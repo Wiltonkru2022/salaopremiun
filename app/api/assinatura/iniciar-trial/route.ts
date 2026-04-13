@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { addDays, format } from "date-fns";
 import { createClient } from "@supabase/supabase-js";
+import { createServerClient } from "@supabase/ssr";
+import { cookies } from "next/headers";
 
 function getSupabaseAdmin() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -15,6 +17,70 @@ function getSupabaseAdmin() {
   }
 
   return createClient(supabaseUrl, serviceRoleKey);
+}
+
+async function getSupabaseServer() {
+  const cookieStore = await cookies();
+
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!supabaseUrl) {
+    throw new Error("NEXT_PUBLIC_SUPABASE_URL não configurada.");
+  }
+
+  if (!supabaseAnonKey) {
+    throw new Error("NEXT_PUBLIC_SUPABASE_ANON_KEY não configurada.");
+  }
+
+  return createServerClient(supabaseUrl, supabaseAnonKey, {
+    cookies: {
+      getAll() {
+        return cookieStore.getAll();
+      },
+      setAll() {},
+    },
+  });
+}
+
+async function validarSalaoDoUsuario(idSalao: string) {
+  const supabase = await getSupabaseServer();
+  const supabaseAdmin = getSupabaseAdmin();
+
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+
+  if (authError) {
+    throw new Error("Erro ao validar usuário autenticado.");
+  }
+
+  if (!user) {
+    throw new Error("Usuário não autenticado.");
+  }
+
+  const { data: usuario, error: usuarioError } = await supabaseAdmin
+    .from("usuarios")
+    .select("id_salao, status")
+    .eq("auth_user_id", user.id)
+    .maybeSingle();
+
+  if (usuarioError) {
+    throw new Error("Erro ao validar vínculo do usuário com o salão.");
+  }
+
+  if (!usuario?.id_salao) {
+    throw new Error("Usuário sem salão vinculado.");
+  }
+
+  if (String(usuario.status || "").toLowerCase() !== "ativo") {
+    throw new Error("Usuário inativo.");
+  }
+
+  if (usuario.id_salao !== idSalao) {
+    throw new Error("Acesso negado para este salão.");
+  }
 }
 
 type BodyInput = {
@@ -34,6 +100,8 @@ export async function POST(req: Request) {
         { status: 400 }
       );
     }
+
+    await validarSalaoDoUsuario(idSalao);
 
     const { data: salao, error: salaoError } = await supabaseAdmin
       .from("saloes")
@@ -96,18 +164,19 @@ export async function POST(req: Request) {
     const limiteUsuarios = Number(planoTeste.limite_usuarios || 0);
     const limiteProfissionais = Number(planoTeste.limite_profissionais || 0);
 
-    const { data: assinaturaExistente, error: assinaturaError } = await supabaseAdmin
-      .from("assinaturas")
-      .select(`
-        id,
-        status,
-        trial_ativo,
-        trial_inicio_em,
-        trial_fim_em,
-        vencimento_em
-      `)
-      .eq("id_salao", idSalao)
-      .maybeSingle();
+    const { data: assinaturaExistente, error: assinaturaError } =
+      await supabaseAdmin
+        .from("assinaturas")
+        .select(`
+          id,
+          status,
+          trial_ativo,
+          trial_inicio_em,
+          trial_fim_em,
+          vencimento_em
+        `)
+        .eq("id_salao", idSalao)
+        .maybeSingle();
 
     if (assinaturaError) {
       return NextResponse.json(
@@ -119,7 +188,11 @@ export async function POST(req: Request) {
     if (assinaturaExistente?.id) {
       const statusAtual = String(assinaturaExistente.status || "").toLowerCase();
 
-      if (["teste_gratis", "trial", "ativo", "ativa", "pago"].includes(statusAtual)) {
+      if (
+        ["teste_gratis", "trial", "ativo", "ativa", "pago"].includes(
+          statusAtual
+        )
+      ) {
         return NextResponse.json({
           ok: true,
           alreadyExists: true,
@@ -157,27 +230,25 @@ export async function POST(req: Request) {
         );
       }
     } else {
-      const { error: insertError } = await supabaseAdmin
-        .from("assinaturas")
-        .insert({
-          id_salao: idSalao,
-          asaas_customer_id: null,
-          asaas_payment_id: null,
-          plano: planoTeste.codigo,
-          valor: valorMensal,
-          status: "teste_gratis",
-          vencimento_em: vencimentoEm,
-          limite_profissionais: limiteProfissionais,
-          limite_usuarios: limiteUsuarios,
-          pago_em: null,
-          trial_ativo: true,
-          trial_inicio_em: agoraIso,
-          trial_fim_em: trialFimIso,
-          forma_pagamento_atual: null,
-          id_cobranca_atual: null,
-          gateway: null,
-          referencia_atual: null,
-        });
+      const { error: insertError } = await supabaseAdmin.from("assinaturas").insert({
+        id_salao: idSalao,
+        asaas_customer_id: null,
+        asaas_payment_id: null,
+        plano: planoTeste.codigo,
+        valor: valorMensal,
+        status: "teste_gratis",
+        vencimento_em: vencimentoEm,
+        limite_profissionais: limiteProfissionais,
+        limite_usuarios: limiteUsuarios,
+        pago_em: null,
+        trial_ativo: true,
+        trial_inicio_em: agoraIso,
+        trial_fim_em: trialFimIso,
+        forma_pagamento_atual: null,
+        id_cobranca_atual: null,
+        gateway: null,
+        referencia_atual: null,
+      });
 
       if (insertError) {
         return NextResponse.json(

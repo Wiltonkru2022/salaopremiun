@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { addDays, format } from "date-fns";
 import { createClient } from "@supabase/supabase-js";
+import { createServerClient } from "@supabase/ssr";
+import { cookies } from "next/headers";
 
 type BillingType = "PIX" | "BOLETO" | "CREDIT_CARD";
 
@@ -51,6 +53,74 @@ function getSupabaseAdmin() {
   }
 
   return createClient(supabaseUrl, serviceRoleKey);
+}
+
+async function getSupabaseServer() {
+  const cookieStore = await cookies();
+
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!supabaseUrl) {
+    throw new Error("NEXT_PUBLIC_SUPABASE_URL não configurada.");
+  }
+
+  if (!supabaseAnonKey) {
+    throw new Error("NEXT_PUBLIC_SUPABASE_ANON_KEY não configurada.");
+  }
+
+  return createServerClient(supabaseUrl, supabaseAnonKey, {
+    cookies: {
+      getAll() {
+        return cookieStore.getAll();
+      },
+      setAll() {
+        // route handler não precisa gravar cookie aqui
+      },
+    },
+  });
+}
+
+async function validarSalaoDoUsuario(idSalao: string) {
+  const supabase = await getSupabaseServer();
+  const supabaseAdmin = getSupabaseAdmin();
+
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+
+  if (authError) {
+    throw new Error("Erro ao validar usuário autenticado.");
+  }
+
+  if (!user) {
+    throw new Error("Usuário não autenticado.");
+  }
+
+  const { data: usuario, error: usuarioError } = await supabaseAdmin
+    .from("usuarios")
+    .select("id_salao, status")
+    .eq("auth_user_id", user.id)
+    .maybeSingle();
+
+  if (usuarioError) {
+    throw new Error("Erro ao validar vínculo do usuário com o salão.");
+  }
+
+  if (!usuario?.id_salao) {
+    throw new Error("Usuário sem salão vinculado.");
+  }
+
+  if (String(usuario.status || "").toLowerCase() !== "ativo") {
+    throw new Error("Usuário inativo.");
+  }
+
+  if (usuario.id_salao !== idSalao) {
+    throw new Error("Acesso negado para este salão.");
+  }
+
+  return { user };
 }
 
 function getAsaasHeaders() {
@@ -294,6 +364,8 @@ export async function POST(req: Request) {
       );
     }
 
+    await validarSalaoDoUsuario(idSalao);
+
     if (!["basico", "pro", "premium"].includes(planoCodigo)) {
       return NextResponse.json({ error: "Plano inválido." }, { status: 400 });
     }
@@ -444,9 +516,6 @@ export async function POST(req: Request) {
       pixCopiaCola = pixPayload?.payload || null;
     }
 
-    // Importante:
-    // Quem ativa assinatura e soma 30 dias é SOMENTE o webhook.
-    // Aqui a cobrança sempre nasce como pendente.
     const assinaturaStatus = "pendente";
     const vencimentoEm = dueDate;
     const pagoEm = null;
