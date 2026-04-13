@@ -1,0 +1,27 @@
+export const profissionalTheme = {
+  colors: {
+    bg: "#f5f5f5",
+    card: "#ffffff",
+    cardSoft: "#fafafa",
+    border: "#e4e4e7",
+    text: "#18181b",
+    textMuted: "#71717a",
+    gold: "#c89b3c",
+    goldDark: "#a97a1f",
+    dark: "#09090b",
+    darkSoft: "#18181b",
+    successBg: "#dcfce7",
+    successText: "#166534",
+    warningBg: "#fef3c7",
+    warningText: "#92400e",
+    dangerBg: "#fee2e2",
+    dangerText: "#991b1b",
+    infoBg: "#dbeafe",
+    infoText: "#1d4ed8",
+  },
+  radius: {
+    xl: "1.5rem",
+    lg: "1rem",
+    md: "0.875rem",
+  },
+};
