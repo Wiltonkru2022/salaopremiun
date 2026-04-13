@@ -55,12 +55,49 @@ export default function AssinaturaStatusCard({
         </div>
       ) : null}
 
+      {resumoAssinatura.bloqueioTotal ? (
+        <section className="overflow-hidden rounded-[30px] border border-red-300 bg-[linear-gradient(135deg,#7f1d1d_0%,#b91c1c_45%,#ef4444_100%)] p-6 text-white shadow-[0_18px_45px_rgba(185,28,28,0.28)]">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <div className="text-xs font-semibold uppercase tracking-[0.25em] text-red-100">
+                Bloqueio automático
+              </div>
+              <h2 className="mt-2 text-2xl font-bold">
+                Seu acesso principal está bloqueado
+              </h2>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-red-50">
+                A assinatura passou do limite permitido sem regularização. Para
+                liberar novamente o painel, gere uma nova cobrança e conclua o
+                pagamento.
+              </p>
+            </div>
+
+            {mostrarBotaoRegularizar ? (
+              <button
+                type="button"
+                onClick={criarCobrancaAssinatura}
+                disabled={gerandoCobranca}
+                className="inline-flex items-center justify-center rounded-2xl bg-white px-5 py-3 text-sm font-semibold text-red-700 transition hover:bg-red-50 disabled:opacity-60"
+              >
+                {gerandoCobranca
+                  ? "Gerando cobrança..."
+                  : billingType === "PIX"
+                  ? "Regularizar com PIX"
+                  : billingType === "BOLETO"
+                  ? "Regularizar com boleto"
+                  : "Regularizar no cartão"}
+              </button>
+            ) : null}
+          </div>
+        </section>
+      ) : null}
+
       <section className="rounded-[30px] border border-zinc-200 bg-white p-6 shadow-sm">
         <div className="text-lg font-bold text-zinc-950">
           Situação da assinatura
         </div>
         <div className="mt-1 text-sm text-zinc-500">
-          Acompanhe seu período de uso, vencimento e renovação.
+          Acompanhe período de uso, vencimento, risco de bloqueio e renovação.
         </div>
 
         <div className="mt-5 space-y-3">
@@ -80,7 +117,7 @@ export default function AssinaturaStatusCard({
             </div>
           ) : resumoAssinatura.ativa ? (
             <div className="rounded-[22px] border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-              Sua assinatura está ativa.
+              Sua assinatura está ativa e liberada.
             </div>
           ) : (
             <div className="rounded-[22px] border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-700">
@@ -122,7 +159,7 @@ export default function AssinaturaStatusCard({
 
       {aguardandoPagamento && podeGerenciar ? (
         <div className="rounded-[24px] border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-800">
-          <div className="flex items-center justify-between gap-4">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
               <div className="font-semibold">
                 Aguardando confirmação do pagamento...

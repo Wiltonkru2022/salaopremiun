@@ -73,6 +73,7 @@ export const PLANOS_INFO: Record<
     valor: number;
     descricao: string;
     recursos: string[];
+    ordem: number;
   }
 > = {
   basico: {
@@ -80,12 +81,14 @@ export const PLANOS_INFO: Record<
     valor: 49.9,
     descricao: "Ideal para salão pequeno",
     recursos: ["3 profissionais", "2 usuários", "Agenda e caixa"],
+    ordem: 1,
   },
   pro: {
     nome: "Pro",
     valor: 89.9,
     descricao: "Mais recursos e mais equipe",
     recursos: ["10 profissionais", "5 usuários", "Operação completa"],
+    ordem: 2,
   },
   premium: {
     nome: "Premium",
@@ -96,6 +99,7 @@ export const PLANOS_INFO: Record<
       "Usuários ilimitados",
       "Tudo liberado",
     ],
+    ordem: 3,
   },
   teste_gratis: {
     nome: "Teste grátis",
@@ -106,13 +110,13 @@ export const PLANOS_INFO: Record<
       "Teste da operação",
       "Sem cobrança no período",
     ],
+    ordem: 0,
   },
 };
 
 export type HistoricoCobrancaRow = {
   id: string;
   referencia?: string | null;
-  descricao?: string | null;
   valor?: number | null;
   status?: string | null;
   forma_pagamento?: string | null;
@@ -122,4 +126,5 @@ export type HistoricoCobrancaRow = {
   invoice_url?: string | null;
   bank_slip_url?: string | null;
   created_at?: string | null;
+  descricao?: string | null;
 };

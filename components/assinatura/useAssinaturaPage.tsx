@@ -47,6 +47,9 @@ export function useAssinaturaPage() {
     HistoricoCobrancaRow[]
   >([]);
 
+  const [renovacaoAutomaticaAtiva, setRenovacaoAutomaticaAtiva] =
+    useState(true);
+
   const [cardForm, setCardForm] = useState<CardForm>({
     holderName: "",
     number: "",
@@ -56,12 +59,6 @@ export function useAssinaturaPage() {
   });
 
   const podeGerenciar = nivel === "admin";
-  const renovacaoAutomaticaAtiva = Boolean(
-    assinatura?.forma_pagamento_atual &&
-      ["PIX", "BOLETO", "CREDIT_CARD"].includes(
-        String(assinatura.forma_pagamento_atual).toUpperCase()
-      )
-  );
 
   const carregarAcesso = useCallback(async () => {
     const {
@@ -285,9 +282,7 @@ export function useAssinaturaPage() {
         throw new Error(result?.error || "Erro ao carregar histórico.");
       }
 
-      setHistoricoCobrancas(
-        (result?.historico as HistoricoCobrancaRow[]) || []
-      );
+      setHistoricoCobrancas((result?.historico as HistoricoCobrancaRow[]) || []);
     } catch (e) {
       console.error(e);
       setErro(e instanceof Error ? e.message : "Erro ao carregar histórico.");
@@ -392,9 +387,7 @@ export function useAssinaturaPage() {
         setCheckout(null);
         await carregarDados();
       } else {
-        setErro(
-          "Pagamento ainda não confirmado. Tente novamente em alguns segundos."
-        );
+        setErro("Pagamento ainda não confirmado. Tente novamente em alguns segundos.");
       }
     } catch (e) {
       console.error(e);
@@ -578,5 +571,6 @@ export function useAssinaturaPage() {
     carregandoHistorico,
     historicoCobrancas,
     renovacaoAutomaticaAtiva,
+    setRenovacaoAutomaticaAtiva,
   };
 }

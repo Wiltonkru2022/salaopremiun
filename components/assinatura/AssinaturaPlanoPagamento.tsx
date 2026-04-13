@@ -8,13 +8,13 @@ import {
   formatarMes,
   formatarMoeda,
   formatarNumeroCartao,
-  getPlanoActionLabel,
 } from "./utils";
 
 type Props = {
   podeGerenciar: boolean;
   planoSelecionado: string;
   setPlanoSelecionado: (value: string) => void;
+  planoAtual: string | null;
   billingType: BillingType;
   setBillingType: (value: BillingType) => void;
   cardForm: CardForm;
@@ -22,7 +22,6 @@ type Props = {
   esconderBotaoPadraoRenovacao: boolean;
   gerandoCobranca: boolean;
   criarCobrancaAssinatura: () => Promise<void>;
-  planoAtual: string | null;
 };
 
 function StepBadge({ numero }: { numero: number }) {
@@ -33,10 +32,39 @@ function StepBadge({ numero }: { numero: number }) {
   );
 }
 
+function getMovimentoPlano(planoAtual: string | null, planoSelecionado: string) {
+  if (!planoAtual || !PLANOS_INFO[planoAtual] || !PLANOS_INFO[planoSelecionado]) {
+    return null;
+  }
+
+  const ordemAtual = PLANOS_INFO[planoAtual].ordem;
+  const ordemSelecionada = PLANOS_INFO[planoSelecionado].ordem;
+
+  if (ordemSelecionada > ordemAtual) {
+    return {
+      label: "Upgrade",
+      className: "border-emerald-200 bg-emerald-50 text-emerald-700",
+    };
+  }
+
+  if (ordemSelecionada < ordemAtual) {
+    return {
+      label: "Downgrade",
+      className: "border-amber-200 bg-amber-50 text-amber-800",
+    };
+  }
+
+  return {
+    label: "Plano atual",
+    className: "border-violet-200 bg-violet-50 text-violet-700",
+  };
+}
+
 export default function AssinaturaPlanosPagamento({
   podeGerenciar,
   planoSelecionado,
   setPlanoSelecionado,
+  planoAtual,
   billingType,
   setBillingType,
   cardForm,
@@ -44,7 +72,6 @@ export default function AssinaturaPlanosPagamento({
   esconderBotaoPadraoRenovacao,
   gerandoCobranca,
   criarCobrancaAssinatura,
-  planoAtual,
 }: Props) {
   if (esconderBotaoPadraoRenovacao) {
     return (
@@ -64,15 +91,27 @@ export default function AssinaturaPlanosPagamento({
     );
   }
 
+  const movimentoPlano = getMovimentoPlano(planoAtual, planoSelecionado);
+
   return (
     <section className="rounded-[30px] border border-zinc-200 bg-white p-6 shadow-sm">
-      <div>
-        <h2 className="text-3xl font-bold tracking-tight text-zinc-950">
-          Comece, renove ou troque seu plano
-        </h2>
-        <p className="mt-2 text-sm text-zinc-500">
-          Escolha o plano ideal para o seu salão e depois a forma de pagamento.
-        </p>
+      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+        <div>
+          <h2 className="text-3xl font-bold tracking-tight text-zinc-950">
+            Comece ou renove seu acesso
+          </h2>
+          <p className="mt-2 text-sm text-zinc-500">
+            Escolha o plano ideal para o seu salão e depois a forma de pagamento.
+          </p>
+        </div>
+
+        {movimentoPlano ? (
+          <span
+            className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${movimentoPlano.className}`}
+          >
+            {movimentoPlano.label}
+          </span>
+        ) : null}
       </div>
 
       <div className="mt-8">
@@ -83,7 +122,7 @@ export default function AssinaturaPlanosPagamento({
               Escolha o plano ideal para você
             </div>
             <div className="text-sm text-zinc-500">
-              Você pode fazer upgrade, downgrade ou renovar o mesmo plano.
+              Todos os planos liberam o sistema. O que muda é o limite e a estrutura.
             </div>
           </div>
         </div>
@@ -92,7 +131,7 @@ export default function AssinaturaPlanosPagamento({
           {(["basico", "pro", "premium"] as string[]).map((plano) => {
             const info = PLANOS_INFO[plano];
             const ativo = planoSelecionado === plano;
-            const atual = planoAtual === plano;
+            const badge = getMovimentoPlano(planoAtual, plano);
 
             return (
               <button
@@ -100,31 +139,35 @@ export default function AssinaturaPlanosPagamento({
                 type="button"
                 onClick={() => podeGerenciar && setPlanoSelecionado(plano)}
                 disabled={!podeGerenciar}
-                className={`relative min-h-[220px] rounded-[26px] border p-6 text-left transition ${
+                className={`relative min-h-[240px] rounded-[26px] border p-6 text-left transition ${
                   ativo
                     ? "border-violet-600 bg-[linear-gradient(135deg,#5b21b6_0%,#6d28d9_60%,#7c3aed_100%)] text-white shadow-lg"
                     : "border-zinc-200 bg-white text-zinc-950 hover:border-violet-300 hover:shadow-sm"
                 } ${!podeGerenciar ? "cursor-not-allowed opacity-70" : ""}`}
               >
-                {ativo ? (
-                  <div className="absolute right-4 top-4 rounded-full bg-white/15 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-white">
-                    Selecionado
-                  </div>
-                ) : null}
+                <div className="absolute right-4 top-4 flex flex-col items-end gap-2">
+                  {ativo ? (
+                    <div className="rounded-full bg-white/15 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-white">
+                      Selecionado
+                    </div>
+                  ) : null}
 
-                {atual && !ativo ? (
-                  <div className="absolute right-4 top-4 rounded-full bg-zinc-100 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-700">
-                    Atual
-                  </div>
-                ) : null}
+                  {badge ? (
+                    <div
+                      className={`rounded-full px-3 py-1 text-[11px] font-semibold ${
+                        ativo
+                          ? "bg-white/15 text-white"
+                          : badge.className.replace("border ", "")
+                      }`}
+                    >
+                      {badge.label}
+                    </div>
+                  ) : null}
+                </div>
 
                 <div className="text-3xl font-bold leading-none">{info.nome}</div>
 
-                <div
-                  className={`mt-4 text-base ${
-                    ativo ? "text-violet-100" : "text-zinc-500"
-                  }`}
-                >
+                <div className={`mt-4 text-base ${ativo ? "text-violet-100" : "text-zinc-500"}`}>
                   {info.descricao}
                 </div>
 
@@ -132,11 +175,7 @@ export default function AssinaturaPlanosPagamento({
                   {formatarMoeda(info.valor)}
                 </div>
 
-                <div
-                  className={`mt-6 space-y-2 text-sm ${
-                    ativo ? "text-violet-100" : "text-zinc-600"
-                  }`}
-                >
+                <div className={`mt-6 space-y-2 text-sm ${ativo ? "text-violet-100" : "text-zinc-600"}`}>
                   {info.recursos.map((item) => (
                     <div key={item}>{item}</div>
                   ))}
@@ -161,7 +200,7 @@ export default function AssinaturaPlanosPagamento({
         </div>
 
         <div className="mt-5 space-y-3">
-          {[
+          {([
             {
               tipo: "PIX" as BillingType,
               titulo: "PIX",
@@ -177,7 +216,7 @@ export default function AssinaturaPlanosPagamento({
               titulo: "Cartão de crédito",
               subtitulo: "Pode passar por validação do gateway.",
             },
-          ].map((item) => {
+          ]).map((item) => {
             const ativo = billingType === item.tipo;
 
             return (
@@ -210,7 +249,9 @@ export default function AssinaturaPlanosPagamento({
 
       {billingType === "CREDIT_CARD" ? (
         <div className="mt-8">
-          <div className="text-lg font-bold text-zinc-950">Dados do cartão</div>
+          <div className="text-lg font-bold text-zinc-950">
+            Dados do cartão
+          </div>
 
           <div className="mt-4 grid gap-3 md:grid-cols-2">
             <input
@@ -308,10 +349,6 @@ export default function AssinaturaPlanosPagamento({
             ? "Gerar boleto"
             : "Gerar cobrança no cartão"}
         </button>
-
-        <p className="mt-3 text-center text-xs text-zinc-500">
-          {getPlanoActionLabel(planoAtual, planoSelecionado)}
-        </p>
       </div>
     </section>
   );

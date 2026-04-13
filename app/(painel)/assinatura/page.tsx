@@ -45,6 +45,7 @@ export default function AssinaturaPage() {
     carregandoHistorico,
     historicoCobrancas,
     renovacaoAutomaticaAtiva,
+    setRenovacaoAutomaticaAtiva,
   } = useAssinaturaPage();
 
   if (loading || !acessoCarregado) {
@@ -77,51 +78,15 @@ export default function AssinaturaPage() {
     !mostrarSecaoRenovacao && (trialAtivo || assinaturaAtiva);
 
   return (
-    <div className="space-y-6">
-      <AssinaturaHero />
-
-      <section className="grid gap-4 lg:grid-cols-[1.4fr_0.6fr]">
-        <div className="rounded-[28px] border border-zinc-200 bg-white p-5 shadow-sm">
-          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <div>
-              <div className="text-[11px] font-semibold uppercase tracking-[0.24em] text-zinc-400">
-                Central da assinatura
-              </div>
-              <h2 className="mt-2 text-2xl font-bold tracking-tight text-zinc-950">
-                Gestão do plano do seu salão
-              </h2>
-              <p className="mt-1 text-sm text-zinc-500">
-                Faça upgrade, downgrade, acompanhe cobranças e veja o histórico
-                completo em um só lugar.
-              </p>
-            </div>
-
-            <div className="flex flex-wrap gap-3">
-              <button
-                type="button"
-                onClick={abrirHistoricoModal}
-                className="rounded-2xl border border-violet-200 bg-violet-50 px-5 py-3 text-sm font-semibold text-violet-700 transition hover:bg-violet-100"
-              >
-                Ver histórico de pagamentos
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <div className="rounded-[28px] border border-zinc-200 bg-white p-5 shadow-sm">
-          <div className="text-[11px] font-semibold uppercase tracking-[0.24em] text-zinc-400">
-            Renovação
-          </div>
-          <div className="mt-3 text-lg font-bold text-zinc-950">
-            {renovacaoAutomaticaAtiva ? "Automática ativa" : "Manual"}
-          </div>
-          <p className="mt-2 text-sm text-zinc-500">
-            {renovacaoAutomaticaAtiva
-              ? "Seu plano pode gerar nova cobrança automaticamente perto do vencimento."
-              : "Hoje sua assinatura depende de geração e confirmação da cobrança."}
-          </p>
-        </div>
-      </section>
+    <div className="space-y-6 pb-8">
+      <AssinaturaHero
+        planoAtualNome={planoAtualNome}
+        resumoAssinatura={resumoAssinatura}
+        podeGerenciar={podeGerenciar}
+        renovacaoAutomaticaAtiva={renovacaoAutomaticaAtiva}
+        setRenovacaoAutomaticaAtiva={setRenovacaoAutomaticaAtiva}
+        abrirHistoricoModal={abrirHistoricoModal}
+      />
 
       <AssinaturaStatusCard
         podeGerenciar={podeGerenciar}
@@ -144,14 +109,16 @@ export default function AssinaturaPage() {
         salao={salao}
         planoAtualNome={planoAtualNome}
         valorAtual={valorAtual}
+        renovacaoAutomaticaAtiva={renovacaoAutomaticaAtiva}
       />
 
       {mostrarSecaoRenovacao && !trialAtivo ? (
-        <section className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
+        <section className="grid gap-6 2xl:grid-cols-[1.25fr_0.75fr]">
           <AssinaturaPlanosPagamento
             podeGerenciar={podeGerenciar}
             planoSelecionado={planoSelecionado}
             setPlanoSelecionado={setPlanoSelecionado}
+            planoAtual={assinatura?.plano || null}
             billingType={billingType}
             setBillingType={setBillingType}
             cardForm={cardForm}
@@ -159,25 +126,27 @@ export default function AssinaturaPage() {
             esconderBotaoPadraoRenovacao={esconderBotaoPadraoRenovacao}
             gerandoCobranca={gerandoCobranca}
             criarCobrancaAssinatura={criarCobrancaAssinatura}
-            planoAtual={assinatura?.plano || null}
           />
 
-          <AssinaturaCheckoutBox checkout={checkout} copiarPix={copiarPix} />
+          <AssinaturaCheckoutBox
+            checkout={checkout}
+            copiarPix={copiarPix}
+          />
         </section>
       ) : mostrarCardAssinaturaAtiva ? (
-        <section className="rounded-[28px] border border-zinc-200 bg-white p-6 shadow-sm">
+        <section className="rounded-[32px] border border-emerald-200 bg-[linear-gradient(180deg,#ffffff_0%,#f7fff9_100%)] p-6 shadow-sm">
           <h2 className="text-2xl font-bold text-zinc-950">
             {trialAtivo ? "Teste grátis ativo" : "Assinatura ativa"}
           </h2>
 
-          <p className="mt-2 text-sm text-zinc-500">
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-zinc-500">
             {trialAtivo
-              ? "Seu teste está liberado. A área de renovação aparecerá quando o período terminar."
-              : "Seu acesso está liberado. A área de renovação aparecerá apenas quando estiver perto do vencimento ou se houver cobrança pendente."}
+              ? "Seu teste está liberado. A área de renovação vai aparecer quando o período terminar."
+              : "Seu acesso está liberado. A área de renovação só aparece perto do vencimento, em caso de pendência ou quando houver troca de plano."}
           </p>
 
           {resumoAssinatura.diasRestantes != null ? (
-            <div className="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+            <div className="mt-5 inline-flex rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800">
               Restam {resumoAssinatura.diasRestantes} dia(s) para o vencimento.
             </div>
           ) : null}

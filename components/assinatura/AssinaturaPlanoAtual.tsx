@@ -14,6 +14,7 @@ type Props = {
   salao: SalaoRow | null;
   planoAtualNome: string;
   valorAtual: number;
+  renovacaoAutomaticaAtiva: boolean;
 };
 
 export default function AssinaturaPlanoAtual({
@@ -21,6 +22,7 @@ export default function AssinaturaPlanoAtual({
   salao,
   planoAtualNome,
   valorAtual,
+  renovacaoAutomaticaAtiva,
 }: Props) {
   return (
     <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -28,7 +30,9 @@ export default function AssinaturaPlanoAtual({
         <div className="text-[11px] font-semibold uppercase tracking-[0.25em] text-zinc-400">
           Plano atual
         </div>
-        <div className="mt-3 text-2xl font-bold text-zinc-950">{planoAtualNome}</div>
+        <div className="mt-3 text-2xl font-bold text-zinc-950">
+          {planoAtualNome}
+        </div>
         <p className="mt-1 text-sm text-zinc-500">
           {assinatura?.limite_profissionais != null
             ? `${assinatura.limite_profissionais} profissionais`
@@ -79,7 +83,9 @@ export default function AssinaturaPlanoAtual({
         <div className="text-[11px] font-semibold uppercase tracking-[0.25em] text-zinc-400">
           Salão
         </div>
-        <div className="mt-3 text-lg font-bold text-zinc-950">{salao?.nome || "-"}</div>
+        <div className="mt-3 text-lg font-bold text-zinc-950">
+          {salao?.nome || "-"}
+        </div>
         <p className="mt-1 text-sm text-zinc-500">ID: {salao?.id || "-"}</p>
       </div>
 
@@ -117,6 +123,12 @@ export default function AssinaturaPlanoAtual({
         <div className="mt-3 text-2xl font-bold text-zinc-950">
           {formatarMoeda(valorAtual)}
         </div>
+        <p className="mt-2 text-sm text-zinc-500">
+          Renovação automática:{" "}
+          <span className="font-medium text-zinc-800">
+            {renovacaoAutomaticaAtiva ? "Ativada" : "Desativada"}
+          </span>
+        </p>
       </div>
     </div>
   );
