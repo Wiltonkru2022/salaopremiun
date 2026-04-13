@@ -91,22 +91,28 @@ export const PLANOS_INFO: Record<
     nome: "Premium",
     valor: 149.9,
     descricao: "Plano completo sem limites práticos",
-    recursos: ["Profissionais ilimitados", "Usuários ilimitados", "Tudo liberado"],
+    recursos: [
+      "Profissionais ilimitados",
+      "Usuários ilimitados",
+      "Tudo liberado",
+    ],
   },
   teste_gratis: {
     nome: "Teste grátis",
     valor: 0,
     descricao: "Período de teste",
-    recursos: ["Acesso temporário", "Teste da operação", "Sem cobrança no período"],
+    recursos: [
+      "Acesso temporário",
+      "Teste da operação",
+      "Sem cobrança no período",
+    ],
   },
-
-
-  
 };
 
 export type HistoricoCobrancaRow = {
   id: string;
   referencia?: string | null;
+  descricao?: string | null;
   valor?: number | null;
   status?: string | null;
   forma_pagamento?: string | null;

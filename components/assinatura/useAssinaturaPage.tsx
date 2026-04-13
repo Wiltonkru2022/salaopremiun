@@ -43,7 +43,9 @@ export function useAssinaturaPage() {
 
   const [historicoModalOpen, setHistoricoModalOpen] = useState(false);
   const [carregandoHistorico, setCarregandoHistorico] = useState(false);
-  const [historicoCobrancas, setHistoricoCobrancas] = useState<HistoricoCobrancaRow[]>([]);
+  const [historicoCobrancas, setHistoricoCobrancas] = useState<
+    HistoricoCobrancaRow[]
+  >([]);
 
   const [cardForm, setCardForm] = useState<CardForm>({
     holderName: "",
@@ -54,6 +56,12 @@ export function useAssinaturaPage() {
   });
 
   const podeGerenciar = nivel === "admin";
+  const renovacaoAutomaticaAtiva = Boolean(
+    assinatura?.forma_pagamento_atual &&
+      ["PIX", "BOLETO", "CREDIT_CARD"].includes(
+        String(assinatura.forma_pagamento_atual).toUpperCase()
+      )
+  );
 
   const carregarAcesso = useCallback(async () => {
     const {
@@ -256,36 +264,38 @@ export function useAssinaturaPage() {
     return () => clearInterval(interval);
   }, [aguardandoPagamento, idSalao, podeGerenciar, supabase, carregarDados]);
 
-async function carregarHistoricoCobrancas() {
-  try {
-    if (!idSalao) return;
+  async function carregarHistoricoCobrancas() {
+    try {
+      if (!idSalao) return;
 
-    setCarregandoHistorico(true);
-    setErro("");
+      setCarregandoHistorico(true);
+      setErro("");
 
-    const response = await fetch("/api/assinatura/historico", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ idSalao }),
-    });
+      const response = await fetch("/api/assinatura/historico", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ idSalao }),
+      });
 
-    const result = await response.json();
+      const result = await response.json();
 
-    if (!response.ok) {
-      throw new Error(result?.error || "Erro ao carregar histórico.");
+      if (!response.ok) {
+        throw new Error(result?.error || "Erro ao carregar histórico.");
+      }
+
+      setHistoricoCobrancas(
+        (result?.historico as HistoricoCobrancaRow[]) || []
+      );
+    } catch (e) {
+      console.error(e);
+      setErro(e instanceof Error ? e.message : "Erro ao carregar histórico.");
+      setHistoricoCobrancas([]);
+    } finally {
+      setCarregandoHistorico(false);
     }
-
-    setHistoricoCobrancas((result?.historico as HistoricoCobrancaRow[]) || []);
-  } catch (e) {
-    console.error(e);
-    setErro(e instanceof Error ? e.message : "Erro ao carregar histórico.");
-    setHistoricoCobrancas([]);
-  } finally {
-    setCarregandoHistorico(false);
   }
-}
 
   async function abrirHistoricoModal() {
     setHistoricoModalOpen(true);
@@ -382,7 +392,9 @@ async function carregarHistoricoCobrancas() {
         setCheckout(null);
         await carregarDados();
       } else {
-        setErro("Pagamento ainda não confirmado. Tente novamente em alguns segundos.");
+        setErro(
+          "Pagamento ainda não confirmado. Tente novamente em alguns segundos."
+        );
       }
     } catch (e) {
       console.error(e);
@@ -565,5 +577,6 @@ async function carregarHistoricoCobrancas() {
     fecharHistoricoModal,
     carregandoHistorico,
     historicoCobrancas,
+    renovacaoAutomaticaAtiva,
   };
 }

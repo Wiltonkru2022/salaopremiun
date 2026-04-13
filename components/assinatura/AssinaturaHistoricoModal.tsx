@@ -1,20 +1,11 @@
 "use client";
 
-import { formatarData, formatarMoeda, getFormaPagamentoLabel } from "./utils";
-
-export type HistoricoCobrancaRow = {
-  id: string;
-  referencia?: string | null;
-  valor?: number | null;
-  status?: string | null;
-  forma_pagamento?: string | null;
-  data_expiracao?: string | null;
-  payment_date?: string | null;
-  confirmed_date?: string | null;
-  invoice_url?: string | null;
-  bank_slip_url?: string | null;
-  created_at?: string | null;
-};
+import type { HistoricoCobrancaRow } from "./types";
+import {
+  formatarData,
+  formatarMoeda,
+  getFormaPagamentoLabel,
+} from "./utils";
 
 type Props = {
   open: boolean;
@@ -121,6 +112,11 @@ export default function AssinaturaHistoricoModal({
                       <div className="mt-2 text-lg font-bold text-zinc-950">
                         {item.referencia || item.id}
                       </div>
+                      {item.descricao ? (
+                        <div className="mt-1 text-sm text-zinc-500">
+                          {item.descricao}
+                        </div>
+                      ) : null}
                     </div>
 
                     <span
@@ -188,7 +184,7 @@ export default function AssinaturaHistoricoModal({
                     </div>
                   </div>
 
-                  {(item.bank_slip_url || item.invoice_url) ? (
+                  {item.bank_slip_url || item.invoice_url ? (
                     <div className="mt-5 flex flex-wrap gap-3">
                       {item.bank_slip_url ? (
                         <a

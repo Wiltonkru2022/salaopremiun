@@ -8,6 +8,7 @@ import {
   formatarMes,
   formatarMoeda,
   formatarNumeroCartao,
+  getPlanoActionLabel,
 } from "./utils";
 
 type Props = {
@@ -21,6 +22,7 @@ type Props = {
   esconderBotaoPadraoRenovacao: boolean;
   gerandoCobranca: boolean;
   criarCobrancaAssinatura: () => Promise<void>;
+  planoAtual: string | null;
 };
 
 function StepBadge({ numero }: { numero: number }) {
@@ -42,6 +44,7 @@ export default function AssinaturaPlanosPagamento({
   esconderBotaoPadraoRenovacao,
   gerandoCobranca,
   criarCobrancaAssinatura,
+  planoAtual,
 }: Props) {
   if (esconderBotaoPadraoRenovacao) {
     return (
@@ -65,7 +68,7 @@ export default function AssinaturaPlanosPagamento({
     <section className="rounded-[30px] border border-zinc-200 bg-white p-6 shadow-sm">
       <div>
         <h2 className="text-3xl font-bold tracking-tight text-zinc-950">
-          Comece ou renove seu acesso
+          Comece, renove ou troque seu plano
         </h2>
         <p className="mt-2 text-sm text-zinc-500">
           Escolha o plano ideal para o seu salão e depois a forma de pagamento.
@@ -80,7 +83,7 @@ export default function AssinaturaPlanosPagamento({
               Escolha o plano ideal para você
             </div>
             <div className="text-sm text-zinc-500">
-              Todos os planos liberam o sistema. O que muda é o limite e a estrutura.
+              Você pode fazer upgrade, downgrade ou renovar o mesmo plano.
             </div>
           </div>
         </div>
@@ -89,6 +92,7 @@ export default function AssinaturaPlanosPagamento({
           {(["basico", "pro", "premium"] as string[]).map((plano) => {
             const info = PLANOS_INFO[plano];
             const ativo = planoSelecionado === plano;
+            const atual = planoAtual === plano;
 
             return (
               <button
@@ -108,9 +112,19 @@ export default function AssinaturaPlanosPagamento({
                   </div>
                 ) : null}
 
+                {atual && !ativo ? (
+                  <div className="absolute right-4 top-4 rounded-full bg-zinc-100 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-700">
+                    Atual
+                  </div>
+                ) : null}
+
                 <div className="text-3xl font-bold leading-none">{info.nome}</div>
 
-                <div className={`mt-4 text-base ${ativo ? "text-violet-100" : "text-zinc-500"}`}>
+                <div
+                  className={`mt-4 text-base ${
+                    ativo ? "text-violet-100" : "text-zinc-500"
+                  }`}
+                >
                   {info.descricao}
                 </div>
 
@@ -118,7 +132,11 @@ export default function AssinaturaPlanosPagamento({
                   {formatarMoeda(info.valor)}
                 </div>
 
-                <div className={`mt-6 space-y-2 text-sm ${ativo ? "text-violet-100" : "text-zinc-600"}`}>
+                <div
+                  className={`mt-6 space-y-2 text-sm ${
+                    ativo ? "text-violet-100" : "text-zinc-600"
+                  }`}
+                >
                   {info.recursos.map((item) => (
                     <div key={item}>{item}</div>
                   ))}
@@ -143,7 +161,7 @@ export default function AssinaturaPlanosPagamento({
         </div>
 
         <div className="mt-5 space-y-3">
-          {([
+          {[
             {
               tipo: "PIX" as BillingType,
               titulo: "PIX",
@@ -159,7 +177,7 @@ export default function AssinaturaPlanosPagamento({
               titulo: "Cartão de crédito",
               subtitulo: "Pode passar por validação do gateway.",
             },
-          ]).map((item) => {
+          ].map((item) => {
             const ativo = billingType === item.tipo;
 
             return (
@@ -192,9 +210,7 @@ export default function AssinaturaPlanosPagamento({
 
       {billingType === "CREDIT_CARD" ? (
         <div className="mt-8">
-          <div className="text-lg font-bold text-zinc-950">
-            Dados do cartão
-          </div>
+          <div className="text-lg font-bold text-zinc-950">Dados do cartão</div>
 
           <div className="mt-4 grid gap-3 md:grid-cols-2">
             <input
@@ -292,6 +308,10 @@ export default function AssinaturaPlanosPagamento({
             ? "Gerar boleto"
             : "Gerar cobrança no cartão"}
         </button>
+
+        <p className="mt-3 text-center text-xs text-zinc-500">
+          {getPlanoActionLabel(planoAtual, planoSelecionado)}
+        </p>
       </div>
     </section>
   );

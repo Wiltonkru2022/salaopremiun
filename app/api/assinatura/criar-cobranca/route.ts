@@ -313,6 +313,10 @@ async function criarCobrancaAsaas(params: {
     description: params.description,
   };
 
+  if (billingType === "BOLETO") {
+    payload.daysAfterDueDateToRegistrationCancellation = 1;
+  }
+
   if (billingType === "CREDIT_CARD") {
     if (!params.creditCard || !params.creditCardHolderInfo) {
       throw new Error("Dados do cartão não enviados.");
@@ -513,7 +517,8 @@ export async function POST(req: Request) {
     });
 
     const dueDate = format(addDays(new Date(), 1), "yyyy-MM-dd");
-    const remoteIp = billingType === "CREDIT_CARD" ? await getRemoteIp() : undefined;
+    const remoteIp =
+      billingType === "CREDIT_CARD" ? await getRemoteIp() : undefined;
 
     const payment = await criarCobrancaAsaas({
       customer: customer.id,
@@ -549,8 +554,6 @@ export async function POST(req: Request) {
       pixCopiaCola = pixPayload?.payload || null;
     }
 
-    // Sempre nasce pendente.
-    // Quem ativa e soma 30 dias é somente o webhook.
     const assinaturaStatus = "pendente";
     const vencimentoEm = dueDate;
     const pagoEm = null;
@@ -655,18 +658,30 @@ export async function POST(req: Request) {
           id_assinatura: assinaturaId,
           id_plano: plano.id,
           referencia: payment.invoiceNumber || payment.id,
+          descricao: `Assinatura ${plano.nome} - ${
+            body.nomeSalao || salaoData.nome || "SalaoPremium"
+          }`,
           valor,
           status: assinaturaStatus,
           forma_pagamento: billingType,
+          gateway: "asaas",
+          txid: billingType === "PIX" ? payment.id : null,
           asaas_payment_id: payment.id,
+          asaas_customer_id: customer.id,
           payment_date: null,
           confirmed_date: null,
           invoice_url: payment.invoiceUrl || null,
           bank_slip_url: payment.bankSlipUrl || null,
           data_expiracao: dueDate,
+          external_reference: idSalao,
           webhook_payload: null,
           webhook_last_event: null,
           deleted: false,
+          metadata: {
+            origem: "checkout_manual",
+            plano: plano.codigo,
+            billingType,
+          },
         })
         .select("id")
         .single();

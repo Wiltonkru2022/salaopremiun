@@ -2,6 +2,17 @@ import { NextResponse } from "next/server";
 import { addDays, isAfter } from "date-fns";
 import { createClient } from "@supabase/supabase-js";
 
+type PlanoSaasRow = {
+  id: string;
+  codigo: string;
+  nome: string;
+  descricao: string | null;
+  valor_mensal: number | string;
+  limite_usuarios: number | null;
+  limite_profissionais: number | null;
+  ativo: boolean;
+};
+
 function getSupabaseAdmin() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -42,17 +53,6 @@ function shouldActivateAccess(event: string, billingType?: string | null) {
 
   return event === "PAYMENT_CONFIRMED" || event === "PAYMENT_RECEIVED";
 }
-
-type PlanoSaasRow = {
-  id: string;
-  codigo: string;
-  nome: string;
-  descricao: string | null;
-  valor_mensal: number | string;
-  limite_usuarios: number | null;
-  limite_profissionais: number | null;
-  ativo: boolean;
-};
 
 function mapAsaasStatusToInternal(status?: string | null) {
   const normalized = String(status || "").toUpperCase();

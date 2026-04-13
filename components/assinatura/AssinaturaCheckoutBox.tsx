@@ -1,13 +1,17 @@
 "use client";
 
 import type { CheckoutResponse } from "./types";
+import { formatarData, formatarMoeda } from "./utils";
 
 type Props = {
   checkout: CheckoutResponse | null;
   copiarPix: () => Promise<void>;
 };
 
-export default function AssinaturaCheckoutBox({ checkout, copiarPix }: Props) {
+export default function AssinaturaCheckoutBox({
+  checkout,
+  copiarPix,
+}: Props) {
   return (
     <section className="rounded-[30px] border border-zinc-200 bg-white p-6 shadow-sm">
       <h2 className="text-3xl font-bold tracking-tight text-zinc-950">
@@ -23,12 +27,26 @@ export default function AssinaturaCheckoutBox({ checkout, copiarPix }: Props) {
         </div>
       ) : (
         <div className="mt-8 space-y-4">
-          <div className="rounded-[22px] border border-zinc-200 bg-zinc-50 p-4">
-            <div className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
-              Status
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="rounded-[22px] border border-zinc-200 bg-zinc-50 p-4">
+              <div className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
+                Status
+              </div>
+              <div className="mt-2 text-lg font-bold text-zinc-950">
+                {checkout.status || "-"}
+              </div>
             </div>
-            <div className="mt-2 text-lg font-bold text-zinc-950">
-              {checkout.status || "-"}
+
+            <div className="rounded-[22px] border border-zinc-200 bg-zinc-50 p-4">
+              <div className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
+                Valor
+              </div>
+              <div className="mt-2 text-lg font-bold text-zinc-950">
+                {formatarMoeda(checkout.valor)}
+              </div>
+              <div className="mt-1 text-xs text-zinc-500">
+                Vencimento: {formatarData(checkout.vencimento)}
+              </div>
             </div>
           </div>
 
@@ -66,27 +84,29 @@ export default function AssinaturaCheckoutBox({ checkout, copiarPix }: Props) {
             </div>
           ) : null}
 
-          {checkout.bankSlipUrl ? (
-            <a
-              href={checkout.bankSlipUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex rounded-2xl border border-zinc-200 bg-white px-4 py-2 text-sm font-semibold text-zinc-900 transition hover:bg-zinc-50"
-            >
-              Abrir boleto
-            </a>
-          ) : null}
+          <div className="flex flex-wrap gap-3">
+            {checkout.bankSlipUrl ? (
+              <a
+                href={checkout.bankSlipUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex rounded-2xl border border-zinc-200 bg-white px-4 py-2 text-sm font-semibold text-zinc-900 transition hover:bg-zinc-50"
+              >
+                Abrir boleto
+              </a>
+            ) : null}
 
-          {checkout.invoiceUrl ? (
-            <a
-              href={checkout.invoiceUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex rounded-2xl border border-zinc-200 bg-white px-4 py-2 text-sm font-semibold text-zinc-900 transition hover:bg-zinc-50"
-            >
-              Abrir fatura
-            </a>
-          ) : null}
+            {checkout.invoiceUrl ? (
+              <a
+                href={checkout.invoiceUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex rounded-2xl border border-zinc-200 bg-white px-4 py-2 text-sm font-semibold text-zinc-900 transition hover:bg-zinc-50"
+              >
+                Abrir fatura
+              </a>
+            ) : null}
+          </div>
         </div>
       )}
     </section>

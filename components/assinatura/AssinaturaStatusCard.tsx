@@ -124,7 +124,9 @@ export default function AssinaturaStatusCard({
         <div className="rounded-[24px] border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-800">
           <div className="flex items-center justify-between gap-4">
             <div>
-              <div className="font-semibold">Aguardando confirmação do pagamento...</div>
+              <div className="font-semibold">
+                Aguardando confirmação do pagamento...
+              </div>
               <div className="text-xs text-amber-700">
                 Assim que o gateway confirmar, a assinatura será atualizada.
               </div>

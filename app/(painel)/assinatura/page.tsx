@@ -44,6 +44,7 @@ export default function AssinaturaPage() {
     fecharHistoricoModal,
     carregandoHistorico,
     historicoCobrancas,
+    renovacaoAutomaticaAtiva,
   } = useAssinaturaPage();
 
   if (loading || !acessoCarregado) {
@@ -79,15 +80,48 @@ export default function AssinaturaPage() {
     <div className="space-y-6">
       <AssinaturaHero />
 
-      <div className="flex justify-end">
-        <button
-          type="button"
-          onClick={abrirHistoricoModal}
-          className="rounded-2xl border border-violet-200 bg-violet-50 px-5 py-3 text-sm font-semibold text-violet-700 transition hover:bg-violet-100"
-        >
-          Ver histórico de pagamentos
-        </button>
-      </div>
+      <section className="grid gap-4 lg:grid-cols-[1.4fr_0.6fr]">
+        <div className="rounded-[28px] border border-zinc-200 bg-white p-5 shadow-sm">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div>
+              <div className="text-[11px] font-semibold uppercase tracking-[0.24em] text-zinc-400">
+                Central da assinatura
+              </div>
+              <h2 className="mt-2 text-2xl font-bold tracking-tight text-zinc-950">
+                Gestão do plano do seu salão
+              </h2>
+              <p className="mt-1 text-sm text-zinc-500">
+                Faça upgrade, downgrade, acompanhe cobranças e veja o histórico
+                completo em um só lugar.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap gap-3">
+              <button
+                type="button"
+                onClick={abrirHistoricoModal}
+                className="rounded-2xl border border-violet-200 bg-violet-50 px-5 py-3 text-sm font-semibold text-violet-700 transition hover:bg-violet-100"
+              >
+                Ver histórico de pagamentos
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-[28px] border border-zinc-200 bg-white p-5 shadow-sm">
+          <div className="text-[11px] font-semibold uppercase tracking-[0.24em] text-zinc-400">
+            Renovação
+          </div>
+          <div className="mt-3 text-lg font-bold text-zinc-950">
+            {renovacaoAutomaticaAtiva ? "Automática ativa" : "Manual"}
+          </div>
+          <p className="mt-2 text-sm text-zinc-500">
+            {renovacaoAutomaticaAtiva
+              ? "Seu plano pode gerar nova cobrança automaticamente perto do vencimento."
+              : "Hoje sua assinatura depende de geração e confirmação da cobrança."}
+          </p>
+        </div>
+      </section>
 
       <AssinaturaStatusCard
         podeGerenciar={podeGerenciar}
@@ -125,12 +159,10 @@ export default function AssinaturaPage() {
             esconderBotaoPadraoRenovacao={esconderBotaoPadraoRenovacao}
             gerandoCobranca={gerandoCobranca}
             criarCobrancaAssinatura={criarCobrancaAssinatura}
+            planoAtual={assinatura?.plano || null}
           />
 
-          <AssinaturaCheckoutBox
-            checkout={checkout}
-            copiarPix={copiarPix}
-          />
+          <AssinaturaCheckoutBox checkout={checkout} copiarPix={copiarPix} />
         </section>
       ) : mostrarCardAssinaturaAtiva ? (
         <section className="rounded-[28px] border border-zinc-200 bg-white p-6 shadow-sm">

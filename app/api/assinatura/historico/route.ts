@@ -3,6 +3,16 @@ import { createClient } from "@supabase/supabase-js";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
+class HttpError extends Error {
+  status: number;
+
+  constructor(message: string, status = 500) {
+    super(message);
+    this.name = "HttpError";
+    this.status = status;
+  }
+}
+
 function getSupabaseAdmin() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -52,11 +62,11 @@ async function validarSalaoDoUsuario(idSalao: string) {
   } = await supabase.auth.getUser();
 
   if (authError) {
-    throw new Error("Erro ao validar usuário autenticado.");
+    throw new HttpError("Erro ao validar usuário autenticado.", 401);
   }
 
   if (!user) {
-    throw new Error("Usuário não autenticado.");
+    throw new HttpError("Usuário não autenticado.", 401);
   }
 
   const { data: usuario, error: usuarioError } = await supabaseAdmin
@@ -66,19 +76,19 @@ async function validarSalaoDoUsuario(idSalao: string) {
     .maybeSingle();
 
   if (usuarioError) {
-    throw new Error("Erro ao validar vínculo do usuário com o salão.");
+    throw new HttpError("Erro ao validar vínculo do usuário com o salão.", 500);
   }
 
   if (!usuario?.id_salao) {
-    throw new Error("Usuário sem salão vinculado.");
+    throw new HttpError("Usuário sem salão vinculado.", 403);
   }
 
   if (String(usuario.status || "").toLowerCase() !== "ativo") {
-    throw new Error("Usuário inativo.");
+    throw new HttpError("Usuário inativo.", 403);
   }
 
   if (usuario.id_salao !== idSalao) {
-    throw new Error("Acesso negado para este salão.");
+    throw new HttpError("Acesso negado para este salão.", 403);
   }
 }
 
@@ -103,6 +113,7 @@ export async function POST(req: Request) {
       .select(`
         id,
         referencia,
+        descricao,
         valor,
         status,
         forma_pagamento,
@@ -128,6 +139,13 @@ export async function POST(req: Request) {
       historico: data || [],
     });
   } catch (error: unknown) {
+    if (error instanceof HttpError) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: error.status }
+      );
+    }
+
     return NextResponse.json(
       {
         error:
