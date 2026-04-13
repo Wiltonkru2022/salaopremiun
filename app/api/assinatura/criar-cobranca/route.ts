@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { addDays, format } from "date-fns";
 import { createClient } from "@supabase/supabase-js";
 import { createServerClient } from "@supabase/ssr";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 
 type BillingType = "PIX" | "BOLETO" | "CREDIT_CARD";
 
@@ -39,6 +39,16 @@ type PlanoSaasRow = {
   limite_profissionais: number | null;
   ativo: boolean;
 };
+
+class HttpError extends Error {
+  status: number;
+
+  constructor(message: string, status = 500) {
+    super(message);
+    this.name = "HttpError";
+    this.status = status;
+  }
+}
 
 function getSupabaseAdmin() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -91,11 +101,11 @@ async function validarSalaoDoUsuario(idSalao: string) {
   } = await supabase.auth.getUser();
 
   if (authError) {
-    throw new Error("Erro ao validar usuário autenticado.");
+    throw new HttpError("Erro ao validar usuário autenticado.", 401);
   }
 
   if (!user) {
-    throw new Error("Usuário não autenticado.");
+    throw new HttpError("Usuário não autenticado.", 401);
   }
 
   const { data: usuario, error: usuarioError } = await supabaseAdmin
@@ -105,19 +115,19 @@ async function validarSalaoDoUsuario(idSalao: string) {
     .maybeSingle();
 
   if (usuarioError) {
-    throw new Error("Erro ao validar vínculo do usuário com o salão.");
+    throw new HttpError("Erro ao validar vínculo do usuário com o salão.", 500);
   }
 
   if (!usuario?.id_salao) {
-    throw new Error("Usuário sem salão vinculado.");
+    throw new HttpError("Usuário sem salão vinculado.", 403);
   }
 
   if (String(usuario.status || "").toLowerCase() !== "ativo") {
-    throw new Error("Usuário inativo.");
+    throw new HttpError("Usuário inativo.", 403);
   }
 
   if (usuario.id_salao !== idSalao) {
-    throw new Error("Acesso negado para este salão.");
+    throw new HttpError("Acesso negado para este salão.", 403);
   }
 
   return { user };
@@ -155,6 +165,24 @@ function mapBillingType(tipo: BillingType) {
   if (tipo === "PIX") return "PIX";
   if (tipo === "BOLETO") return "BOLETO";
   return "CREDIT_CARD";
+}
+
+async function getRemoteIp() {
+  const requestHeaders = await headers();
+
+  const forwardedFor = requestHeaders.get("x-forwarded-for");
+  if (forwardedFor) {
+    const ip = forwardedFor.split(",")[0]?.trim();
+    if (ip) return ip;
+  }
+
+  const realIp = requestHeaders.get("x-real-ip");
+  if (realIp) return realIp.trim();
+
+  const cfConnectingIp = requestHeaders.get("cf-connecting-ip");
+  if (cfConnectingIp) return cfConnectingIp.trim();
+
+  return "127.0.0.1";
 }
 
 async function buscarOuCriarCustomerAsaas(params: {
@@ -261,6 +289,7 @@ async function criarCobrancaAsaas(params: {
   value: number;
   dueDate: string;
   description: string;
+  remoteIp?: string;
   creditCard?: CardPayload;
   creditCardHolderInfo?: {
     name: string;
@@ -305,6 +334,8 @@ async function criarCobrancaAsaas(params: {
       addressNumber: params.creditCardHolderInfo.addressNumber,
       phone: onlyNumbers(params.creditCardHolderInfo.phone),
     };
+
+    payload.remoteIp = params.remoteIp || "127.0.0.1";
   }
 
   const response = await fetch(`${baseUrl}/payments`, {
@@ -482,6 +513,7 @@ export async function POST(req: Request) {
     });
 
     const dueDate = format(addDays(new Date(), 1), "yyyy-MM-dd");
+    const remoteIp = billingType === "CREDIT_CARD" ? await getRemoteIp() : undefined;
 
     const payment = await criarCobrancaAsaas({
       customer: customer.id,
@@ -491,6 +523,7 @@ export async function POST(req: Request) {
       description: `Assinatura ${plano.nome} - ${
         body.nomeSalao || salaoData.nome || "SalaoPremium"
       }`,
+      remoteIp,
       creditCard: body.creditCard,
       creditCardHolderInfo:
         billingType === "CREDIT_CARD"
@@ -516,6 +549,8 @@ export async function POST(req: Request) {
       pixCopiaCola = pixPayload?.payload || null;
     }
 
+    // Sempre nasce pendente.
+    // Quem ativa e soma 30 dias é somente o webhook.
     const assinaturaStatus = "pendente";
     const vencimentoEm = dueDate;
     const pagoEm = null;
@@ -702,6 +737,13 @@ export async function POST(req: Request) {
       bankSlipUrl: payment.bankSlipUrl || null,
     });
   } catch (error: unknown) {
+    if (error instanceof HttpError) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: error.status }
+      );
+    }
+
     return NextResponse.json(
       {
         error:
