@@ -1,6 +1,18 @@
 import { NextResponse } from "next/server";
-import { addDays, isAfter } from "date-fns";
+import { addDays, format, isBefore, subDays } from "date-fns";
 import { createClient } from "@supabase/supabase-js";
+import { criarCobranca } from "@/lib/payments/pix-provider";
+
+type AssinaturaCronRow = {
+  id: string;
+  id_salao: string;
+  plano: string | null;
+  status: string | null;
+  vencimento_em: string | null;
+  asaas_customer_id: string | null;
+  forma_pagamento_atual: string | null;
+  renovacao_automatica?: boolean | null;
+};
 
 type PlanoSaasRow = {
   id: string;
@@ -11,6 +23,13 @@ type PlanoSaasRow = {
   limite_usuarios: number | null;
   limite_profissionais: number | null;
   ativo: boolean;
+};
+
+type CobrancaExistenteRow = {
+  id: string;
+  status: string | null;
+  asaas_payment_id: string | null;
+  data_expiracao: string | null;
 };
 
 function getSupabaseAdmin() {
@@ -28,180 +47,55 @@ function getSupabaseAdmin() {
   return createClient(supabaseUrl, serviceRoleKey);
 }
 
-function validarTokenWebhook(req: Request) {
-  const tokenHeader =
-    req.headers.get("asaas-access-token") ||
-    req.headers.get("access_token");
-
-  return tokenHeader === process.env.ASAAS_WEBHOOK_TOKEN;
+function validarCron(req: Request) {
+  const authHeader = req.headers.get("authorization");
+  return authHeader === `Bearer ${process.env.CRON_SECRET}`;
 }
 
-function shouldActivateAccess(event: string, billingType?: string | null) {
-  const type = String(billingType || "").toUpperCase();
-
-  if (type === "CREDIT_CARD") {
-    return event === "PAYMENT_CONFIRMED" || event === "PAYMENT_RECEIVED";
-  }
-
-  if (type === "BOLETO") {
-    return event === "PAYMENT_CONFIRMED" || event === "PAYMENT_RECEIVED";
-  }
-
-  if (type === "PIX") {
-    return event === "PAYMENT_RECEIVED" || event === "PAYMENT_CONFIRMED";
-  }
-
-  return event === "PAYMENT_CONFIRMED" || event === "PAYMENT_RECEIVED";
-}
-
-function mapAsaasStatusToInternal(status?: string | null) {
-  const normalized = String(status || "").toUpperCase();
-
-  if (["RECEIVED", "CONFIRMED", "RECEIVED_IN_CASH"].includes(normalized)) {
-    return "ativo";
-  }
-
-  if (["PENDING"].includes(normalized)) {
-    return "pendente";
-  }
-
-  if (["OVERDUE"].includes(normalized)) {
-    return "vencida";
-  }
-
-  if (
-    [
-      "REFUNDED",
-      "REFUND_REQUESTED",
-      "CHARGEBACK_DISPUTE",
-      "CHARGEBACK_REQUESTED",
-      "CHARGEBACK_RECEIVED",
-      "AWAITING_CHARGEBACK_REVERSAL",
-      "DUNNING_REQUESTED",
-      "DUNNING_RECEIVED",
-      "DUNNING_RETURNED",
-      "CANCELLED",
-    ].includes(normalized)
-  ) {
-    return "cancelada";
-  }
-
-  return "pendente";
-}
-
-function toMiddayIso(dateOnly?: string | null) {
-  if (!dateOnly) return null;
-
-  const value = String(dateOnly).trim();
-  if (!value) return null;
-
-  const iso = new Date(`${value}T12:00:00`);
-  if (Number.isNaN(iso.getTime())) return null;
-
-  return iso.toISOString();
-}
-
-export async function POST(req: Request) {
+async function handleCron(req: Request) {
   try {
+    if (!validarCron(req)) {
+      return NextResponse.json({ error: "Não autorizado." }, { status: 401 });
+    }
+
     const supabaseAdmin = getSupabaseAdmin();
+    const hoje = new Date();
+    const dataLimite = format(addDays(hoje, 3), "yyyy-MM-dd");
 
-    if (!validarTokenWebhook(req)) {
-      return NextResponse.json(
-        { error: "Webhook não autorizado." },
-        { status: 401 }
-      );
-    }
-
-    const body = await req.json();
-    const event = String(body?.event || "");
-    const payment = body?.payment;
-
-    if (!payment?.id) {
-      return NextResponse.json({
-        ok: true,
-        ignored: true,
-        reason: "no_payment_id",
-      });
-    }
-
-    const paymentId = String(payment.id);
-    const billingType = String(payment.billingType || "").toUpperCase() || null;
-    const paymentStatus = String(payment.status || "").toUpperCase();
-    const agora = new Date();
-    const agoraIso = agora.toISOString();
-
-    const { data: cobranca, error: cobrancaError } = await supabaseAdmin
-      .from("assinaturas_cobrancas")
-      .select(`
-        id,
-        id_salao,
-        id_assinatura,
-        id_plano,
-        valor,
-        status,
-        forma_pagamento,
-        asaas_payment_id,
-        data_expiracao,
-        referencia,
-        payment_date,
-        confirmed_date
-      `)
-      .eq("asaas_payment_id", paymentId)
-      .maybeSingle();
-
-    if (cobrancaError) {
-      console.error("Erro ao buscar cobrança:", cobrancaError);
-      return NextResponse.json(
-        { error: "Erro ao buscar cobrança." },
-        { status: 500 }
-      );
-    }
-
-    if (!cobranca) {
-      return NextResponse.json({
-        ok: true,
-        ignored: true,
-        reason: "charge_not_found",
-      });
-    }
-
-    if (!cobranca.id_assinatura) {
-      return NextResponse.json(
-        { error: "Cobrança sem id_assinatura vinculado." },
-        { status: 500 }
-      );
-    }
-
-    const { data: assinatura, error: assinaturaError } = await supabaseAdmin
+    const { data: assinaturas, error } = await supabaseAdmin
       .from("assinaturas")
       .select(`
         id,
         id_salao,
         plano,
         status,
-        valor,
         vencimento_em,
-        trial_ativo,
-        trial_inicio_em,
-        trial_fim_em,
-        limite_profissionais,
-        limite_usuarios,
-        created_at
+        asaas_customer_id,
+        forma_pagamento_atual,
+        renovacao_automatica
       `)
-      .eq("id", cobranca.id_assinatura)
-      .maybeSingle();
+      .in("status", ["ativo", "ativa", "pago"])
+      .eq("renovacao_automatica", true)
+      .lte("vencimento_em", dataLimite);
 
-    if (assinaturaError || !assinatura) {
-      console.error("Erro ao buscar assinatura:", assinaturaError);
-      return NextResponse.json(
-        { error: "Erro ao buscar assinatura." },
-        { status: 500 }
-      );
+    if (error) {
+      throw error;
     }
 
-    let plano: PlanoSaasRow | null = null;
+    const resultados: Array<Record<string, unknown>> = [];
 
-    if (cobranca.id_plano) {
+    for (const assinatura of (assinaturas || []) as AssinaturaCronRow[]) {
+      const planoCodigo = String(assinatura.plano || "").toLowerCase();
+
+      if (!planoCodigo) {
+        resultados.push({
+          id_salao: assinatura.id_salao,
+          ok: false,
+          motivo: "Plano inválido.",
+        });
+        continue;
+      }
+
       const { data: planoData, error: planoError } = await supabaseAdmin
         .from("planos_saas")
         .select(`
@@ -214,213 +108,219 @@ export async function POST(req: Request) {
           limite_profissionais,
           ativo
         `)
-        .eq("id", cobranca.id_plano)
+        .eq("codigo", planoCodigo)
         .eq("ativo", true)
         .maybeSingle();
 
       if (planoError) {
-        console.error("Erro ao buscar plano no webhook:", planoError);
-        return NextResponse.json(
-          { error: "Erro ao buscar plano." },
-          { status: 500 }
-        );
+        resultados.push({
+          id_salao: assinatura.id_salao,
+          ok: false,
+          motivo: planoError.message,
+        });
+        continue;
       }
 
-      plano = (planoData as PlanoSaasRow | null) || null;
-    }
+      const plano = (planoData as PlanoSaasRow | null) || null;
 
-    const statusCobrancaInterno = mapAsaasStatusToInternal(paymentStatus);
-
-    const confirmedDateIso = toMiddayIso(payment.confirmedDate);
-    const paymentDateIso =
-      toMiddayIso(payment.clientPaymentDate) ||
-      toMiddayIso(payment.paymentDate) ||
-      confirmedDateIso;
-
-    const { error: updateChargeError } = await supabaseAdmin
-      .from("assinaturas_cobrancas")
-      .update({
-        status: statusCobrancaInterno,
-        forma_pagamento: billingType || cobranca.forma_pagamento,
-        confirmed_date: confirmedDateIso,
-        payment_date: paymentDateIso,
-        bank_slip_url: payment.bankSlipUrl || null,
-        invoice_url: payment.invoiceUrl || null,
-        webhook_last_event: event,
-        webhook_payload: body,
-        deleted: Boolean(payment.deleted),
-      })
-      .eq("id", cobranca.id);
-
-    if (updateChargeError) {
-      console.error("Erro ao atualizar cobrança:", updateChargeError);
-      return NextResponse.json(
-        { error: "Erro ao atualizar cobrança." },
-        { status: 500 }
-      );
-    }
-
-    if (shouldActivateAccess(event, billingType)) {
-      let baseDate = agora;
-
-      if (assinatura.vencimento_em) {
-        const vencimentoAtual = new Date(`${assinatura.vencimento_em}T23:59:59`);
-
-        if (
-          !Number.isNaN(vencimentoAtual.getTime()) &&
-          isAfter(vencimentoAtual, agora)
-        ) {
-          baseDate = vencimentoAtual;
-        }
-      } else if (assinatura.trial_fim_em) {
-        const trialFimAtual = new Date(assinatura.trial_fim_em);
-
-        if (
-          !Number.isNaN(trialFimAtual.getTime()) &&
-          isAfter(trialFimAtual, agora)
-        ) {
-          baseDate = trialFimAtual;
-        }
+      if (!plano?.id) {
+        resultados.push({
+          id_salao: assinatura.id_salao,
+          ok: false,
+          motivo: "Plano não encontrado em planos_saas.",
+        });
+        continue;
       }
 
-      const novoFim = addDays(baseDate, 30);
-      const novoVencimentoBanco = novoFim.toISOString().slice(0, 10);
+      if (!assinatura.asaas_customer_id) {
+        resultados.push({
+          id_salao: assinatura.id_salao,
+          ok: false,
+          motivo: "Sem asaas_customer_id.",
+        });
+        continue;
+      }
 
-      const planoCodigoFinal = plano?.codigo || assinatura.plano || null;
-      const valorPlanoFinal =
-        plano != null
-          ? Number(plano.valor_mensal || 0)
-          : Number(assinatura.valor || 0);
-      const limiteUsuariosFinal =
-        plano != null
-          ? Number(plano.limite_usuarios || 0)
-          : Number(assinatura.limite_usuarios || 0);
-      const limiteProfissionaisFinal =
-        plano != null
-          ? Number(plano.limite_profissionais || 0)
-          : Number(assinatura.limite_profissionais || 0);
+      const vencimentoAtual = assinatura.vencimento_em
+        ? new Date(`${assinatura.vencimento_em}T23:59:59`)
+        : null;
+
+      if (!vencimentoAtual || Number.isNaN(vencimentoAtual.getTime())) {
+        resultados.push({
+          id_salao: assinatura.id_salao,
+          ok: false,
+          motivo: "Vencimento inválido.",
+        });
+        continue;
+      }
+
+      const jaVenceu = isBefore(vencimentoAtual, subDays(hoje, 1));
+      if (jaVenceu) {
+        resultados.push({
+          id_salao: assinatura.id_salao,
+          ok: false,
+          motivo: "Assinatura já vencida.",
+        });
+        continue;
+      }
+
+      const formaPagamento = String(
+        assinatura.forma_pagamento_atual || "PIX"
+      ).toUpperCase();
+
+      if (!["PIX", "BOLETO", "CREDIT_CARD"].includes(formaPagamento)) {
+        resultados.push({
+          id_salao: assinatura.id_salao,
+          ok: false,
+          motivo: "Forma de pagamento inválida.",
+        });
+        continue;
+      }
+
+      const { data: cobrancaExistente } = await supabaseAdmin
+        .from("assinaturas_cobrancas")
+        .select("id, status, asaas_payment_id, data_expiracao")
+        .eq("id_assinatura", assinatura.id)
+        .in("status", ["pending", "PENDING", "pendente"])
+        .gte("data_expiracao", format(hoje, "yyyy-MM-dd"))
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      const cobrancaPendente =
+        (cobrancaExistente as CobrancaExistenteRow | null) || null;
+
+      if (cobrancaPendente) {
+        resultados.push({
+          id_salao: assinatura.id_salao,
+          ok: true,
+          skipped: true,
+          motivo: "Já existe cobrança pendente ativa.",
+          paymentId: cobrancaPendente.asaas_payment_id,
+        });
+        continue;
+      }
+
+      const valorPlano = Number(plano.valor_mensal || 0);
+
+      if (valorPlano <= 0) {
+        resultados.push({
+          id_salao: assinatura.id_salao,
+          ok: false,
+          motivo: "Valor do plano inválido.",
+        });
+        continue;
+      }
+
+      const novoVencimentoCobranca = format(addDays(hoje, 1), "yyyy-MM-dd");
+      const referencia = `${assinatura.id_salao}-${plano.codigo}-${Date.now()}`;
+
+      const cobranca = await criarCobranca({
+        customerId: assinatura.asaas_customer_id,
+        billingType: formaPagamento as "PIX" | "BOLETO" | "CREDIT_CARD",
+        valor: valorPlano,
+        descricao: `Renovação ${plano.nome} - SalaoPremium`,
+        vencimento: novoVencimentoCobranca,
+        referenciaExterna: assinatura.id_salao,
+      });
+
+      const statusInicial = String(cobranca.status || "PENDING").toLowerCase();
+
+      const { data: cobrancaInserida, error: historicoError } =
+        await supabaseAdmin
+          .from("assinaturas_cobrancas")
+          .insert({
+            id_salao: assinatura.id_salao,
+            id_assinatura: assinatura.id,
+            id_plano: plano.id,
+            referencia,
+            descricao: `Renovação ${plano.nome} - SalaoPremium`,
+            valor: valorPlano,
+            status: statusInicial,
+            forma_pagamento: formaPagamento,
+            gateway: "asaas",
+            txid: formaPagamento === "PIX" ? cobranca.id : null,
+            data_expiracao: novoVencimentoCobranca,
+            external_reference: assinatura.id_salao,
+            asaas_customer_id: assinatura.asaas_customer_id,
+            asaas_payment_id: cobranca.id,
+            bank_slip_url:
+              (cobranca as { bankSlipUrl?: string | null }).bankSlipUrl || null,
+            invoice_url:
+              (cobranca as { invoiceUrl?: string | null }).invoiceUrl || null,
+            webhook_payload: cobranca,
+            metadata: {
+              origem: "cron_renovacao",
+              plano: plano.codigo,
+              formaPagamento,
+            },
+          })
+          .select("id")
+          .single();
+
+      if (historicoError || !cobrancaInserida?.id) {
+        resultados.push({
+          id_salao: assinatura.id_salao,
+          ok: false,
+          motivo: historicoError?.message || "Erro ao gravar cobrança.",
+        });
+        continue;
+      }
 
       const { error: updateAssinaturaError } = await supabaseAdmin
         .from("assinaturas")
         .update({
-          status: "ativo",
-          plano: planoCodigoFinal,
-          valor: valorPlanoFinal,
-          pago_em: agoraIso,
-          vencimento_em: novoVencimentoBanco,
-          trial_ativo: false,
-          trial_inicio_em: null,
-          trial_fim_em: null,
-          limite_profissionais: limiteProfissionaisFinal,
-          limite_usuarios: limiteUsuariosFinal,
-          forma_pagamento_atual: billingType || cobranca.forma_pagamento,
+          status: "pendente",
+          asaas_payment_id: cobranca.id,
+          valor: valorPlano,
           gateway: "asaas",
-          asaas_payment_id: paymentId,
-          referencia_atual: cobranca.referencia || paymentId,
-          id_cobranca_atual: cobranca.id,
+          forma_pagamento_atual: formaPagamento,
+          id_cobranca_atual: cobrancaInserida.id,
+          referencia_atual: referencia,
         })
         .eq("id", assinatura.id);
 
       if (updateAssinaturaError) {
-        console.error("Erro ao atualizar assinatura:", updateAssinaturaError);
-        return NextResponse.json(
-          { error: "Erro ao atualizar assinatura." },
-          { status: 500 }
-        );
+        resultados.push({
+          id_salao: assinatura.id_salao,
+          ok: false,
+          motivo: updateAssinaturaError.message,
+        });
+        continue;
       }
 
-      const { error: updateSalaoError } = await supabaseAdmin
-        .from("saloes")
-        .update({
-          status: "ativo",
-          plano: planoCodigoFinal,
-          trial_ativo: false,
-          trial_inicio_em: null,
-          trial_fim_em: null,
-          limite_profissionais: limiteProfissionaisFinal,
-          limite_usuarios: limiteUsuariosFinal,
-          updated_at: agoraIso,
-        })
-        .eq("id", assinatura.id_salao);
-
-      if (updateSalaoError) {
-        console.error("Erro ao atualizar salão:", updateSalaoError);
-        return NextResponse.json(
-          { error: "Erro ao atualizar salão." },
-          { status: 500 }
-        );
-      }
-
-      return NextResponse.json({ ok: true, updated: "paid" });
+      resultados.push({
+        id_salao: assinatura.id_salao,
+        ok: true,
+        paymentId: cobranca.id,
+        billingType: formaPagamento,
+        expiracaoCobranca: novoVencimentoCobranca,
+      });
     }
 
-    if (
-      event === "PAYMENT_OVERDUE" ||
-      event === "PAYMENT_DELETED" ||
-      event === "PAYMENT_RESTORED" ||
-      event === "PAYMENT_REFUNDED" ||
-      event === "PAYMENT_RECEIVED_IN_CASH_UNDONE" ||
-      event === "PAYMENT_BANK_SLIP_CANCELLED" ||
-      event === "PAYMENT_CREDIT_CARD_CAPTURE_REFUSED"
-    ) {
-      let novoStatus = assinatura.status || "pendente";
-
-      if (event === "PAYMENT_OVERDUE") {
-        novoStatus = "vencida";
-      }
-
-      if (
-        event === "PAYMENT_DELETED" ||
-        event === "PAYMENT_REFUNDED" ||
-        event === "PAYMENT_RECEIVED_IN_CASH_UNDONE" ||
-        event === "PAYMENT_BANK_SLIP_CANCELLED" ||
-        event === "PAYMENT_CREDIT_CARD_CAPTURE_REFUSED"
-      ) {
-        novoStatus = "cancelada";
-      }
-
-      if (event === "PAYMENT_RESTORED") {
-        novoStatus = "pendente";
-      }
-
-      const { error: updateAssinaturaError } = await supabaseAdmin
-        .from("assinaturas")
-        .update({
-          status: novoStatus,
-          trial_ativo: false,
-          id_cobranca_atual: cobranca.id,
-        })
-        .eq("id", assinatura.id);
-
-      if (updateAssinaturaError) {
-        console.error("Erro ao atualizar assinatura:", updateAssinaturaError);
-        return NextResponse.json(
-          { error: "Erro ao atualizar assinatura." },
-          { status: 500 }
-        );
-      }
-
-      const { error: updateSalaoError } = await supabaseAdmin
-        .from("saloes")
-        .update({
-          updated_at: agoraIso,
-        })
-        .eq("id", assinatura.id_salao);
-
-      if (updateSalaoError) {
-        console.error("Erro ao atualizar salão:", updateSalaoError);
-        return NextResponse.json(
-          { error: "Erro ao atualizar salão." },
-          { status: 500 }
-        );
-      }
-
-      return NextResponse.json({ ok: true, updated: novoStatus });
-    }
-
-    return NextResponse.json({ ok: true, ignored: true, event });
+    return NextResponse.json({
+      ok: true,
+      total: resultados.length,
+      resultados,
+    });
   } catch (error) {
-    console.error("Erro webhook:", error);
-    return NextResponse.json({ error: "Erro webhook" }, { status: 500 });
+    console.error("Erro ao renovar assinaturas:", error);
+    return NextResponse.json(
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : "Erro ao renovar assinaturas.",
+      },
+      { status: 500 }
+    );
   }
+}
+
+export async function GET(req: Request) {
+  return handleCron(req);
+}
+
+export async function POST(req: Request) {
+  return handleCron(req);
 }
