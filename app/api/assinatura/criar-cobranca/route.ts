@@ -185,6 +185,20 @@ async function getRemoteIp() {
   return "127.0.0.1";
 }
 
+async function parseJsonSafe(response: Response) {
+  const rawText = await response.text();
+
+  if (!rawText) {
+    return {};
+  }
+
+  try {
+    return JSON.parse(rawText);
+  } catch {
+    throw new Error("Resposta inválida recebida do Asaas.");
+  }
+}
+
 async function buscarOuCriarCustomerAsaas(params: {
   nome: string;
   email: string;
@@ -210,20 +224,20 @@ async function buscarOuCriarCustomerAsaas(params: {
       }
     );
 
-    const buscaPorCpfJson = await buscaPorCpf.json();
+    const buscaPorCpfJson = await parseJsonSafe(buscaPorCpf);
 
     if (!buscaPorCpf.ok) {
       throw new Error(
-        buscaPorCpfJson?.errors?.[0]?.description ||
-          "Erro ao buscar customer no Asaas."
+        (buscaPorCpfJson as { errors?: Array<{ description?: string }> })?.errors?.[0]
+          ?.description || "Erro ao buscar customer no Asaas."
       );
     }
 
     if (
-      Array.isArray(buscaPorCpfJson?.data) &&
-      buscaPorCpfJson.data.length > 0
+      Array.isArray((buscaPorCpfJson as { data?: unknown[] })?.data) &&
+      (buscaPorCpfJson as { data: unknown[] }).data.length > 0
     ) {
-      return buscaPorCpfJson.data[0];
+      return (buscaPorCpfJson as { data: Array<Record<string, unknown>> }).data[0];
     }
   }
 
@@ -237,20 +251,20 @@ async function buscarOuCriarCustomerAsaas(params: {
       }
     );
 
-    const buscaPorEmailJson = await buscaPorEmail.json();
+    const buscaPorEmailJson = await parseJsonSafe(buscaPorEmail);
 
     if (!buscaPorEmail.ok) {
       throw new Error(
-        buscaPorEmailJson?.errors?.[0]?.description ||
-          "Erro ao buscar customer por e-mail no Asaas."
+        (buscaPorEmailJson as { errors?: Array<{ description?: string }> })?.errors?.[0]
+          ?.description || "Erro ao buscar customer por e-mail no Asaas."
       );
     }
 
     if (
-      Array.isArray(buscaPorEmailJson?.data) &&
-      buscaPorEmailJson.data.length > 0
+      Array.isArray((buscaPorEmailJson as { data?: unknown[] })?.data) &&
+      (buscaPorEmailJson as { data: unknown[] }).data.length > 0
     ) {
-      return buscaPorEmailJson.data[0];
+      return (buscaPorEmailJson as { data: Array<Record<string, unknown>> }).data[0];
     }
   }
 
@@ -271,16 +285,16 @@ async function buscarOuCriarCustomerAsaas(params: {
     body: JSON.stringify(payload),
   });
 
-  const createJson = await createRes.json();
+  const createJson = await parseJsonSafe(createRes);
 
   if (!createRes.ok) {
     throw new Error(
-      createJson?.errors?.[0]?.description ||
-        "Erro ao criar customer no Asaas."
+      (createJson as { errors?: Array<{ description?: string }> })?.errors?.[0]
+        ?.description || "Erro ao criar customer no Asaas."
     );
   }
 
-  return createJson;
+  return createJson as Record<string, unknown>;
 }
 
 async function criarCobrancaAsaas(params: {
@@ -348,15 +362,16 @@ async function criarCobrancaAsaas(params: {
     body: JSON.stringify(payload),
   });
 
-  const json = await response.json();
+  const json = await parseJsonSafe(response);
 
   if (!response.ok) {
     throw new Error(
-      json?.errors?.[0]?.description || "Erro ao criar cobrança no Asaas."
+      (json as { errors?: Array<{ description?: string }> })?.errors?.[0]
+        ?.description || "Erro ao criar cobrança no Asaas."
     );
   }
 
-  return json;
+  return json as Record<string, unknown>;
 }
 
 async function buscarPayloadPix(paymentId: string) {
@@ -369,15 +384,16 @@ async function buscarPayloadPix(paymentId: string) {
     cache: "no-store",
   });
 
-  const json = await response.json();
+  const json = await parseJsonSafe(response);
 
   if (!response.ok) {
     throw new Error(
-      json?.errors?.[0]?.description || "Erro ao buscar QR Code PIX."
+      (json as { errors?: Array<{ description?: string }> })?.errors?.[0]
+        ?.description || "Erro ao buscar QR Code PIX."
     );
   }
 
-  return json;
+  return json as Record<string, unknown>;
 }
 
 export async function POST(req: Request) {
@@ -516,12 +532,21 @@ export async function POST(req: Request) {
       complemento: body.complemento || salaoData.complemento || undefined,
     });
 
+    const customerId = String(customer.id || "").trim();
+
+    if (!customerId) {
+      return NextResponse.json(
+        { error: "Não foi possível identificar o customer no Asaas." },
+        { status: 500 }
+      );
+    }
+
     const dueDate = format(addDays(new Date(), 1), "yyyy-MM-dd");
     const remoteIp =
       billingType === "CREDIT_CARD" ? await getRemoteIp() : undefined;
 
     const payment = await criarCobrancaAsaas({
-      customer: customer.id,
+      customer: customerId,
       billingType,
       value: valor,
       dueDate,
@@ -545,13 +570,22 @@ export async function POST(req: Request) {
           : undefined,
     });
 
+    const paymentId = String(payment.id || "").trim();
+
+    if (!paymentId) {
+      return NextResponse.json(
+        { error: "Não foi possível identificar a cobrança criada no Asaas." },
+        { status: 500 }
+      );
+    }
+
     let qrCodeBase64: string | null = null;
     let pixCopiaCola: string | null = null;
 
     if (billingType === "PIX") {
-      const pixPayload = await buscarPayloadPix(payment.id);
-      qrCodeBase64 = pixPayload?.encodedImage || null;
-      pixCopiaCola = pixPayload?.payload || null;
+      const pixPayload = await buscarPayloadPix(paymentId);
+      qrCodeBase64 = String(pixPayload?.encodedImage || "") || null;
+      pixCopiaCola = String(pixPayload?.payload || "") || null;
     }
 
     const assinaturaStatus = "pendente";
@@ -583,8 +617,8 @@ export async function POST(req: Request) {
       const { error: updateAssinaturaError } = await supabaseAdmin
         .from("assinaturas")
         .update({
-          asaas_customer_id: customer.id,
-          asaas_payment_id: payment.id,
+          asaas_customer_id: customerId,
+          asaas_payment_id: paymentId,
           plano: plano.codigo,
           valor,
           status: assinaturaStatus,
@@ -598,7 +632,8 @@ export async function POST(req: Request) {
           forma_pagamento_atual: billingType,
           id_cobranca_atual: null,
           gateway: "asaas",
-          referencia_atual: payment.invoiceNumber || payment.id,
+          referencia_atual:
+            String(payment.invoiceNumber || "").trim() || paymentId,
         })
         .eq("id", assinaturaId);
 
@@ -617,8 +652,8 @@ export async function POST(req: Request) {
           .from("assinaturas")
           .insert({
             id_salao: idSalao,
-            asaas_customer_id: customer.id,
-            asaas_payment_id: payment.id,
+            asaas_customer_id: customerId,
+            asaas_payment_id: paymentId,
             plano: plano.codigo,
             valor,
             status: assinaturaStatus,
@@ -632,7 +667,8 @@ export async function POST(req: Request) {
             forma_pagamento_atual: billingType,
             id_cobranca_atual: null,
             gateway: "asaas",
-            referencia_atual: payment.invoiceNumber || payment.id,
+            referencia_atual:
+              String(payment.invoiceNumber || "").trim() || paymentId,
           })
           .select("id")
           .single();
@@ -657,7 +693,7 @@ export async function POST(req: Request) {
           id_salao: idSalao,
           id_assinatura: assinaturaId,
           id_plano: plano.id,
-          referencia: payment.invoiceNumber || payment.id,
+          referencia: String(payment.invoiceNumber || "").trim() || paymentId,
           descricao: `Assinatura ${plano.nome} - ${
             body.nomeSalao || salaoData.nome || "SalaoPremium"
           }`,
@@ -665,13 +701,13 @@ export async function POST(req: Request) {
           status: assinaturaStatus,
           forma_pagamento: billingType,
           gateway: "asaas",
-          txid: billingType === "PIX" ? payment.id : null,
-          asaas_payment_id: payment.id,
-          asaas_customer_id: customer.id,
+          txid: billingType === "PIX" ? paymentId : null,
+          asaas_payment_id: paymentId,
+          asaas_customer_id: customerId,
           payment_date: null,
           confirmed_date: null,
-          invoice_url: payment.invoiceUrl || null,
-          bank_slip_url: payment.bankSlipUrl || null,
+          invoice_url: String(payment.invoiceUrl || "").trim() || null,
+          bank_slip_url: String(payment.bankSlipUrl || "").trim() || null,
           data_expiracao: dueDate,
           external_reference: idSalao,
           webhook_payload: null,
@@ -739,17 +775,17 @@ export async function POST(req: Request) {
 
     return NextResponse.json({
       ok: true,
-      customerId: customer.id,
-      paymentId: payment.id,
+      customerId,
+      paymentId,
       valor,
       plano: plano.codigo,
       billingType,
-      status: payment.status || "PENDING",
+      status: String(payment.status || "PENDING"),
       qrCodeBase64,
       pixCopiaCola,
       vencimento: dueDate,
-      invoiceUrl: payment.invoiceUrl || null,
-      bankSlipUrl: payment.bankSlipUrl || null,
+      invoiceUrl: String(payment.invoiceUrl || "").trim() || null,
+      bankSlipUrl: String(payment.bankSlipUrl || "").trim() || null,
     });
   } catch (error: unknown) {
     if (error instanceof HttpError) {
