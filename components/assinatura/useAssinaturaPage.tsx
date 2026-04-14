@@ -21,6 +21,18 @@ type UsuarioSalaoRow = {
   id_salao: string | null;
 };
 
+type CobrancaAtualRow = {
+  id: string;
+  valor: number | null;
+  status: string | null;
+  forma_pagamento: BillingType | null;
+  data_expiracao: string | null;
+  invoice_url: string | null;
+  bank_slip_url: string | null;
+  asaas_payment_id: string | null;
+  txid: string | null;
+};
+
 export function useAssinaturaPage() {
   const supabase = useMemo(() => createClient(), []);
 
@@ -63,6 +75,71 @@ export function useAssinaturaPage() {
 
   const podeGerenciar = true;
 
+  const montarCheckoutDaCobranca = useCallback(
+    (cobranca: CobrancaAtualRow): CheckoutResponse => {
+      const billing =
+        cobranca.forma_pagamento === "PIX" ||
+        cobranca.forma_pagamento === "BOLETO" ||
+        cobranca.forma_pagamento === "CREDIT_CARD"
+          ? cobranca.forma_pagamento
+          : billingType;
+
+      return {
+        ok: true,
+        customerId: assinatura?.asaas_customer_id || "",
+        paymentId:
+          cobranca.asaas_payment_id || cobranca.txid || assinatura?.asaas_payment_id || "",
+        valor: Number(cobranca.valor || 0),
+        plano: planoSelecionado,
+        billingType: billing,
+        status: cobranca.status || "PENDING",
+        qrCodeBase64: null,
+        pixCopiaCola: null,
+        vencimento: cobranca.data_expiracao || "",
+        invoiceUrl: cobranca.invoice_url || null,
+        bankSlipUrl: cobranca.bank_slip_url || null,
+      };
+    },
+    [assinatura?.asaas_customer_id, assinatura?.asaas_payment_id, billingType, planoSelecionado]
+  );
+
+  const carregarCheckoutAtual = useCallback(
+    async (idSalao: string) => {
+      const { data, error } = await supabase
+        .from("assinaturas_cobrancas")
+        .select(
+          `
+            id,
+            valor,
+            status,
+            forma_pagamento,
+            data_expiracao,
+            invoice_url,
+            bank_slip_url,
+            asaas_payment_id,
+            txid
+          `
+        )
+        .eq("id_salao", idSalao)
+        .in("status", ["pendente", "pending", "PENDING"])
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle<CobrancaAtualRow>();
+
+      if (error) {
+        throw error;
+      }
+
+      if (!data) {
+        setCheckout(null);
+        return;
+      }
+
+      setCheckout(montarCheckoutDaCobranca(data));
+    },
+    [montarCheckoutDaCobranca, supabase]
+  );
+
   const carregar = useCallback(async () => {
     try {
       setLoading(true);
@@ -75,6 +152,7 @@ export function useAssinaturaPage() {
       if (!user) {
         setSalao(null);
         setAssinatura(null);
+        setCheckout(null);
         return;
       }
 
@@ -126,9 +204,17 @@ export function useAssinaturaPage() {
       }
 
       const statusNormalizado = String(assinaturaFinal?.status || "").toLowerCase();
-      setAguardandoPagamento(
-        ["pendente", "aguardando_pagamento"].includes(statusNormalizado)
+      const estaAguardando = ["pendente", "aguardando_pagamento"].includes(
+        statusNormalizado
       );
+
+      setAguardandoPagamento(estaAguardando);
+
+      if (estaAguardando) {
+        await carregarCheckoutAtual(idSalao);
+      } else {
+        setCheckout(null);
+      }
     } catch (error: unknown) {
       setErro(
         error instanceof Error ? error.message : "Erro ao carregar assinatura."
@@ -136,7 +222,7 @@ export function useAssinaturaPage() {
     } finally {
       setLoading(false);
     }
-  }, [supabase]);
+  }, [carregarCheckoutAtual, supabase]);
 
   useEffect(() => {
     void carregar();
@@ -273,9 +359,7 @@ export function useAssinaturaPage() {
     }
   }
 
-  async function verificarPagamentoAgora(
-    silencioso = false
-  ): Promise<void> {
+  async function verificarPagamentoAgora(silencioso = false): Promise<void> {
     try {
       if (!salao?.id) return;
 
@@ -297,22 +381,23 @@ export function useAssinaturaPage() {
       const assinaturaAtual = (data as AssinaturaRow | null) ?? null;
       setAssinatura(assinaturaAtual);
 
-      const statusNormalizado = String(assinaturaAtual?.status || "").toLowerCase();
+      const statusAtual = String(assinaturaAtual?.status || "").toLowerCase();
 
-      if (["ativo", "ativa", "pago"].includes(statusNormalizado)) {
+      if (["ativo", "ativa", "pago"].includes(statusAtual)) {
         setAguardandoPagamento(false);
         setCheckout(null);
         await carregar();
         return;
       }
 
-      if (
-        ["cancelada", "vencida"].includes(statusNormalizado)
-      ) {
+      if (["pendente", "aguardando_pagamento"].includes(statusAtual)) {
+        setAguardandoPagamento(true);
+        await carregarCheckoutAtual(salao.id);
+      } else if (["cancelada", "vencida"].includes(statusAtual)) {
         setAguardandoPagamento(false);
       }
 
-      if (!silencioso) {
+      if (!silencioso && !["ativo", "ativa", "pago"].includes(statusAtual)) {
         setErro("Pagamento ainda não confirmado. Tente novamente em alguns segundos.");
       }
     } catch (error: unknown) {

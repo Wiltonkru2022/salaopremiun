@@ -12,6 +12,8 @@ export default function AssinaturaCheckoutBox({
   checkout,
   copiarPix,
 }: Props) {
+  const linkPrincipal = checkout?.bankSlipUrl || checkout?.invoiceUrl || null;
+
   return (
     <section className="rounded-[30px] border border-zinc-200 bg-white p-6 shadow-sm">
       <h2 className="text-3xl font-bold tracking-tight text-zinc-950">
@@ -76,7 +78,9 @@ export default function AssinaturaCheckoutBox({
 
               <button
                 type="button"
-                onClick={copiarPix}
+                onClick={() => {
+                  void copiarPix();
+                }}
                 className="mt-4 rounded-2xl bg-violet-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-violet-600"
               >
                 Copiar PIX
@@ -84,29 +88,36 @@ export default function AssinaturaCheckoutBox({
             </div>
           ) : null}
 
-          <div className="flex flex-wrap gap-3">
-            {checkout.bankSlipUrl ? (
-              <a
-                href={checkout.bankSlipUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex rounded-2xl border border-zinc-200 bg-white px-4 py-2 text-sm font-semibold text-zinc-900 transition hover:bg-zinc-50"
-              >
-                Abrir boleto
-              </a>
-            ) : null}
+          {linkPrincipal ? (
+            <div className="flex flex-wrap gap-3">
+              {checkout.bankSlipUrl ? (
+                <a
+                  href={checkout.bankSlipUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex rounded-2xl border border-zinc-200 bg-white px-4 py-2 text-sm font-semibold text-zinc-900 transition hover:bg-zinc-50"
+                >
+                  Abrir boleto
+                </a>
+              ) : null}
 
-            {checkout.invoiceUrl ? (
-              <a
-                href={checkout.invoiceUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex rounded-2xl border border-zinc-200 bg-white px-4 py-2 text-sm font-semibold text-zinc-900 transition hover:bg-zinc-50"
-              >
-                Abrir fatura
-              </a>
-            ) : null}
-          </div>
+              {checkout.invoiceUrl ? (
+                <a
+                  href={checkout.invoiceUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex rounded-2xl border border-zinc-200 bg-white px-4 py-2 text-sm font-semibold text-zinc-900 transition hover:bg-zinc-50"
+                >
+                  Abrir fatura
+                </a>
+              ) : null}
+            </div>
+          ) : (
+            <div className="rounded-[22px] border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+              A cobrança foi criada, mas o link do pagamento ainda não ficou disponível nesta tela.
+              Você pode abrir pelo histórico de pagamentos.
+            </div>
+          )}
         </div>
       )}
     </section>
