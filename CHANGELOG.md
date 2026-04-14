@@ -6,7 +6,8 @@ Todas as mudanças importantes do projeto serão documentadas aqui.
 
 ### Corrigido
 
-- Auditoria de dependências adicionada aos scripts e ao CI.
+- Auditoria de dependências adicionada aos scripts e ao CI como checagem informativa.
+- Dependabot configurado para monitorar dependências semanalmente.
 - Remoção de helper legado de sessão do profissional via `localStorage`.
 - Correções de typecheck, lint e build.
 - Proteção server-side para APIs administrativas de usuários.
