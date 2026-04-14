@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { SearchableOption } from "@/components/ui/SearchableSelect";
+import type { ComandaResumo } from "./page-types";
 import type {
   Agendamento,
   Bloqueio,
@@ -15,13 +16,6 @@ import {
   buildWhatsappConfirmacaoText,
   normalizeTimeString,
 } from "@/lib/utils/agenda";
-
-export type ComandaResumo = {
-  id: string;
-  numero: number;
-  status: string;
-  id_cliente?: string | null;
-};
 
 export type AgendaModalMode = "agendamento" | "bloqueio";
 

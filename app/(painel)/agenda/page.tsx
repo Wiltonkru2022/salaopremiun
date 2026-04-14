@@ -8,7 +8,16 @@ import AgendaToolbar from "@/components/agenda/AgendaToolbar";
 import AgendaGrid from "@/components/agenda/AgendaGrid";
 import AgendaModal from "@/components/agenda/AgendaModal";
 import ProfissionaisBar from "@/components/agenda/ProfissionaisBar";
+import AgendaNoticeDialog from "@/components/agenda/AgendaNoticeDialog";
+import AgendaConfirmDialog from "@/components/agenda/AgendaConfirmDialog";
+import AgendaReasonDialog from "@/components/agenda/AgendaReasonDialog";
+import type { ComandaResumo } from "@/components/agenda/page-types";
+import { useAgendaFeedback } from "@/components/agenda/useAgendaFeedback";
 import { cancelarAgendamentoComComanda } from "@/lib/agenda/cancelarAgendamentoComComanda";
+import {
+  buscarComandasAbertasDoClienteAgenda,
+  criarNovaComandaAgenda,
+} from "@/lib/agenda/comandasAgenda";
 import { montarPayloadSincronizacao } from "@/lib/agenda/montarPayloadSincronizacao";
 import { sincronizarAgendamentoComComanda } from "@/lib/agenda/sincronizarAgendamentoComComanda";
 import { ensureDiaFuncionamento, getProfessionalAutoBloqueios, validateAgendaTimeRange } from "@/lib/agenda/validacoesAgenda";
@@ -27,38 +36,6 @@ import {
   ViewMode,
 } from "@/types/agenda";
 import { normalizeTimeString, overlaps, sanitizeDiasFuncionamento } from "@/lib/utils/agenda";
-
-type ComandaResumo = {
-  id: string;
-  numero: number;
-  status: string;
-  id_cliente?: string | null;
-};
-
-type AvisoModalState = {
-  open: boolean;
-  title: string;
-  message: string;
-  tone?: "default" | "danger" | "warning";
-  redirectTo?: string | null;
-};
-
-type ConfirmModalState = {
-  open: boolean;
-  title: string;
-  message: string;
-  confirmLabel: string;
-  tone?: "default" | "danger" | "warning";
-  onConfirm?: (() => Promise<void>) | null;
-};
-
-type MotivoModalState = {
-  open: boolean;
-  title: string;
-  message: string;
-  value: string;
-  onConfirm?: ((value: string) => Promise<void>) | null;
-};
 
 export default function AgendaPage() {
   const supabase = createClient();
@@ -92,148 +69,24 @@ export default function AgendaPage() {
 
   const [assinaturaBloqueada, setAssinaturaBloqueada] = useState(false);
 
-  const [avisoModal, setAvisoModal] = useState<AvisoModalState>({
-    open: false,
-    title: "",
-    message: "",
-    tone: "default",
-    redirectTo: null,
+  const {
+    avisoModal,
+    confirmModal,
+    motivoModal,
+    confirmLoading,
+    motivoLoading,
+    abrirAviso,
+    fecharAviso,
+    abrirConfirmacao,
+    fecharConfirmacao,
+    executarConfirmacao,
+    abrirMotivoExclusao,
+    fecharMotivo,
+    executarMotivo,
+    setMotivoValor,
+  } = useAgendaFeedback({
+    onRedirect: (path) => router.push(path),
   });
-
-  const [confirmModal, setConfirmModal] = useState<ConfirmModalState>({
-    open: false,
-    title: "",
-    message: "",
-    confirmLabel: "Confirmar",
-    tone: "default",
-    onConfirm: null,
-  });
-
-  const [motivoModal, setMotivoModal] = useState<MotivoModalState>({
-    open: false,
-    title: "",
-    message: "",
-    value: "",
-    onConfirm: null,
-  });
-
-  const [confirmLoading, setConfirmLoading] = useState(false);
-  const [motivoLoading, setMotivoLoading] = useState(false);
-
-  function abrirAviso(
-    title: string,
-    message: string,
-    tone: "default" | "danger" | "warning" = "default",
-    redirectTo?: string | null
-  ) {
-    setAvisoModal({
-      open: true,
-      title,
-      message,
-      tone,
-      redirectTo: redirectTo || null,
-    });
-  }
-
-  function fecharAviso() {
-    const redirectTo = avisoModal.redirectTo;
-
-    setAvisoModal({
-      open: false,
-      title: "",
-      message: "",
-      tone: "default",
-      redirectTo: null,
-    });
-
-    if (redirectTo) {
-      router.push(redirectTo);
-    }
-  }
-
-  function abrirConfirmacao(params: {
-    title: string;
-    message: string;
-    confirmLabel?: string;
-    tone?: "default" | "danger" | "warning";
-    onConfirm: () => Promise<void>;
-  }) {
-    setConfirmModal({
-      open: true,
-      title: params.title,
-      message: params.message,
-      confirmLabel: params.confirmLabel || "Confirmar",
-      tone: params.tone || "default",
-      onConfirm: params.onConfirm,
-    });
-  }
-
-  async function executarConfirmacao() {
-    if (!confirmModal.onConfirm) return;
-
-    try {
-      setConfirmLoading(true);
-      await confirmModal.onConfirm();
-
-      setConfirmModal({
-        open: false,
-        title: "",
-        message: "",
-        confirmLabel: "Confirmar",
-        tone: "default",
-        onConfirm: null,
-      });
-    } catch (error) {
-      console.error(error);
-      abrirAviso(
-        "Não foi possível concluir",
-        error instanceof Error ? error.message : "Ocorreu um erro inesperado.",
-        "danger"
-      );
-    } finally {
-      setConfirmLoading(false);
-    }
-  }
-
-  function abrirMotivoExclusao(params: {
-    title: string;
-    message: string;
-    onConfirm: (value: string) => Promise<void>;
-  }) {
-    setMotivoModal({
-      open: true,
-      title: params.title,
-      message: params.message,
-      value: "",
-      onConfirm: params.onConfirm,
-    });
-  }
-
-  async function executarMotivo() {
-    if (!motivoModal.onConfirm) return;
-
-    try {
-      setMotivoLoading(true);
-      await motivoModal.onConfirm(motivoModal.value);
-
-      setMotivoModal({
-        open: false,
-        title: "",
-        message: "",
-        value: "",
-        onConfirm: null,
-      });
-    } catch (error) {
-      console.error(error);
-      abrirAviso(
-        "Não foi possível concluir",
-        error instanceof Error ? error.message : "Ocorreu um erro inesperado.",
-        "danger"
-      );
-    } finally {
-      setMotivoLoading(false);
-    }
-  }
 
   function bloquearSeAssinaturaInvalida() {
     if (!assinaturaBloqueada) return false;
@@ -405,23 +258,14 @@ export default function AgendaPage() {
     }
   }, [idSalao, selectedProfissionalId, loadAgenda]);
 
-  async function buscarComandasAbertasDoCliente(clienteId: string): Promise<ComandaResumo[]> {
-    if (!idSalao || !clienteId) return [];
-
-    const { data, error } = await supabase
-      .from("comandas")
-      .select("id, numero, status, id_cliente")
-      .eq("id_salao", idSalao)
-      .eq("id_cliente", clienteId)
-      .in("status", ["aberta", "em_atendimento", "aguardando_pagamento"])
-      .order("aberta_em", { ascending: false });
-
-    if (error) {
-      console.error("Erro ao buscar comandas abertas:", error);
-      throw new Error("Erro ao buscar comandas abertas.");
-    }
-
-    return (data as ComandaResumo[]) || [];
+  async function buscarComandasAbertasDoCliente(
+    clienteId: string
+  ): Promise<ComandaResumo[]> {
+    return buscarComandasAbertasDoClienteAgenda({
+      supabase,
+      idSalao,
+      clienteId,
+    });
   }
 
   async function criarNovaComanda(clienteId: string): Promise<ComandaResumo> {
@@ -429,48 +273,11 @@ export default function AgendaPage() {
       throw new Error("Assinatura bloqueada.");
     }
 
-    if (!idSalao) {
-      throw new Error("Salão não identificado.");
-    }
-
-    const { data: ultimaRows, error: ultimaError } = await supabase
-      .from("comandas")
-      .select("numero")
-      .eq("id_salao", idSalao)
-      .order("numero", { ascending: false })
-      .limit(1);
-
-    if (ultimaError) {
-      console.error("Erro ao buscar último número da comanda:", ultimaError);
-      throw new Error("Erro ao gerar número da comanda.");
-    }
-
-    const ultimoNumero = ultimaRows?.[0]?.numero || 0;
-
-    const { data, error } = await supabase
-      .from("comandas")
-      .insert({
-        id_salao: idSalao,
-        numero: ultimoNumero + 1,
-        id_cliente: clienteId,
-        status: "aberta",
-        origem: "agenda",
-      })
-      .select("id, numero, status, id_cliente")
-      .limit(1);
-
-    if (error) {
-      console.error("Erro ao criar comanda:", error);
-      throw new Error("Erro ao criar nova comanda.");
-    }
-
-    const nova = data?.[0] as ComandaResumo | undefined;
-
-    if (!nova) {
-      throw new Error("Não foi possível criar a comanda.");
-    }
-
-    return nova;
+    return criarNovaComandaAgenda({
+      supabase,
+      idSalao,
+      clienteId,
+    });
   }
 
   function openCreateModal(date: string, time: string) {
@@ -1047,20 +854,6 @@ export default function AgendaPage() {
   const configInfo = config as ConfigSalao & { dias_funcionamento?: string[] | null };
   const diasFuncionamento = sanitizeDiasFuncionamento(configInfo.dias_funcionamento ?? []);
 
-  const toneClasses =
-    avisoModal.tone === "danger"
-      ? "border-red-200 bg-red-50 text-red-700"
-      : avisoModal.tone === "warning"
-      ? "border-amber-200 bg-amber-50 text-amber-800"
-      : "border-zinc-200 bg-zinc-50 text-zinc-700";
-
-  const confirmToneButton =
-    confirmModal.tone === "danger"
-      ? "bg-red-600 hover:bg-red-500"
-      : confirmModal.tone === "warning"
-      ? "bg-amber-600 hover:bg-amber-500"
-      : "bg-zinc-950 hover:bg-zinc-800";
-
   return (
     <>
       <div
@@ -1180,114 +973,20 @@ export default function AgendaPage() {
           onCriarComanda={criarNovaComanda}
         />
       </div>
-
-      {avisoModal.open ? (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-md rounded-[28px] bg-white p-6 shadow-2xl">
-            <div className={`rounded-2xl border px-4 py-4 ${toneClasses}`}>
-              <div className="text-lg font-bold">{avisoModal.title}</div>
-              <div className="mt-2 text-sm leading-6">{avisoModal.message}</div>
-            </div>
-
-            <div className="mt-5 flex justify-end">
-              <button
-                type="button"
-                onClick={fecharAviso}
-                className="rounded-2xl bg-zinc-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-zinc-800"
-              >
-                Entendi
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
-
-      {confirmModal.open ? (
-        <div className="fixed inset-0 z-[210] flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-md rounded-[28px] bg-white p-6 shadow-2xl">
-            <div className="text-lg font-bold text-zinc-950">{confirmModal.title}</div>
-            <div className="mt-2 text-sm leading-6 text-zinc-600">{confirmModal.message}</div>
-
-            <div className="mt-6 flex justify-end gap-3">
-              <button
-                type="button"
-                disabled={confirmLoading}
-                onClick={() =>
-                  setConfirmModal({
-                    open: false,
-                    title: "",
-                    message: "",
-                    confirmLabel: "Confirmar",
-                    tone: "default",
-                    onConfirm: null,
-                  })
-                }
-                className="rounded-2xl border border-zinc-200 px-5 py-3 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-60"
-              >
-                Fechar
-              </button>
-
-              <button
-                type="button"
-                disabled={confirmLoading}
-                onClick={executarConfirmacao}
-                className={`rounded-2xl px-5 py-3 text-sm font-semibold text-white transition disabled:opacity-60 ${confirmToneButton}`}
-              >
-                {confirmLoading ? "Processando..." : confirmModal.confirmLabel}
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
-
-      {motivoModal.open ? (
-        <div className="fixed inset-0 z-[220] flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-md rounded-[28px] bg-white p-6 shadow-2xl">
-            <div className="text-lg font-bold text-zinc-950">{motivoModal.title}</div>
-            <div className="mt-2 text-sm leading-6 text-zinc-600">{motivoModal.message}</div>
-
-            <textarea
-              value={motivoModal.value}
-              onChange={(e) =>
-                setMotivoModal((prev) => ({
-                  ...prev,
-                  value: e.target.value,
-                }))
-              }
-              placeholder="Digite o motivo..."
-              className="mt-4 min-h-[120px] w-full rounded-2xl border border-zinc-200 bg-zinc-50 p-4 text-sm text-zinc-700 outline-none"
-            />
-
-            <div className="mt-6 flex justify-end gap-3">
-              <button
-                type="button"
-                disabled={motivoLoading}
-                onClick={() =>
-                  setMotivoModal({
-                    open: false,
-                    title: "",
-                    message: "",
-                    value: "",
-                    onConfirm: null,
-                  })
-                }
-                className="rounded-2xl border border-zinc-200 px-5 py-3 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-60"
-              >
-                Fechar
-              </button>
-
-              <button
-                type="button"
-                disabled={motivoLoading}
-                onClick={executarMotivo}
-                className="rounded-2xl bg-zinc-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-zinc-800 disabled:opacity-60"
-              >
-                {motivoLoading ? "Salvando..." : "Confirmar exclusão"}
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
+      <AgendaNoticeDialog modal={avisoModal} onClose={fecharAviso} />
+      <AgendaConfirmDialog
+        modal={confirmModal}
+        loading={confirmLoading}
+        onClose={fecharConfirmacao}
+        onConfirm={executarConfirmacao}
+      />
+      <AgendaReasonDialog
+        modal={motivoModal}
+        loading={motivoLoading}
+        onClose={fecharMotivo}
+        onChangeValue={setMotivoValor}
+        onConfirm={executarMotivo}
+      />
     </>
   );
 }

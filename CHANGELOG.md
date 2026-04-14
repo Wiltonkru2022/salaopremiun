@@ -10,6 +10,7 @@ Todas as mudanças importantes do projeto serão documentadas aqui.
 - Dependabot configurado para monitorar dependências semanalmente.
 - Dependabot ajustado para não abrir major automático de TypeScript após falha no typecheck.
 - Helpers, tipos e componentes auxiliares separados das páginas grandes de caixa, configurações e vendas.
+- Fluxos de feedback e helpers de comanda extraídos da página de agenda.
 - Validação de segredos reforçada em webhook Asaas e cron de renovação.
 - Remoção de helper legado de sessão do profissional via `localStorage`.
 - Correções de typecheck, lint e build.

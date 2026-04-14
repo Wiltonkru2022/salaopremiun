@@ -1,6 +1,6 @@
 "use client";
 
-import type { ComandaResumo } from "./useAgendaModal";
+import type { ComandaResumo } from "./page-types";
 
 type Props = {
   open: boolean;
