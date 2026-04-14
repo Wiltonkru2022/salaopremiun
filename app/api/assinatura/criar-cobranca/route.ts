@@ -148,7 +148,7 @@ function getAsaasHeaders() {
 }
 
 function getAsaasBaseUrl() {
-  return process.env.ASAAS_BASE_URL || "https://sandbox.asaas.com/api/v3";
+  return process.env.ASAAS_BASE_URL || "https://api.asaas.com/api/v3";
 }
 
 function onlyNumbers(value?: string | null) {
