@@ -30,257 +30,31 @@ import {
   CheckCircle2,
   Lock,
 } from "lucide-react";
-
-type SalaoForm = {
-  id: string;
-  nome: string;
-  responsavel: string;
-  email: string;
-  telefone: string;
-  cpf_cnpj: string;
-  endereco: string;
-  numero: string;
-  bairro: string;
-  cidade: string;
-  estado: string;
-  cep: string;
-  logo_url: string;
-  plano?: string | null;
-  status?: string | null;
-};
-
-type ConfigSalaoForm = {
-  id: string;
-  id_salao: string;
-  hora_abertura: string;
-  hora_fechamento: string;
-  intervalo_minutos: number;
-  dias_funcionamento: string[];
-  taxa_maquininha_credito: number;
-  taxa_maquininha_debito: number;
-  taxa_maquininha_pix: number;
-  repassa_taxa_cliente: boolean;
-  desconta_taxa_profissional: boolean;
-  permitir_reabrir_venda: boolean;
-  exigir_cliente_na_venda: boolean;
-  cor_primaria: string;
-  modo_compacto: boolean;
-};
-
-type UsuarioSistema = {
-  id: string;
-  id_salao: string;
-  nome: string;
-  email: string;
-  nivel: UserNivel | string;
-  status: string;
-  auth_user_id?: string | null;
-  created_at?: string | null;
-};
-
-
-type UsuarioForm = {
-  id: string;
-  nome: string;
-  email: string;
-  nivel: UserNivel;
-  senha: string;
-  status: string;
-};
-
-const DIAS_SEMANA = [
-  { value: "segunda", label: "Segunda" },
-  { value: "terca", label: "Terça" },
-  { value: "quarta", label: "Quarta" },
-  { value: "quinta", label: "Quinta" },
-  { value: "sexta", label: "Sexta" },
-  { value: "sabado", label: "Sábado" },
-  { value: "domingo", label: "Domingo" },
-];
-
-const NIVEIS_USUARIO: { value: UserNivel; label: string }[] = [
-  { value: "admin", label: "Admin" },
-  { value: "gerente", label: "Gerente" },
-  { value: "recepcao", label: "Recepção" },
-  { value: "profissional", label: "Profissional" },
-];
-
-const EMPTY_SALAO: SalaoForm = {
-  id: "",
-  nome: "",
-  responsavel: "",
-  email: "",
-  telefone: "",
-  cpf_cnpj: "",
-  endereco: "",
-  numero: "",
-  bairro: "",
-  cidade: "",
-  estado: "",
-  cep: "",
-  logo_url: "",
-  plano: "",
-  status: "",
-};
-
-const EMPTY_CONFIG: ConfigSalaoForm = {
-  id: "",
-  id_salao: "",
-  hora_abertura: "08:00",
-  hora_fechamento: "19:00",
-  intervalo_minutos: 15,
-  dias_funcionamento: ["segunda", "terca", "quarta", "quinta", "sexta", "sabado"],
-  taxa_maquininha_credito: 0,
-  taxa_maquininha_debito: 0,
-  taxa_maquininha_pix: 0,
-  repassa_taxa_cliente: false,
-  desconta_taxa_profissional: false,
-  permitir_reabrir_venda: true,
-  exigir_cliente_na_venda: false,
-  cor_primaria: "#18181b",
-  modo_compacto: false,
-};
-
-const EMPTY_USUARIO_FORM: UsuarioForm = {
-  id: "",
-  nome: "",
-  email: "",
-  nivel: "recepcao",
-  senha: "",
-  status: "ativo",
-};
-
-function parseNumber(value: string | number | null | undefined) {
-  const n = Number(value || 0);
-  return Number.isFinite(n) ? n : 0;
-}
-
-function normalizeTime(value?: string | null) {
-  if (!value) return "";
-  return String(value).slice(0, 5);
-}
-
-function SectionCard({
-  icon,
-  title,
-  description,
-  children,
-}: {
-  icon: React.ReactNode;
-  title: string;
-  description: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <section className="rounded-[28px] border border-zinc-200 bg-white p-6 shadow-sm">
-      <div className="mb-5 flex items-start gap-4">
-        <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-3 text-zinc-700">
-          {icon}
-        </div>
-
-        <div>
-          <h2 className="text-lg font-bold text-zinc-900">{title}</h2>
-          <p className="mt-1 text-sm text-zinc-500">{description}</p>
-        </div>
-      </div>
-
-      {children}
-    </section>
-  );
-}
-
-function Field({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div>
-      <label className="mb-2 block text-sm font-semibold text-zinc-700">
-        {label}
-      </label>
-      {children}
-    </div>
-  );
-}
-
-function TextInput(props: React.InputHTMLAttributes<HTMLInputElement>) {
-  return (
-    <input
-      {...props}
-      className={`w-full rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-zinc-900 ${
-        props.className || ""
-      }`}
-    />
-  );
-}
-
-function SelectInput(props: React.SelectHTMLAttributes<HTMLSelectElement>) {
-  return (
-    <select
-      {...props}
-      className={`w-full rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-zinc-900 ${
-        props.className || ""
-      }`}
-    />
-  );
-}
-
-function Toggle({
-  checked,
-  onChange,
-  label,
-  description,
-}: {
-  checked: boolean;
-  onChange: (checked: boolean) => void;
-  label: string;
-  description?: string;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={() => onChange(!checked)}
-      className="flex w-full items-start justify-between gap-4 rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-4 text-left transition hover:bg-zinc-100"
-    >
-      <div>
-        <div className="text-sm font-semibold text-zinc-900">{label}</div>
-        {description ? (
-          <div className="mt-1 text-xs text-zinc-500">{description}</div>
-        ) : null}
-      </div>
-
-      <div
-        className={`relative mt-0.5 h-7 w-12 rounded-full transition ${
-          checked ? "bg-zinc-900" : "bg-zinc-300"
-        }`}
-      >
-        <div
-          className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow transition ${
-            checked ? "left-6" : "left-1"
-          }`}
-        />
-      </div>
-    </button>
-  );
-}
-
-function getNivelBadgeClass(nivel: string) {
-  switch (nivel) {
-    case "admin":
-      return "border-zinc-900 bg-zinc-900 text-white";
-    case "gerente":
-      return "border-sky-200 bg-sky-50 text-sky-700";
-    case "recepcao":
-      return "border-amber-200 bg-amber-50 text-amber-700";
-    case "profissional":
-      return "border-emerald-200 bg-emerald-50 text-emerald-700";
-    default:
-      return "border-zinc-200 bg-zinc-100 text-zinc-700";
-  }
-}
+import {
+  DIAS_SEMANA,
+  EMPTY_CONFIG,
+  EMPTY_SALAO,
+  EMPTY_USUARIO_FORM,
+  NIVEIS_USUARIO,
+} from "@/components/configuracoes/constants";
+import type {
+  ConfigSalaoForm,
+  SalaoForm,
+  UsuarioForm,
+  UsuarioSistema,
+} from "@/components/configuracoes/types";
+import {
+  getNivelBadgeClass,
+  normalizeTime,
+  parseNumber,
+} from "@/components/configuracoes/utils";
+import {
+  Field,
+  SectionCard,
+  SelectInput,
+  TextInput,
+  Toggle,
+} from "@/components/configuracoes/ui";
 
 export default function ConfiguracoesPage() {
   const supabase = createClient();

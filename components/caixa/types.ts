@@ -107,6 +107,32 @@ export type ComandaPagamento = {
 
 export type AbaCaixa = "fila" | "fechadas" | "canceladas";
 
+export type ConfigCaixaSalao = {
+  id_salao?: string;
+  exigir_cliente_na_venda?: boolean | null;
+  repassa_taxa_cliente?: boolean | null;
+
+  taxa_maquininha_credito?: number | null;
+  taxa_maquininha_debito?: number | null;
+  taxa_maquininha_pix?: number | null;
+  taxa_maquininha_transferencia?: number | null;
+  taxa_maquininha_boleto?: number | null;
+  taxa_maquininha_outro?: number | null;
+
+  taxa_credito_1x?: number | null;
+  taxa_credito_2x?: number | null;
+  taxa_credito_3x?: number | null;
+  taxa_credito_4x?: number | null;
+  taxa_credito_5x?: number | null;
+  taxa_credito_6x?: number | null;
+  taxa_credito_7x?: number | null;
+  taxa_credito_8x?: number | null;
+  taxa_credito_9x?: number | null;
+  taxa_credito_10x?: number | null;
+  taxa_credito_11x?: number | null;
+  taxa_credito_12x?: number | null;
+};
+
 export type ProfissionalResumo = {
   id: string;
   nome: string;

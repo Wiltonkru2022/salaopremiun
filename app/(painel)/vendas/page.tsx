@@ -17,154 +17,22 @@ import {
   Users,
   CreditCard,
 } from "lucide-react";
-
-type ClienteJoin = {
-  nome?: string | null;
-};
-
-type SalaoInfo = {
-  id: string;
-  nome?: string | null;
-  cpf_cnpj?: string | null;
-  telefone?: string | null;
-  endereco?: string | null;
-};
-
-type ComandaVenda = {
-  id: string;
-  numero: number;
-  status: string;
-  subtotal?: number | null;
-  desconto?: number | null;
-  acrescimo?: number | null;
-  total?: number | null;
-  aberta_em?: string | null;
-  fechada_em?: string | null;
-  cancelada_em?: string | null;
-  id_cliente?: string | null;
-  clientes?: ClienteJoin | ClienteJoin[] | null;
-};
-
-type VendaBuscaRow = {
-  id: string;
-  id_salao: string;
-  numero: number;
-  status: string;
-  id_cliente?: string | null;
-  subtotal?: number | null;
-  desconto?: number | null;
-  acrescimo?: number | null;
-  total?: number | null;
-  aberta_em?: string | null;
-  fechada_em?: string | null;
-  cancelada_em?: string | null;
-  cliente_nome?: string | null;
-  profissionais_nomes?: string | null;
-  itens_descricoes?: string | null;
-  formas_pagamento?: string | null;
-};
-
-type Pagamento = {
-  id: string;
-  forma_pagamento: string;
-  valor: number;
-  parcelas?: number | null;
-  observacoes?: string | null;
-};
-
-type ItemVenda = {
-  id: string;
-  tipo_item: string;
-  descricao: string;
-  quantidade: number;
-  valor_unitario: number;
-  valor_total: number;
-};
-
-type VendaDetalhe = {
-  comanda?: ComandaVenda | null;
-  itens: ItemVenda[];
-  pagamentos: Pagamento[];
-  agendamentos: any[];
-  comissoes: any[];
-};
-
-function toArray<T>(value: T | T[] | null | undefined): T[] {
-  if (!value) return [];
-  return Array.isArray(value) ? value : [value];
-}
-
-function getJoinedName(value: any, fallback = "-") {
-  const first = toArray(value)[0];
-  return first?.nome || fallback;
-}
-
-function formatCurrency(value?: number | null) {
-  return Number(value || 0).toLocaleString("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-  });
-}
-
-function formatDateTime(value?: string | null) {
-  if (!value) return "-";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleString("pt-BR");
-}
-
-function formatDateInput(date: Date) {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, "0");
-  const d = String(date.getDate()).padStart(2, "0");
-  return `${y}-${m}-${d}`;
-}
-
-function getStatusBadgeClass(status: string) {
-  if (status === "fechada") {
-    return "bg-emerald-100 text-emerald-700 border border-emerald-200";
-  }
-  if (status === "cancelada") {
-    return "bg-rose-100 text-rose-700 border border-rose-200";
-  }
-  if (status === "aguardando_pagamento") {
-    return "bg-amber-100 text-amber-700 border border-amber-200";
-  }
-  return "bg-zinc-100 text-zinc-700 border border-zinc-200";
-}
-
-function ResumoRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex items-center justify-between rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3">
-      <span className="text-sm text-zinc-500">{label}</span>
-      <span className="text-sm font-semibold text-zinc-900">{value}</span>
-    </div>
-  );
-}
-
-function KpiCard({
-  icon,
-  label,
-  value,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: string;
-}) {
-  return (
-    <div className="rounded-[24px] border border-zinc-200 bg-white p-5 shadow-sm">
-      <div className="flex items-center gap-3">
-        <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-3 text-zinc-700">
-          {icon}
-        </div>
-        <div>
-          <div className="text-sm text-zinc-500">{label}</div>
-          <div className="mt-1 text-2xl font-bold text-zinc-900">{value}</div>
-        </div>
-      </div>
-    </div>
-  );
-}
+import type {
+  ComandaVenda,
+  ItemVenda,
+  Pagamento,
+  SalaoInfo,
+  VendaBuscaRow,
+  VendaDetalhe,
+} from "@/components/vendas/types";
+import {
+  formatCurrency,
+  formatDateInput,
+  formatDateTime,
+  getJoinedName,
+  getStatusBadgeClass,
+} from "@/components/vendas/utils";
+import { KpiCard, ResumoRow } from "@/components/vendas/ui";
 
 export default function VendasPage() {
   const supabase = createClient();
