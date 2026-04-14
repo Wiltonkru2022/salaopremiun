@@ -164,18 +164,27 @@ async function handleCron(req: Request) {
         continue;
       }
 
-      const formaPagamento = String(
-        assinatura.forma_pagamento_atual || "PIX"
-      ).toUpperCase();
+const formaPagamento = String(
+  assinatura.forma_pagamento_atual || "PIX"
+).toUpperCase();
 
-      if (!["PIX", "BOLETO", "CREDIT_CARD"].includes(formaPagamento)) {
-        resultados.push({
-          id_salao: assinatura.id_salao,
-          ok: false,
-          motivo: "Forma de pagamento inválida.",
-        });
-        continue;
-      }
+if (formaPagamento === "CREDIT_CARD") {
+  resultados.push({
+    id_salao: assinatura.id_salao,
+    ok: false,
+    motivo: "Renovação automática ainda não suportada para cartão.",
+  });
+  continue;
+}
+
+if (!["PIX", "BOLETO"].includes(formaPagamento)) {
+  resultados.push({
+    id_salao: assinatura.id_salao,
+    ok: false,
+    motivo: "Forma de pagamento inválida.",
+  });
+  continue;
+}
 
       const { data: cobrancaExistente } = await supabaseAdmin
         .from("assinaturas_cobrancas")
