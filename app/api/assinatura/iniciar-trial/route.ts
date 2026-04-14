@@ -115,7 +115,7 @@ export async function POST(req: Request) {
 
     const { data: salao, error: salaoError } = await supabaseAdmin
       .from("saloes")
-      .select("id, plano")
+      .select("id, plano, trial_ativo, trial_inicio_em, trial_fim_em")
       .eq("id", idSalao)
       .maybeSingle();
 
@@ -183,7 +183,8 @@ export async function POST(req: Request) {
           trial_ativo,
           trial_inicio_em,
           trial_fim_em,
-          vencimento_em
+          vencimento_em,
+          renovacao_automatica
         `)
         .eq("id_salao", idSalao)
         .maybeSingle();
@@ -199,9 +200,7 @@ export async function POST(req: Request) {
       const statusAtual = String(assinaturaExistente.status || "").toLowerCase();
 
       if (
-        ["teste_gratis", "trial", "ativo", "ativa", "pago"].includes(
-          statusAtual
-        )
+        ["teste_gratis", "trial", "ativo", "ativa", "pago"].includes(statusAtual)
       ) {
         return NextResponse.json({
           ok: true,
@@ -230,6 +229,8 @@ export async function POST(req: Request) {
           id_cobranca_atual: null,
           referencia_atual: null,
           asaas_payment_id: null,
+          renovacao_automatica:
+            assinaturaExistente.renovacao_automatica ?? false,
         })
         .eq("id", assinaturaExistente.id);
 
@@ -260,6 +261,7 @@ export async function POST(req: Request) {
           id_cobranca_atual: null,
           gateway: null,
           referencia_atual: null,
+          renovacao_automatica: false,
         });
 
       if (insertError) {

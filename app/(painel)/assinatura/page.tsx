@@ -6,7 +6,6 @@ import AssinaturaHistoricoModal from "@/components/assinatura/AssinaturaHistoric
 import AssinaturaPlanoAtual from "@/components/assinatura/AssinaturaPlanoAtual";
 import AssinaturaPlanosPagamento from "@/components/assinatura/AssinaturaPlanoPagamento";
 import AssinaturaStatusCard from "@/components/assinatura/AssinaturaStatusCard";
-import { PLANOS_INFO } from "@/components/assinatura/types";
 import { useAssinaturaPage } from "@/components/assinatura/useAssinaturaPage";
 
 export default function AssinaturaPage() {
@@ -15,7 +14,6 @@ export default function AssinaturaPage() {
     gerandoCobranca,
     verificandoAgora,
     iniciandoTrial,
-    salvandoRenovacao,
     erro,
     salao,
     assinatura,
@@ -34,7 +32,6 @@ export default function AssinaturaPage() {
     criarCobrancaAssinatura,
     copiarPix,
     iniciarTrial,
-    toggleRenovacaoAutomatica,
     planoAtualNome,
     valorAtual,
     resumoAssinatura,
@@ -47,6 +44,9 @@ export default function AssinaturaPage() {
     fecharHistoricoModal,
     carregandoHistorico,
     historicoCobrancas,
+    renovacaoAutomatica,
+    salvandoRenovacaoAutomatica,
+    atualizarRenovacaoAutomatica,
     tipoMudancaPlano,
   } = useAssinaturaPage();
 
@@ -79,25 +79,21 @@ export default function AssinaturaPage() {
   const mostrarCardAssinaturaAtiva =
     !mostrarSecaoRenovacao && (trialAtivo || assinaturaAtiva);
 
-  const planoSelecionadoNome =
-    PLANOS_INFO[planoSelecionado]?.nome || planoSelecionado || "-";
-
   return (
     <div className="space-y-6">
       <AssinaturaHero
-        renovacaoAutomatica={Boolean(assinatura?.renovacao_automatica)}
-        salvandoRenovacao={salvandoRenovacao}
-        onToggleRenovacaoAutomatica={toggleRenovacaoAutomatica}
-        tipoMudancaPlano={tipoMudancaPlano}
-        bloqueioTotal={resumoAssinatura.bloqueioTotal}
-        vencida={resumoAssinatura.vencida}
-        vencendoLogo={resumoAssinatura.vencendoLogo}
-        diasRestantes={resumoAssinatura.diasRestantes}
+        assinaturaStatus={assinatura?.status}
         planoAtualNome={planoAtualNome}
-        planoSelecionadoNome={planoSelecionadoNome}
+        bloqueioTotal={resumoAssinatura.bloqueioTotal}
+        vencendoLogo={resumoAssinatura.vencendoLogo}
+        renovacaoAutomatica={renovacaoAutomatica}
+        onToggleRenovacaoAutomatica={atualizarRenovacaoAutomatica}
+        salvandoRenovacaoAutomatica={salvandoRenovacaoAutomatica}
+        podeGerenciar={podeGerenciar}
+        tipoMudancaPlano={tipoMudancaPlano}
       />
 
-      <div className="flex justify-end">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
         <button
           type="button"
           onClick={abrirHistoricoModal}

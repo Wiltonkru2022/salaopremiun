@@ -92,10 +92,14 @@ async function validarSalaoDoUsuario(idSalao: string) {
   }
 }
 
+type BodyInput = {
+  idSalao: string;
+};
+
 export async function POST(req: Request) {
   try {
     const supabaseAdmin = getSupabaseAdmin();
-    const body = await req.json();
+    const body = (await req.json()) as BodyInput;
 
     const idSalao = String(body?.idSalao || "").trim();
 
@@ -113,6 +117,7 @@ export async function POST(req: Request) {
       .select(`
         id,
         referencia,
+        descricao,
         valor,
         status,
         forma_pagamento,
@@ -122,11 +127,9 @@ export async function POST(req: Request) {
         invoice_url,
         bank_slip_url,
         created_at,
-        descricao,
-        plano_origem,
-        plano_destino,
-        tipo_movimento,
-        gerada_automaticamente
+        updated_at,
+        asaas_payment_id,
+        deleted
       `)
       .eq("id_salao", idSalao)
       .order("created_at", { ascending: false });

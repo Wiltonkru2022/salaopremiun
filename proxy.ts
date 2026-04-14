@@ -24,9 +24,8 @@ const ROTAS_LIBERADAS = [
   "/assinatura",
   "/api/assinatura/iniciar-trial",
   "/api/assinatura/criar-cobranca",
-  "/api/assinatura/historico",
-  "/api/assinatura/toggle-renovacao",
   "/api/webhooks/asaas",
+  "/api/assinatura/historico",
 ];
 
 function isPainelRoute(pathname: string) {
@@ -68,6 +67,7 @@ export async function proxy(request: NextRequest) {
   const rotaAssinatura = pathname.startsWith("/assinatura");
   const rotaConfiguracoes = pathname.startsWith("/configuracoes");
 
+  // Se não for rota protegida, libera
   if (!rotaPainel && !rotaLiberada) {
     return response;
   }
@@ -76,15 +76,14 @@ export async function proxy(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
+  // 🔒 Não logado → login
   if ((rotaPainel || rotaAssinatura) && !user) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);
   }
 
-  if (!user) {
-    return response;
-  }
+  if (!user) return response;
 
   const { data: usuario, error: usuarioError } = await supabase
     .from("usuarios")
@@ -93,46 +92,44 @@ export async function proxy(request: NextRequest) {
     .maybeSingle();
 
   if (usuarioError) {
-    console.error("Erro ao buscar usuário no proxy:", usuarioError);
+    console.error("Erro proxy usuário:", usuarioError);
     return response;
   }
 
   const idSalao = usuario?.id_salao;
 
+  // 🔥 Sem salão → manda pra assinatura
   if (!idSalao) {
     if (rotaPainel) {
       const url = request.nextUrl.clone();
       url.pathname = "/assinatura";
       return NextResponse.redirect(url);
     }
-
     return response;
   }
 
   const { data: assinatura, error: assinaturaError } = await supabase
     .from("assinaturas")
-    .select("status, vencimento_em, trial_fim_em")
+    .select(`
+      status,
+      vencimento_em,
+      trial_fim_em
+    `)
     .eq("id_salao", idSalao)
     .maybeSingle();
 
   if (assinaturaError) {
-    console.error("Erro ao buscar assinatura no proxy:", assinaturaError);
+    console.error("Erro proxy assinatura:", assinaturaError);
     return response;
   }
 
+  // 🔥 Nunca teve assinatura
   if (!assinatura) {
-    if (rotaLogin) {
-      const url = request.nextUrl.clone();
-      url.pathname = "/assinatura";
-      return NextResponse.redirect(url);
-    }
-
     if (rotaPainel && !rotaConfiguracoes) {
       const url = request.nextUrl.clone();
       url.pathname = "/assinatura";
       return NextResponse.redirect(url);
     }
-
     return response;
   }
 
@@ -142,12 +139,14 @@ export async function proxy(request: NextRequest) {
     trialFimEm: assinatura.trial_fim_em,
   });
 
+  // 🔥 Login redirecionamento inteligente
   if (rotaLogin) {
     const url = request.nextUrl.clone();
     url.pathname = resumo.bloqueioTotal ? "/assinatura" : "/dashboard";
     return NextResponse.redirect(url);
   }
 
+  // 🔥 BLOQUEIO FORTE DO SISTEMA
   if (rotaPainel && resumo.bloqueioTotal && !rotaConfiguracoes) {
     const url = request.nextUrl.clone();
     url.pathname = "/assinatura";
@@ -177,8 +176,7 @@ export const config = {
     "/configuracoes/:path*",
     "/api/assinatura/iniciar-trial",
     "/api/assinatura/criar-cobranca",
-    "/api/assinatura/historico",
-    "/api/assinatura/toggle-renovacao",
     "/api/webhooks/asaas",
+    "/api/assinatura/historico",
   ],
 };

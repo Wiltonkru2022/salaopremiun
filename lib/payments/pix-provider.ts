@@ -97,6 +97,10 @@ async function asaasFetch<T>(path: string, init?: RequestInit): Promise<T> {
   return data as T;
 }
 
+function onlyNumbers(value?: string | null) {
+  return String(value || "").replace(/\D/g, "");
+}
+
 export async function buscarClientePorEmail(
   email: string
 ): Promise<AsaasCustomer | null> {
@@ -152,8 +156,25 @@ export async function criarCobranca(
       );
     }
 
-    body.creditCard = input.creditCard;
-    body.creditCardHolderInfo = input.creditCardHolderInfo;
+    body.creditCard = {
+      holderName: input.creditCard.holderName,
+      number: onlyNumbers(input.creditCard.number),
+      expiryMonth: onlyNumbers(input.creditCard.expiryMonth),
+      expiryYear: onlyNumbers(input.creditCard.expiryYear),
+      ccv: onlyNumbers(input.creditCard.ccv),
+    };
+
+    body.creditCardHolderInfo = {
+      name: input.creditCardHolderInfo.name,
+      email: input.creditCardHolderInfo.email,
+      cpfCnpj: onlyNumbers(input.creditCardHolderInfo.cpfCnpj),
+      postalCode: onlyNumbers(input.creditCardHolderInfo.postalCode),
+      addressNumber: input.creditCardHolderInfo.addressNumber,
+      addressComplement: input.creditCardHolderInfo.addressComplement,
+      phone: onlyNumbers(input.creditCardHolderInfo.phone),
+      mobilePhone: onlyNumbers(input.creditCardHolderInfo.mobilePhone),
+    };
+
     body.remoteIp = input.remoteIp;
   }
 
