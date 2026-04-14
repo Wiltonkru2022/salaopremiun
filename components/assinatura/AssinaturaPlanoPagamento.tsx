@@ -13,10 +13,10 @@ import {
 type Props = {
   podeGerenciar: boolean;
   planoSelecionado: string;
-  setPlanoSelecionado: (value: string) => void;
+  setPlanoSelecionado: React.Dispatch<React.SetStateAction<string>>;
   planoAtual: string | null;
   billingType: BillingType;
-  setBillingType: (value: BillingType) => void;
+  setBillingType: React.Dispatch<React.SetStateAction<BillingType>>;
   cardForm: CardForm;
   setCardForm: React.Dispatch<React.SetStateAction<CardForm>>;
   esconderBotaoPadraoRenovacao: boolean;
@@ -33,12 +33,15 @@ function StepBadge({ numero }: { numero: number }) {
 }
 
 function getMovimentoPlano(planoAtual: string | null, planoSelecionado: string) {
-  if (!planoAtual || !PLANOS_INFO[planoAtual] || !PLANOS_INFO[planoSelecionado]) {
+  const infoAtual = planoAtual ? PLANOS_INFO[planoAtual] : null;
+  const infoSelecionado = PLANOS_INFO[planoSelecionado];
+
+  if (!infoAtual || !infoSelecionado) {
     return null;
   }
 
-  const ordemAtual = PLANOS_INFO[planoAtual].ordem;
-  const ordemSelecionada = PLANOS_INFO[planoSelecionado].ordem;
+  const ordemAtual = infoAtual.ordem;
+  const ordemSelecionada = infoSelecionado.ordem;
 
   if (ordemSelecionada > ordemAtual) {
     return {
@@ -133,11 +136,15 @@ export default function AssinaturaPlanosPagamento({
             const ativo = planoSelecionado === plano;
             const badge = getMovimentoPlano(planoAtual, plano);
 
+            if (!info) return null;
+
             return (
               <button
                 key={plano}
                 type="button"
-                onClick={() => podeGerenciar && setPlanoSelecionado(plano)}
+                onClick={() => {
+                  if (podeGerenciar) setPlanoSelecionado(plano);
+                }}
                 disabled={!podeGerenciar}
                 className={`relative min-h-[240px] rounded-[26px] border p-6 text-left transition ${
                   ativo
@@ -223,7 +230,9 @@ export default function AssinaturaPlanosPagamento({
               <button
                 key={item.tipo}
                 type="button"
-                onClick={() => podeGerenciar && setBillingType(item.tipo)}
+                onClick={() => {
+                  if (podeGerenciar) setBillingType(item.tipo);
+                }}
                 disabled={!podeGerenciar}
                 className={`flex w-full items-center justify-between rounded-[22px] border px-5 py-4 text-left transition ${
                   ativo
@@ -337,7 +346,9 @@ export default function AssinaturaPlanosPagamento({
 
         <button
           type="button"
-          onClick={criarCobrancaAssinatura}
+          onClick={() => {
+            void criarCobrancaAssinatura();
+          }}
           disabled={gerandoCobranca || !podeGerenciar}
           className="mt-5 inline-flex w-full items-center justify-center rounded-[22px] bg-[linear-gradient(135deg,#5b21b6_0%,#6d28d9_60%,#7c3aed_100%)] px-5 py-4 text-sm font-semibold text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60"
         >

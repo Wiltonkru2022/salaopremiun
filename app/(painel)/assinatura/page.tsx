@@ -132,6 +132,7 @@ export default function AssinaturaPage() {
             podeGerenciar={podeGerenciar}
             planoSelecionado={planoSelecionado}
             setPlanoSelecionado={setPlanoSelecionado}
+            planoAtual={assinatura?.plano || null}
             billingType={billingType}
             setBillingType={setBillingType}
             cardForm={cardForm}
