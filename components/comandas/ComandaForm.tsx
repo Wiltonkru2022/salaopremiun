@@ -84,6 +84,7 @@ export default function ComandaForm({ modo }: ComandaFormProps) {
 
   useEffect(() => {
     bootstrap();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [modo, comandaId]);
 
   const subtotal = useMemo(

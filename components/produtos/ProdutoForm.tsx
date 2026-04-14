@@ -100,6 +100,7 @@ export default function ProdutoForm({ modo }: ProdutoFormProps) {
 
   useEffect(() => {
     bootstrap();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [modo, produtoId]);
 
   const precoCusto = parseMoneyToNumber(produto.preco_custo);

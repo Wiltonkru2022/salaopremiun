@@ -40,8 +40,8 @@ export default [
     },
 
     rules: {
-      // 🔥 IMPORTANTE: não travar dev
-      "@typescript-eslint/no-explicit-any": "warn",
+      // IMPORTANTE: não travar dev em integrações Supabase/RPC ainda sem tipos gerados
+      "@typescript-eslint/no-explicit-any": "off",
 
       // hooks funcionando corretamente
       "react-hooks/rules-of-hooks": "error",

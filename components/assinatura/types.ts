@@ -65,7 +65,23 @@ export type UsuarioSupabase = {
   app_metadata?: Record<string, unknown>;
 };
 
-export type Permissoes = Record<string, boolean>;
+export type Permissoes = {
+  dashboard_ver: boolean;
+  agenda_ver: boolean;
+  clientes_ver: boolean;
+  profissionais_ver: boolean;
+  servicos_ver: boolean;
+  produtos_ver: boolean;
+  estoque_ver: boolean;
+  comandas_ver: boolean;
+  vendas_ver: boolean;
+  caixa_ver: boolean;
+  comissoes_ver: boolean;
+  relatorios_ver: boolean;
+  marketing_ver: boolean;
+  configuracoes_ver: boolean;
+  assinatura_ver: boolean;
+};
 
 export const PLANOS_INFO: Record<
   string,
@@ -137,4 +153,11 @@ export type HistoricoCobrancaRow = {
   plano_destino?: string | null;
   tipo_movimento?: TipoMovimentoAssinatura | null;
   gerada_automaticamente?: boolean | null;
+};
+
+export type UsuarioSistemaRow = {
+  id: string;
+  id_salao: string | null;
+  nivel: string | null;
+  status: string | null;
 };

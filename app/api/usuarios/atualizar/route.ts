@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { buildSalonPasswordReuseHash } from "@/lib/auth/password-reuse";
+import { AuthzError, requireAdminSalao } from "@/lib/auth/require-admin-salao";
 
 function getSupabaseAdmin() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -46,6 +47,8 @@ export async function PATCH(req: NextRequest) {
         { status: 400 }
       );
     }
+
+    await requireAdminSalao(idSalao);
 
     if (!nome) {
       return NextResponse.json(
@@ -261,6 +264,13 @@ export async function PATCH(req: NextRequest) {
 
     return NextResponse.json({ ok: true });
   } catch (error) {
+    if (error instanceof AuthzError) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: error.status }
+      );
+    }
+
     console.error("Erro interno ao atualizar usuário:", error);
 
     return NextResponse.json(
@@ -269,3 +279,4 @@ export async function PATCH(req: NextRequest) {
     );
   }
 }
+

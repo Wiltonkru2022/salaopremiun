@@ -24,4 +24,6 @@ Thumbs.db
 
 # misc
 .vercel
+.cloudflared
+tsconfig.tsbuildinfo
 coverage

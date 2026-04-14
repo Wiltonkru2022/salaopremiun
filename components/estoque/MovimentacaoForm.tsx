@@ -33,6 +33,7 @@ export default function MovimentacaoForm() {
 
   useEffect(() => {
     bootstrap();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
 async function bootstrap() {

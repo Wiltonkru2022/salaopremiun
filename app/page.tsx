@@ -1,5 +1,6 @@
 import SiteHeader from "@/components/site-header";
 import SiteFooter from "@/components/site-footer";
+import Link from "next/link";
 import {
   CalendarDays,
   Users,
@@ -22,7 +23,6 @@ import {
   Receipt,
   Crown,
   BellRing,
-  Link,
 } from "lucide-react";
 
 const saasModules = [
@@ -376,7 +376,6 @@ function SaaSModulesSection() {
               </div>
               <h3 className="mt-5 text-xl font-bold text-zinc-950">{module.title}</h3>
               <p className="mt-3 leading-7 text-zinc-600">{module.text}</p>
-              See all
             </div>
           );
         })}
@@ -804,4 +803,3 @@ function FinalCTA() {
     </section>
   );
 }
-

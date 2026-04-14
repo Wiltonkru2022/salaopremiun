@@ -66,7 +66,9 @@ export function getStatusLabel(status?: string | null) {
 
   if (s === "teste_gratis" || s === "trial") return "Teste grátis";
   if (s === "ativo" || s === "ativa" || s === "pago") return "Ativa";
-  if (s === "pendente" || s === "aguardando_pagamento") return "Pagamento pendente";
+  if (s === "pendente" || s === "aguardando_pagamento") {
+    return "Pagamento pendente";
+  }
   if (s === "cancelada") return "Cancelada";
   if (s === "vencida") return "Vencida";
 
@@ -86,6 +88,10 @@ export function getStatusBadgeClass(status?: string | null) {
 
   if (s === "pendente" || s === "aguardando_pagamento") {
     return "border-amber-200 bg-amber-50 text-amber-700";
+  }
+
+  if (s === "cancelada") {
+    return "border-zinc-300 bg-zinc-100 text-zinc-700";
   }
 
   return "border-red-200 bg-red-50 text-red-700";

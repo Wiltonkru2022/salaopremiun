@@ -1,6 +1,7 @@
-"use client";
+﻿"use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { getResumoAssinatura } from "@/lib/assinatura-utils";
 import {
@@ -10,16 +11,11 @@ import {
   type CardForm,
   type CheckoutResponse,
   type HistoricoCobrancaRow,
+  type Permissoes,
   type SalaoRow,
+  type UsuarioSistemaRow,
+  type UsuarioSupabase,
 } from "./types";
-
-type PermissoesMock = {
-  assinatura_ver: boolean;
-};
-
-type UsuarioSalaoRow = {
-  id_salao: string | null;
-};
 
 type CobrancaAtualRow = {
   id: string;
@@ -33,12 +29,34 @@ type CobrancaAtualRow = {
   txid: string | null;
 };
 
+const PERMISSOES_PADRAO = (
+  nivel: string | null | undefined
+): Permissoes => ({
+  dashboard_ver: true,
+  agenda_ver: true,
+  clientes_ver: true,
+  profissionais_ver: true,
+  servicos_ver: true,
+  produtos_ver: true,
+  estoque_ver: true,
+  comandas_ver: true,
+  vendas_ver: true,
+  caixa_ver: true,
+  comissoes_ver: true,
+  relatorios_ver: true,
+  marketing_ver: true,
+  configuracoes_ver: String(nivel || "").toLowerCase() === "admin",
+  assinatura_ver: true,
+});
+
 export function useAssinaturaPage() {
   const supabase = useMemo(() => createClient(), []);
+  const router = useRouter();
 
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState("");
 
+  const [usuario, setUsuario] = useState<UsuarioSupabase | null>(null);
   const [salao, setSalao] = useState<SalaoRow | null>(null);
   const [assinatura, setAssinatura] = useState<AssinaturaRow | null>(null);
 
@@ -57,7 +75,12 @@ export function useAssinaturaPage() {
 
   const [gerandoCobranca, setGerandoCobranca] = useState(false);
   const [verificandoAgora, setVerificandoAgora] = useState(false);
+  const [iniciandoTrial, setIniciandoTrial] = useState(false);
   const [aguardandoPagamento, setAguardandoPagamento] = useState(false);
+
+  const [permissoes, setPermissoes] = useState<Permissoes | null>(null);
+  const [acessoCarregado, setAcessoCarregado] = useState(false);
+  const [nivel, setNivel] = useState("");
 
   const [cardForm, setCardForm] = useState<CardForm>({
     holderName: "",
@@ -73,7 +96,62 @@ export function useAssinaturaPage() {
     HistoricoCobrancaRow[]
   >([]);
 
-  const podeGerenciar = true;
+  const podeGerenciar = nivel === "admin";
+
+  const carregarAcesso = useCallback(async () => {
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError) {
+      throw authError;
+    }
+
+    if (!user) {
+      router.replace("/login");
+      return null;
+    }
+
+    const { data: usuarioDb, error: usuarioError } = await supabase
+      .from("usuarios")
+      .select("id, id_salao, nivel, status")
+      .eq("auth_user_id", user.id)
+      .maybeSingle<UsuarioSistemaRow>();
+
+    if (usuarioError || !usuarioDb?.id || !usuarioDb?.id_salao) {
+      throw new Error("Não foi possível localizar o usuário do sistema.");
+    }
+
+    if (String(usuarioDb.status || "").toLowerCase() !== "ativo") {
+      throw new Error("Usuário inativo.");
+    }
+
+    const { data: permissoesDb } = await supabase
+      .from("usuarios_permissoes")
+      .select("*")
+      .eq("id_usuario", usuarioDb.id)
+      .eq("id_salao", usuarioDb.id_salao)
+      .maybeSingle<Permissoes>();
+
+    const permissoesFinais =
+      permissoesDb || PERMISSOES_PADRAO(usuarioDb.nivel);
+
+    setUsuario(user as UsuarioSupabase);
+    setPermissoes(permissoesFinais);
+    setNivel(String(usuarioDb.nivel || "").toLowerCase());
+    setAcessoCarregado(true);
+
+    if (!permissoesFinais.assinatura_ver) {
+      router.replace("/dashboard");
+      return null;
+    }
+
+    return {
+      user: user as UsuarioSupabase,
+      usuarioDb,
+    };
+  }, [router, supabase]);
 
   const montarCheckoutDaCobranca = useCallback(
     (cobranca: CobrancaAtualRow): CheckoutResponse => {
@@ -88,7 +166,10 @@ export function useAssinaturaPage() {
         ok: true,
         customerId: assinatura?.asaas_customer_id || "",
         paymentId:
-          cobranca.asaas_payment_id || cobranca.txid || assinatura?.asaas_payment_id || "",
+          cobranca.asaas_payment_id ||
+          cobranca.txid ||
+          assinatura?.asaas_payment_id ||
+          "",
         valor: Number(cobranca.valor || 0),
         plano: planoSelecionado,
         billingType: billing,
@@ -107,19 +188,17 @@ export function useAssinaturaPage() {
     async (idSalao: string) => {
       const { data, error } = await supabase
         .from("assinaturas_cobrancas")
-        .select(
-          `
-            id,
-            valor,
-            status,
-            forma_pagamento,
-            data_expiracao,
-            invoice_url,
-            bank_slip_url,
-            asaas_payment_id,
-            txid
-          `
-        )
+        .select(`
+          id,
+          valor,
+          status,
+          forma_pagamento,
+          data_expiracao,
+          invoice_url,
+          bank_slip_url,
+          asaas_payment_id,
+          txid
+        `)
         .eq("id_salao", idSalao)
         .in("status", ["pendente", "pending", "PENDING"])
         .order("created_at", { ascending: false })
@@ -140,42 +219,24 @@ export function useAssinaturaPage() {
     [montarCheckoutDaCobranca, supabase]
   );
 
-  const carregar = useCallback(async () => {
+  const carregarDados = useCallback(async () => {
     try {
       setLoading(true);
       setErro("");
 
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      const acesso = await carregarAcesso();
+      if (!acesso) return;
 
-      if (!user) {
-        setSalao(null);
-        setAssinatura(null);
-        setCheckout(null);
-        return;
-      }
+      const idSalaoAtual = String(acesso.usuarioDb.id_salao || "").trim();
 
-      const { data: usuario, error: usuarioError } = await supabase
-        .from("usuarios")
-        .select("id_salao")
-        .eq("auth_user_id", user.id)
-        .single<UsuarioSalaoRow>();
-
-      if (usuarioError) {
-        throw usuarioError;
-      }
-
-      const idSalao = String(usuario?.id_salao || "").trim();
-
-      if (!idSalao) {
+      if (!idSalaoAtual) {
         throw new Error("Salão não encontrado para o usuário logado.");
       }
 
       const { data: salaoData, error: salaoError } = await supabase
         .from("saloes")
         .select("*")
-        .eq("id", idSalao)
+        .eq("id", idSalaoAtual)
         .single();
 
       if (salaoError) {
@@ -185,7 +246,7 @@ export function useAssinaturaPage() {
       const { data: assinaturaData, error: assinaturaError } = await supabase
         .from("assinaturas")
         .select("*")
-        .eq("id_salao", idSalao)
+        .eq("id_salao", idSalaoAtual)
         .maybeSingle();
 
       if (assinaturaError) {
@@ -199,7 +260,7 @@ export function useAssinaturaPage() {
       setAssinatura(assinaturaFinal);
       setRenovacaoAutomatica(Boolean(assinaturaFinal?.renovacao_automatica));
 
-      if (assinaturaFinal?.plano) {
+      if (assinaturaFinal?.plano && PLANOS_INFO[assinaturaFinal.plano]) {
         setPlanoSelecionado(assinaturaFinal.plano);
       }
 
@@ -211,7 +272,7 @@ export function useAssinaturaPage() {
       setAguardandoPagamento(estaAguardando);
 
       if (estaAguardando) {
-        await carregarCheckoutAtual(idSalao);
+        await carregarCheckoutAtual(idSalaoAtual);
       } else {
         setCheckout(null);
       }
@@ -222,11 +283,11 @@ export function useAssinaturaPage() {
     } finally {
       setLoading(false);
     }
-  }, [carregarCheckoutAtual, supabase]);
+  }, [carregarAcesso, carregarCheckoutAtual, supabase]);
 
   useEffect(() => {
-    void carregar();
-  }, [carregar]);
+    void carregarDados();
+  }, [carregarDados]);
 
   useEffect(() => {
     if (!assinatura?.plano) return;
@@ -255,7 +316,68 @@ export function useAssinaturaPage() {
     } else {
       setTipoMudancaPlano(null);
     }
-  }, [planoSelecionado, assinatura]);
+  }, [assinatura, planoSelecionado]);
+
+  const verificarPagamentoAgora = useCallback(
+    async (silencioso = false): Promise<void> => {
+      try {
+        if (!salao?.id) return;
+
+        if (!silencioso) {
+          setVerificandoAgora(true);
+          setErro("");
+        }
+
+        const { data, error } = await supabase
+          .from("assinaturas")
+          .select("*")
+          .eq("id_salao", salao.id)
+          .maybeSingle();
+
+        if (error) {
+          throw error;
+        }
+
+        const assinaturaAtual = (data as AssinaturaRow | null) ?? null;
+        setAssinatura(assinaturaAtual);
+
+        const statusAtual = String(assinaturaAtual?.status || "").toLowerCase();
+
+        if (["ativo", "ativa", "pago"].includes(statusAtual)) {
+          setAguardandoPagamento(false);
+          setCheckout(null);
+          await carregarDados();
+          return;
+        }
+
+        if (["pendente", "aguardando_pagamento"].includes(statusAtual)) {
+          setAguardandoPagamento(true);
+          await carregarCheckoutAtual(salao.id);
+        } else if (["cancelada", "vencida"].includes(statusAtual)) {
+          setAguardandoPagamento(false);
+        }
+
+        if (!silencioso && !["ativo", "ativa", "pago"].includes(statusAtual)) {
+          setErro(
+            "Pagamento ainda não confirmado. Tente novamente em alguns segundos."
+          );
+        }
+      } catch (error: unknown) {
+        if (!silencioso) {
+          setErro(
+            error instanceof Error
+              ? error.message
+              : "Erro ao verificar pagamento."
+          );
+        }
+      } finally {
+        if (!silencioso) {
+          setVerificandoAgora(false);
+        }
+      }
+    },
+    [carregarCheckoutAtual, carregarDados, salao?.id, supabase]
+  );
 
   useEffect(() => {
     if (!aguardandoPagamento || !salao?.id) return;
@@ -265,7 +387,7 @@ export function useAssinaturaPage() {
     }, 5000);
 
     return () => clearInterval(interval);
-  }, [aguardandoPagamento, salao?.id]);
+  }, [aguardandoPagamento, salao?.id, verificarPagamentoAgora]);
 
   async function atualizarRenovacaoAutomatica(value: boolean) {
     try {
@@ -349,7 +471,7 @@ export function useAssinaturaPage() {
       setCheckout(data);
       setAguardandoPagamento(true);
 
-      await carregar();
+      await carregarDados();
     } catch (error: unknown) {
       setErro(
         error instanceof Error ? error.message : "Erro ao criar cobrança."
@@ -359,57 +481,43 @@ export function useAssinaturaPage() {
     }
   }
 
-  async function verificarPagamentoAgora(silencioso = false): Promise<void> {
+  async function iniciarTrial(): Promise<void> {
     try {
-      if (!salao?.id) return;
-
-      if (!silencioso) {
-        setVerificandoAgora(true);
-        setErro("");
-      }
-
-      const { data, error } = await supabase
-        .from("assinaturas")
-        .select("*")
-        .eq("id_salao", salao.id)
-        .maybeSingle();
-
-      if (error) {
-        throw error;
-      }
-
-      const assinaturaAtual = (data as AssinaturaRow | null) ?? null;
-      setAssinatura(assinaturaAtual);
-
-      const statusAtual = String(assinaturaAtual?.status || "").toLowerCase();
-
-      if (["ativo", "ativa", "pago"].includes(statusAtual)) {
-        setAguardandoPagamento(false);
-        setCheckout(null);
-        await carregar();
+      if (!podeGerenciar) {
+        setErro("Você não tem permissão para iniciar o trial.");
         return;
       }
 
-      if (["pendente", "aguardando_pagamento"].includes(statusAtual)) {
-        setAguardandoPagamento(true);
-        await carregarCheckoutAtual(salao.id);
-      } else if (["cancelada", "vencida"].includes(statusAtual)) {
-        setAguardandoPagamento(false);
+      if (!salao?.id) {
+        throw new Error("Salão não carregado.");
       }
 
-      if (!silencioso && !["ativo", "ativa", "pago"].includes(statusAtual)) {
-        setErro("Pagamento ainda não confirmado. Tente novamente em alguns segundos.");
+      setIniciandoTrial(true);
+      setErro("");
+
+      const response = await fetch("/api/assinatura/iniciar-trial", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          idSalao: salao.id,
+        }),
+      });
+
+      const data = (await response.json()) as { error?: string };
+
+      if (!response.ok) {
+        throw new Error(data.error || "Erro ao iniciar teste grátis.");
       }
+
+      await carregarDados();
     } catch (error: unknown) {
-      if (!silencioso) {
-        setErro(
-          error instanceof Error ? error.message : "Erro ao verificar pagamento."
-        );
-      }
+      setErro(
+        error instanceof Error ? error.message : "Erro ao iniciar teste grátis."
+      );
     } finally {
-      if (!silencioso) {
-        setVerificandoAgora(false);
-      }
+      setIniciandoTrial(false);
     }
   }
 
@@ -477,12 +585,20 @@ export function useAssinaturaPage() {
   const planoAtualNome =
     PLANOS_INFO[assinatura?.plano || ""]?.nome || assinatura?.plano || "-";
 
-  const valorAtual = PLANOS_INFO[assinatura?.plano || ""]?.valor || 0;
+  const valorAtual =
+    assinatura?.valor ??
+    PLANOS_INFO[assinatura?.plano || ""]?.valor ??
+    PLANOS_INFO[planoSelecionado]?.valor ??
+    0;
 
   const statusNormalizado = String(assinatura?.status || "").toLowerCase();
   const semAssinatura = !assinatura;
   const ehStatusTrial = ["teste_gratis", "trial"].includes(statusNormalizado);
+  const trialAtivo = ehStatusTrial && !resumoAssinatura.vencida;
   const trialVencido = ehStatusTrial && resumoAssinatura.vencida;
+  const assinaturaAtivaPaga =
+    ["ativo", "ativa", "pago"].includes(statusNormalizado) &&
+    !resumoAssinatura.vencida;
 
   const mostrarBotaoIniciarTrial = semAssinatura && podeGerenciar;
 
@@ -495,49 +611,51 @@ export function useAssinaturaPage() {
         (resumoAssinatura.vencida || resumoAssinatura.vencendoLogo))
     );
 
-  const esconderBotaoPadraoRenovacao = false;
+  const esconderBotaoPadraoRenovacao =
+    trialAtivo || (assinaturaAtivaPaga && !resumoAssinatura.vencendoLogo);
+
   const mostrarSecaoRenovacao = true;
 
   return {
     loading,
+    gerandoCobranca,
+    verificandoAgora,
+    iniciandoTrial,
     erro,
+    usuario,
     salao,
     assinatura,
+    checkout,
     planoSelecionado,
     setPlanoSelecionado,
     billingType,
     setBillingType,
-    checkout,
-    criarCobrancaAssinatura,
-    resumoAssinatura,
-    renovacaoAutomatica,
-    salvandoRenovacaoAutomatica,
-    atualizarRenovacaoAutomatica,
-    tipoMudancaPlano,
-    podeGerenciar,
-
-    gerandoCobranca,
-    verificandoAgora,
-    iniciandoTrial: false,
     aguardandoPagamento,
-    permissoes: { assinatura_ver: true } as PermissoesMock,
-    acessoCarregado: true,
+    permissoes,
+    acessoCarregado,
     cardForm,
     setCardForm,
+    podeGerenciar,
     verificarPagamentoAgora,
+    criarCobrancaAssinatura,
     copiarPix,
-    iniciarTrial: () => {},
+    iniciarTrial,
     planoAtualNome,
     valorAtual,
+    resumoAssinatura,
     mostrarBotaoRegularizar,
     mostrarBotaoIniciarTrial,
     esconderBotaoPadraoRenovacao,
     mostrarSecaoRenovacao,
-
     historicoModalOpen,
     abrirHistoricoModal,
     fecharHistoricoModal,
     carregandoHistorico,
     historicoCobrancas,
+    renovacaoAutomatica,
+    salvandoRenovacaoAutomatica,
+    atualizarRenovacaoAutomatica,
+    tipoMudancaPlano,
   };
 }
+

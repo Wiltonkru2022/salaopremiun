@@ -162,6 +162,7 @@ export default function ClienteForm({ modo }: ClienteFormProps) {
 
   useEffect(() => {
     bootstrap();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [modo, clienteId]);
 
 async function bootstrap() {

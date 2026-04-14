@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { AuthzError, requireAdminSalao } from "@/lib/auth/require-admin-salao";
 
 function getSupabaseAdmin() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -42,6 +43,8 @@ export async function DELETE(req: Request) {
         { status: 400 }
       );
     }
+
+    await requireAdminSalao(idSalao);
 
     const { data: usuario, error: usuarioError } = await supabaseAdmin
       .from("usuarios")
@@ -156,6 +159,13 @@ export async function DELETE(req: Request) {
       },
     });
   } catch (error) {
+    if (error instanceof AuthzError) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: error.status }
+      );
+    }
+
     console.error("Erro geral ao excluir usuário:", error);
 
     return NextResponse.json(
@@ -164,3 +174,4 @@ export async function DELETE(req: Request) {
     );
   }
 }
+

@@ -183,6 +183,7 @@ export default function ProfissionalForm({
 
   useEffect(() => {
     bootstrap();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [modo, profissionalId]);
 
   useEffect(() => {

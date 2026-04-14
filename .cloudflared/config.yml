@@ -1,9 +1,0 @@
-tunnel: 57c23bb7-1638-4229-8642-d8cf63b5f590
-credentials-file: C:\Users\bruno\.cloudflared\57c23bb7-1638-4229-8642-d8cf63b5f590.json
-
-ingress:
-  - hostname: salaopremiun.com.br
-    service: http://127.0.0.1:3000
-  - hostname: www.salaopremiun.com.br
-    service: http://127.0.0.1:3000
-  - service: http_status:404
