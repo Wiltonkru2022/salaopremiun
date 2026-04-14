@@ -9,8 +9,9 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "typecheck": "tsc --noEmit",
+    "audit": "npm audit --audit-level=moderate",
     "check": "npm run lint && npm run typecheck",
-    "validate": "npm run lint && npm run typecheck && npm run build"
+    "validate": "npm run lint && npm run typecheck && npm run audit && npm run build"
   },
   "dependencies": {
     "@supabase/ssr": "^0.9.0",

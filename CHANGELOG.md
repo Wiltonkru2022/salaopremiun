@@ -6,6 +6,8 @@ Todas as mudanças importantes do projeto serão documentadas aqui.
 
 ### Corrigido
 
+- Auditoria de dependências adicionada aos scripts e ao CI.
+- Remoção de helper legado de sessão do profissional via `localStorage`.
 - Correções de typecheck, lint e build.
 - Proteção server-side para APIs administrativas de usuários.
 - Proteção da rota de debug em produção.
