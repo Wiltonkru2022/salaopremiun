@@ -66,8 +66,7 @@ export function getStatusLabel(status?: string | null) {
 
   if (s === "teste_gratis" || s === "trial") return "Teste grátis";
   if (s === "ativo" || s === "ativa" || s === "pago") return "Ativa";
-  if (s === "pendente" || s === "aguardando_pagamento")
-    return "Pagamento pendente";
+  if (s === "pendente" || s === "aguardando_pagamento") return "Pagamento pendente";
   if (s === "cancelada") return "Cancelada";
   if (s === "vencida") return "Vencida";
 
@@ -107,30 +106,13 @@ export function isStatusTrial(status?: string | null) {
   return s === "teste_gratis" || s === "trial";
 }
 
-export function getPlanoActionLabel(
-  planoAtual?: string | null,
-  planoSelecionado?: string | null
-) {
-  const atual = String(planoAtual || "").toLowerCase();
-  const selecionado = String(planoSelecionado || "").toLowerCase();
+export function getNomePlano(plano?: string | null) {
+  const s = String(plano || "").toLowerCase();
 
-  const ordem: Record<string, number> = {
-    basico: 1,
-    pro: 2,
-    premium: 3,
-  };
+  if (s === "basico") return "Básico";
+  if (s === "pro") return "Pro";
+  if (s === "premium") return "Premium";
+  if (s === "teste_gratis" || s === "trial") return "Teste grátis";
 
-  if (!atual || !selecionado || !ordem[atual] || !ordem[selecionado]) {
-    return "Alterar plano";
-  }
-
-  if (ordem[selecionado] > ordem[atual]) {
-    return "Fazer upgrade";
-  }
-
-  if (ordem[selecionado] < ordem[atual]) {
-    return "Fazer downgrade";
-  }
-
-  return "Renovar plano atual";
+  return "-";
 }

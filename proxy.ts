@@ -24,8 +24,9 @@ const ROTAS_LIBERADAS = [
   "/assinatura",
   "/api/assinatura/iniciar-trial",
   "/api/assinatura/criar-cobranca",
-  "/api/webhooks/asaas",
   "/api/assinatura/historico",
+  "/api/assinatura/toggle-renovacao",
+  "/api/webhooks/asaas",
 ];
 
 function isPainelRoute(pathname: string) {
@@ -176,7 +177,8 @@ export const config = {
     "/configuracoes/:path*",
     "/api/assinatura/iniciar-trial",
     "/api/assinatura/criar-cobranca",
-    "/api/webhooks/asaas",
     "/api/assinatura/historico",
+    "/api/assinatura/toggle-renovacao",
+    "/api/webhooks/asaas",
   ],
 };

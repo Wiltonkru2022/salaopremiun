@@ -16,6 +16,24 @@ import type {
 } from "./types";
 import { PLANOS_INFO } from "./types";
 
+function getTipoMudancaPlano(
+  planoAtual?: string | null,
+  planoSelecionado?: string | null
+): "upgrade" | "downgrade" | "manter" {
+  const atual =
+    planoAtual && PLANOS_INFO[planoAtual] ? PLANOS_INFO[planoAtual].ordem : null;
+  const proximo =
+    planoSelecionado && PLANOS_INFO[planoSelecionado]
+      ? PLANOS_INFO[planoSelecionado].ordem
+      : null;
+
+  if (atual == null || proximo == null || atual === proximo) {
+    return "manter";
+  }
+
+  return proximo > atual ? "upgrade" : "downgrade";
+}
+
 export function useAssinaturaPage() {
   const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
@@ -24,6 +42,7 @@ export function useAssinaturaPage() {
   const [gerandoCobranca, setGerandoCobranca] = useState(false);
   const [verificandoAgora, setVerificandoAgora] = useState(false);
   const [iniciandoTrial, setIniciandoTrial] = useState(false);
+  const [salvandoRenovacao, setSalvandoRenovacao] = useState(false);
   const [erro, setErro] = useState("");
 
   const [usuario, setUsuario] = useState<UsuarioSupabase | null>(null);
@@ -46,9 +65,6 @@ export function useAssinaturaPage() {
   const [historicoCobrancas, setHistoricoCobrancas] = useState<
     HistoricoCobrancaRow[]
   >([]);
-
-  const [renovacaoAutomaticaAtiva, setRenovacaoAutomaticaAtiva] =
-    useState(true);
 
   const [cardForm, setCardForm] = useState<CardForm>({
     holderName: "",
@@ -183,7 +199,8 @@ export function useAssinaturaPage() {
           asaas_customer_id,
           asaas_payment_id,
           gateway,
-          forma_pagamento_atual
+          forma_pagamento_atual,
+          renovacao_automatica
         `)
         .eq("id_salao", idSalaoAtual)
         .maybeSingle();
@@ -236,7 +253,8 @@ export function useAssinaturaPage() {
             asaas_customer_id,
             asaas_payment_id,
             gateway,
-            forma_pagamento_atual
+            forma_pagamento_atual,
+            renovacao_automatica
           `)
           .eq("id_salao", idSalao)
           .maybeSingle();
@@ -299,6 +317,57 @@ export function useAssinaturaPage() {
 
   function fecharHistoricoModal() {
     setHistoricoModalOpen(false);
+  }
+
+  async function toggleRenovacaoAutomatica(value: boolean) {
+    if (!podeGerenciar) {
+      setErro("Você não tem permissão para alterar a renovação automática.");
+      return;
+    }
+
+    try {
+      if (!idSalao) throw new Error("Salão não localizado.");
+
+      setSalvandoRenovacao(true);
+      setErro("");
+
+      const response = await fetch("/api/assinatura/toggle-renovacao", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          idSalao,
+          renovacaoAutomatica: value,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          result?.error || "Erro ao atualizar renovação automática."
+        );
+      }
+
+      setAssinatura((prev) =>
+        prev
+          ? {
+              ...prev,
+              renovacao_automatica: value,
+            }
+          : prev
+      );
+    } catch (e) {
+      console.error(e);
+      setErro(
+        e instanceof Error
+          ? e.message
+          : "Erro ao atualizar renovação automática."
+      );
+    } finally {
+      setSalvandoRenovacao(false);
+    }
   }
 
   async function iniciarTrial() {
@@ -367,7 +436,8 @@ export function useAssinaturaPage() {
           asaas_customer_id,
           asaas_payment_id,
           gateway,
-          forma_pagamento_atual
+          forma_pagamento_atual,
+          renovacao_automatica
         `)
         .eq("id_salao", idSalao)
         .maybeSingle();
@@ -534,11 +604,17 @@ export function useAssinaturaPage() {
     trialVencido ||
     semAssinatura;
 
+  const tipoMudancaPlano = getTipoMudancaPlano(
+    assinatura?.plano,
+    planoSelecionado
+  );
+
   return {
     loading,
     gerandoCobranca,
     verificandoAgora,
     iniciandoTrial,
+    salvandoRenovacao,
     erro,
     usuario,
     salao,
@@ -558,6 +634,7 @@ export function useAssinaturaPage() {
     criarCobrancaAssinatura,
     copiarPix,
     iniciarTrial,
+    toggleRenovacaoAutomatica,
     planoAtualNome,
     valorAtual,
     resumoAssinatura,
@@ -570,7 +647,6 @@ export function useAssinaturaPage() {
     fecharHistoricoModal,
     carregandoHistorico,
     historicoCobrancas,
-    renovacaoAutomaticaAtiva,
-    setRenovacaoAutomaticaAtiva,
+    tipoMudancaPlano,
   };
 }

@@ -39,6 +39,7 @@ export type AssinaturaRow = {
   asaas_payment_id?: string | null;
   gateway?: string | null;
   forma_pagamento_atual?: string | null;
+  renovacao_automatica?: boolean | null;
 };
 
 export type CheckoutResponse = {
@@ -114,6 +115,11 @@ export const PLANOS_INFO: Record<
   },
 };
 
+export type TipoMovimentoAssinatura =
+  | "upgrade"
+  | "downgrade"
+  | "renovacao";
+
 export type HistoricoCobrancaRow = {
   id: string;
   referencia?: string | null;
@@ -127,4 +133,8 @@ export type HistoricoCobrancaRow = {
   bank_slip_url?: string | null;
   created_at?: string | null;
   descricao?: string | null;
+  plano_origem?: string | null;
+  plano_destino?: string | null;
+  tipo_movimento?: TipoMovimentoAssinatura | null;
+  gerada_automaticamente?: boolean | null;
 };

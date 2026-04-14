@@ -71,7 +71,7 @@ async function validarSalaoDoUsuario(idSalao: string) {
 
   const { data: usuario, error: usuarioError } = await supabaseAdmin
     .from("usuarios")
-    .select("id_salao, status")
+    .select("id_salao, status, nivel")
     .eq("auth_user_id", user.id)
     .maybeSingle();
 
@@ -90,6 +90,13 @@ async function validarSalaoDoUsuario(idSalao: string) {
   if (usuario.id_salao !== idSalao) {
     throw new HttpError("Acesso negado para este salão.", 403);
   }
+
+  if (String(usuario.nivel || "").toLowerCase() !== "admin") {
+    throw new HttpError(
+      "Somente administrador pode alterar a renovação automática.",
+      403
+    );
+  }
 }
 
 export async function POST(req: Request) {
@@ -98,6 +105,7 @@ export async function POST(req: Request) {
     const body = await req.json();
 
     const idSalao = String(body?.idSalao || "").trim();
+    const renovacaoAutomatica = Boolean(body?.renovacaoAutomatica);
 
     if (!idSalao) {
       return NextResponse.json(
@@ -108,39 +116,43 @@ export async function POST(req: Request) {
 
     await validarSalaoDoUsuario(idSalao);
 
-    const { data, error } = await supabaseAdmin
-      .from("assinaturas_cobrancas")
-      .select(`
-        id,
-        referencia,
-        valor,
-        status,
-        forma_pagamento,
-        data_expiracao,
-        payment_date,
-        confirmed_date,
-        invoice_url,
-        bank_slip_url,
-        created_at,
-        descricao,
-        plano_origem,
-        plano_destino,
-        tipo_movimento,
-        gerada_automaticamente
-      `)
+    const { data: assinatura, error: assinaturaError } = await supabaseAdmin
+      .from("assinaturas")
+      .select("id, renovacao_automatica")
       .eq("id_salao", idSalao)
-      .order("created_at", { ascending: false });
+      .maybeSingle();
 
-    if (error) {
+    if (assinaturaError) {
       return NextResponse.json(
-        { error: error.message || "Erro ao carregar histórico." },
+        { error: assinaturaError.message || "Erro ao consultar assinatura." },
+        { status: 500 }
+      );
+    }
+
+    if (!assinatura?.id) {
+      return NextResponse.json(
+        { error: "Assinatura não encontrada." },
+        { status: 404 }
+      );
+    }
+
+    const { error: updateError } = await supabaseAdmin
+      .from("assinaturas")
+      .update({
+        renovacao_automatica: renovacaoAutomatica,
+      })
+      .eq("id", assinatura.id);
+
+    if (updateError) {
+      return NextResponse.json(
+        { error: updateError.message || "Erro ao atualizar renovação automática." },
         { status: 500 }
       );
     }
 
     return NextResponse.json({
       ok: true,
-      historico: data || [],
+      renovacao_automatica: renovacaoAutomatica,
     });
   } catch (error: unknown) {
     if (error instanceof HttpError) {
@@ -155,7 +167,7 @@ export async function POST(req: Request) {
         error:
           error instanceof Error
             ? error.message
-            : "Erro interno ao carregar histórico.",
+            : "Erro interno ao alterar renovação automática.",
       },
       { status: 500 }
     );

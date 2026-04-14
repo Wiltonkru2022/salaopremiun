@@ -14,7 +14,6 @@ type Props = {
   salao: SalaoRow | null;
   planoAtualNome: string;
   valorAtual: number;
-  renovacaoAutomaticaAtiva: boolean;
 };
 
 export default function AssinaturaPlanoAtual({
@@ -22,7 +21,6 @@ export default function AssinaturaPlanoAtual({
   salao,
   planoAtualNome,
   valorAtual,
-  renovacaoAutomaticaAtiva,
 }: Props) {
   return (
     <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -81,6 +79,23 @@ export default function AssinaturaPlanoAtual({
 
       <div className="rounded-[28px] border border-zinc-200 bg-white p-5 shadow-sm">
         <div className="text-[11px] font-semibold uppercase tracking-[0.25em] text-zinc-400">
+          Renovação automática
+        </div>
+        <div className="mt-3">
+          <span
+            className={`inline-flex rounded-full border px-3 py-1 text-sm font-semibold ${
+              assinatura?.renovacao_automatica
+                ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                : "border-zinc-200 bg-zinc-50 text-zinc-700"
+            }`}
+          >
+            {assinatura?.renovacao_automatica ? "Ativada" : "Desativada"}
+          </span>
+        </div>
+      </div>
+
+      <div className="rounded-[28px] border border-zinc-200 bg-white p-5 shadow-sm">
+        <div className="text-[11px] font-semibold uppercase tracking-[0.25em] text-zinc-400">
           Salão
         </div>
         <div className="mt-3 text-lg font-bold text-zinc-950">
@@ -123,12 +138,6 @@ export default function AssinaturaPlanoAtual({
         <div className="mt-3 text-2xl font-bold text-zinc-950">
           {formatarMoeda(valorAtual)}
         </div>
-        <p className="mt-2 text-sm text-zinc-500">
-          Renovação automática:{" "}
-          <span className="font-medium text-zinc-800">
-            {renovacaoAutomaticaAtiva ? "Ativada" : "Desativada"}
-          </span>
-        </p>
       </div>
     </div>
   );

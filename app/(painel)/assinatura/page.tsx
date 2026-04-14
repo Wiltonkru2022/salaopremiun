@@ -6,6 +6,7 @@ import AssinaturaHistoricoModal from "@/components/assinatura/AssinaturaHistoric
 import AssinaturaPlanoAtual from "@/components/assinatura/AssinaturaPlanoAtual";
 import AssinaturaPlanosPagamento from "@/components/assinatura/AssinaturaPlanoPagamento";
 import AssinaturaStatusCard from "@/components/assinatura/AssinaturaStatusCard";
+import { PLANOS_INFO } from "@/components/assinatura/types";
 import { useAssinaturaPage } from "@/components/assinatura/useAssinaturaPage";
 
 export default function AssinaturaPage() {
@@ -14,6 +15,7 @@ export default function AssinaturaPage() {
     gerandoCobranca,
     verificandoAgora,
     iniciandoTrial,
+    salvandoRenovacao,
     erro,
     salao,
     assinatura,
@@ -32,6 +34,7 @@ export default function AssinaturaPage() {
     criarCobrancaAssinatura,
     copiarPix,
     iniciarTrial,
+    toggleRenovacaoAutomatica,
     planoAtualNome,
     valorAtual,
     resumoAssinatura,
@@ -44,8 +47,7 @@ export default function AssinaturaPage() {
     fecharHistoricoModal,
     carregandoHistorico,
     historicoCobrancas,
-    renovacaoAutomaticaAtiva,
-    setRenovacaoAutomaticaAtiva,
+    tipoMudancaPlano,
   } = useAssinaturaPage();
 
   if (loading || !acessoCarregado) {
@@ -77,16 +79,33 @@ export default function AssinaturaPage() {
   const mostrarCardAssinaturaAtiva =
     !mostrarSecaoRenovacao && (trialAtivo || assinaturaAtiva);
 
+  const planoSelecionadoNome =
+    PLANOS_INFO[planoSelecionado]?.nome || planoSelecionado || "-";
+
   return (
-    <div className="space-y-6 pb-8">
+    <div className="space-y-6">
       <AssinaturaHero
+        renovacaoAutomatica={Boolean(assinatura?.renovacao_automatica)}
+        salvandoRenovacao={salvandoRenovacao}
+        onToggleRenovacaoAutomatica={toggleRenovacaoAutomatica}
+        tipoMudancaPlano={tipoMudancaPlano}
+        bloqueioTotal={resumoAssinatura.bloqueioTotal}
+        vencida={resumoAssinatura.vencida}
+        vencendoLogo={resumoAssinatura.vencendoLogo}
+        diasRestantes={resumoAssinatura.diasRestantes}
         planoAtualNome={planoAtualNome}
-        resumoAssinatura={resumoAssinatura}
-        podeGerenciar={podeGerenciar}
-        renovacaoAutomaticaAtiva={renovacaoAutomaticaAtiva}
-        setRenovacaoAutomaticaAtiva={setRenovacaoAutomaticaAtiva}
-        abrirHistoricoModal={abrirHistoricoModal}
+        planoSelecionadoNome={planoSelecionadoNome}
       />
+
+      <div className="flex justify-end">
+        <button
+          type="button"
+          onClick={abrirHistoricoModal}
+          className="rounded-2xl border border-violet-200 bg-violet-50 px-5 py-3 text-sm font-semibold text-violet-700 transition hover:bg-violet-100"
+        >
+          Ver histórico de pagamentos
+        </button>
+      </div>
 
       <AssinaturaStatusCard
         podeGerenciar={podeGerenciar}
@@ -109,16 +128,14 @@ export default function AssinaturaPage() {
         salao={salao}
         planoAtualNome={planoAtualNome}
         valorAtual={valorAtual}
-        renovacaoAutomaticaAtiva={renovacaoAutomaticaAtiva}
       />
 
       {mostrarSecaoRenovacao && !trialAtivo ? (
-        <section className="grid gap-6 2xl:grid-cols-[1.25fr_0.75fr]">
+        <section className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
           <AssinaturaPlanosPagamento
             podeGerenciar={podeGerenciar}
             planoSelecionado={planoSelecionado}
             setPlanoSelecionado={setPlanoSelecionado}
-            planoAtual={assinatura?.plano || null}
             billingType={billingType}
             setBillingType={setBillingType}
             cardForm={cardForm}
@@ -134,19 +151,19 @@ export default function AssinaturaPage() {
           />
         </section>
       ) : mostrarCardAssinaturaAtiva ? (
-        <section className="rounded-[32px] border border-emerald-200 bg-[linear-gradient(180deg,#ffffff_0%,#f7fff9_100%)] p-6 shadow-sm">
+        <section className="rounded-[28px] border border-zinc-200 bg-white p-6 shadow-sm">
           <h2 className="text-2xl font-bold text-zinc-950">
             {trialAtivo ? "Teste grátis ativo" : "Assinatura ativa"}
           </h2>
 
-          <p className="mt-2 max-w-3xl text-sm leading-6 text-zinc-500">
+          <p className="mt-2 text-sm text-zinc-500">
             {trialAtivo
-              ? "Seu teste está liberado. A área de renovação vai aparecer quando o período terminar."
-              : "Seu acesso está liberado. A área de renovação só aparece perto do vencimento, em caso de pendência ou quando houver troca de plano."}
+              ? "Seu teste está liberado. A área de renovação aparecerá quando o período terminar."
+              : "Seu acesso está liberado. A área de renovação aparecerá apenas quando estiver perto do vencimento ou se houver cobrança pendente."}
           </p>
 
           {resumoAssinatura.diasRestantes != null ? (
-            <div className="mt-5 inline-flex rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800">
+            <div className="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
               Restam {resumoAssinatura.diasRestantes} dia(s) para o vencimento.
             </div>
           ) : null}
