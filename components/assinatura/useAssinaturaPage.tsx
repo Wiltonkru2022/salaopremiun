@@ -43,6 +43,10 @@ export function useAssinaturaPage() {
 
   const [checkout, setCheckout] = useState<CheckoutResponse | null>(null);
 
+  const [gerandoCobranca, setGerandoCobranca] = useState(false);
+  const [verificandoAgora, setVerificandoAgora] = useState(false);
+  const [aguardandoPagamento, setAguardandoPagamento] = useState(false);
+
   const [cardForm, setCardForm] = useState<CardForm>({
     holderName: "",
     number: "",
@@ -120,6 +124,11 @@ export function useAssinaturaPage() {
       if (assinaturaFinal?.plano) {
         setPlanoSelecionado(assinaturaFinal.plano);
       }
+
+      const statusNormalizado = String(assinaturaFinal?.status || "").toLowerCase();
+      setAguardandoPagamento(
+        ["pendente", "aguardando_pagamento"].includes(statusNormalizado)
+      );
     } catch (error: unknown) {
       setErro(
         error instanceof Error ? error.message : "Erro ao carregar assinatura."
@@ -162,6 +171,16 @@ export function useAssinaturaPage() {
     }
   }, [planoSelecionado, assinatura]);
 
+  useEffect(() => {
+    if (!aguardandoPagamento || !salao?.id) return;
+
+    const interval = setInterval(() => {
+      void verificarPagamentoAgora(true);
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [aguardandoPagamento, salao?.id]);
+
   async function atualizarRenovacaoAutomatica(value: boolean) {
     try {
       setSalvandoRenovacaoAutomatica(true);
@@ -196,6 +215,7 @@ export function useAssinaturaPage() {
 
   async function criarCobrancaAssinatura(): Promise<void> {
     try {
+      setGerandoCobranca(true);
       setErro("");
 
       if (!salao?.id) {
@@ -241,10 +261,70 @@ export function useAssinaturaPage() {
       }
 
       setCheckout(data);
+      setAguardandoPagamento(true);
+
+      await carregar();
     } catch (error: unknown) {
       setErro(
         error instanceof Error ? error.message : "Erro ao criar cobrança."
       );
+    } finally {
+      setGerandoCobranca(false);
+    }
+  }
+
+  async function verificarPagamentoAgora(
+    silencioso = false
+  ): Promise<void> {
+    try {
+      if (!salao?.id) return;
+
+      if (!silencioso) {
+        setVerificandoAgora(true);
+        setErro("");
+      }
+
+      const { data, error } = await supabase
+        .from("assinaturas")
+        .select("*")
+        .eq("id_salao", salao.id)
+        .maybeSingle();
+
+      if (error) {
+        throw error;
+      }
+
+      const assinaturaAtual = (data as AssinaturaRow | null) ?? null;
+      setAssinatura(assinaturaAtual);
+
+      const statusNormalizado = String(assinaturaAtual?.status || "").toLowerCase();
+
+      if (["ativo", "ativa", "pago"].includes(statusNormalizado)) {
+        setAguardandoPagamento(false);
+        setCheckout(null);
+        await carregar();
+        return;
+      }
+
+      if (
+        ["cancelada", "vencida"].includes(statusNormalizado)
+      ) {
+        setAguardandoPagamento(false);
+      }
+
+      if (!silencioso) {
+        setErro("Pagamento ainda não confirmado. Tente novamente em alguns segundos.");
+      }
+    } catch (error: unknown) {
+      if (!silencioso) {
+        setErro(
+          error instanceof Error ? error.message : "Erro ao verificar pagamento."
+        );
+      }
+    } finally {
+      if (!silencioso) {
+        setVerificandoAgora(false);
+      }
     }
   }
 
@@ -314,6 +394,25 @@ export function useAssinaturaPage() {
 
   const valorAtual = PLANOS_INFO[assinatura?.plano || ""]?.valor || 0;
 
+  const statusNormalizado = String(assinatura?.status || "").toLowerCase();
+  const semAssinatura = !assinatura;
+  const ehStatusTrial = ["teste_gratis", "trial"].includes(statusNormalizado);
+  const trialVencido = ehStatusTrial && resumoAssinatura.vencida;
+
+  const mostrarBotaoIniciarTrial = semAssinatura && podeGerenciar;
+
+  const mostrarBotaoRegularizar =
+    podeGerenciar &&
+    (
+      aguardandoPagamento ||
+      trialVencido ||
+      (!ehStatusTrial &&
+        (resumoAssinatura.vencida || resumoAssinatura.vencendoLogo))
+    );
+
+  const esconderBotaoPadraoRenovacao = false;
+  const mostrarSecaoRenovacao = true;
+
   return {
     loading,
     erro,
@@ -332,23 +431,23 @@ export function useAssinaturaPage() {
     tipoMudancaPlano,
     podeGerenciar,
 
-    gerandoCobranca: false,
-    verificandoAgora: false,
+    gerandoCobranca,
+    verificandoAgora,
     iniciandoTrial: false,
-    aguardandoPagamento: false,
+    aguardandoPagamento,
     permissoes: { assinatura_ver: true } as PermissoesMock,
     acessoCarregado: true,
     cardForm,
     setCardForm,
-    verificarPagamentoAgora: () => {},
+    verificarPagamentoAgora,
     copiarPix,
     iniciarTrial: () => {},
     planoAtualNome,
     valorAtual,
-    mostrarBotaoRegularizar: false,
-    mostrarBotaoIniciarTrial: false,
-    esconderBotaoPadraoRenovacao: false,
-    mostrarSecaoRenovacao: true,
+    mostrarBotaoRegularizar,
+    mostrarBotaoIniciarTrial,
+    esconderBotaoPadraoRenovacao,
+    mostrarSecaoRenovacao,
 
     historicoModalOpen,
     abrirHistoricoModal,

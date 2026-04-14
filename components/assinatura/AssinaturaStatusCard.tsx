@@ -26,6 +26,18 @@ type Props = {
   verificarPagamentoAgora: () => void;
 };
 
+function LoadingDot({ dark = false }: { dark?: boolean }) {
+  return (
+    <span
+      className={`inline-block h-4 w-4 animate-spin rounded-full border-2 ${
+        dark
+          ? "border-zinc-400/40 border-t-zinc-800"
+          : "border-white/40 border-t-white"
+      }`}
+    />
+  );
+}
+
 export default function AssinaturaStatusCard({
   podeGerenciar,
   erro,
@@ -77,10 +89,16 @@ export default function AssinaturaStatusCard({
                 type="button"
                 onClick={criarCobrancaAssinatura}
                 disabled={gerandoCobranca}
-                className="inline-flex items-center justify-center rounded-2xl bg-white px-5 py-3 text-sm font-semibold text-red-700 transition hover:bg-red-50 disabled:opacity-60"
+                className="inline-flex items-center justify-center gap-3 rounded-2xl bg-white px-5 py-3 text-sm font-semibold text-red-700 transition hover:bg-red-50 disabled:opacity-60"
               >
+                {gerandoCobranca ? <LoadingDot dark /> : null}
+
                 {gerandoCobranca
-                  ? "Gerando cobrança..."
+                  ? billingType === "PIX"
+                    ? "Gerando PIX..."
+                    : billingType === "BOLETO"
+                    ? "Gerando boleto..."
+                    : "Gerando cobrança no cartão..."
                   : billingType === "PIX"
                   ? "Regularizar com PIX"
                   : billingType === "BOLETO"
@@ -142,10 +160,16 @@ export default function AssinaturaStatusCard({
                 type="button"
                 onClick={criarCobrancaAssinatura}
                 disabled={gerandoCobranca}
-                className="rounded-2xl bg-violet-700 px-5 py-3 text-sm font-semibold text-white transition hover:bg-violet-600 disabled:opacity-60"
+                className="inline-flex items-center gap-3 rounded-2xl bg-violet-700 px-5 py-3 text-sm font-semibold text-white transition hover:bg-violet-600 disabled:opacity-60"
               >
+                {gerandoCobranca ? <LoadingDot /> : null}
+
                 {gerandoCobranca
-                  ? "Gerando cobrança..."
+                  ? billingType === "PIX"
+                    ? "Gerando PIX..."
+                    : billingType === "BOLETO"
+                    ? "Gerando boleto..."
+                    : "Gerando cobrança no cartão..."
                   : billingType === "PIX"
                   ? "Gerar PIX"
                   : billingType === "BOLETO"
@@ -165,7 +189,7 @@ export default function AssinaturaStatusCard({
                 Aguardando confirmação do pagamento...
               </div>
               <div className="text-xs text-amber-700">
-                Assim que o gateway confirmar, a assinatura será atualizada.
+                O sistema está consultando automaticamente. Você também pode verificar manualmente.
               </div>
             </div>
 
@@ -173,8 +197,9 @@ export default function AssinaturaStatusCard({
               type="button"
               onClick={verificarPagamentoAgora}
               disabled={verificandoAgora}
-              className="rounded-xl border border-amber-300 bg-white px-4 py-2 text-xs font-semibold text-amber-800 transition hover:bg-amber-100 disabled:opacity-60"
+              className="inline-flex items-center gap-2 rounded-xl border border-amber-300 bg-white px-4 py-2 text-xs font-semibold text-amber-800 transition hover:bg-amber-100 disabled:opacity-60"
             >
+              {verificandoAgora ? <LoadingDot dark /> : null}
               {verificandoAgora ? "Verificando..." : "Verificar agora"}
             </button>
           </div>

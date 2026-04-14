@@ -32,6 +32,12 @@ function StepBadge({ numero }: { numero: number }) {
   );
 }
 
+function LoadingDot() {
+  return (
+    <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+  );
+}
+
 function getMovimentoPlano(planoAtual: string | null, planoSelecionado: string) {
   const infoAtual = planoAtual ? PLANOS_INFO[planoAtual] : null;
   const infoSelecionado = PLANOS_INFO[planoSelecionado];
@@ -143,14 +149,14 @@ export default function AssinaturaPlanosPagamento({
                 key={plano}
                 type="button"
                 onClick={() => {
-                  if (podeGerenciar) setPlanoSelecionado(plano);
+                  if (podeGerenciar && !gerandoCobranca) setPlanoSelecionado(plano);
                 }}
-                disabled={!podeGerenciar}
+                disabled={!podeGerenciar || gerandoCobranca}
                 className={`relative min-h-[240px] rounded-[26px] border p-6 text-left transition ${
                   ativo
                     ? "border-violet-600 bg-[linear-gradient(135deg,#5b21b6_0%,#6d28d9_60%,#7c3aed_100%)] text-white shadow-lg"
                     : "border-zinc-200 bg-white text-zinc-950 hover:border-violet-300 hover:shadow-sm"
-                } ${!podeGerenciar ? "cursor-not-allowed opacity-70" : ""}`}
+                } ${!podeGerenciar || gerandoCobranca ? "cursor-not-allowed opacity-70" : ""}`}
               >
                 <div className="absolute right-4 top-4 flex flex-col items-end gap-2">
                   {ativo ? (
@@ -231,9 +237,9 @@ export default function AssinaturaPlanosPagamento({
                 key={item.tipo}
                 type="button"
                 onClick={() => {
-                  if (podeGerenciar) setBillingType(item.tipo);
+                  if (podeGerenciar && !gerandoCobranca) setBillingType(item.tipo);
                 }}
-                disabled={!podeGerenciar}
+                disabled={!podeGerenciar || gerandoCobranca}
                 className={`flex w-full items-center justify-between rounded-[22px] border px-5 py-4 text-left transition ${
                   ativo
                     ? "border-violet-500 bg-violet-50 text-violet-900 shadow-sm"
@@ -350,10 +356,16 @@ export default function AssinaturaPlanosPagamento({
             void criarCobrancaAssinatura();
           }}
           disabled={gerandoCobranca || !podeGerenciar}
-          className="mt-5 inline-flex w-full items-center justify-center rounded-[22px] bg-[linear-gradient(135deg,#5b21b6_0%,#6d28d9_60%,#7c3aed_100%)] px-5 py-4 text-sm font-semibold text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60"
+          className="mt-5 inline-flex w-full items-center justify-center gap-3 rounded-[22px] bg-[linear-gradient(135deg,#5b21b6_0%,#6d28d9_60%,#7c3aed_100%)] px-5 py-4 text-sm font-semibold text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60"
         >
+          {gerandoCobranca ? <LoadingDot /> : null}
+
           {gerandoCobranca
-            ? "Gerando cobrança..."
+            ? billingType === "PIX"
+              ? "Gerando PIX..."
+              : billingType === "BOLETO"
+              ? "Gerando boleto..."
+              : "Gerando cobrança no cartão..."
             : billingType === "PIX"
             ? "Gerar PIX"
             : billingType === "BOLETO"
