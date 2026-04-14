@@ -8,6 +8,7 @@ Todas as mudanças importantes do projeto serão documentadas aqui.
 
 - Auditoria de dependências adicionada aos scripts e ao CI como checagem informativa.
 - Dependabot configurado para monitorar dependências semanalmente.
+- Validação de segredos reforçada em webhook Asaas e cron de renovação.
 - Remoção de helper legado de sessão do profissional via `localStorage`.
 - Correções de typecheck, lint e build.
 - Proteção server-side para APIs administrativas de usuários.

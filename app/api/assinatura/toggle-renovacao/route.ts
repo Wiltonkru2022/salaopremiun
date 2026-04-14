@@ -105,7 +105,7 @@ export async function POST(req: Request) {
     const body = await req.json();
 
     const idSalao = String(body?.idSalao || "").trim();
-    const renovacaoAutomatica = Boolean(body?.renovacaoAutomatica);
+    const renovacaoAutomaticaInput = body?.renovacaoAutomatica;
 
     if (!idSalao) {
       return NextResponse.json(
@@ -113,6 +113,15 @@ export async function POST(req: Request) {
         { status: 400 }
       );
     }
+
+    if (typeof renovacaoAutomaticaInput !== "boolean") {
+      return NextResponse.json(
+        { error: "renovacaoAutomatica deve ser booleano." },
+        { status: 400 }
+      );
+    }
+
+    const renovacaoAutomatica = renovacaoAutomaticaInput;
 
     await validarSalaoDoUsuario(idSalao);
 

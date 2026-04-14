@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { addDays, format, isBefore, subDays } from "date-fns";
 import { createClient } from "@supabase/supabase-js";
+import { verifyBearerSecret } from "@/lib/auth/verify-secret";
 import { criarCobranca } from "@/lib/payments/pix-provider";
 
 type AssinaturaCronRow = {
@@ -48,8 +49,10 @@ function getSupabaseAdmin() {
 }
 
 function validarCron(req: Request) {
-  const authHeader = req.headers.get("authorization");
-  return authHeader === `Bearer ${process.env.CRON_SECRET}`;
+  return verifyBearerSecret(
+    req.headers.get("authorization"),
+    process.env.CRON_SECRET
+  );
 }
 
 async function handleCron(req: Request) {

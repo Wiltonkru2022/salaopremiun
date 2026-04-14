@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { addDays, isAfter } from "date-fns";
 import { createClient } from "@supabase/supabase-js";
+import { verifyHeaderSecret } from "@/lib/auth/verify-secret";
 
 type PlanoSaasRow = {
   id: string;
@@ -33,25 +34,30 @@ function validarTokenWebhook(req: Request) {
     req.headers.get("asaas-access-token") ||
     req.headers.get("access_token");
 
-  return tokenHeader === process.env.ASAAS_WEBHOOK_TOKEN;
+  return verifyHeaderSecret(tokenHeader, process.env.ASAAS_WEBHOOK_TOKEN);
 }
 
 function shouldActivateAccess(event: string, billingType?: string | null) {
   const type = String(billingType || "").toUpperCase();
+  const paidEvents = [
+    "PAYMENT_CONFIRMED",
+    "PAYMENT_RECEIVED",
+    "PAYMENT_RECEIVED_IN_CASH",
+  ];
 
   if (type === "CREDIT_CARD") {
-    return event === "PAYMENT_CONFIRMED" || event === "PAYMENT_RECEIVED";
+    return paidEvents.includes(event);
   }
 
   if (type === "BOLETO") {
-    return event === "PAYMENT_CONFIRMED" || event === "PAYMENT_RECEIVED";
+    return paidEvents.includes(event);
   }
 
   if (type === "PIX") {
-    return event === "PAYMENT_RECEIVED" || event === "PAYMENT_CONFIRMED";
+    return paidEvents.includes(event);
   }
 
-  return event === "PAYMENT_CONFIRMED" || event === "PAYMENT_RECEIVED";
+  return paidEvents.includes(event);
 }
 
 function mapAsaasStatusToInternal(status?: string | null) {
