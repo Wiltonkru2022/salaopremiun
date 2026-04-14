@@ -17,6 +17,10 @@ type PermissoesMock = {
   assinatura_ver: boolean;
 };
 
+type UsuarioSalaoRow = {
+  id_salao: string | null;
+};
+
 export function useAssinaturaPage() {
   const supabase = useMemo(() => createClient(), []);
 
@@ -39,8 +43,6 @@ export function useAssinaturaPage() {
 
   const [checkout, setCheckout] = useState<CheckoutResponse | null>(null);
 
-  const podeGerenciar = true;
-
   const [cardForm, setCardForm] = useState<CardForm>({
     holderName: "",
     number: "",
@@ -48,6 +50,14 @@ export function useAssinaturaPage() {
     expiryYear: "",
     ccv: "",
   });
+
+  const [historicoModalOpen, setHistoricoModalOpen] = useState(false);
+  const [carregandoHistorico, setCarregandoHistorico] = useState(false);
+  const [historicoCobrancas, setHistoricoCobrancas] = useState<
+    HistoricoCobrancaRow[]
+  >([]);
+
+  const podeGerenciar = true;
 
   const carregar = useCallback(async () => {
     try {
@@ -68,7 +78,7 @@ export function useAssinaturaPage() {
         .from("usuarios")
         .select("id_salao")
         .eq("auth_user_id", user.id)
-        .single();
+        .single<UsuarioSalaoRow>();
 
       if (usuarioError) {
         throw usuarioError;
@@ -184,7 +194,7 @@ export function useAssinaturaPage() {
     }
   }
 
-  async function criarCobrancaAssinatura() {
+  async function criarCobrancaAssinatura(): Promise<void> {
     try {
       setErro("");
 
@@ -240,8 +250,57 @@ export function useAssinaturaPage() {
 
   async function copiarPix(): Promise<void> {
     if (!checkout?.pixCopiaCola) return;
-
     await navigator.clipboard.writeText(checkout.pixCopiaCola);
+  }
+
+  async function carregarHistoricoCobrancas(): Promise<void> {
+    try {
+      setCarregandoHistorico(true);
+      setErro("");
+
+      if (!salao?.id) {
+        setHistoricoCobrancas([]);
+        return;
+      }
+
+      const response = await fetch("/api/assinatura/historico", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          idSalao: salao.id,
+        }),
+      });
+
+      const data = (await response.json()) as {
+        ok?: boolean;
+        error?: string;
+        historico?: HistoricoCobrancaRow[];
+      };
+
+      if (!response.ok) {
+        throw new Error(data.error || "Erro ao carregar histórico.");
+      }
+
+      setHistoricoCobrancas(Array.isArray(data.historico) ? data.historico : []);
+    } catch (error: unknown) {
+      setErro(
+        error instanceof Error ? error.message : "Erro ao carregar histórico."
+      );
+      setHistoricoCobrancas([]);
+    } finally {
+      setCarregandoHistorico(false);
+    }
+  }
+
+  async function abrirHistoricoModal(): Promise<void> {
+    setHistoricoModalOpen(true);
+    await carregarHistoricoCobrancas();
+  }
+
+  function fecharHistoricoModal(): void {
+    setHistoricoModalOpen(false);
   }
 
   const resumoAssinatura = getResumoAssinatura({
@@ -290,10 +349,11 @@ export function useAssinaturaPage() {
     mostrarBotaoIniciarTrial: false,
     esconderBotaoPadraoRenovacao: false,
     mostrarSecaoRenovacao: true,
-    historicoModalOpen: false,
-    abrirHistoricoModal: () => {},
-    fecharHistoricoModal: () => {},
-    carregandoHistorico: false,
-    historicoCobrancas: [] as HistoricoCobrancaRow[],
+
+    historicoModalOpen,
+    abrirHistoricoModal,
+    fecharHistoricoModal,
+    carregandoHistorico,
+    historicoCobrancas,
   };
 }
