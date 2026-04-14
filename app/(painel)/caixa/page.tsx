@@ -889,6 +889,26 @@ export default function CaixaPage() {
     }
   }
 
+  async function recalcularTaxaProfissionalAposFechamento(idComanda: string) {
+    const response = await fetch("/api/comissoes/recalcular-taxa-profissional", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        idSalao,
+        idComanda,
+      }),
+    });
+
+    if (!response.ok) {
+      const result = await response.json().catch(() => null);
+      throw new Error(
+        result?.error || "não foi possível recalcular a taxa da comissão."
+      );
+    }
+  }
+
   async function finalizarComanda() {
     if (!comandaSelecionada) return;
     if (!podeFinalizarCaixa) {
@@ -915,11 +935,24 @@ export default function CaixaPage() {
         throw new Error(error.message || "Erro ao finalizar comanda.");
       }
 
+      let avisoRecalculo = "";
+
+      try {
+        await recalcularTaxaProfissionalAposFechamento(comandaSelecionada.id);
+      } catch (recalculoError: any) {
+        avisoRecalculo =
+          recalculoError?.message || "não foi possível recalcular a taxa da comissão.";
+      }
+
       await carregarTudo();
       setComandaSelecionada(null);
       setItens([]);
       setPagamentos([]);
-      setMsg(`Comanda #${numeroAtual} finalizada com sucesso.`);
+      setMsg(
+        avisoRecalculo
+          ? `Comanda #${numeroAtual} finalizada, mas ${avisoRecalculo}`
+          : `Comanda #${numeroAtual} finalizada com sucesso.`
+      );
     } catch (error: any) {
       console.error(error);
       setErroTela(error?.message || "Erro ao finalizar comanda.");

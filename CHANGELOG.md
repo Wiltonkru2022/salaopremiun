@@ -11,7 +11,7 @@ Todas as mudanças importantes do projeto serão documentadas aqui.
 - Dependabot ajustado para não abrir major automático de TypeScript após falha no typecheck.
 - Helpers, tipos e componentes auxiliares separados das páginas grandes de caixa, configurações e vendas.
 - Fluxos de feedback e helpers de comanda extraídos da página de agenda.
-- Lógica de comissão alinhada entre agenda, caixa e comanda manual, com guias práticos para configuração em serviços, comissões, profissionais e taxas.
+- Lógica de comissão alinhada entre agenda, caixa e comanda manual, com guias práticos para configuração em serviços, comissões, profissionais e taxas, incluindo desconto da taxa do profissional também para base bruta.
 - Validação de segredos reforçada em webhook Asaas e cron de renovação.
 - Remoção de helper legado de sessão do profissional via `localStorage`.
 - Correções de typecheck, lint e build.
