@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { getUsuarioLogado } from "@/lib/auth/getUsuarioLogado";
+import { ComissaoHelpPanel } from "@/components/comissoes/ComissaoHelpPanel";
 import {
   BadgeDollarSign,
   CalendarDays,
@@ -95,19 +96,19 @@ function statusLabel(status: string | null | undefined) {
 function origemLabel(origem: string | null | undefined) {
   switch (origem) {
     case "profissional_servico":
-      return "Profissional/Serviço";
+      return "Exceção do profissional";
     case "servico_padrao":
-      return "Serviço padrão";
+      return "Padrão do serviço";
     case "profissional_padrao":
-      return "Profissional padrão";
+      return "Padrão antigo do profissional";
     case "assistente":
       return "Assistente";
     case "legado":
       return "Legado";
     case "manual":
-      return "Manual";
+      return "Lançamento manual";
     case "sem_regra":
-      return "Sem regra";
+      return "Sem regra definida";
     default:
       return origem || "-";
   }
@@ -674,6 +675,44 @@ export default function ComissoesPage() {
             icon={<XCircle size={16} />}
           />
         </div>
+
+        <ComissaoHelpPanel
+          eyebrow="Leitura rápida"
+          title="Como este valor foi definido"
+          description="A coluna de origem mostra qual regra entrou no lançamento. Isso ajuda a entender o que foi configurado e onde mexer para os próximos rateios."
+          steps={[
+            {
+              title: "Padrão do serviço",
+              description:
+                "É a configuração principal do salão e deve ser o caminho mais comum para a comissão.",
+            },
+            {
+              title: "Exceção do profissional",
+              description:
+                "Quando um profissional foge do padrão daquele serviço, a exceção aparece aqui.",
+            },
+            {
+              title: "Taxa da maquininha",
+              description:
+                "Ela só entra na comissão se o salão permitir e o serviço ou vínculo estiver marcado para descontar taxa.",
+            },
+          ]}
+        >
+          <div className="flex flex-wrap gap-2 text-xs font-medium text-zinc-600">
+            <span className="rounded-full bg-white px-3 py-1 ring-1 ring-zinc-200">
+              Exceção do profissional
+            </span>
+            <span className="rounded-full bg-white px-3 py-1 ring-1 ring-zinc-200">
+              Padrão do serviço
+            </span>
+            <span className="rounded-full bg-white px-3 py-1 ring-1 ring-zinc-200">
+              Padrão antigo do profissional
+            </span>
+            <span className="rounded-full bg-white px-3 py-1 ring-1 ring-zinc-200">
+              Sem regra definida
+            </span>
+          </div>
+        </ComissaoHelpPanel>
 
         {erro ? (
           <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">

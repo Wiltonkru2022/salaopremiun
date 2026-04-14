@@ -1,28 +1,18 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import {
+  buscarVinculoProfissionalServico,
+  resolverRegraComissaoServico,
+  type ProfissionalComissaoSource,
+  type ServicoComissaoSource,
+} from "@/lib/comissoes/regrasServico";
 
-type ServicoComandaInfo = {
+type ServicoComandaInfo = ServicoComissaoSource & {
   id: string;
   nome: string;
-  preco_padrao?: number | null;
-  preco?: number | null;
-  custo_produto?: number | null;
-  comissao_percentual?: number | null;
-  comissao_assistente_percentual?: number | null;
-  base_calculo?: string | null;
-  desconta_taxa_maquininha?: boolean | null;
 };
 
-type ProfissionalComandaInfo = {
+type ProfissionalComandaInfo = ProfissionalComissaoSource & {
   id: string;
-  comissao_percentual?: number | null;
-};
-
-type VinculoProfissionalServico = {
-  preco_personalizado?: number | null;
-  comissao_percentual?: number | null;
-  comissao_assistente_percentual?: number | null;
-  base_calculo?: string | null;
-  desconta_taxa_maquininha?: boolean | null;
 };
 
 type SincronizarParams = {
@@ -35,32 +25,6 @@ type SincronizarParams = {
   servico?: ServicoComandaInfo | null;
   profissional?: ProfissionalComandaInfo | null;
 };
-
-async function buscarVinculoProfissionalServico(params: {
-  supabase: SupabaseClient;
-  idProfissional: string;
-  idServico: string;
-}) {
-  const { data, error } = await params.supabase
-    .from("profissional_servicos")
-    .select(`
-      preco_personalizado,
-      comissao_percentual,
-      comissao_assistente_percentual,
-      base_calculo,
-      desconta_taxa_maquininha
-    `)
-    .eq("id_profissional", params.idProfissional)
-    .eq("id_servico", params.idServico)
-    .maybeSingle();
-
-  if (error) {
-    console.error("Erro ao buscar vínculo profissional_servicos:", error);
-    throw new Error("Erro ao buscar vínculo do profissional com o serviço.");
-  }
-
-  return (data as VinculoProfissionalServico | null) || null;
-}
 
 export async function recalcularTotaisComanda(params: {
   supabase: SupabaseClient;
@@ -256,7 +220,7 @@ export async function sincronizarAgendamentoComComanda(params: SincronizarParams
       .eq("id", idAgendamento);
 
     if (clearAgendamentoError) {
-      console.error("Erro ao limpar vínculo da comanda no agendamento:", clearAgendamentoError);
+      console.error("Erro ao limpar vinculo da comanda no agendamento:", clearAgendamentoError);
       throw new Error("Erro ao desvincular agendamento da comanda.");
     }
 
@@ -268,13 +232,18 @@ export async function sincronizarAgendamentoComComanda(params: SincronizarParams
   }
 
   if (!servico) {
-    throw new Error("Serviço não encontrado para sincronização da comanda.");
+    throw new Error("Servico nao encontrado para sincronizacao da comanda.");
   }
 
   const vinculo = await buscarVinculoProfissionalServico({
     supabase,
     idProfissional,
     idServico,
+  });
+  const regraServico = resolverRegraComissaoServico({
+    servico,
+    profissional,
+    vinculo,
   });
 
   const { data: comanda, error: comandaError } = await supabase
@@ -289,13 +258,13 @@ export async function sincronizarAgendamentoComComanda(params: SincronizarParams
   }
 
   if (!comanda?.id) {
-    throw new Error("Comanda de destino não encontrada.");
+    throw new Error("Comanda de destino nao encontrada.");
   }
 
   const statusComanda = String(comanda.status || "").toLowerCase();
 
   if (statusComanda === "fechada") {
-    throw new Error("A comanda selecionada não pode receber itens.");
+    throw new Error("A comanda selecionada nao pode receber itens.");
   }
 
   if (statusComanda === "cancelada") {
@@ -314,32 +283,6 @@ export async function sincronizarAgendamentoComComanda(params: SincronizarParams
     }
   }
 
-  const valorUnitario = Number(
-    vinculo?.preco_personalizado ?? servico.preco_padrao ?? servico.preco ?? 0
-  );
-
-  const valorTotal = valorUnitario;
-
-  const comissaoPercentual = Number(
-    vinculo?.comissao_percentual ??
-      profissional?.comissao_percentual ??
-      servico.comissao_percentual ??
-      0
-  );
-
-  const comissaoAssistentePercentual = Number(
-    vinculo?.comissao_assistente_percentual ??
-      servico.comissao_assistente_percentual ??
-      0
-  );
-
-  const baseCalculoAplicada = vinculo?.base_calculo || servico.base_calculo || "bruto";
-
-  const descontaTaxaAplicada =
-    vinculo?.desconta_taxa_maquininha ??
-    servico.desconta_taxa_maquininha ??
-    false;
-
   const payloadItem = {
     id_salao: idSalao,
     id_comanda: idComandaNova,
@@ -348,17 +291,17 @@ export async function sincronizarAgendamentoComComanda(params: SincronizarParams
     id_servico: servico.id,
     descricao: servico.nome,
     quantidade: 1,
-    valor_unitario: valorUnitario,
-    valor_total: valorTotal,
+    valor_unitario: regraServico.valorUnitario,
+    valor_total: regraServico.valorUnitario,
     custo_total: Number(servico.custo_produto ?? 0),
     id_profissional: idProfissional,
     id_assistente: null,
-    comissao_percentual_aplicada: comissaoPercentual,
+    comissao_percentual_aplicada: regraServico.comissaoPercentual,
     comissao_valor_aplicado: 0,
-    comissao_assistente_percentual_aplicada: comissaoAssistentePercentual,
+    comissao_assistente_percentual_aplicada: regraServico.comissaoAssistentePercentual,
     comissao_assistente_valor_aplicado: 0,
-    base_calculo_aplicada: baseCalculoAplicada,
-    desconta_taxa_maquininha_aplicada: descontaTaxaAplicada,
+    base_calculo_aplicada: regraServico.baseCalculo,
+    desconta_taxa_maquininha_aplicada: regraServico.descontaTaxaMaquininha,
     origem: "agenda",
     observacoes: null,
     ativo: true,
@@ -383,7 +326,7 @@ export async function sincronizarAgendamentoComComanda(params: SincronizarParams
 
   if (updateAgendamentoError) {
     console.error("Erro ao atualizar comanda do agendamento:", updateAgendamentoError);
-    throw new Error("Erro ao vincular agendamento à comanda.");
+    throw new Error("Erro ao vincular agendamento a comanda.");
   }
 
   await recalcularTotaisComanda({

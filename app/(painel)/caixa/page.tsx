@@ -9,6 +9,10 @@ import CaixaDetalhe from "@/components/caixa/CaixaDetalhe";
 import CaixaResumo from "@/components/caixa/CaixaResumo";
 import CaixaPagamentos from "@/components/caixa/CaixaPagamentos";
 import {
+  buscarVinculoProfissionalServico,
+  resolverRegraComissaoServico,
+} from "@/lib/comissoes/regrasServico";
+import {
   AbaCaixa,
   AgendamentoFila,
   CatalogoExtra,
@@ -29,10 +33,6 @@ import {
   getExtraPrice,
   getProdutoPrice,
   getServicoPrice,
-  getServicoComissao,
-  getServicoComissaoAssistente,
-  getServicoBaseCalculo,
-  getServicoDescontaTaxa,
   obterTaxaConfigurada,
 } from "@/components/caixa/utils";
 import {
@@ -312,7 +312,7 @@ export default function CaixaPage() {
 
       supabase
         .from("profissionais")
-        .select("id, nome")
+        .select("id, nome, comissao_percentual")
         .eq("id_salao", salaoId)
         .eq("status", "ativo")
         .order("nome", { ascending: true }),
@@ -1180,19 +1180,33 @@ export default function CaixaPage() {
 
       if (itemModal.tipoItem === "servico") {
         const servico = servicosCatalogo.find((item) => item.id === itemModal.catalogoId);
+        const profissional = profissionaisCatalogo.find(
+          (item) => item.id === itemModal.idProfissional
+        );
+        const vinculo =
+          servico?.id && itemModal.idProfissional
+            ? await buscarVinculoProfissionalServico({
+                supabase,
+                idProfissional: itemModal.idProfissional,
+                idServico: servico.id,
+              })
+            : null;
+        const regraServico = resolverRegraComissaoServico({
+          servico,
+          profissional,
+          vinculo,
+        });
 
         payloadBase = {
           ...payloadBase,
           id_servico: servico?.id || null,
-          comissao_percentual_aplicada: getServicoComissao(
-            servico,
-            profissionaisCatalogo.find((p) => p.id === itemModal.idProfissional)
-          ),
+          comissao_percentual_aplicada: regraServico.comissaoPercentual,
           comissao_valor_aplicado: 0,
-          comissao_assistente_percentual_aplicada: getServicoComissaoAssistente(servico),
+          comissao_assistente_percentual_aplicada:
+            regraServico.comissaoAssistentePercentual,
           comissao_assistente_valor_aplicado: 0,
-          base_calculo_aplicada: getServicoBaseCalculo(servico),
-          desconta_taxa_maquininha_aplicada: getServicoDescontaTaxa(servico),
+          base_calculo_aplicada: regraServico.baseCalculo,
+          desconta_taxa_maquininha_aplicada: regraServico.descontaTaxaMaquininha,
         };
       } else {
         payloadBase = {

@@ -6,6 +6,10 @@ import { createClient } from "@/lib/supabase/client";
 import ComandaItemModal from "@/components/comandas/ComandaItemModal";
 import { getUsuarioLogado } from "@/lib/auth/getUsuarioLogado";
 import { calcularValorTotal, formatMoney, formatMoneyInput, parseMoneyToNumber } from "@/lib/utils/comanda";
+import {
+  buscarVinculoProfissionalServico,
+  resolverRegraComissaoServico,
+} from "@/lib/comissoes/regrasServico";
 
 type Cliente = {
   id: string;
@@ -21,8 +25,10 @@ type Profissional = {
 type Servico = {
   id: string;
   nome: string;
+  preco?: number | null;
   preco_padrao?: number | null;
   custo_produto?: number | null;
+  comissao_percentual?: number | null;
   comissao_percentual_padrao?: number | null;
   comissao_assistente_percentual?: number | null;
   base_calculo?: string | null;
@@ -143,8 +149,10 @@ async function bootstrap() {
         .select(`
           id,
           nome,
+          preco,
           preco_padrao,
           custo_produto,
+          comissao_percentual,
           comissao_percentual_padrao,
           comissao_assistente_percentual,
           base_calculo,
@@ -303,6 +311,28 @@ async function bootstrap() {
       const quantidade = Number(payload.quantidade || 1);
       const valorUnitario = Number(payload.valor_unitario || 0);
       const valorTotal = calcularValorTotal(quantidade, valorUnitario);
+      let regraServico: ReturnType<typeof resolverRegraComissaoServico> | null = null;
+
+      if (payload.tipo_item === "servico") {
+        const servicoSelecionado = servicos.find((item) => item.id === payload.id_servico);
+        const profissionalSelecionado = profissionais.find(
+          (item) => item.id === payload.id_profissional
+        );
+        const vinculo =
+          payload.id_servico && payload.id_profissional
+            ? await buscarVinculoProfissionalServico({
+                supabase,
+                idProfissional: payload.id_profissional,
+                idServico: payload.id_servico,
+              })
+            : null;
+
+        regraServico = resolverRegraComissaoServico({
+          servico: servicoSelecionado,
+          profissional: profissionalSelecionado,
+          vinculo,
+        });
+      }
 
       const itemPayload = {
         id_salao: idSalao,
@@ -318,14 +348,20 @@ async function bootstrap() {
         custo_total: Number(payload.custo_total || 0),
         id_profissional: payload.id_profissional || null,
         id_assistente: payload.id_assistente || null,
-        comissao_percentual_aplicada: payload.comissao_percentual_aplicada || 0,
+        comissao_percentual_aplicada: regraServico
+          ? regraServico.comissaoPercentual
+          : Number(payload.comissao_percentual_aplicada ?? 0),
         comissao_valor_aplicado: 0,
-        comissao_assistente_percentual_aplicada:
-          payload.comissao_assistente_percentual_aplicada || 0,
+        comissao_assistente_percentual_aplicada: regraServico
+          ? regraServico.comissaoAssistentePercentual
+          : Number(payload.comissao_assistente_percentual_aplicada ?? 0),
         comissao_assistente_valor_aplicado: 0,
-        base_calculo_aplicada: payload.base_calculo_aplicada || "bruto",
-        desconta_taxa_maquininha_aplicada:
-          payload.desconta_taxa_maquininha_aplicada || false,
+        base_calculo_aplicada: regraServico
+          ? regraServico.baseCalculo
+          : payload.base_calculo_aplicada || "bruto",
+        desconta_taxa_maquininha_aplicada: regraServico
+          ? regraServico.descontaTaxaMaquininha
+          : Boolean(payload.desconta_taxa_maquininha_aplicada ?? false),
         origem: "manual",
         observacoes: payload.observacoes || null,
       };

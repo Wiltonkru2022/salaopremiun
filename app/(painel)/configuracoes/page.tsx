@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { getUsuarioLogado } from "@/lib/auth/getUsuarioLogado";
 import { hasPermission } from "@/lib/auth/permissions";
 import type { UserNivel } from "@/lib/permissions";
+import { ComissaoHelpPanel } from "@/components/comissoes/ComissaoHelpPanel";
 import {
   Building2,
   CalendarClock,
@@ -999,6 +1000,46 @@ const { data, error } = await supabase
             title="Caixa e taxas"
             description="Taxa de maquininha, repasse, desconto e regras financeiras."
           >
+            <ComissaoHelpPanel
+              eyebrow="Como funciona"
+              title="Essas taxas são gerais do salão"
+              description="Aqui você define o comportamento financeiro da maquininha. A comissão só é afetada quando o serviço ou a exceção do profissional estiver marcado para descontar taxa."
+              steps={[
+                {
+                  title: "Cadastre as taxas da operadora",
+                  description: "Crédito, débito e PIX servem como base para o caixa inteiro.",
+                },
+                {
+                  title: "Decida quem absorve a taxa",
+                  description:
+                    "Você pode repassar para o cliente, descontar do profissional ou não repassar para ninguém.",
+                },
+                {
+                  title: "Ligue isso ao serviço",
+                  description:
+                    "A opção de descontar taxa na comissão precisa estar marcada no serviço ou na exceção do profissional.",
+                },
+              ]}
+            >
+              <div className="flex flex-wrap gap-2 text-xs font-medium text-zinc-600">
+                <span className="rounded-full bg-white px-3 py-1 ring-1 ring-zinc-200">
+                  Cliente absorve: {configForm.repassa_taxa_cliente ? "Sim" : "Não"}
+                </span>
+                <span className="rounded-full bg-white px-3 py-1 ring-1 ring-zinc-200">
+                  Profissional absorve: {configForm.desconta_taxa_profissional ? "Sim" : "Não"}
+                </span>
+                <span className="rounded-full bg-white px-3 py-1 ring-1 ring-zinc-200">
+                  Crédito: {configForm.taxa_maquininha_credito.toLocaleString("pt-BR")}%
+                </span>
+                <span className="rounded-full bg-white px-3 py-1 ring-1 ring-zinc-200">
+                  Débito: {configForm.taxa_maquininha_debito.toLocaleString("pt-BR")}%
+                </span>
+                <span className="rounded-full bg-white px-3 py-1 ring-1 ring-zinc-200">
+                  PIX: {configForm.taxa_maquininha_pix.toLocaleString("pt-BR")}%
+                </span>
+              </div>
+            </ComissaoHelpPanel>
+
             <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
               <Field label="Taxa crédito (%)">
                 <div className="relative">

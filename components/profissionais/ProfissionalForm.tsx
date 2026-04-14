@@ -1026,6 +1026,11 @@ async function salvarAcessoProfissional(idProfissional: string) {
                   onChange={(v) => handleChange("comissao_produto_percentual", v)}
                 />
 
+                <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-600">
+                  A comissão de serviços não é configurada aqui. Para ajustar percentual, base de cálculo
+                  e taxa da maquininha por serviço, use <strong className="text-zinc-900">Serviços &gt; Editar serviço</strong>.
+                </div>
+
                 <Select
                   label="Tipo de PIX"
                   value={form.pix_tipo}

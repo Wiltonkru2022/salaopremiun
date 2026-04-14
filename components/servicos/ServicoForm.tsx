@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { maskMoneyInput, parseMoneyToNumber } from "@/lib/utils/serviceMasks";
 import { getUsuarioLogado } from "@/lib/auth/getUsuarioLogado";
+import { ComissaoHelpPanel } from "@/components/comissoes/ComissaoHelpPanel";
 
 type ServicoFormProps = {
   modo: "novo" | "editar";
@@ -34,7 +35,7 @@ type VinculoProfissional = {
   comissao_percentual: string;
   comissao_assistente_percentual: string;
   base_calculo: string;
-  desconta_taxa_maquininha: boolean;
+  desconta_taxa_maquininha: boolean | null;
 };
 
 type ProdutoConsumo = {
@@ -103,6 +104,44 @@ function formatMoneyFromDb(value: unknown) {
   return n.toFixed(2).replace(".", ",");
 }
 
+function formatPercentPreview(value: string) {
+  if (!value.trim()) return "Nao definido";
+
+  return `${Number(value || 0).toLocaleString("pt-BR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}%`;
+}
+
+function formatBaseCalculoLabel(value: string) {
+  return value === "liquido" ? "Liquido" : "Bruto";
+}
+
+function formatTaxaMaquininhaLabel(value: boolean | null | undefined) {
+  if (value === null || value === undefined) return "Usar padrao do servico";
+  return value ? "Descontar taxa" : "Nao descontar taxa";
+}
+
+function hasRegraComissaoPersonalizada(vinculo: VinculoProfissional) {
+  return (
+    vinculo.comissao_percentual.trim() !== "" ||
+    vinculo.comissao_assistente_percentual.trim() !== "" ||
+    vinculo.base_calculo.trim() !== "" ||
+    vinculo.desconta_taxa_maquininha !== null
+  );
+}
+
+function getTaxaMaquininhaSelectValue(value: boolean | null) {
+  if (value === null) return "";
+  return value ? "descontar" : "nao_descontar";
+}
+
+function parseTaxaMaquininhaSelectValue(value: string): boolean | null {
+  if (value === "descontar") return true;
+  if (value === "nao_descontar") return false;
+  return null;
+}
+
 export default function ServicoForm({ modo }: ServicoFormProps) {
   const supabase = createClient();
   const router = useRouter();
@@ -131,6 +170,11 @@ export default function ServicoForm({ modo }: ServicoFormProps) {
   const custoProdutoNumero = useMemo(
     () => parseMoneyToNumber(servico.custo_produto),
     [servico.custo_produto]
+  );
+  const vinculosAtivos = useMemo(() => vinculos.filter((item) => item.ativo), [vinculos]);
+  const totalRegrasPersonalizadas = useMemo(
+    () => vinculosAtivos.filter((item) => hasRegraComissaoPersonalizada(item)).length,
+    [vinculosAtivos]
   );
 
   useEffect(() => {
@@ -202,7 +246,7 @@ async function bootstrap() {
           comissao_percentual: "",
           comissao_assistente_percentual: "",
           base_calculo: "",
-          desconta_taxa_maquininha: false,
+          desconta_taxa_maquininha: null,
         }))
       );
       setConsumos([]);
@@ -298,7 +342,10 @@ async function bootstrap() {
           comissao_assistente_percentual:
             v?.comissao_assistente_percentual?.toString() || "",
           base_calculo: v?.base_calculo || "",
-          desconta_taxa_maquininha: v?.desconta_taxa_maquininha ?? false,
+          desconta_taxa_maquininha:
+            typeof v?.desconta_taxa_maquininha === "boolean"
+              ? v.desconta_taxa_maquininha
+              : null,
         };
       })
     );
@@ -340,6 +387,22 @@ async function bootstrap() {
       prev.map((item) =>
         item.id_profissional === idProfissional
           ? { ...item, [field]: value }
+          : item
+      )
+    );
+  }
+
+  function limparRegraComissao(idProfissional: string) {
+    setVinculos((prev) =>
+      prev.map((item) =>
+        item.id_profissional === idProfissional
+          ? {
+              ...item,
+              comissao_percentual: "",
+              comissao_assistente_percentual: "",
+              base_calculo: "",
+              desconta_taxa_maquininha: null,
+            }
           : item
       )
     );
@@ -445,7 +508,7 @@ async function bootstrap() {
 
       if (deleteVinculosError) throw deleteVinculosError;
 
-      const vinculosAtivos = vinculos
+      const vinculosParaSalvar = vinculos
         .filter((v) => v.ativo)
         .map((v) => ({
           id_salao: idSalao,
@@ -465,13 +528,16 @@ async function bootstrap() {
             ? Number(v.comissao_assistente_percentual)
             : null,
           base_calculo: v.base_calculo || null,
-          desconta_taxa_maquininha: v.desconta_taxa_maquininha,
+          desconta_taxa_maquininha:
+            typeof v.desconta_taxa_maquininha === "boolean"
+              ? v.desconta_taxa_maquininha
+              : null,
         }));
 
-      if (vinculosAtivos.length > 0) {
+      if (vinculosParaSalvar.length > 0) {
         const { error: vinculoError } = await supabase
           .from("profissional_servicos")
-          .insert(vinculosAtivos);
+          .insert(vinculosParaSalvar);
 
         if (vinculoError) throw vinculoError;
       }
@@ -668,7 +734,45 @@ async function bootstrap() {
             </Card>
 
             <Card title="4. Regras de comissão" subtitle="Padrão do serviço">
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div className="space-y-4">
+                <ComissaoHelpPanel
+                  title="Use uma regra padrão e mexa só nas exceções"
+                  description="A forma mais simples de trabalhar com comissão é definir o padrão do serviço aqui e personalizar apenas quem foge da regra."
+                  steps={[
+                    {
+                      title: "Defina o padrão do serviço",
+                      description:
+                        "Esse percentual vira a referência principal para o caixa e para os próximos lançamentos.",
+                    },
+                    {
+                      title: "Personalize só quando precisar",
+                      description:
+                        "Campos vazios na seção de profissionais significam herdar o padrão deste serviço.",
+                    },
+                    {
+                      title: "Revise a taxa da maquininha",
+                      description:
+                        "A taxa geral do salão fica em Configurações. Aqui você decide se este serviço entra nessa regra.",
+                    },
+                  ]}
+                />
+
+                <div className="flex flex-wrap gap-2 text-xs font-medium text-zinc-600">
+                  <span className="rounded-full bg-zinc-100 px-3 py-1">
+                    Profissional: {formatPercentPreview(servico.comissao_percentual_padrao)}
+                  </span>
+                  <span className="rounded-full bg-zinc-100 px-3 py-1">
+                    Assistente: {formatPercentPreview(servico.comissao_assistente_percentual)}
+                  </span>
+                  <span className="rounded-full bg-zinc-100 px-3 py-1">
+                    Base: {formatBaseCalculoLabel(servico.base_calculo)}
+                  </span>
+                  <span className="rounded-full bg-zinc-100 px-3 py-1">
+                    Taxa: {servico.desconta_taxa_maquininha ? "Desconta taxa" : "Não desconta taxa"}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <Input
                   label="Comissão profissional (%)"
                   value={servico.comissao_percentual_padrao}
@@ -701,6 +805,7 @@ async function bootstrap() {
                   onChange={(v) => setField("desconta_taxa_maquininha", v)}
                 />
               </div>
+              </div>
             </Card>
 
             <Card
@@ -708,11 +813,47 @@ async function bootstrap() {
               subtitle="Onde você controla 40%, 50% etc."
             >
               <div className="space-y-4">
+                <ComissaoHelpPanel
+                  eyebrow="Exceções"
+                  title="Deixe vazio para usar o padrão do serviço"
+                  description="Esta área serve para exceções por profissional. Quando você não preencher uma regra aqui, o sistema usa o padrão configurado acima."
+                  steps={[
+                    {
+                      title: "Ative o profissional",
+                      description:
+                        "O vínculo libera o agendamento e, se necessário, permite personalizar preço, tempo e comissão.",
+                    },
+                    {
+                      title: "Preencha só o que muda",
+                      description:
+                        "Comissão, base e taxa podem ficar vazias para herdar a configuração principal do serviço.",
+                    },
+                    {
+                      title: "Volte ao padrão com um clique",
+                      description:
+                        "Use o botão de limpar exceções quando o profissional voltar a seguir a regra geral.",
+                    },
+                  ]}
+                >
+                  <div className="flex flex-wrap gap-2 text-xs font-medium text-zinc-600">
+                    <span className="rounded-full bg-white px-3 py-1 ring-1 ring-zinc-200">
+                      Vínculos ativos: {vinculosAtivos.length}
+                    </span>
+                    <span className="rounded-full bg-white px-3 py-1 ring-1 ring-zinc-200">
+                      Regras personalizadas: {totalRegrasPersonalizadas}
+                    </span>
+                    <span className="rounded-full bg-white px-3 py-1 ring-1 ring-zinc-200">
+                      Herdando padrão: {Math.max(vinculosAtivos.length - totalRegrasPersonalizadas, 0)}
+                    </span>
+                  </div>
+                </ComissaoHelpPanel>
+
                 {profissionais.map((profissional) => {
                   const vinculo = vinculos.find(
                     (v) => v.id_profissional === profissional.id
                   );
                   if (!vinculo) return null;
+                  const usaPadraoServico = !hasRegraComissaoPersonalizada(vinculo);
 
                   return (
                     <div
@@ -721,30 +862,53 @@ async function bootstrap() {
                     >
                       <div className="mb-4 flex items-center justify-between gap-4">
                         <div>
-                          <p className="font-semibold text-zinc-900">
-                            {profissional.nome}
-                          </p>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p className="font-semibold text-zinc-900">
+                              {profissional.nome}
+                            </p>
+                            <span
+                              className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+                                usaPadraoServico
+                                  ? "bg-zinc-100 text-zinc-700"
+                                  : "bg-amber-100 text-amber-700"
+                              }`}
+                            >
+                              {usaPadraoServico ? "Usando padrão do serviço" : "Regra personalizada"}
+                            </span>
+                          </div>
                           <p className="text-sm text-zinc-500">
                             Ative para permitir agendamento deste serviço com
                             esse profissional
                           </p>
                         </div>
 
-                        <input
-                          type="checkbox"
-                          checked={vinculo.ativo}
-                          onChange={(e) =>
-                            updateVinculo(
-                              profissional.id,
-                              "ativo",
-                              e.target.checked
-                            )
-                          }
-                        />
+                        <div className="flex items-center gap-3">
+                          {vinculo.ativo ? (
+                            <button
+                              type="button"
+                              onClick={() => limparRegraComissao(profissional.id)}
+                              className="rounded-xl border border-zinc-300 px-3 py-2 text-xs font-semibold text-zinc-700 transition hover:bg-zinc-50"
+                            >
+                              Limpar exceções
+                            </button>
+                          ) : null}
+
+                          <input
+                            type="checkbox"
+                            checked={vinculo.ativo}
+                            onChange={(e) =>
+                              updateVinculo(
+                                profissional.id,
+                                "ativo",
+                                e.target.checked
+                              )
+                            }
+                          />
+                        </div>
                       </div>
 
                       {vinculo.ativo && (
-                        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
                           <Input
                             label="Duração personalizada"
                             value={vinculo.duracao_minutos}
@@ -810,17 +974,30 @@ async function bootstrap() {
                             ]}
                           />
 
-                          <Switch
-                            label="Desconta maquininha"
-                            checked={vinculo.desconta_taxa_maquininha}
-                            onChange={(v) =>
+                          <Select
+                            label="Taxa da maquininha"
+                            value={getTaxaMaquininhaSelectValue(vinculo.desconta_taxa_maquininha)}
+                            onChange={(value) =>
                               updateVinculo(
                                 profissional.id,
                                 "desconta_taxa_maquininha",
-                                v
+                                parseTaxaMaquininhaSelectValue(value)
                               )
                             }
+                            options={[
+                              { value: "", label: "Usar padrão do serviço" },
+                              { value: "descontar", label: "Descontar taxa" },
+                              { value: "nao_descontar", label: "Não descontar taxa" },
+                            ]}
                           />
+
+                          <div className="rounded-2xl border border-dashed border-zinc-200 px-4 py-3 text-sm text-zinc-600 md:col-span-2 xl:col-span-3">
+                            Resumo desta regra: profissional {formatPercentPreview(vinculo.comissao_percentual)},
+                            assistente {formatPercentPreview(vinculo.comissao_assistente_percentual)},
+                            base {vinculo.base_calculo ? formatBaseCalculoLabel(vinculo.base_calculo) : "usar padrão do serviço"}
+                            {" e "}
+                            {formatTaxaMaquininhaLabel(vinculo.desconta_taxa_maquininha).toLowerCase()}.
+                          </div>
                         </div>
                       )}
                     </div>

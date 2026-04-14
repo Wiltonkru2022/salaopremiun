@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { getUsuarioLogado } from "@/lib/auth/getUsuarioLogado";
+import { ComissaoHelpPanel } from "@/components/comissoes/ComissaoHelpPanel";
 
 type Servico = {
   id: string;
@@ -305,6 +306,37 @@ export default function ServicosPage() {
             </div>
           </div>
         </div>
+
+        <ComissaoHelpPanel
+          eyebrow="Comissão"
+          title="A configuração principal fica dentro de cada serviço"
+          description="Para o usuário final ficar menos perdido, o melhor fluxo é sempre o mesmo: defina o padrão no serviço, personalize só exceções por profissional e deixe as taxas gerais em Configurações."
+          steps={[
+            {
+              title: "Abra o serviço",
+              description: "É no cadastro do serviço que a comissão principal é definida.",
+            },
+            {
+              title: "Use exceções com moderação",
+              description:
+                "Se um profissional foge do padrão, ajuste só aquele vínculo dentro do próprio serviço.",
+            },
+            {
+              title: "Revise as taxas gerais",
+              description:
+                "Repasses e desconto de maquininha ficam em Configurações e impactam o financeiro inteiro do salão.",
+            },
+          ]}
+        >
+          <div className="flex flex-wrap gap-3">
+            <Link
+              href="/configuracoes"
+              className="inline-flex items-center justify-center rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50"
+            >
+              Abrir Configurações
+            </Link>
+          </div>
+        </ComissaoHelpPanel>
 
         {erro ? (
           <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
