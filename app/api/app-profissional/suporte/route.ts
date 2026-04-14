@@ -1,7 +1,7 @@
 import OpenAI from "openai";
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
+import { getProfissionalSessionFromCookie } from "@/lib/profissional-auth.server";
 import {
   buscarOuCriarConversaSuporte,
   listarMensagensConversa,
@@ -26,24 +26,6 @@ function getOpenAI() {
   }
 
   return new OpenAI({ apiKey });
-}
-
-type ProfissionalSession = {
-  idProfissional: string;
-  idSalao: string;
-  nome: string;
-  cpf: string;
-  tipo: "profissional";
-};
-
-function parseSession(raw: string | undefined): ProfissionalSession | null {
-  if (!raw) return null;
-
-  try {
-    return JSON.parse(raw) as ProfissionalSession;
-  } catch {
-    return null;
-  }
 }
 
 function hojeISO() {
@@ -106,10 +88,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const cookieStore = await cookies();
-    const session = parseSession(
-      cookieStore.get("sp_profissional_session")?.value
-    );
+    const session = await getProfissionalSessionFromCookie();
 
     if (!session) {
       return NextResponse.json(
