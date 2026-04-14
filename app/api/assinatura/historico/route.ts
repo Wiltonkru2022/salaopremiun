@@ -129,7 +129,11 @@ export async function POST(req: Request) {
         created_at,
         updated_at,
         asaas_payment_id,
-        deleted
+        deleted,
+        plano_origem,
+        plano_destino,
+        tipo_movimento,
+        gerada_automaticamente
       `)
       .eq("id_salao", idSalao)
       .order("created_at", { ascending: false });

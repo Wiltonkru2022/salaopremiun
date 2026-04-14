@@ -5,6 +5,7 @@ import { createServerClient } from "@supabase/ssr";
 import { cookies, headers } from "next/headers";
 
 type BillingType = "PIX" | "BOLETO" | "CREDIT_CARD";
+type TipoMovimentoAssinatura = "upgrade" | "downgrade" | "renovacao";
 
 type CardPayload = {
   holderName: string;
@@ -167,6 +168,41 @@ function mapBillingType(tipo: BillingType) {
   return "CREDIT_CARD";
 }
 
+function getPlanoOrdem(plano?: string | null) {
+  const codigo = String(plano || "").toLowerCase();
+
+  if (codigo === "basico") return 1;
+  if (codigo === "pro") return 2;
+  if (codigo === "premium") return 3;
+
+  return 0;
+}
+
+function getTipoMovimento(
+  planoOrigem?: string | null,
+  planoDestino?: string | null
+): TipoMovimentoAssinatura {
+  const origem = String(planoOrigem || "").toLowerCase();
+  const destino = String(planoDestino || "").toLowerCase();
+
+  if (!origem || origem === destino) {
+    return "renovacao";
+  }
+
+  const ordemOrigem = getPlanoOrdem(origem);
+  const ordemDestino = getPlanoOrdem(destino);
+
+  if (ordemDestino > ordemOrigem) {
+    return "upgrade";
+  }
+
+  if (ordemDestino < ordemOrigem) {
+    return "downgrade";
+  }
+
+  return "renovacao";
+}
+
 async function getRemoteIp() {
   const requestHeaders = await headers();
 
@@ -228,8 +264,8 @@ async function buscarOuCriarCustomerAsaas(params: {
 
     if (!buscaPorCpf.ok) {
       throw new Error(
-        (buscaPorCpfJson as { errors?: Array<{ description?: string }> })?.errors?.[0]
-          ?.description || "Erro ao buscar customer no Asaas."
+        (buscaPorCpfJson as { errors?: Array<{ description?: string }> })
+          ?.errors?.[0]?.description || "Erro ao buscar customer no Asaas."
       );
     }
 
@@ -255,8 +291,9 @@ async function buscarOuCriarCustomerAsaas(params: {
 
     if (!buscaPorEmail.ok) {
       throw new Error(
-        (buscaPorEmailJson as { errors?: Array<{ description?: string }> })?.errors?.[0]
-          ?.description || "Erro ao buscar customer por e-mail no Asaas."
+        (buscaPorEmailJson as { errors?: Array<{ description?: string }> })
+          ?.errors?.[0]?.description ||
+          "Erro ao buscar customer por e-mail no Asaas."
       );
     }
 
@@ -478,6 +515,28 @@ export async function POST(req: Request) {
         { status: 404 }
       );
     }
+
+    const { data: assinaturaExistenteFull, error: assinaturaExistenteFullError } =
+      await supabaseAdmin
+        .from("assinaturas")
+        .select("id, plano")
+        .eq("id_salao", idSalao)
+        .maybeSingle();
+
+    if (assinaturaExistenteFullError) {
+      return NextResponse.json(
+        {
+          error:
+            assinaturaExistenteFullError.message ||
+            "Erro ao consultar assinatura atual.",
+        },
+        { status: 500 }
+      );
+    }
+
+    const planoOrigem = String(assinaturaExistenteFull?.plano || "").trim() || null;
+    const planoDestino = planoCodigo;
+    const tipoMovimento = getTipoMovimento(planoOrigem, planoDestino);
 
     const { data: planoData, error: planoError } = await supabaseAdmin
       .from("planos_saas")
@@ -713,10 +772,18 @@ export async function POST(req: Request) {
           webhook_payload: null,
           webhook_last_event: null,
           deleted: false,
+          plano_origem: planoOrigem,
+          plano_destino: planoDestino,
+          tipo_movimento: tipoMovimento,
+          gerada_automaticamente: false,
           metadata: {
             origem: "checkout_manual",
             plano: plano.codigo,
             billingType,
+            plano_origem: planoOrigem,
+            plano_destino: planoDestino,
+            tipo_movimento: tipoMovimento,
+            gerada_automaticamente: false,
           },
         })
         .select("id")

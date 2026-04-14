@@ -144,7 +144,11 @@ export async function POST(req: Request) {
         data_expiracao,
         referencia,
         payment_date,
-        confirmed_date
+        confirmed_date,
+        plano_origem,
+        plano_destino,
+        tipo_movimento,
+        gerada_automaticamente
       `)
       .eq("asaas_payment_id", paymentId)
       .maybeSingle();
@@ -231,11 +235,26 @@ export async function POST(req: Request) {
 
     const statusCobrancaInterno = mapAsaasStatusToInternal(paymentStatus);
 
-    const confirmedDateIso = toMiddayIso(payment.confirmedDate);
-    const paymentDateIso =
-      toMiddayIso(payment.clientPaymentDate) ||
-      toMiddayIso(payment.paymentDate) ||
-      confirmedDateIso;
+    const isEventoPago = shouldActivateAccess(event, billingType);
+
+    const confirmedDateIso = isEventoPago
+      ? toMiddayIso(payment.confirmedDate) ||
+        toMiddayIso(payment.paymentDate) ||
+        toMiddayIso(payment.clientPaymentDate) ||
+        cobranca.confirmed_date ||
+        agoraIso
+      : toMiddayIso(payment.confirmedDate) || cobranca.confirmed_date || null;
+
+    const paymentDateIso = isEventoPago
+      ? toMiddayIso(payment.clientPaymentDate) ||
+        toMiddayIso(payment.paymentDate) ||
+        toMiddayIso(payment.confirmedDate) ||
+        cobranca.payment_date ||
+        agoraIso
+      : toMiddayIso(payment.clientPaymentDate) ||
+        toMiddayIso(payment.paymentDate) ||
+        cobranca.payment_date ||
+        null;
 
     const { error: updateChargeError } = await supabaseAdmin
       .from("assinaturas_cobrancas")
@@ -260,7 +279,7 @@ export async function POST(req: Request) {
       );
     }
 
-    if (shouldActivateAccess(event, billingType)) {
+    if (isEventoPago) {
       let baseDate = agora;
 
       if (assinatura.vencimento_em) {
@@ -306,7 +325,7 @@ export async function POST(req: Request) {
           status: "ativo",
           plano: planoCodigoFinal,
           valor: valorPlanoFinal,
-          pago_em: agoraIso,
+          pago_em: paymentDateIso || agoraIso,
           vencimento_em: novoVencimentoBanco,
           trial_ativo: false,
           trial_inicio_em: null,
