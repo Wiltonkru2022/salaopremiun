@@ -1,0 +1,6 @@
+.codex-dev-server*.log
+.env
+.env.*
+.git
+.next
+node_modules
