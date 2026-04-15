@@ -26,12 +26,54 @@ type ComissaoRow = {
   id: string;
   id_comanda_item?: string | null;
   tipo_profissional?: string | null;
+  tipo_destinatario?: string | null;
+  id_profissional?: string | null;
+  id_assistente?: string | null;
+  percentual?: number | null;
   percentual_aplicado?: number | null;
   valor_base?: number | null;
 };
 
 function roundCurrency(value: number) {
   return Number(value.toFixed(2));
+}
+
+function getTipoDestinatario(row: ComissaoRow) {
+  const tipo = String(row.tipo_profissional || row.tipo_destinatario || "").trim();
+
+  if (tipo) return tipo.toLowerCase();
+  if (row.id_assistente) return "assistente";
+  if (row.id_profissional) return "profissional";
+
+  return "";
+}
+
+function getPercentualAplicado(row: ComissaoRow) {
+  return Number(row.percentual_aplicado ?? row.percentual ?? 0);
+}
+
+function buildErroCargaMensagem(errors: {
+  configError: unknown;
+  pagamentosError: unknown;
+  itensError: unknown;
+  comissoesError: unknown;
+}) {
+  const fontes: string[] = [];
+
+  if (errors.configError) fontes.push("configuracoes do salao");
+  if (errors.pagamentosError) fontes.push("pagamentos da comanda");
+  if (errors.itensError) fontes.push("itens da comanda");
+  if (errors.comissoesError) fontes.push("lancamentos de comissao");
+
+  if (fontes.length === 0) {
+    return "Erro ao carregar dados para recalcular a comissao.";
+  }
+
+  if (fontes.length === 1) {
+    return `Erro ao carregar ${fontes[0]} para recalcular a comissao.`;
+  }
+
+  return `Erro ao carregar ${fontes.join(", ")} para recalcular a comissao.`;
 }
 
 async function requireGerenteOuAdminSalao(idSalao: string) {
@@ -44,7 +86,7 @@ async function requireGerenteOuAdminSalao(idSalao: string) {
   } = await supabase.auth.getUser();
 
   if (authError || !user) {
-    return { error: "Usuário não autenticado.", status: 401 } as const;
+    return { error: "Usuario nao autenticado.", status: 401 } as const;
   }
 
   const { data: usuario, error: usuarioError } = await supabaseAdmin
@@ -54,23 +96,26 @@ async function requireGerenteOuAdminSalao(idSalao: string) {
     .maybeSingle();
 
   if (usuarioError) {
-    console.error("Erro ao validar usuário da comissão:", usuarioError);
-    return { error: "Erro ao validar usuário.", status: 500 } as const;
+    console.error("Erro ao validar usuario da comissao:", usuarioError);
+    return { error: "Erro ao validar usuario.", status: 500 } as const;
   }
 
   if (!usuario?.id_salao || usuario.id_salao !== idSalao) {
-    return { error: "Acesso negado para este salão.", status: 403 } as const;
+    return { error: "Acesso negado para este salao.", status: 403 } as const;
   }
 
   const nivel = String(usuario.nivel || "").toLowerCase();
   const status = String(usuario.status || "").toLowerCase();
 
   if (status !== "ativo") {
-    return { error: "Usuário inativo.", status: 403 } as const;
+    return { error: "Usuario inativo.", status: 403 } as const;
   }
 
   if (!["admin", "gerente"].includes(nivel)) {
-    return { error: "Somente admin ou gerente pode recalcular a comissão.", status: 403 } as const;
+    return {
+      error: "Somente admin ou gerente pode recalcular a comissao.",
+      status: 403,
+    } as const;
   }
 
   return { ok: true } as const;
@@ -106,7 +151,7 @@ export async function POST(req: NextRequest) {
 
     if (!idSalao || !idComanda) {
       return NextResponse.json(
-        { error: "Salão e comanda são obrigatórios." },
+        { error: "Salao e comanda sao obrigatorios." },
         { status: 400 }
       );
     }
@@ -143,13 +188,13 @@ export async function POST(req: NextRequest) {
 
       supabaseAdmin
         .from("comissoes_lancamentos")
-        .select("id, id_comanda_item, tipo_profissional, percentual_aplicado, valor_base")
+        .select("*")
         .eq("id_salao", idSalao)
         .eq("id_comanda", idComanda),
     ]);
 
     if (configError || pagamentosError || itensError || comissoesError) {
-      console.error("Erro ao carregar dados para recalcular comissão:", {
+      console.error("Erro ao carregar dados para recalcular comissao:", {
         configError,
         pagamentosError,
         itensError,
@@ -157,7 +202,14 @@ export async function POST(req: NextRequest) {
       });
 
       return NextResponse.json(
-        { error: "Erro ao carregar dados para recalcular a comissão." },
+        {
+          error: buildErroCargaMensagem({
+            configError,
+            pagamentosError,
+            itensError,
+            comissoesError,
+          }),
+        },
         { status: 500 }
       );
     }
@@ -198,14 +250,14 @@ export async function POST(req: NextRequest) {
 
     const comissoesElegiveis = ((comissoes as ComissaoRow[] | null) || []).filter((row) => {
       const item = row.id_comanda_item ? itensMap.get(row.id_comanda_item) : null;
-      const tipo = String(row.tipo_profissional || "").toLowerCase();
+      const tipo = getTipoDestinatario(row);
 
       if (!item) return false;
       if (tipo === "assistente") return false;
       if (String(item.base_calculo_aplicada || "").toLowerCase() !== "bruto") return false;
       if (!item.desconta_taxa_maquininha_aplicada) return false;
 
-      const percentual = Number(row.percentual_aplicado || 0);
+      const percentual = getPercentualAplicado(row);
       const valorBase = Number(row.valor_base || 0);
 
       return percentual > 0 && valorBase > 0;
@@ -215,7 +267,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({
         ok: true,
         skipped: true,
-        reason: "Nenhuma comissão elegível para desconto em base bruta.",
+        reason: "Nenhuma comissao elegivel para desconto em base bruta.",
       });
     }
 
@@ -229,7 +281,7 @@ export async function POST(req: NextRequest) {
 
     await Promise.all(
       comissoesElegiveis.map(async (row) => {
-        const percentual = Number(row.percentual_aplicado || 0);
+        const percentual = getPercentualAplicado(row);
         const valorBase = Number(row.valor_base || 0);
         const taxaRateada = Number(distribuicaoTaxa.get(row.id) || 0);
         const valorBrutoComissao = roundCurrency((valorBase * percentual) / 100);
