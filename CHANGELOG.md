@@ -17,6 +17,7 @@ Todas as mudancas importantes do projeto serao documentadas aqui.
 - Caixa ganhou uma rodada visual premium com header de KPIs, fila em cards operacionais, detalhe agrupado por tipo, resumo financeiro mais claro e previsao explicita do impacto da taxa nos pagamentos.
 - Agenda ganhou uma rodada de polimento premium com header operacional, KPIs do periodo, barra de profissionais mais forte, cards de atendimento com mais contexto e realce do horario atual no grid.
 - Agenda recebeu ajuste fino para priorizar o grid, com topo mais compacto e melhor aproveitamento vertical da tela.
+- Comissoes ganhou um painel mais visual, com header financeiro, cards por profissional, leitura mais clara de origem da regra e tabela analitica mais facil de conferir.
 - Validacao de segredos reforcada em webhook Asaas e cron de renovacao.
 - Remocao de helper legado de sessao do profissional via `localStorage`.
 - Correcoes de typecheck, lint e build.
