@@ -25,7 +25,7 @@ type ItemRow = {
 type ComissaoRow = {
   id: string;
   id_comanda_item?: string | null;
-  tipo?: string | null;
+  tipo_profissional?: string | null;
   percentual_aplicado?: number | null;
   valor_base?: number | null;
 };
@@ -143,7 +143,7 @@ export async function POST(req: NextRequest) {
 
       supabaseAdmin
         .from("comissoes_lancamentos")
-        .select("id, id_comanda_item, tipo, percentual_aplicado, valor_base")
+        .select("id, id_comanda_item, tipo_profissional, percentual_aplicado, valor_base")
         .eq("id_salao", idSalao)
         .eq("id_comanda", idComanda),
     ]);
@@ -198,7 +198,7 @@ export async function POST(req: NextRequest) {
 
     const comissoesElegiveis = ((comissoes as ComissaoRow[] | null) || []).filter((row) => {
       const item = row.id_comanda_item ? itensMap.get(row.id_comanda_item) : null;
-      const tipo = String(row.tipo || "").toLowerCase();
+      const tipo = String(row.tipo_profissional || "").toLowerCase();
 
       if (!item) return false;
       if (tipo === "assistente") return false;
