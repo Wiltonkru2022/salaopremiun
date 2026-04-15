@@ -12,6 +12,7 @@ Todas as mudanças importantes do projeto serão documentadas aqui.
 - Helpers, tipos e componentes auxiliares separados das páginas grandes de caixa, configurações e vendas.
 - Fluxos de feedback e helpers de comanda extraídos da página de agenda.
 - Lógica de comissão alinhada entre agenda, caixa e comanda manual, com guias práticos para configuração em serviços, comissões, profissionais e taxas, incluindo desconto da taxa do profissional também para base bruta.
+- Caixa refatorado com modal de cancelamento e modal de item extraidos, hook proprio para busca/selecao de itens e helper dedicado para montar payload de itens da comanda.
 - Validação de segredos reforçada em webhook Asaas e cron de renovação.
 - Remoção de helper legado de sessão do profissional via `localStorage`.
 - Correções de typecheck, lint e build.

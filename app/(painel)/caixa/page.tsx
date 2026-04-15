@@ -8,10 +8,8 @@ import CaixaFila from "@/components/caixa/CaixaFila";
 import CaixaDetalhe from "@/components/caixa/CaixaDetalhe";
 import CaixaResumo from "@/components/caixa/CaixaResumo";
 import CaixaPagamentos from "@/components/caixa/CaixaPagamentos";
-import {
-  buscarVinculoProfissionalServico,
-  resolverRegraComissaoServico,
-} from "@/lib/comissoes/regrasServico";
+import CaixaCancelModal from "@/components/caixa/CaixaCancelModal";
+import CaixaItemModal from "@/components/caixa/CaixaItemModal";
 import {
   AbaCaixa,
   AgendamentoFila,
@@ -27,33 +25,18 @@ import {
   TipoItemComanda,
 } from "@/components/caixa/types";
 import {
+  INITIAL_MODAL_ITEM_STATE,
+  type ModalItemState,
+} from "@/components/caixa/page-types";
+import {
   agendamentosFiltradosBase,
   getJoinedName,
   parseMoney,
-  getExtraPrice,
-  getProdutoPrice,
-  getServicoPrice,
   obterTaxaConfigurada,
 } from "@/components/caixa/utils";
-import {
-  buildPermissoesByNivel,
-  sanitizePermissoesDb,
-  type Permissoes,
-} from "@/components/caixa/permissions";
-import { MOTIVOS_CANCELAMENTO_PADRAO } from "@/components/caixa/constants";
-
-type ModalItemState = {
-  open: boolean;
-  mode: "create" | "edit";
-  itemId: string | null;
-  tipoItem: TipoItemComanda;
-  catalogoId: string;
-  descricao: string;
-  quantidade: string;
-  valorUnitario: string;
-  idProfissional: string;
-  idAssistente: string;
-};
+import { type Permissoes } from "@/components/caixa/permissions";
+import { buildComandaItemPayload } from "@/lib/caixa/buildComandaItemPayload";
+import { carregarAcessoCaixa } from "@/lib/caixa/loadCaixaData";
 
 export default function CaixaPage() {
   const supabase = createClient();
@@ -92,35 +75,13 @@ export default function CaixaPage() {
   const [observacaoPagamento, setObservacaoPagamento] = useState("");
 
   const [cancelModalOpen, setCancelModalOpen] = useState(false);
-  const [motivoCancelamento, setMotivoCancelamento] = useState("");
-  const [tipoMotivoCancelamento, setTipoMotivoCancelamento] = useState("");
 
   const [servicosCatalogo, setServicosCatalogo] = useState<CatalogoServico[]>([]);
   const [produtosCatalogo, setProdutosCatalogo] = useState<CatalogoProduto[]>([]);
   const [extrasCatalogo, setExtrasCatalogo] = useState<CatalogoExtra[]>([]);
   const [profissionaisCatalogo, setProfissionaisCatalogo] = useState<ProfissionalResumo[]>([]);
 
-  const [itemModal, setItemModal] = useState<ModalItemState>({
-    open: false,
-    mode: "create",
-    itemId: null,
-    tipoItem: "servico",
-    catalogoId: "",
-    descricao: "",
-    quantidade: "1",
-    valorUnitario: "0,00",
-    idProfissional: "",
-    idAssistente: "",
-  });
-
-  const [buscaCatalogo, setBuscaCatalogo] = useState("");
-  const [dropdownCatalogoOpen, setDropdownCatalogoOpen] = useState(false);
-
-  const [buscaProfissional, setBuscaProfissional] = useState("");
-  const [dropdownProfissionalOpen, setDropdownProfissionalOpen] = useState(false);
-
-  const [buscaAssistente, setBuscaAssistente] = useState("");
-  const [dropdownAssistenteOpen, setDropdownAssistenteOpen] = useState(false);
+  const [itemModal, setItemModal] = useState<ModalItemState>(INITIAL_MODAL_ITEM_STATE);
 
   const podeVerCaixa = !!permissoes?.caixa_ver;
 
@@ -162,47 +123,14 @@ export default function CaixaPage() {
   }, [formaPagamento, parcelas, configCaixa]);
 
   async function carregarAcesso() {
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
+    const acesso = await carregarAcessoCaixa(supabase);
 
-    if (authError || !user) {
+    if (acesso.precisaLogin) {
       router.replace("/login");
       return null;
     }
 
-    const { data: usuario, error: usuarioError } = await supabase
-      .from("usuarios")
-      .select("id, id_salao, nivel, status")
-      .eq("auth_user_id", user.id)
-      .maybeSingle();
-
-    if (usuarioError || !usuario?.id || !usuario?.id_salao) {
-      throw new Error("Não foi possível identificar o salão do usuário.");
-    }
-
-    if (usuario.status && usuario.status !== "ativo") {
-      throw new Error("Usuário inativo.");
-    }
-
-    const { data: permissoesDb } = await supabase
-      .from("usuarios_permissoes")
-      .select("*")
-      .eq("id_usuario", usuario.id)
-      .eq("id_salao", usuario.id_salao)
-      .maybeSingle();
-
-    const nivelNormalizado = String(usuario.nivel || "").toLowerCase();
-    const permissoesBase = buildPermissoesByNivel(nivelNormalizado);
-    const permissoesSobrescritas = sanitizePermissoesDb(
-      (permissoesDb as Record<string, unknown> | null) || null
-    );
-
-    const permissoesFinal: Permissoes = {
-      ...permissoesBase,
-      ...permissoesSobrescritas,
-    };
+    const permissoesFinal: Permissoes = acesso.permissoes;
 
     setPermissoes(permissoesFinal);
     setAcessoCarregado(true);
@@ -213,8 +141,7 @@ export default function CaixaPage() {
     }
 
     return {
-      user,
-      usuario,
+      usuario: acesso.usuario,
       permissoes: permissoesFinal,
     };
   }
@@ -967,19 +894,15 @@ export default function CaixaPage() {
       setErroTela("Você não tem permissão para cancelar comandas.");
       return;
     }
-    setTipoMotivoCancelamento("");
-    setMotivoCancelamento("");
     setCancelModalOpen(true);
   }
 
   function fecharModalCancelamento() {
     if (saving) return;
     setCancelModalOpen(false);
-    setTipoMotivoCancelamento("");
-    setMotivoCancelamento("");
   }
 
-  async function confirmarCancelamentoComanda() {
+  async function confirmarCancelamentoComanda(motivoFinal: string | null) {
     if (!comandaSelecionada) return;
     if (!podeFinalizarCaixa) {
       setErroTela("Você não tem permissão para cancelar comandas.");
@@ -991,13 +914,9 @@ export default function CaixaPage() {
       setErroTela("");
       setMsg("");
 
-      const motivoFinal = [tipoMotivoCancelamento, motivoCancelamento.trim()]
-        .filter(Boolean)
-        .join(" - ");
-
       const { error } = await supabase.rpc("fn_cancelar_comanda", {
         p_id_comanda: comandaSelecionada.id,
-        p_motivo: motivoFinal || null,
+        p_motivo: motivoFinal,
       });
 
       if (error) {
@@ -1009,8 +928,6 @@ export default function CaixaPage() {
       setItens([]);
       setPagamentos([]);
       setCancelModalOpen(false);
-      setTipoMotivoCancelamento("");
-      setMotivoCancelamento("");
       setMsg("Comanda cancelada com sucesso.");
     } catch (error: any) {
       console.error(error);
@@ -1027,24 +944,10 @@ export default function CaixaPage() {
       return;
     }
 
-    setBuscaCatalogo("");
-    setBuscaProfissional("");
-    setBuscaAssistente("");
-    setDropdownCatalogoOpen(false);
-    setDropdownProfissionalOpen(false);
-    setDropdownAssistenteOpen(false);
-
     setItemModal({
+      ...INITIAL_MODAL_ITEM_STATE,
       open: true,
-      mode: "create",
-      itemId: null,
       tipoItem: tipo,
-      catalogoId: "",
-      descricao: "",
-      quantidade: "1",
-      valorUnitario: "0,00",
-      idProfissional: "",
-      idAssistente: "",
     });
   }
 
@@ -1054,22 +957,12 @@ export default function CaixaPage() {
       return;
     }
 
-    const profissionalAtual = profissionaisCatalogo.find((p) => p.id === item.id_profissional);
-    const assistenteAtual = profissionaisCatalogo.find((p) => p.id === item.id_assistente);
-
-    setBuscaCatalogo(item.descricao || "");
-    setBuscaProfissional(profissionalAtual?.nome || "");
-    setBuscaAssistente(assistenteAtual?.nome || "");
-    setDropdownCatalogoOpen(false);
-    setDropdownProfissionalOpen(false);
-    setDropdownAssistenteOpen(false);
-
     setItemModal({
+      ...INITIAL_MODAL_ITEM_STATE,
       open: true,
       mode: "edit",
       itemId: item.id,
       tipoItem: item.tipo_item,
-      catalogoId: "",
       descricao: item.descricao || "",
       quantidade: String(Number(item.quantidade || 1)),
       valorUnitario: Number(item.valor_unitario || 0).toLocaleString("pt-BR", {
@@ -1083,93 +976,7 @@ export default function CaixaPage() {
 
   function fecharModalItem() {
     if (saving) return;
-
-    setBuscaCatalogo("");
-    setBuscaProfissional("");
-    setBuscaAssistente("");
-    setDropdownCatalogoOpen(false);
-    setDropdownProfissionalOpen(false);
-    setDropdownAssistenteOpen(false);
-
-    setItemModal({
-      open: false,
-      mode: "create",
-      itemId: null,
-      tipoItem: "servico",
-      catalogoId: "",
-      descricao: "",
-      quantidade: "1",
-      valorUnitario: "0,00",
-      idProfissional: "",
-      idAssistente: "",
-    });
-  }
-
-  function preencherPorCatalogo(tipo: TipoItemComanda, id: string) {
-    if (!id) {
-      setItemModal((prev) => ({
-        ...prev,
-        catalogoId: "",
-      }));
-      return;
-    }
-
-    if (tipo === "servico") {
-      const servico = servicosCatalogo.find((item) => item.id === id);
-      if (!servico) return;
-
-      setItemModal((prev) => ({
-        ...prev,
-        catalogoId: id,
-        descricao: servico.nome || "",
-        valorUnitario: getServicoPrice(servico).toLocaleString("pt-BR", {
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2,
-        }),
-      }));
-
-      setBuscaCatalogo(servico.nome || "");
-      setDropdownCatalogoOpen(false);
-      return;
-    }
-
-    if (tipo === "produto") {
-      const produto = produtosCatalogo.find((item) => item.id === id);
-      if (!produto) return;
-
-      setItemModal((prev) => ({
-        ...prev,
-        catalogoId: id,
-        descricao: produto.nome || "",
-        valorUnitario: getProdutoPrice(produto).toLocaleString("pt-BR", {
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2,
-        }),
-      }));
-
-      setBuscaCatalogo(produto.nome || "");
-      setDropdownCatalogoOpen(false);
-      return;
-    }
-
-    if (tipo === "extra") {
-      const extra = extrasCatalogo.find((item) => item.id === id);
-      if (!extra) return;
-
-      setItemModal((prev) => ({
-        ...prev,
-        catalogoId: id,
-        descricao: extra.nome || "",
-        valorUnitario: getExtraPrice(extra).toLocaleString("pt-BR", {
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2,
-        }),
-      }));
-
-      setBuscaCatalogo(extra.nome || "");
-      setDropdownCatalogoOpen(false);
-      return;
-    }
+    setItemModal(INITIAL_MODAL_ITEM_STATE);
   }
 
   async function salvarItemComanda() {
@@ -1196,62 +1003,17 @@ export default function CaixaPage() {
         throw new Error("Informe um valor unitário válido.");
       }
 
-      let payloadBase: Record<string, any> = {
-        id_salao: idSalao,
-        id_comanda: comandaSelecionada.id,
-        tipo_item: itemModal.tipoItem,
-        descricao: itemModal.descricao.trim(),
+      const payloadBase = await buildComandaItemPayload({
+        supabase,
+        idSalao,
+        idComanda: comandaSelecionada.id,
+        itemModal,
+        servicosCatalogo,
+        profissionaisCatalogo,
         quantidade,
-        valor_unitario: valorUnitario,
-        valor_total: valorTotal,
-        custo_total: 0,
-        id_profissional: itemModal.idProfissional || null,
-        id_assistente: itemModal.idAssistente || null,
-        origem: "caixa_manual",
-        ativo: true,
-      };
-
-      if (itemModal.tipoItem === "servico") {
-        const servico = servicosCatalogo.find((item) => item.id === itemModal.catalogoId);
-        const profissional = profissionaisCatalogo.find(
-          (item) => item.id === itemModal.idProfissional
-        );
-        const vinculo =
-          servico?.id && itemModal.idProfissional
-            ? await buscarVinculoProfissionalServico({
-                supabase,
-                idProfissional: itemModal.idProfissional,
-                idServico: servico.id,
-              })
-            : null;
-        const regraServico = resolverRegraComissaoServico({
-          servico,
-          profissional,
-          vinculo,
-        });
-
-        payloadBase = {
-          ...payloadBase,
-          id_servico: servico?.id || null,
-          comissao_percentual_aplicada: regraServico.comissaoPercentual,
-          comissao_valor_aplicado: 0,
-          comissao_assistente_percentual_aplicada:
-            regraServico.comissaoAssistentePercentual,
-          comissao_assistente_valor_aplicado: 0,
-          base_calculo_aplicada: regraServico.baseCalculo,
-          desconta_taxa_maquininha_aplicada: regraServico.descontaTaxaMaquininha,
-        };
-      } else {
-        payloadBase = {
-          ...payloadBase,
-          comissao_percentual_aplicada: 0,
-          comissao_valor_aplicado: 0,
-          comissao_assistente_percentual_aplicada: 0,
-          comissao_assistente_valor_aplicado: 0,
-          base_calculo_aplicada: "bruto",
-          desconta_taxa_maquininha_aplicada: false,
-        };
-      }
+        valorUnitario,
+        valorTotal,
+      });
 
       if (itemModal.mode === "edit" && itemModal.itemId) {
         const { error } = await supabase
@@ -1368,49 +1130,6 @@ export default function CaixaPage() {
     return agendamentosFiltradosBase(agendamentosFila, term);
   }, [busca, agendamentosFila]);
 
-  const totalPreviewItem = useMemo(() => {
-    const quantidade = Math.max(Number(itemModal.quantidade || 1), 1);
-    const valorUnitario = parseMoney(itemModal.valorUnitario);
-    return quantidade * valorUnitario;
-  }, [itemModal.quantidade, itemModal.valorUnitario]);
-
-  const opcoesCatalogoFiltradas = useMemo(() => {
-    const termo = buscaCatalogo.trim().toLowerCase();
-
-    const lista =
-      itemModal.tipoItem === "servico"
-        ? servicosCatalogo
-        : itemModal.tipoItem === "produto"
-        ? produtosCatalogo
-        : itemModal.tipoItem === "extra"
-        ? extrasCatalogo
-        : [];
-
-    if (!termo) return lista.slice(0, 8);
-
-    return lista
-      .filter((item: any) => String(item.nome || "").toLowerCase().includes(termo))
-      .slice(0, 8);
-  }, [buscaCatalogo, itemModal.tipoItem, servicosCatalogo, produtosCatalogo, extrasCatalogo]);
-
-  const profissionaisFiltrados = useMemo(() => {
-    const termo = buscaProfissional.trim().toLowerCase();
-    if (!termo) return profissionaisCatalogo.slice(0, 8);
-
-    return profissionaisCatalogo
-      .filter((item) => String(item.nome || "").toLowerCase().includes(termo))
-      .slice(0, 8);
-  }, [buscaProfissional, profissionaisCatalogo]);
-
-  const assistentesFiltrados = useMemo(() => {
-    const termo = buscaAssistente.trim().toLowerCase();
-    if (!termo) return profissionaisCatalogo.slice(0, 8);
-
-    return profissionaisCatalogo
-      .filter((item) => String(item.nome || "").toLowerCase().includes(termo))
-      .slice(0, 8);
-  }, [buscaAssistente, profissionaisCatalogo]);
-
   if (loading || !acessoCarregado) {
     return <div className="p-6">Carregando caixa...</div>;
   }
@@ -1515,400 +1234,29 @@ export default function CaixaPage() {
         </div>
       </div>
 
-      {cancelModalOpen ? (
-        <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/45 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-lg rounded-[28px] border border-zinc-200 bg-white shadow-2xl">
-            <div className="border-b border-zinc-200 px-6 py-5">
-              <h2 className="text-xl font-bold text-zinc-900">Cancelar comanda</h2>
-              <p className="mt-1 text-sm text-zinc-500">
-                Informe o motivo do cancelamento da comanda
-                {comandaSelecionada?.numero ? ` #${comandaSelecionada.numero}` : ""}.
-              </p>
-            </div>
+      <CaixaCancelModal
+        open={cancelModalOpen}
+        comandaNumero={comandaSelecionada?.numero}
+        saving={saving}
+        podeConfirmar={podeFinalizarCaixa}
+        onClose={fecharModalCancelamento}
+        onConfirm={confirmarCancelamentoComanda}
+      />
 
-            <div className="space-y-4 px-6 py-5">
-              <div>
-                <label className="mb-2 block text-sm font-semibold text-zinc-700">
-                  Motivo padrão
-                </label>
-
-                <select
-                  value={tipoMotivoCancelamento}
-                  onChange={(e) => setTipoMotivoCancelamento(e.target.value)}
-                  className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-zinc-900"
-                >
-                  <option value="">Selecione</option>
-                  {MOTIVOS_CANCELAMENTO_PADRAO.map((motivo) => (
-                    <option key={motivo} value={motivo}>
-                      {motivo}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm font-semibold text-zinc-700">
-                  Observação
-                </label>
-
-                <textarea
-                  rows={4}
-                  value={motivoCancelamento}
-                  onChange={(e) => setMotivoCancelamento(e.target.value)}
-                  placeholder="Descreva o motivo do cancelamento..."
-                  className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-zinc-900"
-                />
-              </div>
-            </div>
-
-            <div className="flex flex-col-reverse gap-3 border-t border-zinc-200 px-6 py-5 sm:flex-row sm:justify-end">
-              <button
-                type="button"
-                onClick={fecharModalCancelamento}
-                disabled={saving}
-                className="rounded-2xl border border-zinc-300 bg-white px-5 py-3 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-60"
-              >
-                Voltar
-              </button>
-
-              <button
-                type="button"
-                onClick={confirmarCancelamentoComanda}
-                disabled={saving || !podeFinalizarCaixa}
-                className="rounded-2xl bg-rose-600 px-5 py-3 text-sm font-bold text-white transition hover:opacity-95 disabled:opacity-60"
-              >
-                {saving ? "Cancelando..." : "Confirmar cancelamento"}
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
-
-      {itemModal.open ? (
-        <div className="fixed inset-0 z-[95] flex items-center justify-center bg-black/45 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-2xl rounded-[28px] border border-zinc-200 bg-white shadow-2xl">
-            <div className="border-b border-zinc-200 px-6 py-5">
-              <h2 className="text-xl font-bold text-zinc-900">
-                {itemModal.mode === "edit" ? "Editar item da comanda" : "Adicionar item na comanda"}
-              </h2>
-              <p className="mt-1 text-sm text-zinc-500">
-                Escolha o tipo do item e preencha os dados da cobrança.
-              </p>
-            </div>
-
-            <div className="space-y-5 px-6 py-5">
-              <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-                {(["servico", "produto", "extra", "ajuste"] as TipoItemComanda[]).map((tipo) => (
-                  <button
-                    key={tipo}
-                    type="button"
-                    onClick={() => {
-                      setBuscaCatalogo("");
-                      setDropdownCatalogoOpen(false);
-
-                      setItemModal((prev) => ({
-                        ...prev,
-                        tipoItem: tipo,
-                        catalogoId: "",
-                        descricao: tipo === "ajuste" ? prev.descricao : "",
-                        valorUnitario: tipo === "ajuste" ? prev.valorUnitario : "0,00",
-                      }));
-                    }}
-                    className={`rounded-2xl border px-4 py-3 text-sm font-semibold transition ${
-                      itemModal.tipoItem === tipo
-                        ? "border-zinc-900 bg-zinc-900 text-white"
-                        : "border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50"
-                    }`}
-                  >
-                    {tipo === "servico"
-                      ? "Serviço"
-                      : tipo === "produto"
-                      ? "Produto"
-                      : tipo === "extra"
-                      ? "Extra"
-                      : "Ajuste"}
-                  </button>
-                ))}
-              </div>
-
-              {itemModal.tipoItem !== "ajuste" ? (
-                <div className="relative">
-                  <label className="mb-2 block text-sm font-semibold text-zinc-700">
-                    Buscar{" "}
-                    {itemModal.tipoItem === "servico"
-                      ? "serviço"
-                      : itemModal.tipoItem === "produto"
-                      ? "produto"
-                      : "extra"}
-                  </label>
-
-                  <input
-                    value={buscaCatalogo}
-                    onChange={(e) => {
-                      setBuscaCatalogo(e.target.value);
-                      setDropdownCatalogoOpen(true);
-                      setItemModal((prev) => ({
-                        ...prev,
-                        catalogoId: "",
-                        descricao: e.target.value,
-                      }));
-                    }}
-                    onFocus={() => setDropdownCatalogoOpen(true)}
-                    placeholder={
-                      itemModal.tipoItem === "servico"
-                        ? "Digite o nome do serviço"
-                        : itemModal.tipoItem === "produto"
-                        ? "Digite o nome do produto"
-                        : "Digite o nome do extra"
-                    }
-                    className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-zinc-900"
-                  />
-
-                  {dropdownCatalogoOpen && opcoesCatalogoFiltradas.length > 0 ? (
-                    <div className="absolute z-20 mt-2 max-h-64 w-full overflow-y-auto rounded-2xl border border-zinc-200 bg-white p-2 shadow-xl">
-                      {opcoesCatalogoFiltradas.map((item: any) => (
-                        <button
-                          key={item.id}
-                          type="button"
-                          onClick={() => preencherPorCatalogo(itemModal.tipoItem, item.id)}
-                          className="flex w-full items-center justify-between rounded-xl px-3 py-3 text-left transition hover:bg-zinc-50"
-                        >
-                          <div className="font-medium text-zinc-900">{item.nome}</div>
-                          <div className="text-sm font-semibold text-zinc-600">
-                            {(itemModal.tipoItem === "servico"
-                              ? getServicoPrice(item)
-                              : itemModal.tipoItem === "produto"
-                              ? getProdutoPrice(item)
-                              : getExtraPrice(item)
-                            ).toLocaleString("pt-BR", {
-                              style: "currency",
-                              currency: "BRL",
-                            })}
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                  ) : null}
-                </div>
-              ) : null}
-
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <div>
-                  <label className="mb-2 block text-sm font-semibold text-zinc-700">
-                    Descrição
-                  </label>
-                  <input
-                    value={itemModal.descricao}
-                    onChange={(e) =>
-                      setItemModal((prev) => ({
-                        ...prev,
-                        descricao: e.target.value,
-                      }))
-                    }
-                    placeholder="Descrição do item"
-                    className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-zinc-900"
-                  />
-                </div>
-
-                <div>
-                  <label className="mb-2 block text-sm font-semibold text-zinc-700">
-                    Quantidade
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    value={itemModal.quantidade}
-                    onChange={(e) =>
-                      setItemModal((prev) => ({
-                        ...prev,
-                        quantidade: e.target.value,
-                      }))
-                    }
-                    className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-zinc-900"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                <div>
-                  <label className="mb-2 block text-sm font-semibold text-zinc-700">
-                    Valor unitário
-                  </label>
-                  <input
-                    value={itemModal.valorUnitario}
-                    onChange={(e) => {
-                      const digits = e.target.value.replace(/\D/g, "");
-                      const number = Number(digits || "0") / 100;
-
-                      setItemModal((prev) => ({
-                        ...prev,
-                        valorUnitario: number.toLocaleString("pt-BR", {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        }),
-                      }));
-                    }}
-                    placeholder="0,00"
-                    className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-zinc-900"
-                  />
-                </div>
-
-                <div className="relative">
-                  <label className="mb-2 block text-sm font-semibold text-zinc-700">
-                    Profissional
-                  </label>
-
-                  <input
-                    value={buscaProfissional}
-                    onChange={(e) => {
-                      setBuscaProfissional(e.target.value);
-                      setDropdownProfissionalOpen(true);
-                      setItemModal((prev) => ({
-                        ...prev,
-                        idProfissional: "",
-                      }));
-                    }}
-                    onFocus={() => setDropdownProfissionalOpen(true)}
-                    placeholder="Digite o nome do profissional"
-                    className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-zinc-900"
-                  />
-
-                  {dropdownProfissionalOpen ? (
-                    <div className="absolute z-20 mt-2 max-h-64 w-full overflow-y-auto rounded-2xl border border-zinc-200 bg-white p-2 shadow-xl">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setBuscaProfissional("");
-                          setItemModal((prev) => ({
-                            ...prev,
-                            idProfissional: "",
-                          }));
-                          setDropdownProfissionalOpen(false);
-                        }}
-                        className="w-full rounded-xl px-3 py-3 text-left text-sm text-zinc-600 transition hover:bg-zinc-50"
-                      >
-                        Sem profissional
-                      </button>
-
-                      {profissionaisFiltrados.map((prof) => (
-                        <button
-                          key={prof.id}
-                          type="button"
-                          onClick={() => {
-                            setBuscaProfissional(prof.nome || "");
-                            setItemModal((prev) => ({
-                              ...prev,
-                              idProfissional: prof.id,
-                            }));
-                            setDropdownProfissionalOpen(false);
-                          }}
-                          className="w-full rounded-xl px-3 py-3 text-left transition hover:bg-zinc-50"
-                        >
-                          <div className="font-medium text-zinc-900">{prof.nome}</div>
-                        </button>
-                      ))}
-                    </div>
-                  ) : null}
-                </div>
-
-                <div className="relative">
-                  <label className="mb-2 block text-sm font-semibold text-zinc-700">
-                    Assistente
-                  </label>
-
-                  <input
-                    value={buscaAssistente}
-                    onChange={(e) => {
-                      setBuscaAssistente(e.target.value);
-                      setDropdownAssistenteOpen(true);
-                      setItemModal((prev) => ({
-                        ...prev,
-                        idAssistente: "",
-                      }));
-                    }}
-                    onFocus={() => setDropdownAssistenteOpen(true)}
-                    placeholder="Digite o nome do assistente"
-                    className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-zinc-900"
-                  />
-
-                  {dropdownAssistenteOpen ? (
-                    <div className="absolute z-20 mt-2 max-h-64 w-full overflow-y-auto rounded-2xl border border-zinc-200 bg-white p-2 shadow-xl">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setBuscaAssistente("");
-                          setItemModal((prev) => ({
-                            ...prev,
-                            idAssistente: "",
-                          }));
-                          setDropdownAssistenteOpen(false);
-                        }}
-                        className="w-full rounded-xl px-3 py-3 text-left text-sm text-zinc-600 transition hover:bg-zinc-50"
-                      >
-                        Sem assistente
-                      </button>
-
-                      {assistentesFiltrados.map((prof) => (
-                        <button
-                          key={prof.id}
-                          type="button"
-                          onClick={() => {
-                            setBuscaAssistente(prof.nome || "");
-                            setItemModal((prev) => ({
-                              ...prev,
-                              idAssistente: prof.id,
-                            }));
-                            setDropdownAssistenteOpen(false);
-                          }}
-                          className="w-full rounded-xl px-3 py-3 text-left transition hover:bg-zinc-50"
-                        >
-                          <div className="font-medium text-zinc-900">{prof.nome}</div>
-                        </button>
-                      ))}
-                    </div>
-                  ) : null}
-                </div>
-              </div>
-
-              <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-4">
-                <div className="text-xs uppercase tracking-[0.18em] text-zinc-500">
-                  Total do item
-                </div>
-                <div className="mt-1 text-2xl font-bold text-zinc-900">
-                  {totalPreviewItem.toLocaleString("pt-BR", {
-                    style: "currency",
-                    currency: "BRL",
-                  })}
-                </div>
-              </div>
-            </div>
-
-            <div className="flex flex-col-reverse gap-3 border-t border-zinc-200 px-6 py-5 sm:flex-row sm:justify-end">
-              <button
-                type="button"
-                onClick={fecharModalItem}
-                disabled={saving}
-                className="rounded-2xl border border-zinc-300 bg-white px-5 py-3 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-60"
-              >
-                Fechar
-              </button>
-
-              <button
-                type="button"
-                onClick={salvarItemComanda}
-                disabled={saving || !comandaSelecionada || !podeEditarCaixa}
-                className="rounded-2xl bg-zinc-900 px-5 py-3 text-sm font-bold text-white transition hover:opacity-95 disabled:opacity-60"
-              >
-                {saving
-                  ? "Salvando..."
-                  : itemModal.mode === "edit"
-                  ? "Salvar alterações"
-                  : "Adicionar item"}
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
+      <CaixaItemModal
+        open={itemModal.open}
+        itemModal={itemModal}
+        setItemModal={setItemModal}
+        comandaSelecionada={comandaSelecionada}
+        servicosCatalogo={servicosCatalogo}
+        produtosCatalogo={produtosCatalogo}
+        extrasCatalogo={extrasCatalogo}
+        profissionaisCatalogo={profissionaisCatalogo}
+        saving={saving}
+        podeEditar={podeEditarCaixa}
+        onClose={fecharModalItem}
+        onSave={salvarItemComanda}
+      />
     </>
   );
 }
