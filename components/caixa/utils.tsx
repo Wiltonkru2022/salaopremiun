@@ -49,6 +49,83 @@ export function formatDateTime(value?: string | null) {
   return date.toLocaleString("pt-BR");
 }
 
+export function formatShortDateTime(value?: string | null) {
+  if (!value) return "-";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+
+  return date.toLocaleString("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+export function getTipoItemLabel(tipo: string) {
+  if (tipo === "servico") return "Servico";
+  if (tipo === "produto") return "Produto";
+  if (tipo === "extra") return "Extra";
+  return "Ajuste";
+}
+
+export function getStatusCaixaMeta(status?: string | null) {
+  const normalized = String(status || "").toLowerCase();
+
+  if (normalized === "aguardando_pagamento") {
+    return {
+      badgeClass:
+        "border-amber-200 bg-amber-50 text-amber-800",
+      cardClass:
+        "border-amber-200 bg-amber-50/60",
+      description: "Venda pronta para receber pagamento.",
+      label: "Aguardando pagamento",
+    };
+  }
+
+  if (normalized === "em_atendimento") {
+    return {
+      badgeClass:
+        "border-sky-200 bg-sky-50 text-sky-800",
+      cardClass:
+        "border-sky-200 bg-sky-50/60",
+      description: "Atendimento em andamento.",
+      label: "Em atendimento",
+    };
+  }
+
+  if (normalized === "fechada") {
+    return {
+      badgeClass:
+        "border-emerald-200 bg-emerald-50 text-emerald-800",
+      cardClass:
+        "border-emerald-200 bg-emerald-50/60",
+      description: "Comanda encerrada com sucesso.",
+      label: "Fechada",
+    };
+  }
+
+  if (normalized === "cancelada") {
+    return {
+      badgeClass:
+        "border-rose-200 bg-rose-50 text-rose-800",
+      cardClass:
+        "border-rose-200 bg-rose-50/60",
+      description: "Comanda cancelada.",
+      label: "Cancelada",
+    };
+  }
+
+  return {
+    badgeClass:
+      "border-zinc-200 bg-zinc-100 text-zinc-700",
+    cardClass:
+      "border-zinc-200 bg-zinc-50/80",
+    description: "Comanda aberta para atendimento.",
+    label: "Aberta",
+  };
+}
+
 export function tipoItemIcon(tipo: string) {
   if (tipo === "servico") return <Scissors size={14} />;
   if (tipo === "produto") return <Package size={14} />;

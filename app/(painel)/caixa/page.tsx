@@ -753,7 +753,12 @@ export default function CaixaPage() {
     <>
       <div className="min-h-screen bg-zinc-50 p-4 md:p-6">
         <div className="mx-auto max-w-[1700px] space-y-5">
-          <CaixaHeader totalEmAberto={comandasFila.length + agendamentosFila.length} />
+          <CaixaHeader
+            agendamentosPendentes={agendamentosFila.length}
+            comandasAtivas={comandasFila.length}
+            comandasFechadasHoje={comandasFechadas.length}
+            totalEmAberto={comandasFila.length + agendamentosFila.length}
+          />
 
           {!podeOperarCaixa ? (
             <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-700">
@@ -773,7 +778,7 @@ export default function CaixaPage() {
             </div>
           ) : null}
 
-          <div className="grid grid-cols-1 gap-5 xl:grid-cols-[360px_minmax(0,1fr)_380px]">
+          <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-[360px_minmax(0,1fr)_380px]">
             <CaixaFila
               aba={aba}
               setAba={setAba}
@@ -803,7 +808,7 @@ export default function CaixaPage() {
               onRemoverItem={removerItemComanda}
             />
 
-            <div className="space-y-5">
+            <div className="space-y-5 xl:sticky xl:top-6 xl:max-h-[calc(100vh-3rem)] xl:overflow-y-auto xl:pr-1">
               <CaixaResumo
                 comandaSelecionada={comandaSelecionada}
                 descontoInput={descontoInput}
@@ -816,6 +821,7 @@ export default function CaixaPage() {
 
               <CaixaPagamentos
                 comandaSelecionada={comandaSelecionada}
+                repassaTaxaCliente={Boolean(configCaixa?.repassa_taxa_cliente)}
                 pagamentos={pagamentos}
                 formaPagamento={formaPagamento}
                 setFormaPagamento={setFormaPagamento}

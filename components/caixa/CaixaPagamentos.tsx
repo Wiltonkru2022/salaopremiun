@@ -1,21 +1,28 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { CreditCard, Trash2, User2 } from "lucide-react";
 import { ComandaDetalhe, ComandaPagamento } from "./types";
-import { formatCurrency, moneyMask, parseMoney } from "./utils";
+import {
+  formatCurrency,
+  formatShortDateTime,
+  moneyMask,
+  parseMoney,
+} from "./utils";
 
 const FORMAS_PAGAMENTO = [
   { value: "dinheiro", label: "Dinheiro" },
   { value: "pix", label: "Pix" },
-  { value: "debito", label: "Débito" },
-  { value: "credito", label: "Crédito" },
-  { value: "transferencia", label: "Transferência" },
+  { value: "debito", label: "Debito" },
+  { value: "credito", label: "Credito" },
+  { value: "transferencia", label: "Transferencia" },
   { value: "boleto", label: "Boleto" },
   { value: "outro", label: "Outro" },
 ];
 
 type Props = {
   comandaSelecionada: ComandaDetalhe | null;
+  repassaTaxaCliente: boolean;
   pagamentos: ComandaPagamento[];
   formaPagamento: string;
   setFormaPagamento: (value: string) => void;
@@ -37,6 +44,7 @@ type Props = {
 
 export default function CaixaPagamentos({
   comandaSelecionada,
+  repassaTaxaCliente,
   pagamentos,
   formaPagamento,
   setFormaPagamento,
@@ -63,6 +71,13 @@ export default function CaixaPagamentos({
   const valorTotalComTaxa = Number(
     (valorBaseDigitado + taxaPreviewValor).toFixed(2)
   );
+  const valorCobradoCliente = repassaTaxaCliente
+    ? valorTotalComTaxa
+    : valorBaseDigitado;
+  const valorLiquidoPrevisto = Math.max(
+    repassaTaxaCliente ? valorBaseDigitado : valorBaseDigitado - taxaPreviewValor,
+    0
+  );
 
   const podeEditar =
     comandaSelecionada &&
@@ -77,9 +92,14 @@ export default function CaixaPagamentos({
   return (
     <>
       <div className="rounded-[28px] border border-zinc-200 bg-white p-5 shadow-sm">
-        <div className="mb-4 flex items-center gap-2">
-          <CreditCard size={18} className="text-zinc-700" />
-          <div className="text-lg font-bold text-zinc-900">Pagamentos</div>
+        <div className="mb-4">
+          <div className="flex items-center gap-2">
+            <CreditCard size={18} className="text-zinc-700" />
+            <div className="text-lg font-bold text-zinc-900">Pagamentos</div>
+          </div>
+          <div className="mt-1 text-sm text-zinc-500">
+            Lance recebimentos e confira o impacto da taxa antes do fechamento.
+          </div>
         </div>
 
         <div className="space-y-3">
@@ -87,9 +107,7 @@ export default function CaixaPagamentos({
             const taxaPercentualItem = Number(
               pagamento.taxa_maquininha_percentual || 0
             );
-            const taxaValorItem = Number(
-              pagamento.taxa_maquininha_valor || 0
-            );
+            const taxaValorItem = Number(pagamento.taxa_maquininha_valor || 0);
             const valorLiquido = Number(pagamento.valor || 0) - taxaValorItem;
 
             return (
@@ -105,7 +123,7 @@ export default function CaixaPagamentos({
 
                     <div className="mt-1 text-sm text-zinc-500">
                       {formatCurrency(pagamento.valor)}
-                      {pagamento.parcelas > 1 ? ` • ${pagamento.parcelas}x` : ""}
+                      {pagamento.parcelas > 1 ? ` - ${pagamento.parcelas}x` : ""}
                     </div>
 
                     {(taxaPercentualItem > 0 || taxaValorItem > 0) && (
@@ -135,6 +153,13 @@ export default function CaixaPagamentos({
                         Obs.: {pagamento.observacoes}
                       </div>
                     ) : null}
+
+                    {pagamento.recebido_em || pagamento.created_at ? (
+                      <div className="mt-2 text-xs text-zinc-400">
+                        Recebido em{" "}
+                        {formatShortDateTime(pagamento.recebido_em || pagamento.created_at)}
+                      </div>
+                    ) : null}
                   </div>
 
                   {podeEditar ? (
@@ -154,7 +179,7 @@ export default function CaixaPagamentos({
 
           {pagamentos.length === 0 ? (
             <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-5 text-center text-sm text-zinc-500">
-              Nenhum pagamento lançado.
+              Nenhum pagamento lancado.
             </div>
           ) : null}
         </div>
@@ -200,7 +225,7 @@ export default function CaixaPagamentos({
                 value={formatCurrency(valorBaseDigitado)}
               />
               <PreviewCard
-                label="Taxa automática"
+                label="Taxa automatica"
                 value={`${Number(taxaPercentualNumero || 0).toLocaleString(
                   "pt-BR",
                   {
@@ -217,27 +242,28 @@ export default function CaixaPagamentos({
 
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
               <PreviewCard
-                label="Total com taxa"
-                value={formatCurrency(valorTotalComTaxa)}
+                label="Cliente paga"
+                value={formatCurrency(valorCobradoCliente)}
               />
               <PreviewCard
-                label="Cobrança estimada"
-                value={formatCurrency(valorTotalComTaxa)}
+                label="Liquido previsto"
+                value={formatCurrency(valorLiquidoPrevisto)}
               />
             </div>
 
             <div className="rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-800">
-              A taxa é aplicada automaticamente conforme a configuração do salão
-              e a quantidade de parcelas.
+              {repassaTaxaCliente
+                ? "A taxa e somada ao valor cobrado do cliente e o liquido previsto preserva a base da venda."
+                : "A taxa nao e somada ao cliente. O liquido previsto mostra quanto sobra depois do custo da maquininha."}
             </div>
 
-            <Field label="Observação">
+            <Field label="Observacao">
               <textarea
                 rows={3}
                 value={observacaoPagamento}
                 onChange={(e) => setObservacaoPagamento(e.target.value)}
                 className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-zinc-900"
-                placeholder="Ex.: cartão da cliente, pix recepção, pagamento parcial..."
+                placeholder="Ex.: cartao da cliente, pix recepcao, pagamento parcial..."
               />
             </Field>
 
@@ -266,15 +292,15 @@ export default function CaixaPagamentos({
         </div>
 
         <div className="space-y-2 text-sm leading-6 text-zinc-500">
-          <p>• O total dos pagamentos precisa bater com o total da comanda.</p>
+          <p>O total dos pagamentos precisa bater com o total da comanda.</p>
           <p>
-            • Ao finalizar, o sistema baixa estoque, gera comissão e encerra os
+            Ao finalizar, o sistema baixa estoque, gera comissao e encerra os
             agendamentos vinculados.
           </p>
-          <p>• Agendamento sem comanda vira comanda automática ao abrir no caixa.</p>
+          <p>Agendamento sem comanda vira comanda automatica ao abrir no caixa.</p>
           <p>
-            • A taxa da maquininha é aplicada automaticamente conforme a
-            configuração do salão.
+            A taxa da maquininha segue a configuracao do salao e o valor mostrado
+            no painel de pagamento.
           </p>
         </div>
       </div>
@@ -287,13 +313,11 @@ function Field({
   children,
 }: {
   label: string;
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   return (
     <div>
-      <label className="mb-1 block text-sm font-semibold text-zinc-700">
-        {label}
-      </label>
+      <label className="mb-1 block text-sm font-semibold text-zinc-700">{label}</label>
       {children}
     </div>
   );
