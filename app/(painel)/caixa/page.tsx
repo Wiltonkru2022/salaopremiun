@@ -2,15 +2,19 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
-import CaixaHeader from "@/components/caixa/CaixaHeader";
-import CaixaFila from "@/components/caixa/CaixaFila";
-import CaixaDetalhe from "@/components/caixa/CaixaDetalhe";
-import CaixaResumo from "@/components/caixa/CaixaResumo";
-import CaixaPagamentos from "@/components/caixa/CaixaPagamentos";
 import CaixaCancelModal from "@/components/caixa/CaixaCancelModal";
+import CaixaDetalhe from "@/components/caixa/CaixaDetalhe";
+import CaixaFila from "@/components/caixa/CaixaFila";
+import CaixaHeader from "@/components/caixa/CaixaHeader";
 import CaixaItemModal from "@/components/caixa/CaixaItemModal";
+import CaixaPagamentos from "@/components/caixa/CaixaPagamentos";
+import CaixaResumo from "@/components/caixa/CaixaResumo";
 import {
+  INITIAL_MODAL_ITEM_STATE,
+  type ModalItemState,
+} from "@/components/caixa/page-types";
+import { type Permissoes } from "@/components/caixa/permissions";
+import type {
   AbaCaixa,
   AgendamentoFila,
   CatalogoExtra,
@@ -25,18 +29,20 @@ import {
   TipoItemComanda,
 } from "@/components/caixa/types";
 import {
-  INITIAL_MODAL_ITEM_STATE,
-  type ModalItemState,
-} from "@/components/caixa/page-types";
-import {
   agendamentosFiltradosBase,
   getJoinedName,
-  parseMoney,
   obterTaxaConfigurada,
+  parseMoney,
 } from "@/components/caixa/utils";
-import { type Permissoes } from "@/components/caixa/permissions";
 import { buildComandaItemPayload } from "@/lib/caixa/buildComandaItemPayload";
-import { carregarAcessoCaixa } from "@/lib/caixa/loadCaixaData";
+import {
+  carregarAcessoCaixa,
+  carregarCatalogosCaixa,
+  carregarComandaDetalhe,
+  carregarConfiguracoesCaixa as carregarConfiguracoesCaixaData,
+  carregarListasCaixa,
+} from "@/lib/caixa/loadCaixaData";
+import { createClient } from "@/lib/supabase/client";
 
 export default function CaixaPage() {
   const supabase = createClient();
@@ -122,6 +128,22 @@ export default function CaixaPage() {
     );
   }, [formaPagamento, parcelas, configCaixa]);
 
+  function limparComandaSelecionada() {
+    setComandaSelecionada(null);
+    setItens([]);
+    setPagamentos([]);
+  }
+
+  async function aplicarDetalheComanda(idComanda: string) {
+    const detalhe = await carregarComandaDetalhe(supabase, idComanda);
+
+    setComandaSelecionada(detalhe.comandaSelecionada);
+    setItens(detalhe.itens);
+    setPagamentos(detalhe.pagamentos);
+    setDescontoInput(detalhe.descontoInput);
+    setAcrescimoInput(detalhe.acrescimoInput);
+  }
+
   async function carregarAcesso() {
     const acesso = await carregarAcessoCaixa(supabase);
 
@@ -130,20 +152,47 @@ export default function CaixaPage() {
       return null;
     }
 
-    const permissoesFinal: Permissoes = acesso.permissoes;
-
-    setPermissoes(permissoesFinal);
+    setPermissoes(acesso.permissoes);
     setAcessoCarregado(true);
 
-    if (!permissoesFinal.caixa_ver) {
+    if (!acesso.permissoes.caixa_ver) {
       router.replace("/dashboard");
       return null;
     }
 
-    return {
-      usuario: acesso.usuario,
-      permissoes: permissoesFinal,
-    };
+    return acesso;
+  }
+
+  async function carregarConfiguracoesCaixa(salaoIdParam?: string) {
+    const salaoId = salaoIdParam || idSalao;
+    if (!salaoId) return;
+
+    const config = await carregarConfiguracoesCaixaData(supabase, salaoId);
+    setConfigCaixa(config);
+  }
+
+  async function carregarCatalogos(salaoIdParam?: string) {
+    const salaoId = salaoIdParam || idSalao;
+    if (!salaoId) return;
+
+    const catalogos = await carregarCatalogosCaixa(supabase, salaoId);
+
+    setServicosCatalogo(catalogos.servicosCatalogo);
+    setProdutosCatalogo(catalogos.produtosCatalogo);
+    setExtrasCatalogo(catalogos.extrasCatalogo);
+    setProfissionaisCatalogo(catalogos.profissionaisCatalogo);
+  }
+
+  async function carregarTudo(salaoIdParam?: string) {
+    const salaoId = salaoIdParam || idSalao;
+    if (!salaoId) return;
+
+    const listas = await carregarListasCaixa(supabase, salaoId);
+
+    setComandasFila(listas.comandasFila);
+    setAgendamentosFila(listas.agendamentosFila);
+    setComandasFechadas(listas.comandasFechadas);
+    setComandasCanceladas(listas.comandasCanceladas);
   }
 
   async function init() {
@@ -171,357 +220,9 @@ export default function CaixaPage() {
     }
   }
 
-  async function carregarConfiguracoesCaixa(salaoIdParam?: string) {
-    const salaoId = salaoIdParam || idSalao;
-    if (!salaoId) return;
-
-    const { data, error } = await supabase
-      .from("configuracoes_salao")
-      .select(`
-        id_salao,
-        exigir_cliente_na_venda,
-        repassa_taxa_cliente,
-        taxa_maquininha_credito,
-        taxa_maquininha_debito,
-        taxa_maquininha_pix,
-        taxa_maquininha_transferencia,
-        taxa_maquininha_boleto,
-        taxa_maquininha_outro,
-        taxa_credito_1x,
-        taxa_credito_2x,
-        taxa_credito_3x,
-        taxa_credito_4x,
-        taxa_credito_5x,
-        taxa_credito_6x,
-        taxa_credito_7x,
-        taxa_credito_8x,
-        taxa_credito_9x,
-        taxa_credito_10x,
-        taxa_credito_11x,
-        taxa_credito_12x
-      `)
-      .eq("id_salao", salaoId)
-      .maybeSingle();
-
-    if (error) {
-      console.error("Erro ao carregar configurações do caixa:", error);
-      setConfigCaixa(null);
-      return;
-    }
-
-    setConfigCaixa((data as ConfigCaixaSalao) || null);
-  }
-
-  async function carregarCatalogos(salaoIdParam?: string) {
-    const salaoId = salaoIdParam || idSalao;
-    if (!salaoId) return;
-
-    const [servicosRes, produtosRes, extrasRes, profissionaisRes] = await Promise.all([
-      supabase
-        .from("servicos")
-        .select("*")
-        .eq("id_salao", salaoId)
-        .eq("status", "ativo")
-        .order("nome", { ascending: true }),
-
-      supabase
-        .from("produtos")
-        .select("*")
-        .eq("id_salao", salaoId)
-        .eq("status", "ativo")
-        .order("nome", { ascending: true }),
-
-      supabase
-        .from("itens_extras")
-        .select("*")
-        .eq("id_salao", salaoId)
-        .order("nome", { ascending: true }),
-
-      supabase
-        .from("profissionais")
-        .select("id, nome, comissao_percentual")
-        .eq("id_salao", salaoId)
-        .eq("status", "ativo")
-        .order("nome", { ascending: true }),
-    ]);
-
-    if (servicosRes.error) {
-      console.error("Erro ao carregar serviços do caixa:", servicosRes.error);
-    } else {
-      setServicosCatalogo((servicosRes.data as CatalogoServico[]) || []);
-    }
-
-    if (produtosRes.error) {
-      console.error("Erro ao carregar produtos do caixa:", produtosRes.error);
-      setProdutosCatalogo([]);
-    } else {
-      setProdutosCatalogo((produtosRes.data as CatalogoProduto[]) || []);
-    }
-
-    if (extrasRes.error) {
-      console.error("Erro ao carregar extras do caixa:", extrasRes.error);
-      setExtrasCatalogo([]);
-    } else {
-      setExtrasCatalogo((extrasRes.data as CatalogoExtra[]) || []);
-    }
-
-    if (profissionaisRes.error) {
-      console.error("Erro ao carregar profissionais do caixa:", profissionaisRes.error);
-      setProfissionaisCatalogo([]);
-    } else {
-      setProfissionaisCatalogo((profissionaisRes.data as ProfissionalResumo[]) || []);
-    }
-  }
-
-  async function carregarTudo(salaoIdParam?: string) {
-    const salaoId = salaoIdParam || idSalao;
-    if (!salaoId) return;
-
-    await Promise.all([
-      carregarFilaComandas(salaoId),
-      carregarAgendamentosSemComanda(salaoId),
-      carregarFechadasHoje(salaoId),
-      carregarCanceladas(salaoId),
-    ]);
-  }
-
-  async function carregarFilaComandas(salaoIdParam?: string) {
-    const salaoId = salaoIdParam || idSalao;
-    if (!salaoId) return;
-
-    const { data, error } = await supabase
-      .from("comandas")
-      .select(`
-        id,
-        numero,
-        status,
-        aberta_em,
-        subtotal,
-        desconto,
-        acrescimo,
-        total,
-        id_cliente,
-        clientes (
-          nome
-        )
-      `)
-      .eq("id_salao", salaoId)
-      .in("status", ["aberta", "em_atendimento", "aguardando_pagamento"])
-      .order("aberta_em", { ascending: true });
-
-    if (error) {
-      console.error(error);
-      setErroTela("Erro ao carregar fila de comandas.");
-      return;
-    }
-
-    const sorted = ((data as ComandaFila[]) || []).sort((a, b) => {
-      const peso = (status: string) => {
-        if (status === "aguardando_pagamento") return 1;
-        if (status === "em_atendimento") return 2;
-        if (status === "aberta") return 3;
-        return 4;
-      };
-
-      return peso(a.status) - peso(b.status);
-    });
-
-    setComandasFila(sorted);
-  }
-
-  async function carregarAgendamentosSemComanda(salaoIdParam?: string) {
-    const salaoId = salaoIdParam || idSalao;
-    if (!salaoId) return;
-
-    const { data, error } = await supabase
-      .from("agendamentos")
-      .select(`
-        id,
-        data,
-        hora_inicio,
-        hora_fim,
-        status,
-        id_comanda,
-        cliente_id,
-        profissional_id,
-        servico_id
-      `)
-      .eq("id_salao", salaoId)
-      .is("id_comanda", null)
-      .eq("status", "aguardando_pagamento")
-      .order("data", { ascending: true })
-      .order("hora_inicio", { ascending: true });
-
-    if (error) {
-      console.error("Erro Supabase agendamentos sem comanda:", error);
-      setErroTela("Erro ao carregar agendamentos sem comanda.");
-      return;
-    }
-
-    const agendamentosBase = (data as AgendamentoFila[]) || [];
-
-    const clienteIds = Array.from(
-      new Set(agendamentosBase.map((item) => item.cliente_id).filter(Boolean))
-    ) as string[];
-
-    const profissionalIds = Array.from(
-      new Set(agendamentosBase.map((item) => item.profissional_id).filter(Boolean))
-    ) as string[];
-
-    const servicoIds = Array.from(
-      new Set(agendamentosBase.map((item) => item.servico_id).filter(Boolean))
-    ) as string[];
-
-    let mapaClientes = new Map<string, { id: string; nome: string }>();
-    let mapaProfissionais = new Map<string, { id: string; nome: string }>();
-    let mapaServicos = new Map<string, { id: string; nome: string; preco?: number | null }>();
-
-    if (clienteIds.length > 0) {
-      const { data: clientesData, error: clientesError } = await supabase
-        .from("clientes")
-        .select("id, nome")
-        .in("id", clienteIds);
-
-      if (clientesError) {
-        console.error("Erro ao buscar clientes dos agendamentos:", clientesError);
-        setErroTela("Erro ao carregar clientes dos agendamentos.");
-        return;
-      }
-
-      mapaClientes = new Map(
-        (((clientesData as { id: string; nome: string }[]) || [])).map((item) => [
-          item.id,
-          item,
-        ])
-      );
-    }
-
-    if (profissionalIds.length > 0) {
-      const { data: profissionaisData, error: profissionaisError } = await supabase
-        .from("profissionais")
-        .select("id, nome")
-        .in("id", profissionalIds);
-
-      if (profissionaisError) {
-        console.error("Erro ao buscar profissionais dos agendamentos:", profissionaisError);
-        setErroTela("Erro ao carregar profissionais dos agendamentos.");
-        return;
-      }
-
-      mapaProfissionais = new Map(
-        (((profissionaisData as { id: string; nome: string }[]) || [])).map((item) => [
-          item.id,
-          item,
-        ])
-      );
-    }
-
-    if (servicoIds.length > 0) {
-      const { data: servicosData, error: servicosError } = await supabase
-        .from("servicos")
-        .select("id, nome, preco")
-        .in("id", servicoIds);
-
-      if (servicosError) {
-        console.error("Erro ao buscar serviços dos agendamentos:", servicosError);
-        setErroTela("Erro ao carregar serviços dos agendamentos.");
-        return;
-      }
-
-      mapaServicos = new Map(
-        (((servicosData as { id: string; nome: string; preco?: number | null }[]) || [])).map(
-          (item) => [item.id, item]
-        )
-      );
-    }
-
-    const agendamentosFormatados: AgendamentoFila[] = agendamentosBase.map((item) => ({
-      ...item,
-      clientes: item.cliente_id
-        ? { nome: mapaClientes.get(item.cliente_id)?.nome || "Sem cliente" }
-        : null,
-      profissionais: item.profissional_id
-        ? { nome: mapaProfissionais.get(item.profissional_id)?.nome || "Sem profissional" }
-        : null,
-      servicos: item.servico_id
-        ? {
-            nome: mapaServicos.get(item.servico_id)?.nome || "Serviço",
-            preco: mapaServicos.get(item.servico_id)?.preco || 0,
-          }
-        : null,
-    }));
-
-    setAgendamentosFila(agendamentosFormatados);
-  }
-
-  async function carregarFechadasHoje(salaoIdParam?: string) {
-    const salaoId = salaoIdParam || idSalao;
-    if (!salaoId) return;
-
-    const inicio = new Date();
-    inicio.setHours(0, 0, 0, 0);
-    const fim = new Date();
-    fim.setHours(23, 59, 59, 999);
-
-    const { data, error } = await supabase
-      .from("comandas")
-      .select(`
-        id,
-        numero,
-        status,
-        fechada_em,
-        total,
-        id_cliente,
-        clientes (
-          nome
-        )
-      `)
-      .eq("id_salao", salaoId)
-      .eq("status", "fechada")
-      .gte("fechada_em", inicio.toISOString())
-      .lte("fechada_em", fim.toISOString())
-      .order("fechada_em", { ascending: false });
-
-    if (error) {
-      console.error(error);
-      return;
-    }
-
-    setComandasFechadas((data as ComandaFila[]) || []);
-  }
-
-  async function carregarCanceladas(salaoIdParam?: string) {
-    const salaoId = salaoIdParam || idSalao;
-    if (!salaoId) return;
-
-    const { data, error } = await supabase
-      .from("comandas")
-      .select(`
-        id,
-        numero,
-        status,
-        cancelada_em,
-        total,
-        id_cliente,
-        clientes (
-          nome
-        )
-      `)
-      .eq("id_salao", salaoId)
-      .eq("status", "cancelada")
-      .order("cancelada_em", { ascending: false });
-
-    if (error) {
-      console.error(error);
-      return;
-    }
-
-    setComandasCanceladas((data as ComandaFila[]) || []);
-  }
-
   async function abrirComanda(idComanda: string) {
     if (!podeOperarCaixa) {
-      setErroTela("Você não tem permissão para operar o caixa.");
+      setErroTela("Voce nao tem permissao para operar o caixa.");
       return;
     }
 
@@ -529,101 +230,7 @@ export default function CaixaPage() {
       setSaving(true);
       setErroTela("");
       setMsg("");
-
-      const { data: comandaData, error: comandaError } = await supabase
-        .from("comandas")
-        .select(`
-          *,
-          clientes (
-            nome
-          )
-        `)
-        .eq("id", idComanda)
-        .maybeSingle();
-
-      if (comandaError || !comandaData) {
-        throw new Error("Não foi possível abrir a comanda.");
-      }
-
-      const { data: itensData, error: itensError } = await supabase
-        .from("comanda_itens")
-        .select("*")
-        .eq("id_comanda", idComanda)
-        .eq("ativo", true);
-
-      if (itensError) {
-        console.error("Erro Supabase comanda_itens:", itensError);
-        throw new Error("Erro ao carregar itens da comanda.");
-      }
-
-      const { data: pagamentosData, error: pagamentosError } = await supabase
-        .from("comanda_pagamentos")
-        .select("*")
-        .eq("id_comanda", idComanda);
-
-      if (pagamentosError) {
-        console.error("Erro Supabase comanda_pagamentos:", pagamentosError);
-        throw new Error("Erro ao carregar pagamentos da comanda.");
-      }
-
-      const itensBase = (itensData as ComandaItem[]) || [];
-
-      const idsProfissionais = Array.from(
-        new Set(
-          itensBase
-            .flatMap((item) => [item.id_profissional, item.id_assistente])
-            .filter(Boolean)
-        )
-      ) as string[];
-
-      let mapaProfissionais = new Map<string, { id: string; nome: string }>();
-
-      if (idsProfissionais.length > 0) {
-        const { data: profissionaisData, error: profissionaisError } = await supabase
-          .from("profissionais")
-          .select("id, nome")
-          .in("id", idsProfissionais);
-
-        if (profissionaisError) {
-          console.error("Erro Supabase profissionais:", profissionaisError);
-          throw new Error("Erro ao carregar profissionais da comanda.");
-        }
-
-        mapaProfissionais = new Map(
-          ((profissionaisData as { id: string; nome: string }[]) || []).map((prof) => [
-            prof.id,
-            prof,
-          ])
-        );
-      }
-
-      const itensFormatados: ComandaItem[] = itensBase.map((item) => ({
-        ...item,
-        profissionais: item.id_profissional
-          ? { nome: mapaProfissionais.get(item.id_profissional)?.nome || "-" }
-          : null,
-        assistente_ref: item.id_assistente
-          ? { nome: mapaProfissionais.get(item.id_assistente)?.nome || "-" }
-          : null,
-      }));
-
-      const detalhe = comandaData as ComandaDetalhe;
-
-      setComandaSelecionada(detalhe);
-      setItens(itensFormatados);
-      setPagamentos((pagamentosData as ComandaPagamento[]) || []);
-      setDescontoInput(
-        Number(detalhe.desconto || 0).toLocaleString("pt-BR", {
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2,
-        })
-      );
-      setAcrescimoInput(
-        Number(detalhe.acrescimo || 0).toLocaleString("pt-BR", {
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2,
-        })
-      );
+      await aplicarDetalheComanda(idComanda);
     } catch (error: any) {
       console.error(error);
       setErroTela(error?.message || "Erro ao abrir comanda.");
@@ -634,7 +241,7 @@ export default function CaixaPage() {
 
   async function abrirAgendamentoSemComanda(agendamentoId: string) {
     if (!podeOperarCaixa) {
-      setErroTela("Você não tem permissão para operar o caixa.");
+      setErroTela("Voce nao tem permissao para operar o caixa.");
       return;
     }
 
@@ -653,11 +260,11 @@ export default function CaixaPage() {
 
       const idComanda = data?.id_comanda;
       if (!idComanda) {
-        throw new Error("Não foi possível obter a comanda criada.");
+        throw new Error("Nao foi possivel obter a comanda criada.");
       }
 
       await carregarTudo();
-      await abrirComanda(idComanda);
+      await aplicarDetalheComanda(idComanda);
       setMsg(
         data?.ja_existia
           ? "Comanda existente aberta com sucesso."
@@ -674,7 +281,7 @@ export default function CaixaPage() {
   async function salvarDescontoAcrescimo() {
     if (!comandaSelecionada) return;
     if (!podeEditarCaixa) {
-      setErroTela("Você não tem permissão para editar o caixa.");
+      setErroTela("Voce nao tem permissao para editar o caixa.");
       return;
     }
 
@@ -695,14 +302,14 @@ export default function CaixaPage() {
         .eq("id", comandaSelecionada.id);
 
       if (error) {
-        throw new Error("Erro ao atualizar desconto/acréscimo.");
+        throw new Error("Erro ao atualizar desconto/acrescimo.");
       }
 
       await supabase.rpc("fn_recalcular_total_comanda", {
         p_id_comanda: comandaSelecionada.id,
       });
 
-      await abrirComanda(comandaSelecionada.id);
+      await aplicarDetalheComanda(comandaSelecionada.id);
       await carregarTudo();
       setMsg("Resumo financeiro atualizado.");
     } catch (error: any) {
@@ -716,7 +323,7 @@ export default function CaixaPage() {
   async function adicionarPagamento() {
     if (!comandaSelecionada) return;
     if (!podeGerenciarPagamentos) {
-      setErroTela("Você não tem permissão para lançar pagamentos.");
+      setErroTela("Voce nao tem permissao para lancar pagamentos.");
       return;
     }
 
@@ -729,7 +336,7 @@ export default function CaixaPage() {
       const numeroParcelas = Math.max(Number(parcelas || 1), 1);
 
       if (valorBase <= 0) {
-        throw new Error("Informe um valor de pagamento válido.");
+        throw new Error("Informe um valor de pagamento valido.");
       }
 
       const taxa = obterTaxaConfigurada(formaPagamento, numeroParcelas, configCaixa);
@@ -767,13 +374,16 @@ export default function CaixaPage() {
         })
       );
 
-      await abrirComanda(comandaSelecionada.id);
+      await aplicarDetalheComanda(comandaSelecionada.id);
       setMsg(
         repassaTaxaCliente && taxaValor > 0
-          ? `Pagamento adicionado com taxa repassada ao cliente (${taxaValor.toLocaleString("pt-BR", {
-              style: "currency",
-              currency: "BRL",
-            })}).`
+          ? `Pagamento adicionado com taxa repassada ao cliente (${taxaValor.toLocaleString(
+              "pt-BR",
+              {
+                style: "currency",
+                currency: "BRL",
+              }
+            )}).`
           : "Pagamento adicionado."
       );
     } catch (error: any) {
@@ -787,7 +397,7 @@ export default function CaixaPage() {
   async function removerPagamento(idPagamento: string) {
     if (!comandaSelecionada) return;
     if (!podeGerenciarPagamentos) {
-      setErroTela("Você não tem permissão para remover pagamentos.");
+      setErroTela("Voce nao tem permissao para remover pagamentos.");
       return;
     }
 
@@ -806,7 +416,7 @@ export default function CaixaPage() {
         throw new Error("Erro ao remover pagamento.");
       }
 
-      await abrirComanda(comandaSelecionada.id);
+      await aplicarDetalheComanda(comandaSelecionada.id);
       setMsg("Pagamento removido.");
     } catch (error: any) {
       console.error(error);
@@ -830,16 +440,14 @@ export default function CaixaPage() {
 
     if (!response.ok) {
       const result = await response.json().catch(() => null);
-      throw new Error(
-        result?.error || "não foi possível recalcular a taxa da comissão."
-      );
+      throw new Error(result?.error || "nao foi possivel recalcular a taxa da comissao.");
     }
   }
 
   async function finalizarComanda() {
     if (!comandaSelecionada) return;
     if (!podeFinalizarCaixa) {
-      setErroTela("Você não tem permissão para finalizar vendas.");
+      setErroTela("Voce nao tem permissao para finalizar vendas.");
       return;
     }
 
@@ -849,7 +457,7 @@ export default function CaixaPage() {
       setMsg("");
 
       if (configCaixa?.exigir_cliente_na_venda && !comandaSelecionada.id_cliente) {
-        throw new Error("Esta venda exige cliente vinculado antes da finalização.");
+        throw new Error("Esta venda exige cliente vinculado antes da finalizacao.");
       }
 
       const numeroAtual = comandaSelecionada.numero;
@@ -868,13 +476,11 @@ export default function CaixaPage() {
         await recalcularTaxaProfissionalAposFechamento(comandaSelecionada.id);
       } catch (recalculoError: any) {
         avisoRecalculo =
-          recalculoError?.message || "não foi possível recalcular a taxa da comissão.";
+          recalculoError?.message || "nao foi possivel recalcular a taxa da comissao.";
       }
 
       await carregarTudo();
-      setComandaSelecionada(null);
-      setItens([]);
-      setPagamentos([]);
+      limparComandaSelecionada();
       setMsg(
         avisoRecalculo
           ? `Comanda #${numeroAtual} finalizada, mas ${avisoRecalculo}`
@@ -891,9 +497,10 @@ export default function CaixaPage() {
   function abrirModalCancelamento() {
     if (!comandaSelecionada) return;
     if (!podeFinalizarCaixa) {
-      setErroTela("Você não tem permissão para cancelar comandas.");
+      setErroTela("Voce nao tem permissao para cancelar comandas.");
       return;
     }
+
     setCancelModalOpen(true);
   }
 
@@ -905,7 +512,7 @@ export default function CaixaPage() {
   async function confirmarCancelamentoComanda(motivoFinal: string | null) {
     if (!comandaSelecionada) return;
     if (!podeFinalizarCaixa) {
-      setErroTela("Você não tem permissão para cancelar comandas.");
+      setErroTela("Voce nao tem permissao para cancelar comandas.");
       return;
     }
 
@@ -924,9 +531,7 @@ export default function CaixaPage() {
       }
 
       await carregarTudo();
-      setComandaSelecionada(null);
-      setItens([]);
-      setPagamentos([]);
+      limparComandaSelecionada();
       setCancelModalOpen(false);
       setMsg("Comanda cancelada com sucesso.");
     } catch (error: any) {
@@ -940,7 +545,7 @@ export default function CaixaPage() {
   function abrirModalNovoItem(tipo: TipoItemComanda) {
     if (!comandaSelecionada) return;
     if (!podeEditarCaixa) {
-      setErroTela("Você não tem permissão para adicionar itens.");
+      setErroTela("Voce nao tem permissao para adicionar itens.");
       return;
     }
 
@@ -953,7 +558,7 @@ export default function CaixaPage() {
 
   function abrirModalEditarItem(item: ComandaItem) {
     if (!podeEditarCaixa) {
-      setErroTela("Você não tem permissão para editar itens.");
+      setErroTela("Voce nao tem permissao para editar itens.");
       return;
     }
 
@@ -982,7 +587,7 @@ export default function CaixaPage() {
   async function salvarItemComanda() {
     if (!comandaSelecionada) return;
     if (!podeEditarCaixa) {
-      setErroTela("Você não tem permissão para editar itens.");
+      setErroTela("Voce nao tem permissao para editar itens.");
       return;
     }
 
@@ -996,11 +601,11 @@ export default function CaixaPage() {
       const valorTotal = Number((quantidade * valorUnitario).toFixed(2));
 
       if (!itemModal.descricao.trim()) {
-        throw new Error("Informe a descrição do item.");
+        throw new Error("Informe a descricao do item.");
       }
 
       if (valorUnitario < 0) {
-        throw new Error("Informe um valor unitário válido.");
+        throw new Error("Informe um valor unitario valido.");
       }
 
       const payloadBase = await buildComandaItemPayload({
@@ -1034,7 +639,7 @@ export default function CaixaPage() {
           p_id_comanda: comandaSelecionada.id,
         });
 
-        await abrirComanda(comandaSelecionada.id);
+        await aplicarDetalheComanda(comandaSelecionada.id);
         await carregarTudo();
         fecharModalItem();
         setMsg("Item atualizado com sucesso.");
@@ -1052,7 +657,7 @@ export default function CaixaPage() {
         p_id_comanda: comandaSelecionada.id,
       });
 
-      await abrirComanda(comandaSelecionada.id);
+      await aplicarDetalheComanda(comandaSelecionada.id);
       await carregarTudo();
       fecharModalItem();
       setMsg("Item adicionado com sucesso.");
@@ -1067,7 +672,7 @@ export default function CaixaPage() {
   async function removerItemComanda(idItem: string) {
     if (!comandaSelecionada) return;
     if (!podeEditarCaixa) {
-      setErroTela("Você não tem permissão para remover itens.");
+      setErroTela("Voce nao tem permissao para remover itens.");
       return;
     }
 
@@ -1093,7 +698,7 @@ export default function CaixaPage() {
         p_id_comanda: comandaSelecionada.id,
       });
 
-      await abrirComanda(comandaSelecionada.id);
+      await aplicarDetalheComanda(comandaSelecionada.id);
       await carregarTudo();
       setMsg("Item removido com sucesso.");
     } catch (error: any) {
@@ -1138,7 +743,7 @@ export default function CaixaPage() {
     return (
       <div className="p-6">
         <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-rose-700">
-          Você não tem permissão para acessar o caixa.
+          Voce nao tem permissao para acessar o caixa.
         </div>
       </div>
     );
@@ -1152,7 +757,7 @@ export default function CaixaPage() {
 
           {!podeOperarCaixa ? (
             <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-700">
-              Você está em modo de <strong>somente leitura</strong> no caixa.
+              Voce esta em modo de <strong>somente leitura</strong> no caixa.
             </div>
           ) : null}
 
