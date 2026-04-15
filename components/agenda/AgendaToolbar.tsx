@@ -69,14 +69,14 @@ export default function AgendaToolbar({
 
   return (
     <div className="overflow-hidden rounded-[22px] border border-zinc-200 bg-white shadow-sm">
-      <div className="border-b border-zinc-200 bg-[linear-gradient(135deg,#18181b_0%,#27272a_60%,#52525b_100%)] px-4 py-4 text-white">
+      <div className="border-b border-zinc-200 bg-[linear-gradient(135deg,#18181b_0%,#27272a_60%,#52525b_100%)] px-4 py-3 text-white">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="max-w-3xl">
             <div className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-400">
               Agenda premium
             </div>
-            <div className="mt-2 text-3xl font-bold">Agenda</div>
-            <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-zinc-300">
+            <div className="mt-1 text-2xl font-bold">Agenda</div>
+            <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-zinc-300">
               <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 capitalize">
                 {periodLabel}
               </span>
@@ -89,18 +89,18 @@ export default function AgendaToolbar({
             </div>
           </div>
 
-          <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
+          <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-2.5">
             <div className="text-xs uppercase tracking-[0.18em] text-zinc-400">
               Valor potencial
             </div>
-            <div className="mt-1 text-2xl font-bold">
+            <div className="mt-1 text-xl font-bold">
               {currencyFormatter.format(potentialValue)}
             </div>
           </div>
         </div>
       </div>
 
-      <div className="grid gap-4 px-4 py-4 xl:grid-cols-[minmax(0,1fr)_380px]">
+      <div className="grid gap-3 px-4 py-3 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-center">
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <StatCard
             icon={<CalendarDays size={16} />}
@@ -128,8 +128,8 @@ export default function AgendaToolbar({
           />
         </div>
 
-        <div className="space-y-3">
-          <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 xl:justify-end">
+          <div className="flex items-center gap-2">
             <button
               onClick={onPrev}
               className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-zinc-200 bg-white text-zinc-700 transition hover:bg-zinc-50"
@@ -174,30 +174,28 @@ export default function AgendaToolbar({
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              onClick={onToggleExpanded}
-              className="inline-flex items-center gap-2 rounded-xl border border-zinc-200 bg-white px-3 py-2.5 text-sm font-medium text-zinc-600 transition hover:bg-zinc-50"
-            >
-              {isExpanded ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
-              {isExpanded ? "Recolher agenda" : "Expandir agenda"}
-            </button>
+          <button
+            type="button"
+            onClick={onToggleExpanded}
+            className="inline-flex items-center gap-2 rounded-xl border border-zinc-200 bg-white px-3 py-2.5 text-sm font-medium text-zinc-600 transition hover:bg-zinc-50"
+          >
+            {isExpanded ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+            {isExpanded ? "Recolher agenda" : "Expandir agenda"}
+          </button>
 
-            <button
-              onClick={onNewAppointment}
-              className="rounded-xl bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-95"
-            >
-              Novo agendamento
-            </button>
+          <button
+            onClick={onNewAppointment}
+            className="rounded-xl bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-95"
+          >
+            Novo agendamento
+          </button>
 
-            <button
-              onClick={onNewBlock}
-              className="rounded-xl border border-zinc-200 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50"
-            >
-              Bloquear horario
-            </button>
-          </div>
+          <button
+            onClick={onNewBlock}
+            className="rounded-xl border border-zinc-200 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50"
+          >
+            Bloquear horario
+          </button>
         </div>
       </div>
     </div>
@@ -225,12 +223,14 @@ function StatCard({
       : "border-zinc-200 bg-zinc-50 text-zinc-900";
 
   return (
-    <div className={`rounded-2xl border px-4 py-4 ${toneClass}`}>
-      <div className="flex items-center gap-2 text-sm font-medium">
-        {icon}
-        <span>{label}</span>
+    <div className={`rounded-2xl border px-3 py-3 ${toneClass}`}>
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2 text-xs font-medium">
+          {icon}
+          <span>{label}</span>
+        </div>
+        <div className="text-lg font-bold capitalize">{value}</div>
       </div>
-      <div className="mt-3 text-2xl font-bold capitalize">{value}</div>
     </div>
   );
 }

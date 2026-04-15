@@ -425,7 +425,6 @@ export default function AgendaGrid({
   onDeleteBlock,
   onMoveBlock,
   onResizeBlock,
-  isExpanded = false,
 }: Props) {
   const [now, setNow] = useState(() => new Date());
 
@@ -471,7 +470,6 @@ export default function AgendaGrid({
     );
   }
 
-  const verticalHeight = isExpanded ? "calc(100vh - 140px)" : "calc(100vh - 180px)";
   const dayColumnWidth = viewMode === "day" ? DAY_MIN_WIDTH_DAY : DAY_MIN_WIDTH_WEEK;
   const totalGridHeight = slots.length * SLOT_HEIGHT;
   const nowMinutes = timeToMinutes(
@@ -482,7 +480,6 @@ export default function AgendaGrid({
     <div className="flex h-full min-h-0 flex-col rounded-[22px] bg-white select-none">
       <div
         className="agenda-scroll min-h-0 flex-1 overflow-auto rounded-[22px] select-none"
-        style={{ maxHeight: verticalHeight }}
       >
         <div
           className="grid min-w-max select-none"
