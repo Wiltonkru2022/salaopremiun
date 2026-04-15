@@ -36,6 +36,10 @@ type Props = {
 const PX_PER_15_MIN = 22;
 const MIN_CARD_HEIGHT = 30;
 const DRAG_THRESHOLD = 5;
+const currencyFormatter = new Intl.NumberFormat("pt-BR", {
+  style: "currency",
+  currency: "BRL",
+});
 
 export default function AppointmentCard({
   item,
@@ -67,7 +71,7 @@ export default function AppointmentCard({
 
   const isTiny = effectiveHeight <= 34;
   const isSmall = effectiveHeight > 34 && effectiveHeight <= 56;
-  const isMedium = effectiveHeight > 56 && effectiveHeight <= 90;
+  const isMedium = effectiveHeight > 56 && effectiveHeight <= 96;
 
   const statusLabel = useMemo(() => {
     switch (item.status) {
@@ -80,11 +84,18 @@ export default function AppointmentCard({
       case "cancelado":
         return "Cancelado";
       case "aguardando_pagamento":
-        return "Aguardando pagto";
+        return "Aguardando caixa";
       default:
         return item.status;
     }
   }, [item.status]);
+
+  const valorServico = useMemo(
+    () => currencyFormatter.format(Number(item.servico?.preco || 0)),
+    [item.servico?.preco]
+  );
+
+  const comandaLabel = item.comanda_numero ? `Comanda #${item.comanda_numero}` : "";
 
   function resetPreview() {
     setPreviewTop(null);
@@ -212,7 +223,7 @@ export default function AppointmentCard({
     <>
       {(dragging || resizing) && (
         <div
-          className="pointer-events-none absolute rounded-[16px] border border-dashed border-zinc-400 bg-white/40 select-none"
+          className="pointer-events-none absolute rounded-[16px] border border-dashed border-zinc-500 bg-zinc-950/10 select-none"
           style={{
             top: effectiveTop,
             height: effectiveHeight,
@@ -225,7 +236,7 @@ export default function AppointmentCard({
 
       <div
         className={clsx(
-          "absolute overflow-hidden rounded-[16px] border border-white/30 shadow-sm transition-all duration-150 select-none",
+          "absolute overflow-hidden rounded-[16px] border shadow-sm transition-all duration-150 select-none",
           "hover:-translate-y-[1px] hover:shadow-md",
           "cursor-grab active:cursor-grabbing",
           styles.card,
@@ -241,159 +252,166 @@ export default function AppointmentCard({
         onClick={handleCardClick}
         onDragStart={(e) => e.preventDefault()}
       >
+        <div className="absolute inset-y-0 left-0 w-1.5 bg-white/30" />
+
         <div
           className={clsx(
-            "h-full w-full select-none",
-            isTiny ? "px-2 py-1" : isSmall ? "px-2.5 py-2" : "p-2.5"
+            "relative h-full w-full select-none",
+            isTiny ? "px-2 py-1.5" : isSmall ? "px-3 py-2.5" : "p-3"
           )}
         >
           {isTiny ? (
             <div className="flex h-full items-center gap-2 select-none">
               <GripVertical size={11} className="shrink-0 opacity-70" />
-
-              {profissionalFotoUrl ? (
-                <img
-                  src={profissionalFotoUrl}
-                  alt={profissionalNome || "Profissional"}
-                  draggable={false}
-                  className="h-4.5 w-4.5 shrink-0 rounded-full border border-white/40 object-cover select-none pointer-events-none"
-                />
-              ) : (
-                <div className="flex h-4.5 w-4.5 shrink-0 items-center justify-center rounded-full bg-white/20 select-none">
-                  <User2 size={9} />
-                </div>
-              )}
-
-              <div className="min-w-0 flex-1 truncate text-[10px] font-semibold select-none">
+              <div className="min-w-0 flex-1 truncate text-[10px] font-semibold">
                 {item.cliente?.nome || "Cliente"}
+              </div>
+              <div className="text-[9px] opacity-90">
+                {normalizeTimeString(item.hora_inicio)}
               </div>
             </div>
           ) : (
-            <div className="flex h-full items-start justify-between gap-2 select-none">
-              <div className="min-w-0 flex-1 select-none">
-                <div className="mb-1.5 flex items-center gap-2 select-none">
-                  <GripVertical size={11} className="shrink-0 opacity-70" />
+            <div className="flex h-full flex-col justify-between gap-2 select-none">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <GripVertical size={11} className="shrink-0 opacity-70" />
 
-                  {profissionalFotoUrl ? (
-                    <img
-                      src={profissionalFotoUrl}
-                      alt={profissionalNome || "Profissional"}
-                      draggable={false}
-                      className={clsx(
-                        "shrink-0 rounded-full border border-white/40 object-cover select-none pointer-events-none",
-                        isSmall ? "h-5 w-5" : "h-6 w-6"
-                      )}
-                    />
-                  ) : (
-                    <div
-                      className={clsx(
-                        "flex shrink-0 items-center justify-center rounded-full bg-white/20 select-none",
-                        isSmall ? "h-5 w-5" : "h-6 w-6"
-                      )}
-                    >
-                      <User2 size={isSmall ? 10 : 11} />
-                    </div>
-                  )}
-
-                  <div className="min-w-0 flex-1 select-none">
-                    <div
-                      className={clsx(
-                        "truncate font-bold leading-tight select-none",
-                        isSmall ? "text-[10px]" : "text-[12px]"
-                      )}
-                    >
-                      {item.cliente?.nome || "Cliente"}
-                    </div>
-
-                    {profissionalNome ? (
+                    {profissionalFotoUrl ? (
+                      <img
+                        src={profissionalFotoUrl}
+                        alt={profissionalNome || "Profissional"}
+                        draggable={false}
+                        className={clsx(
+                          "shrink-0 rounded-full border border-white/40 object-cover select-none pointer-events-none",
+                          isSmall ? "h-5 w-5" : "h-7 w-7"
+                        )}
+                      />
+                    ) : (
                       <div
                         className={clsx(
-                          "truncate opacity-85 select-none",
-                          isSmall ? "text-[8px]" : "text-[9px]"
+                          "flex shrink-0 items-center justify-center rounded-full bg-white/20 select-none",
+                          isSmall ? "h-5 w-5" : "h-7 w-7"
                         )}
                       >
-                        {profissionalNome}
+                        <User2 size={isSmall ? 10 : 12} />
                       </div>
-                    ) : null}
+                    )}
+
+                    <div className="min-w-0 flex-1">
+                      <div
+                        className={clsx(
+                          "truncate font-bold leading-tight",
+                          isSmall ? "text-[10px]" : "text-[13px]"
+                        )}
+                      >
+                        {item.cliente?.nome || "Cliente"}
+                      </div>
+
+                      {!isSmall && profissionalNome ? (
+                        <div className="truncate text-[10px] opacity-85">
+                          {profissionalNome}
+                        </div>
+                      ) : null}
+                    </div>
                   </div>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-1.5 select-none">
-                  <span
-                    className={clsx(
-                      "rounded-full border border-white/25 bg-white/15 font-semibold select-none",
-                      isSmall ? "px-1.5 py-0.5 text-[8px]" : "px-2 py-0.5 text-[9px]"
-                    )}
-                  >
-                    {statusLabel}
-                  </span>
-                </div>
-
-                {!isSmall && (
-                  <>
-                    <div className="mt-1.5 flex items-center gap-1.5 text-[10px] opacity-95 select-none">
-                      <Clock3 size={10} />
-                      <span>
-                        {normalizeTimeString(item.hora_inicio)} -{" "}
-                        {normalizeTimeString(item.hora_fim)}
-                      </span>
-                    </div>
-
-                    <div className="mt-1 flex items-center gap-1.5 text-[10px] opacity-95 select-none">
-                      <Scissors size={10} />
-                      <span className="truncate">{item.servico?.nome || "Serviço"}</span>
-                    </div>
-
-                    {isMedium || effectiveHeight <= 100 ? null : item.observacoes ? (
-                      <div className="mt-1.5 line-clamp-2 text-[10px] opacity-90 select-none">
-                        {item.observacoes}
-                      </div>
-                    ) : null}
-                  </>
-                )}
-              </div>
-
-              <div className="flex flex-col gap-1">
-                <button
-                  type="button"
-                  data-no-drag="true"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onClick(item);
-                  }}
-                  className="rounded-md bg-white/20 p-1 transition hover:bg-white/30"
-                  title="Editar"
-                >
-                  <Pencil size={11} />
-                </button>
-
-                <button
-                  type="button"
-                  data-no-drag="true"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onDelete(item);
-                  }}
-                  className="rounded-md bg-white/20 p-1 transition hover:bg-white/30"
-                  title="Excluir"
-                >
-                  <Trash2 size={11} />
-                </button>
-
-                {item.status === "aguardando_pagamento" && (
+                <div className="flex flex-col gap-1">
                   <button
                     type="button"
                     data-no-drag="true"
                     onClick={(e) => {
                       e.stopPropagation();
-                      onGoToCashier(item);
+                      onClick(item);
                     }}
-                    className="rounded-md bg-white/25 p-1 transition hover:bg-white/35"
-                    title="Ir para caixa"
+                    className="rounded-md bg-white/20 p-1 transition hover:bg-white/30"
+                    title="Editar"
                   >
-                    <DollarSign size={11} />
+                    <Pencil size={11} />
                   </button>
-                )}
+
+                  <button
+                    type="button"
+                    data-no-drag="true"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDelete(item);
+                    }}
+                    className="rounded-md bg-white/20 p-1 transition hover:bg-white/30"
+                    title="Excluir"
+                  >
+                    <Trash2 size={11} />
+                  </button>
+
+                  {item.status === "aguardando_pagamento" ? (
+                    <button
+                      type="button"
+                      data-no-drag="true"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onGoToCashier(item);
+                      }}
+                      className="rounded-md bg-white/25 p-1 transition hover:bg-white/35"
+                      title="Ir para caixa"
+                    >
+                      <DollarSign size={11} />
+                    </button>
+                  ) : null}
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span
+                  className={clsx(
+                    "rounded-full border px-2 py-0.5 text-[9px] font-semibold",
+                    styles.badge
+                  )}
+                >
+                  {statusLabel}
+                </span>
+
+                {comandaLabel && !isSmall ? (
+                  <span className="rounded-full border border-white/20 bg-white/15 px-2 py-0.5 text-[9px] font-semibold">
+                    {comandaLabel}
+                  </span>
+                ) : null}
+
+                {!isSmall ? (
+                  <span className="rounded-full border border-white/20 bg-white/15 px-2 py-0.5 text-[9px] font-semibold">
+                    {valorServico}
+                  </span>
+                ) : null}
+              </div>
+
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-1.5 text-[10px] opacity-95">
+                  <Clock3 size={10} />
+                  <span>
+                    {normalizeTimeString(item.hora_inicio)} -{" "}
+                    {normalizeTimeString(item.hora_fim)}
+                  </span>
+                </div>
+
+                {!isSmall ? (
+                  <div className="flex items-center gap-1.5 text-[10px] opacity-95">
+                    <Scissors size={10} />
+                    <span className="truncate">{item.servico?.nome || "Servico"}</span>
+                  </div>
+                ) : null}
+
+                {!isSmall && item.status === "aguardando_pagamento" ? (
+                  <div className="inline-flex items-center gap-1 rounded-full border border-white/20 bg-white/15 px-2 py-1 text-[9px] font-semibold">
+                    <DollarSign size={9} />
+                    Pronto para caixa
+                  </div>
+                ) : null}
+
+                {!isMedium && item.observacoes ? (
+                  <div className="line-clamp-2 text-[10px] opacity-90">
+                    {item.observacoes}
+                  </div>
+                ) : null}
               </div>
             </div>
           )}
@@ -406,7 +424,7 @@ export default function AppointmentCard({
             "absolute bottom-0 left-0 right-0 cursor-ns-resize bg-black/15",
             isTiny ? "h-1.5 rounded-b-[12px]" : "h-2 rounded-b-[16px]"
           )}
-          title="Arraste para alterar duração"
+          title="Arraste para alterar duracao"
         />
       </div>
     </>

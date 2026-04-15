@@ -827,6 +827,21 @@ export default function AgendaPage() {
     [profissionais, selectedProfissionalId]
   );
 
+  const totalAtendimentos = useMemo(() => agendamentos.length, [agendamentos]);
+  const aguardandoPagamento = useMemo(
+    () => agendamentos.filter((item) => item.status === "aguardando_pagamento").length,
+    [agendamentos]
+  );
+  const totalBloqueios = useMemo(() => bloqueios.length, [bloqueios]);
+  const valorPotencial = useMemo(
+    () =>
+      agendamentos.reduce(
+        (total, item) => total + Number(item.servico?.preco || 0),
+        0
+      ),
+    [agendamentos]
+  );
+
   if (loading || !acessoCarregado) {
     return <div className="p-6">Carregando agenda...</div>;
   }
@@ -872,6 +887,14 @@ export default function AgendaPage() {
         <AgendaToolbar
           currentDate={currentDate}
           viewMode={viewMode}
+          selectedProfessionalName={selectedProfissional?.nome || ""}
+          selectedProfessionalRole={
+            selectedProfissional?.cargo || selectedProfissional?.categoria || ""
+          }
+          appointmentsCount={totalAtendimentos}
+          waitingPaymentCount={aguardandoPagamento}
+          blockedCount={totalBloqueios}
+          potentialValue={valorPotencial}
           onPrev={() =>
             setCurrentDate((prev) =>
               viewMode === "day" ? subDays(prev, 1) : subDays(prev, 7)

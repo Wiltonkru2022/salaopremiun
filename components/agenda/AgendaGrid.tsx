@@ -2,7 +2,7 @@
 
 import clsx from "clsx";
 import { addDays } from "date-fns";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Agendamento,
   Bloqueio,
@@ -427,6 +427,16 @@ export default function AgendaGrid({
   onResizeBlock,
   isExpanded = false,
 }: Props) {
+  const [now, setNow] = useState(() => new Date());
+
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      setNow(new Date());
+    }, 60000);
+
+    return () => window.clearInterval(interval);
+  }, []);
+
   const slots = buildTimeSlots(startTime, endTime, intervalMinutes);
   const rawDays = viewMode === "day" ? [currentDate] : getWeekDays(currentDate);
   const days = rawDays.filter((day) => isDiaFuncionamento(day, diasFuncionamento));
@@ -464,6 +474,9 @@ export default function AgendaGrid({
   const verticalHeight = isExpanded ? "calc(100vh - 140px)" : "calc(100vh - 180px)";
   const dayColumnWidth = viewMode === "day" ? DAY_MIN_WIDTH_DAY : DAY_MIN_WIDTH_WEEK;
   const totalGridHeight = slots.length * SLOT_HEIGHT;
+  const nowMinutes = timeToMinutes(
+    `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`
+  );
 
   return (
     <div className="flex h-full min-h-0 flex-col rounded-[22px] bg-white select-none">
@@ -489,18 +502,26 @@ export default function AgendaGrid({
               key={day.toISOString()}
               className={clsx(
                 "sticky top-0 z-30 h-[50px] select-none border-b border-l border-zinc-200 px-3 py-2",
-                isTodayDate(day) ? "bg-zinc-50" : "bg-white"
+                isTodayDate(day) ? "bg-zinc-100" : "bg-white"
               )}
             >
-              <div className="truncate text-[13px] font-semibold text-zinc-900">
-                {formatDayLabel(day)}
-              </div>
-
-              {selectedProfessional?.nome ? (
-                <div className="mt-0.5 truncate text-[10px] text-zinc-500">
-                  {selectedProfessional.nome}
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="truncate text-[13px] font-semibold text-zinc-900">
+                    {formatDayLabel(day)}
+                  </div>
+                  <div className="mt-0.5 text-[10px] text-zinc-500">
+                    {agendamentos.filter((item) => item.data === formatFullDate(day)).length}{" "}
+                    atendimento(s)
+                  </div>
                 </div>
-              ) : null}
+
+                {isTodayDate(day) ? (
+                  <span className="rounded-full border border-zinc-300 bg-white px-2 py-0.5 text-[10px] font-semibold text-zinc-700">
+                    Hoje
+                  </span>
+                ) : null}
+              </div>
             </div>
           ))}
 
@@ -566,6 +587,21 @@ export default function AgendaGrid({
                     className="block h-[44px] w-full border-b border-zinc-100 text-left transition hover:bg-zinc-50/70"
                   />
                 ))}
+
+                {isTodayDate(day) &&
+                nowMinutes >= timeToMinutes(startTime) &&
+                nowMinutes <= timeToMinutes(endTime) ? (
+                  <div
+                    className="pointer-events-none absolute left-0 right-0 z-10"
+                    style={{ top: eventTop(minutesToTime(nowMinutes)) }}
+                  >
+                    <div className="relative h-[2px] bg-rose-500/80">
+                      <span className="absolute -top-3 left-3 rounded-full bg-rose-500 px-2 py-0.5 text-[10px] font-semibold text-white shadow-sm">
+                        {minutesToTime(nowMinutes)}
+                      </span>
+                    </div>
+                  </div>
+                ) : null}
 
                 {dayBloqueios.map((b) => (
                   <BlockCard
