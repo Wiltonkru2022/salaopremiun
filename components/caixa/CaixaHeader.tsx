@@ -16,20 +16,20 @@ export default function CaixaHeader({
 }: Props) {
   return (
     <div className="overflow-hidden rounded-[28px] border border-zinc-200 bg-white shadow-sm">
-      <div className="border-b border-zinc-200 bg-[linear-gradient(135deg,#18181b_0%,#27272a_58%,#52525b_100%)] px-6 py-6 text-white">
+      <div className="border-b border-zinc-200 bg-white px-6 py-6 text-zinc-950">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="max-w-2xl">
-            <div className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-400">
+            <div className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-500">
               Operacao do salao
             </div>
             <h1 className="mt-2 text-3xl font-bold">Caixa</h1>
-            <p className="mt-2 text-sm text-zinc-300">
+            <p className="mt-2 text-sm text-zinc-500">
               Atendimento, cobranca, pagamento e fechamento em um fluxo mais claro.
             </p>
           </div>
 
-          <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-right">
-            <div className="text-xs uppercase tracking-[0.18em] text-zinc-400">
+          <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-right">
+            <div className="text-xs uppercase tracking-[0.18em] text-zinc-500">
               Movimento agora
             </div>
             <div className="mt-1 text-2xl font-bold">{totalEmAberto}</div>

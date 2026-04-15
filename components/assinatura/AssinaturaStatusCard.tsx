@@ -68,16 +68,16 @@ export default function AssinaturaStatusCard({
       ) : null}
 
       {resumoAssinatura.bloqueioTotal ? (
-        <section className="overflow-hidden rounded-[30px] border border-red-300 bg-[linear-gradient(135deg,#7f1d1d_0%,#b91c1c_45%,#ef4444_100%)] p-6 text-white shadow-[0_18px_45px_rgba(185,28,28,0.28)]">
+        <section className="overflow-hidden rounded-[30px] border border-red-200 bg-red-50 p-6 text-red-900 shadow-sm">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <div className="text-xs font-semibold uppercase tracking-[0.25em] text-red-100">
+              <div className="text-xs font-semibold uppercase tracking-[0.25em] text-red-600">
                 Bloqueio automático
               </div>
               <h2 className="mt-2 text-2xl font-bold">
                 Seu acesso principal está bloqueado
               </h2>
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-red-50">
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-red-700">
                 A assinatura passou do limite permitido sem regularização. Para
                 liberar novamente o painel, gere uma nova cobrança e conclua o
                 pagamento.
@@ -89,7 +89,7 @@ export default function AssinaturaStatusCard({
                 type="button"
                 onClick={criarCobrancaAssinatura}
                 disabled={gerandoCobranca}
-                className="inline-flex items-center justify-center gap-3 rounded-2xl bg-white px-5 py-3 text-sm font-semibold text-red-700 transition hover:bg-red-50 disabled:opacity-60"
+                className="inline-flex items-center justify-center gap-3 rounded-2xl bg-red-700 px-5 py-3 text-sm font-semibold text-white transition hover:opacity-95 disabled:opacity-60"
               >
                 {gerandoCobranca ? <LoadingDot dark /> : null}
 

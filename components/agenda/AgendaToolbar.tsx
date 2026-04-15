@@ -68,20 +68,20 @@ export default function AgendaToolbar({
         })}`;
 
   return (
-    <div className="overflow-hidden rounded-[22px] border border-zinc-200 bg-white shadow-sm">
-      <div className="border-b border-zinc-200 bg-[linear-gradient(135deg,#18181b_0%,#27272a_60%,#52525b_100%)] px-4 py-3 text-white">
+    <div className="overflow-hidden rounded-[22px] border border-zinc-200 bg-white">
+      <div className="border-b border-zinc-200 bg-white px-4 py-3 text-zinc-950">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="max-w-3xl">
-            <div className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-400">
+            <div className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-500">
               Agenda premium
             </div>
             <div className="mt-1 text-2xl font-bold">Agenda</div>
-            <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-zinc-300">
-              <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 capitalize">
+            <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-zinc-600">
+              <span className="rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1 capitalize">
                 {periodLabel}
               </span>
               {selectedProfessionalName ? (
-                <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1">
+                <span className="rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1">
                   {selectedProfessionalName}
                   {selectedProfessionalRole ? ` - ${selectedProfessionalRole}` : ""}
                 </span>
@@ -89,8 +89,8 @@ export default function AgendaToolbar({
             </div>
           </div>
 
-          <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-2.5">
-            <div className="text-xs uppercase tracking-[0.18em] text-zinc-400">
+          <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-2.5">
+            <div className="text-xs uppercase tracking-[0.18em] text-zinc-500">
               Valor potencial
             </div>
             <div className="mt-1 text-xl font-bold">

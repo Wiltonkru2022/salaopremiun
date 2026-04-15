@@ -285,7 +285,7 @@ export default function CaixaPagamentos({
         </div>
       </div>
 
-      <div className="rounded-[28px] border border-zinc-200 bg-gradient-to-br from-zinc-50 to-white p-5 shadow-sm">
+      <div className="rounded-[28px] border border-zinc-200 bg-white p-5 shadow-sm">
         <div className="mb-3 flex items-center gap-2 text-zinc-800">
           <User2 size={16} />
           <div className="font-semibold">Regras do fechamento</div>

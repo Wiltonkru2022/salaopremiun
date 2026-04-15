@@ -22,6 +22,7 @@ export type PermissionKey =
   | "comissoes_ver"
   | "relatorios_ver"
   | "marketing_ver"
+  | "perfil_salao_ver"
   | "configuracoes_ver"
   | "assinatura_ver";
 
@@ -39,6 +40,7 @@ export const PERMISSIONS: Record<PermissionKey, UserNivel[]> = {
   comissoes_ver: ["admin", "gerente"],
   relatorios_ver: ["admin"],
   marketing_ver: ["admin", "gerente"],
+  perfil_salao_ver: ["admin"],
   configuracoes_ver: ["admin"],
   assinatura_ver: ["admin"],
   caixa_editar: ["admin", "gerente"],

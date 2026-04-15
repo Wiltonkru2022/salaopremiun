@@ -10,6 +10,7 @@ const PAINEL_PREFIXES = [
   "/servicos",
   "/produtos",
   "/estoque",
+  "/comandas",
   "/vendas",
   "/caixa",
   "/comissoes",
@@ -17,6 +18,7 @@ const PAINEL_PREFIXES = [
   "/relatorio_financeiro",
   "/relatorios",
   "/marketing",
+  "/perfil-salao",
   "/configuracoes",
 ];
 
@@ -66,7 +68,6 @@ export async function proxy(request: NextRequest) {
   const rotaLiberada = isRotaLiberada(pathname);
   const rotaLogin = pathname === "/login";
   const rotaAssinatura = pathname.startsWith("/assinatura");
-  const rotaConfiguracoes = pathname.startsWith("/configuracoes");
 
   // Se não for rota protegida, libera
   if (!rotaPainel && !rotaLiberada) {
@@ -126,7 +127,7 @@ export async function proxy(request: NextRequest) {
 
   // 🔥 Nunca teve assinatura
   if (!assinatura) {
-    if (rotaPainel && !rotaConfiguracoes) {
+    if (rotaPainel) {
       const url = request.nextUrl.clone();
       url.pathname = "/assinatura";
       return NextResponse.redirect(url);
@@ -148,7 +149,7 @@ export async function proxy(request: NextRequest) {
   }
 
   // 🔥 BLOQUEIO FORTE DO SISTEMA
-  if (rotaPainel && resumo.bloqueioTotal && !rotaConfiguracoes) {
+  if (rotaPainel && resumo.bloqueioTotal) {
     const url = request.nextUrl.clone();
     url.pathname = "/assinatura";
     return NextResponse.redirect(url);
@@ -168,6 +169,7 @@ export const config = {
     "/servicos/:path*",
     "/produtos/:path*",
     "/estoque/:path*",
+    "/comandas/:path*",
     "/vendas/:path*",
     "/caixa/:path*",
     "/comissoes/:path*",
@@ -175,6 +177,7 @@ export const config = {
     "/relatorio_financeiro/:path*",
     "/relatorios/:path*",
     "/marketing/:path*",
+    "/perfil-salao/:path*",
     "/configuracoes/:path*",
     "/api/assinatura/iniciar-trial",
     "/api/assinatura/criar-cobranca",

@@ -247,7 +247,7 @@ export default async function NovoAgendamentoProfissionalPage({
               </label>
             ) : null}
 
-            <button className="h-12 w-full rounded-2xl bg-gradient-to-r from-yellow-600 to-yellow-400 text-sm font-semibold text-white">
+          <button className="h-12 w-full rounded-2xl bg-zinc-950 text-sm font-semibold text-white">
               Confirmar agendamento
             </button>
           </form>

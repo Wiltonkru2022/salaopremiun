@@ -15,7 +15,7 @@ function getBadgeMudancaPlano(tipoMudancaPlano?: "upgrade" | "downgrade" | null)
     return {
       label: "Upgrade de plano",
       className:
-        "border-emerald-300/40 bg-emerald-400/15 text-emerald-50",
+        "border-emerald-200 bg-emerald-50 text-emerald-700",
     };
   }
 
@@ -23,7 +23,7 @@ function getBadgeMudancaPlano(tipoMudancaPlano?: "upgrade" | "downgrade" | null)
     return {
       label: "Downgrade de plano",
       className:
-        "border-amber-300/40 bg-amber-400/15 text-amber-50",
+        "border-amber-200 bg-amber-50 text-amber-700",
     };
   }
 
@@ -57,16 +57,16 @@ export default function AssinaturaHero({
     : "Controle teste grátis, vencimento, histórico, upgrade, downgrade e cobrança por PIX, boleto ou cartão em uma experiência premium.";
 
   return (
-    <section className="overflow-hidden rounded-[34px] border border-violet-200 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.22),transparent_30%),linear-gradient(135deg,#4c1d95_0%,#6d28d9_45%,#7c3aed_70%,#8b5cf6_100%)] px-5 py-6 text-white shadow-sm md:px-8 md:py-8 xl:px-10 xl:py-10">
+    <section className="overflow-hidden rounded-[34px] border border-zinc-200 bg-white px-5 py-6 text-zinc-950 shadow-sm md:px-8 md:py-8 xl:px-10 xl:py-10">
       <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
         <div className="max-w-4xl">
           <div className="flex flex-wrap gap-2">
-            <div className="inline-flex rounded-full border border-white/20 bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.28em] text-violet-100">
+            <div className="inline-flex rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.28em] text-zinc-600">
               Assinatura SalaoPremium
             </div>
 
             {planoAtualNome ? (
-              <div className="inline-flex rounded-full border border-white/20 bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.20em] text-violet-100">
+              <div className="inline-flex rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.20em] text-zinc-600">
                 Plano atual: {planoAtualNome}
               </div>
             ) : null}
@@ -80,7 +80,7 @@ export default function AssinaturaHero({
             ) : null}
 
             {status ? (
-              <div className="inline-flex rounded-full border border-white/20 bg-black/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.20em] text-white">
+              <div className="inline-flex rounded-full border border-zinc-200 bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.20em] text-zinc-700">
                 Status: {status.replaceAll("_", " ")}
               </div>
             ) : null}
@@ -90,32 +90,32 @@ export default function AssinaturaHero({
             {titulo}
           </h1>
 
-          <p className="mt-4 max-w-2xl text-sm leading-6 text-violet-100 md:text-base">
+          <p className="mt-4 max-w-2xl text-sm leading-6 text-zinc-600 md:text-base">
             {descricao}
           </p>
 
           {bloqueioTotal ? (
-            <div className="mt-5 rounded-[24px] border border-red-300/35 bg-red-500/15 px-4 py-4 backdrop-blur-sm">
-              <div className="text-sm font-semibold text-white md:text-base">
+            <div className="mt-5 rounded-[24px] border border-red-200 bg-red-50 px-4 py-4">
+              <div className="text-sm font-semibold text-red-700 md:text-base">
                 Bloqueio automático ativo
               </div>
-              <div className="mt-1 text-sm text-red-50/95">
+              <div className="mt-1 text-sm text-red-600">
                 Enquanto a assinatura permanecer vencida, o sistema mantém o acesso restrito às rotas protegidas.
               </div>
             </div>
           ) : null}
         </div>
 
-        <div className="w-full max-w-[420px] rounded-[28px] border border-white/15 bg-white/10 p-4 backdrop-blur-md">
+        <div className="w-full max-w-[420px] rounded-[28px] border border-zinc-200 bg-zinc-50 p-4">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <div className="text-xs font-semibold uppercase tracking-[0.24em] text-violet-100">
+              <div className="text-xs font-semibold uppercase tracking-[0.24em] text-zinc-500">
                 Renovação automática
               </div>
-              <div className="mt-2 text-lg font-bold text-white">
+              <div className="mt-2 text-lg font-bold text-zinc-950">
                 {renovacaoAutomatica ? "Ativada" : "Desativada"}
               </div>
-              <p className="mt-1 text-sm text-violet-100">
+              <p className="mt-1 text-sm text-zinc-600">
                 {renovacaoAutomatica
                   ? "O sistema poderá gerar a próxima cobrança automaticamente conforme a regra da assinatura."
                   : "A próxima cobrança dependerá de ação manual ou mudança futura na configuração."}
@@ -134,8 +134,8 @@ export default function AssinaturaHero({
               }
               className={`relative inline-flex h-8 w-14 shrink-0 items-center rounded-full border transition ${
                 renovacaoAutomatica
-                  ? "border-emerald-300/50 bg-emerald-400/25"
-                  : "border-white/20 bg-white/15"
+                  ? "border-emerald-300 bg-emerald-500"
+                  : "border-zinc-300 bg-zinc-200"
               } ${
                 !podeGerenciar || salvandoRenovacaoAutomatica
                   ? "cursor-not-allowed opacity-60"
@@ -150,7 +150,7 @@ export default function AssinaturaHero({
             </button>
           </div>
 
-          <div className="mt-4 rounded-2xl border border-white/10 bg-black/10 px-3 py-3 text-xs text-violet-100">
+          <div className="mt-4 rounded-2xl border border-zinc-200 bg-white px-3 py-3 text-xs text-zinc-600">
             {salvandoRenovacaoAutomatica
               ? "Salvando configuração..."
               : podeGerenciar

@@ -316,6 +316,26 @@ export default function VendasPage() {
     setExcluirModalOpen(true);
   }
 
+  async function reverterEstoqueComanda(idComanda: string) {
+    const response = await fetch("/api/estoque/reverter-comanda", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        idSalao,
+        idComanda,
+      }),
+    });
+
+    if (!response.ok) {
+      const result = await response.json().catch(() => null);
+      throw new Error(
+        result?.error || "nao foi possivel devolver o estoque da venda."
+      );
+    }
+  }
+
   async function confirmarReabrirVenda() {
     if (!vendaSelecionada) return;
 
@@ -338,11 +358,27 @@ export default function VendasPage() {
         throw new Error(error.message || "Erro ao reabrir venda.");
       }
 
+      let avisoEstoque = "";
+
+      try {
+        await reverterEstoqueComanda(vendaSelecionada.id);
+      } catch (estoqueError: any) {
+        avisoEstoque =
+          estoqueError?.message || "nao foi possivel devolver o estoque da venda.";
+      }
+
       setReabrirModalOpen(false);
       setMotivoReabertura("");
-      setMsg(`Venda #${vendaSelecionada.numero} enviada para o caixa.`);
+      setMsg(
+        avisoEstoque
+          ? `Venda #${vendaSelecionada.numero} reaberta, mas ${avisoEstoque}`
+          : `Venda #${vendaSelecionada.numero} enviada para o caixa.`
+      );
       await carregarVendas();
-      window.location.href = `/caixa?comanda_id=${vendaSelecionada.id}`;
+
+      if (!avisoEstoque) {
+        router.push(`/caixa?comanda_id=${vendaSelecionada.id}`);
+      }
     } catch (error: any) {
       console.error(error);
       setErroTela(error?.message || "Erro ao reabrir venda.");
@@ -371,6 +407,23 @@ export default function VendasPage() {
 
       if (error) {
         throw new Error(error.message || "Erro ao excluir venda.");
+      }
+
+      let avisoEstoque = "";
+
+      try {
+        await reverterEstoqueComanda(vendaSelecionada.id);
+      } catch (estoqueError: any) {
+        avisoEstoque =
+          estoqueError?.message || "nao foi possivel devolver o estoque da venda.";
+      }
+
+      if (avisoEstoque) {
+        setExcluirModalOpen(false);
+        setMotivoExclusao("");
+        setDetalheOpen(false);
+        setDetalheVenda(null);
+        throw new Error(`Venda excluida, mas ${avisoEstoque}`);
       }
 
       setExcluirModalOpen(false);
@@ -676,19 +729,19 @@ export default function VendasPage() {
 
   return (
     <>
-      <div className="min-h-screen bg-zinc-50 p-4 md:p-6">
+      <div className="bg-white">
         <div className="mx-auto max-w-[1700px] space-y-5">
-          <div className="rounded-[32px] bg-gradient-to-r from-zinc-950 via-zinc-900 to-zinc-800 p-6 text-white shadow-xl">
+          <div className="rounded-[32px] border border-zinc-200 bg-white p-6 text-zinc-950 shadow-sm">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div>
                 <h1 className="mt-2 text-3xl font-bold">Vendas</h1>
-                <p className="mt-2 text-sm text-zinc-300">
+                <p className="mt-2 text-sm text-zinc-500">
                   Histórico de comandas fechadas, busca avançada, reabertura para o caixa, exclusão e impressão de cupom.
                 </p>
               </div>
 
-              <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-right">
-                <div className="text-xs uppercase tracking-[0.2em] text-zinc-400">
+              <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-right">
+                <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">
                   Resultados
                 </div>
                 <div className="mt-1 text-2xl font-bold">{vendasFiltradas.length}</div>

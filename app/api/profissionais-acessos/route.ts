@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
-import { hashPassword } from "../../../lib/profissional-auth.server";
+import { requireAdminSalao } from "@/lib/auth/require-admin-salao";
+import { AuthzError } from "@/lib/auth/require-salao-membership";
+import { hashPassword } from "@/lib/profissional-auth.server";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 type BodyPayload = {
   id_profissional: string;
@@ -17,41 +19,73 @@ export async function POST(req: NextRequest) {
   try {
     const body = (await req.json()) as BodyPayload;
 
-    const idProfissional = body.id_profissional?.trim();
+    const idProfissional = String(body.id_profissional || "").trim();
     const cpf = onlyDigits(body.cpf);
-    const senha = body.senha?.trim() || "";
-    const ativo = !!body.ativo;
+    const senha = String(body.senha || "").trim();
+    const ativo = Boolean(body.ativo);
 
     if (!idProfissional) {
       return NextResponse.json(
-        { error: "ID do profissional é obrigatório." },
+        { error: "ID do profissional e obrigatorio." },
         { status: 400 }
       );
     }
 
     if (!cpf) {
       return NextResponse.json(
-        { error: "CPF é obrigatório." },
+        { error: "CPF e obrigatorio." },
         { status: 400 }
       );
     }
 
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
+    const supabaseAdmin = getSupabaseAdmin();
 
-    const { data: acessoExistente, error: acessoExistenteError } = await supabase
+    const { data: profissional, error: profissionalError } = await supabaseAdmin
+      .from("profissionais")
+      .select("id, id_salao, nome")
+      .eq("id", idProfissional)
+      .maybeSingle();
+
+    if (profissionalError) {
+      throw profissionalError;
+    }
+
+    if (!profissional?.id || !profissional.id_salao) {
+      return NextResponse.json(
+        { error: "Profissional nao encontrado." },
+        { status: 404 }
+      );
+    }
+
+    await requireAdminSalao(profissional.id_salao);
+
+    const { data: cpfJaUsado, error: cpfJaUsadoError } = await supabaseAdmin
+      .from("profissionais_acessos")
+      .select("id, id_profissional")
+      .eq("cpf", cpf)
+      .neq("id_profissional", idProfissional)
+      .limit(1)
+      .maybeSingle();
+
+    if (cpfJaUsadoError) {
+      throw cpfJaUsadoError;
+    }
+
+    if (cpfJaUsado?.id) {
+      return NextResponse.json(
+        { error: "Este CPF ja esta vinculado a outro acesso profissional." },
+        { status: 409 }
+      );
+    }
+
+    const { data: acessoExistente, error: acessoExistenteError } = await supabaseAdmin
       .from("profissionais_acessos")
       .select("id, senha_hash")
       .eq("id_profissional", idProfissional)
       .maybeSingle();
 
     if (acessoExistenteError) {
-      return NextResponse.json(
-        { error: acessoExistenteError.message },
-        { status: 400 }
-      );
+      throw acessoExistenteError;
     }
 
     let senhaHashFinal = acessoExistente?.senha_hash || null;
@@ -78,29 +112,37 @@ export async function POST(req: NextRequest) {
     };
 
     if (acessoExistente?.id) {
-      const { error } = await supabase
+      const { error } = await supabaseAdmin
         .from("profissionais_acessos")
         .update(payload)
         .eq("id", acessoExistente.id);
 
       if (error) {
-        return NextResponse.json({ error: error.message }, { status: 400 });
+        throw error;
       }
     } else {
-      const { error } = await supabase
+      const { error } = await supabaseAdmin
         .from("profissionais_acessos")
         .insert(payload);
 
       if (error) {
-        return NextResponse.json({ error: error.message }, { status: 400 });
+        throw error;
       }
     }
 
     return NextResponse.json({ success: true });
-  } catch (e: any) {
-    console.error("ERRO API PROFISSIONAIS ACESSOS:", e);
+  } catch (error) {
+    if (error instanceof AuthzError) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: error.status }
+      );
+    }
+
+    console.error("ERRO API PROFISSIONAIS ACESSOS:", error);
+
     return NextResponse.json(
-      { error: e.message || "Erro interno ao salvar acesso." },
+      { error: "Erro interno ao salvar acesso do profissional." },
       { status: 500 }
     );
   }

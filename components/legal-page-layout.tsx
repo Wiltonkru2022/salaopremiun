@@ -13,7 +13,7 @@ export default function LegalPageLayout({
   children,
 }: Props) {
   return (
-    <main className="min-h-screen bg-[#f7f4fa] text-zinc-900">
+    <main className="min-h-screen bg-white text-zinc-900">
       <SiteHeader />
 
       <section className="border-b border-zinc-200 bg-white">

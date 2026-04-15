@@ -7,7 +7,7 @@ type Props = {
 
 export default function ProfissionalHeader({ title, subtitle }: Props) {
   return (
-    <header className="rounded-b-[2rem] bg-gradient-to-r from-zinc-950 via-zinc-900 to-zinc-950 px-5 pb-5 pt-6 text-white shadow-sm">
+    <header className="rounded-b-[2rem] border-b border-zinc-200 bg-white px-5 pb-5 pt-6 text-zinc-950 shadow-sm">
       <div className="text-[11px] uppercase tracking-[0.28em] text-zinc-500">
         app do profissional
       </div>
@@ -17,7 +17,7 @@ export default function ProfissionalHeader({ title, subtitle }: Props) {
       </h1>
 
       {subtitle ? (
-        <p className="mt-2 text-sm text-zinc-300">{subtitle}</p>
+        <p className="mt-2 text-sm text-zinc-500">{subtitle}</p>
       ) : null}
     </header>
   );

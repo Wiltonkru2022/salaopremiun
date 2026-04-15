@@ -97,7 +97,7 @@ export default async function ClientesPage({
 
         <Link
           href="/app-profissional/clientes/novo"
-          className="flex h-12 w-full items-center justify-center rounded-2xl bg-gradient-to-r from-yellow-600 to-yellow-400 text-base font-semibold text-white shadow-sm"
+          className="flex h-12 w-full items-center justify-center rounded-2xl bg-zinc-950 text-base font-semibold text-white shadow-sm"
         >
           + Cadastrar cliente
         </Link>

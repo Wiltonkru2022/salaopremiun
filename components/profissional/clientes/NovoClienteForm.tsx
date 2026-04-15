@@ -18,7 +18,7 @@ function SubmitButton() {
     <button
       type="submit"
       disabled={pending}
-      className="h-12 w-full rounded-2xl bg-gradient-to-r from-yellow-600 to-yellow-400 text-base font-semibold text-white shadow-sm transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60"
+        className="h-12 w-full rounded-2xl bg-zinc-950 text-base font-semibold text-white shadow-sm transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60"
     >
       {pending ? "Salvando..." : "Salvar cliente"}
     </button>

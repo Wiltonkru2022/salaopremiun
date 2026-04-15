@@ -108,9 +108,7 @@ export default function RecuperarSenhaPage() {
   }
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#f4f4f5] px-4 py-8">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(24,24,27,0.08),_transparent_35%)]" />
-
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-white px-4 py-8">
       <div className="relative grid w-full max-w-5xl overflow-hidden rounded-[36px] bg-white shadow-[0_25px_80px_rgba(0,0,0,0.12)] md:grid-cols-2">
         <div className="hidden bg-zinc-950 p-10 text-white md:flex md:flex-col md:justify-between">
           <div>

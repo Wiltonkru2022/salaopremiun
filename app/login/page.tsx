@@ -45,7 +45,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-100 p-4">
+    <div className="flex min-h-screen items-center justify-center bg-white p-4">
       <div className="grid w-full max-w-5xl overflow-hidden rounded-[32px] bg-white shadow-2xl md:grid-cols-2">
         <div className="hidden bg-zinc-900 p-10 text-white md:flex md:flex-col md:justify-between">
           <div>

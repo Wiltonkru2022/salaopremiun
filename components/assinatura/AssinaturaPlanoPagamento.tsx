@@ -154,13 +154,13 @@ export default function AssinaturaPlanosPagamento({
                 disabled={!podeGerenciar || gerandoCobranca}
                 className={`relative min-h-[240px] rounded-[26px] border p-6 text-left transition ${
                   ativo
-                    ? "border-violet-600 bg-[linear-gradient(135deg,#5b21b6_0%,#6d28d9_60%,#7c3aed_100%)] text-white shadow-lg"
-                    : "border-zinc-200 bg-white text-zinc-950 hover:border-violet-300 hover:shadow-sm"
+                    ? "border-zinc-950 bg-white text-zinc-950 shadow-sm ring-2 ring-zinc-950/5"
+                    : "border-zinc-200 bg-white text-zinc-950 hover:border-zinc-400 hover:shadow-sm"
                 } ${!podeGerenciar || gerandoCobranca ? "cursor-not-allowed opacity-70" : ""}`}
               >
                 <div className="absolute right-4 top-4 flex flex-col items-end gap-2">
                   {ativo ? (
-                    <div className="rounded-full bg-white/15 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-white">
+                    <div className="rounded-full bg-zinc-950 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-white">
                       Selecionado
                     </div>
                   ) : null}
@@ -169,7 +169,7 @@ export default function AssinaturaPlanosPagamento({
                     <div
                       className={`rounded-full px-3 py-1 text-[11px] font-semibold ${
                         ativo
-                          ? "bg-white/15 text-white"
+                          ? "bg-zinc-100 text-zinc-700"
                           : badge.className.replace("border ", "")
                       }`}
                     >
@@ -180,7 +180,7 @@ export default function AssinaturaPlanosPagamento({
 
                 <div className="text-3xl font-bold leading-none">{info.nome}</div>
 
-                <div className={`mt-4 text-base ${ativo ? "text-violet-100" : "text-zinc-500"}`}>
+                <div className={`mt-4 text-base ${ativo ? "text-zinc-600" : "text-zinc-500"}`}>
                   {info.descricao}
                 </div>
 
@@ -188,7 +188,7 @@ export default function AssinaturaPlanosPagamento({
                   {formatarMoeda(info.valor)}
                 </div>
 
-                <div className={`mt-6 space-y-2 text-sm ${ativo ? "text-violet-100" : "text-zinc-600"}`}>
+                <div className="mt-6 space-y-2 text-sm text-zinc-600">
                   {info.recursos.map((item) => (
                     <div key={item}>{item}</div>
                   ))}
@@ -242,8 +242,8 @@ export default function AssinaturaPlanosPagamento({
                 disabled={!podeGerenciar || gerandoCobranca}
                 className={`flex w-full items-center justify-between rounded-[22px] border px-5 py-4 text-left transition ${
                   ativo
-                    ? "border-violet-500 bg-violet-50 text-violet-900 shadow-sm"
-                    : "border-zinc-200 bg-white text-zinc-950 hover:border-violet-300"
+                    ? "border-zinc-950 bg-zinc-50 text-zinc-950 shadow-sm"
+                    : "border-zinc-200 bg-white text-zinc-950 hover:border-zinc-400"
                 }`}
               >
                 <div>
@@ -252,7 +252,7 @@ export default function AssinaturaPlanosPagamento({
                 </div>
 
                 {ativo ? (
-                  <div className="rounded-full bg-violet-700 px-3 py-1 text-xs font-semibold text-white">
+                  <div className="rounded-full bg-zinc-950 px-3 py-1 text-xs font-semibold text-white">
                     Selecionado
                   </div>
                 ) : null}
@@ -356,7 +356,7 @@ export default function AssinaturaPlanosPagamento({
             void criarCobrancaAssinatura();
           }}
           disabled={gerandoCobranca || !podeGerenciar}
-          className="mt-5 inline-flex w-full items-center justify-center gap-3 rounded-[22px] bg-[linear-gradient(135deg,#5b21b6_0%,#6d28d9_60%,#7c3aed_100%)] px-5 py-4 text-sm font-semibold text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60"
+          className="mt-5 inline-flex w-full items-center justify-center gap-3 rounded-[22px] bg-zinc-950 px-5 py-4 text-sm font-semibold text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {gerandoCobranca ? <LoadingDot /> : null}
 

@@ -475,16 +475,16 @@ async function bootstrap() {
         produtos={produtos}
       />
 
-      <div className="min-h-screen bg-zinc-50 p-4 md:p-6">
+    <div className="bg-white">
         <div className="mx-auto max-w-7xl space-y-6">
-          <div className="rounded-3xl bg-gradient-to-r from-zinc-900 via-zinc-800 to-zinc-900 p-6 text-white shadow-xl">
+        <div className="rounded-3xl border border-zinc-200 bg-white p-6 text-zinc-950 shadow-sm">
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
               <div>
                 <p className="text-sm uppercase tracking-[0.25em] text-zinc-300">Comanda</p>
                 <h1 className="mt-2 text-2xl font-bold md:text-3xl">
                   {modo === "novo" ? "Nova Comanda" : `Comanda #${numero}`}
                 </h1>
-                <p className="mt-2 text-sm text-zinc-300">
+          <p className="mt-2 text-sm text-zinc-500">
                   Controle atendimento, consumo, serviços, produtos e fechamento.
                 </p>
               </div>

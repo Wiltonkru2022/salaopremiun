@@ -144,7 +144,7 @@ function ChatSuporteInner() {
           ) : (
             <div
               key={message.id}
-              className="ml-auto max-w-[88%] rounded-[1.25rem] bg-gradient-to-r from-zinc-950 via-zinc-900 to-zinc-950 p-4 text-sm text-white shadow-sm"
+            className="ml-auto max-w-[88%] rounded-[1.25rem] bg-zinc-950 p-4 text-sm text-white shadow-sm"
             >
               {message.content}
             </div>
@@ -205,7 +205,7 @@ function ChatSuporteInner() {
             type="button"
             onClick={handleSend}
             disabled={loading || !input.trim()}
-            className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-r from-yellow-600 to-yellow-400 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex h-11 w-11 items-center justify-center rounded-2xl bg-zinc-950 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
           >
             →
           </button>

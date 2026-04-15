@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { addDays, format, subDays } from "date-fns";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -37,9 +37,22 @@ import {
 } from "@/types/agenda";
 import { normalizeTimeString, overlaps, sanitizeDiasFuncionamento } from "@/lib/utils/agenda";
 
+function addMinutesToTime(time: string, minutes: number) {
+  const normalized = normalizeTimeString(time);
+  const [hours, mins] = normalized.split(":").map(Number);
+  const totalMinutes = hours * 60 + mins + minutes;
+
+  return normalizeTimeString(
+    `${String(Math.floor(totalMinutes / 60)).padStart(2, "0")}:${String(
+      totalMinutes % 60
+    ).padStart(2, "0")}`
+  );
+}
+
 export default function AgendaPage() {
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
+  const loadAgendaSeqRef = useRef(0);
 
   const [loading, setLoading] = useState(true);
   const [erroTela, setErroTela] = useState("");
@@ -188,18 +201,30 @@ export default function AgendaPage() {
   const loadAgenda = useCallback(async () => {
     if (!idSalao || !selectedProfissionalId) return;
 
-    const data = await loadAgendaData({
-      supabase,
-      idSalao,
-      selectedProfissionalId,
-      viewMode,
-      currentDate,
-      clientes,
-      servicos,
-    });
+    const requestId = ++loadAgendaSeqRef.current;
 
-    setAgendamentos(data.agendamentos);
-    setBloqueios(data.bloqueios);
+    try {
+      const data = await loadAgendaData({
+        supabase,
+        idSalao,
+        selectedProfissionalId,
+        viewMode,
+        currentDate,
+        clientes,
+        servicos,
+      });
+
+      if (requestId !== loadAgendaSeqRef.current) return;
+
+      setAgendamentos(data.agendamentos);
+      setBloqueios(data.bloqueios);
+      setErroTela("");
+    } catch (error) {
+      if (requestId !== loadAgendaSeqRef.current) return;
+
+      console.error("Erro ao atualizar agenda:", error);
+      setErroTela("Nao foi possivel atualizar a agenda agora.");
+    }
   }, [supabase, idSalao, selectedProfissionalId, viewMode, currentDate, clientes, servicos]);
 
   const init = useCallback(async () => {
@@ -398,9 +423,7 @@ export default function AgendaPage() {
     if (!config) return;
 
     const startTime = normalizeTimeString(item.hora_inicio);
-    const novoFim = normalizeTimeString(
-      `${String(Math.floor((Number(startTime.split(":")[0]) * 60 + Number(startTime.split(":")[1]) + newDuration) / 60)).padStart(2, "0")}:${String((Number(startTime.split(":")[0]) * 60 + Number(startTime.split(":")[1]) + newDuration) % 60).padStart(2, "0")}`
-    );
+    const novoFim = addMinutesToTime(startTime, newDuration);
 
     const validRange = validateAgendaTimeRange({
       config,
@@ -448,31 +471,57 @@ export default function AgendaPage() {
       return;
     }
 
+    const agendamentosAntes = agendamentos;
+    const updatedAt = new Date().toISOString();
+    loadAgendaSeqRef.current += 1;
+    setAgendamentos((prev) =>
+      prev.map((agendamento) =>
+        agendamento.id === item.id
+          ? {
+              ...agendamento,
+              duracao_minutos: newDuration,
+              hora_fim: novoFim,
+              updated_at: updatedAt,
+            }
+          : agendamento
+      )
+    );
+
     const { error } = await supabase
       .from("agendamentos")
       .update({
         duracao_minutos: newDuration,
         hora_fim: novoFim,
-        updated_at: new Date().toISOString(),
+        updated_at: updatedAt,
       })
       .eq("id", item.id);
 
     if (error) {
+      setAgendamentos(agendamentosAntes);
       console.error(error);
       abrirAviso("Erro", "Erro ao atualizar duração.", "danger");
       return;
     }
 
     if (item.id_comanda) {
-      await sincronizarAgendamento({
-        idAgendamento: item.id,
-        idComandaNova: item.id_comanda,
-        idServico: item.servico_id,
-        idProfissional: item.profissional_id,
-      });
+      try {
+        await sincronizarAgendamento({
+          idAgendamento: item.id,
+          idComandaNova: item.id_comanda,
+          idServico: item.servico_id,
+          idProfissional: item.profissional_id,
+        });
+      } catch (error) {
+        console.error("Erro ao sincronizar comanda do agendamento:", error);
+        abrirAviso(
+          "Agenda atualizada",
+          "A agenda foi atualizada, mas a comanda vinculada precisa ser conferida.",
+          "warning"
+        );
+      }
     }
 
-    await loadAgenda();
+    void loadAgenda();
   }
 
   async function handleMoveEvent(item: Agendamento, move: { newDate: string; newStartTime: string }) {
@@ -489,9 +538,7 @@ export default function AgendaPage() {
     }
 
     const startTime = normalizeTimeString(move.newStartTime);
-    const novoFim = normalizeTimeString(
-      `${String(Math.floor((Number(startTime.split(":")[0]) * 60 + Number(startTime.split(":")[1]) + item.duracao_minutos) / 60)).padStart(2, "0")}:${String((Number(startTime.split(":")[0]) * 60 + Number(startTime.split(":")[1]) + item.duracao_minutos) % 60).padStart(2, "0")}`
-    );
+    const novoFim = addMinutesToTime(startTime, item.duracao_minutos);
 
     const validRange = validateAgendaTimeRange({
       config,
@@ -539,32 +586,59 @@ export default function AgendaPage() {
       return;
     }
 
+    const agendamentosAntes = agendamentos;
+    const updatedAt = new Date().toISOString();
+    loadAgendaSeqRef.current += 1;
+    setAgendamentos((prev) =>
+      prev.map((agendamento) =>
+        agendamento.id === item.id
+          ? {
+              ...agendamento,
+              data: move.newDate,
+              hora_inicio: startTime,
+              hora_fim: novoFim,
+              updated_at: updatedAt,
+            }
+          : agendamento
+      )
+    );
+
     const { error } = await supabase
       .from("agendamentos")
       .update({
         data: move.newDate,
         hora_inicio: startTime,
         hora_fim: novoFim,
-        updated_at: new Date().toISOString(),
+        updated_at: updatedAt,
       })
       .eq("id", item.id);
 
     if (error) {
+      setAgendamentos(agendamentosAntes);
       console.error(error);
       abrirAviso("Erro", "Erro ao mover agendamento.", "danger");
       return;
     }
 
     if (item.id_comanda) {
-      await sincronizarAgendamento({
-        idAgendamento: item.id,
-        idComandaNova: item.id_comanda,
-        idServico: item.servico_id,
-        idProfissional: item.profissional_id,
-      });
+      try {
+        await sincronizarAgendamento({
+          idAgendamento: item.id,
+          idComandaNova: item.id_comanda,
+          idServico: item.servico_id,
+          idProfissional: item.profissional_id,
+        });
+      } catch (error) {
+        console.error("Erro ao sincronizar comanda do agendamento:", error);
+        abrirAviso(
+          "Agenda atualizada",
+          "O agendamento foi movido, mas a comanda vinculada precisa ser conferida.",
+          "warning"
+        );
+      }
     }
 
-    await loadAgenda();
+    void loadAgenda();
   }
 
   async function handleDeleteEvent(item: Agendamento) {
@@ -874,8 +948,8 @@ export default function AgendaPage() {
       <div
         className={
           agendaExpanded
-            ? "fixed inset-0 z-40 flex min-h-0 flex-col gap-2 bg-zinc-100 p-2 md:p-3"
-            : "flex h-[calc(100vh-8px)] min-h-0 flex-col gap-2 overflow-hidden bg-zinc-100 p-2 md:p-3"
+            ? "fixed inset-0 z-40 flex min-h-0 flex-col gap-2 bg-white p-2 md:p-3"
+            : "flex h-[calc(100vh-9.5rem)] min-h-0 flex-col gap-2 overflow-hidden bg-white"
         }
       >
         <ProfissionaisBar
@@ -949,7 +1023,7 @@ export default function AgendaPage() {
           </div>
         ) : null}
 
-        <div className="min-h-0 flex-1 overflow-hidden rounded-[22px] border border-zinc-200 bg-white shadow-sm select-none">
+        <div className="min-h-0 flex-1 overflow-hidden rounded-[22px] border border-zinc-200 bg-white select-none">
           <AgendaGrid
             viewMode={viewMode}
             currentDate={currentDate}

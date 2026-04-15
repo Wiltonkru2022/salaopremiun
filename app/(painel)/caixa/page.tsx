@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import CaixaCancelModal from "@/components/caixa/CaixaCancelModal";
 import CaixaDetalhe from "@/components/caixa/CaixaDetalhe";
 import CaixaFila from "@/components/caixa/CaixaFila";
@@ -9,6 +9,7 @@ import CaixaHeader from "@/components/caixa/CaixaHeader";
 import CaixaItemModal from "@/components/caixa/CaixaItemModal";
 import CaixaPagamentos from "@/components/caixa/CaixaPagamentos";
 import CaixaResumo from "@/components/caixa/CaixaResumo";
+import CaixaSessaoPanel from "@/components/caixa/CaixaSessaoPanel";
 import {
   INITIAL_MODAL_ITEM_STATE,
   type ModalItemState,
@@ -42,22 +43,39 @@ import {
   carregarConfiguracoesCaixa as carregarConfiguracoesCaixaData,
   carregarListasCaixa,
 } from "@/lib/caixa/loadCaixaData";
+import {
+  abrirSessaoCaixa,
+  carregarSessaoCaixa,
+  fecharSessaoCaixa,
+  lancarMovimentacaoCaixa,
+  type CaixaMovimentacao,
+  type CaixaMovimentacaoTipo,
+  type CaixaSessao,
+} from "@/lib/caixa/sessaoCaixa";
 import { createClient } from "@/lib/supabase/client";
 
 export default function CaixaPage() {
   const supabase = createClient();
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [erroTela, setErroTela] = useState("");
   const [msg, setMsg] = useState("");
   const [idSalao, setIdSalao] = useState("");
+  const [idUsuario, setIdUsuario] = useState("");
 
   const [permissoes, setPermissoes] = useState<Permissoes | null>(null);
   const [acessoCarregado, setAcessoCarregado] = useState(false);
 
   const [configCaixa, setConfigCaixa] = useState<ConfigCaixaSalao | null>(null);
+  const [caixaSchemaReady, setCaixaSchemaReady] = useState(true);
+  const [caixaSchemaError, setCaixaSchemaError] = useState("");
+  const [sessaoCaixa, setSessaoCaixa] = useState<CaixaSessao | null>(null);
+  const [movimentacoesCaixa, setMovimentacoesCaixa] = useState<
+    CaixaMovimentacao[]
+  >([]);
 
   const [aba, setAba] = useState<AbaCaixa>("fila");
   const [busca, setBusca] = useState("");
@@ -88,6 +106,7 @@ export default function CaixaPage() {
   const [profissionaisCatalogo, setProfissionaisCatalogo] = useState<ProfissionalResumo[]>([]);
 
   const [itemModal, setItemModal] = useState<ModalItemState>(INITIAL_MODAL_ITEM_STATE);
+  const requestedComandaId = searchParams.get("comanda_id");
 
   const podeVerCaixa = !!permissoes?.caixa_ver;
 
@@ -106,10 +125,12 @@ export default function CaixaPage() {
   const podeFinalizarCaixa =
     !!permissoes?.caixa_editar || !!permissoes?.caixa_finalizar;
 
+  const caixaAberto = caixaSchemaReady && sessaoCaixa?.status === "aberto";
+
   useEffect(() => {
     void init();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [requestedComandaId]);
 
   useEffect(() => {
     if (!configCaixa) {
@@ -171,6 +192,17 @@ export default function CaixaPage() {
     setConfigCaixa(config);
   }
 
+  async function carregarSessaoOperacional(salaoIdParam?: string) {
+    const salaoId = salaoIdParam || idSalao;
+    if (!salaoId) return;
+
+    const resultado = await carregarSessaoCaixa(supabase, salaoId);
+    setCaixaSchemaReady(resultado.schemaReady);
+    setCaixaSchemaError(resultado.error || "");
+    setSessaoCaixa(resultado.sessao);
+    setMovimentacoesCaixa(resultado.movimentacoes);
+  }
+
   async function carregarCatalogos(salaoIdParam?: string) {
     const salaoId = salaoIdParam || idSalao;
     if (!salaoId) return;
@@ -195,6 +227,129 @@ export default function CaixaPage() {
     setComandasCanceladas(listas.comandasCanceladas);
   }
 
+  function exigirCaixaAberto() {
+    if (!caixaSchemaReady) {
+      setErroTela(
+        "Aplique a migration de caixa operacional no Supabase antes de vender."
+      );
+      return false;
+    }
+
+    if (!caixaAberto || !sessaoCaixa) {
+      setErroTela("Abra o caixa antes de vender, receber ou finalizar comanda.");
+      return false;
+    }
+
+    return true;
+  }
+
+  async function abrirCaixa(payload: {
+    valorAbertura: number;
+    observacoes: string;
+  }) {
+    if (!podeOperarCaixa) {
+      setErroTela("Voce nao tem permissao para abrir o caixa.");
+      return;
+    }
+
+    try {
+      setSaving(true);
+      setErroTela("");
+      setMsg("");
+      await abrirSessaoCaixa({
+        supabase,
+        idSalao,
+        idUsuario,
+        valorAbertura: payload.valorAbertura,
+        observacoes: payload.observacoes,
+      });
+      await carregarSessaoOperacional();
+      setMsg("Caixa aberto. Agora as vendas podem ser recebidas.");
+    } catch (error: any) {
+      console.error(error);
+      setErroTela(error?.message || "Erro ao abrir caixa.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function fecharCaixa(payload: {
+    valorFechamento: number;
+    observacoes: string;
+  }) {
+    if (!sessaoCaixa) return;
+    if (!podeFinalizarCaixa) {
+      setErroTela("Voce nao tem permissao para fechar o caixa.");
+      return;
+    }
+
+    try {
+      setSaving(true);
+      setErroTela("");
+      setMsg("");
+      await fecharSessaoCaixa({
+        supabase,
+        idSessao: sessaoCaixa.id,
+        idUsuario,
+        valorFechamento: payload.valorFechamento,
+        observacoes: payload.observacoes,
+      });
+      await carregarSessaoOperacional();
+      setMsg("Caixa fechado com sucesso.");
+    } catch (error: any) {
+      console.error(error);
+      setErroTela(error?.message || "Erro ao fechar caixa.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function lancarMovimentoCaixa(payload: {
+    tipo: CaixaMovimentacaoTipo;
+    valor: number;
+    descricao: string;
+    idProfissional?: string | null;
+  }) {
+    if (!exigirCaixaAberto() || !sessaoCaixa) return;
+
+    if (payload.valor <= 0) {
+      setErroTela("Informe um valor valido para o movimento.");
+      return;
+    }
+
+    if (payload.tipo === "vale_profissional" && !payload.idProfissional) {
+      setErroTela("Selecione o profissional para lancar o vale.");
+      return;
+    }
+
+    try {
+      setSaving(true);
+      setErroTela("");
+      setMsg("");
+      await lancarMovimentacaoCaixa({
+        supabase,
+        idSalao,
+        idSessao: sessaoCaixa.id,
+        idUsuario,
+        tipo: payload.tipo,
+        valor: payload.valor,
+        descricao: payload.descricao,
+        idProfissional: payload.idProfissional,
+      });
+      await carregarSessaoOperacional();
+      setMsg(
+        payload.tipo === "vale_profissional"
+          ? "Vale lancado e preparado para desconto no fechamento de comissao."
+          : "Movimento do caixa lancado."
+      );
+    } catch (error: any) {
+      console.error(error);
+      setErroTela(error?.message || "Erro ao lancar movimento do caixa.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
   async function init() {
     try {
       setLoading(true);
@@ -206,12 +361,19 @@ export default function CaixaPage() {
 
       const salaoId = acesso.usuario.id_salao;
       setIdSalao(salaoId);
+      setIdUsuario(acesso.usuario.id);
 
       await Promise.all([
         carregarTudo(salaoId),
         carregarCatalogos(salaoId),
         carregarConfiguracoesCaixa(salaoId),
+        carregarSessaoOperacional(salaoId),
       ]);
+
+      if (requestedComandaId) {
+        await aplicarDetalheComanda(requestedComandaId);
+        setAba("fila");
+      }
     } catch (error: any) {
       console.error(error);
       setErroTela(error?.message || "Erro ao carregar caixa.");
@@ -225,6 +387,7 @@ export default function CaixaPage() {
       setErroTela("Voce nao tem permissao para operar o caixa.");
       return;
     }
+    if (!exigirCaixaAberto()) return;
 
     try {
       setSaving(true);
@@ -284,6 +447,7 @@ export default function CaixaPage() {
       setErroTela("Voce nao tem permissao para editar o caixa.");
       return;
     }
+    if (!exigirCaixaAberto()) return;
 
     try {
       setSaving(true);
@@ -326,6 +490,7 @@ export default function CaixaPage() {
       setErroTela("Voce nao tem permissao para lancar pagamentos.");
       return;
     }
+    if (!exigirCaixaAberto()) return;
 
     try {
       setSaving(true);
@@ -362,6 +527,20 @@ export default function CaixaPage() {
         throw new Error(error.message || "Erro ao adicionar pagamento.");
       }
 
+      if (sessaoCaixa) {
+        await lancarMovimentacaoCaixa({
+          supabase,
+          idSalao,
+          idSessao: sessaoCaixa.id,
+          idUsuario,
+          tipo: "venda",
+          valor: valorFinalCobrado,
+          descricao: `Pagamento da comanda #${comandaSelecionada.numero}`,
+          idComanda: comandaSelecionada.id,
+          formaPagamento,
+        });
+      }
+
       setValorPagamento("");
       setParcelas("1");
       setObservacaoPagamento("");
@@ -375,6 +554,7 @@ export default function CaixaPage() {
       );
 
       await aplicarDetalheComanda(comandaSelecionada.id);
+      await carregarSessaoOperacional();
       setMsg(
         repassaTaxaCliente && taxaValor > 0
           ? `Pagamento adicionado com taxa repassada ao cliente (${taxaValor.toLocaleString(
@@ -400,6 +580,7 @@ export default function CaixaPage() {
       setErroTela("Voce nao tem permissao para remover pagamentos.");
       return;
     }
+    if (!exigirCaixaAberto()) return;
 
     try {
       setSaving(true);
@@ -444,12 +625,33 @@ export default function CaixaPage() {
     }
   }
 
+  async function processarEstoqueAposFechamento(idComanda: string) {
+    const response = await fetch("/api/estoque/processar-comanda", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        idSalao,
+        idComanda,
+      }),
+    });
+
+    if (!response.ok) {
+      const result = await response.json().catch(() => null);
+      throw new Error(
+        result?.error || "nao foi possivel atualizar o estoque da comanda."
+      );
+    }
+  }
+
   async function finalizarComanda() {
     if (!comandaSelecionada) return;
     if (!podeFinalizarCaixa) {
       setErroTela("Voce nao tem permissao para finalizar vendas.");
       return;
     }
+    if (!exigirCaixaAberto()) return;
 
     try {
       setSaving(true);
@@ -461,19 +663,29 @@ export default function CaixaPage() {
       }
 
       const numeroAtual = comandaSelecionada.numero;
+      const idComandaAtual = comandaSelecionada.id;
 
       const { error } = await supabase.rpc("fn_fechar_comanda", {
-        p_id_comanda: comandaSelecionada.id,
+        p_id_comanda: idComandaAtual,
       });
 
       if (error) {
         throw new Error(error.message || "Erro ao finalizar comanda.");
       }
 
+      let avisoEstoque = "";
+
+      try {
+        await processarEstoqueAposFechamento(idComandaAtual);
+      } catch (estoqueError: any) {
+        avisoEstoque =
+          estoqueError?.message || "nao foi possivel atualizar o estoque da venda.";
+      }
+
       let avisoRecalculo = "";
 
       try {
-        await recalcularTaxaProfissionalAposFechamento(comandaSelecionada.id);
+        await recalcularTaxaProfissionalAposFechamento(idComandaAtual);
       } catch (recalculoError: any) {
         avisoRecalculo =
           recalculoError?.message || "nao foi possivel recalcular a taxa da comissao.";
@@ -481,9 +693,10 @@ export default function CaixaPage() {
 
       await carregarTudo();
       limparComandaSelecionada();
+      const avisos = [avisoEstoque, avisoRecalculo].filter(Boolean);
       setMsg(
-        avisoRecalculo
-          ? `Comanda #${numeroAtual} finalizada, mas ${avisoRecalculo}`
+        avisos.length > 0
+          ? `Comanda #${numeroAtual} finalizada, mas ${avisos.join(" / ")}`
           : `Comanda #${numeroAtual} finalizada com sucesso.`
       );
     } catch (error: any) {
@@ -548,6 +761,7 @@ export default function CaixaPage() {
       setErroTela("Voce nao tem permissao para adicionar itens.");
       return;
     }
+    if (!exigirCaixaAberto()) return;
 
     setItemModal({
       ...INITIAL_MODAL_ITEM_STATE,
@@ -561,6 +775,7 @@ export default function CaixaPage() {
       setErroTela("Voce nao tem permissao para editar itens.");
       return;
     }
+    if (!exigirCaixaAberto()) return;
 
     setItemModal({
       ...INITIAL_MODAL_ITEM_STATE,
@@ -590,6 +805,7 @@ export default function CaixaPage() {
       setErroTela("Voce nao tem permissao para editar itens.");
       return;
     }
+    if (!exigirCaixaAberto()) return;
 
     try {
       setSaving(true);
@@ -675,6 +891,7 @@ export default function CaixaPage() {
       setErroTela("Voce nao tem permissao para remover itens.");
       return;
     }
+    if (!exigirCaixaAberto()) return;
 
     const confirmar = window.confirm("Deseja remover este item da comanda?");
     if (!confirmar) return;
@@ -751,13 +968,25 @@ export default function CaixaPage() {
 
   return (
     <>
-      <div className="min-h-screen bg-zinc-50 p-4 md:p-6">
+      <div className="bg-white">
         <div className="mx-auto max-w-[1700px] space-y-5">
           <CaixaHeader
             agendamentosPendentes={agendamentosFila.length}
             comandasAtivas={comandasFila.length}
             comandasFechadasHoje={comandasFechadas.length}
             totalEmAberto={comandasFila.length + agendamentosFila.length}
+          />
+
+          <CaixaSessaoPanel
+            sessao={sessaoCaixa}
+            movimentacoes={movimentacoesCaixa}
+            schemaReady={caixaSchemaReady}
+            schemaError={caixaSchemaError}
+            profissionais={profissionaisCatalogo}
+            saving={saving || !podeOperarCaixa}
+            onAbrirCaixa={(payload) => void abrirCaixa(payload)}
+            onFecharCaixa={(payload) => void fecharCaixa(payload)}
+            onLancamento={(payload) => void lancarMovimentoCaixa(payload)}
           />
 
           {!podeOperarCaixa ? (

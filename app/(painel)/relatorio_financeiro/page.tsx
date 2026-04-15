@@ -477,19 +477,19 @@ export default function RelatorioFinanceiroPage() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-50 p-4 md:p-6">
+    <div className="bg-white">
       <div className="mx-auto max-w-[1800px] space-y-5">
-        <div className="rounded-[32px] bg-gradient-to-r from-zinc-950 via-zinc-900 to-zinc-800 p-6 text-white shadow-xl">
+        <div className="rounded-[32px] border border-zinc-200 bg-white p-6 text-zinc-950 shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
               <h1 className="mt-2 text-3xl font-bold">Relatório Financeiro</h1>
-              <p className="mt-2 text-sm text-zinc-300">
+              <p className="mt-2 text-sm text-zinc-500">
                 Acompanhe faturamento, recebimentos, taxas da maquininha, comissões e vendas do salão.
               </p>
             </div>
 
-            <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-right">
-              <div className="text-xs uppercase tracking-[0.2em] text-zinc-400">
+            <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-right">
+              <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">
                 Vendas fechadas
               </div>
               <div className="mt-1 text-2xl font-bold">{resumo.quantidadeVendas}</div>

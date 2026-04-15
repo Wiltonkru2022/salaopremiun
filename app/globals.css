@@ -1,5 +1,15 @@
 @import "tailwindcss";
 
+:root {
+  --app-bg: #ffffff;
+  --app-surface: #ffffff;
+  --app-ink: #101828;
+  --app-muted: #667085;
+  --app-accent: #c7a25c;
+  --app-accent-strong: #8e6a2f;
+  --app-success: #1f7a5a;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -11,16 +21,37 @@ body {
   min-height: 100%;
 }
 
-body {
-  background: #f4f4f5;
-  color: #18181b;
-  font-family: Arial, Helvetica, sans-serif;
+html {
+  scroll-padding-top: 120px;
 }
 
-/* Scroll padrão mais bonito no sistema inteiro */
+body {
+  background: #ffffff;
+  color: var(--app-ink);
+  font-family: var(--font-sans), sans-serif;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button.bg-zinc-900,
+button.bg-zinc-950,
+button.bg-black,
+a.bg-zinc-900,
+a.bg-zinc-950,
+a.bg-black {
+  color: #ffffff;
+}
+
+.font-display {
+  font-family: var(--font-display), sans-serif;
+}
+
 * {
   scrollbar-width: thin;
-  scrollbar-color: rgba(24, 24, 27, 0.18) transparent;
+  scrollbar-color: rgba(16, 24, 40, 0.18) transparent;
 }
 
 *::-webkit-scrollbar {
@@ -33,18 +64,17 @@ body {
 }
 
 *::-webkit-scrollbar-thumb {
-  background: rgba(24, 24, 27, 0.18);
+  background: rgba(16, 24, 40, 0.18);
   border-radius: 999px;
 }
 
 *::-webkit-scrollbar-thumb:hover {
-  background: rgba(24, 24, 27, 0.28);
+  background: rgba(16, 24, 40, 0.28);
 }
 
-/* Scroll premium para áreas específicas */
 .scroll-premium {
   scrollbar-width: thin;
-  scrollbar-color: rgba(24, 24, 27, 0.16) transparent;
+  scrollbar-color: rgba(16, 24, 40, 0.16) transparent;
 }
 
 .scroll-premium::-webkit-scrollbar {
@@ -57,27 +87,26 @@ body {
 }
 
 .scroll-premium::-webkit-scrollbar-thumb {
-  background: rgba(24, 24, 27, 0.16);
+  background: rgba(16, 24, 40, 0.16);
   border-radius: 999px;
   border: 2px solid transparent;
   background-clip: padding-box;
 }
 
 .scroll-premium::-webkit-scrollbar-thumb:hover {
-  background: rgba(24, 24, 27, 0.30);
+  background: rgba(16, 24, 40, 0.3);
   border: 2px solid transparent;
   background-clip: padding-box;
 }
 
-/* Mantém a agenda com a mesma identidade */
 .agenda-scroll {
   scrollbar-width: thin;
-  scrollbar-color: rgba(24, 24, 27, 0.18) transparent;
+  scrollbar-color: rgba(16, 24, 40, 0.14) transparent;
 }
 
 .agenda-scroll::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 .agenda-scroll::-webkit-scrollbar-track {
@@ -85,10 +114,14 @@ body {
 }
 
 .agenda-scroll::-webkit-scrollbar-thumb {
-  background: rgba(24, 24, 27, 0.18);
+  background: rgba(16, 24, 40, 0.14);
   border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
 }
 
 .agenda-scroll::-webkit-scrollbar-thumb:hover {
-  background: rgba(24, 24, 27, 0.28);
+  background: rgba(16, 24, 40, 0.28);
+  border: 2px solid transparent;
+  background-clip: padding-box;
 }

@@ -38,6 +38,48 @@ type Comanda = {
 
 type Permissoes = Record<string, boolean>;
 
+function formatCurrency(value: number | null | undefined) {
+  return Number(value || 0).toLocaleString("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  });
+}
+
+function getStatusMeta(status: string) {
+  if (status === "fechada") {
+    return {
+      label: "Fechada",
+      className: "border-emerald-200 bg-emerald-50 text-emerald-700",
+    };
+  }
+
+  if (status === "cancelada") {
+    return {
+      label: "Cancelada",
+      className: "border-rose-200 bg-rose-50 text-rose-700",
+    };
+  }
+
+  if (status === "aguardando_pagamento") {
+    return {
+      label: "Aguardando pagamento",
+      className: "border-amber-200 bg-amber-50 text-amber-700",
+    };
+  }
+
+  if (status === "em_atendimento") {
+    return {
+      label: "Em atendimento",
+      className: "border-sky-200 bg-sky-50 text-sky-700",
+    };
+  }
+
+  return {
+    label: "Aberta",
+    className: "border-zinc-200 bg-zinc-100 text-zinc-700",
+  };
+}
+
 export default function ComandasPage() {
   const supabase = createClient();
   const router = useRouter();
@@ -219,6 +261,22 @@ export default function ComandasPage() {
     });
   }, [comandas, busca, statusFiltro]);
 
+  const resumoComandas = useMemo(() => {
+    return comandas.reduce(
+      (acc, item) => {
+        acc.total += Number(item.total || 0);
+        if (["aberta", "em_atendimento", "aguardando_pagamento"].includes(item.status)) {
+          acc.ativas += 1;
+          acc.totalAberto += Number(item.total || 0);
+        }
+        if (item.status === "aguardando_pagamento") acc.aguardando += 1;
+        if (item.status === "fechada") acc.fechadas += 1;
+        return acc;
+      },
+      { total: 0, totalAberto: 0, ativas: 0, aguardando: 0, fechadas: 0 }
+    );
+  }, [comandas]);
+
   if (loading || !acessoCarregado) {
     return <div className="p-6 text-sm text-zinc-600">Carregando comandas...</div>;
   }
@@ -234,26 +292,50 @@ export default function ComandasPage() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-50 p-4 md:p-6">
+    <div className="bg-white">
       <div className="mx-auto max-w-7xl space-y-6">
-        <div className="rounded-3xl bg-gradient-to-r from-zinc-900 via-zinc-800 to-zinc-900 p-6 text-white shadow-xl">
+        <div className="rounded-3xl border border-zinc-200 bg-white p-6 text-zinc-950 shadow-sm">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
               <h1 className="mt-2 text-2xl font-bold md:text-3xl">Comandas</h1>
-              <p className="mt-2 text-sm text-zinc-300">
+            <p className="mt-2 text-sm text-zinc-500">
                 Controle completo do consumo da cliente até o fechamento no caixa.
               </p>
             </div>
 
             {podeGerenciar ? (
-              <Link
-                href="/comandas/nova"
-                className="inline-flex items-center justify-center rounded-2xl bg-white px-5 py-3 text-sm font-bold text-zinc-900"
-              >
-                + Nova comanda
-              </Link>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <Link
+                  href="/comandas/nova"
+                  className="inline-flex items-center justify-center rounded-2xl bg-zinc-900 px-5 py-3 text-sm font-bold text-white transition hover:opacity-95"
+                >
+                  + Nova comanda
+                </Link>
+                <Link
+                  href="/caixa"
+                  className="inline-flex items-center justify-center rounded-2xl border border-zinc-200 bg-white px-5 py-3 text-sm font-bold text-zinc-800 transition hover:bg-zinc-50"
+                >
+                  Ir para o caixa
+                </Link>
+              </div>
             ) : null}
           </div>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <ResumoCard label="Comandas ativas" value={String(resumoComandas.ativas)} />
+          <ResumoCard
+            label="Aguardando pagamento"
+            value={String(resumoComandas.aguardando)}
+          />
+          <ResumoCard
+            label="Total em aberto"
+            value={formatCurrency(resumoComandas.totalAberto)}
+          />
+          <ResumoCard
+            label="Fechadas no historico"
+            value={String(resumoComandas.fechadas)}
+          />
         </div>
 
         {erro ? (
@@ -325,7 +407,7 @@ export default function ComandasPage() {
 
                 <tbody className="divide-y divide-zinc-200 bg-white">
                   {listaFiltrada.map((item) => (
-                    <tr key={item.id}>
+                    <tr key={item.id} className="transition hover:bg-zinc-50">
                       <td className="px-4 py-4 font-semibold text-zinc-900">
                         #{item.numero}
                       </td>
@@ -333,10 +415,14 @@ export default function ComandasPage() {
                         {item.cliente_nome || "Sem cliente"}
                       </td>
                       <td className="px-4 py-4 text-sm text-zinc-700">
-                        {item.status}
+                        <span
+                          className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${getStatusMeta(item.status).className}`}
+                        >
+                          {getStatusMeta(item.status).label}
+                        </span>
                       </td>
                       <td className="px-4 py-4 text-sm text-zinc-700">
-                        R$ {Number(item.total || 0).toFixed(2)}
+                        {formatCurrency(item.total)}
                       </td>
                       <td className="px-4 py-4 text-sm text-zinc-700">
                         {new Date(item.aberta_em).toLocaleString("pt-BR")}
@@ -362,6 +448,19 @@ export default function ComandasPage() {
             </div>
           )}
         </div>
+      </div>
+    </div>
+  );
+}
+
+function ResumoCard({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-[28px] border border-zinc-200 bg-white p-5 shadow-sm">
+      <div className="text-xs font-bold uppercase tracking-[0.18em] text-zinc-400">
+        {label}
+      </div>
+      <div className="mt-3 font-display text-3xl font-bold tracking-[-0.05em] text-zinc-950">
+        {value}
       </div>
     </div>
   );

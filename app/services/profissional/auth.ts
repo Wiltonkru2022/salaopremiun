@@ -30,10 +30,6 @@ export async function loginProfissionalByCpfSenha(
   const cpfLimpo = normalizeCpf(cpf);
   const senhaLimpa = String(senha || "").trim();
 
-  console.log("CPF recebido:", cpf);
-  console.log("CPF limpo:", cpfLimpo);
-  console.log("Senha recebida:", senhaLimpa);
-
   const { data: acesso, error: acessoError } = await supabaseAdmin
     .from("profissionais_acessos")
     .select("id, cpf, senha_hash, ativo, id_profissional")
@@ -42,22 +38,18 @@ export async function loginProfissionalByCpfSenha(
     .limit(1)
     .maybeSingle();
 
-  console.log("Resultado acesso:", acesso);
-  console.log("Erro acesso:", acessoError);
-
   if (acessoError) {
     return { ok: false, error: "Erro ao buscar acesso do profissional." };
   }
 
   if (!acesso) {
-    return { ok: false, error: "CPF ou senha inválidos." };
+    return { ok: false, error: "CPF ou senha invalidos." };
   }
 
   const senhaOk = await verifyPassword(senhaLimpa, acesso.senha_hash);
-  console.log("Senha válida:", senhaOk);
 
   if (!senhaOk) {
-    return { ok: false, error: "CPF ou senha inválidos." };
+    return { ok: false, error: "CPF ou senha invalidos." };
   }
 
   const { data: profissional, error: profissionalError } = await supabaseAdmin
@@ -67,15 +59,12 @@ export async function loginProfissionalByCpfSenha(
     .limit(1)
     .maybeSingle();
 
-  console.log("Profissional:", profissional);
-  console.log("Erro profissional:", profissionalError);
-
   if (profissionalError) {
     return { ok: false, error: "Erro ao buscar profissional." };
   }
 
   if (!profissional) {
-    return { ok: false, error: "Profissional não encontrado." };
+    return { ok: false, error: "Profissional nao encontrado." };
   }
 
   if (!profissional.ativo) {
@@ -83,7 +72,7 @@ export async function loginProfissionalByCpfSenha(
   }
 
   if (!profissional.id_salao) {
-    return { ok: false, error: "Profissional sem salão vinculado." };
+    return { ok: false, error: "Profissional sem salao vinculado." };
   }
 
   const { data: salao, error: salaoError } = await supabaseAdmin
@@ -93,19 +82,16 @@ export async function loginProfissionalByCpfSenha(
     .limit(1)
     .maybeSingle();
 
-  console.log("Salão:", salao);
-  console.log("Erro salão:", salaoError);
-
   if (salaoError) {
-    return { ok: false, error: "Erro ao buscar salão." };
+    return { ok: false, error: "Erro ao buscar salao." };
   }
 
   if (!salao) {
-    return { ok: false, error: "Salão não encontrado." };
+    return { ok: false, error: "Salao nao encontrado." };
   }
 
   if (String(salao.status || "").toLowerCase() !== "ativo") {
-    return { ok: false, error: "Salão inativo ou bloqueado." };
+    return { ok: false, error: "Salao inativo ou bloqueado." };
   }
 
   await supabaseAdmin

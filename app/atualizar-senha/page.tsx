@@ -185,7 +185,7 @@ useEffect(() => {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-100 p-4">
+    <div className="flex min-h-screen items-center justify-center bg-white p-4">
       <div className="w-full max-w-md rounded-[32px] bg-white p-8 shadow-2xl">
         <div className="mb-2 flex items-center justify-between gap-3">
           <h2 className="text-2xl font-bold text-zinc-900">Nova senha</h2>

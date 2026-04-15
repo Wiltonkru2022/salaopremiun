@@ -58,7 +58,7 @@ export default function AgendaDayStrip({
             href={`${basePath}?data=${dia.data}`}
             className={
               dia.ativo
-                ? "flex h-[94px] w-[82px] shrink-0 flex-col items-center justify-center rounded-[2rem] bg-gradient-to-b from-[#b67d19] to-[#d9ab3f] text-white shadow-[0_14px_28px_rgba(0,0,0,0.14)]"
+              ? "flex h-[94px] w-[82px] shrink-0 flex-col items-center justify-center rounded-[2rem] bg-zinc-950 text-white shadow-sm"
                 : "flex h-[94px] w-[82px] shrink-0 flex-col items-center justify-center rounded-[2rem] border border-zinc-200 bg-white text-zinc-700 shadow-sm"
             }
           >

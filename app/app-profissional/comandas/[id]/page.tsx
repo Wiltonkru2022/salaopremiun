@@ -316,7 +316,7 @@ export default async function ComandaDetalhePage({
 
                 <button
                   type="submit"
-                  className="h-12 w-full rounded-2xl bg-gradient-to-r from-yellow-600 to-yellow-400 text-sm font-semibold text-white"
+              className="h-12 w-full rounded-2xl bg-zinc-950 text-sm font-semibold text-white"
                 >
                   + Adicionar serviço
                 </button>
@@ -373,7 +373,7 @@ export default async function ComandaDetalhePage({
               <button
                 type="submit"
                 disabled={!itens?.length}
-                className="h-12 w-full rounded-2xl bg-gradient-to-r from-zinc-950 via-zinc-900 to-zinc-950 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+            className="h-12 w-full rounded-2xl bg-zinc-950 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Enviar para o caixa
               </button>

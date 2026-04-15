@@ -276,13 +276,13 @@ export default function ServicosPage() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-50 p-4 md:p-6">
+    <div className="bg-white">
       <div className="mx-auto max-w-7xl space-y-6">
-        <div className="rounded-3xl bg-gradient-to-r from-zinc-900 via-zinc-800 to-zinc-900 p-6 text-white shadow-xl">
+        <div className="rounded-3xl border border-zinc-200 bg-white p-6 text-zinc-950 shadow-sm">
           <div className="mt-2 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
               <h1 className="text-2xl font-bold md:text-3xl">Serviços</h1>
-              <p className="mt-2 text-sm text-zinc-300">
+              <p className="mt-2 text-sm text-zinc-500">
                 Gerencie serviços, agenda, comissão, tempo e custo.
               </p>
             </div>
@@ -290,7 +290,7 @@ export default function ServicosPage() {
             <div className="flex flex-wrap gap-3">
               <Link
                 href="/servicos-extras"
-                className="inline-flex items-center justify-center rounded-2xl border border-white/20 bg-white/10 px-5 py-3 text-sm font-bold text-white transition hover:bg-white/20"
+                className="inline-flex items-center justify-center rounded-2xl border border-zinc-200 bg-white px-5 py-3 text-sm font-bold text-zinc-800 transition hover:bg-zinc-50"
               >
                 Ver serviços extras
               </Link>
@@ -298,7 +298,7 @@ export default function ServicosPage() {
               {podeGerenciar ? (
                 <Link
                   href="/servicos/novo"
-                  className="inline-flex items-center justify-center rounded-2xl bg-white px-5 py-3 text-sm font-bold text-zinc-900 transition hover:bg-zinc-100"
+                className="inline-flex items-center justify-center rounded-2xl bg-zinc-900 px-5 py-3 text-sm font-bold text-white transition hover:opacity-95"
                 >
                   + Novo serviço
                 </Link>

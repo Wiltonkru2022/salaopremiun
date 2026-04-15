@@ -108,7 +108,7 @@ export default async function AgendaProfissionalPage({
 
         <Link
           href={`/app-profissional/agenda/novo?data=${agenda.dataSelecionada}`}
-          className="fixed bottom-[98px] right-5 z-20 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-b from-[#b67d19] to-[#d9ab3f] text-white shadow-[0_18px_35px_rgba(0,0,0,0.18)]"
+          className="fixed bottom-[98px] right-5 z-20 flex h-16 w-16 items-center justify-center rounded-full bg-zinc-950 text-white shadow-sm"
         >
           <Plus size={28} />
         </Link>

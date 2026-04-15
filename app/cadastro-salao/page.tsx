@@ -104,7 +104,7 @@ export default function CadastroSalaoPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-zinc-50 px-4 py-6 md:px-6">
+      <div className="min-h-screen bg-white px-4 py-6 md:px-6">
           <div className="mx-auto max-w-6xl rounded-[32px] border border-zinc-200 bg-white p-10 text-center shadow-xl">
             <p className="text-sm text-zinc-500">Carregando cadastro...</p>
           </div>
@@ -521,12 +521,12 @@ function CadastroSalaoContent() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-50 px-4 py-6 md:px-6">
+    <div className="min-h-screen bg-white px-4 py-6 md:px-6">
       <div className="mx-auto max-w-6xl">
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-[0.95fr_1.05fr]">
-          <aside className="overflow-hidden rounded-[32px] bg-gradient-to-br from-zinc-950 via-zinc-900 to-zinc-800 text-white shadow-2xl">
+          <aside className="overflow-hidden rounded-[32px] border border-zinc-200 bg-white text-zinc-950 shadow-sm">
             <div className="p-8">
-              <div className="inline-flex rounded-full border border-white/10 bg-white/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.25em] text-zinc-200">
+              <div className="inline-flex rounded-full border border-zinc-200 bg-zinc-50 px-4 py-2 text-xs font-semibold uppercase tracking-[0.25em] text-zinc-600">
                 SalaoPremium
               </div>
 
@@ -534,7 +534,7 @@ function CadastroSalaoContent() {
                 Cadastro bonito, guiado e profissional para o seu salão
               </h1>
 
-              <p className="mt-4 text-sm leading-6 text-zinc-300 md:text-base">
+              <p className="mt-4 text-sm leading-6 text-zinc-500 md:text-base">
                 Crie sua conta, configure seu salão e comece com agenda, caixa, comandas,
                 serviços, clientes e gestão completa em um único sistema.
               </p>
@@ -560,9 +560,9 @@ function CadastroSalaoContent() {
                   <span>{progresso}%</span>
                 </div>
 
-                <div className="h-3 overflow-hidden rounded-full bg-white/10">
+                <div className="h-3 overflow-hidden rounded-full bg-zinc-100">
                   <div
-                    className="h-full rounded-full bg-white transition-all duration-300"
+                    className="h-full rounded-full bg-zinc-950 transition-all duration-300"
                     style={{ width: `${progresso}%` }}
                   />
                 </div>
@@ -578,8 +578,8 @@ function CadastroSalaoContent() {
                       key={item}
                       className={`rounded-2xl border px-4 py-3 text-sm transition ${
                         active
-                          ? "border-white/20 bg-white/10 text-white"
-                          : "border-white/5 bg-white/[0.03] text-zinc-500"
+                          ? "border-zinc-950 bg-zinc-950 text-white"
+                          : "border-zinc-200 bg-zinc-50 text-zinc-500"
                       }`}
                     >
                       <div className="text-xs uppercase tracking-wider">
@@ -692,9 +692,9 @@ function BenefitItem({
   text: string;
 }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-4">
-      <p className="font-semibold text-white">{title}</p>
-      <p className="mt-1 text-sm text-zinc-300">{text}</p>
+    <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-4">
+      <p className="font-semibold text-zinc-950">{title}</p>
+      <p className="mt-1 text-sm text-zinc-500">{text}</p>
     </div>
   );
 }

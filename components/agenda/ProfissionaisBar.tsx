@@ -15,7 +15,7 @@ export default function ProfissionaisBar({
   onSelect,
 }: Props) {
   return (
-    <div className="overflow-hidden rounded-[22px] border border-zinc-200 bg-white px-3 py-2.5 shadow-sm">
+    <div className="overflow-hidden rounded-[22px] border border-zinc-200 bg-white px-3 py-2.5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <div className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">

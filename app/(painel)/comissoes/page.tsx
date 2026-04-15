@@ -177,6 +177,61 @@ export default function ComissoesPage() {
 
   const podeGerenciar = nivel === "admin" || nivel === "gerente";
 
+  function isMissingValesSchema(error: unknown) {
+    const candidate = error as
+      | { code?: string | null; message?: string | null }
+      | null
+      | undefined;
+    const code = String(candidate?.code || "");
+    const message = String(candidate?.message || "").toLowerCase();
+
+    return (
+      code === "42P01" ||
+      code === "PGRST205" ||
+      message.includes("profissionais_vales") ||
+      message.includes("does not exist") ||
+      message.includes("could not find")
+    );
+  }
+
+  async function descontarValesAbertos(
+    idProfissional: string | null | undefined,
+    idComissaoLancamento?: string
+  ) {
+    if (!idProfissional || !idSalao) return 0;
+
+    const { data, error } = await supabase
+      .from("profissionais_vales")
+      .select("id, valor")
+      .eq("id_salao", idSalao)
+      .eq("id_profissional", idProfissional)
+      .eq("status", "aberto");
+
+    if (error) {
+      if (isMissingValesSchema(error)) return 0;
+      throw error;
+    }
+
+    const vales = (data as { id: string; valor: number | null }[]) || [];
+    const ids = vales.map((vale) => vale.id);
+    const total = vales.reduce((acc, vale) => acc + Number(vale.valor || 0), 0);
+
+    if (ids.length === 0) return 0;
+
+    const { error: updateError } = await supabase
+      .from("profissionais_vales")
+      .update({
+        status: "descontado",
+        descontado_em: new Date().toISOString(),
+        id_comissao_lancamento: idComissaoLancamento || null,
+        updated_at: new Date().toISOString(),
+      })
+      .in("id", ids);
+
+    if (updateError) throw updateError;
+    return total;
+  }
+
   const carregarAcesso = useCallback(async () => {
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
@@ -313,10 +368,16 @@ export default function ComissoesPage() {
     if (!podeGerenciar) return setErro("Voce nao tem permissao para marcar como pago.");
     try {
       setSaving(true);
+      const lancamento = rows.find((item) => item.id === id);
       const { error } = await supabase.from("comissoes_lancamentos").update({ status: "pago", pago_em: new Date().toISOString() }).eq("id", id);
       if (error) throw error;
+      const totalVales = await descontarValesAbertos(lancamento?.id_profissional, id);
       await carregarComissoes();
-      setMsg("Comissao marcada como paga.");
+      setMsg(
+        totalVales > 0
+          ? `Comissao marcada como paga. Vales descontados: ${formatCurrency(totalVales)}.`
+          : "Comissao marcada como paga."
+      );
     } catch (error) {
       console.error(error);
       setErro(error instanceof Error ? error.message : "Erro ao marcar como pago.");
@@ -343,16 +404,34 @@ export default function ComissoesPage() {
   }
 
   async function marcarFiltradasComoPagas() {
-    const ids = rows.filter((item) => item.status === "pendente").map((item) => item.id);
+    const pendentes = rows.filter((item) => item.status === "pendente");
+    const ids = pendentes.map((item) => item.id);
     if (!podeGerenciar) return setErro("Voce nao tem permissao para marcar rateio como pago.");
     if (ids.length === 0) return setErro("Nao ha comissoes pendentes no filtro atual.");
     if (!window.confirm(`Deseja marcar ${ids.length} lancamento(s) filtrado(s) como pago(s)?`)) return;
     try {
       setSaving(true);
+      const lancamentoPorProfissional = new Map<string, string>();
+      for (const item of pendentes) {
+        if (item.id_profissional && !lancamentoPorProfissional.has(item.id_profissional)) {
+          lancamentoPorProfissional.set(item.id_profissional, item.id);
+        }
+      }
+
       const { error } = await supabase.from("comissoes_lancamentos").update({ status: "pago", pago_em: new Date().toISOString() }).in("id", ids);
       if (error) throw error;
+
+      let totalVales = 0;
+      for (const [idProfissional, idLancamento] of lancamentoPorProfissional) {
+        totalVales += await descontarValesAbertos(idProfissional, idLancamento);
+      }
+
       await carregarComissoes();
-      setMsg("Rateio marcado como pago.");
+      setMsg(
+        totalVales > 0
+          ? `Rateio marcado como pago. Vales descontados: ${formatCurrency(totalVales)}.`
+          : "Rateio marcado como pago."
+      );
     } catch (error) {
       console.error(error);
       setErro(error instanceof Error ? error.message : "Erro ao marcar rateio como pago.");
@@ -400,17 +479,17 @@ export default function ComissoesPage() {
   if (permissoes && !permissoes.comissoes_ver) return <div className="p-6"><div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-rose-700">Voce nao tem permissao para acessar Comissoes.</div></div>;
 
   return (
-    <div className="min-h-screen bg-zinc-50 p-4 md:p-6">
+    <div className="bg-white">
       <div className="mx-auto max-w-[1800px] space-y-5">
         <div className="overflow-hidden rounded-[28px] border border-zinc-200 bg-white shadow-sm">
-          <div className="border-b border-zinc-200 bg-[linear-gradient(135deg,#18181b_0%,#27272a_58%,#52525b_100%)] px-6 py-6 text-white">
+          <div className="border-b border-zinc-200 bg-white px-6 py-6 text-zinc-950">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div className="max-w-3xl">
-                <div className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-400">Painel financeiro</div>
+                <div className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-500">Painel financeiro</div>
                 <h1 className="mt-2 text-3xl font-bold">Comissoes</h1>
-                <p className="mt-2 text-sm text-zinc-300">Veja o total do periodo, quem lidera o rateio e qual regra gerou cada valor.</p>
+                <p className="mt-2 text-sm text-zinc-500">Veja o total do periodo, quem lidera o rateio e qual regra gerou cada valor.</p>
               </div>
-              <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-right"><div className="text-xs uppercase tracking-[0.18em] text-zinc-400">Lancamentos filtrados</div><div className="mt-1 text-2xl font-bold">{rows.length}</div></div>
+              <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-right"><div className="text-xs uppercase tracking-[0.18em] text-zinc-500">Lancamentos filtrados</div><div className="mt-1 text-2xl font-bold">{rows.length}</div></div>
             </div>
           </div>
           <div className="grid gap-3 px-4 py-4 md:grid-cols-2 xl:grid-cols-5">

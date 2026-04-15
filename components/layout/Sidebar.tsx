@@ -2,221 +2,180 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import {
-  CalendarDays,
-  LayoutDashboard,
-  Users,
-  Scissors,
-  UserSquare2,
-  Package,
-  Boxes,
-  ShoppingCart,
-  Wallet,
-  BadgeDollarSign,
-  BarChart3,
-  Megaphone,
-  Settings,
-  CreditCard,
-  LogOut,
-  Receipt,
-} from "lucide-react";
+import { useEffect, useMemo } from "react";
 import clsx from "clsx";
-import { createClient } from "@/lib/supabase/client";
-
-type Permissoes = Record<string, boolean>;
-
-type SidebarItem = {
-  href: string;
-  label: string;
-  icon: React.ComponentType<{ size?: number; className?: string }>;
-  permissionKey?: string;
-  niveis?: string[];
-};
+import { LogOut, X } from "lucide-react";
+import {
+  filterPainelNavigation,
+  type Permissoes,
+} from "@/components/layout/navigation";
 
 type Props = {
   permissoes: Permissoes;
   nivel: string;
+  salaoNome?: string;
+  salaoResponsavel?: string;
+  salaoLogoUrl?: string | null;
+  mobileOpen: boolean;
+  onClose: () => void;
+  onLogout: () => Promise<void>;
 };
 
-const items: SidebarItem[] = [
-  {
-    href: "/dashboard",
-    label: "Dashboard",
-    icon: LayoutDashboard,
-    permissionKey: "dashboard_ver",
-  },
-  {
-    href: "/agenda",
-    label: "Agenda",
-    icon: CalendarDays,
-    permissionKey: "agenda_ver",
-  },
-  {
-    href: "/clientes",
-    label: "Clientes",
-    icon: Users,
-    permissionKey: "clientes_ver",
-  },
-  {
-    href: "/profissionais",
-    label: "Profissionais",
-    icon: UserSquare2,
-    permissionKey: "profissionais_ver",
-  },
-  {
-    href: "/servicos",
-    label: "Serviços",
-    icon: Scissors,
-    permissionKey: "servicos_ver",
-  },
-  {
-    href: "/produtos",
-    label: "Produtos",
-    icon: Package,
-    permissionKey: "produtos_ver",
-  },
-  {
-    href: "/estoque",
-    label: "Estoque",
-    icon: Boxes,
-    permissionKey: "estoque_ver",
-  },
-  {
-    href: "/comandas",
-    label: "Comandas",
-    icon: Receipt,
-    permissionKey: "comandas_ver",
-  },
-  {
-    href: "/vendas",
-    label: "Vendas",
-    icon: ShoppingCart,
-    permissionKey: "vendas_ver",
-  },
-  {
-    href: "/caixa",
-    label: "Caixa",
-    icon: Wallet,
-    permissionKey: "caixa_ver",
-  },
-  {
-    href: "/comissoes",
-    label: "Comissões",
-    icon: BadgeDollarSign,
-    permissionKey: "comissoes_ver",
-  },
-  {
-    href: "/relatorio_financeiro",
-    label: "Relatórios",
-    icon: BarChart3,
-    permissionKey: "relatorios_ver",
-  },
-  {
-    href: "/marketing",
-    label: "Marketing",
-    icon: Megaphone,
-    permissionKey: "marketing_ver",
-  },
-  {
-    href: "/configuracoes",
-    label: "Configurações",
-    icon: Settings,
-    permissionKey: "configuracoes_ver",
-    niveis: ["admin"],
-  },
-  {
-    href: "/assinatura",
-    label: "Assinatura",
-    icon: CreditCard,
-    permissionKey: "assinatura_ver",
-    niveis: ["admin"],
-  },
-];
-
-export default function Sidebar({ permissoes, nivel }: Props) {
+export default function Sidebar({
+  permissoes,
+  nivel,
+  salaoNome,
+  salaoResponsavel,
+  salaoLogoUrl,
+  mobileOpen,
+  onClose,
+  onLogout,
+}: Props) {
   const pathname = usePathname();
   const router = useRouter();
+  const itemsFiltrados = useMemo(
+    () => filterPainelNavigation(permissoes, nivel),
+    [permissoes, nivel]
+  );
 
-  async function handleLogout() {
-    const supabase = createClient();
-    await supabase.auth.signOut();
-    router.push("/login");
-    router.refresh();
-  }
+  useEffect(() => {
+    if (process.env.NODE_ENV !== "production") return;
 
-  const nivelNormalizado = String(nivel || "").toLowerCase();
+    const prefetchTimer = window.setTimeout(() => {
+      itemsFiltrados.forEach((item) => {
+        router.prefetch(item.href);
+      });
+    }, 600);
 
-  const itemsFiltrados = items.filter((item) => {
-    const permitidoPorNivel =
-      !item.niveis || item.niveis.includes(nivelNormalizado);
-
-    const permitidoPorPermissao =
-      !item.permissionKey || permissoes?.[item.permissionKey] === true;
-
-    return permitidoPorNivel && permitidoPorPermissao;
-  });
+    return () => window.clearTimeout(prefetchTimer);
+  }, [itemsFiltrados, router]);
 
   return (
-    <aside className="hidden h-screen w-[290px] shrink-0 border-r border-zinc-200 bg-white xl:flex xl:flex-col">
-      <div className="flex h-[132px] shrink-0 flex-col justify-center border-b border-zinc-200 px-6">
-        <div className="text-[11px] font-semibold uppercase tracking-[0.28em] text-zinc-400">
-          SaaS Profissional
-        </div>
+    <>
+      {mobileOpen ? (
+        <button
+          type="button"
+          onClick={onClose}
+          className="fixed inset-0 z-40 bg-transparent xl:hidden"
+          aria-label="Fechar menu lateral"
+        />
+      ) : null}
 
-        <div className="mt-2 text-[30px] font-black tracking-tight text-zinc-950">
-          SalaoPremium
-        </div>
+      <aside
+        className={clsx(
+          "group fixed inset-y-0 left-0 z-50 w-[292px] -translate-x-full border-r border-white/10 bg-[linear-gradient(180deg,#07101b,#0d1724_54%,#14251f)] text-white shadow-[0_30px_90px_rgba(2,6,23,0.38)] transition-[width,transform] duration-300 xl:sticky xl:top-0 xl:z-20 xl:flex xl:h-screen xl:w-[82px] xl:translate-x-0 xl:flex-col xl:overflow-hidden xl:hover:w-[292px]",
+          mobileOpen ? "translate-x-0" : ""
+        )}
+      >
+        <div className="flex h-full flex-col">
+          <div className="flex items-start justify-between gap-3 border-b border-white/10 px-4 py-4 xl:block xl:px-4 xl:py-5">
+            <div className="flex min-w-0 items-center gap-3">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-[20px] bg-white/10 ring-1 ring-white/10">
+                {salaoLogoUrl ? (
+                  <img
+                    src={salaoLogoUrl}
+                    alt={salaoNome || "Salao"}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <span className="font-display text-lg font-bold uppercase">
+                    {(salaoNome || "SP").slice(0, 2)}
+                  </span>
+                )}
+              </div>
 
-        <p className="mt-1 text-sm text-zinc-500">Gestão premium para salão</p>
-      </div>
+              <div className="min-w-0 xl:max-w-0 xl:overflow-hidden xl:opacity-0 xl:transition-all xl:duration-300 xl:group-hover:max-w-[170px] xl:group-hover:opacity-100">
+                <div className="truncate text-[11px] font-semibold uppercase tracking-[0.28em] text-white/45">
+                  SaaS beauty
+                </div>
+                <div className="mt-1 truncate font-display text-2xl font-bold tracking-[-0.05em] text-white">
+                  {salaoNome || "SalaoPremium"}
+                </div>
+                <div className="mt-1 truncate text-xs text-white/55">
+                  {salaoResponsavel || "Gestao pronta para escalar"}
+                </div>
+              </div>
+            </div>
 
-      <div className="flex min-h-0 flex-1 flex-col">
-        <nav className="scroll-premium min-h-0 flex-1 overflow-y-auto px-4 py-5">
-          <div className="space-y-1.5">
-            {itemsFiltrados.map((item) => {
-              const Icon = item.icon;
-              const active =
-                pathname === item.href || pathname.startsWith(item.href + "/");
+            <button
+              type="button"
+              onClick={onClose}
+              className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/10 text-white transition hover:bg-white/15 xl:hidden"
+              aria-label="Fechar menu lateral"
+            >
+              <X size={18} />
+            </button>
+          </div>
 
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={clsx(
-                    "group flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium transition-all duration-200",
-                    active
-                      ? "bg-zinc-900 text-white shadow-[0_10px_30px_rgba(0,0,0,0.18)]"
-                      : "text-zinc-700 hover:bg-zinc-100"
-                  )}
-                >
-                  <span
+          <nav className="scroll-premium min-h-0 flex-1 overflow-y-auto px-3 py-4">
+            <div className="space-y-2">
+              {itemsFiltrados.map((item) => {
+                const Icon = item.icon;
+                const active =
+                  pathname === item.href || pathname.startsWith(`${item.href}/`);
+
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    prefetch={true}
+                    onClick={onClose}
+                    onFocus={() => router.prefetch(item.href)}
+                    onMouseEnter={() => router.prefetch(item.href)}
                     className={clsx(
-                      "flex h-9 w-9 items-center justify-center rounded-xl transition",
+                      "group/item flex items-center gap-3 rounded-[22px] px-3 py-2.5 transition-all duration-300 xl:h-12 xl:w-12 xl:justify-center xl:px-0 xl:py-0 xl:hover:-translate-y-0.5 xl:group-hover:w-full xl:group-hover:justify-start xl:group-hover:px-3",
                       active
-                        ? "bg-white/10"
-                        : "bg-zinc-100 text-zinc-600 group-hover:bg-white"
+                        ? "bg-[linear-gradient(135deg,rgba(199,162,92,0.95),rgba(243,228,188,0.94))] text-zinc-950 shadow-[0_18px_40px_rgba(199,162,92,0.25)]"
+                        : "text-white/72 hover:bg-white/8 hover:text-white"
                     )}
                   >
-                    <Icon size={18} />
-                  </span>
+                    <span
+                      className={clsx(
+                        "flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl ring-1 transition",
+                        active
+                          ? "bg-white/55 ring-white/30"
+                          : "bg-white/8 ring-white/10 group-hover/item:bg-white/12"
+                      )}
+                    >
+                      <Icon size={18} />
+                    </span>
 
-                  <span className="truncate">{item.label}</span>
-                </Link>
-              );
-            })}
+                    <span className="min-w-0 xl:max-w-0 xl:overflow-hidden xl:opacity-0 xl:transition-all xl:duration-300 xl:group-hover:max-w-[180px] xl:group-hover:opacity-100">
+                      <span className="block truncate text-sm font-semibold">
+                        {item.label}
+                      </span>
+                      <span
+                        className={clsx(
+                          "mt-0.5 block truncate text-xs",
+                          active ? "text-zinc-800/75" : "text-white/45"
+                        )}
+                      >
+                        {item.description}
+                      </span>
+                    </span>
+                  </Link>
+                );
+              })}
+            </div>
+          </nav>
+
+          <div className="border-t border-white/10 px-3 py-4">
+            <button
+              type="button"
+              onClick={onLogout}
+              className="flex w-full items-center gap-3 rounded-[22px] border border-white/10 px-3 py-2.5 text-sm font-semibold text-white/82 transition hover:bg-white/8 xl:h-12 xl:w-12 xl:justify-center xl:px-0 xl:py-0 xl:group-hover:w-full xl:group-hover:justify-start xl:group-hover:px-3"
+            >
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white/8 ring-1 ring-white/10">
+                <LogOut size={18} />
+              </span>
+
+              <span className="xl:max-w-0 xl:overflow-hidden xl:opacity-0 xl:transition-all xl:duration-300 xl:group-hover:max-w-[160px] xl:group-hover:opacity-100">
+                Encerrar sessao
+              </span>
+            </button>
           </div>
-        </nav>
-
-        <div className="border-t border-zinc-200 p-4">
-          <button
-            onClick={handleLogout}
-            className="flex w-full items-center justify-center gap-2 rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-100"
-          >
-            <LogOut size={16} />
-            Sair
-          </button>
         </div>
-      </div>
-    </aside>
+      </aside>
+    </>
   );
 }
