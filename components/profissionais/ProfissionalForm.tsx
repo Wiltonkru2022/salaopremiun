@@ -41,6 +41,7 @@ type AssistenteOption = {
   foto_url?: string | null;
   status?: string | null;
   ativo?: boolean | null;
+  tipo_profissional?: string | null;
 };
 
 type Profissional = {
@@ -66,6 +67,7 @@ type Profissional = {
   especialidades: string[];
   data_admissao: string;
   bio: string;
+  tipo_profissional: string;
   tipo_vinculo: string;
   comissao_produto_percentual: string;
   pix_tipo: string;
@@ -120,6 +122,7 @@ const initialForm: Profissional = {
   especialidades: [],
   data_admissao: "",
   bio: "",
+  tipo_profissional: "profissional",
   tipo_vinculo: "AUTONOMO",
   comissao_produto_percentual: "0",
   pix_tipo: "CPF",
@@ -193,6 +196,18 @@ export default function ProfissionalForm({
     }));
   }, [form.cpf]);
 
+  useEffect(() => {
+    if (form.tipo_profissional !== "assistente") return;
+
+    setAcesso((prev) => ({
+      ...prev,
+      ativo: false,
+      senha: "",
+    }));
+    setServicosSelecionados([]);
+    setAssistentesSelecionados([]);
+  }, [form.tipo_profissional]);
+
   async function bootstrap() {
     try {
       setLoading(true);
@@ -224,8 +239,9 @@ export default function ProfissionalForm({
 
       const { data: listaAssistentes, error: assistentesDisponiveisError } = await supabase
         .from("profissionais")
-        .select("id, nome, nome_social, categoria, cargo, foto_url, status, ativo")
+        .select("id, nome, nome_social, categoria, cargo, foto_url, status, ativo, tipo_profissional")
         .eq("id_salao", usuarioLogado.idSalao)
+        .eq("tipo_profissional", "assistente")
         .order("nome", { ascending: true });
 
       if (assistentesDisponiveisError) throw assistentesDisponiveisError;
@@ -288,6 +304,7 @@ export default function ProfissionalForm({
       especialidades: profissional.especialidades || [],
       data_admissao: profissional.data_admissao || "",
       bio: profissional.bio || "",
+      tipo_profissional: profissional.tipo_profissional || "profissional",
       tipo_vinculo: profissional.tipo_vinculo || "AUTONOMO",
       comissao_produto_percentual: String(
         profissional.comissao_produto_percentual ?? 0
@@ -492,6 +509,7 @@ async function salvarAcessoProfissional(idProfissional: string) {
         .split(",")
         .map((item) => item.trim())
         .filter(Boolean);
+      const isAssistenteSalao = form.tipo_profissional === "assistente";
 
       const payloadBase = {
         id_salao: idSalao,
@@ -514,11 +532,12 @@ async function salvarAcessoProfissional(idProfissional: string) {
         especialidades: especialidadesTratadas,
         data_admissao: form.data_admissao || null,
         bio: form.bio.trim() || null,
+        tipo_profissional: form.tipo_profissional || "profissional",
         tipo_vinculo: form.tipo_vinculo || null,
         comissao_produto_percentual: Number(form.comissao_produto_percentual || 0),
         pix_tipo: form.pix_tipo || null,
         pix_chave: form.pix_chave.trim() || null,
-        nivel_acesso: form.nivel_acesso || "proprio",
+        nivel_acesso: isAssistenteSalao ? "sem_acesso" : form.nivel_acesso || "proprio",
         status: form.ativo ? "ativo" : "inativo",
         ativo: form.ativo,
         dias_trabalho: form.dias_trabalho,
@@ -565,7 +584,39 @@ async function salvarAcessoProfissional(idProfissional: string) {
       }
 
       if (idProfissional) {
-        await salvarAcessoProfissional(idProfissional);
+        if (isAssistenteSalao) {
+          await supabase
+            .from("profissionais_acessos")
+            .update({ ativo: false })
+            .eq("id_profissional", idProfissional);
+        } else {
+          await salvarAcessoProfissional(idProfissional);
+        }
+
+        const { data: vinculosAtuais, error: vinculosAtuaisError } = await supabase
+          .from("profissional_servicos")
+          .select(`
+            id_servico,
+            preco_personalizado,
+            comissao_percentual,
+            comissao_assistente_percentual,
+            base_calculo,
+            desconta_taxa_maquininha
+          `)
+          .eq("id_profissional", idProfissional);
+
+        if (vinculosAtuaisError) throw vinculosAtuaisError;
+
+        const regrasAtuaisPorServico = new Map(
+          ((vinculosAtuais || []) as {
+            id_servico: string;
+            preco_personalizado?: number | null;
+            comissao_percentual?: number | null;
+            comissao_assistente_percentual?: number | null;
+            base_calculo?: string | null;
+            desconta_taxa_maquininha?: boolean | null;
+          }[]).map((item) => [item.id_servico, item])
+        );
 
         const { error: removeError } = await supabase
           .from("profissional_servicos")
@@ -574,13 +625,20 @@ async function salvarAcessoProfissional(idProfissional: string) {
 
         if (removeError) throw removeError;
 
-        if (servicosSelecionados.length > 0) {
+        if (!isAssistenteSalao && servicosSelecionados.length > 0) {
           const vinculos = servicosSelecionados.map((item) => ({
             id_salao: idSalao,
             id_profissional: idProfissional,
             id_servico: item.id_servico,
             duracao_minutos: Number(item.duracao_minutos || 0),
             ativo: true,
+            preco_personalizado: regrasAtuaisPorServico.get(item.id_servico)?.preco_personalizado ?? null,
+            comissao_percentual: regrasAtuaisPorServico.get(item.id_servico)?.comissao_percentual ?? null,
+            comissao_assistente_percentual:
+              regrasAtuaisPorServico.get(item.id_servico)?.comissao_assistente_percentual ?? null,
+            base_calculo: regrasAtuaisPorServico.get(item.id_servico)?.base_calculo ?? null,
+            desconta_taxa_maquininha:
+              regrasAtuaisPorServico.get(item.id_servico)?.desconta_taxa_maquininha ?? null,
           }));
 
           const { error: vinculoError } = await supabase
@@ -598,7 +656,7 @@ async function salvarAcessoProfissional(idProfissional: string) {
 
         if (removeAssistentesError) throw removeAssistentesError;
 
-        if (assistentesSelecionados.length > 0) {
+        if (!isAssistenteSalao && assistentesSelecionados.length > 0) {
           const vinculosAssistentes = assistentesSelecionados
             .filter((idAssistente) => idAssistente !== idProfissional)
             .map((idAssistente) => ({
@@ -634,6 +692,7 @@ async function salvarAcessoProfissional(idProfissional: string) {
   const assistentesFiltrados = useMemo(() => {
     return assistentesDisponiveis.filter((item) => item.id !== profissionalId);
   }, [assistentesDisponiveis, profissionalId]);
+  const isAssistenteSalao = form.tipo_profissional === "assistente";
 
   if (loading) {
     return (
@@ -718,6 +777,15 @@ async function salvarAcessoProfissional(idProfissional: string) {
             <Card title="2. Dados Profissionais e Especialidades" subtitle="Função, bio e posicionamento do profissional">
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <Input label="Cargo / Função" value={form.cargo} onChange={(v) => handleChange("cargo", v)} />
+                <Select
+                  label="Funcao no salao"
+                  value={form.tipo_profissional}
+                  onChange={(v) => handleChange("tipo_profissional", v)}
+                  options={[
+                    { value: "profissional", label: "Profissional (agenda e app)" },
+                    { value: "assistente", label: "Assistente do salao" },
+                  ]}
+                />
                 <Input label="Categoria" value={form.categoria} onChange={(v) => handleChange("categoria", v)} />
                 <Input label="Data de admissão / início" type="date" value={form.data_admissao} onChange={(v) => handleChange("data_admissao", v)} />
                 <Select
@@ -857,6 +925,11 @@ async function salvarAcessoProfissional(idProfissional: string) {
             </Card>
 
             <Card title="Serviços Vinculados" subtitle="Serviços e duração personalizada">
+              {isAssistenteSalao ? (
+                <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-600">
+                  Assistente do salao nao recebe servicos vinculados nem acesso ao app profissional.
+                </div>
+              ) : (
               <div className="space-y-3">
                 {servicos.map((servico) => {
                   const ativo = servicoEstaSelecionado(servico.id);
@@ -912,6 +985,7 @@ async function salvarAcessoProfissional(idProfissional: string) {
                   );
                 })}
               </div>
+              )}
             </Card>
           </div>
 
@@ -954,6 +1028,11 @@ async function salvarAcessoProfissional(idProfissional: string) {
             </Card>
 
             <Card title="Assistentes vinculados" subtitle="Selecione quem pode auxiliar este profissional">
+              {isAssistenteSalao ? (
+                <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-600">
+                  Este cadastro e um assistente. Vincule ele dentro do cadastro de um profissional.
+                </div>
+              ) : (
               <div className="space-y-3">
                 {assistentesFiltrados.length === 0 ? (
                   <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-600">
@@ -1014,6 +1093,7 @@ async function salvarAcessoProfissional(idProfissional: string) {
                   <strong className="text-zinc-900">{assistentesSelecionados.length}</strong>
                 </div>
               </div>
+              )}
             </Card>
 
             <Card title="4. Financeiro e Acesso" subtitle="PIX, comissão, status e acesso ao app">
@@ -1081,6 +1161,11 @@ async function salvarAcessoProfissional(idProfissional: string) {
                     Aqui você libera o login do profissional no app usando CPF e senha.
                   </p>
 
+                  {isAssistenteSalao ? (
+                    <div className="mt-4 rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-600">
+                      Assistente do salao nao acessa o app profissional. O sistema mantem qualquer acesso existente desativado ao salvar.
+                    </div>
+                  ) : (
                   <div className="mt-4 space-y-4">
                     <Switch
                       label="Permitir acesso ao app"
@@ -1118,6 +1203,7 @@ async function salvarAcessoProfissional(idProfissional: string) {
                         : "Ao salvar, será criado o acesso do profissional na tabela profissionais_acessos."}
                     </div>
                   </div>
+                  )}
                 </div>
               </div>
             </Card>

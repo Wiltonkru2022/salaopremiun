@@ -54,7 +54,7 @@ export async function loginProfissionalByCpfSenha(
 
   const { data: profissional, error: profissionalError } = await supabaseAdmin
     .from("profissionais")
-    .select("id, nome, nome_exibicao, ativo, id_salao")
+    .select("id, nome, nome_exibicao, ativo, id_salao, tipo_profissional")
     .eq("id", acesso.id_profissional)
     .limit(1)
     .maybeSingle();
@@ -69,6 +69,13 @@ export async function loginProfissionalByCpfSenha(
 
   if (!profissional.ativo) {
     return { ok: false, error: "Profissional inativo." };
+  }
+
+  if (String(profissional.tipo_profissional || "profissional").toLowerCase() === "assistente") {
+    return {
+      ok: false,
+      error: "Assistente do salao nao possui acesso ao app profissional.",
+    };
   }
 
   if (!profissional.id_salao) {

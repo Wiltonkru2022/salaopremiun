@@ -166,7 +166,14 @@ export async function initAgendaPage(params: {
 
   const salaoId = usuarioRes.data.id_salao;
 
-  const [configRes, profissionaisRes, clientesRes, servicosRes, assinaturaRes] =
+  const [
+    configRes,
+    profissionaisRes,
+    clientesRes,
+    servicosRes,
+    vinculosServicosRes,
+    assinaturaRes,
+  ] =
     await Promise.all([
       supabase
         .from("configuracoes_salao")
@@ -179,6 +186,7 @@ export async function initAgendaPage(params: {
         .select("*")
         .eq("id_salao", salaoId)
         .eq("status", "ativo")
+        .or("tipo_profissional.is.null,tipo_profissional.eq.profissional")
         .order("nome"),
 
       supabase
@@ -195,7 +203,9 @@ export async function initAgendaPage(params: {
           duracao_minutos,
           preco,
           preco_padrao,
+          custo_produto,
           comissao_percentual,
+          comissao_percentual_padrao,
           comissao_assistente_percentual,
           base_calculo,
           desconta_taxa_maquininha
@@ -203,6 +213,12 @@ export async function initAgendaPage(params: {
         .eq("id_salao", salaoId)
         .eq("status", "ativo")
         .order("nome"),
+
+      supabase
+        .from("profissional_servicos")
+        .select("id_profissional, id_servico, ativo")
+        .eq("id_salao", salaoId)
+        .eq("ativo", true),
 
       supabase
         .from("assinaturas")
@@ -215,7 +231,25 @@ export async function initAgendaPage(params: {
   if (profissionaisRes.error) console.error("Erro profissionais:", profissionaisRes.error);
   if (clientesRes.error) console.error("Erro clientes:", clientesRes.error);
   if (servicosRes.error) console.error("Erro serviços:", servicosRes.error);
+  if (vinculosServicosRes.error) console.error("Erro vinculos servicos:", vinculosServicosRes.error);
   if (assinaturaRes.error) console.error("Erro assinatura:", assinaturaRes.error);
+
+  const vinculosPorServico = new Map<string, string[]>();
+  ((vinculosServicosRes.data || []) as {
+    id_servico: string | null;
+    id_profissional: string | null;
+  }[]).forEach((vinculo) => {
+    if (!vinculo.id_servico || !vinculo.id_profissional) return;
+
+    const lista = vinculosPorServico.get(vinculo.id_servico) || [];
+    lista.push(vinculo.id_profissional);
+    vinculosPorServico.set(vinculo.id_servico, lista);
+  });
+
+  const servicosComVinculos = ((servicosRes.data || []) as Servico[]).map((servico) => ({
+    ...servico,
+    profissionais_vinculados: vinculosPorServico.get(servico.id) || [],
+  }));
 
   const assinaturaBloqueada = getAssinaturaBloqueada({
     status: assinaturaRes.data?.status,
@@ -230,7 +264,7 @@ export async function initAgendaPage(params: {
     config: (configRes.data as ConfigSalao) || null,
     profissionais: (profissionaisRes.data as Profissional[]) || [],
     clientes: (clientesRes.data as Cliente[]) || [],
-    servicos: (servicosRes.data as Servico[]) || [],
+    servicos: servicosComVinculos,
     assinaturaBloqueada,
     erroTela: configRes.data
       ? ""

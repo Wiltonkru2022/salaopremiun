@@ -608,24 +608,6 @@ export default function CaixaPage() {
     }
   }
 
-  async function recalcularTaxaProfissionalAposFechamento(idComanda: string) {
-    const response = await fetch("/api/comissoes/recalcular-taxa-profissional", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        idSalao,
-        idComanda,
-      }),
-    });
-
-    if (!response.ok) {
-      const result = await response.json().catch(() => null);
-      throw new Error(result?.error || "nao foi possivel recalcular a taxa da comissao.");
-    }
-  }
-
   async function processarEstoqueAposFechamento(idComanda: string) {
     const response = await fetch("/api/estoque/processar-comanda", {
       method: "POST",
@@ -683,18 +665,9 @@ export default function CaixaPage() {
           estoqueError?.message || "nao foi possivel atualizar o estoque da venda.";
       }
 
-      let avisoRecalculo = "";
-
-      try {
-        await recalcularTaxaProfissionalAposFechamento(idComandaAtual);
-      } catch (recalculoError: any) {
-        avisoRecalculo =
-          recalculoError?.message || "nao foi possivel recalcular a taxa da comissao.";
-      }
-
       await carregarTudo();
       limparComandaSelecionada();
-      const avisos = [avisoEstoque, avisoRecalculo].filter(Boolean);
+      const avisos = [avisoEstoque].filter(Boolean);
       setMsg(
         avisos.length > 0
           ? `Comanda #${numeroAtual} finalizada, mas ${avisos.join(" / ")}`

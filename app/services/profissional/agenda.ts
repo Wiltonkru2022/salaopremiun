@@ -127,6 +127,28 @@ export async function buscarServicoPorId(idSalao: string, idServico: string) {
   return data;
 }
 
+export async function validarServicoVinculadoAoProfissional(
+  idSalao: string,
+  idProfissional: string,
+  idServico: string
+) {
+  const supabase = getSupabaseAdmin();
+
+  const { data, error } = await supabase
+    .from("profissional_servicos")
+    .select("id")
+    .eq("id_salao", idSalao)
+    .eq("id_profissional", idProfissional)
+    .eq("id_servico", idServico)
+    .eq("ativo", true)
+    .maybeSingle();
+
+  if (error) throw new Error(error.message);
+  if (!data) throw new Error("Servico nao vinculado ao profissional.");
+
+  return true;
+}
+
 export async function buscarConflitosNoHorario(params: BuscarConflitosParams) {
   const supabase = getSupabaseAdmin();
 

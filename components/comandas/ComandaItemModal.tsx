@@ -1,11 +1,13 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { formatMoneyInput, parseMoneyToNumber } from "@/lib/utils/comanda";
 
 type Profissional = {
   id: string;
   nome: string;
+  tipo_profissional?: string | null;
+  assistentes_ids?: string[];
 };
 
 type Servico = {
@@ -82,6 +84,40 @@ export default function ComandaItemModal({
     () => produtos.find((p) => p.id === idProduto),
     [produtos, idProduto]
   );
+
+  const profissionaisOperacionais = useMemo(
+    () =>
+      profissionais.filter(
+        (profissional) =>
+          String(profissional.tipo_profissional || "profissional").toLowerCase() !== "assistente"
+      ),
+    [profissionais]
+  );
+
+  const assistentesDoProfissional = useMemo(() => {
+    if (!idProfissional) return [];
+
+    const profissional = profissionais.find((item) => item.id === idProfissional);
+    const idsAssistentes = new Set(profissional?.assistentes_ids || []);
+
+    return profissionais.filter(
+      (item) =>
+        String(item.tipo_profissional || "").toLowerCase() === "assistente" &&
+        idsAssistentes.has(item.id)
+    );
+  }, [idProfissional, profissionais]);
+
+  useEffect(() => {
+    if (!idAssistente) return;
+
+    const assistenteLiberado = assistentesDoProfissional.some(
+      (item) => item.id === idAssistente
+    );
+
+    if (!assistenteLiberado) {
+      setIdAssistente("");
+    }
+  }, [assistentesDoProfissional, idAssistente]);
 
   if (!open) return null;
 
@@ -214,11 +250,14 @@ export default function ComandaItemModal({
                 <label className="mb-1 block text-sm font-semibold text-zinc-700">Profissional</label>
                 <select
                   value={idProfissional}
-                  onChange={(e) => setIdProfissional(e.target.value)}
+                  onChange={(e) => {
+                    setIdProfissional(e.target.value);
+                    setIdAssistente("");
+                  }}
                   className="w-full rounded-2xl border border-zinc-300 px-4 py-3"
                 >
                   <option value="">Selecione</option>
-                  {profissionais.map((p) => (
+                  {profissionaisOperacionais.map((p) => (
                     <option key={p.id} value={p.id}>
                       {p.nome}
                     </option>
@@ -234,7 +273,7 @@ export default function ComandaItemModal({
                   className="w-full rounded-2xl border border-zinc-300 px-4 py-3"
                 >
                   <option value="">Selecione</option>
-                  {profissionais.map((p) => (
+                  {assistentesDoProfissional.map((p) => (
                     <option key={p.id} value={p.id}>
                       {p.nome}
                     </option>
@@ -266,11 +305,14 @@ export default function ComandaItemModal({
                 <label className="mb-1 block text-sm font-semibold text-zinc-700">Profissional</label>
                 <select
                   value={idProfissional}
-                  onChange={(e) => setIdProfissional(e.target.value)}
+                  onChange={(e) => {
+                    setIdProfissional(e.target.value);
+                    setIdAssistente("");
+                  }}
                   className="w-full rounded-2xl border border-zinc-300 px-4 py-3"
                 >
                   <option value="">Selecione</option>
-                  {profissionais.map((p) => (
+                  {profissionaisOperacionais.map((p) => (
                     <option key={p.id} value={p.id}>
                       {p.nome}
                     </option>

@@ -138,6 +138,8 @@ export type ProfissionalResumo = {
   nome: string;
   comissao_percentual?: number | null;
   comissao?: number | null;
+  tipo_profissional?: string | null;
+  assistentes_ids?: string[];
 };
 
 export type CatalogoServico = {

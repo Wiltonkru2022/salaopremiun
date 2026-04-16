@@ -151,14 +151,25 @@ export function useAgendaModal({
     [clientes]
   );
 
+  const servicosDoProfissional = useMemo(
+    () => {
+      if (!profissionalId) return [];
+
+      return servicos.filter((servico) =>
+        (servico.profissionais_vinculados || []).includes(profissionalId)
+      );
+    },
+    [servicos, profissionalId]
+  );
+
   const servicosOptions = useMemo<SearchableOption[]>(
     () =>
-      servicos.map((s) => ({
+      servicosDoProfissional.map((s) => ({
         value: s.id,
         label: s.nome,
         description: `${s.duracao_minutos} min`,
       })),
-    [servicos]
+    [servicosDoProfissional]
   );
 
   function abrirAviso(
@@ -242,6 +253,15 @@ export function useAgendaModal({
 
     return () => clearInterval(interval);
   }, [open]);
+
+  useEffect(() => {
+    if (mode !== "agendamento" || !profissionalId || !servicoId) return;
+
+    const servicoLiberado = servicosDoProfissional.some((servico) => servico.id === servicoId);
+    if (!servicoLiberado) {
+      setServicoId("");
+    }
+  }, [mode, profissionalId, servicoId, servicosDoProfissional]);
 
   const servicoSelecionado = useMemo(
     () => servicos.find((s) => s.id === servicoId),

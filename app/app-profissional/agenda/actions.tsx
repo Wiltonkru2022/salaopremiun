@@ -8,6 +8,7 @@ import {
   buscarConfiguracaoAgendaProfissional,
   buscarConflitosNoHorario,
   buscarServicoPorId,
+  validarServicoVinculadoAoProfissional,
   validarHorarioAgendamento,
 } from "@/app/services/profissional/agenda";
 
@@ -70,6 +71,7 @@ export async function criarAgendamentoProfissionalAction(formData: FormData) {
     const [configProfissional, servico] = await Promise.all([
       buscarConfiguracaoAgendaProfissional(session.idSalao, session.idProfissional),
       buscarServicoPorId(session.idSalao, servicoId),
+      validarServicoVinculadoAoProfissional(session.idSalao, session.idProfissional, servicoId),
     ]);
 
     if (!configProfissional.ativo) {

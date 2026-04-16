@@ -59,6 +59,11 @@ export async function saveAgendaItem(params: {
       throw new Error("Selecione um serviço válido.");
     }
 
+    const profissionaisVinculados = servico.profissionais_vinculados || [];
+    if (!profissionaisVinculados.includes(String(payload.profissionalId))) {
+      throw new Error("Este servico nao esta vinculado ao profissional selecionado.");
+    }
+
     const servicoInfo = servico as Servico & { duracao_minutos?: number | null };
     const duracao = servicoInfo.duracao_minutos || 30;
     const horaInicio = normalizeTimeString(String(payload.horaInicio || ""));

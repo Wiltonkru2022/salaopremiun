@@ -87,6 +87,7 @@ export async function buscarVinculoProfissionalServico(params: {
     )
     .eq("id_profissional", params.idProfissional)
     .eq("id_servico", params.idServico)
+    .eq("ativo", true)
     .maybeSingle();
 
   if (error) {

@@ -51,7 +51,13 @@ export default async function NovoAgendamentoProfissionalPage({
   const query = searchParams ? await searchParams : {};
   const dataSelecionada = query?.data || hojeISO();
 
-  const [clientesResult, servicosResult, configProfissional, agendaDiaResult] =
+  const [
+    clientesResult,
+    servicosResult,
+    vinculosServicosResult,
+    configProfissional,
+    agendaDiaResult,
+  ] =
     await Promise.all([
       supabaseAdmin
         .from("clientes")
@@ -66,6 +72,13 @@ export default async function NovoAgendamentoProfissionalPage({
         .eq("id_salao", session.idSalao)
         .eq("ativo", true)
         .order("nome", { ascending: true }),
+
+      supabaseAdmin
+        .from("profissional_servicos")
+        .select("id_servico")
+        .eq("id_salao", session.idSalao)
+        .eq("id_profissional", session.idProfissional)
+        .eq("ativo", true),
 
       buscarConfiguracaoAgendaProfissional(
         session.idSalao,
@@ -103,12 +116,21 @@ export default async function NovoAgendamentoProfissionalPage({
     throw new Error(servicosResult.error.message);
   }
 
+  if (vinculosServicosResult.error) {
+    throw new Error(vinculosServicosResult.error.message);
+  }
+
   if (agendaDiaResult.error) {
     throw new Error(agendaDiaResult.error.message);
   }
 
   const clientes = clientesResult.data ?? [];
-  const servicos = servicosResult.data ?? [];
+  const idsServicosLiberados = new Set(
+    (vinculosServicosResult.data ?? []).map((item) => item.id_servico).filter(Boolean)
+  );
+  const servicos = (servicosResult.data ?? []).filter((servico) =>
+    idsServicosLiberados.has(servico.id)
+  );
   const agendaDia = (agendaDiaResult.data ?? []).map((item: any) => ({
     id: item.id,
     hora_inicio: String(item.hora_inicio).slice(0, 5),

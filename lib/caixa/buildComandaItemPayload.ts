@@ -43,6 +43,25 @@ export async function buildComandaItemPayload({
     ativo: true,
   };
 
+  const profissionalSelecionado = profissionaisCatalogo.find(
+    (item) => item.id === itemModal.idProfissional
+  );
+
+  if (
+    profissionalSelecionado &&
+    String(profissionalSelecionado.tipo_profissional || "profissional").toLowerCase() ===
+      "assistente"
+  ) {
+    throw new Error("Selecione um profissional principal, nao um assistente.");
+  }
+
+  if (
+    itemModal.idAssistente &&
+    !profissionalSelecionado?.assistentes_ids?.includes(itemModal.idAssistente)
+  ) {
+    throw new Error("Assistente nao vinculado ao profissional selecionado.");
+  }
+
   if (itemModal.tipoItem !== "servico") {
     return {
       ...payloadBase,
@@ -56,9 +75,6 @@ export async function buildComandaItemPayload({
   }
 
   const servico = servicosCatalogo.find((item) => item.id === itemModal.catalogoId);
-  const profissional = profissionaisCatalogo.find(
-    (item) => item.id === itemModal.idProfissional
-  );
   const vinculo =
     servico?.id && itemModal.idProfissional
       ? await buscarVinculoProfissionalServico({
@@ -69,7 +85,7 @@ export async function buildComandaItemPayload({
       : null;
   const regraServico = resolverRegraComissaoServico({
     servico,
-    profissional,
+    profissional: profissionalSelecionado,
     vinculo,
   });
 

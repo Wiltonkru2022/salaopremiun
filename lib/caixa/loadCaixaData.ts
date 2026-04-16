@@ -117,7 +117,7 @@ export async function carregarCatalogosCaixa(
   supabase: CaixaSupabaseClient,
   idSalao: string
 ) {
-  const [servicosRes, produtosRes, extrasRes, profissionaisRes] = await Promise.all([
+  const [servicosRes, produtosRes, extrasRes, profissionaisRes, assistentesRes] = await Promise.all([
     supabase
       .from("servicos")
       .select("*")
@@ -140,10 +140,16 @@ export async function carregarCatalogosCaixa(
 
     supabase
       .from("profissionais")
-      .select("id, nome, comissao_percentual")
+      .select("id, nome, comissao_percentual, tipo_profissional")
       .eq("id_salao", idSalao)
       .eq("status", "ativo")
       .order("nome", { ascending: true }),
+
+    supabase
+      .from("profissional_assistentes")
+      .select("id_profissional, id_assistente")
+      .eq("id_salao", idSalao)
+      .eq("ativo", true),
   ]);
 
   if (servicosRes.error) {
@@ -162,10 +168,32 @@ export async function carregarCatalogosCaixa(
     console.error("Erro ao carregar profissionais do caixa:", profissionaisRes.error);
   }
 
+  if (assistentesRes.error) {
+    console.error("Erro ao carregar assistentes vinculados do caixa:", assistentesRes.error);
+  }
+
+  const assistentesPorProfissional = new Map<string, string[]>();
+  ((assistentesRes.data || []) as {
+    id_profissional: string | null;
+    id_assistente: string | null;
+  }[]).forEach((vinculo) => {
+    if (!vinculo.id_profissional || !vinculo.id_assistente) return;
+    const lista = assistentesPorProfissional.get(vinculo.id_profissional) || [];
+    lista.push(vinculo.id_assistente);
+    assistentesPorProfissional.set(vinculo.id_profissional, lista);
+  });
+
+  const profissionaisCatalogo = ((profissionaisRes.data || []) as ProfissionalResumo[]).map(
+    (profissional) => ({
+      ...profissional,
+      assistentes_ids: assistentesPorProfissional.get(profissional.id) || [],
+    })
+  );
+
   return {
     extrasCatalogo: (extrasRes.data as CatalogoExtra[]) || [],
     produtosCatalogo: (produtosRes.data as CatalogoProduto[]) || [],
-    profissionaisCatalogo: (profissionaisRes.data as ProfissionalResumo[]) || [],
+    profissionaisCatalogo,
     servicosCatalogo: (servicosRes.data as CatalogoServico[]) || [],
   };
 }

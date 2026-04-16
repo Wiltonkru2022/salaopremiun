@@ -29,6 +29,7 @@ export type Profissional = {
   categoria: string | null;
   cargo?: string | null;
   comissao_percentual: number | null;
+  tipo_profissional?: string | null;
   cor_agenda: string | null;
   status: string;
   ativo?: boolean | null;
@@ -52,9 +53,11 @@ export type Servico = {
   preco_padrao?: number | null;
   custo_produto?: number | null;
   comissao_percentual?: number | null;
+  comissao_percentual_padrao?: number | null;
   comissao_assistente_percentual?: number | null;
   base_calculo?: string | null;
   desconta_taxa_maquininha?: boolean | null;
+  profissionais_vinculados?: string[];
 };
 
 export type ConfigSalao = {

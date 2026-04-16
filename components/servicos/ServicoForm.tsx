@@ -16,6 +16,11 @@ type Profissional = {
   nome: string;
 };
 
+type CategoriaServico = {
+  id: string;
+  nome: string;
+};
+
 type Produto = {
   id: string;
   nome: string;
@@ -51,6 +56,7 @@ type ServicoState = {
   id_salao: string;
   nome: string;
   categoria: string;
+  id_categoria: string;
   descricao: string;
   gatilho_retorno_dias: string;
   duracao_minutos: string;
@@ -73,6 +79,7 @@ const initialState: ServicoState = {
   id_salao: "",
   nome: "",
   categoria: "",
+  id_categoria: "",
   descricao: "",
   gatilho_retorno_dias: "",
   duracao_minutos: "60",
@@ -156,6 +163,8 @@ export default function ServicoForm({ modo }: ServicoFormProps) {
   const [idSalao, setIdSalao] = useState("");
 
   const [servico, setServico] = useState<ServicoState>(initialState);
+  const [categorias, setCategorias] = useState<CategoriaServico[]>([]);
+  const [novaCategoria, setNovaCategoria] = useState("");
   const [profissionais, setProfissionais] = useState<Profissional[]>([]);
   const [produtos, setProdutos] = useState<Produto[]>([]);
   const [recursos, setRecursos] = useState<Recurso[]>([]);
@@ -228,10 +237,21 @@ async function bootstrap() {
 
     if (recError) throw recError;
 
+    const { data: categoriasRows, error: categoriasError } = await supabase
+      .from("servicos_categorias")
+      .select("id, nome")
+      .eq("id_salao", usuarioLogado.idSalao)
+      .eq("ativo", true)
+      .or("tipo_profissional.is.null,tipo_profissional.eq.profissional")
+      .order("nome", { ascending: true });
+
+    if (categoriasError) throw categoriasError;
+
     const listaProfissionais = (profissionaisRows as Profissional[]) || [];
     const listaProdutos = (produtosRows as Produto[]) || [];
     const listaRecursos = (recursosRows as Recurso[]) || [];
 
+    setCategorias((categoriasRows as CategoriaServico[]) || []);
     setProfissionais(listaProfissionais);
     setProdutos(listaProdutos);
     setRecursos(listaRecursos);
@@ -295,6 +315,7 @@ async function bootstrap() {
       id_salao: row.id_salao,
       nome: row.nome || "",
       categoria: row.categoria || "",
+      id_categoria: row.id_categoria || "",
       descricao: row.descricao || "",
       gatilho_retorno_dias: row.gatilho_retorno_dias?.toString() || "",
       duracao_minutos: row.duracao_minutos?.toString() || "60",
@@ -435,6 +456,61 @@ async function bootstrap() {
     );
   }
 
+  async function resolverCategoriaParaSalvar() {
+    const categoriaSelecionada = servico.id_categoria;
+
+    if (categoriaSelecionada === "__nova__") {
+      const nome = novaCategoria.trim();
+      if (!nome) {
+        throw new Error("Informe o nome da nova categoria.");
+      }
+
+      const existente = categorias.find(
+        (item) => item.nome.trim().toLowerCase() === nome.toLowerCase()
+      );
+
+      if (existente) {
+        setServico((prev) => ({
+          ...prev,
+          id_categoria: existente.id,
+          categoria: existente.nome,
+        }));
+        setNovaCategoria("");
+        return existente;
+      }
+
+      const { data, error } = await supabase
+        .from("servicos_categorias")
+        .insert({
+          id_salao: idSalao,
+          nome,
+          ativo: true,
+        })
+        .select("id, nome")
+        .limit(1);
+
+      if (error) throw error;
+
+      const categoriaCriada = data?.[0] as CategoriaServico | undefined;
+      if (!categoriaCriada?.id) {
+        throw new Error("Nao foi possivel criar a categoria.");
+      }
+
+      setCategorias((prev) => [...prev, categoriaCriada].sort((a, b) => a.nome.localeCompare(b.nome)));
+      setServico((prev) => ({
+        ...prev,
+        id_categoria: categoriaCriada.id,
+        categoria: categoriaCriada.nome,
+      }));
+      setNovaCategoria("");
+
+      return categoriaCriada;
+    }
+
+    const categoria = categorias.find((item) => item.id === categoriaSelecionada);
+    return categoria || null;
+  }
+
   async function salvar() {
     try {
       setSaving(true);
@@ -445,10 +521,13 @@ async function bootstrap() {
         throw new Error("Informe o nome do serviço.");
       }
 
+      const categoriaSalvar = await resolverCategoriaParaSalvar();
+
       const payload = {
         id_salao: idSalao,
         nome: servico.nome.trim(),
-        categoria: servico.categoria.trim() || null,
+        id_categoria: categoriaSalvar?.id || null,
+        categoria: categoriaSalvar?.nome || null,
         descricao: servico.descricao.trim() || null,
         gatilho_retorno_dias: servico.gatilho_retorno_dias
           ? Number(servico.gatilho_retorno_dias)
@@ -655,11 +734,30 @@ async function bootstrap() {
                   onChange={(v) => setField("nome", v)}
                   required
                 />
-                <Input
+                <Select
                   label="Categoria"
-                  value={servico.categoria}
-                  onChange={(v) => setField("categoria", v)}
+                  value={servico.id_categoria}
+                  onChange={(v) => {
+                    setField("id_categoria", v);
+                    const categoria = categorias.find((item) => item.id === v);
+                    setField("categoria", categoria?.nome || "");
+                  }}
+                  options={[
+                    { value: "", label: "Sem categoria" },
+                    ...categorias.map((categoria) => ({
+                      value: categoria.id,
+                      label: categoria.nome,
+                    })),
+                    { value: "__nova__", label: "+ Criar nova categoria" },
+                  ]}
                 />
+                {servico.id_categoria === "__nova__" ? (
+                  <Input
+                    label="Nova categoria"
+                    value={novaCategoria}
+                    onChange={setNovaCategoria}
+                  />
+                ) : null}
                 <Input
                   label="Gatilho de retorno (dias)"
                   value={servico.gatilho_retorno_dias}

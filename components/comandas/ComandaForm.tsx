@@ -22,6 +22,8 @@ type Profissional = {
   id: string;
   nome: string;
   comissao_percentual?: number | null;
+  tipo_profissional?: string | null;
+  assistentes_ids?: string[];
 };
 
 type Servico = {
@@ -143,6 +145,7 @@ async function bootstrap() {
     const [
       clientesRes,
       profissionaisRes,
+      assistentesRes,
       servicosRes,
       produtosRes,
     ] = await Promise.all([
@@ -155,10 +158,16 @@ async function bootstrap() {
 
       supabase
         .from("profissionais")
-        .select("id, nome, comissao_percentual")
+        .select("id, nome, comissao_percentual, tipo_profissional")
         .eq("id_salao", usuarioLogado.idSalao)
         .eq("ativo", true)
         .order("nome", { ascending: true }),
+
+      supabase
+        .from("profissional_assistentes")
+        .select("id_profissional, id_assistente")
+        .eq("id_salao", usuarioLogado.idSalao)
+        .eq("ativo", true),
 
       supabase
         .from("servicos")
@@ -194,11 +203,31 @@ async function bootstrap() {
 
     if (clientesRes.error) throw clientesRes.error;
     if (profissionaisRes.error) throw profissionaisRes.error;
+    if (assistentesRes.error) throw assistentesRes.error;
     if (servicosRes.error) throw servicosRes.error;
     if (produtosRes.error) throw produtosRes.error;
 
+    const assistentesPorProfissional = new Map<string, string[]>();
+    ((assistentesRes.data || []) as {
+      id_profissional: string | null;
+      id_assistente: string | null;
+    }[]).forEach((vinculo) => {
+      if (!vinculo.id_profissional || !vinculo.id_assistente) return;
+
+      const lista = assistentesPorProfissional.get(vinculo.id_profissional) || [];
+      lista.push(vinculo.id_assistente);
+      assistentesPorProfissional.set(vinculo.id_profissional, lista);
+    });
+
+    const profissionaisComAssistentes = ((profissionaisRes.data || []) as Profissional[]).map(
+      (profissional) => ({
+        ...profissional,
+        assistentes_ids: assistentesPorProfissional.get(profissional.id) || [],
+      })
+    );
+
     setClientes((clientesRes.data as Cliente[]) || []);
-    setProfissionais((profissionaisRes.data as Profissional[]) || []);
+    setProfissionais(profissionaisComAssistentes);
     setServicos((servicosRes.data as Servico[]) || []);
     setProdutos((produtosRes.data as Produto[]) || []);
 
@@ -339,6 +368,22 @@ async function bootstrap() {
         const profissionalSelecionado = profissionais.find(
           (item) => item.id === payload.id_profissional
         );
+
+        if (
+          profissionalSelecionado &&
+          String(profissionalSelecionado.tipo_profissional || "profissional").toLowerCase() ===
+            "assistente"
+        ) {
+          throw new Error("Selecione um profissional principal, nao um assistente.");
+        }
+
+        if (
+          payload.id_assistente &&
+          !profissionalSelecionado?.assistentes_ids?.includes(payload.id_assistente)
+        ) {
+          throw new Error("Assistente nao vinculado ao profissional selecionado.");
+        }
+
         const vinculo =
           payload.id_servico && payload.id_profissional
             ? await buscarVinculoProfissionalServico({

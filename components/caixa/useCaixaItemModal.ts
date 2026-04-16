@@ -58,6 +58,45 @@ export function useCaixaItemModal({
     profissionaisCatalogo,
   ]);
 
+  const profissionaisOperacionais = useMemo(
+    () =>
+      profissionaisCatalogo.filter(
+        (item) => String(item.tipo_profissional || "profissional").toLowerCase() !== "assistente"
+      ),
+    [profissionaisCatalogo]
+  );
+
+  const assistentesDoProfissional = useMemo(() => {
+    if (!itemModal.idProfissional) return [];
+
+    const profissional = profissionaisCatalogo.find(
+      (item) => item.id === itemModal.idProfissional
+    );
+    const idsAssistentes = new Set(profissional?.assistentes_ids || []);
+
+    return profissionaisCatalogo.filter(
+      (item) =>
+        String(item.tipo_profissional || "").toLowerCase() === "assistente" &&
+        idsAssistentes.has(item.id)
+    );
+  }, [itemModal.idProfissional, profissionaisCatalogo]);
+
+  useEffect(() => {
+    if (!itemModal.idAssistente) return;
+
+    const assistenteLiberado = assistentesDoProfissional.some(
+      (item) => item.id === itemModal.idAssistente
+    );
+
+    if (!assistenteLiberado) {
+      setBuscaAssistente("");
+      setItemModal((prev) => ({
+        ...prev,
+        idAssistente: "",
+      }));
+    }
+  }, [assistentesDoProfissional, itemModal.idAssistente, setItemModal]);
+
   const opcoesCatalogoFiltradas = useMemo(() => {
     const termo = buscaCatalogo.trim().toLowerCase();
 
@@ -79,21 +118,22 @@ export function useCaixaItemModal({
 
   const profissionaisFiltrados = useMemo(() => {
     const termo = buscaProfissional.trim().toLowerCase();
-    if (!termo) return profissionaisCatalogo.slice(0, 8);
+    if (!termo) return profissionaisOperacionais.slice(0, 8);
 
-    return profissionaisCatalogo
+    return profissionaisOperacionais
       .filter((item) => String(item.nome || "").toLowerCase().includes(termo))
       .slice(0, 8);
-  }, [buscaProfissional, profissionaisCatalogo]);
+  }, [buscaProfissional, profissionaisOperacionais]);
 
   const assistentesFiltrados = useMemo(() => {
     const termo = buscaAssistente.trim().toLowerCase();
-    if (!termo) return profissionaisCatalogo.slice(0, 8);
+    if (!itemModal.idProfissional) return [];
+    if (!termo) return assistentesDoProfissional.slice(0, 8);
 
-    return profissionaisCatalogo
+    return assistentesDoProfissional
       .filter((item) => String(item.nome || "").toLowerCase().includes(termo))
       .slice(0, 8);
-  }, [buscaAssistente, profissionaisCatalogo]);
+  }, [assistentesDoProfissional, buscaAssistente, itemModal.idProfissional]);
 
   const totalPreviewItem = useMemo(() => {
     const quantidade = Math.max(Number(itemModal.quantidade || 1), 1);
@@ -219,7 +259,9 @@ export function useCaixaItemModal({
     setItemModal((prev) => ({
       ...prev,
       idProfissional: "",
+      idAssistente: "",
     }));
+    setBuscaAssistente("");
   }
 
   function limparProfissional() {
@@ -227,7 +269,9 @@ export function useCaixaItemModal({
     setItemModal((prev) => ({
       ...prev,
       idProfissional: "",
+      idAssistente: "",
     }));
+    setBuscaAssistente("");
     setDropdownProfissionalOpen(false);
   }
 
@@ -236,7 +280,9 @@ export function useCaixaItemModal({
     setItemModal((prev) => ({
       ...prev,
       idProfissional: id,
+      idAssistente: "",
     }));
+    setBuscaAssistente("");
     setDropdownProfissionalOpen(false);
   }
 
