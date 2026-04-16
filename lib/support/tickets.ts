@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { getProfissionalSessionFromCookie } from "@/lib/profissional-auth.server";
+import { registrarLogSistema } from "@/lib/system-logs";
 
 export type TicketCategoria =
   | "assinatura"
@@ -795,6 +796,22 @@ export async function createSalaoTicket(params: {
     },
   });
 
+  await registrarLogSistema({
+    gravidade: "info",
+    modulo: "suporte",
+    idSalao: params.context.idSalao,
+    idUsuario:
+      params.context.origem === "painel_salao" ? params.context.idUsuario : null,
+    mensagem: "Novo ticket aberto pelo salao.",
+    detalhes: {
+      id_ticket: ticket.id,
+      numero: ticket.numero,
+      origem: params.context.origem,
+      categoria,
+      prioridade,
+    },
+  });
+
   return {
     id: String(ticket.id),
     numero: Number(ticket.numero || 0),
@@ -882,6 +899,20 @@ export async function replySalaoTicket(params: {
     },
   });
 
+  await registrarLogSistema({
+    gravidade: "info",
+    modulo: "suporte",
+    idSalao: params.context.idSalao,
+    idUsuario:
+      params.context.origem === "painel_salao" ? params.context.idUsuario : null,
+    mensagem: "Ticket respondido pelo salao.",
+    detalhes: {
+      id_ticket: params.idTicket,
+      origem: params.context.origem,
+      status: proximoStatus,
+    },
+  });
+
   return { ok: true, status: proximoStatus };
 }
 
@@ -932,6 +963,23 @@ export async function updateSalaoTicketStatus(params: {
         ? "Ticket encerrado pelo salao."
         : "Ticket reaberto pelo salao."),
     payload_json: {
+      origem: params.context.origem,
+      status: newStatus,
+    },
+  });
+
+  await registrarLogSistema({
+    gravidade: "info",
+    modulo: "suporte",
+    idSalao: params.context.idSalao,
+    idUsuario:
+      params.context.origem === "painel_salao" ? params.context.idUsuario : null,
+    mensagem:
+      newStatus === "fechado"
+        ? "Ticket encerrado pelo salao."
+        : "Ticket reaberto pelo salao.",
+    detalhes: {
+      id_ticket: params.idTicket,
       origem: params.context.origem,
       status: newStatus,
     },
@@ -1010,6 +1058,17 @@ export async function replyAdminTicket(params: {
     },
   });
 
+  await registrarLogSistema({
+    gravidade: "info",
+    modulo: "suporte",
+    mensagem: "Ticket respondido pelo AdminMaster.",
+    detalhes: {
+      id_ticket: params.idTicket,
+      id_admin: params.context.idAdmin,
+      status: nextStatus,
+    },
+  });
+
   return { ok: true, status: nextStatus };
 }
 
@@ -1067,6 +1126,18 @@ export async function updateAdminTicketStatus(params: {
       status: nextStatus,
       prioridade: nextPrioridade || ticket.prioridade,
       id_admin: params.context.idAdmin,
+    },
+  });
+
+  await registrarLogSistema({
+    gravidade: "info",
+    modulo: "suporte",
+    mensagem: "Status do ticket atualizado pelo AdminMaster.",
+    detalhes: {
+      id_ticket: params.idTicket,
+      id_admin: params.context.idAdmin,
+      status: nextStatus,
+      prioridade: nextPrioridade || ticket.prioridade,
     },
   });
 
