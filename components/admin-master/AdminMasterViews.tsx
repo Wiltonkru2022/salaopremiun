@@ -1,4 +1,5 @@
 import Link from "next/link";
+import AdminMasterModuleActionButton from "@/components/admin-master/AdminMasterModuleActionButton";
 import AdminMasterRowActionButton from "@/components/admin-master/AdminMasterRowActionButton";
 import type { AdminKpi, AdminSectionData, AdminTableRow } from "@/lib/admin-master/data";
 
@@ -107,13 +108,11 @@ export function AdminSectionView({ data }: { data: AdminSectionData }) {
 
           <div className="flex flex-wrap gap-2">
             {data.actions.slice(0, 3).map((action) => (
-              <button
+              <AdminMasterModuleActionButton
                 key={action}
-                type="button"
-                className="rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-bold text-white"
-              >
-                {action}
-              </button>
+                action={action}
+                variant="pill"
+              />
             ))}
           </div>
         </div>
@@ -131,13 +130,11 @@ export function AdminSectionView({ data }: { data: AdminSectionData }) {
             </div>
             <div className="mt-4 space-y-2">
               {data.actions.map((action) => (
-                <button
+                <AdminMasterModuleActionButton
                   key={action}
-                  type="button"
-                  className="w-full rounded-2xl border border-zinc-200 px-4 py-3 text-left text-sm font-bold text-zinc-800 transition hover:border-zinc-950 hover:bg-zinc-950 hover:text-white"
-                >
-                  {action}
-                </button>
+                  action={action}
+                  variant="list"
+                />
               ))}
             </div>
           </div>
