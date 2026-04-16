@@ -11,6 +11,16 @@ type ServicoFormProps = {
   modo: "novo" | "editar";
 };
 
+type ServicoProcessarResponse = {
+  ok: boolean;
+  idServico?: string | null;
+  categoria?: CategoriaServico | null;
+};
+
+type ServicoProcessarErrorResponse = {
+  error?: string;
+};
+
 type Profissional = {
   id: string;
   nome: string;
@@ -469,45 +479,7 @@ async function bootstrap() {
         (item) => item.nome.trim().toLowerCase() === nome.toLowerCase()
       );
 
-      if (existente) {
-        setServico((prev) => ({
-          ...prev,
-          id_categoria: existente.id,
-          categoria: existente.nome,
-        }));
-        setNovaCategoria("");
-        return existente;
-      }
-
-      const { data, error } = await supabase.rpc(
-        "fn_get_or_create_servico_categoria",
-        {
-          p_id_salao: idSalao,
-          p_nome: nome,
-        }
-      );
-
-      if (error) throw error;
-
-      const categoriaCriada = (data?.[0] || null) as CategoriaServico | null;
-      if (!categoriaCriada?.id) {
-        throw new Error("Nao foi possivel criar a categoria.");
-      }
-
-      setCategorias((prev) =>
-        [
-          ...prev.filter((item) => item.id !== categoriaCriada.id),
-          categoriaCriada,
-        ].sort((a, b) => a.nome.localeCompare(b.nome))
-      );
-      setServico((prev) => ({
-        ...prev,
-        id_categoria: categoriaCriada.id,
-        categoria: categoriaCriada.nome,
-      }));
-      setNovaCategoria("");
-
-      return categoriaCriada;
+      return existente || null;
     }
 
     const categoria = categorias.find((item) => item.id === categoriaSelecionada);
@@ -515,6 +487,153 @@ async function bootstrap() {
   }
 
   async function salvar() {
+    try {
+      setSaving(true);
+      setErro("");
+      setMsg("");
+
+      if (!servico.nome.trim()) {
+        throw new Error("Informe o nome do serviÃ§o.");
+      }
+
+      const categoriaSalvar = await resolverCategoriaParaSalvar();
+
+      const payload = {
+        id_salao: idSalao,
+        nome: servico.nome.trim(),
+        id_categoria:
+          servico.id_categoria === "__nova__"
+            ? categoriaSalvar?.id || null
+            : servico.id_categoria || null,
+        categoria:
+          servico.id_categoria === "__nova__"
+            ? categoriaSalvar?.nome || novaCategoria.trim() || null
+            : categoriaSalvar?.nome || null,
+        descricao: servico.descricao.trim() || null,
+        gatilho_retorno_dias: servico.gatilho_retorno_dias
+          ? Number(servico.gatilho_retorno_dias)
+          : null,
+        duracao_minutos: Number(servico.duracao_minutos || 0),
+        pausa_minutos: Number(servico.pausa_minutos || 0),
+        recurso_nome: servico.recurso_nome.trim() || null,
+        preco_padrao: parseMoneyToNumber(servico.preco_padrao),
+        preco_variavel: servico.preco_variavel,
+        preco_minimo: servico.preco_minimo
+          ? parseMoneyToNumber(servico.preco_minimo)
+          : null,
+        custo_produto: parseMoneyToNumber(servico.custo_produto),
+        comissao_percentual_padrao: servico.comissao_percentual_padrao
+          ? Number(servico.comissao_percentual_padrao)
+          : null,
+        comissao_assistente_percentual: Number(
+          servico.comissao_assistente_percentual || 0
+        ),
+        base_calculo: servico.base_calculo || "bruto",
+        desconta_taxa_maquininha: servico.desconta_taxa_maquininha,
+        exige_avaliacao: servico.exige_avaliacao,
+        status: servico.ativo ? "ativo" : "inativo",
+        ativo: servico.ativo,
+      };
+
+      const vinculosParaSalvar = vinculos
+        .filter((v) => v.ativo)
+        .map((v) => ({
+          id_salao: idSalao,
+          id_profissional: v.id_profissional,
+          id_servico: servico.id || null,
+          ativo: true,
+          duracao_minutos: v.duracao_minutos
+            ? Number(v.duracao_minutos)
+            : null,
+          preco_personalizado: v.preco_personalizado
+            ? parseMoneyToNumber(v.preco_personalizado)
+            : null,
+          comissao_percentual: v.comissao_percentual
+            ? Number(v.comissao_percentual)
+            : null,
+          comissao_assistente_percentual: v.comissao_assistente_percentual
+            ? Number(v.comissao_assistente_percentual)
+            : null,
+          base_calculo: v.base_calculo || null,
+          desconta_taxa_maquininha:
+            typeof v.desconta_taxa_maquininha === "boolean"
+              ? v.desconta_taxa_maquininha
+              : null,
+        }));
+
+      const consumosValidos = consumos
+        .filter((c) => c.id_produto && Number(c.quantidade_consumo || 0) > 0)
+        .map((c) => ({
+          id_salao: idSalao,
+          id_servico: servico.id || null,
+          id_produto: c.id_produto,
+          quantidade_consumo: Number(c.quantidade_consumo || 0),
+          unidade_medida: c.unidade_medida || null,
+          custo_estimado: c.custo_estimado
+            ? parseMoneyToNumber(c.custo_estimado)
+            : null,
+          ativo: true,
+        }));
+
+      const response = await fetch("/api/servicos/processar", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          idSalao,
+          acao: "salvar",
+          servico: {
+            id: servico.id || null,
+            ...payload,
+          },
+          novaCategoria:
+            servico.id_categoria === "__nova__" ? novaCategoria.trim() : null,
+          vinculos: vinculosParaSalvar,
+          consumos: consumosValidos,
+        }),
+      });
+
+      const result = (await response.json().catch(() => ({}))) as Partial<
+        ServicoProcessarResponse
+      > &
+        ServicoProcessarErrorResponse;
+
+      if (!response.ok) {
+        throw new Error(result.error || "Erro ao salvar serviÃ§o.");
+      }
+
+      if (result.categoria?.id) {
+        setCategorias((prev) =>
+          [
+            ...prev.filter((item) => item.id !== result.categoria?.id),
+            result.categoria as CategoriaServico,
+          ].sort((a, b) => a.nome.localeCompare(b.nome))
+        );
+        setServico((prev) => ({
+          ...prev,
+          id_categoria: result.categoria?.id || "",
+          categoria: result.categoria?.nome || "",
+        }));
+        setNovaCategoria("");
+      }
+
+      if (modo === "novo") {
+        router.push("/servicos");
+        return;
+      }
+
+      setMsg("ServiÃ§o atualizado com sucesso.");
+    } catch (e: unknown) {
+      console.error("Erro ao salvar serviÃ§o:", e);
+      setErro(e instanceof Error ? e.message : "Erro ao salvar serviÃ§o.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  async function salvarLegado() {
     try {
       setSaving(true);
       setErro("");
@@ -529,8 +648,14 @@ async function bootstrap() {
       const payload = {
         id_salao: idSalao,
         nome: servico.nome.trim(),
-        id_categoria: categoriaSalvar?.id || null,
-        categoria: categoriaSalvar?.nome || null,
+        id_categoria:
+          servico.id_categoria === "__nova__"
+            ? categoriaSalvar?.id || null
+            : servico.id_categoria || null,
+        categoria:
+          servico.id_categoria === "__nova__"
+            ? categoriaSalvar?.nome || novaCategoria.trim() || null
+            : categoriaSalvar?.nome || null,
         descricao: servico.descricao.trim() || null,
         gatilho_retorno_dias: servico.gatilho_retorno_dias
           ? Number(servico.gatilho_retorno_dias)

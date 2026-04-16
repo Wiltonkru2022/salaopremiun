@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import AppModal from "@/components/ui/AppModal";
 import { formatMoneyInput, parseMoneyToNumber } from "@/lib/utils/comanda";
 
 type Profissional = {
@@ -210,11 +211,37 @@ export default function ComandaItemModal({
   }
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4">
-      <div className="w-full max-w-3xl rounded-3xl bg-white p-6 shadow-2xl">
-        <h2 className="text-2xl font-bold text-zinc-900">Adicionar item na comanda</h2>
+    <AppModal
+      open={open}
+      onClose={onClose}
+      title="Adicionar item na comanda"
+      description="Preencha os dados do item e vincule o profissional quando fizer sentido."
+      maxWidthClassName="max-w-3xl"
+      zIndexClassName="z-[100]"
+      closeDisabled={saving}
+      footer={
+        <>
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={saving}
+            className="rounded-2xl border border-zinc-300 px-4 py-3 font-semibold text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-60"
+          >
+            Fechar
+          </button>
 
-        <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2">
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={saving}
+            className="rounded-2xl bg-zinc-900 px-5 py-3 font-semibold text-white transition hover:opacity-95 disabled:opacity-60"
+          >
+            {saving ? "Salvando..." : "Adicionar item"}
+          </button>
+        </>
+      }
+    >
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div className="md:col-span-2">
             <label className="mb-1 block text-sm font-semibold text-zinc-700">Tipo</label>
             <select
@@ -358,27 +385,7 @@ export default function ComandaItemModal({
               className="w-full rounded-2xl border border-zinc-300 px-4 py-3"
             />
           </div>
-        </div>
-
-        <div className="mt-6 flex justify-end gap-3">
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-2xl border border-zinc-300 px-4 py-3 font-semibold text-zinc-700"
-          >
-            Fechar
-          </button>
-
-          <button
-            type="button"
-            onClick={handleSave}
-            disabled={saving}
-            className="rounded-2xl bg-zinc-900 px-5 py-3 font-semibold text-white"
-          >
-            {saving ? "Salvando..." : "Adicionar item"}
-          </button>
-        </div>
       </div>
-    </div>
+    </AppModal>
   );
 }

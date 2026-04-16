@@ -8,6 +8,11 @@ import {
   buildPermissoesByNivel,
   sanitizePermissoesDb,
 } from "@/lib/auth/permissions";
+import {
+  getStatusComissaoMeta,
+  getStatusComissaoQueryValues,
+  normalizeStatusComissao,
+} from "@/lib/domain/status";
 import { ComissaoHelpPanel } from "@/components/comissoes/ComissaoHelpPanel";
 import {
   BadgeDollarSign,
@@ -88,28 +93,6 @@ function getValorLancamento(item: ComissaoRow) {
   return Number(item.valor_comissao || 0);
 }
 
-function statusMeta(status: string | null | undefined) {
-  if (status === "pago") {
-    return {
-      badgeClass: "border-emerald-200 bg-emerald-50 text-emerald-700",
-      description: "Lancamento ja quitado.",
-      label: "Pago",
-    };
-  }
-  if (status === "cancelado") {
-    return {
-      badgeClass: "border-rose-200 bg-rose-50 text-rose-700",
-      description: "Lancamento retirado do rateio.",
-      label: "Cancelado",
-    };
-  }
-  return {
-    badgeClass: "border-amber-200 bg-amber-50 text-amber-700",
-    description: "Aguardando pagamento.",
-    label: "Pendente",
-  };
-}
-
 function origemMeta(origem: string | null | undefined) {
   if (origem === "profissional_servico") {
     return {
@@ -183,61 +166,6 @@ export default function ComissoesPage() {
 
   const podeGerenciar = nivel === "admin" || nivel === "gerente";
 
-  function isMissingValesSchema(error: unknown) {
-    const candidate = error as
-      | { code?: string | null; message?: string | null }
-      | null
-      | undefined;
-    const code = String(candidate?.code || "");
-    const message = String(candidate?.message || "").toLowerCase();
-
-    return (
-      code === "42P01" ||
-      code === "PGRST205" ||
-      message.includes("profissionais_vales") ||
-      message.includes("does not exist") ||
-      message.includes("could not find")
-    );
-  }
-
-  async function descontarValesAbertos(
-    idProfissional: string | null | undefined,
-    idComissaoLancamento?: string
-  ) {
-    if (!idProfissional || !idSalao) return 0;
-
-    const { data, error } = await supabase
-      .from("profissionais_vales")
-      .select("id, valor")
-      .eq("id_salao", idSalao)
-      .eq("id_profissional", idProfissional)
-      .eq("status", "aberto");
-
-    if (error) {
-      if (isMissingValesSchema(error)) return 0;
-      throw error;
-    }
-
-    const vales = (data as { id: string; valor: number | null }[]) || [];
-    const ids = vales.map((vale) => vale.id);
-    const total = vales.reduce((acc, vale) => acc + Number(vale.valor || 0), 0);
-
-    if (ids.length === 0) return 0;
-
-    const { error: updateError } = await supabase
-      .from("profissionais_vales")
-      .update({
-        status: "descontado",
-        descontado_em: new Date().toISOString(),
-        id_comissao_lancamento: idComissaoLancamento || null,
-        updated_at: new Date().toISOString(),
-      })
-      .in("id", ids);
-
-    if (updateError) throw updateError;
-    return total;
-  }
-
   const carregarAcesso = useCallback(async () => {
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
@@ -297,7 +225,9 @@ export default function ComissoesPage() {
         .order("criado_em", { ascending: false })
         .order("competencia_data", { ascending: false });
 
-      if (status !== "todos") query = query.eq("status", status);
+      if (status !== "todos") {
+        query = query.in("status", getStatusComissaoQueryValues(status));
+      }
       if (tipoDestinatario !== "todos") query = query.eq("tipo_destinatario", tipoDestinatario);
       if (profissionalId) query = query.eq("id_profissional", profissionalId);
 
@@ -321,6 +251,7 @@ export default function ComissoesPage() {
       const enriched = baseRows
         .map((item) => ({
           ...item,
+          status: normalizeStatusComissao(item.status),
           profissionais: item.id_profissional ? { nome: mapaProfissionais.get(item.id_profissional)?.nome || "Profissional" } : null,
         }))
         .filter((item) => {
@@ -336,9 +267,10 @@ export default function ComissoesPage() {
           (acc, item) => {
             const valor = getValorLancamento(item);
             acc.total += valor;
-            if (item.status === "pendente") acc.pendente += valor;
-            if (item.status === "pago") acc.pago += valor;
-            if (item.status === "cancelado") acc.cancelado += valor;
+            const statusNormalizado = normalizeStatusComissao(item.status);
+            if (statusNormalizado === "pendente") acc.pendente += valor;
+            if (statusNormalizado === "pago") acc.pago += valor;
+            if (statusNormalizado === "cancelado") acc.cancelado += valor;
             return acc;
           },
           { total: 0, pendente: 0, pago: 0, cancelado: 0 }
@@ -374,21 +306,50 @@ export default function ComissoesPage() {
     void init();
   }, [init]);
 
+  async function processarComissoes(
+    acao: "marcar_pago" | "cancelar",
+    ids: string[]
+  ) {
+    const response = await fetch("/api/comissoes/processar", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        idSalao,
+        ids,
+        acao,
+      }),
+    });
+
+    const result = await response.json().catch(() => null);
+
+    if (!response.ok) {
+      throw new Error(
+        result?.error || "Erro ao processar lancamentos de comissao."
+      );
+    }
+
+    return {
+      totalLancamentos: Number(result?.totalLancamentos || 0),
+      totalVales: Number(result?.totalVales || 0),
+      totalProfissionaisComVales: Number(
+        result?.totalProfissionaisComVales || 0
+      ),
+    };
+  }
+
   async function marcarComoPago(id: string) {
     if (!podeGerenciar) return setErro("Voce nao tem permissao para marcar como pago.");
     try {
       setSaving(true);
-      const lancamento = rows.find((item) => item.id === id);
-      const { error } = await supabase.from("comissoes_lancamentos").update({ status: "pago", pago_em: new Date().toISOString() }).eq("id", id);
-      if (error) throw error;
-      const totalVales =
-        lancamento && getTipoDestinatario(lancamento) === "profissional"
-          ? await descontarValesAbertos(lancamento.id_profissional, id)
-          : 0;
+      const resultado = await processarComissoes("marcar_pago", [id]);
       await carregarComissoes();
       setMsg(
-        totalVales > 0
-          ? `Comissao marcada como paga. Vales descontados: ${formatCurrency(totalVales)}.`
+        resultado.totalLancamentos === 0
+          ? "Nenhuma comissao pendente foi alterada."
+          : resultado.totalVales > 0
+          ? `Comissao marcada como paga. Vales descontados: ${formatCurrency(resultado.totalVales)}.`
           : "Comissao marcada como paga."
       );
     } catch (error) {
@@ -404,10 +365,13 @@ export default function ComissoesPage() {
     if (!window.confirm("Deseja cancelar este lancamento de comissao?")) return;
     try {
       setSaving(true);
-      const { error } = await supabase.from("comissoes_lancamentos").update({ status: "cancelado" }).eq("id", id);
-      if (error) throw error;
+      const resultado = await processarComissoes("cancelar", [id]);
       await carregarComissoes();
-      setMsg("Lancamento cancelado.");
+      setMsg(
+        resultado.totalLancamentos === 0
+          ? "Nenhum lancamento elegivel foi cancelado."
+          : "Lancamento cancelado."
+      );
     } catch (error) {
       console.error(error);
       setErro(error instanceof Error ? error.message : "Erro ao cancelar lancamento.");
@@ -417,36 +381,23 @@ export default function ComissoesPage() {
   }
 
   async function marcarFiltradasComoPagas() {
-    const pendentes = rows.filter((item) => item.status === "pendente");
+    const pendentes = rows.filter(
+      (item) => normalizeStatusComissao(item.status) === "pendente"
+    );
     const ids = pendentes.map((item) => item.id);
     if (!podeGerenciar) return setErro("Voce nao tem permissao para marcar rateio como pago.");
     if (ids.length === 0) return setErro("Nao ha comissoes pendentes no filtro atual.");
     if (!window.confirm(`Deseja marcar ${ids.length} lancamento(s) filtrado(s) como pago(s)?`)) return;
     try {
       setSaving(true);
-      const lancamentoPorProfissional = new Map<string, string>();
-      for (const item of pendentes) {
-        if (
-          getTipoDestinatario(item) === "profissional" &&
-          item.id_profissional &&
-          !lancamentoPorProfissional.has(item.id_profissional)
-        ) {
-          lancamentoPorProfissional.set(item.id_profissional, item.id);
-        }
-      }
-
-      const { error } = await supabase.from("comissoes_lancamentos").update({ status: "pago", pago_em: new Date().toISOString() }).in("id", ids);
-      if (error) throw error;
-
-      let totalVales = 0;
-      for (const [idProfissional, idLancamento] of lancamentoPorProfissional) {
-        totalVales += await descontarValesAbertos(idProfissional, idLancamento);
-      }
+      const resultado = await processarComissoes("marcar_pago", ids);
 
       await carregarComissoes();
       setMsg(
-        totalVales > 0
-          ? `Rateio marcado como pago. Vales descontados: ${formatCurrency(totalVales)}.`
+        resultado.totalLancamentos === 0
+          ? "Nenhuma comissao pendente foi alterada."
+          : resultado.totalVales > 0
+          ? `Rateio marcado como pago. Vales descontados: ${formatCurrency(resultado.totalVales)}.`
           : "Rateio marcado como pago."
       );
     } catch (error) {
@@ -458,7 +409,9 @@ export default function ComissoesPage() {
   }
 
   function apurarRateio() {
-    const pendentes = rows.filter((item) => item.status === "pendente");
+    const pendentes = rows.filter(
+      (item) => normalizeStatusComissao(item.status) === "pendente"
+    );
     const total = pendentes.reduce((acc, item) => acc + getValorLancamento(item), 0);
     if (pendentes.length === 0) return setErro("Nao ha lancamentos pendentes no filtro atual para apurar.");
     setMsg(`Rateio apurado com ${pendentes.length} lancamento(s). Total pendente: ${formatCurrency(total)}.`);
@@ -473,7 +426,13 @@ export default function ComissoesPage() {
     win.print();
   }
 
-  const totalPendentesCount = useMemo(() => rows.filter((item) => item.status === "pendente").length, [rows]);
+  const totalPendentesCount = useMemo(
+    () =>
+      rows.filter(
+        (item) => normalizeStatusComissao(item.status) === "pendente"
+      ).length,
+    [rows]
+  );
   const ticketMedio = useMemo(() => (rows.length ? resumo.total / rows.length : 0), [resumo.total, rows.length]);
   const maiorLancamento = useMemo(() => rows.reduce<ComissaoRow | null>((maior, item) => (!maior || getValorLancamento(item) > getValorLancamento(maior) ? item : maior), null), [rows]);
   const resumoPorTipo = useMemo(
@@ -502,8 +461,9 @@ export default function ComissoesPage() {
       const atual = mapa.get(id)!;
       atual.quantidade += 1;
       atual.total += valor;
-      if (item.status === "pendente") atual.pendente += valor;
-      atual.statusMap[item.status || "pendente"] = (atual.statusMap[item.status || "pendente"] || 0) + 1;
+      const statusNormalizado = normalizeStatusComissao(item.status);
+      if (statusNormalizado === "pendente") atual.pendente += valor;
+      atual.statusMap[statusNormalizado] = (atual.statusMap[statusNormalizado] || 0) + 1;
     });
     return Array.from(mapa.values()).map((item) => ({ ...item, statusPredominante: Object.entries(item.statusMap).sort((a, b) => b[1] - a[1])[0]?.[0] || "pendente" })).sort((a, b) => b.total - a.total);
   }, [rows]);
@@ -563,7 +523,7 @@ export default function ComissoesPage() {
             <div><div className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">Visao por pessoa</div><div className="mt-1 text-xl font-bold text-zinc-950">Profissionais e assistentes no rateio</div></div>
             <div className="inline-flex items-center gap-2 rounded-2xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-700"><Layers3 size={16} />{resumoProfissionais.length} pessoa(s)</div>
           </div>
-          {resumoProfissionais.length === 0 ? <div className="mt-4 rounded-2xl border border-dashed border-zinc-300 bg-zinc-50 px-4 py-10 text-center text-sm text-zinc-500">Nenhum profissional entrou no periodo filtrado.</div> : <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">{resumoProfissionais.slice(0, 4).map((item) => <div key={item.id} className="rounded-[24px] border border-zinc-200 bg-zinc-50 p-4"><div className="flex items-start justify-between gap-3"><div className="flex items-center gap-3"><div className="flex h-11 w-11 items-center justify-center rounded-full bg-white text-sm font-bold text-zinc-700 ring-1 ring-zinc-200">{getInitials(item.nome)}</div><div><div className="font-semibold text-zinc-900">{item.nome}</div><div className="text-xs text-zinc-500">{item.quantidade} lancamento(s)</div></div></div><span className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${statusMeta(item.statusPredominante).badgeClass}`}>{statusMeta(item.statusPredominante).label}</span></div><div className="mt-4 text-2xl font-bold text-zinc-950">{formatCurrency(item.total)}</div><div className="mt-3 text-sm text-zinc-500">Pendente: {formatCurrency(item.pendente)}</div></div>)}</div>}
+          {resumoProfissionais.length === 0 ? <div className="mt-4 rounded-2xl border border-dashed border-zinc-300 bg-zinc-50 px-4 py-10 text-center text-sm text-zinc-500">Nenhum profissional entrou no periodo filtrado.</div> : <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">{resumoProfissionais.slice(0, 4).map((item) => { const statusPredominante = getStatusComissaoMeta(item.statusPredominante); return <div key={item.id} className="rounded-[24px] border border-zinc-200 bg-zinc-50 p-4"><div className="flex items-start justify-between gap-3"><div className="flex items-center gap-3"><div className="flex h-11 w-11 items-center justify-center rounded-full bg-white text-sm font-bold text-zinc-700 ring-1 ring-zinc-200">{getInitials(item.nome)}</div><div><div className="font-semibold text-zinc-900">{item.nome}</div><div className="text-xs text-zinc-500">{item.quantidade} lancamento(s)</div></div></div><span className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${statusPredominante.badgeClass}`}>{statusPredominante.label}</span></div><div className="mt-4 text-2xl font-bold text-zinc-950">{formatCurrency(item.total)}</div><div className="mt-3 text-sm text-zinc-500">Pendente: {formatCurrency(item.pendente)}</div></div>; })}</div>}
         </div>
 
         <div className="overflow-hidden rounded-[28px] border border-zinc-200 bg-white shadow-sm">
@@ -575,7 +535,7 @@ export default function ComissoesPage() {
                 {rows.length === 0 ? <tr><td colSpan={10} className="px-5 py-10 text-center text-sm text-zinc-500">Nenhuma comissao encontrada com os filtros atuais.</td></tr> : rows.map((item) => {
                   const nome = item.profissionais?.nome || "Profissional";
                   const origem = origemMeta(item.origem_percentual);
-                  const statusInfo = statusMeta(item.status);
+                  const statusInfo = getStatusComissaoMeta(item.status);
                   return (
                     <tr key={item.id} className="border-b border-zinc-100 align-top">
                       <td className="px-5 py-4"><div className="flex items-center gap-3"><div className="flex h-11 w-11 items-center justify-center rounded-full bg-zinc-100 text-sm font-bold text-zinc-700">{getInitials(nome) || <User2 size={16} />}</div><div><div className="font-semibold text-zinc-900">{nome}</div><div className="text-xs text-zinc-500">{getTipoDestinatario(item) === "assistente" ? "Assistente" : "Profissional"}</div></div></div></td>
@@ -587,7 +547,7 @@ export default function ComissoesPage() {
                       <td className="px-5 py-4"><div className="text-sm font-bold text-zinc-900">{formatCurrency(getValorLancamento(item))}</div><div className="mt-1 text-xs text-zinc-500">Base {formatCurrency(item.valor_base)}</div></td>
                       <td className="px-5 py-4"><span className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${statusInfo.badgeClass}`}>{statusInfo.label}</span><div className="mt-2 text-xs text-zinc-500">{statusInfo.description}</div></td>
                       <td className="px-5 py-4 text-sm text-zinc-700">{formatDateTime(item.pago_em)}</td>
-                      <td className="px-5 py-4"><div className="flex justify-end gap-2">{podeGerenciar ? <>{item.status === "pendente" ? <button onClick={() => void marcarComoPago(item.id)} disabled={saving} className="rounded-xl bg-zinc-900 px-3 py-2 text-xs font-semibold text-white transition hover:opacity-95 disabled:opacity-50">Marcar paga</button> : null}{item.status !== "cancelado" ? <button onClick={() => void cancelarLancamento(item.id)} disabled={saving} className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-100 disabled:opacity-50">Cancelar</button> : null}</> : <span className="text-xs font-medium text-zinc-400">Somente leitura</span>}</div></td>
+                      <td className="px-5 py-4"><div className="flex justify-end gap-2">{podeGerenciar ? <>{normalizeStatusComissao(item.status) === "pendente" ? <button onClick={() => void marcarComoPago(item.id)} disabled={saving} className="rounded-xl bg-zinc-900 px-3 py-2 text-xs font-semibold text-white transition hover:opacity-95 disabled:opacity-50">Marcar pago</button> : null}{normalizeStatusComissao(item.status) !== "cancelado" ? <button onClick={() => void cancelarLancamento(item.id)} disabled={saving} className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-100 disabled:opacity-50">Cancelar</button> : null}</> : <span className="text-xs font-medium text-zinc-400">Somente leitura</span>}</div></td>
                     </tr>
                   );
                 })}

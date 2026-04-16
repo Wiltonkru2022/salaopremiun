@@ -1,6 +1,7 @@
+import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
 import { addDays, isAfter } from "date-fns";
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { verifyHeaderSecret } from "@/lib/auth/verify-secret";
 
 type PlanoSaasRow = {
@@ -14,16 +15,23 @@ type PlanoSaasRow = {
   ativo: boolean;
 };
 
+type WebhookRegistroRow = {
+  id: string;
+  should_process: boolean;
+  status_processamento: string;
+  tentativas: number;
+};
+
 function getSupabaseAdmin() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
   if (!supabaseUrl) {
-    throw new Error("NEXT_PUBLIC_SUPABASE_URL não configurada.");
+    throw new Error("NEXT_PUBLIC_SUPABASE_URL nao configurada.");
   }
 
   if (!serviceRoleKey) {
-    throw new Error("SUPABASE_SERVICE_ROLE_KEY não configurada.");
+    throw new Error("SUPABASE_SERVICE_ROLE_KEY nao configurada.");
   }
 
   return createClient(supabaseUrl, serviceRoleKey);
@@ -107,20 +115,72 @@ function toMiddayIso(dateOnly?: string | null) {
   return iso.toISOString();
 }
 
+function buildWebhookFingerprint(
+  event: string,
+  payment: Record<string, unknown>
+) {
+  const fingerprintSource = JSON.stringify({
+    event,
+    paymentId: String(payment.id || ""),
+    status: String(payment.status || ""),
+    billingType: String(payment.billingType || ""),
+    confirmedDate: String(payment.confirmedDate || ""),
+    paymentDate: String(payment.paymentDate || ""),
+    clientPaymentDate: String(payment.clientPaymentDate || ""),
+    dueDate: String(payment.dueDate || ""),
+    deleted: Boolean(payment.deleted),
+    value: String(payment.value || ""),
+  });
+
+  return createHash("sha256").update(fingerprintSource).digest("hex");
+}
+
+async function atualizarStatusEventoWebhook(
+  supabaseAdmin: SupabaseClient,
+  webhookEventId: string | null,
+  statusProcessamento: "processado" | "erro",
+  errorMessage?: string | null
+) {
+  if (!webhookEventId) return;
+
+  const agoraIso = new Date().toISOString();
+  const payload: Record<string, unknown> = {
+    status_processamento: statusProcessamento,
+    erro_mensagem: errorMessage || null,
+    updated_at: agoraIso,
+  };
+
+  if (statusProcessamento === "processado") {
+    payload.processado_em = agoraIso;
+  }
+
+  const { error } = await supabaseAdmin
+    .from("asaas_webhook_eventos")
+    .update(payload)
+    .eq("id", webhookEventId);
+
+  if (error) {
+    console.error("Erro ao atualizar log do webhook Asaas:", error);
+  }
+}
+
 export async function POST(req: Request) {
+  let supabaseAdmin: SupabaseClient | null = null;
+  let webhookEventId: string | null = null;
+
   try {
-    const supabaseAdmin = getSupabaseAdmin();
+    supabaseAdmin = getSupabaseAdmin();
 
     if (!validarTokenWebhook(req)) {
       return NextResponse.json(
-        { error: "Webhook não autorizado." },
+        { error: "Webhook nao autorizado." },
         { status: 401 }
       );
     }
 
     const body = await req.json();
     const event = String(body?.event || "");
-    const payment = body?.payment;
+    const payment = body?.payment as Record<string, unknown> | undefined;
 
     if (!payment?.id) {
       return NextResponse.json({
@@ -135,6 +195,42 @@ export async function POST(req: Request) {
     const paymentStatus = String(payment.status || "").toUpperCase();
     const agora = new Date();
     const agoraIso = agora.toISOString();
+    const webhookFingerprint = buildWebhookFingerprint(event, payment);
+
+    const { data: webhookRegistroData, error: webhookRegistroError } =
+      await supabaseAdmin.rpc("fn_registrar_asaas_webhook_evento", {
+        p_fingerprint: webhookFingerprint,
+        p_evento: event,
+        p_payment_id: paymentId,
+        p_payment_status: paymentStatus || null,
+        p_payload: body,
+      });
+
+    if (webhookRegistroError) {
+      console.error("Erro ao registrar evento do webhook:", webhookRegistroError);
+      return NextResponse.json(
+        { error: "Erro ao registrar evento do webhook." },
+        { status: 500 }
+      );
+    }
+
+    const webhookRegistro = Array.isArray(webhookRegistroData)
+      ? (webhookRegistroData[0] as WebhookRegistroRow | undefined)
+      : (webhookRegistroData as WebhookRegistroRow | null);
+
+    webhookEventId = webhookRegistro?.id || null;
+
+    if (!webhookRegistro?.should_process) {
+      return NextResponse.json({
+        ok: true,
+        ignored: true,
+        reason:
+          webhookRegistro?.status_processamento === "processado"
+            ? "duplicate_event"
+            : "event_in_processing",
+        event,
+      });
+    }
 
     const { data: cobranca, error: cobrancaError } = await supabaseAdmin
       .from("assinaturas_cobrancas")
@@ -160,14 +256,26 @@ export async function POST(req: Request) {
       .maybeSingle();
 
     if (cobrancaError) {
-      console.error("Erro ao buscar cobrança:", cobrancaError);
+      console.error("Erro ao buscar cobranca:", cobrancaError);
+      await atualizarStatusEventoWebhook(
+        supabaseAdmin,
+        webhookEventId,
+        "erro",
+        "Erro ao buscar cobranca."
+      );
       return NextResponse.json(
-        { error: "Erro ao buscar cobrança." },
+        { error: "Erro ao buscar cobranca." },
         { status: 500 }
       );
     }
 
     if (!cobranca) {
+      await atualizarStatusEventoWebhook(
+        supabaseAdmin,
+        webhookEventId,
+        "erro",
+        "charge_not_found"
+      );
       return NextResponse.json({
         ok: true,
         ignored: true,
@@ -176,8 +284,14 @@ export async function POST(req: Request) {
     }
 
     if (!cobranca.id_assinatura) {
+      await atualizarStatusEventoWebhook(
+        supabaseAdmin,
+        webhookEventId,
+        "erro",
+        "Cobranca sem id_assinatura vinculado."
+      );
       return NextResponse.json(
-        { error: "Cobrança sem id_assinatura vinculado." },
+        { error: "Cobranca sem id_assinatura vinculada." },
         { status: 500 }
       );
     }
@@ -203,6 +317,12 @@ export async function POST(req: Request) {
 
     if (assinaturaError || !assinatura) {
       console.error("Erro ao buscar assinatura:", assinaturaError);
+      await atualizarStatusEventoWebhook(
+        supabaseAdmin,
+        webhookEventId,
+        "erro",
+        "Erro ao buscar assinatura."
+      );
       return NextResponse.json(
         { error: "Erro ao buscar assinatura." },
         { status: 500 }
@@ -230,6 +350,12 @@ export async function POST(req: Request) {
 
       if (planoError) {
         console.error("Erro ao buscar plano no webhook:", planoError);
+        await atualizarStatusEventoWebhook(
+          supabaseAdmin,
+          webhookEventId,
+          "erro",
+          "Erro ao buscar plano."
+        );
         return NextResponse.json(
           { error: "Erro ao buscar plano." },
           { status: 500 }
@@ -240,9 +366,9 @@ export async function POST(req: Request) {
     }
 
     const statusCobrancaInterno = mapAsaasStatusToInternal(paymentStatus);
-
     const isEventoPago = shouldActivateAccess(event, billingType);
-    const cobrancaJaConfirmada = String(cobranca.status || "").toLowerCase() === "ativo";
+    const cobrancaJaConfirmada =
+      String(cobranca.status || "").toLowerCase() === "ativo";
     const eventoRegressivo =
       event === "PAYMENT_OVERDUE" ||
       event === "PAYMENT_RESTORED" ||
@@ -251,30 +377,38 @@ export async function POST(req: Request) {
       event === "PAYMENT_CREDIT_CARD_CAPTURE_REFUSED";
 
     if (cobrancaJaConfirmada && eventoRegressivo) {
+      await atualizarStatusEventoWebhook(
+        supabaseAdmin,
+        webhookEventId,
+        "processado"
+      );
       return NextResponse.json({
         ok: true,
         ignored: true,
-        reason: "Evento regressivo ignorado porque a cobranca ja esta confirmada.",
+        reason:
+          "Evento regressivo ignorado porque a cobranca ja esta confirmada.",
         event,
       });
     }
 
     const confirmedDateIso = isEventoPago
-      ? toMiddayIso(payment.confirmedDate) ||
-        toMiddayIso(payment.paymentDate) ||
-        toMiddayIso(payment.clientPaymentDate) ||
+      ? toMiddayIso(String(payment.confirmedDate || "")) ||
+        toMiddayIso(String(payment.paymentDate || "")) ||
+        toMiddayIso(String(payment.clientPaymentDate || "")) ||
         cobranca.confirmed_date ||
         agoraIso
-      : toMiddayIso(payment.confirmedDate) || cobranca.confirmed_date || null;
+      : toMiddayIso(String(payment.confirmedDate || "")) ||
+        cobranca.confirmed_date ||
+        null;
 
     const paymentDateIso = isEventoPago
-      ? toMiddayIso(payment.clientPaymentDate) ||
-        toMiddayIso(payment.paymentDate) ||
-        toMiddayIso(payment.confirmedDate) ||
+      ? toMiddayIso(String(payment.clientPaymentDate || "")) ||
+        toMiddayIso(String(payment.paymentDate || "")) ||
+        toMiddayIso(String(payment.confirmedDate || "")) ||
         cobranca.payment_date ||
         agoraIso
-      : toMiddayIso(payment.clientPaymentDate) ||
-        toMiddayIso(payment.paymentDate) ||
+      : toMiddayIso(String(payment.clientPaymentDate || "")) ||
+        toMiddayIso(String(payment.paymentDate || "")) ||
         cobranca.payment_date ||
         null;
 
@@ -294,9 +428,15 @@ export async function POST(req: Request) {
       .eq("id", cobranca.id);
 
     if (updateChargeError) {
-      console.error("Erro ao atualizar cobrança:", updateChargeError);
+      console.error("Erro ao atualizar cobranca:", updateChargeError);
+      await atualizarStatusEventoWebhook(
+        supabaseAdmin,
+        webhookEventId,
+        "erro",
+        "Erro ao atualizar cobranca."
+      );
       return NextResponse.json(
-        { error: "Erro ao atualizar cobrança." },
+        { error: "Erro ao atualizar cobranca." },
         { status: 500 }
       );
     }
@@ -364,6 +504,12 @@ export async function POST(req: Request) {
 
       if (updateAssinaturaError) {
         console.error("Erro ao atualizar assinatura:", updateAssinaturaError);
+        await atualizarStatusEventoWebhook(
+          supabaseAdmin,
+          webhookEventId,
+          "erro",
+          "Erro ao atualizar assinatura."
+        );
         return NextResponse.json(
           { error: "Erro ao atualizar assinatura." },
           { status: 500 }
@@ -385,13 +531,24 @@ export async function POST(req: Request) {
         .eq("id", assinatura.id_salao);
 
       if (updateSalaoError) {
-        console.error("Erro ao atualizar salão:", updateSalaoError);
+        console.error("Erro ao atualizar salao:", updateSalaoError);
+        await atualizarStatusEventoWebhook(
+          supabaseAdmin,
+          webhookEventId,
+          "erro",
+          "Erro ao atualizar salao."
+        );
         return NextResponse.json(
-          { error: "Erro ao atualizar salão." },
+          { error: "Erro ao atualizar salao." },
           { status: 500 }
         );
       }
 
+      await atualizarStatusEventoWebhook(
+        supabaseAdmin,
+        webhookEventId,
+        "processado"
+      );
       return NextResponse.json({ ok: true, updated: "paid" });
     }
 
@@ -435,6 +592,12 @@ export async function POST(req: Request) {
 
       if (updateAssinaturaError) {
         console.error("Erro ao atualizar assinatura:", updateAssinaturaError);
+        await atualizarStatusEventoWebhook(
+          supabaseAdmin,
+          webhookEventId,
+          "erro",
+          "Erro ao atualizar assinatura."
+        );
         return NextResponse.json(
           { error: "Erro ao atualizar assinatura." },
           { status: 500 }
@@ -451,19 +614,45 @@ export async function POST(req: Request) {
         .eq("id", assinatura.id_salao);
 
       if (updateSalaoError) {
-        console.error("Erro ao atualizar salão:", updateSalaoError);
+        console.error("Erro ao atualizar salao:", updateSalaoError);
+        await atualizarStatusEventoWebhook(
+          supabaseAdmin,
+          webhookEventId,
+          "erro",
+          "Erro ao atualizar salao."
+        );
         return NextResponse.json(
-          { error: "Erro ao atualizar salão." },
+          { error: "Erro ao atualizar salao." },
           { status: 500 }
         );
       }
 
+      await atualizarStatusEventoWebhook(
+        supabaseAdmin,
+        webhookEventId,
+        "processado"
+      );
       return NextResponse.json({ ok: true, updated: novoStatus });
     }
 
+    await atualizarStatusEventoWebhook(
+      supabaseAdmin,
+      webhookEventId,
+      "processado"
+    );
     return NextResponse.json({ ok: true, ignored: true, event });
   } catch (error) {
     console.error("Erro webhook:", error);
+
+    if (supabaseAdmin) {
+      await atualizarStatusEventoWebhook(
+        supabaseAdmin,
+        webhookEventId,
+        "erro",
+        error instanceof Error ? error.message : "Erro webhook"
+      );
+    }
+
     return NextResponse.json({ error: "Erro webhook" }, { status: 500 });
   }
 }

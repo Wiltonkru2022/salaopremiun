@@ -27,6 +27,17 @@ type Produto = {
 
 type Permissoes = Record<string, boolean>;
 
+type ProdutoProcessarResponse = {
+  ok: boolean;
+  idProduto?: string | null;
+  ativo?: boolean | null;
+  status?: string | null;
+};
+
+type ProdutoProcessarErrorResponse = {
+  error?: string;
+};
+
 export default function ProdutosPage() {
   const supabase = createClient();
   const router = useRouter();
@@ -150,6 +161,34 @@ export default function ProdutosPage() {
     void bootstrap();
   }, [bootstrap]);
 
+  async function processarProduto(params: {
+    acao: "salvar" | "alterar_status" | "excluir";
+    produto: Record<string, unknown>;
+  }) {
+    const response = await fetch("/api/produtos/processar", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        idSalao,
+        acao: params.acao,
+        produto: params.produto,
+      }),
+    });
+
+    const result = (await response.json().catch(() => ({}))) as Partial<
+      ProdutoProcessarResponse
+    > &
+      ProdutoProcessarErrorResponse;
+
+    if (!response.ok) {
+      throw new Error(result.error || "Erro ao processar produto.");
+    }
+
+    return result as ProdutoProcessarResponse;
+  }
+
   async function alternarStatus(produto: Produto) {
     if (!podeGerenciar) {
       setErro("Você não tem permissão para alterar status de produtos.");
@@ -164,16 +203,13 @@ export default function ProdutosPage() {
       const novoAtivo = !(produto.ativo ?? produto.status === "ativo");
       const novoStatus = novoAtivo ? "ativo" : "inativo";
 
-      const { error } = await supabase
-        .from("produtos")
-        .update({
+      await processarProduto({
+        acao: "alterar_status",
+        produto: {
+          id: produto.id,
           ativo: novoAtivo,
-          status: novoStatus,
-        })
-        .eq("id", produto.id)
-        .eq("id_salao", idSalao);
-
-      if (error) throw error;
+        },
+      });
 
       setProdutos((prev) =>
         prev.map((item) =>
@@ -206,17 +242,12 @@ export default function ProdutosPage() {
       setErro("");
       setMsg("");
 
-      await supabase.from("produtos_movimentacoes").delete().eq("id_produto", id);
-      await supabase.from("produto_servico_consumo").delete().eq("id_produto", id);
-      await supabase.from("produtos_alertas").delete().eq("id_produto", id);
-
-      const { error } = await supabase
-        .from("produtos")
-        .delete()
-        .eq("id", id)
-        .eq("id_salao", idSalao);
-
-      if (error) throw error;
+      await processarProduto({
+        acao: "excluir",
+        produto: {
+          id,
+        },
+      });
 
       setProdutos((prev) => prev.filter((item) => item.id !== id));
       setMsg("Produto excluído com sucesso.");

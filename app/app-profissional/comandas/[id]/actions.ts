@@ -69,7 +69,8 @@ async function recalcularTotaisComanda(idComanda: string, idSalao: string) {
   }
 
   const subtotal = (itens ?? []).reduce(
-    (acc: number, item: any) => acc + Number(item.valor_total || 0),
+    (acc: number, item: { valor_total?: number | string | null }) =>
+      acc + Number(item.valor_total || 0),
     0
   );
 

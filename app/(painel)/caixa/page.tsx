@@ -32,10 +32,8 @@ import type {
 import {
   agendamentosFiltradosBase,
   getJoinedName,
-  obterTaxaConfigurada,
   parseMoney,
 } from "@/components/caixa/utils";
-import { buildComandaItemPayload } from "@/lib/caixa/buildComandaItemPayload";
 import {
   carregarAcessoCaixa,
   carregarCatalogosCaixa,
@@ -44,15 +42,55 @@ import {
   carregarListasCaixa,
 } from "@/lib/caixa/loadCaixaData";
 import {
-  abrirSessaoCaixa,
   carregarSessaoCaixa,
-  fecharSessaoCaixa,
-  lancarMovimentacaoCaixa,
   type CaixaMovimentacao,
   type CaixaMovimentacaoTipo,
   type CaixaSessao,
 } from "@/lib/caixa/sessaoCaixa";
+import { obterTaxaConfigurada } from "@/lib/caixa/taxas";
 import { createClient } from "@/lib/supabase/client";
+
+type ProcessarComandaAcao =
+  | "salvar_base"
+  | "adicionar_item"
+  | "editar_item"
+  | "remover_item"
+  | "enviar_pagamento"
+  | "criar_por_agendamento";
+
+type ProcessarComandaResponse = {
+  ok: boolean;
+  idComanda?: string;
+  idItem?: string;
+  status?: string;
+  jaExistia?: boolean;
+};
+
+type ProcessarComandaErrorResponse = {
+  error?: string;
+};
+
+type ProcessarCaixaAcao =
+  | "abrir_caixa"
+  | "fechar_caixa"
+  | "lancar_movimentacao"
+  | "adicionar_pagamento"
+  | "remover_pagamento"
+  | "finalizar_comanda"
+  | "cancelar_comanda";
+
+type ProcessarCaixaResponse = {
+  ok: boolean;
+  warning?: string | null;
+  taxaPercentual?: number;
+  taxaValor?: number;
+  valorFinalCobrado?: number;
+  repassaTaxaCliente?: boolean;
+};
+
+type ProcessarCaixaErrorResponse = {
+  error?: string;
+};
 
 export default function CaixaPage() {
   const supabase = createClient();
@@ -64,7 +102,6 @@ export default function CaixaPage() {
   const [erroTela, setErroTela] = useState("");
   const [msg, setMsg] = useState("");
   const [idSalao, setIdSalao] = useState("");
-  const [idUsuario, setIdUsuario] = useState("");
 
   const [permissoes, setPermissoes] = useState<Permissoes | null>(null);
   const [acessoCarregado, setAcessoCarregado] = useState(false);
@@ -126,6 +163,85 @@ export default function CaixaPage() {
     !!permissoes?.caixa_editar || !!permissoes?.caixa_finalizar;
 
   const caixaAberto = caixaSchemaReady && sessaoCaixa?.status === "aberto";
+
+  async function processarComanda(params: {
+    acao: ProcessarComandaAcao;
+    item?: Record<string, unknown>;
+    desconto?: number;
+    acrescimo?: number;
+    status?: string;
+  }) {
+    const response = await fetch("/api/comandas/processar", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        idSalao,
+        acao: params.acao,
+        comanda: {
+          idComanda: comandaSelecionada?.id || null,
+          numero: comandaSelecionada?.numero || null,
+          idCliente: comandaSelecionada?.id_cliente || null,
+          status: params.status || comandaSelecionada?.status || "aberta",
+          observacoes: comandaSelecionada?.observacoes || null,
+          desconto:
+            params.desconto ?? Number(comandaSelecionada?.desconto || 0),
+          acrescimo:
+            params.acrescimo ?? Number(comandaSelecionada?.acrescimo || 0),
+        },
+        item: params.item,
+      }),
+    });
+
+    const result = (await response.json().catch(() => ({}))) as Partial<
+      ProcessarComandaResponse
+    > &
+      ProcessarComandaErrorResponse;
+
+    if (!response.ok) {
+      throw new Error(result.error || "Erro ao processar comanda.");
+    }
+
+    return result as ProcessarComandaResponse;
+  }
+
+  async function processarCaixa(params: {
+    acao: ProcessarCaixaAcao;
+    sessao?: Record<string, unknown>;
+    movimento?: Record<string, unknown>;
+    pagamento?: Record<string, unknown>;
+    motivo?: string | null;
+  }) {
+    const response = await fetch("/api/caixa/processar", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        idSalao,
+        acao: params.acao,
+        comanda: {
+          idComanda: comandaSelecionada?.id || null,
+        },
+        sessao: params.sessao,
+        movimento: params.movimento,
+        pagamento: params.pagamento,
+        motivo: params.motivo,
+      }),
+    });
+
+    const result = (await response.json().catch(() => ({}))) as Partial<
+      ProcessarCaixaResponse
+    > &
+      ProcessarCaixaErrorResponse;
+
+    if (!response.ok) {
+      throw new Error(result.error || "Erro ao processar o caixa.");
+    }
+
+    return result as ProcessarCaixaResponse;
+  }
 
   useEffect(() => {
     void init();
@@ -256,12 +372,12 @@ export default function CaixaPage() {
       setSaving(true);
       setErroTela("");
       setMsg("");
-      await abrirSessaoCaixa({
-        supabase,
-        idSalao,
-        idUsuario,
-        valorAbertura: payload.valorAbertura,
-        observacoes: payload.observacoes,
+      await processarCaixa({
+        acao: "abrir_caixa",
+        sessao: {
+          valorAbertura: payload.valorAbertura,
+          observacoes: payload.observacoes,
+        },
       });
       await carregarSessaoOperacional();
       setMsg("Caixa aberto. Agora as vendas podem ser recebidas.");
@@ -287,12 +403,13 @@ export default function CaixaPage() {
       setSaving(true);
       setErroTela("");
       setMsg("");
-      await fecharSessaoCaixa({
-        supabase,
-        idSessao: sessaoCaixa.id,
-        idUsuario,
-        valorFechamento: payload.valorFechamento,
-        observacoes: payload.observacoes,
+      await processarCaixa({
+        acao: "fechar_caixa",
+        sessao: {
+          idSessao: sessaoCaixa.id,
+          valorFechamento: payload.valorFechamento,
+          observacoes: payload.observacoes,
+        },
       });
       await carregarSessaoOperacional();
       setMsg("Caixa fechado com sucesso.");
@@ -326,15 +443,17 @@ export default function CaixaPage() {
       setSaving(true);
       setErroTela("");
       setMsg("");
-      await lancarMovimentacaoCaixa({
-        supabase,
-        idSalao,
-        idSessao: sessaoCaixa.id,
-        idUsuario,
-        tipo: payload.tipo,
-        valor: payload.valor,
-        descricao: payload.descricao,
-        idProfissional: payload.idProfissional,
+      await processarCaixa({
+        acao: "lancar_movimentacao",
+        sessao: {
+          idSessao: sessaoCaixa.id,
+        },
+        movimento: {
+          tipo: payload.tipo,
+          valor: payload.valor,
+          descricao: payload.descricao,
+          idProfissional: payload.idProfissional,
+        },
       });
       await carregarSessaoOperacional();
       setMsg(
@@ -361,7 +480,6 @@ export default function CaixaPage() {
 
       const salaoId = acesso.usuario.id_salao;
       setIdSalao(salaoId);
-      setIdUsuario(acesso.usuario.id);
 
       await Promise.all([
         carregarTudo(salaoId),
@@ -414,15 +532,14 @@ export default function CaixaPage() {
       setErroTela("");
       setMsg("");
 
-      const { data, error } = await supabase.rpc("fn_criar_comanda_por_agendamento", {
-        p_id_agendamento: agendamentoId,
+      const result = await processarComanda({
+        acao: "criar_por_agendamento",
+        item: {
+          id_agendamento: agendamentoId,
+        },
       });
 
-      if (error) {
-        throw new Error(error.message || "Erro ao criar comanda do agendamento.");
-      }
-
-      const idComanda = data?.id_comanda;
+      const idComanda = result.idComanda;
       if (!idComanda) {
         throw new Error("Nao foi possivel obter a comanda criada.");
       }
@@ -430,7 +547,7 @@ export default function CaixaPage() {
       await carregarTudo();
       await aplicarDetalheComanda(idComanda);
       setMsg(
-        data?.ja_existia
+        result.jaExistia
           ? "Comanda existente aberta com sucesso."
           : "Comanda criada a partir do agendamento."
       );
@@ -458,20 +575,10 @@ export default function CaixaPage() {
       const desconto = parseMoney(descontoInput);
       const acrescimo = parseMoney(acrescimoInput);
 
-      const { error } = await supabase
-        .from("comandas")
-        .update({
-          desconto,
-          acrescimo,
-        })
-        .eq("id", comandaSelecionada.id);
-
-      if (error) {
-        throw new Error("Erro ao atualizar desconto/acrescimo.");
-      }
-
-      await supabase.rpc("fn_recalcular_total_comanda", {
-        p_id_comanda: comandaSelecionada.id,
+      await processarComanda({
+        acao: "salvar_base",
+        desconto,
+        acrescimo,
       });
 
       await aplicarDetalheComanda(comandaSelecionada.id);
@@ -505,42 +612,15 @@ export default function CaixaPage() {
         throw new Error("Informe um valor de pagamento valido.");
       }
 
-      const taxa = obterTaxaConfigurada(formaPagamento, numeroParcelas, configCaixa);
-      const taxaValor = Number(((valorBase * taxa) / 100).toFixed(2));
-
-      const repassaTaxaCliente = Boolean(configCaixa?.repassa_taxa_cliente);
-      const valorFinalCobrado = repassaTaxaCliente
-        ? Number((valorBase + taxaValor).toFixed(2))
-        : valorBase;
-
-      const { error } = await supabase.from("comanda_pagamentos").insert({
-        id_salao: idSalao,
-        id_comanda: comandaSelecionada.id,
-        forma_pagamento: formaPagamento,
-        valor: valorFinalCobrado,
-        parcelas: numeroParcelas,
-        taxa_maquininha_percentual: taxa,
-        taxa_maquininha_valor: taxaValor,
-        observacoes: observacaoPagamento || null,
-      });
-
-      if (error) {
-        throw new Error(error.message || "Erro ao adicionar pagamento.");
-      }
-
-      if (sessaoCaixa) {
-        await lancarMovimentacaoCaixa({
-          supabase,
-          idSalao,
-          idSessao: sessaoCaixa.id,
-          idUsuario,
-          tipo: "venda",
-          valor: valorFinalCobrado,
-          descricao: `Pagamento da comanda #${comandaSelecionada.numero}`,
-          idComanda: comandaSelecionada.id,
+      const result = await processarCaixa({
+        acao: "adicionar_pagamento",
+        pagamento: {
           formaPagamento,
-        });
-      }
+          valorBase,
+          parcelas: numeroParcelas,
+          observacoes: observacaoPagamento || null,
+        },
+      });
 
       setValorPagamento("");
       setParcelas("1");
@@ -556,9 +636,12 @@ export default function CaixaPage() {
 
       await aplicarDetalheComanda(comandaSelecionada.id);
       await carregarSessaoOperacional();
+      await carregarTudo();
       setMsg(
-        repassaTaxaCliente && taxaValor > 0
-          ? `Pagamento adicionado com taxa repassada ao cliente (${taxaValor.toLocaleString(
+        result.repassaTaxaCliente && Number(result.taxaValor || 0) > 0
+          ? `Pagamento adicionado com taxa repassada ao cliente (${Number(
+              result.taxaValor || 0
+            ).toLocaleString(
               "pt-BR",
               {
                 style: "currency",
@@ -588,43 +671,21 @@ export default function CaixaPage() {
       setErroTela("");
       setMsg("");
 
-      const { error } = await supabase
-        .from("comanda_pagamentos")
-        .delete()
-        .eq("id", idPagamento)
-        .eq("id_comanda", comandaSelecionada.id);
-
-      if (error) {
-        throw new Error("Erro ao remover pagamento.");
-      }
+      await processarCaixa({
+        acao: "remover_pagamento",
+        pagamento: {
+          idPagamento,
+        },
+      });
 
       await aplicarDetalheComanda(comandaSelecionada.id);
+      await carregarSessaoOperacional();
       setMsg("Pagamento removido.");
     } catch (error: any) {
       console.error(error);
       setErroTela(error?.message || "Erro ao remover pagamento.");
     } finally {
       setSaving(false);
-    }
-  }
-
-  async function processarEstoqueAposFechamento(idComanda: string) {
-    const response = await fetch("/api/estoque/processar-comanda", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        idSalao,
-        idComanda,
-      }),
-    });
-
-    if (!response.ok) {
-      const result = await response.json().catch(() => null);
-      throw new Error(
-        result?.error || "nao foi possivel atualizar o estoque da comanda."
-      );
     }
   }
 
@@ -646,28 +707,14 @@ export default function CaixaPage() {
       }
 
       const numeroAtual = comandaSelecionada.numero;
-      const idComandaAtual = comandaSelecionada.id;
-
-      const { error } = await supabase.rpc("fn_fechar_comanda", {
-        p_id_comanda: idComandaAtual,
+      const result = await processarCaixa({
+        acao: "finalizar_comanda",
       });
 
-      if (error) {
-        throw new Error(error.message || "Erro ao finalizar comanda.");
-      }
-
-      let avisoEstoque = "";
-
-      try {
-        await processarEstoqueAposFechamento(idComandaAtual);
-      } catch (estoqueError: any) {
-        avisoEstoque =
-          estoqueError?.message || "nao foi possivel atualizar o estoque da venda.";
-      }
-
       await carregarTudo();
+      await carregarSessaoOperacional();
       limparComandaSelecionada();
-      const avisos = [avisoEstoque].filter(Boolean);
+      const avisos = [result.warning].filter(Boolean);
       setMsg(
         avisos.length > 0
           ? `Comanda #${numeroAtual} finalizada, mas ${avisos.join(" / ")}`
@@ -708,14 +755,10 @@ export default function CaixaPage() {
       setErroTela("");
       setMsg("");
 
-      const { error } = await supabase.rpc("fn_cancelar_comanda", {
-        p_id_comanda: comandaSelecionada.id,
-        p_motivo: motivoFinal,
+      await processarCaixa({
+        acao: "cancelar_comanda",
+        motivo: motivoFinal,
       });
-
-      if (error) {
-        throw new Error(error.message || "Erro ao cancelar comanda.");
-      }
 
       await carregarTudo();
       limparComandaSelecionada();
@@ -757,6 +800,12 @@ export default function CaixaPage() {
       mode: "edit",
       itemId: item.id,
       tipoItem: item.tipo_item,
+      catalogoId:
+        item.tipo_item === "servico"
+          ? item.id_servico || ""
+          : item.tipo_item === "produto"
+          ? item.id_produto || ""
+          : item.id_extra || "",
       descricao: item.descricao || "",
       quantidade: String(Number(item.quantidade || 1)),
       valorUnitario: Number(item.valor_unitario || 0).toLocaleString("pt-BR", {
@@ -788,8 +837,6 @@ export default function CaixaPage() {
 
       const quantidade = Math.max(Number(itemModal.quantidade || 1), 1);
       const valorUnitario = parseMoney(itemModal.valorUnitario);
-      const valorTotal = Number((quantidade * valorUnitario).toFixed(2));
-
       if (!itemModal.descricao.trim()) {
         throw new Error("Informe a descricao do item.");
       }
@@ -798,59 +845,41 @@ export default function CaixaPage() {
         throw new Error("Informe um valor unitario valido.");
       }
 
-      const payloadBase = await buildComandaItemPayload({
-        supabase,
-        idSalao,
-        idComanda: comandaSelecionada.id,
-        itemModal,
-        servicosCatalogo,
-        profissionaisCatalogo,
+      const itemPayload = {
+        idItem: itemModal.itemId,
+        tipo_item: itemModal.tipoItem,
+        id_servico:
+          itemModal.tipoItem === "servico" ? itemModal.catalogoId || null : null,
+        id_produto:
+          itemModal.tipoItem === "produto" ? itemModal.catalogoId || null : null,
+        descricao: itemModal.descricao.trim(),
         quantidade,
-        valorUnitario,
-        valorTotal,
-      });
+        valor_unitario: valorUnitario,
+        custo_total:
+          itemModal.tipoItem === "ajuste" || itemModal.tipoItem === "extra"
+            ? 0
+            : undefined,
+        id_profissional: itemModal.idProfissional || null,
+        id_assistente: itemModal.idAssistente || null,
+        origem: "caixa_manual",
+      };
 
-      if (itemModal.mode === "edit" && itemModal.itemId) {
-        const { error } = await supabase
-          .from("comanda_itens")
-          .update({
-            ...payloadBase,
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", itemModal.itemId)
-          .eq("id_comanda", comandaSelecionada.id);
-
-        if (error) {
-          console.error(error);
-          throw new Error(error.message || "Erro ao atualizar item.");
-        }
-
-        await supabase.rpc("fn_recalcular_total_comanda", {
-          p_id_comanda: comandaSelecionada.id,
-        });
-
-        await aplicarDetalheComanda(comandaSelecionada.id);
-        await carregarTudo();
-        fecharModalItem();
-        setMsg("Item atualizado com sucesso.");
-        return;
-      }
-
-      const { error } = await supabase.from("comanda_itens").insert(payloadBase);
-
-      if (error) {
-        console.error(error);
-        throw new Error(error.message || "Erro ao adicionar item.");
-      }
-
-      await supabase.rpc("fn_recalcular_total_comanda", {
-        p_id_comanda: comandaSelecionada.id,
+      await processarComanda({
+        acao:
+          itemModal.mode === "edit" && itemModal.itemId
+            ? "editar_item"
+            : "adicionar_item",
+        item: itemPayload,
       });
 
       await aplicarDetalheComanda(comandaSelecionada.id);
       await carregarTudo();
       fecharModalItem();
-      setMsg("Item adicionado com sucesso.");
+      setMsg(
+        itemModal.mode === "edit" && itemModal.itemId
+          ? "Item atualizado com sucesso."
+          : "Item adicionado com sucesso."
+      );
     } catch (error: any) {
       console.error(error);
       setErroTela(error?.message || "Erro ao salvar item da comanda.");
@@ -875,18 +904,11 @@ export default function CaixaPage() {
       setErroTela("");
       setMsg("");
 
-      const { error } = await supabase
-        .from("comanda_itens")
-        .delete()
-        .eq("id", idItem)
-        .eq("id_comanda", comandaSelecionada.id);
-
-      if (error) {
-        throw new Error(error.message || "Erro ao remover item.");
-      }
-
-      await supabase.rpc("fn_recalcular_total_comanda", {
-        p_id_comanda: comandaSelecionada.id,
+      await processarComanda({
+        acao: "remover_item",
+        item: {
+          idItem,
+        },
       });
 
       await aplicarDetalheComanda(comandaSelecionada.id);

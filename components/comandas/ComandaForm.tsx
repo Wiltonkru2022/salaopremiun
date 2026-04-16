@@ -7,11 +7,11 @@ import ComandaItemModal, {
   type ComandaItemModalPayload,
 } from "@/components/comandas/ComandaItemModal";
 import { getUsuarioLogado } from "@/lib/auth/getUsuarioLogado";
-import { calcularValorTotal, formatMoney, formatMoneyInput, parseMoneyToNumber } from "@/lib/utils/comanda";
 import {
-  buscarVinculoProfissionalServico,
-  resolverRegraComissaoServico,
-} from "@/lib/comissoes/regrasServico";
+  formatMoney,
+  formatMoneyInput,
+  parseMoneyToNumber,
+} from "@/lib/utils/comanda";
 
 type Cliente = {
   id: string;
@@ -65,6 +65,17 @@ type ComandaFormProps = {
   modo: "novo" | "editar";
 };
 
+type ProcessarComandaResponse = {
+  ok: boolean;
+  idComanda?: string;
+  idItem?: string;
+  status?: string;
+};
+
+type ProcessarComandaErrorResponse = {
+  error?: string;
+};
+
 function getErrorMessage(error: unknown, fallback: string) {
   return error instanceof Error && error.message ? error.message : fallback;
 }
@@ -97,7 +108,7 @@ export default function ComandaForm({ modo }: ComandaFormProps) {
   const [itens, setItens] = useState<ComandaItem[]>([]);
 
   useEffect(() => {
-    bootstrap();
+    void bootstrap();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [modo, comandaId]);
 
@@ -106,8 +117,14 @@ export default function ComandaForm({ modo }: ComandaFormProps) {
     [itens]
   );
 
-  const descontoNumero = useMemo(() => parseMoneyToNumber(desconto), [desconto]);
-  const acrescimoNumero = useMemo(() => parseMoneyToNumber(acrescimo), [acrescimo]);
+  const descontoNumero = useMemo(
+    () => parseMoneyToNumber(desconto),
+    [desconto]
+  );
+  const acrescimoNumero = useMemo(
+    () => parseMoneyToNumber(acrescimo),
+    [acrescimo]
+  );
 
   const total = useMemo(
     () => Number((subtotal - descontoNumero + acrescimoNumero).toFixed(2)),
@@ -124,137 +141,181 @@ export default function ComandaForm({ modo }: ComandaFormProps) {
     }
   }
 
-async function bootstrap() {
-  try {
-    setLoading(true);
-    setErro("");
-    setMsg("");
-
-    const usuarioLogado = await getUsuarioLogado();
-
-    if (!usuarioLogado) {
-      throw new Error("Usuário não autenticado.");
-    }
-
-    if (!usuarioLogado.idSalao) {
-      throw new Error("Não foi possível identificar o salão.");
-    }
-
-    setIdSalao(usuarioLogado.idSalao);
-
-    const [
-      clientesRes,
-      profissionaisRes,
-      assistentesRes,
-      servicosRes,
-      produtosRes,
-    ] = await Promise.all([
-      supabase
-        .from("clientes")
-        .select("id, nome")
-        .eq("id_salao", usuarioLogado.idSalao)
-        .eq("ativo", true)
-        .order("nome", { ascending: true }),
-
-      supabase
-        .from("profissionais")
-        .select("id, nome, comissao_percentual, tipo_profissional")
-        .eq("id_salao", usuarioLogado.idSalao)
-        .eq("ativo", true)
-        .order("nome", { ascending: true }),
-
-      supabase
-        .from("profissional_assistentes")
-        .select("id_profissional, id_assistente")
-        .eq("id_salao", usuarioLogado.idSalao)
-        .eq("ativo", true),
-
-      supabase
-        .from("servicos")
-        .select(`
-          id,
-          nome,
-          preco,
-          preco_padrao,
-          custo_produto,
-          comissao_percentual,
-          comissao_percentual_padrao,
-          comissao_assistente_percentual,
-          base_calculo,
-          desconta_taxa_maquininha
-        `)
-        .eq("id_salao", usuarioLogado.idSalao)
-        .eq("ativo", true)
-        .order("nome", { ascending: true }),
-
-      supabase
-        .from("produtos")
-        .select(`
-          id,
-          nome,
-          preco_venda,
-          custo_real,
-          comissao_revenda_percentual
-        `)
-        .eq("id_salao", usuarioLogado.idSalao)
-        .eq("ativo", true)
-        .order("nome", { ascending: true }),
-    ]);
-
-    if (clientesRes.error) throw clientesRes.error;
-    if (profissionaisRes.error) throw profissionaisRes.error;
-    if (assistentesRes.error) throw assistentesRes.error;
-    if (servicosRes.error) throw servicosRes.error;
-    if (produtosRes.error) throw produtosRes.error;
-
-    const assistentesPorProfissional = new Map<string, string[]>();
-    ((assistentesRes.data || []) as {
-      id_profissional: string | null;
-      id_assistente: string | null;
-    }[]).forEach((vinculo) => {
-      if (!vinculo.id_profissional || !vinculo.id_assistente) return;
-
-      const lista = assistentesPorProfissional.get(vinculo.id_profissional) || [];
-      lista.push(vinculo.id_assistente);
-      assistentesPorProfissional.set(vinculo.id_profissional, lista);
+  async function processarComanda(
+    acao: "salvar_base" | "adicionar_item" | "remover_item" | "enviar_pagamento",
+    item?: Partial<ComandaItemModalPayload> & { idItem?: string | null }
+  ) {
+    const response = await fetch("/api/comandas/processar", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        idSalao,
+        acao,
+        comanda: {
+          idComanda: modo === "editar" ? comandaId : null,
+          numero,
+          idCliente: clienteId || null,
+          status,
+          observacoes,
+          desconto: descontoNumero,
+          acrescimo: acrescimoNumero,
+        },
+        item,
+      }),
     });
 
-    const profissionaisComAssistentes = ((profissionaisRes.data || []) as Profissional[]).map(
-      (profissional) => ({
+    const result = (await response.json().catch(() => ({}))) as Partial<
+      ProcessarComandaResponse
+    > &
+      ProcessarComandaErrorResponse;
+
+    if (!response.ok) {
+      throw new Error(result.error || "Erro ao processar comanda.");
+    }
+
+    return result as ProcessarComandaResponse;
+  }
+
+  async function bootstrap() {
+    try {
+      setLoading(true);
+      setErro("");
+      setMsg("");
+
+      const usuarioLogado = await getUsuarioLogado();
+
+      if (!usuarioLogado) {
+        throw new Error("Usuario nao autenticado.");
+      }
+
+      if (!usuarioLogado.idSalao) {
+        throw new Error("Nao foi possivel identificar o salao.");
+      }
+
+      setIdSalao(usuarioLogado.idSalao);
+
+      const [
+        clientesRes,
+        profissionaisRes,
+        assistentesRes,
+        servicosRes,
+        produtosRes,
+      ] = await Promise.all([
+        supabase
+          .from("clientes")
+          .select("id, nome")
+          .eq("id_salao", usuarioLogado.idSalao)
+          .eq("ativo", true)
+          .order("nome", { ascending: true }),
+
+        supabase
+          .from("profissionais")
+          .select("id, nome, comissao_percentual, tipo_profissional")
+          .eq("id_salao", usuarioLogado.idSalao)
+          .eq("ativo", true)
+          .order("nome", { ascending: true }),
+
+        supabase
+          .from("profissional_assistentes")
+          .select("id_profissional, id_assistente")
+          .eq("id_salao", usuarioLogado.idSalao)
+          .eq("ativo", true),
+
+        supabase
+          .from("servicos")
+          .select(
+            `
+              id,
+              nome,
+              preco,
+              preco_padrao,
+              custo_produto,
+              comissao_percentual,
+              comissao_percentual_padrao,
+              comissao_assistente_percentual,
+              base_calculo,
+              desconta_taxa_maquininha
+            `
+          )
+          .eq("id_salao", usuarioLogado.idSalao)
+          .eq("ativo", true)
+          .order("nome", { ascending: true }),
+
+        supabase
+          .from("produtos")
+          .select(
+            `
+              id,
+              nome,
+              preco_venda,
+              custo_real,
+              comissao_revenda_percentual
+            `
+          )
+          .eq("id_salao", usuarioLogado.idSalao)
+          .eq("ativo", true)
+          .order("nome", { ascending: true }),
+      ]);
+
+      if (clientesRes.error) throw clientesRes.error;
+      if (profissionaisRes.error) throw profissionaisRes.error;
+      if (assistentesRes.error) throw assistentesRes.error;
+      if (servicosRes.error) throw servicosRes.error;
+      if (produtosRes.error) throw produtosRes.error;
+
+      const assistentesPorProfissional = new Map<string, string[]>();
+      (
+        (assistentesRes.data || []) as {
+          id_profissional: string | null;
+          id_assistente: string | null;
+        }[]
+      ).forEach((vinculo) => {
+        if (!vinculo.id_profissional || !vinculo.id_assistente) return;
+
+        const lista =
+          assistentesPorProfissional.get(vinculo.id_profissional) || [];
+        lista.push(vinculo.id_assistente);
+        assistentesPorProfissional.set(vinculo.id_profissional, lista);
+      });
+
+      const profissionaisComAssistentes = (
+        (profissionaisRes.data || []) as Profissional[]
+      ).map((profissional) => ({
         ...profissional,
         assistentes_ids: assistentesPorProfissional.get(profissional.id) || [],
-      })
-    );
+      }));
 
-    setClientes((clientesRes.data as Cliente[]) || []);
-    setProfissionais(profissionaisComAssistentes);
-    setServicos((servicosRes.data as Servico[]) || []);
-    setProdutos((produtosRes.data as Produto[]) || []);
+      setClientes((clientesRes.data as Cliente[]) || []);
+      setProfissionais(profissionaisComAssistentes);
+      setServicos((servicosRes.data as Servico[]) || []);
+      setProdutos((produtosRes.data as Produto[]) || []);
 
-    if (modo === "novo") {
-      const { data: ultimaComandaRows, error: ultimaError } = await supabase
-        .from("comandas")
-        .select("numero")
-        .eq("id_salao", usuarioLogado.idSalao)
-        .order("numero", { ascending: false })
-        .limit(1);
+      if (modo === "novo") {
+        const { data: ultimaComandaRows, error: ultimaError } = await supabase
+          .from("comandas")
+          .select("numero")
+          .eq("id_salao", usuarioLogado.idSalao)
+          .order("numero", { ascending: false })
+          .limit(1);
 
-      if (ultimaError) throw ultimaError;
+        if (ultimaError) throw ultimaError;
 
-      const ultimoNumero = ultimaComandaRows?.[0]?.numero || 0;
-      setNumero(ultimoNumero + 1);
+        const ultimoNumero = ultimaComandaRows?.[0]?.numero || 0;
+        setNumero(ultimoNumero + 1);
+      }
+
+      if (modo === "editar" && comandaId) {
+        await carregarComanda(comandaId, usuarioLogado.idSalao);
+      }
+    } catch (error: unknown) {
+      console.error(error);
+      setErro(getErrorMessage(error, "Erro ao carregar comanda."));
+    } finally {
+      setLoading(false);
     }
-
-    if (modo === "editar" && comandaId) {
-      await carregarComanda(comandaId, usuarioLogado.idSalao);
-    }
-  } catch (error: unknown) {
-    console.error(error);
-    setErro(getErrorMessage(error, "Erro ao carregar comanda."));
-  } finally {
-    setLoading(false);
   }
-}
 
   async function carregarComanda(id: string, salaoId: string) {
     const { data: comanda, error } = await supabase
@@ -265,7 +326,7 @@ async function bootstrap() {
       .maybeSingle();
 
     if (error) throw error;
-    if (!comanda) throw new Error("Comanda não encontrada.");
+    if (!comanda) throw new Error("Comanda nao encontrada.");
 
     setNumero(comanda.numero);
     setClienteId(comanda.id_cliente || "");
@@ -274,59 +335,21 @@ async function bootstrap() {
     setDesconto(Number(comanda.desconto || 0).toFixed(2).replace(".", ","));
     setAcrescimo(Number(comanda.acrescimo || 0).toFixed(2).replace(".", ","));
 
-    const { data: itensRows, error: itensError } = await supabase
-      .from("comanda_itens")
-      .select("*")
-      .eq("id_comanda", id)
-      .eq("ativo", true)
-      .order("created_at", { ascending: true });
-
-    if (itensError) throw itensError;
-
-    setItens((itensRows as ComandaItem[]) || []);
+    await recarregarItens(id);
   }
 
   async function salvarComandaBase() {
-    if (!numero) throw new Error("Número da comanda não definido.");
+    if (!numero) throw new Error("Numero da comanda nao definido.");
     if (modo === "editar") {
       exigirComandaEditavel();
     }
 
-    const payload = {
-      id_salao: idSalao,
-      numero,
-      id_cliente: clienteId || null,
-      status,
-      observacoes: observacoes || null,
-      subtotal,
-      desconto: descontoNumero,
-      acrescimo: acrescimoNumero,
-      total,
-    };
-
-    if (modo === "novo") {
-      const { data, error } = await supabase
-        .from("comandas")
-        .insert(payload)
-        .select("id")
-        .limit(1);
-
-      if (error) throw error;
-
-      const novoId = data?.[0]?.id;
-      if (!novoId) throw new Error("Não foi possível criar a comanda.");
-
-      return novoId;
+    const result = await processarComanda("salvar_base");
+    if (!result.idComanda) {
+      throw new Error("Nao foi possivel salvar a comanda.");
     }
 
-    const { error } = await supabase
-      .from("comandas")
-      .update(payload)
-      .eq("id", comandaId)
-      .eq("id_salao", idSalao);
-
-    if (error) throw error;
-    return comandaId;
+    return result.idComanda;
   }
 
   async function handleSalvar() {
@@ -354,86 +377,15 @@ async function bootstrap() {
   async function handleAdicionarItem(payload: ComandaItemModalPayload) {
     try {
       exigirComandaEditavel();
+      setErro("");
+      setMsg("");
 
-      const id = modo === "novo" ? await salvarComandaBase() : comandaId;
-      if (!id) throw new Error("Comanda inválida.");
+      const result = await processarComanda("adicionar_item", payload);
+      const id = result.idComanda;
 
-      const quantidade = Number(payload.quantidade || 1);
-      const valorUnitario = Number(payload.valor_unitario || 0);
-      const valorTotal = calcularValorTotal(quantidade, valorUnitario);
-      let regraServico: ReturnType<typeof resolverRegraComissaoServico> | null = null;
-
-      if (payload.tipo_item === "servico") {
-        const servicoSelecionado = servicos.find((item) => item.id === payload.id_servico);
-        const profissionalSelecionado = profissionais.find(
-          (item) => item.id === payload.id_profissional
-        );
-
-        if (
-          profissionalSelecionado &&
-          String(profissionalSelecionado.tipo_profissional || "profissional").toLowerCase() ===
-            "assistente"
-        ) {
-          throw new Error("Selecione um profissional principal, nao um assistente.");
-        }
-
-        if (
-          payload.id_assistente &&
-          !profissionalSelecionado?.assistentes_ids?.includes(payload.id_assistente)
-        ) {
-          throw new Error("Assistente nao vinculado ao profissional selecionado.");
-        }
-
-        const vinculo =
-          payload.id_servico && payload.id_profissional
-            ? await buscarVinculoProfissionalServico({
-                supabase,
-                idProfissional: payload.id_profissional,
-                idServico: payload.id_servico,
-              })
-            : null;
-
-        regraServico = resolverRegraComissaoServico({
-          servico: servicoSelecionado,
-          profissional: profissionalSelecionado,
-          vinculo,
-        });
+      if (!id) {
+        throw new Error("Comanda invalida.");
       }
-
-      const itemPayload = {
-        id_salao: idSalao,
-        id_comanda: id,
-        tipo_item: payload.tipo_item,
-        id_agendamento: payload.id_agendamento || null,
-        id_servico: payload.id_servico || null,
-        id_produto: payload.id_produto || null,
-        descricao: payload.descricao,
-        quantidade,
-        valor_unitario: valorUnitario,
-        valor_total: valorTotal,
-        custo_total: Number(payload.custo_total || 0),
-        id_profissional: payload.id_profissional || null,
-        id_assistente: payload.id_assistente || null,
-        comissao_percentual_aplicada: regraServico
-          ? regraServico.comissaoPercentual
-          : Number(payload.comissao_percentual_aplicada ?? 0),
-        comissao_valor_aplicado: 0,
-        comissao_assistente_percentual_aplicada: regraServico
-          ? regraServico.comissaoAssistentePercentual
-          : Number(payload.comissao_assistente_percentual_aplicada ?? 0),
-        comissao_assistente_valor_aplicado: 0,
-        base_calculo_aplicada: regraServico
-          ? regraServico.baseCalculo
-          : payload.base_calculo_aplicada || "bruto",
-        desconta_taxa_maquininha_aplicada: regraServico
-          ? regraServico.descontaTaxaMaquininha
-          : Boolean(payload.desconta_taxa_maquininha_aplicada ?? false),
-        origem: "manual",
-        observacoes: payload.observacoes || null,
-      };
-
-      const { error } = await supabase.from("comanda_itens").insert(itemPayload);
-      if (error) throw error;
 
       await recarregarItens(id);
 
@@ -451,27 +403,12 @@ async function bootstrap() {
       .from("comanda_itens")
       .select("*")
       .eq("id_comanda", id)
+      .eq("ativo", true)
       .order("created_at", { ascending: true });
 
     if (itensError) throw itensError;
 
     setItens((itensRows as ComandaItem[]) || []);
-
-    const novoSubtotal = ((itensRows as ComandaItem[] | null) || []).reduce(
-      (acc, item) => acc + Number(item.valor_total || 0),
-      0
-    );
-
-    await supabase
-      .from("comandas")
-      .update({
-        subtotal: novoSubtotal,
-        desconto: descontoNumero,
-        acrescimo: acrescimoNumero,
-        total: Number((novoSubtotal - descontoNumero + acrescimoNumero).toFixed(2)),
-      })
-      .eq("id", id)
-      .eq("id_salao", idSalao);
   }
 
   async function removerItem(itemId: string) {
@@ -481,14 +418,7 @@ async function bootstrap() {
       const confirmar = window.confirm("Remover este item da comanda?");
       if (!confirmar) return;
 
-      const { error } = await supabase
-        .from("comanda_itens")
-        .delete()
-        .eq("id", itemId)
-        .eq("id_salao", idSalao);
-
-      if (error) throw error;
-
+      await processarComanda("remover_item", { idItem: itemId });
       await recarregarItens(comandaId);
     } catch (error: unknown) {
       console.error(error);
@@ -502,19 +432,7 @@ async function bootstrap() {
 
       if (!comandaId) throw new Error("Salve a comanda antes de fechar.");
 
-      const { error } = await supabase
-        .from("comandas")
-        .update({
-          status: "aguardando_pagamento",
-          subtotal,
-          desconto: descontoNumero,
-          acrescimo: acrescimoNumero,
-          total,
-        })
-        .eq("id", comandaId)
-        .eq("id_salao", idSalao);
-
-      if (error) throw error;
+      await processarComanda("enviar_pagamento");
 
       setStatus("aguardando_pagamento");
       setMsg("Comanda enviada para o caixa.");
@@ -545,17 +463,20 @@ async function bootstrap() {
         produtos={produtos}
       />
 
-    <div className="bg-white">
+      <div className="bg-white">
         <div className="mx-auto max-w-7xl space-y-6">
-        <div className="rounded-3xl border border-zinc-200 bg-white p-6 text-zinc-950 shadow-sm">
+          <div className="rounded-3xl border border-zinc-200 bg-white p-6 text-zinc-950 shadow-sm">
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
               <div>
-                <p className="text-sm uppercase tracking-[0.25em] text-zinc-300">Comanda</p>
+                <p className="text-sm uppercase tracking-[0.25em] text-zinc-300">
+                  Comanda
+                </p>
                 <h1 className="mt-2 text-2xl font-bold md:text-3xl">
                   {modo === "novo" ? "Nova Comanda" : `Comanda #${numero}`}
                 </h1>
-          <p className="mt-2 text-sm text-zinc-500">
-                  Controle atendimento, consumo, serviços, produtos e fechamento.
+                <p className="mt-2 text-sm text-zinc-500">
+                  Controle atendimento, consumo, servicos, produtos e
+                  fechamento.
                 </p>
               </div>
 
@@ -579,7 +500,9 @@ async function bootstrap() {
 
           {comandaBloqueada ? (
             <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-              Esta comanda esta {status}. Edicao de itens, valores e envio para pagamento fica bloqueada para manter o caixa e as comissoes consistentes.
+              Esta comanda esta {status}. Edicao de itens, valores e envio para
+              pagamento fica bloqueada para manter o caixa e as comissoes
+              consistentes.
             </div>
           ) : null}
 
@@ -588,7 +511,9 @@ async function bootstrap() {
               <div className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm">
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <div>
-                    <label className="mb-1 block text-sm font-semibold text-zinc-700">Cliente</label>
+                    <label className="mb-1 block text-sm font-semibold text-zinc-700">
+                      Cliente
+                    </label>
                     <select
                       value={clienteId}
                       onChange={(e) => setClienteId(e.target.value)}
@@ -596,16 +521,18 @@ async function bootstrap() {
                       className="w-full rounded-2xl border border-zinc-300 px-4 py-3"
                     >
                       <option value="">Selecione</option>
-                      {clientes.map((c) => (
-                        <option key={c.id} value={c.id}>
-                          {c.nome}
+                      {clientes.map((cliente) => (
+                        <option key={cliente.id} value={cliente.id}>
+                          {cliente.nome}
                         </option>
                       ))}
                     </select>
                   </div>
 
                   <div>
-                    <label className="mb-1 block text-sm font-semibold text-zinc-700">Status</label>
+                    <label className="mb-1 block text-sm font-semibold text-zinc-700">
+                      Status
+                    </label>
                     <select
                       value={status}
                       onChange={(e) => setStatus(e.target.value)}
@@ -614,14 +541,22 @@ async function bootstrap() {
                     >
                       <option value="aberta">Aberta</option>
                       <option value="em_atendimento">Em atendimento</option>
-                      <option value="aguardando_pagamento">Aguardando pagamento</option>
-                      <option value="fechada" disabled>Fechada</option>
-                      <option value="cancelada" disabled>Cancelada</option>
+                      <option value="aguardando_pagamento">
+                        Aguardando pagamento
+                      </option>
+                      <option value="fechada" disabled>
+                        Fechada
+                      </option>
+                      <option value="cancelada" disabled>
+                        Cancelada
+                      </option>
                     </select>
                   </div>
 
                   <div className="md:col-span-2">
-                    <label className="mb-1 block text-sm font-semibold text-zinc-700">Observações</label>
+                    <label className="mb-1 block text-sm font-semibold text-zinc-700">
+                      Observacoes
+                    </label>
                     <textarea
                       rows={3}
                       value={observacoes}
@@ -635,7 +570,9 @@ async function bootstrap() {
 
               <div className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm">
                 <div className="mb-4 flex items-center justify-between">
-                  <h2 className="text-xl font-bold text-zinc-900">Itens da comanda</h2>
+                  <h2 className="text-xl font-bold text-zinc-900">
+                    Itens da comanda
+                  </h2>
 
                   <button
                     type="button"
@@ -666,7 +603,8 @@ async function bootstrap() {
                             {item.descricao}
                           </div>
                           <div className="mt-1 text-sm text-zinc-500">
-                            Qtd: {Number(item.quantidade).toFixed(2)} • Unit: R$ {Number(item.valor_unitario).toFixed(2)}
+                            Qtd: {Number(item.quantidade).toFixed(2)} • Unit: R${" "}
+                            {Number(item.valor_unitario).toFixed(2)}
                           </div>
                         </div>
 
@@ -682,7 +620,7 @@ async function bootstrap() {
 
                           <button
                             type="button"
-                            onClick={() => removerItem(item.id)}
+                            onClick={() => void removerItem(item.id)}
                             disabled={comandaBloqueada}
                             className="rounded-xl border border-red-300 bg-red-50 px-3 py-2 text-sm font-semibold text-red-600 disabled:cursor-not-allowed disabled:opacity-50"
                           >
@@ -704,7 +642,9 @@ async function bootstrap() {
                   <Info label="Subtotal" value={formatMoney(subtotal)} />
 
                   <div>
-                    <label className="mb-1 block text-sm font-semibold text-zinc-700">Desconto</label>
+                    <label className="mb-1 block text-sm font-semibold text-zinc-700">
+                      Desconto
+                    </label>
                     <input
                       value={desconto}
                       onChange={(e) => setDesconto(formatMoneyInput(e.target.value))}
@@ -714,10 +654,14 @@ async function bootstrap() {
                   </div>
 
                   <div>
-                    <label className="mb-1 block text-sm font-semibold text-zinc-700">Acréscimo</label>
+                    <label className="mb-1 block text-sm font-semibold text-zinc-700">
+                      Acrescimo
+                    </label>
                     <input
                       value={acrescimo}
-                      onChange={(e) => setAcrescimo(formatMoneyInput(e.target.value))}
+                      onChange={(e) =>
+                        setAcrescimo(formatMoneyInput(e.target.value))
+                      }
                       disabled={comandaBloqueada}
                       className="w-full rounded-2xl border border-zinc-300 px-4 py-3"
                     />
@@ -729,16 +673,20 @@ async function bootstrap() {
                 <div className="mt-6 space-y-3">
                   <button
                     type="button"
-                    onClick={handleSalvar}
+                    onClick={() => void handleSalvar()}
                     disabled={saving || comandaBloqueada}
                     className="w-full rounded-2xl bg-zinc-900 px-5 py-3 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    {saving ? "Salvando..." : modo === "novo" ? "Salvar comanda" : "Atualizar comanda"}
+                    {saving
+                      ? "Salvando..."
+                      : modo === "novo"
+                      ? "Salvar comanda"
+                      : "Atualizar comanda"}
                   </button>
 
                   <button
                     type="button"
-                    onClick={fecharComanda}
+                    onClick={() => void fecharComanda()}
                     disabled={saving || comandaBloqueada}
                     className="w-full rounded-2xl border border-zinc-300 bg-white px-5 py-3 font-semibold text-zinc-700 disabled:cursor-not-allowed disabled:opacity-50"
                   >
@@ -765,7 +713,9 @@ async function bootstrap() {
 function Info({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3">
-      <div className="text-xs uppercase tracking-wide text-zinc-500">{label}</div>
+      <div className="text-xs uppercase tracking-wide text-zinc-500">
+        {label}
+      </div>
       <div className="mt-1 text-lg font-bold text-zinc-900">{value}</div>
     </div>
   );

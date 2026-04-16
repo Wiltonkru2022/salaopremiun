@@ -38,6 +38,16 @@ import {
   sanitizePermissoesDb,
 } from "@/lib/auth/permissions";
 
+type VendaProcessarResponse = {
+  ok: boolean;
+  detalhe?: Partial<VendaDetalhe> | null;
+  warning?: string | null;
+};
+
+type VendaProcessarErrorResponse = {
+  error?: string;
+};
+
 export default function VendasPage() {
   const supabase = createClient();
   const router = useRouter();
@@ -173,9 +183,11 @@ export default function VendasPage() {
       }
 
       await carregarVendas(usuario.id_salao);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error(error);
-      setErroTela(error?.message || "Erro ao carregar vendas.");
+      setErroTela(
+        error instanceof Error ? error.message : "Erro ao carregar vendas."
+      );
     } finally {
       setLoading(false);
     }
@@ -272,33 +284,61 @@ export default function VendasPage() {
     setVendasBusca((buscaData as VendaBuscaRow[]) || []);
   }
 
+  async function processarVenda(params: {
+    acao: "detalhes" | "reabrir" | "excluir";
+    idComanda: string;
+    motivo?: string | null;
+  }) {
+    const response = await fetch("/api/vendas/processar", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        idSalao,
+        acao: params.acao,
+        idComanda: params.idComanda,
+        motivo: params.motivo || null,
+      }),
+    });
+
+    const result = (await response.json().catch(() => ({}))) as Partial<
+      VendaProcessarResponse
+    > &
+      VendaProcessarErrorResponse;
+
+    if (!response.ok) {
+      throw new Error(result.error || "Erro ao processar venda.");
+    }
+
+    return result as VendaProcessarResponse;
+  }
+
   async function abrirDetalhes(venda: ComandaVenda) {
     try {
       setSaving(true);
       setErroTela("");
       setVendaSelecionada(venda);
 
-      const { data, error } = await supabase.rpc("fn_detalhes_venda", {
-        p_id_comanda: venda.id,
+      const data = await processarVenda({
+        acao: "detalhes",
+        idComanda: venda.id,
       });
 
-      if (error) {
-        console.error(error);
-        throw new Error(error.message || "Erro ao carregar detalhes da venda.");
-      }
-
       setDetalheVenda({
-        comanda: (data?.comanda as ComandaVenda) || venda,
-        itens: (data?.itens as ItemVenda[]) || [],
-        pagamentos: (data?.pagamentos as Pagamento[]) || [],
-        agendamentos: (data?.agendamentos as any[]) || [],
-        comissoes: (data?.comissoes as any[]) || [],
+        comanda: (data.detalhe?.comanda as ComandaVenda) || venda,
+        itens: (data.detalhe?.itens as ItemVenda[]) || [],
+        pagamentos: (data.detalhe?.pagamentos as Pagamento[]) || [],
+        agendamentos: (data.detalhe?.agendamentos as unknown[]) || [],
+        comissoes: (data.detalhe?.comissoes as unknown[]) || [],
       });
 
       setDetalheOpen(true);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error(error);
-      setErroTela(error?.message || "Erro ao abrir detalhes.");
+      setErroTela(
+        error instanceof Error ? error.message : "Erro ao abrir detalhes."
+      );
     } finally {
       setSaving(false);
     }
@@ -316,26 +356,6 @@ export default function VendasPage() {
     setExcluirModalOpen(true);
   }
 
-  async function reverterEstoqueComanda(idComanda: string) {
-    const response = await fetch("/api/estoque/reverter-comanda", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        idSalao,
-        idComanda,
-      }),
-    });
-
-    if (!response.ok) {
-      const result = await response.json().catch(() => null);
-      throw new Error(
-        result?.error || "nao foi possivel devolver o estoque da venda."
-      );
-    }
-  }
-
   async function confirmarReabrirVenda() {
     if (!vendaSelecionada) return;
 
@@ -344,28 +364,13 @@ export default function VendasPage() {
       setErroTela("");
       setMsg("");
 
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      const { error } = await supabase.rpc("fn_reabrir_venda_para_caixa", {
-        p_id_comanda: vendaSelecionada.id,
-        p_motivo: motivoReabertura || null,
-        p_reopened_by: user?.id || null,
+      const result = await processarVenda({
+        acao: "reabrir",
+        idComanda: vendaSelecionada.id,
+        motivo: motivoReabertura || null,
       });
 
-      if (error) {
-        throw new Error(error.message || "Erro ao reabrir venda.");
-      }
-
-      let avisoEstoque = "";
-
-      try {
-        await reverterEstoqueComanda(vendaSelecionada.id);
-      } catch (estoqueError: any) {
-        avisoEstoque =
-          estoqueError?.message || "nao foi possivel devolver o estoque da venda.";
-      }
+      const avisoEstoque = result.warning || "";
 
       setReabrirModalOpen(false);
       setMotivoReabertura("");
@@ -379,9 +384,11 @@ export default function VendasPage() {
       if (!avisoEstoque) {
         router.push(`/caixa?comanda_id=${vendaSelecionada.id}`);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error(error);
-      setErroTela(error?.message || "Erro ao reabrir venda.");
+      setErroTela(
+        error instanceof Error ? error.message : "Erro ao reabrir venda."
+      );
     } finally {
       setSaving(false);
     }
@@ -395,28 +402,13 @@ export default function VendasPage() {
       setErroTela("");
       setMsg("");
 
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      const { error } = await supabase.rpc("fn_excluir_venda_completa", {
-        p_id_comanda: vendaSelecionada.id,
-        p_motivo: motivoExclusao || null,
-        p_deleted_by: user?.id || null,
+      const result = await processarVenda({
+        acao: "excluir",
+        idComanda: vendaSelecionada.id,
+        motivo: motivoExclusao || null,
       });
 
-      if (error) {
-        throw new Error(error.message || "Erro ao excluir venda.");
-      }
-
-      let avisoEstoque = "";
-
-      try {
-        await reverterEstoqueComanda(vendaSelecionada.id);
-      } catch (estoqueError: any) {
-        avisoEstoque =
-          estoqueError?.message || "nao foi possivel devolver o estoque da venda.";
-      }
+      const avisoEstoque = result.warning || "";
 
       if (avisoEstoque) {
         setExcluirModalOpen(false);
@@ -432,9 +424,11 @@ export default function VendasPage() {
       setDetalheVenda(null);
       setMsg(`Venda #${vendaSelecionada.numero} excluída com sucesso.`);
       await carregarVendas();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error(error);
-      setErroTela(error?.message || "Erro ao excluir venda.");
+      setErroTela(
+        error instanceof Error ? error.message : "Erro ao excluir venda."
+      );
     } finally {
       setSaving(false);
     }
@@ -591,26 +585,32 @@ export default function VendasPage() {
       setSaving(true);
       setErroTela("");
 
-      const { data, error } = await supabase.rpc("fn_detalhes_venda", {
-        p_id_comanda: venda.id,
+      const data = await processarVenda({
+        acao: "detalhes",
+        idComanda: venda.id,
       });
 
-      if (error) {
+      /* Legacy error block removed after routing detalhes through /api/vendas/processar.
+      if (error.message === "__never__") {
+
         throw new Error(error.message || "Erro ao carregar dados para impressão.");
       }
 
+      */
       const detalhe: VendaDetalhe = {
-        comanda: (data?.comanda as ComandaVenda) || venda,
-        itens: (data?.itens as ItemVenda[]) || [],
-        pagamentos: (data?.pagamentos as Pagamento[]) || [],
-        agendamentos: (data?.agendamentos as any[]) || [],
-        comissoes: (data?.comissoes as any[]) || [],
+        comanda: (data.detalhe?.comanda as ComandaVenda) || venda,
+        itens: (data.detalhe?.itens as ItemVenda[]) || [],
+        pagamentos: (data.detalhe?.pagamentos as Pagamento[]) || [],
+        agendamentos: (data.detalhe?.agendamentos as unknown[]) || [],
+        comissoes: (data.detalhe?.comissoes as unknown[]) || [],
       };
 
       imprimirCupom(venda, detalhe, salaoInfo);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error(error);
-      setErroTela(error?.message || "Erro ao imprimir cupom.");
+      setErroTela(
+        error instanceof Error ? error.message : "Erro ao imprimir cupom."
+      );
     } finally {
       setSaving(false);
     }

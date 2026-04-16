@@ -1,6 +1,7 @@
 "use client";
 
 import type { Dispatch, SetStateAction } from "react";
+import AppModal from "@/components/ui/AppModal";
 import type {
   CatalogoExtra,
   CatalogoProduto,
@@ -98,18 +99,45 @@ export default function CaixaItemModal({
   const canSave = !saving && !!comandaSelecionada && podeEditar;
 
   return (
-    <div className="fixed inset-0 z-[95] flex items-center justify-center bg-black/45 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-2xl rounded-[28px] border border-zinc-200 bg-white shadow-2xl">
-        <div className="border-b border-zinc-200 px-6 py-5">
-          <h2 className="text-xl font-bold text-zinc-900">
-            {itemModal.mode === "edit" ? "Editar item da comanda" : "Adicionar item na comanda"}
-          </h2>
-          <p className="mt-1 text-sm text-zinc-500">
-            Escolha o tipo do item e preencha os dados da cobranca.
-          </p>
-        </div>
+    <AppModal
+      open={open}
+      onClose={onClose}
+      title={
+        itemModal.mode === "edit"
+          ? "Editar item da comanda"
+          : "Adicionar item na comanda"
+      }
+      description="Escolha o tipo do item e preencha os dados da cobranca."
+      maxWidthClassName="max-w-2xl"
+      zIndexClassName="z-[95]"
+      closeDisabled={saving}
+      footer={
+        <>
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={saving}
+            className="rounded-2xl border border-zinc-300 bg-white px-5 py-3 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-60"
+          >
+            Fechar
+          </button>
 
-        <div className="space-y-5 px-6 py-5">
+          <button
+            type="button"
+            onClick={onSave}
+            disabled={!canSave}
+            className="rounded-2xl bg-zinc-900 px-5 py-3 text-sm font-bold text-white transition hover:opacity-95 disabled:opacity-60"
+          >
+            {saving
+              ? "Salvando..."
+              : itemModal.mode === "edit"
+              ? "Salvar alteracoes"
+              : "Adicionar item"}
+          </button>
+        </>
+      }
+    >
+      <div className="space-y-5">
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
             {TIPOS_ITEM.map((tipo) => (
               <button
@@ -295,32 +323,7 @@ export default function CaixaItemModal({
               })}
             </div>
           </div>
-        </div>
-
-        <div className="flex flex-col-reverse gap-3 border-t border-zinc-200 px-6 py-5 sm:flex-row sm:justify-end">
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={saving}
-            className="rounded-2xl border border-zinc-300 bg-white px-5 py-3 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-60"
-          >
-            Fechar
-          </button>
-
-          <button
-            type="button"
-            onClick={onSave}
-            disabled={!canSave}
-            className="rounded-2xl bg-zinc-900 px-5 py-3 text-sm font-bold text-white transition hover:opacity-95 disabled:opacity-60"
-          >
-            {saving
-              ? "Salvando..."
-              : itemModal.mode === "edit"
-              ? "Salvar alteracoes"
-              : "Adicionar item"}
-          </button>
-        </div>
       </div>
-    </div>
+    </AppModal>
   );
 }

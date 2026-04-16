@@ -17,6 +17,15 @@ type ProdutoFormProps = {
   modo: "novo" | "editar";
 };
 
+type ProdutoProcessarResponse = {
+  ok: boolean;
+  idProduto?: string | null;
+};
+
+type ProdutoProcessarErrorResponse = {
+  error?: string;
+};
+
 type ProdutoState = {
   id?: string;
   id_salao: string;
@@ -244,25 +253,39 @@ async function bootstrap() {
         ativo: produto.ativo,
       };
 
+      const response = await fetch("/api/produtos/processar", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          idSalao,
+          acao: "salvar",
+          produto: {
+            id: produto.id || null,
+            ...payload,
+          },
+        }),
+      });
+
+      const result = (await response.json().catch(() => ({}))) as Partial<
+        ProdutoProcessarResponse
+      > &
+        ProdutoProcessarErrorResponse;
+
+      if (!response.ok) {
+        throw new Error(result.error || "Erro ao salvar produto.");
+      }
+
       if (modo === "novo") {
-        const { error } = await supabase.from("produtos").insert(payload);
-        if (error) throw error;
         router.push("/produtos");
         return;
       }
 
-      const { error } = await supabase
-        .from("produtos")
-        .update(payload)
-        .eq("id", produto.id)
-        .eq("id_salao", idSalao);
-
-      if (error) throw error;
-
       setMsg("Produto atualizado com sucesso.");
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error(e);
-      setErro(e.message || "Erro ao salvar produto.");
+      setErro(e instanceof Error ? e.message : "Erro ao salvar produto.");
     } finally {
       setSaving(false);
     }

@@ -4,13 +4,26 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { getUsuarioLogado } from "@/lib/auth/getUsuarioLogado";
-import { maskMoneyInput, parseMoneyToNumber } from "@/lib/utils/produtoMasks";
+import {
+  maskMoneyInput,
+  parseMoneyToNumber,
+} from "@/lib/utils/produtoMasks";
 
 type Produto = {
   id: string;
   nome: string;
   unidade_medida?: string | null;
   estoque_atual?: number | null;
+};
+
+type EstoqueProcessarResponse = {
+  ok: boolean;
+  idMovimentacao?: string | null;
+  estoqueAtual?: number | null;
+};
+
+type EstoqueProcessarErrorResponse = {
+  error?: string;
 };
 
 export default function MovimentacaoForm() {
@@ -32,45 +45,49 @@ export default function MovimentacaoForm() {
   const [observacoes, setObservacoes] = useState("");
 
   useEffect(() => {
-    bootstrap();
+    void bootstrap();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-async function bootstrap() {
-  try {
-    setLoading(true);
-    setErro("");
-    setMsg("");
+  async function bootstrap() {
+    try {
+      setLoading(true);
+      setErro("");
+      setMsg("");
 
-    const usuarioLogado = await getUsuarioLogado();
+      const usuarioLogado = await getUsuarioLogado();
 
-    if (!usuarioLogado) {
-      throw new Error("Usuário não autenticado.");
+      if (!usuarioLogado) {
+        throw new Error("Usuario nao autenticado.");
+      }
+
+      if (!usuarioLogado.idSalao) {
+        throw new Error("Nao foi possivel identificar o salao do usuario.");
+      }
+
+      setIdSalao(usuarioLogado.idSalao);
+
+      const { data, error } = await supabase
+        .from("produtos")
+        .select("id, nome, unidade_medida, estoque_atual")
+        .eq("id_salao", usuarioLogado.idSalao)
+        .eq("ativo", true)
+        .order("nome", { ascending: true });
+
+      if (error) throw error;
+
+      setProdutos((data as Produto[]) || []);
+    } catch (error: unknown) {
+      console.error(error);
+      setErro(
+        error instanceof Error
+          ? error.message
+          : "Erro ao carregar movimentacao."
+      );
+    } finally {
+      setLoading(false);
     }
-
-    if (!usuarioLogado.idSalao) {
-      throw new Error("Não foi possível identificar o salão do usuário.");
-    }
-
-    setIdSalao(usuarioLogado.idSalao);
-
-    const { data, error } = await supabase
-      .from("produtos")
-      .select("id, nome, unidade_medida, estoque_atual")
-      .eq("id_salao", usuarioLogado.idSalao)
-      .eq("ativo", true)
-      .order("nome", { ascending: true });
-
-    if (error) throw error;
-
-    setProdutos((data as Produto[]) || []);
-  } catch (e: any) {
-    console.error(e);
-    setErro(e.message || "Erro ao carregar movimentação.");
-  } finally {
-    setLoading(false);
   }
-}
 
   async function salvar() {
     try {
@@ -78,19 +95,24 @@ async function bootstrap() {
       setErro("");
       setMsg("");
 
-      if (!produtoId) throw new Error("Selecione o produto.");
-      if (!quantidade || Number(quantidade) <= 0) throw new Error("Informe a quantidade.");
+      if (!produtoId) {
+        throw new Error("Selecione o produto.");
+      }
 
-      const produto = produtos.find((p) => p.id === produtoId);
-      if (!produto) throw new Error("Produto não encontrado.");
+      if (!quantidade || Number(quantidade) <= 0) {
+        throw new Error("Informe a quantidade.");
+      }
+
+      const produto = produtos.find((item) => item.id === produtoId);
+      if (!produto) {
+        throw new Error("Produto nao encontrado.");
+      }
 
       const qtd = Number(quantidade);
       const valorUnit = parseMoneyToNumber(valorUnitario);
-      const valorTotal = Number((qtd * valorUnit).toFixed(2));
       const estoqueAtual = Number(produto.estoque_atual ?? 0);
 
       let novoEstoque = estoqueAtual;
-
       if (tipo === "entrada") novoEstoque = estoqueAtual + qtd;
       if (tipo === "saida" || tipo === "consumo_interno" || tipo === "venda") {
         novoEstoque = estoqueAtual - qtd;
@@ -100,58 +122,59 @@ async function bootstrap() {
       }
 
       if (novoEstoque < 0) {
-        throw new Error("O estoque não pode ficar negativo.");
+        throw new Error("O estoque nao pode ficar negativo.");
       }
 
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      const { error: movError } = await supabase.from("produtos_movimentacoes").insert({
-        id_salao: idSalao,
-        id_produto: produtoId,
-        tipo,
-        origem,
-        quantidade: qtd,
-        valor_unitario: valorUnit || null,
-        valor_total: valorTotal || null,
-        observacoes: observacoes.trim() || null,
-        id_usuario: user?.id || null,
+      const response = await fetch("/api/estoque/processar", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          idSalao,
+          acao: "movimentacao_manual",
+          movimentacao: {
+            idProduto: produtoId,
+            tipo,
+            origem,
+            quantidade: qtd,
+            valorUnitario: valorUnit || null,
+            observacoes: observacoes.trim() || null,
+          },
+        }),
       });
 
-      if (movError) throw movError;
+      const result = (await response.json().catch(() => ({}))) as Partial<
+        EstoqueProcessarResponse
+      > &
+        EstoqueProcessarErrorResponse;
 
-      const { error: updateError } = await supabase
-        .from("produtos")
-        .update({
-          estoque_atual: novoEstoque,
-        })
-        .eq("id", produtoId)
-        .eq("id_salao", idSalao);
-
-      if (updateError) throw updateError;
-
-      const minimo = 0;
-      if (novoEstoque <= minimo) {
-        await supabase.from("produtos_alertas").insert({
-          id_salao: idSalao,
-          id_produto: produtoId,
-          tipo: "estoque_minimo",
-          mensagem: `O produto "${produto.nome}" ficou com estoque baixo.`,
-          resolvido: false,
-        });
+      if (!response.ok) {
+        throw new Error(result.error || "Erro ao registrar movimentacao.");
       }
 
-      setMsg("Movimentação registrada com sucesso.");
+      setProdutos((prev) =>
+        prev.map((item) =>
+          item.id === produtoId
+            ? { ...item, estoque_atual: result.estoqueAtual ?? novoEstoque }
+            : item
+        )
+      );
+
+      setMsg("Movimentacao registrada com sucesso.");
       setProdutoId("");
       setTipo("entrada");
       setOrigem("manual");
       setQuantidade("");
       setValorUnitario("");
       setObservacoes("");
-    } catch (e: any) {
-      console.error(e);
-      setErro(e.message || "Erro ao registrar movimentação.");
+    } catch (error: unknown) {
+      console.error(error);
+      setErro(
+        error instanceof Error
+          ? error.message
+          : "Erro ao registrar movimentacao."
+      );
     } finally {
       setSaving(false);
     }
@@ -161,7 +184,7 @@ async function bootstrap() {
     return (
       <div className="p-6">
         <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
-          Carregando movimentação...
+          Carregando movimentacao...
         </div>
       </div>
     );
@@ -171,9 +194,11 @@ async function bootstrap() {
     <div className="bg-white">
       <div className="mx-auto max-w-3xl space-y-6">
         <div className="rounded-3xl border border-zinc-200 bg-white p-6 text-zinc-950 shadow-sm">
-          <h1 className="mt-2 text-2xl font-bold md:text-3xl">Nova movimentação</h1>
+          <h1 className="mt-2 text-2xl font-bold md:text-3xl">
+            Nova movimentacao
+          </h1>
           <p className="mt-2 text-sm text-zinc-500">
-            Registre entrada, saída, ajuste, consumo interno ou venda.
+            Registre entrada, saida, ajuste, consumo interno ou venda.
           </p>
         </div>
 
@@ -189,16 +214,18 @@ async function bootstrap() {
           </div>
         ) : null}
 
-        <div className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm space-y-4">
+        <div className="space-y-4 rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm">
           <Select
             label="Produto"
             value={produtoId}
             onChange={setProdutoId}
             options={[
               { value: "", label: "Selecione" },
-              ...produtos.map((p) => ({
-                value: p.id,
-                label: `${p.nome} (${Number(p.estoque_atual ?? 0).toFixed(2)} ${p.unidade_medida || ""})`,
+              ...produtos.map((produto) => ({
+                value: produto.id,
+                label: `${produto.nome} (${Number(
+                  produto.estoque_atual ?? 0
+                ).toFixed(2)} ${produto.unidade_medida || ""})`,
               })),
             ]}
           />
@@ -210,7 +237,7 @@ async function bootstrap() {
               onChange={setTipo}
               options={[
                 { value: "entrada", label: "Entrada" },
-                { value: "saida", label: "Saída" },
+                { value: "saida", label: "Saida" },
                 { value: "ajuste", label: "Ajuste" },
                 { value: "consumo_interno", label: "Consumo interno" },
                 { value: "venda", label: "Venda" },
@@ -225,9 +252,9 @@ async function bootstrap() {
                 { value: "manual", label: "Manual" },
                 { value: "compra", label: "Compra" },
                 { value: "pdv", label: "PDV" },
-                { value: "servico", label: "Serviço" },
+                { value: "servico", label: "Servico" },
                 { value: "perda", label: "Perda" },
-                { value: "devolucao", label: "Devolução" },
+                { value: "devolucao", label: "Devolucao" },
               ]}
             />
           </div>
@@ -241,15 +268,15 @@ async function bootstrap() {
             />
 
             <Input
-              label="Valor unitário"
+              label="Valor unitario"
               value={valorUnitario}
-              onChange={(v) => setValorUnitario(maskMoneyInput(v))}
+              onChange={(value) => setValorUnitario(maskMoneyInput(value))}
               placeholder="0,00"
             />
           </div>
 
           <Textarea
-            label="Observações"
+            label="Observacoes"
             value={observacoes}
             onChange={setObservacoes}
           />
@@ -269,7 +296,7 @@ async function bootstrap() {
               disabled={saving}
               className="rounded-2xl bg-zinc-900 px-5 py-3 text-sm font-bold text-white disabled:opacity-60"
             >
-              {saving ? "Salvando..." : "Salvar movimentação"}
+              {saving ? "Salvando..." : "Salvar movimentacao"}
             </button>
           </div>
         </div>
@@ -291,10 +318,12 @@ function Input({
 }) {
   return (
     <div>
-      <label className="mb-1 block text-sm font-semibold text-zinc-700">{label}</label>
+      <label className="mb-1 block text-sm font-semibold text-zinc-700">
+        {label}
+      </label>
       <input
         value={value}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
         className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-zinc-900"
       />
@@ -313,11 +342,13 @@ function Textarea({
 }) {
   return (
     <div>
-      <label className="mb-1 block text-sm font-semibold text-zinc-700">{label}</label>
+      <label className="mb-1 block text-sm font-semibold text-zinc-700">
+        {label}
+      </label>
       <textarea
         rows={4}
         value={value}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={(event) => onChange(event.target.value)}
         className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-zinc-900"
       />
     </div>
@@ -337,10 +368,12 @@ function Select({
 }) {
   return (
     <div>
-      <label className="mb-1 block text-sm font-semibold text-zinc-700">{label}</label>
+      <label className="mb-1 block text-sm font-semibold text-zinc-700">
+        {label}
+      </label>
       <select
         value={value}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={(event) => onChange(event.target.value)}
         className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-zinc-900"
       >
         {options.map((option) => (

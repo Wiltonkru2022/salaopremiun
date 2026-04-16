@@ -1,3 +1,5 @@
+import { getStatusComissaoMeta } from "@/lib/domain/status";
+
 export function formatCurrency(value?: number | null) {
   return Number(value || 0).toLocaleString("pt-BR", {
     style: "currency",
@@ -24,19 +26,9 @@ export function formatDateTime(value?: string | null) {
 }
 
 export function getStatusLabel(status?: string | null) {
-  if (status === "paga") return "Paga";
-  if (status === "cancelada") return "Cancelada";
-  return "Pendente";
+  return getStatusComissaoMeta(status).label;
 }
 
 export function getStatusClasses(status?: string | null) {
-  if (status === "paga") {
-    return "bg-emerald-50 text-emerald-700 border-emerald-200";
-  }
-
-  if (status === "cancelada") {
-    return "bg-rose-50 text-rose-700 border-rose-200";
-  }
-
-  return "bg-amber-50 text-amber-700 border-amber-200";
+  return getStatusComissaoMeta(status).badgeClass;
 }

@@ -26,6 +26,17 @@ type Servico = {
 
 type Permissoes = Record<string, boolean>;
 
+type ServicoProcessarResponse = {
+  ok: boolean;
+  idServico?: string | null;
+  ativo?: boolean | null;
+  status?: string | null;
+};
+
+type ServicoProcessarErrorResponse = {
+  error?: string;
+};
+
 function formatCurrency(value?: number | null) {
   return Number(value || 0).toLocaleString("pt-BR", {
     style: "currency",
@@ -154,6 +165,34 @@ export default function ServicosPage() {
     void bootstrap();
   }, [bootstrap]);
 
+  async function processarServico(params: {
+    acao: "salvar" | "alterar_status" | "excluir";
+    servico: Record<string, unknown>;
+  }) {
+    const response = await fetch("/api/servicos/processar", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        idSalao,
+        acao: params.acao,
+        servico: params.servico,
+      }),
+    });
+
+    const result = (await response.json().catch(() => ({}))) as Partial<
+      ServicoProcessarResponse
+    > &
+      ServicoProcessarErrorResponse;
+
+    if (!response.ok) {
+      throw new Error(result.error || "Erro ao processar servico.");
+    }
+
+    return result as ServicoProcessarResponse;
+  }
+
   async function alternarStatus(servico: Servico) {
     if (!podeGerenciar) {
       setErro("Você não tem permissão para alterar status de serviços.");
@@ -168,16 +207,13 @@ export default function ServicosPage() {
       const novoAtivo = !(servico.ativo ?? servico.status === "ativo");
       const novoStatus = novoAtivo ? "ativo" : "inativo";
 
-      const { error } = await supabase
-        .from("servicos")
-        .update({
+      await processarServico({
+        acao: "alterar_status",
+        servico: {
+          id: servico.id,
           ativo: novoAtivo,
-          status: novoStatus,
-        })
-        .eq("id", servico.id)
-        .eq("id_salao", idSalao);
-
-      if (error) throw error;
+        },
+      });
 
       setServicos((prev) =>
         prev.map((item) =>
@@ -210,16 +246,12 @@ export default function ServicosPage() {
       setErro("");
       setMsg("");
 
-      await supabase.from("profissional_servicos").delete().eq("id_servico", id);
-      await supabase.from("produto_servico_consumo").delete().eq("id_servico", id);
-
-      const { error } = await supabase
-        .from("servicos")
-        .delete()
-        .eq("id", id)
-        .eq("id_salao", idSalao);
-
-      if (error) throw error;
+      await processarServico({
+        acao: "excluir",
+        servico: {
+          id,
+        },
+      });
 
       setServicos((prev) => prev.filter((item) => item.id !== id));
       setMsg("Serviço excluído com sucesso.");

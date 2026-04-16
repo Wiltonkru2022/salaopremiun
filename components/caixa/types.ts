@@ -93,6 +93,7 @@ export type ComandaItem = {
 export type ComandaPagamento = {
   id: string;
   id_comanda: string;
+  id_movimentacao?: string | null;
   forma_pagamento: string;
   valor: number;
   parcelas: number;

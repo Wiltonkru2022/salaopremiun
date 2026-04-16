@@ -1,5 +1,6 @@
 "use client";
 
+import AppModal from "@/components/ui/AppModal";
 import {
   formatarData,
   formatarMoeda,
@@ -64,7 +65,7 @@ function getMovimentoLabel(tipo?: string | null) {
 
   if (t === "upgrade") return "Upgrade";
   if (t === "downgrade") return "Downgrade";
-  return "Renovação";
+  return "Renovacao";
 }
 
 function getMovimentoClass(tipo?: string | null) {
@@ -87,186 +88,179 @@ export default function AssinaturaHistoricoModal({
   loading,
   historico,
 }: Props) {
-  if (!open) return null;
-
   return (
-    <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/55 p-4">
-      <div className="max-h-[90vh] w-full max-w-5xl overflow-hidden rounded-[32px] border border-zinc-200 bg-white shadow-2xl">
-        <div className="flex items-center justify-between border-b border-zinc-200 px-6 py-5">
-          <div>
-            <h2 className="text-2xl font-bold text-zinc-950">
-              Histórico de pagamentos
-            </h2>
-            <p className="mt-1 text-sm text-zinc-500">
-              Veja as cobranças já geradas da assinatura.
-            </p>
-          </div>
-
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-2xl border border-zinc-200 px-4 py-2 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50"
-          >
-            Fechar
-          </button>
+    <AppModal
+      open={open}
+      onClose={onClose}
+      title="Historico de pagamentos"
+      description="Veja as cobrancas ja geradas da assinatura."
+      maxWidthClassName="max-w-5xl"
+      zIndexClassName="z-[120]"
+      panelClassName="max-h-[90vh]"
+      bodyClassName="max-h-[calc(90vh-168px)] overflow-y-auto p-6"
+      footer={
+        <button
+          type="button"
+          onClick={onClose}
+          className="rounded-2xl border border-zinc-200 px-4 py-2 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50"
+        >
+          Fechar
+        </button>
+      }
+    >
+      {loading ? (
+        <div className="rounded-[24px] border border-zinc-200 bg-zinc-50 p-8 text-sm text-zinc-500">
+          Carregando historico...
         </div>
-
-        <div className="max-h-[calc(90vh-88px)] overflow-y-auto p-6">
-          {loading ? (
-            <div className="rounded-[24px] border border-zinc-200 bg-zinc-50 p-8 text-sm text-zinc-500">
-              Carregando histórico...
-            </div>
-          ) : historico.length === 0 ? (
-            <div className="rounded-[24px] border border-dashed border-zinc-300 bg-zinc-50 p-8 text-sm text-zinc-500">
-              Nenhum histórico encontrado.
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {historico.map((item) => (
-                <div
-                  key={item.id}
-                  className="rounded-[24px] border border-zinc-200 bg-white p-5 shadow-sm"
-                >
-                  <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                    <div>
-                      <div className="text-xs font-semibold uppercase tracking-[0.20em] text-zinc-400">
-                        Referência
-                      </div>
-                      <div className="mt-2 text-lg font-bold text-zinc-950">
-                        {item.referencia || item.id}
-                      </div>
-                    </div>
-
-                    <div className="flex flex-wrap gap-2">
-                      <span
-                        className={`inline-flex rounded-full border px-3 py-1 text-sm font-semibold ${getMovimentoClass(
-                          item.tipo_movimento
-                        )}`}
-                      >
-                        {getMovimentoLabel(item.tipo_movimento)}
-                      </span>
-
-                      <span
-                        className={`inline-flex rounded-full border px-3 py-1 text-sm font-semibold ${getStatusClass(
-                          item.status
-                        )}`}
-                      >
-                        {getStatusLabel(item.status)}
-                      </span>
-
-                      {item.gerada_automaticamente ? (
-                        <span className="inline-flex rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1 text-sm font-semibold text-zinc-700">
-                          Automática
-                        </span>
-                      ) : null}
-                    </div>
+      ) : historico.length === 0 ? (
+        <div className="rounded-[24px] border border-dashed border-zinc-300 bg-zinc-50 p-8 text-sm text-zinc-500">
+          Nenhum historico encontrado.
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {historico.map((item) => (
+            <div
+              key={item.id}
+              className="rounded-[24px] border border-zinc-200 bg-white p-5 shadow-sm"
+            >
+              <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                <div>
+                  <div className="text-xs font-semibold uppercase tracking-[0.20em] text-zinc-400">
+                    Referencia
                   </div>
-
-                  <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                    <div>
-                      <div className="text-xs font-semibold uppercase tracking-[0.20em] text-zinc-400">
-                        Valor
-                      </div>
-                      <div className="mt-2 text-base font-bold text-zinc-950">
-                        {formatarMoeda(item.valor)}
-                      </div>
-                    </div>
-
-                    <div>
-                      <div className="text-xs font-semibold uppercase tracking-[0.20em] text-zinc-400">
-                        Forma de pagamento
-                      </div>
-                      <div className="mt-2 text-sm font-medium text-zinc-800">
-                        {getFormaPagamentoLabel(item.forma_pagamento)}
-                      </div>
-                    </div>
-
-                    <div>
-                      <div className="text-xs font-semibold uppercase tracking-[0.20em] text-zinc-400">
-                        Vencimento
-                      </div>
-                      <div className="mt-2 text-sm font-medium text-zinc-800">
-                        {formatarData(item.data_expiracao)}
-                      </div>
-                    </div>
-
-                    <div>
-                      <div className="text-xs font-semibold uppercase tracking-[0.20em] text-zinc-400">
-                        Criada em
-                      </div>
-                      <div className="mt-2 text-sm font-medium text-zinc-800">
-                        {formatarData(item.created_at)}
-                      </div>
-                    </div>
-
-                    <div>
-                      <div className="text-xs font-semibold uppercase tracking-[0.20em] text-zinc-400">
-                        Pagamento
-                      </div>
-                      <div className="mt-2 text-sm font-medium text-zinc-800">
-                        {formatarData(item.payment_date)}
-                      </div>
-                    </div>
-
-                    <div>
-                      <div className="text-xs font-semibold uppercase tracking-[0.20em] text-zinc-400">
-                        Confirmação
-                      </div>
-                      <div className="mt-2 text-sm font-medium text-zinc-800">
-                        {formatarData(item.confirmed_date)}
-                      </div>
-                    </div>
-
-                    <div>
-                      <div className="text-xs font-semibold uppercase tracking-[0.20em] text-zinc-400">
-                        Plano origem
-                      </div>
-                      <div className="mt-2 text-sm font-medium text-zinc-800">
-                        {getNomePlano(item.plano_origem)}
-                      </div>
-                    </div>
-
-                    <div>
-                      <div className="text-xs font-semibold uppercase tracking-[0.20em] text-zinc-400">
-                        Plano destino
-                      </div>
-                      <div className="mt-2 text-sm font-medium text-zinc-800">
-                        {getNomePlano(item.plano_destino)}
-                      </div>
-                    </div>
+                  <div className="mt-2 text-lg font-bold text-zinc-950">
+                    {item.referencia || item.id}
                   </div>
+                </div>
 
-                  {(item.bank_slip_url || item.invoice_url) ? (
-                    <div className="mt-5 flex flex-wrap gap-3">
-                      {item.bank_slip_url ? (
-                        <a
-                          href={item.bank_slip_url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-flex rounded-2xl border border-zinc-200 bg-white px-4 py-2 text-sm font-semibold text-zinc-900 transition hover:bg-zinc-50"
-                        >
-                          Abrir boleto
-                        </a>
-                      ) : null}
+                <div className="flex flex-wrap gap-2">
+                  <span
+                    className={`inline-flex rounded-full border px-3 py-1 text-sm font-semibold ${getMovimentoClass(
+                      item.tipo_movimento
+                    )}`}
+                  >
+                    {getMovimentoLabel(item.tipo_movimento)}
+                  </span>
 
-                      {item.invoice_url ? (
-                        <a
-                          href={item.invoice_url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-flex rounded-2xl border border-zinc-200 bg-white px-4 py-2 text-sm font-semibold text-zinc-900 transition hover:bg-zinc-50"
-                        >
-                          Abrir fatura
-                        </a>
-                      ) : null}
-                    </div>
+                  <span
+                    className={`inline-flex rounded-full border px-3 py-1 text-sm font-semibold ${getStatusClass(
+                      item.status
+                    )}`}
+                  >
+                    {getStatusLabel(item.status)}
+                  </span>
+
+                  {item.gerada_automaticamente ? (
+                    <span className="inline-flex rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1 text-sm font-semibold text-zinc-700">
+                      Automatica
+                    </span>
                   ) : null}
                 </div>
-              ))}
+              </div>
+
+              <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                <div>
+                  <div className="text-xs font-semibold uppercase tracking-[0.20em] text-zinc-400">
+                    Valor
+                  </div>
+                  <div className="mt-2 text-base font-bold text-zinc-950">
+                    {formatarMoeda(item.valor)}
+                  </div>
+                </div>
+
+                <div>
+                  <div className="text-xs font-semibold uppercase tracking-[0.20em] text-zinc-400">
+                    Forma de pagamento
+                  </div>
+                  <div className="mt-2 text-sm font-medium text-zinc-800">
+                    {getFormaPagamentoLabel(item.forma_pagamento)}
+                  </div>
+                </div>
+
+                <div>
+                  <div className="text-xs font-semibold uppercase tracking-[0.20em] text-zinc-400">
+                    Vencimento
+                  </div>
+                  <div className="mt-2 text-sm font-medium text-zinc-800">
+                    {formatarData(item.data_expiracao)}
+                  </div>
+                </div>
+
+                <div>
+                  <div className="text-xs font-semibold uppercase tracking-[0.20em] text-zinc-400">
+                    Criada em
+                  </div>
+                  <div className="mt-2 text-sm font-medium text-zinc-800">
+                    {formatarData(item.created_at)}
+                  </div>
+                </div>
+
+                <div>
+                  <div className="text-xs font-semibold uppercase tracking-[0.20em] text-zinc-400">
+                    Pagamento
+                  </div>
+                  <div className="mt-2 text-sm font-medium text-zinc-800">
+                    {formatarData(item.payment_date)}
+                  </div>
+                </div>
+
+                <div>
+                  <div className="text-xs font-semibold uppercase tracking-[0.20em] text-zinc-400">
+                    Confirmacao
+                  </div>
+                  <div className="mt-2 text-sm font-medium text-zinc-800">
+                    {formatarData(item.confirmed_date)}
+                  </div>
+                </div>
+
+                <div>
+                  <div className="text-xs font-semibold uppercase tracking-[0.20em] text-zinc-400">
+                    Plano origem
+                  </div>
+                  <div className="mt-2 text-sm font-medium text-zinc-800">
+                    {getNomePlano(item.plano_origem)}
+                  </div>
+                </div>
+
+                <div>
+                  <div className="text-xs font-semibold uppercase tracking-[0.20em] text-zinc-400">
+                    Plano destino
+                  </div>
+                  <div className="mt-2 text-sm font-medium text-zinc-800">
+                    {getNomePlano(item.plano_destino)}
+                  </div>
+                </div>
+              </div>
+
+              {item.bank_slip_url || item.invoice_url ? (
+                <div className="mt-5 flex flex-wrap gap-3">
+                  {item.bank_slip_url ? (
+                    <a
+                      href={item.bank_slip_url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex rounded-2xl border border-zinc-200 bg-white px-4 py-2 text-sm font-semibold text-zinc-900 transition hover:bg-zinc-50"
+                    >
+                      Abrir boleto
+                    </a>
+                  ) : null}
+
+                  {item.invoice_url ? (
+                    <a
+                      href={item.invoice_url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex rounded-2xl border border-zinc-200 bg-white px-4 py-2 text-sm font-semibold text-zinc-900 transition hover:bg-zinc-50"
+                    >
+                      Abrir fatura
+                    </a>
+                  ) : null}
+                </div>
+              ) : null}
             </div>
-          )}
+          ))}
         </div>
-      </div>
-    </div>
+      )}
+    </AppModal>
   );
 }

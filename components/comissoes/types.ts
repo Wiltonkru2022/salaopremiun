@@ -1,4 +1,4 @@
-export type StatusComissao = "pendente" | "paga" | "cancelada";
+import type { StatusComissao } from "@/lib/domain/status";
 
 export type ComissaoItem = {
   id: string;
