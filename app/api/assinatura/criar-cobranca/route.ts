@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { addDays, format } from "date-fns";
+import { addDays, format, isAfter } from "date-fns";
 import { createClient } from "@supabase/supabase-js";
 import { createServerClient } from "@supabase/ssr";
 import { cookies, headers } from "next/headers";
@@ -176,6 +176,42 @@ function isAsaasPaymentPaid(status?: unknown) {
   return ["RECEIVED", "CONFIRMED", "RECEIVED_IN_CASH"].includes(
     String(status || "").toUpperCase()
   );
+}
+
+function getWebhookEventOrderFromAsaasStatus(status?: unknown) {
+  return isAsaasPaymentPaid(status) ? 100 : 20;
+}
+
+function calcularVencimentoAssinaturaPaga(assinatura?: {
+  vencimento_em?: string | null;
+  trial_fim_em?: string | null;
+}) {
+  const agora = new Date();
+  let baseDate = agora;
+
+  if (assinatura?.vencimento_em) {
+    const vencimentoAtual = new Date(`${assinatura.vencimento_em}T23:59:59`);
+
+    if (
+      !Number.isNaN(vencimentoAtual.getTime()) &&
+      isAfter(vencimentoAtual, baseDate)
+    ) {
+      baseDate = vencimentoAtual;
+    }
+  }
+
+  if (assinatura?.trial_fim_em) {
+    const trialFimAtual = new Date(assinatura.trial_fim_em);
+
+    if (
+      !Number.isNaN(trialFimAtual.getTime()) &&
+      isAfter(trialFimAtual, baseDate)
+    ) {
+      baseDate = trialFimAtual;
+    }
+  }
+
+  return format(addDays(baseDate, 30), "yyyy-MM-dd");
 }
 
 function getPlanoOrdem(plano?: string | null) {
@@ -529,7 +565,7 @@ export async function POST(req: Request) {
     const { data: assinaturaExistenteFull, error: assinaturaExistenteFullError } =
       await supabaseAdmin
         .from("assinaturas")
-        .select("id, plano")
+        .select("id, plano, vencimento_em, trial_fim_em")
         .eq("id_salao", idSalao)
         .maybeSingle();
 
@@ -659,8 +695,13 @@ export async function POST(req: Request) {
 
     const pagamentoConfirmado = isAsaasPaymentPaid(payment.status);
     const assinaturaStatus = pagamentoConfirmado ? "ativo" : "pendente";
-    const vencimentoEm = dueDate;
+    const vencimentoEm = pagamentoConfirmado
+      ? calcularVencimentoAssinaturaPaga(assinaturaExistenteFull || undefined)
+      : dueDate;
     const pagoEm = pagamentoConfirmado ? new Date().toISOString() : null;
+    const webhookEventOrderInicial = getWebhookEventOrderFromAsaasStatus(
+      payment.status
+    );
 
     const { data: assinaturaExistente, error: assinaturaBuscaError } =
       await supabaseAdmin
@@ -782,6 +823,9 @@ export async function POST(req: Request) {
           external_reference: idSalao,
           webhook_payload: null,
           webhook_last_event: null,
+          webhook_event_order: webhookEventOrderInicial,
+          webhook_processed_at: pagamentoConfirmado ? pagoEm : null,
+          asaas_status: String(payment.status || "PENDING").toUpperCase(),
           deleted: false,
           plano_origem: planoOrigem,
           plano_destino: planoDestino,

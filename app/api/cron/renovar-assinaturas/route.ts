@@ -238,6 +238,12 @@ async function handleCron(req: Request) {
       });
 
       const statusInicial = String(cobranca.status || "PENDING").toLowerCase();
+      const statusInicialUpper = statusInicial.toUpperCase();
+      const cobrancaConfirmadaNaCriacao = [
+        "RECEIVED",
+        "CONFIRMED",
+        "RECEIVED_IN_CASH",
+      ].includes(statusInicialUpper);
 
       const { data: cobrancaInserida, error: historicoError } =
         await supabaseAdmin
@@ -262,6 +268,11 @@ async function handleCron(req: Request) {
             invoice_url:
               (cobranca as { invoiceUrl?: string | null }).invoiceUrl || null,
             webhook_payload: cobranca,
+            webhook_event_order: cobrancaConfirmadaNaCriacao ? 100 : 20,
+            webhook_processed_at: cobrancaConfirmadaNaCriacao
+              ? new Date().toISOString()
+              : null,
+            asaas_status: statusInicialUpper,
             tipo_movimento: "renovacao",
             gerada_automaticamente: true,
             metadata: {

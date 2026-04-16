@@ -22,6 +22,39 @@ type WebhookRegistroRow = {
   tentativas: number;
 };
 
+const PAID_ASAAS_STATUSES = new Set([
+  "RECEIVED",
+  "CONFIRMED",
+  "RECEIVED_IN_CASH",
+]);
+
+const PAID_ASAAS_EVENTS = new Set([
+  "PAYMENT_CONFIRMED",
+  "PAYMENT_RECEIVED",
+  "PAYMENT_RECEIVED_IN_CASH",
+]);
+
+const TERMINAL_REVERSAL_EVENTS = new Set([
+  "PAYMENT_DELETED",
+  "PAYMENT_REFUNDED",
+  "PAYMENT_RECEIVED_IN_CASH_UNDONE",
+  "PAYMENT_BANK_SLIP_CANCELLED",
+  "PAYMENT_CREDIT_CARD_CAPTURE_REFUSED",
+]);
+
+const TERMINAL_REVERSAL_STATUSES = new Set([
+  "REFUNDED",
+  "REFUND_REQUESTED",
+  "CHARGEBACK_DISPUTE",
+  "CHARGEBACK_REQUESTED",
+  "CHARGEBACK_RECEIVED",
+  "AWAITING_CHARGEBACK_REVERSAL",
+  "DUNNING_REQUESTED",
+  "DUNNING_RECEIVED",
+  "DUNNING_RETURNED",
+  "CANCELLED",
+]);
+
 function getSupabaseAdmin() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -47,32 +80,86 @@ function validarTokenWebhook(req: Request) {
 
 function shouldActivateAccess(event: string, billingType?: string | null) {
   const type = String(billingType || "").toUpperCase();
-  const paidEvents = [
-    "PAYMENT_CONFIRMED",
-    "PAYMENT_RECEIVED",
-    "PAYMENT_RECEIVED_IN_CASH",
-  ];
 
   if (type === "CREDIT_CARD") {
-    return paidEvents.includes(event);
+    return PAID_ASAAS_EVENTS.has(event);
   }
 
   if (type === "BOLETO") {
-    return paidEvents.includes(event);
+    return PAID_ASAAS_EVENTS.has(event);
   }
 
   if (type === "PIX") {
-    return paidEvents.includes(event);
+    return PAID_ASAAS_EVENTS.has(event);
   }
 
-  return paidEvents.includes(event);
+  return PAID_ASAAS_EVENTS.has(event);
 }
 
-function mapAsaasStatusToInternal(status?: string | null) {
-  const normalized = String(status || "").toUpperCase();
+function isTerminalReversalEvent(event: string, status?: string | null) {
+  const normalizedStatus = String(status || "").toUpperCase();
 
-  if (["RECEIVED", "CONFIRMED", "RECEIVED_IN_CASH"].includes(normalized)) {
+  return (
+    TERMINAL_REVERSAL_EVENTS.has(event) ||
+    TERMINAL_REVERSAL_STATUSES.has(normalizedStatus)
+  );
+}
+
+function isInternalPaidStatus(status?: string | null) {
+  return ["ativo", "ativa", "pago", "paid", "received", "confirmed"].includes(
+    String(status || "").toLowerCase()
+  );
+}
+
+function isInternalTerminalStatus(status?: string | null) {
+  return ["cancelada", "cancelado", "cancelled", "refunded", "estornado"].includes(
+    String(status || "").toLowerCase()
+  );
+}
+
+function getWebhookEventOrder(event: string, status?: string | null) {
+  const normalizedStatus = String(status || "").toUpperCase();
+
+  if (isTerminalReversalEvent(event, normalizedStatus)) {
+    return 120;
+  }
+
+  if (PAID_ASAAS_EVENTS.has(event) || PAID_ASAAS_STATUSES.has(normalizedStatus)) {
+    return 100;
+  }
+
+  if (event === "PAYMENT_OVERDUE" || normalizedStatus === "OVERDUE") {
+    return 60;
+  }
+
+  if (event === "PAYMENT_RESTORED" || normalizedStatus === "PENDING") {
+    return 40;
+  }
+
+  return 20;
+}
+
+function mapAsaasStatusToInternal(
+  status?: string | null,
+  event?: string | null
+) {
+  const normalized = String(status || "").toUpperCase();
+  const normalizedEvent = String(event || "").toUpperCase();
+
+  if (PAID_ASAAS_EVENTS.has(normalizedEvent) || PAID_ASAAS_STATUSES.has(normalized)) {
     return "ativo";
+  }
+
+  if (isTerminalReversalEvent(normalizedEvent, normalized)) {
+    return "cancelada";
+  }
+
+  if (normalizedEvent === "PAYMENT_OVERDUE") {
+    return "vencida";
+  }
+
+  if (normalizedEvent === "PAYMENT_RESTORED") {
+    return "pendente";
   }
 
   if (["PENDING"].includes(normalized)) {
@@ -81,23 +168,6 @@ function mapAsaasStatusToInternal(status?: string | null) {
 
   if (["OVERDUE"].includes(normalized)) {
     return "vencida";
-  }
-
-  if (
-    [
-      "REFUNDED",
-      "REFUND_REQUESTED",
-      "CHARGEBACK_DISPUTE",
-      "CHARGEBACK_REQUESTED",
-      "CHARGEBACK_RECEIVED",
-      "AWAITING_CHARGEBACK_REVERSAL",
-      "DUNNING_REQUESTED",
-      "DUNNING_RECEIVED",
-      "DUNNING_RETURNED",
-      "CANCELLED",
-    ].includes(normalized)
-  ) {
-    return "cancelada";
   }
 
   return "pendente";
@@ -139,7 +209,8 @@ async function atualizarStatusEventoWebhook(
   supabaseAdmin: SupabaseClient,
   webhookEventId: string | null,
   statusProcessamento: "processado" | "erro",
-  errorMessage?: string | null
+  errorMessage?: string | null,
+  extra?: Record<string, unknown>
 ) {
   if (!webhookEventId) return;
 
@@ -153,6 +224,8 @@ async function atualizarStatusEventoWebhook(
   if (statusProcessamento === "processado") {
     payload.processado_em = agoraIso;
   }
+
+  Object.assign(payload, extra || {});
 
   const { error } = await supabaseAdmin
     .from("asaas_webhook_eventos")
@@ -250,7 +323,10 @@ export async function POST(req: Request) {
         plano_origem,
         plano_destino,
         tipo_movimento,
-        gerada_automaticamente
+        gerada_automaticamente,
+        webhook_event_order,
+        webhook_processed_at,
+        asaas_status
       `)
       .eq("asaas_payment_id", paymentId)
       .maybeSingle();
@@ -365,28 +441,48 @@ export async function POST(req: Request) {
       plano = (planoData as PlanoSaasRow | null) || null;
     }
 
-    const statusCobrancaInterno = mapAsaasStatusToInternal(paymentStatus);
+    const statusCobrancaInterno = mapAsaasStatusToInternal(
+      paymentStatus,
+      event
+    );
     const isEventoPago = shouldActivateAccess(event, billingType);
-    const cobrancaJaConfirmada =
-      String(cobranca.status || "").toLowerCase() === "ativo";
-    const eventoRegressivo =
-      event === "PAYMENT_OVERDUE" ||
-      event === "PAYMENT_RESTORED" ||
-      event === "PAYMENT_RECEIVED_IN_CASH_UNDONE" ||
-      event === "PAYMENT_BANK_SLIP_CANCELLED" ||
-      event === "PAYMENT_CREDIT_CARD_CAPTURE_REFUSED";
+    const isEventoTerminal = isTerminalReversalEvent(event, paymentStatus);
+    const eventOrder = getWebhookEventOrder(event, paymentStatus);
+    const cobrancaWebhookOrder = Number(cobranca.webhook_event_order || 0);
+    const cobrancaTemConfirmacao =
+      isInternalPaidStatus(cobranca.status) ||
+      Boolean(cobranca.confirmed_date) ||
+      Boolean(cobranca.payment_date);
+    const cobrancaEstaTerminal = isInternalTerminalStatus(cobranca.status);
+    const eventoMaisAntigoQueAtual =
+      cobrancaWebhookOrder > 0 && eventOrder < cobrancaWebhookOrder;
+    const deveIgnorarEvento =
+      (cobrancaTemConfirmacao && !isEventoPago && !isEventoTerminal) ||
+      (cobrancaEstaTerminal && !isEventoTerminal) ||
+      eventoMaisAntigoQueAtual;
 
-    if (cobrancaJaConfirmada && eventoRegressivo) {
+    if (deveIgnorarEvento) {
       await atualizarStatusEventoWebhook(
         supabaseAdmin,
         webhookEventId,
-        "processado"
+        "processado",
+        null,
+        {
+          id_salao: cobranca.id_salao || assinatura.id_salao,
+          id_assinatura: assinatura.id,
+          id_cobranca: cobranca.id,
+          event_order: eventOrder,
+          decisao: eventoMaisAntigoQueAtual
+            ? "ignored_older_event"
+            : "ignored_regression_after_final_status",
+        }
       );
       return NextResponse.json({
         ok: true,
         ignored: true,
-        reason:
-          "Evento regressivo ignorado porque a cobranca ja esta confirmada.",
+        reason: eventoMaisAntigoQueAtual
+          ? "Evento mais antigo ignorado para nao regredir a cobranca."
+          : "Evento regressivo ignorado porque a cobranca ja possui status final.",
         event,
       });
     }
@@ -423,6 +519,9 @@ export async function POST(req: Request) {
         invoice_url: payment.invoiceUrl || null,
         webhook_last_event: event,
         webhook_payload: body,
+        webhook_event_order: eventOrder,
+        webhook_processed_at: agoraIso,
+        asaas_status: paymentStatus || null,
         deleted: Boolean(payment.deleted),
       })
       .eq("id", cobranca.id);
@@ -547,7 +646,15 @@ export async function POST(req: Request) {
       await atualizarStatusEventoWebhook(
         supabaseAdmin,
         webhookEventId,
-        "processado"
+        "processado",
+        null,
+        {
+          id_salao: cobranca.id_salao || assinatura.id_salao,
+          id_assinatura: assinatura.id,
+          id_cobranca: cobranca.id,
+          event_order: eventOrder,
+          decisao: "paid_applied",
+        }
       );
       return NextResponse.json({ ok: true, updated: "paid" });
     }
@@ -559,7 +666,8 @@ export async function POST(req: Request) {
       event === "PAYMENT_REFUNDED" ||
       event === "PAYMENT_RECEIVED_IN_CASH_UNDONE" ||
       event === "PAYMENT_BANK_SLIP_CANCELLED" ||
-      event === "PAYMENT_CREDIT_CARD_CAPTURE_REFUSED"
+      event === "PAYMENT_CREDIT_CARD_CAPTURE_REFUSED" ||
+      isEventoTerminal
     ) {
       let novoStatus = assinatura.status || "pendente";
 
@@ -572,7 +680,8 @@ export async function POST(req: Request) {
         event === "PAYMENT_REFUNDED" ||
         event === "PAYMENT_RECEIVED_IN_CASH_UNDONE" ||
         event === "PAYMENT_BANK_SLIP_CANCELLED" ||
-        event === "PAYMENT_CREDIT_CARD_CAPTURE_REFUSED"
+        event === "PAYMENT_CREDIT_CARD_CAPTURE_REFUSED" ||
+        isEventoTerminal
       ) {
         novoStatus = "cancelada";
       }
@@ -630,7 +739,15 @@ export async function POST(req: Request) {
       await atualizarStatusEventoWebhook(
         supabaseAdmin,
         webhookEventId,
-        "processado"
+        "processado",
+        null,
+        {
+          id_salao: cobranca.id_salao || assinatura.id_salao,
+          id_assinatura: assinatura.id,
+          id_cobranca: cobranca.id,
+          event_order: eventOrder,
+          decisao: `status_applied_${novoStatus}`,
+        }
       );
       return NextResponse.json({ ok: true, updated: novoStatus });
     }
@@ -638,7 +755,15 @@ export async function POST(req: Request) {
     await atualizarStatusEventoWebhook(
       supabaseAdmin,
       webhookEventId,
-      "processado"
+      "processado",
+      null,
+      {
+        id_salao: cobranca.id_salao || assinatura.id_salao,
+        id_assinatura: assinatura.id,
+        id_cobranca: cobranca.id,
+        event_order: eventOrder,
+        decisao: "ignored_unhandled_event",
+      }
     );
     return NextResponse.json({ ok: true, ignored: true, event });
   } catch (error) {
