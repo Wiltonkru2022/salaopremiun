@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { randomUUID } from "node:crypto";
 import ProfissionalShell from "@/components/profissional/layout/ProfissionalShell";
 import { getProfissionalSessionFromCookie } from "@/lib/profissional-auth.server";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
@@ -118,6 +119,8 @@ export default async function ComandaDetalhePage({
   }
 
   const permiteEdicao = String(comanda.status).toLowerCase() === "aberta";
+  const servicoIdempotencyKey = randomUUID();
+  const extraIdempotencyKey = randomUUID();
 
   const { data: servicos, error: servicosError } = await supabaseAdmin
     .from("servicos")
@@ -285,6 +288,11 @@ export default async function ComandaDetalhePage({
 
               <form action={adicionarServicoNaComandaAction} className="space-y-3">
                 <input type="hidden" name="id_comanda" value={comanda.id} />
+                <input
+                  type="hidden"
+                  name="idempotency_key"
+                  value={servicoIdempotencyKey}
+                />
 
                 <select
                   name="id_servico"
@@ -331,6 +339,11 @@ export default async function ComandaDetalhePage({
               {(extras ?? []).length ? (
                 <form action={adicionarExtraNaComandaAction} className="space-y-3">
                   <input type="hidden" name="id_comanda" value={comanda.id} />
+                  <input
+                    type="hidden"
+                    name="idempotency_key"
+                    value={extraIdempotencyKey}
+                  />
 
                   <select
                     name="id_item_extra"
