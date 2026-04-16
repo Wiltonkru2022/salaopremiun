@@ -3,6 +3,10 @@ import {
   AuthzError,
   requireSalaoPermission,
 } from "@/lib/auth/require-salao-permission";
+import {
+  assertCanMutatePlanFeature,
+  PlanAccessError,
+} from "@/lib/plans/access";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { registrarLogSistema } from "@/lib/system-logs";
 
@@ -76,6 +80,7 @@ export async function POST(req: NextRequest) {
     }
 
     const membership = await requireSalaoPermission(idSalao, "comissoes_ver");
+    await assertCanMutatePlanFeature(idSalao, "comissoes_basicas");
 
     const supabaseAdmin = getSupabaseAdmin();
     const { data, error } = await supabaseAdmin.rpc(
@@ -139,6 +144,13 @@ export async function POST(req: NextRequest) {
     if (error instanceof AuthzError) {
       return NextResponse.json(
         { error: error.message },
+        { status: error.status }
+      );
+    }
+
+    if (error instanceof PlanAccessError) {
+      return NextResponse.json(
+        { error: error.message, code: error.code },
         { status: error.status }
       );
     }

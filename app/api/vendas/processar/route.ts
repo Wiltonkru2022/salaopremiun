@@ -4,6 +4,10 @@ import {
   requireSalaoPermission,
 } from "@/lib/auth/require-salao-permission";
 import { reverterEstoqueComanda } from "@/lib/estoque/comanda-stock";
+import {
+  assertCanMutatePlanFeature,
+  PlanAccessError,
+} from "@/lib/plans/access";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { registrarLogSistema } from "@/lib/system-logs";
 
@@ -86,6 +90,10 @@ export async function POST(req: NextRequest) {
         : await requireSalaoPermission(idSalao, "vendas_ver", {
             allowedNiveis: ["admin", "gerente"],
           });
+
+    if (acao !== "detalhes") {
+      await assertCanMutatePlanFeature(idSalao, "vendas");
+    }
 
     const supabaseAdmin = getSupabaseAdmin();
 
@@ -216,6 +224,13 @@ export async function POST(req: NextRequest) {
     if (error instanceof AuthzError) {
       return NextResponse.json(
         { error: error.message },
+        { status: error.status }
+      );
+    }
+
+    if (error instanceof PlanAccessError) {
+      return NextResponse.json(
+        { error: error.message, code: error.code },
         { status: error.status }
       );
     }

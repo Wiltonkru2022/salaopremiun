@@ -5,7 +5,7 @@ import {
 } from "@/lib/auth/require-salao-permission";
 import {
   assertCanCreateWithinLimit,
-  assertCanUsePlanFeature,
+  assertCanMutatePlanFeature,
   PlanAccessError,
 } from "@/lib/plans/access";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
@@ -335,7 +335,7 @@ export async function POST(req: NextRequest) {
     await requireSalaoPermission(idSalao, "profissionais_ver", {
       allowedNiveis: ["admin", "gerente"],
     });
-    await assertCanUsePlanFeature(idSalao, "profissionais");
+    await assertCanMutatePlanFeature(idSalao, "profissionais");
 
     const supabaseAdmin = getSupabaseAdmin();
 

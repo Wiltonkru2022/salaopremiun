@@ -4,6 +4,10 @@ import {
   requireSalaoAnyPermission,
 } from "@/lib/auth/require-salao-permission";
 import { processarEstoqueComanda } from "@/lib/estoque/comanda-stock";
+import {
+  assertCanMutatePlanFeature,
+  PlanAccessError,
+} from "@/lib/plans/access";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { obterTaxaConfigurada, type CaixaTaxasConfig } from "@/lib/caixa/taxas";
 import { registrarLogSistema } from "@/lib/system-logs";
@@ -192,6 +196,8 @@ export async function POST(req: NextRequest) {
             "caixa_editar",
             "caixa_finalizar",
           ]);
+
+    await assertCanMutatePlanFeature(idSalao, "caixa");
 
     const supabaseAdmin = getSupabaseAdmin();
 
@@ -643,6 +649,13 @@ export async function POST(req: NextRequest) {
     if (error instanceof AuthzError) {
       return NextResponse.json(
         { error: error.message },
+        { status: error.status }
+      );
+    }
+
+    if (error instanceof PlanAccessError) {
+      return NextResponse.json(
+        { error: error.message, code: error.code },
         { status: error.status }
       );
     }

@@ -3,6 +3,10 @@ import {
   AuthzError,
   requireSalaoPermission,
 } from "@/lib/auth/require-salao-permission";
+import {
+  assertCanMutatePlanFeature,
+  PlanAccessError,
+} from "@/lib/plans/access";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 type AcaoProduto = "salvar" | "alterar_status" | "excluir";
@@ -163,6 +167,7 @@ export async function POST(req: NextRequest) {
     await requireSalaoPermission(idSalao, "produtos_ver", {
       allowedNiveis: ["admin", "gerente"],
     });
+    await assertCanMutatePlanFeature(idSalao, "produtos");
 
     const supabaseAdmin = getSupabaseAdmin();
     const produto = body.produto || {};
@@ -277,6 +282,13 @@ export async function POST(req: NextRequest) {
     if (error instanceof AuthzError) {
       return NextResponse.json(
         { error: error.message },
+        { status: error.status }
+      );
+    }
+
+    if (error instanceof PlanAccessError) {
+      return NextResponse.json(
+        { error: error.message, code: error.code },
         { status: error.status }
       );
     }

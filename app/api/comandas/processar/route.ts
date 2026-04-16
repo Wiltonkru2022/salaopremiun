@@ -8,6 +8,10 @@ import {
   buscarVinculoProfissionalServico,
   resolverRegraComissaoServico,
 } from "@/lib/comissoes/regrasServico";
+import {
+  assertCanMutatePlanFeature,
+  PlanAccessError,
+} from "@/lib/plans/access";
 import { registrarLogSistema } from "@/lib/system-logs";
 
 type AcaoComanda =
@@ -358,6 +362,8 @@ export async function POST(req: NextRequest) {
       idSalao,
       "comandas_ver"
     );
+
+    await assertCanMutatePlanFeature(idSalao, "comandas");
 
     const supabaseAdmin = getSupabaseAdmin();
     const comanda = body.comanda || {};
@@ -781,6 +787,13 @@ export async function POST(req: NextRequest) {
     if (error instanceof AuthzError) {
       return NextResponse.json(
         { error: error.message },
+        { status: error.status }
+      );
+    }
+
+    if (error instanceof PlanAccessError) {
+      return NextResponse.json(
+        { error: error.message, code: error.code },
         { status: error.status }
       );
     }

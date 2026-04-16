@@ -4,7 +4,7 @@ import { buildSalonPasswordReuseHash } from "@/lib/auth/password-reuse";
 import { AuthzError, requireAdminSalao } from "@/lib/auth/require-admin-salao";
 import {
   assertCanCreateWithinLimit,
-  assertCanUsePlanFeature,
+  assertCanMutatePlanFeature,
   PlanAccessError,
 } from "@/lib/plans/access";
 
@@ -88,7 +88,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    await assertCanUsePlanFeature(idSalao, "usuarios");
+    await assertCanMutatePlanFeature(idSalao, "usuarios");
 
     if (status === "ativo") {
       await assertCanCreateWithinLimit(idSalao, "usuarios");

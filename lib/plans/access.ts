@@ -46,6 +46,81 @@ export type PlanoAccessSnapshot = {
   recursosBloqueados: string[];
 };
 
+export const PLANO_RECURSOS_PADRAO: PlanoRecursoCodigo[] = [
+  "agenda",
+  "clientes",
+  "profissionais",
+  "usuarios",
+  "servicos",
+  "servicos_extras",
+  "produtos",
+  "estoque",
+  "caixa",
+  "comandas",
+  "vendas",
+  "comissoes_basicas",
+  "comissoes_avancadas",
+  "relatorios_basicos",
+  "relatorios_avancados",
+  "dashboard_avancado",
+  "whatsapp",
+  "campanhas",
+  "app_profissional",
+  "marketing",
+  "recursos_beta",
+  "suporte_prioritario",
+];
+
+export const PLANO_RECURSO_LABELS: Record<PlanoRecursoCodigo, string> = {
+  agenda: "Agenda",
+  clientes: "Clientes",
+  profissionais: "Profissionais",
+  usuarios: "Usuarios do sistema",
+  servicos: "Servicos",
+  servicos_extras: "Servicos extras",
+  produtos: "Produtos",
+  estoque: "Estoque",
+  caixa: "Caixa",
+  comandas: "Comandas",
+  vendas: "Vendas",
+  comissoes_basicas: "Comissoes basicas",
+  comissoes_avancadas: "Comissoes avancadas",
+  relatorios_basicos: "Relatorios basicos",
+  relatorios_avancados: "Relatorios avancados",
+  dashboard_avancado: "Dashboard avancado",
+  whatsapp: "WhatsApp",
+  campanhas: "Campanhas",
+  app_profissional: "App profissional",
+  marketing: "Marketing",
+  recursos_beta: "Recursos beta",
+  suporte_prioritario: "Suporte prioritario",
+};
+
+export const PLANO_RECURSO_GROUPS: Record<PlanoRecursoCodigo, string> = {
+  agenda: "Operacao",
+  clientes: "Operacao",
+  profissionais: "Operacao",
+  usuarios: "Gestao",
+  servicos: "Operacao",
+  servicos_extras: "Operacao",
+  produtos: "Produtos e estoque",
+  estoque: "Produtos e estoque",
+  caixa: "Financeiro",
+  comandas: "Financeiro",
+  vendas: "Financeiro",
+  comissoes_basicas: "Comissoes",
+  comissoes_avancadas: "Comissoes",
+  relatorios_basicos: "Relatorios",
+  relatorios_avancados: "Relatorios",
+  dashboard_avancado: "Relatorios",
+  whatsapp: "Comunicacao",
+  campanhas: "Comunicacao",
+  app_profissional: "Equipe",
+  marketing: "Comunicacao",
+  recursos_beta: "Premium",
+  suporte_prioritario: "Premium",
+};
+
 export class PlanAccessError extends Error {
   status = 402;
   code: string;
@@ -104,6 +179,13 @@ function normalizePlano(plano?: string | null) {
 
 function isUnlimited(value?: number | null) {
   return value == null || value >= 999;
+}
+
+export function getPlanoRecursoLabel(recurso: string) {
+  return (
+    (PLANO_RECURSO_LABELS as Record<string, string>)[recurso] ||
+    recurso.replace(/_/g, " ")
+  );
 }
 
 export async function getPlanoAccessSnapshot(
@@ -182,6 +264,12 @@ export async function getPlanoAccessSnapshot(
     }
   });
 
+  PLANO_RECURSOS_PADRAO.forEach((codigo) => {
+    if (!(codigo in recursos)) {
+      recursos[codigo] = false;
+    }
+  });
+
   const assinaturaStatus = String(assinaturaRow?.status || salaoRow?.status || "")
     .trim()
     .toLowerCase();
@@ -253,7 +341,7 @@ export async function canUsePlanFeature(
   if (!snapshot.recursos[recurso]) {
     return {
       allowed: false,
-      reason: `Recurso ${recurso} nao liberado no plano atual.`,
+      reason: `${getPlanoRecursoLabel(recurso)} nao esta liberado no plano atual.`,
       snapshot,
     };
   }
@@ -275,6 +363,28 @@ export async function assertCanUsePlanFeature(
   return result.snapshot;
 }
 
+export async function assertCanMutatePlanFeature(
+  idSalao: string,
+  recurso: PlanoRecursoCodigo
+) {
+  const result = await canUsePlanFeature(idSalao, recurso);
+  if (!result.allowed) {
+    throw new PlanAccessError(
+      result.reason || "Recurso indisponivel no plano atual.",
+      "FEATURE_BLOCKED"
+    );
+  }
+
+  if (result.snapshot.modoRestrito) {
+    throw new PlanAccessError(
+      "Sua assinatura esta em modo restrito. Regularize o plano para realizar novas operacoes.",
+      "SUBSCRIPTION_RESTRICTED"
+    );
+  }
+
+  return result.snapshot;
+}
+
 export async function assertCanCreateWithinLimit(
   idSalao: string,
   tipo: "usuarios" | "profissionais"
@@ -287,6 +397,13 @@ export async function assertCanCreateWithinLimit(
     throw new PlanAccessError(
       snapshot.bloqueioMotivo || "Assinatura bloqueada.",
       "SUBSCRIPTION_BLOCKED"
+    );
+  }
+
+  if (snapshot.modoRestrito) {
+    throw new PlanAccessError(
+      "Sua assinatura esta em modo restrito. Regularize o plano para criar novos registros.",
+      "SUBSCRIPTION_RESTRICTED"
     );
   }
 

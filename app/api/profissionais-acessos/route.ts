@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdminSalao } from "@/lib/auth/require-admin-salao";
 import { AuthzError } from "@/lib/auth/require-salao-membership";
 import {
-  assertCanUsePlanFeature,
+  assertCanMutatePlanFeature,
   PlanAccessError,
 } from "@/lib/plans/access";
 import { hashPassword } from "@/lib/profissional-auth.server";
@@ -64,7 +64,10 @@ export async function POST(req: NextRequest) {
     await requireAdminSalao(profissional.id_salao);
 
     if (ativo) {
-      await assertCanUsePlanFeature(profissional.id_salao, "app_profissional");
+      await assertCanMutatePlanFeature(
+        profissional.id_salao,
+        "app_profissional"
+      );
     }
 
     const { data: cpfJaUsado, error: cpfJaUsadoError } = await supabaseAdmin
