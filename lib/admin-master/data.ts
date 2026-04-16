@@ -764,6 +764,9 @@ export async function getAdminMasterSection(
         item.txid ||
         item.idempotency_key ||
         "-",
+      acao: "-",
+      acao_tipo: null,
+      acao_id: null,
     }));
 
     const checkoutRows = ((checkoutLocks || []) as {
@@ -811,6 +814,9 @@ export async function getAdminMasterSection(
         criado: dateTimeValue(item.created_at),
         pago: "-",
         detalhe: String(detalhe).slice(0, 90),
+        acao: requiresReconciliation ? "Criar ticket" : "-",
+        acao_tipo: requiresReconciliation ? "checkout_ticket" : null,
+        acao_id: requiresReconciliation ? item.id || null : null,
       };
     });
 
@@ -880,6 +886,7 @@ export async function getAdminMasterSection(
         "expira",
         "criado",
         "detalhe",
+        "acao",
       ],
       actions: [
         "Copiar link",
@@ -1409,6 +1416,9 @@ export async function getAdminMasterSection(
         referencia,
         criado: dateTimeValue(row.criado_em),
         detalhe: JSON.stringify(detalhes).slice(0, 120),
+        acao: "-",
+        acao_tipo: null,
+        acao_id: null,
       };
     });
 
@@ -1436,6 +1446,9 @@ export async function getAdminMasterSection(
       detalhe:
         row.erro_texto ||
         `${row.plano_codigo || "-"} / ${row.billing_type || "-"} / ${row.status || "-"}`,
+      acao: "Criar ticket",
+      acao_tipo: "checkout_ticket",
+      acao_id: row.id || null,
     }));
 
     const rows = [...reconciliationRows, ...logRows]
@@ -1485,6 +1498,7 @@ export async function getAdminMasterSection(
         "referencia",
         "criado",
         "detalhe",
+        "acao",
       ],
       actions: [
         "Investigar tenant guard",

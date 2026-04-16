@@ -1,4 +1,5 @@
 import Link from "next/link";
+import AdminMasterRowActionButton from "@/components/admin-master/AdminMasterRowActionButton";
 import type { AdminKpi, AdminSectionData, AdminTableRow } from "@/lib/admin-master/data";
 
 function toneClass(tone?: AdminKpi["tone"]) {
@@ -54,7 +55,15 @@ export function AdminDataTable({
                 <tr key={index} className="hover:bg-zinc-50/80">
                   {columns.map((column) => (
                     <td key={column} className="max-w-[260px] truncate px-5 py-4">
-                      {String(row[column] ?? "-")}
+                      {column === "acao" ? (
+                        <AdminMasterRowActionButton
+                          actionType={String(row.acao_tipo || "")}
+                          actionId={String(row.acao_id || "")}
+                          label={String(row[column] || "-")}
+                        />
+                      ) : (
+                        String(row[column] ?? "-")
+                      )}
                     </td>
                   ))}
                 </tr>

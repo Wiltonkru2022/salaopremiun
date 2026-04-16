@@ -485,3 +485,213 @@ export async function criarTicketPorAlertaAdminMaster(params: {
     existed: false,
   };
 }
+
+export async function criarTicketPorCheckoutLockAdminMaster(params: {
+  idCheckoutLock: string;
+  idAdmin: string;
+  mensagem?: string | null;
+  assumir?: boolean | null;
+}) {
+  const supabase = getSupabaseAdmin();
+  const now = new Date().toISOString();
+
+  const { data: lock, error: lockError } = await supabase
+    .from("assinatura_checkout_locks")
+    .select(
+      "id, id_salao, plano_codigo, billing_type, valor, idempotency_key, status, id_cobranca, asaas_payment_id, erro_texto, response_json, payload_json, created_at, updated_at"
+    )
+    .eq("id", params.idCheckoutLock)
+    .maybeSingle();
+
+  if (lockError) {
+    throw new Error("Erro ao carregar checkout para criar ticket.");
+  }
+
+  if (!lock) {
+    throw new Error("Checkout nao encontrado.");
+  }
+
+  const lockRow = lock as {
+    id: string;
+    id_salao?: string | null;
+    plano_codigo?: string | null;
+    billing_type?: string | null;
+    valor?: number | string | null;
+    idempotency_key?: string | null;
+    status?: string | null;
+    id_cobranca?: string | null;
+    asaas_payment_id?: string | null;
+    erro_texto?: string | null;
+    response_json?: Record<string, unknown> | null;
+    payload_json?: Record<string, unknown> | null;
+    created_at?: string | null;
+    updated_at?: string | null;
+  };
+
+  const payloadAtual =
+    lockRow.payload_json && typeof lockRow.payload_json === "object"
+      ? lockRow.payload_json
+      : {};
+  const ticketPayloadId = payloadAtual.ticket_id;
+
+  if (typeof ticketPayloadId === "string" && ticketPayloadId) {
+    const { data: ticketExistente } = await supabase
+      .from("tickets")
+      .select("id, numero, status")
+      .eq("id", ticketPayloadId)
+      .maybeSingle();
+
+    if (ticketExistente) {
+      return {
+        ticketId: String(ticketExistente.id),
+        ticketNumero: Number(ticketExistente.numero || 0),
+        status: String(ticketExistente.status || "aberto"),
+        existed: true,
+      };
+    }
+  }
+
+  const { data: eventoExistente } = await supabase
+    .from("ticket_eventos")
+    .select("id_ticket, tickets(id, numero, status)")
+    .eq("evento", "checkout_reconciliacao_vinculada")
+    .contains("payload_json", { id_checkout_lock: lockRow.id })
+    .limit(1)
+    .maybeSingle();
+
+  const ticketFromEvento = Array.isArray(
+    (eventoExistente as { tickets?: unknown } | null)?.tickets
+  )
+    ? ((eventoExistente as { tickets?: { id?: string; numero?: number | string | null; status?: string | null }[] } | null)
+        ?.tickets?.[0] ?? null)
+    : ((eventoExistente as { tickets?: { id?: string; numero?: number | string | null; status?: string | null } | null } | null)
+        ?.tickets ?? null);
+
+  if (ticketFromEvento?.id) {
+    return {
+      ticketId: String(ticketFromEvento.id),
+      ticketNumero: Number(ticketFromEvento.numero || 0),
+      status: String(ticketFromEvento.status || "aberto"),
+      existed: true,
+    };
+  }
+
+  const prioridade = lockRow.asaas_payment_id ? "alta" : "media";
+  const assunto = "Reconciliar checkout de assinatura";
+  const mensagem =
+    normalizeText(params.mensagem) ||
+    [
+      "Checkout de assinatura precisa de reconciliacao financeira.",
+      `Status do lock: ${lockRow.status || "-"}`,
+      `Salao: ${lockRow.id_salao || "-"}`,
+      `Plano: ${lockRow.plano_codigo || "-"}`,
+      `Forma: ${lockRow.billing_type || "-"}`,
+      `Valor: ${lockRow.valor || 0}`,
+      `Asaas payment: ${lockRow.asaas_payment_id || "-"}`,
+      `Cobranca local: ${lockRow.id_cobranca || "nao vinculada"}`,
+      `Idempotencia: ${lockRow.idempotency_key || "-"}`,
+      lockRow.erro_texto ? `Erro: ${lockRow.erro_texto}` : null,
+    ]
+      .filter(Boolean)
+      .join("\n");
+
+  const { data: ticketData, error: ticketError } = await supabase
+    .from("tickets")
+    .insert({
+      id_salao: lockRow.id_salao || null,
+      assunto,
+      categoria: "cobranca",
+      prioridade,
+      status: "aberto",
+      origem: "checkout_reconciliacao_admin_master",
+      id_responsavel_admin:
+        params.assumir === false ? null : params.idAdmin,
+      solicitante_nome: "AdminMaster",
+      solicitante_email: null,
+      origem_contexto: {
+        origem: "admin_master",
+        modulo: "assinatura_checkout",
+        id_checkout_lock: lockRow.id,
+        asaas_payment_id: lockRow.asaas_payment_id || null,
+      },
+      ultima_interacao_em: now,
+      atualizado_em: now,
+      sla_limite_em: buildTicketSla(prioridade),
+    })
+    .select("id, numero, status")
+    .single();
+
+  if (ticketError || !ticketData) {
+    throw new Error("Erro ao criar ticket para reconciliacao do checkout.");
+  }
+
+  const ticket = ticketData as {
+    id: string;
+    numero?: number | string | null;
+    status?: string | null;
+  };
+
+  await supabase.from("ticket_mensagens").insert({
+    id_ticket: ticket.id,
+    autor_tipo: "admin",
+    autor_nome: "AdminMaster",
+    id_admin_usuario: params.idAdmin,
+    mensagem,
+    interna: true,
+  });
+
+  await supabase.from("ticket_eventos").insert({
+    id_ticket: ticket.id,
+    evento: "checkout_reconciliacao_vinculada",
+    descricao: "Ticket criado para reconciliar checkout de assinatura.",
+    payload_json: {
+      id_checkout_lock: lockRow.id,
+      id_salao: lockRow.id_salao || null,
+      plano_codigo: lockRow.plano_codigo || null,
+      billing_type: lockRow.billing_type || null,
+      valor: lockRow.valor || null,
+      status_checkout: lockRow.status || null,
+      id_cobranca: lockRow.id_cobranca || null,
+      asaas_payment_id: lockRow.asaas_payment_id || null,
+      idempotency_key: lockRow.idempotency_key || null,
+      erro_texto: lockRow.erro_texto || null,
+      response_json: lockRow.response_json || {},
+    },
+  });
+
+  await supabase
+    .from("assinatura_checkout_locks")
+    .update({
+      payload_json: {
+        ...payloadAtual,
+        ticket_id: ticket.id,
+        ticket_numero: Number(ticket.numero || 0),
+        ticket_criado_em: now,
+        ticket_criado_por: params.idAdmin,
+      },
+      updated_at: now,
+    })
+    .eq("id", lockRow.id);
+
+  await registrarAdminMasterAuditoria({
+    idAdmin: params.idAdmin,
+    acao: "criar_ticket_checkout_reconciliacao",
+    entidade: "assinatura_checkout_locks",
+    entidadeId: lockRow.id,
+    descricao: assunto,
+    payload: {
+      id_ticket: ticket.id,
+      ticket_numero: Number(ticket.numero || 0),
+      id_salao: lockRow.id_salao || null,
+      asaas_payment_id: lockRow.asaas_payment_id || null,
+      idempotency_key: lockRow.idempotency_key || null,
+    },
+  });
+
+  return {
+    ticketId: ticket.id,
+    ticketNumero: Number(ticket.numero || 0),
+    status: String(ticket.status || "aberto"),
+    existed: false,
+  };
+}
