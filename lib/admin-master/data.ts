@@ -1105,16 +1105,17 @@ export async function getAdminMasterSection(
 
   if (section === "alertas") {
     const sync = await syncAdminMasterAlerts();
-    const [{ data: alertas }, { data: saloes }] = await Promise.all([
+    const [{ data: alertas }, { data: saloes }, { data: tickets }] = await Promise.all([
       supabase
         .from("alertas_sistema")
         .select(
-          "id, tipo, gravidade, origem_modulo, id_salao, titulo, descricao, resolvido, criado_em, atualizado_em, automatico"
+          "id, tipo, gravidade, origem_modulo, id_salao, titulo, descricao, resolvido, criado_em, atualizado_em, automatico, id_ticket"
         )
         .order("resolvido", { ascending: true })
         .order("criado_em", { ascending: false })
         .limit(150),
       supabase.from("saloes").select("id, nome").limit(1000),
+      supabase.from("tickets").select("id, numero, status").limit(1000),
     ]);
 
     const salaoById = new Map(
@@ -1122,6 +1123,17 @@ export async function getAdminMasterSection(
         salao.id,
         salao.nome || salao.id,
       ])
+    );
+    const ticketById = new Map(
+      ((tickets || []) as { id: string; numero?: number | string | null; status?: string | null }[]).map(
+        (ticket) => [
+          ticket.id,
+          {
+            numero: ticket.numero,
+            status: ticket.status,
+          },
+        ]
+      )
     );
 
     const rows = ((alertas || []) as {
@@ -1136,12 +1148,20 @@ export async function getAdminMasterSection(
       criado_em?: string | null;
       atualizado_em?: string | null;
       automatico?: boolean | null;
+      id_ticket?: string | null;
     }[]).map((row) => ({
       gravidade: row.gravidade || "-",
       titulo: row.titulo || "-",
       salao: row.id_salao ? salaoById.get(row.id_salao) || row.id_salao : "-",
       origem: row.origem_modulo || "-",
       status: row.resolvido ? "Resolvido" : "Ativo",
+      ticket: row.id_ticket
+        ? (() => {
+            const ticket = ticketById.get(row.id_ticket);
+            if (!ticket) return "Vinculado";
+            return `#${ticket.numero || "-"} • ${ticket.status || "aberto"}`;
+          })()
+        : "-",
       automatico: row.automatico ? "Sim" : "Nao",
       criado: dateTimeValue(row.criado_em),
       atualizado: dateTimeValue(row.atualizado_em),
@@ -1152,6 +1172,7 @@ export async function getAdminMasterSection(
     const criticos = rows.filter((row) =>
       ["alta", "critica"].includes(String(row.gravidade).toLowerCase())
     ).length;
+    const comTicket = rows.filter((row) => row.ticket !== "-").length;
 
     return {
       title: "Alertas",
@@ -1176,6 +1197,12 @@ export async function getAdminMasterSection(
           hint: `${sync.cobrancasVencidas} cobrancas vencidas monitoradas`,
           tone: sync.trialsVencendo > 0 ? "blue" : "dark",
         },
+        {
+          label: "Com ticket",
+          value: String(comTicket),
+          hint: "Alertas ja vinculados ao suporte",
+          tone: comTicket > 0 ? "green" : "dark",
+        },
       ],
       rows,
       columns: [
@@ -1184,15 +1211,17 @@ export async function getAdminMasterSection(
         "salao",
         "origem",
         "status",
+        "ticket",
         "automatico",
         "criado",
         "detalhe",
       ],
       actions: [
+        "Resolver alerta",
+        "Criar ticket",
         "Sincronizar alertas",
         "Ver webhooks com erro",
         "Ver checkouts travados",
-        "Ver cobrancas vencidas",
       ],
     };
   }
