@@ -1,0 +1,820 @@
+import { getPlanoAccessSnapshot } from "@/lib/plans/access";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
+
+export type AdminKpi = {
+  label: string;
+  value: string;
+  hint: string;
+  tone?: "dark" | "green" | "amber" | "red" | "blue";
+};
+
+export type AdminTableRow = Record<string, string | number | boolean | null>;
+
+export type AdminSectionData = {
+  title: string;
+  description: string;
+  kpis: AdminKpi[];
+  rows: AdminTableRow[];
+  columns: string[];
+  actions: string[];
+};
+
+type CountResult = {
+  count: number | null;
+  error: unknown;
+};
+
+function currency(value: number) {
+  return value.toLocaleString("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  });
+}
+
+function dateValue(value?: string | null) {
+  if (!value) return "-";
+  return new Date(value).toLocaleDateString("pt-BR");
+}
+
+function safeNumber(value: unknown) {
+  const parsed = Number(value || 0);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function safeCount(result: CountResult) {
+  if (result.error) return 0;
+  return result.count || 0;
+}
+
+async function countSaloesByStatus(status: string) {
+  const supabase = getSupabaseAdmin();
+  const result = await supabase
+    .from("saloes")
+    .select("id", { count: "exact", head: true })
+    .eq("status", status);
+  return safeCount(result);
+}
+
+export async function getAdminMasterDashboard() {
+  const supabase = getSupabaseAdmin();
+  const inicioMes = new Date();
+  inicioMes.setDate(1);
+  inicioMes.setHours(0, 0, 0, 0);
+
+  const [
+    totalSaloes,
+    ativos,
+    bloqueados,
+    cancelados,
+    saloesTrial,
+    assinaturasAtivas,
+    assinaturasVencidas,
+    cobrancasMes,
+    cobrancasVencidas,
+    ticketsAbertos,
+    alertasCriticos,
+    planos,
+    recentes,
+  ] = await Promise.all([
+    supabase.from("saloes").select("id", { count: "exact", head: true }),
+    countSaloesByStatus("ativo"),
+    countSaloesByStatus("bloqueado"),
+    countSaloesByStatus("cancelado"),
+    supabase
+      .from("assinaturas")
+      .select("id", { count: "exact", head: true })
+      .in("status", ["teste_gratis", "trial"]),
+    supabase
+      .from("assinaturas")
+      .select("id, valor")
+      .in("status", ["ativo", "ativa", "pago"]),
+    supabase
+      .from("assinaturas")
+      .select("id", { count: "exact", head: true })
+      .in("status", ["vencida", "bloqueada", "cancelada"]),
+    supabase
+      .from("assinaturas_cobrancas")
+      .select("valor, pago_em, payment_date, confirmed_date, status")
+      .gte("created_at", inicioMes.toISOString()),
+    supabase
+      .from("assinaturas_cobrancas")
+      .select("id", { count: "exact", head: true })
+      .lt("data_expiracao", new Date().toISOString())
+      .in("status", ["pending", "pendente", "aguardando_pagamento"]),
+    supabase
+      .from("tickets")
+      .select("id", { count: "exact", head: true })
+      .in("status", ["aberto", "em_atendimento", "aguardando_tecnico"]),
+    supabase
+      .from("alertas_sistema")
+      .select("id", { count: "exact", head: true })
+      .eq("resolvido", false)
+      .in("gravidade", ["alta", "critica"]),
+    supabase
+      .from("planos_saas")
+      .select("codigo, nome, valor_mensal, destaque")
+      .eq("ativo", true)
+      .order("ordem", { ascending: true }),
+    supabase
+      .from("saloes")
+      .select("id, nome, responsavel, email, plano, status, created_at")
+      .order("created_at", { ascending: false })
+      .limit(8),
+  ]);
+
+  const assinaturasAtivasRows =
+    (assinaturasAtivas.data as { valor?: number | string | null }[] | null) ||
+    [];
+  const cobrancasRows =
+    (cobrancasMes.data as { valor?: number | string | null; status?: string | null }[] | null) ||
+    [];
+  const mrr = assinaturasAtivasRows.reduce(
+    (acc, row) => acc + safeNumber(row.valor),
+    0
+  );
+  const receitaMes = cobrancasRows
+    .filter((row) =>
+      ["received", "confirmed", "pago", "paid"].includes(
+        String(row.status || "").toLowerCase()
+      )
+    )
+    .reduce((acc, row) => acc + safeNumber(row.valor), 0);
+
+  return {
+    kpis: [
+      {
+        label: "Total de saloes",
+        value: String(safeCount(totalSaloes)),
+        hint: `${ativos} ativos, ${bloqueados} bloqueados`,
+        tone: "dark",
+      },
+      {
+        label: "Trials ativos",
+        value: String(safeCount(saloesTrial)),
+        hint: "Oportunidade de conversao",
+        tone: "blue",
+      },
+      {
+        label: "MRR atual",
+        value: currency(mrr),
+        hint: `${safeCount(assinaturasVencidas)} assinaturas em risco`,
+        tone: "green",
+      },
+      {
+        label: "Receita do mes",
+        value: currency(receitaMes),
+        hint: `${safeCount(cobrancasVencidas)} cobrancas vencidas`,
+        tone: "amber",
+      },
+      {
+        label: "Tickets abertos",
+        value: String(safeCount(ticketsAbertos)),
+        hint: "Suporte pendente",
+        tone: "red",
+      },
+      {
+        label: "Alertas criticos",
+        value: String(safeCount(alertasCriticos)),
+        hint: "Operacao e webhooks",
+        tone: "red",
+      },
+    ] satisfies AdminKpi[],
+    planos: (planos.data || []) as AdminTableRow[],
+    recentes: ((recentes.data || []) as {
+      id: string;
+      nome?: string | null;
+      responsavel?: string | null;
+      email?: string | null;
+      plano?: string | null;
+      status?: string | null;
+      created_at?: string | null;
+    }[]).map((row) => ({
+      id: row.id,
+      salao: row.nome || "-",
+      responsavel: row.responsavel || "-",
+      email: row.email || "-",
+      plano: row.plano || "-",
+      status: row.status || "-",
+      criado: dateValue(row.created_at),
+    })),
+    cancelados,
+  };
+}
+
+export async function getAdminMasterSaloes() {
+  const supabase = getSupabaseAdmin();
+  const [{ data: saloes }, { data: assinaturas }, { data: scores }] =
+    await Promise.all([
+      supabase
+        .from("saloes")
+        .select(
+          "id, nome, responsavel, email, telefone, whatsapp, cidade, estado, plano, status, created_at"
+        )
+        .order("created_at", { ascending: false })
+        .limit(100),
+      supabase
+        .from("assinaturas")
+        .select("id_salao, plano, status, vencimento_em, trial_fim_em"),
+      supabase
+        .from("score_onboarding_salao")
+        .select("id_salao, score_total, atualizado_em"),
+    ]);
+
+  const assinaturaBySalao = new Map(
+    ((assinaturas || []) as { id_salao: string }[]).map((item) => [
+      item.id_salao,
+      item,
+    ])
+  );
+  const scoreBySalao = new Map(
+    ((scores || []) as { id_salao: string }[]).map((item) => [
+      item.id_salao,
+      item,
+    ])
+  );
+
+  return ((saloes || []) as {
+    id: string;
+    nome?: string | null;
+    responsavel?: string | null;
+    email?: string | null;
+    telefone?: string | null;
+    whatsapp?: string | null;
+    cidade?: string | null;
+    estado?: string | null;
+    plano?: string | null;
+    status?: string | null;
+    created_at?: string | null;
+  }[]).map((salao) => {
+    const assinatura = assinaturaBySalao.get(salao.id) as
+      | {
+          plano?: string | null;
+          status?: string | null;
+          vencimento_em?: string | null;
+          trial_fim_em?: string | null;
+        }
+      | undefined;
+    const score = scoreBySalao.get(salao.id) as
+      | { score_total?: number | null }
+      | undefined;
+
+    return {
+      id: salao.id,
+      salao: salao.nome || "-",
+      responsavel: salao.responsavel || "-",
+      email: salao.email || "-",
+      telefone: salao.whatsapp || salao.telefone || "-",
+      cidade: [salao.cidade, salao.estado].filter(Boolean).join("/") || "-",
+      plano: assinatura?.plano || salao.plano || "-",
+      assinatura: assinatura?.status || "-",
+      vencimento: dateValue(assinatura?.vencimento_em || assinatura?.trial_fim_em),
+      status: salao.status || "-",
+      score: score?.score_total ?? 0,
+      criado: dateValue(salao.created_at),
+    };
+  });
+}
+
+export async function getAdminMasterSalaoDetail(idSalao: string) {
+  const supabase = getSupabaseAdmin();
+  const [
+    { data: salao },
+    { data: assinatura },
+    { data: tickets },
+    { data: cobrancas },
+    { data: anotacoes },
+    { data: tags },
+    access,
+  ] = await Promise.all([
+    supabase
+      .from("saloes")
+      .select("*")
+      .eq("id", idSalao)
+      .maybeSingle(),
+    supabase
+      .from("assinaturas")
+      .select("*")
+      .eq("id_salao", idSalao)
+      .maybeSingle(),
+    supabase
+      .from("tickets")
+      .select("id, numero, assunto, status, prioridade, criado_em")
+      .eq("id_salao", idSalao)
+      .order("criado_em", { ascending: false })
+      .limit(10),
+    supabase
+      .from("assinaturas_cobrancas")
+      .select("id, referencia, descricao, valor, status, data_expiracao, pago_em")
+      .eq("id_salao", idSalao)
+      .order("created_at", { ascending: false })
+      .limit(10),
+    supabase
+      .from("admin_master_anotacoes_salao")
+      .select("id, titulo, nota, criada_em")
+      .eq("id_salao", idSalao)
+      .order("criada_em", { ascending: false })
+      .limit(10),
+    supabase
+      .from("admin_master_salao_tags")
+      .select("admin_master_tags_salao(nome, cor)")
+      .eq("id_salao", idSalao),
+    getPlanoAccessSnapshot(idSalao),
+  ]);
+
+  return {
+    salao: salao as Record<string, unknown> | null,
+    assinatura: assinatura as Record<string, unknown> | null,
+    tickets: (tickets || []) as AdminTableRow[],
+    cobrancas: (cobrancas || []) as AdminTableRow[],
+    anotacoes: (anotacoes || []) as AdminTableRow[],
+    tags: ((tags || []) as { admin_master_tags_salao?: { nome?: string; cor?: string } | { nome?: string; cor?: string }[] | null }[]).map(
+      (item) => {
+        const tag = Array.isArray(item.admin_master_tags_salao)
+          ? item.admin_master_tags_salao[0]
+          : item.admin_master_tags_salao;
+
+        return {
+          nome: tag?.nome || "-",
+          cor: tag?.cor || "-",
+        };
+      }
+    ),
+    access,
+  };
+}
+
+export async function getAdminMasterPlanosSection(): Promise<AdminSectionData> {
+  const supabase = getSupabaseAdmin();
+  const [{ data: planos }, { data: recursos }] = await Promise.all([
+    supabase
+      .from("planos_saas")
+      .select(
+        "id, codigo, nome, subtitulo, valor_mensal, preco_anual, limite_usuarios, limite_profissionais, destaque, ativo"
+      )
+      .order("ordem", { ascending: true }),
+    supabase
+      .from("planos_recursos")
+      .select("id_plano, recurso_codigo, habilitado"),
+  ]);
+
+  const recursosRows = (recursos || []) as {
+    id_plano: string;
+    recurso_codigo: string;
+    habilitado: boolean | null;
+  }[];
+
+  const rows = ((planos || []) as {
+    id: string;
+    codigo?: string | null;
+    nome?: string | null;
+    subtitulo?: string | null;
+    valor_mensal?: number | string | null;
+    preco_anual?: number | string | null;
+    limite_usuarios?: number | null;
+    limite_profissionais?: number | null;
+    destaque?: boolean | null;
+    ativo?: boolean | null;
+  }[]).map((plano) => {
+    const habilitados = recursosRows.filter(
+      (recurso) => recurso.id_plano === plano.id && recurso.habilitado
+    ).length;
+    const bloqueados = recursosRows.filter(
+      (recurso) => recurso.id_plano === plano.id && !recurso.habilitado
+    ).length;
+
+    return {
+      codigo: plano.codigo || "-",
+      plano: plano.nome || "-",
+      mensal: currency(safeNumber(plano.valor_mensal)),
+      anual: currency(safeNumber(plano.preco_anual)),
+      usuarios: plano.limite_usuarios ?? "-",
+      profissionais: plano.limite_profissionais ?? "-",
+      recursos: habilitados,
+      bloqueados,
+      destaque: plano.destaque ? "Sim" : "Nao",
+      ativo: plano.ativo ? "Ativo" : "Inativo",
+    };
+  });
+
+  return {
+    title: "Planos e recursos",
+    description:
+      "Motor comercial do SalaoPremium com limites, recursos liberados e bloqueios por plano.",
+    kpis: [
+      {
+        label: "Planos ativos",
+        value: String(rows.filter((row) => row.ativo === "Ativo").length),
+        hint: "Trial, Basico, Pro e Premium",
+        tone: "blue",
+      },
+      {
+        label: "Recursos mapeados",
+        value: String(recursosRows.length),
+        hint: "Planos_recursos centralizado",
+        tone: "green",
+      },
+      {
+        label: "Plano destaque",
+        value: String(rows.find((row) => row.destaque === "Sim")?.plano || "-"),
+        hint: "Usado para venda e upgrade",
+        tone: "dark",
+      },
+    ],
+    rows,
+    columns: [
+      "codigo",
+      "plano",
+      "mensal",
+      "usuarios",
+      "profissionais",
+      "recursos",
+      "bloqueados",
+      "ativo",
+    ],
+    actions: [
+      "Editar preco e limites",
+      "Ajustar matriz de recursos",
+      "Duplicar plano",
+      "Ver saloes no plano",
+    ],
+  };
+}
+
+export async function getAdminMasterSection(
+  section: string
+): Promise<AdminSectionData> {
+  const supabase = getSupabaseAdmin();
+
+  if (section === "saloes") {
+    const rows = await getAdminMasterSaloes();
+    return {
+      title: "Saloes clientes",
+      description:
+        "Controle de clientes, status, assinatura, score de onboarding e acoes administrativas.",
+      kpis: [
+        {
+          label: "Saloes listados",
+          value: String(rows.length),
+          hint: "Ultimos 100 saloes",
+          tone: "dark",
+        },
+        {
+          label: "Ativos",
+          value: String(rows.filter((row) => row.status === "ativo").length),
+          hint: "Status do salao",
+          tone: "green",
+        },
+        {
+          label: "Em trial",
+          value: String(
+            rows.filter((row) =>
+              ["teste_gratis", "trial"].includes(
+                String(row.assinatura || "").toLowerCase()
+              )
+            ).length
+          ),
+          hint: "Converter para pago",
+          tone: "blue",
+        },
+      ],
+      rows,
+      columns: [
+        "salao",
+        "responsavel",
+        "email",
+        "telefone",
+        "plano",
+        "assinatura",
+        "vencimento",
+        "score",
+      ],
+      actions: [
+        "Ver detalhes",
+        "Entrar como salao",
+        "Bloquear/desbloquear",
+        "Criar nota interna",
+      ],
+    };
+  }
+
+  if (section === "assinaturas") {
+    const { data } = await supabase
+      .from("assinaturas")
+      .select("id, id_salao, plano, status, valor, vencimento_em, renovacao_automatica")
+      .order("updated_at", { ascending: false })
+      .limit(100);
+    const rows = ((data || []) as {
+      id_salao?: string | null;
+      plano?: string | null;
+      status?: string | null;
+      valor?: number | string | null;
+      vencimento_em?: string | null;
+      renovacao_automatica?: boolean | null;
+    }[]).map((item) => ({
+      salao: item.id_salao || "-",
+      plano: item.plano || "-",
+      status: item.status || "-",
+      valor: currency(safeNumber(item.valor)),
+      vencimento: dateValue(item.vencimento_em),
+      renovacao: item.renovacao_automatica ? "Ativa" : "Desativada",
+    }));
+
+    return {
+      title: "Assinaturas",
+      description:
+        "Status financeiro, vencimentos, renovacao automatica e ajustes manuais.",
+      kpis: [
+        {
+          label: "Assinaturas",
+          value: String(rows.length),
+          hint: "Ultimas atualizadas",
+          tone: "dark",
+        },
+        {
+          label: "Ativas",
+          value: String(
+            rows.filter((row) =>
+              ["ativo", "ativa", "pago"].includes(
+                String(row.status).toLowerCase()
+              )
+            ).length
+          ),
+          hint: "Liberadas",
+          tone: "green",
+        },
+        {
+          label: "Em risco",
+          value: String(
+            rows.filter((row) =>
+              ["vencida", "cancelada", "bloqueada"].includes(
+                String(row.status).toLowerCase()
+              )
+            ).length
+          ),
+          hint: "Precisa acao",
+          tone: "red",
+        },
+      ],
+      rows,
+      columns: ["salao", "plano", "status", "valor", "vencimento", "renovacao"],
+      actions: [
+        "Trocar plano",
+        "Ajustar vencimento",
+        "Gerar cobranca",
+        "Reenviar cobranca",
+      ],
+    };
+  }
+
+  if (section === "cobrancas") {
+    const { data } = await supabase
+      .from("assinaturas_cobrancas")
+      .select("id_salao, referencia, valor, status, forma_pagamento, gateway, data_expiracao, pago_em")
+      .order("created_at", { ascending: false })
+      .limit(100);
+    const rows = ((data || []) as {
+      id_salao?: string | null;
+      referencia?: string | null;
+      valor?: number | string | null;
+      status?: string | null;
+      forma_pagamento?: string | null;
+      gateway?: string | null;
+      data_expiracao?: string | null;
+      pago_em?: string | null;
+    }[]).map((item) => ({
+      salao: item.id_salao || "-",
+      referencia: item.referencia || "-",
+      valor: currency(safeNumber(item.valor)),
+      status: item.status || "-",
+      forma: item.forma_pagamento || "-",
+      gateway: item.gateway || "-",
+      vence: dateValue(item.data_expiracao),
+      pago: dateValue(item.pago_em),
+    }));
+
+    return {
+      title: "Cobrancas",
+      description:
+        "Historico de cobrancas, pagamentos, vencimentos e reprocessamento de gateway.",
+      kpis: [
+        {
+          label: "Cobrancas recentes",
+          value: String(rows.length),
+          hint: "Ultimas 100",
+          tone: "dark",
+        },
+        {
+          label: "Pagas",
+          value: String(
+            rows.filter((row) =>
+              ["pago", "paid", "received", "confirmed"].includes(
+                String(row.status).toLowerCase()
+              )
+            ).length
+          ),
+          hint: "Confirmadas",
+          tone: "green",
+        },
+        {
+          label: "Pendentes",
+          value: String(
+            rows.filter((row) =>
+              ["pending", "pendente", "aguardando_pagamento"].includes(
+                String(row.status).toLowerCase()
+              )
+            ).length
+          ),
+          hint: "Acompanhar",
+          tone: "amber",
+        },
+      ],
+      rows,
+      columns: ["referencia", "valor", "status", "forma", "gateway", "vence", "pago"],
+      actions: [
+        "Copiar link",
+        "Reenviar",
+        "Reprocessar webhook",
+        "Marcar ajuste manual",
+      ],
+    };
+  }
+
+  if (section === "planos") {
+    return getAdminMasterPlanosSection();
+  }
+
+  const map: Record<
+    string,
+    {
+      title: string;
+      description: string;
+      table: string;
+      columns: string[];
+      actions: string[];
+    }
+  > = {
+    tickets: {
+      title: "Tickets",
+      description: "Atendimento, SLA, categorias, prioridades e historico.",
+      table: "tickets",
+      columns: ["numero", "assunto", "categoria", "prioridade", "status", "criado_em"],
+      actions: ["Assumir", "Responder", "Alterar status", "Entrar como salao"],
+    },
+    notificacoes: {
+      title: "Notificacoes globais",
+      description: "Comunicados, manutencao, ofertas e avisos institucionais.",
+      table: "notificacoes_globais",
+      columns: ["titulo", "tipo", "publico_tipo", "status", "criada_em"],
+      actions: ["Nova notificacao", "Agendar", "Enviar agora", "Duplicar"],
+    },
+    campanhas: {
+      title: "Campanhas",
+      description: "Promocoes, retencao, conversao de trial e recuperacao.",
+      table: "campanhas",
+      columns: ["nome", "tipo", "publico_tipo", "status", "inicio_em", "fim_em"],
+      actions: ["Criar campanha", "Pausar", "Encerrar", "Ver metricas"],
+    },
+    alertas: {
+      title: "Alertas",
+      description: "Riscos, falhas, cobrancas, webhooks e operacao.",
+      table: "alertas_sistema",
+      columns: ["tipo", "gravidade", "origem_modulo", "titulo", "resolvido", "criado_em"],
+      actions: ["Resolver", "Criar ticket", "Notificar cliente", "Corrigir manualmente"],
+    },
+    webhooks: {
+      title: "Webhooks",
+      description: "Eventos recebidos, falhas, tentativas e reprocessamento.",
+      table: "eventos_webhook",
+      columns: ["origem", "evento", "status", "tentativas", "erro_texto", "recebido_em"],
+      actions: ["Ver payload", "Reprocessar", "Marcar resolvido"],
+    },
+    logs: {
+      title: "Logs",
+      description: "Logs de sistema, financeiro, suporte e operacao.",
+      table: "logs_sistema",
+      columns: ["gravidade", "modulo", "mensagem", "criado_em"],
+      actions: ["Ver detalhe", "Vincular ticket", "Exportar"],
+    },
+    whatsapp: {
+      title: "WhatsApp e pacotes",
+      description: "Creditos, consumo, templates, filas e cobranca por envio.",
+      table: "whatsapp_envios",
+      columns: ["tipo", "destino", "template", "status", "custo_creditos", "criado_em"],
+      actions: ["Adicionar pacote", "Ajustar creditos", "Suspender envios"],
+    },
+    "feature-flags": {
+      title: "Feature flags",
+      description: "Liberacoes por plano, salao especifico e recursos beta.",
+      table: "feature_flags",
+      columns: ["nome", "status_global", "tipo_liberacao", "data_inicio", "data_fim"],
+      actions: ["Ativar", "Liberar por plano", "Liberar para salao"],
+    },
+    "usuarios-admin": {
+      title: "Usuarios AdminMaster",
+      description: "Admins internos, perfis, permissoes e auditoria.",
+      table: "admin_master_usuarios",
+      columns: ["nome", "email", "perfil", "status", "ultimo_acesso_em"],
+      actions: ["Criar admin", "Editar permissoes", "Suspender", "Forcar logout"],
+    },
+    checklists: {
+      title: "Checklists e trial +7",
+      description: "Onboarding, score de saude e extensao automatica de trial.",
+      table: "score_onboarding_salao",
+      columns: ["id_salao", "score_total", "dias_com_acesso", "modulos_usados", "atualizado_em"],
+      actions: ["Recalcular score", "Avaliar trial extra", "Ver criterios"],
+    },
+    financeiro: {
+      title: "Financeiro SaaS",
+      description: "MRR, recebimentos, inadimplencia, churn e receita por plano.",
+      table: "assinaturas_cobrancas",
+      columns: ["referencia", "valor", "status", "forma_pagamento", "data_expiracao", "pago_em"],
+      actions: ["Ver inadimplentes", "Exportar receita", "Gerar cobranca manual"],
+    },
+    operacao: {
+      title: "Operacao",
+      description: "Saude do sistema, crons, sincronizacoes e reprocessamentos.",
+      table: "eventos_cron",
+      columns: ["nome", "status", "resumo", "erro_texto", "iniciado_em", "finalizado_em"],
+      actions: ["Rodar sincronizacao", "Reprocessar eventos", "Recalcular assinaturas"],
+    },
+    suporte: {
+      title: "Suporte",
+      description: "Tickets, clientes com problema, historico e acoes de suporte.",
+      table: "tickets",
+      columns: ["numero", "assunto", "categoria", "prioridade", "status", "criado_em"],
+      actions: ["Criar ticket", "Entrar como salao", "Ver ultimos erros"],
+    },
+    relatorios: {
+      title: "Relatorios e growth",
+      description: "Crescimento, uso dos saloes, retencao, churn e conversao.",
+      table: "score_saude_salao",
+      columns: ["id_salao", "score_total", "uso_recente", "inadimplencia_risco", "tickets_abertos"],
+      actions: ["Ver crescimento", "Ver uso por modulo", "Exportar relatorio"],
+    },
+    "configuracoes-globais": {
+      title: "Configuracoes globais",
+      description: "Manutencao, banners, onboarding, politicas e templates globais.",
+      table: "configuracoes_globais",
+      columns: ["chave", "descricao", "atualizado_em"],
+      actions: ["Publicar aviso", "Ativar manutencao", "Salvar template"],
+    },
+  };
+
+  const config = map[section] || {
+    title: section,
+    description: "Modulo AdminMaster preparado para operacao.",
+    table: "admin_master_auditoria",
+    columns: ["acao", "entidade", "descricao", "criado_em"],
+    actions: ["Ver detalhes", "Exportar", "Auditar"],
+  };
+
+  const { data } = await supabase
+    .from(config.table)
+    .select("*")
+    .limit(100);
+
+  const rows = ((data || []) as Record<string, unknown>[]).map((row) =>
+    config.columns.reduce((acc, column) => {
+      const value = row[column];
+      acc[column] =
+        typeof value === "boolean"
+          ? value
+            ? "Sim"
+            : "Nao"
+          : typeof value === "number"
+            ? value
+            : value
+              ? String(value)
+              : "-";
+      return acc;
+    }, {} as AdminTableRow)
+  );
+
+  return {
+    title: config.title,
+    description: config.description,
+    kpis: [
+      {
+        label: "Registros",
+        value: String(rows.length),
+        hint: "Ultimos registros do modulo",
+        tone: "dark",
+      },
+      {
+        label: "Acoes prontas",
+        value: String(config.actions.length),
+        hint: "Fluxo de operacao definido",
+        tone: "blue",
+      },
+      {
+        label: "Auditoria",
+        value: "Ativa",
+        hint: "Acoes criticas devem registrar historico",
+        tone: "green",
+      },
+    ],
+    rows,
+    columns: config.columns,
+    actions: config.actions,
+  };
+}

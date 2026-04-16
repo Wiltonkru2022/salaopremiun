@@ -197,6 +197,16 @@ export const painelNavigationItems: PainelNavItem[] = [
     sidebar: false,
   },
   {
+    href: "/meu-plano",
+    label: "Meu Plano",
+    shortLabel: "Plano",
+    description: "Recursos liberados, limites e bloqueios do plano.",
+    icon: CreditCard,
+    permissionKey: "assinatura_ver",
+    niveis: ["admin"],
+    sidebar: false,
+  },
+  {
     href: "/assinatura",
     label: "Assinatura",
     shortLabel: "Plano",

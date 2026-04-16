@@ -18,6 +18,7 @@ const PAINEL_PREFIXES = [
   "/relatorio_financeiro",
   "/relatorios",
   "/marketing",
+  "/meu-plano",
   "/perfil-salao",
   "/configuracoes",
 ];
@@ -177,6 +178,7 @@ export const config = {
     "/relatorio_financeiro/:path*",
     "/relatorios/:path*",
     "/marketing/:path*",
+    "/meu-plano/:path*",
     "/perfil-salao/:path*",
     "/configuracoes/:path*",
     "/api/assinatura/iniciar-trial",
