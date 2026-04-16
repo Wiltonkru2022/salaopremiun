@@ -1,3 +1,4 @@
+import { syncAdminMasterAlerts } from "@/lib/admin-master/alerts-sync";
 import { getPlanoAccessSnapshot } from "@/lib/plans/access";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
@@ -69,6 +70,7 @@ async function countSaloesByStatus(status: string) {
 
 export async function getAdminMasterDashboard() {
   const supabase = getSupabaseAdmin();
+  await syncAdminMasterAlerts();
   const inicioMes = new Date();
   inicioMes.setDate(1);
   inicioMes.setHours(0, 0, 0, 0);
@@ -765,6 +767,100 @@ export async function getAdminMasterSection(
 
   if (section === "planos") {
     return getAdminMasterPlanosSection();
+  }
+
+  if (section === "alertas") {
+    const sync = await syncAdminMasterAlerts();
+    const [{ data: alertas }, { data: saloes }] = await Promise.all([
+      supabase
+        .from("alertas_sistema")
+        .select(
+          "id, tipo, gravidade, origem_modulo, id_salao, titulo, descricao, resolvido, criado_em, atualizado_em, automatico"
+        )
+        .order("resolvido", { ascending: true })
+        .order("criado_em", { ascending: false })
+        .limit(150),
+      supabase.from("saloes").select("id, nome").limit(1000),
+    ]);
+
+    const salaoById = new Map(
+      ((saloes || []) as { id: string; nome?: string | null }[]).map((salao) => [
+        salao.id,
+        salao.nome || salao.id,
+      ])
+    );
+
+    const rows = ((alertas || []) as {
+      id?: string | null;
+      tipo?: string | null;
+      gravidade?: string | null;
+      origem_modulo?: string | null;
+      id_salao?: string | null;
+      titulo?: string | null;
+      descricao?: string | null;
+      resolvido?: boolean | null;
+      criado_em?: string | null;
+      atualizado_em?: string | null;
+      automatico?: boolean | null;
+    }[]).map((row) => ({
+      gravidade: row.gravidade || "-",
+      titulo: row.titulo || "-",
+      salao: row.id_salao ? salaoById.get(row.id_salao) || row.id_salao : "-",
+      origem: row.origem_modulo || "-",
+      status: row.resolvido ? "Resolvido" : "Ativo",
+      automatico: row.automatico ? "Sim" : "Nao",
+      criado: dateTimeValue(row.criado_em),
+      atualizado: dateTimeValue(row.atualizado_em),
+      detalhe: row.descricao || "-",
+    }));
+
+    const ativos = rows.filter((row) => row.status === "Ativo").length;
+    const criticos = rows.filter((row) =>
+      ["alta", "critica"].includes(String(row.gravidade).toLowerCase())
+    ).length;
+
+    return {
+      title: "Alertas",
+      description:
+        "Alertas automaticos do AdminMaster para checkout de assinatura, webhook Asaas, cobrancas vencidas e trials terminando.",
+      kpis: [
+        {
+          label: "Alertas ativos",
+          value: String(ativos),
+          hint: `${rows.length} registros recentes`,
+          tone: ativos > 0 ? "amber" : "green",
+        },
+        {
+          label: "Alta ou critica",
+          value: String(criticos),
+          hint: `${sync.webhooksComErro} webhooks e ${sync.checkoutsFalhos} checkouts com falha`,
+          tone: criticos > 0 ? "red" : "green",
+        },
+        {
+          label: "Trials vencendo",
+          value: String(sync.trialsVencendo),
+          hint: `${sync.cobrancasVencidas} cobrancas vencidas monitoradas`,
+          tone: sync.trialsVencendo > 0 ? "blue" : "dark",
+        },
+      ],
+      rows,
+      columns: [
+        "gravidade",
+        "titulo",
+        "salao",
+        "origem",
+        "status",
+        "automatico",
+        "criado",
+        "detalhe",
+      ],
+      actions: [
+        "Sincronizar alertas",
+        "Ver webhooks com erro",
+        "Ver checkouts travados",
+        "Ver cobrancas vencidas",
+      ],
+    };
   }
 
   const map: Record<
