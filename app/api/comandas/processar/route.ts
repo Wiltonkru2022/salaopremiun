@@ -8,6 +8,7 @@ import {
   buscarVinculoProfissionalServico,
   resolverRegraComissaoServico,
 } from "@/lib/comissoes/regrasServico";
+import { registrarLogSistema } from "@/lib/system-logs";
 
 type AcaoComanda =
   | "salvar_base"
@@ -46,6 +47,7 @@ type ItemPayload = {
 type Body = {
   idSalao?: string | null;
   acao?: AcaoComanda | null;
+  idempotencyKey?: string | null;
   comanda?: ComandaPayload | null;
   item?: ItemPayload | null;
 };
@@ -94,12 +96,48 @@ function sanitizeText(value: unknown) {
   return parsed || null;
 }
 
+function sanitizeIdempotencyKey(value: unknown) {
+  const parsed = String(value || "")
+    .trim()
+    .replace(/[^a-zA-Z0-9:_-]/g, "")
+    .slice(0, 160);
+
+  return parsed || null;
+}
+
+function criarChaveItemAgendamento(resolved: ResolvedItemPayload) {
+  if (!resolved.idAgendamento) {
+    return null;
+  }
+
+  return sanitizeIdempotencyKey(
+    [
+      "agendamento-item",
+      resolved.idAgendamento,
+      resolved.idServico || "sem-servico",
+      resolved.idProduto || "sem-produto",
+      resolved.idProfissional || "sem-profissional",
+    ].join(":")
+  );
+}
+
 function resolveHttpStatus(error: unknown) {
   const candidate = error as { code?: string; message?: string } | null;
   if (!candidate?.code) return 500;
   if (candidate.code === "P0001") return 400;
   if (candidate.code === "23514") return 409;
   return 500;
+}
+
+function isMissingRpcFunction(error: unknown, functionName: string) {
+  const candidate = error as { code?: string; message?: string } | null;
+  const message = String(candidate?.message || "").toLowerCase();
+
+  return (
+    candidate?.code === "PGRST202" ||
+    message.includes("could not find the function") ||
+    message.includes(`function public.${functionName.toLowerCase()}`)
+  );
 }
 
 async function garantirComandaBase(params: {
@@ -297,6 +335,7 @@ export async function POST(req: NextRequest) {
     const body = (await req.json()) as Body;
     const idSalao = sanitizeUuid(body.idSalao);
     const acao = String(body.acao || "").trim().toLowerCase() as AcaoComanda;
+    const idempotencyKey = sanitizeIdempotencyKey(body.idempotencyKey);
 
     if (!idSalao) {
       return NextResponse.json({ error: "Salao obrigatorio." }, { status: 400 });
@@ -315,7 +354,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Acao invalida." }, { status: 400 });
     }
 
-    await requireSalaoPermission(idSalao, "comandas_ver");
+    const permissionMembership = await requireSalaoPermission(
+      idSalao,
+      "comandas_ver"
+    );
 
     const supabaseAdmin = getSupabaseAdmin();
     const comanda = body.comanda || {};
@@ -360,6 +402,22 @@ export async function POST(req: NextRequest) {
         );
       }
 
+      await registrarLogSistema({
+        gravidade: data?.ja_existia ? "warning" : "info",
+        modulo: "comandas",
+        idSalao,
+        idUsuario: permissionMembership.usuario.id,
+        mensagem: data?.ja_existia
+          ? "Comanda de agendamento reaproveitada por idempotencia."
+          : "Comanda criada a partir de agendamento.",
+        detalhes: {
+          acao,
+          id_agendamento: idAgendamento,
+          id_comanda: data?.id_comanda || null,
+          ja_existia: Boolean(data?.ja_existia),
+        },
+      });
+
       return NextResponse.json({
         ok: true,
         idComanda: data?.id_comanda || null,
@@ -396,6 +454,20 @@ export async function POST(req: NextRequest) {
         );
       }
 
+      await registrarLogSistema({
+        gravidade: "info",
+        modulo: "comandas",
+        idSalao,
+        idUsuario: permissionMembership.usuario.id,
+        mensagem: "Base da comanda salva pelo servidor.",
+        detalhes: {
+          acao,
+          id_comanda: data,
+          numero,
+          status: sanitizeText(comanda.status) || "aberta",
+        },
+      });
+
       return NextResponse.json({ ok: true, idComanda: data });
     }
 
@@ -425,8 +497,11 @@ export async function POST(req: NextRequest) {
         });
 
         if (acao === "adicionar_item") {
-          const { data: itemId, error: addItemError } = await supabaseAdmin.rpc(
-            "fn_adicionar_item_comanda",
+          const itemIdempotencyKey =
+            idempotencyKey || criarChaveItemAgendamento(resolved);
+
+          let { data: itemResult, error: addItemError } = await supabaseAdmin.rpc(
+            "fn_adicionar_item_comanda_idempotente",
             {
               p_id_salao: idSalao,
               p_id_comanda: idComanda,
@@ -449,8 +524,46 @@ export async function POST(req: NextRequest) {
               p_observacoes: resolved.observacoes,
               p_desconto: sanitizeMoney(comanda.desconto),
               p_acrescimo: sanitizeMoney(comanda.acrescimo),
+              p_idempotency_key: itemIdempotencyKey,
             }
           );
+
+          if (
+            addItemError &&
+            isMissingRpcFunction(
+              addItemError,
+              "fn_adicionar_item_comanda_idempotente"
+            )
+          ) {
+            const fallback = await supabaseAdmin.rpc(
+              "fn_adicionar_item_comanda",
+              {
+                p_id_salao: idSalao,
+                p_id_comanda: idComanda,
+                p_tipo_item: resolved.tipoItem,
+                p_id_agendamento: resolved.idAgendamento,
+                p_id_servico: resolved.idServico,
+                p_id_produto: resolved.idProduto,
+                p_descricao: resolved.descricao,
+                p_quantidade: resolved.quantidade,
+                p_valor_unitario: resolved.valorUnitario,
+                p_custo_total: resolved.custoTotal,
+                p_id_profissional: resolved.idProfissional,
+                p_id_assistente: resolved.idAssistente,
+                p_comissao_percentual: resolved.comissaoPercentual,
+                p_comissao_assistente_percentual:
+                  resolved.comissaoAssistentePercentual,
+                p_base_calculo: resolved.baseCalculo,
+                p_desconta_taxa_maquininha: resolved.descontaTaxaMaquininha,
+                p_origem: resolved.origem,
+                p_observacoes: resolved.observacoes,
+                p_desconto: sanitizeMoney(comanda.desconto),
+                p_acrescimo: sanitizeMoney(comanda.acrescimo),
+              }
+            );
+            itemResult = fallback.data;
+            addItemError = fallback.error;
+          }
 
           if (addItemError) {
             console.error("Erro ao adicionar item na comanda:", addItemError);
@@ -460,10 +573,39 @@ export async function POST(req: NextRequest) {
             );
           }
 
+          const resultRow = Array.isArray(itemResult) ? itemResult[0] : null;
+          const itemId =
+            resultRow && typeof resultRow === "object" && "id_item" in resultRow
+              ? String(resultRow.id_item || "")
+              : String(itemResult || "");
+          const jaExistia =
+            resultRow && typeof resultRow === "object" && "ja_existia" in resultRow
+              ? Boolean(resultRow.ja_existia)
+              : false;
+
+          await registrarLogSistema({
+            gravidade: jaExistia ? "warning" : "info",
+            modulo: "comandas",
+            idSalao,
+            idUsuario: permissionMembership.usuario.id,
+            mensagem: jaExistia
+              ? "Item de comanda reaproveitado por idempotencia."
+              : "Item adicionado na comanda pelo servidor.",
+            detalhes: {
+              acao,
+              id_comanda: idComanda,
+              id_item: itemId || null,
+              tipo_item: resolved.tipoItem,
+              idempotency_key: itemIdempotencyKey,
+              ja_existia: jaExistia,
+            },
+          });
+
           return NextResponse.json({
             ok: true,
             idComanda,
             idItem: itemId,
+            idempotentReplay: jaExistia,
           });
         }
 
@@ -512,6 +654,20 @@ export async function POST(req: NextRequest) {
           );
         }
 
+        await registrarLogSistema({
+          gravidade: "info",
+          modulo: "comandas",
+          idSalao,
+          idUsuario: permissionMembership.usuario.id,
+          mensagem: "Item da comanda atualizado pelo servidor.",
+          detalhes: {
+            acao,
+            id_comanda: idComanda,
+            id_item: idItem,
+            tipo_item: resolved.tipoItem,
+          },
+        });
+
         return NextResponse.json({
           ok: true,
           idComanda,
@@ -558,6 +714,19 @@ export async function POST(req: NextRequest) {
         );
       }
 
+      await registrarLogSistema({
+        gravidade: "warning",
+        modulo: "comandas",
+        idSalao,
+        idUsuario: permissionMembership.usuario.id,
+        mensagem: "Item removido da comanda pelo servidor.",
+        detalhes: {
+          acao,
+          id_comanda: idComanda,
+          id_item: idItem,
+        },
+      });
+
       return NextResponse.json({ ok: true, idComanda });
     }
 
@@ -589,6 +758,19 @@ export async function POST(req: NextRequest) {
         { status: resolveHttpStatus(error) }
       );
     }
+
+    await registrarLogSistema({
+      gravidade: "info",
+      modulo: "comandas",
+      idSalao,
+      idUsuario: permissionMembership.usuario.id,
+      mensagem: "Comanda enviada para pagamento pelo servidor.",
+      detalhes: {
+        acao,
+        id_comanda: idComanda,
+        status: "aguardando_pagamento",
+      },
+    });
 
     return NextResponse.json({
       ok: true,

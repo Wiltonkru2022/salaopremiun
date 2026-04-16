@@ -6,6 +6,7 @@ import {
 import { processarEstoqueComanda } from "@/lib/estoque/comanda-stock";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { obterTaxaConfigurada, type CaixaTaxasConfig } from "@/lib/caixa/taxas";
+import { registrarLogSistema } from "@/lib/system-logs";
 
 type AcaoCaixa =
   | "abrir_caixa"
@@ -210,6 +211,19 @@ export async function POST(req: NextRequest) {
         );
       }
 
+      await registrarLogSistema({
+        gravidade: "info",
+        modulo: "caixa",
+        idSalao,
+        idUsuario: permissionMembership.usuario.id,
+        mensagem: "Caixa aberto pelo servidor.",
+        detalhes: {
+          acao,
+          id_sessao: data || null,
+          valor_abertura: sanitizeMoney(body.sessao?.valorAbertura),
+        },
+      });
+
       return NextResponse.json({ ok: true, idSessao: data || null });
     }
 
@@ -238,6 +252,19 @@ export async function POST(req: NextRequest) {
           { status: resolveHttpStatus(error) }
         );
       }
+
+      await registrarLogSistema({
+        gravidade: "info",
+        modulo: "caixa",
+        idSalao,
+        idUsuario: permissionMembership.usuario.id,
+        mensagem: "Caixa fechado pelo servidor.",
+        detalhes: {
+          acao,
+          id_sessao: data || idSessao,
+          valor_fechamento: sanitizeMoney(body.sessao?.valorFechamento),
+        },
+      });
 
       return NextResponse.json({ ok: true, idSessao: data || null });
     }
@@ -292,12 +319,35 @@ export async function POST(req: NextRequest) {
       }
 
       const resultRow = Array.isArray(data) ? data[0] : data;
+      const idMovimentacao = resultRow?.id_movimentacao || null;
+      const idVale = resultRow?.id_vale || null;
+      const jaExistia = Boolean(resultRow?.ja_existia);
+
+      await registrarLogSistema({
+        gravidade: jaExistia ? "warning" : "info",
+        modulo: "caixa",
+        idSalao,
+        idUsuario: permissionMembership.usuario.id,
+        mensagem: jaExistia
+          ? "Movimentacao do caixa reaproveitada por idempotencia."
+          : "Movimentacao do caixa lancada pelo servidor.",
+        detalhes: {
+          acao,
+          id_sessao: idSessao,
+          id_movimentacao: idMovimentacao,
+          id_vale: idVale,
+          tipo: movimentoPayload.p_tipo,
+          valor: movimentoPayload.p_valor,
+          idempotency_key: idempotencyKey,
+          ja_existia: jaExistia,
+        },
+      });
 
       return NextResponse.json({
         ok: true,
-        idMovimentacao: resultRow?.id_movimentacao || null,
-        idVale: resultRow?.id_vale || null,
-        idempotentReplay: Boolean(resultRow?.ja_existia),
+        idMovimentacao,
+        idVale,
+        idempotentReplay: jaExistia,
       });
     }
 
@@ -397,16 +447,43 @@ export async function POST(req: NextRequest) {
       }
 
       const resultRow = Array.isArray(data) ? data[0] : data;
+      const idPagamento = resultRow?.id_pagamento || null;
+      const idMovimentacao = resultRow?.id_movimentacao || null;
+      const jaExistia = Boolean(resultRow?.ja_existia);
+
+      await registrarLogSistema({
+        gravidade: jaExistia ? "warning" : "info",
+        modulo: "caixa",
+        idSalao,
+        idUsuario: permissionMembership.usuario.id,
+        mensagem: jaExistia
+          ? "Pagamento da comanda reaproveitado por idempotencia."
+          : "Pagamento da comanda adicionado pelo servidor.",
+        detalhes: {
+          acao,
+          id_comanda: idComanda,
+          id_sessao: sessao.id,
+          id_pagamento: idPagamento,
+          id_movimentacao: idMovimentacao,
+          forma_pagamento: formaPagamento,
+          valor_base: valorBase,
+          valor_final_cobrado: valorFinalCobrado,
+          taxa_percentual: taxaPercentual,
+          taxa_valor: taxaValor,
+          idempotency_key: idempotencyKey,
+          ja_existia: jaExistia,
+        },
+      });
 
       return NextResponse.json({
         ok: true,
-        idPagamento: resultRow?.id_pagamento || null,
-        idMovimentacao: resultRow?.id_movimentacao || null,
+        idPagamento,
+        idMovimentacao,
         repassaTaxaCliente,
         taxaPercentual,
         taxaValor,
         valorFinalCobrado,
-        idempotentReplay: Boolean(resultRow?.ja_existia),
+        idempotentReplay: jaExistia,
       });
     }
 
@@ -436,6 +513,19 @@ export async function POST(req: NextRequest) {
           { status: resolveHttpStatus(error) }
         );
       }
+
+      await registrarLogSistema({
+        gravidade: "warning",
+        modulo: "caixa",
+        idSalao,
+        idUsuario: permissionMembership.usuario.id,
+        mensagem: "Pagamento da comanda removido pelo servidor.",
+        detalhes: {
+          acao,
+          id_comanda: idComanda,
+          id_pagamento: idPagamento,
+        },
+      });
 
       return NextResponse.json({ ok: true });
     }
@@ -499,6 +589,22 @@ export async function POST(req: NextRequest) {
             : "nao foi possivel atualizar o estoque da comanda.";
       }
 
+      await registrarLogSistema({
+        gravidade: warning ? "warning" : "info",
+        modulo: "caixa",
+        idSalao,
+        idUsuario: permissionMembership.usuario.id,
+        mensagem: warning
+          ? "Comanda finalizada com aviso de estoque."
+          : "Comanda finalizada pelo servidor.",
+        detalhes: {
+          acao,
+          id_comanda: idComanda,
+          exigir_cliente: exigirCliente,
+          warning,
+        },
+      });
+
       return NextResponse.json({
         ok: true,
         warning,
@@ -518,6 +624,19 @@ export async function POST(req: NextRequest) {
         { status: resolveHttpStatus(error) }
       );
     }
+
+    await registrarLogSistema({
+      gravidade: "warning",
+      modulo: "caixa",
+      idSalao,
+      idUsuario: permissionMembership.usuario.id,
+      mensagem: "Comanda cancelada pelo servidor.",
+      detalhes: {
+        acao,
+        id_comanda: idComanda,
+        motivo: sanitizeText(body.motivo),
+      },
+    });
 
     return NextResponse.json({ ok: true });
   } catch (error) {
