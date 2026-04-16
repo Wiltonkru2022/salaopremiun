@@ -63,7 +63,7 @@ export default function Sidebar({
 
       <aside
         className={clsx(
-          "group fixed inset-y-0 left-0 z-50 w-[292px] -translate-x-full border-r border-white/10 bg-[linear-gradient(180deg,#07101b,#0d1724_54%,#14251f)] text-white shadow-[0_30px_90px_rgba(2,6,23,0.38)] transition-[width,transform] duration-300 xl:sticky xl:top-0 xl:z-20 xl:flex xl:h-screen xl:w-[82px] xl:translate-x-0 xl:flex-col xl:overflow-hidden xl:hover:w-[292px]",
+          "group fixed inset-y-0 left-0 z-50 w-[292px] -translate-x-full border-r border-white/10 bg-[linear-gradient(180deg,#07101b,#0d1724_54%,#14251f)] text-white transition-[width,transform] duration-300 xl:sticky xl:top-0 xl:z-20 xl:flex xl:h-screen xl:w-[82px] xl:translate-x-0 xl:flex-col xl:overflow-hidden xl:hover:w-[292px]",
           mobileOpen ? "translate-x-0" : ""
         )}
       >
@@ -125,7 +125,7 @@ export default function Sidebar({
                     className={clsx(
                       "group/item flex items-center gap-3 rounded-[22px] px-3 py-2.5 transition-all duration-300 xl:h-12 xl:w-12 xl:justify-center xl:px-0 xl:py-0 xl:hover:-translate-y-0.5 xl:group-hover:w-full xl:group-hover:justify-start xl:group-hover:px-3",
                       active
-                        ? "bg-[linear-gradient(135deg,rgba(199,162,92,0.95),rgba(243,228,188,0.94))] text-zinc-950 shadow-[0_18px_40px_rgba(199,162,92,0.25)]"
+                        ? "bg-[linear-gradient(135deg,rgba(199,162,92,0.95),rgba(243,228,188,0.94))] text-zinc-950 xl:bg-transparent xl:text-white xl:shadow-none xl:group-hover:bg-[linear-gradient(135deg,rgba(199,162,92,0.95),rgba(243,228,188,0.94))] xl:group-hover:text-zinc-950"
                         : "text-white/72 hover:bg-white/8 hover:text-white"
                     )}
                   >
@@ -133,7 +133,7 @@ export default function Sidebar({
                       className={clsx(
                         "flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl ring-1 transition",
                         active
-                          ? "bg-white/55 ring-white/30"
+                          ? "bg-white/55 text-zinc-950 ring-white/30 xl:bg-[rgba(199,162,92,0.18)] xl:text-[#f3e4bc] xl:ring-[rgba(243,228,188,0.35)] xl:group-hover:bg-white/60 xl:group-hover:text-zinc-950 xl:group-hover:ring-white/30"
                           : "bg-white/8 ring-white/10 group-hover/item:bg-white/12"
                       )}
                     >
