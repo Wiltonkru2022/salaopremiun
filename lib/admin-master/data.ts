@@ -33,7 +33,19 @@ function currency(value: number) {
 
 function dateValue(value?: string | null) {
   if (!value) return "-";
-  return new Date(value).toLocaleDateString("pt-BR");
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "-";
+  return date.toLocaleDateString("pt-BR");
+}
+
+function dateTimeValue(value?: string | null) {
+  if (!value) return "-";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "-";
+  return date.toLocaleString("pt-BR", {
+    dateStyle: "short",
+    timeStyle: "short",
+  });
 }
 
 function safeNumber(value: unknown) {
@@ -71,6 +83,8 @@ export async function getAdminMasterDashboard() {
     assinaturasVencidas,
     cobrancasMes,
     cobrancasVencidas,
+    checkoutsProcessando,
+    checkoutsFalhos,
     ticketsAbertos,
     alertasCriticos,
     planos,
@@ -101,6 +115,14 @@ export async function getAdminMasterDashboard() {
       .select("id", { count: "exact", head: true })
       .lt("data_expiracao", new Date().toISOString())
       .in("status", ["pending", "pendente", "aguardando_pagamento"]),
+    supabase
+      .from("assinatura_checkout_locks")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "processando"),
+    supabase
+      .from("assinatura_checkout_locks")
+      .select("id", { count: "exact", head: true })
+      .in("status", ["erro", "expirado"]),
     supabase
       .from("tickets")
       .select("id", { count: "exact", head: true })
@@ -165,6 +187,12 @@ export async function getAdminMasterDashboard() {
         value: currency(receitaMes),
         hint: `${safeCount(cobrancasVencidas)} cobrancas vencidas`,
         tone: "amber",
+      },
+      {
+        label: "Checkouts assinatura",
+        value: String(safeCount(checkoutsProcessando)),
+        hint: `${safeCount(checkoutsFalhos)} com erro/expirado`,
+        tone: safeCount(checkoutsFalhos) > 0 ? "red" : "blue",
       },
       {
         label: "Tickets abertos",
@@ -567,12 +595,35 @@ export async function getAdminMasterSection(
   }
 
   if (section === "cobrancas") {
-    const { data } = await supabase
-      .from("assinaturas_cobrancas")
-      .select("id_salao, referencia, valor, status, forma_pagamento, gateway, data_expiracao, pago_em")
-      .order("created_at", { ascending: false })
-      .limit(100);
-    const rows = ((data || []) as {
+    const [{ data: cobrancas }, { data: checkoutLocks }, { data: saloes }] =
+      await Promise.all([
+        supabase
+          .from("assinaturas_cobrancas")
+          .select(
+            "id, id_salao, referencia, valor, status, forma_pagamento, gateway, data_expiracao, pago_em, created_at, asaas_payment_id, txid, idempotency_key"
+          )
+          .order("created_at", { ascending: false })
+          .limit(100),
+        supabase
+          .from("assinatura_checkout_locks")
+          .select(
+            "id, id_salao, plano_codigo, billing_type, valor, idempotency_key, status, id_cobranca, asaas_payment_id, erro_texto, expires_at, created_at, updated_at"
+          )
+          .order("created_at", { ascending: false })
+          .limit(100),
+        supabase.from("saloes").select("id, nome").limit(1000),
+      ]);
+
+    const salaoById = new Map(
+      ((saloes || []) as { id: string; nome?: string | null }[]).map((salao) => [
+        salao.id,
+        salao.nome || salao.id,
+      ])
+    );
+
+    type AdminCobrancaRow = AdminTableRow & { _sort: string };
+
+    const cobrancaRows = ((cobrancas || []) as {
       id_salao?: string | null;
       referencia?: string | null;
       valor?: number | string | null;
@@ -581,59 +632,132 @@ export async function getAdminMasterSection(
       gateway?: string | null;
       data_expiracao?: string | null;
       pago_em?: string | null;
-    }[]).map((item) => ({
-      salao: item.id_salao || "-",
+      created_at?: string | null;
+      asaas_payment_id?: string | null;
+      txid?: string | null;
+      idempotency_key?: string | null;
+    }[]).map((item): AdminCobrancaRow => ({
+      _sort: item.created_at || "",
+      tipo: "cobranca",
+      salao: item.id_salao ? salaoById.get(item.id_salao) || item.id_salao : "-",
       referencia: item.referencia || "-",
       valor: currency(safeNumber(item.valor)),
       status: item.status || "-",
       forma: item.forma_pagamento || "-",
       gateway: item.gateway || "-",
-      vence: dateValue(item.data_expiracao),
+      expira: dateValue(item.data_expiracao),
+      criado: dateTimeValue(item.created_at),
       pago: dateValue(item.pago_em),
+      detalhe:
+        item.asaas_payment_id ||
+        item.txid ||
+        item.idempotency_key ||
+        "-",
     }));
+
+    const checkoutRows = ((checkoutLocks || []) as {
+      id?: string | null;
+      id_salao?: string | null;
+      plano_codigo?: string | null;
+      billing_type?: string | null;
+      valor?: number | string | null;
+      idempotency_key?: string | null;
+      status?: string | null;
+      id_cobranca?: string | null;
+      asaas_payment_id?: string | null;
+      erro_texto?: string | null;
+      expires_at?: string | null;
+      created_at?: string | null;
+      updated_at?: string | null;
+    }[]).map((item): AdminCobrancaRow => {
+      const detalhe =
+        item.erro_texto ||
+        item.asaas_payment_id ||
+        item.id_cobranca ||
+        item.idempotency_key ||
+        "-";
+
+      return {
+        _sort: item.created_at || item.updated_at || "",
+        tipo: "checkout",
+        salao: item.id_salao ? salaoById.get(item.id_salao) || item.id_salao : "-",
+        referencia: item.idempotency_key || item.id || "-",
+        valor: currency(safeNumber(item.valor)),
+        status: item.status || "-",
+        forma: item.billing_type || "-",
+        gateway: "asaas",
+        expira: dateTimeValue(item.expires_at),
+        criado: dateTimeValue(item.created_at),
+        pago: "-",
+        detalhe: String(detalhe).slice(0, 90),
+      };
+    });
+
+    const rows = [...cobrancaRows, ...checkoutRows]
+      .sort((a, b) => String(b._sort).localeCompare(String(a._sort)))
+      .slice(0, 120)
+      .map(({ _sort: _sort, ...row }) => row);
+
+    const checkoutEmAndamento = checkoutRows.filter(
+      (row) => String(row.status).toLowerCase() === "processando"
+    ).length;
+    const checkoutFalhos = checkoutRows.filter((row) =>
+      ["erro", "expirado"].includes(String(row.status).toLowerCase())
+    ).length;
+    const cobrancasPendentes = cobrancaRows.filter((row) =>
+      ["pending", "pendente", "aguardando_pagamento"].includes(
+        String(row.status).toLowerCase()
+      )
+    ).length;
 
     return {
       title: "Cobrancas",
       description:
-        "Historico de cobrancas, pagamentos, vencimentos e reprocessamento de gateway.",
+        "Historico de cobrancas, pagamentos e locks de checkout para detectar duplicidade, falha e operacao presa.",
       kpis: [
         {
           label: "Cobrancas recentes",
-          value: String(rows.length),
+          value: String(cobrancaRows.length),
           hint: "Ultimas 100",
           tone: "dark",
         },
         {
-          label: "Pagas",
-          value: String(
-            rows.filter((row) =>
-              ["pago", "paid", "received", "confirmed"].includes(
-                String(row.status).toLowerCase()
-              )
-            ).length
-          ),
-          hint: "Confirmadas",
-          tone: "green",
+          label: "Checkouts ativos",
+          value: String(checkoutEmAndamento),
+          hint: "Reservas em processamento",
+          tone: checkoutEmAndamento > 0 ? "amber" : "green",
+        },
+        {
+          label: "Falhas checkout",
+          value: String(checkoutFalhos),
+          hint: "Erro ou expirado",
+          tone: checkoutFalhos > 0 ? "red" : "green",
         },
         {
           label: "Pendentes",
-          value: String(
-            rows.filter((row) =>
-              ["pending", "pendente", "aguardando_pagamento"].includes(
-                String(row.status).toLowerCase()
-              )
-            ).length
-          ),
+          value: String(cobrancasPendentes),
           hint: "Acompanhar",
           tone: "amber",
         },
       ],
       rows,
-      columns: ["referencia", "valor", "status", "forma", "gateway", "vence", "pago"],
+      columns: [
+        "tipo",
+        "salao",
+        "referencia",
+        "valor",
+        "status",
+        "forma",
+        "gateway",
+        "expira",
+        "criado",
+        "detalhe",
+      ],
       actions: [
         "Copiar link",
         "Reenviar",
         "Reprocessar webhook",
+        "Ver checkout travado",
         "Marcar ajuste manual",
       ],
     };
