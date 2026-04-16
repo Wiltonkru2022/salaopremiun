@@ -863,13 +863,16 @@ export async function POST(req: Request) {
         return NextResponse.json(checkoutExistente);
       }
 
+      const requiresReconciliation =
+        reservaCheckout.reason === "provider_payment_pending_reconciliation";
+
       return NextResponse.json(
         {
           error:
             "JÃ¡ existe uma cobranÃ§a sendo gerada para este salÃ£o. Aguarde alguns segundos e tente novamente.",
           reason: reservaCheckout.reason,
         },
-        { status: 409 }
+        { status: requiresReconciliation ? 423 : 409 }
       );
     }
 

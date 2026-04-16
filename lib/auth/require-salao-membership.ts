@@ -1,5 +1,6 @@
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { registrarLogSistema } from "@/lib/system-logs";
 
 type RequireSalaoMembershipOptions = {
   allowedNiveis?: string[];
@@ -13,6 +14,27 @@ export class AuthzError extends Error {
     this.name = "AuthzError";
     this.status = status;
   }
+}
+
+async function registrarTenantGuardLog(params: {
+  idSalaoAtual?: string | null;
+  idSalaoSolicitado?: string | null;
+  idUsuario?: string | null;
+  motivo: string;
+  detalhes?: Record<string, unknown>;
+}) {
+  await registrarLogSistema({
+    gravidade: "warning",
+    modulo: "tenant_guard",
+    idSalao: params.idSalaoAtual || null,
+    idUsuario: params.idUsuario || null,
+    mensagem: params.motivo,
+    detalhes: {
+      id_salao_solicitado: params.idSalaoSolicitado || null,
+      id_salao_usuario: params.idSalaoAtual || null,
+      ...params.detalhes,
+    },
+  });
 }
 
 export async function requireSalaoMembership(
@@ -42,10 +64,31 @@ export async function requireSalaoMembership(
   }
 
   if (!usuario?.id_salao || usuario.id_salao !== idSalao) {
+    await registrarTenantGuardLog({
+      idSalaoAtual: usuario?.id_salao || null,
+      idSalaoSolicitado: idSalao,
+      idUsuario: usuario?.id || null,
+      motivo: "Tentativa de acesso negada por isolamento multi-tenant.",
+      detalhes: {
+        auth_user_id: user.id,
+        usuario_tem_salao: Boolean(usuario?.id_salao),
+      },
+    });
+
     throw new AuthzError("Acesso negado para este salao.", 403);
   }
 
   if (String(usuario.status || "").toLowerCase() !== "ativo") {
+    await registrarTenantGuardLog({
+      idSalaoAtual: usuario.id_salao,
+      idSalaoSolicitado: idSalao,
+      idUsuario: usuario.id,
+      motivo: "Usuario inativo tentou acessar area protegida do salao.",
+      detalhes: {
+        status_usuario: usuario.status || null,
+      },
+    });
+
     throw new AuthzError("Usuario inativo.", 403);
   }
 
@@ -56,6 +99,17 @@ export async function requireSalaoMembership(
     );
 
     if (!niveisPermitidos.includes(nivelNormalizado)) {
+      await registrarTenantGuardLog({
+        idSalaoAtual: usuario.id_salao,
+        idSalaoSolicitado: idSalao,
+        idUsuario: usuario.id,
+        motivo: "Usuario tentou executar acao sem nivel permitido.",
+        detalhes: {
+          nivel_usuario: nivelNormalizado,
+          niveis_permitidos: niveisPermitidos,
+        },
+      });
+
       throw new AuthzError("Usuario sem nivel permitido para esta acao.", 403);
     }
   }
