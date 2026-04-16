@@ -46,6 +46,17 @@ export type PlanoAccessSnapshot = {
   recursosBloqueados: string[];
 };
 
+export class PlanAccessError extends Error {
+  status = 402;
+  code: string;
+
+  constructor(message: string, code = "PLAN_ACCESS_DENIED") {
+    super(message);
+    this.name = "PlanAccessError";
+    this.code = code;
+  }
+}
+
 type AssinaturaRow = {
   plano?: string | null;
   status?: string | null;
@@ -256,7 +267,10 @@ export async function assertCanUsePlanFeature(
 ) {
   const result = await canUsePlanFeature(idSalao, recurso);
   if (!result.allowed) {
-    throw new Error(result.reason || "Recurso indisponivel no plano atual.");
+    throw new PlanAccessError(
+      result.reason || "Recurso indisponivel no plano atual.",
+      "FEATURE_BLOCKED"
+    );
   }
   return result.snapshot;
 }
@@ -270,12 +284,16 @@ export async function assertCanCreateWithinLimit(
   const uso = snapshot.uso[tipo];
 
   if (snapshot.bloqueioTotal) {
-    throw new Error(snapshot.bloqueioMotivo || "Assinatura bloqueada.");
+    throw new PlanAccessError(
+      snapshot.bloqueioMotivo || "Assinatura bloqueada.",
+      "SUBSCRIPTION_BLOCKED"
+    );
   }
 
   if (limite != null && uso >= limite) {
-    throw new Error(
-      `Limite do plano atingido: ${uso} de ${limite} ${tipo}.`
+    throw new PlanAccessError(
+      `Limite do plano atingido: ${uso} de ${limite} ${tipo}.`,
+      "PLAN_LIMIT_REACHED"
     );
   }
 

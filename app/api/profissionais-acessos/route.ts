@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdminSalao } from "@/lib/auth/require-admin-salao";
 import { AuthzError } from "@/lib/auth/require-salao-membership";
+import {
+  assertCanUsePlanFeature,
+  PlanAccessError,
+} from "@/lib/plans/access";
 import { hashPassword } from "@/lib/profissional-auth.server";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
@@ -58,6 +62,10 @@ export async function POST(req: NextRequest) {
     }
 
     await requireAdminSalao(profissional.id_salao);
+
+    if (ativo) {
+      await assertCanUsePlanFeature(profissional.id_salao, "app_profissional");
+    }
 
     const { data: cpfJaUsado, error: cpfJaUsadoError } = await supabaseAdmin
       .from("profissionais_acessos")
@@ -135,6 +143,13 @@ export async function POST(req: NextRequest) {
     if (error instanceof AuthzError) {
       return NextResponse.json(
         { error: error.message },
+        { status: error.status }
+      );
+    }
+
+    if (error instanceof PlanAccessError) {
+      return NextResponse.json(
+        { error: error.message, code: error.code },
         { status: error.status }
       );
     }

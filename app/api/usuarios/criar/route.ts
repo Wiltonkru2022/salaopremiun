@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { buildSalonPasswordReuseHash } from "@/lib/auth/password-reuse";
 import { AuthzError, requireAdminSalao } from "@/lib/auth/require-admin-salao";
+import {
+  assertCanCreateWithinLimit,
+  assertCanUsePlanFeature,
+  PlanAccessError,
+} from "@/lib/plans/access";
 
 function getSupabaseAdmin() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -81,6 +86,12 @@ export async function POST(req: NextRequest) {
         { error: "Status inválido." },
         { status: 400 }
       );
+    }
+
+    await assertCanUsePlanFeature(idSalao, "usuarios");
+
+    if (status === "ativo") {
+      await assertCanCreateWithinLimit(idSalao, "usuarios");
     }
 
     const senhaHashReuso = buildSalonPasswordReuseHash({
@@ -212,6 +223,13 @@ export async function POST(req: NextRequest) {
     if (error instanceof AuthzError) {
       return NextResponse.json(
         { error: error.message },
+        { status: error.status }
+      );
+    }
+
+    if (error instanceof PlanAccessError) {
+      return NextResponse.json(
+        { error: error.message, code: error.code },
         { status: error.status }
       );
     }

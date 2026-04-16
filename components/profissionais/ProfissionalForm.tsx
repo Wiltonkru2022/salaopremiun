@@ -545,134 +545,59 @@ async function salvarAcessoProfissional(idProfissional: string) {
         foto_url: form.foto_url || null,
       };
 
-      let idProfissional = form.id || "";
+      const salvarResponse = await fetch("/api/profissionais/processar", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          acao: modo === "novo" ? "criar" : "atualizar",
+          idSalao,
+          idProfissional: form.id || null,
+          profissional: payloadBase,
+          servicos: isAssistenteSalao ? [] : servicosSelecionados,
+          assistentes: isAssistenteSalao ? [] : assistentesSelecionados,
+        }),
+      });
 
-      if (modo === "novo") {
-        const { data, error } = await supabase
-          .from("profissionais")
-          .insert(payloadBase)
-          .select("id")
-          .limit(1);
+      const salvarResult = (await salvarResponse.json()) as {
+        error?: string;
+        idProfissional?: string;
+      };
 
-        if (error) throw error;
-
-        idProfissional = data?.[0]?.id;
-        if (!idProfissional) throw new Error("Não foi possível obter o ID do profissional.");
-      } else {
-        const { error } = await supabase
-          .from("profissionais")
-          .update(payloadBase)
-          .eq("id", form.id)
-          .eq("id_salao", idSalao);
-
-        if (error) throw error;
-        idProfissional = form.id || "";
+      if (!salvarResponse.ok) {
+        throw new Error(salvarResult.error || "Erro ao salvar profissional.");
       }
 
-      let fotoUrlFinal = form.foto_url;
+      const idProfissional = salvarResult.idProfissional || form.id || "";
 
-      if (fotoFile && idProfissional) {
-        fotoUrlFinal = await uploadFoto(idProfissional);
-
-        const { error: fotoError } = await supabase
-          .from("profissionais")
-          .update({ foto_url: fotoUrlFinal, foto: fotoUrlFinal })
-          .eq("id", idProfissional)
-          .eq("id_salao", idSalao);
-
-        if (fotoError) throw fotoError;
+      if (!idProfissional) {
+        throw new Error("Não foi possível obter o ID do profissional.");
       }
 
-      if (idProfissional) {
-        if (isAssistenteSalao) {
-          await supabase
-            .from("profissionais_acessos")
-            .update({ ativo: false })
-            .eq("id_profissional", idProfissional);
-        } else {
-          await salvarAcessoProfissional(idProfissional);
+      if (fotoFile) {
+        const fotoUrlFinal = await uploadFoto(idProfissional);
+        const fotoResponse = await fetch("/api/profissionais/processar", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            acao: "atualizar_foto",
+            idSalao,
+            idProfissional,
+            foto_url: fotoUrlFinal,
+          }),
+        });
+        const fotoResult = (await fotoResponse.json()) as { error?: string };
+
+        if (!fotoResponse.ok) {
+          throw new Error(fotoResult.error || "Erro ao salvar foto.");
         }
+      }
 
-        const { data: vinculosAtuais, error: vinculosAtuaisError } = await supabase
-          .from("profissional_servicos")
-          .select(`
-            id_servico,
-            preco_personalizado,
-            comissao_percentual,
-            comissao_assistente_percentual,
-            base_calculo,
-            desconta_taxa_maquininha
-          `)
-          .eq("id_profissional", idProfissional);
-
-        if (vinculosAtuaisError) throw vinculosAtuaisError;
-
-        const regrasAtuaisPorServico = new Map(
-          ((vinculosAtuais || []) as {
-            id_servico: string;
-            preco_personalizado?: number | null;
-            comissao_percentual?: number | null;
-            comissao_assistente_percentual?: number | null;
-            base_calculo?: string | null;
-            desconta_taxa_maquininha?: boolean | null;
-          }[]).map((item) => [item.id_servico, item])
-        );
-
-        const { error: removeError } = await supabase
-          .from("profissional_servicos")
-          .delete()
-          .eq("id_profissional", idProfissional);
-
-        if (removeError) throw removeError;
-
-        if (!isAssistenteSalao && servicosSelecionados.length > 0) {
-          const vinculos = servicosSelecionados.map((item) => ({
-            id_salao: idSalao,
-            id_profissional: idProfissional,
-            id_servico: item.id_servico,
-            duracao_minutos: Number(item.duracao_minutos || 0),
-            ativo: true,
-            preco_personalizado: regrasAtuaisPorServico.get(item.id_servico)?.preco_personalizado ?? null,
-            comissao_percentual: regrasAtuaisPorServico.get(item.id_servico)?.comissao_percentual ?? null,
-            comissao_assistente_percentual:
-              regrasAtuaisPorServico.get(item.id_servico)?.comissao_assistente_percentual ?? null,
-            base_calculo: regrasAtuaisPorServico.get(item.id_servico)?.base_calculo ?? null,
-            desconta_taxa_maquininha:
-              regrasAtuaisPorServico.get(item.id_servico)?.desconta_taxa_maquininha ?? null,
-          }));
-
-          const { error: vinculoError } = await supabase
-            .from("profissional_servicos")
-            .insert(vinculos);
-
-          if (vinculoError) throw vinculoError;
-        }
-
-        const { error: removeAssistentesError } = await supabase
-          .from("profissional_assistentes")
-          .delete()
-          .eq("id_salao", idSalao)
-          .eq("id_profissional", idProfissional);
-
-        if (removeAssistentesError) throw removeAssistentesError;
-
-        if (!isAssistenteSalao && assistentesSelecionados.length > 0) {
-          const vinculosAssistentes = assistentesSelecionados
-            .filter((idAssistente) => idAssistente !== idProfissional)
-            .map((idAssistente) => ({
-              id_salao: idSalao,
-              id_profissional: idProfissional,
-              id_assistente: idAssistente,
-            }));
-
-          if (vinculosAssistentes.length > 0) {
-            const { error: insertAssistentesError } = await supabase
-              .from("profissional_assistentes")
-              .insert(vinculosAssistentes);
-
-            if (insertAssistentesError) throw insertAssistentesError;
-          }
-        }
+      if (!isAssistenteSalao) {
+        await salvarAcessoProfissional(idProfissional);
       }
 
       if (modo === "novo") {
