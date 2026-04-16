@@ -781,12 +781,22 @@ export async function getAdminMasterSection(
       created_at?: string | null;
       updated_at?: string | null;
     }[]).map((item): AdminCobrancaRow => {
+      const requiresReconciliation =
+        Boolean(item.asaas_payment_id) &&
+        !item.id_cobranca &&
+        ["erro", "expirado"].includes(String(item.status || "").toLowerCase());
       const detalhe =
-        item.erro_texto ||
-        item.asaas_payment_id ||
-        item.id_cobranca ||
-        item.idempotency_key ||
-        "-";
+        requiresReconciliation
+          ? `reconciliar:${item.asaas_payment_id}`
+          : item.erro_texto ||
+            item.asaas_payment_id ||
+            item.id_cobranca ||
+            item.idempotency_key ||
+            "-";
+
+      const status = requiresReconciliation
+        ? "reconciliar"
+        : item.status || "-";
 
       return {
         _sort: item.created_at || item.updated_at || "",
@@ -794,7 +804,7 @@ export async function getAdminMasterSection(
         salao: item.id_salao ? salaoById.get(item.id_salao) || item.id_salao : "-",
         referencia: item.idempotency_key || item.id || "-",
         valor: currency(safeNumber(item.valor)),
-        status: item.status || "-",
+        status,
         forma: item.billing_type || "-",
         gateway: "asaas",
         expira: dateTimeValue(item.expires_at),
@@ -813,7 +823,14 @@ export async function getAdminMasterSection(
       (row) => String(row.status).toLowerCase() === "processando"
     ).length;
     const checkoutFalhos = checkoutRows.filter((row) =>
-      ["erro", "expirado"].includes(String(row.status).toLowerCase())
+      ["erro", "expirado", "reconciliar"].includes(
+        String(row.status).toLowerCase()
+      )
+    ).length;
+    const checkoutsReconciliar = checkoutRows.filter(
+      (row) =>
+        String(row.status).toLowerCase() !== "concluido" &&
+        String(row.detalhe || "").startsWith("reconciliar:")
     ).length;
     const cobrancasPendentes = cobrancaRows.filter((row) =>
       ["pending", "pendente", "aguardando_pagamento"].includes(
@@ -841,7 +858,7 @@ export async function getAdminMasterSection(
         {
           label: "Falhas checkout",
           value: String(checkoutFalhos),
-          hint: "Erro ou expirado",
+          hint: `${checkoutsReconciliar} exigem reconciliacao`,
           tone: checkoutFalhos > 0 ? "red" : "green",
         },
         {
@@ -1326,6 +1343,154 @@ export async function getAdminMasterSection(
         "Sincronizar alertas",
         "Ver webhooks com erro",
         "Ver checkouts travados",
+      ],
+    };
+  }
+
+  if (section === "logs") {
+    const [{ data: logs }, { data: checkoutLocks }, { data: saloes }] =
+      await Promise.all([
+        supabase
+          .from("logs_sistema")
+          .select(
+            "id, gravidade, modulo, id_salao, mensagem, detalhes_json, criado_em"
+          )
+          .order("criado_em", { ascending: false })
+          .limit(120),
+        supabase
+          .from("assinatura_checkout_locks")
+          .select(
+            "id, id_salao, plano_codigo, billing_type, status, id_cobranca, asaas_payment_id, erro_texto, idempotency_key, created_at, updated_at"
+          )
+          .in("status", ["erro", "expirado"])
+          .not("asaas_payment_id", "is", null)
+          .is("id_cobranca", null)
+          .order("updated_at", { ascending: false })
+          .limit(60),
+        supabase.from("saloes").select("id, nome").limit(1000),
+      ]);
+
+    const salaoById = new Map(
+      ((saloes || []) as { id: string; nome?: string | null }[]).map((salao) => [
+        salao.id,
+        salao.nome || salao.id,
+      ])
+    );
+
+    type AdminLogRow = AdminTableRow & { _sort: string };
+
+    const logRows = ((logs || []) as {
+      id?: string | null;
+      gravidade?: string | null;
+      modulo?: string | null;
+      id_salao?: string | null;
+      mensagem?: string | null;
+      detalhes_json?: Record<string, unknown> | null;
+      criado_em?: string | null;
+    }[]).map((row): AdminLogRow => {
+      const detalhes =
+        row.detalhes_json && typeof row.detalhes_json === "object"
+          ? row.detalhes_json
+          : {};
+      const referencia =
+        typeof detalhes.id_salao_solicitado === "string"
+          ? detalhes.id_salao_solicitado
+          : typeof detalhes.idempotency_key === "string"
+            ? detalhes.idempotency_key
+            : row.id || "-";
+
+      return {
+        _sort: row.criado_em || "",
+        tipo: row.modulo === "tenant_guard" ? "seguranca" : "log",
+        gravidade: row.gravidade || "-",
+        modulo: row.modulo || "-",
+        salao: row.id_salao ? salaoById.get(row.id_salao) || row.id_salao : "-",
+        mensagem: row.mensagem || "-",
+        referencia,
+        criado: dateTimeValue(row.criado_em),
+        detalhe: JSON.stringify(detalhes).slice(0, 120),
+      };
+    });
+
+    const reconciliationRows = ((checkoutLocks || []) as {
+      id?: string | null;
+      id_salao?: string | null;
+      plano_codigo?: string | null;
+      billing_type?: string | null;
+      status?: string | null;
+      asaas_payment_id?: string | null;
+      erro_texto?: string | null;
+      idempotency_key?: string | null;
+      updated_at?: string | null;
+      created_at?: string | null;
+    }[]).map((row): AdminLogRow => ({
+      _sort: row.updated_at || row.created_at || "",
+      tipo: "reconciliacao",
+      gravidade: "error",
+      modulo: "assinatura_checkout",
+      salao: row.id_salao ? salaoById.get(row.id_salao) || row.id_salao : "-",
+      mensagem:
+        "Pagamento existe no provedor, mas nao ha cobranca local vinculada.",
+      referencia: row.asaas_payment_id || row.idempotency_key || row.id || "-",
+      criado: dateTimeValue(row.updated_at || row.created_at),
+      detalhe:
+        row.erro_texto ||
+        `${row.plano_codigo || "-"} / ${row.billing_type || "-"} / ${row.status || "-"}`,
+    }));
+
+    const rows = [...reconciliationRows, ...logRows]
+      .sort((a, b) => String(b._sort).localeCompare(String(a._sort)))
+      .slice(0, 150)
+      .map(({ _sort: _sort, ...row }) => row);
+
+    const tenantGuardCount = logRows.filter(
+      (row) => row.modulo === "tenant_guard"
+    ).length;
+    const errorsCount = rows.filter((row) =>
+      ["error", "erro"].includes(String(row.gravidade).toLowerCase())
+    ).length;
+    const modulesCount = new Set(rows.map((row) => String(row.modulo))).size;
+
+    return {
+      title: "Logs e seguranca",
+      description:
+        "Visao operacional dos eventos recentes, tentativas multi-tenant bloqueadas e checkouts que precisam de reconciliacao financeira.",
+      kpis: [
+        {
+          label: "Tenant guard",
+          value: String(tenantGuardCount),
+          hint: "Tentativas bloqueadas por isolamento de salao",
+          tone: tenantGuardCount > 0 ? "red" : "green",
+        },
+        {
+          label: "Reconciliacoes",
+          value: String(reconciliationRows.length),
+          hint: "Pagamento no provedor sem cobranca local",
+          tone: reconciliationRows.length > 0 ? "red" : "green",
+        },
+        {
+          label: "Erros recentes",
+          value: String(errorsCount),
+          hint: `${modulesCount} modulos com eventos`,
+          tone: errorsCount > 0 ? "amber" : "green",
+        },
+      ],
+      rows,
+      columns: [
+        "tipo",
+        "gravidade",
+        "modulo",
+        "salao",
+        "mensagem",
+        "referencia",
+        "criado",
+        "detalhe",
+      ],
+      actions: [
+        "Investigar tenant guard",
+        "Abrir ticket interno",
+        "Reconciliar checkout",
+        "Exportar logs",
       ],
     };
   }
