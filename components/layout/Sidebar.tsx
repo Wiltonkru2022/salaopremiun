@@ -108,7 +108,7 @@ export default function Sidebar({
           </div>
 
           <nav className="scroll-premium min-h-0 flex-1 overflow-y-auto px-3 py-4">
-            <div className="space-y-2">
+            <div className="space-y-2.5">
               {itemsFiltrados.map((item) => {
                 const Icon = item.icon;
                 const active =
@@ -123,9 +123,9 @@ export default function Sidebar({
                     onFocus={() => router.prefetch(item.href)}
                     onMouseEnter={() => router.prefetch(item.href)}
                     className={clsx(
-                      "group/item flex items-center gap-3 rounded-[22px] px-3 py-2.5 transition-all duration-300 xl:h-12 xl:w-12 xl:justify-center xl:px-0 xl:py-0 xl:hover:-translate-y-0.5 xl:group-hover:w-full xl:group-hover:justify-start xl:group-hover:px-3",
+                      "group/item flex items-center gap-3 rounded-[22px] px-3 py-2.5 ring-1 ring-transparent transition-all duration-300 xl:h-12 xl:w-12 xl:justify-center xl:px-0 xl:py-0 xl:group-hover:w-full xl:group-hover:justify-start xl:group-hover:px-3",
                       active
-                        ? "bg-[linear-gradient(135deg,rgba(199,162,92,0.95),rgba(243,228,188,0.94))] text-zinc-950 xl:bg-transparent xl:text-white xl:shadow-none xl:group-hover:bg-[linear-gradient(135deg,rgba(199,162,92,0.95),rgba(243,228,188,0.94))] xl:group-hover:text-zinc-950"
+                        ? "bg-white/12 text-white ring-white/12"
                         : "text-white/72 hover:bg-white/8 hover:text-white"
                     )}
                   >
@@ -133,7 +133,7 @@ export default function Sidebar({
                       className={clsx(
                         "flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl ring-1 transition",
                         active
-                          ? "bg-white/55 text-zinc-950 ring-white/30 xl:bg-[rgba(199,162,92,0.18)] xl:text-[#f3e4bc] xl:ring-[rgba(243,228,188,0.35)] xl:group-hover:bg-white/60 xl:group-hover:text-zinc-950 xl:group-hover:ring-white/30"
+                          ? "bg-white/14 text-white ring-white/18"
                           : "bg-white/8 ring-white/10 group-hover/item:bg-white/12"
                       )}
                     >
@@ -147,7 +147,7 @@ export default function Sidebar({
                       <span
                         className={clsx(
                           "mt-0.5 block truncate text-xs",
-                          active ? "text-zinc-800/75" : "text-white/45"
+                          active ? "text-white/58" : "text-white/45"
                         )}
                       >
                         {item.description}
