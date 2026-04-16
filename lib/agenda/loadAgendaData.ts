@@ -1,9 +1,10 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { addDays, subDays } from "date-fns";
 import type { Agendamento, Bloqueio, Cliente, Servico, ViewMode } from "@/types/agenda";
 import { formatFullDate, normalizeTimeString } from "@/lib/utils/agenda";
 
 export async function loadAgendaData(params: {
-  supabase: any;
+  supabase: SupabaseClient;
   idSalao: string;
   selectedProfissionalId: string;
   viewMode: ViewMode;

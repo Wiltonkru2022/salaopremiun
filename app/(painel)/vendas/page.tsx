@@ -33,6 +33,10 @@ import {
   getStatusBadgeClass,
 } from "@/components/vendas/utils";
 import { KpiCard, ResumoRow } from "@/components/vendas/ui";
+import {
+  buildPermissoesByNivel,
+  sanitizePermissoesDb,
+} from "@/components/caixa/permissions";
 
 export default function VendasPage() {
   const supabase = createClient();
@@ -83,7 +87,7 @@ export default function VendasPage() {
   }, []);
 
   useEffect(() => {
-    if (idSalao && acessoCarregado && permissoes?.vendas) {
+    if (idSalao && acessoCarregado && permissoes?.vendas_ver) {
       void carregarVendas(idSalao);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -130,19 +134,15 @@ export default function VendasPage() {
         .eq("id_salao", usuario.id_salao)
         .maybeSingle();
 
-      const permissoesFinal = permissoesData || {
-        dashboard: true,
-        agenda: true,
-        clientes: true,
-        comandas: true,
-        caixa: true,
-        vendas: true,
+      const permissoesFinal = {
+        ...buildPermissoesByNivel(usuario.nivel),
+        ...sanitizePermissoesDb(permissoesData as Record<string, unknown> | null),
       };
 
       setPermissoes(permissoesFinal);
       setAcessoCarregado(true);
 
-      if (!permissoesFinal?.vendas) {
+      if (!permissoesFinal?.vendas_ver) {
         setErroTela("Você não tem permissão para acessar a página de vendas.");
         setLoading(false);
         return;
@@ -717,7 +717,7 @@ export default function VendasPage() {
     return <div className="p-6">Carregando vendas...</div>;
   }
 
-  if (!permissoes?.vendas) {
+  if (!permissoes?.vendas_ver) {
     return (
       <div className="p-6">
         <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">

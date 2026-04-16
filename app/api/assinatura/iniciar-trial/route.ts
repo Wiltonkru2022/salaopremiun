@@ -72,7 +72,7 @@ async function validarSalaoDoUsuario(idSalao: string) {
 
   const { data: usuario, error: usuarioError } = await supabaseAdmin
     .from("usuarios")
-    .select("id_salao, status")
+    .select("id_salao, status, nivel")
     .eq("auth_user_id", user.id)
     .maybeSingle();
 
@@ -90,6 +90,10 @@ async function validarSalaoDoUsuario(idSalao: string) {
 
   if (usuario.id_salao !== idSalao) {
     throw new HttpError("Acesso negado para este salão.", 403);
+  }
+
+  if (String(usuario.nivel || "").toLowerCase() !== "admin") {
+    throw new HttpError("Somente administrador pode iniciar o trial.", 403);
   }
 }
 

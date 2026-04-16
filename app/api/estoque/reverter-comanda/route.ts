@@ -21,7 +21,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    await requireSalaoMembership(idSalao);
+    await requireSalaoMembership(idSalao, {
+      allowedNiveis: ["admin", "gerente"],
+    });
 
     const result = await reverterEstoqueComanda(getSupabaseAdmin(), {
       idSalao,

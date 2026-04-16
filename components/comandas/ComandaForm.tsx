@@ -3,7 +3,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import ComandaItemModal from "@/components/comandas/ComandaItemModal";
+import ComandaItemModal, {
+  type ComandaItemModalPayload,
+} from "@/components/comandas/ComandaItemModal";
 import { getUsuarioLogado } from "@/lib/auth/getUsuarioLogado";
 import { calcularValorTotal, formatMoney, formatMoneyInput, parseMoneyToNumber } from "@/lib/utils/comanda";
 import {
@@ -61,6 +63,10 @@ type ComandaFormProps = {
   modo: "novo" | "editar";
 };
 
+function getErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error && error.message ? error.message : fallback;
+}
+
 export default function ComandaForm({ modo }: ComandaFormProps) {
   const supabase = createClient();
   const router = useRouter();
@@ -105,6 +111,16 @@ export default function ComandaForm({ modo }: ComandaFormProps) {
     () => Number((subtotal - descontoNumero + acrescimoNumero).toFixed(2)),
     [subtotal, descontoNumero, acrescimoNumero]
   );
+
+  const comandaBloqueada = ["fechada", "cancelada"].includes(
+    status.toLowerCase()
+  );
+
+  function exigirComandaEditavel() {
+    if (comandaBloqueada) {
+      throw new Error("Comanda fechada ou cancelada nao pode ser editada.");
+    }
+  }
 
 async function bootstrap() {
   try {
@@ -203,9 +219,9 @@ async function bootstrap() {
     if (modo === "editar" && comandaId) {
       await carregarComanda(comandaId, usuarioLogado.idSalao);
     }
-  } catch (e: any) {
-    console.error(e);
-    setErro(e.message || "Erro ao carregar comanda.");
+  } catch (error: unknown) {
+    console.error(error);
+    setErro(getErrorMessage(error, "Erro ao carregar comanda."));
   } finally {
     setLoading(false);
   }
@@ -243,6 +259,9 @@ async function bootstrap() {
 
   async function salvarComandaBase() {
     if (!numero) throw new Error("Número da comanda não definido.");
+    if (modo === "editar") {
+      exigirComandaEditavel();
+    }
 
     const payload = {
       id_salao: idSalao,
@@ -295,16 +314,18 @@ async function bootstrap() {
       }
 
       setMsg("Comanda atualizada com sucesso.");
-    } catch (e: any) {
-      console.error(e);
-      setErro(e.message || "Erro ao salvar comanda.");
+    } catch (error: unknown) {
+      console.error(error);
+      setErro(getErrorMessage(error, "Erro ao salvar comanda."));
     } finally {
       setSaving(false);
     }
   }
 
-  async function handleAdicionarItem(payload: any) {
+  async function handleAdicionarItem(payload: ComandaItemModalPayload) {
     try {
+      exigirComandaEditavel();
+
       const id = modo === "novo" ? await salvarComandaBase() : comandaId;
       if (!id) throw new Error("Comanda inválida.");
 
@@ -374,9 +395,9 @@ async function bootstrap() {
       if (modo === "novo") {
         router.push(`/comandas/${id}`);
       }
-    } catch (e: any) {
-      console.error(e);
-      setErro(e.message || "Erro ao adicionar item.");
+    } catch (error: unknown) {
+      console.error(error);
+      setErro(getErrorMessage(error, "Erro ao adicionar item."));
     }
   }
 
@@ -391,8 +412,8 @@ async function bootstrap() {
 
     setItens((itensRows as ComandaItem[]) || []);
 
-    const novoSubtotal = (itensRows || []).reduce(
-      (acc: number, item: any) => acc + Number(item.valor_total || 0),
+    const novoSubtotal = ((itensRows as ComandaItem[] | null) || []).reduce(
+      (acc, item) => acc + Number(item.valor_total || 0),
       0
     );
 
@@ -410,6 +431,8 @@ async function bootstrap() {
 
   async function removerItem(itemId: string) {
     try {
+      exigirComandaEditavel();
+
       const confirmar = window.confirm("Remover este item da comanda?");
       if (!confirmar) return;
 
@@ -422,14 +445,16 @@ async function bootstrap() {
       if (error) throw error;
 
       await recarregarItens(comandaId);
-    } catch (e: any) {
-      console.error(e);
-      setErro(e.message || "Erro ao remover item.");
+    } catch (error: unknown) {
+      console.error(error);
+      setErro(getErrorMessage(error, "Erro ao remover item."));
     }
   }
 
   async function fecharComanda() {
     try {
+      exigirComandaEditavel();
+
       if (!comandaId) throw new Error("Salve a comanda antes de fechar.");
 
       const { error } = await supabase
@@ -448,9 +473,9 @@ async function bootstrap() {
 
       setStatus("aguardando_pagamento");
       setMsg("Comanda enviada para o caixa.");
-    } catch (e: any) {
-      console.error(e);
-      setErro(e.message || "Erro ao enviar comanda para pagamento.");
+    } catch (error: unknown) {
+      console.error(error);
+      setErro(getErrorMessage(error, "Erro ao enviar comanda para pagamento."));
     }
   }
 
@@ -507,6 +532,12 @@ async function bootstrap() {
             </div>
           ) : null}
 
+          {comandaBloqueada ? (
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+              Esta comanda esta {status}. Edicao de itens, valores e envio para pagamento fica bloqueada para manter o caixa e as comissoes consistentes.
+            </div>
+          ) : null}
+
           <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.4fr_0.6fr]">
             <div className="space-y-6">
               <div className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm">
@@ -516,6 +547,7 @@ async function bootstrap() {
                     <select
                       value={clienteId}
                       onChange={(e) => setClienteId(e.target.value)}
+                      disabled={comandaBloqueada}
                       className="w-full rounded-2xl border border-zinc-300 px-4 py-3"
                     >
                       <option value="">Selecione</option>
@@ -532,13 +564,14 @@ async function bootstrap() {
                     <select
                       value={status}
                       onChange={(e) => setStatus(e.target.value)}
+                      disabled={comandaBloqueada}
                       className="w-full rounded-2xl border border-zinc-300 px-4 py-3"
                     >
                       <option value="aberta">Aberta</option>
                       <option value="em_atendimento">Em atendimento</option>
                       <option value="aguardando_pagamento">Aguardando pagamento</option>
-                      <option value="fechada">Fechada</option>
-                      <option value="cancelada">Cancelada</option>
+                      <option value="fechada" disabled>Fechada</option>
+                      <option value="cancelada" disabled>Cancelada</option>
                     </select>
                   </div>
 
@@ -548,6 +581,7 @@ async function bootstrap() {
                       rows={3}
                       value={observacoes}
                       onChange={(e) => setObservacoes(e.target.value)}
+                      disabled={comandaBloqueada}
                       className="w-full rounded-2xl border border-zinc-300 px-4 py-3"
                     />
                   </div>
@@ -561,7 +595,8 @@ async function bootstrap() {
                   <button
                     type="button"
                     onClick={() => setItemModalOpen(true)}
-                    className="rounded-2xl bg-zinc-900 px-4 py-3 text-sm font-semibold text-white"
+                    disabled={comandaBloqueada}
+                    className="rounded-2xl bg-zinc-900 px-4 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     + Adicionar item
                   </button>
@@ -603,7 +638,8 @@ async function bootstrap() {
                           <button
                             type="button"
                             onClick={() => removerItem(item.id)}
-                            className="rounded-xl border border-red-300 bg-red-50 px-3 py-2 text-sm font-semibold text-red-600"
+                            disabled={comandaBloqueada}
+                            className="rounded-xl border border-red-300 bg-red-50 px-3 py-2 text-sm font-semibold text-red-600 disabled:cursor-not-allowed disabled:opacity-50"
                           >
                             Remover
                           </button>
@@ -627,6 +663,7 @@ async function bootstrap() {
                     <input
                       value={desconto}
                       onChange={(e) => setDesconto(formatMoneyInput(e.target.value))}
+                      disabled={comandaBloqueada}
                       className="w-full rounded-2xl border border-zinc-300 px-4 py-3"
                     />
                   </div>
@@ -636,6 +673,7 @@ async function bootstrap() {
                     <input
                       value={acrescimo}
                       onChange={(e) => setAcrescimo(formatMoneyInput(e.target.value))}
+                      disabled={comandaBloqueada}
                       className="w-full rounded-2xl border border-zinc-300 px-4 py-3"
                     />
                   </div>
@@ -647,8 +685,8 @@ async function bootstrap() {
                   <button
                     type="button"
                     onClick={handleSalvar}
-                    disabled={saving}
-                    className="w-full rounded-2xl bg-zinc-900 px-5 py-3 font-semibold text-white"
+                    disabled={saving || comandaBloqueada}
+                    className="w-full rounded-2xl bg-zinc-900 px-5 py-3 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {saving ? "Salvando..." : modo === "novo" ? "Salvar comanda" : "Atualizar comanda"}
                   </button>
@@ -656,7 +694,8 @@ async function bootstrap() {
                   <button
                     type="button"
                     onClick={fecharComanda}
-                    className="w-full rounded-2xl border border-zinc-300 bg-white px-5 py-3 font-semibold text-zinc-700"
+                    disabled={saving || comandaBloqueada}
+                    className="w-full rounded-2xl border border-zinc-300 bg-white px-5 py-3 font-semibold text-zinc-700 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     Enviar para pagamento
                   </button>

@@ -21,7 +21,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const auth = await requireSalaoMembership(idSalao);
+    const auth = await requireSalaoMembership(idSalao, {
+      allowedNiveis: ["admin", "gerente"],
+    });
     const supabaseAdmin = getSupabaseAdmin();
 
     const { data: comanda, error: comandaError } = await supabaseAdmin

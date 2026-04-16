@@ -407,6 +407,7 @@ export default function CaixaPage() {
       setErroTela("Voce nao tem permissao para operar o caixa.");
       return;
     }
+    if (!exigirCaixaAberto()) return;
 
     try {
       setSaving(true);

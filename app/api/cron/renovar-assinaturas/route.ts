@@ -167,27 +167,28 @@ async function handleCron(req: Request) {
         continue;
       }
 
-const formaPagamento = String(
-  assinatura.forma_pagamento_atual || "PIX"
-).toUpperCase();
+      const formaPagamento = String(
+        assinatura.forma_pagamento_atual || "PIX"
+      ).toUpperCase();
 
-if (formaPagamento === "CREDIT_CARD") {
-  resultados.push({
-    id_salao: assinatura.id_salao,
-    ok: false,
-    motivo: "Renovação automática ainda não suportada para cartão.",
-  });
-  continue;
-}
+      if (formaPagamento === "CREDIT_CARD") {
+        resultados.push({
+          id_salao: assinatura.id_salao,
+          ok: false,
+          motivo:
+            "Renovacao automatica por cartao exige tokenizacao antes de ser ativada.",
+        });
+        continue;
+      }
 
-if (!["PIX", "BOLETO"].includes(formaPagamento)) {
-  resultados.push({
-    id_salao: assinatura.id_salao,
-    ok: false,
-    motivo: "Forma de pagamento inválida.",
-  });
-  continue;
-}
+      if (!["PIX", "BOLETO"].includes(formaPagamento)) {
+        resultados.push({
+          id_salao: assinatura.id_salao,
+          ok: false,
+          motivo: "Forma de pagamento invalida.",
+        });
+        continue;
+      }
 
       const { data: cobrancaExistente } = await supabaseAdmin
         .from("assinaturas_cobrancas")
@@ -282,7 +283,6 @@ if (!["PIX", "BOLETO"].includes(formaPagamento)) {
       const { error: updateAssinaturaError } = await supabaseAdmin
         .from("assinaturas")
         .update({
-          status: "pendente",
           asaas_payment_id: cobranca.id,
           valor: valorPlano,
           gateway: "asaas",

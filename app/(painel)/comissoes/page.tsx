@@ -4,6 +4,10 @@ import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { getUsuarioLogado } from "@/lib/auth/getUsuarioLogado";
+import {
+  buildPermissoesByNivel,
+  sanitizePermissoesDb,
+} from "@/components/caixa/permissions";
 import { ComissaoHelpPanel } from "@/components/comissoes/ComissaoHelpPanel";
 import {
   BadgeDollarSign,
@@ -257,8 +261,10 @@ export default function ComissoesPage() {
       .eq("id_salao", usuario.id_salao)
       .maybeSingle();
 
-    const permissoesFinal: Permissoes =
-      permissoesDb || { agenda_ver: true, caixa_ver: true, clientes_ver: true, comissoes_ver: true, dashboard_ver: true, vendas_ver: true };
+    const permissoesFinal: Permissoes = {
+      ...buildPermissoesByNivel(usuario.nivel),
+      ...sanitizePermissoesDb(permissoesDb as Record<string, unknown> | null),
+    };
 
     setPermissoes(permissoesFinal);
     setNivel(String(usuario.nivel || "").toLowerCase());

@@ -213,6 +213,10 @@ export async function lancarMovimentacaoCaixa({
   idComanda?: string | null;
   formaPagamento?: string | null;
 }) {
+  if (tipo === "vale_profissional" && !idProfissional) {
+    throw new Error("Selecione o profissional para lancar o vale.");
+  }
+
   const { data: movimento, error } = await supabase
     .from("caixa_movimentacoes")
     .insert({
@@ -245,7 +249,17 @@ export async function lancarMovimentacaoCaixa({
         status: "aberto",
       });
 
-    if (valeError) throw valeError;
+    if (valeError) {
+      if (movimento?.id) {
+        await supabase
+          .from("caixa_movimentacoes")
+          .delete()
+          .eq("id", movimento.id)
+          .eq("id_salao", idSalao);
+      }
+
+      throw valeError;
+    }
   }
 
   return movimento as CaixaMovimentacao;

@@ -127,7 +127,7 @@ export async function POST(req: Request) {
 
     const { data: assinatura, error: assinaturaError } = await supabaseAdmin
       .from("assinaturas")
-      .select("id, renovacao_automatica")
+      .select("id, renovacao_automatica, forma_pagamento_atual")
       .eq("id_salao", idSalao)
       .maybeSingle();
 
@@ -142,6 +142,20 @@ export async function POST(req: Request) {
       return NextResponse.json(
         { error: "Assinatura não encontrada." },
         { status: 404 }
+      );
+    }
+
+    if (
+      renovacaoAutomatica &&
+      String(assinatura.forma_pagamento_atual || "").toUpperCase() ===
+        "CREDIT_CARD"
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "Renovacao automatica por cartao exige tokenizacao antes de ser ativada.",
+        },
+        { status: 400 }
       );
     }
 

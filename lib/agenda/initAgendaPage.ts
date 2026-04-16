@@ -1,3 +1,4 @@
+import type { SupabaseClient, User } from "@supabase/supabase-js";
 import { PERMISSIONS, type PermissionKey, type UserNivel } from "@/lib/permissions";
 import type { Cliente, ConfigSalao, Profissional, Servico } from "@/types/agenda";
 
@@ -99,8 +100,8 @@ function getAssinaturaBloqueada(params: {
 }
 
 export async function initAgendaPage(params: {
-  supabase: any;
-  safeGetAuthUser: () => Promise<any>;
+  supabase: SupabaseClient;
+  safeGetAuthUser: () => Promise<User | null>;
 }): Promise<{
   ok: boolean;
   redirectTo?: string | null;

@@ -27,10 +27,28 @@ type Produto = {
   comissao_revenda_percentual?: number | null;
 };
 
+export type ComandaItemModalPayload = {
+  tipo_item: string;
+  quantidade: number;
+  valor_unitario: number;
+  observacoes?: string | null;
+  id_servico?: string | null;
+  id_produto?: string | null;
+  id_agendamento?: string | null;
+  descricao?: string | null;
+  custo_total?: number | null;
+  id_profissional?: string | null;
+  id_assistente?: string | null;
+  comissao_percentual_aplicada?: number | null;
+  comissao_assistente_percentual_aplicada?: number | null;
+  base_calculo_aplicada?: string | null;
+  desconta_taxa_maquininha_aplicada?: boolean | null;
+};
+
 type Props = {
   open: boolean;
   onClose: () => void;
-  onSave: (payload: any) => Promise<void>;
+  onSave: (payload: ComandaItemModalPayload) => Promise<void>;
   profissionais: Profissional[];
   servicos: Servico[];
   produtos: Produto[];
@@ -74,7 +92,7 @@ export default function ComandaItemModal({
       const quantidadeNumero = Number(quantidade || 1);
       const valorUnitarioNumero = parseMoneyToNumber(valorUnitario);
 
-      let payload: any = {
+      let payload: ComandaItemModalPayload = {
         tipo_item: tipoItem,
         quantidade: quantidadeNumero,
         valor_unitario: valorUnitarioNumero,

@@ -5,6 +5,10 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { getResumoAssinatura } from "@/lib/assinatura-utils";
 import {
+  buildPermissoesByNivel,
+  sanitizePermissoesDb,
+} from "@/components/caixa/permissions";
+import {
   PLANOS_INFO,
   type AssinaturaRow,
   type BillingType,
@@ -28,26 +32,6 @@ type CobrancaAtualRow = {
   asaas_payment_id: string | null;
   txid: string | null;
 };
-
-const PERMISSOES_PADRAO = (
-  nivel: string | null | undefined
-): Permissoes => ({
-  dashboard_ver: true,
-  agenda_ver: true,
-  clientes_ver: true,
-  profissionais_ver: true,
-  servicos_ver: true,
-  produtos_ver: true,
-  estoque_ver: true,
-  comandas_ver: true,
-  vendas_ver: true,
-  caixa_ver: true,
-  comissoes_ver: true,
-  relatorios_ver: true,
-  marketing_ver: true,
-  configuracoes_ver: String(nivel || "").toLowerCase() === "admin",
-  assinatura_ver: true,
-});
 
 export function useAssinaturaPage() {
   const supabase = useMemo(() => createClient(), []);
@@ -132,10 +116,18 @@ export function useAssinaturaPage() {
       .select("*")
       .eq("id_usuario", usuarioDb.id)
       .eq("id_salao", usuarioDb.id_salao)
-      .maybeSingle<Permissoes>();
+      .maybeSingle<Record<string, unknown>>();
 
-    const permissoesFinais =
-      permissoesDb || PERMISSOES_PADRAO(usuarioDb.nivel);
+    const permissoesFinais = {
+      ...buildPermissoesByNivel(usuarioDb.nivel),
+      ...sanitizePermissoesDb(permissoesDb),
+      assinatura_ver:
+        String(usuarioDb.nivel || "").toLowerCase() === "admin" &&
+        Boolean(
+          permissoesDb?.assinatura_ver ??
+            buildPermissoesByNivel(usuarioDb.nivel).assinatura_ver
+        ),
+    } as Permissoes;
 
     setUsuario(user as UsuarioSupabase);
     setPermissoes(permissoesFinais);
@@ -394,19 +386,25 @@ export function useAssinaturaPage() {
       setSalvandoRenovacaoAutomatica(true);
       setErro("");
 
-      if (!assinatura?.id) {
+      if (!assinatura?.id || !salao?.id) {
         throw new Error("Assinatura não encontrada.");
       }
 
-      const { error } = await supabase
-        .from("assinaturas")
-        .update({
-          renovacao_automatica: value,
-        })
-        .eq("id", assinatura.id);
+      const response = await fetch("/api/assinatura/toggle-renovacao", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          idSalao: salao.id,
+          renovacaoAutomatica: value,
+        }),
+      });
 
-      if (error) {
-        throw error;
+      const data = (await response.json()) as { error?: string };
+
+      if (!response.ok) {
+        throw new Error(data.error || "Erro ao salvar renovação automática.");
       }
 
       setRenovacaoAutomatica(value);
@@ -468,8 +466,15 @@ export function useAssinaturaPage() {
         throw new Error(data.error || "Erro ao criar cobrança.");
       }
 
-      setCheckout(data);
-      setAguardandoPagamento(true);
+      const statusCobranca = String(data.status || "").toUpperCase();
+      const pagamentoConfirmado = [
+        "CONFIRMED",
+        "RECEIVED",
+        "RECEIVED_IN_CASH",
+      ].includes(statusCobranca);
+
+      setCheckout(pagamentoConfirmado ? null : data);
+      setAguardandoPagamento(!pagamentoConfirmado);
 
       await carregarDados();
     } catch (error: unknown) {

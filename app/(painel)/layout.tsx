@@ -3,6 +3,10 @@ import { getUser } from "@/lib/auth/get-user";
 import { getResumoAssinatura } from "@/lib/assinatura-utils";
 import { buildShellNotifications } from "@/lib/notifications/shell-notifications";
 import { createClient } from "@/lib/supabase/server";
+import {
+  buildPermissoesByNivel,
+  sanitizePermissoesDb,
+} from "@/components/caixa/permissions";
 import { redirect } from "next/navigation";
 
 type Permissoes = Record<string, boolean>;
@@ -62,34 +66,21 @@ export default async function PainelLayout({
         .maybeSingle(),
     ]);
 
-  const permissoesPadrao: Permissoes = {
-    dashboard_ver: true,
-    agenda_ver: true,
-    clientes_ver: true,
-    profissionais_ver: true,
-    servicos_ver: true,
-    produtos_ver: true,
-    estoque_ver: true,
-    comandas_ver: true,
-    vendas_ver: true,
-    caixa_ver: true,
-    comissoes_ver: true,
-    relatorios_ver: true,
-    marketing_ver: true,
-    perfil_salao_ver: usuario.nivel === "admin",
-    configuracoes_ver: usuario.nivel === "admin",
-    assinatura_ver: usuario.nivel === "admin",
-  };
+  const permissoesPadrao = buildPermissoesByNivel(usuario.nivel);
+  const permissoesDb = sanitizePermissoesDb(permissoes as Permissoes | null);
 
   const permissoesFinal: Permissoes = {
     ...permissoesPadrao,
-    ...(permissoes || {}),
+    ...permissoesDb,
     perfil_salao_ver:
-      usuario.nivel === "admin" && (permissoes?.perfil_salao_ver ?? true),
+      usuario.nivel === "admin" &&
+      (permissoesDb.perfil_salao_ver ?? permissoesPadrao.perfil_salao_ver),
     configuracoes_ver:
-      usuario.nivel === "admin" && (permissoes?.configuracoes_ver ?? true),
+      usuario.nivel === "admin" &&
+      (permissoesDb.configuracoes_ver ?? permissoesPadrao.configuracoes_ver),
     assinatura_ver:
-      usuario.nivel === "admin" && (permissoes?.assinatura_ver ?? true),
+      usuario.nivel === "admin" &&
+      (permissoesDb.assinatura_ver ?? permissoesPadrao.assinatura_ver),
   };
 
   const resumoAssinatura = assinatura

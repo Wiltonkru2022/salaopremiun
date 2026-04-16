@@ -111,7 +111,7 @@ async function validarSalaoDoUsuario(idSalao: string) {
 
   const { data: usuario, error: usuarioError } = await supabaseAdmin
     .from("usuarios")
-    .select("id_salao, status")
+    .select("id_salao, status, nivel")
     .eq("auth_user_id", user.id)
     .maybeSingle();
 
@@ -129,6 +129,10 @@ async function validarSalaoDoUsuario(idSalao: string) {
 
   if (usuario.id_salao !== idSalao) {
     throw new HttpError("Acesso negado para este salão.", 403);
+  }
+
+  if (String(usuario.nivel || "").toLowerCase() !== "admin") {
+    throw new HttpError("Somente administrador pode gerenciar assinatura.", 403);
   }
 
   return { user };
@@ -166,6 +170,12 @@ function mapBillingType(tipo: BillingType) {
   if (tipo === "PIX") return "PIX";
   if (tipo === "BOLETO") return "BOLETO";
   return "CREDIT_CARD";
+}
+
+function isAsaasPaymentPaid(status?: unknown) {
+  return ["RECEIVED", "CONFIRMED", "RECEIVED_IN_CASH"].includes(
+    String(status || "").toUpperCase()
+  );
 }
 
 function getPlanoOrdem(plano?: string | null) {
@@ -647,9 +657,10 @@ export async function POST(req: Request) {
       pixCopiaCola = String(pixPayload?.payload || "") || null;
     }
 
-    const assinaturaStatus = "pendente";
+    const pagamentoConfirmado = isAsaasPaymentPaid(payment.status);
+    const assinaturaStatus = pagamentoConfirmado ? "ativo" : "pendente";
     const vencimentoEm = dueDate;
-    const pagoEm = null;
+    const pagoEm = pagamentoConfirmado ? new Date().toISOString() : null;
 
     const { data: assinaturaExistente, error: assinaturaBuscaError } =
       await supabaseAdmin
@@ -763,8 +774,8 @@ export async function POST(req: Request) {
           txid: billingType === "PIX" ? paymentId : null,
           asaas_payment_id: paymentId,
           asaas_customer_id: customerId,
-          payment_date: null,
-          confirmed_date: null,
+          payment_date: pagoEm,
+          confirmed_date: pagoEm,
           invoice_url: String(payment.invoiceUrl || "").trim() || null,
           bank_slip_url: String(payment.bankSlipUrl || "").trim() || null,
           data_expiracao: dueDate,
@@ -827,7 +838,7 @@ export async function POST(req: Request) {
         trial_ativo: false,
         trial_inicio_em: null,
         trial_fim_em: null,
-        status: "pendente",
+        status: assinaturaStatus,
       })
       .eq("id", idSalao);
 

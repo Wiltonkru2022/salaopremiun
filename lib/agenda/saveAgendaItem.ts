@@ -1,3 +1,4 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Agendamento, Bloqueio, ConfigSalao, Profissional, Servico } from "@/types/agenda";
 import {
   addDurationToTime,
@@ -8,7 +9,7 @@ import {
 } from "@/lib/utils/agenda";
 
 export async function saveAgendaItem(params: {
-  supabase: any;
+  supabase: SupabaseClient;
   payload: Record<string, unknown>;
   idSalao: string;
   config: ConfigSalao;

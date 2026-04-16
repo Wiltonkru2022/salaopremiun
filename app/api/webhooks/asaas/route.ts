@@ -428,6 +428,8 @@ export async function POST(req: Request) {
       const { error: updateSalaoError } = await supabaseAdmin
         .from("saloes")
         .update({
+          status: novoStatus,
+          trial_ativo: false,
           updated_at: agoraIso,
         })
         .eq("id", assinatura.id_salao);

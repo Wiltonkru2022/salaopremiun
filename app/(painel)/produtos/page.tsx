@@ -5,6 +5,10 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { getUsuarioLogado } from "@/lib/auth/getUsuarioLogado";
+import {
+  buildPermissoesByNivel,
+  sanitizePermissoesDb,
+} from "@/components/caixa/permissions";
 
 type Produto = {
   id: string;
@@ -76,24 +80,10 @@ export default function ProdutosPage() {
       .eq("id_salao", usuario.id_salao)
       .maybeSingle();
 
-    const permissoesFinal: Permissoes =
-      permissoesDb || {
-        dashboard_ver: true,
-        agenda_ver: true,
-        clientes_ver: true,
-        profissionais_ver: true,
-        servicos_ver: true,
-        produtos_ver: true,
-        estoque_ver: true,
-        comandas_ver: true,
-        vendas_ver: true,
-        caixa_ver: true,
-        comissoes_ver: true,
-        relatorios_ver: true,
-        marketing_ver: true,
-        configuracoes_ver: usuario.nivel === "admin",
-        assinatura_ver: usuario.nivel === "admin",
-      };
+    const permissoesFinal: Permissoes = {
+      ...buildPermissoesByNivel(usuario.nivel),
+      ...sanitizePermissoesDb(permissoesDb as Record<string, unknown> | null),
+    };
 
     setPermissoes(permissoesFinal);
     setNivel(String(usuario.nivel || "").toLowerCase());
