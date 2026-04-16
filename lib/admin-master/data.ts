@@ -1,6 +1,11 @@
 import { syncAdminMasterAlerts } from "@/lib/admin-master/alerts-sync";
 import { getPlanoAccessSnapshot } from "@/lib/plans/access";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import {
+  formatWebhookDate,
+  formatWebhookDiagnosticDetail,
+  syncAdminMasterWebhookEvents,
+} from "@/lib/admin-master/webhooks-sync";
 
 export type AdminKpi = {
   label: string;
@@ -761,6 +766,335 @@ export async function getAdminMasterSection(
         "Reprocessar webhook",
         "Ver checkout travado",
         "Marcar ajuste manual",
+      ],
+    };
+  }
+
+  if (section === "webhooks") {
+    let sync = {
+      total: 0,
+      erros: 0,
+      processados: 0,
+      pendentes: 0,
+    };
+    let syncError: string | null = null;
+
+    try {
+      sync = await syncAdminMasterWebhookEvents();
+    } catch (error) {
+      syncError =
+        error instanceof Error
+          ? error.message
+          : "Falha ao sincronizar eventos reais do Asaas.";
+    }
+
+    const [{ data: eventos }, { data: saloes }] = await Promise.all([
+      supabase
+        .from("eventos_webhook")
+        .select(
+          "origem, evento, id_salao, status, tentativas, erro_texto, resposta_json, recebido_em, processado_em"
+        )
+        .order("recebido_em", { ascending: false })
+        .limit(150),
+      supabase.from("saloes").select("id, nome").limit(1000),
+    ]);
+
+    const salaoById = new Map(
+      ((saloes || []) as { id: string; nome?: string | null }[]).map((salao) => [
+        salao.id,
+        salao.nome || salao.id,
+      ])
+    );
+
+    const rows = ((eventos || []) as {
+      origem?: string | null;
+      evento?: string | null;
+      id_salao?: string | null;
+      status?: string | null;
+      tentativas?: number | null;
+      erro_texto?: string | null;
+      resposta_json?: Record<string, unknown> | null;
+      recebido_em?: string | null;
+      processado_em?: string | null;
+    }[]).map((row) => {
+      const resposta =
+        row.resposta_json && typeof row.resposta_json === "object"
+          ? row.resposta_json
+          : {};
+      const paymentId =
+        typeof resposta.payment_id === "string" ? resposta.payment_id : null;
+      const decisao =
+        typeof resposta.decisao === "string" ? resposta.decisao : null;
+
+      return {
+        origem: row.origem || "-",
+        evento: row.evento || "-",
+        salao: row.id_salao ? salaoById.get(row.id_salao) || row.id_salao : "-",
+        status: row.status || "-",
+        tentativas: safeNumber(row.tentativas),
+        recebido: formatWebhookDate(row.recebido_em),
+        processado: formatWebhookDate(row.processado_em),
+        detalhe: formatWebhookDiagnosticDetail({
+          paymentId,
+          decisao,
+          erro: row.erro_texto,
+        }),
+      };
+    });
+
+    const erros = rows.filter(
+      (row) => String(row.status).toLowerCase() === "erro"
+    ).length;
+    const pendentes = rows.filter(
+      (row) => String(row.status).toLowerCase() === "pendente"
+    ).length;
+    const saloesImpactados = new Set(
+      rows
+        .map((row) => String(row.salao || "-"))
+        .filter((salao) => salao && salao !== "-")
+    ).size;
+
+    return {
+      title: "Webhooks",
+      description:
+        "Diagnostico operacional dos eventos reais do Asaas, com status consolidado, tentativas, decisao aplicada e impacto por salao.",
+      kpis: [
+        {
+          label: "Eventos recentes",
+          value: String(rows.length),
+          hint: syncError ? "Sincronizacao falhou, exibindo cache local" : `${sync.total} eventos sincronizados`,
+          tone: syncError ? "amber" : "dark",
+        },
+        {
+          label: "Com erro",
+          value: String(erros),
+          hint: `${pendentes} pendentes para acompanhar`,
+          tone: erros > 0 ? "red" : "green",
+        },
+        {
+          label: "Saloes impactados",
+          value: String(saloesImpactados),
+          hint: `${sync.processados} processados sem falha`,
+          tone: saloesImpactados > 0 ? "blue" : "dark",
+        },
+        {
+          label: "Sincronizacao",
+          value: syncError ? "Falhou" : "OK",
+          hint: syncError || "Eventos espelhados para o AdminMaster",
+          tone: syncError ? "red" : "green",
+        },
+      ],
+      rows,
+      columns: [
+        "origem",
+        "evento",
+        "salao",
+        "status",
+        "tentativas",
+        "recebido",
+        "processado",
+        "detalhe",
+      ],
+      actions: [
+        "Sincronizar webhooks",
+        "Ver payload Asaas",
+        "Reprocessar diagnostico",
+        "Auditar falhas",
+      ],
+    };
+  }
+
+  if (section === "operacao") {
+    let syncError: string | null = null;
+
+    try {
+      await syncAdminMasterWebhookEvents();
+    } catch (error) {
+      syncError =
+        error instanceof Error
+          ? error.message
+          : "Falha ao sincronizar webhooks para operacao.";
+    }
+
+    const [
+      { data: crons },
+      { data: webhooks },
+      { data: checkoutLocks },
+      { data: saloes },
+    ] = await Promise.all([
+      supabase
+        .from("eventos_cron")
+        .select("nome, status, resumo, erro_texto, iniciado_em, finalizado_em")
+        .order("iniciado_em", { ascending: false })
+        .limit(40),
+      supabase
+        .from("eventos_webhook")
+        .select(
+          "evento, id_salao, status, erro_texto, resposta_json, recebido_em, processado_em"
+        )
+        .in("status", ["erro", "pendente"])
+        .order("recebido_em", { ascending: false })
+        .limit(40),
+      supabase
+        .from("assinatura_checkout_locks")
+        .select(
+          "id, id_salao, plano_codigo, billing_type, status, id_cobranca, asaas_payment_id, erro_texto, idempotency_key, created_at, updated_at"
+        )
+        .in("status", ["processando", "erro", "expirado"])
+        .order("updated_at", { ascending: false })
+        .limit(40),
+      supabase.from("saloes").select("id, nome").limit(1000),
+    ]);
+
+    const salaoById = new Map(
+      ((saloes || []) as { id: string; nome?: string | null }[]).map((salao) => [
+        salao.id,
+        salao.nome || salao.id,
+      ])
+    );
+
+    type AdminOperacaoRow = AdminTableRow & { _sort: string };
+
+    const cronRows = ((crons || []) as {
+      nome?: string | null;
+      status?: string | null;
+      resumo?: string | null;
+      erro_texto?: string | null;
+      iniciado_em?: string | null;
+      finalizado_em?: string | null;
+    }[]).map((row): AdminOperacaoRow => ({
+      _sort: row.finalizado_em || row.iniciado_em || "",
+      tipo: "cron",
+      salao: "-",
+      nome: row.nome || "-",
+      status: row.status || "-",
+      referencia: "-",
+      atualizado: dateTimeValue(row.finalizado_em || row.iniciado_em),
+      detalhe: row.erro_texto || row.resumo || "-",
+    }));
+
+    const webhookRows = ((webhooks || []) as {
+      evento?: string | null;
+      id_salao?: string | null;
+      status?: string | null;
+      erro_texto?: string | null;
+      resposta_json?: Record<string, unknown> | null;
+      recebido_em?: string | null;
+      processado_em?: string | null;
+    }[]).map((row): AdminOperacaoRow => {
+      const resposta =
+        row.resposta_json && typeof row.resposta_json === "object"
+          ? row.resposta_json
+          : {};
+      const paymentId =
+        typeof resposta.payment_id === "string" ? resposta.payment_id : null;
+      const decisao =
+        typeof resposta.decisao === "string" ? resposta.decisao : null;
+
+      return {
+        _sort: row.processado_em || row.recebido_em || "",
+        tipo: "webhook",
+        salao: row.id_salao ? salaoById.get(row.id_salao) || row.id_salao : "-",
+        nome: row.evento || "-",
+        status: row.status || "-",
+        referencia: paymentId || "-",
+        atualizado: formatWebhookDate(row.processado_em || row.recebido_em),
+        detalhe: formatWebhookDiagnosticDetail({
+          paymentId,
+          decisao,
+          erro: row.erro_texto,
+        }),
+      };
+    });
+
+    const checkoutRows = ((checkoutLocks || []) as {
+      id?: string | null;
+      id_salao?: string | null;
+      plano_codigo?: string | null;
+      billing_type?: string | null;
+      status?: string | null;
+      id_cobranca?: string | null;
+      asaas_payment_id?: string | null;
+      erro_texto?: string | null;
+      idempotency_key?: string | null;
+      created_at?: string | null;
+      updated_at?: string | null;
+    }[]).map((row): AdminOperacaoRow => ({
+      _sort: row.updated_at || row.created_at || "",
+      tipo: "checkout",
+      salao: row.id_salao ? salaoById.get(row.id_salao) || row.id_salao : "-",
+      nome: row.plano_codigo
+        ? `Checkout ${row.plano_codigo}`
+        : `Checkout ${row.billing_type || "-"}`,
+      status: row.status || "-",
+      referencia:
+        row.asaas_payment_id ||
+        row.id_cobranca ||
+        row.idempotency_key ||
+        row.id ||
+        "-",
+      atualizado: dateTimeValue(row.updated_at || row.created_at),
+      detalhe: row.erro_texto || row.billing_type || "-",
+    }));
+
+    const rows = [...cronRows, ...webhookRows, ...checkoutRows]
+      .sort((a, b) => String(b._sort).localeCompare(String(a._sort)))
+      .slice(0, 120)
+      .map(({ _sort: _sort, ...row }) => row);
+
+    const cronsComErro = cronRows.filter((row) =>
+      ["erro", "falha", "failed"].includes(String(row.status).toLowerCase())
+    ).length;
+    const checkoutsProblematicos = checkoutRows.length;
+    const webhooksPendentes = webhookRows.filter(
+      (row) => String(row.status).toLowerCase() === "pendente"
+    ).length;
+
+    return {
+      title: "Operacao",
+      description:
+        "Visao operacional unificada com crons recentes, checkouts presos e webhooks com erro ou pendentes para suporte e reprocessamento.",
+      kpis: [
+        {
+          label: "Crons com erro",
+          value: String(cronsComErro),
+          hint: `${cronRows.length} eventos recentes`,
+          tone: cronsComErro > 0 ? "red" : "green",
+        },
+        {
+          label: "Webhooks em atencao",
+          value: String(webhookRows.length),
+          hint: `${webhooksPendentes} pendentes e ${webhookRows.length - webhooksPendentes} com erro`,
+          tone: webhookRows.length > 0 ? "amber" : "green",
+        },
+        {
+          label: "Checkouts travados",
+          value: String(checkoutsProblematicos),
+          hint: "Processando, erro ou expirado",
+          tone: checkoutsProblematicos > 0 ? "red" : "green",
+        },
+        {
+          label: "Sync webhooks",
+          value: syncError ? "Falhou" : "OK",
+          hint: syncError || "Operacao alinhada com Asaas",
+          tone: syncError ? "red" : "green",
+        },
+      ],
+      rows,
+      columns: [
+        "tipo",
+        "salao",
+        "nome",
+        "status",
+        "referencia",
+        "atualizado",
+        "detalhe",
+      ],
+      actions: [
+        "Rodar sincronizacao",
+        "Sincronizar webhooks",
+        "Reprocessar eventos",
+        "Auditar erros",
       ],
     };
   }

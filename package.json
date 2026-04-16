@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "next typegen && node scripts/ensure-next-types.mjs && tsc --noEmit --incremental false",
     "audit": "npm audit --audit-level=moderate",
     "check": "npm run lint && npm run typecheck",
     "validate": "npm run lint && npm run typecheck && npm run audit && npm run build"
