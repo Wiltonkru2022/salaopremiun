@@ -6,7 +6,7 @@ import { useState } from "react";
 type RowActionState =
   | { status: "idle"; label: string; href?: undefined }
   | { status: "loading"; label: string; href?: undefined }
-  | { status: "success"; label: string; href: string }
+  | { status: "success"; label: string; href?: string }
   | { status: "error"; label: string; href?: undefined };
 
 type CreateTicketResponse = {
@@ -17,8 +17,37 @@ type CreateTicketResponse = {
     ticketNumero?: number;
     status?: string;
     existed?: boolean;
+    resolvido?: boolean;
   };
 };
+
+function buildActionRequest(actionType: string, actionId: string) {
+  if (actionType === "checkout_ticket") {
+    return {
+      endpoint: `/api/admin-master/checkouts/${encodeURIComponent(actionId)}/criar-ticket`,
+      body: { assumir: true },
+      successLabel: null,
+    };
+  }
+
+  if (actionType === "alert_ticket") {
+    return {
+      endpoint: `/api/admin-master/alertas/${encodeURIComponent(actionId)}/criar-ticket`,
+      body: { assumir: true },
+      successLabel: null,
+    };
+  }
+
+  if (actionType === "alert_resolve") {
+    return {
+      endpoint: `/api/admin-master/alertas/${encodeURIComponent(actionId)}/resolver`,
+      body: { motivo: "Resolvido manualmente pelo AdminMaster." },
+      successLabel: "Resolvido",
+    };
+  }
+
+  return null;
+}
 
 export default function AdminMasterRowActionButton({
   actionType,
@@ -35,25 +64,34 @@ export default function AdminMasterRowActionButton({
     label: normalizedLabel,
   });
 
-  if (actionType !== "checkout_ticket" || !actionId || normalizedLabel === "-") {
+  if (!actionType || !actionId || normalizedLabel === "-") {
     return <span>{normalizedLabel}</span>;
   }
 
-  async function handleCreateTicket() {
+  async function handleAction() {
+    const request = buildActionRequest(actionType || "", actionId || "");
+    if (!request) return;
+
     setState({ status: "loading", label: "Criando..." });
 
     try {
-      const response = await fetch(
-        `/api/admin-master/checkouts/${encodeURIComponent(actionId || "")}/criar-ticket`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ assumir: true }),
-        }
-      );
+      const response = await fetch(request.endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(request.body),
+      });
       const data = (await response.json().catch(() => ({}))) as CreateTicketResponse;
 
-      if (!response.ok || !data.ok || !data.resultado?.ticketId) {
+      if (!response.ok || !data.ok) {
+        throw new Error(data.error || "Nao foi possivel executar a acao.");
+      }
+
+      if (request.successLabel) {
+        setState({ status: "success", label: request.successLabel });
+        return;
+      }
+
+      if (!data.resultado?.ticketId) {
         throw new Error(data.error || "Nao foi possivel criar o ticket.");
       }
 
@@ -76,20 +114,24 @@ export default function AdminMasterRowActionButton({
   }
 
   if (state.status === "success") {
-    return (
+    return state.href ? (
       <Link
         href={state.href}
         className="inline-flex rounded-full bg-emerald-50 px-3 py-1 text-xs font-black text-emerald-700 ring-1 ring-emerald-200"
       >
         {state.label}
       </Link>
+    ) : (
+      <span className="inline-flex rounded-full bg-emerald-50 px-3 py-1 text-xs font-black text-emerald-700 ring-1 ring-emerald-200">
+        {state.label}
+      </span>
     );
   }
 
   return (
     <button
       type="button"
-      onClick={handleCreateTicket}
+      onClick={handleAction}
       disabled={state.status === "loading"}
       className={`inline-flex rounded-full px-3 py-1 text-xs font-black ring-1 transition ${
         state.status === "error"

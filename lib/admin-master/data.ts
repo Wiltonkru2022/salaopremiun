@@ -1294,6 +1294,12 @@ export async function getAdminMasterSection(
       criado: dateTimeValue(row.criado_em),
       atualizado: dateTimeValue(row.atualizado_em),
       detalhe: row.descricao || "-",
+      ticket_acao: !row.resolvido && !row.id_ticket ? "Criar ticket" : "-",
+      ticket_acao_tipo: !row.resolvido && !row.id_ticket ? "alert_ticket" : null,
+      ticket_acao_id: !row.resolvido && !row.id_ticket ? row.id || null : null,
+      resolver_acao: row.resolvido ? "-" : "Resolver",
+      resolver_acao_tipo: row.resolvido ? null : "alert_resolve",
+      resolver_acao_id: row.resolvido ? null : row.id || null,
     }));
 
     const ativos = rows.filter((row) => row.status === "Ativo").length;
@@ -1343,6 +1349,8 @@ export async function getAdminMasterSection(
         "automatico",
         "criado",
         "detalhe",
+        "ticket_acao",
+        "resolver_acao",
       ],
       actions: [
         "Resolver alerta",

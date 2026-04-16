@@ -10,6 +10,14 @@ function toneClass(tone?: AdminKpi["tone"]) {
   return "border-zinc-200 bg-white text-zinc-950";
 }
 
+function isActionColumn(column: string) {
+  return column === "acao" || column.endsWith("_acao");
+}
+
+function getActionField(column: string, suffix: "tipo" | "id") {
+  return column === "acao" ? `acao_${suffix}` : `${column}_${suffix}`;
+}
+
 export function AdminKpiGrid({ kpis }: { kpis: AdminKpi[] }) {
   return (
     <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -55,10 +63,10 @@ export function AdminDataTable({
                 <tr key={index} className="hover:bg-zinc-50/80">
                   {columns.map((column) => (
                     <td key={column} className="max-w-[260px] truncate px-5 py-4">
-                      {column === "acao" ? (
+                      {isActionColumn(column) ? (
                         <AdminMasterRowActionButton
-                          actionType={String(row.acao_tipo || "")}
-                          actionId={String(row.acao_id || "")}
+                          actionType={String(row[getActionField(column, "tipo")] || "")}
+                          actionId={String(row[getActionField(column, "id")] || "")}
                           label={String(row[column] || "-")}
                         />
                       ) : (
