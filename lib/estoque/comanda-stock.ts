@@ -41,6 +41,15 @@ type MovimentoPlanejado = {
   observacoes: string;
 };
 
+type EstoqueRpcResponse = {
+  processed?: boolean;
+  reverted?: boolean;
+  skipped?: boolean;
+  reason?: string;
+  movements?: number;
+  itemsUpdated?: number;
+};
+
 function roundCurrency(value: number) {
   return Number(value.toFixed(2));
 }
@@ -48,6 +57,26 @@ function roundCurrency(value: number) {
 function getNumeric(value: unknown) {
   const parsed = Number(value || 0);
   return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function isMissingRpcError(error: unknown) {
+  const candidate = error as { code?: string; message?: string } | null;
+  const message = String(candidate?.message || "").toLowerCase();
+
+  return (
+    candidate?.code === "PGRST202" ||
+    message.includes("could not find the function") ||
+    message.includes("function public.fn_processar_estoque_comanda_atomic") ||
+    message.includes("function public.fn_reverter_estoque_comanda_atomic")
+  );
+}
+
+function normalizeRpcResponse(data: unknown): EstoqueRpcResponse {
+  if (!data || typeof data !== "object") {
+    return {};
+  }
+
+  return data as EstoqueRpcResponse;
 }
 
 function getProdutoUnitCost(produto: ProdutoRow, fallback?: number | null) {
@@ -254,6 +283,25 @@ export async function processarEstoqueComanda(
     idUsuario?: string | null;
   }
 ) {
+  const { data: rpcData, error: rpcError } = await supabaseAdmin.rpc(
+    "fn_processar_estoque_comanda_atomic",
+    {
+      p_id_salao: params.idSalao,
+      p_id_comanda: params.idComanda,
+      p_id_usuario: params.idUsuario || null,
+    }
+  );
+
+  if (!rpcError) {
+    return normalizeRpcResponse(rpcData);
+  }
+
+  if (!isMissingRpcError(rpcError)) {
+    throw new Error(
+      rpcError.message || "Erro ao processar estoque da comanda."
+    );
+  }
+
   const itens = await carregarItensDaComanda(
     supabaseAdmin,
     params.idSalao,
@@ -514,6 +562,24 @@ export async function reverterEstoqueComanda(
     idComanda: string;
   }
 ) {
+  const { data: rpcData, error: rpcError } = await supabaseAdmin.rpc(
+    "fn_reverter_estoque_comanda_atomic",
+    {
+      p_id_salao: params.idSalao,
+      p_id_comanda: params.idComanda,
+    }
+  );
+
+  if (!rpcError) {
+    return normalizeRpcResponse(rpcData);
+  }
+
+  if (!isMissingRpcError(rpcError)) {
+    throw new Error(
+      rpcError.message || "Erro ao devolver estoque da comanda."
+    );
+  }
+
   const movimentos = await carregarMovimentosExistentes(
     supabaseAdmin,
     params.idSalao,

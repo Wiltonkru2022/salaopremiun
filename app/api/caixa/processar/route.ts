@@ -426,7 +426,11 @@ export async function POST(req: NextRequest) {
           idUsuario: permissionMembership.usuario.id,
         });
 
-        if (estoqueResult.skipped && estoqueResult.reason) {
+        if (
+          estoqueResult.skipped &&
+          estoqueResult.reason &&
+          !estoqueResult.reason.toLowerCase().includes("ja foi processado")
+        ) {
           warning = estoqueResult.reason;
         }
       } catch (estoqueError) {
