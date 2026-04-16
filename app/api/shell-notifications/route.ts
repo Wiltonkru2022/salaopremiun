@@ -6,13 +6,16 @@ import {
   type AgendamentoNotificacao,
   type CaixaMovimentoNotificacao,
   type ClienteNascimento,
+  type TicketNotificacao,
 } from "@/lib/notifications/shell-notifications";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
   const supabase = await createClient();
+  const supabaseAdmin = getSupabaseAdmin();
   const user = await getUser();
 
   if (!user) {
@@ -39,6 +42,7 @@ export async function GET() {
     { data: clientesNotificacao },
     { data: agendamentosNotificacao },
     { data: movimentosCaixaNotificacao },
+    { data: ticketsNotificacao },
   ] = await Promise.all([
     supabase
       .from("assinaturas")
@@ -69,6 +73,13 @@ export async function GET() {
       .gte("created_at", inicioHoje.toISOString())
       .order("created_at", { ascending: false })
       .limit(20),
+    supabaseAdmin
+      .from("tickets")
+      .select("id, numero, assunto, prioridade, status, ultima_interacao_em")
+      .eq("id_salao", usuario.id_salao)
+      .in("status", ["aberto", "em_atendimento", "aguardando_cliente", "aguardando_tecnico"])
+      .order("ultima_interacao_em", { ascending: false })
+      .limit(10),
   ]);
 
   const resumoAssinatura = assinatura
@@ -86,6 +97,7 @@ export async function GET() {
       (agendamentosNotificacao as AgendamentoNotificacao[]) || [],
     movimentosCaixa:
       (movimentosCaixaNotificacao as CaixaMovimentoNotificacao[]) || [],
+    tickets: (ticketsNotificacao as TicketNotificacao[]) || [],
   });
 
   return Response.json({ notifications });

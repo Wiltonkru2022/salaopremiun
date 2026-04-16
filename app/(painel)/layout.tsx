@@ -2,6 +2,7 @@ import AppShell from "@/components/layout/AppShell";
 import { getUser } from "@/lib/auth/get-user";
 import { getResumoAssinatura } from "@/lib/assinatura-utils";
 import { buildShellNotifications } from "@/lib/notifications/shell-notifications";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import {
   buildPermissoesByNivel,
@@ -17,6 +18,7 @@ export default async function PainelLayout({
   children: React.ReactNode;
 }) {
   const supabase = await createClient();
+  const supabaseAdmin = getSupabaseAdmin();
   const user = await getUser();
 
   if (!user) {
@@ -44,7 +46,7 @@ export default async function PainelLayout({
     return <div className="p-6 text-red-600">Usuario inativo.</div>;
   }
 
-  const [{ data: permissoes }, { data: salao }, { data: assinatura }] =
+  const [{ data: permissoes }, { data: salao }, { data: assinatura }, { data: tickets }] =
     await Promise.all([
       supabase
         .from("usuarios_permissoes")
@@ -64,6 +66,18 @@ export default async function PainelLayout({
         .select("status, plano, vencimento_em, trial_fim_em")
         .eq("id_salao", usuario.id_salao)
         .maybeSingle(),
+      supabaseAdmin
+        .from("tickets")
+        .select("id, numero, assunto, prioridade, status, ultima_interacao_em")
+        .eq("id_salao", usuario.id_salao)
+        .in("status", [
+          "aberto",
+          "em_atendimento",
+          "aguardando_cliente",
+          "aguardando_tecnico",
+        ])
+        .order("ultima_interacao_em", { ascending: false })
+        .limit(10),
     ]);
 
   const permissoesPadrao = buildPermissoesByNivel(usuario.nivel);
@@ -96,6 +110,16 @@ export default async function PainelLayout({
     clientes: [],
     agendamentos: [],
     movimentosCaixa: [],
+    tickets: (tickets as
+      | Array<{
+          id: string;
+          numero?: number | string | null;
+          assunto?: string | null;
+          prioridade?: string | null;
+          status?: string | null;
+          ultima_interacao_em?: string | null;
+        }>
+      | null) || [],
   });
 
   return (

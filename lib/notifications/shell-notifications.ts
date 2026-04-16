@@ -21,6 +21,15 @@ export type CaixaMovimentoNotificacao = {
   created_at?: string | null;
 };
 
+export type TicketNotificacao = {
+  id: string;
+  numero?: number | string | null;
+  assunto?: string | null;
+  prioridade?: string | null;
+  status?: string | null;
+  ultima_interacao_em?: string | null;
+};
+
 export function formatDateKey(date: Date) {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -46,11 +55,13 @@ export function buildShellNotifications({
   clientes,
   agendamentos,
   movimentosCaixa,
+  tickets,
 }: {
   resumoAssinatura: ReturnType<typeof getResumoAssinatura> | null;
   clientes: ClienteNascimento[];
   agendamentos: AgendamentoNotificacao[];
   movimentosCaixa: CaixaMovimentoNotificacao[];
+  tickets: TicketNotificacao[];
 }): ShellNotification[] {
   const notifications: ShellNotification[] = [];
 
@@ -153,6 +164,30 @@ export function buildShellNotifications({
       tone: "warning",
       category: "caixa",
       href: "/caixa",
+    });
+  }
+
+  const ticketsAbertos = tickets.filter((ticket) =>
+    ["aberto", "em_atendimento", "aguardando_cliente", "aguardando_tecnico"].includes(
+      String(ticket.status || "").toLowerCase()
+    )
+  );
+
+  if (ticketsAbertos.length > 0) {
+    const urgentes = ticketsAbertos.filter((ticket) =>
+      ["alta", "critica"].includes(String(ticket.prioridade || "").toLowerCase())
+    ).length;
+
+    notifications.push({
+      id: "tickets-suporte",
+      title: `${ticketsAbertos.length} ticket(s) em andamento`,
+      description:
+        urgentes > 0
+          ? `${urgentes} ticket(s) com prioridade alta ou critica aguardando retorno.`
+          : "Acompanhe respostas e atualizacoes do suporte.",
+      tone: urgentes > 0 ? "warning" : "info",
+      category: "suporte",
+      href: "/suporte",
     });
   }
 

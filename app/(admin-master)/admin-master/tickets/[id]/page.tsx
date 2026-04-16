@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { AdminDataTable, AdminKpiGrid } from "@/components/admin-master/AdminMasterViews";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import AdminTicketDetailClient from "@/components/admin-master/tickets/AdminTicketDetailClient";
+import { requireAdminMasterUser } from "@/lib/admin-master/auth/requireAdminMasterUser";
+import { getAdminTicketDetail } from "@/lib/support/tickets";
 
 export const dynamic = "force-dynamic";
 
@@ -9,24 +10,9 @@ export default async function AdminMasterTicketDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  const admin = await requireAdminMasterUser("tickets_ver");
   const { id } = await params;
-  const supabase = getSupabaseAdmin();
-  const [{ data: ticket }, { data: mensagens }, { data: eventos }] =
-    await Promise.all([
-      supabase.from("tickets").select("*").eq("id", id).maybeSingle(),
-      supabase
-        .from("ticket_mensagens")
-        .select("autor_tipo, mensagem, interna, criada_em")
-        .eq("id_ticket", id)
-        .order("criada_em", { ascending: true }),
-      supabase
-        .from("ticket_eventos")
-        .select("evento, descricao, criado_em")
-        .eq("id_ticket", id)
-        .order("criado_em", { ascending: false }),
-    ]);
-
-  const row = (ticket || {}) as Record<string, unknown>;
+  const detail = await getAdminTicketDetail(id);
 
   return (
     <div className="space-y-6">
@@ -35,52 +21,18 @@ export default async function AdminMasterTicketDetailPage({
           Voltar para tickets
         </Link>
         <h2 className="mt-4 font-display text-4xl font-black">
-          Ticket #{String(row.numero || "-")}
+          Ticket #{detail.ticket.numero}
         </h2>
         <p className="mt-2 text-sm text-zinc-300">
-          {String(row.assunto || "Sem assunto")}
+          {detail.salao?.nome || "Salao nao identificado"} •{" "}
+          {detail.ticket.assunto}
         </p>
       </section>
 
-      <AdminKpiGrid
-        kpis={[
-          {
-            label: "Status",
-            value: String(row.status || "-"),
-            hint: "Fluxo do atendimento",
-            tone: "blue",
-          },
-          {
-            label: "Prioridade",
-            value: String(row.prioridade || "-"),
-            hint: "SLA e urgencia",
-            tone: String(row.prioridade || "").toLowerCase() === "critica" ? "red" : "amber",
-          },
-          {
-            label: "Categoria",
-            value: String(row.categoria || "-"),
-            hint: "Modulo do problema",
-            tone: "dark",
-          },
-        ]}
+      <AdminTicketDetailClient
+        detail={detail}
+        canEdit={admin.permissions.tickets_editar}
       />
-
-      <section className="grid gap-5 xl:grid-cols-2">
-        <div className="space-y-3">
-          <h3 className="font-display text-2xl font-black">Thread</h3>
-          <AdminDataTable
-            rows={(mensagens || []) as Record<string, string | number | boolean | null>[]}
-            columns={["autor_tipo", "mensagem", "interna", "criada_em"]}
-          />
-        </div>
-        <div className="space-y-3">
-          <h3 className="font-display text-2xl font-black">Eventos</h3>
-          <AdminDataTable
-            rows={(eventos || []) as Record<string, string | number | boolean | null>[]}
-            columns={["evento", "descricao", "criado_em"]}
-          />
-        </div>
-      </section>
     </div>
   );
 }

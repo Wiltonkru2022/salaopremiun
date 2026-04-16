@@ -6,6 +6,7 @@ import {
   formatWebhookDiagnosticDetail,
   syncAdminMasterWebhookEvents,
 } from "@/lib/admin-master/webhooks-sync";
+import { listAdminTickets } from "@/lib/support/tickets";
 
 export type AdminKpi = {
   label: string;
@@ -479,6 +480,55 @@ export async function getAdminMasterSection(
   section: string
 ): Promise<AdminSectionData> {
   const supabase = getSupabaseAdmin();
+
+  if (section === "suporte") {
+    const { items, metrics } = await listAdminTickets();
+
+    return {
+      title: "Suporte",
+      description:
+        "Tickets, clientes com problema, prioridades, ultima resposta e operacao de atendimento.",
+      kpis: [
+        {
+          label: "Tickets",
+          value: String(metrics.total),
+          hint: "Historico recente do suporte",
+          tone: "dark",
+        },
+        {
+          label: "Em andamento",
+          value: String(metrics.abertos),
+          hint: "Chamados ainda nao encerrados",
+          tone: "amber",
+        },
+        {
+          label: "Aguardando cliente",
+          value: String(metrics.aguardandoCliente),
+          hint: "Retorno pendente do salao",
+          tone: "blue",
+        },
+      ],
+      rows: items.map((item) => ({
+        ticket: `#${item.numero}`,
+        salao: item.salaoNome || item.salaoId || "-",
+        assunto: item.assunto,
+        solicitante: item.solicitanteNome,
+        prioridade: item.prioridade,
+        status: item.status,
+        atualizado: item.ultimaInteracaoLabel,
+      })),
+      columns: [
+        "ticket",
+        "salao",
+        "assunto",
+        "solicitante",
+        "prioridade",
+        "status",
+        "atualizado",
+      ],
+      actions: ["Abrir ticket", "Entrar como salao", "Criar alerta"],
+    };
+  }
 
   if (section === "saloes") {
     const rows = await getAdminMasterSaloes();

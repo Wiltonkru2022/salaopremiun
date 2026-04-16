@@ -13,6 +13,7 @@ import {
   Scissors,
   Settings,
   ShoppingCart,
+  LifeBuoy,
   UserSquare2,
   Users,
   Wallet,
@@ -135,6 +136,14 @@ export const painelNavigationItems: PainelNavItem[] = [
     description: "Acoes de retorno, aniversarios e campanhas.",
     icon: Megaphone,
     permissionKey: "marketing_ver",
+  },
+  {
+    href: "/suporte",
+    label: "Suporte",
+    shortLabel: "Suporte",
+    description: "Tickets, conversa com suporte e historico do salao.",
+    icon: LifeBuoy,
+    permissionKey: "suporte_ver",
   },
   {
     href: "/perfil-salao",

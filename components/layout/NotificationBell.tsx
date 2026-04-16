@@ -12,6 +12,7 @@ import {
   ChevronRight,
   CreditCard,
   Megaphone,
+  LifeBuoy,
   WalletCards,
 } from "lucide-react";
 
@@ -28,6 +29,7 @@ export type ShellNotificationCategory =
   | "aniversario"
   | "caixa"
   | "marketing"
+  | "suporte"
   | "sistema";
 
 export type ShellNotification = {
@@ -68,6 +70,7 @@ function NotificationIcon({
   if (category === "aniversario") return <Cake className={className} />;
   if (category === "caixa") return <WalletCards className={className} />;
   if (category === "marketing") return <Megaphone className={className} />;
+  if (category === "suporte") return <LifeBuoy className={className} />;
   if (tone === "success") return <CheckCircle2 className={className} />;
 
   return <AlertTriangle className={className} />;
