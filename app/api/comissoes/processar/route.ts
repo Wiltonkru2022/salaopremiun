@@ -4,6 +4,7 @@ import {
   requireSalaoPermission,
 } from "@/lib/auth/require-salao-permission";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { registrarLogSistema } from "@/lib/system-logs";
 
 type Body = {
   idSalao?: string;
@@ -21,6 +22,11 @@ type ProcessamentoRow = {
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
+function sanitizeUuid(value: unknown) {
+  const parsed = String(value || "").trim();
+  return UUID_REGEX.test(parsed) ? parsed : null;
+}
+
 function sanitizeIds(ids: unknown) {
   if (!Array.isArray(ids)) return [];
 
@@ -33,10 +39,18 @@ function sanitizeIds(ids: unknown) {
   );
 }
 
+function resolveHttpStatus(error: unknown) {
+  const candidate = error as { code?: string } | null;
+  if (!candidate?.code) return 500;
+  if (candidate.code === "P0001") return 400;
+  if (candidate.code === "23514") return 409;
+  return 500;
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = (await req.json()) as Body;
-    const idSalao = String(body.idSalao || "").trim();
+    const idSalao = sanitizeUuid(body.idSalao);
     const ids = sanitizeIds(body.ids);
     const acao = String(body.acao || "").trim().toLowerCase();
 
@@ -61,7 +75,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    await requireSalaoPermission(idSalao, "comissoes_ver");
+    const membership = await requireSalaoPermission(idSalao, "comissoes_ver");
 
     const supabaseAdmin = getSupabaseAdmin();
     const { data, error } = await supabaseAdmin.rpc(
@@ -76,24 +90,50 @@ export async function POST(req: NextRequest) {
     if (error) {
       console.error("Erro ao processar comissoes:", error);
       return NextResponse.json(
-        { error: "Erro ao processar lancamentos de comissao." },
-        { status: 500 }
+        {
+          error:
+            error.message || "Erro ao processar lancamentos de comissao.",
+        },
+        { status: resolveHttpStatus(error) }
       );
     }
 
     const row = Array.isArray(data)
       ? (data[0] as ProcessamentoRow | undefined)
       : (data as ProcessamentoRow | null);
+    const totalLancamentos = Number(row?.total_lancamentos || 0);
+    const totalVales = Number(row?.total_vales || 0);
+    const totalProfissionaisComVales = Number(
+      row?.total_profissionais_com_vales || 0
+    );
+    const idsProcessados = row?.ids_processados || [];
+
+    await registrarLogSistema({
+      gravidade: acao === "cancelar" ? "warning" : "info",
+      modulo: "comissoes",
+      idSalao,
+      idUsuario: membership.usuario.id,
+      mensagem:
+        acao === "cancelar"
+          ? "Lancamentos de comissao cancelados pelo servidor."
+          : "Lancamentos de comissao marcados como pagos pelo servidor.",
+      detalhes: {
+        acao,
+        total_lancamentos: totalLancamentos,
+        total_vales: totalVales,
+        total_profissionais_com_vales: totalProfissionaisComVales,
+        ids_solicitados: ids.length,
+        ids_processados: idsProcessados,
+      },
+    });
 
     return NextResponse.json({
       ok: true,
       acao,
-      totalLancamentos: Number(row?.total_lancamentos || 0),
-      totalVales: Number(row?.total_vales || 0),
-      totalProfissionaisComVales: Number(
-        row?.total_profissionais_com_vales || 0
-      ),
-      idsProcessados: row?.ids_processados || [],
+      totalLancamentos,
+      totalVales,
+      totalProfissionaisComVales,
+      idsProcessados,
     });
   } catch (error) {
     if (error instanceof AuthzError) {

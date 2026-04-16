@@ -5,6 +5,7 @@ import {
 } from "@/lib/auth/require-salao-permission";
 import { reverterEstoqueComanda } from "@/lib/estoque/comanda-stock";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { registrarLogSistema } from "@/lib/system-logs";
 
 type AcaoVenda = "detalhes" | "reabrir" | "excluir";
 
@@ -143,6 +144,22 @@ export async function POST(req: NextRequest) {
             : "nao foi possivel devolver o estoque da venda.";
       }
 
+      await registrarLogSistema({
+        gravidade: warning ? "warning" : "info",
+        modulo: "vendas",
+        idSalao,
+        idUsuario: membership.usuario.id,
+        mensagem: warning
+          ? "Venda reaberta com aviso de estoque."
+          : "Venda reaberta para o caixa pelo servidor.",
+        detalhes: {
+          acao,
+          id_comanda: idComanda,
+          motivo: sanitizeText(body.motivo),
+          warning,
+        },
+      });
+
       return NextResponse.json({ ok: true, warning });
     }
 
@@ -177,6 +194,22 @@ export async function POST(req: NextRequest) {
           ? estoqueError.message
           : "nao foi possivel devolver o estoque da venda.";
     }
+
+    await registrarLogSistema({
+      gravidade: "warning",
+      modulo: "vendas",
+      idSalao,
+      idUsuario: membership.usuario.id,
+      mensagem: warning
+        ? "Venda excluida com aviso de estoque."
+        : "Venda excluida pelo servidor.",
+      detalhes: {
+        acao,
+        id_comanda: idComanda,
+        motivo: sanitizeText(body.motivo),
+        warning,
+      },
+    });
 
     return NextResponse.json({ ok: true, warning });
   } catch (error) {
