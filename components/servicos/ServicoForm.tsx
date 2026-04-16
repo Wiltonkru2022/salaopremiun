@@ -215,6 +215,7 @@ async function bootstrap() {
       .select("id, nome")
       .eq("id_salao", usuarioLogado.idSalao)
       .eq("ativo", true)
+      .or("tipo_profissional.is.null,tipo_profissional.eq.profissional")
       .order("nome", { ascending: true });
 
     if (profError) throw profError;
@@ -242,7 +243,6 @@ async function bootstrap() {
       .select("id, nome")
       .eq("id_salao", usuarioLogado.idSalao)
       .eq("ativo", true)
-      .or("tipo_profissional.is.null,tipo_profissional.eq.profissional")
       .order("nome", { ascending: true });
 
     if (categoriasError) throw categoriasError;
