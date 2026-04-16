@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { getResumoAssinatura } from "@/lib/assinatura-utils";
@@ -79,6 +79,7 @@ export function useAssinaturaPage() {
   const [historicoCobrancas, setHistoricoCobrancas] = useState<
     HistoricoCobrancaRow[]
   >([]);
+  const cobrancaRequestKeyRef = useRef<string | null>(null);
 
   const podeGerenciar = nivel === "admin";
 
@@ -421,6 +422,10 @@ export function useAssinaturaPage() {
 
   async function criarCobrancaAssinatura(): Promise<void> {
     try {
+      if (cobrancaRequestKeyRef.current) {
+        return;
+      }
+
       setGerandoCobranca(true);
       setErro("");
 
@@ -428,10 +433,16 @@ export function useAssinaturaPage() {
         throw new Error("Salão não carregado.");
       }
 
+      const idempotencyKey =
+        globalThis.crypto?.randomUUID?.() ||
+        `assinatura-${salao.id}-${Date.now()}`;
+      cobrancaRequestKeyRef.current = idempotencyKey;
+
       const response = await fetch("/api/assinatura/criar-cobranca", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "Idempotency-Key": idempotencyKey,
         },
         body: JSON.stringify({
           idSalao: salao.id,
@@ -482,6 +493,7 @@ export function useAssinaturaPage() {
         error instanceof Error ? error.message : "Erro ao criar cobrança."
       );
     } finally {
+      cobrancaRequestKeyRef.current = null;
       setGerandoCobranca(false);
     }
   }

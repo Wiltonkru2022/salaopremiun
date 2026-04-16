@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { addDays, format, isAfter } from "date-fns";
 import { createClient } from "@supabase/supabase-js";
@@ -39,6 +40,30 @@ type PlanoSaasRow = {
   limite_usuarios: number | null;
   limite_profissionais: number | null;
   ativo: boolean;
+};
+
+type CheckoutReservaRow = {
+  checkout_lock_id: string | null;
+  should_process: boolean;
+  reason: string;
+  existing_cobranca_id: string | null;
+};
+
+type CheckoutResponsePayload = {
+  ok: true;
+  customerId: string;
+  paymentId: string;
+  valor: number;
+  plano: string;
+  billingType: BillingType;
+  status: string;
+  qrCodeBase64: string | null;
+  pixCopiaCola: string | null;
+  vencimento: string;
+  invoiceUrl: string | null;
+  bankSlipUrl: string | null;
+  reused?: boolean;
+  reason?: string;
 };
 
 class HttpError extends Error {
@@ -212,6 +237,26 @@ function calcularVencimentoAssinaturaPaga(assinatura?: {
   }
 
   return format(addDays(baseDate, 30), "yyyy-MM-dd");
+}
+
+function normalizarIdempotencyKey(value?: string | null) {
+  const normalized = String(value || "")
+    .trim()
+    .replace(/[^\w:.-]/g, "")
+    .slice(0, 160);
+
+  return normalized || randomUUID();
+}
+
+function getCheckoutIdempotencyKey(req: Request) {
+  return normalizarIdempotencyKey(
+    req.headers.get("idempotency-key") ||
+      req.headers.get("x-idempotency-key")
+  );
+}
+
+function isBillingType(value?: string | null): value is BillingType {
+  return value === "PIX" || value === "BOLETO" || value === "CREDIT_CARD";
 }
 
 function getPlanoOrdem(plano?: string | null) {
@@ -479,10 +524,170 @@ async function buscarPayloadPix(paymentId: string) {
   return json as Record<string, unknown>;
 }
 
+async function reservarCheckoutAssinatura(params: {
+  supabaseAdmin: ReturnType<typeof getSupabaseAdmin>;
+  idSalao: string;
+  planoCodigo: string;
+  billingType: BillingType;
+  valor: number;
+  idempotencyKey: string;
+  payload: Record<string, unknown>;
+}) {
+  const { data, error } = await params.supabaseAdmin.rpc(
+    "fn_assinatura_reservar_checkout",
+    {
+      p_id_salao: params.idSalao,
+      p_plano_codigo: params.planoCodigo,
+      p_billing_type: params.billingType,
+      p_valor: params.valor,
+      p_idempotency_key: params.idempotencyKey,
+      p_payload: params.payload,
+    }
+  );
+
+  if (error) {
+    throw new HttpError(
+      error.message || "Erro ao reservar checkout da assinatura.",
+      500
+    );
+  }
+
+  const reserva = Array.isArray(data)
+    ? (data[0] as CheckoutReservaRow | undefined)
+    : (data as CheckoutReservaRow | null);
+
+  if (!reserva) {
+    throw new HttpError("Erro ao reservar checkout da assinatura.", 500);
+  }
+
+  return reserva;
+}
+
+async function marcarCheckoutConcluido(params: {
+  supabaseAdmin: ReturnType<typeof getSupabaseAdmin>;
+  checkoutLockId: string | null;
+  idCobranca: string;
+  paymentId: string;
+  response: CheckoutResponsePayload;
+}) {
+  if (!params.checkoutLockId) return;
+
+  const { error } = await params.supabaseAdmin.rpc(
+    "fn_assinatura_concluir_checkout",
+    {
+      p_checkout_lock_id: params.checkoutLockId,
+      p_id_cobranca: params.idCobranca,
+      p_asaas_payment_id: params.paymentId,
+      p_response_json: params.response,
+    }
+  );
+
+  if (error) {
+    console.error("Erro ao concluir lock de checkout:", error);
+  }
+}
+
+async function marcarCheckoutFalho(params: {
+  supabaseAdmin: ReturnType<typeof getSupabaseAdmin>;
+  checkoutLockId: string | null;
+  paymentId?: string | null;
+  errorMessage: string;
+  response?: Record<string, unknown>;
+}) {
+  if (!params.checkoutLockId) return;
+
+  const { error } = await params.supabaseAdmin.rpc(
+    "fn_assinatura_falhar_checkout",
+    {
+      p_checkout_lock_id: params.checkoutLockId,
+      p_erro_texto: params.errorMessage,
+      p_asaas_payment_id: params.paymentId || null,
+      p_response_json: params.response || {},
+    }
+  );
+
+  if (error) {
+    console.error("Erro ao marcar checkout como falho:", error);
+  }
+}
+
+async function montarCheckoutExistente(params: {
+  supabaseAdmin: ReturnType<typeof getSupabaseAdmin>;
+  idCobranca: string;
+  planoFallback: string;
+  reason: string;
+}) {
+  const { data, error } = await params.supabaseAdmin
+    .from("assinaturas_cobrancas")
+    .select(`
+      id,
+      asaas_customer_id,
+      asaas_payment_id,
+      txid,
+      valor,
+      status,
+      forma_pagamento,
+      data_expiracao,
+      invoice_url,
+      bank_slip_url,
+      plano_destino,
+      plano_origem
+    `)
+    .eq("id", params.idCobranca)
+    .maybeSingle();
+
+  if (error || !data) {
+    throw new HttpError(
+      error?.message || "Cobrança existente não encontrada.",
+      500
+    );
+  }
+
+  const billingCandidate = String(data.forma_pagamento || "").toUpperCase();
+  const billingType = isBillingType(billingCandidate) ? billingCandidate : "PIX";
+  const paymentId = String(data.asaas_payment_id || data.txid || "").trim();
+  let qrCodeBase64: string | null = null;
+  let pixCopiaCola: string | null = null;
+
+  if (billingType === "PIX" && paymentId) {
+    try {
+      const pixPayload = await buscarPayloadPix(paymentId);
+      qrCodeBase64 = String(pixPayload?.encodedImage || "") || null;
+      pixCopiaCola = String(pixPayload?.payload || "") || null;
+    } catch (error) {
+      console.error("Erro ao recuperar Pix de cobrança existente:", error);
+    }
+  }
+
+  return {
+    ok: true,
+    customerId: String(data.asaas_customer_id || ""),
+    paymentId,
+    valor: Number(data.valor || 0),
+    plano:
+      String(data.plano_destino || data.plano_origem || "").trim() ||
+      params.planoFallback,
+    billingType,
+    status: String(data.status || "PENDING"),
+    qrCodeBase64,
+    pixCopiaCola,
+    vencimento: String(data.data_expiracao || ""),
+    invoiceUrl: String(data.invoice_url || "").trim() || null,
+    bankSlipUrl: String(data.bank_slip_url || "").trim() || null,
+    reused: true,
+    reason: params.reason,
+  } satisfies CheckoutResponsePayload;
+}
+
 export async function POST(req: Request) {
+  let supabaseAdmin: ReturnType<typeof getSupabaseAdmin> | null = null;
+  let checkoutLockId: string | null = null;
+  let checkoutPaymentId: string | null = null;
+
   try {
-    const supabaseAdmin = getSupabaseAdmin();
+    supabaseAdmin = getSupabaseAdmin();
     const body = (await req.json()) as BodyInput;
+    const idempotencyKey = getCheckoutIdempotencyKey(req);
 
     const idSalao = String(body.idSalao || "").trim();
     const planoCodigo = String(body.plano || "").trim().toLowerCase() as
@@ -498,7 +703,7 @@ export async function POST(req: Request) {
       );
     }
 
-    await validarSalaoDoUsuario(idSalao);
+    const acesso = await validarSalaoDoUsuario(idSalao);
 
     if (!["basico", "pro", "premium"].includes(planoCodigo)) {
       return NextResponse.json({ error: "Plano inválido." }, { status: 400 });
@@ -627,6 +832,47 @@ export async function POST(req: Request) {
       );
     }
 
+    const reservaCheckout = await reservarCheckoutAssinatura({
+      supabaseAdmin,
+      idSalao,
+      planoCodigo,
+      billingType,
+      valor,
+      idempotencyKey,
+      payload: {
+        origem: "checkout_manual",
+        id_usuario_auth: acesso.user.id,
+        plano_origem: planoOrigem,
+        plano_destino: planoDestino,
+        tipo_movimento: tipoMovimento,
+        billing_type: billingType,
+      },
+    });
+
+    checkoutLockId = reservaCheckout.checkout_lock_id;
+
+    if (!reservaCheckout.should_process) {
+      if (reservaCheckout.existing_cobranca_id) {
+        const checkoutExistente = await montarCheckoutExistente({
+          supabaseAdmin,
+          idCobranca: reservaCheckout.existing_cobranca_id,
+          planoFallback: planoCodigo,
+          reason: reservaCheckout.reason,
+        });
+
+        return NextResponse.json(checkoutExistente);
+      }
+
+      return NextResponse.json(
+        {
+          error:
+            "JÃ¡ existe uma cobranÃ§a sendo gerada para este salÃ£o. Aguarde alguns segundos e tente novamente.",
+          reason: reservaCheckout.reason,
+        },
+        { status: 409 }
+      );
+    }
+
     const customer = await buscarOuCriarCustomerAsaas({
       nome: body.responsavelNome.trim(),
       email: body.responsavelEmail.trim().toLowerCase(),
@@ -640,9 +886,9 @@ export async function POST(req: Request) {
     const customerId = String(customer.id || "").trim();
 
     if (!customerId) {
-      return NextResponse.json(
-        { error: "Não foi possível identificar o customer no Asaas." },
-        { status: 500 }
+      throw new HttpError(
+        "Nao foi possivel identificar o customer no Asaas.",
+        500
       );
     }
 
@@ -676,11 +922,12 @@ export async function POST(req: Request) {
     });
 
     const paymentId = String(payment.id || "").trim();
+    checkoutPaymentId = paymentId || null;
 
     if (!paymentId) {
-      return NextResponse.json(
-        { error: "Não foi possível identificar a cobrança criada no Asaas." },
-        { status: 500 }
+      throw new HttpError(
+        "Nao foi possivel identificar a cobranca criada no Asaas.",
+        500
       );
     }
 
@@ -688,9 +935,13 @@ export async function POST(req: Request) {
     let pixCopiaCola: string | null = null;
 
     if (billingType === "PIX") {
-      const pixPayload = await buscarPayloadPix(paymentId);
-      qrCodeBase64 = String(pixPayload?.encodedImage || "") || null;
-      pixCopiaCola = String(pixPayload?.payload || "") || null;
+      try {
+        const pixPayload = await buscarPayloadPix(paymentId);
+        qrCodeBase64 = String(pixPayload?.encodedImage || "") || null;
+        pixCopiaCola = String(pixPayload?.payload || "") || null;
+      } catch (error) {
+        console.error("Erro ao buscar QR Code Pix da cobranca:", error);
+      }
     }
 
     const pagamentoConfirmado = isAsaasPaymentPaid(payment.status);
@@ -711,12 +962,9 @@ export async function POST(req: Request) {
         .maybeSingle();
 
     if (assinaturaBuscaError) {
-      return NextResponse.json(
-        {
-          error:
-            assinaturaBuscaError.message || "Erro ao consultar assinatura.",
-        },
-        { status: 500 }
+      throw new HttpError(
+        assinaturaBuscaError.message || "Erro ao consultar assinatura.",
+        500
       );
     }
 
@@ -749,12 +997,9 @@ export async function POST(req: Request) {
         .eq("id", assinaturaId);
 
       if (updateAssinaturaError) {
-        return NextResponse.json(
-          {
-            error:
-              updateAssinaturaError.message || "Erro ao atualizar assinatura.",
-          },
-          { status: 500 }
+        throw new HttpError(
+          updateAssinaturaError.message || "Erro ao atualizar assinatura.",
+          500
         );
       }
     } else {
@@ -785,12 +1030,9 @@ export async function POST(req: Request) {
           .single();
 
       if (insertAssinaturaError || !novaAssinatura?.id) {
-        return NextResponse.json(
-          {
-            error:
-              insertAssinaturaError?.message || "Erro ao criar assinatura.",
-          },
-          { status: 500 }
+        throw new HttpError(
+          insertAssinaturaError?.message || "Erro ao criar assinatura.",
+          500
         );
       }
 
@@ -826,6 +1068,8 @@ export async function POST(req: Request) {
           webhook_event_order: webhookEventOrderInicial,
           webhook_processed_at: pagamentoConfirmado ? pagoEm : null,
           asaas_status: String(payment.status || "PENDING").toUpperCase(),
+          idempotency_key: idempotencyKey,
+          checkout_lock_id: checkoutLockId,
           deleted: false,
           plano_origem: planoOrigem,
           plano_destino: planoDestino,
@@ -845,13 +1089,10 @@ export async function POST(req: Request) {
         .single();
 
     if (cobrancaInsertError || !cobrancaInserida?.id) {
-      return NextResponse.json(
-        {
-          error:
-            cobrancaInsertError?.message ||
-            "Erro ao criar registro da cobrança.",
-        },
-        { status: 500 }
+      throw new HttpError(
+        cobrancaInsertError?.message ||
+          "Erro ao criar registro da cobranca.",
+        500
       );
     }
 
@@ -863,13 +1104,10 @@ export async function POST(req: Request) {
       .eq("id", assinaturaId);
 
     if (updateAssinaturaComCobrancaError) {
-      return NextResponse.json(
-        {
-          error:
-            updateAssinaturaComCobrancaError.message ||
-            "Erro ao vincular cobrança na assinatura.",
-        },
-        { status: 500 }
+      throw new HttpError(
+        updateAssinaturaComCobrancaError.message ||
+          "Erro ao vincular cobranca na assinatura.",
+        500
       );
     }
 
@@ -887,15 +1125,13 @@ export async function POST(req: Request) {
       .eq("id", idSalao);
 
     if (salaoUpdateError) {
-      return NextResponse.json(
-        {
-          error: salaoUpdateError.message || "Erro ao atualizar salão.",
-        },
-        { status: 500 }
+      throw new HttpError(
+        salaoUpdateError.message || "Erro ao atualizar salao.",
+        500
       );
     }
 
-    return NextResponse.json({
+    const checkoutResponse = {
       ok: true,
       customerId,
       paymentId,
@@ -908,8 +1144,30 @@ export async function POST(req: Request) {
       vencimento: dueDate,
       invoiceUrl: String(payment.invoiceUrl || "").trim() || null,
       bankSlipUrl: String(payment.bankSlipUrl || "").trim() || null,
+    } satisfies CheckoutResponsePayload;
+
+    await marcarCheckoutConcluido({
+      supabaseAdmin,
+      checkoutLockId,
+      idCobranca: cobrancaInserida.id,
+      paymentId,
+      response: checkoutResponse,
     });
+
+    return NextResponse.json(checkoutResponse);
   } catch (error: unknown) {
+    if (supabaseAdmin && checkoutLockId) {
+      await marcarCheckoutFalho({
+        supabaseAdmin,
+        checkoutLockId,
+        paymentId: checkoutPaymentId,
+        errorMessage:
+          error instanceof Error
+            ? error.message
+            : "Erro interno ao criar cobranca.",
+      });
+    }
+
     if (error instanceof HttpError) {
       return NextResponse.json(
         { error: error.message },

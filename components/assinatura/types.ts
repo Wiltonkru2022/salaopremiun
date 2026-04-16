@@ -55,6 +55,8 @@ export type CheckoutResponse = {
   vencimento: string;
   invoiceUrl?: string | null;
   bankSlipUrl?: string | null;
+  reused?: boolean;
+  reason?: string;
   error?: string;
 };
 
