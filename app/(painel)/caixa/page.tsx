@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import CaixaCancelModal from "@/components/caixa/CaixaCancelModal";
 import CaixaDetalhe from "@/components/caixa/CaixaDetalhe";
@@ -86,6 +86,7 @@ type ProcessarCaixaResponse = {
   taxaValor?: number;
   valorFinalCobrado?: number;
   repassaTaxaCliente?: boolean;
+  idempotentReplay?: boolean;
 };
 
 type ProcessarCaixaErrorResponse = {
@@ -98,6 +99,7 @@ export default function CaixaPage() {
   const searchParams = useSearchParams();
 
   const [loading, setLoading] = useState(true);
+  const pendingOperationKeysRef = useRef<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [erroTela, setErroTela] = useState("");
   const [msg, setMsg] = useState("");
@@ -164,6 +166,23 @@ export default function CaixaPage() {
 
   const caixaAberto = caixaSchemaReady && sessaoCaixa?.status === "aberto";
 
+  function gerarChaveOperacao(scope: string) {
+    const existente = pendingOperationKeysRef.current[scope];
+    if (existente) return existente;
+
+    const novaChave =
+      typeof crypto !== "undefined" && "randomUUID" in crypto
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+    pendingOperationKeysRef.current[scope] = novaChave;
+    return novaChave;
+  }
+
+  function limparChaveOperacao(scope: string) {
+    delete pendingOperationKeysRef.current[scope];
+  }
+
   async function processarComanda(params: {
     acao: ProcessarComandaAcao;
     item?: Record<string, unknown>;
@@ -208,6 +227,7 @@ export default function CaixaPage() {
 
   async function processarCaixa(params: {
     acao: ProcessarCaixaAcao;
+    idempotencyKey?: string | null;
     sessao?: Record<string, unknown>;
     movimento?: Record<string, unknown>;
     pagamento?: Record<string, unknown>;
@@ -221,6 +241,7 @@ export default function CaixaPage() {
       body: JSON.stringify({
         idSalao,
         acao: params.acao,
+        idempotencyKey: params.idempotencyKey || null,
         comanda: {
           idComanda: comandaSelecionada?.id || null,
         },
@@ -439,12 +460,24 @@ export default function CaixaPage() {
       return;
     }
 
+    const operationScope = [
+      "movimento",
+      sessaoCaixa.id,
+      payload.tipo,
+      payload.idProfissional || "sem-profissional",
+      payload.valor,
+      payload.descricao.trim(),
+    ].join(":");
+    const idempotencyKey = gerarChaveOperacao(operationScope);
+    let completed = false;
+
     try {
       setSaving(true);
       setErroTela("");
       setMsg("");
       await processarCaixa({
         acao: "lancar_movimentacao",
+        idempotencyKey,
         sessao: {
           idSessao: sessaoCaixa.id,
         },
@@ -455,6 +488,7 @@ export default function CaixaPage() {
           idProfissional: payload.idProfissional,
         },
       });
+      completed = true;
       await carregarSessaoOperacional();
       setMsg(
         payload.tipo === "vale_profissional"
@@ -465,6 +499,9 @@ export default function CaixaPage() {
       console.error(error);
       setErroTela(error?.message || "Erro ao lancar movimento do caixa.");
     } finally {
+      if (completed) {
+        limparChaveOperacao(operationScope);
+      }
       setSaving(false);
     }
   }
@@ -612,8 +649,19 @@ export default function CaixaPage() {
         throw new Error("Informe um valor de pagamento valido.");
       }
 
+      const operationScope = [
+        "pagamento",
+        comandaSelecionada.id,
+        formaPagamento,
+        valorBase,
+        numeroParcelas,
+        observacaoPagamento.trim(),
+      ].join(":");
+      const idempotencyKey = gerarChaveOperacao(operationScope);
+
       const result = await processarCaixa({
         acao: "adicionar_pagamento",
+        idempotencyKey,
         pagamento: {
           formaPagamento,
           valorBase,
@@ -650,6 +698,7 @@ export default function CaixaPage() {
             )}).`
           : "Pagamento adicionado."
       );
+      limparChaveOperacao(operationScope);
     } catch (error: any) {
       console.error(error);
       setErroTela(error?.message || "Erro ao adicionar pagamento.");

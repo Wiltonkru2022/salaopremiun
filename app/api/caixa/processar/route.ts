@@ -19,6 +19,7 @@ type AcaoCaixa =
 type BodyPayload = {
   idSalao?: string | null;
   acao?: AcaoCaixa | null;
+  idempotencyKey?: string | null;
   comanda?: {
     idComanda?: string | null;
   } | null;
@@ -59,6 +60,15 @@ function sanitizeText(value: unknown) {
   return parsed || null;
 }
 
+function sanitizeIdempotencyKey(value: unknown) {
+  const parsed = String(value || "")
+    .trim()
+    .replace(/[^a-zA-Z0-9:_-]/g, "")
+    .slice(0, 160);
+
+  return parsed || null;
+}
+
 function sanitizeMoney(value: unknown) {
   const parsed = Number(value ?? 0);
   return Number.isFinite(parsed) ? Number(parsed.toFixed(2)) : 0;
@@ -75,6 +85,17 @@ function resolveHttpStatus(error: unknown) {
   if (candidate.code === "P0001") return 400;
   if (candidate.code === "23514") return 409;
   return 500;
+}
+
+function isMissingRpcFunction(error: unknown, functionName: string) {
+  const candidate = error as { code?: string; message?: string } | null;
+  const message = String(candidate?.message || "").toLowerCase();
+
+  return (
+    candidate?.code === "PGRST202" ||
+    message.includes("could not find the function") ||
+    message.includes(`function public.${functionName.toLowerCase()}`)
+  );
 }
 
 async function carregarComandaBase(params: {
@@ -132,6 +153,7 @@ export async function POST(req: NextRequest) {
     const idSalao = sanitizeUuid(body.idSalao);
     const acao = String(body.acao || "").trim().toLowerCase() as AcaoCaixa;
     const idComanda = sanitizeUuid(body.comanda?.idComanda);
+    const idempotencyKey = sanitizeIdempotencyKey(body.idempotencyKey);
 
     if (!idSalao) {
       return NextResponse.json(
@@ -230,20 +252,36 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      const { data, error } = await supabaseAdmin.rpc(
-        "fn_caixa_lancar_movimentacao",
+      const movimentoPayload = {
+        p_id_salao: idSalao,
+        p_id_sessao: idSessao,
+        p_id_usuario: permissionMembership.usuario.id,
+        p_tipo: sanitizeText(body.movimento?.tipo),
+        p_valor: sanitizeMoney(body.movimento?.valor),
+        p_descricao: sanitizeText(body.movimento?.descricao),
+        p_id_profissional: sanitizeUuid(body.movimento?.idProfissional),
+        p_id_comanda: sanitizeUuid(body.movimento?.idComanda),
+        p_forma_pagamento: sanitizeText(body.movimento?.formaPagamento),
+      };
+      let { data, error } = await supabaseAdmin.rpc(
+        "fn_caixa_lancar_movimentacao_idempotente",
         {
-          p_id_salao: idSalao,
-          p_id_sessao: idSessao,
-          p_id_usuario: permissionMembership.usuario.id,
-          p_tipo: sanitizeText(body.movimento?.tipo),
-          p_valor: sanitizeMoney(body.movimento?.valor),
-          p_descricao: sanitizeText(body.movimento?.descricao),
-          p_id_profissional: sanitizeUuid(body.movimento?.idProfissional),
-          p_id_comanda: sanitizeUuid(body.movimento?.idComanda),
-          p_forma_pagamento: sanitizeText(body.movimento?.formaPagamento),
+          ...movimentoPayload,
+          p_idempotency_key: idempotencyKey,
         }
       );
+
+      if (
+        error &&
+        isMissingRpcFunction(error, "fn_caixa_lancar_movimentacao_idempotente")
+      ) {
+        const fallback = await supabaseAdmin.rpc(
+          "fn_caixa_lancar_movimentacao",
+          movimentoPayload
+        );
+        data = fallback.data;
+        error = fallback.error;
+      }
 
       if (error) {
         console.error("Erro ao lancar movimentacao do caixa:", error);
@@ -259,6 +297,7 @@ export async function POST(req: NextRequest) {
         ok: true,
         idMovimentacao: resultRow?.id_movimentacao || null,
         idVale: resultRow?.id_vale || null,
+        idempotentReplay: Boolean(resultRow?.ja_existia),
       });
     }
 
@@ -314,21 +353,40 @@ export async function POST(req: NextRequest) {
         ? sanitizeMoney(valorBase + taxaValor)
         : valorBase;
 
-      const { data, error } = await supabaseAdmin.rpc(
-        "fn_caixa_adicionar_pagamento_comanda",
+      const pagamentoPayload = {
+        p_id_salao: idSalao,
+        p_id_comanda: idComanda,
+        p_id_sessao: sessao.id,
+        p_id_usuario: permissionMembership.usuario.id,
+        p_forma_pagamento: formaPagamento,
+        p_valor: valorFinalCobrado,
+        p_parcelas: parcelas,
+        p_taxa_percentual: taxaPercentual,
+        p_taxa_valor: taxaValor,
+        p_observacoes: sanitizeText(body.pagamento?.observacoes),
+      };
+      let { data, error } = await supabaseAdmin.rpc(
+        "fn_caixa_adicionar_pagamento_comanda_idempotente",
         {
-          p_id_salao: idSalao,
-          p_id_comanda: idComanda,
-          p_id_sessao: sessao.id,
-          p_id_usuario: permissionMembership.usuario.id,
-          p_forma_pagamento: formaPagamento,
-          p_valor: valorFinalCobrado,
-          p_parcelas: parcelas,
-          p_taxa_percentual: taxaPercentual,
-          p_taxa_valor: taxaValor,
-          p_observacoes: sanitizeText(body.pagamento?.observacoes),
+          ...pagamentoPayload,
+          p_idempotency_key: idempotencyKey,
         }
       );
+
+      if (
+        error &&
+        isMissingRpcFunction(
+          error,
+          "fn_caixa_adicionar_pagamento_comanda_idempotente"
+        )
+      ) {
+        const fallback = await supabaseAdmin.rpc(
+          "fn_caixa_adicionar_pagamento_comanda",
+          pagamentoPayload
+        );
+        data = fallback.data;
+        error = fallback.error;
+      }
 
       if (error) {
         console.error("Erro ao adicionar pagamento da comanda:", error);
@@ -348,6 +406,7 @@ export async function POST(req: NextRequest) {
         taxaPercentual,
         taxaValor,
         valorFinalCobrado,
+        idempotentReplay: Boolean(resultRow?.ja_existia),
       });
     }
 
