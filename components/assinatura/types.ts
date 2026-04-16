@@ -11,6 +11,7 @@ export type CardForm = {
 export type SalaoRow = {
   id: string;
   nome: string | null;
+  plano?: string | null;
   email?: string | null;
   telefone?: string | null;
   cpf_cnpj?: string | null;

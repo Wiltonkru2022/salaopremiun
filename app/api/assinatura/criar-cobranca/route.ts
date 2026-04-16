@@ -259,6 +259,30 @@ function isBillingType(value?: string | null): value is BillingType {
   return value === "PIX" || value === "BOLETO" || value === "CREDIT_CARD";
 }
 
+function normalizarPlanoCobranca(value?: string | null) {
+  const normalized = String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, "_")
+    .trim()
+    .toLowerCase();
+
+  if (normalized === "basico" || normalized === "pro" || normalized === "premium") {
+    return normalized;
+  }
+
+  if (
+    !normalized ||
+    normalized === "teste_gratis" ||
+    normalized === "testegratis" ||
+    normalized === "trial"
+  ) {
+    return "basico";
+  }
+
+  return null;
+}
+
 function getPlanoOrdem(plano?: string | null) {
   const codigo = String(plano || "").toLowerCase();
 
@@ -690,10 +714,7 @@ export async function POST(req: Request) {
     const idempotencyKey = getCheckoutIdempotencyKey(req);
 
     const idSalao = String(body.idSalao || "").trim();
-    const planoCodigo = String(body.plano || "").trim().toLowerCase() as
-      | "basico"
-      | "pro"
-      | "premium";
+    const planoCodigo = normalizarPlanoCobranca(body.plano);
     const billingType = body.billingType;
 
     if (!idSalao) {
@@ -705,7 +726,7 @@ export async function POST(req: Request) {
 
     const acesso = await validarSalaoDoUsuario(idSalao);
 
-    if (!["basico", "pro", "premium"].includes(planoCodigo)) {
+    if (!planoCodigo) {
       return NextResponse.json({ error: "Plano inválido." }, { status: 400 });
     }
 

@@ -1,6 +1,14 @@
 ﻿"use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  type Dispatch,
+  type SetStateAction,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { getResumoAssinatura } from "@/lib/assinatura-utils";
@@ -32,6 +40,30 @@ type CobrancaAtualRow = {
   asaas_payment_id: string | null;
   txid: string | null;
 };
+
+const PLANOS_COBRAVEIS = ["basico", "pro", "premium"] as const;
+type PlanoCobravel = (typeof PLANOS_COBRAVEIS)[number];
+
+function normalizarCodigoPlano(value?: string | null) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, "_")
+    .trim()
+    .toLowerCase();
+}
+
+function isPlanoCobravel(value?: string | null): value is PlanoCobravel {
+  return PLANOS_COBRAVEIS.includes(normalizarCodigoPlano(value) as PlanoCobravel);
+}
+
+function normalizarPlanoCobravel(
+  value?: string | null,
+  fallback: PlanoCobravel = "basico"
+): PlanoCobravel {
+  const normalized = normalizarCodigoPlano(value);
+  return isPlanoCobravel(normalized) ? normalized : fallback;
+}
 
 export function useAssinaturaPage() {
   const supabase = useMemo(() => createClient(), []);
@@ -80,8 +112,37 @@ export function useAssinaturaPage() {
     HistoricoCobrancaRow[]
   >([]);
   const cobrancaRequestKeyRef = useRef<string | null>(null);
+  const planoSelecionadoRef = useRef<PlanoCobravel>("pro");
+  const planoEscolhidoManualmenteRef = useRef(false);
 
   const podeGerenciar = nivel === "admin";
+
+  const selecionarPlano = useCallback<Dispatch<SetStateAction<string>>>(
+    (value) => {
+      planoEscolhidoManualmenteRef.current = true;
+
+      if (typeof value !== "function") {
+        const normalized = normalizarPlanoCobravel(
+          value,
+          planoSelecionadoRef.current
+        );
+        planoSelecionadoRef.current = normalized;
+        setPlanoSelecionado(normalized);
+        return;
+      }
+
+      setPlanoSelecionado((current) => {
+        const nextValue = value(current);
+        const normalized = normalizarPlanoCobravel(
+          nextValue,
+          normalizarPlanoCobravel(current, planoSelecionadoRef.current)
+        );
+        planoSelecionadoRef.current = normalized;
+        return normalized;
+      });
+    },
+    []
+  );
 
   const carregarAcesso = useCallback(async () => {
     const {
@@ -153,7 +214,7 @@ export function useAssinaturaPage() {
         cobranca.forma_pagamento === "BOLETO" ||
         cobranca.forma_pagamento === "CREDIT_CARD"
           ? cobranca.forma_pagamento
-          : billingType;
+          : "PIX";
 
       return {
         ok: true,
@@ -164,7 +225,7 @@ export function useAssinaturaPage() {
           assinatura?.asaas_payment_id ||
           "",
         valor: Number(cobranca.valor || 0),
-        plano: planoSelecionado,
+        plano: normalizarPlanoCobravel(assinatura?.plano),
         billingType: billing,
         status: cobranca.status || "PENDING",
         qrCodeBase64: null,
@@ -174,7 +235,7 @@ export function useAssinaturaPage() {
         bankSlipUrl: cobranca.bank_slip_url || null,
       };
     },
-    [assinatura?.asaas_customer_id, assinatura?.asaas_payment_id, billingType, planoSelecionado]
+    [assinatura?.asaas_customer_id, assinatura?.asaas_payment_id, assinatura?.plano]
   );
 
   const carregarCheckoutAtual = useCallback(
@@ -253,8 +314,14 @@ export function useAssinaturaPage() {
       setAssinatura(assinaturaFinal);
       setRenovacaoAutomatica(Boolean(assinaturaFinal?.renovacao_automatica));
 
-      if (assinaturaFinal?.plano && PLANOS_INFO[assinaturaFinal.plano]) {
-        setPlanoSelecionado(assinaturaFinal.plano);
+      const planoInicial = normalizarPlanoCobravel(
+        assinaturaFinal?.plano || salaoFinal.plano,
+        "basico"
+      );
+
+      if (!planoEscolhidoManualmenteRef.current) {
+        planoSelecionadoRef.current = planoInicial;
+        setPlanoSelecionado(planoInicial);
       }
 
       const statusNormalizado = String(assinaturaFinal?.status || "").toLowerCase();
@@ -293,7 +360,7 @@ export function useAssinaturaPage() {
       return;
     }
 
-    const ordem = ["basico", "pro", "premium"];
+    const ordem = ["teste_gratis", "trial", "basico", "pro", "premium"];
     const atualIndex = ordem.indexOf(atual);
     const novoIndex = ordem.indexOf(novo);
 
@@ -438,6 +505,16 @@ export function useAssinaturaPage() {
         `assinatura-${salao.id}-${Date.now()}`;
       cobrancaRequestKeyRef.current = idempotencyKey;
 
+      const planoParaCobranca = normalizarPlanoCobravel(
+        planoSelecionadoRef.current || planoSelecionado,
+        "basico"
+      );
+
+      if (planoSelecionado !== planoParaCobranca) {
+        planoSelecionadoRef.current = planoParaCobranca;
+        setPlanoSelecionado(planoParaCobranca);
+      }
+
       const response = await fetch("/api/assinatura/criar-cobranca", {
         method: "POST",
         headers: {
@@ -454,7 +531,7 @@ export function useAssinaturaPage() {
           cep: salao.cep || "",
           numero: salao.numero || "",
           complemento: salao.complemento || "",
-          plano: planoSelecionado,
+          plano: planoParaCobranca,
           billingType,
           creditCard:
             billingType === "CREDIT_CARD"
@@ -644,7 +721,7 @@ export function useAssinaturaPage() {
     assinatura,
     checkout,
     planoSelecionado,
-    setPlanoSelecionado,
+    setPlanoSelecionado: selecionarPlano,
     billingType,
     setBillingType,
     aguardandoPagamento,
