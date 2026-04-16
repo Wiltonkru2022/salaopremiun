@@ -101,6 +101,28 @@ type BodyInput = {
   idSalao: string;
 };
 
+type PlanoTrialRow = {
+  id: string | null;
+  codigo: string;
+  nome: string;
+  descricao: string | null;
+  valor_mensal: number | string;
+  limite_usuarios: number | null;
+  limite_profissionais: number | null;
+  ativo: boolean;
+};
+
+const PLANO_TRIAL_PADRAO: PlanoTrialRow = {
+  id: null,
+  codigo: "teste_gratis",
+  nome: "Teste gratis",
+  descricao: "Periodo de teste gratuito de 7 dias.",
+  valor_mensal: 0,
+  limite_usuarios: 1,
+  limite_profissionais: 3,
+  ativo: true,
+};
+
 export async function POST(req: Request) {
   try {
     const supabaseAdmin = getSupabaseAdmin();
@@ -137,7 +159,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const { data: planoTeste, error: planoError } = await supabaseAdmin
+    const { data: planoTesteData, error: planoError } = await supabaseAdmin
       .from("planos_saas")
       .select(`
         id,
@@ -160,12 +182,14 @@ export async function POST(req: Request) {
       );
     }
 
-    if (!planoTeste?.id) {
-      return NextResponse.json(
-        { error: "Plano teste_gratis não encontrado ou inativo." },
-        { status: 400 }
+    if (!planoTesteData?.id) {
+      console.warn(
+        "Plano teste_gratis nao encontrado ou inativo; usando fallback interno."
       );
     }
+
+    const planoTeste =
+      (planoTesteData as PlanoTrialRow | null) || PLANO_TRIAL_PADRAO;
 
     const agora = new Date();
     const trialFim = addDays(agora, 7);
