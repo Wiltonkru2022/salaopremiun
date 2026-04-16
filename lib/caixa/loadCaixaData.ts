@@ -1,4 +1,4 @@
-import { buildPermissoesByNivel, sanitizePermissoesDb, type Permissoes } from "@/components/caixa/permissions";
+import { buildPermissoesByNivel, sanitizePermissoesDb, type Permissoes } from "@/lib/auth/permissions";
 import type {
   AgendamentoFila,
   CatalogoExtra,

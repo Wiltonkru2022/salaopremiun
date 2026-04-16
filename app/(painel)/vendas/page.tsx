@@ -36,7 +36,7 @@ import { KpiCard, ResumoRow } from "@/components/vendas/ui";
 import {
   buildPermissoesByNivel,
   sanitizePermissoesDb,
-} from "@/components/caixa/permissions";
+} from "@/lib/auth/permissions";
 
 export default function VendasPage() {
   const supabase = createClient();

@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import {
   buildPermissoesByNivel,
   sanitizePermissoesDb,
-} from "@/components/caixa/permissions";
+} from "@/lib/auth/permissions";
 import { redirect } from "next/navigation";
 
 type Permissoes = Record<string, boolean>;

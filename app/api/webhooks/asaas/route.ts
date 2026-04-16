@@ -242,6 +242,22 @@ export async function POST(req: Request) {
     const statusCobrancaInterno = mapAsaasStatusToInternal(paymentStatus);
 
     const isEventoPago = shouldActivateAccess(event, billingType);
+    const cobrancaJaConfirmada = String(cobranca.status || "").toLowerCase() === "ativo";
+    const eventoRegressivo =
+      event === "PAYMENT_OVERDUE" ||
+      event === "PAYMENT_RESTORED" ||
+      event === "PAYMENT_RECEIVED_IN_CASH_UNDONE" ||
+      event === "PAYMENT_BANK_SLIP_CANCELLED" ||
+      event === "PAYMENT_CREDIT_CARD_CAPTURE_REFUSED";
+
+    if (cobrancaJaConfirmada && eventoRegressivo) {
+      return NextResponse.json({
+        ok: true,
+        ignored: true,
+        reason: "Evento regressivo ignorado porque a cobranca ja esta confirmada.",
+        event,
+      });
+    }
 
     const confirmedDateIso = isEventoPago
       ? toMiddayIso(payment.confirmedDate) ||

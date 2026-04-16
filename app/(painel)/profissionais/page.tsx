@@ -8,7 +8,7 @@ import { getUsuarioLogado } from "@/lib/auth/getUsuarioLogado";
 import {
   buildPermissoesByNivel,
   sanitizePermissoesDb,
-} from "@/components/caixa/permissions";
+} from "@/lib/auth/permissions";
 
 type Profissional = {
   id: string;

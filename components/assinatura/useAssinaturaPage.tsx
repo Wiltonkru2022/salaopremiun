@@ -7,7 +7,7 @@ import { getResumoAssinatura } from "@/lib/assinatura-utils";
 import {
   buildPermissoesByNivel,
   sanitizePermissoesDb,
-} from "@/components/caixa/permissions";
+} from "@/lib/auth/permissions";
 import {
   PLANOS_INFO,
   type AssinaturaRow,

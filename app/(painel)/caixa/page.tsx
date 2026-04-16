@@ -14,7 +14,7 @@ import {
   INITIAL_MODAL_ITEM_STATE,
   type ModalItemState,
 } from "@/components/caixa/page-types";
-import { type Permissoes } from "@/components/caixa/permissions";
+import { type Permissoes } from "@/lib/auth/permissions";
 import type {
   AbaCaixa,
   AgendamentoFila,

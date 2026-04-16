@@ -262,6 +262,8 @@ async function handleCron(req: Request) {
             invoice_url:
               (cobranca as { invoiceUrl?: string | null }).invoiceUrl || null,
             webhook_payload: cobranca,
+            tipo_movimento: "renovacao",
+            gerada_automaticamente: true,
             metadata: {
               origem: "cron_renovacao",
               plano: plano.codigo,
@@ -272,6 +274,23 @@ async function handleCron(req: Request) {
           .single();
 
       if (historicoError || !cobrancaInserida?.id) {
+        const historicoErrorCode =
+          historicoError &&
+          typeof historicoError === "object" &&
+          "code" in historicoError
+            ? String(historicoError.code || "")
+            : "";
+
+        if (historicoErrorCode === "23505") {
+          resultados.push({
+            id_salao: assinatura.id_salao,
+            ok: true,
+            skipped: true,
+            motivo: "Cobranca automatica do ciclo ja registrada.",
+          });
+          continue;
+        }
+
         resultados.push({
           id_salao: assinatura.id_salao,
           ok: false,

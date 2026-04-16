@@ -7,7 +7,7 @@ import { getUsuarioLogado } from "@/lib/auth/getUsuarioLogado";
 import {
   buildPermissoesByNivel,
   sanitizePermissoesDb,
-} from "@/components/caixa/permissions";
+} from "@/lib/auth/permissions";
 import { ComissaoHelpPanel } from "@/components/comissoes/ComissaoHelpPanel";
 import {
   BadgeDollarSign,
