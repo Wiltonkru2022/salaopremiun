@@ -26,6 +26,20 @@ export type AdminSectionData = {
   actions: string[];
 };
 
+export type AdminMasterAuditEntry = {
+  id: string;
+  acao: string;
+  entidade: string;
+  descricao: string;
+  criadoEm: string;
+};
+
+export type AdminMasterShellData = {
+  alertasCriticos: number;
+  ticketsAbertos: number;
+  auditoriaRecente: AdminMasterAuditEntry[];
+};
+
 type CountResult = {
   count: number | null;
   error: unknown;
@@ -72,6 +86,46 @@ async function countSaloesByStatus(status: string) {
     .select("id", { count: "exact", head: true })
     .eq("status", status);
   return safeCount(result);
+}
+
+export async function getAdminMasterShellData(): Promise<AdminMasterShellData> {
+  const supabase = getSupabaseAdmin();
+
+  const [{ count: alertasCriticos, error: alertasError }, { count: ticketsAbertos, error: ticketsError }, { data: auditoria }] =
+    await Promise.all([
+      supabase
+        .from("alertas_sistema")
+        .select("id", { count: "exact", head: true })
+        .eq("resolvido", false)
+        .in("gravidade", ["alta", "critica"]),
+      supabase
+        .from("tickets")
+        .select("id", { count: "exact", head: true })
+        .in("status", ["aberto", "em_atendimento", "aguardando_tecnico"]),
+      supabase
+        .from("admin_master_auditoria")
+        .select("id, acao, entidade, descricao, criado_em")
+        .order("criado_em", { ascending: false })
+        .limit(6),
+    ]);
+
+  return {
+    alertasCriticos: alertasError ? 0 : alertasCriticos || 0,
+    ticketsAbertos: ticketsError ? 0 : ticketsAbertos || 0,
+    auditoriaRecente: ((auditoria || []) as {
+      id?: string | null;
+      acao?: string | null;
+      entidade?: string | null;
+      descricao?: string | null;
+      criado_em?: string | null;
+    }[]).map((item) => ({
+      id: String(item.id || `${item.acao || "audit"}-${item.criado_em || ""}`),
+      acao: item.acao || "-",
+      entidade: item.entidade || "-",
+      descricao: item.descricao || "Sem descricao",
+      criadoEm: dateTimeValue(item.criado_em),
+    })),
+  };
 }
 
 export async function getAdminMasterDashboard() {
