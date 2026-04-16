@@ -479,24 +479,27 @@ async function bootstrap() {
         return existente;
       }
 
-      const { data, error } = await supabase
-        .from("servicos_categorias")
-        .insert({
-          id_salao: idSalao,
-          nome,
-          ativo: true,
-        })
-        .select("id, nome")
-        .limit(1);
+      const { data, error } = await supabase.rpc(
+        "fn_get_or_create_servico_categoria",
+        {
+          p_id_salao: idSalao,
+          p_nome: nome,
+        }
+      );
 
       if (error) throw error;
 
-      const categoriaCriada = data?.[0] as CategoriaServico | undefined;
+      const categoriaCriada = (data?.[0] || null) as CategoriaServico | null;
       if (!categoriaCriada?.id) {
         throw new Error("Nao foi possivel criar a categoria.");
       }
 
-      setCategorias((prev) => [...prev, categoriaCriada].sort((a, b) => a.nome.localeCompare(b.nome)));
+      setCategorias((prev) =>
+        [
+          ...prev.filter((item) => item.id !== categoriaCriada.id),
+          categoriaCriada,
+        ].sort((a, b) => a.nome.localeCompare(b.nome))
+      );
       setServico((prev) => ({
         ...prev,
         id_categoria: categoriaCriada.id,
