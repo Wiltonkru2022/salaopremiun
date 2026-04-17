@@ -97,7 +97,6 @@ function redirectToHost(
 export async function proxy(request: NextRequest) {
   const url = request.nextUrl.clone();
   const pathname = url.pathname;
-  const search = url.search;
   const host = request.headers.get("host")?.toLowerCase() ?? "";
 
   const rotaPainel = isPainelRoute(pathname);
