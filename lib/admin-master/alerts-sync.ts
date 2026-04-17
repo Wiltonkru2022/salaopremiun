@@ -71,7 +71,7 @@ export async function syncAdminMasterAlerts() {
   ).toISOString();
   const today = now.toISOString().slice(0, 10);
 
-  const [checkoutLocksRes, webhookRes, cobrancasRes, trialsRes, existingAlertsRes] =
+  const [checkoutLocksRes, webhookRes, webhookFallbackRes, cobrancasRes, trialsRes, existingAlertsRes] =
     await Promise.all([
       supabase
         .from("assinatura_checkout_locks")
@@ -90,6 +90,17 @@ export async function syncAdminMasterAlerts() {
         .eq("status_processamento", "erro")
         .gte("ultimo_recebido_em", recentAlertsFrom)
         .order("ultimo_recebido_em", { ascending: false })
+        .limit(200),
+      supabase
+        .from("eventos_webhook")
+        .select(
+          "id, chave, evento, id_salao, status, payload_json, resposta_json, erro_texto, tentativas, recebido_em, processado_em, automatico"
+        )
+        .eq("origem", "asaas")
+        .eq("status", "erro")
+        .eq("automatico", true)
+        .gte("recebido_em", recentAlertsFrom)
+        .order("recebido_em", { ascending: false })
         .limit(200),
       supabase
         .from("assinaturas_cobrancas")
@@ -166,6 +177,23 @@ export async function syncAdminMasterAlerts() {
           created_at?: string | null;
         }>
       | null) || [];
+  const webhookFallbackRows =
+    (webhookFallbackRes.data as
+      | Array<{
+          id: string;
+          chave?: string | null;
+          evento?: string | null;
+          id_salao?: string | null;
+          status?: string | null;
+          payload_json?: Record<string, unknown> | null;
+          resposta_json?: Record<string, unknown> | null;
+          erro_texto?: string | null;
+          tentativas?: number | null;
+          recebido_em?: string | null;
+          processado_em?: string | null;
+          automatico?: boolean | null;
+        }>
+      | null) || [];
   const trials =
     (trialsRes.data as
       | Array<{
@@ -190,6 +218,7 @@ export async function syncAdminMasterAlerts() {
       [
         ...checkoutLocks.map((row) => row.id_salao).filter(Boolean),
         ...webhookRows.map((row) => row.id_salao).filter(Boolean),
+        ...webhookFallbackRows.map((row) => row.id_salao).filter(Boolean),
         ...cobrancasVencidas.map((row) => row.id_salao).filter(Boolean),
         ...trials.map((row) => row.id_salao).filter(Boolean),
       ] as string[]
@@ -300,6 +329,53 @@ export async function syncAdminMasterAlerts() {
       atualizado_em: nowIso,
     });
   });
+
+  webhookFallbackRows
+    .filter((row) => {
+      const payload =
+        row.payload_json && typeof row.payload_json === "object"
+          ? row.payload_json
+          : {};
+
+      return (
+        normalizeString(payload.origem_registro) ===
+        "fallback_webhook_registration_error"
+      );
+    })
+    .forEach((row) => {
+      const salaoNome = row.id_salao
+        ? salaoNameById.get(row.id_salao) || row.id_salao
+        : "Salao nao identificado";
+      const payload =
+        row.payload_json && typeof row.payload_json === "object"
+          ? row.payload_json
+          : {};
+
+      candidates.push({
+        chave: `alerta:webhook_asaas_fallback:${row.chave || row.id}`,
+        tipo: "webhook_asaas_erro",
+        gravidade: "critica",
+        origem_modulo: "webhooks",
+        id_salao: row.id_salao || null,
+        titulo: "Webhook Asaas falhou antes do registro",
+        descricao: `${salaoNome} recebeu evento ${row.evento || "-"} com falha antes de persistir em ${dateTimeValue(
+          row.recebido_em
+        )}.`,
+        payload_json: {
+          fonte: "eventos_webhook",
+          webhook_id: row.id,
+          chave: row.chave || null,
+          payment_id: normalizeString(payload.payment_id) || null,
+          payment_status: normalizeString(payload.payment_status) || null,
+          erro_mensagem: row.erro_texto || null,
+          recebido_em: row.recebido_em || null,
+        },
+        automatico: true,
+        resolvido: false,
+        resolvido_em: null,
+        atualizado_em: nowIso,
+      });
+    });
 
   cobrancasVencidas.forEach((row) => {
     const salaoNome = row.id_salao

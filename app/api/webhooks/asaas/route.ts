@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { addDays, isAfter } from "date-fns";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { verifyHeaderSecret } from "@/lib/auth/verify-secret";
+import { registrarLogSistema } from "@/lib/system-logs";
 
 type PlanoSaasRow = {
   id: string;
@@ -20,6 +21,14 @@ type WebhookRegistroRow = {
   should_process: boolean;
   status_processamento: string;
   tentativas: number;
+};
+
+type WebhookEventoExistenteRow = {
+  id: string;
+  status_processamento: string | null;
+  tentativas: number | null;
+  erro_mensagem?: string | null;
+  processado_em?: string | null;
 };
 
 const PAID_ASAAS_STATUSES = new Set([
@@ -205,6 +214,155 @@ function buildWebhookFingerprint(
   return createHash("sha256").update(fingerprintSource).digest("hex");
 }
 
+function buildWebhookIdempotencyKey(
+  body: Record<string, unknown>,
+  event: string,
+  paymentId: string,
+  fingerprint: string
+) {
+  return (
+    String(body.id || "").trim() ||
+    `${paymentId}:${event}` ||
+    fingerprint
+  );
+}
+
+async function buscarEventoWebhookExistente(
+  supabaseAdmin: SupabaseClient,
+  fingerprint: string,
+  idempotenciaKey: string
+) {
+  const { data: porFingerprint, error: fingerprintError } = await supabaseAdmin
+    .from("asaas_webhook_eventos")
+    .select(
+      "id, status_processamento, tentativas, erro_mensagem, processado_em"
+    )
+    .eq("fingerprint", fingerprint)
+    .maybeSingle<WebhookEventoExistenteRow>();
+
+  if (fingerprintError) {
+    throw fingerprintError;
+  }
+
+  if (porFingerprint?.id) {
+    return porFingerprint;
+  }
+
+  const { data: porIdempotencia, error: idempotenciaError } =
+    await supabaseAdmin
+      .from("asaas_webhook_eventos")
+      .select(
+        "id, status_processamento, tentativas, erro_mensagem, processado_em"
+      )
+      .eq("idempotencia_key", idempotenciaKey)
+      .maybeSingle<WebhookEventoExistenteRow>();
+
+  if (idempotenciaError) {
+    throw idempotenciaError;
+  }
+
+  return porIdempotencia;
+}
+
+async function registrarEventoWebhookAsaas(params: {
+  supabaseAdmin: SupabaseClient;
+  fingerprint: string;
+  body: Record<string, unknown>;
+  event: string;
+  paymentId: string;
+  paymentStatus: string;
+}) {
+  const agoraIso = new Date().toISOString();
+  const idempotenciaKey = buildWebhookIdempotencyKey(
+    params.body,
+    params.event,
+    params.paymentId,
+    params.fingerprint
+  );
+  const eventOrder = getWebhookEventOrder(params.event, params.paymentStatus);
+
+  const { data: inserted, error: insertError } = await params.supabaseAdmin
+    .from("asaas_webhook_eventos")
+    .insert({
+      fingerprint: params.fingerprint,
+      idempotencia_key: idempotenciaKey,
+      event_type: params.event,
+      evento: params.event,
+      payment_id: params.paymentId,
+      payment_status: params.paymentStatus || null,
+      status_processamento: "processando",
+      tentativas: 1,
+      payload: params.body,
+      erro_mensagem: null,
+      primeiro_recebido_em: agoraIso,
+      ultimo_recebido_em: agoraIso,
+      updated_at: agoraIso,
+      event_order: eventOrder,
+    })
+    .select("id, status_processamento, tentativas")
+    .single();
+
+  if (!insertError && inserted?.id) {
+    return {
+      id: inserted.id,
+      should_process: true,
+      status_processamento: inserted.status_processamento || "processando",
+      tentativas: Number(inserted.tentativas || 1),
+    } satisfies WebhookRegistroRow;
+  }
+
+  if (insertError?.code !== "23505") {
+    throw insertError;
+  }
+
+  const existente = await buscarEventoWebhookExistente(
+    params.supabaseAdmin,
+    params.fingerprint,
+    idempotenciaKey
+  );
+
+  if (!existente?.id) {
+    throw insertError;
+  }
+
+  const statusAnterior = String(existente.status_processamento || "processando");
+  const tentativasAtualizadas = Number(existente.tentativas || 0) + 1;
+
+  const { data: updated, error: updateError } = await params.supabaseAdmin
+    .from("asaas_webhook_eventos")
+    .update({
+      fingerprint: params.fingerprint,
+      idempotencia_key: idempotenciaKey,
+      event_type: params.event,
+      evento: params.event,
+      payment_id: params.paymentId,
+      payment_status: params.paymentStatus || null,
+      payload: params.body,
+      tentativas: tentativasAtualizadas,
+      ultimo_recebido_em: agoraIso,
+      updated_at: agoraIso,
+      event_order: eventOrder,
+      status_processamento:
+        statusAnterior === "erro" ? "processando" : statusAnterior,
+      erro_mensagem: statusAnterior === "erro" ? null : existente.erro_mensagem || null,
+      processado_em: statusAnterior === "erro" ? null : existente.processado_em || null,
+    })
+    .eq("id", existente.id)
+    .select("id, status_processamento, tentativas")
+    .single();
+
+  if (updateError || !updated?.id) {
+    throw updateError || new Error("Erro ao atualizar evento duplicado do webhook.");
+  }
+
+  return {
+    id: updated.id,
+    should_process: statusAnterior === "erro",
+    status_processamento: updated.status_processamento || statusAnterior,
+    tentativas: Number(updated.tentativas || tentativasAtualizadas),
+  } satisfies WebhookRegistroRow;
+}
+
 async function atualizarStatusEventoWebhook(
   supabaseAdmin: SupabaseClient,
   webhookEventId: string | null,
@@ -237,9 +395,101 @@ async function atualizarStatusEventoWebhook(
   }
 }
 
+async function registrarFalhaWebhookFallback(params: {
+  supabaseAdmin: SupabaseClient;
+  webhookPayload: Record<string, unknown>;
+  event: string;
+  paymentId: string;
+  paymentStatus: string | null;
+  errorMessage: string;
+}) {
+  const agoraIso = new Date().toISOString();
+
+  const { data: cobranca } = await params.supabaseAdmin
+    .from("assinaturas_cobrancas")
+    .select("id, id_salao, id_assinatura")
+    .eq("asaas_payment_id", params.paymentId)
+    .maybeSingle();
+
+  const idSalao = String(cobranca?.id_salao || "").trim() || null;
+  const eventId = String(params.webhookPayload.id || "").trim();
+  const chaveEvento = `fallback:asaas:${eventId || params.paymentId}:${params.event}`;
+
+  await registrarLogSistema({
+    gravidade: "error",
+    modulo: "webhook_asaas",
+    idSalao,
+    mensagem: "Falha ao registrar evento inicial do webhook Asaas.",
+    detalhes: {
+      origem_registro: "fallback_webhook_registration_error",
+      event_id: eventId || null,
+      event: params.event,
+      payment_id: params.paymentId,
+      payment_status: params.paymentStatus,
+      erro_mensagem: params.errorMessage,
+    },
+  });
+
+  const payloadFallback = {
+    origem_registro: "fallback_webhook_registration_error",
+    event_id: eventId || null,
+    payment_id: params.paymentId,
+    payment_status: params.paymentStatus,
+    webhook_payload: params.webhookPayload,
+  };
+
+  await params.supabaseAdmin.from("eventos_webhook").upsert(
+    {
+      chave: chaveEvento,
+      origem: "asaas",
+      evento: params.event || "evento_desconhecido",
+      id_salao: idSalao,
+      status: "erro",
+      payload_json: payloadFallback,
+      resposta_json: {
+        status_processamento: "erro_registro_inicial",
+        payment_id: params.paymentId,
+      },
+      erro_texto: params.errorMessage,
+      tentativas: 1,
+      recebido_em: agoraIso,
+      processado_em: null,
+      automatico: true,
+      atualizado_em: agoraIso,
+    },
+    { onConflict: "chave" }
+  );
+
+  await params.supabaseAdmin.from("alertas_sistema").upsert(
+    {
+      chave: `alerta:${chaveEvento}`,
+      tipo: "webhook_asaas_erro",
+      gravidade: "critica",
+      origem_modulo: "webhooks",
+      id_salao: idSalao,
+      titulo: "Webhook Asaas falhou antes do registro",
+      descricao: `Falha ao registrar o evento ${params.event || "-"} para o pagamento ${params.paymentId}.`,
+      payload_json: {
+        ...payloadFallback,
+        id_cobranca: cobranca?.id || null,
+        id_assinatura: cobranca?.id_assinatura || null,
+      },
+      automatico: true,
+      resolvido: false,
+      resolvido_em: null,
+      atualizado_em: agoraIso,
+    },
+    { onConflict: "chave" }
+  );
+}
+
 export async function POST(req: Request) {
   let supabaseAdmin: SupabaseClient | null = null;
   let webhookEventId: string | null = null;
+  let webhookPayload: Record<string, unknown> | null = null;
+  let event = "";
+  let paymentId = "";
+  let paymentStatus: string | null = null;
 
   try {
     supabaseAdmin = getSupabaseAdmin();
@@ -251,8 +501,9 @@ export async function POST(req: Request) {
       );
     }
 
-    const body = await req.json();
-    const event = String(body?.event || "");
+    const body = (await req.json()) as Record<string, unknown>;
+    webhookPayload = body;
+    event = String(body?.event || "");
     const payment = body?.payment as Record<string, unknown> | undefined;
 
     if (!payment?.id) {
@@ -263,33 +514,43 @@ export async function POST(req: Request) {
       });
     }
 
-    const paymentId = String(payment.id);
+    paymentId = String(payment.id);
     const billingType = String(payment.billingType || "").toUpperCase() || null;
-    const paymentStatus = String(payment.status || "").toUpperCase();
+    paymentStatus = String(payment.status || "").toUpperCase();
     const agora = new Date();
     const agoraIso = agora.toISOString();
     const webhookFingerprint = buildWebhookFingerprint(event, payment);
 
-    const { data: webhookRegistroData, error: webhookRegistroError } =
-      await supabaseAdmin.rpc("fn_registrar_asaas_webhook_evento", {
-        p_fingerprint: webhookFingerprint,
-        p_evento: event,
-        p_payment_id: paymentId,
-        p_payment_status: paymentStatus || null,
-        p_payload: body,
-      });
+    let webhookRegistro: WebhookRegistroRow | null = null;
 
-    if (webhookRegistroError) {
+    try {
+      webhookRegistro = await registrarEventoWebhookAsaas({
+        supabaseAdmin,
+        fingerprint: webhookFingerprint,
+        body,
+        event,
+        paymentId,
+        paymentStatus,
+      });
+    } catch (webhookRegistroError) {
       console.error("Erro ao registrar evento do webhook:", webhookRegistroError);
+      const webhookRegistroErrorMessage =
+        webhookRegistroError instanceof Error
+          ? webhookRegistroError.message
+          : "Erro ao registrar evento do webhook.";
+      await registrarFalhaWebhookFallback({
+        supabaseAdmin,
+        webhookPayload: body,
+        event,
+        paymentId,
+        paymentStatus,
+        errorMessage: webhookRegistroErrorMessage,
+      });
       return NextResponse.json(
         { error: "Erro ao registrar evento do webhook." },
         { status: 500 }
       );
     }
-
-    const webhookRegistro = Array.isArray(webhookRegistroData)
-      ? (webhookRegistroData[0] as WebhookRegistroRow | undefined)
-      : (webhookRegistroData as WebhookRegistroRow | null);
 
     webhookEventId = webhookRegistro?.id || null;
 
@@ -770,6 +1031,17 @@ export async function POST(req: Request) {
     console.error("Erro webhook:", error);
 
     if (supabaseAdmin) {
+      if (!webhookEventId && webhookPayload && paymentId) {
+        await registrarFalhaWebhookFallback({
+          supabaseAdmin,
+          webhookPayload,
+          event,
+          paymentId,
+          paymentStatus,
+          errorMessage: error instanceof Error ? error.message : "Erro webhook",
+        });
+      }
+
       await atualizarStatusEventoWebhook(
         supabaseAdmin,
         webhookEventId,
