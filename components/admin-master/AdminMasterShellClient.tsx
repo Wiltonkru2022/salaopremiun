@@ -10,7 +10,9 @@ import {
   Boxes,
   Building2,
   ChartNoAxesCombined,
+  ChevronDown,
   ChevronRight,
+  ChevronUp,
   CreditCard,
   Flag,
   Headphones,
@@ -243,6 +245,7 @@ export default function AdminMasterShellClient({
 }: Props) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [auditExpanded, setAuditExpanded] = useState(false);
 
   const visibleGroups = useMemo(
     () =>
@@ -251,6 +254,14 @@ export default function AdminMasterShellClient({
         items: group.items.filter((item) => permissions[item.permission]),
       })).filter((group) => group.items.length > 0),
     [permissions]
+  );
+  const collapsedAuditItems = shellData.auditoriaRecente.slice(0, 2);
+  const visibleAuditItems = auditExpanded
+    ? shellData.auditoriaRecente
+    : collapsedAuditItems;
+  const hiddenAuditCount = Math.max(
+    shellData.auditoriaRecente.length - collapsedAuditItems.length,
+    0
   );
 
   return (
@@ -265,7 +276,7 @@ export default function AdminMasterShellClient({
       ) : null}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-[296px] flex-col border-r border-white/10 bg-zinc-950 text-white transition-transform duration-300 lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-50 flex w-[296px] flex-col overflow-hidden border-r border-white/10 bg-zinc-950 text-white transition-transform duration-300 lg:translate-x-0 ${
           mobileOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
@@ -289,88 +300,132 @@ export default function AdminMasterShellClient({
           </button>
         </div>
 
-        <nav className="scroll-premium flex-1 space-y-6 overflow-y-auto px-4 py-5">
-          {visibleGroups.map((group) => (
-            <div key={group.label}>
-              <div className="px-3 text-[11px] font-black uppercase tracking-[0.28em] text-zinc-500">
-                {group.label}
-              </div>
-              <div className="mt-2 space-y-1">
-                {group.items.map((item) => {
-                  const Icon = item.icon;
-                  const active = isActivePath(pathname, item.href);
-                  const badge = countBadge(item.badge, shellData);
+        <div className="scroll-premium min-h-0 flex-1 overflow-y-auto">
+          <nav className="space-y-6 px-4 py-5">
+            {visibleGroups.map((group) => (
+              <div key={group.label}>
+                <div className="px-3 text-[11px] font-black uppercase tracking-[0.28em] text-zinc-500">
+                  {group.label}
+                </div>
+                <div className="mt-2 space-y-1">
+                  {group.items.map((item) => {
+                    const Icon = item.icon;
+                    const active = isActivePath(pathname, item.href);
+                    const badge = countBadge(item.badge, shellData);
 
-                  return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      onClick={() => setMobileOpen(false)}
-                      className={`flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-semibold transition ${
-                        active
-                          ? "bg-white text-zinc-950 shadow-lg shadow-black/20"
-                          : "text-zinc-300 hover:bg-white/10 hover:text-white"
-                      }`}
-                    >
-                      <Icon
-                        size={18}
-                        className={active ? "text-zinc-950" : "text-zinc-400"}
-                      />
-                      <span className="flex-1">{item.label}</span>
-                      {badge > 0 ? (
-                        <span
-                          className={`rounded-full px-2 py-0.5 text-[10px] font-black ${
-                            active
-                              ? "bg-zinc-950 text-white"
-                              : "bg-red-500/90 text-white"
-                          }`}
-                        >
-                          {badge}
-                        </span>
-                      ) : null}
-                    </Link>
-                  );
-                })}
+                    return (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        onClick={() => setMobileOpen(false)}
+                        className={`flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-semibold transition ${
+                          active
+                            ? "bg-white text-zinc-950 shadow-lg shadow-black/20"
+                            : "text-zinc-300 hover:bg-white/10 hover:text-white"
+                        }`}
+                      >
+                        <Icon
+                          size={18}
+                          className={active ? "text-zinc-950" : "text-zinc-400"}
+                        />
+                        <span className="flex-1">{item.label}</span>
+                        {badge > 0 ? (
+                          <span
+                            className={`rounded-full px-2 py-0.5 text-[10px] font-black ${
+                              active
+                                ? "bg-zinc-950 text-white"
+                                : "bg-red-500/90 text-white"
+                            }`}
+                          >
+                            {badge}
+                          </span>
+                        ) : null}
+                      </Link>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          ))}
-        </nav>
+            ))}
+          </nav>
 
-        <div className="space-y-4 border-t border-white/10 p-4">
-          {permissions.auditoria_ver ? (
-            <div className="rounded-3xl border border-white/10 bg-white/5 p-4">
-              <div className="text-xs font-semibold uppercase tracking-[0.25em] text-zinc-400">
-                Auditoria recente
-              </div>
-              <div className="mt-3 space-y-3">
-                {shellData.auditoriaRecente.slice(0, 4).map((item) => (
-                  <div key={item.id} className="rounded-2xl bg-white/5 p-3">
-                    <div className="text-xs font-black uppercase tracking-[0.18em] text-amber-200">
-                      {item.acao.replace(/_/g, " ")}
+          <div className="space-y-4 border-t border-white/10 p-4">
+            {permissions.auditoria_ver ? (
+              <div className="rounded-3xl border border-white/10 bg-white/5 p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <div className="text-xs font-semibold uppercase tracking-[0.25em] text-zinc-400">
+                      Auditoria recente
                     </div>
-                    <div className="mt-1 text-sm font-semibold text-white">
-                      {item.entidade}
-                    </div>
-                    <div className="mt-1 text-xs leading-5 text-zinc-400">
-                      {item.descricao}
-                    </div>
-                    <div className="mt-2 text-[11px] font-bold uppercase tracking-[0.18em] text-zinc-500">
-                      {item.criadoEm}
+                    <div className="mt-2 text-xs leading-5 text-zinc-500">
+                      O menu continua acessivel e a auditoria pode ser expandida quando precisar.
                     </div>
                   </div>
-                ))}
-              </div>
-            </div>
-          ) : null}
 
-          <div className="rounded-3xl bg-white p-4 text-zinc-950">
-            <div className="text-xs font-semibold uppercase tracking-[0.25em] text-zinc-400">
-              Admin logado
-            </div>
-            <div className="mt-2 text-sm font-bold">{adminName}</div>
-            <div className="truncate text-xs text-zinc-500">{adminEmail}</div>
-            <div className="mt-3 inline-flex rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-800">
-              {perfil}
+                  <button
+                    type="button"
+                    onClick={() => setAuditExpanded((current) => !current)}
+                    className="inline-flex items-center gap-1 rounded-full border border-white/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.18em] text-zinc-200 transition hover:bg-white/10"
+                  >
+                    {auditExpanded ? "Ocultar" : "Abrir"}
+                    {auditExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                  </button>
+                </div>
+
+                {visibleAuditItems.length ? (
+                  <div
+                    className={`mt-3 space-y-3 ${
+                      auditExpanded ? "scroll-premium max-h-[280px] overflow-y-auto pr-1" : ""
+                    }`}
+                  >
+                    {visibleAuditItems.map((item) => (
+                      <div key={item.id} className="rounded-2xl bg-white/5 p-3">
+                        <div className="text-xs font-black uppercase tracking-[0.18em] text-amber-200">
+                          {item.acao.replace(/_/g, " ")}
+                        </div>
+                        <div className="mt-1 line-clamp-1 text-sm font-semibold text-white">
+                          {item.entidade}
+                        </div>
+                        <div className="mt-1 line-clamp-2 text-xs leading-5 text-zinc-400">
+                          {item.descricao}
+                        </div>
+                        <div className="mt-2 text-[11px] font-bold uppercase tracking-[0.18em] text-zinc-500">
+                          {item.criadoEm}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="mt-3 rounded-2xl bg-white/5 p-3 text-sm text-zinc-400">
+                    Nenhum evento recente na auditoria.
+                  </div>
+                )}
+
+                <div className="mt-3 flex items-center justify-between gap-3 text-[11px] font-bold uppercase tracking-[0.18em] text-zinc-500">
+                  <span>
+                    {hiddenAuditCount > 0 && !auditExpanded
+                      ? `+${hiddenAuditCount} eventos ocultos`
+                      : "Painel resumido"}
+                  </span>
+                  <Link
+                    href="/admin-master/logs"
+                    onClick={() => setMobileOpen(false)}
+                    className="rounded-full border border-white/10 px-3 py-1.5 text-zinc-200 transition hover:bg-white/10"
+                  >
+                    Ver logs
+                  </Link>
+                </div>
+              </div>
+            ) : null}
+
+            <div className="rounded-3xl bg-white p-4 text-zinc-950">
+              <div className="text-xs font-semibold uppercase tracking-[0.25em] text-zinc-400">
+                Admin logado
+              </div>
+              <div className="mt-2 text-sm font-bold">{adminName}</div>
+              <div className="truncate text-xs text-zinc-500">{adminEmail}</div>
+              <div className="mt-3 inline-flex rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-800">
+                {perfil}
+              </div>
             </div>
           </div>
         </div>
