@@ -3,8 +3,12 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getResumoAssinatura } from "@/lib/assinatura-utils";
 
 const DOMINIO_RAIZ = "salaopremiun.com.br";
+const DOMINIO_WWW = "www.salaopremiun.com.br";
 const DOMINIO_PAINEL = "painel.salaopremiun.com.br";
 const DOMINIO_APP = "app.salaopremiun.com.br";
+const DOMINIO_LOGIN = "login.salaopremiun.com.br";
+const DOMINIO_CADASTRO = "cadastro.salaopremiun.com.br";
+const DOMINIO_ASSINATURA = "assinatura.salaopremiun.com.br";
 
 const PAINEL_PREFIXES = [
   "/dashboard",
@@ -36,12 +40,23 @@ const ROTAS_LIBERADAS = [
   "/api/assinatura/historico",
 ];
 
+const CADASTRO_PREFIXES = [
+  "/cadastro",
+  "/criar-conta",
+  "/registro",
+  "/signup",
+];
+
 function isPainelRoute(pathname: string) {
   return PAINEL_PREFIXES.some((prefix) => pathname.startsWith(prefix));
 }
 
 function isRotaLiberada(pathname: string) {
   return ROTAS_LIBERADAS.some((rota) => pathname.startsWith(rota));
+}
+
+function isCadastroRoute(pathname: string) {
+  return CADASTRO_PREFIXES.some((prefix) => pathname.startsWith(prefix));
 }
 
 function isArquivoPublico(pathname: string) {
@@ -55,24 +70,41 @@ function isArquivoPublico(pathname: string) {
   );
 }
 
-function buildAbsoluteUrl(request: NextRequest, host: string, pathname: string) {
+function buildAbsoluteUrl(
+  request: NextRequest,
+  host: string,
+  pathname: string,
+  search = ""
+) {
   const url = request.nextUrl.clone();
   url.protocol = "https:";
   url.host = host;
   url.pathname = pathname;
-  url.search = "";
+  url.search = search;
   return url;
+}
+
+function redirectToHost(
+  request: NextRequest,
+  host: string,
+  pathname: string
+) {
+  return NextResponse.redirect(
+    buildAbsoluteUrl(request, host, pathname, request.nextUrl.search)
+  );
 }
 
 export async function proxy(request: NextRequest) {
   const url = request.nextUrl.clone();
   const pathname = url.pathname;
+  const search = url.search;
   const host = request.headers.get("host")?.toLowerCase() ?? "";
 
   const rotaPainel = isPainelRoute(pathname);
   const rotaLiberada = isRotaLiberada(pathname);
   const rotaLogin = pathname === "/login";
   const rotaAssinatura = pathname.startsWith("/assinatura");
+  const rotaCadastro = isCadastroRoute(pathname);
 
   // =========================
   // APP DO PROFISSIONAL
@@ -90,14 +122,98 @@ export async function proxy(request: NextRequest) {
   }
 
   // =========================
-  // SITE PRINCIPAL
+  // LOGIN
   // =========================
-  if (host === DOMINIO_RAIZ) {
-    // Se tentarem acessar rotas do painel pelo domínio principal,
-    // manda para o subdomínio do painel.
-    if (rotaPainel || rotaLogin || rotaAssinatura) {
-      const redirectUrl = buildAbsoluteUrl(request, DOMINIO_PAINEL, pathname);
-      return NextResponse.redirect(redirectUrl);
+  if (host === DOMINIO_LOGIN) {
+    if (pathname === "/") {
+      return redirectToHost(request, DOMINIO_LOGIN, "/login");
+    }
+
+    if (pathname !== "/login") {
+      if (rotaPainel) {
+        return redirectToHost(request, DOMINIO_PAINEL, pathname);
+      }
+
+      if (rotaAssinatura) {
+        return redirectToHost(request, DOMINIO_ASSINATURA, pathname);
+      }
+
+      if (rotaCadastro) {
+        return redirectToHost(request, DOMINIO_CADASTRO, pathname);
+      }
+
+      return redirectToHost(request, DOMINIO_LOGIN, "/login");
+    }
+  }
+
+  // =========================
+  // CADASTRO
+  // =========================
+  if (host === DOMINIO_CADASTRO) {
+    if (pathname === "/") {
+      return redirectToHost(request, DOMINIO_CADASTRO, "/cadastro");
+    }
+
+    if (!rotaCadastro) {
+      if (rotaLogin) {
+        return redirectToHost(request, DOMINIO_LOGIN, "/login");
+      }
+
+      if (rotaAssinatura) {
+        return redirectToHost(request, DOMINIO_ASSINATURA, pathname);
+      }
+
+      if (rotaPainel) {
+        return redirectToHost(request, DOMINIO_PAINEL, pathname);
+      }
+
+      return redirectToHost(request, DOMINIO_CADASTRO, "/cadastro");
+    }
+  }
+
+  // =========================
+  // ASSINATURA
+  // =========================
+  if (host === DOMINIO_ASSINATURA) {
+    if (pathname === "/") {
+      return redirectToHost(request, DOMINIO_ASSINATURA, "/assinatura");
+    }
+
+    if (!rotaAssinatura) {
+      if (rotaLogin) {
+        return redirectToHost(request, DOMINIO_LOGIN, "/login");
+      }
+
+      if (rotaPainel) {
+        return redirectToHost(request, DOMINIO_PAINEL, pathname);
+      }
+
+      if (rotaCadastro) {
+        return redirectToHost(request, DOMINIO_CADASTRO, pathname);
+      }
+
+      return redirectToHost(request, DOMINIO_ASSINATURA, "/assinatura");
+    }
+  }
+
+  // =========================
+  // SITE PRINCIPAL / WWW
+  // =========================
+  if (host === DOMINIO_RAIZ || host === DOMINIO_WWW) {
+    if (rotaLogin) {
+      return redirectToHost(request, DOMINIO_LOGIN, "/login");
+    }
+
+    if (rotaAssinatura) {
+      return redirectToHost(request, DOMINIO_ASSINATURA, pathname);
+    }
+
+    if (rotaCadastro) {
+      return redirectToHost(request, DOMINIO_CADASTRO, pathname);
+    }
+
+    if (rotaPainel) {
+      return redirectToHost(request, DOMINIO_PAINEL, pathname);
     }
 
     return NextResponse.next();
@@ -107,10 +223,20 @@ export async function proxy(request: NextRequest) {
   // PAINEL
   // =========================
   if (host === DOMINIO_PAINEL) {
-    // raiz do painel -> login
     if (pathname === "/") {
-      const redirectUrl = buildAbsoluteUrl(request, DOMINIO_PAINEL, "/login");
-      return NextResponse.redirect(redirectUrl);
+      return redirectToHost(request, DOMINIO_LOGIN, "/login");
+    }
+
+    if (rotaLogin) {
+      return redirectToHost(request, DOMINIO_LOGIN, "/login");
+    }
+
+    if (rotaAssinatura) {
+      return redirectToHost(request, DOMINIO_ASSINATURA, pathname);
+    }
+
+    if (rotaCadastro) {
+      return redirectToHost(request, DOMINIO_CADASTRO, pathname);
     }
   }
 
@@ -136,8 +262,7 @@ export async function proxy(request: NextRequest) {
     },
   });
 
-  // Se não for rota protegida/liberada do painel, libera.
-  if (!rotaPainel && !rotaLiberada) {
+  if (!rotaPainel && !rotaLiberada && !rotaLogin) {
     return response;
   }
 
@@ -145,10 +270,18 @@ export async function proxy(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Não logado -> login
+  // Não logado -> login sempre no subdomínio de login
   if ((rotaPainel || rotaAssinatura) && !user) {
-    const redirectUrl = buildAbsoluteUrl(request, DOMINIO_PAINEL, "/login");
-    return NextResponse.redirect(redirectUrl);
+    return redirectToHost(request, DOMINIO_LOGIN, "/login");
+  }
+
+  // Tela de login
+  if (rotaLogin && !user) {
+    // se estiver em outro host, força login.salaopremiun.com.br
+    if (host !== DOMINIO_LOGIN) {
+      return redirectToHost(request, DOMINIO_LOGIN, "/login");
+    }
+    return response;
   }
 
   if (!user) return response;
@@ -166,12 +299,15 @@ export async function proxy(request: NextRequest) {
 
   const idSalao = usuario?.id_salao;
 
-  // Sem salão -> assinatura
   if (!idSalao) {
     if (rotaPainel) {
-      const redirectUrl = buildAbsoluteUrl(request, DOMINIO_PAINEL, "/assinatura");
-      return NextResponse.redirect(redirectUrl);
+      return redirectToHost(request, DOMINIO_ASSINATURA, "/assinatura");
     }
+
+    if (rotaLogin) {
+      return redirectToHost(request, DOMINIO_ASSINATURA, "/assinatura");
+    }
+
     return response;
   }
 
@@ -190,11 +326,9 @@ export async function proxy(request: NextRequest) {
     return response;
   }
 
-  // Nunca teve assinatura
   if (!assinatura) {
-    if (rotaPainel) {
-      const redirectUrl = buildAbsoluteUrl(request, DOMINIO_PAINEL, "/assinatura");
-      return NextResponse.redirect(redirectUrl);
+    if (rotaPainel || rotaLogin) {
+      return redirectToHost(request, DOMINIO_ASSINATURA, "/assinatura");
     }
     return response;
   }
@@ -205,20 +339,17 @@ export async function proxy(request: NextRequest) {
     trialFimEm: assinatura.trial_fim_em,
   });
 
-  // Login -> dashboard ou assinatura
+  // Usuário logado tentando abrir login
   if (rotaLogin) {
-    const redirectUrl = buildAbsoluteUrl(
+    return redirectToHost(
       request,
-      DOMINIO_PAINEL,
+      resumo.bloqueioTotal ? DOMINIO_ASSINATURA : DOMINIO_PAINEL,
       resumo.bloqueioTotal ? "/assinatura" : "/dashboard"
     );
-    return NextResponse.redirect(redirectUrl);
   }
 
-  // Bloqueio forte do sistema
   if (rotaPainel && resumo.bloqueioTotal) {
-    const redirectUrl = buildAbsoluteUrl(request, DOMINIO_PAINEL, "/assinatura");
-    return NextResponse.redirect(redirectUrl);
+    return redirectToHost(request, DOMINIO_ASSINATURA, "/assinatura");
   }
 
   return response;
