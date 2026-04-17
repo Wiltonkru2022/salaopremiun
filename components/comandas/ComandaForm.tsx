@@ -7,6 +7,7 @@ import ComandaItemModal, {
   type ComandaItemModalPayload,
 } from "@/components/comandas/ComandaItemModal";
 import { getUsuarioLogado } from "@/lib/auth/getUsuarioLogado";
+import { monitorClientOperation } from "@/lib/monitoring/client";
 import {
   formatMoney,
   formatMoneyInput,
@@ -145,26 +146,44 @@ export default function ComandaForm({ modo }: ComandaFormProps) {
     acao: "salvar_base" | "adicionar_item" | "remover_item" | "enviar_pagamento",
     item?: Partial<ComandaItemModalPayload> & { idItem?: string | null }
   ) {
-    const response = await fetch("/api/comandas/processar", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        idSalao,
-        acao,
-        comanda: {
-          idComanda: modo === "editar" ? comandaId : null,
+    const response = await monitorClientOperation(
+      {
+        module: "comanda",
+        action: acao,
+        route: "/api/comandas/processar",
+        screen: "comanda_form",
+        entity: "comanda",
+        entityId: modo === "editar" ? comandaId : null,
+        details: {
+          idSalao,
+          modo,
           numero,
-          idCliente: clienteId || null,
-          status,
-          observacoes,
-          desconto: descontoNumero,
-          acrescimo: acrescimoNumero,
         },
-        item,
-      }),
-    });
+        successMessage: `Acao da comanda concluida: ${acao}.`,
+        errorMessage: `Falha ao processar comanda: ${acao}.`,
+      },
+      () =>
+        fetch("/api/comandas/processar", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            idSalao,
+            acao,
+            comanda: {
+              idComanda: modo === "editar" ? comandaId : null,
+              numero,
+              idCliente: clienteId || null,
+              status,
+              observacoes,
+              desconto: descontoNumero,
+              acrescimo: acrescimoNumero,
+            },
+            item,
+          }),
+        })
+    );
 
     const result = (await response.json().catch(() => ({}))) as Partial<
       ProcessarComandaResponse
@@ -184,7 +203,16 @@ export default function ComandaForm({ modo }: ComandaFormProps) {
       setErro("");
       setMsg("");
 
-      const usuarioLogado = await getUsuarioLogado();
+      const usuarioLogado = await monitorClientOperation(
+        {
+          module: "comanda",
+          action: "bootstrap",
+          screen: "comanda_form",
+          successMessage: "Contexto da comanda carregado com sucesso.",
+          errorMessage: "Falha ao carregar contexto da comanda.",
+        },
+        () => getUsuarioLogado()
+      );
 
       if (!usuarioLogado) {
         throw new Error("Usuario nao autenticado.");

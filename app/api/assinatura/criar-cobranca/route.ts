@@ -4,6 +4,12 @@ import { addDays, format, isAfter } from "date-fns";
 import { createClient } from "@supabase/supabase-js";
 import { createServerClient } from "@supabase/ssr";
 import { cookies, headers } from "next/headers";
+import {
+  captureSystemError,
+  captureSystemEvent,
+  registrarAcaoAutomaticaSistema,
+  upsertSystemHealthCheck,
+} from "@/lib/monitoring/server";
 
 type BillingType = "PIX" | "BOLETO" | "CREDIT_CARD";
 type TipoMovimentoAssinatura = "upgrade" | "downgrade" | "renovacao";
@@ -711,10 +717,13 @@ export async function POST(req: Request) {
   let supabaseAdmin: ReturnType<typeof getSupabaseAdmin> | null = null;
   let checkoutLockId: string | null = null;
   let checkoutPaymentId: string | null = null;
+  let monitoredBody: BodyInput | null = null;
+  const startedAt = Date.now();
 
   try {
     supabaseAdmin = getSupabaseAdmin();
     const body = (await req.json()) as BodyInput;
+    monitoredBody = body;
     const idempotencyKey = getCheckoutIdempotencyKey(req);
 
     const idSalao = String(body.idSalao || "").trim();
@@ -885,11 +894,60 @@ export async function POST(req: Request) {
           reason: reservaCheckout.reason,
         });
 
+        await captureSystemEvent({
+          module: "assinatura",
+          eventType: "action_succeeded",
+          severity: "info",
+          message: "Checkout existente reutilizado para assinatura.",
+          action: "reutilizar_checkout_existente",
+          origin: "api",
+          idSalao,
+          route: "/api/assinatura/criar-cobranca",
+          entity: "assinatura_cobranca",
+          entityId: reservaCheckout.existing_cobranca_id,
+          responseMs: Date.now() - startedAt,
+          success: true,
+          details: {
+            billingType,
+            plano: planoCodigo,
+            reason: reservaCheckout.reason,
+          },
+          createIncident: false,
+        });
+
         return NextResponse.json(checkoutExistente);
       }
 
       const requiresReconciliation =
         reservaCheckout.reason === "provider_payment_pending_reconciliation";
+
+      await captureSystemEvent({
+        module: "assinatura",
+        eventType: "action_failed",
+        severity: requiresReconciliation ? "error" : "warning",
+        message:
+          requiresReconciliation
+            ? "Checkout bloqueado aguardando reconciliacao do provedor."
+            : "Checkout duplicado bloqueado por idempotencia.",
+        action: "bloquear_checkout_duplicado",
+        origin: "api",
+        idSalao,
+        route: "/api/assinatura/criar-cobranca",
+        responseMs: Date.now() - startedAt,
+        success: false,
+        details: {
+          billingType,
+          plano: planoCodigo,
+          reason: reservaCheckout.reason,
+        },
+        incidentKey: `assinatura_checkout:${idSalao}:${reservaCheckout.reason}`,
+        incidentTitle: "Checkout de assinatura bloqueado",
+        suggestedAction:
+          requiresReconciliation
+            ? "Reconciliar o pagamento pendente no provedor antes de liberar nova cobranca."
+            : "Aguardar a conclusao do checkout ja em andamento.",
+        automationAvailable: false,
+      });
 
       return NextResponse.json(
         {
@@ -969,6 +1027,24 @@ export async function POST(req: Request) {
         pixCopiaCola = String(pixPayload?.payload || "") || null;
       } catch (error) {
         console.error("Erro ao buscar QR Code Pix da cobranca:", error);
+        await captureSystemError({
+          module: "assinatura",
+          action: "buscar_qr_code_pix",
+          origin: "integration",
+          idSalao,
+          route: "/api/assinatura/criar-cobranca",
+          entity: "assinatura_cobranca",
+          entityId: paymentId,
+          error,
+          details: {
+            billingType,
+            plano: planoCodigo,
+          },
+          incidentKey: `assinatura_pix:${paymentId}`,
+          incidentTitle: "Falha ao recuperar QR Code Pix",
+          suggestedAction: "Reprocessar a captura do QR Code Pix da cobranca.",
+          automationAvailable: false,
+        });
       }
     }
 
@@ -1182,6 +1258,54 @@ export async function POST(req: Request) {
       response: checkoutResponse,
     });
 
+    await captureSystemEvent({
+      module: "assinatura",
+      eventType: "action_succeeded",
+      severity: "info",
+      message: "Checkout de assinatura concluido com sucesso.",
+      action: "criar_cobranca",
+      origin: "api",
+      idSalao,
+      route: "/api/assinatura/criar-cobranca",
+      entity: "assinatura_cobranca",
+      entityId: cobrancaInserida.id,
+      responseMs: Date.now() - startedAt,
+      success: true,
+      details: {
+        billingType,
+        plano: plano.codigo,
+        paymentId,
+        pagamentoConfirmado,
+        reused: false,
+      },
+      createIncident: false,
+    });
+    await upsertSystemHealthCheck({
+      key: "checkout_assinatura",
+      name: "Checkout de assinatura",
+      status: "ok",
+      score: 96,
+      details: {
+        billingType,
+        plano: plano.codigo,
+        pagamentoConfirmado,
+        checkedAt: new Date().toISOString(),
+      },
+    });
+    await registrarAcaoAutomaticaSistema({
+      type: "checkout_assinatura",
+      reference: cobrancaInserida.id,
+      executed: true,
+      success: true,
+      log: "Checkout de assinatura concluido com sucesso.",
+      details: {
+        idSalao,
+        billingType,
+        plano: plano.codigo,
+        paymentId,
+      },
+    });
+
     return NextResponse.json(checkoutResponse);
   } catch (error: unknown) {
     if (supabaseAdmin && checkoutLockId) {
@@ -1195,6 +1319,57 @@ export async function POST(req: Request) {
             : "Erro interno ao criar cobranca.",
       });
     }
+
+    await captureSystemError({
+      module: "assinatura",
+      action: "criar_cobranca",
+      origin: "api",
+      idSalao: monitoredBody?.idSalao || null,
+      route: "/api/assinatura/criar-cobranca",
+      entity: "assinatura_checkout",
+      entityId: checkoutLockId,
+      error,
+      responseMs: Date.now() - startedAt,
+      details: {
+        billingType: monitoredBody?.billingType || null,
+        plano: monitoredBody?.plano || null,
+        paymentId: checkoutPaymentId,
+      },
+      incidentKey: `assinatura_checkout:${monitoredBody?.idSalao || "unknown"}`,
+      incidentTitle: "Falha no checkout de assinatura",
+      suggestedAction: "Revisar validacoes, integracao Asaas e vinculos locais da cobranca.",
+      automationAvailable: false,
+    });
+    await upsertSystemHealthCheck({
+      key: "checkout_assinatura",
+      name: "Checkout de assinatura",
+      status: "critical",
+      score: 42,
+      details: {
+        billingType: monitoredBody?.billingType || null,
+        plano: monitoredBody?.plano || null,
+        erro:
+          error instanceof Error
+            ? error.message
+            : "Erro interno ao criar cobranca.",
+      },
+    });
+    await registrarAcaoAutomaticaSistema({
+      type: "checkout_assinatura",
+      reference: checkoutLockId || checkoutPaymentId || monitoredBody?.idSalao || null,
+      executed: true,
+      success: false,
+      log:
+        error instanceof Error
+          ? error.message
+          : "Erro interno ao criar cobranca.",
+      details: {
+        idSalao: monitoredBody?.idSalao || null,
+        billingType: monitoredBody?.billingType || null,
+        plano: monitoredBody?.plano || null,
+        paymentId: checkoutPaymentId,
+      },
+    });
 
     if (error instanceof HttpError) {
       return NextResponse.json(

@@ -1,4 +1,5 @@
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { captureSystemEvent } from "@/lib/monitoring/server";
 
 type LogSeverity = "info" | "warning" | "error";
 
@@ -27,13 +28,35 @@ function sanitizeDetails(value?: Record<string, unknown>) {
 export async function registrarLogSistema(params: RegistrarLogParams) {
   try {
     const supabase = getSupabaseAdmin();
+    const details = sanitizeDetails(params.detalhes);
+    const gravidade = normalizeText(params.gravidade) || "info";
+    const modulo = normalizeText(params.modulo) || "sistema";
+    const mensagem = normalizeText(params.mensagem) || "Evento do sistema";
+
     await supabase.from("logs_sistema").insert({
-      gravidade: normalizeText(params.gravidade) || "info",
-      modulo: normalizeText(params.modulo) || "sistema",
+      gravidade,
+      modulo,
       id_salao: params.idSalao || null,
       id_usuario: params.idUsuario || null,
-      mensagem: normalizeText(params.mensagem) || "Evento do sistema",
-      detalhes_json: sanitizeDetails(params.detalhes),
+      mensagem,
+      detalhes_json: details,
+    });
+
+    await captureSystemEvent({
+      module: modulo,
+      eventType: "ui_event",
+      severity:
+        gravidade === "warning"
+          ? "warning"
+          : gravidade === "error"
+            ? "error"
+            : "info",
+      message: mensagem,
+      idSalao: params.idSalao || null,
+      idUsuario: params.idUsuario || null,
+      details,
+      origin: "server",
+      createIncident: gravidade === "error",
     });
   } catch (error) {
     console.error("Falha ao registrar log do sistema:", error);

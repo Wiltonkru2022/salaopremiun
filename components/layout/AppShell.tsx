@@ -4,13 +4,20 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Header from "@/components/layout/Header";
 import Sidebar from "@/components/layout/Sidebar";
+import MonitoringContextBridge from "@/components/monitoring/MonitoringContextBridge";
 import type { Permissoes } from "@/components/layout/navigation";
 import type { ShellNotification } from "@/components/layout/NotificationBell";
 import type { ResumoAssinatura } from "@/lib/assinatura-utils";
 import { createClient } from "@/lib/supabase/client";
+import {
+  captureClientError,
+  monitorClientOperation,
+} from "@/lib/monitoring/client";
 
 type Props = {
   children: React.ReactNode;
+  idSalao?: string;
+  idUsuario?: string;
   userName?: string;
   userEmail?: string;
   permissoes: Permissoes;
@@ -26,6 +33,8 @@ type Props = {
 
 export default function AppShell({
   children,
+  idSalao,
+  idUsuario,
   userName,
   userEmail,
   permissoes,
@@ -52,11 +61,24 @@ export default function AppShell({
 
     async function loadShellNotifications() {
       try {
-        const response = await fetch("/api/shell-notifications", {
-          cache: "no-store",
-        });
+        const response = await monitorClientOperation(
+          {
+            module: "shell",
+            action: "carregar_notificacoes",
+            route: "/api/shell-notifications",
+            screen: "painel_shell",
+            successMessage: "Notificacoes do shell atualizadas.",
+            errorMessage: "Falha ao carregar notificacoes do shell.",
+          },
+          () =>
+            fetch("/api/shell-notifications", {
+              cache: "no-store",
+            })
+        );
 
-        if (!response.ok) return;
+        if (!response.ok) {
+          return;
+        }
 
         const data = (await response.json()) as {
           notifications?: ShellNotification[];
@@ -67,6 +89,13 @@ export default function AppShell({
         }
       } catch (error) {
         console.error("Erro ao carregar notificacoes do painel:", error);
+        void captureClientError({
+          module: "shell",
+          action: "carregar_notificacoes",
+          screen: "painel_shell",
+          error,
+          fallbackMessage: "Erro ao carregar notificacoes do painel.",
+        });
       }
     }
 
@@ -78,14 +107,32 @@ export default function AppShell({
   }, [notifications]);
 
   async function handleLogout() {
-    const supabase = createClient();
-    await supabase.auth.signOut();
-    router.push("/login");
-    router.refresh();
+    await monitorClientOperation(
+      {
+        module: "auth",
+        action: "logout",
+        screen: "painel_shell",
+        successMessage: "Logout executado com sucesso.",
+        errorMessage: "Falha ao encerrar sessao.",
+      },
+      async () => {
+        const supabase = createClient();
+        await supabase.auth.signOut();
+        router.push("/login");
+        router.refresh();
+      }
+    );
   }
 
   return (
     <div className="min-h-screen bg-white text-[var(--app-ink)]">
+      <MonitoringContextBridge
+        actorType="usuario_salao"
+        surface="painel"
+        idSalao={idSalao || null}
+        idUsuario={idUsuario || null}
+      />
+
       <div className="relative flex min-h-screen">
         <Sidebar
           permissoes={permissoes}

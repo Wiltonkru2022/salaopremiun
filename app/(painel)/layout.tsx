@@ -124,6 +124,8 @@ export default async function PainelLayout({
 
   return (
     <AppShell
+      idSalao={usuario.id_salao}
+      idUsuario={usuario.id}
       userName={userName}
       userEmail={user.email || ""}
       permissoes={permissoesFinal}

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Manrope, Space_Grotesk } from "next/font/google";
+import MonitoringClient from "@/components/monitoring/MonitoringClient";
 import "./globals.css";
 
 const manrope = Manrope({
@@ -27,7 +28,10 @@ export default function RootLayout({
       lang="pt-BR"
       className={`${manrope.variable} ${spaceGrotesk.variable}`}
     >
-      <body>{children}</body>
+      <body>
+        <MonitoringClient />
+        {children}
+      </body>
     </html>
   );
 }

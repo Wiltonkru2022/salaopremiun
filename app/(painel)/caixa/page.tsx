@@ -48,6 +48,7 @@ import {
   type CaixaSessao,
 } from "@/lib/caixa/sessaoCaixa";
 import { obterTaxaConfigurada } from "@/lib/caixa/taxas";
+import { monitorClientOperation } from "@/lib/monitoring/client";
 import { createClient } from "@/lib/supabase/client";
 
 type ProcessarComandaAcao =
@@ -190,28 +191,45 @@ export default function CaixaPage() {
     acrescimo?: number;
     status?: string;
   }) {
-    const response = await fetch("/api/comandas/processar", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        idSalao,
-        acao: params.acao,
-        comanda: {
-          idComanda: comandaSelecionada?.id || null,
-          numero: comandaSelecionada?.numero || null,
-          idCliente: comandaSelecionada?.id_cliente || null,
-          status: params.status || comandaSelecionada?.status || "aberta",
-          observacoes: comandaSelecionada?.observacoes || null,
-          desconto:
-            params.desconto ?? Number(comandaSelecionada?.desconto || 0),
-          acrescimo:
-            params.acrescimo ?? Number(comandaSelecionada?.acrescimo || 0),
+    const response = await monitorClientOperation(
+      {
+        module: "caixa",
+        action: params.acao,
+        route: "/api/comandas/processar",
+        screen: "caixa",
+        entity: "comanda",
+        entityId: comandaSelecionada?.id || null,
+        details: {
+          idSalao,
+          numeroComanda: comandaSelecionada?.numero || null,
         },
-        item: params.item,
-      }),
-    });
+        successMessage: `Comanda processada com sucesso: ${params.acao}.`,
+        errorMessage: `Falha ao processar comanda: ${params.acao}.`,
+      },
+      () =>
+        fetch("/api/comandas/processar", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            idSalao,
+            acao: params.acao,
+            comanda: {
+              idComanda: comandaSelecionada?.id || null,
+              numero: comandaSelecionada?.numero || null,
+              idCliente: comandaSelecionada?.id_cliente || null,
+              status: params.status || comandaSelecionada?.status || "aberta",
+              observacoes: comandaSelecionada?.observacoes || null,
+              desconto:
+                params.desconto ?? Number(comandaSelecionada?.desconto || 0),
+              acrescimo:
+                params.acrescimo ?? Number(comandaSelecionada?.acrescimo || 0),
+            },
+            item: params.item,
+          }),
+        })
+    );
 
     const result = (await response.json().catch(() => ({}))) as Partial<
       ProcessarComandaResponse
@@ -233,24 +251,47 @@ export default function CaixaPage() {
     pagamento?: Record<string, unknown>;
     motivo?: string | null;
   }) {
-    const response = await fetch("/api/caixa/processar", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        idSalao,
-        acao: params.acao,
-        idempotencyKey: params.idempotencyKey || null,
-        comanda: {
-          idComanda: comandaSelecionada?.id || null,
+    const response = await monitorClientOperation(
+      {
+        module: "caixa",
+        action: params.acao,
+        route: "/api/caixa/processar",
+        screen: "caixa",
+        entity:
+          params.acao === "abrir_caixa" || params.acao === "fechar_caixa"
+            ? "sessao_caixa"
+            : params.acao.includes("comanda")
+              ? "comanda"
+              : "caixa",
+        entityId: comandaSelecionada?.id || sessaoCaixa?.id || null,
+        details: {
+          idSalao,
+          idempotencyKey: params.idempotencyKey || null,
+          sessaoId: sessaoCaixa?.id || null,
         },
-        sessao: params.sessao,
-        movimento: params.movimento,
-        pagamento: params.pagamento,
-        motivo: params.motivo,
-      }),
-    });
+        successMessage: `Acao de caixa executada com sucesso: ${params.acao}.`,
+        errorMessage: `Falha na acao de caixa: ${params.acao}.`,
+      },
+      () =>
+        fetch("/api/caixa/processar", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            idSalao,
+            acao: params.acao,
+            idempotencyKey: params.idempotencyKey || null,
+            comanda: {
+              idComanda: comandaSelecionada?.id || null,
+            },
+            sessao: params.sessao,
+            movimento: params.movimento,
+            pagamento: params.pagamento,
+            motivo: params.motivo,
+          }),
+        })
+    );
 
     const result = (await response.json().catch(() => ({}))) as Partial<
       ProcessarCaixaResponse
@@ -293,7 +334,18 @@ export default function CaixaPage() {
   }
 
   async function aplicarDetalheComanda(idComanda: string) {
-    const detalhe = await carregarComandaDetalhe(supabase, idComanda);
+    const detalhe = await monitorClientOperation(
+      {
+        module: "caixa",
+        action: "carregar_detalhe_comanda",
+        screen: "caixa",
+        entity: "comanda",
+        entityId: idComanda,
+        successMessage: "Detalhe da comanda carregado com sucesso.",
+        errorMessage: "Falha ao carregar detalhe da comanda.",
+      },
+      () => carregarComandaDetalhe(supabase, idComanda)
+    );
 
     setComandaSelecionada(detalhe.comandaSelecionada);
     setItens(detalhe.itens);
@@ -512,18 +564,40 @@ export default function CaixaPage() {
       setErroTela("");
       setMsg("");
 
-      const acesso = await carregarAcesso();
+      const acesso = await monitorClientOperation(
+        {
+          module: "caixa",
+          action: "inicializar_caixa",
+          screen: "caixa",
+          successMessage: "Caixa inicializado com sucesso.",
+          errorMessage: "Falha ao inicializar o caixa.",
+        },
+        () => carregarAcesso()
+      );
       if (!acesso) return;
 
       const salaoId = acesso.usuario.id_salao;
       setIdSalao(salaoId);
 
-      await Promise.all([
-        carregarTudo(salaoId),
-        carregarCatalogos(salaoId),
-        carregarConfiguracoesCaixa(salaoId),
-        carregarSessaoOperacional(salaoId),
-      ]);
+      await monitorClientOperation(
+        {
+          module: "caixa",
+          action: "carregar_contexto_caixa",
+          screen: "caixa",
+          details: {
+            idSalao: salaoId,
+          },
+          successMessage: "Contexto operacional do caixa carregado.",
+          errorMessage: "Falha ao carregar contexto operacional do caixa.",
+        },
+        () =>
+          Promise.all([
+            carregarTudo(salaoId),
+            carregarCatalogos(salaoId),
+            carregarConfiguracoesCaixa(salaoId),
+            carregarSessaoOperacional(salaoId),
+          ])
+      );
 
       if (requestedComandaId) {
         await aplicarDetalheComanda(requestedComandaId);

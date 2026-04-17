@@ -1,4 +1,8 @@
 import { syncAdminMasterAlerts } from "@/lib/admin-master/alerts-sync";
+import {
+  getAdminMasterOperationalSnapshot,
+  type AdminMasterOperationalSnapshot,
+} from "@/lib/admin-master/operability";
 import { getPlanoAccessSnapshot } from "@/lib/plans/access";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import {
@@ -38,6 +42,14 @@ export type AdminMasterShellData = {
   alertasCriticos: number;
   ticketsAbertos: number;
   auditoriaRecente: AdminMasterAuditEntry[];
+};
+
+export type AdminMasterDashboardData = {
+  kpis: AdminKpi[];
+  planos: AdminTableRow[];
+  recentes: AdminTableRow[];
+  cancelados: number;
+  operational: AdminMasterOperationalSnapshot;
 };
 
 type CountResult = {
@@ -128,9 +140,10 @@ export async function getAdminMasterShellData(): Promise<AdminMasterShellData> {
   };
 }
 
-export async function getAdminMasterDashboard() {
+export async function getAdminMasterDashboard(): Promise<AdminMasterDashboardData> {
   const supabase = getSupabaseAdmin();
   await syncAdminMasterAlerts();
+  const operational = await getAdminMasterOperationalSnapshot();
   const inicioMes = new Date();
   inicioMes.setDate(1);
   inicioMes.setHours(0, 0, 0, 0);
@@ -288,6 +301,7 @@ export async function getAdminMasterDashboard() {
       criado: dateValue(row.created_at),
     })),
     cancelados,
+    operational,
   };
 }
 

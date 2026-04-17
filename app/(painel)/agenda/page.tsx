@@ -24,6 +24,10 @@ import { ensureDiaFuncionamento, getProfessionalAutoBloqueios, validateAgendaTim
 import { loadAgendaData } from "@/lib/agenda/loadAgendaData";
 import { initAgendaPage } from "@/lib/agenda/initAgendaPage";
 import { saveAgendaItem } from "@/lib/agenda/saveAgendaItem";
+import {
+  captureClientEvent,
+  monitorClientOperation,
+} from "@/lib/monitoring/client";
 import { mergeBloqueios } from "@/lib/utils/agenda";
 import { formatFullDate } from "@/lib/utils/agenda";
 import {
@@ -204,15 +208,31 @@ export default function AgendaPage() {
     const requestId = ++loadAgendaSeqRef.current;
 
     try {
-      const data = await loadAgendaData({
-        supabase,
-        idSalao,
-        selectedProfissionalId,
-        viewMode,
-        currentDate,
-        clientes,
-        servicos,
-      });
+      const data = await monitorClientOperation(
+        {
+          module: "agenda",
+          action: "carregar_agenda",
+          screen: "agenda",
+          details: {
+            idSalao,
+            profissionalId: selectedProfissionalId,
+            viewMode,
+            currentDate: currentDate.toISOString(),
+          },
+          successMessage: "Agenda carregada com sucesso.",
+          errorMessage: "Falha ao carregar a agenda.",
+        },
+        () =>
+          loadAgendaData({
+            supabase,
+            idSalao,
+            selectedProfissionalId,
+            viewMode,
+            currentDate,
+            clientes,
+            servicos,
+          })
+      );
 
       if (requestId !== loadAgendaSeqRef.current) return;
 
@@ -232,10 +252,20 @@ export default function AgendaPage() {
     setErroTela("");
 
     try {
-      const result = await initAgendaPage({
-        supabase,
-        safeGetAuthUser,
-      });
+      const result = await monitorClientOperation(
+        {
+          module: "agenda",
+          action: "inicializar_agenda",
+          screen: "agenda",
+          successMessage: "Agenda inicializada com sucesso.",
+          errorMessage: "Falha ao inicializar a agenda.",
+        },
+        () =>
+          initAgendaPage({
+            supabase,
+            safeGetAuthUser,
+          })
+      );
 
       if (!result.ok) {
         setErroTela(result.erroTela || "Erro ao carregar agenda.");
@@ -368,30 +398,34 @@ export default function AgendaPage() {
     if (!config || !idSalao) return;
 
     try {
-      await saveAgendaItem({
-        supabase,
-        payload,
-        idSalao,
-        config,
-        bloqueios,
-        agendamentos,
-        profissionais,
-        servicos,
-        ensureDiaFuncionamentoFn: (dateString: string) =>
-          ensureDiaFuncionamento({ config, dateString }),
-        getProfessionalAutoBloqueiosFn: (profissionalId: string, date: string) =>
-          getProfessionalAutoBloqueios({
-            profissionais,
+      await monitorClientOperation(
+        {
+          module: "agenda",
+          action: "salvar_item",
+          screen: "agenda_modal",
+          entity: String(payload.tipo || modalMode || "agenda_item"),
+          details: {
+            idSalao,
+            modalMode,
+            editingItemId: editingItem?.id || null,
+            editingBlockId: editingBlock?.id || null,
+          },
+          successMessage: "Item da agenda salvo com sucesso.",
+          errorMessage: "Falha ao salvar item da agenda.",
+        },
+        () =>
+          saveAgendaItem({
+            supabase,
+            payload,
             idSalao,
             config,
-            profissionalId,
-            date,
-          }),
-        validateAgendaTimeRangeFn: (params) =>
-          validateAgendaTimeRange({
-            config,
+            bloqueios,
+            agendamentos,
             profissionais,
-            getProfessionalAutoBloqueiosFn: (profissionalId, date) =>
+            servicos,
+            ensureDiaFuncionamentoFn: (dateString: string) =>
+              ensureDiaFuncionamento({ config, dateString }),
+            getProfessionalAutoBloqueiosFn: (profissionalId: string, date: string) =>
               getProfessionalAutoBloqueios({
                 profissionais,
                 idSalao,
@@ -399,10 +433,23 @@ export default function AgendaPage() {
                 profissionalId,
                 date,
               }),
-            ...params,
-          }),
-        sincronizarAgendamentoFn: sincronizarAgendamento,
-      });
+            validateAgendaTimeRangeFn: (params) =>
+              validateAgendaTimeRange({
+                config,
+                profissionais,
+                getProfessionalAutoBloqueiosFn: (profissionalId, date) =>
+                  getProfessionalAutoBloqueios({
+                    profissionais,
+                    idSalao,
+                    config,
+                    profissionalId,
+                    date,
+                  }),
+                ...params,
+              }),
+            sincronizarAgendamentoFn: sincronizarAgendamento,
+          })
+      );
 
       setModalOpen(false);
       setEditingItem(null);
@@ -487,14 +534,33 @@ export default function AgendaPage() {
       )
     );
 
-    const { error } = await supabase
-      .from("agendamentos")
-      .update({
-        duracao_minutos: newDuration,
-        hora_fim: novoFim,
-        updated_at: updatedAt,
-      })
-      .eq("id", item.id);
+    const { error } = await monitorClientOperation(
+      {
+        module: "agenda",
+        action: "redimensionar_agendamento",
+        screen: "agenda_grid",
+        entity: "agendamento",
+        entityId: item.id,
+        details: {
+          idSalao,
+          profissionalId: item.profissional_id,
+          data: item.data,
+          novaDuracao: newDuration,
+          novoFim,
+        },
+        successMessage: "Agendamento redimensionado com sucesso.",
+        errorMessage: "Falha ao redimensionar agendamento.",
+      },
+      async () =>
+        await supabase
+          .from("agendamentos")
+          .update({
+            duracao_minutos: newDuration,
+            hora_fim: novoFim,
+            updated_at: updatedAt,
+          })
+          .eq("id", item.id)
+    );
 
     if (error) {
       setAgendamentos(agendamentosAntes);
@@ -505,12 +571,28 @@ export default function AgendaPage() {
 
     if (item.id_comanda) {
       try {
-        await sincronizarAgendamento({
-          idAgendamento: item.id,
-          idComandaNova: item.id_comanda,
-          idServico: item.servico_id,
-          idProfissional: item.profissional_id,
-        });
+        await monitorClientOperation(
+          {
+            module: "agenda",
+            action: "sincronizar_comanda_agendamento",
+            screen: "agenda_grid",
+            entity: "agendamento",
+            entityId: item.id,
+            details: {
+              idSalao,
+              idComanda: item.id_comanda,
+            },
+            successMessage: "Agendamento sincronizado com a comanda.",
+            errorMessage: "Falha ao sincronizar agendamento com a comanda.",
+          },
+          () =>
+            sincronizarAgendamento({
+              idAgendamento: item.id,
+              idComandaNova: item.id_comanda || null,
+              idServico: item.servico_id,
+              idProfissional: item.profissional_id,
+            })
+        );
       } catch (error) {
         console.error("Erro ao sincronizar comanda do agendamento:", error);
         abrirAviso(
@@ -603,15 +685,34 @@ export default function AgendaPage() {
       )
     );
 
-    const { error } = await supabase
-      .from("agendamentos")
-      .update({
-        data: move.newDate,
-        hora_inicio: startTime,
-        hora_fim: novoFim,
-        updated_at: updatedAt,
-      })
-      .eq("id", item.id);
+    const { error } = await monitorClientOperation(
+      {
+        module: "agenda",
+        action: "mover_agendamento",
+        screen: "agenda_grid",
+        entity: "agendamento",
+        entityId: item.id,
+        details: {
+          idSalao,
+          profissionalId: item.profissional_id,
+          novaData: move.newDate,
+          novoInicio: startTime,
+          novoFim,
+        },
+        successMessage: "Agendamento movido com sucesso.",
+        errorMessage: "Falha ao mover agendamento.",
+      },
+      async () =>
+        await supabase
+          .from("agendamentos")
+          .update({
+            data: move.newDate,
+            hora_inicio: startTime,
+            hora_fim: novoFim,
+            updated_at: updatedAt,
+          })
+          .eq("id", item.id)
+    );
 
     if (error) {
       setAgendamentos(agendamentosAntes);
@@ -622,12 +723,28 @@ export default function AgendaPage() {
 
     if (item.id_comanda) {
       try {
-        await sincronizarAgendamento({
-          idAgendamento: item.id,
-          idComandaNova: item.id_comanda,
-          idServico: item.servico_id,
-          idProfissional: item.profissional_id,
-        });
+        await monitorClientOperation(
+          {
+            module: "agenda",
+            action: "sincronizar_comanda_agendamento",
+            screen: "agenda_grid",
+            entity: "agendamento",
+            entityId: item.id,
+            details: {
+              idSalao,
+              idComanda: item.id_comanda,
+            },
+            successMessage: "Agendamento sincronizado com a comanda.",
+            errorMessage: "Falha ao sincronizar agendamento com a comanda.",
+          },
+          () =>
+            sincronizarAgendamento({
+              idAgendamento: item.id,
+              idComandaNova: item.id_comanda || null,
+              idServico: item.servico_id,
+              idProfissional: item.profissional_id,
+            })
+        );
       } catch (error) {
         console.error("Erro ao sincronizar comanda do agendamento:", error);
         abrirAviso(
@@ -892,6 +1009,21 @@ export default function AgendaPage() {
       );
       return;
     }
+
+    void captureClientEvent({
+      module: "agenda",
+      eventType: "ui_event",
+      action: "abrir_caixa_por_agendamento",
+      screen: "agenda_grid",
+      entity: "agendamento",
+      entityId: item.id,
+      message: "Usuario abriu o caixa a partir de um agendamento.",
+      details: {
+        idSalao,
+        idComanda: item.id_comanda || null,
+      },
+      success: true,
+    });
 
     router.push(`/caixa?agendamento_id=${item.id}`);
   }

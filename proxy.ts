@@ -2,6 +2,10 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { getResumoAssinatura } from "@/lib/assinatura-utils";
 
+const DOMINIO_RAIZ = "salaopremiun.com.br";
+const DOMINIO_PAINEL = "painel.salaopremiun.com.br";
+const DOMINIO_APP = "app.salaopremiun.com.br";
+
 const PAINEL_PREFIXES = [
   "/dashboard",
   "/agenda",
@@ -40,8 +44,75 @@ function isRotaLiberada(pathname: string) {
   return ROTAS_LIBERADAS.some((rota) => pathname.startsWith(rota));
 }
 
+function isArquivoPublico(pathname: string) {
+  return (
+    pathname.startsWith("/_next") ||
+    pathname.startsWith("/favicon.ico") ||
+    pathname.startsWith("/images") ||
+    pathname.startsWith("/icons") ||
+    pathname.startsWith("/fonts") ||
+    /\.(.*)$/.test(pathname)
+  );
+}
+
+function buildAbsoluteUrl(request: NextRequest, host: string, pathname: string) {
+  const url = request.nextUrl.clone();
+  url.protocol = "https:";
+  url.host = host;
+  url.pathname = pathname;
+  url.search = "";
+  return url;
+}
+
 export async function proxy(request: NextRequest) {
-  const pathname = request.nextUrl.pathname;
+  const url = request.nextUrl.clone();
+  const pathname = url.pathname;
+  const host = request.headers.get("host")?.toLowerCase() ?? "";
+
+  const rotaPainel = isPainelRoute(pathname);
+  const rotaLiberada = isRotaLiberada(pathname);
+  const rotaLogin = pathname === "/login";
+  const rotaAssinatura = pathname.startsWith("/assinatura");
+
+  // =========================
+  // APP DO PROFISSIONAL
+  // =========================
+  if (host === DOMINIO_APP) {
+    if (!isArquivoPublico(pathname) && !pathname.startsWith("/app-profissional")) {
+      url.pathname =
+        pathname === "/"
+          ? "/app-profissional"
+          : `/app-profissional${pathname}`;
+      return NextResponse.rewrite(url);
+    }
+
+    return NextResponse.next();
+  }
+
+  // =========================
+  // SITE PRINCIPAL
+  // =========================
+  if (host === DOMINIO_RAIZ) {
+    // Se tentarem acessar rotas do painel pelo domínio principal,
+    // manda para o subdomínio do painel.
+    if (rotaPainel || rotaLogin || rotaAssinatura) {
+      const redirectUrl = buildAbsoluteUrl(request, DOMINIO_PAINEL, pathname);
+      return NextResponse.redirect(redirectUrl);
+    }
+
+    return NextResponse.next();
+  }
+
+  // =========================
+  // PAINEL
+  // =========================
+  if (host === DOMINIO_PAINEL) {
+    // raiz do painel -> login
+    if (pathname === "/") {
+      const redirectUrl = buildAbsoluteUrl(request, DOMINIO_PAINEL, "/login");
+      return NextResponse.redirect(redirectUrl);
+    }
+  }
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -65,12 +136,7 @@ export async function proxy(request: NextRequest) {
     },
   });
 
-  const rotaPainel = isPainelRoute(pathname);
-  const rotaLiberada = isRotaLiberada(pathname);
-  const rotaLogin = pathname === "/login";
-  const rotaAssinatura = pathname.startsWith("/assinatura");
-
-  // Se não for rota protegida, libera
+  // Se não for rota protegida/liberada do painel, libera.
   if (!rotaPainel && !rotaLiberada) {
     return response;
   }
@@ -79,11 +145,10 @@ export async function proxy(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // 🔒 Não logado → login
+  // Não logado -> login
   if ((rotaPainel || rotaAssinatura) && !user) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/login";
-    return NextResponse.redirect(url);
+    const redirectUrl = buildAbsoluteUrl(request, DOMINIO_PAINEL, "/login");
+    return NextResponse.redirect(redirectUrl);
   }
 
   if (!user) return response;
@@ -101,12 +166,11 @@ export async function proxy(request: NextRequest) {
 
   const idSalao = usuario?.id_salao;
 
-  // 🔥 Sem salão → manda pra assinatura
+  // Sem salão -> assinatura
   if (!idSalao) {
     if (rotaPainel) {
-      const url = request.nextUrl.clone();
-      url.pathname = "/assinatura";
-      return NextResponse.redirect(url);
+      const redirectUrl = buildAbsoluteUrl(request, DOMINIO_PAINEL, "/assinatura");
+      return NextResponse.redirect(redirectUrl);
     }
     return response;
   }
@@ -126,12 +190,11 @@ export async function proxy(request: NextRequest) {
     return response;
   }
 
-  // 🔥 Nunca teve assinatura
+  // Nunca teve assinatura
   if (!assinatura) {
     if (rotaPainel) {
-      const url = request.nextUrl.clone();
-      url.pathname = "/assinatura";
-      return NextResponse.redirect(url);
+      const redirectUrl = buildAbsoluteUrl(request, DOMINIO_PAINEL, "/assinatura");
+      return NextResponse.redirect(redirectUrl);
     }
     return response;
   }
@@ -142,18 +205,20 @@ export async function proxy(request: NextRequest) {
     trialFimEm: assinatura.trial_fim_em,
   });
 
-  // 🔥 Login redirecionamento inteligente
+  // Login -> dashboard ou assinatura
   if (rotaLogin) {
-    const url = request.nextUrl.clone();
-    url.pathname = resumo.bloqueioTotal ? "/assinatura" : "/dashboard";
-    return NextResponse.redirect(url);
+    const redirectUrl = buildAbsoluteUrl(
+      request,
+      DOMINIO_PAINEL,
+      resumo.bloqueioTotal ? "/assinatura" : "/dashboard"
+    );
+    return NextResponse.redirect(redirectUrl);
   }
 
-  // 🔥 BLOQUEIO FORTE DO SISTEMA
+  // Bloqueio forte do sistema
   if (rotaPainel && resumo.bloqueioTotal) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/assinatura";
-    return NextResponse.redirect(url);
+    const redirectUrl = buildAbsoluteUrl(request, DOMINIO_PAINEL, "/assinatura");
+    return NextResponse.redirect(redirectUrl);
   }
 
   return response;
@@ -161,29 +226,6 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/login",
-    "/assinatura/:path*",
-    "/dashboard/:path*",
-    "/agenda/:path*",
-    "/clientes/:path*",
-    "/profissionais/:path*",
-    "/servicos/:path*",
-    "/produtos/:path*",
-    "/estoque/:path*",
-    "/comandas/:path*",
-    "/vendas/:path*",
-    "/caixa/:path*",
-    "/comissoes/:path*",
-    "/financeiro/:path*",
-    "/relatorio_financeiro/:path*",
-    "/relatorios/:path*",
-    "/marketing/:path*",
-    "/meu-plano/:path*",
-    "/perfil-salao/:path*",
-    "/configuracoes/:path*",
-    "/api/assinatura/iniciar-trial",
-    "/api/assinatura/criar-cobranca",
-    "/api/webhooks/asaas",
-    "/api/assinatura/historico",
+    "/((?!_next/static|_next/image|favicon.ico).*)",
   ],
 };

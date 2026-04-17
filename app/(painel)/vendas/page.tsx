@@ -37,6 +37,7 @@ import {
   buildPermissoesByNivel,
   sanitizePermissoesDb,
 } from "@/lib/auth/permissions";
+import { monitorClientOperation } from "@/lib/monitoring/client";
 
 type VendaProcessarResponse = {
   ok: boolean;
@@ -112,7 +113,16 @@ export default function VendasPage() {
       const {
         data: { user },
         error: authError,
-      } = await supabase.auth.getUser();
+      } = await monitorClientOperation(
+        {
+          module: "vendas",
+          action: "inicializar_vendas",
+          screen: "vendas",
+          successMessage: "Tela de vendas inicializada com sucesso.",
+          errorMessage: "Falha ao inicializar a tela de vendas.",
+        },
+        () => supabase.auth.getUser()
+      );
 
       if (authError || !user) {
         router.push("/login");
@@ -266,7 +276,22 @@ export default function VendasPage() {
     const [
       { data: comandasData, error: comandasError },
       { data: buscaData, error: buscaError },
-    ] = await Promise.all([queryComandas, queryBusca]);
+    ] = await monitorClientOperation(
+      {
+        module: "vendas",
+        action: "carregar_vendas",
+        screen: "vendas",
+        details: {
+          idSalao: salaoId,
+          statusFiltro,
+          dataInicio,
+          dataFim,
+        },
+        successMessage: "Vendas carregadas com sucesso.",
+        errorMessage: "Falha ao carregar vendas.",
+      },
+      () => Promise.all([queryComandas, queryBusca])
+    );
 
     if (comandasError) {
       console.error(comandasError);
@@ -289,18 +314,34 @@ export default function VendasPage() {
     idComanda: string;
     motivo?: string | null;
   }) {
-    const response = await fetch("/api/vendas/processar", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
+    const response = await monitorClientOperation(
+      {
+        module: "vendas",
+        action: params.acao,
+        route: "/api/vendas/processar",
+        screen: "vendas",
+        entity: "comanda",
+        entityId: params.idComanda,
+        details: {
+          idSalao,
+        },
+        successMessage: `Acao de venda concluida: ${params.acao}.`,
+        errorMessage: `Falha ao executar acao de venda: ${params.acao}.`,
       },
-      body: JSON.stringify({
-        idSalao,
-        acao: params.acao,
-        idComanda: params.idComanda,
-        motivo: params.motivo || null,
-      }),
-    });
+      () =>
+        fetch("/api/vendas/processar", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            idSalao,
+            acao: params.acao,
+            idComanda: params.idComanda,
+            motivo: params.motivo || null,
+          }),
+        })
+    );
 
     const result = (await response.json().catch(() => ({}))) as Partial<
       VendaProcessarResponse

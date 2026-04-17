@@ -34,9 +34,11 @@ import type {
 } from "@/lib/admin-master/auth/adminMasterPermissions";
 import type { AdminMasterShellData } from "@/lib/admin-master/data";
 import AdminMasterGlobalSearch from "@/components/admin-master/AdminMasterGlobalSearch";
+import MonitoringContextBridge from "@/components/monitoring/MonitoringContextBridge";
 
 type Props = {
   children: ReactNode;
+  adminId: string;
   adminName: string;
   adminEmail: string;
   perfil: string;
@@ -237,6 +239,7 @@ function countBadge(
 
 export default function AdminMasterShellClient({
   children,
+  adminId,
   adminName,
   adminEmail,
   perfil,
@@ -266,6 +269,12 @@ export default function AdminMasterShellClient({
 
   return (
     <div className="min-h-screen bg-[#f7f5ef] text-zinc-950">
+      <MonitoringContextBridge
+        actorType="admin_master"
+        surface="admin_master"
+        idAdminUsuario={adminId}
+      />
+
       {mobileOpen ? (
         <button
           type="button"

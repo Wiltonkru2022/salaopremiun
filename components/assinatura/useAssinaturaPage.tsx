@@ -17,6 +17,10 @@ import {
   sanitizePermissoesDb,
 } from "@/lib/auth/permissions";
 import {
+  captureClientEvent,
+  monitorClientOperation,
+} from "@/lib/monitoring/client";
+import {
   PLANOS_INFO,
   type AssinaturaRow,
   type BillingType,
@@ -411,11 +415,26 @@ export function useAssinaturaPage() {
           setErro("");
         }
 
-        const { data, error } = await supabase
-          .from("assinaturas")
-          .select("*")
-          .eq("id_salao", salao.id)
-          .maybeSingle();
+        const { data, error } = await monitorClientOperation(
+          {
+            module: "assinatura",
+            action: "verificar_pagamento",
+            screen: "assinatura",
+            entity: "salao",
+            entityId: salao.id,
+            details: {
+              silencioso,
+            },
+            successMessage: "Status do pagamento verificado.",
+            errorMessage: "Falha ao verificar status do pagamento.",
+          },
+          async () =>
+            await supabase
+              .from("assinaturas")
+              .select("*")
+              .eq("id_salao", salao.id)
+              .maybeSingle()
+        );
 
         if (error) {
           throw error;
@@ -481,16 +500,33 @@ export function useAssinaturaPage() {
         throw new Error("Assinatura não encontrada.");
       }
 
-      const response = await fetch("/api/assinatura/toggle-renovacao", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
+      const response = await monitorClientOperation(
+        {
+          module: "assinatura",
+          action: "toggle_renovacao_automatica",
+          route: "/api/assinatura/toggle-renovacao",
+          screen: "assinatura",
+          entity: "assinatura",
+          entityId: assinatura.id,
+          details: {
+            idSalao: salao.id,
+            renovacaoAutomatica: value,
+          },
+          successMessage: "Renovacao automatica atualizada.",
+          errorMessage: "Falha ao atualizar renovacao automatica.",
         },
-        body: JSON.stringify({
-          idSalao: salao.id,
-          renovacaoAutomatica: value,
-        }),
-      });
+        () =>
+          fetch("/api/assinatura/toggle-renovacao", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              idSalao: salao.id,
+              renovacaoAutomatica: value,
+            }),
+          })
+      );
 
       const data = (await response.json()) as { error?: string };
 
@@ -538,36 +574,54 @@ export function useAssinaturaPage() {
         setPlanoSelecionado(planoParaCobranca);
       }
 
-      const response = await fetch("/api/assinatura/criar-cobranca", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Idempotency-Key": idempotencyKey,
+      const response = await monitorClientOperation(
+        {
+          module: "assinatura",
+          action: "criar_cobranca",
+          route: "/api/assinatura/criar-cobranca",
+          screen: "assinatura_checkout",
+          entity: "salao",
+          entityId: salao.id,
+          details: {
+            billingType,
+            plano: planoParaCobranca,
+            idempotencyKey,
+          },
+          successMessage: "Cobranca de assinatura criada.",
+          errorMessage: "Falha ao criar cobranca de assinatura.",
         },
-        body: JSON.stringify({
-          idSalao: salao.id,
-          nomeSalao: salao.nome || "Salão",
-          responsavelNome: salao.responsavel || salao.nome || "Responsável",
-          responsavelEmail: salao.email || "",
-          responsavelCpfCnpj: salao.cpf_cnpj || "",
-          responsavelTelefone: salao.telefone || "",
-          cep: salao.cep || "",
-          numero: salao.numero || "",
-          complemento: salao.complemento || "",
-          plano: planoParaCobranca,
-          billingType,
-          creditCard:
-            billingType === "CREDIT_CARD"
-              ? {
-                  holderName: cardForm.holderName.trim(),
-                  number: cardForm.number.replace(/\D/g, ""),
-                  expiryMonth: cardForm.expiryMonth.replace(/\D/g, ""),
-                  expiryYear: cardForm.expiryYear.replace(/\D/g, ""),
-                  ccv: cardForm.ccv.replace(/\D/g, ""),
-                }
-              : undefined,
-        }),
-      });
+        () =>
+          fetch("/api/assinatura/criar-cobranca", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Idempotency-Key": idempotencyKey,
+            },
+            body: JSON.stringify({
+              idSalao: salao.id,
+              nomeSalao: salao.nome || "Salão",
+              responsavelNome: salao.responsavel || salao.nome || "Responsável",
+              responsavelEmail: salao.email || "",
+              responsavelCpfCnpj: salao.cpf_cnpj || "",
+              responsavelTelefone: salao.telefone || "",
+              cep: salao.cep || "",
+              numero: salao.numero || "",
+              complemento: salao.complemento || "",
+              plano: planoParaCobranca,
+              billingType,
+              creditCard:
+                billingType === "CREDIT_CARD"
+                  ? {
+                      holderName: cardForm.holderName.trim(),
+                      number: cardForm.number.replace(/\D/g, ""),
+                      expiryMonth: cardForm.expiryMonth.replace(/\D/g, ""),
+                      expiryYear: cardForm.expiryYear.replace(/\D/g, ""),
+                      ccv: cardForm.ccv.replace(/\D/g, ""),
+                    }
+                  : undefined,
+            }),
+          })
+      );
 
       const data = (await response.json()) as CheckoutResponse & {
         error?: string;
@@ -612,15 +666,28 @@ export function useAssinaturaPage() {
       setIniciandoTrial(true);
       setErro("");
 
-      const response = await fetch("/api/assinatura/iniciar-trial", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
+      const response = await monitorClientOperation(
+        {
+          module: "assinatura",
+          action: "iniciar_trial",
+          route: "/api/assinatura/iniciar-trial",
+          screen: "assinatura",
+          entity: "salao",
+          entityId: salao.id,
+          successMessage: "Trial iniciado com sucesso.",
+          errorMessage: "Falha ao iniciar trial.",
         },
-        body: JSON.stringify({
-          idSalao: salao.id,
-        }),
-      });
+        () =>
+          fetch("/api/assinatura/iniciar-trial", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              idSalao: salao.id,
+            }),
+          })
+      );
 
       const data = (await response.json()) as { error?: string };
 
@@ -641,6 +708,20 @@ export function useAssinaturaPage() {
   async function copiarPix(): Promise<void> {
     if (!checkout?.pixCopiaCola) return;
     await navigator.clipboard.writeText(checkout.pixCopiaCola);
+    await captureClientEvent({
+      module: "assinatura",
+      eventType: "ui_event",
+      action: "copiar_pix",
+      screen: "assinatura_checkout",
+      entity: "cobranca",
+      entityId: checkout.paymentId,
+      message: "Codigo Pix copiado pelo usuario.",
+      details: {
+        idSalao: salao?.id || null,
+        billingType: checkout.billingType,
+      },
+      success: true,
+    });
   }
 
   async function carregarHistoricoCobrancas(): Promise<void> {
@@ -653,15 +734,28 @@ export function useAssinaturaPage() {
         return;
       }
 
-      const response = await fetch("/api/assinatura/historico", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
+      const response = await monitorClientOperation(
+        {
+          module: "assinatura",
+          action: "carregar_historico_cobrancas",
+          route: "/api/assinatura/historico",
+          screen: "assinatura_historico",
+          entity: "salao",
+          entityId: salao.id,
+          successMessage: "Historico de cobrancas carregado.",
+          errorMessage: "Falha ao carregar historico de cobrancas.",
         },
-        body: JSON.stringify({
-          idSalao: salao.id,
-        }),
-      });
+        () =>
+          fetch("/api/assinatura/historico", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              idSalao: salao.id,
+            }),
+          })
+      );
 
       const data = (await response.json()) as {
         ok?: boolean;

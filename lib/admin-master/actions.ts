@@ -1,4 +1,5 @@
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { captureSystemEvent } from "@/lib/monitoring/server";
 
 function normalizeText(value: unknown) {
   return String(value || "").trim();
@@ -67,6 +68,23 @@ export async function registrarAdminMasterAuditoria(params: {
     p_payload_json: params.payload || {},
     p_ip: null,
     p_user_agent: null,
+  });
+
+  await captureSystemEvent({
+    module: "admin_master",
+    eventType: "ui_event",
+    severity: "info",
+    message:
+      normalizeText(params.descricao) ||
+      `${normalizeText(params.acao)} em ${normalizeText(params.entidade)}`,
+    action: params.acao,
+    entity: params.entidade,
+    entityId: params.entidadeId || null,
+    idAdminUsuario: params.idAdmin,
+    details: params.payload || {},
+    origin: "server_action",
+    surface: "admin_master",
+    createIncident: false,
   });
 }
 

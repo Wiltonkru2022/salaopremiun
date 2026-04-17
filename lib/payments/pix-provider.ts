@@ -1,4 +1,8 @@
 import {
+  captureSystemError,
+  upsertSystemHealthCheck,
+} from "@/lib/monitoring/server";
+import {
   AsaasCustomer,
   AsaasPayment,
   AsaasPixQrCode,
@@ -49,14 +53,28 @@ function getAsaasConfig() {
   const apiKey = process.env.ASAAS_API_KEY;
 
   if (!baseUrl) {
-    throw new Error("ASAAS_BASE_URL não configurado.");
+    throw new Error("ASAAS_BASE_URL nao configurado.");
   }
 
   if (!apiKey) {
-    throw new Error("ASAAS_API_KEY não configurado.");
+    throw new Error("ASAAS_API_KEY nao configurado.");
   }
 
   return { baseUrl, apiKey };
+}
+
+async function registrarSaudeAsaas(params: {
+  status: "ok" | "warning" | "critical";
+  score: number;
+  details: Record<string, unknown>;
+}) {
+  await upsertSystemHealthCheck({
+    key: "integracao_asaas",
+    name: "Integracao Asaas",
+    status: params.status,
+    score: params.score,
+    details: params.details,
+  });
 }
 
 async function parseAsaasResponse(response: Response) {
@@ -65,8 +83,28 @@ async function parseAsaasResponse(response: Response) {
   try {
     return text ? JSON.parse(text) : {};
   } catch {
-    console.error("Resposta inválida do Asaas:", text);
-    throw new Error("Resposta inválida recebida do Asaas.");
+    console.error("Resposta invalida do Asaas:", text);
+    await captureSystemError({
+      module: "asaas",
+      action: "parse_response",
+      origin: "integration",
+      error: new Error("Resposta invalida recebida do Asaas."),
+      details: {
+        bodyPreview: text.slice(0, 500),
+      },
+      incidentKey: "asaas:invalid_response",
+      incidentTitle: "Resposta invalida do Asaas",
+      suggestedAction: "Validar endpoint, credenciais e payload retornado pelo provedor.",
+      automationAvailable: false,
+    });
+    await registrarSaudeAsaas({
+      status: "warning",
+      score: 70,
+      details: {
+        motivo: "Resposta invalida recebida do provedor.",
+      },
+    });
+    throw new Error("Resposta invalida recebida do Asaas.");
   }
 }
 
@@ -87,12 +125,49 @@ async function asaasFetch<T>(path: string, init?: RequestInit): Promise<T> {
 
   if (!response.ok) {
     console.error("Erro Asaas:", data);
-    throw new Error(
+    const message =
       data?.errors?.[0]?.description ||
-        data?.message ||
-        "Erro ao comunicar com o Asaas."
-    );
+      data?.message ||
+      "Erro ao comunicar com o Asaas.";
+
+    await captureSystemError({
+      module: "asaas",
+      action: "request_failed",
+      origin: "integration",
+      error: new Error(message),
+      details: {
+        path,
+        status: response.status,
+        method: init?.method || "GET",
+        response: data,
+      },
+      incidentKey: `asaas:${path}:${response.status}`,
+      incidentTitle: "Falha na integracao com o Asaas",
+      suggestedAction: "Reprocessar a acao apos validar disponibilidade e payload do provedor.",
+      automationAvailable: false,
+    });
+    await registrarSaudeAsaas({
+      status: response.status >= 500 ? "critical" : "warning",
+      score: response.status >= 500 ? 40 : 68,
+      details: {
+        path,
+        status: response.status,
+        message,
+      },
+    });
+
+    throw new Error(message);
   }
+
+  await registrarSaudeAsaas({
+    status: "ok",
+    score: 96,
+    details: {
+      path,
+      method: init?.method || "GET",
+      checkedAt: new Date().toISOString(),
+    },
+  });
 
   return data as T;
 }
@@ -152,7 +227,7 @@ export async function criarCobranca(
   if (input.billingType === "CREDIT_CARD") {
     if (!input.creditCard || !input.creditCardHolderInfo || !input.remoteIp) {
       throw new Error(
-        "Dados do cartão, titular e IP remoto são obrigatórios para cobrança em cartão."
+        "Dados do cartao, titular e IP remoto sao obrigatorios para cobranca em cartao."
       );
     }
 

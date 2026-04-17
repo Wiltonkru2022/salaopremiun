@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import MonitoringContextBridge from "@/components/monitoring/MonitoringContextBridge";
 
 type Props = {
   children: ReactNode;
@@ -20,6 +21,11 @@ export default function ProfissionalShell({
 }: Props) {
   return (
     <div className="min-h-dvh bg-[#f5f5f5]">
+      <MonitoringContextBridge
+        actorType="profissional"
+        surface="app_profissional"
+      />
+
       <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col bg-[#f5f5f5]">
         <ProfissionalHeader title={title} subtitle={subtitle} />
 

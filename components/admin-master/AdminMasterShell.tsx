@@ -5,6 +5,7 @@ import AdminMasterShellClient from "@/components/admin-master/AdminMasterShellCl
 
 type Props = {
   children: ReactNode;
+  adminId: string;
   adminName: string;
   adminEmail: string;
   perfil: string;

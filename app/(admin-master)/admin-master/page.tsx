@@ -11,6 +11,7 @@ export default async function AdminMasterPage() {
       kpis={data.kpis}
       recentes={data.recentes}
       planos={data.planos}
+      operational={data.operational}
     />
   );
 }

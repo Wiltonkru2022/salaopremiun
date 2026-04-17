@@ -14,6 +14,7 @@ export default async function AdminMasterLayout({
 
   return (
     <AdminMasterShell
+      adminId={admin.usuario.id}
       adminName={admin.usuario.nome}
       adminEmail={admin.usuario.email}
       perfil={admin.usuario.perfil}
