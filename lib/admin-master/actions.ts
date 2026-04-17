@@ -695,3 +695,102 @@ export async function criarTicketPorCheckoutLockAdminMaster(params: {
     existed: false,
   };
 }
+
+export async function criarTicketSalaoAdminMaster(params: {
+  idSalao: string;
+  idAdmin: string;
+  assunto: string;
+  mensagem: string;
+  prioridade?: string | null;
+  categoria?: string | null;
+}) {
+  const supabase = getSupabaseAdmin();
+  const now = new Date().toISOString();
+  const assunto = normalizeText(params.assunto);
+  const mensagem = normalizeText(params.mensagem);
+
+  if (!assunto || !mensagem) {
+    throw new Error("Assunto e mensagem sao obrigatorios.");
+  }
+
+  const prioridade = buildTicketPrioridade(params.prioridade);
+  const categoria = buildTicketCategoria({
+    tipo: params.categoria || "suporte",
+    origem: "saloes",
+  });
+
+  const { data: ticketData, error: ticketError } = await supabase
+    .from("tickets")
+    .insert({
+      id_salao: params.idSalao,
+      assunto,
+      categoria,
+      prioridade,
+      status: "aberto",
+      origem: "admin_master",
+      id_responsavel_admin: params.idAdmin,
+      solicitante_nome: "AdminMaster",
+      solicitante_email: null,
+      origem_contexto: {
+        origem: "admin_master",
+        modulo: "saloes",
+        id_salao: params.idSalao,
+      },
+      ultima_interacao_em: now,
+      atualizado_em: now,
+      sla_limite_em: buildTicketSla(prioridade),
+    })
+    .select("id, numero, status")
+    .single();
+
+  if (ticketError || !ticketData) {
+    throw new Error("Erro ao criar ticket interno do salao.");
+  }
+
+  const ticket = ticketData as {
+    id: string;
+    numero?: number | string | null;
+    status?: string | null;
+  };
+
+  await supabase.from("ticket_mensagens").insert({
+    id_ticket: ticket.id,
+    autor_tipo: "admin",
+    id_admin_usuario: params.idAdmin,
+    autor_nome: "AdminMaster",
+    mensagem,
+    interna: true,
+  });
+
+  await supabase.from("ticket_eventos").insert({
+    id_ticket: ticket.id,
+    evento: "ticket_aberto_admin_master",
+    descricao: "Ticket aberto manualmente pelo detalhe do salao no AdminMaster.",
+    payload_json: {
+      id_salao: params.idSalao,
+      categoria,
+      prioridade,
+      id_admin: params.idAdmin,
+    },
+  });
+
+  await registrarAdminMasterAuditoria({
+    idAdmin: params.idAdmin,
+    acao: "criar_ticket_salao",
+    entidade: "tickets",
+    entidadeId: ticket.id,
+    descricao: assunto,
+    payload: {
+      id_salao: params.idSalao,
+      ticket_numero: Number(ticket.numero || 0),
+      categoria,
+      prioridade,
+    },
+  });
+
+  return {
+    ticketId: ticket.id,
+    ticketNumero: Number(ticket.numero || 0),
+    status: String(ticket.status || "aberto"),
+  };
+}
