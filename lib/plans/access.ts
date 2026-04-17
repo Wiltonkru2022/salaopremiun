@@ -171,10 +171,22 @@ type ExtraRow = {
 const STATUS_RESTRITO = new Set(["vencida", "cancelada", "bloqueada", "suspensa"]);
 
 function normalizePlano(plano?: string | null) {
-  return String(plano || "teste_gratis")
+  const normalized = String(plano || "teste_gratis")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
     .trim()
     .toLowerCase()
-    .replace(/\s+/g, "_");
+    .replace(/[-\s]+/g, "_");
+
+  const codigo = normalized.startsWith("plano_")
+    ? normalized.replace(/^plano_/, "")
+    : normalized;
+
+  if (!codigo || codigo === "trial" || codigo === "testegratis" || codigo === "gratis") {
+    return "teste_gratis";
+  }
+
+  return codigo;
 }
 
 function isUnlimited(value?: number | null) {

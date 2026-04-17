@@ -110,11 +110,20 @@ export async function POST(req: Request) {
 
     await salvarMensagemConversa({
       idConversa: conversa.id,
+      idSalao: session.idSalao,
+      idProfissional: session.idProfissional,
       papel: "user",
       conteudo: message,
     });
 
-    const historico = await listarMensagensConversa(conversa.id, 20);
+    const historico = await listarMensagensConversa(
+      {
+        idConversa: conversa.id,
+        idSalao: session.idSalao,
+        idProfissional: session.idProfissional,
+      },
+      20
+    );
 
     const [
       profissionalResult,
@@ -268,6 +277,8 @@ export async function POST(req: Request) {
 
       await salvarMensagemConversa({
         idConversa: conversa.id,
+        idSalao: session.idSalao,
+        idProfissional: session.idProfissional,
         papel: "assistant",
         conteudo: respostaBloqueio,
       });
@@ -350,6 +361,8 @@ const response = await openai.responses.create({
 
     await salvarMensagemConversa({
       idConversa: conversa.id,
+      idSalao: session.idSalao,
+      idProfissional: session.idProfissional,
       papel: "assistant",
       conteudo: answer,
     });

@@ -9,7 +9,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { getResumoAssinatura } from "@/lib/assinatura-utils";
 import {
@@ -45,12 +45,16 @@ const PLANOS_COBRAVEIS = ["basico", "pro", "premium"] as const;
 type PlanoCobravel = (typeof PLANOS_COBRAVEIS)[number];
 
 function normalizarCodigoPlano(value?: string | null) {
-  return String(value || "")
+  const normalized = String(value || "")
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
-    .replace(/\s+/g, "_")
+    .replace(/[-\s]+/g, "_")
     .trim()
     .toLowerCase();
+
+  return normalized.startsWith("plano_")
+    ? normalized.replace(/^plano_/, "")
+    : normalized;
 }
 
 function isPlanoCobravel(value?: string | null): value is PlanoCobravel {
@@ -62,12 +66,21 @@ function normalizarPlanoCobravel(
   fallback: PlanoCobravel = "basico"
 ): PlanoCobravel {
   const normalized = normalizarCodigoPlano(value);
+
+  if (
+    !normalized ||
+    ["teste_gratis", "testegratis", "trial", "gratis"].includes(normalized)
+  ) {
+    return fallback;
+  }
+
   return isPlanoCobravel(normalized) ? normalized : fallback;
 }
 
 export function useAssinaturaPage() {
   const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState("");
@@ -116,6 +129,7 @@ export function useAssinaturaPage() {
   const planoEscolhidoManualmenteRef = useRef(false);
 
   const podeGerenciar = nivel === "admin";
+  const planoUrl = searchParams.get("plano");
 
   const selecionarPlano = useCallback<Dispatch<SetStateAction<string>>>(
     (value) => {
@@ -143,6 +157,15 @@ export function useAssinaturaPage() {
     },
     []
   );
+
+  useEffect(() => {
+    if (!planoUrl) return;
+
+    const planoDaUrl = normalizarPlanoCobravel(planoUrl, "basico");
+    planoEscolhidoManualmenteRef.current = true;
+    planoSelecionadoRef.current = planoDaUrl;
+    setPlanoSelecionado(planoDaUrl);
+  }, [planoUrl]);
 
   const carregarAcesso = useCallback(async () => {
     const {

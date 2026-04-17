@@ -24,6 +24,22 @@ function statusLabel(status: string) {
   return normalized || "sem status";
 }
 
+function getPlanoCheckoutHref(planoAtual: string, upgrade = false) {
+  const plano = String(planoAtual || "").toLowerCase();
+
+  if (upgrade) {
+    if (plano === "premium") return "/assinatura?plano=premium";
+    if (plano === "pro") return "/assinatura?plano=premium";
+    return "/assinatura?plano=pro";
+  }
+
+  if (plano === "basico" || plano === "pro" || plano === "premium") {
+    return `/assinatura?plano=${plano}`;
+  }
+
+  return "/assinatura?plano=basico";
+}
+
 export default async function MeuPlanoPage() {
   const supabase = await createClient();
   const {
@@ -70,6 +86,8 @@ export default async function MeuPlanoPage() {
     access.uso.profissionais,
     access.limites.profissionais
   );
+  const assinaturaHref = getPlanoCheckoutHref(access.planoCodigo);
+  const upgradeHref = getPlanoCheckoutHref(access.planoCodigo, true);
 
   return (
     <div className="space-y-6">
@@ -89,13 +107,13 @@ export default async function MeuPlanoPage() {
             </p>
             <div className="mt-6 flex flex-wrap gap-2">
               <Link
-                href="/assinatura"
+                href={assinaturaHref}
                 className="rounded-full bg-white px-5 py-3 text-sm font-black text-zinc-950 transition hover:-translate-y-0.5"
               >
                 Gerenciar assinatura
               </Link>
               <Link
-                href="/assinatura"
+                href={upgradeHref}
                 className="rounded-full border border-white/15 bg-white/10 px-5 py-3 text-sm font-black text-white transition hover:-translate-y-0.5 hover:bg-white/15"
               >
                 Fazer upgrade
@@ -209,7 +227,7 @@ export default async function MeuPlanoPage() {
               </h2>
             </div>
             <Link
-              href="/assinatura"
+              href={assinaturaHref}
               className="rounded-full border border-zinc-200 px-4 py-2 text-sm font-black text-zinc-900 transition hover:border-zinc-950"
             >
               Ver planos
@@ -256,7 +274,7 @@ export default async function MeuPlanoPage() {
               mensagem clara e leva para assinatura, sem quebrar o fluxo.
             </p>
             <Link
-              href="/assinatura"
+              href={upgradeHref}
               className="mt-5 inline-flex rounded-full bg-white px-5 py-3 text-sm font-black text-zinc-950 transition hover:-translate-y-0.5"
             >
               Comparar planos

@@ -263,19 +263,23 @@ function normalizarPlanoCobranca(value?: string | null) {
   const normalized = String(value || "")
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
-    .replace(/\s+/g, "_")
+    .replace(/[-\s]+/g, "_")
     .trim()
     .toLowerCase();
+  const codigo = normalized.startsWith("plano_")
+    ? normalized.replace(/^plano_/, "")
+    : normalized;
 
-  if (normalized === "basico" || normalized === "pro" || normalized === "premium") {
-    return normalized;
+  if (codigo === "basico" || codigo === "pro" || codigo === "premium") {
+    return codigo;
   }
 
   if (
-    !normalized ||
-    normalized === "teste_gratis" ||
-    normalized === "testegratis" ||
-    normalized === "trial"
+    !codigo ||
+    codigo === "teste_gratis" ||
+    codigo === "testegratis" ||
+    codigo === "trial" ||
+    codigo === "gratis"
   ) {
     return "basico";
   }

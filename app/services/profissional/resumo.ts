@@ -1,5 +1,9 @@
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
+type ComissaoResumoRow = {
+  valor_comissao?: number | string | null;
+};
+
 function inicioMesISO() {
   const now = new Date();
   return new Date(now.getFullYear(), now.getMonth(), 1)
@@ -57,19 +61,12 @@ export async function buscarResumoInicioProfissional(
       .lte("competencia_data", fimMes),
   ]);
 
-  console.log("Resumo atendimentosHoje:", atendimentosHoje);
-  console.log("Resumo atendimentosMes:", atendimentosMes);
-  console.log("Resumo comissões:", comissoes);
-  console.log("Erro hoje:", erroHoje);
-  console.log("Erro mês:", erroMes);
-  console.log("Erro comissão:", erroComissao);
-
   if (erroHoje) throw new Error(erroHoje.message);
   if (erroMes) throw new Error(erroMes.message);
   if (erroComissao) throw new Error(erroComissao.message);
 
-  const totalComissaoMes = (comissoes ?? []).reduce(
-    (acc: number, item: any) => acc + Number(item.valor_comissao || 0),
+  const totalComissaoMes = ((comissoes ?? []) as ComissaoResumoRow[]).reduce(
+    (acc, item) => acc + Number(item.valor_comissao || 0),
     0
   );
 
