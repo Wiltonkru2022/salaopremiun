@@ -30,6 +30,28 @@ export type TicketNotificacao = {
   ultima_interacao_em?: string | null;
 };
 
+export type EstoqueAlertaNotificacao = {
+  id: string;
+  tipo?: string | null;
+  mensagem?: string | null;
+};
+
+export type SistemaAlertaNotificacao = {
+  id: string;
+  tipo?: string | null;
+  gravidade?: string | null;
+  origem_modulo?: string | null;
+  titulo?: string | null;
+  descricao?: string | null;
+};
+
+export type OnboardingScoreNotificacao = {
+  score_total?: number | null;
+  dias_com_acesso?: number | null;
+  modulos_usados?: number | null;
+  detalhes_json?: Record<string, unknown> | null;
+};
+
 export function formatDateKey(date: Date) {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -50,18 +72,61 @@ function isBirthdayThisMonth(value?: string | null) {
   return month === new Date().getMonth() + 1;
 }
 
+function normalizeAlertSeverity(value?: string | null) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function isCriticalAlert(alerta: SistemaAlertaNotificacao) {
+  return ["alta", "critica", "critical", "high"].includes(
+    normalizeAlertSeverity(alerta.gravidade)
+  );
+}
+
+function isWebhookAlert(alerta: SistemaAlertaNotificacao) {
+  const haystack = `${String(alerta.tipo || "")} ${String(alerta.origem_modulo || "")}`.toLowerCase();
+  return haystack.includes("webhook") || haystack.includes("asaas");
+}
+
+function getOnboardingNextSteps(onboarding?: OnboardingScoreNotificacao | null) {
+  const detalhes =
+    onboarding?.detalhes_json && typeof onboarding.detalhes_json === "object"
+      ? onboarding.detalhes_json
+      : {};
+
+  const suggestions: string[] = [];
+  const profissionais = Number(detalhes.profissionais || 0);
+  const servicos = Number(detalhes.servicos || 0);
+  const clientes = Number(detalhes.clientes || 0);
+  const agendamentos = Number(detalhes.agendamentos || 0);
+  const caixas = Number(detalhes.caixas || 0);
+
+  if (profissionais < 2) suggestions.push("cadastre a equipe");
+  if (servicos < 5) suggestions.push("organize os servicos");
+  if (clientes < 5) suggestions.push("importe os clientes");
+  if (agendamentos < 3) suggestions.push("crie os primeiros agendamentos");
+  if (caixas < 1) suggestions.push("abra o primeiro caixa");
+
+  return suggestions.slice(0, 2);
+}
+
 export function buildShellNotifications({
   resumoAssinatura,
   clientes,
   agendamentos,
   movimentosCaixa,
   tickets,
+  estoqueAlertas = [],
+  alertasSistema = [],
+  onboarding = null,
 }: {
   resumoAssinatura: ReturnType<typeof getResumoAssinatura> | null;
   clientes: ClienteNascimento[];
   agendamentos: AgendamentoNotificacao[];
   movimentosCaixa: CaixaMovimentoNotificacao[];
   tickets: TicketNotificacao[];
+  estoqueAlertas?: EstoqueAlertaNotificacao[];
+  alertasSistema?: SistemaAlertaNotificacao[];
+  onboarding?: OnboardingScoreNotificacao | null;
 }): ShellNotification[] {
   const notifications: ShellNotification[] = [];
 
@@ -164,6 +229,85 @@ export function buildShellNotifications({
       tone: "warning",
       category: "caixa",
       href: "/caixa",
+    });
+  }
+
+  if (estoqueAlertas.length > 0) {
+    const preview = estoqueAlertas
+      .map((alerta) => String(alerta.mensagem || "").trim())
+      .filter(Boolean)
+      .slice(0, 2)
+      .join(" • ");
+
+    notifications.push({
+      id: "estoque-critico",
+      title: `${estoqueAlertas.length} alerta(s) de estoque`,
+      description:
+        preview ||
+        "Existem produtos em risco. Revise entradas, saidas e consumo dos servicos.",
+      tone: estoqueAlertas.length > 2 ? "danger" : "warning",
+      category: "estoque",
+      href: "/estoque",
+      critical: true,
+    });
+  }
+
+  const webhookAlerts = alertasSistema.filter(isWebhookAlert);
+
+  if (webhookAlerts.length > 0) {
+    const criticalWebhookAlerts = webhookAlerts.filter(isCriticalAlert);
+    const primaryAlert = webhookAlerts[0];
+
+    notifications.push({
+      id: "webhook-falho",
+      title: `${webhookAlerts.length} webhook(s) em atencao`,
+      description:
+        String(primaryAlert?.descricao || primaryAlert?.titulo || "").trim() ||
+        "Eventos de cobranca precisam de acompanhamento para manter a assinatura segura.",
+      tone: criticalWebhookAlerts.length > 0 ? "danger" : "warning",
+      category: "webhook",
+      href: "/assinatura",
+      critical: true,
+    });
+  }
+
+  const criticalSystemAlerts = alertasSistema.filter(
+    (alerta) => !isWebhookAlert(alerta) && isCriticalAlert(alerta)
+  );
+
+  if (criticalSystemAlerts.length > 0) {
+    const latest = criticalSystemAlerts[0];
+
+    notifications.push({
+      id: "operacao-critica",
+      title: `${criticalSystemAlerts.length} alerta(s) critico(s) do sistema`,
+      description:
+        String(latest?.titulo || latest?.descricao || "").trim() ||
+        "O sistema identificou uma situacao que pede revisao imediata.",
+      tone: "danger",
+      category: "sistema",
+      href: "/suporte",
+      critical: true,
+    });
+  }
+
+  const scoreOnboarding = Number(onboarding?.score_total || 0);
+  const onboardingHints = getOnboardingNextSteps(onboarding);
+  const shouldShowOnboarding =
+    onboarding != null &&
+    (scoreOnboarding < 70 || Number(onboarding.modulos_usados || 0) < 4);
+
+  if (shouldShowOnboarding) {
+    notifications.push({
+      id: "tour-guiado",
+      title: `Tour guiado disponivel (${scoreOnboarding}/100)`,
+      description:
+        onboardingHints.length > 0
+          ? `Proximos passos: ${onboardingHints.join(" e ")}.`
+          : "Use o tour para entender dashboard, agenda, clientes, servicos, caixa e assinatura.",
+      tone: "info",
+      category: "onboarding",
+      href: "/dashboard?tour=1",
     });
   }
 

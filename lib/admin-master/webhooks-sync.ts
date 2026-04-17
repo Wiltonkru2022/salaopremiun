@@ -21,6 +21,16 @@ function buildWebhookStatus(statusProcessamento?: string | null) {
   return "pendente";
 }
 
+export function buildWebhookMirrorKey(sourceId: string) {
+  return `asaas:${normalizeString(sourceId)}`;
+}
+
+export function extractWebhookSourceId(chave?: string | null) {
+  const normalized = normalizeString(chave);
+  if (!normalized.startsWith("asaas:")) return normalized || null;
+  return normalized.replace(/^asaas:/, "") || null;
+}
+
 export async function syncAdminMasterWebhookEvents() {
   const supabase = getSupabaseAdmin();
   const since = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();
@@ -76,7 +86,7 @@ export async function syncAdminMasterWebhookEvents() {
     const erroMensagem = normalizeString(row.erro_mensagem);
 
     return {
-      chave: `asaas:${row.id}`,
+      chave: buildWebhookMirrorKey(row.id),
       origem: "asaas",
       evento: row.evento || "evento_desconhecido",
       id_salao: row.id_salao || null,

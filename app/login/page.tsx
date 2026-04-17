@@ -1,12 +1,31 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { createClient } from "../../lib/supabase/client";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowRight, LockKeyhole, Mail, Sparkles } from "lucide-react";
 
 export default function LoginPage() {
+  return (
+    <Suspense fallback={<LoginPageFallback />}>
+      <LoginPageContent />
+    </Suspense>
+  );
+}
+
+function LoginPageFallback() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-white p-4">
+      <div className="w-full max-w-xl rounded-[32px] border border-zinc-200 bg-white p-10 text-center shadow-2xl">
+        <p className="text-sm text-zinc-500">Carregando login...</p>
+      </div>
+    </div>
+  );
+}
+
+function LoginPageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const [supabase, setSupabase] = useState<ReturnType<typeof createClient> | null>(null);
   const [email, setEmail] = useState("");
@@ -14,9 +33,17 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState("");
 
+  const planoSelecionado = searchParams.get("plano")?.trim() || "";
+  const emailQuery = searchParams.get("email")?.trim() || "";
+
   useEffect(() => {
     setSupabase(createClient());
   }, []);
+
+  useEffect(() => {
+    if (!emailQuery) return;
+    setEmail((current) => current || emailQuery);
+  }, [emailQuery]);
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -40,7 +67,11 @@ export default function LoginPage() {
       return;
     }
 
-    router.push("/dashboard");
+    router.push(
+      planoSelecionado
+        ? `/assinatura?plano=${encodeURIComponent(planoSelecionado)}`
+        : "/dashboard"
+    );
     router.refresh();
   }
 
@@ -156,7 +187,13 @@ export default function LoginPage() {
 
             <button
               type="button"
-              onClick={() => router.push("/cadastro-salao")}
+              onClick={() =>
+                router.push(
+                  planoSelecionado
+                    ? `/cadastro-salao?plano=${encodeURIComponent(planoSelecionado)}`
+                    : "/cadastro-salao"
+                )
+              }
               className="flex w-full items-center justify-center gap-2 rounded-2xl border border-zinc-300 bg-white px-4 py-3 font-semibold text-zinc-900 transition hover:border-zinc-900 hover:bg-zinc-50"
             >
               <span>Cadastrar salão</span>

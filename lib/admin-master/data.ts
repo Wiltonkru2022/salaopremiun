@@ -6,6 +6,7 @@ import {
 import { getPlanoAccessSnapshot } from "@/lib/plans/access";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import {
+  extractWebhookSourceId,
   formatWebhookDate,
   formatWebhookDiagnosticDetail,
   syncAdminMasterWebhookEvents,
@@ -934,7 +935,7 @@ export async function getAdminMasterSection(
       supabase
         .from("eventos_webhook")
         .select(
-          "origem, evento, id_salao, status, tentativas, erro_texto, resposta_json, recebido_em, processado_em"
+          "chave, origem, evento, id_salao, status, tentativas, erro_texto, payload_json, resposta_json, recebido_em, processado_em"
         )
         .order("recebido_em", { ascending: false })
         .limit(150),
@@ -949,16 +950,19 @@ export async function getAdminMasterSection(
     );
 
     const rows = ((eventos || []) as {
+      chave?: string | null;
       origem?: string | null;
       evento?: string | null;
       id_salao?: string | null;
       status?: string | null;
       tentativas?: number | null;
       erro_texto?: string | null;
+      payload_json?: Record<string, unknown> | null;
       resposta_json?: Record<string, unknown> | null;
       recebido_em?: string | null;
       processado_em?: string | null;
     }[]).map((row) => {
+      const sourceId = extractWebhookSourceId(row.chave);
       const resposta =
         row.resposta_json && typeof row.resposta_json === "object"
           ? row.resposta_json
@@ -968,21 +972,27 @@ export async function getAdminMasterSection(
       const decisao =
         typeof resposta.decisao === "string" ? resposta.decisao : null;
 
-      return {
-        origem: row.origem || "-",
-        evento: row.evento || "-",
-        salao: row.id_salao ? salaoById.get(row.id_salao) || row.id_salao : "-",
-        status: row.status || "-",
-        tentativas: safeNumber(row.tentativas),
-        recebido: formatWebhookDate(row.recebido_em),
-        processado: formatWebhookDate(row.processado_em),
-        detalhe: formatWebhookDiagnosticDetail({
-          paymentId,
-          decisao,
-          erro: row.erro_texto,
-        }),
-      };
-    });
+        return {
+          origem: row.origem || "-",
+          evento: row.evento || "-",
+          salao: row.id_salao ? salaoById.get(row.id_salao) || row.id_salao : "-",
+          status: row.status || "-",
+          tentativas: safeNumber(row.tentativas),
+          recebido: formatWebhookDate(row.recebido_em),
+          processado: formatWebhookDate(row.processado_em),
+          detalhe: formatWebhookDiagnosticDetail({
+            paymentId,
+            decisao,
+            erro: row.erro_texto,
+          }),
+          payload_acao: sourceId ? "Ver payload" : "-",
+          payload_acao_tipo: sourceId ? "webhook_payload" : null,
+          payload_acao_id: sourceId,
+          reprocessar_acao: sourceId ? "Reprocessar" : "-",
+          reprocessar_acao_tipo: sourceId ? "webhook_reprocess" : null,
+          reprocessar_acao_id: sourceId,
+        };
+      });
 
     const erros = rows.filter(
       (row) => String(row.status).toLowerCase() === "erro"
@@ -1036,6 +1046,8 @@ export async function getAdminMasterSection(
         "recebido",
         "processado",
         "detalhe",
+        "payload_acao",
+        "reprocessar_acao",
       ],
       actions: [
         "Sincronizar webhooks",

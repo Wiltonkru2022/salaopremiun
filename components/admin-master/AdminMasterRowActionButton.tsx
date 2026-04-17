@@ -21,29 +21,65 @@ type CreateTicketResponse = {
   };
 };
 
+type RowActionRequest =
+  | {
+      kind: "api";
+      endpoint: string;
+      body: Record<string, unknown>;
+      successLabel: string | null;
+      loadingLabel: string;
+    }
+  | {
+      kind: "link";
+      href: string;
+    };
+
 function buildActionRequest(actionType: string, actionId: string) {
   if (actionType === "checkout_ticket") {
     return {
+      kind: "api",
       endpoint: `/api/admin-master/checkouts/${encodeURIComponent(actionId)}/criar-ticket`,
       body: { assumir: true },
       successLabel: null,
-    };
+      loadingLabel: "Criando...",
+    } satisfies RowActionRequest;
   }
 
   if (actionType === "alert_ticket") {
     return {
+      kind: "api",
       endpoint: `/api/admin-master/alertas/${encodeURIComponent(actionId)}/criar-ticket`,
       body: { assumir: true },
       successLabel: null,
-    };
+      loadingLabel: "Criando...",
+    } satisfies RowActionRequest;
   }
 
   if (actionType === "alert_resolve") {
     return {
+      kind: "api",
       endpoint: `/api/admin-master/alertas/${encodeURIComponent(actionId)}/resolver`,
       body: { motivo: "Resolvido manualmente pelo AdminMaster." },
       successLabel: "Resolvido",
-    };
+      loadingLabel: "Resolvendo...",
+    } satisfies RowActionRequest;
+  }
+
+  if (actionType === "webhook_payload") {
+    return {
+      kind: "link",
+      href: `/admin-master/webhooks/${encodeURIComponent(actionId)}`,
+    } satisfies RowActionRequest;
+  }
+
+  if (actionType === "webhook_reprocess") {
+    return {
+      kind: "api",
+      endpoint: `/api/admin-master/webhooks/${encodeURIComponent(actionId)}/reprocessar`,
+      body: {},
+      successLabel: "Reprocessado",
+      loadingLabel: "Reprocessando...",
+    } satisfies RowActionRequest;
   }
 
   return null;
@@ -59,26 +95,37 @@ export default function AdminMasterRowActionButton({
   label?: string | null;
 }) {
   const normalizedLabel = label || "-";
+  const request = buildActionRequest(actionType || "", actionId || "");
   const [state, setState] = useState<RowActionState>({
     status: "idle",
     label: normalizedLabel,
   });
 
-  if (!actionType || !actionId || normalizedLabel === "-") {
+  if (!actionType || !actionId || normalizedLabel === "-" || !request) {
     return <span>{normalizedLabel}</span>;
   }
 
-  async function handleAction() {
-    const request = buildActionRequest(actionType || "", actionId || "");
-    if (!request) return;
+  if (request.kind === "link") {
+    return (
+      <Link
+        href={request.href}
+        className="inline-flex rounded-full bg-zinc-100 px-3 py-1 text-xs font-black text-zinc-700 ring-1 ring-zinc-200 transition hover:bg-zinc-950 hover:text-white hover:ring-zinc-950"
+      >
+        {normalizedLabel}
+      </Link>
+    );
+  }
 
-    setState({ status: "loading", label: "Criando..." });
+  const apiRequest = request;
+
+  async function handleAction() {
+    setState({ status: "loading", label: apiRequest.loadingLabel });
 
     try {
-      const response = await fetch(request.endpoint, {
+      const response = await fetch(apiRequest.endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(request.body),
+        body: JSON.stringify(apiRequest.body),
       });
       const data = (await response.json().catch(() => ({}))) as CreateTicketResponse;
 
@@ -86,8 +133,8 @@ export default function AdminMasterRowActionButton({
         throw new Error(data.error || "Nao foi possivel executar a acao.");
       }
 
-      if (request.successLabel) {
-        setState({ status: "success", label: request.successLabel });
+      if (apiRequest.successLabel) {
+        setState({ status: "success", label: apiRequest.successLabel });
         return;
       }
 

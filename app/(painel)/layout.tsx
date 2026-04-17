@@ -46,7 +46,13 @@ export default async function PainelLayout({
     return <div className="p-6 text-red-600">Usuario inativo.</div>;
   }
 
-  const [{ data: permissoes }, { data: salao }, { data: assinatura }, { data: tickets }] =
+  const [
+    { data: permissoes },
+    { data: salao },
+    { data: assinatura },
+    { data: tickets },
+    { data: onboarding },
+  ] =
     await Promise.all([
       supabase
         .from("usuarios_permissoes")
@@ -78,6 +84,11 @@ export default async function PainelLayout({
         ])
         .order("ultima_interacao_em", { ascending: false })
         .limit(10),
+      supabaseAdmin
+        .from("score_onboarding_salao")
+        .select("score_total, dias_com_acesso, modulos_usados, detalhes_json")
+        .eq("id_salao", usuario.id_salao)
+        .maybeSingle(),
     ]);
 
   const permissoesPadrao = buildPermissoesByNivel(usuario.nivel);
@@ -110,6 +121,18 @@ export default async function PainelLayout({
     clientes: [],
     agendamentos: [],
     movimentosCaixa: [],
+    onboarding: onboarding
+      ? {
+          score_total: onboarding.score_total,
+          dias_com_acesso: onboarding.dias_com_acesso,
+          modulos_usados: onboarding.modulos_usados,
+          detalhes_json:
+            onboarding.detalhes_json &&
+            typeof onboarding.detalhes_json === "object"
+              ? (onboarding.detalhes_json as Record<string, unknown>)
+              : {},
+        }
+      : null,
     tickets: (tickets as
       | Array<{
           id: string;
@@ -136,6 +159,20 @@ export default async function PainelLayout({
       planoNome={assinatura?.plano || salao?.plano || "Sem plano"}
       assinaturaStatus={assinatura?.status || salao?.status || null}
       resumoAssinatura={resumoAssinatura}
+      onboarding={
+        onboarding
+          ? {
+              scoreTotal: onboarding.score_total,
+              diasComAcesso: onboarding.dias_com_acesso,
+              modulosUsados: onboarding.modulos_usados,
+              detalhes:
+                onboarding.detalhes_json &&
+                typeof onboarding.detalhes_json === "object"
+                  ? (onboarding.detalhes_json as Record<string, unknown>)
+                  : {},
+            }
+          : null
+      }
       notifications={notifications}
     >
       {children}

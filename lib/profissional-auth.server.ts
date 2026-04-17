@@ -1,5 +1,6 @@
 import bcrypt from "bcryptjs";
 import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import crypto from "node:crypto";
 
 export type ProfissionalSession = {
@@ -102,6 +103,16 @@ export async function getProfissionalSessionFromCookie(): Promise<ProfissionalSe
   if (!raw) return null;
 
   return parseSession(raw);
+}
+
+export async function requireProfissionalSession() {
+  const session = await getProfissionalSessionFromCookie();
+
+  if (!session) {
+    redirect("/app-profissional/login");
+  }
+
+  return session;
 }
 
 export async function clearProfissionalSession() {

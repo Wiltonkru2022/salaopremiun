@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { getErrorMessage } from "@/lib/get-error-message";
 
 type StepKey =
@@ -62,6 +62,29 @@ function maskCpfCnpj(value: string) {
   )}-${v.slice(12)}`;
 }
 
+function normalizarPlanoSelecionado(value: string | null) {
+  const plano = String(value || "").trim().toLowerCase();
+
+  if (plano === "basico" || plano === "pro" || plano === "premium") {
+    return plano;
+  }
+
+  return "";
+}
+
+function getPlanoLabel(plano: string) {
+  switch (plano) {
+    case "basico":
+      return "Essencial";
+    case "pro":
+      return "Profissional";
+    case "premium":
+      return "Premium";
+    default:
+      return "Escolher depois";
+  }
+}
+
 function getStepTitle(step: StepKey) {
   switch (step) {
     case "boas_vindas":
@@ -118,6 +141,7 @@ export default function CadastroSalaoPage() {
 
 function CadastroSalaoContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const [step, setStep] = useState<StepKey>("boas_vindas");
   const [saving, setSaving] = useState(false);
@@ -141,6 +165,9 @@ function CadastroSalaoContent() {
   const [bairro, setBairro] = useState("");
   const [cidade, setCidade] = useState("");
   const [estado, setEstado] = useState("");
+
+  const planoSelecionado = normalizarPlanoSelecionado(searchParams.get("plano"));
+  const planoLabel = getPlanoLabel(planoSelecionado);
 
   const currentStepIndex = STEPS.indexOf(step);
   const progresso = Math.round((currentStepIndex / (STEPS.length - 1)) * 100);
@@ -292,7 +319,16 @@ function CadastroSalaoContent() {
       }
 
       setMsg("Cadastro realizado com sucesso.");
-      router.push(`/login?email=${encodeURIComponent(email.trim())}`);
+
+      const params = new URLSearchParams({
+        email: email.trim(),
+      });
+
+      if (planoSelecionado) {
+        params.set("plano", planoSelecionado);
+      }
+
+      router.push(`/login?${params.toString()}`);
     } catch (e: unknown) {
       console.error("ERRO FINAL CADASTRO:", e);
       setErro(getErrorMessage(e, "Erro ao cadastrar salão."));
@@ -311,7 +347,9 @@ function CadastroSalaoContent() {
             </AssistantBubble>
 
             <AssistantBubble>
-              Depois do primeiro login, você escolhe o plano na tela de assinatura e pode iniciar o teste grátis por lá.
+              {planoSelecionado
+                ? `Seu plano ${planoLabel} vai seguir com você para a assinatura logo após o primeiro login.`
+                : "Depois do primeiro login, você escolhe o plano na tela de assinatura e pode iniciar o teste grátis por lá."}
             </AssistantBubble>
 
             <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
@@ -494,6 +532,9 @@ function CadastroSalaoContent() {
               <SummaryCard label="Responsável" value={responsavel || "-"} />
               <SummaryCard label="WhatsApp" value={whatsapp || "-"} />
               <SummaryCard label="CPF/CNPJ" value={cpfCnpj || "-"} />
+              {planoSelecionado ? (
+                <SummaryCard label="Plano" value={planoLabel} />
+              ) : null}
               <SummaryCard
                 label="Endereço"
                 value={[
@@ -529,6 +570,12 @@ function CadastroSalaoContent() {
               <div className="inline-flex rounded-full border border-zinc-200 bg-zinc-50 px-4 py-2 text-xs font-semibold uppercase tracking-[0.25em] text-zinc-600">
                 SalaoPremium
               </div>
+
+              {planoSelecionado ? (
+                <div className="mt-4 inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">
+                  Plano escolhido: {planoLabel}
+                </div>
+              ) : null}
 
               <h1 className="mt-6 text-3xl font-bold leading-tight md:text-4xl">
                 Cadastro bonito, guiado e profissional para o seu salão

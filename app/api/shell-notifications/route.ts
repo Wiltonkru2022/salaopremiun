@@ -2,10 +2,13 @@ import { getUser } from "@/lib/auth/get-user";
 import { getResumoAssinatura } from "@/lib/assinatura-utils";
 import {
   buildShellNotifications,
+  type EstoqueAlertaNotificacao,
   formatDateKey,
   type AgendamentoNotificacao,
   type CaixaMovimentoNotificacao,
   type ClienteNascimento,
+  type OnboardingScoreNotificacao,
+  type SistemaAlertaNotificacao,
   type TicketNotificacao,
 } from "@/lib/notifications/shell-notifications";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
@@ -43,6 +46,9 @@ export async function GET() {
     { data: agendamentosNotificacao },
     { data: movimentosCaixaNotificacao },
     { data: ticketsNotificacao },
+    { data: estoqueAlertasNotificacao },
+    { data: alertasSistemaNotificacao },
+    { data: onboardingNotificacao },
   ] = await Promise.all([
     supabase
       .from("assinaturas")
@@ -80,6 +86,25 @@ export async function GET() {
       .in("status", ["aberto", "em_atendimento", "aguardando_cliente", "aguardando_tecnico"])
       .order("ultima_interacao_em", { ascending: false })
       .limit(10),
+    supabase
+      .from("produtos_alertas")
+      .select("id, tipo, mensagem")
+      .eq("id_salao", usuario.id_salao)
+      .eq("resolvido", false)
+      .order("created_at", { ascending: false })
+      .limit(8),
+    supabaseAdmin
+      .from("alertas_sistema")
+      .select("id, tipo, gravidade, origem_modulo, titulo, descricao")
+      .eq("id_salao", usuario.id_salao)
+      .eq("resolvido", false)
+      .order("criado_em", { ascending: false })
+      .limit(8),
+    supabaseAdmin
+      .from("score_onboarding_salao")
+      .select("score_total, dias_com_acesso, modulos_usados, detalhes_json")
+      .eq("id_salao", usuario.id_salao)
+      .maybeSingle(),
   ]);
 
   const resumoAssinatura = assinatura
@@ -97,6 +122,11 @@ export async function GET() {
       (agendamentosNotificacao as AgendamentoNotificacao[]) || [],
     movimentosCaixa:
       (movimentosCaixaNotificacao as CaixaMovimentoNotificacao[]) || [],
+    estoqueAlertas:
+      (estoqueAlertasNotificacao as EstoqueAlertaNotificacao[]) || [],
+    alertasSistema:
+      (alertasSistemaNotificacao as SistemaAlertaNotificacao[]) || [],
+    onboarding: (onboardingNotificacao as OnboardingScoreNotificacao | null) || null,
     tickets: (ticketsNotificacao as TicketNotificacao[]) || [],
   });
 

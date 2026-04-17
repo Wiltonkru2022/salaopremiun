@@ -8,6 +8,7 @@ import {
   Building2,
   CalendarClock,
   ChevronDown,
+  CircleHelp,
   CreditCard,
   LogOut,
   Menu,
@@ -36,8 +37,10 @@ type Props = {
   canSeeConfiguracoes: boolean;
   canSeeAssinatura: boolean;
   notifications: ShellNotification[];
+  notificationStorageKey?: string;
   scrolled: boolean;
   onOpenSidebar: () => void;
+  onOpenHelp: () => void;
   onLogout: () => Promise<void>;
 };
 
@@ -90,8 +93,10 @@ export default function Header({
   canSeeConfiguracoes,
   canSeeAssinatura,
   notifications,
+  notificationStorageKey,
   scrolled,
   onOpenSidebar,
+  onOpenHelp,
   onLogout,
 }: Props) {
   const pathname = usePathname();
@@ -166,7 +171,20 @@ export default function Header({
           </span>
         </div>
 
-        <NotificationBell notifications={notifications} />
+        <button
+          type="button"
+          onClick={onOpenHelp}
+          className="hidden h-11 items-center gap-2 rounded-2xl border border-zinc-200 bg-white px-3 text-sm font-semibold text-zinc-700 shadow-sm transition hover:-translate-y-0.5 hover:border-zinc-950 hover:text-zinc-950 md:inline-flex"
+        >
+          <CircleHelp size={16} />
+          Ajuda
+        </button>
+
+        <NotificationBell
+          notifications={notifications}
+          storageKey={notificationStorageKey}
+          onOpenHelp={onOpenHelp}
+        />
 
         <div className="relative" ref={menuRef}>
           <button

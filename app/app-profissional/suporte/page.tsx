@@ -1,15 +1,12 @@
-import ProfissionalShell from "@/components/profissional/layout/ProfissionalShell";
+import ProfissionalPrivate from "@/components/profissional/layout/ProfissionalPrivate";
 import ChatSuporte from "@/components/profissional/suporte/ChatSuporte";
 import ProfissionalTicketQuickOpen from "@/components/profissional/suporte/ProfissionalTicketQuickOpen";
 
-export default function SuporteProfissionalPage() {
+export default async function SuporteProfissionalPage() {
   return (
-    <ProfissionalShell
-      title="Suporte · Chat"
-      subtitle="Tire dúvidas sobre o app"
-    >
+    <ProfissionalPrivate title="Suporte IA" subtitle="Tire duvidas sobre o app">
       <ProfissionalTicketQuickOpen />
       <ChatSuporte />
-    </ProfissionalShell>
+    </ProfissionalPrivate>
   );
 }

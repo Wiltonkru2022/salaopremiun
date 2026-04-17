@@ -1,16 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import clsx from "clsx";
 import {
   AlertTriangle,
   Bell,
+  Boxes,
   CalendarCheck2,
   Cake,
   CheckCircle2,
   ChevronRight,
   CreditCard,
+  Radar,
+  Sparkles,
   Megaphone,
   LifeBuoy,
   WalletCards,
@@ -28,9 +31,12 @@ export type ShellNotificationCategory =
   | "agenda"
   | "aniversario"
   | "caixa"
+  | "estoque"
   | "marketing"
+  | "onboarding"
   | "suporte"
-  | "sistema";
+  | "sistema"
+  | "webhook";
 
 export type ShellNotification = {
   id: string;
@@ -39,10 +45,13 @@ export type ShellNotification = {
   tone: ShellNotificationTone;
   category: ShellNotificationCategory;
   href?: string;
+  critical?: boolean;
 };
 
 type Props = {
   notifications: ShellNotification[];
+  storageKey?: string;
+  onOpenHelp?: () => void;
 };
 
 const toneClass: Record<ShellNotificationTone, string> = {
@@ -69,18 +78,91 @@ function NotificationIcon({
   if (category === "agenda") return <CalendarCheck2 className={className} />;
   if (category === "aniversario") return <Cake className={className} />;
   if (category === "caixa") return <WalletCards className={className} />;
+  if (category === "estoque") return <Boxes className={className} />;
   if (category === "marketing") return <Megaphone className={className} />;
+  if (category === "onboarding") return <Sparkles className={className} />;
   if (category === "suporte") return <LifeBuoy className={className} />;
+  if (category === "webhook") return <Radar className={className} />;
   if (tone === "success") return <CheckCircle2 className={className} />;
 
   return <AlertTriangle className={className} />;
 }
 
-export default function NotificationBell({ notifications }: Props) {
+function buildStorageKey(storageKey?: string) {
+  return storageKey ? `salaopremium:notificacoes:${storageKey}` : null;
+}
+
+export default function NotificationBell({
+  notifications,
+  storageKey,
+  onOpenHelp,
+}: Props) {
   const [open, setOpen] = useState(false);
+  const [readIds, setReadIds] = useState<string[]>([]);
+  const [hydrated, setHydrated] = useState(false);
   const wrapperRef = useRef<HTMLDivElement | null>(null);
-  const visibleNotifications = notifications.slice(0, 8);
-  const unreadCount = notifications.length;
+  const persistedKey = buildStorageKey(storageKey);
+
+  useEffect(() => {
+    if (!persistedKey) {
+      setReadIds([]);
+      setHydrated(true);
+      return;
+    }
+
+    try {
+      const raw = window.localStorage.getItem(persistedKey);
+      const parsed = raw ? JSON.parse(raw) : [];
+      setReadIds(Array.isArray(parsed) ? parsed.filter((item) => typeof item === "string") : []);
+    } catch {
+      setReadIds([]);
+    } finally {
+      setHydrated(true);
+    }
+  }, [persistedKey]);
+
+  const persistReadIds = useCallback((next: string[]) => {
+    setReadIds(next);
+
+    if (!persistedKey) return;
+
+    try {
+      window.localStorage.setItem(persistedKey, JSON.stringify(next));
+    } catch {
+      // localStorage pode falhar em navegadores restritos; nesse caso,
+      // mantemos o estado apenas em memoria durante a sessao atual.
+    }
+  }, [persistedKey]);
+
+  const isRead = useCallback((notification: ShellNotification) => {
+    if (notification.critical) return false;
+    return readIds.includes(notification.id);
+  }, [readIds]);
+
+  function markAsRead(notificationId: string) {
+    if (readIds.includes(notificationId)) return;
+    persistReadIds([...readIds, notificationId]);
+  }
+
+  function markAllAsRead() {
+    const next = notifications
+      .filter((notification) => !notification.critical)
+      .map((notification) => notification.id);
+    persistReadIds(next);
+  }
+
+  const visibleNotifications = useMemo(
+    () =>
+      [...notifications]
+        .filter((notification) => !isRead(notification))
+        .sort((a, b) => Number(Boolean(b.critical)) - Number(Boolean(a.critical)))
+        .slice(0, 8),
+    [isRead, notifications]
+  );
+  const unreadCount = useMemo(
+    () => notifications.filter((notification) => !isRead(notification)).length,
+    [isRead, notifications]
+  );
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -92,6 +174,20 @@ export default function NotificationBell({ notifications }: Props) {
     window.addEventListener("mousedown", handleClickOutside);
     return () => window.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  useEffect(() => {
+    if (!hydrated || !notifications.length || !readIds.length) return;
+
+    const validIds = readIds.filter((id) =>
+      notifications.some(
+        (notification) => notification.id === id && !notification.critical
+      )
+    );
+
+    if (validIds.length !== readIds.length) {
+      persistReadIds(validIds);
+    }
+  }, [hydrated, notifications, persistReadIds, readIds]);
 
   return (
     <div className="relative" ref={wrapperRef}>
@@ -122,6 +218,9 @@ export default function NotificationBell({ notifications }: Props) {
               <div className="font-display text-lg font-bold text-zinc-950">
                 Notificacoes
               </div>
+              <div className="mt-1 text-[11px] text-zinc-400">
+                Criticos ficam visiveis ate a resolucao.
+              </div>
             </div>
 
             <span className="rounded-full bg-zinc-100 px-2.5 py-1 text-xs font-bold text-zinc-600">
@@ -143,6 +242,11 @@ export default function NotificationBell({ notifications }: Props) {
                       <div className="line-clamp-1 text-sm font-bold text-zinc-900">
                         {notification.title}
                       </div>
+                      {notification.critical ? (
+                        <div className="mt-1 inline-flex rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.14em] text-rose-700">
+                          Critico
+                        </div>
+                      ) : null}
                       <div className="mt-0.5 line-clamp-2 text-xs leading-5 text-zinc-500">
                         {notification.description}
                       </div>
@@ -159,7 +263,10 @@ export default function NotificationBell({ notifications }: Props) {
                     <Link
                       key={notification.id}
                       href={notification.href}
-                      onClick={() => setOpen(false)}
+                      onClick={() => {
+                        markAsRead(notification.id);
+                        setOpen(false);
+                      }}
                       className="flex items-start gap-3 rounded-[22px] border border-zinc-100 bg-zinc-50/80 p-3 transition hover:border-zinc-200 hover:bg-white"
                     >
                       {content}
@@ -168,12 +275,16 @@ export default function NotificationBell({ notifications }: Props) {
                 }
 
                 return (
-                  <div
+                  <button
+                    type="button"
                     key={notification.id}
-                    className="flex items-start gap-3 rounded-[22px] border border-zinc-100 bg-zinc-50/80 p-3"
+                    onClick={() => {
+                      markAsRead(notification.id);
+                    }}
+                    className="flex w-full items-start gap-3 rounded-[22px] border border-zinc-100 bg-zinc-50/80 p-3 text-left transition hover:border-zinc-200 hover:bg-white"
                   >
                     {content}
-                  </div>
+                  </button>
                 );
               })
             ) : (
@@ -182,6 +293,30 @@ export default function NotificationBell({ notifications }: Props) {
                 aniversario, agenda finalizada ou alerta do caixa, aparece aqui.
               </div>
             )}
+          </div>
+
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-zinc-100 px-2 pt-3">
+            <button
+              type="button"
+              onClick={markAllAsRead}
+              disabled={unreadCount === 0}
+              className="rounded-full border border-zinc-200 px-3 py-1.5 text-xs font-bold text-zinc-600 transition hover:border-zinc-950 hover:text-zinc-950 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Marcar lidas
+            </button>
+
+            {onOpenHelp ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setOpen(false);
+                  onOpenHelp();
+                }}
+                className="rounded-full bg-zinc-950 px-3 py-1.5 text-xs font-bold text-white transition hover:bg-zinc-800"
+              >
+                Abrir ajuda guiada
+              </button>
+            ) : null}
           </div>
         </div>
       ) : null}

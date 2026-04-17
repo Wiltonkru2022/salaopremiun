@@ -1,13 +1,8 @@
-import ProfissionalShell from "@/components/profissional/layout/ProfissionalShell";
-import ChatSuporte from "@/components/profissional/suporte/ChatSuporte";
+import { redirect } from "next/navigation";
+import { getProfissionalSessionFromCookie } from "@/lib/profissional-auth.server";
 
-export default function SuporteProfissionalPage() {
-  return (
-    <ProfissionalShell
-      title="Suporte · IA"
-      subtitle="Tire dúvidas sobre o app"
-    >
-      <ChatSuporte />
-    </ProfissionalShell>
-  );
+export default async function AppProfissionalRootPage() {
+  const session = await getProfissionalSessionFromCookie();
+
+  redirect(session ? "/app-profissional/inicio" : "/app-profissional/login");
 }

@@ -1,13 +1,18 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Header from "@/components/layout/Header";
 import Sidebar from "@/components/layout/Sidebar";
+import GuidedOnboarding from "@/components/layout/GuidedOnboarding";
 import MonitoringContextBridge from "@/components/monitoring/MonitoringContextBridge";
 import type { Permissoes } from "@/components/layout/navigation";
 import type { ShellNotification } from "@/components/layout/NotificationBell";
 import type { ResumoAssinatura } from "@/lib/assinatura-utils";
+import {
+  getPainelOnboardingSteps,
+  type PainelOnboardingSnapshot,
+} from "@/lib/onboarding/painel-guide";
 import { createClient } from "@/lib/supabase/client";
 import {
   captureClientError,
@@ -28,6 +33,7 @@ type Props = {
   planoNome?: string;
   assinaturaStatus?: string | null;
   resumoAssinatura?: ResumoAssinatura | null;
+  onboarding?: PainelOnboardingSnapshot | null;
   notifications?: ShellNotification[];
 };
 
@@ -45,12 +51,25 @@ export default function AppShell({
   planoNome,
   assinaturaStatus,
   resumoAssinatura,
+  onboarding,
   notifications = [],
 }: Props) {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [contentScrolled, setContentScrolled] = useState(false);
   const [shellNotifications, setShellNotifications] = useState(notifications);
+  const [guideOpen, setGuideOpen] = useState(false);
+  const [guideStep, setGuideStep] = useState(0);
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const storageScope = [idSalao, idUsuario].filter(Boolean).join(":");
+  const onboardingStorageKey = storageScope
+    ? `salaopremium:onboarding:${storageScope}`
+    : null;
+  const notificationStorageKey = storageScope || undefined;
+  const onboardingSteps = getPainelOnboardingSteps(
+    Boolean(permissoes?.assinatura_ver)
+  );
 
   useEffect(() => {
     setShellNotifications(notifications);
@@ -106,6 +125,30 @@ export default function AppShell({
     };
   }, [notifications]);
 
+  useEffect(() => {
+    if (!onboardingStorageKey) return;
+
+    const current = readOnboardingState(onboardingStorageKey);
+    setGuideStep(
+      Math.max(0, Math.min(current.stepIndex || 0, onboardingSteps.length - 1))
+    );
+
+    if (searchParams.get("tour") === "1") {
+      setGuideOpen(true);
+      const nextParams = new URLSearchParams(searchParams.toString());
+      nextParams.delete("tour");
+      const nextQuery = nextParams.toString();
+      router.replace(nextQuery ? `${pathname}?${nextQuery}` : pathname, {
+        scroll: false,
+      });
+      return;
+    }
+
+    if (!current.completedAt && !current.dismissedAt && onboardingSteps.length > 0) {
+      setGuideOpen(true);
+    }
+  }, [onboardingStorageKey, onboardingSteps.length, pathname, router, searchParams]);
+
   async function handleLogout() {
     await monitorClientOperation(
       {
@@ -122,6 +165,58 @@ export default function AppShell({
         router.refresh();
       }
     );
+  }
+
+  function handleOpenHelp() {
+    setGuideOpen(true);
+
+    if (!onboardingStorageKey) return;
+
+    const current = readOnboardingState(onboardingStorageKey);
+    writeOnboardingState(onboardingStorageKey, {
+      ...current,
+      dismissedAt: null,
+    });
+  }
+
+  function handleCloseGuide() {
+    setGuideOpen(false);
+  }
+
+  function handleSkipGuide() {
+    if (onboardingStorageKey) {
+      writeOnboardingState(onboardingStorageKey, {
+        stepIndex: guideStep,
+        dismissedAt: new Date().toISOString(),
+      });
+    }
+
+    setGuideOpen(false);
+  }
+
+  function handleGuideStepChange(nextStep: number) {
+    const clamped = Math.max(0, Math.min(nextStep, onboardingSteps.length - 1));
+    setGuideStep(clamped);
+
+    if (onboardingStorageKey) {
+      const current = readOnboardingState(onboardingStorageKey);
+      writeOnboardingState(onboardingStorageKey, {
+        ...current,
+        stepIndex: clamped,
+      });
+    }
+  }
+
+  function handleFinishGuide() {
+    if (onboardingStorageKey) {
+      writeOnboardingState(onboardingStorageKey, {
+        stepIndex: onboardingSteps.length - 1,
+        completedAt: new Date().toISOString(),
+        dismissedAt: null,
+      });
+    }
+
+    setGuideOpen(false);
   }
 
   return (
@@ -161,7 +256,9 @@ export default function AppShell({
               canSeeConfiguracoes={Boolean(permissoes?.configuracoes_ver)}
               canSeeAssinatura={Boolean(permissoes?.assinatura_ver)}
               notifications={shellNotifications}
+              notificationStorageKey={notificationStorageKey}
               scrolled={contentScrolled}
+              onOpenHelp={handleOpenHelp}
               onOpenSidebar={() => setMobileSidebarOpen(true)}
               onLogout={handleLogout}
             />
@@ -182,6 +279,63 @@ export default function AppShell({
           </main>
         </div>
       </div>
+
+      <GuidedOnboarding
+        open={guideOpen}
+        pathname={pathname}
+        stepIndex={guideStep}
+        steps={onboardingSteps}
+        snapshot={onboarding}
+        onClose={handleCloseGuide}
+        onBack={() => handleGuideStepChange(guideStep - 1)}
+        onNext={() => handleGuideStepChange(guideStep + 1)}
+        onOpenStep={(href) => {
+          router.push(href);
+        }}
+        onSkip={handleSkipGuide}
+        onFinish={handleFinishGuide}
+      />
     </div>
   );
+}
+
+type OnboardingState = {
+  stepIndex: number;
+  dismissedAt?: string | null;
+  completedAt?: string | null;
+};
+
+function readOnboardingState(storageKey: string): OnboardingState {
+  try {
+    const raw = window.localStorage.getItem(storageKey);
+    if (!raw) {
+      return { stepIndex: 0 };
+    }
+
+    const parsed = JSON.parse(raw) as Partial<OnboardingState>;
+
+    return {
+      stepIndex: Number(parsed.stepIndex || 0),
+      dismissedAt:
+        typeof parsed.dismissedAt === "string" ? parsed.dismissedAt : null,
+      completedAt:
+        typeof parsed.completedAt === "string" ? parsed.completedAt : null,
+    };
+  } catch {
+    return { stepIndex: 0 };
+  }
+}
+
+function writeOnboardingState(
+  storageKey: string,
+  partial: Partial<OnboardingState>
+) {
+  const current = readOnboardingState(storageKey);
+  const next: OnboardingState = {
+    ...current,
+    ...partial,
+    stepIndex: Number(partial.stepIndex ?? current.stepIndex ?? 0),
+  };
+
+  window.localStorage.setItem(storageKey, JSON.stringify(next));
 }
