@@ -89,8 +89,16 @@ function redirectToHost(
   host: string,
   pathname: string
 ) {
+  const currentHost = request.headers.get("host")?.toLowerCase() ?? "";
+  const currentPath = request.nextUrl.pathname;
+  const currentSearch = request.nextUrl.search;
+
+  if (currentHost === host && currentPath === pathname) {
+    return NextResponse.next();
+  }
+
   return NextResponse.redirect(
-    buildAbsoluteUrl(request, host, pathname, request.nextUrl.search)
+    buildAbsoluteUrl(request, host, pathname, currentSearch)
   );
 }
 
@@ -105,11 +113,21 @@ export async function proxy(request: NextRequest) {
   const rotaAssinatura = pathname.startsWith("/assinatura");
   const rotaCadastro = isCadastroRoute(pathname);
 
+  const isRootHost = host === DOMINIO_RAIZ || host === DOMINIO_WWW;
+  const isPainelHost = host === DOMINIO_PAINEL;
+  const isAppHost = host === DOMINIO_APP;
+  const isLoginHost = host === DOMINIO_LOGIN;
+  const isCadastroHost = host === DOMINIO_CADASTRO;
+  const isAssinaturaHost = host === DOMINIO_ASSINATURA;
+
   // =========================
   // APP DO PROFISSIONAL
   // =========================
-  if (host === DOMINIO_APP) {
-    if (!isArquivoPublico(pathname) && !pathname.startsWith("/app-profissional")) {
+  if (isAppHost) {
+    if (
+      !isArquivoPublico(pathname) &&
+      !pathname.startsWith("/app-profissional")
+    ) {
       url.pathname =
         pathname === "/"
           ? "/app-profissional"
@@ -121,90 +139,15 @@ export async function proxy(request: NextRequest) {
   }
 
   // =========================
-  // LOGIN
-  // =========================
-  if (host === DOMINIO_LOGIN) {
-    if (pathname === "/") {
-      return redirectToHost(request, DOMINIO_LOGIN, "/login");
-    }
-
-    if (pathname !== "/login") {
-      if (rotaPainel) {
-        return redirectToHost(request, DOMINIO_PAINEL, pathname);
-      }
-
-      if (rotaAssinatura) {
-        return redirectToHost(request, DOMINIO_ASSINATURA, pathname);
-      }
-
-      if (rotaCadastro) {
-        return redirectToHost(request, DOMINIO_CADASTRO, pathname);
-      }
-
-      return redirectToHost(request, DOMINIO_LOGIN, "/login");
-    }
-  }
-
-  // =========================
-  // CADASTRO
-  // =========================
-  if (host === DOMINIO_CADASTRO) {
-    if (pathname === "/") {
-      return redirectToHost(request, DOMINIO_CADASTRO, "/cadastro");
-    }
-
-    if (!rotaCadastro) {
-      if (rotaLogin) {
-        return redirectToHost(request, DOMINIO_LOGIN, "/login");
-      }
-
-      if (rotaAssinatura) {
-        return redirectToHost(request, DOMINIO_ASSINATURA, pathname);
-      }
-
-      if (rotaPainel) {
-        return redirectToHost(request, DOMINIO_PAINEL, pathname);
-      }
-
-      return redirectToHost(request, DOMINIO_CADASTRO, "/cadastro");
-    }
-  }
-
-  // =========================
-  // ASSINATURA
-  // =========================
-  if (host === DOMINIO_ASSINATURA) {
-    if (pathname === "/") {
-      return redirectToHost(request, DOMINIO_ASSINATURA, "/assinatura");
-    }
-
-    if (!rotaAssinatura) {
-      if (rotaLogin) {
-        return redirectToHost(request, DOMINIO_LOGIN, "/login");
-      }
-
-      if (rotaPainel) {
-        return redirectToHost(request, DOMINIO_PAINEL, pathname);
-      }
-
-      if (rotaCadastro) {
-        return redirectToHost(request, DOMINIO_CADASTRO, pathname);
-      }
-
-      return redirectToHost(request, DOMINIO_ASSINATURA, "/assinatura");
-    }
-  }
-
-  // =========================
   // SITE PRINCIPAL / WWW
   // =========================
-  if (host === DOMINIO_RAIZ || host === DOMINIO_WWW) {
+  if (isRootHost) {
     if (rotaLogin) {
       return redirectToHost(request, DOMINIO_LOGIN, "/login");
     }
 
     if (rotaAssinatura) {
-      return redirectToHost(request, DOMINIO_ASSINATURA, pathname);
+      return redirectToHost(request, DOMINIO_ASSINATURA, "/assinatura");
     }
 
     if (rotaCadastro) {
@@ -219,9 +162,84 @@ export async function proxy(request: NextRequest) {
   }
 
   // =========================
+  // LOGIN
+  // =========================
+  if (isLoginHost) {
+    if (pathname === "/") {
+      return redirectToHost(request, DOMINIO_LOGIN, "/login");
+    }
+
+    if (!rotaLogin) {
+      if (rotaPainel) {
+        return redirectToHost(request, DOMINIO_PAINEL, pathname);
+      }
+
+      if (rotaAssinatura) {
+        return redirectToHost(request, DOMINIO_ASSINATURA, "/assinatura");
+      }
+
+      if (rotaCadastro) {
+        return redirectToHost(request, DOMINIO_CADASTRO, pathname);
+      }
+
+      return redirectToHost(request, DOMINIO_LOGIN, "/login");
+    }
+  }
+
+  // =========================
+  // CADASTRO
+  // =========================
+  if (isCadastroHost) {
+    if (pathname === "/") {
+      return redirectToHost(request, DOMINIO_CADASTRO, "/cadastro");
+    }
+
+    if (!rotaCadastro) {
+      if (rotaLogin) {
+        return redirectToHost(request, DOMINIO_LOGIN, "/login");
+      }
+
+      if (rotaAssinatura) {
+        return redirectToHost(request, DOMINIO_ASSINATURA, "/assinatura");
+      }
+
+      if (rotaPainel) {
+        return redirectToHost(request, DOMINIO_PAINEL, pathname);
+      }
+
+      return redirectToHost(request, DOMINIO_CADASTRO, "/cadastro");
+    }
+  }
+
+  // =========================
+  // ASSINATURA
+  // =========================
+  if (isAssinaturaHost) {
+    if (pathname === "/") {
+      return redirectToHost(request, DOMINIO_ASSINATURA, "/assinatura");
+    }
+
+    if (!rotaAssinatura) {
+      if (rotaLogin) {
+        return redirectToHost(request, DOMINIO_LOGIN, "/login");
+      }
+
+      if (rotaCadastro) {
+        return redirectToHost(request, DOMINIO_CADASTRO, pathname);
+      }
+
+      if (rotaPainel) {
+        return redirectToHost(request, DOMINIO_PAINEL, pathname);
+      }
+
+      return redirectToHost(request, DOMINIO_ASSINATURA, "/assinatura");
+    }
+  }
+
+  // =========================
   // PAINEL
   // =========================
-  if (host === DOMINIO_PAINEL) {
+  if (isPainelHost) {
     if (pathname === "/") {
       return redirectToHost(request, DOMINIO_LOGIN, "/login");
     }
@@ -231,7 +249,7 @@ export async function proxy(request: NextRequest) {
     }
 
     if (rotaAssinatura) {
-      return redirectToHost(request, DOMINIO_ASSINATURA, pathname);
+      return redirectToHost(request, DOMINIO_ASSINATURA, "/assinatura");
     }
 
     if (rotaCadastro) {
@@ -269,15 +287,25 @@ export async function proxy(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Não logado -> login sempre no subdomínio de login
-  if ((rotaPainel || rotaAssinatura) && !user) {
-    return redirectToHost(request, DOMINIO_LOGIN, "/login");
+  // Não logado tentando entrar no painel -> login
+  if (rotaPainel && !user) {
+    if (!isLoginHost) {
+      return redirectToHost(request, DOMINIO_LOGIN, "/login");
+    }
+    return response;
   }
 
-  // Tela de login
+  // Não logado tentando assinatura -> assinatura
+  if (rotaAssinatura && !user) {
+    if (!isAssinaturaHost) {
+      return redirectToHost(request, DOMINIO_ASSINATURA, "/assinatura");
+    }
+    return response;
+  }
+
+  // Não logado na tela de login
   if (rotaLogin && !user) {
-    // se estiver em outro host, força login.salaopremiun.com.br
-    if (host !== DOMINIO_LOGIN) {
+    if (!isLoginHost) {
       return redirectToHost(request, DOMINIO_LOGIN, "/login");
     }
     return response;
@@ -299,14 +327,9 @@ export async function proxy(request: NextRequest) {
   const idSalao = usuario?.id_salao;
 
   if (!idSalao) {
-    if (rotaPainel) {
+    if (rotaPainel || rotaLogin) {
       return redirectToHost(request, DOMINIO_ASSINATURA, "/assinatura");
     }
-
-    if (rotaLogin) {
-      return redirectToHost(request, DOMINIO_ASSINATURA, "/assinatura");
-    }
-
     return response;
   }
 
@@ -338,7 +361,7 @@ export async function proxy(request: NextRequest) {
     trialFimEm: assinatura.trial_fim_em,
   });
 
-  // Usuário logado tentando abrir login
+  // Logado tentando abrir login
   if (rotaLogin) {
     return redirectToHost(
       request,
@@ -355,7 +378,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: [
-    "/((?!_next/static|_next/image|favicon.ico).*)",
-  ],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
 };
