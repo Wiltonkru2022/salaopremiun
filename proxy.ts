@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { getResumoAssinatura } from "@/lib/assinatura-utils";
+import { getSupabaseCookieOptions } from "@/lib/supabase/cookie-options";
 
 const DOMINIO_RAIZ = "salaopremiun.com.br";
 const DOMINIO_WWW = "www.salaopremiun.com.br";
@@ -16,9 +17,6 @@ const APP_PROFISSIONAL_PREFIX = "/app-profissional";
 const DOMINIOS_SITE = [
   DOMINIO_RAIZ,
   DOMINIO_WWW,
-  "salaopremiun.vercel.app",
-  "salaopremiun-wiltonkru2022s-projects.vercel.app",
-  "salaopremiun-git-main-wiltonkru2022s-projects.vercel.app",
 ];
 
 const PAINEL_PREFIXES = [
@@ -130,16 +128,8 @@ function getRequestHost(request: NextRequest) {
   return normalizeHost(forwardedHost ?? request.headers.get("host") ?? "");
 }
 
-function isVercelProjectHost(host: string) {
-  return (
-    host === "salaopremiun.vercel.app" ||
-    (host.startsWith("salaopremiun-") &&
-      host.endsWith("-wiltonkru2022s-projects.vercel.app"))
-  );
-}
-
 function isSiteHost(host: string) {
-  return DOMINIOS_SITE.includes(host) || isVercelProjectHost(host);
+  return DOMINIOS_SITE.includes(host);
 }
 
 function getCadastroPath(pathname: string) {
@@ -183,6 +173,7 @@ export async function proxy(request: NextRequest) {
   const pathname = url.pathname;
   const pathnameNormalizado = normalizePathname(pathname);
   const host = getRequestHost(request);
+  const supabaseCookieOptions = getSupabaseCookieOptions(host);
 
   // APIs validate access in their own handlers. Redirecting them here turns
   // JSON/POST calls into HTML page redirects and breaks subdomain flows.
@@ -420,13 +411,17 @@ export async function proxy(request: NextRequest) {
   const response = NextResponse.next({ request });
 
   const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
+    cookieOptions: supabaseCookieOptions,
     cookies: {
       getAll() {
         return request.cookies.getAll();
       },
       setAll(cookiesToSet) {
         cookiesToSet.forEach(({ name, value, options }) => {
-          response.cookies.set(name, value, options);
+          response.cookies.set(name, value, {
+            ...options,
+            ...supabaseCookieOptions,
+          });
         });
       },
     },
@@ -514,8 +509,13 @@ export async function proxy(request: NextRequest) {
     trialFimEm: assinatura.trial_fim_em,
   });
 
-  // nao logado tentando abrir login/recuperacao de senha
+  // Usuario autenticado no proprio host de login pode ter cookies antigos
+  // presos ao subdominio. Evita loop login -> painel -> login.
   if (rotaLogin) {
+    if (isLoginHost) {
+      return response;
+    }
+
     return redirectToHost(
       request,
       resumo.bloqueioTotal ? DOMINIO_ASSINATURA : DOMINIO_PAINEL,

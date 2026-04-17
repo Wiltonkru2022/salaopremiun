@@ -1,5 +1,6 @@
 import { createBrowserClient } from "@supabase/ssr";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { getSupabaseCookieOptions } from "./cookie-options";
 
 let browserClient: SupabaseClient | null = null;
 
@@ -20,6 +21,9 @@ export function createClient() {
   }
 
   browserClient = createBrowserClient(supabaseUrl, supabaseAnonKey, {
+    cookieOptions: getSupabaseCookieOptions(
+      typeof window === "undefined" ? undefined : window.location.hostname
+    ),
     auth: {
       flowType: "pkce",
       detectSessionInUrl: true,
