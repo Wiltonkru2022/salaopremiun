@@ -10,6 +10,17 @@ const DOMINIO_LOGIN = "login.salaopremiun.com.br";
 const DOMINIO_CADASTRO = "cadastro.salaopremiun.com.br";
 const DOMINIO_ASSINATURA = "assinatura.salaopremiun.com.br";
 
+const CADASTRO_PATH = "/cadastro-salao";
+const APP_PROFISSIONAL_PREFIX = "/app-profissional";
+
+const DOMINIOS_SITE = [
+  DOMINIO_RAIZ,
+  DOMINIO_WWW,
+  "salaopremiun.vercel.app",
+  "salaopremiun-wiltonkru2022s-projects.vercel.app",
+  "salaopremiun-git-main-wiltonkru2022s-projects.vercel.app",
+];
+
 const PAINEL_PREFIXES = [
   "/dashboard",
   "/agenda",
@@ -33,30 +44,65 @@ const PAINEL_PREFIXES = [
 
 const ROTAS_LIBERADAS = [
   "/login",
+  "/recuperar-senha",
+  "/atualizar-senha",
   "/assinatura",
   "/api/assinatura/iniciar-trial",
   "/api/assinatura/criar-cobranca",
+  "/api/assinatura/toggle-renovacao",
   "/api/webhooks/asaas",
   "/api/assinatura/historico",
 ];
 
 const CADASTRO_PREFIXES = [
+  CADASTRO_PATH,
   "/cadastro",
   "/criar-conta",
   "/registro",
   "/signup",
 ];
 
+const LOGIN_PREFIXES = ["/login", "/recuperar-senha", "/atualizar-senha"];
+
+function startsWithPrefix(pathname: string, prefixes: string[]) {
+  return prefixes.some(
+    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
+  );
+}
+
 function isPainelRoute(pathname: string) {
   return PAINEL_PREFIXES.some((prefix) => pathname.startsWith(prefix));
 }
 
 function isRotaLiberada(pathname: string) {
-  return ROTAS_LIBERADAS.some((rota) => pathname.startsWith(rota));
+  return startsWithPrefix(pathname, ROTAS_LIBERADAS);
 }
 
 function isCadastroRoute(pathname: string) {
-  return CADASTRO_PREFIXES.some((prefix) => pathname.startsWith(prefix));
+  return startsWithPrefix(pathname, CADASTRO_PREFIXES);
+}
+
+function isLoginRoute(pathname: string) {
+  return startsWithPrefix(pathname, LOGIN_PREFIXES);
+}
+
+function isApiRoute(pathname: string) {
+  return pathname === "/api" || pathname.startsWith("/api/");
+}
+
+function isAppProfissionalRoute(pathname: string) {
+  return (
+    pathname === APP_PROFISSIONAL_PREFIX ||
+    pathname.startsWith(`${APP_PROFISSIONAL_PREFIX}/`)
+  );
+}
+
+function removeAppProfissionalPrefix(pathname: string) {
+  if (pathname === APP_PROFISSIONAL_PREFIX) {
+    return "/";
+  }
+
+  return pathname.replace(APP_PROFISSIONAL_PREFIX, "") || "/";
 }
 
 function isArquivoPublico(pathname: string) {
@@ -73,6 +119,31 @@ function isArquivoPublico(pathname: string) {
 function normalizePathname(pathname: string) {
   const semLocale = pathname.replace(/^\/[a-z]{2}(?=\/|$)/, "") || "/";
   return semLocale;
+}
+
+function normalizeHost(host: string) {
+  return host.trim().toLowerCase().replace(/:\d+$/, "");
+}
+
+function getRequestHost(request: NextRequest) {
+  const forwardedHost = request.headers.get("x-forwarded-host")?.split(",")[0];
+  return normalizeHost(forwardedHost ?? request.headers.get("host") ?? "");
+}
+
+function isVercelProjectHost(host: string) {
+  return (
+    host === "salaopremiun.vercel.app" ||
+    (host.startsWith("salaopremiun-") &&
+      host.endsWith("-wiltonkru2022s-projects.vercel.app"))
+  );
+}
+
+function isSiteHost(host: string) {
+  return DOMINIOS_SITE.includes(host) || isVercelProjectHost(host);
+}
+
+function getCadastroPath(pathname: string) {
+  return pathname === "/" || pathname === "/cadastro" ? CADASTRO_PATH : pathname;
 }
 
 function buildAbsoluteUrl(
@@ -94,7 +165,7 @@ function redirectToHost(
   host: string,
   pathname: string
 ) {
-  const currentHost = request.headers.get("host")?.toLowerCase() ?? "";
+  const currentHost = getRequestHost(request);
   const currentPath = request.nextUrl.pathname;
   const currentSearch = request.nextUrl.search;
 
@@ -111,20 +182,23 @@ export async function proxy(request: NextRequest) {
   const url = request.nextUrl.clone();
   const pathname = url.pathname;
   const pathnameNormalizado = normalizePathname(pathname);
-  const host = request.headers.get("host")?.toLowerCase() ?? "";
+  const host = getRequestHost(request);
 
-  // libera webhook do Asaas sem interferência
-  if (pathname.startsWith("/api/webhooks/asaas")) {
+  // APIs validate access in their own handlers. Redirecting them here turns
+  // JSON/POST calls into HTML page redirects and breaks subdomain flows.
+  if (isApiRoute(pathnameNormalizado)) {
     return NextResponse.next();
   }
 
   const rotaPainel = isPainelRoute(pathnameNormalizado);
   const rotaLiberada = isRotaLiberada(pathnameNormalizado);
   const rotaLogin = pathnameNormalizado === "/login";
+  const rotaAutenticacao = isLoginRoute(pathnameNormalizado);
   const rotaAssinatura = pathnameNormalizado.startsWith("/assinatura");
   const rotaCadastro = isCadastroRoute(pathnameNormalizado);
+  const rotaAppProfissional = isAppProfissionalRoute(pathnameNormalizado);
 
-  const isRootHost = host === DOMINIO_RAIZ || host === DOMINIO_WWW;
+  const isRootHost = isSiteHost(host);
   const isPainelHost = host === DOMINIO_PAINEL;
   const isAppHost = host === DOMINIO_APP;
   const isLoginHost = host === DOMINIO_LOGIN;
@@ -135,14 +209,22 @@ export async function proxy(request: NextRequest) {
   // APP DO PROFISSIONAL
   // =========================
   if (isAppHost) {
+    if (isAppProfissionalRoute(pathnameNormalizado)) {
+      return redirectToHost(
+        request,
+        DOMINIO_APP,
+        removeAppProfissionalPrefix(pathnameNormalizado)
+      );
+    }
+
     if (
       !isArquivoPublico(pathname) &&
-      !pathname.startsWith("/app-profissional")
+      !pathname.startsWith(APP_PROFISSIONAL_PREFIX)
     ) {
       url.pathname =
         pathname === "/"
-          ? "/app-profissional"
-          : `/app-profissional${pathname}`;
+          ? APP_PROFISSIONAL_PREFIX
+          : `${APP_PROFISSIONAL_PREFIX}${pathname}`;
       return NextResponse.rewrite(url);
     }
 
@@ -153,8 +235,8 @@ export async function proxy(request: NextRequest) {
   // SITE PRINCIPAL / WWW
   // =========================
   if (isRootHost) {
-    if (rotaLogin) {
-      return redirectToHost(request, DOMINIO_LOGIN, "/login");
+    if (rotaAutenticacao) {
+      return redirectToHost(request, DOMINIO_LOGIN, pathnameNormalizado);
     }
 
     if (rotaAssinatura) {
@@ -162,7 +244,19 @@ export async function proxy(request: NextRequest) {
     }
 
     if (rotaCadastro) {
-      return redirectToHost(request, DOMINIO_CADASTRO, pathnameNormalizado);
+      return redirectToHost(
+        request,
+        DOMINIO_CADASTRO,
+        getCadastroPath(pathnameNormalizado)
+      );
+    }
+
+    if (rotaAppProfissional) {
+      return redirectToHost(
+        request,
+        DOMINIO_APP,
+        removeAppProfissionalPrefix(pathnameNormalizado)
+      );
     }
 
     if (rotaPainel) {
@@ -180,7 +274,7 @@ export async function proxy(request: NextRequest) {
       return redirectToHost(request, DOMINIO_LOGIN, "/login");
     }
 
-    if (!rotaLogin) {
+    if (!rotaAutenticacao) {
       if (rotaPainel) {
         return redirectToHost(request, DOMINIO_PAINEL, pathnameNormalizado);
       }
@@ -190,7 +284,19 @@ export async function proxy(request: NextRequest) {
       }
 
       if (rotaCadastro) {
-        return redirectToHost(request, DOMINIO_CADASTRO, pathnameNormalizado);
+        return redirectToHost(
+          request,
+          DOMINIO_CADASTRO,
+          getCadastroPath(pathnameNormalizado)
+        );
+      }
+
+      if (rotaAppProfissional) {
+        return redirectToHost(
+          request,
+          DOMINIO_APP,
+          removeAppProfissionalPrefix(pathnameNormalizado)
+        );
       }
 
       return redirectToHost(request, DOMINIO_LOGIN, "/login");
@@ -202,12 +308,12 @@ export async function proxy(request: NextRequest) {
   // =========================
   if (isCadastroHost) {
     if (pathnameNormalizado === "/") {
-      return redirectToHost(request, DOMINIO_CADASTRO, "/cadastro");
+      return redirectToHost(request, DOMINIO_CADASTRO, CADASTRO_PATH);
     }
 
     if (!rotaCadastro) {
-      if (rotaLogin) {
-        return redirectToHost(request, DOMINIO_LOGIN, "/login");
+      if (rotaAutenticacao) {
+        return redirectToHost(request, DOMINIO_LOGIN, pathnameNormalizado);
       }
 
       if (rotaAssinatura) {
@@ -218,7 +324,19 @@ export async function proxy(request: NextRequest) {
         return redirectToHost(request, DOMINIO_PAINEL, pathnameNormalizado);
       }
 
-      return redirectToHost(request, DOMINIO_CADASTRO, "/cadastro");
+      if (rotaAppProfissional) {
+        return redirectToHost(
+          request,
+          DOMINIO_APP,
+          removeAppProfissionalPrefix(pathnameNormalizado)
+        );
+      }
+
+      return redirectToHost(request, DOMINIO_CADASTRO, CADASTRO_PATH);
+    }
+
+    if (pathnameNormalizado === "/cadastro") {
+      return redirectToHost(request, DOMINIO_CADASTRO, CADASTRO_PATH);
     }
   }
 
@@ -231,16 +349,28 @@ export async function proxy(request: NextRequest) {
     }
 
     if (!rotaAssinatura) {
-      if (rotaLogin) {
-        return redirectToHost(request, DOMINIO_LOGIN, "/login");
+      if (rotaAutenticacao) {
+        return redirectToHost(request, DOMINIO_LOGIN, pathnameNormalizado);
       }
 
       if (rotaCadastro) {
-        return redirectToHost(request, DOMINIO_CADASTRO, pathnameNormalizado);
+        return redirectToHost(
+          request,
+          DOMINIO_CADASTRO,
+          getCadastroPath(pathnameNormalizado)
+        );
       }
 
       if (rotaPainel) {
         return redirectToHost(request, DOMINIO_PAINEL, pathnameNormalizado);
+      }
+
+      if (rotaAppProfissional) {
+        return redirectToHost(
+          request,
+          DOMINIO_APP,
+          removeAppProfissionalPrefix(pathnameNormalizado)
+        );
       }
 
       return redirectToHost(request, DOMINIO_ASSINATURA, "/assinatura");
@@ -255,8 +385,8 @@ export async function proxy(request: NextRequest) {
       return redirectToHost(request, DOMINIO_LOGIN, "/login");
     }
 
-    if (rotaLogin) {
-      return redirectToHost(request, DOMINIO_LOGIN, "/login");
+    if (rotaAutenticacao) {
+      return redirectToHost(request, DOMINIO_LOGIN, pathnameNormalizado);
     }
 
     if (rotaAssinatura) {
@@ -264,7 +394,19 @@ export async function proxy(request: NextRequest) {
     }
 
     if (rotaCadastro) {
-      return redirectToHost(request, DOMINIO_CADASTRO, pathnameNormalizado);
+      return redirectToHost(
+        request,
+        DOMINIO_CADASTRO,
+        getCadastroPath(pathnameNormalizado)
+      );
+    }
+
+    if (rotaAppProfissional) {
+      return redirectToHost(
+        request,
+        DOMINIO_APP,
+        removeAppProfissionalPrefix(pathnameNormalizado)
+      );
     }
   }
 
@@ -290,7 +432,7 @@ export async function proxy(request: NextRequest) {
     },
   });
 
-  if (!rotaPainel && !rotaLiberada && !rotaLogin) {
+  if (!rotaPainel && !rotaLiberada && !rotaAutenticacao) {
     return response;
   }
 
@@ -314,10 +456,10 @@ export async function proxy(request: NextRequest) {
     return response;
   }
 
-  // não logado tentando abrir login
-  if (rotaLogin && !user) {
+  // nao logado tentando abrir login/recuperacao de senha
+  if (rotaAutenticacao && !user) {
     if (!isLoginHost) {
-      return redirectToHost(request, DOMINIO_LOGIN, "/login");
+      return redirectToHost(request, DOMINIO_LOGIN, pathnameNormalizado);
     }
     return response;
   }
@@ -372,7 +514,7 @@ export async function proxy(request: NextRequest) {
     trialFimEm: assinatura.trial_fim_em,
   });
 
-  // logado tentando abrir login
+  // nao logado tentando abrir login/recuperacao de senha
   if (rotaLogin) {
     return redirectToHost(
       request,
