@@ -70,6 +70,11 @@ function isArquivoPublico(pathname: string) {
   );
 }
 
+function normalizePathname(pathname: string) {
+  const semLocale = pathname.replace(/^\/[a-z]{2}(?=\/|$)/, "") || "/";
+  return semLocale;
+}
+
 function buildAbsoluteUrl(
   request: NextRequest,
   host: string,
@@ -105,13 +110,19 @@ function redirectToHost(
 export async function proxy(request: NextRequest) {
   const url = request.nextUrl.clone();
   const pathname = url.pathname;
+  const pathnameNormalizado = normalizePathname(pathname);
   const host = request.headers.get("host")?.toLowerCase() ?? "";
 
-  const rotaPainel = isPainelRoute(pathname);
-  const rotaLiberada = isRotaLiberada(pathname);
-  const rotaLogin = pathname === "/login";
-  const rotaAssinatura = pathname.startsWith("/assinatura");
-  const rotaCadastro = isCadastroRoute(pathname);
+  // libera webhook do Asaas sem interferência
+  if (pathname.startsWith("/api/webhooks/asaas")) {
+    return NextResponse.next();
+  }
+
+  const rotaPainel = isPainelRoute(pathnameNormalizado);
+  const rotaLiberada = isRotaLiberada(pathnameNormalizado);
+  const rotaLogin = pathnameNormalizado === "/login";
+  const rotaAssinatura = pathnameNormalizado.startsWith("/assinatura");
+  const rotaCadastro = isCadastroRoute(pathnameNormalizado);
 
   const isRootHost = host === DOMINIO_RAIZ || host === DOMINIO_WWW;
   const isPainelHost = host === DOMINIO_PAINEL;
@@ -151,11 +162,11 @@ export async function proxy(request: NextRequest) {
     }
 
     if (rotaCadastro) {
-      return redirectToHost(request, DOMINIO_CADASTRO, pathname);
+      return redirectToHost(request, DOMINIO_CADASTRO, pathnameNormalizado);
     }
 
     if (rotaPainel) {
-      return redirectToHost(request, DOMINIO_PAINEL, pathname);
+      return redirectToHost(request, DOMINIO_PAINEL, pathnameNormalizado);
     }
 
     return NextResponse.next();
@@ -165,13 +176,13 @@ export async function proxy(request: NextRequest) {
   // LOGIN
   // =========================
   if (isLoginHost) {
-    if (pathname === "/") {
+    if (pathnameNormalizado === "/") {
       return redirectToHost(request, DOMINIO_LOGIN, "/login");
     }
 
     if (!rotaLogin) {
       if (rotaPainel) {
-        return redirectToHost(request, DOMINIO_PAINEL, pathname);
+        return redirectToHost(request, DOMINIO_PAINEL, pathnameNormalizado);
       }
 
       if (rotaAssinatura) {
@@ -179,7 +190,7 @@ export async function proxy(request: NextRequest) {
       }
 
       if (rotaCadastro) {
-        return redirectToHost(request, DOMINIO_CADASTRO, pathname);
+        return redirectToHost(request, DOMINIO_CADASTRO, pathnameNormalizado);
       }
 
       return redirectToHost(request, DOMINIO_LOGIN, "/login");
@@ -190,7 +201,7 @@ export async function proxy(request: NextRequest) {
   // CADASTRO
   // =========================
   if (isCadastroHost) {
-    if (pathname === "/") {
+    if (pathnameNormalizado === "/") {
       return redirectToHost(request, DOMINIO_CADASTRO, "/cadastro");
     }
 
@@ -204,7 +215,7 @@ export async function proxy(request: NextRequest) {
       }
 
       if (rotaPainel) {
-        return redirectToHost(request, DOMINIO_PAINEL, pathname);
+        return redirectToHost(request, DOMINIO_PAINEL, pathnameNormalizado);
       }
 
       return redirectToHost(request, DOMINIO_CADASTRO, "/cadastro");
@@ -215,7 +226,7 @@ export async function proxy(request: NextRequest) {
   // ASSINATURA
   // =========================
   if (isAssinaturaHost) {
-    if (pathname === "/") {
+    if (pathnameNormalizado === "/") {
       return redirectToHost(request, DOMINIO_ASSINATURA, "/assinatura");
     }
 
@@ -225,11 +236,11 @@ export async function proxy(request: NextRequest) {
       }
 
       if (rotaCadastro) {
-        return redirectToHost(request, DOMINIO_CADASTRO, pathname);
+        return redirectToHost(request, DOMINIO_CADASTRO, pathnameNormalizado);
       }
 
       if (rotaPainel) {
-        return redirectToHost(request, DOMINIO_PAINEL, pathname);
+        return redirectToHost(request, DOMINIO_PAINEL, pathnameNormalizado);
       }
 
       return redirectToHost(request, DOMINIO_ASSINATURA, "/assinatura");
@@ -240,7 +251,7 @@ export async function proxy(request: NextRequest) {
   // PAINEL
   // =========================
   if (isPainelHost) {
-    if (pathname === "/") {
+    if (pathnameNormalizado === "/") {
       return redirectToHost(request, DOMINIO_LOGIN, "/login");
     }
 
@@ -253,7 +264,7 @@ export async function proxy(request: NextRequest) {
     }
 
     if (rotaCadastro) {
-      return redirectToHost(request, DOMINIO_CADASTRO, pathname);
+      return redirectToHost(request, DOMINIO_CADASTRO, pathnameNormalizado);
     }
   }
 
@@ -287,7 +298,7 @@ export async function proxy(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Não logado tentando entrar no painel -> login
+  // não logado tentando entrar em rota do painel
   if (rotaPainel && !user) {
     if (!isLoginHost) {
       return redirectToHost(request, DOMINIO_LOGIN, "/login");
@@ -295,7 +306,7 @@ export async function proxy(request: NextRequest) {
     return response;
   }
 
-  // Não logado tentando assinatura -> assinatura
+  // não logado tentando abrir assinatura
   if (rotaAssinatura && !user) {
     if (!isAssinaturaHost) {
       return redirectToHost(request, DOMINIO_ASSINATURA, "/assinatura");
@@ -303,7 +314,7 @@ export async function proxy(request: NextRequest) {
     return response;
   }
 
-  // Não logado na tela de login
+  // não logado tentando abrir login
   if (rotaLogin && !user) {
     if (!isLoginHost) {
       return redirectToHost(request, DOMINIO_LOGIN, "/login");
@@ -361,7 +372,7 @@ export async function proxy(request: NextRequest) {
     trialFimEm: assinatura.trial_fim_em,
   });
 
-  // Logado tentando abrir login
+  // logado tentando abrir login
   if (rotaLogin) {
     return redirectToHost(
       request,
