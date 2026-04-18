@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import type { ComponentType, ReactNode } from "react";
 import { useMemo, useState } from "react";
 import {
@@ -17,6 +17,7 @@ import {
   Flag,
   Headphones,
   LayoutDashboard,
+  LogOut,
   Menu,
   MessageCircle,
   Settings,
@@ -32,9 +33,11 @@ import type {
   AdminMasterPermissionKey,
   AdminMasterPermissions,
 } from "@/lib/admin-master/auth/adminMasterPermissions";
+import { ADMIN_MASTER_LOGIN_PATH } from "@/lib/admin-master/auth/login-path";
 import type { AdminMasterShellData } from "@/lib/admin-master/data";
 import AdminMasterGlobalSearch from "@/components/admin-master/AdminMasterGlobalSearch";
 import MonitoringContextBridge from "@/components/monitoring/MonitoringContextBridge";
+import { createClient } from "@/lib/supabase/client";
 
 type Props = {
   children: ReactNode;
@@ -247,8 +250,10 @@ export default function AdminMasterShellClient({
   shellData,
 }: Props) {
   const pathname = usePathname();
+  const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [auditExpanded, setAuditExpanded] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
 
   const visibleGroups = useMemo(
     () =>
@@ -266,6 +271,19 @@ export default function AdminMasterShellClient({
     shellData.auditoriaRecente.length - collapsedAuditItems.length,
     0
   );
+
+  async function handleAdminLogout() {
+    if (signingOut) return;
+
+    setSigningOut(true);
+
+    try {
+      await createClient().auth.signOut();
+    } finally {
+      router.push(ADMIN_MASTER_LOGIN_PATH);
+      router.refresh();
+    }
+  }
 
   return (
     <div className="min-h-screen bg-[#f7f5ef] text-zinc-950">
@@ -427,13 +445,31 @@ export default function AdminMasterShellClient({
             ) : null}
 
             <div className="rounded-3xl bg-white p-4 text-zinc-950">
-              <div className="text-xs font-semibold uppercase tracking-[0.25em] text-zinc-400">
-                Admin logado
-              </div>
-              <div className="mt-2 text-sm font-bold">{adminName}</div>
-              <div className="truncate text-xs text-zinc-500">{adminEmail}</div>
-              <div className="mt-3 inline-flex rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-800">
-                {perfil}
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="text-xs font-semibold uppercase tracking-[0.25em] text-zinc-400">
+                    Admin logado
+                  </div>
+                  <div className="mt-2 truncate text-sm font-bold">
+                    {adminName}
+                  </div>
+                  <div className="truncate text-xs text-zinc-500">
+                    {adminEmail}
+                  </div>
+                  <div className="mt-3 inline-flex rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-800">
+                    {perfil}
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleAdminLogout}
+                  disabled={signingOut}
+                  className="inline-flex shrink-0 items-center gap-2 rounded-2xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-xs font-black uppercase tracking-[0.16em] text-zinc-700 transition hover:border-zinc-950 hover:bg-zinc-950 hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  <LogOut size={14} />
+                  {signingOut ? "Saindo" : "Sair"}
+                </button>
               </div>
             </div>
           </div>
@@ -476,6 +512,15 @@ export default function AdminMasterShellClient({
                 >
                   Ver painel
                 </Link>
+                <button
+                  type="button"
+                  onClick={handleAdminLogout}
+                  disabled={signingOut}
+                  className="inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-white px-4 py-2 text-sm font-bold text-zinc-800 shadow-sm transition hover:border-zinc-950 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  <LogOut size={16} />
+                  {signingOut ? "Saindo..." : "Sair"}
+                </button>
               </div>
             </div>
 
