@@ -13,6 +13,7 @@ const DOMINIO_ASSINATURA = "assinatura.salaopremiun.com.br";
 
 const CADASTRO_PATH = "/cadastro-salao";
 const APP_PROFISSIONAL_PREFIX = "/app-profissional";
+const ADMIN_MASTER_PREFIX = "/admin-master";
 
 const DOMINIOS_SITE = [
   DOMINIO_RAIZ,
@@ -61,6 +62,7 @@ const CADASTRO_PREFIXES = [
 ];
 
 const LOGIN_PREFIXES = ["/login", "/recuperar-senha", "/atualizar-senha"];
+const ADMIN_MASTER_PREFIXES = [ADMIN_MASTER_PREFIX];
 
 function startsWithPrefix(pathname: string, prefixes: string[]) {
   return prefixes.some(
@@ -86,6 +88,10 @@ function isLoginRoute(pathname: string) {
 
 function isApiRoute(pathname: string) {
   return pathname === "/api" || pathname.startsWith("/api/");
+}
+
+function isAdminMasterRoute(pathname: string) {
+  return startsWithPrefix(pathname, ADMIN_MASTER_PREFIXES);
 }
 
 function isAppProfissionalRoute(pathname: string) {
@@ -188,6 +194,7 @@ export async function proxy(request: NextRequest) {
   const rotaAssinatura = pathnameNormalizado.startsWith("/assinatura");
   const rotaCadastro = isCadastroRoute(pathnameNormalizado);
   const rotaAppProfissional = isAppProfissionalRoute(pathnameNormalizado);
+  const rotaAdminMaster = isAdminMasterRoute(pathnameNormalizado);
 
   const isRootHost = isSiteHost(host);
   const isPainelHost = host === DOMINIO_PAINEL;
@@ -200,6 +207,26 @@ export async function proxy(request: NextRequest) {
   // APP DO PROFISSIONAL
   // =========================
   if (isAppHost) {
+    if (rotaAdminMaster) {
+      return redirectToHost(request, DOMINIO_PAINEL, pathnameNormalizado);
+    }
+
+    if (rotaPainel) {
+      return redirectToHost(request, DOMINIO_PAINEL, pathnameNormalizado);
+    }
+
+    if (rotaAssinatura) {
+      return redirectToHost(request, DOMINIO_ASSINATURA, "/assinatura");
+    }
+
+    if (rotaCadastro) {
+      return redirectToHost(
+        request,
+        DOMINIO_CADASTRO,
+        getCadastroPath(pathnameNormalizado)
+      );
+    }
+
     if (isAppProfissionalRoute(pathnameNormalizado)) {
       return redirectToHost(
         request,
@@ -228,6 +255,10 @@ export async function proxy(request: NextRequest) {
   if (isRootHost) {
     if (rotaAutenticacao) {
       return redirectToHost(request, DOMINIO_LOGIN, pathnameNormalizado);
+    }
+
+    if (rotaAdminMaster) {
+      return redirectToHost(request, DOMINIO_PAINEL, pathnameNormalizado);
     }
 
     if (rotaAssinatura) {
@@ -266,6 +297,10 @@ export async function proxy(request: NextRequest) {
     }
 
     if (!rotaAutenticacao) {
+      if (rotaAdminMaster) {
+        return redirectToHost(request, DOMINIO_PAINEL, pathnameNormalizado);
+      }
+
       if (rotaPainel) {
         return redirectToHost(request, DOMINIO_PAINEL, pathnameNormalizado);
       }
@@ -303,6 +338,10 @@ export async function proxy(request: NextRequest) {
     }
 
     if (!rotaCadastro) {
+      if (rotaAdminMaster) {
+        return redirectToHost(request, DOMINIO_PAINEL, pathnameNormalizado);
+      }
+
       if (rotaAutenticacao) {
         return redirectToHost(request, DOMINIO_LOGIN, pathnameNormalizado);
       }
@@ -340,6 +379,10 @@ export async function proxy(request: NextRequest) {
     }
 
     if (!rotaAssinatura) {
+      if (rotaAdminMaster) {
+        return redirectToHost(request, DOMINIO_PAINEL, pathnameNormalizado);
+      }
+
       if (rotaAutenticacao) {
         return redirectToHost(request, DOMINIO_LOGIN, pathnameNormalizado);
       }
@@ -427,7 +470,7 @@ export async function proxy(request: NextRequest) {
     },
   });
 
-  if (!rotaPainel && !rotaLiberada && !rotaAutenticacao) {
+  if (!rotaPainel && !rotaLiberada && !rotaAutenticacao && !rotaAdminMaster) {
     return response;
   }
 
@@ -437,6 +480,13 @@ export async function proxy(request: NextRequest) {
 
   // não logado tentando entrar em rota do painel
   if (rotaPainel && !user) {
+    if (!isLoginHost) {
+      return redirectToHost(request, DOMINIO_LOGIN, "/login");
+    }
+    return response;
+  }
+
+  if (rotaAdminMaster && !user) {
     if (!isLoginHost) {
       return redirectToHost(request, DOMINIO_LOGIN, "/login");
     }
