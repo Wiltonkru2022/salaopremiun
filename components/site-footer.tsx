@@ -9,8 +9,8 @@ export default function SiteFooter() {
             <h3 className="text-2xl font-bold">SalaoPremium</h3>
             <p className="mt-4 leading-7 text-zinc-500">
               Plataforma para salões, barbearias, clínicas e studios que
-              desejam gestão forte no computador e praticidade no celular para
-              profissional e cliente.
+              desejam gestão forte no computador, praticidade no celular para o
+              profissional e um fluxo comercial pronto para vender.
             </p>
           </div>
 
@@ -28,8 +28,8 @@ export default function SiteFooter() {
                 </Link>
               </li>
               <li>
-                <Link href="/#app-cliente" className="hover:text-zinc-950">
-                  App cliente
+                <Link href="/#comercial" className="hover:text-zinc-950">
+                  Comercial
                 </Link>
               </li>
               <li>

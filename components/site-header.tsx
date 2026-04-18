@@ -39,10 +39,10 @@ export default function SiteHeader() {
             App Profissional
           </Link>
           <Link
-            href="/#app-cliente"
+            href="/#comercial"
             className="text-sm font-medium text-zinc-700 transition hover:text-[#2c0a45]"
           >
-            App Cliente
+            Comercial
           </Link>
           <Link
             href="/#planos"
@@ -102,11 +102,11 @@ export default function SiteHeader() {
               App profissional
             </Link>
             <Link
-              href="/#app-cliente"
+              href="/#comercial"
               className="border-b border-zinc-100 py-4 text-base font-medium text-zinc-800"
               onClick={() => setOpen(false)}
             >
-              App cliente
+              Comercial
             </Link>
             <Link
               href="/#planos"

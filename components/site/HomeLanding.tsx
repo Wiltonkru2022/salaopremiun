@@ -17,9 +17,7 @@ import {
   Bot,
   BadgeDollarSign,
   ClipboardList,
-  MapPin,
   UserPlus,
-  UserCircle2,
   Receipt,
   Crown,
   BellRing,
@@ -51,12 +49,12 @@ const professionalAppModules = [
   "Suporte ChatGPT",
 ];
 
-const clientAppModules = [
-  "Criar cadastro",
-  "Procurar salão próximo",
-  "Agenda",
-  "Cancelar agendamento",
-  "Perfil",
+const commercialFlowModules = [
+  "Planos com CTA direto por subdomínio",
+  "Cadastro guiado do salão",
+  "Login com continuidade do plano",
+  "Checkout com PIX, boleto e cartão",
+  "Histórico e regularização de cobrança",
 ];
 
 const plans = [
@@ -86,7 +84,7 @@ const plans = [
       "Comissão e relatórios",
       "Estoque e comandas",
       "App profissional",
-      "App cliente",
+      "Checkout e assinatura online",
       "Mais recursos e operação completa",
     ],
   },
@@ -116,12 +114,12 @@ const faqItems = [
   {
     question: "O que funciona no celular?",
     answer:
-      "No celular ficam o app do profissional e o app do cliente, ambos em formato web app, com acesso direto pela tela principal do aparelho.",
+      "Hoje, no celular, funciona o app do profissional em formato web app. A experiência do cliente final ainda está em evolução e não faz parte da entrega principal atual.",
   },
   {
     question: "Precisa publicar na Play Store ou App Store?",
     answer:
-      "Não. Os apps funcionam como web app e podem ser instalados na tela inicial do celular sem depender de loja de aplicativos.",
+      "Não. O app do profissional funciona como web app e pode ser instalado na tela inicial do celular sem depender de loja de aplicativos.",
   },
   {
     question: "O suporte com ChatGPT faz agendamento ou cria cliente?",
@@ -138,7 +136,7 @@ export default function HomeLanding() {
       <SaaSIntro />
       <SaaSModulesSection />
       <ProfessionalAppSection />
-      <ClientAppSection />
+      <CommercialFlowSection />
       <WebAppSection />
       <SupportAISection />
       <PlansSection />
@@ -155,15 +153,15 @@ function Hero() {
       <div className="mx-auto grid max-w-7xl gap-12 px-6 py-16 lg:grid-cols-2 lg:px-10 lg:py-24">
         <div className="flex flex-col justify-center">
           <span className="mb-4 inline-flex w-fit items-center rounded-full border border-[#dccbed] bg-white px-4 py-2 text-sm font-medium text-[#5a267f] shadow-sm">
-            Sistema SaaS para PC + web app profissional + web app cliente
+            Sistema SaaS para PC + web app profissional + checkout de assinatura
           </span>
 
           <h2 className="max-w-3xl text-4xl font-extrabold leading-tight tracking-tight text-zinc-950 lg:text-6xl">
-            Gestão completa para salão no computador. Mobilidade para profissional e cliente no celular.
+            Gestão completa para salão no computador. Mobilidade para o profissional e venda pronta para assinatura.
           </h2>
 
           <p className="mt-6 max-w-2xl text-lg leading-8 text-zinc-600">
-            O SalaoPremium reúne um sistema robusto para operação do salão no PC com web apps modernos para profissional e cliente, tudo integrado em uma única plataforma.
+            O SalaoPremium reúne um sistema robusto para operação do salão no PC, um web app profissional para a rotina e um fluxo comercial completo para cadastro, login e assinatura.
           </p>
 
           <div className="mt-8 flex flex-wrap items-center gap-4">
@@ -211,11 +209,11 @@ function Hero() {
             <div className="rounded-2xl border border-zinc-200 bg-white px-5 py-4 shadow-sm">
               <div className="flex items-center gap-3">
                 <div className="rounded-xl bg-[#f2ecf8] p-2 text-[#5a267f]">
-                  <UserCircle2 size={18} />
+                  <Crown size={18} />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-zinc-900">App cliente</p>
-                  <p className="text-xs text-zinc-500">Web app no celular</p>
+                  <p className="text-sm font-semibold text-zinc-900">Cadastro e assinatura</p>
+                  <p className="text-xs text-zinc-500">Fluxo comercial ativo</p>
                 </div>
               </div>
             </div>
@@ -287,17 +285,17 @@ function Hero() {
                   <div className="rounded-[26px] border border-zinc-200 bg-white p-4 shadow-sm">
                     <div className="mb-3 flex items-center gap-3">
                       <div className="rounded-2xl bg-[#f2ecf8] p-3 text-[#5a267f]">
-                        <UserCircle2 size={18} />
+                        <Crown size={18} />
                       </div>
                       <div>
-                        <p className="font-bold text-zinc-950">Cliente</p>
-                        <p className="text-xs text-zinc-500">Web app</p>
+                        <p className="font-bold text-zinc-950">Comercial</p>
+                        <p className="text-xs text-zinc-500">Fluxo em produção</p>
                       </div>
                     </div>
                     <div className="space-y-2 text-sm text-zinc-600">
                       <p>Cadastro</p>
-                      <p>Agendamento</p>
-                      <p>Cancelamento</p>
+                      <p>Login</p>
+                      <p>Assinatura</p>
                     </div>
                   </div>
                 </div>
@@ -305,8 +303,8 @@ function Hero() {
 
               <div className="mt-5 flex flex-wrap gap-3">
                 {[
-                  "Sem Play Store",
-                  "Sem App Store",
+                  "Subdomínios dedicados",
+                  "Checkout online",
                   "Instalável na tela inicial",
                   "Suporte inteligente",
                 ].map((item) => (
@@ -460,29 +458,29 @@ function ProfessionalAppSection() {
   );
 }
 
-function ClientAppSection() {
+function CommercialFlowSection() {
   return (
-    <section id="app-cliente" className="mx-auto max-w-7xl px-6 py-20 lg:px-10">
+    <section id="comercial" className="mx-auto max-w-7xl px-6 py-20 lg:px-10">
       <div className="mx-auto max-w-4xl text-center">
         <p className="text-sm font-bold uppercase tracking-[0.22em] text-[#6b2c98]">
-          App do cliente
+          Fluxo comercial
         </p>
         <h2 className="mt-3 text-3xl font-bold tracking-tight text-zinc-950 lg:text-5xl">
-          O cliente agenda e acompanha tudo com praticidade
+          Jornada pronta para vender assinatura sem atrito
         </h2>
         <p className="mt-5 text-lg leading-8 text-zinc-600">
-          Uma experiência pensada para facilitar cadastro, busca do salão, agendamento, cancelamento e gerenciamento do perfil direto no celular.
+          Do primeiro clique até a cobrança, o sistema mantém a jornada do salão organizada entre site, cadastro, login e assinatura.
         </p>
       </div>
 
       <div className="mt-12 grid items-center gap-10 lg:grid-cols-2">
         <div className="space-y-4">
           {[
-            { icon: UserPlus, label: "Criar cadastro" },
-            { icon: MapPin, label: "Procurar salão próximo" },
-            { icon: CalendarDays, label: "Agenda" },
-            { icon: BellRing, label: "Cancelar agendamento" },
-            { icon: UserCircle2, label: "Perfil" },
+            { icon: Crown, label: "Escolher plano ideal" },
+            { icon: UserPlus, label: "Cadastro guiado do salão" },
+            { icon: ClipboardList, label: "Login com continuidade do plano" },
+            { icon: CreditCard, label: "Checkout com cobrança online" },
+            { icon: BellRing, label: "Histórico e regularização" },
           ].map((item) => {
             const Icon = item.icon;
             return (
@@ -503,16 +501,16 @@ function ClientAppSection() {
           <div className="rounded-[28px] border border-zinc-200 bg-white p-6">
             <div className="mb-6 flex items-center gap-3">
               <div className="rounded-2xl bg-[#2c0a45] p-3 text-white">
-                <UserCircle2 size={20} />
+                <Crown size={20} />
               </div>
               <div>
-                <p className="font-bold text-zinc-950">Web app do cliente</p>
-                <p className="text-sm text-zinc-500">Experiência simples para agendar e acompanhar</p>
+                <p className="font-bold text-zinc-950">Onboarding e assinatura</p>
+                <p className="text-sm text-zinc-500">Fluxo real e já disponível em produção</p>
               </div>
             </div>
 
             <div className="grid gap-3">
-              {clientAppModules.map((item) => (
+              {commercialFlowModules.map((item) => (
                 <div
                   key={item}
                   className="rounded-2xl border border-white/70 bg-white px-4 py-3 text-sm font-medium text-zinc-700 shadow-sm"
@@ -520,6 +518,9 @@ function ClientAppSection() {
                   {item}
                 </div>
               ))}
+            </div>
+            <div className="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-4 text-sm text-emerald-800">
+              Login, cadastro e assinatura rodam hoje com subdomínios dedicados e webhook financeiro integrado.
             </div>
           </div>
         </div>
@@ -538,10 +539,10 @@ function WebAppSection() {
               Instalação simples no celular
             </p>
             <h2 className="mt-3 text-3xl font-bold tracking-tight text-zinc-950 lg:text-5xl">
-              Apps leves, rápidos e sem depender de loja
+              App profissional leve, rápido e sem depender de loja
             </h2>
             <p className="mt-5 text-lg leading-8 text-zinc-600">
-              O app do profissional e o app do cliente funcionam como web app no celular e podem ser instalados na tela principal, sem precisar publicar na Apple Store ou na Play Store.
+              O app do profissional funciona como web app no celular e pode ser instalado na tela principal, sem precisar publicar na Apple Store ou na Play Store.
             </p>
           </div>
 
@@ -552,7 +553,7 @@ function WebAppSection() {
               "Sem depender de loja de apps",
               "Abertura rápida no celular",
               "Experiência leve e prática",
-              "Mais facilidade para uso diário",
+              "Uso diário do profissional",
             ].map((item) => (
               <div
                 key={item}
@@ -583,9 +584,9 @@ function SupportAISection() {
             <h2 className="mt-3 text-3xl font-bold tracking-tight lg:text-5xl">
               ChatGPT para orientar, explicar e guiar o uso da plataforma
             </h2>
-            <p className="mt-5 text-lg leading-8 text-zinc-600">
-              O suporte inteligente ajuda o salão, o profissional e o cliente a entender menus, funções, recursos e fluxos do sistema com mais autonomia.
-            </p>
+          <p className="mt-5 text-lg leading-8 text-zinc-600">
+            O suporte inteligente ajuda o salão e o profissional a entender menus, funções, recursos e fluxos do sistema com mais autonomia.
+          </p>
           </div>
 
           <div className="rounded-[34px] border border-zinc-200 bg-white p-6 shadow-sm">
@@ -631,7 +632,7 @@ function PlansSection() {
             Escolha o plano ideal para o seu negócio
           </h2>
           <p className="mt-5 text-lg leading-8 text-zinc-600">
-            Estrutura pronta para vender o sistema com clareza, destacando o acesso ao SaaS do salão e aos web apps integrados.
+            Estrutura pronta para vender o sistema com clareza, destacando o SaaS do salão, o app profissional e o fluxo comercial integrado.
           </p>
         </div>
 
@@ -738,7 +739,7 @@ function FinalCTA() {
                 Comece agora
               </p>
               <h2 className="mt-3 text-3xl font-bold tracking-tight lg:text-5xl">
-                Tenha uma plataforma completa para salão, com gestão no PC e experiência mobile para profissional e cliente
+                Tenha uma plataforma completa para salão, com gestão no PC, app profissional e assinatura online pronta para vender
               </h2>
 
 
@@ -775,8 +776,8 @@ function FinalCTA() {
                     <Smartphone size={22} />
                   </div>
                   <div>
-                    <p className="font-bold">App profissional e cliente</p>
-                    <p className="text-sm text-zinc-500">Web apps leves e instaláveis</p>
+                    <p className="font-bold">App profissional e assinatura online</p>
+                    <p className="text-sm text-zinc-500">Web app mobile e checkout integrado</p>
                   </div>
                 </div>
 
