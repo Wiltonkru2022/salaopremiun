@@ -203,7 +203,7 @@ function redirectToAdminMasterLogin(
   const currentSearch = request.nextUrl.search;
 
   if (
-    currentHost === DOMINIO_RAIZ &&
+    (currentHost === DOMINIO_RAIZ || currentHost === DOMINIO_WWW) &&
     currentPath === ADMIN_MASTER_LOGIN_PATH &&
     currentSearch === targetSearch
   ) {
@@ -363,13 +363,6 @@ export async function proxy(request: NextRequest) {
   // =========================
   if (isRootHost) {
     if (rotaAdminMasterLogin) {
-      if (host !== DOMINIO_RAIZ) {
-        return redirectToAdminMasterLogin(
-          request,
-          getAdminMasterLoginNextPath(request.nextUrl.searchParams.get("next"))
-        );
-      }
-
       return NextResponse.next();
     }
 
