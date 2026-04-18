@@ -1,5 +1,8 @@
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
-import { captureSystemEvent } from "@/lib/monitoring/server";
+import {
+  captureSystemEvent,
+  registrarAcaoAutomaticaSistema,
+} from "@/lib/monitoring/server";
 
 function normalizeText(value: unknown) {
   return String(value || "").trim();
@@ -48,6 +51,299 @@ function buildTicketSla(prioridade: string) {
   }
 
   return new Date(now + 24 * 60 * 60 * 1000).toISOString();
+}
+
+type AdminMasterAlertRow = {
+  id: string;
+  id_salao?: string | null;
+  tipo?: string | null;
+  gravidade?: string | null;
+  origem_modulo?: string | null;
+  titulo?: string | null;
+  descricao?: string | null;
+  payload_json?: Record<string, unknown> | null;
+  id_ticket?: string | null;
+};
+
+async function loadAlertTicketLink(params: {
+  supabase: ReturnType<typeof getSupabaseAdmin>;
+  alerta: AdminMasterAlertRow;
+}) {
+  if (params.alerta.id_ticket) {
+    const { data: ticketExistente } = await params.supabase
+      .from("tickets")
+      .select("id, numero, status")
+      .eq("id", params.alerta.id_ticket)
+      .maybeSingle();
+
+    if (ticketExistente) {
+      return {
+        ticketId: String(ticketExistente.id),
+        ticketNumero: Number(ticketExistente.numero || 0),
+        status: String(ticketExistente.status || "aberto"),
+        existed: true,
+      };
+    }
+  }
+
+  const { data: eventoExistente } = await params.supabase
+    .from("ticket_eventos")
+    .select("id_ticket, tickets(id, numero, status)")
+    .in("evento", ["alerta_vinculado", "alerta_vinculado_automaticamente"])
+    .contains("payload_json", { id_alerta: params.alerta.id })
+    .limit(1)
+    .maybeSingle();
+
+  const ticketFromEvento = Array.isArray(
+    (eventoExistente as { tickets?: unknown } | null)?.tickets
+  )
+    ? ((eventoExistente as {
+        tickets?: {
+          id?: string;
+          numero?: number | string | null;
+          status?: string | null;
+        }[];
+      } | null)?.tickets?.[0] ?? null)
+    : ((eventoExistente as {
+        tickets?: {
+          id?: string;
+          numero?: number | string | null;
+          status?: string | null;
+        } | null;
+      } | null)?.tickets ?? null);
+
+  if (!ticketFromEvento?.id) {
+    return null;
+  }
+
+  if (!params.alerta.id_ticket) {
+    const payloadAtual =
+      params.alerta.payload_json && typeof params.alerta.payload_json === "object"
+        ? params.alerta.payload_json
+        : {};
+
+    await params.supabase
+      .from("alertas_sistema")
+      .update({
+        id_ticket: ticketFromEvento.id,
+        atualizado_em: new Date().toISOString(),
+        payload_json: {
+          ...payloadAtual,
+          ticket_numero: Number(ticketFromEvento.numero || 0),
+        },
+      })
+      .eq("id", params.alerta.id);
+  }
+
+  return {
+    ticketId: String(ticketFromEvento.id),
+    ticketNumero: Number(ticketFromEvento.numero || 0),
+    status: String(ticketFromEvento.status || "aberto"),
+    existed: true,
+  };
+}
+
+async function criarTicketPorAlertaBase(params: {
+  idAlerta: string;
+  idAdmin?: string | null;
+  mensagem?: string | null;
+  assumir?: boolean | null;
+  automatico?: boolean | null;
+}) {
+  const supabase = getSupabaseAdmin();
+  const now = new Date().toISOString();
+  const automatico = Boolean(params.automatico);
+
+  const { data: alerta, error: alertaError } = await supabase
+    .from("alertas_sistema")
+    .select(
+      "id, id_salao, tipo, gravidade, origem_modulo, titulo, descricao, payload_json, id_ticket"
+    )
+    .eq("id", params.idAlerta)
+    .maybeSingle();
+
+  if (alertaError) {
+    throw new Error("Erro ao carregar alerta para criar ticket.");
+  }
+
+  if (!alerta) {
+    throw new Error("Alerta nao encontrado.");
+  }
+
+  const alertaRow = alerta as AdminMasterAlertRow;
+  const existingTicket = await loadAlertTicketLink({
+    supabase,
+    alerta: alertaRow,
+  });
+
+  if (existingTicket) {
+    return existingTicket;
+  }
+
+  const prioridade = buildTicketPrioridade(alertaRow.gravidade);
+  const categoria = buildTicketCategoria({
+    tipo: alertaRow.tipo,
+    origem: alertaRow.origem_modulo,
+  });
+  const mensagem =
+    normalizeText(params.mensagem) ||
+    [
+      automatico
+        ? "Ticket aberto automaticamente para acompanhar um risco operacional detectado pelo AdminMaster."
+        : `Alerta vinculado: ${alertaRow.titulo || "Sem titulo"}`,
+      alertaRow.descricao ? `Descricao: ${alertaRow.descricao}` : null,
+      alertaRow.tipo ? `Tipo: ${alertaRow.tipo}` : null,
+      alertaRow.origem_modulo ? `Origem: ${alertaRow.origem_modulo}` : null,
+      alertaRow.gravidade ? `Gravidade: ${alertaRow.gravidade}` : null,
+    ]
+      .filter(Boolean)
+      .join("\n");
+
+  const origem = automatico ? "alerta_admin_master_auto" : "alerta_admin_master";
+  const autorNome = automatico ? "Automacao AdminMaster" : "AdminMaster";
+  const responsavelAdmin =
+    automatico || params.assumir === false ? null : params.idAdmin || null;
+
+  const { data: ticketData, error: ticketError } = await supabase
+    .from("tickets")
+    .insert({
+      id_salao: alertaRow.id_salao || null,
+      assunto: alertaRow.titulo || "Alerta do sistema",
+      categoria,
+      prioridade,
+      status: "aberto",
+      origem,
+      id_responsavel_admin: responsavelAdmin,
+      solicitante_nome: autorNome,
+      solicitante_email: null,
+      origem_contexto: {
+        origem: automatico ? "admin_master_automacao" : "admin_master",
+        modulo: "alertas_sistema",
+        id_alerta: alertaRow.id,
+        tipo_alerta: alertaRow.tipo || null,
+        origem_modulo: alertaRow.origem_modulo || null,
+      },
+      ultima_interacao_em: now,
+      atualizado_em: now,
+      sla_limite_em: buildTicketSla(prioridade),
+    })
+    .select("id, numero, status")
+    .single();
+
+  if (ticketError || !ticketData) {
+    throw new Error("Erro ao criar ticket a partir do alerta.");
+  }
+
+  const ticket = ticketData as {
+    id: string;
+    numero?: number | string | null;
+    status?: string | null;
+  };
+
+  await supabase.from("ticket_mensagens").insert({
+    id_ticket: ticket.id,
+    autor_tipo: "admin",
+    id_admin_usuario: automatico ? null : params.idAdmin || null,
+    autor_nome: autorNome,
+    mensagem,
+    interna: true,
+  });
+
+  await supabase.from("ticket_eventos").insert({
+    id_ticket: ticket.id,
+    evento: automatico
+      ? "alerta_vinculado_automaticamente"
+      : "alerta_vinculado",
+    descricao: automatico
+      ? "Ticket criado automaticamente a partir de um alerta do AdminMaster."
+      : "Ticket criado manualmente a partir de um alerta do AdminMaster.",
+    payload_json: {
+      id_alerta: alertaRow.id,
+      tipo_alerta: alertaRow.tipo || null,
+      gravidade: alertaRow.gravidade || null,
+      origem_modulo: alertaRow.origem_modulo || null,
+      automatico,
+    },
+  });
+
+  const payloadAtual =
+    alertaRow.payload_json && typeof alertaRow.payload_json === "object"
+      ? alertaRow.payload_json
+      : {};
+
+  await supabase
+    .from("alertas_sistema")
+    .update({
+      id_ticket: ticket.id,
+      atualizado_em: now,
+      payload_json: {
+        ...payloadAtual,
+        ticket_numero: Number(ticket.numero || 0),
+        ticket_criado_em: now,
+        ticket_criado_por: automatico ? null : params.idAdmin || null,
+        ticket_criado_automaticamente: automatico,
+      },
+    })
+    .eq("id", alertaRow.id);
+
+  if (automatico) {
+    await registrarAcaoAutomaticaSistema({
+      type: "alerta_admin_master_ticket_auto",
+      reference: alertaRow.id,
+      executed: true,
+      success: true,
+      log: `Ticket automatico criado para o alerta ${alertaRow.id}.`,
+      details: {
+        id_ticket: ticket.id,
+        ticket_numero: Number(ticket.numero || 0),
+        id_salao: alertaRow.id_salao || null,
+        tipo_alerta: alertaRow.tipo || null,
+      },
+    });
+
+    await captureSystemEvent({
+      module: "admin_master",
+      eventType: "automation_executed",
+      severity: "info",
+      message:
+        alertaRow.titulo ||
+        "Ticket automatico criado a partir de alerta do AdminMaster.",
+      action: "criar_ticket_alerta_automatico",
+      entity: "tickets",
+      entityId: ticket.id,
+      details: {
+        id_alerta: alertaRow.id,
+        id_salao: alertaRow.id_salao || null,
+        ticket_numero: Number(ticket.numero || 0),
+        tipo_alerta: alertaRow.tipo || null,
+      },
+      origin: "server",
+      surface: "admin_master",
+      createIncident: false,
+    });
+  } else if (params.idAdmin) {
+    await registrarAdminMasterAuditoria({
+      idAdmin: params.idAdmin,
+      acao: "criar_ticket_alerta",
+      entidade: "tickets",
+      entidadeId: ticket.id,
+      descricao: alertaRow.titulo || "Ticket criado por alerta",
+      payload: {
+        id_alerta: alertaRow.id,
+        id_salao: alertaRow.id_salao || null,
+        ticket_numero: Number(ticket.numero || 0),
+        prioridade,
+        categoria,
+      },
+    });
+  }
+
+  return {
+    ticketId: ticket.id,
+    ticketNumero: Number(ticket.numero || 0),
+    status: String(ticket.status || "aberto"),
+    existed: false,
+  };
 }
 
 export async function registrarAdminMasterAuditoria(params: {
@@ -350,158 +646,22 @@ export async function criarTicketPorAlertaAdminMaster(params: {
   mensagem?: string | null;
   assumir?: boolean | null;
 }) {
-  const supabase = getSupabaseAdmin();
-  const now = new Date().toISOString();
-
-  const { data: alerta, error: alertaError } = await supabase
-    .from("alertas_sistema")
-    .select(
-      "id, id_salao, tipo, gravidade, origem_modulo, titulo, descricao, payload_json, id_ticket"
-    )
-    .eq("id", params.idAlerta)
-    .maybeSingle();
-
-  if (alertaError) {
-    throw new Error("Erro ao carregar alerta para criar ticket.");
-  }
-
-  if (!alerta) {
-    throw new Error("Alerta nao encontrado.");
-  }
-
-  const alertaRow = alerta as {
-    id: string;
-    id_salao?: string | null;
-    tipo?: string | null;
-    gravidade?: string | null;
-    origem_modulo?: string | null;
-    titulo?: string | null;
-    descricao?: string | null;
-    payload_json?: Record<string, unknown> | null;
-    id_ticket?: string | null;
-  };
-
-  if (alertaRow.id_ticket) {
-    const { data: ticketExistente } = await supabase
-      .from("tickets")
-      .select("id, numero, status")
-      .eq("id", alertaRow.id_ticket)
-      .maybeSingle();
-
-    if (ticketExistente) {
-      return {
-        ticketId: String(ticketExistente.id),
-        ticketNumero: Number(ticketExistente.numero || 0),
-        status: String(ticketExistente.status || "aberto"),
-        existed: true,
-      };
-    }
-  }
-
-  const prioridade = buildTicketPrioridade(alertaRow.gravidade);
-  const categoria = buildTicketCategoria({
-    tipo: alertaRow.tipo,
-    origem: alertaRow.origem_modulo,
+  return criarTicketPorAlertaBase({
+    ...params,
+    automatico: false,
   });
-  const mensagem =
-    normalizeText(params.mensagem) ||
-    [
-      `Alerta vinculado: ${alertaRow.titulo || "Sem titulo"}`,
-      alertaRow.descricao ? `Descricao: ${alertaRow.descricao}` : null,
-      alertaRow.tipo ? `Tipo: ${alertaRow.tipo}` : null,
-      alertaRow.origem_modulo ? `Origem: ${alertaRow.origem_modulo}` : null,
-      alertaRow.gravidade ? `Gravidade: ${alertaRow.gravidade}` : null,
-    ]
-      .filter(Boolean)
-      .join("\n");
+}
 
-  const { data: ticketData, error: ticketError } = await supabase
-    .from("tickets")
-    .insert({
-      id_salao: alertaRow.id_salao || null,
-      assunto: alertaRow.titulo || "Alerta do sistema",
-      categoria,
-      prioridade,
-      status: "aberto",
-      origem: "alerta_admin_master",
-      id_responsavel_admin:
-        params.assumir === false ? null : params.idAdmin,
-      sla_limite_em: buildTicketSla(prioridade),
-      atualizado_em: now,
-    })
-    .select("id, numero, status")
-    .single();
-
-  if (ticketError || !ticketData) {
-    throw new Error("Erro ao criar ticket a partir do alerta.");
-  }
-
-  const ticket = ticketData as {
-    id: string;
-    numero?: number | string | null;
-    status?: string | null;
-  };
-
-  await supabase.from("ticket_mensagens").insert({
-    id_ticket: ticket.id,
-    autor_tipo: "admin",
-    id_admin_usuario: params.idAdmin,
-    mensagem,
-    interna: true,
+export async function criarTicketAutomaticoPorAlertaAdminMaster(params: {
+  idAlerta: string;
+  mensagem?: string | null;
+}) {
+  return criarTicketPorAlertaBase({
+    idAlerta: params.idAlerta,
+    mensagem: params.mensagem,
+    automatico: true,
+    assumir: false,
   });
-
-  await supabase.from("ticket_eventos").insert({
-    id_ticket: ticket.id,
-    evento: "alerta_vinculado",
-    descricao: "Ticket criado automaticamente a partir de um alerta do AdminMaster.",
-    payload_json: {
-      id_alerta: alertaRow.id,
-      tipo_alerta: alertaRow.tipo || null,
-      gravidade: alertaRow.gravidade || null,
-      origem_modulo: alertaRow.origem_modulo || null,
-    },
-  });
-
-  const payloadAtual =
-    alertaRow.payload_json && typeof alertaRow.payload_json === "object"
-      ? alertaRow.payload_json
-      : {};
-
-  await supabase
-    .from("alertas_sistema")
-    .update({
-      id_ticket: ticket.id,
-      atualizado_em: now,
-      payload_json: {
-        ...payloadAtual,
-        ticket_numero: Number(ticket.numero || 0),
-        ticket_criado_em: now,
-        ticket_criado_por: params.idAdmin,
-      },
-    })
-    .eq("id", alertaRow.id);
-
-  await registrarAdminMasterAuditoria({
-    idAdmin: params.idAdmin,
-    acao: "criar_ticket_alerta",
-    entidade: "tickets",
-    entidadeId: ticket.id,
-    descricao: alertaRow.titulo || "Ticket criado por alerta",
-    payload: {
-      id_alerta: alertaRow.id,
-      id_salao: alertaRow.id_salao || null,
-      ticket_numero: Number(ticket.numero || 0),
-      prioridade,
-      categoria,
-    },
-  });
-
-  return {
-    ticketId: ticket.id,
-    ticketNumero: Number(ticket.numero || 0),
-    status: String(ticket.status || "aberto"),
-    existed: false,
-  };
 }
 
 export async function criarTicketPorCheckoutLockAdminMaster(params: {

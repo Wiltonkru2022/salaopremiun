@@ -1595,13 +1595,14 @@ export async function getAdminMasterSection(
     const criticos = rows.filter((row) =>
       ["alta", "critica"].includes(String(row.gravidade).toLowerCase())
     ).length;
+    const comTicket = rows.filter((row) => row.ticket !== "-").length;
     const renovacoesEmRisco =
       sync.renovacoesComConfigInvalida + sync.renovacoesSemCobranca;
 
     return {
       title: "Alertas",
       description:
-        "Alertas automaticos do AdminMaster para renovacao automatica, checkout de assinatura, webhook Asaas, cobrancas vencidas e trials terminando.",
+        "Alertas automaticos do AdminMaster para renovacao automatica, checkout de assinatura, webhook Asaas, cobrancas vencidas e trials terminando, com abertura automatica de ticket nos riscos de recorrencia.",
       kpis: [
         {
           label: "Alertas ativos",
@@ -1626,6 +1627,12 @@ export async function getAdminMasterSection(
           value: String(sync.trialsVencendo),
           hint: `${sync.cobrancasVencidas} cobrancas vencidas monitoradas`,
           tone: sync.trialsVencendo > 0 ? "blue" : "dark",
+        },
+        {
+          label: "Com ticket",
+          value: String(comTicket),
+          hint: `${sync.ticketsAutomaticosCriados} ticket(s) aberto(s) automaticamente nesta sync`,
+          tone: comTicket > 0 ? "green" : "dark",
         },
       ],
       rows,

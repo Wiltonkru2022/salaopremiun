@@ -1,8 +1,10 @@
+import { criarTicketAutomaticoPorAlertaAdminMaster } from "@/lib/admin-master/actions";
 import {
   getRenovacaoAutomaticaInfo,
   isPaidChargeStatus,
   isPendingChargeStatus,
 } from "@/lib/assinaturas/renovacao-automatica";
+import { registrarAcaoAutomaticaSistema } from "@/lib/monitoring/server";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 const MANAGED_ALERT_TYPES = [
@@ -715,6 +717,53 @@ export async function syncAdminMasterAlerts() {
     }
   }
 
+  let ticketsAutomaticosCriados = 0;
+  let ticketsAutomaticosExistentes = 0;
+
+  const { data: alertasSemTicket } = await supabase
+    .from("alertas_sistema")
+    .select("id")
+    .eq("automatico", true)
+    .eq("resolvido", false)
+    .is("id_ticket", null)
+    .in("tipo", [
+      "renovacao_automatica_invalida",
+      "renovacao_automatica_sem_cobranca",
+    ])
+    .order("criado_em", { ascending: true })
+    .limit(50);
+
+  for (const alerta of ((alertasSemTicket || []) as { id: string }[])) {
+    try {
+      const resultado = await criarTicketAutomaticoPorAlertaAdminMaster({
+        idAlerta: alerta.id,
+        mensagem:
+          "Risco de renovacao detectado automaticamente pelo AdminMaster. Validar configuracao, cobranca futura e contato com o salao.",
+      });
+
+      if (resultado.existed) {
+        ticketsAutomaticosExistentes += 1;
+      } else {
+        ticketsAutomaticosCriados += 1;
+      }
+    } catch (error) {
+      await registrarAcaoAutomaticaSistema({
+        type: "alerta_admin_master_ticket_auto",
+        reference: alerta.id,
+        executed: true,
+        success: false,
+        log:
+          error instanceof Error
+            ? error.message
+            : "Falha ao criar ticket automatico de alerta.",
+        details: {
+          id_alerta: alerta.id,
+          origem: "sync_admin_master_alerts",
+        },
+      });
+    }
+  }
+
   return {
     total: candidates.length,
     checkoutsFalhos: candidates.filter(
@@ -738,5 +787,7 @@ export async function syncAdminMasterAlerts() {
     renovacoesSemCobranca: candidates.filter(
       (item) => item.tipo === "renovacao_automatica_sem_cobranca"
     ).length,
+    ticketsAutomaticosCriados,
+    ticketsAutomaticosExistentes,
   };
 }
