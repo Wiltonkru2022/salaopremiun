@@ -3,6 +3,7 @@ import { addDays, format, isBefore, subDays } from "date-fns";
 import { createClient } from "@supabase/supabase-js";
 import { verifyBearerSecret } from "@/lib/auth/verify-secret";
 import { criarCobranca } from "@/lib/payments/pix-provider";
+import { getRenovacaoAutomaticaInfo } from "@/lib/assinaturas/renovacao-automatica";
 
 type AssinaturaCronRow = {
   id: string;
@@ -167,28 +168,27 @@ async function handleCron(req: Request) {
         continue;
       }
 
-      const formaPagamento = String(
-        assinatura.forma_pagamento_atual || "PIX"
-      ).toUpperCase();
+      const renovacaoInfo = getRenovacaoAutomaticaInfo({
+        assinaturaExiste: true,
+        asaasCustomerId: assinatura.asaas_customer_id,
+        formaPagamentoAtual: assinatura.forma_pagamento_atual,
+        renovacaoAutomatica: true,
+      });
 
-      if (formaPagamento === "CREDIT_CARD") {
+      if (!renovacaoInfo.estaProntaParaCobranca) {
         resultados.push({
           id_salao: assinatura.id_salao,
           ok: false,
           motivo:
-            "Renovacao automatica por cartao exige tokenizacao antes de ser ativada.",
+            renovacaoInfo.erroAtivacao ||
+            "Renovacao automatica ainda nao esta pronta.",
         });
         continue;
       }
 
-      if (!["PIX", "BOLETO"].includes(formaPagamento)) {
-        resultados.push({
-          id_salao: assinatura.id_salao,
-          ok: false,
-          motivo: "Forma de pagamento invalida.",
-        });
-        continue;
-      }
+      const formaPagamento = renovacaoInfo.formaPagamentoNormalizada as
+        | "PIX"
+        | "BOLETO";
 
       const { data: cobrancaExistente } = await supabaseAdmin
         .from("assinaturas_cobrancas")

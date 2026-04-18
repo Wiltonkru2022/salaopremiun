@@ -20,6 +20,7 @@ import {
   captureClientEvent,
   monitorClientOperation,
 } from "@/lib/monitoring/client";
+import { getRenovacaoAutomaticaInfo } from "@/lib/assinaturas/renovacao-automatica";
 import {
   PLANOS_INFO,
   type AssinaturaRow,
@@ -43,15 +44,6 @@ type CobrancaAtualRow = {
   bank_slip_url: string | null;
   asaas_payment_id: string | null;
   txid: string | null;
-};
-
-type RenovacaoAutomaticaInfo = {
-  podeAtivar: boolean;
-  podeAlternar: boolean;
-  titulo: string;
-  descricao: string;
-  observacao: string;
-  tone: "green" | "amber" | "red" | "zinc";
 };
 
 const PLANOS_COBRAVEIS = ["basico", "pro", "premium"] as const;
@@ -90,102 +82,6 @@ function normalizarPlanoCobravel(
   return isPlanoCobravel(normalized) ? normalized : fallback;
 }
 
-function getRenovacaoAutomaticaInfo(params: {
-  assinatura: AssinaturaRow | null;
-  renovacaoAutomatica: boolean;
-}): RenovacaoAutomaticaInfo {
-  const { assinatura, renovacaoAutomatica } = params;
-
-  if (!assinatura) {
-    return {
-      podeAtivar: false,
-      podeAlternar: false,
-      titulo: "Disponivel apos a assinatura",
-      descricao:
-        "Escolha um plano e gere a primeira cobranca para liberar a renovacao automatica.",
-      observacao:
-        "A configuracao aparece quando o salao ja tem uma assinatura vinculada.",
-      tone: "zinc",
-    };
-  }
-
-  const formaPagamento = String(
-    assinatura.forma_pagamento_atual || ""
-  ).toUpperCase();
-  const temCustomerAsaas = Boolean(
-    String(assinatura.asaas_customer_id || "").trim()
-  );
-
-  if (formaPagamento === "CREDIT_CARD") {
-    return {
-      podeAtivar: false,
-      podeAlternar: renovacaoAutomatica,
-      titulo: renovacaoAutomatica
-        ? "Ativada com ajuste pendente"
-        : "Cartao ainda nao esta apto",
-      descricao:
-        "Hoje a renovacao automatica so gera a proxima cobranca com PIX ou boleto. Cartao automatico exige tokenizacao segura antes de ligar.",
-      observacao: renovacaoAutomatica
-        ? "Desative ate a tokenizacao do cartao ficar pronta ou use PIX/boleto como forma atual."
-        : "Use PIX ou boleto na proxima cobranca para ativar agora, ou aguarde a tokenizacao do cartao.",
-      tone: "amber",
-    };
-  }
-
-  if (!temCustomerAsaas) {
-    return {
-      podeAtivar: false,
-      podeAlternar: renovacaoAutomatica,
-      titulo: renovacaoAutomatica
-        ? "Ativada com cadastro incompleto"
-        : "Configure a primeira cobranca",
-      descricao:
-        "O salao ainda nao esta vinculado ao customer do Asaas. Sem isso, o cron nao consegue gerar a proxima cobranca automaticamente.",
-      observacao:
-        "Gere uma cobranca PIX ou boleto uma vez para vincular o salao ao Asaas e depois ligue a renovacao automatica.",
-      tone: "red",
-    };
-  }
-
-  if (!["PIX", "BOLETO"].includes(formaPagamento)) {
-    return {
-      podeAtivar: false,
-      podeAlternar: renovacaoAutomatica,
-      titulo: renovacaoAutomatica
-        ? "Ativada com forma invalida"
-        : "Escolha PIX ou boleto",
-      descricao:
-        "A renovacao automatica precisa de uma forma atual compativel para gerar a proxima cobranca antes do vencimento.",
-      observacao:
-        "Defina PIX ou boleto como forma da assinatura para deixar a recorrencia pronta.",
-      tone: "amber",
-    };
-  }
-
-  if (renovacaoAutomatica) {
-    return {
-      podeAtivar: true,
-      podeAlternar: true,
-      titulo: "Ativada e pronta",
-      descricao:
-        "O sistema esta configurado para gerar a proxima cobranca automaticamente perto do vencimento usando a forma atual.",
-      observacao:
-        "Se precisar pausar, voce pode desligar a configuracao a qualquer momento.",
-      tone: "green",
-    };
-  }
-
-  return {
-    podeAtivar: true,
-    podeAlternar: true,
-    titulo: "Pronta para ativar",
-    descricao:
-      "Seu salao ja tem customer no Asaas e forma compativel. Ao ativar, o sistema passa a gerar a proxima cobranca com antecedencia.",
-    observacao:
-      "Ative para reduzir risco de esquecimento e inadimplencia nas proximas renovacoes.",
-    tone: "green",
-  };
-}
 
 export function useAssinaturaPage() {
   const supabase = useMemo(() => createClient(), []);
@@ -937,7 +833,9 @@ export function useAssinaturaPage() {
 
   const mostrarSecaoRenovacao = true;
   const renovacaoInfo = getRenovacaoAutomaticaInfo({
-    assinatura,
+    assinaturaExiste: Boolean(assinatura?.id),
+    asaasCustomerId: assinatura?.asaas_customer_id,
+    formaPagamentoAtual: assinatura?.forma_pagamento_atual,
     renovacaoAutomatica,
   });
 

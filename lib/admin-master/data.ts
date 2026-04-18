@@ -11,6 +11,7 @@ import {
   formatWebhookDiagnosticDetail,
   syncAdminMasterWebhookEvents,
 } from "@/lib/admin-master/webhooks-sync";
+import { getRenovacaoAutomaticaInfo } from "@/lib/assinaturas/renovacao-automatica";
 import { listAdminTickets } from "@/lib/support/tickets";
 
 export type AdminKpi = {
@@ -692,7 +693,7 @@ export async function getAdminMasterSection(
       supabase
         .from("assinaturas")
         .select(
-          "id, id_salao, plano, status, valor, vencimento_em, trial_fim_em, renovacao_automatica"
+          "id, id_salao, plano, status, valor, vencimento_em, trial_fim_em, renovacao_automatica, asaas_customer_id, forma_pagamento_atual"
         )
         .order("updated_at", { ascending: false })
         .limit(100),
@@ -748,11 +749,19 @@ export async function getAdminMasterSection(
       vencimento_em?: string | null;
       trial_fim_em?: string | null;
       renovacao_automatica?: boolean | null;
+      asaas_customer_id?: string | null;
+      forma_pagamento_atual?: string | null;
     }[]).map((item) => {
       const idSalao = item.id_salao || null;
       const status = normalizeStatus(item.status);
       const vencimentoBase = item.vencimento_em || item.trial_fim_em || null;
       const diasParaVencer = daysUntil(vencimentoBase);
+      const renovacaoInfo = getRenovacaoAutomaticaInfo({
+        assinaturaExiste: true,
+        asaasCustomerId: item.asaas_customer_id,
+        formaPagamentoAtual: item.forma_pagamento_atual,
+        renovacaoAutomatica: item.renovacao_automatica,
+      });
       const pendingCharges = idSalao
         ? pendingChargeCountBySalao.get(idSalao) || 0
         : 0;
@@ -765,6 +774,13 @@ export async function getAdminMasterSection(
 
       if (RISK_SUBSCRIPTION_STATUSES.has(status)) {
         risco = "Status critico";
+        acao = idSalao ? "Criar ticket" : "-";
+        acaoTipo = idSalao ? "salao_ticket_assinatura" : null;
+      } else if (
+        item.renovacao_automatica &&
+        !renovacaoInfo.estaProntaParaCobranca
+      ) {
+        risco = "Auto-renovacao com ajuste";
         acao = idSalao ? "Criar ticket" : "-";
         acaoTipo = idSalao ? "salao_ticket_assinatura" : null;
       } else if (diasParaVencer !== null && diasParaVencer < 0) {
@@ -807,7 +823,11 @@ export async function getAdminMasterSection(
         status: item.status || "-",
         valor: currency(safeNumber(item.valor)),
         vencimento: dateValue(vencimentoBase),
-        renovacao: item.renovacao_automatica ? "Ativa" : "Desativada",
+        renovacao: item.renovacao_automatica
+          ? renovacaoInfo.estaProntaParaCobranca
+            ? "Ativa"
+            : "Ativa com ajuste"
+          : "Desativada",
         cobranca,
         risco,
         acao,
@@ -1575,12 +1595,13 @@ export async function getAdminMasterSection(
     const criticos = rows.filter((row) =>
       ["alta", "critica"].includes(String(row.gravidade).toLowerCase())
     ).length;
-    const comTicket = rows.filter((row) => row.ticket !== "-").length;
+    const renovacoesEmRisco =
+      sync.renovacoesComConfigInvalida + sync.renovacoesSemCobranca;
 
     return {
       title: "Alertas",
       description:
-        "Alertas automaticos do AdminMaster para checkout de assinatura, webhook Asaas, cobrancas vencidas e trials terminando.",
+        "Alertas automaticos do AdminMaster para renovacao automatica, checkout de assinatura, webhook Asaas, cobrancas vencidas e trials terminando.",
       kpis: [
         {
           label: "Alertas ativos",
@@ -1595,16 +1616,16 @@ export async function getAdminMasterSection(
           tone: criticos > 0 ? "red" : "green",
         },
         {
+          label: "Renovacao em risco",
+          value: String(renovacoesEmRisco),
+          hint: `${sync.renovacoesComConfigInvalida} sem preparo e ${sync.renovacoesSemCobranca} sem cobranca futura`,
+          tone: renovacoesEmRisco > 0 ? "red" : "green",
+        },
+        {
           label: "Trials vencendo",
           value: String(sync.trialsVencendo),
           hint: `${sync.cobrancasVencidas} cobrancas vencidas monitoradas`,
           tone: sync.trialsVencendo > 0 ? "blue" : "dark",
-        },
-        {
-          label: "Com ticket",
-          value: String(comTicket),
-          hint: "Alertas ja vinculados ao suporte",
-          tone: comTicket > 0 ? "green" : "dark",
         },
       ],
       rows,

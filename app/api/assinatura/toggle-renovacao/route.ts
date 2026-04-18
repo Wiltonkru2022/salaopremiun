@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { getRenovacaoAutomaticaInfo } from "@/lib/assinaturas/renovacao-automatica";
 
 class HttpError extends Error {
   status: number;
@@ -127,9 +128,7 @@ export async function POST(req: Request) {
 
     const { data: assinatura, error: assinaturaError } = await supabaseAdmin
       .from("assinaturas")
-      .select(
-        "id, renovacao_automatica, forma_pagamento_atual, asaas_customer_id, status"
-      )
+      .select("id, renovacao_automatica, forma_pagamento_atual, asaas_customer_id")
       .eq("id_salao", idSalao)
       .maybeSingle();
 
@@ -147,54 +146,17 @@ export async function POST(req: Request) {
       );
     }
 
-    const formaPagamentoAtual = String(
-      assinatura.forma_pagamento_atual || ""
-    ).toUpperCase();
+    const renovacaoInfo = getRenovacaoAutomaticaInfo({
+      assinaturaExiste: Boolean(assinatura.id),
+      asaasCustomerId: assinatura.asaas_customer_id,
+      formaPagamentoAtual: assinatura.forma_pagamento_atual,
+      renovacaoAutomatica,
+    });
 
-    if (
-      renovacaoAutomatica &&
-      !String(assinatura.asaas_customer_id || "").trim()
-    ) {
+    if (renovacaoAutomatica && renovacaoInfo.erroAtivacao) {
       return NextResponse.json(
         {
-          error:
-            "Ative uma cobranca PIX ou boleto primeiro para vincular o salao ao Asaas antes de ligar a renovacao automatica.",
-        },
-        { status: 400 }
-      );
-    }
-
-    if (renovacaoAutomatica && !formaPagamentoAtual) {
-      return NextResponse.json(
-        {
-          error:
-            "Defina uma forma de pagamento antes de ativar a renovacao automatica.",
-        },
-        { status: 400 }
-      );
-    }
-
-    if (
-      renovacaoAutomatica &&
-      formaPagamentoAtual === "CREDIT_CARD"
-    ) {
-      return NextResponse.json(
-        {
-          error:
-            "Renovacao automatica por cartao exige tokenizacao antes de ser ativada.",
-        },
-        { status: 400 }
-      );
-    }
-
-    if (
-      renovacaoAutomatica &&
-      !["PIX", "BOLETO"].includes(formaPagamentoAtual)
-    ) {
-      return NextResponse.json(
-        {
-          error:
-            "A renovacao automatica hoje funciona com PIX ou boleto. Gere a cobranca com uma dessas formas primeiro.",
+          error: renovacaoInfo.erroAtivacao,
         },
         { status: 400 }
       );
