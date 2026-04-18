@@ -45,6 +45,7 @@ export default function AssinaturaPage() {
     carregandoHistorico,
     historicoCobrancas,
     renovacaoAutomatica,
+    renovacaoInfo,
     salvandoRenovacaoAutomatica,
     atualizarRenovacaoAutomatica,
     tipoMudancaPlano,
@@ -87,6 +88,11 @@ export default function AssinaturaPage() {
         bloqueioTotal={resumoAssinatura.bloqueioTotal}
         vencendoLogo={resumoAssinatura.vencendoLogo}
         renovacaoAutomatica={renovacaoAutomatica}
+        renovacaoPodeAlternar={renovacaoInfo.podeAlternar}
+        renovacaoTitulo={renovacaoInfo.titulo}
+        renovacaoDescricao={renovacaoInfo.descricao}
+        renovacaoObservacao={renovacaoInfo.observacao}
+        renovacaoTone={renovacaoInfo.tone}
         onToggleRenovacaoAutomatica={atualizarRenovacaoAutomatica}
         salvandoRenovacaoAutomatica={salvandoRenovacaoAutomatica}
         podeGerenciar={podeGerenciar}

@@ -127,7 +127,9 @@ export async function POST(req: Request) {
 
     const { data: assinatura, error: assinaturaError } = await supabaseAdmin
       .from("assinaturas")
-      .select("id, renovacao_automatica, forma_pagamento_atual")
+      .select(
+        "id, renovacao_automatica, forma_pagamento_atual, asaas_customer_id, status"
+      )
       .eq("id_salao", idSalao)
       .maybeSingle();
 
@@ -145,15 +147,54 @@ export async function POST(req: Request) {
       );
     }
 
+    const formaPagamentoAtual = String(
+      assinatura.forma_pagamento_atual || ""
+    ).toUpperCase();
+
     if (
       renovacaoAutomatica &&
-      String(assinatura.forma_pagamento_atual || "").toUpperCase() ===
-        "CREDIT_CARD"
+      !String(assinatura.asaas_customer_id || "").trim()
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "Ative uma cobranca PIX ou boleto primeiro para vincular o salao ao Asaas antes de ligar a renovacao automatica.",
+        },
+        { status: 400 }
+      );
+    }
+
+    if (renovacaoAutomatica && !formaPagamentoAtual) {
+      return NextResponse.json(
+        {
+          error:
+            "Defina uma forma de pagamento antes de ativar a renovacao automatica.",
+        },
+        { status: 400 }
+      );
+    }
+
+    if (
+      renovacaoAutomatica &&
+      formaPagamentoAtual === "CREDIT_CARD"
     ) {
       return NextResponse.json(
         {
           error:
             "Renovacao automatica por cartao exige tokenizacao antes de ser ativada.",
+        },
+        { status: 400 }
+      );
+    }
+
+    if (
+      renovacaoAutomatica &&
+      !["PIX", "BOLETO"].includes(formaPagamentoAtual)
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "A renovacao automatica hoje funciona com PIX ou boleto. Gere a cobranca com uma dessas formas primeiro.",
         },
         { status: 400 }
       );

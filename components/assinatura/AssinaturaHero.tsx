@@ -1,9 +1,14 @@
-type Props = {
+﻿type Props = {
   assinaturaStatus?: string | null;
   planoAtualNome?: string;
   bloqueioTotal?: boolean;
   vencendoLogo?: boolean;
   renovacaoAutomatica?: boolean;
+  renovacaoPodeAlternar?: boolean;
+  renovacaoTitulo?: string;
+  renovacaoDescricao?: string;
+  renovacaoObservacao?: string;
+  renovacaoTone?: "green" | "amber" | "red" | "zinc";
   onToggleRenovacaoAutomatica?: (value: boolean) => void;
   salvandoRenovacaoAutomatica?: boolean;
   podeGerenciar?: boolean;
@@ -14,20 +19,34 @@ function getBadgeMudancaPlano(tipoMudancaPlano?: "upgrade" | "downgrade" | null)
   if (tipoMudancaPlano === "upgrade") {
     return {
       label: "Upgrade de plano",
-      className:
-        "border-emerald-200 bg-emerald-50 text-emerald-700",
+      className: "border-emerald-200 bg-emerald-50 text-emerald-700",
     };
   }
 
   if (tipoMudancaPlano === "downgrade") {
     return {
       label: "Downgrade de plano",
-      className:
-        "border-amber-200 bg-amber-50 text-amber-700",
+      className: "border-amber-200 bg-amber-50 text-amber-700",
     };
   }
 
   return null;
+}
+
+function getRenovacaoToneClasses(tone: "green" | "amber" | "red" | "zinc") {
+  if (tone === "green") {
+    return "border-emerald-200 bg-emerald-50 text-emerald-800";
+  }
+
+  if (tone === "amber") {
+    return "border-amber-200 bg-amber-50 text-amber-900";
+  }
+
+  if (tone === "red") {
+    return "border-red-200 bg-red-50 text-red-800";
+  }
+
+  return "border-zinc-200 bg-zinc-50 text-zinc-700";
 }
 
 export default function AssinaturaHero({
@@ -36,6 +55,11 @@ export default function AssinaturaHero({
   bloqueioTotal = false,
   vencendoLogo = false,
   renovacaoAutomatica = false,
+  renovacaoPodeAlternar = false,
+  renovacaoTitulo,
+  renovacaoDescricao,
+  renovacaoObservacao,
+  renovacaoTone = "zinc",
   onToggleRenovacaoAutomatica,
   salvandoRenovacaoAutomatica = false,
   podeGerenciar = false,
@@ -45,16 +69,16 @@ export default function AssinaturaHero({
   const badgeMudanca = getBadgeMudancaPlano(tipoMudancaPlano);
 
   const titulo = bloqueioTotal
-    ? "Seu acesso está bloqueado até regularizar a assinatura"
+    ? "Seu acesso esta bloqueado ate regularizar a assinatura"
     : vencendoLogo
-    ? "Sua assinatura está perto do vencimento"
-    : "Escolha seu plano e mantenha seu salão sempre liberado";
+      ? "Sua assinatura esta perto do vencimento"
+      : "Escolha seu plano e mantenha seu salao sempre liberado";
 
   const descricao = bloqueioTotal
-    ? "O sistema identificou bloqueio automático por vencimento. Regularize agora para voltar a usar todas as áreas do painel."
+    ? "O sistema identificou bloqueio automatico por vencimento. Regularize agora para voltar a usar todas as areas do painel."
     : vencendoLogo
-    ? "Evite interrupções. Gere a cobrança, ajuste seu plano e mantenha sua operação ativa sem sair da página."
-    : "Controle teste grátis, vencimento, histórico, upgrade, downgrade e cobrança por PIX, boleto ou cartão em uma experiência premium.";
+      ? "Evite interrupcoes. Gere a cobranca, ajuste seu plano e mantenha sua operacao ativa sem sair da pagina."
+      : "Controle teste gratis, vencimento, historico, upgrade, downgrade e cobranca por PIX, boleto ou cartao em uma experiencia premium.";
 
   return (
     <section className="overflow-hidden rounded-[34px] border border-zinc-200 bg-white px-5 py-6 text-zinc-950 shadow-sm md:px-8 md:py-8 xl:px-10 xl:py-10">
@@ -97,10 +121,10 @@ export default function AssinaturaHero({
           {bloqueioTotal ? (
             <div className="mt-5 rounded-[24px] border border-red-200 bg-red-50 px-4 py-4">
               <div className="text-sm font-semibold text-red-700 md:text-base">
-                Bloqueio automático ativo
+                Bloqueio automatico ativo
               </div>
               <div className="mt-1 text-sm text-red-600">
-                Enquanto a assinatura permanecer vencida, o sistema mantém o acesso restrito às rotas protegidas.
+                Enquanto a assinatura permanecer vencida, o sistema mantem o acesso restrito as rotas protegidas.
               </div>
             </div>
           ) : null}
@@ -110,15 +134,16 @@ export default function AssinaturaHero({
           <div className="flex items-start justify-between gap-4">
             <div>
               <div className="text-xs font-semibold uppercase tracking-[0.24em] text-zinc-500">
-                Renovação automática
+                Renovacao automatica
               </div>
               <div className="mt-2 text-lg font-bold text-zinc-950">
-                {renovacaoAutomatica ? "Ativada" : "Desativada"}
+                {renovacaoTitulo || (renovacaoAutomatica ? "Ativada" : "Desativada")}
               </div>
               <p className="mt-1 text-sm text-zinc-600">
-                {renovacaoAutomatica
-                  ? "O sistema gera a proxima cobranca automaticamente para PIX ou boleto antes do vencimento."
-                  : "A proxima cobranca dependera de acao manual. Cartao automatico sera liberado apos tokenizacao segura."}
+                {renovacaoDescricao ||
+                  (renovacaoAutomatica
+                    ? "O sistema gera a proxima cobranca automaticamente para PIX ou boleto antes do vencimento."
+                    : "A proxima cobranca dependera de acao manual. Cartao automatico sera liberado apos tokenizacao segura.")}
               </p>
             </div>
 
@@ -126,10 +151,15 @@ export default function AssinaturaHero({
               type="button"
               role="switch"
               aria-checked={renovacaoAutomatica}
-              disabled={!podeGerenciar || salvandoRenovacaoAutomatica}
+              disabled={
+                !podeGerenciar ||
+                salvandoRenovacaoAutomatica ||
+                !renovacaoPodeAlternar
+              }
               onClick={() =>
                 !salvandoRenovacaoAutomatica &&
                 podeGerenciar &&
+                renovacaoPodeAlternar &&
                 onToggleRenovacaoAutomatica?.(!renovacaoAutomatica)
               }
               className={`relative inline-flex h-8 w-14 shrink-0 items-center rounded-full border transition ${
@@ -137,7 +167,9 @@ export default function AssinaturaHero({
                   ? "border-emerald-300 bg-emerald-500"
                   : "border-zinc-300 bg-zinc-200"
               } ${
-                !podeGerenciar || salvandoRenovacaoAutomatica
+                !podeGerenciar ||
+                salvandoRenovacaoAutomatica ||
+                !renovacaoPodeAlternar
                   ? "cursor-not-allowed opacity-60"
                   : "cursor-pointer"
               }`}
@@ -150,12 +182,17 @@ export default function AssinaturaHero({
             </button>
           </div>
 
-          <div className="mt-4 rounded-2xl border border-zinc-200 bg-white px-3 py-3 text-xs text-zinc-600">
+          <div
+            className={`mt-4 rounded-2xl border px-3 py-3 text-xs ${getRenovacaoToneClasses(
+              renovacaoTone
+            )}`}
+          >
             {salvandoRenovacaoAutomatica
-              ? "Salvando configuração..."
+              ? "Salvando configuracao..."
               : podeGerenciar
-              ? "Você pode ativar ou desativar essa opção a qualquer momento."
-              : "Somente administradores podem alterar essa configuração."}
+                ? renovacaoObservacao ||
+                  "Voce pode ativar ou desativar essa opcao a qualquer momento."
+                : "Somente administradores podem alterar essa configuracao."}
           </div>
         </div>
       </div>
