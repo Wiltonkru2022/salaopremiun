@@ -1,8 +1,11 @@
 import { redirect } from "next/navigation";
+import type { User } from "@supabase/supabase-js";
 import {
   mergeAdminMasterPermissions,
+  type AdminMasterPermissions,
   type AdminMasterPermissionKey,
 } from "@/lib/admin-master/auth/adminMasterPermissions";
+import { ADMIN_MASTER_LOGIN_PATH } from "@/lib/admin-master/auth/login-path";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
@@ -23,6 +26,23 @@ type AdminMasterUsuarioRow = {
   perfil: string;
   status: string;
 };
+
+type AdminMasterAccessAllowed = {
+  ok: true;
+  authUser: User;
+  usuario: AdminMasterUsuarioRow;
+  permissions: AdminMasterPermissions;
+};
+
+type AdminMasterAccessDenied = {
+  ok: false;
+  status: number;
+  message: string;
+};
+
+export type AdminMasterAccessResult =
+  | AdminMasterAccessAllowed
+  | AdminMasterAccessDenied;
 
 function getOwnerEmails() {
   return String(process.env.ADMIN_MASTER_OWNER_EMAILS || "")
@@ -103,9 +123,9 @@ async function bootstrapOwnerIfAllowed(params: {
   return usuario;
 }
 
-export async function requireAdminMasterUser(
+export async function getAdminMasterAccess(
   permission: AdminMasterPermissionKey = "dashboard_ver"
-) {
+): Promise<AdminMasterAccessResult> {
   const supabase = await createClient();
   const supabaseAdmin = getSupabaseAdmin();
 
@@ -115,7 +135,11 @@ export async function requireAdminMasterUser(
   } = await supabase.auth.getUser();
 
   if (authError || !user) {
-    redirect("/login");
+    return {
+      ok: false,
+      status: 401,
+      message: "Sessao expirada. Faça login novamente no Admin Master.",
+    };
   }
 
   const email = String(user.email || "").toLowerCase();
@@ -140,7 +164,11 @@ export async function requireAdminMasterUser(
       .maybeSingle();
 
     if (emailError) {
-      throw new AdminMasterAuthError("Erro ao validar AdminMaster.", 500);
+      return {
+        ok: false,
+        status: 500,
+        message: "Erro ao validar AdminMaster.",
+      };
     }
 
     if (adminByEmail?.id) {
@@ -153,7 +181,11 @@ export async function requireAdminMasterUser(
   }
 
   if (error) {
-    throw new AdminMasterAuthError("Erro ao carregar usuario AdminMaster.", 500);
+    return {
+      ok: false,
+      status: 500,
+      message: "Erro ao carregar usuario AdminMaster.",
+    };
   }
 
   if (!adminUser && email) {
@@ -165,16 +197,22 @@ export async function requireAdminMasterUser(
   }
 
   if (!adminUser) {
-    throw new AdminMasterAuthError(
-      "Usuario sem acesso ao AdminMaster. Cadastre este e-mail em admin_master_usuarios.",
-      403
-    );
+    return {
+      ok: false,
+      status: 403,
+      message:
+        "Usuario sem acesso ao AdminMaster. Cadastre este e-mail em admin_master_usuarios.",
+    };
   }
 
   const usuario = adminUser as AdminMasterUsuarioRow;
 
   if (String(usuario.status || "").toLowerCase() !== "ativo") {
-    throw new AdminMasterAuthError("Usuario AdminMaster inativo.", 403);
+    return {
+      ok: false,
+      status: 403,
+      message: "Usuario AdminMaster inativo.",
+    };
   }
 
   const { data: permissoesDb, error: permissoesError } = await supabaseAdmin
@@ -184,10 +222,11 @@ export async function requireAdminMasterUser(
     .maybeSingle();
 
   if (permissoesError) {
-    throw new AdminMasterAuthError(
-      "Erro ao carregar permissoes AdminMaster.",
-      500
-    );
+    return {
+      ok: false,
+      status: 500,
+      message: "Erro ao carregar permissoes AdminMaster.",
+    };
   }
 
   const permissions = mergeAdminMasterPermissions(
@@ -196,10 +235,11 @@ export async function requireAdminMasterUser(
   );
 
   if (!permissions[permission]) {
-    throw new AdminMasterAuthError(
-      "Usuario sem permissao para esta area do AdminMaster.",
-      403
-    );
+    return {
+      ok: false,
+      status: 403,
+      message: "Usuario sem permissao para esta area do AdminMaster.",
+    };
   }
 
   await supabaseAdmin
@@ -208,8 +248,25 @@ export async function requireAdminMasterUser(
     .eq("id", usuario.id);
 
   return {
+    ok: true,
     authUser: user,
     usuario,
     permissions,
   };
+}
+
+export async function requireAdminMasterUser(
+  permission: AdminMasterPermissionKey = "dashboard_ver"
+) {
+  const result = await getAdminMasterAccess(permission);
+
+  if (!result.ok) {
+    if (result.status === 401) {
+      redirect(ADMIN_MASTER_LOGIN_PATH);
+    }
+
+    throw new AdminMasterAuthError(result.message, result.status);
+  }
+
+  return result;
 }

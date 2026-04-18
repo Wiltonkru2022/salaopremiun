@@ -1,5 +1,12 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import {
+  ADMIN_MASTER_HOME_PATH,
+  ADMIN_MASTER_LOGIN_PATH,
+  buildAdminMasterLoginPath,
+  isAdminMasterLoginPath,
+  sanitizeAdminMasterNextPath,
+} from "@/lib/admin-master/auth/login-path";
 import { getResumoAssinatura } from "@/lib/assinatura-utils";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { getSupabaseCookieOptions } from "@/lib/supabase/cookie-options";
@@ -14,7 +21,7 @@ const DOMINIO_ASSINATURA = "assinatura.salaopremiun.com.br";
 
 const CADASTRO_PATH = "/cadastro-salao";
 const APP_PROFISSIONAL_PREFIX = "/app-profissional";
-const ADMIN_MASTER_PREFIX = "/admin-master";
+const ADMIN_MASTER_PREFIX = ADMIN_MASTER_HOME_PATH;
 
 const DOMINIOS_SITE = [
   DOMINIO_RAIZ,
@@ -95,6 +102,10 @@ function isAdminMasterRoute(pathname: string) {
   return startsWithPrefix(pathname, ADMIN_MASTER_PREFIXES);
 }
 
+function getAdminMasterLoginNextPath(value?: string | null) {
+  return sanitizeAdminMasterNextPath(value);
+}
+
 function isAppProfissionalRoute(pathname: string) {
   return (
     pathname === APP_PROFISSIONAL_PREFIX ||
@@ -160,18 +171,52 @@ function buildAbsoluteUrl(
 function redirectToHost(
   request: NextRequest,
   host: string,
-  pathname: string
+  pathname: string,
+  search = request.nextUrl.search
 ) {
   const currentHost = getRequestHost(request);
   const currentPath = request.nextUrl.pathname;
   const currentSearch = request.nextUrl.search;
 
-  if (currentHost === host && currentPath === pathname) {
+  if (
+    currentHost === host &&
+    currentPath === pathname &&
+    currentSearch === search
+  ) {
+    return NextResponse.next();
+  }
+
+  return NextResponse.redirect(buildAbsoluteUrl(request, host, pathname, search));
+}
+
+function redirectToAdminMasterLogin(
+  request: NextRequest,
+  nextPath?: string | null
+) {
+  const targetPath = buildAdminMasterLoginPath(nextPath);
+  const targetSearch =
+    targetPath === ADMIN_MASTER_LOGIN_PATH
+      ? ""
+      : targetPath.slice(ADMIN_MASTER_LOGIN_PATH.length);
+  const currentHost = getRequestHost(request);
+  const currentPath = request.nextUrl.pathname;
+  const currentSearch = request.nextUrl.search;
+
+  if (
+    currentHost === DOMINIO_RAIZ &&
+    currentPath === ADMIN_MASTER_LOGIN_PATH &&
+    currentSearch === targetSearch
+  ) {
     return NextResponse.next();
   }
 
   return NextResponse.redirect(
-    buildAbsoluteUrl(request, host, pathname, currentSearch)
+    buildAbsoluteUrl(
+      request,
+      DOMINIO_RAIZ,
+      ADMIN_MASTER_LOGIN_PATH,
+      targetSearch
+    )
   );
 }
 
@@ -250,6 +295,8 @@ export async function proxy(request: NextRequest) {
   const rotaCadastro = isCadastroRoute(pathnameNormalizado);
   const rotaAppProfissional = isAppProfissionalRoute(pathnameNormalizado);
   const rotaAdminMaster = isAdminMasterRoute(pathnameNormalizado);
+  const rotaAdminMasterLogin = isAdminMasterLoginPath(pathnameNormalizado);
+  const rotaAdminMasterProtegida = rotaAdminMaster && !rotaAdminMasterLogin;
 
   const isRootHost = isSiteHost(host);
   const isPainelHost = host === DOMINIO_PAINEL;
@@ -262,7 +309,14 @@ export async function proxy(request: NextRequest) {
   // APP DO PROFISSIONAL
   // =========================
   if (isAppHost) {
-    if (rotaAdminMaster) {
+    if (rotaAdminMasterLogin) {
+      return redirectToAdminMasterLogin(
+        request,
+        getAdminMasterLoginNextPath(request.nextUrl.searchParams.get("next"))
+      );
+    }
+
+    if (rotaAdminMasterProtegida) {
       return redirectToHost(request, DOMINIO_PAINEL, pathnameNormalizado);
     }
 
@@ -308,11 +362,22 @@ export async function proxy(request: NextRequest) {
   // SITE PRINCIPAL / WWW
   // =========================
   if (isRootHost) {
+    if (rotaAdminMasterLogin) {
+      if (host !== DOMINIO_RAIZ) {
+        return redirectToAdminMasterLogin(
+          request,
+          getAdminMasterLoginNextPath(request.nextUrl.searchParams.get("next"))
+        );
+      }
+
+      return NextResponse.next();
+    }
+
     if (rotaAutenticacao) {
       return redirectToHost(request, DOMINIO_LOGIN, pathnameNormalizado);
     }
 
-    if (rotaAdminMaster) {
+    if (rotaAdminMasterProtegida) {
       return redirectToHost(request, DOMINIO_PAINEL, pathnameNormalizado);
     }
 
@@ -347,6 +412,13 @@ export async function proxy(request: NextRequest) {
   // LOGIN
   // =========================
   if (isLoginHost) {
+    if (rotaAdminMasterLogin) {
+      return redirectToAdminMasterLogin(
+        request,
+        getAdminMasterLoginNextPath(request.nextUrl.searchParams.get("next"))
+      );
+    }
+
     if (pathnameNormalizado === "/") {
       return redirectToHost(request, DOMINIO_LOGIN, "/login");
     }
@@ -388,12 +460,19 @@ export async function proxy(request: NextRequest) {
   // CADASTRO
   // =========================
   if (isCadastroHost) {
+    if (rotaAdminMasterLogin) {
+      return redirectToAdminMasterLogin(
+        request,
+        getAdminMasterLoginNextPath(request.nextUrl.searchParams.get("next"))
+      );
+    }
+
     if (pathnameNormalizado === "/") {
       return redirectToHost(request, DOMINIO_CADASTRO, CADASTRO_PATH);
     }
 
     if (!rotaCadastro) {
-      if (rotaAdminMaster) {
+      if (rotaAdminMasterProtegida) {
         return redirectToHost(request, DOMINIO_PAINEL, pathnameNormalizado);
       }
 
@@ -429,12 +508,19 @@ export async function proxy(request: NextRequest) {
   // ASSINATURA
   // =========================
   if (isAssinaturaHost) {
+    if (rotaAdminMasterLogin) {
+      return redirectToAdminMasterLogin(
+        request,
+        getAdminMasterLoginNextPath(request.nextUrl.searchParams.get("next"))
+      );
+    }
+
     if (pathnameNormalizado === "/") {
       return redirectToHost(request, DOMINIO_ASSINATURA, "/assinatura");
     }
 
     if (!rotaAssinatura) {
-      if (rotaAdminMaster) {
+      if (rotaAdminMasterProtegida) {
         return redirectToHost(request, DOMINIO_PAINEL, pathnameNormalizado);
       }
 
@@ -470,6 +556,13 @@ export async function proxy(request: NextRequest) {
   // PAINEL
   // =========================
   if (isPainelHost) {
+    if (rotaAdminMasterLogin) {
+      return redirectToAdminMasterLogin(
+        request,
+        getAdminMasterLoginNextPath(request.nextUrl.searchParams.get("next"))
+      );
+    }
+
     if (pathnameNormalizado === "/") {
       return redirectToHost(request, DOMINIO_LOGIN, "/login");
     }
@@ -525,7 +618,12 @@ export async function proxy(request: NextRequest) {
     },
   });
 
-  if (!rotaPainel && !rotaLiberada && !rotaAutenticacao && !rotaAdminMaster) {
+  if (
+    !rotaPainel &&
+    !rotaLiberada &&
+    !rotaAutenticacao &&
+    !rotaAdminMaster
+  ) {
     return response;
   }
 
@@ -541,10 +639,14 @@ export async function proxy(request: NextRequest) {
     return response;
   }
 
-  if (rotaAdminMaster && !user) {
-    if (!isLoginHost) {
-      return redirectToHost(request, DOMINIO_LOGIN, "/login");
-    }
+  if (rotaAdminMasterProtegida && !user) {
+    return redirectToAdminMasterLogin(
+      request,
+      `${pathnameNormalizado}${request.nextUrl.search}`
+    );
+  }
+
+  if (rotaAdminMasterLogin && !user) {
     return response;
   }
 
@@ -578,15 +680,36 @@ export async function proxy(request: NextRequest) {
   }
 
   const idSalao = usuario?.id_salao;
+  const shouldCheckAdminMasterAccess =
+    rotaAdminMaster || rotaAdminMasterLogin || !idSalao;
+  const adminMasterUser = shouldCheckAdminMasterAccess
+    ? await hasAdminMasterAccess({
+        authUserId: user.id,
+        email: user.email,
+      })
+    : false;
+
+  if (rotaAdminMasterLogin) {
+    if (adminMasterUser) {
+      const nextAdminPath =
+        getAdminMasterLoginNextPath(request.nextUrl.searchParams.get("next")) ||
+        ADMIN_MASTER_PREFIX;
+      return redirectToHost(request, DOMINIO_PAINEL, nextAdminPath, "");
+    }
+
+    return response;
+  }
+
+  if (rotaAdminMasterProtegida && !adminMasterUser) {
+    return redirectToAdminMasterLogin(
+      request,
+      `${pathnameNormalizado}${request.nextUrl.search}`
+    );
+  }
 
   if (!idSalao) {
-    const adminMasterUser = await hasAdminMasterAccess({
-      authUserId: user.id,
-      email: user.email,
-    });
-
     if (adminMasterUser) {
-      if (rotaAdminMaster) {
+      if (rotaAdminMasterProtegida) {
         return response;
       }
 
