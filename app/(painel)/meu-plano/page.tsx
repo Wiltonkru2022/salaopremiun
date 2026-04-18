@@ -24,20 +24,22 @@ function statusLabel(status: string) {
   return normalized || "sem status";
 }
 
-function getPlanoCheckoutHref(planoAtual: string, upgrade = false) {
+function getPlanoCheckoutHref(planoAtual: string) {
   const plano = String(planoAtual || "").toLowerCase();
-
-  if (upgrade) {
-    if (plano === "premium") return "/assinatura?plano=premium";
-    if (plano === "pro") return "/assinatura?plano=premium";
-    return "/assinatura?plano=pro";
-  }
 
   if (plano === "basico" || plano === "pro" || plano === "premium") {
     return `/assinatura?plano=${plano}`;
   }
 
   return "/assinatura?plano=basico";
+}
+
+function getPlanoUpgradeHref(planoAtual: string) {
+  const plano = String(planoAtual || "").toLowerCase();
+
+  if (plano === "premium") return null;
+  if (plano === "pro") return "/assinatura?plano=premium";
+  return "/assinatura?plano=pro";
 }
 
 export default async function MeuPlanoPage() {
@@ -87,7 +89,7 @@ export default async function MeuPlanoPage() {
     access.limites.profissionais
   );
   const assinaturaHref = getPlanoCheckoutHref(access.planoCodigo);
-  const upgradeHref = getPlanoCheckoutHref(access.planoCodigo, true);
+  const upgradeHref = getPlanoUpgradeHref(access.planoCodigo);
 
   return (
     <div className="space-y-6">
@@ -112,12 +114,18 @@ export default async function MeuPlanoPage() {
               >
                 Gerenciar assinatura
               </Link>
-              <Link
-                href={upgradeHref}
-                className="rounded-full border border-white/15 bg-white/10 px-5 py-3 text-sm font-black text-white transition hover:-translate-y-0.5 hover:bg-white/15"
-              >
-                Fazer upgrade
-              </Link>
+              {upgradeHref ? (
+                <Link
+                  href={upgradeHref}
+                  className="rounded-full border border-white/15 bg-white/10 px-5 py-3 text-sm font-black text-white transition hover:-translate-y-0.5 hover:bg-white/15"
+                >
+                  Fazer upgrade
+                </Link>
+              ) : (
+                <span className="rounded-full border border-white/15 bg-white/10 px-5 py-3 text-sm font-black text-white/85">
+                  Plano maximo ativo
+                </span>
+              )}
             </div>
           </div>
 
@@ -273,12 +281,18 @@ export default async function MeuPlanoPage() {
               Quando um recurso nao estiver no plano, o sistema bloqueia com
               mensagem clara e leva para assinatura, sem quebrar o fluxo.
             </p>
-            <Link
-              href={upgradeHref}
-              className="mt-5 inline-flex rounded-full bg-white px-5 py-3 text-sm font-black text-zinc-950 transition hover:-translate-y-0.5"
-            >
-              Comparar planos
-            </Link>
+            {upgradeHref ? (
+              <Link
+                href={upgradeHref}
+                className="mt-5 inline-flex rounded-full bg-white px-5 py-3 text-sm font-black text-zinc-950 transition hover:-translate-y-0.5"
+              >
+                Comparar planos
+              </Link>
+            ) : (
+              <span className="mt-5 inline-flex rounded-full border border-white/15 bg-white/10 px-5 py-3 text-sm font-black text-white/85">
+                Todos os recursos do topo liberados
+              </span>
+            )}
           </div>
 
           <div className="rounded-[30px] border border-amber-200 bg-amber-50 p-6 text-amber-950 shadow-sm">
