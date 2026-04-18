@@ -142,7 +142,7 @@ export default function AssinaturaHero({
               <p className="mt-1 text-sm text-zinc-600">
                 {renovacaoDescricao ||
                   (renovacaoAutomatica
-                    ? "O sistema gera a proxima cobranca automaticamente para PIX ou boleto antes do vencimento."
+                    ? "O sistema mantem a proxima renovacao automatica alinhada com a forma de pagamento atual."
                     : "A proxima cobranca dependera de acao manual. Cartao automatico sera liberado apos tokenizacao segura.")}
               </p>
             </div>

@@ -10,6 +10,11 @@ import {
   registrarAcaoAutomaticaSistema,
   upsertSystemHealthCheck,
 } from "@/lib/monitoring/server";
+import {
+  createAsaasSubscription,
+  isAsaasSubscriptionNotFoundError,
+  removeAsaasSubscription,
+} from "@/lib/payments/asaas-subscriptions";
 
 type BillingType = "PIX" | "BOLETO" | "CREDIT_CARD";
 type TipoMovimentoAssinatura = "upgrade" | "downgrade" | "renovacao";
@@ -713,6 +718,98 @@ async function montarCheckoutExistente(params: {
   } satisfies CheckoutResponsePayload;
 }
 
+function getCardSnapshot(payment: Record<string, unknown>) {
+  const creditCard =
+    payment.creditCard && typeof payment.creditCard === "object"
+      ? (payment.creditCard as Record<string, unknown>)
+      : null;
+  const token = String(creditCard?.creditCardToken || "").trim() || null;
+  const brand = String(creditCard?.creditCardBrand || "").trim() || null;
+  const last4 = String(creditCard?.creditCardNumber || "").trim() || null;
+
+  return {
+    token,
+    brand,
+    last4,
+    tokenizedAt: token ? new Date().toISOString() : null,
+  };
+}
+
+async function limparAssinaturaRecorrenteCartao(params: {
+  supabaseAdmin: ReturnType<typeof getSupabaseAdmin>;
+  assinaturaId: string;
+  asaasSubscriptionId?: string | null;
+  idSalao: string;
+  route: string;
+  reason: string;
+}) {
+  const subscriptionId = String(params.asaasSubscriptionId || "").trim();
+
+  if (subscriptionId) {
+    try {
+      await removeAsaasSubscription(subscriptionId);
+    } catch (error) {
+      if (!isAsaasSubscriptionNotFoundError(error)) {
+        await captureSystemError({
+          module: "assinatura",
+          action: "remover_assinatura_recorrente_cartao",
+          origin: "integration",
+          idSalao: params.idSalao,
+          route: params.route,
+          entity: "assinatura",
+          entityId: params.assinaturaId,
+          error,
+          details: {
+            asaasSubscriptionId: subscriptionId,
+            reason: params.reason,
+          },
+          incidentKey: `assinatura_recorrente_cleanup:${params.assinaturaId}`,
+          incidentTitle:
+            "Falha ao remover assinatura recorrente do cartao no Asaas",
+          suggestedAction:
+            "Revisar a assinatura recorrente no Asaas antes de concluir a troca da forma de pagamento.",
+          automationAvailable: false,
+        });
+        return false;
+      }
+    }
+  }
+
+  const { error: cleanupError } = await params.supabaseAdmin
+    .from("assinaturas")
+    .update({
+      asaas_subscription_id: null,
+      asaas_subscription_status: null,
+    })
+    .eq("id", params.assinaturaId);
+
+  if (cleanupError) {
+    await captureSystemError({
+      module: "assinatura",
+      action: "limpar_assinatura_recorrente_cartao_local",
+      origin: "api",
+      idSalao: params.idSalao,
+      route: params.route,
+      entity: "assinatura",
+      entityId: params.assinaturaId,
+      error: new Error(cleanupError.message),
+      details: {
+        asaasSubscriptionId: subscriptionId || null,
+        reason: params.reason,
+      },
+      incidentKey: `assinatura_recorrente_cleanup_local:${params.assinaturaId}`,
+      incidentTitle:
+        "Falha ao limpar assinatura recorrente do cartao no sistema",
+      suggestedAction:
+        "Revisar o registro local da assinatura recorrente antes da proxima renovacao.",
+      automationAvailable: false,
+    });
+    return false;
+  }
+
+  return true;
+}
+
 export async function POST(req: Request) {
   let supabaseAdmin: ReturnType<typeof getSupabaseAdmin> | null = null;
   let checkoutLockId: string | null = null;
@@ -804,7 +901,9 @@ export async function POST(req: Request) {
     const { data: assinaturaExistenteFull, error: assinaturaExistenteFullError } =
       await supabaseAdmin
         .from("assinaturas")
-        .select("id, plano, vencimento_em, trial_fim_em")
+        .select(
+          "id, plano, vencimento_em, trial_fim_em, renovacao_automatica, asaas_subscription_id"
+        )
         .eq("id_salao", idSalao)
         .maybeSingle();
 
@@ -1054,6 +1153,7 @@ export async function POST(req: Request) {
       ? calcularVencimentoAssinaturaPaga(assinaturaExistenteFull || undefined)
       : dueDate;
     const pagoEm = pagamentoConfirmado ? new Date().toISOString() : null;
+    const cardSnapshot = getCardSnapshot(payment);
     const webhookEventOrderInicial = getWebhookEventOrderFromAsaasStatus(
       payment.status
     );
@@ -1077,27 +1177,37 @@ export async function POST(req: Request) {
     if (assinaturaExistente?.id) {
       assinaturaId = assinaturaExistente.id;
 
+      const assinaturaUpdate: Record<string, unknown> = {
+        asaas_customer_id: customerId,
+        asaas_payment_id: paymentId,
+        plano: plano.codigo,
+        valor,
+        status: assinaturaStatus,
+        vencimento_em: vencimentoEm,
+        pago_em: pagoEm,
+        limite_profissionais: limiteProfissionais,
+        limite_usuarios: limiteUsuarios,
+        trial_ativo: false,
+        trial_inicio_em: null,
+        trial_fim_em: null,
+        forma_pagamento_atual: billingType,
+        id_cobranca_atual: null,
+        gateway: "asaas",
+        referencia_atual:
+          String(payment.invoiceNumber || "").trim() || paymentId,
+      };
+
+      if (cardSnapshot.token) {
+        assinaturaUpdate.asaas_credit_card_token = cardSnapshot.token;
+        assinaturaUpdate.asaas_credit_card_brand = cardSnapshot.brand;
+        assinaturaUpdate.asaas_credit_card_last4 = cardSnapshot.last4;
+        assinaturaUpdate.asaas_credit_card_tokenized_at =
+          cardSnapshot.tokenizedAt;
+      }
+
       const { error: updateAssinaturaError } = await supabaseAdmin
         .from("assinaturas")
-        .update({
-          asaas_customer_id: customerId,
-          asaas_payment_id: paymentId,
-          plano: plano.codigo,
-          valor,
-          status: assinaturaStatus,
-          vencimento_em: vencimentoEm,
-          pago_em: pagoEm,
-          limite_profissionais: limiteProfissionais,
-          limite_usuarios: limiteUsuarios,
-          trial_ativo: false,
-          trial_inicio_em: null,
-          trial_fim_em: null,
-          forma_pagamento_atual: billingType,
-          id_cobranca_atual: null,
-          gateway: "asaas",
-          referencia_atual:
-            String(payment.invoiceNumber || "").trim() || paymentId,
-        })
+        .update(assinaturaUpdate)
         .eq("id", assinaturaId);
 
       if (updateAssinaturaError) {
@@ -1107,29 +1217,39 @@ export async function POST(req: Request) {
         );
       }
     } else {
+      const assinaturaInsert: Record<string, unknown> = {
+        id_salao: idSalao,
+        asaas_customer_id: customerId,
+        asaas_payment_id: paymentId,
+        plano: plano.codigo,
+        valor,
+        status: assinaturaStatus,
+        vencimento_em: vencimentoEm,
+        pago_em: pagoEm,
+        limite_profissionais: limiteProfissionais,
+        limite_usuarios: limiteUsuarios,
+        trial_ativo: false,
+        trial_inicio_em: null,
+        trial_fim_em: null,
+        forma_pagamento_atual: billingType,
+        id_cobranca_atual: null,
+        gateway: "asaas",
+        referencia_atual:
+          String(payment.invoiceNumber || "").trim() || paymentId,
+      };
+
+      if (cardSnapshot.token) {
+        assinaturaInsert.asaas_credit_card_token = cardSnapshot.token;
+        assinaturaInsert.asaas_credit_card_brand = cardSnapshot.brand;
+        assinaturaInsert.asaas_credit_card_last4 = cardSnapshot.last4;
+        assinaturaInsert.asaas_credit_card_tokenized_at =
+          cardSnapshot.tokenizedAt;
+      }
+
       const { data: novaAssinatura, error: insertAssinaturaError } =
         await supabaseAdmin
           .from("assinaturas")
-          .insert({
-            id_salao: idSalao,
-            asaas_customer_id: customerId,
-            asaas_payment_id: paymentId,
-            plano: plano.codigo,
-            valor,
-            status: assinaturaStatus,
-            vencimento_em: vencimentoEm,
-            pago_em: pagoEm,
-            limite_profissionais: limiteProfissionais,
-            limite_usuarios: limiteUsuarios,
-            trial_ativo: false,
-            trial_inicio_em: null,
-            trial_fim_em: null,
-            forma_pagamento_atual: billingType,
-            id_cobranca_atual: null,
-            gateway: "asaas",
-            referencia_atual:
-              String(payment.invoiceNumber || "").trim() || paymentId,
-          })
+          .insert(assinaturaInsert)
           .select("id")
           .single();
 
@@ -1167,6 +1287,7 @@ export async function POST(req: Request) {
           bank_slip_url: String(payment.bankSlipUrl || "").trim() || null,
           data_expiracao: dueDate,
           external_reference: idSalao,
+          asaas_subscription_id: null,
           webhook_payload: null,
           webhook_last_event: null,
           webhook_event_order: webhookEventOrderInicial,
@@ -1233,6 +1354,105 @@ export async function POST(req: Request) {
         salaoUpdateError.message || "Erro ao atualizar salao.",
         500
       );
+    }
+
+    const assinaturaAutoRenovacao = Boolean(
+      assinaturaExistenteFull?.renovacao_automatica
+    );
+    const assinaturaRecorrenteAtual =
+      String(assinaturaExistenteFull?.asaas_subscription_id || "").trim() || null;
+    const descricaoAssinatura = `Assinatura ${plano.nome} - ${
+      body.nomeSalao || salaoData.nome || "SalaoPremium"
+    }`;
+
+    if (assinaturaRecorrenteAtual && (billingType !== "CREDIT_CARD" || !assinaturaAutoRenovacao)) {
+      await limparAssinaturaRecorrenteCartao({
+        supabaseAdmin,
+        assinaturaId,
+        asaasSubscriptionId: assinaturaRecorrenteAtual,
+        idSalao,
+        route: "/api/assinatura/criar-cobranca",
+        reason:
+          billingType !== "CREDIT_CARD"
+            ? "billing_type_changed"
+            : "auto_renew_disabled",
+      });
+    }
+
+    if (
+      billingType === "CREDIT_CARD" &&
+      assinaturaStatus === "ativo" &&
+      assinaturaAutoRenovacao &&
+      body.creditCard &&
+      remoteIp
+    ) {
+      if (assinaturaRecorrenteAtual) {
+        await limparAssinaturaRecorrenteCartao({
+          supabaseAdmin,
+          assinaturaId,
+          asaasSubscriptionId: assinaturaRecorrenteAtual,
+          idSalao,
+          route: "/api/assinatura/criar-cobranca",
+          reason: "reprovision_after_checkout",
+        });
+      }
+
+      try {
+        const recurring = await createAsaasSubscription({
+          customerId,
+          billingType: "CREDIT_CARD",
+          value: valor,
+          nextDueDate: vencimentoEm,
+          description: descricaoAssinatura,
+          externalReference: idSalao,
+          creditCard: body.creditCard,
+          creditCardHolderInfo: {
+            name: body.responsavelNome.trim(),
+            email: body.responsavelEmail.trim().toLowerCase(),
+            cpfCnpj:
+              body.responsavelCpfCnpj || salaoData.cpf_cnpj || undefined,
+            postalCode: body.cep || salaoData.cep || undefined,
+            addressNumber: body.numero || salaoData.numero || undefined,
+            phone: body.responsavelTelefone || salaoData.telefone || undefined,
+          },
+          remoteIp,
+        });
+
+        const subscriptionId = String(recurring.id || "").trim();
+
+        if (subscriptionId) {
+          await supabaseAdmin
+            .from("assinaturas")
+            .update({
+              asaas_subscription_id: subscriptionId,
+              asaas_subscription_status:
+                String(recurring.status || "").trim() || "ACTIVE",
+            })
+            .eq("id", assinaturaId);
+        }
+      } catch (error) {
+        await captureSystemError({
+          module: "assinatura",
+          action: "provisionar_assinatura_recorrente_cartao",
+          origin: "integration",
+          idSalao,
+          route: "/api/assinatura/criar-cobranca",
+          entity: "assinatura",
+          entityId: assinaturaId,
+          error,
+          details: {
+            billingType,
+            plano: plano.codigo,
+            paymentId,
+          },
+          incidentKey: `assinatura_recorrente_provision:${assinaturaId}`,
+          incidentTitle:
+            "Falha ao provisionar recorrencia do cartao apos checkout",
+          suggestedAction:
+            "Desativar e reativar a renovacao automatica para reprovisionar a assinatura recorrente no Asaas.",
+          automationAvailable: false,
+        });
+      }
     }
 
     const checkoutResponse = {

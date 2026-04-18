@@ -837,6 +837,8 @@ export function useAssinaturaPage() {
     asaasCustomerId: assinatura?.asaas_customer_id,
     formaPagamentoAtual: assinatura?.forma_pagamento_atual,
     renovacaoAutomatica,
+    asaasCreditCardToken: assinatura?.asaas_credit_card_token,
+    asaasSubscriptionId: assinatura?.asaas_subscription_id,
   });
 
   return {

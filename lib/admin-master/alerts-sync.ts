@@ -43,6 +43,8 @@ type RenovacaoAssinaturaRow = {
   renovacao_automatica?: boolean | null;
   asaas_customer_id?: string | null;
   forma_pagamento_atual?: string | null;
+  asaas_credit_card_token?: string | null;
+  asaas_subscription_id?: string | null;
 };
 
 type RenovacaoChargeRow = {
@@ -114,8 +116,12 @@ function getRenewalIssueLabel(code: string) {
     return "o cartao ainda depende de tokenizacao para a recorrencia";
   }
 
+  if (code === "credit_card_subscription_missing") {
+    return "o cartao foi tokenizado, mas a assinatura recorrente do Asaas ainda nao foi provisionada";
+  }
+
   if (code === "unsupported_payment_method") {
-    return "a forma atual nao e compativel com PIX ou boleto";
+    return "a forma atual nao esta apta para recorrencia";
   }
 
   return "a renovacao automatica ainda nao esta pronta";
@@ -227,7 +233,7 @@ export async function syncAdminMasterAlerts() {
     supabase
       .from("assinaturas")
       .select(
-        "id, id_salao, plano, status, vencimento_em, renovacao_automatica, asaas_customer_id, forma_pagamento_atual"
+        "id, id_salao, plano, status, vencimento_em, renovacao_automatica, asaas_customer_id, forma_pagamento_atual, asaas_credit_card_token, asaas_subscription_id"
       )
       .in("status", ["ativo", "ativa", "pago"])
       .eq("renovacao_automatica", true)
@@ -591,6 +597,8 @@ export async function syncAdminMasterAlerts() {
       asaasCustomerId: row.asaas_customer_id,
       formaPagamentoAtual: row.forma_pagamento_atual,
       renovacaoAutomatica: true,
+      asaasCreditCardToken: row.asaas_credit_card_token,
+      asaasSubscriptionId: row.asaas_subscription_id,
     });
     const charges = renewalChargesByAssinatura.get(row.id) || [];
     const pendingCharges = charges.filter((charge) =>
@@ -633,6 +641,7 @@ export async function syncAdminMasterAlerts() {
             row.forma_pagamento_atual ||
             null,
           asaas_customer_id: row.asaas_customer_id || null,
+          asaas_subscription_id: row.asaas_subscription_id || null,
         },
         automatico: true,
         resolvido: false,

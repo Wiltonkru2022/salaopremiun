@@ -3,7 +3,10 @@ import { addDays, format, isBefore, subDays } from "date-fns";
 import { createClient } from "@supabase/supabase-js";
 import { verifyBearerSecret } from "@/lib/auth/verify-secret";
 import { criarCobranca } from "@/lib/payments/pix-provider";
-import { getRenovacaoAutomaticaInfo } from "@/lib/assinaturas/renovacao-automatica";
+import {
+  getRenovacaoAutomaticaInfo,
+  normalizePaymentMethod,
+} from "@/lib/assinaturas/renovacao-automatica";
 
 type AssinaturaCronRow = {
   id: string;
@@ -13,6 +16,8 @@ type AssinaturaCronRow = {
   vencimento_em: string | null;
   asaas_customer_id: string | null;
   forma_pagamento_atual: string | null;
+  asaas_credit_card_token?: string | null;
+  asaas_subscription_id?: string | null;
   renovacao_automatica?: boolean | null;
 };
 
@@ -76,6 +81,8 @@ async function handleCron(req: Request) {
         vencimento_em,
         asaas_customer_id,
         forma_pagamento_atual,
+        asaas_credit_card_token,
+        asaas_subscription_id,
         renovacao_automatica
       `)
       .in("status", ["ativo", "ativa", "pago"])
@@ -173,6 +180,8 @@ async function handleCron(req: Request) {
         asaasCustomerId: assinatura.asaas_customer_id,
         formaPagamentoAtual: assinatura.forma_pagamento_atual,
         renovacaoAutomatica: true,
+        asaasCreditCardToken: assinatura.asaas_credit_card_token,
+        asaasSubscriptionId: assinatura.asaas_subscription_id,
       });
 
       if (!renovacaoInfo.estaProntaParaCobranca) {
@@ -182,6 +191,22 @@ async function handleCron(req: Request) {
           motivo:
             renovacaoInfo.erroAtivacao ||
             "Renovacao automatica ainda nao esta pronta.",
+        });
+        continue;
+      }
+
+      if (
+        normalizePaymentMethod(assinatura.forma_pagamento_atual) ===
+          "CREDIT_CARD" &&
+        String(assinatura.asaas_subscription_id || "").trim()
+      ) {
+        resultados.push({
+          id_salao: assinatura.id_salao,
+          ok: true,
+          skipped: true,
+          motivo:
+            "Renovacao no cartao gerenciada pela assinatura recorrente do Asaas.",
+          subscriptionId: assinatura.asaas_subscription_id,
         });
         continue;
       }

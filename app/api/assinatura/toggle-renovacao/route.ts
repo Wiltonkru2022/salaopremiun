@@ -1,8 +1,14 @@
 import { NextResponse } from "next/server";
+import { addDays, format, isBefore } from "date-fns";
 import { createClient } from "@supabase/supabase-js";
 import { createServerClient } from "@supabase/ssr";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { getRenovacaoAutomaticaInfo } from "@/lib/assinaturas/renovacao-automatica";
+import {
+  createAsaasSubscription,
+  isAsaasSubscriptionNotFoundError,
+  removeAsaasSubscription,
+} from "@/lib/payments/asaas-subscriptions";
 
 class HttpError extends Error {
   status: number;
@@ -100,6 +106,37 @@ async function validarSalaoDoUsuario(idSalao: string) {
   }
 }
 
+async function getRemoteIp() {
+  const requestHeaders = await headers();
+
+  const forwardedFor = requestHeaders.get("x-forwarded-for");
+  if (forwardedFor) {
+    const ip = forwardedFor.split(",")[0]?.trim();
+    if (ip) return ip;
+  }
+
+  const realIp = requestHeaders.get("x-real-ip");
+  if (realIp) return realIp.trim();
+
+  const cfConnectingIp = requestHeaders.get("cf-connecting-ip");
+  if (cfConnectingIp) return cfConnectingIp.trim();
+
+  return "127.0.0.1";
+}
+
+function getRecurringNextDueDate(vencimentoEm?: string | null) {
+  const normalized = String(vencimentoEm || "").trim();
+
+  if (normalized) {
+    const dueDate = new Date(`${normalized}T12:00:00`);
+    if (!Number.isNaN(dueDate.getTime()) && !isBefore(dueDate, new Date())) {
+      return normalized;
+    }
+  }
+
+  return format(addDays(new Date(), 30), "yyyy-MM-dd");
+}
+
 export async function POST(req: Request) {
   try {
     const supabaseAdmin = getSupabaseAdmin();
@@ -128,7 +165,9 @@ export async function POST(req: Request) {
 
     const { data: assinatura, error: assinaturaError } = await supabaseAdmin
       .from("assinaturas")
-      .select("id, renovacao_automatica, forma_pagamento_atual, asaas_customer_id")
+      .select(
+        "id, plano, valor, vencimento_em, renovacao_automatica, forma_pagamento_atual, asaas_customer_id, asaas_credit_card_token, asaas_subscription_id, asaas_subscription_status"
+      )
       .eq("id_salao", idSalao)
       .maybeSingle();
 
@@ -151,6 +190,8 @@ export async function POST(req: Request) {
       asaasCustomerId: assinatura.asaas_customer_id,
       formaPagamentoAtual: assinatura.forma_pagamento_atual,
       renovacaoAutomatica,
+      asaasCreditCardToken: assinatura.asaas_credit_card_token,
+      asaasSubscriptionId: assinatura.asaas_subscription_id,
     });
 
     if (renovacaoAutomatica && renovacaoInfo.erroAtivacao) {
@@ -160,6 +201,101 @@ export async function POST(req: Request) {
         },
         { status: 400 }
       );
+    }
+
+    const formaPagamentoAtual = String(
+      assinatura.forma_pagamento_atual || ""
+    ).toUpperCase();
+    const asaasSubscriptionId =
+      String(assinatura.asaas_subscription_id || "").trim() || null;
+
+    if (renovacaoAutomatica && formaPagamentoAtual === "CREDIT_CARD") {
+      if (!asaasSubscriptionId) {
+        const assinaturaValor = Number(assinatura.valor || 0);
+
+        if (assinaturaValor <= 0) {
+          return NextResponse.json(
+            {
+              error:
+                "Nao foi possivel identificar o valor da assinatura para provisionar a recorrencia no cartao.",
+            },
+            { status: 400 }
+          );
+        }
+
+        const remoteIp = await getRemoteIp();
+        const recurring = await createAsaasSubscription({
+          customerId: String(assinatura.asaas_customer_id || "").trim(),
+          billingType: "CREDIT_CARD",
+          value: assinaturaValor,
+          nextDueDate: getRecurringNextDueDate(assinatura.vencimento_em),
+          description: `Assinatura ${String(assinatura.plano || "salaopremium").toUpperCase()} - SalaoPremium`,
+          externalReference: idSalao,
+          creditCardToken: String(assinatura.asaas_credit_card_token || "").trim(),
+          remoteIp,
+        });
+
+        const subscriptionId = String(recurring.id || "").trim();
+
+        if (!subscriptionId) {
+          return NextResponse.json(
+            {
+              error:
+                "Nao foi possivel provisionar a assinatura recorrente no Asaas.",
+            },
+            { status: 502 }
+          );
+        }
+
+        const { error: provisionError } = await supabaseAdmin
+          .from("assinaturas")
+          .update({
+            asaas_subscription_id: subscriptionId,
+            asaas_subscription_status:
+              String(recurring.status || "").trim() || "ACTIVE",
+          })
+          .eq("id", assinatura.id);
+
+        if (provisionError) {
+          return NextResponse.json(
+            {
+              error:
+                provisionError.message ||
+                "Erro ao salvar assinatura recorrente do cartao.",
+            },
+            { status: 500 }
+          );
+        }
+      }
+    }
+
+    if (!renovacaoAutomatica && asaasSubscriptionId) {
+      try {
+        await removeAsaasSubscription(asaasSubscriptionId);
+      } catch (error) {
+        if (!isAsaasSubscriptionNotFoundError(error)) {
+          throw error;
+        }
+      }
+
+      const { error: cleanupError } = await supabaseAdmin
+        .from("assinaturas")
+        .update({
+          asaas_subscription_id: null,
+          asaas_subscription_status: null,
+        })
+        .eq("id", assinatura.id);
+
+      if (cleanupError) {
+        return NextResponse.json(
+          {
+            error:
+              cleanupError.message ||
+              "Erro ao limpar assinatura recorrente do cartao.",
+          },
+          { status: 500 }
+        );
+      }
     }
 
     const { error: updateError } = await supabaseAdmin

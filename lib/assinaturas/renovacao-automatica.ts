@@ -5,6 +5,7 @@ export type RenovacaoAutomaticaCode =
   | "missing_customer"
   | "missing_payment_method"
   | "credit_card_requires_tokenization"
+  | "credit_card_subscription_missing"
   | "unsupported_payment_method"
   | "ready_disabled"
   | "ready_enabled";
@@ -28,9 +29,11 @@ type GetRenovacaoAutomaticaInfoParams = {
   asaasCustomerId?: string | null;
   formaPagamentoAtual?: string | null;
   renovacaoAutomatica?: boolean | null;
+  asaasCreditCardToken?: string | null;
+  asaasSubscriptionId?: string | null;
 };
 
-const PAYMENT_METHODS_COMPATIVEIS = new Set(["PIX", "BOLETO"]);
+const NON_CARD_PAYMENT_METHODS = new Set(["PIX", "BOLETO"]);
 
 export function normalizePaymentMethod(value: unknown) {
   return String(value || "").trim().toUpperCase();
@@ -60,16 +63,23 @@ function buildInfo(
   options: {
     assinaturaExiste: boolean;
     renovacaoAutomatica: boolean;
+    prontaParaAtivar: boolean;
     prontaParaCobranca: boolean;
   }
 ): RenovacaoAutomaticaInfo {
-  const { assinaturaExiste, renovacaoAutomatica, prontaParaCobranca } = options;
+  const {
+    assinaturaExiste,
+    renovacaoAutomatica,
+    prontaParaAtivar,
+    prontaParaCobranca,
+  } = options;
 
   return {
     ...base,
-    podeAtivar: assinaturaExiste && prontaParaCobranca,
+    podeAtivar: assinaturaExiste && prontaParaAtivar,
     podeAlternar:
-      assinaturaExiste && (prontaParaCobranca || renovacaoAutomatica),
+      assinaturaExiste &&
+      (prontaParaAtivar || prontaParaCobranca || renovacaoAutomatica),
     estaProntaParaCobranca: assinaturaExiste && prontaParaCobranca,
   };
 }
@@ -85,9 +95,12 @@ export function getRenovacaoAutomaticaInfo(
   const possuiCustomerAsaas = Boolean(
     String(params.asaasCustomerId || "").trim()
   );
-  const prontaParaCobranca =
-    possuiCustomerAsaas &&
-    PAYMENT_METHODS_COMPATIVEIS.has(formaPagamentoNormalizada);
+  const possuiCartaoTokenizado = Boolean(
+    String(params.asaasCreditCardToken || "").trim()
+  );
+  const possuiAssinaturaRecorrenteCartao = Boolean(
+    String(params.asaasSubscriptionId || "").trim()
+  );
 
   if (!assinaturaExiste) {
     return buildInfo(
@@ -107,32 +120,7 @@ export function getRenovacaoAutomaticaInfo(
       {
         assinaturaExiste,
         renovacaoAutomatica,
-        prontaParaCobranca: false,
-      }
-    );
-  }
-
-  if (formaPagamentoNormalizada === "CREDIT_CARD") {
-    return buildInfo(
-      {
-        code: "credit_card_requires_tokenization",
-        titulo: renovacaoAutomatica
-          ? "Ativada com ajuste pendente"
-          : "Cartao ainda nao esta apto",
-        descricao:
-          "Hoje a renovacao automatica so gera a proxima cobranca com PIX ou boleto. Cartao automatico exige tokenizacao segura antes de ligar.",
-        observacao: renovacaoAutomatica
-          ? "Desative ate a tokenizacao do cartao ficar pronta ou use PIX/boleto como forma atual."
-          : "Use PIX ou boleto na proxima cobranca para ativar agora, ou aguarde a tokenizacao do cartao.",
-        tone: "amber",
-        formaPagamentoNormalizada,
-        possuiCustomerAsaas,
-        erroAtivacao:
-          "Renovacao automatica por cartao exige tokenizacao antes de ser ativada.",
-      },
-      {
-        assinaturaExiste,
-        renovacaoAutomatica,
+        prontaParaAtivar: false,
         prontaParaCobranca: false,
       }
     );
@@ -148,16 +136,17 @@ export function getRenovacaoAutomaticaInfo(
         descricao:
           "O salao ainda nao esta vinculado ao customer do Asaas. Sem isso, o cron nao consegue gerar a proxima cobranca automaticamente.",
         observacao:
-          "Gere uma cobranca PIX ou boleto uma vez para vincular o salao ao Asaas e depois ligue a renovacao automatica.",
+          "Gere uma cobranca uma vez para vincular o salao ao Asaas antes de ligar a renovacao automatica.",
         tone: "red",
         formaPagamentoNormalizada,
         possuiCustomerAsaas,
         erroAtivacao:
-          "Ative uma cobranca PIX ou boleto primeiro para vincular o salao ao Asaas antes de ligar a renovacao automatica.",
+          "Ative uma cobranca primeiro para vincular o salao ao Asaas antes de ligar a renovacao automatica.",
       },
       {
         assinaturaExiste,
         renovacaoAutomatica,
+        prontaParaAtivar: false,
         prontaParaCobranca: false,
       }
     );
@@ -173,7 +162,7 @@ export function getRenovacaoAutomaticaInfo(
         descricao:
           "A renovacao automatica precisa de uma forma atual compativel para gerar a proxima cobranca antes do vencimento.",
         observacao:
-          "Defina PIX ou boleto como forma da assinatura para deixar a recorrencia pronta.",
+          "Defina PIX, boleto ou cartao como forma da assinatura para deixar a recorrencia pronta.",
         tone: "amber",
         formaPagamentoNormalizada,
         possuiCustomerAsaas,
@@ -183,31 +172,133 @@ export function getRenovacaoAutomaticaInfo(
       {
         assinaturaExiste,
         renovacaoAutomatica,
+        prontaParaAtivar: false,
         prontaParaCobranca: false,
       }
     );
   }
 
-  if (!PAYMENT_METHODS_COMPATIVEIS.has(formaPagamentoNormalizada)) {
+  if (formaPagamentoNormalizada === "CREDIT_CARD") {
+    if (renovacaoAutomatica && possuiAssinaturaRecorrenteCartao) {
+      return buildInfo(
+        {
+          code: "ready_enabled",
+          titulo: "Ativada e pronta",
+          descricao:
+            "O Asaas esta provisionado para gerar as proximas cobrancas mensais no cartao automaticamente.",
+          observacao:
+            "Se precisar pausar, desligue a configuracao para remover a assinatura recorrente do Asaas.",
+          tone: "green",
+          formaPagamentoNormalizada,
+          possuiCustomerAsaas,
+          erroAtivacao: null,
+        },
+        {
+          assinaturaExiste,
+          renovacaoAutomatica,
+          prontaParaAtivar: true,
+          prontaParaCobranca: true,
+        }
+      );
+    }
+
+    if (renovacaoAutomatica && possuiCartaoTokenizado) {
+      return buildInfo(
+        {
+          code: "credit_card_subscription_missing",
+          titulo: "Ativada com provisionamento pendente",
+          descricao:
+            "O cartao esta tokenizado, mas a assinatura recorrente do Asaas ainda nao foi provisionada para as proximas mensalidades.",
+          observacao:
+            "Desative e ative novamente para tentar provisionar a recorrencia no Asaas com o cartao salvo.",
+          tone: "red",
+          formaPagamentoNormalizada,
+          possuiCustomerAsaas,
+          erroAtivacao:
+            "Renovacao automatica no cartao ainda nao foi provisionada no Asaas.",
+        },
+        {
+          assinaturaExiste,
+          renovacaoAutomatica,
+          prontaParaAtivar: true,
+          prontaParaCobranca: false,
+        }
+      );
+    }
+
+    if (possuiCartaoTokenizado || possuiAssinaturaRecorrenteCartao) {
+      return buildInfo(
+        {
+          code: "ready_disabled",
+          titulo: possuiAssinaturaRecorrenteCartao
+            ? "Cartao recorrente pronto"
+            : "Cartao tokenizado e pronto",
+          descricao:
+            "O cartao ja pode ser usado para provisionar a recorrencia mensal no Asaas sem pedir os dados novamente.",
+          observacao: possuiAssinaturaRecorrenteCartao
+            ? "Ao ativar, o sistema volta a monitorar a assinatura recorrente que ja esta provisionada."
+            : "Ao ativar, o sistema cria a assinatura recorrente mensal no Asaas usando o cartao salvo.",
+          tone: "green",
+          formaPagamentoNormalizada,
+          possuiCustomerAsaas,
+          erroAtivacao: null,
+        },
+        {
+          assinaturaExiste,
+          renovacaoAutomatica,
+          prontaParaAtivar: true,
+          prontaParaCobranca: possuiAssinaturaRecorrenteCartao,
+        }
+      );
+    }
+
+    return buildInfo(
+      {
+        code: "credit_card_requires_tokenization",
+        titulo: renovacaoAutomatica
+          ? "Ativada com ajuste pendente"
+          : "Cartao ainda nao esta apto",
+        descricao:
+          "O cartao precisa passar pela primeira cobranca e tokenizacao segura antes de ser usado para recorrencia automatica.",
+        observacao: renovacaoAutomatica
+          ? "Desative ate a tokenizacao do cartao ficar pronta ou gere uma nova cobranca no cartao para refazer o provisionamento."
+          : "Gere uma cobranca no cartao uma vez para salvar o token e liberar a recorrencia automatica.",
+        tone: "amber",
+        formaPagamentoNormalizada,
+        possuiCustomerAsaas,
+        erroAtivacao:
+          "Renovacao automatica por cartao exige tokenizacao antes de ser ativada.",
+      },
+      {
+        assinaturaExiste,
+        renovacaoAutomatica,
+        prontaParaAtivar: false,
+        prontaParaCobranca: false,
+      }
+    );
+  }
+
+  if (!NON_CARD_PAYMENT_METHODS.has(formaPagamentoNormalizada)) {
     return buildInfo(
       {
         code: "unsupported_payment_method",
         titulo: renovacaoAutomatica
           ? "Ativada com forma invalida"
-          : "Escolha PIX ou boleto",
+          : "Escolha uma forma compativel",
         descricao:
           "A renovacao automatica precisa de uma forma atual compativel para gerar a proxima cobranca antes do vencimento.",
         observacao:
-          "Defina PIX ou boleto como forma da assinatura para deixar a recorrencia pronta.",
+          "Defina PIX, boleto ou cartao tokenizado como forma da assinatura para deixar a recorrencia pronta.",
         tone: "amber",
         formaPagamentoNormalizada,
         possuiCustomerAsaas,
         erroAtivacao:
-          "A renovacao automatica hoje funciona com PIX ou boleto. Gere a cobranca com uma dessas formas primeiro.",
+          "A forma de pagamento atual ainda nao esta apta para a renovacao automatica.",
       },
       {
         assinaturaExiste,
         renovacaoAutomatica,
+        prontaParaAtivar: false,
         prontaParaCobranca: false,
       }
     );
@@ -230,6 +321,7 @@ export function getRenovacaoAutomaticaInfo(
       {
         assinaturaExiste,
         renovacaoAutomatica,
+        prontaParaAtivar: true,
         prontaParaCobranca: true,
       }
     );
@@ -251,6 +343,7 @@ export function getRenovacaoAutomaticaInfo(
     {
       assinaturaExiste,
       renovacaoAutomatica,
+      prontaParaAtivar: true,
       prontaParaCobranca: true,
     }
   );

@@ -483,6 +483,133 @@ async function registrarFalhaWebhookFallback(params: {
   );
 }
 
+function getCardSnapshot(payment: Record<string, unknown>) {
+  const creditCard =
+    payment.creditCard && typeof payment.creditCard === "object"
+      ? (payment.creditCard as Record<string, unknown>)
+      : null;
+
+  return {
+    token: String(creditCard?.creditCardToken || "").trim() || null,
+    brand: String(creditCard?.creditCardBrand || "").trim() || null,
+    last4: String(creditCard?.creditCardNumber || "").trim() || null,
+    tokenizedAt: creditCard?.creditCardToken ? new Date().toISOString() : null,
+  };
+}
+
+async function criarCobrancaWebhookDeAssinaturaRecorrente(params: {
+  supabaseAdmin: SupabaseClient;
+  asaasSubscriptionId: string;
+  paymentId: string;
+  payment: Record<string, unknown>;
+  body: Record<string, unknown>;
+  billingType: string | null;
+  paymentStatus: string | null;
+  event: string;
+  agoraIso: string;
+}) {
+  const { data: assinatura, error: assinaturaError } = await params.supabaseAdmin
+    .from("assinaturas")
+    .select("id, id_salao, plano, valor, asaas_subscription_id")
+    .eq("asaas_subscription_id", params.asaasSubscriptionId)
+    .maybeSingle();
+
+  if (assinaturaError || !assinatura?.id || !assinatura.id_salao) {
+    return null;
+  }
+
+  const { data: existente } = await params.supabaseAdmin
+    .from("assinaturas_cobrancas")
+    .select(
+      "id, id_salao, id_assinatura, id_plano, valor, status, forma_pagamento, asaas_payment_id, data_expiracao, referencia, payment_date, confirmed_date, plano_origem, plano_destino, tipo_movimento, gerada_automaticamente, webhook_event_order, webhook_processed_at, asaas_status, asaas_subscription_id"
+    )
+    .eq("asaas_payment_id", params.paymentId)
+    .maybeSingle();
+
+  if (existente?.id) {
+    return existente;
+  }
+
+  const planoCodigo = String(assinatura.plano || "").trim() || null;
+  const { data: plano } = planoCodigo
+    ? await params.supabaseAdmin
+        .from("planos_saas")
+        .select("id, codigo, nome")
+        .eq("codigo", planoCodigo)
+        .maybeSingle()
+    : { data: null };
+
+  const statusInterno = mapAsaasStatusToInternal(
+    params.paymentStatus,
+    params.event
+  );
+  const eventOrder = getWebhookEventOrder(params.event, params.paymentStatus);
+  const confirmedDateIso =
+    toMiddayIso(String(params.payment.confirmedDate || "")) ||
+    toMiddayIso(String(params.payment.paymentDate || "")) ||
+    toMiddayIso(String(params.payment.clientPaymentDate || "")) ||
+    null;
+  const paymentDateIso =
+    toMiddayIso(String(params.payment.clientPaymentDate || "")) ||
+    toMiddayIso(String(params.payment.paymentDate || "")) ||
+    toMiddayIso(String(params.payment.confirmedDate || "")) ||
+    null;
+
+  const { data: inserted, error: insertError } = await params.supabaseAdmin
+    .from("assinaturas_cobrancas")
+    .insert({
+      id_salao: assinatura.id_salao,
+      id_assinatura: assinatura.id,
+      id_plano: plano?.id || null,
+      referencia:
+        String(params.payment.invoiceNumber || "").trim() || params.paymentId,
+      descricao:
+        String(params.payment.description || "").trim() ||
+        `Renovacao ${plano?.nome || planoCodigo || "SalaoPremium"} - SalaoPremium`,
+      valor: Number(params.payment.value || assinatura.valor || 0),
+      status: statusInterno,
+      forma_pagamento: params.billingType || null,
+      gateway: "asaas",
+      txid: params.billingType === "PIX" ? params.paymentId : null,
+      asaas_payment_id: params.paymentId,
+      asaas_customer_id: String(params.payment.customer || "").trim() || null,
+      asaas_subscription_id: params.asaasSubscriptionId,
+      payment_date: paymentDateIso,
+      confirmed_date: confirmedDateIso,
+      invoice_url: params.payment.invoiceUrl || null,
+      bank_slip_url: params.payment.bankSlipUrl || null,
+      data_expiracao: String(params.payment.dueDate || "").trim() || null,
+      external_reference:
+        String(params.payment.externalReference || "").trim() ||
+        assinatura.id_salao,
+      webhook_payload: params.body,
+      webhook_last_event: params.event,
+      webhook_event_order: eventOrder,
+      webhook_processed_at: params.agoraIso,
+      asaas_status: params.paymentStatus || null,
+      deleted: Boolean(params.payment.deleted),
+      plano_origem: planoCodigo,
+      plano_destino: planoCodigo,
+      tipo_movimento: "renovacao",
+      gerada_automaticamente: true,
+      metadata: {
+        origem: "asaas_subscription_webhook",
+        asaas_subscription_id: params.asaasSubscriptionId,
+        billingType: params.billingType,
+      },
+    })
+    .select(
+      "id, id_salao, id_assinatura, id_plano, valor, status, forma_pagamento, asaas_payment_id, data_expiracao, referencia, payment_date, confirmed_date, plano_origem, plano_destino, tipo_movimento, gerada_automaticamente, webhook_event_order, webhook_processed_at, asaas_status, asaas_subscription_id"
+    )
+    .single();
+
+  if (insertError || !inserted?.id) {
+    throw insertError || new Error("Erro ao materializar cobranca recorrente.");
+  }
+
+  return inserted;
+}
+
 export async function POST(req: Request) {
   let supabaseAdmin: SupabaseClient | null = null;
   let webhookEventId: string | null = null;
@@ -516,6 +643,8 @@ export async function POST(req: Request) {
 
     paymentId = String(payment.id);
     const billingType = String(payment.billingType || "").toUpperCase() || null;
+    const asaasSubscriptionId =
+      String(payment.subscription || "").trim() || null;
     paymentStatus = String(payment.status || "").toUpperCase();
     const agora = new Date();
     const agoraIso = agora.toISOString();
@@ -587,7 +716,8 @@ export async function POST(req: Request) {
         gerada_automaticamente,
         webhook_event_order,
         webhook_processed_at,
-        asaas_status
+        asaas_status,
+        asaas_subscription_id
       `)
       .eq("asaas_payment_id", paymentId)
       .maybeSingle();
@@ -606,7 +736,23 @@ export async function POST(req: Request) {
       );
     }
 
-    if (!cobranca) {
+    let cobrancaAtual = cobranca;
+
+    if (!cobrancaAtual && asaasSubscriptionId) {
+      cobrancaAtual = await criarCobrancaWebhookDeAssinaturaRecorrente({
+        supabaseAdmin,
+        asaasSubscriptionId,
+        paymentId,
+        payment,
+        body,
+        billingType,
+        paymentStatus,
+        event,
+        agoraIso,
+      });
+    }
+
+    if (!cobrancaAtual) {
       await atualizarStatusEventoWebhook(
         supabaseAdmin,
         webhookEventId,
@@ -620,7 +766,7 @@ export async function POST(req: Request) {
       });
     }
 
-    if (!cobranca.id_assinatura) {
+    if (!cobrancaAtual.id_assinatura) {
       await atualizarStatusEventoWebhook(
         supabaseAdmin,
         webhookEventId,
@@ -647,9 +793,14 @@ export async function POST(req: Request) {
         trial_fim_em,
         limite_profissionais,
         limite_usuarios,
-        created_at
+        created_at,
+        asaas_subscription_id,
+        asaas_credit_card_token,
+        asaas_credit_card_brand,
+        asaas_credit_card_last4,
+        asaas_credit_card_tokenized_at
       `)
-      .eq("id", cobranca.id_assinatura)
+      .eq("id", cobrancaAtual.id_assinatura)
       .maybeSingle();
 
     if (assinaturaError || !assinatura) {
@@ -668,7 +819,7 @@ export async function POST(req: Request) {
 
     let plano: PlanoSaasRow | null = null;
 
-    if (cobranca.id_plano) {
+    if (cobrancaAtual.id_plano) {
       const { data: planoData, error: planoError } = await supabaseAdmin
         .from("planos_saas")
         .select(`
@@ -681,7 +832,7 @@ export async function POST(req: Request) {
           limite_profissionais,
           ativo
         `)
-        .eq("id", cobranca.id_plano)
+        .eq("id", cobrancaAtual.id_plano)
         .eq("ativo", true)
         .maybeSingle();
 
@@ -706,15 +857,16 @@ export async function POST(req: Request) {
       paymentStatus,
       event
     );
+    const cardSnapshot = getCardSnapshot(payment);
     const isEventoPago = shouldActivateAccess(event, billingType);
     const isEventoTerminal = isTerminalReversalEvent(event, paymentStatus);
     const eventOrder = getWebhookEventOrder(event, paymentStatus);
-    const cobrancaWebhookOrder = Number(cobranca.webhook_event_order || 0);
+    const cobrancaWebhookOrder = Number(cobrancaAtual.webhook_event_order || 0);
     const cobrancaTemConfirmacao =
-      isInternalPaidStatus(cobranca.status) ||
-      Boolean(cobranca.confirmed_date) ||
-      Boolean(cobranca.payment_date);
-    const cobrancaEstaTerminal = isInternalTerminalStatus(cobranca.status);
+      isInternalPaidStatus(cobrancaAtual.status) ||
+      Boolean(cobrancaAtual.confirmed_date) ||
+      Boolean(cobrancaAtual.payment_date);
+    const cobrancaEstaTerminal = isInternalTerminalStatus(cobrancaAtual.status);
     const eventoMaisAntigoQueAtual =
       cobrancaWebhookOrder > 0 && eventOrder < cobrancaWebhookOrder;
     const deveIgnorarEvento =
@@ -729,9 +881,9 @@ export async function POST(req: Request) {
         "processado",
         null,
         {
-          id_salao: cobranca.id_salao || assinatura.id_salao,
+          id_salao: cobrancaAtual.id_salao || assinatura.id_salao,
           id_assinatura: assinatura.id,
-          id_cobranca: cobranca.id,
+          id_cobranca: cobrancaAtual.id,
           event_order: eventOrder,
           decisao: eventoMaisAntigoQueAtual
             ? "ignored_older_event"
@@ -752,28 +904,28 @@ export async function POST(req: Request) {
       ? toMiddayIso(String(payment.confirmedDate || "")) ||
         toMiddayIso(String(payment.paymentDate || "")) ||
         toMiddayIso(String(payment.clientPaymentDate || "")) ||
-        cobranca.confirmed_date ||
+        cobrancaAtual.confirmed_date ||
         agoraIso
       : toMiddayIso(String(payment.confirmedDate || "")) ||
-        cobranca.confirmed_date ||
+        cobrancaAtual.confirmed_date ||
         null;
 
     const paymentDateIso = isEventoPago
       ? toMiddayIso(String(payment.clientPaymentDate || "")) ||
         toMiddayIso(String(payment.paymentDate || "")) ||
         toMiddayIso(String(payment.confirmedDate || "")) ||
-        cobranca.payment_date ||
+        cobrancaAtual.payment_date ||
         agoraIso
       : toMiddayIso(String(payment.clientPaymentDate || "")) ||
         toMiddayIso(String(payment.paymentDate || "")) ||
-        cobranca.payment_date ||
+        cobrancaAtual.payment_date ||
         null;
 
     const { error: updateChargeError } = await supabaseAdmin
       .from("assinaturas_cobrancas")
       .update({
         status: statusCobrancaInterno,
-        forma_pagamento: billingType || cobranca.forma_pagamento,
+        forma_pagamento: billingType || cobrancaAtual.forma_pagamento,
         confirmed_date: confirmedDateIso,
         payment_date: paymentDateIso,
         bank_slip_url: payment.bankSlipUrl || null,
@@ -783,9 +935,13 @@ export async function POST(req: Request) {
         webhook_event_order: eventOrder,
         webhook_processed_at: agoraIso,
         asaas_status: paymentStatus || null,
+        asaas_subscription_id:
+          asaasSubscriptionId ||
+          cobrancaAtual.asaas_subscription_id ||
+          null,
         deleted: Boolean(payment.deleted),
       })
-      .eq("id", cobranca.id);
+      .eq("id", cobrancaAtual.id);
 
     if (updateChargeError) {
       console.error("Erro ao atualizar cobranca:", updateChargeError);
@@ -854,11 +1010,23 @@ export async function POST(req: Request) {
           trial_fim_em: null,
           limite_profissionais: limiteProfissionaisFinal,
           limite_usuarios: limiteUsuariosFinal,
-          forma_pagamento_atual: billingType || cobranca.forma_pagamento,
+          forma_pagamento_atual: billingType || cobrancaAtual.forma_pagamento,
           gateway: "asaas",
           asaas_payment_id: paymentId,
-          referencia_atual: cobranca.referencia || paymentId,
-          id_cobranca_atual: cobranca.id,
+          referencia_atual: cobrancaAtual.referencia || paymentId,
+          id_cobranca_atual: cobrancaAtual.id,
+          asaas_subscription_id:
+            asaasSubscriptionId || assinatura.asaas_subscription_id || null,
+          asaas_credit_card_token:
+            cardSnapshot.token || assinatura.asaas_credit_card_token || null,
+          asaas_credit_card_brand:
+            cardSnapshot.brand || assinatura.asaas_credit_card_brand || null,
+          asaas_credit_card_last4:
+            cardSnapshot.last4 || assinatura.asaas_credit_card_last4 || null,
+          asaas_credit_card_tokenized_at:
+            cardSnapshot.tokenizedAt ||
+            assinatura.asaas_credit_card_tokenized_at ||
+            null,
         })
         .eq("id", assinatura.id);
 
@@ -910,9 +1078,9 @@ export async function POST(req: Request) {
         "processado",
         null,
         {
-          id_salao: cobranca.id_salao || assinatura.id_salao,
+          id_salao: cobrancaAtual.id_salao || assinatura.id_salao,
           id_assinatura: assinatura.id,
-          id_cobranca: cobranca.id,
+          id_cobranca: cobrancaAtual.id,
           event_order: eventOrder,
           decisao: "paid_applied",
         }
@@ -956,7 +1124,7 @@ export async function POST(req: Request) {
         .update({
           status: novoStatus,
           trial_ativo: false,
-          id_cobranca_atual: cobranca.id,
+          id_cobranca_atual: cobrancaAtual.id,
         })
         .eq("id", assinatura.id);
 
@@ -1003,9 +1171,9 @@ export async function POST(req: Request) {
         "processado",
         null,
         {
-          id_salao: cobranca.id_salao || assinatura.id_salao,
+          id_salao: cobrancaAtual.id_salao || assinatura.id_salao,
           id_assinatura: assinatura.id,
-          id_cobranca: cobranca.id,
+          id_cobranca: cobrancaAtual.id,
           event_order: eventOrder,
           decisao: `status_applied_${novoStatus}`,
         }
@@ -1019,9 +1187,9 @@ export async function POST(req: Request) {
       "processado",
       null,
       {
-        id_salao: cobranca.id_salao || assinatura.id_salao,
+        id_salao: cobrancaAtual.id_salao || assinatura.id_salao,
         id_assinatura: assinatura.id,
-        id_cobranca: cobranca.id,
+        id_cobranca: cobrancaAtual.id,
         event_order: eventOrder,
         decisao: "ignored_unhandled_event",
       }

@@ -1,5 +1,14 @@
 export type AsaasBillingType = "PIX" | "BOLETO" | "CREDIT_CARD";
 
+export type AsaasSubscriptionCycle =
+  | "WEEKLY"
+  | "BIWEEKLY"
+  | "MONTHLY"
+  | "BIMONTHLY"
+  | "QUARTERLY"
+  | "SEMIANNUALLY"
+  | "YEARLY";
+
 export type AsaasCustomer = {
   id: string;
   name: string;
@@ -39,7 +48,21 @@ export type AsaasPayment = {
   installmentNumber?: number | null;
   invoiceNumber?: string | null;
   nossoNumero?: string | null;
+  subscription?: string | null;
   creditCard?: AsaasCreditCardInfo | null;
+};
+
+export type AsaasSubscription = {
+  id: string;
+  customer?: string;
+  billingType?: AsaasBillingType | string;
+  value?: number;
+  nextDueDate?: string;
+  cycle?: AsaasSubscriptionCycle | string;
+  description?: string;
+  status?: string;
+  externalReference?: string | null;
+  deleted?: boolean;
 };
 
 export type AsaasPixQrCode = {
@@ -54,6 +77,7 @@ export type AsaasWebhookPayment = {
   id: string;
   dateCreated?: string;
   customer?: string;
+  subscription?: string | null;
   paymentLink?: string | null;
   value?: number;
   netValue?: number;

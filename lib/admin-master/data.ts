@@ -693,7 +693,7 @@ export async function getAdminMasterSection(
       supabase
         .from("assinaturas")
         .select(
-          "id, id_salao, plano, status, valor, vencimento_em, trial_fim_em, renovacao_automatica, asaas_customer_id, forma_pagamento_atual"
+          "id, id_salao, plano, status, valor, vencimento_em, trial_fim_em, renovacao_automatica, asaas_customer_id, forma_pagamento_atual, asaas_credit_card_token, asaas_subscription_id"
         )
         .order("updated_at", { ascending: false })
         .limit(100),
@@ -751,6 +751,8 @@ export async function getAdminMasterSection(
       renovacao_automatica?: boolean | null;
       asaas_customer_id?: string | null;
       forma_pagamento_atual?: string | null;
+      asaas_credit_card_token?: string | null;
+      asaas_subscription_id?: string | null;
     }[]).map((item) => {
       const idSalao = item.id_salao || null;
       const status = normalizeStatus(item.status);
@@ -761,6 +763,8 @@ export async function getAdminMasterSection(
         asaasCustomerId: item.asaas_customer_id,
         formaPagamentoAtual: item.forma_pagamento_atual,
         renovacaoAutomatica: item.renovacao_automatica,
+        asaasCreditCardToken: item.asaas_credit_card_token,
+        asaasSubscriptionId: item.asaas_subscription_id,
       });
       const pendingCharges = idSalao
         ? pendingChargeCountBySalao.get(idSalao) || 0

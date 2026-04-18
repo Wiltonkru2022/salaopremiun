@@ -207,7 +207,7 @@ export default function AssinaturaPlanosPagamento({
               Selecione a forma de pagamento
             </div>
             <div className="text-sm text-zinc-500">
-              PIX costuma confirmar mais rápido. Boleto e cartão também estão disponíveis.
+              PIX costuma confirmar mais rápido. No cartão, a recorrência pode ser ativada depois da primeira cobrança tokenizada.
             </div>
           </div>
         </div>
@@ -227,7 +227,8 @@ export default function AssinaturaPlanosPagamento({
             {
               tipo: "CREDIT_CARD" as BillingType,
               titulo: "Cartão de crédito",
-              subtitulo: "Pode passar por validação do gateway.",
+              subtitulo:
+                "Pode passar por validação do gateway e depois habilitar recorrência mensal no Asaas.",
             },
           ]).map((item) => {
             const ativo = billingType === item.tipo;
@@ -376,3 +377,5 @@ export default function AssinaturaPlanosPagamento({
     </section>
   );
 }
+
+

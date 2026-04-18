@@ -33,6 +33,11 @@ export default async function AdminMasterSalaoDetalhePage({
   const statusSalao = String(salao.status || data.access.salaoStatus || "-");
   const planoAtual = String(assinatura.plano || data.access.planoCodigo || "basico");
   const vencimentoAtual = String(assinatura.vencimento_em || "");
+  const cartaoRecorrente = assinatura.asaas_credit_card_last4
+    ? `${String(assinatura.asaas_credit_card_brand || "CARTAO")} •••• ${String(
+        assinatura.asaas_credit_card_last4 || ""
+      )}`
+    : "-";
 
   return (
     <div className="space-y-6">
@@ -100,17 +105,25 @@ export default async function AdminMasterSalaoDetalhePage({
         <div className="rounded-[30px] border border-zinc-200 bg-white p-6 shadow-sm">
           <h3 className="font-display text-2xl font-black">Assinatura</h3>
           <div className="mt-4 grid gap-3 text-sm">
-            {["plano", "status", "valor", "vencimento_em", "renovacao_automatica"].map(
-              (key) => (
-                <div
-                  key={key}
-                  className="flex justify-between border-b border-zinc-100 pb-2"
-                >
-                  <span className="font-semibold text-zinc-500">{key}</span>
-                  <span className="font-bold">{String(assinatura[key] ?? "-")}</span>
-                </div>
-              )
-            )}
+            {[
+              ["plano", assinatura.plano],
+              ["status", assinatura.status],
+              ["valor", assinatura.valor],
+              ["vencimento_em", assinatura.vencimento_em],
+              ["renovacao_automatica", assinatura.renovacao_automatica],
+              ["asaas_subscription_id", assinatura.asaas_subscription_id],
+              ["cartao_recorrente", cartaoRecorrente],
+            ].map(([label, value]) => (
+              <div
+                key={String(label)}
+                className="flex justify-between border-b border-zinc-100 pb-2"
+              >
+                <span className="font-semibold text-zinc-500">
+                  {String(label)}
+                </span>
+                <span className="font-bold">{String(value ?? "-")}</span>
+              </div>
+            ))}
           </div>
         </div>
 

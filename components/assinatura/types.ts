@@ -38,6 +38,12 @@ export type AssinaturaRow = {
   limite_usuarios: number | null;
   asaas_customer_id?: string | null;
   asaas_payment_id?: string | null;
+  asaas_credit_card_token?: string | null;
+  asaas_credit_card_brand?: string | null;
+  asaas_credit_card_last4?: string | null;
+  asaas_credit_card_tokenized_at?: string | null;
+  asaas_subscription_id?: string | null;
+  asaas_subscription_status?: string | null;
   gateway?: string | null;
   forma_pagamento_atual?: string | null;
   renovacao_automatica?: boolean | null;
