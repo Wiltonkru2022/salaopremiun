@@ -35,6 +35,45 @@ type RowActionRequest =
     };
 
 function buildActionRequest(actionType: string, actionId: string) {
+  if (actionType === "salao_detail") {
+    return {
+      kind: "link",
+      href: `/admin-master/saloes/${encodeURIComponent(actionId)}`,
+    } satisfies RowActionRequest;
+  }
+
+  if (actionType === "salao_ticket_assinatura") {
+    return {
+      kind: "api",
+      endpoint: `/api/admin-master/saloes/${encodeURIComponent(actionId)}/criar-ticket`,
+      body: {
+        assunto: "Assinatura em risco no AdminMaster",
+        mensagem:
+          "Assinatura com status ou vencimento exigindo acompanhamento manual no AdminMaster.",
+        prioridade: "alta",
+        categoria: "financeiro",
+      },
+      successLabel: null,
+      loadingLabel: "Criando...",
+    } satisfies RowActionRequest;
+  }
+
+  if (actionType === "salao_ticket_financeiro") {
+    return {
+      kind: "api",
+      endpoint: `/api/admin-master/saloes/${encodeURIComponent(actionId)}/criar-ticket`,
+      body: {
+        assunto: "Cobranca em atraso no AdminMaster",
+        mensagem:
+          "Cobranca pendente ou vencida identificada no painel financeiro. Validar contato, pagamento e regularizacao.",
+        prioridade: "alta",
+        categoria: "financeiro",
+      },
+      successLabel: null,
+      loadingLabel: "Criando...",
+    } satisfies RowActionRequest;
+  }
+
   if (actionType === "checkout_ticket") {
     return {
       kind: "api",

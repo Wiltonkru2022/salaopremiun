@@ -92,6 +92,42 @@ function safeCount(result: CountResult) {
   return result.count || 0;
 }
 
+const ACTIVE_SUBSCRIPTION_STATUSES = new Set(["ativo", "ativa", "pago"]);
+const RISK_SUBSCRIPTION_STATUSES = new Set([
+  "vencida",
+  "cancelada",
+  "bloqueada",
+  "inadimplente",
+]);
+const PENDING_CHARGE_STATUSES = new Set([
+  "pending",
+  "pendente",
+  "aguardando_pagamento",
+]);
+const PAID_CHARGE_STATUSES = new Set([
+  "received",
+  "confirmed",
+  "pago",
+  "paid",
+]);
+
+function normalizeStatus(value: unknown) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function daysUntil(value?: string | null) {
+  if (!value) return null;
+
+  const target = new Date(value);
+  if (Number.isNaN(target.getTime())) return null;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  target.setHours(0, 0, 0, 0);
+
+  return Math.round((target.getTime() - today.getTime()) / 86400000);
+}
+
 async function countSaloesByStatus(status: string) {
   const supabase = getSupabaseAdmin();
   const result = await supabase
@@ -652,31 +688,151 @@ export async function getAdminMasterSection(
   }
 
   if (section === "assinaturas") {
-    const { data } = await supabase
-      .from("assinaturas")
-      .select("id, id_salao, plano, status, valor, vencimento_em, renovacao_automatica")
-      .order("updated_at", { ascending: false })
-      .limit(100);
-    const rows = ((data || []) as {
+    const [{ data }, { data: saloes }, { data: cobrancas }] = await Promise.all([
+      supabase
+        .from("assinaturas")
+        .select(
+          "id, id_salao, plano, status, valor, vencimento_em, trial_fim_em, renovacao_automatica"
+        )
+        .order("updated_at", { ascending: false })
+        .limit(100),
+      supabase.from("saloes").select("id, nome").limit(1000),
+      supabase
+        .from("assinaturas_cobrancas")
+        .select("id_salao, status, data_expiracao, pago_em, created_at")
+        .order("created_at", { ascending: false })
+        .limit(500),
+    ]);
+
+    const salaoById = new Map(
+      ((saloes || []) as { id: string; nome?: string | null }[]).map((salao) => [
+        salao.id,
+        salao.nome || salao.id,
+      ])
+    );
+    const latestChargeBySalao = new Map<
+      string,
+      {
+        status?: string | null;
+        data_expiracao?: string | null;
+        pago_em?: string | null;
+      }
+    >();
+    const pendingChargeCountBySalao = new Map<string, number>();
+
+    for (const cobranca of (cobrancas || []) as {
+      id_salao?: string | null;
+      status?: string | null;
+      data_expiracao?: string | null;
+      pago_em?: string | null;
+    }[]) {
+      if (!cobranca.id_salao) continue;
+
+      if (!latestChargeBySalao.has(cobranca.id_salao)) {
+        latestChargeBySalao.set(cobranca.id_salao, cobranca);
+      }
+
+      if (PENDING_CHARGE_STATUSES.has(normalizeStatus(cobranca.status))) {
+        pendingChargeCountBySalao.set(
+          cobranca.id_salao,
+          (pendingChargeCountBySalao.get(cobranca.id_salao) || 0) + 1
+        );
+      }
+    }
+
+    const parsedRows = ((data || []) as {
       id_salao?: string | null;
       plano?: string | null;
       status?: string | null;
       valor?: number | string | null;
       vencimento_em?: string | null;
+      trial_fim_em?: string | null;
       renovacao_automatica?: boolean | null;
-    }[]).map((item) => ({
-      salao: item.id_salao || "-",
-      plano: item.plano || "-",
-      status: item.status || "-",
-      valor: currency(safeNumber(item.valor)),
-      vencimento: dateValue(item.vencimento_em),
-      renovacao: item.renovacao_automatica ? "Ativa" : "Desativada",
-    }));
+    }[]).map((item) => {
+      const idSalao = item.id_salao || null;
+      const status = normalizeStatus(item.status);
+      const vencimentoBase = item.vencimento_em || item.trial_fim_em || null;
+      const diasParaVencer = daysUntil(vencimentoBase);
+      const pendingCharges = idSalao
+        ? pendingChargeCountBySalao.get(idSalao) || 0
+        : 0;
+      const latestCharge = idSalao ? latestChargeBySalao.get(idSalao) : null;
+      const latestChargeStatus = normalizeStatus(latestCharge?.status);
+
+      let risco = "Saudavel";
+      let acao = idSalao ? "Abrir salao" : "-";
+      let acaoTipo: string | null = idSalao ? "salao_detail" : null;
+
+      if (RISK_SUBSCRIPTION_STATUSES.has(status)) {
+        risco = "Status critico";
+        acao = idSalao ? "Criar ticket" : "-";
+        acaoTipo = idSalao ? "salao_ticket_assinatura" : null;
+      } else if (diasParaVencer !== null && diasParaVencer < 0) {
+        risco = `Vencida ha ${Math.abs(diasParaVencer)}d`;
+        acao = idSalao ? "Criar ticket" : "-";
+        acaoTipo = idSalao ? "salao_ticket_assinatura" : null;
+      } else if (pendingCharges > 0) {
+        risco =
+          pendingCharges === 1
+            ? "1 cobranca pendente"
+            : `${pendingCharges} cobrancas pendentes`;
+      } else if (diasParaVencer !== null && diasParaVencer === 0) {
+        risco = "Vence hoje";
+      } else if (diasParaVencer !== null && diasParaVencer <= 7) {
+        risco = `Vence em ${diasParaVencer}d`;
+      } else if (
+        !item.renovacao_automatica &&
+        diasParaVencer !== null &&
+        diasParaVencer <= 15
+      ) {
+        risco = "Sem renovacao automatica";
+      }
+
+      let cobranca = "-";
+      if (latestCharge) {
+        if (PENDING_CHARGE_STATUSES.has(latestChargeStatus)) {
+          cobranca = `Pendente ate ${dateValue(latestCharge.data_expiracao)}`;
+        } else if (PAID_CHARGE_STATUSES.has(latestChargeStatus)) {
+          cobranca = `Paga em ${dateValue(latestCharge.pago_em)}`;
+        } else {
+          cobranca = `${latestCharge.status || "Sem status"} ${dateValue(
+            latestCharge.data_expiracao
+          )}`;
+        }
+      }
+
+      return {
+        salao: idSalao ? salaoById.get(idSalao) || idSalao : "-",
+        plano: item.plano || "-",
+        status: item.status || "-",
+        valor: currency(safeNumber(item.valor)),
+        vencimento: dateValue(vencimentoBase),
+        renovacao: item.renovacao_automatica ? "Ativa" : "Desativada",
+        cobranca,
+        risco,
+        acao,
+        acao_tipo: acaoTipo,
+        acao_id: idSalao,
+        _dias_para_vencer: diasParaVencer,
+      };
+    });
+
+    const rows = parsedRows.map(({ _dias_para_vencer: _diasParaVencer, ...row }) => row);
+    const vencendoSeteDias = parsedRows.filter((row) => {
+      const diasParaVencer = row._dias_para_vencer;
+      return typeof diasParaVencer === "number" && diasParaVencer >= 0 && diasParaVencer <= 7;
+    }).length;
+    const emRisco = parsedRows.filter(
+      (row) => row.acao_tipo === "salao_ticket_assinatura"
+    ).length;
+    const mrr = ((data || []) as { status?: string | null; valor?: number | string | null }[])
+      .filter((item) => ACTIVE_SUBSCRIPTION_STATUSES.has(normalizeStatus(item.status)))
+      .reduce((acc, item) => acc + safeNumber(item.valor), 0);
 
     return {
       title: "Assinaturas",
       description:
-        "Status financeiro, vencimentos, renovacao automatica e ajustes manuais.",
+        "Status comercial do SaaS com urgencia por vencimento, cobranca e atalho direto para atuar no salao.",
       kpis: [
         {
           label: "Assinaturas",
@@ -688,29 +844,43 @@ export async function getAdminMasterSection(
           label: "Ativas",
           value: String(
             rows.filter((row) =>
-              ["ativo", "ativa", "pago"].includes(
-                String(row.status).toLowerCase()
-              )
+              ACTIVE_SUBSCRIPTION_STATUSES.has(normalizeStatus(row.status))
             ).length
           ),
           hint: "Liberadas",
           tone: "green",
         },
         {
+          label: "Vencendo 7 dias",
+          value: String(vencendoSeteDias),
+          hint: "Janela para agir antes da ruptura",
+          tone: vencendoSeteDias > 0 ? "amber" : "green",
+        },
+        {
           label: "Em risco",
-          value: String(
-            rows.filter((row) =>
-              ["vencida", "cancelada", "bloqueada"].includes(
-                String(row.status).toLowerCase()
-              )
-            ).length
-          ),
-          hint: "Precisa acao",
+          value: String(emRisco),
+          hint: "Ja pede ticket ou revisao",
           tone: "red",
+        },
+        {
+          label: "MRR visivel",
+          value: currency(mrr),
+          hint: "Base ativa acompanhada daqui",
+          tone: "blue",
         },
       ],
       rows,
-      columns: ["salao", "plano", "status", "valor", "vencimento", "renovacao"],
+      columns: [
+        "salao",
+        "plano",
+        "status",
+        "valor",
+        "vencimento",
+        "renovacao",
+        "cobranca",
+        "risco",
+        "acao",
+      ],
       actions: [
         "Trocar plano",
         "Ajustar vencimento",
@@ -774,14 +944,65 @@ export async function getAdminMasterSection(
       expira: dateValue(item.data_expiracao),
       criado: dateTimeValue(item.created_at),
       pago: dateValue(item.pago_em),
+      sinal: (() => {
+        const status = normalizeStatus(item.status);
+        const diasParaExpirar = daysUntil(item.data_expiracao);
+
+        if (PAID_CHARGE_STATUSES.has(status)) return "Recebida";
+        if (
+          PENDING_CHARGE_STATUSES.has(status) &&
+          typeof diasParaExpirar === "number" &&
+          diasParaExpirar < 0
+        ) {
+          return `Vencida ha ${Math.abs(diasParaExpirar)}d`;
+        }
+        if (
+          PENDING_CHARGE_STATUSES.has(status) &&
+          typeof diasParaExpirar === "number" &&
+          diasParaExpirar === 0
+        ) {
+          return "Vence hoje";
+        }
+        if (
+          PENDING_CHARGE_STATUSES.has(status) &&
+          typeof diasParaExpirar === "number" &&
+          diasParaExpirar > 0
+        ) {
+          return `Vence em ${diasParaExpirar}d`;
+        }
+        if (PENDING_CHARGE_STATUSES.has(status)) return "Aguardando pagamento";
+        return "Acompanhar";
+      })(),
       detalhe:
         item.asaas_payment_id ||
         item.txid ||
         item.idempotency_key ||
         "-",
-      acao: "-",
-      acao_tipo: null,
-      acao_id: null,
+      acao: (() => {
+        const status = normalizeStatus(item.status);
+        const diasParaExpirar = daysUntil(item.data_expiracao);
+        const atrasada =
+          PENDING_CHARGE_STATUSES.has(status) &&
+          typeof diasParaExpirar === "number" &&
+          diasParaExpirar < 0;
+
+        if (atrasada && item.id_salao) return "Criar ticket";
+        if (item.id_salao) return "Abrir salao";
+        return "-";
+      })(),
+      acao_tipo: (() => {
+        const status = normalizeStatus(item.status);
+        const diasParaExpirar = daysUntil(item.data_expiracao);
+        const atrasada =
+          PENDING_CHARGE_STATUSES.has(status) &&
+          typeof diasParaExpirar === "number" &&
+          diasParaExpirar < 0;
+
+        if (atrasada && item.id_salao) return "salao_ticket_financeiro";
+        if (item.id_salao) return "salao_detail";
+        return null;
+      })(),
+      acao_id: item.id_salao || null,
     }));
 
     const checkoutRows = ((checkoutLocks || []) as {
@@ -828,10 +1049,27 @@ export async function getAdminMasterSection(
         expira: dateTimeValue(item.expires_at),
         criado: dateTimeValue(item.created_at),
         pago: "-",
+        sinal: requiresReconciliation
+          ? "Pagamento sem vinculo"
+          : normalizeStatus(status) === "processando"
+            ? "Checkout em andamento"
+            : normalizeStatus(status) === "erro"
+              ? "Falha no checkout"
+              : normalizeStatus(status) === "expirado"
+                ? "Lock expirado"
+                : "Acompanhar",
         detalhe: String(detalhe).slice(0, 90),
-        acao: requiresReconciliation ? "Criar ticket" : "-",
-        acao_tipo: requiresReconciliation ? "checkout_ticket" : null,
-        acao_id: requiresReconciliation ? item.id || null : null,
+        acao: requiresReconciliation
+          ? "Criar ticket"
+          : item.id_salao
+            ? "Abrir salao"
+            : "-",
+        acao_tipo: requiresReconciliation
+          ? "checkout_ticket"
+          : item.id_salao
+            ? "salao_detail"
+            : null,
+        acao_id: requiresReconciliation ? item.id || null : item.id_salao || null,
       };
     });
 
@@ -854,15 +1092,19 @@ export async function getAdminMasterSection(
         String(row.detalhe || "").startsWith("reconciliar:")
     ).length;
     const cobrancasPendentes = cobrancaRows.filter((row) =>
-      ["pending", "pendente", "aguardando_pagamento"].includes(
-        String(row.status).toLowerCase()
-      )
+      PENDING_CHARGE_STATUSES.has(normalizeStatus(row.status))
+    ).length;
+    const cobrancasRecebidas = cobrancaRows.filter((row) =>
+      PAID_CHARGE_STATUSES.has(normalizeStatus(row.status))
+    ).length;
+    const cobrancasEmAtraso = cobrancaRows.filter(
+      (row) => row.acao_tipo === "salao_ticket_financeiro"
     ).length;
 
     return {
       title: "Cobrancas",
       description:
-        "Historico de cobrancas, pagamentos e locks de checkout para detectar duplicidade, falha e operacao presa.",
+        "Historico financeiro com leitura de atraso, pagamento e checkout travado para acelerar cobranca e suporte.",
       kpis: [
         {
           label: "Cobrancas recentes",
@@ -871,22 +1113,22 @@ export async function getAdminMasterSection(
           tone: "dark",
         },
         {
-          label: "Checkouts ativos",
-          value: String(checkoutEmAndamento),
-          hint: "Reservas em processamento",
-          tone: checkoutEmAndamento > 0 ? "amber" : "green",
+          label: "Recebidas",
+          value: String(cobrancasRecebidas),
+          hint: `${cobrancasPendentes} ainda aguardando pagamento`,
+          tone: "green",
+        },
+        {
+          label: "Em atraso",
+          value: String(cobrancasEmAtraso),
+          hint: "Ja pedem contato ou ticket",
+          tone: cobrancasEmAtraso > 0 ? "red" : "green",
         },
         {
           label: "Falhas checkout",
           value: String(checkoutFalhos),
           hint: `${checkoutsReconciliar} exigem reconciliacao`,
-          tone: checkoutFalhos > 0 ? "red" : "green",
-        },
-        {
-          label: "Pendentes",
-          value: String(cobrancasPendentes),
-          hint: "Acompanhar",
-          tone: "amber",
+          tone: checkoutFalhos > 0 ? "red" : checkoutEmAndamento > 0 ? "amber" : "green",
         },
       ],
       rows,
@@ -900,6 +1142,7 @@ export async function getAdminMasterSection(
         "gateway",
         "expira",
         "criado",
+        "sinal",
         "detalhe",
         "acao",
       ],
