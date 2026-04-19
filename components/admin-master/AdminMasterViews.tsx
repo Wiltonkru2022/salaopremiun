@@ -2,7 +2,12 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import AdminMasterModuleActionButton from "@/components/admin-master/AdminMasterModuleActionButton";
 import AdminMasterRowActionButton from "@/components/admin-master/AdminMasterRowActionButton";
-import type { AdminKpi, AdminSectionData, AdminTableRow } from "@/lib/admin-master/data";
+import type {
+  AdminKpi,
+  AdminSectionData,
+  AdminSectionDiagnostic,
+  AdminTableRow,
+} from "@/lib/admin-master/data";
 import type { AdminMasterOperationalSnapshot } from "@/lib/admin-master/operability";
 
 function toneClass(tone?: AdminKpi["tone"]) {
@@ -11,6 +16,14 @@ function toneClass(tone?: AdminKpi["tone"]) {
   if (tone === "red") return "border-red-200 bg-red-50 text-red-900";
   if (tone === "blue") return "border-blue-200 bg-blue-50 text-blue-900";
   return "border-zinc-200 bg-white text-zinc-950";
+}
+
+function diagnosticToneClass(tone?: AdminKpi["tone"]) {
+  if (tone === "green") return "border-emerald-200 bg-emerald-50 text-emerald-950";
+  if (tone === "amber") return "border-amber-200 bg-amber-50 text-amber-950";
+  if (tone === "red") return "border-red-200 bg-red-50 text-red-950";
+  if (tone === "blue") return "border-blue-200 bg-blue-50 text-blue-950";
+  return "border-zinc-200 bg-zinc-50 text-zinc-950";
 }
 
 function healthToneClass(status: AdminMasterOperationalSnapshot["health"]["status"]) {
@@ -105,6 +118,51 @@ export function AdminDataTable({
         </table>
       </div>
     </div>
+  );
+}
+
+function AdminSectionDiagnostics({
+  diagnostics,
+}: {
+  diagnostics: AdminSectionDiagnostic[];
+}) {
+  if (!diagnostics.length) return null;
+
+  return (
+    <section className="grid gap-4 lg:grid-cols-3">
+      {diagnostics.map((item) => {
+        const content = (
+          <>
+            <div className="text-[11px] font-black uppercase tracking-[0.24em] opacity-60">
+              {item.label}
+            </div>
+            <div className="mt-3 font-display text-2xl font-black">
+              {item.value}
+            </div>
+            <p className="mt-2 text-sm leading-6 opacity-75">{item.detail}</p>
+          </>
+        );
+        const className = `rounded-[26px] border p-5 shadow-sm ${diagnosticToneClass(item.tone)}`;
+
+        if (item.href) {
+          return (
+            <Link
+              key={`${item.label}-${item.value}`}
+              href={item.href}
+              className={`${className} transition hover:-translate-y-0.5 hover:shadow-md`}
+            >
+              {content}
+            </Link>
+          );
+        }
+
+        return (
+          <div key={`${item.label}-${item.value}`} className={className}>
+            {content}
+          </div>
+        );
+      })}
+    </section>
   );
 }
 
@@ -357,6 +415,7 @@ export function AdminSectionView({ data }: { data: AdminSectionData }) {
       </section>
 
       <AdminKpiGrid kpis={data.kpis} />
+      <AdminSectionDiagnostics diagnostics={data.diagnostics || []} />
 
       <section className="grid gap-5 xl:grid-cols-[1fr_360px]">
         <AdminDataTable rows={data.rows} columns={data.columns} />

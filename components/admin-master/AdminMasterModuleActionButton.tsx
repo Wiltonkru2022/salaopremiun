@@ -55,6 +55,15 @@ function resolveModuleAction(action: string): ModuleAction {
     };
   }
 
+  if (normalized === "testar endpoint asaas") {
+    return {
+      kind: "api",
+      endpoint: "/api/admin-master/webhooks/diagnostico",
+      loadingLabel: "Testando endpoint...",
+      successLabel: "Endpoint Asaas OK",
+    };
+  }
+
   if (
     normalized === "rodar sincronizacao" ||
     normalized === "reprocessar eventos"

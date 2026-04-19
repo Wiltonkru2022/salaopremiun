@@ -21,12 +21,21 @@ export type AdminKpi = {
   tone?: "dark" | "green" | "amber" | "red" | "blue";
 };
 
+export type AdminSectionDiagnostic = {
+  label: string;
+  value: string;
+  detail: string;
+  tone?: AdminKpi["tone"];
+  href?: string;
+};
+
 export type AdminTableRow = Record<string, string | number | boolean | null>;
 
 export type AdminSectionData = {
   title: string;
   description: string;
   kpis: AdminKpi[];
+  diagnostics?: AdminSectionDiagnostic[];
   rows: AdminTableRow[];
   columns: string[];
   actions: string[];
@@ -1303,6 +1312,30 @@ export async function getAdminMasterSection(
           tone: syncError ? "red" : "green",
         },
       ],
+      diagnostics: [
+        {
+          label: "Endpoint Asaas",
+          value: "salaopremiun.com.br",
+          detail:
+            "Configure no Asaas: https://salaopremiun.com.br/api/webhooks/asaas",
+          tone: "blue",
+          href: "https://salaopremiun.com.br/api/webhooks/asaas",
+        },
+        {
+          label: "Sem redirect",
+          value: "Obrigatorio",
+          detail:
+            "Webhook de pagamento deve responder direto no dominio raiz. 3xx causa penalizacao no Asaas.",
+          tone: "green",
+        },
+        {
+          label: "Teste sem token",
+          value: "401 esperado",
+          detail:
+            "Um POST sem asaas-access-token deve chegar no handler e ser recusado com 401, nunca com 307/308.",
+          tone: "amber",
+        },
+      ],
       rows,
       columns: [
         "origem",
@@ -1318,6 +1351,7 @@ export async function getAdminMasterSection(
       ],
       actions: [
         "Sincronizar webhooks",
+        "Testar endpoint Asaas",
         "Ver payload Asaas",
         "Reprocessar diagnostico",
         "Auditar falhas",
