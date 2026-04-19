@@ -590,7 +590,7 @@ export async function resolverAlertaAdminMaster(params: {
       ? alertaRow.payload_json
       : {};
 
-  await supabase
+  const { error: updateError } = await supabase
     .from("alertas_sistema")
     .update({
       resolvido: true,
@@ -605,6 +605,10 @@ export async function resolverAlertaAdminMaster(params: {
       },
     })
     .eq("id", params.idAlerta);
+
+  if (updateError) {
+    throw new Error(updateError.message || "Erro ao marcar alerta como resolvido.");
+  }
 
   if (alertaRow.id_ticket) {
     await supabase.from("ticket_eventos").insert({

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 type RowActionState =
@@ -140,6 +141,7 @@ export default function AdminMasterRowActionButton({
   actionId?: string | null;
   label?: string | null;
 }) {
+  const router = useRouter();
   const normalizedLabel = label || "-";
   const request = buildActionRequest(actionType || "", actionId || "");
   const [state, setState] = useState<RowActionState>({
@@ -181,6 +183,7 @@ export default function AdminMasterRowActionButton({
 
       if (apiRequest.successLabel) {
         setState({ status: "success", label: apiRequest.successLabel });
+        router.refresh();
         return;
       }
 
@@ -198,6 +201,7 @@ export default function AdminMasterRowActionButton({
         label: `${ticketLabel}${suffix}`,
         href: `/admin-master/tickets/${data.resultado.ticketId}`,
       });
+      router.refresh();
     } catch (error) {
       setState({
         status: "error",

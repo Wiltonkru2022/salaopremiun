@@ -244,9 +244,8 @@ export async function syncAdminMasterAlerts() {
       .limit(300),
     supabase
       .from("alertas_sistema")
-      .select("id, chave, tipo")
+      .select("id, chave, tipo, resolvido, payload_json")
       .eq("automatico", true)
-      .eq("resolvido", false)
       .in("tipo", [...MANAGED_ALERT_TYPES]),
   ]);
 
@@ -333,6 +332,8 @@ export async function syncAdminMasterAlerts() {
           id: string;
           chave?: string | null;
           tipo?: string | null;
+          resolvido?: boolean | null;
+          payload_json?: Record<string, unknown> | null;
         }>
       | null) || [];
 
@@ -691,10 +692,31 @@ export async function syncAdminMasterAlerts() {
     });
   });
 
-  if (candidates.length > 0) {
+  const manuallyResolvedKeys = new Set(
+    existingAlerts
+      .filter((row) => {
+        const payload =
+          row.payload_json && typeof row.payload_json === "object"
+            ? row.payload_json
+            : {};
+
+        return (
+          row.resolvido === true &&
+          (typeof payload.resolvido_manual_por === "string" ||
+            typeof payload.resolvido_manual_em === "string")
+        );
+      })
+      .map((row) => String(row.chave || ""))
+      .filter(Boolean)
+  );
+  const activeCandidates = candidates.filter(
+    (item) => !manuallyResolvedKeys.has(item.chave)
+  );
+
+  if (activeCandidates.length > 0) {
     const { error } = await supabase
       .from("alertas_sistema")
-      .upsert(candidates, { onConflict: "chave" });
+      .upsert(activeCandidates, { onConflict: "chave" });
 
     if (error) {
       throw new Error(
@@ -703,7 +725,7 @@ export async function syncAdminMasterAlerts() {
     }
   }
 
-  const activeKeys = new Set(candidates.map((item) => item.chave));
+  const activeKeys = new Set(activeCandidates.map((item) => item.chave));
   const staleAlerts = existingAlerts.filter(
     (row) => row.chave && !activeKeys.has(String(row.chave))
   );
@@ -774,26 +796,26 @@ export async function syncAdminMasterAlerts() {
   }
 
   return {
-    total: candidates.length,
-    checkoutsFalhos: candidates.filter(
+    total: activeCandidates.length,
+    checkoutsFalhos: activeCandidates.filter(
       (item) => item.tipo === "checkout_assinatura_erro"
     ).length,
-    checkoutsTravados: candidates.filter(
+    checkoutsTravados: activeCandidates.filter(
       (item) => item.tipo === "checkout_assinatura_processando"
     ).length,
-    webhooksComErro: candidates.filter(
+    webhooksComErro: activeCandidates.filter(
       (item) => item.tipo === "webhook_asaas_erro"
     ).length,
-    cobrancasVencidas: candidates.filter(
+    cobrancasVencidas: activeCandidates.filter(
       (item) => item.tipo === "cobranca_vencida"
     ).length,
-    trialsVencendo: candidates.filter(
+    trialsVencendo: activeCandidates.filter(
       (item) => item.tipo === "trial_vencendo"
     ).length,
-    renovacoesComConfigInvalida: candidates.filter(
+    renovacoesComConfigInvalida: activeCandidates.filter(
       (item) => item.tipo === "renovacao_automatica_invalida"
     ).length,
-    renovacoesSemCobranca: candidates.filter(
+    renovacoesSemCobranca: activeCandidates.filter(
       (item) => item.tipo === "renovacao_automatica_sem_cobranca"
     ).length,
     ticketsAutomaticosCriados,
