@@ -92,6 +92,37 @@ function resolveModuleAction(action: string): ModuleAction {
     "abrir ticket": "/admin-master/tickets",
     "criar ticket": "/admin-master/tickets",
     "criar alerta": "/admin-master/alertas",
+    "abrir saloes": "/admin-master/saloes",
+    "abrir tickets": "/admin-master/tickets",
+    "abrir cobrancas": "/admin-master/assinaturas/cobrancas",
+    "abrir planos": "/admin-master/planos",
+    "abrir recursos": "/admin-master/recursos",
+    "abrir financeiro": "/admin-master/financeiro",
+    "abrir relatorios": "/admin-master/relatorios",
+    "abrir operacao": "/admin-master/operacao",
+    "abrir webhooks": "/admin-master/webhooks",
+    "abrir logs": "/admin-master/logs",
+    "abrir alertas": "/admin-master/alertas",
+    "abrir suporte": "/admin-master/suporte",
+    "abrir notificacoes": "/admin-master/notificacoes",
+    "abrir campanhas": "/admin-master/campanhas",
+    "abrir whatsapp": "/admin-master/whatsapp",
+    "abrir feature flags": "/admin-master/feature-flags",
+    "abrir admins internos": "/admin-master/usuarios-admin",
+    "abrir checklists": "/admin-master/checklists",
+    "abrir configs globais": "/admin-master/configuracoes-globais",
+    "ver saloes": "/admin-master/saloes",
+    "ver suporte": "/admin-master/suporte",
+    "ver tickets": "/admin-master/tickets",
+    "ver notificacoes": "/admin-master/notificacoes",
+    "ver campanhas": "/admin-master/campanhas",
+    "ver whatsapp": "/admin-master/whatsapp",
+    "ver pacotes whatsapp": "/admin-master/whatsapp/pacotes",
+    "ver templates whatsapp": "/admin-master/whatsapp/templates",
+    "ver feature flags": "/admin-master/feature-flags",
+    "ver admins internos": "/admin-master/usuarios-admin",
+    "ver configs globais": "/admin-master/configuracoes-globais",
+    "ver logs": "/admin-master/logs",
     assumir: "/admin-master/tickets",
     responder: "/admin-master/tickets",
     "alterar status": "/admin-master/tickets",
@@ -206,7 +237,11 @@ export default function AdminMasterModuleActionButton({
 
   if (resolved.kind === "link") {
     return (
-      <Link href={resolved.href} className={buttonClass(variant, "idle")}>
+      <Link
+        href={resolved.href}
+        className={buttonClass(variant, "idle")}
+        title={`Abrir ${resolved.href}`}
+      >
         {action}
       </Link>
     );

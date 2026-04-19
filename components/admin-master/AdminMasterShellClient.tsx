@@ -126,7 +126,7 @@ const MENU_GROUPS: MenuGroup[] = [
     items: [
       {
         href: "/admin-master/operacao",
-        label: "Operacao",
+        label: "Painel operacional",
         icon: Activity,
         permission: "operacao_ver",
       },
@@ -156,7 +156,7 @@ const MENU_GROUPS: MenuGroup[] = [
     items: [
       {
         href: "/admin-master/suporte",
-        label: "Suporte",
+        label: "Central de suporte",
         icon: Headphones,
         permission: "suporte_ver",
       },
@@ -507,10 +507,10 @@ export default function AdminMasterShellClient({
                   Alertas {shellData.alertasCriticos}
                 </Link>
                 <Link
-                  href="/dashboard"
+                  href="/admin-master"
                   className="rounded-full bg-zinc-950 px-4 py-2 text-sm font-bold text-white"
                 >
-                  Ver painel
+                  Dashboard admin
                 </Link>
                 <button
                   type="button"

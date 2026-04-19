@@ -464,6 +464,9 @@ export async function getAdminMasterSaloes() {
       status: salao.status || "-",
       score: score?.score_total ?? 0,
       criado: dateValue(salao.created_at),
+      acao: "Abrir salao",
+      acao_tipo: "salao_detail",
+      acao_id: salao.id,
     };
   });
 }
@@ -737,7 +740,7 @@ export async function getAdminMasterPlanosSection(): Promise<AdminSectionData> {
     actions: [
       "Editar preco e limites",
       "Ajustar matriz de recursos",
-      "Duplicar plano",
+      "Abrir planos",
       "Ver saloes no plano",
     ],
   };
@@ -1159,11 +1162,61 @@ async function getAdminMasterFinanceiroSection(): Promise<AdminSectionData> {
     ],
     actions: [
       "Ver inadimplentes",
-      "Exportar receita",
-      "Gerar cobranca manual",
+      "Abrir cobrancas",
+      "Abrir relatorios",
       "Reconciliar checkout",
     ],
   };
+}
+
+function formatAdminTableValue(value: unknown) {
+  if (typeof value === "boolean") return value ? "Sim" : "Nao";
+  if (typeof value === "number") return value;
+
+  if (typeof value === "string") {
+    const looksLikeDate =
+      /^\d{4}-\d{2}-\d{2}T/.test(value) ||
+      /^\d{4}-\d{2}-\d{2}$/.test(value);
+
+    return looksLikeDate ? dateTimeValue(value) : value;
+  }
+
+  if (value && typeof value === "object") {
+    return JSON.stringify(value).slice(0, 120);
+  }
+
+  return value ? String(value) : "-";
+}
+
+function buildGenericRowAction(section: string, row: Record<string, unknown>) {
+  const id = typeof row.id === "string" ? row.id : null;
+  const idSalao = typeof row.id_salao === "string" ? row.id_salao : null;
+
+  if ((section === "tickets" || section === "suporte") && id) {
+    return {
+      acao: "Abrir ticket",
+      acao_tipo: "ticket_detail",
+      acao_id: id,
+    };
+  }
+
+  if ((section === "checklists" || section === "relatorios") && idSalao) {
+    return {
+      acao: "Abrir salao",
+      acao_tipo: "salao_detail",
+      acao_id: idSalao,
+    };
+  }
+
+  if (section === "whatsapp" && idSalao) {
+    return {
+      acao: "Abrir salao",
+      acao_tipo: "salao_detail",
+      acao_id: idSalao,
+    };
+  }
+
+  return null;
 }
 
 export async function getAdminMasterSection(
@@ -1206,6 +1259,9 @@ export async function getAdminMasterSection(
         prioridade: item.prioridade,
         status: item.status,
         atualizado: item.ultimaInteracaoLabel,
+        acao: "Abrir ticket",
+        acao_tipo: "ticket_detail",
+        acao_id: item.id,
       })),
       columns: [
         "ticket",
@@ -1215,8 +1271,9 @@ export async function getAdminMasterSection(
         "prioridade",
         "status",
         "atualizado",
+        "acao",
       ],
-      actions: ["Abrir ticket", "Entrar como salao", "Criar alerta"],
+      actions: ["Abrir tickets", "Abrir saloes", "Abrir alertas"],
     };
   }
 
@@ -1262,12 +1319,12 @@ export async function getAdminMasterSection(
         "assinatura",
         "vencimento",
         "score",
+        "acao",
       ],
       actions: [
-        "Ver detalhes",
-        "Entrar como salao",
-        "Bloquear/desbloquear",
-        "Criar nota interna",
+        "Abrir saloes",
+        "Abrir tickets",
+        "Abrir financeiro",
       ],
     };
   }
@@ -1516,10 +1573,10 @@ export async function getAdminMasterSection(
         "acao",
       ],
       actions: [
-        "Trocar plano",
-        "Ajustar vencimento",
-        "Gerar cobranca",
-        "Reenviar cobranca",
+        "Abrir saloes",
+        "Abrir cobrancas",
+        "Abrir planos",
+        "Abrir financeiro",
       ],
     };
   }
@@ -1807,11 +1864,11 @@ export async function getAdminMasterSection(
         "acao",
       ],
       actions: [
-        "Copiar link",
-        "Reenviar",
+        "Abrir cobrancas",
+        "Abrir saloes",
         "Reprocessar webhook",
         "Ver checkout travado",
-        "Marcar ajuste manual",
+        "Reconciliar checkout",
       ],
     };
   }
@@ -1981,7 +2038,7 @@ export async function getAdminMasterSection(
         "Testar endpoint Asaas",
         "Ver payload Asaas",
         "Reprocessar diagnostico",
-        "Auditar falhas",
+        "Abrir logs",
       ],
     };
   }
@@ -2176,7 +2233,7 @@ export async function getAdminMasterSection(
         "Rodar sincronizacao",
         "Sincronizar webhooks",
         "Reprocessar eventos",
-        "Auditar erros",
+        "Abrir logs",
       ],
     };
   }
@@ -2479,10 +2536,10 @@ export async function getAdminMasterSection(
         "acao",
       ],
       actions: [
-        "Investigar tenant guard",
-        "Abrir ticket interno",
+        "Abrir logs",
+        "Abrir tickets",
         "Reconciliar checkout",
-        "Exportar logs",
+        "Auditar",
       ],
     };
   }
@@ -2502,63 +2559,63 @@ export async function getAdminMasterSection(
       description: "Atendimento, SLA, categorias, prioridades e historico.",
       table: "tickets",
       columns: ["numero", "assunto", "categoria", "prioridade", "status", "criado_em"],
-      actions: ["Assumir", "Responder", "Alterar status", "Entrar como salao"],
+      actions: ["Abrir tickets", "Abrir suporte", "Abrir saloes", "Auditar"],
     },
     notificacoes: {
       title: "Notificacoes globais",
       description: "Comunicados, manutencao, ofertas e avisos institucionais.",
       table: "notificacoes_globais",
       columns: ["titulo", "tipo", "publico_tipo", "status", "criada_em"],
-      actions: ["Nova notificacao", "Agendar", "Enviar agora", "Duplicar"],
+      actions: ["Abrir notificacoes", "Ver campanhas", "Auditar"],
     },
     campanhas: {
       title: "Campanhas",
       description: "Promocoes, retencao, conversao de trial e recuperacao.",
       table: "campanhas",
       columns: ["nome", "tipo", "publico_tipo", "status", "inicio_em", "fim_em"],
-      actions: ["Criar campanha", "Pausar", "Encerrar", "Ver metricas"],
+      actions: ["Abrir campanhas", "Ver notificacoes", "Abrir relatorios", "Auditar"],
     },
     alertas: {
       title: "Alertas",
       description: "Riscos, falhas, cobrancas, webhooks e operacao.",
       table: "alertas_sistema",
       columns: ["tipo", "gravidade", "origem_modulo", "titulo", "resolvido", "criado_em"],
-      actions: ["Resolver", "Criar ticket", "Notificar cliente", "Corrigir manualmente"],
+      actions: ["Abrir alertas", "Criar ticket", "Sincronizar alertas", "Abrir suporte"],
     },
     webhooks: {
       title: "Webhooks",
       description: "Eventos recebidos, falhas, tentativas e reprocessamento.",
       table: "eventos_webhook",
       columns: ["origem", "evento", "status", "tentativas", "erro_texto", "recebido_em"],
-      actions: ["Ver payload", "Reprocessar", "Marcar resolvido"],
+      actions: ["Abrir webhooks", "Sincronizar webhooks", "Auditar"],
     },
     logs: {
       title: "Logs",
       description: "Logs de sistema, financeiro, suporte e operacao.",
       table: "logs_sistema",
       columns: ["gravidade", "modulo", "mensagem", "criado_em"],
-      actions: ["Ver detalhe", "Vincular ticket", "Exportar"],
+      actions: ["Abrir logs", "Abrir tickets", "Auditar"],
     },
     whatsapp: {
       title: "WhatsApp e pacotes",
       description: "Creditos, consumo, templates, filas e cobranca por envio.",
       table: "whatsapp_envios",
       columns: ["tipo", "destino", "template", "status", "custo_creditos", "criado_em"],
-      actions: ["Adicionar pacote", "Ajustar creditos", "Suspender envios"],
+      actions: ["Ver WhatsApp", "Ver pacotes WhatsApp", "Ver templates WhatsApp", "Auditar"],
     },
     "feature-flags": {
       title: "Feature flags",
       description: "Liberacoes por plano, salao especifico e recursos beta.",
       table: "feature_flags",
       columns: ["nome", "status_global", "tipo_liberacao", "data_inicio", "data_fim"],
-      actions: ["Ativar", "Liberar por plano", "Liberar para salao"],
+      actions: ["Ver feature flags", "Ajustar matriz de recursos", "Auditar"],
     },
     "usuarios-admin": {
       title: "Usuarios AdminMaster",
       description: "Admins internos, perfis, permissoes e auditoria.",
       table: "admin_master_usuarios",
       columns: ["nome", "email", "perfil", "status", "ultimo_acesso_em"],
-      actions: ["Criar admin", "Editar permissoes", "Suspender", "Forcar logout"],
+      actions: ["Ver admins internos", "Ver logs", "Auditar"],
     },
     checklists: {
       title: "Checklists e trial +7",
@@ -2572,35 +2629,35 @@ export async function getAdminMasterSection(
       description: "MRR, recebimentos, inadimplencia, churn e receita por plano.",
       table: "assinaturas_cobrancas",
       columns: ["referencia", "valor", "status", "forma_pagamento", "data_expiracao", "pago_em"],
-      actions: ["Ver inadimplentes", "Exportar receita", "Gerar cobranca manual"],
+      actions: ["Abrir financeiro", "Abrir cobrancas", "Reconciliar checkout"],
     },
     operacao: {
       title: "Operacao",
       description: "Saude do sistema, crons, sincronizacoes e reprocessamentos.",
       table: "eventos_cron",
       columns: ["nome", "status", "resumo", "erro_texto", "iniciado_em", "finalizado_em"],
-      actions: ["Rodar sincronizacao", "Reprocessar eventos", "Recalcular assinaturas"],
+      actions: ["Rodar sincronizacao", "Sincronizar webhooks", "Abrir logs"],
     },
     suporte: {
       title: "Suporte",
       description: "Tickets, clientes com problema, historico e acoes de suporte.",
       table: "tickets",
       columns: ["numero", "assunto", "categoria", "prioridade", "status", "criado_em"],
-      actions: ["Criar ticket", "Entrar como salao", "Ver ultimos erros"],
+      actions: ["Abrir suporte", "Abrir tickets", "Abrir saloes"],
     },
     relatorios: {
       title: "Relatorios e growth",
       description: "Crescimento, uso dos saloes, retencao, churn e conversao.",
       table: "score_saude_salao",
       columns: ["id_salao", "score_total", "uso_recente", "inadimplencia_risco", "tickets_abertos"],
-      actions: ["Ver crescimento", "Ver uso por modulo", "Exportar relatorio"],
+      actions: ["Ver crescimento", "Ver uso por modulo", "Abrir relatorios"],
     },
     "configuracoes-globais": {
       title: "Configuracoes globais",
       description: "Manutencao, banners, onboarding, politicas e templates globais.",
       table: "configuracoes_globais",
       columns: ["chave", "descricao", "atualizado_em"],
-      actions: ["Publicar aviso", "Ativar manutencao", "Salvar template"],
+      actions: ["Ver configs globais", "Ver logs", "Auditar"],
     },
   };
 
@@ -2609,7 +2666,7 @@ export async function getAdminMasterSection(
     description: "Modulo AdminMaster preparado para operacao.",
     table: "admin_master_auditoria",
     columns: ["acao", "entidade", "descricao", "criado_em"],
-    actions: ["Ver detalhes", "Exportar", "Auditar"],
+    actions: ["Abrir logs", "Auditar"],
   };
 
   const { data } = await supabase
@@ -2617,22 +2674,19 @@ export async function getAdminMasterSection(
     .select("*")
     .limit(100);
 
-  const rows = ((data || []) as Record<string, unknown>[]).map((row) =>
-    config.columns.reduce((acc, column) => {
+  const rows = ((data || []) as Record<string, unknown>[]).map((row) => {
+    const formattedRow = config.columns.reduce((acc, column) => {
       const value = row[column];
-      acc[column] =
-        typeof value === "boolean"
-          ? value
-            ? "Sim"
-            : "Nao"
-          : typeof value === "number"
-            ? value
-            : value
-              ? String(value)
-              : "-";
+      acc[column] = formatAdminTableValue(value);
       return acc;
-    }, {} as AdminTableRow)
-  );
+    }, {} as AdminTableRow);
+    const action = buildGenericRowAction(section, row);
+
+    return action ? { ...formattedRow, ...action } : formattedRow;
+  });
+  const columns = rows.some((row) => row.acao)
+    ? [...config.columns, "acao"]
+    : config.columns;
 
   return {
     title: config.title,
@@ -2645,9 +2699,9 @@ export async function getAdminMasterSection(
         tone: "dark",
       },
       {
-        label: "Acoes prontas",
+        label: "Atalhos reais",
         value: String(config.actions.length),
-        hint: "Fluxo de operacao definido",
+        hint: "Botoes apontam para rotas ou APIs existentes",
         tone: "blue",
       },
       {
@@ -2657,8 +2711,31 @@ export async function getAdminMasterSection(
         tone: "green",
       },
     ],
+    diagnostics: [
+      {
+        label: "Fonte real",
+        value: config.table,
+        detail:
+          "Esta tela le os registros diretamente do Supabase usado pelo SalaoPremium.",
+        tone: "blue",
+      },
+      {
+        label: "Botoes",
+        value: "Sem ficcao",
+        detail:
+          "Acoes de listagem agora abrem telas reais ou executam endpoints existentes; operacoes destrutivas ficam no detalhe correto.",
+        tone: "green",
+      },
+      {
+        label: "Compatibilidade",
+        value: "AdminMaster",
+        detail:
+          "Linhas com detalhe real mostram atalho de abertura; demais modulos ficam como painel de consulta operacional.",
+        tone: "dark",
+      },
+    ],
     rows,
-    columns: config.columns,
+    columns,
     actions: config.actions,
   };
 }

@@ -42,6 +42,13 @@ function buildActionRequest(actionType: string, actionId: string) {
     } satisfies RowActionRequest;
   }
 
+  if (actionType === "ticket_detail") {
+    return {
+      kind: "link",
+      href: `/admin-master/tickets/${encodeURIComponent(actionId)}`,
+    } satisfies RowActionRequest;
+  }
+
   if (actionType === "salao_ticket_assinatura") {
     return {
       kind: "api",
