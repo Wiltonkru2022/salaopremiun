@@ -242,6 +242,93 @@ function BulletList({
   );
 }
 
+function findKpi(kpis: AdminKpi[], label: string) {
+  return kpis.find((kpi) => kpi.label.toLowerCase() === label.toLowerCase());
+}
+
+function ExecutiveMetricCard({
+  label,
+  value,
+  hint,
+  tone,
+}: {
+  label: string;
+  value: string;
+  hint: string;
+  tone?: AdminKpi["tone"];
+}) {
+  return (
+    <div className={`rounded-[26px] border p-5 ${toneClass(tone)}`}>
+      <div className="text-[11px] font-black uppercase tracking-[0.24em] opacity-60">
+        {label}
+      </div>
+      <div className="mt-3 font-display text-3xl font-black">{value}</div>
+      <div className="mt-2 text-sm leading-5 opacity-75">{hint}</div>
+    </div>
+  );
+}
+
+function ExecutiveLinkCard({
+  href,
+  title,
+  body,
+  tone = "dark",
+}: {
+  href: string;
+  title: string;
+  body: string;
+  tone?: "dark" | "light" | "amber";
+}) {
+  const classes =
+    tone === "dark"
+      ? "border-zinc-800 bg-zinc-950 text-white"
+      : tone === "amber"
+        ? "border-amber-200 bg-amber-50 text-amber-950"
+        : "border-zinc-200 bg-white text-zinc-950";
+
+  return (
+    <Link
+      href={href}
+      className={`group rounded-[26px] border p-5 transition hover:-translate-y-0.5 hover:shadow-lg ${classes}`}
+    >
+      <div className="text-xs font-black uppercase tracking-[0.24em] opacity-60">
+        {title}
+      </div>
+      <div className="mt-3 text-sm leading-6 opacity-80">{body}</div>
+      <div className="mt-4 text-sm font-black uppercase tracking-[0.18em] opacity-80 transition group-hover:opacity-100">
+        Abrir agora
+      </div>
+    </Link>
+  );
+}
+
+function PrioritySignal({
+  label,
+  value,
+  description,
+  href,
+}: {
+  label: string;
+  value: string;
+  description: string;
+  href: string;
+}) {
+  return (
+    <Link
+      href={href}
+      className="rounded-[24px] border border-white/10 bg-white/8 p-4 transition hover:bg-white/12"
+    >
+      <div className="text-[11px] font-black uppercase tracking-[0.24em] text-amber-100/70">
+        {label}
+      </div>
+      <div className="mt-2 font-display text-3xl font-black text-white">
+        {value}
+      </div>
+      <div className="mt-2 text-sm leading-5 text-zinc-300">{description}</div>
+    </Link>
+  );
+}
+
 export function AdminSectionView({ data }: { data: AdminSectionData }) {
   return (
     <div className="space-y-6">
@@ -359,37 +446,88 @@ export function AdminDashboardView({
     score: item.score,
     atualizado: item.updatedAt,
   }));
+  const totalSaloesKpi = findKpi(kpis, "Total de saloes");
+  const trialsKpi = findKpi(kpis, "Trials ativos");
+  const mrrKpi = findKpi(kpis, "MRR atual");
+  const receitaMesKpi = findKpi(kpis, "Receita do mes");
+  const checkoutsKpi = findKpi(kpis, "Checkouts assinatura");
+  const ticketsKpi = findKpi(kpis, "Tickets abertos");
+  const alertasKpi = findKpi(kpis, "Alertas criticos");
+  const primarySuggestion = operational.suggestions[0];
+  const primaryIncident = operational.incidents[0];
 
   return (
     <div className="space-y-6">
-      <section className="overflow-hidden rounded-[36px] bg-zinc-950 p-7 text-white shadow-sm">
-        <div className="grid gap-8 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
+      <section className="overflow-hidden rounded-[38px] bg-[#16110b] p-6 text-white shadow-sm sm:p-7">
+        <div className="grid gap-7 xl:grid-cols-[minmax(0,1.15fr)_440px] xl:items-stretch">
           <div>
-            <div className="text-xs font-bold uppercase tracking-[0.35em] text-amber-200">
-              Centro total de comando
+            <div className="inline-flex rounded-full border border-amber-200/20 bg-amber-200/10 px-4 py-2 text-xs font-black uppercase tracking-[0.32em] text-amber-100">
+              Sala de decisao
             </div>
-            <h2 className="mt-3 font-display text-5xl font-black">
-              AdminMaster SalaoPremium
+            <h2 className="mt-5 max-w-4xl font-display text-4xl font-black leading-[1.02] sm:text-6xl">
+              Comando comercial e operacional do SalaoPremium.
             </h2>
-            <p className="mt-4 max-w-3xl text-sm leading-6 text-zinc-300">
-              Produto, plataforma e operacao agora passam pelo mesmo fluxo de
-              saude, incidentes, uso e automacoes seguras.
+            <p className="mt-5 max-w-3xl text-sm leading-6 text-zinc-300 sm:text-base">
+              A primeira dobra agora mostra o que precisa de decisao hoje:
+              receita, trials, cobrancas, suporte e estabilidade da plataforma.
             </p>
+
+            <div className="mt-7 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+              <PrioritySignal
+                label="Saude"
+                value={String(operational.health.score)}
+                description={operational.health.label}
+                href="/admin-master/operacao"
+              />
+              <PrioritySignal
+                label="MRR"
+                value={mrrKpi?.value || "-"}
+                description={mrrKpi?.hint || "Receita recorrente atual"}
+                href="/admin-master/assinaturas"
+              />
+              <PrioritySignal
+                label="Receita mes"
+                value={receitaMesKpi?.value || "-"}
+                description={receitaMesKpi?.hint || "Cobrancas do mes"}
+                href="/admin-master/assinaturas/cobrancas"
+              />
+              <PrioritySignal
+                label="Alertas"
+                value={alertasKpi?.value || "0"}
+                description={alertasKpi?.hint || "Operacao e webhooks"}
+                href="/admin-master/alertas"
+              />
+            </div>
           </div>
 
-          <div className="rounded-[30px] border border-white/10 bg-white/10 p-5">
-            <div className="text-sm font-bold text-amber-100">Acoes rapidas</div>
-            <div className="mt-4 grid gap-2">
+          <div className="flex flex-col justify-between rounded-[32px] border border-white/10 bg-white/10 p-5 backdrop-blur">
+            <div>
+              <div className="text-xs font-black uppercase tracking-[0.28em] text-amber-100">
+                Proxima melhor acao
+              </div>
+              <h3 className="mt-4 font-display text-3xl font-black">
+                {primarySuggestion?.title ||
+                  primaryIncident?.recommendedAction ||
+                  "Monitorar operacao do dia"}
+              </h3>
+              <p className="mt-3 text-sm leading-6 text-zinc-300">
+                {primarySuggestion?.detail ||
+                  primaryIncident?.title ||
+                  "Sem incidente critico no snapshot atual. Mantenha a rotina de cobrancas, tickets e alertas em dia."}
+              </p>
+            </div>
+
+            <div className="mt-6 grid gap-2">
               {[
-                ["Ver incidentes", "/admin-master/operacao"],
-                ["Abrir logs", "/admin-master/logs"],
-                ["Acompanhar alertas", "/admin-master/alertas"],
+                ["Cobrancas e inadimplencia", "/admin-master/assinaturas/cobrancas"],
                 ["Tickets urgentes", "/admin-master/tickets"],
+                ["Alertas operacionais", "/admin-master/alertas"],
+                ["Logs e webhooks", "/admin-master/logs"],
               ].map(([label, href]) => (
                 <Link
                   key={href}
                   href={href}
-                  className="rounded-2xl bg-white px-4 py-3 text-sm font-black text-zinc-950"
+                  className="rounded-2xl bg-white px-4 py-3 text-sm font-black text-zinc-950 transition hover:bg-amber-100"
                 >
                   {label}
                 </Link>
@@ -399,12 +537,54 @@ export function AdminDashboardView({
         </div>
       </section>
 
-      <DashboardPanel
-        title="Saude Do Sistema"
-        description="Score operacional em tempo real calculado por incidentes, taxa de erro, lentidao e impacto em saloes."
-      >
-        <HealthRing health={operational.health} />
-      </DashboardPanel>
+      <section className="grid gap-4 lg:grid-cols-3">
+        <ExecutiveLinkCard
+          href="/admin-master/assinaturas/cobrancas"
+          title="Travas de receita"
+          body={`${checkoutsKpi?.value || "0"} checkouts em processamento. ${checkoutsKpi?.hint || "Acompanhe falhas antes do cliente desistir."}`}
+          tone="amber"
+        />
+        <ExecutiveLinkCard
+          href="/admin-master/tickets"
+          title="Suporte que segura churn"
+          body={`${ticketsKpi?.value || "0"} tickets abertos. Priorize contas pagantes, trial quente e saloes com risco operacional.`}
+          tone="light"
+        />
+        <ExecutiveLinkCard
+          href="/admin-master/saloes"
+          title="Base e conversao"
+          body={`${totalSaloesKpi?.value || "0"} saloes no sistema. ${trialsKpi?.value || "0"} trials ativos para converter em assinatura.`}
+          tone="dark"
+        />
+      </section>
+
+      <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_420px]">
+        <DashboardPanel
+          title="Saude Do Sistema"
+          description="Score operacional em tempo real calculado por incidentes, taxa de erro, lentidao e impacto em saloes."
+        >
+          <HealthRing health={operational.health} />
+        </DashboardPanel>
+
+        <DashboardPanel
+          title="Resumo Executivo"
+          description="Numeros que orientam a reuniao diaria do SaaS."
+        >
+          <div className="grid gap-3">
+            {[mrrKpi, receitaMesKpi, trialsKpi, ticketsKpi, alertasKpi]
+              .filter(Boolean)
+              .map((kpi) => (
+                <ExecutiveMetricCard
+                  key={kpi!.label}
+                  label={kpi!.label}
+                  value={kpi!.value}
+                  hint={kpi!.hint}
+                  tone={kpi!.tone}
+                />
+              ))}
+          </div>
+        </DashboardPanel>
+      </section>
 
       <AdminKpiGrid kpis={kpis} />
 
