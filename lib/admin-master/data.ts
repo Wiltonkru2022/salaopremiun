@@ -2380,11 +2380,10 @@ export async function getAdminMasterSection(
         "resolver_acao",
       ],
       actions: [
-        "Resolver alerta",
-        "Criar ticket",
         "Sincronizar alertas",
         "Ver webhooks com erro",
         "Ver checkouts travados",
+        "Abrir tickets",
       ],
     };
   }
