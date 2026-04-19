@@ -8,6 +8,23 @@ export type ComandaResumo = {
   cliente_nome: string;
 };
 
+type AgendamentoComandaRow = {
+  id_comanda: string | null;
+};
+
+type ComandaRow = {
+  id: string;
+  numero: number;
+  status: string;
+  total: number | string | null;
+  id_cliente: string | null;
+};
+
+type ClienteNomeRow = {
+  id: string;
+  nome: string;
+};
+
 export async function listarComandasProfissional(
   idSalao: string,
   idProfissional: string
@@ -27,11 +44,11 @@ export async function listarComandasProfissional(
 
   const comandaIds = Array.from(
     new Set(
-      (agendamentos ?? [])
-        .map((item: any) => item.id_comanda)
+      ((agendamentos ?? []) as AgendamentoComandaRow[])
+        .map((item) => item.id_comanda)
         .filter(Boolean)
     )
-  );
+  ) as string[];
 
   if (!comandaIds.length) {
     return [];
@@ -49,8 +66,8 @@ export async function listarComandasProfissional(
   }
 
   const clienteIds = Array.from(
-    new Set((comandas ?? []).map((c: any) => c.id_cliente).filter(Boolean))
-  );
+    new Set(((comandas ?? []) as ComandaRow[]).map((c) => c.id_cliente).filter(Boolean))
+  ) as string[];
 
   let clientesMap = new Map<string, string>();
 
@@ -65,15 +82,15 @@ export async function listarComandasProfissional(
     }
 
     clientesMap = new Map(
-      (clientes ?? []).map((cliente: any) => [cliente.id, cliente.nome])
+      ((clientes ?? []) as ClienteNomeRow[]).map((cliente) => [cliente.id, cliente.nome])
     );
   }
 
-  return (comandas ?? []).map((comanda: any) => ({
+  return ((comandas ?? []) as ComandaRow[]).map((comanda) => ({
     id: comanda.id,
     numero: comanda.numero,
     status: comanda.status,
     total: Number(comanda.total || 0),
-    cliente_nome: clientesMap.get(comanda.id_cliente) ?? "Cliente",
+    cliente_nome: comanda.id_cliente ? clientesMap.get(comanda.id_cliente) ?? "Cliente" : "Cliente",
   }));
 }

@@ -12,6 +12,12 @@ type SearchParams = Promise<{
   ok?: string;
 }>;
 
+type AgendaPausa = {
+  descricao: string;
+  top: number;
+  height: number;
+};
+
 function formatarMoeda(valor: number) {
   return new Intl.NumberFormat("pt-BR", {
     style: "currency",
@@ -97,7 +103,7 @@ export default async function AgendaProfissionalPage({
           <AgendaTimeline
             labels={agenda.labels}
             cards={agenda.cards}
-            pausas={agenda.pausas as any}
+            pausas={agenda.pausas as AgendaPausa[]}
             timelineHeight={agenda.timelineHeight}
           />
         ) : (

@@ -94,6 +94,10 @@ type ProcessarCaixaErrorResponse = {
   error?: string;
 };
 
+function getErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback;
+}
+
 export default function CaixaPage() {
   const supabase = createClient();
   const router = useRouter();
@@ -454,9 +458,9 @@ export default function CaixaPage() {
       });
       await carregarSessaoOperacional();
       setMsg("Caixa aberto. Agora as vendas podem ser recebidas.");
-    } catch (error: any) {
+    } catch (error) {
       console.error(error);
-      setErroTela(error?.message || "Erro ao abrir caixa.");
+      setErroTela(getErrorMessage(error, "Erro ao abrir caixa."));
     } finally {
       setSaving(false);
     }
@@ -486,9 +490,9 @@ export default function CaixaPage() {
       });
       await carregarSessaoOperacional();
       setMsg("Caixa fechado com sucesso.");
-    } catch (error: any) {
+    } catch (error) {
       console.error(error);
-      setErroTela(error?.message || "Erro ao fechar caixa.");
+      setErroTela(getErrorMessage(error, "Erro ao fechar caixa."));
     } finally {
       setSaving(false);
     }
@@ -547,9 +551,9 @@ export default function CaixaPage() {
           ? "Vale lancado e preparado para desconto no fechamento de comissao."
           : "Movimento do caixa lancado."
       );
-    } catch (error: any) {
+    } catch (error) {
       console.error(error);
-      setErroTela(error?.message || "Erro ao lancar movimento do caixa.");
+      setErroTela(getErrorMessage(error, "Erro ao lancar movimento do caixa."));
     } finally {
       if (completed) {
         limparChaveOperacao(operationScope);
@@ -603,9 +607,9 @@ export default function CaixaPage() {
         await aplicarDetalheComanda(requestedComandaId);
         setAba("fila");
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error(error);
-      setErroTela(error?.message || "Erro ao carregar caixa.");
+      setErroTela(getErrorMessage(error, "Erro ao carregar caixa."));
     } finally {
       setLoading(false);
     }
@@ -623,9 +627,9 @@ export default function CaixaPage() {
       setErroTela("");
       setMsg("");
       await aplicarDetalheComanda(idComanda);
-    } catch (error: any) {
+    } catch (error) {
       console.error(error);
-      setErroTela(error?.message || "Erro ao abrir comanda.");
+      setErroTela(getErrorMessage(error, "Erro ao abrir comanda."));
     } finally {
       setSaving(false);
     }
@@ -662,9 +666,9 @@ export default function CaixaPage() {
           ? "Comanda existente aberta com sucesso."
           : "Comanda criada a partir do agendamento."
       );
-    } catch (error: any) {
+    } catch (error) {
       console.error(error);
-      setErroTela(error?.message || "Erro ao abrir agendamento no caixa.");
+      setErroTela(getErrorMessage(error, "Erro ao abrir agendamento no caixa."));
     } finally {
       setSaving(false);
     }
@@ -695,9 +699,9 @@ export default function CaixaPage() {
       await aplicarDetalheComanda(comandaSelecionada.id);
       await carregarTudo();
       setMsg("Resumo financeiro atualizado.");
-    } catch (error: any) {
+    } catch (error) {
       console.error(error);
-      setErroTela(error?.message || "Erro ao atualizar resumo.");
+      setErroTela(getErrorMessage(error, "Erro ao atualizar resumo."));
     } finally {
       setSaving(false);
     }
@@ -773,9 +777,9 @@ export default function CaixaPage() {
           : "Pagamento adicionado."
       );
       limparChaveOperacao(operationScope);
-    } catch (error: any) {
+    } catch (error) {
       console.error(error);
-      setErroTela(error?.message || "Erro ao adicionar pagamento.");
+      setErroTela(getErrorMessage(error, "Erro ao adicionar pagamento."));
     } finally {
       setSaving(false);
     }
@@ -804,9 +808,9 @@ export default function CaixaPage() {
       await aplicarDetalheComanda(comandaSelecionada.id);
       await carregarSessaoOperacional();
       setMsg("Pagamento removido.");
-    } catch (error: any) {
+    } catch (error) {
       console.error(error);
-      setErroTela(error?.message || "Erro ao remover pagamento.");
+      setErroTela(getErrorMessage(error, "Erro ao remover pagamento."));
     } finally {
       setSaving(false);
     }
@@ -843,9 +847,9 @@ export default function CaixaPage() {
           ? `Comanda #${numeroAtual} finalizada, mas ${avisos.join(" / ")}`
           : `Comanda #${numeroAtual} finalizada com sucesso.`
       );
-    } catch (error: any) {
+    } catch (error) {
       console.error(error);
-      setErroTela(error?.message || "Erro ao finalizar comanda.");
+      setErroTela(getErrorMessage(error, "Erro ao finalizar comanda."));
     } finally {
       setSaving(false);
     }
@@ -887,9 +891,9 @@ export default function CaixaPage() {
       limparComandaSelecionada();
       setCancelModalOpen(false);
       setMsg("Comanda cancelada com sucesso.");
-    } catch (error: any) {
+    } catch (error) {
       console.error(error);
-      setErroTela(error?.message || "Erro ao cancelar comanda.");
+      setErroTela(getErrorMessage(error, "Erro ao cancelar comanda."));
     } finally {
       setSaving(false);
     }
@@ -1003,9 +1007,9 @@ export default function CaixaPage() {
           ? "Item atualizado com sucesso."
           : "Item adicionado com sucesso."
       );
-    } catch (error: any) {
+    } catch (error) {
       console.error(error);
-      setErroTela(error?.message || "Erro ao salvar item da comanda.");
+      setErroTela(getErrorMessage(error, "Erro ao salvar item da comanda."));
     } finally {
       setSaving(false);
     }
@@ -1037,9 +1041,9 @@ export default function CaixaPage() {
       await aplicarDetalheComanda(comandaSelecionada.id);
       await carregarTudo();
       setMsg("Item removido com sucesso.");
-    } catch (error: any) {
+    } catch (error) {
       console.error(error);
-      setErroTela(error?.message || "Erro ao remover item da comanda.");
+      setErroTela(getErrorMessage(error, "Erro ao remover item da comanda."));
     } finally {
       setSaving(false);
     }

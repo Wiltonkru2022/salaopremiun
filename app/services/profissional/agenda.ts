@@ -31,6 +31,11 @@ type BuscarConflitosParams = {
   horaFim: string;
 };
 
+type AgendamentoConflitoRow = {
+  hora_inicio: string;
+  hora_fim: string;
+};
+
 /* ---------------- UTILS ---------------- */
 
 function hojeLocal() {
@@ -165,7 +170,7 @@ export async function buscarConflitosNoHorario(params: BuscarConflitosParams) {
   const novoInicio = timeToMinutes(params.horaInicio);
   const novoFim = timeToMinutes(params.horaFim);
 
-  return (data ?? []).filter((i: any) =>
+  return ((data ?? []) as AgendamentoConflitoRow[]).filter((i) =>
     overlaps(
       novoInicio,
       novoFim,

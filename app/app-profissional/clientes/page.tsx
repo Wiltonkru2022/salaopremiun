@@ -24,6 +24,14 @@ function formatTelefone(value?: string | null) {
   return value || "Sem telefone";
 }
 
+type ClienteRow = {
+  id: string;
+  nome: string;
+  telefone?: string | null;
+  ativo?: boolean | string | number | null;
+  status?: string | null;
+};
+
 export default async function ClientesPage({
   searchParams,
 }: {
@@ -65,7 +73,7 @@ export default async function ClientesPage({
     );
   }
 
-  const clientes = (data ?? []).filter((item: any) => {
+  const clientes = ((data ?? []) as ClienteRow[]).filter((item) => {
     const ativo =
       item.ativo === true ||
       item.ativo === "true" ||
@@ -110,7 +118,7 @@ export default async function ClientesPage({
                 : "Nenhum cliente cadastrado neste salão."}
             </div>
           ) : (
-            clientes.map((cliente: any) => (
+            clientes.map((cliente) => (
               <Link
                 key={cliente.id}
                 href={`/app-profissional/clientes/novo?cliente_id=${cliente.id}`}

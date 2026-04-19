@@ -29,7 +29,7 @@ function getStatusClasses(status: string) {
   return "bg-zinc-50 text-zinc-700 border-zinc-200";
 }
 
-function traduzirTipoItem(tipo: string | null) {
+function traduzirTipoItem(tipo: string | null | undefined) {
   const valor = String(tipo || "").toLowerCase();
   if (valor === "servico") return "Serviço";
   if (valor === "extra") return "Item extra";
@@ -39,6 +39,29 @@ function traduzirTipoItem(tipo: string | null) {
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{ ok?: string; erro?: string }>;
+
+type ComandaItemRow = {
+  id: string;
+  descricao?: string | null;
+  quantidade?: number | string | null;
+  valor_unitario?: number | string | null;
+  valor_total?: number | string | null;
+  tipo_item?: string | null;
+};
+
+type ServicoOption = {
+  id: string;
+  nome: string;
+  preco?: number | string | null;
+  preco_padrao?: number | string | null;
+};
+
+type ExtraOption = {
+  id: string;
+  nome: string;
+  preco_venda?: number | string | null;
+  ativo?: boolean | null;
+};
 
 export default async function ComandaDetalhePage({
   params,
@@ -144,7 +167,9 @@ export default async function ComandaDetalhePage({
     throw new Error(extrasError.message || "Erro ao carregar itens extras.");
   }
 
-  const extras = (extrasRaw ?? []).filter((item: any) => item.ativo === true);
+  const extras = ((extrasRaw ?? []) as ExtraOption[]).filter(
+    (item) => item.ativo === true
+  );
 
   return (
     <ProfissionalShell
@@ -229,7 +254,7 @@ export default async function ComandaDetalhePage({
 
           {itens?.length ? (
             <div className="space-y-3">
-              {itens.map((item: any) => (
+              {((itens ?? []) as ComandaItemRow[]).map((item) => (
                 <div
                   key={item.id}
                   className="rounded-2xl border border-zinc-100 bg-zinc-50 p-3"
@@ -300,7 +325,7 @@ export default async function ComandaDetalhePage({
                   defaultValue=""
                 >
                   <option value="">Selecione um serviço</option>
-                  {(servicos ?? []).map((servico: any) => {
+                  {((servicos ?? []) as ServicoOption[]).map((servico) => {
                     const valor = Number(
                       servico.preco ?? servico.preco_padrao ?? 0
                     );
@@ -351,7 +376,7 @@ export default async function ComandaDetalhePage({
                     defaultValue=""
                   >
                     <option value="">Selecione um item extra</option>
-                    {(extras ?? []).map((extra: any) => (
+                    {(extras ?? []).map((extra) => (
                       <option key={extra.id} value={extra.id}>
                         {extra.nome} · {formatarMoeda(Number(extra.preco_venda || 0))}
                       </option>

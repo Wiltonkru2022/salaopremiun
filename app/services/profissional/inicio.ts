@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+﻿import { createClient } from "@/lib/supabase/server";
 
 export type AgendamentoInicio = {
   id: string;
@@ -9,6 +9,22 @@ export type AgendamentoInicio = {
   cliente_nome: string;
   servico_nome: string;
   id_comanda: string | null;
+};
+
+type AgendamentoInicioRow = {
+  id: string;
+  data: string;
+  hora_inicio: string;
+  hora_fim: string | null;
+  status: string;
+  id_comanda: string | null;
+  cliente_id: string | null;
+  servico_id: string | null;
+};
+
+type NomeRow = {
+  id: string;
+  nome: string;
 };
 
 function hojeISO() {
@@ -46,19 +62,19 @@ export async function listarProximosAgendamentosProfissional(
 
   const clienteIds = Array.from(
     new Set(
-      (agendamentos ?? [])
-        .map((item: any) => item.cliente_id)
+      ((agendamentos ?? []) as AgendamentoInicioRow[])
+        .map((item) => item.cliente_id)
         .filter(Boolean)
     )
-  );
+  ) as string[];
 
   const servicoIds = Array.from(
     new Set(
-      (agendamentos ?? [])
-        .map((item: any) => item.servico_id)
+      ((agendamentos ?? []) as AgendamentoInicioRow[])
+        .map((item) => item.servico_id)
         .filter(Boolean)
     )
-  );
+  ) as string[];
 
   let clientesMap = new Map<string, string>();
   let servicosMap = new Map<string, string>();
@@ -74,7 +90,7 @@ export async function listarProximosAgendamentosProfissional(
     }
 
     clientesMap = new Map(
-      (clientes ?? []).map((cliente: any) => [cliente.id, cliente.nome])
+      ((clientes ?? []) as NomeRow[]).map((cliente) => [cliente.id, cliente.nome])
     );
   }
 
@@ -85,22 +101,22 @@ export async function listarProximosAgendamentosProfissional(
       .in("id", servicoIds);
 
     if (servicosError) {
-      throw new Error(servicosError.message || "Erro ao carregar serviços.");
+      throw new Error(servicosError.message || "Erro ao carregar serviÃ§os.");
     }
 
     servicosMap = new Map(
-      (servicos ?? []).map((servico: any) => [servico.id, servico.nome])
+      ((servicos ?? []) as NomeRow[]).map((servico) => [servico.id, servico.nome])
     );
   }
 
-  return (agendamentos ?? []).map((item: any) => ({
+  return ((agendamentos ?? []) as AgendamentoInicioRow[]).map((item) => ({
     id: item.id,
     data: item.data,
     hora_inicio: item.hora_inicio,
     hora_fim: item.hora_fim,
     status: item.status,
     id_comanda: item.id_comanda ?? null,
-    cliente_nome: clientesMap.get(item.cliente_id) ?? "Cliente",
-    servico_nome: servicosMap.get(item.servico_id) ?? "Serviço",
+    cliente_nome: item.cliente_id ? clientesMap.get(item.cliente_id) ?? "Cliente" : "Cliente",
+    servico_nome: item.servico_id ? servicosMap.get(item.servico_id) ?? "Serviço" : "Serviço",
   }));
 }

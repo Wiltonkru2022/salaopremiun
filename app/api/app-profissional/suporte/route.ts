@@ -51,15 +51,64 @@ function inicioAnoISO() {
   return `${now.getFullYear()}-01-01`;
 }
 
-function somarTotais(rows: any[] | null | undefined) {
+type TotalRow = {
+  total?: number | string | null;
+};
+
+type StatusRow = {
+  status?: string | null;
+};
+
+type ComandaContexto = {
+  id: string;
+  numero?: number | string | null;
+  status?: string | null;
+  subtotal?: number | string | null;
+  desconto?: number | string | null;
+  acrescimo?: number | string | null;
+  total?: number | string | null;
+  id_cliente?: string | null;
+};
+
+type AgendamentoContexto = {
+  id: string;
+  data?: string | null;
+  hora_inicio?: string | null;
+  hora_fim?: string | null;
+  status?: string | null;
+  cliente_id?: string | null;
+  servico_id?: string | null;
+  id_comanda?: string | null;
+  observacoes?: string | null;
+  duracao_minutos?: number | null;
+};
+
+type ClienteContexto = {
+  id: string;
+  nome?: string | null;
+  telefone?: string | null;
+  email?: string | null;
+};
+
+type HistoricoMensagem = {
+  papel?: string | null;
+  conteudo?: string | null;
+};
+
+type OpenAIMessage = {
+  role: "system" | "user" | "assistant";
+  content: string;
+};
+
+function somarTotais(rows: TotalRow[] | null | undefined) {
   return Number(
     (rows ?? [])
-      .reduce((acc: number, item: any) => acc + Number(item.total || 0), 0)
+      .reduce((acc, item) => acc + Number(item.total || 0), 0)
       .toFixed(2)
   );
 }
 
-function contarPorStatus(rows: any[] | null | undefined) {
+function contarPorStatus(rows: StatusRow[] | null | undefined) {
   const mapa: Record<string, number> = {};
 
   for (const item of rows ?? []) {
@@ -194,9 +243,9 @@ export async function POST(req: Request) {
       statusAgendamentosHoje: contarPorStatus(statusAgendamentosResult.data),
     };
 
-    let comandaAtual: any = null;
-    let agendamentoAtual: any = null;
-    let clienteAtual: any = null;
+    let comandaAtual: ComandaContexto | null = null;
+    let agendamentoAtual: AgendamentoContexto | null = null;
+    let clienteAtual: ClienteContexto | null = null;
 
     if (idComanda) {
       const { data } = await supabase
@@ -291,9 +340,9 @@ export async function POST(req: Request) {
 
     const historicoLimitado = historico.slice(-6);
 
-    const historicoOpenAI = historicoLimitado.map((item: any) => ({
+    const historicoOpenAI: OpenAIMessage[] = (historicoLimitado as HistoricoMensagem[]).map((item) => ({
       role: item.papel === "assistant" ? "assistant" : "user",
-      content: item.conteudo,
+      content: item.conteudo || "",
     }));
 
     const systemPrompt = `
@@ -349,7 +398,7 @@ const response = await openai.responses.create({
       role: "system",
       content: systemPrompt,
     },
-    ...historicoOpenAI.map((msg: any) => ({
+    ...historicoOpenAI.map((msg) => ({
       role: msg.role,
       content: msg.content,
     })),

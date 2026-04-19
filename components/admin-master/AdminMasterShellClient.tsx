@@ -131,6 +131,13 @@ const MENU_GROUPS: MenuGroup[] = [
         permission: "operacao_ver",
       },
       {
+        href: "/admin-master/saude",
+        label: "Saude operacional",
+        icon: ShieldCheck,
+        permission: "operacao_ver",
+        badge: "alertas",
+      },
+      {
         href: "/admin-master/webhooks",
         label: "Webhooks",
         icon: Webhook,

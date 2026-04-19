@@ -36,6 +36,27 @@ type Pausa = {
   descricao?: string;
 };
 
+type ClienteOption = {
+  id: string;
+  nome: string;
+  telefone?: string | null;
+};
+
+type ServicoOption = {
+  id: string;
+  nome: string;
+  duracao_minutos?: number | string | null;
+};
+
+type AgendaDiaRow = {
+  id: string;
+  hora_inicio: string;
+  hora_fim: string;
+  status: string;
+  clientes?: { nome?: string | null } | { nome?: string | null }[] | null;
+  servicos?: { nome?: string | null } | { nome?: string | null }[] | null;
+};
+
 export default async function NovoAgendamentoProfissionalPage({
   searchParams,
 }: {
@@ -131,7 +152,7 @@ export default async function NovoAgendamentoProfissionalPage({
   const servicos = (servicosResult.data ?? []).filter((servico) =>
     idsServicosLiberados.has(servico.id)
   );
-  const agendaDia = (agendaDiaResult.data ?? []).map((item: any) => ({
+  const agendaDia = ((agendaDiaResult.data ?? []) as AgendaDiaRow[]).map((item) => ({
     id: item.id,
     hora_inicio: String(item.hora_inicio).slice(0, 5),
     hora_fim: String(item.hora_fim).slice(0, 5),
@@ -212,7 +233,7 @@ export default async function NovoAgendamentoProfissionalPage({
               className="h-12 w-full rounded-2xl border border-zinc-200 bg-white px-4 text-sm outline-none"
             >
               <option value="">Selecione o cliente</option>
-              {clientes.map((cliente: any) => (
+              {(clientes as ClienteOption[]).map((cliente) => (
                 <option key={cliente.id} value={cliente.id}>
                   {cliente.nome}
                   {cliente.telefone ? ` · ${cliente.telefone}` : ""}
@@ -226,7 +247,7 @@ export default async function NovoAgendamentoProfissionalPage({
               className="h-12 w-full rounded-2xl border border-zinc-200 bg-white px-4 text-sm outline-none"
             >
               <option value="">Selecione o serviço</option>
-              {servicos.map((servico: any) => (
+              {(servicos as ServicoOption[]).map((servico) => (
                 <option key={servico.id} value={servico.id}>
                   {servico.nome}
                   {servico.duracao_minutos

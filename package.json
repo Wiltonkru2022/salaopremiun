@@ -10,8 +10,13 @@
     "lint:fix": "eslint . --fix",
     "typecheck": "next typegen && node scripts/ensure-next-types.mjs && tsc --noEmit --incremental false",
     "audit": "npm audit --audit-level=moderate",
+    "audit:service-role": "node scripts/audit/service-role-audit.mjs",
+    "audit:admin-actions": "node scripts/audit/admin-master-actions-audit.mjs",
+    "e2e:proxy": "node scripts/e2e/proxy-smoke.mjs",
+    "e2e:sales": "node scripts/e2e/saas-sales-flow.mjs",
     "check": "npm run lint && npm run typecheck",
-    "validate": "npm run lint && npm run typecheck && npm run audit && npm run build"
+    "validate": "npm run lint && npm run typecheck && npm run audit && npm run audit:service-role && npm run audit:admin-actions && npm run build",
+    "validate:release": "npm run validate && npm run e2e:proxy && npm run e2e:sales"
   },
   "dependencies": {
     "@supabase/ssr": "^0.9.0",
