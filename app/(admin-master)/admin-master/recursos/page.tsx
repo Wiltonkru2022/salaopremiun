@@ -4,6 +4,6 @@ import { getAdminMasterSection } from "@/lib/admin-master/data";
 export const dynamic = "force-dynamic";
 
 export default async function AdminMasterRecursosPage() {
-  const data = await getAdminMasterSection("planos");
-  return <AdminSectionView data={{ ...data, title: "Matriz de recursos" }} />;
+  const data = await getAdminMasterSection("recursos");
+  return <AdminSectionView data={data} />;
 }

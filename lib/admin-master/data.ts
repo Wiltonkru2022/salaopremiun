@@ -97,6 +97,10 @@ function safeNumber(value: unknown) {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
+function percent(value: number) {
+  return `${value.toFixed(1).replace(".", ",")}%`;
+}
+
 function safeCount(result: CountResult) {
   if (result.error) return 0;
   return result.count || 0;
@@ -123,6 +127,44 @@ const PAID_CHARGE_STATUSES = new Set([
 
 function normalizeStatus(value: unknown) {
   return String(value || "").trim().toLowerCase();
+}
+
+function formatResourceName(value?: string | null) {
+  return String(value || "-")
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function formatResourceAvailability(row?: {
+  habilitado?: boolean | null;
+  limite_numero?: number | null;
+  observacao?: string | null;
+}) {
+  if (!row) return "Nao mapeado";
+  if (!row.habilitado) return "Bloqueado";
+  if (typeof row.limite_numero === "number" && row.limite_numero > 0) {
+    if (row.limite_numero >= 999) return "Ilimitado";
+    return `Ate ${row.limite_numero}`;
+  }
+  return "Liberado";
+}
+
+function premiumEnabledSummary(rows: AdminTableRow[], planCodes: string[]) {
+  const premiumCode = planCodes.includes("premium")
+    ? "premium"
+    : planCodes[planCodes.length - 1];
+
+  if (!premiumCode || rows.length === 0) return "-";
+
+  const enabled = rows.filter((row) => {
+    const value = String(row[premiumCode] || "");
+    return (
+      ["Liberado", "Ilimitado"].includes(value) ||
+      value.startsWith("Ate ")
+    );
+  }).length;
+
+  return `${enabled}/${rows.length}`;
 }
 
 function daysUntil(value?: string | null) {
@@ -496,23 +538,65 @@ export async function getAdminMasterSalaoDetail(idSalao: string) {
 
 export async function getAdminMasterPlanosSection(): Promise<AdminSectionData> {
   const supabase = getSupabaseAdmin();
-  const [{ data: planos }, { data: recursos }] = await Promise.all([
+  const [{ data: planos }, { data: recursos }, { data: assinaturas }, { data: saloes }] = await Promise.all([
     supabase
       .from("planos_saas")
       .select(
-        "id, codigo, nome, subtitulo, valor_mensal, preco_anual, limite_usuarios, limite_profissionais, destaque, ativo"
+        "id, codigo, nome, subtitulo, valor_mensal, preco_anual, limite_usuarios, limite_profissionais, destaque, ativo, trial_dias, ideal_para, cta, ordem"
       )
       .order("ordem", { ascending: true }),
     supabase
       .from("planos_recursos")
-      .select("id_plano, recurso_codigo, habilitado"),
+      .select("id_plano, recurso_codigo, habilitado, limite_numero, observacao"),
+    supabase
+      .from("assinaturas")
+      .select("plano, status, valor"),
+    supabase
+      .from("saloes")
+      .select("plano, status"),
   ]);
 
   const recursosRows = (recursos || []) as {
     id_plano: string;
     recurso_codigo: string;
     habilitado: boolean | null;
+    limite_numero?: number | null;
+    observacao?: string | null;
   }[];
+  const assinaturasRows = ((assinaturas || []) as {
+    plano?: string | null;
+    status?: string | null;
+    valor?: number | string | null;
+  }[]);
+  const saloesRows = ((saloes || []) as {
+    plano?: string | null;
+    status?: string | null;
+  }[]);
+  const assinaturasAtivasPorPlano = new Map<string, number>();
+  const mrrPorPlano = new Map<string, number>();
+  const saloesPorPlano = new Map<string, number>();
+
+  for (const assinatura of assinaturasRows) {
+    const planoCodigo = normalizeStatus(assinatura.plano);
+    if (!planoCodigo) continue;
+
+    if (ACTIVE_SUBSCRIPTION_STATUSES.has(normalizeStatus(assinatura.status))) {
+      assinaturasAtivasPorPlano.set(
+        planoCodigo,
+        (assinaturasAtivasPorPlano.get(planoCodigo) || 0) + 1
+      );
+      mrrPorPlano.set(
+        planoCodigo,
+        (mrrPorPlano.get(planoCodigo) || 0) + safeNumber(assinatura.valor)
+      );
+    }
+  }
+
+  for (const salao of saloesRows) {
+    const planoCodigo = normalizeStatus(salao.plano);
+    if (!planoCodigo) continue;
+    saloesPorPlano.set(planoCodigo, (saloesPorPlano.get(planoCodigo) || 0) + 1);
+  }
 
   const rows = ((planos || []) as {
     id: string;
@@ -525,6 +609,10 @@ export async function getAdminMasterPlanosSection(): Promise<AdminSectionData> {
     limite_profissionais?: number | null;
     destaque?: boolean | null;
     ativo?: boolean | null;
+    trial_dias?: number | null;
+    ideal_para?: string | null;
+    cta?: string | null;
+    ordem?: number | null;
   }[]).map((plano) => {
     const habilitados = recursosRows.filter(
       (recurso) => recurso.id_plano === plano.id && recurso.habilitado
@@ -532,20 +620,39 @@ export async function getAdminMasterPlanosSection(): Promise<AdminSectionData> {
     const bloqueados = recursosRows.filter(
       (recurso) => recurso.id_plano === plano.id && !recurso.habilitado
     ).length;
+    const codigo = normalizeStatus(plano.codigo);
+    const mensal = safeNumber(plano.valor_mensal);
+    const anual = safeNumber(plano.preco_anual);
+    const anualCheio = mensal * 12;
+    const descontoAnual =
+      anual > 0 && anualCheio > 0
+        ? Math.max(0, ((anualCheio - anual) / anualCheio) * 100)
+        : 0;
 
     return {
       codigo: plano.codigo || "-",
       plano: plano.nome || "-",
-      mensal: currency(safeNumber(plano.valor_mensal)),
-      anual: currency(safeNumber(plano.preco_anual)),
+      mensal: currency(mensal),
+      anual: anual > 0 ? currency(anual) : "-",
+      desconto_anual: descontoAnual > 0 ? percent(descontoAnual) : "-",
       usuarios: plano.limite_usuarios ?? "-",
       profissionais: plano.limite_profissionais ?? "-",
       recursos: habilitados,
       bloqueados,
+      saloes: saloesPorPlano.get(codigo) || 0,
+      assinaturas_ativas: assinaturasAtivasPorPlano.get(codigo) || 0,
+      mrr: currency(mrrPorPlano.get(codigo) || 0),
+      ideal: plano.ideal_para || "-",
+      cta: plano.cta || "-",
+      trial: plano.trial_dias ? `${plano.trial_dias}d` : "-",
       destaque: plano.destaque ? "Sim" : "Nao",
       ativo: plano.ativo ? "Ativo" : "Inativo",
     };
   });
+  const activeRows = rows.filter((row) => row.ativo === "Ativo");
+  const totalMrr = Array.from(mrrPorPlano.values()).reduce((acc, value) => acc + value, 0);
+  const destaque = rows.find((row) => row.destaque === "Sim");
+  const planosComBloqueios = rows.filter((row) => safeNumber(row.bloqueados) > 0).length;
 
   return {
     title: "Planos e recursos",
@@ -554,7 +661,7 @@ export async function getAdminMasterPlanosSection(): Promise<AdminSectionData> {
     kpis: [
       {
         label: "Planos ativos",
-        value: String(rows.filter((row) => row.ativo === "Ativo").length),
+        value: String(activeRows.length),
         hint: "Trial, Basico, Pro e Premium",
         tone: "blue",
       },
@@ -566,9 +673,48 @@ export async function getAdminMasterPlanosSection(): Promise<AdminSectionData> {
       },
       {
         label: "Plano destaque",
-        value: String(rows.find((row) => row.destaque === "Sim")?.plano || "-"),
+        value: String(destaque?.plano || "-"),
         hint: "Usado para venda e upgrade",
         tone: "dark",
+      },
+      {
+        label: "MRR por plano",
+        value: currency(totalMrr),
+        hint: "Receita ativa distribuida nos planos",
+        tone: "green",
+      },
+      {
+        label: "Planos com bloqueios",
+        value: String(planosComBloqueios),
+        hint: "Diferenciais reais para upgrade",
+        tone: planosComBloqueios > 0 ? "amber" : "green",
+      },
+    ],
+    diagnostics: [
+      {
+        label: "Oferta principal",
+        value: String(destaque?.plano || "Definir"),
+        detail:
+          destaque?.cta && destaque.cta !== "-"
+            ? `CTA atual: ${destaque.cta}`
+            : "Defina um CTA comercial claro no plano destaque para melhorar conversao.",
+        tone: destaque ? "green" : "amber",
+        href: "/admin-master/planos",
+      },
+      {
+        label: "Upgrade path",
+        value: `${planosComBloqueios} diferencial(is)`,
+        detail:
+          "Recursos bloqueados por plano precisam ser intencionais: eles formam o argumento de upgrade no painel e na venda.",
+        tone: planosComBloqueios > 0 ? "blue" : "amber",
+        href: "/admin-master/recursos",
+      },
+      {
+        label: "Preco anual",
+        value: rows.some((row) => row.desconto_anual !== "-") ? "Configurado" : "Revisar",
+        detail:
+          "Plano anual com desconto claro aumenta previsibilidade de caixa e reduz churn mensal.",
+        tone: rows.some((row) => row.desconto_anual !== "-") ? "green" : "amber",
       },
     ],
     rows,
@@ -576,10 +722,16 @@ export async function getAdminMasterPlanosSection(): Promise<AdminSectionData> {
       "codigo",
       "plano",
       "mensal",
+      "anual",
+      "desconto_anual",
       "usuarios",
       "profissionais",
       "recursos",
       "bloqueados",
+      "saloes",
+      "assinaturas_ativas",
+      "mrr",
+      "ideal",
       "ativo",
     ],
     actions: [
@@ -587,6 +739,429 @@ export async function getAdminMasterPlanosSection(): Promise<AdminSectionData> {
       "Ajustar matriz de recursos",
       "Duplicar plano",
       "Ver saloes no plano",
+    ],
+  };
+}
+
+export async function getAdminMasterRecursosSection(): Promise<AdminSectionData> {
+  const supabase = getSupabaseAdmin();
+  const [{ data: planos }, { data: recursos }] = await Promise.all([
+    supabase
+      .from("planos_saas")
+      .select("id, codigo, nome, ativo, ordem")
+      .order("ordem", { ascending: true }),
+    supabase
+      .from("planos_recursos")
+      .select("id_plano, recurso_codigo, habilitado, limite_numero, observacao"),
+  ]);
+
+  const planRows = ((planos || []) as {
+    id: string;
+    codigo?: string | null;
+    nome?: string | null;
+    ativo?: boolean | null;
+    ordem?: number | null;
+  }[]).filter((plano) => plano.ativo !== false);
+  const resourceRows = ((recursos || []) as {
+    id_plano?: string | null;
+    recurso_codigo?: string | null;
+    habilitado?: boolean | null;
+    limite_numero?: number | null;
+    observacao?: string | null;
+  }[]);
+  const planById = new Map(planRows.map((plano) => [plano.id, plano]));
+  const resourcesByCode = new Map<
+    string,
+    Map<string, (typeof resourceRows)[number]>
+  >();
+
+  for (const recurso of resourceRows) {
+    if (!recurso.id_plano || !recurso.recurso_codigo) continue;
+    const plano = planById.get(recurso.id_plano);
+    if (!plano?.codigo) continue;
+    const code = recurso.recurso_codigo;
+    if (!resourcesByCode.has(code)) {
+      resourcesByCode.set(code, new Map());
+    }
+    resourcesByCode.get(code)?.set(plano.codigo, recurso);
+  }
+
+  const planCodes = planRows
+    .map((plano) => String(plano.codigo || "").trim())
+    .filter(Boolean);
+  const paidPlanCodes = planCodes.filter(
+    (codigo) => !["teste_gratis", "trial", "gratis"].includes(codigo)
+  );
+  const rows = Array.from(resourcesByCode.entries())
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([recursoCodigo, byPlan]) => {
+      const enabledPlans = paidPlanCodes.filter(
+        (codigo) => byPlan.get(codigo)?.habilitado
+      );
+      const firstEnabledPlan =
+        enabledPlans[0] ||
+        planCodes.find((codigo) => byPlan.get(codigo)?.habilitado) ||
+        null;
+      const premiumEnabled =
+        byPlan.get("premium")?.habilitado ||
+        byPlan.get(paidPlanCodes[paidPlanCodes.length - 1] || "")?.habilitado;
+      const observacao =
+        Array.from(byPlan.values()).find((item) => item.observacao)?.observacao ||
+        "-";
+      const row: AdminTableRow = {
+        recurso: formatResourceName(recursoCodigo),
+        codigo: recursoCodigo,
+        entrada: firstEnabledPlan ? formatResourceName(firstEnabledPlan) : "-",
+        status: enabledPlans.length === paidPlanCodes.length
+          ? "Base"
+          : premiumEnabled
+            ? "Upgrade"
+            : enabledPlans.length > 0
+              ? "Parcial"
+              : "Bloqueado",
+        observacao,
+      };
+
+      for (const codigo of planCodes) {
+        row[codigo] = formatResourceAvailability(byPlan.get(codigo));
+      }
+
+      return row;
+    });
+  const distinctResources = rows.length;
+  const upgradeResources = rows.filter((row) => row.status === "Upgrade").length;
+  const blockedResources = rows.filter((row) => row.status === "Bloqueado").length;
+  const unmappedSlots = rows.reduce(
+    (acc, row) =>
+      acc +
+      planCodes.filter((codigo) => String(row[codigo] || "") === "Nao mapeado")
+        .length,
+    0
+  );
+
+  return {
+    title: "Matriz de recursos",
+    description:
+      "Mapa de liberacao por plano para garantir promessa comercial, bloqueios de upgrade e limites operacionais coerentes.",
+    kpis: [
+      {
+        label: "Recursos",
+        value: String(distinctResources),
+        hint: `${planCodes.length} planos ativos mapeados`,
+        tone: "dark",
+      },
+      {
+        label: "Diferenciais upgrade",
+        value: String(upgradeResources),
+        hint: "Liberados somente em planos superiores",
+        tone: upgradeResources > 0 ? "blue" : "amber",
+      },
+      {
+        label: "Bloqueados",
+        value: String(blockedResources),
+        hint: "Recursos sem plano pago liberado",
+        tone: blockedResources > 0 ? "red" : "green",
+      },
+      {
+        label: "Lacunas matriz",
+        value: String(unmappedSlots),
+        hint: "Celulas sem configuracao explicita",
+        tone: unmappedSlots > 0 ? "amber" : "green",
+      },
+    ],
+    diagnostics: [
+      {
+        label: "Regra de venda",
+        value: "1 matriz",
+        detail:
+          "Tudo que aparece para o cliente deve existir aqui: limites, bloqueios e diferenciais de upgrade.",
+        tone: "blue",
+      },
+      {
+        label: "Premium",
+        value: premiumEnabledSummary(rows, planCodes),
+        detail:
+          "Premium deve concentrar os recursos mais fortes para sustentar maior ticket mensal.",
+        tone: "green",
+      },
+      {
+        label: "Governanca",
+        value: unmappedSlots > 0 ? "Revisar" : "Completa",
+        detail:
+          "Evite recurso sem mapeamento: isso causa divergencia entre venda, acesso e suporte.",
+        tone: unmappedSlots > 0 ? "amber" : "green",
+      },
+    ],
+    rows,
+    columns: ["recurso", ...planCodes, "entrada", "status", "observacao"],
+    actions: [
+      "Ajustar matriz de recursos",
+      "Editar preco e limites",
+      "Ver saloes no plano",
+      "Auditar",
+    ],
+  };
+}
+
+async function getAdminMasterFinanceiroSection(): Promise<AdminSectionData> {
+  const supabase = getSupabaseAdmin();
+  const inicioMes = new Date();
+  inicioMes.setDate(1);
+  inicioMes.setHours(0, 0, 0, 0);
+
+  const [{ data: assinaturas }, { data: cobrancas }, { data: checkoutLocks }, { data: saloes }] =
+    await Promise.all([
+      supabase
+        .from("assinaturas")
+        .select("id_salao, plano, status, valor, vencimento_em, trial_fim_em, updated_at")
+        .order("updated_at", { ascending: false })
+        .limit(1000),
+      supabase
+        .from("assinaturas_cobrancas")
+        .select(
+          "id_salao, referencia, valor, status, forma_pagamento, gateway, data_expiracao, pago_em, payment_date, confirmed_date, created_at"
+        )
+        .order("created_at", { ascending: false })
+        .limit(200),
+      supabase
+        .from("assinatura_checkout_locks")
+        .select("id_salao, status, id_cobranca, asaas_payment_id, erro_texto, created_at, updated_at")
+        .order("updated_at", { ascending: false })
+        .limit(100),
+      supabase.from("saloes").select("id, nome, plano, status").limit(1000),
+    ]);
+
+  const salaoById = new Map(
+    ((saloes || []) as {
+      id: string;
+      nome?: string | null;
+      plano?: string | null;
+      status?: string | null;
+    }[]).map((salao) => [
+      salao.id,
+      {
+        nome: salao.nome || salao.id,
+        plano: salao.plano || "-",
+        status: salao.status || "-",
+      },
+    ])
+  );
+
+  const assinaturaRows = ((assinaturas || []) as {
+    id_salao?: string | null;
+    plano?: string | null;
+    status?: string | null;
+    valor?: number | string | null;
+    vencimento_em?: string | null;
+    trial_fim_em?: string | null;
+  }[]);
+  const cobrancaRows = ((cobrancas || []) as {
+    id_salao?: string | null;
+    referencia?: string | null;
+    valor?: number | string | null;
+    status?: string | null;
+    forma_pagamento?: string | null;
+    gateway?: string | null;
+    data_expiracao?: string | null;
+    pago_em?: string | null;
+    payment_date?: string | null;
+    confirmed_date?: string | null;
+    created_at?: string | null;
+  }[]);
+  const checkoutRows = ((checkoutLocks || []) as {
+    id_salao?: string | null;
+    status?: string | null;
+    id_cobranca?: string | null;
+    asaas_payment_id?: string | null;
+    erro_texto?: string | null;
+  }[]);
+
+  const assinaturaBySalao = new Map<string, (typeof assinaturaRows)[number]>();
+  for (const assinatura of assinaturaRows) {
+    if (assinatura.id_salao && !assinaturaBySalao.has(assinatura.id_salao)) {
+      assinaturaBySalao.set(assinatura.id_salao, assinatura);
+    }
+  }
+
+  const mrr = assinaturaRows
+    .filter((assinatura) =>
+      ACTIVE_SUBSCRIPTION_STATUSES.has(normalizeStatus(assinatura.status))
+    )
+    .reduce((acc, assinatura) => acc + safeNumber(assinatura.valor), 0);
+  const receitaMes = cobrancaRows
+    .filter((cobranca) => {
+      if (!PAID_CHARGE_STATUSES.has(normalizeStatus(cobranca.status))) {
+        return false;
+      }
+      const paidAt =
+        cobranca.pago_em ||
+        cobranca.payment_date ||
+        cobranca.confirmed_date ||
+        cobranca.created_at;
+      return paidAt ? new Date(paidAt) >= inicioMes : false;
+    })
+    .reduce((acc, cobranca) => acc + safeNumber(cobranca.valor), 0);
+  const pendenteValor = cobrancaRows
+    .filter((cobranca) =>
+      PENDING_CHARGE_STATUSES.has(normalizeStatus(cobranca.status))
+    )
+    .reduce((acc, cobranca) => acc + safeNumber(cobranca.valor), 0);
+  const cobrancasAtrasadas = cobrancaRows.filter((cobranca) => {
+    const dias = daysUntil(cobranca.data_expiracao);
+    return (
+      PENDING_CHARGE_STATUSES.has(normalizeStatus(cobranca.status)) &&
+      typeof dias === "number" &&
+      dias < 0
+    );
+  });
+  const atrasadoValor = cobrancasAtrasadas.reduce(
+    (acc, cobranca) => acc + safeNumber(cobranca.valor),
+    0
+  );
+  const assinaturasEmRisco = assinaturaRows.filter((assinatura) =>
+    RISK_SUBSCRIPTION_STATUSES.has(normalizeStatus(assinatura.status))
+  ).length;
+  const checkoutsComFalha = checkoutRows.filter((checkout) =>
+    ["erro", "expirado"].includes(normalizeStatus(checkout.status))
+  ).length;
+  const checkoutsParaReconciliar = checkoutRows.filter(
+    (checkout) =>
+      Boolean(checkout.asaas_payment_id) &&
+      !checkout.id_cobranca &&
+      ["erro", "expirado"].includes(normalizeStatus(checkout.status))
+  ).length;
+  const taxaRecebimento =
+    cobrancaRows.length > 0
+      ? (cobrancaRows.filter((cobranca) =>
+          PAID_CHARGE_STATUSES.has(normalizeStatus(cobranca.status))
+        ).length /
+          cobrancaRows.length) *
+        100
+      : 0;
+
+  const rows = cobrancaRows.slice(0, 120).map((cobranca) => {
+    const salao = cobranca.id_salao ? salaoById.get(cobranca.id_salao) : null;
+    const assinatura = cobranca.id_salao
+      ? assinaturaBySalao.get(cobranca.id_salao)
+      : null;
+    const status = normalizeStatus(cobranca.status);
+    const diasParaExpirar = daysUntil(cobranca.data_expiracao);
+    const atrasada =
+      PENDING_CHARGE_STATUSES.has(status) &&
+      typeof diasParaExpirar === "number" &&
+      diasParaExpirar < 0;
+    const paidAt =
+      cobranca.pago_em ||
+      cobranca.payment_date ||
+      cobranca.confirmed_date ||
+      null;
+
+    return {
+      salao: salao?.nome || cobranca.id_salao || "-",
+      plano: assinatura?.plano || salao?.plano || "-",
+      valor: currency(safeNumber(cobranca.valor)),
+      status: cobranca.status || "-",
+      forma: cobranca.forma_pagamento || cobranca.gateway || "-",
+      vencimento: dateValue(cobranca.data_expiracao),
+      recebido: dateValue(paidAt),
+      referencia: cobranca.referencia || "-",
+      sinal: PAID_CHARGE_STATUSES.has(status)
+        ? "Receita confirmada"
+        : atrasada
+          ? `Inadimplente ha ${Math.abs(diasParaExpirar || 0)}d`
+          : PENDING_CHARGE_STATUSES.has(status)
+            ? "Aguardando pagamento"
+            : "Acompanhar",
+      acao: atrasada && cobranca.id_salao ? "Criar ticket" : "Abrir salao",
+      acao_tipo:
+        atrasada && cobranca.id_salao
+          ? "salao_ticket_financeiro"
+          : cobranca.id_salao
+            ? "salao_detail"
+            : null,
+      acao_id: cobranca.id_salao || null,
+    };
+  });
+
+  return {
+    title: "Financeiro SaaS",
+    description:
+      "Cockpit de receita do Admin Master: MRR, caixa recebido, pendencias, inadimplencia e reconciliacao de checkout.",
+    kpis: [
+      {
+        label: "MRR atual",
+        value: currency(mrr),
+        hint: "Assinaturas ativas ou pagas",
+        tone: "green",
+      },
+      {
+        label: "Receita mes",
+        value: currency(receitaMes),
+        hint: "Cobrancas confirmadas no mes atual",
+        tone: "blue",
+      },
+      {
+        label: "Pendentes",
+        value: currency(pendenteValor),
+        hint: "Valor aguardando pagamento",
+        tone: pendenteValor > 0 ? "amber" : "green",
+      },
+      {
+        label: "Em atraso",
+        value: currency(atrasadoValor),
+        hint: `${cobrancasAtrasadas.length} cobranca(s) vencida(s)`,
+        tone: atrasadoValor > 0 ? "red" : "green",
+      },
+      {
+        label: "Assinaturas em risco",
+        value: String(assinaturasEmRisco),
+        hint: "Churn, bloqueio ou inadimplencia",
+        tone: assinaturasEmRisco > 0 ? "red" : "green",
+      },
+    ],
+    diagnostics: [
+      {
+        label: "Caixa do mes",
+        value: currency(receitaMes),
+        detail:
+          "Receita confirmada precisa bater com cobrancas pagas e manter o webhook Asaas sem redirecionamento.",
+        tone: "blue",
+        href: "/admin-master/assinaturas/cobrancas",
+      },
+      {
+        label: "Recebimento",
+        value: percent(taxaRecebimento),
+        detail:
+          "Percentual recebido nas ultimas cobrancas listadas. Queda aqui vira acao de cobranca e suporte.",
+        tone: taxaRecebimento >= 70 ? "green" : "amber",
+      },
+      {
+        label: "Reconciliacao",
+        value: `${checkoutsParaReconciliar}/${checkoutsComFalha}`,
+        detail:
+          "Checkout com pagamento no provedor e sem cobranca local precisa ser tratado antes de vender em escala.",
+        tone: checkoutsParaReconciliar > 0 ? "red" : "green",
+        href: "/admin-master/operacao",
+      },
+    ],
+    rows,
+    columns: [
+      "salao",
+      "plano",
+      "valor",
+      "status",
+      "forma",
+      "vencimento",
+      "recebido",
+      "referencia",
+      "sinal",
+      "acao",
+    ],
+    actions: [
+      "Ver inadimplentes",
+      "Exportar receita",
+      "Gerar cobranca manual",
+      "Reconciliar checkout",
     ],
   };
 }
@@ -902,6 +1477,32 @@ export async function getAdminMasterSection(
           tone: "blue",
         },
       ],
+      diagnostics: [
+        {
+          label: "Retencao",
+          value: `${emRisco} em risco`,
+          detail:
+            "Assinatura em risco deve virar ticket antes de bloqueio, churn ou perda de receita recorrente.",
+          tone: emRisco > 0 ? "red" : "green",
+          href: "/admin-master/suporte",
+        },
+        {
+          label: "Vencimento",
+          value: `${vencendoSeteDias} em 7d`,
+          detail:
+            "A janela de sete dias e a melhor hora para confirmar pagamento, cartao e renovacao automatica.",
+          tone: vencendoSeteDias > 0 ? "amber" : "green",
+          href: "/admin-master/assinaturas/cobrancas",
+        },
+        {
+          label: "MRR",
+          value: currency(mrr),
+          detail:
+            "Este valor considera assinaturas ativas/pagas e ajuda a validar se planos e cobrancas estao conversando.",
+          tone: "blue",
+          href: "/admin-master/financeiro",
+        },
+      ],
       rows,
       columns: [
         "salao",
@@ -1162,6 +1763,32 @@ export async function getAdminMasterSection(
           value: String(checkoutFalhos),
           hint: `${checkoutsReconciliar} exigem reconciliacao`,
           tone: checkoutFalhos > 0 ? "red" : checkoutEmAndamento > 0 ? "amber" : "green",
+        },
+      ],
+      diagnostics: [
+        {
+          label: "Recebimento",
+          value: `${cobrancasRecebidas}/${cobrancaRows.length}`,
+          detail:
+            "Acompanhe a proporcao de cobrancas recebidas contra a fila recente para medir conversao real de caixa.",
+          tone: cobrancasRecebidas > 0 ? "green" : "amber",
+          href: "/admin-master/financeiro",
+        },
+        {
+          label: "Atraso",
+          value: String(cobrancasEmAtraso),
+          detail:
+            "Cobranca pendente vencida deve abrir acao no salao para reduzir inadimplencia antes do bloqueio.",
+          tone: cobrancasEmAtraso > 0 ? "red" : "green",
+          href: "/admin-master/suporte",
+        },
+        {
+          label: "Checkout",
+          value: `${checkoutFalhos} falhas`,
+          detail:
+            "Falhas ou reconciliacoes indicam dinheiro no caminho que ainda nao virou registro financeiro confiavel.",
+          tone: checkoutFalhos > 0 ? "red" : "green",
+          href: "/admin-master/operacao",
         },
       ],
       rows,
@@ -1554,8 +2181,16 @@ export async function getAdminMasterSection(
     };
   }
 
+  if (section === "financeiro") {
+    return getAdminMasterFinanceiroSection();
+  }
+
   if (section === "planos") {
     return getAdminMasterPlanosSection();
+  }
+
+  if (section === "recursos") {
+    return getAdminMasterRecursosSection();
   }
 
   if (section === "alertas") {
