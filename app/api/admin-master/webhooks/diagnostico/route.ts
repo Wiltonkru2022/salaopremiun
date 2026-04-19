@@ -1,16 +1,20 @@
 import { NextResponse } from "next/server";
 import { registrarAdminMasterAuditoria } from "@/lib/admin-master/actions";
-import {
-  AdminMasterAuthError,
-  requireAdminMasterUser,
-} from "@/lib/admin-master/auth/requireAdminMasterUser";
+import { getAdminMasterAccess } from "@/lib/admin-master/auth/requireAdminMasterUser";
 
 const ASAAS_WEBHOOK_PUBLIC_URL =
   "https://salaopremiun.com.br/api/webhooks/asaas";
 
 export async function POST() {
   try {
-    const admin = await requireAdminMasterUser("operacao_reprocessar");
+    const admin = await getAdminMasterAccess("operacao_reprocessar");
+
+    if (!admin.ok) {
+      return NextResponse.json(
+        { ok: false, error: admin.message },
+        { status: admin.status }
+      );
+    }
 
     const response = await fetch(ASAAS_WEBHOOK_PUBLIC_URL, {
       method: "POST",
@@ -48,13 +52,6 @@ export async function POST() {
         : "Endpoint Asaas nao respondeu com 401 direto. Revise redirect de dominio.",
     });
   } catch (error) {
-    if (error instanceof AdminMasterAuthError) {
-      return NextResponse.json(
-        { ok: false, error: error.message },
-        { status: error.status }
-      );
-    }
-
     return NextResponse.json(
       {
         ok: false,
