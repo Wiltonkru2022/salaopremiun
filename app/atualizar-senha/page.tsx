@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { AlertCircle, ArrowLeft, LockKeyhole, RefreshCcw } from "lucide-react";
@@ -11,7 +11,9 @@ const MENSAGEM_ERRO_LINK =
 
 export default function AtualizarSenhaPage() {
   const router = useRouter();
-  const supabase = useMemo(() => createClient(), []);
+  const [supabase, setSupabase] = useState<ReturnType<typeof createClient> | null>(
+    null
+  );
 
   const [senha, setSenha] = useState("");
   const [confirmarSenha, setConfirmarSenha] = useState("");
@@ -22,6 +24,17 @@ export default function AtualizarSenhaPage() {
   const [erroSessaoRecuperacao, setErroSessaoRecuperacao] = useState(false);
 
   useEffect(() => {
+    try {
+      setSupabase(createClient());
+    } catch (error) {
+      console.warn("Supabase indisponivel para atualizar senha:", error);
+      setErro("Servico de autenticacao indisponivel neste ambiente.");
+      setValidandoLink(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!supabase) return;
     const client = supabase;
 
     async function prepararSessaoDeRecuperacao() {
@@ -125,6 +138,10 @@ export default function AtualizarSenhaPage() {
     setSucesso("");
 
     try {
+      if (!supabase) {
+        throw new Error("Servico de autenticacao indisponivel neste ambiente.");
+      }
+
       if (!senha.trim()) {
         throw new Error("Informe a nova senha.");
       }

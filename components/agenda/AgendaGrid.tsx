@@ -2,7 +2,7 @@
 
 import clsx from "clsx";
 import { addDays } from "date-fns";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   AgendaDensityMode,
   Agendamento,
@@ -175,6 +175,7 @@ type BlockCardProps = {
   ) => void;
   onResize: (item: Bloqueio, newEndTime: string) => void;
   baseDate: string;
+  allowDayMove?: boolean;
 };
 
 function BlockCard({
@@ -188,6 +189,7 @@ function BlockCard({
   onMove,
   onResize,
   baseDate,
+  allowDayMove = true,
 }: BlockCardProps) {
   const [previewTop, setPreviewTop] = useState<number | null>(null);
   const [previewHeight, setPreviewHeight] = useState<number | null>(null);
@@ -236,7 +238,9 @@ function BlockCard({
       const minutesDelta = blocksMoved * 15;
 
       nextStartMinutes = Math.max(0, startMinutes + minutesDelta);
-      nextDayDelta = Math.round(deltaX / Math.max(dayColumnWidthPx, 1));
+      nextDayDelta = allowDayMove
+        ? Math.round(deltaX / Math.max(dayColumnWidthPx, 1))
+        : 0;
 
       setPreviewTop(snappedTop);
       setPreviewDayDelta(nextDayDelta);
@@ -433,6 +437,8 @@ export default function AgendaGrid({
   onResizeBlock,
 }: Props) {
   const [now, setNow] = useState(() => new Date());
+  const gridViewportRef = useRef<HTMLDivElement | null>(null);
+  const [viewportWidth, setViewportWidth] = useState(0);
   const compactMode = densityMode === "reception";
   const pixelsPer15Min = compactMode ? 12 : 18;
   const slotHeight = compactMode ? 24 : 36;
@@ -451,6 +457,34 @@ export default function AgendaGrid({
   const slots = buildTimeSlots(startTime, endTime, intervalMinutes);
   const rawDays = viewMode === "day" ? [currentDate] : getWeekDays(currentDate);
   const days = rawDays.filter((day) => isDiaFuncionamento(day, diasFuncionamento));
+  const dayColumnWidth = useMemo(() => {
+    const daysCount = Math.max(days.length, 1);
+    if (!viewportWidth) {
+      return viewMode === "day" ? dayMinWidthDay : dayMinWidthWeek;
+    }
+
+    const available = Math.max(viewportWidth - timeColWidth, 0);
+    const dynamicWidth =
+      viewMode === "day" ? available : Math.floor(available / daysCount);
+
+    return Math.max(
+      viewMode === "day" ? dayMinWidthDay : dayMinWidthWeek,
+      dynamicWidth
+    );
+  }, [dayMinWidthDay, dayMinWidthWeek, days.length, timeColWidth, viewMode, viewportWidth]);
+
+  useEffect(() => {
+    const node = gridViewportRef.current;
+    if (!node || typeof ResizeObserver === "undefined") return;
+
+    const update = () => setViewportWidth(node.clientWidth);
+    update();
+
+    const observer = new ResizeObserver(() => update());
+    observer.observe(node);
+
+    return () => observer.disconnect();
+  }, []);
 
   function eventTop(horaInicio: string) {
     const start = timeToMinutes(startTime);
@@ -482,7 +516,6 @@ export default function AgendaGrid({
     );
   }
 
-  const dayColumnWidth = viewMode === "day" ? dayMinWidthDay : dayMinWidthWeek;
   const totalGridHeight = slots.length * slotHeight;
   const nowMinutes = timeToMinutes(
     `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`
@@ -491,6 +524,7 @@ export default function AgendaGrid({
   return (
     <div className="flex h-full min-h-0 flex-col rounded-[18px] bg-white select-none">
       <div
+        ref={gridViewportRef}
         className="agenda-scroll min-h-0 flex-1 overflow-auto rounded-[18px] select-none"
       >
         <div
@@ -739,6 +773,7 @@ export default function AgendaGrid({
                     onMove={onMoveBlock}
                     onResize={onResizeBlock}
                     baseDate={dayStr}
+                    allowDayMove={viewMode === "week"}
                   />
                 ))}
 
@@ -754,6 +789,7 @@ export default function AgendaGrid({
                     profissionalNome={selectedProfessional?.nome}
                     profissionalFotoUrl={selectedProfessional?.foto_url || null}
                     dayColumnWidthPx={dayColumnWidth}
+                    allowDayMove={viewMode === "week"}
                     operationalSignals={operationalSignals.get(item.id)}
                     onResizeEnd={onResizeEvent}
                     onMoveEnd={(ag, move) => {

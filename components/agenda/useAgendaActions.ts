@@ -20,6 +20,9 @@ type UseAgendaActionsParams = {
   setEditingBlock: (value: Bloqueio | null) => void;
   setModalMode: (value: "agendamento" | "bloqueio") => void;
   setModalOpen: (value: boolean) => void;
+  setSelectedBlockEndTime: (value: string) => void;
+  setSelectedBlockReason: (value: string) => void;
+  setSlotActionOpen: (value: boolean) => void;
 };
 
 export function useAgendaActions({
@@ -32,6 +35,9 @@ export function useAgendaActions({
   setEditingBlock,
   setModalMode,
   setModalOpen,
+  setSelectedBlockEndTime,
+  setSelectedBlockReason,
+  setSlotActionOpen,
 }: UseAgendaActionsParams) {
   const bloquearSeAssinaturaInvalida = useCallback(() => {
     if (!assinaturaBloqueada) return false;
@@ -62,13 +68,34 @@ export function useAgendaActions({
     [abrirAviso, config]
   );
 
-  const openCreateModal = useCallback(
+  const openSlotActions = useCallback(
     (date: string, time: string) => {
       if (bloquearSeAssinaturaInvalida()) return;
       if (!validarDiaFuncionamento(date)) return;
 
       setSelectedDate(date);
       setSelectedTime(time);
+      setSlotActionOpen(true);
+    },
+    [
+      bloquearSeAssinaturaInvalida,
+      setSelectedDate,
+      setSelectedTime,
+      setSlotActionOpen,
+      validarDiaFuncionamento,
+    ]
+  );
+
+  const openCreateModal = useCallback(
+    (date: string, time: string) => {
+      if (bloquearSeAssinaturaInvalida()) return;
+      if (!validarDiaFuncionamento(date)) return;
+
+      setSlotActionOpen(false);
+      setSelectedDate(date);
+      setSelectedTime(time);
+      setSelectedBlockEndTime(time);
+      setSelectedBlockReason("");
       setEditingItem(null);
       setEditingBlock(null);
       setModalMode("agendamento");
@@ -80,19 +107,29 @@ export function useAgendaActions({
       setEditingItem,
       setModalMode,
       setModalOpen,
+      setSelectedBlockEndTime,
+      setSelectedBlockReason,
       setSelectedDate,
       setSelectedTime,
+      setSlotActionOpen,
       validarDiaFuncionamento,
     ]
   );
 
   const openBlockModal = useCallback(
-    (date: string, time: string) => {
+    (
+      date: string,
+      time: string,
+      preset?: { endTime?: string; reason?: string }
+    ) => {
       if (bloquearSeAssinaturaInvalida()) return;
       if (!validarDiaFuncionamento(date)) return;
 
+      setSlotActionOpen(false);
       setSelectedDate(date);
       setSelectedTime(time);
+      setSelectedBlockEndTime(preset?.endTime || time);
+      setSelectedBlockReason(preset?.reason || "");
       setEditingItem(null);
       setEditingBlock(null);
       setModalMode("bloqueio");
@@ -104,8 +141,11 @@ export function useAgendaActions({
       setEditingItem,
       setModalMode,
       setModalOpen,
+      setSelectedBlockEndTime,
+      setSelectedBlockReason,
       setSelectedDate,
       setSelectedTime,
+      setSlotActionOpen,
       validarDiaFuncionamento,
     ]
   );
@@ -114,6 +154,7 @@ export function useAgendaActions({
     (item: Agendamento) => {
       if (bloquearSeAssinaturaInvalida()) return;
 
+      setSlotActionOpen(false);
       setEditingItem(item);
       setEditingBlock(null);
       setModalMode("agendamento");
@@ -125,6 +166,7 @@ export function useAgendaActions({
       setEditingItem,
       setModalMode,
       setModalOpen,
+      setSlotActionOpen,
     ]
   );
 
@@ -132,6 +174,7 @@ export function useAgendaActions({
     (block: Bloqueio) => {
       if (bloquearSeAssinaturaInvalida()) return;
 
+      setSlotActionOpen(false);
       setEditingItem(null);
       setEditingBlock(block);
       setModalMode("bloqueio");
@@ -143,6 +186,7 @@ export function useAgendaActions({
       setEditingItem,
       setModalMode,
       setModalOpen,
+      setSlotActionOpen,
     ]
   );
 
@@ -150,10 +194,19 @@ export function useAgendaActions({
     setModalOpen(false);
     setEditingItem(null);
     setEditingBlock(null);
-  }, [setEditingBlock, setEditingItem, setModalOpen]);
+    setSelectedBlockEndTime("");
+    setSelectedBlockReason("");
+  }, [
+    setEditingBlock,
+    setEditingItem,
+    setModalOpen,
+    setSelectedBlockEndTime,
+    setSelectedBlockReason,
+  ]);
 
   return {
     bloquearSeAssinaturaInvalida,
+    openSlotActions,
     openCreateModal,
     openBlockModal,
     openEditModal,

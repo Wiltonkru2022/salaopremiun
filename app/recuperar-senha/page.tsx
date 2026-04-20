@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter, useSearchParams } from "next/navigation";
 import { getErrorMessage } from "@/lib/get-error-message";
@@ -34,7 +34,9 @@ function RecuperarSenhaFallback() {
 function RecuperarSenhaContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const supabase = useMemo(() => createClient(), []);
+  const [supabase, setSupabase] = useState<ReturnType<typeof createClient> | null>(
+    null
+  );
 
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
@@ -43,6 +45,15 @@ function RecuperarSenhaContent() {
   const [cooldown, setCooldown] = useState(0);
   const [enviadoComSucesso, setEnviadoComSucesso] = useState(false);
   const emailQuery = searchParams.get("email")?.trim() || "";
+
+  useEffect(() => {
+    try {
+      setSupabase(createClient());
+    } catch (error) {
+      console.warn("Supabase indisponivel para recuperar senha:", error);
+      setErro("Servico de autenticacao indisponivel neste ambiente.");
+    }
+  }, []);
 
   useEffect(() => {
     if (!emailQuery) return;
@@ -76,6 +87,10 @@ function RecuperarSenhaContent() {
     setEnviadoComSucesso(false);
 
     try {
+      if (!supabase) {
+        throw new Error("Servico de autenticacao indisponivel neste ambiente.");
+      }
+
       const emailLimpo = email.trim();
 
       if (!emailLimpo) {

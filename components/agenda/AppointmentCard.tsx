@@ -28,6 +28,7 @@ type Props = {
   profissionalNome?: string;
   profissionalFotoUrl?: string | null;
   dayColumnWidthPx: number;
+  allowDayMove?: boolean;
   operationalSignals?: {
     isOverdue: boolean;
     isInProgress: boolean;
@@ -61,6 +62,7 @@ export default function AppointmentCard({
   profissionalNome,
   profissionalFotoUrl,
   dayColumnWidthPx,
+  allowDayMove = true,
   operationalSignals,
   onResizeEnd,
   onMoveEnd,
@@ -246,7 +248,9 @@ export default function AppointmentCard({
 
       const snappedBlocksY = Math.round(deltaY / pixelsPer15Min);
       minutesDelta = snappedBlocksY * 15;
-      dayDelta = Math.round(deltaX / Math.max(dayColumnWidthPx, 1));
+      dayDelta = allowDayMove
+        ? Math.round(deltaX / Math.max(dayColumnWidthPx, 1))
+        : 0;
 
       setPreviewTop(top + snappedBlocksY * pixelsPer15Min);
       setPreviewDayDelta(dayDelta);

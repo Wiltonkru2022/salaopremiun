@@ -62,8 +62,16 @@ export default function AgendaModal(props: AgendaModalProps) {
     abrirWhatsappMensagem,
     handleClienteChange,
     handleAbrirComanda,
+    handleQuickCreateClient,
     handleCriarNovaComandaParaClienteAtual,
     handleSubmit,
+    quickClientOpen,
+    setQuickClientOpen,
+    quickClientName,
+    setQuickClientName,
+    quickClientWhatsapp,
+    setQuickClientWhatsapp,
+    quickClientSaving,
   } = useAgendaModal(props);
 
   if (!open) return null;
@@ -152,6 +160,14 @@ export default function AgendaModal(props: AgendaModalProps) {
                     onObservacoesChange={setObservacoes}
                     onStatusChange={setStatus}
                     onAbrirComanda={handleAbrirComanda}
+                    onQuickCreateClient={handleQuickCreateClient}
+                    quickClientOpen={quickClientOpen}
+                    quickClientName={quickClientName}
+                    quickClientWhatsapp={quickClientWhatsapp}
+                    quickClientSaving={quickClientSaving}
+                    onToggleQuickClient={setQuickClientOpen}
+                    onQuickClientNameChange={setQuickClientName}
+                    onQuickClientWhatsappChange={setQuickClientWhatsapp}
                     onCancelAppointment={onCancelAppointment}
                   />
                 ) : (

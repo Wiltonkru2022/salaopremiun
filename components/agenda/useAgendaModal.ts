@@ -16,6 +16,7 @@ import {
   buildWhatsappConfirmacaoText,
   normalizeTimeString,
 } from "@/lib/utils/agenda";
+import { getErrorMessage } from "@/lib/get-error-message";
 
 export type AgendaModalMode = "agendamento" | "bloqueio";
 
@@ -72,9 +73,12 @@ export type AgendaModalProps = {
   profissionais: Profissional[];
   clientes: Cliente[];
   servicos: Servico[];
+  idSalao: string;
   selectedProfissionalId: string;
   selectedDate: string;
   selectedTime: string;
+  initialBlockEndTime?: string;
+  initialBlockReason?: string;
   onBuscarComandasAbertas: (clienteId: string) => Promise<ComandaResumo[]>;
   onCriarComanda: (clienteId: string) => Promise<ComandaResumo>;
 };
@@ -95,9 +99,12 @@ export function useAgendaModal({
   profissionais,
   clientes,
   servicos,
+  idSalao,
   selectedProfissionalId,
   selectedDate,
   selectedTime,
+  initialBlockEndTime,
+  initialBlockReason,
   onBuscarComandasAbertas,
   onCriarComanda,
 }: AgendaModalProps) {
@@ -121,6 +128,11 @@ export function useAgendaModal({
   const [comandasAbertasCliente, setComandasAbertasCliente] = useState<ComandaResumo[]>([]);
 
   const [whatsMensagem, setWhatsMensagem] = useState("");
+  const [quickClientOpen, setQuickClientOpen] = useState(false);
+  const [quickClientName, setQuickClientName] = useState("");
+  const [quickClientWhatsapp, setQuickClientWhatsapp] = useState("");
+  const [quickClientSaving, setQuickClientSaving] = useState(false);
+  const [quickClientOptions, setQuickClientOptions] = useState<Cliente[]>([]);
 
   const [aviso, setAviso] = useState<AvisoState>({
     open: false,
@@ -143,12 +155,12 @@ export function useAgendaModal({
 
   const clientesOptions = useMemo<SearchableOption[]>(
     () =>
-      clientes.map((c) => ({
+      [...clientes, ...quickClientOptions].map((c) => ({
         value: c.id,
         label: c.nome,
         description: c.whatsapp || "",
       })),
-    [clientes]
+    [clientes, quickClientOptions]
   );
 
   const servicosDoProfissional = useMemo(
@@ -234,15 +246,27 @@ export function useAgendaModal({
 
         setProfissionalId(selectedProfissionalId || "");
         setHoraInicio(start);
-        setHoraFimBloqueio(`${endHour}:${endMin}`);
-        setMotivoBloqueio("");
+        setHoraFimBloqueio(initialBlockEndTime || `${endHour}:${endMin}`);
+        setMotivoBloqueio(initialBlockReason || "");
       }
     }
 
     setComandasAbertasCliente([]);
     setShowComandaDecisionModal(false);
+    setQuickClientOpen(false);
+    setQuickClientName("");
+    setQuickClientWhatsapp("");
     fecharAviso();
-  }, [open, mode, editingItem, editingBlock, selectedProfissionalId, selectedTime]);
+  }, [
+    open,
+    mode,
+    editingItem,
+    editingBlock,
+    selectedProfissionalId,
+    selectedTime,
+    initialBlockEndTime,
+    initialBlockReason,
+  ]);
 
   useEffect(() => {
     if (!open) return;
@@ -434,6 +458,65 @@ export function useAgendaModal({
     }
   }
 
+  async function handleQuickCreateClient() {
+    if (!idSalao) {
+      abrirAviso("Salao indisponivel", "Nao foi possivel identificar o salao atual.", "danger");
+      return;
+    }
+
+    if (!String(quickClientName || "").trim()) {
+      abrirAviso("Nome obrigatorio", "Informe pelo menos o nome da cliente.", "warning");
+      return;
+    }
+
+    try {
+      setQuickClientSaving(true);
+      const response = await fetch("/api/clientes/processar", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          idSalao,
+          acao: "salvar",
+          cliente: {
+            nome: quickClientName.trim(),
+            whatsapp: quickClientWhatsapp.trim() || null,
+            ativo: true,
+          },
+        }),
+      });
+
+      const data = (await response.json()) as { idCliente?: string; error?: string };
+
+      if (!response.ok || !data.idCliente) {
+        throw new Error(data.error || "Nao foi possivel cadastrar a cliente.");
+      }
+
+      const novoCliente: Cliente = {
+        id: data.idCliente,
+        nome: quickClientName.trim(),
+        whatsapp: quickClientWhatsapp.trim() || null,
+      };
+
+      setQuickClientOptions((prev) => {
+        const next = prev.filter((item) => item.id !== novoCliente.id);
+        return [...next, novoCliente];
+      });
+      setClienteId(novoCliente.id);
+      setQuickClientOpen(false);
+      setQuickClientName("");
+      setQuickClientWhatsapp("");
+
+      await handleClienteChange(novoCliente.id);
+      abrirAviso("Cliente criado", "Cadastro rapido concluido e cliente selecionado.", "success");
+    } catch (error) {
+      abrirAviso("Erro ao cadastrar cliente", getErrorMessage(error), "danger");
+    } finally {
+      setQuickClientSaving(false);
+    }
+  }
+
   async function handleCriarNovaComandaParaClienteAtual() {
     if (!clienteId) {
       abrirAviso(
@@ -589,7 +672,15 @@ export function useAgendaModal({
     abrirWhatsappMensagem,
     handleClienteChange,
     handleAbrirComanda,
+    handleQuickCreateClient,
     handleCriarNovaComandaParaClienteAtual,
     handleSubmit,
+    quickClientOpen,
+    setQuickClientOpen,
+    quickClientName,
+    setQuickClientName,
+    quickClientWhatsapp,
+    setQuickClientWhatsapp,
+    quickClientSaving,
   };
 }

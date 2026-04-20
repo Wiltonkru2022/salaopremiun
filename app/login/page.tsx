@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowRight, LockKeyhole, Mail, Sparkles } from "lucide-react";
 import { createClient } from "../../lib/supabase/client";
@@ -33,7 +33,9 @@ function LoginPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const submittingRef = useRef(false);
-  const supabase = useMemo(() => createClient(), []);
+  const [supabase, setSupabase] = useState<ReturnType<typeof createClient> | null>(
+    null
+  );
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -44,6 +46,15 @@ function LoginPageContent() {
   const planoSelecionado = searchParams.get("plano")?.trim() || "";
   const emailQuery = searchParams.get("email")?.trim() || "";
   const redirectNotice = getLoginRedirectNotice(searchParams);
+
+  useEffect(() => {
+    try {
+      setSupabase(createClient());
+    } catch (error) {
+      console.warn("Supabase indisponivel para login:", error);
+      setErro("Servico de autenticacao indisponivel neste ambiente.");
+    }
+  }, []);
 
   useEffect(() => {
     if (!emailQuery) return;
@@ -60,6 +71,10 @@ function LoginPageContent() {
     setRateLimited(false);
 
     try {
+      if (!supabase) {
+        throw new Error("Servico de autenticacao indisponivel neste ambiente.");
+      }
+
       const { error } = await supabase.auth.signInWithPassword({
         email: email.trim().toLowerCase(),
         password,

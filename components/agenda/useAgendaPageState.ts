@@ -51,6 +51,9 @@ export function useAgendaPageState() {
     format(new Date(), "yyyy-MM-dd")
   );
   const [selectedTime, setSelectedTime] = useState("08:00");
+  const [selectedBlockEndTime, setSelectedBlockEndTime] = useState("09:00");
+  const [selectedBlockReason, setSelectedBlockReason] = useState("");
+  const [slotActionOpen, setSlotActionOpen] = useState(false);
 
   const [assinaturaBloqueada, setAssinaturaBloqueada] = useState(false);
 
@@ -126,6 +129,12 @@ export function useAgendaPageState() {
     setSelectedDate,
     selectedTime,
     setSelectedTime,
+    selectedBlockEndTime,
+    setSelectedBlockEndTime,
+    selectedBlockReason,
+    setSelectedBlockReason,
+    slotActionOpen,
+    setSlotActionOpen,
     assinaturaBloqueada,
     setAssinaturaBloqueada,
     comandasAbertasCliente,

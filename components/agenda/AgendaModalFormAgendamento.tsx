@@ -1,6 +1,6 @@
 "use client";
 
-import { Clock3, Receipt } from "lucide-react";
+import { Clock3, Plus, Receipt } from "lucide-react";
 import SearchableSelect, {
   type SearchableOption,
 } from "@/components/ui/SearchableSelect";
@@ -20,6 +20,10 @@ type Props = {
   loadingComanda: boolean;
   comandaNumero: number | null;
   editingItem?: Agendamento | null;
+  quickClientOpen: boolean;
+  quickClientName: string;
+  quickClientWhatsapp: string;
+  quickClientSaving: boolean;
   onProfissionalChange: (value: string) => void;
   onClienteChange: (value: string) => Promise<void>;
   onServicoChange: (value: string) => void;
@@ -27,6 +31,10 @@ type Props = {
   onObservacoesChange: (value: string) => void;
   onStatusChange: (value: AgendaStatus) => void;
   onAbrirComanda: () => Promise<void>;
+  onQuickCreateClient: () => Promise<void>;
+  onToggleQuickClient: (value: boolean) => void;
+  onQuickClientNameChange: (value: string) => void;
+  onQuickClientWhatsappChange: (value: string) => void;
   onCancelAppointment: (item: Agendamento) => Promise<void>;
 };
 
@@ -43,6 +51,10 @@ export default function AgendaModalFormAgendamento({
   loadingComanda,
   comandaNumero,
   editingItem,
+  quickClientOpen,
+  quickClientName,
+  quickClientWhatsapp,
+  quickClientSaving,
   onProfissionalChange,
   onClienteChange,
   onServicoChange,
@@ -50,6 +62,10 @@ export default function AgendaModalFormAgendamento({
   onObservacoesChange,
   onStatusChange,
   onAbrirComanda,
+  onQuickCreateClient,
+  onToggleQuickClient,
+  onQuickClientNameChange,
+  onQuickClientWhatsappChange,
   onCancelAppointment,
 }: Props) {
   return (
@@ -67,14 +83,54 @@ export default function AgendaModalFormAgendamento({
         </div>
 
         <div>
+          <div className="mb-1.5 flex items-center justify-between gap-2">
+            <label className="block text-xs font-semibold text-zinc-700">
+              Cliente
+            </label>
+            <button
+              type="button"
+              onClick={() => onToggleQuickClient(!quickClientOpen)}
+              className="inline-flex items-center gap-1 rounded-lg border border-zinc-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-zinc-700 transition hover:bg-zinc-50"
+            >
+              <Plus size={12} />
+              Cadastro rapido
+            </button>
+          </div>
+
           <SearchableSelect
-            label="Cliente"
             placeholder="Digite o nome do cliente"
             emptyText="Nenhum cliente encontrado."
             options={clientesOptions}
             value={clienteId}
             onChange={onClienteChange}
           />
+
+          {quickClientOpen ? (
+            <div className="mt-2 rounded-[18px] border border-zinc-200 bg-zinc-50 p-3">
+              <div className="grid gap-2 md:grid-cols-[minmax(0,1fr)_180px_auto]">
+                <input
+                  value={quickClientName}
+                  onChange={(e) => onQuickClientNameChange(e.target.value)}
+                  placeholder="Nome da cliente"
+                  className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-zinc-900"
+                />
+                <input
+                  value={quickClientWhatsapp}
+                  onChange={(e) => onQuickClientWhatsappChange(e.target.value)}
+                  placeholder="WhatsApp"
+                  className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-zinc-900"
+                />
+                <button
+                  type="button"
+                  onClick={() => void onQuickCreateClient()}
+                  disabled={quickClientSaving}
+                  className="rounded-xl bg-zinc-900 px-3 py-2 text-sm font-semibold text-white transition hover:opacity-95 disabled:opacity-60"
+                >
+                  {quickClientSaving ? "Salvando..." : "Salvar"}
+                </button>
+              </div>
+            </div>
+          ) : null}
 
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <button

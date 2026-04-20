@@ -10,6 +10,7 @@ import ProfissionaisBar from "@/components/agenda/ProfissionaisBar";
 import AgendaNoticeDialog from "@/components/agenda/AgendaNoticeDialog";
 import AgendaConfirmDialog from "@/components/agenda/AgendaConfirmDialog";
 import AgendaReasonDialog from "@/components/agenda/AgendaReasonDialog";
+import AgendaSlotActionsModal from "@/components/agenda/AgendaSlotActionsModal";
 import type { ComandaResumo } from "@/components/agenda/page-types";
 import { useAgendaActions } from "@/components/agenda/useAgendaActions";
 import { useAgendaData } from "@/components/agenda/useAgendaData";
@@ -21,9 +22,19 @@ import {
   criarNovaComandaAgenda,
 } from "@/lib/agenda/comandasAgenda";
 import { captureClientEvent } from "@/lib/monitoring/client";
-import { formatFullDate, sanitizeDiasFuncionamento } from "@/lib/utils/agenda";
+import { sanitizeDiasFuncionamento } from "@/lib/utils/agenda";
 import type { Agendamento, ConfigSalao } from "@/types/agenda";
 import { normalizeTimeString } from "@/lib/utils/agenda";
+
+function addMinutesToSlotTime(time: string, minutes: number) {
+  const [hour, minute] = normalizeTimeString(time).split(":").map(Number);
+  const total = hour * 60 + minute + minutes;
+  return normalizeTimeString(
+    `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(
+      total % 60
+    ).padStart(2, "0")}`
+  );
+}
 
 export default function AgendaPage() {
   const router = useRouter();
@@ -75,6 +86,12 @@ export default function AgendaPage() {
     setSelectedDate,
     selectedTime,
     setSelectedTime,
+    selectedBlockEndTime,
+    setSelectedBlockEndTime,
+    selectedBlockReason,
+    setSelectedBlockReason,
+    slotActionOpen,
+    setSlotActionOpen,
     assinaturaBloqueada,
     setAssinaturaBloqueada,
     selectedProfissional,
@@ -105,6 +122,7 @@ export default function AgendaPage() {
 
   const {
     bloquearSeAssinaturaInvalida,
+    openSlotActions,
     openCreateModal,
     openBlockModal,
     openEditModal,
@@ -120,6 +138,9 @@ export default function AgendaPage() {
     setEditingBlock,
     setModalMode,
     setModalOpen,
+    setSelectedBlockEndTime,
+    setSelectedBlockReason,
+    setSlotActionOpen,
   });
 
   const { safeGetAuthUser, sincronizarAgendamento, loadAgenda, init } =
@@ -352,32 +373,6 @@ export default function AgendaPage() {
           onChangeDensityMode={setDensityMode}
           isExpanded={agendaExpanded}
           onToggleExpanded={() => setAgendaExpanded((prev) => !prev)}
-          onNewAppointment={() =>
-            assinaturaBloqueada
-              ? abrirAviso(
-                  "Assinatura bloqueada",
-                  "Regularize o pagamento para voltar a criar agendamentos.",
-                  "danger",
-                  "/assinatura"
-                )
-              : openCreateModal(
-                  formatFullDate(currentDate),
-                  normalizeTimeString(config.hora_abertura)
-                )
-          }
-          onNewBlock={() =>
-            assinaturaBloqueada
-              ? abrirAviso(
-                  "Assinatura bloqueada",
-                  "Regularize o pagamento para voltar a criar bloqueios.",
-                  "danger",
-                  "/assinatura"
-                )
-              : openBlockModal(
-                  formatFullDate(currentDate),
-                  normalizeTimeString(config.hora_abertura)
-                )
-          }
         />
 
         {assinaturaBloqueada ? (
@@ -404,7 +399,7 @@ export default function AgendaPage() {
             bloqueios={bloqueios}
             selectedProfessional={selectedProfissional}
             densityMode={densityMode}
-            onClickSlot={openCreateModal}
+            onClickSlot={openSlotActions}
             onResizeEvent={handleResizeEvent}
             onMoveEvent={handleMoveEvent}
             onEditEvent={openEditModal}
@@ -430,12 +425,44 @@ export default function AgendaPage() {
           clientes={clientes}
           servicos={servicos}
           selectedProfissionalId={selectedProfissionalId}
+          idSalao={idSalao}
           selectedDate={selectedDate}
           selectedTime={selectedTime}
+          initialBlockEndTime={selectedBlockEndTime}
+          initialBlockReason={selectedBlockReason}
           onBuscarComandasAbertas={buscarComandasAbertasDoCliente}
           onCriarComanda={criarNovaComanda}
         />
       </div>
+      <AgendaSlotActionsModal
+        open={slotActionOpen}
+        date={selectedDate}
+        time={selectedTime}
+        onClose={() => setSlotActionOpen(false)}
+        onNewAppointment={() => openCreateModal(selectedDate, selectedTime)}
+        onQuickLunch30={() =>
+          openBlockModal(selectedDate, selectedTime, {
+            endTime: addMinutesToSlotTime(selectedTime, 30),
+            reason: "Almoco",
+          })
+        }
+        onQuickLunch60={() =>
+          openBlockModal(selectedDate, selectedTime, {
+            endTime: addMinutesToSlotTime(selectedTime, 60),
+            reason: "Almoco",
+          })
+        }
+        onOtherAbsence={() => openBlockModal(selectedDate, selectedTime)}
+        onCustomerCredit={() => {
+          setSlotActionOpen(false);
+          abrirAviso(
+            "Credito da cliente",
+            "O lancamento de credito da cliente vai pelo caixa. Vou deixar esse atalho completo no proximo passo, mas por enquanto ele ainda nao fecha o fluxo pela agenda.",
+            "warning",
+            "/caixa"
+          );
+        }}
+      />
       <AgendaNoticeDialog modal={avisoModal} onClose={fecharAviso} />
       <AgendaConfirmDialog
         modal={confirmModal}

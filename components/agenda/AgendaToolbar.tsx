@@ -41,8 +41,6 @@ type Props = {
   onChangeDensityMode: (mode: AgendaDensityMode) => void;
   isExpanded: boolean;
   onToggleExpanded: () => void;
-  onNewAppointment: () => void;
-  onNewBlock: () => void;
 };
 
 const currencyFormatter = new Intl.NumberFormat("pt-BR", {
@@ -68,8 +66,6 @@ export default function AgendaToolbar({
   onChangeDensityMode,
   isExpanded,
   onToggleExpanded,
-  onNewAppointment,
-  onNewBlock,
 }: Props) {
   const periodLabel =
     viewMode === "day"
@@ -261,20 +257,6 @@ export default function AgendaToolbar({
             <span className="hidden lg:inline">
               {isExpanded ? "Recolher agenda" : "Expandir agenda"}
             </span>
-          </button>
-
-          <button
-            onClick={onNewAppointment}
-            className="rounded-lg bg-zinc-900 px-3.5 py-2 text-sm font-semibold text-white transition hover:opacity-95"
-          >
-            Novo agendamento
-          </button>
-
-          <button
-            onClick={onNewBlock}
-            className="rounded-lg border border-zinc-200 bg-white px-3.5 py-2 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50"
-          >
-            Bloquear horario
           </button>
         </div>
 
