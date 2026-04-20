@@ -84,22 +84,30 @@ export default function AgendaToolbar({
     <div className="overflow-hidden rounded-[16px] border border-zinc-200 bg-white">
       <div
         className={`border-b border-zinc-200 bg-white text-zinc-950 ${
-          densityMode === "reception" ? "px-3 py-2.5" : "px-3 py-3 lg:px-4"
+          densityMode === "reception" ? "px-3 py-2" : "px-3 py-3 lg:px-4"
         }`}
       >
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="max-w-3xl">
-            <div className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-500">
+            <div
+              className={`font-semibold uppercase tracking-[0.22em] text-zinc-500 ${
+                densityMode === "reception" ? "text-[10px]" : "text-xs"
+              }`}
+            >
               Operacao da agenda
             </div>
             <div
               className={`mt-1 font-bold ${
-                densityMode === "reception" ? "text-lg md:text-xl" : "text-xl md:text-2xl"
+                densityMode === "reception" ? "text-base md:text-lg" : "text-xl md:text-2xl"
               }`}
             >
               Agenda
             </div>
-            <div className="mt-1.5 flex flex-wrap items-center gap-2 text-xs text-zinc-600">
+            <div
+              className={`flex flex-wrap items-center gap-2 text-zinc-600 ${
+                densityMode === "reception" ? "mt-1 text-[11px]" : "mt-1.5 text-xs"
+              }`}
+            >
               <span className="rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1 capitalize">
                 {periodLabel}
               </span>
@@ -112,8 +120,16 @@ export default function AgendaToolbar({
             </div>
           </div>
 
-          <div className="rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2">
-            <div className="text-xs uppercase tracking-[0.18em] text-zinc-500">
+          <div
+            className={`rounded-xl border border-zinc-200 bg-zinc-50 ${
+              densityMode === "reception" ? "px-3 py-1.5" : "px-3 py-2"
+            }`}
+          >
+            <div
+              className={`uppercase tracking-[0.18em] text-zinc-500 ${
+                densityMode === "reception" ? "text-[10px]" : "text-xs"
+              }`}
+            >
               Valor potencial
             </div>
             <div className="mt-1 text-base font-bold md:text-lg">
@@ -125,10 +141,14 @@ export default function AgendaToolbar({
 
       <div
         className={`grid gap-2.5 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-center ${
-          densityMode === "reception" ? "px-3 py-2.5" : "px-3 py-3 lg:px-4"
+          densityMode === "reception" ? "px-3 py-2" : "px-3 py-3 lg:px-4"
         }`}
       >
-        <div className="grid gap-2.5 sm:grid-cols-2 xl:grid-cols-4">
+        <div
+          className={`grid sm:grid-cols-2 xl:grid-cols-4 ${
+            densityMode === "reception" ? "gap-2" : "gap-2.5"
+          }`}
+        >
           <StatCard
             icon={<CalendarDays size={16} />}
             label="Atendimentos"
@@ -160,7 +180,7 @@ export default function AgendaToolbar({
         </div>
 
         <div className="flex flex-wrap items-center gap-2 xl:justify-end">
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-1.5">
             <button
               onClick={onPrev}
               className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-zinc-200 bg-white text-zinc-700 transition hover:bg-zinc-50"
@@ -205,7 +225,7 @@ export default function AgendaToolbar({
             </div>
           </div>
 
-          <div className="flex rounded-lg border border-zinc-200 bg-zinc-50 p-1">
+          <div className="flex rounded-lg border border-zinc-200 bg-zinc-50 p-0.5">
             <button
               type="button"
               onClick={() => onChangeDensityMode("reception")}
@@ -258,7 +278,7 @@ export default function AgendaToolbar({
           </button>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2 xl:col-span-2">
+        <div className="flex flex-wrap items-center gap-1.5 xl:col-span-2">
           <StatusPill
             label="Confirmados"
             value={statusCounts.confirmado}

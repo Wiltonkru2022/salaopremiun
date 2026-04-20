@@ -19,7 +19,7 @@ export default function ProfissionaisBar({
   return (
     <div
       className={`overflow-hidden rounded-[16px] border border-zinc-200 bg-white ${
-        densityMode === "reception" ? "px-3 py-2" : "px-3 py-2.5"
+        densityMode === "reception" ? "px-3 py-1.5" : "px-3 py-2.5"
       }`}
     >
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -34,7 +34,7 @@ export default function ProfissionaisBar({
         </div>
       </div>
 
-      <div className="mt-2 overflow-x-auto">
+      <div className={densityMode === "reception" ? "mt-1.5 overflow-x-auto" : "mt-2 overflow-x-auto"}>
         <div
           className={`flex min-w-max pb-1 ${
             densityMode === "reception" ? "gap-2" : "gap-3"
@@ -51,7 +51,7 @@ export default function ProfissionaisBar({
                 className={clsx(
                   `flex items-center gap-3 rounded-[16px] border text-left transition ${
                     densityMode === "reception"
-                      ? "min-w-[150px] px-2.5 py-2"
+                      ? "min-w-[142px] px-2 py-1.5"
                       : "min-w-[180px] px-3 py-2.5 xl:min-w-[210px]"
                   }`,
                   active
@@ -63,7 +63,7 @@ export default function ProfissionaisBar({
                   src={prof.foto_url || "https://placehold.co/96x96?text=Prof"}
                   alt={prof.nome}
                   className={`${
-                    densityMode === "reception" ? "h-8 w-8" : "h-10 w-10"
+                    densityMode === "reception" ? "h-7 w-7" : "h-10 w-10"
                   } rounded-full object-cover`}
                 />
 
@@ -80,7 +80,7 @@ export default function ProfissionaisBar({
                   </div>
                   <div
                     className={`mt-0.5 truncate ${
-                      densityMode === "reception" ? "text-xs" : "text-[13px] xl:text-sm"
+                      densityMode === "reception" ? "text-[11px]" : "text-[13px] xl:text-sm"
                     } font-bold leading-tight`}
                   >
                     {prof.nome}
