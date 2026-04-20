@@ -310,7 +310,7 @@ export function useAssinaturaPage() {
     } finally {
       setLoading(false);
     }
-  }, [carregarAcesso, carregarCheckoutAtual, supabase]);
+  }, [carregarAcesso, carregarCheckoutAtual, setRenovacaoAutomatica, supabase]);
 
   useEffect(() => {
     void carregarDados();
