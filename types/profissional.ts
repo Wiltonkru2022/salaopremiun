@@ -55,7 +55,12 @@ export type SuporteRequestBody = {
   idCliente?: string | null;
 };
 
-export type AcaoProfissional = "criar" | "atualizar" | "atualizar_foto";
+export type AcaoProfissional =
+  | "criar"
+  | "atualizar"
+  | "atualizar_foto"
+  | "alterar_status"
+  | "excluir";
 
 export type ProfissionalServicoPayload = {
   id_servico?: string;

@@ -8,6 +8,7 @@ import {
   assertCanMutatePlanFeature,
   PlanAccessError,
 } from "@/lib/plans/access";
+import { reportOperationalIncident } from "@/lib/monitoring/operational-incidents";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import type {
   ProfissionalProcessarBody,
@@ -307,11 +308,80 @@ async function sincronizarVinculos(params: {
   }
 }
 
+async function assertProfissionalPodeSerExcluido(params: {
+  supabaseAdmin: ReturnType<typeof getSupabaseAdmin>;
+  idSalao: string;
+  idProfissional: string;
+}) {
+  const { supabaseAdmin, idSalao, idProfissional } = params;
+
+  const [
+    { count: agendamentosCount, error: agendamentosError },
+    { count: comandaItensCount, error: comandaItensError },
+    { count: comissoesCount, error: comissoesError },
+    { count: valesCount, error: valesError },
+  ] = await Promise.all([
+    supabaseAdmin
+      .from("agendamentos")
+      .select("id", { count: "exact", head: true })
+      .eq("id_salao", idSalao)
+      .eq("profissional_id", idProfissional),
+    supabaseAdmin
+      .from("comanda_itens")
+      .select("id", { count: "exact", head: true })
+      .eq("id_salao", idSalao)
+      .or(`id_profissional.eq.${idProfissional},id_assistente.eq.${idProfissional}`),
+    supabaseAdmin
+      .from("comissoes_lancamentos")
+      .select("id", { count: "exact", head: true })
+      .eq("id_salao", idSalao)
+      .eq("id_profissional", idProfissional),
+    supabaseAdmin
+      .from("profissionais_vales")
+      .select("id", { count: "exact", head: true })
+      .eq("id_salao", idSalao)
+      .eq("id_profissional", idProfissional),
+  ]);
+
+  if (agendamentosError) throw agendamentosError;
+  if (comandaItensError) throw comandaItensError;
+  if (comissoesError) throw comissoesError;
+  if (valesError) throw valesError;
+
+  if ((agendamentosCount || 0) > 0) {
+    throw new Error(
+      "Este profissional ja participou da agenda do salao. Inative o cadastro em vez de excluir."
+    );
+  }
+
+  if ((comandaItensCount || 0) > 0) {
+    throw new Error(
+      "Este profissional ja participou de comandas. Inative o cadastro em vez de excluir."
+    );
+  }
+
+  if ((comissoesCount || 0) > 0) {
+    throw new Error(
+      "Este profissional ja possui lancamentos de comissao. Inative o cadastro em vez de excluir."
+    );
+  }
+
+  if ((valesCount || 0) > 0) {
+    throw new Error(
+      "Este profissional ja possui historico financeiro no caixa. Inative o cadastro em vez de excluir."
+    );
+  }
+}
+
 export async function POST(req: NextRequest) {
+  let idSalao = "";
+  let acaoRaw = "";
+
   try {
     const body = (await req.json()) as ProfissionalProcessarBody;
     const acao = body.acao;
-    const idSalao = getString(body.idSalao);
+    acaoRaw = getString(body.acao).toLowerCase();
+    idSalao = getString(body.idSalao);
     const idProfissional = getString(body.idProfissional);
 
     if (!idSalao) {
@@ -339,6 +409,102 @@ export async function POST(req: NextRequest) {
         .eq("id_salao", idSalao);
 
       if (error) throw error;
+
+      return NextResponse.json({ ok: true, idProfissional });
+    }
+
+    if (acao === "alterar_status") {
+      if (!idProfissional) {
+        return jsonError("Profissional nao informado.");
+      }
+
+      const ativo = Boolean(body.profissional?.ativo);
+      const { data, error } = await supabaseAdmin
+        .from("profissionais")
+        .update({
+          ativo,
+          status: ativo ? "ativo" : "inativo",
+        })
+        .eq("id", idProfissional)
+        .eq("id_salao", idSalao)
+        .select("id")
+        .maybeSingle();
+
+      if (error) throw error;
+
+      if (!data?.id) {
+        return jsonError("Profissional nao encontrado.", 404);
+      }
+
+      if (!ativo) {
+        await supabaseAdmin
+          .from("profissionais_acessos")
+          .update({ ativo: false })
+          .eq("id_profissional", idProfissional);
+      }
+
+      return NextResponse.json({
+        ok: true,
+        idProfissional,
+        ativo,
+        status: ativo ? "ativo" : "inativo",
+      });
+    }
+
+    if (acao === "excluir") {
+      if (!idProfissional) {
+        return jsonError("Profissional nao informado.");
+      }
+
+      await assertProfissionalPodeSerExcluido({
+        supabaseAdmin,
+        idSalao,
+        idProfissional,
+      });
+
+      const { error: acessoError } = await supabaseAdmin
+        .from("profissionais_acessos")
+        .delete()
+        .eq("id_profissional", idProfissional);
+
+      if (acessoError) throw acessoError;
+
+      const { error: vinculoServicoError } = await supabaseAdmin
+        .from("profissional_servicos")
+        .delete()
+        .eq("id_profissional", idProfissional);
+
+      if (vinculoServicoError) throw vinculoServicoError;
+
+      const { error: vinculoAssistentePrincipalError } = await supabaseAdmin
+        .from("profissional_assistentes")
+        .delete()
+        .eq("id_salao", idSalao)
+        .eq("id_profissional", idProfissional);
+
+      if (vinculoAssistentePrincipalError) throw vinculoAssistentePrincipalError;
+
+      const { error: vinculoAssistenteSecundarioError } = await supabaseAdmin
+        .from("profissional_assistentes")
+        .delete()
+        .eq("id_salao", idSalao)
+        .eq("id_assistente", idProfissional);
+
+      if (vinculoAssistenteSecundarioError) throw vinculoAssistenteSecundarioError;
+
+      const { data, error } = await supabaseAdmin
+        .from("profissionais")
+        .delete()
+        .eq("id", idProfissional)
+        .eq("id_salao", idSalao)
+        .select("id")
+        .maybeSingle();
+
+      if (error) throw error;
+
+      if (!data?.id) {
+        return jsonError("Profissional nao encontrado.", 404);
+      }
 
       return NextResponse.json({ ok: true, idProfissional });
     }
@@ -433,6 +599,32 @@ export async function POST(req: NextRequest) {
 
     if (error instanceof PlanAccessError) {
       return jsonError(error.message, error.status, { code: error.code });
+    }
+
+    if (idSalao) {
+      try {
+        await reportOperationalIncident({
+          supabaseAdmin: getSupabaseAdmin(),
+          key: `profissionais:processar:${acaoRaw || "desconhecida"}:${idSalao}`,
+          module: "profissionais",
+          title: "Processamento de profissional falhou",
+          description:
+            error instanceof Error
+              ? error.message
+              : "Erro interno ao salvar profissional.",
+          severity: "alta",
+          idSalao,
+          details: {
+            acao: acaoRaw || null,
+            route: "/api/profissionais/processar",
+          },
+        });
+      } catch (incidentError) {
+        console.error(
+          "Falha ao registrar incidente operacional de profissionais:",
+          incidentError
+        );
+      }
     }
 
     console.error("ERRO API PROFISSIONAIS PROCESSAR:", error);

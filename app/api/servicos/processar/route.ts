@@ -7,6 +7,7 @@ import {
   assertCanMutatePlanFeature,
   PlanAccessError,
 } from "@/lib/plans/access";
+import { reportOperationalIncident } from "@/lib/monitoring/operational-incidents";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import type {
   AcaoServico,
@@ -224,10 +225,14 @@ async function salvarServicoCatalogoTransacional(params: {
 }
 
 export async function POST(req: NextRequest) {
+  let idSalao = "";
+  let acaoRaw = "";
+
   try {
     const body = (await req.json()) as ServicoProcessarBody;
-    const idSalao = sanitizeUuid(body.idSalao);
-    const acao = String(body.acao || "").trim().toLowerCase() as AcaoServico;
+    idSalao = sanitizeUuid(body.idSalao) || "";
+    acaoRaw = String(body.acao || "").trim().toLowerCase();
+    const acao = acaoRaw as AcaoServico;
 
     if (!idSalao) {
       return NextResponse.json({ error: "Salao obrigatorio." }, { status: 400 });
@@ -355,6 +360,35 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    if (idSalao) {
+      try {
+        await reportOperationalIncident({
+          supabaseAdmin: getSupabaseAdmin(),
+          key: `servicos:processar:${acaoRaw || "desconhecida"}:${idSalao}`,
+          module: "servicos",
+          title: "Processamento de servico falhou",
+          description:
+            error instanceof Error
+              ? error.message
+              : "Erro interno ao processar servico.",
+          severity: "alta",
+          idSalao,
+          details: {
+            acao: ["salvar", "alterar_status", "excluir"].includes(acaoRaw)
+              ? acaoRaw
+              : null,
+            route: "/api/servicos/processar",
+          },
+        });
+      } catch (incidentError) {
+        console.error(
+          "Falha ao registrar incidente operacional de servicos:",
+          incidentError
+        );
+      }
+    }
+
+    console.error("Erro geral ao processar servico:", error);
     return NextResponse.json(
       {
         error:

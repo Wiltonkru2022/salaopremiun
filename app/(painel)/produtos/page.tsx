@@ -1,15 +1,26 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
+import {
+  AlertTriangle,
+  ArrowUpDown,
+  Boxes,
+  Wallet,
+} from "lucide-react";
+import ConfirmActionModal from "@/components/ui/ConfirmActionModal";
 import { getUsuarioLogado } from "@/lib/auth/getUsuarioLogado";
 import {
   buildPermissoesByNivel,
   sanitizePermissoesDb,
 } from "@/lib/auth/permissions";
-import ConfirmActionModal from "@/components/ui/ConfirmActionModal";
+import { getErrorMessage } from "@/lib/get-error-message";
+import { createClient } from "@/lib/supabase/client";
+import type {
+  ProdutoProcessarErrorResponse,
+  ProdutoProcessarResponse,
+} from "@/types/produtos";
 
 type Produto = {
   id: string;
@@ -28,19 +39,29 @@ type Produto = {
 
 type Permissoes = Record<string, boolean>;
 
-type ProdutoProcessarResponse = {
-  ok: boolean;
-  idProduto?: string | null;
-  ativo?: boolean | null;
-  status?: string | null;
-};
+function formatCurrency(value?: number | null) {
+  return Number(value || 0).toLocaleString("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  });
+}
 
-type ProdutoProcessarErrorResponse = {
-  error?: string;
-};
+function formatQuantity(value?: number | null) {
+  return Number(value || 0).toLocaleString("pt-BR", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  });
+}
+
+function getMargemPercentual(produto: Produto) {
+  const custo = Number(produto.custo_real || 0);
+  const venda = Number(produto.preco_venda || 0);
+  if (venda <= 0) return 0;
+  return Number((((venda - custo) / venda) * 100).toFixed(1));
+}
 
 export default function ProdutosPage() {
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
 
   const [loading, setLoading] = useState(true);
@@ -48,11 +69,14 @@ export default function ProdutosPage() {
   const [erro, setErro] = useState("");
   const [msg, setMsg] = useState("");
   const [busca, setBusca] = useState("");
-  const [statusFiltro, setStatusFiltro] = useState<"todos" | "ativo" | "inativo">("todos");
+  const [statusFiltro, setStatusFiltro] = useState<
+    "todos" | "ativo" | "inativo"
+  >("todos");
   const [idSalao, setIdSalao] = useState("");
   const [produtos, setProdutos] = useState<Produto[]>([]);
-  const [produtoParaExcluir, setProdutoParaExcluir] = useState<Produto | null>(null);
-
+  const [produtoParaExcluir, setProdutoParaExcluir] = useState<Produto | null>(
+    null
+  );
   const [permissoes, setPermissoes] = useState<Permissoes | null>(null);
   const [nivel, setNivel] = useState("");
   const [acessoCarregado, setAcessoCarregado] = useState(false);
@@ -66,7 +90,7 @@ export default function ProdutosPage() {
     } = await supabase.auth.getUser();
 
     if (authError || !user) {
-      router.replace("/login");
+      router.replace("/login?motivo=sessao_expirada");
       return null;
     }
 
@@ -77,12 +101,12 @@ export default function ProdutosPage() {
       .maybeSingle();
 
     if (usuarioError || !usuario?.id || !usuario?.id_salao) {
-      setErro("Não foi possível validar o usuário do sistema.");
+      setErro("Nao foi possivel validar o usuario do sistema.");
       return null;
     }
 
     if (usuario.status && usuario.status !== "ativo") {
-      setErro("Usuário inativo.");
+      setErro("Usuario inativo. Fale com a administracao do salao.");
       return null;
     }
 
@@ -104,7 +128,7 @@ export default function ProdutosPage() {
     setAcessoCarregado(true);
 
     if (!permissoesFinal.produtos_ver) {
-      router.replace("/dashboard");
+      router.replace("/dashboard?motivo=sem_permissao");
       return null;
     }
 
@@ -131,29 +155,31 @@ export default function ProdutosPage() {
 
       const { data, error } = await supabase
         .from("produtos")
-        .select(`
-          id,
-          nome,
-          marca,
-          linha,
-          categoria,
-          destinacao,
-          preco_venda,
-          custo_real,
-          estoque_atual,
-          estoque_minimo,
-          status,
-          ativo
-        `)
+        .select(
+          [
+            "id",
+            "nome",
+            "marca",
+            "linha",
+            "categoria",
+            "destinacao",
+            "preco_venda",
+            "custo_real",
+            "estoque_atual",
+            "estoque_minimo",
+            "status",
+            "ativo",
+          ].join(", ")
+        )
         .eq("id_salao", salaoIdFinal)
         .order("nome", { ascending: true });
 
       if (error) throw error;
 
-      setProdutos((data as Produto[]) || []);
+      setProdutos(((data ?? []) as unknown as Produto[]) || []);
     } catch (e: unknown) {
       console.error(e);
-      setErro(e instanceof Error ? e.message : "Erro ao carregar produtos.");
+      setErro(getErrorMessage(e, "Erro ao carregar produtos."));
     } finally {
       setLoading(false);
     }
@@ -193,7 +219,7 @@ export default function ProdutosPage() {
 
   async function alternarStatus(produto: Produto) {
     if (!podeGerenciar) {
-      setErro("Você não tem permissão para alterar status de produtos.");
+      setErro("Voce nao tem permissao para alterar status de produtos.");
       return;
     }
 
@@ -224,7 +250,7 @@ export default function ProdutosPage() {
       setMsg(`Produto ${novoAtivo ? "ativado" : "inativado"} com sucesso.`);
     } catch (e: unknown) {
       console.error(e);
-      setErro(e instanceof Error ? e.message : "Erro ao alterar status.");
+      setErro(getErrorMessage(e, "Erro ao alterar status do produto."));
     } finally {
       setSavingId(null);
     }
@@ -232,7 +258,7 @@ export default function ProdutosPage() {
 
   async function excluirProduto(id: string) {
     if (!podeGerenciar) {
-      setErro("Você não tem permissão para excluir produtos.");
+      setErro("Voce nao tem permissao para excluir produtos.");
       return;
     }
 
@@ -243,17 +269,15 @@ export default function ProdutosPage() {
 
       await processarProduto({
         acao: "excluir",
-        produto: {
-          id,
-        },
+        produto: { id },
       });
 
       setProdutos((prev) => prev.filter((item) => item.id !== id));
       setProdutoParaExcluir(null);
-      setMsg("Produto excluído com sucesso.");
+      setMsg("Produto excluido com sucesso.");
     } catch (e: unknown) {
       console.error(e);
-      setErro(e instanceof Error ? e.message : "Erro ao excluir produto.");
+      setErro(getErrorMessage(e, "Erro ao excluir produto."));
     } finally {
       setSavingId(null);
     }
@@ -282,6 +306,36 @@ export default function ProdutosPage() {
     });
   }, [produtos, busca, statusFiltro]);
 
+  const resumo = useMemo(() => {
+    const ativos = listaFiltrada.filter(
+      (item) => item.ativo ?? item.status === "ativo"
+    );
+    const baixoEstoque = listaFiltrada.filter(
+      (item) =>
+        Number(item.estoque_atual ?? 0) <= Number(item.estoque_minimo ?? 0)
+    );
+    const ticketMedio =
+      listaFiltrada.length > 0
+        ? listaFiltrada.reduce(
+            (acc, item) => acc + Number(item.preco_venda || 0),
+            0
+          ) / listaFiltrada.length
+        : 0;
+    const margemMedia =
+      listaFiltrada.length > 0
+        ? listaFiltrada.reduce((acc, item) => acc + getMargemPercentual(item), 0) /
+          listaFiltrada.length
+        : 0;
+
+    return {
+      total: listaFiltrada.length,
+      ativos: ativos.length,
+      baixoEstoque: baixoEstoque.length,
+      ticketMedio,
+      margemMedia,
+    };
+  }, [listaFiltrada]);
+
   if (loading || !acessoCarregado) {
     return <div className="p-6 text-sm text-zinc-600">Carregando produtos...</div>;
   }
@@ -290,7 +344,7 @@ export default function ProdutosPage() {
     return (
       <div className="p-6">
         <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-rose-700">
-          Você não tem permissão para acessar Produtos.
+          Voce nao tem permissao para acessar Produtos.
         </div>
       </div>
     );
@@ -299,24 +353,55 @@ export default function ProdutosPage() {
   return (
     <div className="bg-white">
       <div className="mx-auto max-w-7xl space-y-6">
-        <div className="rounded-3xl border border-zinc-200 bg-white p-6 text-zinc-950 shadow-sm">
-          <div className="mt-2 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <div>
-              <h1 className="text-2xl font-bold md:text-3xl">Produtos</h1>
-              <p className="mt-2 text-sm text-zinc-500">
-                Controle completo de estoque, custo, revenda e fornecedor.
+        <section className="rounded-3xl border border-zinc-200 bg-white p-6 text-zinc-950 shadow-sm">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div className="max-w-3xl">
+              <div className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-400">
+                Estoque e revenda
+              </div>
+              <h1 className="mt-2 text-2xl font-bold md:text-3xl">Produtos</h1>
+              <p className="mt-3 max-w-2xl text-sm leading-6 text-zinc-600">
+                O cadastro de produto precisa responder tres perguntas rapido:
+                quanto custa, quanto vende e se o estoque esta ficando perigoso.
               </p>
             </div>
 
             {podeGerenciar ? (
               <Link
                 href="/produtos/novo"
-                className="inline-flex items-center justify-center rounded-2xl bg-zinc-900 px-5 py-3 text-sm font-bold text-white transition hover:opacity-95"
+                className="inline-flex items-center justify-center rounded-xl bg-zinc-900 px-4 py-3 text-sm font-semibold text-white transition hover:opacity-95"
               >
-                + Novo produto
+                Novo produto
               </Link>
             ) : null}
           </div>
+        </section>
+
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+          <ResumoCard
+            title="Catalogo ativo"
+            value={`${resumo.ativos}`}
+            description={`${resumo.total} produtos no filtro atual`}
+            icon={Boxes}
+          />
+          <ResumoCard
+            title="Baixo estoque"
+            value={`${resumo.baixoEstoque}`}
+            description="Itens que ja pedem reposicao ou revisao"
+            icon={AlertTriangle}
+          />
+          <ResumoCard
+            title="Preco medio"
+            value={formatCurrency(resumo.ticketMedio)}
+            description="Media de venda do catalogo filtrado"
+            icon={Wallet}
+          />
+          <ResumoCard
+            title="Margem media"
+            value={`${resumo.margemMedia.toFixed(1)}%`}
+            description="Leitura rapida entre custo real e venda"
+            icon={ArrowUpDown}
+          />
         </div>
 
         {erro ? (
@@ -331,11 +416,26 @@ export default function ProdutosPage() {
           </div>
         ) : null}
 
-        <div className="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm">
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+          <GuideCard
+            title="Custo antes de cadastro"
+            text="Nao vale cadastrar so nome e preco. Custo real e o que protege sua margem na hora de revender."
+          />
+          <GuideCard
+            title="Estoque com leitura util"
+            text="Quantidade atual sozinha nao basta. O minimo ajuda a enxergar risco antes de faltar produto no atendimento."
+          />
+          <GuideCard
+            title="Exclusao com trava"
+            text="Produto com historico de estoque, uso em comanda ou consumo em servico agora pede inativacao em vez de sumir do mapa."
+          />
+        </div>
+
+        <section className="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.6fr)_220px_220px]">
             <input
               type="text"
-              placeholder="Buscar por nome, marca, linha, categoria ou destinação"
+              placeholder="Buscar por nome, marca, linha, categoria ou destinacao"
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
               className="w-full rounded-2xl border border-zinc-300 px-4 py-3 text-sm outline-none focus:border-zinc-900"
@@ -348,152 +448,146 @@ export default function ProdutosPage() {
               }
               className="w-full rounded-2xl border border-zinc-300 px-4 py-3 text-sm outline-none focus:border-zinc-900"
             >
-              <option value="todos">Todos</option>
+              <option value="todos">Todos os status</option>
               <option value="ativo">Apenas ativos</option>
               <option value="inativo">Apenas inativos</option>
             </select>
 
             <div className="flex items-center rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-600">
-              Total: <strong className="ml-2 text-zinc-900">{listaFiltrada.length}</strong>
+              Itens visiveis:
+              <strong className="ml-2 text-zinc-900">{listaFiltrada.length}</strong>
             </div>
           </div>
-        </div>
+        </section>
 
-        <div className="overflow-hidden rounded-3xl border border-zinc-200 bg-white shadow-sm">
+        <section className="space-y-4">
           {listaFiltrada.length === 0 ? (
-            <div className="p-6 text-sm text-zinc-600">Nenhum produto encontrado.</div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-zinc-200">
-                <thead className="bg-zinc-100">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-600">
-                      Produto
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-600">
-                      Categoria
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-600">
-                      Destinação
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-600">
-                      Custo
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-600">
-                      Venda
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-600">
-                      Estoque
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-600">
-                      Status
-                    </th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-zinc-600">
-                      Ações
-                    </th>
-                  </tr>
-                </thead>
-
-                <tbody className="divide-y divide-zinc-200 bg-white">
-                  {listaFiltrada.map((item) => {
-                    const ativo = item.ativo ?? item.status === "ativo";
-                    const baixoEstoque =
-                      Number(item.estoque_atual ?? 0) <= Number(item.estoque_minimo ?? 0);
-
-                    return (
-                      <tr key={item.id}>
-                        <td className="px-4 py-4">
-                          <div>
-                            <p className="font-semibold text-zinc-900">{item.nome}</p>
-                            <p className="text-sm text-zinc-500">
-                              {[item.marca, item.linha].filter(Boolean).join(" • ") || "Sem marca"}
-                            </p>
-                          </div>
-                        </td>
-
-                        <td className="px-4 py-4 text-sm text-zinc-700">
-                          {item.categoria || "-"}
-                        </td>
-
-                        <td className="px-4 py-4 text-sm text-zinc-700">
-                          {item.destinacao || "-"}
-                        </td>
-
-                        <td className="px-4 py-4 text-sm text-zinc-700">
-                          R$ {Number(item.custo_real ?? 0).toFixed(2)}
-                        </td>
-
-                        <td className="px-4 py-4 text-sm text-zinc-700">
-                          R$ {Number(item.preco_venda ?? 0).toFixed(2)}
-                        </td>
-
-                        <td className="px-4 py-4 text-sm text-zinc-700">
-                          <span className={baixoEstoque ? "font-semibold text-red-600" : ""}>
-                            {Number(item.estoque_atual ?? 0).toFixed(2)}
-                          </span>
-                        </td>
-
-                        <td className="px-4 py-4">
-                          <span
-                            className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
-                              ativo
-                                ? "bg-emerald-100 text-emerald-700"
-                                : "bg-zinc-200 text-zinc-700"
-                            }`}
-                          >
-                            {ativo ? "Ativo" : "Inativo"}
-                          </span>
-                        </td>
-
-                        <td className="px-4 py-4">
-                          <div className="flex flex-wrap justify-end gap-2">
-                            {podeGerenciar ? (
-                              <>
-                                <Link
-                                  href={`/produtos/${item.id}`}
-                                  className="rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50"
-                                >
-                                  Editar
-                                </Link>
-
-                                <button
-                                  type="button"
-                                  onClick={() => alternarStatus(item)}
-                                  disabled={savingId === item.id}
-                                  className="rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-60"
-                                >
-                                  {ativo ? "Inativar" : "Ativar"}
-                                </button>
-
-                                <button
-                                  type="button"
-                                  onClick={() => setProdutoParaExcluir(item)}
-                                  disabled={savingId === item.id}
-                                  className="rounded-xl border border-red-300 bg-red-50 px-3 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-100 disabled:opacity-60"
-                                >
-                                  Excluir
-                                </button>
-                              </>
-                            ) : (
-                              <span className="text-xs font-medium text-zinc-400">
-                                Somente leitura
-                              </span>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+            <div className="rounded-3xl border border-zinc-200 bg-white p-6 text-sm text-zinc-600 shadow-sm">
+              Nenhum produto encontrado com esse filtro.
             </div>
+          ) : (
+            listaFiltrada.map((item) => {
+              const ativo = item.ativo ?? item.status === "ativo";
+              const estoqueAtual = Number(item.estoque_atual ?? 0);
+              const estoqueMinimo = Number(item.estoque_minimo ?? 0);
+              const baixoEstoque = estoqueAtual <= estoqueMinimo;
+              const margem = getMargemPercentual(item);
+
+              return (
+                <article
+                  key={item.id}
+                  className="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm"
+                >
+                  <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h2 className="text-lg font-semibold text-zinc-950">
+                          {item.nome}
+                        </h2>
+                        <StatusBadge ativo={ativo} />
+                        {baixoEstoque ? (
+                          <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-700">
+                            Baixo estoque
+                          </span>
+                        ) : null}
+                      </div>
+
+                      <p className="mt-2 text-sm text-zinc-500">
+                        {[item.marca, item.linha].filter(Boolean).join(" • ") ||
+                          "Sem marca ou linha informada"}
+                      </p>
+
+                      <div className="mt-3 flex flex-wrap gap-2 text-xs text-zinc-500">
+                        <TagHint>{item.categoria || "Sem categoria"}</TagHint>
+                        <TagHint>{item.destinacao || "Sem destinacao"}</TagHint>
+                      </div>
+
+                      <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+                        <MetricBlock
+                          label="Custo real"
+                          value={formatCurrency(item.custo_real)}
+                          detail="Base para ler margem e recompra"
+                        />
+                        <MetricBlock
+                          label="Preco de venda"
+                          value={formatCurrency(item.preco_venda)}
+                          detail="Valor base para revenda ao cliente"
+                        />
+                        <MetricBlock
+                          label="Margem estimada"
+                          value={`${margem.toFixed(1)}%`}
+                          detail={
+                            margem <= 0
+                              ? "A venda esta sem sobra clara"
+                              : "Leitura rapida entre custo e venda"
+                          }
+                        />
+                        <MetricBlock
+                          label="Estoque"
+                          value={`${formatQuantity(estoqueAtual)} un`}
+                          detail={`Minimo esperado: ${formatQuantity(
+                            estoqueMinimo
+                          )} un`}
+                          tone={baixoEstoque ? "warning" : "neutral"}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex shrink-0 flex-col gap-2 xl:w-52">
+                      <Link
+                        href={`/produtos/${item.id}`}
+                        className="inline-flex items-center justify-center rounded-xl border border-zinc-300 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50"
+                      >
+                        Editar produto
+                      </Link>
+
+                      <Link
+                        href={`/produtos/${item.id}`}
+                        className="inline-flex items-center justify-center rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-2.5 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-100"
+                      >
+                        Ver detalhe
+                      </Link>
+
+                      {podeGerenciar ? (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => alternarStatus(item)}
+                            disabled={savingId === item.id}
+                            className="rounded-xl border border-zinc-300 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-60"
+                          >
+                            {ativo ? "Inativar" : "Ativar"}
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => setProdutoParaExcluir(item)}
+                            disabled={savingId === item.id}
+                            className="rounded-xl border border-red-300 bg-red-50 px-4 py-2.5 text-sm font-semibold text-red-600 transition hover:bg-red-100 disabled:opacity-60"
+                          >
+                            Excluir
+                          </button>
+                        </>
+                      ) : (
+                        <div className="rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-xs font-medium text-zinc-500">
+                          Somente leitura para seu perfil.
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </article>
+              );
+            })
           )}
-        </div>
+        </section>
       </div>
+
       <ConfirmActionModal
         open={Boolean(produtoParaExcluir)}
         title="Excluir produto"
-        description={`Confirme a exclusão de ${produtoParaExcluir?.nome || "este produto"}.`}
+        description={`Confirme a exclusao de ${
+          produtoParaExcluir?.nome || "este produto"
+        }.`}
         confirmLabel="Excluir produto"
         tone="danger"
         loading={Boolean(produtoParaExcluir && savingId === produtoParaExcluir.id)}
@@ -505,5 +599,93 @@ export default function ProdutosPage() {
         }}
       />
     </div>
+  );
+}
+
+function ResumoCard({
+  title,
+  value,
+  description,
+  icon: Icon,
+}: {
+  title: string;
+  value: string;
+  description: string;
+  icon: typeof Boxes;
+}) {
+  return (
+    <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <div className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
+            {title}
+          </div>
+          <div className="mt-2 text-2xl font-semibold text-zinc-950">{value}</div>
+        </div>
+        <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-2 text-zinc-600">
+          <Icon className="h-4 w-4" />
+        </div>
+      </div>
+      <p className="mt-3 text-sm leading-6 text-zinc-600">{description}</p>
+    </div>
+  );
+}
+
+function GuideCard({ title, text }: { title: string; text: string }) {
+  return (
+    <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
+      <div className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
+        {title}
+      </div>
+      <p className="mt-2 text-sm leading-6 text-zinc-700">{text}</p>
+    </div>
+  );
+}
+
+function MetricBlock({
+  label,
+  value,
+  detail,
+  tone = "neutral",
+}: {
+  label: string;
+  value: string;
+  detail: string;
+  tone?: "neutral" | "warning";
+}) {
+  return (
+    <div
+      className={`rounded-2xl border px-4 py-3 ${
+        tone === "warning"
+          ? "border-amber-200 bg-amber-50"
+          : "border-zinc-200 bg-zinc-50"
+      }`}
+    >
+      <div className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-400">
+        {label}
+      </div>
+      <div className="mt-2 text-base font-semibold text-zinc-950">{value}</div>
+      <p className="mt-1 text-xs leading-5 text-zinc-500">{detail}</p>
+    </div>
+  );
+}
+
+function StatusBadge({ ativo }: { ativo: boolean }) {
+  return (
+    <span
+      className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${
+        ativo ? "bg-emerald-100 text-emerald-700" : "bg-zinc-200 text-zinc-700"
+      }`}
+    >
+      {ativo ? "Ativo" : "Inativo"}
+    </span>
+  );
+}
+
+function TagHint({ children }: { children: ReactNode }) {
+  return (
+    <span className="rounded-full border border-zinc-200 bg-zinc-50 px-2.5 py-1">
+      {children}
+    </span>
   );
 }

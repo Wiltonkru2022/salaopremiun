@@ -1,42 +1,41 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
+import { AlertTriangle, Clock3, Percent, Wallet } from "lucide-react";
+import { ComissaoHelpPanel } from "@/components/comissoes/ComissaoHelpPanel";
+import ConfirmActionModal from "@/components/ui/ConfirmActionModal";
 import { getUsuarioLogado } from "@/lib/auth/getUsuarioLogado";
 import {
   buildPermissoesByNivel,
   sanitizePermissoesDb,
 } from "@/lib/auth/permissions";
-import { ComissaoHelpPanel } from "@/components/comissoes/ComissaoHelpPanel";
-import ConfirmActionModal from "@/components/ui/ConfirmActionModal";
+import { getErrorMessage } from "@/lib/get-error-message";
+import { createClient } from "@/lib/supabase/client";
+import type {
+  ServicoProcessarErrorResponse,
+  ServicoProcessarResponse,
+} from "@/types/servicos";
 
-type Servico = {
+type ServicoListItem = {
   id: string;
   nome: string;
   categoria?: string | null;
+  descricao?: string | null;
   duracao_minutos?: number | null;
   pausa_minutos?: number | null;
   preco_padrao?: number | null;
   preco_variavel?: boolean | null;
+  custo_produto?: number | null;
   comissao_percentual_padrao?: number | null;
+  exige_avaliacao?: boolean | null;
+  gatilho_retorno_dias?: number | null;
   status?: string | null;
   ativo?: boolean | null;
 };
 
 type Permissoes = Record<string, boolean>;
-
-type ServicoProcessarResponse = {
-  ok: boolean;
-  idServico?: string | null;
-  ativo?: boolean | null;
-  status?: string | null;
-};
-
-type ServicoProcessarErrorResponse = {
-  error?: string;
-};
 
 function formatCurrency(value?: number | null) {
   return Number(value || 0).toLocaleString("pt-BR", {
@@ -52,8 +51,19 @@ function formatPercent(value?: number | null) {
   });
 }
 
+function formatMinutes(value?: number | null) {
+  const total = Number(value || 0);
+  if (!total) return "Sem tempo definido";
+  if (total < 60) return `${total} min`;
+
+  const horas = Math.floor(total / 60);
+  const minutos = total % 60;
+  if (!minutos) return `${horas}h`;
+  return `${horas}h ${minutos}min`;
+}
+
 export default function ServicosPage() {
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
 
   const [loading, setLoading] = useState(true);
@@ -65,10 +75,9 @@ export default function ServicosPage() {
     "todos" | "ativo" | "inativo"
   >("todos");
   const [idSalao, setIdSalao] = useState("");
-  const [servicos, setServicos] = useState<Servico[]>([]);
+  const [servicos, setServicos] = useState<ServicoListItem[]>([]);
   const [servicoParaExcluir, setServicoParaExcluir] =
-    useState<Servico | null>(null);
-
+    useState<ServicoListItem | null>(null);
   const [permissoes, setPermissoes] = useState<Permissoes | null>(null);
   const [nivel, setNivel] = useState("");
   const [acessoCarregado, setAcessoCarregado] = useState(false);
@@ -82,7 +91,7 @@ export default function ServicosPage() {
     } = await supabase.auth.getUser();
 
     if (authError || !user) {
-      router.replace("/login");
+      router.replace("/login?motivo=sessao_expirada");
       return null;
     }
 
@@ -93,12 +102,12 @@ export default function ServicosPage() {
       .maybeSingle();
 
     if (usuarioError || !usuario?.id || !usuario?.id_salao) {
-      setErro("Não foi possível validar o usuário do sistema.");
+      setErro("Nao foi possivel validar o usuario do sistema.");
       return null;
     }
 
     if (usuario.status && usuario.status !== "ativo") {
-      setErro("Usuário inativo.");
+      setErro("Usuario inativo. Fale com a administracao do salao.");
       return null;
     }
 
@@ -120,7 +129,7 @@ export default function ServicosPage() {
     setAcessoCarregado(true);
 
     if (!permissoesFinal.servicos_ver) {
-      router.replace("/dashboard");
+      router.replace("/dashboard?motivo=sem_permissao");
       return null;
     }
 
@@ -148,28 +157,32 @@ export default function ServicosPage() {
       const { data, error } = await supabase
         .from("servicos")
         .select(
-          `
-          id,
-          nome,
-          categoria,
-          duracao_minutos,
-          pausa_minutos,
-          preco_padrao,
-          preco_variavel,
-          comissao_percentual_padrao,
-          status,
-          ativo
-        `
+          [
+            "id",
+            "nome",
+            "categoria",
+            "descricao",
+            "duracao_minutos",
+            "pausa_minutos",
+            "preco_padrao",
+            "preco_variavel",
+            "custo_produto",
+            "comissao_percentual_padrao",
+            "exige_avaliacao",
+            "gatilho_retorno_dias",
+            "status",
+            "ativo",
+          ].join(", ")
         )
         .eq("id_salao", salaoIdFinal)
         .order("nome", { ascending: true });
 
       if (error) throw error;
 
-      setServicos((data as Servico[]) || []);
+      setServicos(((data ?? []) as unknown as ServicoListItem[]) || []);
     } catch (e: unknown) {
       console.error(e);
-      setErro(e instanceof Error ? e.message : "Erro ao carregar serviços.");
+      setErro(getErrorMessage(e, "Erro ao carregar servicos."));
     } finally {
       setLoading(false);
     }
@@ -201,15 +214,15 @@ export default function ServicosPage() {
       ServicoProcessarErrorResponse;
 
     if (!response.ok) {
-      throw new Error(result.error || "Erro ao processar serviço.");
+      throw new Error(result.error || "Erro ao processar servico.");
     }
 
     return result as ServicoProcessarResponse;
   }
 
-  async function alternarStatus(servico: Servico) {
+  async function alternarStatus(servico: ServicoListItem) {
     if (!podeGerenciar) {
-      setErro("Você não tem permissão para alterar status de serviços.");
+      setErro("Voce nao tem permissao para alterar status de servicos.");
       return;
     }
 
@@ -237,10 +250,10 @@ export default function ServicosPage() {
         )
       );
 
-      setMsg(`Serviço ${novoAtivo ? "ativado" : "inativado"} com sucesso.`);
+      setMsg(`Servico ${novoAtivo ? "ativado" : "inativado"} com sucesso.`);
     } catch (e: unknown) {
       console.error(e);
-      setErro(e instanceof Error ? e.message : "Erro ao alterar status.");
+      setErro(getErrorMessage(e, "Erro ao alterar status do servico."));
     } finally {
       setSavingId(null);
     }
@@ -248,7 +261,7 @@ export default function ServicosPage() {
 
   async function excluirServico(id: string) {
     if (!podeGerenciar) {
-      setErro("Você não tem permissão para excluir serviços.");
+      setErro("Voce nao tem permissao para excluir servicos.");
       return;
     }
 
@@ -259,17 +272,15 @@ export default function ServicosPage() {
 
       await processarServico({
         acao: "excluir",
-        servico: {
-          id,
-        },
+        servico: { id },
       });
 
       setServicos((prev) => prev.filter((item) => item.id !== id));
       setServicoParaExcluir(null);
-      setMsg("Serviço excluído com sucesso.");
+      setMsg("Servico excluido com sucesso.");
     } catch (e: unknown) {
       console.error(e);
-      setErro(e instanceof Error ? e.message : "Erro ao excluir serviço.");
+      setErro(getErrorMessage(e, "Erro ao excluir servico."));
     } finally {
       setSavingId(null);
     }
@@ -280,11 +291,11 @@ export default function ServicosPage() {
 
     return servicos.filter((item) => {
       const ativoAtual = item.ativo ?? item.status === "ativo";
-
       const bateBusca =
         !termo ||
         item.nome?.toLowerCase().includes(termo) ||
-        item.categoria?.toLowerCase().includes(termo);
+        item.categoria?.toLowerCase().includes(termo) ||
+        item.descricao?.toLowerCase().includes(termo);
 
       const bateStatus =
         statusFiltro === "todos" ||
@@ -293,17 +304,38 @@ export default function ServicosPage() {
 
       return bateBusca && bateStatus;
     });
-  }, [servicos, busca, statusFiltro]);
+  }, [busca, servicos, statusFiltro]);
+
+  const resumo = useMemo(() => {
+    const ativos = listaFiltrada.filter(
+      (item) => item.ativo ?? item.status === "ativo"
+    );
+    const precosVariaveis = listaFiltrada.filter((item) => item.preco_variavel);
+    const comAvaliacao = listaFiltrada.filter((item) => item.exige_avaliacao);
+    const ticketMedio =
+      listaFiltrada.length > 0
+        ? listaFiltrada.reduce((acc, item) => acc + Number(item.preco_padrao || 0), 0) /
+          listaFiltrada.length
+        : 0;
+
+    return {
+      total: listaFiltrada.length,
+      ativos: ativos.length,
+      precosVariaveis: precosVariaveis.length,
+      comAvaliacao: comAvaliacao.length,
+      ticketMedio,
+    };
+  }, [listaFiltrada]);
 
   if (loading || !acessoCarregado) {
-    return <div className="p-6 text-sm text-zinc-600">Carregando serviços...</div>;
+    return <div className="p-6 text-sm text-zinc-600">Carregando servicos...</div>;
   }
 
   if (permissoes && !permissoes.servicos_ver) {
     return (
       <div className="p-6">
         <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-rose-700">
-          Você não tem permissão para acessar Serviços.
+          Voce nao tem permissao para acessar Servicos.
         </div>
       </div>
     );
@@ -312,54 +344,86 @@ export default function ServicosPage() {
   return (
     <div className="bg-white">
       <div className="mx-auto max-w-7xl space-y-6">
-        <div className="rounded-3xl border border-zinc-200 bg-white p-6 text-zinc-950 shadow-sm">
-          <div className="mt-2 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <div>
-              <h1 className="text-2xl font-bold md:text-3xl">Serviços</h1>
-              <p className="mt-2 text-sm text-zinc-500">
-                Gerencie serviços, agenda, comissão, tempo e custo.
+        <section className="rounded-3xl border border-zinc-200 bg-white p-6 text-zinc-950 shadow-sm">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div className="max-w-3xl">
+              <div className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-400">
+                Catalogo operacional
+              </div>
+              <h1 className="mt-2 text-2xl font-bold md:text-3xl">Servicos</h1>
+              <p className="mt-3 max-w-2xl text-sm leading-6 text-zinc-600">
+                Aqui fica a regra principal do salao: o que cobra, quanto dura,
+                quem recebe, quanto custa e quando existe excecao por
+                profissional.
               </p>
             </div>
 
             <div className="flex flex-wrap gap-3">
               <Link
                 href="/servicos-extras"
-                className="inline-flex items-center justify-center rounded-2xl border border-zinc-200 bg-white px-5 py-3 text-sm font-bold text-zinc-800 transition hover:bg-zinc-50"
+                className="inline-flex items-center justify-center rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-50"
               >
-                Ver serviços extras
+                Servicos extras
               </Link>
 
               {podeGerenciar ? (
                 <Link
                   href="/servicos/novo"
-                  className="inline-flex items-center justify-center rounded-2xl bg-zinc-900 px-5 py-3 text-sm font-bold text-white transition hover:opacity-95"
+                  className="inline-flex items-center justify-center rounded-xl bg-zinc-900 px-4 py-3 text-sm font-semibold text-white transition hover:opacity-95"
                 >
-                  + Novo serviço
+                  Novo servico
                 </Link>
               ) : null}
             </div>
           </div>
+        </section>
+
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+          <ResumoCard
+            title="Servicos ativos"
+            value={`${resumo.ativos}`}
+            description={`${resumo.total} visiveis na tela agora`}
+            icon={Clock3}
+          />
+          <ResumoCard
+            title="Ticket base medio"
+            value={formatCurrency(resumo.ticketMedio)}
+            description="Preco padrao medio do catalogo filtrado"
+            icon={Wallet}
+          />
+          <ResumoCard
+            title="Preco sob avaliacao"
+            value={`${resumo.precosVariaveis}`}
+            description="Itens que precisam de combinacao antes de fechar"
+            icon={AlertTriangle}
+          />
+          <ResumoCard
+            title="Exigem leitura atenta"
+            value={`${resumo.comAvaliacao}`}
+            description="Servicos que pedem avaliacao antes da execucao"
+            icon={Percent}
+          />
         </div>
 
         <ComissaoHelpPanel
-          eyebrow="Comissão"
-          title="A configuração principal fica dentro de cada serviço"
-          description="Defina o padrão no serviço, personalize só exceções por profissional e deixe as taxas gerais em Configurações."
+          eyebrow="Comissao"
+          title="Padrao primeiro. Excecao so quando fizer sentido."
+          description="Defina a regra principal no servico. Quando um profissional foge do padrao, ajuste somente aquele vinculo."
           steps={[
             {
-              title: "Padrão do serviço",
+              title: "Regra padrao",
               description:
-                "A comissão padrão vale para todos os atendimentos que não tiverem uma exceção ativa.",
+                "A comissao da lista vale para o servico inteiro ate que voce crie uma excecao por profissional.",
             },
             {
-              title: "Exceção por profissional",
+              title: "Excecao pontual",
               description:
-                "Quando alguém foge da regra, abra o serviço e ajuste somente o vínculo daquele profissional.",
+                "Use o detalhe do servico para mudar preco, duracao, base ou comissao apenas para quem precisa.",
             },
             {
-              title: "Taxa da maquininha",
+              title: "Taxa de maquininha",
               description:
-                "As taxas gerais ficam em Configurações. Em cada serviço você decide se elas entram no cálculo.",
+                "A taxa geral fica em Configuracoes. Aqui voce decide se ela entra ou nao no calculo da comissao.",
             },
           ]}
         >
@@ -368,23 +432,23 @@ export default function ServicosPage() {
               href="/configuracoes"
               className="inline-flex items-center justify-center rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50"
             >
-              Abrir Configurações
+              Abrir Configuracoes
             </Link>
           </div>
         </ComissaoHelpPanel>
 
         <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
           <CommissionGuideCard
-            title="Regra padrão"
-            text="A comissão exibida na lista é a base do serviço. Ela vale quando não houver exceção."
+            title="Regra padrao do servico"
+            text="O numero principal da lista e a base da casa. Use excecao so quando a operacao realmente pedir."
           />
           <CommissionGuideCard
-            title="Exceção profissional"
-            text="Abra o serviço e ajuste preço, tempo, base ou comissão apenas para quem precisa."
+            title="Preco, custo e sobra"
+            text="Nao cadastre servico so pelo valor de venda. O custo ajuda a enxergar margem e a evitar tabela bonita com resultado ruim."
           />
           <CommissionGuideCard
-            title="Taxa da maquininha"
-            text="A taxa geral fica em Configurações. No serviço você decide se ela afeta a comissão."
+            title="Detalhe no clique"
+            text="A lista precisa responder rapido. O detalhe do vinculo, da taxa e do consumo fica na edicao do servico."
           />
         </div>
 
@@ -400,11 +464,11 @@ export default function ServicosPage() {
           </div>
         ) : null}
 
-        <div className="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm">
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <section className="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.6fr)_220px_220px]">
             <input
               type="text"
-              placeholder="Buscar por nome ou categoria"
+              placeholder="Buscar por nome, categoria ou descricao"
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
               className="w-full rounded-2xl border border-zinc-300 px-4 py-3 text-sm outline-none focus:border-zinc-900"
@@ -417,163 +481,156 @@ export default function ServicosPage() {
               }
               className="w-full rounded-2xl border border-zinc-300 px-4 py-3 text-sm outline-none focus:border-zinc-900"
             >
-              <option value="todos">Todos</option>
+              <option value="todos">Todos os status</option>
               <option value="ativo">Apenas ativos</option>
               <option value="inativo">Apenas inativos</option>
             </select>
 
             <div className="flex items-center rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-600">
-              Total:{" "}
+              Catalogo filtrado:
               <strong className="ml-2 text-zinc-900">{listaFiltrada.length}</strong>
             </div>
           </div>
-        </div>
+        </section>
 
-        <div className="overflow-hidden rounded-3xl border border-zinc-200 bg-white shadow-sm">
+        <section className="space-y-4">
           {listaFiltrada.length === 0 ? (
-            <div className="p-6 text-sm text-zinc-600">
-              Nenhum serviço encontrado.
+            <div className="rounded-3xl border border-zinc-200 bg-white p-6 text-sm text-zinc-600 shadow-sm">
+              Nenhum servico encontrado com esse filtro.
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-zinc-200">
-                <thead className="bg-zinc-100">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-600">
-                      Serviço
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-600">
-                      Categoria
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-600">
-                      Duração
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-600">
-                      Pausa
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-600">
-                      Preço
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-600">
-                      Comissão
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-600">
-                      Status
-                    </th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-zinc-600">
-                      Ações
-                    </th>
-                  </tr>
-                </thead>
+            listaFiltrada.map((item) => {
+              const ativo = item.ativo ?? item.status === "ativo";
+              const pausa = Number(item.pausa_minutos || 0);
+              const precoVariavel = Boolean(item.preco_variavel);
 
-                <tbody className="divide-y divide-zinc-200 bg-white">
-                  {listaFiltrada.map((item) => {
-                    const ativo = item.ativo ?? item.status === "ativo";
-
-                    return (
-                      <tr key={item.id}>
-                        <td className="px-4 py-4">
-                          <p className="font-semibold text-zinc-900">{item.nome}</p>
-                        </td>
-
-                        <td className="px-4 py-4 text-sm text-zinc-700">
-                          {item.categoria || "-"}
-                        </td>
-
-                        <td className="px-4 py-4 text-sm text-zinc-700">
-                          {item.duracao_minutos || 0} min
-                        </td>
-
-                        <td className="px-4 py-4 text-sm text-zinc-700">
-                          {item.pausa_minutos || 0} min
-                        </td>
-
-                        <td className="px-4 py-4 text-sm text-zinc-700">
-                          {item.preco_variavel
-                            ? `A partir de ${formatCurrency(item.preco_padrao)}`
-                            : formatCurrency(item.preco_padrao)}
-                        </td>
-
-                        <td className="px-4 py-4 text-sm text-zinc-700">
-                          <div className="font-semibold text-zinc-900">
-                            {formatPercent(item.comissao_percentual_padrao)}%
-                          </div>
-                          <div className="mt-1 text-xs text-zinc-500">
-                            Padrão do serviço
-                          </div>
-                          <Link
-                            href={`/servicos/${item.id}`}
-                            className="mt-2 inline-flex rounded-xl border border-zinc-200 px-3 py-1.5 text-xs font-semibold text-zinc-700 transition hover:bg-zinc-50"
-                          >
-                            Editar exceções
-                          </Link>
-                        </td>
-
-                        <td className="px-4 py-4">
-                          <span
-                            className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
-                              ativo
-                                ? "bg-emerald-100 text-emerald-700"
-                                : "bg-zinc-200 text-zinc-700"
-                            }`}
-                          >
-                            {ativo ? "Ativo" : "Inativo"}
+              return (
+                <article
+                  key={item.id}
+                  className="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm"
+                >
+                  <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h2 className="text-lg font-semibold text-zinc-950">
+                          {item.nome}
+                        </h2>
+                        <StatusBadge ativo={ativo} />
+                        {precoVariavel ? (
+                          <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-700">
+                            Sob avaliacao
                           </span>
-                        </td>
+                        ) : null}
+                        {item.exige_avaliacao ? (
+                          <span className="rounded-full bg-sky-100 px-2.5 py-1 text-xs font-semibold text-sky-700">
+                            Exige avaliacao
+                          </span>
+                        ) : null}
+                      </div>
 
-                        <td className="px-4 py-4">
-                          <div className="flex flex-wrap justify-end gap-2">
-                            {podeGerenciar ? (
-                              <>
-                                <Link
-                                  href={`/servicos/${item.id}`}
-                                  className="rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50"
-                                >
-                                  Editar
-                                </Link>
+                      <p className="mt-2 text-sm text-zinc-500">
+                        {item.categoria || "Sem categoria"}
+                      </p>
 
-                                <button
-                                  type="button"
-                                  onClick={() => alternarStatus(item)}
-                                  disabled={savingId === item.id}
-                                  className="rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-60"
-                                >
-                                  {ativo ? "Inativar" : "Ativar"}
-                                </button>
+                      {item.descricao ? (
+                        <p className="mt-3 max-w-3xl text-sm leading-6 text-zinc-600">
+                          {item.descricao}
+                        </p>
+                      ) : null}
 
-                                <button
-                                  type="button"
-                                  onClick={() => setServicoParaExcluir(item)}
-                                  disabled={savingId === item.id}
-                                  className="rounded-xl border border-red-300 bg-red-50 px-3 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-100 disabled:opacity-60"
-                                >
-                                  Excluir
-                                </button>
-                              </>
-                            ) : (
-                              <span className="text-xs font-medium text-zinc-400">
-                                Somente leitura
-                              </span>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                      <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+                        <MetricBlock
+                          label="Tempo operacional"
+                          value={formatMinutes(item.duracao_minutos)}
+                          detail={
+                            pausa > 0 ? `${pausa} min de pausa apos o atendimento` : "Sem pausa adicional"
+                          }
+                        />
+                        <MetricBlock
+                          label="Preco base"
+                          value={
+                            precoVariavel
+                              ? `A partir de ${formatCurrency(item.preco_padrao)}`
+                              : formatCurrency(item.preco_padrao)
+                          }
+                          detail="Valor exibido para a recepcao como base do servico"
+                        />
+                        <MetricBlock
+                          label="Custo previsto"
+                          value={formatCurrency(item.custo_produto)}
+                          detail="Ajuda a enxergar margem e impacto de consumo"
+                        />
+                        <MetricBlock
+                          label="Comissao padrao"
+                          value={`${formatPercent(item.comissao_percentual_padrao)}%`}
+                          detail="Vale enquanto nao houver excecao por profissional"
+                        />
+                      </div>
+
+                      <div className="mt-4 flex flex-wrap gap-2 text-xs text-zinc-500">
+                        {item.gatilho_retorno_dias ? (
+                          <TagHint>{`Retorno sugerido em ${item.gatilho_retorno_dias} dias`}</TagHint>
+                        ) : null}
+                        <TagHint>Excecoes e consumo ficam no detalhe do servico</TagHint>
+                      </div>
+                    </div>
+
+                    <div className="flex shrink-0 flex-col gap-2 xl:w-52">
+                      <Link
+                        href={`/servicos/${item.id}`}
+                        className="inline-flex items-center justify-center rounded-xl border border-zinc-300 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50"
+                      >
+                        Editar servico
+                      </Link>
+
+                      <Link
+                        href={`/servicos/${item.id}`}
+                        className="inline-flex items-center justify-center rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-2.5 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-100"
+                      >
+                        Ver excecoes
+                      </Link>
+
+                      {podeGerenciar ? (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => alternarStatus(item)}
+                            disabled={savingId === item.id}
+                            className="rounded-xl border border-zinc-300 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-60"
+                          >
+                            {ativo ? "Inativar" : "Ativar"}
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => setServicoParaExcluir(item)}
+                            disabled={savingId === item.id}
+                            className="rounded-xl border border-red-300 bg-red-50 px-4 py-2.5 text-sm font-semibold text-red-600 transition hover:bg-red-100 disabled:opacity-60"
+                          >
+                            Excluir
+                          </button>
+                        </>
+                      ) : (
+                        <div className="rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-xs font-medium text-zinc-500">
+                          Somente leitura para seu perfil.
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </article>
+              );
+            })
           )}
-        </div>
+        </section>
       </div>
 
       <ConfirmActionModal
         open={Boolean(servicoParaExcluir)}
-        title="Excluir serviço"
-        description={`Confirme a exclusão de ${
-          servicoParaExcluir?.nome || "este serviço"
+        title="Excluir servico"
+        description={`Confirme a exclusao de ${
+          servicoParaExcluir?.nome || "este servico"
         }.`}
-        confirmLabel="Excluir serviço"
+        confirmLabel="Excluir servico"
         tone="danger"
         loading={Boolean(servicoParaExcluir && savingId === servicoParaExcluir.id)}
         onClose={() => {
@@ -587,13 +644,82 @@ export default function ServicosPage() {
   );
 }
 
+function ResumoCard({
+  title,
+  value,
+  description,
+  icon: Icon,
+}: {
+  title: string;
+  value: string;
+  description: string;
+  icon: typeof Clock3;
+}) {
+  return (
+    <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <div className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
+            {title}
+          </div>
+          <div className="mt-2 text-2xl font-semibold text-zinc-950">{value}</div>
+        </div>
+        <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-2 text-zinc-600">
+          <Icon className="h-4 w-4" />
+        </div>
+      </div>
+      <p className="mt-3 text-sm leading-6 text-zinc-600">{description}</p>
+    </div>
+  );
+}
+
 function CommissionGuideCard({ title, text }: { title: string; text: string }) {
   return (
     <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
-      <div className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
+      <div className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
         {title}
       </div>
       <p className="mt-2 text-sm leading-6 text-zinc-700">{text}</p>
     </div>
+  );
+}
+
+function MetricBlock({
+  label,
+  value,
+  detail,
+}: {
+  label: string;
+  value: string;
+  detail: string;
+}) {
+  return (
+    <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3">
+      <div className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-400">
+        {label}
+      </div>
+      <div className="mt-2 text-base font-semibold text-zinc-950">{value}</div>
+      <p className="mt-1 text-xs leading-5 text-zinc-500">{detail}</p>
+    </div>
+  );
+}
+
+function StatusBadge({ ativo }: { ativo: boolean }) {
+  return (
+    <span
+      className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${
+        ativo ? "bg-emerald-100 text-emerald-700" : "bg-zinc-200 text-zinc-700"
+      }`}
+    >
+      {ativo ? "Ativo" : "Inativo"}
+    </span>
+  );
+}
+
+function TagHint({ children }: { children: ReactNode }) {
+  return (
+    <span className="rounded-full border border-zinc-200 bg-zinc-50 px-2.5 py-1">
+      {children}
+    </span>
   );
 }

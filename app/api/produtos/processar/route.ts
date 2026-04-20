@@ -7,6 +7,7 @@ import {
   assertCanMutatePlanFeature,
   PlanAccessError,
 } from "@/lib/plans/access";
+import { reportOperationalIncident } from "@/lib/monitoring/operational-incidents";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import type {
   AcaoProduto,
@@ -112,11 +113,66 @@ function buildProdutoPayload(idSalao: string, produto: ProdutoPayload) {
   };
 }
 
+async function assertProdutoPodeSerExcluido(params: {
+  idSalao: string;
+  idProduto: string;
+}) {
+  const supabaseAdmin = getSupabaseAdmin();
+
+  const [
+    { count: movimentacoesCount, error: movimentacoesError },
+    { count: consumoServicoCount, error: consumoServicoError },
+    { count: comandaItensCount, error: comandaItensError },
+  ] = await Promise.all([
+    supabaseAdmin
+      .from("produtos_movimentacoes")
+      .select("id", { count: "exact", head: true })
+      .eq("id_salao", params.idSalao)
+      .eq("id_produto", params.idProduto),
+    supabaseAdmin
+      .from("produto_servico_consumo")
+      .select("id", { count: "exact", head: true })
+      .eq("id_salao", params.idSalao)
+      .eq("id_produto", params.idProduto),
+    supabaseAdmin
+      .from("comanda_itens")
+      .select("id", { count: "exact", head: true })
+      .eq("id_salao", params.idSalao)
+      .eq("id_produto", params.idProduto),
+  ]);
+
+  if (movimentacoesError) throw movimentacoesError;
+  if (consumoServicoError) throw consumoServicoError;
+  if (comandaItensError) throw comandaItensError;
+
+  if ((movimentacoesCount || 0) > 0) {
+    throw new Error(
+      "Este produto ja tem historico de estoque. Inative o cadastro em vez de excluir."
+    );
+  }
+
+  if ((comandaItensCount || 0) > 0) {
+    throw new Error(
+      "Este produto ja foi usado em comandas. Inative o cadastro em vez de excluir."
+    );
+  }
+
+  if ((consumoServicoCount || 0) > 0) {
+    throw new Error(
+      "Este produto esta vinculado ao consumo de servicos. Remova os vinculos antes de excluir."
+    );
+  }
+}
+
 export async function POST(req: NextRequest) {
+  let idSalao = "";
+  let acaoRaw = "";
+
   try {
     const body = (await req.json()) as ProdutoProcessarBody;
-    const idSalao = sanitizeUuid(body.idSalao);
-    const acao = String(body.acao || "").trim().toLowerCase() as AcaoProduto;
+    idSalao = sanitizeUuid(body.idSalao) || "";
+    acaoRaw = String(body.acao || "").trim().toLowerCase();
+    const acao = acaoRaw as AcaoProduto;
 
     if (!idSalao) {
       return NextResponse.json({ error: "Salao obrigatorio." }, { status: 400 });
@@ -226,6 +282,8 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    await assertProdutoPodeSerExcluido({ idSalao, idProduto });
+
     const { error } = await supabaseAdmin.rpc("fn_excluir_produto_catalogo", {
       p_id_salao: idSalao,
       p_id_produto: idProduto,
@@ -255,6 +313,35 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    if (idSalao) {
+      try {
+        await reportOperationalIncident({
+          supabaseAdmin: getSupabaseAdmin(),
+          key: `produtos:processar:${acaoRaw || "desconhecida"}:${idSalao}`,
+          module: "produtos",
+          title: "Processamento de produto falhou",
+          description:
+            error instanceof Error
+              ? error.message
+              : "Erro interno ao processar produto.",
+          severity: "alta",
+          idSalao,
+          details: {
+            acao: ["salvar", "alterar_status", "excluir"].includes(acaoRaw)
+              ? acaoRaw
+              : null,
+            route: "/api/produtos/processar",
+          },
+        });
+      } catch (incidentError) {
+        console.error(
+          "Falha ao registrar incidente operacional de produtos:",
+          incidentError
+        );
+      }
+    }
+
+    console.error("Erro geral ao processar produto:", error);
     return NextResponse.json(
       {
         error:

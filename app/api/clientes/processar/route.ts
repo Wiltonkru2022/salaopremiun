@@ -7,6 +7,7 @@ import {
   assertCanMutatePlanFeature,
   PlanAccessError,
 } from "@/lib/plans/access";
+import { reportOperationalIncident } from "@/lib/monitoring/operational-incidents";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import type {
   ClienteAuthPayload,
@@ -27,6 +28,16 @@ function sanitizeUuid(value: unknown) {
 
 function sanitizeText(value: unknown) {
   const parsed = String(value || "").trim();
+  return parsed || null;
+}
+
+function normalizeEmail(value: unknown) {
+  const parsed = String(value || "").trim().toLowerCase();
+  return parsed || null;
+}
+
+function normalizePhone(value: unknown) {
+  const parsed = String(value || "").replace(/\D/g, "");
   return parsed || null;
 }
 
@@ -64,7 +75,7 @@ function buildClientePayload(idSalao: string, cliente: ClientePayload) {
     data_nascimento: sanitizeText(cliente.data_nascimento),
     whatsapp: sanitizeText(cliente.whatsapp),
     telefone: sanitizeText(cliente.telefone),
-    email: sanitizeText(cliente.email),
+    email: normalizeEmail(cliente.email),
     cpf: sanitizeText(cliente.cpf),
     endereco: sanitizeText(cliente.endereco),
     numero: sanitizeText(cliente.numero),
@@ -78,6 +89,103 @@ function buildClientePayload(idSalao: string, cliente: ClientePayload) {
     ativo,
     status: ativo ? "ativo" : "inativo",
   };
+}
+
+async function assertNoDuplicateCliente(params: {
+  supabaseAdmin: ReturnType<typeof getSupabaseAdmin>;
+  idSalao: string;
+  idClienteAtual?: string | null;
+  payloadCliente: ReturnType<typeof buildClientePayload>;
+}) {
+  const { supabaseAdmin, idSalao, idClienteAtual, payloadCliente } = params;
+  const email = normalizeEmail(payloadCliente.email);
+  const whatsapp = normalizePhone(payloadCliente.whatsapp);
+  const telefone = normalizePhone(payloadCliente.telefone);
+  const cpf = normalizePhone(payloadCliente.cpf);
+
+  if (email) {
+    const { data, error } = await supabaseAdmin
+      .from("clientes")
+      .select("id, nome, email")
+      .eq("id_salao", idSalao)
+      .eq("email", email);
+
+    if (error) throw error;
+
+    const duplicado = (data || []).find((item) => item.id !== idClienteAtual);
+    if (duplicado) {
+      throw new Error(
+        `Ja existe cliente com este e-mail: ${duplicado.nome || "cadastro existente"}.`
+      );
+    }
+  }
+
+  if (!whatsapp && !telefone && !cpf) return;
+
+  const { data, error } = await supabaseAdmin
+    .from("clientes")
+    .select("id, nome, whatsapp, telefone, cpf")
+    .eq("id_salao", idSalao);
+
+  if (error) throw error;
+
+  const duplicadoContato = (data || []).find((item) => {
+    if (item.id === idClienteAtual) return false;
+    const itemWhatsapp = normalizePhone(item.whatsapp);
+    const itemTelefone = normalizePhone(item.telefone);
+    const itemCpf = normalizePhone(item.cpf);
+
+    return Boolean(
+      (whatsapp && (whatsapp === itemWhatsapp || whatsapp === itemTelefone)) ||
+        (telefone && (telefone === itemTelefone || telefone === itemWhatsapp)) ||
+        (cpf && cpf === itemCpf)
+    );
+  });
+
+  if (duplicadoContato) {
+    throw new Error(
+      `Ja existe cliente com contato ou CPF parecido: ${duplicadoContato.nome || "cadastro existente"}.`
+    );
+  }
+}
+
+async function assertClientePodeSerExcluido(params: {
+  supabaseAdmin: ReturnType<typeof getSupabaseAdmin>;
+  idSalao: string;
+  idCliente: string;
+}) {
+  const { supabaseAdmin, idSalao, idCliente } = params;
+
+  const [
+    { count: agendamentosCount, error: agendamentosError },
+    { count: comandasCount, error: comandasError },
+  ] = await Promise.all([
+    supabaseAdmin
+      .from("agendamentos")
+      .select("id", { count: "exact", head: true })
+      .eq("id_salao", idSalao)
+      .eq("cliente_id", idCliente),
+    supabaseAdmin
+      .from("comandas")
+      .select("id", { count: "exact", head: true })
+      .eq("id_salao", idSalao)
+      .eq("id_cliente", idCliente),
+  ]);
+
+  if (agendamentosError) throw agendamentosError;
+  if (comandasError) throw comandasError;
+
+  if ((agendamentosCount || 0) > 0) {
+    throw new Error(
+      "Esta cliente ja possui historico de agenda. Inative o cadastro em vez de excluir."
+    );
+  }
+
+  if ((comandasCount || 0) > 0) {
+    throw new Error(
+      "Esta cliente ja possui historico de comanda. Inative o cadastro em vez de excluir."
+    );
+  }
 }
 
 function buildFichaPayload(
@@ -208,10 +316,14 @@ async function upsertByCliente(params: {
 }
 
 export async function POST(req: NextRequest) {
+  let idSalao = "";
+  let acaoRaw = "";
+
   try {
     const body = (await req.json()) as ClienteProcessarBody;
-    const idSalao = sanitizeUuid(body.idSalao);
-    const acao = String(body.acao || "").trim().toLowerCase();
+    idSalao = sanitizeUuid(body.idSalao) || "";
+    acaoRaw = String(body.acao || "").trim().toLowerCase();
+    const acao = acaoRaw;
     const cliente = body.cliente;
 
     if (!idSalao) {
@@ -240,6 +352,13 @@ export async function POST(req: NextRequest) {
       const payloadCliente = buildClientePayload(idSalao, cliente);
       const idClienteAtual = sanitizeUuid(cliente.id);
       let idCliente = idClienteAtual;
+
+      await assertNoDuplicateCliente({
+        supabaseAdmin,
+        idSalao,
+        idClienteAtual,
+        payloadCliente,
+      });
 
       if (idClienteAtual) {
         const { data, error } = await supabaseAdmin
@@ -365,6 +484,20 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    await assertClientePodeSerExcluido({
+      supabaseAdmin,
+      idSalao,
+      idCliente,
+    });
+
+    await Promise.all([
+      supabaseAdmin.from("clientes_ficha_tecnica").delete().eq("id_cliente", idCliente),
+      supabaseAdmin.from("clientes_preferencias").delete().eq("id_cliente", idCliente),
+      supabaseAdmin.from("clientes_autorizacoes").delete().eq("id_cliente", idCliente),
+      supabaseAdmin.from("clientes_auth").delete().eq("id_cliente", idCliente),
+      supabaseAdmin.from("clientes_historico").delete().eq("id_cliente", idCliente),
+    ]);
+
     const { error } = await supabaseAdmin
       .from("clientes")
       .delete()
@@ -393,6 +526,34 @@ export async function POST(req: NextRequest) {
         { status: error.status }
       );
     }
+
+    if (idSalao) {
+      try {
+        await reportOperationalIncident({
+          supabaseAdmin: getSupabaseAdmin(),
+          key: `clientes:processar:${acaoRaw || "desconhecida"}:${idSalao}`,
+          module: "clientes",
+          title: "Processamento de cliente falhou",
+          description:
+            error instanceof Error
+              ? error.message
+              : "Erro interno ao processar cliente.",
+          severity: "alta",
+          idSalao,
+          details: {
+            acao: acaoRaw || null,
+            route: "/api/clientes/processar",
+          },
+        });
+      } catch (incidentError) {
+        console.error(
+          "Falha ao registrar incidente operacional de clientes:",
+          incidentError
+        );
+      }
+    }
+
+    console.error("Erro geral ao processar cliente:", error);
 
     return NextResponse.json(
       {
