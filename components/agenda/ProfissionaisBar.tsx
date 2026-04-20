@@ -18,7 +18,7 @@ export default function ProfissionaisBar({
 }: Props) {
   return (
     <div
-      className={`overflow-hidden rounded-[18px] border border-zinc-200 bg-white ${
+      className={`overflow-hidden rounded-[16px] border border-zinc-200 bg-white ${
         densityMode === "reception" ? "px-3 py-2" : "px-3 py-2.5"
       }`}
     >
@@ -51,8 +51,8 @@ export default function ProfissionaisBar({
                 className={clsx(
                   `flex items-center gap-3 rounded-[16px] border text-left transition ${
                     densityMode === "reception"
-                      ? "min-w-[168px] px-2.5 py-2"
-                      : "min-w-[210px] px-3 py-2.5"
+                      ? "min-w-[150px] px-2.5 py-2"
+                      : "min-w-[180px] px-3 py-2.5 xl:min-w-[210px]"
                   }`,
                   active
                     ? "border-zinc-950 bg-zinc-950 text-white shadow-sm"
@@ -80,7 +80,7 @@ export default function ProfissionaisBar({
                   </div>
                   <div
                     className={`mt-0.5 truncate ${
-                      densityMode === "reception" ? "text-[13px]" : "text-sm"
+                      densityMode === "reception" ? "text-xs" : "text-[13px] xl:text-sm"
                     } font-bold leading-tight`}
                   >
                     {prof.nome}

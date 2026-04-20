@@ -288,6 +288,23 @@ export default function AgendaPage() {
   const diasFuncionamento = sanitizeDiasFuncionamento(
     configInfo.dias_funcionamento ?? []
   );
+  const statusCounts = agendamentos.reduce(
+    (acc, item) => {
+      if (item.status === "confirmado") acc.confirmado += 1;
+      else if (item.status === "pendente") acc.pendente += 1;
+      else if (item.status === "atendido") acc.atendido += 1;
+      else if (item.status === "aguardando_pagamento") acc.aguardandoPagamento += 1;
+      else if (item.status === "cancelado") acc.cancelado += 1;
+      return acc;
+    },
+    {
+      confirmado: 0,
+      pendente: 0,
+      atendido: 0,
+      aguardandoPagamento: 0,
+      cancelado: 0,
+    }
+  );
 
   return (
     <>
@@ -296,8 +313,8 @@ export default function AgendaPage() {
           agendaExpanded
             ? "fixed inset-0 z-40 flex min-h-0 flex-col gap-1.5 bg-white p-2 md:p-3"
             : densityMode === "reception"
-              ? "flex h-[calc(100vh-8.5rem)] min-h-0 flex-col gap-1.5 overflow-hidden bg-white"
-              : "flex h-[calc(100vh-9.5rem)] min-h-0 flex-col gap-2 overflow-hidden bg-white"
+              ? "flex h-[calc(100vh-7.25rem)] min-h-[560px] min-w-0 flex-col gap-1.5 overflow-hidden bg-white"
+              : "flex h-[calc(100vh-7.75rem)] min-h-[560px] min-w-0 flex-col gap-2 overflow-hidden bg-white"
         }
       >
         <ProfissionaisBar
@@ -318,6 +335,7 @@ export default function AgendaPage() {
           waitingPaymentCount={aguardandoPagamento}
           blockedCount={totalBloqueios}
           potentialValue={valorPotencial}
+          statusCounts={statusCounts}
           densityMode={densityMode}
           onPrev={() =>
             setCurrentDate((prev) =>
@@ -374,7 +392,7 @@ export default function AgendaPage() {
           </div>
         ) : null}
 
-        <div className="min-h-0 flex-1 overflow-hidden rounded-[18px] border border-zinc-200 bg-white select-none">
+        <div className="min-h-0 min-w-0 flex-1 overflow-hidden rounded-[16px] border border-zinc-200 bg-white select-none">
           <AgendaGrid
             viewMode={viewMode}
             currentDate={currentDate}

@@ -130,25 +130,25 @@ export default function Header({
   return (
     <header
       className={clsx(
-        "rounded-[22px] border px-3 py-2 transition-all duration-300",
+        "rounded-[18px] border px-2.5 py-2 transition-all duration-300 md:px-3",
         scrolled
           ? "border-zinc-200 bg-white shadow-sm"
           : "border-zinc-200 bg-white shadow-none"
       )}
     >
-      <div className="flex min-h-12 items-center gap-3">
+      <div className="flex min-h-12 flex-wrap items-center gap-2.5 lg:flex-nowrap">
         <button
           type="button"
           onClick={onOpenSidebar}
-          className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-zinc-200 bg-white text-zinc-900 shadow-sm transition hover:-translate-y-0.5 hover:border-[var(--app-accent)] xl:hidden"
+          className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-zinc-200 bg-white text-zinc-900 shadow-sm transition hover:-translate-y-0.5 hover:border-[var(--app-accent)] lg:hidden"
           aria-label="Abrir menu lateral"
         >
           <Menu size={18} />
         </button>
 
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0 flex-1 basis-[220px]">
           <div className="flex min-w-0 items-center gap-2">
-            <h1 className="truncate font-display text-xl font-bold tracking-[-0.04em] text-zinc-950 sm:text-2xl">
+            <h1 className="truncate font-display text-lg font-bold tracking-[-0.04em] text-zinc-950 sm:text-xl xl:text-2xl">
               {pageMeta.title}
             </h1>
             <span className="hidden rounded-full border border-zinc-200 bg-white/80 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-zinc-500 sm:inline-flex">
@@ -172,9 +172,9 @@ export default function Header({
           ) : null}
         </div>
 
-        <div className="hidden min-w-0 items-center gap-2 rounded-2xl border border-zinc-200 bg-white/80 px-3 py-2 text-sm shadow-sm lg:flex">
+        <div className="hidden min-w-0 items-center gap-2 rounded-xl border border-zinc-200 bg-white/80 px-2.5 py-2 text-sm shadow-sm md:flex xl:px-3">
           <ShieldCheck size={16} className="shrink-0 text-[var(--app-accent-strong)]" />
-          <span className="truncate font-semibold text-zinc-900">
+          <span className="hidden truncate font-semibold text-zinc-900 xl:inline">
             {planoNome || "Sem plano"}
           </span>
           <span
@@ -190,10 +190,10 @@ export default function Header({
         <button
           type="button"
           onClick={onOpenHelp}
-          className="hidden h-11 items-center gap-2 rounded-2xl border border-zinc-200 bg-white px-3 text-sm font-semibold text-zinc-700 shadow-sm transition hover:-translate-y-0.5 hover:border-zinc-950 hover:text-zinc-950 md:inline-flex"
+          className="hidden h-10 items-center gap-2 rounded-xl border border-zinc-200 bg-white px-3 text-sm font-semibold text-zinc-700 shadow-sm transition hover:-translate-y-0.5 hover:border-zinc-950 hover:text-zinc-950 md:inline-flex"
         >
           <CircleHelp size={16} />
-          Ajuda
+          <span className="hidden xl:inline">Ajuda</span>
         </button>
 
         <NotificationBell
@@ -206,7 +206,7 @@ export default function Header({
           <button
             type="button"
             onClick={() => setMenuOpen((prev) => !prev)}
-            className="flex h-11 items-center gap-2 rounded-2xl border border-zinc-200 bg-zinc-950 py-1.5 pl-1.5 pr-2 text-left text-white shadow-[0_14px_32px_rgba(15,23,42,0.18)] transition hover:-translate-y-0.5"
+            className="flex h-10 max-w-full items-center gap-2 rounded-xl border border-zinc-200 bg-zinc-950 py-1.5 pl-1.5 pr-2 text-left text-white shadow-[0_14px_32px_rgba(15,23,42,0.18)] transition hover:-translate-y-0.5"
             aria-label="Abrir menu da conta"
           >
             <span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white/12 ring-1 ring-white/10">
@@ -222,10 +222,10 @@ export default function Header({
             </span>
 
             <span className="hidden min-w-0 sm:block">
-              <span className="block max-w-[150px] truncate text-sm font-semibold">
+              <span className="block max-w-[120px] truncate text-sm font-semibold xl:max-w-[150px]">
                 {userName || "Usuario"}
               </span>
-              <span className="block max-w-[150px] truncate text-[11px] text-white/60">
+              <span className="block max-w-[120px] truncate text-[11px] text-white/60 xl:max-w-[150px]">
                 {salaoNome || userEmail || "Conta principal"}
               </span>
             </span>
@@ -237,7 +237,7 @@ export default function Header({
           </button>
 
           {menuOpen ? (
-            <div className="absolute right-0 top-[calc(100%+0.75rem)] z-50 w-[300px] rounded-[28px] border border-zinc-200 bg-white p-3 shadow-[0_24px_60px_rgba(15,23,42,0.14)]">
+            <div className="absolute right-0 top-[calc(100%+0.75rem)] z-50 w-[min(92vw,300px)] rounded-[24px] border border-zinc-200 bg-white p-3 shadow-[0_24px_60px_rgba(15,23,42,0.14)]">
               <div className="rounded-[22px] border border-zinc-200 bg-zinc-50 p-4 text-zinc-950">
                 <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">
                   Perfil do salao

@@ -28,6 +28,12 @@ type Props = {
   profissionalNome?: string;
   profissionalFotoUrl?: string | null;
   dayColumnWidthPx: number;
+  operationalSignals?: {
+    isOverdue: boolean;
+    isInProgress: boolean;
+    hasConflict: boolean;
+    tightFit: boolean;
+  };
   onResizeEnd: (item: Agendamento, newDuration: number) => void;
   onMoveEnd: (
     item: Agendamento,
@@ -38,7 +44,6 @@ type Props = {
   onGoToCashier: (item: Agendamento) => void;
 };
 
-const PX_PER_15_MIN = 22;
 const MIN_CARD_HEIGHT = 30;
 const DRAG_THRESHOLD = 5;
 const currencyFormatter = new Intl.NumberFormat("pt-BR", {
@@ -56,6 +61,7 @@ export default function AppointmentCard({
   profissionalNome,
   profissionalFotoUrl,
   dayColumnWidthPx,
+  operationalSignals,
   onResizeEnd,
   onMoveEnd,
   onClick,
@@ -63,6 +69,10 @@ export default function AppointmentCard({
   onGoToCashier,
 }: Props) {
   const styles = getStatusStyles(item.status);
+  const isOverdue = Boolean(operationalSignals?.isOverdue);
+  const isInProgress = Boolean(operationalSignals?.isInProgress);
+  const hasConflict = Boolean(operationalSignals?.hasConflict);
+  const tightFit = Boolean(operationalSignals?.tightFit);
 
   const [previewTop, setPreviewTop] = useState<number | null>(null);
   const [previewHeight, setPreviewHeight] = useState<number | null>(null);
@@ -75,6 +85,10 @@ export default function AppointmentCard({
   const effectiveTop = previewTop ?? top;
   const effectiveHeight = Math.max(MIN_CARD_HEIGHT, previewHeight ?? height);
   const compactMode = densityMode === "reception";
+  const pixelsPer15Min = compactMode ? 12 : 18;
+  const effectiveWidthPx = Math.max(56, (dayColumnWidthPx * widthPercent) / 100 - 8);
+  const isUltraNarrow = effectiveWidthPx <= 96;
+  const isNarrow = effectiveWidthPx <= (compactMode ? 122 : 148);
 
   const isTiny = effectiveHeight <= 34;
   const isSmall = effectiveHeight > 34 && effectiveHeight <= (compactMode ? 48 : 56);
@@ -98,6 +112,22 @@ export default function AppointmentCard({
         return item.status;
     }
   }, [item.status]);
+  const shortStatusLabel = useMemo(() => {
+    switch (item.status) {
+      case "confirmado":
+        return "OK";
+      case "pendente":
+        return "Pendente";
+      case "atendido":
+        return "Atendido";
+      case "cancelado":
+        return "Cancelado";
+      case "aguardando_pagamento":
+        return "Caixa";
+      default:
+        return statusLabel;
+    }
+  }, [item.status, statusLabel]);
 
   const valorServico = useMemo(
     () => currencyFormatter.format(Number(item.servico?.preco || 0)),
@@ -151,8 +181,8 @@ export default function AppointmentCard({
 
       const delta = ev.clientY - startY;
       const rawHeight = Math.max(MIN_CARD_HEIGHT, startHeight + delta);
-      const snappedBlocks = Math.max(1, Math.round(rawHeight / PX_PER_15_MIN));
-      const snappedHeight = snappedBlocks * PX_PER_15_MIN;
+      const snappedBlocks = Math.max(1, Math.round(rawHeight / pixelsPer15Min));
+      const snappedHeight = snappedBlocks * pixelsPer15Min;
       const duration = snappedBlocks * 15;
 
       if (Math.abs(delta) > 0) moved = true;
@@ -214,11 +244,11 @@ export default function AppointmentCard({
 
       if (!dragStarted) return;
 
-      const snappedBlocksY = Math.round(deltaY / PX_PER_15_MIN);
+      const snappedBlocksY = Math.round(deltaY / pixelsPer15Min);
       minutesDelta = snappedBlocksY * 15;
       dayDelta = Math.round(deltaX / Math.max(dayColumnWidthPx, 1));
 
-      setPreviewTop(top + snappedBlocksY * PX_PER_15_MIN);
+      setPreviewTop(top + snappedBlocksY * pixelsPer15Min);
       setPreviewDayDelta(dayDelta);
     }
 
@@ -263,6 +293,8 @@ export default function AppointmentCard({
           "hover:-translate-y-[1px] hover:shadow-md",
           "cursor-grab active:cursor-grabbing",
           styles.card,
+          isOverdue && "ring-2 ring-rose-200 ring-offset-1",
+          hasConflict && "outline outline-2 outline-amber-200 outline-offset-[-2px]",
           dragging || resizing ? "z-40 scale-[1.01]" : "z-20"
         )}
         style={{
@@ -276,6 +308,9 @@ export default function AppointmentCard({
         onDragStart={(e) => e.preventDefault()}
       >
         <div className="absolute inset-y-0 left-0 w-1.5 bg-white/30" />
+        {isInProgress ? (
+          <div className="absolute inset-x-0 top-0 h-1 bg-emerald-200/90" />
+        ) : null}
 
         <div
           className={clsx(
@@ -301,21 +336,28 @@ export default function AppointmentCard({
                 {normalizeTimeString(item.hora_inicio)}
               </div>
             </div>
-          ) : compactMode ? (
+          ) : compactMode || isNarrow ? (
             <div className="flex h-full flex-col justify-between gap-1.5 select-none">
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5">
                     <GripVertical size={10} className="shrink-0 opacity-70" />
                     <span className="shrink-0 opacity-90">{statusIcon}</span>
-                    <div className="truncate text-[11px] font-bold leading-tight">
-                      {compactTitle}
+                    <div
+                      className={clsx(
+                        "truncate font-bold leading-tight",
+                        isUltraNarrow ? "text-[10px]" : "text-[11px]"
+                      )}
+                    >
+                      {isUltraNarrow
+                        ? item.cliente?.nome || "Cliente"
+                        : compactTitle}
                     </div>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-1">
-                  {item.status === "aguardando_pagamento" ? (
+                  {!isUltraNarrow && item.status === "aguardando_pagamento" ? (
                     <button
                       type="button"
                       data-no-drag="true"
@@ -329,26 +371,49 @@ export default function AppointmentCard({
                       <DollarSign size={10} />
                     </button>
                   ) : null}
-                  <button
-                    type="button"
-                    data-no-drag="true"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onClick(item);
-                    }}
-                    className="rounded-md bg-white/20 p-1 transition hover:bg-white/30"
-                    title="Editar"
-                  >
-                    <Pencil size={10} />
-                  </button>
+                  {!isUltraNarrow ? (
+                    <button
+                      type="button"
+                      data-no-drag="true"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onClick(item);
+                      }}
+                      className="rounded-md bg-white/20 p-1 transition hover:bg-white/30"
+                      title="Editar"
+                    >
+                      <Pencil size={10} />
+                    </button>
+                  ) : null}
                 </div>
               </div>
 
-              <div className="flex items-center justify-between gap-2 text-[10px] opacity-95">
+              <div
+                className={clsx(
+                  "flex items-center justify-between gap-2 opacity-95",
+                  isUltraNarrow ? "text-[9px]" : "text-[10px]"
+                )}
+              >
                 <div className="min-w-0 truncate">{compactTimeLabel}</div>
-                {item.status === "aguardando_pagamento" ? (
+                {isOverdue && !isUltraNarrow ? (
+                  <span className="shrink-0 rounded-full border border-white/20 bg-rose-100/90 px-1.5 py-0.5 text-[9px] font-semibold text-rose-700">
+                    Atraso
+                  </span>
+                ) : hasConflict && !isUltraNarrow ? (
+                  <span className="shrink-0 rounded-full border border-white/20 bg-amber-100/90 px-1.5 py-0.5 text-[9px] font-semibold text-amber-700">
+                    Conflito
+                  </span>
+                ) : tightFit && !isUltraNarrow ? (
+                  <span className="shrink-0 rounded-full border border-white/20 bg-zinc-100/90 px-1.5 py-0.5 text-[9px] font-semibold text-zinc-700">
+                    Encaixe
+                  </span>
+                ) : item.status === "aguardando_pagamento" && !isUltraNarrow ? (
                   <span className="shrink-0 rounded-full border border-white/20 bg-white/15 px-1.5 py-0.5 text-[9px] font-semibold">
                     $
+                  </span>
+                ) : !isUltraNarrow ? (
+                  <span className="shrink-0 rounded-full border border-white/20 bg-white/15 px-1.5 py-0.5 text-[9px] font-semibold">
+                    {shortStatusLabel}
                   </span>
                 ) : null}
               </div>
@@ -453,6 +518,24 @@ export default function AppointmentCard({
                 >
                   {statusLabel}
                 </span>
+
+                {isOverdue ? (
+                  <span className="rounded-full border border-rose-200 bg-rose-100 px-2 py-0.5 text-[9px] font-semibold text-rose-700">
+                    Atrasado
+                  </span>
+                ) : null}
+
+                {hasConflict ? (
+                  <span className="rounded-full border border-amber-200 bg-amber-100 px-2 py-0.5 text-[9px] font-semibold text-amber-700">
+                    Conflito
+                  </span>
+                ) : null}
+
+                {tightFit ? (
+                  <span className="rounded-full border border-zinc-200 bg-zinc-100 px-2 py-0.5 text-[9px] font-semibold text-zinc-700">
+                    Encaixe apertado
+                  </span>
+                ) : null}
 
                 {comandaLabel && !isSmall ? (
                   <span className="rounded-full border border-white/20 bg-white/15 px-2 py-0.5 text-[9px] font-semibold">

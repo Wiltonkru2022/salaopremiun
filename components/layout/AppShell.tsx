@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Header from "@/components/layout/Header";
+import HelpDrawer from "@/components/layout/HelpDrawer";
 import Sidebar from "@/components/layout/Sidebar";
 import GuidedOnboarding from "@/components/layout/GuidedOnboarding";
 import MonitoringContextBridge from "@/components/monitoring/MonitoringContextBridge";
@@ -14,6 +15,8 @@ import type {
 } from "@/lib/notifications/contracts";
 import {
   getPainelOnboardingModuleId,
+  getPainelOnboardingHighlights,
+  getPainelOnboardingStepByModule,
   getPainelOnboardingStepIndexForPath,
   getPainelOnboardingSteps,
   type PainelOnboardingSnapshot,
@@ -25,8 +28,10 @@ import {
 } from "@/lib/monitoring/client";
 import {
   buildPainelOnboardingStorageKey,
+  markOnboardingOpened,
   markOnboardingModuleVisited,
   readOnboardingState,
+  resetOnboardingState,
   writeOnboardingState,
 } from "@/lib/onboarding/storage";
 
@@ -69,6 +74,7 @@ export default function AppShell({
   const [contentScrolled, setContentScrolled] = useState(false);
   const [shellNotifications, setShellNotifications] = useState(notifications);
   const [guideOpen, setGuideOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
   const [guideStep, setGuideStep] = useState(0);
   const router = useRouter();
   const pathname = usePathname();
@@ -83,6 +89,11 @@ export default function AppShell({
     Boolean(permissoes?.assinatura_ver)
   );
   const currentModuleId = getPainelOnboardingModuleId(pathname);
+  const currentStep = getPainelOnboardingStepByModule(
+    currentModuleId,
+    onboardingSteps
+  );
+  const onboardingHighlights = getPainelOnboardingHighlights(onboarding);
   const criticalNotificationsCount = shellNotifications.filter(
     (notification) => notification.critical
   ).length;
@@ -151,11 +162,20 @@ export default function AppShell({
       current.lastModuleId === currentModuleId
         ? Number(current.stepIndex || 0)
         : contextualStep;
+    const shouldAutoOpen =
+      onboardingSteps.length > 0 &&
+      !current.startedAt &&
+      !current.completedAt &&
+      !current.dismissedAt;
 
     setGuideStep(Math.max(0, Math.min(nextStep, onboardingSteps.length - 1)));
     markOnboardingModuleVisited(onboardingStorageKey, currentModuleId);
 
     if (searchParams.get("tour") === "1") {
+      markOnboardingOpened(onboardingStorageKey, {
+        stepIndex: nextStep,
+        moduleId: currentModuleId,
+      });
       setGuideOpen(true);
       const nextParams = new URLSearchParams(searchParams.toString());
       nextParams.delete("tour");
@@ -166,7 +186,11 @@ export default function AppShell({
       return;
     }
 
-    if (!current.completedAt && !current.dismissedAt && onboardingSteps.length > 0) {
+    if (shouldAutoOpen) {
+      markOnboardingOpened(onboardingStorageKey, {
+        stepIndex: nextStep,
+        moduleId: currentModuleId,
+      });
       setGuideOpen(true);
     }
   }, [
@@ -202,20 +226,24 @@ export default function AppShell({
       onboardingSteps
     );
     setGuideStep(contextualStep);
-    setGuideOpen(true);
+    setHelpOpen(true);
 
     if (!onboardingStorageKey) return;
 
-    const current = readOnboardingState(onboardingStorageKey);
-    writeOnboardingState(onboardingStorageKey, {
-      ...current,
+    markOnboardingOpened(onboardingStorageKey, {
       stepIndex: contextualStep,
-      lastModuleId: currentModuleId,
-      dismissedAt: null,
+      moduleId: currentModuleId,
     });
   }
 
   function handleCloseGuide() {
+    if (onboardingStorageKey) {
+      writeOnboardingState(onboardingStorageKey, {
+        stepIndex: guideStep,
+        dismissedAt: new Date().toISOString(),
+      });
+    }
+
     setGuideOpen(false);
   }
 
@@ -235,10 +263,9 @@ export default function AppShell({
     setGuideStep(clamped);
 
     if (onboardingStorageKey) {
-      const current = readOnboardingState(onboardingStorageKey);
-      writeOnboardingState(onboardingStorageKey, {
-        ...current,
+      markOnboardingOpened(onboardingStorageKey, {
         stepIndex: clamped,
+        moduleId: onboardingSteps[clamped]?.id || currentModuleId,
       });
     }
   }
@@ -253,6 +280,32 @@ export default function AppShell({
     }
 
     setGuideOpen(false);
+  }
+
+  function handleOpenTourFromHere() {
+    setHelpOpen(false);
+    setGuideOpen(true);
+
+    if (!onboardingStorageKey) return;
+
+    markOnboardingOpened(onboardingStorageKey, {
+      stepIndex: guideStep,
+      moduleId: currentModuleId,
+    });
+  }
+
+  function handleRestartTour() {
+    if (onboardingStorageKey) {
+      resetOnboardingState(onboardingStorageKey);
+      markOnboardingOpened(onboardingStorageKey, {
+        stepIndex: 0,
+        moduleId: onboardingSteps[0]?.id || "dashboard",
+      });
+    }
+
+    setGuideStep(0);
+    setHelpOpen(false);
+    setGuideOpen(true);
   }
 
   return (
@@ -281,7 +334,7 @@ export default function AppShell({
         />
 
         <div className="flex min-w-0 flex-1 flex-col">
-          <div className="sticky top-0 z-30 bg-white px-3 pb-2 pt-2 sm:px-5">
+          <div className="sticky top-0 z-30 bg-white px-2.5 pb-2 pt-2 md:px-3 lg:px-4 xl:px-5">
             <Header
               userName={userName}
               userEmail={userEmail}
@@ -306,7 +359,7 @@ export default function AppShell({
           </div>
 
           <main
-            className="scroll-premium min-h-0 flex-1 overflow-y-auto bg-white px-3 pb-5 sm:px-5"
+            className="scroll-premium min-h-0 flex-1 overflow-y-auto bg-white px-2.5 pb-4 md:px-3 lg:px-4 xl:px-5"
             onScroll={(event) => {
               const nextScrolled = event.currentTarget.scrollTop > 12;
               setContentScrolled((current) =>
@@ -314,7 +367,7 @@ export default function AppShell({
               );
             }}
           >
-            <div className="min-h-[calc(100vh-6.5rem)] bg-white p-4 sm:p-6">
+            <div className="min-h-[calc(100vh-5.75rem)] bg-white p-3 md:p-4 xl:p-5">
               <div className="min-w-0">{children}</div>
             </div>
           </main>
@@ -335,6 +388,19 @@ export default function AppShell({
         }}
         onSkip={handleSkipGuide}
         onFinish={handleFinishGuide}
+      />
+      <HelpDrawer
+        open={helpOpen}
+        currentStep={currentStep}
+        snapshot={onboarding}
+        pending={onboardingHighlights.pending}
+        onClose={() => setHelpOpen(false)}
+        onOpenStep={(href) => {
+          setHelpOpen(false);
+          router.push(href);
+        }}
+        onOpenTourFromHere={handleOpenTourFromHere}
+        onRestartTour={handleRestartTour}
       />
     </div>
   );

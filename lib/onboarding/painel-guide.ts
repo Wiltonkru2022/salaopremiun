@@ -11,6 +11,8 @@ export type PainelOnboardingStep = {
   description: string;
   href: string;
   highlight: string;
+  checklist: string[];
+  quickActions: string[];
 };
 
 const BASE_STEPS: PainelOnboardingStep[] = [
@@ -21,6 +23,12 @@ const BASE_STEPS: PainelOnboardingStep[] = [
       "Comece pelo resumo do negocio: alertas, indicadores, agenda do dia e pendencias do caixa.",
     href: "/dashboard",
     highlight: "Veja primeiro o que pede resposta imediata.",
+    checklist: [
+      "Ler alertas criticos e riscos da assinatura.",
+      "Conferir agenda do dia e pendencias operacionais.",
+      "Usar o resumo como ponto de partida da equipe.",
+    ],
+    quickActions: ["Revisar alertas", "Priorizar o dia", "Checar gargalos"],
   },
   {
     id: "agenda",
@@ -29,6 +37,12 @@ const BASE_STEPS: PainelOnboardingStep[] = [
       "Aqui voce controla encaixes, bloqueios, horarios e a trilha operacional do atendimento.",
     href: "/agenda",
     highlight: "Agenda forte reduz erro e acelera a recepcao.",
+    checklist: [
+      "Conferir conflitos e encaixes do dia.",
+      "Garantir que bloqueios estejam claros.",
+      "Resolver pendencias antes de abrir o caixa.",
+    ],
+    quickActions: ["Encaixar cliente", "Bloquear horario", "Revisar timeline"],
   },
   {
     id: "clientes",
@@ -37,6 +51,12 @@ const BASE_STEPS: PainelOnboardingStep[] = [
       "Cadastre, acompanhe historico e prepare a base para marketing, recorrencia e suporte.",
     href: "/clientes",
     highlight: "Cliente bem cadastrado faz o resto do sistema render.",
+    checklist: [
+      "Salvar contato sem duplicar telefone ou e-mail.",
+      "Deixar WhatsApp e bairro legiveis para retorno.",
+      "Registrar observacoes que ajudem no proximo atendimento.",
+    ],
+    quickActions: ["Cadastrar cliente", "Filtrar recorrentes", "Abrir detalhe"],
   },
   {
     id: "servicos",
@@ -45,6 +65,12 @@ const BASE_STEPS: PainelOnboardingStep[] = [
       "Defina preco, duracao, comissao e consumo para deixar a operacao previsivel.",
     href: "/servicos",
     highlight: "Servico bem configurado evita retrabalho em agenda, caixa e comissao.",
+    checklist: [
+      "Confirmar preco, custo e margem.",
+      "Separar regra padrao de excecao por profissional.",
+      "Garantir que consumo de produto esteja correto.",
+    ],
+    quickActions: ["Ajustar preco", "Revisar comissao", "Checar consumo"],
   },
   {
     id: "caixa",
@@ -53,6 +79,12 @@ const BASE_STEPS: PainelOnboardingStep[] = [
       "Confira comandas, recebimentos, sangrias, vales e a sensacao real do dinheiro entrando.",
     href: "/caixa",
     highlight: "O caixa precisa parecer seguro e rapido todos os dias.",
+    checklist: [
+      "Abrir sessao antes de receber.",
+      "Conferir diferenca entre total, pago e restante.",
+      "Fechar com historico claro de movimentos.",
+    ],
+    quickActions: ["Abrir caixa", "Receber comanda", "Conferir movimentos"],
   },
 ];
 
@@ -63,6 +95,12 @@ const ASSINATURA_STEP: PainelOnboardingStep = {
     "Acompanhe plano, cobrancas, trial e qualquer risco operacional ligado ao pagamento.",
   href: "/assinatura",
   highlight: "Assinatura organizada protege a continuidade do negocio.",
+  checklist: [
+    "Revisar status comercial atual.",
+    "Conferir cobrancas pendentes e renovacao.",
+    "Resolver bloqueio antes de travar a operacao.",
+  ],
+  quickActions: ["Ver cobrancas", "Checar renovacao", "Resolver bloqueio"],
 };
 
 function safeNumber(value: unknown) {
@@ -140,4 +178,11 @@ export function getPainelOnboardingHighlights(
     highlights,
     pending,
   };
+}
+
+export function getPainelOnboardingStepByModule(
+  moduleId: string,
+  steps: PainelOnboardingStep[]
+) {
+  return steps.find((step) => step.id === moduleId) || steps[0] || null;
 }

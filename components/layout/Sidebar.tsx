@@ -75,12 +75,12 @@ export default function Sidebar({
 
       <aside
         className={clsx(
-          "group fixed inset-y-0 left-0 z-50 w-[292px] -translate-x-full border-r border-white/10 bg-[linear-gradient(180deg,#07101b,#0d1724_54%,#14251f)] text-white transition-[width,transform] duration-300 xl:sticky xl:top-0 xl:z-20 xl:flex xl:h-screen xl:w-[82px] xl:translate-x-0 xl:flex-col xl:overflow-hidden xl:hover:w-[292px]",
+          "group fixed inset-y-0 left-0 z-50 w-[272px] -translate-x-full border-r border-white/10 bg-[linear-gradient(180deg,#07101b,#0d1724_54%,#14251f)] text-white transition-[width,transform] duration-300 lg:sticky lg:top-0 lg:z-20 lg:flex lg:h-screen lg:w-[74px] lg:translate-x-0 lg:flex-col lg:overflow-hidden lg:hover:w-[252px]",
           mobileOpen ? "translate-x-0" : ""
         )}
       >
         <div className="flex h-full flex-col">
-          <div className="flex items-start justify-between gap-3 border-b border-white/10 px-4 py-4 xl:block xl:px-4 xl:py-5">
+          <div className="flex items-start justify-between gap-3 border-b border-white/10 px-4 py-4 lg:block lg:px-3 lg:py-4 xl:px-4 xl:py-5">
             <div className="flex min-w-0 items-center gap-3">
               <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-[20px] bg-white/10 ring-1 ring-white/10">
                 {salaoLogoUrl ? (
@@ -96,7 +96,7 @@ export default function Sidebar({
                 )}
               </div>
 
-              <div className="min-w-0 xl:max-w-0 xl:overflow-hidden xl:opacity-0 xl:transition-all xl:duration-300 xl:group-hover:max-w-[170px] xl:group-hover:opacity-100">
+              <div className="min-w-0 lg:max-w-0 lg:overflow-hidden lg:opacity-0 lg:transition-all lg:duration-300 lg:group-hover:max-w-[170px] lg:group-hover:opacity-100">
                 <div className="truncate text-[11px] font-semibold uppercase tracking-[0.28em] text-white/45">
                   SaaS beauty
                 </div>
@@ -112,7 +112,7 @@ export default function Sidebar({
             <button
               type="button"
               onClick={onClose}
-              className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/10 text-white transition hover:bg-white/15 xl:hidden"
+              className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/10 text-white transition hover:bg-white/15 lg:hidden"
               aria-label="Fechar menu lateral"
             >
               <X size={18} />
@@ -182,7 +182,7 @@ export default function Sidebar({
                     onFocus={() => router.prefetch(item.href)}
                     onMouseEnter={() => router.prefetch(item.href)}
                     className={clsx(
-                      "group/item flex items-center gap-3 rounded-[22px] px-3 py-2.5 ring-1 ring-transparent transition-all duration-300 xl:h-12 xl:w-12 xl:justify-center xl:px-0 xl:py-0 xl:group-hover:w-full xl:group-hover:justify-start xl:group-hover:px-3",
+                    "group/item flex items-center gap-3 rounded-[18px] px-3 py-2.5 ring-1 ring-transparent transition-all duration-300 lg:h-11 lg:w-11 lg:justify-center lg:px-0 lg:py-0 lg:group-hover:w-full lg:group-hover:justify-start lg:group-hover:px-3",
                       active
                         ? "bg-white/12 text-white ring-white/12"
                         : "text-white/72 hover:bg-white/8 hover:text-white"
@@ -199,7 +199,7 @@ export default function Sidebar({
                       <Icon size={18} />
                     </span>
 
-                    <span className="min-w-0 xl:max-w-0 xl:overflow-hidden xl:opacity-0 xl:transition-all xl:duration-300 xl:group-hover:max-w-[180px] xl:group-hover:opacity-100">
+                    <span className="min-w-0 lg:max-w-0 lg:overflow-hidden lg:opacity-0 lg:transition-all lg:duration-300 lg:group-hover:max-w-[180px] lg:group-hover:opacity-100">
                       <span className="block truncate text-sm font-semibold">
                         {item.label}
                       </span>
@@ -222,13 +222,13 @@ export default function Sidebar({
             <button
               type="button"
               onClick={onLogout}
-              className="flex w-full items-center gap-3 rounded-[22px] border border-white/10 px-3 py-2.5 text-sm font-semibold text-white/82 transition hover:bg-white/8 xl:h-12 xl:w-12 xl:justify-center xl:px-0 xl:py-0 xl:group-hover:w-full xl:group-hover:justify-start xl:group-hover:px-3"
+              className="flex w-full items-center gap-3 rounded-[18px] border border-white/10 px-3 py-2.5 text-sm font-semibold text-white/82 transition hover:bg-white/8 lg:h-11 lg:w-11 lg:justify-center lg:px-0 lg:py-0 lg:group-hover:w-full lg:group-hover:justify-start lg:group-hover:px-3"
             >
               <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white/8 ring-1 ring-white/10">
                 <LogOut size={18} />
               </span>
 
-              <span className="xl:max-w-0 xl:overflow-hidden xl:opacity-0 xl:transition-all xl:duration-300 xl:group-hover:max-w-[160px] xl:group-hover:opacity-100">
+              <span className="lg:max-w-0 lg:overflow-hidden lg:opacity-0 lg:transition-all lg:duration-300 lg:group-hover:max-w-[160px] lg:group-hover:opacity-100">
                 Encerrar sessao
               </span>
             </button>

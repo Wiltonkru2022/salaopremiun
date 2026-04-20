@@ -7,6 +7,8 @@ export type OnboardingModuleState = {
 
 export type OnboardingState = {
   stepIndex: number;
+  startedAt?: string | null;
+  lastOpenedAt?: string | null;
   dismissedAt?: string | null;
   completedAt?: string | null;
   lastModuleId?: string | null;
@@ -42,6 +44,10 @@ export function readOnboardingState(storageKey: string): OnboardingState {
 
     return {
       stepIndex: Number(parsed.stepIndex || 0),
+      startedAt:
+        typeof parsed.startedAt === "string" ? parsed.startedAt : null,
+      lastOpenedAt:
+        typeof parsed.lastOpenedAt === "string" ? parsed.lastOpenedAt : null,
       dismissedAt:
         typeof parsed.dismissedAt === "string" ? parsed.dismissedAt : null,
       completedAt:
@@ -93,4 +99,28 @@ export function markOnboardingModuleVisited(
       },
     },
   });
+}
+
+export function markOnboardingOpened(
+  storageKey: string,
+  params?: {
+    stepIndex?: number;
+    moduleId?: string | null;
+    manual?: boolean;
+  }
+) {
+  const current = readOnboardingState(storageKey);
+  const timestamp = new Date().toISOString();
+
+  writeOnboardingState(storageKey, {
+    startedAt: current.startedAt || timestamp,
+    lastOpenedAt: timestamp,
+    dismissedAt: null,
+    stepIndex: Number(params?.stepIndex ?? current.stepIndex ?? 0),
+    lastModuleId: params?.moduleId ?? current.lastModuleId ?? null,
+  });
+}
+
+export function resetOnboardingState(storageKey: string) {
+  window.localStorage.removeItem(storageKey);
 }

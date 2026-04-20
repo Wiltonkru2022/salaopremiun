@@ -71,6 +71,13 @@ type PositionedEvent = {
   widthPercent: number;
 };
 
+type OperationalSignal = {
+  isOverdue: boolean;
+  isInProgress: boolean;
+  hasConflict: boolean;
+  tightFit: boolean;
+};
+
 function computeEventColumns(items: Agendamento[]): PositionedEvent[] {
   const sorted = [...items].sort((a, b) => {
     const startDiff =
@@ -427,11 +434,11 @@ export default function AgendaGrid({
 }: Props) {
   const [now, setNow] = useState(() => new Date());
   const compactMode = densityMode === "reception";
-  const pixelsPer15Min = compactMode ? 14 : 22;
-  const slotHeight = compactMode ? 28 : 44;
-  const timeColWidth = compactMode ? 56 : 64;
-  const dayMinWidthDay = compactMode ? 620 : 760;
-  const dayMinWidthWeek = compactMode ? 132 : 170;
+  const pixelsPer15Min = compactMode ? 12 : 18;
+  const slotHeight = compactMode ? 24 : 36;
+  const timeColWidth = compactMode ? 48 : 56;
+  const dayMinWidthDay = compactMode ? 480 : 620;
+  const dayMinWidthWeek = compactMode ? 112 : 144;
 
   useEffect(() => {
     const interval = window.setInterval(() => {
@@ -466,7 +473,7 @@ export default function AgendaGrid({
 
   if (days.length === 0) {
     return (
-      <div className="rounded-[24px] border border-zinc-200 bg-white p-8 text-center shadow-sm">
+      <div className="rounded-[20px] border border-zinc-200 bg-white p-6 text-center shadow-sm">
         <div className="text-lg font-semibold text-zinc-900">Salão fechado</div>
         <div className="mt-2 text-sm text-zinc-500">
           Verifique os dias configurados em <strong>configurações da agenda</strong>.
@@ -482,9 +489,9 @@ export default function AgendaGrid({
   );
 
   return (
-    <div className="flex h-full min-h-0 flex-col rounded-[22px] bg-white select-none">
+    <div className="flex h-full min-h-0 flex-col rounded-[18px] bg-white select-none">
       <div
-        className="agenda-scroll min-h-0 flex-1 overflow-auto rounded-[22px] select-none"
+        className="agenda-scroll min-h-0 flex-1 overflow-auto rounded-[18px] select-none"
       >
         <div
           className="grid min-w-max select-none"
@@ -541,10 +548,17 @@ export default function AgendaGrid({
             {slots.map((slot) => (
               <div
                 key={slot.time}
-                className="flex select-none items-start justify-end border-b border-zinc-100 pr-2 pt-1 text-[10px] font-medium text-zinc-400"
+                className={clsx(
+                  "flex select-none items-start justify-end pr-2 pt-1 text-[10px] font-medium",
+                  slot.minutes % 60 === 0
+                    ? "border-b border-zinc-200 bg-zinc-50/80 text-zinc-700"
+                    : slot.minutes % 30 === 0
+                      ? "border-b border-zinc-200/70 text-zinc-500"
+                      : "border-b border-zinc-100 text-zinc-400"
+                )}
                 style={{ height: slotHeight }}
               >
-                {slot.time}
+                {slot.minutes % 60 === 0 ? slot.time : compactMode ? "" : slot.time}
               </div>
             ))}
           </div>
@@ -552,6 +566,9 @@ export default function AgendaGrid({
           {days.map((day) => {
             const dayStr = formatFullDate(day);
             const dayAgendamentos = agendamentos.filter((a) => a.data === dayStr);
+            const sortedDayAgendamentos = [...dayAgendamentos].sort(
+              (a, b) => timeToMinutes(a.hora_inicio) - timeToMinutes(b.hora_inicio)
+            );
 
             const baseBloqueios = bloqueios.filter(
               (b) => b.data === dayStr && b.profissional_id === selectedProfessional?.id
@@ -583,6 +600,91 @@ export default function AgendaGrid({
             ]);
 
             const positionedEvents = computeEventColumns(dayAgendamentos);
+            const operationalSignals = new Map<string, OperationalSignal>();
+
+            for (let index = 0; index < sortedDayAgendamentos.length; index += 1) {
+              const current = sortedDayAgendamentos[index];
+              const prev = sortedDayAgendamentos[index - 1] || null;
+              const next = sortedDayAgendamentos[index + 1] || null;
+              const currentStart = timeToMinutes(current.hora_inicio);
+              const currentEnd = timeToMinutes(current.hora_fim);
+              const prevEnd = prev ? timeToMinutes(prev.hora_fim) : null;
+              const nextStart = next ? timeToMinutes(next.hora_inicio) : null;
+              const prevGap = prevEnd === null ? null : currentStart - prevEnd;
+              const nextGap = nextStart === null ? null : nextStart - currentEnd;
+              const hasConflict = sortedDayAgendamentos.some((other) => {
+                if (other.id === current.id) return false;
+                return (
+                  timeToMinutes(other.hora_inicio) < currentEnd &&
+                  timeToMinutes(other.hora_fim) > currentStart
+                );
+              });
+              const activeStatus =
+                current.status !== "cancelado" && current.status !== "atendido";
+              const isOverdue = activeStatus && isTodayDate(day) && nowMinutes > currentEnd;
+              const isInProgress =
+                activeStatus &&
+                isTodayDate(day) &&
+                nowMinutes >= currentStart &&
+                nowMinutes <= currentEnd;
+              const tightFit =
+                activeStatus &&
+                !hasConflict &&
+                ((prevGap !== null && prevGap >= 0 && prevGap <= 15) ||
+                  (nextGap !== null && nextGap >= 0 && nextGap <= 15));
+
+              operationalSignals.set(current.id, {
+                isOverdue,
+                isInProgress,
+                hasConflict,
+                tightFit,
+              });
+            }
+
+            const busyRanges = [
+              ...sortedDayAgendamentos.map((item) => ({
+                start: timeToMinutes(item.hora_inicio),
+                end: timeToMinutes(item.hora_fim),
+              })),
+              ...dayBloqueios.map((item) => ({
+                start: timeToMinutes(item.hora_inicio),
+                end: timeToMinutes(item.hora_fim),
+              })),
+            ].sort((a, b) => a.start - b.start);
+
+            const mergedRanges: Array<{ start: number; end: number }> = [];
+            for (const range of busyRanges) {
+              const last = mergedRanges[mergedRanges.length - 1];
+              if (!last || range.start > last.end) {
+                mergedRanges.push({ ...range });
+              } else {
+                last.end = Math.max(last.end, range.end);
+              }
+            }
+
+            let largestFreeGap = 0;
+            let largestFreeGapStart = timeToMinutes(startTime);
+            let cursor = timeToMinutes(startTime);
+
+            for (const range of mergedRanges) {
+              if (range.start > cursor) {
+                const gap = range.start - cursor;
+                if (gap > largestFreeGap) {
+                  largestFreeGap = gap;
+                  largestFreeGapStart = cursor;
+                }
+              }
+              cursor = Math.max(cursor, range.end);
+            }
+
+            const agendaEndMinutes = timeToMinutes(endTime);
+            if (agendaEndMinutes > cursor) {
+              const gap = agendaEndMinutes - cursor;
+              if (gap > largestFreeGap) {
+                largestFreeGap = gap;
+                largestFreeGapStart = cursor;
+              }
+            }
 
             return (
               <div
@@ -597,7 +699,14 @@ export default function AgendaGrid({
                   <button
                     key={`${dayStr}-${slot.time}`}
                     onClick={() => onClickSlot(dayStr, slot.time)}
-                    className="block w-full border-b border-zinc-100 text-left transition hover:bg-zinc-50/70"
+                    className={clsx(
+                      "block w-full text-left transition hover:bg-zinc-50/70",
+                      slot.minutes % 60 === 0
+                        ? "border-b border-zinc-200 bg-zinc-50/20"
+                        : slot.minutes % 30 === 0
+                          ? "border-b border-zinc-200/70"
+                          : "border-b border-zinc-100"
+                    )}
                     style={{ height: slotHeight }}
                   />
                 ))}
@@ -645,6 +754,7 @@ export default function AgendaGrid({
                     profissionalNome={selectedProfessional?.nome}
                     profissionalFotoUrl={selectedProfessional?.foto_url || null}
                     dayColumnWidthPx={dayColumnWidth}
+                    operationalSignals={operationalSignals.get(item.id)}
                     onResizeEnd={onResizeEvent}
                     onMoveEnd={(ag, move) => {
                       const currentBaseDate = new Date(`${ag.data}T12:00:00`);
@@ -665,6 +775,13 @@ export default function AgendaGrid({
                     onGoToCashier={onGoToCashier}
                   />
                 ))}
+
+                {largestFreeGap >= 30 ? (
+                  <div className="pointer-events-none absolute bottom-2 right-2 z-10 rounded-full border border-emerald-200 bg-emerald-50/95 px-2.5 py-1 text-[10px] font-semibold text-emerald-700 shadow-sm">
+                    Janela livre {Math.round(largestFreeGap)} min às{" "}
+                    {minutesToTime(largestFreeGapStart)}
+                  </div>
+                ) : null}
               </div>
             );
           })}
