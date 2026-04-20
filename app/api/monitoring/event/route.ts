@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { reportOperationalIncident } from "@/lib/monitoring/operational-incidents";
 import {
   captureSystemError,
   captureSystemEvent,
@@ -86,7 +87,27 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({ ok: true });
-  } catch {
+  } catch (error) {
+    try {
+      await reportOperationalIncident({
+        supabaseAdmin: getSupabaseAdmin(),
+        key: "api:monitoring:event:erro",
+        module: "monitoring_event_route",
+        title: "Rota de monitoramento falhou",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Erro ao processar evento de monitoramento.",
+        severity: "alta",
+        details: {
+          route: "/api/monitoring/event",
+          method: "POST",
+        },
+      });
+    } catch (incidentError) {
+      console.error("Falha ao registrar incidente de monitoring:", incidentError);
+    }
+
     return NextResponse.json({ ok: true });
   }
 }

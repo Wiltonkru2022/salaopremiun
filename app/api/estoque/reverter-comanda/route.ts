@@ -3,7 +3,11 @@ import {
   AuthzError,
   requireSalaoMembership,
 } from "@/lib/auth/require-salao-membership";
-import { reverterEstoqueComanda } from "@/lib/estoque/comanda-stock";
+import {
+  reverterEstoqueComanda,
+  validarComandaParaEstoque,
+} from "@/lib/estoque/comanda-stock";
+import { reportOperationalIncident } from "@/lib/monitoring/operational-incidents";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { registrarLogSistema } from "@/lib/system-logs";
 
@@ -21,10 +25,13 @@ function sanitizeUuid(value: unknown) {
 }
 
 export async function POST(req: NextRequest) {
+  let idSalao = "";
+  let idComanda = "";
+
   try {
     const body = (await req.json()) as BodyPayload;
-    const idSalao = sanitizeUuid(body.idSalao);
-    const idComanda = sanitizeUuid(body.idComanda);
+    idSalao = sanitizeUuid(body.idSalao) || "";
+    idComanda = sanitizeUuid(body.idComanda) || "";
 
     if (!idSalao || !idComanda) {
       return NextResponse.json(
@@ -36,10 +43,20 @@ export async function POST(req: NextRequest) {
     const auth = await requireSalaoMembership(idSalao, {
       allowedNiveis: ["admin", "gerente"],
     });
+    const supabaseAdmin = getSupabaseAdmin();
 
-    const result = await reverterEstoqueComanda(getSupabaseAdmin(), {
+    await validarComandaParaEstoque({
+      supabaseAdmin,
       idSalao,
       idComanda,
+    });
+
+    const result = await reverterEstoqueComanda(supabaseAdmin, {
+      idSalao,
+      idComanda,
+      idUsuario: auth.usuario.id,
+      sourceModule: "estoque",
+      sourceAction: "reverter_comanda",
     });
 
     await registrarLogSistema({
@@ -67,6 +84,33 @@ export async function POST(req: NextRequest) {
         { error: error.message },
         { status: error.status }
       );
+    }
+
+    if (idSalao && idComanda) {
+      try {
+        await reportOperationalIncident({
+          supabaseAdmin: getSupabaseAdmin(),
+          key: `estoque:reverter_comanda:${idSalao}:${idComanda}`,
+          module: "estoque",
+          title: "Reversao de estoque da comanda falhou",
+          description:
+            error instanceof Error
+              ? error.message
+              : "Erro interno ao reverter o estoque da comanda.",
+          severity: "alta",
+          idSalao,
+          details: {
+            route: "/api/estoque/reverter-comanda",
+            acao: "reverter_comanda",
+            id_comanda: idComanda,
+          },
+        });
+      } catch (incidentError) {
+        console.error(
+          "Falha ao registrar incidente de reversao de estoque:",
+          incidentError
+        );
+      }
     }
 
     console.error("Erro geral ao reverter estoque da comanda:", error);

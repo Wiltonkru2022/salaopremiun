@@ -1,4 +1,4 @@
-import { processarEstoqueComanda } from "@/lib/estoque/comanda-stock";
+import { executarMutacaoComandaComEstoque } from "@/lib/comandas/lifecycle";
 import { registrarLogSistema } from "@/lib/system-logs";
 import type { CaixaProcessarBody, CaixaProcessarContext } from "./types";
 import { carregarSessaoAberta, sanitizeText } from "./utils";
@@ -25,54 +25,31 @@ export async function finalizarComanda(params: {
       ?.exigir_cliente_na_venda
   );
 
-  const { error } = await ctx.supabaseAdmin.rpc("fn_caixa_finalizar_comanda", {
-    p_id_salao: ctx.idSalao,
-    p_id_comanda: idComanda,
-    p_exigir_cliente: exigirCliente,
-  });
-
-  if (error) throw error;
-
-  let warning: string | null = null;
-
-  try {
-    const estoqueResult = await processarEstoqueComanda(ctx.supabaseAdmin, {
-      idSalao: ctx.idSalao,
-      idComanda,
-      idUsuario: ctx.idUsuario,
-    });
-
-    if (
-      estoqueResult.skipped &&
-      estoqueResult.reason &&
-      !estoqueResult.reason.toLowerCase().includes("ja foi processado")
-    ) {
-      warning = estoqueResult.reason;
-    }
-  } catch (estoqueError) {
-    warning =
-      estoqueError instanceof Error
-        ? estoqueError.message
-        : "nao foi possivel atualizar o estoque da comanda.";
-  }
-
-  await registrarLogSistema({
-    gravidade: warning ? "warning" : "info",
-    modulo: "caixa",
+  return executarMutacaoComandaComEstoque({
+    supabaseAdmin: ctx.supabaseAdmin,
     idSalao: ctx.idSalao,
+    idComanda,
     idUsuario: ctx.idUsuario,
-    mensagem: warning
-      ? "Comanda finalizada com aviso de estoque."
-      : "Comanda finalizada pelo servidor.",
-    detalhes: {
-      acao: "finalizar_comanda",
-      id_comanda: idComanda,
+    sourceModule: "caixa",
+    sourceAction: "finalizar_comanda",
+    stockMode: "apply",
+    mutate: async () => {
+      const { error } = await ctx.supabaseAdmin.rpc("fn_caixa_finalizar_comanda", {
+        p_id_salao: ctx.idSalao,
+        p_id_comanda: idComanda,
+        p_exigir_cliente: exigirCliente,
+      });
+
+      if (error) throw error;
+    },
+    successMessage: "Comanda finalizada pelo servidor.",
+    warningMessage: "Comanda finalizada com aviso de estoque.",
+    logModule: "caixa",
+    logAction: "finalizar_comanda",
+    baseDetails: {
       exigir_cliente: exigirCliente,
-      warning,
     },
   });
-
-  return { warning };
 }
 
 export async function cancelarComanda(params: {

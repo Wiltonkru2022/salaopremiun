@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowRight, LockKeyhole, Mail, Sparkles } from "lucide-react";
 import { createClient } from "../../lib/supabase/client";
@@ -9,6 +9,7 @@ import {
   getLoginErrorMessage,
   isSupabaseAuthRateLimit,
 } from "@/lib/supabase/auth-client-recovery";
+import { getLoginRedirectNotice } from "@/lib/auth/login-redirect";
 
 export default function LoginPage() {
   return (
@@ -32,9 +33,8 @@ function LoginPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const submittingRef = useRef(false);
+  const supabase = useMemo(() => createClient(), []);
 
-  const [supabase, setSupabase] =
-    useState<ReturnType<typeof createClient> | null>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -43,10 +43,7 @@ function LoginPageContent() {
 
   const planoSelecionado = searchParams.get("plano")?.trim() || "";
   const emailQuery = searchParams.get("email")?.trim() || "";
-
-  useEffect(() => {
-    setSupabase(createClient());
-  }, []);
+  const redirectNotice = getLoginRedirectNotice(searchParams);
 
   useEffect(() => {
     if (!emailQuery) return;
@@ -56,11 +53,6 @@ function LoginPageContent() {
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
     if (loading || submittingRef.current) return;
-
-    if (!supabase) {
-      setErro("Cliente de autenticação ainda não carregado.");
-      return;
-    }
 
     submittingRef.current = true;
     setLoading(true);
@@ -96,9 +88,8 @@ function LoginPageContent() {
 
   function limparSessaoLocal() {
     clearSupabaseBrowserAuthState();
-    setSupabase(createClient());
     setRateLimited(false);
-    setErro("Sessão local limpa. Aguarde alguns segundos e tente entrar de novo.");
+    setErro("Sessao local limpa. Aguarde alguns segundos e tente entrar de novo.");
   }
 
   return (
@@ -116,20 +107,20 @@ function LoginPageContent() {
             </h1>
 
             <p className="mt-4 max-w-md text-zinc-300">
-              Gestão profissional para salões, clínicas e profissionais da
+              Gestao profissional para saloes, clinicas e profissionais da
               beleza.
             </p>
           </div>
 
           <div className="space-y-3">
             <div className="rounded-2xl border border-zinc-800 bg-zinc-950/50 p-4 text-sm text-zinc-200">
-              Agenda própria, sem calendar pronto
+              Agenda propria, sem calendar pronto
             </div>
             <div className="rounded-2xl border border-zinc-800 bg-zinc-950/50 p-4 text-sm text-zinc-200">
-              Multi-salão com isolamento por salão
+              Multi-salao com isolamento por salao
             </div>
             <div className="rounded-2xl border border-zinc-800 bg-zinc-950/50 p-4 text-sm text-zinc-200">
-              Painel premium com financeiro, vendas e relatórios
+              Painel premium com financeiro, vendas e relatorios
             </div>
           </div>
         </div>
@@ -142,6 +133,23 @@ function LoginPageContent() {
                 Acesse seu painel administrativo
               </p>
             </div>
+
+            {redirectNotice ? (
+              <div
+                className={
+                  redirectNotice.tone === "danger"
+                    ? "mb-5 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700"
+                    : redirectNotice.tone === "warning"
+                      ? "mb-5 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800"
+                      : redirectNotice.tone === "success"
+                        ? "mb-5 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700"
+                        : "mb-5 rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-700"
+                }
+              >
+                <p className="font-semibold">{redirectNotice.title}</p>
+                <p className="mt-1">{redirectNotice.description}</p>
+              </div>
+            ) : null}
 
             <form onSubmit={handleLogin} className="space-y-5">
               <div>
@@ -181,7 +189,13 @@ function LoginPageContent() {
               <div className="flex items-center justify-end">
                 <button
                   type="button"
-                  onClick={() => router.push("/recuperar-senha")}
+                  onClick={() =>
+                    router.push(
+                      email.trim()
+                        ? `/recuperar-senha?email=${encodeURIComponent(email.trim())}`
+                        : "/recuperar-senha"
+                    )
+                  }
                   className="text-sm font-medium text-zinc-500 transition hover:text-zinc-900"
                 >
                   Esqueci minha senha
@@ -197,7 +211,7 @@ function LoginPageContent() {
                       onClick={limparSessaoLocal}
                       className="mt-3 rounded-xl border border-rose-200 bg-white px-3 py-2 text-xs font-semibold text-rose-700"
                     >
-                      Limpar sessão local
+                      Limpar sessao local
                     </button>
                   ) : null}
                 </div>
@@ -205,7 +219,7 @@ function LoginPageContent() {
 
               <button
                 type="submit"
-                disabled={loading || !supabase}
+                disabled={loading}
                 className="w-full rounded-2xl bg-zinc-900 px-4 py-3 font-semibold text-white transition hover:opacity-95 disabled:opacity-60"
               >
                 {loading ? "Entrando..." : "Entrar"}
@@ -231,13 +245,13 @@ function LoginPageContent() {
               }
               className="flex w-full items-center justify-center gap-2 rounded-2xl border border-zinc-300 bg-white px-4 py-3 font-semibold text-zinc-900 transition hover:border-zinc-900 hover:bg-zinc-50"
             >
-              <span>Cadastrar salão</span>
+              <span>Cadastrar salao</span>
               <ArrowRight size={18} />
             </button>
 
             <div className="mt-6 rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-4 text-sm text-zinc-600">
-              Novo por aqui? Crie seu salão, escolha o plano e comece com agenda,
-              caixa, comandas e gestão completa.
+              Novo por aqui? Crie seu salao, escolha o plano e comece com agenda,
+              caixa, comandas e gestao completa.
             </div>
           </div>
         </div>

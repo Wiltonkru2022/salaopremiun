@@ -18,35 +18,12 @@ import {
   LifeBuoy,
   WalletCards,
 } from "lucide-react";
-
-export type ShellNotificationTone =
-  | "danger"
-  | "warning"
-  | "success"
-  | "info"
-  | "neutral";
-
-export type ShellNotificationCategory =
-  | "assinatura"
-  | "agenda"
-  | "aniversario"
-  | "caixa"
-  | "estoque"
-  | "marketing"
-  | "onboarding"
-  | "suporte"
-  | "sistema"
-  | "webhook";
-
-export type ShellNotification = {
-  id: string;
-  title: string;
-  description: string;
-  tone: ShellNotificationTone;
-  category: ShellNotificationCategory;
-  href?: string;
-  critical?: boolean;
-};
+import type {
+  ShellNotification,
+  ShellNotificationCategory,
+  ShellNotificationIcon,
+  ShellNotificationTone,
+} from "@/lib/notifications/contracts";
 
 type Props = {
   notifications: ShellNotification[];
@@ -64,9 +41,11 @@ const toneClass: Record<ShellNotificationTone, string> = {
 
 function NotificationIcon({
   category,
+  icon,
   tone,
 }: {
   category: ShellNotificationCategory;
+  icon?: ShellNotificationIcon;
   tone: ShellNotificationTone;
 }) {
   const className = clsx(
@@ -74,15 +53,17 @@ function NotificationIcon({
     toneClass[tone]
   );
 
-  if (category === "assinatura") return <CreditCard className={className} />;
-  if (category === "agenda") return <CalendarCheck2 className={className} />;
-  if (category === "aniversario") return <Cake className={className} />;
-  if (category === "caixa") return <WalletCards className={className} />;
-  if (category === "estoque") return <Boxes className={className} />;
-  if (category === "marketing") return <Megaphone className={className} />;
-  if (category === "onboarding") return <Sparkles className={className} />;
-  if (category === "suporte") return <LifeBuoy className={className} />;
-  if (category === "webhook") return <Radar className={className} />;
+  const normalizedIcon = icon || category;
+
+  if (normalizedIcon === "assinatura") return <CreditCard className={className} />;
+  if (normalizedIcon === "agenda") return <CalendarCheck2 className={className} />;
+  if (normalizedIcon === "aniversario") return <Cake className={className} />;
+  if (normalizedIcon === "caixa") return <WalletCards className={className} />;
+  if (normalizedIcon === "estoque") return <Boxes className={className} />;
+  if (normalizedIcon === "marketing") return <Megaphone className={className} />;
+  if (normalizedIcon === "onboarding") return <Sparkles className={className} />;
+  if (normalizedIcon === "suporte") return <LifeBuoy className={className} />;
+  if (normalizedIcon === "webhook") return <Radar className={className} />;
   if (tone === "success") return <CheckCircle2 className={className} />;
 
   return <AlertTriangle className={className} />;
@@ -235,6 +216,7 @@ export default function NotificationBell({
                   <>
                     <NotificationIcon
                       category={notification.category}
+                      icon={notification.icon}
                       tone={notification.tone}
                     />
 
@@ -250,6 +232,11 @@ export default function NotificationBell({
                       <div className="mt-0.5 line-clamp-2 text-xs leading-5 text-zinc-500">
                         {notification.description}
                       </div>
+                      {notification.actionLabel ? (
+                        <div className="mt-1.5 text-[11px] font-semibold text-zinc-600">
+                          {notification.actionLabel}
+                        </div>
+                      ) : null}
                     </div>
 
                     {notification.href ? (

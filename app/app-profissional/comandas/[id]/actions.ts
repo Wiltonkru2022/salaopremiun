@@ -6,6 +6,7 @@ import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { getProfissionalSessionFromCookie } from "@/lib/profissional-auth.server";
 import {
   buscarVinculoProfissionalServico,
+  criarCamposAplicacaoComissao,
   resolverRegraComissaoServico,
 } from "@/lib/comissoes/regrasServico";
 import { registrarLogSistema } from "@/lib/system-logs";
@@ -224,6 +225,7 @@ export async function adicionarServicoNaComandaAction(formData: FormData) {
           profissional,
           vinculo,
         });
+        const camposComissao = criarCamposAplicacaoComissao(regra);
         const itemIdempotencyKey = buildActionKey({
           prefix: "servico",
           idComanda,
@@ -248,11 +250,13 @@ export async function adicionarServicoNaComandaAction(formData: FormData) {
             p_custo_total: sanitizeMoney(servico.custo_produto),
             p_id_profissional: session.idProfissional,
             p_id_assistente: null,
-            p_comissao_percentual: regra.comissaoPercentual,
+            p_comissao_percentual:
+              camposComissao.comissao_percentual_aplicada,
             p_comissao_assistente_percentual:
-              regra.comissaoAssistentePercentual,
-            p_base_calculo: regra.baseCalculo,
-            p_desconta_taxa_maquininha: regra.descontaTaxaMaquininha,
+              camposComissao.comissao_assistente_percentual_aplicada,
+            p_base_calculo: camposComissao.base_calculo_aplicada,
+            p_desconta_taxa_maquininha:
+              camposComissao.desconta_taxa_maquininha_aplicada,
             p_origem: "app_profissional",
             p_observacoes: null,
             p_desconto: sanitizeMoney(comanda.desconto),

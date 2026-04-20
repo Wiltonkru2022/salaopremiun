@@ -3,7 +3,11 @@ import {
   AuthzError,
   requireSalaoMembership,
 } from "@/lib/auth/require-salao-membership";
-import { processarEstoqueComanda } from "@/lib/estoque/comanda-stock";
+import {
+  processarEstoqueComanda,
+  validarComandaParaEstoque,
+} from "@/lib/estoque/comanda-stock";
+import { reportOperationalIncident } from "@/lib/monitoring/operational-incidents";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { registrarLogSistema } from "@/lib/system-logs";
 
@@ -21,10 +25,13 @@ function sanitizeUuid(value: unknown) {
 }
 
 export async function POST(req: NextRequest) {
+  let idSalao = "";
+  let idComanda = "";
+
   try {
     const body = (await req.json()) as BodyPayload;
-    const idSalao = sanitizeUuid(body.idSalao);
-    const idComanda = sanitizeUuid(body.idComanda);
+    idSalao = sanitizeUuid(body.idSalao) || "";
+    idComanda = sanitizeUuid(body.idComanda) || "";
 
     if (!idSalao || !idComanda) {
       return NextResponse.json(
@@ -38,23 +45,11 @@ export async function POST(req: NextRequest) {
     });
     const supabaseAdmin = getSupabaseAdmin();
 
-    const { data: comanda, error: comandaError } = await supabaseAdmin
-      .from("comandas")
-      .select("id, status, id_salao")
-      .eq("id", idComanda)
-      .eq("id_salao", idSalao)
-      .maybeSingle();
-
-    if (comandaError) {
-      throw comandaError;
-    }
-
-    if (!comanda?.id) {
-      return NextResponse.json(
-        { error: "Comanda nao encontrada." },
-        { status: 404 }
-      );
-    }
+    const comanda = await validarComandaParaEstoque({
+      supabaseAdmin,
+      idSalao,
+      idComanda,
+    });
 
     if (String(comanda.status || "").toLowerCase() !== "fechada") {
       return NextResponse.json(
@@ -67,6 +62,8 @@ export async function POST(req: NextRequest) {
       idSalao,
       idComanda,
       idUsuario: auth.usuario.id,
+      sourceModule: "estoque",
+      sourceAction: "processar_comanda",
     });
 
     await registrarLogSistema({
@@ -95,6 +92,33 @@ export async function POST(req: NextRequest) {
         { error: error.message },
         { status: error.status }
       );
+    }
+
+    if (idSalao && idComanda) {
+      try {
+        await reportOperationalIncident({
+          supabaseAdmin: getSupabaseAdmin(),
+          key: `estoque:processar_comanda:${idSalao}:${idComanda}`,
+          module: "estoque",
+          title: "Baixa de estoque da comanda falhou",
+          description:
+            error instanceof Error
+              ? error.message
+              : "Erro interno ao processar o estoque da comanda.",
+          severity: "critica",
+          idSalao,
+          details: {
+            route: "/api/estoque/processar-comanda",
+            acao: "processar_comanda",
+            id_comanda: idComanda,
+          },
+        });
+      } catch (incidentError) {
+        console.error(
+          "Falha ao registrar incidente de processamento de estoque:",
+          incidentError
+        );
+      }
     }
 
     console.error("Erro geral ao processar estoque da comanda:", error);

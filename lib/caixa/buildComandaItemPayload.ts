@@ -1,6 +1,10 @@
 import type { CatalogoServico, ProfissionalResumo } from "@/components/caixa/types";
 import type { ModalItemState } from "@/components/caixa/page-types";
-import { buscarVinculoProfissionalServico, resolverRegraComissaoServico } from "@/lib/comissoes/regrasServico";
+import {
+  buscarVinculoProfissionalServico,
+  criarPreviewComissaoManual,
+  resolverRegraComissaoServico,
+} from "@/lib/comissoes/regrasServico";
 import { createClient } from "@/lib/supabase/client";
 
 type CaixaSupabaseClient = ReturnType<typeof createClient>;
@@ -63,14 +67,12 @@ export async function buildComandaItemPayload({
   }
 
   if (itemModal.tipoItem !== "servico") {
+    const preview = criarPreviewComissaoManual();
     return {
       ...payloadBase,
-      comissao_percentual_aplicada: 0,
+      ...preview,
       comissao_valor_aplicado: 0,
-      comissao_assistente_percentual_aplicada: 0,
       comissao_assistente_valor_aplicado: 0,
-      base_calculo_aplicada: "bruto",
-      desconta_taxa_maquininha_aplicada: false,
     };
   }
 

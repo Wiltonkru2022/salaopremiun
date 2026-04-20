@@ -1,12 +1,25 @@
 import OpenAI from "openai";
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { getProfissionalSessionFromCookie } from "@/lib/profissional-auth.server";
+import { reportOperationalIncident } from "@/lib/monitoring/operational-incidents";
+import { requireProfissionalServerContext } from "@/lib/profissional-context.server";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import {
   buscarOuCriarConversaSuporte,
   listarMensagensConversa,
   salvarMensagemConversa,
 } from "@/app/services/profissional/suporte";
+import type {
+  AgendamentoContexto,
+  ClienteContexto,
+  ComandaContexto,
+  HistoricoMensagem,
+  OpenAIMessage,
+  ProfissionalContextoRow,
+  StatusRow,
+  SuporteRequestBody,
+  TotalRow,
+} from "@/types/profissional";
 
 function parseUUID(value: unknown) {
   const parsed = String(value || "").trim();
@@ -29,7 +42,7 @@ function getOpenAI() {
   const apiKey = process.env.OPENAI_API_KEY;
 
   if (!apiKey) {
-    throw new Error("OPENAI_API_KEY não configurada.");
+    throw new Error("OPENAI_API_KEY nao configurada.");
   }
 
   return new OpenAI({ apiKey });
@@ -57,63 +70,6 @@ function inicioAnoISO() {
   const now = new Date();
   return `${now.getFullYear()}-01-01`;
 }
-
-type TotalRow = {
-  total?: number | string | null;
-};
-
-type StatusRow = {
-  status?: string | null;
-};
-
-type ComandaContexto = {
-  id: string;
-  numero?: number | string | null;
-  status?: string | null;
-  subtotal?: number | string | null;
-  desconto?: number | string | null;
-  acrescimo?: number | string | null;
-  total?: number | string | null;
-  id_cliente?: string | null;
-};
-
-type AgendamentoContexto = {
-  id: string;
-  data?: string | null;
-  hora_inicio?: string | null;
-  hora_fim?: string | null;
-  status?: string | null;
-  cliente_id?: string | null;
-  servico_id?: string | null;
-  id_comanda?: string | null;
-  observacoes?: string | null;
-  duracao_minutos?: number | null;
-};
-
-type ClienteContexto = {
-  id: string;
-  nome?: string | null;
-  telefone?: string | null;
-  email?: string | null;
-};
-
-type HistoricoMensagem = {
-  papel?: string | null;
-  conteudo?: string | null;
-};
-
-type OpenAIMessage = {
-  role: "system" | "user" | "assistant";
-  content: string;
-};
-
-type SuporteRequestBody = {
-  message?: string;
-  origemPagina?: string | null;
-  idComanda?: string | null;
-  idAgendamento?: string | null;
-  idCliente?: string | null;
-};
 
 function somarTotais(rows: TotalRow[] | null | undefined) {
   return Number(
@@ -170,9 +126,43 @@ function avaliarIntentPolicy(message: string) {
   );
 }
 
+function mapHistoricoToOpenAI(value: unknown): OpenAIMessage[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .map((item) => item as HistoricoMensagem)
+    .filter((item) => typeof item?.conteudo === "string" && item.conteudo.trim())
+    .map((item) => ({
+      role: item.papel === "assistant" ? "assistant" : "user",
+      content: compactText(item.conteudo, 700),
+    }));
+}
+
+function parseSuporteRequestBody(input: unknown): SuporteRequestBody {
+  if (!input || typeof input !== "object") {
+    return {};
+  }
+
+  const body = input as Record<string, unknown>;
+
+  return {
+    message: typeof body.message === "string" ? body.message : undefined,
+    origemPagina:
+      typeof body.origemPagina === "string" ? body.origemPagina : null,
+    idComanda: typeof body.idComanda === "string" ? body.idComanda : null,
+    idAgendamento:
+      typeof body.idAgendamento === "string" ? body.idAgendamento : null,
+    idCliente: typeof body.idCliente === "string" ? body.idCliente : null,
+  };
+}
+
 export async function POST(req: Request) {
+  let idSalao = "";
+
   try {
-    const body = (await req.json()) as SuporteRequestBody;
+    const body = parseSuporteRequestBody(await req.json().catch(() => null));
 
     const message = compactText(body?.message, 900);
     const origemPagina = String(body?.origemPagina || "").trim() || null;
@@ -188,14 +178,8 @@ export async function POST(req: Request) {
       );
     }
 
-    const session = await getProfissionalSessionFromCookie();
-
-    if (!session) {
-      return NextResponse.json(
-        { error: "Sessão do profissional não encontrada." },
-        { status: 401 }
-      );
-    }
+    const session = await requireProfissionalServerContext();
+    idSalao = session.idSalao;
 
     const supabase = await createClient();
 
@@ -247,11 +231,13 @@ export async function POST(req: Request) {
         `)
         .eq("id", session.idProfissional)
         .eq("id_salao", session.idSalao)
-        .maybeSingle(),
+        .maybeSingle<ProfissionalContextoRow>(),
 
       supabase
         .from("agendamentos")
-        .select("id, data, hora_inicio, hora_fim, status, cliente_id, servico_id, id_comanda")
+        .select(
+          "id, data, hora_inicio, hora_fim, status, cliente_id, servico_id, id_comanda"
+        )
         .eq("id_salao", session.idSalao)
         .eq("profissional_id", session.idProfissional)
         .eq("data", hojeISO())
@@ -301,10 +287,12 @@ export async function POST(req: Request) {
     if (idComanda) {
       const { data } = await supabase
         .from("comandas")
-        .select("id, numero, status, subtotal, desconto, acrescimo, total, id_cliente")
+        .select(
+          "id, numero, status, subtotal, desconto, acrescimo, total, id_cliente"
+        )
         .eq("id", idComanda)
         .eq("id_salao", session.idSalao)
-        .maybeSingle();
+        .maybeSingle<ComandaContexto>();
 
       comandaAtual = data ?? null;
 
@@ -314,7 +302,7 @@ export async function POST(req: Request) {
           .select("id, nome, telefone, email")
           .eq("id", comandaAtual.id_cliente)
           .eq("id_salao", session.idSalao)
-          .maybeSingle();
+          .maybeSingle<ClienteContexto>();
 
         clienteAtual = cliente ?? null;
       }
@@ -338,9 +326,9 @@ export async function POST(req: Request) {
         .eq("id", idAgendamento)
         .eq("id_salao", session.idSalao)
         .eq("profissional_id", session.idProfissional)
-        .maybeSingle();
+        .maybeSingle<AgendamentoContexto>();
 
-      agendamentoAtual = data ?? null;
+        agendamentoAtual = data ?? null;
     }
 
     if (idCliente && !clienteAtual) {
@@ -349,7 +337,7 @@ export async function POST(req: Request) {
         .select("id, nome, telefone, email")
         .eq("id", idCliente)
         .eq("id_salao", session.idSalao)
-        .maybeSingle();
+        .maybeSingle<ClienteContexto>();
 
       clienteAtual = data ?? null;
     }
@@ -358,7 +346,7 @@ export async function POST(req: Request) {
 
     if (intentBloqueada) {
       const respostaBloqueio =
-        "Eu posso te orientar, mas não executo ações no sistema. No app profissional eu apenas ajudo com informações, regras e passo a passo de uso.";
+        "Eu posso te orientar, mas nao executo acoes no sistema. No app profissional eu apenas ajudo com informacoes, regras e passo a passo de uso.";
 
       await salvarMensagemConversa({
         idConversa: conversa.id,
@@ -376,11 +364,7 @@ export async function POST(req: Request) {
     }
 
     const historicoLimitado = historico.slice(-4);
-
-    const historicoOpenAI: OpenAIMessage[] = (historicoLimitado as HistoricoMensagem[]).map((item) => ({
-      role: item.papel === "assistant" ? "assistant" : "user",
-      content: compactText(item.conteudo, 700),
-    }));
+    const historicoOpenAI = mapHistoricoToOpenAI(historicoLimitado);
 
     const contextoCompacto = {
       session: {
@@ -389,7 +373,9 @@ export async function POST(req: Request) {
       },
       profissional: profissionalResult.data
         ? {
-            nome: profissionalResult.data.nome_exibicao || profissionalResult.data.nome,
+            nome:
+              profissionalResult.data.nome_exibicao ||
+              profissionalResult.data.nome,
             categoria: profissionalResult.data.categoria,
             cargo: profissionalResult.data.cargo,
             ativo: profissionalResult.data.ativo,
@@ -404,31 +390,31 @@ export async function POST(req: Request) {
     };
 
     const systemPrompt = `
-Você é o assistente oficial do app profissional do SalaoPremium.
+Voce e o assistente oficial do app profissional do SalaoPremium.
 
 Seu papel:
 - ajudar o profissional a entender e usar o app profissional
-- responder em português do Brasil
-- responder de forma humana, clara, curta e útil
+- responder em portugues do Brasil
+- responder de forma humana, clara, curta e util
 - se o profissional mudar de assunto, ignore o contexto anterior e responda apenas o novo assunto
 - usar o contexto real do sistema quando ele existir
 
-Você NÃO pode:
+Voce NAO pode:
 - criar agendamentos
 - cadastrar clientes
-- executar ações no sistema
+- executar acoes no sistema
 - trocar senha diretamente
 - alterar comandas
-- prometer funções que ainda não existem
+- prometer funcoes que ainda nao existem
 
-Regras obrigatórias:
-- se perguntarem sobre trocar senha, explique o caminho correto no app ou informe que a alteração é feita pelo sistema SaaS
-- se perguntarem sobre cadastro, informe que o cadastro é feito somente pelo sistema SaaS
-- se o profissional pedir suporte técnico do sistema, explique que haverá um chat exclusivo com o admin dono do sistema, mas que essa função ainda será implantada
-- você pode informar status dos agendamentos
-- você pode informar faturamento da semana, do mês e do ano
-- você pode explicar telas, botões, fluxos e regras do app profissional
-- se a informação não existir no contexto atual, diga isso claramente
+Regras obrigatorias:
+- se perguntarem sobre trocar senha, explique o caminho correto no app ou informe que a alteracao e feita pelo sistema SaaS
+- se perguntarem sobre cadastro, informe que o cadastro e feito somente pelo sistema SaaS
+- se o profissional pedir suporte tecnico do sistema, explique que havera um chat exclusivo com o admin dono do sistema, mas que essa funcao ainda sera implantada
+- voce pode informar status dos agendamentos
+- voce pode informar faturamento da semana, do mes e do ano
+- voce pode explicar telas, botoes, fluxos e regras do app profissional
+- se a informacao nao existir no contexto atual, diga isso claramente
 - resposta curta e direta
 - nunca fique preso no assunto anterior se a nova pergunta for outra
 
@@ -441,23 +427,22 @@ ${JSON.stringify(
   2
 )}
 `;
-const openai = getOpenAI();
-const response = await openai.responses.create({
-  model: "gpt-4.1-mini",
-  input: [
-    {
-      role: "system",
-      content: systemPrompt,
-    },
-    ...historicoOpenAI.map((msg) => ({
-      role: msg.role,
-      content: msg.content,
-    })),
-  ],
-});
+    const openai = getOpenAI();
+    const response = await openai.responses.create({
+      model: "gpt-4.1-mini",
+      input: [
+        {
+          role: "system",
+          content: systemPrompt,
+        },
+        ...historicoOpenAI.map((msg) => ({
+          role: msg.role,
+          content: msg.content,
+        })),
+      ],
+    });
 
-    const answer =
-      response.output_text || "Não consegui responder agora.";
+    const answer = response.output_text || "Nao consegui responder agora.";
 
     await salvarMensagemConversa({
       idConversa: conversa.id,
@@ -472,6 +457,38 @@ const response = await openai.responses.create({
       conversaId: conversa.id,
     });
   } catch (error) {
+    if (error instanceof Error && error.message === "UNAUTHORIZED") {
+      return NextResponse.json(
+        { error: "Sessao do profissional nao encontrada." },
+        { status: 401 }
+      );
+    }
+
+    if (idSalao) {
+      try {
+        await reportOperationalIncident({
+          supabaseAdmin: getSupabaseAdmin(),
+          key: `app-profissional:suporte:${idSalao}`,
+          module: "app_profissional",
+          title: "Suporte IA do app profissional falhou",
+          description:
+            error instanceof Error
+              ? error.message
+              : "Erro ao processar a mensagem no suporte.",
+          severity: "alta",
+          idSalao,
+          details: {
+            route: "/api/app-profissional/suporte",
+          },
+        });
+      } catch (incidentError) {
+        console.error(
+          "Falha ao registrar incidente do suporte IA do app profissional:",
+          incidentError
+        );
+      }
+    }
+
     console.error("Erro no suporte IA:", error);
 
     return NextResponse.json(

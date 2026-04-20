@@ -1,21 +1,27 @@
 "use client";
 
 import clsx from "clsx";
-import { Profissional } from "@/types/agenda";
+import { AgendaDensityMode, Profissional } from "@/types/agenda";
 
 type Props = {
   profissionais: Profissional[];
   selectedProfissionalId: string;
+  densityMode: AgendaDensityMode;
   onSelect: (id: string) => void;
 };
 
 export default function ProfissionaisBar({
   profissionais,
   selectedProfissionalId,
+  densityMode,
   onSelect,
 }: Props) {
   return (
-    <div className="overflow-hidden rounded-[22px] border border-zinc-200 bg-white px-3 py-2.5">
+    <div
+      className={`overflow-hidden rounded-[18px] border border-zinc-200 bg-white ${
+        densityMode === "reception" ? "px-3 py-2" : "px-3 py-2.5"
+      }`}
+    >
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <div className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">
@@ -29,7 +35,11 @@ export default function ProfissionaisBar({
       </div>
 
       <div className="mt-2 overflow-x-auto">
-        <div className="flex min-w-max gap-3 pb-1">
+        <div
+          className={`flex min-w-max pb-1 ${
+            densityMode === "reception" ? "gap-2" : "gap-3"
+          }`}
+        >
           {profissionais.map((prof) => {
             const active = selectedProfissionalId === prof.id;
             const subtitle = prof.cargo || prof.categoria || "Agenda ativa";
@@ -39,7 +49,11 @@ export default function ProfissionaisBar({
                 key={prof.id}
                 onClick={() => onSelect(prof.id)}
                 className={clsx(
-                  "flex min-w-[210px] items-center gap-3 rounded-[18px] border px-3 py-2.5 text-left transition",
+                  `flex items-center gap-3 rounded-[16px] border text-left transition ${
+                    densityMode === "reception"
+                      ? "min-w-[168px] px-2.5 py-2"
+                      : "min-w-[210px] px-3 py-2.5"
+                  }`,
                   active
                     ? "border-zinc-950 bg-zinc-950 text-white shadow-sm"
                     : "border-zinc-200 bg-white text-zinc-800 hover:border-zinc-300 hover:bg-zinc-50"
@@ -48,19 +62,27 @@ export default function ProfissionaisBar({
                 <img
                   src={prof.foto_url || "https://placehold.co/96x96?text=Prof"}
                   alt={prof.nome}
-                  className="h-10 w-10 rounded-full object-cover"
+                  className={`${
+                    densityMode === "reception" ? "h-8 w-8" : "h-10 w-10"
+                  } rounded-full object-cover`}
                 />
 
                 <div className="min-w-0 flex-1">
                   <div
                     className={clsx(
-                      "text-[11px] uppercase tracking-[0.14em]",
+                      `${
+                        densityMode === "reception" ? "text-[10px]" : "text-[11px]"
+                      } uppercase tracking-[0.14em]`,
                       active ? "text-zinc-400" : "text-zinc-500"
                     )}
                   >
                     {subtitle}
                   </div>
-                  <div className="mt-0.5 truncate text-sm font-bold leading-tight">
+                  <div
+                    className={`mt-0.5 truncate ${
+                      densityMode === "reception" ? "text-[13px]" : "text-sm"
+                    } font-bold leading-tight`}
+                  >
                     {prof.nome}
                   </div>
                 </div>

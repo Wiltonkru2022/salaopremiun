@@ -61,8 +61,10 @@ function isPublicRegistrationRoute(rel, source) {
   return (
     rel === "app/api/cadastro-salao/route.ts" &&
     /auth\.admin\.createUser/.test(source) &&
-    /from\(["']saloes["']\)/.test(source) &&
-    /from\(["']usuarios["']\)/.test(source)
+    ((/from\(["']saloes["']\)/.test(source) &&
+      /from\(["']usuarios["']\)/.test(source)) ||
+      /fn_cadastrar_salao_transacional/.test(source)) &&
+    /auth\.admin\.deleteUser/.test(source)
   );
 }
 

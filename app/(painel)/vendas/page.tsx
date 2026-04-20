@@ -38,16 +38,11 @@ import {
   sanitizePermissoesDb,
 } from "@/lib/auth/permissions";
 import { monitorClientOperation } from "@/lib/monitoring/client";
-
-type VendaProcessarResponse = {
-  ok: boolean;
-  detalhe?: Partial<VendaDetalhe> | null;
-  warning?: string | null;
-};
-
-type VendaProcessarErrorResponse = {
-  error?: string;
-};
+import type {
+  VendaProcessarBody,
+  VendaProcessarErrorResponse,
+  VendaProcessarResponse,
+} from "@/types/vendas";
 
 export default function VendasPage() {
   const supabase = createClient();
@@ -314,6 +309,13 @@ export default function VendasPage() {
     idComanda: string;
     motivo?: string | null;
   }) {
+    const requestBody: VendaProcessarBody = {
+      idSalao,
+      acao: params.acao,
+      idComanda: params.idComanda,
+      motivo: params.motivo || null,
+    };
+
     const response = await monitorClientOperation(
       {
         module: "vendas",
@@ -334,17 +336,12 @@ export default function VendasPage() {
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({
-            idSalao,
-            acao: params.acao,
-            idComanda: params.idComanda,
-            motivo: params.motivo || null,
-          }),
+          body: JSON.stringify(requestBody),
         })
     );
 
     const result = (await response.json().catch(() => ({}))) as Partial<
-      VendaProcessarResponse
+      VendaProcessarResponse<Partial<VendaDetalhe>>
     > &
       VendaProcessarErrorResponse;
 
@@ -352,7 +349,7 @@ export default function VendasPage() {
       throw new Error(result.error || "Erro ao processar venda.");
     }
 
-    return result as VendaProcessarResponse;
+    return result as VendaProcessarResponse<Partial<VendaDetalhe>>;
   }
 
   async function abrirDetalhes(venda: ComandaVenda) {

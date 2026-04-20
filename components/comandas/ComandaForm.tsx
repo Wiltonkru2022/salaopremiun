@@ -6,8 +6,15 @@ import { createClient } from "@/lib/supabase/client";
 import ComandaItemModal, {
   type ComandaItemModalPayload,
 } from "@/components/comandas/ComandaItemModal";
+import ConfirmActionModal from "@/components/ui/ConfirmActionModal";
 import { getUsuarioLogado } from "@/lib/auth/getUsuarioLogado";
 import { monitorClientOperation } from "@/lib/monitoring/client";
+import type {
+  ItemPayload,
+  ProcessarComandaBody,
+  ProcessarComandaErrorResponse,
+  ProcessarComandaResponse,
+} from "@/types/comandas";
 import {
   formatMoney,
   formatMoneyInput,
@@ -66,17 +73,6 @@ type ComandaFormProps = {
   modo: "novo" | "editar";
 };
 
-type ProcessarComandaResponse = {
-  ok: boolean;
-  idComanda?: string;
-  idItem?: string;
-  status?: string;
-};
-
-type ProcessarComandaErrorResponse = {
-  error?: string;
-};
-
 function getErrorMessage(error: unknown, fallback: string) {
   return error instanceof Error && error.message ? error.message : fallback;
 }
@@ -93,6 +89,7 @@ export default function ComandaForm({ modo }: ComandaFormProps) {
   const [erro, setErro] = useState("");
   const [msg, setMsg] = useState("");
   const [itemModalOpen, setItemModalOpen] = useState(false);
+  const [itemParaRemover, setItemParaRemover] = useState<string | null>(null);
 
   const [idSalao, setIdSalao] = useState("");
   const [numero, setNumero] = useState<number | null>(null);
@@ -146,6 +143,21 @@ export default function ComandaForm({ modo }: ComandaFormProps) {
     acao: "salvar_base" | "adicionar_item" | "remover_item" | "enviar_pagamento",
     item?: Partial<ComandaItemModalPayload> & { idItem?: string | null }
   ) {
+    const requestBody: ProcessarComandaBody = {
+      idSalao,
+      acao,
+      comanda: {
+        idComanda: modo === "editar" ? comandaId : null,
+        numero,
+        idCliente: clienteId || null,
+        status,
+        observacoes,
+        desconto: descontoNumero,
+        acrescimo: acrescimoNumero,
+      },
+      item: (item as ItemPayload | undefined) || undefined,
+    };
+
     const response = await monitorClientOperation(
       {
         module: "comanda",
@@ -168,20 +180,7 @@ export default function ComandaForm({ modo }: ComandaFormProps) {
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({
-            idSalao,
-            acao,
-            comanda: {
-              idComanda: modo === "editar" ? comandaId : null,
-              numero,
-              idCliente: clienteId || null,
-              status,
-              observacoes,
-              desconto: descontoNumero,
-              acrescimo: acrescimoNumero,
-            },
-            item,
-          }),
+          body: JSON.stringify(requestBody),
         })
     );
 
@@ -443,9 +442,6 @@ export default function ComandaForm({ modo }: ComandaFormProps) {
     try {
       exigirComandaEditavel();
 
-      const confirmar = window.confirm("Remover este item da comanda?");
-      if (!confirmar) return;
-
       await processarComanda("remover_item", { idItem: itemId });
       await recarregarItens(comandaId);
     } catch (error: unknown) {
@@ -489,6 +485,20 @@ export default function ComandaForm({ modo }: ComandaFormProps) {
         profissionais={profissionais}
         servicos={servicos}
         produtos={produtos}
+      />
+
+      <ConfirmActionModal
+        open={Boolean(itemParaRemover)}
+        title="Remover item da comanda"
+        description="Este item sera removido da comanda e o total sera recalculado."
+        confirmLabel="Remover item"
+        tone="danger"
+        onClose={() => setItemParaRemover(null)}
+        onConfirm={() => {
+          const id = itemParaRemover;
+          setItemParaRemover(null);
+          if (id) void removerItem(id);
+        }}
       />
 
       <div className="bg-white">
@@ -648,7 +658,7 @@ export default function ComandaForm({ modo }: ComandaFormProps) {
 
                           <button
                             type="button"
-                            onClick={() => void removerItem(item.id)}
+                            onClick={() => setItemParaRemover(item.id)}
                             disabled={comandaBloqueada}
                             className="rounded-xl border border-red-300 bg-red-50 px-3 py-2 text-sm font-semibold text-red-600 disabled:cursor-not-allowed disabled:opacity-50"
                           >

@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
+import { requireProfissionalServerContext } from "@/lib/profissional-context.server";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
-import { getProfissionalSessionFromCookie } from "@/lib/profissional-auth.server";
 import { registrarLogSistema } from "@/lib/system-logs";
 
 export type TicketCategoria =
@@ -425,33 +425,13 @@ export async function getPainelTicketContext(): Promise<PainelTicketContext> {
 }
 
 export async function getProfissionalTicketContext(): Promise<ProfissionalTicketContext> {
-  const session = await getProfissionalSessionFromCookie();
-
-  if (!session) {
-    throw new Error("UNAUTHORIZED");
-  }
-
-  const supabase = getSupabaseAdmin();
-  const { data: profissional, error } = await supabase
-    .from("profissionais")
-    .select("id, id_salao, nome, nome_exibicao, email, ativo")
-    .eq("id", session.idProfissional)
-    .eq("id_salao", session.idSalao)
-    .maybeSingle();
-
-  if (error || !profissional || profissional.ativo === false) {
-    throw new Error("UNAUTHORIZED");
-  }
+  const profissional = await requireProfissionalServerContext();
 
   return {
     origem: "app_profissional",
-    idSalao: session.idSalao,
-    idProfissional: session.idProfissional,
-    nome:
-      normalizeText(profissional.nome_exibicao) ||
-      normalizeText(profissional.nome) ||
-      normalizeText(session.nome) ||
-      "Profissional",
+    idSalao: profissional.idSalao,
+    idProfissional: profissional.idProfissional,
+    nome: normalizeText(profissional.nome) || "Profissional",
     email: normalizeText(profissional.email) || null,
   };
 }

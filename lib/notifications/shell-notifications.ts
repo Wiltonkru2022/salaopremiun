@@ -1,56 +1,15 @@
-import type { ShellNotification } from "@/components/layout/NotificationBell";
 import type { getResumoAssinatura } from "@/lib/assinatura-utils";
-
-export type ClienteNascimento = {
-  id: string;
-  nome?: string | null;
-  data_nascimento?: string | null;
-};
-
-export type AgendamentoNotificacao = {
-  id: string;
-  status?: string | null;
-  data?: string | null;
-  hora_inicio?: string | null;
-};
-
-export type CaixaMovimentoNotificacao = {
-  id: string;
-  tipo?: string | null;
-  valor?: number | null;
-  created_at?: string | null;
-};
-
-export type TicketNotificacao = {
-  id: string;
-  numero?: number | string | null;
-  assunto?: string | null;
-  prioridade?: string | null;
-  status?: string | null;
-  ultima_interacao_em?: string | null;
-};
-
-export type EstoqueAlertaNotificacao = {
-  id: string;
-  tipo?: string | null;
-  mensagem?: string | null;
-};
-
-export type SistemaAlertaNotificacao = {
-  id: string;
-  tipo?: string | null;
-  gravidade?: string | null;
-  origem_modulo?: string | null;
-  titulo?: string | null;
-  descricao?: string | null;
-};
-
-export type OnboardingScoreNotificacao = {
-  score_total?: number | null;
-  dias_com_acesso?: number | null;
-  modulos_usados?: number | null;
-  detalhes_json?: Record<string, unknown> | null;
-};
+import type {
+  AgendamentoNotificacao,
+  CaixaMovimentoNotificacao,
+  ClienteNascimento,
+  EstoqueAlertaNotificacao,
+  OnboardingScoreNotificacao,
+  ShellNotification,
+  ShellNotificationSeverity,
+  SistemaAlertaNotificacao,
+  TicketNotificacao,
+} from "@/lib/notifications/contracts";
 
 export function formatDateKey(date: Date) {
   const year = date.getFullYear();
@@ -74,6 +33,15 @@ function isBirthdayThisMonth(value?: string | null) {
 
 function normalizeAlertSeverity(value?: string | null) {
   return String(value || "").trim().toLowerCase();
+}
+
+function mapShellSeverity(value?: string | null): ShellNotificationSeverity {
+  const normalized = normalizeAlertSeverity(value);
+
+  if (["critica", "critical"].includes(normalized)) return "critical";
+  if (["alta", "high", "error"].includes(normalized)) return "high";
+  if (["media", "medium", "warning"].includes(normalized)) return "medium";
+  return "low";
 }
 
 function isCriticalAlert(alerta: SistemaAlertaNotificacao) {
@@ -137,7 +105,16 @@ export function buildShellNotifications({
       description: "Regularize o plano para liberar o sistema sem interrupcao.",
       tone: "danger",
       category: "assinatura",
+      severity: "critical",
+      eventType: "subscription_blocked",
       href: "/assinatura",
+      actionLabel: "Regularizar plano",
+      destination: "internal",
+      icon: "assinatura",
+      sourceModule: "assinatura",
+      persistUntilResolved: true,
+      expiresAt: null,
+      critical: true,
     });
   } else if (resumoAssinatura?.vencendoLogo) {
     notifications.push({
@@ -149,7 +126,17 @@ export function buildShellNotifications({
           : "Confira o plano para manter a renovacao em dia.",
       tone: "warning",
       category: "assinatura",
+      severity: "high",
+      eventType: "subscription_due_soon",
       href: "/assinatura",
+      actionLabel: "Ver assinatura",
+      destination: "internal",
+      icon: "assinatura",
+      sourceModule: "assinatura",
+      persistUntilResolved: true,
+      expiresAt: resumoAssinatura.vencimentoEm
+        ? new Date(resumoAssinatura.vencimentoEm).toISOString()
+        : null,
     });
   }
 
@@ -164,7 +151,14 @@ export function buildShellNotifications({
       description: "Boa chance de disparar campanha de retorno pelo Marketing.",
       tone: "info",
       category: "aniversario",
+      severity: "low",
+      eventType: "customers_birthday_month",
       href: "/marketing",
+      actionLabel: "Abrir marketing",
+      destination: "internal",
+      icon: "marketing",
+      sourceModule: "clientes",
+      sourceEntity: "clientes",
     });
   }
 
@@ -181,7 +175,14 @@ export function buildShellNotifications({
       description: "Confira comandas e recebimentos para nao deixar venda solta.",
       tone: "success",
       category: "agenda",
+      severity: "medium",
+      eventType: "appointments_completed_today",
       href: "/agenda",
+      actionLabel: "Abrir agenda",
+      destination: "internal",
+      icon: "agenda",
+      sourceModule: "agenda",
+      sourceEntity: "agendamentos",
     });
   }
 
@@ -198,7 +199,14 @@ export function buildShellNotifications({
       description: "Acompanhe encaixes, atrasos e conversao em comanda.",
       tone: "neutral",
       category: "agenda",
+      severity: "low",
+      eventType: "appointments_today_pending",
       href: "/agenda",
+      actionLabel: "Ver agenda",
+      destination: "internal",
+      icon: "agenda",
+      sourceModule: "agenda",
+      sourceEntity: "agendamentos",
     });
   }
 
@@ -213,7 +221,14 @@ export function buildShellNotifications({
       description: "Confira os movimentos antes de fechar o caixa.",
       tone: "warning",
       category: "caixa",
+      severity: "medium",
+      eventType: "cash_withdrawals_today",
       href: "/caixa",
+      actionLabel: "Ver caixa",
+      destination: "internal",
+      icon: "caixa",
+      sourceModule: "caixa",
+      sourceEntity: "caixa_movimentacoes",
     });
   }
 
@@ -228,7 +243,14 @@ export function buildShellNotifications({
       description: "Os vales ficam preparados para desconto no repasse.",
       tone: "warning",
       category: "caixa",
+      severity: "medium",
+      eventType: "professional_advances_today",
       href: "/caixa",
+      actionLabel: "Revisar vales",
+      destination: "internal",
+      icon: "caixa",
+      sourceModule: "caixa",
+      sourceEntity: "caixa_movimentacoes",
     });
   }
 
@@ -247,7 +269,16 @@ export function buildShellNotifications({
         "Existem produtos em risco. Revise entradas, saidas e consumo dos servicos.",
       tone: estoqueAlertas.length > 2 ? "danger" : "warning",
       category: "estoque",
+      severity: estoqueAlertas.length > 2 ? "high" : "medium",
+      eventType: "stock_alerts_open",
       href: "/estoque",
+      actionLabel: "Ver estoque",
+      destination: "internal",
+      icon: "estoque",
+      sourceModule: "estoque",
+      sourceEntity: "produtos_alertas",
+      persistUntilResolved: true,
+      expiresAt: null,
       critical: true,
     });
   }
@@ -257,6 +288,9 @@ export function buildShellNotifications({
   if (webhookAlerts.length > 0) {
     const criticalWebhookAlerts = webhookAlerts.filter(isCriticalAlert);
     const primaryAlert = webhookAlerts[0];
+    const webhookSeverity = criticalWebhookAlerts.length > 0
+      ? "critical"
+      : mapShellSeverity(primaryAlert?.gravidade);
 
     notifications.push({
       id: "webhook-falho",
@@ -266,7 +300,17 @@ export function buildShellNotifications({
         "Eventos de cobranca precisam de acompanhamento para manter a assinatura segura.",
       tone: criticalWebhookAlerts.length > 0 ? "danger" : "warning",
       category: "webhook",
+      severity: webhookSeverity,
+      eventType: "webhook_alert_open",
       href: "/assinatura",
+      actionLabel: "Ver cobrancas",
+      destination: "internal",
+      icon: "webhook",
+      sourceModule: "webhooks",
+      sourceEntity: "alertas_sistema",
+      sourceEntityId: primaryAlert?.id,
+      persistUntilResolved: true,
+      expiresAt: null,
       critical: true,
     });
   }
@@ -286,7 +330,17 @@ export function buildShellNotifications({
         "O sistema identificou uma situacao que pede revisao imediata.",
       tone: "danger",
       category: "sistema",
+      severity: mapShellSeverity(latest?.gravidade),
+      eventType: "system_alert_open",
       href: "/suporte",
+      actionLabel: "Abrir suporte",
+      destination: "help",
+      icon: "alert",
+      sourceModule: String(latest?.origem_modulo || "sistema"),
+      sourceEntity: "alertas_sistema",
+      sourceEntityId: latest?.id,
+      persistUntilResolved: true,
+      expiresAt: latest?.updated_at || latest?.criado_em || null,
       critical: true,
     });
   }
@@ -307,7 +361,14 @@ export function buildShellNotifications({
           : "Use o tour para entender dashboard, agenda, clientes, servicos, caixa e assinatura.",
       tone: "info",
       category: "onboarding",
+      severity: "low",
+      eventType: "guided_onboarding_available",
       href: "/dashboard?tour=1",
+      actionLabel: "Abrir tour",
+      destination: "internal",
+      icon: "onboarding",
+      sourceModule: "onboarding",
+      sourceEntity: "score_onboarding_salao",
     });
   }
 
@@ -331,7 +392,16 @@ export function buildShellNotifications({
           : "Acompanhe respostas e atualizacoes do suporte.",
       tone: urgentes > 0 ? "warning" : "info",
       category: "suporte",
+      severity: urgentes > 0 ? "high" : "medium",
+      eventType: "support_tickets_open",
       href: "/suporte",
+      actionLabel: "Abrir suporte",
+      destination: "help",
+      icon: "suporte",
+      sourceModule: "suporte",
+      sourceEntity: "tickets",
+      persistUntilResolved: urgentes > 0,
+      expiresAt: null,
     });
   }
 

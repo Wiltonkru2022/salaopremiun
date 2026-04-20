@@ -1,11 +1,11 @@
 import { Coffee, Package, Receipt, Scissors } from "lucide-react";
+import { resolverRegraPadraoServico } from "@/lib/comissoes/regrasServico";
 import {
   AgendamentoFila,
   ConfigCaixaSalao,
   CatalogoExtra,
   CatalogoProduto,
   CatalogoServico,
-  ProfissionalResumo,
 } from "./types";
 
 export function parseMoney(value: string) {
@@ -153,28 +153,21 @@ export function getExtraPrice(extra?: CatalogoExtra | null) {
 }
 
 export function getServicoComissao(
-  servico?: CatalogoServico | null,
-  profissional?: ProfissionalResumo | null
+  servico?: CatalogoServico | null
 ) {
-  const comissaoServico = Number(
-    servico?.comissao_percentual_padrao ?? servico?.comissao_percentual ?? 0
-  );
-
-  if (comissaoServico > 0) return comissaoServico;
-
-  return Number(profissional?.comissao_percentual ?? profissional?.comissao ?? 0);
+  return resolverRegraPadraoServico(servico).comissaoPercentual;
 }
 
 export function getServicoComissaoAssistente(servico?: CatalogoServico | null) {
-  return Number(servico?.comissao_assistente_percentual ?? 0);
+  return resolverRegraPadraoServico(servico).comissaoAssistentePercentual;
 }
 
 export function getServicoBaseCalculo(servico?: CatalogoServico | null) {
-  return servico?.base_calculo || "bruto";
+  return resolverRegraPadraoServico(servico).baseCalculo;
 }
 
 export function getServicoDescontaTaxa(servico?: CatalogoServico | null) {
-  return Boolean(servico?.desconta_taxa_maquininha ?? false);
+  return resolverRegraPadraoServico(servico).descontaTaxaMaquininha;
 }
 
 export function agendamentosFiltradosBase(

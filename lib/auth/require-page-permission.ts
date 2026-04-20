@@ -8,15 +8,15 @@ export async function requirePagePermission(permission: PermissionKey) {
   const usuario = await getUserRole();
 
   if (!usuario) {
-    redirect("/login");
+    redirect("/login?motivo=sessao_expirada");
   }
 
   if (usuario.status !== "ativo") {
-    redirect("/login");
+    redirect("/login?motivo=usuario_inativo");
   }
 
   if (!hasPermission(usuario.nivel, permission)) {
-    redirect("/dashboard");
+    redirect("/dashboard?motivo=sem_permissao");
   }
 
   return usuario;

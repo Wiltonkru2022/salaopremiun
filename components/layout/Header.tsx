@@ -18,10 +18,9 @@ import {
   Users,
 } from "lucide-react";
 import { getPainelPageMeta } from "@/components/layout/navigation";
-import NotificationBell, {
-  type ShellNotification,
-} from "@/components/layout/NotificationBell";
 import type { ResumoAssinatura } from "@/lib/assinatura-utils";
+import NotificationBell from "@/components/layout/NotificationBell";
+import type { ShellNotification } from "@/lib/notifications/contracts";
 
 type Props = {
   userName?: string;
@@ -36,6 +35,7 @@ type Props = {
   canSeePerfilSalao: boolean;
   canSeeConfiguracoes: boolean;
   canSeeAssinatura: boolean;
+  criticalNotificationsCount: number;
   notifications: ShellNotification[];
   notificationStorageKey?: string;
   scrolled: boolean;
@@ -92,6 +92,7 @@ export default function Header({
   canSeePerfilSalao,
   canSeeConfiguracoes,
   canSeeAssinatura,
+  criticalNotificationsCount,
   notifications,
   notificationStorageKey,
   scrolled,
@@ -121,6 +122,10 @@ export default function Header({
   }, [pathname]);
 
   const initials = (userName || salaoNome || "SP").slice(0, 2);
+  const showCriticalState = criticalNotificationsCount > 0;
+  const showSubscriptionRisk =
+    !showCriticalState &&
+    Boolean(resumoAssinatura?.bloqueioTotal || resumoAssinatura?.vencendoLogo);
 
   return (
     <header
@@ -154,6 +159,17 @@ export default function Header({
           <p className="mt-0.5 hidden max-w-2xl truncate text-xs text-zinc-500 md:block">
             {pageMeta.description}
           </p>
+          {showCriticalState ? (
+            <p className="mt-1 text-xs font-semibold text-rose-700">
+              {criticalNotificationsCount} alerta(s) critico(s) pedem acao agora.
+            </p>
+          ) : showSubscriptionRisk ? (
+            <p className="mt-1 text-xs font-semibold text-amber-700">
+              {resumoAssinatura?.bloqueioTotal
+                ? "Assinatura com bloqueio ativo. Revise o status comercial agora."
+                : "Assinatura vencendo em breve. Vale revisar cobranca e renovacao."}
+            </p>
+          ) : null}
         </div>
 
         <div className="hidden min-w-0 items-center gap-2 rounded-2xl border border-zinc-200 bg-white/80 px-3 py-2 text-sm shadow-sm lg:flex">

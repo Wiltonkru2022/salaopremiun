@@ -6,102 +6,24 @@ import { createClient } from "@/lib/supabase/client";
 import { maskMoneyInput, parseMoneyToNumber } from "@/lib/utils/serviceMasks";
 import { getUsuarioLogado } from "@/lib/auth/getUsuarioLogado";
 import { ComissaoHelpPanel } from "@/components/comissoes/ComissaoHelpPanel";
+import type {
+  CategoriaServico,
+  ProdutoConsumoRow,
+  ProdutoConsumoServico,
+  ProdutoServico,
+  ProfissionalServico,
+  RecursoServico,
+  ServicoProcessarBody,
+  ServicoProcessarErrorResponse,
+  ServicoProcessarPayload,
+  ServicoProcessarResponse,
+  ServicoState,
+  VinculoProfissionalServico,
+  VinculoServicoRow,
+} from "@/types/servicos";
 
 type ServicoFormProps = {
   modo: "novo" | "editar";
-};
-
-type ServicoProcessarResponse = {
-  ok: boolean;
-  idServico?: string | null;
-  categoria?: CategoriaServico | null;
-};
-
-type ServicoProcessarErrorResponse = {
-  error?: string;
-};
-
-type Profissional = {
-  id: string;
-  nome: string;
-};
-
-type CategoriaServico = {
-  id: string;
-  nome: string;
-};
-
-type Produto = {
-  id: string;
-  nome: string;
-  unidade_medida?: string | null;
-};
-
-type Recurso = {
-  id: string;
-  nome: string;
-};
-
-type VinculoProfissional = {
-  id_profissional: string;
-  ativo: boolean;
-  duracao_minutos: string;
-  preco_personalizado: string;
-  comissao_percentual: string;
-  comissao_assistente_percentual: string;
-  base_calculo: string;
-  desconta_taxa_maquininha: boolean | null;
-};
-
-type ProdutoConsumo = {
-  id_produto: string;
-  quantidade_consumo: string;
-  unidade_medida: string;
-  custo_estimado: string;
-  ativo: boolean;
-};
-
-type VinculoServicoRow = {
-  id_profissional: string;
-  ativo?: boolean | null;
-  duracao_minutos?: number | string | null;
-  preco_personalizado?: number | string | null;
-  comissao_percentual?: number | string | null;
-  comissao_assistente_percentual?: number | string | null;
-  base_calculo?: string | null;
-  desconta_taxa_maquininha?: boolean | null;
-};
-
-type ProdutoConsumoRow = {
-  id_produto: string;
-  quantidade_consumo?: number | string | null;
-  unidade_medida?: string | null;
-  custo_estimado?: number | string | null;
-  ativo?: boolean | null;
-};
-
-type ServicoState = {
-  id?: string;
-  id_salao: string;
-  nome: string;
-  categoria: string;
-  id_categoria: string;
-  descricao: string;
-  gatilho_retorno_dias: string;
-  duracao_minutos: string;
-  pausa_minutos: string;
-  recurso_nome: string;
-  preco_padrao: string;
-  preco_variavel: boolean;
-  preco_minimo: string;
-  custo_produto: string;
-  comissao_percentual_padrao: string;
-  comissao_assistente_percentual: string;
-  base_calculo: string;
-  desconta_taxa_maquininha: boolean;
-  exige_avaliacao: boolean;
-  status: string;
-  ativo: boolean;
 };
 
 const initialState: ServicoState = {
@@ -158,7 +80,7 @@ function formatTaxaMaquininhaLabel(value: boolean | null | undefined) {
   return value ? "Descontar taxa" : "Nao descontar taxa";
 }
 
-function hasRegraComissaoPersonalizada(vinculo: VinculoProfissional) {
+function hasRegraComissaoPersonalizada(vinculo: VinculoProfissionalServico) {
   return (
     vinculo.comissao_percentual.trim() !== "" ||
     vinculo.comissao_assistente_percentual.trim() !== "" ||
@@ -194,11 +116,11 @@ export default function ServicoForm({ modo }: ServicoFormProps) {
   const [servico, setServico] = useState<ServicoState>(initialState);
   const [categorias, setCategorias] = useState<CategoriaServico[]>([]);
   const [novaCategoria, setNovaCategoria] = useState("");
-  const [profissionais, setProfissionais] = useState<Profissional[]>([]);
-  const [produtos, setProdutos] = useState<Produto[]>([]);
-  const [recursos, setRecursos] = useState<Recurso[]>([]);
-  const [vinculos, setVinculos] = useState<VinculoProfissional[]>([]);
-  const [consumos, setConsumos] = useState<ProdutoConsumo[]>([]);
+  const [profissionais, setProfissionais] = useState<ProfissionalServico[]>([]);
+  const [produtos, setProdutos] = useState<ProdutoServico[]>([]);
+  const [recursos, setRecursos] = useState<RecursoServico[]>([]);
+  const [vinculos, setVinculos] = useState<VinculoProfissionalServico[]>([]);
+  const [consumos, setConsumos] = useState<ProdutoConsumoServico[]>([]);
 
   const precoPadraoNumero = useMemo(
     () => parseMoneyToNumber(servico.preco_padrao),
@@ -276,9 +198,9 @@ async function bootstrap() {
 
     if (categoriasError) throw categoriasError;
 
-    const listaProfissionais = (profissionaisRows as Profissional[]) || [];
-    const listaProdutos = (produtosRows as Produto[]) || [];
-    const listaRecursos = (recursosRows as Recurso[]) || [];
+    const listaProfissionais = (profissionaisRows as ProfissionalServico[]) || [];
+    const listaProdutos = (produtosRows as ProdutoServico[]) || [];
+    const listaRecursos = (recursosRows as RecursoServico[]) || [];
 
     setCategorias((categoriasRows as CategoriaServico[]) || []);
     setProfissionais(listaProfissionais);
@@ -320,8 +242,8 @@ async function bootstrap() {
   async function carregarServico(
     id: string,
     salaoId: string,
-    listaProfissionais: Profissional[],
-    _listaProdutos: Produto[]
+    listaProfissionais: ProfissionalServico[],
+    _listaProdutos: ProdutoServico[]
   ) {
     const { data: row, error } = await supabase
       .from("servicos")
@@ -433,8 +355,8 @@ async function bootstrap() {
 
   function updateVinculo(
     idProfissional: string,
-    field: keyof VinculoProfissional,
-    value: VinculoProfissional[keyof VinculoProfissional]
+    field: keyof VinculoProfissionalServico,
+    value: VinculoProfissionalServico[keyof VinculoProfissionalServico]
   ) {
     setVinculos((prev) =>
       prev.map((item) =>
@@ -480,8 +402,8 @@ async function bootstrap() {
 
   function updateConsumo(
     index: number,
-    field: keyof ProdutoConsumo,
-    value: ProdutoConsumo[keyof ProdutoConsumo]
+    field: keyof ProdutoConsumoServico,
+    value: ProdutoConsumoServico[keyof ProdutoConsumoServico]
   ) {
     setConsumos((prev) =>
       prev.map((item, i) => (i === index ? { ...item, [field]: value } : item))
@@ -520,7 +442,7 @@ async function bootstrap() {
 
       const categoriaSalvar = await resolverCategoriaParaSalvar();
 
-      const payload = {
+      const payload: ServicoProcessarPayload = {
         id_salao: idSalao,
         nome: servico.nome.trim(),
         id_categoria:
@@ -597,23 +519,25 @@ async function bootstrap() {
           ativo: true,
         }));
 
+      const requestBody: ServicoProcessarBody = {
+        idSalao,
+        acao: "salvar",
+        servico: {
+          id: servico.id || null,
+          ...payload,
+        },
+        novaCategoria:
+          servico.id_categoria === "__nova__" ? novaCategoria.trim() : null,
+        vinculos: vinculosParaSalvar,
+        consumos: consumosValidos,
+      };
+
       const response = await fetch("/api/servicos/processar", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          idSalao,
-          acao: "salvar",
-          servico: {
-            id: servico.id || null,
-            ...payload,
-          },
-          novaCategoria:
-            servico.id_categoria === "__nova__" ? novaCategoria.trim() : null,
-          vinculos: vinculosParaSalvar,
-          consumos: consumosValidos,
-        }),
+        body: JSON.stringify(requestBody),
       });
 
       const result = (await response.json().catch(() => ({}))) as Partial<
@@ -626,16 +550,17 @@ async function bootstrap() {
       }
 
       if (result.categoria?.id) {
+        const categoriaAtualizada: CategoriaServico = result.categoria;
         setCategorias((prev) =>
           [
-            ...prev.filter((item) => item.id !== result.categoria?.id),
-            result.categoria as CategoriaServico,
+            ...prev.filter((item) => item.id !== categoriaAtualizada.id),
+            categoriaAtualizada,
           ].sort((a, b) => a.nome.localeCompare(b.nome))
         );
         setServico((prev) => ({
           ...prev,
-          id_categoria: result.categoria?.id || "",
-          categoria: result.categoria?.nome || "",
+          id_categoria: categoriaAtualizada.id,
+          categoria: categoriaAtualizada.nome,
         }));
         setNovaCategoria("");
       }

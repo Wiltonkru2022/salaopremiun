@@ -2,20 +2,25 @@
 
 import clsx from "clsx";
 import { useMemo, useRef, useState } from "react";
-import { Agendamento } from "@/types/agenda";
+import { AgendaDensityMode, Agendamento } from "@/types/agenda";
 import { getStatusStyles, normalizeTimeString } from "@/lib/utils/agenda";
 import {
-  Clock3,
   DollarSign,
   GripVertical,
   Pencil,
+  CheckCircle2,
+  CircleDollarSign,
+  Clock3,
   Scissors,
+  TriangleAlert,
   Trash2,
   User2,
+  XCircle,
 } from "lucide-react";
 
 type Props = {
   item: Agendamento;
+  densityMode?: AgendaDensityMode;
   top: number;
   height: number;
   leftPercent?: number;
@@ -43,6 +48,7 @@ const currencyFormatter = new Intl.NumberFormat("pt-BR", {
 
 export default function AppointmentCard({
   item,
+  densityMode = "standard",
   top,
   height,
   leftPercent = 0,
@@ -68,10 +74,13 @@ export default function AppointmentCard({
 
   const effectiveTop = previewTop ?? top;
   const effectiveHeight = Math.max(MIN_CARD_HEIGHT, previewHeight ?? height);
+  const compactMode = densityMode === "reception";
 
   const isTiny = effectiveHeight <= 34;
-  const isSmall = effectiveHeight > 34 && effectiveHeight <= 56;
-  const isMedium = effectiveHeight > 56 && effectiveHeight <= 96;
+  const isSmall = effectiveHeight > 34 && effectiveHeight <= (compactMode ? 48 : 56);
+  const isMedium =
+    effectiveHeight > (compactMode ? 48 : 56) &&
+    effectiveHeight <= (compactMode ? 84 : 96);
 
   const statusLabel = useMemo(() => {
     switch (item.status) {
@@ -96,6 +105,20 @@ export default function AppointmentCard({
   );
 
   const comandaLabel = item.comanda_numero ? `Comanda #${item.comanda_numero}` : "";
+  const compactTitle = `${item.cliente?.nome || "Cliente"}${
+    item.servico?.nome ? ` - ${item.servico.nome}` : ""
+  }`;
+  const compactTimeLabel = `${normalizeTimeString(item.hora_inicio)} -> ${normalizeTimeString(item.hora_fim)}`;
+  const statusIcon =
+    item.status === "cancelado" ? (
+      <XCircle size={11} />
+    ) : item.status === "aguardando_pagamento" ? (
+      <CircleDollarSign size={11} />
+    ) : item.status === "pendente" ? (
+      <TriangleAlert size={11} />
+    ) : (
+      <CheckCircle2 size={11} />
+    );
 
   function resetPreview() {
     setPreviewTop(null);
@@ -257,7 +280,15 @@ export default function AppointmentCard({
         <div
           className={clsx(
             "relative h-full w-full select-none",
-            isTiny ? "px-2 py-1.5" : isSmall ? "px-3 py-2.5" : "p-3"
+            isTiny
+              ? "px-2 py-1.5"
+              : compactMode
+                ? isSmall
+                  ? "px-2.5 py-2"
+                  : "px-2.5 py-2.5"
+                : isSmall
+                  ? "px-3 py-2.5"
+                  : "p-3"
           )}
         >
           {isTiny ? (
@@ -268,6 +299,58 @@ export default function AppointmentCard({
               </div>
               <div className="text-[9px] opacity-90">
                 {normalizeTimeString(item.hora_inicio)}
+              </div>
+            </div>
+          ) : compactMode ? (
+            <div className="flex h-full flex-col justify-between gap-1.5 select-none">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5">
+                    <GripVertical size={10} className="shrink-0 opacity-70" />
+                    <span className="shrink-0 opacity-90">{statusIcon}</span>
+                    <div className="truncate text-[11px] font-bold leading-tight">
+                      {compactTitle}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-1">
+                  {item.status === "aguardando_pagamento" ? (
+                    <button
+                      type="button"
+                      data-no-drag="true"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onGoToCashier(item);
+                      }}
+                      className="rounded-md bg-white/20 p-1 transition hover:bg-white/30"
+                      title="Ir para caixa"
+                    >
+                      <DollarSign size={10} />
+                    </button>
+                  ) : null}
+                  <button
+                    type="button"
+                    data-no-drag="true"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onClick(item);
+                    }}
+                    className="rounded-md bg-white/20 p-1 transition hover:bg-white/30"
+                    title="Editar"
+                  >
+                    <Pencil size={10} />
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between gap-2 text-[10px] opacity-95">
+                <div className="min-w-0 truncate">{compactTimeLabel}</div>
+                {item.status === "aguardando_pagamento" ? (
+                  <span className="shrink-0 rounded-full border border-white/20 bg-white/15 px-1.5 py-0.5 text-[9px] font-semibold">
+                    $
+                  </span>
+                ) : null}
               </div>
             </div>
           ) : (

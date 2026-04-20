@@ -4,6 +4,23 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { getUsuarioLogado } from "@/lib/auth/getUsuarioLogado";
+import { getErrorMessage } from "@/lib/get-error-message";
+import type {
+  AutorizacoesCliente,
+  ClienteAuthPayload,
+  ClienteAuthState,
+  ClienteFichaPayload,
+  ClienteFormProps,
+  ClientePayload,
+  ClientePreferenciasPayload,
+  ClienteProcessarBody,
+  ClienteProcessarErrorResponse,
+  ClienteProcessarResponse,
+  ClienteState,
+  FichaTecnicaCliente,
+  PreferenciasCliente,
+  ProfissionalCliente,
+} from "@/types/clientes";
 import {
   dateBrToIso,
   dateIsoToBr,
@@ -14,74 +31,7 @@ import {
   onlyDigits,
 } from "@/lib/utils/masks";
 
-type Profissional = {
-  id: string;
-  nome: string;
-};
-
-type ClienteFormProps = {
-  modo: "novo" | "editar";
-};
-
-type Cliente = {
-  id?: string;
-  id_salao: string;
-  nome: string;
-  nome_social: string;
-  data_nascimento: string;
-  whatsapp: string;
-  telefone: string;
-  email: string;
-  cpf: string;
-  endereco: string;
-  numero: string;
-  bairro: string;
-  cidade: string;
-  estado: string;
-  cep: string;
-  profissao: string;
-  observacoes: string;
-  foto_url: string;
-  status: string;
-  ativo: boolean;
-};
-
-type FichaTecnica = {
-  alergias: string;
-  historico_quimico: string;
-  condicoes_couro_cabeludo_pele: string;
-  uso_medicamentos: string;
-  gestante: boolean;
-  lactante: boolean;
-  restricoes_quimicas: string;
-  observacoes_tecnicas: string;
-};
-
-type Preferencias = {
-  bebida_favorita: string;
-  estilo_atendimento: string;
-  revistas_assuntos_preferidos: string;
-  como_conheceu_salao: string;
-  profissional_favorito_id: string;
-  frequencia_visitas: string;
-  preferencias_gerais: string;
-};
-
-type Autorizacoes = {
-  autoriza_uso_imagem: boolean;
-  autoriza_whatsapp_marketing: boolean;
-  autoriza_email_marketing: boolean;
-  termo_lgpd_aceito: boolean;
-  observacoes_autorizacao: string;
-};
-
-type ClienteAuth = {
-  email: string;
-  senha_hash: string;
-  app_ativo: boolean;
-};
-
-const initialCliente: Cliente = {
+const initialCliente: ClienteState = {
   id_salao: "",
   nome: "",
   nome_social: "",
@@ -103,7 +53,7 @@ const initialCliente: Cliente = {
   ativo: true,
 };
 
-const initialFicha: FichaTecnica = {
+const initialFicha: FichaTecnicaCliente = {
   alergias: "",
   historico_quimico: "",
   condicoes_couro_cabeludo_pele: "",
@@ -114,7 +64,7 @@ const initialFicha: FichaTecnica = {
   observacoes_tecnicas: "",
 };
 
-const initialPreferencias: Preferencias = {
+const initialPreferencias: PreferenciasCliente = {
   bebida_favorita: "",
   estilo_atendimento: "",
   revistas_assuntos_preferidos: "",
@@ -124,7 +74,7 @@ const initialPreferencias: Preferencias = {
   preferencias_gerais: "",
 };
 
-const initialAutorizacoes: Autorizacoes = {
+const initialAutorizacoes: AutorizacoesCliente = {
   autoriza_uso_imagem: false,
   autoriza_whatsapp_marketing: false,
   autoriza_email_marketing: false,
@@ -132,7 +82,7 @@ const initialAutorizacoes: Autorizacoes = {
   observacoes_autorizacao: "",
 };
 
-const initialAuth: ClienteAuth = {
+const initialAuth: ClienteAuthState = {
   email: "",
   senha_hash: "",
   app_ativo: false,
@@ -152,13 +102,13 @@ export default function ClienteForm({ modo }: ClienteFormProps) {
   const [idSalao, setIdSalao] = useState("");
   const [buscandoCep, setBuscandoCep] = useState(false);
 
-  const [profissionais, setProfissionais] = useState<Profissional[]>([]);
+  const [profissionais, setProfissionais] = useState<ProfissionalCliente[]>([]);
 
-  const [cliente, setCliente] = useState<Cliente>(initialCliente);
-  const [ficha, setFicha] = useState<FichaTecnica>(initialFicha);
-  const [preferencias, setPreferencias] = useState<Preferencias>(initialPreferencias);
-  const [autorizacoes, setAutorizacoes] = useState<Autorizacoes>(initialAutorizacoes);
-  const [authCliente, setAuthCliente] = useState<ClienteAuth>(initialAuth);
+  const [cliente, setCliente] = useState<ClienteState>(initialCliente);
+  const [ficha, setFicha] = useState<FichaTecnicaCliente>(initialFicha);
+  const [preferencias, setPreferencias] = useState<PreferenciasCliente>(initialPreferencias);
+  const [autorizacoes, setAutorizacoes] = useState<AutorizacoesCliente>(initialAutorizacoes);
+  const [authCliente, setAuthCliente] = useState<ClienteAuthState>(initialAuth);
 
   useEffect(() => {
     bootstrap();
@@ -193,14 +143,14 @@ async function bootstrap() {
 
     if (profissionaisError) throw profissionaisError;
 
-    setProfissionais((listaProfissionais as Profissional[]) || []);
+    setProfissionais((listaProfissionais as ProfissionalCliente[]) || []);
 
     if (modo === "editar" && clienteId) {
       await carregarCliente(clienteId, usuarioLogado.idSalao);
     }
-  } catch (e: any) {
+  } catch (e: unknown) {
     console.error(e);
-    setErro(e.message || "Erro ao carregar formulário.");
+    setErro(getErrorMessage(e, "Erro ao carregar formulário."));
   } finally {
     setLoading(false);
   }
@@ -319,29 +269,29 @@ async function bootstrap() {
     }
   }
 
-  function setClienteField<K extends keyof Cliente>(field: K, value: Cliente[K]) {
+  function setClienteField<K extends keyof ClienteState>(field: K, value: ClienteState[K]) {
     setCliente((prev) => ({ ...prev, [field]: value }));
   }
 
-  function setFichaField<K extends keyof FichaTecnica>(field: K, value: FichaTecnica[K]) {
+  function setFichaField<K extends keyof FichaTecnicaCliente>(field: K, value: FichaTecnicaCliente[K]) {
     setFicha((prev) => ({ ...prev, [field]: value }));
   }
 
-  function setPreferenciasField<K extends keyof Preferencias>(
+  function setPreferenciasField<K extends keyof PreferenciasCliente>(
     field: K,
-    value: Preferencias[K]
+    value: PreferenciasCliente[K]
   ) {
     setPreferencias((prev) => ({ ...prev, [field]: value }));
   }
 
-  function setAutorizacoesField<K extends keyof Autorizacoes>(
+  function setAutorizacoesField<K extends keyof AutorizacoesCliente>(
     field: K,
-    value: Autorizacoes[K]
+    value: AutorizacoesCliente[K]
   ) {
     setAutorizacoes((prev) => ({ ...prev, [field]: value }));
   }
 
-  function setAuthField<K extends keyof ClienteAuth>(field: K, value: ClienteAuth[K]) {
+  function setAuthField<K extends keyof ClienteAuthState>(field: K, value: ClienteAuthState[K]) {
     setAuthCliente((prev) => ({ ...prev, [field]: value }));
   }
 
@@ -382,8 +332,9 @@ async function bootstrap() {
         throw new Error("Informe o nome da cliente.");
       }
 
-      const payloadCliente = {
+      const payloadCliente: ClientePayload = {
         id_salao: idSalao,
+        id: cliente.id || null,
         nome: cliente.nome.trim(),
         nome_social: cliente.nome_social.trim() || null,
         data_nascimento: dateBrToIso(cliente.data_nascimento) || null,
@@ -404,33 +355,9 @@ async function bootstrap() {
         ativo: cliente.ativo,
       };
 
-      let idCliente = cliente.id || "";
-
-      if (modo === "novo") {
-        const { data, error } = await supabase
-          .from("clientes")
-          .insert(payloadCliente)
-          .select("id")
-          .limit(1);
-
-        if (error) throw error;
-
-        idCliente = data?.[0]?.id;
-        if (!idCliente) throw new Error("Não foi possível obter o ID da cliente.");
-      } else {
-        const { error } = await supabase
-          .from("clientes")
-          .update(payloadCliente)
-          .eq("id", cliente.id)
-          .eq("id_salao", idSalao);
-
-        if (error) throw error;
-        idCliente = cliente.id || "";
-      }
-
-      const payloadFicha = {
+      const payloadFicha: ClienteFichaPayload = {
         id_salao: idSalao,
-        id_cliente: idCliente,
+        id_cliente: cliente.id || null,
         alergias: ficha.alergias.trim() || null,
         historico_quimico: ficha.historico_quimico.trim() || null,
         condicoes_couro_cabeludo_pele: ficha.condicoes_couro_cabeludo_pele.trim() || null,
@@ -441,9 +368,9 @@ async function bootstrap() {
         observacoes_tecnicas: ficha.observacoes_tecnicas.trim() || null,
       };
 
-      const payloadPreferencias = {
+      const payloadPreferencias: ClientePreferenciasPayload = {
         id_salao: idSalao,
-        id_cliente: idCliente,
+        id_cliente: cliente.id || null,
         bebida_favorita: preferencias.bebida_favorita.trim() || null,
         estilo_atendimento: preferencias.estilo_atendimento.trim() || null,
         revistas_assuntos_preferidos: preferencias.revistas_assuntos_preferidos.trim() || null,
@@ -455,7 +382,7 @@ async function bootstrap() {
 
       const payloadAutorizacoes = {
         id_salao: idSalao,
-        id_cliente: idCliente,
+        id_cliente: cliente.id || null,
         autoriza_uso_imagem: autorizacoes.autoriza_uso_imagem,
         autoriza_whatsapp_marketing: autorizacoes.autoriza_whatsapp_marketing,
         autoriza_email_marketing: autorizacoes.autoriza_email_marketing,
@@ -464,60 +391,38 @@ async function bootstrap() {
         observacoes_autorizacao: autorizacoes.observacoes_autorizacao.trim() || null,
       };
 
-      const payloadAuth = {
+      const payloadAuth: ClienteAuthPayload = {
         id_salao: idSalao,
-        id_cliente: idCliente,
+        id_cliente: cliente.id || null,
         email: authCliente.email.trim() || cliente.email.trim() || null,
         senha_hash: authCliente.senha_hash.trim() || null,
         app_ativo: authCliente.app_ativo,
       };
+      const requestBody: ClienteProcessarBody = {
+        idSalao,
+        acao: "salvar",
+        cliente: payloadCliente,
+        ficha: payloadFicha,
+        preferencias: payloadPreferencias,
+        autorizacoes: payloadAutorizacoes,
+        auth: payloadAuth,
+      };
 
-      const { data: fichaExists } = await supabase
-        .from("clientes_ficha_tecnica")
-        .select("id")
-        .eq("id_cliente", idCliente)
-        .limit(1);
+      const response = await fetch("/api/clientes/processar", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(requestBody),
+      });
 
-      if (fichaExists?.[0]?.id) {
-        await supabase.from("clientes_ficha_tecnica").update(payloadFicha).eq("id_cliente", idCliente);
-      } else {
-        await supabase.from("clientes_ficha_tecnica").insert(payloadFicha);
-      }
+      const result = (await response.json().catch(() => ({}))) as Partial<
+        ClienteProcessarResponse
+      > &
+        ClienteProcessarErrorResponse;
 
-      const { data: prefExists } = await supabase
-        .from("clientes_preferencias")
-        .select("id")
-        .eq("id_cliente", idCliente)
-        .limit(1);
-
-      if (prefExists?.[0]?.id) {
-        await supabase.from("clientes_preferencias").update(payloadPreferencias).eq("id_cliente", idCliente);
-      } else {
-        await supabase.from("clientes_preferencias").insert(payloadPreferencias);
-      }
-
-      const { data: autExists } = await supabase
-        .from("clientes_autorizacoes")
-        .select("id")
-        .eq("id_cliente", idCliente)
-        .limit(1);
-
-      if (autExists?.[0]?.id) {
-        await supabase.from("clientes_autorizacoes").update(payloadAutorizacoes).eq("id_cliente", idCliente);
-      } else {
-        await supabase.from("clientes_autorizacoes").insert(payloadAutorizacoes);
-      }
-
-      const { data: authExists } = await supabase
-        .from("clientes_auth")
-        .select("id")
-        .eq("id_cliente", idCliente)
-        .limit(1);
-
-      if (authExists?.[0]?.id) {
-        await supabase.from("clientes_auth").update(payloadAuth).eq("id_cliente", idCliente);
-      } else {
-        await supabase.from("clientes_auth").insert(payloadAuth);
+      if (!response.ok) {
+        throw new Error(result.error || "Erro ao salvar cliente.");
       }
 
       if (modo === "novo") {
@@ -525,10 +430,14 @@ async function bootstrap() {
         return;
       }
 
+      if (result.idCliente) {
+        setCliente((prev) => ({ ...prev, id: result.idCliente || prev.id }));
+      }
+
       setMsg("Cliente atualizado com sucesso.");
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error(e);
-      setErro(e.message || "Erro ao salvar cliente.");
+      setErro(getErrorMessage(e, "Erro ao salvar cliente."));
     } finally {
       setSaving(false);
     }

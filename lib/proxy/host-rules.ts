@@ -6,14 +6,26 @@ import {
   isAdminMasterLoginPath,
   sanitizeAdminMasterNextPath,
 } from "@/lib/admin-master/auth/login-path";
+import {
+  DOMINIO_APP,
+  DOMINIO_ASSINATURA,
+  DOMINIO_CADASTRO,
+  DOMINIO_LOGIN,
+  DOMINIO_PAINEL,
+  DOMINIO_RAIZ,
+  DOMINIO_WWW,
+  normalizeHost,
+} from "@/lib/proxy/domain-config";
 
-export const DOMINIO_RAIZ = "salaopremiun.com.br";
-export const DOMINIO_WWW = "www.salaopremiun.com.br";
-export const DOMINIO_PAINEL = "painel.salaopremiun.com.br";
-export const DOMINIO_APP = "app.salaopremiun.com.br";
-export const DOMINIO_LOGIN = "login.salaopremiun.com.br";
-export const DOMINIO_CADASTRO = "cadastro.salaopremiun.com.br";
-export const DOMINIO_ASSINATURA = "assinatura.salaopremiun.com.br";
+export {
+  DOMINIO_APP,
+  DOMINIO_ASSINATURA,
+  DOMINIO_CADASTRO,
+  DOMINIO_LOGIN,
+  DOMINIO_PAINEL,
+  DOMINIO_RAIZ,
+  DOMINIO_WWW,
+};
 
 export const CADASTRO_PATH = "/cadastro-salao";
 export const APP_PROFISSIONAL_PREFIX = "/app-profissional";
@@ -150,10 +162,6 @@ export function isArquivoPublico(pathname: string) {
 
 export function normalizePathname(pathname: string) {
   return pathname.replace(/^\/[a-z]{2}(?=\/|$)/, "") || "/";
-}
-
-export function normalizeHost(host: string) {
-  return host.trim().toLowerCase().replace(/:\d+$/, "");
 }
 
 export function getRequestHost(request: NextRequest) {

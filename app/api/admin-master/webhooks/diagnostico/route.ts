@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { registrarAdminMasterAuditoria } from "@/lib/admin-master/actions";
 import { getAdminMasterAccess } from "@/lib/admin-master/auth/requireAdminMasterUser";
+import { getPublicWebhookUrl } from "@/lib/proxy/domain-config";
 
-const ASAAS_WEBHOOK_PUBLIC_URL =
-  "https://salaopremiun.com.br/api/webhooks/asaas";
+const ASAAS_WEBHOOK_PUBLIC_URL = getPublicWebhookUrl();
 
 export async function POST() {
   try {

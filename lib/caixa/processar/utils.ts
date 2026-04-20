@@ -1,4 +1,5 @@
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { carregarComandaDoSalao } from "@/lib/comandas/lifecycle";
 
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -60,22 +61,7 @@ export async function carregarComandaBase(params: {
   idSalao: string;
   idComanda: string;
 }) {
-  const { supabaseAdmin, idSalao, idComanda } = params;
-
-  const { data: comanda, error } = await supabaseAdmin
-    .from("comandas")
-    .select("id, id_salao, id_cliente, numero, status")
-    .eq("id", idComanda)
-    .eq("id_salao", idSalao)
-    .maybeSingle();
-
-  if (error) throw error;
-
-  if (!comanda?.id) {
-    throw new Error("Comanda nao encontrada para este salao.");
-  }
-
-  return comanda;
+  return carregarComandaDoSalao(params);
 }
 
 export async function carregarSessaoAberta(

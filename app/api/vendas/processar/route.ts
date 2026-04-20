@@ -1,77 +1,29 @@
 import { NextRequest, NextResponse } from "next/server";
+import { reportOperationalIncident } from "@/lib/monitoring/operational-incidents";
 import {
+  ACOES_VENDA,
   AuthzError,
-  requireSalaoPermission,
-} from "@/lib/auth/require-salao-permission";
-import { reverterEstoqueComanda } from "@/lib/estoque/comanda-stock";
-import {
-  assertCanMutatePlanFeature,
+  carregarContextoVenda,
+  excluirVenda,
+  isAcaoVenda,
+  obterDetalhesVenda,
   PlanAccessError,
-} from "@/lib/plans/access";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
-import { registrarLogSistema } from "@/lib/system-logs";
-
-type AcaoVenda = "detalhes" | "reabrir" | "excluir";
-
-type BodyPayload = {
-  idSalao?: string | null;
-  acao?: AcaoVenda | null;
-  idComanda?: string | null;
-  motivo?: string | null;
-};
-
-const UUID_REGEX =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{12}$/i;
-
-function sanitizeUuid(value: unknown) {
-  const parsed = String(value || "").trim();
-  return UUID_REGEX.test(parsed) ? parsed : null;
-}
-
-function sanitizeText(value: unknown) {
-  const parsed = String(value || "").trim();
-  return parsed || null;
-}
-
-function resolveHttpStatus(error: unknown) {
-  const candidate = error as { code?: string } | null;
-  if (!candidate?.code) return 500;
-  if (candidate.code === "P0001") return 400;
-  if (candidate.code === "23514") return 409;
-  return 500;
-}
-
-async function validarComandaVenda(params: {
-  supabaseAdmin: ReturnType<typeof getSupabaseAdmin>;
-  idSalao: string;
-  idComanda: string;
-}) {
-  const { supabaseAdmin, idSalao, idComanda } = params;
-
-  const { data, error } = await supabaseAdmin
-    .from("comandas")
-    .select("id, id_salao, numero, status")
-    .eq("id", idComanda)
-    .eq("id_salao", idSalao)
-    .maybeSingle();
-
-  if (error) {
-    throw error;
-  }
-
-  if (!data?.id) {
-    throw new Error("Venda nao encontrada para este salao.");
-  }
-
-  return data;
-}
+  reabrirVenda,
+  resolveVendaHttpStatus,
+  sanitizeUuid,
+  validarComandaVenda,
+} from "@/lib/vendas/processar";
+import type { VendaProcessarBody } from "@/types/vendas";
 
 export async function POST(req: NextRequest) {
+  let idSalao = "";
+  let acao = "";
+
   try {
-    const body = (await req.json()) as BodyPayload;
-    const idSalao = sanitizeUuid(body.idSalao);
+    const body = (await req.json()) as VendaProcessarBody;
+    idSalao = sanitizeUuid(body.idSalao) || "";
     const idComanda = sanitizeUuid(body.idComanda);
-    const acao = String(body.acao || "").trim().toLowerCase() as AcaoVenda;
+    acao = String(body.acao || "").trim().toLowerCase();
 
     if (!idSalao || !idComanda) {
       return NextResponse.json(
@@ -80,22 +32,14 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (!["detalhes", "reabrir", "excluir"].includes(acao)) {
+    if (!isAcaoVenda(acao)) {
       return NextResponse.json({ error: "Acao invalida." }, { status: 400 });
     }
 
-    const membership =
-      acao === "detalhes"
-        ? await requireSalaoPermission(idSalao, "vendas_ver")
-        : await requireSalaoPermission(idSalao, "vendas_ver", {
-            allowedNiveis: ["admin", "gerente"],
-          });
-
-    if (acao !== "detalhes") {
-      await assertCanMutatePlanFeature(idSalao, "vendas");
-    }
-
-    const supabaseAdmin = getSupabaseAdmin();
+    const { membership, supabaseAdmin } = await carregarContextoVenda({
+      idSalao,
+      acao,
+    });
 
     await validarComandaVenda({
       supabaseAdmin,
@@ -104,122 +48,35 @@ export async function POST(req: NextRequest) {
     });
 
     if (acao === "detalhes") {
-      const { data, error } = await supabaseAdmin.rpc("fn_detalhes_venda", {
-        p_id_comanda: idComanda,
-      });
-
-      if (error) {
-        console.error("Erro ao carregar detalhes da venda:", error);
-        return NextResponse.json(
-          { error: error.message || "Erro ao carregar detalhes da venda." },
-          { status: resolveHttpStatus(error) }
-        );
-      }
-
-      return NextResponse.json({ ok: true, detalhe: data || null });
-    }
-
-    if (acao === "reabrir") {
-      const { error } = await supabaseAdmin.rpc("fn_reabrir_venda_para_caixa", {
-        p_id_comanda: idComanda,
-        p_motivo: sanitizeText(body.motivo),
-        p_reopened_by: membership.user.id,
-      });
-
-      if (error) {
-        console.error("Erro ao reabrir venda:", error);
-        return NextResponse.json(
-          { error: error.message || "Erro ao reabrir venda." },
-          { status: resolveHttpStatus(error) }
-        );
-      }
-
-      let warning: string | null = null;
-
-      try {
-        const estoqueResult = await reverterEstoqueComanda(supabaseAdmin, {
-          idSalao,
-          idComanda,
-        });
-
-        if (estoqueResult.skipped && estoqueResult.reason) {
-          warning = estoqueResult.reason;
-        }
-      } catch (estoqueError) {
-        warning =
-          estoqueError instanceof Error
-            ? estoqueError.message
-            : "nao foi possivel devolver o estoque da venda.";
-      }
-
-      await registrarLogSistema({
-        gravidade: warning ? "warning" : "info",
-        modulo: "vendas",
-        idSalao,
-        idUsuario: membership.usuario.id,
-        mensagem: warning
-          ? "Venda reaberta com aviso de estoque."
-          : "Venda reaberta para o caixa pelo servidor.",
-        detalhes: {
-          acao,
-          id_comanda: idComanda,
-          motivo: sanitizeText(body.motivo),
-          warning,
-        },
-      });
-
-      return NextResponse.json({ ok: true, warning });
-    }
-
-    const { error } = await supabaseAdmin.rpc("fn_excluir_venda_completa", {
-      p_id_comanda: idComanda,
-      p_motivo: sanitizeText(body.motivo),
-      p_deleted_by: membership.user.id,
-    });
-
-    if (error) {
-      console.error("Erro ao excluir venda:", error);
-      return NextResponse.json(
-        { error: error.message || "Erro ao excluir venda." },
-        { status: resolveHttpStatus(error) }
-      );
-    }
-
-    let warning: string | null = null;
-
-    try {
-      const estoqueResult = await reverterEstoqueComanda(supabaseAdmin, {
-        idSalao,
+      const data = await obterDetalhesVenda({
+        supabaseAdmin,
         idComanda,
       });
 
-      if (estoqueResult.skipped && estoqueResult.reason) {
-        warning = estoqueResult.reason;
-      }
-    } catch (estoqueError) {
-      warning =
-        estoqueError instanceof Error
-          ? estoqueError.message
-          : "nao foi possivel devolver o estoque da venda.";
+      return NextResponse.json({ ok: true, ...data });
     }
 
-    await registrarLogSistema({
-      gravidade: "warning",
-      modulo: "vendas",
+    if (acao === "reabrir") {
+      const data = await reabrirVenda({
+        supabaseAdmin,
+        idSalao,
+        idComanda,
+        motivo: body.motivo,
+        idUsuario: membership.usuario.id,
+      });
+
+      return NextResponse.json({ ok: true, ...data });
+    }
+
+    const data = await excluirVenda({
+      supabaseAdmin,
       idSalao,
+      idComanda,
+      motivo: body.motivo,
       idUsuario: membership.usuario.id,
-      mensagem: warning
-        ? "Venda excluida com aviso de estoque."
-        : "Venda excluida pelo servidor.",
-      detalhes: {
-        acao,
-        id_comanda: idComanda,
-        motivo: sanitizeText(body.motivo),
-        warning,
-      },
     });
 
-    return NextResponse.json({ ok: true, warning });
+    return NextResponse.json({ ok: true, ...data });
   } catch (error) {
     if (error instanceof AuthzError) {
       return NextResponse.json(
@@ -235,6 +92,34 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    if (idSalao) {
+      try {
+        const { getSupabaseAdmin } = await import("@/lib/supabase/admin");
+        await reportOperationalIncident({
+          supabaseAdmin: getSupabaseAdmin(),
+          key: `vendas:processar:${acao || "desconhecida"}:${idSalao}`,
+          module: "vendas",
+          title: "Processamento de venda falhou",
+          description:
+            error instanceof Error
+              ? error.message
+              : "Erro interno ao processar venda.",
+          severity: "alta",
+          idSalao,
+          details: {
+            acao: isAcaoVenda(acao) ? acao : null,
+            route: "/api/vendas/processar",
+            acoes_suportadas: ACOES_VENDA,
+          },
+        });
+      } catch (incidentError) {
+        console.error(
+          "Falha ao registrar incidente operacional de vendas:",
+          incidentError
+        );
+      }
+    }
+
     console.error("Erro geral ao processar venda:", error);
     return NextResponse.json(
       {
@@ -243,7 +128,7 @@ export async function POST(req: NextRequest) {
             ? error.message
             : "Erro interno ao processar venda.",
       },
-      { status: 500 }
+      { status: resolveVendaHttpStatus(error) }
     );
   }
 }

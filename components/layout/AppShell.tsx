@@ -7,9 +7,14 @@ import Sidebar from "@/components/layout/Sidebar";
 import GuidedOnboarding from "@/components/layout/GuidedOnboarding";
 import MonitoringContextBridge from "@/components/monitoring/MonitoringContextBridge";
 import type { Permissoes } from "@/components/layout/navigation";
-import type { ShellNotification } from "@/components/layout/NotificationBell";
 import type { ResumoAssinatura } from "@/lib/assinatura-utils";
+import type {
+  ShellNotification,
+  ShellNotificationsResponse,
+} from "@/lib/notifications/contracts";
 import {
+  getPainelOnboardingModuleId,
+  getPainelOnboardingStepIndexForPath,
   getPainelOnboardingSteps,
   type PainelOnboardingSnapshot,
 } from "@/lib/onboarding/painel-guide";
@@ -18,6 +23,12 @@ import {
   captureClientError,
   monitorClientOperation,
 } from "@/lib/monitoring/client";
+import {
+  buildPainelOnboardingStorageKey,
+  markOnboardingModuleVisited,
+  readOnboardingState,
+  writeOnboardingState,
+} from "@/lib/onboarding/storage";
 
 type Props = {
   children: React.ReactNode;
@@ -63,13 +74,18 @@ export default function AppShell({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const storageScope = [idSalao, idUsuario].filter(Boolean).join(":");
-  const onboardingStorageKey = storageScope
-    ? `salaopremium:onboarding:${storageScope}`
-    : null;
+  const onboardingStorageKey = buildPainelOnboardingStorageKey({
+    idSalao,
+    idUsuario,
+  });
   const notificationStorageKey = storageScope || undefined;
   const onboardingSteps = getPainelOnboardingSteps(
     Boolean(permissoes?.assinatura_ver)
   );
+  const currentModuleId = getPainelOnboardingModuleId(pathname);
+  const criticalNotificationsCount = shellNotifications.filter(
+    (notification) => notification.critical
+  ).length;
 
   useEffect(() => {
     setShellNotifications(notifications);
@@ -99,9 +115,7 @@ export default function AppShell({
           return;
         }
 
-        const data = (await response.json()) as {
-          notifications?: ShellNotification[];
-        };
+        const data = (await response.json()) as Partial<ShellNotificationsResponse>;
 
         if (active && Array.isArray(data.notifications)) {
           setShellNotifications(data.notifications);
@@ -129,9 +143,17 @@ export default function AppShell({
     if (!onboardingStorageKey) return;
 
     const current = readOnboardingState(onboardingStorageKey);
-    setGuideStep(
-      Math.max(0, Math.min(current.stepIndex || 0, onboardingSteps.length - 1))
+    const contextualStep = getPainelOnboardingStepIndexForPath(
+      pathname,
+      onboardingSteps
     );
+    const nextStep =
+      current.lastModuleId === currentModuleId
+        ? Number(current.stepIndex || 0)
+        : contextualStep;
+
+    setGuideStep(Math.max(0, Math.min(nextStep, onboardingSteps.length - 1)));
+    markOnboardingModuleVisited(onboardingStorageKey, currentModuleId);
 
     if (searchParams.get("tour") === "1") {
       setGuideOpen(true);
@@ -147,7 +169,14 @@ export default function AppShell({
     if (!current.completedAt && !current.dismissedAt && onboardingSteps.length > 0) {
       setGuideOpen(true);
     }
-  }, [onboardingStorageKey, onboardingSteps.length, pathname, router, searchParams]);
+  }, [
+    currentModuleId,
+    onboardingStorageKey,
+    onboardingSteps,
+    pathname,
+    router,
+    searchParams,
+  ]);
 
   async function handleLogout() {
     await monitorClientOperation(
@@ -161,13 +190,18 @@ export default function AppShell({
       async () => {
         const supabase = createClient();
         await supabase.auth.signOut();
-        router.push("/login");
+        router.push("/login?motivo=logout");
         router.refresh();
       }
     );
   }
 
   function handleOpenHelp() {
+    const contextualStep = getPainelOnboardingStepIndexForPath(
+      pathname,
+      onboardingSteps
+    );
+    setGuideStep(contextualStep);
     setGuideOpen(true);
 
     if (!onboardingStorageKey) return;
@@ -175,6 +209,8 @@ export default function AppShell({
     const current = readOnboardingState(onboardingStorageKey);
     writeOnboardingState(onboardingStorageKey, {
       ...current,
+      stepIndex: contextualStep,
+      lastModuleId: currentModuleId,
       dismissedAt: null,
     });
   }
@@ -235,6 +271,10 @@ export default function AppShell({
           salaoNome={salaoNome}
           salaoResponsavel={salaoResponsavel}
           salaoLogoUrl={salaoLogoUrl}
+          planoNome={planoNome}
+          resumoAssinatura={resumoAssinatura}
+          canSeeAssinatura={Boolean(permissoes?.assinatura_ver)}
+          criticalNotificationsCount={criticalNotificationsCount}
           mobileOpen={mobileSidebarOpen}
           onClose={() => setMobileSidebarOpen(false)}
           onLogout={handleLogout}
@@ -255,6 +295,7 @@ export default function AppShell({
               canSeePerfilSalao={Boolean(permissoes?.perfil_salao_ver)}
               canSeeConfiguracoes={Boolean(permissoes?.configuracoes_ver)}
               canSeeAssinatura={Boolean(permissoes?.assinatura_ver)}
+              criticalNotificationsCount={criticalNotificationsCount}
               notifications={shellNotifications}
               notificationStorageKey={notificationStorageKey}
               scrolled={contentScrolled}
@@ -297,45 +338,4 @@ export default function AppShell({
       />
     </div>
   );
-}
-
-type OnboardingState = {
-  stepIndex: number;
-  dismissedAt?: string | null;
-  completedAt?: string | null;
-};
-
-function readOnboardingState(storageKey: string): OnboardingState {
-  try {
-    const raw = window.localStorage.getItem(storageKey);
-    if (!raw) {
-      return { stepIndex: 0 };
-    }
-
-    const parsed = JSON.parse(raw) as Partial<OnboardingState>;
-
-    return {
-      stepIndex: Number(parsed.stepIndex || 0),
-      dismissedAt:
-        typeof parsed.dismissedAt === "string" ? parsed.dismissedAt : null,
-      completedAt:
-        typeof parsed.completedAt === "string" ? parsed.completedAt : null,
-    };
-  } catch {
-    return { stepIndex: 0 };
-  }
-}
-
-function writeOnboardingState(
-  storageKey: string,
-  partial: Partial<OnboardingState>
-) {
-  const current = readOnboardingState(storageKey);
-  const next: OnboardingState = {
-    ...current,
-    ...partial,
-    stepIndex: Number(partial.stepIndex ?? current.stepIndex ?? 0),
-  };
-
-  window.localStorage.setItem(storageKey, JSON.stringify(next));
 }

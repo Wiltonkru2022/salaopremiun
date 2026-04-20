@@ -3,6 +3,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { getErrorMessage } from "@/lib/get-error-message";
+import type {
+  ProdutoPayload,
+  ProdutoProcessarBody,
+  ProdutoProcessarErrorResponse,
+  ProdutoProcessarResponse,
+} from "@/types/produtos";
 
 import {
   calculateCostPerDose,
@@ -15,15 +22,6 @@ import { getUsuarioLogado } from "@/lib/auth/getUsuarioLogado";
 
 type ProdutoFormProps = {
   modo: "novo" | "editar";
-};
-
-type ProdutoProcessarResponse = {
-  ok: boolean;
-  idProduto?: string | null;
-};
-
-type ProdutoProcessarErrorResponse = {
-  error?: string;
 };
 
 type ProdutoState = {
@@ -146,9 +144,9 @@ async function bootstrap() {
     if (modo === "editar" && produtoId) {
       await carregarProduto(produtoId, usuarioLogado.idSalao);
     }
-  } catch (e: any) {
+  } catch (e: unknown) {
     console.error(e);
-    setErro(e.message || "Erro ao carregar formulário.");
+    setErro(getErrorMessage(e, "Erro ao carregar formulário."));
   } finally {
     setLoading(false);
   }
@@ -216,7 +214,7 @@ async function bootstrap() {
         throw new Error("Informe o nome do produto.");
       }
 
-      const payload = {
+      const payload: ProdutoPayload = {
         id_salao: idSalao,
         nome: produto.nome.trim(),
         sku: produto.sku.trim() || null,
@@ -253,25 +251,27 @@ async function bootstrap() {
         ativo: produto.ativo,
       };
 
-      const response = await fetch("/api/produtos/processar", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
+        const requestBody: ProdutoProcessarBody = {
           idSalao,
           acao: "salvar",
           produto: {
             id: produto.id || null,
             ...payload,
           },
-        }),
-      });
+        };
 
-      const result = (await response.json().catch(() => ({}))) as Partial<
-        ProdutoProcessarResponse
-      > &
-        ProdutoProcessarErrorResponse;
+        const response = await fetch("/api/produtos/processar", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(requestBody),
+        });
+
+        const result = (await response.json().catch(() => ({}))) as Partial<
+          ProdutoProcessarResponse
+        > &
+          ProdutoProcessarErrorResponse;
 
       if (!response.ok) {
         throw new Error(result.error || "Erro ao salvar produto.");

@@ -9,24 +9,10 @@ import {
   PlanAccessError,
 } from "@/lib/plans/access";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
-
-type Acao = "criar" | "atualizar" | "atualizar_foto";
-
-type BodyPayload = {
-  acao?: Acao;
-  idSalao?: string;
-  idProfissional?: string | null;
-  profissional?: Record<string, unknown>;
-  servicos?: ProfissionalServicoPayload[];
-  assistentes?: string[];
-  foto_url?: string | null;
-};
-
-type ProfissionalServicoPayload = {
-  id_servico?: string;
-  duracao_minutos?: string | number | null;
-  ativo?: boolean | null;
-};
+import type {
+  ProfissionalProcessarBody,
+  ProfissionalServicoPayload,
+} from "@/types/profissional";
 
 type ProfissionalRow = {
   id: string;
@@ -323,7 +309,7 @@ async function sincronizarVinculos(params: {
 
 export async function POST(req: NextRequest) {
   try {
-    const body = (await req.json()) as BodyPayload;
+    const body = (await req.json()) as ProfissionalProcessarBody;
     const acao = body.acao;
     const idSalao = getString(body.idSalao);
     const idProfissional = getString(body.idProfissional);

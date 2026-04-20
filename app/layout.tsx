@@ -14,8 +14,36 @@ const spaceGrotesk = Space_Grotesk({
 });
 
 export const metadata: Metadata = {
-  title: "SalaoPremium",
-  description: "Sistema SaaS para saloes",
+  metadataBase: process.env.NEXT_PUBLIC_APP_URL
+    ? new URL(process.env.NEXT_PUBLIC_APP_URL)
+    : undefined,
+  title: {
+    default: "SalaoPremium",
+    template: "%s | SalaoPremium",
+  },
+  description:
+    "Gestao premium para saloes: agenda, caixa, comandas, profissionais, estoque, comissoes e assinatura em um SaaS multi-tenant.",
+  applicationName: "SalaoPremium",
+  openGraph: {
+    title: "SalaoPremium",
+    description:
+      "Gestao premium para saloes com agenda, caixa, comandas, estoque, comissoes e assinatura.",
+    type: "website",
+    locale: "pt_BR",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "SalaoPremium",
+    description:
+      "Gestao premium para saloes com operacao, financeiro e assinatura no mesmo sistema.",
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
+  icons: {
+    icon: "/favicon.ico",
+  },
 };
 
 export default function RootLayout({

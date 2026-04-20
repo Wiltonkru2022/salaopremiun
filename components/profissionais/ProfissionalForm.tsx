@@ -4,6 +4,11 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { getUsuarioLogado } from "@/lib/auth/getUsuarioLogado";
+import { getErrorMessage } from "@/lib/get-error-message";
+import type {
+  ProfissionalProcessarBody,
+  ProfissionalProcessarResponse,
+} from "@/types/profissional";
 
 
 type Servico = {
@@ -84,6 +89,16 @@ type ProfissionalAcesso = {
   cpf: string;
   senha: string;
   possuiCadastro: boolean;
+};
+
+type ProfissionalServicoRow = {
+  id_servico: string;
+  duracao_minutos?: number | string | null;
+  ativo?: boolean | null;
+};
+
+type ProfissionalAssistenteRow = {
+  id_assistente: string;
 };
 
 const DIAS_FIXOS: DiaTrabalho[] = [
@@ -251,8 +266,8 @@ export default function ProfissionalForm({
       if (modo === "editar" && profissionalId) {
         await carregarProfissional(profissionalId, usuarioLogado.idSalao);
       }
-    } catch (e: any) {
-      setErro(e.message || "Erro ao carregar formulário.");
+    } catch (e: unknown) {
+      setErro(getErrorMessage(e, "Erro ao carregar formulário."));
     } finally {
       setLoading(false);
     }
@@ -331,7 +346,7 @@ export default function ProfissionalForm({
     if (vinculosError) throw vinculosError;
 
     setServicosSelecionados(
-      (vinculos || []).map((item: any) => ({
+      (vinculos || []).map((item: ProfissionalServicoRow) => ({
         id_servico: item.id_servico,
         duracao_minutos: String(item.duracao_minutos || 0),
         ativo: item.ativo ?? true,
@@ -347,7 +362,9 @@ export default function ProfissionalForm({
     if (assistentesVinculadosError) throw assistentesVinculadosError;
 
     setAssistentesSelecionados(
-      (assistentesVinculados || []).map((item: any) => item.id_assistente)
+      (assistentesVinculados || []).map(
+        (item: ProfissionalAssistenteRow) => item.id_assistente
+      )
     );
 
     const { data: acessoRow, error: acessoError } = await supabase
@@ -545,25 +562,25 @@ async function salvarAcessoProfissional(idProfissional: string) {
         foto_url: form.foto_url || null,
       };
 
+      const requestBody: ProfissionalProcessarBody = {
+        acao: modo === "novo" ? "criar" : "atualizar",
+        idSalao,
+        idProfissional: form.id || null,
+        profissional: payloadBase,
+        servicos: isAssistenteSalao ? [] : servicosSelecionados,
+        assistentes: isAssistenteSalao ? [] : assistentesSelecionados,
+      };
+
       const salvarResponse = await fetch("/api/profissionais/processar", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          acao: modo === "novo" ? "criar" : "atualizar",
-          idSalao,
-          idProfissional: form.id || null,
-          profissional: payloadBase,
-          servicos: isAssistenteSalao ? [] : servicosSelecionados,
-          assistentes: isAssistenteSalao ? [] : assistentesSelecionados,
-        }),
+        body: JSON.stringify(requestBody),
       });
 
-      const salvarResult = (await salvarResponse.json()) as {
-        error?: string;
-        idProfissional?: string;
-      };
+      const salvarResult =
+        (await salvarResponse.json()) as ProfissionalProcessarResponse;
 
       if (!salvarResponse.ok) {
         throw new Error(salvarResult.error || "Erro ao salvar profissional.");
@@ -577,19 +594,22 @@ async function salvarAcessoProfissional(idProfissional: string) {
 
       if (fotoFile) {
         const fotoUrlFinal = await uploadFoto(idProfissional);
+        const fotoRequestBody: ProfissionalProcessarBody = {
+          acao: "atualizar_foto",
+          idSalao,
+          idProfissional,
+          foto_url: fotoUrlFinal,
+        };
+
         const fotoResponse = await fetch("/api/profissionais/processar", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({
-            acao: "atualizar_foto",
-            idSalao,
-            idProfissional,
-            foto_url: fotoUrlFinal,
-          }),
+          body: JSON.stringify(fotoRequestBody),
         });
-        const fotoResult = (await fotoResponse.json()) as { error?: string };
+        const fotoResult =
+          (await fotoResponse.json()) as ProfissionalProcessarResponse;
 
         if (!fotoResponse.ok) {
           throw new Error(fotoResult.error || "Erro ao salvar foto.");
@@ -607,8 +627,8 @@ async function salvarAcessoProfissional(idProfissional: string) {
 
       setMsg("Profissional atualizado com sucesso.");
       setAcesso((prev) => ({ ...prev, senha: "", possuiCadastro: true }));
-    } catch (e: any) {
-      setErro(e.message || "Erro ao salvar profissional.");
+    } catch (e: unknown) {
+      setErro(getErrorMessage(e, "Erro ao salvar profissional."));
     } finally {
       setSaving(false);
     }

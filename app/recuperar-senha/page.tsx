@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { getErrorMessage } from "@/lib/get-error-message";
+import { getPublicAuthUrl } from "@/lib/auth/public-auth-url";
 import {
   ArrowLeft,
   Check,
@@ -13,19 +14,40 @@ import {
 } from "lucide-react";
 
 export default function RecuperarSenhaPage() {
-  const router = useRouter();
+  return (
+    <Suspense fallback={<RecuperarSenhaFallback />}>
+      <RecuperarSenhaContent />
+    </Suspense>
+  );
+}
 
-  const [supabase, setSupabase] = useState<ReturnType<typeof createClient> | null>(null);
+function RecuperarSenhaFallback() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-white p-4">
+      <div className="w-full max-w-xl rounded-[32px] border border-zinc-200 bg-white p-10 text-center shadow-2xl">
+        <p className="text-sm text-zinc-500">Carregando recuperacao...</p>
+      </div>
+    </div>
+  );
+}
+
+function RecuperarSenhaContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const supabase = useMemo(() => createClient(), []);
+
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState("");
   const [sucesso, setSucesso] = useState("");
   const [cooldown, setCooldown] = useState(0);
   const [enviadoComSucesso, setEnviadoComSucesso] = useState(false);
+  const emailQuery = searchParams.get("email")?.trim() || "";
 
   useEffect(() => {
-    setSupabase(createClient());
-  }, []);
+    if (!emailQuery) return;
+    setEmail((current) => current || emailQuery);
+  }, [emailQuery]);
 
   useEffect(() => {
     if (cooldown <= 0) return;
@@ -46,12 +68,6 @@ export default function RecuperarSenhaPage() {
 
   async function handleRecuperarSenha(e: React.FormEvent) {
     e.preventDefault();
-
-    if (!supabase) {
-      setErro("Cliente de autenticação ainda não carregado.");
-      return;
-    }
-
     if (loading || cooldown > 0) return;
 
     setLoading(true);
@@ -67,7 +83,10 @@ export default function RecuperarSenhaPage() {
       }
 
       const { error } = await supabase.auth.resetPasswordForEmail(emailLimpo, {
-        redirectTo: `${window.location.origin}/atualizar-senha`,
+        redirectTo: getPublicAuthUrl(
+          "/atualizar-senha",
+          typeof window === "undefined" ? undefined : window.location.hostname
+        ),
       });
 
       if (error) {
@@ -80,17 +99,17 @@ export default function RecuperarSenhaPage() {
         ) {
           setCooldown(30);
           throw new Error(
-            "Aguarde alguns segundos para solicitar um novo link. Por segurança, limitamos o envio de e-mails em sequência."
+            "Aguarde alguns segundos para solicitar um novo link. Por seguranca, limitamos o envio de e-mails em sequencia."
           );
         }
 
         throw new Error(
-          error.message || "Não foi possível enviar o link de recuperação."
+          error.message || "Nao foi possivel enviar o link de recuperacao."
         );
       }
 
       setSucesso(
-        "Enviamos o link de recuperação com sucesso. Verifique sua caixa de entrada e também o spam."
+        "Enviamos o link de recuperacao com sucesso. Verifique sua caixa de entrada e tambem o spam."
       );
       setEnviadoComSucesso(true);
       setCooldown(30);
@@ -99,7 +118,7 @@ export default function RecuperarSenhaPage() {
       setErro(
         getErrorMessage(
           e,
-          "Não foi possível enviar o link de recuperação."
+          "Nao foi possivel enviar o link de recuperacao."
         )
       );
     } finally {
@@ -118,12 +137,12 @@ export default function RecuperarSenhaPage() {
             </div>
 
             <h1 className="mt-6 text-4xl font-bold leading-tight">
-              Recuperação de acesso com segurança
+              Recuperacao de acesso com seguranca
             </h1>
 
             <p className="mt-4 max-w-md text-sm leading-7 text-zinc-300">
-              Envie um link de redefinição para seu e-mail e recupere o acesso
-              ao painel do seu salão de forma rápida e segura.
+              Envie um link de redefinicao para seu e-mail e recupere o acesso
+              ao painel do seu salao de forma rapida e segura.
             </p>
           </div>
 
@@ -136,7 +155,7 @@ export default function RecuperarSenhaPage() {
                 <div>
                   <p className="font-semibold">Fluxo protegido</p>
                   <p className="mt-1 text-sm text-zinc-400">
-                    Recuperação com validação segura.
+                    Recuperacao com validacao segura.
                   </p>
                 </div>
               </div>
@@ -150,7 +169,7 @@ export default function RecuperarSenhaPage() {
                 <div>
                   <p className="font-semibold">Link por e-mail</p>
                   <p className="mt-1 text-sm text-zinc-400">
-                    Verifique também a pasta de spam.
+                    Verifique tambem a pasta de spam.
                   </p>
                 </div>
               </div>
@@ -162,9 +181,9 @@ export default function RecuperarSenhaPage() {
                   <Check size={20} />
                 </div>
                 <div>
-                  <p className="font-semibold">Redefinição rápida</p>
+                  <p className="font-semibold">Redefinicao rapida</p>
                   <p className="mt-1 text-sm text-zinc-400">
-                    Em poucos passos você volta ao sistema.
+                    Em poucos passos voce volta ao sistema.
                   </p>
                 </div>
               </div>
@@ -190,7 +209,7 @@ export default function RecuperarSenhaPage() {
                     Recuperar senha
                   </h2>
                   <p className="mt-2 text-sm leading-6 text-zinc-500">
-                    Digite seu e-mail para receber o link de redefinição
+                    Digite seu e-mail para receber o link de redefinicao
                   </p>
                 </div>
 
@@ -221,14 +240,14 @@ export default function RecuperarSenhaPage() {
 
                   {cooldown > 0 && !enviadoComSucesso ? (
                     <div className="rounded-[24px] border border-amber-200 bg-amber-50 px-4 py-4 text-sm leading-6 text-amber-800">
-                      Você poderá solicitar novamente em{" "}
+                      Voce podera solicitar novamente em{" "}
                       <span className="font-bold">{cooldown}s</span>.
                     </div>
                   ) : null}
 
                   <button
                     type="submit"
-                    disabled={loading || cooldown > 0 || !supabase}
+                    disabled={loading || cooldown > 0}
                     className="flex h-14 w-full items-center justify-center rounded-[24px] bg-zinc-950 px-5 text-base font-semibold text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {loading ? (
@@ -239,13 +258,13 @@ export default function RecuperarSenhaPage() {
                     ) : cooldown > 0 ? (
                       `Aguarde ${cooldown}s`
                     ) : (
-                      "Enviar link de recuperação"
+                      "Enviar link de recuperacao"
                     )}
                   </button>
                 </form>
 
                 <div className="mt-6 rounded-[28px] border border-zinc-200 bg-zinc-50 px-5 py-5 text-sm leading-6 text-zinc-600">
-                  Depois de clicar no link enviado por e-mail, você será
+                  Depois de clicar no link enviado por e-mail, voce sera
                   redirecionado para criar uma nova senha.
                 </div>
               </>
@@ -263,7 +282,7 @@ export default function RecuperarSenhaPage() {
                   </h2>
 
                   <p className="mt-3 max-w-sm text-sm leading-7 text-zinc-500">
-                    Enviamos as instruções de recuperação para o e-mail{" "}
+                    Enviamos as instrucoes de recuperacao para o e-mail{" "}
                     <span className="font-semibold text-zinc-800">{email}</span>.
                   </p>
 
@@ -276,7 +295,9 @@ export default function RecuperarSenhaPage() {
                     <p className="font-semibold text-zinc-800">Importante</p>
                     <p className="mt-1">
                       Abra o link no mesmo navegador e dispositivo em que a
-                      solicitação foi feita.
+                      solicitacao foi feita. Para evitar erro de dominio ou
+                      sessao velha, finalize a troca de senha sempre pelo link
+                      seguro enviado no e-mail.
                     </p>
                   </div>
 

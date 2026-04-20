@@ -4,49 +4,17 @@ import { useCallback, useRef } from "react";
 import type { ComandaDetalhe } from "@/components/caixa/types";
 import type { CaixaSessao } from "@/lib/caixa/sessaoCaixa";
 import { monitorClientOperation } from "@/lib/monitoring/client";
-
-export type ProcessarComandaAcao =
-  | "salvar_base"
-  | "adicionar_item"
-  | "editar_item"
-  | "remover_item"
-  | "enviar_pagamento"
-  | "criar_por_agendamento";
-
-type ProcessarComandaResponse = {
-  ok: boolean;
-  idComanda?: string;
-  idItem?: string;
-  status?: string;
-  jaExistia?: boolean;
-};
-
-type ProcessarComandaErrorResponse = {
-  error?: string;
-};
-
-export type ProcessarCaixaAcao =
-  | "abrir_caixa"
-  | "fechar_caixa"
-  | "lancar_movimentacao"
-  | "adicionar_pagamento"
-  | "remover_pagamento"
-  | "finalizar_comanda"
-  | "cancelar_comanda";
-
-type ProcessarCaixaResponse = {
-  ok: boolean;
-  warning?: string | null;
-  taxaPercentual?: number;
-  taxaValor?: number;
-  valorFinalCobrado?: number;
-  repassaTaxaCliente?: boolean;
-  idempotentReplay?: boolean;
-};
-
-type ProcessarCaixaErrorResponse = {
-  error?: string;
-};
+import type {
+  ProcessarComandaBody,
+  ProcessarComandaErrorResponse,
+  ProcessarComandaParams,
+  ProcessarComandaResponse,
+} from "@/types/comandas";
+import type {
+  ProcessarCaixaErrorResponse,
+  ProcessarCaixaParams,
+  ProcessarCaixaResponse,
+} from "@/types/caixa";
 
 type UseCaixaApiParams = {
   idSalao: string;
@@ -83,13 +51,7 @@ export function useCaixaApi({
   }, []);
 
   const processarComanda = useCallback(
-    async (params: {
-      acao: ProcessarComandaAcao;
-      item?: Record<string, unknown>;
-      desconto?: number;
-      acrescimo?: number;
-      status?: string;
-    }) => {
+    async (params: ProcessarComandaParams) => {
       const response = await monitorClientOperation(
         {
           module: "caixa",
@@ -127,7 +89,7 @@ export function useCaixaApi({
                   Number(comandaSelecionada?.acrescimo || 0),
               },
               item: params.item,
-            }),
+            } satisfies ProcessarComandaBody),
           })
       );
 
@@ -146,14 +108,7 @@ export function useCaixaApi({
   );
 
   const processarCaixa = useCallback(
-    async (params: {
-      acao: ProcessarCaixaAcao;
-      idempotencyKey?: string | null;
-      sessao?: Record<string, unknown>;
-      movimento?: Record<string, unknown>;
-      pagamento?: Record<string, unknown>;
-      motivo?: string | null;
-    }) => {
+    async (params: ProcessarCaixaParams) => {
       const response = await monitorClientOperation(
         {
           module: "caixa",

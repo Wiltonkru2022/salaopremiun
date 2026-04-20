@@ -9,14 +9,13 @@ import {
   buildWebhookMirrorKey,
   syncAdminMasterWebhookEvents,
 } from "@/lib/admin-master/webhooks-sync";
+import {
+  DOMINIO_WWW,
+  isLocalHost,
+  isManagedAppHost,
+  normalizeHost,
+} from "@/lib/proxy/domain-config";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
-
-function normalizeHost(value?: string | null) {
-  return String(value || "")
-    .trim()
-    .toLowerCase()
-    .replace(/:\d+$/, "");
-}
 
 async function buildWebhookReplayUrl() {
   const headerStore = await headers();
@@ -24,16 +23,10 @@ async function buildWebhookReplayUrl() {
   const forwardedProto = headerStore.get("x-forwarded-proto")?.split(",")[0];
   const host = forwardedHost || headerStore.get("host");
   const normalizedHost = normalizeHost(host);
-  const isCustomDomain =
-    normalizedHost === "salaopremiun.com.br" ||
-    normalizedHost === "www.salaopremiun.com.br" ||
-    normalizedHost.endsWith(".salaopremiun.com.br");
+  const isCustomDomain = isManagedAppHost(normalizedHost);
 
-  const finalHost = isCustomDomain ? "www.salaopremiun.com.br" : host;
-  const proto =
-    normalizedHost.includes("localhost") || normalizedHost.startsWith("127.0.0.1")
-      ? "http"
-      : forwardedProto || "https";
+  const finalHost = isCustomDomain ? DOMINIO_WWW : host;
+  const proto = isLocalHost(normalizedHost) ? "http" : forwardedProto || "https";
 
   if (!finalHost) {
     throw new Error("Nao foi possivel determinar o host para reprocessar o webhook.");

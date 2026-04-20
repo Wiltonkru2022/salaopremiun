@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { getUsuarioLogado } from "@/lib/auth/getUsuarioLogado";
+import { getErrorMessage } from "@/lib/get-error-message";
 import { maskMoneyInput, parseMoneyToNumber } from "@/lib/utils/serviceMasks";
 
 type ItemExtraFormProps = {
@@ -97,9 +98,9 @@ export default function ItemExtraForm({ modo }: ItemExtraFormProps) {
       if (modo === "editar" && itemId) {
         await carregarItem(itemId, usuario.idSalao);
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error("Erro no bootstrap do item extra:", e);
-      setErro(e.message || "Erro ao carregar formulário.");
+      setErro(getErrorMessage(e, "Erro ao carregar formulário."));
     } finally {
       setLoading(false);
     }
@@ -181,9 +182,9 @@ export default function ItemExtraForm({ modo }: ItemExtraFormProps) {
       if (error) throw error;
 
       setMsg("Serviço extra atualizado com sucesso.");
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error("Erro ao salvar item extra:", e);
-      setErro(e.message || "Erro ao salvar serviço extra.");
+      setErro(getErrorMessage(e, "Erro ao salvar serviço extra."));
     } finally {
       setSaving(false);
     }

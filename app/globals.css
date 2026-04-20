@@ -3,6 +3,8 @@
 :root {
   --app-bg: #ffffff;
   --app-surface: #ffffff;
+  --app-surface-muted: #f6f7f9;
+  --app-border: #e4e7ec;
   --app-ink: #101828;
   --app-muted: #667085;
   --app-accent: #c7a25c;
@@ -10,7 +12,13 @@
   --app-success: #1f7a5a;
   --app-warning: #b66b1a;
   --app-danger: #b42318;
+  --app-info: #2563eb;
   --app-ring: rgba(142, 106, 47, 0.28);
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --shadow-soft: 0 10px 30px rgba(16, 24, 40, 0.08);
+  --shadow-raised: 0 18px 48px rgba(16, 24, 40, 0.14);
 }
 
 * {

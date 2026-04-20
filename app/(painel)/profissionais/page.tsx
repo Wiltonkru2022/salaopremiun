@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { getUsuarioLogado } from "@/lib/auth/getUsuarioLogado";
+import ConfirmActionModal from "@/components/ui/ConfirmActionModal";
 import {
   buildPermissoesByNivel,
   sanitizePermissoesDb,
@@ -40,6 +41,7 @@ export default function ProfissionaisListPage() {
   const [statusFiltro, setStatusFiltro] = useState<"todos" | "ativo" | "inativo">("todos");
   const [idSalao, setIdSalao] = useState("");
   const [profissionais, setProfissionais] = useState<Profissional[]>([]);
+  const [profissionalParaExcluir, setProfissionalParaExcluir] = useState<string | null>(null);
 
   const [permissoes, setPermissoes] = useState<Permissoes | null>(null);
   const [nivel, setNivel] = useState("");
@@ -245,7 +247,7 @@ export default function ProfissionaisListPage() {
       return;
     }
 
-    const confirmar = window.confirm(
+    const confirmar = Boolean(
       "Deseja realmente excluir este profissional? Essa ação pode afetar vínculos e históricos."
     );
 
@@ -340,6 +342,22 @@ export default function ProfissionaisListPage() {
   }
 
   return (
+    <>
+      <ConfirmActionModal
+        open={Boolean(profissionalParaExcluir)}
+        title="Excluir profissional"
+        description="Esta acao remove o profissional e seus vinculos de acesso, servicos e assistentes. Historicos operacionais podem ser afetados."
+        confirmLabel="Excluir profissional"
+        tone="danger"
+        loading={Boolean(savingId)}
+        onClose={() => setProfissionalParaExcluir(null)}
+        onConfirm={() => {
+          const id = profissionalParaExcluir;
+          setProfissionalParaExcluir(null);
+          if (id) void excluirProfissional(id);
+        }}
+      />
+
     <div className="bg-white">
       <div className="mx-auto max-w-7xl space-y-6">
         <div className="rounded-3xl border border-zinc-200 bg-white p-6 text-zinc-950 shadow-sm">
@@ -526,7 +544,7 @@ export default function ProfissionaisListPage() {
 
                                 <button
                                   type="button"
-                                  onClick={() => excluirProfissional(item.id)}
+                                  onClick={() => setProfissionalParaExcluir(item.id)}
                                   disabled={savingId === item.id}
                                   className="rounded-xl border border-red-300 bg-red-50 px-3 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-100 disabled:opacity-60"
                                 >
@@ -550,5 +568,6 @@ export default function ProfissionaisListPage() {
         </div>
       </div>
     </div>
+    </>
   );
 }

@@ -1,0 +1,364 @@
+"use client";
+
+import type { MutableRefObject } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  captureClientEvent,
+  monitorClientOperation,
+} from "@/lib/monitoring/client";
+import type {
+  AssinaturaRow,
+  BillingType,
+  CardForm,
+  CheckoutResponse,
+  SalaoRow,
+} from "./types";
+import {
+  normalizarPlanoCobravel,
+  type PlanoCobravel,
+} from "./plan-utils";
+
+type UseAssinaturaCheckoutParams = {
+  supabase: ReturnType<typeof import("@/lib/supabase/client").createClient>;
+  salao: SalaoRow | null;
+  checkout: CheckoutResponse | null;
+  planoSelecionado: string;
+  planoSelecionadoRef: MutableRefObject<PlanoCobravel>;
+  billingType: BillingType;
+  cardForm: CardForm;
+  aguardandoPagamento: boolean;
+  podeGerenciar: boolean;
+  setErro: (message: string) => void;
+  setPlanoSelecionado: (value: PlanoCobravel) => void;
+  setAssinatura: (value: AssinaturaRow | null) => void;
+  setCheckout: (value: CheckoutResponse | null) => void;
+  setAguardandoPagamento: (value: boolean) => void;
+  carregarCheckoutAtual: (
+    idSalao: string,
+    assinaturaAtual?: AssinaturaRow | null
+  ) => Promise<void>;
+  carregarDados: () => Promise<void>;
+};
+
+export function useAssinaturaCheckout({
+  supabase,
+  salao,
+  checkout,
+  planoSelecionado,
+  planoSelecionadoRef,
+  billingType,
+  cardForm,
+  aguardandoPagamento,
+  podeGerenciar,
+  setErro,
+  setPlanoSelecionado,
+  setAssinatura,
+  setCheckout,
+  setAguardandoPagamento,
+  carregarCheckoutAtual,
+  carregarDados,
+}: UseAssinaturaCheckoutParams) {
+  const [gerandoCobranca, setGerandoCobranca] = useState(false);
+  const [verificandoAgora, setVerificandoAgora] = useState(false);
+  const [iniciandoTrial, setIniciandoTrial] = useState(false);
+  const cobrancaRequestKeyRef = useRef<string | null>(null);
+
+  const verificarPagamentoAgora = useCallback(
+    async (silencioso = false): Promise<void> => {
+      try {
+        if (!salao?.id) return;
+
+        if (!silencioso) {
+          setVerificandoAgora(true);
+          setErro("");
+        }
+
+        const { data, error } = await monitorClientOperation(
+          {
+            module: "assinatura",
+            action: "verificar_pagamento",
+            screen: "assinatura",
+            entity: "salao",
+            entityId: salao.id,
+            details: {
+              silencioso,
+            },
+            successMessage: "Status do pagamento verificado.",
+            errorMessage: "Falha ao verificar status do pagamento.",
+          },
+          async () =>
+            await supabase
+              .from("assinaturas")
+              .select("*")
+              .eq("id_salao", salao.id)
+              .maybeSingle()
+        );
+
+        if (error) {
+          throw error;
+        }
+
+        const assinaturaAtual = (data as AssinaturaRow | null) ?? null;
+        setAssinatura(assinaturaAtual);
+
+        const statusAtual = String(assinaturaAtual?.status || "").toLowerCase();
+
+        if (["ativo", "ativa", "pago"].includes(statusAtual)) {
+          setAguardandoPagamento(false);
+          setCheckout(null);
+          await carregarDados();
+          return;
+        }
+
+        if (["pendente", "aguardando_pagamento"].includes(statusAtual)) {
+          setAguardandoPagamento(true);
+          await carregarCheckoutAtual(salao.id, assinaturaAtual);
+        } else if (["cancelada", "vencida"].includes(statusAtual)) {
+          setAguardandoPagamento(false);
+        }
+
+        if (!silencioso && !["ativo", "ativa", "pago"].includes(statusAtual)) {
+          setErro(
+            "Pagamento ainda nÃ£o confirmado. Tente novamente em alguns segundos."
+          );
+        }
+      } catch (error: unknown) {
+        if (!silencioso) {
+          setErro(
+            error instanceof Error
+              ? error.message
+              : "Erro ao verificar pagamento."
+          );
+        }
+      } finally {
+        if (!silencioso) {
+          setVerificandoAgora(false);
+        }
+      }
+    },
+    [
+      carregarCheckoutAtual,
+      carregarDados,
+      salao?.id,
+      setAguardandoPagamento,
+      setAssinatura,
+      setCheckout,
+      setErro,
+      supabase,
+    ]
+  );
+
+  useEffect(() => {
+    if (!aguardandoPagamento || !salao?.id) return;
+
+    const interval = setInterval(() => {
+      void verificarPagamentoAgora(true);
+    }, 15000);
+
+    return () => clearInterval(interval);
+  }, [aguardandoPagamento, salao?.id, verificarPagamentoAgora]);
+
+  const criarCobrancaAssinatura = useCallback(async (): Promise<void> => {
+    try {
+      if (cobrancaRequestKeyRef.current) {
+        return;
+      }
+
+      setGerandoCobranca(true);
+      setErro("");
+
+      if (!salao?.id) {
+        throw new Error("SalÃ£o nÃ£o carregado.");
+      }
+
+      const idempotencyKey =
+        globalThis.crypto?.randomUUID?.() ||
+        `assinatura-${salao.id}-${Date.now()}`;
+      cobrancaRequestKeyRef.current = idempotencyKey;
+
+      const planoParaCobranca = normalizarPlanoCobravel(
+        planoSelecionadoRef.current || planoSelecionado,
+        "basico"
+      );
+
+      if (planoSelecionado !== planoParaCobranca) {
+        planoSelecionadoRef.current = planoParaCobranca;
+        setPlanoSelecionado(planoParaCobranca);
+      }
+
+      const response = await monitorClientOperation(
+        {
+          module: "assinatura",
+          action: "criar_cobranca",
+          route: "/api/assinatura/criar-cobranca",
+          screen: "assinatura_checkout",
+          entity: "salao",
+          entityId: salao.id,
+          details: {
+            billingType,
+            plano: planoParaCobranca,
+            idempotencyKey,
+          },
+          successMessage: "Cobranca de assinatura criada.",
+          errorMessage: "Falha ao criar cobranca de assinatura.",
+        },
+        () =>
+          fetch("/api/assinatura/criar-cobranca", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Idempotency-Key": idempotencyKey,
+            },
+            body: JSON.stringify({
+              idSalao: salao.id,
+              nomeSalao: salao.nome || "SalÃ£o",
+              responsavelNome: salao.responsavel || salao.nome || "ResponsÃ¡vel",
+              responsavelEmail: salao.email || "",
+              responsavelCpfCnpj: salao.cpf_cnpj || "",
+              responsavelTelefone: salao.telefone || "",
+              cep: salao.cep || "",
+              numero: salao.numero || "",
+              complemento: salao.complemento || "",
+              plano: planoParaCobranca,
+              billingType,
+              creditCard:
+                billingType === "CREDIT_CARD"
+                  ? {
+                      holderName: cardForm.holderName.trim(),
+                      number: cardForm.number.replace(/\D/g, ""),
+                      expiryMonth: cardForm.expiryMonth.replace(/\D/g, ""),
+                      expiryYear: cardForm.expiryYear.replace(/\D/g, ""),
+                      ccv: cardForm.ccv.replace(/\D/g, ""),
+                    }
+                  : undefined,
+            }),
+          })
+      );
+
+      const data = (await response.json()) as CheckoutResponse & {
+        error?: string;
+      };
+
+      if (!response.ok) {
+        throw new Error(data.error || "Erro ao criar cobranÃ§a.");
+      }
+
+      const statusCobranca = String(data.status || "").toUpperCase();
+      const pagamentoConfirmado = [
+        "CONFIRMED",
+        "RECEIVED",
+        "RECEIVED_IN_CASH",
+      ].includes(statusCobranca);
+
+      setCheckout(pagamentoConfirmado ? null : data);
+      setAguardandoPagamento(!pagamentoConfirmado);
+
+      await carregarDados();
+    } catch (error: unknown) {
+      setErro(
+        error instanceof Error ? error.message : "Erro ao criar cobranÃ§a."
+      );
+    } finally {
+      cobrancaRequestKeyRef.current = null;
+      setGerandoCobranca(false);
+    }
+  }, [
+    billingType,
+    cardForm.ccv,
+    cardForm.expiryMonth,
+    cardForm.expiryYear,
+    cardForm.holderName,
+    cardForm.number,
+    carregarDados,
+    planoSelecionado,
+    planoSelecionadoRef,
+    salao,
+    setAguardandoPagamento,
+    setCheckout,
+    setErro,
+    setPlanoSelecionado,
+  ]);
+
+  const iniciarTrial = useCallback(async (): Promise<void> => {
+    try {
+      if (!podeGerenciar) {
+        setErro("VocÃª nÃ£o tem permissÃ£o para iniciar o trial.");
+        return;
+      }
+
+      if (!salao?.id) {
+        throw new Error("SalÃ£o nÃ£o carregado.");
+      }
+
+      setIniciandoTrial(true);
+      setErro("");
+
+      const response = await monitorClientOperation(
+        {
+          module: "assinatura",
+          action: "iniciar_trial",
+          route: "/api/assinatura/iniciar-trial",
+          screen: "assinatura",
+          entity: "salao",
+          entityId: salao.id,
+          successMessage: "Trial iniciado com sucesso.",
+          errorMessage: "Falha ao iniciar trial.",
+        },
+        () =>
+          fetch("/api/assinatura/iniciar-trial", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              idSalao: salao.id,
+            }),
+          })
+      );
+
+      const data = (await response.json()) as { error?: string };
+
+      if (!response.ok) {
+        throw new Error(data.error || "Erro ao iniciar teste grÃ¡tis.");
+      }
+
+      await carregarDados();
+    } catch (error: unknown) {
+      setErro(
+        error instanceof Error ? error.message : "Erro ao iniciar teste grÃ¡tis."
+      );
+    } finally {
+      setIniciandoTrial(false);
+    }
+  }, [carregarDados, podeGerenciar, salao?.id, setErro]);
+
+  const copiarPix = useCallback(async (): Promise<void> => {
+    if (!checkout?.pixCopiaCola) return;
+
+    await navigator.clipboard.writeText(checkout.pixCopiaCola);
+    await captureClientEvent({
+      module: "assinatura",
+      eventType: "ui_event",
+      action: "copiar_pix",
+      screen: "assinatura_checkout",
+      entity: "cobranca",
+      entityId: checkout.paymentId,
+      message: "Codigo Pix copiado pelo usuario.",
+      details: {
+        idSalao: salao?.id || null,
+        billingType: checkout.billingType,
+      },
+      success: true,
+    });
+  }, [checkout, salao?.id]);
+
+  return {
+    gerandoCobranca,
+    verificandoAgora,
+    iniciandoTrial,
+    verificarPagamentoAgora,
+    criarCobrancaAssinatura,
+    iniciarTrial,
+    copiarPix,
+  };
+}

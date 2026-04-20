@@ -26,11 +26,28 @@ export function isSupabaseAuthRateLimit(error: unknown) {
 }
 
 export function getLoginErrorMessage(error: unknown) {
+  const text = getErrorText(error);
+
   if (isSupabaseAuthRateLimit(error)) {
-    return "Muitas tentativas de login ou renovação de sessão. Aguarde alguns minutos ou limpe a sessão local neste navegador.";
+    return "Muitas tentativas de login ou renovacao de sessao. Aguarde alguns minutos ou limpe a sessao local neste navegador.";
   }
 
-  return "E-mail ou senha inválidos.";
+  if (
+    text.includes("invalid login credentials") ||
+    text.includes("invalid_credentials")
+  ) {
+    return "E-mail ou senha invalidos.";
+  }
+
+  if (text.includes("email not confirmed")) {
+    return "Seu e-mail ainda nao foi confirmado. Abra a mensagem de confirmacao antes de entrar.";
+  }
+
+  if (text.includes("session") && text.includes("expired")) {
+    return "Sua sessao anterior expirou neste navegador. Entre novamente para continuar.";
+  }
+
+  return "Nao foi possivel concluir o login agora. Revise seus dados e tente novamente.";
 }
 
 export function clearSupabaseBrowserAuthState() {

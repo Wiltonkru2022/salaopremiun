@@ -74,6 +74,36 @@ export function getPainelOnboardingSteps(canSeeAssinatura: boolean) {
   return canSeeAssinatura ? [...BASE_STEPS, ASSINATURA_STEP] : BASE_STEPS;
 }
 
+function normalizePath(pathname?: string | null) {
+  const value = String(pathname || "/").trim() || "/";
+  if (value === "/") return value;
+  return value.endsWith("/") ? value.slice(0, -1) : value;
+}
+
+export function getPainelOnboardingStepIndexForPath(
+  pathname: string,
+  steps: PainelOnboardingStep[]
+) {
+  const currentPath = normalizePath(pathname);
+  const index = steps.findIndex((step) => {
+    const stepPath = normalizePath(step.href);
+    return currentPath === stepPath || currentPath.startsWith(`${stepPath}/`);
+  });
+
+  return index >= 0 ? index : 0;
+}
+
+export function getPainelOnboardingModuleId(pathname: string) {
+  const normalized = normalizePath(pathname);
+
+  if (normalized === "/") {
+    return "dashboard";
+  }
+
+  const parts = normalized.split("/").filter(Boolean);
+  return parts[0] || "dashboard";
+}
+
 export function getPainelOnboardingHighlights(
   snapshot?: PainelOnboardingSnapshot | null
 ) {

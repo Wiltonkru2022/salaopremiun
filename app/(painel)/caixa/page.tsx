@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import CaixaCancelModal from "@/components/caixa/CaixaCancelModal";
 import CaixaDetalhe from "@/components/caixa/CaixaDetalhe";
 import CaixaFila from "@/components/caixa/CaixaFila";
@@ -11,115 +11,89 @@ import CaixaPagamentos from "@/components/caixa/CaixaPagamentos";
 import CaixaResumo from "@/components/caixa/CaixaResumo";
 import CaixaSessaoPanel from "@/components/caixa/CaixaSessaoPanel";
 import ConfirmActionModal from "@/components/ui/ConfirmActionModal";
-import {
-  INITIAL_MODAL_ITEM_STATE,
-  type ModalItemState,
-} from "@/components/caixa/page-types";
-import { type Permissoes } from "@/lib/auth/permissions";
-import type {
-  AbaCaixa,
-  AgendamentoFila,
-  CatalogoExtra,
-  CatalogoProduto,
-  CatalogoServico,
-  ComandaDetalhe,
-  ComandaFila,
-  ComandaItem,
-  ComandaPagamento,
-  ConfigCaixaSalao,
-  ProfissionalResumo,
-  TipoItemComanda,
-} from "@/components/caixa/types";
-import {
-  agendamentosFiltradosBase,
-  getJoinedName,
-  parseMoney,
-} from "@/components/caixa/utils";
-import {
-  getErrorMessage,
-  useCaixaApi,
-} from "@/components/caixa/useCaixaApi";
+import { useCaixaApi } from "@/components/caixa/useCaixaApi";
 import { useCaixaLoaders } from "@/components/caixa/useCaixaLoaders";
-import {
-  type CaixaMovimentacao,
-  type CaixaMovimentacaoTipo,
-  type CaixaSessao,
-} from "@/lib/caixa/sessaoCaixa";
-import { obterTaxaConfigurada } from "@/lib/caixa/taxas";
-import { createClient } from "@/lib/supabase/client";
+import { useCaixaOperations } from "@/components/caixa/useCaixaOperations";
+import { useCaixaPageState } from "@/components/caixa/useCaixaPageState";
 
 export default function CaixaPage() {
-  const supabase = createClient();
   const router = useRouter();
-  const searchParams = useSearchParams();
-
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [itemParaRemover, setItemParaRemover] = useState<string | null>(null);
-  const [erroTela, setErroTela] = useState("");
-  const [msg, setMsg] = useState("");
-  const [idSalao, setIdSalao] = useState("");
-
-  const [permissoes, setPermissoes] = useState<Permissoes | null>(null);
-  const [acessoCarregado, setAcessoCarregado] = useState(false);
-
-  const [configCaixa, setConfigCaixa] = useState<ConfigCaixaSalao | null>(null);
-  const [caixaSchemaReady, setCaixaSchemaReady] = useState(true);
-  const [caixaSchemaError, setCaixaSchemaError] = useState("");
-  const [sessaoCaixa, setSessaoCaixa] = useState<CaixaSessao | null>(null);
-  const [movimentacoesCaixa, setMovimentacoesCaixa] = useState<
-    CaixaMovimentacao[]
-  >([]);
-
-  const [aba, setAba] = useState<AbaCaixa>("fila");
-  const [busca, setBusca] = useState("");
-
-  const [comandasFila, setComandasFila] = useState<ComandaFila[]>([]);
-  const [agendamentosFila, setAgendamentosFila] = useState<AgendamentoFila[]>([]);
-  const [comandasFechadas, setComandasFechadas] = useState<ComandaFila[]>([]);
-  const [comandasCanceladas, setComandasCanceladas] = useState<ComandaFila[]>([]);
-
-  const [comandaSelecionada, setComandaSelecionada] = useState<ComandaDetalhe | null>(null);
-  const [itens, setItens] = useState<ComandaItem[]>([]);
-  const [pagamentos, setPagamentos] = useState<ComandaPagamento[]>([]);
-
-  const [descontoInput, setDescontoInput] = useState("0,00");
-  const [acrescimoInput, setAcrescimoInput] = useState("0,00");
-
-  const [formaPagamento, setFormaPagamento] = useState("pix");
-  const [valorPagamento, setValorPagamento] = useState("");
-  const [parcelas, setParcelas] = useState("1");
-  const [taxaPercentual, setTaxaPercentual] = useState("0,00");
-  const [observacaoPagamento, setObservacaoPagamento] = useState("");
-
-  const [cancelModalOpen, setCancelModalOpen] = useState(false);
-
-  const [servicosCatalogo, setServicosCatalogo] = useState<CatalogoServico[]>([]);
-  const [produtosCatalogo, setProdutosCatalogo] = useState<CatalogoProduto[]>([]);
-  const [extrasCatalogo, setExtrasCatalogo] = useState<CatalogoExtra[]>([]);
-  const [profissionaisCatalogo, setProfissionaisCatalogo] = useState<ProfissionalResumo[]>([]);
-
-  const [itemModal, setItemModal] = useState<ModalItemState>(INITIAL_MODAL_ITEM_STATE);
-  const requestedComandaId = searchParams.get("comanda_id");
-
-  const podeVerCaixa = !!permissoes?.caixa_ver;
-
-  const podeOperarCaixa =
-    !!permissoes?.caixa_editar ||
-    !!permissoes?.caixa_operar ||
-    !!permissoes?.caixa_pagamentos ||
-    !!permissoes?.caixa_finalizar;
-
-  const podeEditarCaixa =
-    !!permissoes?.caixa_editar || !!permissoes?.caixa_operar;
-
-  const podeGerenciarPagamentos =
-    !!permissoes?.caixa_editar || !!permissoes?.caixa_pagamentos;
-
-  const podeFinalizarCaixa =
-    !!permissoes?.caixa_editar || !!permissoes?.caixa_finalizar;
-
-  const caixaAberto = caixaSchemaReady && sessaoCaixa?.status === "aberto";
+  const {
+    supabase,
+    requestedComandaId,
+    loading,
+    setLoading,
+    erroTela,
+    setErroTela,
+    msg,
+    setMsg,
+    idSalao,
+    setIdSalao,
+    setPermissoes,
+    acessoCarregado,
+    setAcessoCarregado,
+    configCaixa,
+    setConfigCaixa,
+    caixaSchemaReady,
+    setCaixaSchemaReady,
+    caixaSchemaError,
+    setCaixaSchemaError,
+    sessaoCaixa,
+    setSessaoCaixa,
+    movimentacoesCaixa,
+    setMovimentacoesCaixa,
+    aba,
+    setAba,
+    busca,
+    setBusca,
+    comandasFila,
+    setComandasFila,
+    agendamentosFila,
+    setAgendamentosFila,
+    comandasFechadas,
+    setComandasFechadas,
+    comandasCanceladas,
+    setComandasCanceladas,
+    comandaSelecionada,
+    setComandaSelecionada,
+    itens,
+    setItens,
+    pagamentos,
+    setPagamentos,
+    descontoInput,
+    setDescontoInput,
+    acrescimoInput,
+    setAcrescimoInput,
+    formaPagamento,
+    setFormaPagamento,
+    valorPagamento,
+    setValorPagamento,
+    parcelas,
+    setParcelas,
+    taxaPercentual,
+    setTaxaPercentual,
+    observacaoPagamento,
+    setObservacaoPagamento,
+    servicosCatalogo,
+    setServicosCatalogo,
+    produtosCatalogo,
+    setProdutosCatalogo,
+    extrasCatalogo,
+    setExtrasCatalogo,
+    profissionaisCatalogo,
+    setProfissionaisCatalogo,
+    podeVerCaixa,
+    podeOperarCaixa,
+    podeEditarCaixa,
+    podeGerenciarPagamentos,
+    podeFinalizarCaixa,
+    caixaAberto,
+    totalPago,
+    faltaReceber,
+    troco,
+    comandasFiltradas,
+    agendamentosFiltrados,
+  } = useCaixaPageState();
 
   const {
     gerarChaveOperacao,
@@ -166,627 +140,66 @@ export default function CaixaPage() {
     setProfissionaisCatalogo,
   });
 
+  const {
+    saving,
+    itemParaRemover,
+    setItemParaRemover,
+    cancelModalOpen,
+    itemModal,
+    setItemModal,
+    abrirCaixa,
+    fecharCaixa,
+    lancarMovimentoCaixa,
+    abrirComanda,
+    abrirAgendamentoSemComanda,
+    salvarDescontoAcrescimo,
+    adicionarPagamento,
+    removerPagamento,
+    finalizarComanda,
+    abrirModalCancelamento,
+    fecharModalCancelamento,
+    confirmarCancelamentoComanda,
+    abrirModalNovoItem,
+    abrirModalEditarItem,
+    fecharModalItem,
+    salvarItemComanda,
+    removerItemComanda,
+  } = useCaixaOperations({
+    caixaSchemaReady,
+    caixaAberto,
+    sessaoCaixa,
+    comandaSelecionada,
+    configCaixa,
+    formaPagamento,
+    parcelas,
+    valorPagamento,
+    observacaoPagamento,
+    descontoInput,
+    acrescimoInput,
+    podeOperarCaixa,
+    podeEditarCaixa,
+    podeGerenciarPagamentos,
+    podeFinalizarCaixa,
+    aplicarDetalheComanda,
+    carregarSessaoOperacional,
+    carregarTudo,
+    limparComandaSelecionada,
+    gerarChaveOperacao,
+    limparChaveOperacao,
+    processarCaixa,
+    processarComanda,
+    setErroTela,
+    setMsg,
+    setTaxaPercentual,
+    setValorPagamento,
+    setParcelas,
+    setObservacaoPagamento,
+  });
+
   useEffect(() => {
     void init();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [requestedComandaId]);
-
-  useEffect(() => {
-    if (!configCaixa) {
-      setTaxaPercentual("0,00");
-      return;
-    }
-
-    const numeroParcelas = Math.max(Number(parcelas || 1), 1);
-    const taxa = obterTaxaConfigurada(formaPagamento, numeroParcelas, configCaixa);
-
-    setTaxaPercentual(
-      Number(taxa || 0).toLocaleString("pt-BR", {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      })
-    );
-  }, [formaPagamento, parcelas, configCaixa]);
-
-  function exigirCaixaAberto() {
-    if (!caixaSchemaReady) {
-      setErroTela(
-        "Aplique a migration de caixa operacional no Supabase antes de vender."
-      );
-      return false;
-    }
-
-    if (!caixaAberto || !sessaoCaixa) {
-      setErroTela("Abra o caixa antes de vender, receber ou finalizar comanda.");
-      return false;
-    }
-
-    return true;
-  }
-
-  async function abrirCaixa(payload: {
-    valorAbertura: number;
-    observacoes: string;
-  }) {
-    if (!podeOperarCaixa) {
-      setErroTela("Voce nao tem permissao para abrir o caixa.");
-      return;
-    }
-
-    try {
-      setSaving(true);
-      setErroTela("");
-      setMsg("");
-      await processarCaixa({
-        acao: "abrir_caixa",
-        sessao: {
-          valorAbertura: payload.valorAbertura,
-          observacoes: payload.observacoes,
-        },
-      });
-      await carregarSessaoOperacional();
-      setMsg("Caixa aberto. Agora as vendas podem ser recebidas.");
-    } catch (error) {
-      console.error(error);
-      setErroTela(getErrorMessage(error, "Erro ao abrir caixa."));
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function fecharCaixa(payload: {
-    valorFechamento: number;
-    observacoes: string;
-  }) {
-    if (!sessaoCaixa) return;
-    if (!podeFinalizarCaixa) {
-      setErroTela("Voce nao tem permissao para fechar o caixa.");
-      return;
-    }
-
-    try {
-      setSaving(true);
-      setErroTela("");
-      setMsg("");
-      await processarCaixa({
-        acao: "fechar_caixa",
-        sessao: {
-          idSessao: sessaoCaixa.id,
-          valorFechamento: payload.valorFechamento,
-          observacoes: payload.observacoes,
-        },
-      });
-      await carregarSessaoOperacional();
-      setMsg("Caixa fechado com sucesso.");
-    } catch (error) {
-      console.error(error);
-      setErroTela(getErrorMessage(error, "Erro ao fechar caixa."));
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function lancarMovimentoCaixa(payload: {
-    tipo: CaixaMovimentacaoTipo;
-    valor: number;
-    descricao: string;
-    idProfissional?: string | null;
-  }) {
-    if (!exigirCaixaAberto() || !sessaoCaixa) return;
-
-    if (payload.valor <= 0) {
-      setErroTela("Informe um valor valido para o movimento.");
-      return;
-    }
-
-    if (payload.tipo === "vale_profissional" && !payload.idProfissional) {
-      setErroTela("Selecione o profissional para lancar o vale.");
-      return;
-    }
-
-    const operationScope = [
-      "movimento",
-      sessaoCaixa.id,
-      payload.tipo,
-      payload.idProfissional || "sem-profissional",
-      payload.valor,
-      payload.descricao.trim(),
-    ].join(":");
-    const idempotencyKey = gerarChaveOperacao(operationScope);
-    let completed = false;
-
-    try {
-      setSaving(true);
-      setErroTela("");
-      setMsg("");
-      await processarCaixa({
-        acao: "lancar_movimentacao",
-        idempotencyKey,
-        sessao: {
-          idSessao: sessaoCaixa.id,
-        },
-        movimento: {
-          tipo: payload.tipo,
-          valor: payload.valor,
-          descricao: payload.descricao,
-          idProfissional: payload.idProfissional,
-        },
-      });
-      completed = true;
-      await carregarSessaoOperacional();
-      setMsg(
-        payload.tipo === "vale_profissional"
-          ? "Vale lancado e preparado para desconto no fechamento de comissao."
-          : "Movimento do caixa lancado."
-      );
-    } catch (error) {
-      console.error(error);
-      setErroTela(getErrorMessage(error, "Erro ao lancar movimento do caixa."));
-    } finally {
-      if (completed) {
-        limparChaveOperacao(operationScope);
-      }
-      setSaving(false);
-    }
-  }
-
-  async function abrirComanda(idComanda: string) {
-    if (!podeOperarCaixa) {
-      setErroTela("Voce nao tem permissao para operar o caixa.");
-      return;
-    }
-    if (!exigirCaixaAberto()) return;
-
-    try {
-      setSaving(true);
-      setErroTela("");
-      setMsg("");
-      await aplicarDetalheComanda(idComanda);
-    } catch (error) {
-      console.error(error);
-      setErroTela(getErrorMessage(error, "Erro ao abrir comanda."));
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function abrirAgendamentoSemComanda(agendamentoId: string) {
-    if (!podeOperarCaixa) {
-      setErroTela("Voce nao tem permissao para operar o caixa.");
-      return;
-    }
-    if (!exigirCaixaAberto()) return;
-
-    try {
-      setSaving(true);
-      setErroTela("");
-      setMsg("");
-
-      const result = await processarComanda({
-        acao: "criar_por_agendamento",
-        item: {
-          id_agendamento: agendamentoId,
-        },
-      });
-
-      const idComanda = result.idComanda;
-      if (!idComanda) {
-        throw new Error("Nao foi possivel obter a comanda criada.");
-      }
-
-      await carregarTudo();
-      await aplicarDetalheComanda(idComanda);
-      setMsg(
-        result.jaExistia
-          ? "Comanda existente aberta com sucesso."
-          : "Comanda criada a partir do agendamento."
-      );
-    } catch (error) {
-      console.error(error);
-      setErroTela(getErrorMessage(error, "Erro ao abrir agendamento no caixa."));
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function salvarDescontoAcrescimo() {
-    if (!comandaSelecionada) return;
-    if (!podeEditarCaixa) {
-      setErroTela("Voce nao tem permissao para editar o caixa.");
-      return;
-    }
-    if (!exigirCaixaAberto()) return;
-
-    try {
-      setSaving(true);
-      setErroTela("");
-      setMsg("");
-
-      const desconto = parseMoney(descontoInput);
-      const acrescimo = parseMoney(acrescimoInput);
-
-      await processarComanda({
-        acao: "salvar_base",
-        desconto,
-        acrescimo,
-      });
-
-      await aplicarDetalheComanda(comandaSelecionada.id);
-      await carregarTudo();
-      setMsg("Resumo financeiro atualizado.");
-    } catch (error) {
-      console.error(error);
-      setErroTela(getErrorMessage(error, "Erro ao atualizar resumo."));
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function adicionarPagamento() {
-    if (!comandaSelecionada) return;
-    if (!podeGerenciarPagamentos) {
-      setErroTela("Voce nao tem permissao para lancar pagamentos.");
-      return;
-    }
-    if (!exigirCaixaAberto()) return;
-
-    try {
-      setSaving(true);
-      setErroTela("");
-      setMsg("");
-
-      const valorBase = parseMoney(valorPagamento);
-      const numeroParcelas = Math.max(Number(parcelas || 1), 1);
-
-      if (valorBase <= 0) {
-        throw new Error("Informe um valor de pagamento valido.");
-      }
-
-      const operationScope = [
-        "pagamento",
-        comandaSelecionada.id,
-        formaPagamento,
-        valorBase,
-        numeroParcelas,
-        observacaoPagamento.trim(),
-      ].join(":");
-      const idempotencyKey = gerarChaveOperacao(operationScope);
-
-      const result = await processarCaixa({
-        acao: "adicionar_pagamento",
-        idempotencyKey,
-        pagamento: {
-          formaPagamento,
-          valorBase,
-          parcelas: numeroParcelas,
-          observacoes: observacaoPagamento || null,
-        },
-      });
-
-      setValorPagamento("");
-      setParcelas("1");
-      setObservacaoPagamento("");
-
-      const taxaAuto = obterTaxaConfigurada(formaPagamento, 1, configCaixa);
-      setTaxaPercentual(
-        Number(taxaAuto || 0).toLocaleString("pt-BR", {
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2,
-        })
-      );
-
-      await aplicarDetalheComanda(comandaSelecionada.id);
-      await carregarSessaoOperacional();
-      await carregarTudo();
-      setMsg(
-        result.repassaTaxaCliente && Number(result.taxaValor || 0) > 0
-          ? `Pagamento adicionado com taxa repassada ao cliente (${Number(
-              result.taxaValor || 0
-            ).toLocaleString(
-              "pt-BR",
-              {
-                style: "currency",
-                currency: "BRL",
-              }
-            )}).`
-          : "Pagamento adicionado."
-      );
-      limparChaveOperacao(operationScope);
-    } catch (error) {
-      console.error(error);
-      setErroTela(getErrorMessage(error, "Erro ao adicionar pagamento."));
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function removerPagamento(idPagamento: string) {
-    if (!comandaSelecionada) return;
-    if (!podeGerenciarPagamentos) {
-      setErroTela("Voce nao tem permissao para remover pagamentos.");
-      return;
-    }
-    if (!exigirCaixaAberto()) return;
-
-    try {
-      setSaving(true);
-      setErroTela("");
-      setMsg("");
-
-      await processarCaixa({
-        acao: "remover_pagamento",
-        pagamento: {
-          idPagamento,
-        },
-      });
-
-      await aplicarDetalheComanda(comandaSelecionada.id);
-      await carregarSessaoOperacional();
-      setMsg("Pagamento removido.");
-    } catch (error) {
-      console.error(error);
-      setErroTela(getErrorMessage(error, "Erro ao remover pagamento."));
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function finalizarComanda() {
-    if (!comandaSelecionada) return;
-    if (!podeFinalizarCaixa) {
-      setErroTela("Voce nao tem permissao para finalizar vendas.");
-      return;
-    }
-    if (!exigirCaixaAberto()) return;
-
-    try {
-      setSaving(true);
-      setErroTela("");
-      setMsg("");
-
-      if (configCaixa?.exigir_cliente_na_venda && !comandaSelecionada.id_cliente) {
-        throw new Error("Esta venda exige cliente vinculado antes da finalizacao.");
-      }
-
-      const numeroAtual = comandaSelecionada.numero;
-      const result = await processarCaixa({
-        acao: "finalizar_comanda",
-      });
-
-      await carregarTudo();
-      await carregarSessaoOperacional();
-      limparComandaSelecionada();
-      const avisos = [result.warning].filter(Boolean);
-      setMsg(
-        avisos.length > 0
-          ? `Comanda #${numeroAtual} finalizada, mas ${avisos.join(" / ")}`
-          : `Comanda #${numeroAtual} finalizada com sucesso.`
-      );
-    } catch (error) {
-      console.error(error);
-      setErroTela(getErrorMessage(error, "Erro ao finalizar comanda."));
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  function abrirModalCancelamento() {
-    if (!comandaSelecionada) return;
-    if (!podeFinalizarCaixa) {
-      setErroTela("Voce nao tem permissao para cancelar comandas.");
-      return;
-    }
-
-    setCancelModalOpen(true);
-  }
-
-  function fecharModalCancelamento() {
-    if (saving) return;
-    setCancelModalOpen(false);
-  }
-
-  async function confirmarCancelamentoComanda(motivoFinal: string | null) {
-    if (!comandaSelecionada) return;
-    if (!podeFinalizarCaixa) {
-      setErroTela("Voce nao tem permissao para cancelar comandas.");
-      return;
-    }
-
-    try {
-      setSaving(true);
-      setErroTela("");
-      setMsg("");
-
-      await processarCaixa({
-        acao: "cancelar_comanda",
-        motivo: motivoFinal,
-      });
-
-      await carregarTudo();
-      limparComandaSelecionada();
-      setCancelModalOpen(false);
-      setMsg("Comanda cancelada com sucesso.");
-    } catch (error) {
-      console.error(error);
-      setErroTela(getErrorMessage(error, "Erro ao cancelar comanda."));
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  function abrirModalNovoItem(tipo: TipoItemComanda) {
-    if (!comandaSelecionada) return;
-    if (!podeEditarCaixa) {
-      setErroTela("Voce nao tem permissao para adicionar itens.");
-      return;
-    }
-    if (!exigirCaixaAberto()) return;
-
-    setItemModal({
-      ...INITIAL_MODAL_ITEM_STATE,
-      open: true,
-      tipoItem: tipo,
-    });
-  }
-
-  function abrirModalEditarItem(item: ComandaItem) {
-    if (!podeEditarCaixa) {
-      setErroTela("Voce nao tem permissao para editar itens.");
-      return;
-    }
-    if (!exigirCaixaAberto()) return;
-
-    setItemModal({
-      ...INITIAL_MODAL_ITEM_STATE,
-      open: true,
-      mode: "edit",
-      itemId: item.id,
-      tipoItem: item.tipo_item,
-      catalogoId:
-        item.tipo_item === "servico"
-          ? item.id_servico || ""
-          : item.tipo_item === "produto"
-          ? item.id_produto || ""
-          : item.id_extra || "",
-      descricao: item.descricao || "",
-      quantidade: String(Number(item.quantidade || 1)),
-      valorUnitario: Number(item.valor_unitario || 0).toLocaleString("pt-BR", {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      }),
-      idProfissional: item.id_profissional || "",
-      idAssistente: item.id_assistente || "",
-    });
-  }
-
-  function fecharModalItem() {
-    if (saving) return;
-    setItemModal(INITIAL_MODAL_ITEM_STATE);
-  }
-
-  async function salvarItemComanda() {
-    if (!comandaSelecionada) return;
-    if (!podeEditarCaixa) {
-      setErroTela("Voce nao tem permissao para editar itens.");
-      return;
-    }
-    if (!exigirCaixaAberto()) return;
-
-    try {
-      setSaving(true);
-      setErroTela("");
-      setMsg("");
-
-      const quantidade = Math.max(Number(itemModal.quantidade || 1), 1);
-      const valorUnitario = parseMoney(itemModal.valorUnitario);
-      if (!itemModal.descricao.trim()) {
-        throw new Error("Informe a descricao do item.");
-      }
-
-      if (valorUnitario < 0) {
-        throw new Error("Informe um valor unitario valido.");
-      }
-
-      const itemPayload = {
-        idItem: itemModal.itemId,
-        tipo_item: itemModal.tipoItem,
-        id_servico:
-          itemModal.tipoItem === "servico" ? itemModal.catalogoId || null : null,
-        id_produto:
-          itemModal.tipoItem === "produto" ? itemModal.catalogoId || null : null,
-        descricao: itemModal.descricao.trim(),
-        quantidade,
-        valor_unitario: valorUnitario,
-        custo_total:
-          itemModal.tipoItem === "ajuste" || itemModal.tipoItem === "extra"
-            ? 0
-            : undefined,
-        id_profissional: itemModal.idProfissional || null,
-        id_assistente: itemModal.idAssistente || null,
-        origem: "caixa_manual",
-      };
-
-      await processarComanda({
-        acao:
-          itemModal.mode === "edit" && itemModal.itemId
-            ? "editar_item"
-            : "adicionar_item",
-        item: itemPayload,
-      });
-
-      await aplicarDetalheComanda(comandaSelecionada.id);
-      await carregarTudo();
-      fecharModalItem();
-      setMsg(
-        itemModal.mode === "edit" && itemModal.itemId
-          ? "Item atualizado com sucesso."
-          : "Item adicionado com sucesso."
-      );
-    } catch (error) {
-      console.error(error);
-      setErroTela(getErrorMessage(error, "Erro ao salvar item da comanda."));
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function removerItemComanda(idItem: string) {
-    if (!comandaSelecionada) return;
-    if (!podeEditarCaixa) {
-      setErroTela("Voce nao tem permissao para remover itens.");
-      return;
-    }
-    if (!exigirCaixaAberto()) return;
-
-    try {
-      setSaving(true);
-      setErroTela("");
-      setMsg("");
-
-      await processarComanda({
-        acao: "remover_item",
-        item: {
-          idItem,
-        },
-      });
-
-      await aplicarDetalheComanda(comandaSelecionada.id);
-      await carregarTudo();
-      setItemParaRemover(null);
-      setMsg("Item removido com sucesso.");
-    } catch (error) {
-      console.error(error);
-      setErroTela(getErrorMessage(error, "Erro ao remover item da comanda."));
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  const totalPago = useMemo(
-    () => pagamentos.reduce((acc, item) => acc + Number(item.valor || 0), 0),
-    [pagamentos]
-  );
-
-  const totalComanda = Number(comandaSelecionada?.total || 0);
-  const faltaReceber = Math.max(totalComanda - totalPago, 0);
-  const troco = Math.max(totalPago - totalComanda, 0);
-
-  const comandasFiltradas = useMemo(() => {
-    const term = busca.trim().toLowerCase();
-    if (!term) return comandasFila;
-
-    return comandasFila.filter((item) => {
-      const cliente = getJoinedName(item.clientes, "").toLowerCase();
-      return String(item.numero).includes(term) || cliente.includes(term);
-    });
-  }, [busca, comandasFila]);
-
-  const agendamentosFiltrados = useMemo(() => {
-    const term = busca.trim().toLowerCase();
-    if (!term) return agendamentosFila;
-
-    return agendamentosFiltradosBase(agendamentosFila, term);
-  }, [busca, agendamentosFila]);
 
   if (loading || !acessoCarregado) {
     return <div className="p-6">Carregando caixa...</div>;

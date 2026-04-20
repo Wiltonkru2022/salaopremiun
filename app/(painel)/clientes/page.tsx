@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { getUsuarioLogado } from "@/lib/auth/getUsuarioLogado";
+import ConfirmActionModal from "@/components/ui/ConfirmActionModal";
 import {
   buildPermissoesByNivel,
   sanitizePermissoesDb,
@@ -37,6 +38,7 @@ export default function ClientesPage() {
   const [statusFiltro, setStatusFiltro] = useState<"todos" | "ativo" | "inativo">("todos");
   const [idSalao, setIdSalao] = useState("");
   const [clientes, setClientes] = useState<Cliente[]>([]);
+  const [clienteParaExcluir, setClienteParaExcluir] = useState<string | null>(null);
 
   const [permissoes, setPermissoes] = useState<Permissoes | null>(null);
   const [nivel, setNivel] = useState("");
@@ -184,9 +186,6 @@ export default function ClientesPage() {
       return;
     }
 
-    const confirmar = window.confirm("Deseja realmente excluir este cliente?");
-    if (!confirmar) return;
-
     try {
       setSavingId(id);
       setErro("");
@@ -255,6 +254,22 @@ export default function ClientesPage() {
   }
 
   return (
+    <>
+      <ConfirmActionModal
+        open={Boolean(clienteParaExcluir)}
+        title="Excluir cliente"
+        description="Esta acao remove o cadastro e dados complementares do cliente. Historicos operacionais podem ser afetados."
+        confirmLabel="Excluir cliente"
+        tone="danger"
+        loading={Boolean(savingId)}
+        onClose={() => setClienteParaExcluir(null)}
+        onConfirm={() => {
+          const id = clienteParaExcluir;
+          setClienteParaExcluir(null);
+          if (id) void excluirCliente(id);
+        }}
+      />
+
     <div className="bg-white">
       <div className="mx-auto max-w-7xl space-y-6">
         <div className="rounded-3xl border border-zinc-200 bg-white p-6 text-zinc-950 shadow-sm">
@@ -407,7 +422,7 @@ export default function ClientesPage() {
 
                                 <button
                                   type="button"
-                                  onClick={() => excluirCliente(item.id)}
+                                  onClick={() => setClienteParaExcluir(item.id)}
                                   disabled={savingId === item.id}
                                   className="rounded-xl border border-red-300 bg-red-50 px-3 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-100 disabled:opacity-60"
                                 >
@@ -431,5 +446,6 @@ export default function ClientesPage() {
         </div>
       </div>
     </div>
+    </>
   );
 }

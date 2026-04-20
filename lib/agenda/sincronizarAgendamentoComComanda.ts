@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   buscarVinculoProfissionalServico,
+  criarCamposAplicacaoComissao,
   resolverRegraComissaoServico,
   type ProfissionalComissaoSource,
   type ServicoComissaoSource,
@@ -245,6 +246,7 @@ export async function sincronizarAgendamentoComComanda(params: SincronizarParams
     profissional,
     vinculo,
   });
+  const camposComissao = criarCamposAplicacaoComissao(regraServico);
 
   const { data: comanda, error: comandaError } = await supabase
     .from("comandas")
@@ -296,12 +298,7 @@ export async function sincronizarAgendamentoComComanda(params: SincronizarParams
     custo_total: Number(servico.custo_produto ?? 0),
     id_profissional: idProfissional,
     id_assistente: null,
-    comissao_percentual_aplicada: regraServico.comissaoPercentual,
-    comissao_valor_aplicado: 0,
-    comissao_assistente_percentual_aplicada: regraServico.comissaoAssistentePercentual,
-    comissao_assistente_valor_aplicado: 0,
-    base_calculo_aplicada: regraServico.baseCalculo,
-    desconta_taxa_maquininha_aplicada: regraServico.descontaTaxaMaquininha,
+    ...camposComissao,
     origem: "agenda",
     observacoes: null,
     ativo: true,

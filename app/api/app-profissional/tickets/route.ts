@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { reportOperationalIncident } from "@/lib/monitoring/operational-incidents";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import {
   createSalaoTicket,
   getProfissionalTicketContext,
@@ -33,8 +35,11 @@ function buildErrorResponse(error: unknown, fallback: string) {
 }
 
 export async function POST(req: NextRequest) {
+  let idSalao = "";
+
   try {
     const context = await getProfissionalTicketContext();
+    idSalao = context.idSalao;
     const body = (await req.json().catch(() => ({}))) as Payload;
     const ticket = await createSalaoTicket({
       context,
@@ -47,6 +52,31 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ ok: true, ticket });
   } catch (error) {
+    if (idSalao) {
+      try {
+        await reportOperationalIncident({
+          supabaseAdmin: getSupabaseAdmin(),
+          key: `app-profissional:tickets:${idSalao}`,
+          module: "app_profissional",
+          title: "Abertura de ticket do app profissional falhou",
+          description:
+            error instanceof Error
+              ? error.message
+              : "Erro ao abrir ticket pelo app profissional.",
+          severity: "alta",
+          idSalao,
+          details: {
+            route: "/api/app-profissional/tickets",
+          },
+        });
+      } catch (incidentError) {
+        console.error(
+          "Falha ao registrar incidente de ticket do app profissional:",
+          incidentError
+        );
+      }
+    }
+
     return buildErrorResponse(error, "Erro ao abrir ticket pelo app profissional.");
   }
 }

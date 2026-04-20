@@ -4,6 +4,7 @@ import clsx from "clsx";
 import { addDays } from "date-fns";
 import { useEffect, useState } from "react";
 import {
+  AgendaDensityMode,
   Agendamento,
   Bloqueio,
   Profissional,
@@ -42,6 +43,7 @@ type Props = {
   agendamentos: Agendamento[];
   bloqueios: Bloqueio[];
   selectedProfessional?: Profissional | null;
+  densityMode?: AgendaDensityMode;
   onClickSlot: (date: string, time: string) => void;
   onResizeEvent: (item: Agendamento, newDuration: number) => void;
   onMoveEvent: (
@@ -62,12 +64,6 @@ type Props = {
   onResizeBlock: (item: Bloqueio, newEndTime: string) => void;
   isExpanded?: boolean;
 };
-
-const PIXELS_PER_15_MIN = 22;
-const SLOT_HEIGHT = 44;
-const TIME_COL_WIDTH = 64;
-const DAY_MIN_WIDTH_DAY = 760;
-const DAY_MIN_WIDTH_WEEK = 170;
 
 type PositionedEvent = {
   item: Agendamento;
@@ -161,6 +157,7 @@ type BlockCardProps = {
   top: number;
   height: number;
   dayColumnWidthPx: number;
+  pixelsPer15Min: number;
   onEdit: (item: Bloqueio) => void;
   onDelete: (item: Bloqueio) => void;
   onMove: (
@@ -178,6 +175,7 @@ function BlockCard({
   top,
   height,
   dayColumnWidthPx,
+  pixelsPer15Min,
   onEdit,
   onDelete,
   onMove,
@@ -225,9 +223,9 @@ function BlockCard({
 
       const rawTop = Math.max(0, startTop + deltaY);
       const snappedTop =
-        Math.round(rawTop / PIXELS_PER_15_MIN) * PIXELS_PER_15_MIN;
+        Math.round(rawTop / pixelsPer15Min) * pixelsPer15Min;
 
-      const blocksMoved = snappedTop / PIXELS_PER_15_MIN;
+      const blocksMoved = snappedTop / pixelsPer15Min;
       const minutesDelta = blocksMoved * 15;
 
       nextStartMinutes = Math.max(0, startMinutes + minutesDelta);
@@ -276,9 +274,9 @@ function BlockCard({
       const delta = ev.clientY - startY;
       const rawHeight = Math.max(36, startHeight + delta);
       const snappedHeight =
-        Math.round(rawHeight / PIXELS_PER_15_MIN) * PIXELS_PER_15_MIN;
+        Math.round(rawHeight / pixelsPer15Min) * pixelsPer15Min;
 
-      const durationBlocks = snappedHeight / PIXELS_PER_15_MIN;
+      const durationBlocks = snappedHeight / pixelsPer15Min;
       const durationMinutes = durationBlocks * 15;
 
       nextEndMinutes = timeToMinutes(item.hora_inicio) + durationMinutes;
@@ -415,6 +413,7 @@ export default function AgendaGrid({
   agendamentos,
   bloqueios,
   selectedProfessional,
+  densityMode = "standard",
   onClickSlot,
   onResizeEvent,
   onMoveEvent,
@@ -427,6 +426,12 @@ export default function AgendaGrid({
   onResizeBlock,
 }: Props) {
   const [now, setNow] = useState(() => new Date());
+  const compactMode = densityMode === "reception";
+  const pixelsPer15Min = compactMode ? 14 : 22;
+  const slotHeight = compactMode ? 28 : 44;
+  const timeColWidth = compactMode ? 56 : 64;
+  const dayMinWidthDay = compactMode ? 620 : 760;
+  const dayMinWidthWeek = compactMode ? 132 : 170;
 
   useEffect(() => {
     const interval = window.setInterval(() => {
@@ -444,17 +449,17 @@ export default function AgendaGrid({
     const start = timeToMinutes(startTime);
     const eventStart = timeToMinutes(horaInicio);
     const diff = eventStart - start;
-    return (diff / 15) * PIXELS_PER_15_MIN;
+    return (diff / 15) * pixelsPer15Min;
   }
 
   function eventHeight(durationMinutes: number) {
-    return Math.max((durationMinutes / 15) * PIXELS_PER_15_MIN, 30);
+    return Math.max((durationMinutes / 15) * pixelsPer15Min, compactMode ? 24 : 30);
   }
 
   function blockHeight(item: Bloqueio) {
     return Math.max(
       ((timeToMinutes(item.hora_fim) - timeToMinutes(item.hora_inicio)) / 15) *
-        PIXELS_PER_15_MIN,
+        pixelsPer15Min,
       36
     );
   }
@@ -470,8 +475,8 @@ export default function AgendaGrid({
     );
   }
 
-  const dayColumnWidth = viewMode === "day" ? DAY_MIN_WIDTH_DAY : DAY_MIN_WIDTH_WEEK;
-  const totalGridHeight = slots.length * SLOT_HEIGHT;
+  const dayColumnWidth = viewMode === "day" ? dayMinWidthDay : dayMinWidthWeek;
+  const totalGridHeight = slots.length * slotHeight;
   const nowMinutes = timeToMinutes(
     `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`
   );
@@ -486,11 +491,15 @@ export default function AgendaGrid({
           style={{
             gridTemplateColumns:
               viewMode === "day"
-                ? `${TIME_COL_WIDTH}px minmax(${dayColumnWidth}px, 1fr)`
-                : `${TIME_COL_WIDTH}px repeat(${days.length}, minmax(${dayColumnWidth}px, 1fr))`,
+                ? `${timeColWidth}px minmax(${dayColumnWidth}px, 1fr)`
+                : `${timeColWidth}px repeat(${days.length}, minmax(${dayColumnWidth}px, 1fr))`,
           }}
         >
-          <div className="sticky left-0 top-0 z-40 flex h-[50px] select-none items-center border-b border-r border-zinc-200 bg-white px-3 text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
+          <div
+            className={`sticky left-0 top-0 z-40 flex select-none items-center border-b border-r border-zinc-200 bg-white px-3 text-[11px] font-semibold uppercase tracking-wide text-zinc-500 ${
+              compactMode ? "h-[40px]" : "h-[50px]"
+            }`}
+          >
             Hora
           </div>
 
@@ -498,13 +507,19 @@ export default function AgendaGrid({
             <div
               key={day.toISOString()}
               className={clsx(
-                "sticky top-0 z-30 h-[50px] select-none border-b border-l border-zinc-200 px-3 py-2",
+                `sticky top-0 z-30 select-none border-b border-l border-zinc-200 px-3 ${
+                  compactMode ? "h-[40px] py-1.5" : "h-[50px] py-2"
+                }`,
                 isTodayDate(day) ? "bg-zinc-100" : "bg-white"
               )}
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
-                  <div className="truncate text-[13px] font-semibold text-zinc-900">
+                  <div
+                    className={`truncate font-semibold text-zinc-900 ${
+                      compactMode ? "text-xs" : "text-[13px]"
+                    }`}
+                  >
                     {formatDayLabel(day)}
                   </div>
                   <div className="mt-0.5 text-[10px] text-zinc-500">
@@ -526,7 +541,8 @@ export default function AgendaGrid({
             {slots.map((slot) => (
               <div
                 key={slot.time}
-                className="flex h-[44px] select-none items-start justify-end border-b border-zinc-100 pr-2 pt-1.5 text-[10px] font-medium text-zinc-400"
+                className="flex select-none items-start justify-end border-b border-zinc-100 pr-2 pt-1 text-[10px] font-medium text-zinc-400"
+                style={{ height: slotHeight }}
               >
                 {slot.time}
               </div>
@@ -581,7 +597,8 @@ export default function AgendaGrid({
                   <button
                     key={`${dayStr}-${slot.time}`}
                     onClick={() => onClickSlot(dayStr, slot.time)}
-                    className="block h-[44px] w-full border-b border-zinc-100 text-left transition hover:bg-zinc-50/70"
+                    className="block w-full border-b border-zinc-100 text-left transition hover:bg-zinc-50/70"
+                    style={{ height: slotHeight }}
                   />
                 ))}
 
@@ -607,6 +624,7 @@ export default function AgendaGrid({
                     top={eventTop(b.hora_inicio)}
                     height={blockHeight(b)}
                     dayColumnWidthPx={dayColumnWidth}
+                    pixelsPer15Min={pixelsPer15Min}
                     onEdit={onEditBlock}
                     onDelete={onDeleteBlock}
                     onMove={onMoveBlock}
@@ -619,6 +637,7 @@ export default function AgendaGrid({
                   <AppointmentCard
                     key={`${item.id}-${item.data}-${item.hora_inicio}-${item.hora_fim}-${item.status}`}
                     item={item}
+                    densityMode={densityMode}
                     top={eventTop(item.hora_inicio)}
                     height={eventHeight(item.duracao_minutos)}
                     leftPercent={leftPercent}

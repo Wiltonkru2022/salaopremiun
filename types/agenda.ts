@@ -1,4 +1,5 @@
 export type ViewMode = "day" | "week";
+export type AgendaDensityMode = "standard" | "reception";
 
 export type StatusAgenda =
   | "confirmado"

@@ -8,59 +8,13 @@ import {
   PlanAccessError,
 } from "@/lib/plans/access";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
-
-type AcaoServico = "salvar" | "alterar_status" | "excluir";
-
-type ServicoPayload = {
-  id?: string | null;
-  nome?: string | null;
-  id_categoria?: string | null;
-  categoria?: string | null;
-  descricao?: string | null;
-  gatilho_retorno_dias?: number | null;
-  duracao_minutos?: number | null;
-  pausa_minutos?: number | null;
-  recurso_nome?: string | null;
-  preco_padrao?: number | null;
-  preco_variavel?: boolean | null;
-  preco_minimo?: number | null;
-  custo_produto?: number | null;
-  comissao_percentual_padrao?: number | null;
-  comissao_assistente_percentual?: number | null;
-  base_calculo?: string | null;
-  desconta_taxa_maquininha?: boolean | null;
-  exige_avaliacao?: boolean | null;
-  ativo?: boolean | null;
-  status?: string | null;
-};
-
-type VinculoPayload = {
-  id_profissional?: string | null;
-  ativo?: boolean | null;
-  duracao_minutos?: number | null;
-  preco_personalizado?: number | null;
-  comissao_percentual?: number | null;
-  comissao_assistente_percentual?: number | null;
-  base_calculo?: string | null;
-  desconta_taxa_maquininha?: boolean | null;
-};
-
-type ConsumoPayload = {
-  id_produto?: string | null;
-  quantidade_consumo?: number | null;
-  unidade_medida?: string | null;
-  custo_estimado?: number | null;
-  ativo?: boolean | null;
-};
-
-type BodyPayload = {
-  idSalao?: string | null;
-  acao?: AcaoServico | null;
-  servico?: ServicoPayload | null;
-  novaCategoria?: string | null;
-  vinculos?: VinculoPayload[] | null;
-  consumos?: ConsumoPayload[] | null;
-};
+import type {
+  AcaoServico,
+  ConsumoPayload,
+  ServicoProcessarBody,
+  ServicoProcessarPayload,
+  VinculoPayload,
+} from "@/types/servicos";
 
 type CategoriaServicoResult = {
   id: string;
@@ -191,7 +145,7 @@ async function resolverCategoria(params: {
 
 function buildServicoPayload(params: {
   idSalao: string;
-  servico: ServicoPayload;
+  servico: ServicoProcessarPayload;
   categoria: CategoriaServicoResult | null;
 }) {
   const nome = sanitizeText(params.servico.nome);
@@ -271,7 +225,7 @@ async function salvarServicoCatalogoTransacional(params: {
 
 export async function POST(req: NextRequest) {
   try {
-    const body = (await req.json()) as BodyPayload;
+    const body = (await req.json()) as ServicoProcessarBody;
     const idSalao = sanitizeUuid(body.idSalao);
     const acao = String(body.acao || "").trim().toLowerCase() as AcaoServico;
 
@@ -289,9 +243,16 @@ export async function POST(req: NextRequest) {
     await assertCanMutatePlanFeature(idSalao, "servicos");
 
     const supabaseAdmin = getSupabaseAdmin();
-    const servico = body.servico || {};
+    const servico = body.servico;
 
     if (acao === "salvar") {
+      if (!servico) {
+        return NextResponse.json(
+          { error: "Servico obrigatorio para esta acao." },
+          { status: 400 }
+        );
+      }
+
       const categoria = await resolverCategoria({
         supabaseAdmin,
         idSalao,
@@ -321,7 +282,7 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    const idServico = sanitizeUuid(servico.id);
+    const idServico = sanitizeUuid(servico?.id);
     if (!idServico) {
       return NextResponse.json(
         { error: "Servico obrigatorio para esta acao." },
@@ -330,7 +291,7 @@ export async function POST(req: NextRequest) {
     }
 
     if (acao === "alterar_status") {
-      const ativo = sanitizeBoolean(servico.ativo, true);
+      const ativo = sanitizeBoolean(servico?.ativo, true);
       const { data, error } = await supabaseAdmin
         .from("servicos")
         .update({

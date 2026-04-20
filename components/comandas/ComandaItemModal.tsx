@@ -2,6 +2,11 @@
 
 import { useEffect, useMemo, useState } from "react";
 import AppModal from "@/components/ui/AppModal";
+import {
+  criarPreviewComissaoManual,
+  criarPreviewComissaoProduto,
+  criarPreviewComissaoServico,
+} from "@/lib/comissoes/regrasServico";
 import { formatMoneyInput, parseMoneyToNumber } from "@/lib/utils/comanda";
 
 type Profissional = {
@@ -137,6 +142,7 @@ export default function ComandaItemModal({
       };
 
       if (tipoItem === "servico") {
+        const preview = criarPreviewComissaoServico(servicoSelecionado);
         payload = {
           ...payload,
           id_servico: idServico,
@@ -144,42 +150,33 @@ export default function ComandaItemModal({
           custo_total: Number(servicoSelecionado?.custo_produto || 0),
           id_profissional: idProfissional || null,
           id_assistente: idAssistente || null,
-          comissao_percentual_aplicada:
-            servicoSelecionado?.comissao_percentual_padrao || 0,
-          comissao_assistente_percentual_aplicada:
-            servicoSelecionado?.comissao_assistente_percentual || 0,
-          base_calculo_aplicada: servicoSelecionado?.base_calculo || "bruto",
-          desconta_taxa_maquininha_aplicada:
-            servicoSelecionado?.desconta_taxa_maquininha || false,
+          ...preview,
         };
       }
 
       if (tipoItem === "produto") {
+        const preview = criarPreviewComissaoProduto(
+          produtoSelecionado?.comissao_revenda_percentual
+        );
         payload = {
           ...payload,
           id_produto: idProduto,
           descricao: produtoSelecionado?.nome || descricao,
           custo_total: Number(produtoSelecionado?.custo_real || 0) * quantidadeNumero,
           id_profissional: idProfissional || null,
-          comissao_percentual_aplicada:
-            produtoSelecionado?.comissao_revenda_percentual || 0,
-          comissao_assistente_percentual_aplicada: 0,
-          base_calculo_aplicada: "bruto",
-          desconta_taxa_maquininha_aplicada: false,
+          ...preview,
         };
       }
 
       if (tipoItem === "extra") {
+        const preview = criarPreviewComissaoManual();
         payload = {
           ...payload,
           descricao,
           custo_total: 0,
           id_profissional: null,
           id_assistente: null,
-          comissao_percentual_aplicada: 0,
-          comissao_assistente_percentual_aplicada: 0,
-          base_calculo_aplicada: "bruto",
-          desconta_taxa_maquininha_aplicada: false,
+          ...preview,
         };
       }
 

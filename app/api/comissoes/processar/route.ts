@@ -7,6 +7,13 @@ import {
   assertCanMutatePlanFeature,
   PlanAccessError,
 } from "@/lib/plans/access";
+import {
+  processarLancamentosComissao,
+  resolveComissoesHttpStatus,
+  sanitizeIds,
+  sanitizeUuid,
+} from "@/lib/comissoes/processar-lancamentos";
+import { reportOperationalIncident } from "@/lib/monitoring/operational-incidents";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { registrarLogSistema } from "@/lib/system-logs";
 
@@ -16,47 +23,15 @@ type Body = {
   acao?: "marcar_pago" | "cancelar";
 };
 
-type ProcessamentoRow = {
-  total_lancamentos: number | string | null;
-  total_vales: number | string | null;
-  total_profissionais_com_vales: number | string | null;
-  ids_processados: string[] | null;
-};
-
-const UUID_REGEX =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-
-function sanitizeUuid(value: unknown) {
-  const parsed = String(value || "").trim();
-  return UUID_REGEX.test(parsed) ? parsed : null;
-}
-
-function sanitizeIds(ids: unknown) {
-  if (!Array.isArray(ids)) return [];
-
-  return Array.from(
-    new Set(
-      ids
-        .map((value) => String(value || "").trim())
-        .filter((value) => UUID_REGEX.test(value))
-    )
-  );
-}
-
-function resolveHttpStatus(error: unknown) {
-  const candidate = error as { code?: string } | null;
-  if (!candidate?.code) return 500;
-  if (candidate.code === "P0001") return 400;
-  if (candidate.code === "23514") return 409;
-  return 500;
-}
-
 export async function POST(req: NextRequest) {
+  let idSalao = "";
+  let acao = "";
+
   try {
     const body = (await req.json()) as Body;
-    const idSalao = sanitizeUuid(body.idSalao);
+    idSalao = sanitizeUuid(body.idSalao) || "";
     const ids = sanitizeIds(body.ids);
-    const acao = String(body.acao || "").trim().toLowerCase();
+    acao = String(body.acao || "").trim().toLowerCase();
 
     if (!idSalao) {
       return NextResponse.json(
@@ -83,35 +58,17 @@ export async function POST(req: NextRequest) {
     await assertCanMutatePlanFeature(idSalao, "comissoes_basicas");
 
     const supabaseAdmin = getSupabaseAdmin();
-    const { data, error } = await supabaseAdmin.rpc(
-      "fn_processar_comissoes_lancamentos",
-      {
-        p_id_salao: idSalao,
-        p_ids: ids,
-        p_acao: acao,
-      }
-    );
-
-    if (error) {
-      console.error("Erro ao processar comissoes:", error);
-      return NextResponse.json(
-        {
-          error:
-            error.message || "Erro ao processar lancamentos de comissao.",
-        },
-        { status: resolveHttpStatus(error) }
-      );
-    }
-
-    const row = Array.isArray(data)
-      ? (data[0] as ProcessamentoRow | undefined)
-      : (data as ProcessamentoRow | null);
-    const totalLancamentos = Number(row?.total_lancamentos || 0);
-    const totalVales = Number(row?.total_vales || 0);
-    const totalProfissionaisComVales = Number(
-      row?.total_profissionais_com_vales || 0
-    );
-    const idsProcessados = row?.ids_processados || [];
+    const {
+      totalLancamentos,
+      totalVales,
+      totalProfissionaisComVales,
+      idsProcessados,
+    } = await processarLancamentosComissao({
+      supabaseAdmin,
+      idSalao,
+      ids,
+      acao: acao as "marcar_pago" | "cancelar",
+    });
 
     await registrarLogSistema({
       gravidade: acao === "cancelar" ? "warning" : "info",
@@ -155,10 +112,36 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    if (idSalao) {
+      try {
+        await reportOperationalIncident({
+          supabaseAdmin: getSupabaseAdmin(),
+          key: `comissoes:processar:${acao || "desconhecida"}:${idSalao}`,
+          module: "comissoes",
+          title: "Processamento de comissoes falhou",
+          description:
+            error instanceof Error
+              ? error.message
+              : "Erro interno ao processar comissoes.",
+          severity: "alta",
+          idSalao,
+          details: {
+            acao: acao || null,
+            route: "/api/comissoes/processar",
+          },
+        });
+      } catch (incidentError) {
+        console.error(
+          "Falha ao registrar incidente operacional de comissoes:",
+          incidentError
+        );
+      }
+    }
+
     console.error("Erro geral ao processar comissoes:", error);
     return NextResponse.json(
       { error: "Erro interno ao processar comissoes." },
-      { status: 500 }
+      { status: resolveComissoesHttpStatus(error) }
     );
   }
 }

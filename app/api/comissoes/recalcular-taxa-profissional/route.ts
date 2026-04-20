@@ -1,153 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
+import {
+  AuthzError,
+  recalcularTaxaProfissional,
+  validarPermissaoRecalculoComissao,
+} from "@/lib/comissoes/recalcular-taxa-profissional";
+import { reportOperationalIncident } from "@/lib/monitoring/operational-incidents";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
-import { createClient } from "@/lib/supabase/server";
 
 type Body = {
   idSalao: string;
   idComanda: string;
 };
 
-type ConfigRow = {
-  repassa_taxa_cliente?: boolean | null;
-  desconta_taxa_profissional?: boolean | null;
-};
-
-type PagamentoRow = {
-  taxa_maquininha_valor?: number | null;
-};
-
-type ItemRow = {
-  id: string;
-  base_calculo_aplicada?: string | null;
-  desconta_taxa_maquininha_aplicada?: boolean | null;
-};
-
-type ComissaoRow = {
-  id: string;
-  id_comanda_item?: string | null;
-  tipo_profissional?: string | null;
-  tipo_destinatario?: string | null;
-  id_profissional?: string | null;
-  id_assistente?: string | null;
-  percentual?: number | null;
-  percentual_aplicado?: number | null;
-  valor_base?: number | null;
-};
-
-function roundCurrency(value: number) {
-  return Number(value.toFixed(2));
-}
-
-function getTipoDestinatario(row: ComissaoRow) {
-  const tipo = String(row.tipo_profissional || row.tipo_destinatario || "").trim();
-
-  if (tipo) return tipo.toLowerCase();
-  if (row.id_assistente) return "assistente";
-  if (row.id_profissional) return "profissional";
-
-  return "";
-}
-
-function getPercentualAplicado(row: ComissaoRow) {
-  return Number(row.percentual_aplicado ?? row.percentual ?? 0);
-}
-
-function buildErroCargaMensagem(errors: {
-  configError: unknown;
-  pagamentosError: unknown;
-  itensError: unknown;
-  comissoesError: unknown;
-}) {
-  const fontes: string[] = [];
-
-  if (errors.configError) fontes.push("configuracoes do salao");
-  if (errors.pagamentosError) fontes.push("pagamentos da comanda");
-  if (errors.itensError) fontes.push("itens da comanda");
-  if (errors.comissoesError) fontes.push("lancamentos de comissao");
-
-  if (fontes.length === 0) {
-    return "Erro ao carregar dados para recalcular a comissao.";
-  }
-
-  if (fontes.length === 1) {
-    return `Erro ao carregar ${fontes[0]} para recalcular a comissao.`;
-  }
-
-  return `Erro ao carregar ${fontes.join(", ")} para recalcular a comissao.`;
-}
-
-async function requireGerenteOuAdminSalao(idSalao: string) {
-  const supabase = await createClient();
-  const supabaseAdmin = getSupabaseAdmin();
-
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser();
-
-  if (authError || !user) {
-    return { error: "Usuario nao autenticado.", status: 401 } as const;
-  }
-
-  const { data: usuario, error: usuarioError } = await supabaseAdmin
-    .from("usuarios")
-    .select("id_salao, status, nivel")
-    .eq("auth_user_id", user.id)
-    .maybeSingle();
-
-  if (usuarioError) {
-    console.error("Erro ao validar usuario da comissao:", usuarioError);
-    return { error: "Erro ao validar usuario.", status: 500 } as const;
-  }
-
-  if (!usuario?.id_salao || usuario.id_salao !== idSalao) {
-    return { error: "Acesso negado para este salao.", status: 403 } as const;
-  }
-
-  const nivel = String(usuario.nivel || "").toLowerCase();
-  const status = String(usuario.status || "").toLowerCase();
-
-  if (status !== "ativo") {
-    return { error: "Usuario inativo.", status: 403 } as const;
-  }
-
-  if (!["admin", "gerente"].includes(nivel)) {
-    return {
-      error: "Somente admin ou gerente pode recalcular a comissao.",
-      status: 403,
-    } as const;
-  }
-
-  return { ok: true } as const;
-}
-
-function distribuirTaxa(totalTaxa: number, rows: Array<{ id: string; peso: number }>) {
-  if (totalTaxa <= 0 || rows.length === 0) return new Map<string, number>();
-
-  const totalPeso = rows.reduce((acc, row) => acc + row.peso, 0);
-  if (totalPeso <= 0) return new Map<string, number>();
-
-  const distribuicao = new Map<string, number>();
-  let acumulado = 0;
-
-  rows.forEach((row, index) => {
-    const ultimo = index === rows.length - 1;
-    const valor = ultimo
-      ? roundCurrency(totalTaxa - acumulado)
-      : roundCurrency((totalTaxa * row.peso) / totalPeso);
-
-    distribuicao.set(row.id, valor);
-    acumulado = roundCurrency(acumulado + valor);
-  });
-
-  return distribuicao;
-}
-
 export async function POST(req: NextRequest) {
+  let idSalao = "";
+  let idComanda = "";
+
   try {
     const body = (await req.json()) as Body;
-    const idSalao = String(body.idSalao || "").trim();
-    const idComanda = String(body.idComanda || "").trim();
+    idSalao = String(body.idSalao || "").trim();
+    idComanda = String(body.idComanda || "").trim();
 
     if (!idSalao || !idComanda) {
       return NextResponse.json(
@@ -156,163 +28,50 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const auth = await requireGerenteOuAdminSalao(idSalao);
-    if ("error" in auth) {
-      return NextResponse.json({ error: auth.error }, { status: auth.status });
-    }
+    await validarPermissaoRecalculoComissao(idSalao);
 
-    const supabaseAdmin = getSupabaseAdmin();
+    const result = await recalcularTaxaProfissional({
+      supabaseAdmin: getSupabaseAdmin(),
+      idSalao,
+      idComanda,
+    });
 
-    const [
-      { data: config, error: configError },
-      { data: pagamentos, error: pagamentosError },
-      { data: itens, error: itensError },
-      { data: comissoes, error: comissoesError },
-    ] = await Promise.all([
-      supabaseAdmin
-        .from("configuracoes_salao")
-        .select("repassa_taxa_cliente, desconta_taxa_profissional")
-        .eq("id_salao", idSalao)
-        .maybeSingle(),
-
-      supabaseAdmin
-        .from("comanda_pagamentos")
-        .select("taxa_maquininha_valor")
-        .eq("id_comanda", idComanda),
-
-      supabaseAdmin
-        .from("comanda_itens")
-        .select("id, base_calculo_aplicada, desconta_taxa_maquininha_aplicada")
-        .eq("id_comanda", idComanda)
-        .eq("ativo", true),
-
-      supabaseAdmin
-        .from("comissoes_lancamentos")
-        .select("*")
-        .eq("id_salao", idSalao)
-        .eq("id_comanda", idComanda),
-    ]);
-
-    if (configError || pagamentosError || itensError || comissoesError) {
-      console.error("Erro ao carregar dados para recalcular comissao:", {
-        configError,
-        pagamentosError,
-        itensError,
-        comissoesError,
-      });
-
+    return NextResponse.json(result);
+  } catch (error) {
+    if (error instanceof AuthzError) {
       return NextResponse.json(
-        {
-          error: buildErroCargaMensagem({
-            configError,
-            pagamentosError,
-            itensError,
-            comissoesError,
-          }),
-        },
-        { status: 500 }
+        { error: error.message },
+        { status: error.status }
       );
     }
 
-    const configRow = (config as ConfigRow | null) || null;
-    const repassaTaxaCliente = Boolean(configRow?.repassa_taxa_cliente);
-    const descontaTaxaProfissional = Boolean(configRow?.desconta_taxa_profissional);
-
-    if (repassaTaxaCliente || !descontaTaxaProfissional) {
-      return NextResponse.json({
-        ok: true,
-        skipped: true,
-        reason: repassaTaxaCliente
-          ? "Taxa repassada ao cliente."
-          : "Desconto da taxa do profissional desativado.",
-      });
-    }
-
-    const totalTaxa = roundCurrency(
-      ((pagamentos as PagamentoRow[] | null) || []).reduce(
-        (acc, item) => acc + Number(item.taxa_maquininha_valor || 0),
-        0
-      )
-    );
-
-    if (totalTaxa <= 0) {
-      return NextResponse.json({
-        ok: true,
-        skipped: true,
-        reason: "Sem taxa de maquininha para descontar.",
-      });
-    }
-
-    const itensMap = new Map<string, ItemRow>();
-    ((itens as ItemRow[] | null) || []).forEach((item) => {
-      itensMap.set(item.id, item);
-    });
-
-    const comissoesElegiveis = ((comissoes as ComissaoRow[] | null) || []).filter((row) => {
-      const item = row.id_comanda_item ? itensMap.get(row.id_comanda_item) : null;
-      const tipo = getTipoDestinatario(row);
-
-      if (!item) return false;
-      if (tipo === "assistente") return false;
-      if (String(item.base_calculo_aplicada || "").toLowerCase() !== "bruto") return false;
-      if (!item.desconta_taxa_maquininha_aplicada) return false;
-
-      const percentual = getPercentualAplicado(row);
-      const valorBase = Number(row.valor_base || 0);
-
-      return percentual > 0 && valorBase > 0;
-    });
-
-    if (comissoesElegiveis.length === 0) {
-      return NextResponse.json({
-        ok: true,
-        skipped: true,
-        reason: "Nenhuma comissao elegivel para desconto em base bruta.",
-      });
-    }
-
-    const distribuicaoTaxa = distribuirTaxa(
-      totalTaxa,
-      comissoesElegiveis.map((row) => ({
-        id: row.id,
-        peso: Number(row.valor_base || 0),
-      }))
-    );
-
-    await Promise.all(
-      comissoesElegiveis.map(async (row) => {
-        const percentual = getPercentualAplicado(row);
-        const valorBase = Number(row.valor_base || 0);
-        const taxaRateada = Number(distribuicaoTaxa.get(row.id) || 0);
-        const valorBrutoComissao = roundCurrency((valorBase * percentual) / 100);
-        const valorFinalComissao = Math.max(
-          roundCurrency(valorBrutoComissao - taxaRateada),
-          0
+    if (idSalao) {
+      try {
+        await reportOperationalIncident({
+          supabaseAdmin: getSupabaseAdmin(),
+          key: `comissoes:recalcular-taxa:${idSalao}:${idComanda || "sem-comanda"}`,
+          module: "comissoes",
+          title: "Recalculo de taxa profissional falhou",
+          description:
+            error instanceof Error
+              ? error.message
+              : "Erro interno ao recalcular taxa do profissional.",
+          severity: "alta",
+          idSalao,
+          details: {
+            id_comanda: idComanda || null,
+            route: "/api/comissoes/recalcular-taxa-profissional",
+          },
+        });
+      } catch (incidentError) {
+        console.error(
+          "Falha ao registrar incidente operacional de recálculo de comissão:",
+          incidentError
         );
+      }
+    }
 
-        const { error: updateError } = await supabaseAdmin
-          .from("comissoes_lancamentos")
-          .update({
-            valor_comissao: valorFinalComissao,
-          })
-          .eq("id", row.id)
-          .eq("id_salao", idSalao);
-
-        if (updateError) {
-          throw updateError;
-        }
-      })
-    );
-
-    return NextResponse.json({
-      ok: true,
-      adjusted: true,
-      totalTaxa,
-      adjustedRows: comissoesElegiveis.length,
-    });
-  } catch (error) {
     console.error("Erro interno ao recalcular taxa do profissional:", error);
-
     return NextResponse.json(
       { error: "Erro interno ao recalcular taxa do profissional." },
       { status: 500 }

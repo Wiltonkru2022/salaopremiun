@@ -7,6 +7,7 @@ type ServicoSyncPayload = {
   preco: number | null;
   custo_produto: number | null;
   comissao_percentual: number | null;
+  comissao_percentual_padrao: number | null;
   comissao_assistente_percentual: number | null;
   base_calculo: string | null;
   desconta_taxa_maquininha: boolean | null;
@@ -44,6 +45,9 @@ export function montarPayloadSincronizacao(params: {
             (servicoSelecionado as Servico & { custo_produto?: number | null }).custo_produto ?? null,
           comissao_percentual:
             (servicoSelecionado as Servico & { comissao_percentual?: number | null }).comissao_percentual ?? null,
+          comissao_percentual_padrao:
+            (servicoSelecionado as Servico & { comissao_percentual_padrao?: number | null })
+              .comissao_percentual_padrao ?? null,
           comissao_assistente_percentual:
             (servicoSelecionado as Servico & { comissao_assistente_percentual?: number | null })
               .comissao_assistente_percentual ?? null,

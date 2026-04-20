@@ -22,7 +22,7 @@ export default async function PainelLayout({
   const user = await getUser();
 
   if (!user) {
-    redirect("/login");
+    redirect("/login?motivo=sessao_expirada");
   }
 
   const userName =
@@ -43,7 +43,7 @@ export default async function PainelLayout({
   }
 
   if (usuario.status !== "ativo") {
-    return <div className="p-6 text-red-600">Usuario inativo.</div>;
+    redirect("/login?motivo=usuario_inativo");
   }
 
   const [

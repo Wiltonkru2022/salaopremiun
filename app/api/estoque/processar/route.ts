@@ -7,7 +7,9 @@ import {
   assertCanMutatePlanFeature,
   PlanAccessError,
 } from "@/lib/plans/access";
+import { reportOperationalIncident } from "@/lib/monitoring/operational-incidents";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { registrarLogSistema } from "@/lib/system-logs";
 
 type BodyPayload = {
   idSalao?: string | null;
@@ -49,9 +51,11 @@ function resolveHttpStatus(error: unknown) {
 }
 
 export async function POST(req: NextRequest) {
+  let idSalao = "";
+
   try {
     const body = (await req.json()) as BodyPayload;
-    const idSalao = sanitizeUuid(body.idSalao);
+    idSalao = sanitizeUuid(body.idSalao) || "";
 
     if (!idSalao) {
       return NextResponse.json({ error: "Salao obrigatorio." }, { status: 400 });
@@ -91,6 +95,23 @@ export async function POST(req: NextRequest) {
 
     const resultRow = Array.isArray(data) ? data[0] : data;
 
+    await registrarLogSistema({
+      gravidade: "info",
+      modulo: "estoque",
+      idSalao,
+      idUsuario: membership.usuario.id,
+      mensagem: "Movimentacao manual de estoque registrada.",
+      detalhes: {
+        acao: "movimentacao_manual",
+        id_produto: sanitizeUuid(body.movimentacao?.idProduto),
+        tipo: sanitizeText(body.movimentacao?.tipo),
+        origem: sanitizeText(body.movimentacao?.origem),
+        quantidade: sanitizeMoney(body.movimentacao?.quantidade),
+        estoque_atual: resultRow?.estoque_atual ?? null,
+        id_movimentacao: resultRow?.id_movimentacao || null,
+      },
+    });
+
     return NextResponse.json({
       ok: true,
       idMovimentacao: resultRow?.id_movimentacao || null,
@@ -109,6 +130,32 @@ export async function POST(req: NextRequest) {
         { error: error.message, code: error.code },
         { status: error.status }
       );
+    }
+
+    if (idSalao) {
+      try {
+        await reportOperationalIncident({
+          supabaseAdmin: getSupabaseAdmin(),
+          key: `estoque:movimentacao_manual:${idSalao}`,
+          module: "estoque",
+          title: "Movimentacao manual de estoque falhou",
+          description:
+            error instanceof Error
+              ? error.message
+              : "Erro interno ao processar estoque.",
+          severity: "alta",
+          idSalao,
+          details: {
+            route: "/api/estoque/processar",
+            acao: "movimentacao_manual",
+          },
+        });
+      } catch (incidentError) {
+        console.error(
+          "Falha ao registrar incidente operacional de estoque:",
+          incidentError
+        );
+      }
     }
 
     console.error("Erro geral ao processar estoque:", error);

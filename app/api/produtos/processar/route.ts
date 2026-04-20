@@ -8,49 +8,11 @@ import {
   PlanAccessError,
 } from "@/lib/plans/access";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
-
-type AcaoProduto = "salvar" | "alterar_status" | "excluir";
-
-type ProdutoPayload = {
-  id?: string | null;
-  nome?: string | null;
-  sku?: string | null;
-  codigo_barras?: string | null;
-  marca?: string | null;
-  linha?: string | null;
-  unidade_medida?: string | null;
-  quantidade_por_embalagem?: number | null;
-  preco_custo?: number | null;
-  custos_extras?: number | null;
-  custo_por_dose?: number | null;
-  dose_padrao?: number | null;
-  unidade_dose?: string | null;
-  preco_venda?: number | null;
-  margem_lucro_percentual?: number | null;
-  estoque_atual?: number | null;
-  estoque_minimo?: number | null;
-  estoque_maximo?: number | null;
-  data_validade?: string | null;
-  lote?: string | null;
-  destinacao?: string | null;
-  categoria?: string | null;
-  comissao_revenda_percentual?: number | null;
-  fornecedor_nome?: string | null;
-  fornecedor_contato_nome?: string | null;
-  fornecedor_telefone?: string | null;
-  fornecedor_whatsapp?: string | null;
-  prazo_medio_entrega_dias?: number | null;
-  observacoes?: string | null;
-  foto_url?: string | null;
-  ativo?: boolean | null;
-  status?: string | null;
-};
-
-type BodyPayload = {
-  idSalao?: string | null;
-  acao?: AcaoProduto | null;
-  produto?: ProdutoPayload | null;
-};
+import type {
+  AcaoProduto,
+  ProdutoProcessarBody,
+  ProdutoPayload,
+} from "@/types/produtos";
 
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -152,7 +114,7 @@ function buildProdutoPayload(idSalao: string, produto: ProdutoPayload) {
 
 export async function POST(req: NextRequest) {
   try {
-    const body = (await req.json()) as BodyPayload;
+    const body = (await req.json()) as ProdutoProcessarBody;
     const idSalao = sanitizeUuid(body.idSalao);
     const acao = String(body.acao || "").trim().toLowerCase() as AcaoProduto;
 

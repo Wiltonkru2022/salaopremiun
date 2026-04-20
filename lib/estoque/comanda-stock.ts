@@ -50,6 +50,20 @@ type EstoqueRpcResponse = {
   itemsUpdated?: number;
 };
 
+type ComandaEstoqueValidation = {
+  id: string;
+  status?: string | null;
+  id_salao?: string | null;
+};
+
+type ComandaEstoqueParams = {
+  idSalao: string;
+  idComanda: string;
+  idUsuario?: string | null;
+  sourceModule?: string | null;
+  sourceAction?: string | null;
+};
+
 function roundCurrency(value: number) {
   return Number(value.toFixed(2));
 }
@@ -98,8 +112,18 @@ function buildProdutoObservation(params: {
   idComanda: string;
   idItem: string;
   idProduto: string;
+  sourceModule?: string | null;
+  sourceAction?: string | null;
 }) {
-  return `COMANDA:${params.idComanda}|ITEM:${params.idItem}|PRODUTO:${params.idProduto}|ORIGEM:PDV`;
+  return [
+    `COMANDA:${params.idComanda}`,
+    `ITEM:${params.idItem}`,
+    `PRODUTO:${params.idProduto}`,
+    "ORIGEM:PDV",
+    `FLOW:${String(params.sourceModule || "estoque").toUpperCase()}:${String(
+      params.sourceAction || "processar_comanda"
+    ).toUpperCase()}`,
+  ].join("|");
 }
 
 function buildServicoObservation(params: {
@@ -107,8 +131,44 @@ function buildServicoObservation(params: {
   idItem: string;
   idServico: string;
   idProduto: string;
+  sourceModule?: string | null;
+  sourceAction?: string | null;
 }) {
-  return `COMANDA:${params.idComanda}|ITEM:${params.idItem}|SERVICO:${params.idServico}|PRODUTO:${params.idProduto}|ORIGEM:SERVICO`;
+  return [
+    `COMANDA:${params.idComanda}`,
+    `ITEM:${params.idItem}`,
+    `SERVICO:${params.idServico}`,
+    `PRODUTO:${params.idProduto}`,
+    "ORIGEM:SERVICO",
+    `FLOW:${String(params.sourceModule || "estoque").toUpperCase()}:${String(
+      params.sourceAction || "processar_comanda"
+    ).toUpperCase()}`,
+  ].join("|");
+}
+
+export async function validarComandaParaEstoque(params: {
+  supabaseAdmin: AdminClient;
+  idSalao: string;
+  idComanda: string;
+}) {
+  const { supabaseAdmin, idSalao, idComanda } = params;
+
+  const { data, error } = await supabaseAdmin
+    .from("comandas")
+    .select("id, status, id_salao")
+    .eq("id", idComanda)
+    .eq("id_salao", idSalao)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error("Erro ao validar comanda para o estoque.");
+  }
+
+  if (!data?.id) {
+    throw new Error("Comanda nao encontrada.");
+  }
+
+  return data as ComandaEstoqueValidation;
 }
 
 async function carregarItensDaComanda(
@@ -277,11 +337,7 @@ async function resolverAlertasBaixoEstoque(
 
 export async function processarEstoqueComanda(
   supabaseAdmin: AdminClient,
-  params: {
-    idSalao: string;
-    idComanda: string;
-    idUsuario?: string | null;
-  }
+  params: ComandaEstoqueParams
 ) {
   const { data: rpcData, error: rpcError } = await supabaseAdmin.rpc(
     "fn_processar_estoque_comanda_atomic",
@@ -364,6 +420,8 @@ export async function processarEstoqueComanda(
         idComanda: params.idComanda,
         idItem: item.id,
         idProduto: item.id_produto,
+        sourceModule: params.sourceModule,
+        sourceAction: params.sourceAction,
       });
 
       if (!observacoesExistentes.has(observacoes)) {
@@ -411,6 +469,8 @@ export async function processarEstoqueComanda(
           idItem: item.id,
           idServico: item.id_servico,
           idProduto: produto.id,
+          sourceModule: params.sourceModule,
+          sourceAction: params.sourceAction,
         });
 
         if (!observacoesExistentes.has(observacoes)) {
@@ -557,10 +617,7 @@ export async function processarEstoqueComanda(
 
 export async function reverterEstoqueComanda(
   supabaseAdmin: AdminClient,
-  params: {
-    idSalao: string;
-    idComanda: string;
-  }
+  params: ComandaEstoqueParams
 ) {
   const { data: rpcData, error: rpcError } = await supabaseAdmin.rpc(
     "fn_reverter_estoque_comanda_atomic",

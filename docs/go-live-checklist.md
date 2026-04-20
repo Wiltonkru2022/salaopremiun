@@ -10,6 +10,7 @@ Este checklist deve ser revisado antes de vender assinaturas em producao.
 - Confirmar `CRON_SECRET`.
 - Confirmar `PROFISSIONAL_SESSION_SECRET`.
 - Confirmar `OPENAI_API_KEY` se o suporte do app profissional estiver ativo.
+- Confirmar `APP_BASE_DOMAIN` e overrides de host se a producao nao usar o padrao do proxy.
 - Rodar `npm run validate` antes do deploy.
 - Rodar `npm run validate:release` contra staging ou producao antes de liberar venda.
 

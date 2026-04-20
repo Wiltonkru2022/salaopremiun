@@ -42,6 +42,13 @@ export type RegraComissaoServico = {
   origemComissao: OrigemComissaoServico;
 };
 
+export type ComissaoAplicadaPreview = {
+  comissao_percentual_aplicada: number;
+  comissao_assistente_percentual_aplicada: number;
+  base_calculo_aplicada: string;
+  desconta_taxa_maquininha_aplicada: boolean;
+};
+
 function toNullableNumber(value: unknown) {
   if (value === null || value === undefined || value === "") return null;
 
@@ -146,5 +153,64 @@ export function resolverRegraComissaoServico(params: {
     baseCalculo,
     descontaTaxaMaquininha,
     origemComissao,
+  };
+}
+
+export function resolverRegraPadraoServico(
+  servico?: ServicoComissaoSource | null
+) {
+  return resolverRegraComissaoServico({
+    servico,
+    profissional: null,
+    vinculo: null,
+  });
+}
+
+export function criarPreviewComissaoServico(
+  servico?: ServicoComissaoSource | null
+): ComissaoAplicadaPreview {
+  const regra = resolverRegraPadraoServico(servico);
+
+  return {
+    comissao_percentual_aplicada: regra.comissaoPercentual,
+    comissao_assistente_percentual_aplicada:
+      regra.comissaoAssistentePercentual,
+    base_calculo_aplicada: regra.baseCalculo,
+    desconta_taxa_maquininha_aplicada: regra.descontaTaxaMaquininha,
+  };
+}
+
+export function criarPreviewComissaoProduto(percentual?: number | null) {
+  return {
+    comissao_percentual_aplicada: pickFirstNumber(percentual) ?? 0,
+    comissao_assistente_percentual_aplicada: 0,
+    base_calculo_aplicada: "bruto",
+    desconta_taxa_maquininha_aplicada: false,
+  } satisfies ComissaoAplicadaPreview;
+}
+
+export function criarPreviewComissaoManual() {
+  return {
+    comissao_percentual_aplicada: 0,
+    comissao_assistente_percentual_aplicada: 0,
+    base_calculo_aplicada: "bruto",
+    desconta_taxa_maquininha_aplicada: false,
+  } satisfies ComissaoAplicadaPreview;
+}
+
+export function criarCamposAplicacaoComissao(
+  regra: RegraComissaoServico
+): ComissaoAplicadaPreview & {
+  comissao_valor_aplicado: number;
+  comissao_assistente_valor_aplicado: number;
+} {
+  return {
+    comissao_percentual_aplicada: regra.comissaoPercentual,
+    comissao_valor_aplicado: 0,
+    comissao_assistente_percentual_aplicada:
+      regra.comissaoAssistentePercentual,
+    comissao_assistente_valor_aplicado: 0,
+    base_calculo_aplicada: regra.baseCalculo,
+    desconta_taxa_maquininha_aplicada: regra.descontaTaxaMaquininha,
   };
 }
