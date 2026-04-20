@@ -9,6 +9,7 @@ import {
   buildPermissoesByNivel,
   sanitizePermissoesDb,
 } from "@/lib/auth/permissions";
+import ConfirmActionModal from "@/components/ui/ConfirmActionModal";
 
 type Produto = {
   id: string;
@@ -50,6 +51,7 @@ export default function ProdutosPage() {
   const [statusFiltro, setStatusFiltro] = useState<"todos" | "ativo" | "inativo">("todos");
   const [idSalao, setIdSalao] = useState("");
   const [produtos, setProdutos] = useState<Produto[]>([]);
+  const [produtoParaExcluir, setProdutoParaExcluir] = useState<Produto | null>(null);
 
   const [permissoes, setPermissoes] = useState<Permissoes | null>(null);
   const [nivel, setNivel] = useState("");
@@ -234,9 +236,6 @@ export default function ProdutosPage() {
       return;
     }
 
-    const confirmar = window.confirm("Deseja realmente excluir este produto?");
-    if (!confirmar) return;
-
     try {
       setSavingId(id);
       setErro("");
@@ -250,6 +249,7 @@ export default function ProdutosPage() {
       });
 
       setProdutos((prev) => prev.filter((item) => item.id !== id));
+      setProdutoParaExcluir(null);
       setMsg("Produto excluído com sucesso.");
     } catch (e: unknown) {
       console.error(e);
@@ -467,7 +467,7 @@ export default function ProdutosPage() {
 
                                 <button
                                   type="button"
-                                  onClick={() => excluirProduto(item.id)}
+                                  onClick={() => setProdutoParaExcluir(item)}
                                   disabled={savingId === item.id}
                                   className="rounded-xl border border-red-300 bg-red-50 px-3 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-100 disabled:opacity-60"
                                 >
@@ -490,6 +490,20 @@ export default function ProdutosPage() {
           )}
         </div>
       </div>
+      <ConfirmActionModal
+        open={Boolean(produtoParaExcluir)}
+        title="Excluir produto"
+        description={`Confirme a exclusão de ${produtoParaExcluir?.nome || "este produto"}.`}
+        confirmLabel="Excluir produto"
+        tone="danger"
+        loading={Boolean(produtoParaExcluir && savingId === produtoParaExcluir.id)}
+        onClose={() => {
+          if (!savingId) setProdutoParaExcluir(null);
+        }}
+        onConfirm={() => {
+          if (produtoParaExcluir) void excluirProduto(produtoParaExcluir.id);
+        }}
+      />
     </div>
   );
 }

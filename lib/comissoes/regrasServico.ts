@@ -31,7 +31,6 @@ export type VinculoProfissionalServicoSource = {
 export type OrigemComissaoServico =
   | "profissional_servico"
   | "servico_padrao"
-  | "profissional_padrao"
   | "sem_regra";
 
 export type RegraComissaoServico = {
@@ -103,7 +102,7 @@ export function resolverRegraComissaoServico(params: {
   profissional?: ProfissionalComissaoSource | null;
   vinculo?: VinculoProfissionalServicoSource | null;
 }): RegraComissaoServico {
-  const { servico, profissional, vinculo } = params;
+  const { servico, vinculo } = params;
 
   const valorUnitario =
     pickFirstNumber(vinculo?.preco_personalizado, servico?.preco_padrao, servico?.preco) ?? 0;
@@ -113,23 +112,18 @@ export function resolverRegraComissaoServico(params: {
     servico?.comissao_percentual_padrao,
     servico?.comissao_percentual
   );
-  const comissaoProfissional = pickFirstNumber(
-    profissional?.comissao_percentual,
-    profissional?.comissao
-  );
-
   let comissaoPercentual = 0;
   let origemComissao: OrigemComissaoServico = "sem_regra";
 
+  // Origem operacional: o serviço define a regra padrão; o vínculo do
+  // profissional só entra como exceção explícita. A comissão antiga do cadastro
+  // do profissional não é herdada aqui para evitar três níveis invisíveis.
   if (comissaoVinculo !== null) {
     comissaoPercentual = comissaoVinculo;
     origemComissao = "profissional_servico";
   } else if (comissaoServico !== null) {
     comissaoPercentual = comissaoServico;
     origemComissao = "servico_padrao";
-  } else if (comissaoProfissional !== null) {
-    comissaoPercentual = comissaoProfissional;
-    origemComissao = "profissional_padrao";
   }
 
   const comissaoAssistentePercentual =

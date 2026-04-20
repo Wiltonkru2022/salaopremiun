@@ -50,7 +50,8 @@ async function validarPlanoParaPermissao(
     throw new AuthzError(
       access.bloqueioMotivo ||
         "Assinatura bloqueada. Regularize para continuar.",
-      402
+      402,
+      "assinatura_bloqueada"
     );
   }
 
@@ -59,7 +60,8 @@ async function validarPlanoParaPermissao(
   if (recurso && access.recursos[recurso] === false) {
     throw new AuthzError(
       `Recurso indisponivel no plano atual: ${recurso}.`,
-      402
+      402,
+      "recurso_indisponivel_plano"
     );
   }
 }
@@ -80,16 +82,24 @@ export async function requireSalaoPermission(
     .maybeSingle();
 
   if (permissoesError) {
-    throw new AuthzError("Erro ao carregar permissoes do usuario.", 500);
+    throw new AuthzError("Erro ao carregar permissoes do usuario.", 500, "permissoes_erro");
   }
 
   const permissoes = {
     ...buildPermissoesByNivel(membership.usuario.nivel),
-    ...sanitizePermissoesDb(permissoesDb as Record<string, unknown> | null),
+    ...sanitizePermissoesDb(permissoesDb as Record<string, unknown> | null, {
+      idSalao,
+      idUsuario: membership.usuario.id,
+      origem: "requireSalaoPermission",
+    }),
   };
 
   if (!permissoes[permission]) {
-    throw new AuthzError("Usuario sem permissao para esta acao.", 403);
+    throw new AuthzError(
+      "Usuario sem permissao para esta acao.",
+      403,
+      "sem_permissao"
+    );
   }
 
   await validarPlanoParaPermissao(idSalao, permission);
@@ -106,7 +116,7 @@ export async function requireSalaoAnyPermission(
   options: RequireSalaoPermissionOptions = {}
 ) {
   if (permissions.length === 0) {
-    throw new AuthzError("Nenhuma permissao informada para validacao.", 500);
+    throw new AuthzError("Nenhuma permissao informada para validacao.", 500, "permissoes_vazias");
   }
 
   const membership = await requireSalaoMembership(idSalao, options);
@@ -120,18 +130,26 @@ export async function requireSalaoAnyPermission(
     .maybeSingle();
 
   if (permissoesError) {
-    throw new AuthzError("Erro ao carregar permissoes do usuario.", 500);
+    throw new AuthzError("Erro ao carregar permissoes do usuario.", 500, "permissoes_erro");
   }
 
   const permissoes = {
     ...buildPermissoesByNivel(membership.usuario.nivel),
-    ...sanitizePermissoesDb(permissoesDb as Record<string, unknown> | null),
+    ...sanitizePermissoesDb(permissoesDb as Record<string, unknown> | null, {
+      idSalao,
+      idUsuario: membership.usuario.id,
+      origem: "requireSalaoAnyPermission",
+    }),
   };
 
   const permitido = permissions.some((permission) => permissoes[permission]);
 
   if (!permitido) {
-    throw new AuthzError("Usuario sem permissao para esta acao.", 403);
+    throw new AuthzError(
+      "Usuario sem permissao para esta acao.",
+      403,
+      "sem_permissao"
+    );
   }
 
   for (const permission of permissions) {

@@ -8,11 +8,13 @@ type RequireSalaoMembershipOptions = {
 
 export class AuthzError extends Error {
   status: number;
+  code: string;
 
-  constructor(message: string, status = 403) {
+  constructor(message: string, status = 403, code = "authz_denied") {
     super(message);
     this.name = "AuthzError";
     this.status = status;
+    this.code = code;
   }
 }
 

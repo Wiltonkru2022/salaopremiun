@@ -16,9 +16,7 @@ export default function ProfissionalHeader({ title, subtitle }: Props) {
         {title || "SalãoPremium 1"}
       </h1>
 
-      {subtitle ? (
-        <p className="mt-2 text-sm text-zinc-500">{subtitle}</p>
-      ) : null}
+      {subtitle ? <p className="mt-2 text-sm text-zinc-500">{subtitle}</p> : null}
     </header>
   );
 }

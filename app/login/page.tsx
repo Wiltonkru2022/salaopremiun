@@ -1,9 +1,14 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
-import { createClient } from "../../lib/supabase/client";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowRight, LockKeyhole, Mail, Sparkles } from "lucide-react";
+import { createClient } from "../../lib/supabase/client";
+import {
+  clearSupabaseBrowserAuthState,
+  getLoginErrorMessage,
+  isSupabaseAuthRateLimit,
+} from "@/lib/supabase/auth-client-recovery";
 
 export default function LoginPage() {
   return (
@@ -26,12 +31,15 @@ function LoginPageFallback() {
 function LoginPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const submittingRef = useRef(false);
 
-  const [supabase, setSupabase] = useState<ReturnType<typeof createClient> | null>(null);
+  const [supabase, setSupabase] =
+    useState<ReturnType<typeof createClient> | null>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState("");
+  const [rateLimited, setRateLimited] = useState(false);
 
   const planoSelecionado = searchParams.get("plano")?.trim() || "";
   const emailQuery = searchParams.get("email")?.trim() || "";
@@ -47,32 +55,50 @@ function LoginPageContent() {
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
+    if (loading || submittingRef.current) return;
 
     if (!supabase) {
       setErro("Cliente de autenticação ainda não carregado.");
       return;
     }
 
+    submittingRef.current = true;
     setLoading(true);
     setErro("");
+    setRateLimited(false);
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: email.trim().toLowerCase(),
+        password,
+      });
 
-    if (error) {
-      setErro("E-mail ou senha inválidos.");
+      if (error) {
+        setRateLimited(isSupabaseAuthRateLimit(error));
+        setErro(getLoginErrorMessage(error));
+        return;
+      }
+
+      router.push(
+        planoSelecionado
+          ? `/assinatura?plano=${encodeURIComponent(planoSelecionado)}`
+          : "/dashboard"
+      );
+      router.refresh();
+    } catch (error) {
+      setRateLimited(isSupabaseAuthRateLimit(error));
+      setErro(getLoginErrorMessage(error));
+    } finally {
       setLoading(false);
-      return;
+      submittingRef.current = false;
     }
+  }
 
-    router.push(
-      planoSelecionado
-        ? `/assinatura?plano=${encodeURIComponent(planoSelecionado)}`
-        : "/dashboard"
-    );
-    router.refresh();
+  function limparSessaoLocal() {
+    clearSupabaseBrowserAuthState();
+    setSupabase(createClient());
+    setRateLimited(false);
+    setErro("Sessão local limpa. Aguarde alguns segundos e tente entrar de novo.");
   }
 
   return (
@@ -164,7 +190,16 @@ function LoginPageContent() {
 
               {erro ? (
                 <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-600">
-                  {erro}
+                  <p>{erro}</p>
+                  {rateLimited ? (
+                    <button
+                      type="button"
+                      onClick={limparSessaoLocal}
+                      className="mt-3 rounded-xl border border-rose-200 bg-white px-3 py-2 text-xs font-semibold text-rose-700"
+                    >
+                      Limpar sessão local
+                    </button>
+                  ) : null}
                 </div>
               ) : null}
 

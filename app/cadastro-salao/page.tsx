@@ -309,6 +309,8 @@ function CadastroSalaoContent() {
           bairro,
           cidade,
           estado,
+          plano: planoSelecionado || null,
+          origem: "cadastro_publico",
         }),
       });
 

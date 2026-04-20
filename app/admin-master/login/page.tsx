@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   ArrowRight,
@@ -15,6 +15,11 @@ import {
   ADMIN_MASTER_HOME_PATH,
   sanitizeAdminMasterNextPath,
 } from "@/lib/admin-master/auth/login-path";
+import {
+  clearSupabaseBrowserAuthState,
+  getLoginErrorMessage,
+  isSupabaseAuthRateLimit,
+} from "@/lib/supabase/auth-client-recovery";
 
 export default function AdminMasterLoginPage() {
   return (
@@ -39,6 +44,7 @@ function AdminMasterLoginFallback() {
 function AdminMasterLoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const submittingRef = useRef(false);
 
   const [supabase, setSupabase] =
     useState<ReturnType<typeof createClient> | null>(null);
@@ -46,6 +52,7 @@ function AdminMasterLoginContent() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState("");
+  const [rateLimited, setRateLimited] = useState(false);
 
   const nextPath = useMemo(
     () =>
@@ -60,23 +67,28 @@ function AdminMasterLoginContent() {
 
   async function handleLogin(event: React.FormEvent) {
     event.preventDefault();
+    if (loading || submittingRef.current) return;
 
     if (!supabase) {
       setErro("Cliente de autenticacao ainda nao carregado.");
       return;
     }
 
+    submittingRef.current = true;
     setLoading(true);
     setErro("");
+    setRateLimited(false);
 
     const { error } = await supabase.auth.signInWithPassword({
-      email,
+      email: email.trim().toLowerCase(),
       password,
     });
 
     if (error) {
-      setErro("E-mail ou senha invalidos.");
+      setRateLimited(isSupabaseAuthRateLimit(error));
+      setErro(getLoginErrorMessage(error));
       setLoading(false);
+      submittingRef.current = false;
       return;
     }
 
@@ -104,11 +116,21 @@ function AdminMasterLoginContent() {
           "Este e-mail nao possui acesso liberado ao Admin Master."
       );
       setLoading(false);
+      submittingRef.current = false;
       return;
     }
 
     router.push(accessPayload.redirectTo || nextPath);
     router.refresh();
+  }
+
+  function limparSessaoLocal() {
+    clearSupabaseBrowserAuthState();
+    setSupabase(createClient());
+    setRateLimited(false);
+    setErro("Sessao local limpa. Aguarde alguns segundos e tente entrar de novo.");
+    submittingRef.current = false;
+    setLoading(false);
   }
 
   return (
@@ -247,7 +269,16 @@ function AdminMasterLoginContent() {
 
               {erro ? (
                 <div className="rounded-[24px] border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-                  {erro}
+                  <p>{erro}</p>
+                  {rateLimited ? (
+                    <button
+                      type="button"
+                      onClick={limparSessaoLocal}
+                      className="mt-3 rounded-xl border border-rose-200 bg-white px-3 py-2 text-xs font-semibold text-rose-700"
+                    >
+                      Limpar sessao local
+                    </button>
+                  ) : null}
                 </div>
               ) : null}
 

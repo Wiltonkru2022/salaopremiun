@@ -61,6 +61,25 @@ type ProdutoConsumo = {
   ativo: boolean;
 };
 
+type VinculoServicoRow = {
+  id_profissional: string;
+  ativo?: boolean | null;
+  duracao_minutos?: number | string | null;
+  preco_personalizado?: number | string | null;
+  comissao_percentual?: number | string | null;
+  comissao_assistente_percentual?: number | string | null;
+  base_calculo?: string | null;
+  desconta_taxa_maquininha?: boolean | null;
+};
+
+type ProdutoConsumoRow = {
+  id_produto: string;
+  quantidade_consumo?: number | string | null;
+  unidade_medida?: string | null;
+  custo_estimado?: number | string | null;
+  ativo?: boolean | null;
+};
+
 type ServicoState = {
   id?: string;
   id_salao: string;
@@ -290,9 +309,9 @@ async function bootstrap() {
         listaProdutos
       );
     }
-  } catch (e: any) {
+  } catch (e: unknown) {
     console.error("Erro no bootstrap do serviço:", e);
-    setErro(e.message || "Erro ao carregar formulário.");
+    setErro(e instanceof Error ? e.message : "Erro ao carregar formulário.");
   } finally {
     setLoading(false);
   }
@@ -356,13 +375,16 @@ async function bootstrap() {
       throw new Error("Falha ao buscar vínculos do serviço.");
     }
 
-    const mapaVinculos = new Map(
-      ((vinculosRows || []) as any[]).map((v) => [v.id_profissional, v])
+    const mapaVinculos = new Map<string, VinculoServicoRow>(
+      ((vinculosRows || []) as VinculoServicoRow[]).map((v) => [
+        v.id_profissional,
+        v,
+      ])
     );
 
     setVinculos(
       listaProfissionais.map((p) => {
-        const v: any = mapaVinculos.get(p.id);
+        const v = mapaVinculos.get(p.id);
 
         return {
           id_profissional: p.id,
@@ -392,7 +414,7 @@ async function bootstrap() {
     }
 
     setConsumos(
-      ((consumoRows || []) as any[]).map((c) => ({
+      ((consumoRows || []) as ProdutoConsumoRow[]).map((c) => ({
         id_produto: c.id_produto,
         quantidade_consumo: c.quantidade_consumo?.toString() || "",
         unidade_medida: c.unidade_medida || "",
@@ -412,7 +434,7 @@ async function bootstrap() {
   function updateVinculo(
     idProfissional: string,
     field: keyof VinculoProfissional,
-    value: any
+    value: VinculoProfissional[keyof VinculoProfissional]
   ) {
     setVinculos((prev) =>
       prev.map((item) =>
@@ -459,7 +481,7 @@ async function bootstrap() {
   function updateConsumo(
     index: number,
     field: keyof ProdutoConsumo,
-    value: any
+    value: ProdutoConsumo[keyof ProdutoConsumo]
   ) {
     setConsumos((prev) =>
       prev.map((item, i) => (i === index ? { ...item, [field]: value } : item))
@@ -493,7 +515,7 @@ async function bootstrap() {
       setMsg("");
 
       if (!servico.nome.trim()) {
-        throw new Error("Informe o nome do serviÃ§o.");
+        throw new Error("Informe o nome do serviço.");
       }
 
       const categoriaSalvar = await resolverCategoriaParaSalvar();
@@ -600,7 +622,7 @@ async function bootstrap() {
         ServicoProcessarErrorResponse;
 
       if (!response.ok) {
-        throw new Error(result.error || "Erro ao salvar serviÃ§o.");
+        throw new Error(result.error || "Erro ao salvar serviço.");
       }
 
       if (result.categoria?.id) {
@@ -623,170 +645,10 @@ async function bootstrap() {
         return;
       }
 
-      setMsg("ServiÃ§o atualizado com sucesso.");
-    } catch (e: unknown) {
-      console.error("Erro ao salvar serviÃ§o:", e);
-      setErro(e instanceof Error ? e.message : "Erro ao salvar serviÃ§o.");
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  async function salvarLegado() {
-    try {
-      setSaving(true);
-      setErro("");
-      setMsg("");
-
-      if (!servico.nome.trim()) {
-        throw new Error("Informe o nome do serviço.");
-      }
-
-      const categoriaSalvar = await resolverCategoriaParaSalvar();
-
-      const payload = {
-        id_salao: idSalao,
-        nome: servico.nome.trim(),
-        id_categoria:
-          servico.id_categoria === "__nova__"
-            ? categoriaSalvar?.id || null
-            : servico.id_categoria || null,
-        categoria:
-          servico.id_categoria === "__nova__"
-            ? categoriaSalvar?.nome || novaCategoria.trim() || null
-            : categoriaSalvar?.nome || null,
-        descricao: servico.descricao.trim() || null,
-        gatilho_retorno_dias: servico.gatilho_retorno_dias
-          ? Number(servico.gatilho_retorno_dias)
-          : null,
-        duracao_minutos: Number(servico.duracao_minutos || 0),
-        pausa_minutos: Number(servico.pausa_minutos || 0),
-        recurso_nome: servico.recurso_nome.trim() || null,
-        preco_padrao: parseMoneyToNumber(servico.preco_padrao),
-        preco_variavel: servico.preco_variavel,
-        preco_minimo: servico.preco_minimo
-          ? parseMoneyToNumber(servico.preco_minimo)
-          : null,
-        custo_produto: parseMoneyToNumber(servico.custo_produto),
-        comissao_percentual_padrao: servico.comissao_percentual_padrao
-          ? Number(servico.comissao_percentual_padrao)
-          : null,
-        comissao_assistente_percentual: Number(
-          servico.comissao_assistente_percentual || 0
-        ),
-        base_calculo: servico.base_calculo || "bruto",
-        desconta_taxa_maquininha: servico.desconta_taxa_maquininha,
-        exige_avaliacao: servico.exige_avaliacao,
-        status: servico.ativo ? "ativo" : "inativo",
-        ativo: servico.ativo,
-      };
-
-      let idServico = servico.id || "";
-
-      if (modo === "novo") {
-        const { data, error } = await supabase
-          .from("servicos")
-          .insert(payload)
-          .select("id")
-          .limit(1);
-
-        if (error) throw error;
-
-        idServico = data?.[0]?.id;
-        if (!idServico) {
-          throw new Error("Não foi possível obter o ID do serviço.");
-        }
-      } else {
-        const { error } = await supabase
-          .from("servicos")
-          .update(payload)
-          .eq("id", servico.id)
-          .eq("id_salao", idSalao);
-
-        if (error) throw error;
-        idServico = servico.id || "";
-      }
-
-      const { error: deleteVinculosError } = await supabase
-        .from("profissional_servicos")
-        .delete()
-        .eq("id_servico", idServico);
-
-      if (deleteVinculosError) throw deleteVinculosError;
-
-      const vinculosParaSalvar = vinculos
-        .filter((v) => v.ativo)
-        .map((v) => ({
-          id_salao: idSalao,
-          id_profissional: v.id_profissional,
-          id_servico: idServico,
-          ativo: true,
-          duracao_minutos: v.duracao_minutos
-            ? Number(v.duracao_minutos)
-            : null,
-          preco_personalizado: v.preco_personalizado
-            ? parseMoneyToNumber(v.preco_personalizado)
-            : null,
-          comissao_percentual: v.comissao_percentual
-            ? Number(v.comissao_percentual)
-            : null,
-          comissao_assistente_percentual: v.comissao_assistente_percentual
-            ? Number(v.comissao_assistente_percentual)
-            : null,
-          base_calculo: v.base_calculo || null,
-          desconta_taxa_maquininha:
-            typeof v.desconta_taxa_maquininha === "boolean"
-              ? v.desconta_taxa_maquininha
-              : null,
-        }));
-
-      if (vinculosParaSalvar.length > 0) {
-        const { error: vinculoError } = await supabase
-          .from("profissional_servicos")
-          .insert(vinculosParaSalvar);
-
-        if (vinculoError) throw vinculoError;
-      }
-
-      const { error: deleteConsumoError } = await supabase
-        .from("produto_servico_consumo")
-        .delete()
-        .eq("id_servico", idServico);
-
-      if (deleteConsumoError) throw deleteConsumoError;
-
-      const consumosValidos = consumos
-        .filter((c) => c.id_produto && Number(c.quantidade_consumo || 0) > 0)
-        .map((c) => ({
-          id_salao: idSalao,
-          id_servico: idServico,
-          id_produto: c.id_produto,
-          quantidade_consumo: Number(c.quantidade_consumo || 0),
-          unidade_medida: c.unidade_medida || null,
-          custo_estimado: c.custo_estimado
-            ? parseMoneyToNumber(c.custo_estimado)
-            : null,
-          ativo: true,
-        }));
-
-      if (consumosValidos.length > 0) {
-        const { error: consumoError } = await supabase
-          .from("produto_servico_consumo")
-          .insert(consumosValidos);
-
-        if (consumoError) throw consumoError;
-      }
-
-      if (modo === "novo") {
-        router.push("/servicos");
-        return;
-      }
-
       setMsg("Serviço atualizado com sucesso.");
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error("Erro ao salvar serviço:", e);
-      setErro(e.message || "Erro ao salvar serviço.");
+      setErro(e instanceof Error ? e.message : "Erro ao salvar serviço.");
     } finally {
       setSaving(false);
     }
@@ -811,6 +673,9 @@ async function bootstrap() {
           </h1>
           <p className="mt-2 text-sm text-zinc-500">
             Cadastro completo de serviço com agenda, preço, comissão e consumo.
+          </p>
+          <p className="mt-2 text-xs font-medium text-zinc-500">
+            Comece pelos dados básicos e abra as demais seções conforme precisar.
           </p>
         </div>
 
@@ -911,7 +776,7 @@ async function bootstrap() {
               </div>
             </Card>
 
-            <Card title="2. Tempo e dinâmica" subtitle="Agenda e pausas">
+            <Card title="2. Tempo e dinâmica" subtitle="Agenda e pausas" defaultOpen={false}>
               <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                 <Input
                   label="Duração total (min)"
@@ -931,7 +796,7 @@ async function bootstrap() {
               </div>
             </Card>
 
-            <Card title="3. Precificação e custos" subtitle="Lucro real do serviço">
+            <Card title="3. Precificação e custos" subtitle="Lucro real do serviço" defaultOpen={false}>
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <Input
                   label="Preço padrão"
@@ -959,7 +824,7 @@ async function bootstrap() {
               </div>
             </Card>
 
-            <Card title="4. Regras de comissão" subtitle="Padrão do serviço">
+            <Card title="4. Regras de comissão" subtitle="Padrão do serviço" defaultOpen={false}>
               <div className="space-y-4">
                 <ComissaoHelpPanel
                   title="Use uma regra padrão e mexa só nas exceções"
@@ -1037,6 +902,7 @@ async function bootstrap() {
             <Card
               title="5. Profissionais vinculados"
               subtitle="Onde você controla 40%, 50% etc."
+              defaultOpen={false}
             >
               <div className="space-y-4">
                 <ComissaoHelpPanel
@@ -1235,6 +1101,7 @@ async function bootstrap() {
             <Card
               title="6. Consumo de produtos"
               subtitle="Base para baixar estoque automaticamente"
+              defaultOpen={false}
             >
               <div className="space-y-4">
                 <button
@@ -1362,19 +1229,34 @@ function Card({
   title,
   subtitle,
   children,
+  defaultOpen = true,
 }: {
   title: string;
   subtitle?: string;
   children: React.ReactNode;
+  defaultOpen?: boolean;
 }) {
   return (
-    <div className="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm md:p-6">
-      <div className="mb-5">
-        <h2 className="text-lg font-bold text-zinc-900">{title}</h2>
-        {subtitle ? <p className="mt-1 text-sm text-zinc-500">{subtitle}</p> : null}
-      </div>
-      {children}
-    </div>
+    <details
+      open={defaultOpen}
+      className="group rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm md:p-6"
+    >
+      <summary className="flex cursor-pointer list-none items-start justify-between gap-4">
+        <span>
+          <span className="block text-lg font-bold text-zinc-900">{title}</span>
+          {subtitle ? (
+            <span className="mt-1 block text-sm text-zinc-500">{subtitle}</span>
+          ) : null}
+        </span>
+
+        <span className="rounded-full border border-zinc-200 px-3 py-1 text-xs font-semibold text-zinc-600">
+          <span className="group-open:hidden">Abrir</span>
+          <span className="hidden group-open:inline">Fechar</span>
+        </span>
+      </summary>
+
+      <div className="mt-5">{children}</div>
+    </details>
   );
 }
 
@@ -1482,3 +1364,4 @@ function Info({ label, value }: { label: string; value: string }) {
     </div>
   );
 }
+

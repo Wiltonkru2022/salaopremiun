@@ -10,6 +10,7 @@ import {
   sanitizePermissoesDb,
 } from "@/lib/auth/permissions";
 import { ComissaoHelpPanel } from "@/components/comissoes/ComissaoHelpPanel";
+import ConfirmActionModal from "@/components/ui/ConfirmActionModal";
 
 type Servico = {
   id: string;
@@ -44,6 +45,13 @@ function formatCurrency(value?: number | null) {
   });
 }
 
+function formatPercent(value?: number | null) {
+  return Number(value || 0).toLocaleString("pt-BR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
 export default function ServicosPage() {
   const supabase = createClient();
   const router = useRouter();
@@ -53,9 +61,13 @@ export default function ServicosPage() {
   const [erro, setErro] = useState("");
   const [msg, setMsg] = useState("");
   const [busca, setBusca] = useState("");
-  const [statusFiltro, setStatusFiltro] = useState<"todos" | "ativo" | "inativo">("todos");
+  const [statusFiltro, setStatusFiltro] = useState<
+    "todos" | "ativo" | "inativo"
+  >("todos");
   const [idSalao, setIdSalao] = useState("");
   const [servicos, setServicos] = useState<Servico[]>([]);
+  const [servicoParaExcluir, setServicoParaExcluir] =
+    useState<Servico | null>(null);
 
   const [permissoes, setPermissoes] = useState<Permissoes | null>(null);
   const [nivel, setNivel] = useState("");
@@ -135,7 +147,8 @@ export default function ServicosPage() {
 
       const { data, error } = await supabase
         .from("servicos")
-        .select(`
+        .select(
+          `
           id,
           nome,
           categoria,
@@ -146,7 +159,8 @@ export default function ServicosPage() {
           comissao_percentual_padrao,
           status,
           ativo
-        `)
+        `
+        )
         .eq("id_salao", salaoIdFinal)
         .order("nome", { ascending: true });
 
@@ -187,7 +201,7 @@ export default function ServicosPage() {
       ServicoProcessarErrorResponse;
 
     if (!response.ok) {
-      throw new Error(result.error || "Erro ao processar servico.");
+      throw new Error(result.error || "Erro ao processar serviço.");
     }
 
     return result as ServicoProcessarResponse;
@@ -238,9 +252,6 @@ export default function ServicosPage() {
       return;
     }
 
-    const confirmar = window.confirm("Deseja realmente excluir este serviço?");
-    if (!confirmar) return;
-
     try {
       setSavingId(id);
       setErro("");
@@ -254,6 +265,7 @@ export default function ServicosPage() {
       });
 
       setServicos((prev) => prev.filter((item) => item.id !== id));
+      setServicoParaExcluir(null);
       setMsg("Serviço excluído com sucesso.");
     } catch (e: unknown) {
       console.error(e);
@@ -320,7 +332,7 @@ export default function ServicosPage() {
               {podeGerenciar ? (
                 <Link
                   href="/servicos/novo"
-                className="inline-flex items-center justify-center rounded-2xl bg-zinc-900 px-5 py-3 text-sm font-bold text-white transition hover:opacity-95"
+                  className="inline-flex items-center justify-center rounded-2xl bg-zinc-900 px-5 py-3 text-sm font-bold text-white transition hover:opacity-95"
                 >
                   + Novo serviço
                 </Link>
@@ -332,21 +344,22 @@ export default function ServicosPage() {
         <ComissaoHelpPanel
           eyebrow="Comissão"
           title="A configuração principal fica dentro de cada serviço"
-          description="Para o usuário final ficar menos perdido, o melhor fluxo é sempre o mesmo: defina o padrão no serviço, personalize só exceções por profissional e deixe as taxas gerais em Configurações."
+          description="Defina o padrão no serviço, personalize só exceções por profissional e deixe as taxas gerais em Configurações."
           steps={[
             {
-              title: "Abra o serviço",
-              description: "É no cadastro do serviço que a comissão principal é definida.",
+              title: "Padrão do serviço",
+              description:
+                "A comissão padrão vale para todos os atendimentos que não tiverem uma exceção ativa.",
             },
             {
-              title: "Use exceções com moderação",
+              title: "Exceção por profissional",
               description:
-                "Se um profissional foge do padrão, ajuste só aquele vínculo dentro do próprio serviço.",
+                "Quando alguém foge da regra, abra o serviço e ajuste somente o vínculo daquele profissional.",
             },
             {
-              title: "Revise as taxas gerais",
+              title: "Taxa da maquininha",
               description:
-                "Repasses e desconto de maquininha ficam em Configurações e impactam o financeiro inteiro do salão.",
+                "As taxas gerais ficam em Configurações. Em cada serviço você decide se elas entram no cálculo.",
             },
           ]}
         >
@@ -359,6 +372,21 @@ export default function ServicosPage() {
             </Link>
           </div>
         </ComissaoHelpPanel>
+
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+          <CommissionGuideCard
+            title="Regra padrão"
+            text="A comissão exibida na lista é a base do serviço. Ela vale quando não houver exceção."
+          />
+          <CommissionGuideCard
+            title="Exceção profissional"
+            text="Abra o serviço e ajuste preço, tempo, base ou comissão apenas para quem precisa."
+          />
+          <CommissionGuideCard
+            title="Taxa da maquininha"
+            text="A taxa geral fica em Configurações. No serviço você decide se ela afeta a comissão."
+          />
+        </div>
 
         {erro ? (
           <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
@@ -395,14 +423,17 @@ export default function ServicosPage() {
             </select>
 
             <div className="flex items-center rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-600">
-              Total: <strong className="ml-2 text-zinc-900">{listaFiltrada.length}</strong>
+              Total:{" "}
+              <strong className="ml-2 text-zinc-900">{listaFiltrada.length}</strong>
             </div>
           </div>
         </div>
 
         <div className="overflow-hidden rounded-3xl border border-zinc-200 bg-white shadow-sm">
           {listaFiltrada.length === 0 ? (
-            <div className="p-6 text-sm text-zinc-600">Nenhum serviço encontrado.</div>
+            <div className="p-6 text-sm text-zinc-600">
+              Nenhum serviço encontrado.
+            </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-zinc-200">
@@ -464,11 +495,18 @@ export default function ServicosPage() {
                         </td>
 
                         <td className="px-4 py-4 text-sm text-zinc-700">
-                          {Number(item.comissao_percentual_padrao ?? 0).toLocaleString("pt-BR", {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2,
-                          })}
-                          %
+                          <div className="font-semibold text-zinc-900">
+                            {formatPercent(item.comissao_percentual_padrao)}%
+                          </div>
+                          <div className="mt-1 text-xs text-zinc-500">
+                            Padrão do serviço
+                          </div>
+                          <Link
+                            href={`/servicos/${item.id}`}
+                            className="mt-2 inline-flex rounded-xl border border-zinc-200 px-3 py-1.5 text-xs font-semibold text-zinc-700 transition hover:bg-zinc-50"
+                          >
+                            Editar exceções
+                          </Link>
                         </td>
 
                         <td className="px-4 py-4">
@@ -505,7 +543,7 @@ export default function ServicosPage() {
 
                                 <button
                                   type="button"
-                                  onClick={() => excluirServico(item.id)}
+                                  onClick={() => setServicoParaExcluir(item)}
                                   disabled={savingId === item.id}
                                   className="rounded-xl border border-red-300 bg-red-50 px-3 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-100 disabled:opacity-60"
                                 >
@@ -528,6 +566,34 @@ export default function ServicosPage() {
           )}
         </div>
       </div>
+
+      <ConfirmActionModal
+        open={Boolean(servicoParaExcluir)}
+        title="Excluir serviço"
+        description={`Confirme a exclusão de ${
+          servicoParaExcluir?.nome || "este serviço"
+        }.`}
+        confirmLabel="Excluir serviço"
+        tone="danger"
+        loading={Boolean(servicoParaExcluir && savingId === servicoParaExcluir.id)}
+        onClose={() => {
+          if (!savingId) setServicoParaExcluir(null);
+        }}
+        onConfirm={() => {
+          if (servicoParaExcluir) void excluirServico(servicoParaExcluir.id);
+        }}
+      />
+    </div>
+  );
+}
+
+function CommissionGuideCard({ title, text }: { title: string; text: string }) {
+  return (
+    <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
+      <div className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
+        {title}
+      </div>
+      <p className="mt-2 text-sm leading-6 text-zinc-700">{text}</p>
     </div>
   );
 }

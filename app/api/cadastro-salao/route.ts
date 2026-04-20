@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { registrarLogSistema } from "@/lib/system-logs";
 
 function onlyNumbers(value: string) {
   return String(value || "").replace(/\D/g, "");
@@ -34,7 +35,20 @@ type CadastroSalaoBody = {
   estado?: string;
   numero?: string;
   complemento?: string;
+  plano?: string;
+  origem?: string;
 };
+
+type CadastroSalaoRpcResult = {
+  id_salao?: string | null;
+};
+
+function normalizePlano(value: unknown) {
+  const plano = String(value || "").trim().toLowerCase();
+  return plano === "basico" || plano === "pro" || plano === "premium"
+    ? plano
+    : null;
+}
 
 export async function POST(req: Request) {
   try {
@@ -106,6 +120,9 @@ export async function POST(req: Request) {
     const estadoNormalizado = estado?.trim().toUpperCase() || null;
     const numeroNormalizado = numero?.trim() || null;
     const complementoNormalizado = complemento?.trim() || null;
+    const planoNormalizado = normalizePlano(body.plano);
+    const origemNormalizada =
+      String(body.origem || "").trim().slice(0, 80) || "cadastro_salao";
 
     const { data: authData, error: authError } =
       await supabaseAdmin.auth.admin.createUser({
@@ -126,96 +143,56 @@ export async function POST(req: Request) {
 
     const user = authData.user;
 
-    const { data: salaoCriado, error: salaoError } = await supabaseAdmin
-      .from("saloes")
-      .insert({
-        nome: nomeSalaoNormalizado,
-        responsavel: responsavelNormalizado,
-        whatsapp: whatsappNormalizado,
-        telefone: whatsappNormalizado,
-        email: emailNormalizado,
-        cpf_cnpj: cpfCnpjLimpo,
-        cep: cepLimpo,
-        endereco: enderecoNormalizado,
-        numero: numeroNormalizado,
-        complemento: complementoNormalizado,
-        bairro: bairroNormalizado,
-        cidade: cidadeNormalizada,
-        estado: estadoNormalizado,
-
-        // cadastro do salão não controla financeiro
-        status: "ativo",
-
-        // não inicia trial no cadastro
-        trial_ativo: false,
-        trial_inicio_em: null,
-        trial_fim_em: null,
-
-        // plano fica vazio até o usuário iniciar trial ou assinar
-        plano: null,
-        limite_profissionais: 0,
-        limite_usuarios: 0,
-      })
-      .select("id")
-      .single();
-
-    if (salaoError || !salaoCriado?.id) {
-      await supabaseAdmin.auth.admin.deleteUser(user.id);
-
-      return NextResponse.json(
-        { error: salaoError?.message || "Erro ao criar salão." },
-        { status: 400 }
-      );
-    }
-
-    const idSalao = salaoCriado.id;
-
-    const { error: usuarioError } = await supabaseAdmin.from("usuarios").insert({
-      auth_user_id: user.id,
-      email: emailNormalizado,
-      nome: responsavelNormalizado,
-      id_salao: idSalao,
-      nivel: "admin",
-      status: "ativo",
-    });
-
-    if (usuarioError) {
-      await supabaseAdmin.from("saloes").delete().eq("id", idSalao);
-      await supabaseAdmin.auth.admin.deleteUser(user.id);
-
-      return NextResponse.json(
-        { error: usuarioError.message || "Erro ao vincular usuário." },
-        { status: 400 }
-      );
-    }
-
-    const { error: configError } = await supabaseAdmin
-      .from("configuracoes_salao")
-      .insert({
-        id_salao: idSalao,
-        hora_abertura: "08:00",
-        hora_fechamento: "18:00",
-        intervalo_minutos: 30,
-        dias_funcionamento: [
-          "segunda",
-          "terca",
-          "quarta",
-          "quinta",
-          "sexta",
-          "sabado",
-        ],
+    const { data: cadastroData, error: cadastroError } =
+      await supabaseAdmin.rpc("fn_cadastrar_salao_transacional", {
+        p_auth_user_id: user.id,
+        p_email: emailNormalizado,
+        p_nome_salao: nomeSalaoNormalizado,
+        p_responsavel: responsavelNormalizado,
+        p_whatsapp: whatsappNormalizado,
+        p_cpf_cnpj: cpfCnpjLimpo,
+        p_cep: cepLimpo,
+        p_endereco: enderecoNormalizado,
+        p_numero: numeroNormalizado,
+        p_complemento: complementoNormalizado,
+        p_bairro: bairroNormalizado,
+        p_cidade: cidadeNormalizada,
+        p_estado: estadoNormalizado,
+        p_plano_interesse: planoNormalizado,
+        p_origem: origemNormalizada,
       });
 
-    if (configError) {
-      await supabaseAdmin.from("usuarios").delete().eq("auth_user_id", user.id);
-      await supabaseAdmin.from("saloes").delete().eq("id", idSalao);
+    const cadastro = (Array.isArray(cadastroData)
+      ? cadastroData[0]
+      : cadastroData) as CadastroSalaoRpcResult | string | null;
+    const idSalao =
+      typeof cadastro === "string" ? cadastro : cadastro?.id_salao || null;
+
+    if (cadastroError || !idSalao) {
       await supabaseAdmin.auth.admin.deleteUser(user.id);
 
       return NextResponse.json(
-        { error: configError.message || "Erro ao criar configurações." },
+        {
+          error:
+            cadastroError?.message ||
+            "Erro ao criar salão em transação. Verifique a migration fn_cadastrar_salao_transacional.",
+        },
         { status: 400 }
       );
     }
+
+    await registrarLogSistema({
+      gravidade: "info",
+      modulo: "cadastro_salao",
+      idSalao,
+      mensagem: "Salão cadastrado pendente de ativação comercial.",
+      detalhes: {
+        origem: origemNormalizada,
+        plano_interesse: planoNormalizado,
+        status_inicial: "pendente",
+        email: emailNormalizado,
+      },
+    });
 
     return NextResponse.json({
       ok: true,

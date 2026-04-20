@@ -1,0 +1,219 @@
+"use client";
+
+import { useCallback, useRef } from "react";
+import type { ComandaDetalhe } from "@/components/caixa/types";
+import type { CaixaSessao } from "@/lib/caixa/sessaoCaixa";
+import { monitorClientOperation } from "@/lib/monitoring/client";
+
+export type ProcessarComandaAcao =
+  | "salvar_base"
+  | "adicionar_item"
+  | "editar_item"
+  | "remover_item"
+  | "enviar_pagamento"
+  | "criar_por_agendamento";
+
+type ProcessarComandaResponse = {
+  ok: boolean;
+  idComanda?: string;
+  idItem?: string;
+  status?: string;
+  jaExistia?: boolean;
+};
+
+type ProcessarComandaErrorResponse = {
+  error?: string;
+};
+
+export type ProcessarCaixaAcao =
+  | "abrir_caixa"
+  | "fechar_caixa"
+  | "lancar_movimentacao"
+  | "adicionar_pagamento"
+  | "remover_pagamento"
+  | "finalizar_comanda"
+  | "cancelar_comanda";
+
+type ProcessarCaixaResponse = {
+  ok: boolean;
+  warning?: string | null;
+  taxaPercentual?: number;
+  taxaValor?: number;
+  valorFinalCobrado?: number;
+  repassaTaxaCliente?: boolean;
+  idempotentReplay?: boolean;
+};
+
+type ProcessarCaixaErrorResponse = {
+  error?: string;
+};
+
+type UseCaixaApiParams = {
+  idSalao: string;
+  comandaSelecionada: ComandaDetalhe | null;
+  sessaoCaixa: CaixaSessao | null;
+};
+
+export function getErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback;
+}
+
+export function useCaixaApi({
+  idSalao,
+  comandaSelecionada,
+  sessaoCaixa,
+}: UseCaixaApiParams) {
+  const pendingOperationKeysRef = useRef<Record<string, string>>({});
+
+  const gerarChaveOperacao = useCallback((scope: string) => {
+    const existente = pendingOperationKeysRef.current[scope];
+    if (existente) return existente;
+
+    const novaChave =
+      typeof crypto !== "undefined" && "randomUUID" in crypto
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+    pendingOperationKeysRef.current[scope] = novaChave;
+    return novaChave;
+  }, []);
+
+  const limparChaveOperacao = useCallback((scope: string) => {
+    delete pendingOperationKeysRef.current[scope];
+  }, []);
+
+  const processarComanda = useCallback(
+    async (params: {
+      acao: ProcessarComandaAcao;
+      item?: Record<string, unknown>;
+      desconto?: number;
+      acrescimo?: number;
+      status?: string;
+    }) => {
+      const response = await monitorClientOperation(
+        {
+          module: "caixa",
+          action: params.acao,
+          route: "/api/comandas/processar",
+          screen: "caixa",
+          entity: "comanda",
+          entityId: comandaSelecionada?.id || null,
+          details: {
+            idSalao,
+            numeroComanda: comandaSelecionada?.numero || null,
+          },
+          successMessage: `Comanda processada com sucesso: ${params.acao}.`,
+          errorMessage: `Falha ao processar comanda: ${params.acao}.`,
+        },
+        () =>
+          fetch("/api/comandas/processar", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              idSalao,
+              acao: params.acao,
+              comanda: {
+                idComanda: comandaSelecionada?.id || null,
+                numero: comandaSelecionada?.numero || null,
+                idCliente: comandaSelecionada?.id_cliente || null,
+                status: params.status || comandaSelecionada?.status || "aberta",
+                observacoes: comandaSelecionada?.observacoes || null,
+                desconto:
+                  params.desconto ?? Number(comandaSelecionada?.desconto || 0),
+                acrescimo:
+                  params.acrescimo ??
+                  Number(comandaSelecionada?.acrescimo || 0),
+              },
+              item: params.item,
+            }),
+          })
+      );
+
+      const result = (await response.json().catch(() => ({}))) as Partial<
+        ProcessarComandaResponse
+      > &
+        ProcessarComandaErrorResponse;
+
+      if (!response.ok) {
+        throw new Error(result.error || "Erro ao processar comanda.");
+      }
+
+      return result as ProcessarComandaResponse;
+    },
+    [comandaSelecionada, idSalao]
+  );
+
+  const processarCaixa = useCallback(
+    async (params: {
+      acao: ProcessarCaixaAcao;
+      idempotencyKey?: string | null;
+      sessao?: Record<string, unknown>;
+      movimento?: Record<string, unknown>;
+      pagamento?: Record<string, unknown>;
+      motivo?: string | null;
+    }) => {
+      const response = await monitorClientOperation(
+        {
+          module: "caixa",
+          action: params.acao,
+          route: "/api/caixa/processar",
+          screen: "caixa",
+          entity:
+            params.acao === "abrir_caixa" || params.acao === "fechar_caixa"
+              ? "sessao_caixa"
+              : params.acao.includes("comanda")
+                ? "comanda"
+                : "caixa",
+          entityId: comandaSelecionada?.id || sessaoCaixa?.id || null,
+          details: {
+            idSalao,
+            idempotencyKey: params.idempotencyKey || null,
+            sessaoId: sessaoCaixa?.id || null,
+          },
+          successMessage: `Acao de caixa executada com sucesso: ${params.acao}.`,
+          errorMessage: `Falha na acao de caixa: ${params.acao}.`,
+        },
+        () =>
+          fetch("/api/caixa/processar", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              idSalao,
+              acao: params.acao,
+              idempotencyKey: params.idempotencyKey || null,
+              comanda: {
+                idComanda: comandaSelecionada?.id || null,
+              },
+              sessao: params.sessao,
+              movimento: params.movimento,
+              pagamento: params.pagamento,
+              motivo: params.motivo,
+            }),
+          })
+      );
+
+      const result = (await response.json().catch(() => ({}))) as Partial<
+        ProcessarCaixaResponse
+      > &
+        ProcessarCaixaErrorResponse;
+
+      if (!response.ok) {
+        throw new Error(result.error || "Erro ao processar o caixa.");
+      }
+
+      return result as ProcessarCaixaResponse;
+    },
+    [comandaSelecionada?.id, idSalao, sessaoCaixa?.id]
+  );
+
+  return {
+    gerarChaveOperacao,
+    limparChaveOperacao,
+    processarComanda,
+    processarCaixa,
+  };
+}

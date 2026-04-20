@@ -392,6 +392,41 @@ async function normalizarConsumos(params: {
     );
 }
 
+async function salvarServicoCatalogoTransacional(params: {
+  supabaseAdmin: ReturnType<typeof getSupabaseAdmin>;
+  idSalao: string;
+  idServico: string | null;
+  servicoPayload: ReturnType<typeof buildServicoPayload>;
+  vinculos: VinculoPayload[];
+  consumos: ConsumoPayload[];
+}) {
+  const { data, error } = await params.supabaseAdmin.rpc(
+    "fn_salvar_servico_catalogo_transacional",
+    {
+      p_id_salao: params.idSalao,
+      p_id_servico: params.idServico,
+      p_servico: params.servicoPayload,
+      p_vinculos: params.vinculos || [],
+      p_consumos: params.consumos || [],
+    }
+  );
+
+  if (error) throw error;
+
+  const result = (Array.isArray(data) ? data[0] : data) as
+    | { id_servico?: string | null }
+    | string
+    | null;
+  const idServico =
+    typeof result === "string" ? result : result?.id_servico || null;
+
+  if (!idServico) {
+    throw new Error("Nao foi possivel obter o servico salvo.");
+  }
+
+  return idServico;
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = (await req.json()) as BodyPayload;
@@ -428,127 +463,14 @@ export async function POST(req: NextRequest) {
         categoria,
       });
 
-      let idServico = sanitizeUuid(servico.id);
-
-      if (idServico) {
-        const { data, error } = await supabaseAdmin
-          .from("servicos")
-          .update(payload)
-          .eq("id", idServico)
-          .eq("id_salao", idSalao)
-          .select("id")
-          .maybeSingle();
-
-        if (error) {
-          console.error("Erro ao atualizar servico:", error);
-          return NextResponse.json(
-            { error: error.message || "Erro ao atualizar servico." },
-            { status: resolveHttpStatus(error) }
-          );
-        }
-
-        if (!data?.id) {
-          return NextResponse.json(
-            { error: "Servico nao encontrado para atualizacao." },
-            { status: 404 }
-          );
-        }
-
-        idServico = data.id;
-      } else {
-        const { data, error } = await supabaseAdmin
-          .from("servicos")
-          .insert(payload)
-          .select("id")
-          .maybeSingle();
-
-        if (error) {
-          console.error("Erro ao criar servico:", error);
-          return NextResponse.json(
-            { error: error.message || "Erro ao criar servico." },
-            { status: resolveHttpStatus(error) }
-          );
-        }
-
-        idServico = data?.id || null;
-      }
-
-      if (!idServico) {
-        return NextResponse.json(
-          { error: "Nao foi possivel obter o servico salvo." },
-          { status: 500 }
-        );
-      }
-
-      const vinculos = await normalizarVinculos({
+      const idServico = await salvarServicoCatalogoTransacional({
         supabaseAdmin,
         idSalao,
-        idServico,
+        idServico: sanitizeUuid(servico.id),
+        servicoPayload: payload,
         vinculos: body.vinculos || [],
-      });
-
-      const consumos = await normalizarConsumos({
-        supabaseAdmin,
-        idSalao,
-        idServico,
         consumos: body.consumos || [],
       });
-
-      const { error: deleteVinculosError } = await supabaseAdmin
-        .from("profissional_servicos")
-        .delete()
-        .eq("id_salao", idSalao)
-        .eq("id_servico", idServico);
-
-      if (deleteVinculosError) {
-        console.error("Erro ao limpar vinculos do servico:", deleteVinculosError);
-        return NextResponse.json(
-          { error: deleteVinculosError.message || "Erro ao salvar vinculos." },
-          { status: resolveHttpStatus(deleteVinculosError) }
-        );
-      }
-
-      if (vinculos.length > 0) {
-        const { error: vinculosError } = await supabaseAdmin
-          .from("profissional_servicos")
-          .insert(vinculos);
-
-        if (vinculosError) {
-          console.error("Erro ao salvar vinculos do servico:", vinculosError);
-          return NextResponse.json(
-            { error: vinculosError.message || "Erro ao salvar vinculos." },
-            { status: resolveHttpStatus(vinculosError) }
-          );
-        }
-      }
-
-      const { error: deleteConsumosError } = await supabaseAdmin
-        .from("produto_servico_consumo")
-        .delete()
-        .eq("id_salao", idSalao)
-        .eq("id_servico", idServico);
-
-      if (deleteConsumosError) {
-        console.error("Erro ao limpar consumos do servico:", deleteConsumosError);
-        return NextResponse.json(
-          { error: deleteConsumosError.message || "Erro ao salvar consumos." },
-          { status: resolveHttpStatus(deleteConsumosError) }
-        );
-      }
-
-      if (consumos.length > 0) {
-        const { error: consumosError } = await supabaseAdmin
-          .from("produto_servico_consumo")
-          .insert(consumos);
-
-        if (consumosError) {
-          console.error("Erro ao salvar consumos do servico:", consumosError);
-          return NextResponse.json(
-            { error: consumosError.message || "Erro ao salvar consumos." },
-            { status: resolveHttpStatus(consumosError) }
-          );
-        }
-      }
 
       return NextResponse.json({
         ok: true,

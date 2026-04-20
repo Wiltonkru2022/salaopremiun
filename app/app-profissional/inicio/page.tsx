@@ -1,9 +1,12 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import {
+  ArrowRight,
   CalendarPlus2,
+  Clock3,
   MessageCircleQuestion,
   Receipt,
+  Sparkles,
   UserPlus2,
 } from "lucide-react";
 import ProfissionalShell from "@/components/profissional/layout/ProfissionalShell";
@@ -51,13 +54,13 @@ export default async function InicioProfissionalPage() {
       session.idSalao,
       session.idProfissional
     ),
-    buscarResumoInicioProfissional(
-      session.idSalao,
-      session.idProfissional
-    ),
+    buscarResumoInicioProfissional(session.idSalao, session.idProfissional),
   ]);
 
   const proximosAgendamentos = agendamentos.slice(0, 4);
+  const primeiroHorario = proximosAgendamentos[0]?.hora_inicio
+    ? String(proximosAgendamentos[0].hora_inicio).slice(0, 5)
+    : "Livre";
 
   return (
     <ProfissionalShell
@@ -65,28 +68,61 @@ export default async function InicioProfissionalPage() {
       subtitle={`${saudacao()}, ${session.nome}`}
     >
       <div className="space-y-5">
-        <section className="rounded-[1.75rem] border border-zinc-200 bg-white p-4 shadow-sm">
-          <div className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-400">
-            Profissional vinculado
+        <section className="overflow-hidden rounded-[1.75rem] bg-zinc-950 p-4 text-white shadow-sm">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-medium text-emerald-100">
+                <Sparkles size={14} />
+                Acesso ativo
+              </div>
+
+              <h2 className="mt-4 text-[1.55rem] font-semibold leading-tight">
+                {session.nome}
+              </h2>
+
+              <p className="mt-2 text-sm leading-6 text-zinc-300">
+                Seu dia no salão, pronto para atendimento.
+              </p>
+            </div>
+
+            <Link
+              href="/app-profissional/perfil"
+              className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-zinc-950"
+              aria-label="Abrir perfil"
+            >
+              <ArrowRight size={18} />
+            </Link>
           </div>
 
-          <div className="mt-2 text-[1.35rem] font-semibold leading-tight text-zinc-950">
-            {session.nome}
-          </div>
+          <div className="mt-5 grid grid-cols-3 gap-2">
+            <div className="rounded-2xl bg-white/10 p-3">
+              <div className="text-xs text-zinc-400">Próximo</div>
+              <div className="mt-1 text-lg font-semibold">{primeiroHorario}</div>
+            </div>
 
-          <div className="mt-3 flex items-center gap-2">
-            <span className="inline-flex rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700">
-              Acesso ativo
-            </span>
-            <span className="text-xs text-zinc-500">
-              App profissional conectado ao seu salão
-            </span>
+            <div className="rounded-2xl bg-white/10 p-3">
+              <div className="text-xs text-zinc-400">Hoje</div>
+              <div className="mt-1 text-lg font-semibold">
+                {resumo.atendimentosHoje}
+              </div>
+            </div>
+
+            <div className="rounded-2xl bg-white/10 p-3">
+              <div className="text-xs text-zinc-400">Mês</div>
+              <div className="mt-1 text-lg font-semibold">
+                {resumo.atendimentosMes}
+              </div>
+            </div>
           </div>
         </section>
 
         <section>
-          <div className="mb-3 text-sm font-semibold uppercase tracking-[0.18em] text-zinc-500">
-            Ações rápidas
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-zinc-700">
+              Ações rápidas
+            </h2>
+
+            <span className="text-xs text-zinc-500">Toque e resolva</span>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -126,7 +162,7 @@ export default async function InicioProfissionalPage() {
 
         <section>
           <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-zinc-500">
+            <h2 className="text-sm font-semibold text-zinc-700">
               Agenda de hoje
             </h2>
 
@@ -150,15 +186,28 @@ export default async function InicioProfissionalPage() {
                 />
               ))
             ) : (
-              <div className="rounded-[1.5rem] border border-zinc-200 bg-white p-4 text-sm text-zinc-500 shadow-sm">
-                Nenhum agendamento encontrado para hoje.
+              <div className="rounded-[1.5rem] border border-zinc-200 bg-white p-4 shadow-sm">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700">
+                    <Clock3 size={18} />
+                  </div>
+
+                  <div>
+                    <div className="text-sm font-semibold text-zinc-900">
+                      Agenda livre por enquanto
+                    </div>
+                    <p className="mt-1 text-sm leading-6 text-zinc-500">
+                      Quando chegar um atendimento, ele aparece aqui.
+                    </p>
+                  </div>
+                </div>
               </div>
             )}
           </div>
         </section>
 
         <section>
-          <div className="mb-3 text-sm font-semibold uppercase tracking-[0.18em] text-zinc-500">
+          <div className="mb-3 text-sm font-semibold text-zinc-700">
             Resumo do dia
           </div>
 
@@ -178,8 +227,8 @@ export default async function InicioProfissionalPage() {
         </section>
 
         <section className="rounded-[1.75rem] border border-zinc-200 bg-white p-4 shadow-sm">
-          <div className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-400">
-            Dica rápida
+          <div className="text-sm font-semibold text-zinc-900">
+            Precisa de ajuda?
           </div>
 
           <p className="mt-2 text-sm leading-6 text-zinc-600">
@@ -189,9 +238,10 @@ export default async function InicioProfissionalPage() {
 
           <Link
             href="/app-profissional/suporte"
-            className="mt-4 inline-flex h-11 w-full items-center justify-center rounded-2xl border border-zinc-200 bg-zinc-50 text-sm font-semibold text-zinc-800"
+            className="mt-4 inline-flex h-11 w-full items-center justify-center gap-2 rounded-2xl border border-zinc-200 bg-zinc-50 text-sm font-semibold text-zinc-800"
           >
             Abrir suporte
+            <ArrowRight size={16} />
           </Link>
         </section>
       </div>

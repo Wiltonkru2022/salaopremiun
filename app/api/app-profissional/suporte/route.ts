@@ -10,8 +10,15 @@ import {
 
 function parseUUID(value: unknown) {
   const parsed = String(value || "").trim();
+  const uuidRegex =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-  if (!parsed || parsed === "null" || parsed === "undefined") {
+  if (
+    !parsed ||
+    parsed === "null" ||
+    parsed === "undefined" ||
+    !uuidRegex.test(parsed)
+  ) {
     return null;
   }
 
@@ -100,6 +107,14 @@ type OpenAIMessage = {
   content: string;
 };
 
+type SuporteRequestBody = {
+  message?: string;
+  origemPagina?: string | null;
+  idComanda?: string | null;
+  idAgendamento?: string | null;
+  idCliente?: string | null;
+};
+
 function somarTotais(rows: TotalRow[] | null | undefined) {
   return Number(
     (rows ?? [])
@@ -119,11 +134,47 @@ function contarPorStatus(rows: StatusRow[] | null | undefined) {
   return mapa;
 }
 
+function compactText(value: unknown, maxLength = 1200) {
+  return String(value || "").trim().slice(0, maxLength);
+}
+
+function avaliarIntentPolicy(message: string) {
+  const pedido = message.toLowerCase();
+  const blockedIntents = [
+    {
+      intent: "criar_agendamento",
+      patterns: [
+        "cria agendamento",
+        "criar agendamento",
+        "agenda para mim",
+        "agenda esse cliente",
+        "faz o agendamento",
+      ],
+    },
+    {
+      intent: "cadastrar_cliente",
+      patterns: ["cadastra cliente", "cadastrar cliente", "cria cliente"],
+    },
+    {
+      intent: "alterar_senha",
+      patterns: ["troca minha senha", "altera senha", "muda senha"],
+    },
+    {
+      intent: "alterar_comanda",
+      patterns: ["confirma o agendamento", "alterar comanda", "mudar comanda"],
+    },
+  ];
+
+  return blockedIntents.find((entry) =>
+    entry.patterns.some((pattern) => pedido.includes(pattern))
+  );
+}
+
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
+    const body = (await req.json()) as SuporteRequestBody;
 
-    const message = String(body?.message || "").trim();
+    const message = compactText(body?.message, 900);
     const origemPagina = String(body?.origemPagina || "").trim() || null;
 
     const idComanda = parseUUID(body?.idComanda);
@@ -303,24 +354,9 @@ export async function POST(req: Request) {
       clienteAtual = data ?? null;
     }
 
-    const pedido = message.toLowerCase();
+    const intentBloqueada = avaliarIntentPolicy(message);
 
-    const bloqueios = [
-      "cria agendamento",
-      "criar agendamento",
-      "agenda para mim",
-      "agenda esse cliente",
-      "cadastra cliente",
-      "cadastrar cliente",
-      "cria cliente",
-      "troca minha senha",
-      "altera senha",
-      "muda senha",
-      "faz o agendamento",
-      "confirma o agendamento",
-    ];
-
-    if (bloqueios.some((termo) => pedido.includes(termo))) {
+    if (intentBloqueada) {
       const respostaBloqueio =
         "Eu posso te orientar, mas não executo ações no sistema. No app profissional eu apenas ajudo com informações, regras e passo a passo de uso.";
 
@@ -335,15 +371,37 @@ export async function POST(req: Request) {
       return NextResponse.json({
         answer: respostaBloqueio,
         conversaId: conversa.id,
+        blockedIntent: intentBloqueada.intent,
       });
     }
 
-    const historicoLimitado = historico.slice(-6);
+    const historicoLimitado = historico.slice(-4);
 
     const historicoOpenAI: OpenAIMessage[] = (historicoLimitado as HistoricoMensagem[]).map((item) => ({
       role: item.papel === "assistant" ? "assistant" : "user",
-      content: item.conteudo || "",
+      content: compactText(item.conteudo, 700),
     }));
+
+    const contextoCompacto = {
+      session: {
+        idSalao: session.idSalao,
+        idProfissional: session.idProfissional,
+      },
+      profissional: profissionalResult.data
+        ? {
+            nome: profissionalResult.data.nome_exibicao || profissionalResult.data.nome,
+            categoria: profissionalResult.data.categoria,
+            cargo: profissionalResult.data.cargo,
+            ativo: profissionalResult.data.ativo,
+          }
+        : null,
+      agendaHoje: (agendaHojeResult.data || []).slice(0, 6),
+      origemPagina,
+      comandaAtual,
+      agendamentoAtual,
+      clienteAtual,
+      resumoFinanceiro,
+    };
 
     const systemPrompt = `
 Você é o assistente oficial do app profissional do SalaoPremium.
@@ -377,14 +435,7 @@ Regras obrigatórias:
 Contexto real atual:
 ${JSON.stringify(
   {
-    session,
-    profissional: profissionalResult.data ?? null,
-    agendaHoje: agendaHojeResult.data ?? [],
-    origemPagina,
-    comandaAtual,
-    agendamentoAtual,
-    clienteAtual,
-    resumoFinanceiro,
+    ...contextoCompacto,
   },
   null,
   2

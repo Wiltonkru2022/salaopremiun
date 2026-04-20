@@ -4,6 +4,7 @@ import {
   type PermissionKey,
   type UserNivel,
 } from "@/lib/permissions";
+import { registrarLogSistema } from "@/lib/system-logs";
 
 export type Permissoes = Record<string, boolean>;
 
@@ -45,7 +46,12 @@ export function buildPermissoesByNivel(
 }
 
 export function sanitizePermissoesDb(
-  permissoesDb: Record<string, unknown> | null | undefined
+  permissoesDb: Record<string, unknown> | null | undefined,
+  contexto: {
+    idSalao?: string | null;
+    idUsuario?: string | null;
+    origem?: string;
+  } = {}
 ): Permissoes {
   if (!permissoesDb) return {};
 
@@ -64,6 +70,17 @@ export function sanitizePermissoesDb(
 
     if (!permissoesValidas.has(key)) {
       console.warn(`Permissao ignorada por chave desconhecida: ${key}`);
+      void registrarLogSistema({
+        gravidade: "warning",
+        modulo: "permissoes",
+        idSalao: contexto.idSalao || null,
+        idUsuario: contexto.idUsuario || null,
+        mensagem: "Permissão desconhecida encontrada na configuração do usuário.",
+        detalhes: {
+          chave: key,
+          origem: contexto.origem || "sanitizePermissoesDb",
+        },
+      });
       return;
     }
 

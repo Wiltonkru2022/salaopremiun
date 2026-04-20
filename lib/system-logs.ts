@@ -25,6 +25,38 @@ function sanitizeDetails(value?: Record<string, unknown>) {
   return Object.fromEntries(entries);
 }
 
+async function registrarFalhaObservabilidade(params: {
+  erro: unknown;
+  modulo: string;
+  mensagem: string;
+  detalhes: Record<string, unknown>;
+}) {
+  const errorMessage =
+    params.erro instanceof Error ? params.erro.message : String(params.erro);
+
+  try {
+    const supabase = getSupabaseAdmin();
+    await supabase.from("eventos_sistema").insert({
+      modulo: "system_logs",
+      tipo_evento: "log_persist_failed",
+      severidade: "error",
+      mensagem: "Falha ao persistir log do sistema.",
+      detalhes_json: {
+        erro: errorMessage,
+        modulo_original: params.modulo,
+        mensagem_original: params.mensagem,
+        detalhes_original: params.detalhes,
+      },
+      origem: "server",
+      sucesso: false,
+      eh_erro_usuario: false,
+      created_at: new Date().toISOString(),
+    });
+  } catch (fallbackError) {
+    console.error("Falha ao acionar fallback de observabilidade:", fallbackError);
+  }
+}
+
 export async function registrarLogSistema(params: RegistrarLogParams) {
   try {
     const supabase = getSupabaseAdmin();
@@ -60,5 +92,11 @@ export async function registrarLogSistema(params: RegistrarLogParams) {
     });
   } catch (error) {
     console.error("Falha ao registrar log do sistema:", error);
+    await registrarFalhaObservabilidade({
+      erro: error,
+      modulo: normalizeText(params.modulo) || "sistema",
+      mensagem: normalizeText(params.mensagem) || "Evento do sistema",
+      detalhes: sanitizeDetails(params.detalhes),
+    });
   }
 }

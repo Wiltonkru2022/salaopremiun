@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import {
   type Dispatch,
@@ -20,68 +20,25 @@ import {
   captureClientEvent,
   monitorClientOperation,
 } from "@/lib/monitoring/client";
-import { getRenovacaoAutomaticaInfo } from "@/lib/assinaturas/renovacao-automatica";
+import { useAssinaturaHistorico } from "./useAssinaturaHistorico";
+import { useRenovacaoAutomatica } from "./useRenovacaoAutomatica";
 import {
   PLANOS_INFO,
   type AssinaturaRow,
   type BillingType,
   type CardForm,
   type CheckoutResponse,
-  type HistoricoCobrancaRow,
   type Permissoes,
   type SalaoRow,
   type UsuarioSistemaRow,
   type UsuarioSupabase,
 } from "./types";
-
-type CobrancaAtualRow = {
-  id: string;
-  valor: number | null;
-  status: string | null;
-  forma_pagamento: BillingType | null;
-  data_expiracao: string | null;
-  invoice_url: string | null;
-  bank_slip_url: string | null;
-  asaas_payment_id: string | null;
-  txid: string | null;
-};
-
-const PLANOS_COBRAVEIS = ["basico", "pro", "premium"] as const;
-type PlanoCobravel = (typeof PLANOS_COBRAVEIS)[number];
-
-function normalizarCodigoPlano(value?: string | null) {
-  const normalized = String(value || "")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[-\s]+/g, "_")
-    .trim()
-    .toLowerCase();
-
-  return normalized.startsWith("plano_")
-    ? normalized.replace(/^plano_/, "")
-    : normalized;
-}
-
-function isPlanoCobravel(value?: string | null): value is PlanoCobravel {
-  return PLANOS_COBRAVEIS.includes(normalizarCodigoPlano(value) as PlanoCobravel);
-}
-
-function normalizarPlanoCobravel(
-  value?: string | null,
-  fallback: PlanoCobravel = "basico"
-): PlanoCobravel {
-  const normalized = normalizarCodigoPlano(value);
-
-  if (
-    !normalized ||
-    ["teste_gratis", "testegratis", "trial", "gratis"].includes(normalized)
-  ) {
-    return fallback;
-  }
-
-  return isPlanoCobravel(normalized) ? normalized : fallback;
-}
-
+import {
+  montarCheckoutDaCobranca,
+  normalizarPlanoCobravel,
+  type CobrancaAtualRow,
+  type PlanoCobravel,
+} from "./plan-utils";
 
 export function useAssinaturaPage() {
   const supabase = useMemo(() => createClient(), []);
@@ -97,10 +54,6 @@ export function useAssinaturaPage() {
 
   const [planoSelecionado, setPlanoSelecionado] = useState<string>("pro");
   const [billingType, setBillingType] = useState<BillingType>("PIX");
-
-  const [renovacaoAutomatica, setRenovacaoAutomatica] = useState(false);
-  const [salvandoRenovacaoAutomatica, setSalvandoRenovacaoAutomatica] =
-    useState(false);
 
   const [tipoMudancaPlano, setTipoMudancaPlano] = useState<
     "upgrade" | "downgrade" | null
@@ -125,17 +78,33 @@ export function useAssinaturaPage() {
     ccv: "",
   });
 
-  const [historicoModalOpen, setHistoricoModalOpen] = useState(false);
-  const [carregandoHistorico, setCarregandoHistorico] = useState(false);
-  const [historicoCobrancas, setHistoricoCobrancas] = useState<
-    HistoricoCobrancaRow[]
-  >([]);
   const cobrancaRequestKeyRef = useRef<string | null>(null);
   const planoSelecionadoRef = useRef<PlanoCobravel>("pro");
   const planoEscolhidoManualmenteRef = useRef(false);
 
   const podeGerenciar = nivel === "admin";
   const planoUrl = searchParams.get("plano");
+  const {
+    renovacaoAutomatica,
+    setRenovacaoAutomatica,
+    renovacaoInfo,
+    salvandoRenovacaoAutomatica,
+    atualizarRenovacaoAutomatica,
+  } = useRenovacaoAutomatica({
+    assinatura,
+    salao,
+    setErro,
+  });
+  const {
+    historicoModalOpen,
+    abrirHistoricoModal,
+    fecharHistoricoModal,
+    carregandoHistorico,
+    historicoCobrancas,
+  } = useAssinaturaHistorico({
+    salao,
+    setErro,
+  });
 
   const selecionarPlano = useCallback<Dispatch<SetStateAction<string>>>(
     (value) => {
@@ -236,37 +205,6 @@ export function useAssinaturaPage() {
     };
   }, [router, supabase]);
 
-  const montarCheckoutDaCobranca = useCallback(
-    (cobranca: CobrancaAtualRow): CheckoutResponse => {
-      const billing =
-        cobranca.forma_pagamento === "PIX" ||
-        cobranca.forma_pagamento === "BOLETO" ||
-        cobranca.forma_pagamento === "CREDIT_CARD"
-          ? cobranca.forma_pagamento
-          : "PIX";
-
-      return {
-        ok: true,
-        customerId: assinatura?.asaas_customer_id || "",
-        paymentId:
-          cobranca.asaas_payment_id ||
-          cobranca.txid ||
-          assinatura?.asaas_payment_id ||
-          "",
-        valor: Number(cobranca.valor || 0),
-        plano: normalizarPlanoCobravel(assinatura?.plano),
-        billingType: billing,
-        status: cobranca.status || "PENDING",
-        qrCodeBase64: null,
-        pixCopiaCola: null,
-        vencimento: cobranca.data_expiracao || "",
-        invoiceUrl: cobranca.invoice_url || null,
-        bankSlipUrl: cobranca.bank_slip_url || null,
-      };
-    },
-    [assinatura?.asaas_customer_id, assinatura?.asaas_payment_id, assinatura?.plano]
-  );
-
   const carregarCheckoutAtual = useCallback(
     async (idSalao: string) => {
       const { data, error } = await supabase
@@ -297,9 +235,9 @@ export function useAssinaturaPage() {
         return;
       }
 
-      setCheckout(montarCheckoutDaCobranca(data));
+      setCheckout(montarCheckoutDaCobranca({ cobranca: data, assinatura }));
     },
-    [montarCheckoutDaCobranca, supabase]
+    [assinatura, supabase]
   );
 
   const carregarDados = useCallback(async () => {
@@ -488,69 +426,10 @@ export function useAssinaturaPage() {
 
     const interval = setInterval(() => {
       void verificarPagamentoAgora(true);
-    }, 5000);
+    }, 15000);
 
     return () => clearInterval(interval);
   }, [aguardandoPagamento, salao?.id, verificarPagamentoAgora]);
-
-  async function atualizarRenovacaoAutomatica(value: boolean) {
-    try {
-      setSalvandoRenovacaoAutomatica(true);
-      setErro("");
-
-      if (!assinatura?.id || !salao?.id) {
-        throw new Error("Assinatura não encontrada.");
-      }
-
-      if (value && !renovacaoInfo.podeAtivar) {
-        throw new Error(renovacaoInfo.observacao);
-      }
-
-      const response = await monitorClientOperation(
-        {
-          module: "assinatura",
-          action: "toggle_renovacao_automatica",
-          route: "/api/assinatura/toggle-renovacao",
-          screen: "assinatura",
-          entity: "assinatura",
-          entityId: assinatura.id,
-          details: {
-            idSalao: salao.id,
-            renovacaoAutomatica: value,
-          },
-          successMessage: "Renovacao automatica atualizada.",
-          errorMessage: "Falha ao atualizar renovacao automatica.",
-        },
-        () =>
-          fetch("/api/assinatura/toggle-renovacao", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              idSalao: salao.id,
-              renovacaoAutomatica: value,
-            }),
-          })
-      );
-
-      const data = (await response.json()) as { error?: string };
-
-      if (!response.ok) {
-        throw new Error(data.error || "Erro ao salvar renovação automática.");
-      }
-
-      setRenovacaoAutomatica(value);
-    } catch (error: unknown) {
-      setErro(
-        error instanceof Error
-          ? error.message
-          : "Erro ao salvar renovação automática."
-      );
-    } finally {
-      setSalvandoRenovacaoAutomatica(false);
-    }
-  }
 
   async function criarCobrancaAssinatura(): Promise<void> {
     try {
@@ -730,69 +609,6 @@ export function useAssinaturaPage() {
     });
   }
 
-  async function carregarHistoricoCobrancas(): Promise<void> {
-    try {
-      setCarregandoHistorico(true);
-      setErro("");
-
-      if (!salao?.id) {
-        setHistoricoCobrancas([]);
-        return;
-      }
-
-      const response = await monitorClientOperation(
-        {
-          module: "assinatura",
-          action: "carregar_historico_cobrancas",
-          route: "/api/assinatura/historico",
-          screen: "assinatura_historico",
-          entity: "salao",
-          entityId: salao.id,
-          successMessage: "Historico de cobrancas carregado.",
-          errorMessage: "Falha ao carregar historico de cobrancas.",
-        },
-        () =>
-          fetch("/api/assinatura/historico", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              idSalao: salao.id,
-            }),
-          })
-      );
-
-      const data = (await response.json()) as {
-        ok?: boolean;
-        error?: string;
-        historico?: HistoricoCobrancaRow[];
-      };
-
-      if (!response.ok) {
-        throw new Error(data.error || "Erro ao carregar histórico.");
-      }
-
-      setHistoricoCobrancas(Array.isArray(data.historico) ? data.historico : []);
-    } catch (error: unknown) {
-      setErro(
-        error instanceof Error ? error.message : "Erro ao carregar histórico."
-      );
-      setHistoricoCobrancas([]);
-    } finally {
-      setCarregandoHistorico(false);
-    }
-  }
-
-  async function abrirHistoricoModal(): Promise<void> {
-    setHistoricoModalOpen(true);
-    await carregarHistoricoCobrancas();
-  }
-
-  function fecharHistoricoModal(): void {
-    setHistoricoModalOpen(false);
-  }
-
   const resumoAssinatura = getResumoAssinatura({
     status: assinatura?.status,
     vencimentoEm: assinatura?.vencimento_em,
@@ -832,14 +648,6 @@ export function useAssinaturaPage() {
     trialAtivo || (assinaturaAtivaPaga && !resumoAssinatura.vencendoLogo);
 
   const mostrarSecaoRenovacao = true;
-  const renovacaoInfo = getRenovacaoAutomaticaInfo({
-    assinaturaExiste: Boolean(assinatura?.id),
-    asaasCustomerId: assinatura?.asaas_customer_id,
-    formaPagamentoAtual: assinatura?.forma_pagamento_atual,
-    renovacaoAutomatica,
-    asaasCreditCardToken: assinatura?.asaas_credit_card_token,
-    asaasSubscriptionId: assinatura?.asaas_subscription_id,
-  });
 
   return {
     loading,
