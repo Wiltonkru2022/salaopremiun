@@ -40,7 +40,7 @@ type Props = {
     item: Agendamento,
     move: { minutesDelta: number; dayDelta: number }
   ) => void;
-  onClick: (item: Agendamento) => void;
+  onClick: (item: Agendamento, position: { x: number; y: number }) => void;
   onDelete: (item: Agendamento) => void;
   onGoToCashier: (item: Agendamento) => void;
 };
@@ -271,9 +271,12 @@ export default function AppointmentCard({
     window.addEventListener("mouseup", onUp);
   }
 
-  function handleCardClick() {
+  function handleCardClick(event: React.MouseEvent<HTMLDivElement>) {
     if (dragging || resizing || ignoreClickRef.current) return;
-    onClick(item);
+    onClick(item, {
+      x: Math.max(12, event.clientX),
+      y: Math.max(12, event.clientY),
+    });
   }
 
   return (
@@ -381,7 +384,10 @@ export default function AppointmentCard({
                       data-no-drag="true"
                       onClick={(e) => {
                         e.stopPropagation();
-                        onClick(item);
+                        onClick(item, {
+                          x: Math.max(12, e.clientX),
+                          y: Math.max(12, e.clientY),
+                        });
                       }}
                       className="rounded-md bg-white/20 p-1 transition hover:bg-white/30"
                       title="Editar"
@@ -475,7 +481,10 @@ export default function AppointmentCard({
                     data-no-drag="true"
                     onClick={(e) => {
                       e.stopPropagation();
-                      onClick(item);
+                      onClick(item, {
+                        x: Math.max(12, e.clientX),
+                        y: Math.max(12, e.clientY),
+                      });
                     }}
                     className="rounded-md bg-white/20 p-1 transition hover:bg-white/30"
                     title="Editar"

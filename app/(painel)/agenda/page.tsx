@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { addDays, subDays } from "date-fns";
 import { useRouter } from "next/navigation";
 import AgendaToolbar from "@/components/agenda/AgendaToolbar";
@@ -10,7 +10,7 @@ import ProfissionaisBar from "@/components/agenda/ProfissionaisBar";
 import AgendaNoticeDialog from "@/components/agenda/AgendaNoticeDialog";
 import AgendaConfirmDialog from "@/components/agenda/AgendaConfirmDialog";
 import AgendaReasonDialog from "@/components/agenda/AgendaReasonDialog";
-import AgendaSlotActionsModal from "@/components/agenda/AgendaSlotActionsModal";
+import AgendaContextMenu from "@/components/agenda/AgendaContextMenu";
 import type { ComandaResumo } from "@/components/agenda/page-types";
 import { useAgendaActions } from "@/components/agenda/useAgendaActions";
 import { useAgendaData } from "@/components/agenda/useAgendaData";
@@ -39,6 +39,22 @@ function addMinutesToSlotTime(time: string, minutes: number) {
 export default function AgendaPage() {
   const router = useRouter();
   const loadAgendaSeqRef = useRef(0);
+  const [contextMenu, setContextMenu] = useState<
+    | { open: false }
+    | {
+        open: true;
+        type: "slot";
+        x: number;
+        y: number;
+      }
+    | {
+        open: true;
+        type: "appointment";
+        x: number;
+        y: number;
+        item: Agendamento;
+      }
+  >({ open: false });
 
   const {
     supabase,
@@ -90,7 +106,6 @@ export default function AgendaPage() {
     setSelectedBlockEndTime,
     selectedBlockReason,
     setSelectedBlockReason,
-    slotActionOpen,
     setSlotActionOpen,
     assinaturaBloqueada,
     setAssinaturaBloqueada,
@@ -122,7 +137,6 @@ export default function AgendaPage() {
 
   const {
     bloquearSeAssinaturaInvalida,
-    openSlotActions,
     openCreateModal,
     openBlockModal,
     openEditModal,
@@ -175,6 +189,7 @@ export default function AgendaPage() {
     handleResizeEvent,
     handleMoveEvent,
     handleDeleteEvent,
+    handleQuickStatusChange,
     handleCancelAppointment,
     handleDeleteBlock,
     handleMoveBlock,
@@ -277,6 +292,40 @@ export default function AgendaPage() {
     });
 
     router.push(`/caixa?agendamento_id=${item.id}`);
+  }
+
+  function openSlotMenu(
+    date: string,
+    time: string,
+    position: { x: number; y: number }
+  ) {
+    if (bloquearSeAssinaturaInvalida()) return;
+
+    setSelectedDate(date);
+    setSelectedTime(time);
+    setSlotActionOpen(false);
+    setContextMenu({
+      open: true,
+      type: "slot",
+      x: position.x,
+      y: position.y,
+    });
+  }
+
+  function openAppointmentMenu(
+    item: Agendamento,
+    position: { x: number; y: number }
+  ) {
+    if (bloquearSeAssinaturaInvalida()) return;
+
+    setSlotActionOpen(false);
+    setContextMenu({
+      open: true,
+      type: "appointment",
+      item,
+      x: position.x,
+      y: position.y,
+    });
   }
 
   if (loading || !acessoCarregado) {
@@ -399,10 +448,10 @@ export default function AgendaPage() {
             bloqueios={bloqueios}
             selectedProfessional={selectedProfissional}
             densityMode={densityMode}
-            onClickSlot={openSlotActions}
+            onClickSlot={openSlotMenu}
             onResizeEvent={handleResizeEvent}
             onMoveEvent={handleMoveEvent}
-            onEditEvent={openEditModal}
+            onEditEvent={openAppointmentMenu}
             onDeleteEvent={handleDeleteEvent}
             onGoToCashier={handleGoToCashier}
             onEditBlock={handleEditBlock}
@@ -434,33 +483,127 @@ export default function AgendaPage() {
           onCriarComanda={criarNovaComanda}
         />
       </div>
-      <AgendaSlotActionsModal
-        open={slotActionOpen}
-        date={selectedDate}
-        time={selectedTime}
-        onClose={() => setSlotActionOpen(false)}
-        onNewAppointment={() => openCreateModal(selectedDate, selectedTime)}
-        onQuickLunch30={() =>
-          openBlockModal(selectedDate, selectedTime, {
-            endTime: addMinutesToSlotTime(selectedTime, 30),
-            reason: "Almoco",
-          })
+      <AgendaContextMenu
+        open={contextMenu.open}
+        x={contextMenu.open ? contextMenu.x : 12}
+        y={contextMenu.open ? contextMenu.y : 12}
+        title={
+          contextMenu.open && contextMenu.type === "appointment"
+            ? contextMenu.item.cliente?.nome || "Agendamento"
+            : "Horario livre"
         }
-        onQuickLunch60={() =>
-          openBlockModal(selectedDate, selectedTime, {
-            endTime: addMinutesToSlotTime(selectedTime, 60),
-            reason: "Almoco",
-          })
+        subtitle={
+          contextMenu.open && contextMenu.type === "appointment"
+            ? `${normalizeTimeString(contextMenu.item.hora_inicio)} - ${normalizeTimeString(
+                contextMenu.item.hora_fim
+              )}`
+            : `${selectedDate} as ${selectedTime}`
         }
-        onOtherAbsence={() => openBlockModal(selectedDate, selectedTime)}
-        onCustomerCredit={() => {
+        sections={
+          contextMenu.open && contextMenu.type === "appointment"
+            ? [
+                {
+                  title: "Acoes rapidas",
+                  actions: [
+                    {
+                      label: "Editar agendamento",
+                      onClick: () => openEditModal(contextMenu.item),
+                    },
+                    {
+                      label: "Receber do cliente",
+                      onClick: () => handleGoToCashier(contextMenu.item),
+                    },
+                    {
+                      label: "Excluir agendamento",
+                      tone: "danger",
+                      onClick: () => void handleDeleteEvent(contextMenu.item),
+                    },
+                  ],
+                },
+                {
+                  title: "Troca rapida de status",
+                  actions: [
+                    {
+                      label: "Marcar como confirmado",
+                      onClick: () =>
+                        void handleQuickStatusChange(contextMenu.item, "confirmado"),
+                    },
+                    {
+                      label: "Marcar como pendente",
+                      onClick: () =>
+                        void handleQuickStatusChange(contextMenu.item, "pendente"),
+                    },
+                    {
+                      label: "Marcar como atendido",
+                      onClick: () =>
+                        void handleQuickStatusChange(contextMenu.item, "atendido"),
+                    },
+                    {
+                      label: "Enviar para caixa",
+                      onClick: () =>
+                        void handleQuickStatusChange(
+                          contextMenu.item,
+                          "aguardando_pagamento"
+                        ),
+                    },
+                    {
+                      label: "Cancelar agendamento",
+                      tone: "warning",
+                      onClick: () => void handleCancelAppointment(contextMenu.item),
+                    },
+                  ],
+                },
+              ]
+            : [
+                {
+                  title: "Criar ou registrar",
+                  actions: [
+                    {
+                      label: "Novo agendamento",
+                      onClick: () => openCreateModal(selectedDate, selectedTime),
+                    },
+                    {
+                      label: "Registrar credito da cliente",
+                      onClick: () =>
+                        abrirAviso(
+                          "Credito da cliente",
+                          "O lancamento de credito da cliente vai pelo caixa. Vou deixar esse atalho completo no proximo passo, mas por enquanto ele ainda nao fecha o fluxo pela agenda.",
+                          "warning",
+                          "/caixa"
+                        ),
+                    },
+                  ],
+                },
+                {
+                  title: "Ausencia do profissional",
+                  actions: [
+                    {
+                      label: "Almoco 30 min",
+                      onClick: () =>
+                        openBlockModal(selectedDate, selectedTime, {
+                          endTime: addMinutesToSlotTime(selectedTime, 30),
+                          reason: "Almoco",
+                        }),
+                    },
+                    {
+                      label: "Almoco 1 hora",
+                      onClick: () =>
+                        openBlockModal(selectedDate, selectedTime, {
+                          endTime: addMinutesToSlotTime(selectedTime, 60),
+                          reason: "Almoco",
+                        }),
+                    },
+                    {
+                      label: "Outro bloqueio",
+                      onClick: () => openBlockModal(selectedDate, selectedTime),
+                    },
+                  ],
+                },
+              ]
+        }
+        onClose={() => {
+          setContextMenu({ open: false });
           setSlotActionOpen(false);
-          abrirAviso(
-            "Credito da cliente",
-            "O lancamento de credito da cliente vai pelo caixa. Vou deixar esse atalho completo no proximo passo, mas por enquanto ele ainda nao fecha o fluxo pela agenda.",
-            "warning",
-            "/caixa"
-          );
         }}
       />
       <AgendaNoticeDialog modal={avisoModal} onClose={fecharAviso} />

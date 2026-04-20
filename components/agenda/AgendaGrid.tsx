@@ -44,13 +44,13 @@ type Props = {
   bloqueios: Bloqueio[];
   selectedProfessional?: Profissional | null;
   densityMode?: AgendaDensityMode;
-  onClickSlot: (date: string, time: string) => void;
+  onClickSlot: (date: string, time: string, position: { x: number; y: number }) => void;
   onResizeEvent: (item: Agendamento, newDuration: number) => void;
   onMoveEvent: (
     item: Agendamento,
     move: { newDate: string; newStartTime: string }
   ) => void;
-  onEditEvent: (item: Agendamento) => void;
+  onEditEvent: (item: Agendamento, position: { x: number; y: number }) => void;
   onDeleteEvent: (item: Agendamento) => void;
   onGoToCashier: (item: Agendamento) => void;
   onEditBlock: (item: Bloqueio) => void;
@@ -732,7 +732,12 @@ export default function AgendaGrid({
                 {slots.map((slot) => (
                   <button
                     key={`${dayStr}-${slot.time}`}
-                    onClick={() => onClickSlot(dayStr, slot.time)}
+                    onClick={(event) =>
+                      onClickSlot(dayStr, slot.time, {
+                        x: event.clientX,
+                        y: event.clientY,
+                      })
+                    }
                     className={clsx(
                       "block w-full text-left transition hover:bg-zinc-50/70",
                       slot.minutes % 60 === 0

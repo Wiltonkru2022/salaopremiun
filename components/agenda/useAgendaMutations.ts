@@ -572,6 +572,62 @@ export function useAgendaMutations({
     ]
   );
 
+  const handleQuickStatusChange = useCallback(
+    async (
+      item: Agendamento,
+      nextStatus:
+        | "confirmado"
+        | "pendente"
+        | "atendido"
+        | "aguardando_pagamento"
+        | "cancelado"
+    ) => {
+      if (bloquearSeAssinaturaInvalida()) return;
+
+      const updatedAt = new Date().toISOString();
+
+      const { error } = await monitorClientOperation(
+        {
+          module: "agenda",
+          action: "alterar_status_agendamento",
+          screen: "agenda_grid",
+          entity: "agendamento",
+          entityId: item.id,
+          details: {
+            idSalao,
+            statusAtual: item.status,
+            proximoStatus: nextStatus,
+          },
+          successMessage: "Status do agendamento atualizado.",
+          errorMessage: "Falha ao atualizar status do agendamento.",
+        },
+        async () =>
+          await supabase
+            .from("agendamentos")
+            .update({
+              status: nextStatus,
+              updated_at: updatedAt,
+            })
+            .eq("id", item.id)
+      );
+
+      if (error) {
+        console.error(error);
+        abrirAviso("Erro", "Nao foi possivel atualizar o status.", "danger");
+        return;
+      }
+
+      await loadAgenda();
+    },
+    [
+      bloquearSeAssinaturaInvalida,
+      idSalao,
+      loadAgenda,
+      supabase,
+      abrirAviso,
+    ]
+  );
+
   const handleCancelAppointment = useCallback(
     async (item: Agendamento) => {
       if (bloquearSeAssinaturaInvalida()) return;
@@ -841,6 +897,7 @@ export function useAgendaMutations({
     handleResizeEvent,
     handleMoveEvent,
     handleDeleteEvent,
+    handleQuickStatusChange,
     handleCancelAppointment,
     handleDeleteBlock,
     handleMoveBlock,
