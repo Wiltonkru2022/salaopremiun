@@ -373,7 +373,7 @@ export default function AppointmentCard({
                         onGoToCashier(item);
                       }}
                       className="rounded-md bg-white/20 p-1 transition hover:bg-white/30"
-                      title="Ir para caixa"
+                      title="Receber do cliente"
                     >
                       <DollarSign size={10} />
                     </button>
@@ -514,7 +514,7 @@ export default function AppointmentCard({
                         onGoToCashier(item);
                       }}
                       className="rounded-md bg-white/25 p-1 transition hover:bg-white/35"
-                      title="Ir para caixa"
+                      title="Receber do cliente"
                     >
                       <DollarSign size={11} />
                     </button>

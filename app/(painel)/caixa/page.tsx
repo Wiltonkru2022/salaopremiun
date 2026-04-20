@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import CaixaCancelModal from "@/components/caixa/CaixaCancelModal";
 import CaixaDetalhe from "@/components/caixa/CaixaDetalhe";
@@ -21,6 +21,7 @@ export default function CaixaPage() {
   const {
     supabase,
     requestedComandaId,
+    requestedAgendamentoId,
     loading,
     setLoading,
     erroTela,
@@ -196,10 +197,31 @@ export default function CaixaPage() {
     setObservacaoPagamento,
   });
 
+  const agendamentoAutoOpenRef = useRef<string | null>(null);
+
   useEffect(() => {
     void init();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [requestedComandaId]);
+  }, [requestedComandaId, requestedAgendamentoId]);
+
+  useEffect(() => {
+    if (!requestedAgendamentoId || !acessoCarregado || !caixaAberto || loading) {
+      return;
+    }
+
+    if (agendamentoAutoOpenRef.current === requestedAgendamentoId) {
+      return;
+    }
+
+    agendamentoAutoOpenRef.current = requestedAgendamentoId;
+    void abrirAgendamentoSemComanda(requestedAgendamentoId);
+  }, [
+    acessoCarregado,
+    abrirAgendamentoSemComanda,
+    caixaAberto,
+    loading,
+    requestedAgendamentoId,
+  ]);
 
   if (loading || !acessoCarregado) {
     return <div className="p-6">Carregando caixa...</div>;

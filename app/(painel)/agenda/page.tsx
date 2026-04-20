@@ -11,6 +11,8 @@ import AgendaNoticeDialog from "@/components/agenda/AgendaNoticeDialog";
 import AgendaConfirmDialog from "@/components/agenda/AgendaConfirmDialog";
 import AgendaReasonDialog from "@/components/agenda/AgendaReasonDialog";
 import AgendaContextMenu from "@/components/agenda/AgendaContextMenu";
+import AgendaClientProfileModal from "@/components/agenda/AgendaClientProfileModal";
+import AgendaCreditModal from "@/components/agenda/AgendaCreditModal";
 import type { ComandaResumo } from "@/components/agenda/page-types";
 import { useAgendaActions } from "@/components/agenda/useAgendaActions";
 import { useAgendaData } from "@/components/agenda/useAgendaData";
@@ -25,6 +27,30 @@ import { captureClientEvent } from "@/lib/monitoring/client";
 import { sanitizeDiasFuncionamento } from "@/lib/utils/agenda";
 import type { Agendamento, ConfigSalao } from "@/types/agenda";
 import { normalizeTimeString } from "@/lib/utils/agenda";
+import {
+  BadgeDollarSign,
+  Ban,
+  CalendarPlus,
+  CheckCircle2,
+  ClipboardList,
+  Coffee,
+  PencilLine,
+  Receipt,
+  Trash2,
+  UserRound,
+  Wallet,
+  XCircle,
+} from "lucide-react";
+
+type ClienteHistoricoItem = {
+  id: string;
+  data: string;
+  horaInicio: string;
+  horaFim: string;
+  status: string;
+  servicoNome: string;
+  observacoes: string | null;
+};
 
 function addMinutesToSlotTime(time: string, minutes: number) {
   const [hour, minute] = normalizeTimeString(time).split(":").map(Number);
@@ -55,6 +81,16 @@ export default function AgendaPage() {
         item: Agendamento;
       }
   >({ open: false });
+  const [clienteProfileOpen, setClienteProfileOpen] = useState(false);
+  const [clienteProfileLoading, setClienteProfileLoading] = useState(false);
+  const [clienteProfileNome, setClienteProfileNome] = useState("");
+  const [clienteProfileWhatsapp, setClienteProfileWhatsapp] = useState<string | null>("");
+  const [clienteProfileHistorico, setClienteProfileHistorico] = useState<
+    ClienteHistoricoItem[]
+  >([]);
+  const [creditModalOpen, setCreditModalOpen] = useState(false);
+  const [creditClienteId, setCreditClienteId] = useState("");
+  const [creditLoading, setCreditLoading] = useState(false);
 
   const {
     supabase,
@@ -291,7 +327,106 @@ export default function AgendaPage() {
       success: true,
     });
 
+    if (item.id_comanda) {
+      router.push(`/caixa?comanda_id=${item.id_comanda}`);
+      return;
+    }
+
     router.push(`/caixa?agendamento_id=${item.id}`);
+  }
+
+  async function handleOpenCreditFlow() {
+    if (!creditClienteId) {
+      abrirAviso(
+        "Cliente obrigatoria",
+        "Escolha a cliente antes de abrir o credito no caixa.",
+        "warning"
+      );
+      return;
+    }
+
+    try {
+      setCreditLoading(true);
+      const comandas = await buscarComandasAbertasDoCliente(creditClienteId);
+      const comanda = comandas[0] || (await criarNovaComanda(creditClienteId));
+
+      setCreditModalOpen(false);
+      setCreditClienteId("");
+      router.push(`/caixa?comanda_id=${comanda.id}`);
+    } catch (error) {
+      console.error(error);
+      abrirAviso(
+        "Erro ao abrir credito",
+        "Nao foi possivel abrir a comanda da cliente no caixa agora.",
+        "danger"
+      );
+    } finally {
+      setCreditLoading(false);
+    }
+  }
+
+  async function openClientProfile(item: Agendamento) {
+    setClienteProfileOpen(true);
+    setClienteProfileLoading(true);
+    setClienteProfileNome(item.cliente?.nome || "Cliente");
+    setClienteProfileWhatsapp(item.cliente?.whatsapp || null);
+
+    try {
+      const { data, error } = await supabase
+        .from("agendamentos")
+        .select(
+          "id, data, hora_inicio, hora_fim, status, observacoes, servicos(nome)"
+        )
+        .eq("id_salao", idSalao)
+        .eq("cliente_id", item.cliente_id)
+        .order("data", { ascending: false })
+        .order("hora_inicio", { ascending: false })
+        .limit(12);
+
+      if (error) throw error;
+
+      const historico = ((data || []) as Array<{
+        id: string;
+        data: string;
+        hora_inicio: string;
+        hora_fim: string;
+        status: string;
+        observacoes: string | null;
+        servicos?: { nome?: string | null } | Array<{ nome?: string | null }> | null;
+      }>).map((row) => ({
+        id: row.id,
+        data: row.data,
+        horaInicio: normalizeTimeString(row.hora_inicio),
+        horaFim: normalizeTimeString(row.hora_fim),
+        status: row.status,
+        servicoNome: Array.isArray(row.servicos)
+          ? row.servicos[0]?.nome || "Servico"
+          : row.servicos?.nome || "Servico",
+        observacoes: row.observacoes,
+      }));
+
+      setClienteProfileHistorico(historico);
+    } catch (error) {
+      console.error(error);
+      setClienteProfileHistorico([
+        {
+          id: item.id,
+          data: item.data,
+          horaInicio: normalizeTimeString(item.hora_inicio),
+          horaFim: normalizeTimeString(item.hora_fim),
+          status: item.status,
+          servicoNome: item.servico?.nome || "Servico",
+          observacoes: item.observacoes,
+        },
+      ]);
+      abrirAviso(
+        "Historico parcial",
+        "Nao foi possivel carregar o historico completo agora. Vou abrir pelo menos os dados do agendamento atual.",
+        "warning"
+      );
+    } finally {
+      setClienteProfileLoading(false);
+    }
   }
 
   function openSlotMenu(
@@ -506,15 +641,27 @@ export default function AgendaPage() {
                   title: "Acoes rapidas",
                   actions: [
                     {
+                      label: "Abrir perfil da cliente",
+                      description: "Veja historico recente, observacoes e leitura rapida da cliente.",
+                      icon: UserRound,
+                      onClick: () => void openClientProfile(contextMenu.item),
+                    },
+                    {
                       label: "Editar agendamento",
+                      description: "Abra o formulario completo e ajuste servico, horario e observacoes.",
+                      icon: PencilLine,
                       onClick: () => openEditModal(contextMenu.item),
                     },
                     {
                       label: "Receber do cliente",
+                      description: "Vai para o caixa, abre a comanda e cria uma nova se ainda nao existir.",
+                      icon: Receipt,
                       onClick: () => handleGoToCashier(contextMenu.item),
                     },
                     {
                       label: "Excluir agendamento",
+                      description: "Remove o horario da agenda e registra a operacao no historico.",
+                      icon: Trash2,
                       tone: "danger",
                       onClick: () => void handleDeleteEvent(contextMenu.item),
                     },
@@ -525,21 +672,29 @@ export default function AgendaPage() {
                   actions: [
                     {
                       label: "Marcar como confirmado",
+                      description: "Sinal verde para recepcao e para o profissional.",
+                      icon: CheckCircle2,
                       onClick: () =>
                         void handleQuickStatusChange(contextMenu.item, "confirmado"),
                     },
                     {
                       label: "Marcar como pendente",
+                      description: "Deixa claro que ainda falta resposta ou confirmacao.",
+                      icon: ClipboardList,
                       onClick: () =>
                         void handleQuickStatusChange(contextMenu.item, "pendente"),
                     },
                     {
                       label: "Marcar como atendido",
+                      description: "Marca o atendimento como concluido na operacao.",
+                      icon: BadgeDollarSign,
                       onClick: () =>
                         void handleQuickStatusChange(contextMenu.item, "atendido"),
                     },
                     {
-                      label: "Enviar para caixa",
+                      label: "Mandar para receber",
+                      description: "Joga o agendamento para a fila do caixa.",
+                      icon: Wallet,
                       onClick: () =>
                         void handleQuickStatusChange(
                           contextMenu.item,
@@ -548,6 +703,8 @@ export default function AgendaPage() {
                     },
                     {
                       label: "Cancelar agendamento",
+                      description: "Abre o fluxo de cancelamento e registra o motivo.",
+                      icon: XCircle,
                       tone: "warning",
                       onClick: () => void handleCancelAppointment(contextMenu.item),
                     },
@@ -560,17 +717,16 @@ export default function AgendaPage() {
                   actions: [
                     {
                       label: "Novo agendamento",
+                      description: "Abre o modal organizado ja no horario que voce clicou.",
+                      icon: CalendarPlus,
                       onClick: () => openCreateModal(selectedDate, selectedTime),
                     },
                     {
                       label: "Registrar credito da cliente",
-                      onClick: () =>
-                        abrirAviso(
-                          "Credito da cliente",
-                          "O lancamento de credito da cliente vai pelo caixa. Vou deixar esse atalho completo no proximo passo, mas por enquanto ele ainda nao fecha o fluxo pela agenda.",
-                          "warning",
-                          "/caixa"
-                        ),
+                      description:
+                        "Escolha a cliente e eu abro ou crio a comanda certa no caixa.",
+                      icon: Wallet,
+                      onClick: () => setCreditModalOpen(true),
                     },
                   ],
                 },
@@ -579,6 +735,9 @@ export default function AgendaPage() {
                   actions: [
                     {
                       label: "Almoco 30 min",
+                      description: "Bloqueio rapido para pausa curta do profissional.",
+                      icon: Coffee,
+                      badge: "30 min",
                       onClick: () =>
                         openBlockModal(selectedDate, selectedTime, {
                           endTime: addMinutesToSlotTime(selectedTime, 30),
@@ -587,6 +746,9 @@ export default function AgendaPage() {
                     },
                     {
                       label: "Almoco 1 hora",
+                      description: "Bloqueio pronto para pausa completa.",
+                      icon: Coffee,
+                      badge: "60 min",
                       onClick: () =>
                         openBlockModal(selectedDate, selectedTime, {
                           endTime: addMinutesToSlotTime(selectedTime, 60),
@@ -595,6 +757,8 @@ export default function AgendaPage() {
                     },
                     {
                       label: "Outro bloqueio",
+                      description: "Abra o modal de ausencia e defina motivo e horario final.",
+                      icon: Ban,
                       onClick: () => openBlockModal(selectedDate, selectedTime),
                     },
                   ],
@@ -619,6 +783,30 @@ export default function AgendaPage() {
         onClose={fecharMotivo}
         onChangeValue={setMotivoValor}
         onConfirm={executarMotivo}
+      />
+      <AgendaClientProfileModal
+        open={clienteProfileOpen}
+        loading={clienteProfileLoading}
+        clienteNome={clienteProfileNome}
+        clienteWhatsapp={clienteProfileWhatsapp}
+        historico={clienteProfileHistorico}
+        onClose={() => setClienteProfileOpen(false)}
+      />
+      <AgendaCreditModal
+        open={creditModalOpen}
+        clienteId={creditClienteId}
+        loading={creditLoading}
+        clientesOptions={clientes.map((cliente) => ({
+          value: cliente.id,
+          label: cliente.nome,
+          description: cliente.whatsapp || "",
+        }))}
+        onClose={() => {
+          setCreditModalOpen(false);
+          setCreditClienteId("");
+        }}
+        onClienteChange={setCreditClienteId}
+        onSubmit={handleOpenCreditFlow}
       />
     </>
   );

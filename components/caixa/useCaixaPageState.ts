@@ -85,6 +85,7 @@ export function useCaixaPageState() {
   >([]);
 
   const requestedComandaId = searchParams.get("comanda_id");
+  const requestedAgendamentoId = searchParams.get("agendamento_id");
 
   const podeVerCaixa = !!permissoes?.caixa_ver;
   const podeOperarCaixa =
@@ -146,6 +147,7 @@ export function useCaixaPageState() {
   return {
     supabase,
     requestedComandaId,
+    requestedAgendamentoId,
     loading,
     setLoading,
     erroTela,

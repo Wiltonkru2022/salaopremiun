@@ -2,6 +2,7 @@
 
 import { CalendarDays, Lock, X } from "lucide-react";
 import AgendaModalAviso from "@/components/agenda/AgendaModalAviso";
+import AgendaQuickClientModal from "@/components/agenda/AgendaQuickClientModal";
 import AgendaModalComandaDecision from "@/components/agenda/AgendaModalComandaDecision";
 import AgendaModalFormAgendamento from "@/components/agenda/AgendaModalFormAgendamento";
 import AgendaModalFormBloqueio from "@/components/agenda/AgendaModalFormBloqueio";
@@ -93,6 +94,17 @@ export default function AgendaModal(props: AgendaModalProps) {
         }}
       />
 
+      <AgendaQuickClientModal
+        open={quickClientOpen}
+        name={quickClientName}
+        whatsapp={quickClientWhatsapp}
+        saving={quickClientSaving}
+        onClose={() => setQuickClientOpen(false)}
+        onNameChange={setQuickClientName}
+        onWhatsappChange={setQuickClientWhatsapp}
+        onSubmit={handleQuickCreateClient}
+      />
+
       <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/55 p-3 backdrop-blur-sm">
         <div className="flex h-[min(88vh,760px)] w-full max-w-[1080px] flex-col overflow-hidden rounded-[24px] border border-white/30 bg-white shadow-2xl">
           <div className="border-b border-zinc-200 bg-white px-4 py-3 md:px-5">
@@ -160,14 +172,8 @@ export default function AgendaModal(props: AgendaModalProps) {
                     onObservacoesChange={setObservacoes}
                     onStatusChange={setStatus}
                     onAbrirComanda={handleAbrirComanda}
-                    onQuickCreateClient={handleQuickCreateClient}
                     quickClientOpen={quickClientOpen}
-                    quickClientName={quickClientName}
-                    quickClientWhatsapp={quickClientWhatsapp}
-                    quickClientSaving={quickClientSaving}
                     onToggleQuickClient={setQuickClientOpen}
-                    onQuickClientNameChange={setQuickClientName}
-                    onQuickClientWhatsappChange={setQuickClientWhatsapp}
                     onCancelAppointment={onCancelAppointment}
                   />
                 ) : (

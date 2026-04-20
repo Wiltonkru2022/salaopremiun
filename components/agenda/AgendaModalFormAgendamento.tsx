@@ -1,6 +1,7 @@
 "use client";
 
-import { Clock3, Plus, Receipt } from "lucide-react";
+import type { ReactNode } from "react";
+import { Clock3, Plus, Receipt, StickyNote, UserRound } from "lucide-react";
 import SearchableSelect, {
   type SearchableOption,
 } from "@/components/ui/SearchableSelect";
@@ -21,9 +22,6 @@ type Props = {
   comandaNumero: number | null;
   editingItem?: Agendamento | null;
   quickClientOpen: boolean;
-  quickClientName: string;
-  quickClientWhatsapp: string;
-  quickClientSaving: boolean;
   onProfissionalChange: (value: string) => void;
   onClienteChange: (value: string) => Promise<void>;
   onServicoChange: (value: string) => void;
@@ -31,12 +29,29 @@ type Props = {
   onObservacoesChange: (value: string) => void;
   onStatusChange: (value: AgendaStatus) => void;
   onAbrirComanda: () => Promise<void>;
-  onQuickCreateClient: () => Promise<void>;
   onToggleQuickClient: (value: boolean) => void;
-  onQuickClientNameChange: (value: string) => void;
-  onQuickClientWhatsappChange: (value: string) => void;
   onCancelAppointment: (item: Agendamento) => Promise<void>;
 };
+
+function Section({
+  eyebrow,
+  title,
+  children,
+}: {
+  eyebrow: string;
+  title: string;
+  children: ReactNode;
+}) {
+  return (
+    <section className="rounded-[22px] border border-zinc-200 bg-white p-4 shadow-[0_8px_30px_rgba(15,23,42,0.03)]">
+      <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-400">
+        {eyebrow}
+      </div>
+      <h3 className="mt-1 text-sm font-bold text-zinc-900">{title}</h3>
+      <div className="mt-3">{children}</div>
+    </section>
+  );
+}
 
 export default function AgendaModalFormAgendamento({
   profissionaisOptions,
@@ -52,9 +67,6 @@ export default function AgendaModalFormAgendamento({
   comandaNumero,
   editingItem,
   quickClientOpen,
-  quickClientName,
-  quickClientWhatsapp,
-  quickClientSaving,
   onProfissionalChange,
   onClienteChange,
   onServicoChange,
@@ -62,16 +74,13 @@ export default function AgendaModalFormAgendamento({
   onObservacoesChange,
   onStatusChange,
   onAbrirComanda,
-  onQuickCreateClient,
   onToggleQuickClient,
-  onQuickClientNameChange,
-  onQuickClientWhatsappChange,
   onCancelAppointment,
 }: Props) {
   return (
-    <div className="space-y-3.5">
-      <div className="grid gap-3 md:grid-cols-2">
-        <div>
+    <div className="space-y-4">
+      <Section eyebrow="Atendimento" title="Quem vai atender e quem vai ser atendida">
+        <div className="grid gap-3 lg:grid-cols-2">
           <SearchableSelect
             label="Profissional"
             placeholder="Digite o nome do profissional"
@@ -80,146 +89,126 @@ export default function AgendaModalFormAgendamento({
             value={profissionalId}
             onChange={onProfissionalChange}
           />
-        </div>
 
-        <div>
-          <div className="mb-1.5 flex items-center justify-between gap-2">
-            <label className="block text-xs font-semibold text-zinc-700">
-              Cliente
-            </label>
-            <button
-              type="button"
-              onClick={() => onToggleQuickClient(!quickClientOpen)}
-              className="inline-flex items-center gap-1 rounded-lg border border-zinc-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-zinc-700 transition hover:bg-zinc-50"
-            >
-              <Plus size={12} />
-              Cadastro rapido
-            </button>
-          </div>
-
-          <SearchableSelect
-            placeholder="Digite o nome do cliente"
-            emptyText="Nenhum cliente encontrado."
-            options={clientesOptions}
-            value={clienteId}
-            onChange={onClienteChange}
-          />
-
-          {quickClientOpen ? (
-            <div className="mt-2 rounded-[18px] border border-zinc-200 bg-zinc-50 p-3">
-              <div className="grid gap-2 md:grid-cols-[minmax(0,1fr)_180px_auto]">
-                <input
-                  value={quickClientName}
-                  onChange={(e) => onQuickClientNameChange(e.target.value)}
-                  placeholder="Nome da cliente"
-                  className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-zinc-900"
-                />
-                <input
-                  value={quickClientWhatsapp}
-                  onChange={(e) => onQuickClientWhatsappChange(e.target.value)}
-                  placeholder="WhatsApp"
-                  className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-zinc-900"
-                />
-                <button
-                  type="button"
-                  onClick={() => void onQuickCreateClient()}
-                  disabled={quickClientSaving}
-                  className="rounded-xl bg-zinc-900 px-3 py-2 text-sm font-semibold text-white transition hover:opacity-95 disabled:opacity-60"
-                >
-                  {quickClientSaving ? "Salvando..." : "Salvar"}
-                </button>
-              </div>
+          <div>
+            <div className="mb-1.5 flex items-center justify-between gap-2">
+              <label className="block text-xs font-semibold text-zinc-700">
+                Cliente
+              </label>
+              <button
+                type="button"
+                onClick={() => onToggleQuickClient(!quickClientOpen)}
+                className="inline-flex items-center gap-1.5 rounded-full border border-zinc-200 bg-white px-3 py-1 text-[11px] font-semibold text-zinc-700 transition hover:bg-zinc-50"
+              >
+                <Plus size={12} />
+                {quickClientOpen ? "Fechar cadastro" : "Cadastro rapido"}
+              </button>
             </div>
-          ) : null}
 
-          <div className="mt-2 flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              onClick={onAbrirComanda}
-              disabled={loadingComanda || !clienteId}
-              className="inline-flex items-center gap-2 rounded-xl border border-zinc-300 bg-white px-3 py-2 text-xs font-semibold text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-60"
-            >
-              <Receipt size={14} />
-              {loadingComanda ? "Verificando..." : "Abrir comanda"}
-            </button>
-
-            {comandaNumero ? (
-              <div className="rounded-xl bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700">
-                Comanda #{comandaNumero}
-              </div>
-            ) : null}
+            <SearchableSelect
+              placeholder="Digite o nome da cliente"
+              emptyText="Nenhuma cliente encontrada."
+              options={clientesOptions}
+              value={clienteId}
+              onChange={onClienteChange}
+            />
           </div>
         </div>
-      </div>
 
-      <div className="grid gap-3 md:grid-cols-2">
-        <div>
+        <div className="mt-3">
           <SearchableSelect
-            label="Serviço"
-            placeholder="Digite o nome do serviço"
-            emptyText="Nenhum serviço encontrado."
+            label="Servico"
+            placeholder="Digite o nome do servico"
+            emptyText="Nenhum servico encontrado."
             options={servicosOptions}
             value={servicoId}
             onChange={onServicoChange}
           />
         </div>
+      </Section>
 
-        <div>
-          <label className="mb-1.5 flex items-center gap-2 text-xs font-semibold text-zinc-700">
-            <Clock3 size={13} />
-            Hora início
-          </label>
+      <Section eyebrow="Fluxo" title="Horario, status e caixa">
+        <div className="grid gap-3 lg:grid-cols-[220px_220px_minmax(0,1fr)]">
+          <div>
+            <label className="mb-1.5 flex items-center gap-2 text-xs font-semibold text-zinc-700">
+              <Clock3 size={13} />
+              Hora de inicio
+            </label>
 
-          <input
-            type="time"
-            value={horaInicio}
-            onChange={(e) => onHoraInicioChange(e.target.value)}
-            className="w-full rounded-2xl border border-zinc-200 bg-zinc-50 px-3 py-2.5 text-sm outline-none transition focus:border-zinc-900 focus:bg-white"
-            required
-          />
+            <input
+              type="time"
+              value={horaInicio}
+              onChange={(e) => onHoraInicioChange(e.target.value)}
+              className="h-12 w-full rounded-2xl border border-zinc-200 bg-zinc-50 px-3 text-sm outline-none transition focus:border-zinc-900 focus:bg-white"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="mb-1.5 block text-xs font-semibold text-zinc-700">
+              Status
+            </label>
+
+            <select
+              value={status}
+              onChange={(e) => onStatusChange(e.target.value as AgendaStatus)}
+              className="h-12 w-full rounded-2xl border border-zinc-200 bg-zinc-50 px-3 text-sm outline-none transition focus:border-zinc-900 focus:bg-white"
+            >
+              <option value="confirmado">Confirmado</option>
+              <option value="pendente">Pendente</option>
+              <option value="atendido">Atendido</option>
+              <option value="cancelado">Cancelado</option>
+              <option value="aguardando_pagamento">Aguardando pagamento</option>
+            </select>
+          </div>
+
+          <div className="rounded-[18px] border border-zinc-200 bg-zinc-50 px-4 py-3">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-400">
+                  Comanda
+                </div>
+                <div className="mt-1 text-sm font-semibold text-zinc-900">
+                  {comandaNumero ? `Comanda #${comandaNumero}` : "Sem comanda vinculada"}
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={onAbrirComanda}
+                disabled={loadingComanda || !clienteId}
+                className="inline-flex items-center gap-2 rounded-2xl border border-zinc-300 bg-white px-3 py-2 text-xs font-semibold text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-60"
+              >
+                <Receipt size={14} />
+                {loadingComanda ? "Verificando..." : "Abrir comanda"}
+              </button>
+            </div>
+          </div>
         </div>
-      </div>
+      </Section>
 
-      <div className="grid gap-3 md:grid-cols-[220px_1fr]">
-        <div>
-          <label className="mb-1.5 block text-xs font-semibold text-zinc-700">
-            Status
-          </label>
+      <Section eyebrow="Detalhes" title="Observacoes da recepcao e do atendimento">
+        <label className="mb-1.5 flex items-center gap-2 text-xs font-semibold text-zinc-700">
+          <StickyNote size={13} />
+          Observacoes
+        </label>
 
-          <select
-            value={status}
-            onChange={(e) => onStatusChange(e.target.value as AgendaStatus)}
-            className="w-full rounded-2xl border border-zinc-200 bg-zinc-50 px-3 py-2.5 text-sm outline-none transition focus:border-zinc-900 focus:bg-white"
-          >
-            <option value="confirmado">Confirmado</option>
-            <option value="pendente">Pendente</option>
-            <option value="atendido">Atendido</option>
-            <option value="cancelado">Cancelado</option>
-            <option value="aguardando_pagamento">Aguardando pagamento</option>
-          </select>
-        </div>
-
-        <div>
-          <label className="mb-1.5 block text-xs font-semibold text-zinc-700">
-            Observações
-          </label>
-
-          <textarea
-            value={observacoes}
-            onChange={(e) => onObservacoesChange(e.target.value)}
-            className="min-h-[88px] w-full rounded-2xl border border-zinc-200 bg-zinc-50 px-3 py-2.5 text-sm outline-none transition focus:border-zinc-900 focus:bg-white"
-            placeholder="Anotações internas"
-          />
-        </div>
-      </div>
+        <textarea
+          value={observacoes}
+          onChange={(e) => onObservacoesChange(e.target.value)}
+          className="min-h-[120px] w-full rounded-2xl border border-zinc-200 bg-zinc-50 px-3 py-3 text-sm outline-none transition focus:border-zinc-900 focus:bg-white"
+          placeholder="Anotacoes internas, combinados, preferencias ou observacoes importantes."
+        />
+      </Section>
 
       {editingItem ? (
         <div className="flex justify-start">
           <button
             type="button"
             onClick={() => onCancelAppointment(editingItem)}
-            className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-sm font-semibold text-rose-700 transition hover:bg-rose-100"
+            className="inline-flex items-center gap-2 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-sm font-semibold text-rose-700 transition hover:bg-rose-100"
           >
+            <UserRound size={14} />
             Cancelar agendamento
           </button>
         </div>
