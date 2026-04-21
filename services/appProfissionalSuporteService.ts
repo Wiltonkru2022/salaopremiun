@@ -68,6 +68,52 @@ function getOpenAI() {
   return new OpenAI({ apiKey });
 }
 
+async function profissionalTemAcessoComanda(params: {
+  supabase: Awaited<ReturnType<typeof createClient>>;
+  idSalao: string;
+  idProfissional: string;
+  idComanda: string;
+}) {
+  const { data, error } = await params.supabase
+    .from("comanda_itens")
+    .select("id")
+    .eq("id_salao", params.idSalao)
+    .eq("id_comanda", params.idComanda)
+    .or(
+      `id_profissional.eq.${params.idProfissional},id_assistente.eq.${params.idProfissional}`
+    )
+    .limit(1);
+
+  if (error) {
+    console.error("Erro ao validar acesso do profissional a comanda:", error);
+    return false;
+  }
+
+  return Boolean(data?.length);
+}
+
+async function profissionalTemAcessoCliente(params: {
+  supabase: Awaited<ReturnType<typeof createClient>>;
+  idSalao: string;
+  idProfissional: string;
+  idCliente: string;
+}) {
+  const { data, error } = await params.supabase
+    .from("agendamentos")
+    .select("id")
+    .eq("id_salao", params.idSalao)
+    .eq("profissional_id", params.idProfissional)
+    .eq("cliente_id", params.idCliente)
+    .limit(1);
+
+  if (error) {
+    console.error("Erro ao validar acesso do profissional a cliente:", error);
+    return false;
+  }
+
+  return Boolean(data?.length);
+}
+
 export type AppProfissionalSuporteContexto = {
   origemPagina: string | null;
   idComanda: string | null;
@@ -207,16 +253,25 @@ export function createAppProfissionalSuporteService() {
       let clienteAtual: ClienteContexto | null = null;
 
       if (params.contexto.idComanda) {
-        const { data } = await supabase
-          .from("comandas")
-          .select(
-            "id, numero, status, subtotal, desconto, acrescimo, total, id_cliente"
-          )
-          .eq("id", params.contexto.idComanda)
-          .eq("id_salao", params.idSalao)
-          .maybeSingle<ComandaContexto>();
+        const podeVerComanda = await profissionalTemAcessoComanda({
+          supabase,
+          idSalao: params.idSalao,
+          idProfissional: params.idProfissional,
+          idComanda: params.contexto.idComanda,
+        });
 
-        comandaAtual = data ?? null;
+        if (podeVerComanda) {
+          const { data } = await supabase
+            .from("comandas")
+            .select(
+              "id, numero, status, subtotal, desconto, acrescimo, total, id_cliente"
+            )
+            .eq("id", params.contexto.idComanda)
+            .eq("id_salao", params.idSalao)
+            .maybeSingle<ComandaContexto>();
+
+          comandaAtual = data ?? null;
+        }
 
         if (comandaAtual?.id_cliente) {
           const { data: cliente } = await supabase
@@ -256,14 +311,23 @@ export function createAppProfissionalSuporteService() {
       }
 
       if (params.contexto.idCliente && !clienteAtual) {
-        const { data } = await supabase
-          .from("clientes")
-          .select("id, nome, telefone, email")
-          .eq("id", params.contexto.idCliente)
-          .eq("id_salao", params.idSalao)
-          .maybeSingle<ClienteContexto>();
+        const podeVerCliente = await profissionalTemAcessoCliente({
+          supabase,
+          idSalao: params.idSalao,
+          idProfissional: params.idProfissional,
+          idCliente: params.contexto.idCliente,
+        });
 
-        clienteAtual = data ?? null;
+        if (podeVerCliente) {
+          const { data } = await supabase
+            .from("clientes")
+            .select("id, nome, telefone, email")
+            .eq("id", params.contexto.idCliente)
+            .eq("id_salao", params.idSalao)
+            .maybeSingle<ClienteContexto>();
+
+          clienteAtual = data ?? null;
+        }
       }
 
       return {
