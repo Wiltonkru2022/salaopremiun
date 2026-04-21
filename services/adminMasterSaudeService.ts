@@ -4,11 +4,18 @@ import {
 } from "@/lib/admin-master/auth/requireAdminMasterUser";
 import type { AdminMasterPermissionKey } from "@/lib/admin-master/auth/adminMasterPermissions";
 import { REQUIRED_DATABASE_FUNCTIONS } from "@/lib/db/required-rpcs";
+import { REQUIRED_DATABASE_TABLES } from "@/lib/db/required-tables";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 type RoutineRow = {
   function_name: string;
   exists: boolean;
+};
+
+type TableValidationRow = {
+  table_name: string;
+  exists: boolean;
+  error?: string | null;
 };
 
 export function createAdminMasterSaudeService() {
@@ -21,6 +28,10 @@ export function createAdminMasterSaudeService() {
 
     getRequiredDatabaseFunctions() {
       return [...REQUIRED_DATABASE_FUNCTIONS];
+    },
+
+    getRequiredDatabaseTables() {
+      return [...REQUIRED_DATABASE_TABLES];
     },
 
     async validarFuncoesObrigatorias(functionNames: readonly string[]) {
@@ -39,6 +50,26 @@ export function createAdminMasterSaudeService() {
       return ((data || []) as RoutineRow[]).filter(
         (row) => typeof row.function_name === "string"
       );
+    },
+
+    async validarTabelasObrigatorias(tableNames: readonly string[]) {
+      const supabaseAdmin = getSupabaseAdmin();
+
+      const rows = await Promise.all(
+        tableNames.map(async (tableName) => {
+          const { error } = await supabaseAdmin
+            .from(tableName)
+            .select("*", { count: "exact", head: true });
+
+          return {
+            table_name: tableName,
+            exists: !error,
+            error: error?.message || null,
+          } satisfies TableValidationRow;
+        })
+      );
+
+      return rows;
     },
   };
 }

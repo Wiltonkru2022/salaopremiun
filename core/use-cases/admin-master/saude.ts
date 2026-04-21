@@ -26,23 +26,41 @@ export async function validarAdminMasterRpcsUseCase(params: {
   service: AdminMasterSaudeService;
 }) {
   const required = params.service.getRequiredDatabaseFunctions();
+  const requiredTables = params.service.getRequiredDatabaseTables();
 
   try {
     await requireAccess(params.service);
 
-    const rows = await params.service.validarFuncoesObrigatorias(required);
+    const [rows, tableRows] = await Promise.all([
+      params.service.validarFuncoesObrigatorias(required),
+      params.service.validarTabelasObrigatorias(requiredTables),
+    ]);
+
     const found = new Set(
       rows.filter((row) => row.exists).map((row) => row.function_name)
     );
     const missing = required.filter((name) => !found.has(name));
+    const foundTables = new Set(
+      tableRows.filter((row) => row.exists).map((row) => row.table_name)
+    );
+    const missingTables = requiredTables.filter((name) => !foundTables.has(name));
 
     return {
       status: 200,
       body: {
-        ok: missing.length === 0,
+        ok: missing.length === 0 && missingTables.length === 0,
         totalRequired: required.length,
+        totalRequiredTables: requiredTables.length,
         missing,
         found: [...found].sort(),
+        missingTables,
+        foundTables: [...foundTables].sort(),
+        tableErrors: tableRows
+          .filter((row) => !row.exists && row.error)
+          .map((row) => ({
+            table: row.table_name,
+            error: row.error,
+          })),
       },
     };
   } catch (error) {
