@@ -28,10 +28,15 @@ export function createProfissionalAcessoService(
       return (data as ProfissionalResumoRow | null) || null;
     },
 
-    async buscarCpfEmUso(params: { cpf: string; idProfissional: string }) {
+    async buscarCpfEmUso(params: {
+      idSalao: string;
+      cpf: string;
+      idProfissional: string;
+    }) {
       const { data, error } = await supabaseAdmin
         .from("profissionais_acessos")
         .select("id, id_profissional")
+        .eq("id_salao", params.idSalao)
         .eq("cpf", params.cpf)
         .neq("id_profissional", params.idProfissional)
         .limit(1)
@@ -41,11 +46,15 @@ export function createProfissionalAcessoService(
       return data?.id ? data : null;
     },
 
-    async buscarAcessoExistente(idProfissional: string) {
+    async buscarAcessoExistente(params: {
+      idSalao: string;
+      idProfissional: string;
+    }) {
       const { data, error } = await supabaseAdmin
         .from("profissionais_acessos")
         .select("id, senha_hash")
-        .eq("id_profissional", idProfissional)
+        .eq("id_salao", params.idSalao)
+        .eq("id_profissional", params.idProfissional)
         .maybeSingle();
 
       if (error) throw error;
@@ -53,6 +62,7 @@ export function createProfissionalAcessoService(
     },
 
     async salvarAcesso(params: {
+      idSalao: string;
       idProfissional: string;
       cpf: string;
       senhaHash: string | null;
@@ -60,6 +70,7 @@ export function createProfissionalAcessoService(
       idAcesso?: string;
     }) {
       const payload = {
+        id_salao: params.idSalao,
         id_profissional: params.idProfissional,
         cpf: params.cpf,
         senha_hash: params.senhaHash,
@@ -70,7 +81,8 @@ export function createProfissionalAcessoService(
         const { error } = await supabaseAdmin
           .from("profissionais_acessos")
           .update(payload)
-          .eq("id", params.idAcesso);
+          .eq("id", params.idAcesso)
+          .eq("id_salao", params.idSalao);
 
         if (error) throw error;
         return;

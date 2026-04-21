@@ -90,6 +90,7 @@ export async function salvarProfissionalAcessoUseCase(params: {
     }
 
     const cpfEmUso = await service.buscarCpfEmUso({
+      idSalao: String(profissional.id_salao),
       cpf: input.cpf,
       idProfissional: input.idProfissional,
     });
@@ -101,7 +102,10 @@ export async function salvarProfissionalAcessoUseCase(params: {
       );
     }
 
-    const acessoExistente = await service.buscarAcessoExistente(input.idProfissional);
+    const acessoExistente = await service.buscarAcessoExistente({
+      idSalao: String(profissional.id_salao),
+      idProfissional: input.idProfissional,
+    });
 
     let senhaHashFinal = acessoExistente?.senha_hash || null;
     if (input.senha) {
@@ -116,6 +120,7 @@ export async function salvarProfissionalAcessoUseCase(params: {
     }
 
     await service.salvarAcesso({
+      idSalao: String(profissional.id_salao),
       idProfissional: input.idProfissional,
       cpf: input.cpf,
       senhaHash: senhaHashFinal,
