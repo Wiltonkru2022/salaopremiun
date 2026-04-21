@@ -6,6 +6,10 @@ import type {
   ClientePayload,
   ClientePreferenciasPayload,
 } from "@/types/clientes";
+import {
+  normalizarEmailCliente,
+  normalizarTelefoneCliente,
+} from "@/core/entities/cliente";
 import type { ClienteService } from "@/services/clienteService";
 import { PlanAccessError } from "@/lib/plans/access";
 
@@ -19,11 +23,6 @@ function sanitizeUuid(value: unknown) {
 
 function sanitizeText(value: unknown) {
   const parsed = String(value || "").trim();
-  return parsed || null;
-}
-
-function normalizeEmail(value: unknown) {
-  const parsed = String(value || "").trim().toLowerCase();
   return parsed || null;
 }
 
@@ -136,10 +135,10 @@ function buildClientePayload(idSalao: string, cliente: ClientePayload) {
     nome,
     nome_social: sanitizeText(cliente.nome_social),
     data_nascimento: sanitizeText(cliente.data_nascimento),
-    whatsapp: sanitizeText(cliente.whatsapp),
-    telefone: sanitizeText(cliente.telefone),
-    email: normalizeEmail(cliente.email),
-    cpf: sanitizeText(cliente.cpf),
+    whatsapp: normalizarTelefoneCliente(cliente.whatsapp),
+    telefone: normalizarTelefoneCliente(cliente.telefone),
+    email: normalizarEmailCliente(cliente.email),
+    cpf: normalizarTelefoneCliente(cliente.cpf),
     endereco: sanitizeText(cliente.endereco),
     numero: sanitizeText(cliente.numero),
     bairro: sanitizeText(cliente.bairro),
@@ -319,6 +318,7 @@ export async function processarClienteUseCase(params: {
       await service.upsertByCliente({
         table: "clientes_ficha_tecnica",
         payload: buildFichaPayload(input.idSalao, idCliente, input.ficha),
+        idSalao: input.idSalao,
         idCliente,
       });
 
@@ -329,6 +329,7 @@ export async function processarClienteUseCase(params: {
           idCliente,
           input.preferencias
         ),
+        idSalao: input.idSalao,
         idCliente,
       });
 
@@ -339,6 +340,7 @@ export async function processarClienteUseCase(params: {
           idCliente,
           input.autorizacoes
         ),
+        idSalao: input.idSalao,
         idCliente,
       });
 
@@ -350,6 +352,7 @@ export async function processarClienteUseCase(params: {
           input.auth,
           sanitizeText(payloadCliente.email)
         ),
+        idSalao: input.idSalao,
         idCliente,
       });
 

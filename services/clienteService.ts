@@ -1,16 +1,10 @@
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import {
+  normalizarEmailCliente,
+  normalizarTelefoneCliente,
+} from "@/core/entities/cliente";
 
 type SupabaseAdminClient = ReturnType<typeof getSupabaseAdmin>;
-
-function normalizeEmail(value: unknown) {
-  const parsed = String(value || "").trim().toLowerCase();
-  return parsed || null;
-}
-
-function normalizePhone(value: unknown) {
-  const parsed = String(value || "").replace(/\D/g, "");
-  return parsed || null;
-}
 
 export function createClienteService(
   supabaseAdmin: SupabaseAdminClient = getSupabaseAdmin()
@@ -24,10 +18,10 @@ export function createClienteService(
       telefone?: string | null;
       cpf?: string | null;
     }) {
-      const email = normalizeEmail(params.email);
-      const whatsapp = normalizePhone(params.whatsapp);
-      const telefone = normalizePhone(params.telefone);
-      const cpf = normalizePhone(params.cpf);
+      const email = normalizarEmailCliente(params.email);
+      const whatsapp = normalizarTelefoneCliente(params.whatsapp);
+      const telefone = normalizarTelefoneCliente(params.telefone);
+      const cpf = normalizarTelefoneCliente(params.cpf);
 
       if (email) {
         const { data, error } = await supabaseAdmin
@@ -60,9 +54,9 @@ export function createClienteService(
 
       const duplicadoContato = (data || []).find((item) => {
         if (item.id === params.idClienteAtual) return false;
-        const itemWhatsapp = normalizePhone(item.whatsapp);
-        const itemTelefone = normalizePhone(item.telefone);
-        const itemCpf = normalizePhone(item.cpf);
+        const itemWhatsapp = normalizarTelefoneCliente(item.whatsapp);
+        const itemTelefone = normalizarTelefoneCliente(item.telefone);
+        const itemCpf = normalizarTelefoneCliente(item.cpf);
 
         return Boolean(
           (whatsapp &&
@@ -178,11 +172,13 @@ export function createClienteService(
         | "clientes_autorizacoes"
         | "clientes_auth";
       payload: Record<string, unknown>;
+      idSalao: string;
       idCliente: string;
     }) {
       const { data: existing, error: findError } = await supabaseAdmin
         .from(params.table)
         .select("id")
+        .eq("id_salao", params.idSalao)
         .eq("id_cliente", params.idCliente)
         .limit(1);
 
@@ -192,6 +188,7 @@ export function createClienteService(
         const { error } = await supabaseAdmin
           .from(params.table)
           .update(params.payload)
+          .eq("id_salao", params.idSalao)
           .eq("id_cliente", params.idCliente);
 
         if (error) throw error;
@@ -207,11 +204,31 @@ export function createClienteService(
 
     async excluir(params: { idSalao: string; idCliente: string }) {
       const deletionResults = await Promise.all([
-        supabaseAdmin.from("clientes_ficha_tecnica").delete().eq("id_cliente", params.idCliente),
-        supabaseAdmin.from("clientes_preferencias").delete().eq("id_cliente", params.idCliente),
-        supabaseAdmin.from("clientes_autorizacoes").delete().eq("id_cliente", params.idCliente),
-        supabaseAdmin.from("clientes_auth").delete().eq("id_cliente", params.idCliente),
-        supabaseAdmin.from("clientes_historico").delete().eq("id_cliente", params.idCliente),
+        supabaseAdmin
+          .from("clientes_ficha_tecnica")
+          .delete()
+          .eq("id_salao", params.idSalao)
+          .eq("id_cliente", params.idCliente),
+        supabaseAdmin
+          .from("clientes_preferencias")
+          .delete()
+          .eq("id_salao", params.idSalao)
+          .eq("id_cliente", params.idCliente),
+        supabaseAdmin
+          .from("clientes_autorizacoes")
+          .delete()
+          .eq("id_salao", params.idSalao)
+          .eq("id_cliente", params.idCliente),
+        supabaseAdmin
+          .from("clientes_auth")
+          .delete()
+          .eq("id_salao", params.idSalao)
+          .eq("id_cliente", params.idCliente),
+        supabaseAdmin
+          .from("clientes_historico")
+          .delete()
+          .eq("id_salao", params.idSalao)
+          .eq("id_cliente", params.idCliente),
       ]);
 
       for (const result of deletionResults) {
