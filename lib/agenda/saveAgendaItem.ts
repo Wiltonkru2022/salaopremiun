@@ -119,7 +119,8 @@ export async function saveAgendaItem(params: {
           status: payload.status || "confirmado",
           updated_at: new Date().toISOString(),
         })
-        .eq("id", payload.id);
+        .eq("id", payload.id)
+        .eq("id_salao", idSalao);
 
       if (error) {
         console.error(error);
@@ -224,7 +225,8 @@ export async function saveAgendaItem(params: {
           hora_fim: horaFim,
           motivo: payload.motivo || null,
         })
-        .eq("id", payload.id);
+        .eq("id", payload.id)
+        .eq("id_salao", idSalao);
 
       if (error) {
         console.error(error);
