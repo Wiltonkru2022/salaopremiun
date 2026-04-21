@@ -114,16 +114,18 @@ export async function toggleRenovacaoAssinaturaUseCase(params: {
     }
 
     if (!input.renovacaoAutomatica && asaasSubscriptionId) {
-      await params.service.limparRecorrenciaCartao(
-        assinatura.id,
-        asaasSubscriptionId
-      );
+      await params.service.limparRecorrenciaCartao({
+        assinaturaId: assinatura.id,
+        idSalao: input.idSalao,
+        asaasSubscriptionId,
+      });
     }
 
-    await params.service.atualizarRenovacaoAssinatura(
-      assinatura.id,
-      input.renovacaoAutomatica
-    );
+    await params.service.atualizarRenovacaoAssinatura({
+      assinaturaId: assinatura.id,
+      idSalao: input.idSalao,
+      renovacaoAutomatica: input.renovacaoAutomatica,
+    });
 
     return {
       status: 200,

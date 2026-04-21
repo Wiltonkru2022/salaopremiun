@@ -178,12 +178,17 @@ export function createAssinaturaService() {
       return data || null;
     },
 
-    async atualizarRenovacaoAssinatura(assinaturaId: string, renovacaoAutomatica: boolean) {
+    async atualizarRenovacaoAssinatura(params: {
+      assinaturaId: string;
+      idSalao: string;
+      renovacaoAutomatica: boolean;
+    }) {
       const supabaseAdmin = getSupabaseAdmin();
       const { error } = await supabaseAdmin
         .from("assinaturas")
-        .update({ renovacao_automatica: renovacaoAutomatica })
-        .eq("id", assinaturaId);
+        .update({ renovacao_automatica: params.renovacaoAutomatica })
+        .eq("id", params.assinaturaId)
+        .eq("id_salao", params.idSalao);
 
       if (error) {
         throw new AssinaturaServiceError(
@@ -231,7 +236,8 @@ export function createAssinaturaService() {
           asaas_subscription_status:
             String(recurring.status || "").trim() || "ACTIVE",
         })
-        .eq("id", params.assinaturaId);
+        .eq("id", params.assinaturaId)
+        .eq("id_salao", params.idSalao);
 
       if (error) {
         throw new AssinaturaServiceError(
@@ -241,9 +247,13 @@ export function createAssinaturaService() {
       }
     },
 
-    async limparRecorrenciaCartao(assinaturaId: string, asaasSubscriptionId: string) {
+    async limparRecorrenciaCartao(params: {
+      assinaturaId: string;
+      idSalao: string;
+      asaasSubscriptionId: string;
+    }) {
       try {
-        await removeAsaasSubscription(asaasSubscriptionId);
+        await removeAsaasSubscription(params.asaasSubscriptionId);
       } catch (error) {
         if (!isAsaasSubscriptionNotFoundError(error)) {
           throw error;
@@ -257,7 +267,8 @@ export function createAssinaturaService() {
           asaas_subscription_id: null,
           asaas_subscription_status: null,
         })
-        .eq("id", assinaturaId);
+        .eq("id", params.assinaturaId)
+        .eq("id_salao", params.idSalao);
 
       if (error) {
         throw new AssinaturaServiceError(
@@ -350,7 +361,8 @@ export function createAssinaturaService() {
             renovacao_automatica:
               params.assinaturaExistente.renovacao_automatica ?? false,
           })
-          .eq("id", params.assinaturaExistente.id);
+          .eq("id", params.assinaturaExistente.id)
+          .eq("id_salao", params.idSalao);
 
         if (error) {
           throw new AssinaturaServiceError(
