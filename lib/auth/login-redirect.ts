@@ -69,6 +69,24 @@ export function getLoginRedirectNotice(
     };
   }
 
+  if (reason === "recuperacao_invalida") {
+    return {
+      tone: "warning",
+      title: "Link de recuperacao invalido ou antigo",
+      description:
+        "Solicite um novo link de recuperacao e abra-o no mesmo navegador e dispositivo em que o pedido foi feito.",
+    };
+  }
+
+  if (reason === "recuperacao_expirada") {
+    return {
+      tone: "warning",
+      title: "Link de recuperacao expirado",
+      description:
+        "Por seguranca, o link de redefinicao expirou. Solicite um novo link para continuar.",
+    };
+  }
+
   if (reason === "sem_permissao") {
     return {
       tone: "warning",

@@ -317,7 +317,7 @@ export default function AtualizarSenhaPage() {
 
                 <button
                   type="button"
-                  onClick={() => router.push("/login")}
+                  onClick={() => router.push("/login?motivo=recuperacao_invalida")}
                   className="inline-flex items-center gap-2 rounded-2xl border border-zinc-300 bg-white px-4 py-3 font-semibold text-zinc-700 transition hover:bg-zinc-50"
                 >
                   <ArrowLeft size={16} />
