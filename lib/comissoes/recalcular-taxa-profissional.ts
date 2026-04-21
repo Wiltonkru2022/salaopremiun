@@ -131,11 +131,13 @@ export async function recalcularTaxaProfissional(params: {
     supabaseAdmin
       .from("comanda_pagamentos")
       .select("taxa_maquininha_valor")
+      .eq("id_salao", idSalao)
       .eq("id_comanda", idComanda),
 
     supabaseAdmin
       .from("comanda_itens")
       .select("id, base_calculo_aplicada, desconta_taxa_maquininha_aplicada")
+      .eq("id_salao", idSalao)
       .eq("id_comanda", idComanda)
       .eq("ativo", true),
 

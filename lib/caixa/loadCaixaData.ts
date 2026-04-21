@@ -466,9 +466,18 @@ export async function carregarComandaDetalhe(
     throw new Error("Nao foi possivel abrir a comanda.");
   }
 
+  const idSalao = String(
+    (comandaData as { id_salao?: string | null }).id_salao || ""
+  );
+
+  if (!idSalao) {
+    throw new Error("Nao foi possivel identificar o salao da comanda.");
+  }
+
   const { data: itensData, error: itensError } = await supabase
     .from("comanda_itens")
     .select("*")
+    .eq("id_salao", idSalao)
     .eq("id_comanda", idComanda)
     .eq("ativo", true);
 
@@ -480,6 +489,7 @@ export async function carregarComandaDetalhe(
   const { data: pagamentosData, error: pagamentosError } = await supabase
     .from("comanda_pagamentos")
     .select("*")
+    .eq("id_salao", idSalao)
     .eq("id_comanda", idComanda);
 
   if (pagamentosError) {
@@ -502,6 +512,7 @@ export async function carregarComandaDetalhe(
     const { data: profissionaisData, error: profissionaisError } = await supabase
       .from("profissionais")
       .select("id, nome")
+      .eq("id_salao", idSalao)
       .in("id", idsProfissionais);
 
     if (profissionaisError) {
