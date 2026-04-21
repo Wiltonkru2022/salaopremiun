@@ -182,6 +182,7 @@ function buildIncidentKey(params: CaptureSystemEventParams) {
   }
 
   const base = [
+    normalizeText(params.idSalao),
     normalizeText(params.module),
     normalizeText(params.action),
     normalizeText(params.errorCode),
