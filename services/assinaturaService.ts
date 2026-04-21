@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { createServerClient } from "@supabase/ssr";
 import { cookies, headers } from "next/headers";
 import { getRenovacaoAutomaticaInfo } from "@/lib/assinaturas/renovacao-automatica";
+import { getSupabaseCookieOptions } from "@/lib/supabase/cookie-options";
 import {
   createAsaasSubscription,
   isAsaasSubscriptionNotFoundError,
@@ -58,6 +59,7 @@ function getSupabaseAdmin() {
 
 async function getSupabaseServer() {
   const cookieStore = await cookies();
+  const headersList = await headers();
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
@@ -69,7 +71,10 @@ async function getSupabaseServer() {
     throw new Error("NEXT_PUBLIC_SUPABASE_ANON_KEY nao configurada.");
   }
 
+  const cookieOptions = getSupabaseCookieOptions(headersList.get("host"));
+
   return createServerClient(supabaseUrl, supabaseAnonKey, {
+    cookieOptions,
     cookies: {
       getAll() {
         return cookieStore.getAll();
