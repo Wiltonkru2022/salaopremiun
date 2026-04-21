@@ -104,6 +104,7 @@ export async function carregarSessaoCaixa(
   const { data: movimentacoes, error: movimentacoesError } = await supabase
     .from("caixa_movimentacoes")
     .select("*")
+    .eq("id_salao", idSalao)
     .eq("id_sessao", sessao.id)
     .order("created_at", { ascending: false })
     .limit(50);
