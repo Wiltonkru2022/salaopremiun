@@ -9,6 +9,23 @@ import { getErrorMessage } from "@/lib/get-error-message";
 const MENSAGEM_ERRO_LINK =
   "Nao foi possivel validar este link de recuperacao. Por seguranca, a redefinicao de senha deve ser concluida no mesmo navegador e dispositivo em que a solicitacao foi feita. Solicite um novo link e abra-o no mesmo navegador para continuar.";
 
+function getRecoveryRedirectReason(error: unknown) {
+  const text =
+    error instanceof Error ? error.message.toLowerCase() : String(error || "").toLowerCase();
+
+  if (
+    text.includes("expired") ||
+    text.includes("otp_expired") ||
+    text.includes("token has expired") ||
+    text.includes("refresh token") ||
+    text.includes("invalid grant")
+  ) {
+    return "recuperacao_expirada";
+  }
+
+  return "recuperacao_invalida";
+}
+
 export default function AtualizarSenhaPage() {
   const router = useRouter();
   const [supabase, setSupabase] = useState<ReturnType<typeof createClient> | null>(
@@ -25,6 +42,9 @@ export default function AtualizarSenhaPage() {
   const [modoSenha, setModoSenha] = useState<"recovery" | "authenticated" | null>(
     null
   );
+  const [motivoFalhaRecuperacao, setMotivoFalhaRecuperacao] = useState<
+    "recuperacao_invalida" | "recuperacao_expirada"
+  >("recuperacao_invalida");
 
   useEffect(() => {
     try {
@@ -44,6 +64,7 @@ export default function AtualizarSenhaPage() {
       try {
         setErro("");
         setErroSessaoRecuperacao(false);
+        setMotivoFalhaRecuperacao("recuperacao_invalida");
 
         const {
           data: { session: sessaoExistenteAntes },
@@ -71,6 +92,7 @@ export default function AtualizarSenhaPage() {
               return;
             }
 
+            setMotivoFalhaRecuperacao(getRecoveryRedirectReason(error));
             setErroSessaoRecuperacao(true);
             throw new Error(MENSAGEM_ERRO_LINK);
           }
@@ -103,6 +125,7 @@ export default function AtualizarSenhaPage() {
                 return;
               }
 
+              setMotivoFalhaRecuperacao(getRecoveryRedirectReason(error));
               setErroSessaoRecuperacao(true);
               throw new Error(MENSAGEM_ERRO_LINK);
             }
@@ -125,6 +148,7 @@ export default function AtualizarSenhaPage() {
         }
 
         setErroSessaoRecuperacao(true);
+        setMotivoFalhaRecuperacao("recuperacao_invalida");
         setModoSenha(null);
         throw new Error(MENSAGEM_ERRO_LINK);
       } catch (e: unknown) {
@@ -317,7 +341,7 @@ export default function AtualizarSenhaPage() {
 
                 <button
                   type="button"
-                  onClick={() => router.push("/login?motivo=recuperacao_invalida")}
+                  onClick={() => router.push(`/login?motivo=${motivoFalhaRecuperacao}`)}
                   className="inline-flex items-center gap-2 rounded-2xl border border-zinc-300 bg-white px-4 py-3 font-semibold text-zinc-700 transition hover:bg-zinc-50"
                 >
                   <ArrowLeft size={16} />
