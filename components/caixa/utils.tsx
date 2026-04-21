@@ -30,7 +30,14 @@ export function toArray<T>(value: T | T[] | null | undefined): T[] {
   return Array.isArray(value) ? value : [value];
 }
 
-export function getJoinedName(value: any, fallback = "-") {
+type CaixaNomeavel = {
+  nome?: string | null;
+};
+
+export function getJoinedName<T extends CaixaNomeavel>(
+  value: T | T[] | null | undefined,
+  fallback = "-"
+) {
   const first = toArray(value)[0];
   return first?.nome || fallback;
 }

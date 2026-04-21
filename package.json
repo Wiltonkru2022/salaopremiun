@@ -19,7 +19,7 @@
     "// CI": "Validacao deterministica para pull request",
     "ci:lint": "npm run lint",
     "ci:typecheck": "npm run typecheck:ci",
-    "ci:audit": "npm run audit:security && npm run audit:service-role && npm run audit:admin-actions && npm run audit:database-contract",
+    "ci:audit": "npm run audit:security && npm run audit:service-role && npm run audit:admin-actions && npm run audit:database-contract && npm run audit:architecture-boundaries",
     "ci:build": "npm run build",
     "ci:validate": "npm run ci:lint && npm run ci:typecheck && npm run ci:audit && npm run ci:build",
     "// release": "Validacao pesada antes de promover producao",
@@ -33,6 +33,7 @@
     "audit:security": "npm audit --audit-level=moderate",
     "audit:service-role": "node scripts/audit/service-role-audit.mjs",
     "audit:admin-actions": "node scripts/audit/admin-master-actions-audit.mjs",
+    "audit:architecture-boundaries": "node scripts/audit/architecture-boundaries-audit.mjs",
     "audit:database-contract": "node scripts/audit/database-contract-audit.mjs",
     "audit:admin-client-inventory": "node scripts/audit/admin-client-inventory.mjs",
     "audit:launch-readiness": "node scripts/audit/launch-readiness-audit.mjs",
@@ -40,7 +41,7 @@
     "e2e:sales": "node scripts/e2e/saas-sales-flow.mjs",
     "validate": "npm run ci:validate",
     "validate:release": "npm run release:validate",
-    "launch:validate": "npm run lint && npm run typecheck && npm run db:audit && npm run audit:launch-readiness && npm run build"
+    "launch:validate": "npm run lint && npm run typecheck && npm run db:audit && npm run audit:architecture-boundaries && npm run audit:launch-readiness && npm run build"
   },
   "dependencies": {
     "@supabase/ssr": "^0.9.0",
