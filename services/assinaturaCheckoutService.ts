@@ -666,6 +666,7 @@ async function marcarCheckoutFalho(params: {
 
 async function montarCheckoutExistente(params: {
   supabaseAdmin: ReturnType<typeof getSupabaseAdmin>;
+  idSalao: string;
   idCobranca: string;
   planoFallback: string;
   reason: string;
@@ -687,6 +688,7 @@ async function montarCheckoutExistente(params: {
       plano_origem
     `)
     .eq("id", params.idCobranca)
+    .eq("id_salao", params.idSalao)
     .maybeSingle();
 
   if (error || !data) {
@@ -795,7 +797,8 @@ async function limparAssinaturaRecorrenteCartao(params: {
       asaas_subscription_id: null,
       asaas_subscription_status: null,
     })
-    .eq("id", params.assinaturaId);
+    .eq("id", params.assinaturaId)
+    .eq("id_salao", params.idSalao);
 
   if (cleanupError) {
     await captureSystemError({
@@ -1005,6 +1008,7 @@ async function criarCobranca(params: {
       if (reservaCheckout.existing_cobranca_id) {
         const checkoutExistente = await montarCheckoutExistente({
           supabaseAdmin,
+          idSalao,
           idCobranca: reservaCheckout.existing_cobranca_id,
           planoFallback: planoCodigo,
           reason: reservaCheckout.reason,
@@ -1225,7 +1229,8 @@ async function criarCobranca(params: {
       const { error: updateAssinaturaError } = await supabaseAdmin
         .from("assinaturas")
         .update(assinaturaUpdate)
-        .eq("id", assinaturaId);
+        .eq("id", assinaturaId)
+        .eq("id_salao", idSalao);
 
       if (updateAssinaturaError) {
         throw new AssinaturaCheckoutServiceError(
@@ -1343,7 +1348,8 @@ async function criarCobranca(params: {
       .update({
         id_cobranca_atual: cobrancaInserida.id,
       })
-      .eq("id", assinaturaId);
+      .eq("id", assinaturaId)
+      .eq("id_salao", idSalao);
 
     if (updateAssinaturaComCobrancaError) {
       throw new AssinaturaCheckoutServiceError(
@@ -1445,7 +1451,8 @@ async function criarCobranca(params: {
               asaas_subscription_status:
                 String(recurring.status || "").trim() || "ACTIVE",
             })
-            .eq("id", assinaturaId);
+            .eq("id", assinaturaId)
+            .eq("id_salao", idSalao);
         }
       } catch (error) {
         await captureSystemError({
