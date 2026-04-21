@@ -192,6 +192,7 @@ async function carregarItensDaComanda(
 
 async function carregarProdutos(
   supabaseAdmin: AdminClient,
+  idSalao: string,
   idsProdutos: string[]
 ) {
   if (idsProdutos.length === 0) {
@@ -203,6 +204,7 @@ async function carregarProdutos(
     .select(
       "id, nome, estoque_atual, estoque_minimo, preco_custo, custos_extras, custo_real, custo_por_dose"
     )
+    .eq("id_salao", idSalao)
     .in("id", idsProdutos);
 
   if (error) {
@@ -303,6 +305,7 @@ async function resolverAlertasBaixoEstoque(
         resolvido: true,
         resolved_at: new Date().toISOString(),
       })
+      .eq("id_salao", idSalao)
       .in("id", alertasParaResolver);
 
     if (resolveError) {
@@ -385,9 +388,11 @@ export async function processarEstoqueComanda(
   );
 
   const idsProdutosConsumo = consumos.map((item) => item.id_produto);
-  const produtos = await carregarProdutos(supabaseAdmin, [
-    ...new Set([...idsProdutosDiretos, ...idsProdutosConsumo]),
-  ]);
+  const produtos = await carregarProdutos(
+    supabaseAdmin,
+    params.idSalao,
+    [...new Set([...idsProdutosDiretos, ...idsProdutosConsumo])]
+  );
 
   const movimentosExistentes = await carregarMovimentosExistentes(
     supabaseAdmin,
@@ -653,7 +658,11 @@ export async function reverterEstoqueComanda(
   const idsProdutos = Array.from(
     new Set(movimentos.map((item) => item.id_produto).filter(Boolean))
   ) as string[];
-  const produtos = await carregarProdutos(supabaseAdmin, idsProdutos);
+  const produtos = await carregarProdutos(
+    supabaseAdmin,
+    params.idSalao,
+    idsProdutos
+  );
 
   const quantidadePorProduto = new Map<string, number>();
 
