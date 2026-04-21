@@ -15,7 +15,8 @@ async function recalcularTotaisComanda(
     .from("comanda_itens")
     .select("valor_total")
     .eq("id_salao", idSalao)
-    .eq("id_comanda", idComanda);
+    .eq("id_comanda", idComanda)
+    .eq("ativo", true);
 
   if (error) {
     console.error("Erro ao recalcular totais da comanda:", error);
@@ -68,6 +69,7 @@ async function cancelarComandaSeVazia(
     .select("id")
     .eq("id_salao", idSalao)
     .eq("id_comanda", idComanda)
+    .eq("ativo", true)
     .limit(1);
 
   if (itensError) {
