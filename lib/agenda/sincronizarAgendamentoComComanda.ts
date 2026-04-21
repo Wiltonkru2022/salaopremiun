@@ -29,13 +29,15 @@ type SincronizarParams = {
 
 export async function recalcularTotaisComanda(params: {
   supabase: SupabaseClient;
+  idSalao: string;
   idComanda: string;
 }) {
-  const { supabase, idComanda } = params;
+  const { supabase, idSalao, idComanda } = params;
 
   const { data: itens, error: itensError } = await supabase
     .from("comanda_itens")
     .select("valor_total")
+    .eq("id_salao", idSalao)
     .eq("id_comanda", idComanda)
     .eq("ativo", true);
 
@@ -54,6 +56,7 @@ export async function recalcularTotaisComanda(params: {
     .from("comandas")
     .select("id, desconto, acrescimo")
     .eq("id", idComanda)
+    .eq("id_salao", idSalao)
     .maybeSingle();
 
   if (comandaError) {
@@ -74,7 +77,8 @@ export async function recalcularTotaisComanda(params: {
       total,
       updated_at: new Date().toISOString(),
     })
-    .eq("id", idComanda);
+    .eq("id", idComanda)
+    .eq("id_salao", idSalao);
 
   if (updateError) {
     console.error("Erro ao atualizar totais da comanda:", updateError);
@@ -84,13 +88,15 @@ export async function recalcularTotaisComanda(params: {
 
 export async function cancelarComandaSeVazia(params: {
   supabase: SupabaseClient;
+  idSalao: string;
   idComanda: string;
 }) {
-  const { supabase, idComanda } = params;
+  const { supabase, idSalao, idComanda } = params;
 
   const { data: itens, error: itensError } = await supabase
     .from("comanda_itens")
     .select("id")
+    .eq("id_salao", idSalao)
     .eq("id_comanda", idComanda)
     .eq("ativo", true)
     .limit(1);
@@ -107,6 +113,7 @@ export async function cancelarComandaSeVazia(params: {
     .from("comandas")
     .select("id, status")
     .eq("id", idComanda)
+    .eq("id_salao", idSalao)
     .maybeSingle();
 
   if (comandaError) {
@@ -128,7 +135,8 @@ export async function cancelarComandaSeVazia(params: {
         "Comanda cancelada automaticamente por ficar sem itens vinculados.",
       updated_at: new Date().toISOString(),
     })
-    .eq("id", idComanda);
+    .eq("id", idComanda)
+    .eq("id_salao", idSalao);
 
   if (updateError) {
     console.error("Erro ao cancelar comanda vazia:", updateError);
@@ -138,13 +146,15 @@ export async function cancelarComandaSeVazia(params: {
 
 async function removerAgendamentoDaComandaSemCancelar(params: {
   supabase: SupabaseClient;
+  idSalao: string;
   idAgendamento: string;
 }) {
-  const { supabase, idAgendamento } = params;
+  const { supabase, idSalao, idAgendamento } = params;
 
   const { data: itens, error } = await supabase
     .from("comanda_itens")
     .select("id, id_comanda")
+    .eq("id_salao", idSalao)
     .eq("id_agendamento", idAgendamento);
 
   if (error) {
@@ -164,6 +174,7 @@ async function removerAgendamentoDaComandaSemCancelar(params: {
   const { error: deleteError } = await supabase
     .from("comanda_itens")
     .delete()
+    .eq("id_salao", idSalao)
     .in("id", ids);
 
   if (deleteError) {
@@ -172,7 +183,7 @@ async function removerAgendamentoDaComandaSemCancelar(params: {
   }
 
   for (const idComanda of comandasAfetadas) {
-    await recalcularTotaisComanda({ supabase, idComanda });
+    await recalcularTotaisComanda({ supabase, idSalao, idComanda });
   }
 
   return comandasAfetadas;
@@ -180,17 +191,19 @@ async function removerAgendamentoDaComandaSemCancelar(params: {
 
 export async function removerAgendamentoDaComanda(params: {
   supabase: SupabaseClient;
+  idSalao: string;
   idAgendamento: string;
 }) {
-  const { supabase, idAgendamento } = params;
+  const { supabase, idSalao, idAgendamento } = params;
 
   const comandasAfetadas = await removerAgendamentoDaComandaSemCancelar({
     supabase,
+    idSalao,
     idAgendamento,
   });
 
   for (const idComanda of comandasAfetadas) {
-    await cancelarComandaSeVazia({ supabase, idComanda });
+    await cancelarComandaSeVazia({ supabase, idSalao, idComanda });
   }
 }
 
@@ -208,6 +221,7 @@ export async function sincronizarAgendamentoComComanda(params: SincronizarParams
 
   const comandasAntigasAfetadas = await removerAgendamentoDaComandaSemCancelar({
     supabase,
+    idSalao,
     idAgendamento,
   });
 
@@ -218,7 +232,8 @@ export async function sincronizarAgendamentoComComanda(params: SincronizarParams
         id_comanda: null,
         updated_at: new Date().toISOString(),
       })
-      .eq("id", idAgendamento);
+      .eq("id", idAgendamento)
+      .eq("id_salao", idSalao);
 
     if (clearAgendamentoError) {
       console.error("Erro ao limpar vinculo da comanda no agendamento:", clearAgendamentoError);
@@ -226,7 +241,7 @@ export async function sincronizarAgendamentoComComanda(params: SincronizarParams
     }
 
     for (const idComanda of comandasAntigasAfetadas) {
-      await cancelarComandaSeVazia({ supabase, idComanda });
+      await cancelarComandaSeVazia({ supabase, idSalao, idComanda });
     }
 
     return;
@@ -253,6 +268,7 @@ export async function sincronizarAgendamentoComComanda(params: SincronizarParams
     .from("comandas")
     .select("id, status")
     .eq("id", idComandaNova)
+    .eq("id_salao", idSalao)
     .maybeSingle();
 
   if (comandaError) {
@@ -278,7 +294,8 @@ export async function sincronizarAgendamentoComComanda(params: SincronizarParams
         motivo_cancelamento: null,
         updated_at: new Date().toISOString(),
       })
-      .eq("id", idComandaNova);
+      .eq("id", idComandaNova)
+      .eq("id_salao", idSalao);
 
     if (reabrirError) {
       console.error("Erro ao reabrir comanda cancelada:", reabrirError);
@@ -320,7 +337,8 @@ export async function sincronizarAgendamentoComComanda(params: SincronizarParams
       id_comanda: idComandaNova,
       updated_at: new Date().toISOString(),
     })
-    .eq("id", idAgendamento);
+    .eq("id", idAgendamento)
+    .eq("id_salao", idSalao);
 
   if (updateAgendamentoError) {
     console.error("Erro ao atualizar comanda do agendamento:", updateAgendamentoError);
@@ -329,12 +347,13 @@ export async function sincronizarAgendamentoComComanda(params: SincronizarParams
 
   await recalcularTotaisComanda({
     supabase,
+    idSalao,
     idComanda: idComandaNova,
   });
 
   for (const idComanda of comandasAntigasAfetadas) {
     if (idComanda !== idComandaNova) {
-      await cancelarComandaSeVazia({ supabase, idComanda });
+      await cancelarComandaSeVazia({ supabase, idSalao, idComanda });
     }
   }
 }

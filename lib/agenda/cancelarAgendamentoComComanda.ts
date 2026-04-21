@@ -2,13 +2,19 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 type Params = {
   supabase: SupabaseClient;
+  idSalao: string;
   idAgendamento: string;
 };
 
-async function recalcularTotaisComanda(supabase: SupabaseClient, idComanda: string) {
+async function recalcularTotaisComanda(
+  supabase: SupabaseClient,
+  idSalao: string,
+  idComanda: string
+) {
   const { data: itens, error } = await supabase
     .from("comanda_itens")
     .select("valor_total")
+    .eq("id_salao", idSalao)
     .eq("id_comanda", idComanda);
 
   if (error) {
@@ -24,6 +30,7 @@ async function recalcularTotaisComanda(supabase: SupabaseClient, idComanda: stri
     .from("comandas")
     .select("desconto, acrescimo")
     .eq("id", idComanda)
+    .eq("id_salao", idSalao)
     .maybeSingle();
 
   if (comandaError) {
@@ -42,7 +49,8 @@ async function recalcularTotaisComanda(supabase: SupabaseClient, idComanda: stri
       total,
       updated_at: new Date().toISOString(),
     })
-    .eq("id", idComanda);
+    .eq("id", idComanda)
+    .eq("id_salao", idSalao);
 
   if (updateError) {
     console.error("Erro ao atualizar totais da comanda:", updateError);
@@ -50,10 +58,15 @@ async function recalcularTotaisComanda(supabase: SupabaseClient, idComanda: stri
   }
 }
 
-async function cancelarComandaSeVazia(supabase: SupabaseClient, idComanda: string) {
+async function cancelarComandaSeVazia(
+  supabase: SupabaseClient,
+  idSalao: string,
+  idComanda: string
+) {
   const { data: itens, error: itensError } = await supabase
     .from("comanda_itens")
     .select("id")
+    .eq("id_salao", idSalao)
     .eq("id_comanda", idComanda)
     .limit(1);
 
@@ -68,6 +81,7 @@ async function cancelarComandaSeVazia(supabase: SupabaseClient, idComanda: strin
     .from("comandas")
     .select("id, status")
     .eq("id", idComanda)
+    .eq("id_salao", idSalao)
     .maybeSingle();
 
   if (comandaError) {
@@ -87,7 +101,8 @@ async function cancelarComandaSeVazia(supabase: SupabaseClient, idComanda: strin
       motivo_cancelamento: "Cancelada automaticamente pelo cancelamento do agendamento.",
       updated_at: new Date().toISOString(),
     })
-    .eq("id", idComanda);
+    .eq("id", idComanda)
+    .eq("id_salao", idSalao);
 
   if (updateError) {
     console.error("Erro ao cancelar comanda:", updateError);
@@ -95,11 +110,16 @@ async function cancelarComandaSeVazia(supabase: SupabaseClient, idComanda: strin
   }
 }
 
-export async function cancelarAgendamentoComComanda({ supabase, idAgendamento }: Params) {
+export async function cancelarAgendamentoComComanda({
+  supabase,
+  idSalao,
+  idAgendamento,
+}: Params) {
   const { data: agendamento, error: agendamentoError } = await supabase
     .from("agendamentos")
     .select("id, id_comanda, status")
     .eq("id", idAgendamento)
+    .eq("id_salao", idSalao)
     .maybeSingle();
 
   if (agendamentoError) {
@@ -117,7 +137,8 @@ export async function cancelarAgendamentoComComanda({ supabase, idAgendamento }:
       status: "cancelado",
       updated_at: new Date().toISOString(),
     })
-    .eq("id", idAgendamento);
+    .eq("id", idAgendamento)
+    .eq("id_salao", idSalao);
 
   if (cancelError) {
     console.error("Erro ao cancelar agendamento:", cancelError);
@@ -127,6 +148,7 @@ export async function cancelarAgendamentoComComanda({ supabase, idAgendamento }:
   const { data: itens, error: itensError } = await supabase
     .from("comanda_itens")
     .select("id, id_comanda")
+    .eq("id_salao", idSalao)
     .eq("id_agendamento", idAgendamento);
 
   if (itensError) {
@@ -144,7 +166,8 @@ export async function cancelarAgendamentoComComanda({ supabase, idAgendamento }:
     const { error: deleteError } = await supabase
       .from("comanda_itens")
       .delete()
-      .eq("id", item.id);
+      .eq("id", item.id)
+      .eq("id_salao", idSalao);
 
     if (deleteError) {
       console.error("Erro ao remover item da comanda:", deleteError);
@@ -153,7 +176,7 @@ export async function cancelarAgendamentoComComanda({ supabase, idAgendamento }:
   }
 
   for (const idComanda of Array.from(comandasAfetadas)) {
-    await recalcularTotaisComanda(supabase, idComanda);
-    await cancelarComandaSeVazia(supabase, idComanda);
+    await recalcularTotaisComanda(supabase, idSalao, idComanda);
+    await cancelarComandaSeVazia(supabase, idSalao, idComanda);
   }
 }

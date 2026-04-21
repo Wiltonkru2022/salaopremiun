@@ -641,6 +641,7 @@ export function useAgendaMutations({
         onConfirm: async () => {
           await cancelarAgendamentoComComanda({
             supabase,
+            idSalao,
             idAgendamento: item.id,
           });
 
@@ -653,6 +654,7 @@ export function useAgendaMutations({
     [
       bloquearSeAssinaturaInvalida,
       loadAgenda,
+      idSalao,
       setEditingItem,
       setModalOpen,
       supabase,
