@@ -864,7 +864,8 @@ export async function replySalaoTicket(params: {
       ultima_interacao_em: now,
       fechado_em: null,
     })
-    .eq("id", params.idTicket);
+    .eq("id", params.idTicket)
+    .eq("id_salao", params.context.idSalao);
 
   await supabase.from("ticket_eventos").insert({
     id_ticket: params.idTicket,
@@ -929,7 +930,8 @@ export async function updateSalaoTicketStatus(params: {
       ultima_interacao_em: now,
       fechado_em: newStatus === "fechado" ? now : null,
     })
-    .eq("id", params.idTicket);
+    .eq("id", params.idTicket)
+    .eq("id_salao", params.context.idSalao);
 
   await supabase.from("ticket_eventos").insert({
     id_ticket: params.idTicket,
