@@ -77,6 +77,7 @@ function pickFirstText(...values: unknown[]) {
 
 export async function buscarVinculoProfissionalServico(params: {
   supabase: SupabaseClient;
+  idSalao: string;
   idProfissional: string;
   idServico: string;
 }) {
@@ -91,6 +92,7 @@ export async function buscarVinculoProfissionalServico(params: {
       desconta_taxa_maquininha
     `
     )
+    .eq("id_salao", params.idSalao)
     .eq("id_profissional", params.idProfissional)
     .eq("id_servico", params.idServico)
     .eq("ativo", true)

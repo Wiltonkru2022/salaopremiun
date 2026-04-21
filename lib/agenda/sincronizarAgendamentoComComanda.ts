@@ -238,6 +238,7 @@ export async function sincronizarAgendamentoComComanda(params: SincronizarParams
 
   const vinculo = await buscarVinculoProfissionalServico({
     supabase,
+    idSalao,
     idProfissional,
     idServico,
   });

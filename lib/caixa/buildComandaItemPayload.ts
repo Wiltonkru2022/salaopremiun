@@ -81,6 +81,7 @@ export async function buildComandaItemPayload({
     servico?.id && itemModal.idProfissional
       ? await buscarVinculoProfissionalServico({
           supabase,
+          idSalao,
           idProfissional: itemModal.idProfissional,
           idServico: servico.id,
         })

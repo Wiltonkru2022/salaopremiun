@@ -545,6 +545,7 @@ export async function resolverItemPayload(params: {
       idProfissional && idServico
         ? await buscarVinculoProfissionalServico({
             supabase: supabaseAdmin,
+            idSalao,
             idProfissional,
             idServico,
           })

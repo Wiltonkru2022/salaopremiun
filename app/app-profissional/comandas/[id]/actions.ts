@@ -217,6 +217,7 @@ export async function adicionarServicoNaComandaAction(formData: FormData) {
       } else {
         const vinculo = await buscarVinculoProfissionalServico({
           supabase: supabaseAdmin,
+          idSalao: session.idSalao,
           idProfissional: session.idProfissional,
           idServico,
         });
