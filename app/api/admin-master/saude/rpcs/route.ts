@@ -1,52 +1,30 @@
 import { NextResponse } from "next/server";
-import { requireAdminMasterUser } from "@/lib/admin-master/auth/requireAdminMasterUser";
-import { REQUIRED_DATABASE_FUNCTIONS } from "@/lib/db/required-rpcs";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
-
-type RoutineRow = {
-  function_name: string;
-  exists: boolean;
-};
+import {
+  AdminMasterSaudeUseCaseError,
+  validarAdminMasterRpcsUseCase,
+} from "@/core/use-cases/admin-master/saude";
+import { createAdminMasterSaudeService } from "@/services/adminMasterSaudeService";
 
 export async function GET() {
   try {
-    await requireAdminMasterUser();
+    const result = await validarAdminMasterRpcsUseCase({
+      service: createAdminMasterSaudeService(),
+    });
 
-    const supabaseAdmin = getSupabaseAdmin();
-    const { data, error } = await supabaseAdmin.rpc(
-      "fn_validar_funcoes_obrigatorias",
-      {
-        p_function_names: [...REQUIRED_DATABASE_FUNCTIONS],
-      }
-    );
-
-    if (error) {
+    return NextResponse.json(result.body, { status: result.status });
+  } catch (error) {
+    if (error instanceof AdminMasterSaudeUseCaseError) {
       return NextResponse.json(
         {
           ok: false,
-          error:
-            "Não foi possível validar funções obrigatórias. Aplique a migration fn_validar_funcoes_obrigatorias antes do deploy.",
-          details: error.message,
-          required: REQUIRED_DATABASE_FUNCTIONS,
+          error: error.message,
+          details: error.details,
+          required: error.required,
         },
-        { status: 500 }
+        { status: error.status }
       );
     }
 
-    const found = new Set(
-      ((data || []) as RoutineRow[])
-        .filter((row) => row.exists)
-        .map((row) => row.function_name)
-    );
-    const missing = REQUIRED_DATABASE_FUNCTIONS.filter((name) => !found.has(name));
-
-    return NextResponse.json({
-      ok: missing.length === 0,
-      totalRequired: REQUIRED_DATABASE_FUNCTIONS.length,
-      missing,
-      found: [...found].sort(),
-    });
-  } catch (error) {
     return NextResponse.json(
       {
         ok: false,

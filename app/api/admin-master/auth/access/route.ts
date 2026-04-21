@@ -1,47 +1,18 @@
 import { NextResponse } from "next/server";
-import { getAdminMasterAccess } from "@/lib/admin-master/auth/requireAdminMasterUser";
-import {
-  ADMIN_MASTER_HOME_PATH,
-  sanitizeAdminMasterNextPath,
-} from "@/lib/admin-master/auth/login-path";
+import { obterAdminMasterAccessUseCase } from "@/core/use-cases/admin-master/auth";
+import { createAdminMasterAuthService } from "@/services/adminMasterAuthService";
 
 export async function GET(request: Request) {
-  const access = await getAdminMasterAccess("dashboard_ver");
-
-  if (!access.ok) {
-    return NextResponse.json(
-      {
-        ok: false,
-        message: access.message,
-      },
-      {
-        status: access.status,
-        headers: {
-          "Cache-Control": "no-store",
-        },
-      }
-    );
-  }
-
   const requestUrl = new URL(request.url);
-  const redirectTo =
-    sanitizeAdminMasterNextPath(requestUrl.searchParams.get("next")) ||
-    ADMIN_MASTER_HOME_PATH;
+  const result = await obterAdminMasterAccessUseCase({
+    nextPath: requestUrl.searchParams.get("next"),
+    service: createAdminMasterAuthService(),
+  });
 
-  return NextResponse.json(
-    {
-      ok: true,
-      redirectTo,
-      usuario: {
-        id: access.usuario.id,
-        nome: access.usuario.nome,
-        perfil: access.usuario.perfil,
-      },
+  return NextResponse.json(result.body, {
+    status: result.status,
+    headers: {
+      "Cache-Control": "no-store",
     },
-    {
-      headers: {
-        "Cache-Control": "no-store",
-      },
-    }
-  );
+  });
 }

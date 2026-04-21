@@ -518,8 +518,8 @@ export default function AgendaPage() {
           agendaExpanded
             ? "fixed inset-0 z-40 flex min-h-0 flex-col gap-1.5 bg-white p-2 md:p-3"
             : densityMode === "reception"
-              ? "flex h-[calc(100vh-6.1rem)] min-h-[640px] min-w-0 flex-col gap-1 overflow-hidden bg-white"
-              : "flex h-[calc(100vh-6.7rem)] min-h-[620px] min-w-0 flex-col gap-1.5 overflow-hidden bg-white"
+              ? "flex h-[calc(100dvh-4.9rem)] min-h-[720px] min-w-0 flex-col gap-1 overflow-hidden bg-white"
+              : "flex h-[calc(100dvh-5.2rem)] min-h-[700px] min-w-0 flex-col gap-1.5 overflow-hidden bg-white"
         }
       >
         <ProfissionaisBar

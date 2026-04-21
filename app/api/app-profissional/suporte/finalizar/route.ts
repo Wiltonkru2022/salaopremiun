@@ -1,39 +1,33 @@
 import { NextResponse } from "next/server";
-import { excluirConversaSuporte } from "@/app/services/profissional/suporte";
 import { reportOperationalIncident } from "@/lib/monitoring/operational-incidents";
-import { requireProfissionalServerContext } from "@/lib/profissional-context.server";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import {
+  finalizarSuporteIAUseCase,
+  FinalizarSuporteIAUseCaseError,
+} from "@/core/use-cases/app-profissional/finalizarSuporteIA";
+import { createAppProfissionalSuporteService } from "@/services/appProfissionalSuporteService";
 
 export async function POST(req: Request) {
   let idSalao = "";
 
   try {
-    const session = await requireProfissionalServerContext();
-    idSalao = session.idSalao;
-
-    const body = await req.json().catch(() => null);
-    const conversaId = String(body?.conversaId || "").trim();
-
-    if (!conversaId) {
-      return NextResponse.json(
-        { error: "Conversa não informada." },
-        { status: 400 }
-      );
-    }
-
-    await excluirConversaSuporte({
-      idConversa: conversaId,
-      idSalao: session.idSalao,
-      idProfissional: session.idProfissional,
+    const result = await finalizarSuporteIAUseCase({
+      body: await req.json().catch(() => null),
+      service: createAppProfissionalSuporteService(),
     });
+    idSalao = result.idSalao || "";
 
-    return NextResponse.json({ ok: true });
+    return NextResponse.json(result.body, { status: result.status });
   } catch (error) {
-    if (error instanceof Error && error.message === "UNAUTHORIZED") {
-      return NextResponse.json(
-        { error: "Sessao do profissional nao encontrada." },
-        { status: 401 }
-      );
+    if (error instanceof FinalizarSuporteIAUseCaseError) {
+      idSalao = error.idSalao || idSalao;
+
+      if (error.status === 401 || error.status === 400) {
+        return NextResponse.json(
+          { error: error.message },
+          { status: error.status }
+        );
+      }
     }
 
     if (idSalao) {

@@ -101,7 +101,7 @@ export async function listarProximosAgendamentosProfissional(
       .in("id", servicoIds);
 
     if (servicosError) {
-      throw new Error(servicosError.message || "Erro ao carregar serviÃ§os.");
+      throw new Error(servicosError.message || "Erro ao carregar serviços.");
     }
 
     servicosMap = new Map(

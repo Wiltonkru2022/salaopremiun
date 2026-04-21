@@ -228,54 +228,53 @@ try {
 
   if (!allowMutation) {
     console.log("Smoke sem mutacao concluido. Para fluxo completo, rode com E2E_ALLOW_MUTATION=1.");
-    process.exit(0);
+  } else {
+    requireEnv(["NEXT_PUBLIC_SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_ANON_KEY"]);
+
+    const salaoA = buildCadastroPayload("a");
+    const jarA = createCookieJar();
+    const idSalaoA = await cadastroSalao(salaoA);
+    created.push({ idSalao: idSalaoA, authUserId: await findAuthUserId(salaoA.email) });
+
+    await login(salaoA, jarA);
+    await iniciarTrial(idSalaoA, jarA);
+
+    let checkout = null;
+    if (runAsaasCheckout) {
+      checkout = await criarCheckout(idSalaoA, salaoA, jarA);
+    }
+
+    if (runWebhook) {
+      assert(checkout, "E2E_RUN_ASAAS_WEBHOOK exige E2E_RUN_ASAAS_CHECKOUT=1.");
+      await enviarWebhookConfirmado(checkout);
+    }
+
+    if (runMultiTenant) {
+      const salaoB = buildCadastroPayload("b");
+      const idSalaoB = await cadastroSalao(salaoB);
+      created.push({ idSalao: idSalaoB, authUserId: await findAuthUserId(salaoB.email) });
+      await assertTenantIsolation(idSalaoA, idSalaoB, jarA);
+    }
+
+    console.log(
+      JSON.stringify(
+        {
+          ok: true,
+          idSalao: idSalaoA,
+          checkout: checkout
+            ? {
+                paymentId: checkout.paymentId,
+                status: checkout.status,
+                billingType: checkout.billingType,
+              }
+            : null,
+          multiTenant: runMultiTenant,
+        },
+        null,
+        2
+      )
+    );
   }
-
-  requireEnv(["NEXT_PUBLIC_SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_ANON_KEY"]);
-
-  const salaoA = buildCadastroPayload("a");
-  const jarA = createCookieJar();
-  const idSalaoA = await cadastroSalao(salaoA);
-  created.push({ idSalao: idSalaoA, authUserId: await findAuthUserId(salaoA.email) });
-
-  await login(salaoA, jarA);
-  await iniciarTrial(idSalaoA, jarA);
-
-  let checkout = null;
-  if (runAsaasCheckout) {
-    checkout = await criarCheckout(idSalaoA, salaoA, jarA);
-  }
-
-  if (runWebhook) {
-    assert(checkout, "E2E_RUN_ASAAS_WEBHOOK exige E2E_RUN_ASAAS_CHECKOUT=1.");
-    await enviarWebhookConfirmado(checkout);
-  }
-
-  if (runMultiTenant) {
-    const salaoB = buildCadastroPayload("b");
-    const idSalaoB = await cadastroSalao(salaoB);
-    created.push({ idSalao: idSalaoB, authUserId: await findAuthUserId(salaoB.email) });
-    await assertTenantIsolation(idSalaoA, idSalaoB, jarA);
-  }
-
-  console.log(
-    JSON.stringify(
-      {
-        ok: true,
-        idSalao: idSalaoA,
-        checkout: checkout
-          ? {
-              paymentId: checkout.paymentId,
-              status: checkout.status,
-              billingType: checkout.billingType,
-            }
-          : null,
-        multiTenant: runMultiTenant,
-      },
-      null,
-      2
-    )
-  );
 } finally {
   await cleanupCreated(created);
 }

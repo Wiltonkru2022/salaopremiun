@@ -46,7 +46,7 @@ const PAINEL_PREFIXES = [
   "/caixa",
   "/comissoes",
   "/financeiro",
-  "/relatorio_financeiro",
+  "/relatorio-financeiro",
   "/relatorios",
   "/marketing",
   "/meu-plano",

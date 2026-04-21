@@ -87,7 +87,7 @@ export default function AppointmentCard({
   const effectiveTop = previewTop ?? top;
   const effectiveHeight = Math.max(MIN_CARD_HEIGHT, previewHeight ?? height);
   const compactMode = densityMode === "reception";
-  const pixelsPer15Min = compactMode ? 12 : 18;
+  const pixelsPer15Min = compactMode ? 10 : 16;
   const effectiveWidthPx = Math.max(56, (dayColumnWidthPx * widthPercent) / 100 - 8);
   const isUltraNarrow = effectiveWidthPx <= 96;
   const isNarrow = effectiveWidthPx <= (compactMode ? 122 : 148);
@@ -249,7 +249,7 @@ export default function AppointmentCard({
       const snappedBlocksY = Math.round(deltaY / pixelsPer15Min);
       minutesDelta = snappedBlocksY * 15;
       dayDelta = allowDayMove
-        ? Math.round(deltaX / Math.max(dayColumnWidthPx, 1))
+        ? Math.trunc(deltaX / Math.max(dayColumnWidthPx, 1))
         : 0;
 
       setPreviewTop(top + snappedBlocksY * pixelsPer15Min);

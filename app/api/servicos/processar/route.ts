@@ -1,351 +1,58 @@
 import { NextRequest, NextResponse } from "next/server";
+import { ZodError } from "zod";
+import {
+  parseProcessarServicoInput,
+  processarServicoUseCase,
+  ProcessarServicoUseCaseError,
+} from "@/core/use-cases/servicos/processarServico";
+import { createServicoService } from "@/services/servicoService";
 import {
   AuthzError,
-  requireSalaoPermission,
-} from "@/lib/auth/require-salao-permission";
-import {
-  assertCanMutatePlanFeature,
   PlanAccessError,
-} from "@/lib/plans/access";
-import { reportOperationalIncident } from "@/lib/monitoring/operational-incidents";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
-import type {
-  AcaoServico,
-  ConsumoPayload,
-  ServicoProcessarBody,
-  ServicoProcessarPayload,
-  VinculoPayload,
-} from "@/types/servicos";
+  createSalaoMutacaoRouteService,
+} from "@/services/salaoMutacaoRouteService";
 
-type CategoriaServicoResult = {
-  id: string;
-  nome: string;
-};
-
-const UUID_REGEX =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-
-function sanitizeUuid(value: unknown) {
-  const parsed = String(value || "").trim();
-  return UUID_REGEX.test(parsed) ? parsed : null;
-}
-
-function sanitizeText(value: unknown) {
-  const parsed = String(value || "").trim();
-  return parsed || null;
-}
-
-function sanitizeBoolean(value: unknown, fallback = false) {
-  if (typeof value === "boolean") return value;
-  if (typeof value === "string") {
-    if (value === "true") return true;
-    if (value === "false") return false;
-  }
-
-  return fallback;
-}
-
-function sanitizeNumber(value: unknown) {
-  const parsed = Number(value ?? 0);
-  return Number.isFinite(parsed) ? parsed : 0;
-}
-
-function sanitizeOptionalNumber(value: unknown) {
-  if (value === null || value === undefined || value === "") {
-    return null;
-  }
-
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : null;
-}
-
-function sanitizeMoney(value: unknown) {
-  const parsed = Number(value ?? 0);
-  return Number.isFinite(parsed) ? Number(parsed.toFixed(2)) : 0;
-}
-
-function sanitizeOptionalMoney(value: unknown) {
-  if (value === null || value === undefined || value === "") {
-    return null;
-  }
-
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? Number(parsed.toFixed(2)) : null;
-}
-
-function sanitizeBaseCalculo(value: unknown, fallback = "bruto") {
-  const parsed = String(value || "").trim().toLowerCase();
-  return parsed === "liquido" ? "liquido" : fallback;
-}
-
-function resolveHttpStatus(error: unknown) {
-  const candidate = error as { code?: string } | null;
-  if (!candidate?.code) return 500;
-  if (candidate.code === "P0001") return 400;
-  if (candidate.code === "23514") return 409;
-  return 500;
-}
-
-async function resolverCategoria(params: {
-  supabaseAdmin: ReturnType<typeof getSupabaseAdmin>;
-  idSalao: string;
-  idCategoria: string | null;
-  novaCategoria: string | null;
-}) {
-  const { supabaseAdmin, idSalao, idCategoria, novaCategoria } = params;
-
-  if (idCategoria === "__nova__" || novaCategoria) {
-    const nomeNovaCategoria = sanitizeText(novaCategoria);
-    if (!nomeNovaCategoria) {
-      throw new Error("Informe o nome da nova categoria.");
-    }
-
-    const { data, error } = await supabaseAdmin.rpc(
-      "fn_get_or_create_servico_categoria",
-      {
-        p_id_salao: idSalao,
-        p_nome: nomeNovaCategoria,
-      }
-    );
-
-    if (error) {
-      throw error;
-    }
-
-    const categoria = (Array.isArray(data) ? data[0] : data) as
-      | CategoriaServicoResult
-      | null;
-
-    if (!categoria?.id) {
-      throw new Error("Nao foi possivel criar a categoria.");
-    }
-
-    return categoria;
-  }
-
-  const categoriaId = sanitizeUuid(idCategoria);
-  if (!categoriaId) return null;
-
-  const { data, error } = await supabaseAdmin
-    .from("servicos_categorias")
-    .select("id, nome")
-    .eq("id", categoriaId)
-    .eq("id_salao", idSalao)
-    .maybeSingle();
-
-  if (error) {
-    throw error;
-  }
-
-  if (!data?.id) {
-    throw new Error("Categoria do servico nao encontrada para este salao.");
-  }
-
-  return data as CategoriaServicoResult;
-}
-
-function buildServicoPayload(params: {
-  idSalao: string;
-  servico: ServicoProcessarPayload;
-  categoria: CategoriaServicoResult | null;
-}) {
-  const nome = sanitizeText(params.servico.nome);
-  if (!nome) {
-    throw new Error("Informe o nome do servico.");
-  }
-
-  const ativo = sanitizeBoolean(params.servico.ativo, true);
-
-  return {
-    id_salao: params.idSalao,
-    nome,
-    id_categoria: params.categoria?.id || null,
-    categoria: params.categoria?.nome || null,
-    descricao: sanitizeText(params.servico.descricao),
-    gatilho_retorno_dias: sanitizeOptionalNumber(
-      params.servico.gatilho_retorno_dias
-    ),
-    duracao_minutos: sanitizeNumber(params.servico.duracao_minutos),
-    pausa_minutos: sanitizeNumber(params.servico.pausa_minutos),
-    recurso_nome: sanitizeText(params.servico.recurso_nome),
-    preco_padrao: sanitizeMoney(params.servico.preco_padrao),
-    preco_variavel: sanitizeBoolean(params.servico.preco_variavel, false),
-    preco_minimo: sanitizeOptionalMoney(params.servico.preco_minimo),
-    custo_produto: sanitizeMoney(params.servico.custo_produto),
-    comissao_percentual_padrao: sanitizeOptionalMoney(
-      params.servico.comissao_percentual_padrao
-    ),
-    comissao_assistente_percentual: sanitizeMoney(
-      params.servico.comissao_assistente_percentual
-    ),
-    base_calculo: sanitizeBaseCalculo(params.servico.base_calculo),
-    desconta_taxa_maquininha: sanitizeBoolean(
-      params.servico.desconta_taxa_maquininha,
-      false
-    ),
-    exige_avaliacao: sanitizeBoolean(params.servico.exige_avaliacao, false),
-    ativo,
-    status: ativo ? "ativo" : "inativo",
-  };
-}
-
-async function salvarServicoCatalogoTransacional(params: {
-  supabaseAdmin: ReturnType<typeof getSupabaseAdmin>;
-  idSalao: string;
-  idServico: string | null;
-  servicoPayload: ReturnType<typeof buildServicoPayload>;
-  vinculos: VinculoPayload[];
-  consumos: ConsumoPayload[];
-}) {
-  const { data, error } = await params.supabaseAdmin.rpc(
-    "fn_salvar_servico_catalogo_transacional",
-    {
-      p_id_salao: params.idSalao,
-      p_id_servico: params.idServico,
-      p_servico: params.servicoPayload,
-      p_vinculos: params.vinculos || [],
-      p_consumos: params.consumos || [],
-    }
-  );
-
-  if (error) throw error;
-
-  const result = (Array.isArray(data) ? data[0] : data) as
-    | { id_servico?: string | null }
-    | string
-    | null;
-  const idServico =
-    typeof result === "string" ? result : result?.id_servico || null;
-
-  if (!idServico) {
-    throw new Error("Nao foi possivel obter o servico salvo.");
-  }
-
-  return idServico;
-}
+const routeService = createSalaoMutacaoRouteService({
+  permission: "servicos_ver",
+  planFeature: "servicos",
+  incidentKeyPrefix: "servicos:processar",
+  module: "servicos",
+  title: "Processamento de servico falhou",
+  fallbackMessage: "Erro interno ao processar servico.",
+  route: "/api/servicos/processar",
+  getAction: (acaoRaw) =>
+    ["salvar", "alterar_status", "excluir"].includes(acaoRaw) ? acaoRaw : null,
+});
 
 export async function POST(req: NextRequest) {
   let idSalao = "";
   let acaoRaw = "";
 
   try {
-    const body = (await req.json()) as ServicoProcessarBody;
-    idSalao = sanitizeUuid(body.idSalao) || "";
-    acaoRaw = String(body.acao || "").trim().toLowerCase();
-    const acao = acaoRaw as AcaoServico;
+    const input = parseProcessarServicoInput(await req.json());
+    idSalao = input.idSalao;
+    acaoRaw = input.acao;
 
-    if (!idSalao) {
-      return NextResponse.json({ error: "Salao obrigatorio." }, { status: 400 });
-    }
+    await routeService.validar(idSalao);
 
-    if (!["salvar", "alterar_status", "excluir"].includes(acao)) {
-      return NextResponse.json({ error: "Acao invalida." }, { status: 400 });
-    }
-
-    await requireSalaoPermission(idSalao, "servicos_ver", {
-      allowedNiveis: ["admin", "gerente"],
+    const result = await processarServicoUseCase({
+      input,
+      service: createServicoService(),
     });
-    await assertCanMutatePlanFeature(idSalao, "servicos");
 
-    const supabaseAdmin = getSupabaseAdmin();
-    const servico = body.servico;
-
-    if (acao === "salvar") {
-      if (!servico) {
-        return NextResponse.json(
-          { error: "Servico obrigatorio para esta acao." },
-          { status: 400 }
-        );
-      }
-
-      const categoria = await resolverCategoria({
-        supabaseAdmin,
-        idSalao,
-        idCategoria: String(servico.id_categoria || ""),
-        novaCategoria: sanitizeText(body.novaCategoria),
-      });
-
-      const payload = buildServicoPayload({
-        idSalao,
-        servico,
-        categoria,
-      });
-
-      const idServico = await salvarServicoCatalogoTransacional({
-        supabaseAdmin,
-        idSalao,
-        idServico: sanitizeUuid(servico.id),
-        servicoPayload: payload,
-        vinculos: body.vinculos || [],
-        consumos: body.consumos || [],
-      });
-
-      return NextResponse.json({
-        ok: true,
-        idServico,
-        categoria,
-      });
-    }
-
-    const idServico = sanitizeUuid(servico?.id);
-    if (!idServico) {
+    return NextResponse.json(result.body, { status: result.status });
+  } catch (error) {
+    if (error instanceof ZodError) {
+      const firstIssue = error.issues[0];
       return NextResponse.json(
-        { error: "Servico obrigatorio para esta acao." },
+        {
+          error: firstIssue?.message || "Payload invalido.",
+          issues: error.flatten(),
+        },
         { status: 400 }
       );
     }
 
-    if (acao === "alterar_status") {
-      const ativo = sanitizeBoolean(servico?.ativo, true);
-      const { data, error } = await supabaseAdmin
-        .from("servicos")
-        .update({
-          ativo,
-          status: ativo ? "ativo" : "inativo",
-        })
-        .eq("id", idServico)
-        .eq("id_salao", idSalao)
-        .select("id, ativo, status")
-        .maybeSingle();
-
-      if (error) {
-        console.error("Erro ao alterar status do servico:", error);
-        return NextResponse.json(
-          { error: error.message || "Erro ao alterar status do servico." },
-          { status: resolveHttpStatus(error) }
-        );
-      }
-
-      if (!data?.id) {
-        return NextResponse.json(
-          { error: "Servico nao encontrado para alterar status." },
-          { status: 404 }
-        );
-      }
-
-      return NextResponse.json({
-        ok: true,
-        idServico: data.id,
-        ativo: data.ativo,
-        status: data.status,
-      });
-    }
-
-    const { error } = await supabaseAdmin.rpc("fn_excluir_servico_catalogo", {
-      p_id_salao: idSalao,
-      p_id_servico: idServico,
-    });
-
-    if (error) {
-      console.error("Erro ao excluir servico:", error);
-      return NextResponse.json(
-        { error: error.message || "Erro ao excluir servico." },
-        { status: resolveHttpStatus(error) }
-      );
-    }
-
-    return NextResponse.json({ ok: true, idServico });
-  } catch (error) {
     if (error instanceof AuthzError) {
       return NextResponse.json(
         { error: error.message },
@@ -360,32 +67,19 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    if (error instanceof ProcessarServicoUseCaseError) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: error.status }
+      );
+    }
+
     if (idSalao) {
-      try {
-        await reportOperationalIncident({
-          supabaseAdmin: getSupabaseAdmin(),
-          key: `servicos:processar:${acaoRaw || "desconhecida"}:${idSalao}`,
-          module: "servicos",
-          title: "Processamento de servico falhou",
-          description:
-            error instanceof Error
-              ? error.message
-              : "Erro interno ao processar servico.",
-          severity: "alta",
-          idSalao,
-          details: {
-            acao: ["salvar", "alterar_status", "excluir"].includes(acaoRaw)
-              ? acaoRaw
-              : null,
-            route: "/api/servicos/processar",
-          },
-        });
-      } catch (incidentError) {
-        console.error(
-          "Falha ao registrar incidente operacional de servicos:",
-          incidentError
-        );
-      }
+      await routeService.reportarFalha({
+        idSalao,
+        acaoRaw,
+        error,
+      });
     }
 
     console.error("Erro geral ao processar servico:", error);

@@ -1,20 +1,27 @@
 import { NextResponse } from "next/server";
-import { registrarAdminMasterAuditoria } from "@/lib/admin-master/actions";
-import { requireAdminMasterUser } from "@/lib/admin-master/auth/requireAdminMasterUser";
-import { syncAdminMasterWebhookEvents } from "@/lib/admin-master/webhooks-sync";
+import {
+  AdminMasterWebhookUseCaseError,
+  sincronizarAdminMasterWebhooksUseCase,
+} from "@/core/use-cases/admin-master/webhooks";
+import { createAdminMasterWebhookService } from "@/services/adminMasterWebhookService";
 
 export async function POST() {
-  const admin = await requireAdminMasterUser("operacao_reprocessar");
-  const resultado = await syncAdminMasterWebhookEvents();
+  try {
+    const result = await sincronizarAdminMasterWebhooksUseCase({
+      service: createAdminMasterWebhookService(),
+    });
 
-  await registrarAdminMasterAuditoria({
-    idAdmin: admin.usuario.id,
-    acao: "sincronizar_webhooks_admin_master",
-    entidade: "eventos_webhook",
-    descricao:
-      "Sincronizacao manual dos eventos reais do Asaas para diagnostico no AdminMaster.",
-    payload: resultado,
-  });
+    return NextResponse.json(result.body, { status: result.status });
+  } catch (error) {
+    if (error instanceof AdminMasterWebhookUseCaseError) {
+      return NextResponse.json(
+        { ok: false, error: error.message },
+        { status: error.status }
+      );
+    }
 
-  return NextResponse.json({ ok: true, resultado });
+    const message =
+      error instanceof Error ? error.message : "Falha ao sincronizar webhooks.";
+    return NextResponse.json({ ok: false, error: message }, { status: 500 });
+  }
 }

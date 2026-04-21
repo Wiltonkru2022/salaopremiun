@@ -2,56 +2,27 @@ import { NextRequest, NextResponse } from "next/server";
 import { reportOperationalIncident } from "@/lib/monitoring/operational-incidents";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import {
-  createSalaoTicket,
-  getProfissionalTicketContext,
-} from "@/lib/support/tickets";
-
-type Payload = {
-  assunto?: string;
-  categoria?: string | null;
-  prioridade?: string | null;
-  mensagem?: string;
-  contexto?: Record<string, unknown>;
-};
-
-function buildErrorResponse(error: unknown, fallback: string) {
-  const message = error instanceof Error ? error.message : fallback;
-
-  if (message === "UNAUTHORIZED") {
-    return NextResponse.json(
-      { ok: false, error: "Sessao do profissional invalida." },
-      { status: 401 }
-    );
-  }
-
-  if (message === "INVALID_PAYLOAD") {
-    return NextResponse.json(
-      { ok: false, error: "Preencha assunto e mensagem para abrir o ticket." },
-      { status: 400 }
-    );
-  }
-
-  return NextResponse.json({ ok: false, error: message || fallback }, { status: 500 });
-}
+  criarProfissionalTicketUseCase,
+  ProfissionalTicketUseCaseError,
+} from "@/core/use-cases/suporte/profissionalTickets";
+import { createSuporteTicketService } from "@/services/suporteTicketService";
 
 export async function POST(req: NextRequest) {
   let idSalao = "";
 
   try {
-    const context = await getProfissionalTicketContext();
-    idSalao = context.idSalao;
-    const body = (await req.json().catch(() => ({}))) as Payload;
-    const ticket = await createSalaoTicket({
-      context,
-      assunto: body.assunto || "",
-      categoria: body.categoria || null,
-      prioridade: body.prioridade || null,
-      mensagem: body.mensagem || "",
-      contexto: body.contexto || {},
+    const result = await criarProfissionalTicketUseCase({
+      body: await req.json().catch(() => ({})),
+      service: createSuporteTicketService(),
     });
+    idSalao = result.idSalao || "";
 
-    return NextResponse.json({ ok: true, ticket });
+    return NextResponse.json(result.body, { status: result.status });
   } catch (error) {
+    if (error instanceof ProfissionalTicketUseCaseError) {
+      idSalao = error.idSalao || idSalao;
+    }
+
     if (idSalao) {
       try {
         await reportOperationalIncident({
@@ -77,6 +48,16 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    return buildErrorResponse(error, "Erro ao abrir ticket pelo app profissional.");
+    if (error instanceof ProfissionalTicketUseCaseError) {
+      return NextResponse.json(
+        { ok: false, error: error.message },
+        { status: error.status }
+      );
+    }
+
+    return NextResponse.json(
+      { ok: false, error: "Erro ao abrir ticket pelo app profissional." },
+      { status: 500 }
+    );
   }
 }

@@ -44,7 +44,7 @@ export function useAgendaActions({
 
     abrirAviso(
       "Assinatura bloqueada",
-      "Sua assinatura estÃ¡ bloqueada por atraso. Regularize o pagamento para continuar usando a agenda.",
+      "Sua assinatura está bloqueada por atraso. Regularize o pagamento para continuar usando a agenda.",
       "danger",
       "/assinatura"
     );
@@ -56,8 +56,8 @@ export function useAgendaActions({
     (date: string) => {
       if (!ensureDiaFuncionamento({ config, dateString: date })) {
         abrirAviso(
-          "Dia indisponÃ­vel",
-          "Esse dia nÃ£o estÃ¡ configurado como dia de funcionamento.",
+          "Dia indisponível",
+          "Esse dia não está configurado como dia de funcionamento.",
           "warning"
         );
         return false;

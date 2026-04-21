@@ -1,40 +1,35 @@
 import { NextRequest, NextResponse } from "next/server";
-import { criarTicketPorCheckoutLockAdminMaster } from "@/lib/admin-master/actions";
-import { requireAdminMasterUser } from "@/lib/admin-master/auth/requireAdminMasterUser";
-
-type Payload = {
-  mensagem?: string;
-  assumir?: boolean;
-};
+import {
+  AdminMasterOperacaoUseCaseError,
+  criarTicketCheckoutAdminMasterUseCase,
+} from "@/core/use-cases/admin-master/operacao";
+import { createAdminMasterOperacaoService } from "@/services/adminMasterOperacaoService";
 
 export async function POST(
   req: NextRequest,
   ctx: { params: Promise<{ id: string }> }
 ) {
-  const admin = await requireAdminMasterUser("dashboard_ver");
+  try {
+    const { id } = await ctx.params;
+    const result = await criarTicketCheckoutAdminMasterUseCase({
+      idCheckoutLock: id,
+      body: await req.json().catch(() => ({})),
+      service: createAdminMasterOperacaoService(),
+    });
 
-  if (
-    !admin.permissions.tickets_editar &&
-    !admin.permissions.cobrancas_reprocessar &&
-    !admin.permissions.operacao_reprocessar
-  ) {
-    return NextResponse.json(
-      {
-        ok: false,
-        error: "Usuario sem permissao para criar ticket de reconciliacao.",
-      },
-      { status: 403 }
-    );
+    return NextResponse.json(result.body, { status: result.status });
+  } catch (error) {
+    if (error instanceof AdminMasterOperacaoUseCaseError) {
+      return NextResponse.json(
+        { ok: false, error: error.message },
+        { status: error.status }
+      );
+    }
+
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Erro ao criar ticket de reconciliacao.";
+    return NextResponse.json({ ok: false, error: message }, { status: 500 });
   }
-
-  const { id } = await ctx.params;
-  const body = (await req.json().catch(() => ({}))) as Payload;
-  const resultado = await criarTicketPorCheckoutLockAdminMaster({
-    idCheckoutLock: id,
-    idAdmin: admin.usuario.id,
-    mensagem: body.mensagem || null,
-    assumir: body.assumir ?? true,
-  });
-
-  return NextResponse.json({ ok: true, resultado });
 }

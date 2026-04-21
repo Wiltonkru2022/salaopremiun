@@ -25,7 +25,7 @@ function inferSurface(pathname: string) {
     pathname.startsWith("/perfil-salao") ||
     pathname.startsWith("/produtos") ||
     pathname.startsWith("/profissionais") ||
-    pathname.startsWith("/relatorio_financeiro") ||
+    pathname.startsWith("/relatorio-financeiro") ||
     pathname.startsWith("/servicos") ||
     pathname.startsWith("/servicos-extras") ||
     pathname.startsWith("/suporte") ||

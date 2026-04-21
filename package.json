@@ -35,10 +35,12 @@
     "audit:admin-actions": "node scripts/audit/admin-master-actions-audit.mjs",
     "audit:database-contract": "node scripts/audit/database-contract-audit.mjs",
     "audit:admin-client-inventory": "node scripts/audit/admin-client-inventory.mjs",
+    "audit:launch-readiness": "node scripts/audit/launch-readiness-audit.mjs",
     "e2e:proxy": "node scripts/e2e/proxy-smoke.mjs",
     "e2e:sales": "node scripts/e2e/saas-sales-flow.mjs",
     "validate": "npm run ci:validate",
-    "validate:release": "npm run release:validate"
+    "validate:release": "npm run release:validate",
+    "launch:validate": "npm run lint && npm run typecheck && npm run db:audit && npm run audit:launch-readiness && npm run build"
   },
   "dependencies": {
     "@supabase/ssr": "^0.9.0",
@@ -51,7 +53,8 @@
     "next": "^16.2.4",
     "openai": "^6.33.0",
     "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "react-dom": "19.2.4",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

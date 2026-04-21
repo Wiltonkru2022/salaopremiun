@@ -75,14 +75,14 @@ export default function Sidebar({
 
       <aside
         className={clsx(
-          "group fixed inset-y-0 left-0 z-50 w-[272px] -translate-x-full border-r border-white/10 bg-[linear-gradient(180deg,#07101b,#0d1724_54%,#14251f)] text-white transition-[width,transform] duration-300 lg:sticky lg:top-0 lg:z-20 lg:flex lg:h-screen lg:w-[74px] lg:translate-x-0 lg:flex-col lg:overflow-hidden lg:hover:w-[252px]",
+          "group fixed inset-y-0 left-0 z-50 w-[264px] -translate-x-full border-r border-white/10 bg-[linear-gradient(180deg,#07101b,#0d1724_54%,#14251f)] text-white transition-[width,transform] duration-300 lg:sticky lg:top-0 lg:z-20 lg:flex lg:h-screen lg:w-[68px] lg:translate-x-0 lg:flex-col lg:overflow-hidden lg:hover:w-[236px]",
           mobileOpen ? "translate-x-0" : ""
         )}
       >
         <div className="flex h-full flex-col">
-          <div className="flex items-start justify-between gap-3 border-b border-white/10 px-4 py-4 lg:block lg:px-3 lg:py-4 xl:px-4 xl:py-5">
+          <div className="flex items-start justify-between gap-3 border-b border-white/10 px-3.5 py-3.5 lg:block lg:px-2.5 lg:py-3.5 xl:px-3 xl:py-4">
             <div className="flex min-w-0 items-center gap-3">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-[20px] bg-white/10 ring-1 ring-white/10">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-[16px] bg-white/10 ring-1 ring-white/10">
                 {salaoLogoUrl ? (
                   <img
                     src={salaoLogoUrl}
@@ -100,7 +100,7 @@ export default function Sidebar({
                 <div className="truncate text-[11px] font-semibold uppercase tracking-[0.28em] text-white/45">
                   SaaS beauty
                 </div>
-                <div className="mt-1 truncate font-display text-2xl font-bold tracking-[-0.05em] text-white">
+                <div className="mt-1 truncate font-display text-xl font-bold tracking-[-0.04em] text-white">
                   {salaoNome || "SalaoPremium"}
                 </div>
                 <div className="mt-1 truncate text-xs text-white/55">
@@ -119,7 +119,7 @@ export default function Sidebar({
             </button>
           </div>
 
-          <nav className="scroll-premium min-h-0 flex-1 overflow-y-auto px-3 py-4">
+          <nav className="scroll-premium min-h-0 flex-1 overflow-y-auto px-2.5 py-3">
             {subscriptionAtRisk || criticalNotificationsCount > 0 ? (
               <div
                 className={clsx(
@@ -182,7 +182,7 @@ export default function Sidebar({
                     onFocus={() => router.prefetch(item.href)}
                     onMouseEnter={() => router.prefetch(item.href)}
                     className={clsx(
-                    "group/item flex items-center gap-3 rounded-[18px] px-3 py-2.5 ring-1 ring-transparent transition-all duration-300 lg:h-11 lg:w-11 lg:justify-center lg:px-0 lg:py-0 lg:group-hover:w-full lg:group-hover:justify-start lg:group-hover:px-3",
+                    "group/item flex items-center gap-3 rounded-[16px] px-3 py-2.5 ring-1 ring-transparent transition-all duration-300 lg:h-10 lg:w-10 lg:justify-center lg:px-0 lg:py-0 lg:group-hover:w-full lg:group-hover:justify-start lg:group-hover:px-3",
                       active
                         ? "bg-white/12 text-white ring-white/12"
                         : "text-white/72 hover:bg-white/8 hover:text-white"
@@ -190,7 +190,7 @@ export default function Sidebar({
                   >
                     <span
                       className={clsx(
-                        "flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl ring-1 transition",
+                        "flex h-9 w-9 shrink-0 items-center justify-center rounded-[14px] ring-1 transition",
                         active
                           ? "bg-white/14 text-white ring-white/18"
                           : "bg-white/8 ring-white/10 group-hover/item:bg-white/12"
@@ -218,13 +218,13 @@ export default function Sidebar({
             </div>
           </nav>
 
-          <div className="border-t border-white/10 px-3 py-4">
+          <div className="border-t border-white/10 px-2.5 py-3">
             <button
               type="button"
               onClick={onLogout}
-              className="flex w-full items-center gap-3 rounded-[18px] border border-white/10 px-3 py-2.5 text-sm font-semibold text-white/82 transition hover:bg-white/8 lg:h-11 lg:w-11 lg:justify-center lg:px-0 lg:py-0 lg:group-hover:w-full lg:group-hover:justify-start lg:group-hover:px-3"
+              className="flex w-full items-center gap-3 rounded-[16px] border border-white/10 px-3 py-2.5 text-sm font-semibold text-white/82 transition hover:bg-white/8 lg:h-10 lg:w-10 lg:justify-center lg:px-0 lg:py-0 lg:group-hover:w-full lg:group-hover:justify-start lg:group-hover:px-3"
             >
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white/8 ring-1 ring-white/10">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[14px] bg-white/8 ring-1 ring-white/10">
                 <LogOut size={18} />
               </span>
 

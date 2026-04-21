@@ -333,8 +333,8 @@ export default function AppShell({
           onLogout={handleLogout}
         />
 
-        <div className="flex min-w-0 flex-1 flex-col">
-          <div className="sticky top-0 z-30 bg-white px-2.5 pb-2 pt-2 md:px-3 lg:px-4 xl:px-5">
+        <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+          <div className="sticky top-0 z-30 bg-white px-2 pb-1.5 pt-1.5 md:px-2.5 lg:px-3 xl:px-4">
             <Header
               userName={userName}
               userEmail={userEmail}
@@ -359,7 +359,7 @@ export default function AppShell({
           </div>
 
           <main
-            className="scroll-premium min-h-0 flex-1 overflow-y-auto bg-white px-2.5 pb-4 md:px-3 lg:px-4 xl:px-5"
+            className="scroll-premium min-h-0 flex-1 overflow-y-auto bg-white px-2 pb-2 md:px-2.5 lg:px-3 xl:px-4"
             onScroll={(event) => {
               const nextScrolled = event.currentTarget.scrollTop > 12;
               setContentScrolled((current) =>
@@ -367,7 +367,7 @@ export default function AppShell({
               );
             }}
           >
-            <div className="min-h-[calc(100vh-5.75rem)] bg-white p-3 md:p-4 xl:p-5">
+            <div className="min-h-[calc(100dvh-4.8rem)] bg-white p-2 md:p-2.5 xl:p-3">
               <div className="min-w-0">{children}</div>
             </div>
           </main>

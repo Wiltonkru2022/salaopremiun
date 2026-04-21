@@ -132,7 +132,7 @@ export function useAgendaData({
       idProfissional: string;
     }) => {
       if (!idSalao) {
-        throw new Error("SalÃ£o nÃ£o identificado para sincronizaÃ§Ã£o.");
+        throw new Error("Salão não identificado para sincronização.");
       }
 
       const { servico, profissional } = montarPayloadSincronizacao({

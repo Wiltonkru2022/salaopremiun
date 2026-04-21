@@ -121,7 +121,7 @@ export function useAssinaturaPage() {
       const idSalaoAtual = String(acesso.usuarioDb.id_salao || "").trim();
 
       if (!idSalaoAtual) {
-        throw new Error("SalÃ£o nÃ£o encontrado para o usuÃ¡rio logado.");
+        throw new Error("Salão não encontrado para o usuário logado.");
       }
 
       await carregarStatusAssinatura(idSalaoAtual);

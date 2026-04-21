@@ -1,33 +1,33 @@
 import { NextRequest, NextResponse } from "next/server";
-import { criarNotaSalaoAdminMaster } from "@/lib/admin-master/actions";
-import { requireAdminMasterUser } from "@/lib/admin-master/auth/requireAdminMasterUser";
-
-type Payload = {
-  titulo?: string;
-  nota?: string;
-};
+import {
+  AdminMasterSalaoUseCaseError,
+  criarNotaInternaAdminMasterSalaoUseCase,
+} from "@/core/use-cases/admin-master/saloes";
+import { createAdminMasterSalaoService } from "@/services/adminMasterSalaoService";
 
 export async function POST(
   req: NextRequest,
   ctx: { params: Promise<{ id: string }> }
 ) {
-  const admin = await requireAdminMasterUser("saloes_editar");
-  const { id } = await ctx.params;
-  const body = (await req.json().catch(() => ({}))) as Payload;
+  try {
+    const { id } = await ctx.params;
+    const result = await criarNotaInternaAdminMasterSalaoUseCase({
+      idSalao: id,
+      body: await req.json().catch(() => ({})),
+      service: createAdminMasterSalaoService(),
+    });
 
-  if (!body.titulo || !body.nota) {
-    return NextResponse.json(
-      { ok: false, error: "Titulo e nota sao obrigatorios." },
-      { status: 400 }
-    );
+    return NextResponse.json(result.body, { status: result.status });
+  } catch (error) {
+    if (error instanceof AdminMasterSalaoUseCaseError) {
+      return NextResponse.json(
+        { ok: false, error: error.message },
+        { status: error.status }
+      );
+    }
+
+    const message =
+      error instanceof Error ? error.message : "Erro ao criar nota interna.";
+    return NextResponse.json({ ok: false, error: message }, { status: 500 });
   }
-
-  await criarNotaSalaoAdminMaster({
-    idSalao: id,
-    idAdmin: admin.usuario.id,
-    titulo: body.titulo,
-    nota: body.nota,
-  });
-
-  return NextResponse.json({ ok: true });
 }

@@ -46,21 +46,21 @@ export default function AppModal({
   return (
     <div
       className={clsx(
-        "fixed inset-0 flex items-center justify-center bg-black/55 p-4 backdrop-blur-sm",
+        "fixed inset-0 flex items-center justify-center overflow-y-auto bg-black/55 p-2 backdrop-blur-sm sm:p-4",
         zIndexClassName,
         overlayClassName
       )}
     >
       <div
         className={clsx(
-          "w-full overflow-hidden rounded-[28px] border border-zinc-200 bg-white shadow-2xl",
+          "my-auto flex max-h-[calc(100dvh-1rem)] w-full flex-col overflow-hidden rounded-[22px] border border-zinc-200 bg-white shadow-2xl sm:max-h-[calc(100dvh-2rem)] sm:rounded-[28px]",
           maxWidthClassName,
           panelClassName
         )}
       >
         <div
           className={clsx(
-            "border-b border-zinc-200 px-6 py-5",
+            "shrink-0 border-b border-zinc-200 px-4 py-3.5 sm:px-6 sm:py-5",
             headerClassName
           )}
         >
@@ -72,10 +72,14 @@ export default function AppModal({
                 </div>
               ) : null}
 
-              <h2 className="text-xl font-bold text-zinc-900">{title}</h2>
+              <h2 className="text-lg font-bold leading-tight text-zinc-900 sm:text-xl">
+                {title}
+              </h2>
 
               {description ? (
-                <p className="mt-1 text-sm text-zinc-500">{description}</p>
+                <p className="mt-1 text-sm leading-5 text-zinc-500">
+                  {description}
+                </p>
               ) : null}
             </div>
 
@@ -84,7 +88,7 @@ export default function AppModal({
                 type="button"
                 onClick={onClose}
                 disabled={closeDisabled}
-                className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-zinc-200 bg-white text-zinc-500 transition hover:bg-zinc-50 hover:text-zinc-800 disabled:opacity-60"
+                className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-zinc-200 bg-white text-zinc-500 transition hover:bg-zinc-50 hover:text-zinc-800 disabled:opacity-60 sm:h-10 sm:w-10 sm:rounded-2xl"
                 aria-label="Fechar modal"
               >
                 <X size={18} />
@@ -95,7 +99,7 @@ export default function AppModal({
 
         <div
           className={clsx(
-            "max-h-[calc(90vh-168px)] overflow-y-auto px-6 py-5",
+            "min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5",
             bodyClassName
           )}
         >
@@ -105,7 +109,7 @@ export default function AppModal({
         {footer ? (
           <div
             className={clsx(
-              "flex flex-col-reverse gap-3 border-t border-zinc-200 px-6 py-5 sm:flex-row sm:justify-end",
+              "shrink-0 flex flex-col-reverse gap-3 border-t border-zinc-200 px-4 py-3.5 sm:flex-row sm:justify-end sm:px-6 sm:py-5",
               footerClassName
             )}
           >

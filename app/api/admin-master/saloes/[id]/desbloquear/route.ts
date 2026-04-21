@@ -1,20 +1,33 @@
 import { NextRequest, NextResponse } from "next/server";
-import { desbloquearSalaoAdminMaster } from "@/lib/admin-master/actions";
-import { requireAdminMasterUser } from "@/lib/admin-master/auth/requireAdminMasterUser";
+import {
+  AdminMasterSalaoUseCaseError,
+  desbloquearAdminMasterSalaoUseCase,
+} from "@/core/use-cases/admin-master/saloes";
+import { createAdminMasterSalaoService } from "@/services/adminMasterSalaoService";
 
 export async function POST(
   req: NextRequest,
   ctx: { params: Promise<{ id: string }> }
 ) {
-  const admin = await requireAdminMasterUser("saloes_editar");
-  const { id } = await ctx.params;
-  const body = (await req.json().catch(() => ({}))) as { motivo?: string };
+  try {
+    const { id } = await ctx.params;
+    const result = await desbloquearAdminMasterSalaoUseCase({
+      idSalao: id,
+      body: await req.json().catch(() => ({})),
+      service: createAdminMasterSalaoService(),
+    });
 
-  await desbloquearSalaoAdminMaster({
-    idSalao: id,
-    idAdmin: admin.usuario.id,
-    motivo: body.motivo || "Desbloqueio manual pelo AdminMaster.",
-  });
+    return NextResponse.json(result.body, { status: result.status });
+  } catch (error) {
+    if (error instanceof AdminMasterSalaoUseCaseError) {
+      return NextResponse.json(
+        { ok: false, error: error.message },
+        { status: error.status }
+      );
+    }
 
-  return NextResponse.json({ ok: true });
+    const message =
+      error instanceof Error ? error.message : "Erro ao desbloquear salao.";
+    return NextResponse.json({ ok: false, error: message }, { status: 500 });
+  }
 }

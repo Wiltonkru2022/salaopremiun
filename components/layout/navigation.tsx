@@ -122,7 +122,7 @@ export const painelNavigationItems: PainelNavItem[] = [
     permissionKey: "comissoes_ver",
   },
   {
-    href: "/relatorio_financeiro",
+    href: "/relatorio-financeiro",
     label: "Relatorios",
     shortLabel: "Relatorios",
     description: "Resultado, indicadores e leitura financeira.",

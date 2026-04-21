@@ -130,17 +130,17 @@ export default function Header({
   return (
     <header
       className={clsx(
-        "rounded-[18px] border px-2.5 py-2 transition-all duration-300 md:px-3",
+        "rounded-[16px] border px-2 py-1.5 transition-all duration-300 md:px-2.5",
         scrolled
           ? "border-zinc-200 bg-white shadow-sm"
           : "border-zinc-200 bg-white shadow-none"
       )}
     >
-      <div className="flex min-h-12 flex-wrap items-center gap-2.5 lg:flex-nowrap">
+      <div className="flex min-h-11 flex-wrap items-center gap-2 lg:flex-nowrap">
         <button
           type="button"
           onClick={onOpenSidebar}
-          className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-zinc-200 bg-white text-zinc-900 shadow-sm transition hover:-translate-y-0.5 hover:border-[var(--app-accent)] lg:hidden"
+          className="inline-flex h-8.5 w-8.5 shrink-0 items-center justify-center rounded-lg border border-zinc-200 bg-white text-zinc-900 shadow-sm transition hover:-translate-y-0.5 hover:border-[var(--app-accent)] lg:hidden"
           aria-label="Abrir menu lateral"
         >
           <Menu size={18} />
@@ -148,7 +148,7 @@ export default function Header({
 
         <div className="min-w-0 flex-1 basis-[220px]">
           <div className="flex min-w-0 items-center gap-2">
-            <h1 className="truncate font-display text-lg font-bold tracking-[-0.04em] text-zinc-950 sm:text-xl xl:text-2xl">
+            <h1 className="truncate font-display text-base font-bold tracking-[-0.03em] text-zinc-950 sm:text-lg xl:text-[1.35rem]">
               {pageMeta.title}
             </h1>
             <span className="hidden rounded-full border border-zinc-200 bg-white/80 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-zinc-500 sm:inline-flex">
@@ -156,7 +156,7 @@ export default function Header({
             </span>
           </div>
 
-          <p className="mt-0.5 hidden max-w-2xl truncate text-xs text-zinc-500 md:block">
+          <p className="mt-0.5 hidden max-w-2xl truncate text-[11px] text-zinc-500 md:block">
             {pageMeta.description}
           </p>
           {showCriticalState ? (
@@ -172,7 +172,7 @@ export default function Header({
           ) : null}
         </div>
 
-        <div className="hidden min-w-0 items-center gap-2 rounded-xl border border-zinc-200 bg-white/80 px-2.5 py-2 text-sm shadow-sm md:flex xl:px-3">
+        <div className="hidden min-w-0 items-center gap-2 rounded-lg border border-zinc-200 bg-white/80 px-2 py-1.5 text-sm shadow-sm md:flex xl:px-2.5">
           <ShieldCheck size={16} className="shrink-0 text-[var(--app-accent-strong)]" />
           <span className="hidden truncate font-semibold text-zinc-900 xl:inline">
             {planoNome || "Sem plano"}
@@ -190,7 +190,7 @@ export default function Header({
         <button
           type="button"
           onClick={onOpenHelp}
-          className="hidden h-10 items-center gap-2 rounded-xl border border-zinc-200 bg-white px-3 text-sm font-semibold text-zinc-700 shadow-sm transition hover:-translate-y-0.5 hover:border-zinc-950 hover:text-zinc-950 md:inline-flex"
+          className="hidden h-9 items-center gap-2 rounded-lg border border-zinc-200 bg-white px-2.5 text-sm font-semibold text-zinc-700 shadow-sm transition hover:-translate-y-0.5 hover:border-zinc-950 hover:text-zinc-950 md:inline-flex"
         >
           <CircleHelp size={16} />
           <span className="hidden xl:inline">Ajuda</span>
@@ -206,10 +206,10 @@ export default function Header({
           <button
             type="button"
             onClick={() => setMenuOpen((prev) => !prev)}
-            className="flex h-10 max-w-full items-center gap-2 rounded-xl border border-zinc-200 bg-zinc-950 py-1.5 pl-1.5 pr-2 text-left text-white shadow-[0_14px_32px_rgba(15,23,42,0.18)] transition hover:-translate-y-0.5"
+            className="flex h-9 max-w-full items-center gap-2 rounded-lg border border-zinc-200 bg-zinc-950 py-1 pl-1 pr-1.5 text-left text-white shadow-[0_14px_32px_rgba(15,23,42,0.18)] transition hover:-translate-y-0.5"
             aria-label="Abrir menu da conta"
           >
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white/12 ring-1 ring-white/10">
+            <span className="flex h-7.5 w-7.5 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white/12 ring-1 ring-white/10">
               {salaoLogoUrl ? (
                 <img
                   src={salaoLogoUrl}
@@ -222,10 +222,10 @@ export default function Header({
             </span>
 
             <span className="hidden min-w-0 sm:block">
-              <span className="block max-w-[120px] truncate text-sm font-semibold xl:max-w-[150px]">
+              <span className="block max-w-[116px] truncate text-[13px] font-semibold xl:max-w-[144px]">
                 {userName || "Usuario"}
               </span>
-              <span className="block max-w-[120px] truncate text-[11px] text-white/60 xl:max-w-[150px]">
+              <span className="block max-w-[116px] truncate text-[10px] text-white/60 xl:max-w-[144px]">
                 {salaoNome || userEmail || "Conta principal"}
               </span>
             </span>

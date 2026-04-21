@@ -77,10 +77,10 @@ export default function AgendaToolbar({
         })}`;
 
   return (
-    <div className="overflow-hidden rounded-[16px] border border-zinc-200 bg-white">
+    <div className="overflow-hidden rounded-[14px] border border-zinc-200 bg-white">
       <div
         className={`border-b border-zinc-200 bg-white text-zinc-950 ${
-          densityMode === "reception" ? "px-3 py-2" : "px-3 py-3 lg:px-4"
+          densityMode === "reception" ? "px-3 py-2" : "px-3 py-2.5 lg:px-3.5"
         }`}
       >
         <div className="flex flex-wrap items-start justify-between gap-3">
@@ -94,14 +94,14 @@ export default function AgendaToolbar({
             </div>
             <div
               className={`mt-1 font-bold ${
-                densityMode === "reception" ? "text-base md:text-lg" : "text-xl md:text-2xl"
+                densityMode === "reception" ? "text-base md:text-lg" : "text-lg md:text-[1.45rem]"
               }`}
             >
               Agenda
             </div>
             <div
               className={`flex flex-wrap items-center gap-2 text-zinc-600 ${
-                densityMode === "reception" ? "mt-1 text-[11px]" : "mt-1.5 text-xs"
+              densityMode === "reception" ? "mt-1 text-[11px]" : "mt-1.5 text-[11px]"
               }`}
             >
               <span className="rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1 capitalize">
@@ -118,7 +118,7 @@ export default function AgendaToolbar({
 
           <div
             className={`rounded-xl border border-zinc-200 bg-zinc-50 ${
-              densityMode === "reception" ? "px-3 py-1.5" : "px-3 py-2"
+              densityMode === "reception" ? "px-3 py-1.5" : "px-3 py-1.5"
             }`}
           >
             <div
@@ -137,7 +137,7 @@ export default function AgendaToolbar({
 
       <div
         className={`grid gap-2.5 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-center ${
-          densityMode === "reception" ? "px-3 py-2" : "px-3 py-3 lg:px-4"
+          densityMode === "reception" ? "px-3 py-2" : "px-3 py-2.5 lg:px-3.5"
         }`}
       >
         <div

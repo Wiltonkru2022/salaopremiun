@@ -26,10 +26,10 @@ export default function ProfissionalShell({
         surface="app_profissional"
       />
 
-      <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col bg-[#f5f5f5]">
+      <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col bg-[#f5f5f5] sm:max-w-lg lg:max-w-2xl">
         <ProfissionalHeader title={title} subtitle={subtitle} />
 
-        <main className="flex-1 px-4 pb-24 pt-4">
+        <main className="min-w-0 flex-1 px-3 pb-24 pt-3 sm:px-4 sm:pt-4">
           {children}
         </main>
 

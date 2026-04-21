@@ -1,43 +1,47 @@
 import { NextRequest, NextResponse } from "next/server";
+import { ZodError } from "zod";
+import {
+  parseRecalcularTaxaProfissionalInput,
+  recalcularTaxaProfissionalUseCase,
+  RecalcularTaxaProfissionalUseCaseError,
+} from "@/core/use-cases/comissoes/recalcularTaxaProfissional";
 import {
   AuthzError,
-  recalcularTaxaProfissional,
-  validarPermissaoRecalculoComissao,
-} from "@/lib/comissoes/recalcular-taxa-profissional";
-import { reportOperationalIncident } from "@/lib/monitoring/operational-incidents";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+  createComissaoTaxaRouteService,
+} from "@/services/comissaoTaxaRouteService";
+import { createComissaoTaxaService } from "@/services/comissaoTaxaService";
 
-type Body = {
-  idSalao: string;
-  idComanda: string;
-};
+const routeService = createComissaoTaxaRouteService();
 
 export async function POST(req: NextRequest) {
   let idSalao = "";
   let idComanda = "";
 
   try {
-    const body = (await req.json()) as Body;
-    idSalao = String(body.idSalao || "").trim();
-    idComanda = String(body.idComanda || "").trim();
+    const input = parseRecalcularTaxaProfissionalInput(await req.json());
+    idSalao = input.idSalao;
+    idComanda = input.idComanda;
 
-    if (!idSalao || !idComanda) {
+    await routeService.validarPermissao(idSalao);
+
+    const result = await recalcularTaxaProfissionalUseCase({
+      input,
+      service: createComissaoTaxaService(),
+    });
+
+    return NextResponse.json(result.body, { status: result.status });
+  } catch (error) {
+    if (error instanceof ZodError) {
+      const firstIssue = error.issues[0];
       return NextResponse.json(
-        { error: "Salao e comanda sao obrigatorios." },
+        {
+          error: firstIssue?.message || "Payload invalido.",
+          issues: error.flatten(),
+        },
         { status: 400 }
       );
     }
 
-    await validarPermissaoRecalculoComissao(idSalao);
-
-    const result = await recalcularTaxaProfissional({
-      supabaseAdmin: getSupabaseAdmin(),
-      idSalao,
-      idComanda,
-    });
-
-    return NextResponse.json(result);
-  } catch (error) {
     if (error instanceof AuthzError) {
       return NextResponse.json(
         { error: error.message },
@@ -45,33 +49,21 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (idSalao) {
-      try {
-        await reportOperationalIncident({
-          supabaseAdmin: getSupabaseAdmin(),
-          key: `comissoes:recalcular-taxa:${idSalao}:${idComanda || "sem-comanda"}`,
-          module: "comissoes",
-          title: "Recalculo de taxa profissional falhou",
-          description:
-            error instanceof Error
-              ? error.message
-              : "Erro interno ao recalcular taxa do profissional.",
-          severity: "alta",
-          idSalao,
-          details: {
-            id_comanda: idComanda || null,
-            route: "/api/comissoes/recalcular-taxa-profissional",
-          },
-        });
-      } catch (incidentError) {
-        console.error(
-          "Falha ao registrar incidente operacional de recálculo de comissão:",
-          incidentError
-        );
-      }
+    if (error instanceof RecalcularTaxaProfissionalUseCaseError) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: error.status }
+      );
     }
 
-    console.error("Erro interno ao recalcular taxa do profissional:", error);
+    if (idSalao) {
+      await routeService.reportarFalha({
+        idSalao,
+        idComanda,
+        error,
+      });
+    }
+
     return NextResponse.json(
       { error: "Erro interno ao recalcular taxa do profissional." },
       { status: 500 }

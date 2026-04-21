@@ -1,29 +1,28 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAdminMasterUser } from "@/lib/admin-master/auth/requireAdminMasterUser";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
-
-type Payload = {
-  idSalao?: string | null;
-};
+import {
+  AdminMasterOperacaoUseCaseError,
+  avaliarTrialExtraAdminMasterUseCase,
+} from "@/core/use-cases/admin-master/operacao";
+import { createAdminMasterOperacaoService } from "@/services/adminMasterOperacaoService";
 
 export async function POST(req: NextRequest) {
-  await requireAdminMasterUser("operacao_reprocessar");
-  const body = (await req.json().catch(() => ({}))) as Payload;
-  const supabaseAdmin = getSupabaseAdmin();
+  try {
+    const result = await avaliarTrialExtraAdminMasterUseCase({
+      body: await req.json().catch(() => ({})),
+      service: createAdminMasterOperacaoService(),
+    });
 
-  const { data, error } = await supabaseAdmin.rpc(
-    "fn_admin_master_avaliar_extensao_trial",
-    {
-      p_id_salao: body.idSalao || null,
+    return NextResponse.json(result.body, { status: result.status });
+  } catch (error) {
+    if (error instanceof AdminMasterOperacaoUseCaseError) {
+      return NextResponse.json(
+        { ok: false, error: error.message },
+        { status: error.status }
+      );
     }
-  );
 
-  if (error) {
-    return NextResponse.json(
-      { ok: false, error: error.message },
-      { status: 400 }
-    );
+    const message =
+      error instanceof Error ? error.message : "Erro ao avaliar extensao de trial.";
+    return NextResponse.json({ ok: false, error: message }, { status: 500 });
   }
-
-  return NextResponse.json({ ok: true, data });
 }

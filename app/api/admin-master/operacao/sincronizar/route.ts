@@ -1,23 +1,27 @@
 import { NextResponse } from "next/server";
-import { registrarAdminMasterAuditoria } from "@/lib/admin-master/actions";
-import { requireAdminMasterUser } from "@/lib/admin-master/auth/requireAdminMasterUser";
-import { syncAdminMasterAlerts } from "@/lib/admin-master/alerts-sync";
-import { syncAdminMasterWebhookEvents } from "@/lib/admin-master/webhooks-sync";
+import {
+  AdminMasterOperacaoUseCaseError,
+  sincronizarAdminMasterOperacaoUseCase,
+} from "@/core/use-cases/admin-master/operacao";
+import { createAdminMasterOperacaoService } from "@/services/adminMasterOperacaoService";
 
 export async function POST() {
-  const admin = await requireAdminMasterUser("operacao_reprocessar");
-  const webhooks = await syncAdminMasterWebhookEvents();
-  const alertas = await syncAdminMasterAlerts();
-  const resultado = { webhooks, alertas };
+  try {
+    const result = await sincronizarAdminMasterOperacaoUseCase({
+      service: createAdminMasterOperacaoService(),
+    });
 
-  await registrarAdminMasterAuditoria({
-    idAdmin: admin.usuario.id,
-    acao: "sincronizar_operacao_admin_master",
-    entidade: "operacao",
-    descricao:
-      "Sincronizacao manual de webhooks e alertas operacionais do AdminMaster.",
-    payload: resultado,
-  });
+    return NextResponse.json(result.body, { status: result.status });
+  } catch (error) {
+    if (error instanceof AdminMasterOperacaoUseCaseError) {
+      return NextResponse.json(
+        { ok: false, error: error.message },
+        { status: error.status }
+      );
+    }
 
-  return NextResponse.json({ ok: true, resultado });
+    const message =
+      error instanceof Error ? error.message : "Erro ao sincronizar operacao.";
+    return NextResponse.json({ ok: false, error: message }, { status: 500 });
+  }
 }

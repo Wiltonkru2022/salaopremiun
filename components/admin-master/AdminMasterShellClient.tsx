@@ -556,7 +556,9 @@ export default function AdminMasterShellClient({
           </div>
         </header>
 
-        <main className="mx-auto max-w-[1600px] p-5 lg:p-8">{children}</main>
+        <main className="mx-auto w-full max-w-[1600px] min-w-0 p-3 sm:p-4 lg:p-6 xl:p-8">
+          {children}
+        </main>
       </div>
     </div>
   );

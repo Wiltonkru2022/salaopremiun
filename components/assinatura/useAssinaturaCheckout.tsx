@@ -119,7 +119,7 @@ export function useAssinaturaCheckout({
 
         if (!silencioso && !["ativo", "ativa", "pago"].includes(statusAtual)) {
           setErro(
-            "Pagamento ainda nÃ£o confirmado. Tente novamente em alguns segundos."
+            "Pagamento ainda não confirmado. Tente novamente em alguns segundos."
           );
         }
       } catch (error: unknown) {
@@ -168,7 +168,7 @@ export function useAssinaturaCheckout({
       setErro("");
 
       if (!salao?.id) {
-        throw new Error("SalÃ£o nÃ£o carregado.");
+        throw new Error("Salão não carregado.");
       }
 
       const idempotencyKey =
@@ -211,8 +211,8 @@ export function useAssinaturaCheckout({
             },
             body: JSON.stringify({
               idSalao: salao.id,
-              nomeSalao: salao.nome || "SalÃ£o",
-              responsavelNome: salao.responsavel || salao.nome || "ResponsÃ¡vel",
+              nomeSalao: salao.nome || "Salão",
+              responsavelNome: salao.responsavel || salao.nome || "Responsável",
               responsavelEmail: salao.email || "",
               responsavelCpfCnpj: salao.cpf_cnpj || "",
               responsavelTelefone: salao.telefone || "",
@@ -240,7 +240,7 @@ export function useAssinaturaCheckout({
       };
 
       if (!response.ok) {
-        throw new Error(data.error || "Erro ao criar cobranÃ§a.");
+        throw new Error(data.error || "Erro ao criar cobrança.");
       }
 
       const statusCobranca = String(data.status || "").toUpperCase();
@@ -256,7 +256,7 @@ export function useAssinaturaCheckout({
       await carregarDados();
     } catch (error: unknown) {
       setErro(
-        error instanceof Error ? error.message : "Erro ao criar cobranÃ§a."
+        error instanceof Error ? error.message : "Erro ao criar cobrança."
       );
     } finally {
       cobrancaRequestKeyRef.current = null;
@@ -282,12 +282,12 @@ export function useAssinaturaCheckout({
   const iniciarTrial = useCallback(async (): Promise<void> => {
     try {
       if (!podeGerenciar) {
-        setErro("VocÃª nÃ£o tem permissÃ£o para iniciar o trial.");
+        setErro("Você não tem permissão para iniciar o trial.");
         return;
       }
 
       if (!salao?.id) {
-        throw new Error("SalÃ£o nÃ£o carregado.");
+        throw new Error("Salão não carregado.");
       }
 
       setIniciandoTrial(true);
@@ -319,13 +319,13 @@ export function useAssinaturaCheckout({
       const data = (await response.json()) as { error?: string };
 
       if (!response.ok) {
-        throw new Error(data.error || "Erro ao iniciar teste grÃ¡tis.");
+        throw new Error(data.error || "Erro ao iniciar teste grátis.");
       }
 
       await carregarDados();
     } catch (error: unknown) {
       setErro(
-        error instanceof Error ? error.message : "Erro ao iniciar teste grÃ¡tis."
+        error instanceof Error ? error.message : "Erro ao iniciar teste grátis."
       );
     } finally {
       setIniciandoTrial(false);

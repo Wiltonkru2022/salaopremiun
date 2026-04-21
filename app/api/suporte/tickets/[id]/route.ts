@@ -1,37 +1,33 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
-  getPainelTicketContext,
-  getSalaoTicketDetail,
-} from "@/lib/support/tickets";
-
-function buildErrorResponse(error: unknown, fallback: string) {
-  const message = error instanceof Error ? error.message : fallback;
-
-  if (message === "UNAUTHORIZED") {
-    return NextResponse.json({ ok: false, error: "Sessao invalida." }, { status: 401 });
-  }
-
-  if (message === "NOT_FOUND") {
-    return NextResponse.json({ ok: false, error: "Ticket nao encontrado." }, { status: 404 });
-  }
-
-  return NextResponse.json({ ok: false, error: message || fallback }, { status: 500 });
-}
+  obterPainelTicketDetalheUseCase,
+  SuporteTicketUseCaseError,
+} from "@/core/use-cases/suporte/painelTickets";
+import { createSuporteTicketService } from "@/services/suporteTicketService";
 
 export async function GET(
   _req: NextRequest,
   ctx: { params: Promise<{ id: string }> }
 ) {
   try {
-    const context = await getPainelTicketContext();
     const { id } = await ctx.params;
-    const detail = await getSalaoTicketDetail({
-      idSalao: context.idSalao,
+    const result = await obterPainelTicketDetalheUseCase({
       idTicket: id,
+      service: createSuporteTicketService(),
     });
 
-    return NextResponse.json({ ok: true, detail });
+    return NextResponse.json(result.body, { status: result.status });
   } catch (error) {
-    return buildErrorResponse(error, "Erro ao carregar ticket.");
+    if (error instanceof SuporteTicketUseCaseError) {
+      return NextResponse.json(
+        { ok: false, error: error.message },
+        { status: error.status }
+      );
+    }
+
+    return NextResponse.json(
+      { ok: false, error: "Erro ao carregar ticket." },
+      { status: 500 }
+    );
   }
 }

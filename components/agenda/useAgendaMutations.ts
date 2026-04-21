@@ -228,7 +228,7 @@ export function useAgendaMutations({
       });
 
       if (!validRange.ok) {
-        abrirAviso("HorÃ¡rio invÃ¡lido", validRange.message, "warning");
+        abrirAviso("Horário inválido", validRange.message, "warning");
         return;
       }
 
@@ -252,7 +252,7 @@ export function useAgendaMutations({
       if (conflitoBloqueio) {
         abrirAviso(
           "Conflito com bloqueio",
-          "NÃ£o foi possÃ­vel redimensionar por conflito com bloqueio.",
+          "Não foi possível redimensionar por conflito com bloqueio.",
           "warning"
         );
         return;
@@ -305,7 +305,7 @@ export function useAgendaMutations({
       if (error) {
         setAgendamentos(agendamentosAntes);
         console.error(error);
-        abrirAviso("Erro", "Erro ao atualizar duraÃ§Ã£o.", "danger");
+        abrirAviso("Erro", "Erro ao atualizar duração.", "danger");
         return;
       }
 
@@ -368,8 +368,8 @@ export function useAgendaMutations({
 
       if (!ensureDiaFuncionamento({ config, dateString: move.newDate })) {
         abrirAviso(
-          "Dia indisponÃ­vel",
-          "Esse dia nÃ£o estÃ¡ configurado como dia de funcionamento.",
+          "Dia indisponível",
+          "Esse dia não está configurado como dia de funcionamento.",
           "warning"
         );
         return;
@@ -396,7 +396,7 @@ export function useAgendaMutations({
       });
 
       if (!validRange.ok) {
-        abrirAviso("HorÃ¡rio invÃ¡lido", validRange.message, "warning");
+        abrirAviso("Horário inválido", validRange.message, "warning");
         return;
       }
 
@@ -421,7 +421,7 @@ export function useAgendaMutations({
       if (conflitoBloqueio) {
         abrirAviso(
           "Conflito com bloqueio",
-          "NÃ£o foi possÃ­vel mover por conflito com bloqueio.",
+          "Não foi possível mover por conflito com bloqueio.",
           "warning"
         );
         return;
@@ -538,7 +538,7 @@ export function useAgendaMutations({
 
       abrirConfirmacao({
         title: "Excluir agendamento",
-        message: "Deseja excluir este agendamento? Esta aÃ§Ã£o nÃ£o poderÃ¡ ser desfeita.",
+        message: "Deseja excluir este agendamento? Esta ação não poderá ser desfeita.",
         confirmLabel: "Excluir",
         tone: "danger",
         onConfirm: async () => {
@@ -635,7 +635,7 @@ export function useAgendaMutations({
       abrirConfirmacao({
         title: "Cancelar agendamento",
         message:
-          "Deseja cancelar este agendamento? Os itens vinculados serÃ£o removidos da comanda. Se a comanda ficar sem itens, ela serÃ¡ cancelada automaticamente.",
+          "Deseja cancelar este agendamento? Os itens vinculados serão removidos da comanda. Se a comanda ficar sem itens, ela será cancelada automaticamente.",
         confirmLabel: "Cancelar agendamento",
         tone: "warning",
         onConfirm: async () => {
@@ -666,7 +666,7 @@ export function useAgendaMutations({
 
       abrirMotivoExclusao({
         title: "Excluir bloqueio",
-        message: "Informe o motivo da exclusÃ£o do bloqueio.",
+        message: "Informe o motivo da exclusão do bloqueio.",
         onConfirm: async (motivoExclusao: string) => {
           const user = await safeGetAuthUser();
 
@@ -686,7 +686,7 @@ export function useAgendaMutations({
 
           if (logError) {
             console.error(logError);
-            throw new Error("Erro ao salvar log da exclusÃ£o do bloqueio.");
+            throw new Error("Erro ao salvar log da exclusão do bloqueio.");
           }
 
           const { error } = await supabase
@@ -727,8 +727,8 @@ export function useAgendaMutations({
 
       if (!ensureDiaFuncionamento({ config, dateString: targetDate })) {
         abrirAviso(
-          "Dia indisponÃ­vel",
-          "Esse dia nÃ£o estÃ¡ configurado como dia de funcionamento.",
+          "Dia indisponível",
+          "Esse dia não está configurado como dia de funcionamento.",
           "warning"
         );
         return;
@@ -752,7 +752,7 @@ export function useAgendaMutations({
       });
 
       if (!validRange.ok) {
-        abrirAviso("HorÃ¡rio invÃ¡lido", validRange.message, "warning");
+        abrirAviso("Horário inválido", validRange.message, "warning");
         return;
       }
 
@@ -773,8 +773,8 @@ export function useAgendaMutations({
 
       if (conflitoAgendamento || conflitoBloqueio) {
         abrirAviso(
-          "Conflito de horÃ¡rio",
-          "NÃ£o foi possÃ­vel mover o bloqueio por conflito de horÃ¡rio.",
+          "Conflito de horário",
+          "Não foi possível mover o bloqueio por conflito de horário.",
           "warning"
         );
         return;
@@ -836,7 +836,7 @@ export function useAgendaMutations({
       });
 
       if (!validRange.ok) {
-        abrirAviso("HorÃ¡rio invÃ¡lido", validRange.message, "warning");
+        abrirAviso("Horário inválido", validRange.message, "warning");
         return;
       }
 
@@ -857,8 +857,8 @@ export function useAgendaMutations({
 
       if (conflitoAgendamento || conflitoBloqueio) {
         abrirAviso(
-          "Conflito de horÃ¡rio",
-          "NÃ£o foi possÃ­vel redimensionar o bloqueio por conflito.",
+          "Conflito de horário",
+          "Não foi possível redimensionar o bloqueio por conflito.",
           "warning"
         );
         return;

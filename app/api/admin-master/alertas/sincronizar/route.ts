@@ -1,19 +1,29 @@
 import { NextResponse } from "next/server";
-import { registrarAdminMasterAuditoria } from "@/lib/admin-master/actions";
-import { requireAdminMasterUser } from "@/lib/admin-master/auth/requireAdminMasterUser";
-import { syncAdminMasterAlerts } from "@/lib/admin-master/alerts-sync";
+import {
+  AdminMasterAlertaUseCaseError,
+  sincronizarAdminMasterAlertasUseCase,
+} from "@/core/use-cases/admin-master/alertas";
+import { createAdminMasterAlertaService } from "@/services/adminMasterAlertaService";
 
 export async function POST() {
-  const admin = await requireAdminMasterUser("operacao_reprocessar");
-  const resultado = await syncAdminMasterAlerts();
+  try {
+    const result = await sincronizarAdminMasterAlertasUseCase({
+      service: createAdminMasterAlertaService(),
+    });
 
-  await registrarAdminMasterAuditoria({
-    idAdmin: admin.usuario.id,
-    acao: "sincronizar_alertas_admin_master",
-    entidade: "alertas_sistema",
-    descricao: "Sincronizacao manual de alertas automaticos do AdminMaster.",
-    payload: resultado,
-  });
+    return NextResponse.json(result.body, { status: result.status });
+  } catch (error) {
+    if (error instanceof AdminMasterAlertaUseCaseError) {
+      return NextResponse.json(
+        { ok: false, error: error.message },
+        { status: error.status }
+      );
+    }
 
-  return NextResponse.json({ ok: true, resultado });
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Nao foi possivel sincronizar alertas.";
+    return NextResponse.json({ ok: false, error: message }, { status: 500 });
+  }
 }

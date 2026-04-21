@@ -239,7 +239,7 @@ function BlockCard({
 
       nextStartMinutes = Math.max(0, startMinutes + minutesDelta);
       nextDayDelta = allowDayMove
-        ? Math.round(deltaX / Math.max(dayColumnWidthPx, 1))
+        ? Math.trunc(deltaX / Math.max(dayColumnWidthPx, 1))
         : 0;
 
       setPreviewTop(snappedTop);
@@ -440,11 +440,11 @@ export default function AgendaGrid({
   const gridViewportRef = useRef<HTMLDivElement | null>(null);
   const [viewportWidth, setViewportWidth] = useState(0);
   const compactMode = densityMode === "reception";
-  const pixelsPer15Min = compactMode ? 12 : 18;
-  const slotHeight = compactMode ? 24 : 36;
-  const timeColWidth = compactMode ? 48 : 56;
-  const dayMinWidthDay = compactMode ? 480 : 620;
-  const dayMinWidthWeek = compactMode ? 112 : 144;
+  const pixelsPer15Min = compactMode ? 10 : 16;
+  const slotHeight = compactMode ? 20 : 32;
+  const timeColWidth = compactMode ? 44 : 52;
+  const dayMinWidthDay = compactMode ? 520 : 660;
+  const dayMinWidthWeek = compactMode ? 98 : 132;
 
   useEffect(() => {
     const interval = window.setInterval(() => {
@@ -537,8 +537,8 @@ export default function AgendaGrid({
           }}
         >
           <div
-            className={`sticky left-0 top-0 z-40 flex select-none items-center border-b border-r border-zinc-200 bg-white px-3 text-[11px] font-semibold uppercase tracking-wide text-zinc-500 ${
-              compactMode ? "h-[40px]" : "h-[50px]"
+            className={`sticky left-0 top-0 z-40 flex select-none items-center border-b border-r border-zinc-200 bg-white px-2 text-[10px] font-semibold uppercase tracking-wide text-zinc-500 ${
+              compactMode ? "h-[34px]" : "h-[44px]"
             }`}
           >
             Hora
@@ -548,8 +548,8 @@ export default function AgendaGrid({
             <div
               key={day.toISOString()}
               className={clsx(
-                `sticky top-0 z-30 select-none border-b border-l border-zinc-200 px-3 ${
-                  compactMode ? "h-[40px] py-1.5" : "h-[50px] py-2"
+                `sticky top-0 z-30 select-none border-b border-l border-zinc-200 px-2 ${
+                  compactMode ? "h-[34px] py-1" : "h-[44px] py-1.5"
                 }`,
                 isTodayDate(day) ? "bg-zinc-100" : "bg-white"
               )}
@@ -558,19 +558,19 @@ export default function AgendaGrid({
                 <div className="min-w-0">
                   <div
                     className={`truncate font-semibold text-zinc-900 ${
-                      compactMode ? "text-xs" : "text-[13px]"
+                      compactMode ? "text-[11px]" : "text-xs"
                     }`}
                   >
                     {formatDayLabel(day)}
                   </div>
-                  <div className="mt-0.5 text-[10px] text-zinc-500">
+                  <div className="mt-0.5 text-[9px] text-zinc-500">
                     {agendamentos.filter((item) => item.data === formatFullDate(day)).length}{" "}
                     atendimento(s)
                   </div>
                 </div>
 
                 {isTodayDate(day) ? (
-                  <span className="rounded-full border border-zinc-300 bg-white px-2 py-0.5 text-[10px] font-semibold text-zinc-700">
+                  <span className="rounded-full border border-zinc-300 bg-white px-1.5 py-0.5 text-[9px] font-semibold text-zinc-700">
                     Hoje
                   </span>
                 ) : null}
@@ -583,7 +583,7 @@ export default function AgendaGrid({
               <div
                 key={slot.time}
                 className={clsx(
-                  "flex select-none items-start justify-end pr-2 pt-1 text-[10px] font-medium",
+                  "flex select-none items-start justify-end pr-1.5 pt-1 text-[9px] font-medium",
                   slot.minutes % 60 === 0
                     ? "border-b border-zinc-200 bg-zinc-50/80 text-zinc-700"
                     : slot.minutes % 30 === 0

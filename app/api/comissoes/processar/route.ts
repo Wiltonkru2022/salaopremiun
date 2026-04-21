@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { ZodError } from "zod";
 import {
   AuthzError,
   requireSalaoPermission,
@@ -7,97 +8,46 @@ import {
   assertCanMutatePlanFeature,
   PlanAccessError,
 } from "@/lib/plans/access";
-import {
-  processarLancamentosComissao,
-  resolveComissoesHttpStatus,
-  sanitizeIds,
-  sanitizeUuid,
-} from "@/lib/comissoes/processar-lancamentos";
 import { reportOperationalIncident } from "@/lib/monitoring/operational-incidents";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
-import { registrarLogSistema } from "@/lib/system-logs";
-
-type Body = {
-  idSalao?: string;
-  ids?: string[];
-  acao?: "marcar_pago" | "cancelar";
-};
+import {
+  parseProcessarComissoesInput,
+  processarComissoesUseCase,
+  ProcessarComissoesUseCaseError,
+} from "@/core/use-cases/comissoes/processarComissoes";
+import { createComissaoService } from "@/services/comissaoService";
 
 export async function POST(req: NextRequest) {
   let idSalao = "";
   let acao = "";
 
   try {
-    const body = (await req.json()) as Body;
-    idSalao = sanitizeUuid(body.idSalao) || "";
-    const ids = sanitizeIds(body.ids);
-    acao = String(body.acao || "").trim().toLowerCase();
-
-    if (!idSalao) {
-      return NextResponse.json(
-        { error: "Salao obrigatorio." },
-        { status: 400 }
-      );
-    }
-
-    if (!["marcar_pago", "cancelar"].includes(acao)) {
-      return NextResponse.json(
-        { error: "Acao invalida." },
-        { status: 400 }
-      );
-    }
-
-    if (ids.length === 0) {
-      return NextResponse.json(
-        { error: "Nenhum lancamento valido informado." },
-        { status: 400 }
-      );
-    }
+    const input = parseProcessarComissoesInput(await req.json());
+    idSalao = input.idSalao;
+    acao = input.acao;
 
     const membership = await requireSalaoPermission(idSalao, "comissoes_ver");
     await assertCanMutatePlanFeature(idSalao, "comissoes_basicas");
 
-    const supabaseAdmin = getSupabaseAdmin();
-    const {
-      totalLancamentos,
-      totalVales,
-      totalProfissionaisComVales,
-      idsProcessados,
-    } = await processarLancamentosComissao({
-      supabaseAdmin,
-      idSalao,
-      ids,
-      acao: acao as "marcar_pago" | "cancelar",
-    });
-
-    await registrarLogSistema({
-      gravidade: acao === "cancelar" ? "warning" : "info",
-      modulo: "comissoes",
-      idSalao,
+    const result = await processarComissoesUseCase({
+      input,
       idUsuario: membership.usuario.id,
-      mensagem:
-        acao === "cancelar"
-          ? "Lancamentos de comissao cancelados pelo servidor."
-          : "Lancamentos de comissao marcados como pagos pelo servidor.",
-      detalhes: {
-        acao,
-        total_lancamentos: totalLancamentos,
-        total_vales: totalVales,
-        total_profissionais_com_vales: totalProfissionaisComVales,
-        ids_solicitados: ids.length,
-        ids_processados: idsProcessados,
-      },
+      service: createComissaoService(),
     });
 
-    return NextResponse.json({
-      ok: true,
-      acao,
-      totalLancamentos,
-      totalVales,
-      totalProfissionaisComVales,
-      idsProcessados,
-    });
+    return NextResponse.json(result.body, { status: result.status });
   } catch (error) {
+    if (error instanceof ZodError) {
+      const firstIssue = error.issues[0];
+      return NextResponse.json(
+        {
+          error: firstIssue?.message || "Payload invalido.",
+          issues: error.flatten(),
+        },
+        { status: 400 }
+      );
+    }
+
     if (error instanceof AuthzError) {
       return NextResponse.json(
         { error: error.message },
@@ -108,6 +58,13 @@ export async function POST(req: NextRequest) {
     if (error instanceof PlanAccessError) {
       return NextResponse.json(
         { error: error.message, code: error.code },
+        { status: error.status }
+      );
+    }
+
+    if (error instanceof ProcessarComissoesUseCaseError) {
+      return NextResponse.json(
+        { error: error.message },
         { status: error.status }
       );
     }
@@ -141,7 +98,7 @@ export async function POST(req: NextRequest) {
     console.error("Erro geral ao processar comissoes:", error);
     return NextResponse.json(
       { error: "Erro interno ao processar comissoes." },
-      { status: resolveComissoesHttpStatus(error) }
+      { status: 500 }
     );
   }
 }
