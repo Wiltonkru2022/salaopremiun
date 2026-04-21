@@ -22,6 +22,9 @@ export default function AtualizarSenhaPage() {
   const [erro, setErro] = useState("");
   const [sucesso, setSucesso] = useState("");
   const [erroSessaoRecuperacao, setErroSessaoRecuperacao] = useState(false);
+  const [modoSenha, setModoSenha] = useState<"recovery" | "authenticated" | null>(
+    null
+  );
 
   useEffect(() => {
     try {
@@ -47,6 +50,7 @@ export default function AtualizarSenhaPage() {
         } = await client.auth.getSession();
 
         if (sessaoExistenteAntes) {
+          setModoSenha("authenticated");
           setValidandoLink(false);
           return;
         }
@@ -72,6 +76,7 @@ export default function AtualizarSenhaPage() {
           }
 
           window.history.replaceState({}, document.title, "/atualizar-senha");
+          setModoSenha("recovery");
           setValidandoLink(false);
           return;
         }
@@ -103,6 +108,7 @@ export default function AtualizarSenhaPage() {
             }
 
             window.history.replaceState({}, document.title, "/atualizar-senha");
+            setModoSenha("recovery");
             setValidandoLink(false);
             return;
           }
@@ -113,14 +119,17 @@ export default function AtualizarSenhaPage() {
         } = await client.auth.getSession();
 
         if (sessaoFinal) {
+          setModoSenha("authenticated");
           setValidandoLink(false);
           return;
         }
 
         setErroSessaoRecuperacao(true);
+        setModoSenha(null);
         throw new Error(MENSAGEM_ERRO_LINK);
       } catch (e: unknown) {
         console.error("ERRO AO PREPARAR SESSAO:", e);
+        setModoSenha(null);
         setErro(getErrorMessage(e, "Erro ao validar link de recuperacao."));
       } finally {
         setValidandoLink(false);
@@ -179,7 +188,13 @@ export default function AtualizarSenhaPage() {
         throw new Error(error.message || "Nao foi possivel atualizar a senha.");
       }
 
-      setSucesso("Senha atualizada com sucesso. Redirecionando para o login...");
+      await supabase.auth.signOut();
+
+      setSucesso(
+        modoSenha === "authenticated"
+          ? "Senha atualizada com sucesso. Encerrando a sessao atual para voce entrar novamente com a nova senha..."
+          : "Senha atualizada com sucesso. Redirecionando para o login..."
+      );
 
       setTimeout(() => {
         router.push("/login?motivo=senha_atualizada");
@@ -209,7 +224,9 @@ export default function AtualizarSenhaPage() {
         </div>
 
         <p className="mt-2 text-sm text-zinc-500">
-          Digite e confirme sua nova senha
+          {modoSenha === "authenticated"
+            ? "Voce ja esta autenticado neste navegador. Atualize sua senha e entre novamente com a nova credencial."
+            : "Digite e confirme sua nova senha"}
         </p>
 
         <form onSubmit={handleAtualizarSenha} className="mt-6 space-y-4">
@@ -250,6 +267,17 @@ export default function AtualizarSenhaPage() {
           {validandoLink ? (
             <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-3 text-sm text-zinc-600">
               Validando link de recuperacao...
+            </div>
+          ) : null}
+
+          {modoSenha === "authenticated" && !validandoLink ? (
+            <div className="rounded-2xl border border-sky-200 bg-sky-50 p-4 text-sm text-sky-800">
+              <p className="font-semibold">Sessao autenticada detectada</p>
+              <p className="mt-1 leading-6">
+                Esta troca de senha esta sendo feita a partir de uma sessao ja autenticada
+                neste navegador. Depois de salvar a nova senha, o acesso atual sera encerrado
+                para evitar sessao velha.
+              </p>
             </div>
           ) : null}
 
