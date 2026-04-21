@@ -38,6 +38,7 @@ import type { AdminMasterShellData } from "@/lib/admin-master/data";
 import AdminMasterGlobalSearch from "@/components/admin-master/AdminMasterGlobalSearch";
 import MonitoringContextBridge from "@/components/monitoring/MonitoringContextBridge";
 import { createClient } from "@/lib/supabase/client";
+import { clearSupabaseBrowserAuthState } from "@/lib/supabase/auth-client-recovery";
 
 type Props = {
   children: ReactNode;
@@ -285,7 +286,11 @@ export default function AdminMasterShellClient({
     setSigningOut(true);
 
     try {
-      await createClient().auth.signOut();
+      try {
+        await createClient().auth.signOut();
+      } finally {
+        clearSupabaseBrowserAuthState();
+      }
     } finally {
       router.push(ADMIN_MASTER_LOGIN_PATH);
       router.refresh();

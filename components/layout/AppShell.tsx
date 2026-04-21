@@ -22,6 +22,7 @@ import {
   type PainelOnboardingSnapshot,
 } from "@/lib/onboarding/painel-guide";
 import { createClient } from "@/lib/supabase/client";
+import { clearSupabaseBrowserAuthState } from "@/lib/supabase/auth-client-recovery";
 import {
   captureClientError,
   monitorClientOperation,
@@ -213,7 +214,11 @@ export default function AppShell({
       },
       async () => {
         const supabase = createClient();
-        await supabase.auth.signOut();
+        try {
+          await supabase.auth.signOut();
+        } finally {
+          clearSupabaseBrowserAuthState();
+        }
         router.push("/login?motivo=logout");
         router.refresh();
       }
