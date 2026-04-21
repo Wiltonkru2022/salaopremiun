@@ -64,6 +64,7 @@ export function createProfissionalService(
         await supabaseAdmin
           .from("profissionais_acessos")
           .update({ ativo: false })
+          .eq("id_salao", params.idSalao)
           .eq("id_profissional", params.idProfissional);
       }
 
@@ -176,6 +177,7 @@ export function createProfissionalService(
         await supabaseAdmin
           .from("profissionais_acessos")
           .update({ ativo: false })
+          .eq("id_salao", idSalao)
           .eq("id_profissional", idProfissional);
       }
 
@@ -192,6 +194,7 @@ export function createProfissionalService(
               desconta_taxa_maquininha
             `
           )
+          .eq("id_salao", idSalao)
           .eq("id_profissional", idProfissional);
 
       if (vinculosAtuaisError) throw vinculosAtuaisError;
@@ -206,6 +209,7 @@ export function createProfissionalService(
       const { error: removeServicosError } = await supabaseAdmin
         .from("profissional_servicos")
         .delete()
+        .eq("id_salao", idSalao)
         .eq("id_profissional", idProfissional);
 
       if (removeServicosError) throw removeServicosError;
@@ -318,6 +322,7 @@ export function createProfissionalService(
       const { error: acessoError } = await supabaseAdmin
         .from("profissionais_acessos")
         .delete()
+        .eq("id_salao", params.idSalao)
         .eq("id_profissional", params.idProfissional);
 
       if (acessoError) throw acessoError;
@@ -325,6 +330,7 @@ export function createProfissionalService(
       const { error: vinculoServicoError } = await supabaseAdmin
         .from("profissional_servicos")
         .delete()
+        .eq("id_salao", params.idSalao)
         .eq("id_profissional", params.idProfissional);
 
       if (vinculoServicoError) throw vinculoServicoError;
