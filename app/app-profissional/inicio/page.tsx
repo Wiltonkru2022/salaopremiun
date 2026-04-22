@@ -142,11 +142,11 @@ export default async function InicioProfissionalPage() {
               />
             </Link>
 
-            <Link href="/app-profissional/comandas" className="block">
+            <Link href="/app-profissional/comandas/nova" className="block">
               <ProfissionalActionCard
                 icon={<Receipt size={18} />}
-                title="Comandas"
-                subtitle="Abertas e itens"
+                title="Nova comanda"
+                subtitle="Criar no app"
               />
             </Link>
 

@@ -38,6 +38,13 @@ export default async function ComandasPage() {
   return (
     <ProfissionalShell title="Comandas" subtitle="Abertas e atendimentos">
       <div className="space-y-3">
+        <Link
+          href="/app-profissional/comandas/nova"
+          className="block rounded-[1.25rem] bg-zinc-950 px-4 py-3 text-center text-sm font-semibold text-white shadow-sm"
+        >
+          Nova comanda
+        </Link>
+
         {comandas.length ? (
           comandas.map((comanda) => (
             <Link
