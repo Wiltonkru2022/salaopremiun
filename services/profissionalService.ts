@@ -64,7 +64,6 @@ export function createProfissionalService(
         await supabaseAdmin
           .from("profissionais_acessos")
           .update({ ativo: false })
-          .eq("id_salao", params.idSalao)
           .eq("id_profissional", params.idProfissional);
       }
 
@@ -177,7 +176,6 @@ export function createProfissionalService(
         await supabaseAdmin
           .from("profissionais_acessos")
           .update({ ativo: false })
-          .eq("id_salao", idSalao)
           .eq("id_profissional", idProfissional);
       }
 
@@ -322,7 +320,6 @@ export function createProfissionalService(
       const { error: acessoError } = await supabaseAdmin
         .from("profissionais_acessos")
         .delete()
-        .eq("id_salao", params.idSalao)
         .eq("id_profissional", params.idProfissional);
 
       if (acessoError) throw acessoError;

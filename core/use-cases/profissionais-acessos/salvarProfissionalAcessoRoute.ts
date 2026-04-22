@@ -86,6 +86,10 @@ export async function salvarProfissionalAcessoRouteUseCase(params: {
       );
     }
 
+    console.error("[PROFISSIONAL_ACESSO_ROUTE_ERROR]", {
+      error: error instanceof Error ? error.message : "erro_desconhecido",
+    });
+
     throw new SalvarProfissionalAcessoRouteUseCaseError(
       "Erro interno ao salvar acesso do profissional.",
       500

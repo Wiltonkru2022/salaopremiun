@@ -36,14 +36,32 @@ export function createProfissionalAcessoService(
       const { data, error } = await supabaseAdmin
         .from("profissionais_acessos")
         .select("id, id_profissional")
-        .eq("id_salao", params.idSalao)
         .eq("cpf", params.cpf)
         .neq("id_profissional", params.idProfissional)
-        .limit(1)
-        .maybeSingle();
+        .limit(20);
 
       if (error) throw error;
-      return data?.id ? data : null;
+
+      const candidatos = data || [];
+      if (!candidatos.length) return null;
+
+      const idsProfissionais = candidatos
+        .map((item) => item.id_profissional)
+        .filter(Boolean);
+
+      const { data: profissionais, error: profissionaisError } =
+        await supabaseAdmin
+          .from("profissionais")
+          .select("id")
+          .eq("id_salao", params.idSalao)
+          .in("id", idsProfissionais);
+
+      if (profissionaisError) throw profissionaisError;
+
+      const idsDoSalao = new Set((profissionais || []).map((item) => item.id));
+      return (
+        candidatos.find((item) => idsDoSalao.has(item.id_profissional)) || null
+      );
     },
 
     async buscarAcessoExistente(params: {
@@ -53,7 +71,6 @@ export function createProfissionalAcessoService(
       const { data, error } = await supabaseAdmin
         .from("profissionais_acessos")
         .select("id, senha_hash")
-        .eq("id_salao", params.idSalao)
         .eq("id_profissional", params.idProfissional)
         .maybeSingle();
 
@@ -70,7 +87,6 @@ export function createProfissionalAcessoService(
       idAcesso?: string;
     }) {
       const payload = {
-        id_salao: params.idSalao,
         id_profissional: params.idProfissional,
         cpf: params.cpf,
         ativo: params.ativo,
@@ -82,7 +98,7 @@ export function createProfissionalAcessoService(
           .from("profissionais_acessos")
           .update(payload)
           .eq("id", params.idAcesso)
-          .eq("id_salao", params.idSalao);
+          .eq("id_profissional", params.idProfissional);
 
         if (error) throw error;
         return;
