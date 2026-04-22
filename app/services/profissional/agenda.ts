@@ -1,4 +1,6 @@
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { SELECT_AGENDAMENTOS } from "@/lib/db/selects";
+import { runAdminOperation } from "@/lib/supabase/admin-ops";
+import { parseDiasTrabalho, parsePausas } from "@/lib/utils/agenda";
 
 /* ---------------- TYPES ---------------- */
 
@@ -12,7 +14,7 @@ type DiaTrabalho = {
 type Pausa = {
   inicio: string;
   fim: string;
-  descricao?: string;
+  descricao?: string | null;
 };
 
 type ValidarHorarioParams = {
@@ -89,47 +91,64 @@ function overlaps(a1: number, a2: number, b1: number, b2: number) {
   return a1 < b2 && a2 > b1;
 }
 
+function normalizarJsonAgenda(value: unknown) {
+  if (typeof value === "string") return value;
+  if (Array.isArray(value)) return JSON.stringify(value);
+  return null;
+}
+
 /* ---------------- SERVICES ---------------- */
 
 export async function buscarConfiguracaoAgendaProfissional(
   idSalao: string,
   idProfissional: string
 ) {
-  const supabase = getSupabaseAdmin();
+  return runAdminOperation({
+    action: "profissional_agenda_buscar_configuracao",
+    actorId: idProfissional,
+    idSalao,
+    run: async (supabase) => {
+      const { data, error } = await supabase
+        .from("profissionais")
+        .select("id, nome, nome_exibicao, ativo, dias_trabalho, pausas")
+        .eq("id", idProfissional)
+        .eq("id_salao", idSalao)
+        .maybeSingle();
 
-  const { data, error } = await supabase
-    .from("profissionais")
-    .select("id, nome, nome_exibicao, ativo, dias_trabalho, pausas")
-    .eq("id", idProfissional)
-    .eq("id_salao", idSalao)
-    .maybeSingle();
+      if (error) throw new Error(error.message);
+      if (!data) throw new Error("Profissional nao encontrado.");
 
-  if (error) throw new Error(error.message);
-  if (!data) throw new Error("Profissional não encontrado.");
-
-  return {
-    id: data.id,
-    nome: data.nome_exibicao || data.nome,
-    ativo: Boolean(data.ativo),
-    diasTrabalho: data.dias_trabalho || [],
-    pausas: data.pausas || [],
-  };
+      return {
+        id: data.id,
+        nome: data.nome_exibicao || data.nome,
+        ativo: Boolean(data.ativo),
+        diasTrabalho: parseDiasTrabalho(
+          normalizarJsonAgenda(data.dias_trabalho)
+        ),
+        pausas: parsePausas(normalizarJsonAgenda(data.pausas)),
+      };
+    },
+  });
 }
 
 export async function buscarServicoPorId(idSalao: string, idServico: string) {
-  const supabase = getSupabaseAdmin();
+  return runAdminOperation({
+    action: "profissional_agenda_buscar_servico",
+    idSalao,
+    run: async (supabase) => {
+      const { data, error } = await supabase
+        .from("servicos")
+        .select("id, nome, duracao_minutos, preco, preco_padrao")
+        .eq("id", idServico)
+        .eq("id_salao", idSalao)
+        .maybeSingle();
 
-  const { data, error } = await supabase
-    .from("servicos")
-    .select("id, nome, duracao_minutos, preco, preco_padrao")
-    .eq("id", idServico)
-    .eq("id_salao", idSalao)
-    .maybeSingle();
+      if (error) throw new Error(error.message);
+      if (!data) throw new Error("Servico nao encontrado.");
 
-  if (error) throw new Error(error.message);
-  if (!data) throw new Error("Serviço não encontrado.");
-
-  return data;
+      return data;
+    },
+  });
 }
 
 export async function validarServicoVinculadoAoProfissional(
@@ -137,47 +156,57 @@ export async function validarServicoVinculadoAoProfissional(
   idProfissional: string,
   idServico: string
 ) {
-  const supabase = getSupabaseAdmin();
+  return runAdminOperation({
+    action: "profissional_agenda_validar_servico_vinculado",
+    actorId: idProfissional,
+    idSalao,
+    run: async (supabase) => {
+      const { data, error } = await supabase
+        .from("profissional_servicos")
+        .select("id")
+        .eq("id_salao", idSalao)
+        .eq("id_profissional", idProfissional)
+        .eq("id_servico", idServico)
+        .eq("ativo", true)
+        .maybeSingle();
 
-  const { data, error } = await supabase
-    .from("profissional_servicos")
-    .select("id")
-    .eq("id_salao", idSalao)
-    .eq("id_profissional", idProfissional)
-    .eq("id_servico", idServico)
-    .eq("ativo", true)
-    .maybeSingle();
+      if (error) throw new Error(error.message);
+      if (!data) throw new Error("Servico nao vinculado ao profissional.");
 
-  if (error) throw new Error(error.message);
-  if (!data) throw new Error("Servico nao vinculado ao profissional.");
-
-  return true;
+      return true;
+    },
+  });
 }
 
 export async function buscarConflitosNoHorario(params: BuscarConflitosParams) {
-  const supabase = getSupabaseAdmin();
+  return runAdminOperation({
+    action: "profissional_agenda_buscar_conflitos",
+    actorId: params.idProfissional,
+    idSalao: params.idSalao,
+    run: async (supabase) => {
+      const { data, error } = await supabase
+        .from("agendamentos")
+        .select(SELECT_AGENDAMENTOS)
+        .eq("id_salao", params.idSalao)
+        .eq("profissional_id", params.idProfissional)
+        .eq("data", params.dataISO)
+        .not("status", "eq", "cancelado");
 
-  const { data, error } = await supabase
-    .from("agendamentos")
-    .select("*")
-    .eq("id_salao", params.idSalao)
-    .eq("profissional_id", params.idProfissional)
-    .eq("data", params.dataISO)
-    .not("status", "eq", "cancelado");
+      if (error) throw new Error(error.message);
 
-  if (error) throw new Error(error.message);
+      const novoInicio = timeToMinutes(params.horaInicio);
+      const novoFim = timeToMinutes(params.horaFim);
 
-  const novoInicio = timeToMinutes(params.horaInicio);
-  const novoFim = timeToMinutes(params.horaFim);
-
-  return ((data ?? []) as AgendamentoConflitoRow[]).filter((i) =>
-    overlaps(
-      novoInicio,
-      novoFim,
-      timeToMinutes(i.hora_inicio),
-      timeToMinutes(i.hora_fim)
-    )
-  );
+      return ((data ?? []) as AgendamentoConflitoRow[]).filter((i) =>
+        overlaps(
+          novoInicio,
+          novoFim,
+          timeToMinutes(i.hora_inicio),
+          timeToMinutes(i.hora_fim)
+        )
+      );
+    },
+  });
 }
 
 export function validarHorarioAgendamento({
@@ -193,28 +222,18 @@ export function validarHorarioAgendamento({
     (d) => normalizeDia(d.dia) === normalizeDia(dia)
   );
 
-  if (!regra?.ativo) throw new Error("Não atende neste dia.");
+  if (!regra?.ativo) throw new Error("Nao atende neste dia.");
 
   const ini = timeToMinutes(horaInicio);
   const fim = ini + duracaoMinutos;
 
-  if (
-    ini < timeToMinutes(regra.inicio) ||
-    fim > timeToMinutes(regra.fim)
-  ) {
+  if (ini < timeToMinutes(regra.inicio) || fim > timeToMinutes(regra.fim)) {
     throw new Error("Fora do expediente.");
   }
 
   for (const p of pausas) {
-    if (
-      overlaps(
-        ini,
-        fim,
-        timeToMinutes(p.inicio),
-        timeToMinutes(p.fim)
-      )
-    ) {
-      throw new Error("Horário em pausa.");
+    if (overlaps(ini, fim, timeToMinutes(p.inicio), timeToMinutes(p.fim))) {
+      throw new Error("Horario em pausa.");
     }
   }
 
@@ -229,16 +248,25 @@ export async function buscarAgendaProfissional(
   idProfissional: string,
   data?: string
 ) {
-  const supabase = getSupabaseAdmin();
-
   const dataSelecionada = data || hojeLocal();
 
-  const { data: agendamentos } = await supabase
-    .from("agendamentos")
-    .select("*")
-    .eq("id_salao", idSalao)
-    .eq("profissional_id", idProfissional)
-    .eq("data", dataSelecionada);
+  const agendamentos = await runAdminOperation({
+    action: "profissional_agenda_buscar_agenda",
+    actorId: idProfissional,
+    idSalao,
+    run: async (supabase) => {
+      const { data: agendamentosData, error } = await supabase
+        .from("agendamentos")
+        .select(SELECT_AGENDAMENTOS)
+        .eq("id_salao", idSalao)
+        .eq("profissional_id", idProfissional)
+        .eq("data", dataSelecionada);
+
+      if (error) throw new Error(error.message);
+
+      return agendamentosData ?? [];
+    },
+  });
 
   return {
     profissional: { id: idProfissional, nome: "Profissional" },
@@ -247,7 +275,7 @@ export async function buscarAgendaProfissional(
     expedienteAtivo: true,
     horaInicioExpediente: "08:00",
     horaFimExpediente: "18:00",
-    totalAtendimentos: agendamentos?.length || 0,
+    totalAtendimentos: agendamentos.length,
     totalPrevisto: 0,
     cards: [],
     labels: [],

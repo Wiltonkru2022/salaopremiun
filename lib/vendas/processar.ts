@@ -110,7 +110,7 @@ export async function reabrirVenda(params: {
     mutate: async () => {
       const { error } = await supabaseAdmin.rpc("fn_reabrir_venda_para_caixa", {
         p_id_comanda: idComanda,
-        p_motivo: sanitizeText(motivo),
+        p_motivo: sanitizeText(motivo) || undefined,
         p_reopened_by: idUsuario,
       });
 
@@ -147,7 +147,7 @@ export async function excluirVenda(params: {
     mutate: async () => {
       const { error } = await supabaseAdmin.rpc("fn_excluir_venda_completa", {
         p_id_comanda: idComanda,
-        p_motivo: sanitizeText(motivo),
+        p_motivo: sanitizeText(motivo) || undefined,
         p_deleted_by: idUsuario,
       });
 

@@ -143,7 +143,7 @@ export async function recalcularTaxaProfissional(params: {
 
     supabaseAdmin
       .from("comissoes_lancamentos")
-      .select("*")
+      .select("competencia, competencia_data, criado_em, descricao, id, id_agendamento, id_assistente, id_comanda, id_comanda_item, id_profissional, id_salao, observacoes, origem_percentual, pago_em, percentual, percentual_aplicado, status, tipo_destinatario, tipo_profissional, updated_at, valor_base, valor_comissao, valor_comissao_assistente")
       .eq("id_salao", idSalao)
       .eq("id_comanda", idComanda),
   ]);

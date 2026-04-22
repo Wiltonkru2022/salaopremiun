@@ -75,7 +75,7 @@ export function useAssinaturaStatus({
     async (idSalaoAtual: string) => {
       const { data: salaoData, error: salaoError } = await supabase
         .from("saloes")
-        .select("*")
+        .select("bairro, cep, cidade, complemento, cpf_cnpj, created_at, email, endereco, estado, id, inscricao_estadual, limite_profissionais, limite_usuarios, logo_url, nome, nome_fantasia, numero, plano, razao_social, renovacao_automatica, responsavel, status, telefone, tipo_pessoa, trial_ativo, trial_fim_em, trial_inicio_em, updated_at, whatsapp")
         .eq("id", idSalaoAtual)
         .single();
 
@@ -85,7 +85,7 @@ export function useAssinaturaStatus({
 
       const { data: assinaturaData, error: assinaturaError } = await supabase
         .from("assinaturas")
-        .select("*")
+        .select("asaas_credit_card_brand, asaas_credit_card_last4, asaas_credit_card_token, asaas_credit_card_tokenized_at, asaas_customer_id, asaas_payment_id, asaas_subscription_id, asaas_subscription_status, created_at, forma_pagamento_atual, gateway, id, id_cobranca_atual, id_salao, limite_profissionais, limite_usuarios, pago_em, plano, referencia_atual, renovacao_automatica, status, trial_ativo, trial_fim_em, trial_inicio_em, updated_at, valor, vencimento_em")
         .eq("id_salao", idSalaoAtual)
         .maybeSingle();
 

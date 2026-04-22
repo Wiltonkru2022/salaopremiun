@@ -1,9 +1,9 @@
 import { addDays, format, isBefore } from "date-fns";
-import { createClient } from "@supabase/supabase-js";
 import { createServerClient } from "@supabase/ssr";
 import { cookies, headers } from "next/headers";
 import { getRenovacaoAutomaticaInfo } from "@/lib/assinaturas/renovacao-automatica";
 import { getSupabaseCookieOptions } from "@/lib/supabase/cookie-options";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import {
   createAsaasSubscription,
   isAsaasSubscriptionNotFoundError,
@@ -41,21 +41,6 @@ const PLANO_TRIAL_PADRAO: PlanoTrialRow = {
   limite_profissionais: 3,
   ativo: true,
 };
-
-function getSupabaseAdmin() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-  if (!supabaseUrl) {
-    throw new Error("NEXT_PUBLIC_SUPABASE_URL nao configurada.");
-  }
-
-  if (!serviceRoleKey) {
-    throw new Error("SUPABASE_SERVICE_ROLE_KEY nao configurada.");
-  }
-
-  return createClient(supabaseUrl, serviceRoleKey);
-}
 
 async function getSupabaseServer() {
   const cookieStore = await cookies();
@@ -355,7 +340,7 @@ export function createAssinaturaService() {
             limite_profissionais: limiteProfissionais,
             limite_usuarios: limiteUsuarios,
             pago_em: null,
-            trial_ativo: true,
+            trial_ativo: "true",
             trial_inicio_em: params.agoraIso,
             trial_fim_em: params.trialFimIso,
             gateway: null,
@@ -387,7 +372,7 @@ export function createAssinaturaService() {
           limite_profissionais: limiteProfissionais,
           limite_usuarios: limiteUsuarios,
           pago_em: null,
-          trial_ativo: true,
+          trial_ativo: "true",
           trial_inicio_em: params.agoraIso,
           trial_fim_em: params.trialFimIso,
           forma_pagamento_atual: null,

@@ -118,7 +118,7 @@ export function createClienteService(
       const { data, error } = await supabaseAdmin
         .from("clientes")
         .update({
-          ativo: params.ativo,
+          ativo: params.ativo ? "ativo" : "inativo",
           status: params.ativo ? "ativo" : "inativo",
         })
         .eq("id", params.idCliente)
@@ -131,7 +131,7 @@ export function createClienteService(
 
       return {
         idCliente: String(data.id),
-        ativo: Boolean(data.ativo),
+        ativo: String(data.ativo || "").toLowerCase() === "ativo",
         status: String(data.status || ""),
       };
     },
@@ -175,7 +175,32 @@ export function createClienteService(
       idSalao: string;
       idCliente: string;
     }) {
-      const { data: existing, error: findError } = await supabaseAdmin
+      const complementoClient = supabaseAdmin as unknown as {
+        from(table: string): {
+          select(columns: string): {
+            eq(column: string, value: string): {
+              eq(column: string, value: string): {
+                limit(count: number): Promise<{
+                  data: Array<{ id?: string }> | null;
+                  error: { message?: string } | null;
+                }>;
+              };
+            };
+          };
+          update(payload: Record<string, unknown>): {
+            eq(column: string, value: string): {
+              eq(column: string, value: string): Promise<{
+                error: { message?: string } | null;
+              }>;
+            };
+          };
+          insert(payload: Record<string, unknown>): Promise<{
+            error: { message?: string } | null;
+          }>;
+        };
+      };
+
+      const { data: existing, error: findError } = await complementoClient
         .from(params.table)
         .select("id")
         .eq("id_salao", params.idSalao)
@@ -185,7 +210,7 @@ export function createClienteService(
       if (findError) throw findError;
 
       if (existing?.[0]?.id) {
-        const { error } = await supabaseAdmin
+        const { error } = await complementoClient
           .from(params.table)
           .update(params.payload)
           .eq("id_salao", params.idSalao)
@@ -195,7 +220,7 @@ export function createClienteService(
         return;
       }
 
-      const { error } = await supabaseAdmin
+      const { error } = await complementoClient
         .from(params.table)
         .insert(params.payload);
 

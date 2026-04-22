@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { reportOperationalIncident } from "@/lib/monitoring/operational-incidents";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getProfissionalSessionFromCookie } from "@/lib/profissional-auth.server";
+import { runAdminOperation } from "@/lib/supabase/admin-ops";
 import {
   finalizarSuporteIAUseCase,
   FinalizarSuporteIAUseCaseError,
@@ -11,6 +12,12 @@ export async function POST(req: Request) {
   let idSalao = "";
 
   try {
+    const session = await getProfissionalSessionFromCookie();
+    if (!session) {
+      return NextResponse.json({ error: "Sessao invalida." }, { status: 401 });
+    }
+    idSalao = session.idSalao;
+
     const result = await finalizarSuporteIAUseCase({
       body: await req.json().catch(() => null),
       service: createAppProfissionalSuporteService(),
@@ -32,17 +39,25 @@ export async function POST(req: Request) {
 
     if (idSalao) {
       try {
-        await reportOperationalIncident({
-          supabaseAdmin: getSupabaseAdmin(),
-          key: `app-profissional:suporte-finalizar:${idSalao}`,
-          module: "app_profissional",
-          title: "Finalizacao do chat do app profissional falhou",
-          description:
-            error instanceof Error ? error.message : "Erro ao finalizar chat.",
-          severity: "media",
+        await runAdminOperation({
+          action: "app_profissional_suporte_finalizar_report_incident",
           idSalao,
-          details: {
-            route: "/api/app-profissional/suporte/finalizar",
+          run: async (supabaseAdmin) => {
+            await reportOperationalIncident({
+              supabaseAdmin,
+              key: `app-profissional:suporte-finalizar:${idSalao}`,
+              module: "app_profissional",
+              title: "Finalizacao do chat do app profissional falhou",
+              description:
+                error instanceof Error
+                  ? error.message
+                  : "Erro ao finalizar chat.",
+              severity: "media",
+              idSalao,
+              details: {
+                route: "/api/app-profissional/suporte/finalizar",
+              },
+            });
           },
         });
       } catch (incidentError) {

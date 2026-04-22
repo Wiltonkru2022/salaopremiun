@@ -73,8 +73,8 @@ export function createProfissionalAcessoService(
         id_salao: params.idSalao,
         id_profissional: params.idProfissional,
         cpf: params.cpf,
-        senha_hash: params.senhaHash,
         ativo: params.ativo,
+        ...(params.senhaHash ? { senha_hash: params.senhaHash } : {}),
       };
 
       if (params.idAcesso) {
@@ -88,9 +88,16 @@ export function createProfissionalAcessoService(
         return;
       }
 
+      if (!params.senhaHash) {
+        throw new Error("Senha obrigatoria para criar acesso profissional.");
+      }
+
       const { error } = await supabaseAdmin
         .from("profissionais_acessos")
-        .insert(payload);
+        .insert({
+          ...payload,
+          senha_hash: params.senhaHash,
+        });
 
       if (error) throw error;
     },

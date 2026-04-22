@@ -1,5 +1,6 @@
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { captureSystemEvent } from "@/lib/monitoring/server";
+import type { Json } from "@/types/database.generated";
 
 type LogSeverity = "info" | "warning" | "error";
 
@@ -46,7 +47,7 @@ async function registrarFalhaObservabilidade(params: {
         modulo_original: params.modulo,
         mensagem_original: params.mensagem,
         detalhes_original: params.detalhes,
-      },
+      } as Json,
       origem: "server",
       sucesso: false,
       eh_erro_usuario: false,
@@ -71,7 +72,7 @@ export async function registrarLogSistema(params: RegistrarLogParams) {
       id_salao: params.idSalao || null,
       id_usuario: params.idUsuario || null,
       mensagem,
-      detalhes_json: details,
+      detalhes_json: details as Json,
     });
 
     await captureSystemEvent({

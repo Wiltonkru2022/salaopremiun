@@ -259,7 +259,7 @@ export default function ServicoForm({ modo }: ServicoFormProps) {
   ) {
     const { data: row, error } = await supabase
       .from("servicos")
-      .select("*")
+      .select("ativo, atualizado_em, base_calculo, categoria, comissao_assistente_percentual, comissao_percentual, comissao_percentual_padrao, created_at, criado_em, custo_produto, desconta_taxa_maquininha, descricao, duracao, duracao_minutos, exige_avaliacao, gatilho_retorno_dias, id, id_categoria, id_salao, nome, pausa_minutos, preco, preco_minimo, preco_padrao, preco_variavel, recurso_nome, status, updated_at")
       .eq("id", id)
       .eq("id_salao", salaoId)
       .maybeSingle();
@@ -273,9 +273,14 @@ export default function ServicoForm({ modo }: ServicoFormProps) {
       throw new Error("Servico nao encontrado.");
     }
 
+    const rowIdSalao = row.id_salao;
+    if (!rowIdSalao) {
+      throw new Error("Servico sem salao vinculado.");
+    }
+
     setServico({
       id: row.id,
-      id_salao: row.id_salao,
+      id_salao: rowIdSalao,
       nome: row.nome || "",
       categoria: row.categoria || "",
       id_categoria: row.id_categoria || "",
@@ -301,7 +306,7 @@ export default function ServicoForm({ modo }: ServicoFormProps) {
 
     const { data: vinculosRows, error: vinculosError } = await supabase
       .from("profissional_servicos")
-      .select("*")
+      .select("ativo, base_calculo, comissao_assistente_percentual, comissao_percentual, created_at, desconta_taxa_maquininha, duracao_minutos, id, id_profissional, id_salao, id_servico, ordem, preco_personalizado, updated_at")
       .eq("id_servico", id);
 
     if (vinculosError) {
@@ -339,7 +344,7 @@ export default function ServicoForm({ modo }: ServicoFormProps) {
 
     const { data: consumoRows, error: consumoError } = await supabase
       .from("produto_servico_consumo")
-      .select("*")
+      .select("ativo, created_at, custo_estimado, id, id_produto, id_salao, id_servico, quantidade_consumo, unidade_medida, updated_at")
       .eq("id_servico", id);
 
     if (consumoError) {

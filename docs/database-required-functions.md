@@ -40,6 +40,15 @@ npm run audit:database-contract
 - `fn_detalhes_venda`
 - `fn_reabrir_venda_para_caixa`
 - `fn_excluir_venda_completa`
+- `fn_auth_user_id`
+- `fn_usuario_atual`
+- `fn_id_salao_atual`
+- `fn_usuario_ativo`
+- `fn_usuario_nivel`
+- `fn_usuario_admin`
+- `fn_usuario_mesmo_salao`
+- `fn_shell_resumo_painel`
+- `fn_validar_rls_critico`
 - `fn_validar_funcoes_obrigatorias`
 
 ## Tabelas Criticas

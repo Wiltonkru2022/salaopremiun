@@ -1,31 +1,54 @@
 import { createClient } from "@supabase/supabase-js";
 import type { AnySupabaseDatabase } from "@/types/supabase";
 
-let adminClient: ReturnType<typeof createClient<AnySupabaseDatabase>> | null =
-  null;
+type SupabaseAdminClient = ReturnType<typeof createClient<AnySupabaseDatabase>>;
 
-export function getSupabaseAdmin() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const globalStore = globalThis as typeof globalThis & {
+  __salaopremiumSupabaseAdmin?: SupabaseAdminClient;
+};
 
-  if (!supabaseUrl) {
+function getSupabaseUrl() {
+  const value = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  if (!value) {
     throw new Error("NEXT_PUBLIC_SUPABASE_URL nao configurada.");
   }
+  return value;
+}
 
-  if (!serviceRoleKey) {
+function getServiceRoleKey() {
+  const value = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!value) {
     throw new Error("SUPABASE_SERVICE_ROLE_KEY nao configurada.");
   }
+  return value;
+}
 
-  if (adminClient) {
-    return adminClient;
+export function getSupabaseAdmin(): SupabaseAdminClient {
+  if (typeof window !== "undefined") {
+    throw new Error("getSupabaseAdmin() nao pode ser usado no client.");
   }
 
-  adminClient = createClient<AnySupabaseDatabase>(supabaseUrl, serviceRoleKey, {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-    },
-  });
+  if (globalStore.__salaopremiumSupabaseAdmin) {
+    return globalStore.__salaopremiumSupabaseAdmin;
+  }
 
-  return adminClient;
+  globalStore.__salaopremiumSupabaseAdmin = createClient<AnySupabaseDatabase>(
+    getSupabaseUrl(),
+    getServiceRoleKey(),
+    {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+      global: {
+        headers: {
+          "x-application-name": "salaopremium-server-admin",
+        },
+      },
+    }
+  );
+
+  return globalStore.__salaopremiumSupabaseAdmin;
 }
+
+export type { SupabaseAdminClient };

@@ -164,6 +164,27 @@ function onlyDigits(value: string) {
   return (value || "").replace(/\D/g, "");
 }
 
+function isDiaTrabalho(value: unknown): value is DiaTrabalho {
+  if (!value || typeof value !== "object") return false;
+  const item = value as Record<string, unknown>;
+  return (
+    typeof item.dia === "string" &&
+    typeof item.ativo === "boolean" &&
+    typeof item.inicio === "string" &&
+    typeof item.fim === "string"
+  );
+}
+
+function isPausa(value: unknown): value is Pausa {
+  if (!value || typeof value !== "object") return false;
+  const item = value as Record<string, unknown>;
+  return (
+    typeof item.inicio === "string" &&
+    typeof item.fim === "string" &&
+    typeof item.descricao === "string"
+  );
+}
+
 
 export default function ProfissionalForm({
   modo,
@@ -276,7 +297,7 @@ export default function ProfissionalForm({
   async function carregarProfissional(id: string, salaoId: string) {
     const { data, error } = await supabase
       .from("profissionais")
-      .select("*")
+      .select("ativo, bairro, bio, cargo, categoria, cep, cidade, comissao_percentual, comissao_produto_percentual, cor_agenda, cpf, data_admissao, data_nascimento, dias_trabalho, eh_assistente, email, endereco, especialidades, estado, foto, foto_url, id, id_profissional_principal, id_salao, nivel_acesso, nome, nome_exibicao, nome_social, numero, ordem_agenda, pausas, percentual_comissao_assistente, permite_comissao, pix_chave, pix_tipo, pode_usar_sistema, recebe_comissao, rg, status, telefone, tipo_profissional, tipo_vinculo, whatsapp")
       .eq("id", id)
       .eq("id_salao", salaoId)
       .limit(1);
@@ -288,12 +309,12 @@ export default function ProfissionalForm({
 
     const dias =
       Array.isArray(profissional.dias_trabalho) && profissional.dias_trabalho.length > 0
-        ? profissional.dias_trabalho
+        ? profissional.dias_trabalho.filter(isDiaTrabalho)
         : DIAS_FIXOS;
 
     const pausas =
       Array.isArray(profissional.pausas) && profissional.pausas.length > 0
-        ? profissional.pausas
+        ? profissional.pausas.filter(isPausa)
         : PAUSA_INICIAL;
 
     setForm({

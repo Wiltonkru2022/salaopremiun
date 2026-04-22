@@ -1,8 +1,8 @@
 "use server";
 
-import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { redirect } from "next/navigation";
+import { runAdminOperation } from "@/lib/supabase/admin-ops";
 import { getProfissionalSessionFromCookie } from "@/lib/profissional-auth.server";
 import {
   buscarVinculoProfissionalServico,
@@ -36,11 +36,6 @@ function sanitizeQuantidade(value: unknown) {
 function sanitizeMoney(value: unknown) {
   const parsed = Number(value ?? 0);
   return Number.isFinite(parsed) ? Number(parsed.toFixed(2)) : 0;
-}
-
-function formatQuantidade(value: unknown) {
-  const numero = Number(value || 0);
-  return numero.toFixed(3);
 }
 
 function buildActionKey(params: {
@@ -85,66 +80,77 @@ async function buscarComandaPermitida(idComanda: string) {
     redirect("/app-profissional/login");
   }
 
-  const supabaseAdmin = getSupabaseAdmin();
+  const comanda = await runAdminOperation({
+    action: "app_profissional_comanda_buscar_permitida",
+    actorId: session.idProfissional,
+    idSalao: session.idSalao,
+    run: async (supabaseAdmin) => {
+      const { data: comandaData, error: comandaError } = await supabaseAdmin
+        .from("comandas")
+        .select(
+          "id, id_salao, id_cliente, status, observacoes, subtotal, desconto, acrescimo, total"
+        )
+        .eq("id", safeIdComanda)
+        .eq("id_salao", session.idSalao)
+        .maybeSingle();
 
-  const { data: comanda, error: comandaError } = await supabaseAdmin
-    .from("comandas")
-    .select("id, id_salao, id_cliente, status, observacoes, subtotal, desconto, acrescimo, total")
-    .eq("id", safeIdComanda)
-    .eq("id_salao", session.idSalao)
-    .maybeSingle();
+      if (comandaError || !comandaData) {
+        throw new Error("Comanda nao encontrada.");
+      }
 
-  if (comandaError || !comanda) {
-    throw new Error("Comanda não encontrada.");
-  }
+      const { count, error: acessoError } = await supabaseAdmin
+        .from("agendamentos")
+        .select("id", { count: "exact", head: true })
+        .eq("id_salao", session.idSalao)
+        .eq("profissional_id", session.idProfissional)
+        .eq("id_comanda", safeIdComanda);
 
-  const { count, error: acessoError } = await supabaseAdmin
-    .from("agendamentos")
-    .select("*", { count: "exact", head: true })
-    .eq("id_salao", session.idSalao)
-    .eq("profissional_id", session.idProfissional)
-    .eq("id_comanda", safeIdComanda);
+      if (acessoError) {
+        throw new Error("Erro ao validar acesso a comanda.");
+      }
 
-  if (acessoError) {
-    throw new Error("Erro ao validar acesso à comanda.");
-  }
+      if (!count) {
+        throw new Error("Voce nao tem acesso a esta comanda.");
+      }
 
-  if (!count) {
-    throw new Error("Você não tem acesso a esta comanda.");
-  }
+      return comandaData;
+    },
+  });
 
   return { session, comanda };
 }
 
 async function recalcularTotaisComanda(idComanda: string, idSalao: string) {
-  const supabaseAdmin = getSupabaseAdmin();
+  await runAdminOperation({
+    action: "app_profissional_comanda_recalcular_totais",
+    idSalao,
+    run: async (supabaseAdmin) => {
+      const { data: comandaAtual, error: comandaAtualError } =
+        await supabaseAdmin
+          .from("comandas")
+          .select("desconto, acrescimo")
+          .eq("id", idComanda)
+          .eq("id_salao", idSalao)
+          .single();
 
-  const { data: comandaAtual, error: comandaAtualError } = await supabaseAdmin
-    .from("comandas")
-    .select("desconto, acrescimo")
-    .eq("id", idComanda)
-    .eq("id_salao", idSalao)
-    .single();
+      if (comandaAtualError || !comandaAtual) {
+        throw new Error("Erro ao carregar totais da comanda.");
+      }
 
-  if (comandaAtualError || !comandaAtual) {
-    throw new Error("Erro ao carregar totais da comanda.");
-  }
+      const { error: updateError } = await supabaseAdmin.rpc(
+        "fn_recalcular_total_comanda",
+        {
+          p_id_comanda: idComanda,
+          p_desconto: sanitizeMoney(comandaAtual.desconto),
+          p_acrescimo: sanitizeMoney(comandaAtual.acrescimo),
+        }
+      );
 
-  const desconto = Number(comandaAtual.desconto || 0);
-  const acrescimo = Number(comandaAtual.acrescimo || 0);
-
-  const { error: updateError } = await supabaseAdmin.rpc(
-    "fn_recalcular_total_comanda",
-    {
-      p_id_comanda: idComanda,
-      p_desconto: desconto,
-      p_acrescimo: acrescimo,
-    }
-  );
-
-  if (updateError) {
-    throw new Error("Erro ao atualizar totais da comanda.");
-  }
+      if (updateError) {
+        throw new Error("Erro ao atualizar totais da comanda.");
+      }
+    },
+  });
 }
 
 function revalidarComandaProfissional(idComanda: string) {
@@ -164,57 +170,78 @@ export async function adicionarServicoNaComandaAction(formData: FormData) {
   let redirectUrl = buildRedirectUrl(
     idComanda,
     "ok",
-    "Serviço adicionado com sucesso."
+    "Servico adicionado com sucesso."
   );
 
   try {
     const { session, comanda } = await buscarComandaPermitida(idComanda);
-    const supabaseAdmin = getSupabaseAdmin();
 
-    if (String(comanda.status).toLowerCase() !== "aberta") {
-      redirectUrl = buildRedirectUrl(
-        idComanda,
-        "erro",
-        "Comanda fechada não permite alterações."
-      );
-    } else if (!idServico) {
-      redirectUrl = buildRedirectUrl(idComanda, "erro", "Selecione um serviço.");
-    } else {
-      const [
-        { data: servico, error: servicoError },
-        { data: profissional, error: profissionalError },
-      ] = await Promise.all([
-        supabaseAdmin
-          .from("servicos")
-          .select(
-            "id, nome, preco, preco_padrao, custo_produto, comissao_percentual, comissao_percentual_padrao, comissao_assistente_percentual, base_calculo, desconta_taxa_maquininha, ativo, status"
-          )
-          .eq("id", idServico)
-          .eq("id_salao", session.idSalao)
-          .maybeSingle(),
-        supabaseAdmin
-          .from("profissionais")
-          .select("id, nome, comissao_percentual, comissao")
-          .eq("id", session.idProfissional)
-          .eq("id_salao", session.idSalao)
-          .maybeSingle(),
-      ]);
+    await runAdminOperation({
+      action: "app_profissional_comanda_adicionar_servico",
+      actorId: session.idProfissional,
+      idSalao: session.idSalao,
+      run: async (supabaseAdmin) => {
+        if (String(comanda.status).toLowerCase() !== "aberta") {
+          redirectUrl = buildRedirectUrl(
+            idComanda,
+            "erro",
+            "Comanda fechada nao permite alteracoes."
+          );
+          return;
+        }
 
-      if (servicoError || !servico) {
-        redirectUrl = buildRedirectUrl(
-          idComanda,
-          "erro",
-          "Serviço não encontrado."
-        );
-      } else if (profissionalError || !profissional) {
-        redirectUrl = buildRedirectUrl(
-          idComanda,
-          "erro",
-          "Profissional nao encontrado."
-        );
-      } else if (!servico.ativo || servico.status !== "ativo") {
-        redirectUrl = buildRedirectUrl(idComanda, "erro", "Serviço inativo.");
-      } else {
+        if (!idServico) {
+          redirectUrl = buildRedirectUrl(
+            idComanda,
+            "erro",
+            "Selecione um servico."
+          );
+          return;
+        }
+
+        const [
+          { data: servico, error: servicoError },
+          { data: profissional, error: profissionalError },
+        ] = await Promise.all([
+          supabaseAdmin
+            .from("servicos")
+            .select(
+              "id, nome, preco, preco_padrao, custo_produto, comissao_percentual, comissao_percentual_padrao, comissao_assistente_percentual, base_calculo, desconta_taxa_maquininha, ativo, status"
+            )
+            .eq("id", idServico)
+            .eq("id_salao", session.idSalao)
+            .maybeSingle(),
+          supabaseAdmin
+            .from("profissionais")
+            .select("id, nome, comissao_percentual")
+            .eq("id", session.idProfissional)
+            .eq("id_salao", session.idSalao)
+            .maybeSingle(),
+        ]);
+
+        if (servicoError || !servico) {
+          redirectUrl = buildRedirectUrl(
+            idComanda,
+            "erro",
+            "Servico nao encontrado."
+          );
+          return;
+        }
+
+        if (profissionalError || !profissional) {
+          redirectUrl = buildRedirectUrl(
+            idComanda,
+            "erro",
+            "Profissional nao encontrado."
+          );
+          return;
+        }
+
+        if (!servico.ativo || servico.status !== "ativo") {
+          redirectUrl = buildRedirectUrl(idComanda, "erro", "Servico inativo.");
+          return;
+        }
+
         const vinculo = await buscarVinculoProfissionalServico({
           supabase: supabaseAdmin,
           idSalao: session.idSalao,
@@ -236,21 +263,20 @@ export async function adicionarServicoNaComandaAction(formData: FormData) {
           formKey,
         });
 
-        const { data: itemResult, error: insertError } = await supabaseAdmin.rpc(
-          "fn_adicionar_item_comanda_idempotente",
-          {
+        const { data: itemResult, error: insertError } =
+          await supabaseAdmin.rpc("fn_adicionar_item_comanda_idempotente", {
             p_id_salao: session.idSalao,
             p_id_comanda: idComanda,
             p_tipo_item: "servico",
-            p_id_agendamento: null,
+            p_id_agendamento: null as unknown as string,
             p_id_servico: idServico,
-            p_id_produto: null,
+            p_id_produto: null as unknown as string,
             p_descricao: servico.nome || "Servico",
             p_quantidade: quantidade,
             p_valor_unitario: regra.valorUnitario,
             p_custo_total: sanitizeMoney(servico.custo_produto),
             p_id_profissional: session.idProfissional,
-            p_id_assistente: null,
+            p_id_assistente: null as unknown as string,
             p_comissao_percentual:
               camposComissao.comissao_percentual_aplicada,
             p_comissao_assistente_percentual:
@@ -259,52 +285,50 @@ export async function adicionarServicoNaComandaAction(formData: FormData) {
             p_desconta_taxa_maquininha:
               camposComissao.desconta_taxa_maquininha_aplicada,
             p_origem: "app_profissional",
-            p_observacoes: null,
+            p_observacoes: null as unknown as string,
             p_desconto: sanitizeMoney(comanda.desconto),
             p_acrescimo: sanitizeMoney(comanda.acrescimo),
-            p_idempotency_key: itemIdempotencyKey,
-          }
-        );
+            p_idempotency_key: itemIdempotencyKey ?? undefined,
+          });
 
         if (insertError) {
           redirectUrl = buildRedirectUrl(
             idComanda,
             "erro",
-            insertError.message || "Erro ao adicionar serviço."
+            insertError.message || "Erro ao adicionar servico."
           );
-        } else {
-          const resultRow = Array.isArray(itemResult) ? itemResult[0] : null;
-          const jaExistia =
-            resultRow &&
-            typeof resultRow === "object" &&
-            "ja_existia" in resultRow
-              ? Boolean(resultRow.ja_existia)
-              : false;
-
-          await registrarLogSistema({
-            gravidade: jaExistia ? "warning" : "info",
-            modulo: "app_profissional",
-            idSalao: session.idSalao,
-            mensagem: jaExistia
-              ? "Servico da comanda reaproveitado por idempotencia no app profissional."
-              : "Servico adicionado na comanda pelo app profissional.",
-            detalhes: {
-              acao: "adicionar_servico",
-              id_comanda: idComanda,
-              id_servico: idServico,
-              id_profissional: session.idProfissional,
-              quantidade,
-              idempotency_key: itemIdempotencyKey,
-              ja_existia: jaExistia,
-            },
-          });
-          revalidarComandaProfissional(idComanda);
+          return;
         }
-      }
-    }
+
+        const resultRow = Array.isArray(itemResult) ? itemResult[0] : null;
+        const jaExistia =
+          resultRow && typeof resultRow === "object" && "ja_existia" in resultRow
+            ? Boolean(resultRow.ja_existia)
+            : false;
+
+        await registrarLogSistema({
+          gravidade: jaExistia ? "warning" : "info",
+          modulo: "app_profissional",
+          idSalao: session.idSalao,
+          mensagem: jaExistia
+            ? "Servico da comanda reaproveitado por idempotencia no app profissional."
+            : "Servico adicionado na comanda pelo app profissional.",
+          detalhes: {
+            acao: "adicionar_servico",
+            id_comanda: idComanda,
+            id_servico: idServico,
+            id_profissional: session.idProfissional,
+            quantidade,
+            idempotency_key: itemIdempotencyKey,
+            ja_existia: jaExistia,
+          },
+        });
+        revalidarComandaProfissional(idComanda);
+      },
+    });
   } catch (error) {
     const message =
-      error instanceof Error ? error.message : "Erro ao adicionar serviço.";
+      error instanceof Error ? error.message : "Erro ao adicionar servico.";
     redirectUrl = buildRedirectUrl(idComanda, "erro", message);
   }
 
@@ -325,37 +349,55 @@ export async function adicionarExtraNaComandaAction(formData: FormData) {
 
   try {
     const { session, comanda } = await buscarComandaPermitida(idComanda);
-    const supabaseAdmin = getSupabaseAdmin();
 
-    if (String(comanda.status).toLowerCase() !== "aberta") {
-      redirectUrl = buildRedirectUrl(
-        idComanda,
-        "erro",
-        "Comanda fechada não permite alterações."
-      );
-    } else if (!idItemExtra) {
-      redirectUrl = buildRedirectUrl(
-        idComanda,
-        "erro",
-        "Selecione um item extra."
-      );
-    } else {
-      const { data: extra, error: extraError } = await supabaseAdmin
-        .from("itens_extras")
-        .select("id, nome, preco_venda, ativo")
-        .eq("id", idItemExtra)
-        .eq("id_salao", session.idSalao)
-        .maybeSingle();
+    await runAdminOperation({
+      action: "app_profissional_comanda_adicionar_extra",
+      actorId: session.idProfissional,
+      idSalao: session.idSalao,
+      run: async (supabaseAdmin) => {
+        if (String(comanda.status).toLowerCase() !== "aberta") {
+          redirectUrl = buildRedirectUrl(
+            idComanda,
+            "erro",
+            "Comanda fechada nao permite alteracoes."
+          );
+          return;
+        }
 
-      if (extraError || !extra) {
-        redirectUrl = buildRedirectUrl(
-          idComanda,
-          "erro",
-          "Item extra não encontrado."
-        );
-      } else if (!extra.ativo) {
-        redirectUrl = buildRedirectUrl(idComanda, "erro", "Item extra inativo.");
-      } else {
+        if (!idItemExtra) {
+          redirectUrl = buildRedirectUrl(
+            idComanda,
+            "erro",
+            "Selecione um item extra."
+          );
+          return;
+        }
+
+        const { data: extra, error: extraError } = await supabaseAdmin
+          .from("itens_extras")
+          .select("id, nome, preco_venda, ativo")
+          .eq("id", idItemExtra)
+          .eq("id_salao", session.idSalao)
+          .maybeSingle();
+
+        if (extraError || !extra) {
+          redirectUrl = buildRedirectUrl(
+            idComanda,
+            "erro",
+            "Item extra nao encontrado."
+          );
+          return;
+        }
+
+        if (!extra.ativo) {
+          redirectUrl = buildRedirectUrl(
+            idComanda,
+            "erro",
+            "Item extra inativo."
+          );
+          return;
+        }
+
         const valorUnitario = Number(extra.preco_venda || 0);
         const valorTotal = sanitizeMoney(valorUnitario * quantidade);
         const itemIdempotencyKey = buildActionKey({
@@ -388,7 +430,7 @@ export async function adicionarExtraNaComandaAction(formData: FormData) {
             tipo: null,
             id_item_extra: extra.id,
             descricao: extra.nome,
-            quantidade: formatQuantidade(quantidade),
+            quantidade,
             valor_unitario: valorUnitario,
             valor_total: valorTotal,
             custo_total: 0,
@@ -413,29 +455,30 @@ export async function adicionarExtraNaComandaAction(formData: FormData) {
             "erro",
             insertError.message || "Erro ao adicionar item extra."
           );
-        } else {
-          await recalcularTotaisComanda(idComanda, session.idSalao);
-          await registrarLogSistema({
-            gravidade: jaExistia ? "warning" : "info",
-            modulo: "app_profissional",
-            idSalao: session.idSalao,
-            mensagem: jaExistia
-              ? "Item extra da comanda reaproveitado por idempotencia no app profissional."
-              : "Item extra adicionado na comanda pelo app profissional.",
-            detalhes: {
-              acao: "adicionar_extra",
-              id_comanda: idComanda,
-              id_item_extra: idItemExtra,
-              id_profissional: session.idProfissional,
-              quantidade,
-              idempotency_key: itemIdempotencyKey,
-              ja_existia: jaExistia,
-            },
-          });
-          revalidarComandaProfissional(idComanda);
+          return;
         }
-      }
-    }
+
+        await recalcularTotaisComanda(idComanda, session.idSalao);
+        await registrarLogSistema({
+          gravidade: jaExistia ? "warning" : "info",
+          modulo: "app_profissional",
+          idSalao: session.idSalao,
+          mensagem: jaExistia
+            ? "Item extra da comanda reaproveitado por idempotencia no app profissional."
+            : "Item extra adicionado na comanda pelo app profissional.",
+          detalhes: {
+            acao: "adicionar_extra",
+            id_comanda: idComanda,
+            id_item_extra: idItemExtra,
+            id_profissional: session.idProfissional,
+            quantidade,
+            idempotency_key: itemIdempotencyKey,
+            ja_existia: jaExistia,
+          },
+        });
+        revalidarComandaProfissional(idComanda);
+      },
+    });
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Erro ao adicionar item extra.";
@@ -457,43 +500,57 @@ export async function excluirItemDaComandaAction(formData: FormData) {
 
   try {
     const { session, comanda } = await buscarComandaPermitida(idComanda);
-    const supabaseAdmin = getSupabaseAdmin();
 
-    if (String(comanda.status).toLowerCase() !== "aberta") {
-      redirectUrl = buildRedirectUrl(
-        idComanda,
-        "erro",
-        "Comanda fechada não permite alterações."
-      );
-    } else if (!idItem) {
-      redirectUrl = buildRedirectUrl(
-        idComanda,
-        "erro",
-        "Item invalido ou nao encontrado."
-      );
-    } else {
-      const { data: item, error: itemError } = await supabaseAdmin
-        .from("comanda_itens")
-        .select("id, id_comanda, id_salao, ativo")
-        .eq("id", idItem)
-        .eq("id_comanda", idComanda)
-        .eq("id_salao", session.idSalao)
-        .eq("ativo", true)
-        .maybeSingle();
+    await runAdminOperation({
+      action: "app_profissional_comanda_excluir_item",
+      actorId: session.idProfissional,
+      idSalao: session.idSalao,
+      run: async (supabaseAdmin) => {
+        if (String(comanda.status).toLowerCase() !== "aberta") {
+          redirectUrl = buildRedirectUrl(
+            idComanda,
+            "erro",
+            "Comanda fechada nao permite alteracoes."
+          );
+          return;
+        }
 
-      if (itemError) {
-        redirectUrl = buildRedirectUrl(
-          idComanda,
-          "erro",
-          itemError.message || "Erro ao localizar item."
-        );
-      } else if (!item) {
-        redirectUrl = buildRedirectUrl(
-          idComanda,
-          "erro",
-          "Item não encontrado ou já removido."
-        );
-      } else {
+        if (!idItem) {
+          redirectUrl = buildRedirectUrl(
+            idComanda,
+            "erro",
+            "Item invalido ou nao encontrado."
+          );
+          return;
+        }
+
+        const { data: item, error: itemError } = await supabaseAdmin
+          .from("comanda_itens")
+          .select("id, id_comanda, id_salao, ativo")
+          .eq("id", idItem)
+          .eq("id_comanda", idComanda)
+          .eq("id_salao", session.idSalao)
+          .eq("ativo", true)
+          .maybeSingle();
+
+        if (itemError) {
+          redirectUrl = buildRedirectUrl(
+            idComanda,
+            "erro",
+            itemError.message || "Erro ao localizar item."
+          );
+          return;
+        }
+
+        if (!item) {
+          redirectUrl = buildRedirectUrl(
+            idComanda,
+            "erro",
+            "Item nao encontrado ou ja removido."
+          );
+          return;
+        }
+
         const { error: updateError } = await supabaseAdmin.rpc(
           "fn_remover_item_comanda",
           {
@@ -511,23 +568,24 @@ export async function excluirItemDaComandaAction(formData: FormData) {
             "erro",
             updateError.message || "Erro ao excluir item."
           );
-        } else {
-          await registrarLogSistema({
-            gravidade: "warning",
-            modulo: "app_profissional",
-            idSalao: session.idSalao,
-            mensagem: "Item removido da comanda pelo app profissional.",
-            detalhes: {
-              acao: "remover_item",
-              id_comanda: idComanda,
-              id_item: idItem,
-              id_profissional: session.idProfissional,
-            },
-          });
-          revalidarComandaProfissional(idComanda);
+          return;
         }
-      }
-    }
+
+        await registrarLogSistema({
+          gravidade: "warning",
+          modulo: "app_profissional",
+          idSalao: session.idSalao,
+          mensagem: "Item removido da comanda pelo app profissional.",
+          detalhes: {
+            acao: "remover_item",
+            id_comanda: idComanda,
+            id_item: idItem,
+            id_profissional: session.idProfissional,
+          },
+        });
+        revalidarComandaProfissional(idComanda);
+      },
+    });
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Erro ao remover item.";
@@ -548,42 +606,53 @@ export async function enviarComandaParaCaixaAction(formData: FormData) {
 
   try {
     const { session, comanda } = await buscarComandaPermitida(idComanda);
-    const supabaseAdmin = getSupabaseAdmin();
 
-    if (String(comanda.status).toLowerCase() !== "aberta") {
-      redirectUrl = buildRedirectUrl(
-        idComanda,
-        "erro",
-        "Somente comandas abertas podem ser enviadas ao caixa."
-      );
-    } else {
-      const { count, error: itensError } = await supabaseAdmin
-        .from("comanda_itens")
-        .select("*", { count: "exact", head: true })
-        .eq("id_comanda", idComanda)
-        .eq("id_salao", session.idSalao)
-        .eq("ativo", true);
+    await runAdminOperation({
+      action: "app_profissional_comanda_enviar_caixa",
+      actorId: session.idProfissional,
+      idSalao: session.idSalao,
+      run: async (supabaseAdmin) => {
+        if (String(comanda.status).toLowerCase() !== "aberta") {
+          redirectUrl = buildRedirectUrl(
+            idComanda,
+            "erro",
+            "Somente comandas abertas podem ser enviadas ao caixa."
+          );
+          return;
+        }
 
-      if (itensError) {
-        redirectUrl = buildRedirectUrl(
-          idComanda,
-          "erro",
-          "Erro ao validar itens da comanda."
-        );
-      } else if (!count) {
-        redirectUrl = buildRedirectUrl(
-          idComanda,
-          "erro",
-          "Adicione pelo menos um item antes de enviar ao caixa."
-        );
-      } else {
+        const { count, error: itensError } = await supabaseAdmin
+          .from("comanda_itens")
+          .select("id", { count: "exact", head: true })
+          .eq("id_comanda", idComanda)
+          .eq("id_salao", session.idSalao)
+          .eq("ativo", true);
+
+        if (itensError) {
+          redirectUrl = buildRedirectUrl(
+            idComanda,
+            "erro",
+            "Erro ao validar itens da comanda."
+          );
+          return;
+        }
+
+        if (!count) {
+          redirectUrl = buildRedirectUrl(
+            idComanda,
+            "erro",
+            "Adicione pelo menos um item antes de enviar ao caixa."
+          );
+          return;
+        }
+
         const { error: updateError } = await supabaseAdmin.rpc(
           "fn_enviar_comanda_para_pagamento",
           {
             p_id_salao: session.idSalao,
             p_id_comanda: idComanda,
-            p_id_cliente: comanda.id_cliente || null,
-            p_observacoes: comanda.observacoes || null,
+            p_id_cliente: (comanda.id_cliente || null) as unknown as string,
+            p_observacoes: (comanda.observacoes || null) as unknown as string,
             p_desconto: sanitizeMoney(comanda.desconto),
             p_acrescimo: sanitizeMoney(comanda.acrescimo),
           }
@@ -595,23 +664,24 @@ export async function enviarComandaParaCaixaAction(formData: FormData) {
             "erro",
             updateError.message || "Erro ao enviar comanda para o caixa."
           );
-        } else {
-          await registrarLogSistema({
-            gravidade: "info",
-            modulo: "app_profissional",
-            idSalao: session.idSalao,
-            mensagem: "Comanda enviada para o caixa pelo app profissional.",
-            detalhes: {
-              acao: "enviar_caixa",
-              id_comanda: idComanda,
-              id_profissional: session.idProfissional,
-              status: "aguardando_pagamento",
-            },
-          });
-          revalidarComandaProfissional(idComanda);
+          return;
         }
-      }
-    }
+
+        await registrarLogSistema({
+          gravidade: "info",
+          modulo: "app_profissional",
+          idSalao: session.idSalao,
+          mensagem: "Comanda enviada para o caixa pelo app profissional.",
+          detalhes: {
+            acao: "enviar_caixa",
+            id_comanda: idComanda,
+            id_profissional: session.idProfissional,
+            status: "aguardando_pagamento",
+          },
+        });
+        revalidarComandaProfissional(idComanda);
+      },
+    });
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Erro ao enviar comanda.";

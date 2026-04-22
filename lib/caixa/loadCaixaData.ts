@@ -50,7 +50,7 @@ export async function carregarAcessoCaixa(supabase: CaixaSupabaseClient) {
 
   const { data: permissoesDb } = await supabase
     .from("usuarios_permissoes")
-    .select("*")
+    .select("agenda_criar, agenda_editar, agenda_excluir, agenda_ver, caixa_fechar, caixa_operar, caixa_ver, clientes_criar, clientes_editar, clientes_excluir, clientes_ver, comandas_criar, comandas_editar, comandas_excluir, comandas_ver, comissoes_pagar, comissoes_ver, configuracoes_editar, configuracoes_ver, estoque_movimentar, estoque_ver, id, id_salao, id_usuario, produtos_criar, produtos_editar, produtos_excluir, produtos_ver, profissionais_criar, profissionais_editar, profissionais_excluir, profissionais_ver, relatorios_ver, servicos_criar, servicos_editar, servicos_excluir, servicos_ver, vendas_excluir, vendas_reabrir, vendas_ver")
     .eq("id_usuario", usuario.id)
     .eq("id_salao", usuario.id_salao)
     .maybeSingle();
@@ -120,21 +120,21 @@ export async function carregarCatalogosCaixa(
   const [servicosRes, produtosRes, extrasRes, profissionaisRes, assistentesRes] = await Promise.all([
     supabase
       .from("servicos")
-      .select("*")
+      .select("ativo, atualizado_em, base_calculo, categoria, comissao_assistente_percentual, comissao_percentual, comissao_percentual_padrao, created_at, criado_em, custo_produto, desconta_taxa_maquininha, descricao, duracao, duracao_minutos, exige_avaliacao, gatilho_retorno_dias, id, id_categoria, id_salao, nome, pausa_minutos, preco, preco_minimo, preco_padrao, preco_variavel, recurso_nome, status, updated_at")
       .eq("id_salao", idSalao)
       .eq("status", "ativo")
       .order("nome", { ascending: true }),
 
     supabase
       .from("produtos")
-      .select("*")
+      .select("ativo, categoria, codigo_barras, comissao_revenda_percentual, created_at, custo_por_dose, custo_real, custos_extras, data_validade, destinacao, dose_padrao, estoque_atual, estoque_maximo, estoque_minimo, fornecedor_contato_nome, fornecedor_nome, fornecedor_telefone, fornecedor_whatsapp, foto_url, id, id_salao, linha, lote, marca, margem_lucro_percentual, nome, observacoes, prazo_medio_entrega_dias, preco_custo, preco_venda, quantidade_por_embalagem, sku, status, unidade_dose, unidade_medida, updated_at")
       .eq("id_salao", idSalao)
       .eq("status", "ativo")
       .order("nome", { ascending: true }),
 
     supabase
       .from("itens_extras")
-      .select("*")
+      .select("ativo, atualizado_em, categoria, comissao_percentual, comissionavel, controla_estoque, criado_em, custo, descricao, estoque_atual, estoque_minimo, id, id_salao, nome, preco_venda, unidade_medida")
       .eq("id_salao", idSalao)
       .order("nome", { ascending: true }),
 
@@ -476,7 +476,7 @@ export async function carregarComandaDetalhe(
 
   const { data: itensData, error: itensError } = await supabase
     .from("comanda_itens")
-    .select("*")
+    .select("ativo, base_calculo_aplicada, comissao_assistente_percentual_aplicada, comissao_assistente_valor_aplicado, comissao_percentual_aplicada, comissao_valor_aplicado, created_at, custo_total, desconta_taxa_maquininha_aplicada, descricao, id, id_agendamento, id_assistente, id_comanda, id_item_extra, id_produto, id_profissional, id_salao, id_servico, idempotency_key, observacoes, origem, quantidade, tipo, tipo_item, updated_at, valor_total, valor_unitario")
     .eq("id_salao", idSalao)
     .eq("id_comanda", idComanda)
     .eq("ativo", true);
@@ -488,7 +488,7 @@ export async function carregarComandaDetalhe(
 
   const { data: pagamentosData, error: pagamentosError } = await supabase
     .from("comanda_pagamentos")
-    .select("*")
+    .select("created_at, forma_pagamento, id, id_comanda, id_movimentacao, id_salao, idempotency_key, observacoes, pago_em, parcelas, taxa, taxa_maquininha_percentual, taxa_maquininha_valor, valor")
     .eq("id_salao", idSalao)
     .eq("id_comanda", idComanda);
 

@@ -2,7 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 export type ServicoComissaoSource = {
   id?: string;
-  nome?: string;
+  nome?: string | null;
   preco?: number | null;
   preco_padrao?: number | null;
   custo_produto?: number | null;
@@ -15,7 +15,7 @@ export type ServicoComissaoSource = {
 
 export type ProfissionalComissaoSource = {
   id?: string;
-  nome?: string;
+  nome?: string | null;
   comissao_percentual?: number | null;
   comissao?: number | null;
 };

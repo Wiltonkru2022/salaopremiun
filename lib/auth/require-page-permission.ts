@@ -2,7 +2,20 @@
 import { redirect } from "next/navigation";
 import { hasPermission } from "@/lib/auth/permissions";
 import { getUserRole } from "@/lib/auth/get-user-role";
-import type { PermissionKey } from "@/lib/permissions";
+import type { PermissionKey, UserNivel } from "@/lib/permissions";
+
+function asUserNivel(value: string | null | undefined): UserNivel | null {
+  if (
+    value === "admin" ||
+    value === "gerente" ||
+    value === "profissional" ||
+    value === "recepcao"
+  ) {
+    return value;
+  }
+
+  return null;
+}
 
 export async function requirePagePermission(permission: PermissionKey) {
   const usuario = await getUserRole();
@@ -15,7 +28,7 @@ export async function requirePagePermission(permission: PermissionKey) {
     redirect("/login?motivo=usuario_inativo");
   }
 
-  if (!hasPermission(usuario.nivel, permission)) {
+  if (!hasPermission(asUserNivel(usuario.nivel), permission)) {
     redirect("/dashboard?motivo=sem_permissao");
   }
 

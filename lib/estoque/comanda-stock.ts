@@ -347,7 +347,7 @@ export async function processarEstoqueComanda(
     {
       p_id_salao: params.idSalao,
       p_id_comanda: params.idComanda,
-      p_id_usuario: params.idUsuario || null,
+      p_id_usuario: params.idUsuario || undefined,
     }
   );
 

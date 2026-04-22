@@ -2,8 +2,46 @@ import type { NextConfig } from "next";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseHostname = supabaseUrl ? new URL(supabaseUrl).hostname : undefined;
+const appRootDomain = process.env.APP_ROOT_DOMAIN || "salaopremiun.com.br";
+const loginHost = process.env.APP_LOGIN_HOST || `login.${appRootDomain}`;
+
+function buildCsp() {
+  const connectSrc = [
+    "'self'",
+    ...(supabaseHostname
+      ? [`https://${supabaseHostname}`, `wss://${supabaseHostname}`]
+      : []),
+  ];
+  const imgSrc = [
+    "'self'",
+    "data:",
+    "blob:",
+    ...(supabaseHostname ? [`https://${supabaseHostname}`] : []),
+  ];
+  const frameAncestors = ["'self'"];
+  return [
+    "default-src 'self'",
+    "base-uri 'self'",
+    `form-action 'self' https://${loginHost}`,
+    `frame-ancestors ${frameAncestors.join(" ")}`,
+    "object-src 'none'",
+    "script-src 'self' 'unsafe-inline'",
+    "style-src 'self' 'unsafe-inline'",
+    `img-src ${imgSrc.join(" ")}`,
+    "font-src 'self' data:",
+    `connect-src ${connectSrc.join(" ")}`,
+    "frame-src 'self'",
+    "worker-src 'self' blob:",
+    "manifest-src 'self'",
+    "upgrade-insecure-requests",
+  ].join("; ");
+}
 
 const securityHeaders = [
+  {
+    key: "Content-Security-Policy",
+    value: buildCsp(),
+  },
   {
     key: "X-DNS-Prefetch-Control",
     value: "on",
@@ -32,6 +70,14 @@ const securityHeaders = [
   {
     key: "X-Permitted-Cross-Domain-Policies",
     value: "none",
+  },
+  {
+    key: "Cross-Origin-Opener-Policy",
+    value: "same-origin",
+  },
+  {
+    key: "Cross-Origin-Resource-Policy",
+    value: "same-site",
   },
 ];
 
@@ -68,6 +114,7 @@ const nextConfig: NextConfig = {
       {
         source: "/api/:path*",
         headers: [
+          ...securityHeaders,
           {
             key: "Cache-Control",
             value: "no-store, max-age=0",
@@ -77,6 +124,7 @@ const nextConfig: NextConfig = {
       {
         source: "/app-profissional/:path*",
         headers: [
+          ...securityHeaders,
           {
             key: "X-Robots-Tag",
             value: "noindex, nofollow",
@@ -86,6 +134,17 @@ const nextConfig: NextConfig = {
       {
         source: "/admin-master/:path*",
         headers: [
+          ...securityHeaders,
+          {
+            key: "X-Robots-Tag",
+            value: "noindex, nofollow",
+          },
+        ],
+      },
+      {
+        source: "/login/:path*",
+        headers: [
+          ...securityHeaders,
           {
             key: "X-Robots-Tag",
             value: "noindex, nofollow",

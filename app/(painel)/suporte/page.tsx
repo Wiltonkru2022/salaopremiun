@@ -6,6 +6,10 @@ export const dynamic = "force-dynamic";
 
 export default async function SuportePage() {
   const usuario = await requirePagePermission("suporte_ver");
+  if (!usuario.id_salao) {
+    throw new Error("Usuario sem vinculo com salao.");
+  }
+
   const tickets = await listSalaoTickets(usuario.id_salao);
   const firstTicketId = tickets.items[0]?.id || null;
   const initialDetail = firstTicketId

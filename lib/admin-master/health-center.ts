@@ -1,4 +1,4 @@
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { runAdminOperation } from "@/lib/supabase/admin-ops";
 
 export type HealthTone = "green" | "amber" | "red" | "blue" | "dark";
 
@@ -123,10 +123,12 @@ function statusFromScore(score: number): Pick<
 }
 
 export async function getAdminMasterHealthCenter(): Promise<AdminMasterHealthCenter> {
-  const supabase = getSupabaseAdmin();
-  const last24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  return runAdminOperation({
+    action: "admin_master_health_center",
+    run: async (supabase) => {
+      const last24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
-  const [
+      const [
     webhookErrors,
     webhooksProcessing,
     checkoutFailures,
@@ -138,7 +140,7 @@ export async function getAdminMasterHealthCenter(): Promise<AdminMasterHealthCen
     recentCheckouts,
     recentCrons,
     recentAlerts,
-  ] = await Promise.all([
+      ] = await Promise.all([
     supabase
       .from("asaas_webhook_eventos")
       .select("id", { count: "exact", head: true })
@@ -193,9 +195,9 @@ export async function getAdminMasterHealthCenter(): Promise<AdminMasterHealthCen
       .eq("resolvido", false)
       .order("criado_em", { ascending: false })
       .limit(8),
-  ]);
+      ]);
 
-  const counts = {
+      const counts = {
     webhookErrors: safeCount(webhookErrors),
     webhooksProcessing: safeCount(webhooksProcessing),
     checkoutFailures: safeCount(checkoutFailures),
@@ -203,12 +205,12 @@ export async function getAdminMasterHealthCenter(): Promise<AdminMasterHealthCen
     blockedSalons: safeCount(blockedSalons),
     criticalAlerts: safeCount(criticalAlerts),
     cronFailures: safeCount(cronFailures),
-  };
+      };
 
-  const score = healthScore(counts);
-  const status = statusFromScore(score);
+      const score = healthScore(counts);
+      const status = statusFromScore(score);
 
-  const actions: HealthAction[] = [
+      const actions: HealthAction[] = [
     counts.webhookErrors > 0
       ? {
           title: "Reprocessar webhooks com erro",
@@ -241,18 +243,19 @@ export async function getAdminMasterHealthCenter(): Promise<AdminMasterHealthCen
           tone: "amber",
         }
       : null,
-  ].filter(Boolean) as HealthAction[];
+      ].filter(Boolean) as HealthAction[];
 
-  if (!actions.length) {
-    actions.push({
-      title: "Manter monitoramento ativo",
-      detail: "Nenhum incidente critico agora. Continue acompanhando webhooks e cobrancas.",
-      href: "/admin-master/operacao",
-      tone: "green",
-    });
-  }
+      if (!actions.length) {
+        actions.push({
+          title: "Manter monitoramento ativo",
+          detail:
+            "Nenhum incidente critico agora. Continue acompanhando webhooks e cobrancas.",
+          href: "/admin-master/operacao",
+          tone: "green",
+        });
+      }
 
-  return {
+      return {
     score,
     ...status,
     metrics: [
@@ -362,5 +365,7 @@ export async function getAdminMasterHealthCenter(): Promise<AdminMasterHealthCen
       href: "/admin-master/alertas",
       tone: toneFromStatus(row.gravidade),
     })),
-  };
+      };
+    },
+  });
 }

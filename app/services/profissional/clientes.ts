@@ -2,11 +2,11 @@ import { createClient } from "@/lib/supabase/server";
 
 export type ClienteProfissional = {
   id: string;
-  nome: string;
+  nome: string | null;
   telefone: string | null;
   email: string | null;
   status: string | null;
-  ativo: boolean | null;
+  ativo: string | null;
 };
 
 export async function listarClientesDoSalao(

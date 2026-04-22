@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { reportOperationalIncident } from "@/lib/monitoring/operational-incidents";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getProfissionalSessionFromCookie } from "@/lib/profissional-auth.server";
+import { runAdminOperation } from "@/lib/supabase/admin-ops";
 import {
   criarProfissionalTicketUseCase,
   ProfissionalTicketUseCaseError,
@@ -11,6 +12,12 @@ export async function POST(req: NextRequest) {
   let idSalao = "";
 
   try {
+    const session = await getProfissionalSessionFromCookie();
+    if (!session) {
+      return NextResponse.json({ ok: false, error: "Sessao invalida." }, { status: 401 });
+    }
+    idSalao = session.idSalao;
+
     const result = await criarProfissionalTicketUseCase({
       body: await req.json().catch(() => ({})),
       service: createSuporteTicketService(),
@@ -25,19 +32,25 @@ export async function POST(req: NextRequest) {
 
     if (idSalao) {
       try {
-        await reportOperationalIncident({
-          supabaseAdmin: getSupabaseAdmin(),
-          key: `app-profissional:tickets:${idSalao}`,
-          module: "app_profissional",
-          title: "Abertura de ticket do app profissional falhou",
-          description:
-            error instanceof Error
-              ? error.message
-              : "Erro ao abrir ticket pelo app profissional.",
-          severity: "alta",
+        await runAdminOperation({
+          action: "app_profissional_tickets_report_incident",
           idSalao,
-          details: {
-            route: "/api/app-profissional/tickets",
+          run: async (supabaseAdmin) => {
+            await reportOperationalIncident({
+              supabaseAdmin,
+              key: `app-profissional:tickets:${idSalao}`,
+              module: "app_profissional",
+              title: "Abertura de ticket do app profissional falhou",
+              description:
+                error instanceof Error
+                  ? error.message
+                  : "Erro ao abrir ticket pelo app profissional.",
+              severity: "alta",
+              idSalao,
+              details: {
+                route: "/api/app-profissional/tickets",
+              },
+            });
           },
         });
       } catch (incidentError) {

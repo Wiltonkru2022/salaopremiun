@@ -1,4 +1,4 @@
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { runAdminOperation } from "@/lib/supabase/admin-ops";
 
 type ComissaoLancamentoRow = {
   id: string;
@@ -41,57 +41,65 @@ export async function buscarResumoComissaoProfissional(
   idSalao: string,
   idProfissional: string
 ) {
-  const supabaseAdmin = getSupabaseAdmin();
   const inicioMes = inicioMesISO();
   const fimMes = fimMesISO();
 
-  const { data, error } = await supabaseAdmin
-    .from("comissoes_lancamentos")
-    .select(
-      "id, competencia_data, descricao, percentual_aplicado, valor_base, valor_comissao, valor_comissao_assistente, tipo_destinatario, status, pago_em"
-    )
-    .eq("id_salao", idSalao)
-    .eq("id_profissional", idProfissional)
-    .gte("competencia_data", inicioMes)
-    .lte("competencia_data", fimMes)
-    .order("competencia_data", { ascending: false })
-    .order("created_at", { ascending: false })
-    .limit(50);
+  return runAdminOperation({
+    action: "profissional_comissao_resumo",
+    actorId: idProfissional,
+    idSalao,
+    run: async (supabaseAdmin) => {
+      const { data, error } = await supabaseAdmin
+        .from("comissoes_lancamentos")
+        .select(
+          "id, competencia_data, descricao, percentual_aplicado, valor_base, valor_comissao, valor_comissao_assistente, tipo_destinatario, status, pago_em"
+        )
+        .eq("id_salao", idSalao)
+        .eq("id_profissional", idProfissional)
+        .gte("competencia_data", inicioMes)
+        .lte("competencia_data", fimMes)
+        .order("competencia_data", { ascending: false })
+        .order("created_at", { ascending: false })
+        .limit(50);
 
-  if (error) {
-    throw new Error(error.message || "Erro ao carregar comissoes do profissional.");
-  }
+      if (error) {
+        throw new Error(
+          error.message || "Erro ao carregar comissoes do profissional."
+        );
+      }
 
-  const itens = ((data ?? []) as ComissaoLancamentoRow[]).map((item) => {
-    const valor = getValorLancamento(item);
-    const status = String(item.status || "pendente").toLowerCase();
+      const itens = ((data ?? []) as ComissaoLancamentoRow[]).map((item) => {
+        const valor = getValorLancamento(item);
+        const status = String(item.status || "pendente").toLowerCase();
 
-    return {
-      id: item.id,
-      competenciaData: item.competencia_data,
-      descricao: item.descricao || "Lancamento de comissao",
-      percentualAplicado: Number(item.percentual_aplicado || 0),
-      valorBase: Number(item.valor_base || 0),
-      valor,
-      status,
-      pagoEm: item.pago_em,
-    };
+        return {
+          id: item.id,
+          competenciaData: item.competencia_data,
+          descricao: item.descricao || "Lancamento de comissao",
+          percentualAplicado: Number(item.percentual_aplicado || 0),
+          valorBase: Number(item.valor_base || 0),
+          valor,
+          status,
+          pagoEm: item.pago_em,
+        };
+      });
+
+      const totalMes = itens.reduce((acc, item) => acc + item.valor, 0);
+      const totalPago = itens
+        .filter((item) => item.status === "pago")
+        .reduce((acc, item) => acc + item.valor, 0);
+      const totalPendente = itens
+        .filter((item) => item.status === "pendente")
+        .reduce((acc, item) => acc + item.valor, 0);
+
+      return {
+        itens,
+        totalMes,
+        totalPago,
+        totalPendente,
+        totalLancamentos: itens.length,
+        ticketMedio: itens.length ? totalMes / itens.length : 0,
+      };
+    },
   });
-
-  const totalMes = itens.reduce((acc, item) => acc + item.valor, 0);
-  const totalPago = itens
-    .filter((item) => item.status === "pago")
-    .reduce((acc, item) => acc + item.valor, 0);
-  const totalPendente = itens
-    .filter((item) => item.status === "pendente")
-    .reduce((acc, item) => acc + item.valor, 0);
-
-  return {
-    itens,
-    totalMes,
-    totalPago,
-    totalPendente,
-    totalLancamentos: itens.length,
-    ticketMedio: itens.length ? totalMes / itens.length : 0,
-  };
 }

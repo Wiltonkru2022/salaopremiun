@@ -159,7 +159,7 @@ async function bootstrap() {
   async function carregarCliente(id: string, salaoId: string) {
     const { data: clienteRows, error: clienteError } = await supabase
       .from("clientes")
-      .select("*")
+      .select("ativo, atualizado_em, bairro, cashback, cep, cidade, cpf, created_at, data_nascimento, deleted_at, email, endereco, estado, foto_url, id, id_salao, nome, nome_social, numero, observacoes, profissao, rua, status, telefone, whatsapp")
       .eq("id", id)
       .eq("id_salao", salaoId)
       .limit(1);
@@ -167,11 +167,13 @@ async function bootstrap() {
     if (clienteError) throw clienteError;
 
     const row = clienteRows?.[0];
+    const rowIdSalao = row?.id_salao;
+    if (!rowIdSalao) throw new Error("Cliente sem salao vinculado.");
     if (!row) throw new Error("Cliente não encontrado.");
 
     setCliente({
       id: row.id,
-      id_salao: row.id_salao,
+      id_salao: rowIdSalao,
       nome: row.nome || "",
       nome_social: row.nome_social || "",
       data_nascimento: dateIsoToBr(row.data_nascimento),
@@ -189,12 +191,12 @@ async function bootstrap() {
       observacoes: row.observacoes || "",
       foto_url: row.foto_url || "",
       status: row.status || "ativo",
-      ativo: row.ativo ?? true,
+      ativo: String(row.ativo || "ativo").toLowerCase() === "ativo",
     });
 
     const { data: fichaRows } = await supabase
       .from("clientes_ficha_tecnica")
-      .select("*")
+      .select("alergias, condicoes_couro_cabeludo_pele, created_at, gestante, historico_quimico, id, id_cliente, id_salao, lactante, observacoes_tecnicas, restricoes_quimicas, updated_at, uso_medicamentos")
       .eq("id_cliente", id)
       .limit(1);
 
@@ -214,7 +216,7 @@ async function bootstrap() {
 
     const { data: prefRows } = await supabase
       .from("clientes_preferencias")
-      .select("*")
+      .select("bebida_favorita, como_conheceu_salao, created_at, estilo_atendimento, frequencia_visitas, id, id_cliente, id_salao, preferencias_gerais, profissional_favorito_id, revistas_assuntos_preferidos, updated_at")
       .eq("id_cliente", id)
       .limit(1);
 
@@ -233,7 +235,7 @@ async function bootstrap() {
 
     const { data: autRows } = await supabase
       .from("clientes_autorizacoes")
-      .select("*")
+      .select("autoriza_email_marketing, autoriza_uso_imagem, autoriza_whatsapp_marketing, created_at, data_aceite_lgpd, id, id_cliente, id_salao, observacoes_autorizacao, termo_lgpd_aceito, updated_at")
       .eq("id_cliente", id)
       .limit(1);
 
@@ -250,7 +252,7 @@ async function bootstrap() {
 
     const { data: authRows } = await supabase
       .from("clientes_auth")
-      .select("*")
+      .select("app_ativo, created_at, email, id, id_cliente, id_salao, reset_token, reset_token_expira_em, senha_hash, ultimo_login_em, updated_at")
       .eq("id_cliente", id)
       .limit(1);
 

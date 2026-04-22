@@ -23,7 +23,6 @@ async function buildRateLimitKey(cpf: string) {
   const forwardedFor = headerStore.get("x-forwarded-for") || "";
   const ip = forwardedFor.split(",")[0]?.trim() || "sem-ip";
   const userAgent = headerStore.get("user-agent") || "sem-user-agent";
-
   return `${normalizeCpf(cpf)}|${ip}|${userAgent.slice(0, 80)}`;
 }
 
@@ -36,7 +35,7 @@ export async function loginProfissionalAction(
   const rateLimitKey = await buildRateLimitKey(cpf);
 
   try {
-    assertProfissionalLoginAllowed(rateLimitKey);
+    await assertProfissionalLoginAllowed(rateLimitKey);
   } catch (error) {
     return {
       error:
@@ -49,12 +48,11 @@ export async function loginProfissionalAction(
   const result = await loginProfissionalByCpfSenha(cpf, senha);
 
   if (!result.ok) {
-    registerProfissionalLoginFailure(rateLimitKey);
+    await registerProfissionalLoginFailure(rateLimitKey);
     return { error: result.error };
   }
 
-  clearProfissionalLoginFailures(rateLimitKey);
+  await clearProfissionalLoginFailures(rateLimitKey);
   await createProfissionalSession(result.session);
-
   redirect("/app-profissional/inicio");
 }

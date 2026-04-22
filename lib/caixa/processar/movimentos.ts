@@ -19,23 +19,28 @@ export async function lancarMovimentacao(
   }
 
   const idempotencyKey = sanitizeIdempotencyKey(body.idempotencyKey);
+  const tipo = sanitizeText(body.movimento?.tipo);
+  if (!tipo) {
+    throw new CaixaInputError("Tipo de movimentacao obrigatorio.");
+  }
+
   const movimentoPayload = {
     p_id_salao: ctx.idSalao,
     p_id_sessao: idSessao,
     p_id_usuario: ctx.idUsuario,
-    p_tipo: sanitizeText(body.movimento?.tipo),
+    p_tipo: tipo,
     p_valor: sanitizeMoney(body.movimento?.valor),
-    p_descricao: sanitizeText(body.movimento?.descricao),
-    p_id_profissional: sanitizeUuid(body.movimento?.idProfissional),
-    p_id_comanda: sanitizeUuid(body.movimento?.idComanda),
-    p_forma_pagamento: sanitizeText(body.movimento?.formaPagamento),
+    p_descricao: sanitizeText(body.movimento?.descricao) || undefined,
+    p_id_profissional: sanitizeUuid(body.movimento?.idProfissional) || undefined,
+    p_id_comanda: sanitizeUuid(body.movimento?.idComanda) || undefined,
+    p_forma_pagamento: sanitizeText(body.movimento?.formaPagamento) || undefined,
   };
 
   let { data, error } = await ctx.supabaseAdmin.rpc(
     "fn_caixa_lancar_movimentacao_idempotente",
     {
       ...movimentoPayload,
-      p_idempotency_key: idempotencyKey,
+      p_idempotency_key: idempotencyKey || undefined,
     }
   );
 
@@ -47,7 +52,9 @@ export async function lancarMovimentacao(
       "fn_caixa_lancar_movimentacao",
       movimentoPayload
     );
-    data = fallback.data;
+    data = fallback.data
+      ? fallback.data.map((item) => ({ ...item, ja_existia: false }))
+      : null;
     error = fallback.error;
   }
 

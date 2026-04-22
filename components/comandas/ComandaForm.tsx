@@ -234,7 +234,7 @@ export default function ComandaForm({ modo }: ComandaFormProps) {
           .from("clientes")
           .select("id, nome")
           .eq("id_salao", usuarioLogado.idSalao)
-          .eq("ativo", true)
+          .eq("ativo", "ativo")
           .order("nome", { ascending: true }),
 
         supabase
@@ -347,7 +347,7 @@ export default function ComandaForm({ modo }: ComandaFormProps) {
   async function carregarComanda(id: string, salaoId: string) {
     const { data: comanda, error } = await supabase
       .from("comandas")
-      .select("*")
+      .select("aberta_em, acrescimo, cancelada_em, created_at, desconto, fechada_em, id, id_agendamento_principal, id_cliente, id_salao, motivo_cancelamento, numero, observacoes, origem, status, subtotal, total, updated_at")
       .eq("id", id)
       .eq("id_salao", salaoId)
       .maybeSingle();
@@ -428,7 +428,7 @@ export default function ComandaForm({ modo }: ComandaFormProps) {
   async function recarregarItens(id: string) {
     const { data: itensRows, error: itensError } = await supabase
       .from("comanda_itens")
-      .select("*")
+      .select("ativo, base_calculo_aplicada, comissao_assistente_percentual_aplicada, comissao_assistente_valor_aplicado, comissao_percentual_aplicada, comissao_valor_aplicado, created_at, custo_total, desconta_taxa_maquininha_aplicada, descricao, id, id_agendamento, id_assistente, id_comanda, id_item_extra, id_produto, id_profissional, id_salao, id_servico, idempotency_key, observacoes, origem, quantidade, tipo, tipo_item, updated_at, valor_total, valor_unitario")
       .eq("id_comanda", id)
       .eq("ativo", true)
       .order("created_at", { ascending: true });

@@ -63,7 +63,7 @@ export async function cancelarComanda(params: {
   const { error } = await ctx.supabaseAdmin.rpc("fn_caixa_cancelar_comanda", {
     p_id_salao: ctx.idSalao,
     p_id_comanda: idComanda,
-    p_motivo: motivo,
+    p_motivo: motivo || undefined,
   });
 
   if (error) throw error;

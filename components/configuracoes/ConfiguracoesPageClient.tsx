@@ -248,10 +248,10 @@ const { data, error } = await supabase
         { data: salaoData, error: salaoError },
         { data: configData, error: configError },
       ] = await Promise.all([
-        supabase.from("saloes").select("*").eq("id", usuario.idSalao).maybeSingle(),
+        supabase.from("saloes").select("bairro, cep, cidade, complemento, cpf_cnpj, created_at, email, endereco, estado, id, inscricao_estadual, limite_profissionais, limite_usuarios, logo_url, nome, nome_fantasia, numero, plano, razao_social, renovacao_automatica, responsavel, status, telefone, tipo_pessoa, trial_ativo, trial_fim_em, trial_inicio_em, updated_at, whatsapp").eq("id", usuario.idSalao).maybeSingle(),
         supabase
           .from("configuracoes_salao")
-          .select("*")
+          .select("cor_primaria, created_at, desconta_taxa_profissional, dias_funcionamento, exigir_cliente_na_venda, hora_abertura, hora_fechamento, id, id_salao, intervalo_minutos, modo_compacto, permitir_reabrir_venda, repassa_taxa_cliente, taxa_credito_10x, taxa_credito_11x, taxa_credito_12x, taxa_credito_1x, taxa_credito_2x, taxa_credito_3x, taxa_credito_4x, taxa_credito_5x, taxa_credito_6x, taxa_credito_7x, taxa_credito_8x, taxa_credito_9x, taxa_maquininha_boleto, taxa_maquininha_credito, taxa_maquininha_debito, taxa_maquininha_outro, taxa_maquininha_pix, taxa_maquininha_transferencia, updated_at")
           .eq("id_salao", usuario.idSalao)
           .maybeSingle(),
       ]);
@@ -297,7 +297,9 @@ const { data, error } = await supabase
           intervalo_minutos: parseNumber(configData.intervalo_minutos || 15),
           dias_funcionamento:
             Array.isArray(configData.dias_funcionamento) && configData.dias_funcionamento.length > 0
-              ? configData.dias_funcionamento
+              ? configData.dias_funcionamento.filter(
+                  (dia): dia is string => typeof dia === "string"
+                )
               : EMPTY_CONFIG.dias_funcionamento,
           taxa_maquininha_credito: parseNumber(configData.taxa_maquininha_credito),
           taxa_maquininha_debito: parseNumber(configData.taxa_maquininha_debito),
@@ -371,7 +373,7 @@ const { data, error } = await supabase
     const { data, error } = await supabase
       .from("configuracoes_salao")
       .upsert(dataToSave, { onConflict: "id_salao" })
-      .select("*")
+      .select("cor_primaria, created_at, desconta_taxa_profissional, dias_funcionamento, exigir_cliente_na_venda, hora_abertura, hora_fechamento, id, id_salao, intervalo_minutos, modo_compacto, permitir_reabrir_venda, repassa_taxa_cliente, taxa_credito_10x, taxa_credito_11x, taxa_credito_12x, taxa_credito_1x, taxa_credito_2x, taxa_credito_3x, taxa_credito_4x, taxa_credito_5x, taxa_credito_6x, taxa_credito_7x, taxa_credito_8x, taxa_credito_9x, taxa_maquininha_boleto, taxa_maquininha_credito, taxa_maquininha_debito, taxa_maquininha_outro, taxa_maquininha_pix, taxa_maquininha_transferencia, updated_at")
       .maybeSingle();
 
     if (error) throw error;
@@ -385,7 +387,9 @@ const { data, error } = await supabase
         intervalo_minutos: parseNumber(data.intervalo_minutos || 15),
         dias_funcionamento:
           Array.isArray(data.dias_funcionamento) && data.dias_funcionamento.length > 0
-            ? data.dias_funcionamento
+            ? data.dias_funcionamento.filter(
+                (dia): dia is string => typeof dia === "string"
+              )
             : EMPTY_CONFIG.dias_funcionamento,
         taxa_maquininha_credito: parseNumber(data.taxa_maquininha_credito),
         taxa_maquininha_debito: parseNumber(data.taxa_maquininha_debito),

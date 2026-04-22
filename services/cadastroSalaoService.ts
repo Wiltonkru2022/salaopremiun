@@ -1,5 +1,5 @@
-import { createClient } from "@supabase/supabase-js";
 import { registrarLogSistema } from "@/lib/system-logs";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 export type CadastroSalaoBody = {
   email: string;
@@ -59,21 +59,6 @@ function normalizePlano(value: unknown) {
   return plano === "basico" || plano === "pro" || plano === "premium"
     ? plano
     : null;
-}
-
-function getSupabaseAdmin() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-  if (!supabaseUrl) {
-    throw new Error("NEXT_PUBLIC_SUPABASE_URL nao configurada.");
-  }
-
-  if (!serviceRoleKey) {
-    throw new Error("SUPABASE_SERVICE_ROLE_KEY nao configurada.");
-  }
-
-  return createClient(supabaseUrl, serviceRoleKey);
 }
 
 export function createCadastroSalaoService() {
@@ -136,16 +121,16 @@ export function createCadastroSalaoService() {
           p_email: params.payload.emailNormalizado,
           p_nome_salao: params.payload.nomeSalaoNormalizado,
           p_responsavel: params.payload.responsavelNormalizado,
-          p_whatsapp: params.payload.whatsappNormalizado,
+          p_whatsapp: params.payload.whatsappNormalizado || undefined,
           p_cpf_cnpj: params.payload.cpfCnpjLimpo,
-          p_cep: params.payload.cepLimpo,
-          p_endereco: params.payload.enderecoNormalizado,
-          p_numero: params.payload.numeroNormalizado,
-          p_complemento: params.payload.complementoNormalizado,
-          p_bairro: params.payload.bairroNormalizado,
-          p_cidade: params.payload.cidadeNormalizada,
-          p_estado: params.payload.estadoNormalizado,
-          p_plano_interesse: params.payload.planoNormalizado,
+          p_cep: params.payload.cepLimpo || undefined,
+          p_endereco: params.payload.enderecoNormalizado || undefined,
+          p_numero: params.payload.numeroNormalizado || undefined,
+          p_complemento: params.payload.complementoNormalizado || undefined,
+          p_bairro: params.payload.bairroNormalizado || undefined,
+          p_cidade: params.payload.cidadeNormalizada || undefined,
+          p_estado: params.payload.estadoNormalizado || undefined,
+          p_plano_interesse: params.payload.planoNormalizado || undefined,
           p_origem: params.payload.origemNormalizada,
         }
       );

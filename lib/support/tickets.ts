@@ -1,7 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { requireProfissionalServerContext } from "@/lib/profissional-context.server";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { runAdminOperation } from "@/lib/supabase/admin-ops";
 import { registrarLogSistema } from "@/lib/system-logs";
+import type { Json } from "@/types/database.generated";
 
 export type TicketCategoria =
   | "assinatura"
@@ -437,252 +438,290 @@ export async function getProfissionalTicketContext(): Promise<ProfissionalTicket
 }
 
 export async function listSalaoTickets(idSalao: string) {
-  const supabase = getSupabaseAdmin();
-  const { data: tickets, error } = await supabase
-    .from("tickets")
-    .select(
-      "id, id_salao, numero, assunto, categoria, prioridade, status, origem, criado_em, atualizado_em, ultima_interacao_em, solicitante_nome, sla_limite_em"
-    )
-    .eq("id_salao", idSalao)
-    .order("ultima_interacao_em", { ascending: false })
-    .limit(100);
-
-  if (error) {
-    throw new Error(error.message || "Erro ao listar tickets.");
-  }
-
-  const ticketRows = (tickets || []) as TicketListRow[];
-  const ids = ticketRows.map((ticket) => ticket.id);
-  let latestMessages: TicketMessageRow[] = [];
-
-  if (ids.length > 0) {
-    const { data: mensagens, error: mensagensError } = await supabase
-      .from("ticket_mensagens")
-      .select("id, id_ticket, mensagem, criada_em, autor_tipo, autor_nome, interna")
-      .in("id_ticket", ids)
-      .eq("interna", false)
-      .order("criada_em", { ascending: false });
-
-    if (mensagensError) {
-      throw new Error(mensagensError.message || "Erro ao listar mensagens.");
-    }
-
-    latestMessages = (mensagens || []) as TicketMessageRow[];
-  }
-
-  const latestMap = buildLatestMessageMap(latestMessages);
-  const items = ticketRows.map((ticket) =>
-    mapTicketSummary(ticket, latestMap.get(ticket.id))
-  );
-
-  return {
-    items,
-    metrics: buildTicketMetrics(items),
-  };
-}
-
-export async function listAdminTickets() {
-  const supabase = getSupabaseAdmin();
-  const [{ data: tickets, error }, { data: saloes, error: saloesError }] =
-    await Promise.all([
-      supabase
+  return runAdminOperation({
+    action: "support_list_salao_tickets",
+    idSalao,
+    run: async (supabase) => {
+      const { data: tickets, error } = await supabase
         .from("tickets")
         .select(
           "id, id_salao, numero, assunto, categoria, prioridade, status, origem, criado_em, atualizado_em, ultima_interacao_em, solicitante_nome, sla_limite_em"
         )
+        .eq("id_salao", idSalao)
         .order("ultima_interacao_em", { ascending: false })
-        .limit(150),
-      supabase.from("saloes").select("id, nome").limit(1000),
-    ]);
+        .limit(100);
 
-  if (error) {
-    throw new Error(error.message || "Erro ao listar tickets do AdminMaster.");
-  }
+      if (error) {
+        throw new Error(error.message || "Erro ao listar tickets.");
+      }
 
-  if (saloesError) {
-    throw new Error(saloesError.message || "Erro ao carregar saloes dos tickets.");
-  }
+      const ticketRows = (tickets || []) as TicketListRow[];
+      const ids = ticketRows.map((ticket) => ticket.id);
+      let latestMessages: TicketMessageRow[] = [];
 
-  const ticketRows = (tickets || []) as TicketListRow[];
-  const ids = ticketRows.map((ticket) => ticket.id);
-  let latestMessages: TicketMessageRow[] = [];
+      if (ids.length > 0) {
+        const { data: mensagens, error: mensagensError } = await supabase
+          .from("ticket_mensagens")
+          .select(
+            "id, id_ticket, mensagem, criada_em, autor_tipo, autor_nome, interna"
+          )
+          .in("id_ticket", ids)
+          .eq("interna", false)
+          .order("criada_em", { ascending: false });
 
-  if (ids.length > 0) {
-    const { data: mensagens, error: mensagensError } = await supabase
-      .from("ticket_mensagens")
-      .select("id, id_ticket, mensagem, criada_em, autor_tipo, autor_nome, interna")
-      .in("id_ticket", ids)
-      .order("criada_em", { ascending: false });
+        if (mensagensError) {
+          throw new Error(mensagensError.message || "Erro ao listar mensagens.");
+        }
 
-    if (mensagensError) {
-      throw new Error(
-        mensagensError.message || "Erro ao carregar mensagens dos tickets."
+        latestMessages = (mensagens || []) as TicketMessageRow[];
+      }
+
+      const latestMap = buildLatestMessageMap(latestMessages);
+      const items = ticketRows.map((ticket) =>
+        mapTicketSummary(ticket, latestMap.get(ticket.id))
       );
+
+      return {
+        items,
+        metrics: buildTicketMetrics(items),
+      };
     }
+  });
+}
 
-    latestMessages = (mensagens || []) as TicketMessageRow[];
-  }
+export async function listAdminTickets() {
+  return runAdminOperation({
+    action: "support_list_admin_tickets",
+    run: async (supabase) => {
+      const [{ data: tickets, error }, { data: saloes, error: saloesError }] =
+        await Promise.all([
+          supabase
+            .from("tickets")
+            .select(
+              "id, id_salao, numero, assunto, categoria, prioridade, status, origem, criado_em, atualizado_em, ultima_interacao_em, solicitante_nome, sla_limite_em"
+            )
+            .order("ultima_interacao_em", { ascending: false })
+            .limit(150),
+          supabase.from("saloes").select("id, nome").limit(1000),
+        ]);
 
-  const salaoById = new Map(
-    ((saloes || []) as { id: string; nome?: string | null }[]).map((salao) => [
-      salao.id,
-      salao.nome || salao.id,
-    ])
-  );
-  const latestMap = buildLatestMessageMap(latestMessages);
-  const items = ticketRows.map((ticket) =>
-    mapTicketSummary(
-      ticket,
-      latestMap.get(ticket.id),
-      ticket.id_salao ? salaoById.get(ticket.id_salao) || ticket.id_salao : null
-    )
-  );
+      if (error) {
+        throw new Error(error.message || "Erro ao listar tickets do AdminMaster.");
+      }
 
-  return {
-    items,
-    metrics: buildTicketMetrics(items),
-  };
+      if (saloesError) {
+        throw new Error(
+          saloesError.message || "Erro ao carregar saloes dos tickets."
+        );
+      }
+
+      const ticketRows = (tickets || []) as TicketListRow[];
+      const ids = ticketRows.map((ticket) => ticket.id);
+      let latestMessages: TicketMessageRow[] = [];
+
+      if (ids.length > 0) {
+        const { data: mensagens, error: mensagensError } = await supabase
+          .from("ticket_mensagens")
+          .select(
+            "id, id_ticket, mensagem, criada_em, autor_tipo, autor_nome, interna"
+          )
+          .in("id_ticket", ids)
+          .order("criada_em", { ascending: false });
+
+        if (mensagensError) {
+          throw new Error(
+            mensagensError.message || "Erro ao carregar mensagens dos tickets."
+          );
+        }
+
+        latestMessages = (mensagens || []) as TicketMessageRow[];
+      }
+
+      const salaoById = new Map(
+        ((saloes || []) as { id: string; nome?: string | null }[]).map(
+          (salao) => [salao.id, salao.nome || salao.id]
+        )
+      );
+      const latestMap = buildLatestMessageMap(latestMessages);
+      const items = ticketRows.map((ticket) =>
+        mapTicketSummary(
+          ticket,
+          latestMap.get(ticket.id),
+          ticket.id_salao ? salaoById.get(ticket.id_salao) || ticket.id_salao : null
+        )
+      );
+
+      return {
+        items,
+        metrics: buildTicketMetrics(items),
+      };
+    }
+  });
 }
 
 export async function getSalaoTicketDetail(params: {
   idSalao: string;
   idTicket: string;
 }): Promise<SalaoTicketDetail> {
-  const supabase = getSupabaseAdmin();
-  const { data: ticket, error } = await supabase
-    .from("tickets")
-    .select(
-      "id, id_salao, numero, assunto, categoria, prioridade, status, origem, criado_em, atualizado_em, ultima_interacao_em, solicitante_nome, solicitante_email, origem_contexto, sla_limite_em, id_responsavel_admin"
-    )
-    .eq("id", params.idTicket)
-    .eq("id_salao", params.idSalao)
-    .maybeSingle();
-
-  if (error) {
-    throw new Error(error.message || "Erro ao carregar ticket.");
-  }
-
-  if (!ticket) {
-    throw new Error("NOT_FOUND");
-  }
-
-  const [{ data: mensagens, error: mensagensError }, { data: eventos, error: eventosError }] =
-    await Promise.all([
-      supabase
-        .from("ticket_mensagens")
+  return runAdminOperation({
+    action: "support_get_salao_ticket_detail",
+    idSalao: params.idSalao,
+    run: async (supabase) => {
+      const { data: ticket, error } = await supabase
+        .from("tickets")
         .select(
-          "id, id_ticket, autor_tipo, autor_nome, mensagem, interna, criada_em, id_usuario_salao, id_profissional, id_admin_usuario"
+          "id, id_salao, numero, assunto, categoria, prioridade, status, origem, criado_em, atualizado_em, ultima_interacao_em, solicitante_nome, solicitante_email, origem_contexto, sla_limite_em, id_responsavel_admin"
         )
-        .eq("id_ticket", params.idTicket)
-        .eq("interna", false)
-        .order("criada_em", { ascending: true }),
-      supabase
-        .from("ticket_eventos")
-        .select("id, evento, descricao, payload_json, criado_em")
-        .eq("id_ticket", params.idTicket)
-        .order("criado_em", { ascending: false }),
-    ]);
+        .eq("id", params.idTicket)
+        .eq("id_salao", params.idSalao)
+        .maybeSingle();
 
-  if (mensagensError) {
-    throw new Error(mensagensError.message || "Erro ao carregar mensagens.");
-  }
+      if (error) {
+        throw new Error(error.message || "Erro ao carregar ticket.");
+      }
 
-  if (eventosError) {
-    throw new Error(eventosError.message || "Erro ao carregar eventos.");
-  }
+      if (!ticket) {
+        throw new Error("NOT_FOUND");
+      }
 
-  return {
-    ticket: mapTicketHeader(ticket as TicketHeaderRow),
-    mensagens: ((mensagens || []) as TicketMessageRow[]).map(mapTicketMessage),
-    eventos: ((eventos || []) as TicketEventRow[]).map(mapTicketEvent),
-  };
+      const [
+        { data: mensagens, error: mensagensError },
+        { data: eventos, error: eventosError },
+      ] = await Promise.all([
+        supabase
+          .from("ticket_mensagens")
+          .select(
+            "id, id_ticket, autor_tipo, autor_nome, mensagem, interna, criada_em, id_usuario_salao, id_profissional, id_admin_usuario"
+          )
+          .eq("id_ticket", params.idTicket)
+          .eq("interna", false)
+          .order("criada_em", { ascending: true }),
+        supabase
+          .from("ticket_eventos")
+          .select("id, evento, descricao, payload_json, criado_em")
+          .eq("id_ticket", params.idTicket)
+          .order("criado_em", { ascending: false }),
+      ]);
+
+      if (mensagensError) {
+        throw new Error(mensagensError.message || "Erro ao carregar mensagens.");
+      }
+
+      if (eventosError) {
+        throw new Error(eventosError.message || "Erro ao carregar eventos.");
+      }
+
+      return {
+        ticket: mapTicketHeader(ticket as TicketHeaderRow),
+        mensagens: ((mensagens || []) as TicketMessageRow[]).map(
+          mapTicketMessage
+        ),
+        eventos: ((eventos || []) as TicketEventRow[]).map(mapTicketEvent),
+      };
+    }
+  });
 }
 
 export async function getAdminTicketDetail(
   idTicket: string
 ): Promise<AdminTicketDetail> {
-  const supabase = getSupabaseAdmin();
-  const { data: ticket, error } = await supabase
-    .from("tickets")
-    .select(
-      "id, id_salao, numero, assunto, categoria, prioridade, status, origem, criado_em, atualizado_em, ultima_interacao_em, solicitante_nome, solicitante_email, origem_contexto, sla_limite_em, id_responsavel_admin"
-    )
-    .eq("id", idTicket)
-    .maybeSingle();
-
-  if (error) {
-    throw new Error(error.message || "Erro ao carregar ticket.");
-  }
-
-  if (!ticket) {
-    throw new Error("NOT_FOUND");
-  }
-
-  const header = ticket as TicketHeaderRow;
-  const [{ data: mensagens, error: mensagensError }, { data: eventos, error: eventosError }, { data: salao }, { data: responsavelAdmin }] =
-    await Promise.all([
-      supabase
-        .from("ticket_mensagens")
+  return runAdminOperation({
+    action: "support_get_admin_ticket_detail",
+    run: async (supabase) => {
+      const { data: ticket, error } = await supabase
+        .from("tickets")
         .select(
-          "id, id_ticket, autor_tipo, autor_nome, mensagem, interna, criada_em, id_usuario_salao, id_profissional, id_admin_usuario"
+          "id, id_salao, numero, assunto, categoria, prioridade, status, origem, criado_em, atualizado_em, ultima_interacao_em, solicitante_nome, solicitante_email, origem_contexto, sla_limite_em, id_responsavel_admin"
         )
-        .eq("id_ticket", idTicket)
-        .order("criada_em", { ascending: true }),
-      supabase
-        .from("ticket_eventos")
-        .select("id, evento, descricao, payload_json, criado_em")
-        .eq("id_ticket", idTicket)
-        .order("criado_em", { ascending: false }),
-      header.id_salao
-        ? supabase
-            .from("saloes")
-            .select("id, nome, responsavel, email")
-            .eq("id", header.id_salao)
-            .maybeSingle()
-        : Promise.resolve({ data: null, error: null }),
-      header.id_responsavel_admin
-        ? supabase
-            .from("admin_master_usuarios")
-            .select("id, nome, email")
-            .eq("id", header.id_responsavel_admin)
-            .maybeSingle()
-        : Promise.resolve({ data: null, error: null }),
-    ]);
+        .eq("id", idTicket)
+        .maybeSingle();
 
-  if (mensagensError) {
-    throw new Error(mensagensError.message || "Erro ao carregar mensagens.");
-  }
+      if (error) {
+        throw new Error(error.message || "Erro ao carregar ticket.");
+      }
 
-  if (eventosError) {
-    throw new Error(eventosError.message || "Erro ao carregar eventos.");
-  }
+      if (!ticket) {
+        throw new Error("NOT_FOUND");
+      }
 
-  return {
-    ticket: mapTicketHeader(header),
-    mensagens: ((mensagens || []) as TicketMessageRow[]).map(mapTicketMessage),
-    eventos: ((eventos || []) as TicketEventRow[]).map(mapTicketEvent),
-    salao: salao
-      ? {
-          id: String((salao as { id?: string }).id || ""),
-          nome: normalizeText((salao as { nome?: string | null }).nome) || "-",
-          responsavel:
-            normalizeText((salao as { responsavel?: string | null }).responsavel) ||
-            "-",
-          email: normalizeText((salao as { email?: string | null }).email) || "-",
-        }
-      : null,
-    responsavelAdmin: responsavelAdmin
-      ? {
-          id: String((responsavelAdmin as { id?: string }).id || ""),
-          nome:
-            normalizeText((responsavelAdmin as { nome?: string | null }).nome) ||
-            "-",
-          email:
-            normalizeText((responsavelAdmin as { email?: string | null }).email) ||
-            "-",
-        }
-      : null,
-  };
+      const header = ticket as TicketHeaderRow;
+      const [
+        { data: mensagens, error: mensagensError },
+        { data: eventos, error: eventosError },
+        { data: salao },
+        { data: responsavelAdmin },
+      ] = await Promise.all([
+        supabase
+          .from("ticket_mensagens")
+          .select(
+            "id, id_ticket, autor_tipo, autor_nome, mensagem, interna, criada_em, id_usuario_salao, id_profissional, id_admin_usuario"
+          )
+          .eq("id_ticket", idTicket)
+          .order("criada_em", { ascending: true }),
+        supabase
+          .from("ticket_eventos")
+          .select("id, evento, descricao, payload_json, criado_em")
+          .eq("id_ticket", idTicket)
+          .order("criado_em", { ascending: false }),
+        header.id_salao
+          ? supabase
+              .from("saloes")
+              .select("id, nome, responsavel, email")
+              .eq("id", header.id_salao)
+              .maybeSingle()
+          : Promise.resolve({ data: null, error: null }),
+        header.id_responsavel_admin
+          ? supabase
+              .from("admin_master_usuarios")
+              .select("id, nome, email")
+              .eq("id", header.id_responsavel_admin)
+              .maybeSingle()
+          : Promise.resolve({ data: null, error: null }),
+      ]);
+
+      if (mensagensError) {
+        throw new Error(mensagensError.message || "Erro ao carregar mensagens.");
+      }
+
+      if (eventosError) {
+        throw new Error(eventosError.message || "Erro ao carregar eventos.");
+      }
+
+      return {
+        ticket: mapTicketHeader(header),
+        mensagens: ((mensagens || []) as TicketMessageRow[]).map(
+          mapTicketMessage
+        ),
+        eventos: ((eventos || []) as TicketEventRow[]).map(mapTicketEvent),
+        salao: salao
+          ? {
+              id: String((salao as { id?: string }).id || ""),
+              nome:
+                normalizeText((salao as { nome?: string | null }).nome) || "-",
+              responsavel:
+                normalizeText(
+                  (salao as { responsavel?: string | null }).responsavel
+                ) || "-",
+              email:
+                normalizeText((salao as { email?: string | null }).email) || "-",
+            }
+          : null,
+        responsavelAdmin: responsavelAdmin
+          ? {
+              id: String((responsavelAdmin as { id?: string }).id || ""),
+              nome:
+                normalizeText(
+                  (responsavelAdmin as { nome?: string | null }).nome
+                ) || "-",
+              email:
+                normalizeText(
+                  (responsavelAdmin as { email?: string | null }).email
+                ) || "-",
+            }
+          : null,
+      };
+    }
+  });
 }
 
 export async function createSalaoTicket(params: {
@@ -693,7 +732,6 @@ export async function createSalaoTicket(params: {
   mensagem: string;
   contexto?: Record<string, unknown>;
 }) {
-  const supabase = getSupabaseAdmin();
   const assunto = normalizeText(params.assunto);
   const mensagem = normalizeText(params.mensagem);
 
@@ -716,63 +754,87 @@ export async function createSalaoTicket(params: {
     origemContexto.nivel = params.context.nivel;
   }
 
-  const { data: ticket, error } = await supabase
-    .from("tickets")
-    .insert({
-      id_salao: params.context.idSalao,
-      assunto,
-      categoria,
-      prioridade,
-      status: "aberto",
-      origem: params.context.origem,
-      solicitante_nome: params.context.nome,
-      solicitante_email: params.context.email,
-      origem_contexto: origemContexto,
-      ultima_interacao_em: now,
-      atualizado_em: now,
-      sla_limite_em: buildSla(prioridade),
-    })
-    .select("id, numero, status")
-    .single();
+  const ticket = await runAdminOperation({
+    action: "support_create_salao_ticket",
+    actorId:
+      params.context.origem === "painel_salao"
+        ? params.context.idUsuario
+        : params.context.idProfissional,
+    idSalao: params.context.idSalao,
+    run: async (supabase) => {
+      const { data: createdTicket, error } = await supabase
+        .from("tickets")
+        .insert({
+          id_salao: params.context.idSalao,
+          assunto,
+          categoria,
+          prioridade,
+          status: "aberto",
+          origem: params.context.origem,
+          solicitante_nome: params.context.nome,
+          solicitante_email: params.context.email,
+          origem_contexto: origemContexto as Json,
+          ultima_interacao_em: now,
+          atualizado_em: now,
+          sla_limite_em: buildSla(prioridade),
+        })
+        .select("id, numero, status")
+        .single();
 
-  if (error || !ticket) {
-    throw new Error(error?.message || "Erro ao abrir ticket.");
-  }
+      if (error || !createdTicket) {
+        throw new Error(error?.message || "Erro ao abrir ticket.");
+      }
 
-  const messagePayload: Record<string, unknown> = {
-    id_ticket: ticket.id,
-    autor_tipo:
-      params.context.origem === "app_profissional" ? "profissional" : "usuario",
-    autor_nome: params.context.nome,
-    mensagem,
-    interna: false,
-  };
+      const messagePayload: {
+        id_ticket: string;
+        autor_tipo: string;
+        autor_nome: string;
+        mensagem: string;
+        interna: boolean;
+        id_profissional?: string;
+        id_usuario_salao?: string;
+      } = {
+        id_ticket: createdTicket.id,
+        autor_tipo:
+          params.context.origem === "app_profissional"
+            ? "profissional"
+            : "usuario",
+        autor_nome: params.context.nome,
+        mensagem,
+        interna: false,
+      };
 
-  if (params.context.origem === "app_profissional") {
-    messagePayload.id_profissional = params.context.idProfissional;
-  } else {
-    messagePayload.id_usuario_salao = params.context.idUsuario;
-  }
+      if (params.context.origem === "app_profissional") {
+        messagePayload.id_profissional = params.context.idProfissional;
+      } else {
+        messagePayload.id_usuario_salao = params.context.idUsuario;
+      }
 
-  const { error: messageError } = await supabase
-    .from("ticket_mensagens")
-    .insert(messagePayload);
+      const { error: messageError } = await supabase
+        .from("ticket_mensagens")
+        .insert(messagePayload);
 
-  if (messageError) {
-    throw new Error(messageError.message || "Erro ao registrar mensagem do ticket.");
-  }
+      if (messageError) {
+        throw new Error(
+          messageError.message || "Erro ao registrar mensagem do ticket."
+        );
+      }
 
-  await supabase.from("ticket_eventos").insert({
-    id_ticket: ticket.id,
-    evento: "ticket_aberto",
-    descricao:
-      params.context.origem === "app_profissional"
-        ? "Ticket aberto pelo app profissional."
-        : "Ticket aberto pelo painel do salao.",
-    payload_json: {
-      origem: params.context.origem,
-      categoria,
-      prioridade,
+      await supabase.from("ticket_eventos").insert({
+        id_ticket: createdTicket.id,
+        evento: "ticket_aberto",
+        descricao:
+          params.context.origem === "app_profissional"
+            ? "Ticket aberto pelo app profissional."
+            : "Ticket aberto pelo painel do salao.",
+        payload_json: {
+          origem: params.context.origem,
+          categoria,
+          prioridade,
+        } as Json,
+      });
+
+      return createdTicket;
     },
   });
 
@@ -804,79 +866,100 @@ export async function replySalaoTicket(params: {
   idTicket: string;
   mensagem: string;
 }) {
-  const supabase = getSupabaseAdmin();
   const mensagem = normalizeText(params.mensagem);
 
   if (!mensagem) {
     throw new Error("INVALID_PAYLOAD");
   }
 
-  const { data: ticket, error } = await supabase
-    .from("tickets")
-    .select("id, status")
-    .eq("id", params.idTicket)
-    .eq("id_salao", params.context.idSalao)
-    .maybeSingle();
+  const proximoStatus = await runAdminOperation({
+    action: "support_reply_salao_ticket",
+    actorId:
+      params.context.origem === "painel_salao"
+        ? params.context.idUsuario
+        : params.context.idProfissional,
+    idSalao: params.context.idSalao,
+    run: async (supabase) => {
+      const { data: ticket, error } = await supabase
+        .from("tickets")
+        .select("id, status")
+        .eq("id", params.idTicket)
+        .eq("id_salao", params.context.idSalao)
+        .maybeSingle();
 
-  if (error) {
-    throw new Error(error.message || "Erro ao localizar ticket.");
-  }
+      if (error) {
+        throw new Error(error.message || "Erro ao localizar ticket.");
+      }
 
-  if (!ticket) {
-    throw new Error("NOT_FOUND");
-  }
+      if (!ticket) {
+        throw new Error("NOT_FOUND");
+      }
 
-  const messagePayload: Record<string, unknown> = {
-    id_ticket: params.idTicket,
-    autor_tipo:
-      params.context.origem === "app_profissional" ? "profissional" : "usuario",
-    autor_nome: params.context.nome,
-    mensagem,
-    interna: false,
-  };
+      const messagePayload: {
+        id_ticket: string;
+        autor_tipo: string;
+        autor_nome: string;
+        mensagem: string;
+        interna: boolean;
+        id_profissional?: string;
+        id_usuario_salao?: string;
+      } = {
+        id_ticket: params.idTicket,
+        autor_tipo:
+          params.context.origem === "app_profissional"
+            ? "profissional"
+            : "usuario",
+        autor_nome: params.context.nome,
+        mensagem,
+        interna: false,
+      };
 
-  if (params.context.origem === "app_profissional") {
-    messagePayload.id_profissional = params.context.idProfissional;
-  } else {
-    messagePayload.id_usuario_salao = params.context.idUsuario;
-  }
+      if (params.context.origem === "app_profissional") {
+        messagePayload.id_profissional = params.context.idProfissional;
+      } else {
+        messagePayload.id_usuario_salao = params.context.idUsuario;
+      }
 
-  const { error: replyError } = await supabase
-    .from("ticket_mensagens")
-    .insert(messagePayload);
+      const { error: replyError } = await supabase
+        .from("ticket_mensagens")
+        .insert(messagePayload);
 
-  if (replyError) {
-    throw new Error(replyError.message || "Erro ao responder ticket.");
-  }
+      if (replyError) {
+        throw new Error(replyError.message || "Erro ao responder ticket.");
+      }
 
-  const statusAtual = normalizeStatus(ticket.status);
-  const proximoStatus =
-    statusAtual === "fechado" || statusAtual === "resolvido"
-      ? "aberto"
-      : "aguardando_tecnico";
-  const now = new Date().toISOString();
+      const statusAtual = normalizeStatus(ticket.status);
+      const nextStatus =
+        statusAtual === "fechado" || statusAtual === "resolvido"
+          ? "aberto"
+          : "aguardando_tecnico";
+      const now = new Date().toISOString();
 
-  await supabase
-    .from("tickets")
-    .update({
-      status: proximoStatus,
-      atualizado_em: now,
-      ultima_interacao_em: now,
-      fechado_em: null,
-    })
-    .eq("id", params.idTicket)
-    .eq("id_salao", params.context.idSalao);
+      await supabase
+        .from("tickets")
+        .update({
+          status: nextStatus,
+          atualizado_em: now,
+          ultima_interacao_em: now,
+          fechado_em: null,
+        })
+        .eq("id", params.idTicket)
+        .eq("id_salao", params.context.idSalao);
 
-  await supabase.from("ticket_eventos").insert({
-    id_ticket: params.idTicket,
-    evento: "mensagem_cliente",
-    descricao:
-      params.context.origem === "app_profissional"
-        ? "Nova resposta enviada pelo app profissional."
-        : "Nova resposta enviada pelo salao.",
-    payload_json: {
-      origem: params.context.origem,
-      proximo_status: proximoStatus,
+      await supabase.from("ticket_eventos").insert({
+        id_ticket: params.idTicket,
+        evento: "mensagem_cliente",
+        descricao:
+          params.context.origem === "app_profissional"
+            ? "Nova resposta enviada pelo app profissional."
+            : "Nova resposta enviada pelo salao.",
+        payload_json: {
+          origem: params.context.origem,
+          proximo_status: nextStatus,
+        },
+      });
+
+      return nextStatus;
     },
   });
 
@@ -903,50 +986,60 @@ export async function updateSalaoTicketStatus(params: {
   status: "fechado" | "aberto";
   motivo?: string | null;
 }) {
-  const supabase = getSupabaseAdmin();
-  const { data: ticket, error } = await supabase
-    .from("tickets")
-    .select("id, status")
-    .eq("id", params.idTicket)
-    .eq("id_salao", params.context.idSalao)
-    .maybeSingle();
-
-  if (error) {
-    throw new Error(error.message || "Erro ao localizar ticket.");
-  }
-
-  if (!ticket) {
-    throw new Error("NOT_FOUND");
-  }
-
-  const now = new Date().toISOString();
   const newStatus = params.status === "fechado" ? "fechado" : "aberto";
 
-  await supabase
-    .from("tickets")
-    .update({
-      status: newStatus,
-      atualizado_em: now,
-      ultima_interacao_em: now,
-      fechado_em: newStatus === "fechado" ? now : null,
-    })
-    .eq("id", params.idTicket)
-    .eq("id_salao", params.context.idSalao);
+  await runAdminOperation({
+    action: "support_update_salao_ticket_status",
+    actorId:
+      params.context.origem === "painel_salao"
+        ? params.context.idUsuario
+        : params.context.idProfissional,
+    idSalao: params.context.idSalao,
+    run: async (supabase) => {
+      const { data: ticket, error } = await supabase
+        .from("tickets")
+        .select("id, status")
+        .eq("id", params.idTicket)
+        .eq("id_salao", params.context.idSalao)
+        .maybeSingle();
 
-  await supabase.from("ticket_eventos").insert({
-    id_ticket: params.idTicket,
-    evento:
-      newStatus === "fechado"
-        ? "ticket_fechado_cliente"
-        : "ticket_reaberto_cliente",
-    descricao:
-      normalizeText(params.motivo) ||
-      (newStatus === "fechado"
-        ? "Ticket encerrado pelo salao."
-        : "Ticket reaberto pelo salao."),
-    payload_json: {
-      origem: params.context.origem,
-      status: newStatus,
+      if (error) {
+        throw new Error(error.message || "Erro ao localizar ticket.");
+      }
+
+      if (!ticket) {
+        throw new Error("NOT_FOUND");
+      }
+
+      const now = new Date().toISOString();
+
+      await supabase
+        .from("tickets")
+        .update({
+          status: newStatus,
+          atualizado_em: now,
+          ultima_interacao_em: now,
+          fechado_em: newStatus === "fechado" ? now : null,
+        })
+        .eq("id", params.idTicket)
+        .eq("id_salao", params.context.idSalao);
+
+      await supabase.from("ticket_eventos").insert({
+        id_ticket: params.idTicket,
+        evento:
+          newStatus === "fechado"
+            ? "ticket_fechado_cliente"
+            : "ticket_reaberto_cliente",
+        descricao:
+          normalizeText(params.motivo) ||
+          (newStatus === "fechado"
+            ? "Ticket encerrado pelo salao."
+            : "Ticket reaberto pelo salao."),
+        payload_json: {
+          origem: params.context.origem,
+          status: newStatus,
+        },
+      });
     },
   });
 
@@ -977,25 +1070,10 @@ export async function replyAdminTicket(params: {
   status?: string | null;
   assumir?: boolean;
 }) {
-  const supabase = getSupabaseAdmin();
   const mensagem = normalizeText(params.mensagem);
 
   if (!mensagem) {
     throw new Error("INVALID_PAYLOAD");
-  }
-
-  const { data: ticket, error } = await supabase
-    .from("tickets")
-    .select("id, status")
-    .eq("id", params.idTicket)
-    .maybeSingle();
-
-  if (error) {
-    throw new Error(error.message || "Erro ao localizar ticket.");
-  }
-
-  if (!ticket) {
-    throw new Error("NOT_FOUND");
   }
 
   const nextStatus = params.status
@@ -1003,40 +1081,65 @@ export async function replyAdminTicket(params: {
     : "aguardando_cliente";
   const now = new Date().toISOString();
 
-  const { error: replyError } = await supabase.from("ticket_mensagens").insert({
-    id_ticket: params.idTicket,
-    autor_tipo: "admin",
-    id_admin_usuario: params.context.idAdmin,
-    autor_nome: params.context.nome,
-    mensagem,
-    interna: false,
-  });
+  await runAdminOperation({
+    action: "support_reply_admin_ticket",
+    actorId: params.context.idAdmin,
+    run: async (supabase) => {
+      const { data: ticket, error } = await supabase
+        .from("tickets")
+        .select("id, status")
+        .eq("id", params.idTicket)
+        .maybeSingle();
 
-  if (replyError) {
-    throw new Error(replyError.message || "Erro ao responder ticket.");
-  }
+      if (error) {
+        throw new Error(error.message || "Erro ao localizar ticket.");
+      }
 
-  const updatePayload: Record<string, unknown> = {
-    status: nextStatus,
-    atualizado_em: now,
-    ultima_interacao_em: now,
-    fechado_em:
-      nextStatus === "fechado" || nextStatus === "resolvido" ? now : null,
-  };
+      if (!ticket) {
+        throw new Error("NOT_FOUND");
+      }
 
-  if (params.assumir !== false) {
-    updatePayload.id_responsavel_admin = params.context.idAdmin;
-  }
+      const { error: replyError } = await supabase
+        .from("ticket_mensagens")
+        .insert({
+          id_ticket: params.idTicket,
+          autor_tipo: "admin",
+          id_admin_usuario: params.context.idAdmin,
+          autor_nome: params.context.nome,
+          mensagem,
+          interna: false,
+        });
 
-  await supabase.from("tickets").update(updatePayload).eq("id", params.idTicket);
+      if (replyError) {
+        throw new Error(replyError.message || "Erro ao responder ticket.");
+      }
 
-  await supabase.from("ticket_eventos").insert({
-    id_ticket: params.idTicket,
-    evento: "resposta_admin",
-    descricao: "Resposta enviada pelo AdminMaster.",
-    payload_json: {
-      status: nextStatus,
-      id_admin: params.context.idAdmin,
+      const updatePayload: Record<string, unknown> = {
+        status: nextStatus,
+        atualizado_em: now,
+        ultima_interacao_em: now,
+        fechado_em:
+          nextStatus === "fechado" || nextStatus === "resolvido" ? now : null,
+      };
+
+      if (params.assumir !== false) {
+        updatePayload.id_responsavel_admin = params.context.idAdmin;
+      }
+
+      await supabase
+        .from("tickets")
+        .update(updatePayload)
+        .eq("id", params.idTicket);
+
+      await supabase.from("ticket_eventos").insert({
+        id_ticket: params.idTicket,
+        evento: "resposta_admin",
+        descricao: "Resposta enviada pelo AdminMaster.",
+        payload_json: {
+          status: nextStatus,
+          id_admin: params.context.idAdmin,
+        } as Json,
+      });
     },
   });
 
@@ -1062,52 +1165,63 @@ export async function updateAdminTicketStatus(params: {
   motivo?: string | null;
   assumir?: boolean;
 }) {
-  const supabase = getSupabaseAdmin();
   const nextStatus = normalizeStatus(params.status);
   const nextPrioridade = params.prioridade
     ? normalizePrioridade(params.prioridade)
     : null;
   const now = new Date().toISOString();
 
-  const { data: ticket, error } = await supabase
-    .from("tickets")
-    .select("id, prioridade")
-    .eq("id", params.idTicket)
-    .maybeSingle();
+  const prioridadeFinal = await runAdminOperation({
+    action: "support_update_admin_ticket_status",
+    actorId: params.context.idAdmin,
+    run: async (supabase) => {
+      const { data: ticket, error } = await supabase
+        .from("tickets")
+        .select("id, prioridade")
+        .eq("id", params.idTicket)
+        .maybeSingle();
 
-  if (error) {
-    throw new Error(error.message || "Erro ao localizar ticket.");
-  }
+      if (error) {
+        throw new Error(error.message || "Erro ao localizar ticket.");
+      }
 
-  if (!ticket) {
-    throw new Error("NOT_FOUND");
-  }
+      if (!ticket) {
+        throw new Error("NOT_FOUND");
+      }
 
-  const updatePayload: Record<string, unknown> = {
-    status: nextStatus,
-    prioridade: nextPrioridade || ticket.prioridade,
-    atualizado_em: now,
-    ultima_interacao_em: now,
-    fechado_em:
-      nextStatus === "fechado" || nextStatus === "resolvido" ? now : null,
-  };
+      const prioridadeAtualizada = nextPrioridade || ticket.prioridade;
+      const updatePayload: Record<string, unknown> = {
+        status: nextStatus,
+        prioridade: prioridadeAtualizada,
+        atualizado_em: now,
+        ultima_interacao_em: now,
+        fechado_em:
+          nextStatus === "fechado" || nextStatus === "resolvido" ? now : null,
+      };
 
-  if (params.assumir !== false) {
-    updatePayload.id_responsavel_admin = params.context.idAdmin;
-  }
+      if (params.assumir !== false) {
+        updatePayload.id_responsavel_admin = params.context.idAdmin;
+      }
 
-  await supabase.from("tickets").update(updatePayload).eq("id", params.idTicket);
+      await supabase
+        .from("tickets")
+        .update(updatePayload)
+        .eq("id", params.idTicket);
 
-  await supabase.from("ticket_eventos").insert({
-    id_ticket: params.idTicket,
-    evento: "status_admin_atualizado",
-    descricao:
-      normalizeText(params.motivo) ||
-      `Status ajustado para ${nextStatus} pelo AdminMaster.`,
-    payload_json: {
-      status: nextStatus,
-      prioridade: nextPrioridade || ticket.prioridade,
-      id_admin: params.context.idAdmin,
+      await supabase.from("ticket_eventos").insert({
+        id_ticket: params.idTicket,
+        evento: "status_admin_atualizado",
+        descricao:
+          normalizeText(params.motivo) ||
+          `Status ajustado para ${nextStatus} pelo AdminMaster.`,
+        payload_json: {
+          status: nextStatus,
+          prioridade: prioridadeAtualizada,
+          id_admin: params.context.idAdmin,
+        } as Json,
+      });
+
+      return prioridadeAtualizada;
     },
   });
 
@@ -1119,13 +1233,13 @@ export async function updateAdminTicketStatus(params: {
       id_ticket: params.idTicket,
       id_admin: params.context.idAdmin,
       status: nextStatus,
-      prioridade: nextPrioridade || ticket.prioridade,
+      prioridade: prioridadeFinal,
     },
   });
 
   return {
     ok: true,
     status: nextStatus,
-    prioridade: nextPrioridade || ticket.prioridade,
+    prioridade: prioridadeFinal,
   };
 }

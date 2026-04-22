@@ -36,6 +36,18 @@ export function createEstoqueService(
       valorUnitario,
       observacoes,
     }: RegistrarMovimentacaoParams) {
+      if (!idProduto) {
+        throw new Error("Produto obrigatorio para movimentacao de estoque.");
+      }
+
+      if (!tipo) {
+        throw new Error("Tipo obrigatorio para movimentacao de estoque.");
+      }
+
+      if (!origem) {
+        throw new Error("Origem obrigatoria para movimentacao de estoque.");
+      }
+
       const { data, error } = await supabaseAdmin.rpc(
         "fn_registrar_movimentacao_estoque_manual",
         {
@@ -46,7 +58,7 @@ export function createEstoqueService(
           p_origem: origem,
           p_quantidade: quantidade,
           p_valor_unitario: valorUnitario,
-          p_observacoes: observacoes,
+          p_observacoes: observacoes || undefined,
         }
       );
 

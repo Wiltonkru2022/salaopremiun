@@ -46,6 +46,10 @@ npm run audit:database-contract
 npm run audit:service-role
 npm run audit:admin-actions
 npm run audit:admin-client-inventory
+npm run audit:api-guards
+npm run audit:critical-routes
+npm run audit:no-wildcard-select
+npm run audit:admin-surface
 ```
 
 ## Mapa De Dominios
@@ -97,6 +101,7 @@ Toda chamada `.rpc("nome_da_funcao")` no codigo precisa ter definicao correspond
 ## Checklists Operacionais
 
 - Producao e release: `docs/production-checklists.md`
+- Auditoria final de producao: `docs/final-production-audit-checklist.md`
 - Contrato de banco e migrations: `docs/database-required-functions.md`
 - Seguranca/LGPD: `docs/lgpd-security-review.md`
 - Auth e permissoes: `docs/auth.md`, `docs/permissoes.md`

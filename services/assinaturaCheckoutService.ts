@@ -1,9 +1,9 @@
 import { randomUUID } from "node:crypto";
 import { addDays, format, isAfter } from "date-fns";
-import { createClient } from "@supabase/supabase-js";
 import { createServerClient } from "@supabase/ssr";
 import { cookies, headers } from "next/headers";
 import { getSupabaseCookieOptions } from "@/lib/supabase/cookie-options";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import {
   captureSystemError,
   captureSystemEvent,
@@ -15,6 +15,7 @@ import {
   isAsaasSubscriptionNotFoundError,
   removeAsaasSubscription,
 } from "@/lib/payments/asaas-subscriptions";
+import type { Database, Json } from "@/types/database.generated";
 
 export type BillingType = "PIX" | "BOLETO" | "CREDIT_CARD";
 type TipoMovimentoAssinatura = "upgrade" | "downgrade" | "renovacao";
@@ -60,6 +61,8 @@ type CheckoutReservaRow = {
   existing_cobranca_id: string | null;
 };
 
+type AssinaturaInsert = Database["public"]["Tables"]["assinaturas"]["Insert"];
+
 export type CheckoutResponsePayload = {
   ok: true;
   customerId: string;
@@ -101,21 +104,6 @@ function responseJson<T>(body: T, init?: { status?: number }) {
     status: init?.status ?? 200,
     body,
   };
-}
-
-function getSupabaseAdmin() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-  if (!supabaseUrl) {
-    throw new Error("NEXT_PUBLIC_SUPABASE_URL não configurada.");
-  }
-
-  if (!serviceRoleKey) {
-    throw new Error("SUPABASE_SERVICE_ROLE_KEY não configurada.");
-  }
-
-  return createClient(supabaseUrl, serviceRoleKey);
 }
 
 async function getSupabaseServer() {
@@ -599,7 +587,7 @@ async function reservarCheckoutAssinatura(params: {
       p_billing_type: params.billingType,
       p_valor: params.valor,
       p_idempotency_key: params.idempotencyKey,
-      p_payload: params.payload,
+      p_payload: params.payload as Json,
     }
   );
 
@@ -659,8 +647,8 @@ async function marcarCheckoutFalho(params: {
     {
       p_checkout_lock_id: params.checkoutLockId,
       p_erro_texto: params.errorMessage,
-      p_asaas_payment_id: params.paymentId || null,
-      p_response_json: params.response || {},
+      p_asaas_payment_id: params.paymentId || undefined,
+      p_response_json: (params.response || {}) as Json,
     }
   );
 
@@ -1213,7 +1201,7 @@ async function criarCobranca(params: {
         pago_em: pagoEm,
         limite_profissionais: limiteProfissionais,
         limite_usuarios: limiteUsuarios,
-        trial_ativo: false,
+        trial_ativo: "false",
         trial_inicio_em: null,
         trial_fim_em: null,
         forma_pagamento_atual: billingType,
@@ -1244,7 +1232,7 @@ async function criarCobranca(params: {
         );
       }
     } else {
-      const assinaturaInsert: Record<string, unknown> = {
+      const assinaturaInsert: AssinaturaInsert = {
         id_salao: idSalao,
         asaas_customer_id: customerId,
         asaas_payment_id: paymentId,
@@ -1255,7 +1243,7 @@ async function criarCobranca(params: {
         pago_em: pagoEm,
         limite_profissionais: limiteProfissionais,
         limite_usuarios: limiteUsuarios,
-        trial_ativo: false,
+        trial_ativo: "false",
         trial_inicio_em: null,
         trial_fim_em: null,
         forma_pagamento_atual: billingType,

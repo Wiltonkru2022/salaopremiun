@@ -7,7 +7,7 @@ import {
 import type { AdminMasterPermissionKey } from "@/lib/admin-master/auth/adminMasterPermissions";
 import { syncAdminMasterAlerts } from "@/lib/admin-master/alerts-sync";
 import { syncAdminMasterWebhookEvents } from "@/lib/admin-master/webhooks-sync";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { runAdminOperation } from "@/lib/supabase/admin-ops";
 
 export function createAdminMasterOperacaoService() {
   return {
@@ -36,19 +36,26 @@ export function createAdminMasterOperacaoService() {
     },
 
     async avaliarExtensaoTrial(idSalao: string | null) {
-      const supabaseAdmin = getSupabaseAdmin();
-      const { data, error } = await supabaseAdmin.rpc(
-        "fn_admin_master_avaliar_extensao_trial",
-        {
-          p_id_salao: idSalao,
-        }
-      );
+      return runAdminOperation({
+        action: "admin_master_avaliar_extensao_trial",
+        idSalao,
+        run: async (supabaseAdmin) => {
+          const { data, error } = await supabaseAdmin.rpc(
+            "fn_admin_master_avaliar_extensao_trial",
+            {
+              p_id_salao: idSalao || undefined,
+            }
+          );
 
-      if (error) {
-        throw new Error(error.message || "Erro ao avaliar extensao de trial.");
-      }
+          if (error) {
+            throw new Error(
+              error.message || "Erro ao avaliar extensao de trial."
+            );
+          }
 
-      return data;
+          return data;
+        },
+      });
     },
   };
 }

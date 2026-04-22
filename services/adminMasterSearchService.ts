@@ -3,7 +3,7 @@ import {
   type AdminMasterAccessResult,
 } from "@/lib/admin-master/auth/requireAdminMasterUser";
 import type { AdminMasterPermissionKey } from "@/lib/admin-master/auth/adminMasterPermissions";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { runAdminOperation } from "@/lib/supabase/admin-ops";
 
 export type AdminMasterSearchResult = {
   id: string;
@@ -25,7 +25,6 @@ export function createAdminMasterSearchService() {
       const like = `%${query}%`;
       const numericQuery = Number(query);
       const hasNumericQuery = Number.isFinite(numericQuery) && numericQuery > 0;
-      const supabase = getSupabaseAdmin();
 
       const [
         { data: saloes },
@@ -34,46 +33,56 @@ export function createAdminMasterSearchService() {
         { data: webhooks },
         { data: admins },
         { data: planos },
-      ] = await Promise.all([
-        supabase
-          .from("saloes")
-          .select("id, nome, responsavel, email, status")
-          .or(`nome.ilike.${like},responsavel.ilike.${like},email.ilike.${like}`)
-          .limit(5),
-        supabase
-          .from("assinaturas_cobrancas")
-          .select("id, referencia, descricao, status, valor, id_salao")
-          .or(
-            `referencia.ilike.${like},descricao.ilike.${like},asaas_payment_id.ilike.${like},txid.ilike.${like}`
-          )
-          .limit(5),
-        hasNumericQuery
-          ? supabase
-              .from("tickets")
-              .select("id, numero, assunto, status, id_salao")
-              .or(`numero.eq.${numericQuery},assunto.ilike.${like}`)
-              .limit(5)
-          : supabase
-              .from("tickets")
-              .select("id, numero, assunto, status, id_salao")
-              .or(`assunto.ilike.${like},categoria.ilike.${like}`)
+      ] = await runAdminOperation({
+        action: "admin_master_search_buscar",
+        run: async (supabase) =>
+          Promise.all([
+            supabase
+              .from("saloes")
+              .select("id, nome, responsavel, email, status")
+              .or(
+                `nome.ilike.${like},responsavel.ilike.${like},email.ilike.${like}`
+              )
               .limit(5),
-        supabase
-          .from("eventos_webhook")
-          .select("id, evento, status, origem, id_salao")
-          .or(`evento.ilike.${like},origem.ilike.${like},status.ilike.${like}`)
-          .limit(5),
-        supabase
-          .from("admin_master_usuarios")
-          .select("id, nome, email, perfil, status")
-          .or(`nome.ilike.${like},email.ilike.${like},perfil.ilike.${like}`)
-          .limit(5),
-        supabase
-          .from("planos_saas")
-          .select("id, codigo, nome, subtitulo, ativo")
-          .or(`codigo.ilike.${like},nome.ilike.${like},subtitulo.ilike.${like}`)
-          .limit(5),
-      ]);
+            supabase
+              .from("assinaturas_cobrancas")
+              .select("id, referencia, descricao, status, valor, id_salao")
+              .or(
+                `referencia.ilike.${like},descricao.ilike.${like},asaas_payment_id.ilike.${like},txid.ilike.${like}`
+              )
+              .limit(5),
+            hasNumericQuery
+              ? supabase
+                  .from("tickets")
+                  .select("id, numero, assunto, status, id_salao")
+                  .or(`numero.eq.${numericQuery},assunto.ilike.${like}`)
+                  .limit(5)
+              : supabase
+                  .from("tickets")
+                  .select("id, numero, assunto, status, id_salao")
+                  .or(`assunto.ilike.${like},categoria.ilike.${like}`)
+                  .limit(5),
+            supabase
+              .from("eventos_webhook")
+              .select("id, evento, status, origem, id_salao")
+              .or(
+                `evento.ilike.${like},origem.ilike.${like},status.ilike.${like}`
+              )
+              .limit(5),
+            supabase
+              .from("admin_master_usuarios")
+              .select("id, nome, email, perfil, status")
+              .or(`nome.ilike.${like},email.ilike.${like},perfil.ilike.${like}`)
+              .limit(5),
+            supabase
+              .from("planos_saas")
+              .select("id, codigo, nome, subtitulo, ativo")
+              .or(
+                `codigo.ilike.${like},nome.ilike.${like},subtitulo.ilike.${like}`
+              )
+              .limit(5),
+          ]),
+      });
 
       return [
         ...((saloes || []) as {

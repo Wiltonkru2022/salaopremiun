@@ -9,7 +9,7 @@ import {
   PlanAccessError,
   resolveVendaHttpStatus,
 } from "@/lib/vendas/processar";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { runAdminOperation } from "@/lib/supabase/admin-ops";
 import {
   parseProcessarVendaInput,
   processarVendaUseCase,
@@ -26,6 +26,7 @@ export async function POST(req: NextRequest) {
     idSalao = input.idSalao;
     acao = input.acao;
 
+    // Guard: carregarContextoVenda() chama requireSalaoPermission antes de expor o client admin.
     const { membership, supabaseAdmin } = await carregarContextoVenda({
       idSalao,
       acao: input.acao,
@@ -73,21 +74,27 @@ export async function POST(req: NextRequest) {
 
     if (idSalao) {
       try {
-        await reportOperationalIncident({
-          supabaseAdmin: getSupabaseAdmin(),
-          key: `vendas:processar:${acao || "desconhecida"}:${idSalao}`,
-          module: "vendas",
-          title: "Processamento de venda falhou",
-          description:
-            error instanceof Error
-              ? error.message
-              : "Erro interno ao processar venda.",
-          severity: "alta",
+        await runAdminOperation({
+          action: "api_vendas_processar_report_incident",
           idSalao,
-          details: {
-            acao: isAcaoVenda(acao) ? acao : null,
-            route: "/api/vendas/processar",
-            acoes_suportadas: ACOES_VENDA,
+          run: async (supabaseAdmin) => {
+            await reportOperationalIncident({
+              supabaseAdmin,
+              key: `vendas:processar:${acao || "desconhecida"}:${idSalao}`,
+              module: "vendas",
+              title: "Processamento de venda falhou",
+              description:
+                error instanceof Error
+                  ? error.message
+                  : "Erro interno ao processar venda.",
+              severity: "alta",
+              idSalao,
+              details: {
+                acao: isAcaoVenda(acao) ? acao : null,
+                route: "/api/vendas/processar",
+                acoes_suportadas: ACOES_VENDA,
+              },
+            });
           },
         });
       } catch (incidentError) {

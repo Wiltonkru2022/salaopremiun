@@ -1,6 +1,8 @@
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import type { Database } from "@/types/database.generated";
 
 type SupabaseAdminClient = ReturnType<typeof getSupabaseAdmin>;
+type ProdutoPayload = Database["public"]["Tables"]["produtos"]["Insert"];
 
 export function createProdutoService(
   supabaseAdmin: SupabaseAdminClient = getSupabaseAdmin()
@@ -14,7 +16,7 @@ export function createProdutoService(
       if (params.idProduto) {
         const { data, error } = await supabaseAdmin
           .from("produtos")
-          .update(params.payload)
+          .update(params.payload as ProdutoPayload)
           .eq("id", params.idProduto)
           .eq("id_salao", params.idSalao)
           .select("id")
@@ -30,7 +32,7 @@ export function createProdutoService(
 
       const { data, error } = await supabaseAdmin
         .from("produtos")
-        .insert(params.payload)
+        .insert(params.payload as ProdutoPayload)
         .select("id")
         .maybeSingle();
 

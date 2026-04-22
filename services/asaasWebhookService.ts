@@ -1,5 +1,6 @@
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { verifyHeaderSecret } from "@/lib/auth/verify-secret";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import {
   resolverContextoWebhookAsaas,
   type AssinaturaWebhookContextRow,
@@ -32,21 +33,6 @@ export type AsaasWebhookContextResolved = {
   plano: PlanoSaasRow | null;
   asaasSubscriptionId: string | null;
 };
-
-function getSupabaseAdmin() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-  if (!supabaseUrl) {
-    throw new Error("NEXT_PUBLIC_SUPABASE_URL nao configurada.");
-  }
-
-  if (!serviceRoleKey) {
-    throw new Error("SUPABASE_SERVICE_ROLE_KEY nao configurada.");
-  }
-
-  return createClient(supabaseUrl, serviceRoleKey);
-}
 
 export function createAsaasWebhookService() {
   return {

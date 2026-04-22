@@ -217,7 +217,7 @@ export async function getAdminMasterAccess(
 
   const { data: permissoesDb, error: permissoesError } = await supabaseAdmin
     .from("admin_master_permissoes")
-    .select("*")
+    .select("assinaturas_ajustar, assinaturas_ver, atualizado_em, auditoria_ver, campanhas_editar, cobrancas_reprocessar, cobrancas_ver, comunicacao_ver, criado_em, dashboard_ver, feature_flags_editar, financeiro_ver, id, id_admin_master_usuario, notificacoes_editar, operacao_reprocessar, operacao_ver, planos_editar, produto_ver, recursos_editar, relatorios_ver, saloes_editar, saloes_entrar_como, saloes_ver, suporte_ver, tickets_editar, tickets_ver, usuarios_admin_editar, usuarios_admin_ver, whatsapp_editar, whatsapp_ver")
     .eq("id_admin_master_usuario", usuario.id)
     .maybeSingle();
 

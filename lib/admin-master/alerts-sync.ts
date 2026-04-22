@@ -5,7 +5,8 @@ import {
   isPendingChargeStatus,
 } from "@/lib/assinaturas/renovacao-automatica";
 import { registrarAcaoAutomaticaSistema } from "@/lib/monitoring/server";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { runAdminOperation } from "@/lib/supabase/admin-ops";
+import type { Json } from "@/types/database.generated";
 
 const MANAGED_ALERT_TYPES = [
   "checkout_assinatura_erro",
@@ -27,7 +28,7 @@ type AlertCandidate = {
   id_salao: string | null;
   titulo: string;
   descricao: string;
-  payload_json: Record<string, unknown>;
+  payload_json: Json;
   automatico: boolean;
   resolvido: boolean;
   resolvido_em: null;
@@ -148,7 +149,9 @@ function hasChargeCoverage(
 }
 
 export async function syncAdminMasterAlerts() {
-  const supabase = getSupabaseAdmin();
+  return runAdminOperation({
+    action: "admin_master_sync_alerts",
+    run: async (supabase) => {
   const now = new Date();
   const nowIso = now.toISOString();
   const recentAlertsFrom = new Date(
@@ -821,4 +824,6 @@ export async function syncAdminMasterAlerts() {
     ticketsAutomaticosCriados,
     ticketsAutomaticosExistentes,
   };
+    },
+  });
 }

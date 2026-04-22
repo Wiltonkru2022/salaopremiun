@@ -72,7 +72,7 @@ export async function carregarSessaoCaixa(
 ): Promise<CaixaSessaoLoadResult> {
   const { data: sessao, error } = await supabase
     .from("caixa_sessoes")
-    .select("*")
+    .select("aberto_em, created_at, fechado_em, id, id_salao, id_usuario_abertura, id_usuario_fechamento, observacoes, status, updated_at, valor_abertura, valor_fechamento_informado")
     .eq("id_salao", idSalao)
     .eq("status", "aberto")
     .order("aberto_em", { ascending: false })
@@ -103,7 +103,7 @@ export async function carregarSessaoCaixa(
 
   const { data: movimentacoes, error: movimentacoesError } = await supabase
     .from("caixa_movimentacoes")
-    .select("*")
+    .select("created_at, descricao, forma_pagamento, id, id_comanda, id_profissional, id_salao, id_sessao, id_usuario, idempotency_key, tipo, valor")
     .eq("id_salao", idSalao)
     .eq("id_sessao", sessao.id)
     .order("created_at", { ascending: false })
@@ -152,7 +152,7 @@ export async function abrirSessaoCaixa({
       observacoes: observacoes || null,
       status: "aberto",
     })
-    .select("*")
+    .select("aberto_em, created_at, fechado_em, id, id_salao, id_usuario_abertura, id_usuario_fechamento, observacoes, status, updated_at, valor_abertura, valor_fechamento_informado")
     .maybeSingle();
 
   if (error) throw error;
@@ -184,7 +184,7 @@ export async function fecharSessaoCaixa({
     })
     .eq("id", idSessao)
     .eq("status", "aberto")
-    .select("*")
+    .select("aberto_em, created_at, fechado_em, id, id_salao, id_usuario_abertura, id_usuario_fechamento, observacoes, status, updated_at, valor_abertura, valor_fechamento_informado")
     .maybeSingle();
 
   if (error) throw error;
@@ -231,12 +231,16 @@ export async function lancarMovimentacaoCaixa({
       valor,
       descricao: descricao || null,
     })
-    .select("*")
+    .select("created_at, descricao, forma_pagamento, id, id_comanda, id_profissional, id_salao, id_sessao, id_usuario, idempotency_key, tipo, valor")
     .maybeSingle();
 
   if (error) throw error;
 
   if (tipo === "vale_profissional") {
+    if (!idProfissional) {
+      throw new Error("Profissional obrigatorio para lancar vale.");
+    }
+
     const { error: valeError } = await supabase
       .from("profissionais_vales")
       .insert({

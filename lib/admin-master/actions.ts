@@ -3,6 +3,7 @@ import {
   captureSystemEvent,
   registrarAcaoAutomaticaSistema,
 } from "@/lib/monitoring/server";
+import type { Json } from "@/types/database.generated";
 
 function normalizeText(value: unknown) {
   return String(value || "").trim();
@@ -359,11 +360,11 @@ export async function registrarAdminMasterAuditoria(params: {
     p_id_admin_usuario: params.idAdmin,
     p_acao: params.acao,
     p_entidade: params.entidade,
-    p_entidade_id: params.entidadeId || null,
-    p_descricao: params.descricao || null,
-    p_payload_json: params.payload || {},
-    p_ip: null,
-    p_user_agent: null,
+    p_entidade_id: params.entidadeId || undefined,
+    p_descricao: params.descricao || undefined,
+    p_payload_json: (params.payload || {}) as Json,
+    p_ip: undefined,
+    p_user_agent: undefined,
   });
 
   await captureSystemEvent({
@@ -838,7 +839,7 @@ export async function criarTicketPorCheckoutLockAdminMaster(params: {
       idempotency_key: lockRow.idempotency_key || null,
       erro_texto: lockRow.erro_texto || null,
       response_json: lockRow.response_json || {},
-    },
+    } as Json,
   });
 
   await supabase

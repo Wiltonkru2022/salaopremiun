@@ -1,6 +1,9 @@
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import type { Database } from "@/types/database.generated";
 
 type SupabaseAdminClient = ReturnType<typeof getSupabaseAdmin>;
+type UsuarioSenhaReusoPayload =
+  Database["public"]["Tables"]["usuarios_senhas_reuso"]["Insert"];
 
 export type UsuarioNivel = "admin" | "gerente" | "recepcao" | "profissional";
 export type UsuarioStatus = "ativo" | "inativo";
@@ -196,7 +199,7 @@ export function createUsuarioService(
       email: string;
       senhaHashReuso: string;
     }) {
-      const payload: Record<string, unknown> = {
+      const payload: UsuarioSenhaReusoPayload = {
         id_salao: params.idSalao,
         id_usuario: params.idUsuario,
         email: params.email,

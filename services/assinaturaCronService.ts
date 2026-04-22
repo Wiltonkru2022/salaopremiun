@@ -1,7 +1,8 @@
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { verifyBearerSecret } from "@/lib/auth/verify-secret";
 import { reportOperationalIncident } from "@/lib/monitoring/operational-incidents";
 import { executarCronRenovacaoAssinaturas } from "@/lib/assinaturas/renewal-service";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 export class AssinaturaCronServiceError extends Error {
   constructor(
@@ -11,21 +12,6 @@ export class AssinaturaCronServiceError extends Error {
     super(message);
     this.name = "AssinaturaCronServiceError";
   }
-}
-
-function getSupabaseAdmin() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-  if (!supabaseUrl) {
-    throw new Error("NEXT_PUBLIC_SUPABASE_URL nao configurada.");
-  }
-
-  if (!serviceRoleKey) {
-    throw new Error("SUPABASE_SERVICE_ROLE_KEY nao configurada.");
-  }
-
-  return createClient(supabaseUrl, serviceRoleKey);
 }
 
 export function createAssinaturaCronService() {

@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { randomUUID } from "node:crypto";
 import ProfissionalShell from "@/components/profissional/layout/ProfissionalShell";
 import { getProfissionalSessionFromCookie } from "@/lib/profissional-auth.server";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { runAdminOperation } from "@/lib/supabase/admin-ops";
 import {
   adicionarExtraNaComandaAction,
   adicionarServicoNaComandaAction,
@@ -73,16 +73,126 @@ export default async function ComandaDetalhePage({
   const session = await getProfissionalSessionFromCookie();
   if (!session) redirect("/app-profissional/login");
 
-  const supabaseAdmin = getSupabaseAdmin();
   const { id } = await params;
   const query = searchParams ? await searchParams : {};
 
-  const { data: comanda, error: comandaError } = await supabaseAdmin
-    .from("comandas")
-    .select("*")
-    .eq("id", id)
-    .eq("id_salao", session.idSalao)
-    .maybeSingle();
+  const {
+    comanda,
+    comandaError,
+    acessoCount,
+    acessoError,
+    cliente,
+    itens,
+    itensError,
+    servicos,
+    servicosError,
+    extrasRaw,
+    extrasError,
+  } = await runAdminOperation({
+    action: "app_profissional_comanda_detalhe_page",
+    actorId: session.idProfissional,
+    idSalao: session.idSalao,
+    run: async (supabaseAdmin) => {
+      const { data: comandaData, error: comandaLoadError } =
+        await supabaseAdmin
+          .from("comandas")
+          .select("id, numero, id_cliente, status, subtotal, desconto, total")
+          .eq("id", id)
+          .eq("id_salao", session.idSalao)
+          .maybeSingle();
+
+      if (comandaLoadError || !comandaData) {
+        return {
+          comanda: comandaData,
+          comandaError: comandaLoadError,
+          acessoCount: null,
+          acessoError: null,
+          cliente: null,
+          itens: null,
+          itensError: null,
+          servicos: null,
+          servicosError: null,
+          extrasRaw: null,
+          extrasError: null,
+        };
+      }
+
+      const { count: acessoLoadCount, error: acessoLoadError } =
+        await supabaseAdmin
+          .from("agendamentos")
+          .select("id", { count: "exact", head: true })
+          .eq("id_salao", session.idSalao)
+          .eq("profissional_id", session.idProfissional)
+          .eq("id_comanda", id);
+
+      if (acessoLoadError || !acessoLoadCount) {
+        return {
+          comanda: comandaData,
+          comandaError: null,
+          acessoCount: acessoLoadCount,
+          acessoError: acessoLoadError,
+          cliente: null,
+          itens: null,
+          itensError: null,
+          servicos: null,
+          servicosError: null,
+          extrasRaw: null,
+          extrasError: null,
+        };
+      }
+
+      const [
+        clienteResult,
+        itensResult,
+        servicosResult,
+        extrasResult,
+      ] = await Promise.all([
+        comandaData.id_cliente
+          ? supabaseAdmin
+              .from("clientes")
+              .select("id, nome, telefone")
+              .eq("id", comandaData.id_cliente)
+              .eq("id_salao", session.idSalao)
+              .maybeSingle()
+          : Promise.resolve({ data: null, error: null }),
+        supabaseAdmin
+          .from("comanda_itens")
+          .select(
+            "id, descricao, quantidade, valor_unitario, valor_total, tipo_item, id_servico, id_item_extra, ativo, created_at"
+          )
+          .eq("id_comanda", id)
+          .eq("id_salao", session.idSalao)
+          .eq("ativo", true)
+          .order("created_at", { ascending: true }),
+        supabaseAdmin
+          .from("servicos")
+          .select("id, nome, preco, preco_padrao, ativo, status")
+          .eq("id_salao", session.idSalao)
+          .eq("ativo", true)
+          .eq("status", "ativo")
+          .order("nome", { ascending: true }),
+        supabaseAdmin
+          .from("itens_extras")
+          .select("id, id_salao, nome, preco_venda, ativo")
+          .eq("id_salao", session.idSalao)
+          .order("nome", { ascending: true }),
+      ]);
+
+      return {
+        comanda: comandaData,
+        comandaError: null,
+        acessoCount: acessoLoadCount,
+        acessoError: null,
+        cliente: clienteResult.data,
+        itens: itensResult.data,
+        itensError: itensResult.error,
+        servicos: servicosResult.data,
+        servicosError: servicosResult.error,
+        extrasRaw: extrasResult.data,
+        extrasError: extrasResult.error,
+      };
+    },
+  });
 
   if (comandaError || !comanda) {
     return (
@@ -94,13 +204,6 @@ export default async function ComandaDetalhePage({
     );
   }
 
-  const { count: acessoCount, error: acessoError } = await supabaseAdmin
-    .from("agendamentos")
-    .select("*", { count: "exact", head: true })
-    .eq("id_salao", session.idSalao)
-    .eq("profissional_id", session.idProfissional)
-    .eq("id_comanda", id);
-
   if (acessoError || !acessoCount) {
     return (
       <ProfissionalShell title="Comanda" subtitle="Detalhes">
@@ -111,32 +214,6 @@ export default async function ComandaDetalhePage({
     );
   }
 
-  const { data: cliente } = await supabaseAdmin
-    .from("clientes")
-    .select("id, nome, telefone")
-    .eq("id", comanda.id_cliente)
-    .eq("id_salao", session.idSalao)
-    .maybeSingle();
-
-  const { data: itens, error: itensError } = await supabaseAdmin
-    .from("comanda_itens")
-    .select(`
-      id,
-      descricao,
-      quantidade,
-      valor_unitario,
-      valor_total,
-      tipo_item,
-      id_servico,
-      id_item_extra,
-      ativo,
-      created_at
-    `)
-    .eq("id_comanda", id)
-    .eq("id_salao", session.idSalao)
-    .eq("ativo", true)
-    .order("created_at", { ascending: true });
-
   if (itensError) {
     throw new Error(itensError.message);
   }
@@ -145,23 +222,9 @@ export default async function ComandaDetalhePage({
   const servicoIdempotencyKey = randomUUID();
   const extraIdempotencyKey = randomUUID();
 
-  const { data: servicos, error: servicosError } = await supabaseAdmin
-    .from("servicos")
-    .select("id, nome, preco, preco_padrao, ativo, status")
-    .eq("id_salao", session.idSalao)
-    .eq("ativo", true)
-    .eq("status", "ativo")
-    .order("nome", { ascending: true });
-
   if (servicosError) {
     throw new Error(servicosError.message);
   }
-
-  const { data: extrasRaw, error: extrasError } = await supabaseAdmin
-    .from("itens_extras")
-    .select("id, id_salao, nome, preco_venda, ativo")
-    .eq("id_salao", session.idSalao)
-    .order("nome", { ascending: true });
 
   if (extrasError) {
     throw new Error(extrasError.message || "Erro ao carregar itens extras.");

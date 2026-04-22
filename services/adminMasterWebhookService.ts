@@ -16,7 +16,8 @@ import {
   isManagedAppHost,
   normalizeHost,
 } from "@/lib/proxy/domain-config";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { runAdminOperation } from "@/lib/supabase/admin-ops";
+import type { Json } from "@/types/database.generated";
 
 export type AdminMasterWebhookReplayEvent = {
   id: string;
@@ -65,18 +66,24 @@ export function createAdminMasterWebhookService() {
     },
 
     async carregarEventoAsaas(webhookId: string) {
-      const supabase = getSupabaseAdmin();
-      const { data, error } = await supabase
-        .from("asaas_webhook_eventos")
-        .select("id, evento, payment_id, status_processamento, payload")
-        .eq("id", webhookId)
-        .maybeSingle();
+      return runAdminOperation({
+        action: "admin_master_webhook_carregar_evento_asaas",
+        run: async (supabase) => {
+          const { data, error } = await supabase
+            .from("asaas_webhook_eventos")
+            .select("id, evento, payment_id, status_processamento, payload")
+            .eq("id", webhookId)
+            .maybeSingle();
 
-      if (error) {
-        throw new Error(error.message || "Erro ao carregar o webhook Asaas.");
-      }
+          if (error) {
+            throw new Error(
+              error.message || "Erro ao carregar o webhook Asaas."
+            );
+          }
 
-      return (data || null) as AdminMasterWebhookReplayEvent | null;
+          return (data || null) as AdminMasterWebhookReplayEvent | null;
+        },
+      });
     },
 
     async iniciarReprocessamento(params: {
@@ -87,27 +94,32 @@ export function createAdminMasterWebhookService() {
       paymentId?: string | null;
       statusAnterior?: string | null;
     }) {
-      const supabase = getSupabaseAdmin();
-      const { data } = await supabase
-        .from("reprocessamentos_sistema")
-        .insert({
-          tipo: "manual",
-          entidade: "asaas_webhook_eventos",
-          entidade_id: params.webhookId,
-          id_admin_usuario: params.idAdmin,
-          status: "processando",
-          resultado_json: {
-            origem: "admin_master",
-            mirror_key: params.mirrorKey,
-            evento: params.evento || null,
-            payment_id: params.paymentId || null,
-            status_anterior: params.statusAnterior || null,
-          },
-        })
-        .select("id")
-        .single();
+      return runAdminOperation({
+        action: "admin_master_webhook_iniciar_reprocessamento",
+        actorId: params.idAdmin,
+        run: async (supabase) => {
+          const { data } = await supabase
+            .from("reprocessamentos_sistema")
+            .insert({
+              tipo: "manual",
+              entidade: "asaas_webhook_eventos",
+              entidade_id: params.webhookId,
+              id_admin_usuario: params.idAdmin,
+              status: "processando",
+              resultado_json: {
+                origem: "admin_master",
+                mirror_key: params.mirrorKey,
+                evento: params.evento || null,
+                payment_id: params.paymentId || null,
+                status_anterior: params.statusAnterior || null,
+              },
+            })
+            .select("id")
+            .single();
 
-      return String(data?.id || "");
+          return String(data?.id || "");
+        },
+      });
     },
 
     async prepararEventoParaReplay(params: {
@@ -115,27 +127,31 @@ export function createAdminMasterWebhookService() {
       mirrorKey: string;
       nowIso: string;
     }) {
-      const supabase = getSupabaseAdmin();
+      await runAdminOperation({
+        action: "admin_master_webhook_preparar_evento_replay",
+        run: async (supabase) => {
+          await supabase
+            .from("asaas_webhook_eventos")
+            .update({
+              status_processamento: "erro",
+              erro_mensagem:
+                "Reprocessamento manual solicitado pelo AdminMaster.",
+              processado_em: null,
+              updated_at: params.nowIso,
+            })
+            .eq("id", params.webhookId);
 
-      await supabase
-        .from("asaas_webhook_eventos")
-        .update({
-          status_processamento: "erro",
-          erro_mensagem: "Reprocessamento manual solicitado pelo AdminMaster.",
-          processado_em: null,
-          updated_at: params.nowIso,
-        })
-        .eq("id", params.webhookId);
-
-      await supabase
-        .from("eventos_webhook")
-        .update({
-          status: "pendente",
-          erro_texto: "Reprocessamento manual solicitado pelo AdminMaster.",
-          processado_em: null,
-          atualizado_em: params.nowIso,
-        })
-        .eq("chave", params.mirrorKey);
+          await supabase
+            .from("eventos_webhook")
+            .update({
+              status: "pendente",
+              erro_texto: "Reprocessamento manual solicitado pelo AdminMaster.",
+              processado_em: null,
+              atualizado_em: params.nowIso,
+            })
+            .eq("chave", params.mirrorKey);
+        },
+      });
     },
 
     async buildReplayUrl() {
@@ -197,14 +213,18 @@ export function createAdminMasterWebhookService() {
     }) {
       if (!params.reprocessamentoId) return;
 
-      const supabase = getSupabaseAdmin();
-      await supabase
-        .from("reprocessamentos_sistema")
-        .update({
-          status: params.status,
-          resultado_json: params.resultado,
-        })
-        .eq("id", params.reprocessamentoId);
+      await runAdminOperation({
+        action: "admin_master_webhook_finalizar_reprocessamento",
+        run: async (supabase) => {
+          await supabase
+            .from("reprocessamentos_sistema")
+            .update({
+              status: params.status,
+              resultado_json: params.resultado as Json,
+            })
+            .eq("id", params.reprocessamentoId);
+        },
+      });
     },
 
     registrarAuditoria(params: Parameters<typeof registrarAdminMasterAuditoria>[0]) {

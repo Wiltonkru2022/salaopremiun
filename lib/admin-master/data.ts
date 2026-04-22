@@ -484,12 +484,12 @@ export async function getAdminMasterSalaoDetail(idSalao: string) {
   ] = await Promise.all([
     supabase
       .from("saloes")
-      .select("*")
+      .select("bairro, cep, cidade, complemento, cpf_cnpj, created_at, email, endereco, estado, id, inscricao_estadual, limite_profissionais, limite_usuarios, logo_url, nome, nome_fantasia, numero, plano, razao_social, renovacao_automatica, responsavel, status, telefone, tipo_pessoa, trial_ativo, trial_fim_em, trial_inicio_em, updated_at, whatsapp")
       .eq("id", idSalao)
       .maybeSingle(),
     supabase
       .from("assinaturas")
-      .select("*")
+      .select("asaas_credit_card_brand, asaas_credit_card_last4, asaas_credit_card_token, asaas_credit_card_tokenized_at, asaas_customer_id, asaas_payment_id, asaas_subscription_id, asaas_subscription_status, created_at, forma_pagamento_atual, gateway, id, id_cobranca_atual, id_salao, limite_profissionais, limite_usuarios, pago_em, plano, referencia_atual, renovacao_automatica, status, trial_ativo, trial_fim_em, trial_inicio_em, updated_at, valor, vencimento_em")
       .eq("id_salao", idSalao)
       .maybeSingle(),
     supabase
@@ -2668,9 +2668,17 @@ export async function getAdminMasterSection(
     actions: ["Abrir logs", "Auditar"],
   };
 
-  const { data } = await supabase
+  const adminQueryClient = supabase as unknown as {
+    from(table: string): {
+      select(columns: string): {
+        limit(count: number): Promise<{ data: unknown[] | null }>;
+      };
+    };
+  };
+
+  const { data } = await adminQueryClient
     .from(config.table)
-    .select("*")
+    .select(config.columns.join(", "))
     .limit(100);
 
   const rows = ((data || []) as Record<string, unknown>[]).map((row) => {

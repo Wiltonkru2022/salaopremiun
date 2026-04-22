@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import ProfissionalShell from "@/components/profissional/layout/ProfissionalShell";
 import { getProfissionalSessionFromCookie } from "@/lib/profissional-auth.server";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { runAdminOperation } from "@/lib/supabase/admin-ops";
 import { buscarConfiguracaoAgendaProfissional } from "@/app/services/profissional/agenda";
 import { criarAgendamentoProfissionalAction } from "../actions";
 
@@ -33,7 +33,7 @@ type DiaTrabalho = {
 type Pausa = {
   inicio: string;
   fim: string;
-  descricao?: string;
+  descricao?: string | null;
 };
 
 type ClienteOption = {
@@ -68,66 +68,77 @@ export default async function NovoAgendamentoProfissionalPage({
     redirect("/app-profissional/login");
   }
 
-  const supabaseAdmin = getSupabaseAdmin();
   const query = searchParams ? await searchParams : {};
   const dataSelecionada = query?.data || hojeISO();
 
   const [
-    clientesResult,
-    servicosResult,
-    vinculosServicosResult,
     configProfissional,
-    agendaDiaResult,
-  ] =
-    await Promise.all([
-      supabaseAdmin
-        .from("clientes")
-        .select("id, nome, telefone")
-        .eq("id_salao", session.idSalao)
-        .eq("ativo", true)
-        .order("nome", { ascending: true }),
-
-      supabaseAdmin
-        .from("servicos")
-        .select("id, nome, duracao_minutos, ativo")
-        .eq("id_salao", session.idSalao)
-        .eq("ativo", true)
-        .order("nome", { ascending: true }),
-
-      supabaseAdmin
-        .from("profissional_servicos")
-        .select("id_servico")
-        .eq("id_salao", session.idSalao)
-        .eq("id_profissional", session.idProfissional)
-        .eq("ativo", true),
-
+    agendaPageData,
+  ] = await Promise.all([
       buscarConfiguracaoAgendaProfissional(
         session.idSalao,
         session.idProfissional
       ),
+      runAdminOperation({
+        action: "app_profissional_agenda_novo_page",
+        actorId: session.idProfissional,
+        idSalao: session.idSalao,
+        run: async (supabaseAdmin) => {
+          const [
+            clientesResult,
+            servicosResult,
+            vinculosServicosResult,
+            agendaDiaResult,
+          ] = await Promise.all([
+            supabaseAdmin
+              .from("clientes")
+              .select("id, nome, telefone")
+              .eq("id_salao", session.idSalao)
+              .eq("ativo", "true")
+              .order("nome", { ascending: true }),
 
-      supabaseAdmin
-        .from("agendamentos")
-        .select(`
-          id,
-          hora_inicio,
-          hora_fim,
-          status,
-          clientes (
-            id,
-            nome
-          ),
-          servicos (
-            id,
-            nome
-          )
-        `)
-        .eq("id_salao", session.idSalao)
-        .eq("profissional_id", session.idProfissional)
-        .eq("data", dataSelecionada)
-        .not("status", "eq", "cancelado")
-        .order("hora_inicio", { ascending: true }),
+            supabaseAdmin
+              .from("servicos")
+              .select("id, nome, duracao_minutos, ativo")
+              .eq("id_salao", session.idSalao)
+              .eq("ativo", true)
+              .order("nome", { ascending: true }),
+
+            supabaseAdmin
+              .from("profissional_servicos")
+              .select("id_servico")
+              .eq("id_salao", session.idSalao)
+              .eq("id_profissional", session.idProfissional)
+              .eq("ativo", true),
+
+            supabaseAdmin
+              .from("agendamentos")
+              .select(
+                "id, hora_inicio, hora_fim, status, clientes ( id, nome ), servicos ( id, nome )"
+              )
+              .eq("id_salao", session.idSalao)
+              .eq("profissional_id", session.idProfissional)
+              .eq("data", dataSelecionada)
+              .not("status", "eq", "cancelado")
+              .order("hora_inicio", { ascending: true }),
+          ]);
+
+          return {
+            clientesResult,
+            servicosResult,
+            vinculosServicosResult,
+            agendaDiaResult,
+          };
+        },
+      }),
     ]);
+
+  const {
+    clientesResult,
+    servicosResult,
+    vinculosServicosResult,
+    agendaDiaResult,
+  } = agendaPageData;
 
   if (clientesResult.error) {
     throw new Error(clientesResult.error.message);

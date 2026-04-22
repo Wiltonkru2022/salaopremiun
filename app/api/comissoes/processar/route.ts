@@ -9,7 +9,7 @@ import {
   PlanAccessError,
 } from "@/lib/plans/access";
 import { reportOperationalIncident } from "@/lib/monitoring/operational-incidents";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { runAdminOperation } from "@/lib/supabase/admin-ops";
 import {
   parseProcessarComissoesInput,
   processarComissoesUseCase,
@@ -71,20 +71,26 @@ export async function POST(req: NextRequest) {
 
     if (idSalao) {
       try {
-        await reportOperationalIncident({
-          supabaseAdmin: getSupabaseAdmin(),
-          key: `comissoes:processar:${acao || "desconhecida"}:${idSalao}`,
-          module: "comissoes",
-          title: "Processamento de comissoes falhou",
-          description:
-            error instanceof Error
-              ? error.message
-              : "Erro interno ao processar comissoes.",
-          severity: "alta",
+        await runAdminOperation({
+          action: "api_comissoes_processar_report_incident",
           idSalao,
-          details: {
-            acao: acao || null,
-            route: "/api/comissoes/processar",
+          run: async (supabaseAdmin) => {
+            await reportOperationalIncident({
+              supabaseAdmin,
+              key: `comissoes:processar:${acao || "desconhecida"}:${idSalao}`,
+              module: "comissoes",
+              title: "Processamento de comissoes falhou",
+              description:
+                error instanceof Error
+                  ? error.message
+                  : "Erro interno ao processar comissoes.",
+              severity: "alta",
+              idSalao,
+              details: {
+                acao: acao || null,
+                route: "/api/comissoes/processar",
+              },
+            });
           },
         });
       } catch (incidentError) {

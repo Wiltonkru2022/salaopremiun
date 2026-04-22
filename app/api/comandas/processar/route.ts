@@ -10,7 +10,7 @@ import {
   assertCanMutatePlanFeature,
   PlanAccessError,
 } from "@/lib/plans/access";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { runAdminOperation } from "@/lib/supabase/admin-ops";
 import {
   parseProcessarComandaInput,
   processarComandaUseCase,
@@ -75,21 +75,27 @@ export async function POST(req: NextRequest) {
 
     if (idSalao) {
       try {
-        await reportOperationalIncident({
-          supabaseAdmin: getSupabaseAdmin(),
-          key: `comandas:processar:${acao || "desconhecida"}:${idSalao}`,
-          module: "comandas",
-          title: "Processamento de comanda falhou",
-          description:
-            error instanceof Error
-              ? error.message
-              : "Erro interno ao processar comanda.",
-          severity: "alta",
+        await runAdminOperation({
+          action: "api_comandas_processar_report_incident",
           idSalao,
-          details: {
-            acao: COMANDA_ACTIONS.includes(acao as never) ? acao : null,
-            route: "/api/comandas/processar",
-            acoes_suportadas: COMANDA_ACTIONS,
+          run: async (supabaseAdmin) => {
+            await reportOperationalIncident({
+              supabaseAdmin,
+              key: `comandas:processar:${acao || "desconhecida"}:${idSalao}`,
+              module: "comandas",
+              title: "Processamento de comanda falhou",
+              description:
+                error instanceof Error
+                  ? error.message
+                  : "Erro interno ao processar comanda.",
+              severity: "alta",
+              idSalao,
+              details: {
+                acao: COMANDA_ACTIONS.includes(acao as never) ? acao : null,
+                route: "/api/comandas/processar",
+                acoes_suportadas: COMANDA_ACTIONS,
+              },
+            });
           },
         });
       } catch (incidentError) {

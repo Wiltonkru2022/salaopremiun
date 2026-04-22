@@ -177,13 +177,13 @@ export async function initAgendaPage(params: {
     await Promise.all([
       supabase
         .from("configuracoes_salao")
-        .select("*")
+        .select("cor_primaria, created_at, desconta_taxa_profissional, dias_funcionamento, exigir_cliente_na_venda, hora_abertura, hora_fechamento, id, id_salao, intervalo_minutos, modo_compacto, permitir_reabrir_venda, repassa_taxa_cliente, taxa_credito_10x, taxa_credito_11x, taxa_credito_12x, taxa_credito_1x, taxa_credito_2x, taxa_credito_3x, taxa_credito_4x, taxa_credito_5x, taxa_credito_6x, taxa_credito_7x, taxa_credito_8x, taxa_credito_9x, taxa_maquininha_boleto, taxa_maquininha_credito, taxa_maquininha_debito, taxa_maquininha_outro, taxa_maquininha_pix, taxa_maquininha_transferencia, updated_at")
         .eq("id_salao", salaoId)
         .maybeSingle(),
 
       supabase
         .from("profissionais")
-        .select("*")
+        .select("ativo, bairro, bio, cargo, categoria, cep, cidade, comissao_percentual, comissao_produto_percentual, cor_agenda, cpf, data_admissao, data_nascimento, dias_trabalho, eh_assistente, email, endereco, especialidades, estado, foto, foto_url, id, id_profissional_principal, id_salao, nivel_acesso, nome, nome_exibicao, nome_social, numero, ordem_agenda, pausas, percentual_comissao_assistente, permite_comissao, pix_chave, pix_tipo, pode_usar_sistema, recebe_comissao, rg, status, telefone, tipo_profissional, tipo_vinculo, whatsapp")
         .eq("id_salao", salaoId)
         .eq("status", "ativo")
         .or("tipo_profissional.is.null,tipo_profissional.eq.profissional")

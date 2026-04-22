@@ -40,7 +40,7 @@ export async function criarClienteProfissionalAction(
     email: email || null,
     observacoes: observacoes || null,
     status: "ativo",
-    ativo: true,
+    ativo: "true",
     atualizado_em: new Date().toISOString(),
   });
 

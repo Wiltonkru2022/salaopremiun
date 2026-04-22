@@ -1,4 +1,5 @@
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import type { Json } from "@/types/database.generated";
 
 export type CategoriaServicoResult = {
   id: string;
@@ -65,10 +66,10 @@ export function createServicoService(
         "fn_salvar_servico_catalogo_transacional",
         {
           p_id_salao: params.idSalao,
-          p_id_servico: params.idServico,
-          p_servico: params.servicoPayload,
-          p_vinculos: params.vinculos,
-          p_consumos: params.consumos,
+          p_id_servico: params.idServico as unknown as string,
+          p_servico: params.servicoPayload as Json,
+          p_vinculos: params.vinculos as Json,
+          p_consumos: params.consumos as Json,
         }
       );
 

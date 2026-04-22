@@ -153,8 +153,8 @@ export async function processarCriacaoPorAgendamento(params: {
   }
 
   return {
-    idComanda: data?.id_comanda || null,
-    jaExistia: Boolean(data?.ja_existia),
+    idComanda: data || null,
+    jaExistia: false,
   } satisfies CriarComandaPorAgendamentoResult;
 }
 
@@ -172,11 +172,11 @@ export async function salvarBaseComanda(params: {
 
   const { data, error } = await supabaseAdmin.rpc("fn_salvar_comanda_base", {
     p_id_salao: idSalao,
-    p_id_comanda: sanitizeUuid(comanda.idComanda),
+    p_id_comanda: sanitizeUuid(comanda.idComanda) as unknown as string,
     p_numero: numero,
-    p_id_cliente: sanitizeUuid(comanda.idCliente),
+    p_id_cliente: sanitizeUuid(comanda.idCliente) as unknown as string,
     p_status: sanitizeText(comanda.status) || "aberta",
-    p_observacoes: sanitizeText(comanda.observacoes),
+    p_observacoes: sanitizeText(comanda.observacoes) as unknown as string,
     p_desconto: sanitizeMoney(comanda.desconto),
     p_acrescimo: sanitizeMoney(comanda.acrescimo),
   });
@@ -219,25 +219,25 @@ export async function adicionarItemComanda(params: {
       p_id_salao: idSalao,
       p_id_comanda: idComanda,
       p_tipo_item: resolved.tipoItem,
-      p_id_agendamento: resolved.idAgendamento,
-      p_id_servico: resolved.idServico,
-      p_id_produto: resolved.idProduto,
+      p_id_agendamento: resolved.idAgendamento as unknown as string,
+      p_id_servico: resolved.idServico as unknown as string,
+      p_id_produto: resolved.idProduto as unknown as string,
       p_descricao: resolved.descricao,
       p_quantidade: resolved.quantidade,
       p_valor_unitario: resolved.valorUnitario,
       p_custo_total: resolved.custoTotal,
-      p_id_profissional: resolved.idProfissional,
-      p_id_assistente: resolved.idAssistente,
+      p_id_profissional: resolved.idProfissional as unknown as string,
+      p_id_assistente: resolved.idAssistente as unknown as string,
       p_comissao_percentual: resolved.comissaoPercentual,
       p_comissao_assistente_percentual:
         resolved.comissaoAssistentePercentual,
       p_base_calculo: resolved.baseCalculo,
       p_desconta_taxa_maquininha: resolved.descontaTaxaMaquininha,
       p_origem: resolved.origem,
-      p_observacoes: resolved.observacoes,
+      p_observacoes: resolved.observacoes as unknown as string,
       p_desconto: sanitizeMoney(comanda.desconto),
       p_acrescimo: sanitizeMoney(comanda.acrescimo),
-      p_idempotency_key: itemIdempotencyKey,
+      p_idempotency_key: itemIdempotencyKey || undefined,
     }
   );
 
@@ -249,26 +249,28 @@ export async function adicionarItemComanda(params: {
       p_id_salao: idSalao,
       p_id_comanda: idComanda,
       p_tipo_item: resolved.tipoItem,
-      p_id_agendamento: resolved.idAgendamento,
-      p_id_servico: resolved.idServico,
-      p_id_produto: resolved.idProduto,
+      p_id_agendamento: resolved.idAgendamento as unknown as string,
+      p_id_servico: resolved.idServico as unknown as string,
+      p_id_produto: resolved.idProduto as unknown as string,
       p_descricao: resolved.descricao,
       p_quantidade: resolved.quantidade,
       p_valor_unitario: resolved.valorUnitario,
       p_custo_total: resolved.custoTotal,
-      p_id_profissional: resolved.idProfissional,
-      p_id_assistente: resolved.idAssistente,
+      p_id_profissional: resolved.idProfissional as unknown as string,
+      p_id_assistente: resolved.idAssistente as unknown as string,
       p_comissao_percentual: resolved.comissaoPercentual,
       p_comissao_assistente_percentual:
         resolved.comissaoAssistentePercentual,
       p_base_calculo: resolved.baseCalculo,
       p_desconta_taxa_maquininha: resolved.descontaTaxaMaquininha,
       p_origem: resolved.origem,
-      p_observacoes: resolved.observacoes,
+      p_observacoes: resolved.observacoes as unknown as string,
       p_desconto: sanitizeMoney(comanda.desconto),
       p_acrescimo: sanitizeMoney(comanda.acrescimo),
     });
-    itemResult = fallback.data;
+    itemResult = fallback.data
+      ? [{ id_item: String(fallback.data), ja_existia: false }]
+      : null;
     addItemError = fallback.error;
   }
 
@@ -324,22 +326,22 @@ export async function editarItemComanda(params: {
     p_id_comanda: idComanda,
     p_id_item: idItem,
     p_tipo_item: resolved.tipoItem,
-    p_id_agendamento: resolved.idAgendamento,
-    p_id_servico: resolved.idServico,
-    p_id_produto: resolved.idProduto,
+    p_id_agendamento: resolved.idAgendamento as unknown as string,
+    p_id_servico: resolved.idServico as unknown as string,
+    p_id_produto: resolved.idProduto as unknown as string,
     p_descricao: resolved.descricao,
     p_quantidade: resolved.quantidade,
     p_valor_unitario: resolved.valorUnitario,
     p_custo_total: resolved.custoTotal,
-    p_id_profissional: resolved.idProfissional,
-    p_id_assistente: resolved.idAssistente,
+    p_id_profissional: resolved.idProfissional as unknown as string,
+    p_id_assistente: resolved.idAssistente as unknown as string,
     p_comissao_percentual: resolved.comissaoPercentual,
     p_comissao_assistente_percentual:
       resolved.comissaoAssistentePercentual,
     p_base_calculo: resolved.baseCalculo,
     p_desconta_taxa_maquininha: resolved.descontaTaxaMaquininha,
     p_origem: resolved.origem,
-    p_observacoes: resolved.observacoes,
+    p_observacoes: resolved.observacoes as unknown as string,
     p_desconto: sanitizeMoney(comanda.desconto),
     p_acrescimo: sanitizeMoney(comanda.acrescimo),
   });
@@ -404,8 +406,8 @@ export async function enviarComandaParaPagamento(params: {
     {
       p_id_salao: idSalao,
       p_id_comanda: idComanda,
-      p_id_cliente: sanitizeUuid(comanda.idCliente),
-      p_observacoes: sanitizeText(comanda.observacoes),
+      p_id_cliente: sanitizeUuid(comanda.idCliente) as unknown as string,
+      p_observacoes: sanitizeText(comanda.observacoes) as unknown as string,
       p_desconto: sanitizeMoney(comanda.desconto),
       p_acrescimo: sanitizeMoney(comanda.acrescimo),
     }
@@ -442,11 +444,11 @@ export async function garantirComandaBase(params: {
     "fn_salvar_comanda_base",
     {
       p_id_salao: idSalao,
-      p_id_comanda: null,
+      p_id_comanda: null as unknown as string,
       p_numero: numero,
-      p_id_cliente: sanitizeUuid(comanda.idCliente),
+      p_id_cliente: sanitizeUuid(comanda.idCliente) as unknown as string,
       p_status: sanitizeText(comanda.status) || "aberta",
-      p_observacoes: sanitizeText(comanda.observacoes),
+      p_observacoes: sanitizeText(comanda.observacoes) as unknown as string,
       p_desconto: sanitizeMoney(comanda.desconto),
       p_acrescimo: sanitizeMoney(comanda.acrescimo),
     }

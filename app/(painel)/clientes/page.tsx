@@ -80,7 +80,7 @@ export default function ClientesPage() {
 
     const { data: permissoesDb } = await supabase
       .from("usuarios_permissoes")
-      .select("*")
+      .select("agenda_criar, agenda_editar, agenda_excluir, agenda_ver, caixa_fechar, caixa_operar, caixa_ver, clientes_criar, clientes_editar, clientes_excluir, clientes_ver, comandas_criar, comandas_editar, comandas_excluir, comandas_ver, comissoes_pagar, comissoes_ver, configuracoes_editar, configuracoes_ver, estoque_movimentar, estoque_ver, id, id_salao, id_usuario, produtos_criar, produtos_editar, produtos_excluir, produtos_ver, profissionais_criar, profissionais_editar, profissionais_excluir, profissionais_ver, relatorios_ver, servicos_criar, servicos_editar, servicos_excluir, servicos_ver, vendas_excluir, vendas_reabrir, vendas_ver")
       .eq("id_usuario", usuario.id)
       .eq("id_salao", usuario.id_salao)
       .maybeSingle();
@@ -116,17 +116,16 @@ export default function ClientesPage() {
       const acesso = await carregarAcesso();
       if (!acesso) return;
 
-      const { idSalao } = (await getUsuarioLogado()) || {
-        idSalao: acesso.idSalao,
-      };
-      setIdSalao(idSalao);
+      const usuarioLogado = await getUsuarioLogado();
+      const idSalaoAtual = usuarioLogado?.idSalao || acesso.idSalao;
+      setIdSalao(idSalaoAtual);
 
       const { data, error } = await supabase
         .from("clientes")
         .select(
           "id, nome, whatsapp, telefone, email, bairro, profissao, status, ativo, created_at"
         )
-        .eq("id_salao", idSalao)
+        .eq("id_salao", idSalaoAtual)
         .order("nome", { ascending: true });
 
       if (error) throw error;

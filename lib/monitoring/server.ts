@@ -5,6 +5,7 @@ import type {
   MonitoringPayload,
   MonitoringSeverity,
 } from "@/lib/monitoring/types";
+import type { Json } from "@/types/database.generated";
 
 type CaptureSystemEventParams = MonitoringPayload & {
   createIncident?: boolean;
@@ -221,7 +222,7 @@ async function upsertIncident(params: CaptureSystemEventParams, severity: Monito
     screen: params.screen || null,
     latestMessage: params.message,
     latestDetails: sanitizeDetails(params.details),
-  };
+  } as Json;
 
   const { data: existing } = await supabase
     .from("incidentes_sistema")
@@ -304,7 +305,7 @@ export async function captureSystemEvent(params: CaptureSystemEventParams) {
       tipo_evento: normalizeText(params.eventType) || "ui_event",
       severidade: severity,
       mensagem: message,
-      detalhes_json: sanitizeDetails(params.details),
+      detalhes_json: sanitizeDetails(params.details) as Json,
       origem: normalizeOrigin(params.origin),
       superficie: normalizeText(params.surface) || null,
       rota: normalizeText(params.route) || null,
@@ -418,7 +419,7 @@ export async function registrarAcaoAutomaticaSistema(
       executada: params.executed,
       sucesso: params.success,
       log: normalizeText(params.log) || "Acao automatica registrada.",
-      detalhes_json: sanitizeDetails(params.details),
+      detalhes_json: sanitizeDetails(params.details) as Json,
       created_at: new Date().toISOString(),
       executada_em: params.executed ? new Date().toISOString() : null,
     });
@@ -442,7 +443,7 @@ export async function upsertSystemHealthCheck(params: {
         nome: normalizeText(params.name) || "Health check",
         status: normalizeText(params.status) || "ok",
         score: Math.max(0, Math.min(100, Math.round(params.score))),
-        detalhes_json: sanitizeDetails(params.details),
+        detalhes_json: sanitizeDetails(params.details) as Json,
         atualizado_em: new Date().toISOString(),
       },
       { onConflict: "chave" }

@@ -60,14 +60,14 @@ export async function adicionarPagamento(params: {
     p_parcelas: parcelas,
     p_taxa_percentual: taxaPercentual,
     p_taxa_valor: taxaValor,
-    p_observacoes: sanitizeText(body.pagamento?.observacoes),
+    p_observacoes: sanitizeText(body.pagamento?.observacoes) || "",
   };
 
   let { data, error } = await ctx.supabaseAdmin.rpc(
     "fn_caixa_adicionar_pagamento_comanda_idempotente",
     {
       ...pagamentoPayload,
-      p_idempotency_key: idempotencyKey,
+      p_idempotency_key: idempotencyKey || undefined,
     }
   );
 
@@ -82,7 +82,9 @@ export async function adicionarPagamento(params: {
       "fn_caixa_adicionar_pagamento_comanda",
       pagamentoPayload
     );
-    data = fallback.data;
+    data = fallback.data
+      ? fallback.data.map((item) => ({ ...item, ja_existia: false }))
+      : null;
     error = fallback.error;
   }
 

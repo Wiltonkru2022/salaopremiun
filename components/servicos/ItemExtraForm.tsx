@@ -109,7 +109,7 @@ export default function ItemExtraForm({ modo }: ItemExtraFormProps) {
   async function carregarItem(id: string, salaoId: string) {
     const { data, error } = await supabase
       .from("itens_extras")
-      .select("*")
+      .select("ativo, atualizado_em, categoria, comissao_percentual, comissionavel, controla_estoque, criado_em, custo, descricao, estoque_atual, estoque_minimo, id, id_salao, nome, preco_venda, unidade_medida")
       .eq("id", id)
       .eq("id_salao", salaoId)
       .maybeSingle();
@@ -171,6 +171,10 @@ export default function ItemExtraForm({ modo }: ItemExtraFormProps) {
 
         router.push("/servicos-extras");
         return;
+      }
+
+      if (!item.id) {
+        throw new Error("Item extra invalido.");
       }
 
       const { error } = await supabase

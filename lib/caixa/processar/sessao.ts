@@ -10,7 +10,7 @@ export async function abrirCaixa(
     p_id_salao: ctx.idSalao,
     p_id_usuario: ctx.idUsuario,
     p_valor_abertura: sanitizeMoney(body.sessao?.valorAbertura),
-    p_observacoes: sanitizeText(body.sessao?.observacoes),
+    p_observacoes: sanitizeText(body.sessao?.observacoes) || undefined,
   });
 
   if (error) throw error;
@@ -45,7 +45,7 @@ export async function fecharCaixa(
     p_id_sessao: idSessao,
     p_id_usuario: ctx.idUsuario,
     p_valor_fechamento: sanitizeMoney(body.sessao?.valorFechamento),
-    p_observacoes: sanitizeText(body.sessao?.observacoes),
+    p_observacoes: sanitizeText(body.sessao?.observacoes) || undefined,
   });
 
   if (error) throw error;

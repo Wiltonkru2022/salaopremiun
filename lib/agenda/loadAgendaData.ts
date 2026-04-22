@@ -54,7 +54,7 @@ export async function loadAgendaData(params: {
 
     supabase
       .from("agenda_bloqueios")
-      .select("*")
+      .select("created_at, data, hora_fim, hora_inicio, id, id_salao, motivo, profissional_id")
       .eq("id_salao", idSalao)
       .eq("profissional_id", selectedProfissionalId)
       .gte("data", startDate)
