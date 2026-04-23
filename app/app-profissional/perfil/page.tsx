@@ -191,6 +191,26 @@ export default async function PerfilProfissionalPage() {
           </div>
         </div>
 
+        <div className="rounded-[1.5rem] border border-zinc-200 bg-white p-4 shadow-sm">
+          <div className="mb-2 flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.18em] text-zinc-500">
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-zinc-950 text-[10px] font-black text-white">
+              G
+            </span>
+            Conta Google
+          </div>
+          <p className="text-sm leading-6 text-zinc-600">
+            Use esta area para preparar o vinculo da conta Google ao acesso do
+            profissional. A conexao OAuth precisa ser ativada no provedor antes
+            de liberar login Google real.
+          </p>
+          <button
+            type="button"
+            className="mt-4 h-12 w-full rounded-2xl border border-zinc-200 bg-zinc-50 text-sm font-semibold text-zinc-700"
+          >
+            Conectar conta Google
+          </button>
+        </div>
+
         <Link
           href="/app-profissional/suporte"
           className="flex h-12 w-full items-center justify-center rounded-2xl border border-[#d8b36b] bg-white text-sm font-semibold text-[#b07b19]"
