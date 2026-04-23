@@ -253,7 +253,9 @@ export function useAssinaturaCheckout({
       setCheckout(pagamentoConfirmado ? null : data);
       setAguardandoPagamento(!pagamentoConfirmado);
 
-      await carregarDados();
+      if (pagamentoConfirmado) {
+        await carregarDados();
+      }
     } catch (error: unknown) {
       setErro(
         error instanceof Error ? error.message : "Erro ao criar cobrança."

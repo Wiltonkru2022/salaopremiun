@@ -61,12 +61,28 @@ export function useAssinaturaStatus({
         return;
       }
 
-      setCheckout(
-        montarCheckoutDaCobranca({
-          cobranca: data,
-          assinatura: assinaturaAtual ?? null,
-        })
-      );
+      const nextCheckout = montarCheckoutDaCobranca({
+        cobranca: data,
+        assinatura: assinaturaAtual ?? null,
+      });
+
+      setCheckout((current) => {
+        if (
+          current?.paymentId &&
+          nextCheckout.paymentId &&
+          current.paymentId === nextCheckout.paymentId
+        ) {
+          return {
+            ...nextCheckout,
+            qrCodeBase64: current.qrCodeBase64 || nextCheckout.qrCodeBase64 || null,
+            pixCopiaCola: current.pixCopiaCola || nextCheckout.pixCopiaCola || null,
+            invoiceUrl: current.invoiceUrl || nextCheckout.invoiceUrl || null,
+            bankSlipUrl: current.bankSlipUrl || nextCheckout.bankSlipUrl || null,
+          };
+        }
+
+        return nextCheckout;
+      });
     },
     [supabase]
   );
@@ -119,7 +135,16 @@ export function useAssinaturaStatus({
       if (estaAguardando) {
         await carregarCheckoutAtual(idSalaoAtual, assinaturaFinal);
       } else {
-        setCheckout(null);
+        setCheckout((current) => {
+          const statusAtualCheckout = String(current?.status || "").toLowerCase();
+          const checkoutAindaPendente = [
+            "pending",
+            "pendente",
+            "aguardando_pagamento",
+          ].includes(statusAtualCheckout);
+
+          return checkoutAindaPendente ? current : null;
+        });
       }
     },
     [
