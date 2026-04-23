@@ -1,4 +1,5 @@
 import { runAdminOperation } from "@/lib/supabase/admin-ops";
+import type { SupabaseAdminClient } from "@/lib/supabase/admin";
 import { verifyPassword } from "@/lib/profissional-auth.server";
 
 type LoginResult =
@@ -19,6 +20,84 @@ type LoginResult =
 
 function normalizeCpf(value: string) {
   return String(value || "").replace(/\D/g, "").trim();
+}
+
+async function buildProfissionalSession(params: {
+  supabaseAdmin: SupabaseAdminClient;
+  idProfissional: string;
+  cpf: string;
+  acessoId?: string | null;
+}): Promise<LoginResult> {
+  const { data: profissional, error: profissionalError } =
+    await params.supabaseAdmin
+      .from("profissionais")
+      .select("id, nome, nome_exibicao, ativo, id_salao, tipo_profissional")
+      .eq("id", params.idProfissional)
+      .limit(1)
+      .maybeSingle();
+
+  if (profissionalError) {
+    return { ok: false, error: "Erro ao buscar profissional." };
+  }
+
+  if (!profissional) {
+    return { ok: false, error: "Profissional nao encontrado." };
+  }
+
+  if (!profissional.ativo) {
+    return { ok: false, error: "Profissional inativo." };
+  }
+
+  if (
+    String(profissional.tipo_profissional || "profissional").toLowerCase() ===
+    "assistente"
+  ) {
+    return {
+      ok: false,
+      error: "Assistente do salao nao possui acesso ao app profissional.",
+    };
+  }
+
+  if (!profissional.id_salao) {
+    return { ok: false, error: "Profissional sem salao vinculado." };
+  }
+
+  const { data: salao, error: salaoError } = await params.supabaseAdmin
+    .from("saloes")
+    .select("id, nome, status")
+    .eq("id", profissional.id_salao)
+    .limit(1)
+    .maybeSingle();
+
+  if (salaoError) {
+    return { ok: false, error: "Erro ao buscar salao." };
+  }
+
+  if (!salao) {
+    return { ok: false, error: "Salao nao encontrado." };
+  }
+
+  if (String(salao.status || "").toLowerCase() !== "ativo") {
+    return { ok: false, error: "Salao inativo ou bloqueado." };
+  }
+
+  if (params.acessoId) {
+    await params.supabaseAdmin
+      .from("profissionais_acessos")
+      .update({ ultimo_login_em: new Date().toISOString() })
+      .eq("id", params.acessoId);
+  }
+
+  return {
+    ok: true,
+    session: {
+      idProfissional: profissional.id,
+      idSalao: profissional.id_salao,
+      nome: profissional.nome_exibicao || profissional.nome || "Profissional",
+      cpf: params.cpf,
+      tipo: "profissional",
+    },
+  };
 }
 
 export async function loginProfissionalByCpfSenha(
@@ -54,75 +133,115 @@ export async function loginProfissionalByCpfSenha(
         return { ok: false, error: "CPF ou senha invalidos." };
       }
 
-      const { data: profissional, error: profissionalError } =
-        await supabaseAdmin
-          .from("profissionais")
-          .select("id, nome, nome_exibicao, ativo, id_salao, tipo_profissional")
-          .eq("id", acesso.id_profissional)
-          .limit(1)
-          .maybeSingle();
+      return buildProfissionalSession({
+        supabaseAdmin,
+        idProfissional: acesso.id_profissional,
+        cpf: cpfLimpo,
+        acessoId: acesso.id,
+      });
+    },
+  });
+}
 
-      if (profissionalError) {
-        return { ok: false, error: "Erro ao buscar profissional." };
-      }
-
-      if (!profissional) {
-        return { ok: false, error: "Profissional nao encontrado." };
-      }
-
-      if (!profissional.ativo) {
-        return { ok: false, error: "Profissional inativo." };
-      }
-
-      if (
-        String(profissional.tipo_profissional || "profissional").toLowerCase() ===
-        "assistente"
-      ) {
-        return {
-          ok: false,
-          error: "Assistente do salao nao possui acesso ao app profissional.",
-        };
-      }
-
-      if (!profissional.id_salao) {
-        return { ok: false, error: "Profissional sem salao vinculado." };
-      }
-
-      const { data: salao, error: salaoError } = await supabaseAdmin
-        .from("saloes")
-        .select("id, nome, status")
-        .eq("id", profissional.id_salao)
+export async function loginProfissionalByGoogleAuthUser(
+  googleAuthUserId: string,
+  googleEmail: string | null
+): Promise<LoginResult> {
+  return runAdminOperation({
+    action: "profissional_auth_login_google",
+    actorId: googleAuthUserId,
+    run: async (supabaseAdmin): Promise<LoginResult> => {
+      const { data: acesso, error: acessoError } = await supabaseAdmin
+        .from("profissionais_acessos")
+        .select("id, cpf, ativo, id_profissional, google_auth_user_id")
+        .eq("google_auth_user_id", googleAuthUserId)
+        .eq("ativo", true)
         .limit(1)
         .maybeSingle();
 
-      if (salaoError) {
-        return { ok: false, error: "Erro ao buscar salao." };
+      if (acessoError) {
+        return { ok: false, error: "Erro ao buscar acesso Google." };
       }
 
-      if (!salao) {
-        return { ok: false, error: "Salao nao encontrado." };
+      if (!acesso) {
+        return {
+          ok: false,
+          error:
+            "Conta Google ainda nao vinculada. Entre com CPF e senha e conecte no perfil.",
+        };
       }
 
-      if (String(salao.status || "").toLowerCase() !== "ativo") {
-        return { ok: false, error: "Salao inativo ou bloqueado." };
+      return buildProfissionalSession({
+        supabaseAdmin,
+        idProfissional: acesso.id_profissional,
+        cpf: acesso.cpf || googleEmail || "",
+        acessoId: acesso.id,
+      });
+    },
+  });
+}
+
+export async function vincularGoogleAoProfissional(params: {
+  idProfissional: string;
+  idSalao: string;
+  googleAuthUserId: string;
+  googleEmail: string | null;
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  return runAdminOperation({
+    action: "profissional_auth_vincular_google",
+    actorId: params.idProfissional,
+    idSalao: params.idSalao,
+    run: async (supabaseAdmin) => {
+      const { data: profissional, error: profissionalError } =
+        await supabaseAdmin
+          .from("profissionais")
+          .select("id, id_salao, ativo")
+          .eq("id", params.idProfissional)
+          .eq("id_salao", params.idSalao)
+          .maybeSingle();
+
+      if (profissionalError || !profissional?.ativo) {
+        return { ok: false, error: "Profissional invalido para vinculo." };
       }
 
-      await supabaseAdmin
+      const { data: vinculoExistente, error: vinculoError } =
+        await supabaseAdmin
+          .from("profissionais_acessos")
+          .select("id, id_profissional")
+          .eq("google_auth_user_id", params.googleAuthUserId)
+          .maybeSingle();
+
+      if (vinculoError) {
+        return { ok: false, error: "Erro ao validar vinculo Google." };
+      }
+
+      if (
+        vinculoExistente &&
+        vinculoExistente.id_profissional !== params.idProfissional
+      ) {
+        return {
+          ok: false,
+          error: "Esta conta Google ja esta vinculada a outro profissional.",
+        };
+      }
+
+      const { data: acessoAtualizado, error: updateError } = await supabaseAdmin
         .from("profissionais_acessos")
-        .update({ ultimo_login_em: new Date().toISOString() })
-        .eq("id", acesso.id);
+        .update({
+          google_auth_user_id: params.googleAuthUserId,
+          google_email: params.googleEmail,
+          google_conectado_em: new Date().toISOString(),
+        })
+        .eq("id_profissional", params.idProfissional)
+        .eq("ativo", true)
+        .select("id")
+        .maybeSingle();
 
-      return {
-        ok: true,
-        session: {
-          idProfissional: profissional.id,
-          idSalao: profissional.id_salao,
-          nome:
-            profissional.nome_exibicao || profissional.nome || "Profissional",
-          cpf: cpfLimpo,
-          tipo: "profissional",
-        },
-      };
+      if (updateError || !acessoAtualizado) {
+        return { ok: false, error: "Erro ao conectar conta Google." };
+      }
+
+      return { ok: true };
     },
   });
 }

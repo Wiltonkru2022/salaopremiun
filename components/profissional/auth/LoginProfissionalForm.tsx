@@ -35,7 +35,11 @@ function formatCpf(value: string) {
     .replace(/\.(\d{3})(\d)/, ".$1-$2");
 }
 
-export default function LoginProfissionalForm() {
+export default function LoginProfissionalForm({
+  oauthError,
+}: {
+  oauthError?: string | null;
+}) {
   const [state, formAction] = useActionState(
     loginProfissionalAction,
     initialState
@@ -97,6 +101,12 @@ export default function LoginProfissionalForm() {
           Lembrar meu acesso
         </label>
 
+        {oauthError ? (
+          <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            {oauthError}
+          </div>
+        ) : null}
+
         {state.error ? (
           <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
             {state.error}
@@ -105,18 +115,13 @@ export default function LoginProfissionalForm() {
 
         <SubmitButton />
 
-        <button
-          type="button"
-          onClick={() =>
-            alert(
-              "Login Google para profissionais precisa de configuracao OAuth e vinculo da conta no painel. A interface ja esta preparada."
-            )
-          }
+        <Link
+          href="/app-profissional/auth/google/start?intent=login"
           className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl border border-zinc-200 bg-white text-sm font-semibold text-zinc-700"
         >
           G
           Entrar com Google
-        </button>
+        </Link>
 
         <Link
           href="/app-profissional/recuperar-senha"

@@ -3926,6 +3926,9 @@ export type Database = {
           atualizado_em: string
           cpf: string
           criado_em: string
+          google_auth_user_id: string | null
+          google_conectado_em: string | null
+          google_email: string | null
           id: string
           id_profissional: string
           senha_hash: string
@@ -3936,6 +3939,9 @@ export type Database = {
           atualizado_em?: string
           cpf: string
           criado_em?: string
+          google_auth_user_id?: string | null
+          google_conectado_em?: string | null
+          google_email?: string | null
           id?: string
           id_profissional: string
           senha_hash: string
@@ -3946,6 +3952,9 @@ export type Database = {
           atualizado_em?: string
           cpf?: string
           criado_em?: string
+          google_auth_user_id?: string | null
+          google_conectado_em?: string | null
+          google_email?: string | null
           id?: string
           id_profissional?: string
           senha_hash?: string

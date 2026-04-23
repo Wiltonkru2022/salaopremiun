@@ -22,6 +22,11 @@ type ProfissionalPerfilRow = {
   pix_chave?: string | null;
 };
 
+type ProfissionalGoogleRow = {
+  google_email?: string | null;
+  google_conectado_em?: string | null;
+};
+
 function formatCpf(value: string | null | undefined) {
   const digits = String(value || "").replace(/\D/g, "");
   if (digits.length !== 11) return value || "Nao informado";
@@ -71,14 +76,74 @@ async function carregarPerfil(params: {
   });
 }
 
-export default async function PerfilProfissionalPage() {
+async function carregarGoogleProfissional(params: {
+  idSalao: string;
+  idProfissional: string;
+}) {
+  return runAdminOperation({
+    action: "profissional_perfil_google_carregar",
+    actorId: params.idProfissional,
+    idSalao: params.idSalao,
+    run: async (supabase) => {
+      const { data, error } = await supabase
+        .from("profissionais_acessos")
+        .select("google_email, google_conectado_em")
+        .eq("id_profissional", params.idProfissional)
+        .eq("ativo", true)
+        .maybeSingle();
+
+      if (error) {
+        throw new Error(error.message || "Erro ao carregar conta Google.");
+      }
+
+      return (data ?? null) as ProfissionalGoogleRow | null;
+    },
+  });
+}
+
+function getPerfilNotice(params: {
+  google?: string | string[];
+  erro?: string | string[];
+}) {
+  const googleStatus = Array.isArray(params.google)
+    ? params.google[0]
+    : params.google;
+  const erro = Array.isArray(params.erro) ? params.erro[0] : params.erro;
+
+  if (googleStatus === "conectado") {
+    return {
+      type: "success" as const,
+      message: "Conta Google conectada com sucesso.",
+    };
+  }
+
+  if (erro) {
+    return {
+      type: "error" as const,
+      message: erro,
+    };
+  }
+
+  return null;
+}
+
+export default async function PerfilProfissionalPage({
+  searchParams,
+}: {
+  searchParams: Promise<{
+    google?: string | string[];
+    erro?: string | string[];
+  }>;
+}) {
   const session = await getProfissionalSessionFromCookie();
+  const params = await searchParams;
 
   if (!session) {
     redirect("/app-profissional/login");
   }
 
   let profissional: ProfissionalPerfilRow | null = null;
+  let google: ProfissionalGoogleRow | null = null;
 
   try {
     profissional = await carregarPerfil({
@@ -87,6 +152,15 @@ export default async function PerfilProfissionalPage() {
     });
   } catch {
     profissional = null;
+  }
+
+  try {
+    google = await carregarGoogleProfissional({
+      idSalao: session.idSalao,
+      idProfissional: session.idProfissional,
+    });
+  } catch {
+    google = null;
   }
 
   if (!profissional) {
@@ -106,10 +180,23 @@ export default async function PerfilProfissionalPage() {
     "Profissional";
   const categoria =
     profissional.categoria || profissional.cargo || "Profissional";
+  const notice = getPerfilNotice(params);
 
   return (
     <ProfissionalShell title="Meu Perfil" subtitle="Dados do profissional">
       <div className="space-y-4">
+        {notice ? (
+          <div
+            className={
+              notice.type === "success"
+                ? "rounded-[1.25rem] border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-700 shadow-sm"
+                : "rounded-[1.25rem] border border-red-200 bg-red-50 p-4 text-sm text-red-700 shadow-sm"
+            }
+          >
+            {notice.message}
+          </div>
+        ) : null}
+
         <div className="rounded-[1.5rem] border border-zinc-200 bg-white p-4 shadow-sm">
           <div className="flex items-center gap-4">
             {profissional.foto_url ? (
@@ -199,16 +286,16 @@ export default async function PerfilProfissionalPage() {
             Conta Google
           </div>
           <p className="text-sm leading-6 text-zinc-600">
-            Use esta area para preparar o vinculo da conta Google ao acesso do
-            profissional. A conexao OAuth precisa ser ativada no provedor antes
-            de liberar login Google real.
+            {google?.google_email
+              ? `Conectada em ${google.google_email}. Voce ja pode entrar pelo Google na tela de login.`
+              : "Conecte uma conta Google para entrar mais rapido sem digitar CPF e senha."}
           </p>
-          <button
-            type="button"
-            className="mt-4 h-12 w-full rounded-2xl border border-zinc-200 bg-zinc-50 text-sm font-semibold text-zinc-700"
+          <Link
+            href="/app-profissional/auth/google/start?intent=connect"
+            className="mt-4 flex h-12 w-full items-center justify-center rounded-2xl border border-zinc-200 bg-zinc-50 text-sm font-semibold text-zinc-700"
           >
-            Conectar conta Google
-          </button>
+            {google?.google_email ? "Trocar conta Google" : "Conectar conta Google"}
+          </Link>
         </div>
 
         <Link
