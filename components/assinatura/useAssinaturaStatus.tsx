@@ -64,11 +64,11 @@ export function useAssinaturaStatus({
       setCheckout(
         montarCheckoutDaCobranca({
           cobranca: data,
-          assinatura: assinaturaAtual || assinatura,
+          assinatura: assinaturaAtual ?? null,
         })
       );
     },
-    [assinatura, supabase]
+    [supabase]
   );
 
   const carregarStatusAssinatura = useCallback(
