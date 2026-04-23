@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { redirect } from "next/navigation";
 import MarketingPriceSimulator from "@/components/marketing/MarketingPriceSimulator";
+import WhatsAppPackagesCard from "@/components/marketing/WhatsAppPackagesCard";
 import { getUser } from "@/lib/auth/get-user";
 import { canUsePlanFeature } from "@/lib/plans/access";
 import { createClient } from "@/lib/supabase/server";
@@ -25,6 +26,29 @@ type ComandaRow = {
   id_cliente?: string | null;
   total?: number | null;
   fechada_em?: string | null;
+};
+
+type PacoteRow = {
+  id: string;
+  nome?: string | null;
+  quantidade_creditos?: number | null;
+  preco?: number | string | null;
+};
+
+type CreditoRow = {
+  creditos_saldo?: number | null;
+};
+
+type CompraPendenteRow = {
+  id_pacote?: string | null;
+  asaas_payment_id?: string | null;
+  billing_type?: string | null;
+  valor?: number | string | null;
+  quantidade_creditos?: number | null;
+  invoice_url?: string | null;
+  bank_slip_url?: string | null;
+  pix_copia_cola?: string | null;
+  qr_code_base64?: string | null;
 };
 
 type ClienteInsight = {
@@ -103,37 +127,73 @@ export default async function MarketingPage() {
     );
   }
 
-  const marketingAccess = await canUsePlanFeature(usuario.id_salao, "marketing");
-
-  if (!marketingAccess.allowed) {
-    return (
-      <div className="rounded-[30px] border border-amber-200 bg-amber-50 p-6 text-amber-900 shadow-sm">
-        Marketing nao esta liberado no plano atual. Faça upgrade para usar esta area.
-      </div>
-    );
-  }
+  const [marketingAccess, whatsappAccess] = await Promise.all([
+    canUsePlanFeature(usuario.id_salao, "marketing"),
+    canUsePlanFeature(usuario.id_salao, "whatsapp"),
+  ]);
 
   const inicioJanela = new Date();
   inicioJanela.setMonth(inicioJanela.getMonth() - 12);
 
-  const [{ data: clientesData }, { data: comandasData }] = await Promise.all([
+  const [
+    clientesResult,
+    comandasResult,
+    { data: pacotesData },
+    { data: creditosData },
+    { data: compraPendenteData },
+  ] = await Promise.all([
+    marketingAccess.allowed
+      ? supabase
+          .from("clientes")
+          .select("id, nome, telefone, whatsapp, email, data_nascimento")
+          .eq("id_salao", usuario.id_salao)
+          .order("nome", { ascending: true })
+      : Promise.resolve({ data: [] as ClienteRow[] }),
+    marketingAccess.allowed
+      ? supabase
+          .from("comandas")
+          .select("id_cliente, total, fechada_em")
+          .eq("id_salao", usuario.id_salao)
+          .eq("status", "fechada")
+          .gte("fechada_em", inicioJanela.toISOString())
+          .order("fechada_em", { ascending: false })
+      : Promise.resolve({ data: [] as ComandaRow[] }),
     supabase
-      .from("clientes")
-      .select("id, nome, telefone, whatsapp, email, data_nascimento")
-      .eq("id_salao", usuario.id_salao)
-      .order("nome", { ascending: true }),
-
+      .from("whatsapp_pacotes")
+      .select("id, nome, quantidade_creditos, preco")
+      .eq("ativo", true)
+      .order("quantidade_creditos", { ascending: true }),
     supabase
-      .from("comandas")
-      .select("id_cliente, total, fechada_em")
+      .from("whatsapp_pacote_saloes")
+      .select("creditos_saldo")
       .eq("id_salao", usuario.id_salao)
-      .eq("status", "fechada")
-      .gte("fechada_em", inicioJanela.toISOString())
-      .order("fechada_em", { ascending: false }),
+      .eq("status", "ativo")
+      .or(`expira_em.is.null,expira_em.gt.${new Date().toISOString()}`),
+    (supabase as any)
+      .from("whatsapp_pacote_compras")
+      .select(
+        "id_pacote, asaas_payment_id, billing_type, valor, quantidade_creditos, invoice_url, bank_slip_url, pix_copia_cola, qr_code_base64"
+      )
+      .eq("id_salao", usuario.id_salao)
+      .eq("status", "pendente")
+      .order("criado_em", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
   ]);
 
-  const clientes = (clientesData as ClienteRow[]) || [];
-  const comandas = (comandasData as ComandaRow[]) || [];
+  const clientes = (clientesResult.data as ClienteRow[]) || [];
+  const comandas = (comandasResult.data as ComandaRow[]) || [];
+  const pacotes = ((pacotesData as PacoteRow[]) || []).map((item) => ({
+    id: item.id,
+    nome: item.nome || "Pacote",
+    quantidadeCreditos: Number(item.quantidade_creditos || 0),
+    preco: Number(item.preco || 0),
+  }));
+  const saldoAtual = ((creditosData as CreditoRow[]) || []).reduce(
+    (acc, item) => acc + Number(item.creditos_saldo || 0),
+    0
+  );
+  const compraPendente = compraPendenteData as CompraPendenteRow | null;
 
   const metricasPorCliente = new Map<
     string,
@@ -176,9 +236,7 @@ export default async function MarketingPage() {
   const semRetorno = insights
     .filter((cliente) => (cliente.diasSemRetorno || 0) >= 45)
     .slice()
-    .sort(
-      (a, b) => (b.diasSemRetorno || 0) - (a.diasSemRetorno || 0)
-    );
+    .sort((a, b) => (b.diasSemRetorno || 0) - (a.diasSemRetorno || 0));
 
   const clientesVip = insights
     .filter((cliente) => cliente.totalGasto > 0)
@@ -194,6 +252,22 @@ export default async function MarketingPage() {
 
   return (
     <div className="space-y-6">
+      {!marketingAccess.allowed ? (
+        <section className="rounded-[30px] border border-amber-200 bg-amber-50 p-6 text-amber-950 shadow-sm">
+          <div className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-700">
+            Marketing limitado no plano
+          </div>
+          <h2 className="mt-2 font-display text-2xl font-bold tracking-[-0.04em]">
+            A compra de pacote continua disponivel
+          </h2>
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-amber-900/80">
+            Os insights completos e a operacao de marketing ainda nao estao
+            liberados no plano atual, mas voce ja pode comprar pacote de WhatsApp
+            para ativar o recurso no salao.
+          </p>
+        </section>
+      ) : null}
+
       <section className="overflow-hidden rounded-[34px] border border-zinc-200 bg-white px-6 py-7 text-zinc-950 shadow-sm">
         <div className="max-w-3xl">
           <div className="inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.22em] text-zinc-600">
@@ -212,121 +286,178 @@ export default async function MarketingPage() {
         </div>
       </section>
 
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <KpiCard
-          icon={<CalendarHeart size={18} />}
-          label="Aniversariantes"
-          value={String(aniversariantes.length)}
-          helper="Clientes do mes para oferta especial."
-        />
-        <KpiCard
-          icon={<PhoneCall size={18} />}
-          label="Sem retorno 45d+"
-          value={String(semRetorno.length)}
-          helper="Base ideal para recuperar agenda."
-        />
-        <KpiCard
-          icon={<TrendingUp size={18} />}
-          label="Clientes VIP"
-          value={String(clientesVip.slice(0, 10).length)}
-          helper="Top receita para acao premium."
-        />
-        <KpiCard
-          icon={<MessageSquareMore size={18} />}
-          label="Mensagens potenciais"
-          value={String(mensagensPotenciais)}
-          helper="Volume comercial ja mapeado na base."
-        />
-      </section>
-
-      <section className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
+      <section className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
         <div className="space-y-6">
-          <InsightCard
-            title="Aniversariantes do mes"
-            subtitle="Oferta quente para lotar agenda e gerar retorno."
-            emptyText="Nenhum aniversariante identificado neste mes."
-            items={aniversariantes.slice(0, 8).map((cliente) => ({
-              title: cliente.nome,
-              meta: cliente.contato,
-              badge: "Parabens + oferta",
-            }))}
+          <WhatsAppPackagesCard
+            pacotes={pacotes}
+            saldoAtual={saldoAtual}
+            recursoAtivo={whatsappAccess.allowed}
+            marketingLiberado={marketingAccess.allowed}
+            compraInicial={
+              compraPendente?.asaas_payment_id
+                ? {
+                    pacoteId: String(compraPendente.id_pacote || ""),
+                    paymentId: String(compraPendente.asaas_payment_id || ""),
+                    billingType:
+                      String(compraPendente.billing_type || "PIX").toUpperCase() ===
+                      "BOLETO"
+                        ? "BOLETO"
+                        : "PIX",
+                    valor: Number(compraPendente.valor || 0),
+                    quantidadeCreditos: Number(
+                      compraPendente.quantidade_creditos || 0
+                    ),
+                    invoiceUrl: compraPendente.invoice_url || null,
+                    bankSlipUrl: compraPendente.bank_slip_url || null,
+                    pixCopiaCola: compraPendente.pix_copia_cola || null,
+                    qrCodeBase64: compraPendente.qr_code_base64 || null,
+                    reused: true,
+                  }
+                : null
+            }
           />
-
-          <InsightCard
-            title="Clientes para reativacao"
-            subtitle="Quem esta ha mais tempo sem comprar merece campanha agora."
-            emptyText="Nenhum cliente acima do corte de inatividade."
-            items={semRetorno.slice(0, 8).map((cliente) => ({
-              title: cliente.nome,
-              meta: `${cliente.contato} • ${cliente.diasSemRetorno || 0} dia(s) sem compra`,
-              badge: "Retorno",
-            }))}
-          />
-
-          <InsightCard
-            title="Clientes VIP"
-            subtitle="Base para kits premium, manutencao recorrente e indicacao."
-            emptyText="Sem vendas fechadas suficientes para formar ranking."
-            items={clientesVip.slice(0, 8).map((cliente) => ({
-              title: cliente.nome,
-              meta: `${cliente.contato} • ${getMoney(cliente.totalGasto)} no periodo`,
-              badge: "Alta receita",
-            }))}
-          />
-        </div>
-
-        <div className="space-y-6">
-          <MarketingPriceSimulator />
-
-          <WhatsAppSetupCard mensagensPotenciais={mensagensPotenciais} />
 
           <section className="rounded-[30px] border border-zinc-200 bg-white p-6 shadow-sm">
             <div className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
-              Modelos de mensagem
+              API e operacao
             </div>
             <h2 className="mt-2 font-display text-2xl font-bold tracking-[-0.04em] text-zinc-950">
-              Textos que ja ajudam no comercial
+              O que fica ativo depois da compra
             </h2>
 
             <div className="mt-5 space-y-3">
-              <TemplateCard
-                title="Aniversario"
-                body="Oi [nome], seu mes especial chegou. Preparamos uma condicao exclusiva para voce voltar ao salao com carinho e prioridade."
+              <SetupStep
+                title="1. Checkout do lote"
+                description="A compra gera PIX com identificacao propria do pacote para evitar mistura com a assinatura mensal."
               />
-              <TemplateCard
-                title="Retorno"
-                body="Oi [nome], faz um tempo desde seu ultimo atendimento. Tenho uma janela boa esta semana e posso te ajudar a manter o resultado em dia."
+              <SetupStep
+                title="2. Confirmacao automatica"
+                description="Quando o webhook do Asaas marca o pagamento como recebido, o saldo de creditos entra no salao automaticamente."
               />
-              <TemplateCard
-                title="VIP"
-                body="Oi [nome], abrimos uma agenda premium para clientes especiais. Se quiser, reservo um horario com atencao prioritaria para voce."
+              <SetupStep
+                title="3. Habilitacao do recurso"
+                description="Ao cair o pagamento, o recurso WhatsApp passa a ficar liberado como extra pago no salao."
               />
             </div>
           </section>
+        </div>
 
-          <section className="rounded-[30px] border border-zinc-200 bg-white p-6 shadow-sm">
-            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
-              <Users size={14} />
-              Higiene da base
-            </div>
-            <h2 className="mt-2 font-display text-2xl font-bold tracking-[-0.04em] text-zinc-950">
-              Cadastros sem contato
-            </h2>
+        <div className="space-y-6">
+          <WhatsAppSetupCard mensagensPotenciais={mensagensPotenciais} />
 
-            <p className="mt-2 text-sm text-zinc-500">
-              Antes de vender disparo por mensagem, feche estes cadastros sem telefone
-              ou WhatsApp.
-            </p>
+          {marketingAccess.allowed ? (
+            <>
+              <MarketingPriceSimulator />
 
-            <div className="mt-4 rounded-[24px] border border-zinc-200 bg-zinc-50 px-4 py-4">
-              <div className="text-3xl font-bold text-zinc-950">
-                {cadastrosSemContato.length}
-              </div>
-              <div className="mt-1 text-sm text-zinc-500">
-                cliente(s) ainda sem contato utilizavel.
-              </div>
-            </div>
-          </section>
+              <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-2">
+                <KpiCard
+                  icon={<CalendarHeart size={18} />}
+                  label="Aniversariantes"
+                  value={String(aniversariantes.length)}
+                  helper="Clientes do mes para oferta especial."
+                />
+                <KpiCard
+                  icon={<PhoneCall size={18} />}
+                  label="Sem retorno 45d+"
+                  value={String(semRetorno.length)}
+                  helper="Base ideal para recuperar agenda."
+                />
+                <KpiCard
+                  icon={<TrendingUp size={18} />}
+                  label="Clientes VIP"
+                  value={String(clientesVip.slice(0, 10).length)}
+                  helper="Top receita para acao premium."
+                />
+                <KpiCard
+                  icon={<MessageSquareMore size={18} />}
+                  label="Mensagens potenciais"
+                  value={String(mensagensPotenciais)}
+                  helper="Volume comercial ja mapeado na base."
+                />
+              </section>
+
+              <InsightCard
+                title="Aniversariantes do mes"
+                subtitle="Oferta quente para lotar agenda e gerar retorno."
+                emptyText="Nenhum aniversariante identificado neste mes."
+                items={aniversariantes.slice(0, 6).map((cliente) => ({
+                  title: cliente.nome,
+                  meta: cliente.contato,
+                  badge: "Parabens + oferta",
+                }))}
+              />
+
+              <InsightCard
+                title="Clientes para reativacao"
+                subtitle="Quem esta ha mais tempo sem comprar merece campanha agora."
+                emptyText="Nenhum cliente acima do corte de inatividade."
+                items={semRetorno.slice(0, 6).map((cliente) => ({
+                  title: cliente.nome,
+                  meta: `${cliente.contato} • ${cliente.diasSemRetorno || 0} dia(s) sem compra`,
+                  badge: "Retorno",
+                }))}
+              />
+
+              <InsightCard
+                title="Clientes VIP"
+                subtitle="Base para kits premium, manutencao recorrente e indicacao."
+                emptyText="Sem vendas fechadas suficientes para formar ranking."
+                items={clientesVip.slice(0, 6).map((cliente) => ({
+                  title: cliente.nome,
+                  meta: `${cliente.contato} • ${getMoney(cliente.totalGasto)} no periodo`,
+                  badge: "Alta receita",
+                }))}
+              />
+
+              <section className="rounded-[30px] border border-zinc-200 bg-white p-6 shadow-sm">
+                <div className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
+                  Modelos de mensagem
+                </div>
+                <h2 className="mt-2 font-display text-2xl font-bold tracking-[-0.04em] text-zinc-950">
+                  Textos que ja ajudam no comercial
+                </h2>
+
+                <div className="mt-5 space-y-3">
+                  <TemplateCard
+                    title="Aniversario"
+                    body="Oi [nome], seu mes especial chegou. Preparamos uma condicao exclusiva para voce voltar ao salao com carinho e prioridade."
+                  />
+                  <TemplateCard
+                    title="Retorno"
+                    body="Oi [nome], faz um tempo desde seu ultimo atendimento. Tenho uma janela boa esta semana e posso te ajudar a manter o resultado em dia."
+                  />
+                  <TemplateCard
+                    title="VIP"
+                    body="Oi [nome], abrimos uma agenda premium para clientes especiais. Se quiser, reservo um horario com atencao prioritaria para voce."
+                  />
+                </div>
+              </section>
+
+              <section className="rounded-[30px] border border-zinc-200 bg-white p-6 shadow-sm">
+                <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
+                  <Users size={14} />
+                  Higiene da base
+                </div>
+                <h2 className="mt-2 font-display text-2xl font-bold tracking-[-0.04em] text-zinc-950">
+                  Cadastros sem contato
+                </h2>
+
+                <p className="mt-2 text-sm text-zinc-500">
+                  Antes de vender disparo por mensagem, feche estes cadastros sem
+                  telefone ou WhatsApp.
+                </p>
+
+                <div className="mt-4 rounded-[24px] border border-zinc-200 bg-zinc-50 px-4 py-4">
+                  <div className="text-3xl font-bold text-zinc-950">
+                    {cadastrosSemContato.length}
+                  </div>
+                  <div className="mt-1 text-sm text-zinc-500">
+                    cliente(s) ainda sem contato utilizavel.
+                  </div>
+                </div>
+              </section>
+            </>
+          ) : null}
         </div>
       </section>
     </div>
@@ -345,38 +476,36 @@ function WhatsAppSetupCard({
       <div className="border-b border-zinc-200 bg-white p-6 text-zinc-950">
         <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">
           <MessageSquareMore size={14} />
-          WhatsApp pronto para plugar
+          WhatsApp comercial
         </div>
         <h2 className="mt-2 font-display text-2xl font-bold tracking-[-0.04em]">
-          Configuracao de disparo e cobranca por mensagem
+          Motor de compra pronto, envio real no proximo passo
         </h2>
         <p className="mt-2 text-sm leading-6 text-zinc-500">
-          A tela ja separa base, volume e custo. Na integracao, cada mensagem
-          enviada deve registrar consumo para cobrar o salao por disparo.
+          O fluxo de pacote ja ficou preparado para compra e ativacao. O proximo
+          passo e plugar a API oficial do provedor de envio para consumir os
+          creditos automaticamente.
         </p>
       </div>
 
       <div className="grid gap-3 p-5 sm:grid-cols-3">
         <MiniMetric label="Volume mapeado" value={String(mensagensPotenciais)} />
-        <MiniMetric
-          label="Custo estimado"
-          value={getMoney(custoEstimado)}
-        />
-        <MiniMetric label="Status" value="Aguardando API" />
+        <MiniMetric label="Custo estimado" value={getMoney(custoEstimado)} />
+        <MiniMetric label="Status" value="Checkout ativo" />
       </div>
 
       <div className="grid gap-3 border-t border-zinc-100 p-5">
         <SetupStep
-          title="1. Provedor WhatsApp"
-          description="Campos previstos: token, telefone remetente, webhook e status do canal."
+          title="1. Pacote comprado"
+          description="Checkout e webhook ja conseguem liberar creditos no salao."
         />
         <SetupStep
-          title="2. Registro de consumo"
-          description="Cada envio deve gravar cliente, campanha, template, custo unitario e status."
+          title="2. Provedor WhatsApp"
+          description="Falta conectar a API do provedor para disparar e consumir credito por envio."
         />
         <SetupStep
-          title="3. Cobranca do salao"
-          description="O consumo entra na assinatura como adicional por mensagem enviada."
+          title="3. Registro operacional"
+          description="Cada mensagem enviada deve baixar saldo, salvar destino, template, campanha e status."
         />
       </div>
     </section>

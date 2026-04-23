@@ -54,6 +54,7 @@ export async function processarWebhookAsaasUseCase(params: {
     paymentId = String(payment.id);
     const billingType = String(payment.billingType || "").toUpperCase() || null;
     paymentStatus = String(payment.status || "").toUpperCase();
+    const externalReference = String(payment.externalReference || "").trim() || null;
     const agora = new Date();
     const agoraIso = agora.toISOString();
     const webhookFingerprint = params.service.buildFingerprint(event, payment);
@@ -102,6 +103,29 @@ export async function processarWebhookAsaasUseCase(params: {
               : "event_in_processing",
           event,
         },
+      };
+    }
+
+    if (externalReference?.startsWith("whatsapp_package:")) {
+      const result = await params.service.processarPacoteWhatsapp({
+        supabaseAdmin,
+        paymentId,
+        payment,
+        paymentStatus,
+        event,
+        agoraIso,
+        externalReference,
+      });
+
+      await params.service.atualizarStatusEvento(
+        supabaseAdmin,
+        webhookEventId,
+        "processado"
+      );
+
+      return {
+        status: 200,
+        body: result,
       };
     }
 

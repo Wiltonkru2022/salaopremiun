@@ -12,6 +12,7 @@ import {
   buildWebhookFingerprint,
   registrarEventoWebhookAsaas,
 } from "@/lib/webhooks/asaas/registry";
+import { processarWebhookPacoteWhatsapp } from "@/lib/webhooks/asaas/whatsapp-package";
 import { processarWebhookAsaasResolvido } from "@/lib/webhooks/asaas/processor";
 import type { PlanoSaasRow } from "@/lib/webhooks/asaas/types";
 
@@ -121,6 +122,18 @@ export function createAsaasWebhookService() {
       asaasSubscriptionId: string | null;
     }) {
       return processarWebhookAsaasResolvido(params);
+    },
+
+    async processarPacoteWhatsapp(params: {
+      supabaseAdmin: SupabaseClient;
+      paymentId: string;
+      payment: Record<string, unknown>;
+      paymentStatus: string | null;
+      event: string;
+      agoraIso: string;
+      externalReference: string | null;
+    }) {
+      return processarWebhookPacoteWhatsapp(params);
     },
   };
 }
