@@ -94,7 +94,7 @@ export default async function NovoAgendamentoProfissionalPage({
               .from("clientes")
               .select("id, nome, telefone")
               .eq("id_salao", session.idSalao)
-              .eq("ativo", "true")
+              .in("ativo", ["true", "ativo"])
               .order("nome", { ascending: true }),
 
             supabaseAdmin

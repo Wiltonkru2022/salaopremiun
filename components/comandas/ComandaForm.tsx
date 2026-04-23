@@ -234,7 +234,7 @@ export default function ComandaForm({ modo }: ComandaFormProps) {
           .from("clientes")
           .select("id, nome")
           .eq("id_salao", usuarioLogado.idSalao)
-          .eq("ativo", "ativo")
+          .in("ativo", ["true", "ativo"])
           .order("nome", { ascending: true }),
 
         supabase
