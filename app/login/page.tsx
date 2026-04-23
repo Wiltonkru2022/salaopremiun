@@ -180,6 +180,7 @@ function LoginPageContent() {
                     placeholder="seuemail@exemplo.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
+                    autoComplete="email"
                     className="w-full bg-transparent text-sm text-zinc-900 outline-none"
                     required
                   />
@@ -197,6 +198,7 @@ function LoginPageContent() {
                     placeholder="Digite sua senha"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
+                    autoComplete="current-password"
                     className="w-full bg-transparent text-sm text-zinc-900 outline-none"
                     required
                   />
