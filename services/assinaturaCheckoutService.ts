@@ -204,6 +204,39 @@ function onlyNumbers(value?: string | null) {
   return String(value || "").replace(/\D/g, "");
 }
 
+function normalizeBrazilPhoneDigits(value?: string | null) {
+  let digits = onlyNumbers(value);
+
+  if ((digits.length === 12 || digits.length === 13) && digits.startsWith("55")) {
+    digits = digits.slice(2);
+  }
+
+  return digits;
+}
+
+function getAsaasPhonePayload(value?: string | null) {
+  const digits = normalizeBrazilPhoneDigits(value);
+
+  if (digits.length === 11) {
+    return {
+      phone: undefined,
+      mobilePhone: digits,
+    };
+  }
+
+  if (digits.length === 10) {
+    return {
+      phone: digits,
+      mobilePhone: undefined,
+    };
+  }
+
+  return {
+    phone: undefined,
+    mobilePhone: undefined,
+  };
+}
+
 function isEmailValido(email?: string | null) {
   return !!String(email || "")
     .trim()
@@ -386,6 +419,7 @@ async function buscarOuCriarCustomerAsaas(params: {
 
   const cpfCnpj = onlyNumbers(params.cpfCnpj);
   const email = String(params.email || "").trim().toLowerCase();
+  const telefonePayload = getAsaasPhonePayload(params.telefone);
 
   if (cpfCnpj) {
     const buscaPorCpf = await fetch(
@@ -446,7 +480,8 @@ async function buscarOuCriarCustomerAsaas(params: {
     name: params.nome,
     email: email || undefined,
     cpfCnpj: cpfCnpj || undefined,
-    mobilePhone: onlyNumbers(params.telefone) || undefined,
+    phone: telefonePayload.phone,
+    mobilePhone: telefonePayload.mobilePhone,
     postalCode: onlyNumbers(params.cep) || undefined,
     addressNumber: params.numero || undefined,
     complement: params.complemento || undefined,
@@ -490,6 +525,9 @@ async function criarCobrancaAsaas(params: {
 }) {
   const baseUrl = getAsaasBaseUrl();
   const headers = getAsaasHeaders();
+  const holderPhonePayload = getAsaasPhonePayload(
+    params.creditCardHolderInfo?.phone
+  );
 
   const billingType = mapBillingType(params.billingType);
 
@@ -524,7 +562,8 @@ async function criarCobrancaAsaas(params: {
       cpfCnpj: onlyNumbers(params.creditCardHolderInfo.cpfCnpj),
       postalCode: onlyNumbers(params.creditCardHolderInfo.postalCode),
       addressNumber: params.creditCardHolderInfo.addressNumber,
-      phone: onlyNumbers(params.creditCardHolderInfo.phone),
+      phone:
+        holderPhonePayload.mobilePhone || holderPhonePayload.phone || undefined,
     };
 
     payload.remoteIp = params.remoteIp || "127.0.0.1";
