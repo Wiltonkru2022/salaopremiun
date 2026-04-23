@@ -22,11 +22,6 @@ type ProfissionalPerfilRow = {
   pix_chave?: string | null;
 };
 
-type ProfissionalGoogleRow = {
-  google_email?: string | null;
-  google_conectado_em?: string | null;
-};
-
 function formatCpf(value: string | null | undefined) {
   const digits = String(value || "").replace(/\D/g, "");
   if (digits.length !== 11) return value || "Nao informado";
@@ -76,31 +71,6 @@ async function carregarPerfil(params: {
   });
 }
 
-async function carregarGoogleProfissional(params: {
-  idSalao: string;
-  idProfissional: string;
-}) {
-  return runAdminOperation({
-    action: "profissional_perfil_google_carregar",
-    actorId: params.idProfissional,
-    idSalao: params.idSalao,
-    run: async (supabase) => {
-      const { data, error } = await supabase
-        .from("profissionais_acessos")
-        .select("google_email, google_conectado_em")
-        .eq("id_profissional", params.idProfissional)
-        .eq("ativo", true)
-        .maybeSingle();
-
-      if (error) {
-        throw new Error(error.message || "Erro ao carregar conta Google.");
-      }
-
-      return (data ?? null) as ProfissionalGoogleRow | null;
-    },
-  });
-}
-
 function getPerfilNotice(params: {
   google?: string | string[];
   erro?: string | string[];
@@ -143,7 +113,6 @@ export default async function PerfilProfissionalPage({
   }
 
   let profissional: ProfissionalPerfilRow | null = null;
-  let google: ProfissionalGoogleRow | null = null;
 
   try {
     profissional = await carregarPerfil({
@@ -152,15 +121,6 @@ export default async function PerfilProfissionalPage({
     });
   } catch {
     profissional = null;
-  }
-
-  try {
-    google = await carregarGoogleProfissional({
-      idSalao: session.idSalao,
-      idProfissional: session.idProfissional,
-    });
-  } catch {
-    google = null;
   }
 
   if (!profissional) {
@@ -276,26 +236,6 @@ export default async function PerfilProfissionalPage({
               </div>
             ))}
           </div>
-        </div>
-
-        <div className="rounded-[1.5rem] border border-zinc-200 bg-white p-4 shadow-sm">
-          <div className="mb-2 flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.18em] text-zinc-500">
-            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-zinc-950 text-[10px] font-black text-white">
-              G
-            </span>
-            Conta Google
-          </div>
-          <p className="text-sm leading-6 text-zinc-600">
-            {google?.google_email
-              ? `Conectada em ${google.google_email}. Voce ja pode entrar pelo Google na tela de login.`
-              : "Conecte uma conta Google para entrar mais rapido sem digitar CPF e senha."}
-          </p>
-          <Link
-            href="/app-profissional/auth/google/start?intent=connect"
-            className="mt-4 flex h-12 w-full items-center justify-center rounded-2xl border border-zinc-200 bg-zinc-50 text-sm font-semibold text-zinc-700"
-          >
-            {google?.google_email ? "Trocar conta Google" : "Conectar conta Google"}
-          </Link>
         </div>
 
         <Link

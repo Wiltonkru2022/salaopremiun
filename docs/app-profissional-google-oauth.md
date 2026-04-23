@@ -1,7 +1,12 @@
 # App profissional: Google OAuth
 
-## Objetivo
-Permitir que o profissional conecte uma conta Google no perfil e, depois disso, entre pelo botao "Entrar com Google".
+## Status
+Desativado no app profissional.
+
+O app profissional deve continuar usando CPF e senha isolados do Supabase Auth do painel. Isso evita conflito com o login SaaS/painel, que tambem usa Supabase Auth no mesmo projeto.
+
+## Historico
+Este documento fica preservado apenas como referencia tecnica caso no futuro seja criado um projeto Auth separado ou um dominio Auth dedicado para profissionais.
 
 ## Rotas do sistema
 - Inicio do OAuth: `/app-profissional/auth/google/start`

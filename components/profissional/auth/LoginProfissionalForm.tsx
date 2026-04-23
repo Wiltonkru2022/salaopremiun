@@ -56,7 +56,7 @@ export default function LoginProfissionalForm({
         <span className="rounded-full bg-zinc-950 px-3 py-1.5 text-white">
           CPF e senha
         </span>
-        <span className="px-3 py-1.5">Google</span>
+        <span className="px-3 py-1.5">App profissional</span>
       </div>
 
       <h2 className="text-[1.55rem] font-semibold text-zinc-950">
@@ -114,14 +114,6 @@ export default function LoginProfissionalForm({
         ) : null}
 
         <SubmitButton />
-
-        <Link
-          href="/app-profissional/auth/google/start?intent=login"
-          className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl border border-zinc-200 bg-white text-sm font-semibold text-zinc-700"
-        >
-          G
-          Entrar com Google
-        </Link>
 
         <Link
           href="/app-profissional/recuperar-senha"
