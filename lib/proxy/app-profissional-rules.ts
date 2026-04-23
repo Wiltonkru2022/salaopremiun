@@ -4,7 +4,6 @@ import {
   DOMINIO_APP,
   DOMINIO_ASSINATURA,
   DOMINIO_CADASTRO,
-  DOMINIO_PAINEL,
   getCadastroPath,
   isAppProfissionalRoute,
   isArquivoPublico,
@@ -21,8 +20,8 @@ export function handleAppProfissionalHost(ctx: ProxyRouteContext) {
     return redirectAdminMasterLoginFromForeignHost(ctx);
   }
 
-  if (ctx.rotaAdminMasterProtegida || ctx.rotaPainel) {
-    return redirectToHost(request, DOMINIO_PAINEL, pathnameNormalizado);
+  if (ctx.rotaAdminMasterProtegida) {
+    return redirectAdminMasterLoginFromForeignHost(ctx);
   }
 
   if (ctx.rotaAssinatura) {
