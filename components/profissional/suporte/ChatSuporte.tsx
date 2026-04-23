@@ -142,7 +142,7 @@ function ChatSuporteInner() {
   }
 
   return (
-    <section className="fixed inset-x-0 bottom-0 z-40 mx-auto max-h-[92vh] max-w-3xl overflow-hidden rounded-t-lg border border-zinc-200 bg-white shadow-[0_-24px_70px_rgba(15,23,42,0.18)] md:relative md:max-h-none md:rounded-lg md:shadow-[0_24px_50px_rgba(15,23,42,0.08)]">
+    <section className="mx-auto max-w-3xl overflow-hidden rounded-[1.5rem] border border-zinc-200 bg-white shadow-[0_18px_42px_rgba(15,23,42,0.08)]">
       <div className="mx-auto mt-3 h-1.5 w-14 rounded-full bg-zinc-300" />
 
       <div className="border-b border-zinc-200 px-4 pb-4 pt-4">
@@ -212,7 +212,7 @@ function ChatSuporteInner() {
         </div>
       </div>
 
-      <div className="scroll-premium max-h-[48vh] min-h-[34vh] space-y-4 overflow-y-auto px-4 py-4">
+      <div className="scroll-premium max-h-[46vh] min-h-[280px] space-y-4 overflow-y-auto px-4 py-4">
         {messages.map((message) =>
           message.role === "assistant" ? (
             <div key={message.id} className="max-w-[90%]">

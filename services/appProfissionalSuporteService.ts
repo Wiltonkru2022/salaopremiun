@@ -65,7 +65,7 @@ function contarPorStatus(rows: StatusRow[] | null | undefined) {
 function getOpenAI() {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
-    throw new Error("OPENAI_API_KEY nao configurada.");
+    return null;
   }
   return new OpenAI({ apiKey });
 }
@@ -454,23 +454,56 @@ export function createAppProfissionalSuporteService() {
       historico: Array<{ role: "user" | "assistant"; content: string }>;
     }) {
       const openai = getOpenAI();
-      const response = await openai.responses.create({
-        model: "gpt-4.1-mini",
-        input: [
-          {
-            role: "system",
-            content: sanitizeFreeText(params.systemPrompt, 12000),
-          },
-          ...params.historico.map((msg) => ({
-            role: msg.role,
-            content: sanitizeFreeText(msg.content, 3000),
-          })),
-        ],
-      });
-      return sanitizeFreeText(
-        response.output_text || "Nao consegui responder agora.",
-        4000
-      );
+      const ultimaMensagem = params.historico
+        .filter((msg) => msg.role === "user")
+        .at(-1)?.content;
+
+      if (!openai) {
+        return [
+          "No momento o suporte inteligente esta sem a chave de IA configurada.",
+          ultimaMensagem
+            ? `Sobre sua pergunta: "${sanitizeFreeText(ultimaMensagem, 160)}".`
+            : null,
+          "Posso te orientar pelo caminho geral: use Clientes para cadastro, Agenda para horarios, Comandas para atendimento e Perfil para dados do profissional.",
+          "Se precisar de ajuda humana, abra um ticket nesta mesma tela.",
+        ]
+          .filter(Boolean)
+          .join("\n");
+      }
+
+      try {
+        const response = await openai.responses.create({
+          model: "gpt-4.1-mini",
+          input: [
+            {
+              role: "system",
+              content: sanitizeFreeText(params.systemPrompt, 12000),
+            },
+            ...params.historico.map((msg) => ({
+              role: msg.role,
+              content: sanitizeFreeText(msg.content, 3000),
+            })),
+          ],
+        });
+        return sanitizeFreeText(
+          response.output_text || "Nao consegui responder agora.",
+          4000
+        );
+      } catch (error) {
+        console.error("[APP_PROFISSIONAL_SUPORTE_IA_ERROR]", {
+          error: error instanceof Error ? error.message : "erro_desconhecido",
+        });
+
+        return [
+          "Nao consegui consultar a IA agora, mas ainda posso te orientar.",
+          ultimaMensagem
+            ? `Sua pergunta foi: "${sanitizeFreeText(ultimaMensagem, 160)}".`
+            : null,
+          "Tente novamente em instantes. Se for urgente, abra um ticket humano nesta tela.",
+        ]
+          .filter(Boolean)
+          .join("\n");
+      }
     },
   };
 }
