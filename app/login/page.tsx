@@ -86,12 +86,14 @@ function LoginPageContent() {
         return;
       }
 
-      router.push(
+      window.location.assign(
         planoSelecionado
-          ? `/assinatura?plano=${encodeURIComponent(planoSelecionado)}`
-          : "/dashboard"
+          ? getManagedHostHref(
+              `/assinatura?plano=${encodeURIComponent(planoSelecionado)}`,
+              "assinatura"
+            )
+          : getManagedHostHref("/dashboard", "painel")
       );
-      router.refresh();
     } catch (error) {
       setRateLimited(isSupabaseAuthRateLimit(error));
       setErro(getLoginErrorMessage(error));
@@ -273,4 +275,23 @@ function LoginPageContent() {
       </div>
     </div>
   );
+}
+
+function getManagedHostHref(path: string, host: "painel" | "assinatura") {
+  if (typeof window === "undefined") {
+    return path;
+  }
+
+  const isManagedHost = window.location.hostname.endsWith("salaopremiun.com.br");
+
+  if (!isManagedHost) {
+    return path;
+  }
+
+  const targetHost =
+    host === "assinatura"
+      ? "assinatura.salaopremiun.com.br"
+      : "painel.salaopremiun.com.br";
+
+  return `https://${targetHost}${path}`;
 }
