@@ -7,7 +7,7 @@ Permitir que o profissional conecte uma conta Google no perfil e, depois disso, 
 - Inicio do OAuth: `/app-profissional/auth/google/start`
 - Callback do OAuth: `/app-profissional/auth/google/callback`
 - URL publica de callback: `https://app.salaopremiun.com.br/app-profissional/auth/google/callback`
-- URL publica canonica no subdominio do app: `https://app.salaopremiun.com.br/auth/google/callback`
+- URL curta no subdominio do app: `https://app.salaopremiun.com.br/auth/google/callback`
 
 ## Supabase Auth
 No painel do Supabase:
@@ -22,6 +22,7 @@ Em `Authentication > URL Configuration`:
 - Redirect URL obrigatoria:
   - `https://app.salaopremiun.com.br/app-profissional/auth/google/callback`
   - `https://app.salaopremiun.com.br/auth/google/callback`
+  - Enquanto o `Site URL` continuar apontando para o login do painel, mantenha obrigatoriamente a URL com `/app-profissional/auth/google/callback`, porque ela ja aparece permitida no painel.
 
 ## Google Cloud Console
 No OAuth Client usado pelo Supabase:

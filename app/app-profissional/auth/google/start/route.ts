@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
   const intent = getIntent(request);
   const supabase = await createClient();
   const callbackUrl = new URL(
-    `/auth/google/callback?intent=${intent}`,
+    `/app-profissional/auth/google/callback?intent=${intent}`,
     `https://${DOMINIO_APP}`
   );
 
