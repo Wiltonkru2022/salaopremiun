@@ -38,6 +38,21 @@ type AgendamentoConflitoRow = {
   hora_fim: string;
 };
 
+type AgendamentoAgendaRow = {
+  id: string;
+  cliente_id: string | null;
+  servico_id: string | null;
+  hora_inicio: string;
+  hora_fim: string;
+  status: string;
+  id_comanda: string | null;
+};
+
+type NomeRow = {
+  id: string;
+  nome: string;
+};
+
 /* ---------------- UTILS ---------------- */
 
 function hojeLocal() {
@@ -250,7 +265,7 @@ export async function buscarAgendaProfissional(
 ) {
   const dataSelecionada = data || hojeLocal();
 
-  const agendamentos = await runAdminOperation({
+  const { agendamentos, clientesMap, servicosMap } = await runAdminOperation({
     action: "profissional_agenda_buscar_agenda",
     actorId: idProfissional,
     idSalao,
@@ -264,8 +279,85 @@ export async function buscarAgendaProfissional(
 
       if (error) throw new Error(error.message);
 
-      return agendamentosData ?? [];
+      const rows = (agendamentosData ?? []) as AgendamentoAgendaRow[];
+      const clienteIds = Array.from(
+        new Set(rows.map((item) => item.cliente_id).filter(Boolean))
+      ) as string[];
+      const servicoIds = Array.from(
+        new Set(rows.map((item) => item.servico_id).filter(Boolean))
+      ) as string[];
+
+      const [clientesResult, servicosResult] = await Promise.all([
+        clienteIds.length
+          ? supabase.from("clientes").select("id, nome").in("id", clienteIds)
+          : Promise.resolve({ data: [], error: null }),
+        servicoIds.length
+          ? supabase.from("servicos").select("id, nome").in("id", servicoIds)
+          : Promise.resolve({ data: [], error: null }),
+      ]);
+
+      if (clientesResult.error) throw new Error(clientesResult.error.message);
+      if (servicosResult.error) throw new Error(servicosResult.error.message);
+
+      return {
+        agendamentos: rows,
+        clientesMap: new Map(
+          ((clientesResult.data ?? []) as NomeRow[]).map((cliente) => [
+            cliente.id,
+            cliente.nome,
+          ])
+        ),
+        servicosMap: new Map(
+          ((servicosResult.data ?? []) as NomeRow[]).map((servico) => [
+            servico.id,
+            servico.nome,
+          ])
+        ),
+      };
     },
+  });
+
+  const pixelsPorMinuto = 2;
+  const inicioMinutos =
+    agendamentos.length > 0
+      ? Math.min(8 * 60, ...agendamentos.map((item) => timeToMinutes(item.hora_inicio)))
+      : 8 * 60;
+  const fimMinutos =
+    agendamentos.length > 0
+      ? Math.max(18 * 60, ...agendamentos.map((item) => timeToMinutes(item.hora_fim)))
+      : 18 * 60;
+  const timelineHeight = Math.max((fimMinutos - inicioMinutos) * pixelsPorMinuto, 400);
+  const primeiraHora = Math.floor(inicioMinutos / 60);
+  const ultimaHora = Math.ceil(fimMinutos / 60);
+  const labels = Array.from({ length: ultimaHora - primeiraHora + 1 }).map(
+    (_, index) => {
+      const minutos = (primeiraHora + index) * 60;
+      return {
+        hora: minutesToTime(minutos),
+        top: Math.max((minutos - inicioMinutos) * pixelsPorMinuto, 0),
+      };
+    }
+  );
+
+  const cards = agendamentos.map((item) => {
+    const inicio = timeToMinutes(item.hora_inicio);
+    const fim = timeToMinutes(item.hora_fim);
+
+    return {
+      id: item.id,
+      idComanda: item.id_comanda,
+      horario: item.hora_inicio.slice(0, 5),
+      horaFim: item.hora_fim.slice(0, 5),
+      cliente: item.cliente_id
+        ? clientesMap.get(item.cliente_id) ?? "Cliente"
+        : "Cliente",
+      servico: item.servico_id
+        ? servicosMap.get(item.servico_id) ?? "Servico"
+        : "Servico",
+      status: item.status,
+      top: Math.max((inicio - inicioMinutos) * pixelsPorMinuto, 0),
+      height: Math.max((fim - inicio) * pixelsPorMinuto, 88),
+    };
   });
 
   return {
@@ -273,13 +365,13 @@ export async function buscarAgendaProfissional(
     dataSelecionada,
     dataLabel: toDateLabel(dataSelecionada),
     expedienteAtivo: true,
-    horaInicioExpediente: "08:00",
-    horaFimExpediente: "18:00",
+    horaInicioExpediente: minutesToTime(inicioMinutos),
+    horaFimExpediente: minutesToTime(fimMinutos),
     totalAtendimentos: agendamentos.length,
     totalPrevisto: 0,
-    cards: [],
-    labels: [],
+    cards,
+    labels,
     pausas: [],
-    timelineHeight: 400,
+    timelineHeight,
   };
 }
