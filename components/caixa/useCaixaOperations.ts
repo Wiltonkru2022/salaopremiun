@@ -4,6 +4,7 @@ import {
   type Dispatch,
   type SetStateAction,
   useCallback,
+  useRef,
   useState,
 } from "react";
 import {
@@ -104,6 +105,7 @@ export function useCaixaOperations({
   const [cancelModalOpen, setCancelModalOpen] = useState(false);
   const [itemModalState, setItemModalState] =
     useState<ModalItemState>(INITIAL_MODAL_ITEM_STATE);
+  const actionLocksRef = useRef<Record<string, boolean>>({});
 
   const syncItemModal = useCallback(
     (
@@ -118,6 +120,19 @@ export function useCaixaOperations({
     },
     []
   );
+
+  const tryLockAction = useCallback((action: string) => {
+    if (actionLocksRef.current[action]) {
+      return false;
+    }
+
+    actionLocksRef.current[action] = true;
+    return true;
+  }, []);
+
+  const unlockAction = useCallback((action: string) => {
+    delete actionLocksRef.current[action];
+  }, []);
 
   const exigirCaixaAberto = useCallback(() => {
     if (!caixaSchemaReady) {
@@ -404,6 +419,9 @@ export function useCaixaOperations({
       return;
     }
     if (!exigirCaixaAberto()) return;
+    if (!tryLockAction("adicionar_pagamento")) {
+      return;
+    }
 
     try {
       setSaving(true);
@@ -468,6 +486,7 @@ export function useCaixaOperations({
       console.error(error);
       setErroTela(getErrorMessage(error, "Erro ao adicionar pagamento."));
     } finally {
+      unlockAction("adicionar_pagamento");
       setSaving(false);
     }
   }, [
@@ -490,6 +509,8 @@ export function useCaixaOperations({
     setValorPagamento,
     setErroTela,
     setMsg,
+    tryLockAction,
+    unlockAction,
     valorPagamento,
   ]);
 
@@ -543,6 +564,9 @@ export function useCaixaOperations({
       return;
     }
     if (!exigirCaixaAberto()) return;
+    if (!tryLockAction("finalizar_comanda")) {
+      return;
+    }
 
     try {
       setSaving(true);
@@ -571,6 +595,7 @@ export function useCaixaOperations({
       console.error(error);
       setErroTela(getErrorMessage(error, "Erro ao finalizar comanda."));
     } finally {
+      unlockAction("finalizar_comanda");
       setSaving(false);
     }
   }, [
@@ -584,6 +609,8 @@ export function useCaixaOperations({
     processarCaixa,
     setErroTela,
     setMsg,
+    tryLockAction,
+    unlockAction,
   ]);
 
   const abrirModalCancelamento = useCallback(() => {

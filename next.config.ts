@@ -29,6 +29,7 @@ function buildCsp() {
     ...(supabaseHostname
       ? [`https://${supabaseHostname}`, `wss://${supabaseHostname}`]
       : []),
+    "https://viacep.com.br",
     "https://vitals.vercel-insights.com",
     "https://*.vercel-insights.com",
     "https://va.vercel-scripts.com",

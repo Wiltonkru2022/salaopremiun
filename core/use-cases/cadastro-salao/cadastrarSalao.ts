@@ -5,6 +5,10 @@ import {
   type CadastroSalaoService,
 } from "@/services/cadastroSalaoService";
 
+const optionalString = z
+  .union([z.string(), z.null(), z.undefined()])
+  .transform((value) => (typeof value === "string" ? value.trim() : undefined));
+
 const cadastroSalaoSchema = z.object({
   email: z.string().trim().email("Informe um e-mail valido."),
   senha: z
@@ -14,17 +18,17 @@ const cadastroSalaoSchema = z.object({
     .min(6, "A senha deve ter pelo menos 6 caracteres."),
   nomeSalao: z.string().trim().min(1, "Informe o nome do salao."),
   responsavel: z.string().trim().min(1, "Informe o responsavel."),
-  whatsapp: z.string().trim().optional(),
+  whatsapp: optionalString,
   cpfCnpj: z.string().trim().min(1, "Informe CPF/CNPJ."),
-  cep: z.string().trim().optional(),
-  endereco: z.string().trim().optional(),
-  bairro: z.string().trim().optional(),
-  cidade: z.string().trim().optional(),
-  estado: z.string().trim().optional(),
-  numero: z.string().trim().optional(),
-  complemento: z.string().trim().optional(),
-  plano: z.string().trim().optional(),
-  origem: z.string().trim().optional(),
+  cep: optionalString,
+  endereco: optionalString,
+  bairro: optionalString,
+  cidade: optionalString,
+  estado: optionalString,
+  numero: optionalString,
+  complemento: optionalString,
+  plano: optionalString,
+  origem: optionalString,
 });
 
 export class CadastroSalaoUseCaseError extends Error {

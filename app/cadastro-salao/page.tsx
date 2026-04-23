@@ -272,7 +272,12 @@ function CadastroSalaoContent() {
       setEstado((data.uf || "").toUpperCase());
     } catch (e: unknown) {
       console.error(e);
-      setErro(getErrorMessage(e, "Erro ao buscar CEP."));
+      const message = getErrorMessage(e, "Erro ao buscar CEP.");
+      setErro(
+        message === "Failed to fetch"
+          ? "Nao foi possivel buscar o CEP automaticamente. Preencha o endereco manualmente."
+          : message
+      );
     } finally {
       setBuscandoCep(false);
     }
@@ -309,7 +314,7 @@ function CadastroSalaoContent() {
           bairro,
           cidade,
           estado,
-          plano: planoSelecionado || null,
+          plano: planoSelecionado || undefined,
           origem: "cadastro_publico",
         }),
       });
