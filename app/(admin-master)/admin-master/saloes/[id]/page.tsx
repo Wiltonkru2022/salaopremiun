@@ -2,7 +2,7 @@ import Link from "next/link";
 import AdminMasterSalaoActions from "@/components/admin-master/AdminMasterSalaoActions";
 import { AdminDataTable, AdminKpiGrid } from "@/components/admin-master/AdminMasterViews";
 import { getAdminMasterSalaoDetail } from "@/lib/admin-master/data";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { runAdminOperation } from "@/lib/supabase/admin-ops";
 
 export const dynamic = "force-dynamic";
 
@@ -15,13 +15,20 @@ export default async function AdminMasterSalaoDetalhePage({
   const data = await getAdminMasterSalaoDetail(id);
   const salao = data.salao || {};
   const assinatura = data.assinatura || {};
-  const supabase = getSupabaseAdmin();
 
-  const { data: planos } = await supabase
-    .from("planos_saas")
-    .select("codigo, nome")
-    .eq("ativo", true)
-    .order("ordem", { ascending: true });
+  const planos = await runAdminOperation({
+    action: "admin_master_salao_detail_listar_planos",
+    idSalao: id,
+    run: async (supabase) => {
+      const { data: planosData } = await supabase
+        .from("planos_saas")
+        .select("codigo, nome")
+        .eq("ativo", true)
+        .order("ordem", { ascending: true });
+
+      return planosData ?? [];
+    },
+  });
 
   const planosOptions = ((planos || []) as { codigo?: string | null; nome?: string | null }[])
     .filter((plano) => plano.codigo && plano.nome)
