@@ -30,7 +30,10 @@ function buildCsp() {
       ? [`https://${supabaseHostname}`, `wss://${supabaseHostname}`]
       : []),
     "https://vitals.vercel-insights.com",
+    "https://*.vercel-insights.com",
+    "https://va.vercel-scripts.com",
   ];
+  const manifestSrc = ["'self'", ...managedHosts.map((host) => `https://${host}`)];
   const imgSrc = [
     "'self'",
     "data:",
@@ -51,7 +54,7 @@ function buildCsp() {
     `connect-src ${Array.from(new Set(connectSrc)).join(" ")}`,
     "frame-src 'self'",
     "worker-src 'self' blob:",
-    "manifest-src 'self'",
+    `manifest-src ${Array.from(new Set(manifestSrc)).join(" ")}`,
     "upgrade-insecure-requests",
   ].join("; ");
 }

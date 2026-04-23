@@ -1,8 +1,14 @@
+import { getLoginHost } from "@/lib/security/app-hosts";
+
 export type LoginRedirectNotice = {
   tone: "info" | "warning" | "danger" | "success";
   title: string;
   description: string;
 };
+
+export function buildLoginRedirectUrl(motivo: string) {
+  return `https://${getLoginHost()}/login?motivo=${encodeURIComponent(motivo)}`;
+}
 
 function getParam(
   searchParams:

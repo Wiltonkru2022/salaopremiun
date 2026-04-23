@@ -2,6 +2,7 @@
 import { redirect } from "next/navigation";
 import { hasPermission } from "@/lib/auth/permissions";
 import { getUserRole } from "@/lib/auth/get-user-role";
+import { buildLoginRedirectUrl } from "@/lib/auth/login-redirect";
 import type { PermissionKey, UserNivel } from "@/lib/permissions";
 
 function asUserNivel(value: string | null | undefined): UserNivel | null {
@@ -21,11 +22,11 @@ export async function requirePagePermission(permission: PermissionKey) {
   const usuario = await getUserRole();
 
   if (!usuario) {
-    redirect("/login?motivo=sessao_expirada");
+    redirect(buildLoginRedirectUrl("sessao_expirada"));
   }
 
   if (usuario.status !== "ativo") {
-    redirect("/login?motivo=usuario_inativo");
+    redirect(buildLoginRedirectUrl("usuario_inativo"));
   }
 
   if (!hasPermission(asUserNivel(usuario.nivel), permission)) {

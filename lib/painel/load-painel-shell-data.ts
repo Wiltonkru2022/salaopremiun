@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { getUser } from "@/lib/auth/get-user";
+import { buildLoginRedirectUrl } from "@/lib/auth/login-redirect";
 import { createClient } from "@/lib/supabase/server";
 import {
   buildPermissoesByNivel,
@@ -53,7 +54,7 @@ export async function loadPainelShellData() {
   const user = await getUser();
 
   if (!user) {
-    redirect("/login?motivo=sessao_expirada");
+    redirect(buildLoginRedirectUrl("sessao_expirada"));
   }
 
   const userName =
@@ -73,7 +74,7 @@ export async function loadPainelShellData() {
   }
 
   if (usuario.status !== "ativo") {
-    redirect("/login?motivo=usuario_inativo");
+    redirect(buildLoginRedirectUrl("usuario_inativo"));
   }
 
   const permissionsSelect = ["id_usuario", "id_salao", ...Object.keys(PERMISSIONS)].join(", ");
