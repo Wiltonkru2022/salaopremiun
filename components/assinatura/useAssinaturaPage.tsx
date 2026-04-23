@@ -107,7 +107,7 @@ export function useAssinaturaPage() {
     supabase,
     planoEscolhidoManualmenteRef,
     planoSelecionadoRef,
-    setPlanoSelecionado: (value) => selecionarPlano(value),
+    setPlanoSelecionado: selecionarPlano,
   });
 
   const carregarDados = useCallback(async () => {
@@ -153,7 +153,7 @@ export function useAssinaturaPage() {
     aguardandoPagamento,
     podeGerenciar,
     setErro,
-    setPlanoSelecionado: (value) => selecionarPlano(value),
+    setPlanoSelecionado: selecionarPlano,
     setAssinatura,
     setCheckout,
     setAguardandoPagamento,
