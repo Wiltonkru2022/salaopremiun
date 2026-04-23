@@ -15,6 +15,7 @@ import {
   getCadastroPath,
   getAdminMasterLoginNextPath,
   isApiRoute,
+  isArquivoPublico,
   redirectToAdminMasterLogin,
   redirectToHost,
   removeAppProfissionalPrefix,
@@ -196,6 +197,10 @@ export async function proxy(request: NextRequest) {
   // APIs validate access in their own handlers. Redirecting them here turns
   // JSON/POST calls into HTML page redirects and breaks subdomain flows.
   if (isApiRoute(ctx.pathnameNormalizado)) {
+    return NextResponse.next();
+  }
+
+  if (isArquivoPublico(ctx.pathnameNormalizado)) {
     return NextResponse.next();
   }
 

@@ -4,13 +4,32 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseHostname = supabaseUrl ? new URL(supabaseUrl).hostname : undefined;
 const appRootDomain = process.env.APP_ROOT_DOMAIN || "salaopremiun.com.br";
 const loginHost = process.env.APP_LOGIN_HOST || `login.${appRootDomain}`;
+const managedHosts = [
+  appRootDomain,
+  `www.${appRootDomain}`,
+  loginHost,
+  process.env.APP_MAIN_HOST || appRootDomain,
+  process.env.APP_PAINEL_HOST || `painel.${appRootDomain}`,
+  process.env.APP_PROFISSIONAL_HOST || `app.${appRootDomain}`,
+  process.env.APP_ASSINATURA_HOST || `assinatura.${appRootDomain}`,
+  process.env.APP_CADASTRO_HOST || `cadastro.${appRootDomain}`,
+]
+  .map((host) =>
+    String(host || "")
+      .trim()
+      .replace(/^https?:\/\//, "")
+      .replace(/\/.*$/, "")
+  )
+  .filter(Boolean);
 
 function buildCsp() {
   const connectSrc = [
     "'self'",
+    ...managedHosts.map((host) => `https://${host}`),
     ...(supabaseHostname
       ? [`https://${supabaseHostname}`, `wss://${supabaseHostname}`]
       : []),
+    "https://vitals.vercel-insights.com",
   ];
   const imgSrc = [
     "'self'",
@@ -29,7 +48,7 @@ function buildCsp() {
     "style-src 'self' 'unsafe-inline'",
     `img-src ${imgSrc.join(" ")}`,
     "font-src 'self' data:",
-    `connect-src ${connectSrc.join(" ")}`,
+    `connect-src ${Array.from(new Set(connectSrc)).join(" ")}`,
     "frame-src 'self'",
     "worker-src 'self' blob:",
     "manifest-src 'self'",

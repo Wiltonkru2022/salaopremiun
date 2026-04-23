@@ -329,15 +329,12 @@ export default function AppShell({
           salaoNome={salaoNome}
           salaoResponsavel={salaoResponsavel}
           salaoLogoUrl={salaoLogoUrl}
-          userName={userName}
-          userEmail={userEmail}
           planoNome={planoNome}
           resumoAssinatura={resumoAssinatura}
           canSeeAssinatura={Boolean(permissoes?.assinatura_ver)}
           criticalNotificationsCount={criticalNotificationsCount}
           mobileOpen={mobileSidebarOpen}
           onClose={() => setMobileSidebarOpen(false)}
-          onLogout={handleLogout}
         />
 
         <div className="flex min-w-0 flex-1 flex-col overflow-hidden">

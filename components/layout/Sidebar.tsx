@@ -8,10 +8,7 @@ import {
   AlertTriangle,
   ChevronRight,
   CreditCard,
-  HelpCircle,
-  LogOut,
   Search,
-  Settings,
   X,
 } from "lucide-react";
 import {
@@ -27,15 +24,12 @@ type Props = {
   salaoNome?: string;
   salaoResponsavel?: string;
   salaoLogoUrl?: string | null;
-  userName?: string;
-  userEmail?: string;
   planoNome?: string;
   resumoAssinatura?: ResumoAssinatura | null;
   canSeeAssinatura: boolean;
   criticalNotificationsCount: number;
   mobileOpen: boolean;
   onClose: () => void;
-  onLogout: () => Promise<void>;
 };
 
 export default function Sidebar({
@@ -44,15 +38,12 @@ export default function Sidebar({
   salaoNome,
   salaoResponsavel,
   salaoLogoUrl,
-  userName,
-  userEmail,
   planoNome,
   resumoAssinatura,
   canSeeAssinatura,
   criticalNotificationsCount,
   mobileOpen,
   onClose,
-  onLogout,
 }: Props) {
   const pathname = usePathname();
   const router = useRouter();
@@ -76,35 +67,6 @@ export default function Sidebar({
     () => buildNavigationGroups(itemsVisiveis),
     [itemsVisiveis]
   );
-  const utilityItems = useMemo(() => {
-    const items: Array<{
-      href: string;
-      label: string;
-      icon: typeof Settings;
-      enabled: boolean;
-    }> = [
-      {
-        href: "/suporte",
-        label: "Ajuda e suporte",
-        icon: HelpCircle,
-        enabled: Boolean(permissoes?.suporte_ver),
-      },
-      {
-        href: "/configuracoes",
-        label: "Configuracoes",
-        icon: Settings,
-        enabled: Boolean(permissoes?.configuracoes_ver),
-      },
-      {
-        href: "/assinatura",
-        label: "Assinatura",
-        icon: CreditCard,
-        enabled: canSeeAssinatura,
-      },
-    ];
-
-    return items.filter((item) => item.enabled);
-  }, [canSeeAssinatura, permissoes]);
   const subscriptionAtRisk = Boolean(
     resumoAssinatura?.bloqueioTotal || resumoAssinatura?.vencendoLogo
   );
@@ -134,14 +96,14 @@ export default function Sidebar({
 
       <aside
         className={clsx(
-          "group fixed inset-y-0 left-0 z-50 w-[292px] -translate-x-full bg-[#eceff3] p-3 text-zinc-950 transition-[width,transform] duration-300 lg:sticky lg:top-0 lg:z-20 lg:flex lg:h-screen lg:w-[86px] lg:translate-x-0 lg:flex-col lg:overflow-hidden lg:hover:w-[292px]",
+          "fixed inset-y-0 left-0 z-50 w-[286px] -translate-x-full bg-[#f4f5f7] p-3 text-zinc-950 transition-transform duration-300 lg:sticky lg:top-0 lg:z-20 lg:flex lg:h-screen lg:translate-x-0 lg:flex-col",
           mobileOpen ? "translate-x-0" : ""
         )}
       >
-        <div className="flex h-full flex-col overflow-hidden rounded-[28px] border border-white/80 bg-white/92 shadow-[0_24px_70px_rgba(15,23,42,0.12)] backdrop-blur">
+        <div className="flex h-full flex-col overflow-hidden rounded-[28px] border border-zinc-200/80 bg-white shadow-[0_24px_70px_rgba(15,23,42,0.10)]">
           <div className="flex items-start justify-between gap-3 px-4 py-4 lg:block lg:px-3 lg:py-4 xl:px-4">
-            <div className="flex min-w-0 items-center gap-3 lg:justify-center lg:group-hover:justify-start">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-[18px] bg-[#ecf2ff] ring-1 ring-blue-100">
+            <div className="flex min-w-0 items-center gap-3">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-[18px] bg-zinc-950 text-white ring-1 ring-zinc-900/10">
                 {salaoLogoUrl ? (
                   <img
                     src={salaoLogoUrl}
@@ -149,13 +111,13 @@ export default function Sidebar({
                     className="h-full w-full object-cover"
                   />
                 ) : (
-                  <span className="font-display text-lg font-black uppercase text-blue-700">
+                  <span className="font-display text-lg font-black uppercase">
                     {(salaoNome || "SP").slice(0, 2)}
                   </span>
                 )}
               </div>
 
-              <div className="min-w-0 lg:max-w-0 lg:overflow-hidden lg:opacity-0 lg:transition-all lg:duration-300 lg:group-hover:max-w-[190px] lg:group-hover:opacity-100">
+              <div className="min-w-0">
                 <div className="truncate text-[11px] font-semibold uppercase tracking-[0.22em] text-zinc-400">
                   SalaoPremium
                 </div>
@@ -179,16 +141,16 @@ export default function Sidebar({
           </div>
 
           <div className="px-4 pb-3 lg:px-3 xl:px-4">
-            <label className="relative block lg:flex lg:justify-center lg:group-hover:block">
+            <label className="relative block">
               <Search
                 size={17}
-                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 lg:left-1/2 lg:-translate-x-1/2 lg:group-hover:left-3 lg:group-hover:translate-x-0"
+                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400"
               />
               <input
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
                 placeholder="Buscar..."
-                className="h-11 w-full rounded-[15px] border border-zinc-200 bg-zinc-50 pl-10 pr-3 text-sm font-medium text-zinc-800 outline-none transition placeholder:text-zinc-400 focus:border-blue-200 focus:bg-white focus:ring-4 focus:ring-blue-50 lg:w-11 lg:pl-11 lg:pr-0 lg:text-transparent lg:group-hover:w-full lg:group-hover:pl-10 lg:group-hover:pr-3 lg:group-hover:text-zinc-800"
+                className="h-11 w-full rounded-[15px] border border-zinc-200 bg-zinc-50 pl-10 pr-3 text-sm font-medium text-zinc-800 outline-none transition placeholder:text-zinc-400 focus:border-zinc-400 focus:bg-white focus:ring-4 focus:ring-zinc-100"
               />
             </label>
           </div>
@@ -197,7 +159,7 @@ export default function Sidebar({
             {subscriptionAtRisk || criticalNotificationsCount > 0 ? (
               <div
                 className={clsx(
-                  "mb-4 rounded-[22px] border px-3 py-3 lg:hidden lg:group-hover:block",
+                  "mb-4 rounded-[22px] border px-3 py-3",
                   resumoAssinatura?.bloqueioTotal || criticalNotificationsCount > 0
                     ? "border-rose-200 bg-rose-50 text-rose-800"
                     : "border-amber-200 bg-amber-50 text-amber-800"
@@ -244,7 +206,7 @@ export default function Sidebar({
             <div className="space-y-5">
               {groupedItems.map((group) => (
                 <div key={group.label}>
-                  <div className="mb-2 px-2 text-[10px] font-black uppercase tracking-[0.22em] text-zinc-400 lg:hidden lg:group-hover:block">
+                  <div className="mb-2 px-2 text-[10px] font-black uppercase tracking-[0.22em] text-zinc-400">
                     {group.label}
                   </div>
                   <div className="space-y-1.5">
@@ -265,69 +227,32 @@ export default function Sidebar({
               ))}
 
               {searchTerm && itemsVisiveis.length === 0 ? (
-                <div className="rounded-[18px] border border-dashed border-zinc-200 bg-zinc-50 px-3 py-4 text-center text-xs font-medium text-zinc-500 lg:hidden lg:group-hover:block">
+                <div className="rounded-[18px] border border-dashed border-zinc-200 bg-zinc-50 px-3 py-4 text-center text-xs font-medium text-zinc-500">
                   Nenhum modulo encontrado.
                 </div>
               ) : null}
             </div>
           </nav>
 
-          <div className="border-t border-zinc-100 px-3 py-3">
-            {utilityItems.length ? (
-              <div className="mb-3 space-y-1.5">
-                {utilityItems.map((item) => {
-                  const Icon = item.icon;
-                  const active =
-                    pathname === item.href || pathname.startsWith(`${item.href}/`);
-                  return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      onClick={onClose}
-                      className={clsx(
-                        "flex items-center gap-3 rounded-[16px] px-3 py-2.5 transition lg:h-10 lg:w-10 lg:justify-center lg:px-0 lg:py-0 lg:group-hover:w-full lg:group-hover:justify-start lg:group-hover:px-3",
-                        active
-                          ? "bg-blue-50 text-blue-700"
-                          : "text-zinc-500 hover:bg-zinc-50 hover:text-zinc-900"
-                      )}
-                    >
-                      <Icon size={18} />
-                      <span className="text-sm font-semibold lg:max-w-0 lg:overflow-hidden lg:opacity-0 lg:transition-all lg:duration-300 lg:group-hover:max-w-[170px] lg:group-hover:opacity-100">
-                        {item.label}
-                      </span>
-                    </Link>
-                  );
-                })}
+          <div className="border-t border-zinc-100 px-4 py-4">
+            <div className="rounded-[20px] bg-zinc-50 p-3">
+              <div className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">
+                Plano atual
               </div>
-            ) : null}
-
-            <div className="mb-3 flex items-center gap-3 rounded-[18px] bg-zinc-50 p-2.5 lg:justify-center lg:bg-transparent lg:p-0 lg:group-hover:justify-start lg:group-hover:bg-zinc-50 lg:group-hover:p-2.5">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-zinc-900 text-sm font-black uppercase text-white">
-                {(userName || salaoResponsavel || salaoNome || "SP").slice(0, 2)}
+              <div className="mt-1 truncate text-sm font-bold text-zinc-950">
+                {planoNome || "Sem plano"}
               </div>
-              <div className="min-w-0 lg:max-w-0 lg:overflow-hidden lg:opacity-0 lg:transition-all lg:duration-300 lg:group-hover:max-w-[180px] lg:group-hover:opacity-100">
-                <div className="truncate text-sm font-bold text-zinc-950">
-                  {userName || salaoResponsavel || "Usuario"}
-                </div>
-                <div className="truncate text-xs text-zinc-500">
-                  {userEmail || planoNome || "Painel do salao"}
-                </div>
-              </div>
+              {canSeeAssinatura ? (
+                <Link
+                  href="/assinatura"
+                  onClick={onClose}
+                  className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-zinc-950 px-3 py-2 text-xs font-bold text-white transition hover:bg-zinc-800"
+                >
+                  <CreditCard size={14} />
+                  Ver assinatura
+                </Link>
+              ) : null}
             </div>
-
-            <button
-              type="button"
-              onClick={onLogout}
-              className="flex w-full items-center gap-3 rounded-[16px] px-3 py-2.5 text-sm font-semibold text-zinc-500 transition hover:bg-red-50 hover:text-red-700 lg:h-10 lg:w-10 lg:justify-center lg:px-0 lg:py-0 lg:group-hover:w-full lg:group-hover:justify-start lg:group-hover:px-3"
-            >
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[14px] bg-zinc-50 ring-1 ring-zinc-100">
-                <LogOut size={18} />
-              </span>
-
-              <span className="lg:max-w-0 lg:overflow-hidden lg:opacity-0 lg:transition-all lg:duration-300 lg:group-hover:max-w-[160px] lg:group-hover:opacity-100">
-                Encerrar sessao
-              </span>
-            </button>
           </div>
         </div>
       </aside>
@@ -402,27 +327,27 @@ function SidebarLink({
       onFocus={onPrefetch}
       onMouseEnter={onPrefetch}
       className={clsx(
-        "group/item flex items-center gap-3 rounded-[17px] px-3 py-2.5 ring-1 ring-transparent transition-all duration-300 lg:h-11 lg:w-11 lg:justify-center lg:px-0 lg:py-0 lg:group-hover:w-full lg:group-hover:justify-start lg:group-hover:px-3",
+        "group/item flex items-center gap-3 rounded-[17px] px-3 py-2.5 ring-1 ring-transparent transition-all duration-200",
         active
-          ? "bg-[#edf2ff] text-blue-700 ring-blue-100 shadow-sm"
+          ? "bg-zinc-950 text-white ring-zinc-900 shadow-sm"
           : "text-zinc-500 hover:bg-zinc-50 hover:text-zinc-950"
       )}
     >
       <span
         className={clsx(
           "flex h-9 w-9 shrink-0 items-center justify-center rounded-[13px] transition",
-          active ? "bg-blue-600 text-white" : "bg-transparent"
+          active ? "bg-white/12 text-white" : "bg-transparent"
         )}
       >
         <Icon size={18} />
       </span>
 
-      <span className="min-w-0 flex-1 lg:max-w-0 lg:overflow-hidden lg:opacity-0 lg:transition-all lg:duration-300 lg:group-hover:max-w-[180px] lg:group-hover:opacity-100">
+      <span className="min-w-0 flex-1">
         <span className="block truncate text-sm font-bold">{item.label}</span>
         <span
           className={clsx(
             "mt-0.5 block truncate text-xs",
-            active ? "text-blue-500" : "text-zinc-400"
+            active ? "text-white/60" : "text-zinc-400"
           )}
         >
           {item.description}
@@ -432,8 +357,8 @@ function SidebarLink({
       <ChevronRight
         size={15}
         className={clsx(
-          "lg:hidden lg:group-hover:block",
-          active ? "text-blue-500" : "text-zinc-300"
+          "shrink-0",
+          active ? "text-white/60" : "text-zinc-300"
         )}
       />
     </Link>
