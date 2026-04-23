@@ -1,6 +1,6 @@
 import ProfissionalPrivate from "@/components/profissional/layout/ProfissionalPrivate";
 import ProfissionalStatCard from "@/components/profissional/cards/ProfissionalStatCard";
-import { requireProfissionalSession } from "@/lib/profissional-auth.server";
+import { requireProfissionalAppContext } from "@/lib/profissional-context.server";
 import { buscarResumoComissaoProfissional } from "@/app/services/profissional/comissao";
 
 function formatarMoeda(valor: number) {
@@ -32,7 +32,7 @@ function getStatusBadge(status?: string | null) {
 }
 
 export default async function ComissaoProfissionalPage() {
-  const session = await requireProfissionalSession();
+  const session = await requireProfissionalAppContext();
   const resumo = await buscarResumoComissaoProfissional(
     session.idSalao,
     session.idProfissional

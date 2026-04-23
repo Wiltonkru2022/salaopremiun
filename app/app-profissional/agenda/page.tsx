@@ -1,10 +1,9 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { CalendarDays, CircleDollarSign, Plus } from "lucide-react";
 import ProfissionalShell from "@/components/profissional/layout/ProfissionalShell";
 import AgendaDayStrip from "@/components/profissional/agenda/AgendaDayStrip";
 import AgendaTimeline from "@/components/profissional/agenda/AgendaTimeline";
-import { getProfissionalSessionFromCookie } from "@/lib/profissional-auth.server";
+import { requireProfissionalAppContext } from "@/lib/profissional-context.server";
 import { buscarAgendaProfissional } from "@/app/services/profissional/agenda";
 
 type SearchParams = Promise<{
@@ -30,11 +29,7 @@ export default async function AgendaProfissionalPage({
 }: {
   searchParams: SearchParams;
 }) {
-  const session = await getProfissionalSessionFromCookie();
-
-  if (!session) {
-    redirect("/app-profissional/login");
-  }
+  const session = await requireProfissionalAppContext();
 
   const { data, ok } = await searchParams;
 

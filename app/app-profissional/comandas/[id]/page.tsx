@@ -1,7 +1,6 @@
-import { redirect } from "next/navigation";
 import { randomUUID } from "node:crypto";
 import ProfissionalShell from "@/components/profissional/layout/ProfissionalShell";
-import { getProfissionalSessionFromCookie } from "@/lib/profissional-auth.server";
+import { requireProfissionalAppContext } from "@/lib/profissional-context.server";
 import { runAdminOperation } from "@/lib/supabase/admin-ops";
 import {
   adicionarExtraNaComandaAction,
@@ -70,8 +69,7 @@ export default async function ComandaDetalhePage({
   params: Params;
   searchParams?: SearchParams;
 }) {
-  const session = await getProfissionalSessionFromCookie();
-  if (!session) redirect("/app-profissional/login");
+  const session = await requireProfissionalAppContext();
 
   const { id } = await params;
   const query = searchParams ? await searchParams : {};

@@ -1,7 +1,6 @@
-import { redirect } from "next/navigation";
 import Link from "next/link";
 import ProfissionalShell from "@/components/profissional/layout/ProfissionalShell";
-import { getProfissionalSessionFromCookie } from "@/lib/profissional-auth.server";
+import { requireProfissionalAppContext } from "@/lib/profissional-context.server";
 import { listarComandasProfissional } from "@/app/services/profissional/comandas";
 
 function formatarMoeda(valor: number) {
@@ -24,11 +23,7 @@ function getStatusClasses(status: string) {
 }
 
 export default async function ComandasPage() {
-  const session = await getProfissionalSessionFromCookie();
-
-  if (!session) {
-    redirect("/app-profissional/login");
-  }
+  const session = await requireProfissionalAppContext();
 
   const comandas = await listarComandasProfissional(
     session.idSalao,

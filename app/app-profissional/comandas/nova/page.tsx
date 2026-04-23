@@ -1,6 +1,5 @@
-import { redirect } from "next/navigation";
 import ProfissionalShell from "@/components/profissional/layout/ProfissionalShell";
-import { getProfissionalSessionFromCookie } from "@/lib/profissional-auth.server";
+import { requireProfissionalAppContext } from "@/lib/profissional-context.server";
 import { runAdminOperation } from "@/lib/supabase/admin-ops";
 import { criarComandaProfissionalAction } from "./actions";
 
@@ -42,11 +41,7 @@ export default async function NovaComandaProfissionalPage({
 }: {
   searchParams?: SearchParams;
 }) {
-  const session = await getProfissionalSessionFromCookie();
-
-  if (!session) {
-    redirect("/app-profissional/login");
-  }
+  const session = await requireProfissionalAppContext();
 
   const query = searchParams ? await searchParams : {};
 

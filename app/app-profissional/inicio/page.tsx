@@ -1,4 +1,3 @@
-import { redirect } from "next/navigation";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -13,7 +12,7 @@ import ProfissionalShell from "@/components/profissional/layout/ProfissionalShel
 import ProfissionalActionCard from "@/components/profissional/cards/ProfissionalActionCard";
 import ProfissionalAppointmentCard from "@/components/profissional/cards/ProfissionalAppointmentCard";
 import ProfissionalStatCard from "@/components/profissional/cards/ProfissionalStatCard";
-import { getProfissionalSessionFromCookie } from "@/lib/profissional-auth.server";
+import { requireProfissionalAppContext } from "@/lib/profissional-context.server";
 import { listarProximosAgendamentosProfissional } from "@/app/services/profissional/inicio";
 import { buscarResumoInicioProfissional } from "@/app/services/profissional/resumo";
 
@@ -43,11 +42,7 @@ function saudacao() {
 }
 
 export default async function InicioProfissionalPage() {
-  const session = await getProfissionalSessionFromCookie();
-
-  if (!session) {
-    redirect("/app-profissional/login");
-  }
+  const session = await requireProfissionalAppContext();
 
   const [agendamentos, resumo] = await Promise.all([
     listarProximosAgendamentosProfissional(

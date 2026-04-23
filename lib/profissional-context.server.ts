@@ -1,5 +1,10 @@
+import { redirect } from "next/navigation";
+import { canUsePlanFeature } from "@/lib/plans/access";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
-import { getProfissionalSessionFromCookie } from "@/lib/profissional-auth.server";
+import {
+  clearProfissionalSession,
+  getProfissionalSessionFromCookie,
+} from "@/lib/profissional-auth.server";
 
 export type ProfissionalServerContext = {
   idProfissional: string;
@@ -57,4 +62,16 @@ export async function requireProfissionalServerContext(): Promise<ProfissionalSe
       session.nome,
     email: String(profissional.email || "").trim() || null,
   };
+}
+
+export async function requireProfissionalAppContext(): Promise<ProfissionalServerContext> {
+  const context = await requireProfissionalServerContext();
+  const access = await canUsePlanFeature(context.idSalao, "app_profissional");
+
+  if (!access.allowed) {
+    await clearProfissionalSession();
+    redirect("/app-profissional/login?erro=plano_sem_app");
+  }
+
+  return context;
 }

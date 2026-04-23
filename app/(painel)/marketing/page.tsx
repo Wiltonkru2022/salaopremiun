@@ -9,6 +9,7 @@ import {
 import { redirect } from "next/navigation";
 import MarketingPriceSimulator from "@/components/marketing/MarketingPriceSimulator";
 import { getUser } from "@/lib/auth/get-user";
+import { canUsePlanFeature } from "@/lib/plans/access";
 import { createClient } from "@/lib/supabase/server";
 
 type ClienteRow = {
@@ -98,6 +99,16 @@ export default async function MarketingPage() {
     return (
       <div className="rounded-[30px] border border-rose-200 bg-rose-50 p-6 text-rose-700">
         Nao foi possivel identificar o salao da conta atual.
+      </div>
+    );
+  }
+
+  const marketingAccess = await canUsePlanFeature(usuario.id_salao, "marketing");
+
+  if (!marketingAccess.allowed) {
+    return (
+      <div className="rounded-[30px] border border-amber-200 bg-amber-50 p-6 text-amber-900 shadow-sm">
+        Marketing nao esta liberado no plano atual. Faça upgrade para usar esta area.
       </div>
     );
   }

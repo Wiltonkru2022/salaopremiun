@@ -1,7 +1,6 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import ProfissionalShell from "@/components/profissional/layout/ProfissionalShell";
-import { getProfissionalSessionFromCookie } from "@/lib/profissional-auth.server";
+import { requireProfissionalAppContext } from "@/lib/profissional-context.server";
 import { runAdminOperation } from "@/lib/supabase/admin-ops";
 import { sairProfissionalAction } from "./actions";
 
@@ -105,12 +104,8 @@ export default async function PerfilProfissionalPage({
     erro?: string | string[];
   }>;
 }) {
-  const session = await getProfissionalSessionFromCookie();
+  const session = await requireProfissionalAppContext();
   const params = await searchParams;
-
-  if (!session) {
-    redirect("/app-profissional/login");
-  }
 
   let profissional: ProfissionalPerfilRow | null = null;
 

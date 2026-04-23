@@ -1,6 +1,5 @@
-import { redirect } from "next/navigation";
 import ProfissionalShell from "@/components/profissional/layout/ProfissionalShell";
-import { getProfissionalSessionFromCookie } from "@/lib/profissional-auth.server";
+import { requireProfissionalAppContext } from "@/lib/profissional-context.server";
 import { runAdminOperation } from "@/lib/supabase/admin-ops";
 import { buscarConfiguracaoAgendaProfissional } from "@/app/services/profissional/agenda";
 import { criarAgendamentoProfissionalAction } from "../actions";
@@ -62,11 +61,7 @@ export default async function NovoAgendamentoProfissionalPage({
 }: {
   searchParams?: SearchParams;
 }) {
-  const session = await getProfissionalSessionFromCookie();
-
-  if (!session) {
-    redirect("/app-profissional/login");
-  }
+  const session = await requireProfissionalAppContext();
 
   const query = searchParams ? await searchParams : {};
   const dataSelecionada = query?.data || hojeISO();

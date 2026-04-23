@@ -1,8 +1,7 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import ProfissionalShell from "@/components/profissional/layout/ProfissionalShell";
 import { listarClientesDoSalao } from "@/app/services/profissional/clientes";
-import { getProfissionalSessionFromCookie } from "@/lib/profissional-auth.server";
+import { requireProfissionalAppContext } from "@/lib/profissional-context.server";
 
 type SearchParams = Promise<{
   busca?: string;
@@ -37,11 +36,7 @@ export default async function ClientesPage({
 }: {
   searchParams: SearchParams;
 }) {
-  const session = await getProfissionalSessionFromCookie();
-
-  if (!session) {
-    redirect("/app-profissional/login");
-  }
+  const session = await requireProfissionalAppContext();
 
   const { busca = "" } = await searchParams;
   const buscaLimpa = busca.trim();
