@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { getErrorMessage } from "@/lib/get-error-message";
 
 type StepKey =
@@ -85,6 +85,15 @@ function getPlanoLabel(plano: string) {
   }
 }
 
+function getLoginRedirectHref(params: URLSearchParams) {
+  const host =
+    process.env.NEXT_PUBLIC_APP_LOGIN_HOST ||
+    process.env.APP_LOGIN_HOST ||
+    "login.salaopremiun.com.br";
+
+  return `https://${String(host).replace(/^https?:\/\//, "")}/login?${params.toString()}`;
+}
+
 function getStepTitle(step: StepKey) {
   switch (step) {
     case "boas_vindas":
@@ -140,7 +149,6 @@ export default function CadastroSalaoPage() {
 }
 
 function CadastroSalaoContent() {
-  const router = useRouter();
   const searchParams = useSearchParams();
 
   const [step, setStep] = useState<StepKey>("boas_vindas");
@@ -335,7 +343,7 @@ function CadastroSalaoContent() {
         params.set("plano", planoSelecionado);
       }
 
-      router.push(`/login?${params.toString()}`);
+      window.location.assign(getLoginRedirectHref(params));
     } catch (e: unknown) {
       console.error("ERRO FINAL CADASTRO:", e);
       setErro(getErrorMessage(e, "Erro ao cadastrar salão."));
