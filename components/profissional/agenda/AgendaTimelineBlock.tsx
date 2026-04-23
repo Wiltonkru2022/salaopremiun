@@ -23,11 +23,19 @@ function getStatusClasses(status: string) {
     return "bg-sky-50 text-sky-700 border-sky-200";
   }
 
+  if (["em_atendimento"].includes(valor)) {
+    return "bg-blue-50 text-blue-700 border-blue-200";
+  }
+
+  if (["aguardando_pagamento"].includes(valor)) {
+    return "bg-amber-50 text-amber-700 border-amber-200";
+  }
+
   if (["pendente"].includes(valor)) {
     return "bg-amber-50 text-amber-700 border-amber-200";
   }
 
-  if (["cancelado"].includes(valor)) {
+  if (["cancelado", "faltou"].includes(valor)) {
     return "bg-red-50 text-red-700 border-red-200";
   }
 
@@ -38,8 +46,11 @@ function getStatusLabel(status: string) {
   const valor = String(status || "").toLowerCase();
 
   if (valor === "confirmado") return "Confirmado";
+  if (valor === "em_atendimento") return "Em atendimento";
   if (valor === "atendido") return "Atendido";
+  if (valor === "aguardando_pagamento") return "Aguardando pagamento";
   if (valor === "pendente") return "Pendente";
+  if (valor === "faltou") return "Nao compareceu";
   if (valor === "cancelado") return "Cancelado";
 
   return status;
@@ -47,7 +58,6 @@ function getStatusLabel(status: string) {
 
 export default function AgendaTimelineBlock({
   id,
-  idComanda,
   horario,
   horaFim,
   cliente,
@@ -56,9 +66,7 @@ export default function AgendaTimelineBlock({
   top,
   height,
 }: Props) {
-  const href = idComanda
-    ? `/app-profissional/comandas/${idComanda}`
-    : `/app-profissional/agenda/novo?agendamento_id=${id}`;
+  const href = `/app-profissional/agenda/${id}`;
 
   return (
     <Link

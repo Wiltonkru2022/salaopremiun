@@ -34,6 +34,7 @@ type BuscarConflitosParams = {
 };
 
 type AgendamentoConflitoRow = {
+  id: string;
   hora_inicio: string;
   hora_fim: string;
 };
@@ -275,7 +276,8 @@ export async function buscarAgendaProfissional(
         .select(SELECT_AGENDAMENTOS)
         .eq("id_salao", idSalao)
         .eq("profissional_id", idProfissional)
-        .eq("data", dataSelecionada);
+        .eq("data", dataSelecionada)
+        .order("hora_inicio", { ascending: true });
 
       if (error) throw new Error(error.message);
 
