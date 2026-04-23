@@ -401,6 +401,28 @@ export async function enviarComandaParaPagamento(params: {
     throw new Error("Comanda obrigatoria para enviar ao pagamento.");
   }
 
+  const { data: itens, error: itensError } = await supabaseAdmin
+    .from("comanda_itens")
+    .select("id, valor_total")
+    .eq("id_salao", idSalao)
+    .eq("id_comanda", idComanda)
+    .eq("ativo", true);
+
+  if (itensError) {
+    throw new Error("Erro ao validar itens da comanda.");
+  }
+
+  const totalItens = (itens || []).reduce(
+    (acc, item) => acc + sanitizeMoney(item.valor_total),
+    0
+  );
+
+  if (!itens?.length || totalItens <= 0) {
+    throw new Error(
+      "Adicione ao menos um item com valor antes de enviar para o caixa."
+    );
+  }
+
   const { error } = await supabaseAdmin.rpc(
     "fn_enviar_comanda_para_pagamento",
     {

@@ -39,6 +39,8 @@ function buildCsp() {
     "data:",
     "blob:",
     ...(supabaseHostname ? [`https://${supabaseHostname}`] : []),
+    "https://*.googleusercontent.com",
+    "https://*.gstatic.com",
   ];
   const frameAncestors = ["'self'"];
   return [

@@ -59,13 +59,24 @@ export default function ProfissionaisBar({
                     : "border-zinc-200 bg-white text-zinc-800 hover:border-zinc-300 hover:bg-zinc-50"
                 )}
               >
-                <img
-                  src={prof.foto_url || "https://placehold.co/96x96?text=Prof"}
-                  alt={prof.nome}
-                  className={`${
-                    densityMode === "reception" ? "h-7 w-7" : "h-10 w-10"
-                  } rounded-full object-cover`}
-                />
+                {prof.foto_url ? (
+                  <img
+                    src={prof.foto_url}
+                    alt={prof.nome}
+                    className={`${
+                      densityMode === "reception" ? "h-7 w-7" : "h-10 w-10"
+                    } rounded-full object-cover`}
+                  />
+                ) : (
+                  <span
+                    aria-hidden="true"
+                    className={`${
+                      densityMode === "reception" ? "h-7 w-7 text-[10px]" : "h-10 w-10 text-sm"
+                    } flex shrink-0 items-center justify-center rounded-full bg-zinc-100 font-bold text-zinc-700`}
+                  >
+                    {prof.nome?.trim()?.charAt(0)?.toUpperCase() || "P"}
+                  </span>
+                )}
 
                 <div className="min-w-0 flex-1">
                   <div

@@ -455,6 +455,11 @@ export default function ComandaForm({ modo }: ComandaFormProps) {
       exigirComandaEditavel();
 
       if (!comandaId) throw new Error("Salve a comanda antes de fechar.");
+      if (!itens.length || total <= 0) {
+        throw new Error(
+          "Adicione ao menos um item com valor antes de enviar para o caixa."
+        );
+      }
 
       await processarComanda("enviar_pagamento");
 
