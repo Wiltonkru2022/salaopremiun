@@ -329,6 +329,8 @@ export default function AppShell({
           salaoNome={salaoNome}
           salaoResponsavel={salaoResponsavel}
           salaoLogoUrl={salaoLogoUrl}
+          userName={userName}
+          userEmail={userEmail}
           planoNome={planoNome}
           resumoAssinatura={resumoAssinatura}
           canSeeAssinatura={Boolean(permissoes?.assinatura_ver)}
