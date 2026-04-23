@@ -58,6 +58,7 @@ export async function GET(request: NextRequest) {
     const session = await getProfissionalSessionFromCookie();
 
     if (!session) {
+      await supabase.auth.signOut();
       return redirectTo(request, "/app-profissional/login", {
         erro: "sessao_expirada",
       });
@@ -71,11 +72,13 @@ export async function GET(request: NextRequest) {
     });
 
     if (!result.ok) {
+      await supabase.auth.signOut();
       return redirectTo(request, "/app-profissional/perfil", {
         erro: result.error,
       });
     }
 
+    await supabase.auth.signOut();
     return redirectTo(request, "/app-profissional/perfil", {
       google: "conectado",
     });
@@ -94,5 +97,6 @@ export async function GET(request: NextRequest) {
   }
 
   await createProfissionalSession(result.session);
+  await supabase.auth.signOut();
   return redirectTo(request, "/app-profissional/inicio");
 }
