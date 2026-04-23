@@ -1,8 +1,7 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { usePathname } from "next/navigation";
+import { useMemo, useState } from "react";
 import clsx from "clsx";
 import {
   AlertTriangle,
@@ -46,7 +45,6 @@ export default function Sidebar({
   onClose,
 }: Props) {
   const pathname = usePathname();
-  const router = useRouter();
   const [search, setSearch] = useState("");
   const itemsFiltrados = useMemo(
     () => filterPainelNavigation(permissoes, nivel),
@@ -70,18 +68,6 @@ export default function Sidebar({
   const subscriptionAtRisk = Boolean(
     resumoAssinatura?.bloqueioTotal || resumoAssinatura?.vencendoLogo
   );
-
-  useEffect(() => {
-    if (process.env.NODE_ENV !== "production") return;
-
-    const prefetchTimer = window.setTimeout(() => {
-      itemsFiltrados.forEach((item) => {
-        router.prefetch(item.href);
-      });
-    }, 600);
-
-    return () => window.clearTimeout(prefetchTimer);
-  }, [itemsFiltrados, router]);
 
   return (
     <>
@@ -190,7 +176,7 @@ export default function Sidebar({
                         type="button"
                         onClick={() => {
                           onClose();
-                          void router.push("/assinatura");
+                          window.location.assign(getRouteHref("/assinatura"));
                         }}
                         className="mt-3 inline-flex items-center gap-2 rounded-2xl border border-current/10 bg-white px-3 py-2 text-xs font-semibold transition hover:bg-zinc-50"
                       >
@@ -219,7 +205,6 @@ export default function Sidebar({
                           pathname.startsWith(`${item.href}/`)
                         }
                         onClose={onClose}
-                        onPrefetch={() => router.prefetch(item.href)}
                       />
                     ))}
                   </div>
@@ -243,14 +228,14 @@ export default function Sidebar({
                 {planoNome || "Sem plano"}
               </div>
               {canSeeAssinatura ? (
-                <Link
-                  href="/assinatura"
+                <a
+                  href={getRouteHref("/assinatura")}
                   onClick={onClose}
                   className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-zinc-950 px-3 py-2 text-xs font-bold text-white transition hover:bg-zinc-800"
                 >
                   <CreditCard size={14} />
                   Ver assinatura
-                </Link>
+                </a>
               ) : null}
             </div>
           </div>
@@ -310,22 +295,17 @@ function SidebarLink({
   item,
   active,
   onClose,
-  onPrefetch,
 }: {
   item: PainelNavItem;
   active: boolean;
   onClose: () => void;
-  onPrefetch: () => void;
 }) {
   const Icon = item.icon;
 
   return (
-    <Link
-      href={item.href}
-      prefetch={true}
+    <a
+      href={getRouteHref(item.href)}
       onClick={onClose}
-      onFocus={onPrefetch}
-      onMouseEnter={onPrefetch}
       className={clsx(
         "group/item flex items-center gap-3 rounded-[17px] px-3 py-2.5 ring-1 ring-transparent transition-all duration-200",
         active
@@ -361,6 +341,25 @@ function SidebarLink({
           active ? "text-white/60" : "text-zinc-300"
         )}
       />
-    </Link>
+    </a>
   );
+}
+
+function getRouteHref(href: string) {
+  if (typeof window === "undefined") {
+    return href;
+  }
+
+  const host = window.location.hostname;
+  const isManagedHost = host.endsWith("salaopremiun.com.br");
+
+  if (!isManagedHost) {
+    return href;
+  }
+
+  if (href === "/assinatura" || href.startsWith("/assinatura/")) {
+    return `https://assinatura.salaopremiun.com.br${href}`;
+  }
+
+  return `https://painel.salaopremiun.com.br${href}`;
 }
