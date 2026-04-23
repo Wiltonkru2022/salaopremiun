@@ -1,4 +1,4 @@
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { runAdminOperation } from "@/lib/supabase/admin-ops";
 
 type MonitoringEventRow = {
   id?: string | null;
@@ -244,7 +244,9 @@ function inferHealthLabel(status: AdminHealthOverview["status"]) {
 }
 
 export async function getAdminMasterOperationalSnapshot(): Promise<AdminMasterOperationalSnapshot> {
-  const supabase = getSupabaseAdmin();
+  return runAdminOperation({
+    action: "admin_master_operational_snapshot",
+    run: async (supabase) => {
   const now = Date.now();
   const last24h = new Date(now - 24 * 60 * 60 * 1000).toISOString();
   const last12h = new Date(now - 12 * 60 * 60 * 1000).toISOString();
@@ -633,4 +635,6 @@ export async function getAdminMasterOperationalSnapshot(): Promise<AdminMasterOp
     suggestions,
     healthChecks: healthChecksSummary,
   };
+    },
+  });
 }
