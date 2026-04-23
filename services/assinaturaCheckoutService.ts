@@ -214,8 +214,44 @@ function normalizeBrazilPhoneDigits(value?: string | null) {
   return digits;
 }
 
+function isInvalidBrazilPhoneDigits(digits: string) {
+  if (!digits) return true;
+
+  if (!/^\d+$/.test(digits)) {
+    return true;
+  }
+
+  if (digits.length !== 10 && digits.length !== 11) {
+    return true;
+  }
+
+  const ddd = digits.slice(0, 2);
+  const subscriber = digits.slice(2);
+
+  if (ddd.startsWith("0") || subscriber.length < 8) {
+    return true;
+  }
+
+  if (/^(\d)\1+$/.test(digits) || /^(\d)\1+$/.test(subscriber)) {
+    return true;
+  }
+
+  if (subscriber === "99999999" || subscriber === "999999999") {
+    return true;
+  }
+
+  return false;
+}
+
 function getAsaasPhonePayload(value?: string | null) {
   const digits = normalizeBrazilPhoneDigits(value);
+
+  if (isInvalidBrazilPhoneDigits(digits)) {
+    return {
+      phone: undefined,
+      mobilePhone: undefined,
+    };
+  }
 
   if (digits.length === 11) {
     return {
