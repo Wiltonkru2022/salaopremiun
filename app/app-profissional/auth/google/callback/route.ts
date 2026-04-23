@@ -8,11 +8,12 @@ import {
   loginProfissionalByGoogleAuthUser,
   vincularGoogleAoProfissional,
 } from "@/app/services/profissional/auth";
+import { DOMINIO_APP } from "@/lib/proxy/domain-config";
 
 // rota publica: callback OAuth validado pelo code retornado pelo Supabase.
 
-function redirectTo(request: NextRequest, pathname: string, params?: Record<string, string>) {
-  const url = new URL(pathname, request.url);
+function redirectTo(pathname: string, params?: Record<string, string>) {
+  const url = new URL(pathname, `https://${DOMINIO_APP}`);
   for (const [key, value] of Object.entries(params ?? {})) {
     url.searchParams.set(key, value);
   }
@@ -27,7 +28,7 @@ export async function GET(request: NextRequest) {
       : "login";
 
   if (!code) {
-    return redirectTo(request, "/app-profissional/login", {
+    return redirectTo("/app-profissional/login", {
       erro: "google_codigo_ausente",
     });
   }
@@ -38,7 +39,7 @@ export async function GET(request: NextRequest) {
   );
 
   if (exchangeError) {
-    return redirectTo(request, "/app-profissional/login", {
+    return redirectTo("/app-profissional/login", {
       erro: "google_sessao_invalida",
     });
   }
@@ -49,7 +50,7 @@ export async function GET(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   if (userError || !user?.id) {
-    return redirectTo(request, "/app-profissional/login", {
+    return redirectTo("/app-profissional/login", {
       erro: "google_usuario_invalido",
     });
   }
@@ -59,7 +60,7 @@ export async function GET(request: NextRequest) {
 
     if (!session) {
       await supabase.auth.signOut();
-      return redirectTo(request, "/app-profissional/login", {
+      return redirectTo("/app-profissional/login", {
         erro: "sessao_expirada",
       });
     }
@@ -73,13 +74,13 @@ export async function GET(request: NextRequest) {
 
     if (!result.ok) {
       await supabase.auth.signOut();
-      return redirectTo(request, "/app-profissional/perfil", {
+      return redirectTo("/app-profissional/perfil", {
         erro: result.error,
       });
     }
 
     await supabase.auth.signOut();
-    return redirectTo(request, "/app-profissional/perfil", {
+    return redirectTo("/app-profissional/perfil", {
       google: "conectado",
     });
   }
@@ -91,12 +92,12 @@ export async function GET(request: NextRequest) {
 
   if (!result.ok) {
     await supabase.auth.signOut();
-    return redirectTo(request, "/app-profissional/login", {
+    return redirectTo("/app-profissional/login", {
       erro: result.error,
     });
   }
 
   await createProfissionalSession(result.session);
   await supabase.auth.signOut();
-  return redirectTo(request, "/app-profissional/inicio");
+  return redirectTo("/app-profissional/inicio");
 }

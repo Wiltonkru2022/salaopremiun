@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { DOMINIO_APP } from "@/lib/proxy/domain-config";
 
 // rota publica: inicia o OAuth do Google para login/conexao do profissional.
 
@@ -8,8 +9,11 @@ function getIntent(request: NextRequest) {
   return value === "connect" ? "connect" : "login";
 }
 
-function redirectToLogin(request: NextRequest, error: string) {
-  const url = new URL("/app-profissional/login", request.url);
+function redirectToLogin(error: string) {
+  const url = new URL(
+    "/app-profissional/login",
+    `https://${DOMINIO_APP}`
+  );
   url.searchParams.set("erro", error);
   return NextResponse.redirect(url);
 }
@@ -19,7 +23,7 @@ export async function GET(request: NextRequest) {
   const supabase = await createClient();
   const callbackUrl = new URL(
     `/app-profissional/auth/google/callback?intent=${intent}`,
-    request.url
+    `https://${DOMINIO_APP}`
   );
 
   const { data, error } = await supabase.auth.signInWithOAuth({
@@ -33,7 +37,7 @@ export async function GET(request: NextRequest) {
   });
 
   if (error || !data.url) {
-    return redirectToLogin(request, "google_indisponivel");
+    return redirectToLogin("google_indisponivel");
   }
 
   return NextResponse.redirect(data.url);

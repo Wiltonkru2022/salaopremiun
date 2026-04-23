@@ -33,6 +33,19 @@ No OAuth Client usado pelo Supabase:
 
 Importante: o Google normalmente redireciona primeiro para o callback do Supabase Auth. O Supabase entao redireciona para a rota do app definida em `redirectTo`.
 
+## Nome exibido no Google
+Se a tela do Google mostrar `Prosseguir para <project-ref>.supabase.co`, isso vem do dominio de callback do Supabase Auth.
+
+Para melhorar:
+- Configure o OAuth consent screen no Google Cloud com nome `SalaoPremium`, logo, suporte e dominio autorizado `salaopremiun.com.br`.
+- Verifique/publica o app no Google Cloud se necessario.
+
+Para remover o dominio `supabase.co` da tela:
+- Configure Custom Domain no Supabase para Auth, por exemplo `auth.salaopremiun.com.br`.
+- Depois adicione no Google Cloud o redirect URI do dominio customizado:
+  - `https://auth.salaopremiun.com.br/auth/v1/callback`
+- Mantenha tambem o callback original do Supabase enquanto testa.
+
 ## Teste operacional
 1. Entre no app profissional com CPF e senha.
 2. Abra `Perfil`.
