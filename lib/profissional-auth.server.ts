@@ -118,14 +118,24 @@ export async function verifyPassword(password: string, hash: string) {
 
 export async function createProfissionalSession(session: ProfissionalSession) {
   const cookieStore = await cookies();
-  cookieStore.set(COOKIE_NAME, serializeSession(session), {
+  const token = serializeSession(session);
+  const baseOptions = {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
-    domain: getCookieDomain(),
     path: "/",
     maxAge: SESSION_TTL_SECONDS,
-  });
+  } as const;
+
+  cookieStore.set(COOKIE_NAME, token, baseOptions);
+
+  const cookieDomain = getCookieDomain();
+  if (cookieDomain) {
+    cookieStore.set(COOKIE_NAME, token, {
+      ...baseOptions,
+      domain: cookieDomain,
+    });
+  }
 }
 
 export async function getProfissionalSessionFromCookie(): Promise<ProfissionalSession | null> {
@@ -151,8 +161,19 @@ export async function clearProfissionalSession() {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
-    domain: getCookieDomain(),
     path: "/",
     maxAge: 0,
   });
+
+  const cookieDomain = getCookieDomain();
+  if (cookieDomain) {
+    cookieStore.set(COOKIE_NAME, "", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      domain: cookieDomain,
+      path: "/",
+      maxAge: 0,
+    });
+  }
 }
