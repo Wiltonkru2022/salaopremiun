@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { runAdminOperation } from "@/lib/supabase/admin-ops";
 
 export type ClienteProfissional = {
   id: string;
@@ -12,17 +12,21 @@ export type ClienteProfissional = {
 export async function listarClientesDoSalao(
   idSalao: string
 ): Promise<ClienteProfissional[]> {
-  const supabase = await createClient();
+  return runAdminOperation({
+    action: "profissional_listar_clientes_salao",
+    idSalao,
+    run: async (supabase) => {
+      const { data, error } = await supabase
+        .from("clientes")
+        .select("id, nome, telefone, email, status, ativo")
+        .eq("id_salao", idSalao)
+        .order("nome", { ascending: true });
 
-  const { data, error } = await supabase
-    .from("clientes")
-    .select("id, nome, telefone, email, status, ativo")
-    .eq("id_salao", idSalao)
-    .order("nome", { ascending: true });
+      if (error) {
+        throw new Error(error.message || "Erro ao carregar clientes.");
+      }
 
-  if (error) {
-    throw new Error(error.message || "Erro ao carregar clientes.");
-  }
-
-  return data ?? [];
+      return (data ?? []) as ClienteProfissional[];
+    },
+  });
 }

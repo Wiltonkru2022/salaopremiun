@@ -1,4 +1,4 @@
-﻿import { createClient } from "@/lib/supabase/server";
+import { runAdminOperation } from "@/lib/supabase/admin-ops";
 
 export type AgendamentoInicio = {
   id: string;
@@ -35,88 +35,92 @@ export async function listarProximosAgendamentosProfissional(
   idSalao: string,
   idProfissional: string
 ): Promise<AgendamentoInicio[]> {
-  const supabase = await createClient();
+  return runAdminOperation({
+    action: "profissional_inicio_listar_agendamentos",
+    actorId: idProfissional,
+    idSalao,
+    run: async (supabase) => {
+      const { data: agendamentos, error: agendamentosError } = await supabase
+        .from("agendamentos")
+        .select(
+          "id, data, hora_inicio, hora_fim, status, id_comanda, cliente_id, servico_id"
+        )
+        .eq("id_salao", idSalao)
+        .eq("profissional_id", idProfissional)
+        .gte("data", hojeISO())
+        .order("data", { ascending: true })
+        .order("hora_inicio", { ascending: true })
+        .limit(10);
 
-  const { data: agendamentos, error: agendamentosError } = await supabase
-    .from("agendamentos")
-    .select(`
-      id,
-      data,
-      hora_inicio,
-      hora_fim,
-      status,
-      id_comanda,
-      cliente_id,
-      servico_id
-    `)
-    .eq("id_salao", idSalao)
-    .eq("profissional_id", idProfissional)
-    .gte("data", hojeISO())
-    .order("data", { ascending: true })
-    .order("hora_inicio", { ascending: true })
-    .limit(10);
+      if (agendamentosError) {
+        throw new Error(
+          agendamentosError.message || "Erro ao carregar agendamentos."
+        );
+      }
 
-  if (agendamentosError) {
-    throw new Error(agendamentosError.message || "Erro ao carregar agendamentos.");
-  }
+      const rows = (agendamentos ?? []) as AgendamentoInicioRow[];
+      const clienteIds = Array.from(
+        new Set(rows.map((item) => item.cliente_id).filter(Boolean))
+      ) as string[];
+      const servicoIds = Array.from(
+        new Set(rows.map((item) => item.servico_id).filter(Boolean))
+      ) as string[];
 
-  const clienteIds = Array.from(
-    new Set(
-      ((agendamentos ?? []) as AgendamentoInicioRow[])
-        .map((item) => item.cliente_id)
-        .filter(Boolean)
-    )
-  ) as string[];
+      let clientesMap = new Map<string, string>();
+      let servicosMap = new Map<string, string>();
 
-  const servicoIds = Array.from(
-    new Set(
-      ((agendamentos ?? []) as AgendamentoInicioRow[])
-        .map((item) => item.servico_id)
-        .filter(Boolean)
-    )
-  ) as string[];
+      if (clienteIds.length > 0) {
+        const { data: clientes, error: clientesError } = await supabase
+          .from("clientes")
+          .select("id, nome")
+          .eq("id_salao", idSalao)
+          .in("id", clienteIds);
 
-  let clientesMap = new Map<string, string>();
-  let servicosMap = new Map<string, string>();
+        if (clientesError) {
+          throw new Error(clientesError.message || "Erro ao carregar clientes.");
+        }
 
-  if (clienteIds.length > 0) {
-    const { data: clientes, error: clientesError } = await supabase
-      .from("clientes")
-      .select("id, nome")
-      .in("id", clienteIds);
+        clientesMap = new Map(
+          ((clientes ?? []) as NomeRow[]).map((cliente) => [
+            cliente.id,
+            cliente.nome,
+          ])
+        );
+      }
 
-    if (clientesError) {
-      throw new Error(clientesError.message || "Erro ao carregar clientes.");
-    }
+      if (servicoIds.length > 0) {
+        const { data: servicos, error: servicosError } = await supabase
+          .from("servicos")
+          .select("id, nome")
+          .eq("id_salao", idSalao)
+          .in("id", servicoIds);
 
-    clientesMap = new Map(
-      ((clientes ?? []) as NomeRow[]).map((cliente) => [cliente.id, cliente.nome])
-    );
-  }
+        if (servicosError) {
+          throw new Error(servicosError.message || "Erro ao carregar serviços.");
+        }
 
-  if (servicoIds.length > 0) {
-    const { data: servicos, error: servicosError } = await supabase
-      .from("servicos")
-      .select("id, nome")
-      .in("id", servicoIds);
+        servicosMap = new Map(
+          ((servicos ?? []) as NomeRow[]).map((servico) => [
+            servico.id,
+            servico.nome,
+          ])
+        );
+      }
 
-    if (servicosError) {
-      throw new Error(servicosError.message || "Erro ao carregar serviços.");
-    }
-
-    servicosMap = new Map(
-      ((servicos ?? []) as NomeRow[]).map((servico) => [servico.id, servico.nome])
-    );
-  }
-
-  return ((agendamentos ?? []) as AgendamentoInicioRow[]).map((item) => ({
-    id: item.id,
-    data: item.data,
-    hora_inicio: item.hora_inicio,
-    hora_fim: item.hora_fim,
-    status: item.status,
-    id_comanda: item.id_comanda ?? null,
-    cliente_nome: item.cliente_id ? clientesMap.get(item.cliente_id) ?? "Cliente" : "Cliente",
-    servico_nome: item.servico_id ? servicosMap.get(item.servico_id) ?? "Serviço" : "Serviço",
-  }));
+      return rows.map((item) => ({
+        id: item.id,
+        data: item.data,
+        hora_inicio: item.hora_inicio,
+        hora_fim: item.hora_fim,
+        status: item.status,
+        id_comanda: item.id_comanda ?? null,
+        cliente_nome: item.cliente_id
+          ? clientesMap.get(item.cliente_id) ?? "Cliente"
+          : "Cliente",
+        servico_nome: item.servico_id
+          ? servicosMap.get(item.servico_id) ?? "Servico"
+          : "Servico",
+      }));
+    },
+  });
 }

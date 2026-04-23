@@ -2,8 +2,8 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/lib/supabase/server";
 import { getProfissionalSessionFromCookie } from "@/lib/profissional-auth.server";
+import { runAdminOperation } from "@/lib/supabase/admin-ops";
 import {
   buscarConfiguracaoAgendaProfissional,
   buscarConflitosNoHorario,
@@ -112,29 +112,36 @@ export async function criarAgendamentoProfissionalAction(formData: FormData) {
       );
     }
 
-    const supabase = await createClient();
+    const insertErrorMessage = await runAdminOperation({
+      action: "profissional_criar_agendamento",
+      actorId: session.idProfissional,
+      idSalao: session.idSalao,
+      run: async (supabase) => {
+        const { error } = await supabase.from("agendamentos").insert({
+          id_salao: session.idSalao,
+          cliente_id: clienteId,
+          profissional_id: session.idProfissional,
+          servico_id: servicoId,
+          data,
+          hora_inicio: `${inicioValido}:00`,
+          hora_fim: `${horaFim}:00`,
+          status: "pendente",
+          duracao_minutos: duracaoMinutos,
+          observacoes: observacoes || null,
+          origem: "app_profissional",
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        });
 
-    const { error } = await supabase.from("agendamentos").insert({
-      id_salao: session.idSalao,
-      cliente_id: clienteId,
-      profissional_id: session.idProfissional,
-      servico_id: servicoId,
-      data,
-      hora_inicio: `${inicioValido}:00`,
-      hora_fim: `${horaFim}:00`,
-      status: "pendente",
-      duracao_minutos: duracaoMinutos,
-      observacoes: observacoes || null,
-      origem: "app_profissional",
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
+        return error?.message ?? null;
+      },
     });
 
-    if (error) {
+    if (insertErrorMessage) {
       redirect(
         buildNovoUrl({
           ...redirectBase,
-          erro: error.message || "Erro ao criar agendamento.",
+          erro: insertErrorMessage || "Erro ao criar agendamento.",
         })
       );
     }
