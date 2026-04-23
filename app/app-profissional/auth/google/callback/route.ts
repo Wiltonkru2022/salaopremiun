@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
       : "login";
 
   if (!code) {
-    return redirectTo("/app-profissional/login", {
+    return redirectTo("/login", {
       erro: "google_codigo_ausente",
     });
   }
@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
   );
 
   if (exchangeError) {
-    return redirectTo("/app-profissional/login", {
+    return redirectTo("/login", {
       erro: "google_sessao_invalida",
     });
   }
@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   if (userError || !user?.id) {
-    return redirectTo("/app-profissional/login", {
+    return redirectTo("/login", {
       erro: "google_usuario_invalido",
     });
   }
@@ -60,7 +60,7 @@ export async function GET(request: NextRequest) {
 
     if (!session) {
       await supabase.auth.signOut();
-      return redirectTo("/app-profissional/login", {
+      return redirectTo("/login", {
         erro: "sessao_expirada",
       });
     }
@@ -74,13 +74,13 @@ export async function GET(request: NextRequest) {
 
     if (!result.ok) {
       await supabase.auth.signOut();
-      return redirectTo("/app-profissional/perfil", {
+      return redirectTo("/perfil", {
         erro: result.error,
       });
     }
 
     await supabase.auth.signOut();
-    return redirectTo("/app-profissional/perfil", {
+    return redirectTo("/perfil", {
       google: "conectado",
     });
   }
@@ -92,12 +92,12 @@ export async function GET(request: NextRequest) {
 
   if (!result.ok) {
     await supabase.auth.signOut();
-    return redirectTo("/app-profissional/login", {
+    return redirectTo("/login", {
       erro: result.error,
     });
   }
 
   await createProfissionalSession(result.session);
   await supabase.auth.signOut();
-  return redirectTo("/app-profissional/inicio");
+  return redirectTo("/inicio");
 }

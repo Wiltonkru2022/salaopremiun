@@ -10,10 +10,7 @@ function getIntent(request: NextRequest) {
 }
 
 function redirectToLogin(error: string) {
-  const url = new URL(
-    "/app-profissional/login",
-    `https://${DOMINIO_APP}`
-  );
+  const url = new URL("/login", `https://${DOMINIO_APP}`);
   url.searchParams.set("erro", error);
   return NextResponse.redirect(url);
 }
@@ -22,7 +19,7 @@ export async function GET(request: NextRequest) {
   const intent = getIntent(request);
   const supabase = await createClient();
   const callbackUrl = new URL(
-    `/app-profissional/auth/google/callback?intent=${intent}`,
+    `/auth/google/callback?intent=${intent}`,
     `https://${DOMINIO_APP}`
   );
 
