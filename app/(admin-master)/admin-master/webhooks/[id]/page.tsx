@@ -6,7 +6,7 @@ import {
   buildWebhookMirrorKey,
   formatWebhookDate,
 } from "@/lib/admin-master/webhooks-sync";
-import { runAdminOperation } from "@/lib/supabase/admin-ops";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 function prettyJson(value: unknown) {
   return JSON.stringify(value || {}, null, 2);
@@ -47,34 +47,25 @@ export default async function AdminMasterWebhookDetailPage({
     notFound();
   }
 
+  const supabase = getSupabaseAdmin();
   const mirrorKey = buildWebhookMirrorKey(sourceId);
 
-  const { webhook, espelho } = await runAdminOperation({
-    action: "admin_master_webhook_detail",
-    run: async (supabase) => {
-      const [{ data: webhookData }, { data: espelhoData }] = await Promise.all([
-        supabase
-          .from("asaas_webhook_eventos")
-          .select(
-            "id, evento, payment_id, payment_status, status_processamento, tentativas, erro_mensagem, payload, primeiro_recebido_em, ultimo_recebido_em, processado_em, id_salao, id_assinatura, id_cobranca, event_order, decisao"
-          )
-          .eq("id", sourceId)
-          .maybeSingle(),
-        supabase
-          .from("eventos_webhook")
-          .select(
-            "id, status, payload_json, resposta_json, erro_texto, tentativas, recebido_em, processado_em"
-          )
-          .eq("chave", mirrorKey)
-          .maybeSingle(),
-      ]);
-
-      return {
-        webhook: webhookData,
-        espelho: espelhoData,
-      };
-    },
-  });
+  const [{ data: webhook }, { data: espelho }] = await Promise.all([
+    supabase
+      .from("asaas_webhook_eventos")
+      .select(
+        "id, evento, payment_id, payment_status, status_processamento, tentativas, erro_mensagem, payload, primeiro_recebido_em, ultimo_recebido_em, processado_em, id_salao, id_assinatura, id_cobranca, event_order, decisao"
+      )
+      .eq("id", sourceId)
+      .maybeSingle(),
+    supabase
+      .from("eventos_webhook")
+      .select(
+        "id, status, payload_json, resposta_json, erro_texto, tentativas, recebido_em, processado_em"
+      )
+      .eq("chave", mirrorKey)
+      .maybeSingle(),
+  ]);
 
   if (!webhook?.id) {
     notFound();
