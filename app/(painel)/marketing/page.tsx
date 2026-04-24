@@ -12,6 +12,7 @@ import WhatsAppPackagesCard from "@/components/marketing/WhatsAppPackagesCard";
 import WhatsAppSendCard from "@/components/marketing/WhatsAppSendCard";
 import { getUser } from "@/lib/auth/get-user";
 import { canUsePlanFeature } from "@/lib/plans/access";
+import { runAdminOperation } from "@/lib/supabase/admin-ops";
 import { createClient } from "@/lib/supabase/server";
 import type { Json } from "@/types/database.generated";
 
@@ -147,9 +148,11 @@ export default async function MarketingPage() {
     );
   }
 
+  const idSalao = usuario.id_salao;
+
   const [marketingAccess, whatsappAccess] = await Promise.all([
-    canUsePlanFeature(usuario.id_salao, "marketing"),
-    canUsePlanFeature(usuario.id_salao, "whatsapp"),
+    canUsePlanFeature(idSalao, "marketing"),
+    canUsePlanFeature(idSalao, "whatsapp"),
   ]);
 
   const inicioJanela = new Date();
@@ -158,84 +161,101 @@ export default async function MarketingPage() {
   const [
     clientesResult,
     comandasResult,
-    { data: pacotesData },
-    { data: creditosData },
-    { data: compraPendenteData },
-    { data: historicoEnviosData },
-    { data: historicoEventosData },
+    whatsappData,
   ] = await Promise.all([
     marketingAccess.allowed
       ? supabase
           .from("clientes")
           .select("id, nome, telefone, whatsapp, email, data_nascimento")
-          .eq("id_salao", usuario.id_salao)
+          .eq("id_salao", idSalao)
           .order("nome", { ascending: true })
       : Promise.resolve({ data: [] as ClienteRow[] }),
     marketingAccess.allowed
       ? supabase
           .from("comandas")
           .select("id_cliente, total, fechada_em")
-          .eq("id_salao", usuario.id_salao)
+          .eq("id_salao", idSalao)
           .eq("status", "fechada")
           .gte("fechada_em", inicioJanela.toISOString())
           .order("fechada_em", { ascending: false })
       : Promise.resolve({ data: [] as ComandaRow[] }),
-    supabase
-      .from("whatsapp_pacotes")
-      .select("id, nome, quantidade_creditos, preco")
-      .eq("ativo", true)
-      .order("quantidade_creditos", { ascending: true }),
-    supabase
-      .from("whatsapp_pacote_saloes")
-      .select("creditos_saldo")
-      .eq("id_salao", usuario.id_salao)
-      .eq("status", "ativo")
-      .or(`expira_em.is.null,expira_em.gt.${new Date().toISOString()}`),
-    (supabase as any)
-      .from("whatsapp_pacote_compras")
-      .select(
-        "id_pacote, asaas_payment_id, billing_type, valor, quantidade_creditos, invoice_url, bank_slip_url, pix_copia_cola, qr_code_base64"
-      )
-      .eq("id_salao", usuario.id_salao)
-      .eq("status", "pendente")
-      .order("criado_em", { ascending: false })
-      .limit(1)
-      .maybeSingle(),
-    whatsappAccess.allowed
-      ? (supabase as any)
-          .from("whatsapp_envios")
-          .select(
-            "id, destino, mensagem, status, tipo, criado_em, enviado_em, erro_texto"
-          )
-          .eq("id_salao", usuario.id_salao)
-          .eq("provider", "meta_cloud")
-          .order("criado_em", { ascending: false })
-          .limit(10)
-      : Promise.resolve({ data: [] as EnvioHistoricoRow[] }),
-    whatsappAccess.allowed
-      ? (supabase as any)
-          .from("whatsapp_filas")
-          .select("id, status, criado_em, payload_json")
-          .eq("id_salao", usuario.id_salao)
-          .order("criado_em", { ascending: false })
-          .limit(10)
-      : Promise.resolve({ data: [] as FilaHistoricoRow[] }),
+    runAdminOperation({
+      action: "load_marketing_whatsapp_data",
+      actorId: user.id,
+      idSalao,
+      run: async (supabaseAdmin) => {
+        const [
+          { data: pacotesData },
+          { data: creditosData },
+          { data: compraPendenteData },
+          { data: historicoEnviosData },
+          { data: historicoEventosData },
+        ] = await Promise.all([
+          supabaseAdmin
+            .from("whatsapp_pacotes")
+            .select("id, nome, quantidade_creditos, preco")
+            .eq("ativo", true)
+            .order("quantidade_creditos", { ascending: true }),
+          supabaseAdmin
+            .from("whatsapp_pacote_saloes")
+            .select("creditos_saldo")
+            .eq("id_salao", idSalao)
+            .eq("status", "ativo")
+            .or(`expira_em.is.null,expira_em.gt.${new Date().toISOString()}`),
+          (supabaseAdmin as any)
+            .from("whatsapp_pacote_compras")
+            .select(
+              "id_pacote, asaas_payment_id, billing_type, valor, quantidade_creditos, invoice_url, bank_slip_url, pix_copia_cola, qr_code_base64"
+            )
+            .eq("id_salao", idSalao)
+            .eq("status", "pendente")
+            .order("criado_em", { ascending: false })
+            .limit(1)
+            .maybeSingle(),
+          (supabaseAdmin as any)
+            .from("whatsapp_envios")
+            .select(
+              "id, destino, mensagem, status, tipo, criado_em, enviado_em, erro_texto"
+            )
+            .eq("id_salao", idSalao)
+            .eq("provider", "meta_cloud")
+            .order("criado_em", { ascending: false })
+            .limit(10),
+          (supabaseAdmin as any)
+            .from("whatsapp_filas")
+            .select("id, status, criado_em, payload_json")
+            .eq("id_salao", idSalao)
+            .order("criado_em", { ascending: false })
+            .limit(10),
+        ]);
+
+        return {
+          pacotesData: (pacotesData as PacoteRow[] | null) || [],
+          creditosData: (creditosData as CreditoRow[] | null) || [],
+          compraPendenteData: (compraPendenteData as CompraPendenteRow | null) || null,
+          historicoEnviosData:
+            (historicoEnviosData as EnvioHistoricoRow[] | null) || [],
+          historicoEventosData:
+            (historicoEventosData as FilaHistoricoRow[] | null) || [],
+        };
+      },
+    }),
   ]);
 
   const clientes = (clientesResult.data as ClienteRow[]) || [];
   const comandas = (comandasResult.data as ComandaRow[]) || [];
-  const pacotes = ((pacotesData as PacoteRow[]) || []).map((item) => ({
+  const pacotes = (whatsappData.pacotesData || []).map((item) => ({
     id: item.id,
     nome: item.nome || "Pacote",
     quantidadeCreditos: Number(item.quantidade_creditos || 0),
     preco: Number(item.preco || 0),
   }));
-  const saldoAtual = ((creditosData as CreditoRow[]) || []).reduce(
+  const saldoAtual = (whatsappData.creditosData || []).reduce(
     (acc, item) => acc + Number(item.creditos_saldo || 0),
     0
   );
-  const compraPendente = compraPendenteData as CompraPendenteRow | null;
-  const historicoEnvios = ((historicoEnviosData as EnvioHistoricoRow[]) || []).map(
+  const compraPendente = whatsappData.compraPendenteData;
+  const historicoEnvios = (whatsappData.historicoEnviosData || []).map(
     (item) => ({
       id: item.id,
       destino: item.destino || "",
@@ -247,7 +267,7 @@ export default async function MarketingPage() {
       erroTexto: item.erro_texto || null,
     })
   );
-  const historicoEventos = ((historicoEventosData as FilaHistoricoRow[]) || []).map(
+  const historicoEventos = (whatsappData.historicoEventosData || []).map(
     (item) => {
       const payload =
         item.payload_json && typeof item.payload_json === "object"
