@@ -64,3 +64,7 @@ export function isManagedAppHost(host?: string | null) {
 export function getPublicWebhookUrl() {
   return `https://${DOMINIO_RAIZ}/api/webhooks/asaas`;
 }
+
+export function getPublicMetaWhatsAppWebhookUrl() {
+  return `https://${DOMINIO_RAIZ}/api/webhooks/meta-whatsapp`;
+}

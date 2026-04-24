@@ -63,6 +63,7 @@ const ROTAS_LIBERADAS = [
   "/api/assinatura/criar-cobranca",
   "/api/assinatura/toggle-renovacao",
   "/api/webhooks/asaas",
+  "/api/webhooks/meta-whatsapp",
   "/api/assinatura/historico",
 ];
 
