@@ -9,9 +9,11 @@ import {
 import { redirect } from "next/navigation";
 import MarketingPriceSimulator from "@/components/marketing/MarketingPriceSimulator";
 import WhatsAppPackagesCard from "@/components/marketing/WhatsAppPackagesCard";
+import WhatsAppSendCard from "@/components/marketing/WhatsAppSendCard";
 import { getUser } from "@/lib/auth/get-user";
 import { canUsePlanFeature } from "@/lib/plans/access";
 import { createClient } from "@/lib/supabase/server";
+import type { Json } from "@/types/database.generated";
 
 type ClienteRow = {
   id: string;
@@ -49,6 +51,24 @@ type CompraPendenteRow = {
   bank_slip_url?: string | null;
   pix_copia_cola?: string | null;
   qr_code_base64?: string | null;
+};
+
+type EnvioHistoricoRow = {
+  id: string;
+  destino?: string | null;
+  mensagem?: string | null;
+  status?: string | null;
+  tipo?: string | null;
+  criado_em?: string | null;
+  enviado_em?: string | null;
+  erro_texto?: string | null;
+};
+
+type FilaHistoricoRow = {
+  id: string;
+  status?: string | null;
+  criado_em?: string | null;
+  payload_json?: Json | null;
 };
 
 type ClienteInsight = {
@@ -141,6 +161,8 @@ export default async function MarketingPage() {
     { data: pacotesData },
     { data: creditosData },
     { data: compraPendenteData },
+    { data: historicoEnviosData },
+    { data: historicoEventosData },
   ] = await Promise.all([
     marketingAccess.allowed
       ? supabase
@@ -179,6 +201,25 @@ export default async function MarketingPage() {
       .order("criado_em", { ascending: false })
       .limit(1)
       .maybeSingle(),
+    whatsappAccess.allowed
+      ? (supabase as any)
+          .from("whatsapp_envios")
+          .select(
+            "id, destino, mensagem, status, tipo, criado_em, enviado_em, erro_texto"
+          )
+          .eq("id_salao", usuario.id_salao)
+          .eq("provider", "meta_cloud")
+          .order("criado_em", { ascending: false })
+          .limit(10)
+      : Promise.resolve({ data: [] as EnvioHistoricoRow[] }),
+    whatsappAccess.allowed
+      ? (supabase as any)
+          .from("whatsapp_filas")
+          .select("id, status, criado_em, payload_json")
+          .eq("id_salao", usuario.id_salao)
+          .order("criado_em", { ascending: false })
+          .limit(10)
+      : Promise.resolve({ data: [] as FilaHistoricoRow[] }),
   ]);
 
   const clientes = (clientesResult.data as ClienteRow[]) || [];
@@ -194,6 +235,35 @@ export default async function MarketingPage() {
     0
   );
   const compraPendente = compraPendenteData as CompraPendenteRow | null;
+  const historicoEnvios = ((historicoEnviosData as EnvioHistoricoRow[]) || []).map(
+    (item) => ({
+      id: item.id,
+      destino: item.destino || "",
+      mensagem: item.mensagem || "",
+      status: item.status || "pendente",
+      tipo: item.tipo || "manual",
+      criadoEm: item.criado_em || new Date().toISOString(),
+      enviadoEm: item.enviado_em || null,
+      erroTexto: item.erro_texto || null,
+    })
+  );
+  const historicoEventos = ((historicoEventosData as FilaHistoricoRow[]) || []).map(
+    (item) => {
+      const payload =
+        item.payload_json && typeof item.payload_json === "object"
+          ? (item.payload_json as Record<string, unknown>)
+          : {};
+
+      return {
+        id: item.id,
+        status: item.status || "recebido",
+        kind: String(payload.kind || "unknown"),
+        providerStatus: String(payload.provider_status || "").trim() || null,
+        waId: String(payload.wa_id || "").trim() || null,
+        criadoEm: item.criado_em || new Date().toISOString(),
+      };
+    }
+  );
 
   const metricasPorCliente = new Map<
     string,
@@ -315,6 +385,13 @@ export default async function MarketingPage() {
                   }
                 : null
             }
+          />
+
+          <WhatsAppSendCard
+            creditosDisponiveis={saldoAtual}
+            recursoAtivo={whatsappAccess.allowed}
+            historicoInicial={historicoEnvios}
+            eventosIniciais={historicoEventos}
           />
 
           <section className="rounded-[30px] border border-zinc-200 bg-white p-6 shadow-sm">
@@ -479,12 +556,11 @@ function WhatsAppSetupCard({
           WhatsApp comercial
         </div>
         <h2 className="mt-2 font-display text-2xl font-bold tracking-[-0.04em]">
-          Motor de compra pronto, envio real no proximo passo
+          Compra, envio e retorno rodando no mesmo fluxo
         </h2>
         <p className="mt-2 text-sm leading-6 text-zinc-500">
-          O fluxo de pacote ja ficou preparado para compra e ativacao. O proximo
-          passo e plugar a API oficial do provedor de envio para consumir os
-          creditos automaticamente.
+          O pacote libera o saldo, o disparo manual consome credito e os
+          retornos da Meta entram no historico operacional do salao.
         </p>
       </div>
 
@@ -501,11 +577,11 @@ function WhatsAppSetupCard({
         />
         <SetupStep
           title="2. Provedor WhatsApp"
-          description="Falta conectar a API do provedor para disparar e consumir credito por envio."
+          description="A Cloud API oficial da Meta ja esta ligada no envio manual."
         />
         <SetupStep
           title="3. Registro operacional"
-          description="Cada mensagem enviada deve baixar saldo, salvar destino, template, campanha e status."
+          description="Cada mensagem salva destino, texto, status e retorno do webhook."
         />
       </div>
     </section>

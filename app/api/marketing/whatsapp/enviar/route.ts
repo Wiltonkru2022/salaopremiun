@@ -5,6 +5,7 @@ import { sendManualMarketingWhatsApp } from "@/services/marketingWhatsAppService
 type Body = {
   to?: string;
   message?: string;
+  template?: string | null;
 };
 
 export async function POST(request: Request) {
@@ -13,6 +14,7 @@ export async function POST(request: Request) {
     const body = (await request.json()) as Body;
     const to = String(body.to || "").trim();
     const message = String(body.message || "").trim();
+    const template = body.template ? String(body.template).trim() : null;
 
     if (!to) {
       return NextResponse.json(
@@ -32,7 +34,8 @@ export async function POST(request: Request) {
       idSalao: actor.idSalao,
       destino: to,
       mensagem: message,
-      tipo: "teste",
+      tipo: "manual_marketing",
+      template,
     });
 
     return NextResponse.json({ ok: true, result }, { status: 200 });
@@ -42,7 +45,7 @@ export async function POST(request: Request) {
         error:
           error instanceof Error
             ? error.message
-            : "Erro ao enviar mensagem de teste.",
+            : "Erro ao enviar mensagem WhatsApp.",
       },
       { status: 500 }
     );

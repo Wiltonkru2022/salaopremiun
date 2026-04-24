@@ -5245,6 +5245,7 @@ export type Database = {
       }
       whatsapp_envios: {
         Row: {
+          atualizado_em: string
           criado_em: string
           custo_creditos: number
           destino: string
@@ -5253,11 +5254,15 @@ export type Database = {
           id: string
           id_salao: string | null
           mensagem: string
+          payload_json: Json
+          provider: string
+          provider_message_id: string | null
           status: string
           template: string | null
           tipo: string
         }
         Insert: {
+          atualizado_em?: string
           criado_em?: string
           custo_creditos?: number
           destino: string
@@ -5266,11 +5271,15 @@ export type Database = {
           id?: string
           id_salao?: string | null
           mensagem: string
+          payload_json?: Json
+          provider?: string
+          provider_message_id?: string | null
           status?: string
           template?: string | null
           tipo?: string
         }
         Update: {
+          atualizado_em?: string
           criado_em?: string
           custo_creditos?: number
           destino?: string
@@ -5279,6 +5288,9 @@ export type Database = {
           id?: string
           id_salao?: string | null
           mensagem?: string
+          payload_json?: Json
+          provider?: string
+          provider_message_id?: string | null
           status?: string
           template?: string | null
           tipo?: string
