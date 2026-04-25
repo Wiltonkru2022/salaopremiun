@@ -1,9 +1,7 @@
 import Link from "next/link";
 import {
   ArrowLeft,
-  CircleDollarSign,
   Clock,
-  Edit3,
   Scissors,
   Trash2,
   UserX,
