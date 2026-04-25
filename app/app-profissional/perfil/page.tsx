@@ -1,7 +1,9 @@
 import Link from "next/link";
 import ProfissionalShell from "@/components/profissional/layout/ProfissionalShell";
-import { requireProfissionalAppContext } from "@/lib/profissional-context.server";
+import ProfissionalSectionHeader from "@/components/profissional/ui/ProfissionalSectionHeader";
+import ProfissionalSurface from "@/components/profissional/ui/ProfissionalSurface";
 import { runAdminOperation } from "@/lib/supabase/admin-ops";
+import { requireProfissionalAppContext } from "@/lib/profissional-context.server";
 import { sairProfissionalAction } from "./actions";
 
 type ProfissionalPerfilRow = {
@@ -120,7 +122,7 @@ export default async function PerfilProfissionalPage({
 
   if (!profissional) {
     return (
-      <ProfissionalShell title="Meu Perfil" subtitle="Dados do profissional">
+      <ProfissionalShell title="Meu perfil" subtitle="Dados do profissional">
         <div className="rounded-[1.25rem] border border-red-200 bg-red-50 p-4 text-sm text-red-700 shadow-sm">
           Nao foi possivel carregar os dados do profissional.
         </div>
@@ -138,7 +140,7 @@ export default async function PerfilProfissionalPage({
   const notice = getPerfilNotice(params);
 
   return (
-    <ProfissionalShell title="Meu Perfil" subtitle="Dados do profissional">
+    <ProfissionalShell title="Meu perfil" subtitle="Dados do profissional">
       <div className="space-y-4">
         {notice ? (
           <div
@@ -152,66 +154,71 @@ export default async function PerfilProfissionalPage({
           </div>
         ) : null}
 
-        <div className="rounded-[1.5rem] border border-zinc-200 bg-white p-4 shadow-sm">
+        <section className="overflow-hidden rounded-[1.85rem] bg-zinc-950 px-4 py-5 text-white shadow-[0_18px_40px_rgba(15,23,42,0.16)]">
           <div className="flex items-center gap-4">
             {profissional.foto_url ? (
               <img
                 src={profissional.foto_url}
                 alt={nomeExibido}
-                className="h-16 w-16 rounded-full border border-zinc-200 object-cover"
+                className="h-18 w-18 h-[72px] w-[72px] rounded-full border border-white/20 object-cover"
               />
             ) : (
-              <div className="flex h-16 w-16 items-center justify-center rounded-full border border-zinc-200 bg-zinc-100 text-lg font-semibold text-zinc-700">
+              <div className="flex h-[72px] w-[72px] items-center justify-center rounded-full bg-white/10 text-xl font-black">
                 {getInitials(nomeExibido)}
               </div>
             )}
 
             <div className="min-w-0">
-              <div className="truncate text-lg font-semibold text-zinc-950">
+              <div className="text-[1.35rem] font-black tracking-[-0.04em]">
                 {nomeExibido}
               </div>
-              <div className="mt-1 text-sm text-[#b07b19]">{categoria}</div>
+              <div className="mt-1 text-sm text-amber-200">{categoria}</div>
+              <div className="mt-2 text-xs uppercase tracking-[0.14em] text-zinc-400">
+                SalaoPremium profissional
+              </div>
             </div>
           </div>
 
           {profissional.bio ? (
-            <div className="mt-4 rounded-2xl border border-zinc-100 bg-zinc-50 px-4 py-3 text-sm text-zinc-600">
+            <p className="mt-4 text-sm leading-6 text-zinc-300">
               {profissional.bio}
-            </div>
+            </p>
           ) : null}
-        </div>
+        </section>
 
-        <div className="rounded-[1.5rem] border border-zinc-200 bg-white p-4 shadow-sm">
-          <div className="mb-3 text-sm font-semibold uppercase tracking-[0.18em] text-zinc-500">
-            Informacoes
-          </div>
+        <ProfissionalSurface>
+          <ProfissionalSectionHeader
+            title="Contato"
+            description="Informacoes usadas no dia a dia."
+          />
 
           <div className="space-y-3">
             {[
               ["Telefone", profissional.telefone || "Nao informado"],
               ["WhatsApp", profissional.whatsapp || "Nao informado"],
-              ["E-mail", profissional.email || "Nao informado"],
+              ["Email", profissional.email || "Nao informado"],
               ["CPF", formatCpf(profissional.cpf)],
             ].map(([label, value]) => (
               <div
                 key={label}
-                className="rounded-2xl border border-zinc-100 bg-zinc-50 px-4 py-3"
+                className="rounded-2xl border border-zinc-200 bg-zinc-50/80 px-4 py-3"
               >
-                <div className="text-xs uppercase tracking-[0.16em] text-zinc-400">
+                <div className="text-[11px] font-bold uppercase tracking-[0.12em] text-zinc-400">
                   {label}
                 </div>
-                <div className="mt-1 break-all text-sm font-medium text-zinc-900">
+                <div className="mt-1 break-all text-sm font-semibold text-zinc-900">
                   {value}
                 </div>
               </div>
             ))}
           </div>
-        </div>
+        </ProfissionalSurface>
 
-        <div className="rounded-[1.5rem] border border-zinc-200 bg-white p-4 shadow-sm">
-          <div className="mb-3 text-sm font-semibold uppercase tracking-[0.18em] text-zinc-500">
-            Recebimento
-          </div>
+        <ProfissionalSurface>
+          <ProfissionalSectionHeader
+            title="Recebimento"
+            description="Dados de pagamento e repasse."
+          />
 
           <div className="space-y-3">
             {[
@@ -220,31 +227,40 @@ export default async function PerfilProfissionalPage({
             ].map(([label, value]) => (
               <div
                 key={label}
-                className="rounded-2xl border border-zinc-100 bg-zinc-50 px-4 py-3"
+                className="rounded-2xl border border-zinc-200 bg-zinc-50/80 px-4 py-3"
               >
-                <div className="text-xs uppercase tracking-[0.16em] text-zinc-400">
+                <div className="text-[11px] font-bold uppercase tracking-[0.12em] text-zinc-400">
                   {label}
                 </div>
-                <div className="mt-1 break-all text-sm font-medium text-zinc-900">
+                <div className="mt-1 break-all text-sm font-semibold text-zinc-900">
                   {value}
                 </div>
               </div>
             ))}
           </div>
-        </div>
+        </ProfissionalSurface>
 
-        <Link
-          href="/app-profissional/suporte"
-          className="flex h-12 w-full items-center justify-center rounded-2xl border border-[#d8b36b] bg-white text-sm font-semibold text-[#b07b19]"
-        >
-          Suporte
-        </Link>
+        <ProfissionalSurface>
+          <ProfissionalSectionHeader
+            title="Acoes"
+            description="Atalhos rapidos da sua conta."
+          />
 
-        <form action={sairProfissionalAction}>
-          <button className="h-12 w-full rounded-2xl border border-red-200 bg-red-50 text-sm font-semibold text-red-600">
-            Sair da conta
-          </button>
-        </form>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Link
+              href="/app-profissional/suporte"
+              className="flex h-12 w-full items-center justify-center rounded-2xl border border-[#d8b36b] bg-white text-sm font-bold text-[#b07b19]"
+            >
+              Abrir suporte
+            </Link>
+
+            <form action={sairProfissionalAction}>
+              <button className="h-12 w-full rounded-2xl border border-red-200 bg-red-50 text-sm font-bold text-red-600">
+                Sair da conta
+              </button>
+            </form>
+          </div>
+        </ProfissionalSurface>
       </div>
     </ProfissionalShell>
   );

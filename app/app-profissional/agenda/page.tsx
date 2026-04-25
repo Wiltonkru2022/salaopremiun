@@ -1,21 +1,18 @@
 import Link from "next/link";
-import { CalendarDays, CircleDollarSign, Plus } from "lucide-react";
-import ProfissionalShell from "@/components/profissional/layout/ProfissionalShell";
+import { CalendarDays, CircleDollarSign, Plus, Receipt } from "lucide-react";
 import AgendaDayStrip from "@/components/profissional/agenda/AgendaDayStrip";
-import AgendaTimeline from "@/components/profissional/agenda/AgendaTimeline";
-import { requireProfissionalAppContext } from "@/lib/profissional-context.server";
+import ProfissionalShell from "@/components/profissional/layout/ProfissionalShell";
+import ProfissionalEmptyState from "@/components/profissional/ui/ProfissionalEmptyState";
+import ProfissionalSectionHeader from "@/components/profissional/ui/ProfissionalSectionHeader";
+import ProfissionalStatusPill from "@/components/profissional/ui/ProfissionalStatusPill";
+import ProfissionalSurface from "@/components/profissional/ui/ProfissionalSurface";
 import { buscarAgendaProfissional } from "@/app/services/profissional/agenda";
+import { requireProfissionalAppContext } from "@/lib/profissional-context.server";
 
 type SearchParams = Promise<{
   data?: string;
   ok?: string;
 }>;
-
-type AgendaPausa = {
-  descricao: string;
-  top: number;
-  height: number;
-};
 
 function formatarMoeda(valor: number) {
   return new Intl.NumberFormat("pt-BR", {
@@ -24,13 +21,27 @@ function formatarMoeda(valor: number) {
   }).format(valor);
 }
 
+function getStatusMeta(status: string) {
+  const value = String(status || "").toLowerCase();
+
+  if (value === "confirmado") return { label: "Confirmado", tone: "success" as const };
+  if (value === "em_atendimento") return { label: "Em atendimento", tone: "info" as const };
+  if (value === "atendido") return { label: "Atendido", tone: "info" as const };
+  if (value === "aguardando_pagamento") {
+    return { label: "Aguardando pagamento", tone: "warning" as const };
+  }
+  if (value === "faltou") return { label: "Nao compareceu", tone: "danger" as const };
+  if (value === "cancelado") return { label: "Cancelado", tone: "danger" as const };
+
+  return { label: "Pendente", tone: "warning" as const };
+}
+
 export default async function AgendaProfissionalPage({
   searchParams,
 }: {
   searchParams: SearchParams;
 }) {
   const session = await requireProfissionalAppContext();
-
   const { data, ok } = await searchParams;
 
   const agenda = await buscarAgendaProfissional(
@@ -41,78 +52,136 @@ export default async function AgendaProfissionalPage({
 
   return (
     <ProfissionalShell title="Agenda" subtitle={agenda.dataLabel}>
-      <div className="space-y-5 pb-28">
+      <div className="space-y-4">
         {ok ? (
           <div className="rounded-[1.25rem] border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700 shadow-sm">
             {ok}
           </div>
         ) : null}
 
-        <AgendaDayStrip
-          dataSelecionada={agenda.dataSelecionada}
-          basePath="/app-profissional/agenda"
-        />
+        <ProfissionalSurface>
+          <ProfissionalSectionHeader
+            title="Dias da semana"
+            description="Deslize e toque no dia para ver os atendimentos."
+            action={
+              <Link
+                href={`/app-profissional/agenda/novo?data=${agenda.dataSelecionada}`}
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-zinc-950 px-4 text-sm font-bold text-white"
+              >
+                <Plus size={16} />
+                Novo
+              </Link>
+            }
+          />
 
-        <section className="grid grid-cols-2 gap-3">
-          <div className="rounded-[1.6rem] border border-zinc-200 bg-white p-4 shadow-sm">
+          <AgendaDayStrip
+            dataSelecionada={agenda.dataSelecionada}
+            basePath="/app-profissional/agenda"
+          />
+        </ProfissionalSurface>
+
+        <div className="grid grid-cols-2 gap-3">
+          <ProfissionalSurface>
             <div className="flex items-center gap-2 text-zinc-500">
               <CalendarDays size={18} />
-              <span className="text-sm">Atendimentos</span>
+              <span className="text-sm font-medium">Atendimentos</span>
             </div>
-            <div className="mt-3 text-[2rem] font-bold leading-none text-zinc-950">
+            <div className="mt-3 text-[2rem] font-black tracking-[-0.05em] leading-none text-zinc-950">
               {agenda.totalAtendimentos}
             </div>
-          </div>
+          </ProfissionalSurface>
 
-          <div className="rounded-[1.6rem] border border-zinc-200 bg-white p-4 shadow-sm">
+          <ProfissionalSurface>
             <div className="flex items-center gap-2 text-zinc-500">
               <CircleDollarSign size={18} />
-              <span className="text-sm">Previsto</span>
+              <span className="text-sm font-medium">Previsto</span>
             </div>
-            <div className="mt-3 text-[1.75rem] font-bold leading-none text-zinc-950">
+            <div className="mt-3 text-[1.8rem] font-black tracking-[-0.05em] leading-none text-zinc-950">
               {formatarMoeda(agenda.totalPrevisto)}
             </div>
-          </div>
-        </section>
+          </ProfissionalSurface>
+        </div>
 
-        <section className="rounded-[1.6rem] border border-zinc-200 bg-white p-4 shadow-sm">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="inline-flex rounded-full bg-zinc-950 px-4 py-2 text-sm font-semibold text-white">
-              Todos
-            </span>
-
-            <span className="inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-white px-4 py-2 text-sm font-medium text-zinc-700">
-              <span className="h-2.5 w-2.5 rounded-full bg-[#c89b3c]" />
-              {agenda.profissional.nome}
-            </span>
-          </div>
-
-          <div className="mt-4 text-sm text-zinc-500">
-            {agenda.expedienteAtivo
-              ? `Expediente: ${agenda.horaInicioExpediente} às ${agenda.horaFimExpediente}`
-              : "Profissional sem expediente ativo neste dia."}
-          </div>
-        </section>
-
-        {agenda.cards.length ? (
-          <AgendaTimeline
-            labels={agenda.labels}
-            cards={agenda.cards}
-            pausas={agenda.pausas as AgendaPausa[]}
-            timelineHeight={agenda.timelineHeight}
+        <ProfissionalSurface>
+          <ProfissionalSectionHeader
+            title="Dia de trabalho"
+            description={
+              agenda.expedienteAtivo
+                ? `Expediente das ${agenda.horaInicioExpediente} as ${agenda.horaFimExpediente}.`
+                : "Sem expediente ativo neste dia."
+            }
           />
-        ) : (
-          <div className="rounded-[1.6rem] border border-zinc-200 bg-white p-5 text-sm text-zinc-500 shadow-sm">
-            Nenhum agendamento encontrado nesta data.
-          </div>
-        )}
 
-        <Link
-          href={`/app-profissional/agenda/novo?data=${agenda.dataSelecionada}`}
-          className="fixed bottom-[98px] right-5 z-20 flex h-16 w-16 items-center justify-center rounded-full bg-zinc-950 text-white shadow-sm"
-        >
-          <Plus size={28} />
-        </Link>
+          {agenda.cards.length ? (
+            <div className="space-y-3">
+              {agenda.cards.map((card) => {
+                const status = getStatusMeta(card.status);
+
+                return (
+                  <div
+                    key={card.id}
+                    className="rounded-[1.5rem] border border-zinc-200 bg-zinc-50/70 p-4"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.14em] text-zinc-400">
+                          <span>{card.horario}</span>
+                          <span className="h-1 w-1 rounded-full bg-zinc-300" />
+                          <span>{card.horaFim}</span>
+                        </div>
+
+                        <div className="mt-2 text-[1.05rem] font-bold tracking-[-0.02em] text-zinc-950">
+                          {card.cliente}
+                        </div>
+
+                        <div className="mt-1 text-sm leading-6 text-zinc-500">
+                          {card.servico}
+                        </div>
+                      </div>
+
+                      <ProfissionalStatusPill
+                        label={status.label}
+                        tone={status.tone}
+                      />
+                    </div>
+
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      <Link
+                        href={`/app-profissional/agenda/${card.id}`}
+                        className="inline-flex h-9 items-center rounded-full border border-zinc-200 bg-white px-3 text-xs font-bold text-zinc-700"
+                      >
+                        Ver detalhes
+                      </Link>
+
+                      {card.idComanda ? (
+                        <Link
+                          href={`/app-profissional/comandas/${card.idComanda}`}
+                          className="inline-flex h-9 items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 text-xs font-bold text-amber-800"
+                        >
+                          <Receipt size={14} />
+                          Abrir comanda
+                        </Link>
+                      ) : null}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <ProfissionalEmptyState
+              title="Nenhum agendamento nesta data"
+              description="Seu dia esta livre. Se quiser, crie um novo horario agora."
+              action={
+                <Link
+                  href={`/app-profissional/agenda/novo?data=${agenda.dataSelecionada}`}
+                  className="inline-flex h-11 items-center justify-center rounded-2xl bg-zinc-950 px-4 text-sm font-bold text-white"
+                >
+                  Criar horario
+                </Link>
+              }
+            />
+          )}
+        </ProfissionalSurface>
       </div>
     </ProfissionalShell>
   );

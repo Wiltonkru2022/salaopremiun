@@ -54,6 +54,13 @@ type NomeRow = {
   nome: string;
 };
 
+type ServicoResumoRow = {
+  id: string;
+  nome: string;
+  preco?: number | string | null;
+  preco_padrao?: number | string | null;
+};
+
 /* ---------------- UTILS ---------------- */
 
 function hojeLocal() {
@@ -265,21 +272,42 @@ export async function buscarAgendaProfissional(
   data?: string
 ) {
   const dataSelecionada = data || hojeLocal();
+  const diaAtual = dayNamePt(dataSelecionada);
 
-  const { agendamentos, clientesMap, servicosMap } = await runAdminOperation({
+  const {
+    agendamentos,
+    clientesMap,
+    servicosMap,
+    profissionalNome,
+    expedienteAtivo,
+    horaInicioExpediente,
+    horaFimExpediente,
+  } = await runAdminOperation({
     action: "profissional_agenda_buscar_agenda",
     actorId: idProfissional,
     idSalao,
     run: async (supabase) => {
-      const { data: agendamentosData, error } = await supabase
-        .from("agendamentos")
-        .select(SELECT_AGENDAMENTOS)
-        .eq("id_salao", idSalao)
-        .eq("profissional_id", idProfissional)
-        .eq("data", dataSelecionada)
-        .order("hora_inicio", { ascending: true });
+      const [
+        { data: agendamentosData, error: agendamentosError },
+        { data: profissionalData, error: profissionalError },
+      ] = await Promise.all([
+        supabase
+          .from("agendamentos")
+          .select(SELECT_AGENDAMENTOS)
+          .eq("id_salao", idSalao)
+          .eq("profissional_id", idProfissional)
+          .eq("data", dataSelecionada)
+          .order("hora_inicio", { ascending: true }),
+        supabase
+          .from("profissionais")
+          .select("nome, nome_exibicao, dias_trabalho")
+          .eq("id", idProfissional)
+          .eq("id_salao", idSalao)
+          .maybeSingle(),
+      ]);
 
-      if (error) throw new Error(error.message);
+      if (agendamentosError) throw new Error(agendamentosError.message);
+      if (profissionalError) throw new Error(profissionalError.message);
 
       const rows = (agendamentosData ?? []) as AgendamentoAgendaRow[];
       const clienteIds = Array.from(
@@ -294,15 +322,30 @@ export async function buscarAgendaProfissional(
           ? supabase.from("clientes").select("id, nome").in("id", clienteIds)
           : Promise.resolve({ data: [], error: null }),
         servicoIds.length
-          ? supabase.from("servicos").select("id, nome").in("id", servicoIds)
+          ? supabase
+              .from("servicos")
+              .select("id, nome, preco, preco_padrao")
+              .in("id", servicoIds)
           : Promise.resolve({ data: [], error: null }),
       ]);
 
       if (clientesResult.error) throw new Error(clientesResult.error.message);
       if (servicosResult.error) throw new Error(servicosResult.error.message);
 
+      const diasTrabalho = parseDiasTrabalho(
+        normalizarJsonAgenda(profissionalData?.dias_trabalho)
+      );
+      const regraDia = diasTrabalho.find(
+        (item) => normalizeDia(item.dia) === normalizeDia(diaAtual)
+      );
+
       return {
         agendamentos: rows,
+        profissionalNome:
+          profissionalData?.nome_exibicao || profissionalData?.nome || "Profissional",
+        expedienteAtivo: Boolean(regraDia?.ativo),
+        horaInicioExpediente: regraDia?.inicio || null,
+        horaFimExpediente: regraDia?.fim || null,
         clientesMap: new Map(
           ((clientesResult.data ?? []) as NomeRow[]).map((cliente) => [
             cliente.id,
@@ -310,9 +353,12 @@ export async function buscarAgendaProfissional(
           ])
         ),
         servicosMap: new Map(
-          ((servicosResult.data ?? []) as NomeRow[]).map((servico) => [
+          ((servicosResult.data ?? []) as ServicoResumoRow[]).map((servico) => [
             servico.id,
-            servico.nome,
+            {
+              nome: servico.nome,
+              valor: Number(servico.preco ?? servico.preco_padrao ?? 0),
+            },
           ])
         ),
       };
@@ -344,6 +390,7 @@ export async function buscarAgendaProfissional(
   const cards = agendamentos.map((item) => {
     const inicio = timeToMinutes(item.hora_inicio);
     const fim = timeToMinutes(item.hora_fim);
+    const servico = item.servico_id ? servicosMap.get(item.servico_id) : null;
 
     return {
       id: item.id,
@@ -353,24 +400,30 @@ export async function buscarAgendaProfissional(
       cliente: item.cliente_id
         ? clientesMap.get(item.cliente_id) ?? "Cliente"
         : "Cliente",
-      servico: item.servico_id
-        ? servicosMap.get(item.servico_id) ?? "Servico"
-        : "Servico",
+      servico: servico?.nome ?? "Servico",
+      valorPrevisto: servico?.valor ?? 0,
       status: item.status,
       top: Math.max((inicio - inicioMinutos) * pixelsPorMinuto, 0),
       height: Math.max((fim - inicio) * pixelsPorMinuto, 88),
     };
   });
 
+  const totalPrevisto = cards.reduce(
+    (acc, item) => acc + Number(item.valorPrevisto || 0),
+    0
+  );
+
   return {
-    profissional: { id: idProfissional, nome: "Profissional" },
+    profissional: { id: idProfissional, nome: profissionalNome },
     dataSelecionada,
     dataLabel: toDateLabel(dataSelecionada),
-    expedienteAtivo: true,
-    horaInicioExpediente: minutesToTime(inicioMinutos),
-    horaFimExpediente: minutesToTime(fimMinutos),
+    expedienteAtivo,
+    horaInicioExpediente:
+      horaInicioExpediente || minutesToTime(inicioMinutos),
+    horaFimExpediente:
+      horaFimExpediente || minutesToTime(fimMinutos),
     totalAtendimentos: agendamentos.length,
-    totalPrevisto: 0,
+    totalPrevisto,
     cards,
     labels,
     pausas: [],

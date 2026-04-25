@@ -17,7 +17,7 @@ export default function ProfissionalBottomNav() {
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-white/70 bg-white/90 pb-[env(safe-area-inset-bottom)] shadow-[0_-18px_44px_rgba(15,23,42,0.08)] backdrop-blur-xl">
-      <div className="mx-auto grid max-w-md grid-cols-5 px-2">
+      <div className="mx-auto grid max-w-md grid-cols-5 gap-1 px-2 sm:max-w-lg lg:max-w-2xl">
         {items.map(({ href, label, icon: Icon }) => {
           const active = pathname === href || pathname.startsWith(`${href}/`);
 
@@ -26,14 +26,14 @@ export default function ProfissionalBottomNav() {
               key={href}
               href={href}
               prefetch
-              className={`my-2 flex flex-col items-center justify-center gap-1 rounded-2xl px-2 py-2 text-[11px] font-semibold ${
+              className={`my-2 flex min-h-[58px] flex-col items-center justify-center gap-1 rounded-2xl px-2 py-2 text-[11px] font-semibold transition ${
                 active
                   ? "bg-zinc-950 text-white shadow-sm"
                   : "text-zinc-500 active:bg-zinc-100"
               }`}
             >
               <Icon size={18} strokeWidth={2.2} />
-              <span>{label}</span>
+              <span className="leading-none">{label}</span>
             </Link>
           );
         })}
