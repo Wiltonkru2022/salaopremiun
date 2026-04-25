@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import MonitoringContextBridge from "@/components/monitoring/MonitoringContextBridge";
 import ProfissionalInstallPrompt from "@/components/profissional/pwa/ProfissionalInstallPrompt";
 import ProfissionalPwaRuntime from "@/components/profissional/pwa/ProfissionalPwaRuntime";
+import ProfissionalNavigationRuntime from "./ProfissionalNavigationRuntime";
 import ProfissionalHeader from "./ProfissionalHeader";
 import ProfissionalBottomNav from "./ProfissionalBottomNav";
 
@@ -27,6 +28,7 @@ export default function ProfissionalShell({
         surface="app_profissional"
       />
       <ProfissionalPwaRuntime />
+      <ProfissionalNavigationRuntime />
 
       <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col bg-[#f5f5f5]/95 shadow-[0_0_80px_rgba(15,23,42,0.08)] sm:max-w-lg lg:max-w-2xl">
         <ProfissionalHeader title={title} subtitle={subtitle} />
