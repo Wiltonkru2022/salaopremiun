@@ -9,6 +9,9 @@ import {
   UserX,
 } from "lucide-react";
 import ProfissionalShell from "@/components/profissional/layout/ProfissionalShell";
+import ProfissionalSectionHeader from "@/components/profissional/ui/ProfissionalSectionHeader";
+import ProfissionalStatusPill from "@/components/profissional/ui/ProfissionalStatusPill";
+import ProfissionalSurface from "@/components/profissional/ui/ProfissionalSurface";
 import { requireProfissionalAppContext } from "@/lib/profissional-context.server";
 import { runAdminOperation } from "@/lib/supabase/admin-ops";
 import {
@@ -89,15 +92,17 @@ function getStatusLabel(status?: string | null) {
   return option?.[1] || status || "Sem status";
 }
 
-function getStatusClasses(status?: string | null) {
+function getStatusTone(status?: string | null) {
   const valor = String(status || "").toLowerCase();
 
-  if (valor === "confirmado") return "border-emerald-200 bg-emerald-50 text-emerald-700";
-  if (valor === "em_atendimento") return "border-blue-200 bg-blue-50 text-blue-700";
-  if (valor === "atendido") return "border-sky-200 bg-sky-50 text-sky-700";
-  if (valor === "aguardando_pagamento") return "border-amber-200 bg-amber-50 text-amber-700";
-  if (valor === "faltou" || valor === "cancelado") return "border-red-200 bg-red-50 text-red-700";
-  return "border-zinc-200 bg-zinc-50 text-zinc-700";
+  if (valor === "confirmado") return "success" as const;
+  if (valor === "em_atendimento" || valor === "atendido") return "info" as const;
+  if (valor === "aguardando_pagamento" || valor === "pendente") {
+    return "warning" as const;
+  }
+  if (valor === "faltou" || valor === "cancelado") return "danger" as const;
+
+  return "neutral" as const;
 }
 
 function inputClass() {
@@ -145,45 +150,41 @@ export default async function AgendamentoDetalheProfissionalPage({
           };
         }
 
-        const [
-          clienteResult,
-          servicoResult,
-          comandaResult,
-          itensResult,
-        ] = await Promise.all([
-          agendamentoData.cliente_id
-            ? supabase
-                .from("clientes")
-                .select("id, nome, telefone")
-                .eq("id", agendamentoData.cliente_id)
-                .eq("id_salao", session.idSalao)
-                .maybeSingle()
-            : Promise.resolve({ data: null, error: null }),
-          agendamentoData.servico_id
-            ? supabase
-                .from("servicos")
-                .select("id, nome, duracao_minutos, preco, preco_padrao")
-                .eq("id", agendamentoData.servico_id)
-                .eq("id_salao", session.idSalao)
-                .maybeSingle()
-            : Promise.resolve({ data: null, error: null }),
-          agendamentoData.id_comanda
-            ? supabase
-                .from("comandas")
-                .select("id, numero, status, total")
-                .eq("id", agendamentoData.id_comanda)
-                .eq("id_salao", session.idSalao)
-                .maybeSingle()
-            : Promise.resolve({ data: null, error: null }),
-          agendamentoData.id_comanda
-            ? supabase
-                .from("comanda_itens")
-                .select("id", { count: "exact", head: true })
-                .eq("id_comanda", agendamentoData.id_comanda)
-                .eq("id_salao", session.idSalao)
-                .eq("ativo", true)
-            : Promise.resolve({ data: null, error: null, count: 0 }),
-        ]);
+        const [clienteResult, servicoResult, comandaResult, itensResult] =
+          await Promise.all([
+            agendamentoData.cliente_id
+              ? supabase
+                  .from("clientes")
+                  .select("id, nome, telefone")
+                  .eq("id", agendamentoData.cliente_id)
+                  .eq("id_salao", session.idSalao)
+                  .maybeSingle()
+              : Promise.resolve({ data: null, error: null }),
+            agendamentoData.servico_id
+              ? supabase
+                  .from("servicos")
+                  .select("id, nome, duracao_minutos, preco, preco_padrao")
+                  .eq("id", agendamentoData.servico_id)
+                  .eq("id_salao", session.idSalao)
+                  .maybeSingle()
+              : Promise.resolve({ data: null, error: null }),
+            agendamentoData.id_comanda
+              ? supabase
+                  .from("comandas")
+                  .select("id, numero, status, total")
+                  .eq("id", agendamentoData.id_comanda)
+                  .eq("id_salao", session.idSalao)
+                  .maybeSingle()
+              : Promise.resolve({ data: null, error: null }),
+            agendamentoData.id_comanda
+              ? supabase
+                  .from("comanda_itens")
+                  .select("id", { count: "exact", head: true })
+                  .eq("id_comanda", agendamentoData.id_comanda)
+                  .eq("id_salao", session.idSalao)
+                  .eq("ativo", true)
+              : Promise.resolve({ data: null, error: null, count: 0 }),
+          ]);
 
         if (clienteResult.error) throw new Error(clienteResult.error.message);
         if (servicoResult.error) throw new Error(servicoResult.error.message);
@@ -247,79 +248,86 @@ export default async function AgendamentoDetalheProfissionalPage({
           </div>
         ) : null}
 
-        <section className="rounded-[1.75rem] border border-zinc-200 bg-white p-5 shadow-sm">
+        <section className="overflow-hidden rounded-[1.85rem] bg-zinc-950 px-4 py-5 text-white shadow-[0_18px_40px_rgba(15,23,42,0.16)]">
           <div className="flex items-start justify-between gap-3">
-            <div>
-              <div className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-400">
+            <div className="min-w-0">
+              <div className="text-xs font-bold uppercase tracking-[0.14em] text-zinc-400">
                 Cliente
               </div>
-              <h1 className="mt-1 text-2xl font-black tracking-[-0.04em] text-zinc-950">
+              <h1 className="mt-2 text-[1.7rem] font-black tracking-[-0.05em] leading-none">
                 {cliente?.nome || "Cliente"}
               </h1>
               {cliente?.telefone ? (
-                <div className="mt-1 text-sm text-zinc-500">{cliente.telefone}</div>
+                <div className="mt-2 text-sm text-zinc-300">{cliente.telefone}</div>
               ) : null}
             </div>
 
-            <span
-              className={`shrink-0 rounded-full border px-3 py-1 text-xs font-semibold ${getStatusClasses(
-                status
-              )}`}
-            >
-              {getStatusLabel(status)}
-            </span>
+            <ProfissionalStatusPill
+              label={getStatusLabel(status)}
+              tone={getStatusTone(status)}
+            />
           </div>
 
           <div className="mt-5 grid grid-cols-2 gap-3">
-            <div className="rounded-[1.25rem] bg-zinc-50 p-4">
-              <div className="flex items-center gap-2 text-sm text-zinc-500">
+            <div className="rounded-[1.25rem] bg-white/10 p-4">
+              <div className="flex items-center gap-2 text-sm text-zinc-300">
                 <Clock size={17} />
                 Horario
               </div>
-              <div className="mt-2 text-lg font-bold text-zinc-950">
+              <div className="mt-2 text-lg font-bold text-white">
                 {horaInicio} - {horaFim}
               </div>
             </div>
 
-            <div className="rounded-[1.25rem] bg-zinc-50 p-4">
-              <div className="flex items-center gap-2 text-sm text-zinc-500">
+            <div className="rounded-[1.25rem] bg-white/10 p-4">
+              <div className="flex items-center gap-2 text-sm text-zinc-300">
                 <Scissors size={17} />
                 Servico
               </div>
-              <div className="mt-2 text-sm font-bold text-zinc-950">
+              <div className="mt-2 text-sm font-bold text-white">
                 {servico?.nome || "Servico"}
               </div>
-              <div className="mt-1 text-xs text-zinc-500">
+              <div className="mt-1 text-xs text-zinc-300">
                 {formatMoney(servico?.preco ?? servico?.preco_padrao)}
               </div>
             </div>
           </div>
 
           {agendamento.observacoes ? (
-            <div className="mt-4 rounded-[1.25rem] bg-zinc-50 p-4 text-sm text-zinc-600">
+            <div className="mt-4 rounded-[1.25rem] bg-white/10 p-4 text-sm text-zinc-200">
               {agendamento.observacoes}
             </div>
           ) : null}
         </section>
 
-        <section className="rounded-[1.75rem] border border-zinc-200 bg-white p-5 shadow-sm">
-          <div className="flex items-center justify-between gap-3">
+        <ProfissionalSurface>
+          <ProfissionalSectionHeader
+            title="Comanda e caixa"
+            description={
+              comanda
+                ? `Comanda ${comanda.numero || ""} pronta para revisar ou enviar ao caixa.`
+                : "Abra uma comanda para lancar itens e seguir para o caixa."
+            }
+          />
+
+          <div className="flex items-center justify-between gap-3 rounded-[1.25rem] border border-zinc-200 bg-zinc-50/80 p-4">
             <div>
-              <div className="flex items-center gap-2 text-sm font-semibold text-zinc-950">
-                <CircleDollarSign size={18} />
-                Comanda e caixa
+              <div className="text-sm font-semibold text-zinc-900">
+                {comanda ? `Comanda #${comanda.numero}` : "Sem comanda aberta"}
               </div>
-              <p className="mt-1 text-sm text-zinc-500">
+              <div className="mt-1 text-sm text-zinc-500">
                 {comanda
-                  ? `Comanda ${comanda.numero || ""} - ${getStatusLabel(comanda.status)}`
-                  : "Abra uma comanda para lancar itens e enviar ao caixa."}
-              </p>
+                  ? `${itensCount} item(ns) lancados`
+                  : "Crie a comanda deste atendimento em um toque."}
+              </div>
             </div>
             {comanda ? (
-              <div className="text-right text-sm font-bold text-zinc-950">
-                {formatMoney(comanda.total)}
-                <div className="text-xs font-medium text-zinc-400">
-                  {itensCount} item(ns)
+              <div className="text-right">
+                <div className="text-base font-bold text-zinc-950">
+                  {formatMoney(comanda.total)}
+                </div>
+                <div className="text-xs text-zinc-400">
+                  {getStatusLabel(comanda.status)}
                 </div>
               </div>
             ) : null}
@@ -354,15 +362,15 @@ export default async function AgendamentoDetalheProfissionalPage({
               </form>
             ) : null}
           </div>
-        </section>
+        </ProfissionalSurface>
 
-        <section className="rounded-[1.75rem] border border-zinc-200 bg-white p-5 shadow-sm">
-          <div className="flex items-center gap-2 text-sm font-semibold text-zinc-950">
-            <Edit3 size={18} />
-            Editar agendamento
-          </div>
+        <ProfissionalSurface>
+          <ProfissionalSectionHeader
+            title="Editar atendimento"
+            description="Ajuste horario, status e observacoes."
+          />
 
-          <form action={atualizarAgendamentoProfissionalAction} className="mt-4 space-y-3">
+          <form action={atualizarAgendamentoProfissionalAction} className="space-y-3">
             <input type="hidden" name="id_agendamento" value={agendamento.id} />
 
             <label className="block text-sm font-medium text-zinc-700">
@@ -422,30 +430,32 @@ export default async function AgendamentoDetalheProfissionalPage({
               Salvar alteracoes
             </button>
           </form>
-        </section>
+        </ProfissionalSurface>
 
-        <section className="grid gap-2">
-          <form action={marcarClienteNaoCompareceuAction}>
-            <input type="hidden" name="id_agendamento" value={agendamento.id} />
-            <button className="flex w-full items-center justify-center gap-2 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-800">
-              <UserX size={18} />
-              Cliente nao compareceu
-            </button>
-          </form>
+        <ProfissionalSurface>
+          <ProfissionalSectionHeader
+            title="Acoes rapidas"
+            description="Use quando o atendimento mudar de rumo."
+          />
 
-          <form action={cancelarAgendamentoProfissionalAction}>
-            <input type="hidden" name="id_agendamento" value={agendamento.id} />
-            <button className="flex w-full items-center justify-center gap-2 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700">
-              <Trash2 size={18} />
-              Excluir da agenda (cancelar)
-            </button>
-          </form>
-        </section>
+          <div className="grid gap-2">
+            <form action={marcarClienteNaoCompareceuAction}>
+              <input type="hidden" name="id_agendamento" value={agendamento.id} />
+              <button className="flex w-full items-center justify-center gap-2 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-800">
+                <UserX size={18} />
+                Cliente nao compareceu
+              </button>
+            </form>
 
-        <div className="rounded-[1.5rem] border border-zinc-200 bg-white p-4 text-sm text-zinc-500 shadow-sm">
-          Fluxo recomendado: confirme o atendimento, abra a comanda, lance os itens
-          e envie para o caixa quando estiver pronto para pagamento.
-        </div>
+            <form action={cancelarAgendamentoProfissionalAction}>
+              <input type="hidden" name="id_agendamento" value={agendamento.id} />
+              <button className="flex w-full items-center justify-center gap-2 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700">
+                <Trash2 size={18} />
+                Excluir da agenda
+              </button>
+            </form>
+          </div>
+        </ProfissionalSurface>
       </div>
     </ProfissionalShell>
   );

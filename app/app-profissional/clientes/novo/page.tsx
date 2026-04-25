@@ -1,5 +1,5 @@
-import ProfissionalShell from "@/components/profissional/layout/ProfissionalShell";
 import NovoClienteForm from "@/components/profissional/clientes/NovoClienteForm";
+import ProfissionalShell from "@/components/profissional/layout/ProfissionalShell";
 import { requireProfissionalAppContext } from "@/lib/profissional-context.server";
 
 export default async function NovoClientePage() {
@@ -8,7 +8,7 @@ export default async function NovoClientePage() {
   return (
     <ProfissionalShell
       title="Cadastrar cliente"
-      subtitle="Novo cadastro no salão"
+      subtitle="Novo cadastro no salao"
     >
       <NovoClienteForm />
     </ProfissionalShell>

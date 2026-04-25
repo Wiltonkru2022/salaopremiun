@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { Headset, LifeBuoy } from "lucide-react";
+import ProfissionalSectionHeader from "@/components/profissional/ui/ProfissionalSectionHeader";
 
 export default function ProfissionalTicketQuickOpen() {
   const [assunto, setAssunto] = useState("");
@@ -49,11 +51,16 @@ export default function ProfissionalTicketQuickOpen() {
   }
 
   return (
-    <section className="mb-4 rounded-[1.5rem] border border-zinc-200 bg-white p-4 shadow-sm">
-      <div className="text-sm font-semibold text-zinc-950">Atendimento humano</div>
-      <p className="mt-1 text-xs leading-5 text-zinc-500">
-        Se a IA nao resolver, abra um ticket e o AdminMaster recebe o chamado.
-      </p>
+    <section className="rounded-[1.6rem] border border-zinc-200 bg-white p-4 shadow-[0_14px_36px_rgba(15,23,42,0.06)]">
+      <ProfissionalSectionHeader
+        title="Atendimento humano"
+        description="Se a IA nao resolver, abra um chamado e a equipe recebe o contexto."
+        action={
+          <div className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-amber-50 text-amber-700">
+            <Headset size={18} />
+          </div>
+        }
+      />
 
       {feedback ? (
         <div className="mt-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700">
@@ -89,6 +96,11 @@ export default function ProfissionalTicketQuickOpen() {
         >
           {saving ? "Abrindo ticket..." : "Abrir ticket humano"}
         </button>
+
+        <div className="flex items-start gap-2 rounded-2xl border border-zinc-200 bg-zinc-50 px-3 py-3 text-xs leading-5 text-zinc-500">
+          <LifeBuoy size={14} className="mt-0.5 shrink-0" />
+          Envie um resumo curto e objetivo. Isso ajuda a equipe a responder mais rapido.
+        </div>
       </div>
     </section>
   );

@@ -4,9 +4,14 @@ import ProfissionalTicketQuickOpen from "@/components/profissional/suporte/Profi
 
 export default async function SuporteProfissionalPage() {
   return (
-    <ProfissionalPrivate title="Suporte IA" subtitle="Tire duvidas sobre o app">
-      <ProfissionalTicketQuickOpen />
-      <ChatSuporte />
+    <ProfissionalPrivate
+      title="Suporte"
+      subtitle="IA para ajuda rapida e chamado humano quando precisar"
+    >
+      <div className="space-y-4">
+        <ChatSuporte />
+        <ProfissionalTicketQuickOpen />
+      </div>
     </ProfissionalPrivate>
   );
 }

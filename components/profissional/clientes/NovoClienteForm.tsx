@@ -2,6 +2,7 @@
 
 import { useActionState, useMemo, useState } from "react";
 import { useFormStatus } from "react-dom";
+import ProfissionalSectionHeader from "@/components/profissional/ui/ProfissionalSectionHeader";
 import {
   criarClienteProfissionalAction,
   type NovoClienteState,
@@ -18,9 +19,9 @@ function SubmitButton() {
     <button
       type="submit"
       disabled={pending}
-        className="h-12 w-full rounded-2xl bg-zinc-950 text-base font-semibold text-white shadow-sm transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60"
+      className="h-12 w-full rounded-2xl bg-zinc-950 text-base font-semibold text-white shadow-sm transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60"
     >
-      {pending ? "Salvando..." : "Salvar cliente"}
+      {pending ? "Salvando cliente..." : "Salvar cliente"}
     </button>
   );
 }
@@ -46,14 +47,18 @@ export default function NovoClienteForm() {
   );
 
   const [telefone, setTelefone] = useState("");
-
   const telefoneFormatado = useMemo(() => telefone, [telefone]);
 
   return (
     <form
       action={formAction}
-      className="space-y-4 rounded-[1.5rem] border border-zinc-200 bg-white p-4 shadow-sm"
+      className="space-y-4 rounded-[1.6rem] border border-zinc-200 bg-white p-4 shadow-[0_14px_36px_rgba(15,23,42,0.06)]"
     >
+      <ProfissionalSectionHeader
+        title="Novo cliente"
+        description="Cadastre o essencial para agendar e abrir comandas mais rapido."
+      />
+
       <div>
         <label className="mb-1.5 block text-sm font-medium text-zinc-700">
           Nome completo
@@ -83,7 +88,7 @@ export default function NovoClienteForm() {
 
       <div>
         <label className="mb-1.5 block text-sm font-medium text-zinc-700">
-          E-mail
+          Email
         </label>
         <input
           name="email"
@@ -95,11 +100,11 @@ export default function NovoClienteForm() {
 
       <div>
         <label className="mb-1.5 block text-sm font-medium text-zinc-700">
-          Observações
+          Observacoes
         </label>
         <textarea
           name="observacoes"
-          placeholder="Observações do cliente"
+          placeholder="Ex.: prefere atendimento pela manha"
           className="min-h-[110px] w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-zinc-400"
         />
       </div>
@@ -108,7 +113,11 @@ export default function NovoClienteForm() {
         <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
           {state.error}
         </div>
-      ) : null}
+      ) : (
+        <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-500">
+          Depois do cadastro, o cliente ja fica disponivel para agenda e comanda.
+        </div>
+      )}
 
       <SubmitButton />
     </form>

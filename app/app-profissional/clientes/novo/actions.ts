@@ -19,7 +19,7 @@ export async function criarClienteProfissionalAction(
   const session = await getProfissionalSessionFromCookie();
 
   if (!session) {
-    return { error: "Sessão expirada. Faça login novamente." };
+    return { error: "Sessao expirada. Faca login novamente." };
   }
 
   const nome = String(formData.get("nome") || "").trim();
@@ -45,7 +45,7 @@ export async function criarClienteProfissionalAction(
   });
 
   if (error) {
-    return { error: error.message || "Não foi possível cadastrar o cliente." };
+    return { error: error.message || "Nao foi possivel cadastrar o cliente." };
   }
 
   redirect("/app-profissional/clientes");

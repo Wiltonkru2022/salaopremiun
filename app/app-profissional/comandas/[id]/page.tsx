@@ -1,5 +1,10 @@
 import { randomUUID } from "node:crypto";
+import Link from "next/link";
+import { ArrowLeft, PlusCircle, Receipt } from "lucide-react";
 import ProfissionalShell from "@/components/profissional/layout/ProfissionalShell";
+import ProfissionalSectionHeader from "@/components/profissional/ui/ProfissionalSectionHeader";
+import ProfissionalStatusPill from "@/components/profissional/ui/ProfissionalStatusPill";
+import ProfissionalSurface from "@/components/profissional/ui/ProfissionalSurface";
 import { requireProfissionalAppContext } from "@/lib/profissional-context.server";
 import { runAdminOperation } from "@/lib/supabase/admin-ops";
 import {
@@ -16,21 +21,22 @@ function formatarMoeda(valor: number) {
   }).format(valor);
 }
 
-function getStatusClasses(status: string) {
+function getStatusMeta(status: string) {
   const s = String(status || "").toLowerCase();
 
-  if (s === "aberta") return "bg-blue-50 text-blue-700 border-blue-200";
-  if (s === "aguardando_pagamento")
-    return "bg-amber-50 text-amber-700 border-amber-200";
-  if (s === "fechada") return "bg-green-50 text-green-700 border-green-200";
-  if (s === "cancelada") return "bg-red-50 text-red-700 border-red-200";
+  if (s === "aberta") return { label: "Aberta", tone: "info" as const };
+  if (s === "aguardando_pagamento") {
+    return { label: "Aguardando pagamento", tone: "warning" as const };
+  }
+  if (s === "fechada") return { label: "Fechada", tone: "success" as const };
+  if (s === "cancelada") return { label: "Cancelada", tone: "danger" as const };
 
-  return "bg-zinc-50 text-zinc-700 border-zinc-200";
+  return { label: status || "Status", tone: "neutral" as const };
 }
 
 function traduzirTipoItem(tipo: string | null | undefined) {
   const valor = String(tipo || "").toLowerCase();
-  if (valor === "servico") return "Serviço";
+  if (valor === "servico") return "Servico";
   if (valor === "extra") return "Item extra";
   if (valor === "produto") return "Produto";
   return "Item";
@@ -139,42 +145,38 @@ export default async function ComandaDetalhePage({
         };
       }
 
-      const [
-        clienteResult,
-        itensResult,
-        servicosResult,
-        extrasResult,
-      ] = await Promise.all([
-        comandaData.id_cliente
-          ? supabaseAdmin
-              .from("clientes")
-              .select("id, nome, telefone")
-              .eq("id", comandaData.id_cliente)
-              .eq("id_salao", session.idSalao)
-              .maybeSingle()
-          : Promise.resolve({ data: null, error: null }),
-        supabaseAdmin
-          .from("comanda_itens")
-          .select(
-            "id, descricao, quantidade, valor_unitario, valor_total, tipo_item, id_servico, id_item_extra, ativo, created_at"
-          )
-          .eq("id_comanda", id)
-          .eq("id_salao", session.idSalao)
-          .eq("ativo", true)
-          .order("created_at", { ascending: true }),
-        supabaseAdmin
-          .from("servicos")
-          .select("id, nome, preco, preco_padrao, ativo, status")
-          .eq("id_salao", session.idSalao)
-          .eq("ativo", true)
-          .eq("status", "ativo")
-          .order("nome", { ascending: true }),
-        supabaseAdmin
-          .from("itens_extras")
-          .select("id, id_salao, nome, preco_venda, ativo")
-          .eq("id_salao", session.idSalao)
-          .order("nome", { ascending: true }),
-      ]);
+      const [clienteResult, itensResult, servicosResult, extrasResult] =
+        await Promise.all([
+          comandaData.id_cliente
+            ? supabaseAdmin
+                .from("clientes")
+                .select("id, nome, telefone")
+                .eq("id", comandaData.id_cliente)
+                .eq("id_salao", session.idSalao)
+                .maybeSingle()
+            : Promise.resolve({ data: null, error: null }),
+          supabaseAdmin
+            .from("comanda_itens")
+            .select(
+              "id, descricao, quantidade, valor_unitario, valor_total, tipo_item, id_servico, id_item_extra, ativo, created_at"
+            )
+            .eq("id_comanda", id)
+            .eq("id_salao", session.idSalao)
+            .eq("ativo", true)
+            .order("created_at", { ascending: true }),
+          supabaseAdmin
+            .from("servicos")
+            .select("id, nome, preco, preco_padrao, ativo, status")
+            .eq("id_salao", session.idSalao)
+            .eq("ativo", true)
+            .eq("status", "ativo")
+            .order("nome", { ascending: true }),
+          supabaseAdmin
+            .from("itens_extras")
+            .select("id, id_salao, nome, preco_venda, ativo")
+            .eq("id_salao", session.idSalao)
+            .order("nome", { ascending: true }),
+        ]);
 
       return {
         comanda: comandaData,
@@ -196,7 +198,7 @@ export default async function ComandaDetalhePage({
     return (
       <ProfissionalShell title="Comanda" subtitle="Detalhes">
         <div className="rounded-[1.25rem] border border-zinc-200 bg-white p-4 text-sm text-zinc-500 shadow-sm">
-          Comanda não encontrada.
+          Comanda nao encontrada.
         </div>
       </ProfissionalShell>
     );
@@ -206,7 +208,7 @@ export default async function ComandaDetalhePage({
     return (
       <ProfissionalShell title="Comanda" subtitle="Detalhes">
         <div className="rounded-[1.25rem] border border-red-200 bg-red-50 p-4 text-sm text-red-700 shadow-sm">
-          Você não tem acesso a esta comanda.
+          Voce nao tem acesso a esta comanda.
         </div>
       </ProfissionalShell>
     );
@@ -231,13 +233,22 @@ export default async function ComandaDetalhePage({
   const extras = ((extrasRaw ?? []) as ExtraOption[]).filter(
     (item) => item.ativo === true
   );
+  const status = getStatusMeta(String(comanda.status || ""));
 
   return (
     <ProfissionalShell
       title={`Comanda #${comanda.numero}`}
-      subtitle={cliente?.nome || comanda.status}
+      subtitle={cliente?.nome || String(comanda.status || "")}
     >
       <div className="space-y-4 pb-24">
+        <Link
+          href="/app-profissional/comandas"
+          className="inline-flex items-center gap-2 text-sm font-semibold text-zinc-700"
+        >
+          <ArrowLeft size={18} />
+          Voltar para comandas
+        </Link>
+
         {query?.ok ? (
           <div className="rounded-[1.25rem] border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700 shadow-sm">
             {query.ok}
@@ -250,75 +261,72 @@ export default async function ComandaDetalhePage({
           </div>
         ) : null}
 
-        {!permiteEdicao ? (
-          <div className="rounded-[1.25rem] border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 shadow-sm">
-            Esta comanda está <strong>{comanda.status}</strong>. Não é possível
-            adicionar itens, excluir itens ou enviar para o caixa.
-          </div>
-        ) : null}
-
-        <div className="rounded-[1.5rem] border border-zinc-200 bg-white p-4 shadow-sm">
+        <section className="overflow-hidden rounded-[1.85rem] bg-zinc-950 px-4 py-5 text-white shadow-[0_18px_40px_rgba(15,23,42,0.16)]">
           <div className="flex items-start justify-between gap-3">
-            <div>
-              <div className="text-sm text-zinc-500">Cliente</div>
-              <div className="mt-1 text-lg font-semibold text-zinc-950">
-                {cliente?.nome || "Cliente"}
+            <div className="min-w-0">
+              <div className="text-xs font-bold uppercase tracking-[0.14em] text-zinc-400">
+                Cliente
               </div>
-              <div className="mt-1 text-sm text-zinc-500">
+              <h1 className="mt-2 text-[1.7rem] font-black tracking-[-0.05em] leading-none">
+                {cliente?.nome || "Cliente"}
+              </h1>
+              <div className="mt-2 text-sm text-zinc-300">
                 {cliente?.telefone || "Sem telefone"}
               </div>
             </div>
 
-            <span
-              className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-medium ${getStatusClasses(
-                comanda.status
-              )}`}
-            >
-              {comanda.status}
-            </span>
+            <ProfissionalStatusPill label={status.label} tone={status.tone} />
           </div>
 
-          <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <div className="rounded-2xl border border-zinc-100 bg-zinc-50 p-3">
-              <div className="text-xs uppercase tracking-[0.16em] text-zinc-400">
+          <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <div className="rounded-[1.25rem] bg-white/10 p-4">
+              <div className="text-[11px] uppercase tracking-[0.12em] text-zinc-300">
                 Subtotal
               </div>
-              <div className="mt-2 text-sm font-semibold text-zinc-950">
+              <div className="mt-2 text-base font-bold">
                 {formatarMoeda(Number(comanda.subtotal || 0))}
               </div>
             </div>
 
-            <div className="rounded-2xl border border-zinc-100 bg-zinc-50 p-3">
-              <div className="text-xs uppercase tracking-[0.16em] text-zinc-400">
+            <div className="rounded-[1.25rem] bg-white/10 p-4">
+              <div className="text-[11px] uppercase tracking-[0.12em] text-zinc-300">
                 Desconto
               </div>
-              <div className="mt-2 text-sm font-semibold text-zinc-950">
+              <div className="mt-2 text-base font-bold">
                 {formatarMoeda(Number(comanda.desconto || 0))}
               </div>
             </div>
 
-            <div className="rounded-2xl border border-zinc-100 bg-zinc-50 p-3">
-              <div className="text-xs uppercase tracking-[0.16em] text-zinc-400">
+            <div className="rounded-[1.25rem] bg-white/10 p-4">
+              <div className="text-[11px] uppercase tracking-[0.12em] text-zinc-300">
                 Total
               </div>
-              <div className="mt-2 text-sm font-semibold text-zinc-950">
+              <div className="mt-2 text-base font-bold">
                 {formatarMoeda(Number(comanda.total || 0))}
               </div>
             </div>
           </div>
-        </div>
+        </section>
 
-        <div className="rounded-[1.5rem] border border-zinc-200 bg-white p-4 shadow-sm">
-          <div className="mb-3 text-sm font-semibold uppercase tracking-[0.18em] text-zinc-500">
-            Itens da comanda
+        {!permiteEdicao ? (
+          <div className="rounded-[1.25rem] border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 shadow-sm">
+            Esta comanda esta {String(comanda.status || "").toLowerCase()}. Nao e
+            possivel adicionar itens nem enviar ao caixa.
           </div>
+        ) : null}
+
+        <ProfissionalSurface>
+          <ProfissionalSectionHeader
+            title="Itens da comanda"
+            description="Revise o que ja foi lancado antes de enviar ao caixa."
+          />
 
           {itens?.length ? (
             <div className="space-y-3">
               {((itens ?? []) as ComandaItemRow[]).map((item) => (
                 <div
                   key={item.id}
-                  className="rounded-2xl border border-zinc-100 bg-zinc-50 p-3"
+                  className="rounded-2xl border border-zinc-200 bg-zinc-50/80 p-4"
                 >
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div className="min-w-0">
@@ -326,16 +334,16 @@ export default async function ComandaDetalhePage({
                         {item.descricao || "Item"}
                       </div>
 
-                      <div className="mt-1 text-xs text-zinc-500">
-                        {traduzirTipoItem(item.tipo_item)} · Qtd.{" "}
+                      <div className="mt-1 text-xs uppercase tracking-[0.12em] text-zinc-400">
+                        {traduzirTipoItem(item.tipo_item)} - Qtd.{" "}
                         {Number(item.quantidade || 0)}
                       </div>
 
-                      <div className="mt-1 text-sm text-zinc-500">
-                        Unitário: {formatarMoeda(Number(item.valor_unitario || 0))}
+                      <div className="mt-2 text-sm text-zinc-500">
+                        Unitario: {formatarMoeda(Number(item.valor_unitario || 0))}
                       </div>
 
-                      <div className="mt-1 text-sm font-medium text-zinc-900">
+                      <div className="mt-1 text-sm font-bold text-zinc-950">
                         Total: {formatarMoeda(Number(item.valor_total || 0))}
                       </div>
                     </div>
@@ -361,16 +369,20 @@ export default async function ComandaDetalhePage({
               ))}
             </div>
           ) : (
-            <div className="text-sm text-zinc-500">Nenhum item na comanda.</div>
+            <div className="rounded-2xl border border-dashed border-zinc-300 bg-zinc-50 p-4 text-sm text-zinc-500">
+              Nenhum item lancado nesta comanda.
+            </div>
           )}
-        </div>
+        </ProfissionalSurface>
 
         {permiteEdicao ? (
           <>
-            <div className="rounded-[1.5rem] border border-zinc-200 bg-white p-4 shadow-sm">
-              <div className="mb-3 text-sm font-semibold uppercase tracking-[0.18em] text-zinc-500">
-                Adicionar serviço
-              </div>
+            <ProfissionalSurface>
+              <ProfissionalSectionHeader
+                title="Adicionar servico"
+                description="Use para lancar servicos executados no atendimento."
+                action={<PlusCircle size={18} className="text-zinc-400" />}
+              />
 
               <form action={adicionarServicoNaComandaAction} className="space-y-3">
                 <input type="hidden" name="id_comanda" value={comanda.id} />
@@ -385,15 +397,13 @@ export default async function ComandaDetalhePage({
                   className="h-12 w-full rounded-2xl border border-zinc-200 bg-white px-4 text-sm outline-none"
                   defaultValue=""
                 >
-                  <option value="">Selecione um serviço</option>
+                  <option value="">Selecione um servico</option>
                   {((servicos ?? []) as ServicoOption[]).map((servico) => {
-                    const valor = Number(
-                      servico.preco ?? servico.preco_padrao ?? 0
-                    );
+                    const valor = Number(servico.preco ?? servico.preco_padrao ?? 0);
 
                     return (
                       <option key={servico.id} value={servico.id}>
-                        {servico.nome} · {formatarMoeda(valor)}
+                        {servico.nome} - {formatarMoeda(valor)}
                       </option>
                     );
                   })}
@@ -410,17 +420,19 @@ export default async function ComandaDetalhePage({
 
                 <button
                   type="submit"
-              className="h-12 w-full rounded-2xl bg-zinc-950 text-sm font-semibold text-white"
+                  className="h-12 w-full rounded-2xl bg-zinc-950 text-sm font-semibold text-white"
                 >
-                  + Adicionar serviço
+                  Adicionar servico
                 </button>
               </form>
-            </div>
+            </ProfissionalSurface>
 
-            <div className="rounded-[1.5rem] border border-zinc-200 bg-white p-4 shadow-sm">
-              <div className="mb-3 text-sm font-semibold uppercase tracking-[0.18em] text-zinc-500">
-                Adicionar item extra
-              </div>
+            <ProfissionalSurface>
+              <ProfissionalSectionHeader
+                title="Adicionar item extra"
+                description="Lance adicionais usados no atendimento."
+                action={<Receipt size={18} className="text-zinc-400" />}
+              />
 
               {(extras ?? []).length ? (
                 <form action={adicionarExtraNaComandaAction} className="space-y-3">
@@ -439,7 +451,7 @@ export default async function ComandaDetalhePage({
                     <option value="">Selecione um item extra</option>
                     {(extras ?? []).map((extra) => (
                       <option key={extra.id} value={extra.id}>
-                        {extra.nome} · {formatarMoeda(Number(extra.preco_venda || 0))}
+                        {extra.nome} - {formatarMoeda(Number(extra.preco_venda || 0))}
                       </option>
                     ))}
                   </select>
@@ -457,7 +469,7 @@ export default async function ComandaDetalhePage({
                     type="submit"
                     className="h-12 w-full rounded-2xl border border-[#d8b36b] bg-white text-sm font-semibold text-[#b07b19]"
                   >
-                    + Adicionar item extra
+                    Adicionar item extra
                   </button>
                 </form>
               ) : (
@@ -465,7 +477,7 @@ export default async function ComandaDetalhePage({
                   Nenhum item extra ativo encontrado.
                 </div>
               )}
-            </div>
+            </ProfissionalSurface>
 
             <form action={enviarComandaParaCaixaAction}>
               <input type="hidden" name="id_comanda" value={comanda.id} />
@@ -478,11 +490,7 @@ export default async function ComandaDetalhePage({
               </button>
             </form>
           </>
-        ) : (
-          <div className="rounded-[1.5rem] border border-zinc-200 bg-white p-4 text-sm text-zinc-500 shadow-sm">
-            Ações bloqueadas porque a comanda não está aberta.
-          </div>
-        )}
+        ) : null}
       </div>
     </ProfissionalShell>
   );

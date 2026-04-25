@@ -27,7 +27,7 @@ function ChatSuporteInner() {
       id: "1",
       role: "assistant",
       content:
-        "Oi! Sou o suporte inteligente do app profissional. Posso te ajudar com login, agenda, comandas, clientes, faturamento e regras do sistema.",
+        "Oi! Sou o suporte inteligente do app profissional. Posso ajudar com login, agenda, comandas, clientes, faturamento e regras do sistema.",
     },
   ]);
 
@@ -90,7 +90,8 @@ function ChatSuporteInner() {
         {
           id: crypto.randomUUID(),
           role: "assistant",
-          content: "Erro ao enviar mensagem. Tente novamente.",
+          content:
+            "Erro ao enviar a mensagem. Tente novamente em alguns instantes.",
         },
       ]);
     } finally {
@@ -142,7 +143,7 @@ function ChatSuporteInner() {
   }
 
   return (
-    <section className="mx-auto max-w-3xl overflow-hidden rounded-[1.5rem] border border-zinc-200 bg-white shadow-[0_18px_42px_rgba(15,23,42,0.08)]">
+    <section className="mx-auto max-w-3xl overflow-hidden rounded-[1.6rem] border border-zinc-200 bg-white shadow-[0_18px_42px_rgba(15,23,42,0.08)]">
       <div className="mx-auto mt-3 h-1.5 w-14 rounded-full bg-zinc-300" />
 
       <div className="border-b border-zinc-200 px-4 pb-4 pt-4">
@@ -150,14 +151,14 @@ function ChatSuporteInner() {
           <div>
             <div className="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-amber-900">
               <Sparkles size={12} />
-              Suporte vivo
+              Suporte inteligente
             </div>
             <h2 className="mt-3 text-xl font-black text-zinc-950">
-              Sheet de ajuda do profissional
+              Ajuda rapida do profissional
             </h2>
             <p className="mt-2 text-sm leading-6 text-zinc-600">
-              Pergunte em linguagem simples e eu respondo ja com contexto da tela
-              em que voce esta.
+              Pergunte em linguagem simples e eu respondo usando o contexto da
+              tela em que voce esta.
             </p>
           </div>
 
@@ -179,8 +180,8 @@ function ChatSuporteInner() {
             },
             {
               icon: <LifeBuoy size={15} />,
-              title: "Escala para humano",
-              body: "Se a IA nao resolver, voce abre ticket para o AdminMaster em seguida.",
+              title: "Chamado humano",
+              body: "Se a IA nao resolver, voce pode abrir um ticket logo abaixo.",
             },
           ].map((item) => (
             <div
