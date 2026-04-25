@@ -1,7 +1,10 @@
+import { Clock3, Receipt, Sparkles, UserRound } from "lucide-react";
+import { criarComandaProfissionalAction } from "@/app/app-profissional/comandas/nova/actions";
 import ProfissionalShell from "@/components/profissional/layout/ProfissionalShell";
+import ProfissionalSectionHeader from "@/components/profissional/ui/ProfissionalSectionHeader";
+import ProfissionalSurface from "@/components/profissional/ui/ProfissionalSurface";
 import { requireProfissionalAppContext } from "@/lib/profissional-context.server";
 import { runAdminOperation } from "@/lib/supabase/admin-ops";
-import { criarComandaProfissionalAction } from "./actions";
 
 type SearchParams = Promise<{
   cliente_id?: string;
@@ -36,13 +39,16 @@ function horaAtualArredondada() {
   return now.toTimeString().slice(0, 5);
 }
 
+function inputClass() {
+  return "mt-2 h-12 w-full rounded-2xl border border-zinc-200 bg-white px-4 text-sm outline-none transition focus:border-zinc-400";
+}
+
 export default async function NovaComandaProfissionalPage({
   searchParams,
 }: {
   searchParams?: SearchParams;
 }) {
   const session = await requireProfissionalAppContext();
-
   const query = searchParams ? await searchParams : {};
 
   const { clientes, servicos } = await runAdminOperation({
@@ -50,21 +56,23 @@ export default async function NovaComandaProfissionalPage({
     actorId: session.idProfissional,
     idSalao: session.idSalao,
     run: async (supabaseAdmin) => {
-      const [{ data: clientesData, error: clientesError }, { data: vinculosData, error: vinculosError }] =
-        await Promise.all([
-          supabaseAdmin
-            .from("clientes")
-            .select("id, nome, telefone")
-            .eq("id_salao", session.idSalao)
-            .order("nome", { ascending: true })
-            .limit(80),
-          supabaseAdmin
-            .from("profissional_servicos")
-            .select("id_servico")
-            .eq("id_salao", session.idSalao)
-            .eq("id_profissional", session.idProfissional)
-            .eq("ativo", true),
-        ]);
+      const [
+        { data: clientesData, error: clientesError },
+        { data: vinculosData, error: vinculosError },
+      ] = await Promise.all([
+        supabaseAdmin
+          .from("clientes")
+          .select("id, nome, telefone")
+          .eq("id_salao", session.idSalao)
+          .order("nome", { ascending: true })
+          .limit(80),
+        supabaseAdmin
+          .from("profissional_servicos")
+          .select("id_servico")
+          .eq("id_salao", session.idSalao)
+          .eq("id_profissional", session.idProfissional)
+          .eq("ativo", true),
+      ]);
 
       if (clientesError) throw new Error(clientesError.message);
       if (vinculosError) throw new Error(vinculosError.message);
@@ -101,7 +109,7 @@ export default async function NovaComandaProfissionalPage({
   return (
     <ProfissionalShell
       title="Nova comanda"
-      subtitle="Criar atendimento dentro do app"
+      subtitle="Abrir atendimento direto no app"
     >
       <div className="space-y-4 pb-24">
         {query.erro ? (
@@ -110,75 +118,152 @@ export default async function NovaComandaProfissionalPage({
           </div>
         ) : null}
 
-        <div className="rounded-[1.5rem] border border-zinc-200 bg-white p-4 shadow-sm">
-          <div className="mb-3 text-sm font-semibold uppercase tracking-[0.18em] text-zinc-500">
-            Dados da comanda
-          </div>
-
-          <form action={criarComandaProfissionalAction} className="space-y-3">
-            <select
-              name="cliente_id"
-              defaultValue={query.cliente_id || ""}
-              className="h-12 w-full rounded-2xl border border-zinc-200 bg-white px-4 text-sm outline-none"
-            >
-              <option value="">Selecione o cliente</option>
-              {clientes.map((cliente) => (
-                <option key={cliente.id} value={cliente.id}>
-                  {cliente.nome}
-                  {cliente.telefone ? ` - ${cliente.telefone}` : ""}
-                </option>
-              ))}
-            </select>
-
-            <select
-              name="servico_id"
-              defaultValue={query.servico_id || ""}
-              className="h-12 w-full rounded-2xl border border-zinc-200 bg-white px-4 text-sm outline-none"
-            >
-              <option value="">Selecione o servico inicial</option>
-              {servicos.map((servico) => (
-                <option key={servico.id} value={servico.id}>
-                  {servico.nome}
-                  {servico.duracao_minutos
-                    ? ` - ${servico.duracao_minutos} min`
-                    : ""}
-                </option>
-              ))}
-            </select>
-
-            <div className="grid grid-cols-2 gap-3">
-              <input
-                type="date"
-                name="data"
-                defaultValue={query.data || hojeLocal()}
-                className="h-12 w-full rounded-2xl border border-zinc-200 bg-white px-4 text-sm outline-none"
-              />
-
-              <input
-                type="time"
-                name="hora_inicio"
-                defaultValue={query.hora_inicio || horaAtualArredondada()}
-                className="h-12 w-full rounded-2xl border border-zinc-200 bg-white px-4 text-sm outline-none"
-              />
+        <section className="overflow-hidden rounded-[1.85rem] bg-zinc-950 px-4 py-5 text-white shadow-[0_18px_40px_rgba(15,23,42,0.16)]">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-bold uppercase tracking-[0.14em] text-amber-100">
+                <Receipt size={14} />
+                Atendimento rapido
+              </div>
+              <h1 className="mt-4 text-[1.65rem] font-black tracking-[-0.05em] leading-none">
+                Abrir comanda
+              </h1>
+              <p className="mt-3 text-sm leading-6 text-zinc-300">
+                Crie a comanda e o atendimento de uma vez, sem sair do app
+                profissional.
+              </p>
             </div>
 
-            <textarea
-              name="observacoes"
-              defaultValue={query.observacoes || ""}
-              placeholder="Observacoes da comanda (opcional)"
-              className="min-h-[96px] w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm outline-none"
-            />
+            <div className="rounded-[1.3rem] bg-white/10 px-4 py-3 text-right">
+              <div className="text-[11px] uppercase tracking-[0.12em] text-zinc-400">
+                Fluxo
+              </div>
+              <div className="mt-1 text-sm font-bold text-white">App - agenda - caixa</div>
+            </div>
+          </div>
+        </section>
 
-            <button className="h-12 w-full rounded-2xl bg-zinc-950 text-sm font-semibold text-white">
+        <ProfissionalSurface>
+          <ProfissionalSectionHeader
+            title="Dados da comanda"
+            description="Escolha cliente, servico e horario para abrir tudo pronto."
+          />
+
+          <form action={criarComandaProfissionalAction} className="space-y-4">
+            <label className="block text-sm font-medium text-zinc-700">
+              Cliente
+              <select
+                name="cliente_id"
+                defaultValue={query.cliente_id || ""}
+                className={inputClass()}
+                required
+              >
+                <option value="">Selecione o cliente</option>
+                {clientes.map((cliente) => (
+                  <option key={cliente.id} value={cliente.id}>
+                    {cliente.nome}
+                    {cliente.telefone ? ` - ${cliente.telefone}` : ""}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="block text-sm font-medium text-zinc-700">
+              Servico inicial
+              <select
+                name="servico_id"
+                defaultValue={query.servico_id || ""}
+                className={inputClass()}
+                required
+              >
+                <option value="">Selecione o servico inicial</option>
+                {servicos.map((servico) => (
+                  <option key={servico.id} value={servico.id}>
+                    {servico.nome}
+                    {servico.duracao_minutos ? ` - ${servico.duracao_minutos} min` : ""}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <div className="grid grid-cols-2 gap-3">
+              <label className="block text-sm font-medium text-zinc-700">
+                Data
+                <input
+                  type="date"
+                  name="data"
+                  defaultValue={query.data || hojeLocal()}
+                  className={inputClass()}
+                  required
+                />
+              </label>
+
+              <label className="block text-sm font-medium text-zinc-700">
+                Hora
+                <input
+                  type="time"
+                  name="hora_inicio"
+                  defaultValue={query.hora_inicio || horaAtualArredondada()}
+                  className={inputClass()}
+                  required
+                />
+              </label>
+            </div>
+
+            <label className="block text-sm font-medium text-zinc-700">
+              Observacoes
+              <textarea
+                name="observacoes"
+                defaultValue={query.observacoes || ""}
+                placeholder="Ex.: cliente ja chegou e vai iniciar atendimento"
+                className="mt-2 min-h-[96px] w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-zinc-400"
+              />
+            </label>
+
+            <button className="h-12 w-full rounded-2xl bg-zinc-950 text-sm font-bold text-white">
               Criar comanda no app
             </button>
           </form>
+        </ProfissionalSurface>
+
+        <div className="grid grid-cols-2 gap-3">
+          <ProfissionalSurface>
+            <div className="flex items-center gap-2 text-sm font-semibold text-zinc-900">
+              <UserRound size={16} />
+              Cliente pronto
+            </div>
+            <p className="mt-2 text-sm leading-6 text-zinc-500">
+              O cliente precisa estar cadastrado para abrir a comanda sem erro.
+            </p>
+          </ProfissionalSurface>
+
+          <ProfissionalSurface>
+            <div className="flex items-center gap-2 text-sm font-semibold text-zinc-900">
+              <Clock3 size={16} />
+              Hora reservada
+            </div>
+            <p className="mt-2 text-sm leading-6 text-zinc-500">
+              O atendimento ja nasce vinculado ao horario informado.
+            </p>
+          </ProfissionalSurface>
         </div>
 
-        <div className="rounded-[1.5rem] border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
-          Esta comanda sera vinculada a um atendimento rapido na agenda do
-          profissional, mantendo tudo dentro do app profissional.
-        </div>
+        <ProfissionalSurface>
+          <div className="flex items-start gap-3">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700">
+              <Sparkles size={18} />
+            </div>
+            <div className="min-w-0">
+              <div className="text-base font-bold tracking-[-0.02em] text-zinc-950">
+                Fluxo mais rapido
+              </div>
+              <p className="mt-2 text-sm leading-6 text-zinc-500">
+                Esse atalho existe para o profissional nao precisar voltar ao painel:
+                a comanda ja sai pronta para continuar no app e depois seguir ao caixa.
+              </p>
+            </div>
+          </div>
+        </ProfissionalSurface>
       </div>
     </ProfissionalShell>
   );

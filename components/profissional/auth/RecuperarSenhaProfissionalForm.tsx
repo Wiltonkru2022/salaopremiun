@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
+import { LockKeyhole, PhoneCall } from "lucide-react";
 import {
   solicitarRecuperacaoSenhaProfissionalAction,
   type RecuperarSenhaProfissionalState,
@@ -21,7 +22,7 @@ function SubmitButton() {
       disabled={pending}
       className="h-12 w-full rounded-2xl bg-zinc-950 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
     >
-      {pending ? "Enviando..." : "Solicitar redefinicao"}
+      {pending ? "Enviando pedido..." : "Solicitar redefinicao"}
     </button>
   );
 }
@@ -56,10 +57,8 @@ export default function RecuperarSenhaProfissionalForm() {
       </p>
 
       <div className="mt-5 space-y-4">
-        <div>
-          <label className="mb-1.5 block text-sm font-medium text-zinc-700">
-            CPF
-          </label>
+        <label className="block text-sm font-medium text-zinc-700">
+          CPF
           <input
             name="cpf"
             type="text"
@@ -67,20 +66,41 @@ export default function RecuperarSenhaProfissionalForm() {
             placeholder="000.000.000-00"
             value={cpf}
             onChange={(event) => setCpf(formatCpf(event.target.value))}
-            className="h-12 w-full rounded-2xl border border-zinc-200 bg-white px-4 text-sm outline-none transition focus:border-zinc-400"
+            className="mt-2 h-12 w-full rounded-2xl border border-zinc-200 bg-white px-4 text-sm outline-none transition focus:border-zinc-400"
+            required
           />
-        </div>
+        </label>
 
-        <div>
-          <label className="mb-1.5 block text-sm font-medium text-zinc-700">
-            Telefone ou e-mail para contato
-          </label>
+        <label className="block text-sm font-medium text-zinc-700">
+          Telefone ou email para retorno
           <input
             name="contato"
             type="text"
             placeholder="Opcional"
-            className="h-12 w-full rounded-2xl border border-zinc-200 bg-white px-4 text-sm outline-none transition focus:border-zinc-400"
+            className="mt-2 h-12 w-full rounded-2xl border border-zinc-200 bg-white px-4 text-sm outline-none transition focus:border-zinc-400"
           />
+        </label>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4">
+            <div className="flex items-center gap-2 text-sm font-semibold text-zinc-900">
+              <LockKeyhole size={16} />
+              Pedido seguro
+            </div>
+            <p className="mt-2 text-xs leading-5 text-zinc-500">
+              Sua senha atual nao aparece nem precisa ser informada.
+            </p>
+          </div>
+
+          <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4">
+            <div className="flex items-center gap-2 text-sm font-semibold text-zinc-900">
+              <PhoneCall size={16} />
+              Retorno rapido
+            </div>
+            <p className="mt-2 text-xs leading-5 text-zinc-500">
+              Se quiser, informe um contato para a equipe falar com voce.
+            </p>
+          </div>
         </div>
 
         {state.message ? (

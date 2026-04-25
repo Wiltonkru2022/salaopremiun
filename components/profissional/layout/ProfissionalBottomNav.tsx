@@ -1,31 +1,49 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
 import { usePathname } from "next/navigation";
 import { CalendarDays, Home, Receipt, User2, Users } from "lucide-react";
 
 const items = [
-  { href: "/app-profissional/inicio", label: "Inicio", icon: Home },
-  { href: "/app-profissional/clientes", label: "Clientes", icon: Users },
-  { href: "/app-profissional/agenda", label: "Agenda", icon: CalendarDays },
-  { href: "/app-profissional/comandas", label: "Comandas", icon: Receipt },
-  { href: "/app-profissional/perfil", label: "Perfil", icon: User2 },
-];
+  { href: "/app-profissional/inicio", label: "Inicio", icon: Home, key: "inicio" },
+  { href: "/app-profissional/clientes", label: "Clientes", icon: Users, key: "clientes" },
+  { href: "/app-profissional/agenda", label: "Agenda", icon: CalendarDays, key: "agenda" },
+  { href: "/app-profissional/comandas", label: "Comandas", icon: Receipt, key: "comandas" },
+  { href: "/app-profissional/perfil", label: "Perfil", icon: User2, key: "perfil" },
+] as const;
+
+function getSectionKey(pathname: string | null) {
+  const value = String(pathname || "").split("?")[0];
+
+  if (!value || value === "/app-profissional") return "inicio";
+
+  const [, , section] = value.split("/");
+  return section || "inicio";
+}
 
 export default function ProfissionalBottomNav() {
   const pathname = usePathname();
+  const currentSection = useMemo(() => getSectionKey(pathname), [pathname]);
+  const [pressedSection, setPressedSection] = useState<string | null>(null);
+
+  useEffect(() => {
+    setPressedSection(null);
+  }, [pathname]);
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-white/70 bg-white/90 pb-[env(safe-area-inset-bottom)] shadow-[0_-18px_44px_rgba(15,23,42,0.08)] backdrop-blur-xl">
       <div className="mx-auto grid max-w-md grid-cols-5 gap-1 px-2 sm:max-w-lg lg:max-w-2xl">
-        {items.map(({ href, label, icon: Icon }) => {
-          const active = pathname === href || pathname.startsWith(`${href}/`);
+        {items.map(({ href, label, icon: Icon, key }) => {
+          const active = pressedSection ? pressedSection === key : currentSection === key;
 
           return (
             <Link
               key={href}
               href={href}
               prefetch
+              aria-current={active ? "page" : undefined}
+              onClick={() => setPressedSection(key)}
               className={`my-2 flex min-h-[58px] flex-col items-center justify-center gap-1 rounded-2xl px-2 py-2 text-[11px] font-semibold transition ${
                 active
                   ? "bg-zinc-950 text-white shadow-sm"

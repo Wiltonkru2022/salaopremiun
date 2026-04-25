@@ -163,7 +163,7 @@ export default async function ClientesPage({
               {clientes.map((cliente) => (
                 <Link
                   key={cliente.id}
-                  href={`/app-profissional/clientes/novo?cliente_id=${cliente.id}`}
+                  href={`/app-profissional/clientes/${cliente.id}`}
                   className="block rounded-[1.5rem] border border-zinc-200 bg-zinc-50/70 p-4 transition active:scale-[0.99]"
                 >
                   <div className="text-[1.05rem] font-bold tracking-[-0.02em] text-zinc-950">
