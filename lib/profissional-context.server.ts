@@ -13,6 +13,10 @@ export type ProfissionalServerContext = {
   email: string | null;
 };
 
+function isUnauthorizedError(error: unknown) {
+  return error instanceof Error && error.message === "UNAUTHORIZED";
+}
+
 export async function requireProfissionalServerContext(): Promise<ProfissionalServerContext> {
   const session = await getProfissionalSessionFromCookie();
 
@@ -65,7 +69,19 @@ export async function requireProfissionalServerContext(): Promise<ProfissionalSe
 }
 
 export async function requireProfissionalAppContext(): Promise<ProfissionalServerContext> {
-  const context = await requireProfissionalServerContext();
+  let context: ProfissionalServerContext;
+
+  try {
+    context = await requireProfissionalServerContext();
+  } catch (error) {
+    if (isUnauthorizedError(error)) {
+      await clearProfissionalSession();
+      redirect("/app-profissional/login?erro=sessao_expirada");
+    }
+
+    throw error;
+  }
+
   const access = await canUsePlanFeature(context.idSalao, "app_profissional");
 
   if (!access.allowed) {
