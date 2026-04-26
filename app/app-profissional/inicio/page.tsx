@@ -17,6 +17,7 @@ import ProfissionalSectionHeader from "@/components/profissional/ui/Profissional
 import ProfissionalSurface from "@/components/profissional/ui/ProfissionalSurface";
 import { listarProximosAgendamentosProfissional } from "@/app/services/profissional/inicio";
 import { buscarResumoInicioProfissional } from "@/app/services/profissional/resumo";
+import { captureSystemError } from "@/lib/monitoring/server";
 import { requireProfissionalAppContext } from "@/lib/profissional-context.server";
 
 function formatarMoeda(valor: number) {
@@ -42,16 +43,60 @@ function saudacao() {
   return "Boa noite";
 }
 
+function fallbackResumo() {
+  return {
+    atendimentosHoje: 0,
+    atendimentosMes: 0,
+    totalComissaoMes: 0,
+  };
+}
+
 export default async function InicioProfissionalPage() {
   const session = await requireProfissionalAppContext();
-
-  const [agendamentos, resumo] = await Promise.all([
+  const [agendamentosResult, resumoResult] = await Promise.allSettled([
     listarProximosAgendamentosProfissional(
       session.idSalao,
       session.idProfissional
     ),
     buscarResumoInicioProfissional(session.idSalao, session.idProfissional),
   ]);
+
+  if (agendamentosResult.status === "rejected") {
+    await captureSystemError({
+      module: "app_profissional",
+      action: "carregar_inicio_agendamentos",
+      surface: "app_profissional",
+      route: "/app-profissional/inicio",
+      screen: "inicio",
+      idSalao: session.idSalao,
+      error: agendamentosResult.reason,
+      fallbackMessage: "Falha ao carregar agendamentos da home profissional.",
+      createIncident: false,
+      severity: "warning",
+    });
+  }
+
+  if (resumoResult.status === "rejected") {
+    await captureSystemError({
+      module: "app_profissional",
+      action: "carregar_inicio_resumo",
+      surface: "app_profissional",
+      route: "/app-profissional/inicio",
+      screen: "inicio",
+      idSalao: session.idSalao,
+      error: resumoResult.reason,
+      fallbackMessage: "Falha ao carregar resumo da home profissional.",
+      createIncident: false,
+      severity: "warning",
+    });
+  }
+
+  const agendamentos =
+    agendamentosResult.status === "fulfilled" ? agendamentosResult.value : [];
+  const resumo =
+    resumoResult.status === "fulfilled" ? resumoResult.value : fallbackResumo();
+  const hasLoadWarning =
+    agendamentosResult.status === "rejected" || resumoResult.status === "rejected";
 
   const proximosAgendamentos = agendamentos.slice(0, 4);
   const primeiroHorario = proximosAgendamentos[0]?.hora_inicio
@@ -64,6 +109,13 @@ export default async function InicioProfissionalPage() {
       subtitle={`${saudacao()}, ${session.nome}`}
     >
       <div className="space-y-4">
+        {hasLoadWarning ? (
+          <div className="rounded-[1.25rem] border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 shadow-sm">
+            Parte dos dados do inicio nao carregou agora. O app continua funcionando
+            e voce pode seguir para agenda, comandas e clientes.
+          </div>
+        ) : null}
+
         <section className="overflow-hidden rounded-[1.85rem] bg-zinc-950 px-4 py-5 text-white shadow-[0_18px_40px_rgba(15,23,42,0.16)]">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
