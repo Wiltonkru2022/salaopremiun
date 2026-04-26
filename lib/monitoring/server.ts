@@ -125,6 +125,38 @@ function summarizeStack(stack?: string | null) {
     .join("\n");
 }
 
+function isOpaqueServerComponentMessage(message: string) {
+  const normalized = normalizeText(message).toLowerCase();
+
+  return (
+    normalized.includes("an error occurred in the server components render") &&
+    normalized.includes("digest property")
+  );
+}
+
+function buildOpaqueServerComponentMessage(params: CaptureSystemEventParams) {
+  const location =
+    normalizeText(params.route) ||
+    normalizeText(params.screen) ||
+    normalizeText(params.surface) ||
+    "rota_desconhecida";
+  const action =
+    normalizeText(params.action) || normalizeText(params.eventType) || "server_component_render";
+  const digest =
+    normalizeText(params.errorCode) ||
+    normalizeText(params.details?.digest) ||
+    normalizeText(params.details?.errorDigest);
+
+  return [
+    "Falha opaca de Server Component em producao.",
+    `Local: ${location}.`,
+    `Acao: ${action}.`,
+    digest ? `Digest: ${digest}.` : null,
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
+
 function slugify(value: string) {
   return value
     .normalize("NFD")
@@ -169,6 +201,18 @@ function shouldOpenIncident(params: CaptureSystemEventParams, severity: Monitori
 }
 
 function buildIncidentTitle(params: CaptureSystemEventParams) {
+  if (isOpaqueServerComponentMessage(normalizeText(params.message))) {
+    const route =
+      normalizeText(params.route) ||
+      normalizeText(params.screen) ||
+      normalizeText(params.surface);
+    const action = normalizeText(params.action) || normalizeText(params.eventType);
+
+    if (route) return `Falha de render em ${route}`;
+    if (action) return `Falha de render em ${action}`;
+    return "Falha opaca de Server Component";
+  }
+
   return (
     normalizeText(params.incidentTitle) ||
     normalizeText(params.message) ||
@@ -213,6 +257,10 @@ async function upsertIncident(params: CaptureSystemEventParams, severity: Monito
   const supabase = getSupabaseAdmin();
   const chave = buildIncidentKey(params);
   const titulo = buildIncidentTitle(params);
+  const descricao =
+    isOpaqueServerComponentMessage(normalizeText(params.message))
+      ? buildOpaqueServerComponentMessage(params)
+      : normalizeText(params.message) || titulo;
   const impactoSaloes = params.idSalao ? 1 : 0;
   const referencia = {
     action: params.action || null,
@@ -277,7 +325,7 @@ async function upsertIncident(params: CaptureSystemEventParams, severity: Monito
       origem_modulo: normalizeText(params.module) || "sistema",
       id_salao: params.idSalao || null,
       titulo,
-      descricao: normalizeText(params.message) || titulo,
+      descricao,
       payload_json: referencia,
       resolvido: false,
       automatico: true,

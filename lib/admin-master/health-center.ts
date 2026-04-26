@@ -45,6 +45,8 @@ type CountResult = {
   error: unknown;
 };
 
+type AlertPayload = Record<string, unknown>;
+
 function safeCount(result: CountResult) {
   return result.error ? 0 : result.count || 0;
 }
@@ -76,6 +78,78 @@ function toneFromStatus(status?: string | null): HealthTone {
     return "red";
   }
   return "blue";
+}
+
+function normalizeText(value: unknown, fallback = "-") {
+  const text = String(value ?? "").trim();
+  return text || fallback;
+}
+
+function isOpaqueServerComponentMessage(value?: string | null) {
+  const normalized = String(value || "").trim().toLowerCase();
+
+  return (
+    normalized.includes("an error occurred in the server components render") &&
+    normalized.includes("digest property")
+  );
+}
+
+function buildAlertTitle(params: {
+  titulo?: string | null;
+  tipo?: string | null;
+  payload?: AlertPayload | null;
+}) {
+  if (!isOpaqueServerComponentMessage(params.titulo)) {
+    return normalizeText(params.titulo || params.tipo || "Alerta");
+  }
+
+  const route = normalizeText(
+    params.payload?.route || params.payload?.screen || params.payload?.surface,
+    ""
+  );
+  const action = normalizeText(
+    params.payload?.action || params.payload?.eventType || params.tipo,
+    ""
+  );
+
+  if (route) {
+    return `Falha de render em ${route}`;
+  }
+
+  if (action) {
+    return `Falha de render em ${action}`;
+  }
+
+  return "Falha opaca de Server Component";
+}
+
+function buildAlertSubtitle(params: {
+  descricao?: string | null;
+  origem_modulo?: string | null;
+  payload?: AlertPayload | null;
+}) {
+  if (!isOpaqueServerComponentMessage(params.descricao)) {
+    return normalizeText(params.descricao || params.origem_modulo || "-");
+  }
+
+  const route = normalizeText(
+    params.payload?.route || params.payload?.screen || params.payload?.surface,
+    ""
+  );
+  const action = normalizeText(
+    params.payload?.action || params.payload?.eventType || params.origem_modulo,
+    ""
+  );
+  const digest = normalizeText(
+    params.payload?.digest || params.payload?.errorDigest || params.payload?.errorCode,
+    ""
+  );
+
+  return (
+    [route ? `Local ${route}` : null, action ? `acao ${action}` : null, digest ? `digest ${digest}` : null]
+      .filter(Boolean)
+      .join(" - ") || "Erro opaco registrado em producao"
+  );
 }
 
 function healthScore(params: {
@@ -191,7 +265,7 @@ export async function getAdminMasterHealthCenter(): Promise<AdminMasterHealthCen
       .limit(8),
     supabase
       .from("alertas_sistema")
-      .select("id, tipo, gravidade, titulo, descricao, origem_modulo, criado_em")
+      .select("id, tipo, gravidade, titulo, descricao, origem_modulo, criado_em, payload_json")
       .eq("resolvido", false)
       .order("criado_em", { ascending: false })
       .limit(8),
@@ -356,10 +430,19 @@ export async function getAdminMasterHealthCenter(): Promise<AdminMasterHealthCen
       descricao?: string | null;
       origem_modulo?: string | null;
       criado_em?: string | null;
+      payload_json?: AlertPayload | null;
     }[]).map((row) => ({
       id: row.id || `${row.tipo}-${row.criado_em}`,
-      title: row.titulo || row.tipo || "Alerta",
-      subtitle: row.descricao || row.origem_modulo || "-",
+      title: buildAlertTitle({
+        titulo: row.titulo,
+        tipo: row.tipo,
+        payload: row.payload_json,
+      }),
+      subtitle: buildAlertSubtitle({
+        descricao: row.descricao,
+        origem_modulo: row.origem_modulo,
+        payload: row.payload_json,
+      }),
       status: row.gravidade || "-",
       when: dateTimeValue(row.criado_em),
       href: "/admin-master/alertas",
