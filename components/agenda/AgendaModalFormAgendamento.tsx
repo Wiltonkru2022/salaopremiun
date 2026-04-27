@@ -145,7 +145,7 @@ export default function AgendaModalFormAgendamento({
             <label className="mb-1.5 block text-xs font-semibold text-zinc-700">
               Status
             </label>
-            <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="flex flex-wrap gap-2">
               {statusOptions.map((option) => (
                 <button
                   key={option.value}
@@ -153,8 +153,8 @@ export default function AgendaModalFormAgendamento({
                   onClick={() => onStatusChange(option.value)}
                   className={
                     status === option.value
-                      ? "rounded-2xl border border-violet-300 bg-violet-50 px-3 py-2.5 text-sm font-semibold text-violet-700 shadow-[0_10px_24px_rgba(124,58,237,0.12)] transition duration-200"
-                      : "rounded-2xl border border-zinc-200 bg-white px-3 py-2.5 text-sm font-medium text-zinc-700 transition duration-200 hover:-translate-y-[1px] hover:bg-zinc-50"
+                      ? "inline-flex min-h-10 items-center justify-center rounded-full border border-violet-300 bg-violet-50 px-3.5 py-2 text-sm font-semibold text-violet-700 shadow-[0_10px_24px_rgba(124,58,237,0.12)] transition duration-200"
+                      : "inline-flex min-h-10 items-center justify-center rounded-full border border-zinc-200 bg-white px-3.5 py-2 text-sm font-medium text-zinc-700 transition duration-200 hover:-translate-y-[1px] hover:bg-zinc-50"
                   }
                 >
                   {option.label}

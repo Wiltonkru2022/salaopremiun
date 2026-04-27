@@ -69,7 +69,7 @@ export default function AgendaToolbar({
 
   return (
     <div className="rounded-[28px] border border-white/80 bg-white/97 px-4 py-2.5 shadow-[0_18px_52px_rgba(15,23,42,0.07)]">
-      <div className="flex flex-col gap-2 xl:grid xl:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] xl:items-center">
+      <div className="flex flex-col gap-2 lg:grid lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] lg:items-center">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <h1 className="mr-3 text-[1.75rem] font-semibold tracking-[-0.07em] text-slate-900">
@@ -132,7 +132,7 @@ export default function AgendaToolbar({
         </div>
 
         {(selectedProfessionalName || selectedProfessionalRole) ? (
-          <div className="flex justify-center xl:px-4">
+          <div className="flex justify-center lg:px-4">
             <span className="inline-flex max-w-full items-center justify-center rounded-full border border-zinc-200 bg-zinc-50/85 px-3 py-1 text-center text-[12px] text-zinc-700 shadow-[0_6px_18px_rgba(15,23,42,0.04)]">
               <span className="truncate">
                 {selectedProfessionalName}
@@ -141,10 +141,10 @@ export default function AgendaToolbar({
             </span>
           </div>
         ) : (
-          <div className="hidden xl:block" />
+          <div className="hidden lg:block" />
         )}
 
-        <div className="flex items-center gap-2.5 xl:justify-end">
+        <div className="flex items-center gap-2.5 lg:justify-end">
           <div className="rounded-[18px] border border-zinc-200 bg-white p-1 shadow-[0_8px_20px_rgba(15,23,42,0.05)]">
             <button
               type="button"
