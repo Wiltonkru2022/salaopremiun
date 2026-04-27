@@ -27,9 +27,12 @@ export default function ProfissionaisBar({
     if (!element) return;
 
     function syncButtons() {
-      setCanScrollLeft(element.scrollLeft > 8);
+      const current = scrollerRef.current;
+      if (!current) return;
+
+      setCanScrollLeft(current.scrollLeft > 8);
       setCanScrollRight(
-        element.scrollLeft + element.clientWidth < element.scrollWidth - 8
+        current.scrollLeft + current.clientWidth < current.scrollWidth - 8
       );
     }
 
