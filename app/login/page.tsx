@@ -9,7 +9,10 @@ import {
   getLoginErrorMessage,
   isSupabaseAuthRateLimit,
 } from "@/lib/supabase/auth-client-recovery";
-import { getLoginRedirectNotice } from "@/lib/auth/login-redirect";
+import {
+  getLoginRedirectNotice,
+  sanitizeLoginReturnTo,
+} from "@/lib/auth/login-redirect";
 
 export default function LoginPage() {
   return (
@@ -45,7 +48,10 @@ function LoginPageContent() {
 
   const planoSelecionado = searchParams.get("plano")?.trim() || "";
   const emailQuery = searchParams.get("email")?.trim() || "";
+  const returnTo = sanitizeLoginReturnTo(searchParams.get("returnTo"));
+  const loginContext = searchParams.get("context")?.trim() || "";
   const redirectNotice = getLoginRedirectNotice(searchParams);
+  const agendaQuickLogin = loginContext === "agenda" || returnTo === "/agenda";
 
   useEffect(() => {
     try {
@@ -87,12 +93,14 @@ function LoginPageContent() {
       }
 
       window.location.assign(
-        planoSelecionado
-          ? getManagedHostHref(
-              `/assinatura?plano=${encodeURIComponent(planoSelecionado)}`,
-              "assinatura"
-            )
-          : getManagedHostHref("/dashboard", "painel")
+        returnTo
+          ? getManagedHostHrefForPath(returnTo)
+          : planoSelecionado
+            ? getManagedHostHref(
+                `/assinatura?plano=${encodeURIComponent(planoSelecionado)}`,
+                "assinatura"
+              )
+            : getManagedHostHref("/dashboard", "painel")
       );
     } catch (error) {
       setRateLimited(isSupabaseAuthRateLimit(error));
@@ -147,9 +155,21 @@ function LoginPageContent() {
             <div className="mb-8">
               <h2 className="text-3xl font-bold text-zinc-900">Entrar</h2>
               <p className="mt-2 text-zinc-500">
-                Acesse seu painel administrativo
+                {agendaQuickLogin
+                  ? "Login rapido para voltar direto para a agenda"
+                  : "Acesse seu painel administrativo"}
               </p>
             </div>
+
+            {agendaQuickLogin ? (
+              <div className="mb-5 rounded-2xl border border-violet-200 bg-violet-50 px-4 py-3 text-sm text-violet-800">
+                <p className="font-semibold">Agenda em modo foco</p>
+                <p className="mt-1">
+                  Entre novamente e voce volta direto para a agenda, sem passar pelo
+                  dashboard.
+                </p>
+              </div>
+            ) : null}
 
             {redirectNotice ? (
               <div
@@ -296,4 +316,12 @@ function getManagedHostHref(path: string, host: "painel" | "assinatura") {
       : "painel.salaopremiun.com.br";
 
   return `https://${targetHost}${path}`;
+}
+
+function getManagedHostHrefForPath(path: string) {
+  if (path === "/assinatura" || path.startsWith("/assinatura/")) {
+    return getManagedHostHref(path, "assinatura");
+  }
+
+  return getManagedHostHref(path, "painel");
 }

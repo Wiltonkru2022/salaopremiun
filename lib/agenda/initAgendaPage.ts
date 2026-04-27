@@ -1,4 +1,5 @@
 import type { SupabaseClient, User } from "@supabase/supabase-js";
+import { buildLoginRedirectUrl } from "@/lib/auth/login-redirect";
 import { PERMISSIONS, type PermissionKey, type UserNivel } from "@/lib/permissions";
 import type { Cliente, ConfigSalao, Profissional, Servico } from "@/types/agenda";
 
@@ -121,7 +122,11 @@ export async function initAgendaPage(params: {
   if (!user) {
     return {
       ok: false,
-      erroTela: "Usuário não autenticado.",
+      redirectTo: buildLoginRedirectUrl("sessao_expirada", {
+        returnTo: "/agenda",
+        context: "agenda",
+      }),
+      erroTela: "Usuario nao autenticado.",
     };
   }
 
@@ -132,24 +137,28 @@ export async function initAgendaPage(params: {
     .maybeSingle();
 
   if (usuarioRes.error) {
-    console.error("Erro ao buscar usuário logado:", usuarioRes.error);
+    console.error("Erro ao buscar usuario logado:", usuarioRes.error);
     return {
       ok: false,
-      erroTela: "Não foi possível carregar os dados do usuário logado.",
+      erroTela: "Nao foi possivel carregar os dados do usuario logado.",
     };
   }
 
   if (!usuarioRes.data?.id_salao) {
     return {
       ok: false,
-      erroTela: "Não foi possível identificar o salão do usuário logado.",
+      erroTela: "Nao foi possivel identificar o salao do usuario logado.",
     };
   }
 
   if (usuarioRes.data.status && usuarioRes.data.status !== "ativo") {
     return {
       ok: false,
-      erroTela: "Usuário vinculado, mas inativo.",
+      redirectTo: buildLoginRedirectUrl("usuario_inativo", {
+        returnTo: "/agenda",
+        context: "agenda",
+      }),
+      erroTela: "Usuario vinculado, mas inativo.",
     };
   }
 
@@ -173,31 +182,34 @@ export async function initAgendaPage(params: {
     servicosRes,
     vinculosServicosRes,
     assinaturaRes,
-  ] =
-    await Promise.all([
-      supabase
-        .from("configuracoes_salao")
-        .select("cor_primaria, created_at, desconta_taxa_profissional, dias_funcionamento, exigir_cliente_na_venda, hora_abertura, hora_fechamento, id, id_salao, intervalo_minutos, modo_compacto, permitir_reabrir_venda, repassa_taxa_cliente, taxa_credito_10x, taxa_credito_11x, taxa_credito_12x, taxa_credito_1x, taxa_credito_2x, taxa_credito_3x, taxa_credito_4x, taxa_credito_5x, taxa_credito_6x, taxa_credito_7x, taxa_credito_8x, taxa_credito_9x, taxa_maquininha_boleto, taxa_maquininha_credito, taxa_maquininha_debito, taxa_maquininha_outro, taxa_maquininha_pix, taxa_maquininha_transferencia, updated_at")
-        .eq("id_salao", salaoId)
-        .maybeSingle(),
+  ] = await Promise.all([
+    supabase
+      .from("configuracoes_salao")
+      .select(
+        "cor_primaria, created_at, desconta_taxa_profissional, dias_funcionamento, exigir_cliente_na_venda, hora_abertura, hora_fechamento, id, id_salao, intervalo_minutos, modo_compacto, permitir_reabrir_venda, repassa_taxa_cliente, taxa_credito_10x, taxa_credito_11x, taxa_credito_12x, taxa_credito_1x, taxa_credito_2x, taxa_credito_3x, taxa_credito_4x, taxa_credito_5x, taxa_credito_6x, taxa_credito_7x, taxa_credito_8x, taxa_credito_9x, taxa_maquininha_boleto, taxa_maquininha_credito, taxa_maquininha_debito, taxa_maquininha_outro, taxa_maquininha_pix, taxa_maquininha_transferencia, updated_at"
+      )
+      .eq("id_salao", salaoId)
+      .maybeSingle(),
 
-      supabase
-        .from("profissionais")
-        .select("ativo, bairro, bio, cargo, categoria, cep, cidade, comissao_percentual, comissao_produto_percentual, cor_agenda, cpf, data_admissao, data_nascimento, dias_trabalho, eh_assistente, email, endereco, especialidades, estado, foto, foto_url, id, id_profissional_principal, id_salao, nivel_acesso, nome, nome_exibicao, nome_social, numero, ordem_agenda, pausas, percentual_comissao_assistente, permite_comissao, pix_chave, pix_tipo, pode_usar_sistema, recebe_comissao, rg, status, telefone, tipo_profissional, tipo_vinculo, whatsapp")
-        .eq("id_salao", salaoId)
-        .eq("status", "ativo")
-        .or("tipo_profissional.is.null,tipo_profissional.eq.profissional")
-        .order("nome"),
+    supabase
+      .from("profissionais")
+      .select(
+        "ativo, bairro, bio, cargo, categoria, cep, cidade, comissao_percentual, comissao_produto_percentual, cor_agenda, cpf, data_admissao, data_nascimento, dias_trabalho, eh_assistente, email, endereco, especialidades, estado, foto, foto_url, id, id_profissional_principal, id_salao, nivel_acesso, nome, nome_exibicao, nome_social, numero, ordem_agenda, pausas, percentual_comissao_assistente, permite_comissao, pix_chave, pix_tipo, pode_usar_sistema, recebe_comissao, rg, status, telefone, tipo_profissional, tipo_vinculo, whatsapp"
+      )
+      .eq("id_salao", salaoId)
+      .eq("status", "ativo")
+      .or("tipo_profissional.is.null,tipo_profissional.eq.profissional")
+      .order("nome"),
 
-      supabase
-        .from("clientes")
-        .select("id, nome, whatsapp")
-        .eq("id_salao", salaoId)
-        .order("nome"),
+    supabase
+      .from("clientes")
+      .select("id, nome, whatsapp")
+      .eq("id_salao", salaoId)
+      .order("nome"),
 
-      supabase
-        .from("servicos")
-        .select(`
+    supabase
+      .from("servicos")
+      .select(`
           id,
           nome,
           duracao_minutos,
@@ -210,28 +222,30 @@ export async function initAgendaPage(params: {
           base_calculo,
           desconta_taxa_maquininha
         `)
-        .eq("id_salao", salaoId)
-        .eq("status", "ativo")
-        .order("nome"),
+      .eq("id_salao", salaoId)
+      .eq("status", "ativo")
+      .order("nome"),
 
-      supabase
-        .from("profissional_servicos")
-        .select("id_profissional, id_servico, ativo")
-        .eq("id_salao", salaoId)
-        .eq("ativo", true),
+    supabase
+      .from("profissional_servicos")
+      .select("id_profissional, id_servico, ativo")
+      .eq("id_salao", salaoId)
+      .eq("ativo", true),
 
-      supabase
-        .from("assinaturas")
-        .select("status, vencimento_em, trial_fim_em")
-        .eq("id_salao", salaoId)
-        .maybeSingle(),
-    ]);
+    supabase
+      .from("assinaturas")
+      .select("status, vencimento_em, trial_fim_em")
+      .eq("id_salao", salaoId)
+      .maybeSingle(),
+  ]);
 
   if (configRes.error) console.error("Erro config:", configRes.error);
   if (profissionaisRes.error) console.error("Erro profissionais:", profissionaisRes.error);
   if (clientesRes.error) console.error("Erro clientes:", clientesRes.error);
-  if (servicosRes.error) console.error("Erro serviços:", servicosRes.error);
-  if (vinculosServicosRes.error) console.error("Erro vinculos servicos:", vinculosServicosRes.error);
+  if (servicosRes.error) console.error("Erro servicos:", servicosRes.error);
+  if (vinculosServicosRes.error) {
+    console.error("Erro vinculos servicos:", vinculosServicosRes.error);
+  }
   if (assinaturaRes.error) console.error("Erro assinatura:", assinaturaRes.error);
 
   const vinculosPorServico = new Map<string, string[]>();
@@ -268,6 +282,6 @@ export async function initAgendaPage(params: {
     assinaturaBloqueada,
     erroTela: configRes.data
       ? ""
-      : "Não foi possível carregar as configurações do salão.",
+      : "Nao foi possivel carregar as configuracoes do salao.",
   };
 }

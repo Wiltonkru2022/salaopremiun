@@ -7,6 +7,7 @@ import { usePathname, useRouter } from "next/navigation";
 import AgendaToolbar from "@/components/agenda/AgendaToolbar";
 import AgendaGrid from "@/components/agenda/AgendaGrid";
 import AgendaSidebar from "@/components/agenda/AgendaSidebar";
+import AgendaInstallPrompt from "@/components/agenda/AgendaInstallPrompt";
 import type {
   AgendaSidebarPanel,
   AgendaSidebarView,
@@ -858,6 +859,8 @@ export default function AgendaPage() {
                 }
               }}
             />
+
+            {isStandaloneAgendaRoute ? <AgendaInstallPrompt /> : null}
 
             {assinaturaBloqueada ? (
               <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">

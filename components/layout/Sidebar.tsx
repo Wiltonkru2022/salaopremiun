@@ -7,6 +7,7 @@ import {
   AlertTriangle,
   ChevronRight,
   CreditCard,
+  ExternalLink,
   Search,
   X,
 } from "lucide-react";
@@ -305,6 +306,8 @@ function SidebarLink({
   return (
     <a
       href={getRouteHref(item.href)}
+      target={item.openInNewTab ? "_blank" : undefined}
+      rel={item.openInNewTab ? "noreferrer" : undefined}
       onClick={onClose}
       className={clsx(
         "group/item flex items-center gap-3 rounded-[17px] px-3 py-2.5 ring-1 ring-transparent transition-all duration-200",
@@ -341,6 +344,15 @@ function SidebarLink({
           active ? "text-white/60" : "text-zinc-300"
         )}
       />
+      {item.openInNewTab ? (
+        <ExternalLink
+          size={14}
+          className={clsx(
+            "shrink-0",
+            active ? "text-white/60" : "text-zinc-300"
+          )}
+        />
+      ) : null}
     </a>
   );
 }

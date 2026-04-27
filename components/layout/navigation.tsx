@@ -30,6 +30,7 @@ export type PainelNavItem = {
   permissionKey?: string;
   niveis?: string[];
   sidebar?: boolean;
+  openInNewTab?: boolean;
 };
 
 export const painelNavigationItems: PainelNavItem[] = [
@@ -48,6 +49,7 @@ export const painelNavigationItems: PainelNavItem[] = [
     description: "Visao diaria de horarios, encaixes e fluxo.",
     icon: CalendarDays,
     permissionKey: "agenda_ver",
+    openInNewTab: true,
   },
   {
     href: "/clientes",

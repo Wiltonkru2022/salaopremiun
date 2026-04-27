@@ -72,6 +72,18 @@ export function useAgendaData({
   setAgendamentos,
   setBloqueios,
 }: UseAgendaDataParams) {
+  const redirectToHref = useCallback(
+    (href: string) => {
+      if (typeof window !== "undefined" && /^https?:\/\//i.test(href)) {
+        window.location.assign(href);
+        return;
+      }
+
+      router.replace(href);
+    },
+    [router]
+  );
+
   const isAuthLockError = useCallback((error: unknown) => {
     const message = String(
       typeof error === "object" && error !== null && "message" in error
@@ -237,13 +249,13 @@ export function useAgendaData({
         setErroTela(result.erroTela || "Erro ao carregar agenda.");
         setAcessoCarregado(true);
         if (result.redirectTo) {
-          router.replace(result.redirectTo);
+          redirectToHref(result.redirectTo);
         }
         return;
       }
 
       if (result.redirectTo) {
-        router.replace(result.redirectTo);
+        redirectToHref(result.redirectTo);
         return;
       }
 
@@ -268,7 +280,6 @@ export function useAgendaData({
       setLoading(false);
     }
   }, [
-    router,
     safeGetAuthUser,
     setAcessoCarregado,
     setAssinaturaBloqueada,
@@ -282,6 +293,7 @@ export function useAgendaData({
     setSelectedProfissionalId,
     setServicos,
     supabase,
+    redirectToHref,
   ]);
 
   return {

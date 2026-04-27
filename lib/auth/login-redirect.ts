@@ -6,8 +6,40 @@ export type LoginRedirectNotice = {
   description: string;
 };
 
-export function buildLoginRedirectUrl(motivo: string) {
-  return `https://${getLoginHost()}/login?motivo=${encodeURIComponent(motivo)}`;
+export function sanitizeLoginReturnTo(value: string | null | undefined) {
+  const raw = String(value || "").trim();
+  if (!raw.startsWith("/")) {
+    return null;
+  }
+
+  if (raw.startsWith("//")) {
+    return null;
+  }
+
+  return raw;
+}
+
+export function buildLoginRedirectUrl(
+  motivo: string,
+  options?: {
+    returnTo?: string | null;
+    context?: string | null;
+  }
+) {
+  const url = new URL(`https://${getLoginHost()}/login`);
+  url.searchParams.set("motivo", motivo);
+
+  const returnTo = sanitizeLoginReturnTo(options?.returnTo);
+  if (returnTo) {
+    url.searchParams.set("returnTo", returnTo);
+  }
+
+  const context = String(options?.context || "").trim();
+  if (context) {
+    url.searchParams.set("context", context);
+  }
+
+  return url.toString();
 }
 
 function getParam(
