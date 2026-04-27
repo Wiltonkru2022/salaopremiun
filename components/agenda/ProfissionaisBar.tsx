@@ -18,18 +18,18 @@ export default function ProfissionaisBar({
 }: Props) {
   return (
     <div
-      className={`overflow-hidden rounded-[16px] border border-zinc-200 bg-white ${
-        densityMode === "reception" ? "px-3 py-1.5" : "px-3 py-2.5"
+      className={`overflow-hidden rounded-[30px] border border-white/75 bg-white/92 shadow-[0_22px_65px_rgba(15,23,42,0.10)] backdrop-blur ${
+        densityMode === "reception" ? "px-4 py-3" : "px-5 py-4"
       }`}
     >
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <div className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">
+          <div className="text-[15px] font-semibold tracking-[-0.02em] text-slate-900">
             Equipe em foco
           </div>
         </div>
 
-        <div className="rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1 text-xs font-medium text-zinc-600">
+        <div className="rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium text-zinc-600 shadow-[0_8px_20px_rgba(15,23,42,0.05)]">
           {profissionais.length} profissional(is)
         </div>
       </div>
@@ -49,14 +49,14 @@ export default function ProfissionaisBar({
                 key={prof.id}
                 onClick={() => onSelect(prof.id)}
                 className={clsx(
-                  `flex items-center gap-3 rounded-[16px] border text-left transition ${
+                  `flex items-center gap-3 rounded-[24px] border text-left shadow-[0_10px_26px_rgba(15,23,42,0.05)] transition ${
                     densityMode === "reception"
-                      ? "min-w-[142px] px-2 py-1.5"
-                      : "min-w-[180px] px-3 py-2.5 xl:min-w-[210px]"
+                      ? "min-w-[142px] px-2.5 py-2"
+                      : "min-w-[182px] px-3.5 py-3 xl:min-w-[205px]"
                   }`,
                   active
-                    ? "border-zinc-950 bg-zinc-950 text-white shadow-sm"
-                    : "border-zinc-200 bg-white text-zinc-800 hover:border-zinc-300 hover:bg-zinc-50"
+                    ? "border-violet-400 bg-white text-zinc-900 shadow-[0_14px_34px_rgba(124,58,237,0.14)]"
+                    : "border-zinc-200 bg-white/95 text-zinc-800 hover:border-zinc-300 hover:bg-white"
                 )}
               >
                 {prof.foto_url ? (
@@ -82,9 +82,9 @@ export default function ProfissionaisBar({
                   <div
                     className={clsx(
                       `${
-                        densityMode === "reception" ? "text-[10px]" : "text-[11px]"
-                      } uppercase tracking-[0.14em]`,
-                      active ? "text-zinc-400" : "text-zinc-500"
+                      densityMode === "reception" ? "text-[10px]" : "text-[11px]"
+                    } uppercase tracking-[0.14em]`,
+                      active ? "text-violet-500" : "text-zinc-400"
                     )}
                   >
                     {subtitle}

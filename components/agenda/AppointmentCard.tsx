@@ -5,15 +5,11 @@ import { useMemo, useRef, useState } from "react";
 import { AgendaDensityMode, Agendamento } from "@/types/agenda";
 import { getStatusStyles, normalizeTimeString } from "@/lib/utils/agenda";
 import {
-  DollarSign,
-  GripVertical,
-  Pencil,
   CheckCircle2,
   CircleDollarSign,
   Clock3,
   Scissors,
   TriangleAlert,
-  Trash2,
   User2,
   XCircle,
 } from "lucide-react";
@@ -67,8 +63,8 @@ export default function AppointmentCard({
   onResizeEnd,
   onMoveEnd,
   onClick,
-  onDelete,
-  onGoToCashier,
+  onDelete: _onDelete,
+  onGoToCashier: _onGoToCashier,
 }: Props) {
   const styles = getStatusStyles(item.status);
   const isOverdue = Boolean(operationalSignals?.isOverdue);
@@ -296,8 +292,8 @@ export default function AppointmentCard({
 
       <div
         className={clsx(
-          "absolute overflow-hidden rounded-[16px] border shadow-sm transition-all duration-150 select-none",
-          "hover:-translate-y-[1px] hover:shadow-md",
+          "absolute overflow-hidden rounded-[14px] border shadow-[0_10px_24px_rgba(15,23,42,0.07)] transition-all duration-150 select-none backdrop-blur-[1px]",
+          "hover:-translate-y-[1px] hover:shadow-[0_16px_34px_rgba(15,23,42,0.10)]",
           "cursor-grab active:cursor-grabbing",
           styles.card,
           isOverdue && "ring-2 ring-rose-200 ring-offset-1",
@@ -314,9 +310,9 @@ export default function AppointmentCard({
         onClick={handleCardClick}
         onDragStart={(e) => e.preventDefault()}
       >
-        <div className="absolute inset-y-0 left-0 w-1.5 bg-white/30" />
+        <div className="absolute inset-y-0 left-0 w-[1px] bg-white/70" />
         {isInProgress ? (
-          <div className="absolute inset-x-0 top-0 h-1 bg-emerald-200/90" />
+          <div className="absolute inset-x-0 top-0 h-[2px] bg-violet-400/75" />
         ) : null}
 
         <div
@@ -330,12 +326,11 @@ export default function AppointmentCard({
                   : "px-2.5 py-2.5"
                 : isSmall
                   ? "px-3 py-2.5"
-                  : "p-3"
+                  : "px-3 py-2.5"
           )}
         >
           {isTiny ? (
             <div className="flex h-full items-center gap-2 select-none">
-              <GripVertical size={11} className="shrink-0 opacity-70" />
               <div className="min-w-0 flex-1 truncate text-[10px] font-semibold">
                 {item.cliente?.nome || "Cliente"}
               </div>
@@ -348,7 +343,6 @@ export default function AppointmentCard({
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5">
-                    <GripVertical size={10} className="shrink-0 opacity-70" />
                     <span className="shrink-0 opacity-90">{statusIcon}</span>
                     <div
                       className={clsx(
@@ -362,40 +356,6 @@ export default function AppointmentCard({
                     </div>
                   </div>
                 </div>
-
-                <div className="flex items-center gap-1">
-                  {!isUltraNarrow && item.status === "aguardando_pagamento" ? (
-                    <button
-                      type="button"
-                      data-no-drag="true"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onGoToCashier(item);
-                      }}
-                      className="rounded-md bg-white/20 p-1 transition hover:bg-white/30"
-                      title="Receber do cliente"
-                    >
-                      <DollarSign size={10} />
-                    </button>
-                  ) : null}
-                  {!isUltraNarrow ? (
-                    <button
-                      type="button"
-                      data-no-drag="true"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onClick(item, {
-                          x: Math.max(12, e.clientX),
-                          y: Math.max(12, e.clientY),
-                        });
-                      }}
-                      className="rounded-md bg-white/20 p-1 transition hover:bg-white/30"
-                      title="Editar"
-                    >
-                      <Pencil size={10} />
-                    </button>
-                  ) : null}
-                </div>
               </div>
 
               <div
@@ -406,23 +366,23 @@ export default function AppointmentCard({
               >
                 <div className="min-w-0 truncate">{compactTimeLabel}</div>
                 {isOverdue && !isUltraNarrow ? (
-                  <span className="shrink-0 rounded-full border border-white/20 bg-rose-100/90 px-1.5 py-0.5 text-[9px] font-semibold text-rose-700">
+                    <span className="shrink-0 rounded-full border border-rose-200 bg-rose-50 px-1.5 py-0.5 text-[9px] font-semibold text-rose-700">
                     Atraso
                   </span>
                 ) : hasConflict && !isUltraNarrow ? (
-                  <span className="shrink-0 rounded-full border border-white/20 bg-amber-100/90 px-1.5 py-0.5 text-[9px] font-semibold text-amber-700">
+                    <span className="shrink-0 rounded-full border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-[9px] font-semibold text-amber-700">
                     Conflito
                   </span>
                 ) : tightFit && !isUltraNarrow ? (
-                  <span className="shrink-0 rounded-full border border-white/20 bg-zinc-100/90 px-1.5 py-0.5 text-[9px] font-semibold text-zinc-700">
+                    <span className="shrink-0 rounded-full border border-zinc-200 bg-white/90 px-1.5 py-0.5 text-[9px] font-semibold text-zinc-700">
                     Encaixe
                   </span>
                 ) : item.status === "aguardando_pagamento" && !isUltraNarrow ? (
-                  <span className="shrink-0 rounded-full border border-white/20 bg-white/15 px-1.5 py-0.5 text-[9px] font-semibold">
-                    $
+                    <span className="shrink-0 rounded-full border border-white/70 bg-white/90 px-1.5 py-0.5 text-[9px] font-semibold text-zinc-700">
+                    Caixa
                   </span>
                 ) : !isUltraNarrow ? (
-                  <span className="shrink-0 rounded-full border border-white/20 bg-white/15 px-1.5 py-0.5 text-[9px] font-semibold">
+                    <span className="shrink-0 rounded-full border border-white/70 bg-white/90 px-1.5 py-0.5 text-[9px] font-semibold text-zinc-700">
                     {shortStatusLabel}
                   </span>
                 ) : null}
@@ -432,27 +392,32 @@ export default function AppointmentCard({
             <div className="flex h-full flex-col justify-between gap-2 select-none">
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <GripVertical size={11} className="shrink-0 opacity-70" />
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="text-[10px] font-medium opacity-85">
+                      {normalizeTimeString(item.hora_inicio)} - {normalizeTimeString(item.hora_fim)}
+                    </div>
+                    <span className="shrink-0 opacity-90">{statusIcon}</span>
+                  </div>
 
+                  <div className="mt-1.5 flex items-center gap-2">
                     {profissionalFotoUrl ? (
                       <img
                         src={profissionalFotoUrl}
                         alt={profissionalNome || "Profissional"}
                         draggable={false}
                         className={clsx(
-                          "shrink-0 rounded-full border border-white/40 object-cover select-none pointer-events-none",
-                          isSmall ? "h-5 w-5" : "h-7 w-7"
+                          "shrink-0 rounded-full border border-white/50 object-cover select-none pointer-events-none",
+                          isSmall ? "h-5 w-5" : "h-6 w-6"
                         )}
                       />
                     ) : (
                       <div
                         className={clsx(
-                          "flex shrink-0 items-center justify-center rounded-full bg-white/20 select-none",
-                          isSmall ? "h-5 w-5" : "h-7 w-7"
+                          "flex shrink-0 items-center justify-center rounded-full bg-white/30 select-none",
+                          isSmall ? "h-5 w-5" : "h-6 w-6"
                         )}
                       >
-                        <User2 size={isSmall ? 10 : 12} />
+                        <User2 size={isSmall ? 10 : 11} />
                       </div>
                     )}
 
@@ -467,65 +432,19 @@ export default function AppointmentCard({
                       </div>
 
                       {!isSmall && profissionalNome ? (
-                        <div className="truncate text-[10px] opacity-85">
+                        <div className="truncate text-[10px] opacity-75">
                           {profissionalNome}
                         </div>
                       ) : null}
                     </div>
                   </div>
                 </div>
-
-                <div className="flex flex-col gap-1">
-                  <button
-                    type="button"
-                    data-no-drag="true"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onClick(item, {
-                        x: Math.max(12, e.clientX),
-                        y: Math.max(12, e.clientY),
-                      });
-                    }}
-                    className="rounded-md bg-white/20 p-1 transition hover:bg-white/30"
-                    title="Editar"
-                  >
-                    <Pencil size={11} />
-                  </button>
-
-                  <button
-                    type="button"
-                    data-no-drag="true"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onDelete(item);
-                    }}
-                    className="rounded-md bg-white/20 p-1 transition hover:bg-white/30"
-                    title="Excluir"
-                  >
-                    <Trash2 size={11} />
-                  </button>
-
-                  {item.status === "aguardando_pagamento" ? (
-                    <button
-                      type="button"
-                      data-no-drag="true"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onGoToCashier(item);
-                      }}
-                      className="rounded-md bg-white/25 p-1 transition hover:bg-white/35"
-                      title="Receber do cliente"
-                    >
-                      <DollarSign size={11} />
-                    </button>
-                  ) : null}
-                </div>
               </div>
 
               <div className="flex flex-wrap items-center gap-1.5">
                 <span
                   className={clsx(
-                    "rounded-full border px-2 py-0.5 text-[9px] font-semibold",
+                    "rounded-full border px-2 py-0.5 text-[9px] font-semibold shadow-sm",
                     styles.badge
                   )}
                 >
@@ -550,14 +469,14 @@ export default function AppointmentCard({
                   </span>
                 ) : null}
 
-                {comandaLabel && !isSmall ? (
-                  <span className="rounded-full border border-white/20 bg-white/15 px-2 py-0.5 text-[9px] font-semibold">
+                {comandaLabel && !isSmall && !isMedium ? (
+                  <span className="rounded-full border border-white/70 bg-white/90 px-2 py-0.5 text-[9px] font-semibold text-zinc-700">
                     {comandaLabel}
                   </span>
                 ) : null}
 
-                {!isSmall ? (
-                  <span className="rounded-full border border-white/20 bg-white/15 px-2 py-0.5 text-[9px] font-semibold">
+                {!isSmall && !isMedium ? (
+                  <span className="rounded-full border border-white/70 bg-white/90 px-2 py-0.5 text-[9px] font-semibold text-zinc-700">
                     {valorServico}
                   </span>
                 ) : null}
@@ -579,9 +498,9 @@ export default function AppointmentCard({
                   </div>
                 ) : null}
 
-                {!isSmall && item.status === "aguardando_pagamento" ? (
-                  <div className="inline-flex items-center gap-1 rounded-full border border-white/20 bg-white/15 px-2 py-1 text-[9px] font-semibold">
-                    <DollarSign size={9} />
+                {!isSmall && item.status === "aguardando_pagamento" && !isMedium ? (
+                  <div className="inline-flex items-center gap-1 rounded-full border border-white/70 bg-white/90 px-2 py-1 text-[9px] font-semibold text-zinc-700">
+                    <CircleDollarSign size={9} />
                     Pronto para caixa
                   </div>
                 ) : null}
@@ -600,7 +519,7 @@ export default function AppointmentCard({
           data-resize="true"
           onMouseDown={handleResizeMouseDown}
           className={clsx(
-            "absolute bottom-0 left-0 right-0 cursor-ns-resize bg-black/15",
+            "absolute bottom-0 left-0 right-0 cursor-ns-resize bg-zinc-500/12",
             isTiny ? "h-1.5 rounded-b-[12px]" : "h-2 rounded-b-[16px]"
           )}
           title="Arraste para alterar duracao"

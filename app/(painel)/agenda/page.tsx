@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { addDays, subDays } from "date-fns";
+import { addDays, format, subDays } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import { useRouter } from "next/navigation";
 import AgendaToolbar from "@/components/agenda/AgendaToolbar";
 import AgendaGrid from "@/components/agenda/AgendaGrid";
+import AgendaSidebar from "@/components/agenda/AgendaSidebar";
 import AgendaModal from "@/components/agenda/AgendaModal";
 import ProfissionaisBar from "@/components/agenda/ProfissionaisBar";
 import AgendaNoticeDialog from "@/components/agenda/AgendaNoticeDialog";
@@ -91,6 +93,7 @@ export default function AgendaPage() {
   const [creditModalOpen, setCreditModalOpen] = useState(false);
   const [creditClienteId, setCreditClienteId] = useState("");
   const [creditLoading, setCreditLoading] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const {
     supabase,
@@ -510,16 +513,28 @@ export default function AgendaPage() {
       cancelado: 0,
     }
   );
+  const currencyFormatter = new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  });
+  const potentialGoal = 20000;
+  const potentialProgress =
+    potentialGoal > 0 ? (valorPotencial / potentialGoal) * 100 : 0;
+  const defaultSlotDate = format(
+    viewMode === "day" ? currentDate : new Date(),
+    "yyyy-MM-dd"
+  );
+  const defaultSlotTime = normalizeTimeString(config.hora_abertura);
 
   return (
     <>
       <div
         className={
           agendaExpanded
-            ? "fixed inset-0 z-40 flex min-h-0 flex-col gap-1.5 bg-white p-2 md:p-3"
+            ? "fixed inset-0 z-40 flex min-h-0 flex-col gap-4 bg-[radial-gradient(circle_at_top,#faf6ff_0%,#f8fafc_24%,#f3f6fb_58%,#eef2f7_100%)] p-3 md:p-4"
             : densityMode === "reception"
-              ? "flex h-[calc(100dvh-4.9rem)] min-h-[720px] min-w-0 flex-col gap-1 overflow-hidden bg-white"
-              : "flex h-[calc(100dvh-5.2rem)] min-h-[700px] min-w-0 flex-col gap-1.5 overflow-hidden bg-white"
+              ? "flex h-[calc(100dvh-4.9rem)] min-h-[720px] min-w-0 flex-col gap-4 overflow-hidden bg-[radial-gradient(circle_at_top,#faf6ff_0%,#f8fafc_24%,#f3f6fb_58%,#eef2f7_100%)] p-3"
+              : "flex h-[calc(100dvh-5.2rem)] min-h-[700px] min-w-0 flex-col gap-4 overflow-hidden bg-[radial-gradient(circle_at_top,#faf6ff_0%,#f8fafc_24%,#f3f6fb_58%,#eef2f7_100%)] p-3"
         }
       >
         <ProfissionaisBar
@@ -536,12 +551,6 @@ export default function AgendaPage() {
           selectedProfessionalRole={
             selectedProfissional?.cargo || selectedProfissional?.categoria || ""
           }
-          appointmentsCount={totalAtendimentos}
-          waitingPaymentCount={aguardandoPagamento}
-          blockedCount={totalBloqueios}
-          potentialValue={valorPotencial}
-          statusCounts={statusCounts}
-          densityMode={densityMode}
           onPrev={() =>
             setCurrentDate((prev) =>
               viewMode === "day" ? subDays(prev, 1) : subDays(prev, 7)
@@ -554,9 +563,8 @@ export default function AgendaPage() {
           }
           onToday={() => setCurrentDate(new Date())}
           onChangeView={setViewMode}
-          onChangeDensityMode={setDensityMode}
-          isExpanded={agendaExpanded}
-          onToggleExpanded={() => setAgendaExpanded((prev) => !prev)}
+          sidebarOpen={sidebarOpen}
+          onToggleSidebar={() => setSidebarOpen((prev) => !prev)}
         />
 
         {assinaturaBloqueada ? (
@@ -571,30 +579,59 @@ export default function AgendaPage() {
           </div>
         ) : null}
 
-        <div className="min-h-0 min-w-0 flex-1 overflow-hidden rounded-[16px] border border-zinc-200 bg-white select-none">
-          <AgendaGrid
-            viewMode={viewMode}
-            currentDate={currentDate}
-            startTime={normalizeTimeString(config.hora_abertura)}
-            endTime={normalizeTimeString(config.hora_fechamento)}
-            intervalMinutes={config.intervalo_minutos}
-            diasFuncionamento={diasFuncionamento}
-            agendamentos={agendamentos}
-            bloqueios={bloqueios}
-            selectedProfessional={selectedProfissional}
-            densityMode={densityMode}
-            onClickSlot={openSlotMenu}
-            onResizeEvent={handleResizeEvent}
-            onMoveEvent={handleMoveEvent}
-            onEditEvent={openAppointmentMenu}
-            onDeleteEvent={handleDeleteEvent}
-            onGoToCashier={handleGoToCashier}
-            onEditBlock={handleEditBlock}
-            onDeleteBlock={handleDeleteBlock}
-            onMoveBlock={handleMoveBlock}
-            onResizeBlock={handleResizeBlock}
-            isExpanded={agendaExpanded}
-          />
+        <div className="min-h-0 min-w-0 flex-1 overflow-hidden">
+          <div className="flex h-full min-h-0 flex-col gap-4 lg:flex-row">
+            <div className="min-h-0 min-w-0 flex-1">
+              <AgendaGrid
+                viewMode={viewMode}
+                currentDate={currentDate}
+                startTime={normalizeTimeString(config.hora_abertura)}
+                endTime={normalizeTimeString(config.hora_fechamento)}
+                intervalMinutes={config.intervalo_minutos}
+                diasFuncionamento={diasFuncionamento}
+                agendamentos={agendamentos}
+                bloqueios={bloqueios}
+                selectedProfessional={selectedProfissional}
+                densityMode={densityMode}
+                onClickSlot={openSlotMenu}
+                onResizeEvent={handleResizeEvent}
+                onMoveEvent={handleMoveEvent}
+                onEditEvent={openAppointmentMenu}
+                onDeleteEvent={handleDeleteEvent}
+                onGoToCashier={handleGoToCashier}
+                onEditBlock={handleEditBlock}
+                onDeleteBlock={handleDeleteBlock}
+                onMoveBlock={handleMoveBlock}
+                onResizeBlock={handleResizeBlock}
+                isExpanded={agendaExpanded}
+              />
+            </div>
+
+            <AgendaSidebar
+              open={sidebarOpen}
+              currentMonthLabel={format(currentDate, "MMMM", { locale: ptBR })}
+              potentialValueLabel={currencyFormatter.format(valorPotencial)}
+              potentialGoalLabel={`Meta do mes: ${currencyFormatter.format(potentialGoal)}`}
+              potentialProgress={potentialProgress}
+              appointmentsCount={totalAtendimentos}
+              waitingPaymentCount={aguardandoPagamento}
+              blockedCount={totalBloqueios}
+              attendedCount={statusCounts.atendido}
+              statusCounts={statusCounts}
+              viewMode={viewMode}
+              densityMode={densityMode}
+              isExpanded={agendaExpanded}
+              onToggleOpen={() => setSidebarOpen((prev) => !prev)}
+              onChangeView={setViewMode}
+              onChangeDensityMode={setDensityMode}
+              onToggleExpanded={() => setAgendaExpanded((prev) => !prev)}
+              onToday={() => setCurrentDate(new Date())}
+              onOpenCreate={() => openCreateModal(defaultSlotDate, defaultSlotTime)}
+              onOpenBlock={() => openBlockModal(defaultSlotDate, defaultSlotTime)}
+              onOpenCredit={() => setCreditModalOpen(true)}
+              onOpenCashier={() => router.push("/caixa")}
+            />
+          </div>
         </div>
 
         <AgendaModal

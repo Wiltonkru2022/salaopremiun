@@ -115,43 +115,43 @@ export function getStatusStyles(status: string) {
   switch (status) {
     case "confirmado":
       return {
-        card: "border-emerald-500 bg-gradient-to-b from-emerald-500 to-emerald-600 text-white",
+        card: "border-emerald-200 bg-gradient-to-br from-emerald-50 via-emerald-50 to-white text-emerald-950",
         badge: "border border-emerald-200 bg-emerald-100 text-emerald-700",
       };
 
     case "pendente":
       return {
-        card: "border-amber-400 bg-gradient-to-b from-amber-300 to-amber-400 text-zinc-900",
+        card: "border-amber-200 bg-gradient-to-br from-amber-50 via-amber-50 to-white text-amber-950",
         badge: "border border-amber-200 bg-amber-100 text-amber-700",
       };
 
     case "atendido":
       return {
-        card: "border-sky-500 bg-gradient-to-b from-sky-500 to-sky-600 text-white",
+        card: "border-sky-200 bg-gradient-to-br from-sky-50 via-sky-50 to-white text-sky-950",
         badge: "border border-sky-200 bg-sky-100 text-sky-700",
       };
 
     case "cancelado":
       return {
-        card: "border-rose-400 bg-gradient-to-b from-rose-400 to-rose-500 text-white opacity-90",
+        card: "border-rose-200 bg-gradient-to-br from-rose-50 via-rose-50 to-white text-rose-950 opacity-95",
         badge: "border border-rose-200 bg-rose-100 text-rose-700",
       };
 
     case "aguardando_pagamento":
       return {
-        card: "border-violet-500 bg-gradient-to-b from-violet-500 to-fuchsia-600 text-white",
+        card: "border-violet-200 bg-gradient-to-br from-violet-50 via-violet-50 to-white text-violet-950",
         badge: "border border-violet-200 bg-violet-100 text-violet-700",
       };
 
     case "bloqueado":
       return {
-        card: "border-zinc-300 bg-gradient-to-b from-zinc-200 to-zinc-300 text-zinc-800",
+        card: "border-zinc-300 bg-gradient-to-br from-zinc-100 via-zinc-50 to-white text-zinc-800",
         badge: "border border-zinc-200 bg-zinc-100 text-zinc-700",
       };
 
     default:
       return {
-        card: "border-zinc-800 bg-zinc-800 text-white",
+        card: "border-zinc-300 bg-gradient-to-br from-zinc-50 via-white to-zinc-50 text-zinc-900",
         badge: "border border-zinc-200 bg-zinc-100 text-zinc-700",
       };
   }

@@ -312,7 +312,7 @@ function BlockCard({
     <>
       {(dragging || resizing) && (
         <div
-          className="pointer-events-none absolute rounded-[16px] border border-dashed border-zinc-400 bg-zinc-300/40 select-none"
+          className="pointer-events-none absolute rounded-[18px] border border-dashed border-zinc-400 bg-zinc-200/50 select-none"
           style={{
             top: effectiveTop,
             height: effectiveHeight,
@@ -325,8 +325,8 @@ function BlockCard({
 
       <div
         className={clsx(
-          "absolute left-1 right-1 overflow-hidden rounded-[16px] border border-zinc-300 bg-zinc-200/85 p-2.5 text-zinc-700 shadow-sm transition-all duration-150 select-none",
-          "hover:-translate-y-[1px] hover:shadow-md",
+          "absolute left-1 right-1 overflow-hidden rounded-[18px] border border-zinc-300/80 bg-white/72 p-2.5 text-zinc-700 shadow-[0_12px_30px_rgba(15,23,42,0.06)] transition-all duration-150 select-none backdrop-blur",
+          "hover:-translate-y-[1px] hover:shadow-[0_18px_35px_rgba(15,23,42,0.10)]",
           "cursor-grab active:cursor-grabbing",
           dragging || resizing ? "z-40 scale-[1.01]" : "z-20"
         )}
@@ -441,10 +441,13 @@ export default function AgendaGrid({
   const [viewportWidth, setViewportWidth] = useState(0);
   const compactMode = densityMode === "reception";
   const pixelsPer15Min = compactMode ? 10 : 16;
-  const slotHeight = compactMode ? 20 : 32;
-  const timeColWidth = compactMode ? 44 : 52;
+  const slotHeight = Math.max(
+    compactMode ? 18 : 16,
+    Math.round((intervalMinutes / 15) * pixelsPer15Min)
+  );
+  const timeColWidth = compactMode ? 46 : 62;
   const dayMinWidthDay = compactMode ? 520 : 660;
-  const dayMinWidthWeek = compactMode ? 98 : 132;
+  const dayMinWidthWeek = compactMode ? 100 : 146;
 
   useEffect(() => {
     const interval = window.setInterval(() => {
@@ -522,10 +525,10 @@ export default function AgendaGrid({
   );
 
   return (
-    <div className="flex h-full min-h-0 flex-col rounded-[18px] bg-white select-none">
+    <div className="flex h-full min-h-0 flex-col rounded-[30px] border border-white/70 bg-white/90 shadow-[0_24px_70px_rgba(15,23,42,0.10)] backdrop-blur select-none">
       <div
         ref={gridViewportRef}
-        className="agenda-scroll min-h-0 flex-1 overflow-auto rounded-[18px] select-none"
+        className="agenda-scroll min-h-0 flex-1 overflow-auto rounded-[30px] select-none"
       >
         <div
           className="grid min-w-max select-none"
@@ -537,8 +540,8 @@ export default function AgendaGrid({
           }}
         >
           <div
-            className={`sticky left-0 top-0 z-40 flex select-none items-center border-b border-r border-zinc-200 bg-white px-2 text-[10px] font-semibold uppercase tracking-wide text-zinc-500 ${
-              compactMode ? "h-[34px]" : "h-[44px]"
+            className={`sticky left-0 top-0 z-40 flex select-none items-center border-b border-r border-zinc-200 bg-white px-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500 ${
+              compactMode ? "h-[44px]" : "h-[58px]"
             }`}
           >
             Hora
@@ -548,17 +551,17 @@ export default function AgendaGrid({
             <div
               key={day.toISOString()}
               className={clsx(
-                `sticky top-0 z-30 select-none border-b border-l border-zinc-200 px-2 ${
-                  compactMode ? "h-[34px] py-1" : "h-[44px] py-1.5"
+                `sticky top-0 z-30 select-none border-b border-l border-zinc-200 px-3 ${
+                  compactMode ? "h-[44px] py-2" : "h-[58px] py-3"
                 }`,
-                isTodayDate(day) ? "bg-zinc-100" : "bg-white"
+                isTodayDate(day) ? "bg-violet-50/60" : "bg-white/95"
               )}
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
                   <div
                     className={`truncate font-semibold text-zinc-900 ${
-                      compactMode ? "text-[11px]" : "text-xs"
+                      compactMode ? "text-[11px]" : "text-[13px]"
                     }`}
                   >
                     {formatDayLabel(day)}
@@ -570,7 +573,7 @@ export default function AgendaGrid({
                 </div>
 
                 {isTodayDate(day) ? (
-                  <span className="rounded-full border border-zinc-300 bg-white px-1.5 py-0.5 text-[9px] font-semibold text-zinc-700">
+                  <span className="rounded-full border border-violet-200 bg-violet-500 px-2 py-1 text-[9px] font-semibold text-white shadow-sm">
                     Hoje
                   </span>
                 ) : null}
@@ -578,14 +581,14 @@ export default function AgendaGrid({
             </div>
           ))}
 
-          <div className="sticky left-0 z-30 select-none border-r border-zinc-200 bg-zinc-50/70">
+          <div className="sticky left-0 z-30 select-none border-r border-zinc-200 bg-white/92">
             {slots.map((slot) => (
               <div
                 key={slot.time}
                 className={clsx(
-                  "flex select-none items-start justify-end pr-1.5 pt-1 text-[9px] font-medium",
+                  "flex select-none items-start justify-end pr-2.5 pt-1.5 text-[10px] font-medium",
                   slot.minutes % 60 === 0
-                    ? "border-b border-zinc-200 bg-zinc-50/80 text-zinc-700"
+                    ? "border-b border-zinc-200 bg-zinc-50/78 text-zinc-700"
                     : slot.minutes % 30 === 0
                       ? "border-b border-zinc-200/70 text-zinc-500"
                       : "border-b border-zinc-100 text-zinc-400"
@@ -725,7 +728,7 @@ export default function AgendaGrid({
                 key={dayStr}
                 className={clsx(
                   "relative select-none border-l border-zinc-200",
-                  isTodayDate(day) ? "bg-zinc-50/40" : "bg-white"
+                  isTodayDate(day) ? "bg-violet-50/20" : "bg-white/94"
                 )}
                 style={{ height: totalGridHeight }}
               >
@@ -741,7 +744,7 @@ export default function AgendaGrid({
                     className={clsx(
                       "block w-full text-left transition hover:bg-zinc-50/70",
                       slot.minutes % 60 === 0
-                        ? "border-b border-zinc-200 bg-zinc-50/20"
+                        ? "border-b border-zinc-200 bg-zinc-50/22"
                         : slot.minutes % 30 === 0
                           ? "border-b border-zinc-200/70"
                           : "border-b border-zinc-100"
@@ -757,8 +760,8 @@ export default function AgendaGrid({
                     className="pointer-events-none absolute left-0 right-0 z-10"
                     style={{ top: eventTop(minutesToTime(nowMinutes)) }}
                   >
-                    <div className="relative h-[2px] bg-rose-500/80">
-                      <span className="absolute -top-3 left-3 rounded-full bg-rose-500 px-2 py-0.5 text-[10px] font-semibold text-white shadow-sm">
+                    <div className="relative h-[2px] bg-violet-400/75">
+                      <span className="absolute -top-3 left-3 rounded-full bg-violet-600 px-2 py-0.5 text-[10px] font-semibold text-white shadow-sm">
                         {minutesToTime(nowMinutes)}
                       </span>
                     </div>
@@ -818,7 +821,7 @@ export default function AgendaGrid({
                 ))}
 
                 {largestFreeGap >= 30 ? (
-                  <div className="pointer-events-none absolute bottom-2 right-2 z-10 rounded-full border border-emerald-200 bg-emerald-50/95 px-2.5 py-1 text-[10px] font-semibold text-emerald-700 shadow-sm">
+                  <div className="pointer-events-none absolute bottom-3 right-3 z-10 rounded-full border border-emerald-200 bg-white/96 px-3 py-1.5 text-[10px] font-semibold text-emerald-700 shadow-sm">
                     Janela livre {Math.round(largestFreeGap)} min às{" "}
                     {minutesToTime(largestFreeGapStart)}
                   </div>
