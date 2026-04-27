@@ -69,112 +69,70 @@ export default function AgendaToolbar({
 
   return (
     <div className="rounded-[28px] border border-white/80 bg-white/97 px-4 py-2.5 shadow-[0_18px_52px_rgba(15,23,42,0.07)]">
-      <div className="flex flex-col gap-2">
-        <div className="flex flex-col gap-2 xl:flex-row xl:items-start xl:justify-between">
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <h1 className="mr-3 text-[1.75rem] font-semibold tracking-[-0.07em] text-slate-900">
-                Agenda
-              </h1>
-
-              <button
-                type="button"
-                onClick={onToday}
-                className="inline-flex h-10 items-center rounded-2xl border border-zinc-200 bg-white px-4 text-sm font-semibold text-zinc-800 shadow-[0_8px_20px_rgba(15,23,42,0.05)] hover:bg-zinc-50"
-              >
-                Hoje
-              </button>
-
-              <button
-                type="button"
-                onClick={onPrev}
-                className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-zinc-200 bg-white text-zinc-700 shadow-[0_8px_20px_rgba(15,23,42,0.05)] hover:bg-zinc-50"
-              >
-                <ChevronLeft size={18} />
-              </button>
-
-              <button
-                type="button"
-                onClick={onNext}
-                className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-zinc-200 bg-white text-zinc-700 shadow-[0_8px_20px_rgba(15,23,42,0.05)] hover:bg-zinc-50"
-              >
-                <ChevronRight size={18} />
-              </button>
-
-              <div className="relative" ref={pickerRef}>
-                <button
-                  type="button"
-                  onClick={() => setCalendarOpen((prev) => !prev)}
-                  className="inline-flex h-10 items-center gap-2 rounded-2xl border border-transparent bg-transparent px-1.5 text-[0.98rem] font-medium text-zinc-800"
-                >
-                  <span className="capitalize">{periodLabel}</span>
-                  <ChevronDown size={16} className="text-zinc-400" />
-                </button>
-
-                {calendarOpen ? (
-                  <div className="absolute left-0 top-[calc(100%+0.75rem)] z-40 w-[280px] rounded-[24px] border border-zinc-200 bg-white p-4 shadow-[0_24px_60px_rgba(15,23,42,0.14)]">
-                    <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-400">
-                      Escolher data
-                    </div>
-                    <input
-                      type="date"
-                      value={dateValue}
-                      onChange={(event) => {
-                        if (!event.target.value) return;
-                        onSelectDate(new Date(`${event.target.value}T12:00:00`));
-                        setCalendarOpen(false);
-                      }}
-                      className="mt-3 h-12 w-full rounded-2xl border border-zinc-200 bg-white px-3 text-sm font-medium text-zinc-800 outline-none focus:border-violet-300 focus:ring-4 focus:ring-violet-100"
-                    />
-                  </div>
-                ) : null}
-              </div>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2.5">
-            <div className="rounded-[18px] border border-zinc-200 bg-white p-1 shadow-[0_8px_20px_rgba(15,23,42,0.05)]">
-              <button
-                type="button"
-                onClick={() => onChangeView("day")}
-                className={`rounded-[14px] px-4 py-2 text-sm font-semibold ${
-                  viewMode === "day"
-                    ? "bg-violet-600 text-white shadow-[0_10px_25px_rgba(124,58,237,0.25)]"
-                    : "text-zinc-700"
-                }`}
-              >
-                Dia
-              </button>
-              <button
-                type="button"
-                onClick={() => onChangeView("week")}
-                className={`rounded-[14px] px-4 py-2 text-sm font-semibold ${
-                  viewMode === "week"
-                    ? "bg-violet-600 text-white shadow-[0_10px_25px_rgba(124,58,237,0.25)]"
-                    : "text-zinc-700"
-                }`}
-              >
-                Semana
-              </button>
-            </div>
+      <div className="flex flex-col gap-2 xl:grid xl:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] xl:items-center">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="mr-3 text-[1.75rem] font-semibold tracking-[-0.07em] text-slate-900">
+              Agenda
+            </h1>
 
             <button
               type="button"
-              onClick={onToggleSidebar}
-              className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-zinc-200 bg-white text-zinc-700 shadow-[0_8px_20px_rgba(15,23,42,0.05)] hover:bg-zinc-50"
-              title={sidebarOpen ? "Ocultar painel" : "Abrir painel"}
+              onClick={onToday}
+              className="inline-flex h-10 items-center rounded-2xl border border-zinc-200 bg-white px-4 text-sm font-semibold text-zinc-800 shadow-[0_8px_20px_rgba(15,23,42,0.05)] hover:bg-zinc-50"
             >
-              {sidebarOpen ? (
-                <SlidersHorizontal size={18} />
-              ) : (
-                <PanelRightOpen size={18} />
-              )}
+              Hoje
             </button>
+
+            <button
+              type="button"
+              onClick={onPrev}
+              className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-zinc-200 bg-white text-zinc-700 shadow-[0_8px_20px_rgba(15,23,42,0.05)] hover:bg-zinc-50"
+            >
+              <ChevronLeft size={18} />
+            </button>
+
+            <button
+              type="button"
+              onClick={onNext}
+              className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-zinc-200 bg-white text-zinc-700 shadow-[0_8px_20px_rgba(15,23,42,0.05)] hover:bg-zinc-50"
+            >
+              <ChevronRight size={18} />
+            </button>
+
+            <div className="relative" ref={pickerRef}>
+              <button
+                type="button"
+                onClick={() => setCalendarOpen((prev) => !prev)}
+                className="inline-flex h-10 items-center gap-2 rounded-2xl border border-transparent bg-transparent px-1.5 text-[0.98rem] font-medium text-zinc-800"
+              >
+                <span className="capitalize">{periodLabel}</span>
+                <ChevronDown size={16} className="text-zinc-400" />
+              </button>
+
+              {calendarOpen ? (
+                <div className="absolute left-0 top-[calc(100%+0.75rem)] z-40 w-[280px] rounded-[24px] border border-zinc-200 bg-white p-4 shadow-[0_24px_60px_rgba(15,23,42,0.14)]">
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-400">
+                    Escolher data
+                  </div>
+                  <input
+                    type="date"
+                    value={dateValue}
+                    onChange={(event) => {
+                      if (!event.target.value) return;
+                      onSelectDate(new Date(`${event.target.value}T12:00:00`));
+                      setCalendarOpen(false);
+                    }}
+                    className="mt-3 h-12 w-full rounded-2xl border border-zinc-200 bg-white px-3 text-sm font-medium text-zinc-800 outline-none focus:border-violet-300 focus:ring-4 focus:ring-violet-100"
+                  />
+                </div>
+              ) : null}
+            </div>
           </div>
         </div>
 
-        {(selectedProfessionalName || selectedProfessionalRole) && (
-          <div className="-mt-1 flex justify-center">
+        {(selectedProfessionalName || selectedProfessionalRole) ? (
+          <div className="flex justify-center xl:px-4">
             <span className="inline-flex max-w-full items-center justify-center rounded-full border border-zinc-200 bg-zinc-50/85 px-3 py-1 text-center text-[12px] text-zinc-700 shadow-[0_6px_18px_rgba(15,23,42,0.04)]">
               <span className="truncate">
                 {selectedProfessionalName}
@@ -182,7 +140,49 @@ export default function AgendaToolbar({
               </span>
             </span>
           </div>
+        ) : (
+          <div className="hidden xl:block" />
         )}
+
+        <div className="flex items-center gap-2.5 xl:justify-end">
+          <div className="rounded-[18px] border border-zinc-200 bg-white p-1 shadow-[0_8px_20px_rgba(15,23,42,0.05)]">
+            <button
+              type="button"
+              onClick={() => onChangeView("day")}
+              className={`rounded-[14px] px-4 py-2 text-sm font-semibold ${
+                viewMode === "day"
+                  ? "bg-violet-600 text-white shadow-[0_10px_25px_rgba(124,58,237,0.25)]"
+                  : "text-zinc-700"
+              }`}
+            >
+              Dia
+            </button>
+            <button
+              type="button"
+              onClick={() => onChangeView("week")}
+              className={`rounded-[14px] px-4 py-2 text-sm font-semibold ${
+                viewMode === "week"
+                  ? "bg-violet-600 text-white shadow-[0_10px_25px_rgba(124,58,237,0.25)]"
+                  : "text-zinc-700"
+              }`}
+            >
+              Semana
+            </button>
+          </div>
+
+          <button
+            type="button"
+            onClick={onToggleSidebar}
+            className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-zinc-200 bg-white text-zinc-700 shadow-[0_8px_20px_rgba(15,23,42,0.05)] hover:bg-zinc-50"
+            title={sidebarOpen ? "Ocultar painel" : "Abrir painel"}
+          >
+            {sidebarOpen ? (
+              <SlidersHorizontal size={18} />
+            ) : (
+              <PanelRightOpen size={18} />
+            )}
+          </button>
+        </div>
       </div>
     </div>
   );

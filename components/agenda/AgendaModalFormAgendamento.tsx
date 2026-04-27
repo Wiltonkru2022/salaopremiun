@@ -73,6 +73,17 @@ export default function AgendaModalFormAgendamento({
   onAbrirComanda,
   onCancelAppointment,
 }: Props) {
+  const statusOptions: Array<{
+    value: AgendaStatus;
+    label: string;
+  }> = [
+    { value: "confirmado", label: "Confirmado" },
+    { value: "pendente", label: "Pendente" },
+    { value: "atendido", label: "Atendido" },
+    { value: "cancelado", label: "Cancelado" },
+    { value: "aguardando_pagamento", label: "Aguardando pagamento" },
+  ];
+
   return (
     <div className="space-y-4">
       <Section eyebrow="Atendimento" title="Quem vai atender e quem vai ser atendida">
@@ -114,7 +125,7 @@ export default function AgendaModalFormAgendamento({
       </Section>
 
       <Section eyebrow="Fluxo" title="Horario, status e caixa">
-        <div className="grid gap-3 lg:grid-cols-[220px_220px_minmax(0,1fr)]">
+        <div className="grid gap-3 lg:grid-cols-[220px_minmax(0,1fr)]">
           <div>
             <label className="mb-1.5 flex items-center gap-2 text-xs font-semibold text-zinc-700">
               <Clock3 size={13} />
@@ -130,45 +141,49 @@ export default function AgendaModalFormAgendamento({
             />
           </div>
 
-          <div>
+          <div className="rounded-[18px] border border-zinc-200 bg-zinc-50 px-4 py-3">
             <label className="mb-1.5 block text-xs font-semibold text-zinc-700">
               Status
             </label>
-
-            <select
-              value={status}
-              onChange={(e) => onStatusChange(e.target.value as AgendaStatus)}
-              className="h-12 w-full rounded-2xl border border-zinc-200 bg-zinc-50 px-3 text-sm outline-none transition focus:border-zinc-900 focus:bg-white"
-            >
-              <option value="confirmado">Confirmado</option>
-              <option value="pendente">Pendente</option>
-              <option value="atendido">Atendido</option>
-              <option value="cancelado">Cancelado</option>
-              <option value="aguardando_pagamento">Aguardando pagamento</option>
-            </select>
-          </div>
-
-          <div className="rounded-[18px] border border-zinc-200 bg-zinc-50 px-4 py-3">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-400">
-                  Comanda
-                </div>
-                <div className="mt-1 text-sm font-semibold text-zinc-900">
-                  {comandaNumero ? `Comanda #${comandaNumero}` : "Sem comanda vinculada"}
-                </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={onAbrirComanda}
-                disabled={loadingComanda || !clienteId}
-                className="inline-flex items-center gap-2 rounded-2xl border border-zinc-300 bg-white px-3 py-2 text-xs font-semibold text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-60"
-              >
-                <Receipt size={14} />
-                {loadingComanda ? "Verificando..." : "Abrir comanda"}
-              </button>
+            <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+              {statusOptions.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => onStatusChange(option.value)}
+                  className={
+                    status === option.value
+                      ? "rounded-2xl border border-violet-300 bg-violet-50 px-3 py-2.5 text-sm font-semibold text-violet-700 shadow-[0_10px_24px_rgba(124,58,237,0.12)] transition duration-200"
+                      : "rounded-2xl border border-zinc-200 bg-white px-3 py-2.5 text-sm font-medium text-zinc-700 transition duration-200 hover:-translate-y-[1px] hover:bg-zinc-50"
+                  }
+                >
+                  {option.label}
+                </button>
+              ))}
             </div>
+          </div>
+        </div>
+
+        <div className="mt-3 rounded-[18px] border border-zinc-200 bg-zinc-50 px-4 py-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-400">
+                Comanda
+              </div>
+              <div className="mt-1 text-sm font-semibold text-zinc-900">
+                {comandaNumero ? `Comanda #${comandaNumero}` : "Sem comanda vinculada"}
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={onAbrirComanda}
+              disabled={loadingComanda || !clienteId}
+              className="inline-flex items-center gap-2 rounded-2xl border border-zinc-300 bg-white px-3 py-2 text-xs font-semibold text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-60"
+            >
+              <Receipt size={14} />
+              {loadingComanda ? "Verificando..." : "Abrir comanda"}
+            </button>
           </div>
         </div>
       </Section>
