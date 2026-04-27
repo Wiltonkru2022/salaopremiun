@@ -6,6 +6,7 @@ import {
   Building2,
   CheckCircle2,
   KeyRound,
+  Loader2,
   Mail,
   MapPin,
   Phone,
