@@ -31,10 +31,16 @@ function getGoogleErrorMessage(value: string | string[] | undefined) {
 export default async function LoginProfissionalPage({
   searchParams,
 }: {
-  searchParams: Promise<{ erro?: string | string[] }>;
+  searchParams: Promise<{ erro?: string | string[]; limpar?: string | string[] }>;
 }) {
-  const session = await getProfissionalSessionFromCookie();
   const params = await searchParams;
+  const limpar = Array.isArray(params.limpar) ? params.limpar[0] : params.limpar;
+
+  if (limpar === "1") {
+    await clearProfissionalSession();
+  }
+
+  const session = await getProfissionalSessionFromCookie();
 
   if (session) {
     const validation = await validateProfissionalAppSession().catch(() => null);
