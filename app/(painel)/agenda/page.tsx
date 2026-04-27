@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { addDays, format, subDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import AgendaToolbar from "@/components/agenda/AgendaToolbar";
 import AgendaGrid from "@/components/agenda/AgendaGrid";
 import AgendaSidebar from "@/components/agenda/AgendaSidebar";
@@ -67,6 +67,7 @@ function addMinutesToSlotTime(time: string, minutes: number) {
 
 export default function AgendaPage() {
   const router = useRouter();
+  const pathname = usePathname();
   const loadAgendaSeqRef = useRef(0);
   const [contextMenu, setContextMenu] = useState<
     | { open: false }
@@ -526,6 +527,7 @@ export default function AgendaPage() {
     "yyyy-MM-dd"
   );
   const defaultSlotTime = normalizeTimeString(config.hora_abertura);
+  const isStandaloneAgendaRoute = pathname === "/agenda";
   const showFocusMode = agendaExpanded;
 
   return (
@@ -534,6 +536,8 @@ export default function AgendaPage() {
         className={
           showFocusMode
             ? "fixed inset-0 z-[320] flex min-h-0 flex-col gap-4 bg-white p-3 md:p-4"
+            : isStandaloneAgendaRoute
+              ? "flex h-dvh min-h-dvh min-w-0 flex-col gap-4 overflow-hidden bg-[#f8f8fb] p-3"
             : densityMode === "reception"
               ? "flex h-[calc(100dvh-4.9rem)] min-h-[720px] min-w-0 flex-col gap-4 overflow-hidden bg-[radial-gradient(circle_at_top,#faf6ff_0%,#f8fafc_24%,#f3f6fb_58%,#eef2f7_100%)] p-3"
               : "flex h-[calc(100dvh-5.2rem)] min-h-[700px] min-w-0 flex-col gap-4 overflow-hidden bg-[radial-gradient(circle_at_top,#faf6ff_0%,#f8fafc_24%,#f3f6fb_58%,#eef2f7_100%)] p-3"
@@ -572,6 +576,38 @@ export default function AgendaPage() {
               Recarregar
             </button>
           </div>
+        ) : isStandaloneAgendaRoute ? (
+          <>
+            <ProfissionaisBar
+              profissionais={profissionais}
+              selectedProfissionalId={selectedProfissionalId}
+              densityMode={densityMode}
+              onSelect={setSelectedProfissionalId}
+            />
+
+            <AgendaToolbar
+              currentDate={currentDate}
+              viewMode={viewMode}
+              selectedProfessionalName={selectedProfissional?.nome || ""}
+              selectedProfessionalRole={
+                selectedProfissional?.cargo || selectedProfissional?.categoria || ""
+              }
+              onPrev={() =>
+                setCurrentDate((prev) =>
+                  viewMode === "day" ? subDays(prev, 1) : subDays(prev, 7)
+                )
+              }
+              onNext={() =>
+                setCurrentDate((prev) =>
+                  viewMode === "day" ? addDays(prev, 1) : addDays(prev, 7)
+                )
+              }
+              onToday={() => setCurrentDate(new Date())}
+              onChangeView={setViewMode}
+              sidebarOpen={sidebarOpen}
+              onToggleSidebar={() => setSidebarOpen((prev) => !prev)}
+            />
+          </>
         ) : (
           <>
             <ProfissionaisBar

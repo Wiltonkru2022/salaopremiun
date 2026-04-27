@@ -94,6 +94,7 @@ export default function AppShell({
     currentModuleId,
     onboardingSteps
   );
+  const hideShellChrome = pathname === "/agenda";
   const onboardingHighlights = getPainelOnboardingHighlights(onboarding);
   const criticalNotificationsCount = shellNotifications.filter(
     (notification) => notification.critical
@@ -322,6 +323,11 @@ export default function AppShell({
         idUsuario={idUsuario || null}
       />
 
+      {hideShellChrome ? (
+        <main className="min-h-screen bg-white">
+          <div className="min-w-0">{children}</div>
+        </main>
+      ) : (
       <div className="relative flex min-h-screen">
         <Sidebar
           permissoes={permissoes}
@@ -377,6 +383,7 @@ export default function AppShell({
           </main>
         </div>
       </div>
+      )}
 
       <GuidedOnboarding
         open={guideOpen}
