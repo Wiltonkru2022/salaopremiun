@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import AppLoading from "@/components/ui/AppLoading";
 import { createClient } from "@/lib/supabase/client";
 import { getUsuarioLogado } from "@/lib/auth/getUsuarioLogado";
 import ConfirmActionModal from "@/components/ui/ConfirmActionModal";
@@ -199,7 +200,13 @@ export default function ServicosExtrasPage() {
   }, [itens, busca]);
 
   if (loading || !acessoCarregado) {
-    return <div className="p-6 text-sm text-zinc-600">Carregando extras...</div>;
+    return (
+      <AppLoading
+        title="Carregando servicos extras"
+        message="Aguarde enquanto montamos o catalogo de extras, custos e disponibilidade."
+        fullHeight={false}
+      />
+    );
   }
 
   if (permissoes && !permissoes.servicos_ver) {

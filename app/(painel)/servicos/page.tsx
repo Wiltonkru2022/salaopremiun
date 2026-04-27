@@ -5,6 +5,7 @@ import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react
 import { useRouter } from "next/navigation";
 import { AlertTriangle, Clock3, Percent, Wallet } from "lucide-react";
 import { ComissaoHelpPanel } from "@/components/comissoes/ComissaoHelpPanel";
+import AppLoading from "@/components/ui/AppLoading";
 import ConfirmActionModal from "@/components/ui/ConfirmActionModal";
 import { getUsuarioLogado } from "@/lib/auth/getUsuarioLogado";
 import {
@@ -328,7 +329,13 @@ export default function ServicosPage() {
   }, [listaFiltrada]);
 
   if (loading || !acessoCarregado) {
-    return <div className="p-6 text-sm text-zinc-600">Carregando servicos...</div>;
+    return (
+      <AppLoading
+        title="Carregando servicos"
+        message="Aguarde enquanto organizamos duracao, comissao, preco e regras do catalogo."
+        fullHeight={false}
+      />
+    );
   }
 
   if (permissoes && !permissoes.servicos_ver) {

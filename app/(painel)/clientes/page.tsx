@@ -4,6 +4,7 @@ import Link from "next/link";
 import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CalendarClock, HeartHandshake, Mail, Users } from "lucide-react";
+import AppLoading from "@/components/ui/AppLoading";
 import ConfirmActionModal from "@/components/ui/ConfirmActionModal";
 import { getUsuarioLogado } from "@/lib/auth/getUsuarioLogado";
 import {
@@ -288,7 +289,13 @@ export default function ClientesPage() {
   }, [listaFiltrada]);
 
   if (loading || !acessoCarregado) {
-    return <div className="p-6 text-sm text-zinc-600">Carregando clientes...</div>;
+    return (
+      <AppLoading
+        title="Carregando clientes"
+        message="Aguarde enquanto montamos cadastro, relacionamento e historico das clientes."
+        fullHeight={false}
+      />
+    );
   }
 
   if (permissoes && !permissoes.clientes_ver) {

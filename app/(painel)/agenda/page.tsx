@@ -28,6 +28,7 @@ import { useAgendaData } from "@/components/agenda/useAgendaData";
 import { useAgendaMutations } from "@/components/agenda/useAgendaMutations";
 import { useAgendaPageState } from "@/components/agenda/useAgendaPageState";
 import { useAgendaFeedback } from "@/components/agenda/useAgendaFeedback";
+import AppLoading from "@/components/ui/AppLoading";
 import {
   buscarComandasAbertasDoClienteAgenda,
   criarNovaComandaAgenda,
@@ -491,7 +492,13 @@ export default function AgendaPage() {
   }, [hasSidebarActionPanel]);
 
   if (loading || !acessoCarregado) {
-    return <div className="p-6">Carregando agenda...</div>;
+    return (
+      <AppLoading
+        title="Carregando agenda"
+        message="Aguarde enquanto organizamos horarios, profissionais e atendimentos do periodo."
+        fullHeight={false}
+      />
+    );
   }
 
   if (permissoes && !permissoes.agenda_ver) {

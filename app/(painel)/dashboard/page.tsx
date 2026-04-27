@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import AppLoading from "@/components/ui/AppLoading";
 import { createClient } from "@/lib/supabase/client";
 import { getUsuarioLogado } from "@/lib/auth/getUsuarioLogado";
 import { hasPermission } from "@/lib/auth/permissions";
@@ -380,7 +381,13 @@ if (!hasPermission(nivelUsuario, "dashboard_ver")) {
   }, [resumo.aguardandoPagamento]);
 
   if (loading) {
-    return <div className="p-6">Carregando dashboard...</div>;
+    return (
+      <AppLoading
+        title="Carregando dashboard"
+        message="Aguarde enquanto atualizamos indicadores, agenda do dia, caixa e desempenho do salao."
+        fullHeight={false}
+      />
+    );
   }
 
   if (semPermissao) {

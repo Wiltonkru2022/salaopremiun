@@ -6,13 +6,13 @@ import {
   Building2,
   CheckCircle2,
   KeyRound,
-  Loader2,
   Mail,
   MapPin,
   Phone,
   Save,
   ShieldCheck,
 } from "lucide-react";
+import AppLoading from "@/components/ui/AppLoading";
 import { Field, SectionCard, TextInput } from "@/components/configuracoes/ui";
 import { EMPTY_SALAO } from "@/components/configuracoes/constants";
 import type { SalaoForm } from "@/components/configuracoes/types";
@@ -182,12 +182,11 @@ export default function PerfilSalaoPage() {
 
   if (loading) {
     return (
-      <div className="grid min-h-[420px] place-items-center rounded-[32px] border border-zinc-200 bg-white">
-        <div className="flex items-center gap-3 text-sm font-semibold text-zinc-600">
-          <Loader2 className="animate-spin" size={18} />
-          Carregando perfil do salao...
-        </div>
-      </div>
+      <AppLoading
+        title="Carregando perfil do salao"
+        message="Aguarde enquanto reunimos identidade do negocio, contatos e configuracoes da conta."
+        fullHeight={false}
+      />
     );
   }
 

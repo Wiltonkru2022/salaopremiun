@@ -1,6 +1,7 @@
 "use client";
 
 import { type ReactNode } from "react";
+import AppLoading from "@/components/ui/AppLoading";
 import ConfirmActionModal from "@/components/ui/ConfirmActionModal";
 import { ComissaoHelpPanel } from "@/components/comissoes/ComissaoHelpPanel";
 import { useComissoesPage } from "@/components/comissoes/useComissoesPage";
@@ -149,7 +150,13 @@ export default function ComissoesPage() {
   }
 
   if (loading || !acessoCarregado) {
-    return <div className="p-6">Carregando comissoes...</div>;
+    return (
+      <AppLoading
+        title="Carregando comissoes"
+        message="Aguarde enquanto consolidamos lancamentos, filtros e rateios da equipe."
+        fullHeight={false}
+      />
+    );
   }
 
   if (permissoes && !permissoes.comissoes_ver) {

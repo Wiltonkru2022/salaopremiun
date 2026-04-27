@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import AppLoading from "@/components/ui/AppLoading";
 import { createClient } from "@/lib/supabase/client";
 import { getUsuarioLogado } from "@/lib/auth/getUsuarioLogado";
 import {
@@ -206,7 +207,13 @@ export default function EstoquePage() {
   }
 
   if (loading || !acessoCarregado) {
-    return <div className="p-6 text-sm text-zinc-600">Carregando estoque...</div>;
+    return (
+      <AppLoading
+        title="Carregando estoque"
+        message="Aguarde enquanto verificamos produtos, alertas, validade e niveis de reposicao."
+        fullHeight={false}
+      />
+    );
   }
 
   if (permissoes && !permissoes.estoque_ver) {

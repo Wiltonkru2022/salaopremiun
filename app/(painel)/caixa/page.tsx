@@ -10,6 +10,7 @@ import CaixaItemModal from "@/components/caixa/CaixaItemModal";
 import CaixaPagamentos from "@/components/caixa/CaixaPagamentos";
 import CaixaResumo from "@/components/caixa/CaixaResumo";
 import CaixaSessaoPanel from "@/components/caixa/CaixaSessaoPanel";
+import AppLoading from "@/components/ui/AppLoading";
 import ConfirmActionModal from "@/components/ui/ConfirmActionModal";
 import { useCaixaApi } from "@/components/caixa/useCaixaApi";
 import { useCaixaLoaders } from "@/components/caixa/useCaixaLoaders";
@@ -224,7 +225,13 @@ export default function CaixaPage() {
   ]);
 
   if (loading || !acessoCarregado) {
-    return <div className="p-6">Carregando caixa...</div>;
+    return (
+      <AppLoading
+        title="Carregando caixa"
+        message="Aguarde enquanto preparamos comandas, fila, pagamentos e resumo financeiro da operacao."
+        fullHeight={false}
+      />
+    );
   }
 
   if (!podeVerCaixa) {

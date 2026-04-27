@@ -9,6 +9,7 @@ import {
   Boxes,
   Wallet,
 } from "lucide-react";
+import AppLoading from "@/components/ui/AppLoading";
 import ConfirmActionModal from "@/components/ui/ConfirmActionModal";
 import { getUsuarioLogado } from "@/lib/auth/getUsuarioLogado";
 import {
@@ -337,7 +338,13 @@ export default function ProdutosPage() {
   }, [listaFiltrada]);
 
   if (loading || !acessoCarregado) {
-    return <div className="p-6 text-sm text-zinc-600">Carregando produtos...</div>;
+    return (
+      <AppLoading
+        title="Carregando produtos"
+        message="Aguarde enquanto sincronizamos catalogo, margem, preco e situacao do estoque."
+        fullHeight={false}
+      />
+    );
   }
 
   if (permissoes && !permissoes.produtos_ver) {

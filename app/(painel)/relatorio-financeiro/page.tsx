@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import AppLoading from "@/components/ui/AppLoading";
 import { createClient } from "@/lib/supabase/client";
 import { getUsuarioLogado } from "@/lib/auth/getUsuarioLogado";
 import { hasPermission } from "@/lib/auth/permissions";
@@ -452,7 +453,13 @@ export default function RelatorioFinanceiroPage() {
   }, [pagamentosFiltrados]);
 
   if (loading) {
-    return <div className="p-6">Carregando relatório financeiro...</div>;
+    return (
+      <AppLoading
+        title="Carregando relatorio financeiro"
+        message="Aguarde enquanto cruzamos vendas, pagamentos, taxas e comissoes do periodo."
+        fullHeight={false}
+      />
+    );
   }
 
   if (semPermissao) {

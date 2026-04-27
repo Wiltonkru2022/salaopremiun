@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import AppLoading from "@/components/ui/AppLoading";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import {
@@ -752,7 +753,13 @@ export default function VendasPage() {
   }, [vendasFiltradas]);
 
   if (loading || !acessoCarregado) {
-    return <div className="p-6">Carregando vendas...</div>;
+    return (
+      <AppLoading
+        title="Carregando vendas"
+        message="Aguarde enquanto reunimos historico, filtros, detalhes e totais das comandas fechadas."
+        fullHeight={false}
+      />
+    );
   }
 
   if (!permissoes?.vendas_ver) {

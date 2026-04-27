@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import AppLoading from "@/components/ui/AppLoading";
 import { createClient } from "@/lib/supabase/client";
 import { getUsuarioLogado } from "@/lib/auth/getUsuarioLogado";
 import {
@@ -269,7 +270,13 @@ export default function ComandasPage() {
   }, [comandas]);
 
   if (loading || !acessoCarregado) {
-    return <div className="p-6 text-sm text-zinc-600">Carregando comandas...</div>;
+    return (
+      <AppLoading
+        title="Carregando comandas"
+        message="Aguarde enquanto reunimos consumo, status, clientes e totais para conferencia."
+        fullHeight={false}
+      />
+    );
   }
 
   if (permissoes && !permissoes.comandas_ver) {

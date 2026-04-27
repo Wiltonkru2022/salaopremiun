@@ -9,6 +9,7 @@ import {
   Sparkles,
   Users,
 } from "lucide-react";
+import AppLoading from "@/components/ui/AppLoading";
 import ConfirmActionModal from "@/components/ui/ConfirmActionModal";
 import { getUsuarioLogado } from "@/lib/auth/getUsuarioLogado";
 import {
@@ -375,7 +376,11 @@ export default function ProfissionaisListPage() {
 
   if (loading || !acessoCarregado) {
     return (
-      <div className="p-6 text-sm text-zinc-600">Carregando profissionais...</div>
+      <AppLoading
+        title="Carregando profissionais"
+        message="Aguarde enquanto preparamos equipe, acessos, categorias e indicadores operacionais."
+        fullHeight={false}
+      />
     );
   }
 

@@ -7,6 +7,7 @@ import AssinaturaPlanoAtual from "@/components/assinatura/AssinaturaPlanoAtual";
 import AssinaturaPlanosPagamento from "@/components/assinatura/AssinaturaPlanoPagamento";
 import AssinaturaStatusCard from "@/components/assinatura/AssinaturaStatusCard";
 import { useAssinaturaPage } from "@/components/assinatura/useAssinaturaPage";
+import AppLoading from "@/components/ui/AppLoading";
 
 export default function AssinaturaPage() {
   const {
@@ -53,9 +54,11 @@ export default function AssinaturaPage() {
 
   if (loading || !acessoCarregado) {
     return (
-      <div className="rounded-[28px] border border-zinc-200 bg-white p-8 text-sm text-zinc-500 shadow-sm">
-        Carregando dados da assinatura...
-      </div>
+      <AppLoading
+        title="Carregando assinatura"
+        message="Aguarde enquanto consultamos plano, cobrancas, renovacao e historico de pagamentos."
+        fullHeight={false}
+      />
     );
   }
 
