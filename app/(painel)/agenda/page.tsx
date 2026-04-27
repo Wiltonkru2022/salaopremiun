@@ -34,18 +34,15 @@ import { sanitizeDiasFuncionamento } from "@/lib/utils/agenda";
 import type { Agendamento, ConfigSalao } from "@/types/agenda";
 import { normalizeTimeString } from "@/lib/utils/agenda";
 import {
-  BadgeDollarSign,
   Ban,
   CalendarPlus,
   CheckCircle2,
   ClipboardList,
   Coffee,
   PencilLine,
-  Receipt,
   Trash2,
   UserRound,
   Wallet,
-  XCircle,
 } from "lucide-react";
 
 type ClienteHistoricoItem = {
@@ -526,9 +523,8 @@ export default function AgendaPage() {
     style: "currency",
     currency: "BRL",
   });
-  const potentialGoal = 20000;
-  const potentialProgress =
-    potentialGoal > 0 ? (valorPotencial / potentialGoal) * 100 : 0;
+  const totalValueCaption =
+    viewMode === "day" ? "Valor total do dia" : "Valor total da semana";
   const defaultSlotDate = format(
     viewMode === "day" ? currentDate : new Date(),
     "yyyy-MM-dd"
@@ -584,7 +580,7 @@ export default function AgendaPage() {
         <div
           className={`grid h-full min-h-0 min-w-0 gap-3 ${
             sidebarOpen
-              ? "lg:grid-cols-[minmax(0,1fr)_292px]"
+              ? "lg:grid-cols-[minmax(0,1fr)_344px]"
               : "lg:grid-cols-[minmax(0,1fr)]"
           }`}
         >
@@ -669,10 +665,9 @@ export default function AgendaPage() {
               open={sidebarOpen}
               view={sidebarView}
               currentMonthLabel={format(currentDate, "MMMM", { locale: ptBR })}
-              potentialValueLabel={currencyFormatter.format(valorPotencial)}
+              totalValueLabel={currencyFormatter.format(valorPotencial)}
               potentialValueVisible={potentialValueVisible}
-              potentialGoalLabel={`Meta do mes: ${currencyFormatter.format(potentialGoal)}`}
-              potentialProgress={potentialProgress}
+              totalValueCaption={totalValueCaption}
               appointmentsCount={totalAtendimentos}
               waitingPaymentCount={aguardandoPagamento}
               blockedCount={totalBloqueios}
@@ -752,81 +747,89 @@ export default function AgendaPage() {
         }
         sections={
           contextMenu.open && contextMenu.type === "appointment"
-            ? [
-                {
-                  title: "Acoes rapidas",
-                  actions: [
-                    {
-                      label: "Abrir perfil da cliente",
-                      description: "Veja historico recente, observacoes e leitura rapida da cliente.",
-                      icon: UserRound,
-                      onClick: () => void openClientProfile(contextMenu.item),
-                    },
-                    {
-                      label: "Editar agendamento",
-                      description: "Abra o formulario completo e ajuste servico, horario e observacoes.",
-                      icon: PencilLine,
-                      onClick: () => openEditModal(contextMenu.item),
-                    },
-                    {
-                      label: "Receber do cliente",
-                      description: "Vai para o caixa, abre a comanda e cria uma nova se ainda nao existir.",
-                      icon: Receipt,
-                      onClick: () => handleGoToCashier(contextMenu.item),
-                    },
-                    {
-                      label: "Excluir agendamento",
-                      description: "Remove o horario da agenda e registra a operacao no historico.",
-                      icon: Trash2,
-                      tone: "danger",
-                      onClick: () => void handleDeleteEvent(contextMenu.item),
-                    },
-                  ],
-                },
-                {
-                  title: "Troca rapida de status",
-                  actions: [
-                    {
-                      label: "Marcar como confirmado",
-                      description: "Sinal verde para recepcao e para o profissional.",
-                      icon: CheckCircle2,
-                      onClick: () =>
-                        void handleQuickStatusChange(contextMenu.item, "confirmado"),
-                    },
-                    {
-                      label: "Marcar como pendente",
-                      description: "Deixa claro que ainda falta resposta ou confirmacao.",
-                      icon: ClipboardList,
-                      onClick: () =>
-                        void handleQuickStatusChange(contextMenu.item, "pendente"),
-                    },
-                    {
-                      label: "Marcar como atendido",
-                      description: "Marca o atendimento como concluido na operacao.",
-                      icon: BadgeDollarSign,
-                      onClick: () =>
-                        void handleQuickStatusChange(contextMenu.item, "atendido"),
-                    },
-                    {
-                      label: "Mandar para receber",
-                      description: "Joga o agendamento para a fila do caixa.",
-                      icon: Wallet,
-                      onClick: () =>
-                        void handleQuickStatusChange(
-                          contextMenu.item,
-                          "aguardando_pagamento"
-                        ),
-                    },
-                    {
-                      label: "Cancelar agendamento",
-                      description: "Abre o fluxo de cancelamento e registra o motivo.",
-                      icon: XCircle,
-                      tone: "warning",
-                      onClick: () => void handleCancelAppointment(contextMenu.item),
-                    },
-                  ],
-                },
-              ]
+            ? (() => {
+                const item = contextMenu.item;
+                const hasClosedComanda = ["fechada", "cancelada"].includes(
+                  String(item.comanda_status || "").toLowerCase()
+                );
+                const canDelete =
+                  !item.id_comanda &&
+                  !hasClosedComanda &&
+                  ["pendente", "confirmado"].includes(item.status);
+                const canEdit =
+                  !hasClosedComanda &&
+                  ["pendente", "confirmado"].includes(item.status);
+                const canChangeStatus =
+                  !hasClosedComanda &&
+                  !item.id_comanda &&
+                  ["pendente", "confirmado"].includes(item.status);
+
+                const quickActions = [
+                  {
+                    label: "Abrir perfil da cliente",
+                    description:
+                      "Veja historico recente, observacoes e leitura rapida da cliente.",
+                    icon: UserRound,
+                    onClick: () => void openClientProfile(item),
+                  },
+                  ...(canEdit
+                    ? [
+                        {
+                          label: "Editar agendamento",
+                          description:
+                            "Abra o formulario completo e ajuste servico, horario e observacoes.",
+                          icon: PencilLine,
+                          onClick: () => openEditModal(item),
+                        },
+                      ]
+                    : []),
+                  ...(canDelete
+                    ? [
+                        {
+                          label: "Excluir agendamento",
+                          description:
+                            "Remove o horario da agenda e registra a operacao no historico.",
+                          icon: Trash2,
+                          tone: "danger" as const,
+                          onClick: () => void handleDeleteEvent(item),
+                        },
+                      ]
+                    : []),
+                ];
+
+                const statusActions = canChangeStatus
+                  ? [
+                      {
+                        label: "Marcar como confirmado",
+                        description: "Sinal verde para recepcao e para o profissional.",
+                        icon: CheckCircle2,
+                        onClick: () => void handleQuickStatusChange(item, "confirmado"),
+                      },
+                      {
+                        label: "Marcar como pendente",
+                        description:
+                          "Deixa claro que ainda falta resposta ou confirmacao.",
+                        icon: ClipboardList,
+                        onClick: () => void handleQuickStatusChange(item, "pendente"),
+                      },
+                    ]
+                  : [];
+
+                return [
+                  {
+                    title: "Acoes rapidas",
+                    actions: quickActions,
+                  },
+                  ...(statusActions.length > 0
+                    ? [
+                        {
+                          title: "Troca rapida de status",
+                          actions: statusActions,
+                        },
+                      ]
+                    : []),
+                ];
+              })()
             : [
                 {
                   title: "Criar ou registrar",

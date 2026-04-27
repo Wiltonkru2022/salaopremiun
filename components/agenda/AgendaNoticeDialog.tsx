@@ -18,7 +18,7 @@ export default function AgendaNoticeDialog({ modal, onClose }: Props) {
       : "border-zinc-200 bg-zinc-50 text-zinc-700";
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 p-4">
+    <div className="fixed inset-0 z-[520] flex items-center justify-center bg-black/50 p-4">
       <div className="w-full max-w-md rounded-[28px] bg-white p-6 shadow-2xl">
         <div className={`rounded-2xl border px-4 py-4 ${toneClasses}`}>
           <div className="text-lg font-bold">{modal.title}</div>

@@ -33,10 +33,9 @@ type Props = {
   open: boolean;
   view: AgendaSidebarView;
   currentMonthLabel: string;
-  potentialValueLabel: string;
+  totalValueLabel: string;
   potentialValueVisible: boolean;
-  potentialGoalLabel: string;
-  potentialProgress: number;
+  totalValueCaption: string;
   appointmentsCount: number;
   waitingPaymentCount: number;
   blockedCount: number;
@@ -75,10 +74,9 @@ export default function AgendaSidebar(props: Props) {
     open,
     view,
     currentMonthLabel,
-    potentialValueLabel,
+    totalValueLabel,
     potentialValueVisible,
-    potentialGoalLabel,
-    potentialProgress,
+    totalValueCaption,
     appointmentsCount,
     waitingPaymentCount,
     blockedCount,
@@ -124,7 +122,7 @@ export default function AgendaSidebar(props: Props) {
         : "Visao geral do periodo";
 
   return (
-    <aside className="w-full min-h-0 lg:h-full lg:max-w-[292px] lg:min-w-[292px]">
+    <aside className="w-full min-h-0 lg:h-full lg:max-w-[344px] lg:min-w-[344px]">
       <div className="flex h-full min-h-0 flex-col rounded-[30px] border border-white/80 bg-white/96 p-4 shadow-[0_22px_65px_rgba(15,23,42,0.08)]">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
@@ -155,7 +153,7 @@ export default function AgendaSidebar(props: Props) {
           </button>
         </div>
 
-        <div className="agenda-scroll mt-5 min-h-0 flex-1 overflow-y-auto pr-1">
+        <div className="mt-4 min-h-0 flex-1 pr-0.5">
           {view === "clientSearch" ? (
             <ClientSearchView
               query={clientSearchQuery}
@@ -167,13 +165,13 @@ export default function AgendaSidebar(props: Props) {
           ) : view === "waitlist" ? (
             <WaitlistView items={waitlistItems} />
           ) : (
-            <div className="space-y-3">
-              <section className="rounded-[22px] border border-zinc-200/80 bg-white p-4 shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
+            <div className="space-y-2.5">
+              <section className="rounded-[22px] border border-zinc-200/80 bg-white p-3.5 shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
                 <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-sm font-medium text-zinc-950">Valor potencial</p>
-                    <p className="mt-2 text-[1.9rem] font-semibold tracking-[-0.05em] text-emerald-600">
-                      {potentialValueVisible ? potentialValueLabel : "R$ ******"}
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-zinc-950">Valor total</p>
+                    <p className="mt-1.5 truncate text-[1.7rem] font-semibold tracking-[-0.05em] text-emerald-600">
+                      {potentialValueVisible ? totalValueLabel : "R$ ******"}
                     </p>
                   </div>
                   <button
@@ -185,32 +183,23 @@ export default function AgendaSidebar(props: Props) {
                     <Eye size={18} />
                   </button>
                 </div>
-
-                <div className="mt-4 h-2 rounded-full bg-zinc-100">
-                  <div
-                    className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-emerald-400"
-                    style={{ width: `${Math.max(8, Math.min(potentialProgress, 100))}%` }}
-                  />
-                </div>
-
-                <div className="mt-3 flex items-center justify-between gap-3 text-sm text-zinc-500">
-                  <span>{potentialGoalLabel}</span>
-                  <span>{Math.round(potentialProgress)}%</span>
+                <div className="mt-2 text-sm text-zinc-500">
+                  {totalValueCaption}
                 </div>
               </section>
 
-              <section className="rounded-[22px] border border-zinc-200/80 bg-white p-4 shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
+              <section className="rounded-[22px] border border-zinc-200/80 bg-white p-3.5 shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
                 <button
                   type="button"
                   className="flex w-full items-center justify-between gap-3 text-left"
                 >
-                  <span className="text-[1.55rem] font-semibold tracking-[-0.05em] text-slate-900 capitalize">
+                  <span className="text-[1.4rem] font-semibold tracking-[-0.05em] text-slate-900 capitalize">
                     {currentMonthLabel}
                   </span>
                   <ChevronDown size={18} className="text-zinc-500" />
                 </button>
 
-                <div className="mt-4 grid grid-cols-2 gap-2.5">
+                <div className="mt-3 grid grid-cols-2 gap-2">
                   <MetricCard
                     icon={<UserRoundSearch size={16} />}
                     label="Atendimentos"
@@ -238,12 +227,12 @@ export default function AgendaSidebar(props: Props) {
                 </div>
               </section>
 
-              <section className="rounded-[22px] border border-zinc-200/80 bg-white p-4 shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
-                <h3 className="text-[1.3rem] font-semibold tracking-[-0.04em] text-slate-900">
+              <section className="rounded-[22px] border border-zinc-200/80 bg-white p-3.5 shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
+                <h3 className="text-[1.15rem] font-semibold tracking-[-0.04em] text-slate-900">
                   Status dos atendimentos
                 </h3>
 
-                <div className="mt-4 grid grid-cols-2 gap-2.5">
+                <div className="mt-3 grid grid-cols-2 gap-2">
                   <StatusCard label="Confirmados" value={statusCounts.confirmado} tone="emerald" />
                   <StatusCard label="Pendentes" value={statusCounts.pendente} tone="amber" />
                   <StatusCard
@@ -255,12 +244,12 @@ export default function AgendaSidebar(props: Props) {
                 </div>
               </section>
 
-              <section className="rounded-[22px] border border-zinc-200/80 bg-white p-4 shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
-                <h3 className="text-[1.3rem] font-semibold tracking-[-0.04em] text-slate-900">
+              <section className="rounded-[22px] border border-zinc-200/80 bg-white p-3.5 shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
+                <h3 className="text-[1.15rem] font-semibold tracking-[-0.04em] text-slate-900">
                   Visualizacao
                 </h3>
 
-                <div className="mt-4 grid grid-cols-3 gap-2">
+                <div className="mt-3 grid grid-cols-3 gap-2">
                   <ToggleButton active={false} onClick={onToday}>
                     Hoje
                   </ToggleButton>
@@ -272,7 +261,7 @@ export default function AgendaSidebar(props: Props) {
                   </ToggleButton>
                 </div>
 
-                <div className="mt-4 grid grid-cols-2 gap-2.5">
+                <div className="mt-3 grid grid-cols-2 gap-2">
                   <ModeButton
                     active={densityMode === "reception"}
                     label="Recepcao"
@@ -288,12 +277,12 @@ export default function AgendaSidebar(props: Props) {
                 </div>
               </section>
 
-              <section className="rounded-[22px] border border-zinc-200/80 bg-white p-4 shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
-                <h3 className="text-[1.3rem] font-semibold tracking-[-0.04em] text-slate-900">
+              <section className="rounded-[22px] border border-zinc-200/80 bg-white p-3.5 shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
+                <h3 className="text-[1.15rem] font-semibold tracking-[-0.04em] text-slate-900">
                   Acoes rapidas
                 </h3>
 
-                <div className="mt-4 grid grid-cols-2 gap-2.5">
+                <div className="mt-3 grid grid-cols-2 gap-2">
                   <QuickAction
                     icon={<CalendarDays size={16} />}
                     label="Novo agendamento"
@@ -349,7 +338,7 @@ function ClientSearchView({
 }) {
   return (
     <div className="space-y-3">
-      <section className="rounded-[22px] border border-zinc-200/80 bg-white p-4 shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
+      <section className="rounded-[22px] border border-zinc-200/80 bg-white p-3.5 shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
         <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.14em] text-zinc-400">
           Filtro da cliente
         </label>
@@ -365,7 +354,7 @@ function ClientSearchView({
         </div>
       </section>
 
-      <section className="rounded-[22px] border border-zinc-200/80 bg-white p-4 shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
+      <section className="rounded-[22px] border border-zinc-200/80 bg-white p-3.5 shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
         <div className="text-[1.15rem] font-semibold tracking-[-0.04em] text-slate-900">
           Resultado
         </div>
@@ -377,7 +366,7 @@ function ClientSearchView({
                 key={client.id}
                 type="button"
                 onClick={() => onOpenClient(client.id)}
-                className="flex w-full items-center justify-between gap-3 rounded-[20px] border border-zinc-200 bg-white px-4 py-3 text-left shadow-[0_8px_20px_rgba(15,23,42,0.04)]"
+                className="flex w-full items-center justify-between gap-3 rounded-[20px] border border-zinc-200 bg-white px-3.5 py-3 text-left shadow-[0_8px_20px_rgba(15,23,42,0.04)]"
               >
                 <div className="min-w-0">
                   <div className="truncate text-sm font-semibold text-zinc-900">
@@ -414,7 +403,7 @@ function ClientSearchView({
 function WaitlistView({ items }: { items: AgendaWaitlistItem[] }) {
   return (
     <div className="space-y-3">
-      <section className="rounded-[22px] border border-zinc-200/80 bg-white p-4 shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
+      <section className="rounded-[22px] border border-zinc-200/80 bg-white p-3.5 shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
         <div className="text-[1.15rem] font-semibold tracking-[-0.04em] text-slate-900">
           Clientes aguardando
         </div>
@@ -476,14 +465,14 @@ function MetricCard({
           : "bg-sky-50 text-sky-700";
 
   return (
-    <div className="rounded-[18px] border border-zinc-200 bg-white p-3 shadow-[0_8px_20px_rgba(15,23,42,0.04)]">
+    <div className="rounded-[18px] border border-zinc-200 bg-white p-2.5 shadow-[0_8px_20px_rgba(15,23,42,0.04)]">
       <div className="flex items-start gap-3">
         <div className={`inline-flex h-10 w-10 items-center justify-center rounded-2xl ${toneClasses}`}>
           {icon}
         </div>
-        <div>
-          <div className="text-[13px] text-zinc-600">{label}</div>
-          <div className="mt-1 text-[1.55rem] font-semibold tracking-[-0.05em] text-slate-900">
+        <div className="min-w-0">
+          <div className="text-[12px] leading-tight text-zinc-600">{label}</div>
+          <div className="mt-1 text-[1.35rem] font-semibold tracking-[-0.05em] text-slate-900">
             {value}
           </div>
         </div>
@@ -511,9 +500,9 @@ function StatusCard({
           : "bg-sky-50 text-sky-700";
 
   return (
-    <div className={`rounded-[18px] px-4 py-3 ${toneClasses}`}>
-      <div className="text-[13px] font-medium">{label}</div>
-      <div className="mt-1 text-[1.45rem] font-semibold tracking-[-0.05em]">{value}</div>
+    <div className={`rounded-[18px] px-3.5 py-2.5 ${toneClasses}`}>
+      <div className="text-[12px] font-medium leading-tight">{label}</div>
+      <div className="mt-1 text-[1.3rem] font-semibold tracking-[-0.05em]">{value}</div>
     </div>
   );
 }
@@ -533,8 +522,8 @@ function ToggleButton({
       onClick={onClick}
       className={
         active
-          ? "rounded-2xl bg-violet-600 px-3 py-3 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(124,58,237,0.28)]"
-          : "rounded-2xl border border-zinc-200 bg-white px-3 py-3 text-sm font-medium text-zinc-700"
+          ? "rounded-2xl bg-violet-600 px-3 py-2.5 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(124,58,237,0.28)]"
+          : "rounded-2xl border border-zinc-200 bg-white px-3 py-2.5 text-sm font-medium text-zinc-700"
       }
     >
       {children}
@@ -559,8 +548,8 @@ function ModeButton({
       onClick={onClick}
       className={
         active
-          ? "flex items-center justify-center gap-2 rounded-[20px] border border-violet-300 bg-violet-50 px-4 py-4 text-sm font-semibold text-violet-700 shadow-[0_12px_30px_rgba(124,58,237,0.12)]"
-          : "flex items-center justify-center gap-2 rounded-[20px] border border-zinc-200 bg-white px-4 py-4 text-sm font-medium text-zinc-700"
+          ? "flex items-center justify-center gap-2 rounded-[20px] border border-violet-300 bg-violet-50 px-3 py-3 text-sm font-semibold text-violet-700 shadow-[0_12px_30px_rgba(124,58,237,0.12)]"
+          : "flex items-center justify-center gap-2 rounded-[20px] border border-zinc-200 bg-white px-3 py-3 text-sm font-medium text-zinc-700"
       }
     >
       {icon}
@@ -582,12 +571,12 @@ function QuickAction({
     <button
       type="button"
       onClick={onClick}
-      className="flex items-center gap-3 rounded-[20px] border border-zinc-200 bg-white px-4 py-4 text-left text-sm font-medium text-zinc-700 shadow-[0_8px_20px_rgba(15,23,42,0.04)] hover:-translate-y-[1px] hover:shadow-[0_16px_35px_rgba(15,23,42,0.08)]"
+      className="flex items-center gap-3 rounded-[20px] border border-zinc-200 bg-white px-3.5 py-3 text-left text-[13px] font-medium text-zinc-700 shadow-[0_8px_20px_rgba(15,23,42,0.04)] hover:-translate-y-[1px] hover:shadow-[0_16px_35px_rgba(15,23,42,0.08)]"
     >
       <span className="inline-flex h-9 w-9 items-center justify-center rounded-2xl bg-zinc-50 text-zinc-700">
         {icon}
       </span>
-      <span className="leading-tight">{label}</span>
+      <span className="min-w-0 leading-tight">{label}</span>
     </button>
   );
 }

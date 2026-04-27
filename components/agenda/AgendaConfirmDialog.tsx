@@ -25,7 +25,7 @@ export default function AgendaConfirmDialog({
       : "bg-zinc-950 hover:bg-zinc-800";
 
   return (
-    <div className="fixed inset-0 z-[210] flex items-center justify-center bg-black/50 p-4">
+    <div className="fixed inset-0 z-[530] flex items-center justify-center bg-black/50 p-4">
       <div className="w-full max-w-md rounded-[28px] bg-white p-6 shadow-2xl">
         <div className="text-lg font-bold text-zinc-950">{modal.title}</div>
         <div className="mt-2 text-sm leading-6 text-zinc-600">{modal.message}</div>
