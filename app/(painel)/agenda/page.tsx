@@ -538,14 +538,20 @@ export default function AgendaPage() {
           showFocusMode
             ? "fixed inset-0 z-[320] flex min-h-0 flex-col gap-4 bg-white p-3 md:p-4"
             : isStandaloneAgendaRoute
-              ? "flex h-dvh min-h-dvh min-w-0 flex-col gap-3 overflow-hidden bg-[radial-gradient(circle_at_top,#fdfcff_0%,#fafbfe_38%,#f5f7fb_100%)] p-3"
-            : densityMode === "reception"
-              ? "flex h-[calc(100dvh-4.9rem)] min-h-[720px] min-w-0 flex-col gap-4 overflow-hidden bg-[radial-gradient(circle_at_top,#faf6ff_0%,#f8fafc_24%,#f3f6fb_58%,#eef2f7_100%)] p-3"
-              : "flex h-[calc(100dvh-5.2rem)] min-h-[700px] min-w-0 flex-col gap-4 overflow-hidden bg-[radial-gradient(circle_at_top,#faf6ff_0%,#f8fafc_24%,#f3f6fb_58%,#eef2f7_100%)] p-3"
+              ? "flex h-dvh min-h-dvh min-w-0 flex-col overflow-hidden bg-[radial-gradient(circle_at_top,#fdfcff_0%,#fafbfe_38%,#f5f7fb_100%)] p-3"
+              : densityMode === "reception"
+                ? "flex h-[calc(100dvh-4.9rem)] min-h-[720px] min-w-0 flex-col overflow-hidden bg-[radial-gradient(circle_at_top,#faf6ff_0%,#f8fafc_24%,#f3f6fb_58%,#eef2f7_100%)] p-3"
+                : "flex h-[calc(100dvh-5.2rem)] min-h-[700px] min-w-0 flex-col overflow-hidden bg-[radial-gradient(circle_at_top,#faf6ff_0%,#f8fafc_24%,#f3f6fb_58%,#eef2f7_100%)] p-3"
         }
       >
-        {isStandaloneAgendaRoute ? (
-          <>
+        <div
+          className={`grid h-full min-h-0 min-w-0 gap-3 ${
+            sidebarOpen
+              ? "lg:grid-cols-[minmax(0,1fr)_292px]"
+              : "lg:grid-cols-[minmax(0,1fr)_56px]"
+          }`}
+        >
+          <div className="flex min-h-0 min-w-0 flex-col gap-3">
             <ProfissionaisBar
               profissionais={profissionais}
               selectedProfissionalId={selectedProfissionalId}
@@ -576,57 +582,20 @@ export default function AgendaPage() {
               sidebarOpen={sidebarOpen}
               onToggleSidebar={() => setSidebarOpen((prev) => !prev)}
             />
-          </>
-        ) : (
-          <>
-            <ProfissionaisBar
-              profissionais={profissionais}
-              selectedProfissionalId={selectedProfissionalId}
-              densityMode={densityMode}
-              onSelect={setSelectedProfissionalId}
-            />
 
-            <AgendaToolbar
-              currentDate={currentDate}
-              viewMode={viewMode}
-              selectedProfessionalName={selectedProfissional?.nome || ""}
-              selectedProfessionalRole={
-                selectedProfissional?.cargo || selectedProfissional?.categoria || ""
-              }
-              onPrev={() =>
-                setCurrentDate((prev) =>
-                  viewMode === "day" ? subDays(prev, 1) : subDays(prev, 7)
-                )
-              }
-              onNext={() =>
-                setCurrentDate((prev) =>
-                  viewMode === "day" ? addDays(prev, 1) : addDays(prev, 7)
-                )
-              }
-              onToday={() => setCurrentDate(new Date())}
-              onChangeView={setViewMode}
-              onSelectDate={setCurrentDate}
-              sidebarOpen={sidebarOpen}
-              onToggleSidebar={() => setSidebarOpen((prev) => !prev)}
-            />
-          </>
-        )}
+            {assinaturaBloqueada ? (
+              <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                Assinatura bloqueada por atraso. Regularize o pagamento para voltar a usar a agenda.
+              </div>
+            ) : null}
 
-        {assinaturaBloqueada ? (
-          <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-            Assinatura bloqueada por atraso. Regularize o pagamento para voltar a usar a agenda.
-          </div>
-        ) : null}
+            {erroTela ? (
+              <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                {erroTela}
+              </div>
+            ) : null}
 
-        {erroTela ? (
-          <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-            {erroTela}
-          </div>
-        ) : null}
-
-        <div className="min-h-0 min-w-0 flex-1 overflow-hidden">
-          <div className="flex h-full min-h-0 flex-col gap-3 lg:grid lg:grid-cols-[minmax(0,1fr)_292px] lg:items-stretch">
-            <div className="min-h-0 min-w-0 flex-1">
+            <div className="min-h-0 min-w-0 flex-1 overflow-hidden">
               <AgendaGrid
                 viewMode={viewMode}
                 currentDate={currentDate}
@@ -651,7 +620,9 @@ export default function AgendaPage() {
                 isExpanded={agendaExpanded}
               />
             </div>
+          </div>
 
+          <div className="min-h-0">
             <AgendaSidebar
               open={sidebarOpen}
               currentMonthLabel={format(currentDate, "MMMM", { locale: ptBR })}
