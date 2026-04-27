@@ -71,7 +71,7 @@ export default function ProfissionalAlerts({ notifications }: Props) {
   }
 
   const notification = useMemo(() => {
-    if (!hydrated) return items[0] || null;
+    if (!hydrated) return null;
     return items.find((item) => !readIds.includes(item.id)) || null;
   }, [hydrated, items, readIds]);
 

@@ -8,7 +8,7 @@ export default function AppProfissionalLayout({
   children: ReactNode;
 }) {
   return (
-    <div className="min-h-dvh bg-[#f5f5f5] text-zinc-900">
+    <div className="app-profissional-root min-h-dvh bg-[#f5f5f5] text-zinc-900">
       {children}
     </div>
   );
