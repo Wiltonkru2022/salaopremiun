@@ -525,7 +525,7 @@ export default function AgendaGrid({
   );
 
   return (
-    <div className="flex h-full min-h-0 flex-col rounded-[30px] border border-white/70 bg-white/90 shadow-[0_24px_70px_rgba(15,23,42,0.10)] backdrop-blur select-none">
+    <div className="flex h-full min-h-0 flex-col rounded-[30px] border border-zinc-200/80 bg-white shadow-[0_24px_70px_rgba(15,23,42,0.08)] select-none">
       <div
         ref={gridViewportRef}
         className="agenda-scroll min-h-0 flex-1 overflow-auto rounded-[30px] select-none"
@@ -554,7 +554,7 @@ export default function AgendaGrid({
                 `sticky top-0 z-30 select-none border-b border-l border-zinc-200 px-3 ${
                   compactMode ? "h-[44px] py-2" : "h-[58px] py-3"
                 }`,
-                isTodayDate(day) ? "bg-violet-50/60" : "bg-white/95"
+                isTodayDate(day) ? "bg-violet-50/60" : "bg-white"
               )}
             >
               <div className="flex items-start justify-between gap-2">
@@ -581,14 +581,14 @@ export default function AgendaGrid({
             </div>
           ))}
 
-          <div className="sticky left-0 z-30 select-none border-r border-zinc-200 bg-white/92">
+          <div className="sticky left-0 z-30 select-none border-r border-zinc-200 bg-white">
             {slots.map((slot) => (
               <div
                 key={slot.time}
                 className={clsx(
                   "flex select-none items-start justify-end pr-2.5 pt-1.5 text-[10px] font-medium",
                   slot.minutes % 60 === 0
-                    ? "border-b border-zinc-200 bg-zinc-50/78 text-zinc-700"
+                    ? "border-b border-zinc-200 text-zinc-700"
                     : slot.minutes % 30 === 0
                       ? "border-b border-zinc-200/70 text-zinc-500"
                       : "border-b border-zinc-100 text-zinc-400"
@@ -728,7 +728,7 @@ export default function AgendaGrid({
                 key={dayStr}
                 className={clsx(
                   "relative select-none border-l border-zinc-200",
-                  isTodayDate(day) ? "bg-violet-50/20" : "bg-white/94"
+                  isTodayDate(day) ? "bg-violet-50/20" : "bg-white"
                 )}
                 style={{ height: totalGridHeight }}
               >
@@ -744,7 +744,7 @@ export default function AgendaGrid({
                     className={clsx(
                       "block w-full text-left transition hover:bg-zinc-50/70",
                       slot.minutes % 60 === 0
-                        ? "border-b border-zinc-200 bg-zinc-50/22"
+                        ? "border-b border-zinc-200"
                         : slot.minutes % 30 === 0
                           ? "border-b border-zinc-200/70"
                           : "border-b border-zinc-100"

@@ -43,6 +43,7 @@ type Props = {
   onChangeDensityMode: (mode: AgendaDensityMode) => void;
   onToggleExpanded: () => void;
   onToday: () => void;
+  onOpenFullscreen: () => void;
   onOpenCreate: () => void;
   onOpenBlock: () => void;
   onOpenCredit: () => void;
@@ -69,6 +70,7 @@ export default function AgendaSidebar(props: Props) {
     onChangeDensityMode,
     onToggleExpanded,
     onToday,
+    onOpenFullscreen,
     onOpenCreate,
     onOpenBlock,
     onOpenCredit,
@@ -94,12 +96,17 @@ export default function AgendaSidebar(props: Props) {
     <aside className="w-full lg:max-w-[302px] lg:min-w-[302px] xl:max-w-[314px] xl:min-w-[314px]">
       <div className="rounded-[30px] border border-white/80 bg-white/94 p-4 shadow-[0_24px_80px_rgba(15,23,42,0.13)] backdrop-blur xl:p-[18px]">
         <div className="flex items-start justify-between gap-3">
-          <div>
+          <button
+            type="button"
+            onClick={onOpenFullscreen}
+            className="text-left"
+            title="Abrir agenda em tela cheia"
+          >
             <h2 className="text-[2rem] font-semibold tracking-[-0.05em] text-slate-900">
               Agenda
             </h2>
             <p className="mt-1 text-sm text-zinc-500">Visao geral do periodo</p>
-          </div>
+          </button>
 
           <button
             type="button"
