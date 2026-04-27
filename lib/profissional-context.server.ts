@@ -17,7 +17,7 @@ function isUnauthorizedError(error: unknown) {
   return error instanceof Error && error.message === "UNAUTHORIZED";
 }
 
-export async function requireProfissionalServerContext(): Promise<ProfissionalServerContext> {
+async function loadProfissionalServerContext(): Promise<ProfissionalServerContext> {
   const session = await getProfissionalSessionFromCookie();
 
   if (!session) {
@@ -68,15 +68,21 @@ export async function requireProfissionalServerContext(): Promise<ProfissionalSe
   };
 }
 
-export async function requireProfissionalAppContext(): Promise<ProfissionalServerContext> {
+export async function requireProfissionalServerContext(): Promise<ProfissionalServerContext> {
+  return loadProfissionalServerContext();
+}
+
+export async function validateProfissionalAppSession(): Promise<{
+  context: ProfissionalServerContext | null;
+  reason: "unauthorized" | "plan_blocked" | null;
+}> {
   let context: ProfissionalServerContext;
 
   try {
-    context = await requireProfissionalServerContext();
+    context = await loadProfissionalServerContext();
   } catch (error) {
     if (isUnauthorizedError(error)) {
-      await clearProfissionalSession();
-      redirect("/app-profissional/login?erro=sessao_expirada");
+      return { context: null, reason: "unauthorized" };
     }
 
     throw error;
@@ -85,9 +91,24 @@ export async function requireProfissionalAppContext(): Promise<ProfissionalServe
   const access = await canUsePlanFeature(context.idSalao, "app_profissional");
 
   if (!access.allowed) {
-    await clearProfissionalSession();
-    redirect("/app-profissional/login?erro=plano_sem_app");
+    return { context: null, reason: "plan_blocked" };
   }
 
-  return context;
+  return { context, reason: null };
+}
+
+export async function requireProfissionalAppContext(): Promise<ProfissionalServerContext> {
+  const validation = await validateProfissionalAppSession();
+
+  if (!validation.context) {
+    await clearProfissionalSession();
+
+    if (validation.reason === "plan_blocked") {
+      redirect("/app-profissional/login?erro=plano_sem_app");
+    }
+
+    redirect("/app-profissional/login?erro=sessao_expirada");
+  }
+
+  return validation.context;
 }

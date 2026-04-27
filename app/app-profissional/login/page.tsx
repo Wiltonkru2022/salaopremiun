@@ -1,7 +1,11 @@
 import { redirect } from "next/navigation";
 import LoginProfissionalForm from "@/components/profissional/auth/LoginProfissionalForm";
 import ProfissionalHeader from "@/components/profissional/layout/ProfissionalHeader";
-import { getProfissionalSessionFromCookie } from "@/lib/profissional-auth.server";
+import {
+  clearProfissionalSession,
+  getProfissionalSessionFromCookie,
+} from "@/lib/profissional-auth.server";
+import { validateProfissionalAppSession } from "@/lib/profissional-context.server";
 
 function getGoogleErrorMessage(value: string | string[] | undefined) {
   const code = Array.isArray(value) ? value[0] : value;
@@ -33,7 +37,13 @@ export default async function LoginProfissionalPage({
   const params = await searchParams;
 
   if (session) {
-    redirect("/app-profissional/inicio");
+    const validation = await validateProfissionalAppSession().catch(() => null);
+
+    if (validation?.context) {
+      redirect("/app-profissional/inicio");
+    }
+
+    await clearProfissionalSession();
   }
 
   return (
