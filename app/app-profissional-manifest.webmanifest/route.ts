@@ -1,15 +1,15 @@
 export async function GET() {
   const manifest = {
-    id: "/agenda",
-    name: "Agenda SalaoPremium",
-    short_name: "Agenda",
-    description: "Agenda focada para atendimento rapido do salao.",
-    start_url: "/agenda",
-    scope: "/agenda",
+    id: "/app-profissional",
+    name: "SalaoPremium Profissional",
+    short_name: "SalaoPro",
+    description: "Agenda, clientes e comandas para profissionais do salao.",
+    start_url: "/app-profissional",
+    scope: "/app-profissional",
     display: "standalone",
-    background_color: "#ffffff",
-    theme_color: "#6d28d9",
-    orientation: "landscape",
+    background_color: "#f5f5f5",
+    theme_color: "#09090b",
+    orientation: "portrait",
     icons: [
       {
         src: "/app-profissional-icon.svg",

@@ -2,15 +2,16 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "SalaoPremium Profissional",
-    short_name: "SalaoPro",
-    description: "Agenda, clientes e comandas para profissionais do salao.",
-    start_url: "/app-profissional",
+    id: "/",
+    name: "SalaoPremium",
+    short_name: "SalaoPremium",
+    description: "Gestao premium para saloes com agenda, caixa, comandas e financeiro.",
+    start_url: "/login",
     scope: "/",
     display: "standalone",
-    background_color: "#f5f5f5",
+    background_color: "#ffffff",
     theme_color: "#09090b",
-    orientation: "portrait",
+    orientation: "any",
     icons: [
       {
         src: "/app-profissional-icon.svg",
