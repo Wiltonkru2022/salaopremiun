@@ -137,31 +137,33 @@ export default function AgendaSidebar(props: Props) {
   const showBackButton = Boolean(panel) || view !== "overview";
 
   return (
-    <aside className="w-full min-h-0 lg:h-full lg:max-w-[408px] lg:min-w-[408px] xl:max-w-[424px] xl:min-w-[424px]">
-      <div className="flex h-full min-h-0 flex-col rounded-[32px] border border-white/80 bg-white/97 p-4 shadow-[0_22px_70px_rgba(15,23,42,0.08)]">
+    <aside className="w-full min-h-0 lg:h-full lg:max-w-[436px] lg:min-w-[436px] xl:max-w-[456px] xl:min-w-[456px]">
+      <div className="flex h-full min-h-0 flex-col rounded-[34px] border border-white/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(250,251,255,0.96)_100%)] p-5 shadow-[0_24px_80px_rgba(15,23,42,0.09)]">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             {showBackButton ? (
               <button
                 type="button"
                 onClick={panel ? panel.onBack : onBackToOverview}
-                className="mb-3 inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700"
+                className="mb-3 inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-700 shadow-[0_10px_24px_rgba(15,23,42,0.06)] transition duration-200 hover:-translate-y-[1px] hover:bg-zinc-50"
               >
                 <ArrowLeft size={14} />
                 Voltar
               </button>
             ) : null}
 
-            <h2 className="text-[1.92rem] font-semibold tracking-[-0.06em] text-slate-900">
+            <h2 className="text-[2rem] font-semibold tracking-[-0.065em] text-slate-900">
               {headerTitle}
             </h2>
-            <p className="mt-1 text-sm text-zinc-500">{headerSubtitle}</p>
+            <p className="mt-1 max-w-[26rem] text-sm leading-6 text-zinc-500">
+              {headerSubtitle}
+            </p>
           </div>
 
           <button
             type="button"
             onClick={onToggleOpen}
-            className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-zinc-200 bg-white text-zinc-500 shadow-[0_8px_20px_rgba(15,23,42,0.05)] hover:text-zinc-900"
+            className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-zinc-200 bg-white text-zinc-500 shadow-[0_10px_24px_rgba(15,23,42,0.06)] transition duration-200 hover:-translate-y-[1px] hover:bg-zinc-50 hover:text-zinc-900"
             title="Fechar painel"
           >
             <X size={18} />
@@ -169,7 +171,7 @@ export default function AgendaSidebar(props: Props) {
         </div>
 
         {!panel ? (
-          <div className="mt-4 grid grid-cols-3 gap-2 rounded-[22px] border border-zinc-200/80 bg-zinc-50/80 p-1.5">
+          <div className="mt-5 grid grid-cols-3 gap-2 rounded-[24px] border border-zinc-200/80 bg-zinc-50/85 p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.75)]">
             <SidebarNavButton
               active={view === "overview"}
               onClick={() => onSetView("overview")}
@@ -191,7 +193,7 @@ export default function AgendaSidebar(props: Props) {
           </div>
         ) : null}
 
-        <div className="mt-4 min-h-0 flex-1 overflow-y-auto pr-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div className="mt-5 min-h-0 flex-1 overflow-y-auto pr-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {panel ? (
             <div className="h-full">{panel.content}</div>
           ) : view === "clientSearch" ? (
@@ -205,8 +207,8 @@ export default function AgendaSidebar(props: Props) {
           ) : view === "waitlist" ? (
             <WaitlistView items={waitlistItems} />
           ) : (
-            <div className="space-y-3">
-              <section className="rounded-[24px] border border-zinc-200/80 bg-white p-4 shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
+            <div className="space-y-3.5">
+              <section className="rounded-[26px] border border-zinc-200/80 bg-white/98 p-4 shadow-[0_14px_36px_rgba(15,23,42,0.05)] transition duration-300 hover:-translate-y-[1px] hover:shadow-[0_18px_44px_rgba(15,23,42,0.07)]">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-zinc-950">Valor total</p>
@@ -217,7 +219,7 @@ export default function AgendaSidebar(props: Props) {
                   <button
                     type="button"
                     onClick={onTogglePotentialValueVisible}
-                    className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-zinc-200 bg-zinc-50/80 text-zinc-600"
+                    className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-zinc-200 bg-zinc-50/80 text-zinc-600 transition duration-200 hover:-translate-y-[1px] hover:bg-white"
                     title={potentialValueVisible ? "Ocultar valor" : "Mostrar valor"}
                   >
                     <Eye size={18} />
@@ -228,7 +230,7 @@ export default function AgendaSidebar(props: Props) {
                 </div>
               </section>
 
-              <section className="rounded-[24px] border border-zinc-200/80 bg-white p-4 shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
+              <section className="rounded-[26px] border border-zinc-200/80 bg-white/98 p-4 shadow-[0_14px_36px_rgba(15,23,42,0.05)] transition duration-300 hover:-translate-y-[1px] hover:shadow-[0_18px_44px_rgba(15,23,42,0.07)]">
                 <button
                   type="button"
                   className="flex w-full items-center justify-between gap-3 text-left"
@@ -239,7 +241,7 @@ export default function AgendaSidebar(props: Props) {
                   <ChevronDown size={18} className="shrink-0 text-zinc-500" />
                 </button>
 
-                <div className="mt-3 grid grid-cols-2 gap-2.5">
+                <div className="mt-3 grid grid-cols-2 gap-3">
                   <MetricCard
                     icon={<UserRoundSearch size={16} />}
                     label="Atendimentos"
@@ -267,7 +269,7 @@ export default function AgendaSidebar(props: Props) {
                 </div>
               </section>
 
-              <section className="rounded-[24px] border border-zinc-200/80 bg-white p-4 shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
+              <section className="rounded-[26px] border border-zinc-200/80 bg-white/98 p-4 shadow-[0_14px_36px_rgba(15,23,42,0.05)] transition duration-300 hover:-translate-y-[1px] hover:shadow-[0_18px_44px_rgba(15,23,42,0.07)]">
                 <h3 className="text-[1.15rem] font-semibold tracking-[-0.04em] text-slate-900">
                   Status dos atendimentos
                 </h3>
@@ -284,7 +286,7 @@ export default function AgendaSidebar(props: Props) {
                 </div>
               </section>
 
-              <section className="rounded-[24px] border border-zinc-200/80 bg-white p-4 shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
+              <section className="rounded-[26px] border border-zinc-200/80 bg-white/98 p-4 shadow-[0_14px_36px_rgba(15,23,42,0.05)] transition duration-300 hover:-translate-y-[1px] hover:shadow-[0_18px_44px_rgba(15,23,42,0.07)]">
                 <h3 className="text-[1.15rem] font-semibold tracking-[-0.04em] text-slate-900">
                   Visualizacao
                 </h3>
@@ -317,7 +319,7 @@ export default function AgendaSidebar(props: Props) {
                 </div>
               </section>
 
-              <section className="rounded-[24px] border border-zinc-200/80 bg-white p-4 shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
+              <section className="rounded-[26px] border border-zinc-200/80 bg-white/98 p-4 shadow-[0_14px_36px_rgba(15,23,42,0.05)] transition duration-300 hover:-translate-y-[1px] hover:shadow-[0_18px_44px_rgba(15,23,42,0.07)]">
                 <h3 className="text-[1.15rem] font-semibold tracking-[-0.04em] text-slate-900">
                   Acoes rapidas
                 </h3>
@@ -378,8 +380,8 @@ function SidebarNavButton({
       onClick={onClick}
       className={
         active
-          ? "rounded-[16px] bg-white px-3 py-2 text-sm font-semibold text-violet-700 shadow-[0_10px_24px_rgba(124,58,237,0.14)]"
-          : "rounded-[16px] px-3 py-2 text-sm font-medium text-zinc-600"
+          ? "rounded-[16px] bg-white px-3 py-2 text-sm font-semibold text-violet-700 shadow-[0_10px_24px_rgba(124,58,237,0.14)] transition duration-200"
+          : "rounded-[16px] px-3 py-2 text-sm font-medium text-zinc-600 transition duration-200 hover:bg-white/70"
       }
     >
       {children}
@@ -402,7 +404,7 @@ function ClientSearchView({
 }) {
   return (
     <div className="space-y-3">
-      <section className="rounded-[24px] border border-zinc-200/80 bg-white p-4 shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
+      <section className="rounded-[24px] border border-zinc-200/80 bg-white p-4 shadow-[0_12px_32px_rgba(15,23,42,0.05)]">
         <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.14em] text-zinc-400">
           Filtro da cliente
         </label>
@@ -418,7 +420,7 @@ function ClientSearchView({
         </div>
       </section>
 
-      <section className="rounded-[24px] border border-zinc-200/80 bg-white p-4 shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
+      <section className="rounded-[24px] border border-zinc-200/80 bg-white p-4 shadow-[0_12px_32px_rgba(15,23,42,0.05)]">
         <div className="text-[1.15rem] font-semibold tracking-[-0.04em] text-slate-900">
           Resultado
         </div>
@@ -430,7 +432,7 @@ function ClientSearchView({
                 key={client.id}
                 type="button"
                 onClick={() => onOpenClient(client.id)}
-                className="flex w-full items-center justify-between gap-3 rounded-[20px] border border-zinc-200 bg-white px-3.5 py-3 text-left shadow-[0_8px_20px_rgba(15,23,42,0.04)]"
+                className="flex w-full items-center justify-between gap-3 rounded-[20px] border border-zinc-200 bg-white px-3.5 py-3 text-left shadow-[0_8px_20px_rgba(15,23,42,0.04)] transition duration-200 hover:-translate-y-[1px] hover:shadow-[0_16px_32px_rgba(15,23,42,0.07)]"
               >
                 <div className="min-w-0">
                   <div className="truncate text-sm font-semibold text-zinc-900">
@@ -469,7 +471,7 @@ function ClientSearchView({
 function WaitlistView({ items }: { items: AgendaWaitlistItem[] }) {
   return (
     <div className="space-y-3">
-      <section className="rounded-[24px] border border-zinc-200/80 bg-white p-4 shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
+      <section className="rounded-[24px] border border-zinc-200/80 bg-white p-4 shadow-[0_12px_32px_rgba(15,23,42,0.05)]">
         <div className="text-[1.15rem] font-semibold tracking-[-0.04em] text-slate-900">
           Clientes aguardando
         </div>
@@ -482,7 +484,7 @@ function WaitlistView({ items }: { items: AgendaWaitlistItem[] }) {
             {items.map((item) => (
               <div
                 key={item.id}
-                className="rounded-[20px] border border-zinc-200 bg-white px-4 py-3 shadow-[0_8px_20px_rgba(15,23,42,0.04)]"
+                className="rounded-[20px] border border-zinc-200 bg-white px-4 py-3 shadow-[0_8px_20px_rgba(15,23,42,0.04)] transition duration-200 hover:-translate-y-[1px] hover:shadow-[0_16px_32px_rgba(15,23,42,0.07)]"
               >
                 <div className="truncate text-sm font-semibold text-zinc-900">
                   {item.clientName}
@@ -535,7 +537,7 @@ function MetricCard({
           : "bg-sky-50 text-sky-700";
 
   return (
-    <div className="rounded-[18px] border border-zinc-200 bg-white p-3 shadow-[0_8px_20px_rgba(15,23,42,0.04)]">
+    <div className="rounded-[20px] border border-zinc-200 bg-white p-3 shadow-[0_8px_20px_rgba(15,23,42,0.04)] transition duration-200 hover:-translate-y-[1px] hover:shadow-[0_14px_28px_rgba(15,23,42,0.06)]">
       <div className="flex items-start gap-3">
         <div
           className={`inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl ${toneClasses}`}
@@ -572,7 +574,7 @@ function StatusCard({
           : "bg-sky-50 text-sky-700";
 
   return (
-    <div className={`rounded-[18px] px-3.5 py-2.5 ${toneClasses}`}>
+    <div className={`rounded-[18px] px-3.5 py-2.5 transition duration-200 ${toneClasses}`}>
       <div className="text-[12px] font-medium leading-tight">{label}</div>
       <div className="mt-1 text-[1.3rem] font-semibold tracking-[-0.05em]">{value}</div>
     </div>
@@ -594,8 +596,8 @@ function ToggleButton({
       onClick={onClick}
       className={
         active
-          ? "rounded-2xl bg-violet-600 px-3 py-2.5 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(124,58,237,0.28)]"
-          : "rounded-2xl border border-zinc-200 bg-white px-3 py-2.5 text-sm font-medium text-zinc-700"
+          ? "rounded-2xl bg-violet-600 px-3 py-2.5 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(124,58,237,0.28)] transition duration-200"
+          : "rounded-2xl border border-zinc-200 bg-white px-3 py-2.5 text-sm font-medium text-zinc-700 transition duration-200 hover:-translate-y-[1px] hover:bg-zinc-50"
       }
     >
       {children}
@@ -620,8 +622,8 @@ function ModeButton({
       onClick={onClick}
       className={
         active
-          ? "flex items-center justify-center gap-2 rounded-[20px] border border-violet-300 bg-violet-50 px-3 py-3 text-sm font-semibold text-violet-700 shadow-[0_12px_30px_rgba(124,58,237,0.12)]"
-          : "flex items-center justify-center gap-2 rounded-[20px] border border-zinc-200 bg-white px-3 py-3 text-sm font-medium text-zinc-700"
+          ? "flex items-center justify-center gap-2 rounded-[20px] border border-violet-300 bg-violet-50 px-3 py-3 text-sm font-semibold text-violet-700 shadow-[0_12px_30px_rgba(124,58,237,0.12)] transition duration-200"
+          : "flex items-center justify-center gap-2 rounded-[20px] border border-zinc-200 bg-white px-3 py-3 text-sm font-medium text-zinc-700 transition duration-200 hover:-translate-y-[1px] hover:bg-zinc-50"
       }
     >
       {icon}
@@ -643,12 +645,12 @@ function QuickAction({
     <button
       type="button"
       onClick={onClick}
-      className="flex min-w-0 items-center gap-3 rounded-[20px] border border-zinc-200 bg-white px-3.5 py-3 text-left text-[13px] font-medium text-zinc-700 shadow-[0_8px_20px_rgba(15,23,42,0.04)] hover:-translate-y-[1px] hover:shadow-[0_16px_35px_rgba(15,23,42,0.08)]"
+      className="flex min-w-0 items-center gap-3 rounded-[20px] border border-zinc-200 bg-white px-3.5 py-3 text-left text-[13px] font-medium text-zinc-700 shadow-[0_8px_20px_rgba(15,23,42,0.04)] transition duration-200 hover:-translate-y-[1px] hover:bg-zinc-50/80 hover:shadow-[0_16px_35px_rgba(15,23,42,0.08)]"
     >
       <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-zinc-50 text-zinc-700">
         {icon}
       </span>
-      <span className="min-w-0 leading-tight">{label}</span>
+      <span className="min-w-0 break-words leading-tight">{label}</span>
     </button>
   );
 }

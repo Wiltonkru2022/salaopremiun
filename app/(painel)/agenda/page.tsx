@@ -811,7 +811,7 @@ export default function AgendaPage() {
         <div
           className={`grid h-full min-h-0 min-w-0 gap-3 ${
             sidebarOpen
-              ? "lg:grid-cols-[minmax(0,1fr)_408px] xl:grid-cols-[minmax(0,1fr)_424px]"
+              ? "lg:grid-cols-[minmax(0,1fr)_436px] xl:grid-cols-[minmax(0,1fr)_456px]"
               : "lg:grid-cols-[minmax(0,1fr)]"
           }`}
         >

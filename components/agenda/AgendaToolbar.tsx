@@ -68,9 +68,9 @@ export default function AgendaToolbar({
         )}`;
 
   return (
-    <div className="rounded-[28px] border border-white/80 bg-white/97 px-4 py-3 shadow-[0_18px_52px_rgba(15,23,42,0.07)]">
-      <div className="flex flex-col gap-3">
-        <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+    <div className="rounded-[28px] border border-white/80 bg-white/97 px-4 py-2.5 shadow-[0_18px_52px_rgba(15,23,42,0.07)]">
+      <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-2 xl:flex-row xl:items-start xl:justify-between">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               <h1 className="mr-3 text-[1.75rem] font-semibold tracking-[-0.07em] text-slate-900">
@@ -174,8 +174,8 @@ export default function AgendaToolbar({
         </div>
 
         {(selectedProfessionalName || selectedProfessionalRole) && (
-          <div className="flex justify-center">
-            <span className="inline-flex max-w-full items-center justify-center rounded-full border border-zinc-200 bg-white px-3 py-1 text-center text-[12px] text-zinc-700 shadow-[0_6px_18px_rgba(15,23,42,0.04)]">
+          <div className="-mt-1 flex justify-center">
+            <span className="inline-flex max-w-full items-center justify-center rounded-full border border-zinc-200 bg-zinc-50/85 px-3 py-1 text-center text-[12px] text-zinc-700 shadow-[0_6px_18px_rgba(15,23,42,0.04)]">
               <span className="truncate">
                 {selectedProfessionalName}
                 {selectedProfessionalRole ? ` - ${selectedProfessionalRole}` : ""}
