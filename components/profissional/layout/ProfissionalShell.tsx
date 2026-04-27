@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import MonitoringContextBridge from "@/components/monitoring/MonitoringContextBridge";
 import ProfissionalInstallPrompt from "@/components/profissional/pwa/ProfissionalInstallPrompt";
 import ProfissionalPwaRuntime from "@/components/profissional/pwa/ProfissionalPwaRuntime";
-import type { ProfissionalAppNotification } from "@/lib/profissional-app-notifications";
+import type { ProfissionalAppNotification } from "@/lib/profissional-app-notification-contracts";
 import ProfissionalNavigationRuntime from "./ProfissionalNavigationRuntime";
 import ProfissionalAlerts from "./ProfissionalAlerts";
 import ProfissionalHeader from "./ProfissionalHeader";

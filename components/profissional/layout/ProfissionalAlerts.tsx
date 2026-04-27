@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { BellRing, CheckCircle2, ChevronRight } from "lucide-react";
-import type { ProfissionalAppNotification } from "@/lib/profissional-app-notifications";
+import type { ProfissionalAppNotification } from "@/lib/profissional-app-notification-contracts";
 
 type Props = {
   notifications: ProfissionalAppNotification[];

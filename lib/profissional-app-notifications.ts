@@ -1,16 +1,8 @@
 import "server-only";
 
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import type { ProfissionalAppNotification } from "@/lib/profissional-app-notification-contracts";
 import type { ProfissionalServerContext } from "@/lib/profissional-context.server";
-
-export type ProfissionalAppNotification = {
-  id: string;
-  title: string;
-  description: string;
-  createdAt: string | null;
-  actionLabel?: string;
-  href?: string;
-};
 
 type TicketRow = {
   id: string;
