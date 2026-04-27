@@ -88,15 +88,18 @@ export async function listarComandasProfissional(
           .in("id", clienteIds);
 
         if (clientesError) {
-          throw new Error(clientesError.message || "Erro ao carregar clientes.");
+          console.error(
+            "[profissional_comandas] Falha ao carregar nomes de clientes:",
+            clientesError.message
+          );
+        } else {
+          clientesMap = new Map(
+            ((clientes ?? []) as ClienteNomeRow[]).map((cliente) => [
+              cliente.id,
+              cliente.nome,
+            ])
+          );
         }
-
-        clientesMap = new Map(
-          ((clientes ?? []) as ClienteNomeRow[]).map((cliente) => [
-            cliente.id,
-            cliente.nome,
-          ])
-        );
       }
 
       return ((comandas ?? []) as ComandaRow[]).map((comanda) => ({

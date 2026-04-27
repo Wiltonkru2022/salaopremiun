@@ -30,11 +30,22 @@ function getStatusMeta(status: string) {
 
 export default async function ComandasPage() {
   const session = await requireProfissionalAppContext();
+  let comandas = [];
 
-  const comandas = await listarComandasProfissional(
-    session.idSalao,
-    session.idProfissional
-  );
+  try {
+    comandas = await listarComandasProfissional(
+      session.idSalao,
+      session.idProfissional
+    );
+  } catch {
+    return (
+      <ProfissionalShell title="Comandas" subtitle="Abertas e atendimentos">
+        <div className="rounded-[1.5rem] border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 shadow-sm">
+          Nao foi possivel carregar as comandas agora.
+        </div>
+      </ProfissionalShell>
+    );
+  }
 
   const abertas = comandas.filter(
     (comanda) => String(comanda.status).toLowerCase() === "aberta"
@@ -61,11 +72,11 @@ export default async function ComandasPage() {
               </p>
             </div>
 
-            <div className="rounded-[1.3rem] bg-white/10 px-4 py-3 text-right">
+            <div className="min-w-0 rounded-[1.3rem] bg-white/10 px-4 py-3 text-right">
               <div className="text-[11px] uppercase tracking-[0.12em] text-zinc-400">
                 Total em aberto
               </div>
-              <div className="mt-1 text-lg font-bold">
+              <div className="mt-1 break-words text-lg font-bold">
                 {formatarMoeda(totalAberto)}
               </div>
             </div>
@@ -117,7 +128,7 @@ export default async function ComandasPage() {
                     </div>
 
                     <div className="mt-4 flex items-center justify-between gap-3">
-                      <div className="text-lg font-black tracking-[-0.04em] text-zinc-950">
+                      <div className="min-w-0 break-words text-lg font-black tracking-[-0.04em] text-zinc-950">
                         {formatarMoeda(comanda.total)}
                       </div>
                       <ProfissionalStatusPill

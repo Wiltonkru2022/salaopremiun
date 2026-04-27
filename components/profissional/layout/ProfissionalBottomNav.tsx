@@ -32,7 +32,7 @@ export default function ProfissionalBottomNav() {
   }, [pathname]);
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-white/70 bg-white/90 pb-[env(safe-area-inset-bottom)] shadow-[0_-18px_44px_rgba(15,23,42,0.08)] backdrop-blur-xl">
+    <nav className="fixed bottom-0 left-0 right-0 z-40 overflow-x-hidden border-t border-white/70 bg-white/90 pb-[env(safe-area-inset-bottom)] shadow-[0_-18px_44px_rgba(15,23,42,0.08)] backdrop-blur-xl">
       <div className="mx-auto grid max-w-md grid-cols-5 gap-1 px-2 sm:max-w-lg lg:max-w-2xl">
         {items.map(({ href, label, icon: Icon, key }) => {
           const active = pressedSection ? pressedSection === key : currentSection === key;
@@ -44,14 +44,14 @@ export default function ProfissionalBottomNav() {
               prefetch
               aria-current={active ? "page" : undefined}
               onClick={() => setPressedSection(key)}
-              className={`my-2 flex min-h-[58px] flex-col items-center justify-center gap-1 rounded-2xl px-2 py-2 text-[11px] font-semibold transition ${
+              className={`my-2 flex min-h-[58px] min-w-0 flex-col items-center justify-center gap-1 rounded-2xl px-1 py-2 text-[10px] font-semibold transition sm:px-2 sm:text-[11px] ${
                 active
                   ? "bg-zinc-950 text-white shadow-sm"
                   : "text-zinc-500 active:bg-zinc-100"
               }`}
             >
               <Icon size={18} strokeWidth={2.2} />
-              <span className="leading-none">{label}</span>
+              <span className="truncate leading-none">{label}</span>
             </Link>
           );
         })}

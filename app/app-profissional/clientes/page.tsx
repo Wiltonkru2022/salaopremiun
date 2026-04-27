@@ -166,15 +166,15 @@ export default async function ClientesPage({
                   href={`/app-profissional/clientes/${cliente.id}`}
                   className="block rounded-[1.5rem] border border-zinc-200 bg-zinc-50/70 p-4 transition active:scale-[0.99]"
                 >
-                  <div className="text-[1.05rem] font-bold tracking-[-0.02em] text-zinc-950">
+                  <div className="break-words text-[1.05rem] font-bold tracking-[-0.02em] text-zinc-950">
                     {cliente.nome || "Cliente"}
                   </div>
 
-                  <div className="mt-2 text-sm text-zinc-500">
+                  <div className="mt-2 break-words text-sm text-zinc-500">
                     {formatTelefone(cliente.telefone)}
                   </div>
 
-                  <div className="mt-1 truncate text-sm text-zinc-400">
+                  <div className="mt-1 break-all text-sm text-zinc-400">
                     {cliente.email || "Sem email"}
                   </div>
                 </Link>
