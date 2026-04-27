@@ -270,6 +270,10 @@ function average(values: number[]) {
   return values.reduce((acc, item) => acc + item, 0) / values.length;
 }
 
+function clamp(value: number, min: number, max: number) {
+  return Math.min(Math.max(value, min), max);
+}
+
 function inferHealthStatus(score: number): AdminHealthOverview["status"] {
   if (score >= 95) return "green";
   if (score >= 80) return "yellow";
@@ -386,16 +390,21 @@ export async function getAdminMasterOperationalSnapshot(): Promise<AdminMasterOp
     const severity = String(event.severidade || "").toLowerCase();
     return event.sucesso === false || severity === "error" || severity === "critical";
   });
-  const impactedSalonsSet = new Set(
+  const impactedSalonsFromEvents = new Set(
     [...failingEvents, ...events.filter((event) => String(event.tipo_evento || "") === "page_render_error")]
       .map((event) => event.id_salao)
       .filter(Boolean)
   );
-  incidents.forEach((incident) => {
-    if (safeNumber(incident.impacto_saloes) > 0) {
-      impactedSalonsSet.add(`impact:${incident.id || ""}`);
-    }
-  });
+  const impactedSalonsFromIncidents = incidents.reduce(
+    (max, incident) => Math.max(max, safeNumber(incident.impacto_saloes)),
+    0
+  );
+  const totalSalons = Math.max(saloes.length, impactedSalonsFromEvents.size, 1);
+  const impactedSalons = clamp(
+    Math.max(impactedSalonsFromEvents.size, impactedSalonsFromIncidents),
+    0,
+    totalSalons
+  );
 
   const slowRoutes = events.filter((event) => safeNumber(event.response_ms) >= 3000).length;
   const criticalActions = new Set([
@@ -420,7 +429,7 @@ export async function getAdminMasterOperationalSnapshot(): Promise<AdminMasterOp
   healthScore -= Math.min(30, criticalIncidents * 10);
   healthScore -= Math.min(25, errorRate24h * 0.9);
   healthScore -= Math.min(15, slowRoutes * 1.5);
-  healthScore -= Math.min(15, impactedSalonsSet.size * 2);
+  healthScore -= Math.min(15, impactedSalons * 2);
   healthScore -= Math.min(15, failingCriticalActions * 3);
   healthScore = Math.max(0, Math.round(healthScore));
 
@@ -428,7 +437,7 @@ export async function getAdminMasterOperationalSnapshot(): Promise<AdminMasterOp
   const healthLabel = inferHealthLabel(healthStatus);
   const healthSummary =
     incidents.length > 0
-      ? `${incidents.length} incidente(s) aberto(s), ${failingEvents.length} falha(s) nas ultimas 24h e ${impactedSalonsSet.size} salao(oes) com impacto operacional.`
+      ? `${incidents.length} incidente(s) aberto(s), ${failingEvents.length} falha(s) nas ultimas 24h e ${impactedSalons} salao(oes) com impacto operacional.`
       : `${failingEvents.length} falha(s) nas ultimas 24h e ${slowRoutes} rota(s) lentas em observacao.`;
 
   const moduleMap = new Map<
@@ -673,7 +682,7 @@ export async function getAdminMasterOperationalSnapshot(): Promise<AdminMasterOp
       summary: healthSummary,
       errorRate24h,
       openIncidents: incidents.length,
-      impactedSalons: impactedSalonsSet.size,
+      impactedSalons,
       slowRoutes,
       failingCriticalActions,
     },

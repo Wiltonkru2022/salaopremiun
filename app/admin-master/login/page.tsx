@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -20,6 +19,16 @@ import {
   getLoginErrorMessage,
   isSupabaseAuthRateLimit,
 } from "@/lib/supabase/auth-client-recovery";
+
+const LOGIN_HOST =
+  process.env.NEXT_PUBLIC_APP_LOGIN_HOST ||
+  process.env.APP_LOGIN_HOST ||
+  "login.salaopremiun.com.br";
+
+function buildLoginHostUrl(pathname: string) {
+  const normalizedPath = pathname.startsWith("/") ? pathname : `/${pathname}`;
+  return `https://${LOGIN_HOST}${normalizedPath}`;
+}
 
 export default function AdminMasterLoginPage() {
   return (
@@ -59,6 +68,11 @@ function AdminMasterLoginContent() {
       sanitizeAdminMasterNextPath(searchParams.get("next")) ||
       ADMIN_MASTER_HOME_PATH,
     [searchParams]
+  );
+  const salaoLoginUrl = useMemo(() => buildLoginHostUrl("/login"), []);
+  const recuperarSenhaUrl = useMemo(
+    () => buildLoginHostUrl("/recuperar-senha"),
+    []
   );
 
   useEffect(() => {
@@ -252,19 +266,19 @@ function AdminMasterLoginContent() {
               </div>
 
               <div className="flex items-center justify-between gap-3">
-                <Link
-                  href="/login"
+                <a
+                  href={salaoLoginUrl}
                   className="text-sm font-medium text-[#7d6240] transition hover:text-[#2e2115]"
                 >
                   Login do salao
-                </Link>
+                </a>
 
-                <Link
-                  href="/recuperar-senha"
+                <a
+                  href={recuperarSenhaUrl}
                   className="text-sm font-medium text-[#7d6240] transition hover:text-[#2e2115]"
                 >
                   Esqueci minha senha
-                </Link>
+                </a>
               </div>
 
               {erro ? (
