@@ -447,7 +447,7 @@ export default function AgendaGrid({
   );
   const timeColWidth = compactMode ? 46 : 62;
   const dayMinWidthDay = compactMode ? 520 : 660;
-  const dayMinWidthWeek = compactMode ? 100 : 146;
+  const dayMinWidthWeek = compactMode ? 100 : 126;
 
   useEffect(() => {
     const interval = window.setInterval(() => {

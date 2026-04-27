@@ -30,7 +30,6 @@ import { sanitizeDiasFuncionamento } from "@/lib/utils/agenda";
 import type { Agendamento, ConfigSalao } from "@/types/agenda";
 import { normalizeTimeString } from "@/lib/utils/agenda";
 import {
-  ArrowLeft,
   BadgeDollarSign,
   Ban,
   CalendarPlus,
@@ -528,7 +527,7 @@ export default function AgendaPage() {
   );
   const defaultSlotTime = normalizeTimeString(config.hora_abertura);
   const isStandaloneAgendaRoute = pathname === "/agenda";
-  const showFocusMode = agendaExpanded;
+  const showFocusMode = false;
 
   return (
     <>
@@ -537,46 +536,13 @@ export default function AgendaPage() {
           showFocusMode
             ? "fixed inset-0 z-[320] flex min-h-0 flex-col gap-4 bg-white p-3 md:p-4"
             : isStandaloneAgendaRoute
-              ? "flex h-dvh min-h-dvh min-w-0 flex-col gap-4 overflow-hidden bg-[#f8f8fb] p-3"
+              ? "flex h-dvh min-h-dvh min-w-0 flex-col gap-3 overflow-hidden bg-[radial-gradient(circle_at_top,#fdfcff_0%,#fafbfe_38%,#f5f7fb_100%)] p-3"
             : densityMode === "reception"
               ? "flex h-[calc(100dvh-4.9rem)] min-h-[720px] min-w-0 flex-col gap-4 overflow-hidden bg-[radial-gradient(circle_at_top,#faf6ff_0%,#f8fafc_24%,#f3f6fb_58%,#eef2f7_100%)] p-3"
               : "flex h-[calc(100dvh-5.2rem)] min-h-[700px] min-w-0 flex-col gap-4 overflow-hidden bg-[radial-gradient(circle_at_top,#faf6ff_0%,#f8fafc_24%,#f3f6fb_58%,#eef2f7_100%)] p-3"
         }
       >
-        {showFocusMode ? (
-          <div className="flex items-center justify-between rounded-[24px] border border-zinc-200 bg-white px-4 py-3 shadow-[0_12px_35px_rgba(15,23,42,0.06)]">
-            <div className="flex min-w-0 items-center gap-3">
-              <button
-                type="button"
-                onClick={() => setAgendaExpanded(false)}
-                className="inline-flex h-11 items-center gap-2 rounded-2xl border border-zinc-200 bg-white px-4 text-sm font-semibold text-zinc-700 shadow-[0_8px_20px_rgba(15,23,42,0.05)] hover:bg-zinc-50"
-              >
-                <ArrowLeft size={16} />
-                <span>Voltar</span>
-              </button>
-
-              <div className="min-w-0">
-                <div className="text-[1.6rem] font-semibold tracking-[-0.05em] text-slate-900">
-                  Agenda
-                </div>
-                <div className="truncate text-sm text-zinc-500">
-                  {selectedProfissional?.nome || "Profissional"}{" "}
-                  {selectedProfissional?.cargo || selectedProfissional?.categoria
-                    ? `- ${selectedProfissional?.cargo || selectedProfissional?.categoria}`
-                    : ""}
-                </div>
-              </div>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => void loadAgenda()}
-              className="hidden h-11 rounded-2xl border border-zinc-200 bg-white px-4 text-sm font-semibold text-zinc-700 shadow-[0_8px_20px_rgba(15,23,42,0.05)] hover:bg-zinc-50 md:inline-flex md:items-center"
-            >
-              Recarregar
-            </button>
-          </div>
-        ) : isStandaloneAgendaRoute ? (
+        {isStandaloneAgendaRoute ? (
           <>
             <ProfissionaisBar
               profissionais={profissionais}
@@ -655,7 +621,7 @@ export default function AgendaPage() {
         ) : null}
 
         <div className="min-h-0 min-w-0 flex-1 overflow-hidden">
-          <div className="flex h-full min-h-0 flex-col gap-4 lg:flex-row">
+          <div className="flex h-full min-h-0 flex-col gap-3 lg:flex-row">
             <div className="min-h-0 min-w-0 flex-1">
               <AgendaGrid
                 viewMode={viewMode}
@@ -682,33 +648,31 @@ export default function AgendaPage() {
               />
             </div>
 
-            {!showFocusMode ? (
-              <AgendaSidebar
-                open={sidebarOpen}
-                currentMonthLabel={format(currentDate, "MMMM", { locale: ptBR })}
-                potentialValueLabel={currencyFormatter.format(valorPotencial)}
-                potentialGoalLabel={`Meta do mes: ${currencyFormatter.format(potentialGoal)}`}
-                potentialProgress={potentialProgress}
-                appointmentsCount={totalAtendimentos}
-                waitingPaymentCount={aguardandoPagamento}
-                blockedCount={totalBloqueios}
-                attendedCount={statusCounts.atendido}
-                statusCounts={statusCounts}
-                viewMode={viewMode}
-                densityMode={densityMode}
-                isExpanded={agendaExpanded}
-                onToggleOpen={() => setSidebarOpen((prev) => !prev)}
-                onChangeView={setViewMode}
-                onChangeDensityMode={setDensityMode}
-                onToggleExpanded={() => setAgendaExpanded((prev) => !prev)}
-                onToday={() => setCurrentDate(new Date())}
-                onOpenFullscreen={() => setAgendaExpanded(true)}
-                onOpenCreate={() => openCreateModal(defaultSlotDate, defaultSlotTime)}
-                onOpenBlock={() => openBlockModal(defaultSlotDate, defaultSlotTime)}
-                onOpenCredit={() => setCreditModalOpen(true)}
-                onOpenCashier={() => router.push("/caixa")}
-              />
-            ) : null}
+            <AgendaSidebar
+              open={sidebarOpen}
+              currentMonthLabel={format(currentDate, "MMMM", { locale: ptBR })}
+              potentialValueLabel={currencyFormatter.format(valorPotencial)}
+              potentialGoalLabel={`Meta do mes: ${currencyFormatter.format(potentialGoal)}`}
+              potentialProgress={potentialProgress}
+              appointmentsCount={totalAtendimentos}
+              waitingPaymentCount={aguardandoPagamento}
+              blockedCount={totalBloqueios}
+              attendedCount={statusCounts.atendido}
+              statusCounts={statusCounts}
+              viewMode={viewMode}
+              densityMode={densityMode}
+              isExpanded={agendaExpanded}
+              onToggleOpen={() => setSidebarOpen((prev) => !prev)}
+              onChangeView={setViewMode}
+              onChangeDensityMode={setDensityMode}
+              onToggleExpanded={() => setAgendaExpanded((prev) => !prev)}
+              onToday={() => setCurrentDate(new Date())}
+              onOpenFullscreen={() => setAgendaExpanded(true)}
+              onOpenCreate={() => openCreateModal(defaultSlotDate, defaultSlotTime)}
+              onOpenBlock={() => openBlockModal(defaultSlotDate, defaultSlotTime)}
+              onOpenCredit={() => setCreditModalOpen(true)}
+              onOpenCashier={() => router.push("/caixa")}
+            />
           </div>
         </div>
 
