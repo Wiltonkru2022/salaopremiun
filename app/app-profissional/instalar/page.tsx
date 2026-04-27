@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { ChevronLeft, Download, Share, Smartphone } from "lucide-react";
 import ProfissionalShell from "@/components/profissional/layout/ProfissionalShell";
-import { requireProfissionalAppContext } from "@/lib/profissional-context.server";
 
 type SearchParams = Promise<{
   device?: string;
@@ -39,8 +38,6 @@ export default async function InstalarAppProfissionalPage({
 }: {
   searchParams: SearchParams;
 }) {
-  await requireProfissionalAppContext();
-
   const { device = "" } = await searchParams;
   const normalizedDevice = String(device || "").toLowerCase();
   const isIos = normalizedDevice === "ios";
