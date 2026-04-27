@@ -12,6 +12,7 @@ const salvarProfissionalAcessoSchema = z.object({
   cpf: z.string().trim().min(1, "CPF e obrigatorio."),
   senha: z.string().optional().default(""),
   ativo: z.boolean(),
+  ticket_recuperacao_id: z.string().trim().optional(),
 });
 
 export class SalvarProfissionalAcessoUseCaseError extends Error {
@@ -29,6 +30,7 @@ export type SalvarProfissionalAcessoInput = {
   cpf: string;
   senha?: string;
   ativo: boolean;
+  ticketRecuperacaoId?: string;
 };
 
 export type SalvarProfissionalAcessoResult = {
@@ -65,6 +67,7 @@ export function parseSalvarProfissionalAcessoInput(
     cpf: onlyDigits(parsed.cpf),
     senha: parsed.senha?.trim() || undefined,
     ativo: parsed.ativo,
+    ticketRecuperacaoId: parsed.ticket_recuperacao_id?.trim() || undefined,
   };
 }
 
@@ -127,6 +130,31 @@ export async function salvarProfissionalAcessoUseCase(params: {
       ativo: input.ativo,
       idAcesso: acessoExistente?.id,
     });
+
+    if (input.ticketRecuperacaoId && input.senha) {
+      try {
+        const salao = await service.buscarSalao(String(profissional.id_salao));
+        await service.finalizarTicketRecuperacao({
+          idSalao: String(profissional.id_salao),
+          idProfissional: input.idProfissional,
+          idTicket: input.ticketRecuperacaoId,
+          nomeProfissional: String(profissional.nome || "").trim() || "Profissional",
+          nomeSalao:
+            String(salao?.nome_fantasia || "").trim() ||
+            String(salao?.nome || "").trim() ||
+            "Salao",
+        });
+      } catch (ticketError) {
+        console.error("[PROFISSIONAL_ACESSO_RECOVERY_TICKET_ERROR]", {
+          idProfissional: input.idProfissional,
+          idTicket: input.ticketRecuperacaoId,
+          error:
+            ticketError instanceof Error
+              ? ticketError.message
+              : "erro_desconhecido",
+        });
+      }
+    }
 
     return {
       status: 200,

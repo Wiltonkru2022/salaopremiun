@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import {
   CircleAlert,
@@ -84,6 +85,36 @@ function formatDate(value?: string | null) {
   });
 }
 
+function getPasswordRecoveryAction(detail: SalaoTicketDetail | null) {
+  if (!detail || detail.ticket.origem !== "app_profissional_login") {
+    return null;
+  }
+
+  const rawProfissionalId = detail.ticket.origemContexto?.id_profissional;
+  const profissionalId =
+    typeof rawProfissionalId === "string" ? rawProfissionalId.trim() : "";
+
+  if (!profissionalId) {
+    return null;
+  }
+
+  const cpfFinal =
+    typeof detail.ticket.origemContexto?.cpf_final === "string"
+      ? detail.ticket.origemContexto.cpf_final
+      : "";
+  const contato =
+    typeof detail.ticket.origemContexto?.contato_informado === "string"
+      ? detail.ticket.origemContexto.contato_informado
+      : "";
+
+  return {
+    href: `/profissionais/${profissionalId}?ticket_recuperacao=${detail.ticket.id}`,
+    subtitle: cpfFinal
+      ? `CPF final ${cpfFinal}${contato ? ` - contato ${contato}` : ""}`
+      : contato || "Abra o cadastro do profissional para redefinir a senha.",
+  };
+}
+
 async function readJson(response: Response) {
   const data = await response.json().catch(() => ({}));
   if (!response.ok || !data?.ok) {
@@ -149,6 +180,10 @@ export default function SupportDeskClient({
         .includes(term)
     );
   }, [items, search]);
+  const passwordRecoveryAction = useMemo(
+    () => getPasswordRecoveryAction(detail),
+    [detail]
+  );
 
   async function loadTickets(preferredId?: string | null) {
     setLoadingList(true);
@@ -288,7 +323,7 @@ export default function SupportDeskClient({
             </h1>
             <p className="mt-3 max-w-2xl text-sm text-zinc-500 sm:text-base">
               Abra chamados, acompanhe respostas e mantenha o historico visivel
-              para o salao e para o AdminMaster no mesmo processo.
+              para a equipe do salao em um fluxo unico.
             </p>
           </div>
 
@@ -488,6 +523,31 @@ export default function SupportDeskClient({
                     )}
                   </div>
                 </section>
+
+                {passwordRecoveryAction ? (
+                  <section className="rounded-[30px] border border-violet-200 bg-violet-50/70 p-5 shadow-sm">
+                    <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                      <div>
+                        <div className="text-xs font-semibold uppercase tracking-[0.22em] text-violet-500">
+                          Recuperacao de senha do app profissional
+                        </div>
+                        <h3 className="mt-2 text-lg font-bold text-zinc-950">
+                          Redefina a senha de {detail.ticket.solicitanteNome}
+                        </h3>
+                        <p className="mt-2 text-sm text-zinc-600">
+                          {passwordRecoveryAction.subtitle}
+                        </p>
+                      </div>
+
+                      <Link
+                        href={passwordRecoveryAction.href}
+                        className="inline-flex items-center justify-center rounded-2xl border border-violet-500 bg-violet-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-violet-700"
+                      >
+                        Abrir cadastro e trocar senha
+                      </Link>
+                    </div>
+                  </section>
+                ) : null}
 
                 <section className="grid gap-5 2xl:grid-cols-[1fr_320px]">
                   <div className="space-y-4 rounded-[30px] border border-zinc-200 bg-white p-5 shadow-sm">

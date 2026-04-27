@@ -188,6 +188,10 @@ function normalizeText(value: unknown) {
   return String(value || "").trim();
 }
 
+function isProfessionalRecoveryTicketOrigin(value: unknown) {
+  return normalizeText(value).toLowerCase() === "app_profissional_login";
+}
+
 function normalizeCategoria(value: unknown): TicketCategoria {
   const categoria = normalizeText(value).toLowerCase();
 
@@ -500,6 +504,7 @@ export async function listAdminTickets() {
             .select(
               "id, id_salao, numero, assunto, categoria, prioridade, status, origem, criado_em, atualizado_em, ultima_interacao_em, solicitante_nome, sla_limite_em"
             )
+            .neq("origem", "app_profissional_login")
             .order("ultima_interacao_em", { ascending: false })
             .limit(150),
           supabase.from("saloes").select("id, nome").limit(1000),
@@ -641,6 +646,10 @@ export async function getAdminTicketDetail(
       }
 
       if (!ticket) {
+        throw new Error("NOT_FOUND");
+      }
+
+      if (isProfessionalRecoveryTicketOrigin(ticket.origem)) {
         throw new Error("NOT_FOUND");
       }
 

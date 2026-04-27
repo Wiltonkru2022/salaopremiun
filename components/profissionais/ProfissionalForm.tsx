@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { getUsuarioLogado } from "@/lib/auth/getUsuarioLogado";
 import { getErrorMessage } from "@/lib/get-error-message";
@@ -194,8 +194,10 @@ export default function ProfissionalForm({
   const supabase = createClient();
   const router = useRouter();
   const params = useParams();
+  const searchParams = useSearchParams();
 
   const profissionalId = typeof params?.id === "string" ? params.id : "";
+  const recoveryTicketId = searchParams.get("ticket_recuperacao")?.trim() || "";
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -513,6 +515,10 @@ async function salvarAcessoProfissional(idProfissional: string) {
     throw new Error("Informe o CPF do profissional para criar o acesso ao app.");
   }
 
+  if (recoveryTicketId && !acesso.senha.trim()) {
+    throw new Error("Informe a nova senha para concluir a recuperacao do profissional.");
+  }
+
   const response = await fetch("/api/profissionais-acessos", {
     method: "POST",
     headers: {
@@ -523,6 +529,8 @@ async function salvarAcessoProfissional(idProfissional: string) {
       cpf: cpfLimpo,
       senha: acesso.senha.trim() || "",
       ativo: acesso.ativo,
+      ticket_recuperacao_id:
+        recoveryTicketId && acesso.senha.trim() ? recoveryTicketId : undefined,
     }),
   });
 
@@ -646,7 +654,11 @@ async function salvarAcessoProfissional(idProfissional: string) {
         return;
       }
 
-      setMsg("Profissional atualizado com sucesso.");
+      setMsg(
+        recoveryTicketId && acesso.senha.trim()
+          ? "Profissional atualizado e senha redefinida com notificacao para o app."
+          : "Profissional atualizado com sucesso."
+      );
       setAcesso((prev) => ({ ...prev, senha: "", possuiCadastro: true }));
     } catch (e: unknown) {
       setErro(getErrorMessage(e, "Erro ao salvar profissional."));
@@ -1126,6 +1138,12 @@ async function salvarAcessoProfissional(idProfissional: string) {
                   <p className="mt-1 text-sm text-zinc-500">
                     Aqui você libera o login do profissional no app usando CPF e senha.
                   </p>
+
+                  {recoveryTicketId ? (
+                    <div className="mt-4 rounded-2xl border border-violet-200 bg-violet-50 px-4 py-3 text-sm text-violet-800">
+                      Esta alteracao veio de um ticket de recuperacao de senha. Ao salvar uma nova senha, o sistema resolve o ticket e avisa o profissional no app.
+                    </div>
+                  ) : null}
 
                   {isAssistenteSalao ? (
                     <div className="mt-4 rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-600">

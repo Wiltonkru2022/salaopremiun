@@ -1,4 +1,5 @@
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import type { Json } from "@/types/database.generated";
 
 type SupabaseAdminClient = ReturnType<typeof getSupabaseAdmin>;
 
@@ -11,6 +12,12 @@ type ProfissionalResumoRow = {
   id: string;
   id_salao?: string | null;
   nome?: string | null;
+};
+
+type SalaoResumoRow = {
+  id: string;
+  nome?: string | null;
+  nome_fantasia?: string | null;
 };
 
 export function createProfissionalAcessoService(
@@ -26,6 +33,17 @@ export function createProfissionalAcessoService(
 
       if (error) throw error;
       return (data as ProfissionalResumoRow | null) || null;
+    },
+
+    async buscarSalao(idSalao: string) {
+      const { data, error } = await supabaseAdmin
+        .from("saloes")
+        .select("id, nome, nome_fantasia")
+        .eq("id", idSalao)
+        .maybeSingle();
+
+      if (error) throw error;
+      return (data as SalaoResumoRow | null) || null;
     },
 
     async buscarCpfEmUso(params: {
@@ -116,6 +134,74 @@ export function createProfissionalAcessoService(
         });
 
       if (error) throw error;
+    },
+
+    async finalizarTicketRecuperacao(params: {
+      idSalao: string;
+      idProfissional: string;
+      idTicket: string;
+      nomeProfissional: string;
+      nomeSalao: string;
+    }) {
+      const { data: ticket, error: ticketError } = await supabaseAdmin
+        .from("tickets")
+        .select("id, origem, origem_contexto")
+        .eq("id", params.idTicket)
+        .eq("id_salao", params.idSalao)
+        .maybeSingle();
+
+      if (ticketError) throw ticketError;
+
+      const normalizedOrigin = String(ticket?.origem || "").trim().toLowerCase();
+      const origemContexto =
+        ticket?.origem_contexto &&
+        typeof ticket.origem_contexto === "object" &&
+        !Array.isArray(ticket.origem_contexto)
+          ? ticket.origem_contexto
+          : {};
+
+      if (!ticket?.id || normalizedOrigin !== "app_profissional_login") {
+        return;
+      }
+
+      if (String(origemContexto.id_profissional || "").trim() !== params.idProfissional) {
+        return;
+      }
+
+      const now = new Date().toISOString();
+      const mensagem = `Senha do app redefinida pelo salao ${params.nomeSalao}. O profissional ja pode entrar com a nova senha.`;
+
+      await supabaseAdmin.from("ticket_mensagens").insert({
+        id_ticket: params.idTicket,
+        autor_tipo: "usuario",
+        autor_nome: params.nomeSalao,
+        mensagem,
+        interna: false,
+      });
+
+      await supabaseAdmin.from("ticket_eventos").insert({
+        id_ticket: params.idTicket,
+        evento: "senha_redefinida_salao",
+        descricao: `Senha redefinida pelo salao ${params.nomeSalao} para ${params.nomeProfissional}.`,
+        payload_json: {
+          nome_salao: params.nomeSalao,
+          nome_profissional: params.nomeProfissional,
+          id_profissional: params.idProfissional,
+        } as Json,
+      });
+
+      const { error: updateError } = await supabaseAdmin
+        .from("tickets")
+        .update({
+          status: "resolvido",
+          atualizado_em: now,
+          ultima_interacao_em: now,
+          fechado_em: now,
+        })
+        .eq("id", params.idTicket)
+        .eq("id_salao", params.idSalao);
+
+      if (updateError) throw updateError;
     },
   };
 }
