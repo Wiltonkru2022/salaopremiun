@@ -7,6 +7,10 @@ import { usePathname, useRouter } from "next/navigation";
 import AgendaToolbar from "@/components/agenda/AgendaToolbar";
 import AgendaGrid from "@/components/agenda/AgendaGrid";
 import AgendaSidebar from "@/components/agenda/AgendaSidebar";
+import type {
+  AgendaSidebarView,
+  AgendaWaitlistItem,
+} from "@/components/agenda/AgendaSidebar";
 import AgendaModal from "@/components/agenda/AgendaModal";
 import ProfissionaisBar from "@/components/agenda/ProfissionaisBar";
 import AgendaNoticeDialog from "@/components/agenda/AgendaNoticeDialog";
@@ -95,9 +99,11 @@ export default function AgendaPage() {
   const [creditClienteId, setCreditClienteId] = useState("");
   const [creditLoading, setCreditLoading] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarView, setSidebarView] = useState<AgendaSidebarView>("overview");
   const [potentialValueVisible, setPotentialValueVisible] = useState(true);
   const [quickCreateOpen, setQuickCreateOpen] = useState(false);
   const [quickCreateDate, setQuickCreateDate] = useState("");
+  const [clientSearchQuery, setClientSearchQuery] = useState("");
 
   const {
     supabase,
@@ -530,6 +536,37 @@ export default function AgendaPage() {
   const defaultSlotTime = normalizeTimeString(config.hora_abertura);
   const isStandaloneAgendaRoute = pathname === "/agenda";
   const showFocusMode = false;
+  const normalizedClientSearch = clientSearchQuery.trim().toLowerCase();
+  const clientSearchResults = clientes
+    .filter((cliente) => {
+      if (!normalizedClientSearch) return true;
+
+      return (
+        cliente.nome.toLowerCase().includes(normalizedClientSearch) ||
+        String(cliente.whatsapp || "").toLowerCase().includes(normalizedClientSearch)
+      );
+    })
+    .slice(0, 12);
+  const waitlistItems: AgendaWaitlistItem[] = agendamentos
+    .filter((item) => item.status === "pendente")
+    .sort((a, b) => {
+      const dateCompare = String(a.data).localeCompare(String(b.data));
+      if (dateCompare !== 0) return dateCompare;
+      return normalizeTimeString(a.hora_inicio).localeCompare(
+        normalizeTimeString(b.hora_inicio)
+      );
+    })
+    .slice(0, 12)
+    .map((item) => ({
+      id: item.id,
+      clientName: item.cliente?.nome || "Cliente sem nome",
+      serviceName: item.servico?.nome || "Servico",
+      dateLabel: format(new Date(`${item.data}T12:00:00`), "dd/MM"),
+      timeLabel: `${normalizeTimeString(item.hora_inicio)} - ${normalizeTimeString(
+        item.hora_fim
+      )}`,
+      statusLabel: "Pendente",
+    }));
 
   return (
     <>
@@ -548,7 +585,7 @@ export default function AgendaPage() {
           className={`grid h-full min-h-0 min-w-0 gap-3 ${
             sidebarOpen
               ? "lg:grid-cols-[minmax(0,1fr)_292px]"
-              : "lg:grid-cols-[minmax(0,1fr)_56px]"
+              : "lg:grid-cols-[minmax(0,1fr)]"
           }`}
         >
           <div className="flex min-h-0 min-w-0 flex-col gap-3">
@@ -580,7 +617,12 @@ export default function AgendaPage() {
               onChangeView={setViewMode}
               onSelectDate={setCurrentDate}
               sidebarOpen={sidebarOpen}
-              onToggleSidebar={() => setSidebarOpen((prev) => !prev)}
+              onToggleSidebar={() => {
+                setSidebarOpen((prev) => !prev);
+                if (sidebarOpen) {
+                  setSidebarView("overview");
+                }
+              }}
             />
 
             {assinaturaBloqueada ? (
@@ -625,6 +667,7 @@ export default function AgendaPage() {
           <div className="min-h-0">
             <AgendaSidebar
               open={sidebarOpen}
+              view={sidebarView}
               currentMonthLabel={format(currentDate, "MMMM", { locale: ptBR })}
               potentialValueLabel={currencyFormatter.format(valorPotencial)}
               potentialValueVisible={potentialValueVisible}
@@ -637,7 +680,14 @@ export default function AgendaPage() {
               statusCounts={statusCounts}
               viewMode={viewMode}
               densityMode={densityMode}
-              onToggleOpen={() => setSidebarOpen((prev) => !prev)}
+              clientSearchQuery={clientSearchQuery}
+              clientResults={clientSearchResults}
+              waitlistItems={waitlistItems}
+              onToggleOpen={() => {
+                setSidebarOpen(false);
+                setSidebarView("overview");
+              }}
+              onBackToOverview={() => setSidebarView("overview")}
               onChangeView={setViewMode}
               onChangeDensityMode={setDensityMode}
               onToday={() => setCurrentDate(new Date())}
@@ -651,6 +701,14 @@ export default function AgendaPage() {
               onOpenBlock={() => openBlockModal(defaultSlotDate, defaultSlotTime)}
               onOpenCredit={() => setCreditModalOpen(true)}
               onOpenCashier={() => router.push("/caixa")}
+              onOpenClientSearch={() => {
+                setClientSearchQuery("");
+                setSidebarView("clientSearch");
+              }}
+              onOpenWaitlist={() => setSidebarView("waitlist")}
+              onClientSearchQueryChange={setClientSearchQuery}
+              onCreateClient={() => router.push("/clientes/novo")}
+              onOpenClient={(clientId) => router.push(`/clientes/${clientId}`)}
             />
           </div>
         </div>

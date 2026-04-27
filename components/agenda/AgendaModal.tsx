@@ -2,7 +2,6 @@
 
 import { CalendarDays, Lock, X } from "lucide-react";
 import AgendaModalAviso from "@/components/agenda/AgendaModalAviso";
-import AgendaQuickClientModal from "@/components/agenda/AgendaQuickClientModal";
 import AgendaModalComandaDecision from "@/components/agenda/AgendaModalComandaDecision";
 import AgendaModalFormAgendamento from "@/components/agenda/AgendaModalFormAgendamento";
 import AgendaModalFormBloqueio from "@/components/agenda/AgendaModalFormBloqueio";
@@ -63,16 +62,8 @@ export default function AgendaModal(props: AgendaModalProps) {
     abrirWhatsappMensagem,
     handleClienteChange,
     handleAbrirComanda,
-    handleQuickCreateClient,
     handleCriarNovaComandaParaClienteAtual,
     handleSubmit,
-    quickClientOpen,
-    setQuickClientOpen,
-    quickClientName,
-    setQuickClientName,
-    quickClientWhatsapp,
-    setQuickClientWhatsapp,
-    quickClientSaving,
   } = useAgendaModal(props);
 
   if (!open) return null;
@@ -92,17 +83,6 @@ export default function AgendaModal(props: AgendaModalProps) {
           setComandaNumero(comanda.numero);
           setShowComandaDecisionModal(false);
         }}
-      />
-
-      <AgendaQuickClientModal
-        open={quickClientOpen}
-        name={quickClientName}
-        whatsapp={quickClientWhatsapp}
-        saving={quickClientSaving}
-        onClose={() => setQuickClientOpen(false)}
-        onNameChange={setQuickClientName}
-        onWhatsappChange={setQuickClientWhatsapp}
-        onSubmit={handleQuickCreateClient}
       />
 
       <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/55 p-3 backdrop-blur-sm">
@@ -172,8 +152,6 @@ export default function AgendaModal(props: AgendaModalProps) {
                     onObservacoesChange={setObservacoes}
                     onStatusChange={setStatus}
                     onAbrirComanda={handleAbrirComanda}
-                    quickClientOpen={quickClientOpen}
-                    onToggleQuickClient={setQuickClientOpen}
                     onCancelAppointment={onCancelAppointment}
                   />
                 ) : (

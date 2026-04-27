@@ -2,22 +2,36 @@
 
 import type { ReactNode } from "react";
 import {
+  ArrowLeft,
   CalendarDays,
   ChevronDown,
   CreditCard,
   Eye,
   Lock,
   MonitorUp,
-  PanelRightOpen,
+  Search,
   Sparkles,
   UserRoundSearch,
+  Users,
   Wallet,
   X,
 } from "lucide-react";
-import type { AgendaDensityMode, ViewMode } from "@/types/agenda";
+import type { AgendaDensityMode, Cliente, ViewMode } from "@/types/agenda";
+
+export type AgendaSidebarView = "overview" | "clientSearch" | "waitlist";
+
+export type AgendaWaitlistItem = {
+  id: string;
+  clientName: string;
+  serviceName: string;
+  dateLabel: string;
+  timeLabel: string;
+  statusLabel: string;
+};
 
 type Props = {
   open: boolean;
+  view: AgendaSidebarView;
   currentMonthLabel: string;
   potentialValueLabel: string;
   potentialValueVisible: boolean;
@@ -36,7 +50,11 @@ type Props = {
   };
   viewMode: ViewMode;
   densityMode: AgendaDensityMode;
+  clientSearchQuery: string;
+  clientResults: Cliente[];
+  waitlistItems: AgendaWaitlistItem[];
   onToggleOpen: () => void;
+  onBackToOverview: () => void;
   onChangeView: (view: ViewMode) => void;
   onChangeDensityMode: (mode: AgendaDensityMode) => void;
   onToday: () => void;
@@ -45,11 +63,17 @@ type Props = {
   onOpenBlock: () => void;
   onOpenCredit: () => void;
   onOpenCashier: () => void;
+  onOpenClientSearch: () => void;
+  onOpenWaitlist: () => void;
+  onClientSearchQueryChange: (value: string) => void;
+  onCreateClient: () => void;
+  onOpenClient: (clientId: string) => void;
 };
 
 export default function AgendaSidebar(props: Props) {
   const {
     open,
+    view,
     currentMonthLabel,
     potentialValueLabel,
     potentialValueVisible,
@@ -62,7 +86,11 @@ export default function AgendaSidebar(props: Props) {
     statusCounts,
     viewMode,
     densityMode,
+    clientSearchQuery,
+    clientResults,
+    waitlistItems,
     onToggleOpen,
+    onBackToOverview,
     onChangeView,
     onChangeDensityMode,
     onToday,
@@ -71,32 +99,50 @@ export default function AgendaSidebar(props: Props) {
     onOpenBlock,
     onOpenCredit,
     onOpenCashier,
+    onOpenClientSearch,
+    onOpenWaitlist,
+    onClientSearchQueryChange,
+    onCreateClient,
+    onOpenClient,
   } = props;
 
   if (!open) {
-    return (
-      <div className="hidden lg:flex lg:h-full lg:items-start">
-        <button
-          type="button"
-          onClick={onToggleOpen}
-          className="mt-3 inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-white/70 bg-white/95 text-zinc-700 shadow-[0_18px_45px_rgba(15,23,42,0.10)]"
-          title="Abrir painel da agenda"
-        >
-          <PanelRightOpen size={18} />
-        </button>
-      </div>
-    );
+    return null;
   }
+
+  const headerTitle =
+    view === "clientSearch"
+      ? "Buscar cliente"
+      : view === "waitlist"
+        ? "Lista de espera"
+        : "Agenda";
+  const headerSubtitle =
+    view === "clientSearch"
+      ? "Busque no cadastro e abra a ficha da cliente."
+      : view === "waitlist"
+        ? "Fila rapida de clientes e atendimentos pendentes."
+        : "Visao geral do periodo";
 
   return (
     <aside className="w-full min-h-0 lg:h-full lg:max-w-[292px] lg:min-w-[292px]">
       <div className="flex h-full min-h-0 flex-col rounded-[30px] border border-white/80 bg-white/96 p-4 shadow-[0_22px_65px_rgba(15,23,42,0.08)]">
         <div className="flex items-start justify-between gap-3">
-          <div>
-            <h2 className="text-[2rem] font-semibold tracking-[-0.06em] text-slate-900">
-              Agenda
+          <div className="min-w-0">
+            {view !== "overview" ? (
+              <button
+                type="button"
+                onClick={onBackToOverview}
+                className="mb-3 inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700"
+              >
+                <ArrowLeft size={14} />
+                Voltar
+              </button>
+            ) : null}
+
+            <h2 className="text-[1.9rem] font-semibold tracking-[-0.06em] text-slate-900">
+              {headerTitle}
             </h2>
-            <p className="mt-1 text-sm text-zinc-500">Visao geral do periodo</p>
+            <p className="mt-1 text-sm text-zinc-500">{headerSubtitle}</p>
           </div>
 
           <button
@@ -109,158 +155,303 @@ export default function AgendaSidebar(props: Props) {
           </button>
         </div>
 
-        <div className="agenda-scroll mt-5 min-h-0 flex-1 space-y-3 overflow-y-auto pr-1">
-          <section className="rounded-[22px] border border-zinc-200/80 bg-white p-4 shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-sm font-medium text-zinc-950">Valor potencial</p>
-                <p className="mt-2 text-[1.9rem] font-semibold tracking-[-0.05em] text-emerald-600">
-                  {potentialValueVisible ? potentialValueLabel : "R$ ******"}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={onTogglePotentialValueVisible}
-                className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-zinc-200 bg-zinc-50/80 text-zinc-600"
-                title={potentialValueVisible ? "Ocultar valor" : "Mostrar valor"}
-              >
-                <Eye size={18} />
-              </button>
+        <div className="agenda-scroll mt-5 min-h-0 flex-1 overflow-y-auto pr-1">
+          {view === "clientSearch" ? (
+            <ClientSearchView
+              query={clientSearchQuery}
+              results={clientResults}
+              onQueryChange={onClientSearchQueryChange}
+              onCreateClient={onCreateClient}
+              onOpenClient={onOpenClient}
+            />
+          ) : view === "waitlist" ? (
+            <WaitlistView items={waitlistItems} />
+          ) : (
+            <div className="space-y-3">
+              <section className="rounded-[22px] border border-zinc-200/80 bg-white p-4 shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-medium text-zinc-950">Valor potencial</p>
+                    <p className="mt-2 text-[1.9rem] font-semibold tracking-[-0.05em] text-emerald-600">
+                      {potentialValueVisible ? potentialValueLabel : "R$ ******"}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={onTogglePotentialValueVisible}
+                    className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-zinc-200 bg-zinc-50/80 text-zinc-600"
+                    title={potentialValueVisible ? "Ocultar valor" : "Mostrar valor"}
+                  >
+                    <Eye size={18} />
+                  </button>
+                </div>
+
+                <div className="mt-4 h-2 rounded-full bg-zinc-100">
+                  <div
+                    className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-emerald-400"
+                    style={{ width: `${Math.max(8, Math.min(potentialProgress, 100))}%` }}
+                  />
+                </div>
+
+                <div className="mt-3 flex items-center justify-between gap-3 text-sm text-zinc-500">
+                  <span>{potentialGoalLabel}</span>
+                  <span>{Math.round(potentialProgress)}%</span>
+                </div>
+              </section>
+
+              <section className="rounded-[22px] border border-zinc-200/80 bg-white p-4 shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
+                <button
+                  type="button"
+                  className="flex w-full items-center justify-between gap-3 text-left"
+                >
+                  <span className="text-[1.55rem] font-semibold tracking-[-0.05em] text-slate-900 capitalize">
+                    {currentMonthLabel}
+                  </span>
+                  <ChevronDown size={18} className="text-zinc-500" />
+                </button>
+
+                <div className="mt-4 grid grid-cols-2 gap-2.5">
+                  <MetricCard
+                    icon={<UserRoundSearch size={16} />}
+                    label="Atendimentos"
+                    value={appointmentsCount}
+                    tone="emerald"
+                  />
+                  <MetricCard
+                    icon={<Wallet size={16} />}
+                    label="Aguardando caixa"
+                    value={waitingPaymentCount}
+                    tone="amber"
+                  />
+                  <MetricCard
+                    icon={<Lock size={16} />}
+                    label="Bloqueios"
+                    value={blockedCount}
+                    tone="violet"
+                  />
+                  <MetricCard
+                    icon={<CalendarDays size={16} />}
+                    label="Atendidos"
+                    value={attendedCount}
+                    tone="sky"
+                  />
+                </div>
+              </section>
+
+              <section className="rounded-[22px] border border-zinc-200/80 bg-white p-4 shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
+                <h3 className="text-[1.3rem] font-semibold tracking-[-0.04em] text-slate-900">
+                  Status dos atendimentos
+                </h3>
+
+                <div className="mt-4 grid grid-cols-2 gap-2.5">
+                  <StatusCard label="Confirmados" value={statusCounts.confirmado} tone="emerald" />
+                  <StatusCard label="Pendentes" value={statusCounts.pendente} tone="amber" />
+                  <StatusCard
+                    label="Em caixa"
+                    value={statusCounts.aguardandoPagamento}
+                    tone="violet"
+                  />
+                  <StatusCard label="Atendidos" value={statusCounts.atendido} tone="sky" />
+                </div>
+              </section>
+
+              <section className="rounded-[22px] border border-zinc-200/80 bg-white p-4 shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
+                <h3 className="text-[1.3rem] font-semibold tracking-[-0.04em] text-slate-900">
+                  Visualizacao
+                </h3>
+
+                <div className="mt-4 grid grid-cols-3 gap-2">
+                  <ToggleButton active={false} onClick={onToday}>
+                    Hoje
+                  </ToggleButton>
+                  <ToggleButton active={viewMode === "day"} onClick={() => onChangeView("day")}>
+                    Dia
+                  </ToggleButton>
+                  <ToggleButton active={viewMode === "week"} onClick={() => onChangeView("week")}>
+                    Semana
+                  </ToggleButton>
+                </div>
+
+                <div className="mt-4 grid grid-cols-2 gap-2.5">
+                  <ModeButton
+                    active={densityMode === "reception"}
+                    label="Recepcao"
+                    icon={<Sparkles size={17} />}
+                    onClick={() => onChangeDensityMode("reception")}
+                  />
+                  <ModeButton
+                    active={densityMode === "standard"}
+                    label="Conforto"
+                    icon={<MonitorUp size={17} />}
+                    onClick={() => onChangeDensityMode("standard")}
+                  />
+                </div>
+              </section>
+
+              <section className="rounded-[22px] border border-zinc-200/80 bg-white p-4 shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
+                <h3 className="text-[1.3rem] font-semibold tracking-[-0.04em] text-slate-900">
+                  Acoes rapidas
+                </h3>
+
+                <div className="mt-4 grid grid-cols-2 gap-2.5">
+                  <QuickAction
+                    icon={<CalendarDays size={16} />}
+                    label="Novo agendamento"
+                    onClick={onOpenCreate}
+                  />
+                  <QuickAction
+                    icon={<Lock size={16} />}
+                    label="Bloquear horario"
+                    onClick={onOpenBlock}
+                  />
+                  <QuickAction
+                    icon={<Search size={16} />}
+                    label="Buscar cliente"
+                    onClick={onOpenClientSearch}
+                  />
+                  <QuickAction
+                    icon={<Users size={16} />}
+                    label="Lista de espera"
+                    onClick={onOpenWaitlist}
+                  />
+                  <QuickAction
+                    icon={<CreditCard size={16} />}
+                    label="Abrir credito"
+                    onClick={onOpenCredit}
+                  />
+                  <QuickAction
+                    icon={<Wallet size={16} />}
+                    label="Ver caixas"
+                    onClick={onOpenCashier}
+                  />
+                </div>
+              </section>
             </div>
-
-            <div className="mt-4 h-2 rounded-full bg-zinc-100">
-              <div
-                className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-emerald-400"
-                style={{ width: `${Math.max(8, Math.min(potentialProgress, 100))}%` }}
-              />
-            </div>
-
-            <div className="mt-3 flex items-center justify-between gap-3 text-sm text-zinc-500">
-              <span>{potentialGoalLabel}</span>
-              <span>{Math.round(potentialProgress)}%</span>
-            </div>
-          </section>
-
-          <section className="rounded-[22px] border border-zinc-200/80 bg-white p-4 shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
-            <button
-              type="button"
-              className="flex w-full items-center justify-between gap-3 text-left"
-            >
-              <span className="text-[1.55rem] font-semibold tracking-[-0.05em] text-slate-900 capitalize">
-                {currentMonthLabel}
-              </span>
-              <ChevronDown size={18} className="text-zinc-500" />
-            </button>
-
-            <div className="mt-4 grid grid-cols-2 gap-2.5">
-              <MetricCard
-                icon={<UserRoundSearch size={16} />}
-                label="Atendimentos"
-                value={appointmentsCount}
-                tone="emerald"
-              />
-              <MetricCard
-                icon={<Wallet size={16} />}
-                label="Aguardando caixa"
-                value={waitingPaymentCount}
-                tone="amber"
-              />
-              <MetricCard
-                icon={<Lock size={16} />}
-                label="Bloqueios"
-                value={blockedCount}
-                tone="violet"
-              />
-              <MetricCard
-                icon={<CalendarDays size={16} />}
-                label="Atendidos"
-                value={attendedCount}
-                tone="sky"
-              />
-            </div>
-          </section>
-
-          <section className="rounded-[22px] border border-zinc-200/80 bg-white p-4 shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
-            <h3 className="text-[1.3rem] font-semibold tracking-[-0.04em] text-slate-900">
-              Status dos atendimentos
-            </h3>
-
-            <div className="mt-4 grid grid-cols-2 gap-2.5">
-              <StatusCard label="Confirmados" value={statusCounts.confirmado} tone="emerald" />
-              <StatusCard label="Pendentes" value={statusCounts.pendente} tone="amber" />
-              <StatusCard
-                label="Em caixa"
-                value={statusCounts.aguardandoPagamento}
-                tone="violet"
-              />
-              <StatusCard label="Atendidos" value={statusCounts.atendido} tone="sky" />
-            </div>
-          </section>
-
-          <section className="rounded-[22px] border border-zinc-200/80 bg-white p-4 shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
-            <h3 className="text-[1.3rem] font-semibold tracking-[-0.04em] text-slate-900">
-              Visualizacao
-            </h3>
-
-            <div className="mt-4 grid grid-cols-3 gap-2">
-              <ToggleButton active={false} onClick={onToday}>
-                Hoje
-              </ToggleButton>
-              <ToggleButton active={viewMode === "day"} onClick={() => onChangeView("day")}>
-                Dia
-              </ToggleButton>
-              <ToggleButton active={viewMode === "week"} onClick={() => onChangeView("week")}>
-                Semana
-              </ToggleButton>
-            </div>
-
-            <div className="mt-4 grid grid-cols-2 gap-2.5">
-              <ModeButton
-                active={densityMode === "reception"}
-                label="Recepcao"
-                icon={<Sparkles size={17} />}
-                onClick={() => onChangeDensityMode("reception")}
-              />
-              <ModeButton
-                active={densityMode === "standard"}
-                label="Conforto"
-                icon={<MonitorUp size={17} />}
-                onClick={() => onChangeDensityMode("standard")}
-              />
-            </div>
-          </section>
-
-          <section className="rounded-[22px] border border-zinc-200/80 bg-white p-4 shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
-            <h3 className="text-[1.3rem] font-semibold tracking-[-0.04em] text-slate-900">
-              Acoes rapidas
-            </h3>
-
-            <div className="mt-4 grid grid-cols-2 gap-2.5">
-              <QuickAction
-                icon={<CalendarDays size={16} />}
-                label="Novo agendamento"
-                onClick={onOpenCreate}
-              />
-              <QuickAction
-                icon={<Lock size={16} />}
-                label="Bloquear horario"
-                onClick={onOpenBlock}
-              />
-              <QuickAction
-                icon={<CreditCard size={16} />}
-                label="Abrir credito"
-                onClick={onOpenCredit}
-              />
-              <QuickAction
-                icon={<Wallet size={16} />}
-                label="Ver caixas"
-                onClick={onOpenCashier}
-              />
-            </div>
-          </section>
+          )}
         </div>
       </div>
     </aside>
+  );
+}
+
+function ClientSearchView({
+  query,
+  results,
+  onQueryChange,
+  onCreateClient,
+  onOpenClient,
+}: {
+  query: string;
+  results: Cliente[];
+  onQueryChange: (value: string) => void;
+  onCreateClient: () => void;
+  onOpenClient: (clientId: string) => void;
+}) {
+  return (
+    <div className="space-y-3">
+      <section className="rounded-[22px] border border-zinc-200/80 bg-white p-4 shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
+        <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.14em] text-zinc-400">
+          Filtro da cliente
+        </label>
+        <div className="flex items-center gap-3 rounded-[20px] border border-zinc-200 bg-zinc-50 px-3 py-3">
+          <Search size={16} className="text-zinc-400" />
+          <input
+            type="text"
+            value={query}
+            onChange={(event) => onQueryChange(event.target.value)}
+            placeholder="Digite o nome ou whatsapp"
+            className="w-full bg-transparent text-sm text-zinc-900 outline-none"
+          />
+        </div>
+      </section>
+
+      <section className="rounded-[22px] border border-zinc-200/80 bg-white p-4 shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
+        <div className="text-[1.15rem] font-semibold tracking-[-0.04em] text-slate-900">
+          Resultado
+        </div>
+
+        {results.length > 0 ? (
+          <div className="mt-4 space-y-2.5">
+            {results.map((client) => (
+              <button
+                key={client.id}
+                type="button"
+                onClick={() => onOpenClient(client.id)}
+                className="flex w-full items-center justify-between gap-3 rounded-[20px] border border-zinc-200 bg-white px-4 py-3 text-left shadow-[0_8px_20px_rgba(15,23,42,0.04)]"
+              >
+                <div className="min-w-0">
+                  <div className="truncate text-sm font-semibold text-zinc-900">
+                    {client.nome}
+                  </div>
+                  <div className="mt-1 truncate text-xs text-zinc-500">
+                    {client.whatsapp || "Sem whatsapp cadastrado"}
+                  </div>
+                </div>
+                <span className="text-xs font-semibold text-violet-600">Abrir</span>
+              </button>
+            ))}
+          </div>
+        ) : (
+          <div className="mt-4 rounded-[20px] border border-dashed border-zinc-200 bg-zinc-50 px-4 py-4">
+            <div className="text-sm font-semibold text-zinc-900">Nao encontrado</div>
+            <p className="mt-1 text-sm text-zinc-500">
+              Deseja criar novo cliente?
+            </p>
+            <button
+              type="button"
+              onClick={onCreateClient}
+              className="mt-3 rounded-2xl bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white"
+            >
+              Criar novo cliente
+            </button>
+          </div>
+        )}
+      </section>
+    </div>
+  );
+}
+
+function WaitlistView({ items }: { items: AgendaWaitlistItem[] }) {
+  return (
+    <div className="space-y-3">
+      <section className="rounded-[22px] border border-zinc-200/80 bg-white p-4 shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
+        <div className="text-[1.15rem] font-semibold tracking-[-0.04em] text-slate-900">
+          Clientes aguardando
+        </div>
+        <p className="mt-1 text-sm text-zinc-500">
+          Lista rapida para acompanhar encaixes e pendencias da agenda.
+        </p>
+
+        {items.length > 0 ? (
+          <div className="mt-4 space-y-2.5">
+            {items.map((item) => (
+              <div
+                key={item.id}
+                className="rounded-[20px] border border-zinc-200 bg-white px-4 py-3 shadow-[0_8px_20px_rgba(15,23,42,0.04)]"
+              >
+                <div className="text-sm font-semibold text-zinc-900">{item.clientName}</div>
+                <div className="mt-1 text-xs text-zinc-500">{item.serviceName}</div>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <span className="rounded-full bg-zinc-100 px-2.5 py-1 text-[11px] font-medium text-zinc-600">
+                    {item.dateLabel}
+                  </span>
+                  <span className="rounded-full bg-zinc-100 px-2.5 py-1 text-[11px] font-medium text-zinc-600">
+                    {item.timeLabel}
+                  </span>
+                  <span className="rounded-full bg-amber-100 px-2.5 py-1 text-[11px] font-medium text-amber-700">
+                    {item.statusLabel}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="mt-4 rounded-[20px] border border-dashed border-zinc-200 bg-zinc-50 px-4 py-4 text-sm text-zinc-500">
+            Nenhuma cliente na lista de espera agora.
+          </div>
+        )}
+      </section>
+    </div>
   );
 }
 

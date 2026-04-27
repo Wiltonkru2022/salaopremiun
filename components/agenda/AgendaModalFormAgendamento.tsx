@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { Clock3, Plus, Receipt, StickyNote, UserRound } from "lucide-react";
+import { Clock3, Receipt, StickyNote, UserRound } from "lucide-react";
 import SearchableSelect, {
   type SearchableOption,
 } from "@/components/ui/SearchableSelect";
@@ -21,7 +21,6 @@ type Props = {
   loadingComanda: boolean;
   comandaNumero: number | null;
   editingItem?: Agendamento | null;
-  quickClientOpen: boolean;
   onProfissionalChange: (value: string) => void;
   onClienteChange: (value: string) => Promise<void>;
   onServicoChange: (value: string) => void;
@@ -29,7 +28,6 @@ type Props = {
   onObservacoesChange: (value: string) => void;
   onStatusChange: (value: AgendaStatus) => void;
   onAbrirComanda: () => Promise<void>;
-  onToggleQuickClient: (value: boolean) => void;
   onCancelAppointment: (item: Agendamento) => Promise<void>;
 };
 
@@ -66,7 +64,6 @@ export default function AgendaModalFormAgendamento({
   loadingComanda,
   comandaNumero,
   editingItem,
-  quickClientOpen,
   onProfissionalChange,
   onClienteChange,
   onServicoChange,
@@ -74,7 +71,6 @@ export default function AgendaModalFormAgendamento({
   onObservacoesChange,
   onStatusChange,
   onAbrirComanda,
-  onToggleQuickClient,
   onCancelAppointment,
 }: Props) {
   return (
@@ -91,19 +87,9 @@ export default function AgendaModalFormAgendamento({
           />
 
           <div>
-            <div className="mb-1.5 flex items-center justify-between gap-2">
-              <label className="block text-xs font-semibold text-zinc-700">
-                Cliente
-              </label>
-              <button
-                type="button"
-                onClick={() => onToggleQuickClient(!quickClientOpen)}
-                className="inline-flex items-center gap-1.5 rounded-full border border-zinc-200 bg-white px-3 py-1 text-[11px] font-semibold text-zinc-700 transition hover:bg-zinc-50"
-              >
-                <Plus size={12} />
-                {quickClientOpen ? "Fechar cadastro" : "Cadastro rapido"}
-              </button>
-            </div>
+            <label className="mb-1.5 block text-xs font-semibold text-zinc-700">
+              Cliente
+            </label>
 
             <SearchableSelect
               placeholder="Digite o nome da cliente"
