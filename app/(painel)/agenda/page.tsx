@@ -974,6 +974,7 @@ export default function AgendaPage() {
                   !hasClosedComanda &&
                   isInteractiveStatus;
                 const canEdit = !hasClosedComanda && isInteractiveStatus;
+                const canCancel = !hasClosedComanda && isInteractiveStatus;
                 const canChangeStatus =
                   !hasClosedComanda &&
                   !item.id_comanda &&
@@ -1007,6 +1008,18 @@ export default function AgendaPage() {
                           icon: Trash2,
                           tone: "danger" as const,
                           onClick: () => void handleDeleteEvent(item),
+                        },
+                      ]
+                    : []),
+                  ...(canCancel
+                    ? [
+                        {
+                          label: "Cancelar agendamento",
+                          description:
+                            "Cancela o agendamento e ajusta a comanda vinculada quando existir.",
+                          icon: Ban,
+                          tone: "danger" as const,
+                          onClick: () => void handleCancelAppointment(item),
                         },
                       ]
                     : []),
