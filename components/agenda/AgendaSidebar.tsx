@@ -119,6 +119,29 @@ export default function AgendaSidebar(props: Props) {
         </div>
 
         <div className="mt-5 space-y-3">
+          <section className="rounded-[24px] border border-violet-200/80 bg-violet-50/70 p-4 shadow-[0_12px_35px_rgba(124,58,237,0.08)]">
+            <button
+              type="button"
+              onClick={onOpenFullscreen}
+              className="flex w-full items-center justify-between gap-3 text-left"
+            >
+              <div>
+                <div className="text-sm font-semibold uppercase tracking-[0.16em] text-violet-500">
+                  Modo foco
+                </div>
+                <div className="mt-1 text-lg font-semibold tracking-[-0.03em] text-slate-900">
+                  Abrir agenda em tela cheia
+                </div>
+                <div className="mt-1 text-sm text-zinc-600">
+                  Some com painel e topo para ver so a agenda.
+                </div>
+              </div>
+              <div className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-violet-200 bg-white text-violet-600">
+                <Maximize2 size={18} />
+              </div>
+            </button>
+          </section>
+
           <section className="rounded-[24px] border border-zinc-200/80 bg-white p-4 shadow-[0_12px_35px_rgba(15,23,42,0.06)]">
             <div className="flex items-start justify-between gap-3">
               <div>

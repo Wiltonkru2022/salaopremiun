@@ -93,7 +93,7 @@ export default function AgendaContextMenu({
 
       <div
         ref={menuRef}
-        className="fixed z-[206] flex max-h-[calc(100vh-24px)] w-[min(94vw,380px)] flex-col overflow-hidden rounded-[22px] border border-zinc-200 bg-white shadow-[0_28px_90px_rgba(15,23,42,0.18)]"
+        className="fixed z-[420] flex max-h-[calc(100vh-16px)] w-[min(96vw,420px)] flex-col overflow-hidden rounded-[22px] border border-zinc-200 bg-white shadow-[0_28px_90px_rgba(15,23,42,0.18)]"
         style={{
           left: position.left,
           top: position.top,
