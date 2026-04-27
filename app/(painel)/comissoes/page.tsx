@@ -205,39 +205,48 @@ export default function ComissoesPage() {
         <head>
           <title>Rateio de comissoes</title>
           <style>
+            @page { size: A4 landscape; margin: 10mm; }
             * { box-sizing: border-box; }
             body { font-family: Arial, Helvetica, sans-serif; margin: 0; color: #18181b; background: #fff; }
-            .page { padding: 28px 34px 42px; }
-            .header { display: flex; justify-content: space-between; gap: 24px; align-items: flex-start; border-bottom: 2px solid #111827; padding-bottom: 18px; }
-            .eyebrow { font-size: 11px; letter-spacing: .18em; text-transform: uppercase; color: #71717a; font-weight: 700; }
-            .title { font-size: 30px; font-weight: 700; margin: 8px 0 6px; }
-            .muted { color: #52525b; font-size: 12px; line-height: 1.6; }
+            .page { padding: 10px 12px 18px; }
+            .header { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; border-bottom: 1px solid #111827; padding-bottom: 10px; }
+            .eyebrow { font-size: 9px; letter-spacing: .14em; text-transform: uppercase; color: #71717a; font-weight: 700; }
+            .title { font-size: 20px; font-weight: 700; margin: 4px 0; }
+            .muted { color: #52525b; font-size: 10px; line-height: 1.45; }
             .period { text-align: right; }
-            .kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 18px; }
-            .kpi { border: 1px solid #e4e4e7; border-radius: 16px; padding: 14px 16px; background: #fafafa; }
-            .kpi-label { font-size: 11px; text-transform: uppercase; letter-spacing: .12em; color: #71717a; }
-            .kpi-value { margin-top: 8px; font-size: 20px; font-weight: 700; }
-            .group { margin-top: 28px; page-break-inside: avoid; }
-            .group-header { display: flex; justify-content: space-between; gap: 18px; align-items: stretch; }
-            .group-card { flex: 1; border: 1px solid #e4e4e7; border-radius: 18px; padding: 16px 18px; background: #fff; }
-            .group-title { font-size: 22px; font-weight: 700; margin: 6px 0 10px; }
-            .meta-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 10px 18px; }
-            .meta-label { font-size: 11px; text-transform: uppercase; letter-spacing: .12em; color: #71717a; }
-            .meta-value { margin-top: 4px; font-size: 14px; font-weight: 600; color: #18181b; }
-            .total-box { width: 240px; border: 1px solid #d4d4d8; border-radius: 18px; padding: 16px 18px; background: linear-gradient(180deg,#faf5ff 0%,#ffffff 100%); }
-            .total-box .total { margin-top: 8px; font-size: 28px; font-weight: 700; }
-            table { width: 100%; border-collapse: collapse; margin-top: 14px; }
-            th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .1em; color: #71717a; background: #f4f4f5; padding: 12px 10px; border: 1px solid #e4e4e7; }
-            td { padding: 11px 10px; border: 1px solid #e4e4e7; font-size: 12px; vertical-align: top; }
+            .kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
+            .kpi { border: 1px solid #e4e4e7; border-radius: 10px; padding: 8px 10px; background: #fafafa; }
+            .kpi-label { font-size: 9px; text-transform: uppercase; letter-spacing: .1em; color: #71717a; }
+            .kpi-value { margin-top: 4px; font-size: 15px; font-weight: 700; }
+            .group { margin-top: 14px; break-inside: avoid; page-break-inside: avoid; }
+            .group-header { display: grid; grid-template-columns: 1fr 180px; gap: 10px; align-items: start; }
+            .group-card { border: 1px solid #e4e4e7; border-radius: 10px; padding: 10px 12px; background: #fff; }
+            .group-title { font-size: 16px; font-weight: 700; margin: 4px 0 6px; }
+            .meta-grid { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 6px 10px; }
+            .meta-label { font-size: 9px; text-transform: uppercase; letter-spacing: .1em; color: #71717a; }
+            .meta-value { margin-top: 2px; font-size: 11px; font-weight: 600; color: #18181b; }
+            .total-box { border: 1px solid #d4d4d8; border-radius: 10px; padding: 10px 12px; background: linear-gradient(180deg,#faf5ff 0%,#ffffff 100%); }
+            .total-box .total { margin-top: 4px; font-size: 18px; font-weight: 700; }
+            table { width: 100%; border-collapse: collapse; margin-top: 8px; table-layout: fixed; }
+            th { text-align: left; font-size: 8.5px; text-transform: uppercase; letter-spacing: .08em; color: #71717a; background: #f4f4f5; padding: 7px 6px; border: 1px solid #e4e4e7; }
+            td { padding: 6px 6px; border: 1px solid #e4e4e7; font-size: 10px; vertical-align: top; }
             .money { font-weight: 700; white-space: nowrap; }
-            .signature-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 34px; margin-top: 34px; }
-            .signature { padding-top: 34px; border-top: 1px solid #18181b; }
-            .signature-name { font-size: 14px; font-weight: 700; }
-            .signature-role { margin-top: 4px; font-size: 12px; color: #52525b; }
-            .signature-doc { margin-top: 6px; font-size: 12px; color: #52525b; }
-            .footer-note { margin-top: 18px; font-size: 11px; color: #71717a; }
+            .signature-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 20px; margin-top: 14px; }
+            .signature { padding-top: 14px; border-top: 1px solid #18181b; min-height: 48px; }
+            .signature-name { font-size: 11px; font-weight: 700; }
+            .signature-role { margin-top: 3px; font-size: 9px; color: #52525b; }
+            .signature-doc { margin-top: 4px; font-size: 9px; color: #52525b; }
+            .footer-note { margin-top: 10px; font-size: 9px; color: #71717a; }
+            .col-desc { width: 28%; }
+            .col-competencia { width: 10%; }
+            .col-base { width: 11%; }
+            .col-percent { width: 9%; }
+            .col-origem { width: 15%; }
+            .col-comissao { width: 11%; }
+            .col-status { width: 8%; }
+            .col-pago { width: 12%; }
             @media print {
-              .group + .group { page-break-before: always; }
+              .page { padding: 0; }
             }
           </style>
         </head>
@@ -255,7 +264,7 @@ export default function ComissoesPage() {
               </div>
               <div class="period">
                 <div class="eyebrow">Periodo</div>
-                <div class="title" style="font-size:22px;">${escapeHtml(
+                <div class="title" style="font-size:16px;">${escapeHtml(
                   `${formatDate(dataInicial)} ate ${formatDate(dataFinal)}`
                 )}</div>
                 <div class="muted">Gerado em ${escapeHtml(formatDateTime(new Date().toISOString()))}</div>
@@ -335,14 +344,14 @@ export default function ComissoesPage() {
                     <table>
                       <thead>
                         <tr>
-                          <th>Descricao</th>
-                          <th>Competencia</th>
-                          <th>Base</th>
-                          <th>% Aplicada</th>
-                          <th>Origem</th>
-                          <th>Comissao</th>
-                          <th>Status</th>
-                          <th>Pago em</th>
+                          <th class="col-desc">Descricao</th>
+                          <th class="col-competencia">Competencia</th>
+                          <th class="col-base">Base</th>
+                          <th class="col-percent">% Aplicada</th>
+                          <th class="col-origem">Origem</th>
+                          <th class="col-comissao">Comissao</th>
+                          <th class="col-status">Status</th>
+                          <th class="col-pago">Pago em</th>
                         </tr>
                       </thead>
                       <tbody>${linhas}</tbody>
