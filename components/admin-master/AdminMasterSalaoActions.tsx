@@ -17,12 +17,22 @@ type FeedbackState = {
 function formatDateInput(value?: string | null) {
   if (!value) return "";
 
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return String(value).slice(0, 10);
+  const normalized = String(value).trim();
+  const isoMatch = normalized.match(/^(\d{4}-\d{2}-\d{2})/);
+
+  if (isoMatch) {
+    return isoMatch[1];
   }
 
-  return date.toISOString().slice(0, 10);
+  const date = new Date(normalized);
+  if (Number.isNaN(date.getTime())) {
+    return normalized.slice(0, 10);
+  }
+
+  const year = date.getUTCFullYear();
+  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(date.getUTCDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 async function parseApiResponse(response: Response) {

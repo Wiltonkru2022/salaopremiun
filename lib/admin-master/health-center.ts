@@ -1,3 +1,7 @@
+import {
+  getAdminMasterOperationalSnapshot,
+  type AdminHealthOverview,
+} from "@/lib/admin-master/operability";
 import { runAdminOperation } from "@/lib/supabase/admin-ops";
 
 export type HealthTone = "green" | "amber" | "red" | "blue" | "dark";
@@ -152,47 +156,38 @@ function buildAlertSubtitle(params: {
   );
 }
 
-function healthScore(params: {
-  webhookErrors: number;
-  checkoutFailures: number;
-  blockedSalons: number;
-  criticalAlerts: number;
-  cronFailures: number;
-}) {
-  const penalty =
-    params.webhookErrors * 12 +
-    params.checkoutFailures * 14 +
-    params.blockedSalons * 4 +
-    params.criticalAlerts * 10 +
-    params.cronFailures * 10;
-
-  return Math.max(0, Math.min(100, 100 - penalty));
-}
-
-function statusFromScore(score: number): Pick<
+function statusFromOperationalHealth(health: AdminHealthOverview): Pick<
   AdminMasterHealthCenter,
   "statusLabel" | "statusTone" | "summary"
 > {
-  if (score >= 92) {
+  if (health.status === "green") {
     return {
-      statusLabel: "Operacao saudavel",
+      statusLabel: health.label,
       statusTone: "green",
-      summary: "Sem sinais criticos nos principais fluxos SaaS.",
+      summary: health.summary,
     };
   }
 
-  if (score >= 75) {
+  if (health.status === "yellow") {
     return {
-      statusLabel: "Atencao operacional",
+      statusLabel: health.label,
       statusTone: "amber",
-      summary: "Existe risco moderado. Priorize alertas, cron e checkout.",
+      summary: health.summary,
+    };
+  }
+
+  if (health.status === "orange") {
+    return {
+      statusLabel: health.label,
+      statusTone: "amber",
+      summary: health.summary,
     };
   }
 
   return {
-    statusLabel: "Risco alto",
+    statusLabel: health.label,
     statusTone: "red",
-    summary: "Ha falhas que podem afetar cobranca, acesso ou suporte.",
+    summary: health.summary,
   };
 }
 
@@ -203,6 +198,7 @@ export async function getAdminMasterHealthCenter(): Promise<AdminMasterHealthCen
       const last24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
       const [
+    operational,
     webhookErrors,
     webhooksProcessing,
     checkoutFailures,
@@ -215,6 +211,7 @@ export async function getAdminMasterHealthCenter(): Promise<AdminMasterHealthCen
     recentCrons,
     recentAlerts,
       ] = await Promise.all([
+    getAdminMasterOperationalSnapshot(),
     supabase
       .from("asaas_webhook_eventos")
       .select("id", { count: "exact", head: true })
@@ -227,7 +224,8 @@ export async function getAdminMasterHealthCenter(): Promise<AdminMasterHealthCen
     supabase
       .from("assinatura_checkout_locks")
       .select("id", { count: "exact", head: true })
-      .in("status", ["erro", "expirado"]),
+      .in("status", ["erro", "expirado"])
+      .gte("updated_at", last24h),
     supabase
       .from("assinatura_checkout_locks")
       .select("id", { count: "exact", head: true })
@@ -240,7 +238,8 @@ export async function getAdminMasterHealthCenter(): Promise<AdminMasterHealthCen
       .from("alertas_sistema")
       .select("id", { count: "exact", head: true })
       .eq("resolvido", false)
-      .in("gravidade", ["alta", "critica"]),
+      .in("gravidade", ["alta", "critica"])
+      .gte("atualizado_em", last24h),
     supabase
       .from("eventos_cron")
       .select("id", { count: "exact", head: true })
@@ -280,9 +279,8 @@ export async function getAdminMasterHealthCenter(): Promise<AdminMasterHealthCen
     criticalAlerts: safeCount(criticalAlerts),
     cronFailures: safeCount(cronFailures),
       };
-
-      const score = healthScore(counts);
-      const status = statusFromScore(score);
+      const score = operational.health.score;
+      const status = statusFromOperationalHealth(operational.health);
 
       const actions: HealthAction[] = [
     counts.webhookErrors > 0
@@ -323,7 +321,7 @@ export async function getAdminMasterHealthCenter(): Promise<AdminMasterHealthCen
         actions.push({
           title: "Manter monitoramento ativo",
           detail:
-            "Nenhum incidente critico agora. Continue acompanhando webhooks e cobrancas.",
+            "Nenhum incidente critico ativo agora. Continue acompanhando webhooks e cobrancas.",
           href: "/admin-master/operacao",
           tone: "green",
         });

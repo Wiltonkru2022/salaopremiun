@@ -11,6 +11,7 @@ type MonitoringEventRow = {
   acao?: string | null;
   response_ms?: number | null;
   sucesso?: boolean | null;
+  eh_erro_usuario?: boolean | null;
   created_at?: string | null;
 };
 
@@ -311,7 +312,7 @@ export async function getAdminMasterOperationalSnapshot(): Promise<AdminMasterOp
     supabase
       .from("eventos_sistema")
       .select(
-        "id, id_salao, modulo, tipo_evento, severidade, mensagem, rota, acao, response_ms, sucesso, created_at"
+        "id, id_salao, modulo, tipo_evento, severidade, mensagem, rota, acao, response_ms, sucesso, eh_erro_usuario, created_at"
       )
       .gte("created_at", last24h)
       .order("created_at", { ascending: false })
@@ -388,6 +389,10 @@ export async function getAdminMasterOperationalSnapshot(): Promise<AdminMasterOp
 
   const failingEvents = events.filter((event) => {
     const severity = String(event.severidade || "").toLowerCase();
+    if (event.eh_erro_usuario) {
+      return false;
+    }
+
     return event.sucesso === false || severity === "error" || severity === "critical";
   });
   const impactedSalonsFromEvents = new Set(
@@ -465,8 +470,9 @@ export async function getAdminMasterOperationalSnapshot(): Promise<AdminMasterOp
       previous12hFailures: 0,
     };
     const failed =
-      event.sucesso === false ||
-      ["error", "critical"].includes(String(event.severidade || "").toLowerCase());
+      !event.eh_erro_usuario &&
+      (event.sucesso === false ||
+        ["error", "critical"].includes(String(event.severidade || "").toLowerCase()));
 
     current.total += 1;
 
