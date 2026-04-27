@@ -1,6 +1,4 @@
 import { NextResponse } from "next/server";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
-import type { Json } from "@/types/database.generated";
 import {
   getMetaWhatsAppWebhookVerifyToken,
   getMetaWhatsAppAppSecret,
@@ -9,6 +7,7 @@ import {
   isMetaWebhookSignatureValid,
   isMetaWebhookVerifyRequest,
 } from "@/lib/whatsapp/meta-cloud";
+import { processMetaWhatsAppWebhook } from "@/services/metaWhatsAppWebhookService";
 
 type WebhookEvent = {
   kind: "status" | "message";
@@ -26,21 +25,6 @@ function asRecord(value: unknown) {
 
 function asArray(value: unknown) {
   return Array.isArray(value) ? value : [];
-}
-
-function mapMetaStatus(status: string | null) {
-  switch (String(status || "").trim().toLowerCase()) {
-    case "sent":
-      return "enviado";
-    case "delivered":
-      return "entregue";
-    case "read":
-      return "lido";
-    case "failed":
-      return "falhou";
-    default:
-      return String(status || "").trim().toLowerCase() || "recebido";
-  }
 }
 
 function extractWebhookEvents(body: Record<string, unknown>) {
@@ -123,93 +107,20 @@ export async function POST(request: Request) {
   }
 
   const body = rawBody ? (JSON.parse(rawBody) as Record<string, unknown>) : {};
-  const supabaseAdmin = getSupabaseAdmin();
   const events = extractWebhookEvents(body);
 
-  if (events.length === 0) {
-    const { error } = await supabaseAdmin.from("whatsapp_filas").insert({
-      id_salao: null,
-      payload_json: {
-        provider: "meta_cloud",
-        kind: "unknown",
-        received_at: new Date().toISOString(),
-        body,
-      } as Json,
-      status: "recebido",
-      tentativas: 1,
-      processado_em: new Date().toISOString(),
-    });
-
-    if (error) {
-      return NextResponse.json(
-        { error: "Erro ao registrar webhook Meta." },
-        { status: 500 }
-      );
-    }
-
-    return NextResponse.json({ ok: true }, { status: 200 });
-  }
-
-  for (const event of events) {
-    let idSalao: string | null = null;
-    let envioId: string | null = null;
-
-    if (event.providerMessageId) {
-      const envioLookup = await supabaseAdmin
-        .from("whatsapp_envios")
-        .select("id, id_salao")
-        .eq("provider_message_id", event.providerMessageId)
-        .maybeSingle();
-
-      envioId = envioLookup.data?.id || null;
-      idSalao = envioLookup.data?.id_salao || null;
-
-      if (event.kind === "status" && envioId) {
-        const erroTexto =
-          event.providerStatus === "failed" ||
-          event.providerStatus === "falhou"
-            ? JSON.stringify(event.body).slice(0, 500)
-            : null;
-
-        const envioUpdate = await supabaseAdmin
-          .from("whatsapp_envios")
-          .update({
-            status: mapMetaStatus(event.providerStatus),
-            erro_texto: erroTexto,
-          })
-          .eq("id", envioId);
-
-        if (envioUpdate.error) {
-          return NextResponse.json(
-            { error: "Erro ao atualizar status do envio WhatsApp." },
-            { status: 500 }
-          );
-        }
-      }
-    }
-
-    const filaInsert = await supabaseAdmin.from("whatsapp_filas").insert({
-      id_salao: idSalao,
-      payload_json: {
-        provider: "meta_cloud",
-        kind: event.kind,
-        provider_message_id: event.providerMessageId,
-        provider_status: event.providerStatus,
-        wa_id: event.waId,
-        received_at: new Date().toISOString(),
-        body: event.body,
-      } as Json,
-      status: "processado",
-      tentativas: 1,
-      processado_em: new Date().toISOString(),
-    });
-
-    if (filaInsert.error) {
-      return NextResponse.json(
-        { error: "Erro ao registrar evento do webhook Meta." },
-        { status: 500 }
-      );
-    }
+  try {
+    await processMetaWhatsAppWebhook({ body, events });
+  } catch (error) {
+    return NextResponse.json(
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : "Erro ao processar webhook Meta.",
+      },
+      { status: 500 }
+    );
   }
 
   return NextResponse.json({ ok: true }, { status: 200 });

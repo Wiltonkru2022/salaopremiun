@@ -65,7 +65,7 @@ export async function sendManualMarketingWhatsApp({
   let envioId: string | null = null;
 
   try {
-    const reservaResult = await (supabaseAdmin as any).rpc("reservar_credito_whatsapp", {
+    const reservaResult = await supabaseAdmin.rpc("reservar_credito_whatsapp", {
       p_id_salao: idSalao,
       p_quantidade: 1,
     });
@@ -151,7 +151,7 @@ export async function sendManualMarketingWhatsApp({
       error instanceof Error ? error.message : "Erro ao enviar mensagem WhatsApp.";
 
     if (creditoReservaId) {
-      await (supabaseAdmin as any).rpc("estornar_credito_whatsapp", {
+      await supabaseAdmin.rpc("estornar_credito_whatsapp", {
         p_credito_id: creditoReservaId,
         p_quantidade: 1,
       });

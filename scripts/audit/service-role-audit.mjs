@@ -9,7 +9,10 @@ const GUARDRULES = [
   ["supabase_user", /auth\.getUser\(|getUser\(|validarSalaoDoUsuario|getPainelTicketContext|requireSalao/],
   ["salao_admin", /requireAdminSalao/],
   ["profissional_session", /getProfissionalSessionFromCookie|getProfissionalTicketContext|requireProfissionalSession/],
-  ["webhook_secret", /validarTokenWebhook|ASAAS_WEBHOOK_TOKEN|verifyHeaderSecret/],
+  [
+    "webhook_secret",
+    /validarTokenWebhook|ASAAS_WEBHOOK_TOKEN|verifyHeaderSecret|isMetaWebhookSignatureValid|getMetaWhatsAppAppSecret|isMetaWebhookVerifyRequest/,
+  ],
   ["cron_secret", /validarCron|CRON_SECRET|verifyBearerSecret/],
 ];
 

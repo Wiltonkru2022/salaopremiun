@@ -31,6 +31,7 @@ const GUARD_HINTS = [
   "getAdminMasterAccess(",
   "getProfissionalSessionFromCookie(",
   "requireProfissionalSession(",
+  "requireProfissionalAppContext(",
   "requireProfissionalServerContext(",
   "getProfissionalTicketContext(",
   "getPainelTicketContext(",

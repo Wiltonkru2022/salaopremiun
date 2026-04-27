@@ -208,7 +208,7 @@ async function carregarSalao(idSalao: string) {
 
 async function buscarCompraPendente(idSalao: string, pacoteId: string) {
   const supabaseAdmin = getSupabaseAdmin();
-  const { data, error } = await (supabaseAdmin as any)
+  const { data, error } = await supabaseAdmin
     .from("whatsapp_pacote_compras")
     .select(
       "id, status, billing_type, valor, quantidade_creditos, asaas_payment_id, invoice_url, bank_slip_url, pix_copia_cola, qr_code_base64"
@@ -283,7 +283,7 @@ export function createWhatsappPacoteCheckoutService() {
         params.idempotencyKey || `${idSalao}:${pacote.id}:${billingType}`
       ).trim();
 
-      const { error: insertError } = await (supabaseAdmin as any)
+      const { error: insertError } = await supabaseAdmin
         .from("whatsapp_pacote_compras")
         .insert({
           id: compraId,
@@ -342,7 +342,7 @@ export function createWhatsappPacoteCheckoutService() {
         }
       }
 
-      const { error: updateError } = await (supabaseAdmin as any)
+      const { error: updateError } = await supabaseAdmin
         .from("whatsapp_pacote_compras")
         .update({
           asaas_payment_id: paymentId,
