@@ -3,6 +3,12 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import {
+  AlertTriangle,
+  ArrowRight,
+  CheckCircle2,
+  LoaderCircle,
+} from "lucide-react";
 
 type ModuleAction =
   | {
@@ -200,8 +206,7 @@ function resolveModuleAction(action: string): ModuleAction {
 
   return {
     kind: "feedback",
-    message:
-      "Esta acao precisa de um registro especifico na tabela ou de uma tela dedicada.",
+    message: `Ainda nao existe automacao pronta para "${action}". Abra o modulo relacionado ou conclua essa tarefa por uma tela dedicada.`,
   };
 }
 
@@ -223,6 +228,22 @@ function buttonClass(variant: "pill" | "list", state: ActionState) {
   }`;
 }
 
+function StatusIcon({ state }: { state: ActionState }) {
+  if (state === "loading") {
+    return <LoaderCircle size={15} className="animate-spin" />;
+  }
+
+  if (state === "success") {
+    return <CheckCircle2 size={15} />;
+  }
+
+  if (state === "error") {
+    return <AlertTriangle size={15} />;
+  }
+
+  return null;
+}
+
 export default function AdminMasterModuleActionButton({
   action,
   variant = "list",
@@ -242,7 +263,10 @@ export default function AdminMasterModuleActionButton({
         className={buttonClass(variant, "idle")}
         title={`Abrir ${resolved.href}`}
       >
-        {action}
+        <span className="inline-flex items-center gap-2">
+          {action}
+          <ArrowRight size={15} />
+        </span>
       </Link>
     );
   }
@@ -256,7 +280,7 @@ export default function AdminMasterModuleActionButton({
       window.setTimeout(() => {
         setState("idle");
         setLabel(action);
-      }, 2500);
+      }, 2800);
       return;
     }
 
@@ -283,9 +307,17 @@ export default function AdminMasterModuleActionButton({
       setState("success");
       setLabel(currentAction.successLabel);
       router.refresh();
+      window.setTimeout(() => {
+        setState("idle");
+        setLabel(action);
+      }, 2200);
     } catch (error) {
       setState("error");
       setLabel(error instanceof Error ? error.message : "Falha na acao.");
+      window.setTimeout(() => {
+        setState("idle");
+        setLabel(action);
+      }, 3200);
     }
   }
 
@@ -297,7 +329,10 @@ export default function AdminMasterModuleActionButton({
       className={buttonClass(variant, state)}
       title={state === "error" ? label : undefined}
     >
-      {label}
+      <span className="inline-flex items-center gap-2">
+        <StatusIcon state={state} />
+        {label}
+      </span>
     </button>
   );
 }

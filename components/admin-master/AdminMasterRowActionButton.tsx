@@ -3,6 +3,12 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import {
+  AlertTriangle,
+  ArrowRight,
+  CheckCircle2,
+  LoaderCircle,
+} from "lucide-react";
 
 type RowActionState =
   | { status: "idle"; label: string; href?: undefined }
@@ -157,9 +163,10 @@ export default function AdminMasterRowActionButton({
     return (
       <Link
         href={request.href}
-        className="inline-flex rounded-full bg-zinc-100 px-3 py-1 text-xs font-black text-zinc-700 ring-1 ring-zinc-200 transition hover:bg-zinc-950 hover:text-white hover:ring-zinc-950"
+        className="inline-flex items-center gap-1 rounded-full bg-zinc-100 px-3 py-1 text-xs font-black text-zinc-700 ring-1 ring-zinc-200 transition hover:bg-zinc-950 hover:text-white hover:ring-zinc-950"
       >
         {normalizedLabel}
+        <ArrowRight size={12} />
       </Link>
     );
   }
@@ -184,6 +191,9 @@ export default function AdminMasterRowActionButton({
       if (apiRequest.successLabel) {
         setState({ status: "success", label: apiRequest.successLabel });
         router.refresh();
+        window.setTimeout(() => {
+          setState({ status: "idle", label: normalizedLabel });
+        }, 2200);
         return;
       }
 
@@ -207,6 +217,9 @@ export default function AdminMasterRowActionButton({
         status: "error",
         label: error instanceof Error ? error.message : "Erro ao criar ticket",
       });
+      window.setTimeout(() => {
+        setState({ status: "idle", label: normalizedLabel });
+      }, 3200);
     }
   }
 
@@ -214,12 +227,14 @@ export default function AdminMasterRowActionButton({
     return state.href ? (
       <Link
         href={state.href}
-        className="inline-flex rounded-full bg-emerald-50 px-3 py-1 text-xs font-black text-emerald-700 ring-1 ring-emerald-200"
+        className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-3 py-1 text-xs font-black text-emerald-700 ring-1 ring-emerald-200"
       >
+        <CheckCircle2 size={12} />
         {state.label}
       </Link>
     ) : (
-      <span className="inline-flex rounded-full bg-emerald-50 px-3 py-1 text-xs font-black text-emerald-700 ring-1 ring-emerald-200">
+      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-3 py-1 text-xs font-black text-emerald-700 ring-1 ring-emerald-200">
+        <CheckCircle2 size={12} />
         {state.label}
       </span>
     );
@@ -237,7 +252,14 @@ export default function AdminMasterRowActionButton({
       }`}
       title={state.status === "error" ? state.label : undefined}
     >
-      {state.label}
+      <span className="inline-flex items-center gap-1">
+        {state.status === "loading" ? (
+          <LoaderCircle size={12} className="animate-spin" />
+        ) : state.status === "error" ? (
+          <AlertTriangle size={12} />
+        ) : null}
+        {state.label}
+      </span>
     </button>
   );
 }

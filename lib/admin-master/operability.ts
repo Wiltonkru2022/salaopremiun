@@ -197,10 +197,51 @@ function formatModuleLabel(value: string) {
   if (value === "auth") return "Login/Auth";
   if (value === "webhooks") return "Webhooks";
   if (value === "admin_master") return "Admin Master";
+  if (value === "app_profissional") return "App Profissional";
   return value
     .split("_")
     .map((entry) => entry.charAt(0).toUpperCase() + entry.slice(1))
     .join(" ");
+}
+
+function isOpaqueServerComponentMessage(value?: string | null) {
+  const normalized = String(value || "").trim().toLowerCase();
+
+  return (
+    normalized.includes("an error occurred in the server components render") &&
+    normalized.includes("digest property")
+  );
+}
+
+function humanizeOperationalMessage(params: {
+  message?: string | null;
+  route?: string | null;
+  action?: string | null;
+  module?: string | null;
+}) {
+  const message = String(params.message || "").trim();
+
+  if (!message) return "Sem detalhe adicional.";
+
+  if (isOpaqueServerComponentMessage(message)) {
+    const location = params.route || params.module || "rota_desconhecida";
+    const action = params.action || "render";
+    return `Falha opaca de render em ${location}. Acao monitorada: ${action}.`;
+  }
+
+  if (/unauthorized|sessao invalida|nao autenticado|não autenticado/i.test(message)) {
+    return "Sessao expirada ou acesso invalido durante a operacao.";
+  }
+
+  if (/timeout|timed out/i.test(message)) {
+    return "Tempo limite excedido durante a operacao monitorada.";
+  }
+
+  if (/network|fetch failed|failed to fetch/i.test(message)) {
+    return "Falha de comunicacao com servico interno ou integracao externa.";
+  }
+
+  return message.length > 96 ? `${message.slice(0, 96)}...` : message;
 }
 
 function mapIncidentSeverity(value?: string | null) {
@@ -385,7 +426,10 @@ export async function getAdminMasterOperationalSnapshot(): Promise<AdminMasterOp
 
   const healthStatus = inferHealthStatus(healthScore);
   const healthLabel = inferHealthLabel(healthStatus);
-  const healthSummary = `${incidents.length} incidentes abertos, ${failingEvents.length} falhas nas ultimas 24h e ${impactedSalonsSet.size} saloes impactados.`;
+  const healthSummary =
+    incidents.length > 0
+      ? `${incidents.length} incidente(s) aberto(s), ${failingEvents.length} falha(s) nas ultimas 24h e ${impactedSalonsSet.size} salao(oes) com impacto operacional.`
+      : `${failingEvents.length} falha(s) nas ultimas 24h e ${slowRoutes} rota(s) lentas em observacao.`;
 
   const moduleMap = new Map<
     string,
@@ -459,7 +503,10 @@ export async function getAdminMasterOperationalSnapshot(): Promise<AdminMasterOp
         failureRate: toPercent(percentage(current.failed, current.total)),
         avgResponseMs: toResponseMs(average(current.responseMs)),
         lastFailure: dateTimeValue(current.lastFailure),
-        topError: topError.length > 72 ? `${topError.slice(0, 72)}...` : topError,
+        topError: humanizeOperationalMessage({
+          message: topError,
+          module: moduleKey,
+        }),
         trend,
         failureCount: current.failed,
       };
@@ -582,8 +629,8 @@ export async function getAdminMasterOperationalSnapshot(): Promise<AdminMasterOp
       title: "Executar correcoes seguras",
       detail:
         criticalIncidents > 0
-          ? `${criticalIncidents} incidentes de alta criticidade pedem resposta imediata.`
-          : "Nenhum incidente critico aberto agora, mas o fluxo de correcao segura ja esta preparado.",
+          ? `${criticalIncidents} incidente(s) de alta criticidade pedem resposta imediata em alertas, tickets internos ou webhooks.`
+          : "Nenhum incidente critico aberto agora, mas o fluxo de correcao segura esta pronto para agir rapido.",
       kind: criticalIncidents > 0 ? "sugerido" : "automatico",
       target: criticalIncidents > 0 ? `${criticalIncidents} incidentes` : "fila operacional",
     },
@@ -591,7 +638,7 @@ export async function getAdminMasterOperationalSnapshot(): Promise<AdminMasterOp
       title: "Conceder +7 dias para trials engajados",
       detail:
         eligibleTrialExtensions.length > 0
-          ? `${eligibleTrialExtensions.length} saloes em trial atingiram a regra de engajamento.`
+          ? `${eligibleTrialExtensions.length} salao(oes) em trial atingiram a regra de engajamento e podem receber extensao com seguranca.`
           : "Nenhum salao elegivel agora para extensao automatica de trial.",
       kind: eligibleTrialExtensions.length > 0 ? "automatico" : "manual",
       target:
@@ -601,7 +648,9 @@ export async function getAdminMasterOperationalSnapshot(): Promise<AdminMasterOp
     },
     {
       title: "Acompanhar ultima automacao",
-      detail: latestAutomaticAction?.log || "Nenhuma automacao registrada ainda.",
+      detail:
+        latestAutomaticAction?.log ||
+        "Nenhuma automacao registrada ainda. O sistema segue sem evento automatico recente.",
       kind: latestAutomaticAction?.sucesso ? "automatico" : "sugerido",
       target:
         latestAutomaticAction?.referencia ||

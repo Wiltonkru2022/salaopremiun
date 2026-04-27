@@ -36,6 +36,7 @@ import type {
 import { ADMIN_MASTER_LOGIN_PATH } from "@/lib/admin-master/auth/login-path";
 import type { AdminMasterShellData } from "@/lib/admin-master/data";
 import AdminMasterGlobalSearch from "@/components/admin-master/AdminMasterGlobalSearch";
+import AdminMasterNavigationRuntime from "@/components/admin-master/AdminMasterNavigationRuntime";
 import MonitoringContextBridge from "@/components/monitoring/MonitoringContextBridge";
 import { createClient } from "@/lib/supabase/client";
 import { clearSupabaseBrowserAuthState } from "@/lib/supabase/auth-client-recovery";
@@ -299,6 +300,8 @@ export default function AdminMasterShellClient({
 
   return (
     <div className="min-h-screen bg-[#f7f5ef] text-zinc-950">
+      <AdminMasterNavigationRuntime />
+
       <MonitoringContextBridge
         actorType="admin_master"
         surface="admin_master"
@@ -514,13 +517,13 @@ export default function AdminMasterShellClient({
               <div className="flex items-center gap-2">
                 <Link
                   href="/admin-master/alertas"
-                  className="rounded-full border border-red-200 bg-red-50 px-4 py-2 text-sm font-bold text-red-700"
+                  className="rounded-full border border-red-200 bg-red-50 px-4 py-2 text-sm font-bold text-red-700 transition hover:border-red-300 hover:bg-red-100"
                 >
                   Alertas {shellData.alertasCriticos}
                 </Link>
                 <Link
                   href="/admin-master"
-                  className="rounded-full bg-zinc-950 px-4 py-2 text-sm font-bold text-white"
+                  className="rounded-full bg-zinc-950 px-4 py-2 text-sm font-bold text-white transition hover:bg-zinc-800"
                 >
                   Dashboard admin
                 </Link>
@@ -542,7 +545,7 @@ export default function AdminMasterShellClient({
               <div className="flex flex-wrap gap-2">
                 <Link
                   href="/admin-master/tickets"
-                  className="inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-white px-4 py-2 text-sm font-bold text-zinc-800 shadow-sm"
+                  className="inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-white px-4 py-2 text-sm font-bold text-zinc-800 shadow-sm transition hover:border-zinc-950 hover:bg-zinc-50"
                 >
                   Tickets abertos
                   <span className="rounded-full bg-zinc-950 px-2 py-0.5 text-xs text-white">
@@ -551,7 +554,7 @@ export default function AdminMasterShellClient({
                 </Link>
                 <Link
                   href="/admin-master/planos"
-                  className="inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-white px-4 py-2 text-sm font-bold text-zinc-800 shadow-sm"
+                  className="inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-white px-4 py-2 text-sm font-bold text-zinc-800 shadow-sm transition hover:border-zinc-950 hover:bg-zinc-50"
                 >
                   Planos e recursos
                   <ChevronRight size={16} />

@@ -27,8 +27,10 @@ type NomeRow = {
   nome: string;
 };
 
-function hojeISO() {
-  return new Date().toISOString().slice(0, 10);
+function hojeLocalISO() {
+  const now = new Date();
+  const local = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
+  return local.toISOString().slice(0, 10);
 }
 
 export async function listarProximosAgendamentosProfissional(
@@ -47,7 +49,7 @@ export async function listarProximosAgendamentosProfissional(
         )
         .eq("id_salao", idSalao)
         .eq("profissional_id", idProfissional)
-        .gte("data", hojeISO())
+        .gte("data", hojeLocalISO())
         .order("data", { ascending: true })
         .order("hora_inicio", { ascending: true })
         .limit(10);
@@ -66,46 +68,49 @@ export async function listarProximosAgendamentosProfissional(
         new Set(rows.map((item) => item.servico_id).filter(Boolean))
       ) as string[];
 
-      let clientesMap = new Map<string, string>();
-      let servicosMap = new Map<string, string>();
+      const [clientesResult, servicosResult] = await Promise.all([
+        clienteIds.length > 0
+          ? supabase
+              .from("clientes")
+              .select("id, nome")
+              .eq("id_salao", idSalao)
+              .in("id", clienteIds)
+          : Promise.resolve({ data: [], error: null }),
+        servicoIds.length > 0
+          ? supabase
+              .from("servicos")
+              .select("id, nome")
+              .eq("id_salao", idSalao)
+              .in("id", servicoIds)
+          : Promise.resolve({ data: [], error: null }),
+      ]);
 
-      if (clienteIds.length > 0) {
-        const { data: clientes, error: clientesError } = await supabase
-          .from("clientes")
-          .select("id, nome")
-          .eq("id_salao", idSalao)
-          .in("id", clienteIds);
-
-        if (clientesError) {
-          throw new Error(clientesError.message || "Erro ao carregar clientes.");
-        }
-
-        clientesMap = new Map(
-          ((clientes ?? []) as NomeRow[]).map((cliente) => [
-            cliente.id,
-            cliente.nome,
-          ])
+      if (clientesResult.error) {
+        console.error(
+          "[profissional_inicio] Falha ao carregar nomes de clientes:",
+          clientesResult.error.message
         );
       }
 
-      if (servicoIds.length > 0) {
-        const { data: servicos, error: servicosError } = await supabase
-          .from("servicos")
-          .select("id, nome")
-          .eq("id_salao", idSalao)
-          .in("id", servicoIds);
-
-        if (servicosError) {
-          throw new Error(servicosError.message || "Erro ao carregar serviços.");
-        }
-
-        servicosMap = new Map(
-          ((servicos ?? []) as NomeRow[]).map((servico) => [
-            servico.id,
-            servico.nome,
-          ])
+      if (servicosResult.error) {
+        console.error(
+          "[profissional_inicio] Falha ao carregar nomes de servicos:",
+          servicosResult.error.message
         );
       }
+
+      const clientesMap = new Map(
+        (((clientesResult.data ?? []) as NomeRow[]) || []).map((cliente) => [
+          cliente.id,
+          cliente.nome,
+        ])
+      );
+      const servicosMap = new Map(
+        (((servicosResult.data ?? []) as NomeRow[]) || []).map((servico) => [
+          servico.id,
+          servico.nome,
+        ])
+      );
 
       return rows.map((item) => ({
         id: item.id,
