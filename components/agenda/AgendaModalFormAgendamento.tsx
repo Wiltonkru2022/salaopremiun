@@ -1,12 +1,11 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { Clock3, Receipt, StickyNote, UserRound } from "lucide-react";
+import { ChevronRight, Clock3, Receipt, StickyNote, UserRound } from "lucide-react";
 import SearchableSelect, {
   type SearchableOption,
 } from "@/components/ui/SearchableSelect";
 import type { Agendamento } from "@/types/agenda";
-import type { AgendaStatus } from "./useAgendaModal";
 
 type Props = {
   profissionaisOptions: SearchableOption[];
@@ -17,7 +16,7 @@ type Props = {
   servicoId: string;
   horaInicio: string;
   observacoes: string;
-  status: AgendaStatus;
+  statusLabel: string;
   loadingComanda: boolean;
   comandaNumero: number | null;
   editingItem?: Agendamento | null;
@@ -26,7 +25,7 @@ type Props = {
   onServicoChange: (value: string) => void;
   onHoraInicioChange: (value: string) => void;
   onObservacoesChange: (value: string) => void;
-  onStatusChange: (value: AgendaStatus) => void;
+  onOpenStatusPicker: () => void;
   onAbrirComanda: () => Promise<void>;
   onCancelAppointment: (item: Agendamento) => Promise<void>;
 };
@@ -60,7 +59,7 @@ export default function AgendaModalFormAgendamento({
   servicoId,
   horaInicio,
   observacoes,
-  status,
+  statusLabel,
   loadingComanda,
   comandaNumero,
   editingItem,
@@ -69,21 +68,10 @@ export default function AgendaModalFormAgendamento({
   onServicoChange,
   onHoraInicioChange,
   onObservacoesChange,
-  onStatusChange,
+  onOpenStatusPicker,
   onAbrirComanda,
   onCancelAppointment,
 }: Props) {
-  const statusOptions: Array<{
-    value: AgendaStatus;
-    label: string;
-  }> = [
-    { value: "confirmado", label: "Confirmado" },
-    { value: "pendente", label: "Pendente" },
-    { value: "atendido", label: "Atendido" },
-    { value: "cancelado", label: "Cancelado" },
-    { value: "aguardando_pagamento", label: "Aguardando pagamento" },
-  ];
-
   return (
     <div className="space-y-4">
       <Section eyebrow="Atendimento" title="Quem vai atender e quem vai ser atendida">
@@ -145,22 +133,21 @@ export default function AgendaModalFormAgendamento({
             <label className="mb-1.5 block text-xs font-semibold text-zinc-700">
               Status
             </label>
-            <div className="flex flex-wrap gap-2">
-              {statusOptions.map((option) => (
-                <button
-                  key={option.value}
-                  type="button"
-                  onClick={() => onStatusChange(option.value)}
-                  className={
-                    status === option.value
-                      ? "inline-flex min-h-10 items-center justify-center rounded-full border border-violet-300 bg-violet-50 px-3.5 py-2 text-sm font-semibold text-violet-700 shadow-[0_10px_24px_rgba(124,58,237,0.12)] transition duration-200"
-                      : "inline-flex min-h-10 items-center justify-center rounded-full border border-zinc-200 bg-white px-3.5 py-2 text-sm font-medium text-zinc-700 transition duration-200 hover:-translate-y-[1px] hover:bg-zinc-50"
-                  }
-                >
-                  {option.label}
-                </button>
-              ))}
-            </div>
+            <button
+              type="button"
+              onClick={onOpenStatusPicker}
+              className="flex min-h-12 w-full items-center justify-between rounded-2xl border border-zinc-200 bg-white px-3.5 py-3 text-left transition duration-200 hover:-translate-y-[1px] hover:bg-zinc-50"
+            >
+              <div className="min-w-0">
+                <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-400">
+                  Status atual
+                </div>
+                <div className="mt-1 text-sm font-semibold text-zinc-900">
+                  {statusLabel}
+                </div>
+              </div>
+              <ChevronRight size={16} className="shrink-0 text-zinc-400" />
+            </button>
           </div>
         </div>
 

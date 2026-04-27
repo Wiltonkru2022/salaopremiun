@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { CalendarDays, Lock, X } from "lucide-react";
 import AgendaModalAviso from "@/components/agenda/AgendaModalAviso";
 import AgendaModalComandaDecision from "@/components/agenda/AgendaModalComandaDecision";
@@ -73,7 +74,27 @@ export default function AgendaModal(props: Props) {
     handleSubmit,
   } = useAgendaModal(props);
 
+  const [statusPickerOpen, setStatusPickerOpen] = useState(false);
+  const [draftStatus, setDraftStatus] = useState(status);
+
+  useEffect(() => {
+    if (!open) return;
+    setDraftStatus(status);
+    setStatusPickerOpen(false);
+  }, [open, status]);
+
   if (!open) return null;
+
+  const statusOptions = [
+    { value: "confirmado", label: "Confirmado" },
+    { value: "pendente", label: "Pendente" },
+    { value: "atendido", label: "Atendido" },
+    { value: "cancelado", label: "Cancelado" },
+    { value: "aguardando_pagamento", label: "Aguardando pagamento" },
+  ] as const;
+
+  const statusLabel =
+    statusOptions.find((option) => option.value === status)?.label || "Confirmado";
 
   const formBody =
     mode === "agendamento" ? (
@@ -87,6 +108,7 @@ export default function AgendaModal(props: Props) {
         horaInicio={horaInicio}
         observacoes={observacoes}
         status={status}
+        statusLabel={statusLabel}
         loadingComanda={loadingComanda}
         comandaNumero={comandaNumero}
         editingItem={editingItem || null}
@@ -95,7 +117,10 @@ export default function AgendaModal(props: Props) {
         onServicoChange={setServicoId}
         onHoraInicioChange={setHoraInicio}
         onObservacoesChange={setObservacoes}
-        onStatusChange={setStatus}
+        onOpenStatusPicker={() => {
+          setDraftStatus(status);
+          setStatusPickerOpen(true);
+        }}
         onAbrirComanda={handleAbrirComanda}
         onCancelAppointment={onCancelAppointment}
       />
@@ -163,7 +188,61 @@ export default function AgendaModal(props: Props) {
         <div className="min-h-0 flex-1 overflow-y-auto">
           {overlays}
 
-          {!aviso.open && !showComandaDecisionModal ? (
+          {!aviso.open && !showComandaDecisionModal && statusPickerOpen ? (
+            <div className="rounded-[24px] border border-zinc-200 bg-white p-5 shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-400">
+                Status do agendamento
+              </div>
+              <h3 className="mt-2 text-[1.35rem] font-semibold tracking-[-0.04em] text-slate-900">
+                Escolha o status
+              </h3>
+              <p className="mt-1 text-sm text-zinc-500">
+                O restante do painel fica oculto ate voce confirmar a troca.
+              </p>
+
+              <div className="mt-4 space-y-2">
+                {statusOptions.map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => setDraftStatus(option.value)}
+                    className={
+                      draftStatus === option.value
+                        ? "flex min-h-12 w-full items-center rounded-2xl border border-violet-300 bg-violet-50 px-4 py-3 text-left text-sm font-semibold text-violet-700 shadow-[0_10px_24px_rgba(124,58,237,0.12)] transition duration-200"
+                        : "flex min-h-12 w-full items-center rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-left text-sm font-medium text-zinc-700 transition duration-200 hover:-translate-y-[1px] hover:bg-zinc-50"
+                    }
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+
+              <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDraftStatus(status);
+                    setStatusPickerOpen(false);
+                  }}
+                  className="rounded-2xl border border-zinc-200 bg-white px-4 py-2.5 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStatus(draftStatus);
+                    setStatusPickerOpen(false);
+                  }}
+                  className="rounded-2xl bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-95"
+                >
+                  Confirmar
+                </button>
+              </div>
+            </div>
+          ) : null}
+
+          {!aviso.open && !showComandaDecisionModal && !statusPickerOpen ? (
             <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
               <div className="space-y-4">
                 {formBody}
