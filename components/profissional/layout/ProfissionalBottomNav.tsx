@@ -16,10 +16,17 @@ const items = [
 function getSectionKey(pathname: string | null) {
   const value = String(pathname || "").split("?")[0];
 
-  if (!value || value === "/app-profissional") return "inicio";
+  if (!value || value === "/" || value === "/app-profissional") {
+    return "inicio";
+  }
 
-  const [, , section] = value.split("/");
-  return section || "inicio";
+  const segments = value.split("/").filter(Boolean);
+
+  if (segments[0] === "app-profissional") {
+    return segments[1] || "inicio";
+  }
+
+  return segments[0] || "inicio";
 }
 
 export default function ProfissionalBottomNav() {
