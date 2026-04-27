@@ -8,18 +8,21 @@ import AgendaToolbar from "@/components/agenda/AgendaToolbar";
 import AgendaGrid from "@/components/agenda/AgendaGrid";
 import AgendaSidebar from "@/components/agenda/AgendaSidebar";
 import type {
+  AgendaSidebarPanel,
   AgendaSidebarView,
   AgendaWaitlistItem,
 } from "@/components/agenda/AgendaSidebar";
 import AgendaModal from "@/components/agenda/AgendaModal";
 import ProfissionaisBar from "@/components/agenda/ProfissionaisBar";
-import AgendaNoticeDialog from "@/components/agenda/AgendaNoticeDialog";
-import AgendaConfirmDialog from "@/components/agenda/AgendaConfirmDialog";
-import AgendaReasonDialog from "@/components/agenda/AgendaReasonDialog";
 import AgendaContextMenu from "@/components/agenda/AgendaContextMenu";
 import AgendaClientProfileModal from "@/components/agenda/AgendaClientProfileModal";
 import AgendaCreditModal from "@/components/agenda/AgendaCreditModal";
-import type { ComandaResumo } from "@/components/agenda/page-types";
+import type {
+  AgendaPageNoticeState,
+  AgendaPageConfirmState,
+  AgendaPageReasonState,
+  ComandaResumo,
+} from "@/components/agenda/page-types";
 import { useAgendaActions } from "@/components/agenda/useAgendaActions";
 import { useAgendaData } from "@/components/agenda/useAgendaData";
 import { useAgendaMutations } from "@/components/agenda/useAgendaMutations";
@@ -472,6 +475,21 @@ export default function AgendaPage() {
     });
   }
 
+  const hasSidebarActionPanel =
+    modalOpen ||
+    clienteProfileOpen ||
+    creditModalOpen ||
+    quickCreateOpen ||
+    avisoModal.open ||
+    confirmModal.open ||
+    motivoModal.open;
+
+  useEffect(() => {
+    if (hasSidebarActionPanel) {
+      setSidebarOpen(true);
+    }
+  }, [hasSidebarActionPanel]);
+
   if (loading || !acessoCarregado) {
     return <div className="p-6">Carregando agenda...</div>;
   }
@@ -564,6 +582,219 @@ export default function AgendaPage() {
       statusLabel: "Pendente",
     }));
 
+  function closeSidebarPanels() {
+    if (modalOpen) {
+      closeModal();
+    }
+    if (clienteProfileOpen) {
+      setClienteProfileOpen(false);
+    }
+    if (creditModalOpen) {
+      setCreditModalOpen(false);
+      setCreditClienteId("");
+    }
+    if (quickCreateOpen) {
+      setQuickCreateOpen(false);
+    }
+    if (avisoModal.open) {
+      fecharAviso();
+    }
+    if (confirmModal.open) {
+      fecharConfirmacao();
+    }
+    if (motivoModal.open) {
+      fecharMotivo();
+    }
+    setSidebarView("overview");
+  }
+
+  const sidebarPanel: AgendaSidebarPanel | null = motivoModal.open
+    ? {
+        title: motivoModal.title || "Motivo da exclusao",
+        subtitle: "Escreva o motivo antes de concluir a exclusao.",
+        onBack: () => {
+          fecharMotivo();
+          setSidebarView("overview");
+        },
+        content: (
+          <ReasonSidebarPanel
+            modal={motivoModal}
+            loading={motivoLoading}
+            onChangeValue={setMotivoValor}
+            onConfirm={executarMotivo}
+            onCancel={() => {
+              fecharMotivo();
+              setSidebarView("overview");
+            }}
+          />
+        ),
+      }
+    : confirmModal.open
+      ? {
+          title: confirmModal.title || "Confirmar acao",
+          subtitle: "Revise a acao antes de continuar.",
+          onBack: () => {
+            fecharConfirmacao();
+            setSidebarView("overview");
+          },
+          content: (
+            <ConfirmSidebarPanel
+              modal={confirmModal}
+              loading={confirmLoading}
+              onConfirm={executarConfirmacao}
+              onCancel={() => {
+                fecharConfirmacao();
+                setSidebarView("overview");
+              }}
+            />
+          ),
+        }
+      : avisoModal.open
+        ? {
+            title: avisoModal.title || "Aviso da agenda",
+            subtitle: "Veja a mensagem antes de continuar.",
+            onBack: () => {
+              fecharAviso();
+              setSidebarView("overview");
+            },
+            content: (
+              <NoticeSidebarPanel
+                modal={avisoModal}
+                onClose={() => {
+                  fecharAviso();
+                  setSidebarView("overview");
+                }}
+              />
+            ),
+          }
+        : quickCreateOpen
+          ? {
+              title: "Novo agendamento",
+              subtitle: "Escolha o dia do atendimento para abrir a ficha na lateral.",
+              onBack: () => {
+                setQuickCreateOpen(false);
+                setSidebarView("overview");
+              },
+              content: (
+                <QuickCreateSidebarPanel
+                  value={quickCreateDate}
+                  onChange={setQuickCreateDate}
+                  onCancel={() => {
+                    setQuickCreateOpen(false);
+                    setSidebarView("overview");
+                  }}
+                  onContinue={() => {
+                    if (!quickCreateDate) return;
+                    setQuickCreateOpen(false);
+                    openCreateModal(quickCreateDate, defaultSlotTime);
+                  }}
+                />
+              ),
+            }
+          : modalOpen
+            ? {
+                title:
+                  modalMode === "agendamento"
+                    ? editingItem
+                      ? "Editar agendamento"
+                      : "Novo agendamento"
+                    : editingBlock
+                      ? "Editar bloqueio"
+                      : "Novo bloqueio",
+                subtitle:
+                  modalMode === "agendamento"
+                    ? "Edite servico, horario, cliente e status sem sair da agenda."
+                    : "Defina ausencia, pausa ou bloqueio da profissional.",
+                onBack: () => {
+                  closeModal();
+                  setSidebarView("overview");
+                },
+                content: (
+                  <AgendaModal
+                    open={modalOpen}
+                    mode={modalMode}
+                    editingItem={editingItem}
+                    editingBlock={editingBlock}
+                    onClose={() => {
+                      closeModal();
+                      setSidebarView("overview");
+                    }}
+                    onBack={() => {
+                      closeModal();
+                      setSidebarView("overview");
+                    }}
+                    onSave={handleSave}
+                    onCancelAppointment={handleCancelAppointment}
+                    profissionais={profissionais}
+                    clientes={clientes}
+                    servicos={servicos}
+                    selectedProfissionalId={selectedProfissionalId}
+                    idSalao={idSalao}
+                    selectedDate={selectedDate}
+                    selectedTime={selectedTime}
+                    initialBlockEndTime={selectedBlockEndTime}
+                    initialBlockReason={selectedBlockReason}
+                    onBuscarComandasAbertas={buscarComandasAbertasDoCliente}
+                    onCriarComanda={criarNovaComanda}
+                    variant="sidebar"
+                  />
+                ),
+              }
+            : clienteProfileOpen
+              ? {
+                  title: "Perfil da cliente",
+                  subtitle: "Historico recente, observacoes e leitura rapida da cliente.",
+                  onBack: () => {
+                    setClienteProfileOpen(false);
+                    setSidebarView("overview");
+                  },
+                  content: (
+                    <AgendaClientProfileModal
+                      open={clienteProfileOpen}
+                      loading={clienteProfileLoading}
+                      clienteNome={clienteProfileNome}
+                      clienteWhatsapp={clienteProfileWhatsapp}
+                      historico={clienteProfileHistorico}
+                      onClose={() => {
+                        setClienteProfileOpen(false);
+                        setSidebarView("overview");
+                      }}
+                      variant="sidebar"
+                    />
+                  ),
+                }
+              : creditModalOpen
+                ? {
+                    title: "Credito da cliente",
+                    subtitle: "Abra ou vincule a comanda certa sem sair da agenda.",
+                    onBack: () => {
+                      setCreditModalOpen(false);
+                      setCreditClienteId("");
+                      setSidebarView("overview");
+                    },
+                    content: (
+                      <AgendaCreditModal
+                        open={creditModalOpen}
+                        clienteId={creditClienteId}
+                        loading={creditLoading}
+                        clientesOptions={clientes.map((cliente) => ({
+                          value: cliente.id,
+                          label: cliente.nome,
+                          description: cliente.whatsapp || "",
+                        }))}
+                        onClose={() => {
+                          setCreditModalOpen(false);
+                          setCreditClienteId("");
+                          setSidebarView("overview");
+                        }}
+                        onClienteChange={setCreditClienteId}
+                        onSubmit={handleOpenCreditFlow}
+                        variant="sidebar"
+                      />
+                    ),
+                  }
+                : null;
+
   return (
     <>
       <div
@@ -580,7 +811,7 @@ export default function AgendaPage() {
         <div
           className={`grid h-full min-h-0 min-w-0 gap-3 ${
             sidebarOpen
-              ? "lg:grid-cols-[minmax(0,1fr)_344px]"
+              ? "lg:grid-cols-[minmax(0,1fr)_408px] xl:grid-cols-[minmax(0,1fr)_424px]"
               : "lg:grid-cols-[minmax(0,1fr)]"
           }`}
         >
@@ -664,6 +895,7 @@ export default function AgendaPage() {
             <AgendaSidebar
               open={sidebarOpen}
               view={sidebarView}
+              panel={sidebarPanel}
               currentMonthLabel={format(currentDate, "MMMM", { locale: ptBR })}
               totalValueLabel={currencyFormatter.format(valorPotencial)}
               potentialValueVisible={potentialValueVisible}
@@ -680,9 +912,10 @@ export default function AgendaPage() {
               waitlistItems={waitlistItems}
               onToggleOpen={() => {
                 setSidebarOpen(false);
-                setSidebarView("overview");
+                closeSidebarPanels();
               }}
               onBackToOverview={() => setSidebarView("overview")}
+              onSetView={setSidebarView}
               onChangeView={setViewMode}
               onChangeDensityMode={setDensityMode}
               onToday={() => setCurrentDate(new Date())}
@@ -707,27 +940,6 @@ export default function AgendaPage() {
             />
           </div>
         </div>
-
-        <AgendaModal
-          open={modalOpen}
-          mode={modalMode}
-          editingItem={editingItem}
-          editingBlock={editingBlock}
-          onClose={closeModal}
-          onSave={handleSave}
-          onCancelAppointment={handleCancelAppointment}
-          profissionais={profissionais}
-          clientes={clientes}
-          servicos={servicos}
-          selectedProfissionalId={selectedProfissionalId}
-          idSalao={idSalao}
-          selectedDate={selectedDate}
-          selectedTime={selectedTime}
-          initialBlockEndTime={selectedBlockEndTime}
-          initialBlockReason={selectedBlockReason}
-          onBuscarComandasAbertas={buscarComandasAbertasDoCliente}
-          onCriarComanda={criarNovaComanda}
-        />
       </div>
       <AgendaContextMenu
         open={contextMenu.open}
@@ -889,87 +1101,186 @@ export default function AgendaPage() {
           setSlotActionOpen(false);
         }}
       />
-      <AgendaNoticeDialog modal={avisoModal} onClose={fecharAviso} />
-      <AgendaConfirmDialog
-        modal={confirmModal}
-        loading={confirmLoading}
-        onClose={fecharConfirmacao}
-        onConfirm={executarConfirmacao}
-      />
-      <AgendaReasonDialog
-        modal={motivoModal}
-        loading={motivoLoading}
-        onClose={fecharMotivo}
-        onChangeValue={setMotivoValor}
-        onConfirm={executarMotivo}
-      />
-      <AgendaClientProfileModal
-        open={clienteProfileOpen}
-        loading={clienteProfileLoading}
-        clienteNome={clienteProfileNome}
-        clienteWhatsapp={clienteProfileWhatsapp}
-        historico={clienteProfileHistorico}
-        onClose={() => setClienteProfileOpen(false)}
-      />
-      <AgendaCreditModal
-        open={creditModalOpen}
-        clienteId={creditClienteId}
-        loading={creditLoading}
-        clientesOptions={clientes.map((cliente) => ({
-          value: cliente.id,
-          label: cliente.nome,
-          description: cliente.whatsapp || "",
-        }))}
-        onClose={() => {
-          setCreditModalOpen(false);
-          setCreditClienteId("");
-        }}
-        onClienteChange={setCreditClienteId}
-        onSubmit={handleOpenCreditFlow}
-      />
-      {quickCreateOpen ? (
-        <div className="fixed inset-0 z-[230] flex items-center justify-center bg-black/45 p-4">
-          <div className="w-full max-w-[420px] rounded-[26px] border border-zinc-200 bg-white p-5 shadow-[0_28px_90px_rgba(15,23,42,0.18)]">
-            <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-400">
-              Novo agendamento
-            </div>
-            <h3 className="mt-2 text-[1.45rem] font-semibold tracking-[-0.04em] text-slate-900">
-              Escolha o dia do atendimento
-            </h3>
-            <p className="mt-1 text-sm text-zinc-500">
-              Depois eu abro o modal principal da agenda ja na data escolhida.
-            </p>
-
-            <input
-              type="date"
-              value={quickCreateDate}
-              onChange={(event) => setQuickCreateDate(event.target.value)}
-              className="mt-4 h-12 w-full rounded-2xl border border-zinc-200 bg-white px-3 text-sm font-medium text-zinc-800 outline-none focus:border-violet-300 focus:ring-4 focus:ring-violet-100"
-            />
-
-            <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-              <button
-                type="button"
-                onClick={() => setQuickCreateOpen(false)}
-                className="rounded-2xl border border-zinc-200 bg-white px-4 py-2.5 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  if (!quickCreateDate) return;
-                  setQuickCreateOpen(false);
-                  openCreateModal(quickCreateDate, defaultSlotTime);
-                }}
-                className="rounded-2xl bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white hover:opacity-95"
-              >
-                Continuar
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
     </>
+  );
+}
+
+function NoticeSidebarPanel({
+  modal,
+  onClose,
+}: {
+  modal: AgendaPageNoticeState;
+  onClose: () => void;
+}) {
+  const toneClasses =
+    modal.tone === "success"
+      ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+      : modal.tone === "warning"
+        ? "border-amber-200 bg-amber-50 text-amber-800"
+        : modal.tone === "danger"
+          ? "border-red-200 bg-red-50 text-red-700"
+          : "border-zinc-200 bg-zinc-50 text-zinc-700";
+
+  return (
+    <div className="rounded-[24px] border border-zinc-200 bg-white p-5 shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
+      <div className={`rounded-[20px] border px-4 py-4 ${toneClasses}`}>
+        <div className="text-base font-bold">{modal.title}</div>
+        <div className="mt-2 text-sm leading-6">{modal.message}</div>
+      </div>
+
+      <div className="mt-5 flex justify-end">
+        <button
+          type="button"
+          onClick={onClose}
+          className="rounded-2xl bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white"
+        >
+          Entendi
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function ConfirmSidebarPanel({
+  modal,
+  loading,
+  onCancel,
+  onConfirm,
+}: {
+  modal: AgendaPageConfirmState;
+  loading: boolean;
+  onCancel: () => void;
+  onConfirm: () => Promise<void>;
+}) {
+  const confirmToneButton =
+    modal.tone === "danger"
+      ? "bg-red-600 hover:bg-red-500"
+      : modal.tone === "warning"
+        ? "bg-amber-600 hover:bg-amber-500"
+        : "bg-zinc-950 hover:bg-zinc-800";
+
+  return (
+    <div className="rounded-[24px] border border-zinc-200 bg-white p-5 shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
+      <div className="text-lg font-bold text-zinc-950">{modal.title}</div>
+      <div className="mt-2 text-sm leading-6 text-zinc-600">{modal.message}</div>
+
+      <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+        <button
+          type="button"
+          disabled={loading}
+          onClick={onCancel}
+          className="rounded-2xl border border-zinc-200 px-5 py-3 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-60"
+        >
+          Fechar
+        </button>
+
+        <button
+          type="button"
+          disabled={loading}
+          onClick={() => void onConfirm()}
+          className={`rounded-2xl px-5 py-3 text-sm font-semibold text-white transition disabled:opacity-60 ${confirmToneButton}`}
+        >
+          {loading ? "Processando..." : modal.confirmLabel}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function ReasonSidebarPanel({
+  modal,
+  loading,
+  onChangeValue,
+  onCancel,
+  onConfirm,
+}: {
+  modal: AgendaPageReasonState;
+  loading: boolean;
+  onChangeValue: (value: string) => void;
+  onCancel: () => void;
+  onConfirm: () => Promise<void>;
+}) {
+  return (
+    <div className="rounded-[24px] border border-zinc-200 bg-white p-5 shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
+      <div className="text-lg font-bold text-zinc-950">{modal.title}</div>
+      <div className="mt-2 text-sm leading-6 text-zinc-600">{modal.message}</div>
+
+      <textarea
+        value={modal.value}
+        onChange={(event) => onChangeValue(event.target.value)}
+        placeholder="Digite o motivo..."
+        className="mt-4 min-h-[140px] w-full rounded-2xl border border-zinc-200 bg-zinc-50 p-4 text-sm text-zinc-700 outline-none"
+      />
+
+      <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+        <button
+          type="button"
+          disabled={loading}
+          onClick={onCancel}
+          className="rounded-2xl border border-zinc-200 px-5 py-3 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-60"
+        >
+          Fechar
+        </button>
+
+        <button
+          type="button"
+          disabled={loading}
+          onClick={() => void onConfirm()}
+          className="rounded-2xl bg-zinc-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-zinc-800 disabled:opacity-60"
+        >
+          {loading ? "Salvando..." : "Confirmar exclusao"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function QuickCreateSidebarPanel({
+  value,
+  onChange,
+  onCancel,
+  onContinue,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  onCancel: () => void;
+  onContinue: () => void;
+}) {
+  return (
+    <div className="rounded-[24px] border border-zinc-200 bg-white p-5 shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
+      <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-400">
+        Novo agendamento
+      </div>
+      <h3 className="mt-2 text-[1.35rem] font-semibold tracking-[-0.04em] text-slate-900">
+        Escolha o dia do atendimento
+      </h3>
+      <p className="mt-1 text-sm text-zinc-500">
+        Depois eu abro a ficha completa da agenda ja na data escolhida.
+      </p>
+
+      <input
+        type="date"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="mt-4 h-12 w-full rounded-2xl border border-zinc-200 bg-white px-3 text-sm font-medium text-zinc-800 outline-none focus:border-violet-300 focus:ring-4 focus:ring-violet-100"
+      />
+
+      <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+        <button
+          type="button"
+          onClick={onCancel}
+          className="rounded-2xl border border-zinc-200 bg-white px-4 py-2.5 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+        >
+          Cancelar
+        </button>
+        <button
+          type="button"
+          onClick={onContinue}
+          className="rounded-2xl bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white hover:opacity-95"
+        >
+          Continuar
+        </button>
+      </div>
+    </div>
   );
 }

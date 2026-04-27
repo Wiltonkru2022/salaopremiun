@@ -29,9 +29,17 @@ export type AgendaWaitlistItem = {
   statusLabel: string;
 };
 
+export type AgendaSidebarPanel = {
+  title: string;
+  subtitle: string;
+  content: ReactNode;
+  onBack: () => void;
+};
+
 type Props = {
   open: boolean;
   view: AgendaSidebarView;
+  panel?: AgendaSidebarPanel | null;
   currentMonthLabel: string;
   totalValueLabel: string;
   potentialValueVisible: boolean;
@@ -54,6 +62,7 @@ type Props = {
   waitlistItems: AgendaWaitlistItem[];
   onToggleOpen: () => void;
   onBackToOverview: () => void;
+  onSetView: (view: AgendaSidebarView) => void;
   onChangeView: (view: ViewMode) => void;
   onChangeDensityMode: (mode: AgendaDensityMode) => void;
   onToday: () => void;
@@ -73,6 +82,7 @@ export default function AgendaSidebar(props: Props) {
   const {
     open,
     view,
+    panel,
     currentMonthLabel,
     totalValueLabel,
     potentialValueVisible,
@@ -89,6 +99,7 @@ export default function AgendaSidebar(props: Props) {
     waitlistItems,
     onToggleOpen,
     onBackToOverview,
+    onSetView,
     onChangeView,
     onChangeDensityMode,
     onToday,
@@ -108,28 +119,32 @@ export default function AgendaSidebar(props: Props) {
     return null;
   }
 
-  const headerTitle =
-    view === "clientSearch"
+  const headerTitle = panel
+    ? panel.title
+    : view === "clientSearch"
       ? "Buscar cliente"
       : view === "waitlist"
         ? "Lista de espera"
         : "Agenda";
-  const headerSubtitle =
-    view === "clientSearch"
+  const headerSubtitle = panel
+    ? panel.subtitle
+    : view === "clientSearch"
       ? "Busque no cadastro e abra a ficha da cliente."
       : view === "waitlist"
         ? "Fila rapida de clientes e atendimentos pendentes."
         : "Visao geral do periodo";
 
+  const showBackButton = Boolean(panel) || view !== "overview";
+
   return (
-    <aside className="w-full min-h-0 lg:h-full lg:max-w-[344px] lg:min-w-[344px]">
-      <div className="flex h-full min-h-0 flex-col rounded-[30px] border border-white/80 bg-white/96 p-4 shadow-[0_22px_65px_rgba(15,23,42,0.08)]">
+    <aside className="w-full min-h-0 lg:h-full lg:max-w-[408px] lg:min-w-[408px] xl:max-w-[424px] xl:min-w-[424px]">
+      <div className="flex h-full min-h-0 flex-col rounded-[32px] border border-white/80 bg-white/97 p-4 shadow-[0_22px_70px_rgba(15,23,42,0.08)]">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            {view !== "overview" ? (
+            {showBackButton ? (
               <button
                 type="button"
-                onClick={onBackToOverview}
+                onClick={panel ? panel.onBack : onBackToOverview}
                 className="mb-3 inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700"
               >
                 <ArrowLeft size={14} />
@@ -137,7 +152,7 @@ export default function AgendaSidebar(props: Props) {
               </button>
             ) : null}
 
-            <h2 className="text-[1.9rem] font-semibold tracking-[-0.06em] text-slate-900">
+            <h2 className="text-[1.92rem] font-semibold tracking-[-0.06em] text-slate-900">
               {headerTitle}
             </h2>
             <p className="mt-1 text-sm text-zinc-500">{headerSubtitle}</p>
@@ -146,15 +161,40 @@ export default function AgendaSidebar(props: Props) {
           <button
             type="button"
             onClick={onToggleOpen}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-zinc-200 bg-white text-zinc-500 shadow-[0_8px_20px_rgba(15,23,42,0.05)] hover:text-zinc-900"
+            className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-zinc-200 bg-white text-zinc-500 shadow-[0_8px_20px_rgba(15,23,42,0.05)] hover:text-zinc-900"
             title="Fechar painel"
           >
             <X size={18} />
           </button>
         </div>
 
-        <div className="mt-4 min-h-0 flex-1 pr-0.5">
-          {view === "clientSearch" ? (
+        {!panel ? (
+          <div className="mt-4 grid grid-cols-3 gap-2 rounded-[22px] border border-zinc-200/80 bg-zinc-50/80 p-1.5">
+            <SidebarNavButton
+              active={view === "overview"}
+              onClick={() => onSetView("overview")}
+            >
+              Resumo
+            </SidebarNavButton>
+            <SidebarNavButton
+              active={view === "clientSearch"}
+              onClick={onOpenClientSearch}
+            >
+              Clientes
+            </SidebarNavButton>
+            <SidebarNavButton
+              active={view === "waitlist"}
+              onClick={onOpenWaitlist}
+            >
+              Espera
+            </SidebarNavButton>
+          </div>
+        ) : null}
+
+        <div className="mt-4 min-h-0 flex-1 overflow-y-auto pr-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {panel ? (
+            <div className="h-full">{panel.content}</div>
+          ) : view === "clientSearch" ? (
             <ClientSearchView
               query={clientSearchQuery}
               results={clientResults}
@@ -165,19 +205,19 @@ export default function AgendaSidebar(props: Props) {
           ) : view === "waitlist" ? (
             <WaitlistView items={waitlistItems} />
           ) : (
-            <div className="space-y-2.5">
-              <section className="rounded-[22px] border border-zinc-200/80 bg-white p-3.5 shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
+            <div className="space-y-3">
+              <section className="rounded-[24px] border border-zinc-200/80 bg-white p-4 shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-zinc-950">Valor total</p>
-                    <p className="mt-1.5 truncate text-[1.7rem] font-semibold tracking-[-0.05em] text-emerald-600">
+                    <p className="mt-1.5 truncate text-[1.82rem] font-semibold tracking-[-0.05em] text-emerald-600">
                       {potentialValueVisible ? totalValueLabel : "R$ ******"}
                     </p>
                   </div>
                   <button
                     type="button"
                     onClick={onTogglePotentialValueVisible}
-                    className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-zinc-200 bg-zinc-50/80 text-zinc-600"
+                    className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-zinc-200 bg-zinc-50/80 text-zinc-600"
                     title={potentialValueVisible ? "Ocultar valor" : "Mostrar valor"}
                   >
                     <Eye size={18} />
@@ -188,18 +228,18 @@ export default function AgendaSidebar(props: Props) {
                 </div>
               </section>
 
-              <section className="rounded-[22px] border border-zinc-200/80 bg-white p-3.5 shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
+              <section className="rounded-[24px] border border-zinc-200/80 bg-white p-4 shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
                 <button
                   type="button"
                   className="flex w-full items-center justify-between gap-3 text-left"
                 >
-                  <span className="text-[1.4rem] font-semibold tracking-[-0.05em] text-slate-900 capitalize">
+                  <span className="truncate text-[1.45rem] font-semibold tracking-[-0.05em] text-slate-900 capitalize">
                     {currentMonthLabel}
                   </span>
-                  <ChevronDown size={18} className="text-zinc-500" />
+                  <ChevronDown size={18} className="shrink-0 text-zinc-500" />
                 </button>
 
-                <div className="mt-3 grid grid-cols-2 gap-2">
+                <div className="mt-3 grid grid-cols-2 gap-2.5">
                   <MetricCard
                     icon={<UserRoundSearch size={16} />}
                     label="Atendimentos"
@@ -227,7 +267,7 @@ export default function AgendaSidebar(props: Props) {
                 </div>
               </section>
 
-              <section className="rounded-[22px] border border-zinc-200/80 bg-white p-3.5 shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
+              <section className="rounded-[24px] border border-zinc-200/80 bg-white p-4 shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
                 <h3 className="text-[1.15rem] font-semibold tracking-[-0.04em] text-slate-900">
                   Status dos atendimentos
                 </h3>
@@ -244,7 +284,7 @@ export default function AgendaSidebar(props: Props) {
                 </div>
               </section>
 
-              <section className="rounded-[22px] border border-zinc-200/80 bg-white p-3.5 shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
+              <section className="rounded-[24px] border border-zinc-200/80 bg-white p-4 shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
                 <h3 className="text-[1.15rem] font-semibold tracking-[-0.04em] text-slate-900">
                   Visualizacao
                 </h3>
@@ -277,7 +317,7 @@ export default function AgendaSidebar(props: Props) {
                 </div>
               </section>
 
-              <section className="rounded-[22px] border border-zinc-200/80 bg-white p-3.5 shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
+              <section className="rounded-[24px] border border-zinc-200/80 bg-white p-4 shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
                 <h3 className="text-[1.15rem] font-semibold tracking-[-0.04em] text-slate-900">
                   Acoes rapidas
                 </h3>
@@ -323,6 +363,30 @@ export default function AgendaSidebar(props: Props) {
   );
 }
 
+function SidebarNavButton({
+  active,
+  children,
+  onClick,
+}: {
+  active: boolean;
+  children: ReactNode;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={
+        active
+          ? "rounded-[16px] bg-white px-3 py-2 text-sm font-semibold text-violet-700 shadow-[0_10px_24px_rgba(124,58,237,0.14)]"
+          : "rounded-[16px] px-3 py-2 text-sm font-medium text-zinc-600"
+      }
+    >
+      {children}
+    </button>
+  );
+}
+
 function ClientSearchView({
   query,
   results,
@@ -338,12 +402,12 @@ function ClientSearchView({
 }) {
   return (
     <div className="space-y-3">
-      <section className="rounded-[22px] border border-zinc-200/80 bg-white p-3.5 shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
+      <section className="rounded-[24px] border border-zinc-200/80 bg-white p-4 shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
         <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.14em] text-zinc-400">
           Filtro da cliente
         </label>
         <div className="flex items-center gap-3 rounded-[20px] border border-zinc-200 bg-zinc-50 px-3 py-3">
-          <Search size={16} className="text-zinc-400" />
+          <Search size={16} className="shrink-0 text-zinc-400" />
           <input
             type="text"
             value={query}
@@ -354,7 +418,7 @@ function ClientSearchView({
         </div>
       </section>
 
-      <section className="rounded-[22px] border border-zinc-200/80 bg-white p-3.5 shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
+      <section className="rounded-[24px] border border-zinc-200/80 bg-white p-4 shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
         <div className="text-[1.15rem] font-semibold tracking-[-0.04em] text-slate-900">
           Resultado
         </div>
@@ -376,7 +440,9 @@ function ClientSearchView({
                     {client.whatsapp || "Sem whatsapp cadastrado"}
                   </div>
                 </div>
-                <span className="text-xs font-semibold text-violet-600">Abrir</span>
+                <span className="shrink-0 text-xs font-semibold text-violet-600">
+                  Abrir
+                </span>
               </button>
             ))}
           </div>
@@ -403,7 +469,7 @@ function ClientSearchView({
 function WaitlistView({ items }: { items: AgendaWaitlistItem[] }) {
   return (
     <div className="space-y-3">
-      <section className="rounded-[22px] border border-zinc-200/80 bg-white p-3.5 shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
+      <section className="rounded-[24px] border border-zinc-200/80 bg-white p-4 shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
         <div className="text-[1.15rem] font-semibold tracking-[-0.04em] text-slate-900">
           Clientes aguardando
         </div>
@@ -418,8 +484,12 @@ function WaitlistView({ items }: { items: AgendaWaitlistItem[] }) {
                 key={item.id}
                 className="rounded-[20px] border border-zinc-200 bg-white px-4 py-3 shadow-[0_8px_20px_rgba(15,23,42,0.04)]"
               >
-                <div className="text-sm font-semibold text-zinc-900">{item.clientName}</div>
-                <div className="mt-1 text-xs text-zinc-500">{item.serviceName}</div>
+                <div className="truncate text-sm font-semibold text-zinc-900">
+                  {item.clientName}
+                </div>
+                <div className="mt-1 truncate text-xs text-zinc-500">
+                  {item.serviceName}
+                </div>
                 <div className="mt-3 flex flex-wrap gap-2">
                   <span className="rounded-full bg-zinc-100 px-2.5 py-1 text-[11px] font-medium text-zinc-600">
                     {item.dateLabel}
@@ -465,9 +535,11 @@ function MetricCard({
           : "bg-sky-50 text-sky-700";
 
   return (
-    <div className="rounded-[18px] border border-zinc-200 bg-white p-2.5 shadow-[0_8px_20px_rgba(15,23,42,0.04)]">
+    <div className="rounded-[18px] border border-zinc-200 bg-white p-3 shadow-[0_8px_20px_rgba(15,23,42,0.04)]">
       <div className="flex items-start gap-3">
-        <div className={`inline-flex h-10 w-10 items-center justify-center rounded-2xl ${toneClasses}`}>
+        <div
+          className={`inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl ${toneClasses}`}
+        >
           {icon}
         </div>
         <div className="min-w-0">
@@ -571,9 +643,9 @@ function QuickAction({
     <button
       type="button"
       onClick={onClick}
-      className="flex items-center gap-3 rounded-[20px] border border-zinc-200 bg-white px-3.5 py-3 text-left text-[13px] font-medium text-zinc-700 shadow-[0_8px_20px_rgba(15,23,42,0.04)] hover:-translate-y-[1px] hover:shadow-[0_16px_35px_rgba(15,23,42,0.08)]"
+      className="flex min-w-0 items-center gap-3 rounded-[20px] border border-zinc-200 bg-white px-3.5 py-3 text-left text-[13px] font-medium text-zinc-700 shadow-[0_8px_20px_rgba(15,23,42,0.04)] hover:-translate-y-[1px] hover:shadow-[0_16px_35px_rgba(15,23,42,0.08)]"
     >
-      <span className="inline-flex h-9 w-9 items-center justify-center rounded-2xl bg-zinc-50 text-zinc-700">
+      <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-zinc-50 text-zinc-700">
         {icon}
       </span>
       <span className="min-w-0 leading-tight">{label}</span>

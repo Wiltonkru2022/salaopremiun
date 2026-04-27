@@ -11,7 +11,12 @@ import {
   useAgendaModal,
 } from "@/components/agenda/useAgendaModal";
 
-export default function AgendaModal(props: AgendaModalProps) {
+type Props = AgendaModalProps & {
+  variant?: "modal" | "sidebar";
+  onBack?: () => void;
+};
+
+export default function AgendaModal(props: Props) {
   const {
     open,
     mode,
@@ -19,6 +24,8 @@ export default function AgendaModal(props: AgendaModalProps) {
     editingBlock,
     onClose,
     onCancelAppointment,
+    variant = "modal",
+    onBack,
   } = props;
 
   const {
@@ -68,9 +75,71 @@ export default function AgendaModal(props: AgendaModalProps) {
 
   if (!open) return null;
 
-  return (
+  const formBody =
+    mode === "agendamento" ? (
+      <AgendaModalFormAgendamento
+        profissionaisOptions={profissionaisOptions}
+        clientesOptions={clientesOptions}
+        servicosOptions={servicosOptions}
+        profissionalId={profissionalId}
+        clienteId={clienteId}
+        servicoId={servicoId}
+        horaInicio={horaInicio}
+        observacoes={observacoes}
+        status={status}
+        loadingComanda={loadingComanda}
+        comandaNumero={comandaNumero}
+        editingItem={editingItem || null}
+        onProfissionalChange={setProfissionalId}
+        onClienteChange={handleClienteChange}
+        onServicoChange={setServicoId}
+        onHoraInicioChange={setHoraInicio}
+        onObservacoesChange={setObservacoes}
+        onStatusChange={setStatus}
+        onAbrirComanda={handleAbrirComanda}
+        onCancelAppointment={onCancelAppointment}
+      />
+    ) : (
+      <AgendaModalFormBloqueio
+        profissionaisOptions={profissionaisOptions}
+        profissionalId={profissionalId}
+        horaInicio={horaInicio}
+        horaFimBloqueio={horaFimBloqueio}
+        motivoBloqueio={motivoBloqueio}
+        onProfissionalChange={setProfissionalId}
+        onHoraInicioChange={setHoraInicio}
+        onHoraFimChange={setHoraFimBloqueio}
+        onMotivoChange={setMotivoBloqueio}
+      />
+    );
+
+  const resumo = (
+    <AgendaModalResumo
+      mode={mode}
+      profissionalSelecionado={profissionalSelecionado}
+      clienteSelecionado={clienteSelecionado}
+      servicoSelecionado={servicoSelecionado}
+      horaInicio={horaInicio}
+      horaFimPreview={horaFimPreview}
+      horaFimBloqueio={horaFimBloqueio}
+      motivoBloqueio={motivoBloqueio}
+      comandaNumero={comandaNumero}
+      whatsMensagem={whatsMensagem}
+      dicas={dicas}
+      dicaIndex={dicaIndex}
+      tituloWhatsapp={getTituloWhatsapp()}
+      onChangeWhatsapp={setWhatsMensagem}
+      onAbrirWhatsapp={abrirWhatsappMensagem}
+    />
+  );
+
+  const overlays = (
     <>
-      <AgendaModalAviso aviso={aviso} onClose={fecharAviso} />
+      <AgendaModalAviso
+        aviso={aviso}
+        onClose={fecharAviso}
+        variant={variant}
+      />
 
       <AgendaModalComandaDecision
         open={showComandaDecisionModal}
@@ -83,7 +152,53 @@ export default function AgendaModal(props: AgendaModalProps) {
           setComandaNumero(comanda.numero);
           setShowComandaDecisionModal(false);
         }}
+        variant={variant}
       />
+    </>
+  );
+
+  if (variant === "sidebar") {
+    return (
+      <div className="flex h-full min-h-0 flex-col">
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          {overlays}
+
+          {!aviso.open && !showComandaDecisionModal ? (
+            <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
+              <div className="space-y-4">
+                {formBody}
+                <div className="border-t border-zinc-200 pt-4">{resumo}</div>
+              </div>
+
+              <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                {onBack ? (
+                  <button
+                    type="button"
+                    onClick={onBack}
+                    className="rounded-2xl border border-zinc-200 bg-white px-4 py-2.5 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50"
+                  >
+                    Voltar
+                  </button>
+                ) : null}
+
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="rounded-2xl bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-95 disabled:opacity-60"
+                >
+                  {saving ? "Salvando..." : "Salvar"}
+                </button>
+              </div>
+            </form>
+          ) : null}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      {overlays}
 
       <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/55 p-3 backdrop-blur-sm">
         <div className="flex h-[min(88vh,760px)] w-full max-w-[1080px] flex-col overflow-hidden rounded-[24px] border border-white/30 bg-white shadow-2xl">
@@ -110,8 +225,8 @@ export default function AgendaModal(props: AgendaModalProps) {
                       ? "Editar agendamento"
                       : "Novo agendamento"
                     : editingBlock
-                    ? "Editar bloqueio"
-                    : "Novo bloqueio"}
+                      ? "Editar bloqueio"
+                      : "Novo bloqueio"}
                 </h2>
               </div>
 
@@ -130,63 +245,10 @@ export default function AgendaModal(props: AgendaModalProps) {
             className="flex min-h-0 flex-1 flex-col overflow-hidden"
           >
             <div className="grid min-h-0 flex-1 lg:grid-cols-[1.7fr_0.9fr]">
-              <div className="min-h-0 overflow-y-auto px-4 py-4 md:px-5">
-                {mode === "agendamento" ? (
-                  <AgendaModalFormAgendamento
-                    profissionaisOptions={profissionaisOptions}
-                    clientesOptions={clientesOptions}
-                    servicosOptions={servicosOptions}
-                    profissionalId={profissionalId}
-                    clienteId={clienteId}
-                    servicoId={servicoId}
-                    horaInicio={horaInicio}
-                    observacoes={observacoes}
-                    status={status}
-                    loadingComanda={loadingComanda}
-                    comandaNumero={comandaNumero}
-                    editingItem={editingItem || null}
-                    onProfissionalChange={setProfissionalId}
-                    onClienteChange={handleClienteChange}
-                    onServicoChange={setServicoId}
-                    onHoraInicioChange={setHoraInicio}
-                    onObservacoesChange={setObservacoes}
-                    onStatusChange={setStatus}
-                    onAbrirComanda={handleAbrirComanda}
-                    onCancelAppointment={onCancelAppointment}
-                  />
-                ) : (
-                  <AgendaModalFormBloqueio
-                    profissionaisOptions={profissionaisOptions}
-                    profissionalId={profissionalId}
-                    horaInicio={horaInicio}
-                    horaFimBloqueio={horaFimBloqueio}
-                    motivoBloqueio={motivoBloqueio}
-                    onProfissionalChange={setProfissionalId}
-                    onHoraInicioChange={setHoraInicio}
-                    onHoraFimChange={setHoraFimBloqueio}
-                    onMotivoChange={setMotivoBloqueio}
-                  />
-                )}
-              </div>
+              <div className="min-h-0 overflow-y-auto px-4 py-4 md:px-5">{formBody}</div>
 
               <div className="min-h-0 overflow-y-auto border-l border-zinc-200 bg-zinc-50/60 px-4 py-4 md:px-5">
-                <AgendaModalResumo
-                  mode={mode}
-                  profissionalSelecionado={profissionalSelecionado}
-                  clienteSelecionado={clienteSelecionado}
-                  servicoSelecionado={servicoSelecionado}
-                  horaInicio={horaInicio}
-                  horaFimPreview={horaFimPreview}
-                  horaFimBloqueio={horaFimBloqueio}
-                  motivoBloqueio={motivoBloqueio}
-                  comandaNumero={comandaNumero}
-                  whatsMensagem={whatsMensagem}
-                  dicas={dicas}
-                  dicaIndex={dicaIndex}
-                  tituloWhatsapp={getTituloWhatsapp()}
-                  onChangeWhatsapp={setWhatsMensagem}
-                  onAbrirWhatsapp={abrirWhatsappMensagem}
-                />
+                {resumo}
               </div>
             </div>
 
