@@ -243,7 +243,6 @@ export async function saveAgendaItem(params: {
       hora_inicio: horaInicio,
       hora_fim: horaFim,
       motivo: payload.motivo || null,
-      origem: "manual",
     });
 
     if (error) {
