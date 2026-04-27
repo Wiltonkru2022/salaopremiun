@@ -95,6 +95,9 @@ export default function AgendaPage() {
   const [creditClienteId, setCreditClienteId] = useState("");
   const [creditLoading, setCreditLoading] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [potentialValueVisible, setPotentialValueVisible] = useState(true);
+  const [quickCreateOpen, setQuickCreateOpen] = useState(false);
+  const [quickCreateDate, setQuickCreateDate] = useState("");
 
   const {
     supabase,
@@ -109,7 +112,6 @@ export default function AgendaPage() {
     idSalao,
     setIdSalao,
     agendaExpanded,
-    setAgendaExpanded,
     densityMode,
     setDensityMode,
     permissoes,
@@ -570,6 +572,7 @@ export default function AgendaPage() {
               }
               onToday={() => setCurrentDate(new Date())}
               onChangeView={setViewMode}
+              onSelectDate={setCurrentDate}
               sidebarOpen={sidebarOpen}
               onToggleSidebar={() => setSidebarOpen((prev) => !prev)}
             />
@@ -602,6 +605,7 @@ export default function AgendaPage() {
               }
               onToday={() => setCurrentDate(new Date())}
               onChangeView={setViewMode}
+              onSelectDate={setCurrentDate}
               sidebarOpen={sidebarOpen}
               onToggleSidebar={() => setSidebarOpen((prev) => !prev)}
             />
@@ -621,7 +625,7 @@ export default function AgendaPage() {
         ) : null}
 
         <div className="min-h-0 min-w-0 flex-1 overflow-hidden">
-          <div className="flex h-full min-h-0 flex-col gap-3 lg:flex-row">
+          <div className="flex h-full min-h-0 flex-col gap-3 lg:grid lg:grid-cols-[minmax(0,1fr)_292px] lg:items-stretch">
             <div className="min-h-0 min-w-0 flex-1">
               <AgendaGrid
                 viewMode={viewMode}
@@ -652,6 +656,7 @@ export default function AgendaPage() {
               open={sidebarOpen}
               currentMonthLabel={format(currentDate, "MMMM", { locale: ptBR })}
               potentialValueLabel={currencyFormatter.format(valorPotencial)}
+              potentialValueVisible={potentialValueVisible}
               potentialGoalLabel={`Meta do mes: ${currencyFormatter.format(potentialGoal)}`}
               potentialProgress={potentialProgress}
               appointmentsCount={totalAtendimentos}
@@ -661,14 +666,17 @@ export default function AgendaPage() {
               statusCounts={statusCounts}
               viewMode={viewMode}
               densityMode={densityMode}
-              isExpanded={agendaExpanded}
               onToggleOpen={() => setSidebarOpen((prev) => !prev)}
               onChangeView={setViewMode}
               onChangeDensityMode={setDensityMode}
-              onToggleExpanded={() => setAgendaExpanded((prev) => !prev)}
               onToday={() => setCurrentDate(new Date())}
-              onOpenFullscreen={() => setAgendaExpanded(true)}
-              onOpenCreate={() => openCreateModal(defaultSlotDate, defaultSlotTime)}
+              onTogglePotentialValueVisible={() =>
+                setPotentialValueVisible((prev) => !prev)
+              }
+              onOpenCreate={() => {
+                setQuickCreateDate(defaultSlotDate);
+                setQuickCreateOpen(true);
+              }}
               onOpenBlock={() => openBlockModal(defaultSlotDate, defaultSlotTime)}
               onOpenCredit={() => setCreditModalOpen(true)}
               onOpenCashier={() => router.push("/caixa")}
@@ -887,6 +895,49 @@ export default function AgendaPage() {
         onClienteChange={setCreditClienteId}
         onSubmit={handleOpenCreditFlow}
       />
+      {quickCreateOpen ? (
+        <div className="fixed inset-0 z-[230] flex items-center justify-center bg-black/45 p-4">
+          <div className="w-full max-w-[420px] rounded-[26px] border border-zinc-200 bg-white p-5 shadow-[0_28px_90px_rgba(15,23,42,0.18)]">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-400">
+              Novo agendamento
+            </div>
+            <h3 className="mt-2 text-[1.45rem] font-semibold tracking-[-0.04em] text-slate-900">
+              Escolha o dia do atendimento
+            </h3>
+            <p className="mt-1 text-sm text-zinc-500">
+              Depois eu abro o modal principal da agenda ja na data escolhida.
+            </p>
+
+            <input
+              type="date"
+              value={quickCreateDate}
+              onChange={(event) => setQuickCreateDate(event.target.value)}
+              className="mt-4 h-12 w-full rounded-2xl border border-zinc-200 bg-white px-3 text-sm font-medium text-zinc-800 outline-none focus:border-violet-300 focus:ring-4 focus:ring-violet-100"
+            />
+
+            <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={() => setQuickCreateOpen(false)}
+                className="rounded-2xl border border-zinc-200 bg-white px-4 py-2.5 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (!quickCreateDate) return;
+                  setQuickCreateOpen(false);
+                  openCreateModal(quickCreateDate, defaultSlotTime);
+                }}
+                className="rounded-2xl bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white hover:opacity-95"
+              >
+                Continuar
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </>
   );
 }

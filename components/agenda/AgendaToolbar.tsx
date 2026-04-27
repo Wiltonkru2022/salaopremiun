@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { endOfWeek, format, startOfWeek } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { useEffect, useRef, useState } from "react";
 import { ViewMode } from "@/types/agenda";
 
 type Props = {
@@ -20,6 +21,7 @@ type Props = {
   onNext: () => void;
   onToday: () => void;
   onChangeView: (view: ViewMode) => void;
+  onSelectDate: (date: Date) => void;
   sidebarOpen: boolean;
   onToggleSidebar: () => void;
 };
@@ -33,9 +35,27 @@ export default function AgendaToolbar({
   onNext,
   onToday,
   onChangeView,
+  onSelectDate,
   sidebarOpen,
   onToggleSidebar,
 }: Props) {
+  const [calendarOpen, setCalendarOpen] = useState(false);
+  const pickerRef = useRef<HTMLDivElement | null>(null);
+  const dateValue = format(currentDate, "yyyy-MM-dd");
+
+  useEffect(() => {
+    if (!calendarOpen) return;
+
+    function handleClickOutside(event: MouseEvent) {
+      if (!pickerRef.current) return;
+      if (pickerRef.current.contains(event.target as Node)) return;
+      setCalendarOpen(false);
+    }
+
+    window.addEventListener("mousedown", handleClickOutside);
+    return () => window.removeEventListener("mousedown", handleClickOutside);
+  }, [calendarOpen]);
+
   const periodLabel =
     viewMode === "day"
       ? format(currentDate, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })
@@ -80,13 +100,34 @@ export default function AgendaToolbar({
               <ChevronRight size={18} />
             </button>
 
-            <button
-              type="button"
-              className="inline-flex h-11 items-center gap-2 rounded-2xl border border-transparent bg-transparent px-2 text-[1.05rem] font-medium text-zinc-800"
-            >
-              <span className="capitalize">{periodLabel}</span>
-              <ChevronDown size={16} className="text-zinc-400" />
-            </button>
+            <div className="relative" ref={pickerRef}>
+              <button
+                type="button"
+                onClick={() => setCalendarOpen((prev) => !prev)}
+                className="inline-flex h-11 items-center gap-2 rounded-2xl border border-transparent bg-transparent px-2 text-[1.05rem] font-medium text-zinc-800"
+              >
+                <span className="capitalize">{periodLabel}</span>
+                <ChevronDown size={16} className="text-zinc-400" />
+              </button>
+
+              {calendarOpen ? (
+                <div className="absolute left-0 top-[calc(100%+0.75rem)] z-40 w-[280px] rounded-[24px] border border-zinc-200 bg-white p-4 shadow-[0_24px_60px_rgba(15,23,42,0.14)]">
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-400">
+                    Escolher data
+                  </div>
+                  <input
+                    type="date"
+                    value={dateValue}
+                    onChange={(event) => {
+                      if (!event.target.value) return;
+                      onSelectDate(new Date(`${event.target.value}T12:00:00`));
+                      setCalendarOpen(false);
+                    }}
+                    className="mt-3 h-12 w-full rounded-2xl border border-zinc-200 bg-white px-3 text-sm font-medium text-zinc-800 outline-none focus:border-violet-300 focus:ring-4 focus:ring-violet-100"
+                  />
+                </div>
+              ) : null}
+            </div>
           </div>
 
           {(selectedProfessionalName || selectedProfessionalRole) && (

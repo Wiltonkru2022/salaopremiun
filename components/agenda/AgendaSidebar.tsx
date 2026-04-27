@@ -7,8 +7,6 @@ import {
   CreditCard,
   Eye,
   Lock,
-  Maximize2,
-  Minimize2,
   MonitorUp,
   PanelRightOpen,
   Sparkles,
@@ -22,6 +20,7 @@ type Props = {
   open: boolean;
   currentMonthLabel: string;
   potentialValueLabel: string;
+  potentialValueVisible: boolean;
   potentialGoalLabel: string;
   potentialProgress: number;
   appointmentsCount: number;
@@ -37,13 +36,11 @@ type Props = {
   };
   viewMode: ViewMode;
   densityMode: AgendaDensityMode;
-  isExpanded: boolean;
   onToggleOpen: () => void;
   onChangeView: (view: ViewMode) => void;
   onChangeDensityMode: (mode: AgendaDensityMode) => void;
-  onToggleExpanded: () => void;
   onToday: () => void;
-  onOpenFullscreen: () => void;
+  onTogglePotentialValueVisible: () => void;
   onOpenCreate: () => void;
   onOpenBlock: () => void;
   onOpenCredit: () => void;
@@ -55,6 +52,7 @@ export default function AgendaSidebar(props: Props) {
     open,
     currentMonthLabel,
     potentialValueLabel,
+    potentialValueVisible,
     potentialGoalLabel,
     potentialProgress,
     appointmentsCount,
@@ -64,12 +62,11 @@ export default function AgendaSidebar(props: Props) {
     statusCounts,
     viewMode,
     densityMode,
-    isExpanded,
     onToggleOpen,
     onChangeView,
     onChangeDensityMode,
-    onToggleExpanded,
     onToday,
+    onTogglePotentialValueVisible,
     onOpenCreate,
     onOpenBlock,
     onOpenCredit,
@@ -78,7 +75,7 @@ export default function AgendaSidebar(props: Props) {
 
   if (!open) {
     return (
-      <div className="hidden lg:flex lg:items-start">
+      <div className="hidden lg:flex lg:h-full lg:items-start">
         <button
           type="button"
           onClick={onToggleOpen}
@@ -92,7 +89,7 @@ export default function AgendaSidebar(props: Props) {
   }
 
   return (
-    <aside className="w-full min-h-0 lg:max-w-[292px] lg:min-w-[292px]">
+    <aside className="w-full min-h-0 lg:h-full lg:max-w-[292px] lg:min-w-[292px]">
       <div className="flex h-full min-h-0 flex-col rounded-[30px] border border-white/80 bg-white/96 p-4 shadow-[0_22px_65px_rgba(15,23,42,0.08)]">
         <div className="flex items-start justify-between gap-3">
           <div>
@@ -118,12 +115,17 @@ export default function AgendaSidebar(props: Props) {
               <div>
                 <p className="text-sm font-medium text-zinc-950">Valor potencial</p>
                 <p className="mt-2 text-[1.9rem] font-semibold tracking-[-0.05em] text-emerald-600">
-                  {potentialValueLabel}
+                  {potentialValueVisible ? potentialValueLabel : "R$ ******"}
                 </p>
               </div>
-              <div className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-zinc-200 bg-zinc-50/80 text-zinc-600">
+              <button
+                type="button"
+                onClick={onTogglePotentialValueVisible}
+                className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-zinc-200 bg-zinc-50/80 text-zinc-600"
+                title={potentialValueVisible ? "Ocultar valor" : "Mostrar valor"}
+              >
                 <Eye size={18} />
-              </div>
+              </button>
             </div>
 
             <div className="mt-4 h-2 rounded-full bg-zinc-100">
@@ -140,18 +142,41 @@ export default function AgendaSidebar(props: Props) {
           </section>
 
           <section className="rounded-[22px] border border-zinc-200/80 bg-white p-4 shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
-            <button type="button" className="flex w-full items-center justify-between gap-3 text-left">
-              <span className="text-[1.55rem] font-semibold tracking-[-0.05em] text-slate-900">
+            <button
+              type="button"
+              className="flex w-full items-center justify-between gap-3 text-left"
+            >
+              <span className="text-[1.55rem] font-semibold tracking-[-0.05em] text-slate-900 capitalize">
                 {currentMonthLabel}
               </span>
               <ChevronDown size={18} className="text-zinc-500" />
             </button>
 
             <div className="mt-4 grid grid-cols-2 gap-2.5">
-              <MetricCard icon={<UserRoundSearch size={16} />} label="Atendimentos" value={appointmentsCount} tone="emerald" />
-              <MetricCard icon={<Wallet size={16} />} label="Aguardando caixa" value={waitingPaymentCount} tone="amber" />
-              <MetricCard icon={<Lock size={16} />} label="Bloqueios" value={blockedCount} tone="violet" />
-              <MetricCard icon={<CalendarDays size={16} />} label="Atendidos" value={attendedCount} tone="sky" />
+              <MetricCard
+                icon={<UserRoundSearch size={16} />}
+                label="Atendimentos"
+                value={appointmentsCount}
+                tone="emerald"
+              />
+              <MetricCard
+                icon={<Wallet size={16} />}
+                label="Aguardando caixa"
+                value={waitingPaymentCount}
+                tone="amber"
+              />
+              <MetricCard
+                icon={<Lock size={16} />}
+                label="Bloqueios"
+                value={blockedCount}
+                tone="violet"
+              />
+              <MetricCard
+                icon={<CalendarDays size={16} />}
+                label="Atendidos"
+                value={attendedCount}
+                tone="sky"
+              />
             </div>
           </section>
 
@@ -163,7 +188,11 @@ export default function AgendaSidebar(props: Props) {
             <div className="mt-4 grid grid-cols-2 gap-2.5">
               <StatusCard label="Confirmados" value={statusCounts.confirmado} tone="emerald" />
               <StatusCard label="Pendentes" value={statusCounts.pendente} tone="amber" />
-              <StatusCard label="Em caixa" value={statusCounts.aguardandoPagamento} tone="violet" />
+              <StatusCard
+                label="Em caixa"
+                value={statusCounts.aguardandoPagamento}
+                tone="violet"
+              />
               <StatusCard label="Atendidos" value={statusCounts.atendido} tone="sky" />
             </div>
           </section>
@@ -174,9 +203,15 @@ export default function AgendaSidebar(props: Props) {
             </h3>
 
             <div className="mt-4 grid grid-cols-3 gap-2">
-              <ToggleButton active={false} onClick={onToday}>Hoje</ToggleButton>
-              <ToggleButton active={viewMode === "day"} onClick={() => onChangeView("day")}>Dia</ToggleButton>
-              <ToggleButton active={viewMode === "week"} onClick={() => onChangeView("week")}>Semana</ToggleButton>
+              <ToggleButton active={false} onClick={onToday}>
+                Hoje
+              </ToggleButton>
+              <ToggleButton active={viewMode === "day"} onClick={() => onChangeView("day")}>
+                Dia
+              </ToggleButton>
+              <ToggleButton active={viewMode === "week"} onClick={() => onChangeView("week")}>
+                Semana
+              </ToggleButton>
             </div>
 
             <div className="mt-4 grid grid-cols-2 gap-2.5">
@@ -201,14 +236,25 @@ export default function AgendaSidebar(props: Props) {
             </h3>
 
             <div className="mt-4 grid grid-cols-2 gap-2.5">
-              <QuickAction icon={<CalendarDays size={16} />} label="Novo agendamento" onClick={onOpenCreate} />
-              <QuickAction icon={<Lock size={16} />} label="Bloquear horario" onClick={onOpenBlock} />
-              <QuickAction icon={<CreditCard size={16} />} label="Abrir credito" onClick={onOpenCredit} />
-              <QuickAction icon={<Wallet size={16} />} label="Ver caixas" onClick={onOpenCashier} />
               <QuickAction
-                icon={isExpanded ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
-                label={isExpanded ? "Recolher agenda" : "Expandir agenda"}
-                onClick={onToggleExpanded}
+                icon={<CalendarDays size={16} />}
+                label="Novo agendamento"
+                onClick={onOpenCreate}
+              />
+              <QuickAction
+                icon={<Lock size={16} />}
+                label="Bloquear horario"
+                onClick={onOpenBlock}
+              />
+              <QuickAction
+                icon={<CreditCard size={16} />}
+                label="Abrir credito"
+                onClick={onOpenCredit}
+              />
+              <QuickAction
+                icon={<Wallet size={16} />}
+                label="Ver caixas"
+                onClick={onOpenCashier}
               />
             </div>
           </section>
