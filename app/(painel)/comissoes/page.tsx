@@ -243,8 +243,8 @@ export default function ComissoesPage() {
             th { text-align: left; font-size: 8.5px; text-transform: uppercase; letter-spacing: .08em; color: #71717a; background: #f4f4f5; padding: 7px 6px; border: 1px solid #e4e4e7; }
             td { padding: 6px 6px; border: 1px solid #e4e4e7; font-size: 10px; vertical-align: top; }
             .money { font-weight: 700; white-space: nowrap; }
-            .signature-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 20px; margin-top: 14px; }
-            .signature { padding-top: 14px; border-top: 1px solid #18181b; min-height: 48px; }
+            .signature-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 20px; margin-top: 28px; padding-top: 10px; }
+            .signature { padding-top: 18px; border-top: 1px solid #18181b; min-height: 58px; }
             .signature-name { font-size: 11px; font-weight: 700; }
             .signature-role { margin-top: 3px; font-size: 9px; color: #52525b; }
             .signature-doc { margin-top: 4px; font-size: 9px; color: #52525b; }
