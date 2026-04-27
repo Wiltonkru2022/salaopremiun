@@ -107,7 +107,6 @@ export default function AgendaModal(props: Props) {
         servicoId={servicoId}
         horaInicio={horaInicio}
         observacoes={observacoes}
-        status={status}
         statusLabel={statusLabel}
         loadingComanda={loadingComanda}
         comandaNumero={comandaNumero}
