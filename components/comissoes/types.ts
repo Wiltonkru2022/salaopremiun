@@ -31,6 +31,15 @@ export type ComissaoItem = {
 export type ComissaoProfissional = {
   id: string;
   nome: string;
+  cpf?: string | null;
+  tipo_profissional?: string | null;
+};
+
+export type ComissaoSalaoInfo = {
+  id: string;
+  nome: string;
+  cpf_cnpj?: string | null;
+  responsavel?: string | null;
 };
 
 export type ComissaoPermissoes = Record<string, boolean>;
@@ -58,7 +67,11 @@ export type ComissaoRow = {
   criado_em?: string | null;
   pago_em?: string | null;
   observacoes?: string | null;
-  profissionais?: { nome: string } | null;
+  profissionais?: {
+    nome: string;
+    cpf?: string | null;
+    tipo_profissional?: string | null;
+  } | null;
 };
 
 export type ComissaoConfirmacao = {

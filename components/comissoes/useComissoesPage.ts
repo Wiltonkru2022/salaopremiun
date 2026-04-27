@@ -19,6 +19,7 @@ import type {
   ComissaoProfissional,
   ComissaoResumo,
   ComissaoRow,
+  ComissaoSalaoInfo,
 } from "@/components/comissoes/types";
 
 function getTipoDestinatario(item: ComissaoRow) {
@@ -81,6 +82,7 @@ export function useComissoesPage() {
     )}-${String(hoje.getDate()).padStart(2, "0")}`
   );
   const [profissionais, setProfissionais] = useState<ComissaoProfissional[]>([]);
+  const [salaoInfo, setSalaoInfo] = useState<ComissaoSalaoInfo | null>(null);
   const [rows, setRows] = useState<ComissaoRow[]>([]);
   const [resumo, setResumo] = useState<ComissaoResumo>({
     total: 0,
@@ -175,18 +177,31 @@ export function useComissoesPage() {
           )
         ) as string[];
 
-        let mapaProfissionais = new Map<string, { id: string; nome: string }>();
+        let mapaProfissionais = new Map<
+          string,
+          {
+            id: string;
+            nome: string;
+            cpf?: string | null;
+            tipo_profissional?: string | null;
+          }
+        >();
 
         if (idsProfissionais.length > 0) {
           const { data: profissionaisData, error: profError } = await supabase
             .from("profissionais")
-            .select("id, nome")
+            .select("id, nome, cpf, tipo_profissional")
             .in("id", idsProfissionais);
           if (profError) throw profError;
           mapaProfissionais = new Map(
-            (((profissionaisData as { id: string; nome: string }[]) || []).map(
-              (item) => [item.id, item]
-            ))
+            (
+              (profissionaisData as {
+                id: string;
+                nome: string;
+                cpf?: string | null;
+                tipo_profissional?: string | null;
+              }[]) || []
+            ).map((item) => [item.id, item])
           );
         }
 
@@ -200,6 +215,11 @@ export function useComissoesPage() {
                   nome:
                     mapaProfissionais.get(item.id_profissional)?.nome ||
                     "Profissional",
+                  cpf:
+                    mapaProfissionais.get(item.id_profissional)?.cpf || null,
+                  tipo_profissional:
+                    mapaProfissionais.get(item.id_profissional)
+                      ?.tipo_profissional || null,
                 }
               : null,
           }))
@@ -261,12 +281,20 @@ export function useComissoesPage() {
       const { data: profissionaisData, error: profissionaisError } =
         await supabase
           .from("profissionais")
-          .select("id, nome")
+          .select("id, nome, cpf, tipo_profissional")
           .eq("id_salao", salaoIdFinal)
           .order("nome");
       if (profissionaisError) throw profissionaisError;
 
+      const { data: salaoData, error: salaoError } = await supabase
+        .from("saloes")
+        .select("id, nome, cpf_cnpj, responsavel")
+        .eq("id", salaoIdFinal)
+        .maybeSingle();
+      if (salaoError) throw salaoError;
+
       setProfissionais((profissionaisData as ComissaoProfissional[]) || []);
+      setSalaoInfo((salaoData as ComissaoSalaoInfo | null) || null);
       await carregarComissoes(salaoIdFinal);
     } catch (error) {
       console.error(error);
@@ -565,6 +593,7 @@ export function useComissoesPage() {
     dataFinal,
     setDataFinal,
     profissionais,
+    salaoInfo,
     rows,
     resumo,
     confirmacaoComissao,

@@ -43,6 +43,29 @@ function formatDateTime(value: string | null | undefined) {
   return Number.isNaN(date.getTime()) ? value : date.toLocaleString("pt-BR");
 }
 
+function escapeHtml(value: string | null | undefined) {
+  return String(value || "-")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+function formatDocument(value: string | null | undefined) {
+  const digits = String(value || "").replace(/\D/g, "");
+  if (digits.length === 11) {
+    return digits.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
+  }
+  if (digits.length === 14) {
+    return digits.replace(
+      /(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/,
+      "$1.$2.$3/$4-$5"
+    );
+  }
+  return value || "-";
+}
+
 function getInitials(name: string) {
   return name
     .split(" ")
@@ -117,6 +140,7 @@ export default function ComissoesPage() {
     dataFinal,
     setDataFinal,
     profissionais,
+    salaoInfo,
     rows,
     resumo,
     confirmacaoComissao,
@@ -141,9 +165,217 @@ export default function ComissoesPage() {
     const win = window.open("", "_blank");
     if (!win) return;
 
-    win.document.write(
-      `<html><body><h1>Rateio de Comissoes</h1><p>Periodo: ${formatDate(dataInicial)} ate ${formatDate(dataFinal)}</p><p>Total: ${formatCurrency(resumo.total)}</p></body></html>`
-    );
+    const grupos = rows.reduce<
+      Array<{
+        id: string;
+        nome: string;
+        cpf: string | null;
+        tipo: string;
+        rows: typeof rows;
+        total: number;
+      }>
+    >((acc, item) => {
+      const id = item.id_profissional || item.id;
+      const existente = acc.find((group) => group.id === id);
+      const tipo = getTipoDestinatario(item) === "assistente" ? "Assistente" : "Profissional";
+      const cpf = item.profissionais?.cpf || null;
+      const nome = item.profissionais?.nome || "Profissional";
+
+      if (existente) {
+        existente.rows.push(item);
+        existente.total += getValorLancamento(item);
+        return acc;
+      }
+
+      acc.push({
+        id,
+        nome,
+        cpf,
+        tipo,
+        rows: [item],
+        total: getValorLancamento(item),
+      });
+      return acc;
+    }, []);
+
+    const gruposOrdenados = grupos.sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
+
+    const html = `
+      <html>
+        <head>
+          <title>Rateio de comissoes</title>
+          <style>
+            * { box-sizing: border-box; }
+            body { font-family: Arial, Helvetica, sans-serif; margin: 0; color: #18181b; background: #fff; }
+            .page { padding: 28px 34px 42px; }
+            .header { display: flex; justify-content: space-between; gap: 24px; align-items: flex-start; border-bottom: 2px solid #111827; padding-bottom: 18px; }
+            .eyebrow { font-size: 11px; letter-spacing: .18em; text-transform: uppercase; color: #71717a; font-weight: 700; }
+            .title { font-size: 30px; font-weight: 700; margin: 8px 0 6px; }
+            .muted { color: #52525b; font-size: 12px; line-height: 1.6; }
+            .period { text-align: right; }
+            .kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 18px; }
+            .kpi { border: 1px solid #e4e4e7; border-radius: 16px; padding: 14px 16px; background: #fafafa; }
+            .kpi-label { font-size: 11px; text-transform: uppercase; letter-spacing: .12em; color: #71717a; }
+            .kpi-value { margin-top: 8px; font-size: 20px; font-weight: 700; }
+            .group { margin-top: 28px; page-break-inside: avoid; }
+            .group-header { display: flex; justify-content: space-between; gap: 18px; align-items: stretch; }
+            .group-card { flex: 1; border: 1px solid #e4e4e7; border-radius: 18px; padding: 16px 18px; background: #fff; }
+            .group-title { font-size: 22px; font-weight: 700; margin: 6px 0 10px; }
+            .meta-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 10px 18px; }
+            .meta-label { font-size: 11px; text-transform: uppercase; letter-spacing: .12em; color: #71717a; }
+            .meta-value { margin-top: 4px; font-size: 14px; font-weight: 600; color: #18181b; }
+            .total-box { width: 240px; border: 1px solid #d4d4d8; border-radius: 18px; padding: 16px 18px; background: linear-gradient(180deg,#faf5ff 0%,#ffffff 100%); }
+            .total-box .total { margin-top: 8px; font-size: 28px; font-weight: 700; }
+            table { width: 100%; border-collapse: collapse; margin-top: 14px; }
+            th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .1em; color: #71717a; background: #f4f4f5; padding: 12px 10px; border: 1px solid #e4e4e7; }
+            td { padding: 11px 10px; border: 1px solid #e4e4e7; font-size: 12px; vertical-align: top; }
+            .money { font-weight: 700; white-space: nowrap; }
+            .signature-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 34px; margin-top: 34px; }
+            .signature { padding-top: 34px; border-top: 1px solid #18181b; }
+            .signature-name { font-size: 14px; font-weight: 700; }
+            .signature-role { margin-top: 4px; font-size: 12px; color: #52525b; }
+            .signature-doc { margin-top: 6px; font-size: 12px; color: #52525b; }
+            .footer-note { margin-top: 18px; font-size: 11px; color: #71717a; }
+            @media print {
+              .group + .group { page-break-before: always; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="page">
+            <div class="header">
+              <div>
+                <div class="eyebrow">Rateio financeiro</div>
+                <div class="title">Relatorio de comissoes</div>
+                <div class="muted">
+                  Salao: <strong>${escapeHtml(salaoInfo?.nome || "Salao")}</strong><br />
+                  Documento: <strong>${escapeHtml(formatDocument(salaoInfo?.cpf_cnpj))}</strong><br />
+                  Responsavel: <strong>${escapeHtml(salaoInfo?.responsavel || "Nao informado")}</strong>
+                </div>
+              </div>
+              <div class="period">
+                <div class="eyebrow">Periodo</div>
+                <div class="title" style="font-size:22px;">${escapeHtml(
+                  `${formatDate(dataInicial)} ate ${formatDate(dataFinal)}`
+                )}</div>
+                <div class="muted">Gerado em ${escapeHtml(formatDateTime(new Date().toISOString()))}</div>
+              </div>
+            </div>
+
+            <div class="kpis">
+              <div class="kpi">
+                <div class="kpi-label">Total do rateio</div>
+                <div class="kpi-value">${escapeHtml(formatCurrency(resumo.total))}</div>
+              </div>
+              <div class="kpi">
+                <div class="kpi-label">Lancamentos filtrados</div>
+                <div class="kpi-value">${escapeHtml(String(rows.length))}</div>
+              </div>
+              <div class="kpi">
+                <div class="kpi-label">Pessoas no rateio</div>
+                <div class="kpi-value">${escapeHtml(String(gruposOrdenados.length))}</div>
+              </div>
+            </div>
+
+            ${gruposOrdenados
+              .map((group) => {
+                const linhas = group.rows
+                  .map((item) => {
+                    const origem = origemMeta(item.origem_percentual);
+                    const statusInfo = getStatusComissaoMeta(item.status);
+                    return `
+                      <tr>
+                        <td>${escapeHtml(item.descricao || "-")}</td>
+                        <td>${escapeHtml(formatDate(item.competencia_data))}</td>
+                        <td class="money">${escapeHtml(formatCurrency(item.valor_base))}</td>
+                        <td>${escapeHtml(formatPercent(item.percentual_aplicado))}</td>
+                        <td>${escapeHtml(origem.label)}</td>
+                        <td class="money">${escapeHtml(formatCurrency(getValorLancamento(item)))}</td>
+                        <td>${escapeHtml(statusInfo.label)}</td>
+                        <td>${escapeHtml(formatDateTime(item.pago_em))}</td>
+                      </tr>
+                    `;
+                  })
+                  .join("");
+
+                return `
+                  <section class="group">
+                    <div class="group-header">
+                      <div class="group-card">
+                        <div class="eyebrow">Dados do profissional</div>
+                        <div class="group-title">${escapeHtml(group.nome)}</div>
+                        <div class="meta-grid">
+                          <div>
+                            <div class="meta-label">Tipo</div>
+                            <div class="meta-value">${escapeHtml(group.tipo)}</div>
+                          </div>
+                          <div>
+                            <div class="meta-label">CPF</div>
+                            <div class="meta-value">${escapeHtml(formatDocument(group.cpf))}</div>
+                          </div>
+                          <div>
+                            <div class="meta-label">Lancamentos</div>
+                            <div class="meta-value">${escapeHtml(String(group.rows.length))}</div>
+                          </div>
+                          <div>
+                            <div class="meta-label">Periodo</div>
+                            <div class="meta-value">${escapeHtml(
+                              `${formatDate(dataInicial)} ate ${formatDate(dataFinal)}`
+                            )}</div>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="total-box">
+                        <div class="eyebrow">Total do profissional</div>
+                        <div class="total">${escapeHtml(formatCurrency(group.total))}</div>
+                        <div class="muted">Rateio consolidado do periodo filtrado.</div>
+                      </div>
+                    </div>
+
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>Descricao</th>
+                          <th>Competencia</th>
+                          <th>Base</th>
+                          <th>% Aplicada</th>
+                          <th>Origem</th>
+                          <th>Comissao</th>
+                          <th>Status</th>
+                          <th>Pago em</th>
+                        </tr>
+                      </thead>
+                      <tbody>${linhas}</tbody>
+                    </table>
+
+                    <div class="signature-grid">
+                      <div class="signature">
+                        <div class="signature-name">${escapeHtml(salaoInfo?.nome || "Salao")}</div>
+                        <div class="signature-role">Assinatura do salao</div>
+                        <div class="signature-doc">Documento: ${escapeHtml(
+                          formatDocument(salaoInfo?.cpf_cnpj)
+                        )}</div>
+                      </div>
+                      <div class="signature">
+                        <div class="signature-name">${escapeHtml(group.nome)}</div>
+                        <div class="signature-role">Assinatura do ${escapeHtml(group.tipo.toLowerCase())}</div>
+                        <div class="signature-doc">CPF: ${escapeHtml(formatDocument(group.cpf))}</div>
+                      </div>
+                    </div>
+                  </section>
+                `;
+              })
+              .join("")}
+
+            <div class="footer-note">
+              Documento gerado para conferencia e assinatura do rateio de comissoes do periodo.
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+
+    win.document.write(html);
     win.document.close();
     win.focus();
     win.print();
