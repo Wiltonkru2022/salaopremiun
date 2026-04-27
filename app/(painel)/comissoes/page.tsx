@@ -164,46 +164,58 @@ export default function ComissoesPage() {
   function imprimirRateio() {
     const win = window.open("", "_blank");
     if (!win) return;
-
-    const grupos = rows.reduce<
-      Array<{
-        id: string;
-        nome: string;
-        cpf: string | null;
-        tipo: string;
-        rows: typeof rows;
-        total: number;
-      }>
-    >((acc, item) => {
-      const id = item.id_profissional || item.id;
-      const existente = acc.find((group) => group.id === id);
-      const tipo = getTipoDestinatario(item) === "assistente" ? "Assistente" : "Profissional";
-      const cpf = item.profissionais?.cpf || null;
-      const nome = item.profissionais?.nome || "Profissional";
-
-      if (existente) {
-        existente.rows.push(item);
-        existente.total += getValorLancamento(item);
-        return acc;
-      }
-
-      acc.push({
-        id,
-        nome,
-        cpf,
-        tipo,
-        rows: [item],
-        total: getValorLancamento(item),
-      });
-      return acc;
-    }, []);
-
-    const gruposOrdenados = grupos.sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
+    const profissionalSelecionado =
+      profissionais.find((item) => item.id === profissionalId) || null;
+    const profissionalTitulo =
+      profissionalSelecionado?.nome ||
+      (profissionalId ? rows[0]?.profissionais?.nome || "Profissional" : "");
+    const profissionalCpf =
+      profissionalSelecionado?.cpf ||
+      (profissionalId ? rows[0]?.profissionais?.cpf || null : null);
+    const profissionalTipo =
+      profissionalSelecionado?.tipo_profissional ||
+      (profissionalId
+        ? rows[0]?.profissionais?.tipo_profissional ||
+          (getTipoDestinatario(rows[0]) === "assistente"
+            ? "assistente"
+            : "profissional")
+        : null);
+    const documentTitle = profissionalTitulo
+      ? `Rateio - ${profissionalTitulo}`
+      : "Rateio de comissoes";
+    const totalGeral = rows.reduce(
+      (acc, item) => acc + getValorLancamento(item),
+      0
+    );
+    const mostrarColunaPessoa = !profissionalId;
+    const linhas = rows
+      .map((item) => {
+        const origem = origemMeta(item.origem_percentual);
+        const statusInfo = getStatusComissaoMeta(item.status);
+        return `
+          <tr>
+            ${
+              mostrarColunaPessoa
+                ? `<td>${escapeHtml(item.profissionais?.nome || "Profissional")}</td>`
+                : ""
+            }
+            <td>${escapeHtml(item.descricao || "-")}</td>
+            <td>${escapeHtml(formatDate(item.competencia_data))}</td>
+            <td class="money">${escapeHtml(formatCurrency(item.valor_base))}</td>
+            <td>${escapeHtml(formatPercent(item.percentual_aplicado))}</td>
+            <td>${escapeHtml(origem.label)}</td>
+            <td class="money">${escapeHtml(formatCurrency(getValorLancamento(item)))}</td>
+            <td>${escapeHtml(statusInfo.label)}</td>
+            <td>${escapeHtml(formatDateTime(item.pago_em))}</td>
+          </tr>
+        `;
+      })
+      .join("");
 
     const html = `
       <html>
         <head>
-          <title>Rateio de comissoes</title>
+          <title>${escapeHtml(documentTitle)}</title>
           <style>
             @page { size: A4 landscape; margin: 10mm; }
             * { box-sizing: border-box; }
@@ -218,7 +230,7 @@ export default function ComissoesPage() {
             .kpi { border: 1px solid #e4e4e7; border-radius: 10px; padding: 8px 10px; background: #fafafa; }
             .kpi-label { font-size: 9px; text-transform: uppercase; letter-spacing: .1em; color: #71717a; }
             .kpi-value { margin-top: 4px; font-size: 15px; font-weight: 700; }
-            .group { margin-top: 14px; break-inside: avoid; page-break-inside: avoid; }
+            .report { margin-top: 14px; }
             .group-header { display: grid; grid-template-columns: 1fr 180px; gap: 10px; align-items: start; }
             .group-card { border: 1px solid #e4e4e7; border-radius: 10px; padding: 10px 12px; background: #fff; }
             .group-title { font-size: 16px; font-weight: 700; margin: 4px 0 6px; }
@@ -237,6 +249,7 @@ export default function ComissoesPage() {
             .signature-role { margin-top: 3px; font-size: 9px; color: #52525b; }
             .signature-doc { margin-top: 4px; font-size: 9px; color: #52525b; }
             .footer-note { margin-top: 10px; font-size: 9px; color: #71717a; }
+            .col-pessoa { width: 15%; }
             .col-desc { width: 28%; }
             .col-competencia { width: 10%; }
             .col-base { width: 11%; }
@@ -255,11 +268,22 @@ export default function ComissoesPage() {
             <div class="header">
               <div>
                 <div class="eyebrow">Rateio financeiro</div>
-                <div class="title">Relatorio de comissoes</div>
+                <div class="title">${
+                  profissionalTitulo
+                    ? `Rateio de ${escapeHtml(profissionalTitulo)}`
+                    : "Relatorio de comissoes"
+                }</div>
                 <div class="muted">
                   Salao: <strong>${escapeHtml(salaoInfo?.nome || "Salao")}</strong><br />
                   Documento: <strong>${escapeHtml(formatDocument(salaoInfo?.cpf_cnpj))}</strong><br />
                   Responsavel: <strong>${escapeHtml(salaoInfo?.responsavel || "Nao informado")}</strong>
+                  ${
+                    profissionalTitulo
+                      ? `<br />Profissional: <strong>${escapeHtml(
+                          profissionalTitulo
+                        )}</strong>`
+                      : ""
+                  }
                 </div>
               </div>
               <div class="period">
@@ -274,89 +298,115 @@ export default function ComissoesPage() {
             <div class="kpis">
               <div class="kpi">
                 <div class="kpi-label">Total do rateio</div>
-                <div class="kpi-value">${escapeHtml(formatCurrency(resumo.total))}</div>
+                <div class="kpi-value">${escapeHtml(formatCurrency(totalGeral))}</div>
               </div>
               <div class="kpi">
                 <div class="kpi-label">Lancamentos filtrados</div>
                 <div class="kpi-value">${escapeHtml(String(rows.length))}</div>
               </div>
               <div class="kpi">
-                <div class="kpi-label">Pessoas no rateio</div>
-                <div class="kpi-value">${escapeHtml(String(gruposOrdenados.length))}</div>
+                <div class="kpi-label">${
+                  profissionalTitulo ? "Tipo" : "Pessoas no rateio"
+                }</div>
+                <div class="kpi-value">${escapeHtml(
+                  profissionalTitulo
+                    ? profissionalTipo === "assistente"
+                      ? "Assistente"
+                      : "Profissional"
+                    : String(
+                        new Set(
+                          rows.map(
+                            (item) => item.id_profissional || item.profissionais?.nome || item.id
+                          )
+                        ).size
+                      )
+                )}</div>
               </div>
             </div>
 
-            ${gruposOrdenados
-              .map((group) => {
-                const linhas = group.rows
-                  .map((item) => {
-                    const origem = origemMeta(item.origem_percentual);
-                    const statusInfo = getStatusComissaoMeta(item.status);
-                    return `
-                      <tr>
-                        <td>${escapeHtml(item.descricao || "-")}</td>
-                        <td>${escapeHtml(formatDate(item.competencia_data))}</td>
-                        <td class="money">${escapeHtml(formatCurrency(item.valor_base))}</td>
-                        <td>${escapeHtml(formatPercent(item.percentual_aplicado))}</td>
-                        <td>${escapeHtml(origem.label)}</td>
-                        <td class="money">${escapeHtml(formatCurrency(getValorLancamento(item)))}</td>
-                        <td>${escapeHtml(statusInfo.label)}</td>
-                        <td>${escapeHtml(formatDateTime(item.pago_em))}</td>
-                      </tr>
-                    `;
-                  })
-                  .join("");
-
-                return `
-                  <section class="group">
-                    <div class="group-header">
-                      <div class="group-card">
-                        <div class="eyebrow">Dados do profissional</div>
-                        <div class="group-title">${escapeHtml(group.nome)}</div>
-                        <div class="meta-grid">
-                          <div>
-                            <div class="meta-label">Tipo</div>
-                            <div class="meta-value">${escapeHtml(group.tipo)}</div>
-                          </div>
-                          <div>
-                            <div class="meta-label">CPF</div>
-                            <div class="meta-value">${escapeHtml(formatDocument(group.cpf))}</div>
-                          </div>
-                          <div>
-                            <div class="meta-label">Lancamentos</div>
-                            <div class="meta-value">${escapeHtml(String(group.rows.length))}</div>
-                          </div>
-                          <div>
-                            <div class="meta-label">Periodo</div>
-                            <div class="meta-value">${escapeHtml(
-                              `${formatDate(dataInicial)} ate ${formatDate(dataFinal)}`
-                            )}</div>
-                          </div>
-                        </div>
-                      </div>
-                      <div class="total-box">
-                        <div class="eyebrow">Total do profissional</div>
-                        <div class="total">${escapeHtml(formatCurrency(group.total))}</div>
-                        <div class="muted">Rateio consolidado do periodo filtrado.</div>
-                      </div>
+            <section class="report">
+              <div class="group-header">
+                <div class="group-card">
+                  <div class="eyebrow">${
+                    profissionalTitulo ? "Dados do profissional" : "Resumo do filtro"
+                  }</div>
+                  <div class="group-title">${
+                    profissionalTitulo
+                      ? escapeHtml(profissionalTitulo)
+                      : "Rateio consolidado"
+                  }</div>
+                  <div class="meta-grid">
+                    <div>
+                      <div class="meta-label">${
+                        profissionalTitulo ? "Tipo" : "Status"
+                      }</div>
+                      <div class="meta-value">${escapeHtml(
+                        profissionalTitulo
+                          ? profissionalTipo === "assistente"
+                            ? "Assistente"
+                            : "Profissional"
+                          : status === "todos"
+                            ? "Todos"
+                            : status
+                      )}</div>
                     </div>
+                    <div>
+                      <div class="meta-label">${
+                        profissionalTitulo ? "CPF" : "Tipo de destinatario"
+                      }</div>
+                      <div class="meta-value">${escapeHtml(
+                        profissionalTitulo
+                          ? formatDocument(profissionalCpf)
+                          : tipoDestinatario === "todos"
+                            ? "Todos"
+                            : tipoDestinatario
+                      )}</div>
+                    </div>
+                    <div>
+                      <div class="meta-label">Lancamentos</div>
+                      <div class="meta-value">${escapeHtml(String(rows.length))}</div>
+                    </div>
+                    <div>
+                      <div class="meta-label">Periodo</div>
+                      <div class="meta-value">${escapeHtml(
+                        `${formatDate(dataInicial)} ate ${formatDate(dataFinal)}`
+                      )}</div>
+                    </div>
+                  </div>
+                </div>
+                <div class="total-box">
+                  <div class="eyebrow">${
+                    profissionalTitulo ? "Total do profissional" : "Total filtrado"
+                  }</div>
+                  <div class="total">${escapeHtml(formatCurrency(totalGeral))}</div>
+                  <div class="muted">Documento pronto para conferencia e assinatura.</div>
+                </div>
+              </div>
 
-                    <table>
-                      <thead>
-                        <tr>
-                          <th class="col-desc">Descricao</th>
-                          <th class="col-competencia">Competencia</th>
-                          <th class="col-base">Base</th>
-                          <th class="col-percent">% Aplicada</th>
-                          <th class="col-origem">Origem</th>
-                          <th class="col-comissao">Comissao</th>
-                          <th class="col-status">Status</th>
-                          <th class="col-pago">Pago em</th>
-                        </tr>
-                      </thead>
-                      <tbody>${linhas}</tbody>
-                    </table>
+              <table>
+                <thead>
+                  <tr>
+                    ${
+                      mostrarColunaPessoa
+                        ? '<th class="col-pessoa">Pessoa</th>'
+                        : ""
+                    }
+                    <th class="col-desc">Descricao</th>
+                    <th class="col-competencia">Competencia</th>
+                    <th class="col-base">Base</th>
+                    <th class="col-percent">% Aplicada</th>
+                    <th class="col-origem">Origem</th>
+                    <th class="col-comissao">Comissao</th>
+                    <th class="col-status">Status</th>
+                    <th class="col-pago">Pago em</th>
+                  </tr>
+                </thead>
+                <tbody>${linhas}</tbody>
+              </table>
 
+              ${
+                profissionalTitulo
+                  ? `
                     <div class="signature-grid">
                       <div class="signature">
                         <div class="signature-name">${escapeHtml(salaoInfo?.nome || "Salao")}</div>
@@ -366,15 +416,21 @@ export default function ComissoesPage() {
                         )}</div>
                       </div>
                       <div class="signature">
-                        <div class="signature-name">${escapeHtml(group.nome)}</div>
-                        <div class="signature-role">Assinatura do ${escapeHtml(group.tipo.toLowerCase())}</div>
-                        <div class="signature-doc">CPF: ${escapeHtml(formatDocument(group.cpf))}</div>
+                        <div class="signature-name">${escapeHtml(profissionalTitulo)}</div>
+                        <div class="signature-role">Assinatura do ${
+                          profissionalTipo === "assistente"
+                            ? "assistente"
+                            : "profissional"
+                        }</div>
+                        <div class="signature-doc">CPF: ${escapeHtml(
+                          formatDocument(profissionalCpf)
+                        )}</div>
                       </div>
                     </div>
-                  </section>
-                `;
-              })
-              .join("")}
+                  `
+                  : ""
+              }
+            </section>
 
             <div class="footer-note">
               Documento gerado para conferencia e assinatura do rateio de comissoes do periodo.
