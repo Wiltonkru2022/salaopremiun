@@ -14,6 +14,7 @@ const STORAGE_KEY = "salaopremium:profissional-alerts:read";
 export default function ProfissionalAlerts({ notifications }: Props) {
   const [hydrated, setHydrated] = useState(false);
   const [readIds, setReadIds] = useState<string[]>([]);
+  const [items, setItems] = useState<ProfissionalAppNotification[]>(notifications);
 
   useEffect(() => {
     try {
@@ -25,6 +26,37 @@ export default function ProfissionalAlerts({ notifications }: Props) {
     } finally {
       setHydrated(true);
     }
+  }, []);
+
+  useEffect(() => {
+    setItems(notifications);
+  }, [notifications]);
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadNotifications() {
+      try {
+        const response = await fetch("/api/app-profissional/notificacoes", {
+          cache: "no-store",
+        });
+        const data = await response.json().catch(() => null);
+
+        if (!active || !response.ok || !data?.ok || !Array.isArray(data.notifications)) {
+          return;
+        }
+
+        setItems(data.notifications as ProfissionalAppNotification[]);
+      } catch {
+        // Mantem as notificacoes iniciais se a atualizacao falhar.
+      }
+    }
+
+    void loadNotifications();
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   function markAsRead(id: string) {
@@ -39,9 +71,9 @@ export default function ProfissionalAlerts({ notifications }: Props) {
   }
 
   const notification = useMemo(() => {
-    if (!hydrated) return notifications[0] || null;
-    return notifications.find((item) => !readIds.includes(item.id)) || null;
-  }, [hydrated, notifications, readIds]);
+    if (!hydrated) return items[0] || null;
+    return items.find((item) => !readIds.includes(item.id)) || null;
+  }, [hydrated, items, readIds]);
 
   if (!notification) {
     return null;
