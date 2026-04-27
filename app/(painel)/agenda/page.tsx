@@ -964,17 +964,20 @@ export default function AgendaPage() {
                 const hasClosedComanda = ["fechada", "cancelada"].includes(
                   String(item.comanda_status || "").toLowerCase()
                 );
+                const isInteractiveStatus = [
+                  "pendente",
+                  "confirmado",
+                  "atendido",
+                ].includes(item.status);
                 const canDelete =
                   !item.id_comanda &&
                   !hasClosedComanda &&
-                  ["pendente", "confirmado"].includes(item.status);
-                const canEdit =
-                  !hasClosedComanda &&
-                  ["pendente", "confirmado"].includes(item.status);
+                  isInteractiveStatus;
+                const canEdit = !hasClosedComanda && isInteractiveStatus;
                 const canChangeStatus =
                   !hasClosedComanda &&
                   !item.id_comanda &&
-                  ["pendente", "confirmado"].includes(item.status);
+                  isInteractiveStatus;
 
                 const quickActions = [
                   {
@@ -1023,6 +1026,13 @@ export default function AgendaPage() {
                           "Deixa claro que ainda falta resposta ou confirmacao.",
                         icon: ClipboardList,
                         onClick: () => void handleQuickStatusChange(item, "pendente"),
+                      },
+                      {
+                        label: "Marcar como atendido",
+                        description:
+                          "Use quando o atendimento ja estiver concluido na agenda.",
+                        icon: CheckCircle2,
+                        onClick: () => void handleQuickStatusChange(item, "atendido"),
                       },
                     ]
                   : [];
