@@ -59,6 +59,10 @@ type Props = {
   densityMode: AgendaDensityMode;
   clientSearchQuery: string;
   clientResults: Cliente[];
+  clientCreateOpen: boolean;
+  clientCreateName: string;
+  clientCreateWhatsapp: string;
+  clientCreateSaving: boolean;
   waitlistItems: AgendaWaitlistItem[];
   onToggleOpen: () => void;
   onBackToOverview: () => void;
@@ -75,6 +79,10 @@ type Props = {
   onOpenWaitlist: () => void;
   onClientSearchQueryChange: (value: string) => void;
   onCreateClient: () => void;
+  onStartCreateClient: () => void;
+  onCancelCreateClient: () => void;
+  onCreateClientNameChange: (value: string) => void;
+  onCreateClientWhatsappChange: (value: string) => void;
   onOpenClient: (clientId: string) => void;
 };
 
@@ -96,6 +104,10 @@ export default function AgendaSidebar(props: Props) {
     densityMode,
     clientSearchQuery,
     clientResults,
+    clientCreateOpen,
+    clientCreateName,
+    clientCreateWhatsapp,
+    clientCreateSaving,
     waitlistItems,
     onToggleOpen,
     onBackToOverview,
@@ -112,6 +124,10 @@ export default function AgendaSidebar(props: Props) {
     onOpenWaitlist,
     onClientSearchQueryChange,
     onCreateClient,
+    onStartCreateClient,
+    onCancelCreateClient,
+    onCreateClientNameChange,
+    onCreateClientWhatsappChange,
     onOpenClient,
   } = props;
 
@@ -200,8 +216,16 @@ export default function AgendaSidebar(props: Props) {
             <ClientSearchView
               query={clientSearchQuery}
               results={clientResults}
+              createOpen={clientCreateOpen}
+              createName={clientCreateName}
+              createWhatsapp={clientCreateWhatsapp}
+              createSaving={clientCreateSaving}
               onQueryChange={onClientSearchQueryChange}
               onCreateClient={onCreateClient}
+              onStartCreateClient={onStartCreateClient}
+              onCancelCreateClient={onCancelCreateClient}
+              onCreateNameChange={onCreateClientNameChange}
+              onCreateWhatsappChange={onCreateClientWhatsappChange}
               onOpenClient={onOpenClient}
             />
           ) : view === "waitlist" ? (
@@ -392,14 +416,30 @@ function SidebarNavButton({
 function ClientSearchView({
   query,
   results,
+  createOpen,
+  createName,
+  createWhatsapp,
+  createSaving,
   onQueryChange,
   onCreateClient,
+  onStartCreateClient,
+  onCancelCreateClient,
+  onCreateNameChange,
+  onCreateWhatsappChange,
   onOpenClient,
 }: {
   query: string;
   results: Cliente[];
+  createOpen: boolean;
+  createName: string;
+  createWhatsapp: string;
+  createSaving: boolean;
   onQueryChange: (value: string) => void;
   onCreateClient: () => void;
+  onStartCreateClient: () => void;
+  onCancelCreateClient: () => void;
+  onCreateNameChange: (value: string) => void;
+  onCreateWhatsappChange: (value: string) => void;
   onOpenClient: (clientId: string) => void;
 }) {
   return (
@@ -454,13 +494,59 @@ function ClientSearchView({
             <p className="mt-1 text-sm text-zinc-500">
               Deseja criar novo cliente?
             </p>
-            <button
-              type="button"
-              onClick={onCreateClient}
-              className="mt-3 rounded-2xl bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white"
-            >
-              Criar novo cliente
-            </button>
+            {!createOpen ? (
+              <button
+                type="button"
+                onClick={onStartCreateClient}
+                className="mt-3 rounded-2xl bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white"
+              >
+                Criar novo cliente
+              </button>
+            ) : (
+              <div className="mt-4 space-y-3">
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.14em] text-zinc-400">
+                    Nome
+                  </label>
+                  <input
+                    type="text"
+                    value={createName}
+                    onChange={(event) => onCreateNameChange(event.target.value)}
+                    placeholder="Nome da cliente"
+                    className="w-full rounded-2xl border border-zinc-200 bg-white px-3 py-3 text-sm text-zinc-900 outline-none transition focus:border-zinc-900"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.14em] text-zinc-400">
+                    WhatsApp
+                  </label>
+                  <input
+                    type="text"
+                    value={createWhatsapp}
+                    onChange={(event) => onCreateWhatsappChange(event.target.value)}
+                    placeholder="(00) 00000-0000"
+                    className="w-full rounded-2xl border border-zinc-200 bg-white px-3 py-3 text-sm text-zinc-900 outline-none transition focus:border-zinc-900"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={onCancelCreateClient}
+                    className="flex-1 rounded-2xl border border-zinc-200 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-700"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={onCreateClient}
+                    disabled={createSaving}
+                    className="flex-1 rounded-2xl bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
+                  >
+                    {createSaving ? "Salvando..." : "Salvar cliente"}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </section>

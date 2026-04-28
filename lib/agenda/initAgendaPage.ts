@@ -50,6 +50,22 @@ function parseDataAssinatura(valor?: string | null) {
   return null;
 }
 
+function intersectProfessionalIds(
+  serviceIds: string[],
+  linksByService: Map<string, string[]>
+) {
+  if (serviceIds.length === 0) return [];
+
+  const [firstServiceId, ...otherServiceIds] = serviceIds;
+  const firstLinks = linksByService.get(firstServiceId) || [];
+
+  return firstLinks.filter((professionalId) =>
+    otherServiceIds.every((serviceId) =>
+      (linksByService.get(serviceId) || []).includes(professionalId)
+    )
+  );
+}
+
 function getAssinaturaBloqueada(params: {
   status?: string | null;
   vencimentoEm?: string | null;
@@ -181,6 +197,7 @@ export async function initAgendaPage(params: {
     clientesRes,
     servicosRes,
     vinculosServicosRes,
+    comboItensRes,
     assinaturaRes,
   ] = await Promise.all([
     supabase
@@ -234,6 +251,12 @@ export async function initAgendaPage(params: {
       .eq("id_salao", salaoId)
       .eq("ativo", true),
 
+    (supabase as any)
+      .from("servicos_combo_itens")
+      .select("id_servico_combo, id_servico_item, ativo")
+      .eq("id_salao", salaoId)
+      .eq("ativo", true),
+
     supabase
       .from("assinaturas")
       .select("status, vencimento_em, trial_fim_em")
@@ -247,6 +270,9 @@ export async function initAgendaPage(params: {
   if (servicosRes.error) console.error("Erro servicos:", servicosRes.error);
   if (vinculosServicosRes.error) {
     console.error("Erro vinculos servicos:", vinculosServicosRes.error);
+  }
+  if (comboItensRes?.error) {
+    console.error("Erro itens combo:", comboItensRes.error);
   }
   if (assinaturaRes.error) console.error("Erro assinatura:", assinaturaRes.error);
 
@@ -262,10 +288,31 @@ export async function initAgendaPage(params: {
     vinculosPorServico.set(vinculo.id_servico, lista);
   });
 
-  const servicosComVinculos = ((servicosRes.data || []) as Servico[]).map((servico) => ({
-    ...servico,
-    profissionais_vinculados: vinculosPorServico.get(servico.id) || [],
-  }));
+  const comboItensPorServico = new Map<string, string[]>();
+  (((comboItensRes?.data as any[]) || []) as {
+    id_servico_combo?: string | null;
+    id_servico_item?: string | null;
+  }[]).forEach((item) => {
+    if (!item.id_servico_combo || !item.id_servico_item) return;
+
+    const current = comboItensPorServico.get(item.id_servico_combo) || [];
+    current.push(item.id_servico_item);
+    comboItensPorServico.set(item.id_servico_combo, current);
+  });
+
+  const servicosComVinculos = ((servicosRes.data || []) as Servico[]).map((servico) => {
+    const directLinks = vinculosPorServico.get(servico.id) || [];
+    const comboChildren = comboItensPorServico.get(servico.id) || [];
+    const derivedLinks =
+      servico.eh_combo && comboChildren.length > 0
+        ? intersectProfessionalIds(comboChildren, vinculosPorServico)
+        : [];
+
+    return {
+      ...servico,
+      profissionais_vinculados: derivedLinks.length > 0 ? derivedLinks : directLinks,
+    };
+  });
 
   const assinaturaBloqueada = getAssinaturaBloqueada({
     status: assinaturaRes.data?.status,

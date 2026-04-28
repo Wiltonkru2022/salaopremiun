@@ -38,6 +38,7 @@ import { captureClientEvent } from "@/lib/monitoring/client";
 import { sanitizeDiasFuncionamento } from "@/lib/utils/agenda";
 import type { Agendamento, ConfigSalao } from "@/types/agenda";
 import { normalizeTimeString } from "@/lib/utils/agenda";
+import { getErrorMessage } from "@/lib/get-error-message";
 import {
   Ban,
   CalendarPlus,
@@ -106,6 +107,10 @@ export default function AgendaPage() {
   const [quickCreateOpen, setQuickCreateOpen] = useState(false);
   const [quickCreateDate, setQuickCreateDate] = useState("");
   const [clientSearchQuery, setClientSearchQuery] = useState("");
+  const [clientCreateOpen, setClientCreateOpen] = useState(false);
+  const [clientCreateName, setClientCreateName] = useState("");
+  const [clientCreateWhatsapp, setClientCreateWhatsapp] = useState("");
+  const [clientCreateSaving, setClientCreateSaving] = useState(false);
 
   const {
     supabase,
@@ -590,6 +595,78 @@ export default function AgendaPage() {
       statusLabel: "Pendente",
     }));
 
+  async function handleCreateClientFromSidebar() {
+    if (!idSalao) {
+      abrirAviso("Salao indisponivel", "Nao foi possivel identificar o salao atual.");
+      return;
+    }
+
+    if (!clientCreateName.trim()) {
+      abrirAviso("Nome obrigatorio", "Informe pelo menos o nome da cliente.");
+      return;
+    }
+
+    try {
+      setClientCreateSaving(true);
+
+      const response = await fetch("/api/clientes/processar", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          idSalao,
+          acao: "salvar",
+          cliente: {
+            nome: clientCreateName.trim(),
+            whatsapp: clientCreateWhatsapp.trim() || null,
+            ativo: true,
+          },
+        }),
+      });
+
+      const data = (await response.json().catch(() => ({}))) as {
+        idCliente?: string;
+        error?: string;
+      };
+
+      if (!response.ok || !data.idCliente) {
+        throw new Error(data.error || "Nao foi possivel cadastrar a cliente.");
+      }
+
+      const novaCliente = {
+        id: data.idCliente,
+        nome: clientCreateName.trim(),
+        whatsapp: clientCreateWhatsapp.trim() || null,
+      };
+
+      setClientes((prev) => {
+        const next = prev.filter((item) => item.id !== novaCliente.id);
+        return [...next, novaCliente].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
+      });
+      setClientSearchQuery(novaCliente.nome);
+      setClientCreateOpen(false);
+      setClientCreateName("");
+      setClientCreateWhatsapp("");
+      abrirAviso("Cliente criado", "Cadastro rapido concluido com sucesso.");
+    } catch (error) {
+      abrirAviso("Erro ao cadastrar cliente", getErrorMessage(error), "danger");
+    } finally {
+      setClientCreateSaving(false);
+    }
+  }
+
+  function handleStartCreateClient() {
+    setClientCreateOpen(true);
+    setClientCreateName(clientSearchQuery.trim());
+  }
+
+  function handleCancelCreateClient() {
+    setClientCreateOpen(false);
+    setClientCreateName("");
+    setClientCreateWhatsapp("");
+  }
+
   function closeSidebarPanels() {
     if (modalOpen) {
       closeModal();
@@ -941,11 +1018,20 @@ export default function AgendaPage() {
               onOpenCashier={() => router.push("/caixa")}
               onOpenClientSearch={() => {
                 setClientSearchQuery("");
+                setClientCreateOpen(false);
                 setSidebarView("clientSearch");
               }}
               onOpenWaitlist={() => setSidebarView("waitlist")}
               onClientSearchQueryChange={setClientSearchQuery}
-              onCreateClient={() => router.push("/clientes/novo")}
+              clientCreateOpen={clientCreateOpen}
+              clientCreateName={clientCreateName}
+              clientCreateWhatsapp={clientCreateWhatsapp}
+              clientCreateSaving={clientCreateSaving}
+              onCreateClient={handleCreateClientFromSidebar}
+              onStartCreateClient={handleStartCreateClient}
+              onCancelCreateClient={handleCancelCreateClient}
+              onCreateClientNameChange={setClientCreateName}
+              onCreateClientWhatsappChange={setClientCreateWhatsapp}
               onOpenClient={(clientId) => router.push(`/clientes/${clientId}`)}
             />
           </div>
