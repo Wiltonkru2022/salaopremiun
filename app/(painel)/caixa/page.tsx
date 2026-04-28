@@ -248,142 +248,146 @@ export default function CaixaPage() {
 
   return (
     <>
-      <div className="min-h-screen bg-[#f4f5f7] text-[var(--app-ink)]">
-        <div className="mx-auto flex min-h-screen max-w-[1880px] gap-5 p-4 xl:items-start">
-          <div className="min-w-0 flex-1 space-y-5">
-          <CaixaHeader
-            agendamentosPendentes={agendamentosFila.length}
-            comandasAtivas={comandasFila.length}
-            comandasFechadasHoje={comandasFechadas.length}
-            totalEmAberto={comandasFila.length + agendamentosFila.length}
-          />
+      <div className="h-screen overflow-hidden bg-[#f4f5f7] text-[var(--app-ink)]">
+        <div className="mx-auto h-full max-w-[1880px] p-4">
+          <div className="flex h-full flex-col gap-5 overflow-hidden xl:flex-row">
+            <div className="min-w-0 flex-1">
+              <div className="flex h-full min-h-0 flex-col gap-5 overflow-hidden">
+                <CaixaHeader
+                  agendamentosPendentes={agendamentosFila.length}
+                  comandasAtivas={comandasFila.length}
+                  comandasFechadasHoje={comandasFechadas.length}
+                  totalEmAberto={comandasFila.length + agendamentosFila.length}
+                />
 
-          <div className="grid gap-3 xl:grid-cols-3">
-            <GuideCard
-              icon={<WalletCards size={16} />}
-              title={caixaAberto ? "Caixa em operacao" : "Abra o caixa"}
-              description={
-                caixaAberto
-                  ? "A sessao esta pronta para receber, movimentar e fechar vendas."
-                  : "Abra a sessao do caixa no botao da lateral para liberar a operacao."
-              }
-              tone={caixaAberto ? "emerald" : "amber"}
-            />
-            <GuideCard
-              icon={<CreditCard size={16} />}
-              title={comandaSelecionada ? "Receba pelo modal" : "Escolha uma comanda"}
-              description={
-                comandaSelecionada
-                  ? "Pagamento fica em modal para voce receber sem poluir a tela principal."
-                  : "Selecione uma comanda na fila para abrir a venda no centro da tela."
-              }
-              tone={comandaSelecionada ? "sky" : "zinc"}
-            />
-            <GuideCard
-              icon={faltaReceber > 0 ? <CircleAlert size={16} /> : <CheckCircle2 size={16} />}
-              title={faltaReceber > 0 ? "Fechamento pendente" : "Pronto para finalizar"}
-              description={
-                faltaReceber > 0
-                  ? `Ainda faltam ${faltaReceber.toLocaleString("pt-BR", {
-                      style: "currency",
-                      currency: "BRL",
-                    })} para encerrar a comanda selecionada.`
-                  : comandaSelecionada
-                    ? "Com a falta a receber zerada, a finalizacao fica simples e direta."
-                    : "Quando uma venda entrar em foco, esta faixa mostra se ja pode finalizar."
-              }
-              tone={faltaReceber > 0 ? "amber" : "emerald"}
-            />
-          </div>
+                <div className="grid gap-3 xl:grid-cols-3">
+                  <GuideCard
+                    icon={<WalletCards size={16} />}
+                    title={caixaAberto ? "Caixa em operacao" : "Abra o caixa"}
+                    description={
+                      caixaAberto
+                        ? "A sessao esta pronta para receber, movimentar e fechar vendas."
+                        : "Abra a sessao do caixa no botao da lateral para liberar a operacao."
+                    }
+                    tone={caixaAberto ? "emerald" : "amber"}
+                  />
+                  <GuideCard
+                    icon={<CreditCard size={16} />}
+                    title={comandaSelecionada ? "Receba pelo modal" : "Escolha uma comanda"}
+                    description={
+                      comandaSelecionada
+                        ? "Pagamento fica em modal para voce receber sem poluir a tela principal."
+                        : "Selecione uma comanda na fila para abrir a venda no centro da tela."
+                    }
+                    tone={comandaSelecionada ? "sky" : "zinc"}
+                  />
+                  <GuideCard
+                    icon={faltaReceber > 0 ? <CircleAlert size={16} /> : <CheckCircle2 size={16} />}
+                    title={faltaReceber > 0 ? "Fechamento pendente" : "Pronto para finalizar"}
+                    description={
+                      faltaReceber > 0
+                        ? `Ainda faltam ${faltaReceber.toLocaleString("pt-BR", {
+                            style: "currency",
+                            currency: "BRL",
+                          })} para encerrar a comanda selecionada.`
+                        : comandaSelecionada
+                          ? "Com a falta a receber zerada, a finalizacao fica simples e direta."
+                          : "Quando uma venda entrar em foco, esta faixa mostra se ja pode finalizar."
+                    }
+                    tone={faltaReceber > 0 ? "amber" : "emerald"}
+                  />
+                </div>
 
-          {!podeOperarCaixa ? (
-            <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-700">
-              Voce esta em modo de <strong>somente leitura</strong> no caixa.
+                {!podeOperarCaixa ? (
+                  <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-700">
+                    Voce esta em modo de <strong>somente leitura</strong> no caixa.
+                  </div>
+                ) : null}
+
+                {erroTela ? (
+                  <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                    {erroTela}
+                  </div>
+                ) : null}
+
+                {msg ? (
+                  <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+                    {msg}
+                  </div>
+                ) : null}
+
+                <div className="grid min-h-0 flex-1 grid-cols-1 gap-5 xl:grid-cols-[340px_minmax(0,1fr)]">
+                  <CaixaFila
+                    aba={aba}
+                    setAba={setAba}
+                    busca={busca}
+                    setBusca={setBusca}
+                    comandasFiltradas={comandasFiltradas}
+                    agendamentosFiltrados={agendamentosFiltrados}
+                    comandasFechadas={comandasFechadas}
+                    comandasCanceladas={comandasCanceladas}
+                    comandaSelecionada={comandaSelecionada}
+                    onAbrirComanda={abrirComanda}
+                    onAbrirAgendamentoSemComanda={abrirAgendamentoSemComanda}
+                  />
+
+                  <CaixaDetalhe
+                    comandaSelecionada={comandaSelecionada}
+                    itens={itens}
+                    saving={saving || !podeEditarCaixa}
+                    faltaReceber={faltaReceber}
+                    onCancelarComanda={abrirModalCancelamento}
+                    onFinalizarComanda={finalizarComanda}
+                    onNovoServico={() => abrirModalNovoItem("servico")}
+                    onNovoProduto={() => abrirModalNovoItem("produto")}
+                    onNovoExtra={() => abrirModalNovoItem("extra")}
+                    onNovoAjuste={() => abrirModalNovoItem("ajuste")}
+                    onEditarItem={abrirModalEditarItem}
+                    onRemoverItem={setItemParaRemover}
+                  />
+                </div>
+              </div>
             </div>
-          ) : null}
 
-          {erroTela ? (
-            <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-              {erroTela}
+            <div className="min-h-0 xl:w-[456px] xl:min-w-[456px]">
+              <CaixaSidebar
+                comandaSelecionada={comandaSelecionada}
+                configCaixa={configCaixa}
+                pagamentos={pagamentos}
+                formaPagamento={formaPagamento}
+                setFormaPagamento={setFormaPagamento}
+                valorPagamento={valorPagamento}
+                setValorPagamento={setValorPagamento}
+                parcelas={parcelas}
+                setParcelas={setParcelas}
+                taxaPercentual={taxaPercentual}
+                setTaxaPercentual={setTaxaPercentual}
+                observacaoPagamento={observacaoPagamento}
+                setObservacaoPagamento={setObservacaoPagamento}
+                totalPago={totalPago}
+                faltaReceber={faltaReceber}
+                troco={troco}
+                descontoInput={descontoInput}
+                setDescontoInput={setDescontoInput}
+                acrescimoInput={acrescimoInput}
+                setAcrescimoInput={setAcrescimoInput}
+                saving={saving}
+                podeEditarCaixa={podeEditarCaixa}
+                podeGerenciarPagamentos={podeGerenciarPagamentos}
+                onSalvarResumo={salvarDescontoAcrescimo}
+                onAdicionarPagamento={adicionarPagamento}
+                onRemoverPagamento={removerPagamento}
+                sessao={sessaoCaixa || ultimaSessaoFechadaCaixa}
+                movimentacoes={movimentacoesCaixa}
+                schemaReady={caixaSchemaReady}
+                schemaError={caixaSchemaError}
+                profissionais={profissionaisCatalogo}
+                podeOperarCaixa={podeOperarCaixa}
+                onAbrirCaixa={(payload) => void abrirCaixa(payload)}
+                onFecharCaixa={(payload) => void fecharCaixa(payload)}
+                onLancamento={(payload) => void lancarMovimentoCaixa(payload)}
+              />
             </div>
-          ) : null}
-
-          {msg ? (
-            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-              {msg}
-            </div>
-          ) : null}
-
-          <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-[340px_minmax(0,1fr)]">
-            <CaixaFila
-              aba={aba}
-              setAba={setAba}
-              busca={busca}
-              setBusca={setBusca}
-              comandasFiltradas={comandasFiltradas}
-              agendamentosFiltrados={agendamentosFiltrados}
-              comandasFechadas={comandasFechadas}
-              comandasCanceladas={comandasCanceladas}
-              comandaSelecionada={comandaSelecionada}
-              onAbrirComanda={abrirComanda}
-              onAbrirAgendamentoSemComanda={abrirAgendamentoSemComanda}
-            />
-
-            <CaixaDetalhe
-              comandaSelecionada={comandaSelecionada}
-              itens={itens}
-              saving={saving || !podeEditarCaixa}
-              faltaReceber={faltaReceber}
-              onCancelarComanda={abrirModalCancelamento}
-              onFinalizarComanda={finalizarComanda}
-              onNovoServico={() => abrirModalNovoItem("servico")}
-              onNovoProduto={() => abrirModalNovoItem("produto")}
-              onNovoExtra={() => abrirModalNovoItem("extra")}
-              onNovoAjuste={() => abrirModalNovoItem("ajuste")}
-              onEditarItem={abrirModalEditarItem}
-              onRemoverItem={setItemParaRemover}
-            />
-          </div>
-          </div>
-
-          <div className="min-h-0 xl:sticky xl:top-4 xl:max-h-[calc(100vh-2rem)]">
-            <CaixaSidebar
-              comandaSelecionada={comandaSelecionada}
-              configCaixa={configCaixa}
-              pagamentos={pagamentos}
-              formaPagamento={formaPagamento}
-              setFormaPagamento={setFormaPagamento}
-              valorPagamento={valorPagamento}
-              setValorPagamento={setValorPagamento}
-              parcelas={parcelas}
-              setParcelas={setParcelas}
-              taxaPercentual={taxaPercentual}
-              setTaxaPercentual={setTaxaPercentual}
-              observacaoPagamento={observacaoPagamento}
-              setObservacaoPagamento={setObservacaoPagamento}
-              totalPago={totalPago}
-              faltaReceber={faltaReceber}
-              troco={troco}
-              descontoInput={descontoInput}
-              setDescontoInput={setDescontoInput}
-              acrescimoInput={acrescimoInput}
-              setAcrescimoInput={setAcrescimoInput}
-              saving={saving}
-              podeEditarCaixa={podeEditarCaixa}
-              podeGerenciarPagamentos={podeGerenciarPagamentos}
-              onSalvarResumo={salvarDescontoAcrescimo}
-              onAdicionarPagamento={adicionarPagamento}
-              onRemoverPagamento={removerPagamento}
-              sessao={sessaoCaixa || ultimaSessaoFechadaCaixa}
-              movimentacoes={movimentacoesCaixa}
-              schemaReady={caixaSchemaReady}
-              schemaError={caixaSchemaError}
-              profissionais={profissionaisCatalogo}
-              podeOperarCaixa={podeOperarCaixa}
-              onAbrirCaixa={(payload) => void abrirCaixa(payload)}
-              onFecharCaixa={(payload) => void fecharCaixa(payload)}
-              onLancamento={(payload) => void lancarMovimentoCaixa(payload)}
-            />
           </div>
         </div>
       </div>

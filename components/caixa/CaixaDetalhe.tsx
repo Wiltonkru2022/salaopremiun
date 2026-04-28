@@ -65,7 +65,7 @@ export default function CaixaDetalhe({
 
   if (!comandaSelecionada) {
     return (
-      <div className="rounded-[28px] border border-zinc-200 bg-white p-5 shadow-sm">
+      <div className="flex h-full min-h-0 flex-col rounded-[28px] border border-zinc-200 bg-white p-5 shadow-sm">
         <div className="flex h-full min-h-[520px] items-center justify-center rounded-[24px] border border-dashed border-zinc-300 bg-zinc-50 text-center">
           <div>
             <Receipt className="mx-auto mb-3 text-zinc-400" size={32} />
@@ -85,8 +85,8 @@ export default function CaixaDetalhe({
   const status = getStatusCaixaMeta(comandaSelecionada.status);
 
   return (
-    <div className="rounded-[28px] border border-zinc-200 bg-white p-5 shadow-sm">
-      <div className="space-y-4">
+    <div className="flex h-full min-h-0 flex-col rounded-[28px] border border-zinc-200 bg-white p-5 shadow-sm">
+      <div className="shrink-0 space-y-4">
         <div className={`rounded-[24px] border p-4 ${status.cardClass}`}>
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="max-w-2xl">
@@ -165,8 +165,11 @@ export default function CaixaDetalhe({
             </div>
           </div>
         ) : null}
+      </div>
 
-        <div className="rounded-[24px] border border-zinc-200 bg-white">
+      <div className="mt-4 min-h-0 flex-1 overflow-y-auto pr-1">
+        <div className="space-y-4">
+          <div className="rounded-[24px] border border-zinc-200 bg-white">
           <div className="border-b border-zinc-200 px-5 py-4">
             <div className="text-lg font-bold text-zinc-900">Itens da comanda</div>
             <div className="mt-1 text-sm text-zinc-500">
@@ -214,22 +217,23 @@ export default function CaixaDetalhe({
               </div>
             ) : null}
           </div>
-        </div>
+          </div>
 
-        {faltaReceber > 0 ? (
-          <div className="rounded-[24px] border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-900">
-            <div className="flex items-start gap-3">
-              <CircleAlert size={18} className="mt-0.5 shrink-0" />
-              <div>
-                <div className="font-semibold">Fechamento pendente</div>
-                <div className="mt-1">
-                  Ainda falta receber <strong>{formatCurrency(faltaReceber)}</strong> para concluir
-                  esta comanda.
+          {faltaReceber > 0 ? (
+            <div className="rounded-[24px] border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-900">
+              <div className="flex items-start gap-3">
+                <CircleAlert size={18} className="mt-0.5 shrink-0" />
+                <div>
+                  <div className="font-semibold">Fechamento pendente</div>
+                  <div className="mt-1">
+                    Ainda falta receber <strong>{formatCurrency(faltaReceber)}</strong> para concluir
+                    esta comanda.
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        ) : null}
+          ) : null}
+        </div>
       </div>
     </div>
   );

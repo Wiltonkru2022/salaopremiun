@@ -38,8 +38,8 @@ export default function CaixaFila({
   onAbrirAgendamentoSemComanda,
 }: Props) {
   return (
-    <div className="rounded-[28px] border border-zinc-200 bg-white p-4 shadow-sm xl:sticky xl:top-6">
-      <div className="space-y-4">
+    <div className="flex h-full min-h-0 flex-col rounded-[28px] border border-zinc-200 bg-white p-4 shadow-sm">
+      <div className="shrink-0 space-y-4">
         <div>
           <div className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">
             Triagem do caixa
@@ -82,8 +82,10 @@ export default function CaixaFila({
             onClick={() => setAba("canceladas")}
           />
         </div>
+      </div>
 
-        <div className="space-y-3 xl:max-h-[calc(100vh-18rem)] xl:overflow-y-auto xl:pr-1">
+      <div className="mt-4 min-h-0 flex-1 overflow-y-auto pr-1">
+        <div className="space-y-3">
           {aba === "fila" ? (
             <>
               {comandasFiltradas.map((item) => (
