@@ -116,18 +116,18 @@ export default function CaixaSidebar({
 
   return (
     <>
-      <aside className="w-full min-h-0 xl:h-full xl:max-w-[456px] xl:min-w-[456px]">
+      <aside className="w-full min-h-0">
       <div className="flex h-full min-h-0 flex-col rounded-[34px] border border-white/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(250,251,255,0.96)_100%)] p-5 shadow-[0_24px_80px_rgba(15,23,42,0.09)]">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-400">
               Operacao do caixa
             </div>
-            <h2 className="mt-2 text-[2rem] font-semibold text-slate-900">
-              {comandaSelecionada ? `Comanda #${comandaSelecionada.numero}` : "Painel do caixa"}
+            <h2 className="mt-1 text-[1.6rem] font-semibold leading-none text-slate-900">
+              Operacao
             </h2>
             <p className="mt-1 max-w-[26rem] text-sm leading-6 text-zinc-500">
-              Veja o essencial aqui e abra pagamento ou sessao em modal quando precisar operar.
+              Sessao, pagamento e resumo da venda em foco.
             </p>
           </div>
 

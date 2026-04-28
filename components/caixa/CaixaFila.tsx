@@ -39,16 +39,16 @@ export default function CaixaFila({
 }: Props) {
   return (
     <div className="flex h-full min-h-0 flex-col rounded-[28px] border border-zinc-200 bg-white p-4 shadow-sm">
-      <div className="shrink-0 space-y-4">
+      <div className="shrink-0 space-y-3">
         <div>
-          <div className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">
+          <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-400">
             Triagem do caixa
           </div>
-          <div className="mt-2 text-xl font-bold text-zinc-950">
-            Fila e historico rapido
+          <div className="mt-1 text-[1.55rem] font-bold leading-none text-zinc-950">
+            Triagem
           </div>
           <div className="mt-1 text-sm text-zinc-500">
-            Selecione uma comanda ativa ou abra um agendamento direto no caixa.
+            Comandas, agenda sem comanda e historico rapido.
           </div>
         </div>
 

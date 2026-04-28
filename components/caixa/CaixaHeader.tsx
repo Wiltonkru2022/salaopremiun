@@ -15,59 +15,47 @@ export default function CaixaHeader({
   totalEmAberto,
 }: Props) {
   return (
-    <div className="overflow-hidden rounded-[28px] border border-white/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(248,250,252,0.96)_100%)] shadow-[0_20px_60px_rgba(15,23,42,0.08)]">
-      <div className="px-5 py-4 text-zinc-950">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="max-w-2xl">
-            <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-zinc-400">
+    <div className="overflow-hidden rounded-[24px] border border-white/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(248,250,252,0.96)_100%)] shadow-[0_18px_50px_rgba(15,23,42,0.06)]">
+      <div className="px-4 py-3 text-zinc-950">
+        <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+          <div className="min-w-0">
+            <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-zinc-400">
               Workspace do caixa
             </div>
-            <div className="mt-2 flex flex-wrap items-center gap-3">
-              <h1 className="text-[1.95rem] font-semibold leading-none text-slate-900">
-                Caixa
-              </h1>
-              <span className="rounded-full border border-zinc-200 bg-white px-3 py-1 text-xs font-medium text-zinc-600">
-                Operacao rapida
-              </span>
+            <div className="mt-1 flex flex-wrap items-end gap-3">
+              <h1 className="text-[1.8rem] font-semibold leading-none text-slate-900">Caixa</h1>
+              <p className="text-sm text-zinc-500">
+                Operacao rapida para receber, revisar e fechar vendas.
+              </p>
             </div>
-            <p className="mt-2 max-w-xl text-sm leading-5 text-zinc-500">
-              Receba, revise e feche vendas com foco na fila, comanda e fechamento.
-            </p>
           </div>
 
-          <div className="min-w-[170px] rounded-[20px] border border-zinc-200 bg-white px-4 py-3 text-right shadow-[0_10px_28px_rgba(15,23,42,0.05)]">
-            <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-400">
-              Em andamento
-            </div>
-            <div className="mt-1 text-2xl font-bold leading-none text-zinc-950">{totalEmAberto}</div>
+          <div className="grid flex-1 gap-2 sm:grid-cols-2 xl:max-w-[980px] xl:grid-cols-4">
+            <StatCard
+              icon={<CircleDollarSign size={15} />}
+              label="Em andamento agora"
+              value={totalEmAberto}
+              tone="emerald"
+            />
+            <StatCard
+              icon={<ReceiptText size={15} />}
+              label="Comandas ativas"
+              value={comandasAtivas}
+              tone="zinc"
+            />
+            <StatCard
+              icon={<CalendarClock size={15} />}
+              label="Agenda sem comanda"
+              value={agendamentosPendentes}
+              tone="amber"
+            />
+            <StatCard
+              icon={<CircleDollarSign size={15} />}
+              label="Fechadas hoje"
+              value={comandasFechadasHoje}
+              tone="sky"
+            />
           </div>
-        </div>
-
-        <div className="mt-4 grid gap-2.5 sm:grid-cols-2 xl:grid-cols-4">
-          <StatCard
-            icon={<CircleDollarSign size={16} />}
-            label="Em andamento agora"
-            value={totalEmAberto}
-            tone="sky"
-          />
-          <StatCard
-            icon={<ReceiptText size={16} />}
-            label="Comandas ativas"
-            value={comandasAtivas}
-            tone="zinc"
-          />
-          <StatCard
-            icon={<CalendarClock size={16} />}
-            label="Agenda sem comanda"
-            value={agendamentosPendentes}
-            tone="amber"
-          />
-          <StatCard
-            icon={<CircleDollarSign size={16} />}
-            label="Fechadas hoje"
-            value={comandasFechadasHoje}
-            tone="emerald"
-          />
         </div>
       </div>
     </div>
@@ -95,12 +83,12 @@ function StatCard({
       : "border-zinc-200 bg-zinc-50 text-zinc-900";
 
   return (
-    <div className={`rounded-[20px] border px-3.5 py-3 ${toneClass}`}>
-      <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em]">
+    <div className={`rounded-[18px] border px-3.5 py-2.5 ${toneClass}`}>
+      <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.14em]">
         {icon}
         <span>{label}</span>
       </div>
-      <div className="mt-2 text-2xl font-bold leading-none">{value}</div>
+      <div className="mt-1.5 text-2xl font-bold leading-none">{value}</div>
     </div>
   );
 }

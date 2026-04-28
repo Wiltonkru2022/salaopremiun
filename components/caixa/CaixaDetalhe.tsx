@@ -86,15 +86,17 @@ export default function CaixaDetalhe({
 
   return (
     <div className="flex h-full min-h-0 flex-col rounded-[28px] border border-zinc-200 bg-white p-5 shadow-sm">
-      <div className="shrink-0 space-y-4">
+      <div className="shrink-0 space-y-3">
         <div className={`rounded-[24px] border p-4 ${status.cardClass}`}>
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="max-w-2xl">
-              <div className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-400">
                 Comanda
               </div>
               <div className="mt-2 flex flex-wrap items-center gap-2">
-                <h2 className="text-2xl font-bold text-zinc-950">#{comandaSelecionada.numero}</h2>
+                <h2 className="text-[1.7rem] font-bold leading-none text-zinc-950">
+                  #{comandaSelecionada.numero}
+                </h2>
                 <span className={`rounded-full border px-3 py-1 text-xs font-semibold uppercase ${status.badgeClass}`}>
                   {status.label}
                 </span>

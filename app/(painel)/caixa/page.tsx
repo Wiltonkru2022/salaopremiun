@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle2, CircleAlert, CreditCard, WalletCards } from "lucide-react";
+import { CheckCircle2, CircleAlert } from "lucide-react";
 import CaixaCancelModal from "@/components/caixa/CaixaCancelModal";
 import CaixaDetalhe from "@/components/caixa/CaixaDetalhe";
 import CaixaFila from "@/components/caixa/CaixaFila";
@@ -251,107 +251,97 @@ export default function CaixaPage() {
   return (
     <>
       <div className="h-screen overflow-hidden bg-[#f4f5f7] text-[var(--app-ink)]">
-        <div className="mx-auto h-full max-w-[1880px] p-4">
-          <div className="flex h-full flex-col gap-4 overflow-hidden xl:flex-row">
-            <div className="min-w-0 flex-1">
-              <div className="flex h-full min-h-0 flex-col gap-4 overflow-hidden">
-                <CaixaHeader
-                  agendamentosPendentes={agendamentosFila.length}
-                  comandasAtivas={comandasFila.length}
-                  comandasFechadasHoje={comandasFechadas.length}
-                  totalEmAberto={comandasFila.length + agendamentosFila.length}
-                />
+        <div className="mx-auto h-full max-w-[1920px] p-4">
+          <div className="flex h-full min-h-0 flex-col gap-3 overflow-hidden">
+            <CaixaHeader
+              agendamentosPendentes={agendamentosFila.length}
+              comandasAtivas={comandasFila.length}
+              comandasFechadasHoje={comandasFechadas.length}
+              totalEmAberto={comandasFila.length + agendamentosFila.length}
+            />
 
-                <div className="grid gap-2.5 lg:grid-cols-3">
-                  <GuideCard
-                    icon={<WalletCards size={16} />}
-                    title={caixaAberto ? "Caixa em operacao" : "Abra o caixa"}
-                    description={
-                      caixaAberto
-                        ? "A sessao esta pronta para receber, movimentar e fechar vendas."
-                        : "Abra a sessao do caixa no botao da lateral para liberar a operacao."
-                    }
-                    tone={caixaAberto ? "emerald" : "amber"}
-                  />
-                  <GuideCard
-                    icon={<CreditCard size={16} />}
-                    title={comandaSelecionada ? "Receba pelo modal" : "Escolha uma comanda"}
-                    description={
-                      comandaSelecionada
-                        ? "Pagamento fica em modal para voce receber sem poluir a tela principal."
-                        : "Selecione uma comanda na fila para abrir a venda no centro da tela."
-                    }
-                    tone={comandaSelecionada ? "sky" : "zinc"}
-                  />
-                  <GuideCard
-                    icon={faltaReceber > 0 ? <CircleAlert size={16} /> : <CheckCircle2 size={16} />}
-                    title={faltaReceber > 0 ? "Fechamento pendente" : "Pronto para finalizar"}
-                    description={
+            {!podeOperarCaixa || erroTela || msg || comandaSelecionada ? (
+              <div className="grid gap-2 xl:grid-cols-[minmax(0,1fr)_minmax(320px,420px)]">
+                <div className="flex min-h-[48px] items-center rounded-2xl border border-zinc-200 bg-white px-4 py-2.5 text-sm text-zinc-600 shadow-sm">
+                  {!podeOperarCaixa ? (
+                    <>
+                      <CircleAlert size={16} className="mr-2 text-zinc-500" />
+                      Voce esta em modo de <strong className="ml-1">somente leitura</strong> no caixa.
+                    </>
+                  ) : erroTela ? (
+                    <>
+                      <CircleAlert size={16} className="mr-2 text-rose-500" />
+                      <span className="text-rose-700">{erroTela}</span>
+                    </>
+                  ) : msg ? (
+                    <>
+                      <CheckCircle2 size={16} className="mr-2 text-emerald-500" />
+                      <span className="text-emerald-700">{msg}</span>
+                    </>
+                  ) : comandaSelecionada ? (
+                    <>
+                      <CheckCircle2 size={16} className="mr-2 text-zinc-500" />
+                      <span>
+                        Comanda em foco <strong>#{comandaSelecionada.numero}</strong>.{" "}
+                        {faltaReceber > 0
+                          ? `Ainda faltam ${faltaReceber.toLocaleString("pt-BR", {
+                              style: "currency",
+                              currency: "BRL",
+                            })} para fechar.`
+                          : "Pagamento conferido para finalizar."}
+                      </span>
+                    </>
+                  ) : (
+                    <span>Selecione uma comanda para operar no caixa.</span>
+                  )}
+                </div>
+                {comandaSelecionada ? (
+                  <div
+                    className={`flex min-h-[48px] items-center rounded-2xl border px-4 py-2.5 text-sm shadow-sm ${
                       faltaReceber > 0
-                        ? `Ainda faltam ${faltaReceber.toLocaleString("pt-BR", {
-                            style: "currency",
-                            currency: "BRL",
-                          })} para encerrar a comanda selecionada.`
-                        : comandaSelecionada
-                          ? "Com a falta a receber zerada, a finalizacao fica simples e direta."
-                          : "Quando uma venda entrar em foco, esta faixa mostra se ja pode finalizar."
-                    }
-                    tone={faltaReceber > 0 ? "amber" : "emerald"}
-                  />
-                </div>
-
-                {!podeOperarCaixa ? (
-                  <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-700">
-                    Voce esta em modo de <strong>somente leitura</strong> no caixa.
+                        ? "border-amber-200 bg-amber-50 text-amber-900"
+                        : "border-emerald-200 bg-emerald-50 text-emerald-800"
+                    }`}
+                  >
+                    {faltaReceber > 0 ? <CircleAlert size={16} className="mr-2" /> : <CheckCircle2 size={16} className="mr-2" />}
+                    {faltaReceber > 0 ? "Fechamento pendente" : "Pronto para finalizar"}
                   </div>
-                ) : null}
-
-                {erroTela ? (
-                  <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-                    {erroTela}
-                  </div>
-                ) : null}
-
-                {msg ? (
-                  <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-                    {msg}
-                  </div>
-                ) : null}
-
-                <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 xl:grid-cols-[340px_minmax(0,1fr)]">
-                  <CaixaFila
-                    aba={aba}
-                    setAba={setAba}
-                    busca={busca}
-                    setBusca={setBusca}
-                    comandasFiltradas={comandasFiltradas}
-                    agendamentosFiltrados={agendamentosFiltrados}
-                    comandasFechadas={comandasFechadas}
-                    comandasCanceladas={comandasCanceladas}
-                    comandaSelecionada={comandaSelecionada}
-                    onAbrirComanda={abrirComanda}
-                    onAbrirAgendamentoSemComanda={abrirAgendamentoSemComanda}
-                  />
-
-                  <CaixaDetalhe
-                    comandaSelecionada={comandaSelecionada}
-                    itens={itens}
-                    saving={saving || !podeEditarCaixa}
-                    faltaReceber={faltaReceber}
-                    onCancelarComanda={abrirModalCancelamento}
-                    onFinalizarComanda={finalizarComanda}
-                    onNovoServico={() => abrirModalNovoItem("servico")}
-                    onNovoProduto={() => abrirModalNovoItem("produto")}
-                    onNovoExtra={() => abrirModalNovoItem("extra")}
-                    onNovoAjuste={() => abrirModalNovoItem("ajuste")}
-                    onEditarItem={abrirModalEditarItem}
-                    onRemoverItem={setItemParaRemover}
-                  />
-                </div>
+                ) : (
+                  <div className="hidden xl:block" />
+                )}
               </div>
-            </div>
+            ) : null}
 
-            <div className="min-h-0 xl:w-[456px] xl:min-w-[456px]">
+            <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 xl:grid-cols-[330px_minmax(0,1fr)_360px]">
+              <CaixaFila
+                aba={aba}
+                setAba={setAba}
+                busca={busca}
+                setBusca={setBusca}
+                comandasFiltradas={comandasFiltradas}
+                agendamentosFiltrados={agendamentosFiltrados}
+                comandasFechadas={comandasFechadas}
+                comandasCanceladas={comandasCanceladas}
+                comandaSelecionada={comandaSelecionada}
+                onAbrirComanda={abrirComanda}
+                onAbrirAgendamentoSemComanda={abrirAgendamentoSemComanda}
+              />
+
+              <CaixaDetalhe
+                comandaSelecionada={comandaSelecionada}
+                itens={itens}
+                saving={saving || !podeEditarCaixa}
+                faltaReceber={faltaReceber}
+                onCancelarComanda={abrirModalCancelamento}
+                onFinalizarComanda={finalizarComanda}
+                onNovoServico={() => abrirModalNovoItem("servico")}
+                onNovoProduto={() => abrirModalNovoItem("produto")}
+                onNovoExtra={() => abrirModalNovoItem("extra")}
+                onNovoAjuste={() => abrirModalNovoItem("ajuste")}
+                onEditarItem={abrirModalEditarItem}
+                onRemoverItem={setItemParaRemover}
+              />
+
               <CaixaSidebar
                 comandaSelecionada={comandaSelecionada}
                 configCaixa={configCaixa}
@@ -435,41 +425,5 @@ export default function CaixaPage() {
         }}
       />
     </>
-  );
-}
-
-function GuideCard({
-  icon,
-  title,
-  description,
-  tone,
-}: {
-  icon: React.ReactNode;
-  title: string;
-  description: string;
-  tone: "amber" | "emerald" | "sky" | "zinc";
-}) {
-  const toneClass =
-    tone === "amber"
-      ? "border-amber-200 bg-amber-50 text-amber-900"
-      : tone === "emerald"
-        ? "border-emerald-200 bg-emerald-50 text-emerald-900"
-        : tone === "sky"
-          ? "border-sky-200 bg-sky-50 text-sky-900"
-          : "border-zinc-200 bg-white text-zinc-900";
-
-  return (
-    <div className={`rounded-[20px] border px-3.5 py-3 shadow-sm ${toneClass}`}>
-      <div className="flex items-start gap-3">
-        <div className="mt-0.5 rounded-full bg-white/70 p-2">{icon}</div>
-        <div className="min-w-0">
-          <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-current/75">
-            Operacao
-          </div>
-          <div className="mt-1 text-sm font-semibold text-current">{title}</div>
-          <div className="mt-1 text-sm leading-5 text-current/80">{description}</div>
-        </div>
-      </div>
-    </div>
   );
 }
