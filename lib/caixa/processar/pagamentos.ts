@@ -203,6 +203,10 @@ export async function adicionarPagamento(params: {
   const valorFinalCobrado = repassaTaxaCliente
     ? sanitizeMoney(valorBase + taxaValor)
     : valorBase;
+  const resumoAntesDoPagamento =
+    destinoExcedente === "credito_cliente"
+      ? await carregarResumoComanda(ctx, idComanda)
+      : null;
 
   const pagamentoPayload = {
     p_id_salao: ctx.idSalao,
@@ -251,12 +255,12 @@ export async function adicionarPagamento(params: {
 
   let valorCreditoGerado = 0;
   if (destinoExcedente === "credito_cliente") {
-    const resumoComanda = await carregarResumoComanda(ctx, idComanda);
+    const resumoComanda = resumoAntesDoPagamento;
     const excedente = sanitizeMoney(
-      Math.max(valorFinalCobrado - resumoComanda.faltaReceber, 0)
+      Math.max(valorFinalCobrado - Number(resumoComanda?.faltaReceber || 0), 0)
     );
 
-    if (!resumoComanda.idCliente) {
+    if (!resumoComanda?.idCliente) {
       throw new CaixaInputError(
         "Vincule uma cliente na comanda antes de guardar o excedente como credito."
       );
