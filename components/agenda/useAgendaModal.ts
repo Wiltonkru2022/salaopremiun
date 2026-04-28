@@ -179,7 +179,17 @@ export function useAgendaModal({
       servicosDoProfissional.map((s) => ({
         value: s.id,
         label: s.nome,
-        description: `${s.duracao_minutos} min`,
+        description: [
+          s.eh_combo ? "Combo" : "Servico",
+          `${s.duracao_minutos} min`,
+          Number(s.preco_padrao ?? s.preco ?? 0).toLocaleString("pt-BR", {
+            style: "currency",
+            currency: "BRL",
+          }),
+          s.combo_resumo || "",
+        ]
+          .filter(Boolean)
+          .join(" • "),
       })),
     [servicosDoProfissional]
   );

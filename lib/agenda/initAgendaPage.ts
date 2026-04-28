@@ -220,7 +220,9 @@ export async function initAgendaPage(params: {
           comissao_percentual_padrao,
           comissao_assistente_percentual,
           base_calculo,
-          desconta_taxa_maquininha
+          desconta_taxa_maquininha,
+          eh_combo,
+          combo_resumo
         `)
       .eq("id_salao", salaoId)
       .eq("status", "ativo")

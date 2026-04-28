@@ -338,8 +338,9 @@ export default function ClientesPage() {
                 <h1 className="mt-2 text-2xl font-bold md:text-3xl">Clientes</h1>
                 <p className="mt-3 max-w-2xl text-sm leading-6 text-zinc-600">
                   O cadastro precisa ajudar a recepcao a agir rapido: saber como
-                  falar com a cliente, reconhecer quem e recorrente e manter o
-                  historico protegido.
+                  falar com a cliente, reconhecer recorrencia e sustentar
+                  agenda, comandas, caixa e relacionamento sem perder
+                  historico.
                 </p>
               </div>
 

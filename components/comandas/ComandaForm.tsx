@@ -45,6 +45,8 @@ type Servico = {
   comissao_assistente_percentual?: number | null;
   base_calculo?: string | null;
   desconta_taxa_maquininha?: boolean | null;
+  eh_combo?: boolean | null;
+  combo_resumo?: string | null;
 };
 
 type Produto = {
@@ -263,7 +265,9 @@ export default function ComandaForm({ modo }: ComandaFormProps) {
               comissao_percentual_padrao,
               comissao_assistente_percentual,
               base_calculo,
-              desconta_taxa_maquininha
+              desconta_taxa_maquininha,
+              eh_combo,
+              combo_resumo
             `
           )
           .eq("id_salao", usuarioLogado.idSalao)
@@ -316,7 +320,7 @@ export default function ComandaForm({ modo }: ComandaFormProps) {
 
       setClientes((clientesRes.data as Cliente[]) || []);
       setProfissionais(profissionaisComAssistentes);
-      setServicos((servicosRes.data as Servico[]) || []);
+      setServicos(((servicosRes.data as unknown as Servico[]) || []));
       setProdutos((produtosRes.data as Produto[]) || []);
 
       if (modo === "novo") {

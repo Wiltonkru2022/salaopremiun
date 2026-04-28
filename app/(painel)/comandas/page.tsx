@@ -295,8 +295,16 @@ export default function ComandasPage() {
         <div className="rounded-3xl border border-zinc-200 bg-white p-6 text-zinc-950 shadow-sm">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
+              <div className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-400">
+                Consumo e fechamento
+              </div>
               <h1 className="mt-2 text-2xl font-bold md:text-3xl">Comandas</h1>
-            <p className="mt-2 text-sm text-zinc-500">
+              <p className="mt-3 max-w-2xl text-sm leading-6 text-zinc-600">
+                Aqui voce acompanha o consumo da cliente do atendimento ao
+                envio para o caixa, com servicos, combos, produtos, totais e
+                status da venda em um so lugar.
+              </p>
+            <p className="hidden mt-2 text-sm text-zinc-500">
                 Controle completo do consumo da cliente até o fechamento no caixa.
               </p>
             </div>

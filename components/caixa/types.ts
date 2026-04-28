@@ -155,6 +155,8 @@ export type CatalogoServico = {
 
   base_calculo?: string | null;
   desconta_taxa_maquininha?: boolean | null;
+  eh_combo?: boolean | null;
+  combo_resumo?: string | null;
 };
 
 export type CatalogoProduto = {

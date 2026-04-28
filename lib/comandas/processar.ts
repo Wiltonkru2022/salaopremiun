@@ -3,6 +3,10 @@ import {
   buscarVinculoProfissionalServico,
   resolverRegraComissaoServico,
 } from "@/lib/comissoes/regrasServico";
+import {
+  allocateComboUnitPrices,
+  normalizeComboComponents,
+} from "@/lib/servicos/combo-utils";
 import type {
   AcaoComanda,
   ComandaPayload,
@@ -28,6 +32,27 @@ export type ResolvedItemPayload = {
   origem: string;
   observacoes: string | null;
   idAgendamento: string | null;
+  ehCombo: boolean;
+  comboResumo: string | null;
+};
+
+type ComboServicoItem = {
+  id_servico_item: string;
+  ordem?: number | null;
+  preco_base?: number | null;
+  percentual_rateio?: number | null;
+  servico: {
+    id: string;
+    nome: string;
+    preco?: number | null;
+    preco_padrao?: number | null;
+    custo_produto?: number | null;
+    comissao_percentual?: number | null;
+    comissao_percentual_padrao?: number | null;
+    comissao_assistente_percentual?: number | null;
+    base_calculo?: string | null;
+    desconta_taxa_maquininha?: boolean | null;
+  };
 };
 
 export type CriarComandaPorAgendamentoResult = {
@@ -104,6 +129,247 @@ export function criarChaveItemAgendamento(resolved: ResolvedItemPayload) {
   );
 }
 
+async function buscarItensComboServico(params: {
+  supabaseAdmin: SupabaseAdminClient;
+  idSalao: string;
+  idServicoCombo: string;
+}) {
+  const supabaseAny = params.supabaseAdmin as any;
+  const { data, error } = await supabaseAny
+    .from("servicos_combo_itens")
+    .select(
+      `
+        id_servico_item,
+        ordem,
+        preco_base,
+        percentual_rateio,
+        servico:servicos!servicos_combo_itens_id_servico_item_fkey (
+          id,
+          nome,
+          preco,
+          preco_padrao,
+          custo_produto,
+          comissao_percentual,
+          comissao_percentual_padrao,
+          comissao_assistente_percentual,
+          base_calculo,
+          desconta_taxa_maquininha
+        )
+      `
+    )
+    .eq("id_salao", params.idSalao)
+    .eq("id_servico_combo", params.idServicoCombo)
+    .eq("ativo", true)
+    .order("ordem", { ascending: true });
+
+  if (error) {
+    throw error;
+  }
+
+  return ((data || []) as ComboServicoItem[]).filter(
+    (item) => item.id_servico_item && item.servico?.id
+  );
+}
+
+async function expandirItensCombo(params: {
+  supabaseAdmin: SupabaseAdminClient;
+  idSalao: string;
+  resolved: ResolvedItemPayload;
+}) {
+  const { resolved, supabaseAdmin, idSalao } = params;
+
+  if (!resolved.ehCombo || !resolved.idServico) {
+    return [resolved];
+  }
+
+  const itensCombo = await buscarItensComboServico({
+    supabaseAdmin,
+    idSalao,
+    idServicoCombo: resolved.idServico,
+  });
+
+  if (itensCombo.length === 0) {
+    return [resolved];
+  }
+
+  const componentes = normalizeComboComponents(
+    itensCombo.map((item) => ({
+      id: item.servico.id,
+      nome: item.servico.nome,
+      ordem: item.ordem,
+      preco_base:
+        item.preco_base ??
+        item.servico.preco_padrao ??
+        item.servico.preco ??
+        0,
+      percentual_rateio: item.percentual_rateio,
+    }))
+  );
+  const valoresUnitarios = allocateComboUnitPrices(
+    resolved.valorUnitario,
+    componentes
+  );
+
+  return Promise.all(
+    componentes.map(async (item, index) => {
+      const servico = itensCombo.find(
+        (comboItem) => comboItem.servico.id === item.id
+      )?.servico;
+
+      if (!servico) {
+        return resolved;
+      }
+
+      const { data: profissional, error: profissionalError } = resolved.idProfissional
+        ? await supabaseAdmin
+            .from("profissionais")
+            .select("id, nome, comissao_percentual, tipo_profissional")
+            .eq("id", resolved.idProfissional)
+            .eq("id_salao", idSalao)
+            .maybeSingle()
+        : { data: null, error: null };
+
+      if (profissionalError) {
+        throw new Error("Erro ao validar profissional do combo.");
+      }
+
+      const vinculo =
+        resolved.idProfissional && servico.id
+          ? await buscarVinculoProfissionalServico({
+              supabase: supabaseAdmin,
+              idSalao,
+              idProfissional: resolved.idProfissional,
+              idServico: servico.id,
+            })
+          : null;
+
+      const regra = resolverRegraComissaoServico({
+        servico,
+        profissional,
+        vinculo,
+      });
+
+      return {
+        ...resolved,
+        idServico: servico.id,
+        descricao: `${resolved.descricao} • ${servico.nome}`,
+        valorUnitario: valoresUnitarios[index] || 0,
+        custoTotal: sanitizeMoney(Number(servico.custo_produto || 0) * resolved.quantidade),
+        comissaoPercentual: regra.comissaoPercentual,
+        comissaoAssistentePercentual: regra.comissaoAssistentePercentual,
+        baseCalculo: regra.baseCalculo,
+        descontaTaxaMaquininha: regra.descontaTaxaMaquininha,
+        ehCombo: false,
+        comboResumo: resolved.comboResumo,
+      } satisfies ResolvedItemPayload;
+    })
+  );
+}
+
+async function inserirItensResolvidosNaComanda(params: {
+  supabaseAdmin: SupabaseAdminClient;
+  idSalao: string;
+  idComanda: string;
+  resolvedItems: ResolvedItemPayload[];
+  comanda: ComandaPayload;
+  idempotencyKey?: string | null;
+}) {
+  let firstItemId = "";
+  let houveReplay = false;
+
+  for (const [index, resolved] of params.resolvedItems.entries()) {
+    const key =
+      params.idempotencyKey && params.resolvedItems.length > 1
+        ? sanitizeIdempotencyKey(
+            `${params.idempotencyKey}:${index}:${resolved.idServico || resolved.idProduto || "manual"}`
+          )
+        : params.idempotencyKey;
+
+    let { data: itemResult, error: addItemError } = await params.supabaseAdmin.rpc(
+      "fn_adicionar_item_comanda_idempotente",
+      {
+        p_id_salao: params.idSalao,
+        p_id_comanda: params.idComanda,
+        p_tipo_item: resolved.tipoItem,
+        p_id_agendamento: resolved.idAgendamento as unknown as string,
+        p_id_servico: resolved.idServico as unknown as string,
+        p_id_produto: resolved.idProduto as unknown as string,
+        p_descricao: resolved.descricao,
+        p_quantidade: resolved.quantidade,
+        p_valor_unitario: resolved.valorUnitario,
+        p_custo_total: resolved.custoTotal,
+        p_id_profissional: resolved.idProfissional as unknown as string,
+        p_id_assistente: resolved.idAssistente as unknown as string,
+        p_comissao_percentual: resolved.comissaoPercentual,
+        p_comissao_assistente_percentual: resolved.comissaoAssistentePercentual,
+        p_base_calculo: resolved.baseCalculo,
+        p_desconta_taxa_maquininha: resolved.descontaTaxaMaquininha,
+        p_origem: resolved.origem,
+        p_observacoes: resolved.observacoes as unknown as string,
+        p_desconto: sanitizeMoney(params.comanda.desconto),
+        p_acrescimo: sanitizeMoney(params.comanda.acrescimo),
+        p_idempotency_key: key || undefined,
+      }
+    );
+
+    if (
+      addItemError &&
+      isMissingRpcFunction(addItemError, "fn_adicionar_item_comanda_idempotente")
+    ) {
+      const fallback = await params.supabaseAdmin.rpc("fn_adicionar_item_comanda", {
+        p_id_salao: params.idSalao,
+        p_id_comanda: params.idComanda,
+        p_tipo_item: resolved.tipoItem,
+        p_id_agendamento: resolved.idAgendamento as unknown as string,
+        p_id_servico: resolved.idServico as unknown as string,
+        p_id_produto: resolved.idProduto as unknown as string,
+        p_descricao: resolved.descricao,
+        p_quantidade: resolved.quantidade,
+        p_valor_unitario: resolved.valorUnitario,
+        p_custo_total: resolved.custoTotal,
+        p_id_profissional: resolved.idProfissional as unknown as string,
+        p_id_assistente: resolved.idAssistente as unknown as string,
+        p_comissao_percentual: resolved.comissaoPercentual,
+        p_comissao_assistente_percentual: resolved.comissaoAssistentePercentual,
+        p_base_calculo: resolved.baseCalculo,
+        p_desconta_taxa_maquininha: resolved.descontaTaxaMaquininha,
+        p_origem: resolved.origem,
+        p_observacoes: resolved.observacoes as unknown as string,
+        p_desconto: sanitizeMoney(params.comanda.desconto),
+        p_acrescimo: sanitizeMoney(params.comanda.acrescimo),
+      });
+      itemResult = fallback.data
+        ? [{ id_item: String(fallback.data), ja_existia: false }]
+        : null;
+      addItemError = fallback.error;
+    }
+
+    if (addItemError) {
+      throw addItemError;
+    }
+
+    const resultRow = Array.isArray(itemResult) ? itemResult[0] : null;
+    const itemId =
+      resultRow && typeof resultRow === "object" && "id_item" in resultRow
+        ? String(resultRow.id_item || "")
+        : String(itemResult || "");
+    const jaExistia =
+      resultRow && typeof resultRow === "object" && "ja_existia" in resultRow
+        ? Boolean(resultRow.ja_existia)
+        : false;
+
+    if (!firstItemId) {
+      firstItemId = itemId;
+    }
+    houveReplay = houveReplay || jaExistia;
+  }
+
+  return {
+    firstItemId,
+    houveReplay,
+  };
+}
+
 export function resolveComandaHttpStatus(error: unknown) {
   const candidate = error as { code?: string } | null;
   if (!candidate?.code) return 500;
@@ -130,14 +396,14 @@ export async function processarCriacaoPorAgendamento(params: {
 }) {
   const { supabaseAdmin, idSalao, idAgendamento } = params;
 
-  const { data: agendamento, error: agendamentoError } = await supabaseAdmin
+  const { data: agendamentoBase, error: agendamentoError } = await supabaseAdmin
     .from("agendamentos")
     .select("id, id_salao")
     .eq("id", idAgendamento)
     .eq("id_salao", idSalao)
     .maybeSingle();
 
-  if (agendamentoError || !agendamento?.id) {
+  if (agendamentoError || !agendamentoBase?.id) {
     throw new Error("Agendamento nao encontrado para este salao.");
   }
 
@@ -150,6 +416,65 @@ export async function processarCriacaoPorAgendamento(params: {
 
   if (error) {
     throw error;
+  }
+
+  const { data: detalhesAgendamento, error: detalhesAgendamentoError } = await supabaseAdmin
+    .from("agendamentos")
+    .select("id, profissional_id, servico_id, observacoes")
+    .eq("id", idAgendamento)
+    .eq("id_salao", idSalao)
+    .maybeSingle();
+
+  if (detalhesAgendamentoError) {
+    throw detalhesAgendamentoError;
+  }
+
+  if (detalhesAgendamento?.id && detalhesAgendamento.servico_id) {
+    const resolved = await resolverItemPayload({
+      supabaseAdmin,
+      idSalao,
+      item: {
+        tipo_item: "servico",
+        quantidade: 1,
+        valor_unitario: 0,
+        id_servico: detalhesAgendamento.servico_id,
+        id_agendamento: idAgendamento,
+        id_profissional: detalhesAgendamento.profissional_id,
+        observacoes: detalhesAgendamento.observacoes,
+        origem: "agenda",
+      },
+    });
+
+    if (resolved.ehCombo && data) {
+      const { error: deleteError } = await supabaseAdmin
+        .from("comanda_itens")
+        .delete()
+        .eq("id_salao", idSalao)
+        .eq("id_comanda", data)
+        .eq("id_agendamento", idAgendamento);
+
+      if (deleteError) {
+        throw deleteError;
+      }
+
+      const expanded = await expandirItensCombo({
+        supabaseAdmin,
+        idSalao,
+        resolved,
+      });
+
+      await inserirItensResolvidosNaComanda({
+        supabaseAdmin,
+        idSalao,
+        idComanda: data,
+        resolvedItems: expanded,
+        comanda: {
+          idComanda: data,
+          desconto: 0,
+          acrescimo: 0,
+        },
+      });
+    }
   }
 
   return {
@@ -210,89 +535,26 @@ export async function adicionarItemComanda(params: {
     idSalao,
     item,
   });
-  const itemIdempotencyKey =
-    idempotencyKey || criarChaveItemAgendamento(resolved);
-
-  let { data: itemResult, error: addItemError } = await supabaseAdmin.rpc(
-    "fn_adicionar_item_comanda_idempotente",
-    {
-      p_id_salao: idSalao,
-      p_id_comanda: idComanda,
-      p_tipo_item: resolved.tipoItem,
-      p_id_agendamento: resolved.idAgendamento as unknown as string,
-      p_id_servico: resolved.idServico as unknown as string,
-      p_id_produto: resolved.idProduto as unknown as string,
-      p_descricao: resolved.descricao,
-      p_quantidade: resolved.quantidade,
-      p_valor_unitario: resolved.valorUnitario,
-      p_custo_total: resolved.custoTotal,
-      p_id_profissional: resolved.idProfissional as unknown as string,
-      p_id_assistente: resolved.idAssistente as unknown as string,
-      p_comissao_percentual: resolved.comissaoPercentual,
-      p_comissao_assistente_percentual:
-        resolved.comissaoAssistentePercentual,
-      p_base_calculo: resolved.baseCalculo,
-      p_desconta_taxa_maquininha: resolved.descontaTaxaMaquininha,
-      p_origem: resolved.origem,
-      p_observacoes: resolved.observacoes as unknown as string,
-      p_desconto: sanitizeMoney(comanda.desconto),
-      p_acrescimo: sanitizeMoney(comanda.acrescimo),
-      p_idempotency_key: itemIdempotencyKey || undefined,
-    }
-  );
-
-  if (
-    addItemError &&
-    isMissingRpcFunction(addItemError, "fn_adicionar_item_comanda_idempotente")
-  ) {
-    const fallback = await supabaseAdmin.rpc("fn_adicionar_item_comanda", {
-      p_id_salao: idSalao,
-      p_id_comanda: idComanda,
-      p_tipo_item: resolved.tipoItem,
-      p_id_agendamento: resolved.idAgendamento as unknown as string,
-      p_id_servico: resolved.idServico as unknown as string,
-      p_id_produto: resolved.idProduto as unknown as string,
-      p_descricao: resolved.descricao,
-      p_quantidade: resolved.quantidade,
-      p_valor_unitario: resolved.valorUnitario,
-      p_custo_total: resolved.custoTotal,
-      p_id_profissional: resolved.idProfissional as unknown as string,
-      p_id_assistente: resolved.idAssistente as unknown as string,
-      p_comissao_percentual: resolved.comissaoPercentual,
-      p_comissao_assistente_percentual:
-        resolved.comissaoAssistentePercentual,
-      p_base_calculo: resolved.baseCalculo,
-      p_desconta_taxa_maquininha: resolved.descontaTaxaMaquininha,
-      p_origem: resolved.origem,
-      p_observacoes: resolved.observacoes as unknown as string,
-      p_desconto: sanitizeMoney(comanda.desconto),
-      p_acrescimo: sanitizeMoney(comanda.acrescimo),
-    });
-    itemResult = fallback.data
-      ? [{ id_item: String(fallback.data), ja_existia: false }]
-      : null;
-    addItemError = fallback.error;
-  }
-
-  if (addItemError) {
-    throw addItemError;
-  }
-
-  const resultRow = Array.isArray(itemResult) ? itemResult[0] : null;
-  const itemId =
-    resultRow && typeof resultRow === "object" && "id_item" in resultRow
-      ? String(resultRow.id_item || "")
-      : String(itemResult || "");
-  const jaExistia =
-    resultRow && typeof resultRow === "object" && "ja_existia" in resultRow
-      ? Boolean(resultRow.ja_existia)
-      : false;
+  const expanded = await expandirItensCombo({
+    supabaseAdmin,
+    idSalao,
+    resolved,
+  });
+  const itemIdempotencyKey = idempotencyKey || criarChaveItemAgendamento(resolved);
+  const insertResult = await inserirItensResolvidosNaComanda({
+    supabaseAdmin,
+    idSalao,
+    idComanda,
+    resolvedItems: expanded,
+    comanda,
+    idempotencyKey: itemIdempotencyKey,
+  });
 
   return {
     idComanda,
-    idItem: itemId,
+    idItem: insertResult.firstItemId,
     idempotencyKey: itemIdempotencyKey,
-    idempotentReplay: jaExistia,
+    idempotentReplay: insertResult.houveReplay,
     resolved,
   } satisfies AdicionarItemComandaResult;
 }
@@ -490,10 +752,11 @@ export async function resolverItemPayload(params: {
   item: ItemPayload;
 }) {
   const { supabaseAdmin, idSalao, item } = params;
+  const supabaseAny = supabaseAdmin as any;
 
   const tipoItem = String(item.tipo_item || "").trim().toLowerCase();
   const quantidade = Math.max(Number(item.quantidade || 1), 1);
-  const valorUnitario = sanitizeMoney(item.valor_unitario);
+  let valorUnitario = sanitizeMoney(item.valor_unitario);
   const idServico = sanitizeUuid(item.id_servico);
   const idProduto = sanitizeUuid(item.id_produto);
   const idProfissional = sanitizeUuid(item.id_profissional);
@@ -515,10 +778,10 @@ export async function resolverItemPayload(params: {
       { data: servico, error: servicoError },
       { data: profissional, error: profissionalError },
     ] = await Promise.all([
-      supabaseAdmin
+      supabaseAny
         .from("servicos")
         .select(
-          "id, nome, preco, preco_padrao, custo_produto, comissao_percentual, comissao_percentual_padrao, comissao_assistente_percentual, base_calculo, desconta_taxa_maquininha"
+          "id, nome, preco, preco_padrao, custo_produto, comissao_percentual, comissao_percentual_padrao, comissao_assistente_percentual, base_calculo, desconta_taxa_maquininha, eh_combo, combo_resumo"
         )
         .eq("id", idServico)
         .eq("id_salao", idSalao)
@@ -583,10 +846,16 @@ export async function resolverItemPayload(params: {
 
     descricao = descricao || servico.nome || "Servico";
     custoTotal = sanitizeMoney(servico.custo_produto);
-    comissaoPercentual = regra.comissaoPercentual;
-    comissaoAssistentePercentual = regra.comissaoAssistentePercentual;
+    comissaoPercentual = servico.eh_combo ? 0 : regra.comissaoPercentual;
+    comissaoAssistentePercentual = servico.eh_combo
+      ? 0
+      : regra.comissaoAssistentePercentual;
     baseCalculo = regra.baseCalculo;
     descontaTaxaMaquininha = regra.descontaTaxaMaquininha;
+
+    if (!valorUnitario) {
+      valorUnitario = sanitizeMoney(servico.preco_padrao ?? servico.preco ?? 0);
+    }
   } else if (tipoItem === "produto") {
     if (!idProduto) {
       throw new Error("Produto obrigatorio para item de produto.");
@@ -631,7 +900,25 @@ export async function resolverItemPayload(params: {
     origem,
     observacoes,
     idAgendamento: sanitizeUuid(item.id_agendamento),
+    ehCombo: Boolean((item as { eh_combo?: boolean | null }).eh_combo),
+    comboResumo: sanitizeText((item as { combo_resumo?: string | null }).combo_resumo),
   };
+
+  if (tipoItem === "servico" && resolved.idServico) {
+    const { data: servicoInfoRaw } = await supabaseAny
+      .from("servicos")
+      .select("eh_combo, combo_resumo")
+      .eq("id", resolved.idServico)
+      .eq("id_salao", idSalao)
+      .maybeSingle();
+    const servicoInfo = servicoInfoRaw as {
+      eh_combo?: boolean | null;
+      combo_resumo?: string | null;
+    } | null;
+
+    resolved.ehCombo = Boolean(servicoInfo?.eh_combo);
+    resolved.comboResumo = sanitizeText(servicoInfo?.combo_resumo);
+  }
 
   return resolved;
 }

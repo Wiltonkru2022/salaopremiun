@@ -25,6 +25,8 @@ type Servico = {
   comissao_assistente_percentual?: number | null;
   base_calculo?: string | null;
   desconta_taxa_maquininha?: boolean | null;
+  eh_combo?: boolean | null;
+  combo_resumo?: string | null;
 };
 
 type Produto = {
@@ -246,7 +248,7 @@ export default function ComandaItemModal({
               onChange={(e) => setTipoItem(e.target.value)}
               className="w-full rounded-2xl border border-zinc-300 px-4 py-3"
             >
-              <option value="servico">Serviço</option>
+              <option value="servico">Servico</option>
               <option value="produto">Produto</option>
               <option value="extra">Extra</option>
             </select>
@@ -255,7 +257,7 @@ export default function ComandaItemModal({
           {tipoItem === "servico" ? (
             <>
               <div className="md:col-span-2">
-                <label className="mb-1 block text-sm font-semibold text-zinc-700">Serviço</label>
+                <label className="mb-1 block text-sm font-semibold text-zinc-700">Servico</label>
                 <select
                   value={idServico}
                   onChange={(e) => preencherAutomaticoServico(e.target.value)}
@@ -264,7 +266,7 @@ export default function ComandaItemModal({
                   <option value="">Selecione</option>
                   {servicos.map((s) => (
                     <option key={s.id} value={s.id}>
-                      {s.nome}
+                      {s.eh_combo ? `${s.nome} (combo)` : s.nome}
                     </option>
                   ))}
                 </select>

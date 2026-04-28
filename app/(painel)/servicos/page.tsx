@@ -34,6 +34,8 @@ type ServicoListItem = {
   gatilho_retorno_dias?: number | null;
   status?: string | null;
   ativo?: boolean | null;
+  eh_combo?: boolean | null;
+  combo_resumo?: string | null;
 };
 
 type Permissoes = Record<string, boolean>;
@@ -173,6 +175,8 @@ export default function ServicosPage() {
             "gatilho_retorno_dias",
             "status",
             "ativo",
+            "eh_combo",
+            "combo_resumo",
           ].join(", ")
         )
         .eq("id_salao", salaoIdFinal)
@@ -359,13 +363,21 @@ export default function ServicosPage() {
               </div>
               <h1 className="mt-2 text-2xl font-bold md:text-3xl">Servicos</h1>
               <p className="mt-3 max-w-2xl text-sm leading-6 text-zinc-600">
-                Aqui fica a regra principal do salao: o que cobra, quanto dura,
-                quem recebe, quanto custa e quando existe excecao por
-                profissional.
+                Aqui ficam as regras que alimentam agenda, comandas, caixa,
+                vendas e comissoes: preco, duracao, custo, comissao por
+                profissional e agora tambem combos com varios servicos e um
+                preco final unico.
               </p>
             </div>
 
             <div className="flex flex-wrap gap-3">
+              <Link
+                href="/servicos/combos/novo"
+                className="inline-flex items-center justify-center rounded-xl border border-violet-200 bg-violet-50 px-4 py-3 text-sm font-semibold text-violet-700 transition hover:bg-violet-100"
+              >
+                Criar combo
+              </Link>
+
               <Link
                 href="/servicos-extras"
                 className="inline-flex items-center justify-center rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-50"
@@ -455,7 +467,7 @@ export default function ServicosPage() {
           />
           <CommissionGuideCard
             title="Detalhe no clique"
-            text="A lista precisa responder rapido. O detalhe do vinculo, da taxa e do consumo fica na edicao do servico."
+            text="A lista precisa responder rapido. O detalhe do vinculo, da taxa, do consumo e dos combos fica na edicao certa."
           />
         </div>
 
@@ -510,6 +522,8 @@ export default function ServicosPage() {
               const ativo = item.ativo ?? item.status === "ativo";
               const pausa = Number(item.pausa_minutos || 0);
               const precoVariavel = Boolean(item.preco_variavel);
+              const ehCombo = Boolean(item.eh_combo);
+              const hrefEdicao = ehCombo ? `/servicos/combos/${item.id}` : `/servicos/${item.id}`;
 
               return (
                 <article
@@ -523,6 +537,11 @@ export default function ServicosPage() {
                           {item.nome}
                         </h2>
                         <StatusBadge ativo={ativo} />
+                        {ehCombo ? (
+                          <span className="rounded-full bg-violet-100 px-2.5 py-1 text-xs font-semibold text-violet-700">
+                            Combo
+                          </span>
+                        ) : null}
                         {precoVariavel ? (
                           <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-700">
                             Sob avaliacao
@@ -542,6 +561,12 @@ export default function ServicosPage() {
                       {item.descricao ? (
                         <p className="mt-3 max-w-3xl text-sm leading-6 text-zinc-600">
                           {item.descricao}
+                        </p>
+                      ) : null}
+
+                      {ehCombo && item.combo_resumo ? (
+                        <p className="mt-3 max-w-3xl text-sm leading-6 text-violet-700">
+                          Itens do combo: {item.combo_resumo}
                         </p>
                       ) : null}
 
@@ -569,8 +594,16 @@ export default function ServicosPage() {
                         />
                         <MetricBlock
                           label="Comissao padrao"
-                          value={`${formatPercent(item.comissao_percentual_padrao)}%`}
-                          detail="Vale enquanto nao houver excecao por profissional"
+                          value={
+                            ehCombo
+                              ? "Por servico"
+                              : `${formatPercent(item.comissao_percentual_padrao)}%`
+                          }
+                          detail={
+                            ehCombo
+                              ? "Cada servico interno mantem a propria regra de comissao"
+                              : "Vale enquanto nao houver excecao por profissional"
+                          }
                         />
                       </div>
 
@@ -584,17 +617,17 @@ export default function ServicosPage() {
 
                     <div className="flex shrink-0 flex-col gap-2 xl:w-52">
                       <Link
-                        href={`/servicos/${item.id}`}
+                        href={hrefEdicao}
                         className="inline-flex items-center justify-center rounded-xl border border-zinc-300 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50"
                       >
-                        Editar servico
+                        {ehCombo ? "Editar combo" : "Editar servico"}
                       </Link>
 
                       <Link
-                        href={`/servicos/${item.id}`}
+                        href={hrefEdicao}
                         className="inline-flex items-center justify-center rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-2.5 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-100"
                       >
-                        Ver excecoes
+                        {ehCombo ? "Ver composicao" : "Ver excecoes"}
                       </Link>
 
                       {podeGerenciar ? (

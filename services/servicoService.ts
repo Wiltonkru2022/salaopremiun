@@ -61,6 +61,7 @@ export function createServicoService(
       servicoPayload: Record<string, unknown>;
       vinculos: unknown[];
       consumos: unknown[];
+      comboItens: unknown[];
     }) {
       const { data, error } = await supabaseAdmin.rpc(
         "fn_salvar_servico_catalogo_transacional",
@@ -70,6 +71,7 @@ export function createServicoService(
           p_servico: params.servicoPayload as Json,
           p_vinculos: params.vinculos as Json,
           p_consumos: params.consumos as Json,
+          p_combo_itens: params.comboItens as Json,
         }
       );
 

@@ -59,6 +59,8 @@ export type Servico = {
   base_calculo?: string | null;
   desconta_taxa_maquininha?: boolean | null;
   profissionais_vinculados?: string[];
+  eh_combo?: boolean | null;
+  combo_resumo?: string | null;
 };
 
 export type ConfigSalao = {

@@ -6,10 +6,16 @@ import {
   type ProfissionalComissaoSource,
   type ServicoComissaoSource,
 } from "@/lib/comissoes/regrasServico";
+import {
+  allocateComboUnitPrices,
+  normalizeComboComponents,
+} from "@/lib/servicos/combo-utils";
 
 type ServicoComandaInfo = ServicoComissaoSource & {
   id: string;
   nome: string;
+  eh_combo?: boolean | null;
+  combo_resumo?: string | null;
 };
 
 type ProfissionalComandaInfo = ProfissionalComissaoSource & {
@@ -26,6 +32,57 @@ type SincronizarParams = {
   servico?: ServicoComandaInfo | null;
   profissional?: ProfissionalComandaInfo | null;
 };
+
+type ComboServicoItem = {
+  id_servico_item: string;
+  ordem?: number | null;
+  preco_base?: number | null;
+  percentual_rateio?: number | null;
+  servico: ServicoComandaInfo;
+};
+
+async function buscarItensComboServico(params: {
+  supabase: SupabaseClient;
+  idSalao: string;
+  idServicoCombo: string;
+}) {
+  const supabaseAny = params.supabase as any;
+  const { data, error } = await supabaseAny
+    .from("servicos_combo_itens")
+    .select(
+      `
+        id_servico_item,
+        ordem,
+        preco_base,
+        percentual_rateio,
+        servico:servicos!servicos_combo_itens_id_servico_item_fkey (
+          id,
+          nome,
+          preco,
+          preco_padrao,
+          custo_produto,
+          comissao_percentual,
+          comissao_percentual_padrao,
+          comissao_assistente_percentual,
+          base_calculo,
+          desconta_taxa_maquininha
+        )
+      `
+    )
+    .eq("id_salao", params.idSalao)
+    .eq("id_servico_combo", params.idServicoCombo)
+    .eq("ativo", true)
+    .order("ordem", { ascending: true });
+
+  if (error) {
+    console.error("Erro ao carregar itens do combo:", error);
+    throw new Error("Erro ao carregar itens do combo do servico.");
+  }
+
+  return ((data || []) as ComboServicoItem[]).filter(
+    (item) => item.id_servico_item && item.servico?.id
+  );
+}
 
 export async function recalcularTotaisComanda(params: {
   supabase: SupabaseClient;
@@ -303,28 +360,103 @@ export async function sincronizarAgendamentoComComanda(params: SincronizarParams
     }
   }
 
-  const payloadItem = {
-    id_salao: idSalao,
-    id_comanda: idComandaNova,
-    id_agendamento: idAgendamento,
-    tipo_item: "servico",
-    id_servico: servico.id,
-    descricao: servico.nome,
-    quantidade: 1,
-    valor_unitario: regraServico.valorUnitario,
-    valor_total: regraServico.valorUnitario,
-    custo_total: Number(servico.custo_produto ?? 0),
-    id_profissional: idProfissional,
-    id_assistente: null,
-    ...camposComissao,
-    origem: "agenda",
-    observacoes: null,
-    ativo: true,
-  };
+  let payloads = [
+    {
+      id_salao: idSalao,
+      id_comanda: idComandaNova,
+      id_agendamento: idAgendamento,
+      tipo_item: "servico",
+      id_servico: servico.id,
+      descricao: servico.nome,
+      quantidade: 1,
+      valor_unitario: regraServico.valorUnitario,
+      valor_total: regraServico.valorUnitario,
+      custo_total: Number(servico.custo_produto ?? 0),
+      id_profissional: idProfissional,
+      id_assistente: null,
+      ...camposComissao,
+      origem: "agenda",
+      observacoes: null,
+      ativo: true,
+    },
+  ];
+
+  if (servico.eh_combo) {
+    const itensCombo = await buscarItensComboServico({
+      supabase,
+      idSalao,
+      idServicoCombo: servico.id,
+    });
+
+    if (itensCombo.length > 0) {
+      const componentes = normalizeComboComponents(
+        itensCombo.map((item) => ({
+          id: item.servico.id,
+          nome: item.servico.nome,
+          ordem: item.ordem,
+          preco_base:
+            item.preco_base ??
+            item.servico.preco_padrao ??
+            item.servico.preco ??
+            0,
+          percentual_rateio: item.percentual_rateio,
+        }))
+      );
+      const valoresRateados = allocateComboUnitPrices(
+        regraServico.valorUnitario,
+        componentes
+      );
+
+      payloads = await Promise.all(
+        componentes.map(async (componente, index) => {
+          const itemCombo = itensCombo.find(
+            (item) => item.servico.id === componente.id
+          );
+
+          if (!itemCombo) {
+            throw new Error("Item do combo nao encontrado para sincronizacao.");
+          }
+
+          const vinculoItem = await buscarVinculoProfissionalServico({
+            supabase,
+            idSalao,
+            idProfissional,
+            idServico: itemCombo.servico.id,
+          });
+          const regraItem = resolverRegraComissaoServico({
+            servico: itemCombo.servico,
+            profissional,
+            vinculo: vinculoItem,
+          });
+          const camposItem = criarCamposAplicacaoComissao(regraItem);
+          const valorUnitario = valoresRateados[index] || 0;
+
+          return {
+            id_salao: idSalao,
+            id_comanda: idComandaNova,
+            id_agendamento: idAgendamento,
+            tipo_item: "servico",
+            id_servico: itemCombo.servico.id,
+            descricao: `${servico.nome} • ${itemCombo.servico.nome}`,
+            quantidade: 1,
+            valor_unitario: valorUnitario,
+            valor_total: valorUnitario,
+            custo_total: Number(itemCombo.servico.custo_produto ?? 0),
+            id_profissional: idProfissional,
+            id_assistente: null,
+            ...camposItem,
+            origem: "agenda",
+            observacoes: null,
+            ativo: true,
+          };
+        })
+      );
+    }
+  }
 
   const { error: insertError } = await supabase
     .from("comanda_itens")
-    .insert(payloadItem);
+    .insert(payloads);
 
   if (insertError) {
     console.error("Erro ao inserir item sincronizado na comanda:", insertError);

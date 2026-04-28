@@ -429,9 +429,9 @@ export default function ProfissionaisListPage() {
                   Profissionais
                 </h1>
                 <p className="mt-3 max-w-2xl text-sm leading-6 text-zinc-600">
-                  A lista precisa deixar claro quem atende, quem auxilia, quem
-                  entra no app profissional e quem esta realmente ativo para a
-                  operacao do salao.
+                  Organize quem executa servicos, quem auxilia, quem acessa o
+                  app profissional e quem esta disponivel para agenda,
+                  comissoes e operacao do salao.
                 </p>
               </div>
 

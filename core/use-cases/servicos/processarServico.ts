@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type {
   AcaoServico,
+  ComboServicoItemState,
   ConsumoPayload,
   ServicoProcessarPayload,
   VinculoPayload,
@@ -109,6 +110,8 @@ const servicoSchema = z
     exige_avaliacao: z.boolean().optional(),
     status: nullableString,
     ativo: z.boolean().optional(),
+    eh_combo: z.boolean().optional(),
+    combo_resumo: nullableString,
   })
   .partial();
 
@@ -135,6 +138,15 @@ const consumoSchema = z
   })
   .partial();
 
+const comboItemSchema = z
+  .object({
+    id_servico_item: nullableString,
+    ordem: optionalNumber,
+    preco_base: optionalNumber,
+    percentual_rateio: optionalNumber,
+  })
+  .partial();
+
 const processarServicoBodySchema = z
   .object({
     idSalao: z.string().trim().min(1, "Salao obrigatorio."),
@@ -143,6 +155,7 @@ const processarServicoBodySchema = z
     novaCategoria: nullableString,
     vinculos: z.array(vinculoSchema).nullish(),
     consumos: z.array(consumoSchema).nullish(),
+    combo_itens: z.array(comboItemSchema).nullish(),
   })
   .superRefine((body, ctx) => {
     if (body.acao === "salvar" && !body.servico) {
@@ -179,6 +192,7 @@ export type ProcessarServicoInput = {
   novaCategoria?: string;
   vinculos: VinculoPayload[];
   consumos: ConsumoPayload[];
+  combo_itens: ComboServicoItemState[];
 };
 
 export type ProcessarServicoUseCaseResult = {
@@ -228,6 +242,8 @@ function buildServicoPayload(params: {
     exige_avaliacao: sanitizeBoolean(params.servico.exige_avaliacao, false),
     ativo,
     status: ativo ? "ativo" : "inativo",
+    eh_combo: sanitizeBoolean(params.servico.eh_combo, false),
+    combo_resumo: sanitizeText(params.servico.combo_resumo),
   };
 }
 
@@ -270,6 +286,7 @@ export function parseProcessarServicoInput(body: unknown): ProcessarServicoInput
     novaCategoria: sanitizeText(parsed.novaCategoria) || undefined,
     vinculos: (parsed.vinculos || []) as VinculoPayload[],
     consumos: (parsed.consumos || []) as ConsumoPayload[],
+    combo_itens: (parsed.combo_itens || []) as ComboServicoItemState[],
   };
 }
 
@@ -283,6 +300,10 @@ export async function processarServicoUseCase(params: {
     if (input.acao === "salvar") {
       if (!input.servico) {
         throw new Error("Servico obrigatorio para esta acao.");
+      }
+
+      if (sanitizeBoolean(input.servico.eh_combo, false) && input.combo_itens.length < 2) {
+        throw new Error("Informe pelo menos dois servicos para montar o combo.");
       }
 
       const categoria = await resolverCategoria({
@@ -304,6 +325,7 @@ export async function processarServicoUseCase(params: {
         servicoPayload: payload,
         vinculos: input.vinculos,
         consumos: input.consumos,
+        comboItens: input.combo_itens,
       });
 
       return {

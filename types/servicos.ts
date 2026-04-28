@@ -93,6 +93,15 @@ export type ServicoState = {
   exige_avaliacao: boolean;
   status: string;
   ativo: boolean;
+  eh_combo?: boolean;
+  combo_resumo?: string;
+};
+
+export type ComboServicoItemState = {
+  id_servico_item: string;
+  ordem: number;
+  preco_base: number;
+  percentual_rateio: number;
 };
 
 export type ServicoProcessarPayload = {
@@ -116,6 +125,8 @@ export type ServicoProcessarPayload = {
   exige_avaliacao: boolean;
   status: string;
   ativo: boolean;
+  eh_combo?: boolean;
+  combo_resumo?: string | null;
 };
 
 export type VinculoPayload = {
@@ -144,4 +155,5 @@ export type ServicoProcessarBody = {
   novaCategoria?: string | null;
   vinculos?: VinculoPayload[] | null;
   consumos?: ConsumoPayload[] | null;
+  combo_itens?: ComboServicoItemState[] | null;
 };
