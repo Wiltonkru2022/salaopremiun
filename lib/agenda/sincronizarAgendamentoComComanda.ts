@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { adicionarItemComanda } from "@/lib/comandas/processar";
 import {
   buscarVinculoProfissionalServico,
   criarCamposAplicacaoComissao,
@@ -46,8 +47,7 @@ async function buscarItensComboServico(params: {
   idSalao: string;
   idServicoCombo: string;
 }) {
-  const supabaseAny = params.supabase as any;
-  const { data, error } = await supabaseAny
+  const { data, error } = await params.supabase
     .from("servicos_combo_itens")
     .select(
       `
@@ -79,7 +79,7 @@ async function buscarItensComboServico(params: {
     throw new Error("Erro ao carregar itens do combo do servico.");
   }
 
-  return ((data || []) as ComboServicoItem[]).filter(
+  return ((data || []) as unknown as ComboServicoItem[]).filter(
     (item) => item.id_servico_item && item.servico?.id
   );
 }
@@ -488,4 +488,127 @@ export async function sincronizarAgendamentoComComanda(params: SincronizarParams
       await cancelarComandaSeVazia({ supabase, idSalao, idComanda });
     }
   }
+}
+
+export async function sincronizarAgendamentoComComandaNoCaixa(params: {
+  supabase: SupabaseClient;
+  idSalao: string;
+  idAgendamento: string;
+  idComandaNova: string | null;
+  idServico: string;
+  idProfissional: string;
+}) {
+  const {
+    supabase,
+    idSalao,
+    idAgendamento,
+    idComandaNova,
+    idServico,
+    idProfissional,
+  } = params;
+
+  await removerAgendamentoDaComanda({
+    supabase,
+    idSalao,
+    idAgendamento,
+  });
+
+  if (!idComandaNova) {
+    const { error: clearAgendamentoError } = await supabase
+      .from("agendamentos")
+      .update({
+        id_comanda: null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", idAgendamento)
+      .eq("id_salao", idSalao);
+
+    if (clearAgendamentoError) {
+      throw clearAgendamentoError;
+    }
+
+    return { idComanda: null as string | null };
+  }
+
+  const [{ data: agendamento, error: agendamentoError }, { data: comanda, error: comandaError }] =
+    await Promise.all([
+      supabase
+        .from("agendamentos")
+        .select("id, cliente_id, observacoes")
+        .eq("id", idAgendamento)
+        .eq("id_salao", idSalao)
+        .maybeSingle(),
+      supabase
+        .from("comandas")
+        .select("id, status, id_cliente, desconto, acrescimo")
+        .eq("id", idComandaNova)
+        .eq("id_salao", idSalao)
+        .maybeSingle(),
+    ]);
+
+  if (agendamentoError || !agendamento?.id) {
+    throw agendamentoError || new Error("Agendamento nao encontrado.");
+  }
+
+  if (comandaError || !comanda?.id) {
+    throw comandaError || new Error("Comanda nao encontrada.");
+  }
+
+  const statusComanda = String(comanda.status || "").toLowerCase();
+
+  if (statusComanda === "fechada") {
+    throw new Error("A comanda selecionada nao pode receber itens.");
+  }
+
+  if (statusComanda === "cancelada") {
+    const { error: reopenError } = await supabase
+      .from("comandas")
+      .update({
+        status: "aberta",
+        motivo_cancelamento: null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", comanda.id)
+      .eq("id_salao", idSalao);
+
+    if (reopenError) {
+      throw reopenError;
+    }
+  }
+
+  await adicionarItemComanda({
+    supabaseAdmin: supabase,
+    idSalao,
+    comanda: {
+      idComanda: comanda.id,
+      idCliente: comanda.id_cliente || agendamento.cliente_id || null,
+      desconto: Number(comanda.desconto || 0),
+      acrescimo: Number(comanda.acrescimo || 0),
+    },
+    item: {
+      tipo_item: "servico",
+      quantidade: 1,
+      id_servico: idServico,
+      id_agendamento: idAgendamento,
+      id_profissional: idProfissional,
+      observacoes: agendamento.observacoes,
+      origem: "agenda",
+    },
+    idempotencyKey: `agenda-sync:${idAgendamento}:${comanda.id}:${idServico}:${idProfissional}`,
+  });
+
+  const { error: updateAgendamentoError } = await supabase
+    .from("agendamentos")
+    .update({
+      id_comanda: comanda.id,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", idAgendamento)
+    .eq("id_salao", idSalao);
+
+  if (updateAgendamentoError) {
+    throw updateAgendamentoError;
+  }
+
+  return { idComanda: comanda.id };
 }

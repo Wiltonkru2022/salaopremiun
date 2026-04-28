@@ -3,6 +3,12 @@ import { buildLoginRedirectUrl } from "@/lib/auth/login-redirect";
 import { PERMISSIONS, type PermissionKey, type UserNivel } from "@/lib/permissions";
 import type { Cliente, ConfigSalao, Profissional, Servico } from "@/types/agenda";
 
+type ComboServicoAgendaRow = {
+  id_servico_combo?: string | null;
+  id_servico_item?: string | null;
+  ativo?: boolean | null;
+};
+
 function montarPermissoesPorNivel(userNivel: UserNivel) {
   const keys = Object.keys(PERMISSIONS) as PermissionKey[];
 
@@ -251,7 +257,7 @@ export async function initAgendaPage(params: {
       .eq("id_salao", salaoId)
       .eq("ativo", true),
 
-    (supabase as any)
+    supabase
       .from("servicos_combo_itens")
       .select("id_servico_combo, id_servico_item, ativo")
       .eq("id_salao", salaoId)
@@ -289,10 +295,7 @@ export async function initAgendaPage(params: {
   });
 
   const comboItensPorServico = new Map<string, string[]>();
-  (((comboItensRes?.data as any[]) || []) as {
-    id_servico_combo?: string | null;
-    id_servico_item?: string | null;
-  }[]).forEach((item) => {
+  ((comboItensRes?.data || []) as ComboServicoAgendaRow[]).forEach((item) => {
     if (!item.id_servico_combo || !item.id_servico_item) return;
 
     const current = comboItensPorServico.get(item.id_servico_combo) || [];

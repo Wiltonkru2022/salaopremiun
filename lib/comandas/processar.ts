@@ -56,6 +56,11 @@ type ComboServicoItem = {
   };
 };
 
+type ServicoComboLookupRow = {
+  eh_combo?: boolean | null;
+  combo_resumo?: string | null;
+};
+
 export type CriarComandaPorAgendamentoResult = {
   idComanda: string | null;
   jaExistia: boolean;
@@ -68,6 +73,13 @@ export type AdicionarItemComandaResult = {
   idempotentReplay: boolean;
   resolved: ResolvedItemPayload;
 };
+
+function shouldAplicarComissaoAssistente(params: {
+  idAssistente: string | null;
+  idProfissional: string | null;
+}) {
+  return Boolean(params.idAssistente && params.idProfissional);
+}
 
 export const COMANDA_ACTIONS: AcaoComanda[] = [
   "salvar_base",
@@ -148,8 +160,7 @@ async function buscarItensComboServico(params: {
   idSalao: string;
   idServicoCombo: string;
 }) {
-  const supabaseAny = params.supabaseAdmin as any;
-  const { data, error } = await supabaseAny
+  const { data, error } = await params.supabaseAdmin
     .from("servicos_combo_itens")
     .select(
       `
@@ -180,7 +191,7 @@ async function buscarItensComboServico(params: {
     throw error;
   }
 
-  return ((data || []) as ComboServicoItem[]).filter(
+  return ((data || []) as unknown as ComboServicoItem[]).filter(
     (item) => item.id_servico_item && item.servico?.id
   );
 }
@@ -270,7 +281,12 @@ async function expandirItensCombo(params: {
         valorUnitario: valoresUnitarios[index] || 0,
         custoTotal: sanitizeMoney(Number(servico.custo_produto || 0) * resolved.quantidade),
         comissaoPercentual: regra.comissaoPercentual,
-        comissaoAssistentePercentual: regra.comissaoAssistentePercentual,
+        comissaoAssistentePercentual: shouldAplicarComissaoAssistente({
+          idAssistente: resolved.idAssistente,
+          idProfissional: resolved.idProfissional,
+        })
+          ? regra.comissaoAssistentePercentual
+          : 0,
         baseCalculo: regra.baseCalculo,
         descontaTaxaMaquininha: regra.descontaTaxaMaquininha,
         ehCombo: false,
@@ -770,7 +786,6 @@ export async function resolverItemPayload(params: {
   item: ItemPayload;
 }) {
   const { supabaseAdmin, idSalao, item } = params;
-  const supabaseAny = supabaseAdmin as any;
 
   const tipoItem = String(item.tipo_item || "").trim().toLowerCase();
   const quantidade = Math.max(Number(item.quantidade || 1), 1);
@@ -796,7 +811,7 @@ export async function resolverItemPayload(params: {
       { data: servico, error: servicoError },
       { data: profissional, error: profissionalError },
     ] = await Promise.all([
-      supabaseAny
+      supabaseAdmin
         .from("servicos")
         .select(
           "id, nome, preco, preco_padrao, custo_produto, comissao_percentual, comissao_percentual_padrao, comissao_assistente_percentual, base_calculo, desconta_taxa_maquininha, eh_combo, combo_resumo"
@@ -865,9 +880,14 @@ export async function resolverItemPayload(params: {
     descricao = descricao || servico.nome || "Servico";
     custoTotal = sanitizeMoney(servico.custo_produto);
     comissaoPercentual = servico.eh_combo ? 0 : regra.comissaoPercentual;
-    comissaoAssistentePercentual = servico.eh_combo
-      ? 0
-      : regra.comissaoAssistentePercentual;
+    comissaoAssistentePercentual =
+      servico.eh_combo ||
+      !shouldAplicarComissaoAssistente({
+        idAssistente,
+        idProfissional,
+      })
+        ? 0
+        : regra.comissaoAssistentePercentual;
     baseCalculo = regra.baseCalculo;
     descontaTaxaMaquininha = regra.descontaTaxaMaquininha;
 
@@ -923,16 +943,13 @@ export async function resolverItemPayload(params: {
   };
 
   if (tipoItem === "servico" && resolved.idServico) {
-    const { data: servicoInfoRaw } = await supabaseAny
+    const { data: servicoInfoRaw } = await supabaseAdmin
       .from("servicos")
       .select("eh_combo, combo_resumo")
       .eq("id", resolved.idServico)
       .eq("id_salao", idSalao)
       .maybeSingle();
-    const servicoInfo = servicoInfoRaw as {
-      eh_combo?: boolean | null;
-      combo_resumo?: string | null;
-    } | null;
+    const servicoInfo = servicoInfoRaw as ServicoComboLookupRow | null;
 
     resolved.ehCombo = Boolean(servicoInfo?.eh_combo);
     resolved.comboResumo = sanitizeText(servicoInfo?.combo_resumo);

@@ -22,6 +22,8 @@ type UsuarioCaixa = {
   status?: string | null;
 };
 
+type CatalogoServicoRow = CatalogoServico;
+
 export async function carregarAcessoCaixa(supabase: CaixaSupabaseClient) {
   const {
     data: { user },
@@ -117,9 +119,8 @@ export async function carregarCatalogosCaixa(
   supabase: CaixaSupabaseClient,
   idSalao: string
 ) {
-  const supabaseAny = supabase as any;
   const [servicosRes, produtosRes, extrasRes, profissionaisRes, assistentesRes] = await Promise.all([
-    supabaseAny
+    supabase
       .from("servicos")
       .select("ativo, atualizado_em, base_calculo, categoria, combo_resumo, comissao_assistente_percentual, comissao_percentual, comissao_percentual_padrao, created_at, criado_em, custo_produto, desconta_taxa_maquininha, descricao, duracao, duracao_minutos, eh_combo, exige_avaliacao, gatilho_retorno_dias, id, id_categoria, id_salao, nome, pausa_minutos, preco, preco_minimo, preco_padrao, preco_variavel, recurso_nome, status, updated_at")
       .eq("id_salao", idSalao)
@@ -195,7 +196,7 @@ export async function carregarCatalogosCaixa(
     extrasCatalogo: (extrasRes.data as CatalogoExtra[]) || [],
     produtosCatalogo: (produtosRes.data as CatalogoProduto[]) || [],
     profissionaisCatalogo,
-    servicosCatalogo: (servicosRes.data as CatalogoServico[]) || [],
+    servicosCatalogo: (servicosRes.data as CatalogoServicoRow[]) || [],
   };
 }
 

@@ -8,6 +8,7 @@ Use este arquivo para revisar onde o service role ou `auth.admin` aparece. Qualq
 | --- | --- | --- | --- | --- | --- |
 | `app/(admin-master)/admin-master/saloes/[id]/page.tsx` | - | sim | nao | sim | revisar |
 | `app/(admin-master)/admin-master/webhooks/[id]/page.tsx` | - | sim | nao | sim | revisar |
+| `app/api/agenda/sincronizar-comanda/route.ts` | /api/agenda/sincronizar-comanda | sim | nao | sim | revisar |
 | `lib/admin-master/actions.ts` | - | sim | nao | sim | sim |
 | `lib/admin-master/auth/requireAdminMasterUser.ts` | - | sim | nao | sim | revisar |
 | `lib/admin-master/data.ts` | - | sim | nao | sim | sim |
@@ -28,6 +29,7 @@ Use este arquivo para revisar onde o service role ou `auth.admin` aparece. Qualq
 | `scripts/audit/admin-surface-audit.mjs` | - | sim | nao | revisar | revisar |
 | `scripts/audit/service-role-audit.mjs` | - | sim | nao | sim | revisar |
 | `scripts/e2e/saas-sales-flow.mjs` | - | sim | sim | sim | revisar |
+| `scripts/maintenance/recalcular-comissoes-assistente-invalido.mjs` | - | sim | nao | sim | revisar |
 | `services/asaasWebhookService.ts` | - | sim | nao | revisar | sim |
 | `services/assinaturaCheckoutService.ts` | - | sim | nao | sim | revisar |
 | `services/assinaturaCronService.ts` | - | sim | nao | revisar | revisar |

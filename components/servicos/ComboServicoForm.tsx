@@ -30,6 +30,29 @@ type ComboItemForm = {
   ordem: number;
 };
 
+type ServicoBaseRow = BaseServico & {
+  eh_combo?: boolean | null;
+};
+
+type ComboServicoRow = {
+  id: string;
+  nome?: string | null;
+  descricao?: string | null;
+  preco_padrao?: number | null;
+  ativo?: boolean | null;
+  status?: string | null;
+  id_categoria?: string | null;
+  combo_resumo?: string | null;
+  eh_combo?: boolean | null;
+};
+
+type ComboServicoItemRow = {
+  id_servico_item: string;
+  ordem?: number | null;
+  preco_base?: number | null;
+  percentual_rateio?: number | null;
+};
+
 function formatMoneyInput(value: string) {
   const digits = value.replace(/\D/g, "");
   const number = Number(digits || 0) / 100;
@@ -155,8 +178,6 @@ export default function ComboServicoForm({ modo }: { modo: "novo" | "editar" }) 
 
       setIdSalao(usuario.idSalao);
 
-      const supabaseAny = supabase as any;
-
       const [categoriasRes, servicosRes, vinculosRes] = await Promise.all([
         supabase
           .from("servicos_categorias")
@@ -192,7 +213,7 @@ export default function ComboServicoForm({ modo }: { modo: "novo" | "editar" }) 
         }
       );
 
-      const base = (((servicosRes.data || []) as any[]) || [])
+      const base = ((servicosRes.data || []) as unknown as ServicoBaseRow[])
         .filter((item) => !item.eh_combo)
         .map((item) => ({
           ...item,
@@ -204,7 +225,7 @@ export default function ComboServicoForm({ modo }: { modo: "novo" | "editar" }) 
       setVinculosPorServico(mapaVinculos);
 
       if (modo === "editar" && comboId) {
-        const { data: comboRowRaw, error: comboError } = await supabaseAny
+        const { data: comboRowRaw, error: comboError } = await supabase
           .from("servicos")
           .select(
             "id, nome, descricao, preco_padrao, ativo, status, id_categoria, combo_resumo, eh_combo"
@@ -214,11 +235,11 @@ export default function ComboServicoForm({ modo }: { modo: "novo" | "editar" }) 
           .maybeSingle();
 
         if (comboError) throw comboError;
-        const comboRow = comboRowRaw as any;
+        const comboRow = comboRowRaw as ComboServicoRow | null;
         if (!comboRow?.id) throw new Error("Combo nao encontrado.");
         if (!comboRow.eh_combo) throw new Error("Este servico nao e um combo.");
 
-        const { data: itensRows, error: itensError } = await supabaseAny
+        const { data: itensRows, error: itensError } = await supabase
           .from("servicos_combo_itens")
           .select("id_servico_item, ordem, preco_base, percentual_rateio")
           .eq("id_salao", usuario.idSalao)
@@ -236,7 +257,7 @@ export default function ComboServicoForm({ modo }: { modo: "novo" | "editar" }) 
         setStatusAtivo(Boolean(comboRow.ativo ?? comboRow.status === "ativo"));
         setIdCategoria(comboRow.id_categoria || "");
         setComboItens(
-          (((itensRows || []) as any[]) || []).map((item, index) => ({
+          ((itensRows || []) as unknown as ComboServicoItemRow[]).map((item, index) => ({
             id_servico_item: item.id_servico_item,
             ordem: Number(item.ordem || index + 1),
           }))

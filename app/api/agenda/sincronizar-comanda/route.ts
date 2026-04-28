@@ -4,9 +4,8 @@ import {
   AuthzError,
   requireSalaoAnyPermission,
 } from "@/lib/auth/require-salao-permission";
-import { adicionarItemComanda } from "@/lib/comandas/processar";
 import {
-  removerAgendamentoDaComanda,
+  sincronizarAgendamentoComComandaNoCaixa,
 } from "@/lib/agenda/sincronizarAgendamentoComComanda";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
@@ -30,110 +29,16 @@ export async function POST(req: NextRequest) {
     ]);
 
     const supabaseAdmin = getSupabaseAdmin();
-
-    await removerAgendamentoDaComanda({
+    const resultado = await sincronizarAgendamentoComComandaNoCaixa({
       supabase: supabaseAdmin,
       idSalao: body.idSalao,
       idAgendamento: body.idAgendamento,
+      idComandaNova: body.idComandaNova,
+      idServico: body.idServico,
+      idProfissional: body.idProfissional,
     });
 
-    if (!body.idComandaNova) {
-      const { error: clearAgendamentoError } = await supabaseAdmin
-        .from("agendamentos")
-        .update({
-          id_comanda: null,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", body.idAgendamento)
-        .eq("id_salao", body.idSalao);
-
-      if (clearAgendamentoError) {
-        throw clearAgendamentoError;
-      }
-
-      return NextResponse.json({ ok: true, idComanda: null });
-    }
-
-    const [{ data: agendamento, error: agendamentoError }, { data: comanda, error: comandaError }] =
-      await Promise.all([
-        supabaseAdmin
-          .from("agendamentos")
-          .select("id, cliente_id, observacoes")
-          .eq("id", body.idAgendamento)
-          .eq("id_salao", body.idSalao)
-          .maybeSingle(),
-        supabaseAdmin
-          .from("comandas")
-          .select("id, status, id_cliente, desconto, acrescimo")
-          .eq("id", body.idComandaNova)
-          .eq("id_salao", body.idSalao)
-          .maybeSingle(),
-      ]);
-
-    if (agendamentoError || !agendamento?.id) {
-      throw agendamentoError || new Error("Agendamento nao encontrado.");
-    }
-
-    if (comandaError || !comanda?.id) {
-      throw comandaError || new Error("Comanda nao encontrada.");
-    }
-
-    const statusComanda = String(comanda.status || "").toLowerCase();
-    if (statusComanda === "fechada") {
-      throw new Error("A comanda selecionada nao pode receber itens.");
-    }
-
-    if (statusComanda === "cancelada") {
-      const { error: reopenError } = await supabaseAdmin
-        .from("comandas")
-        .update({
-          status: "aberta",
-          motivo_cancelamento: null,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", comanda.id)
-        .eq("id_salao", body.idSalao);
-
-      if (reopenError) {
-        throw reopenError;
-      }
-    }
-
-    await adicionarItemComanda({
-      supabaseAdmin,
-      idSalao: body.idSalao,
-      comanda: {
-        idComanda: comanda.id,
-        idCliente: comanda.id_cliente || agendamento.cliente_id || null,
-        desconto: Number(comanda.desconto || 0),
-        acrescimo: Number(comanda.acrescimo || 0),
-      },
-      item: {
-        tipo_item: "servico",
-        quantidade: 1,
-        id_servico: body.idServico,
-        id_agendamento: body.idAgendamento,
-        id_profissional: body.idProfissional,
-        observacoes: agendamento.observacoes,
-        origem: "agenda",
-      },
-      idempotencyKey: `agenda-sync:${body.idAgendamento}:${comanda.id}:${body.idServico}:${body.idProfissional}`,
-    });
-
-    const { error: updateAgendamentoError } = await supabaseAdmin
-      .from("agendamentos")
-      .update({
-        id_comanda: comanda.id,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", body.idAgendamento)
-      .eq("id_salao", body.idSalao);
-
-    if (updateAgendamentoError) {
-      throw updateAgendamentoError;
-    }
-
-    return NextResponse.json({ ok: true, idComanda: comanda.id });
+    return NextResponse.json({ ok: true, idComanda: resultado.idComanda });
   } catch (error) {
     if (error instanceof ZodError) {
       return NextResponse.json(

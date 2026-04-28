@@ -82,9 +82,88 @@ type WhatsappPacoteComprasTable = {
   ];
 };
 
+type ServicosTableExtensions = {
+  Row: {
+    eh_combo: boolean | null;
+    combo_resumo: string | null;
+  };
+  Insert: {
+    eh_combo?: boolean | null;
+    combo_resumo?: string | null;
+  };
+  Update: {
+    eh_combo?: boolean | null;
+    combo_resumo?: string | null;
+  };
+};
+
+type ServicosComboItensTable = {
+  Row: {
+    ativo: boolean;
+    created_at: string | null;
+    id: string;
+    id_salao: string;
+    id_servico_combo: string;
+    id_servico_item: string;
+    ordem: number | null;
+    percentual_rateio: number | null;
+    preco_base: number | null;
+    updated_at: string | null;
+  };
+  Insert: {
+    ativo?: boolean;
+    created_at?: string | null;
+    id?: string;
+    id_salao: string;
+    id_servico_combo: string;
+    id_servico_item: string;
+    ordem?: number | null;
+    percentual_rateio?: number | null;
+    preco_base?: number | null;
+    updated_at?: string | null;
+  };
+  Update: {
+    ativo?: boolean;
+    created_at?: string | null;
+    id?: string;
+    id_salao?: string;
+    id_servico_combo?: string;
+    id_servico_item?: string;
+    ordem?: number | null;
+    percentual_rateio?: number | null;
+    preco_base?: number | null;
+    updated_at?: string | null;
+  };
+  Relationships: [
+    {
+      foreignKeyName: "servicos_combo_itens_id_salao_fkey";
+      columns: ["id_salao"];
+      isOneToOne: false;
+      referencedRelation: "saloes";
+      referencedColumns: ["id"];
+    },
+    {
+      foreignKeyName: "servicos_combo_itens_id_servico_combo_fkey";
+      columns: ["id_servico_combo"];
+      isOneToOne: false;
+      referencedRelation: "servicos";
+      referencedColumns: ["id"];
+    },
+    {
+      foreignKeyName: "servicos_combo_itens_id_servico_item_fkey";
+      columns: ["id_servico_item"];
+      isOneToOne: false;
+      referencedRelation: "servicos";
+      referencedColumns: ["id"];
+    }
+  ];
+};
+
 type DatabaseWithAppExtensions = Database & {
   public: Database["public"] & {
     Tables: Database["public"]["Tables"] & {
+      servicos: Database["public"]["Tables"]["servicos"] & ServicosTableExtensions;
+      servicos_combo_itens: ServicosComboItensTable;
       whatsapp_pacote_compras: WhatsappPacoteComprasTable;
     };
     Functions: Database["public"]["Functions"] & {
