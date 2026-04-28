@@ -20,6 +20,7 @@ import {
   getTipoItemLabel,
   tipoItemIcon,
 } from "./utils";
+import { parseComboDisplayMeta } from "@/lib/combo/display";
 
 type Props = {
   comandaSelecionada: ComandaDetalhe | null;
@@ -280,6 +281,8 @@ function ItemCard({
   onEditarItem: (item: ComandaItem) => void;
   onRemoverItem: (idItem: string) => void;
 }) {
+  const comboMeta = parseComboDisplayMeta(item.descricao);
+
   return (
     <div className="rounded-[20px] border border-zinc-200 bg-zinc-50 p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -289,10 +292,22 @@ function ItemCard({
           </div>
 
           <div className="min-w-0">
-            <div className="font-semibold text-zinc-950">{item.descricao}</div>
-            <div className="mt-1 text-xs uppercase tracking-[0.14em] text-zinc-500">
-              {getTipoItemLabel(item.tipo_item)}
+            <div className="font-semibold text-zinc-950">{comboMeta.displayTitle}</div>
+            <div className="mt-1 flex flex-wrap items-center gap-2">
+              <div className="text-xs uppercase tracking-[0.14em] text-zinc-500">
+                {getTipoItemLabel(item.tipo_item)}
+              </div>
+              {comboMeta.isComboItem ? (
+                <span className="rounded-full border border-violet-200 bg-violet-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-violet-700">
+                  Combo
+                </span>
+              ) : null}
             </div>
+            {comboMeta.isComboItem && comboMeta.comboName ? (
+              <div className="mt-1 text-xs text-zinc-500">
+                Vindo do combo <span className="font-semibold text-zinc-700">{comboMeta.comboName}</span>
+              </div>
+            ) : null}
           </div>
         </div>
 

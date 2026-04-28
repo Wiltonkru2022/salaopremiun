@@ -34,6 +34,7 @@ import {
   getStatusBadgeClass,
 } from "@/components/vendas/utils";
 import { KpiCard, ResumoRow } from "@/components/vendas/ui";
+import { parseComboDisplayMeta } from "@/lib/combo/display";
 import {
   buildPermissoesByNivel,
   sanitizePermissoesDb,
@@ -1156,7 +1157,7 @@ export default function VendasPage() {
                             {detalheVenda.itens.map((item) => (
                               <tr key={item.id} className="border-b border-zinc-100 last:border-b-0">
                                 <td className="px-5 py-4">
-                                  <div className="font-semibold text-zinc-900">{item.descricao}</div>
+                                  <ComboItemLabel descricao={item.descricao} />
                                   <div className="text-xs uppercase text-zinc-500">{item.tipo_item}</div>
                                 </td>
                                 <td className="px-5 py-4 text-sm text-zinc-700">{item.quantidade}</td>
@@ -1418,5 +1419,23 @@ export default function VendasPage() {
         </div>
       ) : null}
     </>
+  );
+}
+
+function ComboItemLabel({ descricao }: { descricao: string }) {
+  const comboMeta = parseComboDisplayMeta(descricao);
+
+  return (
+    <div>
+      <div className="font-semibold text-zinc-900">{comboMeta.displayTitle}</div>
+      {comboMeta.isComboItem ? (
+        <div className="mt-1 flex flex-wrap items-center gap-2">
+          <span className="rounded-full border border-violet-200 bg-violet-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-violet-700">
+            Combo
+          </span>
+          <span className="text-xs text-zinc-500">{comboMeta.comboName}</span>
+        </div>
+      ) : null}
+    </div>
   );
 }

@@ -16,6 +16,7 @@ import {
   Wallet,
   ShieldAlert,
 } from "lucide-react";
+import { parseComboDisplayMeta } from "@/lib/combo/display";
 
 type ClienteJoin = {
   nome?: string | null;
@@ -152,6 +153,28 @@ function KpiCard({
           {helper ? <div className="mt-1 text-xs text-zinc-500">{helper}</div> : null}
         </div>
       </div>
+    </div>
+  );
+}
+
+function ComboDescriptionCell({
+  descricao,
+}: {
+  descricao: string | null | undefined;
+}) {
+  const comboMeta = parseComboDisplayMeta(descricao);
+
+  return (
+    <div>
+      <div className="text-sm text-zinc-700">{comboMeta.displayTitle}</div>
+      {comboMeta.isComboItem && comboMeta.comboName ? (
+        <div className="mt-1 inline-flex items-center gap-2">
+          <span className="rounded-full border border-violet-200 bg-violet-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-violet-700">
+            Combo
+          </span>
+          <span className="text-xs text-zinc-500">{comboMeta.comboName}</span>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -767,7 +790,9 @@ export default function RelatorioFinanceiroPage() {
                   <tbody>
                     {comissoesFiltradas.slice(0, 20).map((item) => (
                       <tr key={item.id} className="border-b border-zinc-100 last:border-b-0">
-                        <td className="px-5 py-4 text-sm text-zinc-700">{item.descricao || "-"}</td>
+                        <td className="px-5 py-4">
+                          <ComboDescriptionCell descricao={item.descricao} />
+                        </td>
                         <td className="px-5 py-4 text-sm text-zinc-700">
                           {formatCurrency(item.valor_base)}
                         </td>

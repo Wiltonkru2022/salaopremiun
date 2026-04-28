@@ -16,6 +16,7 @@ import {
   User2,
   WalletCards,
 } from "lucide-react";
+import { parseComboDisplayMeta } from "@/lib/combo/display";
 
 function formatCurrency(value: number | null | undefined) {
   return Number(value || 0).toLocaleString("pt-BR", {
@@ -116,6 +117,35 @@ function origemMeta(origem: string | null | undefined) {
     description: "Nao encontrou uma regra clara.",
     label: "Sem regra definida",
   };
+}
+
+function ComboDescriptionBlock({
+  descricao,
+  observacoes,
+}: {
+  descricao: string | null | undefined;
+  observacoes: string | null | undefined;
+}) {
+  const comboMeta = parseComboDisplayMeta(descricao);
+
+  return (
+    <>
+      <div className="text-sm font-medium text-zinc-900">
+        {comboMeta.displayTitle}
+      </div>
+      {comboMeta.isComboItem && comboMeta.comboName ? (
+        <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-zinc-500">
+          <span className="rounded-full border border-violet-200 bg-violet-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-violet-700">
+            Combo
+          </span>
+          <span>{comboMeta.comboName}</span>
+        </div>
+      ) : null}
+      <div className="mt-1 text-xs text-zinc-500">
+        {observacoes || "Sem observacoes adicionais."}
+      </div>
+    </>
+  );
 }
 
 export default function ComissoesPage() {
@@ -828,13 +858,10 @@ export default function ComissoesPage() {
                             </div>
                           </td>
                           <td className="px-5 py-4">
-                            <div className="text-sm font-medium text-zinc-900">
-                              {item.descricao || "-"}
-                            </div>
-                            <div className="mt-1 text-xs text-zinc-500">
-                              {item.observacoes ||
-                                "Sem observacoes adicionais."}
-                            </div>
+                            <ComboDescriptionBlock
+                              descricao={item.descricao}
+                              observacoes={item.observacoes}
+                            />
                           </td>
                           <td className="px-5 py-4 text-sm text-zinc-700">
                             {formatDate(item.competencia_data)}
