@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import {
   buscarVinculoProfissionalServico,
@@ -109,6 +110,21 @@ export function sanitizeIdempotencyKey(value: unknown) {
   return parsed || null;
 }
 
+function buildCompactIdempotencyKey(parts: Array<string | null | undefined>) {
+  const raw = parts
+    .map((part) => String(part || "").trim())
+    .filter(Boolean)
+    .join("|");
+
+  if (!raw) {
+    return null;
+  }
+
+  return sanitizeIdempotencyKey(
+    `ci:${createHash("sha1").update(raw).digest("hex").slice(0, 40)}`
+  );
+}
+
 export function isComandaAction(value: string): value is AcaoComanda {
   return COMANDA_ACTIONS.includes(value as AcaoComanda);
 }
@@ -118,15 +134,13 @@ export function criarChaveItemAgendamento(resolved: ResolvedItemPayload) {
     return null;
   }
 
-  return sanitizeIdempotencyKey(
-    [
-      "agendamento-item",
-      resolved.idAgendamento,
-      resolved.idServico || "sem-servico",
-      resolved.idProduto || "sem-produto",
-      resolved.idProfissional || "sem-profissional",
-    ].join(":")
-  );
+  return buildCompactIdempotencyKey([
+    "agendamento-item",
+    resolved.idAgendamento,
+    resolved.idServico || "sem-servico",
+    resolved.idProduto || "sem-produto",
+    resolved.idProfissional || "sem-profissional",
+  ]);
 }
 
 async function buscarItensComboServico(params: {
@@ -280,9 +294,13 @@ async function inserirItensResolvidosNaComanda(params: {
   for (const [index, resolved] of params.resolvedItems.entries()) {
     const key =
       params.idempotencyKey && params.resolvedItems.length > 1
-        ? sanitizeIdempotencyKey(
-            `${params.idempotencyKey}:${index}:${resolved.idServico || resolved.idProduto || "manual"}`
-          )
+        ? buildCompactIdempotencyKey([
+            params.idempotencyKey,
+            String(index),
+            resolved.idServico || resolved.idProduto || "manual",
+            resolved.idProfissional || "sem-profissional",
+            resolved.idAgendamento || "sem-agendamento",
+          ])
         : params.idempotencyKey;
 
     let { data: itemResult, error: addItemError } = await params.supabaseAdmin.rpc(
