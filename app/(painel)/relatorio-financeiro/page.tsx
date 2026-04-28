@@ -17,6 +17,7 @@ import {
   ShieldAlert,
 } from "lucide-react";
 import { parseComboDisplayMeta } from "@/lib/combo/display";
+import { getLocalDayRangeIso } from "@/lib/date/local-day-range";
 
 type ClienteJoin = {
   nome?: string | null;
@@ -205,6 +206,8 @@ export default function RelatorioFinanceiroPage() {
       try {
         const salaoId = salaoIdParam || idSalao;
         if (!salaoId) return;
+        const dataInicioRange = getLocalDayRangeIso(dataInicio);
+        const dataFimRange = getLocalDayRangeIso(dataFim);
 
         setErroTela("");
         setMsg("");
@@ -237,13 +240,13 @@ export default function RelatorioFinanceiroPage() {
 
         if (statusFiltro === "fechada") {
           queryComandas = queryComandas
-            .gte("fechada_em", `${dataInicio}T00:00:00`)
-            .lte("fechada_em", `${dataFim}T23:59:59`)
+            .gte("fechada_em", dataInicioRange.startIso)
+            .lte("fechada_em", dataFimRange.endIso)
             .order("fechada_em", { ascending: false });
         } else if (statusFiltro === "cancelada") {
           queryComandas = queryComandas
-            .gte("cancelada_em", `${dataInicio}T00:00:00`)
-            .lte("cancelada_em", `${dataFim}T23:59:59`)
+            .gte("cancelada_em", dataInicioRange.startIso)
+            .lte("cancelada_em", dataFimRange.endIso)
             .order("cancelada_em", { ascending: false });
         } else {
           queryComandas = queryComandas.order("fechada_em", { ascending: false });

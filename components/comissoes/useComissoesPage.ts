@@ -13,6 +13,7 @@ import {
   getStatusComissaoQueryValues,
   normalizeStatusComissao,
 } from "@/lib/domain/status";
+import { getLocalDayRangeIso } from "@/lib/date/local-day-range";
 import type {
   ComissaoConfirmacao,
   ComissaoPermissoes,
@@ -147,6 +148,8 @@ export function useComissoesPage() {
       try {
         const salaoId = salaoIdParam || idSalao;
         if (!salaoId) return;
+        const dataInicioRange = getLocalDayRangeIso(dataInicial);
+        const dataFimRange = getLocalDayRangeIso(dataFinal);
         setErro("");
         setMsg("");
 
@@ -154,8 +157,8 @@ export function useComissoesPage() {
           .from("comissoes_lancamentos")
           .select("competencia, competencia_data, criado_em, descricao, id, id_agendamento, id_assistente, id_comanda, id_comanda_item, id_profissional, id_salao, observacoes, origem_percentual, pago_em, percentual, percentual_aplicado, status, tipo_destinatario, tipo_profissional, updated_at, valor_base, valor_comissao, valor_comissao_assistente")
           .eq("id_salao", salaoId)
-          .gte("competencia_data", dataInicial)
-          .lte("competencia_data", dataFinal)
+          .gte("criado_em", dataInicioRange.startIso)
+          .lte("criado_em", dataFimRange.endIso)
           .order("criado_em", { ascending: false })
           .order("competencia_data", { ascending: false });
 

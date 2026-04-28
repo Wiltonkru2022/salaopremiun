@@ -35,6 +35,7 @@ import {
 } from "@/components/vendas/utils";
 import { KpiCard, ResumoRow } from "@/components/vendas/ui";
 import { groupComboTotals, parseComboDisplayMeta } from "@/lib/combo/display";
+import { getLocalDayRangeIso } from "@/lib/date/local-day-range";
 import {
   buildPermissoesByNivel,
   sanitizePermissoesDb,
@@ -224,6 +225,8 @@ export default function VendasPage() {
   async function carregarVendas(salaoIdParam?: string) {
     const salaoId = salaoIdParam || idSalao;
     if (!salaoId) return;
+    const dataInicioRange = getLocalDayRangeIso(dataInicio);
+    const dataFimRange = getLocalDayRangeIso(dataFim);
 
     setErroTela("");
 
@@ -263,31 +266,31 @@ export default function VendasPage() {
 
     if (statusFiltro === "fechada") {
       queryComandas = queryComandas
-        .gte("fechada_em", `${dataInicio}T00:00:00`)
-        .lte("fechada_em", `${dataFim}T23:59:59`);
+        .gte("fechada_em", dataInicioRange.startIso)
+        .lte("fechada_em", dataFimRange.endIso);
 
       queryBusca = queryBusca
-        .gte("fechada_em", `${dataInicio}T00:00:00`)
-        .lte("fechada_em", `${dataFim}T23:59:59`);
+        .gte("fechada_em", dataInicioRange.startIso)
+        .lte("fechada_em", dataFimRange.endIso);
     }
 
     if (statusFiltro === "cancelada") {
       queryComandas = queryComandas
-        .gte("cancelada_em", `${dataInicio}T00:00:00`)
-        .lte("cancelada_em", `${dataFim}T23:59:59`);
+        .gte("cancelada_em", dataInicioRange.startIso)
+        .lte("cancelada_em", dataFimRange.endIso);
 
       queryBusca = queryBusca
-        .gte("cancelada_em", `${dataInicio}T00:00:00`)
-        .lte("cancelada_em", `${dataFim}T23:59:59`);
+        .gte("cancelada_em", dataInicioRange.startIso)
+        .lte("cancelada_em", dataFimRange.endIso);
     }
 
     if (statusFiltro === "todos") {
       queryComandas = queryComandas.or(
-        `and(status.eq.fechada,fechada_em.gte.${dataInicio}T00:00:00,fechada_em.lte.${dataFim}T23:59:59),and(status.eq.cancelada,cancelada_em.gte.${dataInicio}T00:00:00,cancelada_em.lte.${dataFim}T23:59:59)`
+        `and(status.eq.fechada,fechada_em.gte.${dataInicioRange.startIso},fechada_em.lte.${dataFimRange.endIso}),and(status.eq.cancelada,cancelada_em.gte.${dataInicioRange.startIso},cancelada_em.lte.${dataFimRange.endIso})`
       );
 
       queryBusca = queryBusca.or(
-        `and(status.eq.fechada,fechada_em.gte.${dataInicio}T00:00:00,fechada_em.lte.${dataFim}T23:59:59),and(status.eq.cancelada,cancelada_em.gte.${dataInicio}T00:00:00,cancelada_em.lte.${dataFim}T23:59:59)`
+        `and(status.eq.fechada,fechada_em.gte.${dataInicioRange.startIso},fechada_em.lte.${dataFimRange.endIso}),and(status.eq.cancelada,cancelada_em.gte.${dataInicioRange.startIso},cancelada_em.lte.${dataFimRange.endIso})`
       );
     }
 
