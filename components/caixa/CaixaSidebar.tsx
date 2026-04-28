@@ -5,6 +5,7 @@ import { CreditCard, ReceiptText, WalletCards } from "lucide-react";
 import CaixaPagamentos from "@/components/caixa/CaixaPagamentos";
 import CaixaResumo from "@/components/caixa/CaixaResumo";
 import CaixaSessaoPanel from "@/components/caixa/CaixaSessaoPanel";
+import AppModal from "@/components/ui/AppModal";
 import type {
   CaixaMovimentacao,
   CaixaMovimentacaoTipo,
@@ -16,8 +17,7 @@ import type {
   ConfigCaixaSalao,
   ProfissionalResumo,
 } from "@/components/caixa/types";
-
-type SidebarTab = "receber" | "venda" | "sessao";
+import { formatCurrency, getJoinedName } from "@/components/caixa/utils";
 
 type Props = {
   comandaSelecionada: ComandaDetalhe | null;
@@ -105,11 +105,14 @@ export default function CaixaSidebar({
   onFecharCaixa,
   onLancamento,
 }: Props) {
-  const [tab, setTab] = useState<SidebarTab>("receber");
+  const [pagamentosOpen, setPagamentosOpen] = useState(false);
+  const [sessaoOpen, setSessaoOpen] = useState(false);
   const caixaAberto = schemaReady && sessao?.status === "aberto";
+  const totalComanda = Number(comandaSelecionada?.total || 0);
 
   return (
-    <aside className="w-full min-h-0 xl:h-full xl:max-w-[456px] xl:min-w-[456px]">
+    <>
+      <aside className="w-full min-h-0 xl:h-full xl:max-w-[456px] xl:min-w-[456px]">
       <div className="flex h-full min-h-0 flex-col rounded-[34px] border border-white/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(250,251,255,0.96)_100%)] p-5 shadow-[0_24px_80px_rgba(15,23,42,0.09)]">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
@@ -120,7 +123,7 @@ export default function CaixaSidebar({
               {comandaSelecionada ? `Comanda #${comandaSelecionada.numero}` : "Painel do caixa"}
             </h2>
             <p className="mt-1 max-w-[26rem] text-sm leading-6 text-zinc-500">
-              Recebimento, resumo da venda e sessao do caixa em um painel fixo e mais facil de operar.
+              Veja o essencial aqui e abra pagamento ou sessao em modal quando precisar operar.
             </p>
           </div>
 
@@ -135,24 +138,18 @@ export default function CaixaSidebar({
           </span>
         </div>
 
-        <div className="mt-5 grid grid-cols-3 gap-2 rounded-[24px] border border-zinc-200/80 bg-zinc-50/85 p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.75)]">
-          <SidebarTabButton
-            active={tab === "receber"}
-            icon={<CreditCard size={15} />}
-            label="Receber"
-            onClick={() => setTab("receber")}
+        <div className="mt-5 grid grid-cols-2 gap-3">
+          <ActionButton
+            icon={<CreditCard size={16} />}
+            label="Pagamento"
+            description="Receber sem poluir a tela principal."
+            onClick={() => setPagamentosOpen(true)}
           />
-          <SidebarTabButton
-            active={tab === "venda"}
-            icon={<ReceiptText size={15} />}
-            label="Venda"
-            onClick={() => setTab("venda")}
-          />
-          <SidebarTabButton
-            active={tab === "sessao"}
-            icon={<WalletCards size={15} />}
-            label="Sessao"
-            onClick={() => setTab("sessao")}
+          <ActionButton
+            icon={<WalletCards size={16} />}
+            label="Sessao do caixa"
+            description="Abrir, fechar e lancar movimentos em foco."
+            onClick={() => setSessaoOpen(true)}
           />
         </div>
 
@@ -167,33 +164,45 @@ export default function CaixaSidebar({
         </div>
 
         <div className="mt-5 min-h-0 flex-1 overflow-y-auto pr-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {tab === "receber" ? (
-            <CaixaPagamentos
-              comandaSelecionada={comandaSelecionada}
-              repassaTaxaCliente={Boolean(configCaixa?.repassa_taxa_cliente)}
-              pagamentos={pagamentos}
-              formaPagamento={formaPagamento}
-              setFormaPagamento={setFormaPagamento}
-              valorPagamento={valorPagamento}
-              setValorPagamento={setValorPagamento}
-              parcelas={parcelas}
-              setParcelas={setParcelas}
-              taxaPercentual={taxaPercentual}
-              setTaxaPercentual={setTaxaPercentual}
-              observacaoPagamento={observacaoPagamento}
-              setObservacaoPagamento={setObservacaoPagamento}
-              totalPago={totalPago}
-              faltaReceber={faltaReceber}
-              troco={troco}
-              saving={saving || !podeGerenciarPagamentos}
-              onAdicionarPagamento={onAdicionarPagamento}
-              onRemoverPagamento={onRemoverPagamento}
-              showRulesCard={false}
-            />
-          ) : null}
+          <div className="space-y-4">
+              <div className="rounded-[28px] border border-zinc-200 bg-white p-5 shadow-sm">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-400">
+                      Comanda em foco
+                    </div>
+                    <div className="mt-1 text-lg font-semibold text-zinc-900">
+                      {comandaSelecionada ? `#${comandaSelecionada.numero}` : "Nenhuma selecionada"}
+                    </div>
+                  </div>
 
-          {tab === "venda" ? (
-            <div className="space-y-4">
+                  <span
+                    className={`rounded-full border px-3 py-1 text-[11px] font-bold uppercase ${
+                      caixaAberto
+                        ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                        : "border-zinc-200 bg-zinc-100 text-zinc-600"
+                    }`}
+                  >
+                    {caixaAberto ? "Sessao aberta" : "Sessao fechada"}
+                  </span>
+                </div>
+
+                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  <SidebarInfo
+                    label="Cliente"
+                    value={
+                      comandaSelecionada
+                        ? getJoinedName(comandaSelecionada.clientes, "Sem cliente")
+                        : "Selecione uma venda"
+                    }
+                  />
+                  <SidebarInfo
+                    label="Total da venda"
+                    value={comandaSelecionada ? formatCurrency(totalComanda) : "R$ 0,00"}
+                  />
+                </div>
+              </div>
+
               <CaixaResumo
                 comandaSelecionada={comandaSelecionada}
                 descontoInput={descontoInput}
@@ -205,60 +214,134 @@ export default function CaixaSidebar({
               />
 
               <div className="rounded-[28px] border border-zinc-200 bg-white p-5 shadow-sm">
-                <div className="text-sm font-semibold text-zinc-900">
-                  O que conferir antes de finalizar
+                <div className="flex items-center gap-2">
+                  <ReceiptText size={16} className="text-zinc-700" />
+                  <div className="text-sm font-semibold text-zinc-900">
+                    Fluxo rapido da venda
+                  </div>
                 </div>
-                <div className="mt-3 space-y-2 text-sm leading-6 text-zinc-500">
-                  <p>Confirme se os itens da comanda estao certos.</p>
-                  <p>Veja se desconto e acrescimo batem com a venda.</p>
-                  <p>Feche a comanda somente quando a falta a receber estiver zerada.</p>
+                <div className="mt-3 space-y-3 text-sm leading-6 text-zinc-500">
+                  <QuickTip
+                    title="1. Confira a comanda"
+                    description="Itens, profissional, desconto e acrescimo precisam bater antes de receber."
+                  />
+                  <QuickTip
+                    title="2. Receba no modal"
+                    description="Use o botao Pagamento para lancar recebimentos sem rolar a tela inteira."
+                  />
+                  <QuickTip
+                    title="3. Finalize quando zerar"
+                    description="Feche a comanda somente quando a falta a receber estiver em zero."
+                  />
                 </div>
               </div>
-            </div>
-          ) : null}
 
-          {tab === "sessao" ? (
-            <CaixaSessaoPanel
-              sessao={sessao}
-              movimentacoes={movimentacoes}
-              schemaReady={schemaReady}
-              schemaError={schemaError}
-              profissionais={profissionais}
-              saving={saving || !podeOperarCaixa}
-              onAbrirCaixa={onAbrirCaixa}
-              onFecharCaixa={onFecharCaixa}
-              onLancamento={onLancamento}
-            />
-          ) : null}
+              <div className="grid grid-cols-1 gap-3">
+                <StatusCard
+                  label="Pagamento"
+                  value={comandaSelecionada ? "Abrir modal" : "Selecione uma comanda"}
+                  helper="Lance pagamentos e confira taxa, troco e historico."
+                  onClick={() => setPagamentosOpen(true)}
+                  disabled={!comandaSelecionada}
+                />
+                <StatusCard
+                  label="Sessao"
+                  value={caixaAberto ? "Caixa em operacao" : "Abrir modal"}
+                  helper="Abertura, fechamento, sangria, suprimento e vale profissional."
+                  onClick={() => setSessaoOpen(true)}
+                />
+              </div>
+          </div>
         </div>
       </div>
-    </aside>
+      </aside>
+
+      <AppModal
+        open={pagamentosOpen}
+        onClose={() => setPagamentosOpen(false)}
+        title={comandaSelecionada ? `Pagamento da comanda #${comandaSelecionada.numero}` : "Pagamento"}
+        description="Lance recebimentos, acompanhe a taxa e confirme o fechamento sem poluir a tela principal."
+        eyebrow="Operacao de pagamento"
+        maxWidthClassName="max-w-5xl"
+        panelClassName="max-h-[calc(100dvh-2rem)]"
+        bodyClassName="bg-[#f7f8fb]"
+      >
+        <CaixaPagamentos
+          comandaSelecionada={comandaSelecionada}
+          repassaTaxaCliente={Boolean(configCaixa?.repassa_taxa_cliente)}
+          pagamentos={pagamentos}
+          formaPagamento={formaPagamento}
+          setFormaPagamento={setFormaPagamento}
+          valorPagamento={valorPagamento}
+          setValorPagamento={setValorPagamento}
+          parcelas={parcelas}
+          setParcelas={setParcelas}
+          taxaPercentual={taxaPercentual}
+          setTaxaPercentual={setTaxaPercentual}
+          observacaoPagamento={observacaoPagamento}
+          setObservacaoPagamento={setObservacaoPagamento}
+          totalPago={totalPago}
+          faltaReceber={faltaReceber}
+          troco={troco}
+          saving={saving || !podeGerenciarPagamentos}
+          onAdicionarPagamento={onAdicionarPagamento}
+          onRemoverPagamento={onRemoverPagamento}
+          showRulesCard
+        />
+      </AppModal>
+
+      <AppModal
+        open={sessaoOpen}
+        onClose={() => setSessaoOpen(false)}
+        title="Sessao do caixa"
+        description="Abra, feche e movimente o caixa em uma area dedicada, com leitura mais limpa."
+        eyebrow="Operacao da sessao"
+        maxWidthClassName="max-w-6xl"
+        panelClassName="max-h-[calc(100dvh-2rem)]"
+        bodyClassName="bg-[#f7f8fb]"
+      >
+        <CaixaSessaoPanel
+          sessao={sessao}
+          movimentacoes={movimentacoes}
+          schemaReady={schemaReady}
+          schemaError={schemaError}
+          profissionais={profissionais}
+          saving={saving || !podeOperarCaixa}
+          onAbrirCaixa={onAbrirCaixa}
+          onFecharCaixa={onFecharCaixa}
+          onLancamento={onLancamento}
+        />
+      </AppModal>
+    </>
   );
 }
 
-function SidebarTabButton({
-  active,
+function ActionButton({
   icon,
   label,
+  description,
   onClick,
 }: {
-  active: boolean;
   icon: ReactNode;
   label: string;
+  description: string;
   onClick: () => void;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`inline-flex items-center justify-center gap-2 rounded-[18px] px-3 py-3 text-sm font-semibold transition ${
-        active
-          ? "bg-zinc-950 text-white shadow-[0_10px_24px_rgba(15,23,42,0.16)]"
-          : "bg-transparent text-zinc-600 hover:bg-white hover:text-zinc-900"
-      }`}
+      className="rounded-[24px] border border-zinc-200 bg-white px-4 py-4 text-left transition hover:-translate-y-0.5 hover:border-zinc-300 hover:shadow-sm"
     >
-      {icon}
-      <span>{label}</span>
+      <div className="flex items-start gap-3">
+        <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-3 text-zinc-700">
+          {icon}
+        </div>
+        <div className="min-w-0">
+          <div className="text-sm font-semibold text-zinc-900">{label}</div>
+          <div className="mt-1 text-xs leading-5 text-zinc-500">{description}</div>
+        </div>
+      </div>
     </button>
   );
 }
@@ -294,4 +377,65 @@ function formatMoney(value: number) {
     style: "currency",
     currency: "BRL",
   });
+}
+
+function QuickTip({
+  title,
+  description,
+}: {
+  title: string;
+  description: string;
+}) {
+  return (
+    <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3">
+      <div className="text-sm font-semibold text-zinc-900">{title}</div>
+      <div className="mt-1 text-xs leading-5 text-zinc-500">{description}</div>
+    </div>
+  );
+}
+
+function StatusCard({
+  label,
+  value,
+  helper,
+  onClick,
+  disabled = false,
+}: {
+  label: string;
+  value: string;
+  helper: string;
+  onClick: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className="rounded-[24px] border border-zinc-200 bg-white px-4 py-4 text-left transition hover:border-zinc-300 hover:shadow-sm disabled:cursor-not-allowed disabled:opacity-60"
+    >
+      <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-400">
+        {label}
+      </div>
+      <div className="mt-1 text-sm font-semibold text-zinc-900">{value}</div>
+      <div className="mt-2 text-xs leading-5 text-zinc-500">{helper}</div>
+    </button>
+  );
+}
+
+function SidebarInfo({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3">
+      <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-400">
+        {label}
+      </div>
+      <div className="mt-1 text-sm font-semibold text-zinc-900">{value}</div>
+    </div>
+  );
 }

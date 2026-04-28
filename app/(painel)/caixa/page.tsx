@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { CheckCircle2, CircleAlert, CreditCard, WalletCards } from "lucide-react";
 import CaixaCancelModal from "@/components/caixa/CaixaCancelModal";
 import CaixaDetalhe from "@/components/caixa/CaixaDetalhe";
 import CaixaFila from "@/components/caixa/CaixaFila";
@@ -257,6 +258,44 @@ export default function CaixaPage() {
             totalEmAberto={comandasFila.length + agendamentosFila.length}
           />
 
+          <div className="grid gap-3 xl:grid-cols-3">
+            <GuideCard
+              icon={<WalletCards size={16} />}
+              title={caixaAberto ? "Caixa em operacao" : "Abra o caixa"}
+              description={
+                caixaAberto
+                  ? "A sessao esta pronta para receber, movimentar e fechar vendas."
+                  : "Abra a sessao do caixa no botao da lateral para liberar a operacao."
+              }
+              tone={caixaAberto ? "emerald" : "amber"}
+            />
+            <GuideCard
+              icon={<CreditCard size={16} />}
+              title={comandaSelecionada ? "Receba pelo modal" : "Escolha uma comanda"}
+              description={
+                comandaSelecionada
+                  ? "Pagamento fica em modal para voce receber sem poluir a tela principal."
+                  : "Selecione uma comanda na fila para abrir a venda no centro da tela."
+              }
+              tone={comandaSelecionada ? "sky" : "zinc"}
+            />
+            <GuideCard
+              icon={faltaReceber > 0 ? <CircleAlert size={16} /> : <CheckCircle2 size={16} />}
+              title={faltaReceber > 0 ? "Fechamento pendente" : "Pronto para finalizar"}
+              description={
+                faltaReceber > 0
+                  ? `Ainda faltam ${faltaReceber.toLocaleString("pt-BR", {
+                      style: "currency",
+                      currency: "BRL",
+                    })} para encerrar a comanda selecionada.`
+                  : comandaSelecionada
+                    ? "Com a falta a receber zerada, a finalizacao fica simples e direta."
+                    : "Quando uma venda entrar em foco, esta faixa mostra se ja pode finalizar."
+              }
+              tone={faltaReceber > 0 ? "amber" : "emerald"}
+            />
+          </div>
+
           {!podeOperarCaixa ? (
             <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-700">
               Voce esta em modo de <strong>somente leitura</strong> no caixa.
@@ -388,5 +427,36 @@ export default function CaixaPage() {
         }}
       />
     </>
+  );
+}
+
+function GuideCard({
+  icon,
+  title,
+  description,
+  tone,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  description: string;
+  tone: "amber" | "emerald" | "sky" | "zinc";
+}) {
+  const toneClass =
+    tone === "amber"
+      ? "border-amber-200 bg-amber-50 text-amber-900"
+      : tone === "emerald"
+        ? "border-emerald-200 bg-emerald-50 text-emerald-900"
+        : tone === "sky"
+          ? "border-sky-200 bg-sky-50 text-sky-900"
+          : "border-zinc-200 bg-white text-zinc-900";
+
+  return (
+    <div className={`rounded-[24px] border px-4 py-4 shadow-sm ${toneClass}`}>
+      <div className="flex items-center gap-2 text-sm font-semibold">
+        {icon}
+        <span>{title}</span>
+      </div>
+      <div className="mt-2 text-sm leading-6 text-current/80">{description}</div>
+    </div>
   );
 }

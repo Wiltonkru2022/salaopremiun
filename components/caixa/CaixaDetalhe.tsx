@@ -2,6 +2,7 @@
 
 import { type ReactNode, useMemo } from "react";
 import {
+  CheckCircle2,
   CircleAlert,
   Pencil,
   Plus,
@@ -107,17 +108,19 @@ export default function CaixaDetalhe({
                   type="button"
                   onClick={onCancelarComanda}
                   disabled={saving}
-                  className="rounded-2xl border border-rose-200 bg-white px-4 py-2.5 text-sm font-semibold text-rose-700 transition hover:bg-rose-50 disabled:opacity-60"
+                  className="inline-flex items-center gap-2 rounded-2xl border border-rose-200 bg-white px-4 py-2.5 text-sm font-semibold text-rose-700 transition hover:bg-rose-50 disabled:opacity-60"
                 >
-                  Cancelar
+                  <Trash2 size={15} />
+                  Cancelar venda
                 </button>
                 <button
                   type="button"
                   onClick={onFinalizarComanda}
                   disabled={saving || faltaReceber > 0}
-                  className="rounded-2xl bg-zinc-950 px-4 py-2.5 text-sm font-bold text-white transition hover:opacity-95 disabled:opacity-50"
+                  className="inline-flex items-center gap-2 rounded-2xl bg-zinc-950 px-4 py-2.5 text-sm font-bold text-white transition hover:opacity-95 disabled:opacity-50"
                 >
-                  Finalizar comanda
+                  <CheckCircle2 size={15} />
+                  Finalizar venda
                 </button>
               </div>
             ) : null}
