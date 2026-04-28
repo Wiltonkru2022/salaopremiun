@@ -8,8 +8,6 @@ import type {
 import { useCallback } from "react";
 import { initAgendaPage } from "@/lib/agenda/initAgendaPage";
 import { loadAgendaData } from "@/lib/agenda/loadAgendaData";
-import { montarPayloadSincronizacao } from "@/lib/agenda/montarPayloadSincronizacao";
-import { sincronizarAgendamentoComComanda } from "@/lib/agenda/sincronizarAgendamentoComComanda";
 import { monitorClientOperation } from "@/lib/monitoring/client";
 import type {
   Agendamento,
@@ -57,7 +55,7 @@ export function useAgendaData({
   currentDate,
   clientes,
   servicos,
-  profissionais,
+  profissionais: _profissionais,
   setLoading,
   setErroTela,
   setPermissoes,
@@ -147,25 +145,31 @@ export function useAgendaData({
         throw new Error("Salão não identificado para sincronização.");
       }
 
-      const { servico, profissional } = montarPayloadSincronizacao({
-        servicos,
-        profissionais,
-        idServico: params.idServico,
-        idProfissional: params.idProfissional,
+      const response = await fetch("/api/agenda/sincronizar-comanda", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          idSalao,
+          idAgendamento: params.idAgendamento,
+          idComandaNova: params.idComandaNova,
+          idServico: params.idServico,
+          idProfissional: params.idProfissional,
+        }),
       });
 
-      await sincronizarAgendamentoComComanda({
-        supabase,
-        idSalao,
-        idAgendamento: params.idAgendamento,
-        idComandaNova: params.idComandaNova,
-        idServico: params.idServico,
-        idProfissional: params.idProfissional,
-        servico,
-        profissional,
-      });
+      const result = (await response.json().catch(() => ({}))) as {
+        error?: string;
+      };
+
+      if (!response.ok) {
+        throw new Error(
+          result.error || "Erro ao sincronizar agendamento com a comanda."
+        );
+      }
     },
-    [idSalao, profissionais, servicos, supabase]
+    [idSalao]
   );
 
   const loadAgenda = useCallback(async () => {
