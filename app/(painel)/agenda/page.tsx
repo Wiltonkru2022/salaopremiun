@@ -95,6 +95,7 @@ export default function AgendaPage() {
   const [clienteProfileLoading, setClienteProfileLoading] = useState(false);
   const [clienteProfileNome, setClienteProfileNome] = useState("");
   const [clienteProfileWhatsapp, setClienteProfileWhatsapp] = useState<string | null>("");
+  const [clienteProfileCredito, setClienteProfileCredito] = useState(0);
   const [clienteProfileHistorico, setClienteProfileHistorico] = useState<
     ClienteHistoricoItem[]
   >([]);
@@ -450,18 +451,31 @@ export default function AgendaPage() {
     setClienteProfileLoading(true);
     setClienteProfileNome(item.cliente?.nome || "Cliente");
     setClienteProfileWhatsapp(item.cliente?.whatsapp || null);
+    setClienteProfileCredito(Number(item.cliente?.cashback || 0));
 
     try {
-      const { data, error } = await supabase
-        .from("agendamentos")
-        .select(
-          "id, data, hora_inicio, hora_fim, status, observacoes, servicos(nome)"
-        )
-        .eq("id_salao", idSalao)
-        .eq("cliente_id", item.cliente_id)
-        .order("data", { ascending: false })
-        .order("hora_inicio", { ascending: false })
-        .limit(12);
+      const [{ data: clienteData, error: clienteError }, { data, error }] =
+        await Promise.all([
+          supabase
+            .from("clientes")
+            .select("cashback")
+            .eq("id_salao", idSalao)
+            .eq("id", item.cliente_id)
+            .maybeSingle(),
+          supabase
+            .from("agendamentos")
+            .select(
+              "id, data, hora_inicio, hora_fim, status, observacoes, servicos(nome)"
+            )
+            .eq("id_salao", idSalao)
+            .eq("cliente_id", item.cliente_id)
+            .order("data", { ascending: false })
+            .order("hora_inicio", { ascending: false })
+            .limit(12),
+        ]);
+
+      if (clienteError) throw clienteError;
+      setClienteProfileCredito(Number(clienteData?.cashback || 0));
 
       if (error) throw error;
 
@@ -909,6 +923,7 @@ export default function AgendaPage() {
                       loading={clienteProfileLoading}
                       clienteNome={clienteProfileNome}
                       clienteWhatsapp={clienteProfileWhatsapp}
+                      creditoDisponivel={clienteProfileCredito}
                       historico={clienteProfileHistorico}
                       onClose={() => {
                         setClienteProfileOpen(false);

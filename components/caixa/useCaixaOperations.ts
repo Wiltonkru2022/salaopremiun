@@ -412,7 +412,9 @@ export function useCaixaOperations({
     setMsg,
   ]);
 
-  const adicionarPagamento = useCallback(async () => {
+  const adicionarPagamento = useCallback(async (options?: {
+    destinoExcedente?: "troco" | "credito_cliente";
+  }) => {
     if (!comandaSelecionada) return;
     if (!podeGerenciarPagamentos) {
       setErroTela("Voce nao tem permissao para lancar pagamentos.");
@@ -441,6 +443,7 @@ export function useCaixaOperations({
         formaPagamento,
         valorBase,
         numeroParcelas,
+        options?.destinoExcedente || "padrao",
         observacaoPagamento.trim(),
       ].join(":");
       const idempotencyKey = gerarChaveOperacao(operationScope);
@@ -452,6 +455,7 @@ export function useCaixaOperations({
           formaPagamento,
           valorBase,
           parcelas: numeroParcelas,
+          destinoExcedente: options?.destinoExcedente,
           observacoes: observacaoPagamento || null,
         },
       });
@@ -472,14 +476,28 @@ export function useCaixaOperations({
       await carregarSessaoOperacional();
       await carregarTudo();
       setMsg(
-        result.repassaTaxaCliente && Number(result.taxaValor || 0) > 0
-          ? `Pagamento adicionado com taxa repassada ao cliente (${Number(
-              result.taxaValor || 0
+        result.creditoClienteUsado && Number(result.creditoClienteUsado) > 0
+          ? `Pagamento concluido com credito da cliente (${Number(
+              result.creditoClienteUsado
             ).toLocaleString("pt-BR", {
               style: "currency",
               currency: "BRL",
             })}).`
-          : "Pagamento adicionado."
+          : result.valorCreditoGerado && Number(result.valorCreditoGerado) > 0
+            ? `Pagamento adicionado e ${Number(
+                result.valorCreditoGerado
+              ).toLocaleString("pt-BR", {
+                style: "currency",
+                currency: "BRL",
+              })} ficou salvo como credito da cliente.`
+            : result.repassaTaxaCliente && Number(result.taxaValor || 0) > 0
+              ? `Pagamento adicionado com taxa repassada ao cliente (${Number(
+                  result.taxaValor || 0
+                ).toLocaleString("pt-BR", {
+                  style: "currency",
+                  currency: "BRL",
+                })}).`
+              : "Pagamento adicionado."
       );
       limparChaveOperacao(operationScope);
     } catch (error: unknown) {

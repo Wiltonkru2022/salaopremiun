@@ -34,8 +34,10 @@ type Props = {
   observacaoPagamento: string;
   setObservacaoPagamento: (value: string) => void;
   totalPago: number;
+  totalCreditoGerado: number;
   faltaReceber: number;
   troco: number;
+  creditoClienteDisponivel: number;
   descontoInput: string;
   setDescontoInput: (value: string) => void;
   acrescimoInput: string;
@@ -83,8 +85,10 @@ export default function CaixaSidebar({
   observacaoPagamento,
   setObservacaoPagamento,
   totalPago,
+  totalCreditoGerado,
   faltaReceber,
   troco,
+  creditoClienteDisponivel,
   descontoInput,
   setDescontoInput,
   acrescimoInput,
@@ -161,6 +165,19 @@ export default function CaixaSidebar({
             tone={faltaReceber > 0 ? "amber" : "emerald"}
           />
           <MiniInfoCard label="Troco" value={formatMoney(troco)} />
+        </div>
+
+        <div className="mt-3 grid grid-cols-2 gap-3">
+          <MiniInfoCard
+            label="Credito gerado"
+            value={formatMoney(totalCreditoGerado)}
+            tone={totalCreditoGerado > 0 ? "sky" : "zinc"}
+          />
+          <MiniInfoCard
+            label="Credito da cliente"
+            value={formatMoney(creditoClienteDisponivel)}
+            tone={creditoClienteDisponivel > 0 ? "emerald" : "zinc"}
+          />
         </div>
 
         <div className="mt-5 min-h-0 flex-1 overflow-y-auto pr-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -281,8 +298,10 @@ export default function CaixaSidebar({
           observacaoPagamento={observacaoPagamento}
           setObservacaoPagamento={setObservacaoPagamento}
           totalPago={totalPago}
+          totalCreditoGerado={totalCreditoGerado}
           faltaReceber={faltaReceber}
           troco={troco}
+          creditoClienteDisponivel={creditoClienteDisponivel}
           saving={saving || !podeGerenciarPagamentos}
           onAdicionarPagamento={onAdicionarPagamento}
           onRemoverPagamento={onRemoverPagamento}
@@ -353,13 +372,15 @@ function MiniInfoCard({
 }: {
   label: string;
   value: string;
-  tone?: "amber" | "emerald" | "zinc";
+  tone?: "amber" | "emerald" | "sky" | "zinc";
 }) {
   const toneClass =
     tone === "amber"
       ? "border-amber-200 bg-amber-50 text-amber-900"
       : tone === "emerald"
         ? "border-emerald-200 bg-emerald-50 text-emerald-900"
+        : tone === "sky"
+          ? "border-sky-200 bg-sky-50 text-sky-900"
         : "border-zinc-200 bg-white text-zinc-900";
 
   return (

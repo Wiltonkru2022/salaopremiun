@@ -24,6 +24,7 @@ type Props = {
   loading: boolean;
   clienteNome: string;
   clienteWhatsapp?: string | null;
+  creditoDisponivel?: number;
   historico: ClienteHistoricoItem[];
   onClose: () => void;
   variant?: "modal" | "sidebar";
@@ -49,11 +50,13 @@ function getStatusLabel(status: string) {
 function ProfileBody({
   clienteNome,
   clienteWhatsapp,
+  creditoDisponivel = 0,
   historico,
   loading,
 }: {
   clienteNome: string;
   clienteWhatsapp?: string | null;
+  creditoDisponivel?: number;
   historico: ClienteHistoricoItem[];
   loading: boolean;
 }) {
@@ -83,7 +86,7 @@ function ProfileBody({
           </div>
         ) : (
           <div className="space-y-4">
-            <div className="grid gap-3 md:grid-cols-3">
+            <div className="grid gap-3 md:grid-cols-4">
               <div className="rounded-[20px] border border-zinc-200 bg-zinc-50 px-4 py-3">
                 <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-400">
                   Historico
@@ -99,6 +102,17 @@ function ProfileBody({
                 </div>
                 <div className="mt-2 text-sm font-semibold text-zinc-900">
                   {historico[0]?.servicoNome || "-"}
+                </div>
+              </div>
+              <div className="rounded-[20px] border border-zinc-200 bg-zinc-50 px-4 py-3">
+                <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-400">
+                  Credito disponivel
+                </div>
+                <div className="mt-2 text-sm font-semibold text-emerald-700">
+                  {creditoDisponivel.toLocaleString("pt-BR", {
+                    style: "currency",
+                    currency: "BRL",
+                  })}
                 </div>
               </div>
               <div className="rounded-[20px] border border-zinc-200 bg-zinc-50 px-4 py-3">
@@ -163,6 +177,7 @@ export default function AgendaClientProfileModal({
   loading,
   clienteNome,
   clienteWhatsapp,
+  creditoDisponivel,
   historico,
   onClose,
   variant = "modal",
@@ -173,6 +188,7 @@ export default function AgendaClientProfileModal({
     <ProfileBody
       clienteNome={clienteNome}
       clienteWhatsapp={clienteWhatsapp}
+      creditoDisponivel={creditoDisponivel}
       historico={historico}
       loading={loading}
     />

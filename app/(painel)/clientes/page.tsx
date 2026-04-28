@@ -17,6 +17,7 @@ import { createClient } from "@/lib/supabase/client";
 type Cliente = {
   id: string;
   nome: string;
+  cashback?: number | null;
   whatsapp?: string | null;
   telefone?: string | null;
   email?: string | null;
@@ -124,7 +125,7 @@ export default function ClientesPage() {
       const { data, error } = await supabase
         .from("clientes")
         .select(
-          "id, nome, whatsapp, telefone, email, bairro, profissao, status, ativo, created_at"
+          "id, nome, cashback, whatsapp, telefone, email, bairro, profissao, status, ativo, created_at"
         )
         .eq("id_salao", idSalaoAtual)
         .order("nome", { ascending: true });
@@ -282,6 +283,10 @@ export default function ClientesPage() {
     return {
       total: listaFiltrada.length,
       ativos: ativos.length,
+      creditoTotal: listaFiltrada.reduce(
+        (acc, item) => acc + Number(item.cashback || 0),
+        0
+      ),
       comWhatsapp: comWhatsapp.length,
       comEmail: comEmail.length,
       novos30dias: novos30dias.length,
@@ -355,12 +360,21 @@ export default function ClientesPage() {
             </div>
           </section>
 
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-5">
             <ResumoCard
               title="Clientes ativos"
               value={`${resumo.ativos}`}
               description={`${resumo.total} visiveis no filtro atual`}
               icon={Users}
+            />
+            <ResumoCard
+              title="Credito em aberto"
+              value={resumo.creditoTotal.toLocaleString("pt-BR", {
+                style: "currency",
+                currency: "BRL",
+              })}
+              description="Saldo que as clientes ainda podem usar no caixa"
+              icon={HeartHandshake}
             />
             <ResumoCard
               title="WhatsApp pronto"
@@ -485,6 +499,13 @@ export default function ClientesPage() {
                           <TagHint>{contatoPrincipal}</TagHint>
                           <TagHint>{item.bairro || "Sem bairro"}</TagHint>
                           <TagHint>{item.profissao || "Sem profissao"}</TagHint>
+                          <TagHint>
+                            Credito:{" "}
+                            {Number(item.cashback || 0).toLocaleString("pt-BR", {
+                              style: "currency",
+                              currency: "BRL",
+                            })}
+                          </TagHint>
                         </div>
                       </div>
 

@@ -35,6 +35,7 @@ const initialCliente: ClienteState = {
   id_salao: "",
   nome: "",
   nome_social: "",
+  cashback: 0,
   data_nascimento: "",
   whatsapp: "",
   telefone: "",
@@ -176,6 +177,7 @@ async function bootstrap() {
       id_salao: rowIdSalao,
       nome: row.nome || "",
       nome_social: row.nome_social || "",
+      cashback: Number(row.cashback || 0),
       data_nascimento: dateIsoToBr(row.data_nascimento),
       whatsapp: row.whatsapp || "",
       telefone: row.telefone || "",
@@ -461,6 +463,13 @@ async function bootstrap() {
           <p className="mt-2 text-sm text-zinc-500">
             Cadastro simples com os dados principais, cuidados de atendimento e status da cliente.
           </p>
+          <div className="mt-4 inline-flex rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-800">
+            Credito disponivel:{" "}
+            {cliente.cashback.toLocaleString("pt-BR", {
+              style: "currency",
+              currency: "BRL",
+            })}
+          </div>
         </div>
 
         {erro ? (

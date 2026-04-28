@@ -44,6 +44,7 @@ export type Cliente = {
   id: string;
   nome: string;
   whatsapp?: string | null;
+  cashback?: number | null;
 };
 
 export type Servico = {
@@ -93,6 +94,7 @@ export type Agendamento = {
   cliente?: {
     nome: string;
     whatsapp?: string | null;
+    cashback?: number | null;
   };
 
   servico?: {

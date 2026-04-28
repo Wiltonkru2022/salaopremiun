@@ -12,6 +12,7 @@ export type ClienteState = {
   id_salao: string;
   nome: string;
   nome_social: string;
+  cashback: number;
   data_nascimento: string;
   whatsapp: string;
   telefone: string;

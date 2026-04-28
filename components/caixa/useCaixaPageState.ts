@@ -124,10 +124,23 @@ export function useCaixaPageState() {
     () => pagamentos.reduce((acc, item) => acc + Number(item.valor || 0), 0),
     [pagamentos]
   );
+  const totalCreditoGerado = useMemo(
+    () =>
+      pagamentos.reduce(
+        (acc, item) => acc + Number(item.valor_credito_cliente || 0),
+        0
+      ),
+    [pagamentos]
+  );
 
   const totalComanda = Number(comandaSelecionada?.total || 0);
   const faltaReceber = Math.max(totalComanda - totalPago, 0);
-  const troco = Math.max(totalPago - totalComanda, 0);
+  const troco = Math.max(totalPago - totalComanda - totalCreditoGerado, 0);
+  const creditoClienteDisponivel = Number(
+    (Array.isArray(comandaSelecionada?.clientes)
+      ? comandaSelecionada?.clientes[0]?.cashback
+      : comandaSelecionada?.clientes?.cashback) || 0
+  );
 
   const comandasFiltradas = useMemo(() => {
     const term = busca.trim().toLowerCase();
@@ -221,8 +234,10 @@ export function useCaixaPageState() {
     podeFinalizarCaixa,
     caixaAberto,
     totalPago,
+    totalCreditoGerado,
     faltaReceber,
     troco,
+    creditoClienteDisponivel,
     comandasFiltradas,
     agendamentosFiltrados,
   };

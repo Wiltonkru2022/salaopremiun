@@ -56,6 +56,8 @@ export type ProcessarCaixaResponse = {
   taxaPercentual?: number;
   taxaValor?: number;
   valorFinalCobrado?: number;
+  valorCreditoGerado?: number;
+  creditoClienteUsado?: number;
   repassaTaxaCliente?: boolean;
   idempotentReplay?: boolean;
 };
@@ -85,6 +87,7 @@ export type ProcessarCaixaPagamentoPayload = {
   valorBase?: number;
   parcelas?: number;
   taxaPercentual?: number;
+  destinoExcedente?: "troco" | "credito_cliente";
   observacao?: string | null;
   observacoes?: string | null;
 };

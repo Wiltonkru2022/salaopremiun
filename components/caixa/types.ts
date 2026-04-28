@@ -1,5 +1,7 @@
 export type ClienteJoin = {
+  id?: string | null;
   nome?: string | null;
+  cashback?: number | null;
 };
 
 export type ProfissionalJoin = {
@@ -97,6 +99,7 @@ export type ComandaPagamento = {
   forma_pagamento: string;
   valor: number;
   parcelas: number;
+  valor_credito_cliente?: number | null;
 
   taxa_maquininha_percentual?: number | null;
   taxa_maquininha_valor?: number | null;

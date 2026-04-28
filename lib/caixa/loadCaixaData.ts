@@ -230,7 +230,9 @@ async function carregarFilaComandas(
       total,
       id_cliente,
       clientes (
-        nome
+        id,
+        nome,
+        cashback
       )
     `)
     .eq("id_salao", idSalao)
@@ -383,7 +385,9 @@ async function carregarFechadasHoje(
       total,
       id_cliente,
       clientes (
-        nome
+        id,
+        nome,
+        cashback
       )
     `)
     .eq("id_salao", idSalao)
@@ -414,7 +418,9 @@ async function carregarCanceladas(
       total,
       id_cliente,
       clientes (
-        nome
+        id,
+        nome,
+        cashback
       )
     `)
     .eq("id_salao", idSalao)
@@ -458,7 +464,9 @@ export async function carregarComandaDetalhe(
     .select(`
       *,
       clientes (
-        nome
+        id,
+        nome,
+        cashback
       )
     `)
     .eq("id", idComanda)
@@ -490,7 +498,7 @@ export async function carregarComandaDetalhe(
 
   const { data: pagamentosData, error: pagamentosError } = await supabase
     .from("comanda_pagamentos")
-    .select("created_at, forma_pagamento, id, id_comanda, id_movimentacao, id_salao, idempotency_key, observacoes, pago_em, parcelas, taxa, taxa_maquininha_percentual, taxa_maquininha_valor, valor")
+    .select("*")
     .eq("id_salao", idSalao)
     .eq("id_comanda", idComanda);
 
@@ -553,6 +561,6 @@ export async function carregarComandaDetalhe(
       maximumFractionDigits: 2,
     }),
     itens,
-    pagamentos: (pagamentosData as ComandaPagamento[]) || [],
+    pagamentos: ((pagamentosData as unknown) as ComandaPagamento[]) || [],
   };
 }

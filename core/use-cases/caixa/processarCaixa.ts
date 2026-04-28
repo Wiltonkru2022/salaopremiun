@@ -60,6 +60,7 @@ const pagamentoSchema = z
     formaPagamento: nullableString,
     valorBase: optionalNumber,
     parcelas: optionalNumber,
+    destinoExcedente: nullableString,
     observacoes: nullableString,
   })
   .partial();
@@ -126,6 +127,7 @@ export type ProcessarCaixaInput = CaixaProcessarBody & {
     formaPagamento?: string;
     valorBase?: number;
     parcelas?: number;
+    destinoExcedente?: string;
     observacoes?: string;
   };
   motivo?: string;
@@ -191,6 +193,8 @@ export function parseProcessarCaixaInput(body: unknown): ProcessarCaixaInput {
             parsed.pagamento.parcelas !== undefined
               ? sanitizeInteger(parsed.pagamento.parcelas)
               : undefined,
+          destinoExcedente:
+            sanitizeText(parsed.pagamento.destinoExcedente) || undefined,
           observacoes:
             sanitizeText(parsed.pagamento.observacoes) || undefined,
         }

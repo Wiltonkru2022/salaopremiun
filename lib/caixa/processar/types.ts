@@ -35,6 +35,7 @@ export type CaixaProcessarBody = {
     formaPagamento?: string | null;
     valorBase?: number | null;
     parcelas?: number | null;
+    destinoExcedente?: string | null;
     observacoes?: string | null;
   } | null;
   motivo?: string | null;

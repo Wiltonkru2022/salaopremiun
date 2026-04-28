@@ -92,8 +92,10 @@ export default function CaixaPage() {
     podeFinalizarCaixa,
     caixaAberto,
     totalPago,
+    totalCreditoGerado,
     faltaReceber,
     troco,
+    creditoClienteDisponivel,
     comandasFiltradas,
     agendamentosFiltrados,
   } = useCaixaPageState();
@@ -250,9 +252,9 @@ export default function CaixaPage() {
     <>
       <div className="h-screen overflow-hidden bg-[#f4f5f7] text-[var(--app-ink)]">
         <div className="mx-auto h-full max-w-[1880px] p-4">
-          <div className="flex h-full flex-col gap-5 overflow-hidden xl:flex-row">
+          <div className="flex h-full flex-col gap-4 overflow-hidden xl:flex-row">
             <div className="min-w-0 flex-1">
-              <div className="flex h-full min-h-0 flex-col gap-5 overflow-hidden">
+              <div className="flex h-full min-h-0 flex-col gap-4 overflow-hidden">
                 <CaixaHeader
                   agendamentosPendentes={agendamentosFila.length}
                   comandasAtivas={comandasFila.length}
@@ -260,7 +262,7 @@ export default function CaixaPage() {
                   totalEmAberto={comandasFila.length + agendamentosFila.length}
                 />
 
-                <div className="grid gap-3 xl:grid-cols-3">
+                <div className="grid gap-2.5 lg:grid-cols-3">
                   <GuideCard
                     icon={<WalletCards size={16} />}
                     title={caixaAberto ? "Caixa em operacao" : "Abra o caixa"}
@@ -316,7 +318,7 @@ export default function CaixaPage() {
                   </div>
                 ) : null}
 
-                <div className="grid min-h-0 flex-1 grid-cols-1 gap-5 xl:grid-cols-[340px_minmax(0,1fr)]">
+                <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 xl:grid-cols-[340px_minmax(0,1fr)]">
                   <CaixaFila
                     aba={aba}
                     setAba={setAba}
@@ -365,8 +367,10 @@ export default function CaixaPage() {
                 observacaoPagamento={observacaoPagamento}
                 setObservacaoPagamento={setObservacaoPagamento}
                 totalPago={totalPago}
+                totalCreditoGerado={totalCreditoGerado}
                 faltaReceber={faltaReceber}
                 troco={troco}
+                creditoClienteDisponivel={creditoClienteDisponivel}
                 descontoInput={descontoInput}
                 setDescontoInput={setDescontoInput}
                 acrescimoInput={acrescimoInput}
@@ -455,12 +459,17 @@ function GuideCard({
           : "border-zinc-200 bg-white text-zinc-900";
 
   return (
-    <div className={`rounded-[24px] border px-4 py-4 shadow-sm ${toneClass}`}>
-      <div className="flex items-center gap-2 text-sm font-semibold">
-        {icon}
-        <span>{title}</span>
+    <div className={`rounded-[20px] border px-3.5 py-3 shadow-sm ${toneClass}`}>
+      <div className="flex items-start gap-3">
+        <div className="mt-0.5 rounded-full bg-white/70 p-2">{icon}</div>
+        <div className="min-w-0">
+          <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-current/75">
+            Operacao
+          </div>
+          <div className="mt-1 text-sm font-semibold text-current">{title}</div>
+          <div className="mt-1 text-sm leading-5 text-current/80">{description}</div>
+        </div>
       </div>
-      <div className="mt-2 text-sm leading-6 text-current/80">{description}</div>
     </div>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
-import type { ReactNode } from "react";
-import { CreditCard, Trash2, User2 } from "lucide-react";
+import { useMemo, useState, type ReactNode } from "react";
+import { CreditCard, Trash2, User2, Wallet } from "lucide-react";
 import { ComandaDetalhe, ComandaPagamento } from "./types";
 import {
   formatCurrency,
@@ -18,6 +18,7 @@ const FORMAS_PAGAMENTO = [
   { value: "transferencia", label: "Transferencia" },
   { value: "boleto", label: "Boleto" },
   { value: "outro", label: "Outro" },
+  { value: "credito_cliente", label: "Credito da cliente" },
 ];
 
 type Props = {
@@ -35,10 +36,14 @@ type Props = {
   observacaoPagamento: string;
   setObservacaoPagamento: (value: string) => void;
   totalPago: number;
+  totalCreditoGerado: number;
   faltaReceber: number;
   troco: number;
+  creditoClienteDisponivel: number;
   saving: boolean;
-  onAdicionarPagamento: () => void;
+  onAdicionarPagamento: (options?: {
+    destinoExcedente?: "troco" | "credito_cliente";
+  }) => void;
   onRemoverPagamento: (idPagamento: string) => void;
   showRulesCard?: boolean;
 };
@@ -58,13 +63,16 @@ export default function CaixaPagamentos({
   observacaoPagamento,
   setObservacaoPagamento,
   totalPago,
+  totalCreditoGerado,
   faltaReceber,
   troco,
+  creditoClienteDisponivel,
   saving,
   onAdicionarPagamento,
   onRemoverPagamento,
   showRulesCard = true,
 }: Props) {
+  const [confirmarExcedenteOpen, setConfirmarExcedenteOpen] = useState(false);
   const valorBaseDigitado = parseMoney(valorPagamento);
   const taxaPercentualNumero = parseMoney(taxaPercentual);
   const taxaPreviewValor = Number(
@@ -90,6 +98,26 @@ export default function CaixaPagamentos({
     formaPagamento === "credito" ||
     formaPagamento === "debito" ||
     formaPagamento === "boleto";
+  const clienteNome = useMemo(
+    () =>
+      Array.isArray(comandaSelecionada?.clientes)
+        ? comandaSelecionada?.clientes[0]?.nome || "Cliente"
+        : comandaSelecionada?.clientes?.nome || "Cliente",
+    [comandaSelecionada]
+  );
+  function handleAdicionarPagamento() {
+    if (
+      formaPagamento !== "credito_cliente" &&
+      valorBaseDigitado > faltaReceber &&
+      faltaReceber > 0 &&
+      comandaSelecionada?.id_cliente
+    ) {
+      setConfirmarExcedenteOpen(true);
+      return;
+    }
+
+    onAdicionarPagamento();
+  }
 
   return (
     <>
@@ -127,6 +155,14 @@ export default function CaixaPagamentos({
                       {formatCurrency(pagamento.valor)}
                       {pagamento.parcelas > 1 ? ` - ${pagamento.parcelas}x` : ""}
                     </div>
+
+                    {Number(pagamento.valor_credito_cliente || 0) > 0 ? (
+                      <div className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-700">
+                        <Wallet size={12} />
+                        Credito gerado:{" "}
+                        {formatCurrency(Number(pagamento.valor_credito_cliente || 0))}
+                      </div>
+                    ) : null}
 
                     {(taxaPercentualItem > 0 || taxaValorItem > 0) && (
                       <div className="mt-2 space-y-1 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2">
@@ -188,6 +224,37 @@ export default function CaixaPagamentos({
 
         {podeEditar ? (
           <div className="mt-5 space-y-4 border-t border-zinc-200 pt-5">
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+              <PreviewCard
+                label="Credito disponivel"
+                value={formatCurrency(creditoClienteDisponivel)}
+              />
+              <PreviewCard
+                label="Credito gerado nesta comanda"
+                value={formatCurrency(totalCreditoGerado)}
+              />
+            </div>
+
+            {comandaSelecionada?.id_cliente ? (
+              <div
+                className={`rounded-2xl border px-4 py-3 text-sm ${
+                  creditoClienteDisponivel > 0
+                    ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                    : "border-zinc-200 bg-zinc-50 text-zinc-600"
+                }`}
+              >
+                {creditoClienteDisponivel > 0
+                  ? `${clienteNome} tem ${formatCurrency(
+                      creditoClienteDisponivel
+                    )} em credito pronto para usar no pagamento.`
+                  : `${clienteNome} ainda nao tem credito disponivel.`}
+              </div>
+            ) : (
+              <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                Vincule uma cliente na comanda para guardar excedente como credito ou usar saldo existente.
+              </div>
+            )}
+
             <Field label="Forma de pagamento">
               <select
                 value={formaPagamento}
@@ -271,7 +338,7 @@ export default function CaixaPagamentos({
 
             <button
               type="button"
-              onClick={onAdicionarPagamento}
+              onClick={handleAdicionarPagamento}
               disabled={saving || !comandaSelecionada}
               className="w-full rounded-2xl bg-zinc-900 px-4 py-3 text-sm font-bold text-white transition hover:opacity-95 disabled:opacity-60"
             >
@@ -282,6 +349,10 @@ export default function CaixaPagamentos({
 
         <div className="mt-5 space-y-3 border-t border-zinc-200 pt-5">
           <InfoRow label="Total pago" value={formatCurrency(totalPago)} />
+          <InfoRow
+            label="Credito gerado"
+            value={formatCurrency(totalCreditoGerado)}
+          />
           <InfoRow label="Falta receber" value={formatCurrency(faltaReceber)} />
           <InfoRow label="Troco" value={formatCurrency(troco)} />
         </div>
@@ -305,6 +376,70 @@ export default function CaixaPagamentos({
               A taxa da maquininha segue a configuracao do salao e o valor mostrado
               no painel de pagamento.
             </p>
+          </div>
+        </div>
+      ) : null}
+
+      {confirmarExcedenteOpen ? (
+        <div className="fixed inset-0 z-[170] flex items-center justify-center bg-black/45 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-[540px] rounded-[28px] border border-white/20 bg-white p-6 shadow-2xl">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-400">
+              Excedente no pagamento
+            </div>
+            <h3 className="mt-2 text-xl font-bold text-zinc-900">
+              A cliente esta pagando mais do que falta
+            </h3>
+            <p className="mt-3 text-sm leading-6 text-zinc-600">
+              Faltam {formatCurrency(faltaReceber)} e voce esta lancando{" "}
+              {formatCurrency(valorBaseDigitado)}. O excedente de{" "}
+              {formatCurrency(Math.max(valorBaseDigitado - faltaReceber, 0))} vai
+              sair como troco ou ficar salvo como credito para {clienteNome}.
+            </p>
+
+            <div className="mt-5 grid gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setConfirmarExcedenteOpen(false);
+                  onAdicionarPagamento({ destinoExcedente: "troco" });
+                }}
+                className="rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-left transition hover:bg-zinc-50"
+              >
+                <div className="text-sm font-semibold text-zinc-900">
+                  Dar troco
+                </div>
+                <div className="mt-1 text-sm text-zinc-500">
+                  O caixa recebe o valor e o excedente continua como troco da venda.
+                </div>
+              </button>
+
+              <button
+                type="button"
+                disabled={!comandaSelecionada?.id_cliente}
+                onClick={() => {
+                  setConfirmarExcedenteOpen(false);
+                  onAdicionarPagamento({ destinoExcedente: "credito_cliente" });
+                }}
+                className="rounded-2xl border border-emerald-300 bg-emerald-50 px-4 py-3 text-left transition hover:bg-emerald-100 disabled:opacity-60"
+              >
+                <div className="text-sm font-semibold text-emerald-900">
+                  Guardar como credito
+                </div>
+                <div className="mt-1 text-sm text-emerald-700">
+                  O excedente entra no saldo da cliente para ela usar depois no caixa.
+                </div>
+              </button>
+            </div>
+
+            <div className="mt-4 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setConfirmarExcedenteOpen(false)}
+                className="rounded-2xl border border-zinc-200 bg-white px-4 py-2.5 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50"
+              >
+                Voltar
+              </button>
+            </div>
           </div>
         </div>
       ) : null}
