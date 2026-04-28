@@ -34,7 +34,7 @@ import {
   getStatusBadgeClass,
 } from "@/components/vendas/utils";
 import { KpiCard, ResumoRow } from "@/components/vendas/ui";
-import { parseComboDisplayMeta } from "@/lib/combo/display";
+import { groupComboTotals, parseComboDisplayMeta } from "@/lib/combo/display";
 import {
   buildPermissoesByNivel,
   sanitizePermissoesDb,
@@ -45,6 +45,15 @@ import type {
   VendaProcessarErrorResponse,
   VendaProcessarResponse,
 } from "@/types/vendas";
+
+function escapeHtml(value: string | null | undefined) {
+  return String(value || "-")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
 
 export default function VendasPage() {
   const supabase = createClient();
@@ -88,6 +97,18 @@ export default function VendasPage() {
 
   const [excluirModalOpen, setExcluirModalOpen] = useState(false);
   const [motivoExclusao, setMotivoExclusao] = useState("");
+
+  const comboSummaryDetalhe = useMemo(
+    () =>
+      detalheVenda
+        ? groupComboTotals(
+            detalheVenda.itens,
+            (item) => item.descricao,
+            (item) => Number(item.valor_total || 0)
+          )
+        : [],
+    [detalheVenda]
+  );
 
   useEffect(() => {
     void init();
@@ -482,6 +503,11 @@ export default function VendasPage() {
     const itens = detalhe?.itens || [];
     const pagamentos = detalhe?.pagamentos || [];
     const clienteNome = getJoinedName(venda.clientes, "Sem cliente");
+    const comboSummary = groupComboTotals(
+      itens,
+      (item) => item.descricao,
+      (item) => Number(item.valor_total || 0)
+    );
 
     const totalPago = pagamentos.reduce(
       (acc, item) => acc + Number(item.valor || 0),
@@ -543,20 +569,72 @@ export default function VendasPage() {
                 itens.length > 0
                   ? itens
                       .map(
-                        (item) => `
+                        (item) => {
+                          const comboMeta = parseComboDisplayMeta(item.descricao);
+                          const itemTitle = comboMeta.isComboItem
+                            ? `
+                                <div class="item-title">${escapeHtml(
+                                  comboMeta.displayTitle
+                                )}</div>
+                                <div class="item-sub" style="margin-bottom:4px;">
+                                  <span style="display:inline-block;border:1px solid #ddd6fe;background:#f5f3ff;color:#6d28d9;border-radius:999px;padding:1px 6px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;">Combo</span>
+                                  <span style="margin-left:6px;">${escapeHtml(
+                                    comboMeta.comboName
+                                  )}</span>
+                                </div>
+                              `
+                            : `<div class="item-title">${escapeHtml(
+                                item.descricao
+                              )}</div>`;
+
+                          return `
                           <div class="item">
-                            <div class="item-title">${item.descricao}</div>
+                            ${itemTitle}
                             <div class="row">
                               <span class="item-sub">${item.quantidade} x ${formatCurrency(item.valor_unitario)}</span>
                               <strong>${formatCurrency(item.valor_total)}</strong>
                             </div>
                           </div>
-                        `
+                        `;
+                        }
                       )
                       .join("")
                   : `<div class="muted">Nenhum item encontrado.</div>`
               }
             </div>
+
+            ${
+              comboSummary.length > 0
+                ? `
+                    <div class="line"></div>
+                    <div class="section-title">Totais por combo</div>
+                    <div>
+                      ${comboSummary
+                        .map(
+                          (combo) => `
+                            <div class="item" style="padding:10px 0;">
+                              <div class="row" style="margin:0;">
+                                <div>
+                                  <div class="item-title">${escapeHtml(
+                                    combo.comboName
+                                  )}</div>
+                                  <div class="item-sub">${escapeHtml(
+                                    `${combo.itemCount} item(ns) rateados`
+                                  )}</div>
+                                  <div class="item-sub" style="margin-top:3px;">${escapeHtml(
+                                    combo.childLabels.join(", ")
+                                  )}</div>
+                                </div>
+                                <strong>${formatCurrency(combo.total)}</strong>
+                              </div>
+                            </div>
+                          `
+                        )
+                        .join("")}
+                    </div>
+                  `
+                : ""
+            }
 
             <div class="line"></div>
 
@@ -1181,6 +1259,59 @@ export default function VendasPage() {
                         </table>
                       </div>
                     </div>
+
+                    {comboSummaryDetalhe.length > 0 ? (
+                      <div className="rounded-[24px] border border-violet-100 bg-gradient-to-br from-violet-50 via-white to-white p-5">
+                        <div className="mb-4 flex items-start justify-between gap-4">
+                          <div>
+                            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-violet-500">
+                              Totais por combo
+                            </div>
+                            <div className="mt-2 text-lg font-bold text-zinc-950">
+                              Quanto cada combo representou nesta venda
+                            </div>
+                            <p className="mt-1 text-sm text-zinc-500">
+                              O total abaixo soma os servicos filhos que vieram de cada combo.
+                            </p>
+                          </div>
+                          <div className="rounded-2xl border border-violet-200 bg-white px-4 py-3 text-right shadow-sm">
+                            <div className="text-xs uppercase tracking-[0.16em] text-zinc-500">
+                              Combos
+                            </div>
+                            <div className="mt-1 text-2xl font-bold text-zinc-950">
+                              {comboSummaryDetalhe.length}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="grid gap-3 md:grid-cols-2">
+                          {comboSummaryDetalhe.map((combo) => (
+                            <div
+                              key={combo.comboName}
+                              className="rounded-[22px] border border-violet-200 bg-white p-4 shadow-sm"
+                            >
+                              <div className="flex items-center justify-between gap-3">
+                                <span className="rounded-full border border-violet-200 bg-violet-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-violet-700">
+                                  Combo
+                                </span>
+                                <span className="text-sm font-semibold text-zinc-900">
+                                  {formatCurrency(combo.total)}
+                                </span>
+                              </div>
+                              <div className="mt-3 text-base font-bold text-zinc-950">
+                                {combo.comboName}
+                              </div>
+                              <div className="mt-1 text-sm text-zinc-500">
+                                {combo.itemCount} item(ns) rateados
+                              </div>
+                              <div className="mt-3 text-xs leading-5 text-zinc-500">
+                                {combo.childLabels.join(", ")}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null}
 
                     <div className="rounded-[24px] border border-zinc-200 bg-white p-5">
                       <div className="mb-4 flex items-center gap-2 text-lg font-bold text-zinc-900">

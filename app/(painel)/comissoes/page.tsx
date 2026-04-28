@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactNode } from "react";
+import { type ReactNode, useMemo } from "react";
 import AppLoading from "@/components/ui/AppLoading";
 import ConfirmActionModal from "@/components/ui/ConfirmActionModal";
 import { ComissaoHelpPanel } from "@/components/comissoes/ComissaoHelpPanel";
@@ -16,7 +16,7 @@ import {
   User2,
   WalletCards,
 } from "lucide-react";
-import { parseComboDisplayMeta } from "@/lib/combo/display";
+import { groupComboTotals, parseComboDisplayMeta } from "@/lib/combo/display";
 
 function formatCurrency(value: number | null | undefined) {
   return Number(value || 0).toLocaleString("pt-BR", {
@@ -191,6 +191,16 @@ export default function ComissoesPage() {
     normalizeStatusComissao,
   } = useComissoesPage();
 
+  const comboSummary = useMemo(
+    () =>
+      groupComboTotals(
+        rows,
+        (item) => item.descricao,
+        (item) => getValorLancamento(item)
+      ),
+    [getValorLancamento, rows]
+  );
+
   function imprimirRateio() {
     const win = window.open("", "_blank");
     if (!win) return;
@@ -218,10 +228,25 @@ export default function ComissoesPage() {
       0
     );
     const mostrarColunaPessoa = !profissionalId;
+    const comboSummaryPrint = groupComboTotals(
+      rows,
+      (item) => item.descricao,
+      (item) => getValorLancamento(item)
+    );
     const linhas = rows
       .map((item) => {
         const origem = origemMeta(item.origem_percentual);
         const statusInfo = getStatusComissaoMeta(item.status);
+        const comboMeta = parseComboDisplayMeta(item.descricao);
+        const descricaoHtml = comboMeta.isComboItem
+          ? `
+              <div style="font-weight:700;">${escapeHtml(comboMeta.displayTitle)}</div>
+              <div style="margin-top:4px;font-size:9px;color:#52525b;">
+                <span style="display:inline-block;border:1px solid #ddd6fe;background:#f5f3ff;color:#6d28d9;border-radius:999px;padding:2px 6px;font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;">Combo</span>
+                <span style="margin-left:6px;">${escapeHtml(comboMeta.comboName)}</span>
+              </div>
+            `
+          : escapeHtml(item.descricao || "-");
         return `
           <tr>
             ${
@@ -229,7 +254,7 @@ export default function ComissoesPage() {
                 ? `<td>${escapeHtml(item.profissionais?.nome || "Profissional")}</td>`
                 : ""
             }
-            <td>${escapeHtml(item.descricao || "-")}</td>
+            <td>${descricaoHtml}</td>
             <td>${escapeHtml(formatDate(item.competencia_data))}</td>
             <td class="money">${escapeHtml(formatCurrency(item.valor_base))}</td>
             <td>${escapeHtml(formatPercent(item.percentual_aplicado))}</td>
@@ -241,6 +266,37 @@ export default function ComissoesPage() {
         `;
       })
       .join("");
+    const comboSummaryHtml =
+      comboSummaryPrint.length > 0
+        ? `
+            <div class="combo-report">
+              <div class="combo-title">Totais por combo</div>
+              <div class="combo-grid">
+                ${comboSummaryPrint
+                  .map(
+                    (combo) => `
+                      <div class="combo-card">
+                        <div class="combo-card-top">
+                          <span class="combo-badge">Combo</span>
+                          <span class="combo-total">${escapeHtml(
+                            formatCurrency(combo.total)
+                          )}</span>
+                        </div>
+                        <div class="combo-name">${escapeHtml(combo.comboName)}</div>
+                        <div class="combo-meta">${escapeHtml(
+                          `${combo.itemCount} item(ns) rateados`
+                        )}</div>
+                        <div class="combo-children">${escapeHtml(
+                          combo.childLabels.join(", ")
+                        )}</div>
+                      </div>
+                    `
+                  )
+                  .join("")}
+              </div>
+            </div>
+          `
+        : "";
 
     const html = `
       <html>
@@ -273,6 +329,16 @@ export default function ComissoesPage() {
             th { text-align: left; font-size: 8.5px; text-transform: uppercase; letter-spacing: .08em; color: #71717a; background: #f4f4f5; padding: 7px 6px; border: 1px solid #e4e4e7; }
             td { padding: 6px 6px; border: 1px solid #e4e4e7; font-size: 10px; vertical-align: top; }
             .money { font-weight: 700; white-space: nowrap; }
+            .combo-report { margin: 12px 0 2px; }
+            .combo-title { font-size: 11px; font-weight: 700; margin-bottom: 8px; color: #18181b; }
+            .combo-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+            .combo-card { border: 1px solid #e9d5ff; border-radius: 10px; background: linear-gradient(180deg,#faf5ff 0%,#ffffff 100%); padding: 8px 10px; }
+            .combo-card-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+            .combo-badge { display: inline-flex; align-items: center; border: 1px solid #ddd6fe; background: #f5f3ff; color: #6d28d9; border-radius: 999px; padding: 2px 6px; font-size: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; }
+            .combo-total { font-size: 11px; font-weight: 700; color: #18181b; }
+            .combo-name { margin-top: 6px; font-size: 11px; font-weight: 700; color: #18181b; }
+            .combo-meta { margin-top: 3px; font-size: 9px; color: #52525b; }
+            .combo-children { margin-top: 4px; font-size: 9px; color: #71717a; line-height: 1.4; }
             .signature-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 20px; margin-top: 28px; padding-top: 10px; }
             .signature { padding-top: 18px; border-top: 1px solid #18181b; min-height: 58px; }
             .signature-name { font-size: 11px; font-weight: 700; }
@@ -412,6 +478,8 @@ export default function ComissoesPage() {
                   <div class="muted">Documento pronto para conferencia e assinatura.</div>
                 </div>
               </div>
+
+              ${comboSummaryHtml}
 
               <table>
                 <thead>
@@ -616,6 +684,59 @@ export default function ComissoesPage() {
               },
             ]}
           />
+
+          {comboSummary.length > 0 ? (
+            <div className="rounded-[28px] border border-violet-100 bg-gradient-to-br from-violet-50 via-white to-white p-6 shadow-sm">
+              <div className="flex flex-wrap items-start justify-between gap-4">
+                <div className="max-w-3xl">
+                  <div className="text-xs font-semibold uppercase tracking-[0.22em] text-violet-500">
+                    Leitura por combo
+                  </div>
+                  <h2 className="mt-2 text-xl font-bold text-zinc-950">
+                    Total agrupado dos combos no rateio
+                  </h2>
+                  <p className="mt-2 text-sm text-zinc-500">
+                    Cada card soma os lancamentos que vieram dos servicos filhos do combo.
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-violet-200 bg-white px-4 py-3 text-right shadow-sm">
+                  <div className="text-xs uppercase tracking-[0.16em] text-zinc-500">
+                    Combos encontrados
+                  </div>
+                  <div className="mt-1 text-2xl font-bold text-zinc-950">
+                    {comboSummary.length}
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                {comboSummary.map((combo) => (
+                  <div
+                    key={combo.comboName}
+                    className="rounded-[24px] border border-violet-200 bg-white p-4 shadow-sm"
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="rounded-full border border-violet-200 bg-violet-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-violet-700">
+                        Combo
+                      </span>
+                      <span className="text-sm font-semibold text-zinc-900">
+                        {formatCurrency(combo.total)}
+                      </span>
+                    </div>
+                    <div className="mt-3 text-base font-bold text-zinc-950">
+                      {combo.comboName}
+                    </div>
+                    <div className="mt-1 text-sm text-zinc-500">
+                      {combo.itemCount} lancamento(s) do rateio
+                    </div>
+                    <div className="mt-3 text-xs leading-5 text-zinc-500">
+                      {combo.childLabels.join(", ")}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
 
           {erro ? (
             <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
