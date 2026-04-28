@@ -320,7 +320,7 @@ export default function AgendaPage() {
     });
   }
 
-  function handleGoToCashier(item: Agendamento) {
+  async function handleReceiveFromClient(item: Agendamento) {
     if (assinaturaBloqueada) {
       abrirAviso(
         "Acesso bloqueado",
@@ -331,27 +331,88 @@ export default function AgendaPage() {
       return;
     }
 
-    void captureClientEvent({
-      module: "agenda",
-      eventType: "ui_event",
-      action: "abrir_caixa_por_agendamento",
-      screen: "agenda_grid",
-      entity: "agendamento",
-      entityId: item.id,
-      message: "Usuario abriu o caixa a partir de um agendamento.",
-      details: {
-        idSalao,
-        idComanda: item.id_comanda || null,
-      },
-      success: true,
-    });
-
     if (item.id_comanda) {
+      void captureClientEvent({
+        module: "agenda",
+        eventType: "ui_event",
+        action: "receber_cliente_por_agendamento",
+        screen: "agenda_grid",
+        entity: "agendamento",
+        entityId: item.id,
+        message: "Usuario abriu o caixa a partir de um agendamento ja vinculado.",
+        details: {
+          idSalao,
+          idComanda: item.id_comanda,
+          modo: "comanda_existente",
+        },
+        success: true,
+      });
+
       router.push(`/caixa?comanda_id=${item.id_comanda}`);
       return;
     }
 
-    router.push(`/caixa?agendamento_id=${item.id}`);
+    if (!item.cliente_id) {
+      abrirAviso(
+        "Cliente obrigatoria",
+        "Esse agendamento precisa ter uma cliente vinculada antes de ir para o caixa.",
+        "warning"
+      );
+      return;
+    }
+
+    if (!item.servico_id || !item.profissional_id) {
+      abrirAviso(
+        "Agendamento incompleto",
+        "Nao encontrei o servico ou a profissional desse agendamento para abrir no caixa.",
+        "warning"
+      );
+      return;
+    }
+
+    try {
+      const comandas = await buscarComandasAbertasDoCliente(item.cliente_id);
+      const comanda = comandas[0] || (await criarNovaComanda(item.cliente_id));
+
+      await sincronizarAgendamento({
+        idAgendamento: item.id,
+        idComandaNova: comanda.id,
+        idServico: item.servico_id,
+        idProfissional: item.profissional_id,
+      });
+
+      void captureClientEvent({
+        module: "agenda",
+        eventType: "ui_event",
+        action: "receber_cliente_por_agendamento",
+        screen: "agenda_grid",
+        entity: "agendamento",
+        entityId: item.id,
+        message: "Usuario enviou o agendamento para o caixa.",
+        details: {
+          idSalao,
+          idComanda: comanda.id,
+          modo: comandas[0] ? "comanda_reaproveitada" : "comanda_criada",
+        },
+        success: true,
+      });
+
+      router.push(`/caixa?comanda_id=${comanda.id}`);
+    } catch (error) {
+      console.error(error);
+      abrirAviso(
+        "Erro ao receber cliente",
+        getErrorMessage(
+          error,
+          "Nao foi possivel abrir esse agendamento no caixa agora."
+        ),
+        "danger"
+      );
+    }
+  }
+
+  function handleGoToCashier(item: Agendamento) {
+    void handleReceiveFromClient(item);
   }
 
   async function handleOpenCreditFlow() {
@@ -1084,6 +1145,18 @@ export default function AgendaPage() {
                     icon: UserRound,
                     onClick: () => void openClientProfile(item),
                   },
+                  ...(isInteractiveStatus && !hasClosedComanda
+                    ? [
+                        {
+                          label: "Receber do cliente",
+                          description: item.id_comanda
+                            ? "Abre a comanda atual direto no caixa para seguir com o recebimento."
+                            : "Cria ou reaproveita a comanda da cliente e leva esse agendamento para o caixa.",
+                          icon: Wallet,
+                          onClick: () => void handleReceiveFromClient(item),
+                        },
+                      ]
+                    : []),
                   ...(canEdit
                     ? [
                         {
