@@ -1126,6 +1126,11 @@ export default function AgendaPage() {
                   "confirmado",
                   "atendido",
                 ].includes(item.status);
+                const isWaitingCashierStatus =
+                  item.status === "aguardando_pagamento";
+                const canReceiveFromClient =
+                  !hasClosedComanda &&
+                  (isInteractiveStatus || isWaitingCashierStatus);
                 const canDelete =
                   !item.id_comanda &&
                   !hasClosedComanda &&
@@ -1134,8 +1139,7 @@ export default function AgendaPage() {
                 const canCancel = !hasClosedComanda && isInteractiveStatus;
                 const canChangeStatus =
                   !hasClosedComanda &&
-                  !item.id_comanda &&
-                  isInteractiveStatus;
+                  (isInteractiveStatus || isWaitingCashierStatus);
 
                 const quickActions = [
                   {
@@ -1145,7 +1149,7 @@ export default function AgendaPage() {
                     icon: UserRound,
                     onClick: () => void openClientProfile(item),
                   },
-                  ...(isInteractiveStatus && !hasClosedComanda
+                  ...(canReceiveFromClient
                     ? [
                         {
                           label: "Receber do cliente",
