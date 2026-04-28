@@ -62,6 +62,7 @@ export default function CaixaDetalhe({
       })).filter((group) => group.itens.length > 0),
     [itens]
   );
+  const gruposAtivos = itensAgrupados.length;
 
   if (!comandaSelecionada) {
     return (
@@ -172,27 +173,56 @@ export default function CaixaDetalhe({
       <div className="mt-4 min-h-0 flex-1 overflow-y-auto pr-1">
         <div className="space-y-4">
           <div className="rounded-[24px] border border-zinc-200 bg-white">
-          <div className="border-b border-zinc-200 px-5 py-4">
-            <div className="text-lg font-bold text-zinc-900">Itens da comanda</div>
-            <div className="mt-1 text-sm text-zinc-500">
-              Servicos, produtos, extras e ajustes agrupados para leitura mais rapida.
+          <div className="border-b border-zinc-200 px-6 py-5">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div className="max-w-2xl">
+                <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-400">
+                  Leitura da venda
+                </div>
+                <div className="mt-1 text-[1.35rem] font-bold leading-tight text-zinc-900">
+                  Itens da comanda
+                </div>
+                <div className="mt-1 text-sm text-zinc-500">
+                  Servicos, produtos, extras e ajustes agrupados para leitura mais rapida.
+                </div>
+              </div>
+
+              <div className="grid min-w-[220px] gap-2 sm:grid-cols-2">
+                <HeaderStat
+                  label="Itens ativos"
+                  value={String(itens.length)}
+                />
+                <HeaderStat
+                  label="Grupos"
+                  value={String(gruposAtivos)}
+                />
+              </div>
             </div>
           </div>
 
-          <div className="space-y-4 p-5">
+          <div className="space-y-5 p-6">
             {itensAgrupados.map((group) => (
               <section key={group.tipo} className="space-y-3">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2 text-zinc-900">
-                    <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-2 text-zinc-600">
+                <div className="flex items-center justify-between gap-3 rounded-[20px] border border-zinc-200 bg-zinc-50 px-4 py-3">
+                  <div className="flex items-center gap-3 text-zinc-900">
+                    <div className="rounded-2xl border border-zinc-200 bg-white p-2.5 text-zinc-600 shadow-sm">
                       {tipoItemIcon(group.tipo)}
                     </div>
                     <div>
-                      <div className="font-semibold">{getTipoItemLabel(group.tipo)}</div>
+                      <div className="text-base font-semibold">{getTipoItemLabel(group.tipo)}</div>
                       <div className="text-xs uppercase tracking-[0.14em] text-zinc-500">
                         {group.itens.length} item(ns)
                       </div>
                     </div>
+                  </div>
+
+                  <div className="rounded-full border border-zinc-200 bg-white px-3 py-1 text-xs font-semibold text-zinc-700">
+                    {formatCurrency(
+                      group.itens.reduce(
+                        (acc, current) => acc + Number(current.valor_total || 0),
+                        0
+                      )
+                    )}
                   </div>
                 </div>
 
@@ -237,6 +267,17 @@ export default function CaixaDetalhe({
           ) : null}
         </div>
       </div>
+    </div>
+  );
+}
+
+function HeaderStat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3">
+      <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
+        {label}
+      </div>
+      <div className="mt-1 text-lg font-bold leading-none text-zinc-950">{value}</div>
     </div>
   );
 }

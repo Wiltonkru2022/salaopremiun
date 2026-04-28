@@ -123,7 +123,7 @@ export default function CaixaSidebar({
             <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-400">
               Operacao do caixa
             </div>
-            <h2 className="mt-1 text-[1.6rem] font-semibold leading-none text-slate-900">
+            <h2 className="mt-1 text-[1.75rem] font-semibold leading-none text-slate-900">
               Operacao
             </h2>
             <p className="mt-1 max-w-[26rem] text-sm leading-6 text-zinc-500">
@@ -142,7 +142,7 @@ export default function CaixaSidebar({
           </span>
         </div>
 
-        <div className="mt-5 grid grid-cols-2 gap-3">
+        <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
           <ActionButton
             icon={<CreditCard size={16} />}
             label="Pagamento"
@@ -157,7 +157,7 @@ export default function CaixaSidebar({
           />
         </div>
 
-        <div className="mt-5 grid grid-cols-3 gap-3">
+        <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
           <MiniInfoCard label="Total pago" value={formatMoney(totalPago)} />
           <MiniInfoCard
             label="Falta receber"
@@ -167,7 +167,7 @@ export default function CaixaSidebar({
           <MiniInfoCard label="Troco" value={formatMoney(troco)} />
         </div>
 
-        <div className="mt-3 grid grid-cols-2 gap-3">
+        <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
           <MiniInfoCard
             label="Credito gerado"
             value={formatMoney(totalCreditoGerado)}
@@ -183,18 +183,25 @@ export default function CaixaSidebar({
         <div className="mt-5 min-h-0 flex-1 overflow-y-auto pr-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <div className="space-y-4">
               <div className="rounded-[28px] border border-zinc-200 bg-white p-5 shadow-sm">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
                     <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-400">
                       Comanda em foco
                     </div>
-                    <div className="mt-1 text-lg font-semibold text-zinc-900">
-                      {comandaSelecionada ? `#${comandaSelecionada.numero}` : "Nenhuma selecionada"}
+                    <div className="mt-1 text-[1.35rem] font-semibold leading-tight text-zinc-900">
+                      {comandaSelecionada
+                        ? `#${comandaSelecionada.numero}`
+                        : "Nenhuma selecionada"}
+                    </div>
+                    <div className="mt-2 text-sm text-zinc-500">
+                      {comandaSelecionada
+                        ? "Cliente, total e saldo da venda em leitura rapida."
+                        : "Selecione uma comanda na triagem para operar aqui."}
                     </div>
                   </div>
 
                   <span
-                    className={`rounded-full border px-3 py-1 text-[11px] font-bold uppercase ${
+                    className={`shrink-0 rounded-full border px-3 py-1 text-[11px] font-bold uppercase ${
                       caixaAberto
                         ? "border-emerald-200 bg-emerald-50 text-emerald-700"
                         : "border-zinc-200 bg-zinc-100 text-zinc-600"
@@ -204,7 +211,7 @@ export default function CaixaSidebar({
                   </span>
                 </div>
 
-                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                <div className="mt-4 grid gap-3">
                   <SidebarInfo
                     label="Cliente"
                     value={
@@ -213,10 +220,16 @@ export default function CaixaSidebar({
                         : "Selecione uma venda"
                     }
                   />
-                  <SidebarInfo
-                    label="Total da venda"
-                    value={comandaSelecionada ? formatCurrency(totalComanda) : "R$ 0,00"}
-                  />
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <SidebarInfo
+                      label="Total da venda"
+                      value={comandaSelecionada ? formatCurrency(totalComanda) : "R$ 0,00"}
+                    />
+                    <SidebarInfo
+                      label="Credito da cliente"
+                      value={formatMoney(creditoClienteDisponivel)}
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -452,11 +465,13 @@ function SidebarInfo({
   value: string;
 }) {
   return (
-    <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3">
+    <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3.5">
       <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-400">
         {label}
       </div>
-      <div className="mt-1 text-sm font-semibold text-zinc-900">{value}</div>
+      <div className="mt-1.5 break-words text-sm font-semibold leading-5 text-zinc-900">
+        {value}
+      </div>
     </div>
   );
 }
