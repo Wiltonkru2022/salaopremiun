@@ -293,10 +293,6 @@ async function bootstrap() {
     setAutorizacoes((prev) => ({ ...prev, [field]: value }));
   }
 
-  function setAuthField<K extends keyof ClienteAuthState>(field: K, value: ClienteAuthState[K]) {
-    setAuthCliente((prev) => ({ ...prev, [field]: value }));
-  }
-
   async function buscarCep(cepFormatado: string) {
     const cep = onlyDigits(cepFormatado);
 
@@ -463,7 +459,7 @@ async function bootstrap() {
             {modo === "novo" ? "Novo Cliente" : "Editar Cliente"}
           </h1>
           <p className="mt-2 text-sm text-zinc-500">
-            Cadastro completo com dados pessoais, ficha técnica, preferências, LGPD e login futuro.
+            Cadastro simples com os dados principais, cuidados de atendimento e status da cliente.
           </p>
         </div>
 
@@ -500,7 +496,7 @@ async function bootstrap() {
 
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
           <div className="space-y-6 xl:col-span-2">
-            <Card title="1. Dados Pessoais e Contato" subtitle="Base principal da cliente">
+            <Card title="1. Dados principais" subtitle="Informacoes basicas para identificar e atender bem a cliente.">
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <Input label="Nome completo" value={cliente.nome} onChange={(v) => setClienteField("nome", v)} required />
                 <Input label="Nome social" value={cliente.nome_social} onChange={(v) => setClienteField("nome_social", v)} />
@@ -561,7 +557,7 @@ async function bootstrap() {
               </div>
             </Card>
 
-            <Card title="2. Ficha Técnica e Saúde" subtitle="Protege o salão e melhora o atendimento">
+            <Card title="2. Cuidados e ficha tecnica" subtitle="Informacoes importantes para um atendimento seguro.">
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <Textarea label="Alergias" value={ficha.alergias} onChange={(v) => setFichaField("alergias", v)} />
                 <Textarea
@@ -604,7 +600,7 @@ async function bootstrap() {
               </div>
             </Card>
 
-            <Card title="3. Preferências e Mimos" subtitle="Atendimento premium">
+            <Card title="3. Preferencias de atendimento" subtitle="Detalhes que ajudam a personalizar a experiencia.">
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <Input
                   label="Bebida favorita"
@@ -673,7 +669,7 @@ async function bootstrap() {
           </div>
 
           <div className="space-y-6">
-            <Card title="4. Autorizações (LGPD)" subtitle="Imagem e marketing">
+            <Card title="4. Autorizacoes" subtitle="Imagem, comunicacao e consentimentos da cliente.">
               <div className="space-y-4">
                 <Switch
                   label="Autoriza uso de imagem"
@@ -707,31 +703,7 @@ async function bootstrap() {
               </div>
             </Card>
 
-            <Card title="5. Login futuro do app" subtitle="Preparação para agendamento pelo cliente">
-              <div className="space-y-4">
-                <Input
-                  label="E-mail de login"
-                  type="email"
-                  value={authCliente.email}
-                  onChange={(v) => setAuthField("email", v)}
-                />
-
-                <Input
-                  label="Senha hash"
-                  value={authCliente.senha_hash}
-                  onChange={(v) => setAuthField("senha_hash", v)}
-                  placeholder="No futuro salvar hash, nunca senha pura"
-                />
-
-                <Switch
-                  label="App ativo"
-                  checked={authCliente.app_ativo}
-                  onChange={(v) => setAuthField("app_ativo", v)}
-                />
-              </div>
-            </Card>
-
-            <Card title="6. Status" subtitle="Controle do cadastro">
+            <Card title="5. Status e foto" subtitle="Controle simples do cadastro.">
               <div className="space-y-4">
                 <Select
                   label="Status"

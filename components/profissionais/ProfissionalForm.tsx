@@ -31,12 +31,6 @@ type DiaTrabalho = {
   fim: string;
 };
 
-type Pausa = {
-  inicio: string;
-  fim: string;
-  descricao: string;
-};
-
 type AssistenteOption = {
   id: string;
   nome: string;
@@ -81,7 +75,6 @@ type Profissional = {
   status: string;
   ativo: boolean;
   dias_trabalho: DiaTrabalho[];
-  pausas: Pausa[];
 };
 
 type ProfissionalAcesso = {
@@ -109,10 +102,6 @@ const DIAS_FIXOS: DiaTrabalho[] = [
   { dia: "Sexta", ativo: true, inicio: "09:00", fim: "18:00" },
   { dia: "Sábado", ativo: true, inicio: "09:00", fim: "18:00" },
   { dia: "Domingo", ativo: false, inicio: "09:00", fim: "18:00" },
-];
-
-const PAUSA_INICIAL: Pausa[] = [
-  { inicio: "12:00", fim: "13:00", descricao: "Almoço" },
 ];
 
 const initialForm: Profissional = {
@@ -146,9 +135,7 @@ const initialForm: Profissional = {
   status: "ativo",
   ativo: true,
   dias_trabalho: DIAS_FIXOS,
-  pausas: PAUSA_INICIAL,
 };
-
 const initialAcesso: ProfissionalAcesso = {
   ativo: false,
   cpf: "",
@@ -172,16 +159,6 @@ function isDiaTrabalho(value: unknown): value is DiaTrabalho {
     typeof item.ativo === "boolean" &&
     typeof item.inicio === "string" &&
     typeof item.fim === "string"
-  );
-}
-
-function isPausa(value: unknown): value is Pausa {
-  if (!value || typeof value !== "object") return false;
-  const item = value as Record<string, unknown>;
-  return (
-    typeof item.inicio === "string" &&
-    typeof item.fim === "string" &&
-    typeof item.descricao === "string"
   );
 }
 
@@ -314,11 +291,6 @@ export default function ProfissionalForm({
         ? profissional.dias_trabalho.filter(isDiaTrabalho)
         : DIAS_FIXOS;
 
-    const pausas =
-      Array.isArray(profissional.pausas) && profissional.pausas.length > 0
-        ? profissional.pausas.filter(isPausa)
-        : PAUSA_INICIAL;
-
     setForm({
       id: profissional.id,
       id_salao: profissional.id_salao || salaoId,
@@ -356,7 +328,6 @@ export default function ProfissionalForm({
           ? profissional.ativo
           : profissional.status === "ativo",
       dias_trabalho: dias,
-      pausas: pausas,
     });
 
     setEspecialidadesInput((profissional.especialidades || []).join(", "));
@@ -428,28 +399,6 @@ export default function ProfissionalForm({
       dias[index] = { ...dias[index], [field]: value };
       return { ...prev, dias_trabalho: dias };
     });
-  }
-
-  function handlePausaChange(index: number, field: keyof Pausa, value: string) {
-    setForm((prev) => {
-      const pausas = [...prev.pausas];
-      pausas[index] = { ...pausas[index], [field]: value };
-      return { ...prev, pausas };
-    });
-  }
-
-  function addPausa() {
-    setForm((prev) => ({
-      ...prev,
-      pausas: [...prev.pausas, { inicio: "00:00", fim: "00:00", descricao: "" }],
-    }));
-  }
-
-  function removePausa(index: number) {
-    setForm((prev) => ({
-      ...prev,
-      pausas: prev.pausas.filter((_, i) => i !== index),
-    }));
   }
 
   function toggleServico(servico: Servico) {
@@ -587,7 +536,7 @@ async function salvarAcessoProfissional(idProfissional: string) {
         status: form.ativo ? "ativo" : "inativo",
         ativo: form.ativo,
         dias_trabalho: form.dias_trabalho,
-        pausas: form.pausas.filter((p) => p.inicio && p.fim),
+        pausas: [],
         foto_url: form.foto_url || null,
       };
 
@@ -690,7 +639,7 @@ async function salvarAcessoProfissional(idProfissional: string) {
             {modo === "novo" ? "Novo Profissional" : "Editar Profissional"}
           </h1>
           <p className="mt-2 text-sm text-zinc-500">
-            Preencha os dados pessoais, agenda, serviços, comissão, acesso e assistentes.
+            Cadastro simples com dados principais, disponibilidade de referencia e acesso ao app profissional.
           </p>
         </div>
 
@@ -731,7 +680,7 @@ async function salvarAcessoProfissional(idProfissional: string) {
 
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
           <div className="space-y-6 xl:col-span-2">
-            <Card title="1. Dados Pessoais e Contato" subtitle="Identificação e comunicação do profissional">
+            <Card title="1. Dados pessoais" subtitle="Informacoes basicas para identificar e falar com o profissional.">
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <Input label="Nome completo" value={form.nome} onChange={(v) => handleChange("nome", v)} required />
                 <Input label="Nome social / artístico" value={form.nome_social} onChange={(v) => handleChange("nome_social", v)} />
@@ -752,7 +701,7 @@ async function salvarAcessoProfissional(idProfissional: string) {
               </div>
             </Card>
 
-            <Card title="2. Dados Profissionais e Especialidades" subtitle="Função, bio e posicionamento do profissional">
+            <Card title="2. Dados profissionais" subtitle="Funcao, especialidades e uma descricao curta do profissional.">
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <Input label="Cargo / Função" value={form.cargo} onChange={(v) => handleChange("cargo", v)} />
                 <Select
@@ -806,16 +755,19 @@ async function salvarAcessoProfissional(idProfissional: string) {
                 </div>
               </div>
             </Card>
-
-            <Card title="3. Configurações de Agenda" subtitle="Dias, horários e pausas">
+            <Card title="3. Disponibilidade de referencia" subtitle="Dias e horarios apenas para consulta. O bloqueio agora e feito direto na agenda.">
               <div className="space-y-4">
+                <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                  Os dias e horarios abaixo nao bloqueiam mais a agenda. Para travar atendimento, use os bloqueios criados diretamente na agenda.
+                </div>
+
                 <div className="overflow-x-auto rounded-2xl border border-zinc-200">
                   <table className="min-w-full divide-y divide-zinc-200">
                     <thead className="bg-zinc-100">
                       <tr>
                         <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-zinc-600">Dia</th>
                         <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-zinc-600">Ativo</th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-zinc-600">Início</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-zinc-600">Inicio</th>
                         <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-zinc-600">Fim</th>
                       </tr>
                     </thead>
@@ -851,58 +803,10 @@ async function salvarAcessoProfissional(idProfissional: string) {
                     </tbody>
                   </table>
                 </div>
-
-                <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4">
-                  <div className="mb-4 flex items-center justify-between">
-                    <div>
-                      <h3 className="font-semibold text-zinc-900">Pausas fixas</h3>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={addPausa}
-                      className="rounded-xl bg-zinc-900 px-4 py-2 text-sm font-semibold text-white"
-                    >
-                      Adicionar pausa
-                    </button>
-                  </div>
-
-                  <div className="space-y-3">
-                    {form.pausas.map((pausa, index) => (
-                      <div key={index} className="grid grid-cols-1 gap-3 md:grid-cols-4">
-                        <input
-                          type="time"
-                          value={pausa.inicio}
-                          onChange={(e) => handlePausaChange(index, "inicio", e.target.value)}
-                          className="rounded-xl border border-zinc-300 px-3 py-2 text-sm"
-                        />
-                        <input
-                          type="time"
-                          value={pausa.fim}
-                          onChange={(e) => handlePausaChange(index, "fim", e.target.value)}
-                          className="rounded-xl border border-zinc-300 px-3 py-2 text-sm"
-                        />
-                        <input
-                          type="text"
-                          value={pausa.descricao}
-                          onChange={(e) => handlePausaChange(index, "descricao", e.target.value)}
-                          placeholder="Descrição"
-                          className="rounded-xl border border-zinc-300 px-3 py-2 text-sm"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => removePausa(index)}
-                          className="rounded-xl border border-red-300 bg-red-50 px-4 py-2 text-sm font-semibold text-red-600"
-                        >
-                          Remover
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
               </div>
             </Card>
 
-            <Card title="Serviços Vinculados" subtitle="Serviços e duração personalizada">
+            <Card title="4. Servicos vinculados" subtitle="Escolha os servicos atendidos por este profissional e ajuste a duracao, se precisar.">
               {isAssistenteSalao ? (
                 <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-600">
                   Assistente do salao nao recebe servicos vinculados nem acesso ao app profissional.
@@ -968,53 +872,55 @@ async function salvarAcessoProfissional(idProfissional: string) {
           </div>
 
           <div className="space-y-6">
-            <Card title="Foto de Perfil" subtitle="Humaniza o cadastro">
-              <div className="space-y-4">
-                <div className="flex justify-center">
-                  <div className="flex h-36 w-36 items-center justify-center overflow-hidden rounded-full border-4 border-zinc-200 bg-zinc-100">
-                    {fotoFile ? (
-                      <img
-                        src={URL.createObjectURL(fotoFile)}
-                        alt="Prévia da foto"
-                        className="h-full w-full object-cover"
-                      />
-                    ) : form.foto_url ? (
-                      <img
-                        src={form.foto_url}
-                        alt="Foto do profissional"
-                        className="h-full w-full object-cover"
-                      />
-                    ) : (
-                      <span className="text-sm text-zinc-500">Sem foto</span>
-                    )}
-                  </div>
-                </div>
-
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => setFotoFile(e.target.files?.[0] || null)}
-                  className="w-full rounded-xl border border-zinc-300 px-3 py-2 text-sm"
-                />
-
-                <Input
-                  label="Ou cole a URL da foto"
-                  value={form.foto_url}
-                  onChange={(v) => handleChange("foto_url", v)}
-                />
-              </div>
-            </Card>
-
-            <Card title="Assistentes vinculados" subtitle="Selecione quem pode auxiliar este profissional">
+            <Card title="5. Foto e assistentes" subtitle="Foto do cadastro e assistentes que podem apoiar esse profissional.">
               {isAssistenteSalao ? (
                 <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-600">
                   Este cadastro e um assistente. Vincule ele dentro do cadastro de um profissional.
                 </div>
               ) : (
-              <div className="space-y-3">
+              <div className="space-y-5">
+                <div className="space-y-4 rounded-2xl border border-zinc-200 bg-zinc-50 p-4">
+                  <div className="flex justify-center">
+                    <div className="flex h-36 w-36 items-center justify-center overflow-hidden rounded-full border-4 border-zinc-200 bg-zinc-100">
+                      {fotoFile ? (
+                        <img
+                          src={URL.createObjectURL(fotoFile)}
+                          alt="Pr?via da foto"
+                          className="h-full w-full object-cover"
+                        />
+                      ) : form.foto_url ? (
+                        <img
+                          src={form.foto_url}
+                          alt="Foto do profissional"
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <span className="text-sm text-zinc-500">Sem foto</span>
+                      )}
+                    </div>
+                  </div>
+
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => setFotoFile(e.target.files?.[0] || null)}
+                    className="w-full rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm"
+                  />
+
+                  <Input
+                    label="Ou cole a URL da foto"
+                    value={form.foto_url}
+                    onChange={(v) => handleChange("foto_url", v)}
+                  />
+                </div>
+
+                <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-700">
+                  Selecione abaixo apenas quem pode apoiar este profissional no atendimento.
+                </div>
+
                 {assistentesFiltrados.length === 0 ? (
                   <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-600">
-                    Nenhum outro profissional disponível para vínculo.
+                    Nenhum outro profissional dispon?vel para v?nculo.
                   </div>
                 ) : (
                   assistentesFiltrados.map((item) => {
@@ -1055,7 +961,7 @@ async function salvarAcessoProfissional(idProfissional: string) {
                         <div className="min-w-0 flex-1">
                           <p className="font-semibold text-zinc-900">{item.nome}</p>
                           <p className="text-sm text-zinc-500">
-                            {item.cargo || item.categoria || item.nome_social || "Sem descrição"}
+                            {item.cargo || item.categoria || item.nome_social || "Sem descri??o"}
                           </p>
                           <p className="mt-1 text-xs text-zinc-400">
                             {ativo ? "Ativo" : "Inativo"}
@@ -1067,14 +973,13 @@ async function salvarAcessoProfissional(idProfissional: string) {
                 )}
 
                 <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-700">
-                  Total selecionado:{" "}
-                  <strong className="text-zinc-900">{assistentesSelecionados.length}</strong>
+                  Total selecionado: <strong className="text-zinc-900">{assistentesSelecionados.length}</strong>
                 </div>
               </div>
               )}
             </Card>
 
-            <Card title="4. Financeiro e Acesso" subtitle="PIX, comissão, status e acesso ao app">
+            <Card title="6. Financeiro e acesso" subtitle="Pix, status e liberacao de acesso ao app profissional.">
               <div className="space-y-4">
                 <Input
                   label="Comissão sobre produtos (%)"

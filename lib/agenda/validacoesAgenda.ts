@@ -1,12 +1,7 @@
 import type { Bloqueio, ConfigSalao, Profissional } from "@/types/agenda";
 import {
-  buildForaExpedienteBloqueiosDoProfissional,
-  buildPausasBloqueiosDoProfissional,
-  getHorarioProfissionalNoDia,
   isDiaFuncionamento,
-  mergeBloqueios,
   normalizeTimeString,
-  overlaps,
   sanitizeDiasFuncionamento,
   timeToMinutes,
 } from "@/lib/utils/agenda";
@@ -29,40 +24,14 @@ export function ensureDiaFuncionamento(params: {
   return isDiaFuncionamento(date, dias);
 }
 
-export function getProfessionalAutoBloqueios(params: {
+export function getProfessionalAutoBloqueios(_params: {
   profissionais: Profissional[];
   idSalao: string;
   config: ConfigSalao | null;
   profissionalId: string;
   date: string;
 }): Bloqueio[] {
-  const { profissionais, idSalao, config, profissionalId, date } = params;
-
-  const profissional = profissionais.find((p) => p.id === profissionalId);
-  if (!profissional || !idSalao || !config) return [];
-
-  const profissionalInfo = profissional as Profissional & {
-    dias_trabalho?: unknown;
-    pausas?: unknown;
-  };
-
-  const foraExpediente = buildForaExpedienteBloqueiosDoProfissional({
-    idSalao,
-    profissionalId,
-    date,
-    agendaInicio: normalizeTimeString(config.hora_abertura),
-    agendaFim: normalizeTimeString(config.hora_fechamento),
-    diasTrabalho: profissionalInfo.dias_trabalho,
-  });
-
-  const pausas = buildPausasBloqueiosDoProfissional({
-    idSalao,
-    profissionalId,
-    date,
-    pausas: profissionalInfo.pausas,
-  });
-
-  return mergeBloqueios([], [...foraExpediente, ...pausas]);
+  return [];
 }
 
 export function validateAgendaTimeRange(params: {
@@ -85,62 +54,27 @@ export function validateAgendaTimeRange(params: {
   } = params;
 
   if (!config) {
-    return { ok: false, message: "Configuração do salão não carregada." };
+    return { ok: false, message: "Configuracao do salao nao carregada." };
   }
 
   const salonStart = normalizeTimeString(config.hora_abertura);
   const salonEnd = normalizeTimeString(config.hora_fechamento);
 
   if (timeToMinutes(horaInicio) < timeToMinutes(salonStart)) {
-    return { ok: false, message: "Horário antes da abertura do salão." };
+    return { ok: false, message: "Horario antes da abertura do salao." };
   }
 
   if (timeToMinutes(horaFim) > timeToMinutes(salonEnd)) {
-    return { ok: false, message: "Horário após o fechamento do salão." };
+    return { ok: false, message: "Horario apos o fechamento do salao." };
   }
 
   const profissional = profissionais.find((p) => p.id === profissionalId);
   if (!profissional) {
-    return { ok: false, message: "Profissional não encontrado." };
+    return { ok: false, message: "Profissional nao encontrado." };
   }
 
-  const profissionalInfo = profissional as Profissional & {
-    dias_trabalho?: unknown;
-  };
-
-  const dateObj = new Date(`${date}T12:00:00`);
-  const horarioProfissional = getHorarioProfissionalNoDia(dateObj, profissionalInfo.dias_trabalho);
-
-  if (!horarioProfissional) {
-    return { ok: false, message: "Esse profissional não atende nesse dia." };
-  }
-
-  if (timeToMinutes(horaInicio) < timeToMinutes(horarioProfissional.inicio)) {
-    return {
-      ok: false,
-      message: "Horário antes do início de atendimento do profissional.",
-    };
-  }
-
-  if (timeToMinutes(horaFim) > timeToMinutes(horarioProfissional.fim)) {
-    return {
-      ok: false,
-      message: "Horário após o fim de atendimento do profissional.",
-    };
-  }
-
-  const bloqueiosAuto = getProfessionalAutoBloqueiosFn(profissionalId, date);
-
-  const bateEmBloqueioAuto = bloqueiosAuto.some((b) =>
-    overlaps(horaInicio, horaFim, b.hora_inicio, b.hora_fim)
-  );
-
-  if (bateEmBloqueioAuto) {
-    return {
-      ok: false,
-      message: "Esse horário entra em pausa ou fora do expediente do profissional.",
-    };
-  }
+  void date;
+  void getProfessionalAutoBloqueiosFn;
 
   return { ok: true, message: "" };
 }

@@ -1209,9 +1209,12 @@ export type Database = {
           id_usuario_fechamento: string | null
           observacoes: string | null
           status: string
+          tipo_fechamento: string | null
           updated_at: string
           valor_abertura: number
+          valor_diferenca_fechamento: number | null
           valor_fechamento_informado: number | null
+          valor_previsto_fechamento: number | null
         }
         Insert: {
           aberto_em?: string
@@ -1223,9 +1226,12 @@ export type Database = {
           id_usuario_fechamento?: string | null
           observacoes?: string | null
           status?: string
+          tipo_fechamento?: string | null
           updated_at?: string
           valor_abertura?: number
+          valor_diferenca_fechamento?: number | null
           valor_fechamento_informado?: number | null
+          valor_previsto_fechamento?: number | null
         }
         Update: {
           aberto_em?: string
@@ -1237,9 +1243,12 @@ export type Database = {
           id_usuario_fechamento?: string | null
           observacoes?: string | null
           status?: string
+          tipo_fechamento?: string | null
           updated_at?: string
           valor_abertura?: number
+          valor_diferenca_fechamento?: number | null
           valor_fechamento_informado?: number | null
+          valor_previsto_fechamento?: number | null
         }
         Relationships: []
       }

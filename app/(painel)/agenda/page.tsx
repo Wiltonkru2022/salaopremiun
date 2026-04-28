@@ -348,7 +348,7 @@ export default function AgendaPage() {
         success: true,
       });
 
-      router.push(`/caixa?comanda_id=${item.id_comanda}`);
+      openCashierWindow(`/caixa?comanda_id=${item.id_comanda}`);
       return;
     }
 
@@ -397,7 +397,7 @@ export default function AgendaPage() {
         success: true,
       });
 
-      router.push(`/caixa?comanda_id=${comanda.id}`);
+      openCashierWindow(`/caixa?comanda_id=${comanda.id}`);
     } catch (error) {
       console.error(error);
       abrirAviso(
@@ -432,7 +432,7 @@ export default function AgendaPage() {
 
       setCreditModalOpen(false);
       setCreditClienteId("");
-      router.push(`/caixa?comanda_id=${comanda.id}`);
+      openCashierWindow(`/caixa?comanda_id=${comanda.id}`);
     } catch (error) {
       console.error(error);
       abrirAviso(
@@ -635,6 +635,15 @@ export default function AgendaPage() {
       );
     })
     .slice(0, 12);
+  function openCashierWindow(href: string) {
+    if (typeof window === "undefined") {
+      router.push(href);
+      return;
+    }
+
+    window.open(href, "_blank", "noopener,noreferrer");
+  }
+
   const waitlistItems: AgendaWaitlistItem[] = agendamentos
     .filter((item) => item.status === "pendente")
     .sort((a, b) => {
@@ -1076,7 +1085,7 @@ export default function AgendaPage() {
               }}
               onOpenBlock={() => openBlockModal(defaultSlotDate, defaultSlotTime)}
               onOpenCredit={() => setCreditModalOpen(true)}
-              onOpenCashier={() => router.push("/caixa")}
+              onOpenCashier={() => openCashierWindow("/caixa")}
               onOpenClientSearch={() => {
                 setClientSearchQuery("");
                 setClientCreateOpen(false);

@@ -253,7 +253,7 @@ export default function ItemExtraForm({ modo }: ItemExtraFormProps) {
 
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
           <div className="space-y-6 xl:col-span-2">
-            <Card title="1. Dados do extra" subtitle="Nome, categoria e descrição">
+            <Card title="1. Dados do extra" subtitle="Informacoes principais do item adicional.">
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <Input
                   label="Nome"
@@ -278,7 +278,7 @@ export default function ItemExtraForm({ modo }: ItemExtraFormProps) {
               </div>
             </Card>
 
-            <Card title="2. Preço e custo" subtitle="Valores do item extra">
+            <Card title="2. Preco e custo" subtitle="Valores usados na cobranca do extra.">
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <Input
                   label="Preço de venda"
@@ -295,7 +295,7 @@ export default function ItemExtraForm({ modo }: ItemExtraFormProps) {
               </div>
             </Card>
 
-            <Card title="3. Estoque" subtitle="Controle opcional de estoque">
+            <Card title="3. Estoque" subtitle="Use apenas se esse extra consumir quantidade do estoque.">
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <Switch
                   label="Controla estoque"
@@ -314,7 +314,7 @@ export default function ItemExtraForm({ modo }: ItemExtraFormProps) {
           </div>
 
           <div className="space-y-6">
-            <Card title="Resumo" subtitle="Visão rápida">
+            <Card title="Resumo" subtitle="Visao rapida dos valores informados.">
               <div className="space-y-4">
                 <Info
                   label="Preço de venda"

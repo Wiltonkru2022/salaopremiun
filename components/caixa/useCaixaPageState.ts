@@ -43,6 +43,8 @@ export function useCaixaPageState() {
   const [caixaSchemaReady, setCaixaSchemaReady] = useState(true);
   const [caixaSchemaError, setCaixaSchemaError] = useState("");
   const [sessaoCaixa, setSessaoCaixa] = useState<CaixaSessao | null>(null);
+  const [ultimaSessaoFechadaCaixa, setUltimaSessaoFechadaCaixa] =
+    useState<CaixaSessao | null>(null);
   const [movimentacoesCaixa, setMovimentacoesCaixa] = useState<
     CaixaMovimentacao[]
   >([]);
@@ -168,6 +170,8 @@ export function useCaixaPageState() {
     setCaixaSchemaError,
     sessaoCaixa,
     setSessaoCaixa,
+    ultimaSessaoFechadaCaixa,
+    setUltimaSessaoFechadaCaixa,
     movimentacoesCaixa,
     setMovimentacoesCaixa,
     aba,

@@ -94,7 +94,7 @@ export default function AppShell({
     currentModuleId,
     onboardingSteps
   );
-  const hideShellChrome = pathname === "/agenda";
+  const hideShellChrome = pathname === "/agenda" || pathname === "/caixa";
   const onboardingHighlights = getPainelOnboardingHighlights(onboarding);
   const criticalNotificationsCount = shellNotifications.filter(
     (notification) => notification.critical

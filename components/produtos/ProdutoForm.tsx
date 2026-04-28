@@ -309,7 +309,7 @@ async function bootstrap() {
             {modo === "novo" ? "Novo Produto" : "Editar Produto"}
           </h1>
           <p className="mt-2 text-sm text-zinc-500">
-            Cadastro completo com estoque, custo real, revenda e fornecedor.
+            Cadastro simples com identificacao, valores, estoque e dados de compra.
           </p>
         </div>
 
@@ -346,7 +346,7 @@ async function bootstrap() {
 
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
           <div className="space-y-6 xl:col-span-2">
-            <Card title="1. Dados básicos" subtitle="Identificação do produto">
+            <Card title="1. Dados basicos" subtitle="Informacoes principais para identificar o produto.">
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <Input label="Nome do produto" value={produto.nome} onChange={(v) => setField("nome", v)} required />
                 <Input label="SKU" value={produto.sku} onChange={(v) => setField("sku", v)} />
@@ -398,7 +398,7 @@ async function bootstrap() {
               </div>
             </Card>
 
-            <Card title="2. Precificação e custos" subtitle="Onde o lucro mora">
+            <Card title="2. Valores e custos" subtitle="Preco de venda, custo e comissao de revenda.">
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <Input
                   label="Preço de custo"
@@ -448,7 +448,7 @@ async function bootstrap() {
               </div>
             </Card>
 
-            <Card title="3. Controle de estoque" subtitle="Para não faltar nem sobrar">
+            <Card title="3. Estoque" subtitle="Quantidade atual e limites de controle.">
               <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                 <Input
                   label="Estoque atual"
@@ -470,7 +470,7 @@ async function bootstrap() {
               </div>
             </Card>
 
-            <Card title="4. Fornecedor" subtitle="Para facilitar recompra">
+            <Card title="4. Fornecedor e observacoes" subtitle="Dados de compra e anotacoes do produto.">
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <Input
                   label="Fornecedor / distribuidor"
@@ -522,7 +522,7 @@ async function bootstrap() {
           </div>
 
           <div className="space-y-6">
-            <Card title="Resumo financeiro" subtitle="Cálculo automático">
+            <Card title="Resumo financeiro" subtitle="Valores calculados automaticamente.">
               <div className="space-y-4">
                 <Info label="Custo real" value={`R$ ${custoReal.toFixed(2)}`} />
                 <Info label="Margem de lucro" value={`${margem.toFixed(2)}%`} />
@@ -530,7 +530,7 @@ async function bootstrap() {
               </div>
             </Card>
 
-            <Card title="Status" subtitle="Controle do cadastro">
+            <Card title="Status" subtitle="Controle simples do cadastro.">
               <div className="space-y-4">
                 <Select
                   label="Status"

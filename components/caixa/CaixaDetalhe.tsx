@@ -85,20 +85,20 @@ export default function CaixaDetalhe({
 
   return (
     <div className="rounded-[28px] border border-zinc-200 bg-white p-5 shadow-sm">
-      <div className="space-y-5">
-        <div className={`rounded-[24px] border p-5 ${status.cardClass}`}>
-          <div className="flex flex-wrap items-start justify-between gap-4">
+      <div className="space-y-4">
+        <div className={`rounded-[24px] border p-4 ${status.cardClass}`}>
+          <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="max-w-2xl">
               <div className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
                 Comanda
               </div>
-              <div className="mt-2 flex flex-wrap items-center gap-3">
-                <h2 className="text-3xl font-bold text-zinc-950">#{comandaSelecionada.numero}</h2>
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <h2 className="text-2xl font-bold text-zinc-950">#{comandaSelecionada.numero}</h2>
                 <span className={`rounded-full border px-3 py-1 text-xs font-semibold uppercase ${status.badgeClass}`}>
                   {status.label}
                 </span>
               </div>
-              <div className="mt-2 text-sm text-zinc-600">{status.description}</div>
+              <div className="mt-1 text-sm text-zinc-600">{status.description}</div>
             </div>
 
             {podeEditar ? (
@@ -107,7 +107,7 @@ export default function CaixaDetalhe({
                   type="button"
                   onClick={onCancelarComanda}
                   disabled={saving}
-                  className="rounded-2xl border border-rose-200 bg-white px-4 py-3 text-sm font-semibold text-rose-700 transition hover:bg-rose-50 disabled:opacity-60"
+                  className="rounded-2xl border border-rose-200 bg-white px-4 py-2.5 text-sm font-semibold text-rose-700 transition hover:bg-rose-50 disabled:opacity-60"
                 >
                   Cancelar
                 </button>
@@ -115,7 +115,7 @@ export default function CaixaDetalhe({
                   type="button"
                   onClick={onFinalizarComanda}
                   disabled={saving || faltaReceber > 0}
-                  className="rounded-2xl bg-zinc-950 px-4 py-3 text-sm font-bold text-white transition hover:opacity-95 disabled:opacity-50"
+                  className="rounded-2xl bg-zinc-950 px-4 py-2.5 text-sm font-bold text-white transition hover:opacity-95 disabled:opacity-50"
                 >
                   Finalizar comanda
                 </button>
@@ -123,7 +123,7 @@ export default function CaixaDetalhe({
             ) : null}
           </div>
 
-          <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
             <HighlightCard
               label="Cliente"
               value={getJoinedName(comandaSelecionada.clientes, "Sem cliente")}
@@ -143,8 +143,15 @@ export default function CaixaDetalhe({
 
         {podeEditar ? (
           <div className="rounded-[24px] border border-zinc-200 bg-zinc-50 p-4">
-            <div className="mb-3 text-sm font-semibold text-zinc-800">
-              Lancar item manual
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <div className="text-sm font-semibold text-zinc-800">
+                  Lancar item manual
+                </div>
+                <div className="mt-1 text-sm text-zinc-500">
+                  Adicione servico, produto, extra ou ajuste sem sair da venda.
+                </div>
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
@@ -164,7 +171,7 @@ export default function CaixaDetalhe({
             </div>
           </div>
 
-          <div className="space-y-5 p-5">
+          <div className="space-y-4 p-5">
             {itensAgrupados.map((group) => (
               <section key={group.tipo} className="space-y-3">
                 <div className="flex items-center justify-between gap-3">
@@ -242,7 +249,7 @@ function HighlightCard({
       : "border-zinc-200 bg-white text-zinc-900";
 
   return (
-    <div className={`rounded-2xl border px-4 py-4 ${toneClass}`}>
+    <div className={`rounded-2xl border px-4 py-3.5 ${toneClass}`}>
       <div className="text-[11px] uppercase tracking-[0.14em] text-zinc-500">{label}</div>
       <div className="mt-2 text-sm font-semibold">{value}</div>
     </div>
@@ -319,7 +326,7 @@ function ItemCard({
         </div>
       </div>
 
-      <div className="mt-4 grid gap-3 md:grid-cols-4">
+      <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         <InfoPill label="Profissional" value={getJoinedName(item.profissionais, "-")} />
         <InfoPill label="Assistente" value={getJoinedName(item.assistente_ref, "-")} />
         <InfoPill label="Quantidade" value={String(Number(item.quantidade || 0))} />
@@ -327,7 +334,7 @@ function ItemCard({
       </div>
 
       {podeEditar ? (
-        <div className="mt-4 flex justify-end gap-2">
+        <div className="mt-3 flex justify-end gap-2">
           <button
             type="button"
             onClick={() => onEditarItem(item)}
@@ -353,7 +360,7 @@ function ItemCard({
 
 function InfoPill({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-2xl border border-zinc-200 bg-white px-3 py-3">
+    <div className="rounded-2xl border border-zinc-200 bg-white px-3 py-2.5">
       <div className="text-[11px] uppercase tracking-[0.14em] text-zinc-500">{label}</div>
       <div className="mt-1 text-sm font-semibold text-zinc-900">{value}</div>
     </div>

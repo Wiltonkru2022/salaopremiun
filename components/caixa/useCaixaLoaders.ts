@@ -53,6 +53,7 @@ type UseCaixaLoadersParams = {
   setCaixaSchemaReady: StateSetter<boolean>;
   setCaixaSchemaError: StateSetter<string>;
   setSessaoCaixa: StateSetter<CaixaSessao | null>;
+  setUltimaSessaoFechadaCaixa: StateSetter<CaixaSessao | null>;
   setMovimentacoesCaixa: StateSetter<CaixaMovimentacao[]>;
   setAba: StateSetter<AbaCaixa>;
   setComandasFila: StateSetter<ComandaFila[]>;
@@ -85,6 +86,7 @@ export function useCaixaLoaders({
   setCaixaSchemaReady,
   setCaixaSchemaError,
   setSessaoCaixa,
+  setUltimaSessaoFechadaCaixa,
   setMovimentacoesCaixa,
   setAba,
   setComandasFila,
@@ -177,6 +179,7 @@ export function useCaixaLoaders({
       setCaixaSchemaReady(resultado.schemaReady);
       setCaixaSchemaError(resultado.error || "");
       setSessaoCaixa(resultado.sessao);
+      setUltimaSessaoFechadaCaixa(resultado.ultimaSessaoFechada);
       setMovimentacoesCaixa(resultado.movimentacoes);
     },
     [
@@ -185,6 +188,7 @@ export function useCaixaLoaders({
       setCaixaSchemaReady,
       setCaixaSchemaError,
       setSessaoCaixa,
+      setUltimaSessaoFechadaCaixa,
       setMovimentacoesCaixa,
     ]
   );

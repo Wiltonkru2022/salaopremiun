@@ -11,8 +11,6 @@ import {
   ViewMode,
 } from "@/types/agenda";
 import {
-  buildForaExpedienteBloqueiosDoProfissional,
-  buildPausasBloqueiosDoProfissional,
   buildTimeSlots,
   formatDayLabel,
   formatFullDate,
@@ -611,30 +609,7 @@ export default function AgendaGrid({
               (b) => b.data === dayStr && b.profissional_id === selectedProfessional?.id
             );
 
-            const autoForaExpediente = selectedProfessional
-              ? buildForaExpedienteBloqueiosDoProfissional({
-                  idSalao: selectedProfessional.id_salao || "",
-                  profissionalId: selectedProfessional.id,
-                  date: dayStr,
-                  agendaInicio: startTime,
-                  agendaFim: endTime,
-                  diasTrabalho: selectedProfessional.dias_trabalho,
-                })
-              : [];
-
-            const autoPausas = selectedProfessional
-              ? buildPausasBloqueiosDoProfissional({
-                  idSalao: selectedProfessional.id_salao || "",
-                  profissionalId: selectedProfessional.id,
-                  date: dayStr,
-                  pausas: selectedProfessional.pausas,
-                })
-              : [];
-
-            const dayBloqueios = mergeBloqueios(baseBloqueios, [
-              ...autoForaExpediente,
-              ...autoPausas,
-            ]);
+            const dayBloqueios = mergeBloqueios(baseBloqueios, []);
 
             const positionedEvents = computeEventColumns(dayAgendamentos);
             const operationalSignals = new Map<string, OperationalSignal>();

@@ -7,9 +7,7 @@ import CaixaDetalhe from "@/components/caixa/CaixaDetalhe";
 import CaixaFila from "@/components/caixa/CaixaFila";
 import CaixaHeader from "@/components/caixa/CaixaHeader";
 import CaixaItemModal from "@/components/caixa/CaixaItemModal";
-import CaixaPagamentos from "@/components/caixa/CaixaPagamentos";
-import CaixaResumo from "@/components/caixa/CaixaResumo";
-import CaixaSessaoPanel from "@/components/caixa/CaixaSessaoPanel";
+import CaixaSidebar from "@/components/caixa/CaixaSidebar";
 import AppLoading from "@/components/ui/AppLoading";
 import ConfirmActionModal from "@/components/ui/ConfirmActionModal";
 import { useCaixaApi } from "@/components/caixa/useCaixaApi";
@@ -42,6 +40,8 @@ export default function CaixaPage() {
     setCaixaSchemaError,
     sessaoCaixa,
     setSessaoCaixa,
+    ultimaSessaoFechadaCaixa,
+    setUltimaSessaoFechadaCaixa,
     movimentacoesCaixa,
     setMovimentacoesCaixa,
     aba,
@@ -125,6 +125,7 @@ export default function CaixaPage() {
     setCaixaSchemaReady,
     setCaixaSchemaError,
     setSessaoCaixa,
+    setUltimaSessaoFechadaCaixa,
     setMovimentacoesCaixa,
     setAba,
     setComandasFila,
@@ -246,25 +247,14 @@ export default function CaixaPage() {
 
   return (
     <>
-      <div className="bg-white">
-        <div className="mx-auto max-w-[1700px] space-y-5">
+      <div className="min-h-screen bg-[#f4f5f7] text-[var(--app-ink)]">
+        <div className="mx-auto flex min-h-screen max-w-[1880px] gap-5 p-4 xl:items-start">
+          <div className="min-w-0 flex-1 space-y-5">
           <CaixaHeader
             agendamentosPendentes={agendamentosFila.length}
             comandasAtivas={comandasFila.length}
             comandasFechadasHoje={comandasFechadas.length}
             totalEmAberto={comandasFila.length + agendamentosFila.length}
-          />
-
-          <CaixaSessaoPanel
-            sessao={sessaoCaixa}
-            movimentacoes={movimentacoesCaixa}
-            schemaReady={caixaSchemaReady}
-            schemaError={caixaSchemaError}
-            profissionais={profissionaisCatalogo}
-            saving={saving || !podeOperarCaixa}
-            onAbrirCaixa={(payload) => void abrirCaixa(payload)}
-            onFecharCaixa={(payload) => void fecharCaixa(payload)}
-            onLancamento={(payload) => void lancarMovimentoCaixa(payload)}
           />
 
           {!podeOperarCaixa ? (
@@ -285,7 +275,7 @@ export default function CaixaPage() {
             </div>
           ) : null}
 
-          <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-[360px_minmax(0,1fr)_380px]">
+          <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-[340px_minmax(0,1fr)]">
             <CaixaFila
               aba={aba}
               setAba={setAba}
@@ -314,40 +304,47 @@ export default function CaixaPage() {
               onEditarItem={abrirModalEditarItem}
               onRemoverItem={setItemParaRemover}
             />
+          </div>
+          </div>
 
-            <div className="space-y-5 xl:sticky xl:top-6 xl:max-h-[calc(100vh-3rem)] xl:overflow-y-auto xl:pr-1">
-              <CaixaResumo
-                comandaSelecionada={comandaSelecionada}
-                descontoInput={descontoInput}
-                acrescimoInput={acrescimoInput}
-                setDescontoInput={setDescontoInput}
-                setAcrescimoInput={setAcrescimoInput}
-                onSalvar={salvarDescontoAcrescimo}
-                saving={saving || !podeEditarCaixa}
-              />
-
-              <CaixaPagamentos
-                comandaSelecionada={comandaSelecionada}
-                repassaTaxaCliente={Boolean(configCaixa?.repassa_taxa_cliente)}
-                pagamentos={pagamentos}
-                formaPagamento={formaPagamento}
-                setFormaPagamento={setFormaPagamento}
-                valorPagamento={valorPagamento}
-                setValorPagamento={setValorPagamento}
-                parcelas={parcelas}
-                setParcelas={setParcelas}
-                taxaPercentual={taxaPercentual}
-                setTaxaPercentual={setTaxaPercentual}
-                observacaoPagamento={observacaoPagamento}
-                setObservacaoPagamento={setObservacaoPagamento}
-                totalPago={totalPago}
-                faltaReceber={faltaReceber}
-                troco={troco}
-                saving={saving || !podeGerenciarPagamentos}
-                onAdicionarPagamento={adicionarPagamento}
-                onRemoverPagamento={removerPagamento}
-              />
-            </div>
+          <div className="min-h-0 xl:sticky xl:top-4 xl:max-h-[calc(100vh-2rem)]">
+            <CaixaSidebar
+              comandaSelecionada={comandaSelecionada}
+              configCaixa={configCaixa}
+              pagamentos={pagamentos}
+              formaPagamento={formaPagamento}
+              setFormaPagamento={setFormaPagamento}
+              valorPagamento={valorPagamento}
+              setValorPagamento={setValorPagamento}
+              parcelas={parcelas}
+              setParcelas={setParcelas}
+              taxaPercentual={taxaPercentual}
+              setTaxaPercentual={setTaxaPercentual}
+              observacaoPagamento={observacaoPagamento}
+              setObservacaoPagamento={setObservacaoPagamento}
+              totalPago={totalPago}
+              faltaReceber={faltaReceber}
+              troco={troco}
+              descontoInput={descontoInput}
+              setDescontoInput={setDescontoInput}
+              acrescimoInput={acrescimoInput}
+              setAcrescimoInput={setAcrescimoInput}
+              saving={saving}
+              podeEditarCaixa={podeEditarCaixa}
+              podeGerenciarPagamentos={podeGerenciarPagamentos}
+              onSalvarResumo={salvarDescontoAcrescimo}
+              onAdicionarPagamento={adicionarPagamento}
+              onRemoverPagamento={removerPagamento}
+              sessao={sessaoCaixa || ultimaSessaoFechadaCaixa}
+              movimentacoes={movimentacoesCaixa}
+              schemaReady={caixaSchemaReady}
+              schemaError={caixaSchemaError}
+              profissionais={profissionaisCatalogo}
+              podeOperarCaixa={podeOperarCaixa}
+              onAbrirCaixa={(payload) => void abrirCaixa(payload)}
+              onFecharCaixa={(payload) => void fecharCaixa(payload)}
+              onLancamento={(payload) => void lancarMovimentoCaixa(payload)}
+            />
           </div>
         </div>
       </div>

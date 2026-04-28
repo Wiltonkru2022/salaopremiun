@@ -3,6 +3,10 @@ import { createClient } from "@/lib/supabase/client";
 type CaixaSupabaseClient = ReturnType<typeof createClient>;
 
 export type CaixaSessaoStatus = "aberto" | "fechado";
+export type CaixaFechamentoTipo = "confere" | "sobra" | "quebra";
+
+const CAIXA_SESSAO_SELECT =
+  "aberto_em, created_at, fechado_em, id, id_salao, id_usuario_abertura, id_usuario_fechamento, observacoes, status, tipo_fechamento, updated_at, valor_abertura, valor_diferenca_fechamento, valor_fechamento_informado, valor_previsto_fechamento";
 
 export type CaixaSessao = {
   id: string;
@@ -10,7 +14,10 @@ export type CaixaSessao = {
   id_usuario_abertura?: string | null;
   id_usuario_fechamento?: string | null;
   status: CaixaSessaoStatus;
+  tipo_fechamento?: CaixaFechamentoTipo | null;
   valor_abertura: number;
+  valor_previsto_fechamento?: number | null;
+  valor_diferenca_fechamento?: number | null;
   valor_fechamento_informado?: number | null;
   observacoes?: string | null;
   aberto_em?: string | null;
@@ -43,6 +50,7 @@ export type CaixaMovimentacao = {
 export type CaixaSessaoLoadResult = {
   schemaReady: boolean;
   sessao: CaixaSessao | null;
+  ultimaSessaoFechada: CaixaSessao | null;
   movimentacoes: CaixaMovimentacao[];
   error?: string;
 };
@@ -72,7 +80,7 @@ export async function carregarSessaoCaixa(
 ): Promise<CaixaSessaoLoadResult> {
   const { data: sessao, error } = await supabase
     .from("caixa_sessoes")
-    .select("aberto_em, created_at, fechado_em, id, id_salao, id_usuario_abertura, id_usuario_fechamento, observacoes, status, updated_at, valor_abertura, valor_fechamento_informado")
+    .select(CAIXA_SESSAO_SELECT)
     .eq("id_salao", idSalao)
     .eq("status", "aberto")
     .order("aberto_em", { ascending: false })
@@ -84,6 +92,7 @@ export async function carregarSessaoCaixa(
       return {
         schemaReady: false,
         sessao: null,
+        ultimaSessaoFechada: null,
         movimentacoes: [],
         error:
           "A migration de caixa operacional ainda nao foi aplicada no Supabase.",
@@ -94,11 +103,7 @@ export async function carregarSessaoCaixa(
   }
 
   if (!sessao?.id) {
-    return {
-      schemaReady: true,
-      sessao: null,
-      movimentacoes: [],
-    };
+    return carregarUltimaSessaoFechada(supabase, idSalao);
   }
 
   const { data: movimentacoes, error: movimentacoesError } = await supabase
@@ -114,6 +119,7 @@ export async function carregarSessaoCaixa(
       return {
         schemaReady: false,
         sessao: null,
+        ultimaSessaoFechada: null,
         movimentacoes: [],
         error:
           "A migration de caixa operacional ainda nao foi aplicada no Supabase.",
@@ -126,7 +132,44 @@ export async function carregarSessaoCaixa(
   return {
     schemaReady: true,
     sessao: sessao as CaixaSessao,
+    ultimaSessaoFechada: null,
     movimentacoes: (movimentacoes as CaixaMovimentacao[]) || [],
+  };
+}
+
+async function carregarUltimaSessaoFechada(
+  supabase: CaixaSupabaseClient,
+  idSalao: string
+) {
+  const { data, error } = await supabase
+    .from("caixa_sessoes")
+    .select(CAIXA_SESSAO_SELECT)
+    .eq("id_salao", idSalao)
+    .eq("status", "fechado")
+    .order("fechado_em", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    if (isMissingOperationalSchema(error)) {
+      return {
+        schemaReady: false as const,
+        sessao: null,
+        ultimaSessaoFechada: null,
+        movimentacoes: [],
+        error:
+          "A migration de caixa operacional ainda nao foi aplicada no Supabase.",
+      };
+    }
+
+    throw error;
+  }
+
+  return {
+    schemaReady: true as const,
+    sessao: null,
+    ultimaSessaoFechada: (data as CaixaSessao | null) || null,
+    movimentacoes: [],
   };
 }
 
@@ -152,7 +195,7 @@ export async function abrirSessaoCaixa({
       observacoes: observacoes || null,
       status: "aberto",
     })
-    .select("aberto_em, created_at, fechado_em, id, id_salao, id_usuario_abertura, id_usuario_fechamento, observacoes, status, updated_at, valor_abertura, valor_fechamento_informado")
+    .select(CAIXA_SESSAO_SELECT)
     .maybeSingle();
 
   if (error) throw error;
@@ -184,7 +227,7 @@ export async function fecharSessaoCaixa({
     })
     .eq("id", idSessao)
     .eq("status", "aberto")
-    .select("aberto_em, created_at, fechado_em, id, id_salao, id_usuario_abertura, id_usuario_fechamento, observacoes, status, updated_at, valor_abertura, valor_fechamento_informado")
+    .select(CAIXA_SESSAO_SELECT)
     .maybeSingle();
 
   if (error) throw error;

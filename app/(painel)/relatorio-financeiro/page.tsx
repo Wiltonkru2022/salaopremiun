@@ -64,6 +64,19 @@ type ComissaoRow = {
   pago_em?: string | null;
 };
 
+type CaixaSessaoResumoRow = {
+  id: string;
+  status: string;
+  aberto_em?: string | null;
+  fechado_em?: string | null;
+  valor_abertura?: number | null;
+  valor_previsto_fechamento?: number | null;
+  valor_fechamento_informado?: number | null;
+  valor_diferenca_fechamento?: number | null;
+  tipo_fechamento?: string | null;
+  observacoes?: string | null;
+};
+
 type ResumoFinanceiro = {
   faturamentoBruto: number;
   descontos: number;
@@ -76,6 +89,14 @@ type ResumoFinanceiro = {
   canceladas: number;
   quantidadeVendas: number;
   ticketMedio: number;
+};
+
+type ResumoCaixa = {
+  sessoesFechadas: number;
+  previstoFechamento: number;
+  contadoFechamento: number;
+  quebraTotal: number;
+  sobraTotal: number;
 };
 
 type StatusFiltro = "fechada" | "cancelada" | "todos";
@@ -200,6 +221,7 @@ export default function RelatorioFinanceiroPage() {
   const [comandas, setComandas] = useState<ComandaRow[]>([]);
   const [pagamentos, setPagamentos] = useState<PagamentoRow[]>([]);
   const [comissoes, setComissoes] = useState<ComissaoRow[]>([]);
+  const [caixaSessoes, setCaixaSessoes] = useState<CaixaSessaoResumoRow[]>([]);
 
   const carregarRelatorio = useCallback(
     async (salaoIdParam?: string) => {
@@ -262,6 +284,34 @@ export default function RelatorioFinanceiroPage() {
 
         const listaComandas = (comandasData as ComandaRow[]) || [];
         setComandas(listaComandas);
+
+        const { data: caixaSessoesData, error: caixaSessoesError } = await supabase
+          .from("caixa_sessoes")
+          .select(`
+            id,
+            status,
+            aberto_em,
+            fechado_em,
+            valor_abertura,
+            valor_previsto_fechamento,
+            valor_fechamento_informado,
+            valor_diferenca_fechamento,
+            tipo_fechamento,
+            observacoes
+          `)
+          .eq("id_salao", salaoId)
+          .eq("status", "fechado")
+          .gte("fechado_em", dataInicioRange.startIso)
+          .lte("fechado_em", dataFimRange.endIso)
+          .order("fechado_em", { ascending: false });
+
+        if (caixaSessoesError) {
+          console.error(caixaSessoesError);
+          setErroTela("Erro ao carregar fechamentos do caixa.");
+          return;
+        }
+
+        setCaixaSessoes((caixaSessoesData as CaixaSessaoResumoRow[]) || []);
 
         const idsComandas = listaComandas.map((item) => item.id);
 
@@ -478,6 +528,40 @@ export default function RelatorioFinanceiroPage() {
     return Array.from(mapa.values()).sort((a, b) => b.total - a.total);
   }, [pagamentosFiltrados]);
 
+  const resumoCaixa = useMemo<ResumoCaixa>(() => {
+    const previstoFechamento = caixaSessoes.reduce(
+      (acc, item) => acc + Number(item.valor_previsto_fechamento || 0),
+      0
+    );
+
+    const contadoFechamento = caixaSessoes.reduce(
+      (acc, item) => acc + Number(item.valor_fechamento_informado || 0),
+      0
+    );
+
+    const quebraTotal = caixaSessoes
+      .filter((item) => item.tipo_fechamento === "quebra")
+      .reduce(
+        (acc, item) => acc + Math.abs(Number(item.valor_diferenca_fechamento || 0)),
+        0
+      );
+
+    const sobraTotal = caixaSessoes
+      .filter((item) => item.tipo_fechamento === "sobra")
+      .reduce(
+        (acc, item) => acc + Math.abs(Number(item.valor_diferenca_fechamento || 0)),
+        0
+      );
+
+    return {
+      sessoesFechadas: caixaSessoes.length,
+      previstoFechamento,
+      contadoFechamento,
+      quebraTotal,
+      sobraTotal,
+    };
+  }, [caixaSessoes]);
+
   if (loading) {
     return (
       <AppLoading
@@ -669,6 +753,34 @@ export default function RelatorioFinanceiroPage() {
           />
         </div>
 
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-5">
+          <KpiCard
+            icon={<Wallet size={18} />}
+            label="Fechamentos de caixa"
+            value={String(resumoCaixa.sessoesFechadas)}
+          />
+          <KpiCard
+            icon={<Receipt size={18} />}
+            label="Previsto no fechamento"
+            value={formatCurrency(resumoCaixa.previstoFechamento)}
+          />
+          <KpiCard
+            icon={<BadgeDollarSign size={18} />}
+            label="Contado no fechamento"
+            value={formatCurrency(resumoCaixa.contadoFechamento)}
+          />
+          <KpiCard
+            icon={<ShieldAlert size={18} />}
+            label="Quebra de caixa"
+            value={formatCurrency(resumoCaixa.quebraTotal)}
+          />
+          <KpiCard
+            icon={<CreditCard size={18} />}
+            label="Sobra de caixa"
+            value={formatCurrency(resumoCaixa.sobraTotal)}
+          />
+        </div>
+
         <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1.2fr_0.8fr]">
           <div className="overflow-hidden rounded-[28px] border border-zinc-200 bg-white shadow-sm">
             <div className="border-b border-zinc-200 px-5 py-4">
@@ -830,3 +942,4 @@ export default function RelatorioFinanceiroPage() {
     </div>
   );
 }
+

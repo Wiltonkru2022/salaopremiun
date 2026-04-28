@@ -114,6 +114,7 @@ export const painelNavigationItems: PainelNavItem[] = [
     description: "Fechamento de comanda e recebimentos.",
     icon: Wallet,
     permissionKey: "caixa_ver",
+    openInNewTab: true,
   },
   {
     href: "/comissoes",

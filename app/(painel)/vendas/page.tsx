@@ -446,7 +446,15 @@ export default function VendasPage() {
       await carregarVendas();
 
       if (!avisoEstoque) {
-        router.push(`/caixa?comanda_id=${vendaSelecionada.id}`);
+        if (typeof window === "undefined") {
+          router.push(`/caixa?comanda_id=${vendaSelecionada.id}`);
+        } else {
+          window.open(
+            `/caixa?comanda_id=${vendaSelecionada.id}`,
+            "_blank",
+            "noopener,noreferrer"
+          );
+        }
       }
     } catch (error: unknown) {
       console.error(error);

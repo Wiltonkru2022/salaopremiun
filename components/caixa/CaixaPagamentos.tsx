@@ -40,6 +40,7 @@ type Props = {
   saving: boolean;
   onAdicionarPagamento: () => void;
   onRemoverPagamento: (idPagamento: string) => void;
+  showRulesCard?: boolean;
 };
 
 export default function CaixaPagamentos({
@@ -62,6 +63,7 @@ export default function CaixaPagamentos({
   saving,
   onAdicionarPagamento,
   onRemoverPagamento,
+  showRulesCard = true,
 }: Props) {
   const valorBaseDigitado = parseMoney(valorPagamento);
   const taxaPercentualNumero = parseMoney(taxaPercentual);
@@ -285,25 +287,27 @@ export default function CaixaPagamentos({
         </div>
       </div>
 
-      <div className="rounded-[28px] border border-zinc-200 bg-white p-5 shadow-sm">
-        <div className="mb-3 flex items-center gap-2 text-zinc-800">
-          <User2 size={16} />
-          <div className="font-semibold">Regras do fechamento</div>
-        </div>
+      {showRulesCard ? (
+        <div className="rounded-[28px] border border-zinc-200 bg-white p-5 shadow-sm">
+          <div className="mb-3 flex items-center gap-2 text-zinc-800">
+            <User2 size={16} />
+            <div className="font-semibold">Regras do fechamento</div>
+          </div>
 
-        <div className="space-y-2 text-sm leading-6 text-zinc-500">
-          <p>O total dos pagamentos precisa bater com o total da comanda.</p>
-          <p>
-            Ao finalizar, o sistema baixa estoque, gera comissao e encerra os
-            agendamentos vinculados.
-          </p>
-          <p>Agendamento sem comanda vira comanda automatica ao abrir no caixa.</p>
-          <p>
-            A taxa da maquininha segue a configuracao do salao e o valor mostrado
-            no painel de pagamento.
-          </p>
+          <div className="space-y-2 text-sm leading-6 text-zinc-500">
+            <p>O total dos pagamentos precisa bater com o total da comanda.</p>
+            <p>
+              Ao finalizar, o sistema baixa estoque, gera comissao e encerra os
+              agendamentos vinculados.
+            </p>
+            <p>Agendamento sem comanda vira comanda automatica ao abrir no caixa.</p>
+            <p>
+              A taxa da maquininha segue a configuracao do salao e o valor mostrado
+              no painel de pagamento.
+            </p>
+          </div>
         </div>
-      </div>
+      ) : null}
     </>
   );
 }

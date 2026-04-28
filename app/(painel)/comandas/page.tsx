@@ -319,6 +319,8 @@ export default function ComandasPage() {
                 </Link>
                 <Link
                   href="/caixa"
+                  target="_blank"
+                  rel="noreferrer"
                   className="inline-flex items-center justify-center rounded-2xl border border-zinc-200 bg-white px-5 py-3 text-sm font-bold text-zinc-800 transition hover:bg-zinc-50"
                 >
                   Ir para o caixa

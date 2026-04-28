@@ -15,24 +15,26 @@ export default function CaixaHeader({
   totalEmAberto,
 }: Props) {
   return (
-    <div className="overflow-hidden rounded-[28px] border border-zinc-200 bg-white shadow-sm">
-      <div className="border-b border-zinc-200 bg-white px-6 py-6 text-zinc-950">
+    <div className="overflow-hidden rounded-[32px] border border-white/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(250,251,255,0.96)_100%)] shadow-[0_24px_80px_rgba(15,23,42,0.09)]">
+      <div className="border-b border-zinc-200/80 px-6 py-6 text-zinc-950">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="max-w-2xl">
-            <div className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-500">
-              Operacao do salao
+            <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-zinc-400">
+              Workspace do caixa
             </div>
-            <h1 className="mt-2 text-3xl font-bold">Caixa</h1>
-            <p className="mt-2 text-sm text-zinc-500">
-              Atendimento, cobranca, pagamento e fechamento em um fluxo mais claro.
+            <h1 className="mt-2 text-[2.35rem] font-semibold text-slate-900">
+              Caixa
+            </h1>
+            <p className="mt-2 text-sm leading-6 text-zinc-500">
+              Receba, revise e feche vendas em uma tela feita para operacao rapida.
             </p>
           </div>
 
-          <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-right">
-            <div className="text-xs uppercase tracking-[0.18em] text-zinc-500">
-              Movimento agora
+          <div className="rounded-[24px] border border-zinc-200 bg-white px-4 py-3 text-right shadow-[0_14px_36px_rgba(15,23,42,0.05)]">
+            <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-400">
+              Em andamento agora
             </div>
-            <div className="mt-1 text-2xl font-bold">{totalEmAberto}</div>
+            <div className="mt-1 text-2xl font-bold text-zinc-950">{totalEmAberto}</div>
           </div>
         </div>
       </div>
@@ -80,7 +82,7 @@ function StatCard({
       : "border-zinc-200 bg-zinc-50 text-zinc-900";
 
   return (
-    <div className={`rounded-2xl border px-4 py-4 ${toneClass}`}>
+    <div className={`rounded-[24px] border px-4 py-4 ${toneClass}`}>
       <div className="flex items-center gap-2 text-sm font-medium">
         {icon}
         <span>{label}</span>

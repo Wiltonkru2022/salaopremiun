@@ -618,7 +618,7 @@ export default function ServicoForm({ modo }: ServicoFormProps) {
             {modo === "novo" ? "Novo Servico" : "Editar Servico"}
           </h1>
           <p className="mt-2 text-sm text-zinc-500">
-            Cadastro completo de servico com agenda, preco, comissao e consumo.
+            Cadastro do servico com informacoes de atendimento, valores e regras de comissao.
           </p>
           <p className="mt-2 text-xs font-medium text-zinc-500">
             Comece pelos dados basicos e abra as demais secoes conforme precisar.
