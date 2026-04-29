@@ -39,12 +39,6 @@ type RpcShellResumo = {
     status?: string | null;
     ultima_interacao_em?: string | null;
   }>;
-  onboarding?: {
-    score_total?: number | null;
-    dias_com_acesso?: number | null;
-    modulos_usados?: number | null;
-    detalhes_json?: Record<string, unknown> | null;
-  };
 };
 
 type PermissoesDbRow = Record<string, boolean | string | null>;
@@ -130,25 +124,12 @@ export async function loadPainelShellData() {
       })
     : null;
 
-  const onboardingSeguro = rpc.onboarding
-    ? {
-        score_total: rpc.onboarding.score_total,
-        dias_com_acesso: rpc.onboarding.dias_com_acesso,
-        modulos_usados: rpc.onboarding.modulos_usados,
-        detalhes_json:
-          rpc.onboarding.detalhes_json &&
-          typeof rpc.onboarding.detalhes_json === "object"
-            ? rpc.onboarding.detalhes_json
-            : {},
-      }
-    : null;
-
   const notifications = buildShellNotifications({
     resumoAssinatura,
     clientes: [],
     agendamentos: [],
     movimentosCaixa: [],
-    onboarding: onboardingSeguro,
+    onboarding: null,
     tickets: rpc.tickets ?? [],
   });
 
@@ -167,14 +148,6 @@ export async function loadPainelShellData() {
       planoNome: rpc.assinatura?.plano || rpc.salao?.plano || "Sem plano",
       assinaturaStatus: rpc.assinatura?.status || rpc.salao?.status || null,
       resumoAssinatura,
-      onboarding: onboardingSeguro
-        ? {
-            scoreTotal: onboardingSeguro.score_total,
-            diasComAcesso: onboardingSeguro.dias_com_acesso,
-            modulosUsados: onboardingSeguro.modulos_usados,
-            detalhes: onboardingSeguro.detalhes_json || {},
-          }
-        : null,
       notifications,
     },
   };

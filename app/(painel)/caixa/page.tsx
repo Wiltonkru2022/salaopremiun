@@ -210,6 +210,36 @@ export default function CaixaPage() {
   }, [requestedComandaId, requestedAgendamentoId]);
 
   useEffect(() => {
+    if (!acessoCarregado || !idSalao || loading || saving) {
+      return;
+    }
+
+    const interval = window.setInterval(() => {
+      if (document.visibilityState !== "visible") {
+        return;
+      }
+
+      void carregarTudo(idSalao);
+      void carregarSessaoOperacional(idSalao);
+
+      if (comandaSelecionada?.id) {
+        void aplicarDetalheComanda(comandaSelecionada.id);
+      }
+    }, 8000);
+
+    return () => window.clearInterval(interval);
+  }, [
+    acessoCarregado,
+    idSalao,
+    loading,
+    saving,
+    carregarTudo,
+    carregarSessaoOperacional,
+    aplicarDetalheComanda,
+    comandaSelecionada?.id,
+  ]);
+
+  useEffect(() => {
     if (!requestedAgendamentoId || !acessoCarregado || !caixaAberto || loading) {
       return;
     }

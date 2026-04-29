@@ -21,6 +21,59 @@ import {
   removeAppProfissionalPrefix,
 } from "@/lib/proxy/host-rules";
 
+function hasSupabaseAuthCookies(request: NextRequest) {
+  return request.cookies
+    .getAll()
+    .some(
+      (cookie) =>
+        cookie.name.includes("auth-token") ||
+        cookie.name.includes("access-token") ||
+        cookie.name.includes("refresh-token")
+    );
+}
+
+function handleUnauthenticatedRoute(
+  request: NextRequest,
+  ctx: ReturnType<typeof buildProxyRouteContext>
+) {
+  if (ctx.rotaPainel) {
+    if (!ctx.isLoginHost) {
+      return redirectToHost(request, DOMINIO_LOGIN, "/login");
+    }
+
+    return NextResponse.next();
+  }
+
+  if (ctx.rotaAdminMasterProtegida) {
+    return redirectToAdminMasterLogin(
+      request,
+      `${ctx.pathnameNormalizado}${request.nextUrl.search}`
+    );
+  }
+
+  if (ctx.rotaAdminMasterLogin) {
+    return NextResponse.next();
+  }
+
+  if (ctx.rotaAssinatura) {
+    if (!ctx.isAssinaturaHost) {
+      return redirectToHost(request, DOMINIO_ASSINATURA, "/assinatura");
+    }
+
+    return NextResponse.next();
+  }
+
+  if (ctx.rotaAutenticacao) {
+    if (!ctx.isLoginHost) {
+      return redirectToHost(request, DOMINIO_LOGIN, ctx.pathnameNormalizado);
+    }
+
+    return NextResponse.next();
+  }
+
+  return null;
+}
+
 function handlePublicHostRouting(ctx: ReturnType<typeof buildProxyRouteContext>) {
   const { request, pathnameNormalizado } = ctx;
 
@@ -213,6 +266,14 @@ export async function proxy(request: NextRequest) {
 
   if (!getProxySupabaseConfig()) {
     return NextResponse.next();
+  }
+
+  const unauthenticatedResponse = !hasSupabaseAuthCookies(request)
+    ? handleUnauthenticatedRoute(request, ctx)
+    : null;
+
+  if (unauthenticatedResponse) {
+    return unauthenticatedResponse;
   }
 
   const response = NextResponse.next({ request });

@@ -276,6 +276,75 @@ export async function sincronizarAgendamentoComComanda(params: SincronizarParams
     profissional,
   } = params;
 
+  const { data: agendamentoAtual, error: agendamentoAtualError } = await supabase
+    .from("agendamentos")
+    .select("id, id_comanda")
+    .eq("id", idAgendamento)
+    .eq("id_salao", idSalao)
+    .maybeSingle();
+
+  if (agendamentoAtualError) {
+    console.error(
+      "Erro ao buscar agendamento antes de sincronizar comanda:",
+      agendamentoAtualError
+    );
+    throw new Error("Erro ao validar o vinculo atual da comanda.");
+  }
+
+  let comandaDestino:
+    | {
+        id: string;
+        status: string | null;
+      }
+    | null = null;
+
+  if (idComandaNova) {
+    const { data: comanda, error: comandaError } = await supabase
+      .from("comandas")
+      .select("id, status")
+      .eq("id", idComandaNova)
+      .eq("id_salao", idSalao)
+      .maybeSingle();
+
+    if (comandaError) {
+      console.error("Erro ao validar comanda de destino:", comandaError);
+      throw new Error("Erro ao validar comanda de destino.");
+    }
+
+    if (!comanda?.id) {
+      throw new Error("Comanda de destino nao encontrada.");
+    }
+
+    const statusComanda = String(comanda.status || "").toLowerCase();
+
+    if (statusComanda === "fechada") {
+      if (agendamentoAtual?.id_comanda === idComandaNova) {
+        const { error: clearAgendamentoError } = await supabase
+          .from("agendamentos")
+          .update({
+            id_comanda: null,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", idAgendamento)
+          .eq("id_salao", idSalao);
+
+        if (clearAgendamentoError) {
+          console.error(
+            "Erro ao limpar vinculo do agendamento com comanda fechada:",
+            clearAgendamentoError
+          );
+          throw new Error("Erro ao desvincular a comanda ja fechada.");
+        }
+
+        return;
+      }
+
+      throw new Error("A comanda selecionada ja foi fechada.");
+    }
+
+    comandaDestino = comanda;
+  }
+
   const comandasAntigasAfetadas = await removerAgendamentoDaComandaSemCancelar({
     supabase,
     idSalao,
@@ -320,28 +389,12 @@ export async function sincronizarAgendamentoComComanda(params: SincronizarParams
     vinculo,
   });
   const camposComissao = criarCamposAplicacaoComissao(regraServico);
-
-  const { data: comanda, error: comandaError } = await supabase
-    .from("comandas")
-    .select("id, status")
-    .eq("id", idComandaNova)
-    .eq("id_salao", idSalao)
-    .maybeSingle();
-
-  if (comandaError) {
-    console.error("Erro ao validar comanda de destino:", comandaError);
-    throw new Error("Erro ao validar comanda de destino.");
-  }
-
+  const comanda = comandaDestino;
   if (!comanda?.id) {
     throw new Error("Comanda de destino nao encontrada.");
   }
 
   const statusComanda = String(comanda.status || "").toLowerCase();
-
-  if (statusComanda === "fechada") {
-    throw new Error("A comanda selecionada nao pode receber itens.");
-  }
 
   if (statusComanda === "cancelada") {
     const { error: reabrirError } = await supabase

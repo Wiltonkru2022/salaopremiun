@@ -82,6 +82,7 @@ export default function ComandaItemModal({
   const [idProfissional, setIdProfissional] = useState("");
   const [idAssistente, setIdAssistente] = useState("");
   const [observacoes, setObservacoes] = useState("");
+  const [erro, setErro] = useState("");
 
   const servicoSelecionado = useMemo(
     () => servicos.find((s) => s.id === idServico),
@@ -127,14 +128,33 @@ export default function ComandaItemModal({
     }
   }, [assistentesDoProfissional, idAssistente]);
 
+  useEffect(() => {
+    if (open) {
+      setErro("");
+    }
+  }, [open]);
+
   if (!open) return null;
 
   async function handleSave() {
     try {
       setSaving(true);
+      setErro("");
 
       const quantidadeNumero = Number(quantidade || 1);
       const valorUnitarioNumero = parseMoneyToNumber(valorUnitario);
+
+      if (tipoItem === "servico" && !idServico) {
+        throw new Error("Selecione um servico antes de adicionar.");
+      }
+
+      if (tipoItem === "produto" && !idProduto) {
+        throw new Error("Selecione um produto antes de adicionar.");
+      }
+
+      if (tipoItem === "extra" && !String(descricao || "").trim()) {
+        throw new Error("Informe a descricao do item manual.");
+      }
 
       let payload: ComandaItemModalPayload = {
         tipo_item: tipoItem,
@@ -184,6 +204,12 @@ export default function ComandaItemModal({
 
       await onSave(payload);
       onClose();
+    } catch (error) {
+      setErro(
+        error instanceof Error && error.message
+          ? error.message
+          : "Nao foi possivel adicionar o item."
+      );
     } finally {
       setSaving(false);
     }
@@ -241,6 +267,12 @@ export default function ComandaItemModal({
       }
     >
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          {erro ? (
+            <div className="md:col-span-2 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+              {erro}
+            </div>
+          ) : null}
+
           <div className="md:col-span-2">
             <label className="mb-1 block text-sm font-semibold text-zinc-700">Tipo</label>
             <select

@@ -28,7 +28,6 @@ export default async function PainelLayout({
       planoNome={data.planoNome}
       assinaturaStatus={data.assinaturaStatus}
       resumoAssinatura={data.resumoAssinatura}
-      onboarding={data.onboarding}
       notifications={data.notifications}
     >
       {children}

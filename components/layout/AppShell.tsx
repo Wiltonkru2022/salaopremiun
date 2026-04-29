@@ -1,40 +1,18 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import Header from "@/components/layout/Header";
-import HelpDrawer from "@/components/layout/HelpDrawer";
 import Sidebar from "@/components/layout/Sidebar";
-import GuidedOnboarding from "@/components/layout/GuidedOnboarding";
 import MonitoringContextBridge from "@/components/monitoring/MonitoringContextBridge";
 import type { Permissoes } from "@/components/layout/navigation";
 import type { ResumoAssinatura } from "@/lib/assinatura-utils";
 import type {
   ShellNotification,
-  ShellNotificationsResponse,
 } from "@/lib/notifications/contracts";
-import {
-  getPainelOnboardingModuleId,
-  getPainelOnboardingHighlights,
-  getPainelOnboardingStepByModule,
-  getPainelOnboardingStepIndexForPath,
-  getPainelOnboardingSteps,
-  type PainelOnboardingSnapshot,
-} from "@/lib/onboarding/painel-guide";
 import { createClient } from "@/lib/supabase/client";
 import { clearSupabaseBrowserAuthState } from "@/lib/supabase/auth-client-recovery";
-import {
-  captureClientError,
-  monitorClientOperation,
-} from "@/lib/monitoring/client";
-import {
-  buildPainelOnboardingStorageKey,
-  markOnboardingOpened,
-  markOnboardingModuleVisited,
-  readOnboardingState,
-  resetOnboardingState,
-  writeOnboardingState,
-} from "@/lib/onboarding/storage";
+import { monitorClientOperation } from "@/lib/monitoring/client";
 
 type Props = {
   children: React.ReactNode;
@@ -50,7 +28,6 @@ type Props = {
   planoNome?: string;
   assinaturaStatus?: string | null;
   resumoAssinatura?: ResumoAssinatura | null;
-  onboarding?: PainelOnboardingSnapshot | null;
   notifications?: ShellNotification[];
 };
 
@@ -68,34 +45,16 @@ export default function AppShell({
   planoNome,
   assinaturaStatus,
   resumoAssinatura,
-  onboarding,
   notifications = [],
 }: Props) {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [contentScrolled, setContentScrolled] = useState(false);
   const [shellNotifications, setShellNotifications] = useState(notifications);
-  const [guideOpen, setGuideOpen] = useState(false);
-  const [helpOpen, setHelpOpen] = useState(false);
-  const [guideStep, setGuideStep] = useState(0);
   const router = useRouter();
   const pathname = usePathname();
-  const searchParams = useSearchParams();
   const storageScope = [idSalao, idUsuario].filter(Boolean).join(":");
-  const onboardingStorageKey = buildPainelOnboardingStorageKey({
-    idSalao,
-    idUsuario,
-  });
   const notificationStorageKey = storageScope || undefined;
-  const onboardingSteps = getPainelOnboardingSteps(
-    Boolean(permissoes?.assinatura_ver)
-  );
-  const currentModuleId = getPainelOnboardingModuleId(pathname);
-  const currentStep = getPainelOnboardingStepByModule(
-    currentModuleId,
-    onboardingSteps
-  );
   const hideShellChrome = pathname === "/agenda" || pathname === "/caixa";
-  const onboardingHighlights = getPainelOnboardingHighlights(onboarding);
   const criticalNotificationsCount = shellNotifications.filter(
     (notification) => notification.critical
   ).length;
@@ -103,112 +62,6 @@ export default function AppShell({
   useEffect(() => {
     setShellNotifications(notifications);
   }, [notifications]);
-
-  useEffect(() => {
-    let active = true;
-
-    async function loadShellNotifications() {
-      try {
-        const response = await monitorClientOperation(
-          {
-            module: "shell",
-            action: "carregar_notificacoes",
-            route: "/api/shell-notifications",
-            screen: "painel_shell",
-            successMessage: "Notificacoes do shell atualizadas.",
-            errorMessage: "Falha ao carregar notificacoes do shell.",
-          },
-          () =>
-            fetch("/api/shell-notifications", {
-              cache: "no-store",
-            })
-        );
-
-        if (!response.ok) {
-          return;
-        }
-
-        const data = (await response.json()) as Partial<ShellNotificationsResponse>;
-
-        if (active && Array.isArray(data.notifications)) {
-          setShellNotifications(data.notifications);
-        }
-      } catch (error) {
-        console.error("Erro ao carregar notificacoes do painel:", error);
-        void captureClientError({
-          module: "shell",
-          action: "carregar_notificacoes",
-          screen: "painel_shell",
-          error,
-          fallbackMessage: "Erro ao carregar notificacoes do painel.",
-        });
-      }
-    }
-
-    void loadShellNotifications();
-
-    return () => {
-      active = false;
-    };
-  }, [notifications]);
-
-  useEffect(() => {
-    if (!onboardingStorageKey) return;
-
-    const current = readOnboardingState(onboardingStorageKey);
-    const contextualStep = getPainelOnboardingStepIndexForPath(
-      pathname,
-      onboardingSteps
-    );
-    const nextStep =
-      current.lastModuleId === currentModuleId
-        ? Number(current.stepIndex || 0)
-        : contextualStep;
-    const shouldAutoOpen =
-      onboardingSteps.length > 0 &&
-      !current.startedAt &&
-      !current.completedAt &&
-      !current.dismissedAt;
-
-    setGuideStep(Math.max(0, Math.min(nextStep, onboardingSteps.length - 1)));
-    markOnboardingModuleVisited(onboardingStorageKey, currentModuleId);
-
-    if (searchParams.get("tour") === "1") {
-      markOnboardingOpened(onboardingStorageKey, {
-        stepIndex: nextStep,
-        moduleId: currentModuleId,
-      });
-      setGuideOpen(true);
-      const nextParams = new URLSearchParams(searchParams.toString());
-      nextParams.delete("tour");
-      const nextQuery = nextParams.toString();
-      router.replace(nextQuery ? `${pathname}?${nextQuery}` : pathname, {
-        scroll: false,
-      });
-      return;
-    }
-
-    if (shouldAutoOpen) {
-      const timer = window.setTimeout(() => {
-        markOnboardingOpened(onboardingStorageKey, {
-          stepIndex: nextStep,
-          moduleId: currentModuleId,
-        });
-        setGuideOpen(true);
-      }, pathname === "/dashboard" ? 1400 : 900);
-
-      return () => {
-        window.clearTimeout(timer);
-      };
-    }
-  }, [
-    currentModuleId,
-    onboardingStorageKey,
-    onboardingSteps,
-    pathname,
-    router,
-    searchParams,
-  ]);
 
   async function handleLogout() {
     await monitorClientOperation(
@@ -230,94 +83,6 @@ export default function AppShell({
         router.refresh();
       }
     );
-  }
-
-  function handleOpenHelp() {
-    const contextualStep = getPainelOnboardingStepIndexForPath(
-      pathname,
-      onboardingSteps
-    );
-    setGuideStep(contextualStep);
-    setHelpOpen(true);
-
-    if (!onboardingStorageKey) return;
-
-    markOnboardingOpened(onboardingStorageKey, {
-      stepIndex: contextualStep,
-      moduleId: currentModuleId,
-    });
-  }
-
-  function handleCloseGuide() {
-    if (onboardingStorageKey) {
-      writeOnboardingState(onboardingStorageKey, {
-        stepIndex: guideStep,
-        dismissedAt: new Date().toISOString(),
-      });
-    }
-
-    setGuideOpen(false);
-  }
-
-  function handleSkipGuide() {
-    if (onboardingStorageKey) {
-      writeOnboardingState(onboardingStorageKey, {
-        stepIndex: guideStep,
-        dismissedAt: new Date().toISOString(),
-      });
-    }
-
-    setGuideOpen(false);
-  }
-
-  function handleGuideStepChange(nextStep: number) {
-    const clamped = Math.max(0, Math.min(nextStep, onboardingSteps.length - 1));
-    setGuideStep(clamped);
-
-    if (onboardingStorageKey) {
-      markOnboardingOpened(onboardingStorageKey, {
-        stepIndex: clamped,
-        moduleId: onboardingSteps[clamped]?.id || currentModuleId,
-      });
-    }
-  }
-
-  function handleFinishGuide() {
-    if (onboardingStorageKey) {
-      writeOnboardingState(onboardingStorageKey, {
-        stepIndex: onboardingSteps.length - 1,
-        completedAt: new Date().toISOString(),
-        dismissedAt: null,
-      });
-    }
-
-    setGuideOpen(false);
-  }
-
-  function handleOpenTourFromHere() {
-    setHelpOpen(false);
-    setGuideOpen(true);
-
-    if (!onboardingStorageKey) return;
-
-    markOnboardingOpened(onboardingStorageKey, {
-      stepIndex: guideStep,
-      moduleId: currentModuleId,
-    });
-  }
-
-  function handleRestartTour() {
-    if (onboardingStorageKey) {
-      resetOnboardingState(onboardingStorageKey);
-      markOnboardingOpened(onboardingStorageKey, {
-        stepIndex: 0,
-        moduleId: onboardingSteps[0]?.id || "dashboard",
-      });
-    }
-
-    setGuideStep(0);
-    setHelpOpen(false);
-    setGuideOpen(true);
   }
 
   return (
@@ -368,7 +133,6 @@ export default function AppShell({
               notifications={shellNotifications}
               notificationStorageKey={notificationStorageKey}
               scrolled={contentScrolled}
-              onOpenHelp={handleOpenHelp}
               onOpenSidebar={() => setMobileSidebarOpen(true)}
               onLogout={handleLogout}
             />
@@ -391,34 +155,6 @@ export default function AppShell({
       </div>
       )}
 
-      <GuidedOnboarding
-        open={guideOpen}
-        pathname={pathname}
-        stepIndex={guideStep}
-        steps={onboardingSteps}
-        snapshot={onboarding}
-        onClose={handleCloseGuide}
-        onBack={() => handleGuideStepChange(guideStep - 1)}
-        onNext={() => handleGuideStepChange(guideStep + 1)}
-        onOpenStep={(href) => {
-          router.push(href);
-        }}
-        onSkip={handleSkipGuide}
-        onFinish={handleFinishGuide}
-      />
-      <HelpDrawer
-        open={helpOpen}
-        currentStep={currentStep}
-        snapshot={onboarding}
-        pending={onboardingHighlights.pending}
-        onClose={() => setHelpOpen(false)}
-        onOpenStep={(href) => {
-          setHelpOpen(false);
-          router.push(href);
-        }}
-        onOpenTourFromHere={handleOpenTourFromHere}
-        onRestartTour={handleRestartTour}
-      />
     </div>
   );
 }
