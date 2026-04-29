@@ -36,10 +36,23 @@ function run(command, args, extraEnv = {}) {
   });
 }
 
-await run(process.execPath, ["./node_modules/next/dist/bin/next", "build"], {
+const nodeBin = process.execPath;
+const nextBin = "./node_modules/next/dist/bin/next";
+const typecheckScript = "./scripts/run-typecheck.mjs";
+
+if (process.env.SKIP_PREBUILD_TYPECHECK !== "1") {
+  await run(nodeBin, [typecheckScript], {
+    NODE_OPTIONS: mergeNodeOptions(
+      process.env.NODE_OPTIONS,
+      "--max-old-space-size=6144"
+    ),
+  });
+}
+
+await run(nodeBin, [nextBin, "build"], {
   NODE_OPTIONS: mergeNodeOptions(
     process.env.NODE_OPTIONS,
     "--max-old-space-size=12288",
-    "--max-semi-space-size=256"
+    "--max-semi-space-size=512"
   ),
 });
