@@ -167,6 +167,10 @@ type DatabaseWithAppExtensions = Database & {
       whatsapp_pacote_compras: WhatsappPacoteComprasTable;
     };
     Functions: Database["public"]["Functions"] & {
+      fn_dashboard_resumo_painel: {
+        Args: never;
+        Returns: Json;
+      };
       reservar_credito_whatsapp: {
         Args: { p_id_salao: string; p_quantidade?: number };
         Returns: string;

@@ -1,9 +1,10 @@
 "use client";
 
+export const unstable_instant = { prefetch: "static" };
+
 import { useCallback, useEffect, useMemo, useState } from "react";
 import AppLoading from "@/components/ui/AppLoading";
 import { createClient } from "@/lib/supabase/client";
-import { getUsuarioLogado } from "@/lib/auth/getUsuarioLogado";
 import { hasPermission } from "@/lib/auth/permissions";
 import {
   AlertCircle,
@@ -36,11 +37,15 @@ type DashboardResumo = {
   notificacoesPendentes: number;
 };
 
-type SalaoInfo = {
-  id: string;
-  plano?: string | null;
+type DashboardRpcResumo = {
+  usuario?: {
+    id?: string;
+    id_salao?: string | null;
+    nivel?: string | null;
+    status?: string | null;
+  };
+  resumo?: Partial<DashboardResumo>;
 };
-
 type IconType = React.ComponentType<{
   size?: number;
   className?: string;
@@ -167,7 +172,6 @@ export default function DashboardPage() {
   const supabase = createClient();
 
   const [loading, setLoading] = useState(true);
-  const [secondaryLoading, setSecondaryLoading] = useState(false);
   const [erro, setErro] = useState("");
   const [semPermissao, setSemPermissao] = useState(false);
   const [faseCarregamento, setFaseCarregamento] = useState(
@@ -175,108 +179,6 @@ export default function DashboardPage() {
   );
   const [ultimaAtualizacao, setUltimaAtualizacao] = useState<string | null>(null);
   const [resumo, setResumo] = useState<DashboardResumo>(RESUMO_INICIAL);
-
-  const loadSecondarySummary = useCallback(
-    async (
-      idSalao: string,
-      inicioHojeIso: string,
-      fimHojeIso: string,
-      inicioMesIso: string,
-      fimMesIso: string,
-      commandasMesData: Array<{ id_cliente?: string | null; total?: number | null }>
-    ) => {
-      try {
-        setSecondaryLoading(true);
-        setFaseCarregamento("Carregando indicadores complementares.");
-
-        const [
-          comandasHojeRes,
-          comissoesPendentesRes,
-          profissionaisAtivosRes,
-          aguardandoPagamentoRes,
-          agendamentosCanceladosMesRes,
-        ] = await Promise.all([
-          supabase
-            .from("comandas")
-            .select("id, total")
-            .eq("id_salao", idSalao)
-            .eq("status", "fechada")
-            .gte("fechada_em", inicioHojeIso)
-            .lte("fechada_em", fimHojeIso),
-          supabase
-            .from("comissoes_lancamentos")
-            .select("id, valor_comissao, status")
-            .eq("id_salao", idSalao)
-            .eq("status", "pendente")
-            .gte("competencia_data", inicioMesIso.slice(0, 10))
-            .lte("competencia_data", fimMesIso.slice(0, 10)),
-          supabase
-            .from("profissionais")
-            .select("id", { count: "exact", head: true })
-            .eq("id_salao", idSalao)
-            .eq("status", "ativo"),
-          supabase
-            .from("comandas")
-            .select("id", { count: "exact", head: true })
-            .eq("id_salao", idSalao)
-            .eq("status", "aguardando_pagamento"),
-          supabase
-            .from("agendamentos")
-            .select("id", { count: "exact", head: true })
-            .eq("id_salao", idSalao)
-            .eq("status", "cancelado")
-            .gte("data", inicioMesIso.slice(0, 10))
-            .lte("data", fimMesIso.slice(0, 10)),
-        ]);
-
-        if (comandasHojeRes.error) throw comandasHojeRes.error;
-        if (comissoesPendentesRes.error) throw comissoesPendentesRes.error;
-        if (profissionaisAtivosRes.error) throw profissionaisAtivosRes.error;
-        if (aguardandoPagamentoRes.error) throw aguardandoPagamentoRes.error;
-        if (agendamentosCanceladosMesRes.error) {
-          throw agendamentosCanceladosMesRes.error;
-        }
-
-        const comissoesPendentes = comissoesPendentesRes.data || [];
-        const caixaDia = (comandasHojeRes.data || []).reduce(
-          (acc, item) => acc + Number(item.total || 0),
-          0
-        );
-        const clientesUnicosMes = new Set(
-          commandasMesData.map((item) => item.id_cliente).filter(Boolean)
-        ).size;
-        const retornoClientes =
-          clientesUnicosMes > 0
-            ? Math.min(
-                Math.round((commandasMesData.length / clientesUnicosMes) * 100),
-                100
-              )
-            : 0;
-
-        setResumo((current) => ({
-          ...current,
-          caixaDia,
-          retornoClientes,
-          comissaoPendenteMes: comissoesPendentes.reduce(
-            (acc, item) => acc + Number(item.valor_comissao || 0),
-            0
-          ),
-          profissionaisAtivos: Number(profissionaisAtivosRes.count || 0),
-          cancelamentosMes: Number(agendamentosCanceladosMesRes.count || 0),
-          aguardandoPagamento: Number(aguardandoPagamentoRes.count || 0),
-          notificacoesPendentes:
-            Number(aguardandoPagamentoRes.count || 0) + current.proximosConfirmados,
-        }));
-        setUltimaAtualizacao(new Date().toISOString());
-      } catch (error) {
-        console.error("Erro ao carregar indicadores secundarios:", error);
-      } finally {
-        setSecondaryLoading(false);
-        setFaseCarregamento("Resumo atualizado.");
-      }
-    },
-    [supabase]
-  );
 
   const init = useCallback(async () => {
     try {
@@ -286,13 +188,14 @@ export default function DashboardPage() {
       setResumo(RESUMO_INICIAL);
       setFaseCarregamento("Validando acesso ao painel.");
 
-      const usuario = await getUsuarioLogado();
+      const { data, error } = await supabase.rpc("fn_dashboard_resumo_painel");
 
-      if (!usuario?.idSalao) {
-        throw new Error("Nao foi possivel identificar o salao do usuario.");
+      if (error) {
+        throw error;
       }
 
-      const nivelUsuario = (usuario?.perfil?.nivel ?? null) as
+      const rpcData = (data || {}) as DashboardRpcResumo;
+      const nivelUsuario = (rpcData.usuario?.nivel ?? null) as
         | "admin"
         | "gerente"
         | "profissional"
@@ -304,105 +207,32 @@ export default function DashboardPage() {
         return;
       }
 
-      const idSalao = usuario.idSalao;
-      const agora = new Date();
-      const inicioHoje = new Date(agora);
-      inicioHoje.setHours(0, 0, 0, 0);
-      const fimHoje = new Date(agora);
-      fimHoje.setHours(23, 59, 59, 999);
-      const inicioMes = new Date(agora.getFullYear(), agora.getMonth(), 1, 0, 0, 0, 0);
-      const fimMes = new Date(
-        agora.getFullYear(),
-        agora.getMonth() + 1,
-        0,
-        23,
-        59,
-        59,
-        999
-      );
-      const daqui2Horas = new Date(agora.getTime() + 2 * 60 * 60 * 1000);
-
-      setFaseCarregamento("Carregando indicadores principais.");
-
-      const [
-        agendamentosHojeRes,
-        clientesRes,
-        comandasMesRes,
-        salaoRes,
-        agendamentosConfirmadosHojeRes,
-      ] = await Promise.all([
-        supabase
-          .from("agendamentos")
-          .select("id", { count: "exact", head: true })
-          .eq("id_salao", idSalao)
-          .gte("data", inicioHoje.toISOString().slice(0, 10))
-          .lte("data", fimHoje.toISOString().slice(0, 10))
-          .in("status", ["confirmado", "pendente", "atendido", "aguardando_pagamento"]),
-        supabase
-          .from("clientes")
-          .select("id", { count: "exact", head: true })
-          .eq("id_salao", idSalao),
-        supabase
-          .from("comandas")
-          .select("id, total, id_cliente")
-          .eq("id_salao", idSalao)
-          .eq("status", "fechada")
-          .gte("fechada_em", inicioMes.toISOString())
-          .lte("fechada_em", fimMes.toISOString()),
-        supabase.from("saloes").select("id, plano").eq("id", idSalao).maybeSingle(),
-        supabase
-          .from("agendamentos")
-          .select("id, data, hora_inicio")
-          .eq("id_salao", idSalao)
-          .eq("status", "confirmado")
-          .eq("data", inicioHoje.toISOString().slice(0, 10)),
-      ]);
-
-      if (agendamentosHojeRes.error) throw agendamentosHojeRes.error;
-      if (clientesRes.error) throw clientesRes.error;
-      if (comandasMesRes.error) throw comandasMesRes.error;
-      if (salaoRes.error) throw salaoRes.error;
-      if (agendamentosConfirmadosHojeRes.error) {
-        throw agendamentosConfirmadosHojeRes.error;
+      if (!rpcData.usuario?.id_salao) {
+        throw new Error("Nao foi possivel identificar o salao do usuario.");
       }
 
-      const comandasMes = comandasMesRes.data || [];
-      const faturamentoMes = comandasMes.reduce(
-        (acc, item) => acc + Number(item.total || 0),
-        0
-      );
-      const servicosMes = comandasMes.length;
-      const ticketMedioMes =
-        comandasMes.length > 0 ? faturamentoMes / comandasMes.length : 0;
-      const proximosConfirmados = (agendamentosConfirmadosHojeRes.data || []).filter(
-        (item) => {
-          if (!item.hora_inicio) return false;
-          const dataHora = new Date(`${item.data}T${item.hora_inicio}`);
-          return dataHora >= agora && dataHora <= daqui2Horas;
-        }
-      ).length;
-
-      setResumo((current) => ({
-        ...current,
-        agendamentosHoje: Number(agendamentosHojeRes.count || 0),
-        proximosConfirmados,
-        clientesAtivos: Number(clientesRes.count || 0),
-        servicosMes,
-        faturamentoMes,
-        ticketMedioMes,
-        planoSalao: (salaoRes.data as SalaoInfo | null)?.plano || "-",
-      }));
+      setFaseCarregamento("Carregando indicadores principais.");
+      setResumo({
+        ...RESUMO_INICIAL,
+        ...rpcData.resumo,
+        agendamentosHoje: Number(rpcData.resumo?.agendamentosHoje || 0),
+        proximosConfirmados: Number(rpcData.resumo?.proximosConfirmados || 0),
+        clientesAtivos: Number(rpcData.resumo?.clientesAtivos || 0),
+        servicosMes: Number(rpcData.resumo?.servicosMes || 0),
+        faturamentoMes: Number(rpcData.resumo?.faturamentoMes || 0),
+        ticketMedioMes: Number(rpcData.resumo?.ticketMedioMes || 0),
+        comissaoPendenteMes: Number(rpcData.resumo?.comissaoPendenteMes || 0),
+        caixaDia: Number(rpcData.resumo?.caixaDia || 0),
+        retornoClientes: Number(rpcData.resumo?.retornoClientes || 0),
+        profissionaisAtivos: Number(rpcData.resumo?.profissionaisAtivos || 0),
+        cancelamentosMes: Number(rpcData.resumo?.cancelamentosMes || 0),
+        aguardandoPagamento: Number(rpcData.resumo?.aguardandoPagamento || 0),
+        planoSalao: String(rpcData.resumo?.planoSalao || "-"),
+        notificacoesPendentes: Number(rpcData.resumo?.notificacoesPendentes || 0),
+      });
       setUltimaAtualizacao(new Date().toISOString());
+      setFaseCarregamento("Resumo atualizado.");
       setLoading(false);
-
-      void loadSecondarySummary(
-        idSalao,
-        inicioHoje.toISOString(),
-        fimHoje.toISOString(),
-        inicioMes.toISOString(),
-        fimMes.toISOString(),
-        comandasMes
-      );
     } catch (error: unknown) {
       console.error(error);
       setErro(
@@ -411,16 +241,15 @@ export default function DashboardPage() {
     } finally {
       setLoading(false);
     }
-  }, [loadSecondarySummary, supabase]);
+  }, [supabase]);
 
   useEffect(() => {
     void init();
   }, [init]);
 
   const statusCaixa = useMemo(() => {
-    if (secondaryLoading) return "Atualizando";
     return resumo.aguardandoPagamento > 0 ? "Com pendencias" : "Organizado";
-  }, [resumo.aguardandoPagamento, secondaryLoading]);
+  }, [resumo.aguardandoPagamento]);
 
   if (loading) {
     return (
@@ -479,7 +308,7 @@ export default function DashboardPage() {
           <div className="grid gap-3 sm:grid-cols-2 xl:min-w-[420px]">
             <InfoMetric
               title="Status do carregamento"
-              value={secondaryLoading ? "Atualizando" : "Pronto"}
+              value="Pronto"
               helper={faseCarregamento}
             />
             <InfoMetric
@@ -549,7 +378,7 @@ export default function DashboardPage() {
             <InfoMetric
               title="Comissao pendente"
               value={formatCurrency(resumo.comissaoPendenteMes)}
-              helper={secondaryLoading ? "Atualizando..." : "Pronto para conferencia"}
+              helper="Pronto para conferencia"
             />
             <InfoMetric
               title="Caixa do dia"
@@ -584,7 +413,7 @@ export default function DashboardPage() {
             <InfoMetric
               title="Profissionais"
               value={String(resumo.profissionaisAtivos)}
-              helper={secondaryLoading ? "Atualizando..." : "Ativos no cadastro"}
+              helper="Ativos no cadastro"
             />
             <InfoMetric
               title="Aguardando pagamento"
