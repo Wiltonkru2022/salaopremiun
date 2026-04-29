@@ -1,7 +1,5 @@
 "use client";
 
-export const unstable_instant = { prefetch: "static" };
-
 import { useCallback, useEffect, useMemo, useState } from "react";
 import AppLoading from "@/components/ui/AppLoading";
 import { createClient } from "@/lib/supabase/client";
