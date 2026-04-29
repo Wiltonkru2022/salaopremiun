@@ -53,6 +53,14 @@ function LoginPageContent() {
   const loginContext = searchParams.get("context")?.trim() || "";
   const redirectNotice = getLoginRedirectNotice(searchParams);
   const agendaQuickLogin = loginContext === "agenda" || returnTo === "/agenda";
+  const redirectHref = returnTo
+    ? getManagedHostHrefForPath(appendBootParam(returnTo))
+    : planoSelecionado
+      ? getManagedHostHref(
+          `/assinatura?plano=${encodeURIComponent(planoSelecionado)}`,
+          "assinatura"
+        )
+      : getManagedHostHref("/dashboard?boot=1", "painel");
 
   useEffect(() => {
     try {
@@ -67,6 +75,43 @@ function LoginPageContent() {
     if (!emailQuery) return;
     setEmail((current) => current || emailQuery);
   }, [emailQuery]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const targets = [
+      safeOriginFromHref(redirectHref),
+      safeOriginFromHref(process.env.NEXT_PUBLIC_SUPABASE_URL || ""),
+    ].filter(Boolean) as string[];
+
+    const createdLinks: HTMLLinkElement[] = [];
+
+    targets.forEach((origin) => {
+      const preconnect = document.createElement("link");
+      preconnect.rel = "preconnect";
+      preconnect.href = origin;
+      preconnect.crossOrigin = "anonymous";
+      document.head.appendChild(preconnect);
+      createdLinks.push(preconnect);
+
+      const dnsPrefetch = document.createElement("link");
+      dnsPrefetch.rel = "dns-prefetch";
+      dnsPrefetch.href = origin;
+      document.head.appendChild(dnsPrefetch);
+      createdLinks.push(dnsPrefetch);
+
+      void fetch(origin, {
+        method: "HEAD",
+        mode: "no-cors",
+        cache: "no-store",
+        credentials: "include",
+      }).catch(() => undefined);
+    });
+
+    return () => {
+      createdLinks.forEach((link) => link.remove());
+    };
+  }, [redirectHref]);
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -99,16 +144,7 @@ function LoginPageContent() {
           : "Login aceito. Entrando no painel e montando o resumo do salao..."
       );
 
-      window.location.assign(
-        returnTo
-          ? getManagedHostHrefForPath(appendBootParam(returnTo))
-          : planoSelecionado
-            ? getManagedHostHref(
-                `/assinatura?plano=${encodeURIComponent(planoSelecionado)}`,
-                "assinatura"
-              )
-            : getManagedHostHref("/dashboard?boot=1", "painel")
-      );
+      window.location.replace(redirectHref);
     } catch (error) {
       setRateLimited(isSupabaseAuthRateLimit(error));
       setErro(getLoginErrorMessage(error));
@@ -347,4 +383,13 @@ function appendBootParam(path: string) {
   params.set("boot", "1");
   const nextQuery = params.toString();
   return nextQuery ? `${pathname}?${nextQuery}` : pathname;
+}
+
+function safeOriginFromHref(href: string) {
+  try {
+    return new URL(href, typeof window !== "undefined" ? window.location.origin : undefined)
+      .origin;
+  } catch {
+    return null;
+  }
 }
