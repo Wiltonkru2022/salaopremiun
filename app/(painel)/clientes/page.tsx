@@ -334,18 +334,18 @@ export default function ClientesPage() {
 
       <div className="bg-white">
         <div className="mx-auto max-w-7xl space-y-6">
-          <section className="rounded-[28px] border border-zinc-200 bg-white p-5 text-zinc-950 shadow-sm">
+          <section className="rounded-[28px] border border-zinc-200 bg-white p-4 text-zinc-950 shadow-sm">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
               <div className="max-w-3xl">
                 <div className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-400">
                   Relacao com cliente
                 </div>
-                <h1 className="mt-2 text-2xl font-bold md:text-3xl">Clientes</h1>
-                <p className="mt-3 max-w-2xl text-sm leading-6 text-zinc-600">
-                  O cadastro precisa ajudar a recepcao a agir rapido: saber como
-                  falar com a cliente, reconhecer recorrencia e sustentar
-                  agenda, comandas, caixa e relacionamento sem perder
-                  historico.
+                <h1 className="mt-1 text-[1.95rem] font-bold tracking-[-0.04em] md:text-[2.1rem]">
+                  Clientes
+                </h1>
+                <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-600">
+                  Contato, credito e historico em uma leitura mais direta para a
+                  recepcao.
                 </p>
               </div>
 
@@ -408,14 +408,14 @@ export default function ClientesPage() {
             </div>
           ) : null}
 
-          <section className="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm">
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.6fr)_220px_220px]">
+          <section className="rounded-[26px] border border-zinc-200 bg-white p-4 shadow-sm">
+            <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1.6fr)_220px_220px]">
               <input
                 type="text"
                 placeholder="Buscar por nome, WhatsApp, e-mail, bairro ou profissao"
                 value={busca}
                 onChange={(e) => setBusca(e.target.value)}
-                className="w-full rounded-2xl border border-zinc-300 px-4 py-3 text-sm outline-none focus:border-zinc-900"
+                className="w-full rounded-2xl border border-zinc-300 px-4 py-2.5 text-sm outline-none focus:border-zinc-900"
               />
 
               <select
@@ -425,14 +425,14 @@ export default function ClientesPage() {
                     e.target.value as "todos" | "ativo" | "inativo"
                   )
                 }
-                className="w-full rounded-2xl border border-zinc-300 px-4 py-3 text-sm outline-none focus:border-zinc-900"
+                className="w-full rounded-2xl border border-zinc-300 px-4 py-2.5 text-sm outline-none focus:border-zinc-900"
               >
                 <option value="todos">Todos os status</option>
                 <option value="ativo">Apenas ativos</option>
                 <option value="inativo">Apenas inativos</option>
               </select>
 
-              <div className="flex items-center rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-600">
+              <div className="flex items-center rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-2.5 text-sm text-zinc-600">
                 Pessoas visiveis:
                 <strong className="ml-2 text-zinc-900">
                   {listaFiltrada.length}
@@ -455,15 +455,24 @@ export default function ClientesPage() {
                 return (
                   <article
                     key={item.id}
-                    className="rounded-[26px] border border-zinc-200 bg-white p-4 shadow-sm"
+                    className="rounded-[24px] border border-zinc-200 bg-white p-4 shadow-sm"
                   >
-                    <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+                    <div className="grid gap-4 xl:grid-cols-[minmax(0,1.55fr)_240px] xl:items-center">
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
                           <h2 className="text-lg font-semibold text-zinc-950">
                             {item.nome}
                           </h2>
                           <StatusBadge ativo={ativoAtual} />
+                          {Number(item.cashback || 0) > 0 ? (
+                            <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-800">
+                              Credito{" "}
+                              {Number(item.cashback || 0).toLocaleString("pt-BR", {
+                                style: "currency",
+                                currency: "BRL",
+                              })}
+                            </span>
+                          ) : null}
                           {item.whatsapp ? (
                             <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-700">
                               WhatsApp pronto
@@ -482,31 +491,24 @@ export default function ClientesPage() {
 
                         <div className="mt-3 flex flex-wrap gap-2 text-xs text-zinc-500">
                           <TagHint>{contatoPrincipal}</TagHint>
-                          <TagHint>{item.bairro || "Sem bairro"}</TagHint>
-                          <TagHint>{item.profissao || "Sem profissao"}</TagHint>
-                          <TagHint>
-                            Credito:{" "}
-                            {Number(item.cashback || 0).toLocaleString("pt-BR", {
-                              style: "currency",
-                              currency: "BRL",
-                            })}
-                          </TagHint>
+                          {item.email ? <TagHint>{item.email}</TagHint> : null}
+                          {item.bairro ? <TagHint>{item.bairro}</TagHint> : null}
+                          {item.profissao ? <TagHint>{item.profissao}</TagHint> : null}
+                          {item.created_at ? (
+                            <TagHint>
+                              Cadastro em{" "}
+                              {new Date(item.created_at).toLocaleDateString("pt-BR")}
+                            </TagHint>
+                          ) : null}
                         </div>
                       </div>
 
-                      <div className="flex shrink-0 flex-wrap gap-2 xl:w-52 xl:justify-end">
+                      <div className="flex shrink-0 flex-wrap gap-2 xl:justify-end">
                         <Link
                           href={`/clientes/${item.id}`}
-                          className="inline-flex items-center justify-center rounded-xl border border-zinc-300 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50"
+                          className="inline-flex min-w-[108px] items-center justify-center rounded-xl bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-95"
                         >
-                          Editar cliente
-                        </Link>
-
-                        <Link
-                          href={`/clientes/${item.id}`}
-                          className="inline-flex items-center justify-center rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-2.5 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-100"
-                        >
-                          Ver detalhe
+                          Abrir
                         </Link>
 
                         {podeGerenciar ? (
@@ -530,8 +532,8 @@ export default function ClientesPage() {
                             </button>
                           </>
                         ) : (
-                          <div className="rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-xs font-medium text-zinc-500">
-                            Somente leitura para seu perfil.
+                          <div className="rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-2.5 text-xs font-medium text-zinc-500">
+                            Somente leitura
                           </div>
                         )}
                       </div>

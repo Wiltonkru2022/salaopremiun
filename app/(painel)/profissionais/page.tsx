@@ -419,19 +419,18 @@ export default function ProfissionaisListPage() {
 
       <div className="bg-white">
         <div className="mx-auto max-w-7xl space-y-6">
-          <section className="rounded-[28px] border border-zinc-200 bg-white p-5 text-zinc-950 shadow-sm">
+          <section className="rounded-[28px] border border-zinc-200 bg-white p-4 text-zinc-950 shadow-sm">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
               <div className="max-w-3xl">
                 <div className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-400">
                   Time e acesso
                 </div>
-                <h1 className="mt-2 text-2xl font-bold md:text-3xl">
+                <h1 className="mt-1 text-[1.95rem] font-bold tracking-[-0.04em] md:text-[2.1rem]">
                   Profissionais
                 </h1>
-                <p className="mt-3 max-w-2xl text-sm leading-6 text-zinc-600">
-                  Organize quem executa servicos, quem auxilia, quem acessa o
-                  app profissional e quem esta disponivel para agenda,
-                  comissoes e operacao do salao.
+                <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-600">
+                  Equipe, comissao, acesso e apoio em uma leitura mais curta
+                  para a operacao do salao.
                 </p>
               </div>
 
@@ -485,14 +484,14 @@ export default function ProfissionaisListPage() {
             </div>
           ) : null}
 
-          <section className="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm">
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.6fr)_220px_220px]">
+          <section className="rounded-[26px] border border-zinc-200 bg-white p-4 shadow-sm">
+            <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1.7fr)_210px_210px]">
               <input
                 type="text"
                 placeholder="Buscar por nome, cargo, categoria ou e-mail"
                 value={busca}
                 onChange={(e) => setBusca(e.target.value)}
-                className="w-full rounded-2xl border border-zinc-300 px-4 py-3 text-sm outline-none focus:border-zinc-900"
+                className="w-full rounded-2xl border border-zinc-300 px-4 py-2.5 text-sm outline-none focus:border-zinc-900"
               />
 
               <select
@@ -502,14 +501,14 @@ export default function ProfissionaisListPage() {
                     e.target.value as "todos" | "ativo" | "inativo"
                   )
                 }
-                className="w-full rounded-2xl border border-zinc-300 px-4 py-3 text-sm outline-none focus:border-zinc-900"
+                className="w-full rounded-2xl border border-zinc-300 px-4 py-2.5 text-sm outline-none focus:border-zinc-900"
               >
                 <option value="todos">Todos os status</option>
                 <option value="ativo">Apenas ativos</option>
                 <option value="inativo">Apenas inativos</option>
               </select>
 
-              <div className="flex items-center rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-600">
+              <div className="flex items-center rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-2.5 text-sm text-zinc-600">
                 Pessoas visiveis:
                 <strong className="ml-2 text-zinc-900">
                   {listaFiltrada.length}
@@ -532,9 +531,9 @@ export default function ProfissionaisListPage() {
                 return (
                   <article
                     key={item.id}
-                    className="rounded-[26px] border border-zinc-200 bg-white p-4 shadow-sm"
+                    className="rounded-[24px] border border-zinc-200 bg-white p-4 shadow-sm"
                   >
-                    <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+                    <div className="grid gap-4 xl:grid-cols-[minmax(0,1.55fr)_240px] xl:items-center">
                       <div className="min-w-0 flex-1">
                         <div className="flex items-start gap-4">
                           <Avatar profissional={item} />
@@ -575,30 +574,30 @@ export default function ProfissionaisListPage() {
                               </TagHint>
                             </div>
 
-                            <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+                            <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
                               <MetricBlock
-                                label="Cargo e categoria"
+                                label="Funcao"
                                 value={item.cargo || item.categoria || "-"}
-                                detail="Leitura rapida da funcao no salao"
+                                detail="Papel principal no salao"
                               />
                               <MetricBlock
                                 label="Assistentes"
                                 value={`${item.total_assistentes || 0}`}
-                                detail="Quantidade de apoio vinculada"
+                                detail="Apoios vinculados"
                               />
                               <MetricBlock
-                                label="Comissao em produto"
+                                label="Comissao produto"
                                 value={`${Number(
                                   item.comissao_produto_percentual || 0
                                 ).toFixed(2)}%`}
-                                detail="Percentual base para revenda"
+                                detail="Base usada em revenda"
                               />
                               <MetricBlock
                                 label="PIX"
                                 value={item.pix_tipo || "-"}
                                 detail={
                                   item.pix_chave
-                                    ? "Chave cadastrada para repasse"
+                                    ? "Chave pronta para repasse"
                                     : "Sem chave cadastrada"
                                 }
                               />
@@ -607,19 +606,12 @@ export default function ProfissionaisListPage() {
                         </div>
                       </div>
 
-                      <div className="flex shrink-0 flex-wrap gap-2 xl:w-52 xl:justify-end">
+                      <div className="flex shrink-0 flex-wrap gap-2 xl:justify-end">
                         <Link
                           href={`/profissionais/${item.id}`}
-                          className="inline-flex items-center justify-center rounded-xl border border-zinc-300 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50"
+                          className="inline-flex min-w-[108px] items-center justify-center rounded-xl bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-95"
                         >
-                          Editar profissional
-                        </Link>
-
-                        <Link
-                          href={`/profissionais/${item.id}`}
-                          className="inline-flex items-center justify-center rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-2.5 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-100"
-                        >
-                          Ver detalhe
+                          Abrir
                         </Link>
 
                         {podeGerenciar ? (
@@ -643,8 +635,8 @@ export default function ProfissionaisListPage() {
                             </button>
                           </>
                         ) : (
-                          <div className="rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-xs font-medium text-zinc-500">
-                            Somente leitura para seu perfil.
+                          <div className="rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-2.5 text-xs font-medium text-zinc-500">
+                            Somente leitura
                           </div>
                         )}
                       </div>

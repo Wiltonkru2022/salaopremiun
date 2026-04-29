@@ -596,12 +596,17 @@ export default function RelatorioFinanceiroPage() {
   return (
     <div className="bg-white">
       <div className="mx-auto max-w-[1800px] space-y-5">
-        <div className="rounded-[28px] border border-zinc-200 bg-white p-5 text-zinc-950 shadow-sm">
+        <div className="rounded-[28px] border border-zinc-200 bg-white p-4 text-zinc-950 shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
-              <h1 className="mt-2 text-3xl font-bold">Relatório Financeiro</h1>
+              <div className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-400">
+                Visao do periodo
+              </div>
+              <h1 className="mt-1 text-[1.95rem] font-bold tracking-[-0.04em] md:text-[2.1rem]">
+                Relatorio financeiro
+              </h1>
               <p className="mt-2 text-sm text-zinc-500">
-                Acompanhe faturamento, recebimentos, taxas da maquininha, comissões e vendas do salão.
+                Vendas, recebimentos, comissoes e fechamento de caixa em blocos mais diretos.
               </p>
             </div>
 
@@ -700,7 +705,15 @@ export default function RelatorioFinanceiroPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-3 xl:grid-cols-5">
+        <section className="space-y-3">
+          <div>
+            <h2 className="text-base font-semibold text-zinc-950">Vendas e recebimentos</h2>
+            <p className="text-sm text-zinc-500">
+              Leitura rapida do que entrou no periodo filtrado.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 gap-3 xl:grid-cols-5">
           <KpiCard
             icon={<BadgeDollarSign size={18} />}
             label="Faturamento bruto"
@@ -728,9 +741,9 @@ export default function RelatorioFinanceiroPage() {
             value={formatCurrency(resumo.comissaoPendente)}
             helper={`Paga: ${formatCurrency(resumo.comissaoPaga)}`}
           />
-        </div>
+          </div>
 
-        <div className="grid grid-cols-1 gap-3 xl:grid-cols-4">
+          <div className="grid grid-cols-1 gap-3 xl:grid-cols-4">
           <KpiCard
             icon={<Receipt size={18} />}
             label="Descontos"
@@ -751,9 +764,18 @@ export default function RelatorioFinanceiroPage() {
             label="Quantidade de vendas"
             value={String(resumo.quantidadeVendas)}
           />
-        </div>
+          </div>
+        </section>
 
-        <div className="grid grid-cols-1 gap-3 xl:grid-cols-5">
+        <section className="space-y-3">
+          <div>
+            <h2 className="text-base font-semibold text-zinc-950">Fechamento de caixa</h2>
+            <p className="text-sm text-zinc-500">
+              Diferenca entre previsto, contado, sobra e quebra.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 gap-3 xl:grid-cols-5">
           <KpiCard
             icon={<Wallet size={18} />}
             label="Fechamentos de caixa"
@@ -779,7 +801,8 @@ export default function RelatorioFinanceiroPage() {
             label="Sobra de caixa"
             value={formatCurrency(resumoCaixa.sobraTotal)}
           />
-        </div>
+          </div>
+        </section>
 
         <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1.2fr_0.8fr]">
           <div className="overflow-hidden rounded-[28px] border border-zinc-200 bg-white shadow-sm">

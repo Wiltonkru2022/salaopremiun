@@ -153,8 +153,8 @@ export default function AgendaSidebar(props: Props) {
   const showBackButton = Boolean(panel) || view !== "overview";
 
   return (
-    <aside className="w-full min-h-0 lg:h-full lg:max-w-[436px] lg:min-w-[436px] xl:max-w-[456px] xl:min-w-[456px]">
-      <div className="flex h-full min-h-0 flex-col rounded-[34px] border border-white/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(250,251,255,0.96)_100%)] p-5 shadow-[0_24px_80px_rgba(15,23,42,0.09)]">
+    <aside className="w-full min-h-0 lg:h-full lg:max-w-[404px] lg:min-w-[404px] xl:max-w-[420px] xl:min-w-[420px]">
+      <div className="flex h-full min-h-0 flex-col rounded-[30px] border border-white/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(250,251,255,0.96)_100%)] p-4 shadow-[0_20px_60px_rgba(15,23,42,0.08)]">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             {showBackButton ? (
@@ -168,10 +168,10 @@ export default function AgendaSidebar(props: Props) {
               </button>
             ) : null}
 
-            <h2 className="text-[2rem] font-semibold tracking-[-0.065em] text-slate-900">
+            <h2 className="text-[1.8rem] font-semibold tracking-[-0.06em] text-slate-900">
               {headerTitle}
             </h2>
-            <p className="mt-1 max-w-[26rem] text-sm leading-6 text-zinc-500">
+            <p className="mt-1 max-w-[24rem] text-sm leading-5 text-zinc-500">
               {headerSubtitle}
             </p>
           </div>
@@ -209,7 +209,7 @@ export default function AgendaSidebar(props: Props) {
           </div>
         ) : null}
 
-        <div className="mt-5 min-h-0 flex-1 overflow-y-auto pr-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div className="mt-4 min-h-0 flex-1 overflow-y-auto pr-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {panel ? (
             <div className="h-full">{panel.content}</div>
           ) : view === "clientSearch" ? (
@@ -231,12 +231,12 @@ export default function AgendaSidebar(props: Props) {
           ) : view === "waitlist" ? (
             <WaitlistView items={waitlistItems} />
           ) : (
-            <div className="space-y-3.5">
-              <section className="rounded-[26px] border border-zinc-200/80 bg-white/98 p-4 shadow-[0_14px_36px_rgba(15,23,42,0.05)] transition duration-300 hover:-translate-y-[1px] hover:shadow-[0_18px_44px_rgba(15,23,42,0.07)]">
+            <div className="space-y-3">
+              <section className="rounded-[24px] border border-zinc-200/80 bg-white/98 p-3.5 shadow-[0_12px_28px_rgba(15,23,42,0.05)] transition duration-300 hover:-translate-y-[1px] hover:shadow-[0_18px_40px_rgba(15,23,42,0.07)]">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-zinc-950">Valor total</p>
-                    <p className="mt-1.5 truncate text-[1.82rem] font-semibold tracking-[-0.05em] text-emerald-600">
+                    <p className="mt-1 truncate text-[1.65rem] font-semibold tracking-[-0.05em] text-emerald-600">
                       {potentialValueVisible ? totalValueLabel : "R$ ******"}
                     </p>
                   </div>
@@ -254,7 +254,7 @@ export default function AgendaSidebar(props: Props) {
                 </div>
               </section>
 
-              <section className="rounded-[26px] border border-zinc-200/80 bg-white/98 p-4 shadow-[0_14px_36px_rgba(15,23,42,0.05)] transition duration-300 hover:-translate-y-[1px] hover:shadow-[0_18px_44px_rgba(15,23,42,0.07)]">
+              <section className="rounded-[24px] border border-zinc-200/80 bg-white/98 p-3.5 shadow-[0_12px_28px_rgba(15,23,42,0.05)] transition duration-300 hover:-translate-y-[1px] hover:shadow-[0_18px_40px_rgba(15,23,42,0.07)]">
                 <button
                   type="button"
                   className="flex w-full items-center justify-between gap-3 text-left"
@@ -293,7 +293,7 @@ export default function AgendaSidebar(props: Props) {
                 </div>
               </section>
 
-              <section className="rounded-[26px] border border-zinc-200/80 bg-white/98 p-4 shadow-[0_14px_36px_rgba(15,23,42,0.05)] transition duration-300 hover:-translate-y-[1px] hover:shadow-[0_18px_44px_rgba(15,23,42,0.07)]">
+              <section className="rounded-[24px] border border-zinc-200/80 bg-white/98 p-3.5 shadow-[0_12px_28px_rgba(15,23,42,0.05)] transition duration-300 hover:-translate-y-[1px] hover:shadow-[0_18px_40px_rgba(15,23,42,0.07)]">
                 <h3 className="text-[1.15rem] font-semibold tracking-[-0.04em] text-slate-900">
                   Status dos atendimentos
                 </h3>
@@ -310,7 +310,7 @@ export default function AgendaSidebar(props: Props) {
                 </div>
               </section>
 
-              <section className="rounded-[26px] border border-zinc-200/80 bg-white/98 p-4 shadow-[0_14px_36px_rgba(15,23,42,0.05)] transition duration-300 hover:-translate-y-[1px] hover:shadow-[0_18px_44px_rgba(15,23,42,0.07)]">
+              <section className="rounded-[24px] border border-zinc-200/80 bg-white/98 p-3.5 shadow-[0_12px_28px_rgba(15,23,42,0.05)] transition duration-300 hover:-translate-y-[1px] hover:shadow-[0_18px_40px_rgba(15,23,42,0.07)]">
                 <h3 className="text-[1.15rem] font-semibold tracking-[-0.04em] text-slate-900">
                   Visualizacao
                 </h3>
@@ -343,7 +343,7 @@ export default function AgendaSidebar(props: Props) {
                 </div>
               </section>
 
-              <section className="rounded-[26px] border border-zinc-200/80 bg-white/98 p-4 shadow-[0_14px_36px_rgba(15,23,42,0.05)] transition duration-300 hover:-translate-y-[1px] hover:shadow-[0_18px_44px_rgba(15,23,42,0.07)]">
+              <section className="rounded-[24px] border border-zinc-200/80 bg-white/98 p-3.5 shadow-[0_12px_28px_rgba(15,23,42,0.05)] transition duration-300 hover:-translate-y-[1px] hover:shadow-[0_18px_40px_rgba(15,23,42,0.07)]">
                 <h3 className="text-[1.15rem] font-semibold tracking-[-0.04em] text-slate-900">
                   Acoes rapidas
                 </h3>
