@@ -11,6 +11,7 @@ import type {
   ConfigCaixaSalao,
   ProfissionalResumo,
 } from "@/components/caixa/types";
+import { SELECT_COMANDAS, SELECT_COMANDA_PAGAMENTOS } from "@/lib/db/selects";
 import { createClient } from "@/lib/supabase/client";
 
 type CaixaSupabaseClient = ReturnType<typeof createClient>;
@@ -462,7 +463,7 @@ export async function carregarComandaDetalhe(
   const { data: comandaData, error: comandaError } = await supabase
     .from("comandas")
     .select(`
-      *,
+      ${SELECT_COMANDAS},
       clientes (
         id,
         nome,
@@ -498,7 +499,7 @@ export async function carregarComandaDetalhe(
 
   const { data: pagamentosData, error: pagamentosError } = await supabase
     .from("comanda_pagamentos")
-    .select("*")
+    .select(SELECT_COMANDA_PAGAMENTOS)
     .eq("id_salao", idSalao)
     .eq("id_comanda", idComanda);
 

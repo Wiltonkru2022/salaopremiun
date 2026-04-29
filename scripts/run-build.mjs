@@ -1,6 +1,13 @@
 import { spawn } from "node:child_process";
 import process from "node:process";
 
+function mergeNodeOptions(...parts) {
+  return parts
+    .flatMap((part) => String(part || "").trim().split(/\s+/))
+    .filter(Boolean)
+    .join(" ");
+}
+
 function run(command, args, extraEnv = {}) {
   return new Promise((resolve, reject) => {
     const child = spawn(command, args, {
@@ -30,5 +37,9 @@ function run(command, args, extraEnv = {}) {
 }
 
 await run(process.execPath, ["./node_modules/next/dist/bin/next", "build"], {
-  NODE_OPTIONS: "--max-old-space-size=8192",
+  NODE_OPTIONS: mergeNodeOptions(
+    process.env.NODE_OPTIONS,
+    "--max-old-space-size=12288",
+    "--max-semi-space-size=256"
+  ),
 });

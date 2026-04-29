@@ -344,7 +344,7 @@ export async function removerPagamento(params: {
 
   const { data: pagamento, error: pagamentoError } = await ctx.supabaseAdmin
     .from("comanda_pagamentos")
-    .select("*")
+    .select("id, forma_pagamento, valor_credito_cliente")
     .eq("id", idPagamento)
     .eq("id_comanda", idComanda)
     .eq("id_salao", ctx.idSalao)
