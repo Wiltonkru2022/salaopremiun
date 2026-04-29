@@ -189,11 +189,17 @@ export default function AppShell({
     }
 
     if (shouldAutoOpen) {
-      markOnboardingOpened(onboardingStorageKey, {
-        stepIndex: nextStep,
-        moduleId: currentModuleId,
-      });
-      setGuideOpen(true);
+      const timer = window.setTimeout(() => {
+        markOnboardingOpened(onboardingStorageKey, {
+          stepIndex: nextStep,
+          moduleId: currentModuleId,
+        });
+        setGuideOpen(true);
+      }, pathname === "/dashboard" ? 1400 : 900);
+
+      return () => {
+        window.clearTimeout(timer);
+      };
     }
   }, [
     currentModuleId,

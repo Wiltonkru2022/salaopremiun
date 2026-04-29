@@ -3,7 +3,6 @@
 import { type ReactNode, useMemo } from "react";
 import AppLoading from "@/components/ui/AppLoading";
 import ConfirmActionModal from "@/components/ui/ConfirmActionModal";
-import { ComissaoHelpPanel } from "@/components/comissoes/ComissaoHelpPanel";
 import { useComissoesPage } from "@/components/comissoes/useComissoesPage";
 import {
   BadgeDollarSign,
@@ -594,16 +593,18 @@ export default function ComissoesPage() {
       <div className="bg-white">
         <div className="mx-auto max-w-[1800px] space-y-5">
           <div className="overflow-hidden rounded-[28px] border border-zinc-200 bg-white shadow-sm">
-            <div className="border-b border-zinc-200 bg-white px-6 py-6 text-zinc-950">
+            <div className="border-b border-zinc-200 bg-white px-5 py-5 text-zinc-950">
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div className="max-w-3xl">
                   <div className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-500">
-                    Painel financeiro
+                    Rateio e conferencia
                   </div>
-                  <h1 className="mt-2 text-3xl font-bold">Comissoes</h1>
+                  <h1 className="mt-1 text-[2rem] font-bold tracking-[-0.04em]">
+                    Comissoes
+                  </h1>
                   <p className="mt-2 text-sm text-zinc-500">
-                    Veja o total do periodo, quem lidera o rateio e qual regra
-                    gerou cada valor.
+                    Total do periodo, pendencias e regra de origem em uma leitura
+                    menos cansativa.
                   </p>
                 </div>
                 <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-right">
@@ -662,31 +663,8 @@ export default function ComissoesPage() {
             </div>
           </div>
 
-          <ComissaoHelpPanel
-            eyebrow="Leitura rapida"
-            title="Como este valor foi definido"
-            description="A origem mostra qual regra entrou no calculo e evita adivinhacao na hora de conferir o rateio."
-            steps={[
-              {
-                title: "Padrao do servico",
-                description:
-                  "Esse deve ser o caminho mais comum para a comissao.",
-              },
-              {
-                title: "Excecao do profissional",
-                description:
-                  "Quando um vinculo foge do padrao, a tela aponta isso.",
-              },
-              {
-                title: "Taxa da maquininha",
-                description:
-                  "So entra na conta se a configuracao permitir.",
-              },
-            ]}
-          />
-
           {comboSummary.length > 0 ? (
-            <div className="rounded-[28px] border border-violet-100 bg-gradient-to-br from-violet-50 via-white to-white p-6 shadow-sm">
+            <div className="rounded-[28px] border border-violet-100 bg-gradient-to-br from-violet-50 via-white to-white p-5 shadow-sm">
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div className="max-w-3xl">
                   <div className="text-xs font-semibold uppercase tracking-[0.22em] text-violet-500">
@@ -749,8 +727,8 @@ export default function ComissoesPage() {
             </div>
           ) : null}
 
-          <div className="rounded-[28px] border border-zinc-200 bg-white p-5 shadow-sm">
-            <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1.1fr_190px_190px_240px_180px_180px_auto]">
+          <div className="rounded-[28px] border border-zinc-200 bg-white p-4 shadow-sm">
+            <div className="grid grid-cols-1 gap-3 xl:grid-cols-[1.25fr_170px_170px_220px_170px_170px_150px]">
               <Field label="Buscar">
                 <div className="relative">
                   <Search
@@ -827,7 +805,7 @@ export default function ComissoesPage() {
                 </button>
               </Field>
             </div>
-            <div className="mt-4 flex flex-wrap gap-2">
+            <div className="mt-3 flex flex-wrap gap-2">
               <button
                 onClick={apurarRateio}
                 className="rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-50"
@@ -853,7 +831,7 @@ export default function ComissoesPage() {
             </div>
           </div>
 
-          <div className="rounded-[28px] border border-zinc-200 bg-white p-5 shadow-sm">
+          <div className="rounded-[28px] border border-zinc-200 bg-white p-4 shadow-sm">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <div className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">

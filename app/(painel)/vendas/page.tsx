@@ -866,7 +866,7 @@ export default function VendasPage() {
     <>
       <div className="bg-white">
         <div className="mx-auto max-w-[1700px] space-y-5">
-          <div className="rounded-[32px] border border-zinc-200 bg-white p-6 text-zinc-950 shadow-sm">
+          <div className="rounded-[28px] border border-zinc-200 bg-white p-5 text-zinc-950 shadow-sm">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div>
                 <h1 className="mt-2 text-3xl font-bold">Vendas</h1>
@@ -919,8 +919,8 @@ export default function VendasPage() {
             </div>
           ) : null}
 
-          <div className="rounded-[28px] border border-zinc-200 bg-white p-5 shadow-sm">
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
+          <div className="rounded-[28px] border border-zinc-200 bg-white p-4 shadow-sm">
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-5">
               <div className="xl:col-span-2">
                 <label className="mb-2 block text-sm font-semibold text-zinc-700">
                   Busca avançada
@@ -982,7 +982,7 @@ export default function VendasPage() {
               </div>
             </div>
 
-            <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-6">
+            <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-6">
               <div>
                 <label className="mb-2 block text-sm font-semibold text-zinc-700">
                   Cliente

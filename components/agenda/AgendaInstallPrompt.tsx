@@ -75,67 +75,55 @@ export default function AgendaInstallPrompt() {
   if (!ready) return null;
 
   return (
-    <div className="rounded-[24px] border border-violet-200 bg-gradient-to-r from-violet-50 via-white to-sky-50 p-4 shadow-[0_16px_40px_rgba(76,29,149,0.08)]">
-      <div className="flex items-start gap-3">
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[16px] bg-zinc-950 text-white">
-          <CalendarDays size={20} />
+    <div className="rounded-[20px] border border-violet-200 bg-gradient-to-r from-violet-50 via-white to-sky-50 px-4 py-3 shadow-[0_10px_24px_rgba(76,29,149,0.06)]">
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[14px] bg-zinc-950 text-white">
+          <CalendarDays size={18} />
         </div>
 
         <div className="min-w-0 flex-1">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <div className="text-sm font-bold text-zinc-950">
-                Instale a agenda no computador
-              </div>
-              <p className="mt-1 text-sm leading-6 text-zinc-600">
-                Abra a agenda como app separado, sem misturar com outras abas do
-                navegador.
-              </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="text-sm font-bold text-zinc-950">
+              Instale a agenda como app
             </div>
-
-            <button
-              type="button"
-              onClick={close}
-              className="rounded-full border border-white/70 bg-white/90 p-1.5 text-zinc-500 shadow-sm"
-              aria-label="Fechar dica de instalacao da agenda"
-            >
-              <X size={15} />
-            </button>
+            <span className="rounded-full border border-white/80 bg-white/80 px-2.5 py-1 text-[11px] font-semibold text-zinc-600">
+              Menos abas e mais foco
+            </span>
           </div>
-
-          <div className="mt-3 rounded-[18px] border border-white/80 bg-white/80 px-3 py-3 text-xs leading-5 text-zinc-600">
+          <p className="mt-1 text-xs leading-5 text-zinc-600">
             {deferredPrompt
-              ? "Seu navegador ja permite instalar esta agenda como aplicativo."
+              ? "Seu navegador ja permite instalar a agenda agora."
               : device === "desktop"
-                ? "No Chrome ou Edge, use o icone de instalar na barra de endereco para deixar so a agenda no desktop."
-                : "No celular, use Adicionar a tela inicial para abrir a agenda mais rapido."}
-          </div>
+                ? "Use o atalho de instalar do navegador e abra a agenda separada do resto do painel."
+                : "Use Adicionar a tela inicial para voltar mais rapido para a agenda."}
+          </p>
+        </div>
 
-          <div className="mt-3 flex flex-wrap gap-2">
-            {deferredPrompt ? (
-              <button
-                type="button"
-                onClick={installNow}
-                className="inline-flex h-10 items-center gap-2 rounded-full bg-zinc-950 px-4 text-xs font-bold text-white transition hover:bg-zinc-800"
-              >
-                <Download size={14} />
-                Instalar agenda
-              </button>
-            ) : (
-              <div className="inline-flex h-10 items-center gap-2 rounded-full border border-zinc-200 bg-white px-4 text-xs font-bold text-zinc-700">
-                <MonitorSmartphone size={14} />
-                Use o atalho Instalar app do navegador
-              </div>
-            )}
-
+        <div className="flex shrink-0 items-center gap-2">
+          {deferredPrompt ? (
             <button
               type="button"
-              onClick={close}
-              className="h-10 rounded-full border border-zinc-200 bg-white px-4 text-xs font-bold text-zinc-700 transition hover:bg-zinc-50"
+              onClick={installNow}
+              className="inline-flex h-9 items-center gap-2 rounded-full bg-zinc-950 px-4 text-xs font-bold text-white transition hover:bg-zinc-800"
             >
-              Agora nao
+              <Download size={14} />
+              Instalar
             </button>
-          </div>
+          ) : (
+            <div className="inline-flex h-9 items-center gap-2 rounded-full border border-zinc-200 bg-white px-4 text-xs font-bold text-zinc-700">
+              <MonitorSmartphone size={14} />
+              Ver atalho
+            </div>
+          )}
+
+          <button
+            type="button"
+            onClick={close}
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-zinc-200 bg-white text-zinc-600 transition hover:bg-zinc-50"
+            aria-label="Fechar dica de instalacao da agenda"
+          >
+            <X size={14} />
+          </button>
         </div>
       </div>
     </div>

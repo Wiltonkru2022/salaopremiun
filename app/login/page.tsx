@@ -45,6 +45,7 @@ function LoginPageContent() {
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState("");
   const [rateLimited, setRateLimited] = useState(false);
+  const [redirectMessage, setRedirectMessage] = useState("");
 
   const planoSelecionado = searchParams.get("plano")?.trim() || "";
   const emailQuery = searchParams.get("email")?.trim() || "";
@@ -92,15 +93,21 @@ function LoginPageContent() {
         return;
       }
 
+      setRedirectMessage(
+        agendaQuickLogin
+          ? "Login aceito. Abrindo a agenda em modo foco..."
+          : "Login aceito. Entrando no painel e montando o resumo do salao..."
+      );
+
       window.location.assign(
         returnTo
-          ? getManagedHostHrefForPath(returnTo)
+          ? getManagedHostHrefForPath(appendBootParam(returnTo))
           : planoSelecionado
             ? getManagedHostHref(
                 `/assinatura?plano=${encodeURIComponent(planoSelecionado)}`,
                 "assinatura"
               )
-            : getManagedHostHref("/dashboard", "painel")
+            : getManagedHostHref("/dashboard?boot=1", "painel")
       );
     } catch (error) {
       setRateLimited(isSupabaseAuthRateLimit(error));
@@ -265,6 +272,12 @@ function LoginPageContent() {
               </button>
             </form>
 
+            {loading && redirectMessage ? (
+              <div className="mt-4 rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-700">
+                {redirectMessage}
+              </div>
+            ) : null}
+
             <div className="my-6 flex items-center gap-3">
               <div className="h-px flex-1 bg-zinc-200" />
               <span className="text-xs font-medium uppercase tracking-wider text-zinc-400">
@@ -324,4 +337,14 @@ function getManagedHostHrefForPath(path: string) {
   }
 
   return getManagedHostHref(path, "painel");
+}
+
+function appendBootParam(path: string) {
+  if (!path.startsWith("/")) return path;
+
+  const [pathname, query = ""] = path.split("?");
+  const params = new URLSearchParams(query);
+  params.set("boot", "1");
+  const nextQuery = params.toString();
+  return nextQuery ? `${pathname}?${nextQuery}` : pathname;
 }

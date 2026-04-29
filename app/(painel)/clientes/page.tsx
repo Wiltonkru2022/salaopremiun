@@ -334,7 +334,7 @@ export default function ClientesPage() {
 
       <div className="bg-white">
         <div className="mx-auto max-w-7xl space-y-6">
-          <section className="rounded-3xl border border-zinc-200 bg-white p-6 text-zinc-950 shadow-sm">
+          <section className="rounded-[28px] border border-zinc-200 bg-white p-5 text-zinc-950 shadow-sm">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
               <div className="max-w-3xl">
                 <div className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-400">
@@ -408,21 +408,6 @@ export default function ClientesPage() {
             </div>
           ) : null}
 
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-            <GuideCard
-              title="Cadastro sem duplicar"
-              text="A rota agora bloqueia e-mail, telefone, WhatsApp ou CPF repetido dentro do mesmo salao."
-            />
-            <GuideCard
-              title="Historico protegido"
-              text="Se a cliente ja passou por agenda ou comanda, o sistema empurra para inativacao em vez de apagar o passado."
-            />
-            <GuideCard
-              title="Contato em primeiro plano"
-              text="A lista ficou mais util para recepcao: nome, contato, bairro, profissao e prontidao para retorno aparecem sem cavar muito."
-            />
-          </div>
-
           <section className="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm">
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.6fr)_220px_220px]">
               <input
@@ -456,7 +441,7 @@ export default function ClientesPage() {
             </div>
           </section>
 
-          <section className="space-y-4">
+          <section className="space-y-3">
             {listaFiltrada.length === 0 ? (
               <div className="rounded-3xl border border-zinc-200 bg-white p-6 text-sm text-zinc-600 shadow-sm">
                 Nenhum cliente encontrado com esse filtro.
@@ -470,7 +455,7 @@ export default function ClientesPage() {
                 return (
                   <article
                     key={item.id}
-                    className="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm"
+                    className="rounded-[26px] border border-zinc-200 bg-white p-4 shadow-sm"
                   >
                     <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
                       <div className="min-w-0 flex-1">
@@ -509,7 +494,7 @@ export default function ClientesPage() {
                         </div>
                       </div>
 
-                      <div className="flex shrink-0 flex-col gap-2 xl:w-52">
+                      <div className="flex shrink-0 flex-wrap gap-2 xl:w-52 xl:justify-end">
                         <Link
                           href={`/clientes/${item.id}`}
                           className="inline-flex items-center justify-center rounded-xl border border-zinc-300 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50"
@@ -587,17 +572,6 @@ function ResumoCard({
         </div>
       </div>
       <p className="mt-3 text-sm leading-6 text-zinc-600">{description}</p>
-    </div>
-  );
-}
-
-function GuideCard({ title, text }: { title: string; text: string }) {
-  return (
-    <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
-      <div className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
-        {title}
-      </div>
-      <p className="mt-2 text-sm leading-6 text-zinc-700">{text}</p>
     </div>
   );
 }

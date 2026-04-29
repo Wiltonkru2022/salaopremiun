@@ -419,7 +419,7 @@ export default function ProfissionaisListPage() {
 
       <div className="bg-white">
         <div className="mx-auto max-w-7xl space-y-6">
-          <section className="rounded-3xl border border-zinc-200 bg-white p-6 text-zinc-950 shadow-sm">
+          <section className="rounded-[28px] border border-zinc-200 bg-white p-5 text-zinc-950 shadow-sm">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
               <div className="max-w-3xl">
                 <div className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-400">
@@ -485,21 +485,6 @@ export default function ProfissionaisListPage() {
             </div>
           ) : null}
 
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-            <GuideCard
-              title="Atende ou auxilia"
-              text="O tipo do cadastro precisa bater com a operacao. Assistente nao deve parecer profissional principal e vice-versa."
-            />
-            <GuideCard
-              title="Acesso com leitura clara"
-              text="Nao basta dizer que existe login. A lista agora deixa mais claro quem esta liberado no app e qual o nivel de acesso."
-            />
-            <GuideCard
-              title="Excluir com trava"
-              text="Se o profissional ja passou por agenda, comanda, comissao ou caixa, o caminho correto vira inativar, nao apagar o historico."
-            />
-          </div>
-
           <section className="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm">
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.6fr)_220px_220px]">
               <input
@@ -533,7 +518,7 @@ export default function ProfissionaisListPage() {
             </div>
           </section>
 
-          <section className="space-y-4">
+          <section className="space-y-3">
             {listaFiltrada.length === 0 ? (
               <div className="rounded-3xl border border-zinc-200 bg-white p-6 text-sm text-zinc-600 shadow-sm">
                 Nenhum profissional encontrado com esse filtro.
@@ -547,7 +532,7 @@ export default function ProfissionaisListPage() {
                 return (
                   <article
                     key={item.id}
-                    className="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm"
+                    className="rounded-[26px] border border-zinc-200 bg-white p-4 shadow-sm"
                   >
                     <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
                       <div className="min-w-0 flex-1">
@@ -622,7 +607,7 @@ export default function ProfissionaisListPage() {
                         </div>
                       </div>
 
-                      <div className="flex shrink-0 flex-col gap-2 xl:w-52">
+                      <div className="flex shrink-0 flex-wrap gap-2 xl:w-52 xl:justify-end">
                         <Link
                           href={`/profissionais/${item.id}`}
                           className="inline-flex items-center justify-center rounded-xl border border-zinc-300 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50"
@@ -700,17 +685,6 @@ function ResumoCard({
         </div>
       </div>
       <p className="mt-3 text-sm leading-6 text-zinc-600">{description}</p>
-    </div>
-  );
-}
-
-function GuideCard({ title, text }: { title: string; text: string }) {
-  return (
-    <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
-      <div className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
-        {title}
-      </div>
-      <p className="mt-2 text-sm leading-6 text-zinc-700">{text}</p>
     </div>
   );
 }

@@ -74,6 +74,7 @@
     "eslint": "^9",
     "eslint-config-next": "^16.2.4",
     "globals": "^17.4.0",
+    "playwright": "^1.59.1",
     "supabase": "^2.91.2",
     "tailwindcss": "^4",
     "typescript": "^5"

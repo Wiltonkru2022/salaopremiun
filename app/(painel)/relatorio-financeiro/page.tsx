@@ -596,7 +596,7 @@ export default function RelatorioFinanceiroPage() {
   return (
     <div className="bg-white">
       <div className="mx-auto max-w-[1800px] space-y-5">
-        <div className="rounded-[32px] border border-zinc-200 bg-white p-6 text-zinc-950 shadow-sm">
+        <div className="rounded-[28px] border border-zinc-200 bg-white p-5 text-zinc-950 shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
               <h1 className="mt-2 text-3xl font-bold">Relatório Financeiro</h1>
@@ -626,8 +626,8 @@ export default function RelatorioFinanceiroPage() {
           </div>
         ) : null}
 
-        <div className="rounded-[28px] border border-zinc-200 bg-white p-5 shadow-sm">
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
+        <div className="rounded-[28px] border border-zinc-200 bg-white p-4 shadow-sm">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-5">
             <div className="xl:col-span-2">
               <label className="mb-2 block text-sm font-semibold text-zinc-700">
                 Buscar
@@ -700,7 +700,7 @@ export default function RelatorioFinanceiroPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-4 xl:grid-cols-5">
+        <div className="grid grid-cols-1 gap-3 xl:grid-cols-5">
           <KpiCard
             icon={<BadgeDollarSign size={18} />}
             label="Faturamento bruto"
@@ -730,7 +730,7 @@ export default function RelatorioFinanceiroPage() {
           />
         </div>
 
-        <div className="grid grid-cols-1 gap-4 xl:grid-cols-4">
+        <div className="grid grid-cols-1 gap-3 xl:grid-cols-4">
           <KpiCard
             icon={<Receipt size={18} />}
             label="Descontos"
@@ -753,7 +753,7 @@ export default function RelatorioFinanceiroPage() {
           />
         </div>
 
-        <div className="grid grid-cols-1 gap-4 xl:grid-cols-5">
+        <div className="grid grid-cols-1 gap-3 xl:grid-cols-5">
           <KpiCard
             icon={<Wallet size={18} />}
             label="Fechamentos de caixa"

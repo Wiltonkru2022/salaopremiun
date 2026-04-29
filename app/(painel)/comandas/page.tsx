@@ -119,12 +119,12 @@ export default function ComandasPage() {
       .maybeSingle();
 
     if (usuarioError || !usuario?.id || !usuario?.id_salao) {
-      setErro("Não foi possível validar o usuário do sistema.");
+      setErro("Nao foi possivel validar o usuario do sistema.");
       return null;
     }
 
     if (usuario.status && usuario.status !== "ativo") {
-      setErro("Usuário inativo.");
+      setErro("Usuario inativo.");
       return null;
     }
 
@@ -186,7 +186,6 @@ export default function ComandasPage() {
       if (comandasError) throw comandasError;
 
       const comandasRows = (comandasData as ComandaRow[]) || [];
-
       const idsClientes = Array.from(
         new Set(
           comandasRows
@@ -209,20 +208,20 @@ export default function ComandasPage() {
         clientesMap = new Map(clientesRows.map((cliente) => [cliente.id, cliente.nome]));
       }
 
-      const listaFinal: Comanda[] = comandasRows.map((item) => ({
-        id: item.id,
-        numero: Number(item.numero || 0),
-        status: item.status || "",
-        subtotal: Number(item.subtotal || 0),
-        desconto: Number(item.desconto || 0),
-        acrescimo: Number(item.acrescimo || 0),
-        total: Number(item.total || 0),
-        aberta_em: item.aberta_em,
-        id_cliente: item.id_cliente,
-        cliente_nome: item.id_cliente ? clientesMap.get(item.id_cliente) || null : null,
-      }));
-
-      setComandas(listaFinal);
+      setComandas(
+        comandasRows.map((item) => ({
+          id: item.id,
+          numero: Number(item.numero || 0),
+          status: item.status || "",
+          subtotal: Number(item.subtotal || 0),
+          desconto: Number(item.desconto || 0),
+          acrescimo: Number(item.acrescimo || 0),
+          total: Number(item.total || 0),
+          aberta_em: item.aberta_em,
+          id_cliente: item.id_cliente,
+          cliente_nome: item.id_cliente ? clientesMap.get(item.id_cliente) || null : null,
+        }))
+      );
     } catch (e: unknown) {
       console.error(e);
       setErro(e instanceof Error ? e.message : "Erro ao carregar comandas.");
@@ -240,14 +239,11 @@ export default function ComandasPage() {
 
     return comandas.filter((item) => {
       const nomeCliente = (item.cliente_nome || "").toLowerCase();
-
       const bateBusca =
         !termo ||
         String(item.numero).includes(termo) ||
         nomeCliente.includes(termo);
-
-      const bateStatus =
-        statusFiltro === "todos" || item.status === statusFiltro;
+      const bateStatus = statusFiltro === "todos" || item.status === statusFiltro;
 
       return bateBusca && bateStatus;
     });
@@ -256,7 +252,6 @@ export default function ComandasPage() {
   const resumoComandas = useMemo(() => {
     return comandas.reduce(
       (acc, item) => {
-        acc.total += Number(item.total || 0);
         if (["aberta", "em_atendimento", "aguardando_pagamento"].includes(item.status)) {
           acc.ativas += 1;
           acc.totalAberto += Number(item.total || 0);
@@ -265,7 +260,7 @@ export default function ComandasPage() {
         if (item.status === "fechada") acc.fechadas += 1;
         return acc;
       },
-      { total: 0, totalAberto: 0, ativas: 0, aguardando: 0, fechadas: 0 }
+      { totalAberto: 0, ativas: 0, aguardando: 0, fechadas: 0 }
     );
   }, [comandas]);
 
@@ -283,7 +278,7 @@ export default function ComandasPage() {
     return (
       <div className="p-6">
         <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-rose-700">
-          Você não tem permissão para acessar Comandas.
+          Voce nao tem permissao para acessar Comandas.
         </div>
       </div>
     );
@@ -291,21 +286,19 @@ export default function ComandasPage() {
 
   return (
     <div className="bg-white">
-      <div className="mx-auto max-w-7xl space-y-6">
-        <div className="rounded-3xl border border-zinc-200 bg-white p-6 text-zinc-950 shadow-sm">
+      <div className="mx-auto max-w-7xl space-y-5">
+        <section className="rounded-[28px] border border-zinc-200 bg-white p-5 text-zinc-950 shadow-sm">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <div>
+            <div className="max-w-3xl">
               <div className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-400">
                 Consumo e fechamento
               </div>
-              <h1 className="mt-2 text-2xl font-bold md:text-3xl">Comandas</h1>
-              <p className="mt-3 max-w-2xl text-sm leading-6 text-zinc-600">
-                Aqui voce acompanha o consumo da cliente do atendimento ao
-                envio para o caixa, com servicos, combos, produtos, totais e
-                status da venda em um so lugar.
-              </p>
-            <p className="hidden mt-2 text-sm text-zinc-500">
-                Controle completo do consumo da cliente até o fechamento no caixa.
+              <h1 className="mt-1 text-[1.9rem] font-bold tracking-[-0.04em] md:text-[2.1rem]">
+                Comandas
+              </h1>
+              <p className="mt-2 text-sm leading-6 text-zinc-600">
+                Consumo, status e total da venda em uma leitura mais direta para
+                recepcao e caixa.
               </p>
             </div>
 
@@ -328,9 +321,9 @@ export default function ComandasPage() {
               </div>
             ) : null}
           </div>
-        </div>
+        </section>
 
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
           <ResumoCard label="Comandas ativas" value={String(resumoComandas.ativas)} />
           <ResumoCard
             label="Aguardando pagamento"
@@ -352,20 +345,20 @@ export default function ComandasPage() {
           </div>
         ) : null}
 
-        <div className="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm">
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <section className="rounded-[28px] border border-zinc-200 bg-white p-4 shadow-sm">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1.5fr)_220px_160px]">
             <input
               type="text"
-              placeholder="Buscar por número da comanda ou cliente"
+              placeholder="Buscar por numero da comanda ou cliente"
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
-              className="w-full rounded-2xl border border-zinc-300 px-4 py-3 text-sm outline-none focus:border-zinc-900"
+              className="w-full rounded-2xl border border-zinc-300 px-4 py-2.5 text-sm outline-none focus:border-zinc-900"
             />
 
             <select
               value={statusFiltro}
               onChange={(e) => setStatusFiltro(e.target.value)}
-              className="w-full rounded-2xl border border-zinc-300 px-4 py-3 text-sm outline-none focus:border-zinc-900"
+              className="w-full rounded-2xl border border-zinc-300 px-4 py-2.5 text-sm outline-none focus:border-zinc-900"
             >
               <option value="todos">Todos</option>
               <option value="aberta">Aberta</option>
@@ -375,14 +368,14 @@ export default function ComandasPage() {
               <option value="cancelada">Cancelada</option>
             </select>
 
-            <div className="flex items-center rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-600">
+            <div className="flex items-center rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-2.5 text-sm text-zinc-600">
               Total:
               <strong className="ml-2 text-zinc-900">{listaFiltrada.length}</strong>
             </div>
           </div>
-        </div>
+        </section>
 
-        <div className="overflow-hidden rounded-3xl border border-zinc-200 bg-white shadow-sm">
+        <div className="overflow-hidden rounded-[28px] border border-zinc-200 bg-white shadow-sm">
           {listaFiltrada.length === 0 ? (
             <div className="p-6 text-sm text-zinc-600">
               Nenhuma comanda encontrada.
@@ -390,10 +383,10 @@ export default function ComandasPage() {
           ) : (
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-zinc-200">
-                <thead className="bg-zinc-100">
+                <thead className="bg-zinc-50">
                   <tr>
                     <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-zinc-600">
-                      Número
+                      Numero
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-zinc-600">
                       Cliente
@@ -408,7 +401,7 @@ export default function ComandasPage() {
                       Abertura
                     </th>
                     <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-zinc-600">
-                      Ações
+                      Acoes
                     </th>
                   </tr>
                 </thead>
@@ -416,30 +409,30 @@ export default function ComandasPage() {
                 <tbody className="divide-y divide-zinc-200 bg-white">
                   {listaFiltrada.map((item) => (
                     <tr key={item.id} className="transition hover:bg-zinc-50">
-                      <td className="px-4 py-4 font-semibold text-zinc-900">
+                      <td className="px-4 py-3.5 font-semibold text-zinc-900">
                         #{item.numero}
                       </td>
-                      <td className="px-4 py-4 text-sm text-zinc-700">
+                      <td className="px-4 py-3.5 text-sm text-zinc-700">
                         {item.cliente_nome || "Sem cliente"}
                       </td>
-                      <td className="px-4 py-4 text-sm text-zinc-700">
+                      <td className="px-4 py-3.5 text-sm text-zinc-700">
                         <span
                           className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${getStatusMeta(item.status).className}`}
                         >
                           {getStatusMeta(item.status).label}
                         </span>
                       </td>
-                      <td className="px-4 py-4 text-sm text-zinc-700">
+                      <td className="px-4 py-3.5 text-sm text-zinc-700">
                         {formatCurrency(item.total)}
                       </td>
-                      <td className="px-4 py-4 text-sm text-zinc-700">
+                      <td className="px-4 py-3.5 text-sm text-zinc-700">
                         {new Date(item.aberta_em).toLocaleString("pt-BR")}
                       </td>
-                      <td className="px-4 py-4 text-right">
+                      <td className="px-4 py-3.5 text-right">
                         {podeGerenciar ? (
                           <Link
                             href={`/comandas/${item.id}`}
-                            className="rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm font-semibold text-zinc-700"
+                            className="inline-flex items-center rounded-xl bg-zinc-900 px-3 py-2 text-sm font-semibold text-white transition hover:opacity-95"
                           >
                             Abrir
                           </Link>
@@ -463,11 +456,11 @@ export default function ComandasPage() {
 
 function ResumoCard({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-[28px] border border-zinc-200 bg-white p-5 shadow-sm">
+    <div className="rounded-[24px] border border-zinc-200 bg-white p-4 shadow-sm">
       <div className="text-xs font-bold uppercase tracking-[0.18em] text-zinc-400">
         {label}
       </div>
-      <div className="mt-3 font-display text-3xl font-bold tracking-[-0.05em] text-zinc-950">
+      <div className="mt-2 text-[1.9rem] font-bold tracking-[-0.05em] text-zinc-950">
         {value}
       </div>
     </div>
