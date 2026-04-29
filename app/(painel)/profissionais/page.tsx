@@ -533,14 +533,14 @@ export default function ProfissionaisListPage() {
                     key={item.id}
                     className="rounded-[24px] border border-zinc-200 bg-white p-4 shadow-sm"
                   >
-                    <div className="grid gap-4 xl:grid-cols-[minmax(0,1.55fr)_240px] xl:items-center">
+                    <div className="grid gap-3 xl:grid-cols-[minmax(0,1.7fr)_220px] xl:items-center">
                       <div className="min-w-0 flex-1">
-                        <div className="flex items-start gap-4">
+                        <div className="flex items-start gap-3">
                           <Avatar profissional={item} />
 
                           <div className="min-w-0 flex-1">
                             <div className="flex flex-wrap items-center gap-2">
-                              <h2 className="text-lg font-semibold text-zinc-950">
+                              <h2 className="text-[1.05rem] font-semibold text-zinc-950">
                                 {item.nome}
                               </h2>
                               <StatusBadge ativo={ativo} />
@@ -552,7 +552,7 @@ export default function ProfissionaisListPage() {
                               ) : null}
                             </div>
 
-                            <p className="mt-2 text-sm text-zinc-500">
+                            <p className="mt-1.5 text-sm text-zinc-500">
                               {[
                                 nomeExibicao !== item.nome ? nomeExibicao : null,
                                 item.cargo || item.categoria,
@@ -562,7 +562,7 @@ export default function ProfissionaisListPage() {
                                 .join(" • ") || "Sem cargo, categoria ou vinculo informado"}
                             </p>
 
-                            <div className="mt-3 flex flex-wrap gap-2 text-xs text-zinc-500">
+                            <div className="mt-2.5 flex flex-wrap gap-2 text-xs text-zinc-500">
                               <TagHint>{item.email || "Sem e-mail"}</TagHint>
                               <TagHint>
                                 {item.whatsapp || item.telefone || "Sem telefone"}
@@ -574,7 +574,7 @@ export default function ProfissionaisListPage() {
                               </TagHint>
                             </div>
 
-                            <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
+                            <div className="mt-3 flex flex-wrap gap-2.5">
                               <MetricBlock
                                 label="Funcao"
                                 value={item.cargo || item.categoria || "-"}
@@ -606,7 +606,7 @@ export default function ProfissionaisListPage() {
                         </div>
                       </div>
 
-                      <div className="flex shrink-0 flex-wrap gap-2 xl:justify-end">
+                      <div className="flex shrink-0 flex-wrap gap-2 xl:self-start xl:justify-end">
                         <Link
                           href={`/profissionais/${item.id}`}
                           className="inline-flex min-w-[108px] items-center justify-center rounded-xl bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-95"
@@ -691,12 +691,14 @@ function MetricBlock({
   detail: string;
 }) {
   return (
-    <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3">
-      <div className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-400">
-        {label}
+    <div className="flex min-w-[185px] flex-1 items-center justify-between gap-3 rounded-2xl border border-zinc-200 bg-zinc-50 px-3 py-2.5">
+      <div className="min-w-0">
+        <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-400">
+          {label}
+        </div>
+        <p className="mt-0.5 text-[11px] leading-4 text-zinc-500">{detail}</p>
       </div>
-      <div className="mt-2 text-base font-semibold text-zinc-950">{value}</div>
-      <p className="mt-1 text-xs leading-5 text-zinc-500">{detail}</p>
+      <div className="shrink-0 text-base font-semibold text-zinc-950">{value}</div>
     </div>
   );
 }
@@ -737,7 +739,7 @@ function TagHint({ children }: { children: ReactNode }) {
 
 function Avatar({ profissional }: { profissional: Profissional }) {
   return (
-    <div className="h-14 w-14 shrink-0 overflow-hidden rounded-full border border-zinc-200 bg-zinc-100">
+    <div className="h-12 w-12 shrink-0 overflow-hidden rounded-full border border-zinc-200 bg-zinc-100">
       {profissional.foto_url ? (
         <img
           src={profissional.foto_url}

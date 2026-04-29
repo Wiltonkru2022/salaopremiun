@@ -100,6 +100,7 @@ type ResumoCaixa = {
 };
 
 type StatusFiltro = "fechada" | "cancelada" | "todos";
+type PainelLateralTab = "pagamentos" | "comissoes";
 
 function toArray<T>(value: T | T[] | null | undefined): T[] {
   if (!value) return [];
@@ -217,6 +218,8 @@ export default function RelatorioFinanceiroPage() {
   const [dataFim, setDataFim] = useState(formatDateInput(hoje));
   const [busca, setBusca] = useState("");
   const [statusFiltro, setStatusFiltro] = useState<StatusFiltro>("fechada");
+  const [painelLateralTab, setPainelLateralTab] =
+    useState<PainelLateralTab>("pagamentos");
 
   const [comandas, setComandas] = useState<ComandaRow[]>([]);
   const [pagamentos, setPagamentos] = useState<PagamentoRow[]>([]);
@@ -562,6 +565,22 @@ export default function RelatorioFinanceiroPage() {
     };
   }, [caixaSessoes]);
 
+  const resumoComissoes = useMemo(() => {
+    const pendentes = comissoesFiltradas.filter((item) => item.status === "pendente");
+    const pagas = comissoesFiltradas.filter((item) => item.status === "pago");
+
+    return {
+      totalLancamentos: comissoesFiltradas.length,
+      pendentes: pendentes.length,
+      pagas: pagas.length,
+      valorPendente: pendentes.reduce(
+        (acc, item) => acc + Number(item.valor_comissao || 0),
+        0
+      ),
+      valorPago: pagas.reduce((acc, item) => acc + Number(item.valor_comissao || 0), 0),
+    };
+  }, [comissoesFiltradas]);
+
   if (loading) {
     return (
       <AppLoading
@@ -875,7 +894,47 @@ export default function RelatorioFinanceiroPage() {
           </div>
 
           <div className="space-y-5">
-            <div className="overflow-hidden rounded-[28px] border border-zinc-200 bg-white shadow-sm">
+            <div className="rounded-[28px] border border-zinc-200 bg-white p-4 shadow-sm">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <div className="text-lg font-bold text-zinc-900">Painel lateral</div>
+                  <div className="mt-1 text-sm text-zinc-500">
+                    Pagamentos e comissões em uma leitura mais curta.
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-1">
+                  <button
+                    type="button"
+                    onClick={() => setPainelLateralTab("pagamentos")}
+                    className={`rounded-[12px] px-3 py-1.5 text-xs font-semibold ${
+                      painelLateralTab === "pagamentos"
+                        ? "bg-zinc-900 text-white"
+                        : "text-zinc-700"
+                    }`}
+                  >
+                    Pagamentos
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPainelLateralTab("comissoes")}
+                    className={`rounded-[12px] px-3 py-1.5 text-xs font-semibold ${
+                      painelLateralTab === "comissoes"
+                        ? "bg-zinc-900 text-white"
+                        : "text-zinc-700"
+                    }`}
+                  >
+                    Comissões
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div
+              className={`overflow-hidden rounded-[28px] border border-zinc-200 bg-white shadow-sm ${
+                painelLateralTab === "pagamentos" ? "block" : "hidden"
+              }`}
+            >
               <div className="border-b border-zinc-200 px-5 py-4">
                 <div className="text-lg font-bold text-zinc-900">Pagamentos por forma</div>
                 <div className="mt-1 text-sm text-zinc-500">
@@ -905,12 +964,34 @@ export default function RelatorioFinanceiroPage() {
               </div>
             </div>
 
-            <div className="overflow-hidden rounded-[28px] border border-zinc-200 bg-white shadow-sm">
+            <div
+              className={`overflow-hidden rounded-[28px] border border-zinc-200 bg-white shadow-sm ${
+                painelLateralTab === "comissoes" ? "block" : "hidden"
+              }`}
+            >
               <div className="border-b border-zinc-200 px-5 py-4">
                 <div className="text-lg font-bold text-zinc-900">Comissões do período</div>
                 <div className="mt-1 text-sm text-zinc-500">
                   Resumo das comissões ligadas às vendas filtradas.
                 </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-3 border-b border-zinc-200 px-5 py-4 sm:grid-cols-3">
+                <ResumoLateralCard
+                  label="Lancamentos"
+                  value={String(resumoComissoes.totalLancamentos)}
+                  helper="Comissoes no filtro atual"
+                />
+                <ResumoLateralCard
+                  label="Pendentes"
+                  value={formatCurrency(resumoComissoes.valorPendente)}
+                  helper={`${resumoComissoes.pendentes} lancamento(s)`}
+                />
+                <ResumoLateralCard
+                  label="Pagas"
+                  value={formatCurrency(resumoComissoes.valorPago)}
+                  helper={`${resumoComissoes.pagas} lancamento(s)`}
+                />
               </div>
 
               <div className="overflow-x-auto">
@@ -926,7 +1007,7 @@ export default function RelatorioFinanceiroPage() {
                   </thead>
 
                   <tbody>
-                    {comissoesFiltradas.slice(0, 20).map((item) => (
+                    {comissoesFiltradas.slice(0, 8).map((item) => (
                       <tr key={item.id} className="border-b border-zinc-100 last:border-b-0">
                         <td className="px-5 py-4">
                           <ComboDescriptionCell descricao={item.descricao} />
@@ -962,6 +1043,26 @@ export default function RelatorioFinanceiroPage() {
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+function ResumoLateralCard({
+  label,
+  value,
+  helper,
+}: {
+  label: string;
+  value: string;
+  helper: string;
+}) {
+  return (
+    <div className="rounded-[22px] border border-zinc-200 bg-zinc-50 p-4">
+      <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-400">
+        {label}
+      </div>
+      <div className="mt-2 text-xl font-bold text-zinc-950">{value}</div>
+      <div className="mt-1 text-xs text-zinc-500">{helper}</div>
     </div>
   );
 }
