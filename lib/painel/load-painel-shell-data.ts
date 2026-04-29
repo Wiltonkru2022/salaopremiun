@@ -1,5 +1,4 @@
 import { redirect } from "next/navigation";
-import { getUser } from "@/lib/auth/get-user";
 import { buildLoginRedirectUrl } from "@/lib/auth/login-redirect";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -7,7 +6,6 @@ import {
   sanitizePermissoesDb,
 } from "@/lib/auth/permissions";
 import { getResumoAssinatura } from "@/lib/assinatura-utils";
-import { SELECT_USUARIO_TENANT } from "@/lib/db/selects";
 import { buildShellNotifications } from "@/lib/notifications/shell-notifications";
 import { PERMISSIONS } from "@/lib/permissions";
 
@@ -45,22 +43,33 @@ type PermissoesDbRow = Record<string, boolean | string | null>;
 
 export async function loadPainelShellData() {
   const supabase = await createClient();
-  const user = await getUser();
+  const {
+    data: { session },
+    error: sessionError,
+  } = await supabase.auth.getSession();
 
-  if (!user) {
+  if (sessionError || !session?.user) {
     redirect(buildLoginRedirectUrl("sessao_expirada"));
   }
 
+  const user = session.user;
   const userName =
     user.user_metadata?.nome || user.email?.split("@")[0] || "Usuario";
+  const { data: resumoRpc, error: resumoError } = await supabase.rpc(
+    "fn_shell_resumo_painel"
+  );
 
-  const { data: usuario, error: usuarioError } = await supabase
-    .from("usuarios")
-    .select(SELECT_USUARIO_TENANT)
-    .eq("auth_user_id", user.id)
-    .maybeSingle();
+  if (resumoError) {
+    return {
+      ok: false as const,
+      error: resumoError.message || "Erro ao carregar resumo do painel.",
+    };
+  }
 
-  if (usuarioError || !usuario?.id || !usuario.id_salao) {
+  const rpc = (resumoRpc || {}) as RpcShellResumo;
+  const usuario = rpc.usuario;
+
+  if (!usuario?.id || !usuario.id_salao) {
     return {
       ok: false as const,
       error: "Erro ao carregar usuario do sistema.",
@@ -73,25 +82,12 @@ export async function loadPainelShellData() {
 
   const permissionsSelect = ["id_usuario", "id_salao", ...Object.keys(PERMISSIONS)].join(", ");
 
-  const [{ data: permissoes }, { data: resumoRpc, error: resumoError }] =
-    await Promise.all([
-      supabase
-        .from("usuarios_permissoes")
-        .select(permissionsSelect)
-        .eq("id_usuario", usuario.id)
-        .eq("id_salao", usuario.id_salao)
-        .maybeSingle(),
-      supabase.rpc("fn_shell_resumo_painel"),
-    ]);
-
-  if (resumoError) {
-    return {
-      ok: false as const,
-      error: resumoError.message || "Erro ao carregar resumo do painel.",
-    };
-  }
-
-  const rpc = (resumoRpc || {}) as RpcShellResumo;
+  const { data: permissoes } = await supabase
+    .from("usuarios_permissoes")
+    .select(permissionsSelect)
+    .eq("id_usuario", usuario.id)
+    .eq("id_salao", usuario.id_salao)
+    .maybeSingle();
   const permissoesPadrao = buildPermissoesByNivel(usuario.nivel);
   const permissoesDb = sanitizePermissoesDb(
     (permissoes as PermissoesDbRow | null) ?? null,
