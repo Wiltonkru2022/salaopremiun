@@ -78,6 +78,23 @@ export default function SearchableSelect({
     });
   }, [options, query]);
 
+  const bestMatch = useMemo(() => {
+    if (filteredOptions.length === 0) {
+      return null;
+    }
+
+    const normalizedQuery = query.trim().toLowerCase();
+    if (!normalizedQuery) {
+      return filteredOptions[0];
+    }
+
+    return (
+      filteredOptions.find(
+        (option) => option.label.trim().toLowerCase() === normalizedQuery
+      ) || filteredOptions[0]
+    );
+  }, [filteredOptions, query]);
+
   function handleOpen() {
     if (disabled) return;
     setOpen(true);
@@ -128,6 +145,23 @@ export default function SearchableSelect({
           value={open ? query : selectedOption?.label || query}
           onFocus={handleOpen}
           onClick={handleOpen}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              if (bestMatch) {
+                void handleSelect(bestMatch.value);
+              }
+              return;
+            }
+
+            if (!open) return;
+
+            if (e.key === "Escape") {
+              e.preventDefault();
+              setOpen(false);
+              setQuery(selectedOption?.label || "");
+            }
+          }}
           onChange={(e) => {
             setQuery(e.target.value);
             if (!open) setOpen(true);
