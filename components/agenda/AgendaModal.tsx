@@ -96,6 +96,29 @@ export default function AgendaModal(props: Props) {
   const statusLabel =
     statusOptions.find((option) => option.value === status)?.label || "Confirmado";
 
+  function handleFormKeyDown(event: React.KeyboardEvent<HTMLFormElement>) {
+    if (event.key !== "Enter") return;
+
+    const target = event.target as HTMLElement | null;
+    const tagName = target?.tagName?.toLowerCase();
+    const targetRole = target?.getAttribute("role");
+    const targetType = target instanceof HTMLInputElement ? target.type : null;
+
+    if (tagName === "textarea") {
+      return;
+    }
+
+    if (tagName === "button" || targetType === "submit") {
+      return;
+    }
+
+    if (targetRole === "option") {
+      return;
+    }
+
+    event.preventDefault();
+  }
+
   const formBody =
     mode === "agendamento" ? (
       <AgendaModalFormAgendamento
@@ -242,7 +265,11 @@ export default function AgendaModal(props: Props) {
           ) : null}
 
           {!aviso.open && !showComandaDecisionModal && !statusPickerOpen ? (
-            <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
+            <form
+              onSubmit={handleSubmit}
+              onKeyDown={handleFormKeyDown}
+              className="flex min-h-0 flex-1 flex-col"
+            >
               <div className="space-y-4">
                 {formBody}
                 <div className="border-t border-zinc-200 pt-4">{resumo}</div>
@@ -320,6 +347,7 @@ export default function AgendaModal(props: Props) {
 
           <form
             onSubmit={handleSubmit}
+            onKeyDown={handleFormKeyDown}
             className="flex min-h-0 flex-1 flex-col overflow-hidden"
           >
             <div className="grid min-h-0 flex-1 lg:grid-cols-[1.7fr_0.9fr]">
