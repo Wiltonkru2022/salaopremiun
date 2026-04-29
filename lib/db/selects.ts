@@ -49,7 +49,7 @@ export const SELECT_ITENS_EXTRAS =
 export const SELECT_COMANDA_ITENS =
   "ativo, base_calculo_aplicada, comissao_assistente_percentual_aplicada, comissao_assistente_valor_aplicado, comissao_percentual_aplicada, comissao_valor_aplicado, created_at, custo_total, desconta_taxa_maquininha_aplicada, descricao, id, id_agendamento, id_assistente, id_comanda, id_item_extra, id_produto, id_profissional, id_salao, id_servico, idempotency_key, observacoes, origem, quantidade, tipo, tipo_item, updated_at, valor_total, valor_unitario";
 export const SELECT_COMANDA_PAGAMENTOS =
-  "created_at, forma_pagamento, id, id_comanda, id_movimentacao, id_salao, idempotency_key, observacoes, pago_em, parcelas, taxa, taxa_maquininha_percentual, taxa_maquininha_valor, valor";
+  "created_at, forma_pagamento, id, id_comanda, id_movimentacao, id_salao, idempotency_key, observacoes, pago_em, parcelas, taxa, taxa_maquininha_percentual, taxa_maquininha_valor, valor, valor_credito_cliente";
 export const SELECT_COMISSOES_LANCAMENTOS =
   "competencia, competencia_data, criado_em, descricao, id, id_agendamento, id_assistente, id_comanda, id_comanda_item, id_profissional, id_salao, observacoes, origem_percentual, pago_em, percentual, percentual_aplicado, status, tipo_destinatario, tipo_profissional, updated_at, valor_base, valor_comissao, valor_comissao_assistente";
 export const SELECT_CLIENTES =
