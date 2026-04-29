@@ -7,7 +7,7 @@ import {
   criarPreviewComissaoProduto,
   criarPreviewComissaoServico,
 } from "@/lib/comissoes/regrasServico";
-import { formatMoneyInput, parseMoneyToNumber } from "@/lib/utils/comanda";
+import { parseMoneyToNumber } from "@/lib/utils/comanda";
 
 type Profissional = {
   id: string;
@@ -135,6 +135,20 @@ export default function ComandaItemModal({
   }, [open]);
 
   if (!open) return null;
+
+  function normalizeMoneyDraft(value: string) {
+    return String(value || "").replace(/[^\d.,]/g, "");
+  }
+
+  function formatMoneyDraft(value: string) {
+    const parsed = parseMoneyToNumber(value);
+    if (!parsed) return "";
+
+    return parsed.toLocaleString("pt-BR", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+  }
 
   async function handleSave() {
     try {
@@ -401,8 +415,10 @@ export default function ComandaItemModal({
           <div>
             <label className="mb-1 block text-sm font-semibold text-zinc-700">Valor unitário</label>
             <input
+              inputMode="decimal"
               value={valorUnitario}
-              onChange={(e) => setValorUnitario(formatMoneyInput(e.target.value))}
+              onBlur={() => setValorUnitario((current) => formatMoneyDraft(current))}
+              onChange={(e) => setValorUnitario(normalizeMoneyDraft(e.target.value))}
               className="w-full rounded-2xl border border-zinc-300 px-4 py-3"
             />
           </div>
