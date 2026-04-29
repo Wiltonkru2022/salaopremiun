@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useEffect, useRef, useState } from "react";
 import { addDays, format, subDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -13,11 +14,7 @@ import type {
   AgendaSidebarView,
   AgendaWaitlistItem,
 } from "@/components/agenda/AgendaSidebar";
-import AgendaModal from "@/components/agenda/AgendaModal";
 import ProfissionaisBar from "@/components/agenda/ProfissionaisBar";
-import AgendaContextMenu from "@/components/agenda/AgendaContextMenu";
-import AgendaClientProfileModal from "@/components/agenda/AgendaClientProfileModal";
-import AgendaCreditModal from "@/components/agenda/AgendaCreditModal";
 import type {
   AgendaPageNoticeState,
   AgendaPageConfirmState,
@@ -50,6 +47,17 @@ import {
   UserRound,
   Wallet,
 } from "lucide-react";
+
+const AgendaModal = dynamic(() => import("@/components/agenda/AgendaModal"));
+const AgendaContextMenu = dynamic(
+  () => import("@/components/agenda/AgendaContextMenu")
+);
+const AgendaClientProfileModal = dynamic(
+  () => import("@/components/agenda/AgendaClientProfileModal")
+);
+const AgendaCreditModal = dynamic(
+  () => import("@/components/agenda/AgendaCreditModal")
+);
 
 type ClienteHistoricoItem = {
   id: string;
