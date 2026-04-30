@@ -294,16 +294,6 @@ export default function CaixaSidebar({
                     </div>
                   </div>
                 </div>
-
-                <CaixaResumo
-                  comandaSelecionada={comandaSelecionada}
-                  descontoInput={descontoInput}
-                  acrescimoInput={acrescimoInput}
-                  setDescontoInput={setDescontoInput}
-                  setAcrescimoInput={setAcrescimoInput}
-                  onSalvar={onSalvarResumo}
-                  saving={saving || !podeEditarCaixa}
-                />
               </>
             ) : null}
           </div>
@@ -322,30 +312,42 @@ export default function CaixaSidebar({
         panelClassName="max-h-[calc(100dvh-2rem)]"
         bodyClassName="bg-[#f7f8fb]"
       >
-        <CaixaPagamentos
-          comandaSelecionada={comandaSelecionada}
-          repassaTaxaCliente={Boolean(configCaixa?.repassa_taxa_cliente)}
-          pagamentos={pagamentos}
-          formaPagamento={formaPagamento}
-          setFormaPagamento={setFormaPagamento}
-          valorPagamento={valorPagamento}
-          setValorPagamento={setValorPagamento}
-          parcelas={parcelas}
-          setParcelas={setParcelas}
-          taxaPercentual={taxaPercentual}
-          setTaxaPercentual={setTaxaPercentual}
-          observacaoPagamento={observacaoPagamento}
-          setObservacaoPagamento={setObservacaoPagamento}
-          totalPago={totalPago}
-          totalCreditoGerado={totalCreditoGerado}
-          faltaReceber={faltaReceber}
-          troco={troco}
-          creditoClienteDisponivel={creditoClienteDisponivel}
-          saving={saving || !podeGerenciarPagamentos}
-          onAdicionarPagamento={onAdicionarPagamento}
-          onRemoverPagamento={onRemoverPagamento}
-          showRulesCard
-        />
+        <div className="space-y-4">
+          <CaixaResumo
+            comandaSelecionada={comandaSelecionada}
+            descontoInput={descontoInput}
+            acrescimoInput={acrescimoInput}
+            setDescontoInput={setDescontoInput}
+            setAcrescimoInput={setAcrescimoInput}
+            onSalvar={onSalvarResumo}
+            saving={saving || !podeEditarCaixa}
+          />
+
+          <CaixaPagamentos
+            comandaSelecionada={comandaSelecionada}
+            repassaTaxaCliente={Boolean(configCaixa?.repassa_taxa_cliente)}
+            pagamentos={pagamentos}
+            formaPagamento={formaPagamento}
+            setFormaPagamento={setFormaPagamento}
+            valorPagamento={valorPagamento}
+            setValorPagamento={setValorPagamento}
+            parcelas={parcelas}
+            setParcelas={setParcelas}
+            taxaPercentual={taxaPercentual}
+            setTaxaPercentual={setTaxaPercentual}
+            observacaoPagamento={observacaoPagamento}
+            setObservacaoPagamento={setObservacaoPagamento}
+            totalPago={totalPago}
+            totalCreditoGerado={totalCreditoGerado}
+            faltaReceber={faltaReceber}
+            troco={troco}
+            creditoClienteDisponivel={creditoClienteDisponivel}
+            saving={saving || !podeGerenciarPagamentos}
+            onAdicionarPagamento={onAdicionarPagamento}
+            onRemoverPagamento={onRemoverPagamento}
+            showRulesCard
+          />
+        </div>
       </AppModal>
 
       <AppModal
