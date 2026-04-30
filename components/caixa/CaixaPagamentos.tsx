@@ -13,12 +13,12 @@ import {
 const FORMAS_PAGAMENTO = [
   { value: "dinheiro", label: "Dinheiro" },
   { value: "pix", label: "Pix" },
-  { value: "debito", label: "Debito" },
+  { value: "debito", label: "Débito" },
   { value: "credito", label: "Credito" },
   { value: "transferencia", label: "Transferencia" },
   { value: "boleto", label: "Boleto" },
   { value: "outro", label: "Outro" },
-  { value: "credito_cliente", label: "Credito da cliente" },
+  { value: "credito_cliente", label: "Crédito da cliente" },
 ];
 
 type Props = {
@@ -179,7 +179,7 @@ export default function CaixaPagamentos({
                     {Number(pagamento.valor_credito_cliente || 0) > 0 ? (
                       <div className="mt-1.5 inline-flex items-center gap-1.5 rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-700">
                         <Wallet size={12} />
-                        Credito gerado:{" "}
+                        Crédito gerado:{" "}
                         {formatCurrency(Number(pagamento.valor_credito_cliente || 0))}
                       </div>
                     ) : null}
@@ -343,7 +343,7 @@ export default function CaixaPagamentos({
                 : "A taxa não é somada ao cliente."}
             </div>
 
-            <Field label="Observacao">
+            <Field label="Observação">
               <textarea
                 rows={3}
                 value={observacaoPagamento}
@@ -397,10 +397,10 @@ export default function CaixaPagamentos({
               A cliente esta pagando mais do que falta
             </h3>
             <p className="mt-3 text-sm leading-6 text-zinc-600">
-              Faltam {formatCurrency(faltaReceber)} e voce esta lancando{" "}
+              Faltam {formatCurrency(faltaReceber)} e você está lançando{" "}
               {formatCurrency(valorBaseDigitado)}. O excedente de{" "}
               {formatCurrency(Math.max(valorBaseDigitado - faltaReceber, 0))} vai
-              sair como troco ou ficar salvo como credito para {clienteNome}.
+              sair como troco ou ficar salvo como crédito para {clienteNome}.
             </p>
 
             <div className="mt-5 grid gap-3">
@@ -428,8 +428,8 @@ export default function CaixaPagamentos({
               >
                 <div className="text-sm font-semibold text-emerald-900">
                   {destinoExcedentePendente === "credito_cliente"
-                    ? "Guardando credito..."
-                    : "Guardar como credito"}
+                    ? "Guardando crédito..."
+                    : "Guardar como crédito"}
                 </div>
                 <div className="mt-1 text-sm text-emerald-700">
                   O excedente entra no saldo da cliente para ela usar depois no caixa.

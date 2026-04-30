@@ -56,7 +56,7 @@ export default function CaixaFila({
           <input
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
-            placeholder="Buscar por numero, cliente ou servico"
+            placeholder="Buscar por número, cliente ou serviço"
             className="w-full bg-transparent text-sm outline-none"
           />
         </div>
@@ -277,7 +277,7 @@ function AgendamentoFilaCard({
         {getJoinedName(item.clientes, "Sem cliente")}
       </div>
       <div className="mt-1 break-words text-sm leading-5 text-zinc-600">
-        {getJoinedName(item.servicos, "Servico")}
+        {getJoinedName(item.servicos, "Serviço")}
       </div>
 
       <div className="mt-4 grid grid-cols-2 gap-3">

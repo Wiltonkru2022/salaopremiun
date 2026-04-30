@@ -58,10 +58,10 @@ export default function CaixaHeader({
             />
             <ActionCard
               icon={<WalletCards size={15} />}
-              label="Sessao do caixa"
+              label="Sessão do caixa"
               description={
                 caixaAberto
-                  ? "Abrir, fechar e lancar movimentos."
+                  ? "Abrir, fechar e lançar movimentos."
                   : "Abrir caixa e controlar movimentos."
               }
               onClick={onAbrirSessao}

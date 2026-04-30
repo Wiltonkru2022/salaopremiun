@@ -130,10 +130,10 @@ export default function CaixaSidebar({
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-400">
-                    Operacao do caixa
+                    Operação do caixa
                   </div>
                   <h2 className="mt-1 text-[1.55rem] font-semibold leading-none text-slate-900">
-                    Operacao
+                    Operação
                   </h2>
                 </div>
 
@@ -163,7 +163,7 @@ export default function CaixaSidebar({
                     value={comandaSelecionada ? formatCurrency(totalComanda) : "R$ 0,00"}
                   />
                   <SidebarInfo
-                    label="Credito gerado"
+                    label="Crédito gerado"
                     value={formatMoney(totalCreditoGerado)}
                   />
                 </div>
@@ -181,12 +181,12 @@ export default function CaixaSidebar({
 
               <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <MiniInfoCard
-                  label="Credito gerado"
+                  label="Crédito gerado"
                   value={formatMoney(totalCreditoGerado)}
                   tone={totalCreditoGerado > 0 ? "sky" : "zinc"}
                 />
                 <MiniInfoCard
-                  label="Credito da cliente"
+                  label="Crédito da cliente"
                   value={formatMoney(creditoClienteDisponivel)}
                   tone={creditoClienteDisponivel > 0 ? "emerald" : "zinc"}
                 />
@@ -203,7 +203,7 @@ export default function CaixaSidebar({
         closeDisabled={saving}
         title={comandaSelecionada ? `Pagamento da comanda #${comandaSelecionada.numero}` : "Pagamento"}
         description="Lance recebimentos, acompanhe a taxa e confirme o fechamento sem poluir a tela principal."
-        eyebrow="Operacao de pagamento"
+        eyebrow="Operação de pagamento"
         maxWidthClassName="max-w-5xl"
         panelClassName="max-h-[calc(100dvh-2rem)]"
         bodyClassName="bg-[#f7f8fb]"
@@ -250,9 +250,9 @@ export default function CaixaSidebar({
         open={sessaoOpen}
         onClose={() => setSessaoOpen(false)}
         closeDisabled={saving}
-        title="Sessao do caixa"
+        title="Sessão do caixa"
         description="Abra, feche e movimente o caixa em uma area dedicada, com leitura mais limpa."
-        eyebrow="Operacao da sessao"
+        eyebrow="Operação da sessão"
         maxWidthClassName="max-w-6xl"
         panelClassName="max-h-[calc(100dvh-2rem)]"
         bodyClassName="bg-[#f7f8fb]"

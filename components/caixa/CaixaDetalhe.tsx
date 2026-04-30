@@ -170,13 +170,13 @@ export default function CaixaDetalhe({
             <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
               <div>
                 <div className="text-sm font-semibold text-zinc-800">
-                  Lancar item manual
+                  Lançar item manual
                 </div>
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-2 xl:grid-cols-4">
-              <ActionCard icon={<Scissors size={16} />} label="Servico" onClick={onNovoServico} />
+              <ActionCard icon={<Scissors size={16} />} label="Serviço" onClick={onNovoServico} />
               <ActionCard icon={<ShoppingBag size={16} />} label="Produto" onClick={onNovoProduto} />
               <ActionCard icon={<WalletCards size={16} />} label="Extra" onClick={onNovoExtra} />
               <ActionCard icon={<Plus size={16} />} label="Ajuste" onClick={onNovoAjuste} />
@@ -256,7 +256,7 @@ export default function CaixaDetalhe({
               <div className="rounded-2xl border border-dashed border-zinc-300 bg-zinc-50 px-4 py-10 text-center">
                 <div className="text-sm font-medium text-zinc-700">Nenhum item nesta comanda.</div>
                 <div className="mt-1 text-sm text-zinc-500">
-                  Adicione servicos, produtos, extras ou ajustes para seguir com o fechamento.
+                  Adicione serviços, produtos, extras ou ajustes para seguir com o fechamento.
                 </div>
               </div>
             ) : null}

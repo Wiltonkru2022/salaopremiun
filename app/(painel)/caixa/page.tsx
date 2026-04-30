@@ -267,7 +267,7 @@ export default function CaixaPage() {
     return (
       <AppLoading
         title="Carregando caixa"
-        message="Aguarde enquanto preparamos comandas, fila, pagamentos e resumo financeiro da operacao."
+        message="Aguarde enquanto preparamos comandas, fila, pagamentos e resumo financeiro da operação."
         fullHeight={false}
       />
     );
@@ -277,7 +277,7 @@ export default function CaixaPage() {
     return (
       <div className="p-6">
         <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-rose-700">
-          Voce nao tem permissao para acessar o caixa.
+          Você não tem permissão para acessar o caixa.
         </div>
       </div>
     );
@@ -303,7 +303,7 @@ export default function CaixaPage() {
                   {!podeOperarCaixa ? (
                     <>
                       <CircleAlert size={16} className="mr-2 text-zinc-500" />
-                      Voce esta em modo de <strong className="ml-1">somente leitura</strong> no caixa.
+                      Você está em modo de <strong className="ml-1">somente leitura</strong> no caixa.
                     </>
                   ) : erroTela ? (
                     <>
