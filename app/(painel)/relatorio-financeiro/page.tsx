@@ -140,6 +140,29 @@ function formatDateInput(date: Date) {
   return `${y}-${m}-${d}`;
 }
 
+function escapeHtml(value: string) {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+function formatFormaPagamentoLabel(value: string) {
+  const key = (value || "").trim().toLowerCase();
+
+  if (key === "pix") return "Pix";
+  if (key === "dinheiro") return "Dinheiro";
+  if (key === "debito") return "Débito";
+  if (key === "credito") return "Crédito";
+  if (key === "credito_cliente") return "Crédito da cliente";
+  if (key === "transferencia") return "Transferência";
+  if (!key) return "-";
+
+  return key.charAt(0).toUpperCase() + key.slice(1);
+}
+
 function getStatusBadgeClass(status: string) {
   if (status === "fechada") {
     return "bg-emerald-100 text-emerald-700 border border-emerald-200";
@@ -624,24 +647,349 @@ export default function RelatorioFinanceiroPage() {
     setMsg("");
     setPrintModalOpen(false);
 
-    const body = document.body;
-    body.setAttribute("data-print-relatorio", sections.join(" "));
+    const reportWindow = window.open("", "_blank", "noopener,noreferrer,width=1100,height=900");
 
-    const cleanup = () => {
-      body.removeAttribute("data-print-relatorio");
-      window.removeEventListener("afterprint", cleanup);
-    };
+    if (!reportWindow) {
+      setMsg("Não foi possível abrir a janela do relatório para impressão.");
+      return;
+    }
 
-    window.addEventListener("afterprint", cleanup);
+    const periodLabel = `Período de ${dataInicio} até ${dataFim}`;
+    const generatedAt = new Date().toLocaleString("pt-BR");
 
+    const vendasRows =
+      comandasFiltradas.length > 0
+        ? comandasFiltradas
+            .map(
+              (item) => `
+                <tr>
+                  <td>#${escapeHtml(String(item.numero))}</td>
+                  <td>${escapeHtml(getJoinedName(item.clientes, "Sem cliente"))}</td>
+                  <td>${escapeHtml(item.status || "-")}</td>
+                  <td>${escapeHtml(
+                    formatDateTime(item.fechada_em || item.cancelada_em || item.aberta_em)
+                  )}</td>
+                  <td>${escapeHtml(formatCurrency(item.subtotal))}</td>
+                  <td>${escapeHtml(formatCurrency(item.desconto))}</td>
+                  <td>${escapeHtml(formatCurrency(item.acrescimo))}</td>
+                  <td>${escapeHtml(formatCurrency(item.total))}</td>
+                </tr>
+              `
+            )
+            .join("")
+        : `
+          <tr>
+            <td colspan="8" class="empty">Nenhuma venda encontrada no período.</td>
+          </tr>
+        `;
+
+    const pagamentosRows =
+      pagamentosPorForma.length > 0
+        ? pagamentosPorForma
+            .map(
+              (item) => `
+                <tr>
+                  <td>${escapeHtml(formatFormaPagamentoLabel(item.forma))}</td>
+                  <td>${escapeHtml(String(item.qtd))}</td>
+                  <td>${escapeHtml(formatCurrency(item.taxa))}</td>
+                  <td>${escapeHtml(formatCurrency(item.total))}</td>
+                </tr>
+              `
+            )
+            .join("")
+        : `
+          <tr>
+            <td colspan="4" class="empty">Nenhum pagamento encontrado.</td>
+          </tr>
+        `;
+
+    const comissoesRows =
+      comissoesFiltradas.length > 0
+        ? comissoesFiltradas
+            .map(
+              (item) => `
+                <tr>
+                  <td>${escapeHtml(parseComboDisplayMeta(item.descricao).displayTitle)}</td>
+                  <td>${escapeHtml(formatCurrency(item.valor_base))}</td>
+                  <td>${escapeHtml(
+                    `${Number(item.percentual_aplicado || 0).toLocaleString("pt-BR", {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}%`
+                  )}</td>
+                  <td>${escapeHtml(formatCurrency(item.valor_comissao))}</td>
+                  <td>${escapeHtml(item.status || "-")}</td>
+                </tr>
+              `
+            )
+            .join("")
+        : `
+          <tr>
+            <td colspan="5" class="empty">Nenhuma comissão encontrada.</td>
+          </tr>
+        `;
+
+    const sectionBlocks = [
+      printSelection.vendas
+        ? `
+          <section class="report-card">
+            <div class="section-head">
+              <h2>Vendas do período</h2>
+              <p>Lista de comandas conforme os filtros atuais.</p>
+            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Comanda</th>
+                  <th>Cliente</th>
+                  <th>Status</th>
+                  <th>Data</th>
+                  <th>Subtotal</th>
+                  <th>Desconto</th>
+                  <th>Acréscimo</th>
+                  <th>Total</th>
+                </tr>
+              </thead>
+              <tbody>${vendasRows}</tbody>
+            </table>
+          </section>
+        `
+        : "",
+      printSelection.pagamentos
+        ? `
+          <section class="report-card">
+            <div class="section-head">
+              <h2>Pagamentos por forma</h2>
+              <p>Total recebido agrupado por forma de pagamento.</p>
+            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Forma</th>
+                  <th>Pagamentos</th>
+                  <th>Taxa</th>
+                  <th>Total</th>
+                </tr>
+              </thead>
+              <tbody>${pagamentosRows}</tbody>
+            </table>
+          </section>
+        `
+        : "",
+      printSelection.comissoes
+        ? `
+          <section class="report-card">
+            <div class="section-head">
+              <h2>Comissões do período</h2>
+              <p>Resumo das comissões ligadas às vendas filtradas.</p>
+            </div>
+            <div class="summary-grid">
+              <div class="summary-card">
+                <span>Lançamentos</span>
+                <strong>${escapeHtml(String(resumoComissoes.totalLancamentos))}</strong>
+              </div>
+              <div class="summary-card">
+                <span>Pendentes</span>
+                <strong>${escapeHtml(formatCurrency(resumoComissoes.valorPendente))}</strong>
+              </div>
+              <div class="summary-card">
+                <span>Pagas</span>
+                <strong>${escapeHtml(formatCurrency(resumoComissoes.valorPago))}</strong>
+              </div>
+            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Descrição</th>
+                  <th>Base</th>
+                  <th>%</th>
+                  <th>Comissão</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>${comissoesRows}</tbody>
+            </table>
+          </section>
+        `
+        : "",
+    ]
+      .filter(Boolean)
+      .join("");
+
+    const reportHtml = `
+      <!doctype html>
+      <html lang="pt-BR">
+        <head>
+          <meta charset="utf-8" />
+          <meta name="viewport" content="width=device-width, initial-scale=1" />
+          <title>Relatório financeiro</title>
+          <style>
+            :root {
+              color-scheme: light;
+            }
+            * {
+              box-sizing: border-box;
+            }
+            body {
+              margin: 0;
+              background: #f4f4f5;
+              color: #18181b;
+              font-family: Inter, Arial, Helvetica, sans-serif;
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
+            }
+            .page {
+              width: 100%;
+              max-width: 1080px;
+              margin: 0 auto;
+              padding: 32px 24px 40px;
+            }
+            .report-header {
+              border: 1px solid #e4e4e7;
+              border-radius: 24px;
+              background: #ffffff;
+              padding: 24px;
+              margin-bottom: 20px;
+            }
+            .eyebrow {
+              font-size: 11px;
+              font-weight: 700;
+              letter-spacing: 0.18em;
+              text-transform: uppercase;
+              color: #71717a;
+            }
+            h1 {
+              margin: 10px 0 0;
+              font-size: 30px;
+              line-height: 1.1;
+            }
+            .subtitle {
+              margin-top: 10px;
+              font-size: 14px;
+              color: #52525b;
+            }
+            .meta {
+              margin-top: 4px;
+              font-size: 12px;
+              color: #71717a;
+            }
+            .report-card {
+              border: 1px solid #e4e4e7;
+              border-radius: 24px;
+              background: #ffffff;
+              padding: 20px;
+              margin-bottom: 18px;
+              break-inside: avoid;
+            }
+            .section-head h2 {
+              margin: 0;
+              font-size: 20px;
+            }
+            .section-head p {
+              margin: 6px 0 0;
+              font-size: 13px;
+              color: #71717a;
+            }
+            .summary-grid {
+              display: grid;
+              grid-template-columns: repeat(3, minmax(0, 1fr));
+              gap: 12px;
+              margin: 18px 0;
+            }
+            .summary-card {
+              border: 1px solid #e4e4e7;
+              border-radius: 18px;
+              background: #fafafa;
+              padding: 14px 16px;
+            }
+            .summary-card span {
+              display: block;
+              font-size: 11px;
+              font-weight: 700;
+              letter-spacing: 0.14em;
+              text-transform: uppercase;
+              color: #71717a;
+            }
+            .summary-card strong {
+              display: block;
+              margin-top: 8px;
+              font-size: 20px;
+            }
+            table {
+              width: 100%;
+              border-collapse: collapse;
+              margin-top: 18px;
+            }
+            th {
+              background: #fafafa;
+              color: #71717a;
+              font-size: 11px;
+              letter-spacing: 0.12em;
+              text-transform: uppercase;
+              text-align: left;
+              padding: 11px 12px;
+              border-bottom: 1px solid #e4e4e7;
+            }
+            td {
+              padding: 12px;
+              border-bottom: 1px solid #f0f0f0;
+              font-size: 13px;
+              vertical-align: top;
+            }
+            tbody tr:last-child td {
+              border-bottom: none;
+            }
+            .empty {
+              text-align: center;
+              color: #71717a;
+              padding: 22px 12px;
+            }
+            @media print {
+              body {
+                background: #ffffff;
+              }
+              .page {
+                max-width: none;
+                padding: 0;
+              }
+              .report-header,
+              .report-card,
+              .summary-card {
+                box-shadow: none;
+              }
+            }
+          </style>
+        </head>
+        <body>
+          <main class="page">
+            <header class="report-header">
+              <div class="eyebrow">Relatório financeiro</div>
+              <h1>Resumo do período</h1>
+              <div class="subtitle">${escapeHtml(periodLabel)}</div>
+              <div class="meta">Gerado em ${escapeHtml(generatedAt)}</div>
+            </header>
+            ${sectionBlocks}
+          </main>
+        </body>
+      </html>
+    `;
+
+    reportWindow.document.open();
+    reportWindow.document.write(reportHtml);
+    reportWindow.document.close();
+    reportWindow.focus();
     window.setTimeout(() => {
-      window.print();
-    }, 180);
-
-    window.setTimeout(() => {
-      cleanup();
-    }, 1800);
-  }, [printSelection]);
+      reportWindow.print();
+    }, 250);
+  }, [
+    comandasFiltradas,
+    pagamentosPorForma,
+    comissoesFiltradas,
+    resumoComissoes,
+    printSelection,
+    dataInicio,
+    dataFim,
+  ]);
 
   if (loading) {
     return (
@@ -675,63 +1023,9 @@ export default function RelatorioFinanceiroPage() {
   }
 
   return (
-    <div className="bg-white" data-print-root>
-      <style jsx global>{`
-        @media print {
-          body[data-print-relatorio] [data-no-print] {
-            display: none !important;
-          }
-
-          body[data-print-relatorio] [data-print-header] {
-            display: block !important;
-          }
-
-          body[data-print-relatorio] [data-print-section] {
-            display: none !important;
-          }
-
-          body[data-print-relatorio~="vendas"] [data-print-section="vendas"] {
-            display: block !important;
-          }
-
-          body[data-print-relatorio~="pagamentos"] [data-print-section="pagamentos"] {
-            display: block !important;
-          }
-
-          body[data-print-relatorio~="comissoes"] [data-print-section="comissoes"] {
-            display: block !important;
-          }
-
-          body[data-print-relatorio] [data-print-card] {
-            border: 1px solid #d4d4d8 !important;
-            border-radius: 18px !important;
-            box-shadow: none !important;
-            break-inside: avoid;
-          }
-
-          body[data-print-relatorio] table {
-            width: 100% !important;
-          }
-        }
-      `}</style>
-
-      <div className="mx-auto hidden max-w-[1800px] pb-6" data-print-header>
-        <div className="border-b border-zinc-300 pb-4">
-          <div className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-500">
-            Relatório financeiro
-          </div>
-          <div className="mt-1 text-3xl font-bold text-zinc-950">Resumo para impressão</div>
-          <div className="mt-2 text-sm text-zinc-600">
-            Período de {dataInicio} até {dataFim}
-          </div>
-        </div>
-      </div>
-
+    <div className="bg-white">
       <div className="mx-auto max-w-[1800px] space-y-5">
-        <div
-          className="rounded-[28px] border border-zinc-200 bg-white p-4 text-zinc-950 shadow-sm"
-          data-no-print
-        >
+        <div className="rounded-[28px] border border-zinc-200 bg-white p-4 text-zinc-950 shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
               <div className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-400">
@@ -777,7 +1071,7 @@ export default function RelatorioFinanceiroPage() {
           </div>
         ) : null}
 
-        <div className="rounded-[28px] border border-zinc-200 bg-white p-4 shadow-sm" data-no-print>
+        <div className="rounded-[28px] border border-zinc-200 bg-white p-4 shadow-sm">
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-5">
             <div className="xl:col-span-2">
               <label className="mb-2 block text-sm font-semibold text-zinc-700">
@@ -851,7 +1145,7 @@ export default function RelatorioFinanceiroPage() {
           </div>
         </div>
 
-        <section className="space-y-3" data-no-print>
+        <section className="space-y-3">
           <div>
             <h2 className="text-base font-semibold text-zinc-950">Vendas e recebimentos</h2>
             <p className="text-sm text-zinc-500">
@@ -913,7 +1207,7 @@ export default function RelatorioFinanceiroPage() {
           </div>
         </section>
 
-        <section className="space-y-3" data-no-print>
+        <section className="space-y-3">
           <div>
             <h2 className="text-base font-semibold text-zinc-950">Fechamento de caixa</h2>
             <p className="text-sm text-zinc-500">
@@ -951,11 +1245,7 @@ export default function RelatorioFinanceiroPage() {
         </section>
 
         <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1.2fr_0.8fr]">
-          <div
-            className="overflow-hidden rounded-[28px] border border-zinc-200 bg-white shadow-sm"
-            data-print-section="vendas"
-            data-print-card
-          >
+          <div className="overflow-hidden rounded-[28px] border border-zinc-200 bg-white shadow-sm">
             <div className="border-b border-zinc-200 px-5 py-4">
               <div className="text-lg font-bold text-zinc-900">Vendas do período</div>
               <div className="mt-1 text-sm text-zinc-500">
@@ -1025,7 +1315,7 @@ export default function RelatorioFinanceiroPage() {
           </div>
 
             <div className="space-y-5">
-            <div className="rounded-[28px] border border-zinc-200 bg-white p-4 shadow-sm" data-no-print>
+            <div className="rounded-[28px] border border-zinc-200 bg-white p-4 shadow-sm">
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <div className="text-lg font-bold text-zinc-900">Painel lateral</div>
@@ -1065,8 +1355,6 @@ export default function RelatorioFinanceiroPage() {
               className={`overflow-hidden rounded-[28px] border border-zinc-200 bg-white shadow-sm ${
                 painelLateralTab === "pagamentos" ? "block" : "hidden"
               }`}
-              data-print-section="pagamentos"
-              data-print-card
             >
               <div className="border-b border-zinc-200 px-5 py-4">
                 <div className="text-lg font-bold text-zinc-900">Pagamentos por forma</div>
@@ -1101,8 +1389,6 @@ export default function RelatorioFinanceiroPage() {
               className={`overflow-hidden rounded-[28px] border border-zinc-200 bg-white shadow-sm ${
                 painelLateralTab === "comissoes" ? "block" : "hidden"
               }`}
-              data-print-section="comissoes"
-              data-print-card
             >
               <div className="border-b border-zinc-200 px-5 py-4">
                 <div className="text-lg font-bold text-zinc-900">Comissões do período</div>
