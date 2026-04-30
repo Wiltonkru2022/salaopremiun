@@ -49,12 +49,9 @@ export default function CaixaFila({
           <div className="mt-1 text-[1.55rem] font-bold leading-none text-zinc-950">
             Triagem
           </div>
-          <div className="mt-1 text-sm text-zinc-500">
-            Comandas, agenda sem comanda e historico rapido.
-          </div>
         </div>
 
-        <div className="flex items-center gap-2 rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3">
+        <div className="flex items-center gap-2 rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-2.5">
           <Search size={16} className="text-zinc-500" />
           <input
             value={busca}

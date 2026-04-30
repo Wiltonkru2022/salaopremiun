@@ -135,9 +135,6 @@ export default function CaixaSidebar({
                   <h2 className="mt-1 text-[1.55rem] font-semibold leading-none text-slate-900">
                     Operacao
                   </h2>
-                  <p className="mt-1 text-sm leading-6 text-zinc-500">
-                    Sessao e resumo rapido da venda em foco.
-                  </p>
                 </div>
 
                 <span
@@ -151,7 +148,7 @@ export default function CaixaSidebar({
                 </span>
               </div>
 
-              <div className="mt-4 grid gap-3">
+              <div className="mt-3 grid gap-3">
                 <SidebarInfo
                   label="Cliente"
                   value={
@@ -172,7 +169,7 @@ export default function CaixaSidebar({
                 </div>
               </div>
 
-              <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
                 <MiniInfoCard label="Total pago" value={formatMoney(totalPago)} />
                 <MiniInfoCard
                   label="Falta receber"
