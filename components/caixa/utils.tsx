@@ -70,7 +70,7 @@ export function formatShortDateTime(value?: string | null) {
 }
 
 export function getTipoItemLabel(tipo: string) {
-  if (tipo === "servico") return "Servi?o";
+  if (tipo === "servico") return "Serviço";
   if (tipo === "produto") return "Produto";
   if (tipo === "extra") return "Extra";
   return "Ajuste";

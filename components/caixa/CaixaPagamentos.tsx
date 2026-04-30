@@ -14,8 +14,8 @@ const FORMAS_PAGAMENTO = [
   { value: "dinheiro", label: "Dinheiro" },
   { value: "pix", label: "Pix" },
   { value: "debito", label: "Débito" },
-  { value: "credito", label: "Cr?dito" },
-  { value: "transferencia", label: "Transfer?ncia" },
+  { value: "credito", label: "Crédito" },
+  { value: "transferencia", label: "Transferência" },
   { value: "boleto", label: "Boleto" },
   { value: "outro", label: "Outro" },
   { value: "credito_cliente", label: "Crédito da cliente" },
@@ -394,7 +394,7 @@ export default function CaixaPagamentos({
               Excedente no pagamento
             </div>
             <h3 className="mt-2 text-xl font-bold text-zinc-900">
-              A cliente esta pagando mais do que falta
+              A cliente está pagando mais do que falta
             </h3>
             <p className="mt-3 text-sm leading-6 text-zinc-600">
               Faltam {formatCurrency(faltaReceber)} e você está lançando{" "}

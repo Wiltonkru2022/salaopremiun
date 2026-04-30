@@ -254,7 +254,7 @@ export default function CaixaSessaoPanel({
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <div className="text-sm font-bold text-zinc-900">
-                      Ultimo fechamento registrado
+                      Último fechamento registrado
                     </div>
                   </div>
                   <span
