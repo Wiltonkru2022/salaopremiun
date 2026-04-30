@@ -207,7 +207,7 @@ function normalizePlano(plano?: string | null) {
 }
 
 function isUnlimited(value?: number | null) {
-  return value == null || value >= 999;
+  return value == null || value === 999;
 }
 
 function normalizeLimit(value?: number | null) {
