@@ -104,7 +104,7 @@ export const PLANOS_INFO: Record<
 > = {
   basico: {
     nome: "Básico",
-    valor: 1,
+    valor: 5,
     descricao: "Ideal para salão pequeno",
     recursos: ["3 profissionais", "2 usuários", "Agenda e caixa"],
     ordem: 1,
