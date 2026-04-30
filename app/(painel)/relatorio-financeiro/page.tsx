@@ -647,13 +647,6 @@ export default function RelatorioFinanceiroPage() {
     setMsg("");
     setPrintModalOpen(false);
 
-    const reportWindow = window.open("", "_blank", "noopener,noreferrer,width=1100,height=900");
-
-    if (!reportWindow) {
-      setMsg("Não foi possível abrir a janela do relatório para impressão.");
-      return;
-    }
-
     const periodLabel = `Período de ${dataInicio} até ${dataFim}`;
     const generatedAt = new Date().toLocaleString("pt-BR");
 
@@ -974,13 +967,45 @@ export default function RelatorioFinanceiroPage() {
       </html>
     `;
 
-    reportWindow.document.open();
-    reportWindow.document.write(reportHtml);
-    reportWindow.document.close();
-    reportWindow.focus();
-    window.setTimeout(() => {
-      reportWindow.print();
-    }, 250);
+    const iframe = document.createElement("iframe");
+    iframe.setAttribute("aria-hidden", "true");
+    iframe.style.position = "fixed";
+    iframe.style.right = "0";
+    iframe.style.bottom = "0";
+    iframe.style.width = "0";
+    iframe.style.height = "0";
+    iframe.style.border = "0";
+    iframe.style.opacity = "0";
+    document.body.appendChild(iframe);
+
+    const printDocument =
+      iframe.contentWindow?.document || iframe.contentDocument || null;
+
+    if (!printDocument || !iframe.contentWindow) {
+      document.body.removeChild(iframe);
+      setMsg("Não foi possível montar o relatório para impressão.");
+      return;
+    }
+
+    printDocument.open();
+    printDocument.write(reportHtml);
+    printDocument.close();
+
+    const cleanup = () => {
+      window.setTimeout(() => {
+        if (iframe.parentNode) {
+          iframe.parentNode.removeChild(iframe);
+        }
+      }, 300);
+    };
+
+    iframe.onload = () => {
+      window.setTimeout(() => {
+        iframe.contentWindow?.focus();
+        iframe.contentWindow?.print();
+        cleanup();
+      }, 250);
+    };
   }, [
     comandasFiltradas,
     pagamentosPorForma,
