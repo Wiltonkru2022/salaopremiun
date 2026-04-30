@@ -1,7 +1,7 @@
 "use client";
 
 import { type ReactNode, useEffect, useState } from "react";
-import { CreditCard, ReceiptText, WalletCards } from "lucide-react";
+import { ReceiptText, WalletCards } from "lucide-react";
 import CaixaPagamentos from "@/components/caixa/CaixaPagamentos";
 import CaixaResumo from "@/components/caixa/CaixaResumo";
 import CaixaSessaoPanel from "@/components/caixa/CaixaSessaoPanel";
@@ -22,6 +22,10 @@ import { formatCurrency, getJoinedName } from "@/components/caixa/utils";
 type Props = {
   comandaSelecionada: ComandaDetalhe | null;
   comandaCarregandoId: string | null;
+  pagamentosOpen: boolean;
+  setPagamentosOpen: (value: boolean) => void;
+  sessaoOpen: boolean;
+  setSessaoOpen: (value: boolean) => void;
   configCaixa: ConfigCaixaSalao | null;
   pagamentos: ComandaPagamento[];
   formaPagamento: string;
@@ -76,6 +80,10 @@ type Props = {
 export default function CaixaSidebar({
   comandaSelecionada,
   comandaCarregandoId,
+  pagamentosOpen,
+  setPagamentosOpen,
+  sessaoOpen,
+  setSessaoOpen,
   configCaixa,
   pagamentos,
   formaPagamento,
@@ -113,8 +121,6 @@ export default function CaixaSidebar({
   onFecharCaixa,
   onLancamento,
 }: Props) {
-  const [pagamentosOpen, setPagamentosOpen] = useState(false);
-  const [sessaoOpen, setSessaoOpen] = useState(false);
   const [painelAtivo, setPainelAtivo] = useState<"operacao" | "comanda">(
     "operacao"
   );
@@ -176,13 +182,7 @@ export default function CaixaSidebar({
                     </span>
                   </div>
 
-                  <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    <ActionButton
-                      icon={<CreditCard size={16} />}
-                      label="Pagamento"
-                      description="Receber sem poluir a tela principal."
-                      onClick={() => setPagamentosOpen(true)}
-                    />
+                  <div className="mt-4 grid grid-cols-1 gap-3">
                     <ActionButton
                       icon={<WalletCards size={16} />}
                       label="Sessao do caixa"
@@ -229,7 +229,7 @@ export default function CaixaSidebar({
                     />
                     <QuickTip
                       title="2. Receba no modal"
-                      description="Use o botao Pagamento para lancar recebimentos sem rolar a tela inteira."
+                      description="Use o botao Pagamento no topo da comanda para receber sem sair da venda."
                     />
                     <QuickTip
                       title="3. Finalize quando zerar"

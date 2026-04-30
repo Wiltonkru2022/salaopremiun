@@ -29,6 +29,7 @@ type Props = {
   itens: ComandaItem[];
   saving: boolean;
   faltaReceber: number;
+  onAbrirPagamento: () => void;
   onCancelarComanda: () => void;
   onFinalizarComanda: () => void;
   onNovoServico: () => void;
@@ -47,6 +48,7 @@ export default function CaixaDetalhe({
   itens,
   saving,
   faltaReceber,
+  onAbrirPagamento,
   onCancelarComanda,
   onFinalizarComanda,
   onNovoServico,
@@ -114,6 +116,15 @@ export default function CaixaDetalhe({
 
             {podeEditar ? (
               <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={onAbrirPagamento}
+                  disabled={saving}
+                  className="inline-flex items-center gap-2 rounded-2xl border border-zinc-200 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-50 disabled:opacity-60"
+                >
+                  <WalletCards size={15} />
+                  Pagamento
+                </button>
                 <button
                   type="button"
                   onClick={onCancelarComanda}

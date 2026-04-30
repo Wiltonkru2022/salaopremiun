@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CheckCircle2, CircleAlert } from "lucide-react";
 import CaixaCancelModal from "@/components/caixa/CaixaCancelModal";
@@ -18,6 +18,8 @@ import { useCaixaPageState } from "@/components/caixa/useCaixaPageState";
 
 export default function CaixaPage() {
   const router = useRouter();
+  const [pagamentosOpen, setPagamentosOpen] = useState(false);
+  const [sessaoOpen, setSessaoOpen] = useState(false);
   const {
     supabase,
     requestedComandaId,
@@ -373,6 +375,7 @@ export default function CaixaPage() {
                 itens={itens}
                 saving={saving || !podeEditarCaixa}
                 faltaReceber={faltaReceber}
+                onAbrirPagamento={() => setPagamentosOpen(true)}
                 onCancelarComanda={abrirModalCancelamento}
                 onFinalizarComanda={finalizarComanda}
                 onNovoServico={() => abrirModalNovoItem("servico")}
@@ -385,6 +388,10 @@ export default function CaixaPage() {
 
               <CaixaSidebar
                 comandaSelecionada={comandaSelecionada}
+                pagamentosOpen={pagamentosOpen}
+                setPagamentosOpen={setPagamentosOpen}
+                sessaoOpen={sessaoOpen}
+                setSessaoOpen={setSessaoOpen}
                 configCaixa={configCaixa}
                 pagamentos={pagamentos}
                 formaPagamento={formaPagamento}
