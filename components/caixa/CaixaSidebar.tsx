@@ -166,8 +166,8 @@ export default function CaixaSidebar({
                     value={comandaSelecionada ? formatCurrency(totalComanda) : "R$ 0,00"}
                   />
                   <SidebarInfo
-                    label="Credito da cliente"
-                    value={formatMoney(creditoClienteDisponivel)}
+                    label="Credito gerado"
+                    value={formatMoney(totalCreditoGerado)}
                   />
                 </div>
               </div>
