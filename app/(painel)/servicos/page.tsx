@@ -3,9 +3,10 @@
 import Link from "next/link";
 import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, Clock3, Percent, Wallet } from "lucide-react";
+import { AlertTriangle, CircleHelp, Clock3, Percent, Wallet } from "lucide-react";
 import { ComissaoHelpPanel } from "@/components/comissoes/ComissaoHelpPanel";
 import AppLoading from "@/components/ui/AppLoading";
+import AppModal from "@/components/ui/AppModal";
 import ConfirmActionModal from "@/components/ui/ConfirmActionModal";
 import { getUsuarioLogado } from "@/lib/auth/getUsuarioLogado";
 import {
@@ -81,6 +82,7 @@ export default function ServicosPage() {
   const [servicos, setServicos] = useState<ServicoListItem[]>([]);
   const [servicoParaExcluir, setServicoParaExcluir] =
     useState<ServicoListItem | null>(null);
+  const [ajudaOpen, setAjudaOpen] = useState(false);
   const [permissoes, setPermissoes] = useState<Permissoes | null>(null);
   const [nivel, setNivel] = useState("");
   const [acessoCarregado, setAcessoCarregado] = useState(false);
@@ -358,8 +360,17 @@ export default function ServicosPage() {
         <section className="rounded-3xl border border-zinc-200 bg-white p-6 text-zinc-950 shadow-sm">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div className="max-w-3xl">
-              <div className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-400">
-                Catalogo operacional
+              <div className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-[0.22em] text-zinc-400">
+                <span>Catalogo operacional</span>
+                <button
+                  type="button"
+                  onClick={() => setAjudaOpen(true)}
+                  className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-zinc-300 bg-white text-zinc-500 transition hover:border-zinc-400 hover:text-zinc-700"
+                  aria-label="Abrir ajuda da pagina de servicos"
+                  title="Ajuda"
+                >
+                  <CircleHelp className="h-3.5 w-3.5" />
+                </button>
               </div>
               <h1 className="mt-2 text-2xl font-bold md:text-3xl">Servicos</h1>
               <p className="mt-3 max-w-2xl text-sm leading-6 text-zinc-600">
@@ -421,53 +432,6 @@ export default function ServicosPage() {
             value={`${resumo.comAvaliacao}`}
             description="Servicos que pedem avaliacao antes da execucao"
             icon={Percent}
-          />
-        </div>
-
-        <ComissaoHelpPanel
-          eyebrow="Comissao"
-          title="Padrao primeiro. Excecao so quando fizer sentido."
-          description="Defina a regra principal no servico. Quando um profissional foge do padrao, ajuste somente aquele vinculo."
-          steps={[
-            {
-              title: "Regra padrao",
-              description:
-                "A comissao da lista vale para o servico inteiro ate que voce crie uma excecao por profissional.",
-            },
-            {
-              title: "Excecao pontual",
-              description:
-                "Use o detalhe do servico para mudar preco, duracao, base ou comissao apenas para quem precisa.",
-            },
-            {
-              title: "Taxa de maquininha",
-              description:
-                "A taxa geral fica em Configuracoes. Aqui voce decide se ela entra ou nao no calculo da comissao.",
-            },
-          ]}
-        >
-          <div className="flex flex-wrap gap-3">
-            <Link
-              href="/configuracoes"
-              className="inline-flex items-center justify-center rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50"
-            >
-              Abrir Configuracoes
-            </Link>
-          </div>
-        </ComissaoHelpPanel>
-
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-          <CommissionGuideCard
-            title="Regra padrao do servico"
-            text="O numero principal da lista e a base da casa. Use excecao so quando a operacao realmente pedir."
-          />
-          <CommissionGuideCard
-            title="Preco, custo e sobra"
-            text="Nao cadastre servico so pelo valor de venda. O custo ajuda a enxergar margem e a evitar tabela bonita com resultado ruim."
-          />
-          <CommissionGuideCard
-            title="Detalhe no clique"
-            text="A lista precisa responder rapido. O detalhe do vinculo, da taxa, do consumo e dos combos fica na edicao certa."
           />
         </div>
 
@@ -680,6 +644,47 @@ export default function ServicosPage() {
           if (servicoParaExcluir) void excluirServico(servicoParaExcluir.id);
         }}
       />
+
+      <AppModal
+        open={ajudaOpen}
+        onClose={() => setAjudaOpen(false)}
+        title="Ajuda de comissao e operacao"
+        description="Regras de comissao, taxa e excecao ficam aqui quando voce precisar consultar."
+        maxWidthClassName="max-w-5xl"
+        bodyClassName="bg-[#f7f8fb]"
+      >
+        <ComissaoHelpPanel
+          eyebrow="Comissao"
+          title="Padrao primeiro. Excecao so quando fizer sentido."
+          description="Defina a regra principal no servico. Quando um profissional foge do padrao, ajuste somente aquele vinculo."
+          steps={[
+            {
+              title: "Regra padrao",
+              description:
+                "A comissao da lista vale para o servico inteiro ate que voce crie uma excecao por profissional.",
+            },
+            {
+              title: "Excecao pontual",
+              description:
+                "Use o detalhe do servico para mudar preco, duracao, base ou comissao apenas para quem precisa.",
+            },
+            {
+              title: "Taxa de maquininha",
+              description:
+                "A taxa geral fica em Configuracoes. Aqui voce decide se ela entra ou nao no calculo da comissao.",
+            },
+          ]}
+        >
+          <div className="flex flex-wrap gap-3">
+            <Link
+              href="/configuracoes"
+              className="inline-flex items-center justify-center rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50"
+            >
+              Abrir Configuracoes
+            </Link>
+          </div>
+        </ComissaoHelpPanel>
+      </AppModal>
     </div>
   );
 }
@@ -709,17 +714,6 @@ function ResumoCard({
         </div>
       </div>
       <p className="mt-3 text-sm leading-6 text-zinc-600">{description}</p>
-    </div>
-  );
-}
-
-function CommissionGuideCard({ title, text }: { title: string; text: string }) {
-  return (
-    <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
-      <div className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
-        {title}
-      </div>
-      <p className="mt-2 text-sm leading-6 text-zinc-700">{text}</p>
     </div>
   );
 }
