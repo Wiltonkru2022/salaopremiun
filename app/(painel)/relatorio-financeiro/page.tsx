@@ -1289,13 +1289,10 @@ export default function RelatorioFinanceiroPage() {
             </div>
           </section>
         ) : (
-          <section className="rounded-[28px] border border-zinc-200 bg-white p-5 shadow-sm">
-            <h2 className="text-base font-semibold text-zinc-950">Relat√≥rio avan√ßado</h2>
-            <p className="mt-2 text-sm leading-6 text-zinc-500">
-              Fechamento de caixa com quebra, sobra e leitura mais gerencial entra
-              no Pro ou Premium.
-            </p>
-          </section>
+          <UpgradePanel
+            title="RelatÛrio avanÁado"
+            description="Fechamento de caixa com quebra, sobra e leitura mais gerencial entra no Pro ou Premium."
+          />
         )}
 
         <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1.2fr_0.8fr]">
@@ -1469,51 +1466,80 @@ export default function RelatorioFinanceiroPage() {
                 />
               </div>
 
-              <div className="overflow-x-auto">
-                <table className="min-w-full">
-                  <thead>
-                    <tr className="border-b border-zinc-100 text-left text-xs uppercase tracking-wider text-zinc-500">
-                      <th className="px-5 py-3">Descri√ß√£o</th>
-                      <th className="px-5 py-3">Base</th>
-                      <th className="px-5 py-3">% </th>
-                      <th className="px-5 py-3">Comiss√£o</th>
-                      <th className="px-5 py-3">Status</th>
-                    </tr>
-                  </thead>
-
-                  <tbody>
-                    {comissoesFiltradas.slice(0, 8).map((item) => (
-                      <tr key={item.id} className="border-b border-zinc-100 last:border-b-0">
-                        <td className="px-5 py-4">
-                          <ComboDescriptionCell descricao={item.descricao} />
-                        </td>
-                        <td className="px-5 py-4 text-sm text-zinc-700">
-                          {formatCurrency(item.valor_base)}
-                        </td>
-                        <td className="px-5 py-4 text-sm text-zinc-700">
-                          {Number(item.percentual_aplicado || 0).toLocaleString("pt-BR", {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2,
-                          })}
-                          %
-                        </td>
-                        <td className="px-5 py-4 text-sm font-semibold text-zinc-900">
-                          {formatCurrency(item.valor_comissao)}
-                        </td>
-                        <td className="px-5 py-4 text-sm text-zinc-700">{item.status || "-"}</td>
+              {relatoriosAvancados ? (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full">
+                    <thead>
+                      <tr className="border-b border-zinc-100 text-left text-xs uppercase tracking-wider text-zinc-500">
+                        <th className="px-5 py-3">Descri√ß√£o</th>
+                        <th className="px-5 py-3">Base</th>
+                        <th className="px-5 py-3">% </th>
+                        <th className="px-5 py-3">Comiss√£o</th>
+                        <th className="px-5 py-3">Status</th>
                       </tr>
-                    ))}
+                    </thead>
 
-                    {comissoesFiltradas.length === 0 ? (
-                      <tr>
-                        <td colSpan={5} className="px-5 py-8 text-center text-sm text-zinc-500">
-                          Nenhuma comiss√£o encontrada.
-                        </td>
-                      </tr>
-                    ) : null}
-                  </tbody>
-                </table>
-              </div>
+                    <tbody>
+                      {comissoesFiltradas.slice(0, 8).map((item) => (
+                        <tr key={item.id} className="border-b border-zinc-100 last:border-b-0">
+                          <td className="px-5 py-4">
+                            <ComboDescriptionCell descricao={item.descricao} />
+                          </td>
+                          <td className="px-5 py-4 text-sm text-zinc-700">
+                            {formatCurrency(item.valor_base)}
+                          </td>
+                          <td className="px-5 py-4 text-sm text-zinc-700">
+                            {Number(item.percentual_aplicado || 0).toLocaleString("pt-BR", {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            })}
+                            %
+                          </td>
+                          <td className="px-5 py-4 text-sm font-semibold text-zinc-900">
+                            {formatCurrency(item.valor_comissao)}
+                          </td>
+                          <td className="px-5 py-4 text-sm text-zinc-700">{item.status || "-"}</td>
+                        </tr>
+                      ))}
+
+                      {comissoesFiltradas.length === 0 ? (
+                        <tr>
+                          <td colSpan={5} className="px-5 py-8 text-center text-sm text-zinc-500">
+                            Nenhuma comiss√£o encontrada.
+                          </td>
+                        </tr>
+                      ) : null}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="px-5 py-5">
+                  <div className="rounded-2xl border border-dashed border-zinc-200 bg-zinc-50 p-4">
+                    <div className="text-sm font-semibold text-zinc-900">
+                      Detalhamento premium das comissıes
+                    </div>
+                    <div className="mt-1 text-sm leading-6 text-zinc-500">
+                      A tabela detalhada de comissıes do perÌodo fica liberada no
+                      Pro ou Premium. No B·sico, vocÍ continua com o resumo
+                      financeiro e a leitura essencial das vendas.
+                    </div>
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      <a
+                        href="/comparar-planos"
+                        className="inline-flex items-center justify-center rounded-2xl border border-zinc-300 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-50"
+                      >
+                        Comparar planos
+                      </a>
+                      <a
+                        href="/assinatura?plano=pro"
+                        className="inline-flex items-center justify-center rounded-2xl bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-zinc-800"
+                      >
+                        Fazer upgrade
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -1662,4 +1688,39 @@ function PrintOptionCard({
     </button>
   );
 }
+
+function UpgradePanel({
+  title,
+  description,
+  plan = "pro",
+}: {
+  title: string;
+  description: string;
+  plan?: "pro" | "premium";
+}) {
+  return (
+    <section className="rounded-[28px] border border-zinc-200 bg-white p-5 shadow-sm">
+      <h2 className="text-base font-semibold text-zinc-950">{title}</h2>
+      <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-500">
+        {description}
+      </p>
+      <div className="mt-4 flex flex-wrap gap-2">
+        <a
+          href="/comparar-planos"
+          className="inline-flex items-center justify-center rounded-2xl border border-zinc-300 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-50"
+        >
+          Comparar planos
+        </a>
+        <a
+          href={`/assinatura?plano=${plan}`}
+          className="inline-flex items-center justify-center rounded-2xl bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-zinc-800"
+        >
+          Fazer upgrade
+        </a>
+      </div>
+    </section>
+  );
+}
+
+
 

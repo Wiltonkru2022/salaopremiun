@@ -170,6 +170,25 @@ function MiniStatusCard({
   );
 }
 
+function UpgradeActions({ plan = "pro" }: { plan?: "pro" | "premium" }) {
+  return (
+    <div className="mt-4 flex flex-wrap gap-2">
+      <a
+        href="/comparar-planos"
+        className="inline-flex items-center justify-center rounded-2xl border border-zinc-300 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-50"
+      >
+        Comparar planos
+      </a>
+      <a
+        href={`/assinatura?plano=${plan}`}
+        className="inline-flex items-center justify-center rounded-2xl bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-zinc-800"
+      >
+        Fazer upgrade
+      </a>
+    </div>
+  );
+}
+
 export default function DashboardPage() {
   const supabase = createClient();
 
@@ -425,6 +444,7 @@ export default function DashboardPage() {
               forte entram no Pro ou Premium. O painel atual continua mostrando
               o essencial da operacao.
             </p>
+            <UpgradeActions />
           </div>
         )}
 
@@ -465,6 +485,18 @@ export default function DashboardPage() {
               }
             />
           </div>
+          {!dashboardAvancado ? (
+            <div className="mt-4 rounded-2xl border border-dashed border-zinc-200 bg-zinc-50 p-4">
+              <div className="text-sm font-semibold text-zinc-900">
+                Quer uma leitura mais gerencial?
+              </div>
+              <div className="mt-1 text-sm text-zinc-500">
+                O dashboard avancado libera ticket medio, cancelamentos, retorno
+                e outros indicadores de crescimento.
+              </div>
+              <UpgradeActions />
+            </div>
+          ) : null}
         </div>
       </section>
 

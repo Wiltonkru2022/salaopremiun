@@ -684,14 +684,16 @@ export default function ComissoesPage() {
                     tone="violet"
                   />
                 </>
-              ) : (
-                <div className="xl:col-span-2 rounded-[22px] border border-zinc-200 bg-zinc-50 p-4 text-sm text-zinc-500">
-                  Ticket medio, maior lancamento, leitura por combo e auditoria de
-                  origem entram nas comissoes avancadas.
-                </div>
-              )}
+                ) : (
+                  <div className="xl:col-span-2">
+                    <PremiumHintCard
+                      title="Comissões avançadas"
+                      description="Ticket médio, maior lançamento, leitura por combo e auditoria de origem entram no Pro ou Premium."
+                    />
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
 
           {comissoesAvancadas && comboSummary.length > 0 ? (
             <div className="rounded-[28px] border border-violet-100 bg-gradient-to-br from-violet-50 via-white to-white p-5 shadow-sm">
@@ -852,7 +854,24 @@ export default function ComissoesPage() {
                     Imprimir rateio
                   </button>
                 </>
-              ) : null}
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    disabled
+                    className="rounded-2xl border border-zinc-200 bg-zinc-100 px-4 py-3 text-sm font-semibold text-zinc-400"
+                  >
+                    Apurar rateio
+                  </button>
+                  <a
+                    href="/assinatura?plano=pro"
+                    className="inline-flex items-center gap-2 rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-50"
+                  >
+                    <Sparkles size={16} />
+                    Liberar no Pro
+                  </a>
+                </>
+              )}
               {podeGerenciar ? (
                 <button
                   onClick={marcarFiltradasComoPagas}
@@ -866,69 +885,74 @@ export default function ComissoesPage() {
           </div>
 
           {comissoesAvancadas ? (
-          <div className="rounded-[28px] border border-zinc-200 bg-white p-4 shadow-sm">
-            <div className="flex flex-wrap items-start justify-between gap-4">
-              <div>
-                <div className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
-                  Visao por pessoa
+            <div className="rounded-[28px] border border-zinc-200 bg-white p-4 shadow-sm">
+              <div className="flex flex-wrap items-start justify-between gap-4">
+                <div>
+                  <div className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
+                    Visao por pessoa
+                  </div>
+                  <div className="mt-1 text-xl font-bold text-zinc-950">
+                    Profissionais e assistentes no rateio
+                  </div>
                 </div>
-                <div className="mt-1 text-xl font-bold text-zinc-950">
-                  Profissionais e assistentes no rateio
+                <div className="inline-flex items-center gap-2 rounded-2xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-700">
+                  <Layers3 size={16} />
+                  {resumoProfissionais.length} pessoa(s)
                 </div>
               </div>
-              <div className="inline-flex items-center gap-2 rounded-2xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-700">
-                <Layers3 size={16} />
-                {resumoProfissionais.length} pessoa(s)
-              </div>
-            </div>
-            {resumoProfissionais.length === 0 ? (
-              <div className="mt-4 rounded-2xl border border-dashed border-zinc-300 bg-zinc-50 px-4 py-10 text-center text-sm text-zinc-500">
-                Nenhum profissional entrou no periodo filtrado.
-              </div>
-            ) : (
-              <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                {resumoProfissionais.slice(0, 4).map((item) => {
-                  const statusPredominante = getStatusComissaoMeta(
-                    item.statusPredominante
-                  );
-                  return (
-                    <div
-                      key={item.id}
-                      className="rounded-[24px] border border-zinc-200 bg-zinc-50 p-4"
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex items-center gap-3">
-                          <div className="flex h-11 w-11 items-center justify-center rounded-full bg-white text-sm font-bold text-zinc-700 ring-1 ring-zinc-200">
-                            {getInitials(item.nome)}
-                          </div>
-                          <div>
-                            <div className="font-semibold text-zinc-900">
-                              {item.nome}
+              {resumoProfissionais.length === 0 ? (
+                <div className="mt-4 rounded-2xl border border-dashed border-zinc-300 bg-zinc-50 px-4 py-10 text-center text-sm text-zinc-500">
+                  Nenhum profissional entrou no periodo filtrado.
+                </div>
+              ) : (
+                <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                  {resumoProfissionais.slice(0, 4).map((item) => {
+                    const statusPredominante = getStatusComissaoMeta(
+                      item.statusPredominante
+                    );
+                    return (
+                      <div
+                        key={item.id}
+                        className="rounded-[24px] border border-zinc-200 bg-zinc-50 p-4"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex items-center gap-3">
+                            <div className="flex h-11 w-11 items-center justify-center rounded-full bg-white text-sm font-bold text-zinc-700 ring-1 ring-zinc-200">
+                              {getInitials(item.nome)}
                             </div>
-                            <div className="text-xs text-zinc-500">
-                              {item.quantidade} lancamento(s)
+                            <div>
+                              <div className="font-semibold text-zinc-900">
+                                {item.nome}
+                              </div>
+                              <div className="text-xs text-zinc-500">
+                                {item.quantidade} lancamento(s)
+                              </div>
                             </div>
                           </div>
+                          <span
+                            className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${statusPredominante.badgeClass}`}
+                          >
+                            {statusPredominante.label}
+                          </span>
                         </div>
-                        <span
-                          className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${statusPredominante.badgeClass}`}
-                        >
-                          {statusPredominante.label}
-                        </span>
+                        <div className="mt-4 text-2xl font-bold text-zinc-950">
+                          {formatCurrency(item.total)}
+                        </div>
+                        <div className="mt-3 text-sm text-zinc-500">
+                          Pendente: {formatCurrency(item.pendente)}
+                        </div>
                       </div>
-                      <div className="mt-4 text-2xl font-bold text-zinc-950">
-                        {formatCurrency(item.total)}
-                      </div>
-                      <div className="mt-3 text-sm text-zinc-500">
-                        Pendente: {formatCurrency(item.pendente)}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-          ) : null}
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          ) : (
+            <PremiumHintCard
+              title="Visão por pessoa e combo"
+              description="Resumo por profissional, leitura por combo e auditoria da origem da comissão ficam liberados no Pro ou Premium."
+            />
+          )}
 
           <div className="overflow-hidden rounded-[28px] border border-zinc-200 bg-white shadow-sm">
             <div className="border-b border-zinc-200 px-5 py-4">
@@ -1139,6 +1163,41 @@ function Field({
         {label}
       </label>
       {children}
+    </div>
+  );
+}
+
+function UpgradeActions({ plan = "pro" }: { plan?: "pro" | "premium" }) {
+  return (
+    <div className="mt-4 flex flex-wrap gap-2">
+      <a
+        href="/comparar-planos"
+        className="inline-flex items-center justify-center rounded-2xl border border-zinc-300 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-50"
+      >
+        Comparar planos
+      </a>
+      <a
+        href={`/assinatura?plano=${plan}`}
+        className="inline-flex items-center justify-center rounded-2xl bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-zinc-800"
+      >
+        Fazer upgrade
+      </a>
+    </div>
+  );
+}
+
+function PremiumHintCard({
+  title,
+  description,
+}: {
+  title: string;
+  description: string;
+}) {
+  return (
+    <div className="rounded-[24px] border border-dashed border-zinc-200 bg-zinc-50 p-4">
+      <div className="text-sm font-semibold text-zinc-900">{title}</div>
+      <div className="mt-1 text-sm leading-6 text-zinc-500">{description}</div>
+      <UpgradeActions />
     </div>
   );
 }
