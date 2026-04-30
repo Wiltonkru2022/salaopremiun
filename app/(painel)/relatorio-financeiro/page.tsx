@@ -633,11 +633,14 @@ export default function RelatorioFinanceiroPage() {
     };
 
     window.addEventListener("afterprint", cleanup);
-    window.print();
+
+    window.setTimeout(() => {
+      window.print();
+    }, 180);
 
     window.setTimeout(() => {
       cleanup();
-    }, 1500);
+    }, 1800);
   }, [printSelection]);
 
   if (loading) {
@@ -725,7 +728,10 @@ export default function RelatorioFinanceiroPage() {
       </div>
 
       <div className="mx-auto max-w-[1800px] space-y-5">
-        <div className="rounded-[28px] border border-zinc-200 bg-white p-4 text-zinc-950 shadow-sm">
+        <div
+          className="rounded-[28px] border border-zinc-200 bg-white p-4 text-zinc-950 shadow-sm"
+          data-no-print
+        >
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
               <div className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-400">
@@ -845,7 +851,7 @@ export default function RelatorioFinanceiroPage() {
           </div>
         </div>
 
-        <section className="space-y-3">
+        <section className="space-y-3" data-no-print>
           <div>
             <h2 className="text-base font-semibold text-zinc-950">Vendas e recebimentos</h2>
             <p className="text-sm text-zinc-500">
@@ -907,7 +913,7 @@ export default function RelatorioFinanceiroPage() {
           </div>
         </section>
 
-        <section className="space-y-3">
+        <section className="space-y-3" data-no-print>
           <div>
             <h2 className="text-base font-semibold text-zinc-950">Fechamento de caixa</h2>
             <p className="text-sm text-zinc-500">
