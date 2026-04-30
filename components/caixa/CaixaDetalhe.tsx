@@ -25,6 +25,7 @@ import { parseComboDisplayMeta } from "@/lib/combo/display";
 
 type Props = {
   comandaSelecionada: ComandaDetalhe | null;
+  comandaCarregandoId: string | null;
   itens: ComandaItem[];
   saving: boolean;
   faltaReceber: number;
@@ -42,6 +43,7 @@ const ITEM_SECTIONS = ["servico", "produto", "extra", "ajuste"] as const;
 
 export default function CaixaDetalhe({
   comandaSelecionada,
+  comandaCarregandoId,
   itens,
   saving,
   faltaReceber,
@@ -84,6 +86,7 @@ export default function CaixaDetalhe({
     comandaSelecionada.status !== "fechada" &&
     comandaSelecionada.status !== "cancelada";
   const status = getStatusCaixaMeta(comandaSelecionada.status);
+  const carregandoDetalhe = comandaCarregandoId === comandaSelecionada.id;
 
   return (
     <div className="flex h-full min-h-0 flex-col rounded-[28px] border border-zinc-200 bg-white p-5 shadow-sm">
@@ -102,7 +105,11 @@ export default function CaixaDetalhe({
                   {status.label}
                 </span>
               </div>
-              <div className="mt-1 text-sm text-zinc-600">{status.description}</div>
+              <div className="mt-1 text-sm text-zinc-600">
+                {carregandoDetalhe
+                  ? "Atualizando os dados da comanda..."
+                  : status.description}
+              </div>
             </div>
 
             {podeEditar ? (
@@ -277,7 +284,7 @@ function HeaderStat({ label, value }: { label: string; value: string }) {
       <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
         {label}
       </div>
-      <div className="mt-1 text-lg font-bold leading-none text-zinc-950">{value}</div>
+      <div className="mt-1 break-words text-lg font-bold leading-6 text-zinc-950">{value}</div>
     </div>
   );
 }
@@ -301,7 +308,7 @@ function HighlightCard({
   return (
     <div className={`rounded-2xl border px-4 py-3.5 ${toneClass}`}>
       <div className="text-[11px] uppercase tracking-[0.14em] text-zinc-500">{label}</div>
-      <div className="mt-2 text-sm font-semibold">{value}</div>
+      <div className="mt-2 break-words text-sm font-semibold leading-5">{value}</div>
     </div>
   );
 }
@@ -349,7 +356,9 @@ function ItemCard({
           </div>
 
           <div className="min-w-0">
-            <div className="font-semibold text-zinc-950">{comboMeta.displayTitle}</div>
+            <div className="break-words text-sm font-semibold leading-5 text-zinc-950 sm:text-base">
+              {comboMeta.displayTitle}
+            </div>
             <div className="mt-1 flex flex-wrap items-center gap-2">
               <div className="text-xs uppercase tracking-[0.14em] text-zinc-500">
                 {getTipoItemLabel(item.tipo_item)}
@@ -412,7 +421,7 @@ function InfoPill({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-2xl border border-zinc-200 bg-white px-3 py-2.5">
       <div className="text-[11px] uppercase tracking-[0.14em] text-zinc-500">{label}</div>
-      <div className="mt-1 text-sm font-semibold text-zinc-900">{value}</div>
+      <div className="mt-1 break-words text-sm font-semibold leading-5 text-zinc-900">{value}</div>
     </div>
   );
 }

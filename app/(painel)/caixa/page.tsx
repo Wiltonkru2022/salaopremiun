@@ -59,6 +59,8 @@ export default function CaixaPage() {
     setComandasCanceladas,
     comandaSelecionada,
     setComandaSelecionada,
+    comandaCarregandoId,
+    setComandaCarregandoId,
     itens,
     setItens,
     pagamentos,
@@ -136,6 +138,7 @@ export default function CaixaPage() {
     setComandasFechadas,
     setComandasCanceladas,
     setComandaSelecionada,
+    setComandaCarregandoId,
     setItens,
     setPagamentos,
     setDescontoInput,
@@ -312,7 +315,13 @@ export default function CaixaPage() {
                     <>
                       <CheckCircle2 size={16} className="mr-2 text-zinc-500" />
                       <span>
-                        Comanda em foco <strong>#{comandaSelecionada.numero}</strong>.{" "}
+                        {comandaCarregandoId === comandaSelecionada.id ? (
+                          "Abrindo comanda..."
+                        ) : (
+                          <>
+                            Comanda em foco <strong>#{comandaSelecionada.numero}</strong>.{" "}
+                          </>
+                        )}
                         {faltaReceber > 0
                           ? `Ainda faltam ${faltaReceber.toLocaleString("pt-BR", {
                               style: "currency",
@@ -353,12 +362,14 @@ export default function CaixaPage() {
                 comandasFechadas={comandasFechadas}
                 comandasCanceladas={comandasCanceladas}
                 comandaSelecionada={comandaSelecionada}
+                comandaCarregandoId={comandaCarregandoId}
                 onAbrirComanda={abrirComanda}
                 onAbrirAgendamentoSemComanda={abrirAgendamentoSemComanda}
               />
 
               <CaixaDetalhe
                 comandaSelecionada={comandaSelecionada}
+                comandaCarregandoId={comandaCarregandoId}
                 itens={itens}
                 saving={saving || !podeEditarCaixa}
                 faltaReceber={faltaReceber}
@@ -391,6 +402,7 @@ export default function CaixaPage() {
                 faltaReceber={faltaReceber}
                 troco={troco}
                 creditoClienteDisponivel={creditoClienteDisponivel}
+                comandaCarregandoId={comandaCarregandoId}
                 descontoInput={descontoInput}
                 setDescontoInput={setDescontoInput}
                 acrescimoInput={acrescimoInput}

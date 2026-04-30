@@ -61,6 +61,7 @@ type UseCaixaLoadersParams = {
   setComandasFechadas: StateSetter<ComandaFila[]>;
   setComandasCanceladas: StateSetter<ComandaFila[]>;
   setComandaSelecionada: StateSetter<ComandaDetalhe | null>;
+  setComandaCarregandoId: StateSetter<string | null>;
   setItens: StateSetter<ComandaItem[]>;
   setPagamentos: StateSetter<ComandaPagamento[]>;
   setDescontoInput: StateSetter<string>;
@@ -94,6 +95,7 @@ export function useCaixaLoaders({
   setComandasFechadas,
   setComandasCanceladas,
   setComandaSelecionada,
+  setComandaCarregandoId,
   setItens,
   setPagamentos,
   setDescontoInput,
@@ -111,28 +113,36 @@ export function useCaixaLoaders({
 
   const aplicarDetalheComanda = useCallback(
     async (idComanda: string) => {
-      const detalhe = await monitorClientOperation(
-        {
-          module: "caixa",
-          action: "carregar_detalhe_comanda",
-          screen: "caixa",
-          entity: "comanda",
-          entityId: idComanda,
-          successMessage: "Detalhe da comanda carregado com sucesso.",
-          errorMessage: "Falha ao carregar detalhe da comanda.",
-        },
-        () => carregarComandaDetalhe(supabase, idComanda)
-      );
+      try {
+        setComandaCarregandoId(idComanda);
+        const detalhe = await monitorClientOperation(
+          {
+            module: "caixa",
+            action: "carregar_detalhe_comanda",
+            screen: "caixa",
+            entity: "comanda",
+            entityId: idComanda,
+            successMessage: "Detalhe da comanda carregado com sucesso.",
+            errorMessage: "Falha ao carregar detalhe da comanda.",
+          },
+          () => carregarComandaDetalhe(supabase, idComanda)
+        );
 
-      setComandaSelecionada(detalhe.comandaSelecionada);
-      setItens(detalhe.itens);
-      setPagamentos(detalhe.pagamentos);
-      setDescontoInput(detalhe.descontoInput);
-      setAcrescimoInput(detalhe.acrescimoInput);
+        setComandaSelecionada(detalhe.comandaSelecionada);
+        setItens(detalhe.itens);
+        setPagamentos(detalhe.pagamentos);
+        setDescontoInput(detalhe.descontoInput);
+        setAcrescimoInput(detalhe.acrescimoInput);
+      } finally {
+        setComandaCarregandoId((current) =>
+          current === idComanda ? null : current
+        );
+      }
     },
     [
       supabase,
       setComandaSelecionada,
+      setComandaCarregandoId,
       setItens,
       setPagamentos,
       setDescontoInput,

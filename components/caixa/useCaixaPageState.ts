@@ -63,6 +63,9 @@ export function useCaixaPageState() {
 
   const [comandaSelecionada, setComandaSelecionada] =
     useState<ComandaDetalhe | null>(null);
+  const [comandaCarregandoId, setComandaCarregandoId] = useState<string | null>(
+    null
+  );
   const [itens, setItens] = useState<ComandaItem[]>([]);
   const [pagamentos, setPagamentos] = useState<ComandaPagamento[]>([]);
 
@@ -201,6 +204,8 @@ export function useCaixaPageState() {
     setComandasCanceladas,
     comandaSelecionada,
     setComandaSelecionada,
+    comandaCarregandoId,
+    setComandaCarregandoId,
     itens,
     setItens,
     pagamentos,

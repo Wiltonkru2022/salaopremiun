@@ -20,6 +20,7 @@ type Props = {
   comandasFechadas: ComandaFila[];
   comandasCanceladas: ComandaFila[];
   comandaSelecionada: ComandaDetalhe | null;
+  comandaCarregandoId: string | null;
   onAbrirComanda: (idComanda: string) => void;
   onAbrirAgendamentoSemComanda: (idAgendamento: string) => void;
 };
@@ -34,6 +35,7 @@ export default function CaixaFila({
   comandasFechadas,
   comandasCanceladas,
   comandaSelecionada,
+  comandaCarregandoId,
   onAbrirComanda,
   onAbrirAgendamentoSemComanda,
 }: Props) {
@@ -93,6 +95,7 @@ export default function CaixaFila({
                   key={item.id}
                   item={item}
                   selecionada={comandaSelecionada?.id === item.id}
+                  carregando={comandaCarregandoId === item.id}
                   onClick={() => onAbrirComanda(item.id)}
                 />
               ))}
@@ -181,10 +184,12 @@ function TabButton({
 function ComandaFilaCard({
   item,
   selecionada,
+  carregando,
   onClick,
 }: {
   item: ComandaFila;
   selecionada: boolean;
+  carregando: boolean;
   onClick: () => void;
 }) {
   const status = getStatusCaixaMeta(item.status);
@@ -216,15 +221,19 @@ function ComandaFilaCard({
       </div>
 
       <div
-        className={`mt-3 text-base font-semibold ${
+        className={`mt-3 break-words text-base font-semibold leading-6 ${
           selecionada ? "text-white" : "text-zinc-900"
         }`}
       >
         {getJoinedName(item.clientes, "Sem cliente")}
       </div>
 
-      <div className={`mt-1 text-sm ${selecionada ? "text-zinc-300" : "text-zinc-500"}`}>
-        {status.description}
+      <div
+        className={`mt-1 break-words text-sm leading-5 ${
+          selecionada ? "text-zinc-300" : "text-zinc-500"
+        }`}
+      >
+        {carregando ? "Carregando dados da comanda..." : status.description}
       </div>
 
       <div className="mt-4 grid grid-cols-2 gap-3">
@@ -267,10 +276,10 @@ function AgendamentoFilaCard({
         </span>
       </div>
 
-      <div className="mt-3 text-base font-semibold text-zinc-950">
+      <div className="mt-3 break-words text-base font-semibold leading-6 text-zinc-950">
         {getJoinedName(item.clientes, "Sem cliente")}
       </div>
-      <div className="mt-1 text-sm text-zinc-600">
+      <div className="mt-1 break-words text-sm leading-5 text-zinc-600">
         {getJoinedName(item.servicos, "Servico")}
       </div>
 
@@ -308,7 +317,7 @@ function HistoricoCard({
         {icon}
       </div>
 
-      <div className="mt-3 text-base font-semibold text-zinc-900">
+      <div className="mt-3 break-words text-base font-semibold leading-6 text-zinc-900">
         {getJoinedName(item.clientes, "Sem cliente")}
       </div>
 
@@ -344,7 +353,7 @@ function MetaCard({
       >
         {label}
       </div>
-      <div className="mt-1 text-sm font-semibold">{value}</div>
+      <div className="mt-1 break-words text-sm font-semibold leading-5">{value}</div>
     </div>
   );
 }
