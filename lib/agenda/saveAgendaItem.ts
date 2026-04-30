@@ -8,6 +8,34 @@ import {
   timeToMinutes,
 } from "@/lib/utils/agenda";
 
+async function assertAgendaMonthlyLimit() {
+  const response = await fetch("/api/plano/access", {
+    method: "GET",
+    cache: "no-store",
+  });
+
+  const data = (await response.json().catch(() => null)) as
+    | {
+        error?: string;
+        limites?: { agendamentosMensais?: number | null };
+        uso?: { agendamentosMensais?: number };
+      }
+    | null;
+
+  if (!response.ok) {
+    throw new Error(data?.error || "Nao foi possivel validar o plano.");
+  }
+
+  const limite = data?.limites?.agendamentosMensais ?? null;
+  const uso = Number(data?.uso?.agendamentosMensais || 0);
+
+  if (limite != null && uso >= limite) {
+    throw new Error(
+      `Limite do plano atingido: ${uso} de ${limite} agendamentos no mes.`
+    );
+  }
+}
+
 export async function saveAgendaItem(params: {
   supabase: SupabaseClient;
   payload: Record<string, unknown>;
@@ -138,6 +166,8 @@ export async function saveAgendaItem(params: {
 
       return;
     }
+
+    await assertAgendaMonthlyLimit();
 
     const { data: insertedRows, error } = await supabase
       .from("agendamentos")

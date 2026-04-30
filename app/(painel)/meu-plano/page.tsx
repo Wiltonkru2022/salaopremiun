@@ -6,6 +6,7 @@ import {
   PLANO_RECURSO_GROUPS,
   PLANO_RECURSOS_PADRAO,
 } from "@/lib/plans/access";
+import { getPlanoCatalogo } from "@/lib/plans/catalog";
 import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -63,7 +64,10 @@ export default async function MeuPlanoPage() {
   }
 
   const access = await getPlanoAccessSnapshot(usuario.id_salao);
-  const recursos = PLANO_RECURSOS_PADRAO.map((codigo) => ({
+  const planoCatalogo = getPlanoCatalogo(access.planoCodigo);
+  const recursos = PLANO_RECURSOS_PADRAO.filter(
+    (codigo) => codigo !== "agendamentos_mensais"
+  ).map((codigo) => ({
     codigo,
     label: getPlanoRecursoLabel(codigo),
     group: PLANO_RECURSO_GROUPS[codigo],
@@ -80,14 +84,39 @@ export default async function MeuPlanoPage() {
     {}
   );
 
-  const usuariosPercent = usagePercent(
-    access.uso.usuarios,
-    access.limites.usuarios
-  );
-  const profissionaisPercent = usagePercent(
-    access.uso.profissionais,
-    access.limites.profissionais
-  );
+  const metrics = [
+    {
+      title: "Usuários",
+      used: access.uso.usuarios,
+      limit: access.limites.usuarios,
+      color: "bg-zinc-950",
+    },
+    {
+      title: "Profissionais",
+      used: access.uso.profissionais,
+      limit: access.limites.profissionais,
+      color: "bg-emerald-600",
+    },
+    {
+      title: "Clientes",
+      used: access.uso.clientes,
+      limit: access.limites.clientes,
+      color: "bg-violet-600",
+    },
+    {
+      title: "Serviços",
+      used: access.uso.servicos,
+      limit: access.limites.servicos,
+      color: "bg-amber-500",
+    },
+    {
+      title: "Agendamentos do mês",
+      used: access.uso.agendamentosMensais,
+      limit: access.limites.agendamentosMensais,
+      color: "bg-sky-600",
+    },
+  ];
+
   const assinaturaHref = getPlanoCheckoutHref(access.planoCodigo);
   const upgradeHref = getPlanoUpgradeHref(access.planoCodigo);
 
@@ -100,19 +129,26 @@ export default async function MeuPlanoPage() {
               Meu plano
             </div>
             <h1 className="mt-3 font-display text-4xl font-black">
-              {access.planoNome}
+              {planoCatalogo.nome}
             </h1>
             <p className="mt-3 max-w-3xl text-sm leading-6 text-zinc-300">
-              Controle de uso, recursos liberados e limites comerciais do seu
-              salao. Se algo estiver bloqueado, o sistema mostra o motivo e o
-              caminho para liberar.
+              {planoCatalogo.descricao}
             </p>
+            <div className="mt-3 text-sm font-semibold text-zinc-100">
+              Foco: {planoCatalogo.foco}
+            </div>
             <div className="mt-6 flex flex-wrap gap-2">
               <Link
                 href={assinaturaHref}
                 className="rounded-full bg-white px-5 py-3 text-sm font-black text-zinc-950 transition hover:-translate-y-0.5"
               >
                 Gerenciar assinatura
+              </Link>
+              <Link
+                href="/comparar-planos"
+                className="rounded-full border border-white/15 bg-white/10 px-5 py-3 text-sm font-black text-white transition hover:-translate-y-0.5 hover:bg-white/15"
+              >
+                Comparar planos
               </Link>
               {upgradeHref ? (
                 <Link
@@ -123,7 +159,7 @@ export default async function MeuPlanoPage() {
                 </Link>
               ) : (
                 <span className="rounded-full border border-white/15 bg-white/10 px-5 py-3 text-sm font-black text-white/85">
-                  Plano maximo ativo
+                  Plano máximo ativo
                 </span>
               )}
             </div>
@@ -138,9 +174,15 @@ export default async function MeuPlanoPage() {
                 {statusLabel(access.assinaturaStatus)}
               </div>
               <p className="mt-2 text-sm leading-6 text-zinc-500">
-                Status do salao:{" "}
+                Status do salão:{" "}
                 <span className="font-bold capitalize text-zinc-800">
                   {statusLabel(access.salaoStatus)}
+                </span>
+              </p>
+              <p className="mt-3 text-sm leading-6 text-zinc-500">
+                Ideal para:{" "}
+                <span className="font-bold text-zinc-800">
+                  {planoCatalogo.idealPara}
                 </span>
               </p>
             </div>
@@ -155,72 +197,42 @@ export default async function MeuPlanoPage() {
         </div>
       ) : access.modoRestrito ? (
         <div className="rounded-[28px] border border-amber-200 bg-amber-50 p-5 text-sm leading-6 text-amber-900 shadow-sm">
-          <strong>Modo restrito ativo.</strong> Voce ainda pode consultar dados,
-          pagar a assinatura e falar com suporte, mas novas operacoes criticas
-          ficam bloqueadas ate a regularizacao.
+          <strong>Modo restrito ativo.</strong> Você ainda pode consultar
+          dados, pagar a assinatura e falar com suporte, mas novas operações
+          críticas ficam bloqueadas até a regularização.
         </div>
       ) : null}
 
-      <section className="grid gap-4 lg:grid-cols-3">
-        <div className="rounded-[28px] border border-zinc-200 bg-white p-5 shadow-sm">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <div className="text-xs font-bold uppercase tracking-[0.25em] text-zinc-400">
-                Usuarios
+      <section className="grid gap-4 xl:grid-cols-5">
+        {metrics.map((metric) => {
+          const percent = usagePercent(metric.used, metric.limit);
+          return (
+            <div
+              key={metric.title}
+              className="rounded-[28px] border border-zinc-200 bg-white p-5 shadow-sm"
+            >
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <div className="text-xs font-bold uppercase tracking-[0.25em] text-zinc-400">
+                    {metric.title}
+                  </div>
+                  <div className="mt-3 text-2xl font-black text-zinc-950">
+                    {formatLimit(metric.used, metric.limit)}
+                  </div>
+                </div>
+                <span className="rounded-full bg-zinc-100 px-3 py-1 text-xs font-black text-zinc-700">
+                  {percent}%
+                </span>
               </div>
-              <div className="mt-3 text-2xl font-black text-zinc-950">
-                {formatLimit(access.uso.usuarios, access.limites.usuarios)}
+              <div className="mt-4 h-2 overflow-hidden rounded-full bg-zinc-100">
+                <div
+                  className={`h-full rounded-full ${metric.color}`}
+                  style={{ width: `${percent}%` }}
+                />
               </div>
             </div>
-            <span className="rounded-full bg-zinc-100 px-3 py-1 text-xs font-black text-zinc-700">
-              {usuariosPercent}%
-            </span>
-          </div>
-          <div className="mt-4 h-2 overflow-hidden rounded-full bg-zinc-100">
-            <div
-              className="h-full rounded-full bg-zinc-950"
-              style={{ width: `${usuariosPercent}%` }}
-            />
-          </div>
-        </div>
-
-        <div className="rounded-[28px] border border-zinc-200 bg-white p-5 shadow-sm">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <div className="text-xs font-bold uppercase tracking-[0.25em] text-zinc-400">
-                Profissionais
-              </div>
-              <div className="mt-3 text-2xl font-black text-zinc-950">
-                {formatLimit(
-                  access.uso.profissionais,
-                  access.limites.profissionais
-                )}
-              </div>
-            </div>
-            <span className="rounded-full bg-zinc-100 px-3 py-1 text-xs font-black text-zinc-700">
-              {profissionaisPercent}%
-            </span>
-          </div>
-          <div className="mt-4 h-2 overflow-hidden rounded-full bg-zinc-100">
-            <div
-              className="h-full rounded-full bg-emerald-600"
-              style={{ width: `${profissionaisPercent}%` }}
-            />
-          </div>
-        </div>
-
-        <div className="rounded-[28px] border border-zinc-200 bg-white p-5 shadow-sm">
-          <div className="text-xs font-bold uppercase tracking-[0.25em] text-zinc-400">
-            Recursos
-          </div>
-          <div className="mt-3 text-2xl font-black text-zinc-950">
-            {recursosLiberados.length}/{recursos.length}
-          </div>
-          <p className="mt-2 text-sm text-zinc-500">
-            {recursosBloqueados.length} recurso(s) podem virar upgrade ou pacote
-            extra.
-          </p>
-        </div>
+          );
+        })}
       </section>
 
       <section className="grid gap-5 xl:grid-cols-[1fr_360px]">
@@ -235,10 +247,10 @@ export default async function MeuPlanoPage() {
               </h2>
             </div>
             <Link
-              href={assinaturaHref}
+              href="/comparar-planos"
               className="rounded-full border border-zinc-200 px-4 py-2 text-sm font-black text-zinc-900 transition hover:border-zinc-950"
             >
-              Ver planos
+              Ver comparativo
             </Link>
           </div>
 
@@ -272,35 +284,30 @@ export default async function MeuPlanoPage() {
         <aside className="space-y-4">
           <div className="rounded-[30px] border border-zinc-200 bg-zinc-950 p-6 text-white shadow-sm">
             <div className="text-xs font-bold uppercase tracking-[0.25em] text-emerald-200">
-              Upgrade inteligente
+              Leitura comercial
             </div>
             <h3 className="mt-3 text-2xl font-black">
-              Libere mais recursos sem baguncar a operacao.
+              O plano precisa acompanhar o crescimento da casa.
             </h3>
             <p className="mt-3 text-sm leading-6 text-zinc-300">
-              Quando um recurso nao estiver no plano, o sistema bloqueia com
-              mensagem clara e leva para assinatura, sem quebrar o fluxo.
+              O sistema já bloqueia módulo, rota e criação onde o plano não
+              cobre. Quando o salão crescer, o upgrade libera o próximo nível
+              sem bagunçar a operação.
             </p>
-            {upgradeHref ? (
-              <Link
-                href={upgradeHref}
-                className="mt-5 inline-flex rounded-full bg-white px-5 py-3 text-sm font-black text-zinc-950 transition hover:-translate-y-0.5"
-              >
-                Comparar planos
-              </Link>
-            ) : (
-              <span className="mt-5 inline-flex rounded-full border border-white/15 bg-white/10 px-5 py-3 text-sm font-black text-white/85">
-                Todos os recursos do topo liberados
-              </span>
-            )}
+            <Link
+              href="/comparar-planos"
+              className="mt-5 inline-flex rounded-full bg-white px-5 py-3 text-sm font-black text-zinc-950 transition hover:-translate-y-0.5"
+            >
+              Comparar planos
+            </Link>
           </div>
 
           <div className="rounded-[30px] border border-amber-200 bg-amber-50 p-6 text-amber-950 shadow-sm">
             <div className="text-xs font-bold uppercase tracking-[0.25em] text-amber-600">
-              Proximos bloqueios
+              Próximos bloqueios
             </div>
             <div className="mt-4 space-y-3 text-sm font-bold">
-              {recursosBloqueados.slice(0, 5).map((item) => (
+              {recursosBloqueados.slice(0, 6).map((item) => (
                 <div key={item.codigo} className="rounded-2xl bg-white/70 p-3">
                   {item.label}
                 </div>
@@ -311,6 +318,19 @@ export default async function MeuPlanoPage() {
                 </div>
               ) : null}
             </div>
+          </div>
+
+          <div className="rounded-[30px] border border-zinc-200 bg-white p-6 shadow-sm">
+            <div className="text-xs font-bold uppercase tracking-[0.25em] text-zinc-400">
+              Recursos ativos
+            </div>
+            <div className="mt-3 text-3xl font-black text-zinc-950">
+              {recursosLiberados.length}
+            </div>
+            <p className="mt-2 text-sm leading-6 text-zinc-500">
+              {recursosBloqueados.length} recurso(s) ainda podem ser liberados
+              por upgrade ou pacote extra.
+            </p>
           </div>
         </aside>
       </section>

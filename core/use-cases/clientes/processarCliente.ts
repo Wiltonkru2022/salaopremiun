@@ -11,7 +11,10 @@ import {
   normalizarTelefoneCliente,
 } from "@/core/entities/cliente";
 import type { ClienteService } from "@/services/clienteService";
-import { PlanAccessError } from "@/lib/plans/access";
+import {
+  assertCanCreateWithinLimit,
+  PlanAccessError,
+} from "@/lib/plans/access";
 
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -297,6 +300,10 @@ export async function processarClienteUseCase(params: {
     if (input.acao === "salvar") {
       const payloadCliente = buildClientePayload(input.idSalao, input.cliente);
       const idClienteAtual = sanitizeUuid(input.cliente.id);
+
+      if (!idClienteAtual) {
+        await assertCanCreateWithinLimit(input.idSalao, "clientes");
+      }
 
       await service.verificarDuplicidade({
         idSalao: input.idSalao,

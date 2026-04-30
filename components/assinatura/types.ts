@@ -1,3 +1,5 @@
+import { PLANOS_CATALOGO } from "@/lib/plans/catalog";
+
 export type BillingType = "PIX" | "BOLETO" | "CREDIT_CARD";
 
 export type CardForm = {
@@ -103,40 +105,60 @@ export const PLANOS_INFO: Record<
   }
 > = {
   basico: {
-    nome: "Básico",
-    valor: 5,
-    descricao: "Ideal para salão pequeno",
-    recursos: ["3 profissionais", "2 usuários", "Agenda e caixa"],
-    ordem: 1,
+    nome: PLANOS_CATALOGO.basico.nome,
+    valor: PLANOS_CATALOGO.basico.valorMensal,
+    descricao: PLANOS_CATALOGO.basico.subtitulo,
+    recursos: [
+      "250 agendamentos/mês",
+      "2.000 clientes",
+      "80 serviços",
+      "3 profissionais",
+      "2 usuários",
+      "Agenda, caixa e venda",
+    ],
+    ordem: PLANOS_CATALOGO.basico.ordem,
   },
   pro: {
-    nome: "Pro",
-    valor: 89.9,
-    descricao: "Mais recursos e mais equipe",
-    recursos: ["10 profissionais", "5 usuários", "Operação completa"],
-    ordem: 2,
+    nome: PLANOS_CATALOGO.pro.nome,
+    valor: PLANOS_CATALOGO.pro.valorMensal,
+    descricao: PLANOS_CATALOGO.pro.subtitulo,
+    recursos: [
+      "900 agendamentos/mês",
+      "10.000 clientes",
+      "250 serviços",
+      "10 profissionais",
+      "5 usuários",
+      "Estoque, app e leitura avançada",
+    ],
+    ordem: PLANOS_CATALOGO.pro.ordem,
   },
   premium: {
-    nome: "Premium",
-    valor: 149.9,
-    descricao: "Plano completo sem limites práticos",
+    nome: PLANOS_CATALOGO.premium.nome,
+    valor: PLANOS_CATALOGO.premium.valorMensal,
+    descricao: PLANOS_CATALOGO.premium.subtitulo,
     recursos: [
+      "Agendamentos ilimitados",
+      "Clientes ilimitados",
+      "Serviços ilimitados",
       "Profissionais ilimitados",
       "Usuários ilimitados",
       "Tudo liberado",
     ],
-    ordem: 3,
+    ordem: PLANOS_CATALOGO.premium.ordem,
   },
   teste_gratis: {
-    nome: "Teste grátis",
-    valor: 0,
-    descricao: "Período de teste",
+    nome: PLANOS_CATALOGO.teste_gratis.nome,
+    valor: PLANOS_CATALOGO.teste_gratis.valorMensal,
+    descricao: PLANOS_CATALOGO.teste_gratis.subtitulo,
     recursos: [
-      "Acesso temporário",
-      "Teste da operação",
+      "40 agendamentos no período",
+      "100 clientes",
+      "20 serviços",
+      "3 profissionais",
+      "1 usuário",
       "Sem cobrança no período",
     ],
-    ordem: 0,
+    ordem: PLANOS_CATALOGO.teste_gratis.ordem,
   },
 };
 

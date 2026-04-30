@@ -10,6 +10,7 @@ import type {
   CategoriaServicoResult,
   ServicoService,
 } from "@/services/servicoService";
+import { assertCanCreateWithinLimit } from "@/lib/plans/access";
 
 const ACOES_SERVICO = ["salvar", "alterar_status", "excluir"] as const satisfies readonly AcaoServico[];
 const UUID_REGEX =
@@ -300,6 +301,10 @@ export async function processarServicoUseCase(params: {
     if (input.acao === "salvar") {
       if (!input.servico) {
         throw new Error("Servico obrigatorio para esta acao.");
+      }
+
+      if (!sanitizeUuid(input.servico.id)) {
+        await assertCanCreateWithinLimit(input.idSalao, "servicos");
       }
 
       if (sanitizeBoolean(input.servico.eh_combo, false) && input.combo_itens.length < 2) {

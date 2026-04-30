@@ -8,6 +8,7 @@ import {
 import { getResumoAssinatura } from "@/lib/assinatura-utils";
 import { buildShellNotifications } from "@/lib/notifications/shell-notifications";
 import { getPlanoAccessSnapshot } from "@/lib/plans/access";
+import { getPlanoCatalogo } from "@/lib/plans/catalog";
 import { PERMISSIONS } from "@/lib/permissions";
 
 type RpcShellResumo = {
@@ -131,6 +132,7 @@ export async function loadPainelShellData() {
   });
 
   const planoAccess = await getPlanoAccessSnapshot(usuario.id_salao);
+  const planoCatalogo = getPlanoCatalogo(planoAccess.planoCodigo);
 
   return {
     ok: true as const,
@@ -144,7 +146,7 @@ export async function loadPainelShellData() {
       salaoNome: rpc.salao?.nome || "SalaoPremium",
       salaoResponsavel: rpc.salao?.responsavel || userName,
       salaoLogoUrl: rpc.salao?.logo_url || null,
-      planoNome: rpc.assinatura?.plano || rpc.salao?.plano || "Sem plano",
+      planoNome: planoCatalogo.nome,
       assinaturaStatus: rpc.assinatura?.status || rpc.salao?.status || null,
       resumoAssinatura,
       planoRecursos: planoAccess.recursos,

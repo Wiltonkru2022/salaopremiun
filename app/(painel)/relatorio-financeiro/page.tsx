@@ -101,6 +101,10 @@ type ResumoCaixa = {
   sobraTotal: number;
 };
 
+type PlanoAccessPayload = {
+  recursos?: Record<string, boolean>;
+};
+
 type StatusFiltro = "fechada" | "cancelada" | "todos";
 type PainelLateralTab = "pagamentos" | "comissoes";
 type PrintSectionKey = "vendas" | "pagamentos" | "comissoes";
@@ -248,6 +252,7 @@ export default function RelatorioFinanceiroPage() {
   const [painelLateralTab, setPainelLateralTab] =
     useState<PainelLateralTab>("pagamentos");
   const [printModalOpen, setPrintModalOpen] = useState(false);
+  const [relatoriosAvancados, setRelatoriosAvancados] = useState(false);
   const [printSelection, setPrintSelection] = useState<PrintSelection>({
     vendas: true,
     pagamentos: true,
@@ -269,6 +274,14 @@ export default function RelatorioFinanceiroPage() {
 
         setErroTela("");
         setMsg("");
+
+        const planoResponse = await fetch("/api/plano/access", {
+          cache: "no-store",
+        });
+        const planoData = (await planoResponse.json().catch(() => null)) as
+          | PlanoAccessPayload
+          | null;
+        setRelatoriosAvancados(Boolean(planoData?.recursos?.relatorios_avancados));
 
         let queryComandas = supabase
           .from("comandas")
@@ -1188,7 +1201,11 @@ export default function RelatorioFinanceiroPage() {
             icon={<Receipt size={18} />}
             label="Faturamento líquido"
             value={formatCurrency(resumo.faturamentoLiquido)}
-            helper={`Ticket médio: ${formatCurrency(resumo.ticketMedio)}`}
+            helper={
+              relatoriosAvancados
+                ? `Ticket médio: ${formatCurrency(resumo.ticketMedio)}`
+                : "Leitura básica do período"
+            }
           />
           <KpiCard
             icon={<Wallet size={18} />}
@@ -1222,7 +1239,9 @@ export default function RelatorioFinanceiroPage() {
           <KpiCard
             icon={<Receipt size={18} />}
             label="Canceladas"
-            value={formatCurrency(resumo.canceladas)}
+            value={
+              relatoriosAvancados ? formatCurrency(resumo.canceladas) : "Upgrade"
+            }
           />
           <KpiCard
             icon={<Receipt size={18} />}
@@ -1232,42 +1251,52 @@ export default function RelatorioFinanceiroPage() {
           </div>
         </section>
 
-        <section className="space-y-3">
-          <div>
-            <h2 className="text-base font-semibold text-zinc-950">Fechamento de caixa</h2>
-            <p className="text-sm text-zinc-500">
-              Diferenca entre previsto, contado, sobra e quebra.
-            </p>
-          </div>
+        {relatoriosAvancados ? (
+          <section className="space-y-3">
+            <div>
+              <h2 className="text-base font-semibold text-zinc-950">Fechamento de caixa</h2>
+              <p className="text-sm text-zinc-500">
+                Diferença entre previsto, contado, sobra e quebra.
+              </p>
+            </div>
 
-          <div className="grid grid-cols-1 gap-3 xl:grid-cols-5">
-          <KpiCard
-            icon={<Wallet size={18} />}
-            label="Fechamentos de caixa"
-            value={String(resumoCaixa.sessoesFechadas)}
-          />
-          <KpiCard
-            icon={<Receipt size={18} />}
-            label="Previsto no fechamento"
-            value={formatCurrency(resumoCaixa.previstoFechamento)}
-          />
-          <KpiCard
-            icon={<BadgeDollarSign size={18} />}
-            label="Contado no fechamento"
-            value={formatCurrency(resumoCaixa.contadoFechamento)}
-          />
-          <KpiCard
-            icon={<ShieldAlert size={18} />}
-            label="Quebra de caixa"
-            value={formatCurrency(resumoCaixa.quebraTotal)}
-          />
-          <KpiCard
-            icon={<CreditCard size={18} />}
-            label="Sobra de caixa"
-            value={formatCurrency(resumoCaixa.sobraTotal)}
-          />
-          </div>
-        </section>
+            <div className="grid grid-cols-1 gap-3 xl:grid-cols-5">
+            <KpiCard
+              icon={<Wallet size={18} />}
+              label="Fechamentos de caixa"
+              value={String(resumoCaixa.sessoesFechadas)}
+            />
+            <KpiCard
+              icon={<Receipt size={18} />}
+              label="Previsto no fechamento"
+              value={formatCurrency(resumoCaixa.previstoFechamento)}
+            />
+            <KpiCard
+              icon={<BadgeDollarSign size={18} />}
+              label="Contado no fechamento"
+              value={formatCurrency(resumoCaixa.contadoFechamento)}
+            />
+            <KpiCard
+              icon={<ShieldAlert size={18} />}
+              label="Quebra de caixa"
+              value={formatCurrency(resumoCaixa.quebraTotal)}
+            />
+            <KpiCard
+              icon={<CreditCard size={18} />}
+              label="Sobra de caixa"
+              value={formatCurrency(resumoCaixa.sobraTotal)}
+            />
+            </div>
+          </section>
+        ) : (
+          <section className="rounded-[28px] border border-zinc-200 bg-white p-5 shadow-sm">
+            <h2 className="text-base font-semibold text-zinc-950">Relatório avançado</h2>
+            <p className="mt-2 text-sm leading-6 text-zinc-500">
+              Fechamento de caixa com quebra, sobra e leitura mais gerencial entra
+              no Pro ou Premium.
+            </p>
+          </section>
+        )}
 
         <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1.2fr_0.8fr]">
           <div className="overflow-hidden rounded-[28px] border border-zinc-200 bg-white shadow-sm">

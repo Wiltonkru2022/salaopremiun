@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { assertCanCreateAgendaInCurrentMonth, PlanAccessError } from "@/lib/plans/access";
 import { getProfissionalSessionFromCookie } from "@/lib/profissional-auth.server";
 import { runAdminOperation } from "@/lib/supabase/admin-ops";
 import {
@@ -71,6 +72,8 @@ export async function criarComandaProfissionalAction(formData: FormData) {
         })
       );
     }
+
+    await assertCanCreateAgendaInCurrentMonth(session.idSalao);
 
     const [configProfissional, servico] = await Promise.all([
       buscarConfiguracaoAgendaProfissional(
@@ -208,7 +211,11 @@ export async function criarComandaProfissionalAction(formData: FormData) {
     }
 
     const message =
-      error instanceof Error ? error.message : "Erro ao criar comanda.";
+      error instanceof PlanAccessError
+        ? error.message
+        : error instanceof Error
+          ? error.message
+          : "Erro ao criar comanda.";
 
     redirect(
       buildNovaComandaUrl({

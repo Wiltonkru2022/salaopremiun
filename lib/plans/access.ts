@@ -3,6 +3,7 @@ import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 export type PlanoRecursoCodigo =
   | "agenda"
+  | "agendamentos_mensais"
   | "clientes"
   | "profissionais"
   | "usuarios"
@@ -37,10 +38,16 @@ export type PlanoAccessSnapshot = {
   limites: {
     usuarios: number | null;
     profissionais: number | null;
+    clientes: number | null;
+    servicos: number | null;
+    agendamentosMensais: number | null;
   };
   uso: {
     usuarios: number;
     profissionais: number;
+    clientes: number;
+    servicos: number;
+    agendamentosMensais: number;
   };
   recursos: Record<string, boolean>;
   recursosBloqueados: string[];
@@ -48,6 +55,7 @@ export type PlanoAccessSnapshot = {
 
 export const PLANO_RECURSOS_PADRAO: PlanoRecursoCodigo[] = [
   "agenda",
+  "agendamentos_mensais",
   "clientes",
   "profissionais",
   "usuarios",
@@ -73,6 +81,7 @@ export const PLANO_RECURSOS_PADRAO: PlanoRecursoCodigo[] = [
 
 export const PLANO_RECURSO_LABELS: Record<PlanoRecursoCodigo, string> = {
   agenda: "Agenda",
+  agendamentos_mensais: "Agendamentos mensais",
   clientes: "Clientes",
   profissionais: "Profissionais",
   usuarios: "Usuarios do sistema",
@@ -98,6 +107,7 @@ export const PLANO_RECURSO_LABELS: Record<PlanoRecursoCodigo, string> = {
 
 export const PLANO_RECURSO_GROUPS: Record<PlanoRecursoCodigo, string> = {
   agenda: "Operacao",
+  agendamentos_mensais: "Operacao",
   clientes: "Operacao",
   profissionais: "Operacao",
   usuarios: "Gestao",
@@ -168,6 +178,13 @@ type ExtraRow = {
   habilitado: boolean | null;
 };
 
+type UsageLimitKey =
+  | "usuarios"
+  | "profissionais"
+  | "clientes"
+  | "servicos"
+  | "agendamentosMensais";
+
 const STATUS_RESTRITO = new Set(["vencida", "cancelada", "bloqueada", "suspensa"]);
 
 function normalizePlano(plano?: string | null) {
@@ -191,6 +208,18 @@ function normalizePlano(plano?: string | null) {
 
 function isUnlimited(value?: number | null) {
   return value == null || value >= 999;
+}
+
+function normalizeLimit(value?: number | null) {
+  return isUnlimited(value) ? null : Number(value ?? 0);
+}
+
+function getPlanoRecursoLimit(
+  recursosRows: PlanoRecursoRow[],
+  recursoCodigo: string
+) {
+  const row = recursosRows.find((item) => item.recurso_codigo === recursoCodigo);
+  return normalizeLimit(row?.limite_numero ?? null);
 }
 
 export function getPlanoRecursoLabel(recurso: string) {
@@ -238,6 +267,9 @@ export async function getPlanoAccessSnapshot(
     { data: extrasRows },
     usuariosResult,
     profissionaisResult,
+    clientesResult,
+    servicosResult,
+    agendamentosResult,
   ] =
     await Promise.all([
       idPlano
@@ -262,6 +294,32 @@ export async function getPlanoAccessSnapshot(
         .select("id", { count: "exact", head: true })
         .eq("id_salao", idSalao)
         .eq("ativo", true),
+      supabaseAdmin
+        .from("clientes")
+        .select("id", { count: "exact", head: true })
+        .eq("id_salao", idSalao)
+        .eq("ativo", "true"),
+      supabaseAdmin
+        .from("servicos")
+        .select("id", { count: "exact", head: true })
+        .eq("id_salao", idSalao)
+        .eq("ativo", true),
+      supabaseAdmin
+        .from("agendamentos")
+        .select("id", { count: "exact", head: true })
+        .eq("id_salao", idSalao)
+        .gte(
+          "data",
+          new Date(new Date().getFullYear(), new Date().getMonth(), 1)
+            .toISOString()
+            .slice(0, 10)
+        )
+        .lte(
+          "data",
+          new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0)
+            .toISOString()
+            .slice(0, 10)
+        ),
     ]);
 
   const recursos: Record<string, boolean> = {};
@@ -307,6 +365,13 @@ export async function getPlanoAccessSnapshot(
     salaoRow?.limite_profissionais ??
     planoRow?.limite_profissionais ??
     null;
+  const recursosRowsNormalized = (recursosRows || []) as PlanoRecursoRow[];
+  const limiteClientes = getPlanoRecursoLimit(recursosRowsNormalized, "clientes");
+  const limiteServicos = getPlanoRecursoLimit(recursosRowsNormalized, "servicos");
+  const limiteAgendamentosMensais = getPlanoRecursoLimit(
+    recursosRowsNormalized,
+    "agendamentos_mensais"
+  );
 
   return {
     idSalao,
@@ -320,14 +385,18 @@ export async function getPlanoAccessSnapshot(
       ? "Assinatura ou salao bloqueado para novas operacoes."
       : null,
     limites: {
-      usuarios: isUnlimited(limiteUsuarios) ? null : limiteUsuarios,
-      profissionais: isUnlimited(limiteProfissionais)
-        ? null
-        : limiteProfissionais,
+      usuarios: normalizeLimit(limiteUsuarios),
+      profissionais: normalizeLimit(limiteProfissionais),
+      clientes: limiteClientes,
+      servicos: limiteServicos,
+      agendamentosMensais: limiteAgendamentosMensais,
     },
     uso: {
       usuarios: usuariosResult.count || 0,
       profissionais: profissionaisResult.count || 0,
+      clientes: clientesResult.count || 0,
+      servicos: servicosResult.count || 0,
+      agendamentosMensais: agendamentosResult.count || 0,
     },
     recursos,
     recursosBloqueados: Object.entries(recursos)
@@ -399,7 +468,7 @@ export async function assertCanMutatePlanFeature(
 
 export async function assertCanCreateWithinLimit(
   idSalao: string,
-  tipo: "usuarios" | "profissionais"
+  tipo: UsageLimitKey
 ) {
   const snapshot = await getPlanoAccessSnapshot(idSalao);
   const limite = snapshot.limites[tipo];
@@ -421,10 +490,16 @@ export async function assertCanCreateWithinLimit(
 
   if (limite != null && uso >= limite) {
     throw new PlanAccessError(
-      `Limite do plano atingido: ${uso} de ${limite} ${tipo}.`,
+      `Limite do plano atingido: ${uso} de ${limite} ${getPlanoRecursoLabel(
+        tipo === "agendamentosMensais" ? "agendamentos_mensais" : tipo
+      )}.`,
       "PLAN_LIMIT_REACHED"
     );
   }
 
   return snapshot;
+}
+
+export async function assertCanCreateAgendaInCurrentMonth(idSalao: string) {
+  return assertCanCreateWithinLimit(idSalao, "agendamentosMensais");
 }

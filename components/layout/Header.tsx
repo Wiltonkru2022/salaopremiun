@@ -169,7 +169,17 @@ export default function Header({
           ) : null}
         </div>
 
-        <div className="hidden min-w-0 items-center gap-2 rounded-lg border border-zinc-200 bg-zinc-50 px-2 py-1.5 text-sm md:flex xl:px-2.5">
+        <Link
+          href={canSeeAssinatura ? "/meu-plano" : "#"}
+          prefetch={canSeeAssinatura}
+          aria-disabled={!canSeeAssinatura}
+          className={clsx(
+            "hidden min-w-0 items-center gap-2 rounded-lg border border-zinc-200 bg-zinc-50 px-2 py-1.5 text-sm md:flex xl:px-2.5",
+            canSeeAssinatura
+              ? "transition hover:border-zinc-300 hover:bg-white"
+              : "pointer-events-none opacity-70"
+          )}
+        >
           <ShieldCheck size={16} className="shrink-0 text-[var(--app-accent-strong)]" />
           <span className="hidden truncate text-xs font-semibold text-zinc-900 xl:inline">
             {planoNome || "Sem plano"}
@@ -179,10 +189,10 @@ export default function Header({
               "shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold ring-1",
               getStatusTone(resumoAssinatura)
             )}
-          >
+            >
             {getStatusLabel(assinaturaStatus, resumoAssinatura)}
           </span>
-        </div>
+        </Link>
 
         <NotificationBell
           notifications={notifications}
@@ -324,17 +334,41 @@ export default function Header({
                 ) : null}
 
                 {canSeeAssinatura ? (
-                  <Link
-                    href="/assinatura"
-                    prefetch={true}
-                    onClick={() => setMenuOpen(false)}
-                    onFocus={() => router.prefetch("/assinatura")}
-                    onMouseEnter={() => router.prefetch("/assinatura")}
-                    className="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-100"
-                  >
-                    <CreditCard size={16} />
-                    Assinatura
-                  </Link>
+                  <>
+                    <Link
+                      href="/meu-plano"
+                      prefetch={true}
+                      onClick={() => setMenuOpen(false)}
+                      onFocus={() => router.prefetch("/meu-plano")}
+                      onMouseEnter={() => router.prefetch("/meu-plano")}
+                      className="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-100"
+                    >
+                      <CreditCard size={16} />
+                      Meu plano
+                    </Link>
+                    <Link
+                      href="/assinatura"
+                      prefetch={true}
+                      onClick={() => setMenuOpen(false)}
+                      onFocus={() => router.prefetch("/assinatura")}
+                      onMouseEnter={() => router.prefetch("/assinatura")}
+                      className="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-100"
+                    >
+                      <CreditCard size={16} />
+                      Assinatura
+                    </Link>
+                    <Link
+                      href="/comparar-planos"
+                      prefetch={true}
+                      onClick={() => setMenuOpen(false)}
+                      onFocus={() => router.prefetch("/comparar-planos")}
+                      onMouseEnter={() => router.prefetch("/comparar-planos")}
+                      className="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-100"
+                    >
+                      <CreditCard size={16} />
+                      Comparar planos
+                    </Link>
+                  </>
                 ) : null}
 
                 <button

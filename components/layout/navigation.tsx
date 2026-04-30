@@ -244,6 +244,16 @@ export const painelNavigationItems: PainelNavItem[] = [
     niveis: ["admin"],
     sidebar: false,
   },
+  {
+    href: "/comparar-planos",
+    label: "Comparar Planos",
+    shortLabel: "Planos",
+    description: "Preco, limites e recursos liberados por plano.",
+    icon: CreditCard,
+    permissionKey: "assinatura_ver",
+    niveis: ["admin"],
+    sidebar: false,
+  },
 ];
 
 export function filterPainelNavigation(

@@ -41,5 +41,7 @@ export async function GET() {
     bloqueioTotal: access.bloqueioTotal,
     modoRestrito: access.modoRestrito,
     recursos: access.recursos,
+    limites: access.limites,
+    uso: access.uso,
   });
 }

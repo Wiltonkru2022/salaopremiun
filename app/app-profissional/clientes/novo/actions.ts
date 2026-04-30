@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { assertCanCreateWithinLimit, PlanAccessError } from "@/lib/plans/access";
 import { createClient } from "@/lib/supabase/server";
 import { getProfissionalSessionFromCookie } from "@/lib/profissional-auth.server";
 
@@ -32,6 +33,14 @@ export async function criarClienteProfissionalAction(
   }
 
   const supabase = await createClient();
+  try {
+    await assertCanCreateWithinLimit(session.idSalao, "clientes");
+  } catch (error) {
+    if (error instanceof PlanAccessError) {
+      return { error: error.message };
+    }
+    throw error;
+  }
 
   const { error } = await supabase.from("clientes").insert({
     id_salao: session.idSalao,

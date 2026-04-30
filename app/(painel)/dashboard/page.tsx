@@ -44,6 +44,10 @@ type DashboardRpcResumo = {
   };
   resumo?: Partial<DashboardResumo>;
 };
+
+type PlanoAccessPayload = {
+  recursos?: Record<string, boolean>;
+};
 type IconType = React.ComponentType<{
   size?: number;
   className?: string;
@@ -177,6 +181,7 @@ export default function DashboardPage() {
   );
   const [ultimaAtualizacao, setUltimaAtualizacao] = useState<string | null>(null);
   const [resumo, setResumo] = useState<DashboardResumo>(RESUMO_INICIAL);
+  const [dashboardAvancado, setDashboardAvancado] = useState(false);
 
   const init = useCallback(async () => {
     try {
@@ -186,11 +191,19 @@ export default function DashboardPage() {
       setResumo(RESUMO_INICIAL);
       setFaseCarregamento("Validando acesso ao painel.");
 
-      const { data, error } = await supabase.rpc("fn_dashboard_resumo_painel");
+      const [{ data, error }, planoResponse] = await Promise.all([
+        supabase.rpc("fn_dashboard_resumo_painel"),
+        fetch("/api/plano/access", { cache: "no-store" }),
+      ]);
 
       if (error) {
         throw error;
       }
+
+      const planoData = (await planoResponse.json().catch(() => null)) as
+        | PlanoAccessPayload
+        | null;
+      setDashboardAvancado(Boolean(planoData?.recursos?.dashboard_avancado));
 
       const rpcData = (data || {}) as DashboardRpcResumo;
       const nivelUsuario = (rpcData.usuario?.nivel ?? null) as
@@ -352,44 +365,68 @@ export default function DashboardPage() {
       </section>
 
       <section className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
-        <div className="rounded-[28px] border border-zinc-200 bg-white p-5 shadow-sm">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <div className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-400">
-                Visao geral
+        {dashboardAvancado ? (
+          <div className="rounded-[28px] border border-zinc-200 bg-white p-5 shadow-sm">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <div className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-400">
+                  Visao geral
+                </div>
+                <div className="mt-1 text-xl font-bold text-zinc-950">
+                  Indicadores de operacao
+                </div>
               </div>
-              <div className="mt-1 text-xl font-bold text-zinc-950">
-                Indicadores de operacao
+              <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-3 text-zinc-700">
+                <TrendingUp size={18} />
               </div>
             </div>
-            <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-3 text-zinc-700">
-              <TrendingUp size={18} />
-            </div>
-          </div>
 
-          <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-            <InfoMetric
-              title="Ticket medio"
-              value={formatCurrency(resumo.ticketMedioMes)}
-              helper="Valor medio por comanda fechada"
-            />
-            <InfoMetric
-              title="Comissao pendente"
-              value={formatCurrency(resumo.comissaoPendenteMes)}
-              helper="Pronto para conferencia"
-            />
-            <InfoMetric
-              title="Caixa do dia"
-              value={formatCurrency(resumo.caixaDia)}
-              helper="Total fechado hoje"
-            />
-            <InfoMetric
-              title="Retorno"
-              value={formatPercent(resumo.retornoClientes)}
-              helper="Recorrencia estimada no mes"
-            />
+            <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+              <InfoMetric
+                title="Ticket medio"
+                value={formatCurrency(resumo.ticketMedioMes)}
+                helper="Valor medio por comanda fechada"
+              />
+              <InfoMetric
+                title="Comissao pendente"
+                value={formatCurrency(resumo.comissaoPendenteMes)}
+                helper="Pronto para conferencia"
+              />
+              <InfoMetric
+                title="Caixa do dia"
+                value={formatCurrency(resumo.caixaDia)}
+                helper="Total fechado hoje"
+              />
+              <InfoMetric
+                title="Retorno"
+                value={formatPercent(resumo.retornoClientes)}
+                helper="Recorrencia estimada no mes"
+              />
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="rounded-[28px] border border-zinc-200 bg-white p-5 shadow-sm">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <div className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-400">
+                  Dashboard avancado
+                </div>
+                <div className="mt-1 text-xl font-bold text-zinc-950">
+                  Leitura premium liberada no Pro
+                </div>
+              </div>
+              <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-3 text-zinc-700">
+                <TrendingUp size={18} />
+              </div>
+            </div>
+
+            <p className="mt-4 max-w-2xl text-sm leading-6 text-zinc-500">
+              Ticket medio, retorno, comissao pendente e leitura gerencial mais
+              forte entram no Pro ou Premium. O painel atual continua mostrando
+              o essencial da operacao.
+            </p>
+          </div>
+        )}
 
         <div className="rounded-[28px] border border-zinc-200 bg-white p-5 shadow-sm">
           <div className="flex items-center justify-between gap-3">
@@ -420,8 +457,12 @@ export default function DashboardPage() {
             />
             <InfoMetric
               title="Cancelamentos"
-              value={String(resumo.cancelamentosMes)}
-              helper="Ocorrencias no mes"
+              value={dashboardAvancado ? String(resumo.cancelamentosMes) : "--"}
+              helper={
+                dashboardAvancado
+                  ? "Ocorrencias no mes"
+                  : "Disponivel no dashboard avancado"
+              }
             />
           </div>
         </div>
@@ -436,7 +477,11 @@ export default function DashboardPage() {
         <MiniStatusCard
           icon={<CreditCard size={18} className="text-amber-600" />}
           title="Comissao pendente"
-          value={formatCurrency(resumo.comissaoPendenteMes)}
+          value={
+            dashboardAvancado
+              ? formatCurrency(resumo.comissaoPendenteMes)
+              : "Upgrade"
+          }
         />
         <MiniStatusCard
           icon={<AlertCircle size={18} className="text-rose-600" />}

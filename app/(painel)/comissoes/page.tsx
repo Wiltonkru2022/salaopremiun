@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactNode, useMemo } from "react";
+import { type ReactNode, useEffect, useMemo, useState } from "react";
 import AppLoading from "@/components/ui/AppLoading";
 import ConfirmActionModal from "@/components/ui/ConfirmActionModal";
 import { useComissoesPage } from "@/components/comissoes/useComissoesPage";
@@ -16,6 +16,10 @@ import {
   WalletCards,
 } from "lucide-react";
 import { groupComboTotals, parseComboDisplayMeta } from "@/lib/combo/display";
+
+type PlanoAccessPayload = {
+  recursos?: Record<string, boolean>;
+};
 
 function formatCurrency(value: number | null | undefined) {
   return Number(value || 0).toLocaleString("pt-BR", {
@@ -148,6 +152,7 @@ function ComboDescriptionBlock({
 }
 
 export default function ComissoesPage() {
+  const [comissoesAvancadas, setComissoesAvancadas] = useState(false);
   const {
     loading,
     saving,
@@ -199,6 +204,22 @@ export default function ComissoesPage() {
       ),
     [getValorLancamento, rows]
   );
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        const response = await fetch("/api/plano/access", {
+          cache: "no-store",
+        });
+        const data = (await response.json().catch(() => null)) as
+          | PlanoAccessPayload
+          | null;
+        setComissoesAvancadas(Boolean(data?.recursos?.comissoes_avancadas));
+      } catch (error) {
+        console.error("Falha ao carregar acesso de plano para comissoes:", error);
+      }
+    })();
+  }, []);
 
   function imprimirRateio() {
     const win = window.open("", "_blank");
@@ -646,24 +667,33 @@ export default function ComissoesPage() {
                 icon={<CheckCircle2 size={16} />}
                 tone="emerald"
               />
-              <ResumoCard
-                title="Ticket medio"
-                value={formatCurrency(ticketMedio)}
-                icon={<WalletCards size={16} />}
-                tone="sky"
-              />
-              <ResumoCard
-                title="Maior lancamento"
-                value={formatCurrency(
-                  maiorLancamento ? getValorLancamento(maiorLancamento) : 0
-                )}
-                icon={<Sparkles size={16} />}
-                tone="violet"
-              />
+              {comissoesAvancadas ? (
+                <>
+                  <ResumoCard
+                    title="Ticket medio"
+                    value={formatCurrency(ticketMedio)}
+                    icon={<WalletCards size={16} />}
+                    tone="sky"
+                  />
+                  <ResumoCard
+                    title="Maior lancamento"
+                    value={formatCurrency(
+                      maiorLancamento ? getValorLancamento(maiorLancamento) : 0
+                    )}
+                    icon={<Sparkles size={16} />}
+                    tone="violet"
+                  />
+                </>
+              ) : (
+                <div className="xl:col-span-2 rounded-[22px] border border-zinc-200 bg-zinc-50 p-4 text-sm text-zinc-500">
+                  Ticket medio, maior lancamento, leitura por combo e auditoria de
+                  origem entram nas comissoes avancadas.
+                </div>
+              )}
             </div>
           </div>
 
-          {comboSummary.length > 0 ? (
+          {comissoesAvancadas && comboSummary.length > 0 ? (
             <div className="rounded-[28px] border border-violet-100 bg-gradient-to-br from-violet-50 via-white to-white p-5 shadow-sm">
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div className="max-w-3xl">
@@ -806,19 +836,23 @@ export default function ComissoesPage() {
               </Field>
             </div>
             <div className="mt-3 flex flex-wrap gap-2">
-              <button
-                onClick={apurarRateio}
-                className="rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-50"
-              >
-                Apurar rateio
-              </button>
-              <button
-                onClick={imprimirRateio}
-                className="inline-flex items-center gap-2 rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-50"
-              >
-                <Printer size={16} />
-                Imprimir rateio
-              </button>
+              {comissoesAvancadas ? (
+                <>
+                  <button
+                    onClick={apurarRateio}
+                    className="rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-50"
+                  >
+                    Apurar rateio
+                  </button>
+                  <button
+                    onClick={imprimirRateio}
+                    className="inline-flex items-center gap-2 rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-50"
+                  >
+                    <Printer size={16} />
+                    Imprimir rateio
+                  </button>
+                </>
+              ) : null}
               {podeGerenciar ? (
                 <button
                   onClick={marcarFiltradasComoPagas}
@@ -831,6 +865,7 @@ export default function ComissoesPage() {
             </div>
           </div>
 
+          {comissoesAvancadas ? (
           <div className="rounded-[28px] border border-zinc-200 bg-white p-4 shadow-sm">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
@@ -893,6 +928,7 @@ export default function ComissoesPage() {
               </div>
             )}
           </div>
+          ) : null}
 
           <div className="overflow-hidden rounded-[28px] border border-zinc-200 bg-white shadow-sm">
             <div className="border-b border-zinc-200 px-5 py-4">
@@ -912,7 +948,9 @@ export default function ComissoesPage() {
                     <th className="px-5 py-4">Competencia</th>
                     <th className="px-5 py-4">Base</th>
                     <th className="px-5 py-4">% Aplicada</th>
-                    <th className="px-5 py-4">Origem</th>
+                    {comissoesAvancadas ? (
+                      <th className="px-5 py-4">Origem</th>
+                    ) : null}
                     <th className="px-5 py-4">Comissao</th>
                     <th className="px-5 py-4">Status</th>
                     <th className="px-5 py-4">Pago em</th>
@@ -923,7 +961,7 @@ export default function ComissoesPage() {
                   {rows.length === 0 ? (
                     <tr>
                       <td
-                        colSpan={10}
+                      colSpan={comissoesAvancadas ? 10 : 9}
                         className="px-5 py-10 text-center text-sm text-zinc-500"
                       >
                         Nenhuma comissao encontrada com os filtros atuais.
@@ -971,16 +1009,18 @@ export default function ComissoesPage() {
                           <td className="px-5 py-4 text-sm font-medium text-zinc-800">
                             {formatPercent(item.percentual_aplicado)}
                           </td>
-                          <td className="px-5 py-4">
-                            <div
-                              className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${origem.badgeClass}`}
-                            >
-                              {origem.label}
-                            </div>
-                            <div className="mt-2 text-xs text-zinc-500">
-                              {origem.description}
-                            </div>
-                          </td>
+                          {comissoesAvancadas ? (
+                            <td className="px-5 py-4">
+                              <div
+                                className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${origem.badgeClass}`}
+                              >
+                                {origem.label}
+                              </div>
+                              <div className="mt-2 text-xs text-zinc-500">
+                                {origem.description}
+                              </div>
+                            </td>
+                          ) : null}
                           <td className="px-5 py-4">
                             <div className="text-sm font-bold text-zinc-900">
                               {formatCurrency(getValorLancamento(item))}
