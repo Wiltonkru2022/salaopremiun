@@ -119,6 +119,9 @@ export default function CaixaSidebar({
 }: Props) {
   const caixaAberto = schemaReady && sessao?.status === "aberto";
   const totalComanda = Number(comandaSelecionada?.total || 0);
+  const statusVenda = comandaSelecionada
+    ? formatStatusVenda(comandaSelecionada.status)
+    : "Sem venda";
 
   return (
     <>
@@ -163,8 +166,8 @@ export default function CaixaSidebar({
                     value={comandaSelecionada ? formatCurrency(totalComanda) : "R$ 0,00"}
                   />
                   <SidebarInfo
-                    label="Crédito gerado"
-                    value={formatMoney(totalCreditoGerado)}
+                    label="Status da venda"
+                    value={statusVenda}
                   />
                 </div>
               </div>
@@ -306,6 +309,18 @@ function formatMoney(value: number) {
     style: "currency",
     currency: "BRL",
   });
+}
+
+function formatStatusVenda(status?: string | null) {
+  if (!status) return "Sem venda";
+
+  if (status === "aberta") return "Em atendimento";
+  if (status === "fechada") return "Fechada";
+  if (status === "cancelada") return "Cancelada";
+
+  return status
+    .replaceAll("_", " ")
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
 
