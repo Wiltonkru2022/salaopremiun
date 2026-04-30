@@ -15,11 +15,13 @@ import {
   filterPainelNavigation,
   type Permissoes,
   type PainelNavItem,
+  type PlanoRecursos,
 } from "@/components/layout/navigation";
 import type { ResumoAssinatura } from "@/lib/assinatura-utils";
 
 type Props = {
   permissoes: Permissoes;
+  planoRecursos?: PlanoRecursos;
   nivel: string;
   salaoNome?: string;
   salaoResponsavel?: string;
@@ -34,6 +36,7 @@ type Props = {
 
 export default function Sidebar({
   permissoes,
+  planoRecursos,
   nivel,
   salaoNome,
   salaoResponsavel,
@@ -48,8 +51,8 @@ export default function Sidebar({
   const pathname = usePathname();
   const [search, setSearch] = useState("");
   const itemsFiltrados = useMemo(
-    () => filterPainelNavigation(permissoes, nivel),
-    [permissoes, nivel]
+    () => filterPainelNavigation(permissoes, nivel, planoRecursos),
+    [permissoes, nivel, planoRecursos]
   );
   const searchTerm = search.trim().toLowerCase();
   const itemsVisiveis = useMemo(() => {

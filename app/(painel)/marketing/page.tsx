@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import {
   BellRing,
   MessageSquareMore,
@@ -6,6 +7,8 @@ import {
   Sparkles,
   TimerReset,
 } from "lucide-react";
+import { getPlanoAccessSnapshot } from "@/lib/plans/access";
+import { createClient } from "@/lib/supabase/server";
 
 const itens = [
   {
@@ -28,7 +31,32 @@ const itens = [
   },
 ];
 
-export default function MarketingPage() {
+export default async function MarketingPage() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/login");
+  }
+
+  const { data: usuario } = await supabase
+    .from("usuarios")
+    .select("id_salao")
+    .eq("auth_user_id", user.id)
+    .maybeSingle();
+
+  if (!usuario?.id_salao) {
+    redirect("/dashboard");
+  }
+
+  const access = await getPlanoAccessSnapshot(usuario.id_salao);
+
+  if (!access.recursos.marketing) {
+    redirect("/meu-plano?motivo=recurso_marketing_bloqueado");
+  }
+
   return (
     <div className="space-y-6">
       <section className="relative overflow-hidden rounded-[36px] border border-zinc-200 bg-[radial-gradient(circle_at_top_left,_rgba(199,162,92,0.18),_transparent_32%),linear-gradient(135deg,_#111827_0%,_#18181b_55%,_#0f172a_100%)] px-6 py-8 text-white shadow-sm sm:px-8 sm:py-10">

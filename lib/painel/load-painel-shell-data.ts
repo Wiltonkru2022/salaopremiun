@@ -7,6 +7,7 @@ import {
 } from "@/lib/auth/permissions";
 import { getResumoAssinatura } from "@/lib/assinatura-utils";
 import { buildShellNotifications } from "@/lib/notifications/shell-notifications";
+import { getPlanoAccessSnapshot } from "@/lib/plans/access";
 import { PERMISSIONS } from "@/lib/permissions";
 
 type RpcShellResumo = {
@@ -129,6 +130,8 @@ export async function loadPainelShellData() {
     tickets: rpc.tickets ?? [],
   });
 
+  const planoAccess = await getPlanoAccessSnapshot(usuario.id_salao);
+
   return {
     ok: true as const,
     data: {
@@ -144,6 +147,7 @@ export async function loadPainelShellData() {
       planoNome: rpc.assinatura?.plano || rpc.salao?.plano || "Sem plano",
       assinaturaStatus: rpc.assinatura?.status || rpc.salao?.status || null,
       resumoAssinatura,
+      planoRecursos: planoAccess.recursos,
       notifications,
     },
   };

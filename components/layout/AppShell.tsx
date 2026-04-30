@@ -5,7 +5,10 @@ import { usePathname, useRouter } from "next/navigation";
 import Header from "@/components/layout/Header";
 import Sidebar from "@/components/layout/Sidebar";
 import MonitoringContextBridge from "@/components/monitoring/MonitoringContextBridge";
-import type { Permissoes } from "@/components/layout/navigation";
+import type {
+  Permissoes,
+  PlanoRecursos,
+} from "@/components/layout/navigation";
 import type { ResumoAssinatura } from "@/lib/assinatura-utils";
 import type {
   ShellNotification,
@@ -21,6 +24,7 @@ type Props = {
   userName?: string;
   userEmail?: string;
   permissoes: Permissoes;
+  planoRecursos?: PlanoRecursos;
   nivel: string;
   salaoNome?: string;
   salaoResponsavel?: string;
@@ -38,6 +42,7 @@ export default function AppShell({
   userName,
   userEmail,
   permissoes,
+  planoRecursos,
   nivel,
   salaoNome,
   salaoResponsavel,
@@ -102,6 +107,7 @@ export default function AppShell({
       <div className="relative flex min-h-screen">
         <Sidebar
           permissoes={permissoes}
+          planoRecursos={planoRecursos}
           nivel={nivel}
           salaoNome={salaoNome}
           salaoResponsavel={salaoResponsavel}

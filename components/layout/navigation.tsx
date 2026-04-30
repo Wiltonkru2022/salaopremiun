@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 
 export type Permissoes = Record<string, boolean>;
+export type PlanoRecursos = Record<string, boolean>;
 
 export type PainelNavItem = {
   href: string;
@@ -31,6 +32,21 @@ export type PainelNavItem = {
   niveis?: string[];
   sidebar?: boolean;
   openInNewTab?: boolean;
+};
+
+const NAV_PLAN_FEATURE_MAP: Record<string, string> = {
+  "/agenda": "agenda",
+  "/clientes": "clientes",
+  "/profissionais": "profissionais",
+  "/servicos": "servicos",
+  "/produtos": "produtos",
+  "/estoque": "estoque",
+  "/comandas": "comandas",
+  "/vendas": "vendas",
+  "/caixa": "caixa",
+  "/comissoes": "comissoes_basicas",
+  "/relatorio-financeiro": "relatorios_basicos",
+  "/marketing": "marketing",
 };
 
 export const painelNavigationItems: PainelNavItem[] = [
@@ -232,7 +248,8 @@ export const painelNavigationItems: PainelNavItem[] = [
 
 export function filterPainelNavigation(
   permissoes: Permissoes,
-  nivel: string
+  nivel: string,
+  planoRecursos?: PlanoRecursos
 ) {
   const nivelNormalizado = String(nivel || "").toLowerCase();
 
@@ -243,8 +260,11 @@ export function filterPainelNavigation(
       !item.niveis || item.niveis.includes(nivelNormalizado);
     const permitidoPorPermissao =
       !item.permissionKey || permissoes?.[item.permissionKey] === true;
+    const recursoPlano = NAV_PLAN_FEATURE_MAP[item.href];
+    const permitidoPorPlano =
+      !recursoPlano || planoRecursos?.[recursoPlano] !== false;
 
-    return permitidoPorNivel && permitidoPorPermissao;
+    return permitidoPorNivel && permitidoPorPermissao && permitidoPorPlano;
   });
 }
 

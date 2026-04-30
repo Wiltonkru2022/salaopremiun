@@ -36,6 +36,9 @@ type Alerta = {
 };
 
 type Permissoes = Record<string, boolean>;
+type PlanoAccessResponse = {
+  recursos?: Record<string, boolean>;
+};
 
 export default function EstoquePage() {
   const supabase = createClient();
@@ -100,6 +103,19 @@ export default function EstoquePage() {
     if (!permissoesFinal.estoque_ver) {
       router.replace("/dashboard");
       return null;
+    }
+
+    const planoResponse = await fetch("/api/plano/access", {
+      method: "GET",
+      cache: "no-store",
+    });
+
+    if (planoResponse.ok) {
+      const planoData = (await planoResponse.json()) as PlanoAccessResponse;
+      if (planoData.recursos?.estoque === false) {
+        router.replace("/meu-plano?motivo=recurso_estoque_bloqueado");
+        return null;
+      }
     }
 
     return {

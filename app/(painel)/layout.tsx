@@ -21,6 +21,7 @@ export default async function PainelLayout({
       userName={data.userName}
       userEmail={data.userEmail}
       permissoes={data.permissoes}
+      planoRecursos={data.planoRecursos}
       nivel={data.nivel}
       salaoNome={data.salaoNome}
       salaoResponsavel={data.salaoResponsavel}
