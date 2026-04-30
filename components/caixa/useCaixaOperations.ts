@@ -153,7 +153,7 @@ export function useCaixaOperations({
   const abrirCaixa = useCallback(
     async (payload: { valorAbertura: number; observacoes: string }) => {
       if (!podeOperarCaixa) {
-        setErroTela("Voce nao tem permissao para abrir o caixa.");
+        setErroTela("Você não tem permissão para abrir o caixa.");
         return;
       }
 
@@ -184,7 +184,7 @@ export function useCaixaOperations({
     async (payload: { valorFechamento: number; observacoes: string }) => {
       if (!sessaoCaixa) return;
       if (!podeFinalizarCaixa) {
-        setErroTela("Voce nao tem permissao para fechar o caixa.");
+        setErroTela("Você não tem permissão para fechar o caixa.");
         return;
       }
 
@@ -229,12 +229,12 @@ export function useCaixaOperations({
       if (!exigirCaixaAberto() || !sessaoCaixa) return;
 
       if (payload.valor <= 0) {
-        setErroTela("Informe um valor valido para o movimento.");
+        setErroTela("Informe um valor válido para o movimento.");
         return;
       }
 
       if (payload.tipo === "vale_profissional" && !payload.idProfissional) {
-        setErroTela("Selecione o profissional para lancar o vale.");
+        setErroTela("Selecione o profissional para lançar o vale.");
         return;
       }
 
@@ -270,12 +270,12 @@ export function useCaixaOperations({
         await carregarSessaoOperacional();
         setMsg(
           payload.tipo === "vale_profissional"
-            ? "Vale lancado e preparado para desconto no fechamento de comissao."
-            : "Movimento do caixa lancado."
+            ? "Vale lançado e preparado para desconto no fechamento de comissão."
+            : "Movimento do caixa lançado."
         );
       } catch (error: unknown) {
         console.error(error);
-        setErroTela(getErrorMessage(error, "Erro ao lancar movimento do caixa."));
+        setErroTela(getErrorMessage(error, "Erro ao lançar movimento do caixa."));
       } finally {
         if (completed) {
           limparChaveOperacao(operationScope);
@@ -298,7 +298,7 @@ export function useCaixaOperations({
   const abrirComanda = useCallback(
     async (idComanda: string) => {
       if (!podeOperarCaixa) {
-        setErroTela("Voce nao tem permissao para operar o caixa.");
+        setErroTela("Você não tem permissão para operar o caixa.");
         return;
       }
       if (!exigirCaixaAberto()) return;
@@ -321,7 +321,7 @@ export function useCaixaOperations({
   const abrirAgendamentoSemComanda = useCallback(
     async (agendamentoId: string) => {
       if (!podeOperarCaixa) {
-        setErroTela("Voce nao tem permissao para operar o caixa.");
+        setErroTela("Você não tem permissão para operar o caixa.");
         return;
       }
       if (!exigirCaixaAberto()) return;
@@ -340,7 +340,7 @@ export function useCaixaOperations({
 
         const idComanda = result.idComanda;
         if (!idComanda) {
-          throw new Error("Nao foi possivel obter a comanda criada.");
+          throw new Error("Não foi possível obter a comanda criada.");
         }
 
         await carregarTudo();
@@ -371,7 +371,7 @@ export function useCaixaOperations({
   const salvarDescontoAcrescimo = useCallback(async () => {
     if (!comandaSelecionada) return;
     if (!podeEditarCaixa) {
-      setErroTela("Voce nao tem permissao para editar o caixa.");
+      setErroTela("Você não tem permissão para editar o caixa.");
       return;
     }
     if (!exigirCaixaAberto()) return;
@@ -417,7 +417,7 @@ export function useCaixaOperations({
   }) => {
     if (!comandaSelecionada) return;
     if (!podeGerenciarPagamentos) {
-      setErroTela("Voce nao tem permissao para lancar pagamentos.");
+      setErroTela("Você não tem permissão para lançar pagamentos.");
       return;
     }
     if (!exigirCaixaAberto()) return;
@@ -477,19 +477,19 @@ export function useCaixaOperations({
       await carregarTudo();
       setMsg(
         result.creditoClienteUsado && Number(result.creditoClienteUsado) > 0
-          ? `Pagamento concluido com credito da cliente (${Number(
+          ? `Pagamento concluído com crédito da cliente (${Number(
               result.creditoClienteUsado
             ).toLocaleString("pt-BR", {
               style: "currency",
               currency: "BRL",
             })}).`
-          : result.valorCreditoGerado && Number(result.valorCreditoGerado) > 0
+            : result.valorCreditoGerado && Number(result.valorCreditoGerado) > 0
             ? `Pagamento adicionado e ${Number(
                 result.valorCreditoGerado
               ).toLocaleString("pt-BR", {
                 style: "currency",
                 currency: "BRL",
-              })} ficou salvo como credito da cliente.`
+              })} ficou salvo como crédito da cliente.`
             : result.repassaTaxaCliente && Number(result.taxaValor || 0) > 0
               ? `Pagamento adicionado com taxa repassada ao cliente (${Number(
                   result.taxaValor || 0
@@ -536,7 +536,7 @@ export function useCaixaOperations({
     async (idPagamento: string) => {
       if (!comandaSelecionada) return;
       if (!podeGerenciarPagamentos) {
-        setErroTela("Voce nao tem permissao para remover pagamentos.");
+        setErroTela("Você não tem permissão para remover pagamentos.");
         return;
       }
       if (!exigirCaixaAberto()) return;
@@ -578,7 +578,7 @@ export function useCaixaOperations({
   const finalizarComanda = useCallback(async () => {
     if (!comandaSelecionada) return;
     if (!podeFinalizarCaixa) {
-      setErroTela("Voce nao tem permissao para finalizar vendas.");
+      setErroTela("Você não tem permissão para finalizar vendas.");
       return;
     }
     if (!exigirCaixaAberto()) return;
@@ -592,7 +592,7 @@ export function useCaixaOperations({
       setMsg("");
 
       if (configCaixa?.exigir_cliente_na_venda && !comandaSelecionada.id_cliente) {
-        throw new Error("Esta venda exige cliente vinculado antes da finalizacao.");
+        throw new Error("Esta venda exige cliente vinculado antes da finalização.");
       }
 
       const numeroAtual = comandaSelecionada.numero;
@@ -634,7 +634,7 @@ export function useCaixaOperations({
   const abrirModalCancelamento = useCallback(() => {
     if (!comandaSelecionada) return;
     if (!podeFinalizarCaixa) {
-      setErroTela("Voce nao tem permissao para cancelar comandas.");
+      setErroTela("Você não tem permissão para cancelar comandas.");
       return;
     }
 
@@ -650,7 +650,7 @@ export function useCaixaOperations({
     async (motivoFinal: string | null) => {
       if (!comandaSelecionada) return;
       if (!podeFinalizarCaixa) {
-        setErroTela("Voce nao tem permissao para cancelar comandas.");
+        setErroTela("Você não tem permissão para cancelar comandas.");
         return;
       }
 
@@ -690,7 +690,7 @@ export function useCaixaOperations({
     (tipo: TipoItemComanda) => {
       if (!comandaSelecionada) return;
       if (!podeEditarCaixa) {
-        setErroTela("Voce nao tem permissao para adicionar itens.");
+        setErroTela("Você não tem permissão para adicionar itens.");
         return;
       }
       if (!exigirCaixaAberto()) return;
@@ -707,7 +707,7 @@ export function useCaixaOperations({
   const abrirModalEditarItem = useCallback(
     (item: ComandaItem) => {
       if (!podeEditarCaixa) {
-        setErroTela("Voce nao tem permissao para editar itens.");
+        setErroTela("Você não tem permissão para editar itens.");
         return;
       }
       if (!exigirCaixaAberto()) return;
@@ -745,7 +745,7 @@ export function useCaixaOperations({
   const salvarItemComanda = useCallback(async () => {
     if (!comandaSelecionada) return;
     if (!podeEditarCaixa) {
-      setErroTela("Voce nao tem permissao para editar itens.");
+      setErroTela("Você não tem permissão para editar itens.");
       return;
     }
     if (!exigirCaixaAberto()) return;
@@ -758,11 +758,11 @@ export function useCaixaOperations({
       const quantidade = Math.max(Number(itemModalState.quantidade || 1), 1);
       const valorUnitario = parseMoney(itemModalState.valorUnitario);
       if (!itemModalState.descricao.trim()) {
-        throw new Error("Informe a descricao do item.");
+        throw new Error("Informe a descrição do item.");
       }
 
       if (valorUnitario < 0) {
-        throw new Error("Informe um valor unitario valido.");
+        throw new Error("Informe um valor unitário válido.");
       }
 
       const itemPayload = {
@@ -828,7 +828,7 @@ export function useCaixaOperations({
     async (idItem: string) => {
       if (!comandaSelecionada) return;
       if (!podeEditarCaixa) {
-        setErroTela("Voce nao tem permissao para remover itens.");
+        setErroTela("Você não tem permissão para remover itens.");
         return;
       }
       if (!exigirCaixaAberto()) return;
