@@ -845,9 +845,8 @@ export function useCaixaOperations({
           },
         });
 
-        await aplicarDetalheComanda(comandaSelecionada.id);
-        await carregarTudo();
         setItemParaRemover(null);
+        await aplicarDetalheComanda(comandaSelecionada.id);
         setMsg("Item removido com sucesso.");
       } catch (error: unknown) {
         console.error(error);
@@ -858,12 +857,12 @@ export function useCaixaOperations({
     },
     [
       aplicarDetalheComanda,
-      carregarTudo,
       comandaSelecionada,
       exigirCaixaAberto,
       podeEditarCaixa,
       processarComanda,
       setErroTela,
+      setItemParaRemover,
       setMsg,
     ]
   );
