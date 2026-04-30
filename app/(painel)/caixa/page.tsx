@@ -411,7 +411,6 @@ export default function CaixaPage() {
                 faltaReceber={faltaReceber}
                 troco={troco}
                 creditoClienteDisponivel={creditoClienteDisponivel}
-                comandaCarregandoId={comandaCarregandoId}
                 descontoInput={descontoInput}
                 setDescontoInput={setDescontoInput}
                 acrescimoInput={acrescimoInput}
