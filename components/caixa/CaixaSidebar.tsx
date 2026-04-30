@@ -46,7 +46,9 @@ type Props = {
   podeEditarCaixa: boolean;
   podeGerenciarPagamentos: boolean;
   onSalvarResumo: () => void;
-  onAdicionarPagamento: () => void;
+  onAdicionarPagamento: (options?: {
+    destinoExcedente?: "troco" | "credito_cliente";
+  }) => Promise<void> | void;
   onRemoverPagamento: (idPagamento: string) => void;
   sessao: CaixaSessao | null;
   movimentacoes: CaixaMovimentacao[];
@@ -289,6 +291,7 @@ export default function CaixaSidebar({
       <AppModal
         open={pagamentosOpen}
         onClose={() => setPagamentosOpen(false)}
+        closeDisabled={saving}
         title={comandaSelecionada ? `Pagamento da comanda #${comandaSelecionada.numero}` : "Pagamento"}
         description="Lance recebimentos, acompanhe a taxa e confirme o fechamento sem poluir a tela principal."
         eyebrow="Operacao de pagamento"
@@ -325,6 +328,7 @@ export default function CaixaSidebar({
       <AppModal
         open={sessaoOpen}
         onClose={() => setSessaoOpen(false)}
+        closeDisabled={saving}
         title="Sessao do caixa"
         description="Abra, feche e movimente o caixa em uma area dedicada, com leitura mais limpa."
         eyebrow="Operacao da sessao"

@@ -43,7 +43,7 @@ type Props = {
   saving: boolean;
   onAdicionarPagamento: (options?: {
     destinoExcedente?: "troco" | "credito_cliente";
-  }) => void;
+  }) => Promise<void> | void;
   onRemoverPagamento: (idPagamento: string) => void;
   showRulesCard?: boolean;
 };
@@ -73,6 +73,9 @@ export default function CaixaPagamentos({
   showRulesCard = true,
 }: Props) {
   const [confirmarExcedenteOpen, setConfirmarExcedenteOpen] = useState(false);
+  const [destinoExcedentePendente, setDestinoExcedentePendente] = useState<
+    "troco" | "credito_cliente" | null
+  >(null);
   const valorBaseDigitado = parseMoney(valorPagamento);
   const taxaPercentualNumero = parseMoney(taxaPercentual);
   const taxaPreviewValor = Number(
@@ -105,7 +108,11 @@ export default function CaixaPagamentos({
         : comandaSelecionada?.clientes?.nome || "Cliente",
     [comandaSelecionada]
   );
-  function handleAdicionarPagamento() {
+  async function handleAdicionarPagamento() {
+    if (saving || !comandaSelecionada || valorBaseDigitado <= 0) {
+      return;
+    }
+
     if (
       formaPagamento !== "credito_cliente" &&
       valorBaseDigitado > faltaReceber &&
@@ -116,7 +123,23 @@ export default function CaixaPagamentos({
       return;
     }
 
-    onAdicionarPagamento();
+    await onAdicionarPagamento();
+  }
+
+  async function handleConfirmarExcedente(
+    destinoExcedente: "troco" | "credito_cliente"
+  ) {
+    if (saving) {
+      return;
+    }
+
+    try {
+      setDestinoExcedentePendente(destinoExcedente);
+      await onAdicionarPagamento({ destinoExcedente });
+      setConfirmarExcedenteOpen(false);
+    } finally {
+      setDestinoExcedentePendente(null);
+    }
   }
 
   return (
@@ -339,10 +362,10 @@ export default function CaixaPagamentos({
             <button
               type="button"
               onClick={handleAdicionarPagamento}
-              disabled={saving || !comandaSelecionada}
+              disabled={saving || !comandaSelecionada || valorBaseDigitado <= 0}
               className="w-full rounded-2xl bg-zinc-900 px-4 py-3 text-sm font-bold text-white transition hover:opacity-95 disabled:opacity-60"
             >
-              Adicionar pagamento
+              {saving ? "Adicionando pagamento..." : "Adicionar pagamento"}
             </button>
           </div>
         ) : null}
@@ -399,14 +422,14 @@ export default function CaixaPagamentos({
             <div className="mt-5 grid gap-3">
               <button
                 type="button"
-                onClick={() => {
-                  setConfirmarExcedenteOpen(false);
-                  onAdicionarPagamento({ destinoExcedente: "troco" });
-                }}
+                disabled={saving}
+                onClick={() => handleConfirmarExcedente("troco")}
                 className="rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-left transition hover:bg-zinc-50"
               >
                 <div className="text-sm font-semibold text-zinc-900">
-                  Dar troco
+                  {destinoExcedentePendente === "troco"
+                    ? "Lançando troco..."
+                    : "Dar troco"}
                 </div>
                 <div className="mt-1 text-sm text-zinc-500">
                   O caixa recebe o valor e o excedente continua como troco da venda.
@@ -415,15 +438,14 @@ export default function CaixaPagamentos({
 
               <button
                 type="button"
-                disabled={!comandaSelecionada?.id_cliente}
-                onClick={() => {
-                  setConfirmarExcedenteOpen(false);
-                  onAdicionarPagamento({ destinoExcedente: "credito_cliente" });
-                }}
+                disabled={!comandaSelecionada?.id_cliente || saving}
+                onClick={() => handleConfirmarExcedente("credito_cliente")}
                 className="rounded-2xl border border-emerald-300 bg-emerald-50 px-4 py-3 text-left transition hover:bg-emerald-100 disabled:opacity-60"
               >
                 <div className="text-sm font-semibold text-emerald-900">
-                  Guardar como credito
+                  {destinoExcedentePendente === "credito_cliente"
+                    ? "Guardando credito..."
+                    : "Guardar como credito"}
                 </div>
                 <div className="mt-1 text-sm text-emerald-700">
                   O excedente entra no saldo da cliente para ela usar depois no caixa.
@@ -434,6 +456,7 @@ export default function CaixaPagamentos({
             <div className="mt-4 flex justify-end">
               <button
                 type="button"
+                disabled={saving}
                 onClick={() => setConfirmarExcedenteOpen(false)}
                 className="rounded-2xl border border-zinc-200 bg-white px-4 py-2.5 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50"
               >
