@@ -131,70 +131,8 @@ export default function CaixaSidebar({
   return (
     <>
       <aside className="w-full min-h-0">
-      <div className="flex h-full min-h-0 flex-col rounded-[34px] border border-white/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(250,251,255,0.96)_100%)] p-5 shadow-[0_24px_80px_rgba(15,23,42,0.09)]">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-400">
-              Operacao do caixa
-            </div>
-            <h2 className="mt-1 text-[1.75rem] font-semibold leading-none text-slate-900">
-              Operacao
-            </h2>
-            <p className="mt-1 max-w-[26rem] text-sm leading-6 text-zinc-500">
-              Sessao, pagamento e resumo da venda em foco.
-            </p>
-          </div>
-
-          <span
-            className={`rounded-full border px-3 py-1 text-[11px] font-bold uppercase ${
-              caixaAberto
-                ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                : "border-zinc-200 bg-zinc-100 text-zinc-600"
-            }`}
-          >
-            {caixaAberto ? "Caixa aberto" : "Caixa fechado"}
-          </span>
-        </div>
-
-        <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <ActionButton
-            icon={<CreditCard size={16} />}
-            label="Pagamento"
-            description="Receber sem poluir a tela principal."
-            onClick={() => setPagamentosOpen(true)}
-          />
-          <ActionButton
-            icon={<WalletCards size={16} />}
-            label="Sessao do caixa"
-            description="Abrir, fechar e lancar movimentos em foco."
-            onClick={() => setSessaoOpen(true)}
-          />
-        </div>
-
-        <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <MiniInfoCard label="Total pago" value={formatMoney(totalPago)} />
-          <MiniInfoCard
-            label="Falta receber"
-            value={formatMoney(faltaReceber)}
-            tone={faltaReceber > 0 ? "amber" : "emerald"}
-          />
-          <MiniInfoCard label="Troco" value={formatMoney(troco)} />
-        </div>
-
-        <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <MiniInfoCard
-            label="Credito gerado"
-            value={formatMoney(totalCreditoGerado)}
-            tone={totalCreditoGerado > 0 ? "sky" : "zinc"}
-          />
-          <MiniInfoCard
-            label="Credito da cliente"
-            value={formatMoney(creditoClienteDisponivel)}
-            tone={creditoClienteDisponivel > 0 ? "emerald" : "zinc"}
-          />
-        </div>
-
-        <div className="mt-5 shrink-0 rounded-[24px] border border-zinc-200 bg-zinc-50 p-1">
+        <div className="flex h-full min-h-0 flex-col rounded-[34px] border border-white/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(250,251,255,0.96)_100%)] p-5 shadow-[0_24px_80px_rgba(15,23,42,0.09)]">
+        <div className="shrink-0 rounded-[24px] border border-zinc-200 bg-zinc-50 p-1">
           <div className="grid grid-cols-2 gap-1">
             <ToggleButton
               active={painelAtivo === "operacao"}
@@ -209,10 +147,74 @@ export default function CaixaSidebar({
           </div>
         </div>
 
-        <div className="mt-5 min-h-0 flex-1 overflow-y-auto pr-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div className="mt-4 min-h-0 flex-1 overflow-y-auto pr-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <div className="space-y-4">
             {painelAtivo === "operacao" ? (
               <>
+                <div className="rounded-[28px] border border-zinc-200 bg-white p-5 shadow-sm">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-400">
+                        Operacao do caixa
+                      </div>
+                      <h2 className="mt-1 text-[1.55rem] font-semibold leading-none text-slate-900">
+                        Operacao
+                      </h2>
+                      <p className="mt-1 text-sm leading-6 text-zinc-500">
+                        Pagamento, sessao e fluxo rapido da venda.
+                      </p>
+                    </div>
+
+                    <span
+                      className={`shrink-0 rounded-full border px-3 py-1 text-[11px] font-bold uppercase ${
+                        caixaAberto
+                          ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                          : "border-zinc-200 bg-zinc-100 text-zinc-600"
+                      }`}
+                    >
+                      {caixaAberto ? "Caixa aberto" : "Caixa fechado"}
+                    </span>
+                  </div>
+
+                  <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <ActionButton
+                      icon={<CreditCard size={16} />}
+                      label="Pagamento"
+                      description="Receber sem poluir a tela principal."
+                      onClick={() => setPagamentosOpen(true)}
+                    />
+                    <ActionButton
+                      icon={<WalletCards size={16} />}
+                      label="Sessao do caixa"
+                      description="Abrir, fechar e lancar movimentos em foco."
+                      onClick={() => setSessaoOpen(true)}
+                    />
+                  </div>
+
+                  <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+                    <MiniInfoCard label="Total pago" value={formatMoney(totalPago)} />
+                    <MiniInfoCard
+                      label="Falta receber"
+                      value={formatMoney(faltaReceber)}
+                      tone={faltaReceber > 0 ? "amber" : "emerald"}
+                    />
+                    <MiniInfoCard label="Troco" value={formatMoney(troco)} />
+                  </div>
+
+                  <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <MiniInfoCard
+                      label="Credito gerado"
+                      value={formatMoney(totalCreditoGerado)}
+                      tone={totalCreditoGerado > 0 ? "sky" : "zinc"}
+                    />
+                    <MiniInfoCard
+                      label="Credito da cliente"
+                      value={formatMoney(creditoClienteDisponivel)}
+                      tone={creditoClienteDisponivel > 0 ? "emerald" : "zinc"}
+                    />
+                  </div>
+                </div>
+
                 <div className="rounded-[28px] border border-zinc-200 bg-white p-5 shadow-sm">
                   <div className="flex items-center gap-2">
                     <ReceiptText size={16} className="text-zinc-700" />
@@ -234,22 +236,6 @@ export default function CaixaSidebar({
                       description="Feche a comanda somente quando a falta a receber estiver em zero."
                     />
                   </div>
-                </div>
-
-                <div className="grid grid-cols-1 gap-3">
-                  <StatusCard
-                    label="Pagamento"
-                    value={comandaSelecionada ? "Abrir modal" : "Selecione uma comanda"}
-                    helper="Lance pagamentos e confira taxa, troco e historico."
-                    onClick={() => setPagamentosOpen(true)}
-                    disabled={!comandaSelecionada}
-                  />
-                  <StatusCard
-                    label="Sessao"
-                    value={caixaAberto ? "Caixa em operacao" : "Abrir modal"}
-                    helper="Abertura, fechamento, sangria, suprimento e vale profissional."
-                    onClick={() => setSessaoOpen(true)}
-                  />
                 </div>
               </>
             ) : null}
@@ -490,35 +476,6 @@ function QuickTip({
       <div className="text-sm font-semibold text-zinc-900">{title}</div>
       <div className="mt-1 text-xs leading-5 text-zinc-500">{description}</div>
     </div>
-  );
-}
-
-function StatusCard({
-  label,
-  value,
-  helper,
-  onClick,
-  disabled = false,
-}: {
-  label: string;
-  value: string;
-  helper: string;
-  onClick: () => void;
-  disabled?: boolean;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      className="rounded-[24px] border border-zinc-200 bg-white px-4 py-4 text-left transition hover:border-zinc-300 hover:shadow-sm disabled:cursor-not-allowed disabled:opacity-60"
-    >
-      <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-400">
-        {label}
-      </div>
-      <div className="mt-1 text-sm font-semibold text-zinc-900">{value}</div>
-      <div className="mt-2 text-xs leading-5 text-zinc-500">{helper}</div>
-    </button>
   );
 }
 
