@@ -144,18 +144,15 @@ export default function CaixaPagamentos({
 
   return (
     <>
-      <div className="rounded-[28px] border border-zinc-200 bg-white p-5 shadow-sm">
-        <div className="mb-4">
+      <div className="rounded-[28px] border border-zinc-200 bg-white p-4 shadow-sm">
+        <div className="mb-3">
           <div className="flex items-center gap-2">
             <CreditCard size={18} className="text-zinc-700" />
             <div className="text-lg font-bold text-zinc-900">Pagamentos</div>
           </div>
-          <div className="mt-1 text-sm text-zinc-500">
-            Lance recebimentos e confira o impacto da taxa antes do fechamento.
-          </div>
         </div>
 
-        <div className="space-y-3">
+        <div className="space-y-2.5">
           {pagamentos.map((pagamento) => {
             const taxaPercentualItem = Number(
               pagamento.taxa_maquininha_percentual || 0
@@ -166,7 +163,7 @@ export default function CaixaPagamentos({
             return (
               <div
                 key={pagamento.id}
-                className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4"
+                className="rounded-2xl border border-zinc-200 bg-zinc-50 p-3.5"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
@@ -174,13 +171,13 @@ export default function CaixaPagamentos({
                       {pagamento.forma_pagamento}
                     </div>
 
-                    <div className="mt-1 text-sm text-zinc-500">
+                    <div className="mt-0.5 text-sm text-zinc-500">
                       {formatCurrency(pagamento.valor)}
                       {pagamento.parcelas > 1 ? ` - ${pagamento.parcelas}x` : ""}
                     </div>
 
                     {Number(pagamento.valor_credito_cliente || 0) > 0 ? (
-                      <div className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-700">
+                      <div className="mt-1.5 inline-flex items-center gap-1.5 rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-700">
                         <Wallet size={12} />
                         Credito gerado:{" "}
                         {formatCurrency(Number(pagamento.valor_credito_cliente || 0))}
@@ -188,7 +185,7 @@ export default function CaixaPagamentos({
                     ) : null}
 
                     {(taxaPercentualItem > 0 || taxaValorItem > 0) && (
-                      <div className="mt-2 space-y-1 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2">
+                      <div className="mt-1.5 space-y-1 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2">
                         <div className="text-xs font-medium text-amber-800">
                           Taxa aplicada
                         </div>
@@ -210,13 +207,13 @@ export default function CaixaPagamentos({
                     )}
 
                     {pagamento.observacoes ? (
-                      <div className="mt-2 text-xs text-zinc-500">
+                      <div className="mt-1.5 text-xs text-zinc-500">
                         Obs.: {pagamento.observacoes}
                       </div>
                     ) : null}
 
                     {pagamento.recebido_em || pagamento.created_at ? (
-                      <div className="mt-2 text-xs text-zinc-400">
+                      <div className="mt-1.5 text-xs text-zinc-400">
                         Recebido em{" "}
                         {formatShortDateTime(pagamento.recebido_em || pagamento.created_at)}
                       </div>
@@ -240,20 +237,20 @@ export default function CaixaPagamentos({
 
           {pagamentos.length === 0 ? (
             <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-5 text-center text-sm text-zinc-500">
-              Nenhum pagamento lancado.
+              Nenhum pagamento lançado.
             </div>
           ) : null}
         </div>
 
         {podeEditar ? (
-          <div className="mt-5 space-y-4 border-t border-zinc-200 pt-5">
+          <div className="mt-4 space-y-3 border-t border-zinc-200 pt-4">
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
               <PreviewCard
-                label="Credito disponivel"
+                label="Crédito disponível"
                 value={formatCurrency(creditoClienteDisponivel)}
               />
               <PreviewCard
-                label="Credito gerado nesta comanda"
+                label="Crédito gerado"
                 value={formatCurrency(totalCreditoGerado)}
               />
             </div>
@@ -269,12 +266,12 @@ export default function CaixaPagamentos({
                 {creditoClienteDisponivel > 0
                   ? `${clienteNome} tem ${formatCurrency(
                       creditoClienteDisponivel
-                    )} em credito pronto para usar no pagamento.`
-                  : `${clienteNome} ainda nao tem credito disponivel.`}
+                    )} em crédito pronto para usar no pagamento.`
+                  : `${clienteNome} ainda não tem crédito disponível.`}
               </div>
             ) : (
               <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-                Vincule uma cliente na comanda para guardar excedente como credito ou usar saldo existente.
+                Vincule uma cliente na comanda para guardar excedente como crédito ou usar saldo existente.
               </div>
             )}
 
@@ -312,12 +309,9 @@ export default function CaixaPagamentos({
             ) : null}
 
             <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+              <PreviewCard label="Valor base" value={formatCurrency(valorBaseDigitado)} />
               <PreviewCard
-                label="Valor base"
-                value={formatCurrency(valorBaseDigitado)}
-              />
-              <PreviewCard
-                label="Taxa automatica"
+                label="Taxa automática"
                 value={`${Number(taxaPercentualNumero || 0).toLocaleString(
                   "pt-BR",
                   {
@@ -338,15 +332,15 @@ export default function CaixaPagamentos({
                 value={formatCurrency(valorCobradoCliente)}
               />
               <PreviewCard
-                label="Liquido previsto"
+                label="Líquido previsto"
                 value={formatCurrency(valorLiquidoPrevisto)}
               />
             </div>
 
             <div className="rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-800">
               {repassaTaxaCliente
-                ? "A taxa e somada ao valor cobrado do cliente e o liquido previsto preserva a base da venda."
-                : "A taxa nao e somada ao cliente. O liquido previsto mostra quanto sobra depois do custo da maquininha."}
+                ? "A taxa é somada ao valor cobrado do cliente."
+                : "A taxa não é somada ao cliente."}
             </div>
 
             <Field label="Observacao">
@@ -355,7 +349,7 @@ export default function CaixaPagamentos({
                 value={observacaoPagamento}
                 onChange={(e) => setObservacaoPagamento(e.target.value)}
                 className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-zinc-900"
-                placeholder="Ex.: cartao da cliente, pix recepcao, pagamento parcial..."
+                placeholder="Ex.: cartão da cliente, pix recepção, pagamento parcial..."
               />
             </Field>
 
@@ -370,35 +364,25 @@ export default function CaixaPagamentos({
           </div>
         ) : null}
 
-        <div className="mt-5 space-y-3 border-t border-zinc-200 pt-5">
+        <div className="mt-4 space-y-2.5 border-t border-zinc-200 pt-4">
           <InfoRow label="Total pago" value={formatCurrency(totalPago)} />
-          <InfoRow
-            label="Credito gerado"
-            value={formatCurrency(totalCreditoGerado)}
-          />
+          <InfoRow label="Crédito gerado" value={formatCurrency(totalCreditoGerado)} />
           <InfoRow label="Falta receber" value={formatCurrency(faltaReceber)} />
           <InfoRow label="Troco" value={formatCurrency(troco)} />
         </div>
       </div>
 
       {showRulesCard ? (
-        <div className="rounded-[28px] border border-zinc-200 bg-white p-5 shadow-sm">
+        <div className="rounded-[28px] border border-zinc-200 bg-white p-4 shadow-sm">
           <div className="mb-3 flex items-center gap-2 text-zinc-800">
             <User2 size={16} />
-            <div className="font-semibold">Regras do fechamento</div>
+            <div className="font-semibold">Fechamento</div>
           </div>
 
-          <div className="space-y-2 text-sm leading-6 text-zinc-500">
-            <p>O total dos pagamentos precisa bater com o total da comanda.</p>
-            <p>
-              Ao finalizar, o sistema baixa estoque, gera comissao e encerra os
-              agendamentos vinculados.
-            </p>
-            <p>Agendamento sem comanda vira comanda automatica ao abrir no caixa.</p>
-            <p>
-              A taxa da maquininha segue a configuracao do salao e o valor mostrado
-              no painel de pagamento.
-            </p>
+          <div className="space-y-2 text-sm leading-5 text-zinc-500">
+            <p>O total dos pagamentos precisa bater com a comanda.</p>
+            <p>Ao finalizar, o sistema baixa estoque, gera comissão e encerra vínculos.</p>
+            <p>Agendamento sem comanda vira comanda automática ao abrir no caixa.</p>
           </div>
         </div>
       ) : null}
