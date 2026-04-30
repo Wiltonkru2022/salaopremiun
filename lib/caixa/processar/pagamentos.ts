@@ -28,6 +28,18 @@ type PagamentoResumoRow = {
   valor_credito_cliente?: number | null;
 };
 
+type PagamentoIdempotenteRow = {
+  id: string;
+  id_movimentacao?: string | null;
+  forma_pagamento: string;
+  valor?: number | null;
+  parcelas?: number | null;
+  taxa_maquininha_percentual?: number | null;
+  taxa_maquininha_valor?: number | null;
+  valor_credito_cliente?: number | null;
+  observacoes?: string | null;
+};
+
 async function callUnknownRpc<T>(
   ctx: CaixaProcessarContext,
   functionName: string,
@@ -78,6 +90,34 @@ async function carregarResumoComanda(
   };
 }
 
+async function carregarPagamentoPorIdempotencia(params: {
+  ctx: CaixaProcessarContext;
+  idComanda: string;
+  idempotencyKey: string | null;
+}) {
+  const { ctx, idComanda, idempotencyKey } = params;
+
+  if (!idempotencyKey) {
+    return null;
+  }
+
+  const { data, error } = await ctx.supabaseAdmin
+    .from("comanda_pagamentos")
+    .select(
+      "id, id_movimentacao, forma_pagamento, valor, parcelas, taxa_maquininha_percentual, taxa_maquininha_valor, valor_credito_cliente, observacoes"
+    )
+    .eq("id_salao", ctx.idSalao)
+    .eq("id_comanda", idComanda)
+    .eq("idempotency_key", idempotencyKey)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error("Nao foi possivel validar a idempotencia do pagamento.");
+  }
+
+  return (data as PagamentoIdempotenteRow | null) || null;
+}
+
 async function usarCreditoCliente(params: {
   ctx: CaixaProcessarContext;
   idComanda: string;
@@ -86,6 +126,28 @@ async function usarCreditoCliente(params: {
   idempotencyKey: string | null;
 }) {
   const { ctx, idComanda, valorBase, observacoes, idempotencyKey } = params;
+  const pagamentoExistente = await carregarPagamentoPorIdempotencia({
+    ctx,
+    idComanda,
+    idempotencyKey,
+  });
+
+  if (pagamentoExistente) {
+    return {
+      idPagamento: pagamentoExistente.id,
+      idMovimentacao: pagamentoExistente.id_movimentacao || null,
+      repassaTaxaCliente: false,
+      taxaPercentual: 0,
+      taxaValor: 0,
+      valorFinalCobrado: sanitizeMoney(pagamentoExistente.valor),
+      valorCreditoGerado: sanitizeMoney(
+        pagamentoExistente.valor_credito_cliente
+      ),
+      creditoClienteUsado: sanitizeMoney(pagamentoExistente.valor),
+      idempotentReplay: true,
+    };
+  }
+
   const resumo = await carregarResumoComanda(ctx, idComanda);
 
   if (!resumo.idCliente) {
@@ -203,10 +265,35 @@ export async function adicionarPagamento(params: {
   const valorFinalCobrado = repassaTaxaCliente
     ? sanitizeMoney(valorBase + taxaValor)
     : valorBase;
-  const resumoAntesDoPagamento =
-    destinoExcedente === "credito_cliente"
-      ? await carregarResumoComanda(ctx, idComanda)
-      : null;
+  const pagamentoExistente = await carregarPagamentoPorIdempotencia({
+    ctx,
+    idComanda,
+    idempotencyKey,
+  });
+
+  if (pagamentoExistente) {
+    return {
+      idPagamento: pagamentoExistente.id,
+      idMovimentacao: pagamentoExistente.id_movimentacao || null,
+      repassaTaxaCliente,
+      taxaPercentual: sanitizeMoney(
+        pagamentoExistente.taxa_maquininha_percentual
+      ),
+      taxaValor: sanitizeMoney(pagamentoExistente.taxa_maquininha_valor),
+      valorFinalCobrado: sanitizeMoney(pagamentoExistente.valor),
+      valorCreditoGerado: sanitizeMoney(
+        pagamentoExistente.valor_credito_cliente
+      ),
+      creditoClienteUsado: 0,
+      idempotentReplay: true,
+    };
+  }
+
+  const resumoAntesDoPagamento = await carregarResumoComanda(ctx, idComanda);
+
+  if (resumoAntesDoPagamento.faltaReceber <= 0) {
+    throw new CaixaInputError("Esta comanda ja esta quitada.");
+  }
 
   const pagamentoPayload = {
     p_id_salao: ctx.idSalao,
