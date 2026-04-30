@@ -83,14 +83,14 @@ export default function Sidebar({
 
       <aside
         className={clsx(
-          "fixed inset-y-0 left-0 z-50 w-[286px] -translate-x-full bg-[#f4f5f7] p-3 text-zinc-950 transition-transform duration-300 lg:sticky lg:top-0 lg:z-20 lg:flex lg:h-screen lg:translate-x-0 lg:flex-col",
+          "fixed inset-y-0 left-0 z-50 w-[274px] -translate-x-full bg-zinc-50 p-2 text-zinc-950 transition-transform duration-300 lg:sticky lg:top-0 lg:z-20 lg:flex lg:h-screen lg:translate-x-0 lg:flex-col",
           mobileOpen ? "translate-x-0" : ""
         )}
       >
-        <div className="flex h-full flex-col overflow-hidden rounded-[28px] border border-zinc-200/80 bg-white shadow-[0_24px_70px_rgba(15,23,42,0.10)]">
-          <div className="flex items-start justify-between gap-3 px-4 py-4 lg:block lg:px-3 lg:py-4 xl:px-4">
+        <div className="flex h-full flex-col overflow-hidden rounded-[20px] border border-zinc-200 bg-white shadow-sm">
+          <div className="flex items-start justify-between gap-3 px-4 py-3.5 lg:block lg:px-3.5 lg:py-3.5 xl:px-4">
             <div className="flex min-w-0 items-center gap-3">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-[18px] bg-zinc-950 text-white ring-1 ring-zinc-900/10">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-zinc-950 text-white ring-1 ring-zinc-900/10">
                 {salaoLogoUrl ? (
                   <img
                     src={salaoLogoUrl}
@@ -105,10 +105,10 @@ export default function Sidebar({
               </div>
 
               <div className="min-w-0">
-                <div className="truncate text-[11px] font-semibold uppercase tracking-[0.22em] text-zinc-400">
+                <div className="truncate text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-400">
                   SalaoPremium
                 </div>
-                <div className="mt-1 truncate font-display text-lg font-black tracking-[-0.04em] text-zinc-950">
+                <div className="mt-1 truncate font-display text-base font-bold tracking-[-0.02em] text-zinc-950">
                   {salaoNome || "SalaoPremium"}
                 </div>
                 <div className="mt-0.5 truncate text-xs text-zinc-500">
@@ -120,14 +120,14 @@ export default function Sidebar({
             <button
               type="button"
               onClick={onClose}
-              className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-zinc-200 bg-white text-zinc-700 transition hover:bg-zinc-50 lg:hidden"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-zinc-200 bg-white text-zinc-700 transition hover:bg-zinc-50 lg:hidden"
               aria-label="Fechar menu lateral"
             >
               <X size={18} />
             </button>
           </div>
 
-          <div className="px-4 pb-3 lg:px-3 xl:px-4">
+          <div className="px-4 pb-3 lg:px-3.5 xl:px-4">
             <label className="relative block">
               <Search
                 size={17}
@@ -137,7 +137,7 @@ export default function Sidebar({
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
                 placeholder="Buscar..."
-                className="h-11 w-full rounded-[15px] border border-zinc-200 bg-zinc-50 pl-10 pr-3 text-sm font-medium text-zinc-800 outline-none transition placeholder:text-zinc-400 focus:border-zinc-400 focus:bg-white focus:ring-4 focus:ring-zinc-100"
+                className="h-10 w-full rounded-[14px] border border-zinc-200 bg-zinc-50 pl-10 pr-3 text-sm font-medium text-zinc-800 outline-none transition placeholder:text-zinc-400 focus:border-zinc-400 focus:bg-white focus:ring-2 focus:ring-zinc-100"
               />
             </label>
           </div>
@@ -146,14 +146,14 @@ export default function Sidebar({
             {subscriptionAtRisk || criticalNotificationsCount > 0 ? (
               <div
                 className={clsx(
-                  "mb-4 rounded-[22px] border px-3 py-3",
+                  "mb-4 rounded-[16px] border px-3 py-3",
                   resumoAssinatura?.bloqueioTotal || criticalNotificationsCount > 0
                     ? "border-rose-200 bg-rose-50 text-rose-800"
                     : "border-amber-200 bg-amber-50 text-amber-800"
                 )}
               >
                 <div className="flex items-start gap-3">
-                  <span className="mt-0.5 rounded-2xl bg-white p-2 shadow-sm">
+                    <span className="mt-0.5 rounded-xl bg-white p-2">
                     <AlertTriangle size={16} />
                   </span>
                   <div className="min-w-0">
@@ -190,13 +190,13 @@ export default function Sidebar({
               </div>
             ) : null}
 
-            <div className="space-y-5">
+            <div className="space-y-4">
               {groupedItems.map((group) => (
                 <div key={group.label}>
-                  <div className="mb-2 px-2 text-[10px] font-black uppercase tracking-[0.22em] text-zinc-400">
+                  <div className="mb-2 px-2 text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-400">
                     {group.label}
                   </div>
-                  <div className="space-y-1.5">
+                  <div className="space-y-1">
                     {group.items.map((item) => (
                       <SidebarLink
                         key={item.href}
@@ -220,19 +220,19 @@ export default function Sidebar({
             </div>
           </nav>
 
-          <div className="border-t border-zinc-100 px-4 py-4">
-            <div className="rounded-[20px] bg-zinc-50 p-3">
-              <div className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">
+          <div className="border-t border-zinc-100 px-4 py-3.5">
+            <div className="rounded-[16px] border border-zinc-200 bg-zinc-50 p-3">
+              <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-400">
                 Plano atual
               </div>
-              <div className="mt-1 truncate text-sm font-bold text-zinc-950">
+              <div className="mt-1 truncate text-sm font-semibold text-zinc-950">
                 {planoNome || "Sem plano"}
               </div>
               {canSeeAssinatura ? (
                 <a
                   href={getRouteHref("/assinatura")}
                   onClick={onClose}
-                  className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-zinc-950 px-3 py-2 text-xs font-bold text-white transition hover:bg-zinc-800"
+                  className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-800 transition hover:bg-zinc-100"
                 >
                   <CreditCard size={14} />
                   Ver assinatura
@@ -310,15 +310,15 @@ function SidebarLink({
       rel={item.openInNewTab ? "noreferrer" : undefined}
       onClick={onClose}
       className={clsx(
-        "group/item flex items-center gap-3 rounded-[17px] px-3 py-2.5 ring-1 ring-transparent transition-all duration-200",
+        "group/item flex items-center gap-3 rounded-[14px] px-3 py-2.5 ring-1 ring-transparent transition-all duration-200",
         active
-          ? "bg-zinc-950 text-white ring-zinc-900 shadow-sm"
+          ? "bg-zinc-950 text-white ring-zinc-900"
           : "text-zinc-500 hover:bg-zinc-50 hover:text-zinc-950"
       )}
     >
       <span
         className={clsx(
-          "flex h-9 w-9 shrink-0 items-center justify-center rounded-[13px] transition",
+          "flex h-8.5 w-8.5 shrink-0 items-center justify-center rounded-[12px] transition",
           active ? "bg-white/12 text-white" : "bg-transparent"
         )}
       >

@@ -127,17 +127,17 @@ export default function Header({
   return (
     <header
       className={clsx(
-        "rounded-[16px] border px-2 py-1.5 transition-all duration-300 md:px-2.5",
+        "rounded-[14px] border px-2.5 py-2 transition-all duration-200 md:px-3",
         scrolled
-          ? "border-zinc-200 bg-white shadow-sm"
-          : "border-zinc-200 bg-white shadow-none"
+          ? "border-zinc-200 bg-white/95 shadow-sm backdrop-blur"
+          : "border-zinc-200 bg-white/92 backdrop-blur"
       )}
     >
-      <div className="flex min-h-11 flex-wrap items-center gap-2 lg:flex-nowrap">
+      <div className="flex min-h-10 flex-wrap items-center gap-2 lg:flex-nowrap">
         <button
           type="button"
           onClick={onOpenSidebar}
-          className="inline-flex h-8.5 w-8.5 shrink-0 items-center justify-center rounded-lg border border-zinc-200 bg-white text-zinc-900 shadow-sm transition hover:-translate-y-0.5 hover:border-[var(--app-accent)] lg:hidden"
+          className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-zinc-200 bg-white text-zinc-900 transition hover:border-zinc-300 hover:bg-zinc-50 lg:hidden"
           aria-label="Abrir menu lateral"
         >
           <Menu size={18} />
@@ -145,15 +145,15 @@ export default function Header({
 
         <div className="min-w-0 flex-1 basis-[220px]">
           <div className="flex min-w-0 items-center gap-2">
-            <h1 className="truncate font-display text-base font-bold tracking-[-0.03em] text-zinc-950 sm:text-lg xl:text-[1.35rem]">
+            <h1 className="truncate font-display text-[1rem] font-bold tracking-[-0.02em] text-zinc-950 sm:text-[1.05rem] xl:text-[1.2rem]">
               {pageMeta.title}
             </h1>
-            <span className="hidden rounded-full border border-zinc-200 bg-white/80 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-zinc-500 sm:inline-flex">
+            <span className="hidden rounded-full border border-zinc-200 bg-zinc-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.16em] text-zinc-500 sm:inline-flex">
               {nivel}
             </span>
           </div>
 
-          <p className="mt-0.5 hidden max-w-2xl truncate text-[11px] text-zinc-500 md:block">
+          <p className="mt-0.5 hidden max-w-2xl truncate text-[11px] text-zinc-500 xl:block">
             {pageMeta.description}
           </p>
           {showCriticalState ? (
@@ -169,9 +169,9 @@ export default function Header({
           ) : null}
         </div>
 
-        <div className="hidden min-w-0 items-center gap-2 rounded-lg border border-zinc-200 bg-white/80 px-2 py-1.5 text-sm shadow-sm md:flex xl:px-2.5">
+        <div className="hidden min-w-0 items-center gap-2 rounded-lg border border-zinc-200 bg-zinc-50 px-2 py-1.5 text-sm md:flex xl:px-2.5">
           <ShieldCheck size={16} className="shrink-0 text-[var(--app-accent-strong)]" />
-          <span className="hidden truncate font-semibold text-zinc-900 xl:inline">
+          <span className="hidden truncate text-xs font-semibold text-zinc-900 xl:inline">
             {planoNome || "Sem plano"}
           </span>
           <span
@@ -194,10 +194,10 @@ export default function Header({
           <button
             type="button"
             onClick={() => setMenuOpen((prev) => !prev)}
-            className="flex h-9 max-w-full items-center gap-2 rounded-lg border border-zinc-200 bg-zinc-950 py-1 pl-1 pr-1.5 text-left text-white shadow-[0_14px_32px_rgba(15,23,42,0.18)] transition hover:-translate-y-0.5"
+            className="flex h-9 max-w-full items-center gap-2 rounded-lg border border-zinc-200 bg-white py-1 pl-1 pr-1.5 text-left text-zinc-900 transition hover:border-zinc-300 hover:bg-zinc-50"
             aria-label="Abrir menu da conta"
           >
-            <span className="flex h-7.5 w-7.5 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white/12 ring-1 ring-white/10">
+              <span className="flex h-7.5 w-7.5 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-zinc-100 ring-1 ring-zinc-200">
               {salaoLogoUrl ? (
                 <img
                   src={salaoLogoUrl}
@@ -205,7 +205,7 @@ export default function Header({
                   className="h-full w-full object-cover"
                 />
               ) : (
-                <span className="text-xs font-bold uppercase">{initials}</span>
+                  <span className="text-xs font-bold uppercase text-zinc-700">{initials}</span>
               )}
             </span>
 
@@ -213,7 +213,7 @@ export default function Header({
               <span className="block max-w-[116px] truncate text-[13px] font-semibold xl:max-w-[144px]">
                 {userName || "Usuario"}
               </span>
-              <span className="block max-w-[116px] truncate text-[10px] text-white/60 xl:max-w-[144px]">
+                  <span className="block max-w-[116px] truncate text-[10px] text-zinc-500 xl:max-w-[144px]">
                 {salaoNome || userEmail || "Conta principal"}
               </span>
             </span>
@@ -225,8 +225,8 @@ export default function Header({
           </button>
 
           {menuOpen ? (
-            <div className="absolute right-0 top-[calc(100%+0.75rem)] z-50 w-[min(92vw,300px)] rounded-[24px] border border-zinc-200 bg-white p-3 shadow-[0_24px_60px_rgba(15,23,42,0.14)]">
-              <div className="rounded-[22px] border border-zinc-200 bg-zinc-50 p-4 text-zinc-950">
+            <div className="absolute right-0 top-[calc(100%+0.5rem)] z-50 w-[min(92vw,300px)] rounded-[18px] border border-zinc-200 bg-white p-3 shadow-[0_18px_40px_rgba(15,23,42,0.12)]">
+              <div className="rounded-[16px] border border-zinc-200 bg-zinc-50 p-4 text-zinc-950">
                 <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">
                   Perfil do salao
                 </div>

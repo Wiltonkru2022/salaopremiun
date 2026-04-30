@@ -86,7 +86,7 @@ export default function AppShell({
   }
 
   return (
-    <div className="min-h-screen bg-white text-[var(--app-ink)]">
+    <div className="min-h-screen bg-zinc-50 text-[var(--app-ink)]">
       <MonitoringContextBridge
         actorType="usuario_salao"
         surface="painel"
@@ -95,7 +95,7 @@ export default function AppShell({
       />
 
       {hideShellChrome ? (
-        <main className="min-h-screen bg-white">
+        <main className="min-h-screen bg-zinc-50">
           <div className="min-w-0">{children}</div>
         </main>
       ) : (
@@ -115,7 +115,7 @@ export default function AppShell({
         />
 
         <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-          <div className="sticky top-0 z-30 bg-white px-2 pb-1.5 pt-1.5 md:px-2.5 lg:px-3 xl:px-4">
+          <div className="sticky top-0 z-30 bg-zinc-50 px-2 pb-1 pt-2 md:px-2.5 lg:px-3 xl:px-4">
             <Header
               userName={userName}
               userEmail={userEmail}
@@ -139,7 +139,7 @@ export default function AppShell({
           </div>
 
           <main
-            className="scroll-premium min-h-0 flex-1 overflow-y-auto bg-white px-2 pb-2 md:px-2.5 lg:px-3 xl:px-4"
+            className="scroll-premium min-h-0 flex-1 overflow-y-auto bg-zinc-50 px-2 pb-2 md:px-2.5 lg:px-3 xl:px-4"
             onScroll={(event) => {
               const nextScrolled = event.currentTarget.scrollTop > 12;
               setContentScrolled((current) =>
@@ -147,7 +147,7 @@ export default function AppShell({
               );
             }}
           >
-            <div className="min-h-[calc(100dvh-4.8rem)] bg-white p-2 md:p-2.5 xl:p-3">
+            <div className="min-h-[calc(100dvh-4.4rem)] bg-zinc-50 p-1.5 md:p-2 xl:p-2.5">
               <div className="min-w-0">{children}</div>
             </div>
           </main>
