@@ -21,6 +21,10 @@ const historicoSchema = z.object({
   idSalao: z.string().trim().min(1, "idSalao e obrigatorio."),
 });
 
+const sincronizarCartaoSchema = z.object({
+  idSalao: z.string().trim().min(1, "idSalao e obrigatorio."),
+});
+
 export class AssinaturaUseCaseError extends Error {
   constructor(
     message: string,
@@ -231,5 +235,81 @@ export async function historicoAssinaturaUseCase(params: {
     };
   } catch (error) {
     mapAssinaturaError(error, "Erro interno ao carregar historico.");
+  }
+}
+
+export async function sincronizarCartaoAssinaturaUseCase(params: {
+  body: unknown;
+  service: AssinaturaService;
+}) {
+  try {
+    const input = sincronizarCartaoSchema.parse(params.body);
+
+    await params.service.validarSalaoAdmin(
+      input.idSalao,
+      "Somente administrador pode sincronizar o cartao da assinatura."
+    );
+
+    const assinatura = await params.service.buscarAssinaturaSalao(input.idSalao);
+
+    if (!assinatura?.id) {
+      throw new AssinaturaUseCaseError("Assinatura nao encontrada.", 404);
+    }
+
+    const formaPagamentoAtual = String(
+      assinatura.forma_pagamento_atual || ""
+    ).toUpperCase();
+
+    if (formaPagamentoAtual !== "CREDIT_CARD") {
+      return {
+        status: 200,
+        body: {
+          ok: true,
+          updated: false,
+          reason: "not_credit_card",
+        },
+      };
+    }
+
+    if (String(assinatura.asaas_credit_card_token || "").trim()) {
+      return {
+        status: 200,
+        body: {
+          ok: true,
+          updated: false,
+          reason: "already_tokenized",
+        },
+      };
+    }
+
+    const paymentId = String(assinatura.asaas_payment_id || "").trim();
+
+    if (!paymentId) {
+      return {
+        status: 200,
+        body: {
+          ok: true,
+          updated: false,
+          reason: "missing_payment_id",
+        },
+      };
+    }
+
+    const result = await params.service.sincronizarTokenCartaoAssinatura({
+      assinaturaId: assinatura.id,
+      idSalao: input.idSalao,
+      paymentId,
+    });
+
+    return {
+      status: 200,
+      body: {
+        ok: true,
+        updated: result.updated,
+        tokenized: Boolean(result.token),
+      },
+    };
+  } catch (error) {
+    mapAssinaturaError(error, "Erro interno ao sincronizar cartao da assinatura.");
   }
 }

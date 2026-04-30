@@ -2,6 +2,7 @@ import { addDays, format, isBefore } from "date-fns";
 import { createServerClient } from "@supabase/ssr";
 import { cookies, headers } from "next/headers";
 import { getRenovacaoAutomaticaInfo } from "@/lib/assinaturas/renovacao-automatica";
+import { buscarCobranca } from "@/lib/payments/pix-provider";
 import { getSupabaseCookieOptions } from "@/lib/supabase/cookie-options";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import {
@@ -153,7 +154,7 @@ export function createAssinaturaService() {
       const { data, error } = await supabaseAdmin
         .from("assinaturas")
         .select(
-          "id, plano, valor, vencimento_em, renovacao_automatica, forma_pagamento_atual, asaas_customer_id, asaas_credit_card_token, asaas_subscription_id, asaas_subscription_status, status, trial_ativo, trial_inicio_em, trial_fim_em"
+          "id, plano, valor, vencimento_em, renovacao_automatica, forma_pagamento_atual, asaas_customer_id, asaas_payment_id, asaas_credit_card_token, asaas_subscription_id, asaas_subscription_status, status, trial_ativo, trial_inicio_em, trial_fim_em"
         )
         .eq("id_salao", idSalao)
         .maybeSingle();
@@ -166,6 +167,55 @@ export function createAssinaturaService() {
       }
 
       return data || null;
+    },
+
+    async sincronizarTokenCartaoAssinatura(params: {
+      assinaturaId: string;
+      idSalao: string;
+      paymentId: string;
+    }) {
+      const payment = await buscarCobranca(params.paymentId);
+      const creditCard =
+        payment.creditCard && typeof payment.creditCard === "object"
+          ? payment.creditCard
+          : null;
+
+      const token = String(creditCard?.creditCardToken || "").trim() || null;
+      const brand = String(creditCard?.creditCardBrand || "").trim() || null;
+      const last4 = String(creditCard?.creditCardNumber || "").trim() || null;
+
+      if (!token) {
+        return {
+          updated: false,
+          token: null,
+        };
+      }
+
+      const supabaseAdmin = getSupabaseAdmin();
+      const { error } = await supabaseAdmin
+        .from("assinaturas")
+        .update({
+          forma_pagamento_atual: "CREDIT_CARD",
+          asaas_payment_id: params.paymentId,
+          asaas_credit_card_token: token,
+          asaas_credit_card_brand: brand,
+          asaas_credit_card_last4: last4,
+          asaas_credit_card_tokenized_at: new Date().toISOString(),
+        })
+        .eq("id", params.assinaturaId)
+        .eq("id_salao", params.idSalao);
+
+      if (error) {
+        throw new AssinaturaServiceError(
+          error.message || "Erro ao salvar token do cartao na assinatura.",
+          500
+        );
+      }
+
+      return {
+        updated: true,
+        token,
+      };
     },
 
     async atualizarRenovacaoAssinatura(params: {

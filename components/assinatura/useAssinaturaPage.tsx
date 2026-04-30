@@ -48,6 +48,7 @@ export function useAssinaturaPage() {
 
   const planoSelecionadoRef = useRef<PlanoCobravel>("pro");
   const planoEscolhidoManualmenteRef = useRef(false);
+  const sincronizacaoCartaoRef = useRef<string | null>(null);
 
   const {
     usuario,
@@ -191,6 +192,67 @@ export function useAssinaturaPage() {
   useEffect(() => {
     setRenovacaoAutomatica(Boolean(assinatura?.renovacao_automatica));
   }, [assinatura?.renovacao_automatica, setRenovacaoAutomatica]);
+
+  useEffect(() => {
+    const formaPagamentoAtual = String(
+      assinatura?.forma_pagamento_atual || ""
+    ).toUpperCase();
+    const tokenCartao = String(assinatura?.asaas_credit_card_token || "").trim();
+    const paymentId = String(assinatura?.asaas_payment_id || "").trim();
+    const salaoId = String(salao?.id || "").trim();
+
+    if (
+      !salaoId ||
+      formaPagamentoAtual !== "CREDIT_CARD" ||
+      !paymentId ||
+      tokenCartao
+    ) {
+      return;
+    }
+
+    const syncKey = `${salaoId}:${paymentId}`;
+    if (sincronizacaoCartaoRef.current === syncKey) {
+      return;
+    }
+
+    sincronizacaoCartaoRef.current = syncKey;
+
+    void (async () => {
+      try {
+        const response = await fetch("/api/assinatura/sincronizar-cartao", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            idSalao: salaoId,
+          }),
+        });
+
+        const data = (await response.json().catch(() => null)) as
+          | { updated?: boolean; error?: string }
+          | null;
+
+        if (!response.ok) {
+          throw new Error(
+            data?.error || "Erro ao sincronizar cartao da assinatura."
+          );
+        }
+
+        if (data?.updated) {
+          await carregarDados();
+        }
+      } catch (error) {
+        console.error("Falha ao sincronizar token do cartao da assinatura:", error);
+      }
+    })();
+  }, [
+    assinatura?.asaas_credit_card_token,
+    assinatura?.asaas_payment_id,
+    assinatura?.forma_pagamento_atual,
+    carregarDados,
+    salao?.id,
+  ]);
 
   useEffect(() => {
     if (!assinatura?.plano) return;
