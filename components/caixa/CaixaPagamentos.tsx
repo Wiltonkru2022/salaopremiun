@@ -41,6 +41,18 @@ function getFormaPagamentoTone(value?: string | null) {
   return "zinc";
 }
 
+function getFormaPagamentoCardClass(value?: string | null) {
+  const tone = getFormaPagamentoTone(value);
+
+  if (tone === "sky") return "border-sky-200 bg-sky-50/40";
+  if (tone === "emerald") return "border-emerald-200 bg-emerald-50/40";
+  if (tone === "violet") return "border-violet-200 bg-violet-50/40";
+  if (tone === "amber") return "border-amber-200 bg-amber-50/40";
+  if (tone === "rose") return "border-rose-200 bg-rose-50/40";
+
+  return "border-zinc-200 bg-zinc-50";
+}
+
 type Props = {
   comandaSelecionada: ComandaDetalhe | null;
   repassaTaxaCliente: boolean;
@@ -183,7 +195,9 @@ export default function CaixaPagamentos({
             return (
               <div
                 key={pagamento.id}
-                className="rounded-2xl border border-zinc-200 bg-zinc-50 p-3.5"
+                className={`rounded-2xl border-l-4 border p-3.5 ${getFormaPagamentoCardClass(
+                  pagamento.forma_pagamento
+                )}`}
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
