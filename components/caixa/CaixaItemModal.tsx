@@ -32,14 +32,14 @@ type Props = {
 const TIPOS_ITEM: TipoItemComanda[] = ["servico", "produto", "extra", "ajuste"];
 
 function getTipoLabel(tipo: TipoItemComanda) {
-  if (tipo === "servico") return "Servico";
+  if (tipo === "servico") return "Serviço";
   if (tipo === "produto") return "Produto";
   if (tipo === "extra") return "Extra";
   return "Ajuste";
 }
 
 function getCatalogoPlaceholder(tipo: TipoItemComanda) {
-  if (tipo === "servico") return "Digite o nome do servico";
+  if (tipo === "servico") return "Digite o nome do serviço";
   if (tipo === "produto") return "Digite o nome do produto";
   return "Digite o nome do extra";
 }
@@ -107,7 +107,7 @@ export default function CaixaItemModal({
           ? "Editar item da comanda"
           : "Adicionar item na comanda"
       }
-      description="Escolha o tipo do item e preencha os dados da cobranca."
+      description="Escolha o tipo do item e preencha os dados da cobrança."
       maxWidthClassName="max-w-2xl"
       zIndexClassName="z-[95]"
       closeDisabled={saving}
@@ -117,7 +117,7 @@ export default function CaixaItemModal({
             type="button"
             onClick={onClose}
             disabled={saving}
-            className="rounded-2xl border border-zinc-300 bg-white px-5 py-3 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-60"
+            className="rounded-2xl border border-zinc-300 bg-white px-5 py-2.5 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-60"
           >
             Fechar
           </button>
@@ -131,20 +131,20 @@ export default function CaixaItemModal({
             {saving
               ? "Salvando..."
               : itemModal.mode === "edit"
-              ? "Salvar alteracoes"
+              ? "Salvar alterações"
               : "Adicionar item"}
           </button>
         </>
       }
     >
-      <div className="space-y-5">
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+      <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-2.5 md:grid-cols-4">
             {TIPOS_ITEM.map((tipo) => (
               <button
                 key={tipo}
                 type="button"
                 onClick={() => selecionarTipoItem(tipo)}
-                className={`rounded-2xl border px-4 py-3 text-sm font-semibold transition ${
+                className={`rounded-2xl border px-4 py-2.5 text-sm font-semibold transition ${
                   itemModal.tipoItem === tipo
                     ? "border-zinc-900 bg-zinc-900 text-white"
                     : "border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50"
@@ -166,7 +166,7 @@ export default function CaixaItemModal({
                 onChange={(e) => atualizarBuscaCatalogo(e.target.value)}
                 onFocus={() => setDropdownCatalogoOpen(true)}
                 placeholder={getCatalogoPlaceholder(itemModal.tipoItem)}
-                className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-zinc-900"
+                className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-2.5 text-sm outline-none transition focus:border-zinc-900"
               />
 
               {dropdownCatalogoOpen && opcoesCatalogoFiltradas.length > 0 ? (
@@ -197,16 +197,16 @@ export default function CaixaItemModal({
             </div>
           ) : null}
 
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
             <div>
               <label className="mb-2 block text-sm font-semibold text-zinc-700">
-                Descricao
+                Descrição
               </label>
               <input
                 value={itemModal.descricao}
                 onChange={(e) => atualizarDescricao(e.target.value)}
-                placeholder="Descricao do item"
-                className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-zinc-900"
+                placeholder="Descrição do item"
+                className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-2.5 text-sm outline-none transition focus:border-zinc-900"
               />
             </div>
 
@@ -219,21 +219,21 @@ export default function CaixaItemModal({
                 min="1"
                 value={itemModal.quantidade}
                 onChange={(e) => atualizarQuantidade(e.target.value)}
-                className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-zinc-900"
+                className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-2.5 text-sm outline-none transition focus:border-zinc-900"
               />
             </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
             <div>
               <label className="mb-2 block text-sm font-semibold text-zinc-700">
-                Valor unitario
+                Valor unitário
               </label>
               <input
                 value={itemModal.valorUnitario}
                 onChange={(e) => atualizarValorUnitario(e.target.value)}
                 placeholder="0,00"
-                className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-zinc-900"
+                className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-2.5 text-sm outline-none transition focus:border-zinc-900"
               />
             </div>
 
@@ -247,7 +247,7 @@ export default function CaixaItemModal({
                 onChange={(e) => atualizarBuscaProfissional(e.target.value)}
                 onFocus={() => setDropdownProfissionalOpen(true)}
                 placeholder="Digite o nome do profissional"
-                className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-zinc-900"
+                className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-2.5 text-sm outline-none transition focus:border-zinc-900"
               />
 
               {dropdownProfissionalOpen ? (
@@ -284,7 +284,7 @@ export default function CaixaItemModal({
                 onChange={(e) => atualizarBuscaAssistente(e.target.value)}
                 onFocus={() => setDropdownAssistenteOpen(true)}
                 placeholder="Digite o nome do assistente"
-                className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-zinc-900"
+                className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-2.5 text-sm outline-none transition focus:border-zinc-900"
               />
 
               {dropdownAssistenteOpen ? (
@@ -312,7 +312,7 @@ export default function CaixaItemModal({
             </div>
           </div>
 
-          <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-4">
+          <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3.5">
             <div className="text-xs uppercase tracking-[0.18em] text-zinc-500">
               Total do item
             </div>

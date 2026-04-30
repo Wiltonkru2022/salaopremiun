@@ -28,15 +28,12 @@ export default function CaixaResumo({
     : null;
 
   return (
-    <div className="rounded-[28px] border border-zinc-200 bg-white p-5 shadow-sm">
-      <div className="mb-4 flex items-start justify-between gap-3">
+    <div className="rounded-[28px] border border-zinc-200 bg-white p-4 shadow-sm">
+      <div className="mb-3 flex items-start justify-between gap-3">
         <div>
           <div className="flex items-center gap-2">
             <Wallet size={18} className="text-zinc-700" />
             <div className="text-lg font-bold text-zinc-900">Resumo financeiro</div>
-          </div>
-          <div className="mt-1 text-sm text-zinc-500">
-            Totalizacao rapida da comanda antes do fechamento.
           </div>
         </div>
 
@@ -53,7 +50,7 @@ export default function CaixaResumo({
         <div className="rounded-[24px] border border-dashed border-zinc-300 bg-zinc-50 px-4 py-10 text-center">
           <ReceiptText className="mx-auto mb-3 text-zinc-400" size={28} />
           <div className="text-sm font-semibold text-zinc-800">
-            Selecione uma comanda para ver a totalizacao.
+            Selecione uma comanda para ver a totalização.
           </div>
           <div className="mt-1 text-sm text-zinc-500">
             O resumo financeiro aparece assim que uma venda entra em foco.
@@ -67,19 +64,19 @@ export default function CaixaResumo({
               <div className="mt-1 text-3xl font-bold">
                 {formatCurrency(comandaSelecionada.total)}
               </div>
-              <div className="mt-2 text-sm text-zinc-400">{status?.description}</div>
+              <div className="mt-1.5 text-sm text-zinc-400">{status?.description}</div>
             </div>
 
             <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-1 2xl:grid-cols-3">
               <InfoCard label="Subtotal" value={formatCurrency(comandaSelecionada.subtotal)} />
               <InfoCard label="Desconto" value={formatCurrency(comandaSelecionada.desconto)} />
-              <InfoCard label="Acrescimo" value={formatCurrency(comandaSelecionada.acrescimo)} />
+              <InfoCard label="Acréscimo" value={formatCurrency(comandaSelecionada.acrescimo)} />
             </div>
           </div>
 
           {comandaSelecionada.status !== "fechada" &&
           comandaSelecionada.status !== "cancelada" ? (
-            <div className="mt-5 space-y-3 border-t border-zinc-200 pt-5">
+            <div className="mt-4 space-y-3 border-t border-zinc-200 pt-4">
               <div className="text-sm font-semibold text-zinc-800">Ajustes da venda</div>
               <div className="grid grid-cols-2 gap-3">
                 <MoneyField
@@ -88,7 +85,7 @@ export default function CaixaResumo({
                   onChange={setDescontoInput}
                 />
                 <MoneyField
-                  label="Acrescimo"
+                  label="Acréscimo"
                   value={acrescimoInput}
                   onChange={setAcrescimoInput}
                 />
@@ -125,7 +122,7 @@ function MoneyField({
       <input
         value={value}
         onChange={(e) => onChange(moneyMask(e.target.value))}
-        className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-zinc-900"
+        className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-2.5 text-sm outline-none transition focus:border-zinc-900"
         placeholder="0,00"
       />
     </div>

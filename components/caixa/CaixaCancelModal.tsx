@@ -58,7 +58,7 @@ export default function CaixaCancelModal({
             type="button"
             onClick={onClose}
             disabled={saving}
-            className="rounded-2xl border border-zinc-300 bg-white px-5 py-3 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-60"
+            className="rounded-2xl border border-zinc-300 bg-white px-5 py-2.5 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-60"
           >
             Voltar
           </button>
@@ -67,23 +67,23 @@ export default function CaixaCancelModal({
             type="button"
             onClick={() => onConfirm(motivoFinal)}
             disabled={saving || !podeConfirmar}
-            className="rounded-2xl bg-rose-600 px-5 py-3 text-sm font-bold text-white transition hover:opacity-95 disabled:opacity-60"
+            className="rounded-2xl bg-rose-600 px-5 py-2.5 text-sm font-bold text-white transition hover:opacity-95 disabled:opacity-60"
           >
             {saving ? "Cancelando..." : "Confirmar cancelamento"}
           </button>
         </>
       }
     >
-      <div className="space-y-4">
+      <div className="space-y-3">
         <div>
           <label className="mb-2 block text-sm font-semibold text-zinc-700">
-            Motivo padrao
+            Motivo padrão
           </label>
 
           <select
             value={tipoMotivoCancelamento}
             onChange={(e) => setTipoMotivoCancelamento(e.target.value)}
-            className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-zinc-900"
+            className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-2.5 text-sm outline-none transition focus:border-zinc-900"
           >
             <option value="">Selecione</option>
             {MOTIVOS_CANCELAMENTO_PADRAO.map((motivo) => (
@@ -96,7 +96,7 @@ export default function CaixaCancelModal({
 
         <div>
           <label className="mb-2 block text-sm font-semibold text-zinc-700">
-            Observacao
+            Observação
           </label>
 
           <textarea
@@ -104,7 +104,7 @@ export default function CaixaCancelModal({
             value={motivoCancelamento}
             onChange={(e) => setMotivoCancelamento(e.target.value)}
             placeholder="Descreva o motivo do cancelamento..."
-            className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-zinc-900"
+            className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-2.5 text-sm outline-none transition focus:border-zinc-900"
           />
         </div>
       </div>
