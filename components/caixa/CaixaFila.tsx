@@ -106,7 +106,7 @@ export default function CaixaFila({
               ))}
 
               {comandasFiltradas.length === 0 && agendamentosFiltrados.length === 0 ? (
-                <EmptyCard text="Nada encontrado na fila do caixa." />
+                <EmptyCard text="Nenhum atendimento encontrado na fila." />
               ) : null}
             </>
           ) : null}
@@ -124,7 +124,7 @@ export default function CaixaFila({
               ))}
 
               {comandasFechadas.length === 0 ? (
-                <EmptyCard text="Nenhuma comanda fechada hoje." />
+                <EmptyCard text="Nenhuma comanda fechada por enquanto." />
               ) : null}
             </>
           ) : null}
@@ -142,7 +142,7 @@ export default function CaixaFila({
               ))}
 
               {comandasCanceladas.length === 0 ? (
-                <EmptyCard text="Nenhuma comanda cancelada." />
+                <EmptyCard text="Nenhuma comanda cancelada por enquanto." />
               ) : null}
             </>
           ) : null}
