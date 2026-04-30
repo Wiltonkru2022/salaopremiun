@@ -122,6 +122,7 @@ export default function CaixaSidebar({
   const statusVenda = comandaSelecionada
     ? formatStatusVenda(comandaSelecionada.status)
     : "Sem venda";
+  const statusVendaTone = getStatusVendaTone(comandaSelecionada?.status);
 
   return (
     <>
@@ -168,6 +169,7 @@ export default function CaixaSidebar({
                   <SidebarInfo
                     label="Status da venda"
                     value={statusVenda}
+                    tone={statusVendaTone}
                   />
                 </div>
               </div>
@@ -323,16 +325,34 @@ function formatStatusVenda(status?: string | null) {
     .replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
+function getStatusVendaTone(status?: string | null) {
+  if (status === "fechada") return "emerald";
+  if (status === "cancelada") return "rose";
+  if (status === "aberta") return "sky";
+  return "zinc";
+}
+
 
 function SidebarInfo({
   label,
   value,
+  tone = "zinc",
 }: {
   label: string;
   value: string;
+  tone?: "emerald" | "rose" | "sky" | "zinc";
 }) {
+  const toneClass =
+    tone === "emerald"
+      ? "border-emerald-200 bg-emerald-50"
+      : tone === "rose"
+        ? "border-rose-200 bg-rose-50"
+        : tone === "sky"
+          ? "border-sky-200 bg-sky-50"
+          : "border-zinc-200 bg-zinc-50";
+
   return (
-    <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3.5">
+    <div className={`rounded-2xl border px-4 py-3.5 ${toneClass}`}>
       <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-400">
         {label}
       </div>
