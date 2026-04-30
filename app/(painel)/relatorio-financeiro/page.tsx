@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import AppLoading from "@/components/ui/AppLoading";
+import AppModal from "@/components/ui/AppModal";
 import { createClient } from "@/lib/supabase/client";
 import { getUsuarioLogado } from "@/lib/auth/getUsuarioLogado";
 import { hasPermission } from "@/lib/auth/permissions";
@@ -10,6 +11,7 @@ import {
   BadgeDollarSign,
   CalendarDays,
   CreditCard,
+  Printer,
   Receipt,
   Scissors,
   Search,
@@ -101,6 +103,8 @@ type ResumoCaixa = {
 
 type StatusFiltro = "fechada" | "cancelada" | "todos";
 type PainelLateralTab = "pagamentos" | "comissoes";
+type PrintSectionKey = "vendas" | "pagamentos" | "comissoes";
+type PrintSelection = Record<PrintSectionKey, boolean>;
 
 function toArray<T>(value: T | T[] | null | undefined): T[] {
   if (!value) return [];
@@ -220,6 +224,12 @@ export default function RelatorioFinanceiroPage() {
   const [statusFiltro, setStatusFiltro] = useState<StatusFiltro>("fechada");
   const [painelLateralTab, setPainelLateralTab] =
     useState<PainelLateralTab>("pagamentos");
+  const [printModalOpen, setPrintModalOpen] = useState(false);
+  const [printSelection, setPrintSelection] = useState<PrintSelection>({
+    vendas: true,
+    pagamentos: true,
+    comissoes: true,
+  });
 
   const [comandas, setComandas] = useState<ComandaRow[]>([]);
   const [pagamentos, setPagamentos] = useState<PagamentoRow[]>([]);
@@ -581,6 +591,55 @@ export default function RelatorioFinanceiroPage() {
     };
   }, [comissoesFiltradas]);
 
+  const totalSecoesSelecionadas = useMemo(
+    () => Object.values(printSelection).filter(Boolean).length,
+    [printSelection]
+  );
+
+  const togglePrintSelection = useCallback((key: PrintSectionKey) => {
+    setPrintSelection((current) => ({
+      ...current,
+      [key]: !current[key],
+    }));
+  }, []);
+
+  const marcarTodasSecoes = useCallback(() => {
+    setPrintSelection({
+      vendas: true,
+      pagamentos: true,
+      comissoes: true,
+    });
+  }, []);
+
+  const imprimirRelatorio = useCallback(() => {
+    const sections = Object.entries(printSelection)
+      .filter(([, enabled]) => enabled)
+      .map(([key]) => key);
+
+    if (sections.length === 0) {
+      setMsg("Selecione ao menos uma parte do relatório para imprimir.");
+      return;
+    }
+
+    setMsg("");
+    setPrintModalOpen(false);
+
+    const body = document.body;
+    body.setAttribute("data-print-relatorio", sections.join(" "));
+
+    const cleanup = () => {
+      body.removeAttribute("data-print-relatorio");
+      window.removeEventListener("afterprint", cleanup);
+    };
+
+    window.addEventListener("afterprint", cleanup);
+    window.print();
+
+    window.setTimeout(() => {
+      cleanup();
+    }, 1500);
+  }, [printSelection]);
+
   if (loading) {
     return (
       <AppLoading
@@ -613,7 +672,58 @@ export default function RelatorioFinanceiroPage() {
   }
 
   return (
-    <div className="bg-white">
+    <div className="bg-white" data-print-root>
+      <style jsx global>{`
+        @media print {
+          body[data-print-relatorio] [data-no-print] {
+            display: none !important;
+          }
+
+          body[data-print-relatorio] [data-print-header] {
+            display: block !important;
+          }
+
+          body[data-print-relatorio] [data-print-section] {
+            display: none !important;
+          }
+
+          body[data-print-relatorio~="vendas"] [data-print-section="vendas"] {
+            display: block !important;
+          }
+
+          body[data-print-relatorio~="pagamentos"] [data-print-section="pagamentos"] {
+            display: block !important;
+          }
+
+          body[data-print-relatorio~="comissoes"] [data-print-section="comissoes"] {
+            display: block !important;
+          }
+
+          body[data-print-relatorio] [data-print-card] {
+            border: 1px solid #d4d4d8 !important;
+            border-radius: 18px !important;
+            box-shadow: none !important;
+            break-inside: avoid;
+          }
+
+          body[data-print-relatorio] table {
+            width: 100% !important;
+          }
+        }
+      `}</style>
+
+      <div className="mx-auto hidden max-w-[1800px] pb-6" data-print-header>
+        <div className="border-b border-zinc-300 pb-4">
+          <div className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-500">
+            Relatório financeiro
+          </div>
+          <div className="mt-1 text-3xl font-bold text-zinc-950">Resumo para impressão</div>
+          <div className="mt-2 text-sm text-zinc-600">
+            Período de {dataInicio} até {dataFim}
+          </div>
+        </div>
+      </div>
+
       <div className="mx-auto max-w-[1800px] space-y-5">
         <div className="rounded-[28px] border border-zinc-200 bg-white p-4 text-zinc-950 shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-4">
@@ -629,11 +739,22 @@ export default function RelatorioFinanceiroPage() {
               </p>
             </div>
 
-            <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-right">
-              <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-                Vendas fechadas
+            <div className="flex flex-wrap items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setPrintModalOpen(true)}
+                className="inline-flex items-center justify-center gap-2 rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-50"
+              >
+                <Printer size={16} />
+                Imprimir
+              </button>
+
+              <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-right">
+                <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+                  Vendas fechadas
+                </div>
+                <div className="mt-1 text-2xl font-bold">{resumo.quantidadeVendas}</div>
               </div>
-              <div className="mt-1 text-2xl font-bold">{resumo.quantidadeVendas}</div>
             </div>
           </div>
         </div>
@@ -650,7 +771,7 @@ export default function RelatorioFinanceiroPage() {
           </div>
         ) : null}
 
-        <div className="rounded-[28px] border border-zinc-200 bg-white p-4 shadow-sm">
+        <div className="rounded-[28px] border border-zinc-200 bg-white p-4 shadow-sm" data-no-print>
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-5">
             <div className="xl:col-span-2">
               <label className="mb-2 block text-sm font-semibold text-zinc-700">
@@ -824,7 +945,11 @@ export default function RelatorioFinanceiroPage() {
         </section>
 
         <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1.2fr_0.8fr]">
-          <div className="overflow-hidden rounded-[28px] border border-zinc-200 bg-white shadow-sm">
+          <div
+            className="overflow-hidden rounded-[28px] border border-zinc-200 bg-white shadow-sm"
+            data-print-section="vendas"
+            data-print-card
+          >
             <div className="border-b border-zinc-200 px-5 py-4">
               <div className="text-lg font-bold text-zinc-900">Vendas do período</div>
               <div className="mt-1 text-sm text-zinc-500">
@@ -893,8 +1018,8 @@ export default function RelatorioFinanceiroPage() {
             </div>
           </div>
 
-          <div className="space-y-5">
-            <div className="rounded-[28px] border border-zinc-200 bg-white p-4 shadow-sm">
+            <div className="space-y-5">
+            <div className="rounded-[28px] border border-zinc-200 bg-white p-4 shadow-sm" data-no-print>
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <div className="text-lg font-bold text-zinc-900">Painel lateral</div>
@@ -934,6 +1059,8 @@ export default function RelatorioFinanceiroPage() {
               className={`overflow-hidden rounded-[28px] border border-zinc-200 bg-white shadow-sm ${
                 painelLateralTab === "pagamentos" ? "block" : "hidden"
               }`}
+              data-print-section="pagamentos"
+              data-print-card
             >
               <div className="border-b border-zinc-200 px-5 py-4">
                 <div className="text-lg font-bold text-zinc-900">Pagamentos por forma</div>
@@ -968,6 +1095,8 @@ export default function RelatorioFinanceiroPage() {
               className={`overflow-hidden rounded-[28px] border border-zinc-200 bg-white shadow-sm ${
                 painelLateralTab === "comissoes" ? "block" : "hidden"
               }`}
+              data-print-section="comissoes"
+              data-print-card
             >
               <div className="border-b border-zinc-200 px-5 py-4">
                 <div className="text-lg font-bold text-zinc-900">Comissões do período</div>
@@ -1043,6 +1172,84 @@ export default function RelatorioFinanceiroPage() {
           </div>
         </div>
       </div>
+
+      <AppModal
+        open={printModalOpen}
+        onClose={() => setPrintModalOpen(false)}
+        title="Imprimir relatório"
+        description="Escolha o que vai sair na impressão deste período."
+        maxWidthClassName="max-w-2xl"
+        footer={
+          <>
+            <button
+              type="button"
+              onClick={() => setPrintModalOpen(false)}
+              className="inline-flex items-center justify-center rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50"
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              onClick={imprimirRelatorio}
+              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-zinc-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-zinc-800"
+            >
+              <Printer size={16} />
+              Imprimir agora
+            </button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4">
+            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
+              Período
+            </div>
+            <div className="mt-2 text-sm font-medium text-zinc-900">
+              De {dataInicio} até {dataFim}
+            </div>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-3">
+            <PrintOptionCard
+              checked={printSelection.vendas}
+              title="Vendas do período"
+              description="Tabela principal das comandas filtradas."
+              onToggle={() => togglePrintSelection("vendas")}
+            />
+            <PrintOptionCard
+              checked={printSelection.pagamentos}
+              title="Pagamentos por forma"
+              description="Resumo por Pix, dinheiro, cartão e outros."
+              onToggle={() => togglePrintSelection("pagamentos")}
+            />
+            <PrintOptionCard
+              checked={printSelection.comissoes}
+              title="Comissões do período"
+              description="Resumo e tabela curta das comissões filtradas."
+              onToggle={() => togglePrintSelection("comissoes")}
+            />
+          </div>
+
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-zinc-200 bg-white p-4">
+            <div>
+              <div className="text-sm font-semibold text-zinc-900">
+                {totalSecoesSelecionadas} parte(s) selecionada(s)
+              </div>
+              <div className="mt-1 text-xs text-zinc-500">
+                Você pode imprimir tudo ou só o que fizer sentido agora.
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={marcarTodasSecoes}
+              className="inline-flex items-center justify-center rounded-xl border border-zinc-300 bg-zinc-50 px-3 py-2 text-xs font-semibold text-zinc-700 transition hover:bg-zinc-100"
+            >
+              Imprimir tudo
+            </button>
+          </div>
+        </div>
+      </AppModal>
     </div>
   );
 }
@@ -1064,6 +1271,49 @@ function ResumoLateralCard({
       <div className="mt-2 text-xl font-bold text-zinc-950">{value}</div>
       <div className="mt-1 text-xs text-zinc-500">{helper}</div>
     </div>
+  );
+}
+
+function PrintOptionCard({
+  checked,
+  title,
+  description,
+  onToggle,
+}: {
+  checked: boolean;
+  title: string;
+  description: string;
+  onToggle: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      className={`rounded-[22px] border p-4 text-left transition ${
+        checked
+          ? "border-zinc-900 bg-zinc-900 text-white"
+          : "border-zinc-200 bg-white text-zinc-900 hover:bg-zinc-50"
+      }`}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <div className="text-sm font-semibold">{title}</div>
+          <div className={`mt-2 text-xs leading-5 ${checked ? "text-zinc-300" : "text-zinc-500"}`}>
+            {description}
+          </div>
+        </div>
+
+        <span
+          className={`inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-md border text-[11px] font-bold ${
+            checked
+              ? "border-white/30 bg-white/10 text-white"
+              : "border-zinc-300 bg-zinc-50 text-zinc-500"
+          }`}
+        >
+          {checked ? "✓" : ""}
+        </span>
+      </div>
+    </button>
   );
 }
 
