@@ -143,6 +143,8 @@ const initialAcesso: ProfissionalAcesso = {
   possuiCadastro: false,
 };
 
+const FOTO_BUCKET_CANDIDATES = ["profissionais", "avatars", "images"];
+
 function classNames(...classes: string[]) {
   return classes.filter(Boolean).join(" ");
 }
@@ -445,17 +447,32 @@ export default function ProfissionalForm({
     const ext = fotoFile.name.split(".").pop();
     const fileName = `${idSalao}/${idProfissional}-${Date.now()}.${ext}`;
 
-    const { error: uploadError } = await supabase.storage
-      .from("profissionais")
-      .upload(fileName, fotoFile, {
-        cacheControl: "3600",
-        upsert: true,
-      });
+    let lastError: Error | null = null;
 
-    if (uploadError) throw uploadError;
+    for (const bucket of FOTO_BUCKET_CANDIDATES) {
+      const { error: uploadError } = await supabase.storage
+        .from(bucket)
+        .upload(fileName, fotoFile, {
+          cacheControl: "3600",
+          upsert: true,
+        });
 
-    const { data } = supabase.storage.from("profissionais").getPublicUrl(fileName);
-    return data.publicUrl;
+      if (!uploadError) {
+        const { data } = supabase.storage.from(bucket).getPublicUrl(fileName);
+        return data.publicUrl;
+      }
+
+      lastError = uploadError;
+
+      if (!/Bucket not found/i.test(uploadError.message || "")) {
+        throw uploadError;
+      }
+    }
+
+    throw (
+      lastError ||
+      new Error("Nenhum bucket de fotos foi encontrado para enviar a imagem.")
+    );
   }
 async function salvarAcessoProfissional(idProfissional: string) {
   const cpfLimpo = onlyDigits(acesso.cpf || form.cpf);
