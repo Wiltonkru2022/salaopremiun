@@ -293,6 +293,8 @@ export default function CaixaPage() {
               comandasAtivas={comandasFila.length}
               comandasFechadasHoje={comandasFechadas.length}
               totalEmAberto={comandasFila.length + agendamentosFila.length}
+              caixaAberto={caixaAberto}
+              onAbrirSessao={() => setSessaoOpen(true)}
             />
 
             {!podeOperarCaixa || erroTela || msg || comandaSelecionada ? (

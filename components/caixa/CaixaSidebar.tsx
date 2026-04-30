@@ -1,7 +1,7 @@
 "use client";
 
-import { type ReactNode, useEffect, useState } from "react";
-import { ReceiptText, WalletCards } from "lucide-react";
+import { useEffect, useState } from "react";
+import { ReceiptText } from "lucide-react";
 import CaixaPagamentos from "@/components/caixa/CaixaPagamentos";
 import CaixaResumo from "@/components/caixa/CaixaResumo";
 import CaixaSessaoPanel from "@/components/caixa/CaixaSessaoPanel";
@@ -180,15 +180,6 @@ export default function CaixaSidebar({
                     >
                       {caixaAberto ? "Caixa aberto" : "Caixa fechado"}
                     </span>
-                  </div>
-
-                  <div className="mt-4 grid grid-cols-1 gap-3">
-                    <ActionButton
-                      icon={<WalletCards size={16} />}
-                      label="Sessao do caixa"
-                      description="Abrir, fechar e lancar movimentos em foco."
-                      onClick={() => setSessaoOpen(true)}
-                    />
                   </div>
 
                   <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -397,36 +388,6 @@ function ToggleButton({
       }`}
     >
       <span className="line-clamp-1 block">{label}</span>
-    </button>
-  );
-}
-
-function ActionButton({
-  icon,
-  label,
-  description,
-  onClick,
-}: {
-  icon: ReactNode;
-  label: string;
-  description: string;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="rounded-[24px] border border-zinc-200 bg-white px-4 py-4 text-left transition hover:-translate-y-0.5 hover:border-zinc-300 hover:shadow-sm"
-    >
-      <div className="flex items-start gap-3">
-        <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-3 text-zinc-700">
-          {icon}
-        </div>
-        <div className="min-w-0">
-          <div className="text-sm font-semibold text-zinc-900">{label}</div>
-          <div className="mt-1 break-words text-xs leading-5 text-zinc-500">{description}</div>
-        </div>
-      </div>
     </button>
   );
 }
