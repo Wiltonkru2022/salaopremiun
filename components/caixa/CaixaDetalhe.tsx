@@ -92,22 +92,22 @@ export default function CaixaDetalhe({
 
   return (
     <div className="flex h-full min-h-0 flex-col rounded-[28px] border border-zinc-200 bg-white p-5 shadow-sm">
-      <div className="shrink-0 space-y-3">
-        <div className={`rounded-[24px] border p-4 ${status.cardClass}`}>
+      <div className="shrink-0 space-y-2.5">
+        <div className={`rounded-[22px] border p-3.5 ${status.cardClass}`}>
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="max-w-2xl">
               <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-400">
                 Comanda
               </div>
-              <div className="mt-2 flex flex-wrap items-center gap-2">
-                <h2 className="text-[1.7rem] font-bold leading-none text-zinc-950">
+              <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                <h2 className="text-[1.45rem] font-bold leading-none text-zinc-950">
                   #{comandaSelecionada.numero}
                 </h2>
                 <span className={`rounded-full border px-3 py-1 text-xs font-semibold uppercase ${status.badgeClass}`}>
                   {status.label}
                 </span>
               </div>
-              <div className="mt-1 text-sm text-zinc-600">
+              <div className="mt-1 text-[13px] leading-5 text-zinc-600">
                 {carregandoDetalhe
                   ? "Atualizando os dados da comanda..."
                   : status.description}
@@ -147,7 +147,7 @@ export default function CaixaDetalhe({
             ) : null}
           </div>
 
-          <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          <div className="mt-3 grid gap-2.5 md:grid-cols-2 xl:grid-cols-4">
             <HighlightCard
               label="Cliente"
               value={getJoinedName(comandaSelecionada.clientes, "Sem cliente")}
@@ -166,19 +166,19 @@ export default function CaixaDetalhe({
         </div>
 
         {podeEditar ? (
-          <div className="rounded-[24px] border border-zinc-200 bg-zinc-50 p-4">
-            <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+          <div className="rounded-[22px] border border-zinc-200 bg-zinc-50 p-3.5">
+            <div className="mb-2.5 flex flex-wrap items-center justify-between gap-3">
               <div>
                 <div className="text-sm font-semibold text-zinc-800">
                   Lancar item manual
                 </div>
-                <div className="mt-1 text-sm text-zinc-500">
+                <div className="mt-0.5 text-[13px] leading-5 text-zinc-500">
                   Adicione servico, produto, extra ou ajuste sem sair da venda.
                 </div>
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+            <div className="grid grid-cols-2 gap-2.5 xl:grid-cols-4">
               <ActionCard icon={<Scissors size={16} />} label="Servico" onClick={onNovoServico} />
               <ActionCard icon={<ShoppingBag size={16} />} label="Produto" onClick={onNovoProduto} />
               <ActionCard icon={<WalletCards size={16} />} label="Extra" onClick={onNovoExtra} />
@@ -291,7 +291,7 @@ export default function CaixaDetalhe({
 
 function HeaderStat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3">
+    <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-3.5 py-2.5">
       <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
         {label}
       </div>
@@ -317,9 +317,9 @@ function HighlightCard({
       : "border-zinc-200 bg-white text-zinc-900";
 
   return (
-    <div className={`rounded-2xl border px-4 py-3.5 ${toneClass}`}>
+    <div className={`rounded-2xl border px-3.5 py-2.5 ${toneClass}`}>
       <div className="text-[11px] uppercase tracking-[0.14em] text-zinc-500">{label}</div>
-      <div className="mt-2 break-words text-sm font-semibold leading-5">{value}</div>
+      <div className="mt-1.5 break-words text-sm font-semibold leading-5">{value}</div>
     </div>
   );
 }
@@ -337,7 +337,7 @@ function ActionCard({
     <button
       type="button"
       onClick={onClick}
-      className="flex items-center justify-center gap-2 rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm font-semibold text-zinc-800 transition hover:border-zinc-300 hover:bg-zinc-100"
+      className="flex items-center justify-center gap-2 rounded-2xl border border-zinc-200 bg-white px-3.5 py-2.5 text-sm font-semibold text-zinc-800 transition hover:border-zinc-300 hover:bg-zinc-100"
     >
       {icon}
       {label}
