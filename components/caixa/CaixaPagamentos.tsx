@@ -32,6 +32,15 @@ function getFormaPagamentoLabel(value?: string | null) {
     .replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
+function getFormaPagamentoTone(value?: string | null) {
+  if (value === "pix") return "sky";
+  if (value === "dinheiro") return "emerald";
+  if (value === "credito") return "violet";
+  if (value === "debito") return "amber";
+  if (value === "credito_cliente") return "rose";
+  return "zinc";
+}
+
 type Props = {
   comandaSelecionada: ComandaDetalhe | null;
   repassaTaxaCliente: boolean;
@@ -178,8 +187,14 @@ export default function CaixaPagamentos({
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
-                    <div className="font-semibold capitalize text-zinc-900">
-                      {getFormaPagamentoLabel(pagamento.forma_pagamento)}
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-semibold text-zinc-900">
+                        {getFormaPagamentoLabel(pagamento.forma_pagamento)}
+                      </span>
+                      <PaymentChip
+                        label={getFormaPagamentoLabel(pagamento.forma_pagamento)}
+                        tone={getFormaPagamentoTone(pagamento.forma_pagamento)}
+                      />
                     </div>
 
                     <div className="mt-0.5 text-sm text-zinc-500">
@@ -518,5 +533,34 @@ function InfoRow({ label, value }: { label: string; value: string }) {
       <span className="text-sm text-zinc-500">{label}</span>
       <span className="text-sm font-semibold text-zinc-900">{value}</span>
     </div>
+  );
+}
+
+function PaymentChip({
+  label,
+  tone,
+}: {
+  label: string;
+  tone: "amber" | "emerald" | "rose" | "sky" | "violet" | "zinc";
+}) {
+  const toneClass =
+    tone === "amber"
+      ? "border-amber-200 bg-amber-50 text-amber-700"
+      : tone === "emerald"
+        ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+        : tone === "rose"
+          ? "border-rose-200 bg-rose-50 text-rose-700"
+          : tone === "sky"
+            ? "border-sky-200 bg-sky-50 text-sky-700"
+            : tone === "violet"
+              ? "border-violet-200 bg-violet-50 text-violet-700"
+              : "border-zinc-200 bg-zinc-100 text-zinc-600";
+
+  return (
+    <span
+      className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] ${toneClass}`}
+    >
+      {label}
+    </span>
   );
 }
