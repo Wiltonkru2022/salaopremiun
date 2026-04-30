@@ -53,6 +53,11 @@ function getFormaPagamentoCardClass(value?: string | null) {
   return "border-zinc-200 bg-zinc-50";
 }
 
+function getParcelasLabel(parcelas?: number | null) {
+  if (!parcelas || parcelas <= 1) return "À vista";
+  return `${parcelas}x`;
+}
+
 type Props = {
   comandaSelecionada: ComandaDetalhe | null;
   repassaTaxaCliente: boolean;
@@ -211,9 +216,18 @@ export default function CaixaPagamentos({
                       />
                     </div>
 
-                    <div className="mt-0.5 text-sm text-zinc-500">
-                      {formatCurrency(pagamento.valor)}
-                      {pagamento.parcelas > 1 ? ` - ${pagamento.parcelas}x` : ""}
+                    <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-zinc-500">
+                      <span className="font-medium text-zinc-700">
+                        {formatCurrency(pagamento.valor)}
+                      </span>
+                      <span className="rounded-full border border-zinc-200 bg-white px-2 py-0.5 text-[11px] font-medium text-zinc-600">
+                        {getParcelasLabel(pagamento.parcelas)}
+                      </span>
+                      {taxaPercentualItem > 0 || taxaValorItem > 0 ? (
+                        <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700">
+                          Com taxa
+                        </span>
+                      ) : null}
                     </div>
 
                     {Number(pagamento.valor_credito_cliente || 0) > 0 ? (
