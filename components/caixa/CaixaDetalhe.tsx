@@ -92,14 +92,14 @@ export default function CaixaDetalhe({
 
   return (
     <div className="flex h-full min-h-0 flex-col rounded-[28px] border border-zinc-200 bg-white p-5 shadow-sm">
-      <div className="shrink-0 space-y-2.5">
-        <div className={`rounded-[22px] border p-3.5 ${status.cardClass}`}>
+      <div className="shrink-0 space-y-2">
+        <div className={`rounded-[22px] border p-3 ${status.cardClass}`}>
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="max-w-2xl">
               <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-400">
                 Comanda
               </div>
-              <div className="mt-1.5 flex flex-wrap items-center gap-2">
+              <div className="mt-1 flex flex-wrap items-center gap-2">
                 <h2 className="text-[1.45rem] font-bold leading-none text-zinc-950">
                   #{comandaSelecionada.numero}
                 </h2>
@@ -107,7 +107,7 @@ export default function CaixaDetalhe({
                   {status.label}
                 </span>
               </div>
-              <div className="mt-1 text-[13px] leading-5 text-zinc-600">
+              <div className="mt-0.5 text-[13px] leading-5 text-zinc-600">
                 {carregandoDetalhe
                   ? "Atualizando os dados da comanda..."
                   : status.description}
@@ -147,7 +147,7 @@ export default function CaixaDetalhe({
             ) : null}
           </div>
 
-          <div className="mt-3 grid gap-2.5 md:grid-cols-2 xl:grid-cols-4">
+          <div className="mt-2.5 grid gap-2 md:grid-cols-2 xl:grid-cols-4">
             <HighlightCard
               label="Cliente"
               value={getJoinedName(comandaSelecionada.clientes, "Sem cliente")}
@@ -166,19 +166,16 @@ export default function CaixaDetalhe({
         </div>
 
         {podeEditar ? (
-          <div className="rounded-[22px] border border-zinc-200 bg-zinc-50 p-3.5">
-            <div className="mb-2.5 flex flex-wrap items-center justify-between gap-3">
+          <div className="rounded-[22px] border border-zinc-200 bg-zinc-50 p-3">
+            <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
               <div>
                 <div className="text-sm font-semibold text-zinc-800">
                   Lancar item manual
                 </div>
-                <div className="mt-0.5 text-[13px] leading-5 text-zinc-500">
-                  Adicione servico, produto, extra ou ajuste sem sair da venda.
-                </div>
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-2.5 xl:grid-cols-4">
+            <div className="grid grid-cols-2 gap-2 xl:grid-cols-4">
               <ActionCard icon={<Scissors size={16} />} label="Servico" onClick={onNovoServico} />
               <ActionCard icon={<ShoppingBag size={16} />} label="Produto" onClick={onNovoProduto} />
               <ActionCard icon={<WalletCards size={16} />} label="Extra" onClick={onNovoExtra} />
@@ -188,20 +185,17 @@ export default function CaixaDetalhe({
         ) : null}
       </div>
 
-      <div className="mt-4 min-h-0 flex-1 overflow-y-auto pr-1">
-        <div className="space-y-4">
+      <div className="mt-3 min-h-0 flex-1 overflow-y-auto pr-1">
+        <div className="space-y-3">
           <div className="rounded-[24px] border border-zinc-200 bg-white">
-          <div className="border-b border-zinc-200 px-6 py-5">
+          <div className="border-b border-zinc-200 px-5 py-4">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div className="max-w-2xl">
                 <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-400">
                   Leitura da venda
                 </div>
-                <div className="mt-1 text-[1.35rem] font-bold leading-tight text-zinc-900">
+                <div className="mt-1 text-[1.2rem] font-bold leading-tight text-zinc-900">
                   Itens da comanda
-                </div>
-                <div className="mt-1 text-sm text-zinc-500">
-                  Servicos, produtos, extras e ajustes agrupados para leitura mais rapida.
                 </div>
               </div>
 
@@ -218,7 +212,7 @@ export default function CaixaDetalhe({
             </div>
           </div>
 
-          <div className="space-y-5 p-6">
+          <div className="space-y-4 p-5">
             {itensAgrupados.map((group) => (
               <section key={group.tipo} className="space-y-3">
                 <div className="flex items-center justify-between gap-3 rounded-[20px] border border-zinc-200 bg-zinc-50 px-4 py-3">
