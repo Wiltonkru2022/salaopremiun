@@ -209,8 +209,8 @@ export default function CaixaSessaoPanel({
   }
 
   return (
-    <section className="rounded-[28px] border border-zinc-200 bg-white p-5 shadow-sm">
-      <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+    <section className="rounded-[28px] border border-zinc-200 bg-white p-4 shadow-sm">
+      <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
         <div>
           <div className="flex items-center gap-2">
             <WalletCards size={18} className="text-zinc-700" />
@@ -225,9 +225,6 @@ export default function CaixaSessaoPanel({
               {caixaAberto ? "Aberto" : "Fechado"}
             </span>
           </div>
-          <p className="mt-1 text-sm text-zinc-500">
-            Venda, pagamento e fechamento so devem acontecer com caixa aberto.
-          </p>
         </div>
 
         {sessao ? (
@@ -250,17 +247,14 @@ export default function CaixaSessaoPanel({
       </div>
 
       {!caixaAberto ? (
-        <div className="mt-5 grid gap-3 border-t border-zinc-100 pt-5 lg:grid-cols-[180px_minmax(0,1fr)_auto]">
+        <div className="mt-4 grid gap-3 border-t border-zinc-100 pt-4 lg:grid-cols-[180px_minmax(0,1fr)_auto]">
           {sessao?.status === "fechado" ? (
             <div className="lg:col-span-3">
-              <div className={`rounded-[24px] border px-4 py-4 ${fechamentoMeta.cardClass}`}>
+              <div className={`rounded-[24px] border px-4 py-3.5 ${fechamentoMeta.cardClass}`}>
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <div className="text-sm font-bold text-zinc-900">
                       Ultimo fechamento registrado
-                    </div>
-                    <div className="mt-1 text-sm text-zinc-600">
-                      O caixa anterior foi encerrado com este resultado.
                     </div>
                   </div>
                   <span
@@ -270,7 +264,7 @@ export default function CaixaSessaoPanel({
                   </span>
                 </div>
 
-                <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                <div className="mt-3 grid gap-3 sm:grid-cols-3">
                   <Info label="Previsto" value={formatCurrency(valorPrevistoSessao)} />
                   <Info label="Contado" value={formatCurrency(valorContadoSessao)} />
                   <Info
@@ -293,7 +287,7 @@ export default function CaixaSessaoPanel({
                 </div>
 
                 {sessao.observacoes ? (
-                  <div className="mt-4 rounded-2xl border border-white/70 bg-white/80 px-4 py-3 text-sm text-zinc-700">
+                  <div className="mt-3 rounded-2xl border border-white/70 bg-white/80 px-4 py-3 text-sm text-zinc-700">
                     <div className="font-semibold text-zinc-900">Observacao</div>
                     <div className="mt-1">{sessao.observacoes}</div>
                   </div>
@@ -311,10 +305,10 @@ export default function CaixaSessaoPanel({
             <input
               value={obsAbertura}
               onChange={(event) => setObsAbertura(event.target.value)}
-              className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-zinc-900"
-              placeholder="Ex.: abertura da manha"
-            />
-          </Field>
+            className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-2.5 text-sm outline-none transition focus:border-zinc-900"
+            placeholder="Ex.: abertura da manha"
+          />
+        </Field>
           <button
             type="button"
             disabled={saving}
@@ -324,16 +318,16 @@ export default function CaixaSessaoPanel({
                 observacoes: obsAbertura,
               })
             }
-            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-zinc-950 px-5 py-3 text-sm font-bold text-white transition hover:-translate-y-0.5 disabled:opacity-60 lg:self-end"
+            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-zinc-950 px-5 py-2.5 text-sm font-bold text-white transition hover:-translate-y-0.5 disabled:opacity-60 lg:self-end"
           >
             {saving ? <Loader2 className="animate-spin" size={16} /> : <DoorOpen size={16} />}
             Abrir caixa
           </button>
         </div>
       ) : (
-        <div className="mt-5 grid gap-5 border-t border-zinc-100 pt-5 xl:grid-cols-[1.1fr_0.9fr]">
-          <div className="rounded-[24px] border border-zinc-200 bg-zinc-50 p-4">
-            <div className="mb-4 text-sm font-bold text-zinc-900">
+        <div className="mt-4 grid gap-4 border-t border-zinc-100 pt-4 xl:grid-cols-[1.1fr_0.9fr]">
+          <div className="rounded-[24px] border border-zinc-200 bg-zinc-50 p-3.5">
+            <div className="mb-3 text-sm font-bold text-zinc-900">
               Sangria, suprimento ou vale
             </div>
             <div className="grid gap-3 md:grid-cols-2">
@@ -343,7 +337,7 @@ export default function CaixaSessaoPanel({
                   onChange={(event) =>
                     setTipoMovimento(event.target.value as CaixaMovimentacaoTipo)
                   }
-                  className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-zinc-900"
+                  className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-2.5 text-sm outline-none transition focus:border-zinc-900"
                 >
                   {MOVIMENTOS.map((item) => (
                     <option key={item.value} value={item.value}>
@@ -364,7 +358,7 @@ export default function CaixaSessaoPanel({
                   <select
                     value={profissionalMovimento}
                     onChange={(event) => setProfissionalMovimento(event.target.value)}
-                    className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-zinc-900"
+                    className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-2.5 text-sm outline-none transition focus:border-zinc-900"
                   >
                     <option value="">Selecione</option>
                     {profissionais.map((profissional) => (
@@ -387,7 +381,7 @@ export default function CaixaSessaoPanel({
                   <input
                     value={descricaoMovimento}
                     onChange={(event) => setDescricaoMovimento(event.target.value)}
-                    className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-zinc-900"
+                    className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-2.5 text-sm outline-none transition focus:border-zinc-900"
                     placeholder="Ex.: retirada para troco, vale do Joao..."
                   />
                 </Field>
@@ -407,21 +401,18 @@ export default function CaixaSessaoPanel({
                 setValorMovimento("");
                 setDescricaoMovimento("");
               }}
-              className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-zinc-950 px-5 py-3 text-sm font-bold text-white transition hover:-translate-y-0.5 disabled:opacity-60"
+              className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-zinc-950 px-5 py-2.5 text-sm font-bold text-white transition hover:-translate-y-0.5 disabled:opacity-60"
             >
               {saving ? <Loader2 className="animate-spin" size={16} /> : <WalletCards size={16} />}
               Lancar movimento
             </button>
           </div>
 
-          <div className="rounded-[24px] border border-zinc-200 bg-white p-4">
-            <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+          <div className="rounded-[24px] border border-zinc-200 bg-white p-3.5">
+            <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
               <div>
                 <div className="text-sm font-bold text-zinc-900">
                   Fechamento do caixa
-                </div>
-                <div className="mt-1 text-sm text-zinc-500">
-                  Conte o caixa e confirme a diferenca antes de fechar.
                 </div>
               </div>
 
@@ -465,7 +456,7 @@ export default function CaixaSessaoPanel({
                 <input
                   value={obsFechamento}
                   onChange={(event) => setObsFechamento(event.target.value)}
-                  className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-zinc-900"
+                  className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-2.5 text-sm outline-none transition focus:border-zinc-900"
                   placeholder="Ex.: fechamento do dia, falta no troco, ajuste manual..."
                 />
               </Field>
@@ -490,7 +481,7 @@ export default function CaixaSessaoPanel({
                     observacoes: observacoesComDiferenca,
                   });
                 }}
-                className="inline-flex items-center justify-center gap-2 rounded-2xl border border-zinc-300 bg-white px-5 py-3 text-sm font-bold text-zinc-900 transition hover:bg-zinc-50 disabled:opacity-60"
+                className="inline-flex items-center justify-center gap-2 rounded-2xl border border-zinc-300 bg-white px-5 py-2.5 text-sm font-bold text-zinc-900 transition hover:bg-zinc-50 disabled:opacity-60"
               >
                 {saving ? <Loader2 className="animate-spin" size={16} /> : <DoorClosed size={16} />}
                 Fechar caixa
@@ -501,8 +492,8 @@ export default function CaixaSessaoPanel({
       )}
 
       {movimentacoes.length > 0 ? (
-        <div className="mt-5 border-t border-zinc-100 pt-5">
-          <div className="mb-3 text-sm font-bold text-zinc-900">
+        <div className="mt-4 border-t border-zinc-100 pt-4">
+          <div className="mb-2.5 text-sm font-bold text-zinc-900">
             Ultimos movimentos
           </div>
           <div className="grid gap-2 lg:grid-cols-3">
