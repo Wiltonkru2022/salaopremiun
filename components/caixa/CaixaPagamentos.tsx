@@ -21,6 +21,17 @@ const FORMAS_PAGAMENTO = [
   { value: "credito_cliente", label: "Crédito da cliente" },
 ];
 
+function getFormaPagamentoLabel(value?: string | null) {
+  if (!value) return "Pagamento";
+
+  const found = FORMAS_PAGAMENTO.find((item) => item.value === value);
+  if (found) return found.label;
+
+  return value
+    .replaceAll("_", " ")
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
 type Props = {
   comandaSelecionada: ComandaDetalhe | null;
   repassaTaxaCliente: boolean;
@@ -168,7 +179,7 @@ export default function CaixaPagamentos({
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
                     <div className="font-semibold capitalize text-zinc-900">
-                      {pagamento.forma_pagamento}
+                      {getFormaPagamentoLabel(pagamento.forma_pagamento)}
                     </div>
 
                     <div className="mt-0.5 text-sm text-zinc-500">
