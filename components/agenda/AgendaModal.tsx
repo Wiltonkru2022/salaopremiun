@@ -70,6 +70,7 @@ export default function AgendaModal(props: Props) {
     horaFimPreview,
     getTituloWhatsapp,
     abrirWhatsappMensagem,
+    whatsappLiberado,
     handleClienteChange,
     handleAbrirComanda,
     handleCriarNovaComandaParaClienteAtual,
@@ -182,6 +183,8 @@ export default function AgendaModal(props: Props) {
       dicas={dicas}
       dicaIndex={dicaIndex}
       tituloWhatsapp={getTituloWhatsapp()}
+      whatsappLiberado={whatsappLiberado}
+      upgradeTarget={upgradeTarget}
       onChangeWhatsapp={setWhatsMensagem}
       onAbrirWhatsapp={abrirWhatsappMensagem}
     />

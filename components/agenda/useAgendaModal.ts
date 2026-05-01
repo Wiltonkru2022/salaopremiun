@@ -146,6 +146,10 @@ export function useAgendaModal({
   const [planoAccess, setPlanoAccess] = useState<{
     planoNome?: string;
     planoCodigo?: string;
+    recursos?: {
+      whatsapp?: boolean;
+      marketing?: boolean;
+    };
     limites?: {
       clientes?: number | null;
       agendamentosMensais?: number | null;
@@ -383,6 +387,9 @@ export function useAgendaModal({
     limiteAgendamentosMensais != null &&
     usoAgendamentosMensais >= limiteAgendamentosMensais;
   const upgradeTarget = getUpgradeTarget(planoAccess?.planoCodigo);
+  const whatsappLiberado =
+    planoAccess?.recursos?.whatsapp === true ||
+    planoAccess?.recursos?.marketing === true;
 
   useEffect(() => {
     if (mode !== "agendamento") return;
@@ -437,6 +444,15 @@ export function useAgendaModal({
   }
 
   function abrirWhatsappMensagem() {
+    if (!whatsappLiberado) {
+      abrirAviso(
+        "WhatsApp premium",
+        "O disparo e a operação de comunicação ficam disponíveis quando o salão sobe para Pro ou Premium.",
+        "warning"
+      );
+      return;
+    }
+
     const phone = getClienteWhatsapp();
     const encoded = encodeURIComponent(whatsMensagem);
 
@@ -765,6 +781,7 @@ export function useAgendaModal({
     horaFimPreview,
     getTituloWhatsapp,
     abrirWhatsappMensagem,
+    whatsappLiberado,
     handleClienteChange,
     handleAbrirComanda,
     handleQuickCreateClient,

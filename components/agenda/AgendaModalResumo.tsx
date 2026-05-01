@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { ExternalLink } from "lucide-react";
 import { normalizeTimeString } from "@/lib/utils/agenda";
 import type {
@@ -23,6 +24,8 @@ type Props = {
   dicas: string[];
   dicaIndex: number;
   tituloWhatsapp: string;
+  whatsappLiberado: boolean;
+  upgradeTarget: "pro" | "premium";
   onChangeWhatsapp: (value: string) => void;
   onAbrirWhatsapp: () => void;
 };
@@ -41,6 +44,8 @@ export default function AgendaModalResumo({
   dicas,
   dicaIndex,
   tituloWhatsapp,
+  whatsappLiberado,
+  upgradeTarget,
   onChangeWhatsapp,
   onAbrirWhatsapp,
 }: Props) {
@@ -155,7 +160,9 @@ export default function AgendaModalResumo({
               {tituloWhatsapp}
             </div>
             <p className="mt-1 text-xs leading-5 text-zinc-500">
-              A mensagem acompanha o status do agendamento.
+              {whatsappLiberado
+                ? "A mensagem acompanha o status do agendamento."
+                : "A mensagem fica preparada aqui, mas o disparo entra no Pro ou Premium."}
             </p>
           </div>
 
@@ -167,14 +174,31 @@ export default function AgendaModalResumo({
             />
           </div>
 
-          <button
-            type="button"
-            onClick={onAbrirWhatsapp}
-            className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-95"
-          >
-            <ExternalLink size={15} />
-            Abrir WhatsApp
-          </button>
+          {whatsappLiberado ? (
+            <button
+              type="button"
+              onClick={onAbrirWhatsapp}
+              className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-95"
+            >
+              <ExternalLink size={15} />
+              Abrir WhatsApp
+            </button>
+          ) : (
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Link
+                href="/comparar-planos"
+                className="inline-flex flex-1 items-center justify-center rounded-2xl border border-zinc-300 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-50"
+              >
+                Comparar planos
+              </Link>
+              <Link
+                href={`/assinatura?plano=${upgradeTarget}`}
+                className="inline-flex flex-1 items-center justify-center rounded-2xl bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-95"
+              >
+                Fazer upgrade
+              </Link>
+            </div>
+          )}
         </div>
       ) : null}
 
