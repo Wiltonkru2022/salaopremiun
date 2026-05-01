@@ -3,14 +3,15 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import AppLoading from "@/components/ui/AppLoading";
-import { createClient } from "@/lib/supabase/client";
-import { getUsuarioLogado } from "@/lib/auth/getUsuarioLogado";
+import { usePlanoAccessSnapshot } from "@/components/plans/usePlanoAccessSnapshot";
 import ConfirmActionModal from "@/components/ui/ConfirmActionModal";
+import AppLoading from "@/components/ui/AppLoading";
 import {
   buildPermissoesByNivel,
   sanitizePermissoesDb,
 } from "@/lib/auth/permissions";
+import { getUsuarioLogado } from "@/lib/auth/getUsuarioLogado";
+import { createClient } from "@/lib/supabase/client";
 
 type ItemExtra = {
   id: string;
@@ -32,9 +33,17 @@ function formatCurrency(value?: number | null) {
   });
 }
 
+function formatQuantidade(value?: number | null) {
+  return Number(value || 0).toLocaleString("pt-BR", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  });
+}
+
 export default function ServicosExtrasPage() {
   const supabase = createClient();
   const router = useRouter();
+  const { planoAccess, upgradeTarget } = usePlanoAccessSnapshot(true);
 
   const [loading, setLoading] = useState(true);
   const [savingId, setSavingId] = useState<string | null>(null);
@@ -44,12 +53,12 @@ export default function ServicosExtrasPage() {
   const [idSalao, setIdSalao] = useState("");
   const [itens, setItens] = useState<ItemExtra[]>([]);
   const [itemParaExcluir, setItemParaExcluir] = useState<string | null>(null);
-
   const [permissoes, setPermissoes] = useState<Permissoes | null>(null);
   const [nivel, setNivel] = useState("");
   const [acessoCarregado, setAcessoCarregado] = useState(false);
 
   const podeGerenciar = nivel === "admin" || nivel === "gerente";
+  const estoqueLiberado = planoAccess?.recursos?.estoque !== false;
 
   const carregarAcesso = useCallback(async () => {
     const {
@@ -80,7 +89,9 @@ export default function ServicosExtrasPage() {
 
     const { data: permissoesDb } = await supabase
       .from("usuarios_permissoes")
-      .select("agenda_criar, agenda_editar, agenda_excluir, agenda_ver, caixa_fechar, caixa_operar, caixa_ver, clientes_criar, clientes_editar, clientes_excluir, clientes_ver, comandas_criar, comandas_editar, comandas_excluir, comandas_ver, comissoes_pagar, comissoes_ver, configuracoes_editar, configuracoes_ver, estoque_movimentar, estoque_ver, id, id_salao, id_usuario, produtos_criar, produtos_editar, produtos_excluir, produtos_ver, profissionais_criar, profissionais_editar, profissionais_excluir, profissionais_ver, relatorios_ver, servicos_criar, servicos_editar, servicos_excluir, servicos_ver, vendas_excluir, vendas_reabrir, vendas_ver")
+      .select(
+        "agenda_criar, agenda_editar, agenda_excluir, agenda_ver, caixa_fechar, caixa_operar, caixa_ver, clientes_criar, clientes_editar, clientes_excluir, clientes_ver, comandas_criar, comandas_editar, comandas_excluir, comandas_ver, comissoes_pagar, comissoes_ver, configuracoes_editar, configuracoes_ver, estoque_movimentar, estoque_ver, id, id_salao, id_usuario, produtos_criar, produtos_editar, produtos_excluir, produtos_ver, profissionais_criar, profissionais_editar, profissionais_excluir, profissionais_ver, relatorios_ver, servicos_criar, servicos_editar, servicos_excluir, servicos_ver, vendas_excluir, vendas_reabrir, vendas_ver"
+      )
       .eq("id_usuario", usuario.id)
       .eq("id_salao", usuario.id_salao)
       .maybeSingle();
@@ -102,7 +113,6 @@ export default function ServicosExtrasPage() {
 
     return {
       idSalao: usuario.id_salao,
-      nivel: String(usuario.nivel || "").toLowerCase(),
       permissoes: permissoesFinal,
     };
   }, [router, supabase]);
@@ -111,21 +121,13 @@ export default function ServicosExtrasPage() {
     async (salaoId: string) => {
       const { data, error } = await supabase
         .from("itens_extras")
-        .select(`
-          id,
-          nome,
-          categoria,
-          descricao,
-          preco_venda,
-          custo,
-          controla_estoque,
-          estoque_atual
-        `)
+        .select(
+          "id, nome, categoria, descricao, preco_venda, custo, controla_estoque, estoque_atual"
+        )
         .eq("id_salao", salaoId)
         .order("nome", { ascending: true });
 
       if (error) throw error;
-
       setItens((data as ItemExtra[]) || []);
     },
     [supabase]
@@ -142,7 +144,6 @@ export default function ServicosExtrasPage() {
 
       const usuarioLogado = await getUsuarioLogado();
       const salaoIdFinal = usuarioLogado?.idSalao || acesso.idSalao;
-
       setIdSalao(salaoIdFinal);
       await carregarItens(salaoIdFinal);
     } catch (e: unknown) {
@@ -202,8 +203,8 @@ export default function ServicosExtrasPage() {
   if (loading || !acessoCarregado) {
     return (
       <AppLoading
-        title="Carregando servicos extras"
-        message="Aguarde enquanto montamos o catalogo de extras, custos e disponibilidade."
+        title="Carregando serviços extras"
+        message="Aguarde enquanto montamos o catálogo de extras, custos e disponibilidade."
         fullHeight={false}
       />
     );
@@ -223,8 +224,8 @@ export default function ServicosExtrasPage() {
     <>
       <ConfirmActionModal
         open={Boolean(itemParaExcluir)}
-        title="Excluir servico extra"
-        description="Este servico extra sera removido do catalogo e deixara de aparecer para novas comandas."
+        title="Excluir serviço extra"
+        description="Este serviço extra será removido do catálogo e deixará de aparecer para novas comandas."
         confirmLabel="Excluir extra"
         tone="danger"
         loading={Boolean(savingId)}
@@ -236,159 +237,192 @@ export default function ServicosExtrasPage() {
         }}
       />
 
-    <div className="bg-white">
-      <div className="mx-auto max-w-7xl space-y-6">
-        <div className="rounded-3xl border border-zinc-200 bg-white p-6 text-zinc-950 shadow-sm">
-          <div className="mt-2 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <div>
-              <h1 className="text-2xl font-bold md:text-3xl">Serviços Extras</h1>
-              <p className="mt-2 text-sm text-zinc-500">
-                Cadastre extras cobrados à parte, com preço, custo e estoque.
-              </p>
-            </div>
+      <div className="bg-white">
+        <div className="mx-auto max-w-7xl space-y-6">
+          <section className="rounded-3xl border border-zinc-200 bg-white p-6 text-zinc-950 shadow-sm">
+            <div className="mt-2 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+              <div>
+                <h1 className="text-2xl font-bold md:text-3xl">Serviços Extras</h1>
+                <p className="mt-2 text-sm text-zinc-500">
+                  {estoqueLiberado
+                    ? "Cadastre extras cobrados à parte, com preço, custo e estoque."
+                    : "Cadastre extras cobrados à parte, com preço e custo. O controle de estoque libera no Pro ou Premium."}
+                </p>
+              </div>
 
-            <div className="flex flex-wrap gap-3">
-              <Link
-                href="/servicos"
-                className="inline-flex items-center justify-center rounded-2xl border border-zinc-200 bg-white px-5 py-3 text-sm font-bold text-zinc-800 transition hover:bg-zinc-50"
-              >
-                Ver serviços
-              </Link>
-
-              {podeGerenciar ? (
+              <div className="flex flex-wrap gap-3">
                 <Link
-                  href="/servicos-extras/novo"
-                className="inline-flex items-center justify-center rounded-2xl bg-zinc-900 px-5 py-3 text-sm font-bold text-white transition hover:opacity-95"
+                  href="/servicos"
+                  className="inline-flex items-center justify-center rounded-2xl border border-zinc-200 bg-white px-5 py-3 text-sm font-bold text-zinc-800 transition hover:bg-zinc-50"
                 >
-                  + Novo extra
+                  Ver serviços
                 </Link>
-              ) : null}
+
+                {podeGerenciar ? (
+                  <Link
+                    href="/servicos-extras/novo"
+                    className="inline-flex items-center justify-center rounded-2xl bg-zinc-900 px-5 py-3 text-sm font-bold text-white transition hover:opacity-95"
+                  >
+                    + Novo extra
+                  </Link>
+                ) : null}
+              </div>
+            </div>
+          </section>
+
+          {!estoqueLiberado ? (
+            <section className="rounded-3xl border border-sky-200 bg-sky-50 p-5 text-sm text-sky-900 shadow-sm">
+              <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <div className="font-bold">Controle de estoque bloqueado no plano atual</div>
+                  <p className="mt-1 leading-6 text-sky-800">
+                    Os extras continuam liberados para venda, preço e custo. O acompanhamento de saldo e consumo de estoque entra quando o salão sobe para Pro ou Premium.
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap gap-3">
+                  <Link
+                    href="/comparar-planos"
+                    className="inline-flex items-center justify-center rounded-full border border-sky-300 bg-white px-4 py-2.5 font-bold text-sky-900 transition hover:bg-sky-100"
+                  >
+                    Comparar planos
+                  </Link>
+                  <Link
+                    href={`/assinatura?plano=${upgradeTarget}`}
+                    className="inline-flex items-center justify-center rounded-full bg-sky-900 px-4 py-2.5 font-bold text-white transition hover:opacity-95"
+                  >
+                    Fazer upgrade
+                  </Link>
+                </div>
+              </div>
+            </section>
+          ) : null}
+
+          {erro ? (
+            <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              {erro}
+            </div>
+          ) : null}
+
+          {msg ? (
+            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+              {msg}
+            </div>
+          ) : null}
+
+          <div className="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <input
+                type="text"
+                placeholder="Buscar por nome, categoria ou descrição"
+                value={busca}
+                onChange={(e) => setBusca(e.target.value)}
+                className="w-full rounded-2xl border border-zinc-300 px-4 py-3 text-sm outline-none focus:border-zinc-900"
+              />
+
+              <div className="flex items-center rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-600">
+                Total: <strong className="ml-2 text-zinc-900">{listaFiltrada.length}</strong>
+              </div>
             </div>
           </div>
-        </div>
 
-        {erro ? (
-          <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-            {erro}
-          </div>
-        ) : null}
-
-        {msg ? (
-          <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-            {msg}
-          </div>
-        ) : null}
-
-        <div className="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm">
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <input
-              type="text"
-              placeholder="Buscar por nome, categoria ou descrição"
-              value={busca}
-              onChange={(e) => setBusca(e.target.value)}
-              className="w-full rounded-2xl border border-zinc-300 px-4 py-3 text-sm outline-none focus:border-zinc-900"
-            />
-
-            <div className="flex items-center rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-600">
-              Total: <strong className="ml-2 text-zinc-900">{listaFiltrada.length}</strong>
-            </div>
-          </div>
-        </div>
-
-        <div className="overflow-hidden rounded-3xl border border-zinc-200 bg-white shadow-sm">
-          {listaFiltrada.length === 0 ? (
-            <div className="p-6 text-sm text-zinc-600">Nenhum serviço extra encontrado.</div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-zinc-200">
-                <thead className="bg-zinc-100">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-600">
-                      Nome
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-600">
-                      Categoria
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-600">
-                      Preço
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-600">
-                      Custo
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-600">
-                      Estoque
-                    </th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-zinc-600">
-                      Ações
-                    </th>
-                  </tr>
-                </thead>
-
-                <tbody className="divide-y divide-zinc-200 bg-white">
-                  {listaFiltrada.map((item) => (
-                    <tr key={item.id}>
-                      <td className="px-4 py-4">
-                        <p className="font-semibold text-zinc-900">{item.nome}</p>
-                        <p className="text-sm text-zinc-500">{item.descricao || "-"}</p>
-                      </td>
-
-                      <td className="px-4 py-4 text-sm text-zinc-700">
-                        {item.categoria || "-"}
-                      </td>
-
-                      <td className="px-4 py-4 text-sm text-zinc-700">
-                        {formatCurrency(item.preco_venda)}
-                      </td>
-
-                      <td className="px-4 py-4 text-sm text-zinc-700">
-                        {formatCurrency(item.custo)}
-                      </td>
-
-                      <td className="px-4 py-4 text-sm text-zinc-700">
-                        {item.controla_estoque
-                          ? Number(item.estoque_atual ?? 0).toLocaleString("pt-BR", {
-                              minimumFractionDigits: 2,
-                              maximumFractionDigits: 2,
-                            })
-                          : "Não controla"}
-                      </td>
-
-                      <td className="px-4 py-4">
-                        <div className="flex flex-wrap justify-end gap-2">
-                          {podeGerenciar ? (
-                            <>
-                              <Link
-                                href={`/servicos-extras/${item.id}`}
-                                className="rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50"
-                              >
-                                Editar
-                              </Link>
-
-                              <button
-                                type="button"
-                                onClick={() => setItemParaExcluir(item.id)}
-                                disabled={savingId === item.id}
-                                className="rounded-xl border border-red-300 bg-red-50 px-3 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-100 disabled:opacity-60"
-                              >
-                                Excluir
-                              </button>
-                            </>
-                          ) : (
-                            <span className="text-xs font-medium text-zinc-400">
-                              Somente leitura
-                            </span>
-                          )}
-                        </div>
-                      </td>
+          <div className="overflow-hidden rounded-3xl border border-zinc-200 bg-white shadow-sm">
+            {listaFiltrada.length === 0 ? (
+              <div className="p-6 text-sm text-zinc-600">
+                Nenhum serviço extra encontrado.
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-zinc-200">
+                  <thead className="bg-zinc-100">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-600">
+                        Nome
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-600">
+                        Categoria
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-600">
+                        Preço
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-600">
+                        Custo
+                      </th>
+                      {estoqueLiberado ? (
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-600">
+                          Estoque
+                        </th>
+                      ) : null}
+                      <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-zinc-600">
+                        Ações
+                      </th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+                  </thead>
+
+                  <tbody className="divide-y divide-zinc-200 bg-white">
+                    {listaFiltrada.map((item) => (
+                      <tr key={item.id}>
+                        <td className="px-4 py-4">
+                          <p className="font-semibold text-zinc-900">{item.nome}</p>
+                          <p className="text-sm text-zinc-500">{item.descricao || "-"}</p>
+                        </td>
+
+                        <td className="px-4 py-4 text-sm text-zinc-700">
+                          {item.categoria || "-"}
+                        </td>
+
+                        <td className="px-4 py-4 text-sm text-zinc-700">
+                          {formatCurrency(item.preco_venda)}
+                        </td>
+
+                        <td className="px-4 py-4 text-sm text-zinc-700">
+                          {formatCurrency(item.custo)}
+                        </td>
+
+                        {estoqueLiberado ? (
+                          <td className="px-4 py-4 text-sm text-zinc-700">
+                            {item.controla_estoque
+                              ? `${formatQuantidade(item.estoque_atual)} un`
+                              : "Não controla"}
+                          </td>
+                        ) : null}
+
+                        <td className="px-4 py-4">
+                          <div className="flex flex-wrap justify-end gap-2">
+                            {podeGerenciar ? (
+                              <>
+                                <Link
+                                  href={`/servicos-extras/${item.id}`}
+                                  className="rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50"
+                                >
+                                  Editar
+                                </Link>
+
+                                <button
+                                  type="button"
+                                  onClick={() => setItemParaExcluir(item.id)}
+                                  disabled={savingId === item.id}
+                                  className="rounded-xl border border-red-300 bg-red-50 px-3 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-100 disabled:opacity-60"
+                                >
+                                  Excluir
+                                </button>
+                              </>
+                            ) : (
+                              <span className="text-xs font-medium text-zinc-400">
+                                Somente leitura
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
         </div>
       </div>
-    </div>
     </>
   );
 }
