@@ -56,7 +56,7 @@ export default function AssinaturaPage() {
     return (
       <AppLoading
         title="Carregando assinatura"
-        message="Aguarde enquanto consultamos plano, cobrancas, renovacao e historico de pagamentos."
+        message="Aguarde enquanto consultamos plano, cobranças, renovação e histórico de pagamentos."
         fullHeight={false}
       />
     );
@@ -151,10 +151,7 @@ export default function AssinaturaPage() {
             criarCobrancaAssinatura={criarCobrancaAssinatura}
           />
 
-          <AssinaturaCheckoutBox
-            checkout={checkout}
-            copiarPix={copiarPix}
-          />
+          <AssinaturaCheckoutBox checkout={checkout} copiarPix={copiarPix} />
         </section>
       ) : mostrarCardAssinaturaAtiva ? (
         <section className="rounded-[28px] border border-zinc-200 bg-white p-6 shadow-sm">

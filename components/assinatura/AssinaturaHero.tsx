@@ -1,4 +1,4 @@
-﻿type Props = {
+type Props = {
   assinaturaStatus?: string | null;
   planoAtualNome?: string;
   bloqueioTotal?: boolean;
@@ -15,7 +15,9 @@
   tipoMudancaPlano?: "upgrade" | "downgrade" | null;
 };
 
-function getBadgeMudancaPlano(tipoMudancaPlano?: "upgrade" | "downgrade" | null) {
+function getBadgeMudancaPlano(
+  tipoMudancaPlano?: "upgrade" | "downgrade" | null
+) {
   if (tipoMudancaPlano === "upgrade") {
     return {
       label: "Upgrade de plano",
@@ -69,16 +71,16 @@ export default function AssinaturaHero({
   const badgeMudanca = getBadgeMudancaPlano(tipoMudancaPlano);
 
   const titulo = bloqueioTotal
-    ? "Seu acesso esta bloqueado ate regularizar a assinatura"
+    ? "Seu acesso está bloqueado até regularizar a assinatura"
     : vencendoLogo
-      ? "Sua assinatura esta perto do vencimento"
-      : "Escolha seu plano e mantenha seu salao sempre liberado";
+      ? "Sua assinatura está perto do vencimento"
+      : "Escolha seu plano e mantenha seu salão sempre liberado";
 
   const descricao = bloqueioTotal
-    ? "O sistema identificou bloqueio automatico por vencimento. Regularize agora para voltar a usar todas as areas do painel."
+    ? "O sistema identificou bloqueio automático por vencimento. Regularize agora para voltar a usar todas as áreas do painel."
     : vencendoLogo
-      ? "Evite interrupcoes. Gere a cobranca, ajuste seu plano e mantenha sua operacao ativa sem sair da pagina."
-      : "Controle teste gratis, vencimento, historico, upgrade, downgrade e cobranca por PIX, boleto ou cartao em uma experiencia premium.";
+      ? "Evite interrupções. Gere a cobrança, ajuste seu plano e mantenha sua operação ativa sem sair da página."
+      : "Controle teste grátis, vencimento, histórico, upgrade, downgrade e cobrança por PIX, boleto ou cartão em uma experiência premium.";
 
   return (
     <section className="overflow-hidden rounded-[34px] border border-zinc-200 bg-white px-5 py-6 text-zinc-950 shadow-sm md:px-8 md:py-8 xl:px-10 xl:py-10">
@@ -121,10 +123,11 @@ export default function AssinaturaHero({
           {bloqueioTotal ? (
             <div className="mt-5 rounded-[24px] border border-red-200 bg-red-50 px-4 py-4">
               <div className="text-sm font-semibold text-red-700 md:text-base">
-                Bloqueio automatico ativo
+                Bloqueio automático ativo
               </div>
               <div className="mt-1 text-sm text-red-600">
-                Enquanto a assinatura permanecer vencida, o sistema mantem o acesso restrito as rotas protegidas.
+                Enquanto a assinatura permanecer vencida, o sistema mantém o
+                acesso restrito às rotas protegidas.
               </div>
             </div>
           ) : null}
@@ -134,7 +137,7 @@ export default function AssinaturaHero({
           <div className="flex items-start justify-between gap-4">
             <div>
               <div className="text-xs font-semibold uppercase tracking-[0.24em] text-zinc-500">
-                Renovacao automatica
+                Renovação automática
               </div>
               <div className="mt-2 text-lg font-bold text-zinc-950">
                 {renovacaoTitulo || (renovacaoAutomatica ? "Ativada" : "Desativada")}
@@ -142,8 +145,8 @@ export default function AssinaturaHero({
               <p className="mt-1 text-sm text-zinc-600">
                 {renovacaoDescricao ||
                   (renovacaoAutomatica
-                    ? "O sistema mantem a proxima renovacao automatica alinhada com a forma de pagamento atual."
-                    : "A proxima cobranca dependera de acao manual. Cartao automatico sera liberado apos tokenizacao segura.")}
+                    ? "O sistema mantém a próxima renovação automática alinhada com a forma de pagamento atual."
+                    : "A próxima cobrança dependerá de ação manual. Cartão automático será liberado após tokenização segura.")}
               </p>
             </div>
 
@@ -188,11 +191,11 @@ export default function AssinaturaHero({
             )}`}
           >
             {salvandoRenovacaoAutomatica
-              ? "Salvando configuracao..."
+              ? "Salvando configuração..."
               : podeGerenciar
                 ? renovacaoObservacao ||
-                  "Voce pode ativar ou desativar essa opcao a qualquer momento."
-                : "Somente administradores podem alterar essa configuracao."}
+                  "Você pode ativar ou desativar essa opção a qualquer momento."
+                : "Somente administradores podem alterar essa configuração."}
           </div>
         </div>
       </div>

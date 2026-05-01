@@ -24,6 +24,13 @@ type Props = {
   criarCobrancaAssinatura: () => Promise<void>;
 };
 
+type MovimentoPlano = {
+  label: string;
+  className: string;
+  acaoLabel: string;
+  resumo: string;
+};
+
 function StepBadge({ numero }: { numero: number }) {
   return (
     <div className="flex h-8 w-8 items-center justify-center rounded-full bg-violet-700 text-sm font-bold text-white shadow-sm">
@@ -38,12 +45,24 @@ function LoadingDot() {
   );
 }
 
-function getMovimentoPlano(planoAtual: string | null, planoSelecionado: string) {
+function getMovimentoPlano(
+  planoAtual: string | null,
+  planoSelecionado: string
+): MovimentoPlano | null {
   const infoAtual = planoAtual ? PLANOS_INFO[planoAtual] : null;
   const infoSelecionado = PLANOS_INFO[planoSelecionado];
 
-  if (!infoAtual || !infoSelecionado) {
+  if (!infoSelecionado) {
     return null;
+  }
+
+  if (!infoAtual) {
+    return {
+      label: `Assinar ${infoSelecionado.nome}`,
+      className: "border-sky-200 bg-sky-50 text-sky-700",
+      acaoLabel: `Assinar ${infoSelecionado.nome}`,
+      resumo: "Primeira contratação do plano selecionado.",
+    };
   }
 
   const ordemAtual = infoAtual.ordem;
@@ -51,21 +70,27 @@ function getMovimentoPlano(planoAtual: string | null, planoSelecionado: string) 
 
   if (ordemSelecionada > ordemAtual) {
     return {
-      label: "Upgrade",
+      label: `Upgrade para ${infoSelecionado.nome}`,
       className: "border-emerald-200 bg-emerald-50 text-emerald-700",
+      acaoLabel: `Fazer upgrade para ${infoSelecionado.nome}`,
+      resumo: `Você vai subir de ${infoAtual.nome} para ${infoSelecionado.nome}.`,
     };
   }
 
   if (ordemSelecionada < ordemAtual) {
     return {
-      label: "Downgrade",
+      label: `Downgrade para ${infoSelecionado.nome}`,
       className: "border-amber-200 bg-amber-50 text-amber-800",
+      acaoLabel: `Fazer downgrade para ${infoSelecionado.nome}`,
+      resumo: `Você vai trocar ${infoAtual.nome} por ${infoSelecionado.nome}.`,
     };
   }
 
   return {
     label: "Plano atual",
     className: "border-violet-200 bg-violet-50 text-violet-700",
+    acaoLabel: "Gerar cobrança do plano atual",
+    resumo: "Você vai renovar o mesmo plano, sem mudar a categoria.",
   };
 }
 
@@ -180,7 +205,11 @@ export default function AssinaturaPlanosPagamento({
 
                 <div className="text-3xl font-bold leading-none">{info.nome}</div>
 
-                <div className={`mt-4 text-base ${ativo ? "text-zinc-600" : "text-zinc-500"}`}>
+                <div
+                  className={`mt-4 text-base ${
+                    ativo ? "text-zinc-600" : "text-zinc-500"
+                  }`}
+                >
                   {info.descricao}
                 </div>
 
@@ -197,6 +226,12 @@ export default function AssinaturaPlanosPagamento({
             );
           })}
         </div>
+
+        {movimentoPlano?.resumo ? (
+          <div className="mt-4 rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-600">
+            {movimentoPlano.resumo}
+          </div>
+        ) : null}
       </div>
 
       <div className="mt-10">
@@ -207,7 +242,8 @@ export default function AssinaturaPlanosPagamento({
               Selecione a forma de pagamento
             </div>
             <div className="text-sm text-zinc-500">
-              PIX costuma confirmar mais rápido. No cartão, a recorrência pode ser ativada depois da primeira cobrança tokenizada.
+              PIX costuma confirmar mais rápido. No cartão, a recorrência pode ser
+              ativada depois da primeira cobrança tokenizada.
             </div>
           </div>
         </div>
@@ -265,9 +301,7 @@ export default function AssinaturaPlanosPagamento({
 
       {billingType === "CREDIT_CARD" ? (
         <div className="mt-8">
-          <div className="text-lg font-bold text-zinc-950">
-            Dados do cartão
-          </div>
+          <div className="text-lg font-bold text-zinc-950">Dados do cartão</div>
 
           <div className="mt-4 grid gap-3 md:grid-cols-2">
             <input
@@ -342,9 +376,7 @@ export default function AssinaturaPlanosPagamento({
         <div className="flex items-center gap-3">
           <StepBadge numero={3} />
           <div>
-            <div className="text-lg font-bold text-zinc-950">
-              Gerar cobrança
-            </div>
+            <div className="text-lg font-bold text-zinc-950">Gerar cobrança</div>
             <div className="text-sm text-zinc-500">
               O checkout vai aparecer ao lado depois que a cobrança for criada.
             </div>
@@ -365,17 +397,16 @@ export default function AssinaturaPlanosPagamento({
             ? billingType === "PIX"
               ? "Gerando PIX..."
               : billingType === "BOLETO"
-              ? "Gerando boleto..."
-              : "Gerando cobrança no cartão..."
-            : billingType === "PIX"
-            ? "Gerar PIX"
-            : billingType === "BOLETO"
-            ? "Gerar boleto"
-            : "Gerar cobrança no cartão"}
+                ? "Gerando boleto..."
+                : "Gerando cobrança no cartão..."
+            : movimentoPlano?.acaoLabel ||
+              (billingType === "PIX"
+                ? "Gerar PIX"
+                : billingType === "BOLETO"
+                  ? "Gerar boleto"
+                  : "Gerar cobrança no cartão")}
         </button>
       </div>
     </section>
   );
 }
-
-
