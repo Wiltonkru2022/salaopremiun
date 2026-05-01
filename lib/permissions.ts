@@ -37,6 +37,7 @@ export type PermissionKey =
   | "comandas_operar"
   | "vendas_ver"
   | "vendas_criar"
+  | "vendas_reabrir"
   | "vendas_editar"
   | "vendas_excluir"
   | "vendas_financeiro"
@@ -97,6 +98,7 @@ export const PERMISSIONS: Record<PermissionKey, UserNivel[]> = {
   comandas_operar: ["admin", "gerente", "recepcao"],
   vendas_ver: ["admin", "gerente", "recepcao"],
   vendas_criar: ["admin", "gerente", "recepcao"],
+  vendas_reabrir: ["admin", "gerente"],
   vendas_editar: ["admin", "gerente"],
   vendas_excluir: ["admin"],
   vendas_financeiro: ["admin", "gerente"],

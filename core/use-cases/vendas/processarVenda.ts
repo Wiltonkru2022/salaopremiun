@@ -1,6 +1,7 @@
 import { z } from "zod";
 import {
   ACOES_VENDA,
+  getVendaErrorMessage,
   resolveVendaHttpStatus,
   sanitizeText,
   sanitizeUuid,
@@ -101,7 +102,7 @@ export async function processarVendaUseCase(params: {
     };
   } catch (error) {
     throw new ProcessarVendaUseCaseError(
-      error instanceof Error ? error.message : "Erro interno ao processar venda.",
+      getVendaErrorMessage(error),
       resolveVendaHttpStatus(error)
     );
   }

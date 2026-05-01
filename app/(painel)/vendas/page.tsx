@@ -110,6 +110,8 @@ export default function VendasPage() {
         : [],
     [detalheVenda]
   );
+  const podeReabrirVenda = Boolean(permissoes?.vendas_reabrir);
+  const podeExcluirVenda = Boolean(permissoes?.vendas_excluir);
 
   useEffect(() => {
     void init();
@@ -1156,7 +1158,7 @@ export default function VendasPage() {
                               <Printer size={16} />
                             </button>
 
-                            {item.status === "fechada" ? (
+                            {item.status === "fechada" && podeReabrirVenda ? (
                               <button
                                 type="button"
                                 onClick={() => abrirModalReabrir(item)}
@@ -1167,14 +1169,16 @@ export default function VendasPage() {
                               </button>
                             ) : null}
 
-                            <button
-                              type="button"
-                              onClick={() => abrirModalExcluir(item)}
-                              className="rounded-xl border border-rose-200 bg-rose-50 p-2 text-rose-600 transition hover:bg-rose-100"
-                              title="Excluir venda"
-                            >
-                              <Trash2 size={16} />
-                            </button>
+                            {podeExcluirVenda ? (
+                              <button
+                                type="button"
+                                onClick={() => abrirModalExcluir(item)}
+                                className="rounded-xl border border-rose-200 bg-rose-50 p-2 text-rose-600 transition hover:bg-rose-100"
+                                title="Excluir venda"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            ) : null}
                           </div>
                         </td>
                       </tr>
@@ -1434,7 +1438,7 @@ export default function VendasPage() {
                           Imprimir cupom
                         </button>
 
-                        {detalheVenda.comanda?.status === "fechada" ? (
+                        {detalheVenda.comanda?.status === "fechada" && podeReabrirVenda ? (
                           <button
                             type="button"
                             onClick={() => {
@@ -1448,17 +1452,19 @@ export default function VendasPage() {
                           </button>
                         ) : null}
 
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setDetalheOpen(false);
-                            abrirModalExcluir(detalheVenda.comanda as ComandaVenda);
-                          }}
-                          className="flex items-center justify-center gap-2 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700 transition hover:bg-rose-100"
-                        >
-                          <Trash2 size={16} />
-                          Excluir venda
-                        </button>
+                        {podeExcluirVenda ? (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setDetalheOpen(false);
+                              abrirModalExcluir(detalheVenda.comanda as ComandaVenda);
+                            }}
+                            className="flex items-center justify-center gap-2 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700 transition hover:bg-rose-100"
+                          >
+                            <Trash2 size={16} />
+                            Excluir venda
+                          </button>
+                        ) : null}
                       </div>
                     </div>
                   </div>

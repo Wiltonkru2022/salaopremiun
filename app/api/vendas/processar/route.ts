@@ -5,6 +5,7 @@ import {
   ACOES_VENDA,
   AuthzError,
   carregarContextoVenda,
+  getVendaErrorMessage,
   isAcaoVenda,
   PlanAccessError,
   resolveVendaHttpStatus,
@@ -83,10 +84,7 @@ export async function POST(req: NextRequest) {
               key: `vendas:processar:${acao || "desconhecida"}:${idSalao}`,
               module: "vendas",
               title: "Processamento de venda falhou",
-              description:
-                error instanceof Error
-                  ? error.message
-                  : "Erro interno ao processar venda.",
+              description: getVendaErrorMessage(error),
               severity: "alta",
               idSalao,
               details: {
@@ -108,10 +106,7 @@ export async function POST(req: NextRequest) {
     console.error("Erro geral ao processar venda:", error);
     return NextResponse.json(
       {
-        error:
-          error instanceof Error
-            ? error.message
-            : "Erro interno ao processar venda.",
+        error: getVendaErrorMessage(error),
       },
       { status: resolveVendaHttpStatus(error) }
     );

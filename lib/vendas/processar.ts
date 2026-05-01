@@ -28,6 +28,27 @@ export function sanitizeText(value: unknown) {
   return parsed || null;
 }
 
+export function getVendaErrorMessage(
+  error: unknown,
+  fallback = "Erro interno ao processar venda."
+) {
+  if (error instanceof Error && error.message.trim()) {
+    return error.message;
+  }
+
+  if (
+    error &&
+    typeof error === "object" &&
+    "message" in error &&
+    typeof (error as { message?: unknown }).message === "string"
+  ) {
+    const message = String((error as { message?: string }).message || "").trim();
+    if (message) return message;
+  }
+
+  return fallback;
+}
+
 export function resolveVendaHttpStatus(error: unknown) {
   const candidate = error as { code?: string } | null;
   if (!candidate?.code) return 500;
@@ -38,6 +59,12 @@ export function resolveVendaHttpStatus(error: unknown) {
 
 export function isAcaoVenda(value: string): value is AcaoVenda {
   return ACOES_VENDA.includes(value as AcaoVenda);
+}
+
+export function getVendaPermissionByAcao(acao: AcaoVenda) {
+  if (acao === "reabrir") return "vendas_reabrir" as const;
+  if (acao === "excluir") return "vendas_excluir" as const;
+  return "vendas_ver" as const;
 }
 
 export async function validarComandaVenda(params: {
@@ -56,13 +83,8 @@ export async function carregarContextoVenda(params: {
   acao: AcaoVenda;
 }) {
   const { idSalao, acao } = params;
-
-  const membership =
-    acao === "detalhes"
-      ? await requireSalaoPermission(idSalao, "vendas_ver")
-      : await requireSalaoPermission(idSalao, "vendas_ver", {
-          allowedNiveis: ["admin", "gerente"],
-        });
+  const permission = getVendaPermissionByAcao(acao);
+  const membership = await requireSalaoPermission(idSalao, permission);
 
   if (acao !== "detalhes") {
     await assertCanMutatePlanFeature(idSalao, "vendas");
