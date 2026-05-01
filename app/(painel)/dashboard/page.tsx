@@ -81,6 +81,19 @@ function formatPercent(value?: number | null) {
   return `${Number(value || 0)}%`;
 }
 
+function normalizePlanCode(value?: string | null) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase()
+    .replace(/[-\s]+/g, "_");
+}
+
+function getDashboardUpgradePlan(planoSalao?: string | null): "pro" | "premium" {
+  return normalizePlanCode(planoSalao) === "pro" ? "premium" : "pro";
+}
+
 function KpiCard({
   title,
   value,
@@ -280,6 +293,12 @@ export default function DashboardPage() {
   const statusCaixa = useMemo(() => {
     return resumo.aguardandoPagamento > 0 ? "Com pendencias" : "Organizado";
   }, [resumo.aguardandoPagamento]);
+  const dashboardUpgradePlan = useMemo(
+    () => getDashboardUpgradePlan(resumo.planoSalao),
+    [resumo.planoSalao]
+  );
+  const dashboardUpgradeLabel =
+    dashboardUpgradePlan === "premium" ? "Premium" : "Pro";
 
   if (loading) {
     return (
@@ -431,7 +450,7 @@ export default function DashboardPage() {
                   Dashboard avancado
                 </div>
                 <div className="mt-1 text-xl font-bold text-zinc-950">
-                  Leitura premium liberada no Pro
+                  Leitura premium liberada no {dashboardUpgradeLabel}
                 </div>
               </div>
               <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-3 text-zinc-700">
@@ -441,10 +460,10 @@ export default function DashboardPage() {
 
             <p className="mt-4 max-w-2xl text-sm leading-6 text-zinc-500">
               Ticket medio, retorno, comissao pendente e leitura gerencial mais
-              forte entram no Pro ou Premium. O painel atual continua mostrando
+              forte entram no {dashboardUpgradeLabel} ou acima. O painel atual continua mostrando
               o essencial da operacao.
             </p>
-            <UpgradeActions />
+            <UpgradeActions plan={dashboardUpgradePlan} />
           </div>
         )}
 
@@ -494,7 +513,7 @@ export default function DashboardPage() {
                 O dashboard avancado libera ticket medio, cancelamentos, retorno
                 e outros indicadores de crescimento.
               </div>
-              <UpgradeActions />
+              <UpgradeActions plan={dashboardUpgradePlan} />
             </div>
           ) : null}
         </div>
@@ -512,7 +531,7 @@ export default function DashboardPage() {
           value={
             dashboardAvancado
               ? formatCurrency(resumo.comissaoPendenteMes)
-              : "Upgrade"
+              : dashboardUpgradeLabel
           }
         />
         <MiniStatusCard
