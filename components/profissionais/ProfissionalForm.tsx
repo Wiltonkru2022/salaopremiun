@@ -1,10 +1,13 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { getUsuarioLogado } from "@/lib/auth/getUsuarioLogado";
 import { getErrorMessage } from "@/lib/get-error-message";
+import PlanoLimiteNotice from "@/components/plans/PlanoLimiteNotice";
+import { usePlanoAccessSnapshot } from "@/components/plans/usePlanoAccessSnapshot";
 import type {
   ProfissionalProcessarBody,
   ProfissionalProcessarResponse,
@@ -174,6 +177,7 @@ export default function ProfissionalForm({
   const router = useRouter();
   const params = useParams();
   const searchParams = useSearchParams();
+  const { planoAccess, upgradeTarget } = usePlanoAccessSnapshot(modo === "novo");
 
   const profissionalId = typeof params?.id === "string" ? params.id : "";
   const recoveryTicketId = searchParams.get("ticket_recuperacao")?.trim() || "";
@@ -200,6 +204,13 @@ export default function ProfissionalForm({
       .map((item) => item.trim())
       .filter(Boolean);
   }, [especialidadesInput]);
+
+  const limiteProfissionais = planoAccess?.limites?.profissionais ?? null;
+  const usoProfissionais = planoAccess?.uso?.profissionais ?? 0;
+  const atingiuLimiteProfissionais =
+    modo === "novo" &&
+    limiteProfissionais != null &&
+    usoProfissionais >= limiteProfissionais;
 
   useEffect(() => {
     bootstrap();
@@ -517,6 +528,12 @@ async function salvarAcessoProfissional(idProfissional: string) {
         throw new Error("Informe o nome do profissional.");
       }
 
+      if (atingiuLimiteProfissionais && form.ativo) {
+        throw new Error(
+          `Limite do plano atingido: ${usoProfissionais} de ${limiteProfissionais} profissionais.`
+        );
+      }
+
       const especialidadesTratadas = especialidadesInput
         .split(",")
         .map((item) => item.trim())
@@ -660,6 +677,18 @@ async function salvarAcessoProfissional(idProfissional: string) {
           </p>
         </div>
 
+        {modo === "novo" && limiteProfissionais != null ? (
+          <PlanoLimiteNotice
+            titulo="Cadastro de profissionais controlado pelo plano"
+            descricao="O limite vale para profissionais ativos. Cadastros existentes continuam preservados e podem ser inativados ou editados."
+            usado={usoProfissionais}
+            limite={limiteProfissionais}
+            planoNome={planoAccess?.planoNome}
+            upgradeTarget={upgradeTarget}
+            disabled={atingiuLimiteProfissionais}
+          />
+        ) : null}
+
         {erro ? (
           <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
             {erro}
@@ -684,7 +713,7 @@ async function salvarAcessoProfissional(idProfissional: string) {
           <button
             type="button"
             onClick={salvar}
-            disabled={saving}
+            disabled={saving || (modo === "novo" && atingiuLimiteProfissionais)}
             className="rounded-2xl bg-zinc-900 px-5 py-3 text-sm font-bold text-white disabled:opacity-60"
           >
             {saving
@@ -694,6 +723,23 @@ async function salvarAcessoProfissional(idProfissional: string) {
               : "Atualizar profissional"}
           </button>
         </div>
+
+        {modo === "novo" && atingiuLimiteProfissionais ? (
+          <div className="flex flex-wrap gap-2">
+            <Link
+              href="/comparar-planos"
+              className="inline-flex items-center justify-center rounded-2xl border border-zinc-300 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-50"
+            >
+              Comparar planos
+            </Link>
+            <Link
+              href={`/assinatura?plano=${upgradeTarget}`}
+              className="inline-flex items-center justify-center rounded-2xl bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-zinc-800"
+            >
+              Fazer upgrade
+            </Link>
+          </div>
+        ) : null}
 
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
           <div className="space-y-6 xl:col-span-2">

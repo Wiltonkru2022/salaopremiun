@@ -224,7 +224,11 @@ function getPlanoRecursoLimit(
 }
 
 function getExtraRecursoLimit(extrasRows: ExtraRow[], recursoCodigo: string) {
-  const row = extrasRows.find((item) => item.recurso_codigo === recursoCodigo);
+  const row = extrasRows.find(
+    (item) =>
+      item.recurso_codigo === recursoCodigo &&
+      item.limite_numero != null
+  );
   return normalizeLimit(row?.limite_numero ?? null);
 }
 
@@ -360,19 +364,21 @@ export async function getPlanoAccessSnapshot(
     STATUS_RESTRITO.has(assinaturaStatus) || STATUS_RESTRITO.has(salaoStatus);
   const bloqueioTotal = bloqueadoManual || resumo.bloqueioTotal;
   const modoRestrito = resumo.vencida || bloqueadoManual;
+  const recursosRowsNormalized = (recursosRows || []) as PlanoRecursoRow[];
+  const extrasRowsNormalized = (extrasRows || []) as ExtraRow[];
 
   const limiteUsuarios =
+    getExtraRecursoLimit(extrasRowsNormalized, "usuarios") ??
     assinaturaRow?.limite_usuarios ??
     salaoRow?.limite_usuarios ??
     planoRow?.limite_usuarios ??
     null;
   const limiteProfissionais =
+    getExtraRecursoLimit(extrasRowsNormalized, "profissionais") ??
     assinaturaRow?.limite_profissionais ??
     salaoRow?.limite_profissionais ??
     planoRow?.limite_profissionais ??
     null;
-  const recursosRowsNormalized = (recursosRows || []) as PlanoRecursoRow[];
-  const extrasRowsNormalized = (extrasRows || []) as ExtraRow[];
   const limiteClientes =
     getExtraRecursoLimit(extrasRowsNormalized, "clientes") ??
     getPlanoRecursoLimit(recursosRowsNormalized, "clientes");
