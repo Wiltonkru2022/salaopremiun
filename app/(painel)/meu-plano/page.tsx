@@ -6,7 +6,11 @@ import {
   PLANO_RECURSO_GROUPS,
   PLANO_RECURSOS_PADRAO,
 } from "@/lib/plans/access";
-import { getPlanoCatalogo } from "@/lib/plans/catalog";
+import {
+  getPlanoCatalogo,
+  getPlanoDowngradeCatalogo,
+  getPlanoUpgradeCatalogo,
+} from "@/lib/plans/catalog";
 import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -26,21 +30,13 @@ function statusLabel(status: string) {
 }
 
 function getPlanoCheckoutHref(planoAtual: string) {
-  const plano = String(planoAtual || "").toLowerCase();
+  const planoCatalogo = getPlanoCatalogo(planoAtual);
 
-  if (plano === "basico" || plano === "pro" || plano === "premium") {
-    return `/assinatura?plano=${plano}`;
+  if (planoCatalogo.codigo === "teste_gratis") {
+    return "/assinatura?plano=basico";
   }
 
-  return "/assinatura?plano=basico";
-}
-
-function getPlanoUpgradeHref(planoAtual: string) {
-  const plano = String(planoAtual || "").toLowerCase();
-
-  if (plano === "premium") return null;
-  if (plano === "pro") return "/assinatura?plano=premium";
-  return "/assinatura?plano=pro";
+  return `/assinatura?plano=${planoCatalogo.codigo}`;
 }
 
 function getMotivoMeta(motivo?: string | null) {
@@ -160,7 +156,12 @@ export default async function MeuPlanoPage({
   ];
 
   const assinaturaHref = getPlanoCheckoutHref(access.planoCodigo);
-  const upgradeHref = getPlanoUpgradeHref(access.planoCodigo);
+  const upgradePlano = getPlanoUpgradeCatalogo(access.planoCodigo);
+  const downgradePlano = getPlanoDowngradeCatalogo(access.planoCodigo);
+  const acaoPrincipalLabel =
+    planoCatalogo.codigo === "teste_gratis"
+      ? "Escolher primeiro plano"
+      : "Gerenciar assinatura";
 
   return (
     <div className="space-y-6">
@@ -184,7 +185,7 @@ export default async function MeuPlanoPage({
                 href={assinaturaHref}
                 className="rounded-full bg-white px-5 py-3 text-sm font-black text-zinc-950 transition hover:-translate-y-0.5"
               >
-                Gerenciar assinatura
+                {acaoPrincipalLabel}
               </Link>
               <Link
                 href="/comparar-planos"
@@ -192,18 +193,27 @@ export default async function MeuPlanoPage({
               >
                 Comparar planos
               </Link>
-              {upgradeHref ? (
+              {upgradePlano ? (
                 <Link
-                  href={upgradeHref}
+                  href={`/assinatura?plano=${upgradePlano.codigo}`}
                   className="rounded-full border border-white/15 bg-white/10 px-5 py-3 text-sm font-black text-white transition hover:-translate-y-0.5 hover:bg-white/15"
                 >
-                  Fazer upgrade
+                  Fazer upgrade para {upgradePlano.nome}
                 </Link>
-              ) : (
+              ) : null}
+              {downgradePlano ? (
+                <Link
+                  href={`/assinatura?plano=${downgradePlano.codigo}`}
+                  className="rounded-full border border-white/15 bg-white/10 px-5 py-3 text-sm font-black text-white transition hover:-translate-y-0.5 hover:bg-white/15"
+                >
+                  Fazer downgrade para {downgradePlano.nome}
+                </Link>
+              ) : null}
+              {!upgradePlano && !downgradePlano ? (
                 <span className="rounded-full border border-white/15 bg-white/10 px-5 py-3 text-sm font-black text-white/85">
                   Plano máximo ativo
                 </span>
-              )}
+              ) : null}
             </div>
           </div>
 
@@ -239,9 +249,9 @@ export default async function MeuPlanoPage({
         </div>
       ) : access.modoRestrito ? (
         <div className="rounded-[28px] border border-amber-200 bg-amber-50 p-5 text-sm leading-6 text-amber-900 shadow-sm">
-          <strong>Modo restrito ativo.</strong> Você ainda pode consultar
-          dados, pagar a assinatura e falar com suporte, mas novas operações
-          críticas ficam bloqueadas até a regularização.
+          <strong>Modo restrito ativo.</strong> Você ainda pode consultar dados,
+          pagar a assinatura e falar com suporte, mas novas operações críticas
+          ficam bloqueadas até a regularização.
         </div>
       ) : null}
 

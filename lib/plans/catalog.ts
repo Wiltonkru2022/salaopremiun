@@ -28,7 +28,8 @@ export const PLANOS_CATALOGO: Record<PlanoCodigo, PlanoCatalogo> = {
     codigo: "teste_gratis",
     nome: "Teste grátis",
     subtitulo: "Prove a operação antes de pagar.",
-    descricao: "Ideal para validar agenda, caixa e fluxo de venda sem compromisso.",
+    descricao:
+      "Ideal para validar agenda, caixa e fluxo de venda sem compromisso.",
     foco: "Provar a operação",
     idealPara: "Quem quer testar o sistema antes de assinar.",
     valorMensal: 0,
@@ -68,7 +69,8 @@ export const PLANOS_CATALOGO: Record<PlanoCodigo, PlanoCatalogo> = {
     codigo: "basico",
     nome: "Básico",
     subtitulo: "O essencial para um salão pequeno operar bem.",
-    descricao: "Plano enxuto para rodar agenda, caixa e venda sem pagar por estrutura que ainda não usa.",
+    descricao:
+      "Plano enxuto para rodar agenda, caixa e venda sem pagar por estrutura que ainda não usa.",
     foco: "Salão pequeno operando bem",
     idealPara: "Operação pequena, de 1 a 3 profissionais.",
     valorMensal: 5,
@@ -108,7 +110,8 @@ export const PLANOS_CATALOGO: Record<PlanoCodigo, PlanoCatalogo> = {
     codigo: "pro",
     nome: "Pro",
     subtitulo: "Estrutura para equipe em crescimento.",
-    descricao: "Libera operação mais densa, relatórios mais fortes e app profissional para a equipe ganhar autonomia.",
+    descricao:
+      "Libera operação mais densa, relatórios mais fortes e app profissional para a equipe ganhar autonomia.",
     foco: "Equipe em crescimento",
     idealPara: "Salões em expansão, com mais atendimento e gestão.",
     valorMensal: 89.9,
@@ -146,11 +149,13 @@ export const PLANOS_CATALOGO: Record<PlanoCodigo, PlanoCatalogo> = {
     codigo: "premium",
     nome: "Premium",
     subtitulo: "Tudo liberado para operação sem teto prático.",
-    descricao: "Plano completo para quem já opera pesado ou quer crescer sem bater em limite de estrutura.",
+    descricao:
+      "Plano completo para quem já opera pesado ou quer crescer sem bater em limite de estrutura.",
     foco: "Tudo liberado",
     idealPara: "Operação madura, multiatendimento e gestão completa.",
     valorMensal: 149.9,
     ordem: 3,
+    destaque: true,
     recursosLiberados: [
       "Agenda",
       "Clientes",
@@ -202,4 +207,35 @@ export function getPlanoCatalogo(plano?: string | null) {
 
 export function getPlanosOrdenados() {
   return Object.values(PLANOS_CATALOGO).sort((a, b) => a.ordem - b.ordem);
+}
+
+export function getPlanosCobraveisOrdenados() {
+  return getPlanosOrdenados().filter((plano) => plano.codigo !== "teste_gratis");
+}
+
+export function getPlanoUpgradeCatalogo(plano?: string | null) {
+  const planoAtual = getPlanoCatalogo(plano);
+  const planosCobraveis = getPlanosCobraveisOrdenados();
+
+  if (planoAtual.codigo === "teste_gratis") {
+    return planosCobraveis[0] ?? null;
+  }
+
+  const currentIndex = planosCobraveis.findIndex(
+    (item) => item.codigo === planoAtual.codigo
+  );
+
+  if (currentIndex === -1) return planosCobraveis[0] ?? null;
+  return planosCobraveis[currentIndex + 1] ?? null;
+}
+
+export function getPlanoDowngradeCatalogo(plano?: string | null) {
+  const planoAtual = getPlanoCatalogo(plano);
+  const planosCobraveis = getPlanosCobraveisOrdenados();
+  const currentIndex = planosCobraveis.findIndex(
+    (item) => item.codigo === planoAtual.codigo
+  );
+
+  if (currentIndex <= 0) return null;
+  return planosCobraveis[currentIndex - 1] ?? null;
 }
