@@ -1,10 +1,13 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { getUsuarioLogado } from "@/lib/auth/getUsuarioLogado";
 import { getErrorMessage } from "@/lib/get-error-message";
+import PlanoLimiteNotice from "@/components/plans/PlanoLimiteNotice";
+import { usePlanoAccessSnapshot } from "@/components/plans/usePlanoAccessSnapshot";
 import type {
   AutorizacoesCliente,
   ClienteAuthPayload,
@@ -110,6 +113,7 @@ export default function ClienteForm({ modo }: ClienteFormProps) {
   const [preferencias, setPreferencias] = useState<PreferenciasCliente>(initialPreferencias);
   const [autorizacoes, setAutorizacoes] = useState<AutorizacoesCliente>(initialAutorizacoes);
   const [authCliente, setAuthCliente] = useState<ClienteAuthState>(initialAuth);
+  const { planoAccess, upgradeTarget } = usePlanoAccessSnapshot(modo === "novo");
 
   useEffect(() => {
     bootstrap();
@@ -332,6 +336,12 @@ async function bootstrap() {
         throw new Error("Informe o nome da cliente.");
       }
 
+      if (atingiuLimiteClientes) {
+        throw new Error(
+          `Limite do plano atingido: ${usoClientes} de ${limiteClientes} clientes.`
+        );
+      }
+
       const payloadCliente: ClientePayload = {
         id_salao: idSalao,
         id: cliente.id || null,
@@ -453,6 +463,13 @@ async function bootstrap() {
     );
   }
 
+  const limiteClientes = planoAccess?.limites?.clientes ?? null;
+  const usoClientes = planoAccess?.uso?.clientes ?? 0;
+  const atingiuLimiteClientes =
+    modo === "novo" &&
+    limiteClientes != null &&
+    usoClientes >= limiteClientes;
+
   return (
     <div className="bg-white">
       <div className="mx-auto max-w-7xl space-y-6">
@@ -471,6 +488,18 @@ async function bootstrap() {
             })}
           </div>
         </div>
+
+        {modo === "novo" && limiteClientes != null ? (
+          <PlanoLimiteNotice
+            titulo="Cadastro de clientes controlado pelo plano"
+            descricao="O limite vale para novos cadastros. Seus dados atuais continuam preservados mesmo em downgrade."
+            usado={usoClientes}
+            limite={limiteClientes}
+            planoNome={planoAccess?.planoNome}
+            upgradeTarget={upgradeTarget}
+            disabled={atingiuLimiteClientes}
+          />
+        ) : null}
 
         {erro ? (
           <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
@@ -496,12 +525,29 @@ async function bootstrap() {
           <button
             type="button"
             onClick={salvar}
-            disabled={saving}
+            disabled={saving || atingiuLimiteClientes}
             className="rounded-2xl bg-zinc-900 px-5 py-3 text-sm font-bold text-white disabled:opacity-60"
           >
             {saving ? "Salvando..." : modo === "novo" ? "Salvar cliente" : "Atualizar cliente"}
           </button>
         </div>
+
+        {modo === "novo" && atingiuLimiteClientes ? (
+          <div className="flex flex-wrap gap-2">
+            <Link
+              href="/comparar-planos"
+              className="inline-flex items-center justify-center rounded-2xl border border-zinc-300 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-50"
+            >
+              Comparar planos
+            </Link>
+            <Link
+              href={`/assinatura?plano=${upgradeTarget}`}
+              className="inline-flex items-center justify-center rounded-2xl bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-zinc-800"
+            >
+              Fazer upgrade
+            </Link>
+          </div>
+        ) : null}
 
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
           <div className="space-y-6 xl:col-span-2">

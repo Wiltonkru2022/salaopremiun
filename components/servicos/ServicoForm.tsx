@@ -1,10 +1,13 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { parseMoneyToNumber } from "@/lib/utils/serviceMasks";
 import { getUsuarioLogado } from "@/lib/auth/getUsuarioLogado";
+import PlanoLimiteNotice from "@/components/plans/PlanoLimiteNotice";
+import { usePlanoAccessSnapshot } from "@/components/plans/usePlanoAccessSnapshot";
 import {
   ServicoFormAgendaSection,
   ServicoFormComissaoSection,
@@ -112,6 +115,7 @@ export default function ServicoForm({ modo }: ServicoFormProps) {
   const supabase = createClient();
   const router = useRouter();
   const params = useParams();
+  const { planoAccess, upgradeTarget } = usePlanoAccessSnapshot(modo === "novo");
 
   const servicoId = typeof params?.id === "string" ? params.id : "";
 
@@ -459,6 +463,12 @@ export default function ServicoForm({ modo }: ServicoFormProps) {
         throw new Error("Informe o nome do servico.");
       }
 
+      if (atingiuLimiteServicos) {
+        throw new Error(
+          `Limite do plano atingido: ${usoServicos} de ${limiteServicos} servicos.`
+        );
+      }
+
       const categoriaSalvar = await resolverCategoriaParaSalvar();
 
       const payload: ServicoProcessarPayload = {
@@ -610,6 +620,13 @@ export default function ServicoForm({ modo }: ServicoFormProps) {
     );
   }
 
+  const limiteServicos = planoAccess?.limites?.servicos ?? null;
+  const usoServicos = planoAccess?.uso?.servicos ?? 0;
+  const atingiuLimiteServicos =
+    modo === "novo" &&
+    limiteServicos != null &&
+    usoServicos >= limiteServicos;
+
   return (
     <div className="bg-white">
       <div className="mx-auto max-w-7xl space-y-6">
@@ -624,6 +641,18 @@ export default function ServicoForm({ modo }: ServicoFormProps) {
             Comece pelos dados basicos e abra as demais secoes conforme precisar.
           </p>
         </div>
+
+        {modo === "novo" && limiteServicos != null ? (
+          <PlanoLimiteNotice
+            titulo="Cadastro de servicos controlado pelo plano"
+            descricao="O limite considera servicos e combos novos. O catalogo atual continua preservado."
+            usado={usoServicos}
+            limite={limiteServicos}
+            planoNome={planoAccess?.planoNome}
+            upgradeTarget={upgradeTarget}
+            disabled={atingiuLimiteServicos}
+          />
+        ) : null}
 
         {erro ? (
           <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
@@ -649,7 +678,7 @@ export default function ServicoForm({ modo }: ServicoFormProps) {
           <button
             type="button"
             onClick={salvar}
-            disabled={saving}
+            disabled={saving || atingiuLimiteServicos}
             className="rounded-2xl bg-zinc-900 px-5 py-3 text-sm font-bold text-white disabled:opacity-60"
           >
             {saving
@@ -659,6 +688,23 @@ export default function ServicoForm({ modo }: ServicoFormProps) {
                 : "Atualizar servico"}
           </button>
         </div>
+
+        {modo === "novo" && atingiuLimiteServicos ? (
+          <div className="flex flex-wrap gap-2">
+            <Link
+              href="/comparar-planos"
+              className="inline-flex items-center justify-center rounded-2xl border border-zinc-300 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-50"
+            >
+              Comparar planos
+            </Link>
+            <Link
+              href={`/assinatura?plano=${upgradeTarget}`}
+              className="inline-flex items-center justify-center rounded-2xl bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-zinc-800"
+            >
+              Fazer upgrade
+            </Link>
+          </div>
+        ) : null}
 
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
           <div className="space-y-6 xl:col-span-2">

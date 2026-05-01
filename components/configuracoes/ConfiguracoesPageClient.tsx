@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -57,6 +57,8 @@ import {
   TextInput,
   Toggle,
 } from "@/components/configuracoes/ui";
+import PlanoLimiteNotice from "@/components/plans/PlanoLimiteNotice";
+import { usePlanoAccessSnapshot } from "@/components/plans/usePlanoAccessSnapshot";
 
 export type ConfiguracoesSecao =
   | "agenda"
@@ -92,6 +94,9 @@ export default function ConfiguracoesPageClient({
   secao: ConfiguracoesSecao;
 }) {
   const supabase = createClient();
+  const { planoAccess, upgradeTarget } = usePlanoAccessSnapshot(
+    secao === "usuarios"
+  );
   const mostrarAtalhoPerfilEmConfiguracoes = false;
   const mostrarDadosSalaoEmConfiguracoes = false;
   const meta = sectionMeta[secao];
@@ -587,6 +592,13 @@ const { data, error } = await supabase
     return usuariosAtivosCount < limiteUsuarios;
   }, [usuariosAtivosCount, limiteUsuarios]);
 
+  const limiteUsuariosPlano = planoAccess?.limites?.usuarios ?? limiteUsuarios;
+  const usoUsuariosPlano = planoAccess?.uso?.usuarios ?? usuariosAtivosCount;
+  const atingiuLimiteUsuarios =
+    !usuarioEditandoId &&
+    limiteUsuariosPlano != null &&
+    usoUsuariosPlano >= limiteUsuariosPlano;
+
   async function salvarUsuario() {
     if (!idSalao) return;
 
@@ -615,9 +627,9 @@ const { data, error } = await supabase
         throw new Error("A nova senha deve ter pelo menos 6 caracteres.");
       }
 
-      if (!usuarioEditandoId && usuariosAtivosCount >= limiteUsuarios) {
+      if (atingiuLimiteUsuarios) {
         throw new Error(
-          `Limite de usuários atingido para o plano atual. Limite: ${limiteUsuarios}.`
+          `Limite de usuarios atingido para o plano atual. Limite: ${limiteUsuariosPlano}.`
         );
       }
 
@@ -1312,6 +1324,19 @@ const { data, error } = await supabase
           title="Usuários do sistema"
           description="Crie, edite e exclua usuários de acordo com o limite do plano e o perfil de acesso."
         >
+          {limiteUsuariosPlano != null ? (
+            <PlanoLimiteNotice
+              titulo="Equipe administrativa controlada pelo plano"
+              descricao="Os acessos atuais continuam salvos. O upgrade libera novos usuarios sem mexer no que ja esta configurado."
+              usado={usoUsuariosPlano}
+              limite={limiteUsuariosPlano}
+              planoNome={planoAccess?.planoNome}
+              upgradeTarget={upgradeTarget}
+              disabled={atingiuLimiteUsuarios}
+              className="mb-5"
+            />
+          ) : null}
+
           <div className="mb-5 grid gap-4 md:grid-cols-3">
             <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4">
               <div className="text-xs uppercase tracking-[0.18em] text-zinc-500">
@@ -1330,7 +1355,7 @@ const { data, error } = await supabase
                 Limite de usuários
               </div>
               <div className="mt-2 text-xl font-bold text-zinc-900">
-                {limiteUsuarios}
+                {limiteUsuariosPlano ?? "-"}
               </div>
               <div className="mt-1 text-xs text-zinc-500">{textoPlanoUsuarios}</div>
             </div>
@@ -1343,7 +1368,7 @@ const { data, error } = await supabase
                 {usuarios.length}
               </div>
               <div className="mt-1 text-xs text-zinc-500">
-                Ativos: {usuariosAtivosCount}
+                Ativos: {usoUsuariosPlano}
               </div>
             </div>
           </div>
@@ -1356,7 +1381,7 @@ const { data, error } = await supabase
             <button
               type="button"
               onClick={abrirNovoUsuario}
-              disabled={!podeCriarUsuario}
+              disabled={!podeCriarUsuario || atingiuLimiteUsuarios}
               className="inline-flex items-center gap-2 rounded-2xl bg-zinc-900 px-4 py-3 text-sm font-bold text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <Plus size={16} />
@@ -1572,13 +1597,21 @@ const { data, error } = await supabase
                   Limite do plano
                 </div>
                 <div className="mt-2 text-lg font-bold text-zinc-900">
-                  {limiteUsuarios} usuário(s)
+                  {limiteUsuariosPlano ?? "-"} usuario(s)
                 </div>
                 <div className="mt-1 text-sm text-zinc-500">
-                  Cadastrados ativos: {usuariosAtivosCount}
-                  {!usuarioEditandoId ? ` • Restantes: ${Math.max(limiteUsuarios - usuariosAtivosCount, 0)}` : ""}
+                  Cadastrados ativos: {usoUsuariosPlano}
+                  {!usuarioEditandoId && limiteUsuariosPlano != null
+                    ? ` • Restantes: ${Math.max(limiteUsuariosPlano - usoUsuariosPlano, 0)}`
+                    : ""}
                 </div>
               </div>
+
+              {!usuarioEditandoId && atingiuLimiteUsuarios ? (
+                <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-900">
+                  O limite de usuarios do plano atual foi atingido. Compare os planos ou faca upgrade para liberar novos acessos.
+                </div>
+              ) : null}
             </div>
 
             <div className="flex flex-col-reverse gap-3 border-t border-zinc-200 bg-zinc-50 px-6 py-5 sm:flex-row sm:justify-end">
@@ -1594,7 +1627,7 @@ const { data, error } = await supabase
               <button
                 type="button"
                 onClick={salvarUsuario}
-                disabled={savingUsuario}
+                disabled={savingUsuario || (!usuarioEditandoId && atingiuLimiteUsuarios)}
                 className="inline-flex items-center justify-center gap-2 rounded-2xl bg-zinc-900 px-5 py-3 text-sm font-bold text-white transition hover:opacity-95 disabled:opacity-60"
               >
                 {savingUsuario ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />}

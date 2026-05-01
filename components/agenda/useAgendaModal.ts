@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { SearchableOption } from "@/components/ui/SearchableSelect";
+import { getUpgradeTarget } from "@/components/plans/usePlanoAccessSnapshot";
 import type { ComandaResumo } from "./page-types";
 import type {
   Agendamento,
@@ -142,6 +143,18 @@ export function useAgendaModal({
   });
 
   const [dicaIndex, setDicaIndex] = useState(0);
+  const [planoAccess, setPlanoAccess] = useState<{
+    planoNome?: string;
+    planoCodigo?: string;
+    limites?: {
+      clientes?: number | null;
+      agendamentosMensais?: number | null;
+    };
+    uso?: {
+      clientes?: number;
+      agendamentosMensais?: number;
+    };
+  } | null>(null);
 
   const profissionaisOptions = useMemo<SearchableOption[]>(
     () =>
@@ -281,6 +294,47 @@ export function useAgendaModal({
   useEffect(() => {
     if (!open) return;
 
+    let cancelled = false;
+
+    async function carregarPlanoAccess() {
+      try {
+        const response = await fetch("/api/plano/access", {
+          cache: "no-store",
+        });
+
+        if (!response.ok) return;
+
+        const data = (await response.json()) as {
+          planoNome?: string;
+          planoCodigo?: string;
+          limites?: {
+            clientes?: number | null;
+            agendamentosMensais?: number | null;
+          };
+          uso?: {
+            clientes?: number;
+            agendamentosMensais?: number;
+          };
+        };
+
+        if (!cancelled) {
+          setPlanoAccess(data);
+        }
+      } catch (error) {
+        console.error("Erro ao carregar limites do plano na agenda:", error);
+      }
+    }
+
+    void carregarPlanoAccess();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+
     const interval = setInterval(() => {
       setDicaIndex((prev) => (prev + 1) % DICAS_AGENDA.length);
     }, 5000);
@@ -316,6 +370,19 @@ export function useAgendaModal({
     mode === "agendamento" && servicoSelecionado
       ? addDurationToTime(horaInicio, servicoSelecionado.duracao_minutos)
       : null;
+
+  const limiteClientes = planoAccess?.limites?.clientes ?? null;
+  const usoClientes = planoAccess?.uso?.clientes ?? 0;
+  const limiteAgendamentosMensais =
+    planoAccess?.limites?.agendamentosMensais ?? null;
+  const usoAgendamentosMensais = planoAccess?.uso?.agendamentosMensais ?? 0;
+  const atingiuLimiteClientes =
+    limiteClientes != null && usoClientes >= limiteClientes;
+  const atingiuLimiteAgendamentos =
+    !editingItem &&
+    limiteAgendamentosMensais != null &&
+    usoAgendamentosMensais >= limiteAgendamentosMensais;
+  const upgradeTarget = getUpgradeTarget(planoAccess?.planoCodigo);
 
   useEffect(() => {
     if (mode !== "agendamento") return;
@@ -479,6 +546,15 @@ export function useAgendaModal({
       return;
     }
 
+    if (atingiuLimiteClientes) {
+      abrirAviso(
+        "Limite de clientes atingido",
+        `Seu plano chegou a ${usoClientes} de ${limiteClientes} clientes. Faca upgrade para liberar novos cadastros.`,
+        "warning"
+      );
+      return;
+    }
+
     try {
       setQuickClientSaving(true);
       const response = await fetch("/api/clientes/processar", {
@@ -603,6 +679,15 @@ export function useAgendaModal({
     try {
       setSaving(true);
 
+      if (mode === "agendamento" && atingiuLimiteAgendamentos) {
+        abrirAviso(
+          "Limite de agendamentos atingido",
+          `Seu plano chegou a ${usoAgendamentosMensais} de ${limiteAgendamentosMensais} agendamentos no mes. Faca upgrade para continuar criando novos horarios.`,
+          "warning"
+        );
+        return;
+      }
+
       if (mode === "agendamento") {
         await onSave({
           tipo: "agendamento",
@@ -685,6 +770,14 @@ export function useAgendaModal({
     handleQuickCreateClient,
     handleCriarNovaComandaParaClienteAtual,
     handleSubmit,
+    planoAccess,
+    upgradeTarget,
+    limiteClientes,
+    usoClientes,
+    limiteAgendamentosMensais,
+    usoAgendamentosMensais,
+    atingiuLimiteClientes,
+    atingiuLimiteAgendamentos,
     quickClientOpen,
     setQuickClientOpen,
     quickClientName,

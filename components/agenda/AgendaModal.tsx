@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { CalendarDays, Lock, X } from "lucide-react";
 import AgendaModalAviso from "@/components/agenda/AgendaModalAviso";
@@ -7,6 +8,7 @@ import AgendaModalComandaDecision from "@/components/agenda/AgendaModalComandaDe
 import AgendaModalFormAgendamento from "@/components/agenda/AgendaModalFormAgendamento";
 import AgendaModalFormBloqueio from "@/components/agenda/AgendaModalFormBloqueio";
 import AgendaModalResumo from "@/components/agenda/AgendaModalResumo";
+import PlanoLimiteNotice from "@/components/plans/PlanoLimiteNotice";
 import {
   type AgendaModalProps,
   useAgendaModal,
@@ -72,6 +74,11 @@ export default function AgendaModal(props: Props) {
     handleAbrirComanda,
     handleCriarNovaComandaParaClienteAtual,
     handleSubmit,
+    planoAccess,
+    upgradeTarget,
+    limiteAgendamentosMensais,
+    usoAgendamentosMensais,
+    atingiuLimiteAgendamentos,
   } = useAgendaModal(props);
 
   const [statusPickerOpen, setStatusPickerOpen] = useState(false);
@@ -180,6 +187,38 @@ export default function AgendaModal(props: Props) {
     />
   );
 
+  const avisoPlanoAgenda =
+    mode === "agendamento" && !editingItem && limiteAgendamentosMensais != null ? (
+      <div className="space-y-3">
+        <PlanoLimiteNotice
+          titulo="Agendamentos mensais controlados pelo plano"
+          descricao="A agenda continua disponivel para consulta e edicao. O limite vale para novos horarios criados no mes."
+          usado={usoAgendamentosMensais}
+          limite={limiteAgendamentosMensais}
+          planoNome={planoAccess?.planoNome}
+          upgradeTarget={upgradeTarget}
+          disabled={atingiuLimiteAgendamentos}
+        />
+
+        {atingiuLimiteAgendamentos ? (
+          <div className="flex flex-wrap gap-2">
+            <Link
+              href="/comparar-planos"
+              className="inline-flex items-center justify-center rounded-2xl border border-zinc-300 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-50"
+            >
+              Comparar planos
+            </Link>
+            <Link
+              href={`/assinatura?plano=${upgradeTarget}`}
+              className="inline-flex items-center justify-center rounded-2xl bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-zinc-800"
+            >
+              Fazer upgrade
+            </Link>
+          </div>
+        ) : null}
+      </div>
+    ) : null;
+
   const overlays = (
     <>
       <AgendaModalAviso
@@ -271,6 +310,7 @@ export default function AgendaModal(props: Props) {
               className="flex min-h-0 flex-1 flex-col"
             >
               <div className="space-y-4">
+                {avisoPlanoAgenda}
                 {formBody}
                 <div className="border-t border-zinc-200 pt-4">{resumo}</div>
               </div>
@@ -288,7 +328,7 @@ export default function AgendaModal(props: Props) {
 
                 <button
                   type="submit"
-                  disabled={saving}
+                  disabled={saving || atingiuLimiteAgendamentos}
                   className="rounded-2xl bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-95 disabled:opacity-60"
                 >
                   {saving ? "Salvando..." : "Salvar"}
@@ -351,7 +391,12 @@ export default function AgendaModal(props: Props) {
             className="flex min-h-0 flex-1 flex-col overflow-hidden"
           >
             <div className="grid min-h-0 flex-1 lg:grid-cols-[1.7fr_0.9fr]">
-              <div className="min-h-0 overflow-y-auto px-4 py-4 md:px-5">{formBody}</div>
+              <div className="min-h-0 overflow-y-auto px-4 py-4 md:px-5">
+                <div className="space-y-4">
+                  {avisoPlanoAgenda}
+                  {formBody}
+                </div>
+              </div>
 
               <div className="min-h-0 overflow-y-auto border-l border-zinc-200 bg-zinc-50/60 px-4 py-4 md:px-5">
                 {resumo}
@@ -370,7 +415,7 @@ export default function AgendaModal(props: Props) {
 
                 <button
                   type="submit"
-                  disabled={saving}
+                  disabled={saving || atingiuLimiteAgendamentos}
                   className="rounded-2xl bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-95 disabled:opacity-60"
                 >
                   {saving ? "Salvando..." : "Salvar"}
