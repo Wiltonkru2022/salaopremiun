@@ -42,6 +42,9 @@ type Profissional = {
 };
 
 type Permissoes = Record<string, boolean>;
+type PlanoAccessResponse = {
+  recursos?: Record<string, boolean>;
+};
 
 export default function ProfissionaisListPage() {
   const supabase = useMemo(() => createClient(), []);
@@ -62,6 +65,7 @@ export default function ProfissionaisListPage() {
   const [permissoes, setPermissoes] = useState<Permissoes | null>(null);
   const [nivel, setNivel] = useState("");
   const [acessoCarregado, setAcessoCarregado] = useState(false);
+  const [appProfissionalLiberado, setAppProfissionalLiberado] = useState(true);
 
   const podeGerenciar = nivel === "admin" || nivel === "gerente";
 
@@ -112,6 +116,18 @@ export default function ProfissionaisListPage() {
     if (!permissoesFinal.profissionais_ver) {
       router.replace("/dashboard?motivo=sem_permissao");
       return null;
+    }
+
+    const planoResponse = await fetch("/api/plano/access", {
+      method: "GET",
+      cache: "no-store",
+    });
+
+    if (planoResponse.ok) {
+      const planoData = (await planoResponse.json()) as PlanoAccessResponse;
+      setAppProfissionalLiberado(
+        planoData.recursos?.app_profissional !== false
+      );
     }
 
     return {
@@ -453,9 +469,13 @@ export default function ProfissionaisListPage() {
               icon={Users}
             />
             <ResumoCard
-              title="App liberado"
+              title={appProfissionalLiberado ? "App liberado" : "App configurado"}
               value={`${resumo.appLiberado}`}
-              description="Perfis com acesso ao app profissional"
+              description={
+                appProfissionalLiberado
+                  ? "Perfis com acesso ao app profissional"
+                  : "Acessos existentes que voltam a funcionar com upgrade"
+              }
               icon={KeyRound}
             />
             <ResumoCard
@@ -481,6 +501,33 @@ export default function ProfissionaisListPage() {
           {msg ? (
             <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
               {msg}
+            </div>
+          ) : null}
+
+          {!appProfissionalLiberado ? (
+            <div className="rounded-[24px] border border-amber-200 bg-amber-50 p-4 text-amber-900 shadow-sm">
+              <div className="text-sm font-semibold">
+                App profissional pausado no plano atual
+              </div>
+              <div className="mt-1 text-sm leading-6 text-amber-800">
+                Os acessos já configurados para a equipe continuam salvos. O
+                login do app só volta a liberar quando o salão subir para Pro ou
+                Premium.
+              </div>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <Link
+                  href="/comparar-planos"
+                  className="inline-flex items-center justify-center rounded-2xl border border-amber-300 bg-white px-4 py-2.5 text-sm font-semibold text-amber-900 transition hover:bg-amber-100"
+                >
+                  Comparar planos
+                </Link>
+                <Link
+                  href="/assinatura?plano=pro"
+                  className="inline-flex items-center justify-center rounded-2xl bg-zinc-950 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-zinc-800"
+                >
+                  Fazer upgrade
+                </Link>
+              </div>
             </div>
           ) : null}
 
@@ -546,8 +593,16 @@ export default function ProfissionaisListPage() {
                               <StatusBadge ativo={ativo} />
                               <RoleBadge isAssistente={isAssistente} />
                               {item.app_ativo ? (
-                                <span className="rounded-full bg-sky-100 px-2.5 py-1 text-xs font-semibold text-sky-700">
-                                  App liberado
+                                <span
+                                  className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+                                    appProfissionalLiberado
+                                      ? "bg-sky-100 text-sky-700"
+                                      : "bg-amber-100 text-amber-700"
+                                  }`}
+                                >
+                                  {appProfissionalLiberado
+                                    ? "App liberado"
+                                    : "App pausado pelo plano"}
                                 </span>
                               ) : null}
                             </div>

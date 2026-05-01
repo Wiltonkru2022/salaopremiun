@@ -43,7 +43,49 @@ function getPlanoUpgradeHref(planoAtual: string) {
   return "/assinatura?plano=pro";
 }
 
-export default async function MeuPlanoPage() {
+function getMotivoMeta(motivo?: string | null) {
+  const normalized = String(motivo || "").toLowerCase();
+
+  if (normalized === "recurso_estoque_bloqueado") {
+    return {
+      title: "Estoque bloqueado no plano atual",
+      message:
+        "Os produtos e movimentações já cadastrados não foram apagados. O módulo só fica pausado até o salão voltar para um plano que libera estoque.",
+    };
+  }
+
+  if (normalized === "recurso_marketing_bloqueado") {
+    return {
+      title: "Marketing bloqueado no plano atual",
+      message:
+        "As configurações do módulo ficam preservadas, mas o uso do marketing volta a liberar apenas quando o plano incluir esse recurso.",
+    };
+  }
+
+  if (normalized === "recurso_app_profissional_bloqueado") {
+    return {
+      title: "App profissional bloqueado no plano atual",
+      message:
+        "Os acessos já preparados para a equipe continuam cadastrados, mas o login do app fica pausado até o salão voltar para o Pro ou Premium.",
+    };
+  }
+
+  return null;
+}
+
+export default async function MeuPlanoPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ motivo?: string | string[] }>;
+}) {
+  const params = searchParams ? await searchParams : undefined;
+  const motivo =
+    typeof params?.motivo === "string"
+      ? params.motivo
+      : Array.isArray(params?.motivo)
+        ? params?.motivo[0]
+        : undefined;
+  const motivoMeta = getMotivoMeta(motivo);
   const supabase = await createClient();
   const {
     data: { user },
@@ -200,6 +242,12 @@ export default async function MeuPlanoPage() {
           <strong>Modo restrito ativo.</strong> Você ainda pode consultar
           dados, pagar a assinatura e falar com suporte, mas novas operações
           críticas ficam bloqueadas até a regularização.
+        </div>
+      ) : null}
+
+      {motivoMeta ? (
+        <div className="rounded-[28px] border border-sky-200 bg-sky-50 p-5 text-sm leading-6 text-sky-900 shadow-sm">
+          <strong>{motivoMeta.title}.</strong> {motivoMeta.message}
         </div>
       ) : null}
 
