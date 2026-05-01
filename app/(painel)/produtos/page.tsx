@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import AppLoading from "@/components/ui/AppLoading";
 import ConfirmActionModal from "@/components/ui/ConfirmActionModal";
+import { usePlanoAccessSnapshot } from "@/components/plans/usePlanoAccessSnapshot";
 import { getUsuarioLogado } from "@/lib/auth/getUsuarioLogado";
 import {
   buildPermissoesByNivel,
@@ -64,6 +65,7 @@ function getMargemPercentual(produto: Produto) {
 export default function ProdutosPage() {
   const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
+  const { planoAccess, upgradeTarget } = usePlanoAccessSnapshot(true);
 
   const [loading, setLoading] = useState(true);
   const [savingId, setSavingId] = useState<string | null>(null);
@@ -83,6 +85,7 @@ export default function ProdutosPage() {
   const [acessoCarregado, setAcessoCarregado] = useState(false);
 
   const podeGerenciar = nivel === "admin" || nivel === "gerente";
+  const estoqueLiberado = planoAccess?.recursos?.estoque !== false;
 
   const carregarAcesso = useCallback(async () => {
     const {
@@ -364,12 +367,13 @@ export default function ProdutosPage() {
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div className="max-w-3xl">
               <div className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-400">
-                Estoque e revenda
+                {estoqueLiberado ? "Estoque e revenda" : "Revenda e margem"}
               </div>
               <h1 className="mt-2 text-2xl font-bold md:text-3xl">Produtos</h1>
               <p className="mt-3 max-w-2xl text-sm leading-6 text-zinc-600">
-                O cadastro de produto precisa responder tres perguntas rapido:
-                quanto custa, quanto vende e se o estoque esta ficando perigoso.
+                {estoqueLiberado
+                  ? "O cadastro de produto precisa responder tres perguntas rapido: quanto custa, quanto vende e se o estoque esta ficando perigoso."
+                  : "O cadastro de produto segue liberado para revenda, custo e margem. O controle de estoque entra quando o salao sobe para Pro ou Premium."}
               </p>
             </div>
 
@@ -384,19 +388,51 @@ export default function ProdutosPage() {
           </div>
         </section>
 
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+        {!estoqueLiberado ? (
+          <section className="rounded-3xl border border-sky-200 bg-sky-50 p-5 text-sm text-sky-900 shadow-sm">
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+              <div>
+                <div className="font-bold">Estoque bloqueado no plano atual</div>
+                <p className="mt-1 leading-6 text-sky-800">
+                  Seus produtos continuam prontos para cadastro, preço e custo. A leitura de baixo estoque, movimentações e reposição libera no Pro ou Premium.
+                </p>
+              </div>
+
+              <div className="flex flex-wrap gap-3">
+                <Link
+                  href="/comparar-planos"
+                  className="inline-flex items-center justify-center rounded-full border border-sky-300 bg-white px-4 py-2.5 font-bold text-sky-900 transition hover:bg-sky-100"
+                >
+                  Comparar planos
+                </Link>
+                <Link
+                  href={`/assinatura?plano=${upgradeTarget}`}
+                  className="inline-flex items-center justify-center rounded-full bg-sky-900 px-4 py-2.5 font-bold text-white transition hover:opacity-95"
+                >
+                  Fazer upgrade
+                </Link>
+              </div>
+            </div>
+          </section>
+        ) : null}
+
+        <div
+          className={`grid grid-cols-1 gap-3 md:grid-cols-2 ${estoqueLiberado ? "xl:grid-cols-4" : "xl:grid-cols-3"}`}
+        >
           <ResumoCard
             title="Catalogo ativo"
             value={`${resumo.ativos}`}
             description={`${resumo.total} produtos no filtro atual`}
             icon={Boxes}
           />
-          <ResumoCard
-            title="Baixo estoque"
-            value={`${resumo.baixoEstoque}`}
-            description="Itens que ja pedem reposicao ou revisao"
-            icon={AlertTriangle}
-          />
+          {estoqueLiberado ? (
+            <ResumoCard
+              title="Baixo estoque"
+              value={`${resumo.baixoEstoque}`}
+              description="Itens que ja pedem reposicao ou revisao"
+              icon={AlertTriangle}
+            />
+          ) : null}
           <ResumoCard
             title="Preco medio"
             value={formatCurrency(resumo.ticketMedio)}
@@ -423,15 +459,19 @@ export default function ProdutosPage() {
           </div>
         ) : null}
 
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+        <div
+          className={`grid grid-cols-1 gap-3 ${estoqueLiberado ? "md:grid-cols-3" : "md:grid-cols-2"}`}
+        >
           <GuideCard
             title="Custo antes de cadastro"
             text="Nao vale cadastrar so nome e preco. Custo real e o que protege sua margem na hora de revender."
           />
-          <GuideCard
-            title="Estoque com leitura util"
-            text="Quantidade atual sozinha nao basta. O minimo ajuda a enxergar risco antes de faltar produto no atendimento."
-          />
+          {estoqueLiberado ? (
+            <GuideCard
+              title="Estoque com leitura util"
+              text="Quantidade atual sozinha nao basta. O minimo ajuda a enxergar risco antes de faltar produto no atendimento."
+            />
+          ) : null}
           <GuideCard
             title="Exclusao com trava"
             text="Produto com historico de estoque, uso em comanda ou consumo em servico agora pede inativacao em vez de sumir do mapa."
@@ -492,7 +532,7 @@ export default function ProdutosPage() {
                           {item.nome}
                         </h2>
                         <StatusBadge ativo={ativo} />
-                        {baixoEstoque ? (
+                        {estoqueLiberado && baixoEstoque ? (
                           <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-700">
                             Baixo estoque
                           </span>
@@ -509,7 +549,9 @@ export default function ProdutosPage() {
                         <TagHint>{item.destinacao || "Sem destinacao"}</TagHint>
                       </div>
 
-                      <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+                      <div
+                        className={`mt-4 grid grid-cols-1 gap-3 md:grid-cols-2 ${estoqueLiberado ? "xl:grid-cols-4" : "xl:grid-cols-3"}`}
+                      >
                         <MetricBlock
                           label="Custo real"
                           value={formatCurrency(item.custo_real)}
@@ -529,14 +571,16 @@ export default function ProdutosPage() {
                               : "Leitura rapida entre custo e venda"
                           }
                         />
-                        <MetricBlock
-                          label="Estoque"
-                          value={`${formatQuantity(estoqueAtual)} un`}
-                          detail={`Minimo esperado: ${formatQuantity(
-                            estoqueMinimo
-                          )} un`}
-                          tone={baixoEstoque ? "warning" : "neutral"}
-                        />
+                        {estoqueLiberado ? (
+                          <MetricBlock
+                            label="Estoque"
+                            value={`${formatQuantity(estoqueAtual)} un`}
+                            detail={`Minimo esperado: ${formatQuantity(
+                              estoqueMinimo
+                            )} un`}
+                            tone={baixoEstoque ? "warning" : "neutral"}
+                          />
+                        ) : null}
                       </div>
                     </div>
 
