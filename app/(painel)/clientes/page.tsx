@@ -4,6 +4,7 @@ import Link from "next/link";
 import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CalendarClock, HeartHandshake, Mail, Users } from "lucide-react";
+import { usePlanoAccessSnapshot } from "@/components/plans/usePlanoAccessSnapshot";
 import AppLoading from "@/components/ui/AppLoading";
 import ConfirmActionModal from "@/components/ui/ConfirmActionModal";
 import { getUsuarioLogado } from "@/lib/auth/getUsuarioLogado";
@@ -33,6 +34,7 @@ type Permissoes = Record<string, boolean>;
 export default function ClientesPage() {
   const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
+  const { planoAccess, upgradeTarget } = usePlanoAccessSnapshot(true);
 
   const [loading, setLoading] = useState(true);
   const [savingId, setSavingId] = useState<string | null>(null);
@@ -52,6 +54,8 @@ export default function ClientesPage() {
   const [acessoCarregado, setAcessoCarregado] = useState(false);
 
   const podeGerenciar = nivel === "admin" || nivel === "gerente";
+  const whatsappLiberado =
+    planoAccess?.recursos?.whatsapp === true || planoAccess?.recursos?.marketing === true;
 
   const carregarAcesso = useCallback(async () => {
     const {
@@ -377,15 +381,23 @@ export default function ClientesPage() {
               icon={HeartHandshake}
             />
             <ResumoCard
-              title="WhatsApp pronto"
+              title={whatsappLiberado ? "WhatsApp pronto" : "WhatsApp cadastrado"}
               value={`${resumo.comWhatsapp}`}
-              description="Cadastros com contato rapido para confirmacao"
+              description={
+                whatsappLiberado
+                  ? "Cadastros com contato rapido para confirmacao"
+                  : "Contatos prontos para uso quando o modulo de comunicacao for liberado"
+              }
               icon={HeartHandshake}
             />
             <ResumoCard
               title="E-mail preenchido"
               value={`${resumo.comEmail}`}
-              description="Ajuda em recibo, marketing e acesso futuro"
+              description={
+                whatsappLiberado
+                  ? "Ajuda em recibo, marketing e acesso futuro"
+                  : "Ajuda em recibo, comunicacao futura e acesso posterior"
+              }
               icon={Mail}
             />
             <ResumoCard
@@ -406,6 +418,36 @@ export default function ClientesPage() {
             <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
               {msg}
             </div>
+          ) : null}
+
+          {!whatsappLiberado ? (
+            <section className="rounded-[26px] border border-sky-200 bg-sky-50 p-4 shadow-sm">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                <div>
+                  <div className="text-sm font-bold text-sky-950">
+                    Comunicação premium bloqueada no plano atual
+                  </div>
+                  <p className="mt-1 text-sm leading-6 text-sky-900">
+                    Os contatos de WhatsApp e e-mail continuam salvos para a recepção. Disparos, campanhas e automações entram quando o salão sobe para Pro ou Premium.
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap gap-3">
+                  <Link
+                    href="/comparar-planos"
+                    className="inline-flex items-center justify-center rounded-full border border-sky-300 bg-white px-4 py-2.5 text-sm font-bold text-sky-900 transition hover:bg-sky-100"
+                  >
+                    Comparar planos
+                  </Link>
+                  <Link
+                    href={`/assinatura?plano=${upgradeTarget}`}
+                    className="inline-flex items-center justify-center rounded-full bg-sky-900 px-4 py-2.5 text-sm font-bold text-white transition hover:opacity-95"
+                  >
+                    Fazer upgrade
+                  </Link>
+                </div>
+              </div>
+            </section>
           ) : null}
 
           <section className="rounded-[26px] border border-zinc-200 bg-white p-4 shadow-sm">
@@ -475,7 +517,7 @@ export default function ClientesPage() {
                           ) : null}
                           {item.whatsapp ? (
                             <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-700">
-                              WhatsApp pronto
+                              {whatsappLiberado ? "WhatsApp pronto" : "WhatsApp cadastrado"}
                             </span>
                           ) : null}
                         </div>

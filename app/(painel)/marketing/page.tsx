@@ -13,21 +13,21 @@ import { createClient } from "@/lib/supabase/server";
 const itens = [
   {
     icon: <MessageSquareMore size={18} />,
-    title: "Disparo com historico real",
+    title: "Disparo com histórico real",
     description:
-      "Estamos finalizando a trilha completa de envio, retorno e leitura para liberar o modulo com seguranca.",
+      "Estamos finalizando a trilha completa de envio, retorno e leitura para liberar o módulo com segurança.",
   },
   {
     icon: <ShieldCheck size={18} />,
-    title: "Liberacao com validacao tecnica",
+    title: "Liberação com validação técnica",
     description:
-      "A ativacao publica so entra quando webhook, provedor e rastreabilidade estiverem 100% consistentes.",
+      "A ativação pública só entra quando webhook, provedor e rastreabilidade estiverem 100% consistentes.",
   },
   {
     icon: <RadioTower size={18} />,
     title: "Infra pronta para escalar",
     description:
-      "A base do modulo ja esta em producao e a liberacao visual sera feita no momento certo.",
+      "A base do módulo já está em produção e a liberação visual será feita no momento certo.",
   },
 ];
 
@@ -66,22 +66,22 @@ export default async function MarketingPage() {
         <div className="relative max-w-4xl">
           <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.28em] text-white/75">
             <Sparkles size={14} />
-            Nova funcionalidade em producao
+            Nova funcionalidade em produção
           </div>
 
           <h1 className="mt-5 max-w-3xl font-display text-3xl font-bold tracking-[-0.05em] sm:text-5xl">
-            Central de marketing em fase final de liberacao
+            Central de marketing em fase final de liberação
           </h1>
 
           <p className="mt-4 max-w-2xl text-sm leading-7 text-white/75 sm:text-base">
-            Este modulo esta sendo preparado para entrar com disparo profissional,
-            historico validado e operacao segura. A liberacao sera feita assim que
-            a camada final de producao for concluida.
+            Este módulo está sendo preparado para entrar com disparo profissional,
+            histórico validado e operação segura. A liberação será feita assim que
+            a camada final de produção for concluída.
           </p>
 
           <div className="mt-6 flex flex-wrap gap-3">
-            <Badge icon={<BellRing size={14} />} label="Em implantacao tecnica" />
-            <Badge icon={<TimerReset size={14} />} label="Aguarde a liberacao" />
+            <Badge icon={<BellRing size={14} />} label="Em implantação técnica" />
+            <Badge icon={<TimerReset size={14} />} label="Aguarde a liberação" />
             <Badge icon={<ShieldCheck size={14} />} label="Go-live controlado" />
           </div>
         </div>
@@ -90,14 +90,14 @@ export default async function MarketingPage() {
       <section className="grid gap-5 xl:grid-cols-[1.1fr_0.9fr]">
         <div className="rounded-[32px] border border-zinc-200 bg-white p-6 shadow-sm">
           <div className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-400">
-            Status do modulo
+            Status do módulo
           </div>
           <h2 className="mt-2 font-display text-2xl font-bold tracking-[-0.04em] text-zinc-950">
             Marketing temporariamente reservado para a virada oficial
           </h2>
           <p className="mt-3 max-w-2xl text-sm leading-7 text-zinc-600">
-            Para evitar uso parcial antes da liberacao completa, esta area foi
-            colocada em modo de espera. Quando a versao final estiver pronta, o
+            Para evitar uso parcial antes da liberação completa, esta área foi
+            colocada em modo de espera. Quando a versão final estiver pronta, o
             painel vai receber a funcionalidade completa com envio, controle e
             acompanhamento operacional.
           </p>
@@ -127,11 +127,11 @@ export default async function MarketingPage() {
             Aviso operacional
           </div>
           <h2 className="mt-2 font-display text-2xl font-bold tracking-[-0.04em]">
-            Nova funcionalidade em producao. Aguarde.
+            Nova funcionalidade em produção. Aguarde.
           </h2>
           <p className="mt-3 text-sm leading-7 text-white/70">
-            Esta tela esta reservada para a liberacao do novo modulo de
-            marketing. Assim que a ativacao for concluida, os recursos serao
+            Esta tela está reservada para a liberação do novo módulo de
+            marketing. Assim que a ativação for concluída, os recursos serão
             exibidos aqui automaticamente.
           </p>
 
@@ -140,7 +140,7 @@ export default async function MarketingPage() {
               Mensagem do sistema
             </div>
             <div className="mt-3 text-lg font-semibold leading-8 text-white">
-              “Estamos preparando a liberacao final desta funcionalidade para
+              “Estamos preparando a liberação final desta funcionalidade para
               garantir estabilidade, rastreabilidade e uma entrada premium no
               painel.”
             </div>
