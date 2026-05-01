@@ -119,7 +119,7 @@ begin
   where ci.id_comanda = p_id_comanda
     and coalesce(ci.ativo, true) = true;
 
-  select coalesce(jsonb_agg(to_jsonb(cp.*) order by cp.criado_em), '[]'::jsonb)
+  select coalesce(jsonb_agg(to_jsonb(cp.*) order by cp.created_at), '[]'::jsonb)
     into v_pagamentos
   from public.comanda_pagamentos cp
   where cp.id_comanda = p_id_comanda;
