@@ -159,11 +159,26 @@ type ServicosComboItensTable = {
   ];
 };
 
+type SaloesRecursosExtrasTableExtensions = {
+  Row: {
+    limite_numero: number | null;
+  };
+  Insert: {
+    limite_numero?: number | null;
+  };
+  Update: {
+    limite_numero?: number | null;
+  };
+};
+
 type DatabaseWithAppExtensions = Database & {
   public: Database["public"] & {
     Tables: Database["public"]["Tables"] & {
       servicos: Database["public"]["Tables"]["servicos"] & ServicosTableExtensions;
       servicos_combo_itens: ServicosComboItensTable;
+      saloes_recursos_extras:
+        Database["public"]["Tables"]["saloes_recursos_extras"] &
+        SaloesRecursosExtrasTableExtensions;
       whatsapp_pacote_compras: WhatsappPacoteComprasTable;
     };
     Functions: Database["public"]["Functions"] & {

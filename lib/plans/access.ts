@@ -176,6 +176,7 @@ type PlanoRecursoRow = {
 type ExtraRow = {
   recurso_codigo: string;
   habilitado: boolean | null;
+  limite_numero?: number | null;
 };
 
 type UsageLimitKey =
@@ -219,6 +220,11 @@ function getPlanoRecursoLimit(
   recursoCodigo: string
 ) {
   const row = recursosRows.find((item) => item.recurso_codigo === recursoCodigo);
+  return normalizeLimit(row?.limite_numero ?? null);
+}
+
+function getExtraRecursoLimit(extrasRows: ExtraRow[], recursoCodigo: string) {
+  const row = extrasRows.find((item) => item.recurso_codigo === recursoCodigo);
   return normalizeLimit(row?.limite_numero ?? null);
 }
 
@@ -280,7 +286,7 @@ export async function getPlanoAccessSnapshot(
         : Promise.resolve({ data: [] }),
       supabaseAdmin
         .from("saloes_recursos_extras")
-        .select("recurso_codigo, habilitado")
+        .select("recurso_codigo, habilitado, limite_numero")
         .eq("id_salao", idSalao)
         .eq("habilitado", true)
         .or(`expira_em.is.null,expira_em.gt.${new Date().toISOString()}`),
@@ -366,12 +372,16 @@ export async function getPlanoAccessSnapshot(
     planoRow?.limite_profissionais ??
     null;
   const recursosRowsNormalized = (recursosRows || []) as PlanoRecursoRow[];
-  const limiteClientes = getPlanoRecursoLimit(recursosRowsNormalized, "clientes");
-  const limiteServicos = getPlanoRecursoLimit(recursosRowsNormalized, "servicos");
-  const limiteAgendamentosMensais = getPlanoRecursoLimit(
-    recursosRowsNormalized,
-    "agendamentos_mensais"
-  );
+  const extrasRowsNormalized = (extrasRows || []) as ExtraRow[];
+  const limiteClientes =
+    getExtraRecursoLimit(extrasRowsNormalized, "clientes") ??
+    getPlanoRecursoLimit(recursosRowsNormalized, "clientes");
+  const limiteServicos =
+    getExtraRecursoLimit(extrasRowsNormalized, "servicos") ??
+    getPlanoRecursoLimit(recursosRowsNormalized, "servicos");
+  const limiteAgendamentosMensais =
+    getExtraRecursoLimit(extrasRowsNormalized, "agendamentos_mensais") ??
+    getPlanoRecursoLimit(recursosRowsNormalized, "agendamentos_mensais");
 
   return {
     idSalao,
