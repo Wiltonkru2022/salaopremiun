@@ -24,8 +24,12 @@ type PlanoAccessPayload = {
 
 export function getUpgradeTarget(
   planoCodigo?: string | null
-): "pro" | "premium" {
-  return planoCodigo === "pro" ? "premium" : "pro";
+): "basico" | "pro" | "premium" {
+  const normalized = String(planoCodigo || "").toLowerCase();
+
+  if (normalized === "pro") return "premium";
+  if (normalized === "basico") return "pro";
+  return "basico";
 }
 
 export function usePlanoAccessSnapshot(enabled = true) {

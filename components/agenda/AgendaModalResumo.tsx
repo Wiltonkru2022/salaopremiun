@@ -25,7 +25,7 @@ type Props = {
   dicaIndex: number;
   tituloWhatsapp: string;
   whatsappLiberado: boolean;
-  upgradeTarget: "pro" | "premium";
+  upgradeTarget: "basico" | "pro" | "premium";
   onChangeWhatsapp: (value: string) => void;
   onAbrirWhatsapp: () => void;
 };

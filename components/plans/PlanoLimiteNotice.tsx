@@ -6,7 +6,7 @@ type Props = {
   usado: number;
   limite: number | null;
   planoNome?: string | null;
-  upgradeTarget?: "pro" | "premium";
+  upgradeTarget?: "basico" | "pro" | "premium";
   disabled?: boolean;
   className?: string;
 };
@@ -29,7 +29,7 @@ export default function PlanoLimiteNotice({
   usado,
   limite,
   planoNome,
-  upgradeTarget = "pro",
+  upgradeTarget = "basico",
   disabled = false,
   className = "",
 }: Props) {
