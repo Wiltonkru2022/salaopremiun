@@ -151,7 +151,12 @@ export default function AssinaturaPage() {
             criarCobrancaAssinatura={criarCobrancaAssinatura}
           />
 
-          <AssinaturaCheckoutBox checkout={checkout} copiarPix={copiarPix} />
+          <AssinaturaCheckoutBox
+            checkout={checkout}
+            copiarPix={copiarPix}
+            planoAtual={assinatura?.plano || null}
+            planoSelecionado={planoSelecionado}
+          />
         </section>
       ) : mostrarCardAssinaturaAtiva ? (
         <section className="rounded-[28px] border border-zinc-200 bg-white p-6 shadow-sm">

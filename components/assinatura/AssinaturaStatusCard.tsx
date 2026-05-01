@@ -97,13 +97,13 @@ export default function AssinaturaStatusCard({
                   ? billingType === "PIX"
                     ? "Gerando PIX..."
                     : billingType === "BOLETO"
-                    ? "Gerando boleto..."
-                    : "Gerando cobrança no cartão..."
+                      ? "Gerando boleto..."
+                      : "Gerando cobrança no cartão..."
                   : billingType === "PIX"
-                  ? "Regularizar com PIX"
-                  : billingType === "BOLETO"
-                  ? "Regularizar com boleto"
-                  : "Regularizar no cartão"}
+                    ? "Regularizar com PIX"
+                    : billingType === "BOLETO"
+                      ? "Regularizar com boleto"
+                      : "Regularizar no cartão"}
               </button>
             ) : null}
           </div>
@@ -168,13 +168,13 @@ export default function AssinaturaStatusCard({
                   ? billingType === "PIX"
                     ? "Gerando PIX..."
                     : billingType === "BOLETO"
-                    ? "Gerando boleto..."
-                    : "Gerando cobrança no cartão..."
+                      ? "Gerando boleto..."
+                      : "Gerando cobrança no cartão..."
                   : billingType === "PIX"
-                  ? "Gerar PIX"
-                  : billingType === "BOLETO"
-                  ? "Gerar boleto"
-                  : "Gerar cobrança no cartão"}
+                    ? "Gerar PIX"
+                    : billingType === "BOLETO"
+                      ? "Gerar boleto"
+                      : "Gerar cobrança no cartão"}
               </button>
             ) : null}
           </div>
@@ -189,7 +189,8 @@ export default function AssinaturaStatusCard({
                 Aguardando confirmação do pagamento...
               </div>
               <div className="text-xs text-amber-700">
-                O sistema está consultando automaticamente. Você também pode verificar manualmente.
+                O sistema está consultando automaticamente. Você também pode
+                verificar manualmente.
               </div>
             </div>
 
