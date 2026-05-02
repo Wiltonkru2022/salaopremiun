@@ -93,12 +93,12 @@ export default async function CompararPlanosPage() {
   const planos = getPlanosOrdenados();
 
   return (
-    <div className="space-y-6">
-      <section className="rounded-[30px] border border-zinc-200 bg-white p-6 shadow-sm md:p-8">
+    <div className="space-y-4">
+      <section className="rounded-[26px] border border-zinc-200 bg-white p-5 shadow-sm md:p-6">
         <div className="text-xs font-black uppercase tracking-[0.24em] text-zinc-400">
           Comparar planos
         </div>
-        <h1 className="mt-2 text-3xl font-black tracking-[-0.04em] text-zinc-950">
+        <h1 className="mt-2 text-[2rem] font-black tracking-[-0.04em] text-zinc-950">
           O que cada plano libera de verdade
         </h1>
         <p className="mt-3 max-w-3xl text-sm leading-6 text-zinc-500">
@@ -108,7 +108,7 @@ export default async function CompararPlanosPage() {
         </p>
       </section>
 
-      <section className="grid gap-5 xl:grid-cols-4">
+      <section className="grid gap-4 xl:grid-cols-4">
         {planos.map((plano) => {
           const atual = plano.codigo === planoAtualInfo.codigo;
           const action = getPlanoAction({
@@ -131,7 +131,7 @@ export default async function CompararPlanosPage() {
           return (
             <article
               key={plano.codigo}
-              className={`rounded-[28px] border p-5 shadow-sm ${
+              className={`rounded-[24px] border p-4 shadow-sm ${
                 plano.destaque
                   ? "border-zinc-950 bg-zinc-950 text-white"
                   : "border-zinc-200 bg-white text-zinc-950"
@@ -146,7 +146,7 @@ export default async function CompararPlanosPage() {
                   >
                     {plano.foco}
                   </div>
-                  <h2 className="mt-2 text-2xl font-black">{plano.nome}</h2>
+                  <h2 className="mt-1.5 text-xl font-black">{plano.nome}</h2>
                 </div>
 
                 {atual ? (
@@ -164,7 +164,7 @@ export default async function CompararPlanosPage() {
                 {plano.subtitulo}
               </p>
 
-              <div className="mt-5 text-3xl font-black">
+              <div className="mt-4 text-2xl font-black">
                 {plano.valorMensal === 0
                   ? "Grátis"
                   : formatCurrency(plano.valorMensal)}
@@ -179,9 +179,9 @@ export default async function CompararPlanosPage() {
                 ) : null}
               </div>
 
-              <div className="mt-5 space-y-3 text-sm">
+              <div className="mt-4 space-y-2.5 text-sm">
                 <div
-                  className={`rounded-2xl border px-4 py-3 ${
+                  className={`rounded-2xl border px-4 py-2.5 ${
                     plano.destaque
                       ? "border-white/10 bg-white/5"
                       : "border-zinc-200 bg-zinc-50"
@@ -194,7 +194,7 @@ export default async function CompararPlanosPage() {
                   >
                     Limites
                   </div>
-                  <div className="mt-2 space-y-1.5">
+                  <div className="mt-1.5 space-y-1">
                     <div>
                       {formatLimit(
                         plano.limites.agendamentosMensais,
@@ -218,9 +218,9 @@ export default async function CompararPlanosPage() {
                   >
                     Libera
                   </div>
-                  <ul className="mt-2 space-y-1.5">
+                  <ul className="mt-1.5 space-y-1">
                     {plano.recursosLiberados.map((item) => (
-                      <li key={item}>â€¢ {item}</li>
+                      <li key={item}>• {item}</li>
                     ))}
                   </ul>
                 </div>
@@ -233,13 +233,13 @@ export default async function CompararPlanosPage() {
                   >
                     Continua bloqueado
                   </div>
-                  <ul className="mt-2 space-y-1.5">
+                  <ul className="mt-1.5 space-y-1">
                     {plano.recursosBloqueados.length > 0 ? (
                       plano.recursosBloqueados.map((item) => (
-                        <li key={item}>â€¢ {item}</li>
+                        <li key={item}>• {item}</li>
                       ))
                     ) : (
-                      <li>â€¢ Nada bloqueado neste plano</li>
+                      <li>• Nada bloqueado neste plano</li>
                     )}
                   </ul>
                 </div>
@@ -247,7 +247,7 @@ export default async function CompararPlanosPage() {
 
               <Link
                 href={action.href}
-                className={`mt-6 inline-flex w-full items-center justify-center rounded-full px-4 py-3 text-sm font-black transition ${buttonClass}`}
+                className={`mt-5 inline-flex w-full items-center justify-center rounded-full px-4 py-2.5 text-sm font-black transition ${buttonClass}`}
               >
                 {action.label}
               </Link>

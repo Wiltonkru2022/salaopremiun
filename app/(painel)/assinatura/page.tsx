@@ -56,7 +56,7 @@ export default function AssinaturaPage() {
     return (
       <AppLoading
         title="Carregando assinatura"
-        message="Aguarde enquanto consultamos plano, cobranças, renovação e histórico de pagamentos."
+        message="Aguarde enquanto consultamos plano, cobrancas, renovacao e historico de pagamentos."
         fullHeight={false}
       />
     );
@@ -64,8 +64,8 @@ export default function AssinaturaPage() {
 
   if (permissoes && !permissoes.assinatura_ver) {
     return (
-      <div className="rounded-[28px] border border-rose-200 bg-rose-50 p-6 text-rose-700 shadow-sm">
-        Você não tem permissão para acessar Assinatura.
+      <div className="rounded-[24px] border border-rose-200 bg-rose-50 p-5 text-rose-700 shadow-sm">
+        Voce nao tem permissao para acessar Assinatura.
       </div>
     );
   }
@@ -84,7 +84,7 @@ export default function AssinaturaPage() {
     !mostrarSecaoRenovacao && (trialAtivo || assinaturaAtiva);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <AssinaturaHero
         assinaturaStatus={assinatura?.status}
         planoAtualNome={planoAtualNome}
@@ -102,13 +102,13 @@ export default function AssinaturaPage() {
         tipoMudancaPlano={tipoMudancaPlano}
       />
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
+      <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-end">
         <button
           type="button"
           onClick={abrirHistoricoModal}
-          className="rounded-2xl border border-violet-200 bg-violet-50 px-5 py-3 text-sm font-semibold text-violet-700 transition hover:bg-violet-100"
+          className="rounded-2xl border border-violet-200 bg-violet-50 px-5 py-2.5 text-sm font-semibold text-violet-700 transition hover:bg-violet-100"
         >
-          Ver histórico de pagamentos
+          Ver historico de pagamentos
         </button>
       </div>
 
@@ -136,7 +136,7 @@ export default function AssinaturaPage() {
       />
 
       {mostrarSecaoRenovacao && !trialAtivo ? (
-        <section className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
+        <section className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
           <AssinaturaPlanosPagamento
             podeGerenciar={podeGerenciar}
             planoSelecionado={planoSelecionado}
@@ -159,19 +159,19 @@ export default function AssinaturaPage() {
           />
         </section>
       ) : mostrarCardAssinaturaAtiva ? (
-        <section className="rounded-[28px] border border-zinc-200 bg-white p-6 shadow-sm">
+        <section className="rounded-[24px] border border-zinc-200 bg-white p-5 shadow-sm">
           <h2 className="text-2xl font-bold text-zinc-950">
-            {trialAtivo ? "Teste grátis ativo" : "Assinatura ativa"}
+            {trialAtivo ? "Teste gratis ativo" : "Assinatura ativa"}
           </h2>
 
           <p className="mt-2 text-sm text-zinc-500">
             {trialAtivo
-              ? "Seu teste está liberado. A área de renovação aparecerá quando o período terminar."
-              : "Seu acesso está liberado. A área de renovação aparecerá apenas quando estiver perto do vencimento ou se houver cobrança pendente."}
+              ? "Seu teste esta liberado. A area de renovacao aparecera quando o periodo terminar."
+              : "Seu acesso esta liberado. A area de renovacao aparecera apenas quando estiver perto do vencimento ou se houver cobranca pendente."}
           </p>
 
           {resumoAssinatura.diasRestantes != null ? (
-            <div className="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+            <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
               Restam {resumoAssinatura.diasRestantes} dia(s) para o vencimento.
             </div>
           ) : null}
