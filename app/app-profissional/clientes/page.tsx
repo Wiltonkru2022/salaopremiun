@@ -72,27 +72,27 @@ export default async function ClientesPage({
 
   return (
     <ProfissionalShell title="Clientes" subtitle="Cadastros do salao">
-      <div className="space-y-4">
-        <section className="overflow-hidden rounded-[1.85rem] bg-zinc-950 px-4 py-5 text-white shadow-[0_18px_40px_rgba(15,23,42,0.16)]">
+      <div className="space-y-3.5">
+        <section className="overflow-hidden rounded-[1.5rem] bg-zinc-950 px-4 py-4 text-white shadow-[0_16px_34px_rgba(15,23,42,0.15)]">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-bold uppercase tracking-[0.14em] text-amber-100">
+              <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.12em] text-amber-100">
                 <UsersRound size={14} />
                 Base do profissional
               </div>
 
-              <h2 className="mt-4 text-[1.65rem] font-black tracking-[-0.05em] leading-none">
+              <h2 className="mt-3 text-[1.45rem] font-black tracking-[-0.04em] leading-none">
                 {clientes.length} clientes
               </h2>
 
-              <p className="mt-3 text-sm leading-6 text-zinc-300">
+              <p className="mt-2.5 text-sm leading-6 text-zinc-300">
                 Busque rapido, abra o cadastro e siga para agendamento ou comanda.
               </p>
             </div>
 
             <Link
               href="/app-profissional/clientes/novo"
-              className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white text-zinc-950"
+              className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-zinc-950"
               aria-label="Cadastrar cliente"
             >
               <UserPlus2 size={18} />
@@ -107,20 +107,20 @@ export default async function ClientesPage({
           />
 
           <form method="GET" className="space-y-3">
-            <div className="flex items-center gap-2 rounded-[1.3rem] border border-zinc-200 bg-zinc-50 px-3">
+            <div className="flex items-center gap-2 rounded-[1.15rem] border border-zinc-200 bg-zinc-50 px-3">
               <Search size={16} className="shrink-0 text-zinc-400" />
               <input
                 type="text"
                 name="busca"
                 defaultValue={buscaLimpa}
                 placeholder="Buscar cliente"
-                className="h-12 w-full bg-transparent text-sm outline-none"
+                className="h-11 w-full bg-transparent text-sm outline-none"
               />
             </div>
 
             <Link
               href="/app-profissional/clientes/novo"
-              className="flex h-12 w-full items-center justify-center rounded-2xl bg-zinc-950 text-sm font-bold text-white"
+              className="flex h-11 w-full items-center justify-center rounded-[18px] bg-zinc-950 text-sm font-bold text-white"
             >
               Cadastrar cliente
             </Link>
@@ -152,25 +152,25 @@ export default async function ClientesPage({
               action={
                 <Link
                   href="/app-profissional/clientes/novo"
-                  className="inline-flex h-11 items-center justify-center rounded-2xl bg-zinc-950 px-4 text-sm font-bold text-white"
+                  className="inline-flex h-10 items-center justify-center rounded-[18px] bg-zinc-950 px-4 text-sm font-bold text-white"
                 >
                   Novo cliente
                 </Link>
               }
             />
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-2.5">
               {clientes.map((cliente) => (
                 <Link
                   key={cliente.id}
                   href={`/app-profissional/clientes/${cliente.id}`}
-                  className="block rounded-[1.5rem] border border-zinc-200 bg-zinc-50/70 p-4 transition active:scale-[0.99]"
+                  className="block rounded-[1.25rem] border border-zinc-200 bg-zinc-50/70 p-3.5 transition active:scale-[0.99]"
                 >
-                  <div className="break-words text-[1.05rem] font-bold tracking-[-0.02em] text-zinc-950">
+                  <div className="break-words text-base font-bold tracking-[-0.02em] text-zinc-950">
                     {cliente.nome || "Cliente"}
                   </div>
 
-                  <div className="mt-2 break-words text-sm text-zinc-500">
+                  <div className="mt-1.5 break-words text-sm text-zinc-500">
                     {formatTelefone(cliente.telefone)}
                   </div>
 

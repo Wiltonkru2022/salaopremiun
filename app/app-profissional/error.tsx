@@ -27,32 +27,32 @@ export default function AppProfissionalError({
           subtitle="Encontramos um problema ao abrir sua tela."
         />
 
-        <main className="flex flex-1 items-start px-4 py-5">
-          <div className="w-full rounded-[1.8rem] border border-red-200 bg-white p-5 shadow-[0_20px_50px_rgba(15,23,42,0.08)]">
-            <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-red-50 text-red-600">
+        <main className="flex flex-1 items-start px-4 py-4">
+          <div className="w-full rounded-[1.5rem] border border-red-200 bg-white p-4 shadow-[0_16px_36px_rgba(15,23,42,0.08)]">
+            <div className="inline-flex h-10 w-10 items-center justify-center rounded-[18px] bg-red-50 text-red-600">
               <AlertTriangle size={20} />
             </div>
 
-            <h1 className="mt-4 text-[1.5rem] font-black tracking-[-0.04em] text-zinc-950">
+            <h1 className="mt-3 text-[1.3rem] font-black tracking-[-0.03em] text-zinc-950">
               Nao foi possivel carregar esta tela
             </h1>
 
-            <p className="mt-3 text-sm leading-6 text-zinc-600">
+            <p className="mt-2.5 text-sm leading-6 text-zinc-600">
               Tente recarregar a tela. Se o problema vier de uma sessao antiga,
               entre novamente para limpar os dados salvos do navegador.
             </p>
 
             {error?.digest ? (
-              <div className="mt-4 rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-xs text-zinc-500">
+              <div className="mt-3 rounded-[18px] border border-zinc-200 bg-zinc-50 px-4 py-2.5 text-xs text-zinc-500">
                 Codigo do erro: {error.digest}
               </div>
             ) : null}
 
-            <div className="mt-5 grid gap-3">
+            <div className="mt-4 grid gap-2.5">
               <button
                 type="button"
                 onClick={() => reset()}
-                className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-zinc-950 px-4 text-sm font-bold text-white"
+                className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-[18px] bg-zinc-950 px-4 text-sm font-bold text-white"
               >
                 <RefreshCcw size={16} />
                 Tentar novamente
@@ -60,7 +60,7 @@ export default function AppProfissionalError({
 
               <Link
                 href="/app-profissional/login?limpar=1"
-                className="inline-flex h-12 w-full items-center justify-center rounded-2xl border border-zinc-200 bg-zinc-50 px-4 text-sm font-bold text-zinc-800"
+                className="inline-flex h-11 w-full items-center justify-center rounded-[18px] border border-zinc-200 bg-zinc-50 px-4 text-sm font-bold text-zinc-800"
               >
                 Entrar novamente
               </Link>
