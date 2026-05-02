@@ -189,7 +189,7 @@ export default async function ClienteDetalheProfissionalPage({
 
   return (
     <ProfissionalShell title="Cliente" subtitle="Detalhes do cadastro">
-      <div className="space-y-4 pb-24">
+      <div className="space-y-3.5 pb-20">
         <Link
           href="/app-profissional/clientes"
           className="inline-flex items-center gap-2 text-sm font-semibold text-zinc-700"
@@ -198,17 +198,17 @@ export default async function ClienteDetalheProfissionalPage({
           Voltar para clientes
         </Link>
 
-        <section className="overflow-hidden rounded-[1.85rem] bg-zinc-950 px-4 py-5 text-white shadow-[0_18px_40px_rgba(15,23,42,0.16)]">
+        <section className="overflow-hidden rounded-[1.5rem] bg-zinc-950 px-4 py-4 text-white shadow-[0_16px_34px_rgba(15,23,42,0.15)]">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-bold uppercase tracking-[0.14em] text-amber-100">
+              <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.12em] text-amber-100">
                 <UserRound size={14} />
                 Cadastro ativo
               </div>
-              <h1 className="mt-4 text-[1.65rem] font-black tracking-[-0.05em] leading-none">
+              <h1 className="mt-3 text-[1.45rem] font-black tracking-[-0.04em] leading-none">
                 {cliente.nome || "Cliente"}
               </h1>
-              <p className="mt-3 text-sm leading-6 text-zinc-300">
+              <p className="mt-2.5 text-sm leading-6 text-zinc-300">
                 Acesse rapidamente os dados de contato e siga para agenda ou comanda.
               </p>
             </div>
@@ -220,10 +220,10 @@ export default async function ClienteDetalheProfissionalPage({
           </div>
         </section>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-2.5">
           <Link
             href={`/app-profissional/agenda/novo?cliente_id=${cliente.id}`}
-            className="flex min-h-[94px] flex-col justify-between rounded-[1.5rem] border border-zinc-200 bg-white p-4 shadow-[0_14px_36px_rgba(15,23,42,0.06)]"
+            className="flex min-h-[84px] flex-col justify-between rounded-[1.25rem] border border-zinc-200 bg-white p-3.5 shadow-[0_12px_30px_rgba(15,23,42,0.05)]"
           >
             <CalendarPlus2 size={18} className="text-zinc-700" />
             <div>
@@ -234,7 +234,7 @@ export default async function ClienteDetalheProfissionalPage({
 
           <Link
             href={`/app-profissional/comandas/nova?cliente_id=${cliente.id}`}
-            className="flex min-h-[94px] flex-col justify-between rounded-[1.5rem] border border-zinc-200 bg-white p-4 shadow-[0_14px_36px_rgba(15,23,42,0.06)]"
+            className="flex min-h-[84px] flex-col justify-between rounded-[1.25rem] border border-zinc-200 bg-white p-3.5 shadow-[0_12px_30px_rgba(15,23,42,0.05)]"
           >
             <Receipt size={18} className="text-zinc-700" />
             <div>
@@ -250,8 +250,8 @@ export default async function ClienteDetalheProfissionalPage({
             description="Dados principais para confirmar o atendimento."
           />
 
-          <div className="space-y-3">
-            <div className="flex items-start gap-3 rounded-[1.2rem] border border-zinc-200 bg-zinc-50/80 p-4">
+          <div className="space-y-2.5">
+            <div className="flex items-start gap-3 rounded-[1.05rem] border border-zinc-200 bg-zinc-50/80 p-3.5">
               <Phone size={16} className="mt-0.5 shrink-0 text-zinc-500" />
               <div className="min-w-0">
                 <div className="text-xs font-bold uppercase tracking-[0.14em] text-zinc-400">
@@ -263,7 +263,7 @@ export default async function ClienteDetalheProfissionalPage({
               </div>
             </div>
 
-            <div className="flex items-start gap-3 rounded-[1.2rem] border border-zinc-200 bg-zinc-50/80 p-4">
+            <div className="flex items-start gap-3 rounded-[1.05rem] border border-zinc-200 bg-zinc-50/80 p-3.5">
               <Mail size={16} className="mt-0.5 shrink-0 text-zinc-500" />
               <div className="min-w-0">
                 <div className="text-xs font-bold uppercase tracking-[0.14em] text-zinc-400">
@@ -284,12 +284,12 @@ export default async function ClienteDetalheProfissionalPage({
           />
 
           {agendamentos.length ? (
-            <div className="space-y-3">
+            <div className="space-y-2.5">
               {agendamentos.map((agendamento) => (
                 <Link
                   key={agendamento.id}
                   href={`/app-profissional/agenda/${agendamento.id}`}
-                  className="block rounded-[1.35rem] border border-zinc-200 bg-zinc-50/70 p-4"
+                  className="block rounded-[1.15rem] border border-zinc-200 bg-zinc-50/70 p-3.5"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
@@ -309,7 +309,7 @@ export default async function ClienteDetalheProfissionalPage({
               ))}
             </div>
           ) : (
-            <div className="rounded-[1.35rem] border border-dashed border-zinc-300 bg-zinc-50/80 px-4 py-5 text-center text-sm text-zinc-500">
+            <div className="rounded-[1.15rem] border border-dashed border-zinc-300 bg-zinc-50/80 px-4 py-4 text-center text-sm text-zinc-500">
               Ainda nao existe agendamento desse cliente com este profissional.
             </div>
           )}
@@ -322,12 +322,12 @@ export default async function ClienteDetalheProfissionalPage({
           />
 
           {comandas.length ? (
-            <div className="space-y-3">
+            <div className="space-y-2.5">
               {comandas.map((comanda) => (
                 <Link
                   key={comanda.id}
                   href={`/app-profissional/comandas/${comanda.id}`}
-                  className="flex items-center justify-between gap-3 rounded-[1.35rem] border border-zinc-200 bg-zinc-50/70 p-4"
+                  className="flex items-center justify-between gap-3 rounded-[1.15rem] border border-zinc-200 bg-zinc-50/70 p-3.5"
                 >
                   <div className="min-w-0">
                     <div className="text-sm font-bold text-zinc-950">
@@ -345,7 +345,7 @@ export default async function ClienteDetalheProfissionalPage({
               ))}
             </div>
           ) : (
-            <div className="rounded-[1.35rem] border border-dashed border-zinc-300 bg-zinc-50/80 px-4 py-5 text-center text-sm text-zinc-500">
+            <div className="rounded-[1.15rem] border border-dashed border-zinc-300 bg-zinc-50/80 px-4 py-4 text-center text-sm text-zinc-500">
               Nenhuma comanda vinculada a este cliente por enquanto.
             </div>
           )}
@@ -357,7 +357,7 @@ export default async function ClienteDetalheProfissionalPage({
               title="Observacoes"
               description="Notas registradas no cadastro."
             />
-            <div className="rounded-[1.25rem] border border-zinc-200 bg-zinc-50/80 p-4 text-sm leading-6 text-zinc-600">
+            <div className="rounded-[1.1rem] border border-zinc-200 bg-zinc-50/80 p-3.5 text-sm leading-6 text-zinc-600">
               {cliente.observacoes}
             </div>
           </ProfissionalSurface>
