@@ -794,11 +794,11 @@ const { data, error } = await supabase
   return (
     <>
       <div className="space-y-4">
-        <section className="rounded-[28px] border border-zinc-200 bg-white px-5 py-5 text-zinc-950 shadow-sm">
+        <section className="rounded-[24px] border border-zinc-200 bg-white px-5 py-4 text-zinc-950 shadow-sm">
           <div className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-500">
             Configurações
           </div>
-          <h1 className="mt-2.5 text-[2rem] font-bold tracking-tight">{meta.title}</h1>
+          <h1 className="mt-2 text-[1.85rem] font-bold tracking-tight">{meta.title}</h1>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-500">
             {meta.description}
           </p>
@@ -1333,16 +1333,16 @@ const { data, error } = await supabase
               planoNome={planoAccess?.planoNome}
               upgradeTarget={upgradeTarget}
               disabled={atingiuLimiteUsuarios}
-              className="mb-5"
+              className="mb-4"
             />
           ) : null}
 
-          <div className="mb-5 grid gap-4 md:grid-cols-3">
+          <div className="mb-4 grid gap-3 md:grid-cols-3">
             <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4">
               <div className="text-xs uppercase tracking-[0.18em] text-zinc-500">
                 Plano atual
               </div>
-              <div className="mt-2 text-xl font-bold text-zinc-900">
+              <div className="mt-1.5 text-lg font-bold text-zinc-900">
                 {String(salaoForm.plano || "-").toUpperCase()}
               </div>
               <div className="mt-1 text-xs text-zinc-500">
@@ -1354,7 +1354,7 @@ const { data, error } = await supabase
               <div className="text-xs uppercase tracking-[0.18em] text-zinc-500">
                 Limite de usuários
               </div>
-              <div className="mt-2 text-xl font-bold text-zinc-900">
+              <div className="mt-1.5 text-lg font-bold text-zinc-900">
                 {limiteUsuariosPlano ?? "-"}
               </div>
               <div className="mt-1 text-xs text-zinc-500">{textoPlanoUsuarios}</div>
@@ -1364,7 +1364,7 @@ const { data, error } = await supabase
               <div className="text-xs uppercase tracking-[0.18em] text-zinc-500">
                 Cadastrados
               </div>
-              <div className="mt-2 text-xl font-bold text-zinc-900">
+              <div className="mt-1.5 text-lg font-bold text-zinc-900">
                 {usuarios.length}
               </div>
               <div className="mt-1 text-xs text-zinc-500">
@@ -1373,7 +1373,7 @@ const { data, error } = await supabase
             </div>
           </div>
 
-          <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <div className="text-sm text-zinc-500">
               Perfis disponíveis: Admin, Gerente, Recepção e Profissional.
             </div>
@@ -1382,7 +1382,7 @@ const { data, error } = await supabase
               type="button"
               onClick={abrirNovoUsuario}
               disabled={!podeCriarUsuario || atingiuLimiteUsuarios}
-              className="inline-flex items-center gap-2 rounded-2xl bg-zinc-900 px-4 py-2.5 text-sm font-bold text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-2xl bg-zinc-900 px-4 py-2 text-sm font-bold text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <Plus size={16} />
               Novo usuário
@@ -1415,20 +1415,20 @@ const { data, error } = await supabase
                 <tbody className="divide-y divide-zinc-200 bg-white">
                   {usuarios.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="px-4 py-10 text-center text-sm text-zinc-500">
+                      <td colSpan={5} className="px-4 py-8 text-center text-sm text-zinc-500">
                         Nenhum usuário cadastrado.
                       </td>
                     </tr>
                   ) : (
                     usuarios.map((usuario) => (
                       <tr key={usuario.id}>
-                        <td className="px-4 py-4">
+                        <td className="px-4 py-3.5">
                           <div className="font-semibold text-zinc-900">{usuario.nome}</div>
                         </td>
 
-                        <td className="px-4 py-4 text-sm text-zinc-700">{usuario.email}</td>
+                        <td className="px-4 py-3.5 text-sm text-zinc-700">{usuario.email}</td>
 
-                        <td className="px-4 py-4">
+                        <td className="px-4 py-3.5">
                           <span
                             className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${getNivelBadgeClass(
                               String(usuario.nivel)
@@ -1438,7 +1438,7 @@ const { data, error } = await supabase
                           </span>
                         </td>
 
-                        <td className="px-4 py-4">
+                        <td className="px-4 py-3.5">
                           <span
                             className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
                               usuario.status === "ativo"
@@ -1450,12 +1450,12 @@ const { data, error } = await supabase
                           </span>
                         </td>
 
-                        <td className="px-4 py-4">
+                        <td className="px-4 py-3.5">
                           <div className="flex justify-end gap-2">
                             <button
                               type="button"
                               onClick={() => abrirEditarUsuario(usuario)}
-                              className="inline-flex items-center gap-2 rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50"
+                              className="inline-flex items-center gap-2 rounded-xl border border-zinc-300 bg-white px-3 py-1.5 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50"
                             >
                               <Pencil size={14} />
                               Editar
@@ -1464,7 +1464,7 @@ const { data, error } = await supabase
                             <button
                               type="button"
                               onClick={() => abrirExcluirUsuario(usuario)}
-                              className="inline-flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-semibold text-rose-700 transition hover:bg-rose-100"
+                              className="inline-flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-3 py-1.5 text-sm font-semibold text-rose-700 transition hover:bg-rose-100"
                             >
                               <Trash2 size={14} />
                               Excluir
@@ -1484,8 +1484,8 @@ const { data, error } = await supabase
 
       {usuarioModalOpen ? (
         <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/55 p-4 backdrop-blur-md">
-          <div className="w-full max-w-xl overflow-hidden rounded-[32px] border border-white/10 bg-white shadow-[0_30px_80px_rgba(0,0,0,0.25)]">
-            <div className="border-b border-zinc-200 bg-white px-6 py-5 text-zinc-950">
+          <div className="w-full max-w-xl overflow-hidden rounded-[28px] border border-white/10 bg-white shadow-[0_30px_80px_rgba(0,0,0,0.25)]">
+            <div className="border-b border-zinc-200 bg-white px-5 py-4 text-zinc-950">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <div className="inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-zinc-600">
@@ -1493,7 +1493,7 @@ const { data, error } = await supabase
                     Usuário
                   </div>
 
-                  <h2 className="mt-3 text-2xl font-bold">
+                  <h2 className="mt-2.5 text-xl font-bold">
                     {usuarioEditandoId ? "Editar usuário" : "Novo usuário"}
                   </h2>
                   <p className="mt-1 text-sm text-zinc-500">
@@ -1511,7 +1511,7 @@ const { data, error } = await supabase
               </div>
             </div>
 
-            <div className="space-y-4 px-6 py-6">
+            <div className="space-y-4 px-5 py-5">
               <Field label="Nome">
                 <TextInput
                   value={usuarioForm.nome}
@@ -1614,12 +1614,12 @@ const { data, error } = await supabase
               ) : null}
             </div>
 
-            <div className="flex flex-col-reverse gap-3 border-t border-zinc-200 bg-zinc-50 px-6 py-5 sm:flex-row sm:justify-end">
+            <div className="flex flex-col-reverse gap-3 border-t border-zinc-200 bg-zinc-50 px-5 py-4 sm:flex-row sm:justify-end">
               <button
                 type="button"
                 onClick={fecharModalUsuario}
                 disabled={savingUsuario}
-                className="rounded-2xl border border-zinc-300 bg-white px-5 py-3 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-100 disabled:opacity-60"
+                className="rounded-2xl border border-zinc-300 bg-white px-5 py-2.5 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-100 disabled:opacity-60"
               >
                 Cancelar
               </button>
@@ -1628,7 +1628,7 @@ const { data, error } = await supabase
                 type="button"
                 onClick={salvarUsuario}
                 disabled={savingUsuario || (!usuarioEditandoId && atingiuLimiteUsuarios)}
-                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-zinc-900 px-5 py-3 text-sm font-bold text-white transition hover:opacity-95 disabled:opacity-60"
+                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-zinc-900 px-5 py-2.5 text-sm font-bold text-white transition hover:opacity-95 disabled:opacity-60"
               >
                 {savingUsuario ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />}
                 {usuarioEditandoId ? "Salvar alterações" : "Criar usuário"}
@@ -1640,8 +1640,8 @@ const { data, error } = await supabase
 
       {deleteModalOpen ? (
         <div className="fixed inset-0 z-[95] flex items-center justify-center bg-black/55 p-4 backdrop-blur-md">
-          <div className="w-full max-w-md overflow-hidden rounded-[30px] border border-white/10 bg-white shadow-[0_30px_80px_rgba(0,0,0,0.25)]">
-            <div className="border-b border-rose-200 bg-rose-50 px-6 py-5 text-rose-800">
+          <div className="w-full max-w-md overflow-hidden rounded-[26px] border border-white/10 bg-white shadow-[0_30px_80px_rgba(0,0,0,0.25)]">
+            <div className="border-b border-rose-200 bg-rose-50 px-5 py-4 text-rose-800">
               <div className="flex items-center gap-3">
                 <div className="rounded-2xl bg-white p-3 ring-1 ring-rose-200">
                   <AlertTriangle size={20} />
@@ -1655,7 +1655,7 @@ const { data, error } = await supabase
               </div>
             </div>
 
-            <div className="px-6 py-6">
+            <div className="px-5 py-5">
               <p className="text-sm text-zinc-700">
                 Deseja realmente excluir o usuário{" "}
                 <strong>{usuarioExcluir?.nome || "-"}</strong>?
@@ -1665,12 +1665,12 @@ const { data, error } = await supabase
               </p>
             </div>
 
-            <div className="flex flex-col-reverse gap-3 border-t border-zinc-200 bg-zinc-50 px-6 py-5 sm:flex-row sm:justify-end">
+            <div className="flex flex-col-reverse gap-3 border-t border-zinc-200 bg-zinc-50 px-5 py-4 sm:flex-row sm:justify-end">
               <button
                 type="button"
                 onClick={fecharExcluirUsuario}
                 disabled={deletingUsuario}
-                className="rounded-2xl border border-zinc-300 bg-white px-5 py-3 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-100 disabled:opacity-60"
+                className="rounded-2xl border border-zinc-300 bg-white px-5 py-2.5 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-100 disabled:opacity-60"
               >
                 Cancelar
               </button>
@@ -1679,7 +1679,7 @@ const { data, error } = await supabase
                 type="button"
                 onClick={excluirUsuario}
                 disabled={deletingUsuario}
-                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-rose-600 px-5 py-3 text-sm font-bold text-white transition hover:opacity-95 disabled:opacity-60"
+                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-rose-600 px-5 py-2.5 text-sm font-bold text-white transition hover:opacity-95 disabled:opacity-60"
               >
                 {deletingUsuario ? <Loader2 className="animate-spin" size={16} /> : <Trash2 size={16} />}
                 Excluir usuário
@@ -1691,9 +1691,9 @@ const { data, error } = await supabase
 
       {feedbackModalOpen ? (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4 backdrop-blur-md">
-          <div className="w-full max-w-md overflow-hidden rounded-[30px] border border-white/10 bg-white shadow-[0_30px_80px_rgba(0,0,0,0.3)]">
+          <div className="w-full max-w-md overflow-hidden rounded-[26px] border border-white/10 bg-white shadow-[0_30px_80px_rgba(0,0,0,0.3)]">
             <div
-              className={`border-b px-6 py-5 ${
+              className={`border-b px-5 py-4 ${
                 feedbackModalType === "erro"
                   ? "border-rose-200 bg-rose-50 text-rose-800"
                   : "border-emerald-200 bg-emerald-50 text-emerald-800"
@@ -1717,15 +1717,15 @@ const { data, error } = await supabase
               </div>
             </div>
 
-            <div className="px-6 py-6">
+            <div className="px-5 py-5">
               <p className="text-sm leading-6 text-zinc-700">{feedbackModalMessage}</p>
             </div>
 
-            <div className="flex justify-end border-t border-zinc-200 bg-zinc-50 px-6 py-5">
+            <div className="flex justify-end border-t border-zinc-200 bg-zinc-50 px-5 py-4">
               <button
                 type="button"
                 onClick={fecharFeedbackModal}
-                className={`rounded-2xl px-5 py-3 text-sm font-bold text-white transition hover:opacity-95 ${
+                className={`rounded-2xl px-5 py-2.5 text-sm font-bold text-white transition hover:opacity-95 ${
                   feedbackModalType === "erro" ? "bg-rose-600" : "bg-zinc-900"
                 }`}
               >

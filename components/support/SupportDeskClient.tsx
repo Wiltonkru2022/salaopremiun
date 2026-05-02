@@ -139,12 +139,12 @@ function MetricCard(props: {
           : "border-zinc-200 bg-white text-zinc-950";
 
   return (
-    <div className={`rounded-[24px] border p-4 shadow-sm ${className}`}>
+    <div className={`rounded-[22px] border p-3.5 shadow-sm ${className}`}>
       <div className="text-xs font-bold uppercase tracking-[0.24em] opacity-60">
         {props.label}
       </div>
-      <div className="mt-2 text-[1.75rem] font-black">{props.value}</div>
-      <div className="mt-1.5 text-sm opacity-70">{props.helper}</div>
+      <div className="mt-1.5 text-[1.5rem] font-black">{props.value}</div>
+      <div className="mt-1 text-sm opacity-70">{props.helper}</div>
     </div>
   );
 }
@@ -311,14 +311,14 @@ export default function SupportDeskClient({
 
   return (
     <div className="space-y-4">
-      <section className="rounded-[28px] border border-zinc-200 bg-white px-5 py-5 shadow-sm">
+      <section className="rounded-[24px] border border-zinc-200 bg-white px-5 py-4 shadow-sm">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="max-w-3xl">
             <div className="inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.22em] text-zinc-600">
               <LifeBuoy size={14} />
               Central de suporte
             </div>
-            <h1 className="mt-3 font-display text-3xl font-bold tracking-[-0.05em] text-zinc-950 sm:text-[2.2rem]">
+            <h1 className="mt-2.5 font-display text-3xl font-bold tracking-[-0.05em] text-zinc-950 sm:text-[2rem]">
               Tickets e atendimento do salao em um fluxo unico
             </h1>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-500 sm:text-[15px]">
@@ -331,7 +331,7 @@ export default function SupportDeskClient({
             <button
               type="button"
               onClick={() => setShowForm((value) => !value)}
-              className="inline-flex items-center gap-2 rounded-2xl border border-zinc-950 bg-zinc-950 px-5 py-2.5 text-sm font-semibold text-white transition hover:opacity-90"
+              className="inline-flex items-center gap-2 rounded-2xl border border-zinc-950 bg-zinc-950 px-5 py-2 text-sm font-semibold text-white transition hover:opacity-90"
             >
               <Plus size={16} />
               {showForm ? "Fechar abertura" : "Novo ticket"}
@@ -340,7 +340,7 @@ export default function SupportDeskClient({
               type="button"
               onClick={() => void loadTickets(selectedId)}
               disabled={loadingList}
-              className="inline-flex items-center gap-2 rounded-2xl border border-zinc-200 bg-white px-5 py-2.5 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-60"
+              className="inline-flex items-center gap-2 rounded-2xl border border-zinc-200 bg-white px-5 py-2 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-60"
             >
               <RefreshCcw size={16} className={loadingList ? "animate-spin" : ""} />
               Atualizar
@@ -356,12 +356,12 @@ export default function SupportDeskClient({
         <MetricCard label="Criticos" value={metrics.criticos} helper="Prioridade alta" tone="red" />
       </section>
 
-      {success ? <div className="rounded-[24px] border border-emerald-200 bg-emerald-50 px-5 py-4 text-sm text-emerald-700">{success}</div> : null}
-      {error ? <div className="rounded-[24px] border border-rose-200 bg-rose-50 px-5 py-4 text-sm text-rose-700">{error}</div> : null}
+      {success ? <div className="rounded-[22px] border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{success}</div> : null}
+      {error ? <div className="rounded-[22px] border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div> : null}
 
       {showForm ? (
-        <section className="rounded-[26px] border border-zinc-200 bg-white p-5 shadow-sm">
-          <h2 className="text-2xl font-bold text-zinc-950">Abrir novo ticket</h2>
+        <section className="rounded-[24px] border border-zinc-200 bg-white p-4 shadow-sm">
+          <h2 className="text-xl font-bold text-zinc-950">Abrir novo ticket</h2>
           <div className="mt-4 grid gap-4 md:grid-cols-2">
             <input
               value={newTicket.assunto}
@@ -395,14 +395,14 @@ export default function SupportDeskClient({
             onChange={(event) => setNewTicket((current) => ({ ...current, mensagem: event.target.value }))}
             rows={5}
             placeholder="Descreva o problema com o maximo de contexto util."
-            className="mt-4 w-full rounded-[22px] border border-zinc-200 bg-zinc-50 px-4 py-3.5 text-sm outline-none transition focus:border-zinc-950 focus:bg-white"
+            className="mt-4 w-full rounded-[22px] border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm outline-none transition focus:border-zinc-950 focus:bg-white"
           />
           <div className="mt-4 flex flex-wrap gap-3">
             <button
               type="button"
               onClick={() => void handleCreate()}
               disabled={saving === "create"}
-              className="rounded-2xl border border-zinc-950 bg-zinc-950 px-5 py-2.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
+              className="rounded-2xl border border-zinc-950 bg-zinc-950 px-5 py-2 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
             >
               {saving === "create" ? "Abrindo..." : "Abrir ticket"}
             </button>
@@ -412,7 +412,7 @@ export default function SupportDeskClient({
                 setShowForm(false);
                 setNewTicket(emptyForm);
               }}
-              className="rounded-2xl border border-zinc-200 bg-white px-5 py-2.5 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50"
+              className="rounded-2xl border border-zinc-200 bg-white px-5 py-2 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50"
             >
               Cancelar
             </button>
@@ -421,7 +421,7 @@ export default function SupportDeskClient({
       ) : null}
 
       <section className="grid gap-4 xl:grid-cols-[340px_1fr]">
-        <aside className="space-y-3 rounded-[26px] border border-zinc-200 bg-white p-4 shadow-sm">
+        <aside className="space-y-2.5 rounded-[24px] border border-zinc-200 bg-white p-3.5 shadow-sm">
           <input
             value={search}
             onChange={(event) => setSearch(event.target.value)}
@@ -439,7 +439,7 @@ export default function SupportDeskClient({
                     setSelectedId(item.id);
                     setDetail((current) => (current?.ticket.id === item.id ? current : null));
                   }}
-                  className={`w-full rounded-[22px] border px-4 py-3.5 text-left transition ${
+                  className={`w-full rounded-[22px] border px-4 py-3 text-left transition ${
                     item.id === selectedId
                       ? "border-zinc-950 bg-zinc-950 text-white"
                       : "border-zinc-200 bg-zinc-50 text-zinc-900 hover:bg-white"
@@ -476,12 +476,12 @@ export default function SupportDeskClient({
         <div className="space-y-4">
           {selectedId ? (
             loadingDetail && !detail ? (
-              <div className="rounded-[26px] border border-zinc-200 bg-white p-6 text-sm text-zinc-500 shadow-sm">
+              <div className="rounded-[24px] border border-zinc-200 bg-white p-5 text-sm text-zinc-500 shadow-sm">
                 Carregando ticket...
               </div>
             ) : detail ? (
               <>
-                <section className="rounded-[26px] border border-zinc-200 bg-white p-5 shadow-sm">
+                <section className="rounded-[24px] border border-zinc-200 bg-white p-4 shadow-sm">
                   <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                     <div>
                       <div className="flex flex-wrap items-center gap-3">
@@ -492,7 +492,7 @@ export default function SupportDeskClient({
                           {detail.ticket.status.replace(/_/g, " ")}
                         </span>
                       </div>
-                      <h2 className="mt-3 text-[1.85rem] font-bold tracking-[-0.04em] text-zinc-950">
+                      <h2 className="mt-2.5 text-[1.55rem] font-bold tracking-[-0.04em] text-zinc-950">
                         {detail.ticket.assunto}
                       </h2>
                       <div className="mt-2.5 flex flex-wrap gap-3 text-sm text-zinc-500">
@@ -507,7 +507,7 @@ export default function SupportDeskClient({
                         type="button"
                         onClick={() => void handleStatus("aberto")}
                         disabled={saving === "status"}
-                        className="rounded-2xl border border-zinc-200 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-60"
+                        className="rounded-2xl border border-zinc-200 bg-white px-4 py-2 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-60"
                       >
                         Reabrir ticket
                       </button>
@@ -516,7 +516,7 @@ export default function SupportDeskClient({
                         type="button"
                         onClick={() => void handleStatus("fechado")}
                         disabled={saving === "status"}
-                        className="rounded-2xl border border-zinc-950 bg-zinc-950 px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
+                        className="rounded-2xl border border-zinc-950 bg-zinc-950 px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
                       >
                         Encerrar ticket
                       </button>
@@ -525,7 +525,7 @@ export default function SupportDeskClient({
                 </section>
 
                 {passwordRecoveryAction ? (
-                  <section className="rounded-[26px] border border-violet-200 bg-violet-50/70 p-4 shadow-sm">
+                  <section className="rounded-[24px] border border-violet-200 bg-violet-50/70 p-3.5 shadow-sm">
                     <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                       <div>
                         <div className="text-xs font-semibold uppercase tracking-[0.22em] text-violet-500">
@@ -541,7 +541,7 @@ export default function SupportDeskClient({
 
                       <Link
                         href={passwordRecoveryAction.href}
-                        className="inline-flex items-center justify-center rounded-2xl border border-violet-500 bg-violet-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-violet-700"
+                        className="inline-flex items-center justify-center rounded-2xl border border-violet-500 bg-violet-600 px-5 py-2 text-sm font-semibold text-white transition hover:bg-violet-700"
                       >
                         Abrir cadastro e trocar senha
                       </Link>
@@ -550,7 +550,7 @@ export default function SupportDeskClient({
                 ) : null}
 
                 <section className="grid gap-4 2xl:grid-cols-[1fr_300px]">
-                  <div className="space-y-4 rounded-[26px] border border-zinc-200 bg-white p-4 shadow-sm">
+                  <div className="space-y-3 rounded-[24px] border border-zinc-200 bg-white p-3.5 shadow-sm">
                     <div className="flex items-center gap-2 text-lg font-bold text-zinc-950">
                       <MessageSquareText size={18} />
                       Conversa
@@ -560,7 +560,7 @@ export default function SupportDeskClient({
                       {detail.mensagens.map((mensagem) => (
                         <div
                           key={mensagem.id}
-                          className={`max-w-[88%] rounded-[22px] border px-4 py-3.5 text-sm shadow-sm ${
+                          className={`max-w-[88%] rounded-[22px] border px-4 py-3 text-sm shadow-sm ${
                             mensagem.autorTipo === "admin"
                               ? "border-zinc-950 bg-zinc-950 text-white"
                               : "ml-auto border-zinc-200 bg-white text-zinc-900"
@@ -583,14 +583,14 @@ export default function SupportDeskClient({
                         onChange={(event) => setReplyMessage(event.target.value)}
                         rows={4}
                         placeholder="Responder suporte..."
-                        className="w-full resize-none rounded-[18px] bg-white px-4 py-3.5 text-sm outline-none"
+                        className="w-full resize-none rounded-[18px] bg-white px-4 py-3 text-sm outline-none"
                       />
                       <div className="mt-3 flex justify-end">
                         <button
                           type="button"
                           onClick={() => void handleReply()}
                           disabled={saving === "reply" || !replyMessage.trim()}
-                          className="inline-flex items-center gap-2 rounded-2xl border border-zinc-950 bg-zinc-950 px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
+                          className="inline-flex items-center gap-2 rounded-2xl border border-zinc-950 bg-zinc-950 px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
                         >
                           <Send size={15} />
                           {saving === "reply" ? "Enviando..." : "Enviar resposta"}
@@ -599,14 +599,14 @@ export default function SupportDeskClient({
                     </div>
                   </div>
 
-                  <aside className="space-y-3 rounded-[26px] border border-zinc-200 bg-white p-4 shadow-sm">
+                  <aside className="space-y-2.5 rounded-[24px] border border-zinc-200 bg-white p-3.5 shadow-sm">
                     <div className="flex items-center gap-2 text-lg font-bold text-zinc-950">
                       <CircleAlert size={18} />
                       Historico
                     </div>
                     <div className="space-y-3">
                       {detail.eventos.map((evento) => (
-                        <div key={evento.id} className="rounded-[22px] border border-zinc-200 bg-zinc-50 p-3.5">
+                        <div key={evento.id} className="rounded-[22px] border border-zinc-200 bg-zinc-50 p-3">
                           <div className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
                             {evento.evento.replace(/_/g, " ")}
                           </div>
@@ -620,7 +620,7 @@ export default function SupportDeskClient({
               </>
             ) : null
           ) : (
-            <div className="rounded-[26px] border border-zinc-200 bg-white p-6 text-sm text-zinc-500 shadow-sm">
+            <div className="rounded-[24px] border border-zinc-200 bg-white p-5 text-sm text-zinc-500 shadow-sm">
               Nenhum ticket aberto ainda.
             </div>
           )}
