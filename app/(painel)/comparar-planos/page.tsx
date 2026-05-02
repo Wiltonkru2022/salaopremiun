@@ -1,4 +1,4 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 import { getPlanoCatalogo, getPlanosOrdenados } from "@/lib/plans/catalog";
 import { createClient } from "@/lib/supabase/server";
 
@@ -220,7 +220,7 @@ export default async function CompararPlanosPage() {
                   </div>
                   <ul className="mt-2 space-y-1.5">
                     {plano.recursosLiberados.map((item) => (
-                      <li key={item}>• {item}</li>
+                      <li key={item}>â€¢ {item}</li>
                     ))}
                   </ul>
                 </div>
@@ -236,10 +236,10 @@ export default async function CompararPlanosPage() {
                   <ul className="mt-2 space-y-1.5">
                     {plano.recursosBloqueados.length > 0 ? (
                       plano.recursosBloqueados.map((item) => (
-                        <li key={item}>• {item}</li>
+                        <li key={item}>â€¢ {item}</li>
                       ))
                     ) : (
-                      <li>• Nada bloqueado neste plano</li>
+                      <li>â€¢ Nada bloqueado neste plano</li>
                     )}
                   </ul>
                 </div>
@@ -258,3 +258,5 @@ export default async function CompararPlanosPage() {
     </div>
   );
 }
+
+

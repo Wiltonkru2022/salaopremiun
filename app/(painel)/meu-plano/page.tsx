@@ -1,4 +1,4 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 import { redirect } from "next/navigation";
 import {
   getPlanoAccessSnapshot,
@@ -226,13 +226,13 @@ export default async function MeuPlanoPage({
                 {statusLabel(access.assinaturaStatus)}
               </div>
               <p className="mt-2 text-sm leading-6 text-zinc-500">
-                Status do salão:{" "}
+                Status do salão: 
                 <span className="font-bold capitalize text-zinc-800">
                   {statusLabel(access.salaoStatus)}
                 </span>
               </p>
               <p className="mt-3 text-sm leading-6 text-zinc-500">
-                Ideal para:{" "}
+                Ideal para: 
                 <span className="font-bold text-zinc-800">
                   {planoCatalogo.idealPara}
                 </span>
@@ -395,3 +395,5 @@ export default async function MeuPlanoPage({
     </div>
   );
 }
+
+

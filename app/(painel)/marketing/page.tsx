@@ -1,4 +1,4 @@
-import { redirect } from "next/navigation";
+﻿import { redirect } from "next/navigation";
 import {
   BellRing,
   MessageSquareMore,
@@ -130,9 +130,9 @@ export default async function MarketingPage() {
             Nova funcionalidade em produção. Aguarde.
           </h2>
           <p className="mt-3 text-sm leading-7 text-white/70">
-            Esta tela está reservada para a liberação do novo módulo de
-            marketing. Assim que a ativação for concluída, os recursos serão
-            exibidos aqui automaticamente.
+            Esta tela está reservada para a liberação do novo módulo de marketing.
+            Assim que a ativação for concluída, os recursos serão exibidos aqui
+            automaticamente.
           </p>
 
           <div className="mt-6 rounded-[24px] border border-white/10 bg-white/5 p-4">
@@ -140,9 +140,9 @@ export default async function MarketingPage() {
               Mensagem do sistema
             </div>
             <div className="mt-3 text-lg font-semibold leading-8 text-white">
-              “Estamos preparando a liberação final desta funcionalidade para
+              "Estamos preparando a liberação final desta funcionalidade para
               garantir estabilidade, rastreabilidade e uma entrada premium no
-              painel.”
+              painel."
             </div>
           </div>
         </aside>
