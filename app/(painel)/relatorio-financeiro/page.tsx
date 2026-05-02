@@ -159,10 +159,10 @@ function formatFormaPagamentoLabel(value: string) {
 
   if (key === "pix") return "Pix";
   if (key === "dinheiro") return "Dinheiro";
-  if (key === "debito") return "DÃ©bito";
-  if (key === "credito") return "CrÃ©dito";
-  if (key === "credito_cliente") return "CrÃ©dito da cliente";
-  if (key === "transferencia") return "TransferÃªncia";
+  if (key === "debito") return "Débito";
+  if (key === "credito") return "Crédito";
+  if (key === "credito_cliente") return "Crédito da cliente";
+  if (key === "transferencia") return "Transferência";
   if (!key) return "-";
 
   return key.charAt(0).toUpperCase() + key.slice(1);
@@ -328,7 +328,7 @@ export default function RelatorioFinanceiroPage() {
 
         if (comandasError) {
           console.error(comandasError);
-          setErroTela("Erro ao carregar comandas do relatÃ³rio.");
+          setErroTela("Erro ao carregar comandas do relatório.");
           return;
         }
 
@@ -410,13 +410,13 @@ export default function RelatorioFinanceiroPage() {
 
         if (pagamentosError) {
           console.error(pagamentosError);
-          setErroTela("Erro ao carregar pagamentos do relatÃ³rio.");
+          setErroTela("Erro ao carregar pagamentos do relatório.");
           return;
         }
 
         if (comissoesError) {
           console.error(comissoesError);
-          setErroTela("Erro ao carregar comissÃµes do relatÃ³rio.");
+          setErroTela("Erro ao carregar comissões do relatório.");
           return;
         }
 
@@ -425,7 +425,7 @@ export default function RelatorioFinanceiroPage() {
       } catch (error: unknown) {
         console.error(error);
         setErroTela(
-          error instanceof Error ? error.message : "Erro ao carregar relatÃ³rio financeiro."
+          error instanceof Error ? error.message : "Erro ao carregar relatório financeiro."
         );
       }
     },
@@ -442,7 +442,7 @@ export default function RelatorioFinanceiroPage() {
       const usuario = await getUsuarioLogado();
 
       if (!usuario?.idSalao) {
-        setErroTela("NÃ£o foi possÃ­vel identificar o salÃ£o do usuÃ¡rio.");
+        setErroTela("Não foi possível identificar o salão do usuário.");
         return;
       }
 
@@ -458,7 +458,7 @@ export default function RelatorioFinanceiroPage() {
     } catch (error: unknown) {
       console.error(error);
       setErroTela(
-        error instanceof Error ? error.message : "Erro ao carregar relatÃ³rio financeiro."
+        error instanceof Error ? error.message : "Erro ao carregar relatório financeiro."
       );
     } finally {
       setLoading(false);
@@ -654,14 +654,14 @@ export default function RelatorioFinanceiroPage() {
       .map(([key]) => key);
 
     if (sections.length === 0) {
-      setMsg("Selecione ao menos uma parte do relatÃ³rio para imprimir.");
+      setMsg("Selecione ao menos uma parte do relatório para imprimir.");
       return;
     }
 
     setMsg("");
     setPrintModalOpen(false);
 
-    const periodLabel = `PerÃ­odo de ${dataInicio} atÃ© ${dataFim}`;
+    const periodLabel = `Período de ${dataInicio} até ${dataFim}`;
     const generatedAt = new Date().toLocaleString("pt-BR");
 
     const vendasRows =
@@ -686,7 +686,7 @@ export default function RelatorioFinanceiroPage() {
             .join("")
         : `
           <tr>
-            <td colspan="8" class="empty">Nenhuma venda encontrada no perÃ­odo.</td>
+            <td colspan="8" class="empty">Nenhuma venda encontrada no período.</td>
           </tr>
         `;
 
@@ -732,7 +732,7 @@ export default function RelatorioFinanceiroPage() {
             .join("")
         : `
           <tr>
-            <td colspan="5" class="empty">Nenhuma comissÃ£o encontrada.</td>
+            <td colspan="5" class="empty">Nenhuma comissão encontrada.</td>
           </tr>
         `;
 
@@ -741,7 +741,7 @@ export default function RelatorioFinanceiroPage() {
         ? `
           <section class="report-card">
             <div class="section-head">
-              <h2>Vendas do perÃ­odo</h2>
+              <h2>Vendas do período</h2>
               <p>Lista de comandas conforme os filtros atuais.</p>
             </div>
             <table>
@@ -753,7 +753,7 @@ export default function RelatorioFinanceiroPage() {
                   <th>Data</th>
                   <th>Subtotal</th>
                   <th>Desconto</th>
-                  <th>AcrÃ©scimo</th>
+                  <th>Acréscimo</th>
                   <th>Total</th>
                 </tr>
               </thead>
@@ -787,12 +787,12 @@ export default function RelatorioFinanceiroPage() {
         ? `
           <section class="report-card">
             <div class="section-head">
-              <h2>ComissÃµes do perÃ­odo</h2>
+              <h2>Comissões do período</h2>
               <p>Resumo das comissoes ligadas as vendas filtradas.</p>
             </div>
             <div class="summary-grid">
               <div class="summary-card">
-                <span>LanÃ§amentos</span>
+                <span>Lançamentos</span>
                 <strong>${escapeHtml(String(resumoComissoes.totalLancamentos))}</strong>
               </div>
               <div class="summary-card">
@@ -807,10 +807,10 @@ export default function RelatorioFinanceiroPage() {
             <table>
               <thead>
                 <tr>
-                  <th>DescriÃ§Ã£o</th>
+                  <th>Descrição</th>
                   <th>Base</th>
                   <th>%</th>
-                  <th>ComissÃ£o</th>
+                  <th>Comissão</th>
                   <th>Status</th>
                 </tr>
               </thead>
@@ -829,7 +829,7 @@ export default function RelatorioFinanceiroPage() {
         <head>
           <meta charset="utf-8" />
           <meta name="viewport" content="width=device-width, initial-scale=1" />
-          <title>RelatÃ³rio financeiro</title>
+          <title>Relatório financeiro</title>
           <style>
             :root {
               color-scheme: light;
@@ -970,8 +970,8 @@ export default function RelatorioFinanceiroPage() {
         <body>
           <main class="page">
             <header class="report-header">
-              <div class="eyebrow">RelatÃ³rio financeiro</div>
-              <h1>Resumo do perÃ­odo</h1>
+              <div class="eyebrow">Relatório financeiro</div>
+              <h1>Resumo do período</h1>
               <div class="subtitle">${escapeHtml(periodLabel)}</div>
               <div class="meta">Gerado em ${escapeHtml(generatedAt)}</div>
             </header>
@@ -997,7 +997,7 @@ export default function RelatorioFinanceiroPage() {
 
     if (!printDocument || !iframe.contentWindow) {
       document.body.removeChild(iframe);
-      setMsg("NÃ£o foi possÃ­vel montar o relatÃ³rio para impressÃ£o.");
+      setMsg("Não foi possível montar o relatório para impressão.");
       return;
     }
 
@@ -1050,9 +1050,9 @@ export default function RelatorioFinanceiroPage() {
             </div>
 
             <div>
-              <h1 className="text-xl font-bold text-amber-900">Sem permissÃ£o</h1>
+              <h1 className="text-xl font-bold text-amber-900">Sem permissão</h1>
               <p className="mt-2 text-sm text-amber-800">
-                Seu usuÃ¡rio nÃ£o tem acesso para visualizar o relatÃ³rio financeiro.
+                Seu usuário não tem acesso para visualizar o relatório financeiro.
               </p>
             </div>
           </div>
@@ -1122,7 +1122,7 @@ export default function RelatorioFinanceiroPage() {
                 <input
                   value={busca}
                   onChange={(e) => setBusca(e.target.value)}
-                  placeholder="NÃºmero da comanda ou cliente"
+                  placeholder="Número da comanda ou cliente"
                   className="w-full bg-transparent text-sm outline-none"
                 />
               </div>
@@ -1200,12 +1200,12 @@ export default function RelatorioFinanceiroPage() {
           />
           <KpiCard
             icon={<Receipt size={18} />}
-            label="Faturamento lÃ­quido"
+            label="Faturamento líquido"
             value={formatCurrency(resumo.faturamentoLiquido)}
             helper={
               relatoriosAvancados
-                ? `Ticket mÃ©dio: ${formatCurrency(resumo.ticketMedio)}`
-                : "Leitura bÃ¡sica do perÃ­odo"
+                ? `Ticket médio: ${formatCurrency(resumo.ticketMedio)}`
+                : "Leitura básica do período"
             }
           />
           <KpiCard
@@ -1220,7 +1220,7 @@ export default function RelatorioFinanceiroPage() {
           />
           <KpiCard
             icon={<Scissors size={18} />}
-            label="ComissÃ£o pendente"
+            label="Comissão pendente"
             value={formatCurrency(resumo.comissaoPendente)}
             helper={`Paga: ${formatCurrency(resumo.comissaoPaga)}`}
           />
@@ -1234,7 +1234,7 @@ export default function RelatorioFinanceiroPage() {
           />
           <KpiCard
             icon={<Receipt size={18} />}
-            label="AcrÃ©scimos"
+            label="Acréscimos"
             value={formatCurrency(resumo.acrescimos)}
           />
           <KpiCard
@@ -1257,7 +1257,7 @@ export default function RelatorioFinanceiroPage() {
             <div>
               <h2 className="text-base font-semibold text-zinc-950">Fechamento de caixa</h2>
               <p className="text-sm text-zinc-500">
-                DiferenÃ§a entre previsto, contado, sobra e quebra.
+                Diferença entre previsto, contado, sobra e quebra.
               </p>
             </div>
 
@@ -1299,7 +1299,7 @@ export default function RelatorioFinanceiroPage() {
         <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1.2fr_0.8fr]">
           <div className="overflow-hidden rounded-[28px] border border-zinc-200 bg-white shadow-sm">
             <div className="border-b border-zinc-200 px-5 py-4">
-              <div className="text-lg font-bold text-zinc-900">Vendas do perÃ­odo</div>
+              <div className="text-lg font-bold text-zinc-900">Vendas do período</div>
               <div className="mt-1 text-sm text-zinc-500">
                 Lista de comandas conforme os filtros atuais.
               </div>
@@ -1315,7 +1315,7 @@ export default function RelatorioFinanceiroPage() {
                     <th className="px-5 py-3">Data</th>
                     <th className="px-5 py-3">Subtotal</th>
                     <th className="px-5 py-3">Desconto</th>
-                    <th className="px-5 py-3">AcrÃ©scimo</th>
+                    <th className="px-5 py-3">Acréscimo</th>
                     <th className="px-5 py-3">Total</th>
                   </tr>
                 </thead>
@@ -1357,7 +1357,7 @@ export default function RelatorioFinanceiroPage() {
                   {comandasFiltradas.length === 0 ? (
                     <tr>
                       <td colSpan={8} className="px-5 py-10 text-center text-sm text-zinc-500">
-                        Nenhuma venda encontrada no perÃ­odo.
+                        Nenhuma venda encontrada no período.
                       </td>
                     </tr>
                   ) : null}
@@ -1372,7 +1372,7 @@ export default function RelatorioFinanceiroPage() {
                 <div>
                   <div className="text-lg font-bold text-zinc-900">Painel lateral</div>
                   <div className="mt-1 text-sm text-zinc-500">
-                    Pagamentos e comissÃµes em uma leitura mais curta.
+                    Pagamentos e comissões em uma leitura mais curta.
                   </div>
                 </div>
 
@@ -1397,7 +1397,7 @@ export default function RelatorioFinanceiroPage() {
                         : "text-zinc-700"
                     }`}
                   >
-                    ComissÃµes
+                    Comissões
                   </button>
                 </div>
               </div>
@@ -1443,7 +1443,7 @@ export default function RelatorioFinanceiroPage() {
               }`}
             >
               <div className="border-b border-zinc-200 px-5 py-4">
-                <div className="text-lg font-bold text-zinc-900">ComissÃµes do perÃ­odo</div>
+                <div className="text-lg font-bold text-zinc-900">Comissões do período</div>
                 <div className="mt-1 text-sm text-zinc-500">
                   Resumo das comissoes ligadas as vendas filtradas.
                 </div>
@@ -1472,10 +1472,10 @@ export default function RelatorioFinanceiroPage() {
                   <table className="min-w-full">
                     <thead>
                       <tr className="border-b border-zinc-100 text-left text-xs uppercase tracking-wider text-zinc-500">
-                        <th className="px-5 py-3">DescriÃ§Ã£o</th>
+                        <th className="px-5 py-3">Descrição</th>
                         <th className="px-5 py-3">Base</th>
                         <th className="px-5 py-3">% </th>
-                        <th className="px-5 py-3">ComissÃ£o</th>
+                        <th className="px-5 py-3">Comissão</th>
                         <th className="px-5 py-3">Status</th>
                       </tr>
                     </thead>
@@ -1506,7 +1506,7 @@ export default function RelatorioFinanceiroPage() {
                       {comissoesFiltradas.length === 0 ? (
                         <tr>
                           <td colSpan={5} className="px-5 py-8 text-center text-sm text-zinc-500">
-                            Nenhuma comissÃ£o encontrada.
+                            Nenhuma comissão encontrada.
                           </td>
                         </tr>
                       ) : null}
@@ -1549,8 +1549,8 @@ export default function RelatorioFinanceiroPage() {
       <AppModal
         open={printModalOpen}
         onClose={() => setPrintModalOpen(false)}
-        title="Imprimir relatÃ³rio"
-        description="Escolha o que vai sair na impressÃ£o deste perÃ­odo."
+        title="Imprimir relatório"
+        description="Escolha o que vai sair na impressão deste período."
         maxWidthClassName="max-w-2xl"
         footer={
           <>
@@ -1575,30 +1575,30 @@ export default function RelatorioFinanceiroPage() {
         <div className="space-y-4">
           <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4">
             <div className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
-              PerÃ­odo
+              Período
             </div>
             <div className="mt-2 text-sm font-medium text-zinc-900">
-              De {dataInicio} atÃ© {dataFim}
+              De {dataInicio} até {dataFim}
             </div>
           </div>
 
           <div className="grid gap-3 sm:grid-cols-3">
             <PrintOptionCard
               checked={printSelection.vendas}
-              title="Vendas do perÃ­odo"
+              title="Vendas do período"
               description="Tabela principal das comandas filtradas."
               onToggle={() => togglePrintSelection("vendas")}
             />
             <PrintOptionCard
               checked={printSelection.pagamentos}
               title="Pagamentos por forma"
-              description="Resumo por Pix, dinheiro, cartÃ£o e outros."
+              description="Resumo por Pix, dinheiro, cartão e outros."
               onToggle={() => togglePrintSelection("pagamentos")}
             />
             <PrintOptionCard
               checked={printSelection.comissoes}
-              title="ComissÃµes do perÃ­odo"
-              description="Resumo e tabela curta das comissÃµes filtradas."
+              title="Comissões do período"
+              description="Resumo e tabela curta das comissões filtradas."
               onToggle={() => togglePrintSelection("comissoes")}
             />
           </div>
@@ -1609,7 +1609,7 @@ export default function RelatorioFinanceiroPage() {
                 {totalSecoesSelecionadas} parte(s) selecionada(s)
               </div>
               <div className="mt-1 text-xs text-zinc-500">
-                VocÃª pode imprimir tudo ou sÃ³ o que fizer sentido agora.
+                Você pode imprimir tudo ou só o que fizer sentido agora.
               </div>
             </div>
 
@@ -1722,6 +1722,8 @@ function UpgradePanel({
     </section>
   );
 }
+
+
 
 
 
