@@ -183,7 +183,7 @@ export default async function NovoAgendamentoProfissionalPage({
       title="Novo agendamento"
       subtitle="Criar atendimento no seu horario"
     >
-      <div className="space-y-4 pb-24">
+      <div className="space-y-3.5 pb-20">
         {query.erro ? (
           <div className="rounded-[1.25rem] border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 shadow-sm">
             {query.erro}
@@ -197,23 +197,23 @@ export default async function NovoAgendamentoProfissionalPage({
           </div>
         ) : null}
 
-        <section className="overflow-hidden rounded-[1.85rem] bg-zinc-950 px-4 py-5 text-white shadow-[0_18px_40px_rgba(15,23,42,0.16)]">
+        <section className="overflow-hidden rounded-[1.5rem] bg-zinc-950 px-4 py-4 text-white shadow-[0_16px_34px_rgba(15,23,42,0.15)]">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-bold uppercase tracking-[0.14em] text-amber-100">
+              <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.12em] text-amber-100">
                 <CalendarPlus2 size={14} />
                 Agenda do profissional
               </div>
-              <h1 className="mt-4 text-[1.65rem] font-black tracking-[-0.05em] leading-none">
+              <h1 className="mt-3 text-[1.45rem] font-black tracking-[-0.04em] leading-none">
                 Novo horario
               </h1>
-              <p className="mt-3 text-sm leading-6 text-zinc-300">
+              <p className="mt-2.5 text-sm leading-6 text-zinc-300">
                 Escolha cliente, servico e horario. O app ja te avisa quando houver
                 conflito no mesmo periodo.
               </p>
             </div>
 
-            <div className="rounded-[1.3rem] bg-white/10 px-4 py-3 text-right">
+            <div className="rounded-[1.1rem] bg-white/10 px-4 py-2.5 text-right">
               <div className="text-[11px] uppercase tracking-[0.12em] text-zinc-400">
                 Dia selecionado
               </div>
@@ -230,8 +230,8 @@ export default async function NovoAgendamentoProfissionalPage({
             description="Confira os dias ativos e as pausas antes de criar o horario."
           />
 
-          <div className="grid gap-3">
-            <div className="rounded-[1.25rem] border border-zinc-200 bg-zinc-50/80 p-4">
+          <div className="grid gap-2.5">
+            <div className="rounded-[1.1rem] border border-zinc-200 bg-zinc-50/80 p-3.5">
               <div className="flex items-center gap-2 text-sm font-semibold text-zinc-900">
                 <Clock3 size={16} />
                 Dias disponiveis
@@ -241,7 +241,7 @@ export default async function NovoAgendamentoProfissionalPage({
               </div>
             </div>
 
-            <div className="rounded-[1.25rem] border border-zinc-200 bg-zinc-50/80 p-4">
+            <div className="rounded-[1.1rem] border border-zinc-200 bg-zinc-50/80 p-3.5">
               <div className="text-sm font-semibold text-zinc-900">Pausas</div>
               <div className="mt-2 text-sm leading-6 text-zinc-500">
                 {pausas.length
@@ -265,7 +265,7 @@ export default async function NovoAgendamentoProfissionalPage({
             description="Preencha o essencial para reservar o horario com clareza."
           />
 
-          <form action={criarAgendamentoProfissionalAction} className="space-y-4">
+          <form action={criarAgendamentoProfissionalAction} className="space-y-3.5">
             <label className="block text-sm font-medium text-zinc-700">
               Cliente
               <select
@@ -302,7 +302,7 @@ export default async function NovoAgendamentoProfissionalPage({
               </select>
             </label>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-2.5">
               <label className="block text-sm font-medium text-zinc-700">
                 Data
                 <input
@@ -337,7 +337,7 @@ export default async function NovoAgendamentoProfissionalPage({
             </label>
 
             {query.conflito === "1" ? (
-              <label className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+              <label className="flex items-start gap-3 rounded-[18px] border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
                 <input
                   type="checkbox"
                   name="confirmar_conflito"
@@ -348,7 +348,7 @@ export default async function NovoAgendamentoProfissionalPage({
               </label>
             ) : null}
 
-            <button className="h-12 w-full rounded-2xl bg-zinc-950 text-sm font-bold text-white">
+            <button className="h-11 w-full rounded-[18px] bg-zinc-950 text-sm font-bold text-white">
               Confirmar agendamento
             </button>
           </form>
@@ -361,11 +361,11 @@ export default async function NovoAgendamentoProfissionalPage({
           />
 
           {agendaDia.length ? (
-            <div className="space-y-3">
+            <div className="space-y-2.5">
               {agendaDia.map((item) => (
                 <div
                   key={item.id}
-                  className="rounded-[1.35rem] border border-zinc-200 bg-zinc-50/70 p-4"
+                  className="rounded-[1.15rem] border border-zinc-200 bg-zinc-50/70 p-3.5"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
@@ -387,7 +387,7 @@ export default async function NovoAgendamentoProfissionalPage({
               ))}
             </div>
           ) : (
-            <div className="rounded-[1.35rem] border border-dashed border-zinc-300 bg-zinc-50/80 px-4 py-5 text-center text-sm text-zinc-500">
+            <div className="rounded-[1.15rem] border border-dashed border-zinc-300 bg-zinc-50/80 px-4 py-4 text-center text-sm text-zinc-500">
               Nenhum agendamento neste dia. Se quiser, este pode ser o primeiro.
             </div>
           )}
@@ -395,14 +395,14 @@ export default async function NovoAgendamentoProfissionalPage({
 
         <ProfissionalSurface>
           <div className="flex items-start gap-3">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-amber-50 text-amber-700">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[18px] bg-amber-50 text-amber-700">
               <UsersRound size={18} />
             </div>
             <div className="min-w-0">
-              <div className="text-base font-bold tracking-[-0.02em] text-zinc-950">
+              <div className="text-[15px] font-bold tracking-[-0.02em] text-zinc-950">
                 Dica para ganhar tempo
               </div>
-              <p className="mt-2 text-sm leading-6 text-zinc-500">
+              <p className="mt-1.5 text-sm leading-6 text-zinc-500">
                 Se o cliente ainda nao existir, cadastre primeiro e depois volte para
                 este horario com os campos preenchidos mais rapido.
               </p>
