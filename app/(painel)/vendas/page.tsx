@@ -867,26 +867,26 @@ export default function VendasPage() {
   return (
     <>
       <div className="bg-white">
-        <div className="mx-auto max-w-[1700px] space-y-5">
-          <div className="rounded-[28px] border border-zinc-200 bg-white p-5 text-zinc-950 shadow-sm">
+        <div className="mx-auto max-w-[1700px] space-y-4">
+          <div className="rounded-[24px] border border-zinc-200 bg-white p-4 text-zinc-950 shadow-sm">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div>
-                <h1 className="mt-2 text-3xl font-bold">Vendas</h1>
+                <h1 className="mt-1 text-[1.8rem] font-bold">Vendas</h1>
                 <p className="mt-2 text-sm text-zinc-500">
                   Histórico de comandas fechadas, busca avançada, reabertura para o caixa, exclusão e impressão de cupom.
                 </p>
               </div>
 
-              <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-right">
+              <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-3.5 py-2.5 text-right">
                 <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">
                   Resultados
                 </div>
-                <div className="mt-1 text-2xl font-bold">{vendasFiltradas.length}</div>
+                <div className="mt-1 text-xl font-bold">{vendasFiltradas.length}</div>
               </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-4 xl:grid-cols-4">
+          <div className="grid grid-cols-1 gap-3 xl:grid-cols-4">
             <KpiCard
               icon={<BadgeDollarSign size={18} />}
               label="Total vendido"
@@ -921,13 +921,13 @@ export default function VendasPage() {
             </div>
           ) : null}
 
-          <div className="rounded-[28px] border border-zinc-200 bg-white p-4 shadow-sm">
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-5">
+          <div className="rounded-[24px] border border-zinc-200 bg-white p-3.5 shadow-sm">
+            <div className="grid grid-cols-1 gap-2.5 md:grid-cols-2 xl:grid-cols-5">
               <div className="xl:col-span-2">
                 <label className="mb-2 block text-sm font-semibold text-zinc-700">
                   Busca avançada
                 </label>
-                <div className="flex items-center gap-2 rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3">
+                <div className="flex items-center gap-2 rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-2.5">
                   <Search size={16} className="text-zinc-500" />
                   <input
                     value={busca}
@@ -945,7 +945,7 @@ export default function VendasPage() {
                 <select
                   value={statusFiltro}
                   onChange={(e) => setStatusFiltro(e.target.value as "fechada" | "cancelada" | "todos")}
-                  className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-zinc-900"
+                  className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-2.5 text-sm outline-none transition focus:border-zinc-900"
                 >
                   <option value="fechada">Fechadas</option>
                   <option value="cancelada">Canceladas</option>
@@ -962,7 +962,7 @@ export default function VendasPage() {
                     type="date"
                     value={dataInicio}
                     onChange={(e) => setDataInicio(e.target.value)}
-                    className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-zinc-900"
+                    className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-2.5 text-sm outline-none transition focus:border-zinc-900"
                   />
                   <CalendarDays className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-zinc-400" size={16} />
                 </div>
@@ -977,14 +977,14 @@ export default function VendasPage() {
                     type="date"
                     value={dataFim}
                     onChange={(e) => setDataFim(e.target.value)}
-                    className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-zinc-900"
+                    className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-2.5 text-sm outline-none transition focus:border-zinc-900"
                   />
                   <CalendarDays className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-zinc-400" size={16} />
                 </div>
               </div>
             </div>
 
-            <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-6">
+            <div className="mt-2.5 grid grid-cols-1 gap-2.5 md:grid-cols-2 xl:grid-cols-6">
               <div>
                 <label className="mb-2 block text-sm font-semibold text-zinc-700">
                   Cliente
@@ -992,7 +992,7 @@ export default function VendasPage() {
                 <select
                   value={clienteFiltro}
                   onChange={(e) => setClienteFiltro(e.target.value)}
-                  className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-zinc-900"
+                  className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-2.5 text-sm outline-none transition focus:border-zinc-900"
                 >
                   <option value="">Todos</option>
                   {clientesFiltro.map((cliente) => (
@@ -1010,7 +1010,7 @@ export default function VendasPage() {
                 <select
                   value={profissionalFiltro}
                   onChange={(e) => setProfissionalFiltro(e.target.value)}
-                  className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-zinc-900"
+                  className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-2.5 text-sm outline-none transition focus:border-zinc-900"
                 >
                   <option value="">Todos</option>
                   {profissionaisDisponiveis.map((prof) => (
@@ -1023,12 +1023,12 @@ export default function VendasPage() {
 
               <div>
                 <label className="mb-2 block text-sm font-semibold text-zinc-700">
-                  Forma pagamento
+                  Forma de pagamento
                 </label>
                 <select
                   value={formaPagamentoFiltro}
                   onChange={(e) => setFormaPagamentoFiltro(e.target.value)}
-                  className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-zinc-900"
+                  className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-2.5 text-sm outline-none transition focus:border-zinc-900"
                 >
                   <option value="">Todas</option>
                   {formasPagamentoDisponiveis.map((forma) => (
@@ -1047,7 +1047,7 @@ export default function VendasPage() {
                   value={itemFiltro}
                   onChange={(e) => setItemFiltro(e.target.value)}
                   placeholder="Ex.: sobrancelha"
-                  className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-zinc-900"
+                  className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-2.5 text-sm outline-none transition focus:border-zinc-900"
                 />
               </div>
 
@@ -1059,7 +1059,7 @@ export default function VendasPage() {
                   value={valorMinimo}
                   onChange={(e) => setValorMinimo(e.target.value)}
                   placeholder="0,00"
-                  className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-zinc-900"
+                  className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-2.5 text-sm outline-none transition focus:border-zinc-900"
                 />
               </div>
 
@@ -1071,14 +1071,14 @@ export default function VendasPage() {
                   value={valorMaximo}
                   onChange={(e) => setValorMaximo(e.target.value)}
                   placeholder="999,99"
-                  className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-zinc-900"
+                  className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-2.5 text-sm outline-none transition focus:border-zinc-900"
                 />
               </div>
             </div>
           </div>
 
-          <div className="rounded-[28px] border border-zinc-200 bg-white shadow-sm">
-            <div className="border-b border-zinc-200 px-5 py-4">
+          <div className="rounded-[24px] border border-zinc-200 bg-white shadow-sm">
+            <div className="border-b border-zinc-200 px-4 py-3.5">
               <div className="text-lg font-bold text-zinc-900">Lista de vendas</div>
               <div className="mt-1 text-sm text-zinc-500">
                 Consulte, imprima, reabra ou exclua vendas com segurança.
@@ -1089,14 +1089,14 @@ export default function VendasPage() {
               <table className="min-w-full">
                 <thead>
                   <tr className="border-b border-zinc-100 text-left text-xs uppercase tracking-wider text-zinc-500">
-                    <th className="px-5 py-3">Comanda</th>
-                    <th className="px-5 py-3">Cliente</th>
-                    <th className="px-5 py-3">Status</th>
-                    <th className="px-5 py-3">Data</th>
-                    <th className="px-5 py-3">Total</th>
-                    <th className="px-5 py-3">Profissional</th>
-                    <th className="px-5 py-3">Pagamento</th>
-                    <th className="px-5 py-3 text-right">Ações</th>
+                    <th className="px-4 py-3">Comanda</th>
+                    <th className="px-4 py-3">Cliente</th>
+                    <th className="px-4 py-3">Status</th>
+                    <th className="px-4 py-3">Data</th>
+                    <th className="px-4 py-3">Total</th>
+                    <th className="px-4 py-3">Profissional</th>
+                    <th className="px-4 py-3">Pagamento</th>
+                    <th className="px-4 py-3 text-right">Ações</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1105,40 +1105,40 @@ export default function VendasPage() {
 
                     return (
                       <tr key={item.id} className="border-b border-zinc-100 last:border-b-0">
-                        <td className="px-5 py-4">
+                        <td className="px-4 py-3.5">
                           <div className="font-semibold text-zinc-900">#{item.numero}</div>
                           <div className="text-xs text-zinc-500">
                             Subtotal: {formatCurrency(item.subtotal)}
                           </div>
                         </td>
 
-                        <td className="px-5 py-4 text-sm text-zinc-700">
+                        <td className="px-4 py-3.5 text-sm text-zinc-700">
                           {getJoinedName(item.clientes, "Sem cliente")}
                         </td>
 
-                        <td className="px-5 py-4">
+                        <td className="px-4 py-3.5">
                           <span className={`rounded-full px-3 py-1 text-xs font-semibold uppercase ${getStatusBadgeClass(item.status)}`}>
                             {item.status}
                           </span>
                         </td>
 
-                        <td className="px-5 py-4 text-sm text-zinc-700">
+                        <td className="px-4 py-3.5 text-sm text-zinc-700">
                           {formatDateTime(item.fechada_em || item.cancelada_em)}
                         </td>
 
-                        <td className="px-5 py-4 text-sm font-semibold text-zinc-900">
+                        <td className="px-4 py-3.5 text-sm font-semibold text-zinc-900">
                           {formatCurrency(item.total)}
                         </td>
 
-                        <td className="px-5 py-4 text-sm text-zinc-700">
+                        <td className="px-4 py-3.5 text-sm text-zinc-700">
                           {rowBusca?.profissionais_nomes || "-"}
                         </td>
 
-                        <td className="px-5 py-4 text-sm text-zinc-700">
+                        <td className="px-4 py-3.5 text-sm text-zinc-700">
                           {rowBusca?.formas_pagamento || "-"}
                         </td>
 
-                        <td className="px-5 py-4">
+                        <td className="px-4 py-3.5">
                           <div className="flex items-center justify-end gap-2">
                             <button
                               type="button"
@@ -1187,7 +1187,7 @@ export default function VendasPage() {
 
                   {vendasFiltradas.length === 0 ? (
                     <tr>
-                      <td colSpan={8} className="px-5 py-10 text-center text-sm text-zinc-500">
+                      <td colSpan={8} className="px-4 py-10 text-center text-sm text-zinc-500">
                         Nenhuma venda encontrada para os filtros informados.
                       </td>
                     </tr>
@@ -1201,10 +1201,10 @@ export default function VendasPage() {
 
       {detalheOpen && detalheVenda ? (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-          <div className="flex h-[92vh] w-full max-w-6xl flex-col overflow-hidden rounded-[32px] border border-zinc-200 bg-white shadow-2xl">
-            <div className="flex items-center justify-between border-b border-zinc-200 bg-white px-6 py-5">
+          <div className="flex h-[92vh] w-full max-w-6xl flex-col overflow-hidden rounded-[28px] border border-zinc-200 bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-zinc-200 bg-white px-5 py-4">
               <div>
-                <h2 className="text-2xl font-bold text-zinc-900">
+                <h2 className="text-[1.6rem] font-bold text-zinc-900">
                   Detalhes da venda #{detalheVenda.comanda?.numero}
                 </h2>
                 <p className="mt-1 text-sm text-zinc-500">
@@ -1227,9 +1227,9 @@ export default function VendasPage() {
             <div className="min-h-0 flex-1 overflow-hidden">
               <div className="grid h-full min-h-0 grid-cols-1 xl:grid-cols-[minmax(0,1fr)_360px]">
                 <div className="min-h-0 overflow-y-auto p-6 agenda-scroll">
-                  <div className="space-y-5">
-                    <div className="rounded-[24px] border border-zinc-200 bg-white">
-                      <div className="border-b border-zinc-200 px-5 py-4">
+                  <div className="space-y-4">
+                    <div className="rounded-[20px] border border-zinc-200 bg-white">
+                      <div className="border-b border-zinc-200 px-4 py-3.5">
                         <div className="flex items-center gap-2 text-lg font-bold text-zinc-900">
                           <Receipt size={18} />
                           Itens da venda
@@ -1240,24 +1240,24 @@ export default function VendasPage() {
                         <table className="min-w-full">
                           <thead>
                             <tr className="border-b border-zinc-100 text-left text-xs uppercase tracking-wider text-zinc-500">
-                              <th className="px-5 py-3">Descrição</th>
-                              <th className="px-5 py-3">Qtd</th>
-                              <th className="px-5 py-3">Unit.</th>
-                              <th className="px-5 py-3">Total</th>
+                              <th className="px-4 py-3">Descrição</th>
+                              <th className="px-4 py-3">Qtd</th>
+                              <th className="px-4 py-3">Unit.</th>
+                              <th className="px-4 py-3">Total</th>
                             </tr>
                           </thead>
                           <tbody>
                             {detalheVenda.itens.map((item) => (
                               <tr key={item.id} className="border-b border-zinc-100 last:border-b-0">
-                                <td className="px-5 py-4">
+                                <td className="px-4 py-3.5">
                                   <ComboItemLabel descricao={item.descricao} />
                                   <div className="text-xs uppercase text-zinc-500">{item.tipo_item}</div>
                                 </td>
-                                <td className="px-5 py-4 text-sm text-zinc-700">{item.quantidade}</td>
-                                <td className="px-5 py-4 text-sm text-zinc-700">
+                                <td className="px-4 py-3.5 text-sm text-zinc-700">{item.quantidade}</td>
+                                <td className="px-4 py-3.5 text-sm text-zinc-700">
                                   {formatCurrency(item.valor_unitario)}
                                 </td>
-                                <td className="px-5 py-4 text-sm font-semibold text-zinc-900">
+                                <td className="px-4 py-3.5 text-sm font-semibold text-zinc-900">
                                   {formatCurrency(item.valor_total)}
                                 </td>
                               </tr>
@@ -1265,7 +1265,7 @@ export default function VendasPage() {
 
                             {detalheVenda.itens.length === 0 ? (
                               <tr>
-                                <td colSpan={4} className="px-5 py-10 text-center text-sm text-zinc-500">
+                                <td colSpan={4} className="px-4 py-10 text-center text-sm text-zinc-500">
                                   Nenhum item encontrado.
                                 </td>
                               </tr>
@@ -1276,8 +1276,8 @@ export default function VendasPage() {
                     </div>
 
                     {comboSummaryDetalhe.length > 0 ? (
-                      <div className="rounded-[24px] border border-violet-100 bg-gradient-to-br from-violet-50 via-white to-white p-5">
-                        <div className="mb-4 flex items-start justify-between gap-4">
+                      <div className="rounded-[20px] border border-violet-100 bg-gradient-to-br from-violet-50 via-white to-white p-4">
+                        <div className="mb-3.5 flex items-start justify-between gap-4">
                           <div>
                             <div className="text-xs font-semibold uppercase tracking-[0.18em] text-violet-500">
                               Totais por combo
@@ -1289,21 +1289,21 @@ export default function VendasPage() {
                               O total abaixo soma os serviços filhos que vieram de cada combo.
                             </p>
                           </div>
-                          <div className="rounded-2xl border border-violet-200 bg-white px-4 py-3 text-right shadow-sm">
+                          <div className="rounded-2xl border border-violet-200 bg-white px-3.5 py-2.5 text-right shadow-sm">
                             <div className="text-xs uppercase tracking-[0.16em] text-zinc-500">
                               Combos
                             </div>
-                            <div className="mt-1 text-2xl font-bold text-zinc-950">
+                            <div className="mt-1 text-xl font-bold text-zinc-950">
                               {comboSummaryDetalhe.length}
                             </div>
                           </div>
                         </div>
 
-                        <div className="grid gap-3 md:grid-cols-2">
+                        <div className="grid gap-2.5 md:grid-cols-2">
                           {comboSummaryDetalhe.map((combo) => (
                             <div
                               key={combo.comboName}
-                              className="rounded-[22px] border border-violet-200 bg-white p-4 shadow-sm"
+                              className="rounded-[20px] border border-violet-200 bg-white p-3.5 shadow-sm"
                             >
                               <div className="flex items-center justify-between gap-3">
                                 <span className="rounded-full border border-violet-200 bg-violet-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-violet-700">
@@ -1313,13 +1313,13 @@ export default function VendasPage() {
                                   {formatCurrency(combo.total)}
                                 </span>
                               </div>
-                              <div className="mt-3 text-base font-bold text-zinc-950">
+                              <div className="mt-2.5 text-[15px] font-bold text-zinc-950">
                                 {combo.comboName}
                               </div>
                               <div className="mt-1 text-sm text-zinc-500">
                                 {combo.itemCount} item(ns) rateados
                               </div>
-                              <div className="mt-3 text-xs leading-5 text-zinc-500">
+                              <div className="mt-2.5 text-xs leading-5 text-zinc-500">
                                 {combo.childLabels.join(", ")}
                               </div>
                             </div>
@@ -1328,8 +1328,8 @@ export default function VendasPage() {
                       </div>
                     ) : null}
 
-                    <div className="rounded-[24px] border border-zinc-200 bg-white p-5">
-                      <div className="mb-4 flex items-center gap-2 text-lg font-bold text-zinc-900">
+                    <div className="rounded-[20px] border border-zinc-200 bg-white p-4">
+                      <div className="mb-3.5 flex items-center gap-2 text-lg font-bold text-zinc-900">
                         <FileText size={18} />
                         Pagamentos
                       </div>
@@ -1338,7 +1338,7 @@ export default function VendasPage() {
                         {detalheVenda.pagamentos.map((pagamento) => (
                           <div
                             key={pagamento.id}
-                            className="flex items-center justify-between rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3"
+                          className="flex items-center justify-between rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-2.5"
                           >
                             <div>
                               <div className="font-semibold capitalize text-zinc-900">
@@ -1369,8 +1369,8 @@ export default function VendasPage() {
 
                 <div className="min-h-0 overflow-y-auto border-t border-zinc-200 bg-zinc-50 p-6 agenda-scroll xl:border-l xl:border-t-0">
                   <div className="space-y-5">
-                    <div className="rounded-[24px] border border-zinc-200 bg-white p-5 shadow-sm">
-                      <div className="mb-4 text-lg font-bold text-zinc-900">Resumo</div>
+                    <div className="rounded-[20px] border border-zinc-200 bg-white p-4 shadow-sm">
+                      <div className="mb-3.5 text-lg font-bold text-zinc-900">Resumo</div>
 
                       <div className="space-y-3">
                         <ResumoRow
@@ -1408,7 +1408,7 @@ export default function VendasPage() {
                           value={formatCurrency(detalheVenda.comanda?.acrescimo)}
                         />
 
-                        <div className="rounded-2xl bg-zinc-900 px-4 py-4 text-white">
+                        <div className="rounded-2xl bg-zinc-900 px-4 py-3.5 text-white">
                           <div className="text-xs uppercase tracking-[0.18em] text-zinc-400">
                             Total
                           </div>
@@ -1419,8 +1419,8 @@ export default function VendasPage() {
                       </div>
                     </div>
 
-                    <div className="rounded-[24px] border border-zinc-200 bg-white p-5 shadow-sm">
-                      <div className="mb-4 text-lg font-bold text-zinc-900">Ações</div>
+                    <div className="rounded-[20px] border border-zinc-200 bg-white p-4 shadow-sm">
+                      <div className="mb-3.5 text-lg font-bold text-zinc-900">Ações</div>
 
                       <div className="grid grid-cols-1 gap-3">
                         <button
