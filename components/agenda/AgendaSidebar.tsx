@@ -153,22 +153,22 @@ export default function AgendaSidebar(props: Props) {
   const showBackButton = Boolean(panel) || view !== "overview";
 
   return (
-    <aside className="w-full min-h-0 lg:h-full lg:max-w-[404px] lg:min-w-[404px] xl:max-w-[420px] xl:min-w-[420px]">
-      <div className="flex h-full min-h-0 flex-col rounded-[30px] border border-white/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(250,251,255,0.96)_100%)] p-4 shadow-[0_20px_60px_rgba(15,23,42,0.08)]">
+    <aside className="w-full min-h-0 lg:h-full lg:max-w-[388px] lg:min-w-[388px] xl:max-w-[404px] xl:min-w-[404px]">
+      <div className="flex h-full min-h-0 flex-col rounded-[24px] border border-white/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(250,251,255,0.96)_100%)] p-3.5 shadow-[0_16px_40px_rgba(15,23,42,0.07)]">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             {showBackButton ? (
               <button
                 type="button"
                 onClick={panel ? panel.onBack : onBackToOverview}
-                className="mb-3 inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-700 shadow-[0_10px_24px_rgba(15,23,42,0.06)] transition duration-200 hover:-translate-y-[1px] hover:bg-zinc-50"
+                className="mb-2.5 inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 shadow-[0_10px_24px_rgba(15,23,42,0.06)] transition duration-200 hover:-translate-y-[1px] hover:bg-zinc-50"
               >
                 <ArrowLeft size={14} />
                 Voltar
               </button>
             ) : null}
 
-            <h2 className="text-[1.8rem] font-semibold tracking-[-0.06em] text-slate-900">
+            <h2 className="text-[1.5rem] font-semibold tracking-[-0.06em] text-slate-900">
               {headerTitle}
             </h2>
             <p className="mt-1 max-w-[24rem] text-sm leading-5 text-zinc-500">
@@ -179,7 +179,7 @@ export default function AgendaSidebar(props: Props) {
           <button
             type="button"
             onClick={onToggleOpen}
-            className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-zinc-200 bg-white text-zinc-500 shadow-[0_10px_24px_rgba(15,23,42,0.06)] transition duration-200 hover:-translate-y-[1px] hover:bg-zinc-50 hover:text-zinc-900"
+            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl border border-zinc-200 bg-white text-zinc-500 shadow-[0_10px_24px_rgba(15,23,42,0.06)] transition duration-200 hover:-translate-y-[1px] hover:bg-zinc-50 hover:text-zinc-900"
             title="Fechar painel"
           >
             <X size={18} />
@@ -187,7 +187,7 @@ export default function AgendaSidebar(props: Props) {
         </div>
 
         {!panel ? (
-          <div className="mt-5 grid grid-cols-3 gap-2 rounded-[24px] border border-zinc-200/80 bg-zinc-50/85 p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.75)]">
+          <div className="mt-4 grid grid-cols-3 gap-2 rounded-[20px] border border-zinc-200/80 bg-zinc-50/85 p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.75)]">
             <SidebarNavButton
               active={view === "overview"}
               onClick={() => onSetView("overview")}
@@ -209,7 +209,7 @@ export default function AgendaSidebar(props: Props) {
           </div>
         ) : null}
 
-        <div className="mt-4 min-h-0 flex-1 overflow-y-auto pr-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div className="mt-3 min-h-0 flex-1 overflow-y-auto pr-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {panel ? (
             <div className="h-full">{panel.content}</div>
           ) : view === "clientSearch" ? (
@@ -231,12 +231,12 @@ export default function AgendaSidebar(props: Props) {
           ) : view === "waitlist" ? (
             <WaitlistView items={waitlistItems} />
           ) : (
-            <div className="space-y-3">
-              <section className="rounded-[24px] border border-zinc-200/80 bg-white/98 p-3.5 shadow-[0_12px_28px_rgba(15,23,42,0.05)] transition duration-300 hover:-translate-y-[1px] hover:shadow-[0_18px_40px_rgba(15,23,42,0.07)]">
+            <div className="space-y-2.5">
+              <section className="rounded-[20px] border border-zinc-200/80 bg-white/98 p-3 shadow-[0_12px_28px_rgba(15,23,42,0.05)] transition duration-300 hover:-translate-y-[1px] hover:shadow-[0_18px_40px_rgba(15,23,42,0.07)]">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-zinc-950">Valor total</p>
-                    <p className="mt-1 truncate text-[1.65rem] font-semibold tracking-[-0.05em] text-emerald-600">
+                    <p className="mt-1 truncate text-[1.45rem] font-semibold tracking-[-0.05em] text-emerald-600">
                       {potentialValueVisible ? totalValueLabel : "R$ ******"}
                     </p>
                   </div>
