@@ -84,41 +84,41 @@ function origemMeta(origem: string | null | undefined) {
   if (origem === "profissional_servico") {
     return {
       badgeClass: "border-violet-200 bg-violet-50 text-violet-700",
-      description: "Excecao do profissional no servico.",
-      label: "Excecao do profissional",
+      description: "Exceção do profissional no serviço.",
+      label: "Exceção do profissional",
     };
   }
   if (origem === "servico_padrao") {
     return {
       badgeClass: "border-sky-200 bg-sky-50 text-sky-700",
-      description: "Percentual herdado do servico.",
-      label: "Padrao do servico",
+      description: "Percentual herdado do serviço.",
+      label: "Padrão do serviço",
     };
   }
   if (origem === "profissional_padrao") {
     return {
       badgeClass: "border-amber-200 bg-amber-50 text-amber-700",
       description: "Percentual herdado do cadastro antigo.",
-      label: "Padrao antigo do profissional",
+      label: "Padrão antigo do profissional",
     };
   }
   if (origem === "assistente") {
     return {
       badgeClass: "border-emerald-200 bg-emerald-50 text-emerald-700",
-      description: "Lancamento destinado ao assistente.",
+      description: "Lançamento destinado ao assistente.",
       label: "Assistente",
     };
   }
   if (origem === "manual") {
     return {
       badgeClass: "border-zinc-200 bg-zinc-100 text-zinc-700",
-      description: "Lancamento criado manualmente.",
-      label: "Lancamento manual",
+      description: "Lançamento criado manualmente.",
+      label: "Lançamento manual",
     };
   }
   return {
     badgeClass: "border-rose-200 bg-rose-50 text-rose-700",
-    description: "Nao encontrou uma regra clara.",
+    description: "Não encontrou uma regra clara.",
     label: "Sem regra definida",
   };
 }
@@ -146,7 +146,7 @@ function ComboDescriptionBlock({
         </div>
       ) : null}
       <div className="mt-1 text-xs text-zinc-500">
-        {observacoes || "Sem observacoes adicionais."}
+        {observacoes || "Sem observações adicionais."}
       </div>
     </>
   );
@@ -217,7 +217,7 @@ export default function ComissoesPage() {
           | null;
         setComissoesAvancadas(Boolean(data?.recursos?.comissoes_avancadas));
       } catch (error) {
-        console.error("Falha ao carregar acesso de plano para comissoes:", error);
+        console.error("Falha ao carregar acesso de plano para comissões:", error);
       }
     })();
   }, []);
@@ -243,7 +243,7 @@ export default function ComissoesPage() {
         : null);
     const documentTitle = profissionalTitulo
       ? `Rateio - ${profissionalTitulo}`
-      : "Rateio de comissoes";
+      : "Rateio de comissões";
     const totalGeral = rows.reduce(
       (acc, item) => acc + getValorLancamento(item),
       0
@@ -388,12 +388,12 @@ export default function ComissoesPage() {
                 <div class="title">${
                   profissionalTitulo
                     ? `Rateio de ${escapeHtml(profissionalTitulo)}`
-                    : "Relatorio de comissoes"
+                    : "Relatório de comissões"
                 }</div>
                 <div class="muted">
-                  Salao: <strong>${escapeHtml(salaoInfo?.nome || "Salao")}</strong><br />
+                  Salão: <strong>${escapeHtml(salaoInfo?.nome || "Salão")}</strong><br />
                   Documento: <strong>${escapeHtml(formatDocument(salaoInfo?.cpf_cnpj))}</strong><br />
-                  Responsavel: <strong>${escapeHtml(salaoInfo?.responsavel || "Nao informado")}</strong>
+                  Responsável: <strong>${escapeHtml(salaoInfo?.responsavel || "Não informado")}</strong>
                   ${
                     profissionalTitulo
                       ? `<br />Profissional: <strong>${escapeHtml(
@@ -404,7 +404,7 @@ export default function ComissoesPage() {
                 </div>
               </div>
               <div class="period">
-                <div class="eyebrow">Periodo</div>
+                <div class="eyebrow">Período</div>
                 <div class="title" style="font-size:16px;">${escapeHtml(
                   `${formatDate(dataInicial)} ate ${formatDate(dataFinal)}`
                 )}</div>
@@ -469,7 +469,7 @@ export default function ComissoesPage() {
                     </div>
                     <div>
                       <div class="meta-label">${
-                        profissionalTitulo ? "CPF" : "Tipo de destinatario"
+                        profissionalTitulo ? "CPF" : "Tipo de destinatário"
                       }</div>
                       <div class="meta-value">${escapeHtml(
                         profissionalTitulo
@@ -484,7 +484,7 @@ export default function ComissoesPage() {
                       <div class="meta-value">${escapeHtml(String(rows.length))}</div>
                     </div>
                     <div>
-                      <div class="meta-label">Periodo</div>
+                      <div class="meta-label">Período</div>
                       <div class="meta-value">${escapeHtml(
                         `${formatDate(dataInicial)} ate ${formatDate(dataFinal)}`
                       )}</div>
@@ -496,7 +496,7 @@ export default function ComissoesPage() {
                     profissionalTitulo ? "Total do profissional" : "Total filtrado"
                   }</div>
                   <div class="total">${escapeHtml(formatCurrency(totalGeral))}</div>
-                  <div class="muted">Documento pronto para conferencia e assinatura.</div>
+                  <div class="muted">Documento pronto para conferência e assinatura.</div>
                 </div>
               </div>
 
@@ -528,8 +528,8 @@ export default function ComissoesPage() {
                   ? `
                     <div class="signature-grid">
                       <div class="signature">
-                        <div class="signature-name">${escapeHtml(salaoInfo?.nome || "Salao")}</div>
-                        <div class="signature-role">Assinatura do salao</div>
+                        <div class="signature-name">${escapeHtml(salaoInfo?.nome || "Salão")}</div>
+                        <div class="signature-role">Assinatura do salão</div>
                         <div class="signature-doc">Documento: ${escapeHtml(
                           formatDocument(salaoInfo?.cpf_cnpj)
                         )}</div>
@@ -552,7 +552,7 @@ export default function ComissoesPage() {
             </section>
 
             <div class="footer-note">
-              Documento gerado para conferencia e assinatura do rateio de comissoes do periodo.
+              Documento gerado para conferência e assinatura do rateio de comissões do período.
             </div>
           </div>
         </body>
@@ -568,8 +568,8 @@ export default function ComissoesPage() {
   if (loading || !acessoCarregado) {
     return (
       <AppLoading
-        title="Carregando comissoes"
-        message="Aguarde enquanto consolidamos lancamentos, filtros e rateios da equipe."
+        title="Carregando comissões"
+        message="Aguarde enquanto consolidamos lançamentos, filtros e rateios da equipe."
         fullHeight={false}
       />
     );
@@ -591,17 +591,17 @@ export default function ComissoesPage() {
         open={Boolean(confirmacaoComissao)}
         title={
           confirmacaoComissao?.acao === "cancelar"
-            ? "Cancelar lancamento"
-            : "Marcar comissoes como pagas"
+            ? "Cancelar lançamento"
+            : "Marcar comissões como pagas"
         }
         description={
           confirmacaoComissao?.acao === "cancelar"
-            ? "Este lancamento deixara de entrar no rateio ativo."
+            ? "Este lançamento deixará de entrar no rateio ativo."
             : `${confirmacaoComissao?.ids.length || 0} lançamento(s) filtrado(s) serão marcados como pagos.`
         }
         confirmLabel={
           confirmacaoComissao?.acao === "cancelar"
-            ? "Cancelar lancamento"
+            ? "Cancelar lançamento"
             : "Marcar como pago"
         }
         tone={confirmacaoComissao?.acao === "cancelar" ? "danger" : "default"}
@@ -613,31 +613,31 @@ export default function ComissoesPage() {
       />
 
       <div className="bg-white">
-        <div className="mx-auto max-w-[1800px] space-y-5">
-          <div className="overflow-hidden rounded-[28px] border border-zinc-200 bg-white shadow-sm">
-            <div className="border-b border-zinc-200 bg-white px-5 py-5 text-zinc-950">
+        <div className="mx-auto max-w-[1800px] space-y-4">
+          <div className="overflow-hidden rounded-[24px] border border-zinc-200 bg-white shadow-sm">
+            <div className="border-b border-zinc-200 bg-white px-4 py-4 text-zinc-950">
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div className="max-w-3xl">
                   <div className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-500">
-                    Rateio e conferencia
+                    Rateio e conferência
                   </div>
-                  <h1 className="mt-1 text-[2rem] font-bold tracking-[-0.04em]">
-                    Comissoes
+                  <h1 className="mt-1 text-[1.8rem] font-bold tracking-[-0.04em]">
+                    Comissões
                   </h1>
                   <p className="mt-2 text-sm text-zinc-500">
-                    Total do periodo, pendencias e regra de origem em uma leitura
+                    Total do período, pendências e regra de origem em uma leitura
                     menos cansativa.
                   </p>
                 </div>
-                <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-right">
+                <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-3.5 py-2.5 text-right">
                   <div className="text-xs uppercase tracking-[0.18em] text-zinc-500">
                     Lançamentos filtrados
                   </div>
-                  <div className="mt-1 text-2xl font-bold">{rows.length}</div>
+                  <div className="mt-1 text-xl font-bold">{rows.length}</div>
                 </div>
               </div>
             </div>
-            <div className="grid gap-3 px-4 py-4 md:grid-cols-2 xl:grid-cols-7">
+            <div className="grid gap-2.5 px-3 py-3 md:grid-cols-2 xl:grid-cols-7">
               <ResumoCard
                 title="Total"
                 value={formatCurrency(resumo.total)}
@@ -671,13 +671,13 @@ export default function ComissoesPage() {
               {comissoesAvancadas ? (
                 <>
                   <ResumoCard
-                    title="Ticket medio"
+                    title="Ticket médio"
                     value={formatCurrency(ticketMedio)}
                     icon={<WalletCards size={16} />}
                     tone="sky"
                   />
                   <ResumoCard
-                    title="Maior lancamento"
+                    title="Maior lançamento"
                     value={formatCurrency(
                       maiorLancamento ? getValorLancamento(maiorLancamento) : 0
                     )}
@@ -697,34 +697,34 @@ export default function ComissoesPage() {
             </div>
 
           {comissoesAvancadas && comboSummary.length > 0 ? (
-            <div className="rounded-[28px] border border-violet-100 bg-gradient-to-br from-violet-50 via-white to-white p-5 shadow-sm">
+            <div className="rounded-[24px] border border-violet-100 bg-gradient-to-br from-violet-50 via-white to-white p-4 shadow-sm">
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div className="max-w-3xl">
                   <div className="text-xs font-semibold uppercase tracking-[0.22em] text-violet-500">
                     Leitura por combo
                   </div>
-                  <h2 className="mt-2 text-xl font-bold text-zinc-950">
+                  <h2 className="mt-1 text-lg font-bold text-zinc-950">
                     Total agrupado dos combos no rateio
                   </h2>
                   <p className="mt-2 text-sm text-zinc-500">
                     Cada card soma os lançamentos que vieram dos serviços filhos do combo.
                   </p>
                 </div>
-                <div className="rounded-2xl border border-violet-200 bg-white px-4 py-3 text-right shadow-sm">
+                <div className="rounded-2xl border border-violet-200 bg-white px-3.5 py-2.5 text-right shadow-sm">
                   <div className="text-xs uppercase tracking-[0.16em] text-zinc-500">
                     Combos encontrados
                   </div>
-                  <div className="mt-1 text-2xl font-bold text-zinc-950">
+                  <div className="mt-1 text-xl font-bold text-zinc-950">
                     {comboSummary.length}
                   </div>
                 </div>
               </div>
 
-              <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+              <div className="mt-4 grid gap-2.5 md:grid-cols-2 xl:grid-cols-3">
                 {comboSummary.map((combo) => (
                   <div
                     key={combo.comboName}
-                    className="rounded-[24px] border border-violet-200 bg-white p-4 shadow-sm"
+                    className="rounded-[20px] border border-violet-200 bg-white p-3.5 shadow-sm"
                   >
                     <div className="flex items-center justify-between gap-3">
                       <span className="rounded-full border border-violet-200 bg-violet-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-violet-700">
@@ -734,13 +734,13 @@ export default function ComissoesPage() {
                         {formatCurrency(combo.total)}
                       </span>
                     </div>
-                    <div className="mt-3 text-base font-bold text-zinc-950">
+                    <div className="mt-2.5 text-[15px] font-bold text-zinc-950">
                       {combo.comboName}
                     </div>
                     <div className="mt-1 text-sm text-zinc-500">
-                      {combo.itemCount} lancamento(s) do rateio
+                      {combo.itemCount} lançamento(s) do rateio
                     </div>
-                    <div className="mt-3 text-xs leading-5 text-zinc-500">
+                    <div className="mt-2.5 text-xs leading-5 text-zinc-500">
                       {combo.childLabels.join(", ")}
                     </div>
                   </div>
@@ -760,8 +760,8 @@ export default function ComissoesPage() {
             </div>
           ) : null}
 
-          <div className="rounded-[28px] border border-zinc-200 bg-white p-4 shadow-sm">
-            <div className="grid grid-cols-1 gap-3 xl:grid-cols-[1.25fr_170px_170px_220px_170px_170px_150px]">
+          <div className="rounded-[24px] border border-zinc-200 bg-white p-3.5 shadow-sm">
+            <div className="grid grid-cols-1 gap-2.5 xl:grid-cols-[1.25fr_160px_160px_210px_160px_160px_140px]">
               <Field label="Buscar">
                 <div className="relative">
                   <Search
@@ -772,7 +772,7 @@ export default function ComissoesPage() {
                     value={busca}
                     onChange={(e) => setBusca(e.target.value)}
                     placeholder="Profissional, descrição ou origem"
-                    className="w-full rounded-2xl border border-zinc-200 bg-zinc-50 px-11 py-3 text-sm outline-none transition focus:border-zinc-900 focus:bg-white"
+                    className="w-full rounded-2xl border border-zinc-200 bg-zinc-50 px-11 py-2.5 text-sm outline-none transition focus:border-zinc-900 focus:bg-white"
                   />
                 </div>
               </Field>
@@ -780,7 +780,7 @@ export default function ComissoesPage() {
                 <select
                   value={status}
                   onChange={(e) => setStatus(e.target.value)}
-                  className="w-full rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm outline-none transition focus:border-zinc-900 focus:bg-white"
+                  className="w-full rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-2.5 text-sm outline-none transition focus:border-zinc-900 focus:bg-white"
                 >
                   <option value="todos">Todos</option>
                   <option value="pendente">Pendente</option>
@@ -792,7 +792,7 @@ export default function ComissoesPage() {
                 <select
                   value={tipoDestinatario}
                   onChange={(e) => setTipoDestinatario(e.target.value)}
-                  className="w-full rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm outline-none transition focus:border-zinc-900 focus:bg-white"
+                  className="w-full rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-2.5 text-sm outline-none transition focus:border-zinc-900 focus:bg-white"
                 >
                   <option value="todos">Todos</option>
                   <option value="profissional">Profissional</option>
@@ -803,7 +803,7 @@ export default function ComissoesPage() {
                 <select
                   value={profissionalId}
                   onChange={(e) => setProfissionalId(e.target.value)}
-                  className="w-full rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm outline-none transition focus:border-zinc-900 focus:bg-white"
+                  className="w-full rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-2.5 text-sm outline-none transition focus:border-zinc-900 focus:bg-white"
                 >
                   <option value="">Todos</option>
                   {profissionais.map((item) => (
@@ -818,7 +818,7 @@ export default function ComissoesPage() {
                   type="date"
                   value={dataInicial}
                   onChange={(e) => setDataInicial(e.target.value)}
-                  className="w-full rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm outline-none transition focus:border-zinc-900 focus:bg-white"
+                  className="w-full rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-2.5 text-sm outline-none transition focus:border-zinc-900 focus:bg-white"
                 />
               </Field>
               <Field label="Data final">
@@ -826,30 +826,30 @@ export default function ComissoesPage() {
                   type="date"
                   value={dataFinal}
                   onChange={(e) => setDataFinal(e.target.value)}
-                  className="w-full rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm outline-none transition focus:border-zinc-900 focus:bg-white"
+                  className="w-full rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-2.5 text-sm outline-none transition focus:border-zinc-900 focus:bg-white"
                 />
               </Field>
               <Field label="Aplicar">
                 <button
                   onClick={() => void carregarComissoes()}
-                  className="w-full rounded-2xl bg-zinc-900 px-4 py-3 text-sm font-semibold text-white transition hover:opacity-95"
+                  className="w-full rounded-2xl bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-95"
                 >
                   Atualizar
                 </button>
               </Field>
             </div>
-            <div className="mt-3 flex flex-wrap gap-2">
+            <div className="mt-2.5 flex flex-wrap gap-2">
               {comissoesAvancadas ? (
                 <>
                   <button
                     onClick={apurarRateio}
-                    className="rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-50"
+                    className="rounded-2xl border border-zinc-200 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-50"
                   >
                     Apurar rateio
                   </button>
                   <button
                     onClick={imprimirRateio}
-                    className="inline-flex items-center gap-2 rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-50"
+                    className="inline-flex items-center gap-2 rounded-2xl border border-zinc-200 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-50"
                   >
                     <Printer size={16} />
                     Imprimir rateio
@@ -860,13 +860,13 @@ export default function ComissoesPage() {
                   <button
                     type="button"
                     disabled
-                    className="rounded-2xl border border-zinc-200 bg-zinc-100 px-4 py-3 text-sm font-semibold text-zinc-400"
+                    className="rounded-2xl border border-zinc-200 bg-zinc-100 px-4 py-2.5 text-sm font-semibold text-zinc-400"
                   >
                     Apurar rateio
                   </button>
                   <a
                     href={`/assinatura?plano=${getPlanoMinimoParaRecurso("comissoes_avancadas")}`}
-                    className="inline-flex items-center gap-2 rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-50"
+                    className="inline-flex items-center gap-2 rounded-2xl border border-zinc-200 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-50"
                   >
                     <Sparkles size={16} />
                     Liberar no Pro
@@ -877,7 +877,7 @@ export default function ComissoesPage() {
                 <button
                   onClick={marcarFiltradasComoPagas}
                   disabled={saving || totalPendentesCount === 0}
-                  className="rounded-2xl bg-zinc-900 px-4 py-3 text-sm font-semibold text-white transition hover:opacity-95 disabled:opacity-50"
+                  className="rounded-2xl bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-95 disabled:opacity-50"
                 >
                   Marcar filtradas como pagas
                 </button>
@@ -886,13 +886,13 @@ export default function ComissoesPage() {
           </div>
 
           {comissoesAvancadas ? (
-            <div className="rounded-[28px] border border-zinc-200 bg-white p-4 shadow-sm">
+            <div className="rounded-[24px] border border-zinc-200 bg-white p-3.5 shadow-sm">
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
                   <div className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
-                    Visao por pessoa
+                    Visão por pessoa
                   </div>
-                  <div className="mt-1 text-xl font-bold text-zinc-950">
+                  <div className="mt-1 text-lg font-bold text-zinc-950">
                     Profissionais e assistentes no rateio
                   </div>
                 </div>
@@ -903,10 +903,10 @@ export default function ComissoesPage() {
               </div>
               {resumoProfissionais.length === 0 ? (
                 <div className="mt-4 rounded-2xl border border-dashed border-zinc-300 bg-zinc-50 px-4 py-10 text-center text-sm text-zinc-500">
-                  Nenhum profissional entrou no periodo filtrado.
+                  Nenhum profissional entrou no período filtrado.
                 </div>
               ) : (
-                <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                <div className="mt-3.5 grid gap-2.5 md:grid-cols-2 xl:grid-cols-4">
                   {resumoProfissionais.slice(0, 4).map((item) => {
                     const statusPredominante = getStatusComissaoMeta(
                       item.statusPredominante
@@ -914,11 +914,11 @@ export default function ComissoesPage() {
                     return (
                       <div
                         key={item.id}
-                        className="rounded-[24px] border border-zinc-200 bg-zinc-50 p-4"
+                        className="rounded-[20px] border border-zinc-200 bg-zinc-50 p-3.5"
                       >
                         <div className="flex items-start justify-between gap-3">
                           <div className="flex items-center gap-3">
-                            <div className="flex h-11 w-11 items-center justify-center rounded-full bg-white text-sm font-bold text-zinc-700 ring-1 ring-zinc-200">
+                            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-sm font-bold text-zinc-700 ring-1 ring-zinc-200">
                               {getInitials(item.nome)}
                             </div>
                             <div>
@@ -926,7 +926,7 @@ export default function ComissoesPage() {
                                 {item.nome}
                               </div>
                               <div className="text-xs text-zinc-500">
-                                {item.quantidade} lancamento(s)
+                                {item.quantidade} lançamento(s)
                               </div>
                             </div>
                           </div>
@@ -936,10 +936,10 @@ export default function ComissoesPage() {
                             {statusPredominante.label}
                           </span>
                         </div>
-                        <div className="mt-4 text-2xl font-bold text-zinc-950">
+                        <div className="mt-3 text-xl font-bold text-zinc-950">
                           {formatCurrency(item.total)}
                         </div>
-                        <div className="mt-3 text-sm text-zinc-500">
+                        <div className="mt-2.5 text-sm text-zinc-500">
                           Pendente: {formatCurrency(item.pendente)}
                         </div>
                       </div>
@@ -955,8 +955,8 @@ export default function ComissoesPage() {
             />
           )}
 
-          <div className="overflow-hidden rounded-[28px] border border-zinc-200 bg-white shadow-sm">
-            <div className="border-b border-zinc-200 px-5 py-4">
+          <div className="overflow-hidden rounded-[24px] border border-zinc-200 bg-white shadow-sm">
+            <div className="border-b border-zinc-200 px-4 py-3.5">
               <div className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
                 Leitura analítica
               </div>
@@ -965,21 +965,21 @@ export default function ComissoesPage() {
               </div>
             </div>
             <div className="overflow-x-auto">
-              <table className="min-w-[1450px] w-full">
+              <table className="min-w-[1320px] w-full">
                 <thead>
                   <tr className="border-b border-zinc-200 bg-zinc-50 text-left text-xs uppercase tracking-[0.14em] text-zinc-500">
-                    <th className="px-5 py-4">Pessoa</th>
-                    <th className="px-5 py-4">Descrição</th>
-                    <th className="px-5 py-4">Competência</th>
-                    <th className="px-5 py-4">Base</th>
-                    <th className="px-5 py-4">% Aplicada</th>
+                    <th className="px-4 py-3">Pessoa</th>
+                    <th className="px-4 py-3">Descrição</th>
+                    <th className="px-4 py-3">Competência</th>
+                    <th className="px-4 py-3">Base</th>
+                    <th className="px-4 py-3">% Aplicada</th>
                     {comissoesAvancadas ? (
-                      <th className="px-5 py-4">Origem</th>
+                      <th className="px-4 py-3">Origem</th>
                     ) : null}
-                    <th className="px-5 py-4">Comissão</th>
-                    <th className="px-5 py-4">Status</th>
-                    <th className="px-5 py-4">Pago em</th>
-                    <th className="px-5 py-4 text-right">Acoes</th>
+                    <th className="px-4 py-3">Comissão</th>
+                    <th className="px-4 py-3">Status</th>
+                    <th className="px-4 py-3">Pago em</th>
+                    <th className="px-4 py-3 text-right">Ações</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -987,7 +987,7 @@ export default function ComissoesPage() {
                     <tr>
                       <td
                       colSpan={comissoesAvancadas ? 10 : 9}
-                        className="px-5 py-10 text-center text-sm text-zinc-500"
+                        className="px-4 py-10 text-center text-sm text-zinc-500"
                       >
                         Nenhuma comissão encontrada com os filtros atuais.
                       </td>
@@ -1002,9 +1002,9 @@ export default function ComissoesPage() {
                           key={item.id}
                           className="border-b border-zinc-100 align-top"
                         >
-                          <td className="px-5 py-4">
+                          <td className="px-4 py-3.5">
                             <div className="flex items-center gap-3">
-                              <div className="flex h-11 w-11 items-center justify-center rounded-full bg-zinc-100 text-sm font-bold text-zinc-700">
+                              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-zinc-100 text-sm font-bold text-zinc-700">
                                 {getInitials(nome) || <User2 size={16} />}
                               </div>
                               <div>
@@ -1019,23 +1019,23 @@ export default function ComissoesPage() {
                               </div>
                             </div>
                           </td>
-                          <td className="px-5 py-4">
+                          <td className="px-4 py-3.5">
                             <ComboDescriptionBlock
                               descricao={item.descricao}
                               observacoes={item.observacoes}
                             />
                           </td>
-                          <td className="px-5 py-4 text-sm text-zinc-700">
+                          <td className="px-4 py-3.5 text-sm text-zinc-700">
                             {formatDate(item.competencia_data)}
                           </td>
-                          <td className="px-5 py-4 text-sm font-medium text-zinc-800">
+                          <td className="px-4 py-3.5 text-sm font-medium text-zinc-800">
                             {formatCurrency(item.valor_base)}
                           </td>
-                          <td className="px-5 py-4 text-sm font-medium text-zinc-800">
+                          <td className="px-4 py-3.5 text-sm font-medium text-zinc-800">
                             {formatPercent(item.percentual_aplicado)}
                           </td>
                           {comissoesAvancadas ? (
-                            <td className="px-5 py-4">
+                            <td className="px-4 py-3.5">
                               <div
                                 className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${origem.badgeClass}`}
                               >
@@ -1046,7 +1046,7 @@ export default function ComissoesPage() {
                               </div>
                             </td>
                           ) : null}
-                          <td className="px-5 py-4">
+                          <td className="px-4 py-3.5">
                             <div className="text-sm font-bold text-zinc-900">
                               {formatCurrency(getValorLancamento(item))}
                             </div>
@@ -1054,7 +1054,7 @@ export default function ComissoesPage() {
                               Base {formatCurrency(item.valor_base)}
                             </div>
                           </td>
-                          <td className="px-5 py-4">
+                          <td className="px-4 py-3.5">
                             <span
                               className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${statusInfo.badgeClass}`}
                             >
@@ -1064,10 +1064,10 @@ export default function ComissoesPage() {
                               {statusInfo.description}
                             </div>
                           </td>
-                          <td className="px-5 py-4 text-sm text-zinc-700">
+                          <td className="px-4 py-3.5 text-sm text-zinc-700">
                             {formatDateTime(item.pago_em)}
                           </td>
-                          <td className="px-5 py-4">
+                          <td className="px-4 py-3.5">
                             <div className="flex justify-end gap-2">
                               {podeGerenciar ? (
                                 <>
