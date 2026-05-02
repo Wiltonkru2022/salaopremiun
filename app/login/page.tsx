@@ -25,7 +25,7 @@ export default function LoginPage() {
 function LoginPageFallback() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-white p-4">
-      <div className="w-full max-w-xl rounded-[32px] border border-zinc-200 bg-white p-10 text-center shadow-2xl">
+      <div className="w-full max-w-xl rounded-[26px] border border-zinc-200 bg-white p-8 text-center shadow-xl">
         <p className="text-sm text-zinc-500">Carregando login...</p>
       </div>
     </div>
@@ -162,42 +162,42 @@ function LoginPageContent() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-white p-4">
-      <div className="grid w-full max-w-5xl overflow-hidden rounded-[32px] bg-white shadow-2xl md:grid-cols-2">
-        <div className="hidden bg-zinc-900 p-10 text-white md:flex md:flex-col md:justify-between">
+      <div className="grid w-full max-w-5xl overflow-hidden rounded-[26px] bg-white shadow-xl md:grid-cols-2">
+        <div className="hidden bg-zinc-900 p-8 text-white md:flex md:flex-col md:justify-between">
           <div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-zinc-300">
+            <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.24em] text-zinc-300">
               <Sparkles size={14} />
               Sistema SaaS
             </div>
 
-            <h1 className="mt-5 text-4xl font-bold leading-tight">
+            <h1 className="mt-4 text-[2.2rem] font-bold leading-tight">
               SalaoPremium
             </h1>
 
-            <p className="mt-4 max-w-md text-zinc-300">
+            <p className="mt-3 max-w-md text-sm leading-6 text-zinc-300">
               Gestao profissional para saloes, clinicas e profissionais da
               beleza.
             </p>
           </div>
 
-          <div className="space-y-3">
-            <div className="rounded-2xl border border-zinc-800 bg-zinc-950/50 p-4 text-sm text-zinc-200">
+          <div className="space-y-2.5">
+            <div className="rounded-2xl border border-zinc-800 bg-zinc-950/50 p-3.5 text-sm text-zinc-200">
               Agenda propria, sem calendar pronto
             </div>
-            <div className="rounded-2xl border border-zinc-800 bg-zinc-950/50 p-4 text-sm text-zinc-200">
+            <div className="rounded-2xl border border-zinc-800 bg-zinc-950/50 p-3.5 text-sm text-zinc-200">
               Multi-salao com isolamento por salao
             </div>
-            <div className="rounded-2xl border border-zinc-800 bg-zinc-950/50 p-4 text-sm text-zinc-200">
+            <div className="rounded-2xl border border-zinc-800 bg-zinc-950/50 p-3.5 text-sm text-zinc-200">
               Painel premium com financeiro, vendas e relatorios
             </div>
           </div>
         </div>
 
-        <div className="p-6 md:p-10">
+        <div className="p-6 md:p-8">
           <div className="mx-auto max-w-md">
-            <div className="mb-8">
-              <h2 className="text-3xl font-bold text-zinc-900">Entrar</h2>
-              <p className="mt-2 text-zinc-500">
+            <div className="mb-7">
+              <h2 className="text-[2rem] font-bold text-zinc-900">Entrar</h2>
+              <p className="mt-1.5 text-sm text-zinc-500">
                 {agendaQuickLogin
                   ? "Login rapido para voltar direto para a agenda"
                   : "Acesse seu painel administrativo"}
@@ -231,12 +231,12 @@ function LoginPageContent() {
               </div>
             ) : null}
 
-            <form onSubmit={handleLogin} className="space-y-5">
+            <form onSubmit={handleLogin} className="space-y-4.5">
               <div>
                 <label className="mb-2 block text-sm font-medium text-zinc-700">
                   E-mail
                 </label>
-                <div className="flex items-center gap-3 rounded-2xl border border-zinc-300 px-4 py-3 transition focus-within:border-zinc-900 focus-within:ring-4 focus-within:ring-zinc-200">
+                <div className="flex items-center gap-3 rounded-2xl border border-zinc-300 px-4 py-2.5 transition focus-within:border-zinc-900 focus-within:ring-4 focus-within:ring-zinc-200">
                   <Mail size={18} className="text-zinc-400" />
                   <input
                     type="email"
@@ -254,7 +254,7 @@ function LoginPageContent() {
                 <label className="mb-2 block text-sm font-medium text-zinc-700">
                   Senha
                 </label>
-                <div className="flex items-center gap-3 rounded-2xl border border-zinc-300 px-4 py-3 transition focus-within:border-zinc-900 focus-within:ring-4 focus-within:ring-zinc-200">
+                <div className="flex items-center gap-3 rounded-2xl border border-zinc-300 px-4 py-2.5 transition focus-within:border-zinc-900 focus-within:ring-4 focus-within:ring-zinc-200">
                   <LockKeyhole size={18} className="text-zinc-400" />
                   <input
                     type="password"
@@ -302,7 +302,7 @@ function LoginPageContent() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full rounded-2xl bg-zinc-900 px-4 py-3 font-semibold text-white transition hover:opacity-95 disabled:opacity-60"
+                className="w-full rounded-2xl bg-zinc-900 px-4 py-2.5 font-semibold text-white transition hover:opacity-95 disabled:opacity-60"
               >
                 {loading ? "Entrando..." : "Entrar"}
               </button>
@@ -314,7 +314,7 @@ function LoginPageContent() {
               </div>
             ) : null}
 
-            <div className="my-6 flex items-center gap-3">
+            <div className="my-5 flex items-center gap-3">
               <div className="h-px flex-1 bg-zinc-200" />
               <span className="text-xs font-medium uppercase tracking-wider text-zinc-400">
                 ou
@@ -331,13 +331,13 @@ function LoginPageContent() {
                     : "/cadastro-salao"
                 )
               }
-              className="flex w-full items-center justify-center gap-2 rounded-2xl border border-zinc-300 bg-white px-4 py-3 font-semibold text-zinc-900 transition hover:border-zinc-900 hover:bg-zinc-50"
+              className="flex w-full items-center justify-center gap-2 rounded-2xl border border-zinc-300 bg-white px-4 py-2.5 font-semibold text-zinc-900 transition hover:border-zinc-900 hover:bg-zinc-50"
             >
               <span>Cadastrar salao</span>
               <ArrowRight size={18} />
             </button>
 
-            <div className="mt-6 rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-4 text-sm text-zinc-600">
+            <div className="mt-5 rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3.5 text-sm text-zinc-600">
               Novo por aqui? Crie seu salao, escolha o plano e comece com agenda,
               caixa, comandas e gestao completa.
             </div>
