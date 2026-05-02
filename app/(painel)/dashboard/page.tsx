@@ -121,20 +121,20 @@ function KpiCard({
           : "border-zinc-200 bg-white";
 
   return (
-    <div className={`rounded-[26px] border p-4 shadow-sm ${toneClass}`}>
+    <div className={`rounded-[22px] border p-3.5 shadow-sm ${toneClass}`}>
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
           <div className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
             {title}
           </div>
-          <div className="mt-2 text-3xl font-bold tracking-[-0.04em] text-zinc-950">
+          <div className="mt-1.5 text-[1.7rem] font-bold tracking-[-0.04em] text-zinc-950">
             {loading ? "..." : value}
           </div>
-          <div className="mt-2 text-sm text-zinc-500">{subtitle}</div>
+          <div className="mt-1.5 text-sm text-zinc-500">{subtitle}</div>
         </div>
 
-        <div className="rounded-2xl border border-zinc-200 bg-white p-3 text-zinc-700">
-          <Icon size={20} />
+        <div className="rounded-2xl border border-zinc-200 bg-white p-2.5 text-zinc-700">
+          <Icon size={18} />
         </div>
       </div>
     </div>
@@ -151,11 +151,11 @@ function InfoMetric({
   helper: string;
 }) {
   return (
-    <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3">
+    <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-3.5 py-2.5">
       <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-400">
         {title}
       </div>
-      <div className="mt-1 text-xl font-bold text-zinc-950">{value}</div>
+      <div className="mt-1 text-lg font-bold text-zinc-950">{value}</div>
       <div className="mt-1 text-xs leading-5 text-zinc-500">{helper}</div>
     </div>
   );
@@ -171,9 +171,9 @@ function MiniStatusCard({
   value: string;
 }) {
   return (
-    <div className="rounded-[24px] border border-zinc-200 bg-white p-4 shadow-sm">
+    <div className="rounded-[20px] border border-zinc-200 bg-white p-3.5 shadow-sm">
       <div className="flex items-center gap-3">
-        <div className="rounded-2xl bg-zinc-100 p-3">{icon}</div>
+        <div className="rounded-2xl bg-zinc-100 p-2.5">{icon}</div>
         <div className="min-w-0">
           <div className="text-xs font-semibold uppercase tracking-[0.16em] text-zinc-400">
             {title}
@@ -318,15 +318,15 @@ export default function DashboardPage() {
 
   if (semPermissao) {
     return (
-      <div className="space-y-6">
-        <div className="rounded-[32px] border border-zinc-200 bg-white p-8 shadow-sm">
+      <div className="space-y-4">
+        <div className="rounded-[24px] border border-zinc-200 bg-white p-6 shadow-sm">
           <div className="flex items-start gap-4">
             <div className="rounded-2xl bg-rose-100 p-3">
               <ShieldAlert size={24} className="text-rose-600" />
             </div>
 
             <div>
-              <h1 className="text-2xl font-bold text-zinc-900">Acesso negado</h1>
+              <h1 className="text-[1.6rem] font-bold text-zinc-900">Acesso negado</h1>
               <p className="mt-2 text-sm text-zinc-500">
                 Voce nao tem permissao para visualizar o dashboard.
               </p>
@@ -338,29 +338,29 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       {erro ? (
         <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
           {erro}
         </div>
       ) : null}
 
-      <section className="rounded-[30px] border border-zinc-200 bg-white p-5 shadow-sm">
+      <section className="rounded-[24px] border border-zinc-200 bg-white p-4 shadow-sm">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
           <div className="max-w-3xl">
             <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-zinc-400">
               Resumo do salao
             </div>
-            <h1 className="mt-2 text-3xl font-bold tracking-[-0.04em] text-zinc-950">
+            <h1 className="mt-1.5 text-[1.85rem] font-bold tracking-[-0.04em] text-zinc-950">
               Dashboard
             </h1>
-            <p className="mt-2 text-sm leading-6 text-zinc-500">
+            <p className="mt-1.5 text-sm leading-6 text-zinc-500">
               O painel abre primeiro com o essencial e termina o restante em
               segundo plano para voce entrar mais rapido no sistema.
             </p>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2 xl:min-w-[420px]">
+          <div className="grid gap-2.5 sm:grid-cols-2 xl:min-w-[400px]">
             <InfoMetric
               title="Status do carregamento"
               value="Pronto"
@@ -379,7 +379,7 @@ export default function DashboardPage() {
         </div>
       </section>
 
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         <KpiCard
           title="Agendamentos hoje"
           value={String(resumo.agendamentosHoje)}
@@ -408,24 +408,24 @@ export default function DashboardPage() {
         />
       </section>
 
-      <section className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
+      <section className="grid gap-3 xl:grid-cols-[1.2fr_0.8fr]">
         {dashboardAvancado ? (
-          <div className="rounded-[28px] border border-zinc-200 bg-white p-5 shadow-sm">
+          <div className="rounded-[22px] border border-zinc-200 bg-white p-4 shadow-sm">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <div className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-400">
                   Visao geral
                 </div>
-                <div className="mt-1 text-xl font-bold text-zinc-950">
+                <div className="mt-1 text-lg font-bold text-zinc-950">
                   Indicadores de operacao
                 </div>
               </div>
-              <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-3 text-zinc-700">
+              <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-2.5 text-zinc-700">
                 <TrendingUp size={18} />
               </div>
             </div>
 
-            <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            <div className="mt-3.5 grid gap-2.5 md:grid-cols-2 xl:grid-cols-4">
               <InfoMetric
                 title="Ticket medio"
                 value={formatCurrency(resumo.ticketMedioMes)}
@@ -449,22 +449,22 @@ export default function DashboardPage() {
             </div>
           </div>
         ) : (
-          <div className="rounded-[28px] border border-zinc-200 bg-white p-5 shadow-sm">
+          <div className="rounded-[22px] border border-zinc-200 bg-white p-4 shadow-sm">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <div className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-400">
                   Dashboard avancado
                 </div>
-                <div className="mt-1 text-xl font-bold text-zinc-950">
+                <div className="mt-1 text-lg font-bold text-zinc-950">
                   Leitura premium liberada no {dashboardUpgradeLabel}
                 </div>
               </div>
-              <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-3 text-zinc-700">
+              <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-2.5 text-zinc-700">
                 <TrendingUp size={18} />
               </div>
             </div>
 
-            <p className="mt-4 max-w-2xl text-sm leading-6 text-zinc-500">
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-zinc-500">
               Ticket medio, retorno, comissao pendente e leitura gerencial mais
               forte entram no {dashboardUpgradeLabel} ou acima. O painel atual continua mostrando
               o essencial da operacao.
@@ -473,22 +473,22 @@ export default function DashboardPage() {
           </div>
         )}
 
-        <div className="rounded-[28px] border border-zinc-200 bg-white p-5 shadow-sm">
+        <div className="rounded-[22px] border border-zinc-200 bg-white p-4 shadow-sm">
           <div className="flex items-center justify-between gap-3">
             <div>
               <div className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-400">
                 Status rapido
               </div>
-              <div className="mt-1 text-xl font-bold text-zinc-950">
+              <div className="mt-1 text-lg font-bold text-zinc-950">
                 Leitura do dia
               </div>
             </div>
-            <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-3 text-zinc-700">
+            <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-2.5 text-zinc-700">
               <Wallet size={18} />
             </div>
           </div>
 
-          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          <div className="mt-3.5 grid gap-2.5 sm:grid-cols-2">
             <InfoMetric title="Caixa" value={statusCaixa} helper="Leitura operacional do recebimento" />
             <InfoMetric
               title="Profissionais"
@@ -511,7 +511,7 @@ export default function DashboardPage() {
             />
           </div>
           {!dashboardAvancado ? (
-            <div className="mt-4 rounded-2xl border border-dashed border-zinc-200 bg-zinc-50 p-4">
+            <div className="mt-3.5 rounded-[20px] border border-dashed border-zinc-200 bg-zinc-50 p-3.5">
               <div className="text-sm font-semibold text-zinc-900">
                 Quer uma leitura mais gerencial?
               </div>
@@ -525,7 +525,7 @@ export default function DashboardPage() {
         </div>
       </section>
 
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         <MiniStatusCard
           icon={<CheckCircle2 size={18} className="text-emerald-600" />}
           title="Caixa do dia"
