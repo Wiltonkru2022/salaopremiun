@@ -60,11 +60,11 @@ type AgendaDiaRow = {
 };
 
 function inputClass() {
-  return "mt-2 h-12 w-full rounded-2xl border border-zinc-200 bg-white px-4 text-sm outline-none transition focus:border-zinc-400";
+  return "mt-2 h-11 w-full rounded-[18px] border border-zinc-200 bg-white px-4 text-sm outline-none transition focus:border-zinc-400";
 }
 
 function textAreaClass() {
-  return "mt-2 min-h-[110px] w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-zinc-400";
+  return "mt-2 min-h-[96px] w-full rounded-[18px] border border-zinc-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-zinc-400";
 }
 
 function getStatusTone(status?: string | null) {

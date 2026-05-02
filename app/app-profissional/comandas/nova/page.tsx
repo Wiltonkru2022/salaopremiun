@@ -40,7 +40,7 @@ function horaAtualArredondada() {
 }
 
 function inputClass() {
-  return "mt-2 h-12 w-full rounded-2xl border border-zinc-200 bg-white px-4 text-sm outline-none transition focus:border-zinc-400";
+  return "mt-2 h-11 w-full rounded-[18px] border border-zinc-200 bg-white px-4 text-sm outline-none transition focus:border-zinc-400";
 }
 
 export default async function NovaComandaProfissionalPage({

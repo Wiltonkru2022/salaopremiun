@@ -86,7 +86,7 @@ export default async function AgendaProfissionalPage({
               <CalendarDays size={18} />
               <span className="text-sm font-medium">Atendimentos</span>
             </div>
-            <div className="mt-2.5 text-[1.7rem] font-black tracking-[-0.04em] leading-none text-zinc-950">
+            <div className="mt-2 text-[1.55rem] font-black tracking-[-0.04em] leading-none text-zinc-950">
               {agenda.totalAtendimentos}
             </div>
           </ProfissionalSurface>
