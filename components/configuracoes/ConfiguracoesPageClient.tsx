@@ -793,13 +793,13 @@ const { data, error } = await supabase
 
   return (
     <>
-      <div className="space-y-5">
-        <section className="rounded-[32px] border border-zinc-200 bg-white px-6 py-7 text-zinc-950 shadow-sm">
+      <div className="space-y-4">
+        <section className="rounded-[28px] border border-zinc-200 bg-white px-5 py-5 text-zinc-950 shadow-sm">
           <div className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-500">
             Configurações
           </div>
-          <h1 className="mt-3 text-3xl font-bold tracking-tight">{meta.title}</h1>
-          <p className="mt-2 max-w-2xl text-sm text-zinc-500">
+          <h1 className="mt-2.5 text-[2rem] font-bold tracking-tight">{meta.title}</h1>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-500">
             {meta.description}
           </p>
         </section>
@@ -816,7 +816,7 @@ const { data, error } = await supabase
           </div>
         ) : null}
 
-        <div className="grid gap-5">
+        <div className="grid gap-4">
           {mostrarAtalhoPerfilEmConfiguracoes ? (
           <SectionCard
             icon={<Building2 size={18} />}
@@ -831,7 +831,7 @@ const { data, error } = await supabase
             <div className="mt-5">
               <Link
                 href="/perfil-salao"
-                className="inline-flex items-center gap-2 rounded-2xl bg-zinc-950 px-5 py-3 text-sm font-bold text-white transition hover:-translate-y-0.5"
+                className="inline-flex items-center gap-2 rounded-2xl bg-zinc-950 px-5 py-2.5 text-sm font-bold text-white transition hover:-translate-y-0.5"
               >
                 <Building2 size={16} />
                 Abrir perfil do salão
@@ -975,7 +975,7 @@ const { data, error } = await supabase
                 type="button"
                 onClick={salvarDadosSalao}
                 disabled={savingSalao}
-                className="inline-flex items-center gap-2 rounded-2xl bg-zinc-900 px-5 py-3 text-sm font-bold text-white transition hover:opacity-95 disabled:opacity-60"
+                className="inline-flex items-center gap-2 rounded-2xl bg-zinc-900 px-5 py-2.5 text-sm font-bold text-white transition hover:opacity-95 disabled:opacity-60"
               >
                 {savingSalao ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />}
                 Salvar dados do salão
@@ -1050,7 +1050,7 @@ const { data, error } = await supabase
                       key={dia.value}
                       type="button"
                       onClick={() => toggleDiaFuncionamento(dia.value)}
-                      className={`rounded-2xl border px-4 py-3 text-sm font-semibold transition ${
+                      className={`rounded-2xl border px-4 py-2.5 text-sm font-semibold transition ${
                         active
                           ? "border-zinc-900 bg-zinc-900 text-white"
                           : "border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50"
@@ -1062,7 +1062,7 @@ const { data, error } = await supabase
                 })}
               </div>
 
-              <div className="mt-3 rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-600">
+              <div className="mt-3 rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-2.5 text-sm text-zinc-600">
                 <strong className="text-zinc-800">Resumo:</strong> {resumoDias}
               </div>
             </div>
@@ -1072,7 +1072,7 @@ const { data, error } = await supabase
                 type="button"
                 onClick={salvarAgenda}
                 disabled={savingAgenda}
-                className="inline-flex items-center gap-2 rounded-2xl bg-zinc-900 px-5 py-3 text-sm font-bold text-white transition hover:opacity-95 disabled:opacity-60"
+                className="inline-flex items-center gap-2 rounded-2xl bg-zinc-900 px-5 py-2.5 text-sm font-bold text-white transition hover:opacity-95 disabled:opacity-60"
               >
                 {savingAgenda ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />}
                 Salvar agenda
@@ -1215,7 +1215,7 @@ const { data, error } = await supabase
                 type="button"
                 onClick={salvarFinanceiro}
                 disabled={savingFinanceiro}
-                className="inline-flex items-center gap-2 rounded-2xl bg-zinc-900 px-5 py-3 text-sm font-bold text-white transition hover:opacity-95 disabled:opacity-60"
+                className="inline-flex items-center gap-2 rounded-2xl bg-zinc-900 px-5 py-2.5 text-sm font-bold text-white transition hover:opacity-95 disabled:opacity-60"
               >
                 {savingFinanceiro ? (
                   <Loader2 className="animate-spin" size={16} />
@@ -1308,7 +1308,7 @@ const { data, error } = await supabase
                 type="button"
                 onClick={salvarSistema}
                 disabled={savingSistema}
-                className="inline-flex items-center gap-2 rounded-2xl bg-zinc-900 px-5 py-3 text-sm font-bold text-white transition hover:opacity-95 disabled:opacity-60"
+                className="inline-flex items-center gap-2 rounded-2xl bg-zinc-900 px-5 py-2.5 text-sm font-bold text-white transition hover:opacity-95 disabled:opacity-60"
               >
                 {savingSistema ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />}
                 Salvar sistema
@@ -1382,7 +1382,7 @@ const { data, error } = await supabase
               type="button"
               onClick={abrirNovoUsuario}
               disabled={!podeCriarUsuario || atingiuLimiteUsuarios}
-              className="inline-flex items-center gap-2 rounded-2xl bg-zinc-900 px-4 py-3 text-sm font-bold text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-2xl bg-zinc-900 px-4 py-2.5 text-sm font-bold text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <Plus size={16} />
               Novo usuário
