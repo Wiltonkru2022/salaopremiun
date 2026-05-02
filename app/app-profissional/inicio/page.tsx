@@ -116,7 +116,7 @@ export default async function InicioProfissionalPage() {
           </div>
         ) : null}
 
-        <section className="overflow-hidden rounded-[1.6rem] bg-zinc-950 px-4 py-4 text-white shadow-[0_16px_36px_rgba(15,23,42,0.16)]">
+        <section className="overflow-hidden rounded-[1.35rem] bg-zinc-950 px-4 py-3.5 text-white shadow-[0_14px_30px_rgba(15,23,42,0.15)]">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.12em] text-amber-100">
@@ -124,11 +124,11 @@ export default async function InicioProfissionalPage() {
                 Acesso ativo
               </div>
 
-              <h2 className="mt-3 text-[1.55rem] font-black leading-none tracking-[-0.05em]">
+              <h2 className="mt-2.5 text-[1.42rem] font-black leading-none tracking-[-0.04em]">
                 {session.nome}
               </h2>
 
-              <p className="mt-2.5 max-w-md text-sm leading-6 text-zinc-300">
+              <p className="mt-2 max-w-md text-sm leading-6 text-zinc-300">
                 Seu dia no salao, pronto para atender, abrir comandas e seguir
                 a agenda sem perder tempo.
               </p>
@@ -143,15 +143,15 @@ export default async function InicioProfissionalPage() {
             </Link>
           </div>
 
-          <div className="mt-4 grid grid-cols-3 gap-2">
-            <div className="rounded-2xl bg-white/10 p-2.5">
+          <div className="mt-3.5 grid grid-cols-3 gap-2">
+            <div className="rounded-[18px] bg-white/10 p-2.5">
               <div className="text-[11px] uppercase tracking-[0.12em] text-zinc-400">
                 Proximo
               </div>
               <div className="mt-1 text-lg font-bold">{primeiroHorario}</div>
             </div>
 
-            <div className="rounded-2xl bg-white/10 p-2.5">
+            <div className="rounded-[18px] bg-white/10 p-2.5">
               <div className="text-[11px] uppercase tracking-[0.12em] text-zinc-400">
                 Hoje
               </div>
@@ -160,7 +160,7 @@ export default async function InicioProfissionalPage() {
               </div>
             </div>
 
-            <div className="rounded-2xl bg-white/10 p-2.5">
+            <div className="rounded-[18px] bg-white/10 p-2.5">
               <div className="text-[11px] uppercase tracking-[0.12em] text-zinc-400">
                 Mes
               </div>

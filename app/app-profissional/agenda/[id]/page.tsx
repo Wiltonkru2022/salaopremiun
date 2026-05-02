@@ -104,7 +104,7 @@ function getStatusTone(status?: string | null) {
 }
 
 function inputClass() {
-  return "mt-2 w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-950 outline-none transition focus:border-zinc-400";
+  return "mt-2 w-full rounded-[18px] border border-zinc-200 bg-white px-4 py-2.5 text-sm text-zinc-950 outline-none transition focus:border-zinc-400";
 }
 
 export default async function AgendamentoDetalheProfissionalPage({
