@@ -1,4 +1,4 @@
-type Props = {
+﻿type Props = {
   assinaturaStatus?: string | null;
   planoAtualNome?: string;
   bloqueioTotal?: boolean;
@@ -202,3 +202,5 @@ export default function AssinaturaHero({
     </section>
   );
 }
+
+

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import type { BillingType, CardForm } from "./types";
 import { PLANOS_INFO } from "./types";
@@ -410,3 +410,5 @@ export default function AssinaturaPlanosPagamento({
     </section>
   );
 }
+
+
