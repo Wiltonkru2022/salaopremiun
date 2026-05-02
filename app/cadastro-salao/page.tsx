@@ -56,6 +56,7 @@ function maskCpfCnpj(value: string) {
   if (v.length <= 12) {
     return `${v.slice(0, 2)}.${v.slice(2, 5)}.${v.slice(5, 8)}/${v.slice(8)}`;
   }
+
   return `${v.slice(0, 2)}.${v.slice(2, 5)}.${v.slice(5, 8)}/${v.slice(
     8,
     12
@@ -101,11 +102,11 @@ function getStepTitle(step: StepKey) {
     case "conta":
       return "Vamos criar sua conta";
     case "salao":
-      return "Agora os dados do salão";
+      return "Agora os dados do salao";
     case "documento":
       return "Dados fiscais";
     case "endereco":
-      return "Endereço do salão";
+      return "Endereco do salao";
     case "resumo":
       return "Tudo pronto para finalizar";
     default:
@@ -116,15 +117,15 @@ function getStepTitle(step: StepKey) {
 function getStepSubtitle(step: StepKey) {
   switch (step) {
     case "boas_vindas":
-      return "Vou te guiar em um cadastro rápido e bonito, passo a passo.";
+      return "Vou te guiar em um cadastro rapido e bonito, passo a passo.";
     case "conta":
-      return "Essa conta será a administradora principal do seu salão.";
+      return "Essa conta sera a administradora principal do seu salao.";
     case "salao":
-      return "Essas informações aparecem na operação e no cadastro principal.";
+      return "Essas informacoes aparecem na operacao e no cadastro principal.";
     case "documento":
       return "Aqui ficam os dados fiscais do estabelecimento.";
     case "endereco":
-      return "Pode digitar o CEP que eu preencho parte do endereço automaticamente.";
+      return "Pode digitar o CEP que eu preencho parte do endereco automaticamente.";
     case "resumo":
       return "Confere tudo e finaliza. Depois seguimos para o login.";
     default:
@@ -136,7 +137,7 @@ export default function CadastroSalaoPage() {
   return (
     <Suspense
       fallback={
-      <div className="min-h-screen bg-white px-4 py-5 md:px-6">
+        <div className="min-h-screen bg-white px-4 py-5 md:px-6">
           <div className="mx-auto max-w-6xl rounded-[26px] border border-zinc-200 bg-white p-8 text-center shadow-xl">
             <p className="text-sm text-zinc-500">Carregando cadastro...</p>
           </div>
@@ -212,11 +213,11 @@ function CadastroSalaoContent() {
 
     if (step === "salao") {
       if (!nomeSalao.trim()) {
-        setErro("Informe o nome do salão.");
+        setErro("Informe o nome do salao.");
         return false;
       }
       if (!responsavel.trim()) {
-        setErro("Informe o responsável.");
+        setErro("Informe o responsavel.");
         return false;
       }
     }
@@ -234,7 +235,7 @@ function CadastroSalaoContent() {
         return false;
       }
       if (!endereco.trim()) {
-        setErro("Informe o endereço.");
+        setErro("Informe o endereco.");
         return false;
       }
       if (!bairro.trim()) {
@@ -271,7 +272,7 @@ function CadastroSalaoContent() {
       const data = await response.json();
 
       if (data.erro) {
-        throw new Error("CEP não encontrado.");
+        throw new Error("CEP nao encontrado.");
       }
 
       setEndereco(data.logradouro || "");
@@ -299,8 +300,8 @@ function CadastroSalaoContent() {
 
       if (!email.trim()) throw new Error("Informe o e-mail.");
       if (!senha.trim()) throw new Error("Informe a senha.");
-      if (!nomeSalao.trim()) throw new Error("Informe o nome do salão.");
-      if (!responsavel.trim()) throw new Error("Informe o responsável.");
+      if (!nomeSalao.trim()) throw new Error("Informe o nome do salao.");
+      if (!responsavel.trim()) throw new Error("Informe o responsavel.");
       if (!cpfCnpj.trim()) throw new Error("Informe CPF/CNPJ.");
 
       const res = await fetch("/api/cadastro-salao", {
@@ -330,7 +331,7 @@ function CadastroSalaoContent() {
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data?.error || "Erro ao cadastrar salão.");
+        throw new Error(data?.error || "Erro ao cadastrar salao.");
       }
 
       setMsg("Cadastro realizado com sucesso.");
@@ -346,7 +347,7 @@ function CadastroSalaoContent() {
       window.location.assign(getLoginRedirectHref(params));
     } catch (e: unknown) {
       console.error("ERRO FINAL CADASTRO:", e);
-      setErro(getErrorMessage(e, "Erro ao cadastrar salão."));
+      setErro(getErrorMessage(e, "Erro ao cadastrar salao."));
     } finally {
       setSaving(false);
     }
@@ -358,27 +359,27 @@ function CadastroSalaoContent() {
         return (
           <div className="space-y-5">
             <AssistantBubble>
-              Oi! Vou te ajudar a criar o seu salão no sistema em poucos passos.
+              Oi! Vou te ajudar a criar o seu salao no sistema em poucos passos.
             </AssistantBubble>
 
             <AssistantBubble>
               {planoSelecionado
-                ? `Seu plano ${planoLabel} vai seguir com você para a assinatura logo após o primeiro login.`
-                : "Depois do primeiro login, você escolhe o plano na tela de assinatura e pode iniciar o teste grátis por lá."}
+                ? `Seu plano ${planoLabel} vai seguir com voce para a assinatura logo apos o primeiro login.`
+                : "Depois do primeiro login, voce escolhe o plano na tela de assinatura e pode iniciar o teste gratis por la."}
             </AssistantBubble>
 
             <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
               <FeatureCard
                 title="Agenda inteligente"
-                text="Organize horários, profissionais e serviços com visual premium."
+                text="Organize horarios, profissionais e servicos com visual premium."
               />
               <FeatureCard
                 title="Comandas e caixa"
-                text="Controle consumo, fechamento, pagamentos e comissões."
+                text="Controle consumo, fechamento, pagamentos e comissoes."
               />
               <FeatureCard
-                title="Gestão do salão"
-                text="Clientes, relatórios, serviços, produtos e operação em um lugar só."
+                title="Gestao do salao"
+                text="Clientes, relatorios, servicos, produtos e operacao em um lugar so."
               />
             </div>
           </div>
@@ -405,7 +406,7 @@ function CadastroSalaoContent() {
                 value={senha}
                 onChange={setSenha}
                 type="password"
-                placeholder="Mínimo de 6 caracteres"
+                placeholder="Minimo de 6 caracteres"
               />
             </div>
           </div>
@@ -415,19 +416,19 @@ function CadastroSalaoContent() {
         return (
           <div className="space-y-5">
             <AssistantBubble>
-              Agora me fale os dados principais do seu salão.
+              Agora me fale os dados principais do seu salao.
             </AssistantBubble>
 
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <Input
-                label="Nome do salão"
+                label="Nome do salao"
                 value={nomeSalao}
                 onChange={setNomeSalao}
-                placeholder="Ex: Studio Mão de Fadas"
+                placeholder="Ex: Studio Mao de Fadas"
               />
 
               <Input
-                label="Responsável"
+                label="Responsavel"
                 value={responsavel}
                 onChange={setResponsavel}
                 placeholder="Ex: Kawane Natiely"
@@ -449,7 +450,7 @@ function CadastroSalaoContent() {
         return (
           <div className="space-y-5">
             <AssistantBubble>
-              Agora preciso do documento do salão para o cadastro fiscal.
+              Agora preciso do documento do salao para o cadastro fiscal.
             </AssistantBubble>
 
             <div className="grid grid-cols-1 gap-4">
@@ -467,7 +468,7 @@ function CadastroSalaoContent() {
         return (
           <div className="space-y-5">
             <AssistantBubble>
-              Digite o CEP e eu completo parte do endereço automaticamente.
+              Digite o CEP e eu completo parte do endereco automaticamente.
             </AssistantBubble>
 
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -483,13 +484,13 @@ function CadastroSalaoContent() {
                 text={
                   buscandoCep
                     ? "Buscando CEP..."
-                    : "Ao sair do campo CEP eu busco o endereço."
+                    : "Ao sair do campo CEP eu busco o endereco."
                 }
               />
 
               <div className="md:col-span-2">
                 <Input
-                  label="Endereço"
+                  label="Endereco"
                   value={endereco}
                   onChange={setEndereco}
                   placeholder="Rua / Avenida"
@@ -497,10 +498,10 @@ function CadastroSalaoContent() {
               </div>
 
               <Input
-                label="Número"
+                label="Numero"
                 value={numero}
                 onChange={setNumero}
-                placeholder="Número"
+                placeholder="Numero"
               />
 
               <Input
@@ -538,20 +539,20 @@ function CadastroSalaoContent() {
         return (
           <div className="space-y-5">
             <AssistantBubble>
-              Agora é só revisar e finalizar seu cadastro.
+              Agora e so revisar e finalizar seu cadastro.
             </AssistantBubble>
 
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <SummaryCard label="E-mail" value={email || "-"} />
-              <SummaryCard label="Salão" value={nomeSalao || "-"} />
-              <SummaryCard label="Responsável" value={responsavel || "-"} />
+              <SummaryCard label="Salao" value={nomeSalao || "-"} />
+              <SummaryCard label="Responsavel" value={responsavel || "-"} />
               <SummaryCard label="WhatsApp" value={whatsapp || "-"} />
               <SummaryCard label="CPF/CNPJ" value={cpfCnpj || "-"} />
               {planoSelecionado ? (
                 <SummaryCard label="Plano" value={planoLabel} />
               ) : null}
               <SummaryCard
-                label="Endereço"
+                label="Endereco"
                 value={[
                   endereco,
                   numero,
@@ -566,7 +567,8 @@ function CadastroSalaoContent() {
             </div>
 
             <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-4 text-sm text-emerald-800">
-              Ao finalizar, sua conta será criada. No primeiro acesso você será direcionado para a assinatura, onde poderá iniciar o teste grátis.
+              Ao finalizar, sua conta sera criada. No primeiro acesso voce sera
+              direcionado para a assinatura, onde podera iniciar o teste gratis.
             </div>
           </div>
         );
@@ -593,26 +595,26 @@ function CadastroSalaoContent() {
               ) : null}
 
               <h1 className="mt-5 text-[2rem] font-bold leading-tight md:text-[2.3rem]">
-                Cadastro bonito, guiado e profissional para o seu salão
+                Cadastro bonito, guiado e profissional para o seu salao
               </h1>
 
               <p className="mt-3 text-sm leading-6 text-zinc-500 md:text-[15px]">
-                Crie sua conta, configure seu salão e comece com agenda, caixa, comandas,
-                serviços, clientes e gestão completa em um único sistema.
+                Crie sua conta, configure seu salao e comece com agenda, caixa,
+                comandas, servicos, clientes e gestao completa em um unico sistema.
               </p>
 
               <div className="mt-6 space-y-3">
                 <BenefitItem
                   title="Cadastro guiado"
-                  text="Você preenche passo a passo, sem confusão."
+                  text="Voce preenche passo a passo, sem confusao."
                 />
                 <BenefitItem
                   title="Visual premium"
-                  text="Experiência moderna, elegante e mais profissional."
+                  text="Experiencia moderna, elegante e mais profissional."
                 />
                 <BenefitItem
                   title="Pronto para crescer"
-                  text="Estrutura preparada para operação real de salão."
+                  text="Estrutura preparada para operacao real de salao."
                 />
               </div>
 
@@ -702,7 +704,7 @@ function CadastroSalaoContent() {
                     disabled={saving}
                     className="rounded-2xl bg-zinc-900 px-6 py-2.5 text-sm font-bold text-white transition hover:bg-zinc-800 disabled:opacity-60"
                   >
-                    {step === "boas_vindas" ? "Começar cadastro" : "Continuar"}
+                    {step === "boas_vindas" ? "Comecar cadastro" : "Continuar"}
                   </button>
                 ) : (
                   <button
@@ -711,7 +713,7 @@ function CadastroSalaoContent() {
                     disabled={saving}
                     className="rounded-2xl bg-zinc-900 px-6 py-2.5 text-sm font-bold text-white transition hover:bg-zinc-800 disabled:opacity-60"
                   >
-                    {saving ? "Finalizando..." : "Cadastrar salão"}
+                    {saving ? "Finalizando..." : "Cadastrar salao"}
                   </button>
                 )}
               </div>
