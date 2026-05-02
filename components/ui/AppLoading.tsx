@@ -52,12 +52,12 @@ export default function AppLoading({
     <div
       className={
         fullHeight
-          ? "flex min-h-[48vh] items-center justify-center p-6"
-          : "p-6"
+          ? "flex min-h-[44vh] items-center justify-center p-5"
+          : "p-5"
       }
     >
-      <div className={`w-full max-w-[760px] overflow-hidden rounded-[32px] border p-6 ${tone.shell}`}>
-        <div className="flex flex-col gap-6">
+      <div className={`w-full max-w-[760px] overflow-hidden rounded-[24px] border p-5 ${tone.shell}`}>
+        <div className="flex flex-col gap-5">
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
               <div
@@ -66,10 +66,10 @@ export default function AppLoading({
                 <span className={`h-2.5 w-2.5 animate-pulse rounded-full ${tone.dot}`} />
                 Aguarde
               </div>
-              <h2 className="mt-3 text-[1.8rem] font-semibold tracking-[-0.06em]">
+              <h2 className="mt-2.5 text-[1.55rem] font-semibold tracking-[-0.05em]">
                 {title}
               </h2>
-              <p className="mt-2 max-w-[34rem] text-sm leading-6 opacity-75">
+              <p className="mt-1.5 max-w-[34rem] text-sm leading-6 opacity-75">
                 {message}
               </p>
             </div>
@@ -87,20 +87,20 @@ export default function AppLoading({
             </div>
           </div>
 
-          <div className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
-            <div className="space-y-4">
-              <div className={`h-14 animate-pulse rounded-[22px] ${tone.line}`} />
+          <div className="grid gap-3.5 xl:grid-cols-[1.1fr_0.9fr]">
+            <div className="space-y-3.5">
+              <div className={`h-12 animate-pulse rounded-[18px] ${tone.line}`} />
               <div className="grid gap-3 sm:grid-cols-2">
-                <div className={`h-28 animate-pulse rounded-[24px] ${tone.lineSoft}`} />
-                <div className={`h-28 animate-pulse rounded-[24px] ${tone.lineSoft}`} />
+                <div className={`h-24 animate-pulse rounded-[20px] ${tone.lineSoft}`} />
+                <div className={`h-24 animate-pulse rounded-[20px] ${tone.lineSoft}`} />
               </div>
-              <div className={`h-44 animate-pulse rounded-[28px] ${tone.lineSoft}`} />
+              <div className={`h-36 animate-pulse rounded-[22px] ${tone.lineSoft}`} />
             </div>
 
-            <div className="space-y-4">
-              <div className={`h-24 animate-pulse rounded-[24px] ${tone.line}`} />
-              <div className={`h-24 animate-pulse rounded-[24px] ${tone.lineSoft}`} />
-              <div className={`h-24 animate-pulse rounded-[24px] ${tone.lineSoft}`} />
+            <div className="space-y-3.5">
+              <div className={`h-20 animate-pulse rounded-[20px] ${tone.line}`} />
+              <div className={`h-20 animate-pulse rounded-[20px] ${tone.lineSoft}`} />
+              <div className={`h-20 animate-pulse rounded-[20px] ${tone.lineSoft}`} />
             </div>
           </div>
         </div>

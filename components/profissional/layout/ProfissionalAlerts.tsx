@@ -80,19 +80,19 @@ export default function ProfissionalAlerts({ notifications }: Props) {
   }
 
   return (
-    <div className="mx-3 mt-3 rounded-[1.6rem] border border-emerald-200 bg-white/96 p-4 shadow-[0_18px_40px_rgba(16,185,129,0.10)] sm:mx-4">
+    <div className="mx-3 mt-3 rounded-[1.3rem] border border-emerald-200 bg-white/96 p-3.5 shadow-[0_14px_30px_rgba(16,185,129,0.10)] sm:mx-4">
       <div className="flex items-start gap-3">
-        <div className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700">
+        <div className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-[18px] bg-emerald-50 text-emerald-700">
           <BellRing size={18} />
         </div>
 
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="min-w-0">
-              <div className="text-[11px] font-black uppercase tracking-[0.24em] text-emerald-600">
+              <div className="text-[10px] font-black uppercase tracking-[0.18em] text-emerald-600">
                 Aviso do acesso
               </div>
-              <h2 className="mt-1 text-base font-black tracking-[-0.03em] text-zinc-950">
+              <h2 className="mt-1 text-[15px] font-black tracking-[-0.03em] text-zinc-950">
                 {notification.title}
               </h2>
             </div>
@@ -100,14 +100,14 @@ export default function ProfissionalAlerts({ notifications }: Props) {
             <button
               type="button"
               onClick={() => markAsRead(notification.id)}
-              className="inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-600 transition hover:bg-zinc-50"
+              className="inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-white px-3 py-1 text-xs font-semibold text-zinc-600 transition hover:bg-zinc-50"
             >
               <CheckCircle2 size={14} />
               Entendi
             </button>
           </div>
 
-          <p className="mt-2 text-sm leading-6 text-zinc-600">
+          <p className="mt-1.5 text-sm leading-6 text-zinc-600">
             {notification.description}
           </p>
 
@@ -115,7 +115,7 @@ export default function ProfissionalAlerts({ notifications }: Props) {
             <Link
               href={notification.href}
               onClick={() => markAsRead(notification.id)}
-              className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-emerald-700 transition hover:text-emerald-800"
+              className="mt-2.5 inline-flex items-center gap-2 text-sm font-semibold text-emerald-700 transition hover:text-emerald-800"
             >
               {notification.actionLabel || "Abrir"}
               <ChevronRight size={16} />
