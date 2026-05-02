@@ -240,7 +240,7 @@ export default async function ComandaDetalhePage({
       title={`Comanda #${comanda.numero}`}
       subtitle={cliente?.nome || String(comanda.status || "")}
     >
-      <div className="space-y-4 pb-24">
+      <div className="space-y-3.5 pb-20">
         <Link
           href="/app-profissional/comandas"
           className="inline-flex items-center gap-2 text-sm font-semibold text-zinc-700"
@@ -261,16 +261,16 @@ export default async function ComandaDetalhePage({
           </div>
         ) : null}
 
-        <section className="overflow-hidden rounded-[1.85rem] bg-zinc-950 px-4 py-5 text-white shadow-[0_18px_40px_rgba(15,23,42,0.16)]">
+        <section className="overflow-hidden rounded-[1.5rem] bg-zinc-950 px-4 py-4 text-white shadow-[0_16px_34px_rgba(15,23,42,0.15)]">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <div className="text-xs font-bold uppercase tracking-[0.14em] text-zinc-400">
                 Cliente
               </div>
-              <h1 className="mt-2 text-[1.7rem] font-black tracking-[-0.05em] leading-none">
+              <h1 className="mt-2 text-[1.45rem] font-black tracking-[-0.04em] leading-none">
                 {cliente?.nome || "Cliente"}
               </h1>
-              <div className="mt-2 text-sm text-zinc-300">
+              <div className="mt-1.5 text-sm text-zinc-300">
                 {cliente?.telefone || "Sem telefone"}
               </div>
             </div>
@@ -278,8 +278,8 @@ export default async function ComandaDetalhePage({
             <ProfissionalStatusPill label={status.label} tone={status.tone} />
           </div>
 
-          <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <div className="rounded-[1.25rem] bg-white/10 p-4">
+          <div className="mt-4 grid grid-cols-1 gap-2.5 sm:grid-cols-3">
+            <div className="rounded-[1.1rem] bg-white/10 p-3.5">
               <div className="text-[11px] uppercase tracking-[0.12em] text-zinc-300">
                 Subtotal
               </div>
@@ -288,7 +288,7 @@ export default async function ComandaDetalhePage({
               </div>
             </div>
 
-            <div className="rounded-[1.25rem] bg-white/10 p-4">
+            <div className="rounded-[1.1rem] bg-white/10 p-3.5">
               <div className="text-[11px] uppercase tracking-[0.12em] text-zinc-300">
                 Desconto
               </div>
@@ -297,7 +297,7 @@ export default async function ComandaDetalhePage({
               </div>
             </div>
 
-            <div className="rounded-[1.25rem] bg-white/10 p-4">
+            <div className="rounded-[1.1rem] bg-white/10 p-3.5">
               <div className="text-[11px] uppercase tracking-[0.12em] text-zinc-300">
                 Total
               </div>
@@ -322,11 +322,11 @@ export default async function ComandaDetalhePage({
           />
 
           {itens?.length ? (
-            <div className="space-y-3">
+            <div className="space-y-2.5">
               {((itens ?? []) as ComandaItemRow[]).map((item) => (
                 <div
                   key={item.id}
-                  className="rounded-2xl border border-zinc-200 bg-zinc-50/80 p-4"
+                  className="rounded-[18px] border border-zinc-200 bg-zinc-50/80 p-3.5"
                 >
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div className="min-w-0">
@@ -339,7 +339,7 @@ export default async function ComandaDetalhePage({
                         {Number(item.quantidade || 0)}
                       </div>
 
-                      <div className="mt-2 text-sm text-zinc-500">
+                      <div className="mt-1.5 text-sm text-zinc-500">
                         Unitario: {formatarMoeda(Number(item.valor_unitario || 0))}
                       </div>
 
@@ -354,13 +354,13 @@ export default async function ComandaDetalhePage({
                         <input type="hidden" name="id_item" value={item.id} />
                         <button
                           type="submit"
-                          className="w-full rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-600 sm:w-auto"
+                          className="w-full rounded-[14px] border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-600 sm:w-auto"
                         >
                           Excluir
                         </button>
                       </form>
                     ) : (
-                      <div className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-center text-xs text-zinc-400 sm:w-auto">
+                      <div className="w-full rounded-[14px] border border-zinc-200 bg-white px-3 py-2 text-center text-xs text-zinc-400 sm:w-auto">
                         Bloqueado
                       </div>
                     )}
@@ -369,7 +369,7 @@ export default async function ComandaDetalhePage({
               ))}
             </div>
           ) : (
-            <div className="rounded-2xl border border-dashed border-zinc-300 bg-zinc-50 p-4 text-sm text-zinc-500">
+            <div className="rounded-[18px] border border-dashed border-zinc-300 bg-zinc-50 p-4 text-sm text-zinc-500">
               Nenhum item lancado nesta comanda.
             </div>
           )}
@@ -384,7 +384,7 @@ export default async function ComandaDetalhePage({
                 action={<PlusCircle size={18} className="text-zinc-400" />}
               />
 
-              <form action={adicionarServicoNaComandaAction} className="space-y-3">
+              <form action={adicionarServicoNaComandaAction} className="space-y-2.5">
                 <input type="hidden" name="id_comanda" value={comanda.id} />
                 <input
                   type="hidden"
@@ -394,7 +394,7 @@ export default async function ComandaDetalhePage({
 
                 <select
                   name="id_servico"
-                  className="h-12 w-full rounded-2xl border border-zinc-200 bg-white px-4 text-sm outline-none"
+                  className="h-11 w-full rounded-[18px] border border-zinc-200 bg-white px-4 text-sm outline-none"
                   defaultValue=""
                 >
                   <option value="">Selecione um servico</option>
@@ -415,12 +415,12 @@ export default async function ComandaDetalhePage({
                   min={1}
                   step={1}
                   defaultValue={1}
-                  className="h-12 w-full rounded-2xl border border-zinc-200 bg-white px-4 text-sm outline-none"
+                  className="h-11 w-full rounded-[18px] border border-zinc-200 bg-white px-4 text-sm outline-none"
                 />
 
                 <button
                   type="submit"
-                  className="h-12 w-full rounded-2xl bg-zinc-950 text-sm font-semibold text-white"
+                  className="h-11 w-full rounded-[18px] bg-zinc-950 text-sm font-semibold text-white"
                 >
                   Adicionar servico
                 </button>
@@ -435,7 +435,7 @@ export default async function ComandaDetalhePage({
               />
 
               {(extras ?? []).length ? (
-                <form action={adicionarExtraNaComandaAction} className="space-y-3">
+                <form action={adicionarExtraNaComandaAction} className="space-y-2.5">
                   <input type="hidden" name="id_comanda" value={comanda.id} />
                   <input
                     type="hidden"
@@ -445,7 +445,7 @@ export default async function ComandaDetalhePage({
 
                   <select
                     name="id_item_extra"
-                    className="h-12 w-full rounded-2xl border border-zinc-200 bg-white px-4 text-sm outline-none"
+                    className="h-11 w-full rounded-[18px] border border-zinc-200 bg-white px-4 text-sm outline-none"
                     defaultValue=""
                   >
                     <option value="">Selecione um item extra</option>
@@ -462,18 +462,18 @@ export default async function ComandaDetalhePage({
                     min={1}
                     step={1}
                     defaultValue={1}
-                    className="h-12 w-full rounded-2xl border border-zinc-200 bg-white px-4 text-sm outline-none"
+                    className="h-11 w-full rounded-[18px] border border-zinc-200 bg-white px-4 text-sm outline-none"
                   />
 
                   <button
                     type="submit"
-                    className="h-12 w-full rounded-2xl border border-[#d8b36b] bg-white text-sm font-semibold text-[#b07b19]"
+                    className="h-11 w-full rounded-[18px] border border-[#d8b36b] bg-white text-sm font-semibold text-[#b07b19]"
                   >
                     Adicionar item extra
                   </button>
                 </form>
               ) : (
-                <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-500">
+                <div className="rounded-[18px] border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-500">
                   Nenhum item extra ativo encontrado.
                 </div>
               )}
@@ -484,7 +484,7 @@ export default async function ComandaDetalhePage({
               <button
                 type="submit"
                 disabled={!itens?.length}
-                className="h-12 w-full rounded-2xl bg-zinc-950 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+                className="h-11 w-full rounded-[18px] bg-zinc-950 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Enviar para o caixa
               </button>

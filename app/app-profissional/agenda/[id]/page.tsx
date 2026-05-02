@@ -225,7 +225,7 @@ export default async function AgendamentoDetalheProfissionalPage({
 
   return (
     <ProfissionalShell title="Agendamento" subtitle={formatDate(agendamento.data)}>
-      <div className="space-y-4 pb-28">
+      <div className="space-y-3.5 pb-24">
         <Link
           href={`/app-profissional/agenda?data=${agendamento.data || ""}`}
           className="inline-flex items-center gap-2 text-sm font-semibold text-zinc-700"
@@ -246,17 +246,17 @@ export default async function AgendamentoDetalheProfissionalPage({
           </div>
         ) : null}
 
-        <section className="overflow-hidden rounded-[1.85rem] bg-zinc-950 px-4 py-5 text-white shadow-[0_18px_40px_rgba(15,23,42,0.16)]">
+        <section className="overflow-hidden rounded-[1.5rem] bg-zinc-950 px-4 py-4 text-white shadow-[0_16px_34px_rgba(15,23,42,0.15)]">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <div className="text-xs font-bold uppercase tracking-[0.14em] text-zinc-400">
                 Cliente
               </div>
-              <h1 className="mt-2 text-[1.7rem] font-black tracking-[-0.05em] leading-none">
+              <h1 className="mt-2 text-[1.45rem] font-black tracking-[-0.04em] leading-none">
                 {cliente?.nome || "Cliente"}
               </h1>
               {cliente?.telefone ? (
-                <div className="mt-2 text-sm text-zinc-300">{cliente.telefone}</div>
+                <div className="mt-1.5 text-sm text-zinc-300">{cliente.telefone}</div>
               ) : null}
             </div>
 
@@ -266,8 +266,8 @@ export default async function AgendamentoDetalheProfissionalPage({
             />
           </div>
 
-          <div className="mt-5 grid grid-cols-2 gap-3">
-            <div className="rounded-[1.25rem] bg-white/10 p-4">
+          <div className="mt-4 grid grid-cols-2 gap-2.5">
+            <div className="rounded-[1.1rem] bg-white/10 p-3.5">
               <div className="flex items-center gap-2 text-sm text-zinc-300">
                 <Clock size={17} />
                 Horario
@@ -277,7 +277,7 @@ export default async function AgendamentoDetalheProfissionalPage({
               </div>
             </div>
 
-            <div className="rounded-[1.25rem] bg-white/10 p-4">
+            <div className="rounded-[1.1rem] bg-white/10 p-3.5">
               <div className="flex items-center gap-2 text-sm text-zinc-300">
                 <Scissors size={17} />
                 Servico
@@ -292,7 +292,7 @@ export default async function AgendamentoDetalheProfissionalPage({
           </div>
 
           {agendamento.observacoes ? (
-            <div className="mt-4 rounded-[1.25rem] bg-white/10 p-4 text-sm text-zinc-200">
+            <div className="mt-3 rounded-[1.1rem] bg-white/10 p-3.5 text-sm text-zinc-200">
               {agendamento.observacoes}
             </div>
           ) : null}
@@ -308,7 +308,7 @@ export default async function AgendamentoDetalheProfissionalPage({
             }
           />
 
-          <div className="flex items-center justify-between gap-3 rounded-[1.25rem] border border-zinc-200 bg-zinc-50/80 p-4">
+          <div className="flex items-center justify-between gap-3 rounded-[1.1rem] border border-zinc-200 bg-zinc-50/80 p-3.5">
             <div>
               <div className="text-sm font-semibold text-zinc-900">
                 {comanda ? `Comanda #${comanda.numero}` : "Sem comanda aberta"}
@@ -331,18 +331,18 @@ export default async function AgendamentoDetalheProfissionalPage({
             ) : null}
           </div>
 
-          <div className="mt-4 grid gap-2">
+          <div className="mt-3 grid gap-2">
             {comanda ? (
               <Link
                 href={`/app-profissional/comandas/${comanda.id}`}
-                className="rounded-2xl bg-zinc-950 px-4 py-3 text-center text-sm font-bold text-white"
+                className="rounded-[18px] bg-zinc-950 px-4 py-2.5 text-center text-sm font-bold text-white"
               >
                 Abrir comanda
               </Link>
             ) : (
               <form action={abrirComandaDoAgendamentoAction}>
                 <input type="hidden" name="id_agendamento" value={agendamento.id} />
-                <button className="w-full rounded-2xl bg-zinc-950 px-4 py-3 text-sm font-bold text-white">
+                <button className="w-full rounded-[18px] bg-zinc-950 px-4 py-2.5 text-sm font-bold text-white">
                   Abrir comanda deste atendimento
                 </button>
               </form>
@@ -353,7 +353,7 @@ export default async function AgendamentoDetalheProfissionalPage({
                 <input type="hidden" name="id_agendamento" value={agendamento.id} />
                 <button
                   disabled={!comandaAberta}
-                  className="w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm font-bold text-zinc-950 disabled:cursor-not-allowed disabled:opacity-45"
+                  className="w-full rounded-[18px] border border-zinc-200 bg-white px-4 py-2.5 text-sm font-bold text-zinc-950 disabled:cursor-not-allowed disabled:opacity-45"
                 >
                   Enviar comanda para o caixa
                 </button>
@@ -368,7 +368,7 @@ export default async function AgendamentoDetalheProfissionalPage({
             description="Ajuste horario, status e observacoes."
           />
 
-          <form action={atualizarAgendamentoProfissionalAction} className="space-y-3">
+          <form action={atualizarAgendamentoProfissionalAction} className="space-y-2.5">
             <input type="hidden" name="id_agendamento" value={agendamento.id} />
 
             <label className="block text-sm font-medium text-zinc-700">
@@ -414,7 +414,7 @@ export default async function AgendamentoDetalheProfissionalPage({
               />
             </label>
 
-            <label className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+            <label className="flex items-start gap-3 rounded-[18px] border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
               <input
                 type="checkbox"
                 name="confirmar_conflito"
@@ -424,7 +424,7 @@ export default async function AgendamentoDetalheProfissionalPage({
               Salvar mesmo se houver conflito com outro horario.
             </label>
 
-            <button className="w-full rounded-2xl bg-zinc-950 px-4 py-3 text-sm font-bold text-white">
+            <button className="w-full rounded-[18px] bg-zinc-950 px-4 py-2.5 text-sm font-bold text-white">
               Salvar alteracoes
             </button>
           </form>
@@ -439,7 +439,7 @@ export default async function AgendamentoDetalheProfissionalPage({
           <div className="grid gap-2">
             <form action={marcarClienteNaoCompareceuAction}>
               <input type="hidden" name="id_agendamento" value={agendamento.id} />
-              <button className="flex w-full items-center justify-center gap-2 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-800">
+              <button className="flex w-full items-center justify-center gap-2 rounded-[18px] border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm font-bold text-amber-800">
                 <UserX size={18} />
                 Cliente nao compareceu
               </button>
@@ -447,7 +447,7 @@ export default async function AgendamentoDetalheProfissionalPage({
 
             <form action={cancelarAgendamentoProfissionalAction}>
               <input type="hidden" name="id_agendamento" value={agendamento.id} />
-              <button className="flex w-full items-center justify-center gap-2 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700">
+              <button className="flex w-full items-center justify-center gap-2 rounded-[18px] border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-bold text-red-700">
                 <Trash2 size={18} />
                 Excluir da agenda
               </button>
