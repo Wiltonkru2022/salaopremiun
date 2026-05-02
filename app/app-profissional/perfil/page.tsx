@@ -141,35 +141,35 @@ export default async function PerfilProfissionalPage({
 
   return (
     <ProfissionalShell title="Meu perfil" subtitle="Dados do profissional">
-      <div className="space-y-4">
+      <div className="space-y-3.5">
         {notice ? (
           <div
             className={
               notice.type === "success"
-                ? "rounded-[1.25rem] border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-700 shadow-sm"
-                : "rounded-[1.25rem] border border-red-200 bg-red-50 p-4 text-sm text-red-700 shadow-sm"
+                ? "rounded-[1.15rem] border border-emerald-200 bg-emerald-50 p-3.5 text-sm text-emerald-700 shadow-sm"
+                : "rounded-[1.15rem] border border-red-200 bg-red-50 p-3.5 text-sm text-red-700 shadow-sm"
             }
           >
             {notice.message}
           </div>
         ) : null}
 
-        <section className="overflow-hidden rounded-[1.85rem] bg-zinc-950 px-4 py-5 text-white shadow-[0_18px_40px_rgba(15,23,42,0.16)]">
+        <section className="overflow-hidden rounded-[1.5rem] bg-zinc-950 px-4 py-4 text-white shadow-[0_16px_34px_rgba(15,23,42,0.15)]">
           <div className="flex items-center gap-4">
             {profissional.foto_url ? (
               <img
                 src={profissional.foto_url}
                 alt={nomeExibido}
-                className="h-18 w-18 h-[72px] w-[72px] rounded-full border border-white/20 object-cover"
+                className="h-16 w-16 rounded-full border border-white/20 object-cover"
               />
             ) : (
-              <div className="flex h-[72px] w-[72px] items-center justify-center rounded-full bg-white/10 text-xl font-black">
+              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-white/10 text-lg font-black">
                 {getInitials(nomeExibido)}
               </div>
             )}
 
             <div className="min-w-0">
-              <div className="text-[1.35rem] font-black tracking-[-0.04em]">
+              <div className="text-[1.2rem] font-black tracking-[-0.03em]">
                 {nomeExibido}
               </div>
               <div className="mt-1 text-sm text-amber-200">{categoria}</div>
@@ -180,7 +180,7 @@ export default async function PerfilProfissionalPage({
           </div>
 
           {profissional.bio ? (
-            <p className="mt-4 text-sm leading-6 text-zinc-300">
+            <p className="mt-3 text-sm leading-6 text-zinc-300">
               {profissional.bio}
             </p>
           ) : null}
@@ -192,7 +192,7 @@ export default async function PerfilProfissionalPage({
             description="Informacoes usadas no dia a dia."
           />
 
-          <div className="space-y-3">
+          <div className="space-y-2.5">
             {[
               ["Telefone", profissional.telefone || "Nao informado"],
               ["WhatsApp", profissional.whatsapp || "Nao informado"],
@@ -201,7 +201,7 @@ export default async function PerfilProfissionalPage({
             ].map(([label, value]) => (
               <div
                 key={label}
-                className="rounded-2xl border border-zinc-200 bg-zinc-50/80 px-4 py-3"
+                className="rounded-[18px] border border-zinc-200 bg-zinc-50/80 px-4 py-2.5"
               >
                 <div className="text-[11px] font-bold uppercase tracking-[0.12em] text-zinc-400">
                   {label}
@@ -220,14 +220,14 @@ export default async function PerfilProfissionalPage({
             description="Dados de pagamento e repasse."
           />
 
-          <div className="space-y-3">
+          <div className="space-y-2.5">
             {[
               ["Tipo de chave Pix", profissional.pix_tipo || "Nao informado"],
               ["Chave Pix", profissional.pix_chave || "Nao informado"],
             ].map(([label, value]) => (
               <div
                 key={label}
-                className="rounded-2xl border border-zinc-200 bg-zinc-50/80 px-4 py-3"
+                className="rounded-[18px] border border-zinc-200 bg-zinc-50/80 px-4 py-2.5"
               >
                 <div className="text-[11px] font-bold uppercase tracking-[0.12em] text-zinc-400">
                   {label}
@@ -246,16 +246,16 @@ export default async function PerfilProfissionalPage({
             description="Atalhos rapidos da sua conta."
           />
 
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid gap-2.5 sm:grid-cols-2">
             <Link
               href="/app-profissional/suporte"
-              className="flex h-12 w-full items-center justify-center rounded-2xl border border-[#d8b36b] bg-white text-sm font-bold text-[#b07b19]"
+              className="flex h-11 w-full items-center justify-center rounded-[18px] border border-[#d8b36b] bg-white text-sm font-bold text-[#b07b19]"
             >
               Abrir suporte
             </Link>
 
             <form action={sairProfissionalAction}>
-              <button className="h-12 w-full rounded-2xl border border-red-200 bg-red-50 text-sm font-bold text-red-600">
+              <button className="h-11 w-full rounded-[18px] border border-red-200 bg-red-50 text-sm font-bold text-red-600">
                 Sair da conta
               </button>
             </form>

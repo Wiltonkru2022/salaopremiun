@@ -48,7 +48,7 @@ export default async function InstalarAppProfissionalPage({
       title="Instalar app"
       subtitle={isIos ? "Guia para iPhone" : "Guia para Android"}
     >
-      <div className="space-y-4">
+      <div className="space-y-3.5">
         <Link
           href="/app-profissional/inicio"
           className="inline-flex items-center gap-2 text-sm font-semibold text-zinc-600"
@@ -57,11 +57,11 @@ export default async function InstalarAppProfissionalPage({
           Voltar
         </Link>
 
-        <section className="overflow-hidden rounded-[1.8rem] bg-zinc-950 p-5 text-white shadow-sm">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/10">
+        <section className="overflow-hidden rounded-[1.5rem] bg-zinc-950 p-4 text-white shadow-sm">
+          <div className="flex h-10 w-10 items-center justify-center rounded-[18px] bg-white/10">
             {isIos ? <Share size={22} /> : <Download size={22} />}
           </div>
-          <h2 className="mt-4 text-2xl font-black leading-tight">
+          <h2 className="mt-3 text-[1.35rem] font-black leading-tight">
             Deixe o app na tela inicial
           </h2>
           <p className="mt-2 text-sm leading-6 text-zinc-300">
@@ -70,19 +70,19 @@ export default async function InstalarAppProfissionalPage({
           </p>
         </section>
 
-        <section className="rounded-[1.6rem] border border-zinc-200 bg-white p-4 shadow-sm">
+        <section className="rounded-[1.4rem] border border-zinc-200 bg-white p-3.5 shadow-sm">
           <div className="mb-3 flex items-center gap-2 text-sm font-bold text-zinc-900">
             <Smartphone size={18} />
             Passo a passo
           </div>
 
-          <div className="space-y-3">
+          <div className="space-y-2.5">
             {steps.map((step, index) => (
               <div
                 key={step}
-                className="flex gap-3 rounded-2xl border border-zinc-100 bg-zinc-50 p-3"
+                className="flex gap-3 rounded-[18px] border border-zinc-100 bg-zinc-50 p-2.5"
               >
-                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-zinc-950 text-xs font-bold text-white">
+                <div className="flex h-6.5 w-6.5 shrink-0 items-center justify-center rounded-full bg-zinc-950 text-[11px] font-bold text-white">
                   {index + 1}
                 </div>
                 <div className="text-sm leading-6 text-zinc-700">{step}</div>
