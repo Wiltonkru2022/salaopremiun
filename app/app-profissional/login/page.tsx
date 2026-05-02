@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import LoginProfissionalForm from "@/components/profissional/auth/LoginProfissionalForm";
 import ProfissionalHeader from "@/components/profissional/layout/ProfissionalHeader";
+import { getPlanoMinimoParaRecurso } from "@/lib/plans/catalog";
 import {
   clearProfissionalSession,
   getProfissionalSessionFromCookie,
@@ -90,7 +91,7 @@ export default async function LoginProfissionalPage({
                     Comparar planos
                   </Link>
                   <Link
-                    href="https://assinatura.salaopremiun.com.br/assinatura?plano=pro"
+                    href={`https://assinatura.salaopremiun.com.br/assinatura?plano=${getPlanoMinimoParaRecurso("app_profissional")}`}
                     className="inline-flex items-center justify-center rounded-2xl bg-zinc-950 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-zinc-800"
                   >
                     Fazer upgrade

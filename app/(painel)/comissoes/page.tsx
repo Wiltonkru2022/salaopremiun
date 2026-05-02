@@ -16,6 +16,7 @@ import {
   WalletCards,
 } from "lucide-react";
 import { groupComboTotals, parseComboDisplayMeta } from "@/lib/combo/display";
+import { getPlanoMinimoParaRecurso, type PlanoCobravelCodigo } from "@/lib/plans/catalog";
 
 type PlanoAccessPayload = {
   recursos?: Record<string, boolean>;
@@ -864,7 +865,7 @@ export default function ComissoesPage() {
                     Apurar rateio
                   </button>
                   <a
-                    href="/assinatura?plano=pro"
+                    href={`/assinatura?plano=${getPlanoMinimoParaRecurso("comissoes_avancadas")}`}
                     className="inline-flex items-center gap-2 rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-50"
                   >
                     <Sparkles size={16} />
@@ -1167,7 +1168,11 @@ function Field({
   );
 }
 
-function UpgradeActions({ plan = "pro" }: { plan?: "pro" | "premium" }) {
+function UpgradeActions({
+  plan = getPlanoMinimoParaRecurso("comissoes_avancadas"),
+}: {
+  plan?: PlanoCobravelCodigo;
+}) {
   return (
     <div className="mt-4 flex flex-wrap gap-2">
       <a

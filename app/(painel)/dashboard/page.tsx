@@ -17,6 +17,7 @@ import {
   Users,
   Wallet,
 } from "lucide-react";
+import { getPlanoMinimoParaRecurso, type PlanoCobravelCodigo } from "@/lib/plans/catalog";
 
 type DashboardResumo = {
   agendamentosHoje: number;
@@ -90,8 +91,9 @@ function normalizePlanCode(value?: string | null) {
     .replace(/[-\s]+/g, "_");
 }
 
-function getDashboardUpgradePlan(planoSalao?: string | null): "pro" | "premium" {
-  return normalizePlanCode(planoSalao) === "pro" ? "premium" : "pro";
+function getDashboardUpgradePlan(planoSalao?: string | null): PlanoCobravelCodigo {
+  const minimo = getPlanoMinimoParaRecurso("dashboard_avancado");
+  return normalizePlanCode(planoSalao) === minimo ? "premium" : minimo;
 }
 
 function KpiCard({
@@ -183,7 +185,11 @@ function MiniStatusCard({
   );
 }
 
-function UpgradeActions({ plan = "pro" }: { plan?: "pro" | "premium" }) {
+function UpgradeActions({
+  plan = getPlanoMinimoParaRecurso("dashboard_avancado"),
+}: {
+  plan?: PlanoCobravelCodigo;
+}) {
   return (
     <div className="mt-4 flex flex-wrap gap-2">
       <a

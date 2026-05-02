@@ -1,4 +1,14 @@
 export type PlanoCodigo = "teste_gratis" | "basico" | "pro" | "premium";
+export type PlanoCobravelCodigo = Exclude<PlanoCodigo, "teste_gratis">;
+export type PlanoRecursoUpgrade =
+  | "dashboard_avancado"
+  | "relatorios_avancados"
+  | "comissoes_avancadas"
+  | "app_profissional"
+  | "estoque"
+  | "marketing"
+  | "whatsapp"
+  | "campanhas";
 
 export type PlanoLimitesCatalogo = {
   usuarios: number | null;
@@ -238,4 +248,25 @@ export function getPlanoDowngradeCatalogo(plano?: string | null) {
 
   if (currentIndex <= 0) return null;
   return planosCobraveis[currentIndex - 1] ?? null;
+}
+
+export function getPlanoMinimoParaRecurso(
+  recurso: PlanoRecursoUpgrade
+): PlanoCobravelCodigo {
+  if (
+    recurso === "dashboard_avancado" ||
+    recurso === "relatorios_avancados" ||
+    recurso === "comissoes_avancadas" ||
+    recurso === "app_profissional" ||
+    recurso === "estoque" ||
+    recurso === "marketing"
+  ) {
+    return "pro";
+  }
+
+  if (recurso === "whatsapp" || recurso === "campanhas") {
+    return "premium";
+  }
+
+  return "pro";
 }

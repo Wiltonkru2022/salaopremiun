@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { parseComboDisplayMeta } from "@/lib/combo/display";
 import { getLocalDayRangeIso } from "@/lib/date/local-day-range";
+import { getPlanoMinimoParaRecurso, type PlanoCobravelCodigo } from "@/lib/plans/catalog";
 
 type ClienteJoin = {
   nome?: string | null;
@@ -1531,7 +1532,7 @@ export default function RelatorioFinanceiroPage() {
                         Comparar planos
                       </a>
                       <a
-                        href="/assinatura?plano=pro"
+                        href={`/assinatura?plano=${getPlanoMinimoParaRecurso("relatorios_avancados")}`}
                         className="inline-flex items-center justify-center rounded-2xl bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-zinc-800"
                       >
                         Fazer upgrade
@@ -1692,11 +1693,11 @@ function PrintOptionCard({
 function UpgradePanel({
   title,
   description,
-  plan = "pro",
+  plan = getPlanoMinimoParaRecurso("relatorios_avancados"),
 }: {
   title: string;
   description: string;
-  plan?: "pro" | "premium";
+  plan?: PlanoCobravelCodigo;
 }) {
   return (
     <section className="rounded-[28px] border border-zinc-200 bg-white p-5 shadow-sm">
