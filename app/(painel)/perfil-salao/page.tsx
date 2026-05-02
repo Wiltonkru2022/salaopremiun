@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -57,7 +57,7 @@ export default function PerfilSalaoPage() {
       const usuario = await getUsuarioLogado();
 
       if (!usuario?.idSalao) {
-        setErro("Nao foi possivel identificar o salao da conta atual.");
+        setErro("Não foi possível identificar o salão da conta atual.");
         return;
       }
 
@@ -141,7 +141,7 @@ export default function PerfilSalaoPage() {
 
       if (error) throw error;
 
-      setMsg("Perfil do salao atualizado com sucesso.");
+      setMsg("Perfil do salão atualizado com sucesso.");
       router.refresh();
     } catch (error: unknown) {
       setErro(error instanceof Error ? error.message : "Erro ao salvar perfil.");
@@ -162,7 +162,7 @@ export default function PerfilSalaoPage() {
       }
 
       if (passwordForm.novaSenha !== passwordForm.confirmarSenha) {
-        setErro("A confirmacao da senha nao confere.");
+        setErro("A confirmação da senha não confere.");
         return;
       }
 
@@ -184,8 +184,8 @@ export default function PerfilSalaoPage() {
   if (loading) {
     return (
       <AppLoading
-        title="Carregando perfil do salao"
-        message="Aguarde enquanto reunimos identidade do negocio, contatos e configuracoes da conta."
+        title="Carregando perfil do salão"
+        message="Aguarde enquanto reunimos identidade do negócio, contatos e configurações da conta."
         fullHeight={false}
       />
     );
@@ -194,7 +194,7 @@ export default function PerfilSalaoPage() {
   if (semPermissao) {
     return (
       <div className="rounded-[30px] border border-amber-200 bg-amber-50 p-6 text-amber-800">
-        Apenas administradores podem editar o perfil do salao.
+        Apenas administradores podem editar o perfil do salão.
       </div>
     );
   }
@@ -206,13 +206,13 @@ export default function PerfilSalaoPage() {
           <div className="max-w-3xl">
             <div className="inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1 text-xs font-bold uppercase tracking-[0.2em] text-zinc-600">
               <Building2 size={13} />
-              Identidade do negocio
+              Identidade do negócio
             </div>
             <h1 className="mt-4 font-display text-3xl font-bold tracking-[-0.05em] sm:text-4xl">
-              Perfil do salao
+              Perfil do salão
             </h1>
             <p className="mt-3 text-sm text-zinc-500 sm:text-base">
-              Edite dados comerciais, contato, endereco, logo e a senha da conta
+              Edite dados comerciais, contato, endereço, logo e a senha da conta
               administradora sem misturar com as regras internas do sistema.
             </p>
           </div>
@@ -223,7 +223,7 @@ export default function PerfilSalaoPage() {
                 {perfilForm.logo_url ? (
                   <img
                     src={perfilForm.logo_url}
-                    alt={perfilForm.nome || "Salao"}
+                    alt={perfilForm.nome || "Salão"}
                     className="h-full w-full object-cover"
                   />
                 ) : (
@@ -237,8 +237,8 @@ export default function PerfilSalaoPage() {
                   {perfilForm.nome || "SalaoPremium"}
                 </div>
                 <div className="text-sm text-zinc-500">
-                  {String(perfilForm.plano || "sem plano").toUpperCase()} ·{" "}
-                  {perfilForm.status || "status nao definido"}
+                  {String(perfilForm.plano || "sem plano").toUpperCase()} • 
+                  {perfilForm.status || "status não definido"}
                 </div>
               </div>
             </div>
@@ -266,7 +266,7 @@ export default function PerfilSalaoPage() {
           description="Informacoes que aparecem no painel, cobrancas e comunicacoes."
         >
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <Field label="Nome do salao">
+            <Field label="Nome do salão">
               <TextInput
                 value={perfilForm.nome}
                 onChange={(event) =>
@@ -275,7 +275,7 @@ export default function PerfilSalaoPage() {
                     nome: event.target.value,
                   }))
                 }
-                placeholder="Ex.: Salao Premium"
+                placeholder="Ex.: Salão Premium"
               />
             </Field>
 
@@ -362,7 +362,7 @@ export default function PerfilSalaoPage() {
           <div className="mt-6 border-t border-zinc-100 pt-5">
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div className="md:col-span-2">
-                <Field label="Endereco">
+                <Field label="Endereço">
                   <div className="relative">
                     <TextInput
                       value={perfilForm.endereco}
@@ -523,7 +523,7 @@ export default function PerfilSalaoPage() {
               Separacao organizada
             </div>
             <p className="mt-2 text-sm leading-6 text-zinc-600">
-              Este perfil fica para dados do salao e seguranca. Configuracoes
+              Este perfil fica para dados do salão e segurança. Configurações
               fica para agenda, caixa, usuarios, permissoes e regras internas.
             </p>
           </section>
@@ -532,3 +532,5 @@ export default function PerfilSalaoPage() {
     </div>
   );
 }
+
+
