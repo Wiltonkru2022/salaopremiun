@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { ExternalLink } from "lucide-react";
+import { getPlanoMinimoParaRecurso } from "@/lib/plans/catalog";
 import { normalizeTimeString } from "@/lib/utils/agenda";
 import type {
   Cliente,
@@ -25,7 +26,6 @@ type Props = {
   dicaIndex: number;
   tituloWhatsapp: string;
   whatsappLiberado: boolean;
-  upgradeTarget: "basico" | "pro" | "premium";
   onChangeWhatsapp: (value: string) => void;
   onAbrirWhatsapp: () => void;
 };
@@ -45,10 +45,11 @@ export default function AgendaModalResumo({
   dicaIndex,
   tituloWhatsapp,
   whatsappLiberado,
-  upgradeTarget,
   onChangeWhatsapp,
   onAbrirWhatsapp,
 }: Props) {
+  const comunicacaoUpgradeTarget = getPlanoMinimoParaRecurso("marketing");
+
   return (
     <div className="space-y-3">
       <div className="rounded-[20px] border border-zinc-200 bg-white p-3.5 shadow-sm">
@@ -192,7 +193,7 @@ export default function AgendaModalResumo({
                 Comparar planos
               </Link>
               <Link
-                href={`/assinatura?plano=${upgradeTarget}`}
+                href={`/assinatura?plano=${comunicacaoUpgradeTarget}`}
                 className="inline-flex flex-1 items-center justify-center rounded-2xl bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-95"
               >
                 Fazer upgrade

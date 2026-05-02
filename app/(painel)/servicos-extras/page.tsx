@@ -11,6 +11,7 @@ import {
   sanitizePermissoesDb,
 } from "@/lib/auth/permissions";
 import { getUsuarioLogado } from "@/lib/auth/getUsuarioLogado";
+import { getPlanoMinimoParaRecurso } from "@/lib/plans/catalog";
 import { createClient } from "@/lib/supabase/client";
 
 type ItemExtra = {
@@ -43,7 +44,7 @@ function formatQuantidade(value?: number | null) {
 export default function ServicosExtrasPage() {
   const supabase = createClient();
   const router = useRouter();
-  const { planoAccess, upgradeTarget } = usePlanoAccessSnapshot(true);
+  const { planoAccess } = usePlanoAccessSnapshot(true);
 
   const [loading, setLoading] = useState(true);
   const [savingId, setSavingId] = useState<string | null>(null);
@@ -59,6 +60,7 @@ export default function ServicosExtrasPage() {
 
   const podeGerenciar = nivel === "admin" || nivel === "gerente";
   const estoqueLiberado = planoAccess?.recursos?.estoque !== false;
+  const estoqueUpgradeTarget = getPlanoMinimoParaRecurso("estoque");
 
   const carregarAcesso = useCallback(async () => {
     const {
@@ -288,7 +290,7 @@ export default function ServicosExtrasPage() {
                     Comparar planos
                   </Link>
                   <Link
-                    href={`/assinatura?plano=${upgradeTarget}`}
+                    href={`/assinatura?plano=${estoqueUpgradeTarget}`}
                     className="inline-flex items-center justify-center rounded-full bg-sky-900 px-4 py-2.5 font-bold text-white transition hover:opacity-95"
                   >
                     Fazer upgrade

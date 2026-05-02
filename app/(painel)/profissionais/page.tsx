@@ -17,6 +17,7 @@ import {
   sanitizePermissoesDb,
 } from "@/lib/auth/permissions";
 import { getErrorMessage } from "@/lib/get-error-message";
+import { getPlanoMinimoParaRecurso } from "@/lib/plans/catalog";
 import { createClient } from "@/lib/supabase/client";
 
 type Profissional = {
@@ -68,6 +69,8 @@ export default function ProfissionaisListPage() {
   const [appProfissionalLiberado, setAppProfissionalLiberado] = useState(true);
 
   const podeGerenciar = nivel === "admin" || nivel === "gerente";
+  const appProfissionalUpgradeTarget =
+    getPlanoMinimoParaRecurso("app_profissional");
 
   const carregarAcesso = useCallback(async () => {
     const {
@@ -522,7 +525,7 @@ export default function ProfissionaisListPage() {
                   Comparar planos
                 </Link>
                 <Link
-                  href="/assinatura?plano=pro"
+                  href={`/assinatura?plano=${appProfissionalUpgradeTarget}`}
                   className="inline-flex items-center justify-center rounded-2xl bg-zinc-950 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-zinc-800"
                 >
                   Fazer upgrade
