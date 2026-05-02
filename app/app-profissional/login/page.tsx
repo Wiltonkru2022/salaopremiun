@@ -68,31 +68,31 @@ export default async function LoginProfissionalPage({
           subtitle="Acesso do profissional"
         />
 
-        <main className="flex flex-1 items-start px-4 py-5">
+        <main className="flex flex-1 items-start px-4 py-4">
           <div className="w-full">
             {planoSemApp ? (
-              <div className="mb-4 rounded-[1.6rem] border border-amber-200 bg-amber-50 p-4 text-amber-900 shadow-sm">
-                <div className="text-xs font-bold uppercase tracking-[0.16em] text-amber-700">
+              <div className="mb-3.5 rounded-[1.4rem] border border-amber-200 bg-amber-50 p-3.5 text-amber-900 shadow-sm">
+                <div className="text-[11px] font-bold uppercase tracking-[0.14em] text-amber-700">
                   Recurso do plano
                 </div>
-                <h2 className="mt-2 text-lg font-black tracking-[-0.03em]">
+                <h2 className="mt-2 text-[1.05rem] font-black tracking-[-0.03em]">
                   App profissional liberado no Pro ou Premium
                 </h2>
-                <p className="mt-2 text-sm leading-6 text-amber-800">
+                <p className="mt-1.5 text-sm leading-6 text-amber-800">
                   Este salao ainda nao tem acesso ao app profissional no plano
                   atual. Para usar agenda, comandas e clientes no celular, o
                   administrador precisa fazer upgrade.
                 </p>
-                <div className="mt-4 flex flex-wrap gap-2">
+                <div className="mt-3 flex flex-wrap gap-2">
                   <Link
                     href="https://painel.salaopremiun.com.br/comparar-planos"
-                    className="inline-flex items-center justify-center rounded-2xl border border-amber-300 bg-white px-4 py-2.5 text-sm font-semibold text-amber-900 transition hover:bg-amber-100"
+                    className="inline-flex items-center justify-center rounded-[18px] border border-amber-300 bg-white px-4 py-2 text-sm font-semibold text-amber-900 transition hover:bg-amber-100"
                   >
                     Comparar planos
                   </Link>
                   <Link
                     href={`https://assinatura.salaopremiun.com.br/assinatura?plano=${getPlanoMinimoParaRecurso("app_profissional")}`}
-                    className="inline-flex items-center justify-center rounded-2xl bg-zinc-950 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-zinc-800"
+                    className="inline-flex items-center justify-center rounded-[18px] bg-zinc-950 px-4 py-2 text-sm font-semibold text-white transition hover:bg-zinc-800"
                   >
                     Fazer upgrade
                   </Link>
