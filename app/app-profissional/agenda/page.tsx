@@ -52,7 +52,7 @@ export default async function AgendaProfissionalPage({
 
   return (
     <ProfissionalShell title="Agenda" subtitle={agenda.dataLabel}>
-      <div className="space-y-4">
+      <div className="space-y-3.5">
         {ok ? (
           <div className="rounded-[1.25rem] border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700 shadow-sm">
             {ok}
@@ -66,7 +66,7 @@ export default async function AgendaProfissionalPage({
             action={
               <Link
                 href={`/app-profissional/agenda/novo?data=${agenda.dataSelecionada}`}
-                className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-zinc-950 px-4 text-sm font-bold text-white"
+                className="inline-flex h-10 items-center justify-center gap-2 rounded-[18px] bg-zinc-950 px-4 text-sm font-bold text-white"
               >
                 <Plus size={16} />
                 Novo
@@ -80,13 +80,13 @@ export default async function AgendaProfissionalPage({
           />
         </ProfissionalSurface>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-2.5">
           <ProfissionalSurface>
             <div className="flex items-center gap-2 text-zinc-500">
               <CalendarDays size={18} />
               <span className="text-sm font-medium">Atendimentos</span>
             </div>
-            <div className="mt-3 text-[2rem] font-black tracking-[-0.05em] leading-none text-zinc-950">
+            <div className="mt-2.5 text-[1.7rem] font-black tracking-[-0.04em] leading-none text-zinc-950">
               {agenda.totalAtendimentos}
             </div>
           </ProfissionalSurface>
@@ -96,7 +96,7 @@ export default async function AgendaProfissionalPage({
               <CircleDollarSign size={18} />
               <span className="text-sm font-medium">Previsto</span>
             </div>
-            <div className="mt-3 text-[1.8rem] font-black tracking-[-0.05em] leading-none text-zinc-950">
+            <div className="mt-2.5 text-[1.55rem] font-black tracking-[-0.04em] leading-none text-zinc-950">
               {formatarMoeda(agenda.totalPrevisto)}
             </div>
           </ProfissionalSurface>
@@ -113,14 +113,14 @@ export default async function AgendaProfissionalPage({
           />
 
           {agenda.cards.length ? (
-            <div className="space-y-3">
+            <div className="space-y-2.5">
               {agenda.cards.map((card) => {
                 const status = getStatusMeta(card.status);
 
                 return (
                   <div
                     key={card.id}
-                    className="rounded-[1.5rem] border border-zinc-200 bg-zinc-50/70 p-4"
+                    className="rounded-[1.2rem] border border-zinc-200 bg-zinc-50/70 p-3.5"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
@@ -130,7 +130,7 @@ export default async function AgendaProfissionalPage({
                           <span>{card.horaFim}</span>
                         </div>
 
-                        <div className="mt-2 text-[1.05rem] font-bold tracking-[-0.02em] text-zinc-950">
+                        <div className="mt-1.5 text-base font-bold tracking-[-0.02em] text-zinc-950">
                           {card.cliente}
                         </div>
 
@@ -145,10 +145,10 @@ export default async function AgendaProfissionalPage({
                       />
                     </div>
 
-                    <div className="mt-4 flex flex-wrap gap-2">
+                    <div className="mt-3 flex flex-wrap gap-2">
                       <Link
                         href={`/app-profissional/agenda/${card.id}`}
-                        className="inline-flex h-9 items-center rounded-full border border-zinc-200 bg-white px-3 text-xs font-bold text-zinc-700"
+                        className="inline-flex h-8.5 items-center rounded-full border border-zinc-200 bg-white px-3 text-xs font-bold text-zinc-700"
                       >
                         Ver detalhes
                       </Link>
@@ -156,7 +156,7 @@ export default async function AgendaProfissionalPage({
                       {card.idComanda ? (
                         <Link
                           href={`/app-profissional/comandas/${card.idComanda}`}
-                          className="inline-flex h-9 items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 text-xs font-bold text-amber-800"
+                          className="inline-flex h-8.5 items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 text-xs font-bold text-amber-800"
                         >
                           <Receipt size={14} />
                           Abrir comanda
@@ -174,7 +174,7 @@ export default async function AgendaProfissionalPage({
               action={
                 <Link
                   href={`/app-profissional/agenda/novo?data=${agenda.dataSelecionada}`}
-                  className="inline-flex h-11 items-center justify-center rounded-2xl bg-zinc-950 px-4 text-sm font-bold text-white"
+                  className="inline-flex h-10 items-center justify-center rounded-[18px] bg-zinc-950 px-4 text-sm font-bold text-white"
                 >
                   Criar horario
                 </Link>
