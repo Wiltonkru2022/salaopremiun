@@ -71,8 +71,8 @@ const sectionMeta: Record<
   { title: string; description: string }
 > = {
   agenda: {
-    title: "Agenda e horarios",
-    description: "Dias de funcionamento, horarios e intervalo da agenda.",
+    title: "Agenda e horários",
+    description: "Dias de funcionamento, horários e intervalo da agenda.",
   },
   caixa: {
     title: "Caixa e taxas",
@@ -80,10 +80,10 @@ const sectionMeta: Record<
   },
   sistema: {
     title: "Sistema",
-    description: "Preferencias visuais e regras gerais do sistema.",
+    description: "Preferências visuais e regras gerais do sistema.",
   },
   usuarios: {
-    title: "Usuarios do sistema",
+    title: "Usuários do sistema",
     description: "Equipe administrativa, acessos, perfis e limite do plano.",
   },
 };
@@ -629,7 +629,7 @@ const { data, error } = await supabase
 
       if (atingiuLimiteUsuarios) {
         throw new Error(
-          `Limite de usuarios atingido para o plano atual. Limite: ${limiteUsuariosPlano}.`
+          `Limite de usuários atingido para o plano atual. Limite: ${limiteUsuariosPlano}.`
         );
       }
 
@@ -796,7 +796,7 @@ const { data, error } = await supabase
       <div className="space-y-5">
         <section className="rounded-[32px] border border-zinc-200 bg-white px-6 py-7 text-zinc-950 shadow-sm">
           <div className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-500">
-            Configuracoes
+            Configurações
           </div>
           <h1 className="mt-3 text-3xl font-bold tracking-tight">{meta.title}</h1>
           <p className="mt-2 max-w-2xl text-sm text-zinc-500">
@@ -820,11 +820,11 @@ const { data, error } = await supabase
           {mostrarAtalhoPerfilEmConfiguracoes ? (
           <SectionCard
             icon={<Building2 size={18} />}
-            title="Perfil do salao"
-            description="Dados comerciais, endereco, logo e senha agora ficam em uma pagina propria."
+            title="Perfil do salão"
+            description="Dados comerciais, endereço, logo e senha agora ficam em uma página própria."
           >
             <p className="text-sm leading-6 text-zinc-600">
-              Para manter as configuracoes mais leves, a edicao do salao foi
+              Para manter as configurações mais leves, a edição do salão foi
               separada do cadastro de regras internas.
             </p>
 
@@ -834,7 +834,7 @@ const { data, error } = await supabase
                 className="inline-flex items-center gap-2 rounded-2xl bg-zinc-950 px-5 py-3 text-sm font-bold text-white transition hover:-translate-y-0.5"
               >
                 <Building2 size={16} />
-                Abrir perfil do salao
+                Abrir perfil do salão
               </Link>
             </div>
           </SectionCard>
@@ -1327,7 +1327,7 @@ const { data, error } = await supabase
           {limiteUsuariosPlano != null ? (
             <PlanoLimiteNotice
               titulo="Equipe administrativa controlada pelo plano"
-              descricao="Os acessos atuais continuam salvos. O upgrade libera novos usuarios sem mexer no que ja esta configurado."
+              descricao="Os acessos atuais continuam salvos. O upgrade libera novos usuários sem mexer no que já está configurado."
               usado={usoUsuariosPlano}
               limite={limiteUsuariosPlano}
               planoNome={planoAccess?.planoNome}
@@ -1497,7 +1497,7 @@ const { data, error } = await supabase
                     {usuarioEditandoId ? "Editar usuário" : "Novo usuário"}
                   </h2>
                   <p className="mt-1 text-sm text-zinc-500">
-                    Cadastro de usuarios <strong>e permissões</strong>.
+                    Cadastro de usuários <strong>e permissões</strong>.
                   </p>
                 </div>
 
@@ -1609,7 +1609,7 @@ const { data, error } = await supabase
 
               {!usuarioEditandoId && atingiuLimiteUsuarios ? (
                 <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-900">
-                  O limite de usuarios do plano atual foi atingido. Compare os planos ou faca upgrade para liberar novos acessos.
+                  O limite de usuários do plano atual foi atingido. Compare os planos ou faça upgrade para liberar novos acessos.
                 </div>
               ) : null}
             </div>
