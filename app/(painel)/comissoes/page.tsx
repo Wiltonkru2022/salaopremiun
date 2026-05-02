@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { type ReactNode, useEffect, useMemo, useState } from "react";
 import AppLoading from "@/components/ui/AppLoading";
@@ -418,7 +418,7 @@ export default function ComissoesPage() {
                 <div class="kpi-value">${escapeHtml(formatCurrency(totalGeral))}</div>
               </div>
               <div class="kpi">
-                <div class="kpi-label">Lancamentos filtrados</div>
+                <div class="kpi-label">Lançamentos filtrados</div>
                 <div class="kpi-value">${escapeHtml(String(rows.length))}</div>
               </div>
               <div class="kpi">
@@ -480,7 +480,7 @@ export default function ComissoesPage() {
                       )}</div>
                     </div>
                     <div>
-                      <div class="meta-label">Lancamentos</div>
+                      <div class="meta-label">Lançamentos</div>
                       <div class="meta-value">${escapeHtml(String(rows.length))}</div>
                     </div>
                     <div>
@@ -510,12 +510,12 @@ export default function ComissoesPage() {
                         ? '<th class="col-pessoa">Pessoa</th>'
                         : ""
                     }
-                    <th class="col-desc">Descricao</th>
-                    <th class="col-competencia">Competencia</th>
+                    <th class="col-desc">Descrição</th>
+                    <th class="col-competencia">Competência</th>
                     <th class="col-base">Base</th>
                     <th class="col-percent">% Aplicada</th>
                     <th class="col-origem">Origem</th>
-                    <th class="col-comissao">Comissao</th>
+                    <th class="col-comissao">Comissão</th>
                     <th class="col-status">Status</th>
                     <th class="col-pago">Pago em</th>
                   </tr>
@@ -579,7 +579,7 @@ export default function ComissoesPage() {
     return (
       <div className="p-6">
         <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-rose-700">
-          Voce nao tem permissao para acessar Comissoes.
+          Você não tem permissão para acessar Comissões.
         </div>
       </div>
     );
@@ -597,7 +597,7 @@ export default function ComissoesPage() {
         description={
           confirmacaoComissao?.acao === "cancelar"
             ? "Este lancamento deixara de entrar no rateio ativo."
-            : `${confirmacaoComissao?.ids.length || 0} lancamento(s) filtrado(s) serao marcados como pagos.`
+            : `${confirmacaoComissao?.ids.length || 0} lançamento(s) filtrado(s) serão marcados como pagos.`
         }
         confirmLabel={
           confirmacaoComissao?.acao === "cancelar"
@@ -631,7 +631,7 @@ export default function ComissoesPage() {
                 </div>
                 <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-right">
                   <div className="text-xs uppercase tracking-[0.18em] text-zinc-500">
-                    Lancamentos filtrados
+                    Lançamentos filtrados
                   </div>
                   <div className="mt-1 text-2xl font-bold">{rows.length}</div>
                 </div>
@@ -707,7 +707,7 @@ export default function ComissoesPage() {
                     Total agrupado dos combos no rateio
                   </h2>
                   <p className="mt-2 text-sm text-zinc-500">
-                    Cada card soma os lancamentos que vieram dos servicos filhos do combo.
+                    Cada card soma os lançamentos que vieram dos serviços filhos do combo.
                   </p>
                 </div>
                 <div className="rounded-2xl border border-violet-200 bg-white px-4 py-3 text-right shadow-sm">
@@ -771,7 +771,7 @@ export default function ComissoesPage() {
                   <input
                     value={busca}
                     onChange={(e) => setBusca(e.target.value)}
-                    placeholder="Profissional, descricao ou origem"
+                    placeholder="Profissional, descrição ou origem"
                     className="w-full rounded-2xl border border-zinc-200 bg-zinc-50 px-11 py-3 text-sm outline-none transition focus:border-zinc-900 focus:bg-white"
                   />
                 </div>
@@ -958,10 +958,10 @@ export default function ComissoesPage() {
           <div className="overflow-hidden rounded-[28px] border border-zinc-200 bg-white shadow-sm">
             <div className="border-b border-zinc-200 px-5 py-4">
               <div className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
-                Leitura analitica
+                Leitura analítica
               </div>
               <div className="mt-1 text-xl font-bold text-zinc-950">
-                Lancamentos detalhados
+                Lançamentos detalhados
               </div>
             </div>
             <div className="overflow-x-auto">
@@ -969,14 +969,14 @@ export default function ComissoesPage() {
                 <thead>
                   <tr className="border-b border-zinc-200 bg-zinc-50 text-left text-xs uppercase tracking-[0.14em] text-zinc-500">
                     <th className="px-5 py-4">Pessoa</th>
-                    <th className="px-5 py-4">Descricao</th>
-                    <th className="px-5 py-4">Competencia</th>
+                    <th className="px-5 py-4">Descrição</th>
+                    <th className="px-5 py-4">Competência</th>
                     <th className="px-5 py-4">Base</th>
                     <th className="px-5 py-4">% Aplicada</th>
                     {comissoesAvancadas ? (
                       <th className="px-5 py-4">Origem</th>
                     ) : null}
-                    <th className="px-5 py-4">Comissao</th>
+                    <th className="px-5 py-4">Comissão</th>
                     <th className="px-5 py-4">Status</th>
                     <th className="px-5 py-4">Pago em</th>
                     <th className="px-5 py-4 text-right">Acoes</th>
@@ -989,7 +989,7 @@ export default function ComissoesPage() {
                       colSpan={comissoesAvancadas ? 10 : 9}
                         className="px-5 py-10 text-center text-sm text-zinc-500"
                       >
-                        Nenhuma comissao encontrada com os filtros atuais.
+                        Nenhuma comissão encontrada com os filtros atuais.
                       </td>
                     </tr>
                   ) : (
@@ -1206,3 +1206,6 @@ function PremiumHintCard({
     </div>
   );
 }
+
+
+

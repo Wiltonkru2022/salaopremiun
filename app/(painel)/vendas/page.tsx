@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useMemo, useState } from "react";
 import AppLoading from "@/components/ui/AppLoading";
@@ -848,7 +848,7 @@ export default function VendasPage() {
     return (
       <AppLoading
         title="Carregando vendas"
-        message="Aguarde enquanto reunimos historico, filtros, detalhes e totais das comandas fechadas."
+        message="Aguarde enquanto reunimos histórico, filtros, detalhes e totais das comandas fechadas."
         fullHeight={false}
       />
     );
@@ -1286,7 +1286,7 @@ export default function VendasPage() {
                               Quanto cada combo representou nesta venda
                             </div>
                             <p className="mt-1 text-sm text-zinc-500">
-                              O total abaixo soma os servicos filhos que vieram de cada combo.
+                              O total abaixo soma os serviços filhos que vieram de cada combo.
                             </p>
                           </div>
                           <div className="rounded-2xl border border-violet-200 bg-white px-4 py-3 text-right shadow-sm">
@@ -1587,3 +1587,5 @@ function ComboItemLabel({ descricao }: { descricao: string }) {
     </div>
   );
 }
+
+
