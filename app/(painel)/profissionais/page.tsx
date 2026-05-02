@@ -437,17 +437,17 @@ export default function ProfissionaisListPage() {
       />
 
       <div className="bg-white">
-        <div className="mx-auto max-w-7xl space-y-6">
-          <section className="rounded-[28px] border border-zinc-200 bg-white p-4 text-zinc-950 shadow-sm">
+        <div className="mx-auto max-w-7xl space-y-4">
+          <section className="rounded-[24px] border border-zinc-200 bg-white p-4 text-zinc-950 shadow-sm">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
               <div className="max-w-3xl">
                 <div className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-400">
                   Time e acesso
                 </div>
-                <h1 className="mt-1 text-[1.95rem] font-bold tracking-[-0.04em] md:text-[2.1rem]">
+                <h1 className="mt-1 text-[1.8rem] font-bold tracking-[-0.04em] md:text-[1.95rem]">
                   Profissionais
                 </h1>
-                <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-600">
+                <p className="mt-1.5 max-w-2xl text-sm leading-6 text-zinc-600">
                   Equipe, comissao, acesso e apoio em uma leitura mais curta
                   para a operacao do salao.
                 </p>
@@ -456,7 +456,7 @@ export default function ProfissionaisListPage() {
               {podeGerenciar ? (
                 <Link
                   href="/profissionais/novo"
-                  className="inline-flex items-center justify-center rounded-xl bg-zinc-900 px-4 py-3 text-sm font-semibold text-white transition hover:opacity-95"
+                  className="inline-flex items-center justify-center rounded-xl bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-95"
                 >
                   Novo profissional
                 </Link>
@@ -508,7 +508,7 @@ export default function ProfissionaisListPage() {
           ) : null}
 
           {!appProfissionalLiberado ? (
-            <div className="rounded-[24px] border border-amber-200 bg-amber-50 p-4 text-amber-900 shadow-sm">
+            <div className="rounded-[20px] border border-amber-200 bg-amber-50 p-3.5 text-amber-900 shadow-sm">
               <div className="text-sm font-semibold">
                 App profissional pausado no plano atual
               </div>
@@ -534,7 +534,7 @@ export default function ProfissionaisListPage() {
             </div>
           ) : null}
 
-          <section className="rounded-[26px] border border-zinc-200 bg-white p-4 shadow-sm">
+          <section className="rounded-[22px] border border-zinc-200 bg-white p-3.5 shadow-sm">
             <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1.7fr)_210px_210px]">
               <input
                 type="text"
@@ -567,9 +567,9 @@ export default function ProfissionaisListPage() {
             </div>
           </section>
 
-          <section className="space-y-3">
+          <section className="space-y-2.5">
             {listaFiltrada.length === 0 ? (
-              <div className="rounded-3xl border border-zinc-200 bg-white p-6 text-sm text-zinc-600 shadow-sm">
+              <div className="rounded-[22px] border border-zinc-200 bg-white p-5 text-sm text-zinc-600 shadow-sm">
                 Nenhum profissional encontrado com esse filtro.
               </div>
             ) : (
@@ -581,16 +581,16 @@ export default function ProfissionaisListPage() {
                 return (
                   <article
                     key={item.id}
-                    className="rounded-[24px] border border-zinc-200 bg-white p-4 shadow-sm"
+                    className="rounded-[20px] border border-zinc-200 bg-white p-3.5 shadow-sm"
                   >
-                    <div className="grid gap-3 xl:grid-cols-[minmax(0,1.7fr)_220px] xl:items-center">
+                    <div className="grid gap-3 xl:grid-cols-[minmax(0,1.7fr)_210px] xl:items-center">
                       <div className="min-w-0 flex-1">
                         <div className="flex items-start gap-3">
                           <Avatar profissional={item} />
 
                           <div className="min-w-0 flex-1">
                             <div className="flex flex-wrap items-center gap-2">
-                              <h2 className="text-[1.05rem] font-semibold text-zinc-950">
+                              <h2 className="text-[1rem] font-semibold text-zinc-950">
                                 {item.nome}
                               </h2>
                               <StatusBadge ativo={ativo} />
@@ -632,7 +632,7 @@ export default function ProfissionaisListPage() {
                               </TagHint>
                             </div>
 
-                            <div className="mt-3 flex flex-wrap gap-2.5">
+                            <div className="mt-2.5 flex flex-wrap gap-2">
                               <MetricBlock
                                 label="Funcao"
                                 value={item.cargo || item.categoria || "-"}
@@ -667,7 +667,7 @@ export default function ProfissionaisListPage() {
                       <div className="flex shrink-0 flex-wrap gap-2 xl:self-start xl:justify-end">
                         <Link
                           href={`/profissionais/${item.id}`}
-                          className="inline-flex min-w-[108px] items-center justify-center rounded-xl bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-95"
+                          className="inline-flex min-w-[96px] items-center justify-center rounded-xl bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-95"
                         >
                           Abrir
                         </Link>
@@ -749,14 +749,14 @@ function MetricBlock({
   detail: string;
 }) {
   return (
-    <div className="flex min-w-[185px] flex-1 items-center justify-between gap-3 rounded-2xl border border-zinc-200 bg-zinc-50 px-3 py-2.5">
+    <div className="flex min-w-[168px] flex-1 items-center justify-between gap-2.5 rounded-2xl border border-zinc-200 bg-zinc-50 px-3 py-2">
       <div className="min-w-0">
         <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-400">
           {label}
         </div>
-        <p className="mt-0.5 text-[11px] leading-4 text-zinc-500">{detail}</p>
+        <p className="mt-0.5 text-[10px] leading-4 text-zinc-500">{detail}</p>
       </div>
-      <div className="shrink-0 text-base font-semibold text-zinc-950">{value}</div>
+      <div className="shrink-0 text-[15px] font-semibold text-zinc-950">{value}</div>
     </div>
   );
 }
@@ -797,7 +797,7 @@ function TagHint({ children }: { children: ReactNode }) {
 
 function Avatar({ profissional }: { profissional: Profissional }) {
   return (
-    <div className="h-12 w-12 shrink-0 overflow-hidden rounded-full border border-zinc-200 bg-zinc-100">
+    <div className="h-11 w-11 shrink-0 overflow-hidden rounded-full border border-zinc-200 bg-zinc-100">
       {profissional.foto_url ? (
         <img
           src={profissional.foto_url}
