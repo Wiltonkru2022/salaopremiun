@@ -108,27 +108,27 @@ export default async function InicioProfissionalPage() {
       title="Inicio"
       subtitle={`${saudacao()}, ${session.nome}`}
     >
-      <div className="space-y-4">
+      <div className="space-y-3.5">
         {hasLoadWarning ? (
-          <div className="rounded-[1.25rem] border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 shadow-sm">
+          <div className="rounded-[1.1rem] border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-sm text-amber-800 shadow-sm">
             Parte dos dados do inicio nao carregou agora. O app continua funcionando
             e voce pode seguir para agenda, comandas e clientes.
           </div>
         ) : null}
 
-        <section className="overflow-hidden rounded-[1.85rem] bg-zinc-950 px-4 py-5 text-white shadow-[0_18px_40px_rgba(15,23,42,0.16)]">
+        <section className="overflow-hidden rounded-[1.6rem] bg-zinc-950 px-4 py-4 text-white shadow-[0_16px_36px_rgba(15,23,42,0.16)]">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-bold uppercase tracking-[0.14em] text-amber-100">
+              <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.12em] text-amber-100">
                 <Sparkles size={14} />
                 Acesso ativo
               </div>
 
-              <h2 className="mt-4 text-[1.7rem] font-black tracking-[-0.05em] leading-none">
+              <h2 className="mt-3 text-[1.55rem] font-black leading-none tracking-[-0.05em]">
                 {session.nome}
               </h2>
 
-              <p className="mt-3 max-w-md text-sm leading-6 text-zinc-300">
+              <p className="mt-2.5 max-w-md text-sm leading-6 text-zinc-300">
                 Seu dia no salao, pronto para atender, abrir comandas e seguir
                 a agenda sem perder tempo.
               </p>
@@ -136,22 +136,22 @@ export default async function InicioProfissionalPage() {
 
             <Link
               href="/app-profissional/perfil"
-              className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white text-zinc-950"
+              className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-zinc-950"
               aria-label="Abrir perfil"
             >
               <ArrowRight size={18} />
             </Link>
           </div>
 
-          <div className="mt-5 grid grid-cols-3 gap-2">
-            <div className="rounded-2xl bg-white/10 p-3">
+          <div className="mt-4 grid grid-cols-3 gap-2">
+            <div className="rounded-2xl bg-white/10 p-2.5">
               <div className="text-[11px] uppercase tracking-[0.12em] text-zinc-400">
                 Proximo
               </div>
               <div className="mt-1 text-lg font-bold">{primeiroHorario}</div>
             </div>
 
-            <div className="rounded-2xl bg-white/10 p-3">
+            <div className="rounded-2xl bg-white/10 p-2.5">
               <div className="text-[11px] uppercase tracking-[0.12em] text-zinc-400">
                 Hoje
               </div>
@@ -160,7 +160,7 @@ export default async function InicioProfissionalPage() {
               </div>
             </div>
 
-            <div className="rounded-2xl bg-white/10 p-3">
+            <div className="rounded-2xl bg-white/10 p-2.5">
               <div className="text-[11px] uppercase tracking-[0.12em] text-zinc-400">
                 Mes
               </div>
@@ -177,7 +177,7 @@ export default async function InicioProfissionalPage() {
             description="Tudo o que voce mais usa no dia a dia."
           />
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-2.5">
             <Link href="/app-profissional/clientes/novo" className="block">
               <ProfissionalActionCard
                 icon={<UserPlus2 size={18} />}
@@ -282,7 +282,7 @@ export default async function InicioProfissionalPage() {
 
         <ProfissionalSurface className="mb-2">
           <div className="flex items-start gap-3">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700">
               <Clock3 size={18} />
             </div>
 
@@ -290,13 +290,13 @@ export default async function InicioProfissionalPage() {
               <div className="text-base font-bold tracking-[-0.02em] text-zinc-950">
                 Precisa de ajuda?
               </div>
-              <p className="mt-2 text-sm leading-6 text-zinc-500">
+              <p className="mt-1.5 text-sm leading-6 text-zinc-500">
                 Use o suporte para login, agenda, comandas, caixa e duvidas
                 operacionais do app profissional.
               </p>
               <Link
                 href="/app-profissional/suporte"
-                className="mt-4 inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-zinc-200 bg-zinc-50 px-4 text-sm font-bold text-zinc-800"
+                className="mt-3 inline-flex h-10 items-center justify-center gap-2 rounded-2xl border border-zinc-200 bg-zinc-50 px-4 text-sm font-bold text-zinc-800"
               >
                 Abrir suporte
                 <ArrowRight size={16} />
