@@ -131,44 +131,44 @@ export default function HomeLanding() {
 function HeroSection() {
   return (
     <section className="overflow-hidden border-b border-zinc-200 bg-[#f5f1eb]">
-      <div className="mx-auto max-w-7xl px-6 pb-16 pt-10 lg:px-10 lg:pb-24 lg:pt-16">
-        <div className="grid items-center gap-12 lg:grid-cols-[0.9fr_1.1fr]">
+      <div className="mx-auto max-w-7xl px-6 pb-12 pt-8 lg:px-10 lg:pb-16 lg:pt-12">
+        <div className="grid items-center gap-9 lg:grid-cols-[0.9fr_1.1fr]">
           <div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-zinc-300 bg-white/80 px-4 py-2 text-sm font-semibold text-zinc-700">
+            <div className="inline-flex items-center gap-2 rounded-full border border-zinc-300 bg-white/80 px-3 py-1.5 text-sm font-semibold text-zinc-700">
               <Sparkles size={16} />
               Sistema para salao com operacao completa
             </div>
 
-            <h1 className="mt-6 max-w-3xl text-4xl font-bold tracking-tight text-zinc-950 lg:text-6xl">
+            <h1 className="mt-5 max-w-3xl text-[2.4rem] font-bold tracking-tight text-zinc-950 lg:text-[3.8rem]">
               Agenda, caixa, comanda e comissao em uma operacao que parece premium de verdade.
             </h1>
 
-            <p className="mt-6 max-w-2xl text-lg leading-8 text-zinc-600">
+            <p className="mt-4 max-w-2xl text-[15px] leading-7 text-zinc-600 lg:text-base">
               O SalaoPremium organiza a rotina da recepcao no computador e entrega ao profissional um app leve no celular para agenda, comissao e atendimento.
             </p>
 
-            <div className="mt-8 flex flex-wrap gap-3">
+            <div className="mt-6 flex flex-wrap gap-3">
               <Link
                 href="/cadastro-salao"
-                className="inline-flex items-center gap-2 rounded-full bg-zinc-950 px-6 py-4 text-sm font-semibold text-white transition hover:opacity-95"
+                className="inline-flex items-center gap-2 rounded-full bg-zinc-950 px-6 py-3 text-sm font-semibold text-white transition hover:opacity-95"
               >
                 Criar conta
                 <ArrowRight size={18} />
               </Link>
               <Link
                 href="#produto"
-                className="inline-flex items-center gap-2 rounded-full border border-zinc-300 bg-white px-6 py-4 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-50"
+                className="inline-flex items-center gap-2 rounded-full border border-zinc-300 bg-white px-6 py-3 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-50"
               >
                 Ver o sistema
                 <ChevronRight size={18} />
               </Link>
             </div>
 
-            <div className="mt-10 grid gap-3 sm:grid-cols-2">
+            <div className="mt-7 grid gap-2.5 sm:grid-cols-2">
               {trustItems.map((item) => (
                 <div
                   key={item}
-                  className="flex items-center gap-3 rounded-2xl border border-zinc-200 bg-white/90 px-4 py-4 text-sm font-medium text-zinc-700 shadow-sm"
+                  className="flex items-center gap-3 rounded-2xl border border-zinc-200 bg-white/90 px-4 py-3.5 text-sm font-medium text-zinc-700 shadow-sm"
                 >
                   <BadgeCheck size={16} className="text-emerald-600" />
                   {item}
@@ -181,15 +181,15 @@ function HeroSection() {
             <div className="absolute inset-x-10 top-6 h-32 rounded-full bg-[#d6c6b0]/45 blur-3xl" />
             <div className="absolute bottom-10 right-6 h-36 w-36 rounded-full bg-[#d9a67a]/25 blur-3xl" />
 
-            <div className="relative rounded-[36px] border border-zinc-200 bg-[#171717] p-4 shadow-[0_32px_100px_rgba(32,22,10,0.18)]">
+            <div className="relative rounded-[28px] border border-zinc-200 bg-[#171717] p-3.5 shadow-[0_28px_84px_rgba(32,22,10,0.16)]">
               <div className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
-                <div className="rounded-[28px] bg-[#fbfaf8] p-5">
+                <div className="rounded-[24px] bg-[#fbfaf8] p-4">
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-500">
                         Agenda do dia
                       </p>
-                      <h2 className="mt-2 text-2xl font-semibold text-zinc-950">
+                      <h2 className="mt-2 text-[1.35rem] font-semibold text-zinc-950">
                         Recepcao no controle
                       </h2>
                     </div>
@@ -198,20 +198,20 @@ function HeroSection() {
                     </div>
                   </div>
 
-                  <div className="mt-5 grid grid-cols-3 gap-3">
+                  <div className="mt-4 grid grid-cols-3 gap-2.5">
                     {[
                       ["Confirmados", "18"],
                       ["Em atendimento", "6"],
                       ["Fila do caixa", "4"],
                     ].map(([label, value]) => (
-                      <div key={label} className="rounded-2xl bg-white px-3 py-3 ring-1 ring-zinc-200">
+                      <div key={label} className="rounded-2xl bg-white px-3 py-2.5 ring-1 ring-zinc-200">
                         <p className="text-[11px] uppercase tracking-[0.16em] text-zinc-500">{label}</p>
                         <p className="mt-2 text-lg font-semibold text-zinc-950">{value}</p>
                       </div>
                     ))}
                   </div>
 
-                  <div className="mt-5 space-y-3">
+                  <div className="mt-4 space-y-2.5">
                     {[
                       {
                         hour: "09:00",
@@ -240,7 +240,7 @@ function HeroSection() {
                     ].map((row) => (
                       <div
                         key={`${row.hour}-${row.client}`}
-                        className="grid grid-cols-[72px_1fr_auto] items-center gap-3 rounded-2xl border border-zinc-200 bg-white px-3 py-3"
+                        className="grid grid-cols-[68px_1fr_auto] items-center gap-3 rounded-2xl border border-zinc-200 bg-white px-3 py-2.5"
                       >
                         <p className="text-sm font-semibold text-zinc-700">{row.hour}</p>
                         <div>
