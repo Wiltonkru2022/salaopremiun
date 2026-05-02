@@ -356,8 +356,8 @@ export default function ServicosPage() {
 
   return (
     <div className="bg-white">
-      <div className="mx-auto max-w-7xl space-y-6">
-        <section className="rounded-3xl border border-zinc-200 bg-white p-6 text-zinc-950 shadow-sm">
+      <div className="mx-auto max-w-7xl space-y-4">
+        <section className="rounded-[24px] border border-zinc-200 bg-white p-4 text-zinc-950 shadow-sm">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div className="max-w-3xl">
               <div className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-[0.22em] text-zinc-400">
@@ -384,14 +384,14 @@ export default function ServicosPage() {
             <div className="flex flex-wrap gap-3">
               <Link
                 href="/servicos/combos/novo"
-                className="inline-flex items-center justify-center rounded-xl border border-violet-200 bg-violet-50 px-4 py-3 text-sm font-semibold text-violet-700 transition hover:bg-violet-100"
+                className="inline-flex items-center justify-center rounded-xl border border-violet-200 bg-violet-50 px-4 py-2.5 text-sm font-semibold text-violet-700 transition hover:bg-violet-100"
               >
                 Criar combo
               </Link>
 
               <Link
                 href="/servicos-extras"
-                className="inline-flex items-center justify-center rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-50"
+                className="inline-flex items-center justify-center rounded-xl border border-zinc-200 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-50"
               >
                 Servicos extras
               </Link>
@@ -399,7 +399,7 @@ export default function ServicosPage() {
               {podeGerenciar ? (
                 <Link
                   href="/servicos/novo"
-                  className="inline-flex items-center justify-center rounded-xl bg-zinc-900 px-4 py-3 text-sm font-semibold text-white transition hover:opacity-95"
+                  className="inline-flex items-center justify-center rounded-xl bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-95"
                 >
                   Novo servico
                 </Link>
@@ -447,14 +447,14 @@ export default function ServicosPage() {
           </div>
         ) : null}
 
-        <section className="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm">
+        <section className="rounded-[22px] border border-zinc-200 bg-white p-3.5 shadow-sm">
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.6fr)_220px_220px]">
             <input
               type="text"
               placeholder="Buscar por nome, categoria ou descricao"
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
-              className="w-full rounded-2xl border border-zinc-300 px-4 py-3 text-sm outline-none focus:border-zinc-900"
+              className="w-full rounded-2xl border border-zinc-300 px-4 py-2.5 text-sm outline-none focus:border-zinc-900"
             />
 
             <select
@@ -462,23 +462,23 @@ export default function ServicosPage() {
               onChange={(e) =>
                 setStatusFiltro(e.target.value as "todos" | "ativo" | "inativo")
               }
-              className="w-full rounded-2xl border border-zinc-300 px-4 py-3 text-sm outline-none focus:border-zinc-900"
+              className="w-full rounded-2xl border border-zinc-300 px-4 py-2.5 text-sm outline-none focus:border-zinc-900"
             >
               <option value="todos">Todos os status</option>
               <option value="ativo">Apenas ativos</option>
               <option value="inativo">Apenas inativos</option>
             </select>
 
-            <div className="flex items-center rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-600">
+            <div className="flex items-center rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-2.5 text-sm text-zinc-600">
               Catalogo filtrado:
               <strong className="ml-2 text-zinc-900">{listaFiltrada.length}</strong>
             </div>
           </div>
         </section>
 
-        <section className="space-y-4">
+        <section className="space-y-3">
           {listaFiltrada.length === 0 ? (
-            <div className="rounded-3xl border border-zinc-200 bg-white p-6 text-sm text-zinc-600 shadow-sm">
+            <div className="rounded-[22px] border border-zinc-200 bg-white p-5 text-sm text-zinc-600 shadow-sm">
               Nenhum servico encontrado com esse filtro.
             </div>
           ) : (
@@ -492,12 +492,12 @@ export default function ServicosPage() {
               return (
                 <article
                   key={item.id}
-                  className="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm"
+                  className="rounded-[22px] border border-zinc-200 bg-white p-4 shadow-sm"
                 >
                   <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
-                        <h2 className="text-lg font-semibold text-zinc-950">
+                        <h2 className="text-[1rem] font-semibold text-zinc-950">
                           {item.nome}
                         </h2>
                         <StatusBadge ativo={ativo} />
@@ -534,7 +534,7 @@ export default function ServicosPage() {
                         </p>
                       ) : null}
 
-                      <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+                      <div className="mt-3 grid grid-cols-1 gap-2.5 md:grid-cols-2 xl:grid-cols-4">
                         <MetricBlock
                           label="Tempo operacional"
                           value={formatMinutes(item.duracao_minutos)}
@@ -571,7 +571,7 @@ export default function ServicosPage() {
                         />
                       </div>
 
-                      <div className="mt-4 flex flex-wrap gap-2 text-xs text-zinc-500">
+                      <div className="mt-3 flex flex-wrap gap-2 text-xs text-zinc-500">
                         {item.gatilho_retorno_dias ? (
                           <TagHint>{`Retorno sugerido em ${item.gatilho_retorno_dias} dias`}</TagHint>
                         ) : null}
@@ -579,17 +579,17 @@ export default function ServicosPage() {
                       </div>
                     </div>
 
-                    <div className="flex shrink-0 flex-col gap-2 xl:w-52">
+                    <div className="flex shrink-0 flex-col gap-2 xl:w-48">
                       <Link
                         href={hrefEdicao}
-                        className="inline-flex items-center justify-center rounded-xl border border-zinc-300 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50"
+                        className="inline-flex items-center justify-center rounded-xl border border-zinc-300 bg-white px-4 py-2 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50"
                       >
                         {ehCombo ? "Editar combo" : "Editar servico"}
                       </Link>
 
                       <Link
                         href={hrefEdicao}
-                        className="inline-flex items-center justify-center rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-2.5 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-100"
+                        className="inline-flex items-center justify-center rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-2 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-100"
                       >
                         {ehCombo ? "Ver composicao" : "Ver excecoes"}
                       </Link>
@@ -600,7 +600,7 @@ export default function ServicosPage() {
                             type="button"
                             onClick={() => alternarStatus(item)}
                             disabled={savingId === item.id}
-                            className="rounded-xl border border-zinc-300 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-60"
+                            className="rounded-xl border border-zinc-300 bg-white px-4 py-2 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-60"
                           >
                             {ativo ? "Inativar" : "Ativar"}
                           </button>
@@ -609,13 +609,13 @@ export default function ServicosPage() {
                             type="button"
                             onClick={() => setServicoParaExcluir(item)}
                             disabled={savingId === item.id}
-                            className="rounded-xl border border-red-300 bg-red-50 px-4 py-2.5 text-sm font-semibold text-red-600 transition hover:bg-red-100 disabled:opacity-60"
+                            className="rounded-xl border border-red-300 bg-red-50 px-4 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-100 disabled:opacity-60"
                           >
                             Excluir
                           </button>
                         </>
                       ) : (
-                        <div className="rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-xs font-medium text-zinc-500">
+                        <div className="rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-2.5 text-xs font-medium text-zinc-500">
                           Somente leitura para seu perfil.
                         </div>
                       )}
@@ -701,19 +701,19 @@ function ResumoCard({
   icon: typeof Clock3;
 }) {
   return (
-    <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
+    <div className="rounded-2xl border border-zinc-200 bg-white p-3.5 shadow-sm">
       <div className="flex items-start justify-between gap-3">
         <div>
           <div className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
             {title}
           </div>
-          <div className="mt-2 text-2xl font-semibold text-zinc-950">{value}</div>
+          <div className="mt-1.5 text-xl font-semibold text-zinc-950">{value}</div>
         </div>
-        <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-2 text-zinc-600">
+        <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-1.5 text-zinc-600">
           <Icon className="h-4 w-4" />
         </div>
       </div>
-      <p className="mt-3 text-sm leading-6 text-zinc-600">{description}</p>
+      <p className="mt-2 text-sm leading-5 text-zinc-600">{description}</p>
     </div>
   );
 }
@@ -728,11 +728,11 @@ function MetricBlock({
   detail: string;
 }) {
   return (
-    <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3">
+    <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-3.5 py-2.5">
       <div className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-400">
         {label}
       </div>
-      <div className="mt-2 text-base font-semibold text-zinc-950">{value}</div>
+      <div className="mt-1.5 text-[15px] font-semibold text-zinc-950">{value}</div>
       <p className="mt-1 text-xs leading-5 text-zinc-500">{detail}</p>
     </div>
   );

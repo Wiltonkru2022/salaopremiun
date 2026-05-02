@@ -364,8 +364,8 @@ export default function ProdutosPage() {
 
   return (
     <div className="bg-white">
-      <div className="mx-auto max-w-7xl space-y-6">
-        <section className="rounded-3xl border border-zinc-200 bg-white p-6 text-zinc-950 shadow-sm">
+      <div className="mx-auto max-w-7xl space-y-4">
+        <section className="rounded-[24px] border border-zinc-200 bg-white p-4 text-zinc-950 shadow-sm">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div className="max-w-3xl">
               <div className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-400">
@@ -382,7 +382,7 @@ export default function ProdutosPage() {
             {podeGerenciar ? (
               <Link
                 href="/produtos/novo"
-                className="inline-flex items-center justify-center rounded-xl bg-zinc-900 px-4 py-3 text-sm font-semibold text-white transition hover:opacity-95"
+                className="inline-flex items-center justify-center rounded-xl bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-95"
               >
                 Novo produto
               </Link>
@@ -391,7 +391,7 @@ export default function ProdutosPage() {
         </section>
 
         {!estoqueLiberado ? (
-          <section className="rounded-3xl border border-sky-200 bg-sky-50 p-5 text-sm text-sky-900 shadow-sm">
+          <section className="rounded-[22px] border border-sky-200 bg-sky-50 p-3.5 text-sm text-sky-900 shadow-sm">
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
               <div>
                 <div className="font-bold">Estoque bloqueado no plano atual</div>
@@ -403,13 +403,13 @@ export default function ProdutosPage() {
               <div className="flex flex-wrap gap-3">
                 <Link
                   href="/comparar-planos"
-                  className="inline-flex items-center justify-center rounded-full border border-sky-300 bg-white px-4 py-2.5 font-bold text-sky-900 transition hover:bg-sky-100"
+                  className="inline-flex items-center justify-center rounded-full border border-sky-300 bg-white px-4 py-2 font-bold text-sky-900 transition hover:bg-sky-100"
                 >
                   Comparar planos
                 </Link>
                 <Link
                   href={`/assinatura?plano=${estoqueUpgradeTarget}`}
-                  className="inline-flex items-center justify-center rounded-full bg-sky-900 px-4 py-2.5 font-bold text-white transition hover:opacity-95"
+                  className="inline-flex items-center justify-center rounded-full bg-sky-900 px-4 py-2 font-bold text-white transition hover:opacity-95"
                 >
                   Fazer upgrade
                 </Link>
@@ -480,14 +480,14 @@ export default function ProdutosPage() {
           />
         </div>
 
-        <section className="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm">
+        <section className="rounded-[22px] border border-zinc-200 bg-white p-3.5 shadow-sm">
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.6fr)_220px_220px]">
             <input
               type="text"
               placeholder="Buscar por nome, marca, linha, categoria ou destinacao"
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
-              className="w-full rounded-2xl border border-zinc-300 px-4 py-3 text-sm outline-none focus:border-zinc-900"
+              className="w-full rounded-2xl border border-zinc-300 px-4 py-2.5 text-sm outline-none focus:border-zinc-900"
             />
 
             <select
@@ -495,23 +495,23 @@ export default function ProdutosPage() {
               onChange={(e) =>
                 setStatusFiltro(e.target.value as "todos" | "ativo" | "inativo")
               }
-              className="w-full rounded-2xl border border-zinc-300 px-4 py-3 text-sm outline-none focus:border-zinc-900"
+              className="w-full rounded-2xl border border-zinc-300 px-4 py-2.5 text-sm outline-none focus:border-zinc-900"
             >
               <option value="todos">Todos os status</option>
               <option value="ativo">Apenas ativos</option>
               <option value="inativo">Apenas inativos</option>
             </select>
 
-            <div className="flex items-center rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-600">
+            <div className="flex items-center rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-2.5 text-sm text-zinc-600">
               Itens visiveis:
               <strong className="ml-2 text-zinc-900">{listaFiltrada.length}</strong>
             </div>
           </div>
         </section>
 
-        <section className="space-y-4">
+        <section className="space-y-3">
           {listaFiltrada.length === 0 ? (
-            <div className="rounded-3xl border border-zinc-200 bg-white p-6 text-sm text-zinc-600 shadow-sm">
+            <div className="rounded-[22px] border border-zinc-200 bg-white p-5 text-sm text-zinc-600 shadow-sm">
               Nenhum produto encontrado com esse filtro.
             </div>
           ) : (
@@ -525,12 +525,12 @@ export default function ProdutosPage() {
               return (
                 <article
                   key={item.id}
-                  className="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm"
+                  className="rounded-[22px] border border-zinc-200 bg-white p-4 shadow-sm"
                 >
                   <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
-                        <h2 className="text-lg font-semibold text-zinc-950">
+                        <h2 className="text-[1rem] font-semibold text-zinc-950">
                           {item.nome}
                         </h2>
                         <StatusBadge ativo={ativo} />
@@ -546,13 +546,13 @@ export default function ProdutosPage() {
                           "Sem marca ou linha informada"}
                       </p>
 
-                      <div className="mt-3 flex flex-wrap gap-2 text-xs text-zinc-500">
+                      <div className="mt-2.5 flex flex-wrap gap-2 text-xs text-zinc-500">
                         <TagHint>{item.categoria || "Sem categoria"}</TagHint>
                         <TagHint>{item.destinacao || "Sem destinacao"}</TagHint>
                       </div>
 
                       <div
-                        className={`mt-4 grid grid-cols-1 gap-3 md:grid-cols-2 ${estoqueLiberado ? "xl:grid-cols-4" : "xl:grid-cols-3"}`}
+                        className={`mt-3 grid grid-cols-1 gap-2.5 md:grid-cols-2 ${estoqueLiberado ? "xl:grid-cols-4" : "xl:grid-cols-3"}`}
                       >
                         <MetricBlock
                           label="Custo real"
@@ -586,17 +586,17 @@ export default function ProdutosPage() {
                       </div>
                     </div>
 
-                    <div className="flex shrink-0 flex-col gap-2 xl:w-52">
+                    <div className="flex shrink-0 flex-col gap-2 xl:w-48">
                       <Link
                         href={`/produtos/${item.id}`}
-                        className="inline-flex items-center justify-center rounded-xl border border-zinc-300 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50"
+                        className="inline-flex items-center justify-center rounded-xl border border-zinc-300 bg-white px-4 py-2 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50"
                       >
                         Editar produto
                       </Link>
 
                       <Link
                         href={`/produtos/${item.id}`}
-                        className="inline-flex items-center justify-center rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-2.5 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-100"
+                        className="inline-flex items-center justify-center rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-2 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-100"
                       >
                         Ver detalhe
                       </Link>
@@ -607,7 +607,7 @@ export default function ProdutosPage() {
                             type="button"
                             onClick={() => alternarStatus(item)}
                             disabled={savingId === item.id}
-                            className="rounded-xl border border-zinc-300 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-60"
+                            className="rounded-xl border border-zinc-300 bg-white px-4 py-2 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-60"
                           >
                             {ativo ? "Inativar" : "Ativar"}
                           </button>
@@ -616,13 +616,13 @@ export default function ProdutosPage() {
                             type="button"
                             onClick={() => setProdutoParaExcluir(item)}
                             disabled={savingId === item.id}
-                            className="rounded-xl border border-red-300 bg-red-50 px-4 py-2.5 text-sm font-semibold text-red-600 transition hover:bg-red-100 disabled:opacity-60"
+                            className="rounded-xl border border-red-300 bg-red-50 px-4 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-100 disabled:opacity-60"
                           >
                             Excluir
                           </button>
                         </>
                       ) : (
-                        <div className="rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-xs font-medium text-zinc-500">
+                        <div className="rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-2.5 text-xs font-medium text-zinc-500">
                           Somente leitura para seu perfil.
                         </div>
                       )}
@@ -667,30 +667,30 @@ function ResumoCard({
   icon: typeof Boxes;
 }) {
   return (
-    <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
+    <div className="rounded-2xl border border-zinc-200 bg-white p-3.5 shadow-sm">
       <div className="flex items-start justify-between gap-3">
         <div>
           <div className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
             {title}
           </div>
-          <div className="mt-2 text-2xl font-semibold text-zinc-950">{value}</div>
+          <div className="mt-1.5 text-xl font-semibold text-zinc-950">{value}</div>
         </div>
-        <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-2 text-zinc-600">
+        <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-1.5 text-zinc-600">
           <Icon className="h-4 w-4" />
         </div>
       </div>
-      <p className="mt-3 text-sm leading-6 text-zinc-600">{description}</p>
+      <p className="mt-2 text-sm leading-5 text-zinc-600">{description}</p>
     </div>
   );
 }
 
 function GuideCard({ title, text }: { title: string; text: string }) {
   return (
-    <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
+    <div className="rounded-2xl border border-zinc-200 bg-white p-3.5 shadow-sm">
       <div className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
         {title}
       </div>
-      <p className="mt-2 text-sm leading-6 text-zinc-700">{text}</p>
+      <p className="mt-1.5 text-sm leading-5 text-zinc-700">{text}</p>
     </div>
   );
 }
@@ -708,7 +708,7 @@ function MetricBlock({
 }) {
   return (
     <div
-      className={`rounded-2xl border px-4 py-3 ${
+      className={`rounded-2xl border px-3.5 py-2.5 ${
         tone === "warning"
           ? "border-amber-200 bg-amber-50"
           : "border-zinc-200 bg-zinc-50"
@@ -717,7 +717,7 @@ function MetricBlock({
       <div className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-400">
         {label}
       </div>
-      <div className="mt-2 text-base font-semibold text-zinc-950">{value}</div>
+      <div className="mt-1.5 text-[15px] font-semibold text-zinc-950">{value}</div>
       <p className="mt-1 text-xs leading-5 text-zinc-500">{detail}</p>
     </div>
   );
