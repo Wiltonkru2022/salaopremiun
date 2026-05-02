@@ -8,7 +8,7 @@ export default async function SuporteProfissionalPage() {
       title="Suporte"
       subtitle="IA para ajuda rapida e chamado humano quando precisar"
     >
-      <div className="space-y-4">
+      <div className="space-y-3.5">
         <ChatSuporte />
         <ProfissionalTicketQuickOpen />
       </div>

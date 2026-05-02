@@ -143,20 +143,20 @@ function ChatSuporteInner() {
   }
 
   return (
-    <section className="mx-auto max-w-3xl overflow-hidden rounded-[1.6rem] border border-zinc-200 bg-white shadow-[0_18px_42px_rgba(15,23,42,0.08)]">
-      <div className="mx-auto mt-3 h-1.5 w-14 rounded-full bg-zinc-300" />
+    <section className="mx-auto max-w-3xl overflow-hidden rounded-[1.35rem] border border-zinc-200 bg-white shadow-[0_16px_34px_rgba(15,23,42,0.07)]">
+      <div className="mx-auto mt-2.5 h-1.5 w-12 rounded-full bg-zinc-300" />
 
-      <div className="border-b border-zinc-200 px-4 pb-4 pt-4">
+      <div className="border-b border-zinc-200 px-4 pb-3.5 pt-3.5">
         <div className="flex items-start justify-between gap-3">
           <div>
             <div className="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-amber-900">
               <Sparkles size={12} />
               Suporte inteligente
             </div>
-            <h2 className="mt-3 text-xl font-black text-zinc-950">
+            <h2 className="mt-2.5 text-[1.05rem] font-black text-zinc-950">
               Ajuda rapida do profissional
             </h2>
-            <p className="mt-2 text-sm leading-6 text-zinc-600">
+            <p className="mt-1.5 text-sm leading-6 text-zinc-600">
               Pergunte em linguagem simples e eu respondo usando o contexto da
               tela em que voce esta.
             </p>
@@ -165,13 +165,13 @@ function ChatSuporteInner() {
           <button
             type="button"
             onClick={handleFinalizarChat}
-            className="rounded-full border border-red-200 bg-red-50 px-3 py-2 text-[11px] font-black uppercase tracking-[0.14em] text-red-700"
+            className="rounded-full border border-red-200 bg-red-50 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.12em] text-red-700"
           >
             Encerrar
           </button>
         </div>
 
-        <div className="mt-4 grid gap-2 sm:grid-cols-2">
+        <div className="mt-3 grid gap-2 sm:grid-cols-2">
           {[
             {
               icon: <Bot size={15} />,
@@ -186,10 +186,10 @@ function ChatSuporteInner() {
           ].map((item) => (
             <div
               key={item.title}
-              className="rounded-[1.35rem] border border-zinc-200 bg-white/90 p-3"
+              className="rounded-[1.1rem] border border-zinc-200 bg-white/90 p-3"
             >
               <div className="flex items-center gap-2 text-sm font-black text-zinc-900">
-                <span className="inline-flex h-8 w-8 items-center justify-center rounded-2xl bg-zinc-950 text-white">
+                <span className="inline-flex h-7.5 w-7.5 items-center justify-center rounded-[16px] bg-zinc-950 text-white">
                   {item.icon}
                 </span>
                 {item.title}
@@ -199,7 +199,7 @@ function ChatSuporteInner() {
           ))}
         </div>
 
-        <div className="mt-4 flex flex-wrap gap-2">
+        <div className="mt-3 flex flex-wrap gap-2">
           {QUICK_PROMPTS.map((suggestion) => (
             <button
               key={suggestion}
@@ -213,7 +213,7 @@ function ChatSuporteInner() {
         </div>
       </div>
 
-      <div className="scroll-premium max-h-[46vh] min-h-[280px] space-y-4 overflow-y-auto px-4 py-4">
+      <div className="scroll-premium max-h-[44vh] min-h-[250px] space-y-3.5 overflow-y-auto px-4 py-3.5">
         {messages.map((message) =>
           message.role === "assistant" ? (
             <div key={message.id} className="max-w-[90%]">
@@ -223,7 +223,7 @@ function ChatSuporteInner() {
                 </span>
                 IA do suporte
               </div>
-              <div className="rounded-[1.5rem] border border-zinc-200 bg-white p-4 text-sm leading-7 text-zinc-900 shadow-sm">
+              <div className="rounded-[1.2rem] border border-zinc-200 bg-white p-3.5 text-sm leading-7 text-zinc-900 shadow-sm">
                 <div className="whitespace-pre-line">{message.content}</div>
               </div>
             </div>
@@ -232,7 +232,7 @@ function ChatSuporteInner() {
               <div className="mb-1 text-right text-[11px] font-black uppercase tracking-[0.16em] text-zinc-400">
                 Voce
               </div>
-              <div className="rounded-[1.5rem] bg-zinc-950 p-4 text-sm leading-7 text-white shadow-[0_16px_34px_rgba(15,23,42,0.18)]">
+              <div className="rounded-[1.2rem] bg-zinc-950 p-3.5 text-sm leading-7 text-white shadow-[0_14px_28px_rgba(15,23,42,0.18)]">
                 {message.content}
               </div>
             </div>
@@ -244,7 +244,7 @@ function ChatSuporteInner() {
             <div className="mb-1 text-[11px] font-black uppercase tracking-[0.16em] text-zinc-400">
               IA do suporte
             </div>
-            <div className="rounded-[1.5rem] border border-zinc-200 bg-white p-4 text-sm text-zinc-500 shadow-sm">
+            <div className="rounded-[1.2rem] border border-zinc-200 bg-white p-3.5 text-sm text-zinc-500 shadow-sm">
               Respondendo com base no seu contexto...
             </div>
           </div>
@@ -253,8 +253,8 @@ function ChatSuporteInner() {
         <div ref={endRef} />
       </div>
 
-      <div className="border-t border-zinc-200 bg-white/95 px-4 pb-4 pt-3 backdrop-blur">
-        <div className="mb-3 flex flex-wrap gap-2">
+      <div className="border-t border-zinc-200 bg-white/95 px-4 pb-3.5 pt-3 backdrop-blur">
+        <div className="mb-2.5 flex flex-wrap gap-2">
           {[
             "Explica este fluxo",
             "Mostra o passo a passo",
@@ -271,7 +271,7 @@ function ChatSuporteInner() {
           ))}
         </div>
 
-        <div className="flex items-center gap-2 rounded-[1.4rem] border border-zinc-200 bg-white p-2 shadow-sm">
+        <div className="flex items-center gap-2 rounded-[1.15rem] border border-zinc-200 bg-white p-2 shadow-sm">
           <input
             type="text"
             value={input}
@@ -283,13 +283,13 @@ function ChatSuporteInner() {
               }
             }}
             placeholder="Pergunte algo sobre agenda, comandas, login ou faturamento..."
-            className="h-11 flex-1 rounded-2xl px-3 text-sm outline-none"
+            className="h-10 flex-1 rounded-[16px] px-3 text-sm outline-none"
           />
           <button
             type="button"
             onClick={() => void handleSend()}
             disabled={loading || !input.trim()}
-            className="flex h-11 w-11 items-center justify-center rounded-2xl bg-zinc-950 text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:bg-zinc-400"
+            className="flex h-10 w-10 items-center justify-center rounded-[16px] bg-zinc-950 text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:bg-zinc-400"
             aria-label="Enviar mensagem"
           >
             <ArrowUpRight size={16} />
@@ -304,7 +304,7 @@ export default function ChatSuporte() {
   return (
     <Suspense
       fallback={
-        <div className="rounded-[1.5rem] border border-zinc-200 bg-white p-4 text-sm text-zinc-500 shadow-sm">
+        <div className="rounded-[1.2rem] border border-zinc-200 bg-white p-3.5 text-sm text-zinc-500 shadow-sm">
           Carregando suporte...
         </div>
       }

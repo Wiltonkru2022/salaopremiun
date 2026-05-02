@@ -19,7 +19,7 @@ function SubmitButton() {
     <button
       type="submit"
       disabled={pending}
-      className="h-12 w-full rounded-2xl bg-zinc-950 text-base font-semibold text-white shadow-sm transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60"
+      className="h-11 w-full rounded-[18px] bg-zinc-950 text-sm font-semibold text-white shadow-sm transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60"
     >
       {pending ? "Salvando cliente..." : "Salvar cliente"}
     </button>
@@ -52,7 +52,7 @@ export default function NovoClienteForm() {
   return (
     <form
       action={formAction}
-      className="space-y-4 rounded-[1.6rem] border border-zinc-200 bg-white p-4 shadow-[0_14px_36px_rgba(15,23,42,0.06)]"
+      className="space-y-3.5 rounded-[1.35rem] border border-zinc-200 bg-white p-3.5 shadow-[0_12px_30px_rgba(15,23,42,0.05)]"
     >
       <ProfissionalSectionHeader
         title="Novo cliente"
@@ -67,7 +67,7 @@ export default function NovoClienteForm() {
           name="nome"
           type="text"
           placeholder="Digite o nome do cliente"
-          className="h-12 w-full rounded-2xl border border-zinc-200 bg-white px-4 text-sm outline-none transition focus:border-zinc-400"
+          className="h-11 w-full rounded-[18px] border border-zinc-200 bg-white px-4 text-sm outline-none transition focus:border-zinc-400"
         />
       </div>
 
@@ -82,7 +82,7 @@ export default function NovoClienteForm() {
           value={telefoneFormatado}
           onChange={(e) => setTelefone(formatTelefone(e.target.value))}
           placeholder="(00) 00000-0000"
-          className="h-12 w-full rounded-2xl border border-zinc-200 bg-white px-4 text-sm outline-none transition focus:border-zinc-400"
+          className="h-11 w-full rounded-[18px] border border-zinc-200 bg-white px-4 text-sm outline-none transition focus:border-zinc-400"
         />
       </div>
 
@@ -94,7 +94,7 @@ export default function NovoClienteForm() {
           name="email"
           type="email"
           placeholder="cliente@email.com"
-          className="h-12 w-full rounded-2xl border border-zinc-200 bg-white px-4 text-sm outline-none transition focus:border-zinc-400"
+          className="h-11 w-full rounded-[18px] border border-zinc-200 bg-white px-4 text-sm outline-none transition focus:border-zinc-400"
         />
       </div>
 
@@ -105,16 +105,16 @@ export default function NovoClienteForm() {
         <textarea
           name="observacoes"
           placeholder="Ex.: prefere atendimento pela manha"
-          className="min-h-[110px] w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-zinc-400"
+          className="min-h-[96px] w-full rounded-[18px] border border-zinc-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-zinc-400"
         />
       </div>
 
       {state.error ? (
-        <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="rounded-[18px] border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
           {state.error}
         </div>
       ) : (
-        <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-500">
+        <div className="rounded-[18px] border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-500">
           Depois do cadastro, o cliente ja fica disponivel para agenda e comanda.
         </div>
       )}
