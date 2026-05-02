@@ -24,7 +24,7 @@ export default function RecuperarSenhaPage() {
 function RecuperarSenhaFallback() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-white p-4">
-      <div className="w-full max-w-xl rounded-[32px] border border-zinc-200 bg-white p-10 text-center shadow-2xl">
+      <div className="w-full max-w-xl rounded-[24px] border border-zinc-200 bg-white p-8 text-center shadow-xl">
         <p className="text-sm text-zinc-500">Carregando recuperacao...</p>
       </div>
     </div>
@@ -142,29 +142,29 @@ function RecuperarSenhaContent() {
   }
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-white px-4 py-8">
-      <div className="relative grid w-full max-w-5xl overflow-hidden rounded-[36px] bg-white shadow-[0_25px_80px_rgba(0,0,0,0.12)] md:grid-cols-2">
-        <div className="hidden bg-zinc-950 p-10 text-white md:flex md:flex-col md:justify-between">
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-white px-4 py-6">
+      <div className="relative grid w-full max-w-5xl overflow-hidden rounded-[28px] bg-white shadow-[0_22px_70px_rgba(0,0,0,0.12)] md:grid-cols-2">
+        <div className="hidden bg-zinc-950 p-8 text-white md:flex md:flex-col md:justify-between">
           <div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.28em] text-zinc-300">
+            <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.24em] text-zinc-300">
               <Sparkles size={14} />
               SalaoPremium
             </div>
 
-            <h1 className="mt-6 text-4xl font-bold leading-tight">
+            <h1 className="mt-5 text-[2.2rem] font-bold leading-tight">
               Recuperacao de acesso com seguranca
             </h1>
 
-            <p className="mt-4 max-w-md text-sm leading-7 text-zinc-300">
+            <p className="mt-3 max-w-md text-sm leading-6 text-zinc-300">
               Envie um link de redefinicao para seu e-mail e recupere o acesso
               ao painel do seu salao de forma rapida e segura.
             </p>
           </div>
 
-          <div className="space-y-4">
-            <div className="rounded-3xl border border-white/10 bg-white/[0.05] p-5">
+          <div className="space-y-3">
+            <div className="rounded-[22px] border border-white/10 bg-white/[0.05] p-4">
               <div className="flex items-center gap-3">
-                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/10">
+                <div className="flex h-10 w-10 items-center justify-center rounded-[18px] bg-white/10">
                   <ShieldCheck size={20} />
                 </div>
                 <div>
@@ -176,9 +176,9 @@ function RecuperarSenhaContent() {
               </div>
             </div>
 
-            <div className="rounded-3xl border border-white/10 bg-white/[0.05] p-5">
+            <div className="rounded-[22px] border border-white/10 bg-white/[0.05] p-4">
               <div className="flex items-center gap-3">
-                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/10">
+                <div className="flex h-10 w-10 items-center justify-center rounded-[18px] bg-white/10">
                   <Mail size={20} />
                 </div>
                 <div>
@@ -190,9 +190,9 @@ function RecuperarSenhaContent() {
               </div>
             </div>
 
-            <div className="rounded-3xl border border-white/10 bg-white/[0.05] p-5">
+            <div className="rounded-[22px] border border-white/10 bg-white/[0.05] p-4">
               <div className="flex items-center gap-3">
-                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/10">
+                <div className="flex h-10 w-10 items-center justify-center rounded-[18px] bg-white/10">
                   <Check size={20} />
                 </div>
                 <div>
@@ -206,12 +206,12 @@ function RecuperarSenhaContent() {
           </div>
         </div>
 
-        <div className="p-6 md:p-10">
+        <div className="p-6 md:p-8">
           <div className="mx-auto max-w-md">
             <button
               type="button"
               onClick={() => router.push("/login")}
-              className="mb-6 inline-flex items-center gap-2 text-sm font-medium text-zinc-500 transition hover:text-zinc-900"
+              className="mb-5 inline-flex items-center gap-2 text-sm font-medium text-zinc-500 transition hover:text-zinc-900"
             >
               <ArrowLeft size={16} />
               Voltar para login
@@ -219,8 +219,8 @@ function RecuperarSenhaContent() {
 
             {!enviadoComSucesso ? (
               <>
-                <div className="mb-8">
-                  <h2 className="text-3xl font-bold tracking-tight text-zinc-900">
+                <div className="mb-6">
+                  <h2 className="text-[2rem] font-bold tracking-tight text-zinc-900">
                     Recuperar senha
                   </h2>
                   <p className="mt-2 text-sm leading-6 text-zinc-500">
@@ -228,13 +228,13 @@ function RecuperarSenhaContent() {
                   </p>
                 </div>
 
-                <form onSubmit={handleRecuperarSenha} className="space-y-5">
+                <form onSubmit={handleRecuperarSenha} className="space-y-4">
                   <div>
                     <label className="mb-2 block text-sm font-semibold text-zinc-700">
                       E-mail
                     </label>
 
-                    <div className="flex items-center gap-3 rounded-[24px] border border-zinc-300 bg-white px-4 py-4 transition focus-within:border-zinc-900 focus-within:ring-4 focus-within:ring-zinc-200">
+                    <div className="flex items-center gap-3 rounded-[20px] border border-zinc-300 bg-white px-4 py-3 transition focus-within:border-zinc-900 focus-within:ring-4 focus-within:ring-zinc-200">
                       <Mail size={18} className="text-zinc-400" />
                       <input
                         type="email"
@@ -248,13 +248,13 @@ function RecuperarSenhaContent() {
                   </div>
 
                   {erro ? (
-                    <div className="rounded-[24px] border border-rose-200 bg-rose-50 px-4 py-4 text-sm leading-6 text-rose-700">
+                    <div className="rounded-[20px] border border-rose-200 bg-rose-50 px-4 py-3.5 text-sm leading-6 text-rose-700">
                       {erro}
                     </div>
                   ) : null}
 
                   {cooldown > 0 && !enviadoComSucesso ? (
-                    <div className="rounded-[24px] border border-amber-200 bg-amber-50 px-4 py-4 text-sm leading-6 text-amber-800">
+                    <div className="rounded-[20px] border border-amber-200 bg-amber-50 px-4 py-3.5 text-sm leading-6 text-amber-800">
                       Voce podera solicitar novamente em{" "}
                       <span className="font-bold">{cooldown}s</span>.
                     </div>
@@ -263,7 +263,7 @@ function RecuperarSenhaContent() {
                   <button
                     type="submit"
                     disabled={loading || cooldown > 0}
-                    className="flex h-14 w-full items-center justify-center rounded-[24px] bg-zinc-950 px-5 text-base font-semibold text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60"
+                    className="flex h-12 w-full items-center justify-center rounded-[20px] bg-zinc-950 px-5 text-sm font-semibold text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {loading ? (
                       <span className="flex items-center gap-3">
@@ -278,7 +278,7 @@ function RecuperarSenhaContent() {
                   </button>
                 </form>
 
-                <div className="mt-6 rounded-[28px] border border-zinc-200 bg-zinc-50 px-5 py-5 text-sm leading-6 text-zinc-600">
+                <div className="mt-5 rounded-[22px] border border-zinc-200 bg-zinc-50 px-5 py-4 text-sm leading-6 text-zinc-600">
                   Depois de clicar no link enviado por e-mail, voce sera
                   redirecionado para criar uma nova senha.
                 </div>
@@ -286,13 +286,13 @@ function RecuperarSenhaContent() {
             ) : (
               <div className="animate-in fade-in duration-300">
                 <div className="flex flex-col items-center text-center">
-                  <div className="mb-5 flex h-24 w-24 items-center justify-center rounded-full bg-emerald-100 shadow-inner">
-                    <div className="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500 text-white shadow-lg">
-                      <Check size={30} strokeWidth={3} />
+                  <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-emerald-100 shadow-inner">
+                    <div className="flex h-14 w-14 items-center justify-center rounded-full bg-emerald-500 text-white shadow-lg">
+                      <Check size={26} strokeWidth={3} />
                     </div>
                   </div>
 
-                  <h2 className="text-3xl font-bold tracking-tight text-zinc-900">
+                  <h2 className="text-[2rem] font-bold tracking-tight text-zinc-900">
                     Link enviado
                   </h2>
 
@@ -301,12 +301,12 @@ function RecuperarSenhaContent() {
                     <span className="font-semibold text-zinc-800">{email}</span>.
                   </p>
 
-                  <div className="mt-6 w-full rounded-[28px] border border-emerald-200 bg-emerald-50 px-5 py-5 text-left text-sm leading-6 text-emerald-800">
+                  <div className="mt-5 w-full rounded-[22px] border border-emerald-200 bg-emerald-50 px-5 py-4 text-left text-sm leading-6 text-emerald-800">
                     <p className="font-semibold">Tudo certo por aqui.</p>
                     <p className="mt-1">{sucesso}</p>
                   </div>
 
-                  <div className="mt-5 w-full rounded-[28px] border border-zinc-200 bg-zinc-50 px-5 py-5 text-left text-sm leading-6 text-zinc-600">
+                  <div className="mt-4 w-full rounded-[22px] border border-zinc-200 bg-zinc-50 px-5 py-4 text-left text-sm leading-6 text-zinc-600">
                     <p className="font-semibold text-zinc-800">Importante</p>
                     <p className="mt-1">
                       Abra o link no mesmo navegador e dispositivo em que a
@@ -316,7 +316,7 @@ function RecuperarSenhaContent() {
                     </p>
                   </div>
 
-                  <div className="mt-6 grid w-full gap-3">
+                  <div className="mt-5 grid w-full gap-3">
                     <button
                       type="button"
                       onClick={() => {
@@ -325,7 +325,7 @@ function RecuperarSenhaContent() {
                         setSucesso("");
                       }}
                       disabled={cooldown > 0}
-                      className="flex h-14 items-center justify-center rounded-[24px] border border-zinc-300 bg-white px-5 text-base font-semibold text-zinc-900 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-60"
+                      className="flex h-12 items-center justify-center rounded-[20px] border border-zinc-300 bg-white px-5 text-sm font-semibold text-zinc-900 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       {cooldown > 0
                         ? `Reenviar em ${cooldown}s`
@@ -335,7 +335,7 @@ function RecuperarSenhaContent() {
                     <button
                       type="button"
                       onClick={() => router.push("/login")}
-                      className="flex h-14 items-center justify-center rounded-[24px] bg-zinc-950 px-5 text-base font-semibold text-white transition hover:opacity-95"
+                      className="flex h-12 items-center justify-center rounded-[20px] bg-zinc-950 px-5 text-sm font-semibold text-white transition hover:opacity-95"
                     >
                       Voltar ao login
                     </button>

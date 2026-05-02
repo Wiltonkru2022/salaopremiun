@@ -233,14 +233,14 @@ export default function AtualizarSenhaPage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-white p-4">
-      <div className="w-full max-w-md rounded-[32px] bg-white p-8 shadow-2xl">
+      <div className="w-full max-w-md rounded-[24px] border border-zinc-200 bg-white p-6 shadow-xl">
         <div className="mb-2 flex items-center justify-between gap-3">
-          <h2 className="text-2xl font-bold text-zinc-900">Nova senha</h2>
+          <h2 className="text-[1.85rem] font-bold text-zinc-900">Nova senha</h2>
 
           <button
             type="button"
             onClick={() => router.push("/login")}
-            className="inline-flex items-center gap-2 rounded-full border border-zinc-200 px-3 py-2 text-xs font-semibold text-zinc-600 transition hover:border-zinc-900 hover:text-zinc-900"
+            className="inline-flex items-center gap-2 rounded-full border border-zinc-200 px-3 py-1.5 text-[11px] font-semibold text-zinc-600 transition hover:border-zinc-900 hover:text-zinc-900"
           >
             <ArrowLeft size={14} />
             Login
@@ -253,13 +253,13 @@ export default function AtualizarSenhaPage() {
             : "Digite e confirme sua nova senha"}
         </p>
 
-        <form onSubmit={handleAtualizarSenha} className="mt-6 space-y-4">
+        <form onSubmit={handleAtualizarSenha} className="mt-5 space-y-3.5">
           <div>
             <label className="text-sm font-medium text-zinc-700">
               Nova senha
             </label>
 
-            <div className="mt-2 flex items-center gap-3 rounded-2xl border border-zinc-300 px-4 py-3">
+            <div className="mt-2 flex items-center gap-3 rounded-[20px] border border-zinc-300 px-4 py-2.5">
               <LockKeyhole size={18} className="text-zinc-500" />
               <input
                 type="password"
@@ -276,7 +276,7 @@ export default function AtualizarSenhaPage() {
               Confirmar nova senha
             </label>
 
-            <div className="mt-2 flex items-center gap-3 rounded-2xl border border-zinc-300 px-4 py-3">
+            <div className="mt-2 flex items-center gap-3 rounded-[20px] border border-zinc-300 px-4 py-2.5">
               <LockKeyhole size={18} className="text-zinc-500" />
               <input
                 type="password"
@@ -289,13 +289,13 @@ export default function AtualizarSenhaPage() {
           </div>
 
           {validandoLink ? (
-            <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-3 text-sm text-zinc-600">
+            <div className="rounded-[20px] border border-zinc-200 bg-zinc-50 p-3 text-sm text-zinc-600">
               Validando link de recuperacao...
             </div>
           ) : null}
 
           {modoSenha === "authenticated" && !validandoLink ? (
-            <div className="rounded-2xl border border-sky-200 bg-sky-50 p-4 text-sm text-sky-800">
+            <div className="rounded-[20px] border border-sky-200 bg-sky-50 p-3.5 text-sm text-sky-800">
               <p className="font-semibold">Sessao autenticada detectada</p>
               <p className="mt-1 leading-6">
                 Esta troca de senha esta sendo feita a partir de uma sessao ja autenticada
@@ -306,7 +306,7 @@ export default function AtualizarSenhaPage() {
           ) : null}
 
           {erro ? (
-            <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
+            <div className="rounded-[20px] border border-rose-200 bg-rose-50 p-3.5 text-sm text-rose-700">
               <div className="flex items-start gap-3">
                 <AlertCircle size={18} className="mt-0.5 shrink-0" />
                 <div>
@@ -318,7 +318,7 @@ export default function AtualizarSenhaPage() {
           ) : null}
 
           {erroSessaoRecuperacao ? (
-            <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+            <div className="rounded-[20px] border border-amber-200 bg-amber-50 p-3.5 text-sm text-amber-800">
               <p className="font-semibold">Como resolver</p>
               <p className="mt-1 leading-6">
                 Solicite um novo link de recuperacao e abra-o no mesmo navegador e dispositivo
@@ -333,7 +333,7 @@ export default function AtualizarSenhaPage() {
                 <button
                   type="button"
                   onClick={() => router.push("/recuperar-senha")}
-                  className="inline-flex items-center gap-2 rounded-2xl bg-zinc-900 px-4 py-3 font-semibold text-white transition hover:opacity-95"
+                  className="inline-flex items-center gap-2 rounded-[20px] bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-95"
                 >
                   <RefreshCcw size={16} />
                   Solicitar novo link
@@ -342,7 +342,7 @@ export default function AtualizarSenhaPage() {
                 <button
                   type="button"
                   onClick={() => router.push(`/login?motivo=${motivoFalhaRecuperacao}`)}
-                  className="inline-flex items-center gap-2 rounded-2xl border border-zinc-300 bg-white px-4 py-3 font-semibold text-zinc-700 transition hover:bg-zinc-50"
+                  className="inline-flex items-center gap-2 rounded-[20px] border border-zinc-300 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50"
                 >
                   <ArrowLeft size={16} />
                   Voltar ao login
@@ -352,7 +352,7 @@ export default function AtualizarSenhaPage() {
           ) : null}
 
           {sucesso ? (
-            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">
+            <div className="rounded-[20px] border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">
               {sucesso}
             </div>
           ) : null}
@@ -360,7 +360,7 @@ export default function AtualizarSenhaPage() {
           <button
             type="submit"
             disabled={loading || validandoLink || erroSessaoRecuperacao}
-            className="mt-4 w-full rounded-2xl bg-zinc-900 py-3 font-semibold text-white transition hover:opacity-95 disabled:opacity-60"
+            className="mt-3 w-full rounded-[20px] bg-zinc-900 py-2.5 text-sm font-semibold text-white transition hover:opacity-95 disabled:opacity-60"
           >
             {loading
               ? "Atualizando..."
