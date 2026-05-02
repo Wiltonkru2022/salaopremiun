@@ -200,26 +200,26 @@ export default function PerfilSalaoPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <section className="overflow-hidden rounded-[34px] border border-zinc-200 bg-white p-6 text-zinc-950 shadow-sm">
+    <div className="space-y-4">
+      <section className="overflow-hidden rounded-[28px] border border-zinc-200 bg-white p-5 text-zinc-950 shadow-sm">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
           <div className="max-w-3xl">
             <div className="inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1 text-xs font-bold uppercase tracking-[0.2em] text-zinc-600">
               <Building2 size={13} />
               Identidade do negócio
             </div>
-            <h1 className="mt-4 font-display text-3xl font-bold tracking-[-0.05em] sm:text-4xl">
+            <h1 className="mt-3 font-display text-3xl font-bold tracking-[-0.05em] sm:text-[2.1rem]">
               Perfil do salão
             </h1>
-            <p className="mt-3 text-sm text-zinc-500 sm:text-base">
+            <p className="mt-2 text-sm leading-6 text-zinc-500 sm:text-[15px]">
               Edite dados comerciais, contato, endereço, logo e a senha da conta
               administradora sem misturar com as regras internas do sistema.
             </p>
           </div>
 
-          <div className="rounded-[26px] border border-zinc-200 bg-zinc-50 p-4">
+          <div className="rounded-[24px] border border-zinc-200 bg-zinc-50 p-3.5">
             <div className="flex items-center gap-3">
-              <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl bg-white ring-1 ring-zinc-200">
+              <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-2xl bg-white ring-1 ring-zinc-200">
                 {perfilForm.logo_url ? (
                   <img
                     src={perfilForm.logo_url}
@@ -233,11 +233,11 @@ export default function PerfilSalaoPage() {
                 )}
               </div>
               <div>
-                <div className="font-display text-xl font-bold">
+                <div className="font-display text-lg font-bold">
                   {perfilForm.nome || "SalaoPremium"}
                 </div>
                 <div className="text-sm text-zinc-500">
-                  {String(perfilForm.plano || "sem plano").toUpperCase()} • 
+                  {String(perfilForm.plano || "sem plano").toUpperCase()} •{" "}
                   {perfilForm.status || "status não definido"}
                 </div>
               </div>
@@ -259,7 +259,7 @@ export default function PerfilSalaoPage() {
         </div>
       ) : null}
 
-      <div className="grid gap-5 xl:grid-cols-[1.4fr_0.8fr]">
+      <div className="grid gap-4 xl:grid-cols-[1.4fr_0.8fr]">
         <SectionCard
           icon={<Building2 size={18} />}
           title="Dados comerciais"
@@ -359,7 +359,7 @@ export default function PerfilSalaoPage() {
             </Field>
           </div>
 
-          <div className="mt-6 border-t border-zinc-100 pt-5">
+          <div className="mt-5 border-t border-zinc-100 pt-4">
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div className="md:col-span-2">
                 <Field label="Endereço">
@@ -450,12 +450,12 @@ export default function PerfilSalaoPage() {
             </div>
           </div>
 
-          <div className="mt-6 flex justify-end">
+          <div className="mt-5 flex justify-end">
             <button
               type="button"
               onClick={salvarPerfil}
               disabled={savingPerfil}
-              className="inline-flex items-center gap-2 rounded-2xl bg-zinc-950 px-5 py-3 text-sm font-bold text-white transition hover:-translate-y-0.5 disabled:opacity-60"
+              className="inline-flex items-center gap-2 rounded-2xl bg-zinc-950 px-5 py-2.5 text-sm font-bold text-white transition hover:-translate-y-0.5 disabled:opacity-60"
             >
               {savingPerfil ? (
                 <Loader2 className="animate-spin" size={16} />
@@ -467,7 +467,7 @@ export default function PerfilSalaoPage() {
           </div>
         </SectionCard>
 
-        <div className="space-y-5">
+        <div className="space-y-4">
           <SectionCard
             icon={<KeyRound size={18} />}
             title="Senha do administrador"
@@ -484,7 +484,7 @@ export default function PerfilSalaoPage() {
                       novaSenha: event.target.value,
                     }))
                   }
-                  placeholder="Minimo 6 caracteres"
+                placeholder="Minimo 6 caracteres"
                 />
               </Field>
 
@@ -506,7 +506,7 @@ export default function PerfilSalaoPage() {
                 type="button"
                 onClick={trocarSenha}
                 disabled={savingSenha}
-                className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-zinc-200 bg-zinc-950 px-5 py-3 text-sm font-bold text-white transition hover:-translate-y-0.5 disabled:opacity-60"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-zinc-200 bg-zinc-950 px-5 py-2.5 text-sm font-bold text-white transition hover:-translate-y-0.5 disabled:opacity-60"
               >
                 {savingSenha ? (
                   <Loader2 className="animate-spin" size={16} />
@@ -518,11 +518,11 @@ export default function PerfilSalaoPage() {
             </div>
           </SectionCard>
 
-          <section className="rounded-[28px] border border-[rgba(199,162,92,0.28)] bg-[rgba(199,162,92,0.10)] p-5">
+          <section className="rounded-[24px] border border-[rgba(199,162,92,0.28)] bg-[rgba(199,162,92,0.10)] p-4">
             <div className="text-sm font-bold text-zinc-950">
               Separacao organizada
             </div>
-            <p className="mt-2 text-sm leading-6 text-zinc-600">
+            <p className="mt-1.5 text-sm leading-5 text-zinc-600">
               Este perfil fica para dados do salão e segurança. Configurações
               fica para agenda, caixa, usuarios, permissoes e regras internas.
             </p>

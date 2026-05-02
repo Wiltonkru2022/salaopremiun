@@ -80,12 +80,12 @@ export default function ServicosExtrasPage() {
       .maybeSingle();
 
     if (usuarioError || !usuario?.id || !usuario?.id_salao) {
-      setErro("Não foi possível validar o usuário do sistema.");
+      setErro("Nao foi possivel validar o usuario do sistema.");
       return null;
     }
 
     if (usuario.status && usuario.status !== "ativo") {
-      setErro("Usuário inativo.");
+      setErro("Usuario inativo.");
       return null;
     }
 
@@ -162,7 +162,7 @@ export default function ServicosExtrasPage() {
 
   async function excluirItem(id: string) {
     if (!podeGerenciar) {
-      setErro("Você não tem permissão para excluir serviços extras.");
+      setErro("Voce nao tem permissao para excluir servicos extras.");
       return;
     }
 
@@ -180,10 +180,10 @@ export default function ServicosExtrasPage() {
       if (error) throw error;
 
       setItens((prev) => prev.filter((item) => item.id !== id));
-      setMsg("Serviço extra excluído com sucesso.");
+      setMsg("Servico extra excluido com sucesso.");
     } catch (e: unknown) {
       console.error(e);
-      setErro(e instanceof Error ? e.message : "Erro ao excluir serviço extra.");
+      setErro(e instanceof Error ? e.message : "Erro ao excluir servico extra.");
     } finally {
       setSavingId(null);
     }
@@ -205,8 +205,8 @@ export default function ServicosExtrasPage() {
   if (loading || !acessoCarregado) {
     return (
       <AppLoading
-        title="Carregando serviços extras"
-        message="Aguarde enquanto montamos o catálogo de extras, custos e disponibilidade."
+        title="Carregando servicos extras"
+        message="Aguarde enquanto montamos o catalogo de extras, custos e disponibilidade."
         fullHeight={false}
       />
     );
@@ -216,7 +216,7 @@ export default function ServicosExtrasPage() {
     return (
       <div className="p-6">
         <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-rose-700">
-          Você não tem permissão para acessar Serviços Extras.
+          Voce nao tem permissao para acessar Servicos extras.
         </div>
       </div>
     );
@@ -226,8 +226,8 @@ export default function ServicosExtrasPage() {
     <>
       <ConfirmActionModal
         open={Boolean(itemParaExcluir)}
-        title="Excluir serviço extra"
-        description="Este serviço extra será removido do catálogo e deixará de aparecer para novas comandas."
+        title="Excluir servico extra"
+        description="Este servico extra sera removido do catalogo e deixara de aparecer para novas comandas."
         confirmLabel="Excluir extra"
         tone="danger"
         loading={Boolean(savingId)}
@@ -240,30 +240,30 @@ export default function ServicosExtrasPage() {
       />
 
       <div className="bg-white">
-        <div className="mx-auto max-w-7xl space-y-6">
-          <section className="rounded-3xl border border-zinc-200 bg-white p-6 text-zinc-950 shadow-sm">
-            <div className="mt-2 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div className="mx-auto max-w-7xl space-y-4">
+          <section className="rounded-[24px] border border-zinc-200 bg-white p-4 text-zinc-950 shadow-sm">
+            <div className="mt-1 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
               <div>
-                <h1 className="text-2xl font-bold md:text-3xl">Serviços Extras</h1>
-                <p className="mt-2 text-sm text-zinc-500">
+                <h1 className="text-2xl font-bold md:text-3xl">Servicos extras</h1>
+                <p className="mt-2 text-sm leading-6 text-zinc-500">
                   {estoqueLiberado
-                    ? "Cadastre extras cobrados à parte, com preço, custo e estoque."
-                    : "Cadastre extras cobrados à parte, com preço e custo. O controle de estoque libera no Pro ou Premium."}
+                    ? "Cadastre extras cobrados a parte, com preco, custo e estoque."
+                    : "Cadastre extras cobrados a parte, com preco e custo. O controle de estoque libera no Pro ou Premium."}
                 </p>
               </div>
 
               <div className="flex flex-wrap gap-3">
                 <Link
                   href="/servicos"
-                  className="inline-flex items-center justify-center rounded-2xl border border-zinc-200 bg-white px-5 py-3 text-sm font-bold text-zinc-800 transition hover:bg-zinc-50"
+                  className="inline-flex items-center justify-center rounded-2xl border border-zinc-200 bg-white px-4 py-2.5 text-sm font-bold text-zinc-800 transition hover:bg-zinc-50"
                 >
-                  Ver serviços
+                  Ver servicos
                 </Link>
 
                 {podeGerenciar ? (
                   <Link
                     href="/servicos-extras/novo"
-                    className="inline-flex items-center justify-center rounded-2xl bg-zinc-900 px-5 py-3 text-sm font-bold text-white transition hover:opacity-95"
+                    className="inline-flex items-center justify-center rounded-2xl bg-zinc-900 px-4 py-2.5 text-sm font-bold text-white transition hover:opacity-95"
                   >
                     + Novo extra
                   </Link>
@@ -273,25 +273,25 @@ export default function ServicosExtrasPage() {
           </section>
 
           {!estoqueLiberado ? (
-            <section className="rounded-3xl border border-sky-200 bg-sky-50 p-5 text-sm text-sky-900 shadow-sm">
+            <section className="rounded-[22px] border border-sky-200 bg-sky-50 p-3.5 text-sm text-sky-900 shadow-sm">
               <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                 <div>
                   <div className="font-bold">Controle de estoque bloqueado no plano atual</div>
                   <p className="mt-1 leading-6 text-sky-800">
-                    Os extras continuam liberados para venda, preço e custo. O acompanhamento de saldo e consumo de estoque entra quando o salão sobe para Pro ou Premium.
+                    Os extras continuam liberados para venda, preco e custo. O acompanhamento de saldo e consumo de estoque entra quando o salao sobe para Pro ou Premium.
                   </p>
                 </div>
 
                 <div className="flex flex-wrap gap-3">
                   <Link
                     href="/comparar-planos"
-                    className="inline-flex items-center justify-center rounded-full border border-sky-300 bg-white px-4 py-2.5 font-bold text-sky-900 transition hover:bg-sky-100"
+                    className="inline-flex items-center justify-center rounded-full border border-sky-300 bg-white px-4 py-2 font-bold text-sky-900 transition hover:bg-sky-100"
                   >
                     Comparar planos
                   </Link>
                   <Link
                     href={`/assinatura?plano=${estoqueUpgradeTarget}`}
-                    className="inline-flex items-center justify-center rounded-full bg-sky-900 px-4 py-2.5 font-bold text-white transition hover:opacity-95"
+                    className="inline-flex items-center justify-center rounded-full bg-sky-900 px-4 py-2 font-bold text-white transition hover:opacity-95"
                   >
                     Fazer upgrade
                   </Link>
@@ -312,26 +312,26 @@ export default function ServicosExtrasPage() {
             </div>
           ) : null}
 
-          <div className="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm">
+          <div className="rounded-[22px] border border-zinc-200 bg-white p-3.5 shadow-sm">
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <input
                 type="text"
-                placeholder="Buscar por nome, categoria ou descrição"
+                placeholder="Buscar por nome, categoria ou descricao"
                 value={busca}
                 onChange={(e) => setBusca(e.target.value)}
-                className="w-full rounded-2xl border border-zinc-300 px-4 py-3 text-sm outline-none focus:border-zinc-900"
+                className="w-full rounded-2xl border border-zinc-300 px-4 py-2.5 text-sm outline-none focus:border-zinc-900"
               />
 
-              <div className="flex items-center rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-600">
+              <div className="flex items-center rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-2.5 text-sm text-zinc-600">
                 Total: <strong className="ml-2 text-zinc-900">{listaFiltrada.length}</strong>
               </div>
             </div>
           </div>
 
-          <div className="overflow-hidden rounded-3xl border border-zinc-200 bg-white shadow-sm">
+          <div className="overflow-hidden rounded-[22px] border border-zinc-200 bg-white shadow-sm">
             {listaFiltrada.length === 0 ? (
-              <div className="p-6 text-sm text-zinc-600">
-                Nenhum serviço extra encontrado.
+              <div className="p-5 text-sm text-zinc-600">
+                Nenhum servico extra encontrado.
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -345,7 +345,7 @@ export default function ServicosExtrasPage() {
                         Categoria
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-600">
-                        Preço
+                        Preco
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-600">
                         Custo
@@ -356,7 +356,7 @@ export default function ServicosExtrasPage() {
                         </th>
                       ) : null}
                       <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-zinc-600">
-                        Ações
+                        Acoes
                       </th>
                     </tr>
                   </thead>
@@ -364,38 +364,38 @@ export default function ServicosExtrasPage() {
                   <tbody className="divide-y divide-zinc-200 bg-white">
                     {listaFiltrada.map((item) => (
                       <tr key={item.id}>
-                        <td className="px-4 py-4">
+                        <td className="px-4 py-3.5">
                           <p className="font-semibold text-zinc-900">{item.nome}</p>
                           <p className="text-sm text-zinc-500">{item.descricao || "-"}</p>
                         </td>
 
-                        <td className="px-4 py-4 text-sm text-zinc-700">
+                        <td className="px-4 py-3.5 text-sm text-zinc-700">
                           {item.categoria || "-"}
                         </td>
 
-                        <td className="px-4 py-4 text-sm text-zinc-700">
+                        <td className="px-4 py-3.5 text-sm text-zinc-700">
                           {formatCurrency(item.preco_venda)}
                         </td>
 
-                        <td className="px-4 py-4 text-sm text-zinc-700">
+                        <td className="px-4 py-3.5 text-sm text-zinc-700">
                           {formatCurrency(item.custo)}
                         </td>
 
                         {estoqueLiberado ? (
-                          <td className="px-4 py-4 text-sm text-zinc-700">
+                          <td className="px-4 py-3.5 text-sm text-zinc-700">
                             {item.controla_estoque
                               ? `${formatQuantidade(item.estoque_atual)} un`
-                              : "Não controla"}
+                              : "Nao controla"}
                           </td>
                         ) : null}
 
-                        <td className="px-4 py-4">
+                        <td className="px-4 py-3.5">
                           <div className="flex flex-wrap justify-end gap-2">
                             {podeGerenciar ? (
                               <>
                                 <Link
                                   href={`/servicos-extras/${item.id}`}
-                                  className="rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50"
+                                  className="rounded-xl border border-zinc-300 bg-white px-3 py-1.5 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50"
                                 >
                                   Editar
                                 </Link>
@@ -404,7 +404,7 @@ export default function ServicosExtrasPage() {
                                   type="button"
                                   onClick={() => setItemParaExcluir(item.id)}
                                   disabled={savingId === item.id}
-                                  className="rounded-xl border border-red-300 bg-red-50 px-3 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-100 disabled:opacity-60"
+                                  className="rounded-xl border border-red-300 bg-red-50 px-3 py-1.5 text-sm font-semibold text-red-600 transition hover:bg-red-100 disabled:opacity-60"
                                 >
                                   Excluir
                                 </button>
