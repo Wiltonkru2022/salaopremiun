@@ -51,17 +51,17 @@ function getActionField(column: string, suffix: "tipo" | "id") {
 
 export function AdminKpiGrid({ kpis }: { kpis: AdminKpi[] }) {
   return (
-    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
       {kpis.map((kpi) => (
         <div
           key={kpi.label}
-          className={`rounded-[28px] border p-5 shadow-sm ${toneClass(kpi.tone)}`}
+          className={`rounded-[24px] border p-4 shadow-sm ${toneClass(kpi.tone)}`}
         >
           <div className="text-xs font-bold uppercase tracking-[0.28em] opacity-60">
             {kpi.label}
           </div>
-          <div className="mt-3 font-display text-3xl font-black">{kpi.value}</div>
-          <div className="mt-2 text-sm opacity-70">{kpi.hint}</div>
+          <div className="mt-2.5 font-display text-[1.8rem] font-black">{kpi.value}</div>
+          <div className="mt-1.5 text-sm opacity-70">{kpi.hint}</div>
         </div>
       ))}
     </div>
@@ -76,13 +76,13 @@ export function AdminDataTable({
   columns: string[];
 }) {
   return (
-    <div className="overflow-hidden rounded-[30px] border border-zinc-200 bg-white shadow-sm">
+    <div className="overflow-hidden rounded-[24px] border border-zinc-200 bg-white shadow-sm">
       <div className="scroll-premium overflow-x-auto">
         <table className="min-w-full divide-y divide-zinc-100 text-sm">
           <thead className="bg-zinc-50 text-left text-xs uppercase tracking-[0.2em] text-zinc-500">
             <tr>
               {columns.map((column) => (
-                <th key={column} className="px-5 py-4 font-bold">
+                <th key={column} className="px-4 py-3.5 font-bold">
                   {column.replace(/_/g, " ")}
                 </th>
               ))}
@@ -93,7 +93,7 @@ export function AdminDataTable({
               rows.map((row, index) => (
                 <tr key={index} className="hover:bg-zinc-50/80">
                   {columns.map((column) => (
-                    <td key={column} className="max-w-[260px] truncate px-5 py-4">
+                    <td key={column} className="max-w-[260px] truncate px-4 py-3.5">
                       {isActionColumn(column) ? (
                         <AdminMasterRowActionButton
                           actionType={String(row[getActionField(column, "tipo")] || "")}
@@ -109,7 +109,7 @@ export function AdminDataTable({
               ))
             ) : (
               <tr>
-                <td colSpan={columns.length} className="px-5 py-10 text-center text-zinc-500">
+                <td colSpan={columns.length} className="px-4 py-8 text-center text-zinc-500">
                   Nenhum registro encontrado ainda.
                 </td>
               </tr>
@@ -129,7 +129,7 @@ function AdminSectionDiagnostics({
   if (!diagnostics.length) return null;
 
   return (
-    <section className="grid gap-4 lg:grid-cols-3">
+    <section className="grid gap-3 lg:grid-cols-3">
       {diagnostics.map((item) => {
         const content = (
           <>
@@ -142,7 +142,7 @@ function AdminSectionDiagnostics({
             <p className="mt-2 text-sm leading-6 opacity-75">{item.detail}</p>
           </>
         );
-        const className = `rounded-[26px] border p-5 shadow-sm ${diagnosticToneClass(item.tone)}`;
+        const className = `rounded-[22px] border p-4 shadow-sm ${diagnosticToneClass(item.tone)}`;
 
         if (item.href) {
           return (
@@ -172,18 +172,18 @@ function DashboardPanel(props: {
   children: ReactNode;
 }) {
   return (
-    <section className="rounded-[30px] border border-zinc-200 bg-white p-5 shadow-sm">
+    <section className="rounded-[24px] border border-zinc-200 bg-white p-4 shadow-sm">
       <div className="flex items-start justify-between gap-4">
         <div>
           <div className="text-xs font-bold uppercase tracking-[0.25em] text-zinc-400">
             {props.title}
           </div>
           {props.description ? (
-            <p className="mt-2 text-sm leading-6 text-zinc-500">{props.description}</p>
+            <p className="mt-1.5 text-sm leading-6 text-zinc-500">{props.description}</p>
           ) : null}
         </div>
       </div>
-      <div className="mt-4">{props.children}</div>
+      <div className="mt-3.5">{props.children}</div>
     </section>
   );
 }
@@ -197,10 +197,10 @@ function HealthRing({
   const stroke = Math.max(8, Math.min(100, health.score));
 
   return (
-    <div className="grid gap-5 lg:grid-cols-[220px_minmax(0,1fr)] lg:items-center">
+    <div className="grid gap-4 lg:grid-cols-[200px_minmax(0,1fr)] lg:items-center">
       <div className="flex items-center justify-center">
         <div
-          className={`relative flex h-44 w-44 items-center justify-center rounded-full bg-gradient-to-br ${ringClass}`}
+          className={`relative flex h-40 w-40 items-center justify-center rounded-full bg-gradient-to-br ${ringClass}`}
         >
           <div className="absolute inset-4 rounded-full border border-white/30 bg-white/65 backdrop-blur-sm" />
           <div
@@ -216,7 +216,7 @@ function HealthRing({
             <div className="text-xs font-black uppercase tracking-[0.28em] opacity-70">
               Saude
             </div>
-            <div className="mt-2 font-display text-5xl font-black">{health.score}</div>
+            <div className="mt-2 font-display text-4xl font-black">{health.score}</div>
             <div className="mt-2 text-sm font-bold uppercase tracking-[0.18em]">
               {health.label}
             </div>
@@ -225,13 +225,13 @@ function HealthRing({
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
-        <div className="rounded-[24px] border border-zinc-200 bg-zinc-50 p-4">
+        <div className="rounded-[20px] border border-zinc-200 bg-zinc-50 p-3.5">
           <div className="text-xs font-bold uppercase tracking-[0.22em] text-zinc-400">
             Diagnostico
           </div>
           <p className="mt-3 text-sm leading-6 text-zinc-700">{health.summary}</p>
         </div>
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid gap-2.5 sm:grid-cols-2">
           {[
             ["Erro 24h", `${health.errorRate24h.toFixed(1)}%`],
             ["Incidentes", String(health.openIncidents)],
@@ -241,12 +241,12 @@ function HealthRing({
           ].map(([label, value]) => (
             <div
               key={label}
-              className="rounded-[20px] border border-zinc-200 bg-white px-4 py-3"
+              className="rounded-[18px] border border-zinc-200 bg-white px-3.5 py-2.5"
             >
               <div className="text-[11px] font-bold uppercase tracking-[0.22em] text-zinc-400">
                 {label}
               </div>
-              <div className="mt-2 text-xl font-black text-zinc-900">{value}</div>
+              <div className="mt-1.5 text-lg font-black text-zinc-900">{value}</div>
             </div>
           ))}
         </div>
@@ -273,12 +273,12 @@ function BulletList({
   } as const;
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2.5">
       {items.length ? (
         items.map((item, index) => (
           <div
             key={`${item.title}-${index}`}
-            className={`rounded-[22px] border p-4 ${
+            className={`rounded-[18px] border p-3.5 ${
               accentMap[item.accent || "blue"]
             }`}
           >
@@ -288,11 +288,11 @@ function BulletList({
                 {item.meta}
               </div>
             </div>
-            <div className="mt-2 text-sm leading-6 text-zinc-700">{item.body}</div>
+            <div className="mt-1.5 text-sm leading-6 text-zinc-700">{item.body}</div>
           </div>
         ))
       ) : (
-        <div className="rounded-[22px] border border-zinc-200 bg-zinc-50 px-4 py-6 text-sm text-zinc-500">
+        <div className="rounded-[18px] border border-zinc-200 bg-zinc-50 px-4 py-5 text-sm text-zinc-500">
           Nada para mostrar ainda.
         </div>
       )}
@@ -316,12 +316,12 @@ function ExecutiveMetricCard({
   tone?: AdminKpi["tone"];
 }) {
   return (
-    <div className={`rounded-[26px] border p-5 ${toneClass(tone)}`}>
+    <div className={`rounded-[22px] border p-4 ${toneClass(tone)}`}>
       <div className="text-[11px] font-black uppercase tracking-[0.24em] opacity-60">
         {label}
       </div>
-      <div className="mt-3 font-display text-3xl font-black">{value}</div>
-      <div className="mt-2 text-sm leading-5 opacity-75">{hint}</div>
+      <div className="mt-2.5 font-display text-[1.8rem] font-black">{value}</div>
+      <div className="mt-1.5 text-sm leading-5 opacity-75">{hint}</div>
     </div>
   );
 }
@@ -347,13 +347,13 @@ function ExecutiveLinkCard({
   return (
     <Link
       href={href}
-      className={`group rounded-[26px] border p-5 transition hover:-translate-y-0.5 hover:shadow-lg ${classes}`}
+      className={`group rounded-[22px] border p-4 transition hover:-translate-y-0.5 hover:shadow-lg ${classes}`}
     >
       <div className="text-xs font-black uppercase tracking-[0.24em] opacity-60">
         {title}
       </div>
-      <div className="mt-3 text-sm leading-6 opacity-80">{body}</div>
-      <div className="mt-4 text-sm font-black uppercase tracking-[0.18em] opacity-80 transition group-hover:opacity-100">
+      <div className="mt-2.5 text-sm leading-6 opacity-80">{body}</div>
+      <div className="mt-3 text-sm font-black uppercase tracking-[0.18em] opacity-80 transition group-hover:opacity-100">
         Abrir agora
       </div>
     </Link>
@@ -374,30 +374,30 @@ function PrioritySignal({
   return (
     <Link
       href={href}
-      className="rounded-[24px] border border-white/10 bg-white/8 p-4 transition hover:bg-white/12"
+      className="rounded-[20px] border border-white/10 bg-white/8 p-3.5 transition hover:bg-white/12"
     >
       <div className="text-[11px] font-black uppercase tracking-[0.24em] text-amber-100/70">
         {label}
       </div>
-      <div className="mt-2 font-display text-3xl font-black text-white">
+      <div className="mt-1.5 font-display text-[1.8rem] font-black text-white">
         {value}
       </div>
-      <div className="mt-2 text-sm leading-5 text-zinc-300">{description}</div>
+      <div className="mt-1.5 text-sm leading-5 text-zinc-300">{description}</div>
     </Link>
   );
 }
 
 export function AdminSectionView({ data }: { data: AdminSectionData }) {
   return (
-    <div className="space-y-6">
-      <section className="rounded-[34px] bg-zinc-950 p-7 text-white shadow-sm">
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+    <div className="space-y-5">
+      <section className="rounded-[28px] bg-zinc-950 p-5 text-white shadow-sm">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <div className="text-xs font-bold uppercase tracking-[0.35em] text-amber-200">
               AdminMaster
             </div>
-            <h2 className="mt-3 font-display text-4xl font-black">{data.title}</h2>
-            <p className="mt-3 max-w-3xl text-sm leading-6 text-zinc-300">
+            <h2 className="mt-2.5 font-display text-[2rem] font-black">{data.title}</h2>
+            <p className="mt-2.5 max-w-3xl text-sm leading-6 text-zinc-300">
               {data.description}
             </p>
           </div>
@@ -417,15 +417,15 @@ export function AdminSectionView({ data }: { data: AdminSectionData }) {
       <AdminKpiGrid kpis={data.kpis} />
       <AdminSectionDiagnostics diagnostics={data.diagnostics || []} />
 
-      <section className="grid gap-5 xl:grid-cols-[1fr_360px]">
+      <section className="grid gap-4 xl:grid-cols-[1fr_340px]">
         <AdminDataTable rows={data.rows} columns={data.columns} />
 
         <aside className="space-y-4">
-          <div className="rounded-[28px] border border-zinc-200 bg-white p-5 shadow-sm">
+          <div className="rounded-[24px] border border-zinc-200 bg-white p-4 shadow-sm">
             <div className="text-xs font-bold uppercase tracking-[0.25em] text-zinc-400">
               Acoes do modulo
             </div>
-            <div className="mt-4 space-y-2">
+            <div className="mt-3 space-y-2">
               {data.actions.map((action) => (
                 <AdminMasterModuleActionButton
                   key={action}
@@ -436,7 +436,7 @@ export function AdminSectionView({ data }: { data: AdminSectionData }) {
             </div>
           </div>
 
-          <div className="rounded-[28px] border border-amber-200 bg-amber-50 p-5 text-amber-950">
+          <div className="rounded-[24px] border border-amber-200 bg-amber-50 p-4 text-amber-950">
             <div className="text-sm font-black">Regra de seguranca</div>
             <p className="mt-2 text-sm leading-6">
               Toda acao critica do AdminMaster deve passar pelo servidor,
@@ -516,22 +516,22 @@ export function AdminDashboardView({
   const primaryIncident = operational.incidents[0];
 
   return (
-    <div className="space-y-6">
-      <section className="overflow-hidden rounded-[38px] bg-[#16110b] p-6 text-white shadow-sm sm:p-7">
-        <div className="grid gap-7 xl:grid-cols-[minmax(0,1.15fr)_440px] xl:items-stretch">
+    <div className="space-y-5">
+      <section className="overflow-hidden rounded-[30px] bg-[#16110b] p-5 text-white shadow-sm sm:p-6">
+        <div className="grid gap-5 xl:grid-cols-[minmax(0,1.15fr)_400px] xl:items-stretch">
           <div>
-            <div className="inline-flex rounded-full border border-amber-200/20 bg-amber-200/10 px-4 py-2 text-xs font-black uppercase tracking-[0.32em] text-amber-100">
+            <div className="inline-flex rounded-full border border-amber-200/20 bg-amber-200/10 px-3 py-1.5 text-xs font-black uppercase tracking-[0.28em] text-amber-100">
               Sala de decisao
             </div>
-            <h2 className="mt-5 max-w-4xl font-display text-4xl font-black leading-[1.02] sm:text-6xl">
+            <h2 className="mt-4 max-w-4xl font-display text-[2.3rem] font-black leading-[1.02] sm:text-[3.7rem]">
               Comando comercial e operacional do SalaoPremium.
             </h2>
-            <p className="mt-5 max-w-3xl text-sm leading-6 text-zinc-300 sm:text-base">
+            <p className="mt-4 max-w-3xl text-sm leading-6 text-zinc-300 sm:text-[15px]">
               A primeira dobra agora mostra o que precisa de decisao hoje:
               receita, trials, cobrancas, suporte e estabilidade da plataforma.
             </p>
 
-            <div className="mt-7 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            <div className="mt-5 grid gap-2.5 md:grid-cols-2 xl:grid-cols-4">
               <PrioritySignal
                 label="Saude"
                 value={String(operational.health.score)}
@@ -559,24 +559,24 @@ export function AdminDashboardView({
             </div>
           </div>
 
-          <div className="flex flex-col justify-between rounded-[32px] border border-white/10 bg-white/10 p-5 backdrop-blur">
+          <div className="flex flex-col justify-between rounded-[24px] border border-white/10 bg-white/10 p-4 backdrop-blur">
             <div>
               <div className="text-xs font-black uppercase tracking-[0.28em] text-amber-100">
                 Proxima melhor acao
               </div>
-              <h3 className="mt-4 font-display text-3xl font-black">
+              <h3 className="mt-3 font-display text-[2rem] font-black">
                 {primarySuggestion?.title ||
                   primaryIncident?.recommendedAction ||
                   "Monitorar operacao do dia"}
               </h3>
-              <p className="mt-3 text-sm leading-6 text-zinc-300">
+              <p className="mt-2.5 text-sm leading-6 text-zinc-300">
                 {primarySuggestion?.detail ||
                   primaryIncident?.title ||
                   "Sem incidente critico no snapshot atual. Mantenha a rotina de cobrancas, tickets e alertas em dia."}
               </p>
             </div>
 
-            <div className="mt-6 grid gap-2">
+            <div className="mt-5 grid gap-2">
               {[
                 ["Cobrancas e inadimplencia", "/admin-master/assinaturas/cobrancas"],
                 ["Tickets urgentes", "/admin-master/tickets"],
@@ -586,7 +586,7 @@ export function AdminDashboardView({
                 <Link
                   key={href}
                   href={href}
-                  className="rounded-2xl bg-white px-4 py-3 text-sm font-black text-zinc-950 transition hover:bg-amber-100"
+                  className="rounded-2xl bg-white px-4 py-2.5 text-sm font-black text-zinc-950 transition hover:bg-amber-100"
                 >
                   {label}
                 </Link>
@@ -596,7 +596,7 @@ export function AdminDashboardView({
         </div>
       </section>
 
-      <section className="grid gap-4 lg:grid-cols-3">
+      <section className="grid gap-3 lg:grid-cols-3">
         <ExecutiveLinkCard
           href="/admin-master/assinaturas/cobrancas"
           title="Travas de receita"
@@ -617,7 +617,7 @@ export function AdminDashboardView({
         />
       </section>
 
-      <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_420px]">
+      <section className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_400px]">
         <DashboardPanel
           title="Saude Do Sistema"
           description="Score operacional em tempo real calculado por incidentes, taxa de erro, lentidao e impacto em saloes."
@@ -647,7 +647,7 @@ export function AdminDashboardView({
 
       <AdminKpiGrid kpis={kpis} />
 
-      <section className="grid gap-5 xl:grid-cols-[1.1fr_0.9fr]">
+      <section className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
         <DashboardPanel
           title="Centro De Incidentes"
           description="Onde a operacao esta quebrando agora e qual a resposta recomendada."
@@ -686,7 +686,7 @@ export function AdminDashboardView({
         </DashboardPanel>
       </section>
 
-      <section className="grid gap-5 xl:grid-cols-[1.1fr_0.9fr]">
+      <section className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
         <DashboardPanel
           title="Telemetria Por Modulo"
           description="Percentual de sucesso, falha, tempo medio, ultima falha e tendencia."
@@ -715,7 +715,7 @@ export function AdminDashboardView({
         </DashboardPanel>
       </section>
 
-      <section className="grid gap-5 xl:grid-cols-2">
+      <section className="grid gap-4 xl:grid-cols-2">
         <DashboardPanel
           title="Saloes Em Risco"
           description="Priorize suporte, retencao e correcao onde o churn esta mais perto."
@@ -737,15 +737,15 @@ export function AdminDashboardView({
         </DashboardPanel>
       </section>
 
-      <section className="grid gap-5 xl:grid-cols-2">
-        <div className="space-y-3">
+      <section className="grid gap-4 xl:grid-cols-2">
+        <div className="space-y-2.5">
           <h3 className="font-display text-2xl font-black">Saloes recentes</h3>
           <AdminDataTable
             rows={recentes}
             columns={["salao", "responsavel", "plano", "status", "criado"]}
           />
         </div>
-        <div className="space-y-3">
+        <div className="space-y-2.5">
           <h3 className="font-display text-2xl font-black">Planos ativos</h3>
           <AdminDataTable
             rows={planos}

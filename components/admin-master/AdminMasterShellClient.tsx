@@ -318,17 +318,17 @@ export default function AdminMasterShellClient({
       ) : null}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-[296px] flex-col overflow-hidden border-r border-white/10 bg-zinc-950 text-white transition-transform duration-300 lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-50 flex w-[280px] flex-col overflow-hidden border-r border-white/10 bg-zinc-950 text-white transition-transform duration-300 lg:translate-x-0 ${
           mobileOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        <div className="flex items-start justify-between border-b border-white/10 p-6">
+        <div className="flex items-start justify-between border-b border-white/10 p-5">
           <div>
             <div className="text-xs font-semibold uppercase tracking-[0.35em] text-amber-200">
               SalaoPremium
             </div>
-            <div className="mt-2 font-display text-2xl font-bold">AdminMaster</div>
-            <div className="mt-3 rounded-2xl border border-white/10 bg-white/5 p-3 text-xs leading-5 text-zinc-300">
+            <div className="mt-2 font-display text-[1.55rem] font-bold">AdminMaster</div>
+            <div className="mt-3 rounded-2xl border border-white/10 bg-white/5 p-2.5 text-xs leading-5 text-zinc-300">
               Centro de comando do SaaS, cobrancas, suporte, produto e operacao.
             </div>
           </div>
@@ -343,7 +343,7 @@ export default function AdminMasterShellClient({
         </div>
 
         <div className="scroll-premium min-h-0 flex-1 overflow-y-auto">
-          <nav className="space-y-6 px-4 py-5">
+          <nav className="space-y-5 px-4 py-4">
             {visibleGroups.map((group) => (
               <div key={group.label}>
                 <div className="px-3 text-[11px] font-black uppercase tracking-[0.28em] text-zinc-500">
@@ -360,7 +360,7 @@ export default function AdminMasterShellClient({
                         key={item.href}
                         href={item.href}
                         onClick={() => setMobileOpen(false)}
-                        className={`flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-semibold transition ${
+                        className={`flex items-center gap-3 rounded-2xl px-3 py-2 text-sm font-semibold transition ${
                           active
                             ? "bg-white text-zinc-950 shadow-lg shadow-black/20"
                             : "text-zinc-300 hover:bg-white/10 hover:text-white"
@@ -390,9 +390,9 @@ export default function AdminMasterShellClient({
             ))}
           </nav>
 
-          <div className="space-y-4 border-t border-white/10 p-4">
+          <div className="space-y-3.5 border-t border-white/10 p-4">
             {permissions.auditoria_ver ? (
-              <div className="rounded-3xl border border-white/10 bg-white/5 p-4">
+              <div className="rounded-[24px] border border-white/10 bg-white/5 p-3.5">
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <div className="text-xs font-semibold uppercase tracking-[0.25em] text-zinc-400">
@@ -406,7 +406,7 @@ export default function AdminMasterShellClient({
                   <button
                     type="button"
                     onClick={() => setAuditExpanded((current) => !current)}
-                    className="inline-flex items-center gap-1 rounded-full border border-white/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.18em] text-zinc-200 transition hover:bg-white/10"
+                    className="inline-flex items-center gap-1 rounded-full border border-white/10 px-3 py-1 text-[11px] font-black uppercase tracking-[0.18em] text-zinc-200 transition hover:bg-white/10"
                   >
                     {auditExpanded ? "Ocultar" : "Abrir"}
                     {auditExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
@@ -415,12 +415,12 @@ export default function AdminMasterShellClient({
 
                 {visibleAuditItems.length ? (
                   <div
-                    className={`mt-3 space-y-3 ${
+                    className={`mt-3 space-y-2.5 ${
                       auditExpanded ? "scroll-premium max-h-[280px] overflow-y-auto pr-1" : ""
                     }`}
                   >
                     {visibleAuditItems.map((item) => (
-                      <div key={item.id} className="rounded-2xl bg-white/5 p-3">
+                      <div key={item.id} className="rounded-2xl bg-white/5 p-2.5">
                         <div className="text-xs font-black uppercase tracking-[0.18em] text-amber-200">
                           {item.acao.replace(/_/g, " ")}
                         </div>
@@ -459,7 +459,7 @@ export default function AdminMasterShellClient({
               </div>
             ) : null}
 
-            <div className="rounded-3xl bg-white p-4 text-zinc-950">
+            <div className="rounded-[24px] bg-white p-3.5 text-zinc-950">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <div className="text-xs font-semibold uppercase tracking-[0.25em] text-zinc-400">
@@ -480,7 +480,7 @@ export default function AdminMasterShellClient({
                   type="button"
                   onClick={handleAdminLogout}
                   disabled={signingOut}
-                  className="inline-flex shrink-0 items-center gap-2 rounded-2xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-xs font-black uppercase tracking-[0.16em] text-zinc-700 transition hover:border-zinc-950 hover:bg-zinc-950 hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
+                  className="inline-flex shrink-0 items-center gap-2 rounded-2xl border border-zinc-200 bg-zinc-50 px-3 py-1.5 text-xs font-black uppercase tracking-[0.16em] text-zinc-700 transition hover:border-zinc-950 hover:bg-zinc-950 hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   <LogOut size={14} />
                   {signingOut ? "Saindo" : "Sair"}
@@ -491,14 +491,14 @@ export default function AdminMasterShellClient({
         </div>
       </aside>
 
-      <div className="lg:pl-[296px]">
-        <header className="sticky top-0 z-30 border-b border-zinc-200 bg-[#f7f5ef]/92 px-4 py-4 backdrop-blur-xl sm:px-5">
-          <div className="mx-auto space-y-4 max-w-[1600px]">
+      <div className="lg:pl-[280px]">
+        <header className="sticky top-0 z-30 border-b border-zinc-200 bg-[#f7f5ef]/92 px-4 py-3.5 backdrop-blur-xl sm:px-5">
+          <div className="mx-auto max-w-[1600px] space-y-3.5">
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-3">
                 <button
                   type="button"
-                  className="inline-flex rounded-2xl border border-zinc-200 bg-white p-3 text-zinc-700 shadow-sm lg:hidden"
+                  className="inline-flex rounded-2xl border border-zinc-200 bg-white p-2.5 text-zinc-700 shadow-sm lg:hidden"
                   onClick={() => setMobileOpen(true)}
                 >
                   <Menu size={18} />
@@ -508,7 +508,7 @@ export default function AdminMasterShellClient({
                   <div className="text-xs font-semibold uppercase tracking-[0.28em] text-zinc-500">
                     Painel interno
                   </div>
-                  <h1 className="font-display text-2xl font-bold text-zinc-950">
+                  <h1 className="font-display text-[1.45rem] font-bold text-zinc-950">
                     AdminMaster
                   </h1>
                 </div>
@@ -517,13 +517,13 @@ export default function AdminMasterShellClient({
               <div className="flex items-center gap-2">
                 <Link
                   href="/admin-master/alertas"
-                  className="rounded-full border border-red-200 bg-red-50 px-4 py-2 text-sm font-bold text-red-700 transition hover:border-red-300 hover:bg-red-100"
+                  className="rounded-full border border-red-200 bg-red-50 px-4 py-1.5 text-sm font-bold text-red-700 transition hover:border-red-300 hover:bg-red-100"
                 >
                   Alertas {shellData.alertasCriticos}
                 </Link>
                 <Link
                   href="/admin-master"
-                  className="rounded-full bg-zinc-950 px-4 py-2 text-sm font-bold text-white transition hover:bg-zinc-800"
+                  className="rounded-full bg-zinc-950 px-4 py-1.5 text-sm font-bold text-white transition hover:bg-zinc-800"
                 >
                   Dashboard admin
                 </Link>
@@ -531,7 +531,7 @@ export default function AdminMasterShellClient({
                   type="button"
                   onClick={handleAdminLogout}
                   disabled={signingOut}
-                  className="inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-white px-4 py-2 text-sm font-bold text-zinc-800 shadow-sm transition hover:border-zinc-950 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-white px-4 py-1.5 text-sm font-bold text-zinc-800 shadow-sm transition hover:border-zinc-950 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   <LogOut size={16} />
                   {signingOut ? "Saindo..." : "Sair"}
@@ -539,13 +539,13 @@ export default function AdminMasterShellClient({
               </div>
             </div>
 
-            <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
+            <div className="grid gap-2.5 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
               <AdminMasterGlobalSearch />
 
               <div className="flex flex-wrap gap-2">
                 <Link
                   href="/admin-master/tickets"
-                  className="inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-white px-4 py-2 text-sm font-bold text-zinc-800 shadow-sm transition hover:border-zinc-950 hover:bg-zinc-50"
+                  className="inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-white px-4 py-1.5 text-sm font-bold text-zinc-800 shadow-sm transition hover:border-zinc-950 hover:bg-zinc-50"
                 >
                   Tickets abertos
                   <span className="rounded-full bg-zinc-950 px-2 py-0.5 text-xs text-white">
@@ -554,7 +554,7 @@ export default function AdminMasterShellClient({
                 </Link>
                 <Link
                   href="/admin-master/planos"
-                  className="inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-white px-4 py-2 text-sm font-bold text-zinc-800 shadow-sm transition hover:border-zinc-950 hover:bg-zinc-50"
+                  className="inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-white px-4 py-1.5 text-sm font-bold text-zinc-800 shadow-sm transition hover:border-zinc-950 hover:bg-zinc-50"
                 >
                   Planos e recursos
                   <ChevronRight size={16} />
@@ -564,7 +564,7 @@ export default function AdminMasterShellClient({
           </div>
         </header>
 
-        <main className="mx-auto w-full max-w-[1600px] min-w-0 p-3 sm:p-4 lg:p-6 xl:p-8">
+        <main className="mx-auto w-full max-w-[1600px] min-w-0 p-3 sm:p-4 lg:p-5 xl:p-6">
           {children}
         </main>
       </div>
