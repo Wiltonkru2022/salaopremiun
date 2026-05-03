@@ -300,6 +300,14 @@ export function useAssinaturaPage() {
 
   const statusNormalizado = String(assinatura?.status || "").toLowerCase();
   const semAssinatura = !assinatura;
+  const jaPossuiAssinatura = Boolean(assinatura?.id);
+  const jaUsouTrial = Boolean(
+    jaPossuiAssinatura ||
+      salao?.trial_inicio_em ||
+      salao?.trial_fim_em ||
+      assinatura?.trial_inicio_em ||
+      assinatura?.trial_fim_em
+  );
   const ehStatusTrial = ["teste_gratis", "trial"].includes(statusNormalizado);
   const trialAtivo = ehStatusTrial && !resumoAssinatura.vencida;
   const trialVencido = ehStatusTrial && resumoAssinatura.vencida;
@@ -307,7 +315,7 @@ export function useAssinaturaPage() {
     ["ativo", "ativa", "pago"].includes(statusNormalizado) &&
     !resumoAssinatura.vencida;
 
-  const mostrarBotaoIniciarTrial = semAssinatura && podeGerenciar;
+  const mostrarBotaoIniciarTrial = semAssinatura && podeGerenciar && !jaUsouTrial;
 
   const mostrarBotaoRegularizar =
     podeGerenciar &&
@@ -319,7 +327,10 @@ export function useAssinaturaPage() {
     );
 
   const esconderBotaoPadraoRenovacao =
-    trialAtivo || (assinaturaAtivaPaga && !resumoAssinatura.vencendoLogo);
+    trialAtivo ||
+    (assinaturaAtivaPaga &&
+      !resumoAssinatura.vencendoLogo &&
+      tipoMudancaPlano == null);
 
   const mostrarSecaoRenovacao = true;
 
@@ -354,6 +365,8 @@ export function useAssinaturaPage() {
     mostrarBotaoIniciarTrial,
     esconderBotaoPadraoRenovacao,
     mostrarSecaoRenovacao,
+    jaPossuiAssinatura,
+    jaUsouTrial,
     historicoModalOpen,
     abrirHistoricoModal,
     fecharHistoricoModal,

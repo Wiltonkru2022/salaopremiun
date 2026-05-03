@@ -40,6 +40,8 @@ export default function AssinaturaPage() {
     mostrarBotaoIniciarTrial,
     esconderBotaoPadraoRenovacao,
     mostrarSecaoRenovacao,
+    jaPossuiAssinatura,
+    jaUsouTrial,
     historicoModalOpen,
     abrirHistoricoModal,
     fecharHistoricoModal,
@@ -127,6 +129,19 @@ export default function AssinaturaPage() {
         verificandoAgora={verificandoAgora}
         verificarPagamentoAgora={verificarPagamentoAgora}
       />
+
+      {jaPossuiAssinatura ? (
+        <section className="rounded-[24px] border border-sky-200 bg-sky-50 p-4 text-sm leading-6 text-sky-900 shadow-sm">
+          <strong>Voce ja possui uma assinatura.</strong> Escolha o pacote
+          desejado abaixo e conclua a cobranca para registrar o upgrade,
+          downgrade ou a renovacao do plano atual.
+        </section>
+      ) : !mostrarBotaoIniciarTrial && jaUsouTrial ? (
+        <section className="rounded-[24px] border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900 shadow-sm">
+          <strong>O teste gratis ja foi usado neste salao.</strong> Agora a
+          contratacao segue pelos planos pagos.
+        </section>
+      ) : null}
 
       <AssinaturaPlanoAtual
         assinatura={assinatura}

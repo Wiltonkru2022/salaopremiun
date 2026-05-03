@@ -64,7 +64,7 @@ export function formatarCvv(valor: string) {
 export function getStatusLabel(status?: string | null) {
   const s = String(status || "").toLowerCase();
 
-  if (s === "teste_gratis" || s === "trial") return "Teste grátis";
+  if (s === "teste_gratis" || s === "trial") return "Teste gratis";
   if (s === "ativo" || s === "ativa" || s === "pago") return "Ativa";
   if (s === "pendente" || s === "aguardando_pagamento") {
     return "Pagamento pendente";
@@ -102,7 +102,7 @@ export function getFormaPagamentoLabel(forma?: string | null) {
 
   if (s === "PIX") return "PIX";
   if (s === "BOLETO") return "Boleto";
-  if (s === "CREDIT_CARD") return "Cartão";
+  if (s === "CREDIT_CARD") return "Cartao";
 
   return "-";
 }
@@ -115,10 +115,10 @@ export function isStatusTrial(status?: string | null) {
 export function getNomePlano(plano?: string | null) {
   const s = String(plano || "").toLowerCase();
 
-  if (s === "basico") return "Básico";
+  if (s === "basico") return "Basico";
   if (s === "pro") return "Pro";
   if (s === "premium") return "Premium";
-  if (s === "teste_gratis" || s === "trial") return "Teste grátis";
+  if (s === "teste_gratis" || s === "trial") return "Teste gratis";
 
   return "-";
 }

@@ -1,4 +1,4 @@
-﻿import Link from "next/link";
+import Link from "next/link";
 import { getPlanoCatalogo, getPlanosOrdenados } from "@/lib/plans/catalog";
 import { createClient } from "@/lib/supabase/server";
 
@@ -40,14 +40,6 @@ function getPlanoAction(params: {
     };
   }
 
-  if (planoDestinoCodigo === "teste_gratis") {
-    return {
-      href: "/meu-plano",
-      label: "Período inicial",
-      variant: "muted" as const,
-    };
-  }
-
   if (planoAtualCodigo === "teste_gratis") {
     return {
       href: `/assinatura?plano=${planoDestinoCodigo}`,
@@ -70,6 +62,8 @@ export default async function CompararPlanosPage() {
   } = await supabase.auth.getUser();
 
   let planoAtual = "teste_gratis";
+  let jaPossuiAssinatura = false;
+  let jaUsouTrial = false;
 
   if (user) {
     const { data: usuario } = await supabase
@@ -79,34 +73,98 @@ export default async function CompararPlanosPage() {
       .maybeSingle();
 
     if (usuario?.id_salao) {
-      const { data: assinatura } = await supabase
-        .from("assinaturas")
-        .select("plano")
-        .eq("id_salao", usuario.id_salao)
-        .maybeSingle();
+      const [{ data: assinatura }, { data: salao }] = await Promise.all([
+        supabase
+          .from("assinaturas")
+          .select("id, plano, status, trial_inicio_em, trial_fim_em")
+          .eq("id_salao", usuario.id_salao)
+          .maybeSingle(),
+        supabase
+          .from("saloes")
+          .select("plano, status, trial_inicio_em, trial_fim_em")
+          .eq("id", usuario.id_salao)
+          .maybeSingle(),
+      ]);
 
-      planoAtual = String(assinatura?.plano || planoAtual);
+      planoAtual = String(
+        assinatura?.plano || salao?.plano || assinatura?.status || planoAtual
+      );
+      jaPossuiAssinatura = Boolean(assinatura?.id);
+      jaUsouTrial = Boolean(
+        jaPossuiAssinatura ||
+          salao?.trial_inicio_em ||
+          salao?.trial_fim_em ||
+          assinatura?.trial_inicio_em ||
+          assinatura?.trial_fim_em
+      );
     }
   }
 
   const planoAtualInfo = getPlanoCatalogo(planoAtual);
-  const planos = getPlanosOrdenados();
+  const mostrarPlanoTrial =
+    planoAtualInfo.codigo === "teste_gratis" || (!jaUsouTrial && !jaPossuiAssinatura);
+  const planos = getPlanosOrdenados().filter(
+    (plano) => plano.codigo !== "teste_gratis" || mostrarPlanoTrial
+  );
 
   return (
     <div className="space-y-4">
-      <section className="rounded-[26px] border border-zinc-200 bg-white p-5 shadow-sm md:p-6">
-        <div className="text-xs font-black uppercase tracking-[0.24em] text-zinc-400">
-          Comparar planos
+      <section className="overflow-hidden rounded-[28px] border border-zinc-200 bg-white shadow-sm">
+        <div className="grid gap-0 lg:grid-cols-[1.2fr_0.8fr]">
+          <div className="bg-zinc-950 p-6 text-white sm:p-7">
+            <div className="text-xs font-black uppercase tracking-[0.24em] text-emerald-200">
+              Comparar planos
+            </div>
+            <h1 className="mt-2 text-[2.1rem] font-black tracking-[-0.04em]">
+              Veja os pacotes de assinatura com clareza
+            </h1>
+            <p className="mt-3 max-w-3xl text-sm leading-6 text-zinc-300">
+              Compare preco, limites e recursos de cada plano sem ficar
+              adivinhando o que libera ou bloqueia no sistema.
+            </p>
+            <div className="mt-5 flex flex-wrap gap-2">
+              <Link
+                href="/meu-plano"
+                className="rounded-full bg-white px-5 py-2.5 text-sm font-black text-zinc-950 transition hover:-translate-y-0.5"
+              >
+                Voltar para Meu Plano
+              </Link>
+              <Link
+                href={`/assinatura?plano=${planoAtualInfo.codigo === "teste_gratis" ? "basico" : planoAtualInfo.codigo}`}
+                className="rounded-full border border-white/15 bg-white/10 px-5 py-2.5 text-sm font-black text-white transition hover:-translate-y-0.5 hover:bg-white/15"
+              >
+                Abrir assinatura
+              </Link>
+            </div>
+          </div>
+
+          <div className="bg-gradient-to-br from-emerald-50 via-white to-amber-50 p-6 sm:p-7">
+            <div className="rounded-[24px] border border-white/80 bg-white/90 p-4 shadow-sm">
+              <div className="text-xs font-black uppercase tracking-[0.20em] text-zinc-400">
+                Plano atual
+              </div>
+              <div className="mt-2 text-2xl font-black text-zinc-950">
+                {planoAtualInfo.nome}
+              </div>
+              <p className="mt-2 text-sm leading-6 text-zinc-500">
+                {jaPossuiAssinatura
+                  ? "Voce ja possui uma assinatura. Ao clicar em um pacote, a tela de assinatura abre com esse plano pronto para upgrade, downgrade ou renovacao."
+                  : mostrarPlanoTrial
+                    ? "Seu salao ainda pode usar o periodo inicial antes da primeira contratacao."
+                    : "O teste gratis ja foi usado neste salao. Agora o fluxo segue apenas pelos planos pagos."}
+              </p>
+            </div>
+          </div>
         </div>
-        <h1 className="mt-2 text-[2rem] font-black tracking-[-0.04em] text-zinc-950">
-          O que cada plano libera de verdade
-        </h1>
-        <p className="mt-3 max-w-3xl text-sm leading-6 text-zinc-500">
-          Aqui a comparação fica clara: preço, público ideal, limites e o que
-          libera ou bloqueia no sistema. O plano atual do salão é{" "}
-          <span className="font-bold text-zinc-900">{planoAtualInfo.nome}</span>.
-        </p>
       </section>
+
+      {jaPossuiAssinatura ? (
+        <section className="rounded-[24px] border border-sky-200 bg-sky-50 p-4 text-sm leading-6 text-sky-900 shadow-sm">
+          <strong>Voce ja possui uma assinatura em andamento.</strong> Escolha
+          o pacote desejado abaixo e nos vamos abrir a tela de assinatura com a
+          mudanca pronta para voce concluir.
+        </section>
+      ) : null}
 
       <section className="grid gap-4 xl:grid-cols-4">
         {planos.map((plano) => {
@@ -166,7 +224,7 @@ export default async function CompararPlanosPage() {
 
               <div className="mt-4 text-2xl font-black">
                 {plano.valorMensal === 0
-                  ? "Grátis"
+                  ? "Gratis"
                   : formatCurrency(plano.valorMensal)}
                 {plano.valorMensal > 0 ? (
                   <span
@@ -174,7 +232,7 @@ export default async function CompararPlanosPage() {
                       plano.destaque ? "text-zinc-300" : "text-zinc-500"
                     }`}
                   >
-                    / mês
+                    / mes
                   </span>
                 ) : null}
               </div>
@@ -198,15 +256,15 @@ export default async function CompararPlanosPage() {
                     <div>
                       {formatLimit(
                         plano.limites.agendamentosMensais,
-                        " agendamentos/mês"
+                        " agendamentos/mes"
                       )}
                     </div>
                     <div>{formatLimit(plano.limites.clientes, " clientes")}</div>
-                    <div>{formatLimit(plano.limites.servicos, " serviços")}</div>
+                    <div>{formatLimit(plano.limites.servicos, " servicos")}</div>
                     <div>
                       {formatLimit(plano.limites.profissionais, " profissionais")}
                     </div>
-                    <div>{formatLimit(plano.limites.usuarios, " usuários")}</div>
+                    <div>{formatLimit(plano.limites.usuarios, " usuarios")}</div>
                   </div>
                 </div>
 
@@ -258,5 +316,3 @@ export default async function CompararPlanosPage() {
     </div>
   );
 }
-
-

@@ -114,12 +114,12 @@ export default function AssinaturaPlanosPagamento({
           Gerenciar assinatura
         </h2>
         <p className="mt-2 text-sm text-zinc-500">
-          Seu teste grátis está ativo. Quando ele terminar, o sistema libera a
-          escolha de plano e a cobrança aqui.
+          Sua assinatura atual esta em dia. Quando o vencimento se aproximar ou
+          houver cobranca pendente, a troca de plano e a renovacao aparecem aqui.
         </p>
 
         <div className="mt-8 rounded-[24px] border border-dashed border-zinc-300 bg-zinc-50 p-8 text-center text-sm text-zinc-500">
-          Nenhuma cobrança disponível no momento.
+          Nenhuma cobranca disponivel no momento.
         </div>
       </section>
     );

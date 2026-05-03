@@ -14,6 +14,7 @@ export type SalaoRow = {
   id: string;
   nome: string | null;
   plano?: string | null;
+  status?: string | null;
   email?: string | null;
   telefone?: string | null;
   cpf_cnpj?: string | null;
@@ -21,6 +22,9 @@ export type SalaoRow = {
   cep?: string | null;
   numero?: string | null;
   complemento?: string | null;
+  trial_ativo?: boolean | null;
+  trial_inicio_em?: string | null;
+  trial_fim_em?: string | null;
   created_at: string | null;
 };
 
@@ -109,11 +113,11 @@ export const PLANOS_INFO: Record<
     valor: PLANOS_CATALOGO.basico.valorMensal,
     descricao: PLANOS_CATALOGO.basico.subtitulo,
     recursos: [
-      "250 agendamentos/mês",
+      "250 agendamentos/mes",
       "2.000 clientes",
-      "80 serviços",
+      "80 servicos",
       "3 profissionais",
-      "2 usuários",
+      "2 usuarios",
       "Agenda, caixa e venda",
     ],
     ordem: PLANOS_CATALOGO.basico.ordem,
@@ -123,12 +127,12 @@ export const PLANOS_INFO: Record<
     valor: PLANOS_CATALOGO.pro.valorMensal,
     descricao: PLANOS_CATALOGO.pro.subtitulo,
     recursos: [
-      "900 agendamentos/mês",
+      "900 agendamentos/mes",
       "10.000 clientes",
-      "250 serviços",
+      "250 servicos",
       "10 profissionais",
-      "5 usuários",
-      "Estoque, app e leitura avançada",
+      "5 usuarios",
+      "Estoque, app e leitura avancada",
     ],
     ordem: PLANOS_CATALOGO.pro.ordem,
   },
@@ -139,9 +143,9 @@ export const PLANOS_INFO: Record<
     recursos: [
       "Agendamentos ilimitados",
       "Clientes ilimitados",
-      "Serviços ilimitados",
+      "Servicos ilimitados",
       "Profissionais ilimitados",
-      "Usuários ilimitados",
+      "Usuarios ilimitados",
       "Tudo liberado",
     ],
     ordem: PLANOS_CATALOGO.premium.ordem,
@@ -151,12 +155,12 @@ export const PLANOS_INFO: Record<
     valor: PLANOS_CATALOGO.teste_gratis.valorMensal,
     descricao: PLANOS_CATALOGO.teste_gratis.subtitulo,
     recursos: [
-      "40 agendamentos no período",
+      "40 agendamentos no periodo",
       "100 clientes",
-      "20 serviços",
+      "20 servicos",
       "3 profissionais",
-      "1 usuário",
-      "Sem cobrança no período",
+      "1 usuario",
+      "Sem cobranca no periodo",
     ],
     ordem: PLANOS_CATALOGO.teste_gratis.ordem,
   },
