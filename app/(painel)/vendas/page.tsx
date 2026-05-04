@@ -91,6 +91,11 @@ export default function VendasPage() {
   const [itemFiltro, setItemFiltro] = useState("");
   const [valorMinimo, setValorMinimo] = useState("");
   const [valorMaximo, setValorMaximo] = useState("");
+  const [profissionalFiltroAplicado, setProfissionalFiltroAplicado] = useState("");
+  const [formaPagamentoFiltroAplicado, setFormaPagamentoFiltroAplicado] = useState("");
+  const [itemFiltroAplicado, setItemFiltroAplicado] = useState("");
+  const [valorMinimoAplicado, setValorMinimoAplicado] = useState("");
+  const [valorMaximoAplicado, setValorMaximoAplicado] = useState("");
 
   const [detalheOpen, setDetalheOpen] = useState(false);
   const [detalheVenda, setDetalheVenda] = useState<VendaDetalhe | null>(null);
@@ -126,7 +131,38 @@ export default function VendasPage() {
       void carregarVendas(idSalao, 0, false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [idSalao, dataInicio, dataFim, statusFiltro, acessoCarregado, permissoes]);
+  }, [
+    idSalao,
+    dataInicio,
+    dataFim,
+    statusFiltro,
+    acessoCarregado,
+    permissoes,
+    clienteFiltro,
+    profissionalFiltroAplicado,
+    formaPagamentoFiltroAplicado,
+    itemFiltroAplicado,
+    valorMinimoAplicado,
+    valorMaximoAplicado,
+  ]);
+
+  useEffect(() => {
+    const handle = window.setTimeout(() => {
+      setProfissionalFiltroAplicado(profissionalFiltro.trim());
+      setFormaPagamentoFiltroAplicado(formaPagamentoFiltro.trim());
+      setItemFiltroAplicado(itemFiltro.trim());
+      setValorMinimoAplicado(valorMinimo.trim());
+      setValorMaximoAplicado(valorMaximo.trim());
+    }, 300);
+
+    return () => window.clearTimeout(handle);
+  }, [
+    profissionalFiltro,
+    formaPagamentoFiltro,
+    itemFiltro,
+    valorMinimo,
+    valorMaximo,
+  ]);
 
   async function init() {
     try {
@@ -263,6 +299,48 @@ export default function VendasPage() {
       queryBusca = queryBusca.or(
         `and(status.eq.fechada,fechada_em.gte.${dataInicioRange.startIso},fechada_em.lte.${dataFimRange.endIso}),and(status.eq.cancelada,cancelada_em.gte.${dataInicioRange.startIso},cancelada_em.lte.${dataFimRange.endIso})`
       );
+    }
+
+    if (clienteFiltro) {
+      queryComandas = queryComandas.eq("id_cliente", clienteFiltro);
+      queryBusca = queryBusca.eq("id_cliente", clienteFiltro);
+    }
+
+    if (profissionalFiltroAplicado) {
+      queryBusca = queryBusca.ilike(
+        "profissionais_nomes",
+        `%${profissionalFiltroAplicado}%`
+      );
+    }
+
+    if (formaPagamentoFiltroAplicado) {
+      queryBusca = queryBusca.ilike(
+        "formas_pagamento",
+        `%${formaPagamentoFiltroAplicado}%`
+      );
+    }
+
+    if (itemFiltroAplicado) {
+      queryBusca = queryBusca.ilike(
+        "itens_descricoes",
+        `%${itemFiltroAplicado}%`
+      );
+    }
+
+    if (valorMinimoAplicado) {
+      const min = Number(valorMinimoAplicado.replace(",", "."));
+      if (!Number.isNaN(min)) {
+        queryComandas = queryComandas.gte("total", min);
+        queryBusca = queryBusca.gte("total", min);
+      }
+    }
+
+    if (valorMaximoAplicado) {
+      const max = Number(valorMaximoAplicado.replace(",", "."));
+      if (!Number.isNaN(max)) {
+        queryComandas = queryComandas.lte("total", max);
+        queryBusca = queryBusca.lte("total", max);
+      }
     }
 
     const [
@@ -768,12 +846,6 @@ export default function VendasPage() {
 
   const vendasFiltradas = useMemo(() => {
     const term = busca.trim().toLowerCase();
-    const itemTerm = itemFiltro.trim().toLowerCase();
-    const profissionalTerm = profissionalFiltro.trim().toLowerCase();
-    const formaTerm = formaPagamentoFiltro.trim().toLowerCase();
-
-    const min = valorMinimo ? Number(valorMinimo.replace(",", ".")) : null;
-    const max = valorMaximo ? Number(valorMaximo.replace(",", ".")) : null;
 
     const idsPermitidos = vendasBusca
       .filter((row) => {
@@ -782,7 +854,6 @@ export default function VendasPage() {
         const itens = String(row.itens_descricoes || "").toLowerCase();
         const formas = String(row.formas_pagamento || "").toLowerCase();
         const numero = String(row.numero);
-        const total = Number(row.total || 0);
 
         const matchBusca =
           !term ||
@@ -791,38 +862,12 @@ export default function VendasPage() {
           profissionais.includes(term) ||
           itens.includes(term) ||
           formas.includes(term);
-
-        const matchCliente = !clienteFiltro || row.id_cliente === clienteFiltro;
-        const matchProfissional = !profissionalTerm || profissionais.includes(profissionalTerm);
-        const matchForma = !formaTerm || formas.includes(formaTerm);
-        const matchItem = !itemTerm || itens.includes(itemTerm);
-        const matchMin = min === null || total >= min;
-        const matchMax = max === null || total <= max;
-
-        return (
-          matchBusca &&
-          matchCliente &&
-          matchProfissional &&
-          matchForma &&
-          matchItem &&
-          matchMin &&
-          matchMax
-        );
+        return matchBusca;
       })
       .map((row) => row.id);
 
     return vendas.filter((item) => idsPermitidos.includes(item.id));
-  }, [
-    vendas,
-    vendasBusca,
-    busca,
-    clienteFiltro,
-    profissionalFiltro,
-    formaPagamentoFiltro,
-    itemFiltro,
-    valorMinimo,
-    valorMaximo,
-  ]);
+  }, [vendas, vendasBusca, busca]);
 
   const totalVendasPeriodo = useMemo(
     () => vendasFiltradas.reduce((acc, item) => acc + Number(item.total || 0), 0),
