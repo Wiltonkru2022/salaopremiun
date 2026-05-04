@@ -195,7 +195,13 @@ export default function AgendaPage() {
     executarMotivo,
     setMotivoValor,
   } = useAgendaFeedback({
-    onRedirect: (path) => router.push(path),
+    onRedirect: (path) => {
+      if (/^https?:\/\//i.test(path)) {
+        window.location.assign(path);
+        return;
+      }
+      router.push(path);
+    },
   });
 
   const {

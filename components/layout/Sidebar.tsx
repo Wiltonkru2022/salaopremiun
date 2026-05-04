@@ -18,6 +18,7 @@ import {
   type PlanoRecursos,
 } from "@/components/layout/navigation";
 import type { ResumoAssinatura } from "@/lib/assinatura-utils";
+import { getAssinaturaUrl, getPainelUrl } from "@/lib/site-urls";
 
 type Props = {
   permissoes: Permissoes;
@@ -361,20 +362,13 @@ function SidebarLink({
 }
 
 function getRouteHref(href: string) {
-  if (typeof window === "undefined") {
-    return href;
+  if (
+    href === "/assinatura" ||
+    href.startsWith("/assinatura/") ||
+    href.startsWith("/assinatura?")
+  ) {
+    return getAssinaturaUrl(href);
   }
 
-  const host = window.location.hostname;
-  const isManagedHost = host.endsWith("salaopremiun.com.br");
-
-  if (!isManagedHost) {
-    return href;
-  }
-
-  if (href === "/assinatura" || href.startsWith("/assinatura/")) {
-    return `https://assinatura.salaopremiun.com.br${href}`;
-  }
-
-  return `https://painel.salaopremiun.com.br${href}`;
+  return getPainelUrl(href);
 }

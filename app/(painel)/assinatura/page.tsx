@@ -75,11 +75,11 @@ export default function AssinaturaPage() {
   const statusNormalizado = String(assinatura?.status || "").toLowerCase();
 
   const trialAtivo =
-    ["teste_gratis", "trial"].includes(statusNormalizado) &&
+    ["teste_gratis", "trial", "trialing"].includes(statusNormalizado) &&
     !resumoAssinatura.vencida;
 
   const assinaturaAtiva =
-    ["ativo", "ativa", "pago"].includes(statusNormalizado) &&
+    ["ativo", "ativa", "pago", "active", "paid"].includes(statusNormalizado) &&
     !resumoAssinatura.vencida;
 
   const mostrarCardAssinaturaAtiva =
