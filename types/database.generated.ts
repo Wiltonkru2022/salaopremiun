@@ -4836,6 +4836,7 @@ export type Database = {
       }
       ticket_mensagens: {
         Row: {
+          anexos_json: Json
           autor_nome: string | null
           autor_tipo: string
           criada_em: string
@@ -4848,6 +4849,7 @@ export type Database = {
           mensagem: string
         }
         Insert: {
+          anexos_json?: Json
           autor_nome?: string | null
           autor_tipo?: string
           criada_em?: string
@@ -4860,6 +4862,7 @@ export type Database = {
           mensagem: string
         }
         Update: {
+          anexos_json?: Json
           autor_nome?: string | null
           autor_tipo?: string
           criada_em?: string

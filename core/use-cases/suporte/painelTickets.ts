@@ -13,6 +13,13 @@ const replyTicketSchema = z.object({
   mensagem: z.string().trim().min(1, "Digite a mensagem para responder o ticket."),
 });
 
+const attachmentTicketSchema = z.object({
+  bytes: z.instanceof(Uint8Array),
+  contentType: z.string().trim().min(1, "Arquivo invalido."),
+  fileName: z.string().trim().min(1, "Arquivo invalido."),
+  mensagem: z.string().trim().nullable().optional(),
+});
+
 const statusTicketSchema = z.object({
   status: z.enum(["aberto", "fechado"]).default("aberto"),
   motivo: z.string().nullable().optional(),
@@ -41,6 +48,13 @@ function mapSupportError(error: unknown, fallback: string) {
 
   if (message === "INVALID_PAYLOAD") {
     return new SuporteTicketUseCaseError(fallback, 400);
+  }
+
+  if (message === "INVALID_ATTACHMENT") {
+    return new SuporteTicketUseCaseError(
+      "Envie imagem JPG, PNG, WEBP ou PDF com ate 10 MB.",
+      400
+    );
   }
 
   return new SuporteTicketUseCaseError(message || fallback, 500);
@@ -153,6 +167,42 @@ export async function responderPainelTicketUseCase(params: {
     }
 
     throw mapSupportError(error, "Erro ao responder ticket.");
+  }
+}
+
+export async function anexarPainelTicketUseCase(params: {
+  idTicket: string;
+  body: unknown;
+  service: SuporteTicketService;
+}) {
+  try {
+    const context = await params.service.getPainelContext();
+    const input = attachmentTicketSchema.parse(params.body);
+    const result = await params.service.anexarTicket({
+      context,
+      idTicket: params.idTicket,
+      bytes: input.bytes,
+      contentType: input.contentType,
+      fileName: input.fileName,
+      mensagem: input.mensagem || null,
+    });
+
+    return {
+      status: 200,
+      body: {
+        ok: true,
+        result,
+      },
+    };
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      throw new SuporteTicketUseCaseError(
+        error.issues[0]?.message || "Arquivo invalido.",
+        400
+      );
+    }
+
+    throw mapSupportError(error, "Erro ao enviar anexo.");
   }
 }
 

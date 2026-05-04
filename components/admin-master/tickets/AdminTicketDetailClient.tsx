@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { CircleAlert, MessageSquareText, Send } from "lucide-react";
+import { CircleAlert, MessageSquareText, Paperclip, Send } from "lucide-react";
 import type {
   AdminTicketDetail,
   TicketPrioridade,
@@ -299,6 +299,33 @@ export default function AdminTicketDetailClient({ detail, canEdit }: Props) {
                   {mensagem.autorNome}
                 </div>
                 <div className="whitespace-pre-line">{mensagem.mensagem}</div>
+                {mensagem.anexos.length ? (
+                  <div className="mt-3 space-y-2">
+                    {mensagem.anexos.map((anexo) => (
+                      <a
+                        key={`${mensagem.id}-${anexo.path}`}
+                        href={anexo.signedUrl || "#"}
+                        target="_blank"
+                        rel="noreferrer"
+                        className={`block rounded-2xl border px-3 py-2 text-xs ${
+                          mensagem.autorTipo === "admin"
+                            ? "border-white/15 bg-white/10 text-white"
+                            : "border-zinc-200 bg-zinc-50 text-zinc-700"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <Paperclip size={13} />
+                          <span className="truncate font-semibold">
+                            {anexo.fileName}
+                          </span>
+                        </div>
+                        <div className="mt-1 opacity-70">
+                          {(anexo.sizeBytes / 1024 / 1024).toFixed(2)} MB
+                        </div>
+                      </a>
+                    ))}
+                  </div>
+                ) : null}
                 <div className="mt-3 text-[11px] opacity-60">
                   {formatDate(mensagem.criadaEm)}
                 </div>

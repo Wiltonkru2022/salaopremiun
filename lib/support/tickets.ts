@@ -9,6 +9,25 @@ import {
 } from "@/lib/auth/mfa-recovery";
 import { registrarLogSistema } from "@/lib/system-logs";
 import type { Json } from "@/types/database.generated";
+import crypto from "node:crypto";
+
+const TICKET_ATTACHMENT_BUCKET = "ticket-evidencias";
+const TICKET_ATTACHMENT_MAX_BYTES = 10 * 1024 * 1024;
+const TICKET_ATTACHMENT_ALLOWED_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "application/pdf",
+]);
+
+type TicketAttachment = {
+  bucket: string;
+  path: string;
+  fileName: string;
+  contentType: string;
+  sizeBytes: number;
+  signedUrl?: string | null;
+};
 
 export type TicketCategoria =
   | "assinatura"
@@ -76,6 +95,7 @@ type TicketListRow = {
 };
 
 type TicketMessageRow = {
+  anexos_json?: Json | null;
   id?: string | null;
   id_ticket: string;
   mensagem: string | null;
@@ -151,6 +171,7 @@ export type TicketHeader = {
 };
 
 export type TicketDetailMessage = {
+  anexos: TicketAttachment[];
   id: string;
   autorTipo: string;
   autorNome: string;
@@ -370,8 +391,76 @@ function mapTicketHeader(row: TicketHeaderRow): TicketHeader {
   };
 }
 
-function mapTicketMessage(row: TicketMessageRow): TicketDetailMessage {
+function sanitizeFileName(value: string) {
+  const normalized = normalizeText(value)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9._-]+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+
+  return normalized || "arquivo";
+}
+
+function normalizeTicketAttachments(value: unknown): TicketAttachment[] {
+  if (!Array.isArray(value)) return [];
+
+  return value
+    .map((item) => {
+      if (!item || typeof item !== "object") return null;
+      const candidate = item as Record<string, unknown>;
+      const bucket = normalizeText(candidate.bucket);
+      const path = normalizeText(candidate.path);
+      const fileName = normalizeText(candidate.fileName);
+      const contentType = normalizeText(candidate.contentType);
+      const sizeBytes = Number(candidate.sizeBytes || 0);
+
+      if (!bucket || !path || !fileName) return null;
+
+      return {
+        bucket,
+        path,
+        fileName,
+        contentType: contentType || "application/octet-stream",
+        sizeBytes: Number.isFinite(sizeBytes) ? sizeBytes : 0,
+      } satisfies TicketAttachment;
+    })
+    .filter((item): item is TicketAttachment => Boolean(item));
+}
+
+async function signTicketAttachments(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  attachments: TicketAttachment[]
+) {
+  if (!attachments.length) return [];
+
+  const signed = await Promise.all(
+    attachments.map(async (attachment) => {
+      const { data } = await supabase.storage
+        .from(attachment.bucket)
+        .createSignedUrl(attachment.path, 60 * 60);
+
+      return {
+        ...attachment,
+        signedUrl: data?.signedUrl || null,
+      };
+    })
+  );
+
+  return signed;
+}
+
+async function mapTicketMessage(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  row: TicketMessageRow
+): Promise<TicketDetailMessage> {
+  const anexos = await signTicketAttachments(
+    supabase,
+    normalizeTicketAttachments(row.anexos_json)
+  );
+
   return {
+    anexos,
     id: normalizeText(row.id) || crypto.randomUUID(),
     autorTipo: normalizeText(row.autor_tipo) || "sistema",
     autorNome:
@@ -622,11 +711,14 @@ export async function getSalaoTicketDetail(params: {
         throw new Error(eventosError.message || "Erro ao carregar eventos.");
       }
 
+      const rawMessages = (mensagens || []) as TicketMessageRow[];
+      const detailedMessages = await Promise.all(
+        rawMessages.map((row) => mapTicketMessage(supabase, row))
+      );
+
       return {
         ticket: mapTicketHeader(ticket as TicketHeaderRow),
-        mensagens: ((mensagens || []) as TicketMessageRow[]).map(
-          mapTicketMessage
-        ),
+        mensagens: detailedMessages,
         eventos: ((eventos || []) as TicketEventRow[]).map(mapTicketEvent),
       };
     }
@@ -702,11 +794,14 @@ export async function getAdminTicketDetail(
         throw new Error(eventosError.message || "Erro ao carregar eventos.");
       }
 
+      const rawMessages = (mensagens || []) as TicketMessageRow[];
+      const detailedMessages = await Promise.all(
+        rawMessages.map((row) => mapTicketMessage(supabase, row))
+      );
+
       return {
         ticket: mapTicketHeader(header),
-        mensagens: ((mensagens || []) as TicketMessageRow[]).map(
-          mapTicketMessage
-        ),
+        mensagens: detailedMessages,
         eventos: ((eventos || []) as TicketEventRow[]).map(mapTicketEvent),
         salao: salao
           ? {
@@ -1459,4 +1554,161 @@ export async function updateAdminTicketStatus(params: {
     status: statusResult.status,
     prioridade: statusResult.prioridade,
   };
+}
+
+export async function uploadSalaoTicketAttachment(params: {
+  context: SalaoTicketContext;
+  idTicket: string;
+  fileName: string;
+  contentType: string;
+  bytes: Uint8Array;
+  mensagem?: string | null;
+}) {
+  const fileName = sanitizeFileName(params.fileName);
+  const contentType = normalizeText(params.contentType).toLowerCase();
+  const mensagem = normalizeText(params.mensagem) || "Anexo enviado para analise.";
+
+  if (!fileName || !params.bytes?.byteLength) {
+    throw new Error("INVALID_PAYLOAD");
+  }
+
+  if (
+    !TICKET_ATTACHMENT_ALLOWED_TYPES.has(contentType) ||
+    params.bytes.byteLength > TICKET_ATTACHMENT_MAX_BYTES
+  ) {
+    throw new Error("INVALID_ATTACHMENT");
+  }
+
+  const attachmentPath = `${params.context.idSalao}/${params.idTicket}/${Date.now()}-${crypto.randomUUID()}-${fileName}`;
+
+  const nextStatus = await runAdminOperation({
+    action: "support_upload_salao_ticket_attachment",
+    actorId:
+      params.context.origem === "painel_salao"
+        ? params.context.idUsuario
+        : params.context.idProfissional,
+    idSalao: params.context.idSalao,
+    run: async (supabase) => {
+      const { data: ticket, error } = await supabase
+        .from("tickets")
+        .select("id, status")
+        .eq("id", params.idTicket)
+        .eq("id_salao", params.context.idSalao)
+        .maybeSingle();
+
+      if (error) {
+        throw new Error(error.message || "Erro ao localizar ticket.");
+      }
+
+      if (!ticket) {
+        throw new Error("NOT_FOUND");
+      }
+
+      const { error: uploadError } = await supabase.storage
+        .from(TICKET_ATTACHMENT_BUCKET)
+        .upload(attachmentPath, params.bytes, {
+          contentType,
+          upsert: false,
+        });
+
+      if (uploadError) {
+        throw new Error(uploadError.message || "Erro ao enviar anexo.");
+      }
+
+      const attachmentMeta = [
+        {
+          bucket: TICKET_ATTACHMENT_BUCKET,
+          path: attachmentPath,
+          fileName,
+          contentType,
+          sizeBytes: params.bytes.byteLength,
+        },
+      ] satisfies TicketAttachment[];
+
+      const messagePayload: {
+        anexos_json: Json;
+        autor_nome: string;
+        autor_tipo: string;
+        id_profissional?: string;
+        id_ticket: string;
+        id_usuario_salao?: string;
+        interna: boolean;
+        mensagem: string;
+      } = {
+        anexos_json: attachmentMeta as unknown as Json,
+        autor_nome: params.context.nome,
+        autor_tipo:
+          params.context.origem === "app_profissional" ? "profissional" : "usuario",
+        id_ticket: params.idTicket,
+        interna: false,
+        mensagem,
+      };
+
+      if (params.context.origem === "app_profissional") {
+        messagePayload.id_profissional = params.context.idProfissional;
+      } else {
+        messagePayload.id_usuario_salao = params.context.idUsuario;
+      }
+
+      const { error: messageError } = await supabase
+        .from("ticket_mensagens")
+        .insert(messagePayload);
+
+      if (messageError) {
+        throw new Error(messageError.message || "Erro ao registrar anexo.");
+      }
+
+      const statusAtual = normalizeStatus(ticket.status);
+      const nextStatus =
+        statusAtual === "fechado" || statusAtual === "resolvido"
+          ? "aberto"
+          : "aguardando_tecnico";
+      const now = new Date().toISOString();
+
+      await supabase
+        .from("tickets")
+        .update({
+          status: nextStatus,
+          atualizado_em: now,
+          ultima_interacao_em: now,
+          fechado_em: null,
+        })
+        .eq("id", params.idTicket)
+        .eq("id_salao", params.context.idSalao);
+
+      await supabase.from("ticket_eventos").insert({
+        id_ticket: params.idTicket,
+        evento: "anexo_cliente",
+        descricao:
+          params.context.origem === "app_profissional"
+            ? "Novo anexo enviado pelo app profissional."
+            : "Novo anexo enviado pelo salao.",
+        payload_json: {
+          origem: params.context.origem,
+          arquivo: fileName,
+          content_type: contentType,
+          proximo_status: nextStatus,
+        } as Json,
+      });
+
+      return nextStatus;
+    },
+  });
+
+  await registrarLogSistema({
+    gravidade: "info",
+    modulo: "suporte",
+    idSalao: params.context.idSalao,
+    idUsuario:
+      params.context.origem === "painel_salao" ? params.context.idUsuario : null,
+    mensagem: "Anexo enviado para ticket do salao.",
+    detalhes: {
+      arquivo: fileName,
+      id_ticket: params.idTicket,
+      origem: params.context.origem,
+      status: nextStatus,
+    },
+  });
+
+  return { ok: true, status: nextStatus };
 }

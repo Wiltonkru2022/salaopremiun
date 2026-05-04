@@ -5,6 +5,7 @@ import {
   getSalaoTicketDetail,
   listSalaoTickets,
   replySalaoTicket,
+  uploadSalaoTicketAttachment,
   updateSalaoTicketStatus,
 } from "@/lib/support/tickets";
 
@@ -32,6 +33,10 @@ export function createSuporteTicketService() {
 
     responderTicket(params: Parameters<typeof replySalaoTicket>[0]) {
       return replySalaoTicket(params);
+    },
+
+    anexarTicket(params: Parameters<typeof uploadSalaoTicketAttachment>[0]) {
+      return uploadSalaoTicketAttachment(params);
     },
 
     atualizarStatus(params: Parameters<typeof updateSalaoTicketStatus>[0]) {
