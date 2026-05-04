@@ -966,7 +966,7 @@ export default function ComissoesPage() {
               </div>
             </div>
             <div className="overflow-x-auto">
-              <table className="min-w-[1320px] w-full">
+              <table className="min-w-[1180px] w-full">
                 <thead>
                   <tr className="border-b border-zinc-200 bg-zinc-50 text-left text-xs uppercase tracking-[0.14em] text-zinc-500">
                     <th className="px-4 py-3">Pessoa</th>
@@ -979,7 +979,7 @@ export default function ComissoesPage() {
                     ) : null}
                     <th className="px-4 py-3">Comissão</th>
                     <th className="px-4 py-3">Status</th>
-                    <th className="px-4 py-3">Pago em</th>
+                    <th className="px-4 py-3">Pago</th>
                     <th className="px-4 py-3 text-right">Ações</th>
                   </tr>
                 </thead>
@@ -1008,8 +1008,8 @@ export default function ComissoesPage() {
                               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-zinc-100 text-sm font-bold text-zinc-700">
                                 {getInitials(nome) || <User2 size={16} />}
                               </div>
-                              <div>
-                                <div className="font-semibold text-zinc-900">
+                              <div className="min-w-0">
+                                <div className="truncate font-semibold text-zinc-900">
                                   {nome}
                                 </div>
                                 <div className="text-xs text-zinc-500">
@@ -1020,7 +1020,7 @@ export default function ComissoesPage() {
                               </div>
                             </div>
                           </td>
-                          <td className="px-4 py-3.5">
+                          <td className="px-4 py-3.5 min-w-[220px]">
                             <ComboDescriptionBlock
                               descricao={item.descricao}
                               observacoes={item.observacoes}
