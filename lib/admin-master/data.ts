@@ -1933,16 +1933,28 @@ export async function getAdminMasterSection(
           : "Falha ao sincronizar eventos reais do Asaas.";
     }
 
-    const [{ data: eventos }, { data: saloes }] = await Promise.all([
-      supabase
-        .from("eventos_webhook")
-        .select(
-          "chave, origem, evento, id_salao, status, tentativas, erro_texto, payload_json, resposta_json, recebido_em, processado_em"
-        )
-        .order("recebido_em", { ascending: false })
-        .limit(150),
-      supabase.from("saloes").select("id, nome").limit(1000),
-    ]);
+    const { data: eventos } = await supabase
+      .from("eventos_webhook")
+      .select(
+        "chave, origem, evento, id_salao, status, tentativas, erro_texto, payload_json, resposta_json, recebido_em, processado_em"
+      )
+      .order("recebido_em", { ascending: false })
+      .limit(150);
+
+    const webhookSalaoIds = Array.from(
+      new Set(
+        ((eventos || []) as { id_salao?: string | null }[])
+          .map((row) => row.id_salao)
+          .filter(Boolean)
+      )
+    ) as string[];
+    const { data: saloes } = webhookSalaoIds.length
+      ? await supabase
+          .from("saloes")
+          .select("id, nome")
+          .in("id", webhookSalaoIds)
+          .limit(webhookSalaoIds.length)
+      : { data: [] as Array<{ id: string; nome?: string | null }> };
 
     const salaoById = new Map(
       ((saloes || []) as { id: string; nome?: string | null }[]).map((salao) => [
@@ -2097,12 +2109,8 @@ export async function getAdminMasterSection(
           : "Falha ao sincronizar webhooks para operacao.";
     }
 
-    const [
-      { data: crons },
-      { data: webhooks },
-      { data: checkoutLocks },
-      { data: saloes },
-    ] = await Promise.all([
+    const [{ data: crons }, { data: webhooks }, { data: checkoutLocks }] =
+      await Promise.all([
       supabase
         .from("eventos_cron")
         .select("nome, status, resumo, erro_texto, iniciado_em, finalizado_em")
@@ -2124,8 +2132,27 @@ export async function getAdminMasterSection(
         .in("status", ["processando", "erro", "expirado"])
         .order("updated_at", { ascending: false })
         .limit(40),
-      supabase.from("saloes").select("id, nome").limit(1000),
     ]);
+
+    const operacaoSalaoIds = Array.from(
+      new Set(
+        [
+          ...((webhooks || []) as { id_salao?: string | null }[]).map(
+            (row) => row.id_salao
+          ),
+          ...((checkoutLocks || []) as { id_salao?: string | null }[]).map(
+            (row) => row.id_salao
+          ),
+        ].filter(Boolean)
+      )
+    ) as string[];
+    const { data: saloes } = operacaoSalaoIds.length
+      ? await supabase
+          .from("saloes")
+          .select("id, nome")
+          .in("id", operacaoSalaoIds)
+          .limit(operacaoSalaoIds.length)
+      : { data: [] as Array<{ id: string; nome?: string | null }> };
 
     const salaoById = new Map(
       ((saloes || []) as { id: string; nome?: string | null }[]).map((salao) => [
