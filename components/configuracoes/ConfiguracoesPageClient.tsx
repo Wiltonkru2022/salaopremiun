@@ -20,7 +20,6 @@ import {
   Clock3,
   CalendarDays,
   Percent,
-  Palette,
   ShieldAlert,
   Users,
   Plus,
@@ -80,7 +79,7 @@ const sectionMeta: Record<
   },
   sistema: {
     title: "Sistema",
-    description: "Preferências visuais e regras gerais do sistema.",
+    description: "Preferências de leitura para quem usa o painel no dia a dia.",
   },
   usuarios: {
     title: "Usuários do sistema",
@@ -492,6 +491,8 @@ const { data, error } = await supabase
         taxa_maquininha_pix: configForm.taxa_maquininha_pix,
         repassa_taxa_cliente: configForm.repassa_taxa_cliente,
         desconta_taxa_profissional: configForm.desconta_taxa_profissional,
+        permitir_reabrir_venda: configForm.permitir_reabrir_venda,
+        exigir_cliente_na_venda: configForm.exigir_cliente_na_venda,
       });
 
       setMsg("Configurações de caixa e taxas salvas com sucesso.");
@@ -598,6 +599,13 @@ const { data, error } = await supabase
     !usuarioEditandoId &&
     limiteUsuariosPlano != null &&
     usoUsuariosPlano >= limiteUsuariosPlano;
+  const usuarioEditando = useMemo(
+    () => usuarios.find((usuario) => usuario.id === usuarioEditandoId) || null,
+    [usuarios, usuarioEditandoId]
+  );
+  const editandoUsuarioAdmin = Boolean(
+    usuarioEditandoId && usuarioEditando?.nivel === "admin"
+  );
 
   async function salvarUsuario() {
     if (!idSalao) return;
@@ -623,7 +631,12 @@ const { data, error } = await supabase
         throw new Error("A senha deve ter pelo menos 6 caracteres.");
       }
 
-      if (usuarioEditandoId && usuarioForm.senha.trim() && usuarioForm.senha.trim().length < 6) {
+      if (
+        usuarioEditandoId &&
+        !editandoUsuarioAdmin &&
+        usuarioForm.senha.trim() &&
+        usuarioForm.senha.trim().length < 6
+      ) {
         throw new Error("A nova senha deve ter pelo menos 6 caracteres.");
       }
 
@@ -645,7 +658,8 @@ const { data, error } = await supabase
             nome: usuarioForm.nome.trim(),
             email: usuarioForm.email.trim().toLowerCase(),
             nivel: usuarioForm.nivel,
-            senha: usuarioForm.senha.trim() || undefined,
+            senha:
+              editandoUsuarioAdmin ? undefined : usuarioForm.senha.trim() || undefined,
             status: usuarioForm.status,
           }),
         });
@@ -1208,6 +1222,30 @@ const { data, error } = await supabase
                 label="Descontar taxa do profissional"
                 description="Quando ativo, a taxa pode impactar no cálculo da comissão do profissional."
               />
+
+              <Toggle
+                checked={configForm.permitir_reabrir_venda}
+                onChange={(checked) =>
+                  setConfigForm((prev) => ({
+                    ...prev,
+                    permitir_reabrir_venda: checked,
+                  }))
+                }
+                label="Permitir reabrir venda"
+                description="Ativa a ação de mandar venda fechada novamente para o caixa."
+              />
+
+              <Toggle
+                checked={configForm.exigir_cliente_na_venda}
+                onChange={(checked) =>
+                  setConfigForm((prev) => ({
+                    ...prev,
+                    exigir_cliente_na_venda: checked,
+                  }))
+                }
+                label="Exigir cliente na venda"
+                description="Quando ativo, o sistema exige cliente vinculado antes de finalizar operações."
+              />
             </div>
 
             <div className="mt-5 flex justify-end">
@@ -1233,34 +1271,9 @@ const { data, error } = await supabase
           <SectionCard
             icon={<MonitorCog size={18} />}
             title="Sistema"
-            description="Ajustes gerais, permissões e preferências visuais."
+            description="Ajustes visuais para deixar a leitura do painel mais confortável."
           >
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <Field label="Cor principal">
-                <div className="flex items-center gap-3">
-                  <input
-                    type="color"
-                    value={configForm.cor_primaria}
-                    onChange={(e) =>
-                      setConfigForm((prev) => ({ ...prev, cor_primaria: e.target.value }))
-                    }
-                    className="h-12 w-16 cursor-pointer rounded-xl border border-zinc-300 bg-white"
-                  />
-                  <div className="flex-1">
-                    <div className="relative">
-                      <TextInput
-                        value={configForm.cor_primaria}
-                        onChange={(e) =>
-                          setConfigForm((prev) => ({ ...prev, cor_primaria: e.target.value }))
-                        }
-                        className="pl-11"
-                      />
-                      <Palette className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={16} />
-                    </div>
-                  </div>
-                </div>
-              </Field>
-
+            <div className="grid grid-cols-1 gap-4 md:max-w-sm">
               <Field label="Layout">
                 <SelectInput
                   value={configForm.modo_compacto ? "compacto" : "normal"}
@@ -1274,33 +1287,10 @@ const { data, error } = await supabase
                   <option value="normal">Normal</option>
                   <option value="compacto">Compacto</option>
                 </SelectInput>
+                <p className="mt-2 text-sm leading-6 text-zinc-500">
+                  Ajusta a densidade visual das telas para quem prefere um painel mais enxuto.
+                </p>
               </Field>
-            </div>
-
-            <div className="mt-5 space-y-3">
-              <Toggle
-                checked={configForm.permitir_reabrir_venda}
-                onChange={(checked) =>
-                  setConfigForm((prev) => ({
-                    ...prev,
-                    permitir_reabrir_venda: checked,
-                  }))
-                }
-                label="Permitir reabrir venda"
-                description="Ativa a ação de mandar venda fechada novamente para o caixa."
-              />
-
-              <Toggle
-                checked={configForm.exigir_cliente_na_venda}
-                onChange={(checked) =>
-                  setConfigForm((prev) => ({
-                    ...prev,
-                    exigir_cliente_na_venda: checked,
-                  }))
-                }
-                label="Exigir cliente na venda"
-                description="Quando ativo, o sistema exige cliente vinculado antes de finalizar operações."
-              />
             </div>
 
             <div className="mt-5 flex justify-end">
@@ -1537,24 +1527,35 @@ const { data, error } = await supabase
                 </div>
               </Field>
 
-              <Field label={usuarioEditandoId ? "Nova senha (opcional)" : "Senha"}>
-                <div className="relative">
-                  <TextInput
-                    type="password"
-                    value={usuarioForm.senha}
-                    onChange={(e) =>
-                      setUsuarioForm((prev) => ({ ...prev, senha: e.target.value }))
-                    }
-                    placeholder={
-                      usuarioEditandoId
-                        ? "Preencha apenas se quiser trocar a senha"
-                        : "Digite a senha do usuário"
-                    }
-                    className="pl-11"
-                  />
-                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={16} />
+              {editandoUsuarioAdmin ? (
+                <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-4">
+                  <div className="text-sm font-semibold text-zinc-900">
+                    Senha protegida
+                  </div>
+                  <p className="mt-1 text-sm leading-6 text-zinc-500">
+                    A senha de um usuário admin é alterada apenas pelo próprio perfil do salão.
+                  </p>
                 </div>
-              </Field>
+              ) : (
+                <Field label={usuarioEditandoId ? "Nova senha (opcional)" : "Senha"}>
+                  <div className="relative">
+                    <TextInput
+                      type="password"
+                      value={usuarioForm.senha}
+                      onChange={(e) =>
+                        setUsuarioForm((prev) => ({ ...prev, senha: e.target.value }))
+                      }
+                      placeholder={
+                        usuarioEditandoId
+                          ? "Preencha apenas se quiser trocar a senha"
+                          : "Digite a senha do usuário"
+                      }
+                      className="pl-11"
+                    />
+                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={16} />
+                  </div>
+                </Field>
+              )}
 
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <Field label="Nível">

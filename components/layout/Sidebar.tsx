@@ -1,14 +1,13 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import clsx from "clsx";
 import {
   AlertTriangle,
   ChevronRight,
   CreditCard,
   ExternalLink,
-  Search,
   X,
 } from "lucide-react";
 import {
@@ -50,25 +49,13 @@ export default function Sidebar({
   onClose,
 }: Props) {
   const pathname = usePathname();
-  const [search, setSearch] = useState("");
   const itemsFiltrados = useMemo(
     () => filterPainelNavigation(permissoes, nivel, planoRecursos),
     [permissoes, nivel, planoRecursos]
   );
-  const searchTerm = search.trim().toLowerCase();
-  const itemsVisiveis = useMemo(() => {
-    if (!searchTerm) return itemsFiltrados;
-
-    return itemsFiltrados.filter((item) =>
-      [item.label, item.shortLabel, item.description]
-        .join(" ")
-        .toLowerCase()
-        .includes(searchTerm)
-    );
-  }, [itemsFiltrados, searchTerm]);
   const groupedItems = useMemo(
-    () => buildNavigationGroups(itemsVisiveis),
-    [itemsVisiveis]
+    () => buildNavigationGroups(itemsFiltrados),
+    [itemsFiltrados]
   );
   const subscriptionAtRisk = Boolean(
     resumoAssinatura?.bloqueioTotal || resumoAssinatura?.vencendoLogo
@@ -129,21 +116,6 @@ export default function Sidebar({
             >
               <X size={18} />
             </button>
-          </div>
-
-          <div className="px-4 pb-3 lg:px-3.5 xl:px-4">
-            <label className="relative block">
-              <Search
-                size={17}
-                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400"
-              />
-              <input
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder="Buscar..."
-                className="h-10 w-full rounded-[14px] border border-zinc-200 bg-zinc-50 pl-10 pr-3 text-sm font-medium text-zinc-800 outline-none transition placeholder:text-zinc-400 focus:border-zinc-400 focus:bg-white focus:ring-2 focus:ring-zinc-100"
-              />
-            </label>
           </div>
 
           <nav className="scroll-premium min-h-0 flex-1 overflow-y-auto px-3 pb-3">
@@ -216,34 +188,8 @@ export default function Sidebar({
                 </div>
               ))}
 
-              {searchTerm && itemsVisiveis.length === 0 ? (
-                <div className="rounded-[18px] border border-dashed border-zinc-200 bg-zinc-50 px-3 py-4 text-center text-xs font-medium text-zinc-500">
-                  Nenhum modulo encontrado.
-                </div>
-              ) : null}
             </div>
           </nav>
-
-          <div className="border-t border-zinc-100 px-4 py-3.5">
-            <div className="rounded-[16px] border border-zinc-200 bg-zinc-50 p-3">
-              <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-400">
-                Plano atual
-              </div>
-              <div className="mt-1 truncate text-sm font-semibold text-zinc-950">
-                {planoNome || "Sem plano"}
-              </div>
-              {canSeeAssinatura ? (
-                <a
-                  href={getRouteHref("/assinatura")}
-                  onClick={onClose}
-                  className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-800 transition hover:bg-zinc-100"
-                >
-                  <CreditCard size={14} />
-                  Ver assinatura
-                </a>
-              ) : null}
-            </div>
-          </div>
         </div>
       </aside>
     </>
@@ -258,14 +204,18 @@ type SidebarGroup = {
 const GROUPS: Array<{ label: string; hrefs: string[] }> = [
   {
     label: "Principal",
-    hrefs: ["/dashboard", "/agenda", "/clientes", "/profissionais"],
+    hrefs: ["/dashboard", "/agenda", "/caixa"],
   },
   {
     label: "Atendimento",
-    hrefs: ["/comandas", "/caixa", "/vendas"],
+    hrefs: ["/comandas", "/vendas"],
   },
   {
-    label: "Catalogo e estoque",
+    label: "Cadastros",
+    hrefs: ["/clientes", "/profissionais"],
+  },
+  {
+    label: "Catalogo",
     hrefs: ["/servicos", "/produtos", "/estoque"],
   },
   {
