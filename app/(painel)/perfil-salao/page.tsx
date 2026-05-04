@@ -303,7 +303,12 @@ export default function PerfilSalaoPage() {
                     }))
                   }
                   placeholder="email@exemplo.com"
-                  className="pl-11"
+                  className="min-w-0 truncate pl-11 pr-3 text-[13px]"
+                  title={perfilForm.email || "email@exemplo.com"}
+                  inputMode="email"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
                 />
                 <Mail
                   className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400"
