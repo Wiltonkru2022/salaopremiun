@@ -762,7 +762,7 @@ export default function ComissoesPage() {
           ) : null}
 
           <div className="rounded-[24px] border border-zinc-200 bg-white p-3.5 shadow-sm">
-            <div className="grid grid-cols-1 gap-2.5 md:grid-cols-2 xl:grid-cols-[minmax(240px,1.2fr)_minmax(132px,0.68fr)_minmax(132px,0.68fr)_minmax(180px,0.95fr)_minmax(144px,0.74fr)_minmax(144px,0.74fr)]">
+            <div className="grid grid-cols-1 gap-2.5 md:grid-cols-2 xl:grid-cols-[minmax(220px,1.05fr)_minmax(124px,0.64fr)_minmax(124px,0.64fr)_minmax(172px,0.88fr)_minmax(138px,0.7fr)_minmax(138px,0.7fr)]">
               <Field label="Buscar">
                 <div className="relative">
                   <Search
@@ -831,30 +831,30 @@ export default function ComissoesPage() {
                 />
               </Field>
             </div>
-            <div className="mt-2.5 flex flex-col gap-2.5 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
-              <div className="sm:min-w-[150px]">
+            <div className="mt-2.5 flex flex-col gap-2.5 lg:flex-row lg:flex-wrap lg:items-end lg:justify-between">
+              <div className="lg:min-w-[132px]">
                 <div className="mb-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-500">
                   Aplicar
                 </div>
                 <button
                   onClick={() => void carregarComissoes()}
-                  className="w-full rounded-2xl bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-95 sm:w-auto"
+                  className="w-full rounded-2xl bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-95 lg:w-auto"
                 >
                   Atualizar
                 </button>
               </div>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-2 lg:justify-end">
                 {comissoesAvancadas ? (
                   <>
                     <button
                       onClick={apurarRateio}
-                      className="rounded-2xl border border-zinc-200 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-50"
+                      className="rounded-2xl border border-zinc-200 bg-white px-3.5 py-2.5 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-50"
                     >
                       Apurar rateio
                     </button>
                     <button
                       onClick={imprimirRateio}
-                      className="inline-flex items-center gap-2 rounded-2xl border border-zinc-200 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-50"
+                      className="inline-flex items-center gap-2 rounded-2xl border border-zinc-200 bg-white px-3.5 py-2.5 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-50"
                     >
                       <Printer size={16} />
                       Imprimir rateio
@@ -865,13 +865,13 @@ export default function ComissoesPage() {
                     <button
                       type="button"
                       disabled
-                      className="rounded-2xl border border-zinc-200 bg-zinc-100 px-4 py-2.5 text-sm font-semibold text-zinc-400"
+                       className="rounded-2xl border border-zinc-200 bg-zinc-100 px-3.5 py-2.5 text-sm font-semibold text-zinc-400"
                     >
                       Apurar rateio
                     </button>
                     <a
                       href={getAssinaturaUrl(`/assinatura?plano=${getPlanoMinimoParaRecurso("comissoes_avancadas")}`)}
-                      className="inline-flex items-center gap-2 rounded-2xl border border-zinc-200 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-50"
+                      className="inline-flex items-center gap-2 rounded-2xl border border-zinc-200 bg-white px-3.5 py-2.5 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-50"
                     >
                       <Sparkles size={16} />
                       Liberar no Pro
@@ -882,7 +882,7 @@ export default function ComissoesPage() {
                   <button
                     onClick={marcarFiltradasComoPagas}
                     disabled={saving || totalPendentesCount === 0}
-                    className="rounded-2xl bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-95 disabled:opacity-50"
+                     className="rounded-2xl bg-zinc-900 px-3.5 py-2.5 text-sm font-semibold text-white transition hover:opacity-95 disabled:opacity-50"
                   >
                     Marcar filtradas como pagas
                   </button>
@@ -971,7 +971,7 @@ export default function ComissoesPage() {
               </div>
             </div>
             <div className="overflow-x-auto">
-              <table className="min-w-[1020px] w-full">
+              <table className="min-w-[960px] w-full">
                 <thead>
                   <tr className="border-b border-zinc-200 bg-zinc-50 text-left text-xs uppercase tracking-[0.14em] text-zinc-500">
                     <th className="px-4 py-3">Pessoa</th>
