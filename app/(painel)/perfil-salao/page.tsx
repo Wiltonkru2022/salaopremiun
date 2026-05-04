@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import {
   Building2,
@@ -29,6 +29,7 @@ type PasswordForm = {
   novaSenha: string;
   confirmarSenha: string;
   codigoTotp: string;
+  backupCode: string;
 };
 
 type ModalKey = "comercial" | "endereco" | "senha" | "autenticador" | null;
@@ -40,19 +41,56 @@ type TotpFactor = {
   status?: string;
 };
 
+type MfaSnapshot = {
+  factorActive: boolean;
+  currentLevel: "aal1" | "aal2" | null;
+  backupCodesRemaining: number;
+  backupCodesLockedUntil: string | null;
+  backupCodesGeneratedAt: string | null;
+  backupCodesLastUsedAt: string | null;
+};
+
+type TotpSetupState = {
+  factorId: string;
+  qrCode: string;
+  secret: string;
+};
+
 const EMPTY_PASSWORD: PasswordForm = {
   novaSenha: "",
   confirmarSenha: "",
   codigoTotp: "",
+  backupCode: "",
+};
+
+const EMPTY_MFA_SNAPSHOT: MfaSnapshot = {
+  factorActive: false,
+  currentLevel: null,
+  backupCodesRemaining: 0,
+  backupCodesLockedUntil: null,
+  backupCodesGeneratedAt: null,
+  backupCodesLastUsedAt: null,
 };
 
 function formatAddress(form: SalaoForm) {
   const linha1 = [form.endereco, form.numero].filter(Boolean).join(", ");
   const linha2 = [form.bairro, form.cidade, form.estado, form.cep]
     .filter(Boolean)
-    .join(" • ");
+    .join(" | ");
 
   return [linha1, linha2].filter(Boolean);
+}
+
+function formatDateTime(value: string | null | undefined) {
+  if (!value) return "Nao registrado";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Nao registrado";
+
+  return new Intl.DateTimeFormat("pt-BR", {
+    dateStyle: "short",
+    timeStyle: "short",
+  }).format(date);
 }
 
 function DisplayItem({
@@ -85,7 +123,7 @@ function SidebarAction({
   onClick,
   tone = "default",
 }: {
-  icon: React.ReactNode;
+  icon: ReactNode;
   title: string;
   description: string;
   onClick: () => void;
@@ -131,6 +169,7 @@ export default function PerfilSalaoPage() {
   const [savingPerfil, setSavingPerfil] = useState(false);
   const [savingSenha, setSavingSenha] = useState(false);
   const [loadingMfa, setLoadingMfa] = useState(false);
+  const [mfaBusy, setMfaBusy] = useState(false);
   const [erro, setErro] = useState("");
   const [msg, setMsg] = useState("");
   const [idSalao, setIdSalao] = useState("");
@@ -141,31 +180,85 @@ export default function PerfilSalaoPage() {
     useState<PasswordForm>(EMPTY_PASSWORD);
   const [activeModal, setActiveModal] = useState<ModalKey>(null);
   const [totpFactor, setTotpFactor] = useState<TotpFactor | null>(null);
-  const [authLevel, setAuthLevel] = useState<"aal1" | "aal2" | null>(null);
+  const [mfaSnapshot, setMfaSnapshot] = useState<MfaSnapshot>(EMPTY_MFA_SNAPSHOT);
+  const [totpSetup, setTotpSetup] = useState<TotpSetupState | null>(null);
+  const [setupCode, setSetupCode] = useState("");
+  const [manageCode, setManageCode] = useState("");
+  const [disableBackupCode, setDisableBackupCode] = useState("");
+  const [revealedBackupCodes, setRevealedBackupCodes] = useState<string[]>([]);
+
+  const linhasEndereco = useMemo(() => formatAddress(perfilForm), [perfilForm]);
+  const autenticadorAtivo = Boolean(totpFactor?.id);
+  const qrCodeDataUrl = useMemo(
+    () =>
+      totpSetup?.qrCode
+        ? `data:image/svg+xml;utf8,${encodeURIComponent(totpSetup.qrCode)}`
+        : "",
+    [totpSetup]
+  );
+
+  const callMfaApi = useCallback(
+    async (body?: Record<string, unknown>) => {
+      const response = await fetch("/api/auth/mfa", {
+        method: body ? "POST" : "GET",
+        headers: body ? { "Content-Type": "application/json" } : undefined,
+        body: body ? JSON.stringify(body) : undefined,
+      });
+
+      const payload = (await response.json().catch(() => ({}))) as {
+        ok?: boolean;
+        error?: string;
+        [key: string]: unknown;
+      };
+
+      if (!response.ok || payload.ok === false) {
+        throw new Error(payload.error || "Erro ao processar autenticador.");
+      }
+
+      return payload;
+    },
+    []
+  );
 
   const carregarMfa = useCallback(async () => {
     try {
       setLoadingMfa(true);
 
-      const [{ data: factorData, error: factorError }, { data: aalData }] =
-        await Promise.all([
-          supabase.auth.mfa.listFactors(),
-          supabase.auth.mfa.getAuthenticatorAssuranceLevel(),
-        ]);
+      const [
+        { data: factorData, error: factorError },
+        { data: aalData },
+        snapshot,
+      ] = await Promise.all([
+        supabase.auth.mfa.listFactors(),
+        supabase.auth.mfa.getAuthenticatorAssuranceLevel(),
+        callMfaApi(),
+      ]);
 
       if (factorError) throw factorError;
 
       const fator = (factorData?.totp?.[0] ?? null) as TotpFactor | null;
       setTotpFactor(fator);
-      setAuthLevel((aalData?.currentLevel as "aal1" | "aal2" | null) ?? null);
+      setMfaSnapshot({
+        factorActive: Boolean(snapshot.factorActive),
+        currentLevel:
+          (aalData?.currentLevel as "aal1" | "aal2" | null | undefined) ??
+          null,
+        backupCodesRemaining: Number(snapshot.backupCodesRemaining || 0),
+        backupCodesLockedUntil:
+          String(snapshot.backupCodesLockedUntil || "") || null,
+        backupCodesGeneratedAt:
+          String(snapshot.backupCodesGeneratedAt || "") || null,
+        backupCodesLastUsedAt:
+          String(snapshot.backupCodesLastUsedAt || "") || null,
+      });
     } catch (error) {
       console.warn("Nao foi possivel carregar status do autenticador:", error);
       setTotpFactor(null);
-      setAuthLevel(null);
+      setMfaSnapshot(EMPTY_MFA_SNAPSHOT);
     } finally {
       setLoadingMfa(false);
     }
-  }, [supabase]);
+  }, [callMfaApi, supabase]);
 
   const carregarPerfil = useCallback(async () => {
     try {
@@ -238,8 +331,24 @@ export default function PerfilSalaoPage() {
     void carregarPerfil();
   }, [carregarPerfil]);
 
-  const linhasEndereco = useMemo(() => formatAddress(perfilForm), [perfilForm]);
-  const autenticadorAtivo = Boolean(totpFactor?.id);
+  async function fecharModalAutenticador() {
+    if (totpSetup?.factorId && !autenticadorAtivo) {
+      try {
+        await supabase.auth.mfa.unenroll({
+          factorId: totpSetup.factorId,
+        });
+      } catch (error) {
+        console.warn("Nao foi possivel limpar enrolamento pendente:", error);
+      }
+    }
+
+    setTotpSetup(null);
+    setSetupCode("");
+    setManageCode("");
+    setDisableBackupCode("");
+    setRevealedBackupCodes([]);
+    setActiveModal(null);
+  }
 
   function abrirModal(modal: Exclude<ModalKey, null>) {
     setErro("");
@@ -255,6 +364,13 @@ export default function PerfilSalaoPage() {
 
     if (modal === "senha") {
       setPasswordForm(EMPTY_PASSWORD);
+    }
+
+    if (modal === "autenticador") {
+      setSetupCode("");
+      setManageCode("");
+      setDisableBackupCode("");
+      setRevealedBackupCodes([]);
     }
 
     setActiveModal(modal);
@@ -284,15 +400,14 @@ export default function PerfilSalaoPage() {
         updated_at: new Date().toISOString(),
       };
 
-      const { error } = await supabase.from("saloes").update(payload).eq("id", idSalao);
+      const { error } = await supabase
+        .from("saloes")
+        .update(payload)
+        .eq("id", idSalao);
 
       if (error) throw error;
 
-      const nextForm = {
-        ...perfilForm,
-        ...patch,
-      };
-
+      const nextForm = { ...perfilForm, ...patch };
       setPerfilForm(nextForm);
       setComercialDraft(nextForm);
       setEnderecoDraft(nextForm);
@@ -338,41 +453,59 @@ export default function PerfilSalaoPage() {
     );
   }
 
-  async function verificarTotpAntesDaSenha() {
-    if (!totpFactor?.id) return true;
-
-    if (!passwordForm.codigoTotp.trim()) {
-      setErro("Informe o codigo do autenticador para trocar a senha.");
-      return false;
+  async function verificarTotpCode(
+    code: string,
+    factorId = totpFactor?.id || ""
+  ) {
+    if (!factorId) {
+      throw new Error("Nenhum autenticador ativo foi encontrado.");
     }
 
     const { data: challengeData, error: challengeError } =
       await supabase.auth.mfa.challenge({
-        factorId: totpFactor.id,
+        factorId,
       });
 
     if (challengeError) {
       throw challengeError;
     }
 
-    const challengeId =
-      (challengeData as { id?: string } | null)?.id || "";
+    const challengeId = (challengeData as { id?: string } | null)?.id || "";
 
     if (!challengeId) {
       throw new Error("Nao foi possivel iniciar a verificacao do autenticador.");
     }
 
     const { error: verifyError } = await supabase.auth.mfa.verify({
-      factorId: totpFactor.id,
+      factorId,
       challengeId,
-      code: passwordForm.codigoTotp.trim(),
+      code: code.trim(),
     });
 
     if (verifyError) {
       throw verifyError;
     }
+  }
 
-    return true;
+  async function validarSegundoFatorParaSenha() {
+    if (!totpFactor?.id) return true;
+
+    if (passwordForm.codigoTotp.trim()) {
+      await verificarTotpCode(passwordForm.codigoTotp.trim());
+      return true;
+    }
+
+    if (passwordForm.backupCode.trim()) {
+      await callMfaApi({
+        action: "consume_backup_code",
+        backupCode: passwordForm.backupCode.trim(),
+      });
+      await carregarMfa();
+      return true;
+    }
+
+    setErro("Informe o codigo do autenticador ou um backup code.");
+    return false;
   }
 
   async function trocarSenha() {
@@ -391,8 +524,7 @@ export default function PerfilSalaoPage() {
         return;
       }
 
-      const podeSeguir = await verificarTotpAntesDaSenha();
-
+      const podeSeguir = await validarSegundoFatorParaSenha();
       if (!podeSeguir) return;
 
       const { error } = await supabase.auth.updateUser({
@@ -409,6 +541,183 @@ export default function PerfilSalaoPage() {
       setErro(error instanceof Error ? error.message : "Erro ao trocar senha.");
     } finally {
       setSavingSenha(false);
+    }
+  }
+
+  async function prepararAutenticador() {
+    try {
+      setMfaBusy(true);
+      setErro("");
+      setMsg("");
+      setRevealedBackupCodes([]);
+
+      const { data, error } = await supabase.auth.mfa.enroll({
+        factorType: "totp",
+        friendlyName: `Administrador ${perfilForm.nome || "SalaoPremium"}`,
+      });
+
+      if (error) throw error;
+
+      const payload = data as {
+        id?: string;
+        totp?: { qr_code?: string; secret?: string };
+      } | null;
+
+      if (!payload?.id || !payload.totp?.qr_code || !payload.totp?.secret) {
+        throw new Error("Nao foi possivel preparar o autenticador.");
+      }
+
+      setTotpSetup({
+        factorId: payload.id,
+        qrCode: payload.totp.qr_code,
+        secret: payload.totp.secret,
+      });
+      setSetupCode("");
+    } catch (error: unknown) {
+      setErro(
+        error instanceof Error
+          ? error.message
+          : "Erro ao preparar o autenticador."
+      );
+    } finally {
+      setMfaBusy(false);
+    }
+  }
+
+  async function concluirAtivacaoAutenticador() {
+    try {
+      if (!totpSetup?.factorId) {
+        setErro("Nenhum preparo de autenticador ativo foi encontrado.");
+        return;
+      }
+
+      if (setupCode.trim().length < 6) {
+        setErro("Informe o codigo de 6 digitos do autenticador.");
+        return;
+      }
+
+      setMfaBusy(true);
+      setErro("");
+      setMsg("");
+
+      await verificarTotpCode(setupCode.trim(), totpSetup.factorId);
+
+      const response = await callMfaApi({
+        action: "generate_backup_codes",
+      });
+
+      setRevealedBackupCodes(
+        Array.isArray(response.codes)
+          ? response.codes.map((value) => String(value))
+          : []
+      );
+      setTotpSetup(null);
+      setSetupCode("");
+      setMsg("Autenticador ativado com sucesso.");
+      await carregarMfa();
+    } catch (error: unknown) {
+      setErro(
+        error instanceof Error
+          ? error.message
+          : "Erro ao ativar o autenticador."
+      );
+    } finally {
+      setMfaBusy(false);
+    }
+  }
+
+  async function regenerarBackupCodes() {
+    try {
+      if (!manageCode.trim()) {
+        setErro("Informe o codigo atual do autenticador para gerar novos backup codes.");
+        return;
+      }
+
+      setMfaBusy(true);
+      setErro("");
+      setMsg("");
+
+      await verificarTotpCode(manageCode.trim());
+      const response = await callMfaApi({
+        action: "generate_backup_codes",
+      });
+
+      setRevealedBackupCodes(
+        Array.isArray(response.codes)
+          ? response.codes.map((value) => String(value))
+          : []
+      );
+      setManageCode("");
+      setMsg("Novos backup codes gerados.");
+      await carregarMfa();
+    } catch (error: unknown) {
+      setErro(
+        error instanceof Error
+          ? error.message
+          : "Erro ao gerar novos backup codes."
+      );
+    } finally {
+      setMfaBusy(false);
+    }
+  }
+
+  async function desativarAutenticadorPorTotp() {
+    try {
+      if (!manageCode.trim()) {
+        setErro("Informe o codigo atual do autenticador para desativar.");
+        return;
+      }
+
+      setMfaBusy(true);
+      setErro("");
+      setMsg("");
+
+      await verificarTotpCode(manageCode.trim());
+      await callMfaApi({
+        action: "disable_factor",
+        method: "aal2",
+      });
+
+      await supabase.auth.signOut();
+      router.push("/login?motivo=autenticador_desativado");
+    } catch (error: unknown) {
+      setErro(
+        error instanceof Error
+          ? error.message
+          : "Erro ao desativar o autenticador."
+      );
+    } finally {
+      setMfaBusy(false);
+    }
+  }
+
+  async function desativarAutenticadorPorBackupCode() {
+    try {
+      if (!disableBackupCode.trim()) {
+        setErro("Informe um backup code valido para desativar.");
+        return;
+      }
+
+      setMfaBusy(true);
+      setErro("");
+      setMsg("");
+
+      await callMfaApi({
+        action: "disable_factor",
+        method: "backup_code",
+        backupCode: disableBackupCode.trim(),
+      });
+
+      await supabase.auth.signOut();
+      router.push("/login?motivo=autenticador_desativado");
+    } catch (error: unknown) {
+      setErro(
+        error instanceof Error
+          ? error.message
+          : "Erro ao desativar o autenticador."
+      );
+    } finally {
+      setMfaBusy(false);
     }
   }
 
@@ -470,7 +779,7 @@ export default function PerfilSalaoPage() {
                     {perfilForm.nome || "SalaoPremium"}
                   </div>
                   <div className="text-sm text-zinc-500">
-                    {String(perfilForm.plano || "sem plano").toUpperCase()} •{" "}
+                    {String(perfilForm.plano || "sem plano").toUpperCase()} |{" "}
                     {perfilForm.status || "status nao definido"}
                   </div>
                 </div>
@@ -559,7 +868,7 @@ export default function PerfilSalaoPage() {
                   label="Troca de senha"
                   value={
                     autenticadorAtivo
-                      ? "Exige codigo do autenticador antes de salvar."
+                      ? "Exige codigo do autenticador ou backup code antes de salvar."
                       : "Protegida pela sessao autenticada atual."
                   }
                   multiline
@@ -570,7 +879,7 @@ export default function PerfilSalaoPage() {
                     loadingMfa
                       ? "Verificando status..."
                       : autenticadorAtivo
-                        ? `Ativo em ${authLevel === "aal2" ? "nivel reforcado" : "conta protegida"}`
+                        ? `Ativo com ${mfaSnapshot.backupCodesRemaining} backup code(s) restantes.`
                         : "Ainda nao ativado nesta conta."
                   }
                   multiline
@@ -603,7 +912,7 @@ export default function PerfilSalaoPage() {
                 <SidebarAction
                   icon={<KeyRound size={16} />}
                   title="Trocar senha"
-                  description="Quando houver autenticador ativo, este fluxo exige o codigo antes de alterar."
+                  description="Quando houver autenticador ativo, este fluxo exige TOTP ou backup code."
                   onClick={() => abrirModal("senha")}
                   tone="security"
                 />
@@ -611,7 +920,7 @@ export default function PerfilSalaoPage() {
                 <SidebarAction
                   icon={<ShieldCheck size={16} />}
                   title="Autenticador"
-                  description="Veja o status da protecao em dois fatores e o que falta para liberar a ativacao completa."
+                  description="Ative TOTP, gere backup codes e desative a protecao com criterio."
                   onClick={() => abrirModal("autenticador")}
                   tone="security"
                 />
@@ -623,12 +932,12 @@ export default function PerfilSalaoPage() {
                 <CircleAlert size={18} className="mt-0.5 text-zinc-900" />
                 <div>
                   <div className="text-sm font-bold text-zinc-950">
-                    Seguranca sem maquiagem
+                    Camada de recuperacao
                   </div>
                   <p className="mt-1.5 text-sm leading-5 text-zinc-600">
-                    O painel ja consegue exigir codigo TOTP se houver fator ativo.
-                    A ativacao guiada so entra quando o fluxo de backup, recuperacao
-                    e desativacao segura estiver completo.
+                    Backup codes, bloqueio por tentativas e desativacao segura
+                    agora fazem parte do fluxo. O que ainda nao existe e
+                    recuperacao fora da sessao logada por suporte administrado.
                   </p>
                 </div>
               </div>
@@ -927,13 +1236,14 @@ export default function PerfilSalaoPage() {
             {autenticadorAtivo ? (
               <p className="leading-6">
                 Esta conta ja tem autenticador validado. Para trocar a senha,
-                voce precisa informar o codigo do app antes de salvar.
+                voce pode informar o codigo do app ou usar um backup code ainda
+                nao consumido.
               </p>
             ) : (
               <p className="leading-6">
-                No momento a troca ainda depende da sessao autenticada atual.
-                Quando a ativacao completa do autenticador entrar, este modal
-                passa a exigir o codigo de verificacao automaticamente.
+                No momento a troca depende da sessao autenticada atual. Quando
+                o autenticador for ativado, este modal passa a exigir TOTP ou
+                backup code.
               </p>
             )}
           </div>
@@ -967,30 +1277,46 @@ export default function PerfilSalaoPage() {
           </Field>
 
           {autenticadorAtivo ? (
-            <Field label="Codigo do autenticador">
-              <TextInput
-                inputMode="numeric"
-                value={passwordForm.codigoTotp}
-                onChange={(event) =>
-                  setPasswordForm((prev) => ({
-                    ...prev,
-                    codigoTotp: event.target.value.replace(/\D/g, "").slice(0, 6),
-                  }))
-                }
-                placeholder="Digite os 6 digitos do app"
-              />
-            </Field>
+            <>
+              <Field label="Codigo do autenticador">
+                <TextInput
+                  inputMode="numeric"
+                  value={passwordForm.codigoTotp}
+                  onChange={(event) =>
+                    setPasswordForm((prev) => ({
+                      ...prev,
+                      codigoTotp: event.target.value.replace(/\D/g, "").slice(0, 6),
+                    }))
+                  }
+                  placeholder="Digite os 6 digitos do app"
+                />
+              </Field>
+
+              <Field label="Ou use um backup code">
+                <TextInput
+                  value={passwordForm.backupCode}
+                  onChange={(event) =>
+                    setPasswordForm((prev) => ({
+                      ...prev,
+                      backupCode: event.target.value.toUpperCase(),
+                    }))
+                  }
+                  placeholder="XXXX-XXXX"
+                />
+              </Field>
+            </>
           ) : null}
         </div>
       </AppModal>
 
       <AppModal
         open={activeModal === "autenticador"}
-        onClose={() => setActiveModal(null)}
+        onClose={fecharModalAutenticador}
         title="Autenticador do administrador"
-        description="Preparacao da protecao em dois fatores antes de liberar ativacao guiada na conta."
+        description="Ative TOTP com backup codes e mantenha a recuperacao da conta sob controle."
         eyebrow="Seguranca"
-        maxWidthClassName="max-w-2xl"
+        maxWidthClassName="max-w-3xl"
+        closeDisabled={mfaBusy}
       >
         <div className="space-y-4">
           <div className="rounded-[22px] border border-zinc-200 bg-zinc-50 p-4">
@@ -998,36 +1324,260 @@ export default function PerfilSalaoPage() {
               <ShieldCheck size={16} />
               Status atual
             </div>
-            <p className="mt-2 text-sm leading-6 text-zinc-600">
-              {loadingMfa
-                ? "Verificando status do autenticador..."
-                : autenticadorAtivo
-                  ? "Existe um fator TOTP validado nesta conta. A troca de senha no perfil ja passa a pedir o codigo do app."
-                  : "Ainda nao existe fator TOTP ativo nesta conta. A ativacao guiada fica retida ate o fluxo de recuperacao ficar redondo."}
-            </p>
+            <div className="mt-2 grid gap-3 md:grid-cols-2">
+              <DisplayItem
+                label="Protecao TOTP"
+                value={
+                  loadingMfa
+                    ? "Verificando..."
+                    : autenticadorAtivo
+                      ? "Ativa"
+                      : "Nao ativada"
+                }
+              />
+              <DisplayItem
+                label="Backup codes restantes"
+                value={String(mfaSnapshot.backupCodesRemaining || 0)}
+              />
+              <DisplayItem
+                label="Ultima geracao"
+                value={formatDateTime(mfaSnapshot.backupCodesGeneratedAt)}
+              />
+              <DisplayItem
+                label="Ultimo uso"
+                value={formatDateTime(mfaSnapshot.backupCodesLastUsedAt)}
+              />
+            </div>
+            {mfaSnapshot.backupCodesLockedUntil ? (
+              <p className="mt-3 text-sm leading-6 text-amber-700">
+                Backup codes bloqueados ate{" "}
+                {formatDateTime(mfaSnapshot.backupCodesLockedUntil)} por excesso
+                de tentativas.
+              </p>
+            ) : null}
           </div>
 
-          <div className="rounded-[22px] border border-[rgba(199,162,92,0.35)] bg-[rgba(199,162,92,0.10)] p-4">
+          {!autenticadorAtivo && !totpSetup ? (
+            <div className="rounded-[22px] border border-zinc-200 bg-white p-4">
+              <div className="text-sm font-bold text-zinc-950">
+                Ativar autenticador
+              </div>
+              <p className="mt-2 text-sm leading-6 text-zinc-600">
+                Vamos preparar um fator TOTP para Google Authenticator ou apps
+                equivalentes. Depois da verificacao, a tela gera um lote novo de
+                backup codes para emergencias.
+              </p>
+              <button
+                type="button"
+                onClick={prepararAutenticador}
+                disabled={mfaBusy}
+                className="mt-4 inline-flex items-center gap-2 rounded-2xl bg-zinc-950 px-4 py-2.5 text-sm font-bold text-white transition hover:-translate-y-0.5 disabled:opacity-60"
+              >
+                {mfaBusy ? (
+                  <Loader2 className="animate-spin" size={16} />
+                ) : (
+                  <ShieldCheck size={16} />
+                )}
+                Preparar autenticador
+              </button>
+            </div>
+          ) : null}
+
+          {totpSetup ? (
+            <div className="rounded-[22px] border border-zinc-200 bg-white p-4">
+              <div className="text-sm font-bold text-zinc-950">
+                Confirmar ativacao
+              </div>
+              <p className="mt-2 text-sm leading-6 text-zinc-600">
+                Escaneie o QR code no app autenticador ou digite o segredo
+                manualmente. Depois confirme com o codigo gerado.
+              </p>
+
+              <div className="mt-4 grid gap-4 lg:grid-cols-[220px_minmax(0,1fr)]">
+                <div className="rounded-[20px] border border-zinc-200 bg-zinc-50 p-3">
+                  {qrCodeDataUrl ? (
+                    <img
+                      src={qrCodeDataUrl}
+                      alt="QR code do autenticador"
+                      className="h-full w-full rounded-2xl bg-white object-contain p-2"
+                    />
+                  ) : null}
+                </div>
+
+                <div className="space-y-4">
+                  <Field label="Segredo manual">
+                    <TextInput
+                      value={totpSetup.secret}
+                      readOnly
+                      className="font-mono uppercase tracking-[0.08em]"
+                    />
+                  </Field>
+
+                  <Field label="Codigo do app">
+                    <TextInput
+                      inputMode="numeric"
+                      value={setupCode}
+                      onChange={(event) =>
+                        setSetupCode(
+                          event.target.value.replace(/\D/g, "").slice(0, 6)
+                        )
+                      }
+                      placeholder="Digite os 6 digitos"
+                    />
+                  </Field>
+
+                  <div className="flex flex-wrap gap-3">
+                    <button
+                      type="button"
+                      onClick={concluirAtivacaoAutenticador}
+                      disabled={mfaBusy}
+                      className="inline-flex items-center gap-2 rounded-2xl bg-zinc-950 px-4 py-2.5 text-sm font-bold text-white transition hover:-translate-y-0.5 disabled:opacity-60"
+                    >
+                      {mfaBusy ? (
+                        <Loader2 className="animate-spin" size={16} />
+                      ) : (
+                        <CheckCircle2 size={16} />
+                      )}
+                      Ativar e gerar backup codes
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={fecharModalAutenticador}
+                      disabled={mfaBusy}
+                      className="rounded-2xl border border-zinc-200 px-4 py-2.5 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-60"
+                    >
+                      Cancelar preparo
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : null}
+
+          {autenticadorAtivo ? (
+            <>
+              <div className="rounded-[22px] border border-zinc-200 bg-white p-4">
+                <div className="text-sm font-bold text-zinc-950">
+                  Gerar novos backup codes
+                </div>
+                <p className="mt-2 text-sm leading-6 text-zinc-600">
+                  Gere um lote novo e invalide o anterior sempre que suspeitar
+                  de exposicao ou depois de uma mudanca operacional relevante.
+                </p>
+                <div className="mt-4 grid gap-3 md:grid-cols-[minmax(0,1fr)_auto]">
+                  <TextInput
+                    inputMode="numeric"
+                    value={manageCode}
+                    onChange={(event) =>
+                      setManageCode(
+                        event.target.value.replace(/\D/g, "").slice(0, 6)
+                      )
+                    }
+                    placeholder="Codigo atual do autenticador"
+                  />
+                  <button
+                    type="button"
+                    onClick={regenerarBackupCodes}
+                    disabled={mfaBusy}
+                    className="inline-flex items-center justify-center gap-2 rounded-2xl bg-zinc-950 px-4 py-2.5 text-sm font-bold text-white transition hover:-translate-y-0.5 disabled:opacity-60"
+                  >
+                    {mfaBusy ? (
+                      <Loader2 className="animate-spin" size={16} />
+                    ) : (
+                      <ShieldCheck size={16} />
+                    )}
+                    Gerar lote novo
+                  </button>
+                </div>
+              </div>
+
+              <div className="rounded-[22px] border border-[rgba(199,162,92,0.35)] bg-[rgba(199,162,92,0.10)] p-4">
+                <div className="text-sm font-bold text-zinc-950">
+                  Desativar 2FA com seguranca
+                </div>
+                <p className="mt-2 text-sm leading-6 text-zinc-700">
+                  Voce pode desativar pelo codigo atual do autenticador ou por
+                  um backup code valido. Depois disso, a sessao atual e
+                  encerrada.
+                </p>
+
+                <div className="mt-4 space-y-3">
+                  <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto]">
+                    <TextInput
+                      inputMode="numeric"
+                      value={manageCode}
+                      onChange={(event) =>
+                        setManageCode(
+                          event.target.value.replace(/\D/g, "").slice(0, 6)
+                        )
+                      }
+                      placeholder="Codigo atual do autenticador"
+                    />
+                    <button
+                      type="button"
+                      onClick={desativarAutenticadorPorTotp}
+                      disabled={mfaBusy}
+                      className="rounded-2xl border border-zinc-300 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-50 disabled:opacity-60"
+                    >
+                      Desativar com TOTP
+                    </button>
+                  </div>
+
+                  <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto]">
+                    <TextInput
+                      value={disableBackupCode}
+                      onChange={(event) =>
+                        setDisableBackupCode(event.target.value.toUpperCase())
+                      }
+                      placeholder="Backup code de recuperacao"
+                    />
+                    <button
+                      type="button"
+                      onClick={desativarAutenticadorPorBackupCode}
+                      disabled={mfaBusy}
+                      className="rounded-2xl border border-zinc-300 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-50 disabled:opacity-60"
+                    >
+                      Desativar com backup code
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </>
+          ) : null}
+
+          {revealedBackupCodes.length > 0 ? (
+            <div className="rounded-[22px] border border-emerald-200 bg-emerald-50 p-4">
+              <div className="text-sm font-bold text-emerald-900">
+                Backup codes gerados
+              </div>
+              <p className="mt-2 text-sm leading-6 text-emerald-800">
+                Estes codigos aparecem agora como lote atual. Guarde em local
+                seguro; cada um funciona uma vez.
+              </p>
+              <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                {revealedBackupCodes.map((code) => (
+                  <div
+                    key={code}
+                    className="rounded-2xl border border-emerald-200 bg-white px-3 py-2 font-mono text-sm font-bold tracking-[0.08em] text-zinc-900"
+                  >
+                    {code}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
+          <div className="rounded-[22px] border border-zinc-200 bg-zinc-50 p-4">
             <div className="text-sm font-bold text-zinc-950">
-              Cuidados obrigatorios antes de liberar ativacao
+              Cuidados importantes
             </div>
             <ul className="mt-3 space-y-2 text-sm leading-6 text-zinc-700">
-              <li>• Sempre oferecer backup codes.</li>
-              <li>• Permitir desativacao de 2FA com fluxo seguro.</li>
-              <li>• Proteger contra brute force com limite de tentativas.</li>
-              <li>• Guardar o segredo de forma criptografada no provedor de auth.</li>
+              <li>- Sempre oferecer backup codes.</li>
+              <li>- Permitir desativacao de 2FA com seguranca.</li>
+              <li>- Proteger contra brute force com limite de tentativas.</li>
+              <li>- Guardar o segredo criptografado no provedor de auth.</li>
             </ul>
-          </div>
-
-          <div className="rounded-[22px] border border-zinc-200 bg-white p-4">
-            <div className="text-sm font-bold text-zinc-950">
-              Como a tela passa a se comportar
-            </div>
-            <p className="mt-2 text-sm leading-6 text-zinc-600">
-              Com fator TOTP ativo, a troca de senha neste perfil exige o codigo
-              do autenticador antes de salvar. A ativacao self-service vai entrar
-              depois, junto com recuperacao por backup codes e desativacao segura.
-            </p>
           </div>
         </div>
       </AppModal>
