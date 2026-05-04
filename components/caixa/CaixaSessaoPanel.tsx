@@ -17,7 +17,12 @@ import type {
   CaixaSessao,
 } from "@/lib/caixa/sessaoCaixa";
 import type { ProfissionalResumo } from "@/components/caixa/types";
-import { formatCurrency, formatShortDateTime, moneyMask, parseMoney } from "./utils";
+import {
+  formatCurrency,
+  formatShortDateTime,
+  moneyMask,
+  parseMoney,
+} from "./utils";
 
 type MovimentoPayload = {
   tipo: CaixaMovimentacaoTipo;
@@ -65,7 +70,8 @@ function getFechamentoMeta(diferenca: number) {
       badgeClass: "border-sky-200 bg-sky-50 text-sky-700",
       cardClass: "border-sky-200 bg-sky-50",
       title: "Sobra de caixa",
-      description: "O valor contado ficou acima do previsto e será registrado como sobra.",
+      description:
+        "O valor contado ficou acima do previsto e será registrado como sobra.",
     };
   }
 
@@ -73,7 +79,8 @@ function getFechamentoMeta(diferenca: number) {
     badgeClass: "border-rose-200 bg-rose-50 text-rose-700",
     cardClass: "border-rose-200 bg-rose-50",
     title: "Quebra de caixa",
-    description: "O valor contado ficou abaixo do previsto e será registrado como quebra.",
+    description:
+      "O valor contado ficou abaixo do previsto e será registrado como quebra.",
   };
 }
 
@@ -163,15 +170,19 @@ export default function CaixaSessaoPanel({
       if (movimento.tipo === "suprimento" || movimento.tipo === "venda") {
         return acc + valor;
       }
-      if (movimento.tipo === "sangria" || movimento.tipo === "vale_profissional") {
+      if (
+        movimento.tipo === "sangria" ||
+        movimento.tipo === "vale_profissional"
+      ) {
         return acc - valor;
       }
       return acc;
     }, Number(sessao?.valor_abertura || 0));
   }, [movimentacoes, sessao?.valor_abertura]);
+
   const valorFechamentoNumero = parseMoney(valorFechamento);
   const diferencaFechamento = Number(
-    (valorFechamentoNumero - totalMovimentos).toFixed(2)
+    (valorFechamentoNumero - totalMovimentos).toFixed(2),
   );
   const fechamentoMeta = caixaAberto
     ? getFechamentoMeta(diferencaFechamento)
@@ -214,7 +225,9 @@ export default function CaixaSessaoPanel({
         <div>
           <div className="flex items-center gap-2">
             <WalletCards size={18} className="text-zinc-700" />
-            <div className="text-lg font-bold text-zinc-950">Sessão do caixa</div>
+            <div className="text-lg font-bold text-zinc-950">
+              Sessão do caixa
+            </div>
             <span
               className={`rounded-full border px-3 py-1 text-[11px] font-bold uppercase ${
                 caixaAberto
@@ -239,7 +252,7 @@ export default function CaixaSessaoPanel({
               value={formatShortDateTime(
                 caixaAberto
                   ? sessao.aberto_em || sessao.created_at
-                  : sessao.fechado_em || sessao.updated_at
+                  : sessao.fechado_em || sessao.updated_at,
               )}
             />
           </div>
@@ -250,7 +263,9 @@ export default function CaixaSessaoPanel({
         <div className="mt-4 grid gap-3 border-t border-zinc-100 pt-4 lg:grid-cols-[180px_minmax(0,1fr)_auto]">
           {sessao?.status === "fechado" ? (
             <div className="lg:col-span-3">
-              <div className={`rounded-[24px] border px-4 py-3.5 ${fechamentoMeta.cardClass}`}>
+              <div
+                className={`rounded-[24px] border px-4 py-3.5 ${fechamentoMeta.cardClass}`}
+              >
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <div className="text-sm font-bold text-zinc-900">
@@ -265,8 +280,14 @@ export default function CaixaSessaoPanel({
                 </div>
 
                 <div className="mt-3 grid gap-3 sm:grid-cols-3">
-                  <Info label="Previsto" value={formatCurrency(valorPrevistoSessao)} />
-                  <Info label="Contado" value={formatCurrency(valorContadoSessao)} />
+                  <Info
+                    label="Previsto"
+                    value={formatCurrency(valorPrevistoSessao)}
+                  />
+                  <Info
+                    label="Contado"
+                    value={formatCurrency(valorContadoSessao)}
+                  />
                   <Info
                     label={
                       valorDiferencaSessao < 0
@@ -288,7 +309,9 @@ export default function CaixaSessaoPanel({
 
                 {sessao.observacoes ? (
                   <div className="mt-3 rounded-2xl border border-white/70 bg-white/80 px-4 py-3 text-sm text-zinc-700">
-                    <div className="font-semibold text-zinc-900">Observação</div>
+                    <div className="font-semibold text-zinc-900">
+                      Observação
+                    </div>
                     <div className="mt-1">{sessao.observacoes}</div>
                   </div>
                 ) : null}
@@ -305,10 +328,10 @@ export default function CaixaSessaoPanel({
             <input
               value={obsAbertura}
               onChange={(event) => setObsAbertura(event.target.value)}
-            className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-2.5 text-sm outline-none transition focus:border-zinc-900"
+              className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-2.5 text-sm outline-none transition focus:border-zinc-900"
               placeholder="Ex.: abertura da manhã"
-          />
-        </Field>
+            />
+          </Field>
           <button
             type="button"
             disabled={saving}
@@ -320,7 +343,11 @@ export default function CaixaSessaoPanel({
             }
             className="inline-flex items-center justify-center gap-2 rounded-2xl bg-zinc-950 px-5 py-2.5 text-sm font-bold text-white transition hover:-translate-y-0.5 disabled:opacity-60 lg:self-end"
           >
-            {saving ? <Loader2 className="animate-spin" size={16} /> : <DoorOpen size={16} />}
+            {saving ? (
+              <Loader2 className="animate-spin" size={16} />
+            ) : (
+              <DoorOpen size={16} />
+            )}
             Abrir caixa
           </button>
         </div>
@@ -357,7 +384,9 @@ export default function CaixaSessaoPanel({
                 <Field label="Profissional">
                   <select
                     value={profissionalMovimento}
-                    onChange={(event) => setProfissionalMovimento(event.target.value)}
+                    onChange={(event) =>
+                      setProfissionalMovimento(event.target.value)
+                    }
                     className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-2.5 text-sm outline-none transition focus:border-zinc-900"
                   >
                     <option value="">Selecione</option>
@@ -380,7 +409,9 @@ export default function CaixaSessaoPanel({
                 <Field label="Descrição">
                   <input
                     value={descricaoMovimento}
-                    onChange={(event) => setDescricaoMovimento(event.target.value)}
+                    onChange={(event) =>
+                      setDescricaoMovimento(event.target.value)
+                    }
                     className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-2.5 text-sm outline-none transition focus:border-zinc-900"
                     placeholder="Ex.: retirada para troco, vale do João..."
                   />
@@ -403,7 +434,11 @@ export default function CaixaSessaoPanel({
               }}
               className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-zinc-950 px-5 py-2.5 text-sm font-bold text-white transition hover:-translate-y-0.5 disabled:opacity-60"
             >
-              {saving ? <Loader2 className="animate-spin" size={16} /> : <WalletCards size={16} />}
+              {saving ? (
+                <Loader2 className="animate-spin" size={16} />
+              ) : (
+                <WalletCards size={16} />
+              )}
               Lançar movimento
             </button>
           </div>
@@ -430,9 +465,18 @@ export default function CaixaSessaoPanel({
               />
               <div className="grid gap-3 sm:grid-cols-3">
                 <Info label="Previsto" value={formatCurrency(totalMovimentos)} />
-                <Info label="Contado" value={formatCurrency(valorFechamentoNumero)} />
                 <Info
-                  label={diferencaFechamento < 0 ? "Quebra" : diferencaFechamento > 0 ? "Sobra" : "Diferença"}
+                  label="Contado"
+                  value={formatCurrency(valorFechamentoNumero)}
+                />
+                <Info
+                  label={
+                    diferencaFechamento < 0
+                      ? "Quebra"
+                      : diferencaFechamento > 0
+                        ? "Sobra"
+                        : "Diferença"
+                  }
                   value={formatCurrency(Math.abs(diferencaFechamento))}
                   tone={
                     diferencaFechamento < 0
@@ -443,12 +487,15 @@ export default function CaixaSessaoPanel({
                   }
                 />
               </div>
-              <div className={`rounded-2xl border px-4 py-3 text-sm ${fechamentoMeta.cardClass}`}>
+              <div
+                className={`rounded-2xl border px-4 py-3 text-sm ${fechamentoMeta.cardClass}`}
+              >
                 <div className="font-semibold">{fechamentoMeta.title}</div>
                 <div className="mt-1">{fechamentoMeta.description}</div>
                 {Math.abs(diferencaFechamento) >= 0.009 ? (
                   <div className="mt-2 text-xs">
-                    Para fechar com diferença, informe uma observação explicando o motivo.
+                    Para fechar com diferença, informe uma observação explicando
+                    o motivo.
                   </div>
                 ) : null}
               </div>
@@ -462,7 +509,8 @@ export default function CaixaSessaoPanel({
               </Field>
               {exigeObservacaoFechamento ? (
                 <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-                  Informe uma observação para registrar a diferença do fechamento.
+                  Informe uma observação para registrar a diferença do
+                  fechamento.
                 </div>
               ) : null}
               <button
@@ -473,7 +521,7 @@ export default function CaixaSessaoPanel({
                     Math.abs(diferencaFechamento) < 0.009
                       ? obsFechamento
                       : `${obsFechamento.trim()} | ${fechamentoMeta.title}: ${formatCurrency(
-                          Math.abs(diferencaFechamento)
+                          Math.abs(diferencaFechamento),
                         )}`.trim();
 
                   onFecharCaixa({
@@ -483,7 +531,11 @@ export default function CaixaSessaoPanel({
                 }}
                 className="inline-flex items-center justify-center gap-2 rounded-2xl border border-zinc-300 bg-white px-5 py-2.5 text-sm font-bold text-zinc-900 transition hover:bg-zinc-50 disabled:opacity-60"
               >
-                {saving ? <Loader2 className="animate-spin" size={16} /> : <DoorClosed size={16} />}
+                {saving ? (
+                  <Loader2 className="animate-spin" size={16} />
+                ) : (
+                  <DoorClosed size={16} />
+                )}
                 Fechar caixa
               </button>
             </div>
@@ -513,7 +565,8 @@ export default function CaixaSessaoPanel({
                     {formatCurrency(movimento.valor)}
                   </div>
                   <div className="mt-1 line-clamp-1 text-xs opacity-75">
-                    {movimento.descricao || formatShortDateTime(movimento.created_at)}
+                    {movimento.descricao ||
+                      formatShortDateTime(movimento.created_at)}
                   </div>
                 </div>
               );

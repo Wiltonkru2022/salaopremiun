@@ -1,5 +1,10 @@
 import type { ReactNode } from "react";
-import { CalendarClock, CircleDollarSign, ReceiptText, WalletCards } from "lucide-react";
+import {
+  CalendarClock,
+  CircleDollarSign,
+  ReceiptText,
+  WalletCards,
+} from "lucide-react";
 
 type Props = {
   agendamentosPendentes: number;
@@ -27,7 +32,9 @@ export default function CaixaHeader({
               Workspace do caixa
             </div>
             <div className="mt-1 flex flex-wrap items-end gap-2">
-              <h1 className="text-[1.65rem] font-semibold leading-none text-slate-900">Caixa</h1>
+              <h1 className="text-[1.65rem] font-semibold leading-none text-slate-900">
+                Caixa
+              </h1>
             </div>
           </div>
 
@@ -94,7 +101,9 @@ function ActionCard({
         {icon}
         <span>{label}</span>
       </div>
-      <div className="mt-1 text-[11px] leading-4 text-zinc-600">{description}</div>
+      <div className="mt-1 text-[11px] leading-4 text-zinc-600">
+        {description}
+      </div>
     </button>
   );
 }
@@ -114,10 +123,10 @@ function StatCard({
     tone === "amber"
       ? "border-amber-200 bg-amber-50 text-amber-900"
       : tone === "emerald"
-      ? "border-emerald-200 bg-emerald-50 text-emerald-900"
-      : tone === "sky"
-      ? "border-sky-200 bg-sky-50 text-sky-900"
-      : "border-zinc-200 bg-zinc-50 text-zinc-900";
+        ? "border-emerald-200 bg-emerald-50 text-emerald-900"
+        : tone === "sky"
+          ? "border-sky-200 bg-sky-50 text-sky-900"
+          : "border-zinc-200 bg-zinc-50 text-zinc-900";
 
   return (
     <div className={`rounded-[18px] border px-3.5 py-2 ${toneClass}`}>
