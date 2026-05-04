@@ -27,6 +27,52 @@ let monitoringContext: ClientMonitoringContext = {
   surface: "unknown",
 };
 
+const LOW_SIGNAL_EVENT_TTL_MS = 5 * 60 * 1000;
+
+function isLowSignalEvent(payload: Record<string, unknown>) {
+  const severity = String(payload.severity || "info").toLowerCase();
+  const eventType = String(payload.eventType || "").toLowerCase();
+  return (
+    (severity === "info" || severity === "debug") &&
+    ["page_view", "ui_event", "action_started", "action_succeeded"].includes(eventType)
+  );
+}
+
+function buildLowSignalCacheKey(payload: Record<string, unknown>) {
+  return [
+    "salaopremium:monitoring",
+    String(payload.eventType || ""),
+    String(payload.module || ""),
+    String(payload.action || ""),
+    String(payload.route || ""),
+    String(payload.screen || ""),
+    String(payload.entity || ""),
+    String(payload.entityId || ""),
+  ].join(":");
+}
+
+function shouldSkipLowSignalEvent(payload: Record<string, unknown>) {
+  if (typeof window === "undefined" || !isLowSignalEvent(payload)) {
+    return false;
+  }
+
+  try {
+    const key = buildLowSignalCacheKey(payload);
+    const lastSentAt = Number(window.sessionStorage.getItem(key) || "0");
+    const now = Date.now();
+
+    if (now - lastSentAt < LOW_SIGNAL_EVENT_TTL_MS) {
+      return true;
+    }
+
+    window.sessionStorage.setItem(key, String(now));
+  } catch {
+    return false;
+  }
+
+  return false;
+}
+
 function normalizeText(value: unknown) {
   return String(value || "").trim();
 }
@@ -75,6 +121,10 @@ function postMonitoringPayload(
   useBeacon = false
 ) {
   if (typeof window === "undefined") {
+    return Promise.resolve();
+  }
+
+  if (shouldSkipLowSignalEvent(payload)) {
     return Promise.resolve();
   }
 
@@ -147,13 +197,14 @@ export async function monitorClientOperation<T>(
     startMessage?: string;
     successMessage?: string;
     errorMessage?: string;
+    emitLifecycleEvents?: boolean;
   },
   operation: () => Promise<T>
 ) {
   const startedAt =
     typeof performance !== "undefined" ? performance.now() : Date.now();
 
-  if (params.startMessage) {
+  if (params.emitLifecycleEvents && params.startMessage) {
     void captureClientEvent({
       ...params,
       eventType: "action_started",
@@ -167,15 +218,17 @@ export async function monitorClientOperation<T>(
     const finishedAt =
       typeof performance !== "undefined" ? performance.now() : Date.now();
 
-    void captureClientEvent({
-      ...params,
-      eventType: "action_succeeded",
-      message:
-        params.successMessage ||
-        `${normalizeText(params.module)} executou ${normalizeText(params.action)} com sucesso`,
-      responseMs: finishedAt - startedAt,
-      success: true,
-    });
+    if (params.emitLifecycleEvents) {
+      void captureClientEvent({
+        ...params,
+        eventType: "action_succeeded",
+        message:
+          params.successMessage ||
+          `${normalizeText(params.module)} executou ${normalizeText(params.action)} com sucesso`,
+        responseMs: finishedAt - startedAt,
+        success: true,
+      });
+    }
 
     return result;
   } catch (error) {

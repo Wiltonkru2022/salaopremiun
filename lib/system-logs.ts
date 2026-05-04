@@ -75,22 +75,30 @@ export async function registrarLogSistema(params: RegistrarLogParams) {
       detalhes_json: details as Json,
     });
 
-    await captureSystemEvent({
-      module: modulo,
-      eventType: "ui_event",
-      severity:
-        gravidade === "warning"
-          ? "warning"
-          : gravidade === "error"
-            ? "error"
-            : "info",
-      message: mensagem,
-      idSalao: params.idSalao || null,
-      idUsuario: params.idUsuario || null,
-      details,
-      origin: "server",
-      createIncident: gravidade === "error",
-    });
+    const shouldMirrorToEventosSistema =
+      gravidade === "warning" ||
+      gravidade === "error" ||
+      gravidade === "critical" ||
+      details.monitoring_event === true;
+
+    if (shouldMirrorToEventosSistema) {
+      await captureSystemEvent({
+        module: modulo,
+        eventType: "ui_event",
+        severity:
+          gravidade === "warning"
+            ? "warning"
+            : gravidade === "error"
+              ? "error"
+              : "info",
+        message: mensagem,
+        idSalao: params.idSalao || null,
+        idUsuario: params.idUsuario || null,
+        details,
+        origin: "server",
+        createIncident: gravidade === "error",
+      });
+    }
   } catch (error) {
     console.error("Falha ao registrar log do sistema:", error);
     await registrarFalhaObservabilidade({

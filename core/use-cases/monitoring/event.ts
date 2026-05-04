@@ -20,7 +20,18 @@ export async function processMonitoringEventUseCase(params: {
 }) {
   try {
     const body = (params.body || {}) as MonitoringRoutePayload;
-    const identity = await params.service.resolveMonitoringIdentity();
+    const shouldResolveIdentity =
+      (!body.idSalao && !body.idUsuario && !body.idAdminUsuario) &&
+      (body.kind === "error" || body.severity === "warning" || body.severity === "error" || body.severity === "critical");
+
+    const identity = shouldResolveIdentity
+      ? await params.service.resolveMonitoringIdentity()
+      : {
+          idSalao: null,
+          idUsuario: null,
+          idAdminUsuario: null,
+        };
+
     const payload = {
       ...body,
       idSalao: identity.idSalao || body.idSalao || null,
