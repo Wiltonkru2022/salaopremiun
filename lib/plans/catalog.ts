@@ -144,9 +144,8 @@ export const PLANOS_CATALOGO: Record<PlanoCodigo, PlanoCatalogo> = {
       "Relatorios avancados",
       "Dashboard avancado",
       "App profissional",
-      "Marketing",
     ],
-    recursosBloqueados: ["WhatsApp avancado", "Campanhas premium"],
+    recursosBloqueados: ["Marketing", "WhatsApp avancado", "Campanhas premium"],
     limites: {
       usuarios: 5,
       profissionais: 10,
@@ -185,11 +184,10 @@ export const PLANOS_CATALOGO: Record<PlanoCodigo, PlanoCatalogo> = {
       "WhatsApp",
       "Campanhas",
       "App profissional",
-      "Marketing",
       "Recursos beta",
       "Suporte prioritario",
     ],
-    recursosBloqueados: [],
+    recursosBloqueados: ["Marketing"],
     limites: {
       usuarios: null,
       profissionais: null,

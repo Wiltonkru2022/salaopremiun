@@ -56,9 +56,8 @@ export default function ClientesPage() {
   const [acessoCarregado, setAcessoCarregado] = useState(false);
 
   const podeGerenciar = nivel === "admin" || nivel === "gerente";
-  const whatsappLiberado =
-    planoAccess?.recursos?.whatsapp === true || planoAccess?.recursos?.marketing === true;
-  const comunicacaoUpgradeTarget = getPlanoMinimoParaRecurso("marketing");
+  const whatsappLiberado = planoAccess?.recursos?.whatsapp === true;
+  const comunicacaoUpgradeTarget = getPlanoMinimoParaRecurso("whatsapp");
 
   const carregarAcesso = useCallback(async () => {
     const {

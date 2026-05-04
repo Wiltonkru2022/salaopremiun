@@ -350,6 +350,10 @@ export async function getPlanoAccessSnapshot(
     }
   });
 
+  // Marketing segue em preparação operacional. Mesmo que exista configuração
+  // antiga no banco, não liberamos o módulo até a integração estar pronta.
+  recursos.marketing = false;
+
   const assinaturaStatus = String(assinaturaRow?.status || salaoRow?.status || "")
     .trim()
     .toLowerCase();
