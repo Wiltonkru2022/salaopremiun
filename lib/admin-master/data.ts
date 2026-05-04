@@ -396,22 +396,44 @@ export async function getAdminMasterDashboard(): Promise<AdminMasterDashboardDat
 
 export async function getAdminMasterSaloes() {
   const supabase = getSupabaseAdmin();
-  const [{ data: saloes }, { data: assinaturas }, { data: scores }] =
-    await Promise.all([
-      supabase
-        .from("saloes")
-        .select(
-          "id, nome, responsavel, email, telefone, whatsapp, cidade, estado, plano, status, created_at"
-        )
-        .order("created_at", { ascending: false })
-        .limit(100),
-      supabase
-        .from("assinaturas")
-        .select("id_salao, plano, status, vencimento_em, trial_fim_em"),
-      supabase
-        .from("score_onboarding_salao")
-        .select("id_salao, score_total, atualizado_em"),
-    ]);
+  const { data: saloes } = await supabase
+    .from("saloes")
+    .select(
+      "id, nome, responsavel, email, telefone, whatsapp, cidade, estado, plano, status, created_at"
+    )
+    .order("created_at", { ascending: false })
+    .limit(100);
+
+  const saloesRows =
+    ((saloes || []) as {
+      id: string;
+      nome?: string | null;
+      responsavel?: string | null;
+      email?: string | null;
+      telefone?: string | null;
+      whatsapp?: string | null;
+      cidade?: string | null;
+      estado?: string | null;
+      plano?: string | null;
+      status?: string | null;
+      created_at?: string | null;
+    }[]) || [];
+  const salaoIds = saloesRows.map((salao) => salao.id);
+
+  const [{ data: assinaturas }, { data: scores }] = await Promise.all([
+    salaoIds.length
+      ? supabase
+          .from("assinaturas")
+          .select("id_salao, plano, status, vencimento_em, trial_fim_em")
+          .in("id_salao", salaoIds)
+      : Promise.resolve({ data: [] as Array<{ id_salao: string }> }),
+    salaoIds.length
+      ? supabase
+          .from("score_onboarding_salao")
+          .select("id_salao, score_total, atualizado_em")
+          .in("id_salao", salaoIds)
+      : Promise.resolve({ data: [] as Array<{ id_salao: string }> }),
+  ]);
 
   const assinaturaBySalao = new Map(
     ((assinaturas || []) as { id_salao: string }[]).map((item) => [
@@ -426,19 +448,7 @@ export async function getAdminMasterSaloes() {
     ])
   );
 
-  return ((saloes || []) as {
-    id: string;
-    nome?: string | null;
-    responsavel?: string | null;
-    email?: string | null;
-    telefone?: string | null;
-    whatsapp?: string | null;
-    cidade?: string | null;
-    estado?: string | null;
-    plano?: string | null;
-    status?: string | null;
-    created_at?: string | null;
-  }[]).map((salao) => {
+  return saloesRows.map((salao) => {
     const assinatura = assinaturaBySalao.get(salao.id) as
       | {
           plano?: string | null;
@@ -2413,27 +2423,39 @@ export async function getAdminMasterSection(
   }
 
   if (section === "logs") {
-    const [{ data: logs }, { data: checkoutLocks }, { data: saloes }] =
-      await Promise.all([
-        supabase
-          .from("logs_sistema")
-          .select(
-            "id, gravidade, modulo, id_salao, mensagem, detalhes_json, criado_em"
-          )
-          .order("criado_em", { ascending: false })
-          .limit(120),
-        supabase
-          .from("assinatura_checkout_locks")
-          .select(
-            "id, id_salao, plano_codigo, billing_type, status, id_cobranca, asaas_payment_id, erro_texto, idempotency_key, created_at, updated_at"
-          )
-          .in("status", ["erro", "expirado"])
-          .not("asaas_payment_id", "is", null)
-          .is("id_cobranca", null)
-          .order("updated_at", { ascending: false })
-          .limit(60),
-        supabase.from("saloes").select("id, nome").limit(1000),
-      ]);
+    const [{ data: logs }, { data: checkoutLocks }] = await Promise.all([
+      supabase
+        .from("logs_sistema")
+        .select(
+          "id, gravidade, modulo, id_salao, mensagem, detalhes_json, criado_em"
+        )
+        .order("criado_em", { ascending: false })
+        .limit(120),
+      supabase
+        .from("assinatura_checkout_locks")
+        .select(
+          "id, id_salao, plano_codigo, billing_type, status, id_cobranca, asaas_payment_id, erro_texto, idempotency_key, created_at, updated_at"
+        )
+        .in("status", ["erro", "expirado"])
+        .not("asaas_payment_id", "is", null)
+        .is("id_cobranca", null)
+        .order("updated_at", { ascending: false })
+        .limit(60),
+    ]);
+
+    const salaoIds = Array.from(
+      new Set(
+        [
+          ...((logs || []) as { id_salao?: string | null }[]).map((row) => row.id_salao),
+          ...((checkoutLocks || []) as { id_salao?: string | null }[]).map(
+            (row) => row.id_salao
+          ),
+        ].filter(Boolean)
+      )
+    ) as string[];
+    const { data: saloes } = salaoIds.length
+      ? await supabase.from("saloes").select("id, nome").in("id", salaoIds).limit(salaoIds.length)
+      : { data: [] as Array<{ id: string; nome?: string | null }> };
 
     const salaoById = new Map(
       ((saloes || []) as { id: string; nome?: string | null }[]).map((salao) => [
