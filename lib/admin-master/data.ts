@@ -922,13 +922,26 @@ async function getAdminMasterFinanceiroSection(): Promise<AdminSectionData> {
   inicioMes.setDate(1);
   inicioMes.setHours(0, 0, 0, 0);
 
-  const [{ data: assinaturas }, { data: cobrancas }, { data: checkoutLocks }, { data: saloes }] =
-    await Promise.all([
+  const [
+    { data: assinaturasContexto },
+    { data: assinaturasAtivasValor },
+    { count: assinaturasEmRiscoCount },
+    { data: cobrancas },
+    { data: checkoutLocks },
+  ] = await Promise.all([
       supabase
         .from("assinaturas")
         .select("id_salao, plano, status, valor, vencimento_em, trial_fim_em, updated_at")
         .order("updated_at", { ascending: false })
-        .limit(1000),
+        .limit(150),
+      supabase
+        .from("assinaturas")
+        .select("valor")
+        .in("status", ["ativo", "ativa", "pago"]),
+      supabase
+        .from("assinaturas")
+        .select("id", { count: "exact", head: true })
+        .in("status", ["vencida", "cancelada", "bloqueada", "inadimplente"]),
       supabase
         .from("assinaturas_cobrancas")
         .select(
@@ -941,8 +954,60 @@ async function getAdminMasterFinanceiroSection(): Promise<AdminSectionData> {
         .select("id_salao, status, id_cobranca, asaas_payment_id, erro_texto, created_at, updated_at")
         .order("updated_at", { ascending: false })
         .limit(100),
-      supabase.from("saloes").select("id, nome, plano, status").limit(1000),
     ]);
+
+  const assinaturaRows =
+    ((assinaturasContexto || []) as {
+      id_salao?: string | null;
+      plano?: string | null;
+      status?: string | null;
+      valor?: number | string | null;
+      vencimento_em?: string | null;
+      trial_fim_em?: string | null;
+    }[]) || [];
+  const cobrancaRows = ((cobrancas || []) as {
+    id_salao?: string | null;
+    referencia?: string | null;
+    valor?: number | string | null;
+    status?: string | null;
+    forma_pagamento?: string | null;
+    gateway?: string | null;
+    data_expiracao?: string | null;
+    pago_em?: string | null;
+    payment_date?: string | null;
+    confirmed_date?: string | null;
+    created_at?: string | null;
+  }[]) || [];
+  const checkoutRows = ((checkoutLocks || []) as {
+    id_salao?: string | null;
+    status?: string | null;
+    id_cobranca?: string | null;
+    asaas_payment_id?: string | null;
+    erro_texto?: string | null;
+  }[]) || [];
+  const salaoIds = Array.from(
+    new Set(
+      [
+        ...assinaturaRows.map((item) => item.id_salao),
+        ...cobrancaRows.map((item) => item.id_salao),
+        ...checkoutRows.map((item) => item.id_salao),
+      ].filter(Boolean)
+    )
+  ) as string[];
+  const { data: saloes } = salaoIds.length
+    ? await supabase
+        .from("saloes")
+        .select("id, nome, plano, status")
+        .in("id", salaoIds)
+        .limit(salaoIds.length)
+    : {
+        data: [] as Array<{
+          id: string;
+          nome?: string | null;
+          plano?: string | null;
+          status?: string | null;
+        }>,
+      };
 
   const salaoById = new Map(
     ((saloes || []) as {
@@ -960,35 +1025,6 @@ async function getAdminMasterFinanceiroSection(): Promise<AdminSectionData> {
     ])
   );
 
-  const assinaturaRows = ((assinaturas || []) as {
-    id_salao?: string | null;
-    plano?: string | null;
-    status?: string | null;
-    valor?: number | string | null;
-    vencimento_em?: string | null;
-    trial_fim_em?: string | null;
-  }[]);
-  const cobrancaRows = ((cobrancas || []) as {
-    id_salao?: string | null;
-    referencia?: string | null;
-    valor?: number | string | null;
-    status?: string | null;
-    forma_pagamento?: string | null;
-    gateway?: string | null;
-    data_expiracao?: string | null;
-    pago_em?: string | null;
-    payment_date?: string | null;
-    confirmed_date?: string | null;
-    created_at?: string | null;
-  }[]);
-  const checkoutRows = ((checkoutLocks || []) as {
-    id_salao?: string | null;
-    status?: string | null;
-    id_cobranca?: string | null;
-    asaas_payment_id?: string | null;
-    erro_texto?: string | null;
-  }[]);
-
   const assinaturaBySalao = new Map<string, (typeof assinaturaRows)[number]>();
   for (const assinatura of assinaturaRows) {
     if (assinatura.id_salao && !assinaturaBySalao.has(assinatura.id_salao)) {
@@ -996,10 +1032,7 @@ async function getAdminMasterFinanceiroSection(): Promise<AdminSectionData> {
     }
   }
 
-  const mrr = assinaturaRows
-    .filter((assinatura) =>
-      ACTIVE_SUBSCRIPTION_STATUSES.has(normalizeStatus(assinatura.status))
-    )
+  const mrr = (((assinaturasAtivasValor || []) as { valor?: number | string | null }[]) || [])
     .reduce((acc, assinatura) => acc + safeNumber(assinatura.valor), 0);
   const receitaMes = cobrancaRows
     .filter((cobranca) => {
@@ -1031,9 +1064,7 @@ async function getAdminMasterFinanceiroSection(): Promise<AdminSectionData> {
     (acc, cobranca) => acc + safeNumber(cobranca.valor),
     0
   );
-  const assinaturasEmRisco = assinaturaRows.filter((assinatura) =>
-    RISK_SUBSCRIPTION_STATUSES.has(normalizeStatus(assinatura.status))
-  ).length;
+  const assinaturasEmRisco = assinaturasEmRiscoCount || 0;
   const checkoutsComFalha = checkoutRows.filter((checkout) =>
     ["erro", "expirado"].includes(normalizeStatus(checkout.status))
   ).length;
