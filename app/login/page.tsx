@@ -15,15 +15,9 @@ import {
 } from "@/lib/auth/login-redirect";
 
 type WarmupTarget = {
-  origin: string | null;
-  href: string;
-  headers?: HeadersInit;
-  mode: RequestMode;
-  fetchEnabled?: boolean;
-};
-
-type ReadyWarmupTarget = Omit<WarmupTarget, "origin"> & {
   origin: string;
+  href: string;
+  mode: RequestMode;
 };
 
 export default function LoginPage() {
@@ -91,7 +85,7 @@ function LoginPageContent() {
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    const warmupTargets: ReadyWarmupTarget[] = [];
+    const warmupTargets: WarmupTarget[] = [];
 
     const redirectOrigin = safeOriginFromHref(redirectHref);
     if (redirectOrigin && redirectHref) {
@@ -99,28 +93,16 @@ function LoginPageContent() {
         origin: redirectOrigin,
         href: redirectHref,
         mode: "no-cors",
-        fetchEnabled: true,
       });
     }
 
     const supabaseOrigin = safeOriginFromHref(
       process.env.NEXT_PUBLIC_SUPABASE_URL || ""
     );
-    const supabaseHref = getSupabaseWarmupHref(
-      process.env.NEXT_PUBLIC_SUPABASE_URL || ""
-    );
-    if (supabaseOrigin && supabaseHref) {
-      warmupTargets.push({
-        origin: supabaseOrigin,
-        href: supabaseHref,
-        mode: "cors",
-        fetchEnabled: false,
-      });
-    }
 
     const createdLinks: HTMLLinkElement[] = [];
 
-    warmupTargets.forEach(({ origin, href, headers, mode, fetchEnabled }) => {
+    warmupTargets.forEach(({ origin, href, mode }) => {
       const preconnect = document.createElement("link");
       preconnect.rel = "preconnect";
       preconnect.href = origin;
@@ -134,16 +116,28 @@ function LoginPageContent() {
       document.head.appendChild(dnsPrefetch);
       createdLinks.push(dnsPrefetch);
 
-      if (fetchEnabled !== false) {
-        void fetch(href, {
-          method: "GET",
-          mode,
-          cache: "no-store",
-          credentials: "include",
-          headers,
-        }).catch(() => undefined);
-      }
+      void fetch(href, {
+        method: "GET",
+        mode,
+        cache: "no-store",
+        credentials: "include",
+      }).catch(() => undefined);
     });
+
+    if (supabaseOrigin) {
+      const supabasePreconnect = document.createElement("link");
+      supabasePreconnect.rel = "preconnect";
+      supabasePreconnect.href = supabaseOrigin;
+      supabasePreconnect.crossOrigin = "anonymous";
+      document.head.appendChild(supabasePreconnect);
+      createdLinks.push(supabasePreconnect);
+
+      const supabaseDnsPrefetch = document.createElement("link");
+      supabaseDnsPrefetch.rel = "dns-prefetch";
+      supabaseDnsPrefetch.href = supabaseOrigin;
+      document.head.appendChild(supabaseDnsPrefetch);
+      createdLinks.push(supabaseDnsPrefetch);
+    }
 
     return () => {
       createdLinks.forEach((link) => link.remove());
@@ -428,14 +422,5 @@ function safeOriginFromHref(href: string) {
       .origin;
   } catch {
     return null;
-  }
-}
-
-function getSupabaseWarmupHref(rawUrl: string) {
-  try {
-    const url = new URL(rawUrl);
-    return `${url.origin}/auth/v1/health`;
-  } catch {
-    return "";
   }
 }
