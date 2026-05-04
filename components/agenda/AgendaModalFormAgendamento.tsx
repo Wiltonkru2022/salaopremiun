@@ -130,7 +130,7 @@ export default function AgendaModalFormAgendamento({
       </Section>
 
       <Section eyebrow="Fluxo" title="Horario, status e caixa">
-        <div className="grid gap-3 lg:grid-cols-[220px_minmax(0,1fr)]">
+        <div className="space-y-3">
           <div>
             <label className="mb-1.5 flex items-center gap-2 text-xs font-semibold text-zinc-700">
               <Clock3 size={13} />

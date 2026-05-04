@@ -47,6 +47,38 @@ function getStatusLabel(status: string) {
   }
 }
 
+function ProfileStat({
+  label,
+  value,
+  helper,
+  tone = "default",
+}: {
+  label: string;
+  value: string;
+  helper?: string;
+  tone?: "default" | "success";
+}) {
+  return (
+    <div className="rounded-[18px] border border-zinc-200 bg-zinc-50 px-4 py-3">
+      <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-400">
+        {label}
+      </div>
+      <div
+        className={`mt-1.5 break-words text-sm font-semibold ${
+          tone === "success" ? "text-emerald-700" : "text-zinc-900"
+        }`}
+      >
+        {value}
+      </div>
+      {helper ? (
+        <div className="mt-1 break-words text-xs leading-5 text-zinc-500">
+          {helper}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function ProfileBody({
   clienteNome,
   clienteWhatsapp,
@@ -88,44 +120,31 @@ function ProfileBody({
           </div>
         ) : (
           <div className="space-y-4">
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              <div className="rounded-[20px] border border-zinc-200 bg-zinc-50 px-4 py-3">
-                <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-400">
-                  Historico
-                </div>
-                <div className="mt-2 text-2xl font-bold text-zinc-900">
-                  {historico.length}
-                </div>
-                <div className="text-xs text-zinc-500">ultimos agendamentos</div>
-              </div>
-              <div className="rounded-[20px] border border-zinc-200 bg-zinc-50 px-4 py-3">
-                <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-400">
-                  Ultimo servico
-                </div>
-                <div className="mt-2 break-words text-sm font-semibold text-zinc-900">
-                  {historico[0]?.servicoNome || "-"}
-                </div>
-              </div>
-              <div className="rounded-[20px] border border-zinc-200 bg-zinc-50 px-4 py-3">
-                <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-400">
-                  Credito disponivel
-                </div>
-                <div className="mt-2 text-sm font-semibold text-emerald-700">
-                  {creditoDisponivel.toLocaleString("pt-BR", {
-                    style: "currency",
-                    currency: "BRL",
-                  })}
-                </div>
-              </div>
-              <div className="rounded-[20px] border border-zinc-200 bg-zinc-50 px-4 py-3">
-                <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-400">
-                  Ultima observacao
-                </div>
-                <div className="mt-2 break-words text-sm text-zinc-700">
-                  {historico.find((item) => item.observacoes)?.observacoes ||
-                    "Sem observacoes salvas."}
-                </div>
-              </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <ProfileStat
+                label="Historico"
+                value={`${historico.length} agendamento${historico.length === 1 ? "" : "s"}`}
+                helper="Ultimos agendamentos da cliente"
+              />
+              <ProfileStat
+                label="Ultimo servico"
+                value={historico[0]?.servicoNome || "-"}
+              />
+              <ProfileStat
+                label="Credito disponivel"
+                value={creditoDisponivel.toLocaleString("pt-BR", {
+                  style: "currency",
+                  currency: "BRL",
+                })}
+                tone="success"
+              />
+              <ProfileStat
+                label="Ultima observacao"
+                value={
+                  historico.find((item) => item.observacoes)?.observacoes ||
+                  "Sem observacoes salvas."
+                }
+              />
             </div>
 
             <div className="space-y-3">
