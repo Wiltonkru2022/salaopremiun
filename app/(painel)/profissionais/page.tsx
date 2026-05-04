@@ -9,13 +9,9 @@ import {
   Sparkles,
   Users,
 } from "lucide-react";
+import { usePainelSession } from "@/components/layout/PainelSessionProvider";
 import AppLoading from "@/components/ui/AppLoading";
 import ConfirmActionModal from "@/components/ui/ConfirmActionModal";
-import { getUsuarioLogado } from "@/lib/auth/getUsuarioLogado";
-import {
-  buildPermissoesByNivel,
-  sanitizePermissoesDb,
-} from "@/lib/auth/permissions";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { getPlanoMinimoParaRecurso } from "@/lib/plans/catalog";
 import { getAssinaturaUrl } from "@/lib/site-urls";
@@ -44,13 +40,11 @@ type Profissional = {
 };
 
 type Permissoes = Record<string, boolean>;
-type PlanoAccessResponse = {
-  recursos?: Record<string, boolean>;
-};
 
 export default function ProfissionaisListPage() {
   const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
+  const { snapshot: painelSession } = usePainelSession();
 
   const [loading, setLoading] = useState(true);
   const [savingId, setSavingId] = useState<string | null>(null);
@@ -74,72 +68,32 @@ export default function ProfissionaisListPage() {
     getPlanoMinimoParaRecurso("app_profissional");
 
   const carregarAcesso = useCallback(async () => {
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    if (authError || !user) {
+    if (!painelSession?.idSalao || !painelSession?.permissoes) {
       router.replace("/login?motivo=sessao_expirada");
       return null;
     }
-
-    const { data: usuario, error: usuarioError } = await supabase
-      .from("usuarios")
-      .select("id, id_salao, nivel, status")
-      .eq("auth_user_id", user.id)
-      .maybeSingle();
-
-    if (usuarioError || !usuario?.id || !usuario?.id_salao) {
-      setErro("Nao foi possivel validar o usuario do sistema.");
-      return null;
-    }
-
-    if (usuario.status && usuario.status !== "ativo") {
-      setErro("Usuario inativo. Fale com a administracao do salao.");
-      return null;
-    }
-
-    const { data: permissoesDb } = await supabase
-      .from("usuarios_permissoes")
-      .select("agenda_criar, agenda_editar, agenda_excluir, agenda_ver, caixa_fechar, caixa_operar, caixa_ver, clientes_criar, clientes_editar, clientes_excluir, clientes_ver, comandas_criar, comandas_editar, comandas_excluir, comandas_ver, comissoes_pagar, comissoes_ver, configuracoes_editar, configuracoes_ver, estoque_movimentar, estoque_ver, id, id_salao, id_usuario, produtos_criar, produtos_editar, produtos_excluir, produtos_ver, profissionais_criar, profissionais_editar, profissionais_excluir, profissionais_ver, relatorios_ver, servicos_criar, servicos_editar, servicos_excluir, servicos_ver, vendas_excluir, vendas_reabrir, vendas_ver")
-      .eq("id_usuario", usuario.id)
-      .eq("id_salao", usuario.id_salao)
-      .maybeSingle();
-
-    const permissoesFinal: Permissoes = {
-      ...buildPermissoesByNivel(usuario.nivel),
-      ...sanitizePermissoesDb(permissoesDb as Record<string, unknown> | null),
-    };
+    const permissoesFinal = painelSession.permissoes as Permissoes;
+    const nivelAtual = String(painelSession.nivel || "").toLowerCase();
 
     setPermissoes(permissoesFinal);
-    setNivel(String(usuario.nivel || "").toLowerCase());
-    setIdSalao(usuario.id_salao);
+    setNivel(nivelAtual);
+    setIdSalao(painelSession.idSalao);
     setAcessoCarregado(true);
 
     if (!permissoesFinal.profissionais_ver) {
       router.replace("/dashboard?motivo=sem_permissao");
       return null;
     }
-
-    const planoResponse = await fetch("/api/plano/access", {
-      method: "GET",
-      cache: "no-store",
-    });
-
-    if (planoResponse.ok) {
-      const planoData = (await planoResponse.json()) as PlanoAccessResponse;
-      setAppProfissionalLiberado(
-        planoData.recursos?.app_profissional !== false
-      );
-    }
+    setAppProfissionalLiberado(
+      painelSession.planoRecursos?.app_profissional !== false
+    );
 
     return {
-      idSalao: usuario.id_salao,
-      nivel: String(usuario.nivel || "").toLowerCase(),
+      idSalao: painelSession.idSalao,
+      nivel: nivelAtual,
       permissoes: permissoesFinal,
     };
-  }, [router, supabase]);
+  }, [painelSession, router]);
 
   const carregarProfissionais = useCallback(
     async (salaoId: string) => {
@@ -226,11 +180,8 @@ export default function ProfissionaisListPage() {
       const acesso = await carregarAcesso();
       if (!acesso) return;
 
-      const usuarioLogado = await getUsuarioLogado();
-      const salaoIdFinal = usuarioLogado?.idSalao || acesso.idSalao;
-
-      setIdSalao(salaoIdFinal);
-      await carregarProfissionais(salaoIdFinal);
+      setIdSalao(acesso.idSalao);
+      await carregarProfissionais(acesso.idSalao);
     } catch (e: unknown) {
       console.error(e);
       setErro(getErrorMessage(e, "Erro ao carregar profissionais."));

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, type Dispatch, type SetStateAction } from "react";
+import { usePainelSession } from "@/components/layout/PainelSessionProvider";
 import type { Permissoes } from "@/lib/auth/permissions";
 import type {
   AbaCaixa,
@@ -105,6 +106,7 @@ export function useCaixaLoaders({
   setExtrasCatalogo,
   setProfissionaisCatalogo,
 }: UseCaixaLoadersParams) {
+  const { snapshot: painelSession } = usePainelSession();
   const limparComandaSelecionada = useCallback(() => {
     setComandaSelecionada(null);
     setItens([]);
@@ -151,7 +153,7 @@ export function useCaixaLoaders({
   );
 
   const carregarAcesso = useCallback(async () => {
-    const acesso = await carregarAcessoCaixa(supabase);
+    const acesso = await carregarAcessoCaixa(supabase, painelSession);
 
     if (acesso.precisaLogin) {
       router.replace("/login");
@@ -167,7 +169,7 @@ export function useCaixaLoaders({
     }
 
     return acesso;
-  }, [router, supabase, setPermissoes, setAcessoCarregado]);
+  }, [router, supabase, setPermissoes, setAcessoCarregado, painelSession]);
 
   const carregarConfiguracoesCaixa = useCallback(
     async (salaoIdParam?: string) => {

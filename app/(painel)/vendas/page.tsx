@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import AppLoading from "@/components/ui/AppLoading";
+import { usePainelSession } from "@/components/layout/PainelSessionProvider";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import {
@@ -36,10 +37,6 @@ import {
 import { KpiCard, ResumoRow } from "@/components/vendas/ui";
 import { groupComboTotals, parseComboDisplayMeta } from "@/lib/combo/display";
 import { getLocalDayRangeIso } from "@/lib/date/local-day-range";
-import {
-  buildPermissoesByNivel,
-  sanitizePermissoesDb,
-} from "@/lib/auth/permissions";
 import { monitorClientOperation } from "@/lib/monitoring/client";
 import type {
   VendaProcessarBody,
@@ -59,6 +56,7 @@ function escapeHtml(value: string | null | undefined) {
 export default function VendasPage() {
   const supabase = createClient();
   const router = useRouter();
+  const { snapshot: painelSession } = usePainelSession();
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -131,57 +129,15 @@ export default function VendasPage() {
       setErroTela("");
       setMsg("");
 
-      const {
-        data: { user },
-        error: authError,
-      } = await monitorClientOperation(
-        {
-          module: "vendas",
-          action: "inicializar_vendas",
-          screen: "vendas",
-          successMessage: "Tela de vendas inicializada com sucesso.",
-          errorMessage: "Falha ao inicializar a tela de vendas.",
-        },
-        () => supabase.auth.getUser()
-      );
-
-      if (authError || !user) {
+      if (!painelSession?.idSalao || !painelSession?.permissoes) {
         router.push("/login");
         return;
       }
-
-      const { data: usuario, error: usuarioError } = await supabase
-        .from("usuarios")
-        .select("id, id_salao, status, nivel")
-        .eq("auth_user_id", user.id)
-        .maybeSingle();
-
-      if (usuarioError || !usuario?.id_salao) {
-        setErroTela("Não foi possível identificar o salão do usuário.");
-        return;
-      }
-
-      if (usuario.status && usuario.status !== "ativo") {
-        setErroTela("Usuário inativo.");
-        return;
-      }
-
-      setIdSalao(usuario.id_salao);
-
-      const { data: permissoesData } = await supabase
-        .from("usuarios_permissoes")
-        .select("agenda_criar, agenda_editar, agenda_excluir, agenda_ver, caixa_fechar, caixa_operar, caixa_ver, clientes_criar, clientes_editar, clientes_excluir, clientes_ver, comandas_criar, comandas_editar, comandas_excluir, comandas_ver, comissoes_pagar, comissoes_ver, configuracoes_editar, configuracoes_ver, estoque_movimentar, estoque_ver, id, id_salao, id_usuario, produtos_criar, produtos_editar, produtos_excluir, produtos_ver, profissionais_criar, profissionais_editar, profissionais_excluir, profissionais_ver, relatorios_ver, servicos_criar, servicos_editar, servicos_excluir, servicos_ver, vendas_excluir, vendas_reabrir, vendas_ver")
-        .eq("id_usuario", usuario.id)
-        .eq("id_salao", usuario.id_salao)
-        .maybeSingle();
-
-      const permissoesFinal = {
-        ...buildPermissoesByNivel(usuario.nivel),
-        ...sanitizePermissoesDb(permissoesData as Record<string, unknown> | null),
-      };
+      const permissoesFinal = painelSession.permissoes;
 
       setPermissoes(permissoesFinal);
       setAcessoCarregado(true);
+      setIdSalao(painelSession.idSalao);
 
       if (!permissoesFinal?.vendas_ver) {
         setErroTela("Você não tem permissão para acessar a página de vendas.");
@@ -192,7 +148,7 @@ export default function VendasPage() {
       const { data: salaoData, error: salaoError } = await supabase
         .from("saloes")
         .select("id, nome, cpf_cnpj, telefone, endereco")
-        .eq("id", usuario.id_salao)
+        .eq("id", painelSession.idSalao)
         .maybeSingle();
 
       if (salaoError) {
@@ -204,7 +160,7 @@ export default function VendasPage() {
       const { data: clientesData, error: clientesError } = await supabase
         .from("clientes")
         .select("id, nome")
-        .eq("id_salao", usuario.id_salao)
+        .eq("id_salao", painelSession.idSalao)
         .order("nome", { ascending: true });
 
       if (clientesError) {
@@ -213,7 +169,7 @@ export default function VendasPage() {
         setClientesFiltro((clientesData as { id: string; nome: string }[]) || []);
       }
 
-      await carregarVendas(usuario.id_salao);
+      await carregarVendas(painelSession.idSalao);
     } catch (error: unknown) {
       console.error(error);
       setErroTela(

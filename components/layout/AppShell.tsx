@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Header from "@/components/layout/Header";
+import { PainelSessionProvider } from "@/components/layout/PainelSessionProvider";
 import Sidebar from "@/components/layout/Sidebar";
 import MonitoringContextBridge from "@/components/monitoring/MonitoringContextBridge";
 import type {
@@ -63,6 +64,23 @@ export default function AppShell({
   const criticalNotificationsCount = shellNotifications.filter(
     (notification) => notification.critical
   ).length;
+  const sessionSnapshot =
+    idSalao && idUsuario
+      ? {
+          idSalao,
+          idUsuario,
+          userName: userName || "",
+          userEmail: userEmail || "",
+          nivel,
+          permissoes,
+          planoRecursos,
+          salaoNome,
+          salaoResponsavel,
+          salaoLogoUrl,
+          planoNome,
+          assinaturaStatus,
+        }
+      : null;
 
   useEffect(() => {
     setShellNotifications(notifications);
@@ -91,6 +109,7 @@ export default function AppShell({
   }
 
   return (
+    <PainelSessionProvider value={sessionSnapshot}>
     <div className="min-h-screen bg-zinc-50 text-[var(--app-ink)]">
       <MonitoringContextBridge
         actorType="usuario_salao"
@@ -162,5 +181,6 @@ export default function AppShell({
       )}
 
     </div>
+    </PainelSessionProvider>
   );
 }

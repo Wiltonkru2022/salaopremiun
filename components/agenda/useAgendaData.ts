@@ -6,6 +6,7 @@ import type {
   SetStateAction,
 } from "react";
 import { useCallback } from "react";
+import { usePainelSession } from "@/components/layout/PainelSessionProvider";
 import { initAgendaPage } from "@/lib/agenda/initAgendaPage";
 import { loadAgendaData } from "@/lib/agenda/loadAgendaData";
 import { monitorClientOperation } from "@/lib/monitoring/client";
@@ -70,6 +71,7 @@ export function useAgendaData({
   setAgendamentos,
   setBloqueios,
 }: UseAgendaDataParams) {
+  const { snapshot: painelSession } = usePainelSession();
   const redirectToHref = useCallback(
     (href: string) => {
       if (typeof window !== "undefined" && /^https?:\/\//i.test(href)) {
@@ -246,6 +248,7 @@ export function useAgendaData({
           initAgendaPage({
             supabase,
             safeGetAuthUser,
+            sessionSnapshot: painelSession,
           })
       );
 
@@ -298,6 +301,7 @@ export function useAgendaData({
     setServicos,
     supabase,
     redirectToHref,
+    painelSession,
   ]);
 
   return {

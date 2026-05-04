@@ -2,12 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { usePainelSession } from "@/components/layout/PainelSessionProvider";
 import { createClient } from "@/lib/supabase/client";
 import { getUsuarioLogado } from "@/lib/auth/getUsuarioLogado";
-import {
-  buildPermissoesByNivel,
-  sanitizePermissoesDb,
-} from "@/lib/auth/permissions";
 import {
   getStatusComissaoMeta,
   getStatusComissaoQueryValues,
@@ -56,6 +53,7 @@ function origemMetaLabel(origem: string | null | undefined) {
 export function useComissoesPage() {
   const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
+  const { snapshot: painelSession } = usePainelSession();
   const hoje = new Date();
   const primeiroDiaMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
 
@@ -97,42 +95,17 @@ export function useComissoesPage() {
   const podeGerenciar = nivel === "admin" || nivel === "gerente";
 
   const carregarAcesso = useCallback(async () => {
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    if (authError || !user) {
+    if (!painelSession?.idSalao || !painelSession?.permissoes) {
       router.replace("/login");
       return null;
     }
 
-    const { data: usuario, error: usuarioError } = await supabase
-      .from("usuarios")
-      .select("id, id_salao, nivel, status")
-      .eq("auth_user_id", user.id)
-      .maybeSingle();
-
-    if (usuarioError || !usuario?.id || !usuario?.id_salao) {
-      setErro("Nao foi possivel validar o usuario do sistema.");
-      return null;
-    }
-
-    const { data: permissoesDb } = await supabase
-      .from("usuarios_permissoes")
-      .select("agenda_criar, agenda_editar, agenda_excluir, agenda_ver, caixa_fechar, caixa_operar, caixa_ver, clientes_criar, clientes_editar, clientes_excluir, clientes_ver, comandas_criar, comandas_editar, comandas_excluir, comandas_ver, comissoes_pagar, comissoes_ver, configuracoes_editar, configuracoes_ver, estoque_movimentar, estoque_ver, id, id_salao, id_usuario, produtos_criar, produtos_editar, produtos_excluir, produtos_ver, profissionais_criar, profissionais_editar, profissionais_excluir, profissionais_ver, relatorios_ver, servicos_criar, servicos_editar, servicos_excluir, servicos_ver, vendas_excluir, vendas_reabrir, vendas_ver")
-      .eq("id_usuario", usuario.id)
-      .eq("id_salao", usuario.id_salao)
-      .maybeSingle();
-
-    const permissoesFinal: ComissaoPermissoes = {
-      ...buildPermissoesByNivel(usuario.nivel),
-      ...sanitizePermissoesDb(permissoesDb as Record<string, unknown> | null),
-    };
+    const permissoesFinal = painelSession.permissoes as ComissaoPermissoes;
+    const nivelAtual = String(painelSession.nivel || "").toLowerCase();
 
     setPermissoes(permissoesFinal);
-    setNivel(String(usuario.nivel || "").toLowerCase());
-    setIdSalao(usuario.id_salao);
+    setNivel(nivelAtual);
+    setIdSalao(painelSession.idSalao);
     setAcessoCarregado(true);
 
     if (!permissoesFinal.comissoes_ver) {
@@ -140,8 +113,8 @@ export function useComissoesPage() {
       return null;
     }
 
-    return { idSalao: usuario.id_salao };
-  }, [router, supabase]);
+    return { idSalao: painelSession.idSalao };
+  }, [painelSession, router]);
 
   const carregarComissoes = useCallback(
     async (salaoIdParam?: string) => {

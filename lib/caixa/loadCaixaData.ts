@@ -12,6 +12,7 @@ import type {
   ProfissionalResumo,
 } from "@/components/caixa/types";
 import { SELECT_COMANDAS, SELECT_COMANDA_PAGAMENTOS } from "@/lib/db/selects";
+import type { PainelSessionSnapshot } from "@/lib/painel/session-snapshot";
 import { createClient } from "@/lib/supabase/client";
 
 type CaixaSupabaseClient = ReturnType<typeof createClient>;
@@ -25,7 +26,23 @@ type UsuarioCaixa = {
 
 type CatalogoServicoRow = CatalogoServico;
 
-export async function carregarAcessoCaixa(supabase: CaixaSupabaseClient) {
+export async function carregarAcessoCaixa(
+  supabase: CaixaSupabaseClient,
+  sessionSnapshot?: PainelSessionSnapshot | null
+) {
+  if (sessionSnapshot?.idSalao && sessionSnapshot?.permissoes) {
+    return {
+      precisaLogin: false as const,
+      usuario: {
+        id: sessionSnapshot.idUsuario,
+        id_salao: sessionSnapshot.idSalao,
+        nivel: sessionSnapshot.nivel,
+        status: "ativo",
+      } as UsuarioCaixa,
+      permissoes: sessionSnapshot.permissoes as Permissoes,
+    };
+  }
+
   const {
     data: { user },
     error: authError,

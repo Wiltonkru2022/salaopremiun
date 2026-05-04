@@ -38,7 +38,21 @@ export async function loadAgendaData(params: {
     supabase
       .from("agendamentos")
       .select(`
-        *,
+        id,
+        id_salao,
+        cliente_id,
+        profissional_id,
+        servico_id,
+        id_comanda,
+        data,
+        hora_inicio,
+        hora_fim,
+        duracao_minutos,
+        observacoes,
+        status,
+        origem,
+        created_at,
+        updated_at,
         comandas (
           id,
           numero,

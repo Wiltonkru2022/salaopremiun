@@ -3,14 +3,10 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { usePainelSession } from "@/components/layout/PainelSessionProvider";
 import { usePlanoAccessSnapshot } from "@/components/plans/usePlanoAccessSnapshot";
 import ConfirmActionModal from "@/components/ui/ConfirmActionModal";
 import AppLoading from "@/components/ui/AppLoading";
-import {
-  buildPermissoesByNivel,
-  sanitizePermissoesDb,
-} from "@/lib/auth/permissions";
-import { getUsuarioLogado } from "@/lib/auth/getUsuarioLogado";
 import { getPlanoMinimoParaRecurso } from "@/lib/plans/catalog";
 import { getAssinaturaUrl } from "@/lib/site-urls";
 import { createClient } from "@/lib/supabase/client";
@@ -45,6 +41,7 @@ function formatQuantidade(value?: number | null) {
 export default function ServicosExtrasPage() {
   const supabase = createClient();
   const router = useRouter();
+  const { snapshot: painelSession } = usePainelSession();
   const { planoAccess } = usePlanoAccessSnapshot(true);
 
   const [loading, setLoading] = useState(true);
@@ -64,49 +61,16 @@ export default function ServicosExtrasPage() {
   const estoqueUpgradeTarget = getPlanoMinimoParaRecurso("estoque");
 
   const carregarAcesso = useCallback(async () => {
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    if (authError || !user) {
+    if (!painelSession?.idSalao || !painelSession?.permissoes) {
       router.replace("/login");
       return null;
     }
-
-    const { data: usuario, error: usuarioError } = await supabase
-      .from("usuarios")
-      .select("id, id_salao, nivel, status")
-      .eq("auth_user_id", user.id)
-      .maybeSingle();
-
-    if (usuarioError || !usuario?.id || !usuario?.id_salao) {
-      setErro("Nao foi possivel validar o usuario do sistema.");
-      return null;
-    }
-
-    if (usuario.status && usuario.status !== "ativo") {
-      setErro("Usuario inativo.");
-      return null;
-    }
-
-    const { data: permissoesDb } = await supabase
-      .from("usuarios_permissoes")
-      .select(
-        "agenda_criar, agenda_editar, agenda_excluir, agenda_ver, caixa_fechar, caixa_operar, caixa_ver, clientes_criar, clientes_editar, clientes_excluir, clientes_ver, comandas_criar, comandas_editar, comandas_excluir, comandas_ver, comissoes_pagar, comissoes_ver, configuracoes_editar, configuracoes_ver, estoque_movimentar, estoque_ver, id, id_salao, id_usuario, produtos_criar, produtos_editar, produtos_excluir, produtos_ver, profissionais_criar, profissionais_editar, profissionais_excluir, profissionais_ver, relatorios_ver, servicos_criar, servicos_editar, servicos_excluir, servicos_ver, vendas_excluir, vendas_reabrir, vendas_ver"
-      )
-      .eq("id_usuario", usuario.id)
-      .eq("id_salao", usuario.id_salao)
-      .maybeSingle();
-
-    const permissoesFinal: Permissoes = {
-      ...buildPermissoesByNivel(usuario.nivel),
-      ...sanitizePermissoesDb(permissoesDb as Record<string, unknown> | null),
-    };
+    const permissoesFinal = painelSession.permissoes as Permissoes;
+    const nivelAtual = String(painelSession.nivel || "").toLowerCase();
 
     setPermissoes(permissoesFinal);
-    setNivel(String(usuario.nivel || "").toLowerCase());
-    setIdSalao(usuario.id_salao);
+    setNivel(nivelAtual);
+    setIdSalao(painelSession.idSalao);
     setAcessoCarregado(true);
 
     if (!permissoesFinal.servicos_ver) {
@@ -115,10 +79,10 @@ export default function ServicosExtrasPage() {
     }
 
     return {
-      idSalao: usuario.id_salao,
+      idSalao: painelSession.idSalao,
       permissoes: permissoesFinal,
     };
-  }, [router, supabase]);
+  }, [painelSession, router]);
 
   const carregarItens = useCallback(
     async (salaoId: string) => {
@@ -145,10 +109,8 @@ export default function ServicosExtrasPage() {
       const acesso = await carregarAcesso();
       if (!acesso) return;
 
-      const usuarioLogado = await getUsuarioLogado();
-      const salaoIdFinal = usuarioLogado?.idSalao || acesso.idSalao;
-      setIdSalao(salaoIdFinal);
-      await carregarItens(salaoIdFinal);
+      setIdSalao(acesso.idSalao);
+      await carregarItens(acesso.idSalao);
     } catch (e: unknown) {
       console.error(e);
       setErro(e instanceof Error ? e.message : "Erro ao carregar itens extras.");

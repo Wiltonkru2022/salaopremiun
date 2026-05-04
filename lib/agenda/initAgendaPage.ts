@@ -1,5 +1,6 @@
 import type { SupabaseClient, User } from "@supabase/supabase-js";
 import { buildLoginRedirectUrl } from "@/lib/auth/login-redirect";
+import type { PainelSessionSnapshot } from "@/lib/painel/session-snapshot";
 import { PERMISSIONS, type PermissionKey, type UserNivel } from "@/lib/permissions";
 import type { Cliente, ConfigSalao, Profissional, Servico } from "@/types/agenda";
 
@@ -125,6 +126,7 @@ function getAssinaturaBloqueada(params: {
 export async function initAgendaPage(params: {
   supabase: SupabaseClient;
   safeGetAuthUser: () => Promise<User | null>;
+  sessionSnapshot?: PainelSessionSnapshot | null;
 }): Promise<{
   ok: boolean;
   redirectTo?: string | null;
@@ -137,55 +139,63 @@ export async function initAgendaPage(params: {
   servicos?: Servico[];
   assinaturaBloqueada?: boolean;
 }> {
-  const { supabase, safeGetAuthUser } = params;
+  const { supabase, safeGetAuthUser, sessionSnapshot } = params;
 
-  const user = await safeGetAuthUser();
+  let salaoId = sessionSnapshot?.idSalao || "";
+  let userNivel = String(sessionSnapshot?.nivel || "recepcao") as UserNivel;
+  let permissoesNivel =
+    sessionSnapshot?.permissoes || montarPermissoesPorNivel(userNivel);
 
-  if (!user) {
-    return {
-      ok: false,
-      redirectTo: buildLoginRedirectUrl("sessao_expirada", {
-        returnTo: "/agenda",
-        context: "agenda",
-      }),
-      erroTela: "Usuario nao autenticado.",
-    };
+  if (!salaoId) {
+    const user = await safeGetAuthUser();
+
+    if (!user) {
+      return {
+        ok: false,
+        redirectTo: buildLoginRedirectUrl("sessao_expirada", {
+          returnTo: "/agenda",
+          context: "agenda",
+        }),
+        erroTela: "Usuario nao autenticado.",
+      };
+    }
+
+    const usuarioRes = await supabase
+      .from("usuarios")
+      .select("id, id_salao, status, auth_user_id, nivel")
+      .eq("auth_user_id", user.id)
+      .maybeSingle();
+
+    if (usuarioRes.error) {
+      console.error("Erro ao buscar usuario logado:", usuarioRes.error);
+      return {
+        ok: false,
+        erroTela: "Nao foi possivel carregar os dados do usuario logado.",
+      };
+    }
+
+    if (!usuarioRes.data?.id_salao) {
+      return {
+        ok: false,
+        erroTela: "Nao foi possivel identificar o salao do usuario logado.",
+      };
+    }
+
+    if (usuarioRes.data.status && usuarioRes.data.status !== "ativo") {
+      return {
+        ok: false,
+        redirectTo: buildLoginRedirectUrl("usuario_inativo", {
+          returnTo: "/agenda",
+          context: "agenda",
+        }),
+        erroTela: "Usuario vinculado, mas inativo.",
+      };
+    }
+
+    salaoId = usuarioRes.data.id_salao;
+    userNivel = String(usuarioRes.data.nivel || "recepcao") as UserNivel;
+    permissoesNivel = montarPermissoesPorNivel(userNivel);
   }
-
-  const usuarioRes = await supabase
-    .from("usuarios")
-    .select("id, id_salao, status, auth_user_id, nivel")
-    .eq("auth_user_id", user.id)
-    .maybeSingle();
-
-  if (usuarioRes.error) {
-    console.error("Erro ao buscar usuario logado:", usuarioRes.error);
-    return {
-      ok: false,
-      erroTela: "Nao foi possivel carregar os dados do usuario logado.",
-    };
-  }
-
-  if (!usuarioRes.data?.id_salao) {
-    return {
-      ok: false,
-      erroTela: "Nao foi possivel identificar o salao do usuario logado.",
-    };
-  }
-
-  if (usuarioRes.data.status && usuarioRes.data.status !== "ativo") {
-    return {
-      ok: false,
-      redirectTo: buildLoginRedirectUrl("usuario_inativo", {
-        returnTo: "/agenda",
-        context: "agenda",
-      }),
-      erroTela: "Usuario vinculado, mas inativo.",
-    };
-  }
-
-  const userNivel = String(usuarioRes.data.nivel || "recepcao") as UserNivel;
-  const permissoesNivel = montarPermissoesPorNivel(userNivel);
 
   if (!permissoesNivel.agenda_ver) {
     return {
@@ -194,8 +204,6 @@ export async function initAgendaPage(params: {
       redirectTo: "/dashboard",
     };
   }
-
-  const salaoId = usuarioRes.data.id_salao;
 
   const [
     configRes,

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { usePainelSession } from "@/components/layout/PainelSessionProvider";
 
 type PlanoAccessPayload = {
   planoCodigo?: string;
@@ -33,8 +34,17 @@ export function getUpgradeTarget(
 }
 
 export function usePlanoAccessSnapshot(enabled = true) {
+  const { snapshot: painelSession } = usePainelSession();
   const [loadingPlanoAccess, setLoadingPlanoAccess] = useState(enabled);
-  const [planoAccess, setPlanoAccess] = useState<PlanoAccessPayload | null>(null);
+  const [planoAccess, setPlanoAccess] = useState<PlanoAccessPayload | null>(() =>
+    painelSession?.planoRecursos
+      ? {
+          planoCodigo: undefined,
+          planoNome: painelSession.planoNome,
+          recursos: painelSession.planoRecursos,
+        }
+      : null
+  );
 
   const carregarPlanoAccess = useCallback(async () => {
     if (!enabled) return;
@@ -61,6 +71,20 @@ export function usePlanoAccessSnapshot(enabled = true) {
   useEffect(() => {
     void carregarPlanoAccess();
   }, [carregarPlanoAccess]);
+
+  useEffect(() => {
+    if (!painelSession?.planoRecursos) {
+      return;
+    }
+
+    setPlanoAccess((current) => ({
+      ...current,
+      planoNome: current?.planoNome || painelSession.planoNome,
+      recursos: current?.recursos || painelSession.planoRecursos,
+    }));
+
+    setLoadingPlanoAccess(false);
+  }, [painelSession?.planoNome, painelSession?.planoRecursos]);
 
   const upgradeTarget = useMemo(
     () => getUpgradeTarget(planoAccess?.planoCodigo),

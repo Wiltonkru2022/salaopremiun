@@ -1,6 +1,39 @@
 import { createClient } from "@/lib/supabase/client";
+import {
+  PAINEL_SESSION_STORAGE_KEY,
+  type PainelSessionSnapshot,
+} from "@/lib/painel/session-snapshot";
 
 export async function getUsuarioLogado() {
+  if (typeof window !== "undefined") {
+    try {
+      const raw = window.localStorage.getItem(PAINEL_SESSION_STORAGE_KEY);
+      if (raw) {
+        const snapshot = JSON.parse(raw) as PainelSessionSnapshot;
+
+        if (snapshot?.idSalao && snapshot?.idUsuario) {
+          return {
+            ok: true,
+            user: null,
+            perfil: {
+              id: snapshot.idUsuario,
+              id_salao: snapshot.idSalao,
+              nome: snapshot.userName || null,
+              email: snapshot.userEmail || null,
+              nivel: snapshot.nivel || null,
+              status: "ativo",
+              auth_user_id: null,
+            },
+            supabase: createClient(),
+            idSalao: snapshot.idSalao,
+          };
+        }
+      }
+    } catch {
+      // Se o cache falhar, segue para o fluxo normal.
+    }
+  }
+
   const supabase = createClient();
 
   const {
