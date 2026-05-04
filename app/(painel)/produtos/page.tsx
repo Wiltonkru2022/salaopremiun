@@ -19,6 +19,7 @@ import {
 } from "@/lib/auth/permissions";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { getPlanoMinimoParaRecurso } from "@/lib/plans/catalog";
+import { getAssinaturaUrl } from "@/lib/site-urls";
 import { createClient } from "@/lib/supabase/client";
 import type {
   ProdutoProcessarErrorResponse,
@@ -408,7 +409,7 @@ export default function ProdutosPage() {
                   Comparar planos
                 </Link>
                 <Link
-                  href={`/assinatura?plano=${estoqueUpgradeTarget}`}
+                  href={getAssinaturaUrl(`/assinatura?plano=${estoqueUpgradeTarget}`)}
                   className="inline-flex items-center justify-center rounded-full bg-sky-900 px-4 py-2 font-bold text-white transition hover:opacity-95"
                 >
                   Fazer upgrade

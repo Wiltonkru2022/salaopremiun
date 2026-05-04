@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getPlanoCatalogo, getPlanosOrdenados } from "@/lib/plans/catalog";
+import { getAssinaturaUrl } from "@/lib/site-urls";
 import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -42,14 +43,14 @@ function getPlanoAction(params: {
 
   if (planoAtualCodigo === "teste_gratis") {
     return {
-      href: `/assinatura?plano=${planoDestinoCodigo}`,
+      href: getAssinaturaUrl(`/assinatura?plano=${planoDestinoCodigo}`),
       label: `Assinar ${planoDestinoNome}`,
       variant: "primary" as const,
     };
   }
 
   return {
-    href: `/assinatura?plano=${planoDestinoCodigo}`,
+    href: getAssinaturaUrl(`/assinatura?plano=${planoDestinoCodigo}`),
     label: ordemDestino > ordemAtual ? "Fazer upgrade" : "Fazer downgrade",
     variant: "primary" as const,
   };
@@ -130,7 +131,7 @@ export default async function CompararPlanosPage() {
                 Voltar para Meu Plano
               </Link>
               <Link
-                href={`/assinatura?plano=${planoAtualInfo.codigo === "teste_gratis" ? "basico" : planoAtualInfo.codigo}`}
+                href={getAssinaturaUrl(`/assinatura?plano=${planoAtualInfo.codigo === "teste_gratis" ? "basico" : planoAtualInfo.codigo}`)}
                 className="rounded-full border border-white/15 bg-white/10 px-5 py-2.5 text-sm font-black text-white transition hover:-translate-y-0.5 hover:bg-white/15"
               >
                 Abrir assinatura

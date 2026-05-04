@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { groupComboTotals, parseComboDisplayMeta } from "@/lib/combo/display";
 import { getPlanoMinimoParaRecurso, type PlanoCobravelCodigo } from "@/lib/plans/catalog";
+import { getAssinaturaUrl } from "@/lib/site-urls";
 
 type PlanoAccessPayload = {
   recursos?: Record<string, boolean>;
@@ -865,7 +866,7 @@ export default function ComissoesPage() {
                     Apurar rateio
                   </button>
                   <a
-                    href={`/assinatura?plano=${getPlanoMinimoParaRecurso("comissoes_avancadas")}`}
+                    href={getAssinaturaUrl(`/assinatura?plano=${getPlanoMinimoParaRecurso("comissoes_avancadas")}`)}
                     className="inline-flex items-center gap-2 rounded-2xl border border-zinc-200 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-50"
                   >
                     <Sparkles size={16} />
@@ -1182,7 +1183,7 @@ function UpgradeActions({
         Comparar planos
       </a>
       <a
-        href={`/assinatura?plano=${plan}`}
+        href={getAssinaturaUrl(`/assinatura?plano=${plan}`)}
         className="inline-flex items-center justify-center rounded-2xl bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-zinc-800"
       >
         Fazer upgrade

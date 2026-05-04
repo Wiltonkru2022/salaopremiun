@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { getAssinaturaUrl } from "@/lib/site-urls";
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -541,7 +542,7 @@ async function bootstrap() {
               Comparar planos
             </Link>
             <Link
-              href={`/assinatura?plano=${upgradeTarget}`}
+              href={getAssinaturaUrl(`/assinatura?plano=${upgradeTarget}`)}
               className="inline-flex items-center justify-center rounded-2xl bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-zinc-800"
             >
               Fazer upgrade

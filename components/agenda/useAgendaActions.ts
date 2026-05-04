@@ -3,6 +3,7 @@
 import { useCallback } from "react";
 import type { AgendaPageTone } from "@/components/agenda/page-types";
 import { ensureDiaFuncionamento } from "@/lib/agenda/validacoesAgenda";
+import { getAssinaturaUrl } from "@/lib/site-urls";
 import type { Agendamento, Bloqueio, ConfigSalao } from "@/types/agenda";
 
 type UseAgendaActionsParams = {
@@ -46,7 +47,7 @@ export function useAgendaActions({
       "Assinatura bloqueada",
       "Sua assinatura está bloqueada por atraso. Regularize o pagamento para continuar usando a agenda.",
       "danger",
-      "/assinatura"
+      getAssinaturaUrl("/assinatura")
     );
 
     return true;

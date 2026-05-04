@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { getAssinaturaUrl } from "@/lib/site-urls";
 import { ExternalLink } from "lucide-react";
 import { getPlanoMinimoParaRecurso } from "@/lib/plans/catalog";
 import { normalizeTimeString } from "@/lib/utils/agenda";
@@ -193,7 +194,7 @@ export default function AgendaModalResumo({
                 Comparar planos
               </Link>
               <Link
-                href={`/assinatura?plano=${comunicacaoUpgradeTarget}`}
+                href={getAssinaturaUrl(`/assinatura?plano=${comunicacaoUpgradeTarget}`)}
                 className="inline-flex flex-1 items-center justify-center rounded-2xl bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-95"
               >
                 Fazer upgrade

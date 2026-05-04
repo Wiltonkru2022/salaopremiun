@@ -17,6 +17,7 @@ import type {
   ConfigCaixaSalao,
   TipoItemComanda,
 } from "@/components/caixa/types";
+import { imprimirRelatorioFechamentoCaixa } from "@/components/caixa/printFechamentoReport";
 import { parseMoney } from "@/components/caixa/utils";
 import { getErrorMessage } from "@/components/caixa/useCaixaApi";
 import type {
@@ -34,6 +35,7 @@ import type {
 } from "@/types/comandas";
 
 type UseCaixaOperationsParams = {
+  idSalao: string;
   caixaSchemaReady: boolean;
   caixaAberto: boolean;
   sessaoCaixa: CaixaSessao | null;
@@ -70,6 +72,7 @@ type UseCaixaOperationsParams = {
 };
 
 export function useCaixaOperations({
+  idSalao,
   caixaSchemaReady,
   caixaAberto,
   sessaoCaixa,
@@ -201,7 +204,16 @@ export function useCaixaOperations({
           },
         });
         await carregarSessaoOperacional();
-        setMsg("Caixa fechado com sucesso.");
+        await imprimirRelatorioFechamentoCaixa({
+          idSalao,
+          sessao: {
+            ...sessaoCaixa,
+            fechado_em: new Date().toISOString(),
+          },
+          valorFechamento: payload.valorFechamento,
+          observacoes: payload.observacoes,
+        });
+        setMsg("Caixa fechado com sucesso. O relatorio de fechamento foi enviado para impressao.");
       } catch (error: unknown) {
         console.error(error);
         setErroTela(getErrorMessage(error, "Erro ao fechar caixa."));
@@ -211,6 +223,7 @@ export function useCaixaOperations({
     },
     [
       carregarSessaoOperacional,
+      idSalao,
       podeFinalizarCaixa,
       processarCaixa,
       sessaoCaixa,

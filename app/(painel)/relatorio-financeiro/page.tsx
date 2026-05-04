@@ -21,6 +21,7 @@ import {
 import { parseComboDisplayMeta } from "@/lib/combo/display";
 import { getLocalDayRangeIso } from "@/lib/date/local-day-range";
 import { getPlanoMinimoParaRecurso, type PlanoCobravelCodigo } from "@/lib/plans/catalog";
+import { getAssinaturaUrl } from "@/lib/site-urls";
 
 type ClienteJoin = {
   nome?: string | null;
@@ -1532,7 +1533,7 @@ export default function RelatorioFinanceiroPage() {
                         Comparar planos
                       </a>
                       <a
-                        href={`/assinatura?plano=${getPlanoMinimoParaRecurso("relatorios_avancados")}`}
+                        href={getAssinaturaUrl(`/assinatura?plano=${getPlanoMinimoParaRecurso("relatorios_avancados")}`)}
                         className="inline-flex items-center justify-center rounded-2xl bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-zinc-800"
                       >
                         Fazer upgrade
@@ -1713,7 +1714,7 @@ function UpgradePanel({
           Comparar planos
         </a>
         <a
-          href={`/assinatura?plano=${plan}`}
+          href={getAssinaturaUrl(`/assinatura?plano=${plan}`)}
           className="inline-flex items-center justify-center rounded-2xl bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-zinc-800"
         >
           Fazer upgrade

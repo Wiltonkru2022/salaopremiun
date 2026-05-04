@@ -57,7 +57,7 @@ export function getResumoAssinatura({
   const statusNormalizado = String(status || "").toLowerCase();
 
   const vencimentoBase =
-    statusNormalizado === "teste_gratis" || statusNormalizado === "trial"
+    ["teste_gratis", "trial", "trialing"].includes(statusNormalizado)
       ? trialFimEm || vencimentoEm || null
       : vencimentoEm || trialFimEm || null;
 
@@ -105,7 +105,7 @@ export function getResumoAssinatura({
     };
   }
 
-  if (["teste_gratis", "trial"].includes(statusNormalizado)) {
+  if (["teste_gratis", "trial", "trialing"].includes(statusNormalizado)) {
     return {
       ativa: !vencida,
       vencida,
@@ -117,7 +117,7 @@ export function getResumoAssinatura({
     };
   }
 
-  if (["ativo", "ativa", "pago"].includes(statusNormalizado)) {
+  if (["ativo", "ativa", "pago", "active", "paid"].includes(statusNormalizado)) {
     return {
       ativa: !vencida,
       vencida,

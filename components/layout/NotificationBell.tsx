@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import clsx from "clsx";
 import {
@@ -24,6 +23,7 @@ import type {
   ShellNotificationIcon,
   ShellNotificationTone,
 } from "@/lib/notifications/contracts";
+import { getAssinaturaUrl, getPainelUrl } from "@/lib/site-urls";
 
 type Props = {
   notifications: ShellNotification[];
@@ -247,9 +247,9 @@ export default function NotificationBell({
 
                 if (notification.href) {
                   return (
-                    <Link
+                    <a
                       key={notification.id}
-                      href={notification.href}
+                      href={getNotificationHref(notification.href)}
                       onClick={() => {
                         markAsRead(notification.id);
                         setOpen(false);
@@ -257,7 +257,7 @@ export default function NotificationBell({
                       className="flex items-start gap-3 rounded-[22px] border border-zinc-100 bg-zinc-50/80 p-3 transition hover:border-zinc-200 hover:bg-white"
                     >
                       {content}
-                    </Link>
+                    </a>
                   );
                 }
 
@@ -309,4 +309,16 @@ export default function NotificationBell({
       ) : null}
     </div>
   );
+}
+
+function getNotificationHref(href: string) {
+  if (/^https?:\/\//i.test(href)) {
+    return href;
+  }
+
+  if (href === "/assinatura" || href.startsWith("/assinatura?")) {
+    return getAssinaturaUrl(href);
+  }
+
+  return getPainelUrl(href);
 }

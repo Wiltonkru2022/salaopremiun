@@ -18,6 +18,7 @@ import {
   Wallet,
 } from "lucide-react";
 import { getPlanoMinimoParaRecurso, type PlanoCobravelCodigo } from "@/lib/plans/catalog";
+import { getAssinaturaUrl } from "@/lib/site-urls";
 
 type DashboardResumo = {
   agendamentosHoje: number;
@@ -199,7 +200,7 @@ function UpgradeActions({
         Comparar planos
       </a>
       <a
-        href={`/assinatura?plano=${plan}`}
+        href={getAssinaturaUrl(`/assinatura?plano=${plan}`)}
         className="inline-flex items-center justify-center rounded-2xl bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-zinc-800"
       >
         Fazer upgrade

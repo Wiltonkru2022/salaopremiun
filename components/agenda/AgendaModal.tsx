@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { getAssinaturaUrl } from "@/lib/site-urls";
 import { useEffect, useState } from "react";
 import { CalendarDays, Lock, X } from "lucide-react";
 import AgendaModalAviso from "@/components/agenda/AgendaModalAviso";
@@ -213,7 +214,7 @@ export default function AgendaModal(props: Props) {
               Comparar planos
             </Link>
             <Link
-              href={`/assinatura?plano=${comunicacaoUpgradeTarget}`}
+              href={getAssinaturaUrl(`/assinatura?plano=${comunicacaoUpgradeTarget}`)}
               className="inline-flex items-center justify-center rounded-2xl bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-zinc-800"
             >
               Fazer upgrade

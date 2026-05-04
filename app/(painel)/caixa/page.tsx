@@ -176,6 +176,7 @@ export default function CaixaPage() {
     salvarItemComanda,
     removerItemComanda,
   } = useCaixaOperations({
+    idSalao,
     caixaSchemaReady,
     caixaAberto,
     sessaoCaixa,

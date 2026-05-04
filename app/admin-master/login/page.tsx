@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   ArrowRight,
@@ -9,16 +9,10 @@ import {
   ShieldCheck,
   Sparkles,
 } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
 import {
   ADMIN_MASTER_HOME_PATH,
   sanitizeAdminMasterNextPath,
 } from "@/lib/admin-master/auth/login-path";
-import {
-  clearSupabaseBrowserAuthState,
-  getLoginErrorMessage,
-  isSupabaseAuthRateLimit,
-} from "@/lib/supabase/auth-client-recovery";
 
 const LOGIN_HOST =
   process.env.NEXT_PUBLIC_APP_LOGIN_HOST ||
@@ -55,13 +49,10 @@ function AdminMasterLoginContent() {
   const searchParams = useSearchParams();
   const submittingRef = useRef(false);
 
-  const [supabase, setSupabase] =
-    useState<ReturnType<typeof createClient> | null>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState("");
-  const [rateLimited, setRateLimited] = useState(false);
 
   const nextPath = useMemo(
     () =>
@@ -75,76 +66,51 @@ function AdminMasterLoginContent() {
     []
   );
 
-  useEffect(() => {
-    setSupabase(createClient());
-  }, []);
-
   async function handleLogin(event: React.FormEvent) {
     event.preventDefault();
     if (loading || submittingRef.current) return;
 
-    if (!supabase) {
-      setErro("Cliente de autenticacao ainda nao carregado.");
-      return;
-    }
-
     submittingRef.current = true;
     setLoading(true);
     setErro("");
-    setRateLimited(false);
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email: email.trim().toLowerCase(),
-      password,
-    });
-
-    if (error) {
-      setRateLimited(isSupabaseAuthRateLimit(error));
-      setErro(getLoginErrorMessage(error));
-      setLoading(false);
-      submittingRef.current = false;
-      return;
-    }
-
-    const accessResponse = await fetch(
-      `/api/admin-master/auth/access?next=${encodeURIComponent(nextPath)}`,
-      {
-        method: "GET",
+    try {
+      const loginResponse = await fetch("/api/admin-master/auth/login", {
+        method: "POST",
         cache: "no-store",
         credentials: "same-origin",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email,
+          password,
+          next: nextPath,
+        }),
+      });
+
+      const loginPayload = (await loginResponse.json().catch(() => null)) as
+        | {
+            ok?: boolean;
+            message?: string;
+            redirectTo?: string;
+          }
+        | null;
+
+      if (!loginResponse.ok || !loginPayload?.ok) {
+        setErro(
+          loginPayload?.message ||
+            "Nao foi possivel concluir o login do Admin Master."
+        );
+        return;
       }
-    );
 
-    const accessPayload = (await accessResponse.json().catch(() => null)) as
-      | {
-          ok?: boolean;
-          message?: string;
-          redirectTo?: string;
-        }
-      | null;
-
-    if (!accessResponse.ok || !accessPayload?.ok) {
-      await supabase.auth.signOut();
-      setErro(
-        accessPayload?.message ||
-          "Este e-mail nao possui acesso liberado ao Admin Master."
-      );
+      router.push(loginPayload.redirectTo || nextPath);
+      router.refresh();
+    } finally {
       setLoading(false);
       submittingRef.current = false;
-      return;
     }
-
-    router.push(accessPayload.redirectTo || nextPath);
-    router.refresh();
-  }
-
-  function limparSessaoLocal() {
-    clearSupabaseBrowserAuthState();
-    setSupabase(createClient());
-    setRateLimited(false);
-    setErro("Sessao local limpa. Aguarde alguns segundos e tente entrar de novo.");
-    submittingRef.current = false;
-    setLoading(false);
   }
 
   return (
@@ -214,7 +180,8 @@ function AdminMasterLoginContent() {
               </h2>
               <p className="mt-2.5 text-sm leading-6 text-[#6b5b45]">
                 Use seu e-mail interno para abrir o ambiente administrativo
-                executivo.
+                executivo. Essa sessao nao compartilha login com o painel do
+                salao.
               </p>
             </div>
 
@@ -284,21 +251,12 @@ function AdminMasterLoginContent() {
               {erro ? (
                 <div className="rounded-[20px] border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
                   <p>{erro}</p>
-                  {rateLimited ? (
-                    <button
-                      type="button"
-                      onClick={limparSessaoLocal}
-                      className="mt-3 rounded-xl border border-rose-200 bg-white px-3 py-2 text-xs font-semibold text-rose-700"
-                    >
-                      Limpar sessao local
-                    </button>
-                  ) : null}
                 </div>
               ) : null}
 
               <button
                 type="submit"
-                disabled={loading || !supabase}
+                disabled={loading}
                 className="flex w-full items-center justify-center gap-2 rounded-[20px] bg-[#1f160e] px-4 py-3 font-semibold text-white transition hover:bg-[#2b1d11] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 <span>{loading ? "Validando acesso..." : "Entrar no Admin Master"}</span>
@@ -307,9 +265,8 @@ function AdminMasterLoginContent() {
             </form>
 
             <div className="mt-5 rounded-[20px] border border-[#eadcc8] bg-[#fff6ea] px-4 py-3.5 text-sm leading-6 text-[#654f35]">
-              Se o login autenticar, mas o e-mail nao estiver ativo no
-              Admin Master, a sessao e encerrada automaticamente para evitar
-              mistura com o ambiente do salao.
+              O Admin Master usa uma sessao separada do painel do salao. Mesmo
+              com o mesmo navegador aberto, um acesso nao derruba o outro.
             </div>
           </div>
         </section>

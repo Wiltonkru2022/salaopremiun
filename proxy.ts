@@ -2,6 +2,10 @@ import { NextResponse, type NextRequest } from "next/server";
 import { hasAdminMasterAccess } from "@/lib/proxy/admin-master-rules";
 import { getProxyResumoAssinatura } from "@/lib/proxy/assinatura-rules";
 import { createProxySupabaseClient, getProxySupabaseConfig } from "@/lib/proxy/auth-rules";
+import {
+  hasAdminMasterSessionCookie,
+  readAdminMasterSessionFromRequest,
+} from "@/lib/admin-master/auth/session";
 import { handleAppProfissionalHost } from "@/lib/proxy/app-profissional-rules";
 import {
   ADMIN_MASTER_PREFIX,
@@ -264,6 +268,40 @@ export async function proxy(request: NextRequest) {
   const hostRoutingResponse = handlePublicHostRouting(ctx);
   if (hostRoutingResponse) return hostRoutingResponse;
 
+  if (ctx.rotaAdminMaster || ctx.rotaAdminMasterLogin) {
+    const adminSession = hasAdminMasterSessionCookie(request)
+      ? await readAdminMasterSessionFromRequest(request)
+      : null;
+    const adminMasterUser = adminSession
+      ? await hasAdminMasterAccess({
+          authUserId: adminSession.authUserId,
+          email: adminSession.email,
+        })
+      : false;
+
+    if (ctx.rotaAdminMasterLogin) {
+      if (adminMasterUser) {
+        const nextAdminPath =
+          getAdminMasterLoginNextPath(request.nextUrl.searchParams.get("next")) ||
+          ADMIN_MASTER_PREFIX;
+        return redirectToHost(request, DOMINIO_PAINEL, nextAdminPath, "");
+      }
+
+      return NextResponse.next();
+    }
+
+    if (ctx.rotaAdminMasterProtegida) {
+      if (adminMasterUser) {
+        return NextResponse.next();
+      }
+
+      return redirectToAdminMasterLogin(
+        request,
+        `${ctx.pathnameNormalizado}${request.nextUrl.search}`
+      );
+    }
+  }
+
   if (!getProxySupabaseConfig()) {
     return NextResponse.next();
   }
@@ -342,44 +380,8 @@ export async function proxy(request: NextRequest) {
   }
 
   const idSalao = usuario?.id_salao;
-  const shouldCheckAdminMasterAccess =
-    ctx.rotaAdminMaster || ctx.rotaAdminMasterLogin || !idSalao;
-  const adminMasterUser = shouldCheckAdminMasterAccess
-    ? await hasAdminMasterAccess({
-        authUserId: user.id,
-        email: user.email,
-      })
-    : false;
-
-  if (ctx.rotaAdminMasterLogin) {
-    if (adminMasterUser) {
-      const nextAdminPath =
-        getAdminMasterLoginNextPath(request.nextUrl.searchParams.get("next")) ||
-        ADMIN_MASTER_PREFIX;
-      return redirectToHost(request, DOMINIO_PAINEL, nextAdminPath, "");
-    }
-    return response;
-  }
-
-  if (ctx.rotaAdminMasterProtegida && !adminMasterUser) {
-    return redirectToAdminMasterLogin(
-      request,
-      `${ctx.pathnameNormalizado}${request.nextUrl.search}`
-    );
-  }
 
   if (!idSalao) {
-    if (adminMasterUser) {
-      if (ctx.rotaAdminMasterProtegida) return response;
-      if (ctx.rotaPainel || ctx.rotaAssinatura) {
-        return redirectToHost(request, DOMINIO_PAINEL, ADMIN_MASTER_PREFIX);
-      }
-      if (ctx.rotaLogin && !ctx.isLoginHost) {
-        return redirectToHost(request, DOMINIO_PAINEL, ADMIN_MASTER_PREFIX);
-      }
-      return response;
-    }
-
     if (ctx.rotaPainel || ctx.rotaLogin) {
       return redirectToHost(request, DOMINIO_ASSINATURA, "/assinatura");
     }

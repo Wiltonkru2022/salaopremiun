@@ -1,5 +1,3 @@
-"use client";
-
 type SupabaseAuthLikeError = {
   message?: string;
   status?: number;

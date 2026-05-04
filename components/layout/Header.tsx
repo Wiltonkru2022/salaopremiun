@@ -1,7 +1,6 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import clsx from "clsx";
 import {
@@ -98,7 +97,6 @@ export default function Header({
   onLogout,
 }: Props) {
   const pathname = usePathname();
-  const router = useRouter();
   const menuRef = useRef<HTMLDivElement | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const pageMeta = useMemo(() => getPainelPageMeta(pathname), [pathname]);
@@ -169,9 +167,8 @@ export default function Header({
           ) : null}
         </div>
 
-        <Link
-          href={canSeeAssinatura ? "/meu-plano" : "#"}
-          prefetch={canSeeAssinatura}
+        <a
+          href={canSeeAssinatura ? getRouteHref("/meu-plano") : "#"}
           aria-disabled={!canSeeAssinatura}
           className={clsx(
             "hidden min-w-0 items-center gap-2 rounded-lg border border-zinc-200 bg-zinc-50 px-2 py-1.5 text-sm md:flex xl:px-2.5",
@@ -189,10 +186,10 @@ export default function Header({
               "shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold ring-1",
               getStatusTone(resumoAssinatura)
             )}
-            >
+          >
             {getStatusLabel(assinaturaStatus, resumoAssinatura)}
           </span>
-        </Link>
+        </a>
 
         <NotificationBell
           notifications={notifications}
@@ -250,17 +247,14 @@ export default function Header({
 
               <div className="mt-3 space-y-2">
                 {canSeePerfilSalao ? (
-                  <Link
-                    href="/perfil-salao"
-                    prefetch={true}
+                  <a
+                    href={getRouteHref("/perfil-salao")}
                     onClick={() => setMenuOpen(false)}
-                    onFocus={() => router.prefetch("/perfil-salao")}
-                    onMouseEnter={() => router.prefetch("/perfil-salao")}
                     className="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-100"
                   >
                     <Building2 size={16} />
                     Perfil do salao
-                  </Link>
+                  </a>
                 ) : null}
 
                 {canSeeConfiguracoes ? (
@@ -269,105 +263,70 @@ export default function Header({
                       Configuracoes
                     </div>
 
-                    <Link
-                      href="/configuracoes/usuarios"
-                      prefetch={true}
+                    <a
+                      href={getRouteHref("/configuracoes/usuarios")}
                       onClick={() => setMenuOpen(false)}
-                      onFocus={() => router.prefetch("/configuracoes/usuarios")}
-                      onMouseEnter={() =>
-                        router.prefetch("/configuracoes/usuarios")
-                      }
                       className="flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-semibold text-zinc-700 transition hover:bg-white"
                     >
                       <Users size={16} />
                       Usuarios do sistema
-                    </Link>
+                    </a>
 
-                    <Link
-                      href="/configuracoes/caixa-taxas"
-                      prefetch={true}
+                    <a
+                      href={getRouteHref("/configuracoes/caixa-taxas")}
                       onClick={() => setMenuOpen(false)}
-                      onFocus={() =>
-                        router.prefetch("/configuracoes/caixa-taxas")
-                      }
-                      onMouseEnter={() =>
-                        router.prefetch("/configuracoes/caixa-taxas")
-                      }
                       className="flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-semibold text-zinc-700 transition hover:bg-white"
                     >
                       <Percent size={16} />
                       Caixa e taxas
-                    </Link>
+                    </a>
 
-                    <Link
-                      href="/configuracoes/agenda-horarios"
-                      prefetch={true}
+                    <a
+                      href={getRouteHref("/configuracoes/agenda-horarios")}
                       onClick={() => setMenuOpen(false)}
-                      onFocus={() =>
-                        router.prefetch("/configuracoes/agenda-horarios")
-                      }
-                      onMouseEnter={() =>
-                        router.prefetch("/configuracoes/agenda-horarios")
-                      }
                       className="flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-semibold text-zinc-700 transition hover:bg-white"
                     >
                       <CalendarClock size={16} />
                       Agenda e horarios
-                    </Link>
+                    </a>
 
-                    <Link
-                      href="/configuracoes/sistema"
-                      prefetch={true}
+                    <a
+                      href={getRouteHref("/configuracoes/sistema")}
                       onClick={() => setMenuOpen(false)}
-                      onFocus={() =>
-                        router.prefetch("/configuracoes/sistema")
-                      }
-                      onMouseEnter={() =>
-                        router.prefetch("/configuracoes/sistema")
-                      }
                       className="flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-semibold text-zinc-700 transition hover:bg-white"
                     >
                       <Settings size={16} />
                       Sistema
-                    </Link>
+                    </a>
                   </div>
                 ) : null}
 
                 {canSeeAssinatura ? (
                   <>
-                    <Link
-                      href="/meu-plano"
-                      prefetch={true}
+                    <a
+                      href={getRouteHref("/meu-plano")}
                       onClick={() => setMenuOpen(false)}
-                      onFocus={() => router.prefetch("/meu-plano")}
-                      onMouseEnter={() => router.prefetch("/meu-plano")}
                       className="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-100"
                     >
                       <CreditCard size={16} />
                       Meu plano
-                    </Link>
-                    <Link
-                      href="/assinatura"
-                      prefetch={true}
+                    </a>
+                    <a
+                      href={getRouteHref("/assinatura")}
                       onClick={() => setMenuOpen(false)}
-                      onFocus={() => router.prefetch("/assinatura")}
-                      onMouseEnter={() => router.prefetch("/assinatura")}
                       className="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-100"
                     >
                       <CreditCard size={16} />
                       Assinatura
-                    </Link>
-                    <Link
-                      href="/comparar-planos"
-                      prefetch={true}
+                    </a>
+                    <a
+                      href={getRouteHref("/comparar-planos")}
                       onClick={() => setMenuOpen(false)}
-                      onFocus={() => router.prefetch("/comparar-planos")}
-                      onMouseEnter={() => router.prefetch("/comparar-planos")}
                       className="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-100"
                     >
                       <CreditCard size={16} />
                       Comparar planos
-                    </Link>
+                    </a>
                   </>
                 ) : null}
 
@@ -386,4 +345,23 @@ export default function Header({
       </div>
     </header>
   );
+}
+
+function getRouteHref(href: string) {
+  if (typeof window === "undefined") {
+    return href;
+  }
+
+  const host = window.location.hostname;
+  const isManagedHost = host.endsWith("salaopremiun.com.br");
+
+  if (!isManagedHost) {
+    return href;
+  }
+
+  if (href === "/assinatura" || href.startsWith("/assinatura?")) {
+    return `https://assinatura.salaopremiun.com.br${href}`;
+  }
+
+  return `https://painel.salaopremiun.com.br${href}`;
 }

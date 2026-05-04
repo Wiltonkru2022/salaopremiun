@@ -1,13 +1,12 @@
 import { redirect } from "next/navigation";
-import type { User } from "@supabase/supabase-js";
 import {
   mergeAdminMasterPermissions,
   type AdminMasterPermissions,
   type AdminMasterPermissionKey,
 } from "@/lib/admin-master/auth/adminMasterPermissions";
 import { ADMIN_MASTER_LOGIN_PATH } from "@/lib/admin-master/auth/login-path";
+import { readAdminMasterSession } from "@/lib/admin-master/auth/session";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
-import { createClient } from "@/lib/supabase/server";
 
 export class AdminMasterAuthError extends Error {
   status: number;
@@ -27,9 +26,23 @@ type AdminMasterUsuarioRow = {
   status: string;
 };
 
+type AdminMasterIdentity = {
+  id: string;
+  email?: string | null;
+  nome?: string | null;
+};
+
+type AdminMasterAuthUser = {
+  id: string;
+  email: string;
+  user_metadata: {
+    nome: string;
+  };
+};
+
 type AdminMasterAccessAllowed = {
   ok: true;
-  authUser: User;
+  authUser: AdminMasterAuthUser;
   usuario: AdminMasterUsuarioRow;
   permissions: AdminMasterPermissions;
 };
@@ -123,35 +136,19 @@ async function bootstrapOwnerIfAllowed(params: {
   return usuario;
 }
 
-export async function getAdminMasterAccess(
+export async function resolveAdminMasterAccessForIdentity(
+  identity: AdminMasterIdentity,
   permission: AdminMasterPermissionKey = "dashboard_ver"
 ): Promise<AdminMasterAccessResult> {
-  const supabase = await createClient();
   const supabaseAdmin = getSupabaseAdmin();
-
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser();
-
-  if (authError || !user) {
-    return {
-      ok: false,
-      status: 401,
-      message: "Sessao expirada. Faça login novamente no Admin Master.",
-    };
-  }
-
-  const email = String(user.email || "").toLowerCase();
+  const email = String(identity.email || "").trim().toLowerCase();
   const nome =
-    String(user.user_metadata?.nome || "").trim() ||
-    email.split("@")[0] ||
-    "Admin Master";
+    String(identity.nome || "").trim() || email.split("@")[0] || "Admin Master";
 
   const adminUserResult = await supabaseAdmin
     .from("admin_master_usuarios")
     .select("id, nome, email, perfil, status")
-    .eq("auth_user_id", user.id)
+    .eq("auth_user_id", identity.id)
     .maybeSingle();
   let adminUser = adminUserResult.data;
   const error = adminUserResult.error;
@@ -175,7 +172,10 @@ export async function getAdminMasterAccess(
       adminUser = adminByEmail;
       await supabaseAdmin
         .from("admin_master_usuarios")
-        .update({ auth_user_id: user.id, ultimo_acesso_em: new Date().toISOString() })
+        .update({
+          auth_user_id: identity.id,
+          ultimo_acesso_em: new Date().toISOString(),
+        })
         .eq("id", adminByEmail.id);
     }
   }
@@ -190,7 +190,7 @@ export async function getAdminMasterAccess(
 
   if (!adminUser && email) {
     adminUser = await bootstrapOwnerIfAllowed({
-      authUserId: user.id,
+      authUserId: identity.id,
       email,
       nome,
     });
@@ -217,7 +217,9 @@ export async function getAdminMasterAccess(
 
   const { data: permissoesDb, error: permissoesError } = await supabaseAdmin
     .from("admin_master_permissoes")
-    .select("assinaturas_ajustar, assinaturas_ver, atualizado_em, auditoria_ver, campanhas_editar, cobrancas_reprocessar, cobrancas_ver, comunicacao_ver, criado_em, dashboard_ver, feature_flags_editar, financeiro_ver, id, id_admin_master_usuario, notificacoes_editar, operacao_reprocessar, operacao_ver, planos_editar, produto_ver, recursos_editar, relatorios_ver, saloes_editar, saloes_entrar_como, saloes_ver, suporte_ver, tickets_editar, tickets_ver, usuarios_admin_editar, usuarios_admin_ver, whatsapp_editar, whatsapp_ver")
+    .select(
+      "assinaturas_ajustar, assinaturas_ver, atualizado_em, auditoria_ver, campanhas_editar, cobrancas_reprocessar, cobrancas_ver, comunicacao_ver, criado_em, dashboard_ver, feature_flags_editar, financeiro_ver, id, id_admin_master_usuario, notificacoes_editar, operacao_reprocessar, operacao_ver, planos_editar, produto_ver, recursos_editar, relatorios_ver, saloes_editar, saloes_entrar_como, saloes_ver, suporte_ver, tickets_editar, tickets_ver, usuarios_admin_editar, usuarios_admin_ver, whatsapp_editar, whatsapp_ver"
+    )
     .eq("id_admin_master_usuario", usuario.id)
     .maybeSingle();
 
@@ -249,10 +251,36 @@ export async function getAdminMasterAccess(
 
   return {
     ok: true,
-    authUser: user,
+    authUser: {
+      id: identity.id,
+      email,
+      user_metadata: { nome },
+    },
     usuario,
     permissions,
   };
+}
+
+export async function getAdminMasterAccess(
+  permission: AdminMasterPermissionKey = "dashboard_ver"
+): Promise<AdminMasterAccessResult> {
+  const session = await readAdminMasterSession();
+
+  if (!session) {
+    return {
+      ok: false,
+      status: 401,
+      message: "Sessao expirada. Faca login novamente no Admin Master.",
+    };
+  }
+
+  return resolveAdminMasterAccessForIdentity(
+    {
+      id: session.authUserId,
+      email: session.email,
+    },
+    permission
+  );
 }
 
 export async function requireAdminMasterUser(

@@ -36,6 +36,7 @@ import { sanitizeDiasFuncionamento } from "@/lib/utils/agenda";
 import type { Agendamento, ConfigSalao } from "@/types/agenda";
 import { normalizeTimeString } from "@/lib/utils/agenda";
 import { getErrorMessage } from "@/lib/get-error-message";
+import { getAssinaturaUrl } from "@/lib/site-urls";
 import {
   Ban,
   CalendarPlus,
@@ -349,7 +350,7 @@ export default function AgendaPage() {
         "Acesso bloqueado",
         "Sua assinatura esta vencida. Regularize para acessar o caixa.",
         "danger",
-        "/assinatura"
+        getAssinaturaUrl("/assinatura")
       );
       return;
     }

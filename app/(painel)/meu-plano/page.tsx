@@ -11,6 +11,7 @@ import {
   getPlanoDowngradeCatalogo,
   getPlanoUpgradeCatalogo,
 } from "@/lib/plans/catalog";
+import { getAssinaturaUrl } from "@/lib/site-urls";
 import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -33,10 +34,10 @@ function getPlanoCheckoutHref(planoAtual: string) {
   const planoCatalogo = getPlanoCatalogo(planoAtual);
 
   if (planoCatalogo.codigo === "teste_gratis") {
-    return "/assinatura?plano=basico";
+    return getAssinaturaUrl("/assinatura?plano=basico");
   }
 
-  return `/assinatura?plano=${planoCatalogo.codigo}`;
+  return getAssinaturaUrl(`/assinatura?plano=${planoCatalogo.codigo}`);
 }
 
 function getMotivoMeta(motivo?: string | null) {
@@ -104,7 +105,7 @@ export default async function MeuPlanoPage({
     .maybeSingle();
 
   if (!usuario?.id_salao) {
-    redirect("/assinatura");
+    redirect(getAssinaturaUrl("/assinatura"));
   }
 
   const access = await getPlanoAccessSnapshot(usuario.id_salao);
@@ -227,7 +228,7 @@ export default async function MeuPlanoPage({
               </Link>
               {upgradePlano ? (
                 <Link
-                  href={`/assinatura?plano=${upgradePlano.codigo}`}
+                  href={getAssinaturaUrl(`/assinatura?plano=${upgradePlano.codigo}`)}
                   className="rounded-full border border-white/15 bg-white/10 px-5 py-2.5 text-sm font-black text-white transition hover:-translate-y-0.5 hover:bg-white/15"
                 >
                   Upgrade para {upgradePlano.nome}
@@ -235,7 +236,7 @@ export default async function MeuPlanoPage({
               ) : null}
               {downgradePlano ? (
                 <Link
-                  href={`/assinatura?plano=${downgradePlano.codigo}`}
+                  href={getAssinaturaUrl(`/assinatura?plano=${downgradePlano.codigo}`)}
                   className="rounded-full border border-white/15 bg-white/10 px-5 py-2.5 text-sm font-black text-white transition hover:-translate-y-0.5 hover:bg-white/15"
                 >
                   Downgrade para {downgradePlano.nome}
@@ -309,11 +310,11 @@ export default async function MeuPlanoPage({
               key={metric.title}
               className="rounded-[24px] border border-zinc-200 bg-white p-4 shadow-sm"
             >
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <div className="text-xs font-black uppercase tracking-[0.20em] text-zinc-400">
-                    {metric.title}
-                  </div>
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <div className="max-w-[112px] text-[10px] font-black uppercase leading-tight tracking-[0.14em] text-zinc-400 sm:max-w-none">
+                      {metric.title}
+                    </div>
                   <div className="mt-2 text-xl font-black text-zinc-950">
                     {formatLimit(metric.used, metric.limit)}
                   </div>
