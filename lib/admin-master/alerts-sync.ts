@@ -18,6 +18,13 @@ const MANAGED_ALERT_TYPES = [
   "renovacao_automatica_sem_cobranca",
 ] as const;
 
+const CHECKOUT_ALERT_LIMIT = 80;
+const WEBHOOK_ALERT_LIMIT = 80;
+const OVERDUE_CHARGE_ALERT_LIMIT = 80;
+const TRIAL_ALERT_LIMIT = 80;
+const RENEWAL_ALERT_LIMIT = 120;
+const RENEWAL_CHARGE_LIMIT = 250;
+
 type ManagedAlertType = (typeof MANAGED_ALERT_TYPES)[number];
 
 type AlertCandidate = {
@@ -193,7 +200,7 @@ export async function syncAdminMasterAlerts() {
       .in("status", ["erro", "expirado", "processando"])
       .gte("created_at", recentAlertsFrom)
       .order("created_at", { ascending: false })
-      .limit(200),
+      .limit(CHECKOUT_ALERT_LIMIT),
     supabase
       .from("asaas_webhook_eventos")
       .select(
@@ -202,7 +209,7 @@ export async function syncAdminMasterAlerts() {
       .eq("status_processamento", "erro")
       .gte("ultimo_recebido_em", recentAlertsFrom)
       .order("ultimo_recebido_em", { ascending: false })
-      .limit(200),
+      .limit(WEBHOOK_ALERT_LIMIT),
     supabase
       .from("eventos_webhook")
       .select(
@@ -213,7 +220,7 @@ export async function syncAdminMasterAlerts() {
       .eq("automatico", true)
       .gte("recebido_em", recentAlertsFrom)
       .order("recebido_em", { ascending: false })
-      .limit(200),
+      .limit(WEBHOOK_ALERT_LIMIT),
     supabase
       .from("assinaturas_cobrancas")
       .select(
@@ -223,7 +230,7 @@ export async function syncAdminMasterAlerts() {
       .lt("data_expiracao", today)
       .gte("created_at", overdueSince)
       .order("data_expiracao", { ascending: true })
-      .limit(200),
+      .limit(OVERDUE_CHARGE_ALERT_LIMIT),
     supabase
       .from("assinaturas")
       .select("id, id_salao, plano, status, trial_fim_em")
@@ -232,7 +239,7 @@ export async function syncAdminMasterAlerts() {
       .gte("trial_fim_em", nowIso)
       .lte("trial_fim_em", trialSoonUntil)
       .order("trial_fim_em", { ascending: true })
-      .limit(200),
+      .limit(TRIAL_ALERT_LIMIT),
     supabase
       .from("assinaturas")
       .select(
@@ -244,7 +251,7 @@ export async function syncAdminMasterAlerts() {
       .gte("vencimento_em", today)
       .lte("vencimento_em", renewalSoonUntil)
       .order("vencimento_em", { ascending: true })
-      .limit(300),
+      .limit(RENEWAL_ALERT_LIMIT),
     supabase
       .from("alertas_sistema")
       .select("id, chave, tipo, resolvido, payload_json")
@@ -353,7 +360,7 @@ export async function syncAdminMasterAlerts() {
           new Date(recentRenewalChargeFrom).toISOString()
         )
         .order("created_at", { ascending: false })
-        .limit(800)
+        .limit(RENEWAL_CHARGE_LIMIT)
     : { data: [] as RenovacaoChargeRow[] };
 
   const renewalCharges = (renewalChargesData as RenovacaoChargeRow[] | null) || [];
