@@ -95,6 +95,7 @@ type TicketListRow = {
   ultima_interacao_em: string | null;
   solicitante_nome: string | null;
   sla_limite_em?: string | null;
+  origem_contexto?: Record<string, unknown> | null;
 };
 
 type TicketMessageRow = {
@@ -143,6 +144,10 @@ export type TicketSummary = {
   salaoId?: string | null;
   salaoNome?: string | null;
   slaLimiteEm?: string | null;
+  recoveryFlow?: boolean;
+  recoveryStatus?: string | null;
+  recoveryReviewStatus?: string | null;
+  recoveryReadyToComplete?: boolean;
 };
 
 export type TicketMetrics = {
@@ -151,6 +156,9 @@ export type TicketMetrics = {
   aguardandoCliente: number;
   aguardandoTecnico: number;
   criticos: number;
+  recoveryPending: number;
+  recoveryCooldown: number;
+  recoveryReadyToComplete: number;
 };
 
 export type TicketHeader = {
@@ -333,6 +341,19 @@ function buildTicketMetrics(items: TicketSummary[]): TicketMetrics {
       (item) => item.status === "aguardando_tecnico"
     ).length,
     criticos: items.filter((item) => item.prioridade === "critica").length,
+    recoveryPending: items.filter(
+      (item) =>
+        item.recoveryFlow &&
+        (!item.recoveryStatus ||
+          item.recoveryStatus === "requested" ||
+          item.recoveryStatus === "rejected")
+    ).length,
+    recoveryCooldown: items.filter(
+      (item) => item.recoveryFlow && item.recoveryStatus === "cooldown"
+    ).length,
+    recoveryReadyToComplete: items.filter(
+      (item) => item.recoveryFlow && item.recoveryReadyToComplete
+    ).length,
   };
 }
 
@@ -341,6 +362,28 @@ function mapTicketSummary(
   latestMessage?: TicketMessageRow | null,
   salaoNome?: string | null
 ): TicketSummary {
+  const recoveryContext =
+    row.origem_contexto && typeof row.origem_contexto === "object"
+      ? row.origem_contexto
+      : {};
+  const recoveryFlow = recoveryContext.tipo_fluxo === "recuperacao_2fa";
+  const recoveryStatus =
+    typeof recoveryContext.recovery_status === "string"
+      ? recoveryContext.recovery_status
+      : null;
+  const recoveryReviewStatus =
+    typeof recoveryContext.recovery_review_status === "string"
+      ? recoveryContext.recovery_review_status
+      : null;
+  const unlockAt =
+    typeof recoveryContext.recovery_unlock_at === "string"
+      ? recoveryContext.recovery_unlock_at
+      : null;
+  const recoveryReadyToComplete =
+    recoveryFlow && recoveryStatus === "cooldown" && !!unlockAt
+      ? new Date(unlockAt).getTime() <= Date.now()
+      : false;
+
   return {
     id: row.id,
     numero: Number(row.numero || 0),
@@ -364,6 +407,10 @@ function mapTicketSummary(
     salaoId: row.id_salao || null,
     salaoNome: normalizeText(salaoNome) || null,
     slaLimiteEm: row.sla_limite_em || null,
+    recoveryFlow,
+    recoveryStatus,
+    recoveryReviewStatus,
+    recoveryReadyToComplete,
   };
 }
 
@@ -547,7 +594,7 @@ export async function listSalaoTickets(idSalao: string) {
       const { data: tickets, error } = await supabase
         .from("tickets")
         .select(
-          "id, id_salao, numero, assunto, categoria, prioridade, status, origem, criado_em, atualizado_em, ultima_interacao_em, solicitante_nome, sla_limite_em"
+          "id, id_salao, numero, assunto, categoria, prioridade, status, origem, criado_em, atualizado_em, ultima_interacao_em, solicitante_nome, sla_limite_em, origem_contexto"
         )
         .eq("id_salao", idSalao)
         .order("ultima_interacao_em", { ascending: false })
@@ -600,7 +647,7 @@ export async function listAdminTickets() {
           supabase
             .from("tickets")
             .select(
-              "id, id_salao, numero, assunto, categoria, prioridade, status, origem, criado_em, atualizado_em, ultima_interacao_em, solicitante_nome, sla_limite_em"
+              "id, id_salao, numero, assunto, categoria, prioridade, status, origem, criado_em, atualizado_em, ultima_interacao_em, solicitante_nome, sla_limite_em, origem_contexto"
             )
             .neq("origem", "app_profissional_login")
             .order("ultima_interacao_em", { ascending: false })
