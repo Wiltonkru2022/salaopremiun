@@ -16,14 +16,12 @@ import {
   ShieldCheck,
   Sparkles,
 } from "lucide-react";
+import { usePainelSession } from "@/components/layout/PainelSessionProvider";
 import AppLoading from "@/components/ui/AppLoading";
 import AppModal from "@/components/ui/AppModal";
 import { Field, SectionCard, TextInput } from "@/components/configuracoes/ui";
 import { EMPTY_SALAO } from "@/components/configuracoes/constants";
 import type { SalaoForm } from "@/components/configuracoes/types";
-import { getUsuarioLogado } from "@/lib/auth/getUsuarioLogado";
-import { hasPermission } from "@/lib/auth/permissions";
-import type { UserNivel } from "@/lib/permissions";
 import { createClient } from "@/lib/supabase/client";
 
 type PasswordForm = {
@@ -166,6 +164,7 @@ function SidebarAction({
 export default function PerfilSalaoPage() {
   const supabase = createClient();
   const router = useRouter();
+  const { snapshot: painelSession } = usePainelSession();
 
   const [loading, setLoading] = useState(true);
   const [semPermissao, setSemPermissao] = useState(false);
@@ -277,28 +276,24 @@ export default function PerfilSalaoPage() {
       setMsg("");
       setSemPermissao(false);
 
-      const usuario = await getUsuarioLogado();
-
-      if (!usuario?.idSalao) {
+      if (!painelSession?.idSalao || !painelSession?.permissoes) {
         setErro("Nao foi possivel identificar o salao da conta atual.");
         return;
       }
 
-      const nivelUsuario = usuario?.perfil?.nivel as UserNivel | undefined;
-
-      if (!hasPermission(nivelUsuario, "perfil_salao_ver")) {
+      if (!painelSession.permissoes.perfil_salao_ver) {
         setSemPermissao(true);
         return;
       }
 
-      setIdSalao(usuario.idSalao);
+      setIdSalao(painelSession.idSalao);
 
       const { data, error } = await supabase
         .from("saloes")
         .select(
           "id, nome, responsavel, email, telefone, cpf_cnpj, endereco, numero, bairro, cidade, estado, cep, logo_url, plano, status"
         )
-        .eq("id", usuario.idSalao)
+        .eq("id", painelSession.idSalao)
         .maybeSingle();
 
       if (error) throw error;
@@ -335,7 +330,7 @@ export default function PerfilSalaoPage() {
     } finally {
       setLoading(false);
     }
-  }, [carregarMfa, supabase]);
+  }, [carregarMfa, supabase, painelSession]);
 
   useEffect(() => {
     void carregarPerfil();

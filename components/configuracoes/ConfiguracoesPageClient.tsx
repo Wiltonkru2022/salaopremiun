@@ -2,9 +2,8 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { usePainelSession } from "@/components/layout/PainelSessionProvider";
 import { createClient } from "@/lib/supabase/client";
-import { getUsuarioLogado } from "@/lib/auth/getUsuarioLogado";
-import { hasPermission } from "@/lib/auth/permissions";
 import type { UserNivel } from "@/lib/permissions";
 import { ComissaoHelpPanel } from "@/components/comissoes/ComissaoHelpPanel";
 import {
@@ -93,6 +92,7 @@ export default function ConfiguracoesPageClient({
   secao: ConfiguracoesSecao;
 }) {
   const supabase = createClient();
+  const { snapshot: painelSession } = usePainelSession();
   const { planoAccess, upgradeTarget } = usePlanoAccessSnapshot(
     secao === "usuarios"
   );
@@ -232,31 +232,27 @@ const { data, error } = await supabase
       setMsg("");
       setSemPermissao(false);
 
-      const usuario = await getUsuarioLogado();
-
-      if (!usuario?.idSalao) {
+      if (!painelSession?.idSalao || !painelSession?.permissoes) {
         setErroTela("Não foi possível identificar o salão do usuário.");
         return;
       }
 
-      const nivelUsuario = usuario?.perfil?.nivel as UserNivel | undefined;
-
-      if (!hasPermission(nivelUsuario, "configuracoes_ver")) {
+      if (!painelSession.permissoes.configuracoes_ver) {
         setSemPermissao(true);
         return;
       }
 
-      setIdSalao(usuario.idSalao);
+      setIdSalao(painelSession.idSalao);
 
       const [
         { data: salaoData, error: salaoError },
         { data: configData, error: configError },
       ] = await Promise.all([
-        supabase.from("saloes").select("bairro, cep, cidade, complemento, cpf_cnpj, created_at, email, endereco, estado, id, inscricao_estadual, limite_profissionais, limite_usuarios, logo_url, nome, nome_fantasia, numero, plano, razao_social, renovacao_automatica, responsavel, status, telefone, tipo_pessoa, trial_ativo, trial_fim_em, trial_inicio_em, updated_at, whatsapp").eq("id", usuario.idSalao).maybeSingle(),
+        supabase.from("saloes").select("bairro, cep, cidade, complemento, cpf_cnpj, created_at, email, endereco, estado, id, inscricao_estadual, limite_profissionais, limite_usuarios, logo_url, nome, nome_fantasia, numero, plano, razao_social, renovacao_automatica, responsavel, status, telefone, tipo_pessoa, trial_ativo, trial_fim_em, trial_inicio_em, updated_at, whatsapp").eq("id", painelSession.idSalao).maybeSingle(),
         supabase
           .from("configuracoes_salao")
           .select("cor_primaria, created_at, desconta_taxa_profissional, dias_funcionamento, exigir_cliente_na_venda, hora_abertura, hora_fechamento, id, id_salao, intervalo_minutos, modo_compacto, permitir_reabrir_venda, repassa_taxa_cliente, taxa_credito_10x, taxa_credito_11x, taxa_credito_12x, taxa_credito_1x, taxa_credito_2x, taxa_credito_3x, taxa_credito_4x, taxa_credito_5x, taxa_credito_6x, taxa_credito_7x, taxa_credito_8x, taxa_credito_9x, taxa_maquininha_boleto, taxa_maquininha_credito, taxa_maquininha_debito, taxa_maquininha_outro, taxa_maquininha_pix, taxa_maquininha_transferencia, updated_at")
-          .eq("id_salao", usuario.idSalao)
+          .eq("id_salao", painelSession.idSalao)
           .maybeSingle(),
       ]);
 
@@ -295,7 +291,7 @@ const { data, error } = await supabase
       if (configData) {
         setConfigForm({
           id: configData.id || "",
-          id_salao: configData.id_salao || usuario.idSalao,
+          id_salao: configData.id_salao || painelSession.idSalao,
           hora_abertura: normalizeTime(configData.hora_abertura) || "08:00",
           hora_fechamento: normalizeTime(configData.hora_fechamento) || "19:00",
           intervalo_minutos: parseNumber(configData.intervalo_minutos || 15),
@@ -322,11 +318,11 @@ const { data, error } = await supabase
       } else {
         setConfigForm((prev) => ({
           ...prev,
-          id_salao: usuario.idSalao,
+          id_salao: painelSession.idSalao,
         }));
       }
 
-      await carregarUsuarios(usuario.idSalao);
+      await carregarUsuarios(painelSession.idSalao);
     } catch (error: unknown) {
       console.error(error);
       setErroTela(
@@ -335,7 +331,7 @@ const { data, error } = await supabase
     } finally {
       setLoading(false);
     }
-  }, [supabase, carregarUsuarios, carregarLimiteUsuarios]);
+  }, [supabase, carregarUsuarios, carregarLimiteUsuarios, painelSession]);
 
   useEffect(() => {
     void init();
