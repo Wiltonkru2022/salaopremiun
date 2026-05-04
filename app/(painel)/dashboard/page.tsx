@@ -1,9 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { usePainelSession } from "@/components/layout/PainelSessionProvider";
 import AppLoading from "@/components/ui/AppLoading";
 import { createClient } from "@/lib/supabase/client";
-import { hasPermission } from "@/lib/auth/permissions";
 import {
   AlertCircle,
   CalendarDays,
@@ -45,10 +45,6 @@ type DashboardRpcResumo = {
     status?: string | null;
   };
   resumo?: Partial<DashboardResumo>;
-};
-
-type PlanoAccessPayload = {
-  recursos?: Record<string, boolean>;
 };
 type IconType = React.ComponentType<{
   size?: number;
@@ -211,6 +207,7 @@ function UpgradeActions({
 
 export default function DashboardPage() {
   const supabase = createClient();
+  const { snapshot: painelSession } = usePainelSession();
 
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState("");
@@ -230,36 +227,24 @@ export default function DashboardPage() {
       setResumo(RESUMO_INICIAL);
       setFaseCarregamento("Validando acesso ao painel.");
 
-      const [{ data, error }, planoResponse] = await Promise.all([
-        supabase.rpc("fn_dashboard_resumo_painel"),
-        fetch("/api/plano/access", { cache: "no-store" }),
-      ]);
+      if (!painelSession?.idSalao) {
+        throw new Error("Nao foi possivel identificar o salao do usuario.");
+      }
+
+      if (!painelSession.permissoes?.dashboard_ver) {
+        setSemPermissao(true);
+        return;
+      }
+
+      setDashboardAvancado(Boolean(painelSession.planoRecursos?.dashboard_avancado));
+
+      const { data, error } = await supabase.rpc("fn_dashboard_resumo_painel");
 
       if (error) {
         throw error;
       }
 
-      const planoData = (await planoResponse.json().catch(() => null)) as
-        | PlanoAccessPayload
-        | null;
-      setDashboardAvancado(Boolean(planoData?.recursos?.dashboard_avancado));
-
       const rpcData = (data || {}) as DashboardRpcResumo;
-      const nivelUsuario = (rpcData.usuario?.nivel ?? null) as
-        | "admin"
-        | "gerente"
-        | "profissional"
-        | "recepcao"
-        | null;
-
-      if (!hasPermission(nivelUsuario, "dashboard_ver")) {
-        setSemPermissao(true);
-        return;
-      }
-
-      if (!rpcData.usuario?.id_salao) {
-        throw new Error("Nao foi possivel identificar o salao do usuario.");
-      }
 
       setFaseCarregamento("Carregando indicadores principais.");
       setResumo({
@@ -291,7 +276,7 @@ export default function DashboardPage() {
     } finally {
       setLoading(false);
     }
-  }, [supabase]);
+  }, [supabase, painelSession]);
 
   useEffect(() => {
     void init();
