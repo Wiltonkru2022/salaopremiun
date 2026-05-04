@@ -1307,49 +1307,51 @@ export default function RelatorioFinanceiroPage() {
             </div>
 
             <div className="overflow-x-auto">
-              <table className="min-w-[860px] w-full">
+              <table className="min-w-[760px] w-full">
                 <thead>
                   <tr className="border-b border-zinc-100 text-left text-xs uppercase tracking-wider text-zinc-500">
-                    <th className="px-5 py-3">Comanda</th>
-                    <th className="px-5 py-3">Cliente</th>
-                    <th className="px-5 py-3">Status</th>
-                    <th className="px-5 py-3">Data</th>
-                    <th className="px-5 py-3">Subtotal</th>
-                    <th className="px-5 py-3">Desc.</th>
-                    <th className="px-5 py-3">Acrésc.</th>
-                    <th className="px-5 py-3">Total</th>
+                    <th className="px-3.5 py-3">Comanda</th>
+                    <th className="px-3.5 py-3">Cliente</th>
+                    <th className="px-3.5 py-3">Status</th>
+                    <th className="px-3.5 py-3">Data</th>
+                    <th className="px-3.5 py-3">Subtotal</th>
+                    <th className="px-3.5 py-3">Desc.</th>
+                    <th className="px-3.5 py-3">Acrésc.</th>
+                    <th className="px-3.5 py-3">Total</th>
                   </tr>
                 </thead>
 
                 <tbody>
                   {comandasFiltradas.map((item) => (
                     <tr key={item.id} className="border-b border-zinc-100 last:border-b-0">
-                      <td className="px-5 py-4 font-semibold text-zinc-900">#{item.numero}</td>
-                      <td className="px-4 py-4 min-w-[140px] text-sm text-zinc-700">
+                      <td className="px-3.5 py-4 whitespace-nowrap font-semibold text-zinc-900">
+                        #{item.numero}
+                      </td>
+                      <td className="min-w-[120px] max-w-[180px] px-3.5 py-4 text-sm text-zinc-700 break-words">
                         {getJoinedName(item.clientes, "Sem cliente")}
                       </td>
-                      <td className="px-5 py-4">
+                      <td className="px-3.5 py-4">
                         <span
-                          className={`rounded-full px-3 py-1 text-xs font-semibold uppercase ${getStatusBadgeClass(
+                          className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold uppercase ${getStatusBadgeClass(
                             item.status
                           )}`}
                         >
                           {item.status}
                         </span>
                       </td>
-                      <td className="px-4 py-4 whitespace-nowrap text-sm text-zinc-700">
+                      <td className="px-3.5 py-4 whitespace-nowrap text-sm text-zinc-700">
                         {formatDateTime(item.fechada_em || item.cancelada_em || item.aberta_em)}
                       </td>
-                      <td className="px-4 py-4 whitespace-nowrap text-sm text-zinc-700">
+                      <td className="px-3.5 py-4 whitespace-nowrap text-sm text-zinc-700">
                         {formatCurrency(item.subtotal)}
                       </td>
-                      <td className="px-4 py-4 whitespace-nowrap text-sm text-zinc-700">
+                      <td className="px-3.5 py-4 whitespace-nowrap text-sm text-zinc-700">
                         {formatCurrency(item.desconto)}
                       </td>
-                      <td className="px-4 py-4 whitespace-nowrap text-sm text-zinc-700">
+                      <td className="px-3.5 py-4 whitespace-nowrap text-sm text-zinc-700">
                         {formatCurrency(item.acrescimo)}
                       </td>
-                      <td className="px-4 py-4 whitespace-nowrap text-sm font-semibold text-zinc-900">
+                      <td className="px-3.5 py-4 whitespace-nowrap text-sm font-semibold text-zinc-900">
                         {formatCurrency(item.total)}
                       </td>
                     </tr>
