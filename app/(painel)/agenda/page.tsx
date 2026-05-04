@@ -317,15 +317,30 @@ export default function AgendaPage() {
       return;
     }
 
+    const refreshOnReturn = () => {
+      if (document.visibilityState !== "visible") {
+        return;
+      }
+
+      void loadAgenda();
+    };
+
     const interval = window.setInterval(() => {
       if (document.visibilityState !== "visible") {
         return;
       }
 
       void loadAgenda();
-    }, 3000);
+    }, 6000);
 
-    return () => window.clearInterval(interval);
+    window.addEventListener("focus", refreshOnReturn);
+    document.addEventListener("visibilitychange", refreshOnReturn);
+
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener("focus", refreshOnReturn);
+      document.removeEventListener("visibilitychange", refreshOnReturn);
+    };
   }, [idSalao, selectedProfissionalId, modalOpen, loading, loadAgenda]);
 
   async function buscarComandasAbertasDoCliente(

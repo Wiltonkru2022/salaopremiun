@@ -220,6 +220,19 @@ export default function CaixaPage() {
       return;
     }
 
+    const refreshOnReturn = () => {
+      if (document.visibilityState !== "visible") {
+        return;
+      }
+
+      void carregarTudo(idSalao);
+      void carregarSessaoOperacional(idSalao);
+
+      if (comandaSelecionada?.id) {
+        void aplicarDetalheComanda(comandaSelecionada.id);
+      }
+    };
+
     const interval = window.setInterval(() => {
       if (document.visibilityState !== "visible") {
         return;
@@ -231,9 +244,16 @@ export default function CaixaPage() {
       if (comandaSelecionada?.id) {
         void aplicarDetalheComanda(comandaSelecionada.id);
       }
-    }, 8000);
+    }, 15000);
 
-    return () => window.clearInterval(interval);
+    window.addEventListener("focus", refreshOnReturn);
+    document.addEventListener("visibilitychange", refreshOnReturn);
+
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener("focus", refreshOnReturn);
+      document.removeEventListener("visibilitychange", refreshOnReturn);
+    };
   }, [
     acessoCarregado,
     idSalao,
