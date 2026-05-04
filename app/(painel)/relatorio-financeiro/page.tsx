@@ -1,12 +1,10 @@
 ﻿"use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { usePainelSession } from "@/components/layout/PainelSessionProvider";
 import AppLoading from "@/components/ui/AppLoading";
 import AppModal from "@/components/ui/AppModal";
 import { createClient } from "@/lib/supabase/client";
-import { getUsuarioLogado } from "@/lib/auth/getUsuarioLogado";
-import { hasPermission } from "@/lib/auth/permissions";
-import type { UserNivel } from "@/lib/permissions";
 import {
   BadgeDollarSign,
   CalendarDays,
@@ -101,10 +99,6 @@ type ResumoCaixa = {
   contadoFechamento: number;
   quebraTotal: number;
   sobraTotal: number;
-};
-
-type PlanoAccessPayload = {
-  recursos?: Record<string, boolean>;
 };
 
 type StatusFiltro = "fechada" | "cancelada" | "todos";
@@ -237,6 +231,7 @@ function ComboDescriptionCell({
 
 export default function RelatorioFinanceiroPage() {
   const supabase = createClient();
+  const { snapshot: painelSession } = usePainelSession();
 
   const [loading, setLoading] = useState(true);
   const [semPermissao, setSemPermissao] = useState(false);
@@ -277,13 +272,9 @@ export default function RelatorioFinanceiroPage() {
         setErroTela("");
         setMsg("");
 
-        const planoResponse = await fetch("/api/plano/access", {
-          cache: "no-store",
-        });
-        const planoData = (await planoResponse.json().catch(() => null)) as
-          | PlanoAccessPayload
-          | null;
-        setRelatoriosAvancados(Boolean(planoData?.recursos?.relatorios_avancados));
+        setRelatoriosAvancados(
+          Boolean(painelSession?.planoRecursos?.relatorios_avancados)
+        );
 
         let queryComandas = supabase
           .from("comandas")
@@ -430,7 +421,7 @@ export default function RelatorioFinanceiroPage() {
         );
       }
     },
-    [supabase, idSalao, statusFiltro, dataInicio, dataFim]
+    [supabase, idSalao, statusFiltro, dataInicio, dataFim, painelSession?.planoRecursos]
   );
 
   const init = useCallback(async () => {
@@ -440,22 +431,18 @@ export default function RelatorioFinanceiroPage() {
       setMsg("");
       setSemPermissao(false);
 
-      const usuario = await getUsuarioLogado();
-
-      if (!usuario?.idSalao) {
+      if (!painelSession?.idSalao || !painelSession?.permissoes) {
         setErroTela("Não foi possível identificar o salão do usuário.");
         return;
       }
 
-      const nivelUsuario = usuario?.perfil?.nivel as UserNivel | undefined;
-
-      if (!hasPermission(nivelUsuario, "relatorios_ver")) {
+      if (!painelSession.permissoes.relatorios_ver) {
         setSemPermissao(true);
         return;
       }
 
-      setIdSalao(usuario.idSalao);
-      await carregarRelatorio(usuario.idSalao);
+      setIdSalao(painelSession.idSalao);
+      await carregarRelatorio(painelSession.idSalao);
     } catch (error: unknown) {
       console.error(error);
       setErroTela(
@@ -464,7 +451,7 @@ export default function RelatorioFinanceiroPage() {
     } finally {
       setLoading(false);
     }
-  }, [carregarRelatorio]);
+  }, [carregarRelatorio, painelSession]);
 
   useEffect(() => {
     void init();
