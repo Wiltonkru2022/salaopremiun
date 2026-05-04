@@ -19,6 +19,7 @@ type WarmupTarget = {
   href: string;
   headers?: HeadersInit;
   mode: RequestMode;
+  fetchEnabled?: boolean;
 };
 
 type ReadyWarmupTarget = Omit<WarmupTarget, "origin"> & {
@@ -98,6 +99,7 @@ function LoginPageContent() {
         origin: redirectOrigin,
         href: redirectHref,
         mode: "no-cors",
+        fetchEnabled: true,
       });
     }
 
@@ -111,16 +113,14 @@ function LoginPageContent() {
       warmupTargets.push({
         origin: supabaseOrigin,
         href: supabaseHref,
-        headers: getSupabaseWarmupHeaders(
-          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
-        ),
         mode: "cors",
+        fetchEnabled: false,
       });
     }
 
     const createdLinks: HTMLLinkElement[] = [];
 
-    warmupTargets.forEach(({ origin, href, headers, mode }) => {
+    warmupTargets.forEach(({ origin, href, headers, mode, fetchEnabled }) => {
       const preconnect = document.createElement("link");
       preconnect.rel = "preconnect";
       preconnect.href = origin;
@@ -134,13 +134,15 @@ function LoginPageContent() {
       document.head.appendChild(dnsPrefetch);
       createdLinks.push(dnsPrefetch);
 
-      void fetch(href, {
-        method: "GET",
-        mode,
-        cache: "no-store",
-        credentials: "include",
-        headers,
-      }).catch(() => undefined);
+      if (fetchEnabled !== false) {
+        void fetch(href, {
+          method: "GET",
+          mode,
+          cache: "no-store",
+          credentials: "include",
+          headers,
+        }).catch(() => undefined);
+      }
     });
 
     return () => {
@@ -436,12 +438,4 @@ function getSupabaseWarmupHref(rawUrl: string) {
   } catch {
     return "";
   }
-}
-
-function getSupabaseWarmupHeaders(anonKey: string) {
-  if (!anonKey) return undefined;
-  return {
-    apikey: anonKey,
-    Authorization: `Bearer ${anonKey}`,
-  };
 }
