@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePainelSession } from "@/components/layout/PainelSessionProvider";
 import AppLoading from "@/components/ui/AppLoading";
-import { createClient } from "@/lib/supabase/client";
 import {
   AlertCircle,
   CalendarDays,
@@ -206,7 +205,6 @@ function UpgradeActions({
 }
 
 export default function DashboardPage() {
-  const supabase = createClient();
   const { snapshot: painelSession } = usePainelSession();
 
   const [loading, setLoading] = useState(true);
@@ -238,13 +236,21 @@ export default function DashboardPage() {
 
       setDashboardAvancado(Boolean(painelSession.planoRecursos?.dashboard_avancado));
 
-      const { data, error } = await supabase.rpc("fn_dashboard_resumo_painel");
+      const response = await fetch("/api/painel/dashboard-resumo", {
+        cache: "no-store",
+      });
 
-      if (error) {
-        throw error;
+      const payload = (await response.json().catch(() => ({}))) as
+        | DashboardRpcResumo
+        | { error?: string };
+
+      if (!response.ok) {
+        const errorMessage =
+          "error" in payload ? payload.error : "Erro ao carregar dashboard.";
+        throw new Error(errorMessage || "Erro ao carregar dashboard.");
       }
 
-      const rpcData = (data || {}) as DashboardRpcResumo;
+      const rpcData = payload as DashboardRpcResumo;
 
       setFaseCarregamento("Carregando indicadores principais.");
       setResumo({
@@ -276,7 +282,7 @@ export default function DashboardPage() {
     } finally {
       setLoading(false);
     }
-  }, [supabase, painelSession]);
+  }, [painelSession]);
 
   useEffect(() => {
     void init();
