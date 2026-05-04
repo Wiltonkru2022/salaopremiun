@@ -130,7 +130,24 @@ function getMfaRecoveryContext(detail: SalaoTicketDetail | null) {
       typeof detail.ticket.origemContexto?.recovery_delay_hours === "number"
         ? detail.ticket.origemContexto.recovery_delay_hours
         : 24,
+    recoveryStatus:
+      typeof detail.ticket.origemContexto?.recovery_status === "string"
+        ? detail.ticket.origemContexto.recovery_status
+        : "requested",
+    unlockAt:
+      typeof detail.ticket.origemContexto?.recovery_unlock_at === "string"
+        ? detail.ticket.origemContexto.recovery_unlock_at
+        : null,
   };
+}
+
+function formatRecoveryStatus(value?: string | null) {
+  const normalized = String(value || "").toLowerCase();
+
+  if (normalized === "cooldown") return "Em carencia de seguranca";
+  if (normalized === "rejected") return "Aguardando novos dados";
+  if (normalized === "completed") return "Concluida";
+  return "Em analise";
 }
 
 async function readJson(response: Response) {
@@ -587,19 +604,29 @@ export default function SupportDeskClient({
                           Recuperacao do autenticador
                         </div>
                         <h3 className="mt-1.5 text-base font-bold text-zinc-950">
-                          Solicitação em análise de segurança
+                          Solicitacao em analise de seguranca
                         </h3>
                         <p className="mt-2 text-sm leading-6 text-zinc-700">
-                          Código da solicitação:{" "}
+                          Codigo da solicitacao:{" "}
                           <span className="font-mono font-bold">
                             {mfaRecoveryContext.recoveryCode || "-"}
                           </span>
                           . Responda este ticket com uma selfie segurando o
-                          documento e um papel com esse código escrito à mão.
+                          documento e um papel com esse codigo escrito a mao.
                         </p>
                         <p className="mt-2 text-sm leading-6 text-zinc-700">
-                          Depois da aprovação, a liberação entra em carência de
-                          até {mfaRecoveryContext.delayHours} horas por segurança.
+                          Estado atual:{" "}
+                          <strong>
+                            {formatRecoveryStatus(mfaRecoveryContext.recoveryStatus)}
+                          </strong>
+                          {mfaRecoveryContext.unlockAt
+                            ? ` ate ${formatDate(mfaRecoveryContext.unlockAt)}`
+                            : ""}
+                          .
+                        </p>
+                        <p className="mt-2 text-sm leading-6 text-zinc-700">
+                          Depois da aprovacao, a liberacao entra em carencia de
+                          ate {mfaRecoveryContext.delayHours} horas por seguranca.
                         </p>
                       </div>
                     </div>
@@ -686,3 +713,4 @@ export default function SupportDeskClient({
     </div>
   );
 }
+

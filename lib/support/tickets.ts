@@ -2,6 +2,11 @@ import { createClient } from "@/lib/supabase/server";
 import { requireProfissionalServerContext } from "@/lib/profissional-context.server";
 import { runAdminOperation } from "@/lib/supabase/admin-ops";
 import { clearBackupMetadata } from "@/lib/auth/mfa-backup-codes";
+import {
+  buildMfaRecoveryApprovedMessage,
+  buildMfaRecoveryCompletedMessage,
+  buildMfaRecoveryRejectedMessage,
+} from "@/lib/auth/mfa-recovery";
 import { registrarLogSistema } from "@/lib/system-logs";
 import type { Json } from "@/types/database.generated";
 
@@ -1211,6 +1216,11 @@ export async function updateAdminTicketStatus(params: {
       let eventDescription =
         normalizeText(params.motivo) ||
         `Status ajustado para ${nextStatus} pelo AdminMaster.`;
+      let customerMessage = "";
+      const recoveryCode =
+        typeof origemContexto.recovery_code === "string"
+          ? origemContexto.recovery_code
+          : "";
 
       if (params.mfaRecoveryAction) {
         if (!isMfaRecoveryTicket) {
@@ -1237,6 +1247,10 @@ export async function updateAdminTicketStatus(params: {
           eventDescription =
             normalizeText(params.motivo) ||
             `Recuperacao do autenticador aprovada com carencia ate ${unlockAt}.`;
+          customerMessage = buildMfaRecoveryApprovedMessage({
+            code: recoveryCode || "REC",
+            unlockAt,
+          });
         }
 
         if (params.mfaRecoveryAction === "reject") {
@@ -1248,6 +1262,9 @@ export async function updateAdminTicketStatus(params: {
           eventDescription =
             normalizeText(params.motivo) ||
             "Recuperacao do autenticador recusada. Aguardando novos dados do cliente.";
+          customerMessage = buildMfaRecoveryRejectedMessage({
+            code: recoveryCode || "REC",
+          });
         }
 
         if (params.mfaRecoveryAction === "complete") {
@@ -1365,6 +1382,10 @@ export async function updateAdminTicketStatus(params: {
           eventDescription =
             normalizeText(params.motivo) ||
             "Autenticador removido apos a carencia de seguranca.";
+          customerMessage = buildMfaRecoveryCompletedMessage({
+            code: recoveryCode || "REC",
+            lockUntil: recoveryLockUntil,
+          });
         }
       }
 
@@ -1401,6 +1422,17 @@ export async function updateAdminTicketStatus(params: {
           mfa_recovery_action: params.mfaRecoveryAction || null,
         } as Json,
       });
+
+      if (customerMessage) {
+        await supabase.from("ticket_mensagens").insert({
+          id_ticket: params.idTicket,
+          autor_tipo: "admin",
+          autor_nome: "Equipe de seguranca",
+          mensagem: customerMessage,
+          interna: false,
+          id_admin_usuario: params.context.idAdmin,
+        });
+      }
 
       return {
         prioridade: String(prioridadeAtualizada || ticket.prioridade || "media"),
