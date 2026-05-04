@@ -41,6 +41,7 @@ export default function ClientesPage() {
   const [erro, setErro] = useState("");
   const [msg, setMsg] = useState("");
   const [busca, setBusca] = useState("");
+  const [buscaAplicada, setBuscaAplicada] = useState("");
   const [statusFiltro, setStatusFiltro] = useState<
     "todos" | "ativo" | "inativo"
   >("todos");
@@ -85,19 +86,45 @@ export default function ClientesPage() {
     };
   }, [painelSession, router]);
 
+  useEffect(() => {
+    const handle = window.setTimeout(() => {
+      setBuscaAplicada(busca.trim());
+    }, 300);
+
+    return () => window.clearTimeout(handle);
+  }, [busca]);
+
   const carregarClientes = useCallback(
     async (salaoId: string, page = 0, append = false) => {
       const from = page * CLIENTES_PAGE_SIZE;
       const to = from + CLIENTES_PAGE_SIZE - 1;
 
-      const { data, error } = await supabase
+      let query = supabase
         .from("clientes")
         .select(
           "id, nome, cashback, whatsapp, telefone, email, bairro, profissao, status, ativo, created_at"
         )
         .eq("id_salao", salaoId)
-        .order("nome", { ascending: true })
-        .range(from, to);
+        .order("nome", { ascending: true });
+
+      if (statusFiltro !== "todos") {
+        query = query.eq("status", statusFiltro);
+      }
+
+      if (buscaAplicada) {
+        query = query.or(
+          [
+            `nome.ilike.%${buscaAplicada}%`,
+            `whatsapp.ilike.%${buscaAplicada}%`,
+            `telefone.ilike.%${buscaAplicada}%`,
+            `email.ilike.%${buscaAplicada}%`,
+            `bairro.ilike.%${buscaAplicada}%`,
+            `profissao.ilike.%${buscaAplicada}%`,
+          ].join(",")
+        );
+      }
+
+      const { data, error } = await query.range(from, to);
 
       if (error) throw error;
 
@@ -106,7 +133,7 @@ export default function ClientesPage() {
       setClientesPage(page);
       setClientesHasMore(rows.length === CLIENTES_PAGE_SIZE);
     },
-    [supabase]
+    [supabase, statusFiltro, buscaAplicada]
   );
 
   const bootstrap = useCallback(async () => {
@@ -246,28 +273,7 @@ export default function ClientesPage() {
     }
   }
 
-  const listaFiltrada = useMemo(() => {
-    const termo = busca.toLowerCase().trim();
-
-    return clientes.filter((item) => {
-      const ativoAtual = item.ativo ?? item.status === "ativo";
-      const bateBusca =
-        !termo ||
-        item.nome?.toLowerCase().includes(termo) ||
-        item.whatsapp?.toLowerCase().includes(termo) ||
-        item.telefone?.toLowerCase().includes(termo) ||
-        item.email?.toLowerCase().includes(termo) ||
-        item.bairro?.toLowerCase().includes(termo) ||
-        item.profissao?.toLowerCase().includes(termo);
-
-      const bateStatus =
-        statusFiltro === "todos" ||
-        (statusFiltro === "ativo" && ativoAtual) ||
-        (statusFiltro === "inativo" && !ativoAtual);
-
-      return bateBusca && bateStatus;
-    });
-  }, [busca, clientes, statusFiltro]);
+  const listaFiltrada = useMemo(() => clientes, [clientes]);
 
   const resumo = useMemo(() => {
     const ativos = listaFiltrada.filter(

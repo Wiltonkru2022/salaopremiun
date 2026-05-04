@@ -72,6 +72,7 @@ export default function ProdutosPage() {
   const [erro, setErro] = useState("");
   const [msg, setMsg] = useState("");
   const [busca, setBusca] = useState("");
+  const [buscaAplicada, setBuscaAplicada] = useState("");
   const [statusFiltro, setStatusFiltro] = useState<
     "todos" | "ativo" | "inativo"
   >("todos");
@@ -116,12 +117,20 @@ export default function ProdutosPage() {
     };
   }, [painelSession, router]);
 
+  useEffect(() => {
+    const handle = window.setTimeout(() => {
+      setBuscaAplicada(busca.trim());
+    }, 300);
+
+    return () => window.clearTimeout(handle);
+  }, [busca]);
+
   const carregarProdutos = useCallback(
     async (salaoId: string, page = 0, append = false) => {
       const from = page * PRODUTOS_PAGE_SIZE;
       const to = from + PRODUTOS_PAGE_SIZE - 1;
 
-      const { data, error } = await supabase
+      let query = supabase
         .from("produtos")
         .select(
           [
@@ -140,8 +149,25 @@ export default function ProdutosPage() {
           ].join(", ")
         )
         .eq("id_salao", salaoId)
-        .order("nome", { ascending: true })
-        .range(from, to);
+        .order("nome", { ascending: true });
+
+      if (statusFiltro !== "todos") {
+        query = query.eq("status", statusFiltro);
+      }
+
+      if (buscaAplicada) {
+        query = query.or(
+          [
+            `nome.ilike.%${buscaAplicada}%`,
+            `marca.ilike.%${buscaAplicada}%`,
+            `linha.ilike.%${buscaAplicada}%`,
+            `categoria.ilike.%${buscaAplicada}%`,
+            `destinacao.ilike.%${buscaAplicada}%`,
+          ].join(",")
+        );
+      }
+
+      const { data, error } = await query.range(from, to);
 
       if (error) throw error;
 
@@ -150,7 +176,7 @@ export default function ProdutosPage() {
       setProdutosPage(page);
       setProdutosHasMore(rows.length === PRODUTOS_PAGE_SIZE);
     },
-    [supabase]
+    [supabase, statusFiltro, buscaAplicada]
   );
 
   const bootstrap = useCallback(async () => {
@@ -285,28 +311,7 @@ export default function ProdutosPage() {
     }
   }
 
-  const listaFiltrada = useMemo(() => {
-    const termo = busca.toLowerCase().trim();
-
-    return produtos.filter((item) => {
-      const ativoAtual = item.ativo ?? item.status === "ativo";
-
-      const bateBusca =
-        !termo ||
-        item.nome?.toLowerCase().includes(termo) ||
-        item.marca?.toLowerCase().includes(termo) ||
-        item.linha?.toLowerCase().includes(termo) ||
-        item.categoria?.toLowerCase().includes(termo) ||
-        item.destinacao?.toLowerCase().includes(termo);
-
-      const bateStatus =
-        statusFiltro === "todos" ||
-        (statusFiltro === "ativo" && ativoAtual) ||
-        (statusFiltro === "inativo" && !ativoAtual);
-
-      return bateBusca && bateStatus;
-    });
-  }, [produtos, busca, statusFiltro]);
+  const listaFiltrada = useMemo(() => produtos, [produtos]);
 
   const resumo = useMemo(() => {
     const ativos = listaFiltrada.filter(

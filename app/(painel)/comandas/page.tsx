@@ -131,7 +131,7 @@ export default function ComandasPage() {
       const from = page * COMANDAS_PAGE_SIZE;
       const to = from + COMANDAS_PAGE_SIZE - 1;
 
-      const { data: comandasData, error: comandasError } = await supabase
+      let comandasQuery = supabase
         .from("comandas")
         .select(`
           id,
@@ -145,8 +145,13 @@ export default function ComandasPage() {
           id_cliente
         `)
         .eq("id_salao", salaoId)
-        .order("aberta_em", { ascending: false })
-        .range(from, to);
+        .order("aberta_em", { ascending: false });
+
+      if (statusFiltro !== "todos") {
+        comandasQuery = comandasQuery.eq("status", statusFiltro);
+      }
+
+      const { data: comandasData, error: comandasError } = await comandasQuery.range(from, to);
 
       if (comandasError) throw comandasError;
 
@@ -190,7 +195,7 @@ export default function ComandasPage() {
       setComandasPage(page);
       setComandasHasMore(rows.length === COMANDAS_PAGE_SIZE);
     },
-    [supabase]
+    [supabase, statusFiltro]
   );
 
   const bootstrap = useCallback(async () => {
@@ -237,11 +242,10 @@ export default function ComandasPage() {
         !termo ||
         String(item.numero).includes(termo) ||
         nomeCliente.includes(termo);
-      const bateStatus = statusFiltro === "todos" || item.status === statusFiltro;
 
-      return bateBusca && bateStatus;
+      return bateBusca;
     });
-  }, [comandas, busca, statusFiltro]);
+  }, [comandas, busca]);
 
   const resumoComandas = useMemo(() => {
     return comandas.reduce(
