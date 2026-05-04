@@ -642,32 +642,42 @@ export async function listAdminTickets() {
   return runAdminOperation({
     action: "support_list_admin_tickets",
     run: async (supabase) => {
-      const [{ data: tickets, error }, { data: saloes, error: saloesError }] =
-        await Promise.all([
-          supabase
-            .from("tickets")
-            .select(
-              "id, id_salao, numero, assunto, categoria, prioridade, status, origem, criado_em, atualizado_em, ultima_interacao_em, solicitante_nome, sla_limite_em, origem_contexto"
-            )
-            .neq("origem", "app_profissional_login")
-            .order("ultima_interacao_em", { ascending: false })
-            .limit(150),
-          supabase.from("saloes").select("id, nome").limit(1000),
-        ]);
+      const { data: tickets, error } = await supabase
+        .from("tickets")
+        .select(
+          "id, id_salao, numero, assunto, categoria, prioridade, status, origem, criado_em, atualizado_em, ultima_interacao_em, solicitante_nome, sla_limite_em, origem_contexto"
+        )
+        .neq("origem", "app_profissional_login")
+        .order("ultima_interacao_em", { ascending: false })
+        .limit(150);
 
       if (error) {
         throw new Error(error.message || "Erro ao listar tickets do AdminMaster.");
       }
 
-      if (saloesError) {
-        throw new Error(
-          saloesError.message || "Erro ao carregar saloes dos tickets."
-        );
-      }
-
       const ticketRows = (tickets || []) as TicketListRow[];
       const ids = ticketRows.map((ticket) => ticket.id);
+      const salaoIds = Array.from(
+        new Set(ticketRows.map((ticket) => ticket.id_salao).filter(Boolean))
+      ) as string[];
       let latestMessages: TicketMessageRow[] = [];
+      let saloes: Array<{ id: string; nome?: string | null }> = [];
+
+      if (salaoIds.length > 0) {
+        const { data: saloesData, error: saloesError } = await supabase
+          .from("saloes")
+          .select("id, nome")
+          .in("id", salaoIds)
+          .limit(salaoIds.length);
+
+        if (saloesError) {
+          throw new Error(
+            saloesError.message || "Erro ao carregar saloes dos tickets."
+          );
+        }
+
+        saloes = (saloesData || []) as Array<{ id: string; nome?: string | null }>;
+      }
 
       if (ids.length > 0) {
         const { data: mensagens, error: mensagensError } = await supabase

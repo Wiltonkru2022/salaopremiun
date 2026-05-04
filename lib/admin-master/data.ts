@@ -2252,17 +2252,54 @@ export async function getAdminMasterSection(
 
   if (section === "alertas") {
     const sync = await syncAdminMasterAlerts();
-    const [{ data: alertas }, { data: saloes }, { data: tickets }] = await Promise.all([
-      supabase
-        .from("alertas_sistema")
-        .select(
-          "id, tipo, gravidade, origem_modulo, id_salao, titulo, descricao, resolvido, criado_em, atualizado_em, automatico, id_ticket"
-        )
-        .order("resolvido", { ascending: true })
-        .order("criado_em", { ascending: false })
-        .limit(150),
-      supabase.from("saloes").select("id, nome").limit(1000),
-      supabase.from("tickets").select("id, numero, status").limit(1000),
+    const { data: alertas } = await supabase
+      .from("alertas_sistema")
+      .select(
+        "id, tipo, gravidade, origem_modulo, id_salao, titulo, descricao, resolvido, criado_em, atualizado_em, automatico, id_ticket"
+      )
+      .order("resolvido", { ascending: true })
+      .order("criado_em", { ascending: false })
+      .limit(150);
+
+    const alertasRows =
+      ((alertas || []) as {
+        id?: string | null;
+        tipo?: string | null;
+        gravidade?: string | null;
+        origem_modulo?: string | null;
+        id_salao?: string | null;
+        titulo?: string | null;
+        descricao?: string | null;
+        resolvido?: boolean | null;
+        criado_em?: string | null;
+        atualizado_em?: string | null;
+        automatico?: boolean | null;
+        id_ticket?: string | null;
+      }[]) || [];
+    const salaoIds = Array.from(
+      new Set(alertasRows.map((row) => row.id_salao).filter(Boolean))
+    ) as string[];
+    const ticketIds = Array.from(
+      new Set(alertasRows.map((row) => row.id_ticket).filter(Boolean))
+    ) as string[];
+
+    const [{ data: saloes }, { data: tickets }] = await Promise.all([
+      salaoIds.length
+        ? supabase.from("saloes").select("id, nome").in("id", salaoIds).limit(salaoIds.length)
+        : Promise.resolve({ data: [] as Array<{ id: string; nome?: string | null }> }),
+      ticketIds.length
+        ? supabase
+            .from("tickets")
+            .select("id, numero, status")
+            .in("id", ticketIds)
+            .limit(ticketIds.length)
+        : Promise.resolve({
+            data: [] as Array<{
+              id: string;
+              numero?: number | string | null;
+              status?: string | null;
+            }>,
+          }),
     ]);
 
     const salaoById = new Map(
@@ -2283,20 +2320,7 @@ export async function getAdminMasterSection(
       )
     );
 
-    const rows = ((alertas || []) as {
-      id?: string | null;
-      tipo?: string | null;
-      gravidade?: string | null;
-      origem_modulo?: string | null;
-      id_salao?: string | null;
-      titulo?: string | null;
-      descricao?: string | null;
-      resolvido?: boolean | null;
-      criado_em?: string | null;
-      atualizado_em?: string | null;
-      automatico?: boolean | null;
-      id_ticket?: string | null;
-    }[]).map((row) => ({
+    const rows = alertasRows.map((row) => ({
       gravidade: row.gravidade || "-",
       titulo: row.titulo || "-",
       salao: row.id_salao ? salaoById.get(row.id_salao) || row.id_salao : "-",
