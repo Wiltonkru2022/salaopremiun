@@ -86,7 +86,7 @@ export default function AssinaturaPage() {
     !mostrarSecaoRenovacao && (trialAtivo || assinaturaAtiva);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3.5">
       <AssinaturaHero
         assinaturaStatus={assinatura?.status}
         planoAtualNome={planoAtualNome}
@@ -104,11 +104,11 @@ export default function AssinaturaPage() {
         tipoMudancaPlano={tipoMudancaPlano}
       />
 
-      <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-end">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
         <button
           type="button"
           onClick={abrirHistoricoModal}
-          className="rounded-2xl border border-violet-200 bg-violet-50 px-5 py-2.5 text-sm font-semibold text-violet-700 transition hover:bg-violet-100"
+          className="rounded-2xl border border-violet-200 bg-violet-50 px-4.5 py-2 text-sm font-semibold text-violet-700 transition hover:bg-violet-100"
         >
           Ver historico de pagamentos
         </button>
@@ -131,13 +131,13 @@ export default function AssinaturaPage() {
       />
 
       {jaPossuiAssinatura ? (
-        <section className="rounded-[24px] border border-sky-200 bg-sky-50 p-4 text-sm leading-6 text-sky-900 shadow-sm">
+        <section className="rounded-[24px] border border-sky-200 bg-sky-50 px-4 py-3.5 text-sm leading-6 text-sky-900 shadow-sm">
           <strong>Voce ja possui uma assinatura.</strong> Escolha o pacote
           desejado abaixo e conclua a cobranca para registrar o upgrade,
           downgrade ou a renovacao do plano atual.
         </section>
       ) : !mostrarBotaoIniciarTrial && jaUsouTrial ? (
-        <section className="rounded-[24px] border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900 shadow-sm">
+        <section className="rounded-[24px] border border-amber-200 bg-amber-50 px-4 py-3.5 text-sm leading-6 text-amber-900 shadow-sm">
           <strong>O teste gratis ja foi usado neste salao.</strong> Agora a
           contratacao segue pelos planos pagos.
         </section>
@@ -174,7 +174,7 @@ export default function AssinaturaPage() {
           />
         </section>
       ) : mostrarCardAssinaturaAtiva ? (
-        <section className="rounded-[24px] border border-zinc-200 bg-white p-5 shadow-sm">
+        <section className="rounded-[24px] border border-zinc-200 bg-white p-4.5 shadow-sm">
           <h2 className="text-2xl font-bold text-zinc-950">
             {trialAtivo ? "Teste gratis ativo" : "Assinatura ativa"}
           </h2>

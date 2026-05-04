@@ -74,8 +74,8 @@ export default function AssinaturaHero({
       : "Controle teste gratis, vencimento, historico, upgrade, downgrade e cobranca por PIX, boleto ou cartao em uma experiencia premium.";
 
   return (
-    <section className="overflow-hidden rounded-[28px] border border-zinc-200 bg-white px-5 py-5 text-zinc-950 shadow-sm md:px-7 md:py-7 xl:px-8 xl:py-8">
-      <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
+    <section className="overflow-hidden rounded-[28px] border border-zinc-200 bg-white px-5 py-4.5 text-zinc-950 shadow-sm md:px-6 md:py-6 xl:px-7 xl:py-6.5">
+      <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
         <div className="max-w-4xl">
           <div className="flex flex-wrap gap-2">
             <div className="inline-flex rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.28em] text-zinc-600">
@@ -103,16 +103,16 @@ export default function AssinaturaHero({
             ) : null}
           </div>
 
-          <h1 className="mt-4 max-w-3xl text-3xl font-bold tracking-tight md:text-[2.8rem]">
+          <h1 className="mt-3.5 max-w-3xl text-3xl font-bold tracking-tight md:text-[2.6rem]">
             {titulo}
           </h1>
 
-          <p className="mt-4 max-w-2xl text-sm leading-6 text-zinc-600 md:text-base">
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-zinc-600 md:text-[15px]">
             {descricao}
           </p>
 
           {bloqueioTotal ? (
-            <div className="mt-4 rounded-[22px] border border-red-200 bg-red-50 px-4 py-3.5">
+            <div className="mt-3.5 rounded-[22px] border border-red-200 bg-red-50 px-4 py-3">
               <div className="text-sm font-semibold text-red-700 md:text-base">
                 Bloqueio automatico ativo
               </div>
@@ -124,16 +124,16 @@ export default function AssinaturaHero({
           ) : null}
         </div>
 
-        <div className="w-full max-w-[400px] rounded-[24px] border border-zinc-200 bg-zinc-50 p-3.5">
+        <div className="w-full max-w-[388px] rounded-[24px] border border-zinc-200 bg-zinc-50 p-3">
           <div className="flex items-start justify-between gap-4">
             <div>
               <div className="text-xs font-semibold uppercase tracking-[0.24em] text-zinc-500">
                 Renovacao automatica
               </div>
-              <div className="mt-1.5 text-base font-bold text-zinc-950">
+              <div className="mt-1 text-[15px] font-bold text-zinc-950">
                 {renovacaoTitulo || (renovacaoAutomatica ? "Ativada" : "Desativada")}
               </div>
-              <p className="mt-1 text-sm text-zinc-600">
+              <p className="mt-1 text-sm leading-6 text-zinc-600">
                 {renovacaoDescricao ||
                   (renovacaoAutomatica
                     ? "O sistema mantem a proxima renovacao automatica alinhada com a forma de pagamento atual."
@@ -177,7 +177,7 @@ export default function AssinaturaHero({
           </div>
 
           <div
-            className={`mt-3 rounded-2xl border px-3 py-2.5 text-xs ${getRenovacaoToneClasses(
+            className={`mt-2.5 rounded-2xl border px-3 py-2 text-xs leading-5 ${getRenovacaoToneClasses(
               renovacaoTone
             )}`}
           >
