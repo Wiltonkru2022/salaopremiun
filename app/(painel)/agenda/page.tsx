@@ -323,7 +323,7 @@ export default function AgendaPage() {
       }
 
       void loadAgenda();
-    }, 8000);
+    }, 3000);
 
     return () => window.clearInterval(interval);
   }, [idSalao, selectedProfissionalId, modalOpen, loading, loadAgenda]);

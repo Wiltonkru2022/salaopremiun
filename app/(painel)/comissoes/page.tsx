@@ -762,7 +762,7 @@ export default function ComissoesPage() {
           ) : null}
 
           <div className="rounded-[24px] border border-zinc-200 bg-white p-3.5 shadow-sm">
-            <div className="grid grid-cols-1 gap-2.5 xl:grid-cols-[1.25fr_160px_160px_210px_160px_160px_140px]">
+            <div className="grid grid-cols-1 gap-2.5 xl:grid-cols-[minmax(240px,1.35fr)_minmax(136px,0.72fr)_minmax(136px,0.72fr)_minmax(200px,1fr)_minmax(150px,0.78fr)_minmax(150px,0.78fr)_minmax(132px,0.65fr)]">
               <Field label="Buscar">
                 <div className="relative">
                   <Search

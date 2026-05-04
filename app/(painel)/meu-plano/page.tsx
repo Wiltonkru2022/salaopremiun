@@ -312,7 +312,7 @@ export default async function MeuPlanoPage({
             >
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <div className="max-w-[112px] text-[10px] font-black uppercase leading-tight tracking-[0.14em] text-zinc-400 sm:max-w-none">
+                    <div className="max-w-[132px] text-[9px] font-black uppercase leading-[1.35] tracking-[0.08em] text-zinc-400 sm:max-w-none">
                       {metric.title}
                     </div>
                   <div className="mt-2 text-xl font-black text-zinc-950">
