@@ -153,7 +153,7 @@ export default function AgendaSidebar(props: Props) {
   const showBackButton = Boolean(panel) || view !== "overview";
 
   return (
-    <aside className="w-full min-h-0 lg:h-full lg:max-w-[388px] lg:min-w-[388px] xl:max-w-[404px] xl:min-w-[404px]">
+    <aside className="w-full min-h-0 lg:h-full lg:max-w-[432px] lg:min-w-[432px] xl:max-w-[448px] xl:min-w-[448px]">
       <div className="flex h-full min-h-0 flex-col rounded-[24px] border border-white/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(250,251,255,0.96)_100%)] p-3.5 shadow-[0_16px_40px_rgba(15,23,42,0.07)]">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">

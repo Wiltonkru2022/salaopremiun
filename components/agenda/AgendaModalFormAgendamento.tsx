@@ -30,6 +30,21 @@ type Props = {
   onCancelAppointment: (item: Agendamento) => Promise<void>;
 };
 
+function getStatusTone(statusLabel: string) {
+  switch (statusLabel) {
+    case "Confirmado":
+      return "border-emerald-200 bg-emerald-50 text-emerald-700";
+    case "Pendente":
+      return "border-amber-200 bg-amber-50 text-amber-700";
+    case "Atendido":
+      return "border-sky-200 bg-sky-50 text-sky-700";
+    case "Cancelado":
+      return "border-rose-200 bg-rose-50 text-rose-700";
+    default:
+      return "border-violet-200 bg-violet-50 text-violet-700";
+  }
+}
+
 function Section({
   eyebrow,
   title,
@@ -72,6 +87,8 @@ export default function AgendaModalFormAgendamento({
   onAbrirComanda,
   onCancelAppointment,
 }: Props) {
+  const statusTone = getStatusTone(statusLabel);
+
   return (
     <div className="space-y-4">
       <Section eyebrow="Atendimento" title="Quem vai atender e quem vai ser atendida">
@@ -136,14 +153,21 @@ export default function AgendaModalFormAgendamento({
             <button
               type="button"
               onClick={onOpenStatusPicker}
-              className="flex min-h-12 w-full items-center justify-between rounded-2xl border border-zinc-200 bg-white px-3.5 py-3 text-left transition duration-200 hover:-translate-y-[1px] hover:bg-zinc-50"
+              className="flex min-h-12 w-full items-center justify-between gap-3 rounded-2xl border border-zinc-200 bg-white px-3.5 py-3 text-left transition duration-200 hover:-translate-y-[1px] hover:bg-zinc-50"
             >
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-400">
                   Status atual
                 </div>
-                <div className="mt-1 text-sm font-semibold text-zinc-900">
-                  {statusLabel}
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <span
+                    className={`inline-flex max-w-full items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${statusTone}`}
+                  >
+                    {statusLabel}
+                  </span>
+                  <span className="min-w-0 text-xs text-zinc-500">
+                    Toque para trocar
+                  </span>
                 </div>
               </div>
               <ChevronRight size={16} className="shrink-0 text-zinc-400" />

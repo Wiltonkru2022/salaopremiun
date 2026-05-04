@@ -10,7 +10,6 @@ import AgendaModalFormAgendamento from "@/components/agenda/AgendaModalFormAgend
 import AgendaModalFormBloqueio from "@/components/agenda/AgendaModalFormBloqueio";
 import AgendaModalResumo from "@/components/agenda/AgendaModalResumo";
 import PlanoLimiteNotice from "@/components/plans/PlanoLimiteNotice";
-import { getPlanoMinimoParaRecurso } from "@/lib/plans/catalog";
 import {
   type AgendaModalProps,
   useAgendaModal,
@@ -22,7 +21,6 @@ type Props = AgendaModalProps & {
 };
 
 export default function AgendaModal(props: Props) {
-  const comunicacaoUpgradeTarget = getPlanoMinimoParaRecurso("marketing");
   const {
     open,
     mode,
@@ -214,7 +212,7 @@ export default function AgendaModal(props: Props) {
               Comparar planos
             </Link>
             <Link
-              href={getAssinaturaUrl(`/assinatura?plano=${comunicacaoUpgradeTarget}`)}
+              href={getAssinaturaUrl(`/assinatura?plano=${upgradeTarget}`)}
               className="inline-flex items-center justify-center rounded-2xl bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-zinc-800"
             >
               Fazer upgrade

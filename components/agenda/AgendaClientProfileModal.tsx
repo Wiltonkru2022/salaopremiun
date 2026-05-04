@@ -66,11 +66,13 @@ function ProfileBody({
         <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-400">
           Perfil da cliente
         </div>
-        <h3 className="mt-1 text-lg font-bold text-zinc-900">{clienteNome}</h3>
+        <h3 className="mt-1 break-words text-lg font-bold text-zinc-900">
+          {clienteNome}
+        </h3>
         {clienteWhatsapp ? (
-          <div className="mt-1 inline-flex items-center gap-1.5 rounded-full border border-zinc-200 bg-white px-3 py-1 text-xs font-medium text-zinc-600">
+          <div className="mt-1 inline-flex max-w-full items-center gap-1.5 rounded-full border border-zinc-200 bg-white px-3 py-1 text-xs font-medium text-zinc-600">
             <Phone size={12} />
-            {clienteWhatsapp}
+            <span className="break-all">{clienteWhatsapp}</span>
           </div>
         ) : null}
       </div>
@@ -86,7 +88,7 @@ function ProfileBody({
           </div>
         ) : (
           <div className="space-y-4">
-            <div className="grid gap-3 md:grid-cols-4">
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
               <div className="rounded-[20px] border border-zinc-200 bg-zinc-50 px-4 py-3">
                 <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-400">
                   Historico
@@ -100,7 +102,7 @@ function ProfileBody({
                 <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-400">
                   Ultimo servico
                 </div>
-                <div className="mt-2 text-sm font-semibold text-zinc-900">
+                <div className="mt-2 break-words text-sm font-semibold text-zinc-900">
                   {historico[0]?.servicoNome || "-"}
                 </div>
               </div>
@@ -119,7 +121,7 @@ function ProfileBody({
                 <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-400">
                   Ultima observacao
                 </div>
-                <div className="mt-2 line-clamp-2 text-sm text-zinc-700">
+                <div className="mt-2 break-words text-sm text-zinc-700">
                   {historico.find((item) => item.observacoes)?.observacoes ||
                     "Sem observacoes salvas."}
                 </div>
@@ -148,9 +150,9 @@ function ProfileBody({
                         </span>
                       </div>
 
-                      <div className="mt-2 flex items-center gap-2 text-sm font-semibold text-zinc-900">
+                      <div className="mt-2 flex items-start gap-2 text-sm font-semibold text-zinc-900">
                         <UserRound size={14} className="text-zinc-400" />
-                        {item.servicoNome}
+                        <span className="break-words">{item.servicoNome}</span>
                       </div>
                     </div>
                   </div>
@@ -160,7 +162,9 @@ function ProfileBody({
                       <MessageSquareText size={12} />
                       Observacoes
                     </div>
-                    {item.observacoes || "Sem observacoes registradas."}
+                    <div className="break-words">
+                      {item.observacoes || "Sem observacoes registradas."}
+                    </div>
                   </div>
                 </div>
               ))}

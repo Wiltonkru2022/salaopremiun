@@ -79,14 +79,23 @@ function LoginPageContent() {
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    const targets = [
-      safeOriginFromHref(redirectHref),
-      safeOriginFromHref(process.env.NEXT_PUBLIC_SUPABASE_URL || ""),
-    ].filter(Boolean) as string[];
+    const warmupTargets = [
+      {
+        origin: safeOriginFromHref(redirectHref),
+        href: redirectHref,
+      },
+      {
+        origin: safeOriginFromHref(process.env.NEXT_PUBLIC_SUPABASE_URL || ""),
+        href: getSupabaseWarmupHref(process.env.NEXT_PUBLIC_SUPABASE_URL || ""),
+      },
+    ].filter(
+      (target): target is { origin: string; href: string } =>
+        Boolean(target.origin && target.href)
+    );
 
     const createdLinks: HTMLLinkElement[] = [];
 
-    targets.forEach((origin) => {
+    warmupTargets.forEach(({ origin, href }) => {
       const preconnect = document.createElement("link");
       preconnect.rel = "preconnect";
       preconnect.href = origin;
@@ -100,8 +109,8 @@ function LoginPageContent() {
       document.head.appendChild(dnsPrefetch);
       createdLinks.push(dnsPrefetch);
 
-      void fetch(origin, {
-        method: "HEAD",
+      void fetch(href, {
+        method: "GET",
         mode: "no-cors",
         cache: "no-store",
         credentials: "include",
@@ -391,5 +400,14 @@ function safeOriginFromHref(href: string) {
       .origin;
   } catch {
     return null;
+  }
+}
+
+function getSupabaseWarmupHref(rawUrl: string) {
+  try {
+    const url = new URL(rawUrl);
+    return `${url.origin}/auth/v1/health`;
+  } catch {
+    return "";
   }
 }

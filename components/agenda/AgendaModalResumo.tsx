@@ -1,15 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { getAssinaturaUrl } from "@/lib/site-urls";
 import { ExternalLink } from "lucide-react";
+import { getAssinaturaUrl } from "@/lib/site-urls";
 import { getPlanoMinimoParaRecurso } from "@/lib/plans/catalog";
 import { normalizeTimeString } from "@/lib/utils/agenda";
-import type {
-  Cliente,
-  Profissional,
-  Servico,
-} from "@/types/agenda";
+import type { Cliente, Profissional, Servico } from "@/types/agenda";
 import type { AgendaModalMode } from "./useAgendaModal";
 
 type Props = {
@@ -31,6 +27,42 @@ type Props = {
   onAbrirWhatsapp: () => void;
 };
 
+function SummaryItem({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="min-w-0">
+      <div className="text-[11px] text-zinc-500">{label}</div>
+      <div className="mt-1 break-words text-sm font-semibold text-zinc-900">
+        {value}
+      </div>
+    </div>
+  );
+}
+
+function InfoCard({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-3">
+      <div className="text-[10px] uppercase tracking-wide text-zinc-500">
+        {label}
+      </div>
+      <div className="mt-1 break-words text-sm font-semibold text-zinc-900">
+        {value}
+      </div>
+    </div>
+  );
+}
+
 export default function AgendaModalResumo({
   mode,
   profissionalSelecionado,
@@ -49,7 +81,7 @@ export default function AgendaModalResumo({
   onChangeWhatsapp,
   onAbrirWhatsapp,
 }: Props) {
-  const comunicacaoUpgradeTarget = getPlanoMinimoParaRecurso("marketing");
+  const comunicacaoUpgradeTarget = getPlanoMinimoParaRecurso("whatsapp");
 
   return (
     <div className="space-y-3">
@@ -59,97 +91,56 @@ export default function AgendaModalResumo({
         </div>
 
         <div className="mt-3 space-y-3">
-          <div>
-            <div className="text-[11px] text-zinc-500">Profissional</div>
-            <div className="mt-1 text-sm font-semibold text-zinc-900">
-              {profissionalSelecionado?.nome || "Selecione"}
-            </div>
-          </div>
+          <SummaryItem
+            label="Profissional"
+            value={profissionalSelecionado?.nome || "Selecione"}
+          />
 
           {mode === "agendamento" ? (
             <>
-              <div>
-                <div className="text-[11px] text-zinc-500">Cliente</div>
-                <div className="mt-1 text-sm font-semibold text-zinc-900">
-                  {clienteSelecionado?.nome || "Selecione"}
-                </div>
-              </div>
-
-              <div>
-                <div className="text-[11px] text-zinc-500">Serviço</div>
-                <div className="mt-1 text-sm font-semibold text-zinc-900">
-                  {servicoSelecionado?.nome || "Selecione"}
-                </div>
-              </div>
+              <SummaryItem
+                label="Cliente"
+                value={clienteSelecionado?.nome || "Selecione"}
+              />
+              <SummaryItem
+                label="Servico"
+                value={servicoSelecionado?.nome || "Selecione"}
+              />
 
               <div className="grid grid-cols-2 gap-2">
-                <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-3">
-                  <div className="text-[10px] uppercase tracking-wide text-zinc-500">
-                    Início
-                  </div>
-                  <div className="mt-1 text-sm font-semibold text-zinc-900">
-                    {normalizeTimeString(horaInicio)}
-                  </div>
-                </div>
-
-                <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-3">
-                  <div className="text-[10px] uppercase tracking-wide text-zinc-500">
-                    Fim
-                  </div>
-                  <div className="mt-1 text-sm font-semibold text-zinc-900">
-                    {horaFimPreview || "--:--"}
-                  </div>
-                </div>
+                <InfoCard
+                  label="Inicio"
+                  value={normalizeTimeString(horaInicio)}
+                />
+                <InfoCard label="Fim" value={horaFimPreview || "--:--"} />
               </div>
 
-              <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-3">
-                <div className="text-[10px] uppercase tracking-wide text-zinc-500">
-                  Duração
-                </div>
-                <div className="mt-1 text-sm font-semibold text-zinc-900">
-                  {servicoSelecionado?.duracao_minutos ?? 0} min
-                </div>
-              </div>
-
-              <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-3">
-                <div className="text-[10px] uppercase tracking-wide text-zinc-500">
-                  Comanda
-                </div>
-                <div className="mt-1 text-sm font-semibold text-zinc-900">
-                  {comandaNumero ? `#${comandaNumero}` : "Sem comanda"}
-                </div>
-              </div>
+              <InfoCard
+                label="Duracao"
+                value={`${servicoSelecionado?.duracao_minutos ?? 0} min`}
+              />
+              <InfoCard
+                label="Comanda"
+                value={comandaNumero ? `#${comandaNumero}` : "Sem comanda"}
+              />
             </>
           ) : (
             <>
               <div className="grid grid-cols-2 gap-2">
-                <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-3">
-                  <div className="text-[10px] uppercase tracking-wide text-zinc-500">
-                    Início
-                  </div>
-                  <div className="mt-1 text-sm font-semibold text-zinc-900">
-                    {normalizeTimeString(horaInicio)}
-                  </div>
-                </div>
-
-                <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-3">
-                  <div className="text-[10px] uppercase tracking-wide text-zinc-500">
-                    Fim
-                  </div>
-                  <div className="mt-1 text-sm font-semibold text-zinc-900">
-                    {normalizeTimeString(horaFimBloqueio)}
-                  </div>
-                </div>
+                <InfoCard
+                  label="Inicio"
+                  value={normalizeTimeString(horaInicio)}
+                />
+                <InfoCard
+                  label="Fim"
+                  value={normalizeTimeString(horaFimBloqueio)}
+                />
               </div>
 
-              <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-3">
-                <div className="text-[10px] uppercase tracking-wide text-zinc-500">
-                  Motivo
-                </div>
-                <div className="mt-1 text-sm font-medium text-zinc-900">
-                  {motivoBloqueio || "Sem motivo informado"}
-                </div>
-              </div>
+              <InfoCard
+                label="Motivo"
+                value={motivoBloqueio || "Sem motivo informado"}
+              />
             </>
           )}
         </div>
@@ -172,7 +163,7 @@ export default function AgendaModalResumo({
             <textarea
               value={whatsMensagem}
               onChange={(e) => onChangeWhatsapp(e.target.value)}
-              className="min-h-[150px] w-full rounded-2xl border border-zinc-200 bg-zinc-50 px-3 py-2.5 text-sm text-zinc-900 outline-none transition focus:border-zinc-900 focus:bg-white"
+              className="min-h-[150px] w-full rounded-2xl border border-zinc-200 bg-zinc-50 px-3 py-2.5 text-sm leading-6 text-zinc-900 outline-none transition focus:border-zinc-900 focus:bg-white"
             />
           </div>
 
@@ -205,7 +196,7 @@ export default function AgendaModalResumo({
       ) : null}
 
       <div className="rounded-[20px] border border-zinc-200 bg-zinc-50 p-3.5">
-        <div className="text-sm font-semibold text-zinc-800">Dicas rápidas</div>
+        <div className="text-sm font-semibold text-zinc-800">Dicas rapidas</div>
         <div className="mt-2 text-xs leading-5 text-zinc-500">
           {dicas[dicaIndex]}
         </div>
