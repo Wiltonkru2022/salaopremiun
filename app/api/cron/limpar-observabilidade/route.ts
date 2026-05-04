@@ -76,6 +76,8 @@ async function handleCron(req: Request) {
         p_eventos_sistema_days:
           OBSERVABILITY_RETENTION_DEFAULTS.eventosSistemaDays,
         p_logs_sistema_days: OBSERVABILITY_RETENTION_DEFAULTS.logsSistemaDays,
+        p_auditoria_logs_days:
+          OBSERVABILITY_RETENTION_DEFAULTS.auditoriaLogsDays,
         p_acoes_automaticas_days:
           OBSERVABILITY_RETENTION_DEFAULTS.acoesAutomaticasDays,
         p_eventos_webhook_days:

@@ -5549,6 +5549,7 @@ export type Database = {
       fn_observability_retention_cleanup: {
         Args: {
           p_acoes_automaticas_days?: number
+          p_auditoria_logs_days?: number
           p_batch_limit?: number
           p_eventos_cron_days?: number
           p_eventos_sistema_days?: number

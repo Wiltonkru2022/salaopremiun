@@ -1,6 +1,7 @@
 export const OBSERVABILITY_RETENTION_DEFAULTS = {
   eventosSistemaDays: 45,
   logsSistemaDays: 30,
+  auditoriaLogsDays: 180,
   acoesAutomaticasDays: 45,
   eventosWebhookDays: 30,
   eventosCronDays: 30,
