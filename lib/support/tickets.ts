@@ -741,7 +741,7 @@ export async function getSalaoTicketDetail(params: {
         supabase
           .from("ticket_mensagens")
           .select(
-            "id, id_ticket, autor_tipo, autor_nome, mensagem, interna, criada_em, id_usuario_salao, id_profissional, id_admin_usuario"
+            "id, id_ticket, autor_tipo, autor_nome, mensagem, interna, criada_em, id_usuario_salao, id_profissional, id_admin_usuario, anexos_json"
           )
           .eq("id_ticket", params.idTicket)
           .eq("interna", false)
@@ -811,7 +811,7 @@ export async function getAdminTicketDetail(
         supabase
           .from("ticket_mensagens")
           .select(
-            "id, id_ticket, autor_tipo, autor_nome, mensagem, interna, criada_em, id_usuario_salao, id_profissional, id_admin_usuario"
+            "id, id_ticket, autor_tipo, autor_nome, mensagem, interna, criada_em, id_usuario_salao, id_profissional, id_admin_usuario, anexos_json"
           )
           .eq("id_ticket", idTicket)
           .order("criada_em", { ascending: true }),
