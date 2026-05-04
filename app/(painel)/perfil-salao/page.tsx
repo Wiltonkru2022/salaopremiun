@@ -189,13 +189,17 @@ export default function PerfilSalaoPage() {
 
   const linhasEndereco = useMemo(() => formatAddress(perfilForm), [perfilForm]);
   const autenticadorAtivo = Boolean(totpFactor?.id);
-  const qrCodeDataUrl = useMemo(
-    () =>
-      totpSetup?.qrCode
-        ? `data:image/svg+xml;utf8,${encodeURIComponent(totpSetup.qrCode)}`
-        : "",
-    [totpSetup]
-  );
+  const qrCodeMarkup = useMemo(() => {
+    if (!totpSetup?.qrCode) return "";
+    return totpSetup.qrCode.trim().startsWith("<svg") ? totpSetup.qrCode : "";
+  }, [totpSetup]);
+
+  const qrCodeDataUrl = useMemo(() => {
+    if (!totpSetup?.qrCode || qrCodeMarkup) return "";
+    return totpSetup.qrCode.startsWith("data:image")
+      ? totpSetup.qrCode
+      : `data:image/svg+xml;charset=utf-8,${encodeURIComponent(totpSetup.qrCode)}`;
+  }, [qrCodeMarkup, totpSetup]);
 
   const callMfaApi = useCallback(
     async (body?: Record<string, unknown>) => {
@@ -753,9 +757,8 @@ export default function PerfilSalaoPage() {
                 Perfil do salao
               </h1>
               <p className="mt-2 text-sm leading-6 text-zinc-500 sm:text-[15px]">
-                Aqui fica so a leitura da ficha do negocio. As alteracoes
-                importantes entram pela lateral, em modais separados, sem virar
-                um formulario comprido no meio da tela.
+                Confira os dados do negocio em um lugar so e use as acoes da
+                lateral quando precisar atualizar alguma informacao.
               </p>
             </div>
 
@@ -892,7 +895,7 @@ export default function PerfilSalaoPage() {
             <SectionCard
               icon={<Sparkles size={18} />}
               title="Acoes do perfil"
-              description="Cada ajuste abre no proprio contexto, sem poluir a leitura da ficha."
+              description="Escolha o que deseja atualizar sem perder a visao geral do perfil."
             >
               <div className="space-y-3">
                 <SidebarAction
@@ -932,12 +935,11 @@ export default function PerfilSalaoPage() {
                 <CircleAlert size={18} className="mt-0.5 text-zinc-900" />
                 <div>
                   <div className="text-sm font-bold text-zinc-950">
-                    Camada de recuperacao
+                    Protecao da conta
                   </div>
                   <p className="mt-1.5 text-sm leading-5 text-zinc-600">
-                    Backup codes, bloqueio por tentativas e desativacao segura
-                    agora fazem parte do fluxo. O que ainda nao existe e
-                    recuperacao fora da sessao logada por suporte administrado.
+                    Ative o autenticador para reforcar a seguranca da conta e
+                    manter uma forma segura de recuperacao com backup codes.
                   </p>
                 </div>
               </div>
@@ -1235,15 +1237,13 @@ export default function PerfilSalaoPage() {
           <div className="rounded-[22px] border border-zinc-200 bg-zinc-50 p-4 text-sm text-zinc-700">
             {autenticadorAtivo ? (
               <p className="leading-6">
-                Esta conta ja tem autenticador validado. Para trocar a senha,
-                voce pode informar o codigo do app ou usar um backup code ainda
-                nao consumido.
+                Esta conta ja esta protegida com autenticador. Para trocar a
+                senha, confirme com o codigo do app ou use um backup code.
               </p>
             ) : (
               <p className="leading-6">
-                No momento a troca depende da sessao autenticada atual. Quando
-                o autenticador for ativado, este modal passa a exigir TOTP ou
-                backup code.
+                Se quiser reforcar a protecao da conta, ative o autenticador.
+                Depois disso, toda troca de senha pede confirmacao adicional.
               </p>
             )}
           </div>
@@ -1312,8 +1312,8 @@ export default function PerfilSalaoPage() {
       <AppModal
         open={activeModal === "autenticador"}
         onClose={fecharModalAutenticador}
-        title="Autenticador do administrador"
-        description="Ative TOTP com backup codes e mantenha a recuperacao da conta sob controle."
+        title="Autenticador da conta"
+        description="Adicione uma segunda etapa de confirmacao para proteger melhor o acesso."
         eyebrow="Seguranca"
         maxWidthClassName="max-w-3xl"
         closeDisabled={mfaBusy}
@@ -1389,19 +1389,28 @@ export default function PerfilSalaoPage() {
                 Confirmar ativacao
               </div>
               <p className="mt-2 text-sm leading-6 text-zinc-600">
-                Escaneie o QR code no app autenticador ou digite o segredo
-                manualmente. Depois confirme com o codigo gerado.
+                Escaneie o QR code no seu aplicativo autenticador ou use o
+                segredo manual. Depois confirme com o codigo gerado.
               </p>
 
               <div className="mt-4 grid gap-4 lg:grid-cols-[220px_minmax(0,1fr)]">
                 <div className="rounded-[20px] border border-zinc-200 bg-zinc-50 p-3">
-                  {qrCodeDataUrl ? (
+                  {qrCodeMarkup ? (
+                    <div
+                      className="flex min-h-[190px] items-center justify-center rounded-2xl bg-white p-2"
+                      dangerouslySetInnerHTML={{ __html: qrCodeMarkup }}
+                    />
+                  ) : qrCodeDataUrl ? (
                     <img
                       src={qrCodeDataUrl}
                       alt="QR code do autenticador"
                       className="h-full w-full rounded-2xl bg-white object-contain p-2"
                     />
-                  ) : null}
+                  ) : (
+                    <div className="flex min-h-[190px] items-center justify-center rounded-2xl bg-white p-4 text-center text-sm text-zinc-500">
+                      Nao foi possivel montar o QR code. Use o segredo manual ao lado.
+                    </div>
+                  )}
                 </div>
 
                 <div className="space-y-4">
@@ -1462,8 +1471,8 @@ export default function PerfilSalaoPage() {
                   Gerar novos backup codes
                 </div>
                 <p className="mt-2 text-sm leading-6 text-zinc-600">
-                  Gere um lote novo e invalide o anterior sempre que suspeitar
-                  de exposicao ou depois de uma mudanca operacional relevante.
+                  Gere novos backup codes quando quiser renovar a reserva de
+                  acesso da conta.
                 </p>
                 <div className="mt-4 grid gap-3 md:grid-cols-[minmax(0,1fr)_auto]">
                   <TextInput
@@ -1497,9 +1506,8 @@ export default function PerfilSalaoPage() {
                   Desativar 2FA com seguranca
                 </div>
                 <p className="mt-2 text-sm leading-6 text-zinc-700">
-                  Voce pode desativar pelo codigo atual do autenticador ou por
-                  um backup code valido. Depois disso, a sessao atual e
-                  encerrada.
+                  Se precisar remover essa protecao, confirme com o codigo atual
+                  do autenticador ou com um backup code valido.
                 </p>
 
                 <div className="mt-4 space-y-3">
@@ -1552,8 +1560,8 @@ export default function PerfilSalaoPage() {
                 Backup codes gerados
               </div>
               <p className="mt-2 text-sm leading-6 text-emerald-800">
-                Estes codigos aparecem agora como lote atual. Guarde em local
-                seguro; cada um funciona uma vez.
+                Guarde estes codigos em um local seguro. Cada codigo funciona
+                uma unica vez.
               </p>
               <div className="mt-4 grid gap-2 sm:grid-cols-2">
                 {revealedBackupCodes.map((code) => (
@@ -1570,14 +1578,13 @@ export default function PerfilSalaoPage() {
 
           <div className="rounded-[22px] border border-zinc-200 bg-zinc-50 p-4">
             <div className="text-sm font-bold text-zinc-950">
-              Cuidados importantes
+              Como funciona
             </div>
-            <ul className="mt-3 space-y-2 text-sm leading-6 text-zinc-700">
-              <li>- Sempre oferecer backup codes.</li>
-              <li>- Permitir desativacao de 2FA com seguranca.</li>
-              <li>- Proteger contra brute force com limite de tentativas.</li>
-              <li>- Guardar o segredo criptografado no provedor de auth.</li>
-            </ul>
+            <p className="mt-2 text-sm leading-6 text-zinc-700">
+              Depois de ativar o autenticador, a conta passa a pedir confirmacao
+              extra em alteracoes sensiveis e voce continua com backup codes
+              para emergencias.
+            </p>
           </div>
         </div>
       </AppModal>
