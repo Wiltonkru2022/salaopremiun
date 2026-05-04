@@ -49,6 +49,23 @@ function formatDate(value?: string | null) {
   });
 }
 
+function getMfaRecoveryContext(detail: AdminTicketDetail) {
+  if (detail.ticket.origemContexto?.tipo_fluxo !== "recuperacao_2fa") {
+    return null;
+  }
+
+  return {
+    recoveryCode:
+      typeof detail.ticket.origemContexto?.recovery_code === "string"
+        ? detail.ticket.origemContexto.recovery_code
+        : "",
+    delayHours:
+      typeof detail.ticket.origemContexto?.recovery_delay_hours === "number"
+        ? detail.ticket.origemContexto.recovery_delay_hours
+        : 24,
+  };
+}
+
 async function readJson(response: Response) {
   const data = await response.json().catch(() => ({}));
   if (!response.ok || !data?.ok) {
@@ -71,6 +88,7 @@ export default function AdminTicketDetailClient({ detail, canEdit }: Props) {
   const [feedback, setFeedback] = useState("");
   const [error, setError] = useState("");
   const [saving, setSaving] = useState<"reply" | "status" | null>(null);
+  const mfaRecoveryContext = getMfaRecoveryContext(detail);
 
   async function handleReply() {
     if (!reply.trim()) {
@@ -166,6 +184,26 @@ export default function AdminTicketDetailClient({ detail, canEdit }: Props) {
 
       <section className="grid gap-5 2xl:grid-cols-[1fr_320px]">
         <div className="space-y-4 rounded-[30px] border border-zinc-200 bg-white p-5 shadow-sm">
+          {mfaRecoveryContext ? (
+            <div className="rounded-[24px] border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-900">
+              <div className="font-bold">Recuperação do autenticador</div>
+              <div className="mt-2 leading-6">
+                Código da solicitação:{" "}
+                <span className="font-mono font-bold">
+                  {mfaRecoveryContext.recoveryCode || "-"}
+                </span>
+              </div>
+              <ul className="mt-3 list-disc space-y-1 pl-5 leading-6">
+                <li>Validar selfie com documento e código escrito à mão.</li>
+                <li>Conferir contato atual no próprio ticket.</li>
+                <li>
+                  Depois da aprovação, respeitar a carência de até{" "}
+                  {mfaRecoveryContext.delayHours} horas antes de concluir.
+                </li>
+              </ul>
+            </div>
+          ) : null}
+
           <div className="flex items-center gap-2 text-lg font-bold text-zinc-950">
             <MessageSquareText size={18} />
             Thread do ticket

@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   CircleAlert,
   Clock3,
@@ -115,6 +116,23 @@ function getPasswordRecoveryAction(detail: SalaoTicketDetail | null) {
   };
 }
 
+function getMfaRecoveryContext(detail: SalaoTicketDetail | null) {
+  if (detail?.ticket.origemContexto?.tipo_fluxo !== "recuperacao_2fa") {
+    return null;
+  }
+
+  return {
+    recoveryCode:
+      typeof detail.ticket.origemContexto?.recovery_code === "string"
+        ? detail.ticket.origemContexto.recovery_code
+        : "",
+    delayHours:
+      typeof detail.ticket.origemContexto?.recovery_delay_hours === "number"
+        ? detail.ticket.origemContexto.recovery_delay_hours
+        : 24,
+  };
+}
+
 async function readJson(response: Response) {
   const data = await response.json().catch(() => ({}));
   if (!response.ok || !data?.ok) {
@@ -154,6 +172,7 @@ export default function SupportDeskClient({
   initialMetrics,
   initialDetail,
 }: Props) {
+  const searchParams = useSearchParams();
   const [items, setItems] = useState(initialItems);
   const [metrics, setMetrics] = useState(initialMetrics);
   const [detail, setDetail] = useState<SalaoTicketDetail | null>(initialDetail);
@@ -184,8 +203,13 @@ export default function SupportDeskClient({
     () => getPasswordRecoveryAction(detail),
     [detail]
   );
+  const mfaRecoveryContext = useMemo(
+    () => getMfaRecoveryContext(detail),
+    [detail]
+  );
+  const preferredTicketId = searchParams.get("ticket");
 
-  async function loadTickets(preferredId?: string | null) {
+  const loadTickets = useCallback(async (preferredId?: string | null) => {
     setLoadingList(true);
     try {
       setError("");
@@ -207,9 +231,9 @@ export default function SupportDeskClient({
     } finally {
       setLoadingList(false);
     }
-  }
+  }, [initialMetrics]);
 
-  async function loadDetail(id: string) {
+  const loadDetail = useCallback(async (id: string) => {
     setLoadingDetail(true);
     try {
       setError("");
@@ -220,12 +244,18 @@ export default function SupportDeskClient({
     } finally {
       setLoadingDetail(false);
     }
-  }
+  }, []);
 
   useEffect(() => {
     if (!selectedId || detail?.ticket.id === selectedId) return;
     void loadDetail(selectedId);
-  }, [detail?.ticket.id, selectedId]);
+  }, [detail?.ticket.id, loadDetail, selectedId]);
+
+  useEffect(() => {
+    if (!preferredTicketId || preferredTicketId === selectedId) return;
+    setSelectedId(preferredTicketId);
+    void loadTickets(preferredTicketId);
+  }, [loadTickets, preferredTicketId, selectedId]);
 
   async function handleCreate() {
     if (!newTicket.assunto.trim() || !newTicket.mensagem.trim()) {
@@ -545,6 +575,33 @@ export default function SupportDeskClient({
                       >
                         Abrir cadastro e trocar senha
                       </Link>
+                    </div>
+                  </section>
+                ) : null}
+
+                {mfaRecoveryContext ? (
+                  <section className="rounded-[24px] border border-amber-200 bg-amber-50/80 p-3.5 shadow-sm">
+                    <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                      <div>
+                        <div className="text-xs font-semibold uppercase tracking-[0.22em] text-amber-700">
+                          Recuperacao do autenticador
+                        </div>
+                        <h3 className="mt-1.5 text-base font-bold text-zinc-950">
+                          Solicitação em análise de segurança
+                        </h3>
+                        <p className="mt-2 text-sm leading-6 text-zinc-700">
+                          Código da solicitação:{" "}
+                          <span className="font-mono font-bold">
+                            {mfaRecoveryContext.recoveryCode || "-"}
+                          </span>
+                          . Responda este ticket com uma selfie segurando o
+                          documento e um papel com esse código escrito à mão.
+                        </p>
+                        <p className="mt-2 text-sm leading-6 text-zinc-700">
+                          Depois da aprovação, a liberação entra em carência de
+                          até {mfaRecoveryContext.delayHours} horas por segurança.
+                        </p>
+                      </div>
                     </div>
                   </section>
                 ) : null}

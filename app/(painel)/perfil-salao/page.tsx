@@ -6,6 +6,7 @@ import {
   Building2,
   CheckCircle2,
   CircleAlert,
+  LifeBuoy,
   KeyRound,
   Loader2,
   Mail,
@@ -170,6 +171,7 @@ export default function PerfilSalaoPage() {
   const [savingSenha, setSavingSenha] = useState(false);
   const [loadingMfa, setLoadingMfa] = useState(false);
   const [mfaBusy, setMfaBusy] = useState(false);
+  const [creatingRecoveryTicket, setCreatingRecoveryTicket] = useState(false);
   const [erro, setErro] = useState("");
   const [msg, setMsg] = useState("");
   const [idSalao, setIdSalao] = useState("");
@@ -722,6 +724,48 @@ export default function PerfilSalaoPage() {
       );
     } finally {
       setMfaBusy(false);
+    }
+  }
+
+  async function abrirRecuperacaoAutenticador() {
+    try {
+      setCreatingRecoveryTicket(true);
+      setErro("");
+      setMsg("");
+
+      const response = await fetch("/api/auth/mfa/recovery-request", {
+        method: "POST",
+      });
+
+      const payload = (await response.json().catch(() => ({}))) as {
+        ok?: boolean;
+        error?: string;
+        ticket?: { id?: string; numero?: number | string };
+        recoveryCode?: string;
+        delayHours?: number;
+      };
+
+      if (!response.ok || payload.ok === false || !payload.ticket?.id) {
+        throw new Error(
+          payload.error || "Nao foi possivel abrir a recuperacao do autenticador."
+        );
+      }
+
+      const numero = payload.ticket.numero ? `#${payload.ticket.numero}` : "novo ticket";
+      const code = payload.recoveryCode ? ` (${payload.recoveryCode})` : "";
+      setMsg(
+        `Recuperacao iniciada no ticket ${numero}${code}. O processo pode levar ate ${payload.delayHours || 24} horas por seguranca.`
+      );
+      fecharModalAutenticador();
+      router.push(`/suporte?ticket=${payload.ticket.id}&recovery=1`);
+    } catch (error) {
+      setErro(
+        error instanceof Error
+          ? error.message
+          : "Erro ao abrir recuperacao do autenticador."
+      );
+    } finally {
+      setCreatingRecoveryTicket(false);
     }
   }
 
@@ -1586,6 +1630,32 @@ export default function PerfilSalaoPage() {
               para emergencias.
             </p>
           </div>
+
+          {autenticadorAtivo ? (
+            <div className="rounded-[22px] border border-amber-200 bg-amber-50 p-4">
+              <div className="text-sm font-bold text-zinc-950">
+                Perdeu acesso ao aplicativo autenticador?
+              </div>
+              <p className="mt-2 text-sm leading-6 text-zinc-700">
+                Abra uma solicitacao segura para recuperacao. A equipe pode pedir
+                confirmacao da titularidade e o processo pode levar ate 24 horas
+                por seguranca.
+              </p>
+              <button
+                type="button"
+                onClick={abrirRecuperacaoAutenticador}
+                disabled={creatingRecoveryTicket || mfaBusy}
+                className="mt-4 inline-flex items-center gap-2 rounded-2xl border border-zinc-300 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-900 transition hover:bg-zinc-50 disabled:opacity-60"
+              >
+                {creatingRecoveryTicket ? (
+                  <Loader2 className="animate-spin" size={16} />
+                ) : (
+                  <LifeBuoy size={16} />
+                )}
+                Abrir recuperacao segura
+              </button>
+            </div>
+          ) : null}
         </div>
       </AppModal>
     </>
