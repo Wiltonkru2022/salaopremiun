@@ -71,11 +71,22 @@ function getMfaRecoveryContext(detail: AdminTicketDetail) {
       typeof detail.ticket.origemContexto?.recovery_status === "string"
         ? detail.ticket.origemContexto.recovery_status
         : "requested",
+    reviewStatus:
+      typeof detail.ticket.origemContexto?.recovery_review_status === "string"
+        ? detail.ticket.origemContexto.recovery_review_status
+        : "pending",
     unlockAt:
       typeof detail.ticket.origemContexto?.recovery_unlock_at === "string"
         ? detail.ticket.origemContexto.recovery_unlock_at
         : null,
   };
+}
+
+function formatRecoveryReviewStatus(value: string) {
+  if (value === "valid") return "Completa";
+  if (value === "illegible") return "Ilegivel";
+  if (value === "divergent") return "Divergente";
+  return "Pendente";
 }
 
 async function readJson(response: Response) {
@@ -204,6 +215,44 @@ export default function AdminTicketDetailClient({ detail, canEdit }: Props) {
     }
   }
 
+  async function handleMfaEvidenceReviewAction(
+    action: "valid" | "illegible" | "divergent"
+  ) {
+    setSaving("status");
+    try {
+      setError("");
+      setFeedback("");
+      await readJson(
+        await fetch(`/api/admin-master/tickets/${detail.ticket.id}/status`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            status,
+            prioridade,
+            assumir: true,
+            mfaEvidenceReviewAction: action,
+          }),
+        })
+      );
+      setFeedback(
+        action === "valid"
+          ? "Evidencia marcada como completa."
+          : action === "illegible"
+            ? "Evidencia marcada como ilegivel."
+            : "Evidencia marcada como divergente."
+      );
+      router.refresh();
+    } catch (currentError) {
+      setError(
+        currentError instanceof Error
+          ? currentError.message
+          : "Erro ao revisar a evidencia do ticket."
+      );
+    } finally {
+      setSaving(null);
+    }
+  }
+
   return (
     <div className="space-y-5">
       {feedback ? (
@@ -268,6 +317,12 @@ export default function AdminTicketDetailClient({ detail, canEdit }: Props) {
                 {mfaRecoveryContext.unlockAt
                   ? ` - libera em ${formatDate(mfaRecoveryContext.unlockAt)}`
                   : ""}
+              </div>
+              <div className="mt-2 leading-6">
+                Revisao da evidencia:{" "}
+                <strong>
+                  {formatRecoveryReviewStatus(mfaRecoveryContext.reviewStatus)}
+                </strong>
               </div>
               <ul className="mt-3 list-disc space-y-1 pl-5 leading-6">
                 <li>Validar selfie com documento e codigo escrito a mao.</li>
@@ -363,6 +418,40 @@ export default function AdminTicketDetailClient({ detail, canEdit }: Props) {
               Operacao do ticket
             </div>
             <div className="mt-4 grid gap-3">
+              {mfaRecoveryContext ? (
+                <div className="rounded-[24px] border border-zinc-200 bg-zinc-50 p-3">
+                  <div className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
+                    Revisao da evidencia
+                  </div>
+                  <div className="mt-3 grid gap-2">
+                    <button
+                      type="button"
+                      onClick={() => void handleMfaEvidenceReviewAction("valid")}
+                      disabled={saving === "status"}
+                      className="rounded-2xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100 disabled:opacity-60"
+                    >
+                      Marcar completa
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void handleMfaEvidenceReviewAction("illegible")}
+                      disabled={saving === "status"}
+                      className="rounded-2xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-700 transition hover:bg-amber-100 disabled:opacity-60"
+                    >
+                      Marcar ilegivel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void handleMfaEvidenceReviewAction("divergent")}
+                      disabled={saving === "status"}
+                      className="rounded-2xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-semibold text-rose-700 transition hover:bg-rose-100 disabled:opacity-60"
+                    >
+                      Marcar divergente
+                    </button>
+                  </div>
+                </div>
+              ) : null}
+
               <select
                 value={status}
                 onChange={(event) => setStatus(event.target.value as TicketStatus)}

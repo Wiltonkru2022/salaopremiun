@@ -136,6 +136,10 @@ function getMfaRecoveryContext(detail: SalaoTicketDetail | null) {
       typeof detail.ticket.origemContexto?.recovery_status === "string"
         ? detail.ticket.origemContexto.recovery_status
         : "requested",
+    reviewStatus:
+      typeof detail.ticket.origemContexto?.recovery_review_status === "string"
+        ? detail.ticket.origemContexto.recovery_review_status
+        : "pending",
     unlockAt:
       typeof detail.ticket.origemContexto?.recovery_unlock_at === "string"
         ? detail.ticket.origemContexto.recovery_unlock_at
@@ -150,6 +154,15 @@ function formatRecoveryStatus(value?: string | null) {
   if (normalized === "rejected") return "Aguardando novos dados";
   if (normalized === "completed") return "Concluida";
   return "Em analise";
+}
+
+function formatRecoveryReviewStatus(value?: string | null) {
+  const normalized = String(value || "").toLowerCase();
+
+  if (normalized === "valid") return "Evidencia completa";
+  if (normalized === "illegible") return "Reenviar imagem legivel";
+  if (normalized === "divergent") return "Reenviar dados consistentes";
+  return "Aguardando revisao";
 }
 
 async function readJson(response: Response) {
@@ -660,6 +673,15 @@ export default function SupportDeskClient({
                           {mfaRecoveryContext.unlockAt
                             ? ` ate ${formatDate(mfaRecoveryContext.unlockAt)}`
                             : ""}
+                          .
+                        </p>
+                        <p className="mt-2 text-sm leading-6 text-zinc-700">
+                          Revisao da evidencia:{" "}
+                          <strong>
+                            {formatRecoveryReviewStatus(
+                              mfaRecoveryContext.reviewStatus
+                            )}
+                          </strong>
                           .
                         </p>
                         <p className="mt-2 text-sm leading-6 text-zinc-700">

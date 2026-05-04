@@ -75,3 +75,36 @@ export function buildMfaRecoveryCompletedMessage(params: {
     `Por seguranca, troca de senha e outras alteracoes sensiveis ficam bloqueadas ate ${formatDateTime(params.lockUntil)}.`,
   ].join("\n");
 }
+
+export function buildMfaRecoveryEvidenceAcceptedMessage(params: {
+  code: string;
+}) {
+  return [
+    "Recebemos as evidencias da recuperacao do autenticador.",
+    "",
+    `Codigo da solicitacao: ${params.code}`,
+    "Os documentos ficaram marcados como completos e seguem para a etapa final de analise.",
+  ].join("\n");
+}
+
+export function buildMfaRecoveryEvidenceIllegibleMessage(params: {
+  code: string;
+}) {
+  return [
+    "As evidencias enviadas ainda nao estao legiveis o suficiente para aprovar a recuperacao.",
+    "",
+    `Codigo da solicitacao: ${params.code}`,
+    "Envie novamente a selfie e o documento com imagem mais nitida para continuar.",
+  ].join("\n");
+}
+
+export function buildMfaRecoveryEvidenceDivergentMessage(params: {
+  code: string;
+}) {
+  return [
+    "Encontramos divergencia entre os dados enviados e a conta da solicitacao.",
+    "",
+    `Codigo da solicitacao: ${params.code}`,
+    "Responda este ticket com novas evidencias e um contato atualizado para seguirmos com seguranca.",
+  ].join("\n");
+}

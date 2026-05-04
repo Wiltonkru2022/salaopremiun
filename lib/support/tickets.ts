@@ -5,6 +5,9 @@ import { clearBackupMetadata } from "@/lib/auth/mfa-backup-codes";
 import {
   buildMfaRecoveryApprovedMessage,
   buildMfaRecoveryCompletedMessage,
+  buildMfaRecoveryEvidenceAcceptedMessage,
+  buildMfaRecoveryEvidenceDivergentMessage,
+  buildMfaRecoveryEvidenceIllegibleMessage,
   buildMfaRecoveryRejectedMessage,
 } from "@/lib/auth/mfa-recovery";
 import { registrarLogSistema } from "@/lib/system-logs";
@@ -1275,6 +1278,7 @@ export async function updateAdminTicketStatus(params: {
   motivo?: string | null;
   assumir?: boolean;
   mfaRecoveryAction?: "approve" | "reject" | "complete" | null;
+  mfaEvidenceReviewAction?: "valid" | "illegible" | "divergent" | null;
 }) {
   const nextStatus = normalizeStatus(params.status);
   const nextPrioridade = params.prioridade
@@ -1317,6 +1321,53 @@ export async function updateAdminTicketStatus(params: {
           ? origemContexto.recovery_code
           : "";
 
+      if (params.mfaEvidenceReviewAction) {
+        if (!isMfaRecoveryTicket) {
+          throw new Error(
+            "Este ticket nao foi aberto como recuperacao do autenticador."
+          );
+        }
+
+        origemContexto.recovery_reviewed_at = now;
+        origemContexto.recovery_reviewed_by_admin_id = params.context.idAdmin;
+
+        if (params.mfaEvidenceReviewAction === "valid") {
+          origemContexto.recovery_review_status = "valid";
+          effectiveStatus = "aguardando_tecnico";
+          eventName = "mfa_recovery_evidence_valid";
+          eventDescription =
+            normalizeText(params.motivo) ||
+            "Evidencias marcadas como completas para a recuperacao do autenticador.";
+          customerMessage = buildMfaRecoveryEvidenceAcceptedMessage({
+            code: recoveryCode || "REC",
+          });
+        }
+
+        if (params.mfaEvidenceReviewAction === "illegible") {
+          origemContexto.recovery_review_status = "illegible";
+          effectiveStatus = "aguardando_cliente";
+          eventName = "mfa_recovery_evidence_illegible";
+          eventDescription =
+            normalizeText(params.motivo) ||
+            "Evidencias marcadas como ilegiveis. Aguardando novo envio do cliente.";
+          customerMessage = buildMfaRecoveryEvidenceIllegibleMessage({
+            code: recoveryCode || "REC",
+          });
+        }
+
+        if (params.mfaEvidenceReviewAction === "divergent") {
+          origemContexto.recovery_review_status = "divergent";
+          effectiveStatus = "aguardando_cliente";
+          eventName = "mfa_recovery_evidence_divergent";
+          eventDescription =
+            normalizeText(params.motivo) ||
+            "Evidencias com divergencia. Aguardando novos dados do cliente.";
+          customerMessage = buildMfaRecoveryEvidenceDivergentMessage({
+            code: recoveryCode || "REC",
+          });
+        }
+      }
+
       if (params.mfaRecoveryAction) {
         if (!isMfaRecoveryTicket) {
           throw new Error(
@@ -1334,6 +1385,8 @@ export async function updateAdminTicketStatus(params: {
             Date.now() + delayHours * 60 * 60 * 1000
           ).toISOString();
           origemContexto.recovery_status = "cooldown";
+          origemContexto.recovery_review_status =
+            origemContexto.recovery_review_status || "valid";
           origemContexto.recovery_approved_at = now;
           origemContexto.recovery_unlock_at = unlockAt;
           origemContexto.recovery_approved_by_admin_id = params.context.idAdmin;
