@@ -14,6 +14,17 @@ import {
   sanitizeLoginReturnTo,
 } from "@/lib/auth/login-redirect";
 
+type WarmupTarget = {
+  origin: string | null;
+  href: string;
+  headers?: HeadersInit;
+  mode: RequestMode;
+};
+
+type ReadyWarmupTarget = Omit<WarmupTarget, "origin"> & {
+  origin: string;
+};
+
 export default function LoginPage() {
   return (
     <Suspense fallback={<LoginPageFallback />}>
@@ -79,23 +90,37 @@ function LoginPageContent() {
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    const warmupTargets = [
-      {
-        origin: safeOriginFromHref(redirectHref),
+    const warmupTargets: ReadyWarmupTarget[] = [];
+
+    const redirectOrigin = safeOriginFromHref(redirectHref);
+    if (redirectOrigin && redirectHref) {
+      warmupTargets.push({
+        origin: redirectOrigin,
         href: redirectHref,
-      },
-      {
-        origin: safeOriginFromHref(process.env.NEXT_PUBLIC_SUPABASE_URL || ""),
-        href: getSupabaseWarmupHref(process.env.NEXT_PUBLIC_SUPABASE_URL || ""),
-      },
-    ].filter(
-      (target): target is { origin: string; href: string } =>
-        Boolean(target.origin && target.href)
+        mode: "no-cors",
+      });
+    }
+
+    const supabaseOrigin = safeOriginFromHref(
+      process.env.NEXT_PUBLIC_SUPABASE_URL || ""
     );
+    const supabaseHref = getSupabaseWarmupHref(
+      process.env.NEXT_PUBLIC_SUPABASE_URL || ""
+    );
+    if (supabaseOrigin && supabaseHref) {
+      warmupTargets.push({
+        origin: supabaseOrigin,
+        href: supabaseHref,
+        headers: getSupabaseWarmupHeaders(
+          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
+        ),
+        mode: "cors",
+      });
+    }
 
     const createdLinks: HTMLLinkElement[] = [];
 
-    warmupTargets.forEach(({ origin, href }) => {
+    warmupTargets.forEach(({ origin, href, headers, mode }) => {
       const preconnect = document.createElement("link");
       preconnect.rel = "preconnect";
       preconnect.href = origin;
@@ -111,9 +136,10 @@ function LoginPageContent() {
 
       void fetch(href, {
         method: "GET",
-        mode: "no-cors",
+        mode,
         cache: "no-store",
         credentials: "include",
+        headers,
       }).catch(() => undefined);
     });
 
@@ -410,4 +436,12 @@ function getSupabaseWarmupHref(rawUrl: string) {
   } catch {
     return "";
   }
+}
+
+function getSupabaseWarmupHeaders(anonKey: string) {
+  if (!anonKey) return undefined;
+  return {
+    apikey: anonKey,
+    Authorization: `Bearer ${anonKey}`,
+  };
 }
