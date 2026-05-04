@@ -44,6 +44,8 @@ import type {
   VendaProcessarResponse,
 } from "@/types/vendas";
 
+const VENDAS_PAGE_SIZE = 80;
+
 function escapeHtml(value: string | null | undefined) {
   return String(value || "-")
     .replaceAll("&", "&amp;")
@@ -71,6 +73,9 @@ export default function VendasPage() {
   const [vendas, setVendas] = useState<ComandaVenda[]>([]);
   const [vendasBusca, setVendasBusca] = useState<VendaBuscaRow[]>([]);
   const [clientesFiltro, setClientesFiltro] = useState<{ id: string; nome: string }[]>([]);
+  const [vendasPage, setVendasPage] = useState(0);
+  const [vendasHasMore, setVendasHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
 
   const [busca, setBusca] = useState("");
   const [statusFiltro, setStatusFiltro] = useState<"fechada" | "cancelada" | "todos">("fechada");
@@ -118,7 +123,7 @@ export default function VendasPage() {
 
   useEffect(() => {
     if (idSalao && acessoCarregado && permissoes?.vendas_ver) {
-      void carregarVendas(idSalao);
+      void carregarVendas(idSalao, 0, false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [idSalao, dataInicio, dataFim, statusFiltro, acessoCarregado, permissoes]);
@@ -180,11 +185,17 @@ export default function VendasPage() {
     }
   }
 
-  async function carregarVendas(salaoIdParam?: string) {
+  async function carregarVendas(
+    salaoIdParam?: string,
+    page = 0,
+    append = false
+  ) {
     const salaoId = salaoIdParam || idSalao;
     if (!salaoId) return;
     const dataInicioRange = getLocalDayRangeIso(dataInicio);
     const dataFimRange = getLocalDayRangeIso(dataFim);
+    const from = page * VENDAS_PAGE_SIZE;
+    const to = from + VENDAS_PAGE_SIZE - 1;
 
     setErroTela("");
 
@@ -207,12 +218,14 @@ export default function VendasPage() {
         )
       `)
       .eq("id_salao", salaoId)
-      .order("fechada_em", { ascending: false });
+      .order("fechada_em", { ascending: false })
+      .range(from, to);
 
     let queryBusca = supabase
       .from("vw_vendas_busca")
       .select("aberta_em, acrescimo, cancelada_em, cliente_nome, desconto, fechada_em, formas_pagamento, id, id_cliente, id_salao, itens_descricoes, numero, profissionais_nomes, status, subtotal, total")
-      .eq("id_salao", salaoId);
+      .eq("id_salao", salaoId)
+      .range(from, to);
 
     if (statusFiltro !== "todos") {
       queryComandas = queryComandas.eq("status", statusFiltro);
@@ -284,8 +297,34 @@ export default function VendasPage() {
       return;
     }
 
-    setVendas((comandasData as ComandaVenda[]) || []);
-    setVendasBusca((buscaData as VendaBuscaRow[]) || []);
+    const novasVendas = (comandasData as ComandaVenda[]) || [];
+    const novasVendasBusca = (buscaData as VendaBuscaRow[]) || [];
+
+    setVendas((prev) => (append ? [...prev, ...novasVendas] : novasVendas));
+    setVendasBusca((prev) =>
+      append ? [...prev, ...novasVendasBusca] : novasVendasBusca
+    );
+    setVendasPage(page);
+    setVendasHasMore(
+      novasVendas.length === VENDAS_PAGE_SIZE &&
+        novasVendasBusca.length === VENDAS_PAGE_SIZE
+    );
+  }
+
+  async function carregarMaisVendas() {
+    if (!idSalao || loadingMore || !vendasHasMore) return;
+
+    try {
+      setLoadingMore(true);
+      await carregarVendas(idSalao, vendasPage + 1, true);
+    } catch (error: unknown) {
+      console.error(error);
+      setErroTela(
+        error instanceof Error ? error.message : "Erro ao carregar mais vendas."
+      );
+    } finally {
+      setLoadingMore(false);
+    }
   }
 
   async function processarVenda(params: {
@@ -1151,6 +1190,18 @@ export default function VendasPage() {
                 </tbody>
               </table>
             </div>
+            {vendasHasMore ? (
+              <div className="flex justify-center border-t border-zinc-200 px-4 py-4">
+                <button
+                  type="button"
+                  onClick={() => void carregarMaisVendas()}
+                  disabled={loadingMore}
+                  className="rounded-xl border border-zinc-300 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-60"
+                >
+                  {loadingMore ? "Carregando..." : "Carregar mais vendas"}
+                </button>
+              </div>
+            ) : null}
           </div>
         </div>
       </div>

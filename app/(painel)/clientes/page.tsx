@@ -28,6 +28,7 @@ type Cliente = {
 };
 
 type Permissoes = Record<string, boolean>;
+const CLIENTES_PAGE_SIZE = 100;
 
 export default function ClientesPage() {
   const supabase = useMemo(() => createClient(), []);
@@ -45,6 +46,9 @@ export default function ClientesPage() {
   >("todos");
   const [idSalao, setIdSalao] = useState("");
   const [clientes, setClientes] = useState<Cliente[]>([]);
+  const [clientesPage, setClientesPage] = useState(0);
+  const [clientesHasMore, setClientesHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [clienteParaExcluir, setClienteParaExcluir] = useState<Cliente | null>(
     null
   );
@@ -81,6 +85,30 @@ export default function ClientesPage() {
     };
   }, [painelSession, router]);
 
+  const carregarClientes = useCallback(
+    async (salaoId: string, page = 0, append = false) => {
+      const from = page * CLIENTES_PAGE_SIZE;
+      const to = from + CLIENTES_PAGE_SIZE - 1;
+
+      const { data, error } = await supabase
+        .from("clientes")
+        .select(
+          "id, nome, cashback, whatsapp, telefone, email, bairro, profissao, status, ativo, created_at"
+        )
+        .eq("id_salao", salaoId)
+        .order("nome", { ascending: true })
+        .range(from, to);
+
+      if (error) throw error;
+
+      const rows = ((data ?? []) as unknown as Cliente[]) || [];
+      setClientes((prev) => (append ? [...prev, ...rows] : rows));
+      setClientesPage(page);
+      setClientesHasMore(rows.length === CLIENTES_PAGE_SIZE);
+    },
+    [supabase]
+  );
+
   const bootstrap = useCallback(async () => {
     try {
       setLoading(true);
@@ -91,29 +119,33 @@ export default function ClientesPage() {
       if (!acesso) return;
 
       setIdSalao(acesso.idSalao);
-
-      const { data, error } = await supabase
-        .from("clientes")
-        .select(
-          "id, nome, cashback, whatsapp, telefone, email, bairro, profissao, status, ativo, created_at"
-        )
-        .eq("id_salao", acesso.idSalao)
-        .order("nome", { ascending: true });
-
-      if (error) throw error;
-
-      setClientes(((data ?? []) as unknown as Cliente[]) || []);
+      await carregarClientes(acesso.idSalao, 0, false);
     } catch (e: unknown) {
       console.error(e);
       setErro(getErrorMessage(e, "Erro ao carregar clientes."));
     } finally {
       setLoading(false);
     }
-  }, [carregarAcesso, supabase]);
+  }, [carregarAcesso, carregarClientes]);
 
   useEffect(() => {
     void bootstrap();
   }, [bootstrap]);
+
+  async function carregarMaisClientes() {
+    if (!idSalao || loadingMore || !clientesHasMore) return;
+
+    try {
+      setLoadingMore(true);
+      setErro("");
+      await carregarClientes(idSalao, clientesPage + 1, true);
+    } catch (e: unknown) {
+      console.error(e);
+      setErro(getErrorMessage(e, "Erro ao carregar mais clientes."));
+    } finally {
+      setLoadingMore(false);
+    }
+  }
 
   async function processarCliente(params: {
     acao: "alterar_status" | "excluir";
@@ -449,7 +481,7 @@ export default function ClientesPage() {
             </div>
           </section>
 
-          <section className="space-y-2.5">
+        <section className="space-y-2.5">
             {listaFiltrada.length === 0 ? (
               <div className="rounded-[22px] border border-zinc-200 bg-white p-5 text-sm text-zinc-600 shadow-sm">
                 Nenhum cliente encontrado com esse filtro.
@@ -550,6 +582,19 @@ export default function ClientesPage() {
                 );
               })
             )}
+
+            {clientesHasMore ? (
+              <div className="flex justify-center pt-2">
+                <button
+                  type="button"
+                  onClick={() => void carregarMaisClientes()}
+                  disabled={loadingMore}
+                  className="rounded-xl border border-zinc-300 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-60"
+                >
+                  {loadingMore ? "Carregando..." : "Carregar mais clientes"}
+                </button>
+              </div>
+            ) : null}
           </section>
         </div>
       </div>

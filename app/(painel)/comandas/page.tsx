@@ -38,6 +38,7 @@ type Comanda = {
 };
 
 type Permissoes = Record<string, boolean>;
+const COMANDAS_PAGE_SIZE = 80;
 
 function formatCurrency(value: number | null | undefined) {
   return Number(value || 0).toLocaleString("pt-BR", {
@@ -91,6 +92,9 @@ export default function ComandasPage() {
   const [busca, setBusca] = useState("");
   const [statusFiltro, setStatusFiltro] = useState("todos");
   const [comandas, setComandas] = useState<Comanda[]>([]);
+  const [comandasPage, setComandasPage] = useState(0);
+  const [comandasHasMore, setComandasHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
 
   const [permissoes, setPermissoes] = useState<Permissoes | null>(null);
   const [nivel, setNivel] = useState("");
@@ -122,13 +126,10 @@ export default function ComandasPage() {
     };
   }, [painelSession, router]);
 
-  const bootstrap = useCallback(async () => {
-    try {
-      setLoading(true);
-      setErro("");
-
-      const acesso = await carregarAcesso();
-      if (!acesso) return;
+  const carregarComandas = useCallback(
+    async (salaoId: string, page = 0, append = false) => {
+      const from = page * COMANDAS_PAGE_SIZE;
+      const to = from + COMANDAS_PAGE_SIZE - 1;
 
       const { data: comandasData, error: comandasError } = await supabase
         .from("comandas")
@@ -143,8 +144,9 @@ export default function ComandasPage() {
           aberta_em,
           id_cliente
         `)
-        .eq("id_salao", acesso.idSalao)
-        .order("aberta_em", { ascending: false });
+        .eq("id_salao", salaoId)
+        .order("aberta_em", { ascending: false })
+        .range(from, to);
 
       if (comandasError) throw comandasError;
 
@@ -171,31 +173,60 @@ export default function ComandasPage() {
         clientesMap = new Map(clientesRows.map((cliente) => [cliente.id, cliente.nome]));
       }
 
-      setComandas(
-        comandasRows.map((item) => ({
-          id: item.id,
-          numero: Number(item.numero || 0),
-          status: item.status || "",
-          subtotal: Number(item.subtotal || 0),
-          desconto: Number(item.desconto || 0),
-          acrescimo: Number(item.acrescimo || 0),
-          total: Number(item.total || 0),
-          aberta_em: item.aberta_em,
-          id_cliente: item.id_cliente,
-          cliente_nome: item.id_cliente ? clientesMap.get(item.id_cliente) || null : null,
-        }))
-      );
+      const rows = comandasRows.map((item) => ({
+        id: item.id,
+        numero: Number(item.numero || 0),
+        status: item.status || "",
+        subtotal: Number(item.subtotal || 0),
+        desconto: Number(item.desconto || 0),
+        acrescimo: Number(item.acrescimo || 0),
+        total: Number(item.total || 0),
+        aberta_em: item.aberta_em,
+        id_cliente: item.id_cliente,
+        cliente_nome: item.id_cliente ? clientesMap.get(item.id_cliente) || null : null,
+      }));
+
+      setComandas((prev) => (append ? [...prev, ...rows] : rows));
+      setComandasPage(page);
+      setComandasHasMore(rows.length === COMANDAS_PAGE_SIZE);
+    },
+    [supabase]
+  );
+
+  const bootstrap = useCallback(async () => {
+    try {
+      setLoading(true);
+      setErro("");
+
+      const acesso = await carregarAcesso();
+      if (!acesso) return;
+      await carregarComandas(acesso.idSalao, 0, false);
     } catch (e: unknown) {
       console.error(e);
       setErro(e instanceof Error ? e.message : "Erro ao carregar comandas.");
     } finally {
       setLoading(false);
     }
-  }, [carregarAcesso, supabase]);
+  }, [carregarAcesso, carregarComandas]);
 
   useEffect(() => {
     void bootstrap();
   }, [bootstrap]);
+
+  async function carregarMaisComandas() {
+    if (!painelSession?.idSalao || loadingMore || !comandasHasMore) return;
+
+    try {
+      setLoadingMore(true);
+      setErro("");
+      await carregarComandas(painelSession.idSalao, comandasPage + 1, true);
+    } catch (e: unknown) {
+      console.error(e);
+      setErro(e instanceof Error ? e.message : "Erro ao carregar mais comandas.");
+    } finally {
+      setLoadingMore(false);
+    }
+  }
 
   const listaFiltrada = useMemo(() => {
     const termo = busca.toLowerCase().trim();
@@ -411,6 +442,18 @@ export default function ComandasPage() {
               </table>
             </div>
           )}
+          {comandasHasMore ? (
+            <div className="flex justify-center border-t border-zinc-200 px-4 py-4">
+              <button
+                type="button"
+                onClick={() => void carregarMaisComandas()}
+                disabled={loadingMore}
+                className="rounded-xl border border-zinc-300 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-60"
+              >
+                {loadingMore ? "Carregando..." : "Carregar mais comandas"}
+              </button>
+            </div>
+          ) : null}
         </div>
       </div>
     </div>

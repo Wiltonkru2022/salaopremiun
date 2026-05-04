@@ -38,6 +38,7 @@ type Produto = {
 };
 
 type Permissoes = Record<string, boolean>;
+const PRODUTOS_PAGE_SIZE = 100;
 
 function formatCurrency(value?: number | null) {
   return Number(value || 0).toLocaleString("pt-BR", {
@@ -76,6 +77,9 @@ export default function ProdutosPage() {
   >("todos");
   const [idSalao, setIdSalao] = useState("");
   const [produtos, setProdutos] = useState<Produto[]>([]);
+  const [produtosPage, setProdutosPage] = useState(0);
+  const [produtosHasMore, setProdutosHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [produtoParaExcluir, setProdutoParaExcluir] = useState<Produto | null>(
     null
   );
@@ -112,16 +116,10 @@ export default function ProdutosPage() {
     };
   }, [painelSession, router]);
 
-  const bootstrap = useCallback(async () => {
-    try {
-      setLoading(true);
-      setErro("");
-      setMsg("");
-
-      const acesso = await carregarAcesso();
-      if (!acesso) return;
-
-      setIdSalao(acesso.idSalao);
+  const carregarProdutos = useCallback(
+    async (salaoId: string, page = 0, append = false) => {
+      const from = page * PRODUTOS_PAGE_SIZE;
+      const to = from + PRODUTOS_PAGE_SIZE - 1;
 
       const { data, error } = await supabase
         .from("produtos")
@@ -141,23 +139,57 @@ export default function ProdutosPage() {
             "ativo",
           ].join(", ")
         )
-        .eq("id_salao", acesso.idSalao)
-        .order("nome", { ascending: true });
+        .eq("id_salao", salaoId)
+        .order("nome", { ascending: true })
+        .range(from, to);
 
       if (error) throw error;
 
-      setProdutos(((data ?? []) as unknown as Produto[]) || []);
+      const rows = ((data ?? []) as unknown as Produto[]) || [];
+      setProdutos((prev) => (append ? [...prev, ...rows] : rows));
+      setProdutosPage(page);
+      setProdutosHasMore(rows.length === PRODUTOS_PAGE_SIZE);
+    },
+    [supabase]
+  );
+
+  const bootstrap = useCallback(async () => {
+    try {
+      setLoading(true);
+      setErro("");
+      setMsg("");
+
+      const acesso = await carregarAcesso();
+      if (!acesso) return;
+
+      setIdSalao(acesso.idSalao);
+      await carregarProdutos(acesso.idSalao, 0, false);
     } catch (e: unknown) {
       console.error(e);
       setErro(getErrorMessage(e, "Erro ao carregar produtos."));
     } finally {
       setLoading(false);
     }
-  }, [carregarAcesso, supabase]);
+  }, [carregarAcesso, carregarProdutos]);
 
   useEffect(() => {
     void bootstrap();
   }, [bootstrap]);
+
+  async function carregarMaisProdutos() {
+    if (!idSalao || loadingMore || !produtosHasMore) return;
+
+    try {
+      setLoadingMore(true);
+      setErro("");
+      await carregarProdutos(idSalao, produtosPage + 1, true);
+    } catch (e: unknown) {
+      console.error(e);
+      setErro(getErrorMessage(e, "Erro ao carregar mais produtos."));
+    } finally {
+      setLoadingMore(false);
+    }
+  }
 
   async function processarProduto(params: {
     acao: "salvar" | "alterar_status" | "excluir";
@@ -596,6 +628,18 @@ export default function ProdutosPage() {
               );
             })
           )}
+          {produtosHasMore ? (
+            <div className="flex justify-center pt-2">
+              <button
+                type="button"
+                onClick={() => void carregarMaisProdutos()}
+                disabled={loadingMore}
+                className="rounded-xl border border-zinc-300 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-60"
+              >
+                {loadingMore ? "Carregando..." : "Carregar mais produtos"}
+              </button>
+            </div>
+          ) : null}
         </section>
       </div>
 
