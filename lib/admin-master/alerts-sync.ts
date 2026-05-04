@@ -254,7 +254,7 @@ export async function syncAdminMasterAlerts() {
       .limit(RENEWAL_ALERT_LIMIT),
     supabase
       .from("alertas_sistema")
-      .select("id, chave, tipo, resolvido, payload_json")
+      .select("id, chave, resolvido, payload_json")
       .eq("automatico", true)
       .in("tipo", [...MANAGED_ALERT_TYPES]),
   ]);
@@ -761,18 +761,26 @@ export async function syncAdminMasterAlerts() {
   let ticketsAutomaticosCriados = 0;
   let ticketsAutomaticosExistentes = 0;
 
-  const { data: alertasSemTicket } = await supabase
-    .from("alertas_sistema")
-    .select("id")
-    .eq("automatico", true)
-    .eq("resolvido", false)
-    .is("id_ticket", null)
-    .in("tipo", [
-      "renovacao_automatica_invalida",
-      "renovacao_automatica_sem_cobranca",
-    ])
-    .order("criado_em", { ascending: true })
-    .limit(50);
+  const hasRenewalRiskAlerts = activeCandidates.some(
+    (item) =>
+      item.tipo === "renovacao_automatica_invalida" ||
+      item.tipo === "renovacao_automatica_sem_cobranca"
+  );
+
+  const { data: alertasSemTicket } = hasRenewalRiskAlerts
+    ? await supabase
+        .from("alertas_sistema")
+        .select("id")
+        .eq("automatico", true)
+        .eq("resolvido", false)
+        .is("id_ticket", null)
+        .in("tipo", [
+          "renovacao_automatica_invalida",
+          "renovacao_automatica_sem_cobranca",
+        ])
+        .order("criado_em", { ascending: true })
+        .limit(50)
+    : { data: [] as Array<{ id: string }> };
 
   for (const alerta of ((alertasSemTicket || []) as { id: string }[])) {
     try {

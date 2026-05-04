@@ -313,7 +313,14 @@ export default function RelatorioFinanceiroPage() {
             .lte("cancelada_em", dataFimRange.endIso)
             .order("cancelada_em", { ascending: false });
         } else {
-          queryComandas = queryComandas.order("fechada_em", { ascending: false });
+          queryComandas = queryComandas
+            .or(
+              [
+                `and(status.eq.fechada,fechada_em.gte.${dataInicioRange.startIso},fechada_em.lte.${dataFimRange.endIso})`,
+                `and(status.eq.cancelada,cancelada_em.gte.${dataInicioRange.startIso},cancelada_em.lte.${dataFimRange.endIso})`,
+              ].join(",")
+            )
+            .order("fechada_em", { ascending: false });
         }
 
         const { data: comandasData, error: comandasError } = await queryComandas;
