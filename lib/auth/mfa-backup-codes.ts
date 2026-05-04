@@ -6,6 +6,8 @@ export type SalaoPremiumMfaMetadata = {
   backup_codes_last_used_at?: string | null;
   failed_attempts?: number;
   locked_until?: string | null;
+  recovery_lock_until?: string | null;
+  recovery_reset_completed_at?: string | null;
 };
 
 const MAX_FAILED_ATTEMPTS = 5;
@@ -157,4 +159,12 @@ export function clearBackupMetadata(): SalaoPremiumMfaMetadata {
     failed_attempts: 0,
     locked_until: null,
   };
+}
+
+export function isSensitiveActionLocked(
+  metadata: SalaoPremiumMfaMetadata | null | undefined
+) {
+  if (!metadata?.recovery_lock_until) return false;
+
+  return new Date(metadata.recovery_lock_until).getTime() > Date.now();
 }

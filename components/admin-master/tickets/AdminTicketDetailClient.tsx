@@ -3,7 +3,11 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { CircleAlert, MessageSquareText, Send } from "lucide-react";
-import type { AdminTicketDetail, TicketPrioridade, TicketStatus } from "@/lib/support/tickets";
+import type {
+  AdminTicketDetail,
+  TicketPrioridade,
+  TicketStatus,
+} from "@/lib/support/tickets";
 
 type Props = {
   detail: AdminTicketDetail;
@@ -63,6 +67,14 @@ function getMfaRecoveryContext(detail: AdminTicketDetail) {
       typeof detail.ticket.origemContexto?.recovery_delay_hours === "number"
         ? detail.ticket.origemContexto.recovery_delay_hours
         : 24,
+    recoveryStatus:
+      typeof detail.ticket.origemContexto?.recovery_status === "string"
+        ? detail.ticket.origemContexto.recovery_status
+        : "requested",
+    unlockAt:
+      typeof detail.ticket.origemContexto?.recovery_unlock_at === "string"
+        ? detail.ticket.origemContexto.recovery_unlock_at
+        : null,
   };
 }
 
@@ -115,7 +127,11 @@ export default function AdminTicketDetailClient({ detail, canEdit }: Props) {
       setFeedback("Resposta enviada para o salao.");
       router.refresh();
     } catch (currentError) {
-      setError(currentError instanceof Error ? currentError.message : "Erro ao responder ticket.");
+      setError(
+        currentError instanceof Error
+          ? currentError.message
+          : "Erro ao responder ticket."
+      );
     } finally {
       setSaving(null);
     }
@@ -140,7 +156,49 @@ export default function AdminTicketDetailClient({ detail, canEdit }: Props) {
       setFeedback("Ticket atualizado no AdminMaster.");
       router.refresh();
     } catch (currentError) {
-      setError(currentError instanceof Error ? currentError.message : "Erro ao atualizar ticket.");
+      setError(
+        currentError instanceof Error
+          ? currentError.message
+          : "Erro ao atualizar ticket."
+      );
+    } finally {
+      setSaving(null);
+    }
+  }
+
+  async function handleMfaRecoveryAction(
+    action: "approve" | "reject" | "complete"
+  ) {
+    setSaving("status");
+    try {
+      setError("");
+      setFeedback("");
+      await readJson(
+        await fetch(`/api/admin-master/tickets/${detail.ticket.id}/status`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            status,
+            prioridade,
+            assumir: true,
+            mfaRecoveryAction: action,
+          }),
+        })
+      );
+      setFeedback(
+        action === "approve"
+          ? "Recuperacao aprovada e colocada em carencia."
+          : action === "reject"
+            ? "Recuperacao recusada. O ticket segue aguardando novos dados."
+            : "Recuperacao concluida e autenticador removido."
+      );
+      router.refresh();
+    } catch (currentError) {
+      setError(
+        currentError instanceof Error
+          ? currentError.message
+          : "Erro ao processar a recuperacao do autenticador."
+      );
     } finally {
       setSaving(null);
     }
@@ -148,8 +206,16 @@ export default function AdminTicketDetailClient({ detail, canEdit }: Props) {
 
   return (
     <div className="space-y-5">
-      {feedback ? <div className="rounded-[24px] border border-emerald-200 bg-emerald-50 px-5 py-4 text-sm text-emerald-700">{feedback}</div> : null}
-      {error ? <div className="rounded-[24px] border border-rose-200 bg-rose-50 px-5 py-4 text-sm text-rose-700">{error}</div> : null}
+      {feedback ? (
+        <div className="rounded-[24px] border border-emerald-200 bg-emerald-50 px-5 py-4 text-sm text-emerald-700">
+          {feedback}
+        </div>
+      ) : null}
+      {error ? (
+        <div className="rounded-[24px] border border-rose-200 bg-rose-50 px-5 py-4 text-sm text-rose-700">
+          {error}
+        </div>
+      ) : null}
 
       <section className="rounded-[30px] border border-zinc-200 bg-white p-6 shadow-sm">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -158,7 +224,11 @@ export default function AdminTicketDetailClient({ detail, canEdit }: Props) {
               <div className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-400">
                 Ticket #{detail.ticket.numero}
               </div>
-              <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${badgeClass(detail.ticket.status)}`}>
+              <span
+                className={`rounded-full border px-3 py-1 text-xs font-semibold ${badgeClass(
+                  detail.ticket.status
+                )}`}
+              >
                 {detail.ticket.status.replace(/_/g, " ")}
               </span>
             </div>
@@ -186,18 +256,24 @@ export default function AdminTicketDetailClient({ detail, canEdit }: Props) {
         <div className="space-y-4 rounded-[30px] border border-zinc-200 bg-white p-5 shadow-sm">
           {mfaRecoveryContext ? (
             <div className="rounded-[24px] border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-900">
-              <div className="font-bold">Recuperação do autenticador</div>
+              <div className="font-bold">Recuperacao do autenticador</div>
               <div className="mt-2 leading-6">
-                Código da solicitação:{" "}
+                Codigo da solicitacao:{" "}
                 <span className="font-mono font-bold">
                   {mfaRecoveryContext.recoveryCode || "-"}
                 </span>
               </div>
+              <div className="mt-2 leading-6">
+                Estado atual: <strong>{mfaRecoveryContext.recoveryStatus}</strong>
+                {mfaRecoveryContext.unlockAt
+                  ? ` - libera em ${formatDate(mfaRecoveryContext.unlockAt)}`
+                  : ""}
+              </div>
               <ul className="mt-3 list-disc space-y-1 pl-5 leading-6">
-                <li>Validar selfie com documento e código escrito à mão.</li>
-                <li>Conferir contato atual no próprio ticket.</li>
+                <li>Validar selfie com documento e codigo escrito a mao.</li>
+                <li>Conferir contato atual no proprio ticket.</li>
                 <li>
-                  Depois da aprovação, respeitar a carência de até{" "}
+                  Depois da aprovacao, respeitar a carencia de ate{" "}
                   {mfaRecoveryContext.delayHours} horas antes de concluir.
                 </li>
               </ul>
@@ -223,7 +299,9 @@ export default function AdminTicketDetailClient({ detail, canEdit }: Props) {
                   {mensagem.autorNome}
                 </div>
                 <div className="whitespace-pre-line">{mensagem.mensagem}</div>
-                <div className="mt-3 text-[11px] opacity-60">{formatDate(mensagem.criadaEm)}</div>
+                <div className="mt-3 text-[11px] opacity-60">
+                  {formatDate(mensagem.criadaEm)}
+                </div>
               </div>
             ))}
           </div>
@@ -254,7 +332,9 @@ export default function AdminTicketDetailClient({ detail, canEdit }: Props) {
 
         <aside className="space-y-4">
           <div className="rounded-[30px] border border-zinc-200 bg-white p-5 shadow-sm">
-            <div className="text-lg font-bold text-zinc-950">Operacao do ticket</div>
+            <div className="text-lg font-bold text-zinc-950">
+              Operacao do ticket
+            </div>
             <div className="mt-4 grid gap-3">
               <select
                 value={status}
@@ -270,7 +350,9 @@ export default function AdminTicketDetailClient({ detail, canEdit }: Props) {
               </select>
               <select
                 value={prioridade}
-                onChange={(event) => setPrioridade(event.target.value as TicketPrioridade)}
+                onChange={(event) =>
+                  setPrioridade(event.target.value as TicketPrioridade)
+                }
                 disabled={!canEdit}
                 className="h-12 rounded-2xl border border-zinc-200 bg-zinc-50 px-4 text-sm outline-none"
               >
@@ -288,6 +370,38 @@ export default function AdminTicketDetailClient({ detail, canEdit }: Props) {
               >
                 {saving === "status" ? "Salvando..." : "Atualizar ticket"}
               </button>
+
+              {mfaRecoveryContext?.recoveryStatus === "requested" ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => void handleMfaRecoveryAction("approve")}
+                    disabled={!canEdit || saving === "status"}
+                    className="rounded-2xl border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800 transition hover:bg-emerald-100 disabled:opacity-60"
+                  >
+                    Aprovar com carencia
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void handleMfaRecoveryAction("reject")}
+                    disabled={!canEdit || saving === "status"}
+                    className="rounded-2xl border border-rose-300 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-800 transition hover:bg-rose-100 disabled:opacity-60"
+                  >
+                    Recusar pedido
+                  </button>
+                </>
+              ) : null}
+
+              {mfaRecoveryContext?.recoveryStatus === "cooldown" ? (
+                <button
+                  type="button"
+                  onClick={() => void handleMfaRecoveryAction("complete")}
+                  disabled={!canEdit || saving === "status"}
+                  className="rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-900 transition hover:bg-amber-100 disabled:opacity-60"
+                >
+                  Concluir apos carencia
+                </button>
+              ) : null}
             </div>
           </div>
 
@@ -298,12 +412,19 @@ export default function AdminTicketDetailClient({ detail, canEdit }: Props) {
             </div>
             <div className="mt-4 space-y-3">
               {detail.eventos.map((evento) => (
-                <div key={evento.id} className="rounded-[22px] border border-zinc-200 bg-zinc-50 p-4">
+                <div
+                  key={evento.id}
+                  className="rounded-[22px] border border-zinc-200 bg-zinc-50 p-4"
+                >
                   <div className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
                     {evento.evento.replace(/_/g, " ")}
                   </div>
-                  <div className="mt-2 text-sm text-zinc-900">{evento.descricao}</div>
-                  <div className="mt-3 text-[11px] text-zinc-500">{formatDate(evento.criadoEm)}</div>
+                  <div className="mt-2 text-sm text-zinc-900">
+                    {evento.descricao}
+                  </div>
+                  <div className="mt-3 text-[11px] text-zinc-500">
+                    {formatDate(evento.criadoEm)}
+                  </div>
                 </div>
               ))}
             </div>

@@ -49,6 +49,7 @@ type MfaSnapshot = {
   backupCodesLockedUntil: string | null;
   backupCodesGeneratedAt: string | null;
   backupCodesLastUsedAt: string | null;
+  sensitiveActionLockedUntil: string | null;
 };
 
 type TotpSetupState = {
@@ -71,6 +72,7 @@ const EMPTY_MFA_SNAPSHOT: MfaSnapshot = {
   backupCodesLockedUntil: null,
   backupCodesGeneratedAt: null,
   backupCodesLastUsedAt: null,
+  sensitiveActionLockedUntil: null,
 };
 
 function formatAddress(form: SalaoForm) {
@@ -256,6 +258,8 @@ export default function PerfilSalaoPage() {
           String(snapshot.backupCodesGeneratedAt || "") || null,
         backupCodesLastUsedAt:
           String(snapshot.backupCodesLastUsedAt || "") || null,
+        sensitiveActionLockedUntil:
+          String(snapshot.sensitiveActionLockedUntil || "") || null,
       });
     } catch (error) {
       console.warn("Nao foi possivel carregar status do autenticador:", error);
@@ -527,6 +531,15 @@ export default function PerfilSalaoPage() {
 
       if (passwordForm.novaSenha !== passwordForm.confirmarSenha) {
         setErro("A confirmacao da senha nao confere.");
+        return;
+      }
+
+      if (mfaSnapshot.sensitiveActionLockedUntil) {
+        setErro(
+          `Por seguranca, alteracoes sensiveis ficam bloqueadas ate ${formatDateTime(
+            mfaSnapshot.sensitiveActionLockedUntil
+          )} depois da recuperacao do autenticador.`
+        );
         return;
       }
 

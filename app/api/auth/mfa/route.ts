@@ -6,6 +6,7 @@ import {
   clearBackupMetadata,
   consumeBackupCode,
   getRemainingBackupCodeCount,
+  isSensitiveActionLocked,
   type SalaoPremiumMfaMetadata,
   generateBackupCodes,
   isBackupCodeLocked,
@@ -147,6 +148,10 @@ export async function GET() {
       backupCodesLockedUntil: ctx.mfaMetadata?.locked_until || null,
       backupCodesGeneratedAt: ctx.mfaMetadata?.backup_codes_generated_at || null,
       backupCodesLastUsedAt: ctx.mfaMetadata?.backup_codes_last_used_at || null,
+      sensitiveActionLockedUntil:
+        isSensitiveActionLocked(ctx.mfaMetadata)
+          ? ctx.mfaMetadata?.recovery_lock_until || null
+          : null,
     });
   } catch (error) {
     const message =

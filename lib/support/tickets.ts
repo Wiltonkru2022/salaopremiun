@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { requireProfissionalServerContext } from "@/lib/profissional-context.server";
 import { runAdminOperation } from "@/lib/supabase/admin-ops";
+import { clearBackupMetadata } from "@/lib/auth/mfa-backup-codes";
 import { registrarLogSistema } from "@/lib/system-logs";
 import type { Json } from "@/types/database.generated";
 
@@ -1173,6 +1174,7 @@ export async function updateAdminTicketStatus(params: {
   prioridade?: string | null;
   motivo?: string | null;
   assumir?: boolean;
+  mfaRecoveryAction?: "approve" | "reject" | "complete" | null;
 }) {
   const nextStatus = normalizeStatus(params.status);
   const nextPrioridade = params.prioridade
@@ -1180,13 +1182,13 @@ export async function updateAdminTicketStatus(params: {
     : null;
   const now = new Date().toISOString();
 
-  const prioridadeFinal = await runAdminOperation({
+  const statusResult = await runAdminOperation({
     action: "support_update_admin_ticket_status",
     actorId: params.context.idAdmin,
     run: async (supabase) => {
       const { data: ticket, error } = await supabase
         .from("tickets")
-        .select("id, prioridade")
+        .select("id, id_salao, prioridade, status, origem_contexto")
         .eq("id", params.idTicket)
         .maybeSingle();
 
@@ -1198,14 +1200,185 @@ export async function updateAdminTicketStatus(params: {
         throw new Error("NOT_FOUND");
       }
 
+      const origemContexto =
+        ticket.origem_contexto && typeof ticket.origem_contexto === "object"
+          ? { ...(ticket.origem_contexto as Record<string, unknown>) }
+          : {};
+
+      const isMfaRecoveryTicket = origemContexto.tipo_fluxo === "recuperacao_2fa";
+      let effectiveStatus = nextStatus;
+      let eventName = "status_admin_atualizado";
+      let eventDescription =
+        normalizeText(params.motivo) ||
+        `Status ajustado para ${nextStatus} pelo AdminMaster.`;
+
+      if (params.mfaRecoveryAction) {
+        if (!isMfaRecoveryTicket) {
+          throw new Error(
+            "Este ticket nao foi aberto como recuperacao do autenticador."
+          );
+        }
+
+        const delayHours =
+          typeof origemContexto.recovery_delay_hours === "number"
+            ? origemContexto.recovery_delay_hours
+            : 24;
+
+        if (params.mfaRecoveryAction === "approve") {
+          const unlockAt = new Date(
+            Date.now() + delayHours * 60 * 60 * 1000
+          ).toISOString();
+          origemContexto.recovery_status = "cooldown";
+          origemContexto.recovery_approved_at = now;
+          origemContexto.recovery_unlock_at = unlockAt;
+          origemContexto.recovery_approved_by_admin_id = params.context.idAdmin;
+          effectiveStatus = "aguardando_tecnico";
+          eventName = "mfa_recovery_approved";
+          eventDescription =
+            normalizeText(params.motivo) ||
+            `Recuperacao do autenticador aprovada com carencia ate ${unlockAt}.`;
+        }
+
+        if (params.mfaRecoveryAction === "reject") {
+          origemContexto.recovery_status = "rejected";
+          origemContexto.recovery_rejected_at = now;
+          origemContexto.recovery_rejected_by_admin_id = params.context.idAdmin;
+          effectiveStatus = "aguardando_cliente";
+          eventName = "mfa_recovery_rejected";
+          eventDescription =
+            normalizeText(params.motivo) ||
+            "Recuperacao do autenticador recusada. Aguardando novos dados do cliente.";
+        }
+
+        if (params.mfaRecoveryAction === "complete") {
+          const unlockAt =
+            typeof origemContexto.recovery_unlock_at === "string"
+              ? origemContexto.recovery_unlock_at
+              : "";
+
+          if (!unlockAt || new Date(unlockAt).getTime() > Date.now()) {
+            throw new Error(
+              "A carencia de seguranca ainda nao terminou para concluir a remocao do autenticador."
+            );
+          }
+
+          const userIdSalao =
+            typeof origemContexto.id_usuario === "string"
+              ? origemContexto.id_usuario
+              : "";
+
+          if (!ticket.id_salao || !userIdSalao) {
+            throw new Error("Nao foi possivel localizar a conta desta recuperacao.");
+          }
+
+          const { data: usuarioSalao, error: usuarioSalaoError } = await supabase
+            .from("usuarios")
+            .select("auth_user_id")
+            .eq("id", userIdSalao)
+            .eq("id_salao", ticket.id_salao)
+            .maybeSingle();
+
+          if (usuarioSalaoError || !usuarioSalao?.auth_user_id) {
+            throw new Error(
+              usuarioSalaoError?.message ||
+                "Nao foi possivel localizar a conta autenticada desta recuperacao."
+            );
+          }
+
+          const { data: factorsData, error: factorError } =
+            await supabase.auth.admin.mfa.listFactors({
+              userId: usuarioSalao.auth_user_id,
+            });
+
+          if (factorError) {
+            throw new Error(
+              factorError.message || "Erro ao carregar fatores do autenticador."
+            );
+          }
+
+          const totpFactor =
+            factorsData?.factors?.find(
+              (factor) =>
+                factor.factor_type === "totp" && factor.status === "verified"
+            ) || null;
+
+          if (totpFactor) {
+            const { error: deleteFactorError } =
+              await supabase.auth.admin.mfa.deleteFactor({
+                id: totpFactor.id,
+                userId: usuarioSalao.auth_user_id,
+              });
+
+            if (deleteFactorError) {
+              throw new Error(
+                deleteFactorError.message ||
+                  "Nao foi possivel remover o autenticador desta conta."
+              );
+            }
+          }
+
+          const { data: authUserData, error: authUserError } =
+            await supabase.auth.admin.getUserById(usuarioSalao.auth_user_id);
+
+          if (authUserError || !authUserData?.user) {
+            throw new Error(
+              authUserError?.message ||
+                "Nao foi possivel atualizar a conta autenticada."
+            );
+          }
+
+          const currentAppMetadata = (authUserData.user.app_metadata ||
+            {}) as Record<string, unknown>;
+          const currentMfaMetadata =
+            (currentAppMetadata.salaopremium_mfa as Record<string, unknown> | undefined) ||
+            {};
+          const recoveryLockUntil = new Date(
+            Date.now() + 24 * 60 * 60 * 1000
+          ).toISOString();
+
+          const { error: updateAuthError } =
+            await supabase.auth.admin.updateUserById(usuarioSalao.auth_user_id, {
+              app_metadata: {
+                ...currentAppMetadata,
+                salaopremium_mfa: {
+                  ...currentMfaMetadata,
+                  ...clearBackupMetadata(),
+                  recovery_lock_until: recoveryLockUntil,
+                  recovery_reset_completed_at: now,
+                },
+              },
+            });
+
+          if (updateAuthError) {
+            throw new Error(
+              updateAuthError.message ||
+                "Nao foi possivel finalizar a recuperacao do autenticador."
+            );
+          }
+
+          origemContexto.recovery_status = "completed";
+          origemContexto.recovery_completed_at = now;
+          origemContexto.recovery_completed_by_admin_id = params.context.idAdmin;
+          origemContexto.recovery_post_lock_until = recoveryLockUntil;
+          effectiveStatus = "resolvido";
+          eventName = "mfa_recovery_completed";
+          eventDescription =
+            normalizeText(params.motivo) ||
+            "Autenticador removido apos a carencia de seguranca.";
+        }
+      }
+
       const prioridadeAtualizada = nextPrioridade || ticket.prioridade;
       const updatePayload: Record<string, unknown> = {
-        status: nextStatus,
+        status: effectiveStatus,
         prioridade: prioridadeAtualizada,
         atualizado_em: now,
         ultima_interacao_em: now,
         fechado_em:
-          nextStatus === "fechado" || nextStatus === "resolvido" ? now : null,
+          effectiveStatus === "fechado" || effectiveStatus === "resolvido"
+            ? now
+            : null,
+        origem_contexto: origemContexto as Json,
       };
 
       if (params.assumir !== false) {
@@ -1219,18 +1392,20 @@ export async function updateAdminTicketStatus(params: {
 
       await supabase.from("ticket_eventos").insert({
         id_ticket: params.idTicket,
-        evento: "status_admin_atualizado",
-        descricao:
-          normalizeText(params.motivo) ||
-          `Status ajustado para ${nextStatus} pelo AdminMaster.`,
+        evento: eventName,
+        descricao: eventDescription,
         payload_json: {
-          status: nextStatus,
+          status: effectiveStatus,
           prioridade: prioridadeAtualizada,
           id_admin: params.context.idAdmin,
+          mfa_recovery_action: params.mfaRecoveryAction || null,
         } as Json,
       });
 
-      return prioridadeAtualizada;
+      return {
+        prioridade: String(prioridadeAtualizada || ticket.prioridade || "media"),
+        status: effectiveStatus,
+      };
     },
   });
 
@@ -1241,14 +1416,15 @@ export async function updateAdminTicketStatus(params: {
     detalhes: {
       id_ticket: params.idTicket,
       id_admin: params.context.idAdmin,
-      status: nextStatus,
-      prioridade: prioridadeFinal,
+      status: statusResult.status,
+      prioridade: statusResult.prioridade,
+      mfa_recovery_action: params.mfaRecoveryAction || null,
     },
   });
 
   return {
     ok: true,
-    status: nextStatus,
-    prioridade: prioridadeFinal,
+    status: statusResult.status,
+    prioridade: statusResult.prioridade,
   };
 }

@@ -23,6 +23,10 @@ const atualizarStatusSchema = z.object({
   prioridade: ticketPrioridadeSchema.nullable().optional(),
   motivo: z.string().trim().nullable().optional(),
   assumir: z.boolean().optional(),
+  mfaRecoveryAction: z
+    .enum(["approve", "reject", "complete"])
+    .nullable()
+    .optional(),
 });
 
 export class AdminMasterTicketUseCaseError extends Error {
@@ -145,6 +149,7 @@ export async function atualizarAdminMasterTicketStatusUseCase(params: {
       prioridade: input.prioridade || null,
       motivo: input.motivo || null,
       assumir,
+      mfaRecoveryAction: input.mfaRecoveryAction || null,
     });
 
     await params.service.registrarAuditoria({
@@ -157,6 +162,7 @@ export async function atualizarAdminMasterTicketStatusUseCase(params: {
         status: result.status,
         prioridade: result.prioridade,
         assumir,
+        mfaRecoveryAction: input.mfaRecoveryAction || null,
       },
     });
 
