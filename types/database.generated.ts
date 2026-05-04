@@ -5546,6 +5546,20 @@ export type Database = {
         Args: { p_id_comanda: string }
         Returns: boolean
       }
+      fn_observability_retention_cleanup: {
+        Args: {
+          p_acoes_automaticas_days?: number
+          p_batch_limit?: number
+          p_eventos_cron_days?: number
+          p_eventos_sistema_days?: number
+          p_eventos_webhook_days?: number
+          p_logs_sistema_days?: number
+        }
+        Returns: {
+          deleted_count: number
+          table_name: string
+        }[]
+      }
       fn_adicionar_item_comanda: {
         Args: {
           p_acrescimo?: number

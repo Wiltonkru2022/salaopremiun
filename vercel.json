@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/limpar-observabilidade",
+      "schedule": "20 5 * * *"
+    }
+  ]
+}
