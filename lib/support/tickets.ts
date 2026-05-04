@@ -609,6 +609,7 @@ export async function listSalaoTickets(idSalao: string) {
       let latestMessages: TicketMessageRow[] = [];
 
       if (ids.length > 0) {
+        const mensagensLimit = Math.max(ids.length * 3, 150);
         const { data: mensagens, error: mensagensError } = await supabase
           .from("ticket_mensagens")
           .select(
@@ -616,7 +617,8 @@ export async function listSalaoTickets(idSalao: string) {
           )
           .in("id_ticket", ids)
           .eq("interna", false)
-          .order("criada_em", { ascending: false });
+          .order("criada_em", { ascending: false })
+          .limit(mensagensLimit);
 
         if (mensagensError) {
           throw new Error(mensagensError.message || "Erro ao listar mensagens.");
@@ -680,13 +682,15 @@ export async function listAdminTickets() {
       }
 
       if (ids.length > 0) {
+        const mensagensLimit = Math.max(ids.length * 4, 240);
         const { data: mensagens, error: mensagensError } = await supabase
           .from("ticket_mensagens")
           .select(
             "id, id_ticket, mensagem, criada_em, autor_tipo, autor_nome, interna"
           )
           .in("id_ticket", ids)
-          .order("criada_em", { ascending: false });
+          .order("criada_em", { ascending: false })
+          .limit(mensagensLimit);
 
         if (mensagensError) {
           throw new Error(
