@@ -2,6 +2,7 @@ import {
   buildPermissoesByNivel,
   sanitizePermissoesDb,
 } from "@/lib/auth/permissions";
+import { getUserPermissionsRow } from "@/lib/auth/get-user-permissions.server";
 import {
   AuthzError,
   requireSalaoMembership,
@@ -11,7 +12,6 @@ import {
   getPlanoAccessSnapshot,
   type PlanoRecursoCodigo,
 } from "@/lib/plans/access";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 type RequireSalaoPermissionOptions = {
   allowedNiveis?: string[];
@@ -72,22 +72,11 @@ export async function requireSalaoPermission(
   options: RequireSalaoPermissionOptions = {}
 ) {
   const membership = await requireSalaoMembership(idSalao, options);
-  const supabaseAdmin = getSupabaseAdmin();
-
-  const { data: permissoesDb, error: permissoesError } = await supabaseAdmin
-    .from("usuarios_permissoes")
-    .select("agenda_criar, agenda_editar, agenda_excluir, agenda_ver, caixa_fechar, caixa_operar, caixa_ver, clientes_criar, clientes_editar, clientes_excluir, clientes_ver, comandas_criar, comandas_editar, comandas_excluir, comandas_ver, comissoes_pagar, comissoes_ver, configuracoes_editar, configuracoes_ver, estoque_movimentar, estoque_ver, id, id_salao, id_usuario, produtos_criar, produtos_editar, produtos_excluir, produtos_ver, profissionais_criar, profissionais_editar, profissionais_excluir, profissionais_ver, relatorios_ver, servicos_criar, servicos_editar, servicos_excluir, servicos_ver, vendas_excluir, vendas_reabrir, vendas_ver")
-    .eq("id_usuario", membership.usuario.id)
-    .eq("id_salao", idSalao)
-    .maybeSingle();
-
-  if (permissoesError) {
-    throw new AuthzError("Erro ao carregar permissoes do usuario.", 500, "permissoes_erro");
-  }
+  const permissoesDb = await getUserPermissionsRow(idSalao, membership.usuario.id);
 
   const permissoes = {
     ...buildPermissoesByNivel(membership.usuario.nivel),
-    ...sanitizePermissoesDb(permissoesDb as Record<string, unknown> | null, {
+    ...sanitizePermissoesDb(permissoesDb, {
       idSalao,
       idUsuario: membership.usuario.id,
       origem: "requireSalaoPermission",
@@ -120,22 +109,11 @@ export async function requireSalaoAnyPermission(
   }
 
   const membership = await requireSalaoMembership(idSalao, options);
-  const supabaseAdmin = getSupabaseAdmin();
-
-  const { data: permissoesDb, error: permissoesError } = await supabaseAdmin
-    .from("usuarios_permissoes")
-    .select("agenda_criar, agenda_editar, agenda_excluir, agenda_ver, caixa_fechar, caixa_operar, caixa_ver, clientes_criar, clientes_editar, clientes_excluir, clientes_ver, comandas_criar, comandas_editar, comandas_excluir, comandas_ver, comissoes_pagar, comissoes_ver, configuracoes_editar, configuracoes_ver, estoque_movimentar, estoque_ver, id, id_salao, id_usuario, produtos_criar, produtos_editar, produtos_excluir, produtos_ver, profissionais_criar, profissionais_editar, profissionais_excluir, profissionais_ver, relatorios_ver, servicos_criar, servicos_editar, servicos_excluir, servicos_ver, vendas_excluir, vendas_reabrir, vendas_ver")
-    .eq("id_usuario", membership.usuario.id)
-    .eq("id_salao", idSalao)
-    .maybeSingle();
-
-  if (permissoesError) {
-    throw new AuthzError("Erro ao carregar permissoes do usuario.", 500, "permissoes_erro");
-  }
+  const permissoesDb = await getUserPermissionsRow(idSalao, membership.usuario.id);
 
   const permissoes = {
     ...buildPermissoesByNivel(membership.usuario.nivel),
-    ...sanitizePermissoesDb(permissoesDb as Record<string, unknown> | null, {
+    ...sanitizePermissoesDb(permissoesDb, {
       idSalao,
       idUsuario: membership.usuario.id,
       origem: "requireSalaoAnyPermission",
