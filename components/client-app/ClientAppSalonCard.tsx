@@ -1,0 +1,95 @@
+import Link from "next/link";
+import { MapPin, ParkingCircle, Wallet } from "lucide-react";
+import type { ClientAppSalonListItem } from "@/lib/client-app/queries";
+
+export default function ClientAppSalonCard({
+  salao,
+}: {
+  salao: ClientAppSalonListItem;
+}) {
+  return (
+    <article className="overflow-hidden rounded-[1.7rem] border border-white/70 bg-white shadow-[0_18px_48px_rgba(15,23,42,0.08)]">
+      <div className="h-36 bg-zinc-100">
+        {salao.fotoCapaUrl ? (
+          <img
+            src={salao.fotoCapaUrl}
+            alt={`Capa do salao ${salao.nome}`}
+            className="h-full w-full object-cover"
+          />
+        ) : (
+          <div className="flex h-full items-end bg-gradient-to-br from-zinc-950 via-zinc-800 to-amber-700 p-4 text-white">
+            <div className="text-[11px] font-bold uppercase tracking-[0.14em] text-amber-100">
+              Premium ativo
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="space-y-4 p-4">
+        <div className="flex items-start gap-3">
+          <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-[1.2rem] bg-zinc-100">
+            {salao.logoUrl ? (
+              <img
+                src={salao.logoUrl}
+                alt={`Logo do salao ${salao.nome}`}
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <div className="text-lg font-black text-zinc-700">
+                {salao.nome.slice(0, 1).toUpperCase()}
+              </div>
+            )}
+          </div>
+
+          <div className="min-w-0">
+            <h2 className="text-lg font-black tracking-[-0.03em] text-zinc-950">
+              {salao.nome}
+            </h2>
+            <div className="mt-1 flex items-center gap-1.5 text-sm text-zinc-500">
+              <MapPin size={15} />
+              <span className="truncate">
+                {[salao.bairro, salao.cidade].filter(Boolean).join(" - ") ||
+                  "Endereco publico em atualizacao"}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <p className="line-clamp-3 text-sm leading-6 text-zinc-600">
+          {salao.descricaoPublica ||
+            "Conheca equipe, servicos e horarios desse salao no app cliente."}
+        </p>
+
+        <div className="flex flex-wrap gap-2 text-xs font-semibold text-zinc-600">
+          {salao.estacionamento ? (
+            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-3 py-1.5 text-emerald-700">
+              <ParkingCircle size={14} />
+              Estacionamento
+            </span>
+          ) : null}
+          {salao.formasPagamento.length ? (
+            <span className="inline-flex items-center gap-1 rounded-full bg-zinc-100 px-3 py-1.5">
+              <Wallet size={14} />
+              {salao.formasPagamento.slice(0, 2).join(" - ")}
+            </span>
+          ) : null}
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          <Link
+            href={`/app-cliente/salao/${salao.id}`}
+            className="inline-flex h-11 items-center justify-center rounded-2xl bg-zinc-950 px-4 text-sm font-bold text-white transition hover:bg-zinc-800"
+          >
+            Ver salao
+          </Link>
+          <Link
+            href={`/app-cliente/cadastro?salao=${salao.id}`}
+            className="inline-flex h-11 items-center justify-center rounded-2xl border border-zinc-200 bg-white px-4 text-sm font-bold text-zinc-800 transition hover:bg-zinc-50"
+          >
+            Criar conta
+          </Link>
+        </div>
+      </div>
+    </article>
+  );
+}
