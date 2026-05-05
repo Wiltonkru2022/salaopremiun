@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { addDays, format, isAfter } from "date-fns";
 import { createServerClient } from "@supabase/ssr";
 import { cookies, headers } from "next/headers";
+import { getPainelUserContextByAuthUserId } from "@/lib/auth/get-painel-user-context";
 import { getSupabaseCookieOptions } from "@/lib/supabase/cookie-options";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import {
@@ -138,7 +139,6 @@ async function getSupabaseServer() {
 
 async function validarSalaoDoUsuario(idSalao: string) {
   const supabase = await getSupabaseServer();
-  const supabaseAdmin = getSupabaseAdmin();
 
   const {
     data: { user },
@@ -153,15 +153,8 @@ async function validarSalaoDoUsuario(idSalao: string) {
     throw new AssinaturaCheckoutServiceError("Usuário não autenticado.", 401);
   }
 
-  const { data: usuario, error: usuarioError } = await supabaseAdmin
-    .from("usuarios")
-    .select("id_salao, status, nivel")
-    .eq("auth_user_id", user.id)
-    .maybeSingle();
+  const usuario = await getPainelUserContextByAuthUserId(user.id);
 
-  if (usuarioError) {
-    throw new AssinaturaCheckoutServiceError("Erro ao validar vínculo do usuário com o salão.", 500);
-  }
 
   if (!usuario?.id_salao) {
     throw new AssinaturaCheckoutServiceError("Usuário sem salão vinculado.", 403);

@@ -1,6 +1,7 @@
 import { addDays, format, isBefore } from "date-fns";
 import { createServerClient } from "@supabase/ssr";
 import { cookies, headers } from "next/headers";
+import { getPainelUserContextByAuthUserId } from "@/lib/auth/get-painel-user-context";
 import { getRenovacaoAutomaticaInfo } from "@/lib/assinaturas/renovacao-automatica";
 import { buscarCobranca } from "@/lib/payments/pix-provider";
 import { getSupabaseCookieOptions } from "@/lib/supabase/cookie-options";
@@ -101,10 +102,11 @@ function getRecurringNextDueDate(vencimentoEm?: string | null) {
 }
 
 export function createAssinaturaService() {
+  const supabaseAdmin = getSupabaseAdmin();
+
   return {
     async validarSalaoAdmin(idSalao: string, adminOnlyMessage: string) {
       const supabase = await getSupabaseServer();
-      const supabaseAdmin = getSupabaseAdmin();
 
       const {
         data: { user },
@@ -119,18 +121,7 @@ export function createAssinaturaService() {
         throw new AssinaturaServiceError("Usuario nao autenticado.", 401);
       }
 
-      const { data: usuario, error: usuarioError } = await supabaseAdmin
-        .from("usuarios")
-        .select("id_salao, status, nivel")
-        .eq("auth_user_id", user.id)
-        .maybeSingle();
-
-      if (usuarioError) {
-        throw new AssinaturaServiceError(
-          "Erro ao validar vinculo do usuario com o salao.",
-          500
-        );
-      }
+      const usuario = await getPainelUserContextByAuthUserId(user.id);
 
       if (!usuario?.id_salao) {
         throw new AssinaturaServiceError("Usuario sem salao vinculado.", 403);
@@ -150,7 +141,6 @@ export function createAssinaturaService() {
     },
 
     async buscarAssinaturaSalao(idSalao: string) {
-      const supabaseAdmin = getSupabaseAdmin();
       const { data, error } = await supabaseAdmin
         .from("assinaturas")
         .select(
@@ -223,7 +213,6 @@ export function createAssinaturaService() {
       idSalao: string;
       renovacaoAutomatica: boolean;
     }) {
-      const supabaseAdmin = getSupabaseAdmin();
       const { error } = await supabaseAdmin
         .from("assinaturas")
         .update({ renovacao_automatica: params.renovacaoAutomatica })
@@ -268,7 +257,6 @@ export function createAssinaturaService() {
         );
       }
 
-      const supabaseAdmin = getSupabaseAdmin();
       const { error } = await supabaseAdmin
         .from("assinaturas")
         .update({
@@ -300,7 +288,6 @@ export function createAssinaturaService() {
         }
       }
 
-      const supabaseAdmin = getSupabaseAdmin();
       const { error } = await supabaseAdmin
         .from("assinaturas")
         .update({
@@ -323,7 +310,6 @@ export function createAssinaturaService() {
     },
 
     async buscarPlanoTeste() {
-      const supabaseAdmin = getSupabaseAdmin();
       const { data, error } = await supabaseAdmin
         .from("planos_saas")
         .select(
@@ -344,7 +330,6 @@ export function createAssinaturaService() {
     },
 
     async buscarSalaoBasico(idSalao: string) {
-      const supabaseAdmin = getSupabaseAdmin();
       const { data, error } = await supabaseAdmin
         .from("saloes")
         .select("id, plano, trial_ativo, trial_inicio_em, trial_fim_em")
@@ -372,7 +357,6 @@ export function createAssinaturaService() {
       trialFimIso: string;
       vencimentoEm: string;
     }) {
-      const supabaseAdmin = getSupabaseAdmin();
       const valorMensal = Number(params.planoTeste.valor_mensal || 0);
       const limiteUsuarios = Number(params.planoTeste.limite_usuarios || 0);
       const limiteProfissionais = Number(
@@ -472,7 +456,6 @@ export function createAssinaturaService() {
     },
 
     async listarHistorico(idSalao: string) {
-      const supabaseAdmin = getSupabaseAdmin();
       const { data, error } = await supabaseAdmin
         .from("assinaturas_cobrancas")
         .select(
