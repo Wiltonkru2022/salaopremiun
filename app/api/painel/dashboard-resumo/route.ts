@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
+import { unstable_cache } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
 
@@ -45,86 +47,163 @@ export async function GET() {
   const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
   const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1).toISOString();
 
-  const [
-    { count: agendamentosHoje, error: agHojeError },
-    { data: proximosConfirmadosRows, error: proxError },
-    { count: clientesAtivos, error: clientesError },
-    { count: comandasMes, error: comandasMesError },
-    { data: comandasMesRows, error: comandasMesRowsError },
-    { data: comissoesPendentesRows, error: comissoesError },
-    { data: caixaDiaRows, error: caixaDiaError },
-    { count: profissionaisAtivos, error: profissionaisError },
-    { count: aguardandoPagamento, error: aguardandoError },
-    { count: cancelamentosMes, error: cancelamentosError },
-    { data: salaoInfo, error: salaoInfoError },
-  ] = await Promise.all([
-    supabase
-      .from("agendamentos")
-      .select("id", { count: "exact", head: true })
-      .eq("id_salao", usuario.id_salao)
-      .eq("data", nowDate)
-      .in("status", ["confirmado", "pendente", "atendido", "aguardando_pagamento"]),
-    supabase
-      .from("agendamentos")
-      .select("data, hora_inicio")
-      .eq("id_salao", usuario.id_salao)
-      .eq("status", "confirmado")
-      .in("data", [nowDate, inTwoHoursIso.slice(0, 10)]),
-    supabase
-      .from("clientes")
-      .select("id", { count: "exact", head: true })
-      .eq("id_salao", usuario.id_salao),
-    supabase
-      .from("comandas")
-      .select("id", { count: "exact", head: true })
-      .eq("id_salao", usuario.id_salao)
-      .eq("status", "fechada")
-      .gte("fechada_em", startOfMonth)
-      .lt("fechada_em", endOfMonth),
-    supabase
-      .from("comandas")
-      .select("total, id_cliente")
-      .eq("id_salao", usuario.id_salao)
-      .eq("status", "fechada")
-      .gte("fechada_em", startOfMonth)
-      .lt("fechada_em", endOfMonth),
-    supabase
-      .from("comissoes_lancamentos")
-      .select("valor_comissao")
-      .eq("id_salao", usuario.id_salao)
-      .eq("status", "pendente")
-      .gte("competencia_data", startOfMonth.slice(0, 10))
-      .lt("competencia_data", endOfMonth.slice(0, 10)),
-    supabase
-      .from("comandas")
-      .select("total")
-      .eq("id_salao", usuario.id_salao)
-      .eq("status", "fechada")
-      .gte("fechada_em", startOfDay)
-      .lt("fechada_em", endOfDay),
-    supabase
-      .from("profissionais")
-      .select("id", { count: "exact", head: true })
-      .eq("id_salao", usuario.id_salao)
-      .eq("status", "ativo"),
-    supabase
-      .from("comandas")
-      .select("id", { count: "exact", head: true })
-      .eq("id_salao", usuario.id_salao)
-      .eq("status", "aguardando_pagamento"),
-    supabase
-      .from("agendamentos")
-      .select("id", { count: "exact", head: true })
-      .eq("id_salao", usuario.id_salao)
-      .eq("status", "cancelado")
-      .gte("data", startOfMonth.slice(0, 10))
-      .lt("data", endOfMonth.slice(0, 10)),
-    supabase
-      .from("saloes")
-      .select("plano")
-      .eq("id", usuario.id_salao)
-      .maybeSingle(),
-  ]);
+  const getCachedDashboardResumo = unstable_cache(
+    async (
+      idSalao: string,
+      nowDateArg: string,
+      inTwoHoursDateArg: string,
+      startOfMonthArg: string,
+      endOfMonthArg: string,
+      startOfDayArg: string,
+      endOfDayArg: string
+    ) => {
+      const supabaseAdmin = getSupabaseAdmin();
+
+      const [
+        { count: agendamentosHoje, error: agHojeError },
+        { data: proximosConfirmadosRows, error: proxError },
+        { count: clientesAtivos, error: clientesError },
+        { count: comandasMes, error: comandasMesError },
+        { data: comandasMesRows, error: comandasMesRowsError },
+        { data: comissoesPendentesRows, error: comissoesError },
+        { data: caixaDiaRows, error: caixaDiaError },
+        { count: profissionaisAtivos, error: profissionaisError },
+        { count: aguardandoPagamento, error: aguardandoError },
+        { count: cancelamentosMes, error: cancelamentosError },
+        { data: salaoInfo, error: salaoInfoError },
+      ] = await Promise.all([
+        supabaseAdmin
+          .from("agendamentos")
+          .select("id", { count: "exact", head: true })
+          .eq("id_salao", idSalao)
+          .eq("data", nowDateArg)
+          .in("status", ["confirmado", "pendente", "atendido", "aguardando_pagamento"]),
+        supabaseAdmin
+          .from("agendamentos")
+          .select("data, hora_inicio")
+          .eq("id_salao", idSalao)
+          .eq("status", "confirmado")
+          .in("data", [nowDateArg, inTwoHoursDateArg]),
+        supabaseAdmin
+          .from("clientes")
+          .select("id", { count: "exact", head: true })
+          .eq("id_salao", idSalao),
+        supabaseAdmin
+          .from("comandas")
+          .select("id", { count: "exact", head: true })
+          .eq("id_salao", idSalao)
+          .eq("status", "fechada")
+          .gte("fechada_em", startOfMonthArg)
+          .lt("fechada_em", endOfMonthArg),
+        supabaseAdmin
+          .from("comandas")
+          .select("total, id_cliente")
+          .eq("id_salao", idSalao)
+          .eq("status", "fechada")
+          .gte("fechada_em", startOfMonthArg)
+          .lt("fechada_em", endOfMonthArg),
+        supabaseAdmin
+          .from("comissoes_lancamentos")
+          .select("valor_comissao")
+          .eq("id_salao", idSalao)
+          .eq("status", "pendente")
+          .gte("competencia_data", startOfMonthArg.slice(0, 10))
+          .lt("competencia_data", endOfMonthArg.slice(0, 10)),
+        supabaseAdmin
+          .from("comandas")
+          .select("total")
+          .eq("id_salao", idSalao)
+          .eq("status", "fechada")
+          .gte("fechada_em", startOfDayArg)
+          .lt("fechada_em", endOfDayArg),
+        supabaseAdmin
+          .from("profissionais")
+          .select("id", { count: "exact", head: true })
+          .eq("id_salao", idSalao)
+          .eq("status", "ativo"),
+        supabaseAdmin
+          .from("comandas")
+          .select("id", { count: "exact", head: true })
+          .eq("id_salao", idSalao)
+          .eq("status", "aguardando_pagamento"),
+        supabaseAdmin
+          .from("agendamentos")
+          .select("id", { count: "exact", head: true })
+          .eq("id_salao", idSalao)
+          .eq("status", "cancelado")
+          .gte("data", startOfMonthArg.slice(0, 10))
+          .lt("data", endOfMonthArg.slice(0, 10)),
+        supabaseAdmin
+          .from("saloes")
+          .select("plano")
+          .eq("id", idSalao)
+          .maybeSingle(),
+      ]);
+
+      return {
+        agendamentosHoje,
+        agHojeError,
+        proximosConfirmadosRows,
+        proxError,
+        clientesAtivos,
+        clientesError,
+        comandasMes,
+        comandasMesError,
+        comandasMesRows,
+        comandasMesRowsError,
+        comissoesPendentesRows,
+        comissoesError,
+        caixaDiaRows,
+        caixaDiaError,
+        profissionaisAtivos,
+        profissionaisError,
+        aguardandoPagamento,
+        aguardandoError,
+        cancelamentosMes,
+        cancelamentosError,
+        salaoInfo,
+        salaoInfoError,
+      };
+    },
+    ["painel-dashboard-resumo"],
+    {
+      revalidate: 30,
+      tags: ["painel-dashboard-resumo"],
+    }
+  );
+
+  const {
+    agendamentosHoje,
+    agHojeError,
+    proximosConfirmadosRows,
+    proxError,
+    clientesAtivos,
+    clientesError,
+    comandasMes,
+    comandasMesError,
+    comandasMesRows,
+    comandasMesRowsError,
+    comissoesPendentesRows,
+    comissoesError,
+    caixaDiaRows,
+    caixaDiaError,
+    profissionaisAtivos,
+    profissionaisError,
+    aguardandoPagamento,
+    aguardandoError,
+    cancelamentosMes,
+    cancelamentosError,
+    salaoInfo,
+    salaoInfoError,
+  } = await getCachedDashboardResumo(
+    usuario.id_salao,
+    nowDate,
+    inTwoHoursIso.slice(0, 10),
+    startOfMonth,
+    endOfMonth,
+    startOfDay,
+    endOfDay
+  );
 
   const firstError =
     agHojeError ||
