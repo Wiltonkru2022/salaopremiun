@@ -4,7 +4,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { usePainelSession } from "@/components/layout/PainelSessionProvider";
 import { createClient } from "@/lib/supabase/client";
-import { getUsuarioLogado } from "@/lib/auth/getUsuarioLogado";
 import {
   getStatusComissaoMeta,
   getStatusComissaoQueryValues,
@@ -250,8 +249,7 @@ export function useComissoesPage() {
       const acesso = await carregarAcesso();
       if (!acesso) return;
 
-      const usuarioLogado = await getUsuarioLogado();
-      const salaoIdFinal = usuarioLogado?.idSalao || acesso.idSalao;
+      const salaoIdFinal = acesso.idSalao;
       setIdSalao(salaoIdFinal);
 
       const { data: profissionaisData, error: profissionaisError } =
