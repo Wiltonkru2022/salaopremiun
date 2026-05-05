@@ -2,7 +2,6 @@ import { redirect } from "next/navigation";
 import { canUsePlanFeature } from "@/lib/plans/access";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import {
-  clearProfissionalSession,
   getProfissionalSessionFromCookie,
 } from "@/lib/profissional-auth.server";
 
@@ -101,13 +100,14 @@ export async function requireProfissionalAppContext(): Promise<ProfissionalServe
   const validation = await validateProfissionalAppSession();
 
   if (!validation.context) {
-    await clearProfissionalSession();
+    const destino =
+      validation.reason === "plan_blocked"
+        ? "/app-profissional/login?erro=plano_sem_app"
+        : "/app-profissional/login?erro=sessao_expirada";
 
-    if (validation.reason === "plan_blocked") {
-      redirect("/app-profissional/login?erro=plano_sem_app");
-    }
-
-    redirect("/app-profissional/login?erro=sessao_expirada");
+    redirect(
+      `/app-profissional/logout?destino=${encodeURIComponent(destino)}`
+    );
   }
 
   return validation.context;

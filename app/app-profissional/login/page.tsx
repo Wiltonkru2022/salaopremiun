@@ -4,7 +4,6 @@ import LoginProfissionalForm from "@/components/profissional/auth/LoginProfissio
 import ProfissionalHeader from "@/components/profissional/layout/ProfissionalHeader";
 import { getPlanoMinimoParaRecurso } from "@/lib/plans/catalog";
 import {
-  clearProfissionalSession,
   getProfissionalSessionFromCookie,
 } from "@/lib/profissional-auth.server";
 import { validateProfissionalAppSession } from "@/lib/profissional-context.server";
@@ -45,7 +44,7 @@ export default async function LoginProfissionalPage({
   const planoSemApp = getPlanoError(params.erro);
 
   if (limpar === "1") {
-    await clearProfissionalSession();
+    redirect("/app-profissional/logout?destino=/app-profissional/login");
   }
 
   const session = await getProfissionalSessionFromCookie();
@@ -57,7 +56,14 @@ export default async function LoginProfissionalPage({
       redirect("/app-profissional/inicio");
     }
 
-    await clearProfissionalSession();
+    const destino =
+      validation?.reason === "plan_blocked"
+        ? "/app-profissional/login?erro=plano_sem_app"
+        : "/app-profissional/login";
+
+    redirect(
+      `/app-profissional/logout?destino=${encodeURIComponent(destino)}`
+    );
   }
 
   return (

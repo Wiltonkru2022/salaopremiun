@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
 import {
-  clearProfissionalSession,
   getProfissionalSessionFromCookie,
 } from "@/lib/profissional-auth.server";
 import { validateProfissionalAppSession } from "@/lib/profissional-context.server";
@@ -15,11 +14,13 @@ export default async function AppProfissionalRootPage() {
   const validation = await validateProfissionalAppSession();
 
   if (!validation.context) {
-    await clearProfissionalSession();
-    redirect(
+    const destino =
       validation.reason === "plan_blocked"
         ? "/app-profissional/login?erro=plano_sem_app"
-        : "/app-profissional/login?erro=sessao_expirada"
+        : "/app-profissional/login?erro=sessao_expirada";
+
+    redirect(
+      `/app-profissional/logout?destino=${encodeURIComponent(destino)}`
     );
   }
 
