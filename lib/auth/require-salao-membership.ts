@@ -1,5 +1,3 @@
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
-import { createClient } from "@/lib/supabase/server";
 import { getPainelUserContext } from "@/lib/auth/get-painel-user-context";
 import { registrarLogSistema } from "@/lib/system-logs";
 

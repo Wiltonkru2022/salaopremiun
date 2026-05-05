@@ -140,14 +140,19 @@ export default function ProfissionaisListPage() {
         .eq("id_salao", salaoId)
         .in("id_profissional", idsProfissionais);
 
-      if (assistentesError) throw assistentesError;
-
       const { data: acessosRows, error: acessosError } = await supabase
         .from("profissionais_acessos")
         .select("id_profissional, ativo")
+        .eq("id_salao", salaoId)
         .in("id_profissional", idsProfissionais);
 
-      if (acessosError) throw acessosError;
+      if (assistentesError) {
+        console.error("Erro ao carregar assistentes dos profissionais:", assistentesError);
+      }
+
+      if (acessosError) {
+        console.error("Erro ao carregar acessos dos profissionais:", acessosError);
+      }
 
       const totalPorProfissional = new Map<string, number>();
       for (const row of assistentesRows || []) {

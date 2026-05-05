@@ -270,6 +270,7 @@ export default function CaixaPage() {
     idSalao,
     loading,
     saving,
+    carregarTudo,
     carregarFilaOperacional,
     carregarHistorico,
     carregarSessaoOperacional,

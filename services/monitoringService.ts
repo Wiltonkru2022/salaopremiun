@@ -29,7 +29,6 @@ export function createMonitoringService() {
     async resolveMonitoringIdentity() {
       try {
         const supabase = await createClient();
-        const supabaseAdmin = getSupabaseAdmin();
         const {
           data: { user },
         } = await supabase.auth.getUser();
