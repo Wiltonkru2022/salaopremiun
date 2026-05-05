@@ -6,6 +6,7 @@ import {
   Building2,
   CheckCircle2,
   CircleAlert,
+  Globe,
   LifeBuoy,
   KeyRound,
   Loader2,
@@ -22,6 +23,7 @@ import AppModal from "@/components/ui/AppModal";
 import { Field, SectionCard, TextInput } from "@/components/configuracoes/ui";
 import { EMPTY_SALAO } from "@/components/configuracoes/constants";
 import type { SalaoForm } from "@/components/configuracoes/types";
+import { getPlanoCatalogo } from "@/lib/plans/catalog";
 import { createClient } from "@/lib/supabase/client";
 
 type PasswordForm = {
@@ -31,7 +33,13 @@ type PasswordForm = {
   backupCode: string;
 };
 
-type ModalKey = "comercial" | "endereco" | "senha" | "autenticador" | null;
+type ModalKey =
+  | "comercial"
+  | "endereco"
+  | "senha"
+  | "autenticador"
+  | "app_cliente"
+  | null;
 
 type TotpFactor = {
   id: string;
@@ -54,6 +62,31 @@ type TotpSetupState = {
   factorId: string;
   qrCode: string;
   secret: string;
+};
+
+type SalaoProfileRow = {
+  id?: string | null;
+  nome?: string | null;
+  responsavel?: string | null;
+  email?: string | null;
+  telefone?: string | null;
+  cpf_cnpj?: string | null;
+  endereco?: string | null;
+  numero?: string | null;
+  bairro?: string | null;
+  cidade?: string | null;
+  estado?: string | null;
+  cep?: string | null;
+  logo_url?: string | null;
+  plano?: string | null;
+  status?: string | null;
+  descricao_publica?: string | null;
+  foto_capa_url?: string | null;
+  latitude?: number | string | null;
+  longitude?: number | string | null;
+  estacionamento?: boolean | null;
+  formas_pagamento_publico?: string[] | string | null;
+  app_cliente_publicado?: boolean | null;
 };
 
 const EMPTY_PASSWORD: PasswordForm = {
@@ -92,6 +125,31 @@ function formatDateTime(value: string | null | undefined) {
     dateStyle: "short",
     timeStyle: "short",
   }).format(date);
+}
+
+function formatPaymentMethods(value: string | null | undefined) {
+  return String(value || "")
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .slice(0, 8);
+}
+
+function serializePaymentMethods(value: string | null | undefined) {
+  return formatPaymentMethods(value).join(", ");
+}
+
+function parseCoordinate(value: string | null | undefined) {
+  const normalized = String(value || "").trim().replace(",", ".");
+  if (!normalized) return null;
+  const numeric = Number(normalized);
+  return Number.isFinite(numeric) ? numeric : null;
+}
+
+function formatCoordinatePair(latitude?: string, longitude?: string) {
+  const lat = String(latitude || "").trim();
+  const lng = String(longitude || "").trim();
+  return lat && lng ? `${lat}, ${lng}` : "Nao informado";
 }
 
 function DisplayItem({
@@ -179,6 +237,8 @@ export default function PerfilSalaoPage() {
   const [perfilForm, setPerfilForm] = useState<SalaoForm>(EMPTY_SALAO);
   const [comercialDraft, setComercialDraft] = useState<SalaoForm>(EMPTY_SALAO);
   const [enderecoDraft, setEnderecoDraft] = useState<SalaoForm>(EMPTY_SALAO);
+  const [appClienteDraft, setAppClienteDraft] =
+    useState<SalaoForm>(EMPTY_SALAO);
   const [passwordForm, setPasswordForm] =
     useState<PasswordForm>(EMPTY_PASSWORD);
   const [activeModal, setActiveModal] = useState<ModalKey>(null);
@@ -191,6 +251,14 @@ export default function PerfilSalaoPage() {
   const [revealedBackupCodes, setRevealedBackupCodes] = useState<string[]>([]);
 
   const linhasEndereco = useMemo(() => formatAddress(perfilForm), [perfilForm]);
+  const metodosPagamento = useMemo(
+    () => formatPaymentMethods(perfilForm.formas_pagamento_publico),
+    [perfilForm.formas_pagamento_publico]
+  );
+  const planoPremium = useMemo(
+    () => getPlanoCatalogo(perfilForm.plano).codigo === "premium",
+    [perfilForm.plano]
+  );
   const autenticadorAtivo = Boolean(totpFactor?.id);
   const qrCodeMarkup = useMemo(() => {
     if (!totpSetup?.qrCode) return "";
@@ -291,7 +359,7 @@ export default function PerfilSalaoPage() {
       const { data, error } = await supabase
         .from("saloes")
         .select(
-          "id, nome, responsavel, email, telefone, cpf_cnpj, endereco, numero, bairro, cidade, estado, cep, logo_url, plano, status"
+          "id, nome, responsavel, email, telefone, cpf_cnpj, endereco, numero, bairro, cidade, estado, cep, logo_url, plano, status, descricao_publica, foto_capa_url, latitude, longitude, estacionamento, formas_pagamento_publico, app_cliente_publicado"
         )
         .eq("id", painelSession.idSalao)
         .maybeSingle();
@@ -299,27 +367,46 @@ export default function PerfilSalaoPage() {
       if (error) throw error;
 
       if (data) {
+        const row = data as SalaoProfileRow;
         const nextForm: SalaoForm = {
-          id: data.id || "",
-          nome: data.nome || "",
-          responsavel: data.responsavel || "",
-          email: data.email || "",
-          telefone: data.telefone || "",
-          cpf_cnpj: data.cpf_cnpj || "",
-          endereco: data.endereco || "",
-          numero: data.numero || "",
-          bairro: data.bairro || "",
-          cidade: data.cidade || "",
-          estado: data.estado || "",
-          cep: data.cep || "",
-          logo_url: data.logo_url || "",
-          plano: data.plano || "",
-          status: data.status || "",
+          id: row.id || "",
+          nome: row.nome || "",
+          responsavel: row.responsavel || "",
+          email: row.email || "",
+          telefone: row.telefone || "",
+          cpf_cnpj: row.cpf_cnpj || "",
+          endereco: row.endereco || "",
+          numero: row.numero || "",
+          bairro: row.bairro || "",
+          cidade: row.cidade || "",
+          estado: row.estado || "",
+          cep: row.cep || "",
+          logo_url: row.logo_url || "",
+          plano: row.plano || "",
+          status: row.status || "",
+          descricao_publica: row.descricao_publica || "",
+          foto_capa_url: row.foto_capa_url || "",
+          latitude:
+            row.latitude === null || row.latitude === undefined
+              ? ""
+              : String(row.latitude),
+          longitude:
+            row.longitude === null || row.longitude === undefined
+              ? ""
+              : String(row.longitude),
+          estacionamento: Boolean(row.estacionamento),
+          formas_pagamento_publico: serializePaymentMethods(
+            Array.isArray(row.formas_pagamento_publico)
+              ? row.formas_pagamento_publico.join(", ")
+              : row.formas_pagamento_publico
+          ),
+          app_cliente_publicado: Boolean(row.app_cliente_publicado),
         };
 
         setPerfilForm(nextForm);
         setComercialDraft(nextForm);
         setEnderecoDraft(nextForm);
+        setAppClienteDraft(nextForm);
       }
 
       await carregarMfa();
@@ -371,6 +458,10 @@ export default function PerfilSalaoPage() {
       setPasswordForm(EMPTY_PASSWORD);
     }
 
+    if (modal === "app_cliente") {
+      setAppClienteDraft(perfilForm);
+    }
+
     if (modal === "autenticador") {
       setSetupCode("");
       setManageCode("");
@@ -402,6 +493,23 @@ export default function PerfilSalaoPage() {
         estado: (patch.estado ?? perfilForm.estado) || null,
         cep: (patch.cep ?? perfilForm.cep) || null,
         logo_url: (patch.logo_url ?? perfilForm.logo_url) || null,
+        descricao_publica:
+          (patch.descricao_publica ?? perfilForm.descricao_publica) || null,
+        foto_capa_url:
+          (patch.foto_capa_url ?? perfilForm.foto_capa_url) || null,
+        latitude: parseCoordinate(patch.latitude ?? perfilForm.latitude),
+        longitude: parseCoordinate(patch.longitude ?? perfilForm.longitude),
+        estacionamento: Boolean(
+          patch.estacionamento ?? perfilForm.estacionamento
+        ),
+        formas_pagamento_publico: formatPaymentMethods(
+          patch.formas_pagamento_publico ?? perfilForm.formas_pagamento_publico
+        ),
+        app_cliente_publicado: planoPremium
+          ? Boolean(
+              patch.app_cliente_publicado ?? perfilForm.app_cliente_publicado
+            )
+          : false,
         updated_at: new Date().toISOString(),
       };
 
@@ -416,6 +524,7 @@ export default function PerfilSalaoPage() {
       setPerfilForm(nextForm);
       setComercialDraft(nextForm);
       setEnderecoDraft(nextForm);
+      setAppClienteDraft(nextForm);
       setMsg(sucesso);
       setActiveModal(null);
       router.refresh();
@@ -455,6 +564,26 @@ export default function PerfilSalaoPage() {
         cep: enderecoDraft.cep,
       },
       "Endereco do salao atualizado com sucesso."
+    );
+  }
+
+  async function salvarPerfilPublico() {
+    await atualizarPerfil(
+      {
+        descricao_publica: appClienteDraft.descricao_publica || "",
+        foto_capa_url: appClienteDraft.foto_capa_url || "",
+        latitude: appClienteDraft.latitude || "",
+        longitude: appClienteDraft.longitude || "",
+        estacionamento: Boolean(appClienteDraft.estacionamento),
+        formas_pagamento_publico:
+          appClienteDraft.formas_pagamento_publico || "",
+        app_cliente_publicado: planoPremium
+          ? Boolean(appClienteDraft.app_cliente_publicado)
+          : false,
+      },
+      planoPremium
+        ? "Perfil publico do app cliente atualizado com sucesso."
+        : "Perfil publico salvo. A publicacao fica disponivel quando o salao estiver no Premium."
     );
   }
 
@@ -941,6 +1070,63 @@ export default function PerfilSalaoPage() {
                 />
               </div>
             </SectionCard>
+
+            <SectionCard
+              icon={<Globe size={18} />}
+              title="App cliente premium"
+              description="Resumo do perfil publico usado na vitrine do aplicativo do cliente."
+            >
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <DisplayItem
+                  label="Publicacao"
+                  value={
+                    planoPremium
+                      ? perfilForm.app_cliente_publicado
+                        ? "Publicado na vitrine premium."
+                        : "Ainda nao publicado."
+                      : "Disponivel somente no plano Premium."
+                  }
+                  multiline
+                />
+                <DisplayItem
+                  label="Estacionamento"
+                  value={perfilForm.estacionamento ? "Sim" : "Nao"}
+                />
+                <DisplayItem
+                  label="Foto de capa"
+                  value={perfilForm.foto_capa_url || "Sem URL cadastrada"}
+                  multiline
+                />
+                <DisplayItem
+                  label="Coordenadas"
+                  value={formatCoordinatePair(
+                    perfilForm.latitude,
+                    perfilForm.longitude
+                  )}
+                />
+                <div className="md:col-span-2">
+                  <DisplayItem
+                    label="Descricao publica"
+                    value={
+                      perfilForm.descricao_publica ||
+                      "Nenhuma descricao publica cadastrada."
+                    }
+                    multiline
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <DisplayItem
+                    label="Formas de pagamento"
+                    value={
+                      metodosPagamento.length
+                        ? metodosPagamento.join(" | ")
+                        : "Nenhuma forma de pagamento publica cadastrada."
+                    }
+                    multiline
+                  />
+                </div>
+              </div>
+            </SectionCard>
           </div>
 
           <aside className="space-y-4 xl:sticky xl:top-24 xl:self-start">
@@ -962,6 +1148,13 @@ export default function PerfilSalaoPage() {
                   title="Editar endereco"
                   description="Rua, numero, bairro, cidade, estado e CEP."
                   onClick={() => abrirModal("endereco")}
+                />
+
+                <SidebarAction
+                  icon={<Globe size={16} />}
+                  title="App cliente premium"
+                  description="Monte a vitrine publica do salao e publique quando o Premium estiver ativo."
+                  onClick={() => abrirModal("app_cliente")}
                 />
 
                 <SidebarAction
@@ -1358,6 +1551,169 @@ export default function PerfilSalaoPage() {
               </Field>
             </>
           ) : null}
+        </div>
+      </AppModal>
+
+      <AppModal
+        open={activeModal === "app_cliente"}
+        onClose={() => setActiveModal(null)}
+        title="Perfil publico do app cliente"
+        description="Defina como o salao aparece na vitrine do cliente final e publique quando o plano Premium estiver ativo."
+        eyebrow="App cliente"
+        maxWidthClassName="max-w-3xl"
+        footer={
+          <>
+            <button
+              type="button"
+              onClick={() => setActiveModal(null)}
+              className="rounded-2xl border border-zinc-200 px-4 py-2.5 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50"
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              onClick={salvarPerfilPublico}
+              disabled={savingPerfil}
+              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-zinc-950 px-5 py-2.5 text-sm font-bold text-white transition hover:-translate-y-0.5 disabled:opacity-60"
+            >
+              {savingPerfil ? (
+                <Loader2 className="animate-spin" size={16} />
+              ) : (
+                <CheckCircle2 size={16} />
+              )}
+              Salvar perfil publico
+            </button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <div
+            className={`rounded-[22px] border p-4 text-sm leading-6 ${
+              planoPremium
+                ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                : "border-amber-200 bg-amber-50 text-amber-800"
+            }`}
+          >
+            {planoPremium ? (
+              <>
+                Este salao ja pode aparecer no app cliente. Basta completar os
+                dados abaixo e ativar a publicacao.
+              </>
+            ) : (
+              <>
+                Voce pode preparar a descricao e os dados publicos agora, mas a
+                publicacao na vitrine fica liberada somente no plano Premium.
+              </>
+            )}
+          </div>
+
+          <Field label="Descricao publica">
+            <textarea
+              value={appClienteDraft.descricao_publica || ""}
+              onChange={(event) =>
+                setAppClienteDraft((prev) => ({
+                  ...prev,
+                  descricao_publica: event.target.value,
+                }))
+              }
+              rows={4}
+              placeholder="Conte em poucas linhas o estilo do salao, especialidades e o que faz a experiencia valer a visita."
+              className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-zinc-900"
+            />
+          </Field>
+
+          <Field label="Foto de capa (URL)">
+            <TextInput
+              value={appClienteDraft.foto_capa_url || ""}
+              onChange={(event) =>
+                setAppClienteDraft((prev) => ({
+                  ...prev,
+                  foto_capa_url: event.target.value,
+                }))
+              }
+              placeholder="https://..."
+            />
+          </Field>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <Field label="Latitude">
+              <TextInput
+                value={appClienteDraft.latitude || ""}
+                onChange={(event) =>
+                  setAppClienteDraft((prev) => ({
+                    ...prev,
+                    latitude: event.target.value,
+                  }))
+                }
+                placeholder="-23.550520"
+              />
+            </Field>
+
+            <Field label="Longitude">
+              <TextInput
+                value={appClienteDraft.longitude || ""}
+                onChange={(event) =>
+                  setAppClienteDraft((prev) => ({
+                    ...prev,
+                    longitude: event.target.value,
+                  }))
+                }
+                placeholder="-46.633308"
+              />
+            </Field>
+          </div>
+
+          <Field label="Formas de pagamento">
+            <TextInput
+              value={appClienteDraft.formas_pagamento_publico || ""}
+              onChange={(event) =>
+                setAppClienteDraft((prev) => ({
+                  ...prev,
+                  formas_pagamento_publico: event.target.value,
+                }))
+              }
+              placeholder="Pix, Credito, Debito, Dinheiro"
+            />
+          </Field>
+
+          <div className="grid gap-3 md:grid-cols-2">
+            <label className="flex items-center gap-3 rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-800">
+              <input
+                type="checkbox"
+                checked={Boolean(appClienteDraft.estacionamento)}
+                onChange={(event) =>
+                  setAppClienteDraft((prev) => ({
+                    ...prev,
+                    estacionamento: event.target.checked,
+                  }))
+                }
+                className="h-4 w-4 rounded border-zinc-300"
+              />
+              Informar estacionamento disponivel
+            </label>
+
+            <label
+              className={`flex items-center gap-3 rounded-2xl border px-4 py-3 text-sm ${
+                planoPremium
+                  ? "border-zinc-200 bg-zinc-50 text-zinc-800"
+                  : "border-amber-200 bg-amber-50 text-amber-700"
+              }`}
+            >
+              <input
+                type="checkbox"
+                checked={Boolean(appClienteDraft.app_cliente_publicado)}
+                disabled={!planoPremium}
+                onChange={(event) =>
+                  setAppClienteDraft((prev) => ({
+                    ...prev,
+                    app_cliente_publicado: event.target.checked,
+                  }))
+                }
+                className="h-4 w-4 rounded border-zinc-300"
+              />
+              Publicar na vitrine do app cliente
+            </label>
+          </div>
         </div>
       </AppModal>
 

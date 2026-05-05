@@ -16,6 +16,13 @@ export type SalaoForm = {
   logo_url: string;
   plano?: string | null;
   status?: string | null;
+  descricao_publica?: string;
+  foto_capa_url?: string;
+  latitude?: string;
+  longitude?: string;
+  estacionamento?: boolean;
+  formas_pagamento_publico?: string;
+  app_cliente_publicado?: boolean;
 };
 
 export type ConfigSalaoForm = {

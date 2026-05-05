@@ -34,6 +34,13 @@ export const EMPTY_SALAO: SalaoForm = {
   logo_url: "",
   plano: "",
   status: "",
+  descricao_publica: "",
+  foto_capa_url: "",
+  latitude: "",
+  longitude: "",
+  estacionamento: false,
+  formas_pagamento_publico: "",
+  app_cliente_publicado: false,
 };
 
 export const EMPTY_CONFIG: ConfigSalaoForm = {
