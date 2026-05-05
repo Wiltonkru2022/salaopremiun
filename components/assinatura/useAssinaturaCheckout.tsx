@@ -151,11 +151,30 @@ export function useAssinaturaCheckout({
   useEffect(() => {
     if (!aguardandoPagamento || !salao?.id) return;
 
-    const interval = setInterval(() => {
-      void verificarPagamentoAgora(true);
-    }, 15000);
+    const refreshOnReturn = () => {
+      if (document.visibilityState !== "visible") {
+        return;
+      }
 
-    return () => clearInterval(interval);
+      void verificarPagamentoAgora(true);
+    };
+
+    const interval = setInterval(() => {
+      if (document.visibilityState !== "visible") {
+        return;
+      }
+
+      void verificarPagamentoAgora(true);
+    }, 20000);
+
+    window.addEventListener("focus", refreshOnReturn);
+    document.addEventListener("visibilitychange", refreshOnReturn);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("focus", refreshOnReturn);
+      document.removeEventListener("visibilitychange", refreshOnReturn);
+    };
   }, [aguardandoPagamento, salao?.id, verificarPagamentoAgora]);
 
   const criarCobrancaAssinatura = useCallback(async (): Promise<void> => {
