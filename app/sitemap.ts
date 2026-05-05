@@ -1,6 +1,5 @@
 import type { MetadataRoute } from "next";
 import { DOMINIO_RAIZ } from "@/lib/proxy/domain-config";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 function getBaseUrl() {
   const configured = String(process.env.NEXT_PUBLIC_APP_URL || "").trim();
@@ -9,6 +8,40 @@ function getBaseUrl() {
   }
 
   return new URL(`https://${DOMINIO_RAIZ}`);
+}
+
+function canUseSupabaseAdminInBuild() {
+  return Boolean(
+    String(process.env.NEXT_PUBLIC_SUPABASE_URL || "").trim() &&
+      String(process.env.SUPABASE_SERVICE_ROLE_KEY || "").trim()
+  );
+}
+
+async function listDynamicSalonRoutes(baseUrl: URL, now: Date) {
+  if (!canUseSupabaseAdminInBuild()) {
+    return [];
+  }
+
+  const { getSupabaseAdmin } = await import("@/lib/supabase/admin");
+  const supabaseAdmin = getSupabaseAdmin();
+  const { data } = await supabaseAdmin
+    .from("saloes")
+    .select("id, assinaturas!inner(plano,status)")
+    .eq("status", "ativo")
+    .eq("app_cliente_publicado", true)
+    .eq("assinaturas.status", "ativo")
+    .eq("assinaturas.plano", "premium")
+    .limit(500);
+
+  return ((data as Array<{ id?: string }> | null) || [])
+    .map((item) => String(item.id || "").trim())
+    .filter(Boolean)
+    .map((idSalao) => ({
+      url: new URL(`/app-cliente/salao/${idSalao}`, baseUrl).toString(),
+      lastModified: now,
+      changeFrequency: "daily" as const,
+      priority: 0.7,
+    }));
 }
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
@@ -28,25 +61,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     "/app-cliente/cadastro",
   ];
 
-  const supabaseAdmin = getSupabaseAdmin();
-  const { data } = await supabaseAdmin
-    .from("saloes")
-    .select("id, assinaturas!inner(plano,status)")
-    .eq("status", "ativo")
-    .eq("app_cliente_publicado", true)
-    .eq("assinaturas.status", "ativo")
-    .eq("assinaturas.plano", "premium")
-    .limit(500);
-
-  const dynamicSalonRoutes = ((data as Array<{ id?: string }> | null) || [])
-    .map((item) => String(item.id || "").trim())
-    .filter(Boolean)
-    .map((idSalao) => ({
-      url: new URL(`/app-cliente/salao/${idSalao}`, baseUrl).toString(),
-      lastModified: now,
-      changeFrequency: "daily" as const,
-      priority: 0.7,
-    }));
+  const dynamicSalonRoutes = await listDynamicSalonRoutes(baseUrl, now);
 
   return [
     ...staticRoutes.map((path, index) => ({
