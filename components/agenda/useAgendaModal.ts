@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { usePainelSession } from "@/components/layout/PainelSessionProvider";
 import type { SearchableOption } from "@/components/ui/SearchableSelect";
 import { getUpgradeTarget } from "@/components/plans/usePlanoAccessSnapshot";
 import type { ComandaResumo } from "./page-types";
@@ -109,6 +110,7 @@ export function useAgendaModal({
   onBuscarComandasAbertas,
   onCriarComanda,
 }: AgendaModalProps) {
+  const { snapshot: painelSession } = usePainelSession();
   const [saving, setSaving] = useState(false);
   const [loadingComanda, setLoadingComanda] = useState(false);
 
@@ -158,7 +160,28 @@ export function useAgendaModal({
       clientes?: number;
       agendamentosMensais?: number;
     };
-  } | null>(null);
+  } | null>(() =>
+    painelSession
+      ? {
+          planoNome: painelSession.planoNome,
+          planoCodigo: painelSession.planoCodigo,
+          recursos: {
+            whatsapp: painelSession.planoRecursos?.whatsapp,
+            marketing: painelSession.planoRecursos?.marketing,
+          },
+          limites: {
+            clientes: painelSession.planoLimites?.clientes,
+            agendamentosMensais:
+              painelSession.planoLimites?.agendamentosMensais,
+          },
+          uso: {
+            clientes: painelSession.planoUso?.clientes,
+            agendamentosMensais:
+              painelSession.planoUso?.agendamentosMensais,
+          },
+        }
+      : null
+  );
 
   const profissionaisOptions = useMemo<SearchableOption[]>(
     () =>
@@ -297,6 +320,25 @@ export function useAgendaModal({
 
   useEffect(() => {
     if (!open) return;
+    if (painelSession?.planoRecursos) {
+      setPlanoAccess({
+        planoNome: painelSession.planoNome,
+        planoCodigo: painelSession.planoCodigo,
+        recursos: {
+          whatsapp: painelSession.planoRecursos?.whatsapp,
+          marketing: painelSession.planoRecursos?.marketing,
+        },
+        limites: {
+          clientes: painelSession.planoLimites?.clientes,
+          agendamentosMensais: painelSession.planoLimites?.agendamentosMensais,
+        },
+        uso: {
+          clientes: painelSession.planoUso?.clientes,
+          agendamentosMensais: painelSession.planoUso?.agendamentosMensais,
+        },
+      });
+      return;
+    }
 
     let cancelled = false;
 
@@ -334,7 +376,16 @@ export function useAgendaModal({
     return () => {
       cancelled = true;
     };
-  }, [open]);
+  }, [
+    open,
+    painelSession?.planoCodigo,
+    painelSession?.planoLimites?.agendamentosMensais,
+    painelSession?.planoLimites?.clientes,
+    painelSession?.planoNome,
+    painelSession?.planoRecursos,
+    painelSession?.planoUso?.agendamentosMensais,
+    painelSession?.planoUso?.clientes,
+  ]);
 
   useEffect(() => {
     if (!open) return;

@@ -30,7 +30,22 @@ type Props = {
   salaoNome?: string;
   salaoResponsavel?: string;
   salaoLogoUrl?: string | null;
+  planoCodigo?: string;
   planoNome?: string;
+  planoLimites?: {
+    usuarios?: number | null;
+    profissionais?: number | null;
+    clientes?: number | null;
+    servicos?: number | null;
+    agendamentosMensais?: number | null;
+  };
+  planoUso?: {
+    usuarios?: number;
+    profissionais?: number;
+    clientes?: number;
+    servicos?: number;
+    agendamentosMensais?: number;
+  };
   assinaturaStatus?: string | null;
   resumoAssinatura?: ResumoAssinatura | null;
   notifications?: ShellNotification[];
@@ -48,7 +63,10 @@ export default function AppShell({
   salaoNome,
   salaoResponsavel,
   salaoLogoUrl,
+  planoCodigo,
   planoNome,
+  planoLimites,
+  planoUso,
   assinaturaStatus,
   resumoAssinatura,
   notifications = [],
@@ -77,7 +95,10 @@ export default function AppShell({
           salaoNome,
           salaoResponsavel,
           salaoLogoUrl,
+          planoCodigo,
           planoNome,
+          planoLimites,
+          planoUso,
           assinaturaStatus,
         }
       : null;

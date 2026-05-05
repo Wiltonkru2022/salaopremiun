@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import { type ReactNode, useEffect, useMemo, useState } from "react";
+import { usePainelSession } from "@/components/layout/PainelSessionProvider";
 import AppLoading from "@/components/ui/AppLoading";
 import ConfirmActionModal from "@/components/ui/ConfirmActionModal";
 import { useComissoesPage } from "@/components/comissoes/useComissoesPage";
@@ -18,10 +19,6 @@ import {
 import { groupComboTotals, parseComboDisplayMeta } from "@/lib/combo/display";
 import { getPlanoMinimoParaRecurso, type PlanoCobravelCodigo } from "@/lib/plans/catalog";
 import { getAssinaturaUrl } from "@/lib/site-urls";
-
-type PlanoAccessPayload = {
-  recursos?: Record<string, boolean>;
-};
 
 function formatCurrency(value: number | null | undefined) {
   return Number(value || 0).toLocaleString("pt-BR", {
@@ -154,6 +151,7 @@ function ComboDescriptionBlock({
 }
 
 export default function ComissoesPage() {
+  const { snapshot: painelSession } = usePainelSession();
   const [comissoesAvancadas, setComissoesAvancadas] = useState(false);
   const {
     loading,
@@ -208,20 +206,10 @@ export default function ComissoesPage() {
   );
 
   useEffect(() => {
-    void (async () => {
-      try {
-        const response = await fetch("/api/plano/access", {
-          cache: "no-store",
-        });
-        const data = (await response.json().catch(() => null)) as
-          | PlanoAccessPayload
-          | null;
-        setComissoesAvancadas(Boolean(data?.recursos?.comissoes_avancadas));
-      } catch (error) {
-        console.error("Falha ao carregar acesso de plano para comissões:", error);
-      }
-    })();
-  }, []);
+    setComissoesAvancadas(
+      Boolean(painelSession?.planoRecursos?.comissoes_avancadas)
+    );
+  }, [painelSession?.planoRecursos?.comissoes_avancadas]);
 
   function imprimirRateio() {
     const win = window.open("", "_blank");
