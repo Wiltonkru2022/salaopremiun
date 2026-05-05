@@ -11,8 +11,8 @@ import {
   getPlanoDowngradeCatalogo,
   getPlanoUpgradeCatalogo,
 } from "@/lib/plans/catalog";
+import { getPainelUserContext } from "@/lib/auth/get-painel-user-context";
 import { getAssinaturaUrl } from "@/lib/site-urls";
-import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
@@ -89,20 +89,11 @@ export default async function MeuPlanoPage({
         ? params?.motivo[0]
         : undefined;
   const motivoMeta = getMotivoMeta(motivo);
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { user, usuario } = await getPainelUserContext();
 
   if (!user) {
     redirect("/login");
   }
-
-  const { data: usuario } = await supabase
-    .from("usuarios")
-    .select("id_salao")
-    .eq("auth_user_id", user.id)
-    .maybeSingle();
 
   if (!usuario?.id_salao) {
     redirect(getAssinaturaUrl("/assinatura"));

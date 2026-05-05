@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { getPlanoCatalogo, getPlanosOrdenados } from "@/lib/plans/catalog";
+import { getPainelUserContext } from "@/lib/auth/get-painel-user-context";
 import { getAssinaturaUrl } from "@/lib/site-urls";
-import { createClient } from "@/lib/supabase/server";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
 
@@ -57,30 +58,21 @@ function getPlanoAction(params: {
 }
 
 export default async function CompararPlanosPage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { user, usuario } = await getPainelUserContext();
+  const supabaseAdmin = getSupabaseAdmin();
 
   let planoAtual = "teste_gratis";
   let jaPossuiAssinatura = false;
   let jaUsouTrial = false;
 
-  if (user) {
-    const { data: usuario } = await supabase
-      .from("usuarios")
-      .select("id_salao")
-      .eq("auth_user_id", user.id)
-      .maybeSingle();
-
-    if (usuario?.id_salao) {
+  if (user && usuario?.id_salao) {
       const [{ data: assinatura }, { data: salao }] = await Promise.all([
-        supabase
+        supabaseAdmin
           .from("assinaturas")
           .select("id, plano, status, trial_inicio_em, trial_fim_em")
           .eq("id_salao", usuario.id_salao)
           .maybeSingle(),
-        supabase
+        supabaseAdmin
           .from("saloes")
           .select("plano, status, trial_inicio_em, trial_fim_em")
           .eq("id", usuario.id_salao)
@@ -98,7 +90,6 @@ export default async function CompararPlanosPage() {
           assinatura?.trial_inicio_em ||
           assinatura?.trial_fim_em
       );
-    }
   }
 
   const planoAtualInfo = getPlanoCatalogo(planoAtual);

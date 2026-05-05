@@ -8,7 +8,7 @@ import {
   TimerReset,
 } from "lucide-react";
 import { getPlanoAccessSnapshot } from "@/lib/plans/access";
-import { createClient } from "@/lib/supabase/server";
+import { getPainelUserContext } from "@/lib/auth/get-painel-user-context";
 
 const itens = [
   {
@@ -32,20 +32,11 @@ const itens = [
 ];
 
 export default async function MarketingPage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { user, usuario } = await getPainelUserContext();
 
   if (!user) {
     redirect("/login");
   }
-
-  const { data: usuario } = await supabase
-    .from("usuarios")
-    .select("id_salao")
-    .eq("auth_user_id", user.id)
-    .maybeSingle();
 
   if (!usuario?.id_salao) {
     redirect("/dashboard");
