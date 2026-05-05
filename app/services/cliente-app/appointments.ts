@@ -8,13 +8,20 @@ import {
 } from "@/lib/agenda/validacoesAgenda";
 import {
   addDurationToTime,
+  buildTimeSlots,
   buildForaExpedienteBloqueiosDoProfissional,
   buildPausasBloqueiosDoProfissional,
   mergeBloqueios,
+  minutesToTime,
   normalizeTimeString,
   overlaps,
+  timeToMinutes,
 } from "@/lib/utils/agenda";
 import type { ConfigSalao, Profissional } from "@/types/agenda";
+
+const CLIENT_BOOKING_BUFFER_MINUTES = 5;
+const CLIENT_BOOKING_SLOT_STEP_MINUTES = 5;
+const CLIENT_BOOKING_LOOKAHEAD_DAYS = 14;
 
 type ClienteAppActionResult =
   | { ok: true; message: string }
@@ -49,6 +56,27 @@ type ClienteAgendamentoOwnership = {
   idComanda: string | null;
 };
 
+export type ClienteAppAvailabilitySlot = {
+  horaInicio: string;
+  horaFim: string;
+};
+
+export type ClienteAppAvailabilityDay = {
+  data: string;
+  rotulo: string;
+  horarios: ClienteAppAvailabilitySlot[];
+};
+
+export type ClienteAppAvailabilityResult =
+  | {
+      ok: true;
+      intervaloMinutos: number;
+      bufferMinutos: number;
+      duracaoMinutos: number;
+      dias: ClienteAppAvailabilityDay[];
+    }
+  | { ok: false; error: string };
+
 function normalizeDate(value: string) {
   return String(value || "").trim().slice(0, 10);
 }
@@ -56,6 +84,19 @@ function normalizeDate(value: string) {
 function isPastDateTime(date: string, time: string) {
   const value = new Date(`${date}T${normalizeTimeString(time)}:00`);
   return Number.isFinite(value.getTime()) && value.getTime() < Date.now();
+}
+
+function formatDateString(date: Date) {
+  return date.toISOString().slice(0, 10);
+}
+
+function buildClientDateLabel(dateString: string) {
+  const date = new Date(`${dateString}T12:00:00`);
+  return new Intl.DateTimeFormat("pt-BR", {
+    weekday: "short",
+    day: "2-digit",
+    month: "2-digit",
+  }).format(date);
 }
 
 function parseConfigRow(
@@ -93,6 +134,244 @@ function parseProfissionalRow(row: Record<string, unknown>): Profissional {
     dias_trabalho: (row.dias_trabalho as Profissional["dias_trabalho"]) ?? null,
     pausas: (row.pausas as Profissional["pausas"]) ?? null,
   };
+}
+
+function expandAppointmentWindow(params: {
+  horaInicio: string;
+  horaFim: string;
+  bufferMinutes?: number;
+}) {
+  const buffer = Math.max(Number(params.bufferMinutes || 0), 0);
+  const start = Math.max(timeToMinutes(params.horaInicio) - buffer, 0);
+  const end = timeToMinutes(params.horaFim) + buffer;
+
+  return {
+    horaInicio: minutesToTime(start),
+    horaFim: minutesToTime(end),
+  };
+}
+
+function hasAppointmentConflictWithBuffer(params: {
+  horaInicio: string;
+  horaFim: string;
+  agendamentos: Array<Record<string, unknown>>;
+  bufferMinutes?: number;
+}) {
+  return params.agendamentos.some((item) => {
+    const expanded = expandAppointmentWindow({
+      horaInicio: normalizeTimeString(String(item.hora_inicio || "")),
+      horaFim: normalizeTimeString(String(item.hora_fim || "")),
+      bufferMinutes: params.bufferMinutes,
+    });
+
+    return overlaps(
+      params.horaInicio,
+      params.horaFim,
+      expanded.horaInicio,
+      expanded.horaFim
+    );
+  });
+}
+
+async function loadBookingBaseContext(params: {
+  supabaseAdmin: any;
+  idSalao: string;
+  idServico: string;
+  idProfissional: string;
+}) {
+  const [configResult, profissionalResult, servicoResult, vinculoResult] =
+    await Promise.all([
+      params.supabaseAdmin
+        .from("configuracoes_salao")
+        .select(
+          "id_salao, hora_abertura, hora_fechamento, intervalo_minutos, dias_funcionamento"
+        )
+        .eq("id_salao", params.idSalao)
+        .limit(1)
+        .maybeSingle(),
+      (params.supabaseAdmin as any)
+        .from("profissionais")
+        .select(
+          "id, id_salao, nome, nome_exibicao, foto_url, categoria, cargo, comissao_percentual, cor_agenda, status, ativo, dias_trabalho, pausas, app_cliente_visivel, eh_assistente"
+        )
+        .eq("id", params.idProfissional)
+        .eq("id_salao", params.idSalao)
+        .limit(1)
+        .maybeSingle(),
+      (params.supabaseAdmin as any)
+        .from("servicos")
+        .select(
+          "id, id_salao, nome, ativo, preco, duracao, duracao_minutos, descricao, app_cliente_visivel"
+        )
+        .eq("id", params.idServico)
+        .eq("id_salao", params.idSalao)
+        .limit(1)
+        .maybeSingle(),
+      params.supabaseAdmin
+        .from("profissional_servicos")
+        .select("id, duracao_minutos, ativo")
+        .eq("id_salao", params.idSalao)
+        .eq("id_profissional", params.idProfissional)
+        .eq("id_servico", params.idServico)
+        .eq("ativo", true)
+        .limit(1)
+        .maybeSingle(),
+    ]);
+
+  const config = parseConfigRow(
+    (configResult.data as Record<string, unknown> | null) || null
+  );
+
+  if (!config) {
+    return { ok: false as const, error: "A agenda deste salao ainda nao esta configurada." };
+  }
+
+  if (profissionalResult.error || !profissionalResult.data?.id) {
+    return { ok: false as const, error: "Profissional nao encontrado." };
+  }
+
+  if (
+    !profissionalResult.data.app_cliente_visivel ||
+    profissionalResult.data.eh_assistente === true ||
+    profissionalResult.data.ativo === false
+  ) {
+    return {
+      ok: false as const,
+      error: "Este profissional nao esta disponivel no app cliente.",
+    };
+  }
+
+  if (servicoResult.error || !servicoResult.data?.id) {
+    return { ok: false as const, error: "Servico nao encontrado." };
+  }
+
+  if (
+    !servicoResult.data.app_cliente_visivel ||
+    servicoResult.data.ativo === false
+  ) {
+    return {
+      ok: false as const,
+      error: "Este servico nao esta disponivel no app cliente.",
+    };
+  }
+
+  if (vinculoResult.error || !vinculoResult.data?.id) {
+    return {
+      ok: false as const,
+      error: "Este servico nao esta vinculado ao profissional escolhido.",
+    };
+  }
+
+  const profissional = parseProfissionalRow(
+    profissionalResult.data as Record<string, unknown>
+  );
+  const duracao =
+    Number(vinculoResult.data.duracao_minutos || 0) ||
+    Number(servicoResult.data.duracao_minutos || servicoResult.data.duracao || 0) ||
+    30;
+
+  return {
+    ok: true as const,
+    config,
+    profissional,
+    duracao,
+  };
+}
+
+function buildDisponibilidadeDia(params: {
+  data: string;
+  config: ConfigSalao;
+  profissional: Profissional;
+  duracao: number;
+  bloqueios: Array<Record<string, unknown>>;
+  agendamentos: Array<Record<string, unknown>>;
+}) {
+  if (!ensureDiaFuncionamento({ config: params.config, dateString: params.data })) {
+    return [] as ClienteAppAvailabilitySlot[];
+  }
+
+  const autoBloqueios = mergeBloqueios(
+    buildPausasBloqueiosDoProfissional({
+      idSalao: params.config.id_salao,
+      profissionalId: params.profissional.id,
+      date: params.data,
+      pausas: params.profissional.pausas,
+    }),
+    buildForaExpedienteBloqueiosDoProfissional({
+      idSalao: params.config.id_salao,
+      profissionalId: params.profissional.id,
+      date: params.data,
+      agendaInicio: params.config.hora_abertura,
+      agendaFim: params.config.hora_fechamento,
+      diasTrabalho: params.profissional.dias_trabalho,
+    })
+  );
+
+  const bloqueiosDoDia = mergeBloqueios(
+    ((params.bloqueios || []) as Array<Record<string, unknown>>).map((item) => ({
+      id: String(item.id || ""),
+      id_salao: String(item.id_salao || params.config.id_salao),
+      profissional_id: String(item.profissional_id || params.profissional.id),
+      data: String(item.data || params.data),
+      hora_inicio: normalizeTimeString(String(item.hora_inicio || "")),
+      hora_fim: normalizeTimeString(String(item.hora_fim || "")),
+      motivo: String(item.motivo || "").trim() || null,
+    })),
+    autoBloqueios
+  );
+
+  const step = Math.max(
+    Number(params.config.intervalo_minutos || 15),
+    CLIENT_BOOKING_SLOT_STEP_MINUTES
+  );
+  const slots = buildTimeSlots(
+    params.config.hora_abertura,
+    params.config.hora_fechamento,
+    step
+  );
+
+  return slots
+    .filter((slot) => {
+      const horaInicio = slot.time;
+      const horaFim = addDurationToTime(horaInicio, params.duracao);
+
+      if (isPastDateTime(params.data, horaInicio)) {
+        return false;
+      }
+
+      const range = validateAgendaTimeRange({
+        config: params.config,
+        profissionais: [params.profissional],
+        getProfessionalAutoBloqueiosFn: () => [],
+        profissionalId: params.profissional.id,
+        date: params.data,
+        horaInicio,
+        horaFim,
+      });
+
+      if (!range.ok) {
+        return false;
+      }
+
+      const conflitoBloqueio = bloqueiosDoDia.some((item) =>
+        overlaps(horaInicio, horaFim, item.hora_inicio, item.hora_fim)
+      );
+
+      if (conflitoBloqueio) {
+        return false;
+      }
+
+      return !hasAppointmentConflictWithBuffer({
+        horaInicio,
+        horaFim,
+        agendamentos: params.agendamentos,
+        bufferMinutes: CLIENT_BOOKING_BUFFER_MINUTES,
+      });
+    })
+    .map((slot) => ({
+      horaInicio: slot.time,
+      horaFim: addDurationToTime(slot.time, params.duracao),
+    }));
 }
 
 async function loadOwnedAppointment(params: {
@@ -178,13 +457,7 @@ export async function createClienteAppAppointment(
 
       const idCliente = vinculoConta.idCliente;
 
-      const [
-        clienteResult,
-        configResult,
-        profissionalResult,
-        servicoResult,
-        vinculoResult,
-      ] = await Promise.all([
+      const [clienteResult, bookingContext] = await Promise.all([
         supabaseAdmin
           .from("clientes")
           .select("id, id_salao, status")
@@ -192,41 +465,12 @@ export async function createClienteAppAppointment(
           .eq("id_salao", idSalao)
           .limit(1)
           .maybeSingle(),
-        supabaseAdmin
-          .from("configuracoes_salao")
-          .select(
-            "id_salao, hora_abertura, hora_fechamento, intervalo_minutos, dias_funcionamento"
-          )
-          .eq("id_salao", idSalao)
-          .limit(1)
-          .maybeSingle(),
-        (supabaseAdmin as any)
-          .from("profissionais")
-          .select(
-            "id, id_salao, nome, nome_exibicao, foto_url, categoria, cargo, comissao_percentual, cor_agenda, status, ativo, dias_trabalho, pausas, app_cliente_visivel, eh_assistente"
-          )
-          .eq("id", idProfissional)
-          .eq("id_salao", idSalao)
-          .limit(1)
-          .maybeSingle(),
-        (supabaseAdmin as any)
-          .from("servicos")
-          .select(
-            "id, id_salao, nome, ativo, preco, duracao, duracao_minutos, descricao, app_cliente_visivel"
-          )
-          .eq("id", idServico)
-          .eq("id_salao", idSalao)
-          .limit(1)
-          .maybeSingle(),
-        supabaseAdmin
-          .from("profissional_servicos")
-          .select("id, duracao_minutos, ativo")
-          .eq("id_salao", idSalao)
-          .eq("id_profissional", idProfissional)
-          .eq("id_servico", idServico)
-          .eq("ativo", true)
-          .limit(1)
-          .maybeSingle(),
+        loadBookingBaseContext({
+          supabaseAdmin,
+          idSalao,
+          idServico,
+          idProfissional,
+        }),
       ]);
 
       if (
@@ -240,61 +484,11 @@ export async function createClienteAppAppointment(
         };
       }
 
-      const config = parseConfigRow(
-        (configResult.data as Record<string, unknown> | null) || null
-      );
-      if (!config) {
-        return {
-          ok: false,
-          error: "A agenda deste salao ainda nao esta configurada.",
-        };
+      if (!bookingContext.ok) {
+        return bookingContext;
       }
 
-      if (profissionalResult.error || !profissionalResult.data?.id) {
-        return { ok: false, error: "Profissional nao encontrado." };
-      }
-
-      if (
-        !profissionalResult.data.app_cliente_visivel ||
-        profissionalResult.data.eh_assistente === true ||
-        profissionalResult.data.ativo === false
-      ) {
-        return {
-          ok: false,
-          error: "Este profissional nao esta disponivel no app cliente.",
-        };
-      }
-
-      if (servicoResult.error || !servicoResult.data?.id) {
-        return { ok: false, error: "Servico nao encontrado." };
-      }
-
-      if (
-        !servicoResult.data.app_cliente_visivel ||
-        servicoResult.data.ativo === false
-      ) {
-        return {
-          ok: false,
-          error: "Este servico nao esta disponivel no app cliente.",
-        };
-      }
-
-      if (vinculoResult.error || !vinculoResult.data?.id) {
-        return {
-          ok: false,
-          error: "Este servico nao esta vinculado ao profissional escolhido.",
-        };
-      }
-
-      const profissional = parseProfissionalRow(
-        profissionalResult.data as Record<string, unknown>
-      );
-      const duracao =
-        Number(vinculoResult.data.duracao_minutos || 0) ||
-        Number(
-          servicoResult.data.duracao_minutos || servicoResult.data.duracao || 0
-        ) ||
-        30;
+      const { config, profissional, duracao } = bookingContext;
       const horaFim = addDurationToTime(horaInicio, duracao);
 
       if (!ensureDiaFuncionamento({ config, dateString: data })) {
@@ -383,16 +577,12 @@ export async function createClienteAppAppointment(
         };
       }
 
-      const conflitoAgendamento = (
-        (agendamentos || []) as Array<Record<string, unknown>>
-      ).some((item) =>
-        overlaps(
-          horaInicio,
-          horaFim,
-          normalizeTimeString(String(item.hora_inicio || "")),
-          normalizeTimeString(String(item.hora_fim || ""))
-        )
-      );
+      const conflitoAgendamento = hasAppointmentConflictWithBuffer({
+        horaInicio,
+        horaFim,
+        agendamentos: (agendamentos || []) as Array<Record<string, unknown>>,
+        bufferMinutes: CLIENT_BOOKING_BUFFER_MINUTES,
+      });
 
       if (conflitoAgendamento) {
         return {
@@ -428,6 +618,141 @@ export async function createClienteAppAppointment(
         ok: true,
         message:
           "Agendamento criado com sucesso. O salao ja pode confirmar seu horario.",
+      };
+    },
+  });
+}
+
+export async function getClienteAppBookingAvailability(params: {
+  idSalao: string;
+  idServico: string;
+  idProfissional: string;
+}): Promise<ClienteAppAvailabilityResult> {
+  const idSalao = String(params.idSalao || "").trim();
+  const idServico = String(params.idServico || "").trim();
+  const idProfissional = String(params.idProfissional || "").trim();
+
+  if (!idSalao || !idServico || !idProfissional) {
+    return {
+      ok: false,
+      error: "Escolha servico e profissional para ver os horarios disponiveis.",
+    };
+  }
+
+  const elegibilidade = await canSalonAppearInClientApp(idSalao);
+  if (!elegibilidade.allowed) {
+    return {
+      ok: false,
+      error: "Este salao nao esta publicado no app cliente agora.",
+    };
+  }
+
+  return runAdminOperation({
+    action: "cliente_app_load_availability",
+    actorId: idProfissional,
+    idSalao,
+    run: async (supabaseAdmin) => {
+      const bookingContext = await loadBookingBaseContext({
+        supabaseAdmin,
+        idSalao,
+        idServico,
+        idProfissional,
+      });
+
+      if (!bookingContext.ok) {
+        return bookingContext;
+      }
+
+      const { config, profissional, duracao } = bookingContext;
+      const today = new Date();
+      const startDate = new Date(
+        today.getFullYear(),
+        today.getMonth(),
+        today.getDate()
+      );
+      const endDate = new Date(startDate);
+      endDate.setDate(endDate.getDate() + CLIENT_BOOKING_LOOKAHEAD_DAYS - 1);
+
+      const dateFrom = formatDateString(startDate);
+      const dateTo = formatDateString(endDate);
+
+      const [{ data: bloqueios, error: bloqueiosError }, { data: agendamentos, error: agendamentosError }] =
+        await Promise.all([
+          supabaseAdmin
+            .from("agenda_bloqueios")
+            .select(
+              "id, id_salao, profissional_id, data, hora_inicio, hora_fim, motivo"
+            )
+            .eq("id_salao", idSalao)
+            .eq("profissional_id", idProfissional)
+            .gte("data", dateFrom)
+            .lte("data", dateTo),
+          supabaseAdmin
+            .from("agendamentos")
+            .select("id, data, hora_inicio, hora_fim, status")
+            .eq("id_salao", idSalao)
+            .eq("profissional_id", idProfissional)
+            .gte("data", dateFrom)
+            .lte("data", dateTo)
+            .neq("status", "cancelado"),
+        ]);
+
+      if (bloqueiosError || agendamentosError) {
+        return {
+          ok: false,
+          error: "Nao foi possivel carregar a disponibilidade agora.",
+        };
+      }
+
+      const bloqueiosByDate = new Map<string, Array<Record<string, unknown>>>();
+      for (const item of ((bloqueios || []) as Array<Record<string, unknown>>)) {
+        const date = String(item.data || "").trim();
+        if (!date) continue;
+        const list = bloqueiosByDate.get(date) || [];
+        list.push(item);
+        bloqueiosByDate.set(date, list);
+      }
+
+      const agendamentosByDate = new Map<string, Array<Record<string, unknown>>>();
+      for (const item of ((agendamentos || []) as Array<Record<string, unknown>>)) {
+        const date = String(item.data || "").trim();
+        if (!date) continue;
+        const list = agendamentosByDate.get(date) || [];
+        list.push(item);
+        agendamentosByDate.set(date, list);
+      }
+
+      const dias: ClienteAppAvailabilityDay[] = [];
+
+      for (let offset = 0; offset < CLIENT_BOOKING_LOOKAHEAD_DAYS; offset += 1) {
+        const date = new Date(startDate);
+        date.setDate(startDate.getDate() + offset);
+        const dateString = formatDateString(date);
+
+        const horarios = buildDisponibilidadeDia({
+          data: dateString,
+          config,
+          profissional,
+          duracao,
+          bloqueios: bloqueiosByDate.get(dateString) || [],
+          agendamentos: agendamentosByDate.get(dateString) || [],
+        });
+
+        if (horarios.length) {
+          dias.push({
+            data: dateString,
+            rotulo: buildClientDateLabel(dateString),
+            horarios,
+          });
+        }
+      }
+
+      return {
+        ok: true,
+        intervaloMinutos: config.intervalo_minutos,
+        bufferMinutos: CLIENT_BOOKING_BUFFER_MINUTES,
+        duracaoMinutos: duracao,
+        dias,
       };
     },
   });
