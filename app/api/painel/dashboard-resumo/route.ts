@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { unstable_cache } from "next/cache";
-import { createClient } from "@/lib/supabase/server";
+import { getPainelUserContext } from "@/lib/auth/get-painel-user-context";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
@@ -10,26 +10,15 @@ function jsonError(message: string, status = 400) {
 }
 
 export async function GET() {
-  const supabase = await createClient();
+  const { user, usuario } = await getPainelUserContext();
 
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser();
-
-  if (authError || !user) {
+  if (!user) {
     return jsonError("Sessao expirada.", 401);
   }
 
-  const { data: usuario, error: usuarioError } = await supabase
-    .from("usuarios")
-    .select("id, id_salao, nivel, status")
-    .eq("auth_user_id", user.id)
-    .maybeSingle();
-
-  if (usuarioError || !usuario?.id_salao) {
+  if (!usuario?.id_salao) {
     return jsonError(
-      usuarioError?.message || "Nao foi possivel identificar o salao do usuario.",
+      "Nao foi possivel identificar o salao do usuario.",
       403
     );
   }

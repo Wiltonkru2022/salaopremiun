@@ -1,28 +1,18 @@
 import { NextResponse } from "next/server";
+import { getPainelUserContext } from "@/lib/auth/get-painel-user-context";
 import { getPlanoAccessSnapshot } from "@/lib/plans/access";
-import { createClient } from "@/lib/supabase/server";
 
 export async function GET() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser();
+  const { user, usuario } = await getPainelUserContext();
 
-  if (authError || !user) {
+  if (!user) {
     return NextResponse.json(
       { error: "Sessao invalida." },
       { status: 401 }
     );
   }
 
-  const { data: usuario, error: usuarioError } = await supabase
-    .from("usuarios")
-    .select("id_salao, status")
-    .eq("auth_user_id", user.id)
-    .maybeSingle();
-
-  if (usuarioError || !usuario?.id_salao) {
+  if (!usuario?.id_salao) {
     return NextResponse.json(
       { error: "Nao foi possivel identificar o salao do usuario." },
       { status: 403 }
