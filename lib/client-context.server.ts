@@ -1,13 +1,12 @@
 import { redirect } from "next/navigation";
-import { canSalonAppearInClientApp } from "@/lib/client-app/eligibility";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { getClienteSessionFromCookie } from "@/lib/cliente-auth.server";
 
 export type ClienteAppServerContext = {
-  idCliente: string;
-  idSalao: string;
+  idConta: string;
   nome: string;
   email: string;
+  telefone: string | null;
 };
 
 function isUnauthorizedError(error: unknown) {
@@ -17,60 +16,36 @@ function isUnauthorizedError(error: unknown) {
 async function loadClienteAppServerContext(): Promise<ClienteAppServerContext> {
   const session = await getClienteSessionFromCookie();
 
-  if (!session?.idCliente || !session?.idSalao) {
+  if (!session?.idConta) {
     throw new Error("UNAUTHORIZED");
   }
 
   const supabaseAdmin = getSupabaseAdmin();
-  const [{ data: cliente, error: clienteError }, { data: authRows, error: authError }] =
-    await Promise.all([
-      supabaseAdmin
-        .from("clientes")
-        .select("id, id_salao, nome, email, status, ativo")
-        .eq("id", session.idCliente)
-        .eq("id_salao", session.idSalao)
-        .limit(1)
-        .maybeSingle(),
-      supabaseAdmin
-        .from("clientes_auth")
-        .select("id, email, app_ativo")
-        .eq("id_cliente", session.idCliente)
-        .eq("id_salao", session.idSalao)
-        .eq("app_ativo", true)
-        .limit(1),
-    ]);
+  const { data: conta, error } = await (supabaseAdmin as any)
+    .from("clientes_app_auth")
+    .select("id, nome, email, telefone, ativo")
+    .eq("id", session.idConta)
+    .limit(1)
+    .maybeSingle();
 
-  const auth = authRows?.[0];
-
-  if (
-    clienteError ||
-    authError ||
-    !cliente?.id ||
-    !auth?.id ||
-    String(cliente.status || "").toLowerCase() === "inativo"
-  ) {
+  if (error || !conta?.id || conta.ativo === false) {
     throw new Error("UNAUTHORIZED");
   }
 
-  const elegibilidade = await canSalonAppearInClientApp(session.idSalao);
-  if (!elegibilidade.allowed) {
-    throw new Error("PLAN_BLOCKED");
-  }
-
   return {
-    idCliente: cliente.id,
-    idSalao: String(cliente.id_salao || session.idSalao),
+    idConta: conta.id,
     nome:
-      String(cliente.nome || "").trim() || session.nome || "Cliente SalaoPremium",
+      String(conta.nome || "").trim() || session.nome || "Cliente SalaoPremium",
     email:
-      String(auth.email || cliente.email || session.email || "").trim() ||
+      String(conta.email || session.email || "").trim() ||
       "cliente@salaopremium.local",
+    telefone: String(conta.telefone || session.telefone || "").trim() || null,
   };
 }
 
 export async function validateClienteAppSession(): Promise<{
   context: ClienteAppServerContext | null;
-  reason: "unauthorized" | "plan_blocked" | null;
+  reason: "unauthorized" | null;
 }> {
   try {
     const context = await loadClienteAppServerContext();
@@ -78,10 +53,6 @@ export async function validateClienteAppSession(): Promise<{
   } catch (error) {
     if (isUnauthorizedError(error)) {
       return { context: null, reason: "unauthorized" };
-    }
-
-    if (error instanceof Error && error.message === "PLAN_BLOCKED") {
-      return { context: null, reason: "plan_blocked" };
     }
 
     throw error;
@@ -92,12 +63,11 @@ export async function requireClienteAppContext(): Promise<ClienteAppServerContex
   const validation = await validateClienteAppSession();
 
   if (!validation.context) {
-    const destino =
-      validation.reason === "plan_blocked"
-        ? "/app-cliente/login?erro=salao_indisponivel"
-        : "/app-cliente/login?erro=sessao_expirada";
-
-    redirect(`/app-cliente/logout?destino=${encodeURIComponent(destino)}`);
+    redirect(
+      `/app-cliente/logout?destino=${encodeURIComponent(
+        "/app-cliente/login?erro=sessao_expirada"
+      )}`
+    );
   }
 
   return validation.context;

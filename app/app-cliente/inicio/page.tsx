@@ -29,8 +29,8 @@ export default async function InicioClientePage({
             Agende com mais calma
           </h2>
           <p className="mt-2 text-sm leading-6 text-zinc-300">
-            Veja saloes premium, conheca equipe, descubra servicos e crie seu
-            acesso pelo proprio salao.
+            Veja saloes premium, conheca equipe, descubra servicos e use uma
+            conta global para agendar onde quiser.
           </p>
 
           <form className="mt-5 space-y-3" action="/app-cliente/inicio">

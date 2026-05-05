@@ -2,8 +2,7 @@ import { runAdminOperation } from "@/lib/supabase/admin-ops";
 import { createClienteSession } from "@/lib/cliente-auth.server";
 
 type UpdateClienteProfileParams = {
-  idSalao: string;
-  idCliente: string;
+  idConta: string;
   nome: string;
   email: string;
   telefone?: string | null;
@@ -25,14 +24,13 @@ function normalizePhone(value: string) {
 export async function updateClienteAppProfile(
   params: UpdateClienteProfileParams
 ): Promise<ClienteProfileActionResult> {
-  const idSalao = String(params.idSalao || "").trim();
-  const idCliente = String(params.idCliente || "").trim();
+  const idConta = String(params.idConta || "").trim();
   const nome = String(params.nome || "").trim();
   const email = normalizeEmail(params.email);
   const telefone = normalizePhone(params.telefone || "");
   const preferencias = String(params.preferencias || "").trim() || null;
 
-  if (!idSalao || !idCliente) {
+  if (!idConta) {
     return { ok: false, error: "Nao foi possivel identificar a conta do cliente." };
   }
 
@@ -45,49 +43,78 @@ export async function updateClienteAppProfile(
   }
 
   return runAdminOperation({
-    action: "cliente_app_update_profile",
-    actorId: idCliente,
-    idSalao,
+    action: "cliente_app_update_profile_global",
+    actorId: idConta,
     run: async (supabaseAdmin) => {
-      const { data: authRow, error: authError } = await supabaseAdmin
-        .from("clientes_auth")
+      const { data: contaAtual, error: contaError } = await (supabaseAdmin as any)
+        .from("clientes_app_auth")
         .select("id, email")
-        .eq("id_cliente", idCliente)
-        .eq("id_salao", idSalao)
-        .eq("app_ativo", true)
+        .eq("id", idConta)
         .limit(1)
         .maybeSingle();
 
-      if (authError || !authRow?.id) {
-        return { ok: false, error: "Nao foi possivel localizar seu acesso ao app." };
+      if (contaError || !contaAtual?.id) {
+        return { ok: false, error: "Nao foi possivel localizar sua conta global." };
       }
 
-      if (email !== String(authRow.email || "").trim().toLowerCase()) {
-        const { data: duplicateAuthRows, error: duplicateAuthError } =
-          await supabaseAdmin
-            .from("clientes_auth")
+      if (email !== String(contaAtual.email || "").trim().toLowerCase()) {
+        const { data: duplicateRows, error: duplicateError } =
+          await (supabaseAdmin as any)
+            .from("clientes_app_auth")
             .select("id")
-            .eq("id_salao", idSalao)
             .eq("email", email)
-            .neq("id_cliente", idCliente)
+            .neq("id", idConta)
             .limit(1);
 
-        if (duplicateAuthError) {
+        if (duplicateError) {
           return {
             ok: false,
             error: "Nao foi possivel validar seu novo e-mail agora.",
           };
         }
 
-        if (duplicateAuthRows?.length) {
+        if (duplicateRows?.length) {
           return {
             ok: false,
-            error: "Ja existe outra conta de cliente com esse e-mail neste salao.",
+            error: "Ja existe outra conta global com esse e-mail.",
           };
         }
       }
 
-      const [clienteResult, authUpdateResult, preferenciasResult] =
+      const [contaUpdateResult, clientesAuthRowsResult] = await Promise.all([
+        (supabaseAdmin as any)
+          .from("clientes_app_auth")
+          .update({
+            nome,
+            email,
+            telefone: telefone || null,
+            preferencias_gerais: preferencias,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", idConta),
+        supabaseAdmin
+          .from("clientes_auth")
+          .select("id_cliente, id_salao")
+          .eq("app_conta_id", idConta),
+      ]);
+
+      if (contaUpdateResult.error || clientesAuthRowsResult.error) {
+        return {
+          ok: false,
+          error: "Nao foi possivel salvar seu perfil agora.",
+        };
+      }
+
+      const vinculos =
+        clientesAuthRowsResult.data?.filter(
+          (item) => item.id_cliente && item.id_salao
+        ) || [];
+
+      for (const vinculo of vinculos) {
+        const idCliente = String(vinculo.id_cliente || "").trim();
+        const idSalao = String(vinculo.id_salao || "").trim();
+        if (!idCliente || !idSalao) continue;
+
         await Promise.all([
           supabaseAdmin
             .from("clientes")
@@ -108,37 +135,14 @@ export async function updateClienteAppProfile(
             })
             .eq("id_cliente", idCliente)
             .eq("id_salao", idSalao),
-          (supabaseAdmin as any)
-            .from("clientes_preferencias")
-            .upsert(
-              {
-                id_cliente: idCliente,
-                id_salao: idSalao,
-                preferencias_gerais: preferencias,
-                updated_at: new Date().toISOString(),
-              },
-              {
-                onConflict: "id_cliente",
-              }
-            ),
         ]);
-
-      if (
-        clienteResult.error ||
-        authUpdateResult.error ||
-        preferenciasResult.error
-      ) {
-        return {
-          ok: false,
-          error: "Nao foi possivel salvar seu perfil agora.",
-        };
       }
 
       await createClienteSession({
-        idCliente,
-        idSalao,
+        idConta,
         nome,
         email,
+        telefone: telefone || null,
         tipo: "cliente",
       });
 

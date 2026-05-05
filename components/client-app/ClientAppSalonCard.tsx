@@ -83,7 +83,7 @@ export default function ClientAppSalonCard({
             Ver salao
           </Link>
           <Link
-            href={`/app-cliente/cadastro?salao=${salao.id}`}
+            href={`/app-cliente/cadastro?next=${encodeURIComponent(`/app-cliente/salao/${salao.id}`)}`}
             className="inline-flex h-11 items-center justify-center rounded-2xl border border-zinc-200 bg-white px-4 text-sm font-bold text-zinc-800 transition hover:bg-zinc-50"
           >
             Criar conta

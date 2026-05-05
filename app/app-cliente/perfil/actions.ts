@@ -20,8 +20,7 @@ export async function updateClienteProfileAction(
   const preferencias = String(formData.get("preferencias") || "");
 
   const result = await updateClienteAppProfile({
-    idSalao: session.idSalao,
-    idCliente: session.idCliente,
+    idConta: session.idConta,
     nome,
     email,
     telefone,

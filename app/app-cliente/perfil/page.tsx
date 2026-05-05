@@ -11,8 +11,7 @@ export default async function ClientePerfilPage({
 }) {
   const session = await requireClienteAppContext();
   const profile = await getClienteAppProfileData({
-    idCliente: session.idCliente,
-    idSalao: session.idSalao,
+    idConta: session.idConta,
   });
   const params = searchParams ? await searchParams : undefined;
 

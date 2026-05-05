@@ -30,10 +30,7 @@ export default async function ClienteSalonPage({
   try {
     const salao = await getClientAppSalonDetail(id);
     const session = await validateClienteAppSession();
-    const sameSalonSession =
-      session.context && session.context.idSalao === salao.id
-        ? session.context
-        : null;
+    const hasSession = Boolean(session.context);
 
     return (
       <ClientAppFrame
@@ -83,7 +80,7 @@ export default async function ClienteSalonPage({
                 </div>
 
                 <div className="flex flex-wrap gap-2">
-                  {sameSalonSession ? (
+                  {hasSession ? (
                     <Link
                       href="/app-cliente/agendamentos"
                       className="inline-flex h-11 items-center justify-center rounded-2xl bg-zinc-950 px-4 text-sm font-bold text-white transition hover:bg-zinc-800"
@@ -93,13 +90,13 @@ export default async function ClienteSalonPage({
                   ) : (
                     <>
                       <Link
-                        href={`/app-cliente/cadastro?salao=${salao.id}`}
+                        href={`/app-cliente/cadastro?next=${encodeURIComponent(`/app-cliente/salao/${salao.id}`)}`}
                         className="inline-flex h-11 items-center justify-center rounded-2xl bg-zinc-950 px-4 text-sm font-bold text-white transition hover:bg-zinc-800"
                       >
                         Criar conta
                       </Link>
                       <Link
-                        href={`/app-cliente/login?salao=${salao.id}`}
+                        href={`/app-cliente/login?salao=${salao.id}&next=${encodeURIComponent(`/app-cliente/salao/${salao.id}`)}`}
                         className="inline-flex h-11 items-center justify-center rounded-2xl border border-zinc-200 bg-white px-4 text-sm font-bold text-zinc-800 transition hover:bg-zinc-50"
                       >
                         Entrar
@@ -131,7 +128,7 @@ export default async function ClienteSalonPage({
               <h3 className="text-lg font-black tracking-[-0.03em] text-zinc-950">
                 Agendamento online
               </h3>
-              {sameSalonSession ? (
+              {hasSession ? (
                 <div className="mt-4">
                   <ClientBookingForm
                     idSalao={salao.id}
@@ -142,8 +139,9 @@ export default async function ClienteSalonPage({
                 </div>
               ) : (
                 <div className="mt-4 rounded-2xl border border-zinc-100 bg-zinc-50 p-4 text-sm leading-6 text-zinc-600">
-                  Entre com sua conta deste salao para escolher servico,
-                  profissional e horario pelo app cliente.
+                  Entre com sua conta global para escolher servico,
+                  profissional e horario. O vinculo com este salao acontece
+                  por tras quando voce fizer o primeiro agendamento.
                 </div>
               )}
             </div>

@@ -22,16 +22,22 @@ function getErrorMessage(value: string | string[] | undefined) {
 export default async function LoginClientePage({
   searchParams,
 }: {
-  searchParams: Promise<{ erro?: string | string[]; salao?: string | string[] }>;
+  searchParams: Promise<{
+    erro?: string | string[];
+    salao?: string | string[];
+    next?: string | string[];
+  }>;
 }) {
   const params = await searchParams;
   const salaoId = Array.isArray(params.salao) ? params.salao[0] : params.salao;
+  const next =
+    (Array.isArray(params.next) ? params.next[0] : params.next) || "";
   const session = await getClienteSessionFromCookie();
 
   if (session) {
     const validation = await validateClienteAppSession().catch(() => null);
     if (validation?.context) {
-      redirect("/app-cliente/agendamentos");
+      redirect(next || "/app-cliente/agendamentos");
     }
 
     redirect("/app-cliente/logout?destino=/app-cliente/login");
@@ -63,7 +69,7 @@ export default async function LoginClientePage({
                 Entrar no app cliente
               </h1>
               <p className="mt-2.5 text-sm leading-6 text-zinc-300">
-                Acompanhe seus horarios e mantenha o acesso ligado ao salao certo.
+                Entre com sua conta global para acompanhar horarios e agendar em qualquer salao publicado.
               </p>
             </section>
 
@@ -71,6 +77,7 @@ export default async function LoginClientePage({
               salaoId={salaoContext?.salao?.id || salaoId || null}
               salaoNome={salaoContext?.salao?.nome || null}
               oauthError={getErrorMessage(params.erro)}
+              next={next || (salaoId ? `/app-cliente/salao/${salaoId}` : null)}
             />
           </div>
         </main>

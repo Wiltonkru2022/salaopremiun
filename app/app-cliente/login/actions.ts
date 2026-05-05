@@ -15,6 +15,7 @@ export async function loginClienteAction(
   const email = String(formData.get("email") || "");
   const senha = String(formData.get("senha") || "");
   const idSalao = String(formData.get("salao") || "").trim() || null;
+  const next = String(formData.get("next") || "").trim();
 
   const result = await loginClienteAppByEmailSenha({
     email,
@@ -27,5 +28,5 @@ export async function loginClienteAction(
   }
 
   await createClienteSession(result.session);
-  redirect("/app-cliente/agendamentos");
+  redirect(next || "/app-cliente/agendamentos");
 }

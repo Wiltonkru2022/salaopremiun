@@ -10,8 +10,7 @@ export default async function ClienteAppointmentsPage({
 }) {
   const session = await requireClienteAppContext();
   const agendamentos = await listClienteAppAppointments({
-    idCliente: session.idCliente,
-    idSalao: session.idSalao,
+    idConta: session.idConta,
   });
   const params = searchParams ? await searchParams : undefined;
 

@@ -7,14 +7,16 @@ import { canSalonAppearInClientApp } from "@/lib/client-app/eligibility";
 export default async function CadastroClientePage({
   searchParams,
 }: {
-  searchParams: Promise<{ salao?: string | string[] }>;
+  searchParams: Promise<{ salao?: string | string[]; next?: string | string[] }>;
 }) {
   const params = await searchParams;
   const salaoId = Array.isArray(params.salao) ? params.salao[0] : params.salao;
+  const next =
+    (Array.isArray(params.next) ? params.next[0] : params.next) || "";
   const session = await getClienteSessionFromCookie();
 
   if (session) {
-    redirect("/app-cliente/agendamentos");
+    redirect(next || "/app-cliente/inicio");
   }
 
   const salaoContext = salaoId
@@ -43,14 +45,14 @@ export default async function CadastroClientePage({
                 Criar conta de cliente
               </h1>
               <p className="mt-2.5 text-sm leading-6 text-zinc-300">
-                O acesso nasce ligado ao salao escolhido para evitar cadastro
-                duplicado e deixar o app leve desde o dia 1.
+                Crie sua conta uma vez e escolha onde quer agendar depois.
               </p>
             </section>
 
             <CadastroClienteForm
               salaoId={salaoContext?.salao?.id || salaoId || null}
               salaoNome={salaoContext?.salao?.nome || null}
+              next={next || (salaoId ? `/app-cliente/salao/${salaoId}` : null)}
             />
           </div>
         </main>

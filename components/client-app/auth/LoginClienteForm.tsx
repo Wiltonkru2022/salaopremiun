@@ -30,10 +30,12 @@ export default function LoginClienteForm({
   salaoId,
   salaoNome,
   oauthError,
+  next,
 }: {
   salaoId?: string | null;
   salaoNome?: string | null;
   oauthError?: string | null;
+  next?: string | null;
 }) {
   const [state, formAction] = useActionState(loginClienteAction, initialState);
 
@@ -43,6 +45,7 @@ export default function LoginClienteForm({
       className="overflow-hidden rounded-[1.9rem] border border-white/70 bg-white p-5 shadow-[0_18px_48px_rgba(15,23,42,0.08)]"
     >
       {salaoId ? <input type="hidden" name="salao" value={salaoId} /> : null}
+      {next ? <input type="hidden" name="next" value={next} /> : null}
 
       <div className="mb-4 inline-flex rounded-full bg-zinc-100 p-1 text-xs font-bold text-zinc-600">
         <span className="rounded-full bg-zinc-950 px-3 py-1.5 text-white">
@@ -61,12 +64,11 @@ export default function LoginClienteForm({
 
       {salaoNome ? (
         <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-          Entrada vinculada a <strong>{salaoNome}</strong>.
+          Depois do login, voce volta para <strong>{salaoNome}</strong>.
         </div>
       ) : (
         <div className="mt-4 rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-600">
-          Se seu e-mail existir em mais de um salao, entre pela pagina do salao
-          desejado.
+          Seu login e global. Os vinculos com cada salao acontecem so quando voce realmente usar aquele perfil.
         </div>
       )}
 
@@ -113,7 +115,13 @@ export default function LoginClienteForm({
 
         <div className="space-y-2 pt-1 text-center">
           <Link
-            href={salaoId ? `/app-cliente/cadastro?salao=${salaoId}` : "/app-cliente/cadastro"}
+            href={
+              salaoId
+                ? `/app-cliente/cadastro?salao=${salaoId}${next ? `&next=${encodeURIComponent(next)}` : ""}`
+                : next
+                  ? `/app-cliente/cadastro?next=${encodeURIComponent(next)}`
+                  : "/app-cliente/cadastro"
+            }
             className="block w-full text-sm font-medium text-zinc-700 underline underline-offset-4"
           >
             Criar conta de cliente

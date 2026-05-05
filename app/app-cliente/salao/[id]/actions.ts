@@ -21,16 +21,9 @@ export async function createClienteBookingAction(
   const horaInicio = String(formData.get("hora_inicio") || "");
   const observacoes = String(formData.get("observacoes") || "");
 
-  if (idSalao !== session.idSalao) {
-    return {
-      error:
-        "Sua conta atual pertence a outro salao. Entre com uma conta ligada a este perfil para agendar.",
-    };
-  }
-
   const result = await createClienteAppAppointment({
     idSalao,
-    idCliente: session.idCliente,
+    idConta: session.idConta,
     idServico,
     idProfissional,
     data,

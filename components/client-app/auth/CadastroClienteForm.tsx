@@ -29,9 +29,11 @@ function SubmitButton() {
 export default function CadastroClienteForm({
   salaoId,
   salaoNome,
+  next,
 }: {
   salaoId?: string | null;
   salaoNome?: string | null;
+  next?: string | null;
 }) {
   const [state, formAction] = useActionState(
     cadastroClienteAction,
@@ -44,6 +46,7 @@ export default function CadastroClienteForm({
       className="overflow-hidden rounded-[1.9rem] border border-white/70 bg-white p-5 shadow-[0_18px_48px_rgba(15,23,42,0.08)]"
     >
       {salaoId ? <input type="hidden" name="salao" value={salaoId} /> : null}
+      {next ? <input type="hidden" name="next" value={next} /> : null}
 
       <div className="mb-4 inline-flex rounded-full bg-zinc-100 p-1 text-xs font-bold text-zinc-600">
         <span className="rounded-full bg-zinc-950 px-3 py-1.5 text-white">
@@ -56,18 +59,16 @@ export default function CadastroClienteForm({
         Crie sua conta no app cliente
       </h2>
       <p className="mt-2 text-sm leading-6 text-zinc-500">
-        Seu cadastro fica ligado ao salao escolhido para facilitar agenda,
-        historico e proximas visitas.
+        Sua conta nasce global. Quando voce decidir agendar em um salao, o sistema vincula sua ficha por tras sem pedir novo cadastro.
       </p>
 
       {salaoNome ? (
         <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-          Sua conta sera criada para <strong>{salaoNome}</strong>.
+          Depois do cadastro, voce volta para <strong>{salaoNome}</strong> e decide se quer agendar ali.
         </div>
       ) : (
         <div className="mt-4 rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-600">
-          Escolha um salao antes do cadastro para aproveitar o acesso sem gerar
-          duplicidade na base.
+          Crie a conta uma vez e use o mesmo acesso em qualquer salao publicado no app cliente.
         </div>
       )}
 
@@ -130,7 +131,13 @@ export default function CadastroClienteForm({
 
         <div className="space-y-2 pt-1 text-center">
           <Link
-            href={salaoId ? `/app-cliente/login?salao=${salaoId}` : "/app-cliente/login"}
+            href={
+              salaoId
+                ? `/app-cliente/login?salao=${salaoId}${next ? `&next=${encodeURIComponent(next)}` : ""}`
+                : next
+                  ? `/app-cliente/login?next=${encodeURIComponent(next)}`
+                  : "/app-cliente/login"
+            }
             className="block w-full text-sm font-medium text-zinc-700 underline underline-offset-4"
           >
             Ja tenho conta

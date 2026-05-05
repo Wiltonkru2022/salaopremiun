@@ -164,6 +164,9 @@ export default function ClientAppointmentsManager({
             >
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
+                  <div className="text-xs font-bold uppercase tracking-[0.12em] text-zinc-500">
+                    {item.salaoNome}
+                  </div>
                   <div className="text-sm font-bold text-zinc-950">
                     {item.servicoNome}
                   </div>

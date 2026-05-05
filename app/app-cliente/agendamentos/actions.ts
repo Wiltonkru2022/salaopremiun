@@ -24,8 +24,7 @@ export async function cancelClienteAppointmentAction(
   const idAgendamento = String(formData.get("agendamento") || "").trim();
 
   const result = await cancelClienteAppAppointment({
-    idSalao: session.idSalao,
-    idCliente: session.idCliente,
+    idConta: session.idConta,
     idAgendamento,
   });
 
@@ -47,8 +46,7 @@ export async function reviewClienteAppointmentAction(
   const comentario = String(formData.get("comentario") || "");
 
   const result = await reviewClienteAppAppointment({
-    idSalao: session.idSalao,
-    idCliente: session.idCliente,
+    idConta: session.idConta,
     idAgendamento,
     nota,
     comentario,
@@ -59,6 +57,5 @@ export async function reviewClienteAppointmentAction(
   }
 
   revalidatePath("/app-cliente/agendamentos");
-  revalidatePath(`/app-cliente/salao/${session.idSalao}`);
   redirect(buildReturnUrl("avaliado"));
 }

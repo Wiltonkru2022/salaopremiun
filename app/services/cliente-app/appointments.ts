@@ -1,6 +1,7 @@
 import { runAdminOperation } from "@/lib/supabase/admin-ops";
 import { cancelarAgendamentoComComanda } from "@/lib/agenda/cancelarAgendamentoComComanda";
 import { canSalonAppearInClientApp } from "@/lib/client-app/eligibility";
+import { ensureClienteContaVinculadaAoSalao } from "@/app/services/cliente-app/auth";
 import {
   ensureDiaFuncionamento,
   validateAgendaTimeRange,
@@ -21,7 +22,7 @@ type ClienteAppActionResult =
 
 type ClienteBookingParams = {
   idSalao: string;
-  idCliente: string;
+  idConta: string;
   idServico: string;
   idProfissional: string;
   data: string;
@@ -30,17 +31,22 @@ type ClienteBookingParams = {
 };
 
 type ClienteCancelParams = {
-  idSalao: string;
-  idCliente: string;
+  idConta: string;
   idAgendamento: string;
 };
 
 type ClienteReviewParams = {
-  idSalao: string;
-  idCliente: string;
+  idConta: string;
   idAgendamento: string;
   nota: number;
   comentario?: string | null;
+};
+
+type ClienteAgendamentoOwnership = {
+  idSalao: string;
+  idCliente: string;
+  status: string;
+  idComanda: string | null;
 };
 
 function normalizeDate(value: string) {
@@ -89,18 +95,55 @@ function parseProfissionalRow(row: Record<string, unknown>): Profissional {
   };
 }
 
+async function loadOwnedAppointment(params: {
+  supabaseAdmin: any;
+  idConta: string;
+  idAgendamento: string;
+}): Promise<ClienteAgendamentoOwnership | null> {
+  const { data: agendamento, error } = await params.supabaseAdmin
+    .from("agendamentos")
+    .select("id, id_salao, cliente_id, id_comanda, status")
+    .eq("id", params.idAgendamento)
+    .limit(1)
+    .maybeSingle();
+
+  if (error || !agendamento?.id) {
+    return null;
+  }
+
+  const { data: authRows, error: authError } = await params.supabaseAdmin
+    .from("clientes_auth")
+    .select("id")
+    .eq("id_salao", agendamento.id_salao)
+    .eq("id_cliente", agendamento.cliente_id)
+    .eq("app_conta_id", params.idConta)
+    .eq("app_ativo", true)
+    .limit(1);
+
+  if (authError || !authRows?.[0]?.id) {
+    return null;
+  }
+
+  return {
+    idSalao: String(agendamento.id_salao || ""),
+    idCliente: String(agendamento.cliente_id || ""),
+    status: String(agendamento.status || "").trim() || "pendente",
+    idComanda: String(agendamento.id_comanda || "").trim() || null,
+  };
+}
+
 export async function createClienteAppAppointment(
   params: ClienteBookingParams
 ): Promise<ClienteAppActionResult> {
   const idSalao = String(params.idSalao || "").trim();
-  const idCliente = String(params.idCliente || "").trim();
+  const idConta = String(params.idConta || "").trim();
   const idServico = String(params.idServico || "").trim();
   const idProfissional = String(params.idProfissional || "").trim();
   const data = normalizeDate(params.data);
   const horaInicio = normalizeTimeString(params.horaInicio);
   const observacoes = String(params.observacoes || "").trim() || null;
 
-  if (!idSalao || !idCliente || !idServico || !idProfissional || !data) {
+  if (!idSalao || !idConta || !idServico || !idProfissional || !data) {
     return { ok: false, error: "Preencha servico, profissional, data e horario." };
   }
 
@@ -121,9 +164,20 @@ export async function createClienteAppAppointment(
 
   return runAdminOperation({
     action: "cliente_app_book_appointment",
-    actorId: idCliente,
+    actorId: idConta,
     idSalao,
     run: async (supabaseAdmin) => {
+      const vinculoConta = await ensureClienteContaVinculadaAoSalao({
+        idConta,
+        idSalao,
+      });
+
+      if (!vinculoConta.ok) {
+        return vinculoConta;
+      }
+
+      const idCliente = vinculoConta.idCliente;
+
       const [
         clienteResult,
         configResult,
@@ -140,7 +194,9 @@ export async function createClienteAppAppointment(
           .maybeSingle(),
         supabaseAdmin
           .from("configuracoes_salao")
-          .select("id_salao, hora_abertura, hora_fechamento, intervalo_minutos, dias_funcionamento")
+          .select(
+            "id_salao, hora_abertura, hora_fechamento, intervalo_minutos, dias_funcionamento"
+          )
           .eq("id_salao", idSalao)
           .limit(1)
           .maybeSingle(),
@@ -178,7 +234,10 @@ export async function createClienteAppAppointment(
         !clienteResult.data?.id ||
         String(clienteResult.data.status || "").toLowerCase() !== "ativo"
       ) {
-        return { ok: false, error: "Sua conta de cliente nao esta apta para agendar." };
+        return {
+          ok: false,
+          error: "Sua conta de cliente nao esta apta para agendar.",
+        };
       }
 
       const config = parseConfigRow(
@@ -232,7 +291,9 @@ export async function createClienteAppAppointment(
       );
       const duracao =
         Number(vinculoResult.data.duracao_minutos || 0) ||
-        Number(servicoResult.data.duracao_minutos || servicoResult.data.duracao || 0) ||
+        Number(
+          servicoResult.data.duracao_minutos || servicoResult.data.duracao || 0
+        ) ||
         30;
       const horaFim = addDurationToTime(horaInicio, duracao);
 
@@ -261,7 +322,9 @@ export async function createClienteAppAppointment(
         await Promise.all([
           supabaseAdmin
             .from("agenda_bloqueios")
-            .select("id, id_salao, profissional_id, data, hora_inicio, hora_fim, motivo")
+            .select(
+              "id, id_salao, profissional_id, data, hora_inicio, hora_fim, motivo"
+            )
             .eq("id_salao", idSalao)
             .eq("profissional_id", idProfissional)
             .eq("data", data),
@@ -338,19 +401,21 @@ export async function createClienteAppAppointment(
         };
       }
 
-      const { error: insertError } = await supabaseAdmin.from("agendamentos").insert({
-        id_salao: idSalao,
-        cliente_id: idCliente,
-        profissional_id: idProfissional,
-        servico_id: idServico,
-        data,
-        hora_inicio: horaInicio,
-        hora_fim: horaFim,
-        duracao_minutos: duracao,
-        observacoes,
-        status: "pendente",
-        origem: "app_cliente",
-      });
+      const { error: insertError } = await supabaseAdmin
+        .from("agendamentos")
+        .insert({
+          id_salao: idSalao,
+          cliente_id: idCliente,
+          profissional_id: idProfissional,
+          servico_id: idServico,
+          data,
+          hora_inicio: horaInicio,
+          hora_fim: horaFim,
+          duracao_minutos: duracao,
+          observacoes,
+          status: "pendente",
+          origem: "app_cliente",
+        });
 
       if (insertError) {
         return {
@@ -361,7 +426,8 @@ export async function createClienteAppAppointment(
 
       return {
         ok: true,
-        message: "Agendamento criado com sucesso. O salao ja pode confirmar seu horario.",
+        message:
+          "Agendamento criado com sucesso. O salao ja pode confirmar seu horario.",
       };
     },
   });
@@ -370,33 +436,28 @@ export async function createClienteAppAppointment(
 export async function cancelClienteAppAppointment(
   params: ClienteCancelParams
 ): Promise<ClienteAppActionResult> {
-  const idSalao = String(params.idSalao || "").trim();
-  const idCliente = String(params.idCliente || "").trim();
+  const idConta = String(params.idConta || "").trim();
   const idAgendamento = String(params.idAgendamento || "").trim();
 
-  if (!idSalao || !idCliente || !idAgendamento) {
+  if (!idConta || !idAgendamento) {
     return { ok: false, error: "Agendamento invalido para cancelamento." };
   }
 
   return runAdminOperation({
     action: "cliente_app_cancel_appointment",
-    actorId: idCliente,
-    idSalao,
+    actorId: idConta,
     run: async (supabaseAdmin) => {
-      const { data: agendamento, error } = await supabaseAdmin
-        .from("agendamentos")
-        .select("id, id_comanda, status")
-        .eq("id", idAgendamento)
-        .eq("id_salao", idSalao)
-        .eq("cliente_id", idCliente)
-        .limit(1)
-        .maybeSingle();
+      const ownership = await loadOwnedAppointment({
+        supabaseAdmin,
+        idConta,
+        idAgendamento,
+      });
 
-      if (error || !agendamento?.id) {
+      if (!ownership) {
         return { ok: false, error: "Agendamento nao encontrado." };
       }
 
-      const status = String(agendamento.status || "").toLowerCase();
+      const status = ownership.status.toLowerCase();
       if (status === "cancelado") {
         return { ok: false, error: "Este agendamento ja foi cancelado." };
       }
@@ -404,14 +465,15 @@ export async function cancelClienteAppAppointment(
       if (status === "atendido" || status === "aguardando_pagamento") {
         return {
           ok: false,
-          error: "Esse atendimento ja aconteceu e nao pode mais ser cancelado pelo app.",
+          error:
+            "Esse atendimento ja aconteceu e nao pode mais ser cancelado pelo app.",
         };
       }
 
-      if (agendamento.id_comanda) {
+      if (ownership.idComanda) {
         await cancelarAgendamentoComComanda({
           supabase: supabaseAdmin,
-          idSalao,
+          idSalao: ownership.idSalao,
           idAgendamento,
         });
       } else {
@@ -422,8 +484,8 @@ export async function cancelClienteAppAppointment(
             updated_at: new Date().toISOString(),
           })
           .eq("id", idAgendamento)
-          .eq("id_salao", idSalao)
-          .eq("cliente_id", idCliente);
+          .eq("id_salao", ownership.idSalao)
+          .eq("cliente_id", ownership.idCliente);
 
         if (updateError) {
           return {
@@ -444,13 +506,12 @@ export async function cancelClienteAppAppointment(
 export async function reviewClienteAppAppointment(
   params: ClienteReviewParams
 ): Promise<ClienteAppActionResult> {
-  const idSalao = String(params.idSalao || "").trim();
-  const idCliente = String(params.idCliente || "").trim();
+  const idConta = String(params.idConta || "").trim();
   const idAgendamento = String(params.idAgendamento || "").trim();
   const nota = Number(params.nota || 0);
   const comentario = String(params.comentario || "").trim() || null;
 
-  if (!idSalao || !idCliente || !idAgendamento) {
+  if (!idConta || !idAgendamento) {
     return { ok: false, error: "Nao foi possivel identificar o atendimento." };
   }
 
@@ -460,23 +521,19 @@ export async function reviewClienteAppAppointment(
 
   return runAdminOperation({
     action: "cliente_app_review_appointment",
-    actorId: idCliente,
-    idSalao,
+    actorId: idConta,
     run: async (supabaseAdmin) => {
-      const { data: agendamento, error } = await supabaseAdmin
-        .from("agendamentos")
-        .select("id, status")
-        .eq("id", idAgendamento)
-        .eq("id_salao", idSalao)
-        .eq("cliente_id", idCliente)
-        .limit(1)
-        .maybeSingle();
+      const ownership = await loadOwnedAppointment({
+        supabaseAdmin,
+        idConta,
+        idAgendamento,
+      });
 
-      if (error || !agendamento?.id) {
+      if (!ownership) {
         return { ok: false, error: "Atendimento nao encontrado para avaliacao." };
       }
 
-      const status = String(agendamento.status || "").toLowerCase();
+      const status = ownership.status.toLowerCase();
       if (status !== "atendido" && status !== "aguardando_pagamento") {
         return {
           ok: false,
@@ -484,20 +541,12 @@ export async function reviewClienteAppAppointment(
         };
       }
 
-      const reviewPayload = {
-        id_cliente: idCliente,
-        id_salao: idSalao,
-        id_agendamento: idAgendamento,
-        nota,
-        comentario,
-      };
-
       const { data: existingReview, error: existingReviewError } =
         await (supabaseAdmin as any)
           .from("clientes_avaliacoes")
           .select("id")
-          .eq("id_cliente", idCliente)
-          .eq("id_salao", idSalao)
+          .eq("id_cliente", ownership.idCliente)
+          .eq("id_salao", ownership.idSalao)
           .eq("id_agendamento", idAgendamento)
           .limit(1)
           .maybeSingle();
@@ -519,11 +568,15 @@ export async function reviewClienteAppAppointment(
             .eq("id", existingReview.id)
         : await (supabaseAdmin as any)
             .from("clientes_avaliacoes")
-            .insert(reviewPayload);
+            .insert({
+              id_cliente: ownership.idCliente,
+              id_salao: ownership.idSalao,
+              id_agendamento: idAgendamento,
+              nota,
+              comentario,
+            });
 
-      const reviewError = reviewMutation.error;
-
-      if (reviewError) {
+      if (reviewMutation.error) {
         return {
           ok: false,
           error: "Nao foi possivel salvar sua avaliacao agora.",

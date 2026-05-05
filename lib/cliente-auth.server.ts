@@ -5,10 +5,10 @@ import crypto from "node:crypto";
 import { getAppRootDomain } from "@/lib/security/app-hosts";
 
 export type ClienteAppSession = {
-  idCliente: string;
-  idSalao: string;
+  idConta: string;
   nome: string;
   email: string;
+  telefone?: string | null;
   tipo: "cliente";
 };
 
