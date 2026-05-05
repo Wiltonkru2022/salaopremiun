@@ -45,6 +45,15 @@ type DashboardRpcResumo = {
   };
   resumo?: Partial<DashboardResumo>;
 };
+
+type DashboardClientCachePayload = {
+  resumo: DashboardResumo;
+  dashboardAvancado: boolean;
+  ultimaAtualizacao: string;
+};
+
+const DASHBOARD_CLIENT_CACHE_TTL_MS = 30 * 1000;
+const DASHBOARD_CLIENT_CACHE_PREFIX = "salaopremium:dashboard:";
 type IconType = React.ComponentType<{
   size?: number;
   className?: string;
@@ -66,6 +75,55 @@ const RESUMO_INICIAL: DashboardResumo = {
   planoSalao: "-",
   notificacoesPendentes: 0,
 };
+
+function getDashboardCacheKey(idSalao: string) {
+  return `${DASHBOARD_CLIENT_CACHE_PREFIX}${idSalao}`;
+}
+
+function readDashboardClientCache(idSalao: string): DashboardClientCachePayload | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  try {
+    const raw = window.sessionStorage.getItem(getDashboardCacheKey(idSalao));
+    if (!raw) {
+      return null;
+    }
+
+    const parsed = JSON.parse(raw) as DashboardClientCachePayload;
+    if (!parsed?.ultimaAtualizacao || !parsed?.resumo) {
+      return null;
+    }
+
+    const age = Date.now() - new Date(parsed.ultimaAtualizacao).getTime();
+    if (!Number.isFinite(age) || age > DASHBOARD_CLIENT_CACHE_TTL_MS) {
+      return null;
+    }
+
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function writeDashboardClientCache(
+  idSalao: string,
+  payload: DashboardClientCachePayload
+) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  try {
+    window.sessionStorage.setItem(
+      getDashboardCacheKey(idSalao),
+      JSON.stringify(payload)
+    );
+  } catch {
+    // Ignora falhas de storage e segue com a resposta em memoria.
+  }
+}
 
 function formatCurrency(value?: number | null) {
   return Number(value || 0).toLocaleString("pt-BR", {
@@ -234,7 +292,20 @@ export default function DashboardPage() {
         return;
       }
 
-      setDashboardAvancado(Boolean(painelSession.planoRecursos?.dashboard_avancado));
+      const dashboardAvancadoSession = Boolean(
+        painelSession.planoRecursos?.dashboard_avancado
+      );
+      setDashboardAvancado(dashboardAvancadoSession);
+
+      const cached = readDashboardClientCache(painelSession.idSalao);
+      if (cached) {
+        setResumo(cached.resumo);
+        setDashboardAvancado(cached.dashboardAvancado);
+        setUltimaAtualizacao(cached.ultimaAtualizacao);
+        setFaseCarregamento("Resumo recente reaproveitado.");
+        setLoading(false);
+        return;
+      }
 
       const response = await fetch("/api/painel/dashboard-resumo", {
         cache: "no-store",
@@ -253,7 +324,7 @@ export default function DashboardPage() {
       const rpcData = payload as DashboardRpcResumo;
 
       setFaseCarregamento("Carregando indicadores principais.");
-      setResumo({
+      const nextResumo: DashboardResumo = {
         ...RESUMO_INICIAL,
         ...rpcData.resumo,
         agendamentosHoje: Number(rpcData.resumo?.agendamentosHoje || 0),
@@ -270,8 +341,16 @@ export default function DashboardPage() {
         aguardandoPagamento: Number(rpcData.resumo?.aguardandoPagamento || 0),
         planoSalao: String(rpcData.resumo?.planoSalao || "-"),
         notificacoesPendentes: Number(rpcData.resumo?.notificacoesPendentes || 0),
+      };
+      const nowIso = new Date().toISOString();
+
+      setResumo(nextResumo);
+      setUltimaAtualizacao(nowIso);
+      writeDashboardClientCache(painelSession.idSalao, {
+        resumo: nextResumo,
+        dashboardAvancado: dashboardAvancadoSession,
+        ultimaAtualizacao: nowIso,
       });
-      setUltimaAtualizacao(new Date().toISOString());
       setFaseCarregamento("Resumo atualizado.");
       setLoading(false);
     } catch (error: unknown) {
