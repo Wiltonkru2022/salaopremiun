@@ -171,60 +171,6 @@ export default function ConfiguracoesPageClient({
     [supabase, idSalao]
   );
 
-  const carregarLimiteUsuarios = useCallback(
-    async (plano: string | null | undefined, statusSalao: string | null | undefined) => {
-      try {
-        if (statusSalao === "teste_gratis") {
-          setLimiteUsuarios(1);
-          return;
-        }
-
-        if (!plano) {
-          setLimiteUsuarios(0);
-          return;
-        }
-
-        const planoNormalizado = String(plano).trim().toLowerCase();
-
-const { data, error } = await supabase
-  .from("planos_saas")
-  .select("id, codigo, nome, limite_usuarios, ativo")
-  .eq("codigo", planoNormalizado)
-  .limit(1);
-
-        if (error) {
-          console.error("Erro ao buscar plano por código:", error);
-        }
-
-        let planoRow = Array.isArray(data) && data.length > 0 ? data[0] : null;
-
-        if (!planoRow) {
-          const tentativaNome = await supabase
-            .from("planos_saas")
-            .select("id, codigo, nome, limite_usuarios, ativo")
-            .ilike("nome", planoNormalizado)
-            .eq("ativo", true)
-            .limit(1);
-
-          if (tentativaNome.error) {
-            console.error("Erro ao buscar plano por nome:", tentativaNome.error);
-          }
-
-          planoRow =
-            Array.isArray(tentativaNome.data) && tentativaNome.data.length > 0
-              ? tentativaNome.data[0]
-              : null;
-        }
-
-        setLimiteUsuarios(Number(planoRow?.limite_usuarios || 0));
-      } catch (err) {
-        console.error("Erro geral ao carregar limite de usuários:", err);
-        setLimiteUsuarios(0);
-      }
-    },
-    [supabase]
-  );
-
   const init = useCallback(async () => {
     try {
       setLoading(true);
@@ -284,8 +230,6 @@ const { data, error } = await supabase
           plano: salaoData.plano || "",
           status: salaoData.status || "",
         });
-
-        await carregarLimiteUsuarios(salaoData.plano, salaoData.status);
       }
 
       if (configData) {
@@ -331,7 +275,22 @@ const { data, error } = await supabase
     } finally {
       setLoading(false);
     }
-  }, [supabase, carregarUsuarios, carregarLimiteUsuarios, painelSession]);
+  }, [supabase, carregarUsuarios, painelSession]);
+
+  useEffect(() => {
+    if (salaoForm.status === "teste_gratis") {
+      setLimiteUsuarios(1);
+      return;
+    }
+
+    const limitePlano = planoAccess?.limites?.usuarios;
+    if (limitePlano != null) {
+      setLimiteUsuarios(Number(limitePlano || 0));
+      return;
+    }
+
+    setLimiteUsuarios(0);
+  }, [planoAccess?.limites?.usuarios, salaoForm.status]);
 
   useEffect(() => {
     void init();
