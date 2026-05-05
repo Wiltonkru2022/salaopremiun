@@ -1,5 +1,6 @@
 import "server-only";
 
+import { unstable_cache } from "next/cache";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import type { ProfissionalAppNotification } from "@/lib/profissional-app-notification-contracts";
 import type { ProfissionalServerContext } from "@/lib/profissional-context.server";
@@ -19,14 +20,15 @@ type TicketEventoRow = {
   criado_em?: string | null;
 };
 
-export async function listProfissionalAppNotifications(
-  context: ProfissionalServerContext
+async function fetchProfissionalAppNotifications(
+  idSalao: string,
+  idProfissional: string
 ): Promise<ProfissionalAppNotification[]> {
   const supabaseAdmin = getSupabaseAdmin();
   const { data: tickets, error: ticketsError } = await supabaseAdmin
     .from("tickets")
     .select("id, numero, origem_contexto")
-    .eq("id_salao", context.idSalao)
+    .eq("id_salao", idSalao)
     .eq("origem", "app_profissional_login")
     .order("atualizado_em", { ascending: false })
     .limit(20);
@@ -41,7 +43,7 @@ export async function listProfissionalAppNotifications(
         ? ticket.origem_contexto
         : {};
 
-    return String(origemContexto.id_profissional || "").trim() === context.idProfissional;
+    return String(origemContexto.id_profissional || "").trim() === idProfissional;
   });
 
   if (!ownedTickets.length) {
@@ -84,4 +86,22 @@ export async function listProfissionalAppNotifications(
       href: "/app-profissional/suporte",
     };
   });
+}
+
+const getCachedProfissionalAppNotifications = unstable_cache(
+  async (cachedSalaoId: string, cachedProfissionalId: string) =>
+    fetchProfissionalAppNotifications(cachedSalaoId, cachedProfissionalId),
+  ["profissional-app-notifications"],
+  {
+    revalidate: 60,
+  }
+);
+
+export async function listProfissionalAppNotifications(
+  context: ProfissionalServerContext
+): Promise<ProfissionalAppNotification[]> {
+  return getCachedProfissionalAppNotifications(
+    context.idSalao,
+    context.idProfissional
+  );
 }
