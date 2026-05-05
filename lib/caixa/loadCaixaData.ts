@@ -26,6 +26,8 @@ type UsuarioCaixa = {
 
 type CatalogoServicoRow = CatalogoServico;
 
+const CAIXA_CANCELADAS_RECENTES_LIMIT = 120;
+
 export async function carregarAcessoCaixa(
   supabase: CaixaSupabaseClient,
   sessionSnapshot?: PainelSessionSnapshot | null
@@ -443,7 +445,8 @@ async function carregarCanceladas(
     `)
     .eq("id_salao", idSalao)
     .eq("status", "cancelada")
-    .order("cancelada_em", { ascending: false });
+    .order("cancelada_em", { ascending: false })
+    .limit(CAIXA_CANCELADAS_RECENTES_LIMIT);
 
   if (error) {
     console.error(error);

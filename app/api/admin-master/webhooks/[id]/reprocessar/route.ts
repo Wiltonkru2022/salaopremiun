@@ -5,9 +5,13 @@ import {
 } from "@/core/use-cases/admin-master/webhooks";
 import { createAdminMasterWebhookService } from "@/services/adminMasterWebhookService";
 
+type ReprocessarWebhookRouteContext = {
+  params: Promise<{ id: string }>;
+};
+
 export async function POST(
   _request: Request,
-  context: RouteContext<"/api/admin-master/webhooks/[id]/reprocessar">
+  context: ReprocessarWebhookRouteContext
 ) {
   try {
     const { id } = await context.params;
