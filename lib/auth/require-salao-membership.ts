@@ -1,5 +1,6 @@
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { getPainelUserContext } from "@/lib/auth/get-painel-user-context";
 import { registrarLogSistema } from "@/lib/system-logs";
 
 type RequireSalaoMembershipOptions = {
@@ -43,26 +44,10 @@ export async function requireSalaoMembership(
   idSalao: string,
   options: RequireSalaoMembershipOptions = {}
 ) {
-  const supabase = await createClient();
-  const supabaseAdmin = getSupabaseAdmin();
+  const { user, usuario } = await getPainelUserContext();
 
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser();
-
-  if (authError || !user) {
+  if (!user) {
     throw new AuthzError("Usuario nao autenticado.", 401);
-  }
-
-  const { data: usuario, error: usuarioError } = await supabaseAdmin
-    .from("usuarios")
-    .select("id, id_salao, status, nivel")
-    .eq("auth_user_id", user.id)
-    .maybeSingle();
-
-  if (usuarioError) {
-    throw new AuthzError("Erro ao validar usuario.", 500);
   }
 
   if (!usuario?.id_salao || usuario.id_salao !== idSalao) {

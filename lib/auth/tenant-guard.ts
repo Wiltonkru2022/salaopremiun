@@ -1,5 +1,5 @@
 import "server-only";
-import { createClient } from "@/lib/supabase/server";
+import { getPainelUserContext } from "@/lib/auth/get-painel-user-context";
 import { getUser } from "@/lib/auth/get-user";
 
 export type TenantActor = {
@@ -11,33 +11,27 @@ export type TenantActor = {
 };
 
 export async function requireTenantActor(): Promise<TenantActor> {
-  const supabase = await createClient();
   const user = await getUser();
+  const { usuario } = await getPainelUserContext();
 
   if (!user?.id) {
     throw new Error("Sessao invalida.");
   }
 
-  const { data, error } = await supabase
-    .from("usuarios")
-    .select("id, id_salao, nivel, status")
-    .eq("auth_user_id", user.id)
-    .maybeSingle();
-
-  if (error || !data?.id || !data.id_salao) {
+  if (!usuario?.id || !usuario.id_salao) {
     throw new Error("Usuario do sistema nao encontrado.");
   }
 
-  if (data.status !== "ativo") {
+  if (usuario.status !== "ativo") {
     throw new Error("Usuario inativo.");
   }
 
   return {
     authUserId: user.id,
-    idUsuario: data.id,
-    idSalao: data.id_salao,
-    nivel: String(data.nivel || ""),
-    status: String(data.status || ""),
+    idUsuario: usuario.id,
+    idSalao: usuario.id_salao,
+    nivel: String(usuario.nivel || ""),
+    status: String(usuario.status || ""),
   };
 }
 
