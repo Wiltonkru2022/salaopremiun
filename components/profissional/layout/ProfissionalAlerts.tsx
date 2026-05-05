@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { BellRing, CheckCircle2, ChevronRight } from "lucide-react";
 import type { ProfissionalAppNotification } from "@/lib/profissional-app-notification-contracts";
 
@@ -10,11 +10,13 @@ type Props = {
 };
 
 const STORAGE_KEY = "salaopremium:profissional-alerts:read";
+const REFRESH_INTERVAL_MS = 5 * 60 * 1000;
 
 export default function ProfissionalAlerts({ notifications }: Props) {
   const [hydrated, setHydrated] = useState(false);
   const [readIds, setReadIds] = useState<string[]>([]);
   const [items, setItems] = useState<ProfissionalAppNotification[]>(notifications);
+  const lastSyncRef = useRef(Date.now());
 
   useEffect(() => {
     try {
@@ -30,12 +32,24 @@ export default function ProfissionalAlerts({ notifications }: Props) {
 
   useEffect(() => {
     setItems(notifications);
+    lastSyncRef.current = Date.now();
   }, [notifications]);
 
   useEffect(() => {
     let active = true;
 
-    async function loadNotifications() {
+    async function loadNotifications(force = false) {
+      if (
+        !force &&
+        Date.now() - lastSyncRef.current < REFRESH_INTERVAL_MS
+      ) {
+        return;
+      }
+
+      if (document.visibilityState !== "visible") {
+        return;
+      }
+
       try {
         const response = await fetch("/api/app-profissional/notificacoes", {
           cache: "no-store",
@@ -47,15 +61,23 @@ export default function ProfissionalAlerts({ notifications }: Props) {
         }
 
         setItems(data.notifications as ProfissionalAppNotification[]);
+        lastSyncRef.current = Date.now();
       } catch {
         // Mantem as notificacoes iniciais se a atualizacao falhar.
       }
     }
 
-    void loadNotifications();
+    const handleFocusRefresh = () => {
+      void loadNotifications();
+    };
+
+    window.addEventListener("focus", handleFocusRefresh);
+    document.addEventListener("visibilitychange", handleFocusRefresh);
 
     return () => {
       active = false;
+      window.removeEventListener("focus", handleFocusRefresh);
+      document.removeEventListener("visibilitychange", handleFocusRefresh);
     };
   }, []);
 
