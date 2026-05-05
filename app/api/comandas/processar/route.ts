@@ -8,6 +8,7 @@ import { COMANDA_ACTIONS, resolveComandaHttpStatus } from "@/lib/comandas/proces
 import { reportOperationalIncident } from "@/lib/monitoring/operational-incidents";
 import {
   assertCanMutatePlanFeature,
+  getPlanoAccessSnapshot,
   PlanAccessError,
 } from "@/lib/plans/access";
 import { runAdminOperation } from "@/lib/supabase/admin-ops";
@@ -32,6 +33,19 @@ export async function POST(req: NextRequest) {
       "comandas_ver"
     );
     await assertCanMutatePlanFeature(idSalao, "comandas");
+
+    if (
+      (acao === "adicionar_item" || acao === "editar_item") &&
+      input.item?.tipo_item === "produto"
+    ) {
+      const snapshot = await getPlanoAccessSnapshot(idSalao);
+      if (snapshot.planoCodigo === "basico") {
+        throw new PlanAccessError(
+          "Venda de produtos no caixa fica liberada a partir do plano Pro.",
+          "PRODUCT_SALES_PLAN_REQUIRED"
+        );
+      }
+    }
 
     const result = await processarComandaUseCase({
       input,

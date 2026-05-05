@@ -38,6 +38,8 @@ type Props = {
   onNovoAjuste: () => void;
   onEditarItem: (item: ComandaItem) => void;
   onRemoverItem: (idItem: string) => void;
+  podeLancarProduto?: boolean;
+  mensagemBloqueioProduto?: string;
 };
 
 const ITEM_SECTIONS = ["servico", "produto", "extra", "ajuste"] as const;
@@ -57,6 +59,8 @@ export default function CaixaDetalhe({
   onNovoAjuste,
   onEditarItem,
   onRemoverItem,
+  podeLancarProduto = true,
+  mensagemBloqueioProduto,
 }: Props) {
   const itensAgrupados = useMemo(
     () =>
@@ -177,10 +181,21 @@ export default function CaixaDetalhe({
 
             <div className="grid grid-cols-2 gap-2 xl:grid-cols-4">
               <ActionCard icon={<Scissors size={16} />} label="Serviço" onClick={onNovoServico} />
-              <ActionCard icon={<ShoppingBag size={16} />} label="Produto" onClick={onNovoProduto} />
+              <ActionCard
+                icon={<ShoppingBag size={16} />}
+                label="Produto"
+                onClick={onNovoProduto}
+                disabled={!podeLancarProduto}
+                title={mensagemBloqueioProduto}
+              />
               <ActionCard icon={<WalletCards size={16} />} label="Extra" onClick={onNovoExtra} />
               <ActionCard icon={<Plus size={16} />} label="Ajuste" onClick={onNovoAjuste} />
             </div>
+            {!podeLancarProduto && mensagemBloqueioProduto ? (
+              <div className="mt-2 text-xs font-medium text-amber-700">
+                {mensagemBloqueioProduto}
+              </div>
+            ) : null}
           </div>
         ) : null}
       </div>
@@ -322,16 +337,22 @@ function ActionCard({
   icon,
   label,
   onClick,
+  disabled = false,
+  title,
 }: {
   icon: ReactNode;
   label: string;
   onClick: () => void;
+  disabled?: boolean;
+  title?: string;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className="flex items-center justify-center gap-2 rounded-2xl border border-zinc-200 bg-white px-3.5 py-2.5 text-sm font-semibold text-zinc-800 transition hover:border-zinc-300 hover:bg-zinc-100"
+      disabled={disabled}
+      title={title}
+      className="flex items-center justify-center gap-2 rounded-2xl border border-zinc-200 bg-white px-3.5 py-2.5 text-sm font-semibold text-zinc-800 transition hover:border-zinc-300 hover:bg-zinc-100 disabled:cursor-not-allowed disabled:border-zinc-200 disabled:bg-zinc-100 disabled:text-zinc-400"
     >
       {icon}
       {label}

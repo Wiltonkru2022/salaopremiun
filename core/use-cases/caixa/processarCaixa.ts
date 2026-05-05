@@ -1,5 +1,9 @@
 import { z } from "zod";
-import { assertCanMutatePlanFeature } from "@/lib/plans/access";
+import { getErrorMessage } from "@/lib/get-error-message";
+import {
+  assertCanMutatePlanFeature,
+  PlanAccessError,
+} from "@/lib/plans/access";
 import type { CaixaService } from "@/services/caixaService";
 import type { ProcessarCaixaAcao } from "@/types/caixa";
 import type { CaixaProcessarBody } from "@/lib/caixa/processar/types";
@@ -231,14 +235,16 @@ export async function processarCaixaUseCase(params: {
       body: { ok: true, ...result },
     };
   } catch (error) {
+    if (error instanceof PlanAccessError) {
+      throw error;
+    }
+
     if (error instanceof CaixaInputError) {
       throw error;
     }
 
     throw new ProcessarCaixaUseCaseError(
-      error instanceof Error
-        ? error.message
-        : "Erro interno ao processar acao do caixa.",
+      getErrorMessage(error, "Erro interno ao processar acao do caixa."),
       resolveHttpStatus(error)
     );
   }

@@ -1,4 +1,5 @@
 import { executarMutacaoComandaComEstoque } from "@/lib/comandas/lifecycle";
+import { getPlanoAccessSnapshot, PlanAccessError } from "@/lib/plans/access";
 import { registrarLogSistema } from "@/lib/system-logs";
 import type { CaixaProcessarBody, CaixaProcessarContext } from "./types";
 import { carregarSessaoAberta, sanitizeText } from "./utils";
@@ -9,6 +10,28 @@ export async function finalizarComanda(params: {
 }) {
   const { ctx, idComanda } = params;
   await carregarSessaoAberta(ctx.supabaseAdmin, ctx.idSalao);
+
+  const snapshot = await getPlanoAccessSnapshot(ctx.idSalao);
+  if (snapshot.planoCodigo === "basico") {
+    const { count, error: produtoCountError } = await ctx.supabaseAdmin
+      .from("comanda_itens")
+      .select("id", { count: "exact", head: true })
+      .eq("id_salao", ctx.idSalao)
+      .eq("id_comanda", idComanda)
+      .eq("ativo", true)
+      .eq("tipo_item", "produto");
+
+    if (produtoCountError) {
+      throw new Error("Erro ao validar itens da comanda antes da finalizacao.");
+    }
+
+    if ((count || 0) > 0) {
+      throw new PlanAccessError(
+        "Venda de produtos no caixa fica liberada a partir do plano Pro.",
+        "PRODUCT_SALES_PLAN_REQUIRED"
+      );
+    }
+  }
 
   const { data: config, error: configError } = await ctx.supabaseAdmin
     .from("configuracoes_salao")

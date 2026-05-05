@@ -9,6 +9,7 @@ import CaixaFila from "@/components/caixa/CaixaFila";
 import CaixaHeader from "@/components/caixa/CaixaHeader";
 import CaixaItemModal from "@/components/caixa/CaixaItemModal";
 import CaixaSidebar from "@/components/caixa/CaixaSidebar";
+import { usePainelSession } from "@/components/layout/PainelSessionProvider";
 import AppLoading from "@/components/ui/AppLoading";
 import ConfirmActionModal from "@/components/ui/ConfirmActionModal";
 import { useCaixaApi } from "@/components/caixa/useCaixaApi";
@@ -18,6 +19,7 @@ import { useCaixaPageState } from "@/components/caixa/useCaixaPageState";
 
 export default function CaixaPage() {
   const router = useRouter();
+  const { snapshot: painelSession } = usePainelSession();
   const [pagamentosOpen, setPagamentosOpen] = useState(false);
   const [sessaoOpen, setSessaoOpen] = useState(false);
   const {
@@ -103,6 +105,7 @@ export default function CaixaPage() {
     comandasFiltradas,
     agendamentosFiltrados,
   } = useCaixaPageState();
+  const vendaProdutoBloqueadaNoPlano = painelSession?.planoCodigo === "basico";
 
   const {
     gerarChaveOperacao,
@@ -420,6 +423,8 @@ export default function CaixaPage() {
                 onNovoAjuste={() => abrirModalNovoItem("ajuste")}
                 onEditarItem={abrirModalEditarItem}
                 onRemoverItem={setItemParaRemover}
+                podeLancarProduto={!vendaProdutoBloqueadaNoPlano}
+                mensagemBloqueioProduto="Venda de produtos no caixa fica liberada a partir do plano Pro."
               />
 
               <CaixaSidebar
@@ -490,6 +495,7 @@ export default function CaixaPage() {
         profissionaisCatalogo={profissionaisCatalogo}
         saving={saving}
         podeEditar={podeEditarCaixa}
+        produtoBloqueado={vendaProdutoBloqueadaNoPlano}
         onClose={fecharModalItem}
         onSave={salvarItemComanda}
       />

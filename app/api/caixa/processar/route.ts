@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createCaixaService } from "@/services/caixaService";
 import { createCaixaRouteService } from "@/services/caixaRouteService";
+import { getErrorMessage } from "@/lib/get-error-message";
 import {
   ProcessarCaixaRouteUseCaseError,
   processarCaixaRouteUseCase,
@@ -29,10 +30,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(
       {
-        error:
-          error instanceof Error
-            ? error.message
-            : "Erro interno ao processar acao do caixa.",
+        error: getErrorMessage(error, "Erro interno ao processar acao do caixa."),
       },
       { status: 500 }
     );

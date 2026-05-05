@@ -25,6 +25,7 @@ type Props = {
   profissionaisCatalogo: ProfissionalResumo[];
   saving: boolean;
   podeEditar: boolean;
+  produtoBloqueado?: boolean;
   onClose: () => void;
   onSave: () => void;
 };
@@ -55,6 +56,7 @@ export default function CaixaItemModal({
   profissionaisCatalogo,
   saving,
   podeEditar,
+  produtoBloqueado = false,
   onClose,
   onSave,
 }: Props) {
@@ -144,7 +146,13 @@ export default function CaixaItemModal({
                 key={tipo}
                 type="button"
                 onClick={() => selecionarTipoItem(tipo)}
-                className={`rounded-2xl border px-4 py-2.5 text-sm font-semibold transition ${
+                disabled={produtoBloqueado && tipo === "produto"}
+                title={
+                  produtoBloqueado && tipo === "produto"
+                    ? "Venda de produtos no caixa fica liberada a partir do plano Pro."
+                    : undefined
+                }
+                className={`rounded-2xl border px-4 py-2.5 text-sm font-semibold transition disabled:cursor-not-allowed disabled:border-zinc-200 disabled:bg-zinc-100 disabled:text-zinc-400 ${
                   itemModal.tipoItem === tipo
                     ? "border-zinc-900 bg-zinc-900 text-white"
                     : "border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50"
@@ -154,6 +162,11 @@ export default function CaixaItemModal({
               </button>
             ))}
           </div>
+          {produtoBloqueado ? (
+            <div className="text-xs font-medium text-amber-700">
+              Venda de produtos no caixa fica liberada a partir do plano Pro.
+            </div>
+          ) : null}
 
           {itemModal.tipoItem !== "ajuste" ? (
             <div className="relative">
