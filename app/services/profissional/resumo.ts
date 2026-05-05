@@ -1,3 +1,4 @@
+import { unstable_cache } from "next/cache";
 import { runAdminOperation } from "@/lib/supabase/admin-ops";
 
 type ComissaoResumoRow = {
@@ -35,70 +36,91 @@ export async function buscarResumoInicioProfissional(
   const inicioMes = inicioMesISO();
   const fimMes = fimMesISO();
 
-  return runAdminOperation({
-    action: "profissional_resumo_inicio",
-    actorId: idProfissional,
+  const getCachedResumoInicio = unstable_cache(
+    async (
+      cachedSalaoId: string,
+      cachedProfissionalId: string,
+      cachedHoje: string,
+      cachedInicioMes: string,
+      cachedFimMes: string
+    ) =>
+      runAdminOperation({
+        action: "profissional_resumo_inicio",
+        actorId: cachedProfissionalId,
+        idSalao: cachedSalaoId,
+        run: async (supabaseAdmin) => {
+          const [hojeResult, mesResult, comissoesResult] = await Promise.all([
+            supabaseAdmin
+              .from("agendamentos")
+              .select("id", { count: "exact", head: true })
+              .eq("id_salao", cachedSalaoId)
+              .eq("profissional_id", cachedProfissionalId)
+              .eq("data", cachedHoje),
+            supabaseAdmin
+              .from("agendamentos")
+              .select("id", { count: "exact", head: true })
+              .eq("id_salao", cachedSalaoId)
+              .eq("profissional_id", cachedProfissionalId)
+              .gte("data", cachedInicioMes)
+              .lte("data", cachedFimMes),
+            supabaseAdmin
+              .from("comissoes_lancamentos")
+              .select("valor_comissao")
+              .eq("id_salao", cachedSalaoId)
+              .eq("id_profissional", cachedProfissionalId)
+              .gte("competencia_data", cachedInicioMes)
+              .lte("competencia_data", cachedFimMes),
+          ]);
+
+          if (hojeResult.error) {
+            console.error(
+              "[profissional_resumo] Falha ao contar atendimentos de hoje:",
+              hojeResult.error.message
+            );
+          }
+
+          if (mesResult.error) {
+            console.error(
+              "[profissional_resumo] Falha ao contar atendimentos do mes:",
+              mesResult.error.message
+            );
+          }
+
+          if (comissoesResult.error) {
+            console.error(
+              "[profissional_resumo] Falha ao carregar comissoes:",
+              comissoesResult.error.message
+            );
+          }
+
+          if (hojeResult.error && mesResult.error && comissoesResult.error) {
+            throw new Error(
+              "Nao foi possivel carregar o resumo inicial do profissional."
+            );
+          }
+
+          const totalComissaoMes = (
+            ((comissoesResult.data ?? []) as ComissaoResumoRow[]) || []
+          ).reduce((acc, item) => acc + Number(item.valor_comissao || 0), 0);
+
+          return {
+            atendimentosHoje: hojeResult.count ?? 0,
+            atendimentosMes: mesResult.count ?? 0,
+            totalComissaoMes,
+          };
+        },
+      }),
+    ["profissional-inicio-resumo"],
+    {
+      revalidate: 30,
+    }
+  );
+
+  return getCachedResumoInicio(
     idSalao,
-    run: async (supabaseAdmin) => {
-      const [hojeResult, mesResult, comissoesResult] = await Promise.all([
-        supabaseAdmin
-          .from("agendamentos")
-          .select("id", { count: "exact", head: true })
-          .eq("id_salao", idSalao)
-          .eq("profissional_id", idProfissional)
-          .eq("data", hoje),
-        supabaseAdmin
-          .from("agendamentos")
-          .select("id", { count: "exact", head: true })
-          .eq("id_salao", idSalao)
-          .eq("profissional_id", idProfissional)
-          .gte("data", inicioMes)
-          .lte("data", fimMes),
-        supabaseAdmin
-          .from("comissoes_lancamentos")
-          .select("valor_comissao")
-          .eq("id_salao", idSalao)
-          .eq("id_profissional", idProfissional)
-          .gte("competencia_data", inicioMes)
-          .lte("competencia_data", fimMes),
-      ]);
-
-      if (hojeResult.error) {
-        console.error(
-          "[profissional_resumo] Falha ao contar atendimentos de hoje:",
-          hojeResult.error.message
-        );
-      }
-
-      if (mesResult.error) {
-        console.error(
-          "[profissional_resumo] Falha ao contar atendimentos do mes:",
-          mesResult.error.message
-        );
-      }
-
-      if (comissoesResult.error) {
-        console.error(
-          "[profissional_resumo] Falha ao carregar comissoes:",
-          comissoesResult.error.message
-        );
-      }
-
-      if (hojeResult.error && mesResult.error && comissoesResult.error) {
-        throw new Error(
-          "Nao foi possivel carregar o resumo inicial do profissional."
-        );
-      }
-
-      const totalComissaoMes = (
-        ((comissoesResult.data ?? []) as ComissaoResumoRow[]) || []
-      ).reduce((acc, item) => acc + Number(item.valor_comissao || 0), 0);
-
-      return {
-        atendimentosHoje: hojeResult.count ?? 0,
-        atendimentosMes: mesResult.count ?? 0,
-        totalComissaoMes,
-      };
-    },
-  });
+    idProfissional,
+    hoje,
+    inicioMes,
+    fimMes
+  );
 }

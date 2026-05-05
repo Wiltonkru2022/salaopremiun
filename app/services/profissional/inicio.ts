@@ -1,3 +1,4 @@
+import { unstable_cache } from "next/cache";
 import { runAdminOperation } from "@/lib/supabase/admin-ops";
 
 export type AgendamentoInicio = {
@@ -37,95 +38,110 @@ export async function listarProximosAgendamentosProfissional(
   idSalao: string,
   idProfissional: string
 ): Promise<AgendamentoInicio[]> {
-  return runAdminOperation({
-    action: "profissional_inicio_listar_agendamentos",
-    actorId: idProfissional,
-    idSalao,
-    run: async (supabase) => {
-      const { data: agendamentos, error: agendamentosError } = await supabase
-        .from("agendamentos")
-        .select(
-          "id, data, hora_inicio, hora_fim, status, id_comanda, cliente_id, servico_id"
-        )
-        .eq("id_salao", idSalao)
-        .eq("profissional_id", idProfissional)
-        .gte("data", hojeLocalISO())
-        .order("data", { ascending: true })
-        .order("hora_inicio", { ascending: true })
-        .limit(10);
+  const hoje = hojeLocalISO();
 
-      if (agendamentosError) {
-        throw new Error(
-          agendamentosError.message || "Erro ao carregar agendamentos."
-        );
-      }
+  const getCachedAgendamentosInicio = unstable_cache(
+    async (
+      cachedSalaoId: string,
+      cachedProfissionalId: string,
+      cachedHoje: string
+    ) =>
+      runAdminOperation({
+        action: "profissional_inicio_listar_agendamentos",
+        actorId: cachedProfissionalId,
+        idSalao: cachedSalaoId,
+        run: async (supabase) => {
+          const { data: agendamentos, error: agendamentosError } = await supabase
+            .from("agendamentos")
+            .select(
+              "id, data, hora_inicio, hora_fim, status, id_comanda, cliente_id, servico_id"
+            )
+            .eq("id_salao", cachedSalaoId)
+            .eq("profissional_id", cachedProfissionalId)
+            .gte("data", cachedHoje)
+            .order("data", { ascending: true })
+            .order("hora_inicio", { ascending: true })
+            .limit(10);
 
-      const rows = (agendamentos ?? []) as AgendamentoInicioRow[];
-      const clienteIds = Array.from(
-        new Set(rows.map((item) => item.cliente_id).filter(Boolean))
-      ) as string[];
-      const servicoIds = Array.from(
-        new Set(rows.map((item) => item.servico_id).filter(Boolean))
-      ) as string[];
+          if (agendamentosError) {
+            throw new Error(
+              agendamentosError.message || "Erro ao carregar agendamentos."
+            );
+          }
 
-      const [clientesResult, servicosResult] = await Promise.all([
-        clienteIds.length > 0
-          ? supabase
-              .from("clientes")
-              .select("id, nome")
-              .eq("id_salao", idSalao)
-              .in("id", clienteIds)
-          : Promise.resolve({ data: [], error: null }),
-        servicoIds.length > 0
-          ? supabase
-              .from("servicos")
-              .select("id, nome")
-              .eq("id_salao", idSalao)
-              .in("id", servicoIds)
-          : Promise.resolve({ data: [], error: null }),
-      ]);
+          const rows = (agendamentos ?? []) as AgendamentoInicioRow[];
+          const clienteIds = Array.from(
+            new Set(rows.map((item) => item.cliente_id).filter(Boolean))
+          ) as string[];
+          const servicoIds = Array.from(
+            new Set(rows.map((item) => item.servico_id).filter(Boolean))
+          ) as string[];
 
-      if (clientesResult.error) {
-        console.error(
-          "[profissional_inicio] Falha ao carregar nomes de clientes:",
-          clientesResult.error.message
-        );
-      }
+          const [clientesResult, servicosResult] = await Promise.all([
+            clienteIds.length > 0
+              ? supabase
+                  .from("clientes")
+                  .select("id, nome")
+                  .eq("id_salao", cachedSalaoId)
+                  .in("id", clienteIds)
+              : Promise.resolve({ data: [], error: null }),
+            servicoIds.length > 0
+              ? supabase
+                  .from("servicos")
+                  .select("id, nome")
+                  .eq("id_salao", cachedSalaoId)
+                  .in("id", servicoIds)
+              : Promise.resolve({ data: [], error: null }),
+          ]);
 
-      if (servicosResult.error) {
-        console.error(
-          "[profissional_inicio] Falha ao carregar nomes de servicos:",
-          servicosResult.error.message
-        );
-      }
+          if (clientesResult.error) {
+            console.error(
+              "[profissional_inicio] Falha ao carregar nomes de clientes:",
+              clientesResult.error.message
+            );
+          }
 
-      const clientesMap = new Map(
-        (((clientesResult.data ?? []) as NomeRow[]) || []).map((cliente) => [
-          cliente.id,
-          cliente.nome,
-        ])
-      );
-      const servicosMap = new Map(
-        (((servicosResult.data ?? []) as NomeRow[]) || []).map((servico) => [
-          servico.id,
-          servico.nome,
-        ])
-      );
+          if (servicosResult.error) {
+            console.error(
+              "[profissional_inicio] Falha ao carregar nomes de servicos:",
+              servicosResult.error.message
+            );
+          }
 
-      return rows.map((item) => ({
-        id: item.id,
-        data: item.data,
-        hora_inicio: item.hora_inicio,
-        hora_fim: item.hora_fim,
-        status: item.status,
-        id_comanda: item.id_comanda ?? null,
-        cliente_nome: item.cliente_id
-          ? clientesMap.get(item.cliente_id) ?? "Cliente"
-          : "Cliente",
-        servico_nome: item.servico_id
-          ? servicosMap.get(item.servico_id) ?? "Servico"
-          : "Servico",
-      }));
-    },
-  });
+          const clientesMap = new Map(
+            (((clientesResult.data ?? []) as NomeRow[]) || []).map((cliente) => [
+              cliente.id,
+              cliente.nome,
+            ])
+          );
+          const servicosMap = new Map(
+            (((servicosResult.data ?? []) as NomeRow[]) || []).map((servico) => [
+              servico.id,
+              servico.nome,
+            ])
+          );
+
+          return rows.map((item) => ({
+            id: item.id,
+            data: item.data,
+            hora_inicio: item.hora_inicio,
+            hora_fim: item.hora_fim,
+            status: item.status,
+            id_comanda: item.id_comanda ?? null,
+            cliente_nome: item.cliente_id
+              ? clientesMap.get(item.cliente_id) ?? "Cliente"
+              : "Cliente",
+            servico_nome: item.servico_id
+              ? servicosMap.get(item.servico_id) ?? "Servico"
+              : "Servico",
+          }));
+        },
+      }),
+    ["profissional-inicio-agendamentos"],
+    {
+      revalidate: 30,
+    }
+  );
+
+  return getCachedAgendamentosInicio(idSalao, idProfissional, hoje);
 }
