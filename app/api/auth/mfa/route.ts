@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getPainelUserContextByAuthUserId } from "@/lib/auth/get-painel-user-context";
 import {
   buildBackupMetadata,
   clearBackupMetadata,
@@ -38,23 +39,19 @@ async function getAuthenticatedContext() {
     throw new Error("Sessao invalida.");
   }
 
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
+  const usuario = await getPainelUserContextByAuthUserId(user.id);
 
-  const { data: usuario, error: usuarioError } = await supabase
-    .from("usuarios")
-    .select("id_salao, status")
-    .eq("auth_user_id", user.id)
-    .maybeSingle();
-
-  if (usuarioError || !usuario?.id_salao) {
+  if (!usuario?.id_salao) {
     throw new Error("Nao foi possivel identificar o salao do usuario.");
   }
 
   if (usuario.status && usuario.status !== "ativo") {
     throw new Error("Usuario inativo.");
   }
+
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
 
   const { data: authUserData, error: authUserError } =
     await supabaseAdmin.auth.admin.getUserById(user.id);

@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { requireProfissionalServerContext } from "@/lib/profissional-context.server";
 import { runAdminOperation } from "@/lib/supabase/admin-ops";
 import { clearBackupMetadata } from "@/lib/auth/mfa-backup-codes";
+import { getPainelUserContext } from "@/lib/auth/get-painel-user-context";
 import {
   buildMfaRecoveryApprovedMessage,
   buildMfaRecoveryCompletedMessage,
@@ -540,23 +541,13 @@ function mapTicketEvent(row: TicketEventRow): TicketDetailEvent {
 }
 
 export async function getPainelTicketContext(): Promise<PainelTicketContext> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser();
+  const { user, usuario } = await getPainelUserContext();
 
-  if (authError || !user) {
+  if (!user) {
     throw new Error("UNAUTHORIZED");
   }
 
-  const { data: usuario, error } = await supabase
-    .from("usuarios")
-    .select("id, id_salao, nome, email, nivel, status")
-    .eq("auth_user_id", user.id)
-    .maybeSingle();
-
-  if (error || !usuario?.id_salao || usuario.status !== "ativo") {
+  if (!usuario?.id_salao || usuario.status !== "ativo") {
     throw new Error("UNAUTHORIZED");
   }
 

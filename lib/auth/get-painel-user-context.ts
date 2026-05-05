@@ -5,16 +5,18 @@ import { createClient } from "@/lib/supabase/server";
 export type PainelUserContext = {
   id: string;
   id_salao: string;
+  nome: string | null;
+  email: string | null;
   nivel: string | null;
   status: string | null;
 };
 
-const getCachedPainelUserContext = unstable_cache(
+const getCachedPainelUserContextByAuthUserId = unstable_cache(
   async (authUserId: string): Promise<PainelUserContext | null> => {
     const supabaseAdmin = getSupabaseAdmin();
     const { data, error } = await supabaseAdmin
       .from("usuarios")
-      .select("id, id_salao, nivel, status")
+      .select("id, id_salao, nome, email, nivel, status")
       .eq("auth_user_id", authUserId)
       .maybeSingle();
 
@@ -25,6 +27,8 @@ const getCachedPainelUserContext = unstable_cache(
     return {
       id: String(data.id),
       id_salao: String(data.id_salao),
+      nome: data.nome ? String(data.nome) : null,
+      email: data.email ? String(data.email) : null,
       nivel: data.nivel ? String(data.nivel) : null,
       status: data.status ? String(data.status) : null,
     };
@@ -34,6 +38,10 @@ const getCachedPainelUserContext = unstable_cache(
     revalidate: 60,
   }
 );
+
+export async function getPainelUserContextByAuthUserId(authUserId: string) {
+  return getCachedPainelUserContextByAuthUserId(authUserId);
+}
 
 export async function getPainelUserContext() {
   const supabase = await createClient();
@@ -45,6 +53,6 @@ export async function getPainelUserContext() {
     return { user: null, usuario: null };
   }
 
-  const usuario = await getCachedPainelUserContext(user.id);
+  const usuario = await getPainelUserContextByAuthUserId(user.id);
   return { user, usuario };
 }
