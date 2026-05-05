@@ -6,6 +6,7 @@ import type {
   SetStateAction,
 } from "react";
 import { useCallback } from "react";
+import { usePainelSession } from "@/components/layout/PainelSessionProvider";
 import type { AgendaPageTone } from "@/components/agenda/page-types";
 import { cancelarAgendamentoComComanda } from "@/lib/agenda/cancelarAgendamentoComComanda";
 import { saveAgendaItem } from "@/lib/agenda/saveAgendaItem";
@@ -106,6 +107,7 @@ export function useAgendaMutations({
   setEditingBlock,
   setAgendamentos,
 }: UseAgendaMutationsParams) {
+  const { snapshot: painelSession } = usePainelSession();
   const handleSave = useCallback(
     async (payload: Record<string, unknown>) => {
       if (bloquearSeAssinaturaInvalida()) return;
@@ -137,6 +139,8 @@ export function useAgendaMutations({
               agendamentos,
               profissionais,
               servicos,
+              agendaMonthlyLimit:
+                painelSession?.planoLimites?.agendamentosMensais ?? null,
               ensureDiaFuncionamentoFn: (dateString: string) =>
                 ensureDiaFuncionamento({ config, dateString }),
               getProfessionalAutoBloqueiosFn: (
@@ -191,6 +195,7 @@ export function useAgendaMutations({
       idSalao,
       loadAgenda,
       modalMode,
+      painelSession?.planoLimites?.agendamentosMensais,
       profissionais,
       servicos,
       setEditingBlock,

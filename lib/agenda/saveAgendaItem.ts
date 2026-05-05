@@ -8,28 +8,44 @@ import {
   timeToMinutes,
 } from "@/lib/utils/agenda";
 
-async function assertAgendaMonthlyLimit() {
-  const response = await fetch("/api/plano/access", {
-    method: "GET",
-    cache: "no-store",
-  });
+async function assertAgendaMonthlyLimit(params: {
+  supabase: SupabaseClient;
+  idSalao: string;
+  dataReferencia: string;
+  limite: number | null;
+}) {
+  const { supabase, idSalao, dataReferencia, limite } = params;
 
-  const data = (await response.json().catch(() => null)) as
-    | {
-        error?: string;
-        limites?: { agendamentosMensais?: number | null };
-        uso?: { agendamentosMensais?: number };
-      }
-    | null;
-
-  if (!response.ok) {
-    throw new Error(data?.error || "Nao foi possivel validar o plano.");
+  if (limite == null) {
+    return;
   }
 
-  const limite = data?.limites?.agendamentosMensais ?? null;
-  const uso = Number(data?.uso?.agendamentosMensais || 0);
+  const baseDate = new Date(`${String(dataReferencia).slice(0, 10)}T12:00:00`);
+  if (Number.isNaN(baseDate.getTime())) {
+    throw new Error("Nao foi possivel validar o periodo do plano.");
+  }
 
-  if (limite != null && uso >= limite) {
+  const inicioMes = new Date(baseDate.getFullYear(), baseDate.getMonth(), 1)
+    .toISOString()
+    .slice(0, 10);
+  const fimMes = new Date(baseDate.getFullYear(), baseDate.getMonth() + 1, 0)
+    .toISOString()
+    .slice(0, 10);
+
+  const { count, error } = await supabase
+    .from("agendamentos")
+    .select("id", { count: "exact", head: true })
+    .eq("id_salao", idSalao)
+    .gte("data", inicioMes)
+    .lte("data", fimMes);
+
+  if (error) {
+    throw new Error("Nao foi possivel validar o limite mensal da agenda.");
+  }
+
+  const uso = Number(count || 0);
+
+  if (uso >= limite) {
     throw new Error(
       `Limite do plano atingido: ${uso} de ${limite} agendamentos no mes.`
     );
@@ -45,6 +61,7 @@ export async function saveAgendaItem(params: {
   agendamentos: Agendamento[];
   profissionais: Profissional[];
   servicos: Servico[];
+  agendaMonthlyLimit?: number | null;
   ensureDiaFuncionamentoFn: (dateString: string) => boolean;
   getProfessionalAutoBloqueiosFn: (profissionalId: string, date: string) => Bloqueio[];
   validateAgendaTimeRangeFn: (params: {
@@ -67,6 +84,7 @@ export async function saveAgendaItem(params: {
     bloqueios,
     agendamentos,
     servicos,
+    agendaMonthlyLimit = null,
     ensureDiaFuncionamentoFn,
     getProfessionalAutoBloqueiosFn,
     validateAgendaTimeRangeFn,
@@ -167,7 +185,12 @@ export async function saveAgendaItem(params: {
       return;
     }
 
-    await assertAgendaMonthlyLimit();
+    await assertAgendaMonthlyLimit({
+      supabase,
+      idSalao,
+      dataReferencia: String(payload.data || ""),
+      limite: agendaMonthlyLimit,
+    });
 
     const { data: insertedRows, error } = await supabase
       .from("agendamentos")
