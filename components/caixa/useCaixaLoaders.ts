@@ -21,6 +21,8 @@ import {
   carregarCatalogosCaixa,
   carregarComandaDetalhe,
   carregarConfiguracoesCaixa as carregarConfiguracoesCaixaData,
+  carregarFilaOperacionalCaixa,
+  carregarHistoricoCaixa,
   carregarListasCaixa,
 } from "@/lib/caixa/loadCaixaData";
 import {
@@ -249,6 +251,30 @@ export function useCaixaLoaders({
     ]
   );
 
+  const carregarFilaOperacional = useCallback(
+    async (salaoIdParam?: string) => {
+      const salaoId = salaoIdParam || idSalao;
+      if (!salaoId) return;
+
+      const listas = await carregarFilaOperacionalCaixa(supabase, salaoId);
+      setComandasFila(listas.comandasFila);
+      setAgendamentosFila(listas.agendamentosFila);
+    },
+    [idSalao, supabase, setComandasFila, setAgendamentosFila]
+  );
+
+  const carregarHistorico = useCallback(
+    async (salaoIdParam?: string) => {
+      const salaoId = salaoIdParam || idSalao;
+      if (!salaoId) return;
+
+      const listas = await carregarHistoricoCaixa(supabase, salaoId);
+      setComandasFechadas(listas.comandasFechadas);
+      setComandasCanceladas(listas.comandasCanceladas);
+    },
+    [idSalao, supabase, setComandasCanceladas, setComandasFechadas]
+  );
+
   const init = useCallback(async () => {
     try {
       setLoading(true);
@@ -319,6 +345,8 @@ export function useCaixaLoaders({
     aplicarDetalheComanda,
     carregarCatalogos,
     carregarConfiguracoesCaixa,
+    carregarFilaOperacional,
+    carregarHistorico,
     carregarSessaoOperacional,
     carregarTudo,
     init,

@@ -113,6 +113,8 @@ export default function CaixaPage() {
 
   const {
     aplicarDetalheComanda,
+    carregarFilaOperacional,
+    carregarHistorico,
     carregarSessaoOperacional,
     carregarTudo,
     init,
@@ -233,12 +235,12 @@ export default function CaixaPage() {
       }
     };
 
-    const interval = window.setInterval(() => {
+    const hotInterval = window.setInterval(() => {
       if (document.visibilityState !== "visible") {
         return;
       }
 
-      void carregarTudo(idSalao);
+      void carregarFilaOperacional(idSalao);
       void carregarSessaoOperacional(idSalao);
 
       if (comandaSelecionada?.id) {
@@ -246,11 +248,20 @@ export default function CaixaPage() {
       }
     }, 15000);
 
+    const coldInterval = window.setInterval(() => {
+      if (document.visibilityState !== "visible") {
+        return;
+      }
+
+      void carregarHistorico(idSalao);
+    }, 60000);
+
     window.addEventListener("focus", refreshOnReturn);
     document.addEventListener("visibilitychange", refreshOnReturn);
 
     return () => {
-      window.clearInterval(interval);
+      window.clearInterval(hotInterval);
+      window.clearInterval(coldInterval);
       window.removeEventListener("focus", refreshOnReturn);
       document.removeEventListener("visibilitychange", refreshOnReturn);
     };
@@ -259,7 +270,8 @@ export default function CaixaPage() {
     idSalao,
     loading,
     saving,
-    carregarTudo,
+    carregarFilaOperacional,
+    carregarHistorico,
     carregarSessaoOperacional,
     aplicarDetalheComanda,
     comandaSelecionada?.id,

@@ -460,19 +460,49 @@ export async function carregarListasCaixa(
   supabase: CaixaSupabaseClient,
   idSalao: string
 ) {
-  const [comandasFila, agendamentosFila, comandasFechadas, comandasCanceladas] =
-    await Promise.all([
-      carregarFilaComandas(supabase, idSalao),
-      carregarAgendamentosSemComanda(supabase, idSalao),
-      carregarFechadasHoje(supabase, idSalao),
-      carregarCanceladas(supabase, idSalao),
-    ]);
+  const [
+    { comandasFila, agendamentosFila },
+    { comandasFechadas, comandasCanceladas },
+  ] = await Promise.all([
+    carregarFilaOperacionalCaixa(supabase, idSalao),
+    carregarHistoricoCaixa(supabase, idSalao),
+  ]);
 
   return {
     agendamentosFila,
     comandasCanceladas,
     comandasFechadas,
     comandasFila,
+  };
+}
+
+export async function carregarFilaOperacionalCaixa(
+  supabase: CaixaSupabaseClient,
+  idSalao: string
+) {
+  const [comandasFila, agendamentosFila] = await Promise.all([
+    carregarFilaComandas(supabase, idSalao),
+    carregarAgendamentosSemComanda(supabase, idSalao),
+  ]);
+
+  return {
+    agendamentosFila,
+    comandasFila,
+  };
+}
+
+export async function carregarHistoricoCaixa(
+  supabase: CaixaSupabaseClient,
+  idSalao: string
+) {
+  const [comandasFechadas, comandasCanceladas] = await Promise.all([
+    carregarFechadasHoje(supabase, idSalao),
+    carregarCanceladas(supabase, idSalao),
+  ]);
+
+  return {
+    comandasCanceladas,
+    comandasFechadas,
   };
 }
 
