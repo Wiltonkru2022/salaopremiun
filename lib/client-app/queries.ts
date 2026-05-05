@@ -22,6 +22,7 @@ export type ClientAppServiceListItem = {
   descricao: string | null;
   preco: number;
   duracaoMinutos: number | null;
+  profissionaisPermitidos: string[];
 };
 
 export type ClientAppReviewListItem = {
@@ -36,6 +37,28 @@ export type ClientAppSalonDetail = ClientAppEligibleSalon & {
   profissionais: ClientAppProfessionalListItem[];
   servicos: ClientAppServiceListItem[];
   avaliacoes: ClientAppReviewListItem[];
+  intervaloAgendaMinutos: number;
+};
+
+export type ClientAppAppointmentListItem = {
+  id: string;
+  data: string;
+  horaInicio: string;
+  horaFim: string;
+  status: string;
+  observacoes: string | null;
+  servicoNome: string;
+  profissionalNome: string;
+  podeCancelar: boolean;
+  podeAvaliar: boolean;
+  avaliado: boolean;
+};
+
+export type ClientAppProfileData = {
+  nome: string;
+  email: string;
+  telefone: string | null;
+  preferenciasGerais: string | null;
 };
 
 function normalizeSearch(value?: string) {
@@ -110,7 +133,7 @@ const listVisibleClientAppSaloesCached = unstable_cache(
         : [],
     }));
   },
-  ["client-app-visible-saloes"],
+  ["client-app-visible-saloes-v2"],
   {
     revalidate: 60,
     tags: ["client-app-saloes"],
@@ -132,7 +155,7 @@ const getClientAppSalonDetailCached = unstable_cache(
     const salao = await assertSalonCanAppearInClientApp(idSalao);
     const supabaseAdmin = getSupabaseAdmin();
 
-    const [profissionaisResult, servicosResult, avaliacoesResult] =
+    const [profissionaisResult, servicosResult, avaliacoesResult, vinculosResult, configResult] =
       await Promise.allSettled([
         (supabaseAdmin as any)
           .from("profissionais")
@@ -158,7 +181,37 @@ const getClientAppSalonDetailCached = unstable_cache(
           .eq("id_salao", idSalao)
           .order("created_at", { ascending: false })
           .limit(12),
+        supabaseAdmin
+          .from("profissional_servicos")
+          .select("id_profissional, id_servico, ativo")
+          .eq("id_salao", idSalao)
+          .eq("ativo", true),
+        supabaseAdmin
+          .from("configuracoes_salao")
+          .select("intervalo_minutos")
+          .eq("id_salao", idSalao)
+          .limit(1)
+          .maybeSingle(),
       ]);
+
+    const vinculosPorServico = new Map<string, string[]>();
+
+    if (vinculosResult.status === "fulfilled") {
+      for (const item of (vinculosResult.value.data || []) as Array<{
+        id_profissional?: string | null;
+        id_servico?: string | null;
+      }>) {
+        const idServico = String(item.id_servico || "").trim();
+        const idProfissional = String(item.id_profissional || "").trim();
+        if (!idServico || !idProfissional) continue;
+
+        const current = vinculosPorServico.get(idServico) || [];
+        if (!current.includes(idProfissional)) {
+          current.push(idProfissional);
+          vinculosPorServico.set(idServico, current);
+        }
+      }
+    }
 
     const profissionais =
       profissionaisResult.status === "fulfilled"
@@ -189,6 +242,8 @@ const getClientAppSalonDetailCached = unstable_cache(
               preco: parsePrice(item.preco),
               duracaoMinutos:
                 Number(item.duracao_minutos ?? item.duracao ?? 0) || null,
+              profissionaisPermitidos:
+                vinculosPorServico.get(String(item.id || "").trim()) || [],
             })
           )
         : [];
@@ -214,9 +269,13 @@ const getClientAppSalonDetailCached = unstable_cache(
       profissionais,
       servicos,
       avaliacoes,
+      intervaloAgendaMinutos:
+        configResult.status === "fulfilled"
+          ? Number(configResult.value.data?.intervalo_minutos || 15) || 15
+          : 15,
     } satisfies ClientAppSalonDetail;
   },
-  ["client-app-salon-detail"],
+  ["client-app-salon-detail-v2"],
   {
     revalidate: 60,
     tags: ["client-app-saloes"],
@@ -247,12 +306,35 @@ export async function listClienteAppAppointments(params: {
     return [];
   }
 
-  return (data as Array<Record<string, unknown>>).map((item) => ({
+  const rows = data as Array<Record<string, unknown>>;
+  const appointmentIds = rows
+    .map((item) => String(item.id || "").trim())
+    .filter(Boolean);
+
+  const { data: reviewRows } = appointmentIds.length
+    ? await (supabaseAdmin as any)
+        .from("clientes_avaliacoes")
+        .select("id_agendamento")
+        .eq("id_cliente", params.idCliente)
+        .eq("id_salao", params.idSalao)
+        .in("id_agendamento", appointmentIds)
+    : { data: [] };
+
+  const reviewedIds = new Set(
+    ((reviewRows as Array<{ id_agendamento?: string | null }> | null) || [])
+      .map((item) => String(item.id_agendamento || "").trim())
+      .filter(Boolean)
+  );
+
+  return rows.map((item) => {
+    const status = String(item.status || "").trim() || "pendente";
+    const avaliado = reviewedIds.has(String(item.id || "").trim());
+    return {
     id: String(item.id || ""),
     data: String(item.data || ""),
     horaInicio: String(item.hora_inicio || ""),
     horaFim: String(item.hora_fim || ""),
-    status: String(item.status || "").trim() || "pendente",
+    status,
     observacoes: String(item.observacoes || "").trim() || null,
     servicoNome:
       String((item.servicos as { nome?: string } | null)?.nome || "").trim() ||
@@ -262,8 +344,46 @@ export async function listClienteAppAppointments(params: {
         (item.profissionais as { nome_exibicao?: string; nome?: string } | null)
           ?.nome_exibicao ||
           (item.profissionais as { nome_exibicao?: string; nome?: string } | null)
-            ?.nome ||
+          ?.nome ||
           ""
       ).trim() || "Profissional",
-  }));
+    podeCancelar: status === "pendente" || status === "confirmado",
+    podeAvaliar:
+      !avaliado &&
+      (status === "atendido" || status === "aguardando_pagamento"),
+    avaliado,
+  } satisfies ClientAppAppointmentListItem;
+  });
+}
+
+export async function getClienteAppProfileData(params: {
+  idCliente: string;
+  idSalao: string;
+}) {
+  const supabaseAdmin = getSupabaseAdmin();
+  const [{ data: cliente }, { data: preferencias }] = await Promise.all([
+    supabaseAdmin
+      .from("clientes")
+      .select("nome, email, telefone, whatsapp")
+      .eq("id", params.idCliente)
+      .eq("id_salao", params.idSalao)
+      .limit(1)
+      .maybeSingle(),
+    (supabaseAdmin as any)
+      .from("clientes_preferencias")
+      .select("preferencias_gerais")
+      .eq("id_cliente", params.idCliente)
+      .eq("id_salao", params.idSalao)
+      .limit(1)
+      .maybeSingle(),
+  ]);
+
+  return {
+    nome: String(cliente?.nome || "").trim(),
+    email: String(cliente?.email || "").trim(),
+    telefone:
+      String(cliente?.telefone || cliente?.whatsapp || "").trim() || null,
+    preferenciasGerais:
+      String(preferencias?.preferencias_gerais || "").trim() || null,
+  } satisfies ClientAppProfileData;
 }

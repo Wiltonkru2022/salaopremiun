@@ -1,6 +1,22 @@
+import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 
 export const dynamic = "force-dynamic";
+export const metadata: Metadata = {
+  title: "SalaoPremium Cliente",
+  description:
+    "Agende horarios, acompanhe visitas e avalie atendimentos no app cliente do SalaoPremium.",
+  manifest: "/app-cliente/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    title: "SalaoPremium Cliente",
+    statusBarStyle: "default",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#09090b",
+};
 
 export default function AppClienteLayout({
   children,

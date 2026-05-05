@@ -109,7 +109,7 @@ const getEligibleSalonByIdCached = unstable_cache(
 
     return mapSalonRow(data as unknown as EligibleSalonRow);
   },
-  ["client-app-eligible-salon-by-id"],
+  ["client-app-eligible-salon-by-id-v2"],
   {
     revalidate: 60,
     tags: ["client-app-saloes"],

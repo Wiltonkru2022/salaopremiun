@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import { MapPin, ParkingCircle, Wallet } from "lucide-react";
 import ClientAppFrame from "@/components/client-app/ClientAppFrame";
 import { getClientAppSalonDetail } from "@/lib/client-app/queries";
+import ClientBookingForm from "@/components/client-app/ClientBookingForm";
+import { validateClienteAppSession } from "@/lib/client-context.server";
 
 function formatCurrency(value: number) {
   return new Intl.NumberFormat("pt-BR", {
@@ -27,6 +29,11 @@ export default async function ClienteSalonPage({
 
   try {
     const salao = await getClientAppSalonDetail(id);
+    const session = await validateClienteAppSession();
+    const sameSalonSession =
+      session.context && session.context.idSalao === salao.id
+        ? session.context
+        : null;
 
     return (
       <ClientAppFrame
@@ -76,18 +83,29 @@ export default async function ClienteSalonPage({
                 </div>
 
                 <div className="flex flex-wrap gap-2">
-                  <Link
-                    href={`/app-cliente/cadastro?salao=${salao.id}`}
-                    className="inline-flex h-11 items-center justify-center rounded-2xl bg-zinc-950 px-4 text-sm font-bold text-white transition hover:bg-zinc-800"
-                  >
-                    Criar conta
-                  </Link>
-                  <Link
-                    href={`/app-cliente/login?salao=${salao.id}`}
-                    className="inline-flex h-11 items-center justify-center rounded-2xl border border-zinc-200 bg-white px-4 text-sm font-bold text-zinc-800 transition hover:bg-zinc-50"
-                  >
-                    Entrar
-                  </Link>
+                  {sameSalonSession ? (
+                    <Link
+                      href="/app-cliente/agendamentos"
+                      className="inline-flex h-11 items-center justify-center rounded-2xl bg-zinc-950 px-4 text-sm font-bold text-white transition hover:bg-zinc-800"
+                    >
+                      Ver meus horarios
+                    </Link>
+                  ) : (
+                    <>
+                      <Link
+                        href={`/app-cliente/cadastro?salao=${salao.id}`}
+                        className="inline-flex h-11 items-center justify-center rounded-2xl bg-zinc-950 px-4 text-sm font-bold text-white transition hover:bg-zinc-800"
+                      >
+                        Criar conta
+                      </Link>
+                      <Link
+                        href={`/app-cliente/login?salao=${salao.id}`}
+                        className="inline-flex h-11 items-center justify-center rounded-2xl border border-zinc-200 bg-white px-4 text-sm font-bold text-zinc-800 transition hover:bg-zinc-50"
+                      >
+                        Entrar
+                      </Link>
+                    </>
+                  )}
                 </div>
               </div>
 
@@ -104,6 +122,45 @@ export default async function ClienteSalonPage({
                     {salao.formasPagamento.join(" - ")}
                   </span>
                 ) : null}
+              </div>
+            </div>
+          </section>
+
+          <section className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
+            <div className="rounded-[1.8rem] border border-white/70 bg-white p-5 shadow-[0_18px_48px_rgba(15,23,42,0.08)]">
+              <h3 className="text-lg font-black tracking-[-0.03em] text-zinc-950">
+                Agendamento online
+              </h3>
+              {sameSalonSession ? (
+                <div className="mt-4">
+                  <ClientBookingForm
+                    idSalao={salao.id}
+                    servicos={salao.servicos}
+                    profissionais={salao.profissionais}
+                    intervaloMinutos={salao.intervaloAgendaMinutos}
+                  />
+                </div>
+              ) : (
+                <div className="mt-4 rounded-2xl border border-zinc-100 bg-zinc-50 p-4 text-sm leading-6 text-zinc-600">
+                  Entre com sua conta deste salao para escolher servico,
+                  profissional e horario pelo app cliente.
+                </div>
+              )}
+            </div>
+
+            <div className="rounded-[1.8rem] border border-white/70 bg-white p-5 shadow-[0_18px_48px_rgba(15,23,42,0.08)]">
+              <h3 className="text-lg font-black tracking-[-0.03em] text-zinc-950">
+                Como funciona
+              </h3>
+              <div className="mt-4 space-y-3 text-sm leading-6 text-zinc-600">
+                <p>
+                  O pedido entra no sistema do salao com os dados do servico e
+                  do profissional escolhidos por voce.
+                </p>
+                <p>
+                  Depois disso, voce acompanha tudo em <strong>Meus agendamentos</strong>,
+                  incluindo cancelamento e avaliacao pos-atendimento.
+                </p>
               </div>
             </div>
           </section>

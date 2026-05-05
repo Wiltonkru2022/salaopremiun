@@ -1,9 +1,20 @@
 import Link from "next/link";
 import ClientAppFrame from "@/components/client-app/ClientAppFrame";
 import { requireClienteAppContext } from "@/lib/client-context.server";
+import ClientProfileForm from "@/components/client-app/ClientProfileForm";
+import { getClienteAppProfileData } from "@/lib/client-app/queries";
 
-export default async function ClientePerfilPage() {
+export default async function ClientePerfilPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ status?: string }>;
+}) {
   const session = await requireClienteAppContext();
+  const profile = await getClienteAppProfileData({
+    idCliente: session.idCliente,
+    idSalao: session.idSalao,
+  });
+  const params = searchParams ? await searchParams : undefined;
 
   return (
     <ClientAppFrame
@@ -11,29 +22,13 @@ export default async function ClientePerfilPage() {
       subtitle="Conta do cliente no app SalaoPremium."
     >
       <section className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
-        <div className="rounded-[1.8rem] border border-white/70 bg-white p-5 shadow-[0_18px_48px_rgba(15,23,42,0.08)]">
-          <h2 className="text-lg font-black tracking-[-0.03em] text-zinc-950">
-            Dados principais
-          </h2>
-          <div className="mt-5 space-y-3 text-sm">
-            <div className="rounded-2xl border border-zinc-100 bg-zinc-50 p-4">
-              <div className="text-xs font-bold uppercase tracking-[0.12em] text-zinc-500">
-                Nome
-              </div>
-              <div className="mt-1 text-base font-semibold text-zinc-950">
-                {session.nome}
-              </div>
-            </div>
-            <div className="rounded-2xl border border-zinc-100 bg-zinc-50 p-4">
-              <div className="text-xs font-bold uppercase tracking-[0.12em] text-zinc-500">
-                E-mail
-              </div>
-              <div className="mt-1 text-base font-semibold text-zinc-950">
-                {session.email}
-              </div>
-            </div>
-          </div>
-        </div>
+        <ClientProfileForm
+          nome={profile.nome || session.nome}
+          email={profile.email || session.email}
+          telefone={profile.telefone}
+          preferenciasGerais={profile.preferenciasGerais}
+          successKey={params?.status || null}
+        />
 
         <div className="rounded-[1.8rem] border border-white/70 bg-white p-5 shadow-[0_18px_48px_rgba(15,23,42,0.08)]">
           <h2 className="text-lg font-black tracking-[-0.03em] text-zinc-950">
