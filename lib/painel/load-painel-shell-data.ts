@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
+import { unstable_cache } from "next/cache";
 import { buildLoginRedirectUrl } from "@/lib/auth/login-redirect";
 import { createClient } from "@/lib/supabase/server";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import {
   buildPermissoesByNivel,
   sanitizePermissoesDb,
@@ -12,6 +14,123 @@ import { getPlanoCatalogo } from "@/lib/plans/catalog";
 import { PERMISSIONS } from "@/lib/permissions";
 
 type PermissoesDbRow = Record<string, boolean | string | null>;
+
+const permissionsSelect = ["id_usuario", "id_salao", ...Object.keys(PERMISSIONS)].join(", ");
+
+const loadPainelShellContextCached = unstable_cache(
+  async (authUserId: string) => {
+    const supabaseAdmin = getSupabaseAdmin();
+
+    const { data: usuario, error: usuarioError } = await supabaseAdmin
+      .from("usuarios")
+      .select("id, id_salao, nivel, status")
+      .eq("auth_user_id", authUserId)
+      .maybeSingle();
+
+    if (usuarioError) {
+      return {
+        ok: false as const,
+        error: usuarioError.message || "Erro ao carregar usuario do sistema.",
+      };
+    }
+
+    if (!usuario?.id || !usuario.id_salao) {
+      return {
+        ok: false as const,
+        error: "Erro ao carregar usuario do sistema.",
+      };
+    }
+
+    const [{ data: permissoes }, { data: salao }, { data: assinatura }, planoAccess] =
+      await Promise.all([
+        supabaseAdmin
+          .from("usuarios_permissoes")
+          .select(permissionsSelect)
+          .eq("id_usuario", usuario.id)
+          .eq("id_salao", usuario.id_salao)
+          .maybeSingle(),
+        supabaseAdmin
+          .from("saloes")
+          .select("nome, responsavel, logo_url, plano, status")
+          .eq("id", usuario.id_salao)
+          .maybeSingle(),
+        supabaseAdmin
+          .from("assinaturas")
+          .select("status, plano, vencimento_em, trial_fim_em")
+          .eq("id_salao", usuario.id_salao)
+          .limit(1)
+          .maybeSingle(),
+        getPlanoAccessSnapshot(usuario.id_salao),
+      ]);
+
+    const permissoesPadrao = buildPermissoesByNivel(usuario.nivel);
+    const permissoesDb = sanitizePermissoesDb(
+      (permissoes as PermissoesDbRow | null) ?? null,
+      {
+        idSalao: usuario.id_salao,
+        idUsuario: usuario.id,
+        origem: "loadPainelShellData",
+      }
+    );
+
+    const permissoesFinal = {
+      ...permissoesPadrao,
+      ...permissoesDb,
+      perfil_salao_ver:
+        usuario.nivel === "admin" &&
+        (permissoesDb.perfil_salao_ver ?? permissoesPadrao.perfil_salao_ver),
+      configuracoes_ver:
+        usuario.nivel === "admin" &&
+        (permissoesDb.configuracoes_ver ?? permissoesPadrao.configuracoes_ver),
+      assinatura_ver:
+        usuario.nivel === "admin" &&
+        (permissoesDb.assinatura_ver ?? permissoesPadrao.assinatura_ver),
+    };
+
+    const resumoAssinatura = assinatura?.status
+      ? getResumoAssinatura({
+          status: assinatura.status,
+          vencimentoEm: assinatura.vencimento_em,
+          trialFimEm: assinatura.trial_fim_em,
+        })
+      : null;
+
+    const notifications = buildShellNotifications({
+      resumoAssinatura,
+      clientes: [],
+      agendamentos: [],
+      movimentosCaixa: [],
+      onboarding: null,
+      tickets: [],
+    });
+
+    const planoCatalogo = getPlanoCatalogo(planoAccess.planoCodigo);
+
+    return {
+      ok: true as const,
+      data: {
+        idSalao: usuario.id_salao,
+        idUsuario: usuario.id,
+        nivel: String(usuario.nivel || ""),
+        status: String(usuario.status || ""),
+        permissoes: permissoesFinal,
+        salaoNome: salao?.nome || "SalaoPremium",
+        salaoResponsavel: salao?.responsavel || null,
+        salaoLogoUrl: salao?.logo_url || null,
+        planoNome: planoCatalogo.nome,
+        assinaturaStatus: assinatura?.status || salao?.status || null,
+        resumoAssinatura,
+        planoRecursos: planoAccess.recursos,
+        notifications,
+      },
+    };
+  },
+  ["painel-shell-context"],
+  {
+    revalidate: 60,
+    tags: ["painel-shell-context"],
+  }
+);
 
 export async function loadPainelShellData() {
   const supabase = await createClient();
@@ -28,113 +147,33 @@ export async function loadPainelShellData() {
   const userName =
     user.user_metadata?.nome || user.email?.split("@")[0] || "Usuario";
 
-  const { data: usuario, error: usuarioError } = await supabase
-    .from("usuarios")
-    .select("id, id_salao, nivel, status")
-    .eq("auth_user_id", user.id)
-    .maybeSingle();
+  const result = await loadPainelShellContextCached(user.id);
 
-  if (usuarioError) {
-    return {
-      ok: false as const,
-      error: usuarioError.message || "Erro ao carregar usuario do sistema.",
-    };
+  if (!result.ok) {
+    return result;
   }
 
-  if (!usuario?.id || !usuario.id_salao) {
-    return {
-      ok: false as const,
-      error: "Erro ao carregar usuario do sistema.",
-    };
-  }
-
-  if (usuario.status !== "ativo") {
+  if (result.data.status !== "ativo") {
     redirect(buildLoginRedirectUrl("usuario_inativo"));
   }
-
-  const permissionsSelect = ["id_usuario", "id_salao", ...Object.keys(PERMISSIONS)].join(", ");
-
-  const { data: permissoes } = await supabase
-    .from("usuarios_permissoes")
-    .select(permissionsSelect)
-    .eq("id_usuario", usuario.id)
-    .eq("id_salao", usuario.id_salao)
-    .maybeSingle();
-  const permissoesPadrao = buildPermissoesByNivel(usuario.nivel);
-  const permissoesDb = sanitizePermissoesDb(
-    (permissoes as PermissoesDbRow | null) ?? null,
-    {
-      idSalao: usuario.id_salao,
-      idUsuario: usuario.id,
-      origem: "loadPainelShellData",
-    }
-  );
-
-  const permissoesFinal = {
-    ...permissoesPadrao,
-    ...permissoesDb,
-    perfil_salao_ver:
-      usuario.nivel === "admin" &&
-      (permissoesDb.perfil_salao_ver ?? permissoesPadrao.perfil_salao_ver),
-    configuracoes_ver:
-      usuario.nivel === "admin" &&
-      (permissoesDb.configuracoes_ver ?? permissoesPadrao.configuracoes_ver),
-    assinatura_ver:
-      usuario.nivel === "admin" &&
-      (permissoesDb.assinatura_ver ?? permissoesPadrao.assinatura_ver),
-  };
-
-  const [{ data: salao }, { data: assinatura }] = await Promise.all([
-    supabase
-      .from("saloes")
-      .select("nome, responsavel, logo_url, plano, status")
-      .eq("id", usuario.id_salao)
-      .maybeSingle(),
-    supabase
-      .from("assinaturas")
-      .select("status, plano, vencimento_em, trial_fim_em")
-      .eq("id_salao", usuario.id_salao)
-      .limit(1)
-      .maybeSingle(),
-  ]);
-
-  const resumoAssinatura = assinatura?.status
-    ? getResumoAssinatura({
-        status: assinatura.status,
-        vencimentoEm: assinatura.vencimento_em,
-        trialFimEm: assinatura.trial_fim_em,
-      })
-    : null;
-
-  const notifications = buildShellNotifications({
-    resumoAssinatura,
-    clientes: [],
-    agendamentos: [],
-    movimentosCaixa: [],
-    onboarding: null,
-    tickets: [],
-  });
-
-  const planoAccess = await getPlanoAccessSnapshot(usuario.id_salao);
-  const planoCatalogo = getPlanoCatalogo(planoAccess.planoCodigo);
 
   return {
     ok: true as const,
     data: {
-      idSalao: usuario.id_salao,
-      idUsuario: usuario.id,
+      idSalao: result.data.idSalao,
+      idUsuario: result.data.idUsuario,
       userName,
       userEmail: user.email || "",
-      nivel: String(usuario.nivel || ""),
-      permissoes: permissoesFinal,
-      salaoNome: salao?.nome || "SalaoPremium",
-      salaoResponsavel: salao?.responsavel || userName,
-      salaoLogoUrl: salao?.logo_url || null,
-      planoNome: planoCatalogo.nome,
-      assinaturaStatus: assinatura?.status || salao?.status || null,
-      resumoAssinatura,
-      planoRecursos: planoAccess.recursos,
-      notifications,
+      nivel: result.data.nivel,
+      permissoes: result.data.permissoes,
+      salaoNome: result.data.salaoNome,
+      salaoResponsavel: result.data.salaoResponsavel || userName,
+      salaoLogoUrl: result.data.salaoLogoUrl,
+      planoNome: result.data.planoNome,
+      assinaturaStatus: result.data.assinaturaStatus,
+      resumoAssinatura: result.data.resumoAssinatura,
+      planoRecursos: result.data.planoRecursos,
+      notifications: result.data.notifications,
     },
   };
 }
