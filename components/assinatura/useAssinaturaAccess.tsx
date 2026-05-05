@@ -6,6 +6,7 @@ import {
   buildPermissoesByNivel,
   sanitizePermissoesDb,
 } from "@/lib/auth/permissions";
+import { readPainelSessionSnapshot } from "@/lib/painel/session-snapshot";
 import type {
   Permissoes,
   UsuarioSistemaRow,
@@ -110,6 +111,40 @@ export function useAssinaturaAccess({
         setAcessoCarregado(true);
         router.replace("/login");
         return null;
+      }
+
+      const painelSession = readPainelSessionSnapshot();
+      if (
+        painelSession?.idSalao &&
+        painelSession?.idUsuario &&
+        painelSession?.permissoes
+      ) {
+        const permissoesSnapshot = {
+          ...painelSession.permissoes,
+          assinatura_ver:
+            String(painelSession.nivel || "").toLowerCase() === "admin" &&
+            Boolean(painelSession.permissoes.assinatura_ver),
+        } as Permissoes;
+
+        setUsuario(user as UsuarioSupabase);
+        setPermissoes(permissoesSnapshot);
+        setNivel(String(painelSession.nivel || "").toLowerCase());
+        setAcessoCarregado(true);
+
+        if (!permissoesSnapshot.assinatura_ver) {
+          router.replace("/dashboard");
+          return null;
+        }
+
+        return {
+          user: user as UsuarioSupabase,
+          usuarioDb: {
+            id: painelSession.idUsuario,
+            id_salao: painelSession.idSalao,
+            nivel: painelSession.nivel,
+            status: "ativo",
+          } satisfies UsuarioSistemaRow,
+        };
       }
 
       const { data: usuarioDb, error: usuarioError } = await supabase

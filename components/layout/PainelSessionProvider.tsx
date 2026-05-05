@@ -10,23 +10,14 @@ import {
 } from "react";
 import {
   PAINEL_SESSION_STORAGE_KEY,
+  readPainelSessionSnapshot,
   type PainelSessionSnapshot,
 } from "@/lib/painel/session-snapshot";
 
 const PainelSessionContext = createContext<PainelSessionSnapshot | null>(null);
 
 function readStoredPainelSession() {
-  if (typeof window === "undefined") {
-    return null;
-  }
-
-  try {
-    const raw = window.localStorage.getItem(PAINEL_SESSION_STORAGE_KEY);
-    if (!raw) return null;
-    return JSON.parse(raw) as PainelSessionSnapshot;
-  } catch {
-    return null;
-  }
+  return readPainelSessionSnapshot();
 }
 
 export function PainelSessionProvider({

@@ -38,3 +38,17 @@ export type PainelSessionSnapshot = {
   planoUso?: PainelPlanoUso;
   assinaturaStatus?: string | null;
 };
+
+export function readPainelSessionSnapshot(): PainelSessionSnapshot | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  try {
+    const raw = window.localStorage.getItem(PAINEL_SESSION_STORAGE_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw) as PainelSessionSnapshot;
+  } catch {
+    return null;
+  }
+}
