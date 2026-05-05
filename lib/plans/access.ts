@@ -1,5 +1,6 @@
 import { getResumoAssinatura } from "@/lib/assinatura-utils";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { unstable_cache } from "next/cache";
 
 export type PlanoRecursoCodigo =
   | "agenda"
@@ -239,7 +240,7 @@ export function getPlanoRecursoLabel(recurso: string) {
   );
 }
 
-export async function getPlanoAccessSnapshot(
+async function getPlanoAccessSnapshotUncached(
   idSalao: string
 ): Promise<PlanoAccessSnapshot> {
   const supabaseAdmin = getSupabaseAdmin();
@@ -423,6 +424,21 @@ export async function getPlanoAccessSnapshot(
       .filter(([, habilitado]) => !habilitado)
       .map(([codigo]) => codigo),
   };
+}
+
+const getPlanoAccessSnapshotCached = unstable_cache(
+  async (idSalao: string) => getPlanoAccessSnapshotUncached(idSalao),
+  ["plano-access-snapshot"],
+  {
+    revalidate: 60,
+    tags: ["plano-access-snapshot"],
+  }
+);
+
+export async function getPlanoAccessSnapshot(
+  idSalao: string
+): Promise<PlanoAccessSnapshot> {
+  return getPlanoAccessSnapshotCached(idSalao);
 }
 
 export async function canUsePlanFeature(
