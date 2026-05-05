@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getPainelUserContextByAuthUserId } from "@/lib/auth/get-painel-user-context";
 import { reportOperationalIncident } from "@/lib/monitoring/operational-incidents";
 import {
   captureSystemError,
@@ -40,17 +41,21 @@ export function createMonitoringService() {
           };
         }
 
-        const [usuarioResult, adminResult] = await Promise.all([
-          supabaseAdmin
-            .from("usuarios")
-            .select("id, id_salao")
-            .eq("auth_user_id", user.id)
-            .maybeSingle(),
+        const usuario = await getPainelUserContextByAuthUserId(user.id);
+        const [adminResult, usuarioResult] = await Promise.all([
           supabaseAdmin
             .from("admin_master_usuarios")
             .select("id")
             .eq("auth_user_id", user.id)
             .maybeSingle(),
+          Promise.resolve({
+            data: usuario
+              ? {
+                  id: usuario.id,
+                  id_salao: usuario.id_salao,
+                }
+              : null,
+          }),
         ]);
 
         return {

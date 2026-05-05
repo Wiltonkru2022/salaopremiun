@@ -7,6 +7,7 @@ import {
   criarCobranca,
   criarOuBuscarCliente,
 } from "@/lib/payments/pix-provider";
+import { getPainelUserContextByAuthUserId } from "@/lib/auth/get-painel-user-context";
 import { getSupabaseCookieOptions } from "@/lib/supabase/cookie-options";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
@@ -28,12 +29,6 @@ type SalaoRow = {
   telefone?: string | null;
   whatsapp?: string | null;
   cpf_cnpj?: string | null;
-};
-
-type UsuarioRow = {
-  id_salao: string;
-  status?: string | null;
-  nivel?: string | null;
 };
 
 type CompraExistenteRow = {
@@ -96,7 +91,6 @@ function toMoney(value?: number | string | null) {
 
 async function validarSalaoAdmin() {
   const supabase = await getSupabaseServer();
-  const supabaseAdmin = getSupabaseAdmin();
 
   const {
     data: { user },
@@ -114,37 +108,24 @@ async function validarSalaoAdmin() {
     throw new WhatsappPacoteCheckoutServiceError("Usuario nao autenticado.", 401);
   }
 
-  const { data: usuario, error: usuarioError } = await supabaseAdmin
-    .from("usuarios")
-    .select("id_salao, status, nivel")
-    .eq("auth_user_id", user.id)
-    .maybeSingle();
+  const usuario = await getPainelUserContextByAuthUserId(user.id);
 
-  if (usuarioError) {
-    throw new WhatsappPacoteCheckoutServiceError(
-      "Erro ao validar vinculo com o salao.",
-      500
-    );
-  }
-
-  const usuarioRow = usuario as UsuarioRow | null;
-
-  if (!usuarioRow?.id_salao) {
+  if (!usuario?.id_salao) {
     throw new WhatsappPacoteCheckoutServiceError("Usuario sem salao vinculado.", 403);
   }
 
-  if (String(usuarioRow.status || "").toLowerCase() !== "ativo") {
+  if (String(usuario.status || "").toLowerCase() !== "ativo") {
     throw new WhatsappPacoteCheckoutServiceError("Usuario inativo.", 403);
   }
 
-  if (String(usuarioRow.nivel || "").toLowerCase() !== "admin") {
+  if (String(usuario.nivel || "").toLowerCase() !== "admin") {
     throw new WhatsappPacoteCheckoutServiceError(
       "Somente administrador pode comprar pacotes de WhatsApp.",
       403
     );
   }
 
-  return usuarioRow.id_salao;
+  return usuario.id_salao;
 }
 
 async function carregarPacote(pacoteId: string) {

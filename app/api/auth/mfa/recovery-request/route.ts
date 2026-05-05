@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { getPainelUserContext } from "@/lib/auth/get-painel-user-context";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import {
   buildMfaRecoveryMessage,
@@ -11,16 +11,11 @@ import { createSuporteTicketService } from "@/services/suporteTicketService";
 
 export async function POST() {
   try {
-    const supabase = await createClient();
     const supabaseAdmin = getSupabaseAdmin();
     const service = createSuporteTicketService();
+    const { user } = await getPainelUserContext();
 
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    if (authError || !user) {
+    if (!user) {
       return NextResponse.json(
         { ok: false, error: "Sessao invalida." },
         { status: 401 }
