@@ -143,7 +143,6 @@ export default function ProfissionaisListPage() {
       const { data: acessosRows, error: acessosError } = await supabase
         .from("profissionais_acessos")
         .select("id_profissional, ativo")
-        .eq("id_salao", salaoId)
         .in("id_profissional", idsProfissionais);
 
       if (assistentesError) {
