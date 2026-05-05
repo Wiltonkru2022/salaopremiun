@@ -222,6 +222,68 @@ export default function SupportDeskClient({
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
+  const buildMetricsFromItems = useCallback((nextItems: TicketSummary[]): TicketMetrics => {
+    return nextItems.reduce<TicketMetrics>(
+      (acc, item) => {
+        const status = String(item.status || "").toLowerCase();
+        const prioridade = String(item.prioridade || "").toLowerCase();
+
+        acc.total += 1;
+
+        if (["aberto", "em_atendimento", "aguardando_cliente", "aguardando_tecnico"].includes(status)) {
+          acc.abertos += 1;
+        }
+
+        if (status === "aguardando_cliente") {
+          acc.aguardandoCliente += 1;
+        }
+
+        if (status === "aguardando_tecnico") {
+          acc.aguardandoTecnico += 1;
+        }
+
+        if (prioridade === "critica") {
+          acc.criticos += 1;
+        }
+
+        if (item.recoveryFlow) {
+          if (item.recoveryStatus === "cooldown") {
+            acc.recoveryCooldown += 1;
+          } else if (item.recoveryReadyToComplete) {
+            acc.recoveryReadyToComplete += 1;
+          } else {
+            acc.recoveryPending += 1;
+          }
+        }
+
+        return acc;
+      },
+      {
+        total: 0,
+        abertos: 0,
+        aguardandoCliente: 0,
+        aguardandoTecnico: 0,
+        criticos: 0,
+        recoveryPending: 0,
+        recoveryCooldown: 0,
+        recoveryReadyToComplete: 0,
+      }
+    );
+  }, []);
+
+  const patchSelectedTicketSummary = useCallback(
+    (updater: (current: TicketSummary) => TicketSummary) => {
+      setItems((currentItems) => {
+        const nextItems = currentItems.map((item) =>
+          item.id === selectedId ? updater(item) : item
+        );
+        setMetrics(buildMetricsFromItems(nextItems));
+        return nextItems;
+      });
+    },
+    [buildMetricsFromItems, selectedId]
+  );
+
   const filteredItems = useMemo(() => {
     const term = search.trim().toLowerCase();
     if (!term) return items;
@@ -339,6 +401,13 @@ export default function SupportDeskClient({
     try {
       setError("");
       setSuccess("");
+      let replyResult:
+        | {
+            result?: {
+              status?: string;
+            };
+          }
+        | null = null;
       if (attachmentFile) {
         const formData = new FormData();
         formData.set("arquivo", attachmentFile);
@@ -350,19 +419,40 @@ export default function SupportDeskClient({
           })
         );
       } else {
-        await readJson(
+        replyResult = (await readJson(
           await fetch(`/api/suporte/tickets/${selectedId}/mensagens`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ mensagem: message }),
           })
-        );
+        )) as {
+          result?: {
+            status?: string;
+          };
+        };
       }
 
       setReplyMessage("");
       setAttachmentFile(null);
       setSuccess("Resposta enviada para o suporte.");
-      await Promise.all([loadTickets(selectedId), loadDetail(selectedId)]);
+      if (!attachmentFile) {
+        const nextStatus = String(
+          replyResult?.result?.status || "aguardando_tecnico"
+        );
+        const now = new Date().toISOString();
+
+        patchSelectedTicketSummary((current) => ({
+          ...current,
+          status: nextStatus,
+          atualizadoEm: now,
+          ultimaInteracaoEm: now,
+          ultimaInteracaoLabel: "Agora",
+          ultimaMensagem: message,
+          ultimaMensagemAutor: "Voce",
+        }));
+      }
+
+      await loadDetail(selectedId);
     } catch (currentError) {
       setError(currentError instanceof Error ? currentError.message : "Erro ao responder ticket.");
     } finally {
@@ -384,7 +474,15 @@ export default function SupportDeskClient({
         })
       );
       setSuccess(status === "fechado" ? "Ticket encerrado." : "Ticket reaberto.");
-      await Promise.all([loadTickets(selectedId), loadDetail(selectedId)]);
+      const now = new Date().toISOString();
+      patchSelectedTicketSummary((current) => ({
+        ...current,
+        status,
+        atualizadoEm: now,
+        ultimaInteracaoEm: now,
+        ultimaInteracaoLabel: "Agora",
+      }));
+      await loadDetail(selectedId);
     } catch (currentError) {
       setError(currentError instanceof Error ? currentError.message : "Erro ao atualizar ticket.");
     } finally {
