@@ -373,11 +373,45 @@ export default function SupportDeskClient({
         })
       );
       const createdId = String(data.ticket?.id || "");
+      const createdNumber = Number(data.ticket?.numero || 0);
+      const createdStatus = String(data.ticket?.status || "aberto");
+      const now = new Date().toISOString();
+      const draftSummary: TicketSummary = {
+        id: createdId,
+        numero: createdNumber,
+        assunto: newTicket.assunto.trim(),
+        categoria: newTicket.categoria,
+        prioridade: newTicket.prioridade,
+        status: createdStatus,
+        origem: "painel_salao",
+        criadoEm: now,
+        atualizadoEm: now,
+        ultimaInteracaoEm: now,
+        ultimaInteracaoLabel: "Agora",
+        solicitanteNome: "Salao",
+        ultimaMensagem: newTicket.mensagem.trim(),
+        ultimaMensagemAutor: "Voce",
+        slaLimiteEm: null,
+      };
+
       setNewTicket(emptyForm);
       setShowForm(false);
       setSuccess(`Ticket #${data.ticket?.numero || "-"} aberto com sucesso.`);
-      await loadTickets(createdId);
-      if (createdId) await loadDetail(createdId);
+      if (createdId) {
+        setItems((currentItems) => {
+          const nextItems = [
+            draftSummary,
+            ...currentItems.filter((item) => item.id !== createdId),
+          ];
+          setMetrics(buildMetricsFromItems(nextItems));
+          return nextItems;
+        });
+        setSelectedId(createdId);
+        setDetail(null);
+        await loadDetail(createdId);
+      } else {
+        await loadTickets();
+      }
     } catch (currentError) {
       setError(currentError instanceof Error ? currentError.message : "Erro ao abrir ticket.");
     } finally {
