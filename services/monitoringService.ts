@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { getPainelUserContextByAuthUserId } from "@/lib/auth/get-painel-user-context";
+import { getAdminMasterUserContextByAuthUserId } from "@/lib/admin-master/auth/get-admin-master-user-context.server";
 import { reportOperationalIncident } from "@/lib/monitoring/operational-incidents";
 import {
   captureSystemError,
@@ -43,29 +44,21 @@ export function createMonitoringService() {
 
         const usuario = await getPainelUserContextByAuthUserId(user.id);
         const [adminResult, usuarioResult] = await Promise.all([
-          supabaseAdmin
-            .from("admin_master_usuarios")
-            .select("id")
-            .eq("auth_user_id", user.id)
-            .maybeSingle(),
-          Promise.resolve({
-            data: usuario
+          getAdminMasterUserContextByAuthUserId(user.id),
+          Promise.resolve(
+            usuario
               ? {
                   id: usuario.id,
                   id_salao: usuario.id_salao,
                 }
-              : null,
-          }),
+              : null
+          ),
         ]);
 
         return {
-          idSalao:
-            (usuarioResult.data as { id_salao?: string | null } | null)
-              ?.id_salao || null,
-          idUsuario:
-            (usuarioResult.data as { id?: string | null } | null)?.id || null,
-          idAdminUsuario:
-            (adminResult.data as { id?: string | null } | null)?.id || null,
+          idSalao: usuarioResult?.id_salao || null,
+          idUsuario: usuarioResult?.id || null,
+          idAdminUsuario: adminResult?.id || null,
         };
       } catch {
         return {
