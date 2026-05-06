@@ -6,7 +6,8 @@ import { getClientAppSalonDetail } from "@/lib/client-app/queries";
 import ClientBookingForm from "@/components/client-app/ClientBookingForm";
 import { validateClienteAppSession } from "@/lib/client-context.server";
 
-function formatCurrency(value: number) {
+function formatCurrency(value: number | null) {
+  if (value === null) return null;
   return new Intl.NumberFormat("pt-BR", {
     style: "currency",
     currency: "BRL",
@@ -37,13 +38,10 @@ export default async function ClienteSalonPage({
       : null;
 
     return (
-      <ClientAppFrame
-        title={salao.nome}
-        subtitle="Perfil publico do salao no app cliente."
-      >
+      <ClientAppFrame title={salao.nome} subtitle="Agendamento online">
         <div className="space-y-4">
-          <section className="overflow-hidden rounded-[2rem] border border-white/70 bg-white shadow-[0_18px_48px_rgba(15,23,42,0.08)]">
-            <div className="h-52 bg-zinc-100">
+          <section className="overflow-hidden rounded-[1.6rem] border border-white/70 bg-white shadow-[0_18px_48px_rgba(15,23,42,0.08)]">
+            <div className="relative h-64 bg-zinc-100 md:h-80">
               {salao.fotoCapaUrl ? (
                 <img
                   src={salao.fotoCapaUrl}
@@ -51,32 +49,45 @@ export default async function ClienteSalonPage({
                   className="h-full w-full object-cover"
                 />
               ) : (
-                <div className="flex h-full items-end bg-gradient-to-br from-zinc-950 via-zinc-800 to-amber-700 p-6 text-white">
-                  <div>
-                    <div className="text-[11px] font-bold uppercase tracking-[0.14em] text-amber-100">
-                      Premium ativo
-                    </div>
-                    <h2 className="mt-2 text-[1.85rem] font-black tracking-[-0.04em]">
+                <div className="h-full bg-gradient-to-br from-zinc-950 via-zinc-800 to-amber-700" />
+              )}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent" />
+              <div className="absolute inset-x-0 bottom-0 p-5 text-white md:p-7">
+                <div className="flex items-end gap-4">
+                  <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-[1.4rem] border border-white/30 bg-white/95 text-2xl font-black text-zinc-950 shadow-lg">
+                    {salao.logoUrl ? (
+                      <img
+                        src={salao.logoUrl}
+                        alt={`Logo do salao ${salao.nome}`}
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      salao.nome.slice(0, 1).toUpperCase()
+                    )}
+                  </div>
+                  <div className="min-w-0">
+                    <h2 className="text-[2rem] font-black leading-none md:text-[2.6rem]">
                       {salao.nome}
                     </h2>
+                    <div className="mt-3 flex flex-wrap items-center gap-2 text-sm font-semibold text-white/90">
+                      <span className="inline-flex items-center gap-1 rounded-full bg-white/15 px-3 py-1.5 backdrop-blur">
+                        <MapPin size={15} />
+                        {[salao.bairro, salao.cidade].filter(Boolean).join(" - ") ||
+                          "Endereco em atualizacao"}
+                      </span>
+                      <span className="inline-flex items-center gap-1 rounded-full bg-white/15 px-3 py-1.5 backdrop-blur">
+                        <Star size={15} fill="currentColor" />
+                        {notaMedia ? notaMedia.toFixed(1) : "Novo"}
+                      </span>
+                    </div>
                   </div>
                 </div>
-              )}
+              </div>
             </div>
 
             <div className="space-y-5 p-5">
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div className="min-w-0">
-                  <h2 className="text-[1.6rem] font-black tracking-[-0.04em] text-zinc-950">
-                    {salao.nome}
-                  </h2>
-                  <div className="mt-2 flex items-center gap-2 text-sm text-zinc-500">
-                    <MapPin size={16} />
-                    <span>
-                      {[salao.bairro, salao.cidade].filter(Boolean).join(" - ") ||
-                        "Endereco publico em atualizacao"}
-                    </span>
-                  </div>
                   <p className="mt-3 max-w-2xl text-sm leading-6 text-zinc-600">
                     {salao.descricaoPublica ||
                       "Conheca equipe, servicos e avaliacoes deste salao antes de agendar."}
@@ -126,6 +137,12 @@ export default async function ClienteSalonPage({
                     Estacionamento
                   </span>
                 ) : null}
+                {salao.enderecoCompleto ? (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-zinc-100 px-3 py-1.5">
+                    <MapPin size={14} />
+                    {salao.enderecoCompleto}
+                  </span>
+                ) : null}
                 {salao.formasPagamento.length ? (
                   <span className="inline-flex items-center gap-1 rounded-full bg-zinc-100 px-3 py-1.5">
                     <Wallet size={14} />
@@ -159,19 +176,21 @@ export default async function ClienteSalonPage({
               )}
             </div>
 
-            <div className="rounded-[1.8rem] border border-white/70 bg-white p-5 shadow-[0_18px_48px_rgba(15,23,42,0.08)]">
-              <h3 className="text-lg font-black tracking-[-0.03em] text-zinc-950">
-                Como funciona
-              </h3>
-              <div className="mt-4 space-y-3 text-sm leading-6 text-zinc-600">
-                <p>
-                  O pedido entra no sistema do salao com os dados do servico e
-                  do profissional escolhidos por voce.
-                </p>
-                <p>
-                  Depois disso, voce acompanha tudo em <strong>Meus agendamentos</strong>,
-                  incluindo cancelamento e avaliacao pos-atendimento.
-                </p>
+            <div className="rounded-[1.8rem] border border-white/70 bg-zinc-950 p-5 text-white shadow-[0_18px_48px_rgba(15,23,42,0.08)]">
+              <h3 className="text-lg font-black">Escolha e confirme</h3>
+              <div className="mt-4 grid gap-3 text-sm">
+                <div className="rounded-2xl bg-white/10 p-4">
+                  <div className="font-bold">1. Servico</div>
+                  <div className="mt-1 text-white/70">Veja valor, tempo e equipe.</div>
+                </div>
+                <div className="rounded-2xl bg-white/10 p-4">
+                  <div className="font-bold">2. Horario</div>
+                  <div className="mt-1 text-white/70">O app mostra os proximos encaixes.</div>
+                </div>
+                <div className="rounded-2xl bg-white/10 p-4">
+                  <div className="font-bold">3. Acompanhe</div>
+                  <div className="mt-1 text-white/70">Tudo fica em Agenda no menu inferior.</div>
+                </div>
               </div>
             </div>
           </section>
@@ -247,8 +266,10 @@ export default async function ClienteSalonPage({
                             </p>
                           ) : null}
                         </div>
-                        <div className="text-right text-sm font-bold text-zinc-900">
-                          {formatCurrency(servico.preco)}
+                        <div className="shrink-0 text-right text-sm font-bold text-zinc-900">
+                          {servico.exigeAvaliacao
+                            ? "Exige avaliacao"
+                            : formatCurrency(servico.preco) || "Sob consulta"}
                           <div className="mt-1 text-xs font-medium text-zinc-500">
                             {servico.duracaoMinutos
                               ? `${servico.duracaoMinutos} min`

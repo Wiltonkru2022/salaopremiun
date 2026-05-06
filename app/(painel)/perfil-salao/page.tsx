@@ -146,10 +146,10 @@ function parseCoordinate(value: string | null | undefined) {
   return Number.isFinite(numeric) ? numeric : null;
 }
 
-function formatCoordinatePair(latitude?: string, longitude?: string) {
+function formatMapPoint(latitude?: string, longitude?: string) {
   const lat = String(latitude || "").trim();
   const lng = String(longitude || "").trim();
-  return lat && lng ? `${lat}, ${lng}` : "Nao informado";
+  return lat && lng ? "Ponto do mapa configurado" : "Usando endereco do salao";
 }
 
 function DisplayItem({
@@ -1098,8 +1098,8 @@ export default function PerfilSalaoPage() {
                   multiline
                 />
                 <DisplayItem
-                  label="Coordenadas"
-                  value={formatCoordinatePair(
+                  label="Mapa no app cliente"
+                  value={formatMapPoint(
                     perfilForm.latitude,
                     perfilForm.longitude
                   )}
@@ -1635,8 +1635,16 @@ export default function PerfilSalaoPage() {
             />
           </Field>
 
-          <div className="grid gap-4 md:grid-cols-2">
-            <Field label="Latitude">
+          <div className="rounded-[22px] border border-zinc-200 bg-zinc-50 p-4">
+            <div className="text-sm font-bold text-zinc-950">
+              Localizacao no mapa
+            </div>
+            <p className="mt-1 text-sm leading-6 text-zinc-600">
+              Opcional. Preencha somente se quiser ajustar com precisao onde o
+              salao aparece quando o cliente usa "perto de mim".
+            </p>
+            <div className="mt-4 grid gap-4 md:grid-cols-2">
+            <Field label="Ponto do mapa - norte/sul">
               <TextInput
                 value={appClienteDraft.latitude || ""}
                 onChange={(event) =>
@@ -1645,11 +1653,11 @@ export default function PerfilSalaoPage() {
                     latitude: event.target.value,
                   }))
                 }
-                placeholder="-23.550520"
+                placeholder="Ex.: -23.550520"
               />
             </Field>
 
-            <Field label="Longitude">
+            <Field label="Ponto do mapa - leste/oeste">
               <TextInput
                 value={appClienteDraft.longitude || ""}
                 onChange={(event) =>
@@ -1658,9 +1666,10 @@ export default function PerfilSalaoPage() {
                     longitude: event.target.value,
                   }))
                 }
-                placeholder="-46.633308"
+                placeholder="Ex.: -46.633308"
               />
             </Field>
+            </div>
           </div>
 
           <Field label="Formas de pagamento">

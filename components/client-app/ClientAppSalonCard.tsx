@@ -19,8 +19,8 @@ export default function ClientAppSalonCard({
   distanceKm?: number | null;
 }) {
   return (
-    <article className="overflow-hidden rounded-[1.7rem] border border-white/70 bg-white shadow-[0_18px_48px_rgba(15,23,42,0.08)]">
-      <div className="h-36 bg-zinc-100">
+    <article className="overflow-hidden rounded-[1.45rem] border border-white/80 bg-white shadow-[0_18px_48px_rgba(15,23,42,0.08)] transition hover:-translate-y-0.5 hover:shadow-[0_22px_60px_rgba(15,23,42,0.12)]">
+      <div className="relative h-40 bg-zinc-100">
         {salao.fotoCapaUrl ? (
           <img
             src={salao.fotoCapaUrl}
@@ -34,19 +34,32 @@ export default function ClientAppSalonCard({
             </div>
           </div>
         )}
+        <div className="absolute inset-x-3 bottom-3 flex items-center justify-between gap-2">
+          <span className="inline-flex items-center gap-1 rounded-full bg-white/95 px-3 py-1.5 text-xs font-black text-zinc-950 shadow-sm">
+            <Star size={14} fill="currentColor" className="text-amber-600" />
+            {salao.notaMedia ? salao.notaMedia.toFixed(1) : "Novo"}
+          </span>
+          {distanceKm !== null ? (
+            <span className="rounded-full bg-zinc-950/90 px-3 py-1.5 text-xs font-bold text-white">
+              {distanceKm < 1
+                ? `${Math.max(100, Math.round(distanceKm * 1000))} m`
+                : `${distanceKm.toFixed(1)} km`}
+            </span>
+          ) : null}
+        </div>
       </div>
 
       <div className="space-y-4 p-4">
         <div className="flex flex-wrap gap-2 text-xs font-bold text-zinc-700">
-          <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-3 py-1.5 text-amber-700">
-            <Star size={14} fill="currentColor" />
-            {salao.notaMedia ? salao.notaMedia.toFixed(1) : "Novo"}
-            {salao.totalAvaliacoes ? ` (${salao.totalAvaliacoes})` : ""}
-          </span>
           <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-3 py-1.5 text-emerald-700">
             <CalendarClock size={14} />
             {salao.proximoHorarioLabel || "Agenda online"}
           </span>
+          {salao.totalAvaliacoes ? (
+            <span className="rounded-full bg-amber-50 px-3 py-1.5 text-amber-700">
+              {salao.totalAvaliacoes} avaliacoes
+            </span>
+          ) : null}
         </div>
 
         <div className="flex items-start gap-3">
@@ -75,13 +88,6 @@ export default function ClientAppSalonCard({
                   "Endereco publico em atualizacao"}
               </span>
             </div>
-            {distanceKm !== null ? (
-              <div className="mt-1 text-xs font-semibold text-emerald-700">
-                {distanceKm < 1
-                  ? `${Math.max(100, Math.round(distanceKm * 1000))} m de voce`
-                  : `${distanceKm.toFixed(1)} km de voce`}
-              </div>
-            ) : null}
           </div>
         </div>
 

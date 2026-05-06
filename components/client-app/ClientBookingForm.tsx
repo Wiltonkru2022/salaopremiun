@@ -11,6 +11,14 @@ import type {
   ClientAppServiceListItem,
 } from "@/lib/client-app/queries";
 
+function formatCurrency(value: number | null) {
+  if (value === null) return "Sob consulta";
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  }).format(value);
+}
+
 function SubmitButton({ disabled }: { disabled?: boolean }) {
   const { pending } = useFormStatus();
   const isDisabled = pending || disabled;
@@ -166,19 +174,11 @@ export default function ClientBookingForm({
     >
       <input type="hidden" name="salao" value={idSalao} />
 
-      <h3 className="text-lg font-black tracking-[-0.03em] text-zinc-950">
-        Reserve seu horario
+      <h3 className="text-lg font-black text-zinc-950">
+        Agendar
       </h3>
-      <p className="mt-2 text-sm leading-6 text-zinc-500">
-        Escolha em poucos passos. O horario e validado novamente no envio para
-        evitar conflito na agenda.
-      </p>
 
       <div className="mt-5 space-y-4">
-        <div className="rounded-2xl border border-zinc-100 bg-zinc-50 p-3 text-xs font-bold uppercase tracking-[0.12em] text-zinc-500">
-          1. Servico
-        </div>
-
         <div>
           <label className="mb-1.5 block text-sm font-medium text-zinc-700">
             Servico
@@ -192,14 +192,39 @@ export default function ClientBookingForm({
             <option value="">Selecione um servico</option>
             {servicos.map((servico) => (
               <option key={servico.id} value={servico.id}>
-                {servico.nome}
+                {servico.nome} -{" "}
+                {servico.exigeAvaliacao
+                  ? "Exige avaliacao"
+                  : formatCurrency(servico.preco)}
               </option>
             ))}
           </select>
-        </div>
-
-        <div className="rounded-2xl border border-zinc-100 bg-zinc-50 p-3 text-xs font-bold uppercase tracking-[0.12em] text-zinc-500">
-          2. Profissional
+          {selectedServico ? (
+            <div className="mt-3 rounded-2xl border border-zinc-100 bg-zinc-50 p-3">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <div className="text-sm font-bold text-zinc-950">
+                    {selectedServico.nome}
+                  </div>
+                  {selectedServico.descricao ? (
+                    <p className="mt-1 text-sm leading-5 text-zinc-500">
+                      {selectedServico.descricao}
+                    </p>
+                  ) : null}
+                </div>
+                <div className="shrink-0 text-right text-sm font-black text-zinc-950">
+                  {selectedServico.exigeAvaliacao
+                    ? "Exige avaliacao"
+                    : formatCurrency(selectedServico.preco)}
+                  <div className="mt-1 text-xs font-semibold text-zinc-500">
+                    {selectedServico.duracaoMinutos
+                      ? `${selectedServico.duracaoMinutos} min`
+                      : "Tempo sob consulta"}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : null}
         </div>
 
         <div>
@@ -224,10 +249,6 @@ export default function ClientBookingForm({
         <input type="hidden" name="data" value={selectedDate} />
         <input type="hidden" name="hora_inicio" value={selectedTime} />
 
-        <div className="rounded-2xl border border-zinc-100 bg-zinc-50 p-3 text-xs font-bold uppercase tracking-[0.12em] text-zinc-500">
-          3. Data e horario
-        </div>
-
         <div className="space-y-4 rounded-2xl border border-zinc-200 bg-zinc-50 p-4">
           <div>
             <div className="mb-1.5 block text-sm font-medium text-zinc-700">
@@ -235,11 +256,11 @@ export default function ClientBookingForm({
             </div>
             {!servicoId || !profissionalId ? (
               <div className="rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-500">
-                Escolha servico e profissional para liberar os proximos dias.
+                Escolha servico e profissional.
               </div>
             ) : loadingAvailability ? (
               <div className="rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-500">
-                Carregando dias disponiveis...
+                Buscando horarios...
               </div>
             ) : availabilityError ? (
               <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
@@ -264,7 +285,7 @@ export default function ClientBookingForm({
               </div>
             ) : (
               <div className="rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-500">
-                Nao encontramos horarios livres nos proximos dias para essa combinacao.
+                Sem horarios livres para essa combinacao.
               </div>
             )}
           </div>
@@ -292,7 +313,7 @@ export default function ClientBookingForm({
               </div>
             ) : (
               <div className="rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-500">
-                Escolha um dia com horarios livres para continuar.
+                Escolha um dia.
               </div>
             )}
           </div>
@@ -312,7 +333,7 @@ export default function ClientBookingForm({
 
         <div className="rounded-2xl border border-zinc-200 bg-white px-4 py-3">
           <div className="text-xs font-bold uppercase tracking-[0.12em] text-zinc-500">
-            Resumo
+            Confirmacao
           </div>
           <div className="mt-2 space-y-1 text-sm text-zinc-700">
             <div>
@@ -326,7 +347,7 @@ export default function ClientBookingForm({
             <div>
               {selectedDate && selectedTime
                 ? `${selectedDate.split("-").reverse().join("/")} as ${selectedTime}`
-                : "Escolha data e horario disponiveis"}
+                : "Escolha data e horario"}
             </div>
           </div>
         </div>
@@ -338,10 +359,7 @@ export default function ClientBookingForm({
         ) : null}
 
         <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-xs leading-5 text-zinc-500">
-          Horarios seguem o intervalo configurado pelo salao:{" "}
-          <strong>{intervaloMinutos} min</strong>. Entre um atendimento e outro,
-          o app reserva <strong>{bufferMinutos} min</strong> para o profissional
-          se organizar.
+          Grade de {intervaloMinutos} min. Intervalo tecnico de {bufferMinutos} min.
         </div>
 
         <SubmitButton disabled={!canSubmit} />

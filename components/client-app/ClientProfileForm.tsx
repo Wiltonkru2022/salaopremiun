@@ -47,8 +47,8 @@ export default function ClientProfileForm({
         action={formAction}
         className="rounded-[1.8rem] border border-white/70 bg-white p-5 shadow-[0_18px_48px_rgba(15,23,42,0.08)]"
       >
-        <h2 className="text-lg font-black tracking-[-0.03em] text-zinc-950">
-          Dados principais
+        <h2 className="text-lg font-black text-zinc-950">
+          Editar dados
         </h2>
 
         <div className="mt-5 space-y-4">
@@ -90,7 +90,7 @@ export default function ClientProfileForm({
 
           <div>
             <label className="mb-1.5 block text-sm font-medium text-zinc-700">
-              Preferencias
+              Preferencias para atendimento
             </label>
             <textarea
               name="preferencias"

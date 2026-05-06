@@ -1,4 +1,3 @@
-import Link from "next/link";
 import ClientAppFrame from "@/components/client-app/ClientAppFrame";
 import ClientSalonDiscovery from "@/components/client-app/ClientSalonDiscovery";
 import { listVisibleClientAppSaloes } from "@/lib/client-app/queries";
@@ -17,81 +16,22 @@ export default async function InicioClientePage({
 
   return (
     <ClientAppFrame
-      title="Encontre seu salao"
-      subtitle="Busque, compare e agende em saloes premium publicados."
+      title="Saloes"
+      subtitle="Escolha um salao e agende em poucos toques."
     >
-      <section className="grid gap-4 lg:grid-cols-[1.1fr_2fr]">
-        <div className="rounded-[1.8rem] border border-white/70 bg-zinc-950 p-5 text-white shadow-[0_18px_48px_rgba(15,23,42,0.08)]">
-          <div className="inline-flex rounded-full bg-white/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.14em] text-amber-100">
-            App cliente
+      <section className="space-y-4">
+        {saloes.length ? (
+          <ClientSalonDiscovery saloes={saloes} initialSearch={busca || ""} />
+        ) : (
+          <div className="rounded-[1.6rem] border border-white/70 bg-white p-6 shadow-[0_18px_48px_rgba(15,23,42,0.08)]">
+            <h3 className="text-lg font-black text-zinc-950">
+              Nenhum salao encontrado agora
+            </h3>
+            <p className="mt-2 text-sm leading-6 text-zinc-500">
+              Tente buscar por outro bairro, cidade ou servico.
+            </p>
           </div>
-          <h2 className="mt-3 text-[1.75rem] font-black tracking-[-0.04em]">
-            Agende como cliente VIP
-          </h2>
-          <p className="mt-2 text-sm leading-6 text-zinc-300">
-            Compare saloes, veja avaliacoes, escolha equipe e encontre horarios
-            sem precisar chamar cada estabelecimento no WhatsApp.
-          </p>
-
-          <form className="mt-5 space-y-3" action="/app-cliente/inicio">
-            <input
-              name="busca"
-              defaultValue={busca || ""}
-              placeholder="Buscar por nome, bairro ou cidade"
-              className="h-12 w-full rounded-2xl border border-white/15 bg-white/10 px-4 text-sm text-white outline-none placeholder:text-zinc-300 focus:border-white/30"
-            />
-            <button
-              type="submit"
-              className="inline-flex h-11 items-center justify-center rounded-2xl bg-white px-4 text-sm font-bold text-zinc-950"
-            >
-              Buscar saloes
-            </button>
-          </form>
-
-          <div className="mt-5 text-sm text-zinc-300">
-            Ja tem conta?{" "}
-            <Link href="/app-cliente/login" className="font-bold text-white underline">
-              Entrar
-            </Link>
-          </div>
-
-          <div className="mt-5 grid grid-cols-3 gap-2 text-center">
-            <div className="rounded-2xl bg-white/10 px-3 py-3">
-              <div className="text-lg font-black">{saloes.length}</div>
-              <div className="mt-1 text-[11px] font-semibold text-zinc-300">
-                saloes
-              </div>
-            </div>
-            <div className="rounded-2xl bg-white/10 px-3 py-3">
-              <div className="text-lg font-black">24h</div>
-              <div className="mt-1 text-[11px] font-semibold text-zinc-300">
-                vitrine
-              </div>
-            </div>
-            <div className="rounded-2xl bg-white/10 px-3 py-3">
-              <div className="text-lg font-black">1</div>
-              <div className="mt-1 text-[11px] font-semibold text-zinc-300">
-                conta
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="space-y-4">
-          {saloes.length ? (
-            <ClientSalonDiscovery saloes={saloes} />
-          ) : (
-            <div className="rounded-[1.8rem] border border-white/70 bg-white p-6 shadow-[0_18px_48px_rgba(15,23,42,0.08)]">
-              <h3 className="text-lg font-black tracking-[-0.03em] text-zinc-950">
-                Nenhum salao encontrado agora
-              </h3>
-              <p className="mt-2 text-sm leading-6 text-zinc-500">
-                Tente outro termo de busca ou volte depois. A listagem mostra
-                apenas saloes premium com publicacao ativa no app cliente.
-              </p>
-            </div>
-          )}
-        </div>
+        )}
       </section>
     </ClientAppFrame>
   );

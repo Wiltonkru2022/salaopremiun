@@ -29,8 +29,9 @@ export type ClientAppServiceListItem = {
   id: string;
   nome: string;
   descricao: string | null;
-  preco: number;
+  preco: number | null;
   duracaoMinutos: number | null;
+  exigeAvaliacao: boolean;
   profissionaisPermitidos: string[];
 };
 
@@ -76,11 +77,6 @@ export type ClientAppProfileData = {
 
 function normalizeSearch(value?: string) {
   return String(value || "").trim().slice(0, 60);
-}
-
-function parsePrice(value: unknown) {
-  const numeric = Number(value ?? 0);
-  return Number.isFinite(numeric) ? numeric : 0;
 }
 
 function parseNullableNumber(value: unknown) {
@@ -195,7 +191,7 @@ async function attachMarketplaceMetrics(
     await Promise.allSettled([
       (supabaseAdmin as any)
         .from("servicos")
-        .select("id_salao, nome, preco, duracao_minutos, duracao")
+        .select("id_salao, nome, categoria, preco, preco_padrao, duracao_minutos, duracao")
         .in("id_salao", ids)
         .eq("ativo", true)
         .eq("app_cliente_visivel", true)
@@ -232,8 +228,9 @@ async function attachMarketplaceMetrics(
       const current =
         serviceMetrics.get(idSalao) ||
         { count: 0, minPrice: null, minDuration: null, categories: new Set<string>() };
-      const price = parseNullableNumber(row.preco);
+      const price = parseNullableNumber(row.preco_padrao ?? row.preco);
       const duration = parseNullableNumber(row.duracao_minutos ?? row.duracao);
+      const categoria = String(row.categoria || "").trim();
       const nome = String(row.nome || "").trim();
 
       current.count += 1;
@@ -249,7 +246,8 @@ async function attachMarketplaceMetrics(
           : current.minDuration === null
             ? duration
             : Math.min(current.minDuration, duration);
-      if (nome) current.categories.add(nome.split(/\s+/)[0]);
+      if (categoria) current.categories.add(categoria);
+      else if (nome) current.categories.add(nome.split(/\s+/)[0]);
       serviceMetrics.set(idSalao, current);
     }
   }
@@ -422,7 +420,7 @@ const getClientAppSalonDetailCached = unstable_cache(
           .limit(16),
         (supabaseAdmin as any)
           .from("servicos")
-          .select("id, nome, descricao_publica, descricao, preco, duracao, duracao_minutos")
+          .select("id, nome, descricao_publica, descricao, preco, preco_padrao, duracao, duracao_minutos, exige_avaliacao")
           .eq("id_salao", idSalao)
           .eq("ativo", true)
           .eq("app_cliente_visivel", true)
@@ -492,9 +490,10 @@ const getClientAppSalonDetailCached = unstable_cache(
               descricao:
                 String(item.descricao_publica || item.descricao || "").trim() ||
                 null,
-              preco: parsePrice(item.preco),
+              preco: parseNullableNumber(item.preco_padrao ?? item.preco),
               duracaoMinutos:
                 Number(item.duracao_minutos ?? item.duracao ?? 0) || null,
+              exigeAvaliacao: Boolean(item.exige_avaliacao),
               profissionaisPermitidos:
                 vinculosPorServico.get(String(item.id || "").trim()) || [],
             })

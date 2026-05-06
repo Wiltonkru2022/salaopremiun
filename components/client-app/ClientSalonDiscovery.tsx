@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { MapPin, Search, SlidersHorizontal, Star } from "lucide-react";
+import { LocateFixed, MapPin, Search, SlidersHorizontal, Star } from "lucide-react";
 import ClientAppSalonCard from "@/components/client-app/ClientAppSalonCard";
 import type { ClientAppSalonListItem } from "@/lib/client-app/queries";
 
@@ -30,18 +30,24 @@ function calculateDistanceKm(a: ClientCoords, b: ClientCoords) {
 
 export default function ClientSalonDiscovery({
   saloes,
+  initialSearch = "",
 }: {
   saloes: ClientAppSalonListItem[];
+  initialSearch?: string;
 }) {
   const [clientCoords, setClientCoords] = useState<ClientCoords | null>(null);
   const [locationError, setLocationError] = useState<string | null>(null);
   const [loadingLocation, setLoadingLocation] = useState(false);
-  const [localSearch, setLocalSearch] = useState("");
+  const [localSearch, setLocalSearch] = useState(initialSearch);
   const [sortMode, setSortMode] = useState<"recommended" | "nearby" | "rating" | "price">(
     "recommended"
   );
   const [onlyRated, setOnlyRated] = useState(false);
   const [onlyWithParking, setOnlyWithParking] = useState(false);
+  const saloesComMapa = useMemo(
+    () => saloes.some((item) => item.latitude !== null && item.longitude !== null),
+    [saloes]
+  );
 
   const availableCities = useMemo(
     () =>
@@ -128,7 +134,7 @@ export default function ClientSalonDiscovery({
 
   function handleUseLocation() {
     if (!("geolocation" in navigator)) {
-      setLocationError("Seu navegador nao liberou geolocalizacao agora.");
+      setLocationError("Busque por bairro ou cidade.");
       return;
     }
 
@@ -143,9 +149,11 @@ export default function ClientSalonDiscovery({
         });
         setLoadingLocation(false);
       },
-      () => {
+      (error) => {
         setLocationError(
-          "Nao foi possivel ler sua localizacao. Voce ainda pode buscar por bairro ou cidade."
+          error.code === error.PERMISSION_DENIED
+            ? "Localizacao bloqueada no navegador. Busque por bairro ou cidade."
+            : "Busque por bairro ou cidade enquanto a localizacao nao responde."
         );
         setLoadingLocation(false);
       },
@@ -159,7 +167,26 @@ export default function ClientSalonDiscovery({
 
   return (
     <div className="space-y-4">
-      <div className="rounded-[1.8rem] border border-white/70 bg-white p-4 shadow-[0_18px_48px_rgba(15,23,42,0.08)]">
+      <div className="rounded-[1.6rem] border border-white/70 bg-white p-4 shadow-[0_18px_48px_rgba(15,23,42,0.08)]">
+        <div className="mb-4 flex items-end justify-between gap-3">
+          <div>
+            <div className="text-[11px] font-black uppercase tracking-[0.16em] text-zinc-400">
+              Descobrir
+            </div>
+            <h2 className="mt-1 text-2xl font-black text-zinc-950">
+              Onde voce quer ir hoje?
+            </h2>
+          </div>
+          <button
+            type="button"
+            onClick={handleUseLocation}
+            disabled={loadingLocation || !saloesComMapa}
+            className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-2xl bg-zinc-950 px-4 text-sm font-bold text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <LocateFixed size={16} />
+            {loadingLocation ? "Localizando" : "Perto de mim"}
+          </button>
+        </div>
         <div className="grid gap-3 lg:grid-cols-[minmax(0,1.4fr)_auto]">
           <label className="flex h-12 items-center gap-2 rounded-2xl border border-zinc-200 bg-zinc-50 px-4">
             <Search size={17} className="text-zinc-500" />
@@ -167,7 +194,7 @@ export default function ClientSalonDiscovery({
               type="search"
               value={localSearch}
               onChange={(event) => setLocalSearch(event.target.value)}
-              placeholder="Buscar servico, bairro ou salao"
+              placeholder="Servico, bairro ou salao"
               className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-zinc-400"
             />
           </label>
@@ -232,29 +259,21 @@ export default function ClientSalonDiscovery({
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
-        <button
-          type="button"
-          onClick={handleUseLocation}
-          disabled={loadingLocation}
-          className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-zinc-200 bg-white px-4 text-sm font-bold text-zinc-800 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          <MapPin size={16} />
-          {loadingLocation
-            ? "Lendo localizacao..."
-            : clientCoords
-              ? "Ordenando por proximidade"
-              : "Usar minha localizacao"}
-        </button>
-
         {clientCoords ? (
           <div className="rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700">
             Saloes mais proximos primeiro
           </div>
         ) : null}
+        {!saloesComMapa ? (
+          <div className="inline-flex items-center gap-1 rounded-full bg-zinc-100 px-3 py-1.5 text-xs font-semibold text-zinc-600">
+            <MapPin size={14} />
+            Use bairro ou cidade para refinar
+          </div>
+        ) : null}
       </div>
 
       {locationError ? (
-        <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+        <div className="rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-600">
           {locationError}
         </div>
       ) : null}
