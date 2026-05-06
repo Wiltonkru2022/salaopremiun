@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
+import ClientAppPendingLink from "@/components/client-app/ClientAppPendingLink";
 import ClientAppBottomNav from "@/components/client-app/ClientAppBottomNav";
 import PushPermissionRuntime from "@/components/push/PushPermissionRuntime";
 
@@ -29,24 +30,25 @@ export default function ClientAppFrame({
           <div className="flex flex-col items-end gap-2">
             <PushPermissionRuntime audience="cliente_app" compact />
             <nav className="hidden flex-wrap items-center gap-2 text-sm font-semibold text-zinc-700 md:flex">
-              <Link
+              <ClientAppPendingLink
                 href="/app-cliente/inicio"
-                className="rounded-full border border-zinc-200 bg-zinc-50 px-3 py-2 transition hover:bg-zinc-100"
+                className="inline-flex min-h-10 items-center gap-1.5 rounded-full border border-zinc-200 bg-zinc-50 px-3 py-2 transition hover:bg-zinc-100"
               >
                 Saloes
-              </Link>
-              <Link
+              </ClientAppPendingLink>
+              <ClientAppPendingLink
                 href="/app-cliente/agendamentos"
-                className="rounded-full border border-zinc-200 bg-zinc-50 px-3 py-2 transition hover:bg-zinc-100"
+                pendingLabel="Abrindo"
+                className="inline-flex min-h-10 items-center gap-1.5 rounded-full border border-zinc-200 bg-zinc-50 px-3 py-2 transition hover:bg-zinc-100"
               >
                 Meus agendamentos
-              </Link>
-              <Link
+              </ClientAppPendingLink>
+              <ClientAppPendingLink
                 href="/app-cliente/perfil"
-                className="rounded-full border border-zinc-200 bg-zinc-50 px-3 py-2 transition hover:bg-zinc-100"
+                className="inline-flex min-h-10 items-center gap-1.5 rounded-full border border-zinc-200 bg-zinc-50 px-3 py-2 transition hover:bg-zinc-100"
               >
                 Perfil
-              </Link>
+              </ClientAppPendingLink>
             </nav>
           </div>
         </header>

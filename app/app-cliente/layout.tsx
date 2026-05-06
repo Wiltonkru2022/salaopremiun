@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 
-export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "SalaoPremium Cliente",
   description:
@@ -16,6 +15,7 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: "#09090b",
+  maximumScale: 1,
 };
 
 export default function AppClienteLayout({

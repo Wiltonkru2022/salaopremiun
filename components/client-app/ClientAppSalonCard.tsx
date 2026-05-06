@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { CalendarClock, MapPin, ParkingCircle, Star, Wallet } from "lucide-react";
+import ClientAppPendingLink from "@/components/client-app/ClientAppPendingLink";
 import type { ClientAppSalonListItem } from "@/lib/client-app/queries";
 
 function formatCurrency(value: number | null) {
@@ -154,12 +155,13 @@ export default function ClientAppSalonCard({
         </div>
 
         <div className="flex flex-wrap gap-2">
-          <Link
+          <ClientAppPendingLink
             href={`/app-cliente/salao/${salao.id}`}
-            className="inline-flex h-11 flex-1 items-center justify-center rounded-2xl bg-zinc-950 px-4 text-sm font-bold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-zinc-800"
+            pendingLabel="Abrindo"
+            className="inline-flex h-11 flex-1 items-center justify-center gap-1.5 rounded-2xl bg-zinc-950 px-4 text-sm font-bold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-zinc-800"
           >
             Ver horarios
-          </Link>
+          </ClientAppPendingLink>
           {!isLoggedIn ? (
             <Link
               href={`/app-cliente/cadastro?next=${encodeURIComponent(`/app-cliente/salao/${salao.id}`)}`}

@@ -539,144 +539,157 @@ export async function getClientAppSalonDetail(idSalao: string) {
 }
 
 export async function listClienteAppAppointments(params: { idConta: string }) {
-  const supabaseAdmin = getSupabaseAdmin();
-  const { data: vinculos, error: vinculosError } = await supabaseAdmin
-    .from("clientes_auth")
-    .select("id_cliente, id_salao, saloes(nome, nome_fantasia, whatsapp, telefone)")
-    .eq("app_conta_id", params.idConta)
-    .eq("app_ativo", true)
-    .limit(40);
+  try {
+    const supabaseAdmin = getSupabaseAdmin();
+    const { data: vinculos, error: vinculosError } = await supabaseAdmin
+      .from("clientes_auth")
+      .select("id_cliente, id_salao, saloes(nome, nome_fantasia, whatsapp, telefone)")
+      .eq("app_conta_id", params.idConta)
+      .eq("app_ativo", true)
+      .limit(40);
 
-  if (vinculosError || !vinculos?.length) {
-    return [];
-  }
-
-  const clientesIds = Array.from(
-    new Set(
-      vinculos
-        .map((item) => String(item.id_cliente || "").trim())
-        .filter(Boolean)
-    )
-  );
-
-  if (!clientesIds.length) {
-    return [];
-  }
-
-  const salaoNomeByCliente = new Map<
-    string,
-    {
-      nome: string;
-      idSalao: string;
-      whatsapp: string | null;
-      telefone: string | null;
+    if (vinculosError || !vinculos?.length) {
+      return [];
     }
-  >();
-  for (const item of vinculos) {
-    const idCliente = String(item.id_cliente || "").trim();
-    const idSalao = String(item.id_salao || "").trim();
-    if (!idCliente || !idSalao) continue;
-    const salaoRow = item.saloes as
-      | { nome?: string | null; nome_fantasia?: string | null }
-      | null;
-    salaoNomeByCliente.set(idCliente, {
-      idSalao,
-      nome:
-        String(salaoRow?.nome_fantasia || "").trim() ||
-        String(salaoRow?.nome || "").trim() ||
-        "Salao Premium",
-      whatsapp: String((salaoRow as { whatsapp?: string | null } | null)?.whatsapp || "").trim() || null,
-      telefone: String((salaoRow as { telefone?: string | null } | null)?.telefone || "").trim() || null,
-    });
-  }
 
-  const { data, error } = await supabaseAdmin
-    .from("agendamentos")
-    .select(
-      "id, cliente_id, id_salao, data, hora_inicio, hora_fim, status, observacoes, servicos(nome), profissionais(nome, nome_exibicao)"
-    )
-    .in("cliente_id", clientesIds)
-    .order("data", { ascending: false })
-    .order("hora_inicio", { ascending: false })
-    .limit(40);
+    const clientesIds = Array.from(
+      new Set(
+        vinculos
+          .map((item) => String(item.id_cliente || "").trim())
+          .filter(Boolean)
+      )
+    );
 
-  if (error || !data) {
-    return [];
-  }
+    if (!clientesIds.length) {
+      return [];
+    }
 
-  const rows = data as Array<Record<string, unknown>>;
-  const appointmentIds = rows
-    .map((item) => String(item.id || "").trim())
-    .filter(Boolean);
+    const salaoNomeByCliente = new Map<
+      string,
+      {
+        nome: string;
+        idSalao: string;
+        whatsapp: string | null;
+        telefone: string | null;
+      }
+    >();
+    for (const item of vinculos) {
+      const idCliente = String(item.id_cliente || "").trim();
+      const idSalao = String(item.id_salao || "").trim();
+      if (!idCliente || !idSalao) continue;
+      const salaoRow = item.saloes as
+        | { nome?: string | null; nome_fantasia?: string | null }
+        | null;
+      salaoNomeByCliente.set(idCliente, {
+        idSalao,
+        nome:
+          String(salaoRow?.nome_fantasia || "").trim() ||
+          String(salaoRow?.nome || "").trim() ||
+          "Salao Premium",
+        whatsapp: String((salaoRow as { whatsapp?: string | null } | null)?.whatsapp || "").trim() || null,
+        telefone: String((salaoRow as { telefone?: string | null } | null)?.telefone || "").trim() || null,
+      });
+    }
 
-  const { data: reviewRows } = appointmentIds.length
-    ? await (supabaseAdmin as any)
-        .from("clientes_avaliacoes")
-        .select("id_agendamento")
-        .in("id_agendamento", appointmentIds)
-    : { data: [] };
+    const { data, error } = await supabaseAdmin
+      .from("agendamentos")
+      .select(
+        "id, cliente_id, id_salao, data, hora_inicio, hora_fim, status, observacoes, servicos(nome), profissionais(nome, nome_exibicao)"
+      )
+      .in("cliente_id", clientesIds)
+      .order("data", { ascending: false })
+      .order("hora_inicio", { ascending: false })
+      .limit(40);
 
-  const reviewedIds = new Set(
-    ((reviewRows as Array<{ id_agendamento?: string | null }> | null) || [])
-      .map((item) => String(item.id_agendamento || "").trim())
-      .filter(Boolean)
-  );
+    if (error || !data) {
+      return [];
+    }
 
-  return rows.map((item) => {
-    const status = String(item.status || "").trim() || "pendente";
-    const avaliado = reviewedIds.has(String(item.id || "").trim());
-    const clienteId = String(item.cliente_id || "").trim();
-    const salaoMeta = salaoNomeByCliente.get(clienteId);
-    return {
-      id: String(item.id || ""),
-      idSalao: salaoMeta?.idSalao || String(item.id_salao || "").trim(),
-      salaoNome: salaoMeta?.nome || "Salao Premium",
-      salaoWhatsapp: salaoMeta?.whatsapp || null,
-      salaoTelefone: salaoMeta?.telefone || null,
-      data: String(item.data || ""),
-      horaInicio: String(item.hora_inicio || ""),
-      horaFim: String(item.hora_fim || ""),
-      status,
-      observacoes: String(item.observacoes || "").trim() || null,
-      servicoNome:
-        String((item.servicos as { nome?: string } | null)?.nome || "").trim() ||
-        "Servico",
-      profissionalNome:
-        String(
-          (
-            item.profissionais as
-              | { nome_exibicao?: string; nome?: string }
-              | null
-          )?.nome_exibicao ||
+    const rows = data as Array<Record<string, unknown>>;
+    const appointmentIds = rows
+      .map((item) => String(item.id || "").trim())
+      .filter(Boolean);
+
+    const { data: reviewRows } = appointmentIds.length
+      ? await (supabaseAdmin as any)
+          .from("clientes_avaliacoes")
+          .select("id_agendamento")
+          .in("id_agendamento", appointmentIds)
+      : { data: [] };
+
+    const reviewedIds = new Set(
+      ((reviewRows as Array<{ id_agendamento?: string | null }> | null) || [])
+        .map((item) => String(item.id_agendamento || "").trim())
+        .filter(Boolean)
+    );
+
+    return rows.map((item) => {
+      const status = String(item.status || "").trim() || "pendente";
+      const avaliado = reviewedIds.has(String(item.id || "").trim());
+      const clienteId = String(item.cliente_id || "").trim();
+      const salaoMeta = salaoNomeByCliente.get(clienteId);
+      return {
+        id: String(item.id || ""),
+        idSalao: salaoMeta?.idSalao || String(item.id_salao || "").trim(),
+        salaoNome: salaoMeta?.nome || "Salao Premium",
+        salaoWhatsapp: salaoMeta?.whatsapp || null,
+        salaoTelefone: salaoMeta?.telefone || null,
+        data: String(item.data || ""),
+        horaInicio: String(item.hora_inicio || ""),
+        horaFim: String(item.hora_fim || ""),
+        status,
+        observacoes: String(item.observacoes || "").trim() || null,
+        servicoNome:
+          String((item.servicos as { nome?: string } | null)?.nome || "").trim() ||
+          "Servico",
+        profissionalNome:
+          String(
             (
               item.profissionais as
                 | { nome_exibicao?: string; nome?: string }
                 | null
-            )?.nome ||
-            ""
-        ).trim() || "Profissional",
-      podeCancelar: status === "pendente" || status === "confirmado",
-      podeAvaliar:
-        !avaliado &&
-        (status === "atendido" || status === "aguardando_pagamento"),
-      avaliado,
-    } satisfies ClientAppAppointmentListItem;
-  });
+            )?.nome_exibicao ||
+              (
+                item.profissionais as
+                  | { nome_exibicao?: string; nome?: string }
+                  | null
+              )?.nome ||
+              ""
+          ).trim() || "Profissional",
+        podeCancelar: status === "pendente" || status === "confirmado",
+        podeAvaliar:
+          !avaliado &&
+          (status === "atendido" || status === "aguardando_pagamento"),
+        avaliado,
+      } satisfies ClientAppAppointmentListItem;
+    });
+  } catch {
+    return [];
+  }
 }
 
 export async function getClienteAppProfileData(params: { idConta: string }) {
-  const supabaseAdmin = getSupabaseAdmin();
-  const { data: conta } = await (supabaseAdmin as any)
-    .from("clientes_app_auth")
-    .select("nome, email, telefone, preferencias_gerais")
-    .eq("id", params.idConta)
-    .limit(1)
-    .maybeSingle();
+  try {
+    const supabaseAdmin = getSupabaseAdmin();
+    const { data: conta } = await (supabaseAdmin as any)
+      .from("clientes_app_auth")
+      .select("nome, email, telefone, preferencias_gerais")
+      .eq("id", params.idConta)
+      .limit(1)
+      .maybeSingle();
 
-  return {
-    nome: String(conta?.nome || "").trim(),
-    email: String(conta?.email || "").trim(),
-    telefone: String(conta?.telefone || "").trim() || null,
-    preferenciasGerais: String(conta?.preferencias_gerais || "").trim() || null,
-  } satisfies ClientAppProfileData;
+    return {
+      nome: String(conta?.nome || "").trim(),
+      email: String(conta?.email || "").trim(),
+      telefone: String(conta?.telefone || "").trim() || null,
+      preferenciasGerais: String(conta?.preferencias_gerais || "").trim() || null,
+    } satisfies ClientAppProfileData;
+  } catch {
+    return {
+      nome: "",
+      email: "",
+      telefone: null,
+      preferenciasGerais: null,
+    } satisfies ClientAppProfileData;
+  }
 }

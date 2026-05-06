@@ -1,8 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { CalendarDays, Store, UserRound } from "lucide-react";
+import ClientAppPendingLink from "@/components/client-app/ClientAppPendingLink";
 
 const navItems = [
   {
@@ -47,18 +47,19 @@ export default function ClientAppBottomNav() {
           const active = item.match(pathname);
 
           return (
-            <Link
+            <ClientAppPendingLink
               key={item.label}
               href={item.href}
+              icon={Icon}
+              iconSize={19}
               className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-2xl text-[11px] font-bold transition ${
                 active
                   ? "bg-zinc-950 text-white"
                   : "text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900"
               }`}
             >
-              <Icon size={19} strokeWidth={2.4} />
-              <span>{item.label}</span>
-            </Link>
+              {item.label}
+            </ClientAppPendingLink>
           );
         })}
       </div>

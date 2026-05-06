@@ -1,6 +1,5 @@
-import Link from "next/link";
-import { CalendarDays, LogOut, Search, ShieldCheck } from "lucide-react";
 import ClientAppFrame from "@/components/client-app/ClientAppFrame";
+import ClientProfileShortcuts from "@/components/client-app/ClientProfileShortcuts";
 import { requireClienteAppContext } from "@/lib/client-context.server";
 import ClientProfileForm from "@/components/client-app/ClientProfileForm";
 import { getClienteAppProfileData } from "@/lib/client-app/queries";
@@ -44,49 +43,15 @@ export default async function ClientePerfilPage({
         </div>
 
         <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
-        <ClientProfileForm
-          nome={profile.nome || session.nome}
-          email={profile.email || session.email}
-          telefone={profile.telefone}
-          preferenciasGerais={profile.preferenciasGerais}
-          successKey={params?.status || null}
-        />
+          <ClientProfileForm
+            nome={profile.nome || session.nome}
+            email={profile.email || session.email}
+            telefone={profile.telefone}
+            preferenciasGerais={profile.preferenciasGerais}
+            successKey={params?.status || null}
+          />
 
-        <div className="rounded-[1.6rem] border border-white/70 bg-white p-5 shadow-[0_18px_48px_rgba(15,23,42,0.08)]">
-          <h2 className="text-lg font-black text-zinc-950">
-            Atalhos
-          </h2>
-          <div className="mt-5 space-y-3">
-            <Link
-              href="/app-cliente/agendamentos"
-              className="flex h-12 items-center gap-3 rounded-2xl border border-zinc-200 bg-zinc-50 px-4 text-sm font-semibold text-zinc-800"
-            >
-              <CalendarDays size={18} />
-              Agenda
-            </Link>
-            <Link
-              href="/app-cliente/inicio"
-              className="flex h-12 items-center gap-3 rounded-2xl border border-zinc-200 bg-zinc-50 px-4 text-sm font-semibold text-zinc-800"
-            >
-              <Search size={18} />
-              Buscar saloes
-            </Link>
-            <Link
-              href="/app-cliente/recuperar-acesso"
-              className="flex h-12 items-center gap-3 rounded-2xl border border-zinc-200 bg-zinc-50 px-4 text-sm font-semibold text-zinc-800"
-            >
-              <ShieldCheck size={18} />
-              Recuperar acesso
-            </Link>
-            <Link
-              href="/app-cliente/logout?destino=/app-cliente/login"
-              className="flex h-12 items-center gap-3 rounded-2xl bg-zinc-950 px-4 text-sm font-semibold text-white"
-            >
-              <LogOut size={18} />
-              Sair
-            </Link>
-          </div>
-        </div>
+          <ClientProfileShortcuts />
         </div>
       </section>
     </ClientAppFrame>

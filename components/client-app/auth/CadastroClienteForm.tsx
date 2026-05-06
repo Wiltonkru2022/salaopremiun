@@ -80,8 +80,9 @@ export default function CadastroClienteForm({
           <input
             name="nome"
             type="text"
+            autoComplete="name"
             placeholder="Seu nome"
-            className="h-12 w-full rounded-2xl border border-zinc-200 bg-white px-4 text-sm outline-none transition focus:border-zinc-400"
+            className="h-12 w-full rounded-2xl border border-zinc-200 bg-white px-4 text-base outline-none transition focus:border-zinc-400"
           />
         </div>
 
@@ -92,8 +93,10 @@ export default function CadastroClienteForm({
           <input
             name="telefone"
             type="tel"
+            autoComplete="tel"
+            inputMode="tel"
             placeholder="(00) 00000-0000"
-            className="h-12 w-full rounded-2xl border border-zinc-200 bg-white px-4 text-sm outline-none transition focus:border-zinc-400"
+            className="h-12 w-full rounded-2xl border border-zinc-200 bg-white px-4 text-base outline-none transition focus:border-zinc-400"
           />
         </div>
 
@@ -104,8 +107,10 @@ export default function CadastroClienteForm({
           <input
             name="email"
             type="email"
+            autoComplete="email"
+            inputMode="email"
             placeholder="voce@exemplo.com"
-            className="h-12 w-full rounded-2xl border border-zinc-200 bg-white px-4 text-sm outline-none transition focus:border-zinc-400"
+            className="h-12 w-full rounded-2xl border border-zinc-200 bg-white px-4 text-base outline-none transition focus:border-zinc-400"
           />
         </div>
 
@@ -116,8 +121,9 @@ export default function CadastroClienteForm({
           <input
             name="senha"
             type="password"
+            autoComplete="new-password"
             placeholder="Pelo menos 6 caracteres"
-            className="h-12 w-full rounded-2xl border border-zinc-200 bg-white px-4 text-sm outline-none transition focus:border-zinc-400"
+            className="h-12 w-full rounded-2xl border border-zinc-200 bg-white px-4 text-base outline-none transition focus:border-zinc-400"
           />
         </div>
 

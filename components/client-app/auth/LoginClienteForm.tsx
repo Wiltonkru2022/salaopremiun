@@ -77,8 +77,10 @@ export default function LoginClienteForm({
           <input
             name="email"
             type="email"
+            autoComplete="email"
+            inputMode="email"
             placeholder="voce@exemplo.com"
-            className="h-12 w-full rounded-2xl border border-zinc-200 bg-white px-4 text-sm outline-none transition focus:border-zinc-400"
+            className="h-12 w-full rounded-2xl border border-zinc-200 bg-white px-4 text-base outline-none transition focus:border-zinc-400"
           />
         </div>
 
@@ -90,8 +92,9 @@ export default function LoginClienteForm({
           <input
             name="senha"
             type="password"
+            autoComplete="current-password"
             placeholder="Digite sua senha"
-            className="h-12 w-full rounded-2xl border border-zinc-200 bg-white px-4 text-sm outline-none transition focus:border-zinc-400"
+            className="h-12 w-full rounded-2xl border border-zinc-200 bg-white px-4 text-base outline-none transition focus:border-zinc-400"
           />
         </div>
 

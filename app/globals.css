@@ -110,6 +110,16 @@ textarea:focus-visible {
   box-shadow: 0 0 0 4px var(--app-ring);
 }
 
+.app-cliente-root button:focus-visible,
+.app-cliente-root a:focus-visible,
+.app-cliente-root input:focus-visible,
+.app-cliente-root select:focus-visible,
+.app-cliente-root textarea:focus-visible {
+  outline: none;
+  border-color: #a1a1aa;
+  box-shadow: 0 0 0 3px rgba(24, 24, 27, 0.12);
+}
+
 button.bg-zinc-900,
 button.bg-zinc-950,
 button.bg-black,
@@ -279,9 +289,18 @@ a.bg-white {
 }
 
 @media (max-width: 768px) {
+  .app-cliente-root input,
+  .app-cliente-root select,
+  .app-cliente-root textarea,
   .app-profissional-root input,
   .app-profissional-root select,
   .app-profissional-root textarea {
     font-size: 16px !important;
+    line-height: 1.25;
+  }
+
+  .app-cliente-root button,
+  .app-cliente-root a {
+    touch-action: manipulation;
   }
 }
