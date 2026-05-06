@@ -20,7 +20,11 @@ export function canUseBlogSupabasePublic() {
 export function canUseBlogSupabaseAdmin() {
   return Boolean(
     String(process.env.BLOG_SUPABASE_URL || "").trim() &&
-      String(process.env.BLOG_SUPABASE_SERVICE_ROLE_KEY || "").trim()
+      String(
+        process.env.BLOG_SUPABASE_SERVICE_ROLE_KEY ||
+          process.env.BLOG_SUPABASE_ANON_KEY ||
+          ""
+      ).trim()
   );
 }
 
@@ -41,9 +45,11 @@ function getBlogPublishableKey() {
 }
 
 function getBlogServiceRoleKey() {
-  const value = process.env.BLOG_SUPABASE_SERVICE_ROLE_KEY;
+  const value =
+    process.env.BLOG_SUPABASE_SERVICE_ROLE_KEY ||
+    process.env.BLOG_SUPABASE_ANON_KEY;
   if (!value) {
-    throw new Error("BLOG_SUPABASE_SERVICE_ROLE_KEY nao configurada.");
+    throw new Error("BLOG_SUPABASE_SERVICE_ROLE_KEY ou BLOG_SUPABASE_ANON_KEY nao configurada.");
   }
   return value;
 }
