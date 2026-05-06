@@ -53,6 +53,10 @@ export default [
         { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
       ],
 
+      // ESLint 10: manter o lint compativel com o codigo legado ate refatorar esses fluxos
+      "no-useless-assignment": "off",
+      "preserve-caught-error": "off",
+
       // evitar erro com {}
       "@typescript-eslint/no-empty-object-type": "off",
 
