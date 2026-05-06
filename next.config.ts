@@ -67,6 +67,7 @@ function buildCsp() {
     "https://www.google.com",
     "https://maps.google.com",
   ];
+  const mediaSrc = ["'self'", "data:", "blob:"];
   return [
     "default-src 'self'",
     "base-uri 'self'",
@@ -79,6 +80,7 @@ function buildCsp() {
     "font-src 'self' data:",
     `connect-src ${Array.from(new Set(connectSrc)).join(" ")}`,
     `frame-src ${frameSrc.join(" ")}`,
+    `media-src ${mediaSrc.join(" ")}`,
     "worker-src 'self' blob:",
     `manifest-src ${Array.from(new Set(manifestSrc)).join(" ")}`,
     isDevelopment ? "" : "upgrade-insecure-requests",
@@ -136,6 +138,11 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   compress: true,
   productionBrowserSourceMaps: false,
+  experimental: {
+    serverActions: {
+      bodySizeLimit: "25mb",
+    },
+  },
   typescript: {
     ignoreBuildErrors: true,
   },

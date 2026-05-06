@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import {
   AlignCenter,
   AlignLeft,
@@ -51,6 +51,10 @@ const fontOptions = [
   "Courier New, monospace",
 ];
 
+const MAX_INLINE_IMAGE_BYTES = 4 * 1024 * 1024;
+const MAX_INLINE_VIDEO_BYTES = 14 * 1024 * 1024;
+const MAX_FORM_CONTENT_BYTES = 22 * 1024 * 1024;
+
 function stripHtml(value: string) {
   return value.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
 }
@@ -84,6 +88,7 @@ function slugify(value: string) {
 }
 
 export default function AdminBlogEditor({ post, categories }: Props) {
+  const [actionState, formAction, isSaving] = useActionState(createBlogPost, {});
   const editorRef = useRef<HTMLDivElement>(null);
   const contentInputRef = useRef<HTMLInputElement>(null);
   const readTimeInputRef = useRef<HTMLInputElement>(null);
@@ -112,6 +117,7 @@ export default function AdminBlogEditor({ post, categories }: Props) {
   const [modal, setModal] = useState<EditorModal>(null);
   const [selectedInlineImageName, setSelectedInlineImageName] = useState("");
   const [selectedInlineVideoName, setSelectedInlineVideoName] = useState("");
+  const [editorNotice, setEditorNotice] = useState("");
   const [readTime, setReadTime] = useState(() =>
     estimateReadTime(contentValueRef.current)
   );
@@ -280,8 +286,28 @@ export default function AdminBlogEditor({ post, categories }: Props) {
     reader.readAsDataURL(file);
   }
 
+  function fileSizeLabel(bytes: number) {
+    return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+  }
+
+  function canUseFile(file: File, maxBytes: number, kind: string) {
+    if (file.size <= maxBytes) {
+      setEditorNotice("");
+      return true;
+    }
+
+    setEditorNotice(
+      `${kind} muito grande (${fileSizeLabel(file.size)}). Use um arquivo de até ${fileSizeLabel(maxBytes)} para publicar sem erro.`
+    );
+    return false;
+  }
+
   function handleCoverFile(file?: File) {
     if (!file) return;
+    if (!canUseFile(file, MAX_INLINE_IMAGE_BYTES, "Imagem de capa")) {
+      if (coverInputRef.current) coverInputRef.current.value = "";
+      return;
+    }
     readFileAsDataUrl(file, (value) => {
       setCoverImage(value);
       if (!coverAlt) setCoverAlt(file.name.replace(/\.[^.]+$/, ""));
@@ -297,6 +323,10 @@ export default function AdminBlogEditor({ post, categories }: Props) {
 
   function handleInlineImage(file?: File) {
     if (!file) return;
+    if (!canUseFile(file, MAX_INLINE_IMAGE_BYTES, "Imagem")) {
+      if (inlineImageInputRef.current) inlineImageInputRef.current.value = "";
+      return;
+    }
     readFileAsDataUrl(file, (value) => {
       insertHtmlAtSelection(
         `<figure><img src="${value}" alt="${escapeAttribute(file.name)}" style="width:100%;border-radius:18px;margin:16px 0" /><figcaption>${escapeHtml(file.name)}</figcaption></figure>`
@@ -348,6 +378,12 @@ export default function AdminBlogEditor({ post, categories }: Props) {
   function replaceSelectedInlineImage(file?: File) {
     const image = selectedInlineImageRef.current;
     if (!file || !image) return;
+    if (!canUseFile(file, MAX_INLINE_IMAGE_BYTES, "Imagem")) {
+      if (replaceInlineImageInputRef.current) {
+        replaceInlineImageInputRef.current.value = "";
+      }
+      return;
+    }
     readFileAsDataUrl(file, (value) => {
       image.setAttribute("src", value);
       image.setAttribute("alt", file.name);
@@ -364,6 +400,10 @@ export default function AdminBlogEditor({ post, categories }: Props) {
 
   function handleInlineVideo(file?: File) {
     if (!file) return;
+    if (!canUseFile(file, MAX_INLINE_VIDEO_BYTES, "Vídeo")) {
+      if (inlineVideoInputRef.current) inlineVideoInputRef.current.value = "";
+      return;
+    }
     readFileAsDataUrl(file, (value) => {
       insertHtmlAtSelection(
         `<figure><video src="${value}" data-name="${escapeAttribute(file.name)}" controls playsinline style="width:100%;border-radius:18px;margin:16px 0;background:#111"></video><figcaption>${escapeHtml(file.name)}</figcaption></figure>`
@@ -385,6 +425,12 @@ export default function AdminBlogEditor({ post, categories }: Props) {
   function replaceSelectedInlineVideo(file?: File) {
     const video = selectedInlineVideoRef.current;
     if (!file || !video) return;
+    if (!canUseFile(file, MAX_INLINE_VIDEO_BYTES, "Vídeo")) {
+      if (replaceInlineVideoInputRef.current) {
+        replaceInlineVideoInputRef.current.value = "";
+      }
+      return;
+    }
     readFileAsDataUrl(file, (value) => {
       video.setAttribute("src", value);
       video.dataset.name = file.name;
@@ -425,8 +471,23 @@ export default function AdminBlogEditor({ post, categories }: Props) {
     if (!post?.slug && !slug) setSlug(slugify(nextTitle));
   }
 
+  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    const nextContent = syncContent(true);
+    const totalSize = new Blob([nextContent, coverImage]).size;
+    if (totalSize > MAX_FORM_CONTENT_BYTES) {
+      event.preventDefault();
+      setEditorNotice(
+        `O post está com ${fileSizeLabel(totalSize)} em mídia dentro do texto. Remova ou reduza vídeos/imagens para ficar abaixo de ${fileSizeLabel(MAX_FORM_CONTENT_BYTES)}.`
+      );
+    }
+  }
+
   return (
-    <form action={createBlogPost} className="min-h-screen bg-[#f6f4ee] text-zinc-950">
+    <form
+      action={formAction}
+      onSubmit={handleSubmit}
+      className="min-h-screen bg-[#f6f4ee] text-zinc-950"
+    >
       <input type="hidden" name="id" value={post?.id || ""} />
       <input
         ref={contentInputRef}
@@ -466,24 +527,34 @@ export default function AdminBlogEditor({ post, categories }: Props) {
               name="status"
               value="rascunho"
               onClick={() => syncContent(true)}
+              disabled={isSaving}
               className="inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-white px-4 py-2 text-sm font-black text-zinc-800 shadow-sm hover:border-zinc-950"
             >
               <Save size={16} />
-              Rascunho
+              {isSaving ? "Salvando..." : "Rascunho"}
             </button>
             <button
               type="submit"
               name="status"
               value="publicado"
               onClick={() => syncContent(true)}
+              disabled={isSaving}
               className="inline-flex items-center gap-2 rounded-full bg-zinc-950 px-4 py-2 text-sm font-black text-white shadow-sm hover:bg-zinc-800"
             >
               <Send size={16} />
-              Publicar
+              {isSaving ? "Publicando..." : "Publicar"}
             </button>
           </div>
         </div>
       </header>
+
+      {actionState.error || editorNotice ? (
+        <div className="mx-auto mt-4 max-w-7xl px-4">
+          <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold leading-6 text-red-800">
+            {actionState.error || editorNotice}
+          </div>
+        </div>
+      ) : null}
 
       <main className="mx-auto grid max-w-7xl gap-5 px-4 py-5 xl:grid-cols-[310px_minmax(0,1fr)]">
         <aside className="space-y-4">
