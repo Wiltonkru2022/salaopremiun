@@ -168,6 +168,17 @@ async function run() {
   });
   addCheck("admin master blog autenticado", true, page.url());
   await expectText(page, "Posts do blog", "admin master blog renderizado");
+  await goto(
+    page,
+    "/admin-master/blog/agenda-de-clientes-veja-vantagens-e-ferramentas-usadas",
+    "editor post publicado"
+  );
+  const editorOpened = await page
+    .getByText("Publicar", { exact: false })
+    .isVisible()
+    .catch(() => false);
+  addCheck("post publicado abre editor", editorOpened, page.url());
+  if (!editorOpened) throw new Error("Post publicado nao abriu no editor.");
 
   await gotoUrl(page, `${blogBaseUrl}/`, "blog publico");
   await expectText(page, "SalaoPremium", "blog publico renderizado");

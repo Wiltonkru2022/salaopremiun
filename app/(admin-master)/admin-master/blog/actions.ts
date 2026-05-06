@@ -98,7 +98,9 @@ export async function createBlogPost(formData: FormData) {
   };
 
   const { error } = id
-    ? await supabase.from("blog_posts").update(payload).eq("id", id)
+    ? await supabase
+        .from("blog_posts")
+        .upsert({ ...payload, id }, { onConflict: "id" })
     : await supabase.from("blog_posts").upsert(payload, { onConflict: "slug" });
 
   if (error) {

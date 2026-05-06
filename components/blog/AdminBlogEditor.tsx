@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   AlignCenter,
   AlignLeft,
@@ -70,6 +70,10 @@ function slugify(value: string) {
 export default function AdminBlogEditor({ post, categories }: Props) {
   const editorRef = useRef<HTMLDivElement>(null);
   const contentInputRef = useRef<HTMLInputElement>(null);
+  const contentValueRef = useRef(
+    post?.bodyHtml || post?.rawContent || "<p>Comece seu artigo aqui.</p>"
+  );
+  const editorInitializedRef = useRef(false);
   const coverInputRef = useRef<HTMLInputElement>(null);
   const inlineImageInputRef = useRef<HTMLInputElement>(null);
   const savedRangeRef = useRef<Range | null>(null);
@@ -82,19 +86,28 @@ export default function AdminBlogEditor({ post, categories }: Props) {
   const [coverAlt, setCoverAlt] = useState(post?.coverAlt || "");
   const [tags, setTags] = useState((post?.tags || []).join(", "));
   const [featured, setFeatured] = useState(Boolean(post?.featured));
-  const [content, setContent] = useState(
-    post?.bodyHtml || post?.rawContent || "<p>Comece seu artigo aqui.</p>"
-  );
   const [fontSize, setFontSize] = useState(18);
   const [modal, setModal] = useState<EditorModal>(null);
-  const readTime = useMemo(() => estimateReadTime(content), [content]);
+  const [readTime, setReadTime] = useState(() =>
+    estimateReadTime(contentValueRef.current)
+  );
   const previewKey = "salaopremium-blog-preview";
   const previewHref = `/admin-master/blog/${slug || "novo"}/preview`;
 
+  useEffect(() => {
+    if (editorInitializedRef.current || !editorRef.current) return;
+    editorRef.current.innerHTML = contentValueRef.current;
+    if (contentInputRef.current) {
+      contentInputRef.current.value = contentValueRef.current;
+    }
+    editorInitializedRef.current = true;
+  }, []);
+
   function syncContent() {
     const nextContent = editorRef.current?.innerHTML || "";
-    setContent(nextContent);
+    contentValueRef.current = nextContent;
     if (contentInputRef.current) contentInputRef.current.value = nextContent;
+    setReadTime(estimateReadTime(nextContent));
   }
 
   function saveSelection() {
@@ -173,11 +186,13 @@ export default function AdminBlogEditor({ post, categories }: Props) {
 
   function exec(command: string, value?: string) {
     editorRef.current?.focus();
+    restoreSelection();
     document.execCommand(command, false, value);
     syncContent();
+    saveSelection();
   }
 
-  function applyBlock(tag: "h1" | "h2" | "h3" | "p") {
+  function applyBlock(tag: "h1" | "h2" | "h3" | "p" | "blockquote") {
     exec("formatBlock", tag);
   }
 
@@ -261,7 +276,7 @@ export default function AdminBlogEditor({ post, categories }: Props) {
       coverImage,
       coverAlt,
       tags,
-      content: editorRef.current?.innerHTML || content,
+      content: editorRef.current?.innerHTML || contentValueRef.current,
       readTime,
       featured,
     };
@@ -277,7 +292,12 @@ export default function AdminBlogEditor({ post, categories }: Props) {
   return (
     <form action={createBlogPost} className="min-h-screen bg-[#f6f4ee] text-zinc-950">
       <input type="hidden" name="id" value={post?.id || ""} />
-      <input ref={contentInputRef} type="hidden" name="conteudo" defaultValue={content} />
+      <input
+        ref={contentInputRef}
+        type="hidden"
+        name="conteudo"
+        defaultValue={contentValueRef.current}
+      />
       <input type="hidden" name="imagem_capa_url" value={coverImage} />
       <input type="hidden" name="imagem_capa_alt" value={coverAlt} />
       <input type="hidden" name="tempo_leitura" value={readTime} />
@@ -472,7 +492,7 @@ export default function AdminBlogEditor({ post, categories }: Props) {
             <button type="button" onClick={() => exec("insertOrderedList")} className="rounded-xl border border-zinc-200 p-2 hover:border-zinc-950" title="Lista numerada">
               <ListOrdered size={18} />
             </button>
-            <button type="button" onClick={() => applyBlock("h3")} className="rounded-xl border border-zinc-200 p-2 hover:border-zinc-950" title="Citacao">
+            <button type="button" onClick={() => applyBlock("blockquote")} className="rounded-xl border border-zinc-200 p-2 hover:border-zinc-950" title="Citação">
               <Quote size={18} />
             </button>
             <button type="button" onClick={() => exec("justifyLeft")} className="rounded-xl border border-zinc-200 p-2 hover:border-zinc-950" title="Alinhar esquerda">
@@ -550,7 +570,6 @@ export default function AdminBlogEditor({ post, categories }: Props) {
             onKeyUp={saveSelection}
             onBlur={saveSelection}
             className="blog-editor-prose min-h-[640px] px-5 py-6 text-left text-[18px] leading-8 outline-none sm:px-8"
-            dangerouslySetInnerHTML={{ __html: content }}
           />
         </section>
       </main>

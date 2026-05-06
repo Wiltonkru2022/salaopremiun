@@ -83,6 +83,19 @@ function mapPost(post: BlogDbPost): BlogPost {
   };
 }
 
+function mapFallbackAdminPost(post: BlogPost): BlogPost {
+  const fallbackCategoryId = defaultBlogCategories.find(
+    (category) => category.slug === post.categorySlug
+  )?.id;
+
+  return {
+    ...post,
+    categoryId: fallbackCategoryId,
+    status: post.status || "publicado",
+    rawContent: post.rawContent || post.body.join("\n\n"),
+  };
+}
+
 async function getSupabaseAdminUnsafe() {
   if (!canUseSupabaseAdmin()) return null;
 
@@ -211,21 +224,11 @@ export async function getAdminBlogData() {
 export async function getAdminBlogPostById(id: string): Promise<BlogPost | null> {
   noStore();
   const fallbackPost = defaultBlogPosts.find((post) => post.id === id || post.slug === id);
-  const fallbackCategoryId = fallbackPost
-    ? defaultBlogCategories.find((category) => category.slug === fallbackPost.categorySlug)?.id
-    : undefined;
 
   try {
     const supabase = await getSupabaseAdminUnsafe();
     if (!supabase) {
-      return fallbackPost
-        ? {
-            ...fallbackPost,
-            categoryId: fallbackCategoryId,
-            status: "publicado",
-            rawContent: fallbackPost.body.join("\n\n"),
-          }
-        : null;
+      return fallbackPost ? mapFallbackAdminPost(fallbackPost) : null;
     }
 
     const { data, error } = await supabase
@@ -236,17 +239,12 @@ export async function getAdminBlogPostById(id: string): Promise<BlogPost | null>
       .eq("id", id)
       .maybeSingle();
 
-    if (error || !data) return null;
+    if (error || !data) {
+      return fallbackPost ? mapFallbackAdminPost(fallbackPost) : null;
+    }
     return mapPost(data);
   } catch {
-    return fallbackPost
-      ? {
-          ...fallbackPost,
-          categoryId: fallbackCategoryId,
-          status: "publicado",
-          rawContent: fallbackPost.body.join("\n\n"),
-        }
-      : null;
+    return fallbackPost ? mapFallbackAdminPost(fallbackPost) : null;
   }
 }
 
@@ -255,21 +253,11 @@ export async function getAdminBlogPostBySlug(
 ): Promise<BlogPost | null> {
   noStore();
   const fallbackPost = defaultBlogPosts.find((post) => post.slug === slug);
-  const fallbackCategoryId = fallbackPost
-    ? defaultBlogCategories.find((category) => category.slug === fallbackPost.categorySlug)?.id
-    : undefined;
 
   try {
     const supabase = await getSupabaseAdminUnsafe();
     if (!supabase) {
-      return fallbackPost
-        ? {
-            ...fallbackPost,
-            categoryId: fallbackCategoryId,
-            status: "publicado",
-            rawContent: fallbackPost.body.join("\n\n"),
-          }
-        : null;
+      return fallbackPost ? mapFallbackAdminPost(fallbackPost) : null;
     }
 
     const { data, error } = await supabase
@@ -280,17 +268,12 @@ export async function getAdminBlogPostBySlug(
       .eq("slug", slug)
       .maybeSingle();
 
-    if (error || !data) return null;
+    if (error || !data) {
+      return fallbackPost ? mapFallbackAdminPost(fallbackPost) : null;
+    }
     return mapPost(data);
   } catch {
-    return fallbackPost
-      ? {
-          ...fallbackPost,
-          categoryId: fallbackCategoryId,
-          status: "publicado",
-          rawContent: fallbackPost.body.join("\n\n"),
-        }
-      : null;
+    return fallbackPost ? mapFallbackAdminPost(fallbackPost) : null;
   }
 }
 
