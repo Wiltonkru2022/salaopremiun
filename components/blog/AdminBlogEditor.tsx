@@ -25,6 +25,7 @@ import {
   Trash2,
   Type,
   Underline,
+  Video,
 } from "lucide-react";
 import type { BlogCategory, BlogPost } from "@/lib/blog/content";
 import { createBlogPost } from "@/app/(admin-master)/admin-master/blog/actions";
@@ -93,8 +94,11 @@ export default function AdminBlogEditor({ post, categories }: Props) {
   const coverInputRef = useRef<HTMLInputElement>(null);
   const inlineImageInputRef = useRef<HTMLInputElement>(null);
   const replaceInlineImageInputRef = useRef<HTMLInputElement>(null);
+  const inlineVideoInputRef = useRef<HTMLInputElement>(null);
+  const replaceInlineVideoInputRef = useRef<HTMLInputElement>(null);
   const savedRangeRef = useRef<Range | null>(null);
   const selectedInlineImageRef = useRef<HTMLImageElement | null>(null);
+  const selectedInlineVideoRef = useRef<HTMLVideoElement | null>(null);
   const [title, setTitle] = useState(post?.title || "");
   const [slug, setSlug] = useState(post?.slug || "");
   const [description, setDescription] = useState(post?.description || "");
@@ -107,6 +111,7 @@ export default function AdminBlogEditor({ post, categories }: Props) {
   const [fontSize, setFontSize] = useState(18);
   const [modal, setModal] = useState<EditorModal>(null);
   const [selectedInlineImageName, setSelectedInlineImageName] = useState("");
+  const [selectedInlineVideoName, setSelectedInlineVideoName] = useState("");
   const [readTime, setReadTime] = useState(() =>
     estimateReadTime(contentValueRef.current)
   );
@@ -301,14 +306,29 @@ export default function AdminBlogEditor({ post, categories }: Props) {
   }
 
   function handleEditorClick(event: React.MouseEvent<HTMLDivElement>) {
+    const video = (event.target as HTMLElement).closest("video");
+    if (video && editorRef.current?.contains(video)) {
+      selectedInlineImageRef.current = null;
+      setSelectedInlineImageName("");
+      selectedInlineVideoRef.current = video as HTMLVideoElement;
+      setSelectedInlineVideoName(
+        video.dataset.name || video.getAttribute("src") || "Vídeo do post"
+      );
+      return;
+    }
+
     const image = (event.target as HTMLElement).closest("img");
     if (!image || !editorRef.current?.contains(image)) {
       selectedInlineImageRef.current = null;
       setSelectedInlineImageName("");
+      selectedInlineVideoRef.current = null;
+      setSelectedInlineVideoName("");
       saveSelection();
       return;
     }
 
+    selectedInlineVideoRef.current = null;
+    setSelectedInlineVideoName("");
     selectedInlineImageRef.current = image as HTMLImageElement;
     setSelectedInlineImageName(
       image.getAttribute("alt") || image.getAttribute("src") || "Imagem do post"
@@ -339,6 +359,43 @@ export default function AdminBlogEditor({ post, categories }: Props) {
     });
     if (replaceInlineImageInputRef.current) {
       replaceInlineImageInputRef.current.value = "";
+    }
+  }
+
+  function handleInlineVideo(file?: File) {
+    if (!file) return;
+    readFileAsDataUrl(file, (value) => {
+      insertHtmlAtSelection(
+        `<figure><video src="${value}" data-name="${escapeAttribute(file.name)}" controls playsinline style="width:100%;border-radius:18px;margin:16px 0;background:#111"></video><figcaption>${escapeHtml(file.name)}</figcaption></figure>`
+      );
+    });
+    if (inlineVideoInputRef.current) inlineVideoInputRef.current.value = "";
+  }
+
+  function removeSelectedInlineVideo() {
+    const video = selectedInlineVideoRef.current;
+    if (!video) return;
+    const container = video.closest("figure") || video;
+    container.remove();
+    selectedInlineVideoRef.current = null;
+    setSelectedInlineVideoName("");
+    syncContent(true);
+  }
+
+  function replaceSelectedInlineVideo(file?: File) {
+    const video = selectedInlineVideoRef.current;
+    if (!file || !video) return;
+    readFileAsDataUrl(file, (value) => {
+      video.setAttribute("src", value);
+      video.dataset.name = file.name;
+      const figure = video.closest("figure");
+      const caption = figure?.querySelector("figcaption");
+      if (caption) caption.textContent = file.name;
+      setSelectedInlineVideoName(file.name);
+      syncContent(true);
+    });
+    if (replaceInlineVideoInputRef.current) {
+      replaceInlineVideoInputRef.current.value = "";
     }
   }
 
@@ -632,6 +689,17 @@ export default function AdminBlogEditor({ post, categories }: Props) {
             >
               <ImagePlus size={18} />
             </button>
+            <button
+              type="button"
+              onClick={() => {
+                saveSelection();
+                inlineVideoInputRef.current?.click();
+              }}
+              className="rounded-xl border border-zinc-200 p-2 hover:border-zinc-950"
+              title="Adicionar vídeo no post"
+            >
+              <Video size={18} />
+            </button>
             <select
               onChange={(event) => applyFontFamily(event.target.value)}
               className="rounded-xl border border-zinc-200 px-3 py-2 text-sm font-bold"
@@ -678,6 +746,22 @@ export default function AdminBlogEditor({ post, categories }: Props) {
                 replaceSelectedInlineImage(event.target.files?.[0])
               }
             />
+            <input
+              ref={inlineVideoInputRef}
+              type="file"
+              accept="video/*"
+              className="hidden"
+              onChange={(event) => handleInlineVideo(event.target.files?.[0])}
+            />
+            <input
+              ref={replaceInlineVideoInputRef}
+              type="file"
+              accept="video/*"
+              className="hidden"
+              onChange={(event) =>
+                replaceSelectedInlineVideo(event.target.files?.[0])
+              }
+            />
           </div>
 
           {selectedInlineImageName ? (
@@ -701,6 +785,32 @@ export default function AdminBlogEditor({ post, categories }: Props) {
                 >
                   <Trash2 size={14} />
                   Remover imagem
+                </button>
+              </div>
+            </div>
+          ) : null}
+
+          {selectedInlineVideoName ? (
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-200 bg-[#eef7ff] px-4 py-2 text-sm font-bold text-zinc-800">
+              <span className="truncate">
+                Vídeo selecionado: {selectedInlineVideoName}
+              </span>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => replaceInlineVideoInputRef.current?.click()}
+                  className="inline-flex items-center gap-2 rounded-full border border-zinc-300 bg-white px-3 py-1.5 text-xs font-black hover:border-zinc-950"
+                >
+                  <RefreshCw size={14} />
+                  Trocar vídeo
+                </button>
+                <button
+                  type="button"
+                  onClick={removeSelectedInlineVideo}
+                  className="inline-flex items-center gap-2 rounded-full border border-red-200 bg-white px-3 py-1.5 text-xs font-black text-red-700 hover:border-red-500"
+                >
+                  <Trash2 size={14} />
+                  Remover vídeo
                 </button>
               </div>
             </div>
