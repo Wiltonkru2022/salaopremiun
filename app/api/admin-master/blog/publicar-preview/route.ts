@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { requireAdminMasterUser } from "@/lib/admin-master/auth/requireAdminMasterUser";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getBlogSupabaseAdmin } from "@/lib/blog/supabase";
 
 function slugify(value: string) {
   return value
@@ -112,7 +112,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const supabase = getSupabaseAdmin() as any;
+  const supabase = getBlogSupabaseAdmin() as any;
   const now = new Date().toISOString();
   const resolvedCategoryId = await resolveCategoryId(supabase, categoryId);
   const { error } = await supabase.from("blog_posts").upsert(

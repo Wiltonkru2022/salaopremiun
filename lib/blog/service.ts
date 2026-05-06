@@ -1,6 +1,10 @@
 import { unstable_cache, unstable_noStore as noStore } from "next/cache";
 import type { BlogCategory, BlogPost } from "@/lib/blog/content";
 import { defaultBlogCategories, defaultBlogPosts } from "@/lib/blog/content";
+import {
+  canUseBlogSupabaseAdmin,
+  getBlogSupabaseAdmin,
+} from "@/lib/blog/supabase";
 
 type BlogDbCategory = {
   id: string;
@@ -28,10 +32,7 @@ type BlogDbPost = {
 };
 
 function canUseSupabaseAdmin() {
-  return Boolean(
-    String(process.env.NEXT_PUBLIC_SUPABASE_URL || "").trim() &&
-      String(process.env.SUPABASE_SERVICE_ROLE_KEY || "").trim()
-  );
+  return canUseBlogSupabaseAdmin();
 }
 
 function splitBody(value: string) {
@@ -119,8 +120,7 @@ function mapFallbackAdminPost(post: BlogPost): BlogPost {
 async function getSupabaseAdminUnsafe() {
   if (!canUseSupabaseAdmin()) return null;
 
-  const { getSupabaseAdmin } = await import("@/lib/supabase/admin");
-  return getSupabaseAdmin() as any;
+  return getBlogSupabaseAdmin() as any;
 }
 
 async function loadBlogCategories(): Promise<BlogCategory[]> {

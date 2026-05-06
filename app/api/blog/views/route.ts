@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getBlogSupabaseAdmin } from "@/lib/blog/supabase";
 
 export async function POST(request: Request) {
   const body = (await request.json().catch(() => ({}))) as {
@@ -12,7 +12,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const supabase = getSupabaseAdmin() as any;
+    const supabase = getBlogSupabaseAdmin() as any;
     const userAgent = request.headers.get("user-agent")?.slice(0, 300) || null;
 
     await supabase.from("blog_views").insert({

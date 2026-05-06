@@ -3,7 +3,7 @@
 import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAdminMasterUser } from "@/lib/admin-master/auth/requireAdminMasterUser";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getBlogSupabaseAdmin } from "@/lib/blog/supabase";
 
 function slugify(value: string) {
   return value
@@ -161,7 +161,7 @@ export async function createBlogCategory(formData: FormData) {
     throw new Error("Use um nome de categoria em português, não um código interno.");
   }
 
-  const supabase = getSupabaseAdmin() as any;
+  const supabase = getBlogSupabaseAdmin() as any;
   const { error } = await supabase.from("blog_categorias").upsert(
     {
       nome,
@@ -210,7 +210,7 @@ export async function createBlogPost(
   }
 
   const now = new Date().toISOString();
-  const supabase = getSupabaseAdmin() as any;
+  const supabase = getBlogSupabaseAdmin() as any;
   try {
     const resolvedCategoryId = await resolveCategoryId(supabase, categoriaId);
     const payload = {

@@ -2,6 +2,10 @@ import type { NextConfig } from "next";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseHostname = supabaseUrl ? new URL(supabaseUrl).hostname : undefined;
+const blogSupabaseUrl = process.env.BLOG_SUPABASE_URL;
+const blogSupabaseHostname = blogSupabaseUrl
+  ? new URL(blogSupabaseUrl).hostname
+  : undefined;
 const appRootDomain = process.env.APP_ROOT_DOMAIN || "salaopremiun.com.br";
 const loginHost = process.env.APP_LOGIN_HOST || `login.${appRootDomain}`;
 const isDevelopment = process.env.NODE_ENV !== "production";
@@ -41,6 +45,9 @@ function buildCsp() {
     ...(supabaseHostname
       ? [`https://${supabaseHostname}`, `wss://${supabaseHostname}`]
       : []),
+    ...(blogSupabaseHostname
+      ? [`https://${blogSupabaseHostname}`, `wss://${blogSupabaseHostname}`]
+      : []),
     "https://viacep.com.br",
     "https://vitals.vercel-insights.com",
     "https://*.vercel-insights.com",
@@ -58,6 +65,7 @@ function buildCsp() {
     "data:",
     "blob:",
     ...(supabaseHostname ? [`https://${supabaseHostname}`] : []),
+    ...(blogSupabaseHostname ? [`https://${blogSupabaseHostname}`] : []),
     "https://*.googleusercontent.com",
     "https://*.gstatic.com",
   ];
@@ -72,6 +80,7 @@ function buildCsp() {
     "data:",
     "blob:",
     ...(supabaseHostname ? [`https://${supabaseHostname}`] : []),
+    ...(blogSupabaseHostname ? [`https://${blogSupabaseHostname}`] : []),
   ];
   return [
     "default-src 'self'",
@@ -164,6 +173,15 @@ const nextConfig: NextConfig = {
             {
               protocol: "https" as const,
               hostname: supabaseHostname,
+              pathname: "/storage/v1/object/public/**",
+            },
+          ]
+        : []),
+      ...(blogSupabaseHostname
+        ? [
+            {
+              protocol: "https" as const,
+              hostname: blogSupabaseHostname,
               pathname: "/storage/v1/object/public/**",
             },
           ]

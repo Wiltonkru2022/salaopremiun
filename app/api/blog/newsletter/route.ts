@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getBlogSupabaseAdmin } from "@/lib/blog/supabase";
 
 function isValidEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
@@ -20,7 +20,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const supabase = getSupabaseAdmin() as any;
+    const supabase = getBlogSupabaseAdmin() as any;
     const { error } = await supabase.from("newsletter_subscribers").upsert(
       {
         email,

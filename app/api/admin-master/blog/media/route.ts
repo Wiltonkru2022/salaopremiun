@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireAdminMasterUser } from "@/lib/admin-master/auth/requireAdminMasterUser";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getBlogSupabaseAdmin } from "@/lib/blog/supabase";
 
 const BUCKET_ID = "blog-media";
 const MAX_IMAGE_SIZE = 6 * 1024 * 1024;
@@ -25,7 +25,7 @@ function getFileExtension(file: File) {
 }
 
 async function ensureBlogBucket() {
-  const supabaseAdmin = getSupabaseAdmin();
+  const supabaseAdmin = getBlogSupabaseAdmin();
   const { data: bucket } = await supabaseAdmin.storage.getBucket(BUCKET_ID);
 
   if (bucket) return;
@@ -83,7 +83,7 @@ export async function POST(request: Request) {
   try {
     await ensureBlogBucket();
 
-    const supabaseAdmin = getSupabaseAdmin();
+    const supabaseAdmin = getBlogSupabaseAdmin();
     const safePlacement = placement.replace(/[^a-z0-9-]/gi, "-").toLowerCase();
     const path = `${safePlacement}/${new Date()
       .toISOString()
