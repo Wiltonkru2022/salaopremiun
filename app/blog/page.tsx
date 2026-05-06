@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, BookOpen, Layers3, ListChecks, Search } from "lucide-react";
-import SiteFooter from "@/components/site-footer";
-import SiteHeader from "@/components/site-header";
+import { BlogFooter, BlogHeader } from "@/components/blog/BlogChrome";
+import { DOMINIO_BLOG } from "@/lib/proxy/domain-config";
 import { getBlogCategories, getPublishedBlogPosts } from "@/lib/blog/service";
 
 export const dynamic = "force-dynamic";
@@ -11,9 +11,9 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "Blog",
   description:
-    "Artigos sobre agenda online, vendas, fidelizacao, redes sociais e gestao para saloes com o ecossistema SalaoPremium.",
+    "Artigos sobre agenda online, vendas, fidelização, redes sociais e gestão para salões com o ecossistema SalaoPremium.",
   alternates: {
-    canonical: "/blog",
+    canonical: `https://${DOMINIO_BLOG}`,
   },
 };
 
@@ -27,24 +27,24 @@ export default async function BlogPage() {
   const readingLists = [
     {
       title: "Comece pela agenda",
-      body: "Entenda agenda online, clientes, horarios e organizacao de equipe.",
-      href: "/blog/o-que-e-uma-agenda-online",
+      body: "Entenda agenda online, clientes, horários e organização de equipe.",
+      href: "/o-que-e-uma-agenda-online",
     },
     {
       title: "Venda com mais controle",
-      body: "Veja comandas, caixa, automacao e acompanhamento comercial.",
-      href: "/blog/como-posso-gerenciar-minhas-vendas-com-sistema-de-agenda",
+      body: "Veja comandas, caixa, automação e acompanhamento comercial.",
+      href: "/como-posso-gerenciar-minhas-vendas-com-sistema-de-agenda",
     },
     {
       title: "Cresca nas redes",
-      body: "Ideias para conteudo, relacionamento e fidelizacao de clientes.",
-      href: "/blog/o-que-fazer-para-estar-a-frente-nas-redes-sociais",
+      body: "Ideias para conteúdo, relacionamento e fidelização de clientes.",
+      href: "/o-que-fazer-para-estar-a-frente-nas-redes-sociais",
     },
   ];
 
   return (
     <div className="min-h-screen bg-[#f6f4ee] text-zinc-950">
-      <SiteHeader />
+      <BlogHeader />
 
       <main>
         <section className="bg-[#17120d] text-white">
@@ -52,21 +52,21 @@ export default async function BlogPage() {
             <div>
               <div className="inline-flex items-center gap-2 rounded-full border border-amber-200/25 bg-amber-100/10 px-3 py-1.5 text-xs font-black uppercase tracking-[0.28em] text-amber-100">
                 <Search size={15} />
-                Conteudo para saloes crescerem
+                Conteúdo para salões crescerem
               </div>
               <h1 className="mt-5 max-w-4xl font-display text-[2.8rem] font-black leading-[1.02] sm:text-[4.8rem]">
                 Blog SalaoPremium
               </h1>
               <p className="mt-5 max-w-3xl text-base leading-7 text-zinc-300">
                 Artigos recentes, categorias e listas de leitura sobre agenda de
-                clientes, vendas, automacao, fidelizacao e redes sociais para o
+                clientes, vendas, automação, fidelização e redes sociais para o
                 Google entender melhor o sistema SalaoPremium.
               </p>
             </div>
 
             {featured ? (
               <Link
-                href={`/blog/${featured.slug}`}
+                href={`/${featured.slug}`}
                 className="group overflow-hidden rounded-[24px] border border-white/10 bg-white text-zinc-950 shadow-2xl transition hover:-translate-y-0.5"
               >
                 <Image
@@ -107,7 +107,7 @@ export default async function BlogPage() {
               {recentPosts.map((post) => (
                 <Link
                   key={post.id}
-                  href={`/blog/${post.slug}`}
+                  href={`/${post.slug}`}
                   className="group overflow-hidden rounded-[24px] border border-zinc-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg"
                 >
                   <Image
@@ -146,7 +146,7 @@ export default async function BlogPage() {
                 {categories.map((category) => (
                   <a
                     key={category.id}
-                    href={`/blog#${category.slug}`}
+                    href={`/#${category.slug}`}
                     className="block rounded-2xl border border-zinc-200 p-3 transition hover:border-zinc-950"
                     id={category.slug}
                   >
@@ -181,8 +181,7 @@ export default async function BlogPage() {
         </section>
       </main>
 
-      <SiteFooter />
+      <BlogFooter />
     </div>
   );
 }
-

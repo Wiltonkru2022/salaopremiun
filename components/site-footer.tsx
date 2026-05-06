@@ -37,11 +37,6 @@ export default function SiteFooter() {
                   Planos e precos
                 </Link>
               </li>
-              <li>
-                <Link href="/blog" className="hover:text-zinc-950">
-                  Blog
-                </Link>
-              </li>
             </ul>
           </div>
 

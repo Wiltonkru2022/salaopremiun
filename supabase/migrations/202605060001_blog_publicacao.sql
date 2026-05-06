@@ -54,10 +54,10 @@ grant select on public.blog_posts to anon, authenticated;
 
 insert into public.blog_categorias (slug, nome, descricao, ordem)
 values
-  ('agenda-online', 'Agenda online', 'Organizacao de horarios, clientes, profissionais e remarcacoes.', 10),
-  ('vendas-e-caixa', 'Vendas e caixa', 'Comandas, pagamentos, fechamento de caixa e gestao comercial.', 20),
-  ('automacao', 'Automacao', 'Rotinas que reduzem tarefas repetitivas no salao.', 30),
-  ('marketing', 'Marketing e fidelizacao', 'Ideias para redes sociais, relacionamento e retorno de clientes.', 40)
+  ('agenda-online', 'Agenda online', 'Organização de horários, clientes, profissionais e remarcações.', 10),
+  ('vendas-e-caixa', 'Vendas e caixa', 'Comandas, pagamentos, fechamento de caixa e gestão comercial.', 20),
+  ('automacao', 'Automação', 'Rotinas que reduzem tarefas repetitivas no salão.', 30),
+  ('marketing', 'Marketing e fidelização', 'Ideias para redes sociais, relacionamento e retorno de clientes.', 40)
 on conflict (slug) do update
 set
   nome = excluded.nome,
@@ -101,42 +101,42 @@ from (
       'agenda-online',
       'agenda-de-clientes-veja-vantagens-e-ferramentas-usadas',
       'Agenda de clientes: veja as vantagens e ferramentas usadas',
-      'Entenda como uma agenda de clientes ajuda saloes a reduzir faltas, organizar profissionais e melhorar a experiencia de atendimento.',
-      'Uma boa agenda deixa de ser apenas uma lista de horarios e vira o centro da operacao.',
-      'A agenda de clientes e uma das ferramentas mais importantes para saloes, barbearias, clinicas de estetica e studios. Quando ela esta integrada ao restante do sistema, cada horario marcado ja nasce com contexto: quem e o cliente, qual servico sera feito, qual profissional atende e quais proximos passos precisam acontecer.' || E'\n\n' ||
-      'No SalaoPremium, a agenda conversa com clientes, profissionais, comandas e caixa. Isso ajuda a diminuir remarcacoes perdidas, melhora a previsao de movimento do dia e facilita a rotina da recepcao.',
+      'Entenda como uma agenda de clientes ajuda salões a reduzir faltas, organizar profissionais e melhorar a experiência de atendimento.',
+      'Uma boa agenda deixa de ser apenas uma lista de horários e vira o centro da operação.',
+      'A agenda de clientes é uma das ferramentas mais importantes para salões, barbearias, clínicas de estética e studios. Quando ela está integrada ao restante do sistema, cada horário marcado já nasce com contexto: quem é o cliente, qual serviço será feito, qual profissional atende e quais próximos passos precisam acontecer.' || E'\n\n' ||
+      'No SalaoPremium, a agenda conversa com clientes, profissionais, comandas e caixa. Isso ajuda a diminuir remarcações perdidas, melhora a previsão de movimento do dia e facilita a rotina da recepção.',
       '/marketing-kit/site-hero.png',
-      'Tela do sistema SalaoPremium com visao comercial e operacional',
+      'Tela do sistema SalaoPremium com visão comercial e operacional',
       '6 min',
-      array['agenda de clientes', 'sistema para salao', 'atendimento'],
+      array['agenda de clientes', 'sistema para salão', 'atendimento'],
       true
     ),
     (
       'automacao',
       '5-tarefas-de-vendas-para-automatizar-com-o-ecossistema-salao-premiun',
-      '5 tarefas de vendas para automatizar com o ecossistema Salao Premiun',
-      'Veja tarefas comerciais que podem ser automatizadas para vender mais servicos e produtos sem perder controle do atendimento.',
-      'Automatizar vendas no salao tira peso operacional da equipe para ela atender melhor.',
-      'A primeira tarefa e lembrar clientes sobre retornos. Corte, manutencao, hidratacao, unha e procedimentos recorrentes podem gerar oportunidades futuras quando ficam registrados no sistema.' || E'\n\n' ||
-      'A segunda e organizar comandas abertas. Cada atendimento precisa virar venda fechada com clareza de servicos, produtos, descontos e pagamentos.',
+      '5 tarefas de vendas para automatizar com o ecossistema Salão Premiun',
+      'Veja tarefas comerciais que podem ser automatizadas para vender mais serviços e produtos sem perder controle do atendimento.',
+      'Automatizar vendas no salão tira peso operacional da equipe para ela atender melhor.',
+      'A primeira tarefa é lembrar clientes sobre retornos. Corte, manutenção, hidratação, unha e procedimentos recorrentes podem gerar oportunidades futuras quando ficam registrados no sistema.' || E'\n\n' ||
+      'A segunda é organizar comandas abertas. Cada atendimento precisa virar venda fechada com clareza de serviços, produtos, descontos e pagamentos.',
       '/marketing-kit/instagram-feed.png',
-      'Pecas de marketing para divulgacao de salao nas redes sociais',
+      'Peças de marketing para divulgação de salão nas redes sociais',
       '7 min',
-      array['automacao de vendas', 'whatsapp', 'gestao comercial'],
+      array['automação de vendas', 'whatsapp', 'gestão comercial'],
       false
     ),
     (
       'vendas-e-caixa',
       'o-que-o-salao-premium-oferece',
-      'O que o SalaoPremium oferece para saloes e barbearias',
-      'Conheca os principais recursos do SalaoPremium: agenda, clientes, comandas, caixa, estoque, profissionais, comissoes e app profissional.',
-      'O SalaoPremium une agenda, financeiro, equipe e operacao para o dono do salao tomar decisoes com menos improviso.',
-      'O SalaoPremium oferece uma base completa para administrar o dia a dia do salao. A agenda organiza horarios e profissionais; o cadastro de clientes guarda historico; as comandas registram servicos, produtos e pagamentos.' || E'\n\n' ||
-      'No financeiro, o caixa ajuda a entender entradas, saidas e fechamento. No operacional, o controle de estoque evita perda de produtos e melhora a reposicao.',
+      'O que o SalaoPremium oferece para salões e barbearias',
+      'Conheça os principais recursos do SalaoPremium: agenda, clientes, comandas, caixa, estoque, profissionais, comissões e app profissional.',
+      'O SalaoPremium une agenda, financeiro, equipe e operação para o dono do salão tomar decisões com menos improviso.',
+      'O SalaoPremium oferece uma base completa para administrar o dia a dia do salão. A agenda organiza horários e profissionais; o cadastro de clientes guarda histórico; as comandas registram serviços, produtos e pagamentos.' || E'\n\n' ||
+      'No financeiro, o caixa ajuda a entender entradas, saídas e fechamento. No operacional, o controle de estoque evita perda de produtos e melhora a reposição.',
       '/marketing-kit/facebook-link.png',
-      'Arte de divulgacao do SalaoPremium para redes sociais',
+      'Arte de divulgação do SalaoPremium para redes sociais',
       '5 min',
-      array['sistema para salao', 'comandas', 'caixa'],
+      array['sistema para salão', 'comandas', 'caixa'],
       false
     )
 ) as seed(categoria_slug, slug, titulo, descricao, resumo, conteudo, imagem, imagem_alt, tempo, tags, destaque)

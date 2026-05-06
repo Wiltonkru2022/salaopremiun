@@ -3,8 +3,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, CalendarDays, Clock, Tag } from "lucide-react";
-import SiteFooter from "@/components/site-footer";
-import SiteHeader from "@/components/site-header";
+import { BlogFooter, BlogHeader } from "@/components/blog/BlogChrome";
+import { DOMINIO_BLOG, DOMINIO_RAIZ } from "@/lib/proxy/domain-config";
 import { getBlogPost, getPublishedBlogPosts } from "@/lib/blog/service";
 
 type Props = {
@@ -19,7 +19,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   if (!post) {
     return {
-      title: "Artigo nao encontrado",
+      title: "Artigo não encontrado",
     };
   }
 
@@ -27,7 +27,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     title: post.title,
     description: post.description,
     alternates: {
-      canonical: `/blog/${post.slug}`,
+      canonical: `https://${DOMINIO_BLOG}/${post.slug}`,
     },
     openGraph: {
       title: post.title,
@@ -54,7 +54,7 @@ export default async function BlogPostPage({ params }: Props) {
 
   return (
     <div className="min-h-screen bg-[#f6f4ee] text-zinc-950">
-      <SiteHeader />
+      <BlogHeader />
 
       <main>
         <article>
@@ -62,7 +62,7 @@ export default async function BlogPostPage({ params }: Props) {
             <div className="mx-auto grid max-w-7xl gap-8 px-6 py-8 lg:grid-cols-[minmax(0,1fr)_440px] lg:items-end lg:px-10 lg:py-12">
               <div>
                 <Link
-                  href="/blog"
+                  href="/"
                   className="inline-flex items-center gap-2 rounded-full border border-white/15 px-4 py-2 text-sm font-bold text-zinc-200 transition hover:bg-white/10"
                 >
                   <ArrowLeft size={16} />
@@ -120,11 +120,11 @@ export default async function BlogPostPage({ params }: Props) {
                 </h2>
                 <p className="mt-2 text-sm leading-6 text-zinc-300">
                   O SalaoPremium conecta agenda online, comandas, caixa,
-                  profissionais, estoque e marketing para o salao vender com
+                  profissionais, estoque e marketing para o salão vender com
                   mais controle.
                 </p>
                 <Link
-                  href="/cadastro-salao"
+                  href={`https://${DOMINIO_RAIZ}/cadastro-salao`}
                   className="mt-4 inline-flex rounded-full bg-white px-5 py-2.5 text-sm font-black text-zinc-950"
                 >
                   Conhecer o sistema
@@ -136,7 +136,7 @@ export default async function BlogPostPage({ params }: Props) {
               <section className="rounded-[24px] border border-zinc-200 bg-white p-4 shadow-sm">
                 <div className="flex items-center gap-2 text-sm font-black uppercase tracking-[0.22em] text-zinc-500">
                   <Tag size={16} />
-                  Topicos
+                  Tópicos
                 </div>
                 <div className="mt-4 flex flex-wrap gap-2">
                   {post.tags.map((tag) => (
@@ -151,12 +151,12 @@ export default async function BlogPostPage({ params }: Props) {
               </section>
 
               <section className="rounded-[24px] border border-zinc-200 bg-white p-4 shadow-sm">
-                <h2 className="font-display text-2xl font-black">Leia tambem</h2>
+                <h2 className="font-display text-2xl font-black">Leia também</h2>
                 <div className="mt-4 space-y-3">
                   {(related.length ? related : allPosts.filter((item) => item.slug !== post.slug).slice(0, 3)).map((item) => (
                     <Link
                       key={item.id}
-                      href={`/blog/${item.slug}`}
+                      href={`/${item.slug}`}
                       className="block rounded-2xl border border-zinc-200 p-3 transition hover:border-zinc-950"
                     >
                       <div className="text-sm font-black">{item.title}</div>
@@ -172,8 +172,7 @@ export default async function BlogPostPage({ params }: Props) {
         </article>
       </main>
 
-      <SiteFooter />
+      <BlogFooter />
     </div>
   );
 }
-

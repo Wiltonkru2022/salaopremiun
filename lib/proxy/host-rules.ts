@@ -32,6 +32,7 @@ export {
 export const CADASTRO_PATH = "/cadastro-salao";
 export const APP_PROFISSIONAL_PREFIX = "/app-profissional";
 export const ADMIN_MASTER_PREFIX = ADMIN_MASTER_HOME_PATH;
+export const BLOG_PREFIX = "/blog";
 
 const DOMINIOS_SITE = [DOMINIO_RAIZ, DOMINIO_WWW];
 
@@ -143,6 +144,15 @@ export function isAppProfissionalRoute(pathname: string) {
     pathname === APP_PROFISSIONAL_PREFIX ||
     pathname.startsWith(`${APP_PROFISSIONAL_PREFIX}/`)
   );
+}
+
+export function isBlogRoute(pathname: string) {
+  return pathname === BLOG_PREFIX || pathname.startsWith(`${BLOG_PREFIX}/`);
+}
+
+export function removeBlogPrefix(pathname: string) {
+  if (pathname === BLOG_PREFIX) return "/";
+  return pathname.replace(BLOG_PREFIX, "") || "/";
 }
 
 export function removeAppProfissionalPrefix(pathname: string) {

@@ -12,6 +12,7 @@ import {
   CADASTRO_PATH,
   DOMINIO_APP,
   DOMINIO_ASSINATURA,
+  DOMINIO_BLOG,
   DOMINIO_CADASTRO,
   DOMINIO_LOGIN,
   DOMINIO_PAINEL,
@@ -21,8 +22,10 @@ import {
   getAdminMasterLoginNextPath,
   isApiRoute,
   isArquivoPublico,
+  isBlogRoute,
   redirectToAdminMasterLogin,
   redirectToHost,
+  removeBlogPrefix,
   removeAppProfissionalPrefix,
 } from "@/lib/proxy/host-rules";
 
@@ -260,6 +263,14 @@ export async function proxy(request: NextRequest) {
 
   if (isArquivoPublico(ctx.pathnameNormalizado)) {
     return NextResponse.next();
+  }
+
+  if (!ctx.isBlogHost && isBlogRoute(ctx.pathnameNormalizado)) {
+    return redirectToHost(
+      request,
+      DOMINIO_BLOG,
+      removeBlogPrefix(ctx.pathnameNormalizado)
+    );
   }
 
   if (ctx.isAppHost) {

@@ -27,11 +27,11 @@ export default async function AdminMasterBlogPage() {
               Blog e SEO
             </div>
             <h2 className="mt-4 max-w-4xl font-display text-[2.2rem] font-black leading-tight sm:text-[3.2rem]">
-              Editor de conteudo para o blog do SalaoPremium.
+              Editor de conteúdo para o blog do SalaoPremium.
             </h2>
             <p className="mt-3 max-w-3xl text-sm leading-6 text-zinc-300">
-              Crie posts com titulo, descricao para Google, foto de capa,
-              categoria, tags e texto longo. O blog publico usa esses conteudos
+              Crie posts com título, descrição para Google, foto de capa,
+              categoria, tags e texto longo. O blog público usa esses conteúdos
               quando as tabelas existirem no Supabase.
             </p>
           </div>
@@ -52,7 +52,7 @@ export default async function AdminMasterBlogPage() {
             </div>
             {usingFallback ? (
               <p className="mt-3 rounded-2xl border border-amber-200/30 bg-amber-100/10 p-3 text-sm leading-6 text-amber-50">
-                Exibindo conteudo inicial. Apos aplicar a migration do blog, os
+                Exibindo conteúdo inicial. Após aplicar a migration do blog, os
                 posts criados aqui passam a vir do banco.
               </p>
             ) : null}
@@ -73,13 +73,13 @@ export default async function AdminMasterBlogPage() {
           <div className="mt-4 grid gap-3">
             <label className="grid gap-1.5">
               <span className="text-xs font-black uppercase tracking-[0.22em] text-zinc-500">
-                Titulo
+                Título
               </span>
               <input
                 name="titulo"
                 required
                 className="rounded-2xl border border-zinc-200 px-4 py-3 text-sm font-semibold outline-none focus:border-zinc-950"
-                placeholder="Ex: Como fidelizar clientes no salao"
+                placeholder="Ex: Como fidelizar clientes no salão"
               />
             </label>
 
@@ -91,7 +91,7 @@ export default async function AdminMasterBlogPage() {
                 <input
                   name="slug"
                   className="rounded-2xl border border-zinc-200 px-4 py-3 text-sm outline-none focus:border-zinc-950"
-                  placeholder="gerado pelo titulo se ficar vazio"
+                  placeholder="gerado pelo título se ficar vazio"
                 />
               </label>
               <label className="grid gap-1.5">
@@ -115,7 +115,7 @@ export default async function AdminMasterBlogPage() {
 
             <label className="grid gap-1.5">
               <span className="text-xs font-black uppercase tracking-[0.22em] text-zinc-500">
-                Descricao para Google
+                Descrição para Google
               </span>
               <textarea
                 name="descricao"
@@ -134,7 +134,7 @@ export default async function AdminMasterBlogPage() {
                 name="resumo"
                 rows={2}
                 className="rounded-2xl border border-zinc-200 px-4 py-3 text-sm leading-6 outline-none focus:border-zinc-950"
-                placeholder="Texto curto para a pagina de artigos recentes."
+                placeholder="Texto curto para a página de artigos recentes."
               />
             </label>
 
@@ -185,7 +185,7 @@ export default async function AdminMasterBlogPage() {
               <input
                 name="tags"
                 className="rounded-2xl border border-zinc-200 px-4 py-3 text-sm outline-none focus:border-zinc-950"
-                placeholder="agenda online, sistema para salao, vendas"
+                placeholder="agenda online, sistema para salão, vendas"
               />
             </label>
 
@@ -198,7 +198,7 @@ export default async function AdminMasterBlogPage() {
                 required
                 rows={15}
                 className="min-h-[360px] rounded-2xl border border-zinc-200 px-4 py-3 text-sm leading-7 outline-none focus:border-zinc-950"
-                placeholder={"Escreva como em um documento. Use uma linha em branco para separar paragrafos.\n\nInclua ideias, exemplos, listas e chamadas para o SalaoPremium."}
+                placeholder={"Escreva como em um documento. Use uma linha em branco para separar parágrafos.\n\nInclua ideias, exemplos, listas e chamadas para o SalaoPremium."}
               />
             </label>
 
@@ -251,7 +251,7 @@ export default async function AdminMasterBlogPage() {
                 name="descricao"
                 rows={3}
                 className="rounded-2xl border border-zinc-200 px-4 py-3 text-sm leading-6 outline-none focus:border-zinc-950"
-                placeholder="Descricao curta"
+                placeholder="Descrição curta"
               />
               <button className="inline-flex items-center justify-center gap-2 rounded-2xl bg-zinc-950 px-5 py-3 text-sm font-black text-white hover:bg-zinc-800">
                 <Plus size={17} />
@@ -263,7 +263,7 @@ export default async function AdminMasterBlogPage() {
           <div className="rounded-[24px] border border-zinc-200 bg-white p-4 shadow-sm">
             <div className="flex items-center gap-2">
               <ImageIcon size={18} className="text-zinc-500" />
-              <h3 className="font-display text-xl font-black">Fotos disponiveis</h3>
+              <h3 className="font-display text-xl font-black">Fotos disponíveis</h3>
             </div>
             <div className="mt-4 grid grid-cols-2 gap-2">
               {imageOptions.map((src) => (
@@ -286,7 +286,7 @@ export default async function AdminMasterBlogPage() {
               {posts.slice(0, 8).map((post: BlogPost) => (
                 <Link
                   key={post.id}
-                  href={`/blog/${post.slug}`}
+                  href={`/admin-master/blog/${post.id}`}
                   className="block rounded-2xl border border-zinc-200 p-3 transition hover:border-zinc-950"
                 >
                   <div className="text-sm font-black text-zinc-950">{post.title}</div>

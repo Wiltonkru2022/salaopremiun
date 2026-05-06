@@ -11,6 +11,7 @@ type BlogDbCategory = {
 
 type BlogDbPost = {
   id: string;
+  categoria_id?: string;
   slug: string;
   titulo: string;
   descricao: string;
@@ -20,6 +21,7 @@ type BlogDbPost = {
   imagem_capa_alt: string | null;
   tempo_leitura: string | null;
   tags: string[] | null;
+  status?: "rascunho" | "publicado" | "arquivado";
   destaque: boolean | null;
   publicado_em: string | null;
   categoria: BlogDbCategory | null;
@@ -66,6 +68,9 @@ function mapPost(post: BlogDbPost): BlogPost {
     tags: post.tags || [],
     body: splitBody(post.conteudo),
     featured: Boolean(post.destaque),
+    categoryId: post.categoria_id || category?.id,
+    status: post.status || "publicado",
+    rawContent: post.conteudo,
   };
 }
 
@@ -108,7 +113,7 @@ export async function getPublishedBlogPosts(): Promise<BlogPost[]> {
     const { data, error } = await supabase
       .from("blog_posts")
       .select(
-        "id, slug, titulo, descricao, resumo, conteudo, imagem_capa_url, imagem_capa_alt, tempo_leitura, tags, destaque, publicado_em, categoria:blog_categorias(id, slug, nome, descricao)"
+        "id, categoria_id, slug, titulo, descricao, resumo, conteudo, imagem_capa_url, imagem_capa_alt, tempo_leitura, tags, destaque, publicado_em, categoria:blog_categorias(id, slug, nome, descricao)"
       )
       .eq("status", "publicado")
       .order("publicado_em", { ascending: false, nullsFirst: false })
@@ -145,7 +150,7 @@ export async function getAdminBlogData() {
     const { data, error } = await supabase
       .from("blog_posts")
       .select(
-        "id, slug, titulo, descricao, resumo, conteudo, imagem_capa_url, imagem_capa_alt, tempo_leitura, tags, destaque, publicado_em, status, categoria:blog_categorias(id, slug, nome, descricao)"
+        "id, categoria_id, slug, titulo, descricao, resumo, conteudo, imagem_capa_url, imagem_capa_alt, tempo_leitura, tags, destaque, publicado_em, status, categoria:blog_categorias(id, slug, nome, descricao)"
       )
       .order("atualizado_em", { ascending: false })
       .limit(30);
@@ -172,3 +177,44 @@ export async function getAdminBlogData() {
   }
 }
 
+export async function getAdminBlogPostById(id: string): Promise<BlogPost | null> {
+  noStore();
+  const fallbackPost = defaultBlogPosts.find((post) => post.id === id || post.slug === id);
+  const fallbackCategoryId = fallbackPost
+    ? defaultBlogCategories.find((category) => category.slug === fallbackPost.categorySlug)?.id
+    : undefined;
+
+  try {
+    const supabase = await getSupabaseAdminUnsafe();
+    if (!supabase) {
+      return fallbackPost
+        ? {
+            ...fallbackPost,
+            categoryId: fallbackCategoryId,
+            status: "publicado",
+            rawContent: fallbackPost.body.join("\n\n"),
+          }
+        : null;
+    }
+
+    const { data, error } = await supabase
+      .from("blog_posts")
+      .select(
+        "id, categoria_id, slug, titulo, descricao, resumo, conteudo, imagem_capa_url, imagem_capa_alt, tempo_leitura, tags, destaque, publicado_em, status, categoria:blog_categorias(id, slug, nome, descricao)"
+      )
+      .eq("id", id)
+      .maybeSingle();
+
+    if (error || !data) return null;
+    return mapPost(data);
+  } catch {
+    return fallbackPost
+      ? {
+          ...fallbackPost,
+          categoryId: fallbackCategoryId,
+          status: "publicado",
+          rawContent: fallbackPost.body.join("\n\n"),
+        }
+      : null;
+  }
+}

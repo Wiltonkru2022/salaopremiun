@@ -56,12 +56,6 @@ export default function SiteHeader() {
           >
             Suporte
           </Link>
-          <Link
-            href="/blog"
-            className="text-sm font-medium text-zinc-700 transition hover:text-[#2c0a45]"
-          >
-            Blog
-          </Link>
         </nav>
 
         <div className="hidden items-center gap-3 lg:flex">
@@ -134,13 +128,6 @@ export default function SiteHeader() {
               onClick={() => setOpen(false)}
             >
               Quem somos
-            </Link>
-            <Link
-              href="/blog"
-              className="border-b border-zinc-100 py-3.5 text-base font-medium text-zinc-800"
-              onClick={() => setOpen(false)}
-            >
-              Blog
             </Link>
             <Link
               href="/termos-de-uso"

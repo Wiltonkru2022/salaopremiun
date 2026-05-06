@@ -1,5 +1,5 @@
 import type { MetadataRoute } from "next";
-import { DOMINIO_RAIZ } from "@/lib/proxy/domain-config";
+import { DOMINIO_BLOG, DOMINIO_RAIZ } from "@/lib/proxy/domain-config";
 
 function getBaseUrl() {
   const configured = String(process.env.NEXT_PUBLIC_APP_URL || "").trim();
@@ -44,19 +44,20 @@ async function listDynamicSalonRoutes(baseUrl: URL, now: Date) {
     }));
 }
 
-async function listBlogRoutes(baseUrl: URL, now: Date) {
+async function listBlogRoutes(now: Date) {
   const { getPublishedBlogPosts } = await import("@/lib/blog/service");
   const posts = await getPublishedBlogPosts();
+  const blogBaseUrl = new URL(`https://${DOMINIO_BLOG}`);
 
   return [
     {
-      url: new URL("/blog", baseUrl).toString(),
+      url: new URL("/", blogBaseUrl).toString(),
       lastModified: now,
       changeFrequency: "weekly" as const,
       priority: 0.85,
     },
     ...posts.map((post) => ({
-      url: new URL(`/blog/${post.slug}`, baseUrl).toString(),
+      url: new URL(`/${post.slug}`, blogBaseUrl).toString(),
       lastModified: new Date(post.publishedAt || now),
       changeFrequency: "monthly" as const,
       priority: post.featured ? 0.82 : 0.75,
@@ -83,7 +84,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   const [dynamicSalonRoutes, blogRoutes] = await Promise.all([
     listDynamicSalonRoutes(baseUrl, now),
-    listBlogRoutes(baseUrl, now),
+    listBlogRoutes(now),
   ]);
 
   return [

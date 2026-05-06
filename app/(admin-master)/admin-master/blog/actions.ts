@@ -59,6 +59,7 @@ export async function createBlogCategory(formData: FormData) {
 export async function createBlogPost(formData: FormData) {
   await requireAdminMasterUser("comunicacao_ver");
 
+  const id = readText(formData, "id");
   const titulo = readText(formData, "titulo");
   const slug = slugify(readText(formData, "slug") || titulo);
   const descricao = readText(formData, "descricao");
@@ -78,25 +79,26 @@ export async function createBlogPost(formData: FormData) {
 
   const now = new Date().toISOString();
   const supabase = getSupabaseAdmin() as any;
-  const { error } = await supabase.from("blog_posts").upsert(
-    {
-      categoria_id: categoriaId,
-      titulo,
-      slug,
-      descricao,
-      resumo: resumo || descricao,
-      conteudo,
-      imagem_capa_url: imagemCapaUrl || "/marketing-kit/site-hero.png",
-      imagem_capa_alt: imagemCapaAlt || titulo,
-      tempo_leitura: tempoLeitura,
-      status,
-      destaque,
-      tags,
-      publicado_em: status === "publicado" ? now : null,
-      atualizado_em: now,
-    },
-    { onConflict: "slug" }
-  );
+  const payload = {
+    categoria_id: categoriaId,
+    titulo,
+    slug,
+    descricao,
+    resumo: resumo || descricao,
+    conteudo,
+    imagem_capa_url: imagemCapaUrl || "/marketing-kit/site-hero.png",
+    imagem_capa_alt: imagemCapaAlt || titulo,
+    tempo_leitura: tempoLeitura,
+    status,
+    destaque,
+    tags,
+    publicado_em: status === "publicado" ? now : null,
+    atualizado_em: now,
+  };
+
+  const { error } = id
+    ? await supabase.from("blog_posts").update(payload).eq("id", id)
+    : await supabase.from("blog_posts").upsert(payload, { onConflict: "slug" });
 
   if (error) {
     throw new Error(`Nao foi possivel salvar o post: ${error.message}`);
@@ -106,4 +108,3 @@ export async function createBlogPost(formData: FormData) {
   revalidatePath("/blog");
   revalidatePath(`/blog/${slug}`);
 }
-
