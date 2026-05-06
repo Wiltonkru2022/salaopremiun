@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import {
   Building2,
@@ -152,6 +152,202 @@ function formatMapPoint(latitude?: string, longitude?: string) {
   return lat && lng ? "Ponto do mapa configurado" : "Usando endereco do salao";
 }
 
+function buildAddressQuery(form: SalaoForm) {
+  return [
+    [form.endereco, form.numero].filter(Boolean).join(", "),
+    form.bairro,
+    form.cidade,
+    form.estado,
+    form.cep,
+    "Brasil",
+  ]
+    .map((item) => String(item || "").trim())
+    .filter(Boolean)
+    .join(", ");
+}
+
+function getFileExtension(file: File) {
+  const byName = file.name.split(".").pop()?.toLowerCase();
+  if (byName && /^[a-z0-9]+$/.test(byName)) return byName;
+  if (file.type === "image/png") return "png";
+  if (file.type === "image/webp") return "webp";
+  if (file.type === "image/gif") return "gif";
+  return "jpg";
+}
+
+function MapLocationPicker({
+  latitude,
+  longitude,
+  addressQuery,
+  onChange,
+}: {
+  latitude?: string;
+  longitude?: string;
+  addressQuery: string;
+  onChange: (coords: { latitude: string; longitude: string }) => void;
+}) {
+  const mapRef = useRef<HTMLDivElement | null>(null);
+  const mapInstanceRef = useRef<any>(null);
+  const markerRef = useRef<any>(null);
+  const [loadingMap, setLoadingMap] = useState(false);
+  const [mapError, setMapError] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadLeaflet() {
+      if (typeof window === "undefined" || !mapRef.current) return;
+
+      if (!(window as any).L) {
+        const existingCss = document.querySelector(
+          'link[data-salaopremium-leaflet="true"]'
+        );
+        if (!existingCss) {
+          const link = document.createElement("link");
+          link.rel = "stylesheet";
+          link.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
+          link.dataset.salaopremiumLeaflet = "true";
+          document.head.appendChild(link);
+        }
+
+        await new Promise<void>((resolve, reject) => {
+          const existingScript = document.querySelector(
+            'script[data-salaopremium-leaflet="true"]'
+          ) as HTMLScriptElement | null;
+          if (existingScript) {
+            existingScript.addEventListener("load", () => resolve(), {
+              once: true,
+            });
+            existingScript.addEventListener("error", () => reject(), {
+              once: true,
+            });
+            return;
+          }
+
+          const script = document.createElement("script");
+          script.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
+          script.async = true;
+          script.dataset.salaopremiumLeaflet = "true";
+          script.onload = () => resolve();
+          script.onerror = () => reject();
+          document.body.appendChild(script);
+        });
+      }
+
+      if (cancelled || !mapRef.current) return;
+
+      const L = (window as any).L;
+      let initialLat = parseCoordinate(latitude);
+      let initialLng = parseCoordinate(longitude);
+
+      if ((initialLat === null || initialLng === null) && addressQuery) {
+        try {
+          setLoadingMap(true);
+          const response = await fetch(
+            `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(
+              addressQuery
+            )}`
+          );
+          const data = (await response.json()) as Array<{
+            lat?: string;
+            lon?: string;
+          }>;
+          initialLat = parseCoordinate(data[0]?.lat);
+          initialLng = parseCoordinate(data[0]?.lon);
+          if (initialLat !== null && initialLng !== null) {
+            onChange({
+              latitude: initialLat.toFixed(7),
+              longitude: initialLng.toFixed(7),
+            });
+          }
+        } catch {
+          setMapError("Nao foi possivel localizar o endereco automaticamente.");
+        } finally {
+          setLoadingMap(false);
+        }
+      }
+
+      const center: [number, number] =
+        initialLat !== null && initialLng !== null
+          ? [initialLat, initialLng]
+          : [-23.55052, -46.633308];
+
+      if (!mapInstanceRef.current) {
+        const map = L.map(mapRef.current, {
+          zoomControl: true,
+          scrollWheelZoom: false,
+        }).setView(center, initialLat !== null && initialLng !== null ? 16 : 11);
+
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+          maxZoom: 19,
+          attribution: "&copy; OpenStreetMap",
+        }).addTo(map);
+
+        const marker = L.marker(center, { draggable: true }).addTo(map);
+        marker.on("dragend", () => {
+          const next = marker.getLatLng();
+          onChange({
+            latitude: Number(next.lat).toFixed(7),
+            longitude: Number(next.lng).toFixed(7),
+          });
+        });
+
+        map.on("click", (event: { latlng: { lat: number; lng: number } }) => {
+          marker.setLatLng(event.latlng);
+          onChange({
+            latitude: Number(event.latlng.lat).toFixed(7),
+            longitude: Number(event.latlng.lng).toFixed(7),
+          });
+        });
+
+        mapInstanceRef.current = map;
+        markerRef.current = marker;
+      } else {
+        mapInstanceRef.current.setView(center, 16);
+        markerRef.current?.setLatLng(center);
+      }
+    }
+
+    loadLeaflet().catch(() => {
+      if (!cancelled) setMapError("Nao foi possivel carregar o mapa.");
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [addressQuery, latitude, longitude, onChange]);
+
+  return (
+    <div className="rounded-[22px] border border-zinc-200 bg-zinc-50 p-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <div className="text-sm font-bold text-zinc-950">
+            Localizacao no mapa
+          </div>
+          <p className="mt-1 text-sm leading-6 text-zinc-600">
+            Clique no mapa ou arraste o marcador para o ponto exato do salao.
+          </p>
+        </div>
+        {loadingMap ? (
+          <span className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-zinc-600">
+            <Loader2 className="animate-spin" size={14} />
+            Buscando endereco
+          </span>
+        ) : null}
+      </div>
+      <div
+        ref={mapRef}
+        className="mt-4 h-[320px] overflow-hidden rounded-[20px] border border-zinc-200 bg-zinc-100"
+      />
+      {mapError ? (
+        <div className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          {mapError}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function DisplayItem({
   label,
   value,
@@ -228,6 +424,9 @@ export default function PerfilSalaoPage() {
   const [semPermissao, setSemPermissao] = useState(false);
   const [savingPerfil, setSavingPerfil] = useState(false);
   const [savingSenha, setSavingSenha] = useState(false);
+  const [uploadingPublicAsset, setUploadingPublicAsset] = useState<
+    "logo" | "capa" | null
+  >(null);
   const [loadingMfa, setLoadingMfa] = useState(false);
   const [mfaBusy, setMfaBusy] = useState(false);
   const [creatingRecoveryTicket, setCreatingRecoveryTicket] = useState(false);
@@ -271,6 +470,22 @@ export default function PerfilSalaoPage() {
       ? totpSetup.qrCode
       : `data:image/svg+xml;charset=utf-8,${encodeURIComponent(totpSetup.qrCode)}`;
   }, [qrCodeMarkup, totpSetup]);
+
+  const appClienteAddressQuery = useMemo(
+    () => buildAddressQuery(appClienteDraft),
+    [appClienteDraft]
+  );
+
+  const updateAppClienteMapLocation = useCallback(
+    (coords: { latitude: string; longitude: string }) => {
+      setAppClienteDraft((prev) => ({
+        ...prev,
+        latitude: coords.latitude,
+        longitude: coords.longitude,
+      }));
+    },
+    []
+  );
 
   const callMfaApi = useCallback(
     async (body?: Record<string, unknown>) => {
@@ -539,6 +754,64 @@ export default function PerfilSalaoPage() {
     }
   }
 
+  async function uploadImagemPublica(
+    file: File | undefined,
+    tipo: "logo" | "capa"
+  ) {
+    if (!file || !idSalao) return;
+
+    if (!file.type.startsWith("image/")) {
+      setErro("Selecione um arquivo de imagem.");
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setErro("A imagem precisa ter ate 5MB.");
+      return;
+    }
+
+    try {
+      setErro("");
+      setUploadingPublicAsset(tipo);
+
+      const extension = getFileExtension(file);
+      const path = `${idSalao}/${tipo}-${Date.now()}.${extension}`;
+      const { error } = await supabase.storage
+        .from("salao-publico")
+        .upload(path, file, {
+          cacheControl: "31536000",
+          contentType: file.type,
+          upsert: true,
+        });
+
+      if (error) throw error;
+
+      const { data } = supabase.storage
+        .from("salao-publico")
+        .getPublicUrl(path);
+      const publicUrl = data.publicUrl;
+
+      if (!publicUrl) {
+        throw new Error("Nao foi possivel obter a URL publica da imagem.");
+      }
+
+      setAppClienteDraft((prev) => ({
+        ...prev,
+        ...(tipo === "logo"
+          ? { logo_url: publicUrl }
+          : { foto_capa_url: publicUrl }),
+      }));
+    } catch (error: unknown) {
+      setErro(
+        error instanceof Error
+          ? error.message
+          : "Nao foi possivel enviar a imagem."
+      );
+    } finally {
+      setUploadingPublicAsset(null);
+    }
+  }
+
   async function salvarDadosComerciais() {
     await atualizarPerfil(
       {
@@ -572,6 +845,7 @@ export default function PerfilSalaoPage() {
       {
         descricao_publica: appClienteDraft.descricao_publica || "",
         foto_capa_url: appClienteDraft.foto_capa_url || "",
+        logo_url: appClienteDraft.logo_url || "",
         latitude: appClienteDraft.latitude || "",
         longitude: appClienteDraft.longitude || "",
         estacionamento: Boolean(appClienteDraft.estacionamento),
@@ -1622,55 +1896,67 @@ export default function PerfilSalaoPage() {
             />
           </Field>
 
-          <Field label="Foto de capa (URL)">
-            <TextInput
-              value={appClienteDraft.foto_capa_url || ""}
-              onChange={(event) =>
-                setAppClienteDraft((prev) => ({
-                  ...prev,
-                  foto_capa_url: event.target.value,
-                }))
-              }
-              placeholder="https://..."
-            />
-          </Field>
-
-          <div className="rounded-[22px] border border-zinc-200 bg-zinc-50 p-4">
-            <div className="text-sm font-bold text-zinc-950">
-              Localizacao no mapa
-            </div>
-            <p className="mt-1 text-sm leading-6 text-zinc-600">
-              Opcional. Preencha somente se quiser ajustar com precisao onde o
-              salao aparece quando o cliente usa "perto de mim".
-            </p>
-            <div className="mt-4 grid gap-4 md:grid-cols-2">
-            <Field label="Ponto do mapa - norte/sul">
-              <TextInput
-                value={appClienteDraft.latitude || ""}
+          <div className="overflow-hidden rounded-[24px] border border-zinc-200 bg-white">
+            <label className="group relative block h-56 cursor-pointer bg-zinc-100">
+              {appClienteDraft.foto_capa_url ? (
+                <img
+                  src={appClienteDraft.foto_capa_url}
+                  alt="Foto de capa do app cliente"
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <div className="h-full bg-gradient-to-br from-zinc-950 via-zinc-800 to-amber-700" />
+              )}
+              <div className="absolute inset-0 bg-black/20 transition group-hover:bg-black/35" />
+              <div className="absolute bottom-4 right-4 rounded-2xl bg-white px-4 py-2 text-sm font-bold text-zinc-950 shadow-sm">
+                {uploadingPublicAsset === "capa" ? "Enviando..." : "Trocar capa"}
+              </div>
+              <input
+                type="file"
+                accept="image/*"
+                className="sr-only"
                 onChange={(event) =>
-                  setAppClienteDraft((prev) => ({
-                    ...prev,
-                    latitude: event.target.value,
-                  }))
+                  void uploadImagemPublica(event.target.files?.[0], "capa")
                 }
-                placeholder="Ex.: -23.550520"
               />
-            </Field>
+            </label>
 
-            <Field label="Ponto do mapa - leste/oeste">
-              <TextInput
-                value={appClienteDraft.longitude || ""}
-                onChange={(event) =>
-                  setAppClienteDraft((prev) => ({
-                    ...prev,
-                    longitude: event.target.value,
-                  }))
-                }
-                placeholder="Ex.: -46.633308"
-              />
-            </Field>
+            <div className="relative px-5 pb-5">
+              <label className="group relative -mt-12 flex h-24 w-24 cursor-pointer items-center justify-center overflow-hidden rounded-[24px] border-4 border-white bg-zinc-100 text-3xl font-black text-zinc-950 shadow-xl">
+                {appClienteDraft.logo_url ? (
+                  <img
+                    src={appClienteDraft.logo_url}
+                    alt="Logo do salao no app cliente"
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  (appClienteDraft.nome || "S").slice(0, 1).toUpperCase()
+                )}
+                <span className="absolute hidden rounded-xl bg-black/70 px-3 py-1.5 text-xs font-bold text-white group-hover:block">
+                  {uploadingPublicAsset === "logo" ? "Enviando" : "Trocar"}
+                </span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="sr-only"
+                  onChange={(event) =>
+                    void uploadImagemPublica(event.target.files?.[0], "logo")
+                  }
+                />
+              </label>
+              <div className="mt-3 text-sm leading-6 text-zinc-600">
+                Clique na capa ou na foto do perfil para escolher uma imagem do
+                computador. Depois salve o perfil publico.
+              </div>
             </div>
           </div>
+
+          <MapLocationPicker
+            latitude={appClienteDraft.latitude}
+            longitude={appClienteDraft.longitude}
+            addressQuery={appClienteAddressQuery}
+            onChange={updateAppClienteMapLocation}
+          />
 
           <Field label="Formas de pagamento">
             <TextInput

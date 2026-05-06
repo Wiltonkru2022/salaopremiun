@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CalendarClock, MapPin, ParkingCircle, Star, Wallet } from "lucide-react";
 import ClientAppFrame from "@/components/client-app/ClientAppFrame";
@@ -52,21 +51,10 @@ export default async function ClienteSalonPage({
                 <div className="h-full bg-gradient-to-br from-zinc-950 via-zinc-800 to-amber-700" />
               )}
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent" />
-              <div className="absolute inset-x-0 bottom-0 p-5 text-white md:p-7">
-                <div className="flex items-end gap-4">
-                  <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-[1.4rem] border border-white/30 bg-white/95 text-2xl font-black text-zinc-950 shadow-lg">
-                    {salao.logoUrl ? (
-                      <img
-                        src={salao.logoUrl}
-                        alt={`Logo do salao ${salao.nome}`}
-                        className="h-full w-full object-cover"
-                      />
-                    ) : (
-                      salao.nome.slice(0, 1).toUpperCase()
-                    )}
-                  </div>
+              <div className="absolute inset-x-0 bottom-0 p-5 pb-8 text-white md:p-7 md:pb-10">
+                <div className="ml-24 md:ml-28">
                   <div className="min-w-0">
-                    <h2 className="text-[2rem] font-black leading-none md:text-[2.6rem]">
+                    <h2 className="text-[2rem] font-black leading-none drop-shadow md:text-[2.6rem]">
                       {salao.nome}
                     </h2>
                     <div className="mt-3 flex flex-wrap items-center gap-2 text-sm font-semibold text-white/90">
@@ -85,39 +73,27 @@ export default async function ClienteSalonPage({
               </div>
             </div>
 
-            <div className="space-y-5 p-5">
-              <div className="flex flex-wrap items-start justify-between gap-4">
-                <div className="min-w-0">
-                  <p className="mt-3 max-w-2xl text-sm leading-6 text-zinc-600">
+            <div className="relative space-y-5 p-5 pt-0">
+              <div className="flex flex-wrap items-end gap-4">
+                <div className="-mt-12 flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-[1.4rem] border-4 border-white bg-zinc-100 text-3xl font-black text-zinc-950 shadow-xl md:h-28 md:w-28">
+                  {salao.logoUrl ? (
+                    <img
+                      src={salao.logoUrl}
+                      alt={`Logo do salao ${salao.nome}`}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    salao.nome.slice(0, 1).toUpperCase()
+                  )}
+                </div>
+                <div className="min-w-0 flex-1 pb-2">
+                  <h1 className="text-2xl font-black text-zinc-950 md:hidden">
+                    {salao.nome}
+                  </h1>
+                  <p className="mt-2 max-w-4xl text-sm leading-6 text-zinc-600">
                     {salao.descricaoPublica ||
                       "Conheca equipe, servicos e avaliacoes deste salao antes de agendar."}
                   </p>
-                </div>
-
-                <div className="flex flex-wrap gap-2">
-                  {hasSession ? (
-                    <Link
-                      href="/app-cliente/agendamentos"
-                      className="inline-flex h-11 items-center justify-center rounded-2xl bg-zinc-950 px-4 text-sm font-bold text-white transition hover:bg-zinc-800"
-                    >
-                      Ver meus horarios
-                    </Link>
-                  ) : (
-                    <>
-                      <Link
-                        href={`/app-cliente/cadastro?next=${encodeURIComponent(`/app-cliente/salao/${salao.id}`)}`}
-                        className="inline-flex h-11 items-center justify-center rounded-2xl bg-zinc-950 px-4 text-sm font-bold text-white transition hover:bg-zinc-800"
-                      >
-                        Criar conta
-                      </Link>
-                      <Link
-                        href={`/app-cliente/login?salao=${salao.id}&next=${encodeURIComponent(`/app-cliente/salao/${salao.id}`)}`}
-                        className="inline-flex h-11 items-center justify-center rounded-2xl border border-zinc-200 bg-white px-4 text-sm font-bold text-zinc-800 transition hover:bg-zinc-50"
-                      >
-                        Entrar
-                      </Link>
-                    </>
-                  )}
                 </div>
               </div>
 
@@ -169,9 +145,8 @@ export default async function ClienteSalonPage({
                 </div>
               ) : (
                 <div className="mt-4 rounded-2xl border border-zinc-100 bg-zinc-50 p-4 text-sm leading-6 text-zinc-600">
-                  Entre com sua conta global para escolher servico,
-                  profissional e horario. O vinculo com este salao acontece
-                  por tras quando voce fizer o primeiro agendamento.
+                  Entre pelo menu Perfil para liberar a escolha de servico,
+                  profissional e horario.
                 </div>
               )}
             </div>
