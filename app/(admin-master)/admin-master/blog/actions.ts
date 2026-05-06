@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAdminMasterUser } from "@/lib/admin-master/auth/requireAdminMasterUser";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
@@ -43,17 +43,80 @@ function titleFromSlug(value: string) {
     .join(" ");
 }
 
-async function resolveCategoryId(supabase: any, value: string) {
-  if (isUuid(value)) return value;
+function isUuidLikeCategory(value: string) {
+  return isUuid(value) || isUuid(slugify(value));
+}
 
-  const slug = slugify(value || "gestao");
-  const { data: existing } = await supabase
+function isUnsafeCategory(category?: { slug?: string | null; nome?: string | null } | null) {
+  return Boolean(
+    category &&
+      (isUuidLikeCategory(String(category.slug || "")) ||
+        isUuidLikeCategory(String(category.nome || "")))
+  );
+}
+
+async function getDefaultCategoryId(supabase: any) {
+  const { data: existing, error: existingError } = await supabase
     .from("blog_categorias")
     .select("id")
+    .eq("slug", "agenda-online")
+    .maybeSingle();
+
+  if (existingError) throw existingError;
+  if (existing?.id) return existing.id;
+
+  const { data, error } = await supabase
+    .from("blog_categorias")
+    .upsert(
+      {
+        slug: "agenda-online",
+        nome: "Agenda online",
+        descricao: "Organização de horários, clientes, profissionais e remarcações.",
+        ordem: 10,
+        ativo: true,
+      },
+      { onConflict: "slug" }
+    )
+    .select("id")
+    .single();
+
+  if (error || !data?.id) throw error || new Error("Categoria padrão inválida.");
+  return data.id;
+}
+
+async function resolveCategoryId(supabase: any, value: string) {
+  const cleanValue = value.trim();
+
+  if (isUuid(cleanValue)) {
+    const { data, error } = await supabase
+      .from("blog_categorias")
+      .select("id, slug, nome")
+      .eq("id", cleanValue)
+      .maybeSingle();
+
+    if (error) throw error;
+    if (data?.id && !isUnsafeCategory(data)) return data.id;
+
+    return getDefaultCategoryId(supabase);
+  }
+
+  if (isUuidLikeCategory(cleanValue)) {
+    return getDefaultCategoryId(supabase);
+  }
+
+  const slug = slugify(cleanValue || "agenda-online");
+  const { data: existing, error: existingError } = await supabase
+    .from("blog_categorias")
+    .select("id, slug, nome")
     .eq("slug", slug)
     .maybeSingle();
 
-  if (existing?.id) return existing.id;
+  if (existingError) throw existingError;
+  if (existing?.id && !isUnsafeCategory(existing)) return existing.id;
+
+  if (isUnsafeCategory(existing)) {
+    return getDefaultCategoryId(supabase);
+  }
 
   const { data, error } = await supabase
     .from("blog_categorias")
@@ -110,6 +173,7 @@ export async function createBlogCategory(formData: FormData) {
 
   revalidatePath("/admin-master/blog");
   revalidatePath("/blog");
+  revalidateTag("blog-public", "max");
 }
 
 export async function createBlogPost(
@@ -184,5 +248,6 @@ export async function createBlogPost(
   revalidatePath("/blog");
   revalidatePath(`/blog/${slug}`);
   revalidatePath(`/admin-master/blog/${slug}`);
+  revalidateTag("blog-public", "max");
   redirect(`/admin-master/blog/${slug}`);
 }
