@@ -1,6 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type MouseEvent,
+  type ReactNode,
+} from "react";
 import { useRouter } from "next/navigation";
 import {
   Building2,
@@ -186,136 +193,138 @@ function MapLocationPicker({
   addressQuery: string;
   onChange: (coords: { latitude: string; longitude: string }) => void;
 }) {
-  const mapRef = useRef<HTMLDivElement | null>(null);
-  const mapInstanceRef = useRef<any>(null);
-  const markerRef = useRef<any>(null);
   const [loadingMap, setLoadingMap] = useState(false);
-  const [mapError, setMapError] = useState("");
+  const [lookupMessage, setLookupMessage] = useState("");
+  const zoom = 16;
+  const tileSize = 256;
+  const currentLat = parseCoordinate(latitude) ?? -23.55052;
+  const currentLng = parseCoordinate(longitude) ?? -46.633308;
+
+  function lonToTileX(lng: number, zoomLevel: number) {
+    return ((lng + 180) / 360) * 2 ** zoomLevel;
+  }
+
+  function latToTileY(lat: number, zoomLevel: number) {
+    const radians = (lat * Math.PI) / 180;
+    return (
+      ((1 -
+        Math.log(Math.tan(radians) + 1 / Math.cos(radians)) / Math.PI) /
+        2) *
+      2 ** zoomLevel
+    );
+  }
+
+  function tileXToLon(tileX: number, zoomLevel: number) {
+    return (tileX / 2 ** zoomLevel) * 360 - 180;
+  }
+
+  function tileYToLat(tileY: number, zoomLevel: number) {
+    const radians = Math.atan(Math.sinh(Math.PI * (1 - (2 * tileY) / 2 ** zoomLevel)));
+    return (radians * 180) / Math.PI;
+  }
+
+  const centerTileX = lonToTileX(currentLng, zoom);
+  const centerTileY = latToTileY(currentLat, zoom);
+  const centerTileFloorX = Math.floor(centerTileX);
+  const centerTileFloorY = Math.floor(centerTileY);
+  const centerPixelOffsetX = (centerTileX - centerTileFloorX) * tileSize;
+  const centerPixelOffsetY = (centerTileY - centerTileFloorY) * tileSize;
+
+  const tiles = useMemo(() => {
+    const items: Array<{
+      key: string;
+      x: number;
+      y: number;
+      left: string;
+      top: string;
+    }> = [];
+
+    for (let dx = -2; dx <= 2; dx += 1) {
+      for (let dy = -2; dy <= 2; dy += 1) {
+        const x = centerTileFloorX + dx;
+        const y = centerTileFloorY + dy;
+        items.push({
+          key: `${zoom}-${x}-${y}`,
+          x,
+          y,
+          left: `calc(50% + ${dx * tileSize - centerPixelOffsetX}px)`,
+          top: `calc(50% + ${dy * tileSize - centerPixelOffsetY}px)`,
+        });
+      }
+    }
+
+    return items;
+  }, [
+    centerPixelOffsetX,
+    centerPixelOffsetY,
+    centerTileFloorX,
+    centerTileFloorY,
+  ]);
 
   useEffect(() => {
     let cancelled = false;
 
-    async function loadLeaflet() {
-      if (typeof window === "undefined" || !mapRef.current) return;
-
-      if (!(window as any).L) {
-        const existingCss = document.querySelector(
-          'link[data-salaopremium-leaflet="true"]'
-        );
-        if (!existingCss) {
-          const link = document.createElement("link");
-          link.rel = "stylesheet";
-          link.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
-          link.dataset.salaopremiumLeaflet = "true";
-          document.head.appendChild(link);
-        }
-
-        await new Promise<void>((resolve, reject) => {
-          const existingScript = document.querySelector(
-            'script[data-salaopremium-leaflet="true"]'
-          ) as HTMLScriptElement | null;
-          if (existingScript) {
-            existingScript.addEventListener("load", () => resolve(), {
-              once: true,
-            });
-            existingScript.addEventListener("error", () => reject(), {
-              once: true,
-            });
-            return;
-          }
-
-          const script = document.createElement("script");
-          script.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
-          script.async = true;
-          script.dataset.salaopremiumLeaflet = "true";
-          script.onload = () => resolve();
-          script.onerror = () => reject();
-          document.body.appendChild(script);
-        });
-      }
-
-      if (cancelled || !mapRef.current) return;
-
-      const L = (window as any).L;
+    async function localizarEnderecoInicial() {
       let initialLat = parseCoordinate(latitude);
       let initialLng = parseCoordinate(longitude);
 
-      if ((initialLat === null || initialLng === null) && addressQuery) {
-        try {
-          setLoadingMap(true);
-          const response = await fetch(
-            `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(
-              addressQuery
-            )}`
-          );
-          const data = (await response.json()) as Array<{
-            lat?: string;
-            lon?: string;
-          }>;
-          initialLat = parseCoordinate(data[0]?.lat);
-          initialLng = parseCoordinate(data[0]?.lon);
-          if (initialLat !== null && initialLng !== null) {
-            onChange({
-              latitude: initialLat.toFixed(7),
-              longitude: initialLng.toFixed(7),
-            });
-          }
-        } catch {
-          setMapError("Nao foi possivel localizar o endereco automaticamente.");
-        } finally {
-          setLoadingMap(false);
+      if (initialLat !== null && initialLng !== null) return;
+      if (!addressQuery) return;
+
+      try {
+        setLookupMessage("");
+        setLoadingMap(true);
+        const response = await fetch(
+          `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(
+            addressQuery
+          )}`
+        );
+        const data = (await response.json()) as Array<{
+          lat?: string;
+          lon?: string;
+        }>;
+
+        if (cancelled) return;
+
+        initialLat = parseCoordinate(data[0]?.lat);
+        initialLng = parseCoordinate(data[0]?.lon);
+
+        if (initialLat !== null && initialLng !== null) {
+          onChange({
+            latitude: initialLat.toFixed(7),
+            longitude: initialLng.toFixed(7),
+          });
+        } else {
+          setLookupMessage("Endereco nao encontrado automaticamente. Clique no mapa.");
         }
-      }
-
-      const center: [number, number] =
-        initialLat !== null && initialLng !== null
-          ? [initialLat, initialLng]
-          : [-23.55052, -46.633308];
-
-      if (!mapInstanceRef.current) {
-        const map = L.map(mapRef.current, {
-          zoomControl: true,
-          scrollWheelZoom: false,
-        }).setView(center, initialLat !== null && initialLng !== null ? 16 : 11);
-
-        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-          maxZoom: 19,
-          attribution: "&copy; OpenStreetMap",
-        }).addTo(map);
-
-        const marker = L.marker(center, { draggable: true }).addTo(map);
-        marker.on("dragend", () => {
-          const next = marker.getLatLng();
-          onChange({
-            latitude: Number(next.lat).toFixed(7),
-            longitude: Number(next.lng).toFixed(7),
-          });
-        });
-
-        map.on("click", (event: { latlng: { lat: number; lng: number } }) => {
-          marker.setLatLng(event.latlng);
-          onChange({
-            latitude: Number(event.latlng.lat).toFixed(7),
-            longitude: Number(event.latlng.lng).toFixed(7),
-          });
-        });
-
-        mapInstanceRef.current = map;
-        markerRef.current = marker;
-      } else {
-        mapInstanceRef.current.setView(center, 16);
-        markerRef.current?.setLatLng(center);
+      } catch {
+        if (!cancelled) {
+          setLookupMessage("Clique no mapa para marcar o ponto do salao.");
+        }
+      } finally {
+        if (!cancelled) setLoadingMap(false);
       }
     }
 
-    loadLeaflet().catch(() => {
-      if (!cancelled) setMapError("Nao foi possivel carregar o mapa.");
-    });
+    void localizarEnderecoInicial();
 
     return () => {
       cancelled = true;
     };
   }, [addressQuery, latitude, longitude, onChange]);
+
+  function handleMapClick(event: MouseEvent<HTMLDivElement>) {
+    const rect = event.currentTarget.getBoundingClientRect();
+    const offsetX = event.clientX - rect.left - rect.width / 2;
+    const offsetY = event.clientY - rect.top - rect.height / 2;
+    const nextTileX = (centerTileX * tileSize + offsetX) / tileSize;
+    const nextTileY = (centerTileY * tileSize + offsetY) / tileSize;
+
+    onChange({
+      latitude: tileYToLat(nextTileY, zoom).toFixed(7),
+      longitude: tileXToLon(nextTileX, zoom).toFixed(7),
+    });
+  }
 
   return (
     <div className="rounded-[22px] border border-zinc-200 bg-zinc-50 p-4">
@@ -325,7 +334,7 @@ function MapLocationPicker({
             Localizacao no mapa
           </div>
           <p className="mt-1 text-sm leading-6 text-zinc-600">
-            Clique no mapa ou arraste o marcador para o ponto exato do salao.
+            Clique no mapa para colocar o marcador exatamente onde o salao fica.
           </p>
         </div>
         {loadingMap ? (
@@ -336,12 +345,42 @@ function MapLocationPicker({
         ) : null}
       </div>
       <div
-        ref={mapRef}
-        className="mt-4 h-[320px] overflow-hidden rounded-[20px] border border-zinc-200 bg-zinc-100"
-      />
-      {mapError ? (
+        role="button"
+        tabIndex={0}
+        onClick={handleMapClick}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+          }
+        }}
+        className="relative mt-4 h-[320px] cursor-crosshair overflow-hidden rounded-[20px] border border-zinc-200 bg-zinc-100"
+      >
+        {tiles.map((tile) => (
+          <img
+            key={tile.key}
+            src={`https://tile.openstreetmap.org/${zoom}/${tile.x}/${tile.y}.png`}
+            alt=""
+            draggable={false}
+            className="absolute h-64 w-64 select-none"
+            style={{
+              left: tile.left,
+              top: tile.top,
+            }}
+          />
+        ))}
+        <div className="pointer-events-none absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-full flex-col items-center">
+          <div className="rounded-full bg-zinc-950 px-3 py-1 text-xs font-bold text-white shadow-lg">
+            Salao
+          </div>
+          <div className="h-5 w-5 rotate-45 rounded-br-full rounded-tl-full bg-zinc-950 shadow-lg" />
+        </div>
+        <div className="pointer-events-none absolute bottom-2 right-3 rounded-full bg-white/90 px-3 py-1 text-[10px] font-semibold text-zinc-500">
+          OpenStreetMap
+        </div>
+      </div>
+      {lookupMessage ? (
         <div className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-          {mapError}
+          {lookupMessage}
         </div>
       ) : null}
     </div>
