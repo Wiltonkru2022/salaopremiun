@@ -19,8 +19,10 @@ import {
   ListOrdered,
   MousePointerClick,
   Quote,
+  RefreshCw,
   Save,
   Send,
+  Trash2,
   Type,
   Underline,
 } from "lucide-react";
@@ -90,7 +92,9 @@ export default function AdminBlogEditor({ post, categories }: Props) {
   const editorInitializedRef = useRef(false);
   const coverInputRef = useRef<HTMLInputElement>(null);
   const inlineImageInputRef = useRef<HTMLInputElement>(null);
+  const replaceInlineImageInputRef = useRef<HTMLInputElement>(null);
   const savedRangeRef = useRef<Range | null>(null);
+  const selectedInlineImageRef = useRef<HTMLImageElement | null>(null);
   const [title, setTitle] = useState(post?.title || "");
   const [slug, setSlug] = useState(post?.slug || "");
   const [description, setDescription] = useState(post?.description || "");
@@ -102,6 +106,7 @@ export default function AdminBlogEditor({ post, categories }: Props) {
   const [featured, setFeatured] = useState(Boolean(post?.featured));
   const [fontSize, setFontSize] = useState(18);
   const [modal, setModal] = useState<EditorModal>(null);
+  const [selectedInlineImageName, setSelectedInlineImageName] = useState("");
   const [readTime, setReadTime] = useState(() =>
     estimateReadTime(contentValueRef.current)
   );
@@ -276,15 +281,65 @@ export default function AdminBlogEditor({ post, categories }: Props) {
       setCoverImage(value);
       if (!coverAlt) setCoverAlt(file.name.replace(/\.[^.]+$/, ""));
     });
+    if (coverInputRef.current) coverInputRef.current.value = "";
+  }
+
+  function removeCoverImage() {
+    setCoverImage("");
+    setCoverAlt("");
+    if (coverInputRef.current) coverInputRef.current.value = "";
   }
 
   function handleInlineImage(file?: File) {
     if (!file) return;
     readFileAsDataUrl(file, (value) => {
       insertHtmlAtSelection(
-        `<figure><img src="${value}" alt="${file.name}" style="width:100%;border-radius:18px;margin:16px 0" /><figcaption>${file.name}</figcaption></figure>`
+        `<figure><img src="${value}" alt="${escapeAttribute(file.name)}" style="width:100%;border-radius:18px;margin:16px 0" /><figcaption>${escapeHtml(file.name)}</figcaption></figure>`
       );
     });
+    if (inlineImageInputRef.current) inlineImageInputRef.current.value = "";
+  }
+
+  function handleEditorClick(event: React.MouseEvent<HTMLDivElement>) {
+    const image = (event.target as HTMLElement).closest("img");
+    if (!image || !editorRef.current?.contains(image)) {
+      selectedInlineImageRef.current = null;
+      setSelectedInlineImageName("");
+      saveSelection();
+      return;
+    }
+
+    selectedInlineImageRef.current = image as HTMLImageElement;
+    setSelectedInlineImageName(
+      image.getAttribute("alt") || image.getAttribute("src") || "Imagem do post"
+    );
+  }
+
+  function removeSelectedInlineImage() {
+    const image = selectedInlineImageRef.current;
+    if (!image) return;
+    const container = image.closest("figure") || image;
+    container.remove();
+    selectedInlineImageRef.current = null;
+    setSelectedInlineImageName("");
+    syncContent(true);
+  }
+
+  function replaceSelectedInlineImage(file?: File) {
+    const image = selectedInlineImageRef.current;
+    if (!file || !image) return;
+    readFileAsDataUrl(file, (value) => {
+      image.setAttribute("src", value);
+      image.setAttribute("alt", file.name);
+      const figure = image.closest("figure");
+      const caption = figure?.querySelector("figcaption");
+      if (caption) caption.textContent = file.name;
+      setSelectedInlineImageName(file.name);
+      syncContent(true);
+    });
+    if (replaceInlineImageInputRef.current) {
+      replaceInlineImageInputRef.current.value = "";
+    }
   }
 
   function handlePreview() {
@@ -441,21 +496,41 @@ export default function AdminBlogEditor({ post, categories }: Props) {
               className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-zinc-200 px-4 py-3 text-sm font-black hover:border-zinc-950"
             >
               <ImagePlus size={17} />
-              Carregar do PC
+              {coverImage ? "Trocar foto" : "Carregar do PC"}
             </button>
             {coverImage ? (
-              <div className="mt-3 overflow-hidden rounded-2xl border border-zinc-200">
-                {coverImage.startsWith("data:") ? (
-                  <img src={coverImage} alt={coverAlt} className="aspect-[4/3] w-full object-cover" />
-                ) : (
-                  <Image
-                    src={coverImage}
-                    alt={coverAlt}
-                    width={420}
-                    height={320}
-                    className="aspect-[4/3] w-full object-cover"
-                  />
-                )}
+              <div className="mt-3">
+                <div className="overflow-hidden rounded-2xl border border-zinc-200">
+                  {coverImage.startsWith("data:") ? (
+                    <img src={coverImage} alt={coverAlt} className="aspect-[4/3] w-full object-cover" />
+                  ) : (
+                    <Image
+                      src={coverImage}
+                      alt={coverAlt}
+                      width={420}
+                      height={320}
+                      className="aspect-[4/3] w-full object-cover"
+                    />
+                  )}
+                </div>
+                <div className="mt-2 grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => coverInputRef.current?.click()}
+                    className="inline-flex items-center justify-center gap-2 rounded-2xl border border-zinc-200 px-3 py-2 text-xs font-black text-zinc-800 hover:border-zinc-950"
+                  >
+                    <RefreshCw size={15} />
+                    Trocar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={removeCoverImage}
+                    className="inline-flex items-center justify-center gap-2 rounded-2xl border border-red-200 px-3 py-2 text-xs font-black text-red-700 hover:border-red-500"
+                  >
+                    <Trash2 size={15} />
+                    Remover
+                  </button>
+                </div>
               </div>
             ) : null}
             <input
@@ -594,7 +669,42 @@ export default function AdminBlogEditor({ post, categories }: Props) {
               className="hidden"
               onChange={(event) => handleInlineImage(event.target.files?.[0])}
             />
+            <input
+              ref={replaceInlineImageInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(event) =>
+                replaceSelectedInlineImage(event.target.files?.[0])
+              }
+            />
           </div>
+
+          {selectedInlineImageName ? (
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-200 bg-[#fff8e6] px-4 py-2 text-sm font-bold text-zinc-800">
+              <span className="truncate">
+                Imagem selecionada: {selectedInlineImageName}
+              </span>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => replaceInlineImageInputRef.current?.click()}
+                  className="inline-flex items-center gap-2 rounded-full border border-zinc-300 bg-white px-3 py-1.5 text-xs font-black hover:border-zinc-950"
+                >
+                  <RefreshCw size={14} />
+                  Trocar imagem
+                </button>
+                <button
+                  type="button"
+                  onClick={removeSelectedInlineImage}
+                  className="inline-flex items-center gap-2 rounded-full border border-red-200 bg-white px-3 py-1.5 text-xs font-black text-red-700 hover:border-red-500"
+                >
+                  <Trash2 size={14} />
+                  Remover imagem
+                </button>
+              </div>
+            </div>
+          ) : null}
 
           <div
             ref={editorRef}
@@ -602,6 +712,7 @@ export default function AdminBlogEditor({ post, categories }: Props) {
             dir="ltr"
             suppressContentEditableWarning
             onInput={() => syncContent()}
+            onClick={handleEditorClick}
             onMouseUp={saveSelection}
             onKeyUp={saveSelection}
             onBlur={() => {
