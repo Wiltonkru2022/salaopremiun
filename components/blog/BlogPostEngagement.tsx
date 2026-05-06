@@ -70,7 +70,7 @@ export default function BlogPostEngagement({ postId, postSlug }: Props) {
       </div>
       <form
         onSubmit={subscribe}
-        className="my-8 rounded-[22px] border border-zinc-200 bg-zinc-50 p-5"
+        className="rounded-[22px] border border-zinc-200 bg-zinc-50 p-5"
       >
         <h2 className="font-display text-2xl font-black text-zinc-950">
           Gostou? Receba novidades do SalaoPremium

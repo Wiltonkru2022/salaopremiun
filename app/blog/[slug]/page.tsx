@@ -110,8 +110,6 @@ export default async function BlogPostPage({ params }: Props) {
                 {post.excerpt}
               </p>
 
-              <BlogPostEngagement postId={post.id} postSlug={post.slug} />
-
               <div
                 className="blog-editor-prose mt-8 text-[1.03rem] leading-8 text-zinc-700"
                 dangerouslySetInnerHTML={{
@@ -140,6 +138,8 @@ export default async function BlogPostPage({ params }: Props) {
             </div>
 
             <aside className="space-y-5">
+              <BlogPostEngagement postId={post.id} postSlug={post.slug} />
+
               <section className="rounded-[24px] border border-zinc-200 bg-white p-4 shadow-sm">
                 <div className="flex items-center gap-2 text-sm font-black uppercase tracking-[0.22em] text-zinc-500">
                   <Tag size={16} />
