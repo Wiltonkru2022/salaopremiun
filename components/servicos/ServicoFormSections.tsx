@@ -43,6 +43,7 @@ export function ServicoFormGeralSection({
   categorias,
   novaCategoria,
   recursos,
+  planoPremium,
   setField,
   setNovaCategoria,
 }: {
@@ -50,6 +51,7 @@ export function ServicoFormGeralSection({
   categorias: CategoriaServico[];
   novaCategoria: string;
   recursos: RecursoServico[];
+  planoPremium: boolean;
   setField: SetServicoField;
   setNovaCategoria: (value: string) => void;
 }) {
@@ -111,6 +113,19 @@ export function ServicoFormGeralSection({
             onChange={(v) => setField("descricao", v)}
           />
         </div>
+
+        {planoPremium ? (
+          <div className="md:col-span-2">
+            <Switch
+              label="Mostrar servico no app cliente"
+              checked={servico.app_cliente_visivel}
+              onChange={(v) => setField("app_cliente_visivel", v)}
+            />
+            <p className="mt-2 text-xs leading-5 text-zinc-500">
+              O app cliente mostra apenas servicos ativos e marcados para aparecer.
+            </p>
+          </div>
+        ) : null}
       </div>
     </Card>
   );

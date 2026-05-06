@@ -57,6 +57,7 @@ const initialState: ServicoState = {
   base_calculo: "bruto",
   desconta_taxa_maquininha: false,
   exige_avaliacao: false,
+  app_cliente_visivel: false,
   status: "ativo",
   ativo: true,
 };
@@ -112,11 +113,27 @@ function parseTaxaMaquininhaSelectValue(value: string): boolean | null {
   return null;
 }
 
+function normalizePlanoCode(value?: string | null) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase()
+    .replace(/[-\s]+/g, "_");
+}
+
+function isPlanoPremium(planoCodigo?: string | null, planoNome?: string | null) {
+  return (
+    normalizePlanoCode(planoCodigo) === "premium" ||
+    normalizePlanoCode(planoNome) === "premium"
+  );
+}
+
 export default function ServicoForm({ modo }: ServicoFormProps) {
   const supabase = createClient();
   const router = useRouter();
   const params = useParams();
-  const { planoAccess, upgradeTarget } = usePlanoAccessSnapshot(modo === "novo");
+  const { planoAccess, upgradeTarget } = usePlanoAccessSnapshot(true);
 
   const servicoId = typeof params?.id === "string" ? params.id : "";
 
@@ -148,6 +165,11 @@ export default function ServicoForm({ modo }: ServicoFormProps) {
   const vinculosAtivos = useMemo(
     () => vinculos.filter((item) => item.ativo),
     [vinculos]
+  );
+
+  const planoPremium = useMemo(
+    () => isPlanoPremium(planoAccess?.planoCodigo, planoAccess?.planoNome),
+    [planoAccess?.planoCodigo, planoAccess?.planoNome]
   );
 
   const totalRegrasPersonalizadas = useMemo(
@@ -264,7 +286,7 @@ export default function ServicoForm({ modo }: ServicoFormProps) {
   ) {
     const { data: row, error } = await supabase
       .from("servicos")
-      .select("ativo, atualizado_em, base_calculo, categoria, comissao_assistente_percentual, comissao_percentual, comissao_percentual_padrao, created_at, criado_em, custo_produto, desconta_taxa_maquininha, descricao, duracao, duracao_minutos, exige_avaliacao, gatilho_retorno_dias, id, id_categoria, id_salao, nome, pausa_minutos, preco, preco_minimo, preco_padrao, preco_variavel, recurso_nome, status, updated_at")
+      .select("app_cliente_visivel, ativo, atualizado_em, base_calculo, categoria, comissao_assistente_percentual, comissao_percentual, comissao_percentual_padrao, created_at, criado_em, custo_produto, desconta_taxa_maquininha, descricao, duracao, duracao_minutos, exige_avaliacao, gatilho_retorno_dias, id, id_categoria, id_salao, nome, pausa_minutos, preco, preco_minimo, preco_padrao, preco_variavel, recurso_nome, status, updated_at")
       .eq("id", id)
       .eq("id_salao", salaoId)
       .maybeSingle();
@@ -305,6 +327,7 @@ export default function ServicoForm({ modo }: ServicoFormProps) {
       base_calculo: row.base_calculo || "bruto",
       desconta_taxa_maquininha: row.desconta_taxa_maquininha ?? false,
       exige_avaliacao: row.exige_avaliacao ?? false,
+      app_cliente_visivel: row.app_cliente_visivel ?? false,
       status: row.status || "ativo",
       ativo: row.ativo ?? true,
     });
@@ -505,6 +528,9 @@ export default function ServicoForm({ modo }: ServicoFormProps) {
         base_calculo: servico.base_calculo || "bruto",
         desconta_taxa_maquininha: servico.desconta_taxa_maquininha,
         exige_avaliacao: servico.exige_avaliacao,
+        app_cliente_visivel: planoPremium
+          ? servico.app_cliente_visivel
+          : false,
         status: servico.ativo ? "ativo" : "inativo",
         ativo: servico.ativo,
       };
@@ -714,6 +740,7 @@ export default function ServicoForm({ modo }: ServicoFormProps) {
               categorias={categorias}
               novaCategoria={novaCategoria}
               recursos={recursos}
+              planoPremium={planoPremium}
               setField={setField}
               setNovaCategoria={setNovaCategoria}
             />

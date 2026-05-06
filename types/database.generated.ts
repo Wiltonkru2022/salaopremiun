@@ -4608,6 +4608,7 @@ export type Database = {
       servicos: {
         Row: {
           ativo: boolean | null
+          app_cliente_visivel: boolean
           atualizado_em: string | null
           base_calculo: string | null
           categoria: string | null
@@ -4638,6 +4639,7 @@ export type Database = {
         }
         Insert: {
           ativo?: boolean | null
+          app_cliente_visivel?: boolean
           atualizado_em?: string | null
           base_calculo?: string | null
           categoria?: string | null
@@ -4668,6 +4670,7 @@ export type Database = {
         }
         Update: {
           ativo?: boolean | null
+          app_cliente_visivel?: boolean
           atualizado_em?: string | null
           base_calculo?: string | null
           categoria?: string | null

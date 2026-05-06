@@ -91,6 +91,7 @@ export type ServicoState = {
   base_calculo: string;
   desconta_taxa_maquininha: boolean;
   exige_avaliacao: boolean;
+  app_cliente_visivel: boolean;
   status: string;
   ativo: boolean;
   eh_combo?: boolean;
@@ -123,6 +124,7 @@ export type ServicoProcessarPayload = {
   base_calculo: string;
   desconta_taxa_maquininha: boolean;
   exige_avaliacao: boolean;
+  app_cliente_visivel: boolean;
   status: string;
   ativo: boolean;
   eh_combo?: boolean;

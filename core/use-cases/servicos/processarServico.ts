@@ -10,7 +10,10 @@ import type {
   CategoriaServicoResult,
   ServicoService,
 } from "@/services/servicoService";
-import { assertCanCreateWithinLimit } from "@/lib/plans/access";
+import {
+  assertCanCreateWithinLimit,
+  getPlanoAccessSnapshot,
+} from "@/lib/plans/access";
 
 const ACOES_SERVICO = ["salvar", "alterar_status", "excluir"] as const satisfies readonly AcaoServico[];
 const UUID_REGEX =
@@ -69,6 +72,19 @@ function sanitizeBaseCalculo(value: unknown, fallback = "bruto") {
   return parsed === "liquido" ? "liquido" : fallback;
 }
 
+function normalizePlanoCode(value?: string | null) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase()
+    .replace(/[-\s]+/g, "_");
+}
+
+function isPlanoPremium(planoCodigo?: string | null) {
+  return normalizePlanoCode(planoCodigo) === "premium";
+}
+
 function resolveServicoHttpStatus(error: unknown) {
   const candidate = error as { code?: string } | null;
   if (!candidate?.code) return 500;
@@ -109,6 +125,7 @@ const servicoSchema = z
     base_calculo: nullableString,
     desconta_taxa_maquininha: z.boolean().optional(),
     exige_avaliacao: z.boolean().optional(),
+    app_cliente_visivel: z.boolean().optional(),
     status: nullableString,
     ativo: z.boolean().optional(),
     eh_combo: z.boolean().optional(),
@@ -205,6 +222,7 @@ function buildServicoPayload(params: {
   idSalao: string;
   servico: Partial<ServicoProcessarPayload>;
   categoria: CategoriaServicoResult | null;
+  appClientePermitido: boolean;
 }) {
   const nome = sanitizeText(params.servico.nome);
   if (!nome) {
@@ -241,6 +259,9 @@ function buildServicoPayload(params: {
       false
     ),
     exige_avaliacao: sanitizeBoolean(params.servico.exige_avaliacao, false),
+    app_cliente_visivel: params.appClientePermitido
+      ? sanitizeBoolean(params.servico.app_cliente_visivel, false)
+      : false,
     ativo,
     status: ativo ? "ativo" : "inativo",
     eh_combo: sanitizeBoolean(params.servico.eh_combo, false),
@@ -311,6 +332,8 @@ export async function processarServicoUseCase(params: {
         throw new Error("Informe pelo menos dois servicos para montar o combo.");
       }
 
+      const planoAccess = await getPlanoAccessSnapshot(input.idSalao);
+
       const categoria = await resolverCategoria({
         service,
         idSalao: input.idSalao,
@@ -322,6 +345,7 @@ export async function processarServicoUseCase(params: {
         idSalao: input.idSalao,
         servico: input.servico,
         categoria,
+        appClientePermitido: isPlanoPremium(planoAccess.planoCodigo),
       });
 
       const idServico = await service.salvarCatalogoTransacional({

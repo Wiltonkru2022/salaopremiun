@@ -366,6 +366,7 @@ export default function ComboServicoForm({ modo }: { modo: "novo" | "editar" }) 
             exige_avaliacao: false,
             status: statusAtivo ? "ativo" : "inativo",
             ativo: statusAtivo,
+            app_cliente_visivel: false,
             eh_combo: true,
             combo_resumo: resumoCombo,
           },
