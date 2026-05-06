@@ -9,6 +9,7 @@ import {
 import {
   DOMINIO_APP,
   DOMINIO_ASSINATURA,
+  DOMINIO_BLOG,
   DOMINIO_CADASTRO,
   DOMINIO_LOGIN,
   DOMINIO_PAINEL,
@@ -20,6 +21,7 @@ import {
 export {
   DOMINIO_APP,
   DOMINIO_ASSINATURA,
+  DOMINIO_BLOG,
   DOMINIO_CADASTRO,
   DOMINIO_LOGIN,
   DOMINIO_PAINEL,
@@ -99,6 +101,7 @@ export type ProxyRouteContext = {
   isLoginHost: boolean;
   isCadastroHost: boolean;
   isAssinaturaHost: boolean;
+  isBlogHost: boolean;
 };
 
 function startsWithPrefix(pathname: string, prefixes: string[]) {
@@ -159,6 +162,12 @@ export function isArquivoPublico(pathname: string) {
     pathname.startsWith("/fonts") ||
     /\.(.*)$/.test(pathname)
   );
+}
+
+export function getBlogRewritePath(pathname: string) {
+  if (pathname === "/") return "/blog";
+  if (pathname === "/blog" || pathname.startsWith("/blog/")) return pathname;
+  return `/blog${pathname}`;
 }
 
 export function normalizePathname(pathname: string) {
@@ -274,5 +283,6 @@ export function buildProxyRouteContext(
     isLoginHost: host === DOMINIO_LOGIN,
     isCadastroHost: host === DOMINIO_CADASTRO,
     isAssinaturaHost: host === DOMINIO_ASSINATURA,
+    isBlogHost: host === DOMINIO_BLOG,
   };
 }

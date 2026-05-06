@@ -44,6 +44,26 @@ async function listDynamicSalonRoutes(baseUrl: URL, now: Date) {
     }));
 }
 
+async function listBlogRoutes(baseUrl: URL, now: Date) {
+  const { getPublishedBlogPosts } = await import("@/lib/blog/service");
+  const posts = await getPublishedBlogPosts();
+
+  return [
+    {
+      url: new URL("/blog", baseUrl).toString(),
+      lastModified: now,
+      changeFrequency: "weekly" as const,
+      priority: 0.85,
+    },
+    ...posts.map((post) => ({
+      url: new URL(`/blog/${post.slug}`, baseUrl).toString(),
+      lastModified: new Date(post.publishedAt || now),
+      changeFrequency: "monthly" as const,
+      priority: post.featured ? 0.82 : 0.75,
+    })),
+  ];
+}
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = getBaseUrl();
   const now = new Date();
@@ -61,7 +81,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     "/app-cliente/cadastro",
   ];
 
-  const dynamicSalonRoutes = await listDynamicSalonRoutes(baseUrl, now);
+  const [dynamicSalonRoutes, blogRoutes] = await Promise.all([
+    listDynamicSalonRoutes(baseUrl, now),
+    listBlogRoutes(baseUrl, now),
+  ]);
 
   return [
     ...staticRoutes.map((path, index) => ({
@@ -71,5 +94,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: index === 0 ? 1 : path.startsWith("/app-cliente") ? 0.8 : 0.6,
     })),
     ...dynamicSalonRoutes,
+    ...blogRoutes,
   ];
 }

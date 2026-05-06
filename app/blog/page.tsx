@@ -1,0 +1,188 @@
+import type { Metadata } from "next";
+import Image from "next/image";
+import Link from "next/link";
+import { ArrowRight, BookOpen, Layers3, ListChecks, Search } from "lucide-react";
+import SiteFooter from "@/components/site-footer";
+import SiteHeader from "@/components/site-header";
+import { getBlogCategories, getPublishedBlogPosts } from "@/lib/blog/service";
+
+export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "Blog",
+  description:
+    "Artigos sobre agenda online, vendas, fidelizacao, redes sociais e gestao para saloes com o ecossistema SalaoPremium.",
+  alternates: {
+    canonical: "/blog",
+  },
+};
+
+export default async function BlogPage() {
+  const [posts, categories] = await Promise.all([
+    getPublishedBlogPosts(),
+    getBlogCategories(),
+  ]);
+  const featured = posts.find((post) => post.featured) || posts[0];
+  const recentPosts = posts.filter((post) => post.id !== featured?.id);
+  const readingLists = [
+    {
+      title: "Comece pela agenda",
+      body: "Entenda agenda online, clientes, horarios e organizacao de equipe.",
+      href: "/blog/o-que-e-uma-agenda-online",
+    },
+    {
+      title: "Venda com mais controle",
+      body: "Veja comandas, caixa, automacao e acompanhamento comercial.",
+      href: "/blog/como-posso-gerenciar-minhas-vendas-com-sistema-de-agenda",
+    },
+    {
+      title: "Cresca nas redes",
+      body: "Ideias para conteudo, relacionamento e fidelizacao de clientes.",
+      href: "/blog/o-que-fazer-para-estar-a-frente-nas-redes-sociais",
+    },
+  ];
+
+  return (
+    <div className="min-h-screen bg-[#f6f4ee] text-zinc-950">
+      <SiteHeader />
+
+      <main>
+        <section className="bg-[#17120d] text-white">
+          <div className="mx-auto grid max-w-7xl gap-8 px-6 py-10 lg:grid-cols-[minmax(0,1fr)_420px] lg:items-end lg:px-10 lg:py-14">
+            <div>
+              <div className="inline-flex items-center gap-2 rounded-full border border-amber-200/25 bg-amber-100/10 px-3 py-1.5 text-xs font-black uppercase tracking-[0.28em] text-amber-100">
+                <Search size={15} />
+                Conteudo para saloes crescerem
+              </div>
+              <h1 className="mt-5 max-w-4xl font-display text-[2.8rem] font-black leading-[1.02] sm:text-[4.8rem]">
+                Blog SalaoPremium
+              </h1>
+              <p className="mt-5 max-w-3xl text-base leading-7 text-zinc-300">
+                Artigos recentes, categorias e listas de leitura sobre agenda de
+                clientes, vendas, automacao, fidelizacao e redes sociais para o
+                Google entender melhor o sistema SalaoPremium.
+              </p>
+            </div>
+
+            {featured ? (
+              <Link
+                href={`/blog/${featured.slug}`}
+                className="group overflow-hidden rounded-[24px] border border-white/10 bg-white text-zinc-950 shadow-2xl transition hover:-translate-y-0.5"
+              >
+                <Image
+                  src={featured.coverImage}
+                  alt={featured.coverAlt}
+                  width={840}
+                  height={520}
+                  priority
+                  className="aspect-[16/10] w-full object-cover"
+                />
+                <div className="p-4">
+                  <div className="text-xs font-black uppercase tracking-[0.22em] text-amber-700">
+                    Destaque - {featured.categoryName}
+                  </div>
+                  <h2 className="mt-2 font-display text-2xl font-black">
+                    {featured.title}
+                  </h2>
+                  <p className="mt-2 text-sm leading-6 text-zinc-600">
+                    {featured.excerpt}
+                  </p>
+                  <div className="mt-4 inline-flex items-center gap-2 text-sm font-black">
+                    Ler artigo <ArrowRight size={16} />
+                  </div>
+                </div>
+              </Link>
+            ) : null}
+          </div>
+        </section>
+
+        <section className="mx-auto grid max-w-7xl gap-5 px-6 py-8 lg:grid-cols-[minmax(0,1fr)_360px] lg:px-10 lg:py-10">
+          <div className="space-y-5">
+            <div className="flex items-center gap-2">
+              <BookOpen size={21} className="text-zinc-500" />
+              <h2 className="font-display text-3xl font-black">Artigos recentes</h2>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              {recentPosts.map((post) => (
+                <Link
+                  key={post.id}
+                  href={`/blog/${post.slug}`}
+                  className="group overflow-hidden rounded-[24px] border border-zinc-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg"
+                >
+                  <Image
+                    src={post.coverImage}
+                    alt={post.coverAlt}
+                    width={720}
+                    height={420}
+                    className="aspect-[16/9] w-full object-cover"
+                  />
+                  <div className="p-4">
+                    <div className="text-[11px] font-black uppercase tracking-[0.22em] text-zinc-400">
+                      {post.categoryName} - {post.readTime}
+                    </div>
+                    <h3 className="mt-2 font-display text-xl font-black leading-tight">
+                      {post.title}
+                    </h3>
+                    <p className="mt-2 text-sm leading-6 text-zinc-600">
+                      {post.excerpt}
+                    </p>
+                    <div className="mt-4 inline-flex items-center gap-2 text-sm font-black text-zinc-950">
+                      Abrir post <ArrowRight size={16} />
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+
+          <aside className="space-y-5">
+            <section className="rounded-[24px] border border-zinc-200 bg-white p-4 shadow-sm">
+              <div className="flex items-center gap-2">
+                <Layers3 size={19} className="text-zinc-500" />
+                <h2 className="font-display text-2xl font-black">Categorias</h2>
+              </div>
+              <div className="mt-4 space-y-2.5">
+                {categories.map((category) => (
+                  <a
+                    key={category.id}
+                    href={`/blog#${category.slug}`}
+                    className="block rounded-2xl border border-zinc-200 p-3 transition hover:border-zinc-950"
+                    id={category.slug}
+                  >
+                    <div className="font-black">{category.name}</div>
+                    <p className="mt-1 text-sm leading-6 text-zinc-500">
+                      {category.description}
+                    </p>
+                  </a>
+                ))}
+              </div>
+            </section>
+
+            <section className="rounded-[24px] border border-zinc-200 bg-white p-4 shadow-sm">
+              <div className="flex items-center gap-2">
+                <ListChecks size={19} className="text-zinc-500" />
+                <h2 className="font-display text-2xl font-black">Listas de leitura</h2>
+              </div>
+              <div className="mt-4 space-y-2.5">
+                {readingLists.map((list) => (
+                  <Link
+                    key={list.href}
+                    href={list.href}
+                    className="block rounded-2xl bg-zinc-950 p-3 text-white transition hover:bg-zinc-800"
+                  >
+                    <div className="font-black">{list.title}</div>
+                    <p className="mt-1 text-sm leading-6 text-zinc-300">{list.body}</p>
+                  </Link>
+                ))}
+              </div>
+            </section>
+          </aside>
+        </section>
+      </main>
+
+      <SiteFooter />
+    </div>
+  );
+}
+

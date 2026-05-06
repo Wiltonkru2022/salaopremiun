@@ -41,6 +41,8 @@ export const DOMINIO_CADASTRO =
   sanitizeDomain(process.env.APP_CADASTRO_HOST) || `cadastro.${APP_BASE_DOMAIN}`;
 export const DOMINIO_ASSINATURA =
   sanitizeDomain(process.env.APP_ASSINATURA_HOST) || `assinatura.${APP_BASE_DOMAIN}`;
+export const DOMINIO_BLOG =
+  sanitizeDomain(process.env.APP_BLOG_HOST) || `blog.${APP_BASE_DOMAIN}`;
 
 export const DOMINIOS_GERENCIADOS = [
   DOMINIO_RAIZ,
@@ -50,6 +52,7 @@ export const DOMINIOS_GERENCIADOS = [
   DOMINIO_LOGIN,
   DOMINIO_CADASTRO,
   DOMINIO_ASSINATURA,
+  DOMINIO_BLOG,
 ];
 
 export function isManagedAppHost(host?: string | null) {

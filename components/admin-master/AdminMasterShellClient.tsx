@@ -7,6 +7,7 @@ import { useMemo, useState } from "react";
 import {
   Activity,
   Bell,
+  BookOpen,
   Boxes,
   Building2,
   ChartNoAxesCombined,
@@ -195,6 +196,12 @@ const MENU_GROUPS: MenuGroup[] = [
         href: "/admin-master/campanhas",
         label: "Campanhas",
         icon: Sparkles,
+        permission: "comunicacao_ver",
+      },
+      {
+        href: "/admin-master/blog",
+        label: "Blog",
+        icon: BookOpen,
         permission: "comunicacao_ver",
       },
       {

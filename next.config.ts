@@ -13,6 +13,7 @@ const managedHosts = [
   process.env.APP_PROFISSIONAL_HOST || `app.${appRootDomain}`,
   process.env.APP_ASSINATURA_HOST || `assinatura.${appRootDomain}`,
   process.env.APP_CADASTRO_HOST || `cadastro.${appRootDomain}`,
+  process.env.APP_BLOG_HOST || `blog.${appRootDomain}`,
 ]
   .map((host) =>
     String(host || "")

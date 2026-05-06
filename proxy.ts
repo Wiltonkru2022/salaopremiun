@@ -16,6 +16,7 @@ import {
   DOMINIO_LOGIN,
   DOMINIO_PAINEL,
   buildProxyRouteContext,
+  getBlogRewritePath,
   getCadastroPath,
   getAdminMasterLoginNextPath,
   isApiRoute,
@@ -263,6 +264,12 @@ export async function proxy(request: NextRequest) {
 
   if (ctx.isAppHost) {
     return handleAppProfissionalHost(ctx);
+  }
+
+  if (ctx.isBlogHost) {
+    const rewriteUrl = request.nextUrl.clone();
+    rewriteUrl.pathname = getBlogRewritePath(ctx.pathnameNormalizado);
+    return NextResponse.rewrite(rewriteUrl);
   }
 
   const hostRoutingResponse = handlePublicHostRouting(ctx);
