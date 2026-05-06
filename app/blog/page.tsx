@@ -58,9 +58,8 @@ export default async function BlogPage() {
                 Blog SalaoPremium
               </h1>
               <p className="mt-5 max-w-3xl text-base leading-7 text-zinc-600">
-                Artigos recentes, categorias e listas de leitura sobre agenda de
-                clientes, vendas, automação, fidelização e redes sociais para o
-                Google entender melhor o sistema SalaoPremium.
+                Conteúdos práticos para organizar agenda, vender melhor,
+                fidelizar clientes e divulgar seu salão com mais consistência.
               </p>
             </div>
 

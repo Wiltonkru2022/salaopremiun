@@ -24,11 +24,38 @@ function getFileExtension(file: File) {
   return file.type.startsWith("video/") ? "mp4" : "jpg";
 }
 
+function getStoragePathFromPublicUrl(publicUrl: string) {
+  try {
+    const url = new URL(publicUrl);
+    const marker = `/storage/v1/object/public/${BUCKET_ID}/`;
+    const markerIndex = url.pathname.indexOf(marker);
+    if (markerIndex < 0) return null;
+
+    return decodeURIComponent(url.pathname.slice(markerIndex + marker.length));
+  } catch {
+    return null;
+  }
+}
+
 async function ensureBlogBucket() {
+  if (!process.env.BLOG_SUPABASE_SERVICE_ROLE_KEY) {
+    return;
+  }
+
   const supabaseAdmin = getBlogSupabaseAdmin();
-  const { data: bucket } = await supabaseAdmin.storage.getBucket(BUCKET_ID);
+  const { data: bucket, error: getBucketError } =
+    await supabaseAdmin.storage.getBucket(BUCKET_ID);
 
   if (bucket) return;
+
+  if (
+    getBucketError &&
+    /not authorized|permission|row-level security/i.test(
+      getBucketError.message || ""
+    )
+  ) {
+    return;
+  }
 
   const { error } = await supabaseAdmin.storage.createBucket(BUCKET_ID, {
     public: true,
@@ -121,4 +148,32 @@ export async function POST(request: Request) {
       { status: 500 }
     );
   }
+}
+
+export async function DELETE(request: Request) {
+  await requireAdminMasterUser("comunicacao_ver");
+
+  const body = (await request.json().catch(() => null)) as {
+    publicUrl?: string;
+  } | null;
+  const path = getStoragePathFromPublicUrl(String(body?.publicUrl || ""));
+
+  if (!path) {
+    return NextResponse.json(
+      { message: "URL de mídia inválida para remoção." },
+      { status: 400 }
+    );
+  }
+
+  const supabaseAdmin = getBlogSupabaseAdmin();
+  const { error } = await supabaseAdmin.storage.from(BUCKET_ID).remove([path]);
+
+  if (error) {
+    return NextResponse.json(
+      { message: `Não foi possível remover a mídia: ${error.message}` },
+      { status: 500 }
+    );
+  }
+
+  return NextResponse.json({ ok: true });
 }

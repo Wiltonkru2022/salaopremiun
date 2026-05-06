@@ -2,7 +2,8 @@ import type { NextConfig } from "next";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseHostname = supabaseUrl ? new URL(supabaseUrl).hostname : undefined;
-const blogSupabaseUrl = process.env.BLOG_SUPABASE_URL;
+const blogSupabaseUrl =
+  process.env.BLOG_SUPABASE_URL || "https://qwabnqbzbhtxicwizxmv.supabase.co";
 const blogSupabaseHostname = blogSupabaseUrl
   ? new URL(blogSupabaseUrl).hostname
   : undefined;

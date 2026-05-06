@@ -139,7 +139,9 @@ export default function BlogSearchExperience({
           </div>
         ) : (
           <div className="rounded-[24px] border border-zinc-200 bg-zinc-50 p-6 text-sm font-bold leading-6 text-zinc-600">
-            Nenhum artigo encontrado para essa pesquisa.
+            {posts.length
+              ? "Nenhum artigo encontrado para essa pesquisa."
+              : "Nenhum artigo publicado ainda."}
           </div>
         )}
       </div>

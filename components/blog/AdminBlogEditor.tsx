@@ -169,6 +169,7 @@ export default function AdminBlogEditor({ post, categories }: Props) {
   const [selectedInlineVideoName, setSelectedInlineVideoName] = useState("");
   const [editorNotice, setEditorNotice] = useState("");
   const [autosaveStatus, setAutosaveStatus] = useState("Rascunho local pronto");
+  const [isOnline, setIsOnline] = useState(true);
   const [readTime, setReadTime] = useState(() =>
     estimateReadTime(contentValueRef.current)
   );
@@ -195,6 +196,18 @@ export default function AdminBlogEditor({ post, categories }: Props) {
   }
 
   const isNewPost = !post?.id;
+
+  useEffect(() => {
+    setIsOnline(navigator.onLine);
+    const updateOnlineStatus = () => setIsOnline(navigator.onLine);
+    window.addEventListener("online", updateOnlineStatus);
+    window.addEventListener("offline", updateOnlineStatus);
+
+    return () => {
+      window.removeEventListener("online", updateOnlineStatus);
+      window.removeEventListener("offline", updateOnlineStatus);
+    };
+  }, []);
 
   useEffect(() => {
     if (editorInitializedRef.current || !editorRef.current) return;
@@ -416,6 +429,21 @@ export default function AdminBlogEditor({ post, categories }: Props) {
     return payload;
   }
 
+  async function deleteUploadedBlogMedia(publicUrl?: string | null) {
+    if (
+      !publicUrl ||
+      !publicUrl.includes("/storage/v1/object/public/blog-media/")
+    ) {
+      return;
+    }
+
+    await fetch("/api/admin-master/blog/media", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ publicUrl }),
+    }).catch(() => null);
+  }
+
   function saveSelection() {
     const selection = window.getSelection();
     if (!selection || selection.rangeCount === 0) return;
@@ -565,6 +593,7 @@ export default function AdminBlogEditor({ post, categories }: Props) {
 
   async function handleCoverFile(file?: File) {
     if (!file) return;
+    const previousCoverImage = coverImage;
     const isVideo = file.type.startsWith("video/");
     if (
       !canUseFile(
@@ -580,6 +609,9 @@ export default function AdminBlogEditor({ post, categories }: Props) {
       const uploaded = await uploadBlogMedia(file, "cover");
       setCoverImage(uploaded.publicUrl || "");
       if (!coverAlt) setCoverAlt(file.name.replace(/\.[^.]+$/, ""));
+      if (uploaded.publicUrl && previousCoverImage !== uploaded.publicUrl) {
+        await deleteUploadedBlogMedia(previousCoverImage);
+      }
       setEditorNotice("");
     } catch (error) {
       setEditorNotice(
@@ -589,7 +621,8 @@ export default function AdminBlogEditor({ post, categories }: Props) {
     if (coverInputRef.current) coverInputRef.current.value = "";
   }
 
-  function removeCoverImage() {
+  async function removeCoverImage() {
+    await deleteUploadedBlogMedia(coverImage);
     setCoverImage("");
     setCoverAlt("");
     if (coverInputRef.current) coverInputRef.current.value = "";
@@ -646,9 +679,10 @@ export default function AdminBlogEditor({ post, categories }: Props) {
     );
   }
 
-  function removeSelectedInlineImage() {
+  async function removeSelectedInlineImage() {
     const image = selectedInlineImageRef.current;
     if (!image) return;
+    await deleteUploadedBlogMedia(image.getAttribute("src"));
     const container = image.closest("figure") || image;
     container.remove();
     selectedInlineImageRef.current = null;
@@ -666,6 +700,7 @@ export default function AdminBlogEditor({ post, categories }: Props) {
       return;
     }
     try {
+      const previousSrc = image.getAttribute("src");
       const uploaded = await uploadBlogMedia(file, "inline-image");
       image.setAttribute("src", uploaded.publicUrl || "");
       image.setAttribute("alt", file.name);
@@ -674,6 +709,9 @@ export default function AdminBlogEditor({ post, categories }: Props) {
       if (caption) caption.textContent = file.name;
       setSelectedInlineImageName(file.name);
       syncContent(true);
+      if (uploaded.publicUrl && previousSrc !== uploaded.publicUrl) {
+        await deleteUploadedBlogMedia(previousSrc);
+      }
     } catch (error) {
       setEditorNotice(
         error instanceof Error
@@ -705,9 +743,10 @@ export default function AdminBlogEditor({ post, categories }: Props) {
     if (inlineVideoInputRef.current) inlineVideoInputRef.current.value = "";
   }
 
-  function removeSelectedInlineVideo() {
+  async function removeSelectedInlineVideo() {
     const video = selectedInlineVideoRef.current;
     if (!video) return;
+    await deleteUploadedBlogMedia(video.getAttribute("src"));
     const container = video.closest("figure") || video;
     container.remove();
     selectedInlineVideoRef.current = null;
@@ -725,6 +764,7 @@ export default function AdminBlogEditor({ post, categories }: Props) {
       return;
     }
     try {
+      const previousSrc = video.getAttribute("src");
       const uploaded = await uploadBlogMedia(file, "inline-video");
       video.setAttribute("src", uploaded.publicUrl || "");
       video.dataset.name = file.name;
@@ -733,6 +773,9 @@ export default function AdminBlogEditor({ post, categories }: Props) {
       if (caption) caption.textContent = file.name;
       setSelectedInlineVideoName(file.name);
       syncContent(true);
+      if (uploaded.publicUrl && previousSrc !== uploaded.publicUrl) {
+        await deleteUploadedBlogMedia(previousSrc);
+      }
     } catch (error) {
       setEditorNotice(
         error instanceof Error ? error.message : "Nao foi possivel trocar o video."
@@ -976,6 +1019,11 @@ export default function AdminBlogEditor({ post, categories }: Props) {
                   onChange={(event) => setCategorySlug(event.target.value)}
                   className="rounded-2xl border border-zinc-200 px-3 py-2.5 text-sm font-semibold outline-none focus:border-zinc-950"
                 >
+                  {categories.length === 0 ? (
+                    <option value="" disabled>
+                      Crie uma categoria antes de publicar
+                    </option>
+                  ) : null}
                   {categories.map((category) => (
                     <option key={category.id} value={category.slug}>
                       {category.name}
@@ -1295,7 +1343,7 @@ export default function AdminBlogEditor({ post, categories }: Props) {
               Tempo estimado: {readTime}
             </span>
             <span className="inline-flex items-center gap-2">
-              {typeof navigator !== "undefined" && !navigator.onLine ? (
+              {!isOnline ? (
                 <WifiOff size={14} className="text-amber-600" />
               ) : (
                 <Save size={14} className="text-zinc-400" />

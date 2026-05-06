@@ -1,6 +1,5 @@
 import { unstable_cache, unstable_noStore as noStore } from "next/cache";
 import type { BlogCategory, BlogPost } from "@/lib/blog/content";
-import { defaultBlogCategories, defaultBlogPosts } from "@/lib/blog/content";
 import {
   canUseBlogSupabasePublic,
   getBlogSupabasePublic,
@@ -67,7 +66,7 @@ function mapCategory(category: BlogDbCategory): BlogCategory {
     id: category.id,
     slug: looksLikeUuid(category.slug) ? "agenda-online" : category.slug,
     name: readableCategoryName(category),
-    description: category.descricao || "",
+    description: category.descricao || "Artigos do blog SalaoPremium.",
   };
 }
 
@@ -113,7 +112,7 @@ async function getBlogDatabaseUnsafe() {
 async function loadBlogCategories(): Promise<BlogCategory[]> {
   try {
     const supabase = await getBlogDatabaseUnsafe();
-    if (!supabase) return defaultBlogCategories;
+    if (!supabase) return [];
 
     const { data, error } = await supabase
       .from("blog_categorias")
@@ -122,11 +121,11 @@ async function loadBlogCategories(): Promise<BlogCategory[]> {
       .order("ordem", { ascending: true })
       .order("nome", { ascending: true });
 
-    if (error || !data?.length) return defaultBlogCategories;
+    if (error || !data?.length) return [];
     return data.map(mapCategory);
   } catch (error) {
-    console.warn("Blog usando categorias padrao:", error);
-    return defaultBlogCategories;
+    console.warn("Blog sem categorias carregadas:", error);
+    return [];
   }
 }
 
@@ -146,7 +145,7 @@ export async function getBlogCategories(): Promise<BlogCategory[]> {
 async function loadPublishedBlogPosts(): Promise<BlogPost[]> {
   try {
     const supabase = await getBlogDatabaseUnsafe();
-    if (!supabase) return defaultBlogPosts;
+    if (!supabase) return [];
 
     const { data, error } = await supabase
       .from("blog_posts")
@@ -157,11 +156,11 @@ async function loadPublishedBlogPosts(): Promise<BlogPost[]> {
       .order("publicado_em", { ascending: false, nullsFirst: false })
       .order("criado_em", { ascending: false });
 
-    if (error || !data?.length) return defaultBlogPosts;
+    if (error || !data?.length) return [];
     return data.map(mapPost);
   } catch (error) {
-    console.warn("Blog usando posts padrao:", error);
-    return defaultBlogPosts;
+    console.warn("Blog sem posts carregados:", error);
+    return [];
   }
 }
 
