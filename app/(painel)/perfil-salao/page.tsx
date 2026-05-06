@@ -218,6 +218,14 @@ type ReverseAddress = {
   postcode?: string;
 };
 
+type MapSearchResponse = {
+  ok?: boolean;
+  latitude?: string;
+  longitude?: string;
+  address?: ReverseAddress | null;
+  message?: string;
+};
+
 function MapLocationPicker({
   latitude,
   longitude,
@@ -345,42 +353,45 @@ function MapLocationPicker({
       setLoadingMap(true);
 
       try {
-        for (const candidate of candidates) {
-          const response = await fetch(
-            `https://nominatim.openstreetmap.org/search?format=json&countrycodes=br&limit=1&q=${encodeURIComponent(
-              candidate
-            )}`
-          );
-          const data = (await response.json()) as Array<{
-            lat?: string;
-            lon?: string;
-          }>;
-          const nextLat = parseCoordinate(data[0]?.lat);
-          const nextLng = parseCoordinate(data[0]?.lon);
+        const response = await fetch("/api/painel/map-location", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            type: "search",
+            candidates,
+          }),
+        });
+        const data = (await response.json().catch(() => null)) as
+          | MapSearchResponse
+          | null;
+        const nextLat = parseCoordinate(data?.latitude);
+        const nextLng = parseCoordinate(data?.longitude);
 
-          if (nextLat !== null && nextLng !== null) {
-            setMapCenter({
-              latitude: nextLat,
-              longitude: nextLng,
-            });
-            onChange({
-              latitude: nextLat.toFixed(7),
-              longitude: nextLng.toFixed(7),
-            });
-            setLookupMessage(
-              "Mapa posicionado. Arraste ate o ponteiro ficar na entrada exata do salao."
-            );
-            return true;
-          }
+        if (response.ok && data?.ok && nextLat !== null && nextLng !== null) {
+          setMapCenter({
+            latitude: nextLat,
+            longitude: nextLng,
+          });
+          onChange({
+            latitude: nextLat.toFixed(7),
+            longitude: nextLng.toFixed(7),
+          });
+          setLookupMessage(
+            "Mapa posicionado. Arraste ate o ponteiro ficar na entrada exata do salao."
+          );
+          return true;
         }
 
         setLookupMessage(
-          "Digite um trecho mais simples, como rua, bairro e cidade, ou arraste o mapa ate o salao."
+          data?.message ||
+            "Tente rua, bairro e cidade, ou arraste o mapa ate o salao."
         );
         return false;
       } catch {
         setLookupMessage(
-          "A busca do mapa oscilou agora. Voce ainda pode arrastar o mapa ate o ponto do salao."
+          "A busca automatica nao respondeu. O mapa continua funcionando para marcar o ponto."
         );
         return false;
       } finally {
@@ -394,15 +405,21 @@ function MapLocationPicker({
     try {
       setLoadingMap(true);
       setLookupMessage("");
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${mapCenter.latitude.toFixed(
-          7
-        )}&lon=${mapCenter.longitude.toFixed(7)}&addressdetails=1`
-      );
-      const data = (await response.json()) as {
-        address?: ReverseAddress;
-      };
-      const endereco = normalizeReverseAddress(data.address);
+      const response = await fetch("/api/painel/map-location", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          type: "reverse",
+          latitude: mapCenter.latitude.toFixed(7),
+          longitude: mapCenter.longitude.toFixed(7),
+        }),
+      });
+      const data = (await response.json().catch(() => null)) as
+        | MapSearchResponse
+        | null;
+      const endereco = normalizeReverseAddress(data?.address || undefined);
 
       onChange({
         latitude: mapCenter.latitude.toFixed(7),
@@ -410,7 +427,7 @@ function MapLocationPicker({
         ...endereco,
       });
       setLookupMessage(
-        endereco.endereco
+        response.ok && data?.ok && endereco.endereco
           ? "Ponto confirmado e endereco atualizado. Clique em salvar para gravar no banco."
           : "Ponto confirmado. Clique em salvar para gravar no banco."
       );
