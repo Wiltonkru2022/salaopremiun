@@ -116,7 +116,7 @@ export default function NotificationBell({
   }, [persistedKey]);
 
   const isRead = useCallback((notification: ShellNotification) => {
-    if (notification.critical) return false;
+    if (notification.critical || notification.persistUntilResolved) return false;
     return readIds.includes(notification.id);
   }, [readIds]);
 
@@ -127,7 +127,10 @@ export default function NotificationBell({
 
   function markAllAsRead() {
     const next = notifications
-      .filter((notification) => !notification.critical)
+      .filter(
+        (notification) =>
+          !notification.critical && !notification.persistUntilResolved
+      )
       .map((notification) => notification.id);
     persistReadIds(next);
   }
@@ -136,7 +139,11 @@ export default function NotificationBell({
     () =>
       [...notifications]
         .filter((notification) => !isRead(notification))
-        .sort((a, b) => Number(Boolean(b.critical)) - Number(Boolean(a.critical)))
+        .sort((a, b) => {
+          const bPinned = Boolean(b.critical || b.persistUntilResolved);
+          const aPinned = Boolean(a.critical || a.persistUntilResolved);
+          return Number(bPinned) - Number(aPinned);
+        })
         .slice(0, 8),
     [isRead, notifications]
   );
@@ -161,7 +168,10 @@ export default function NotificationBell({
 
     const validIds = readIds.filter((id) =>
       notifications.some(
-        (notification) => notification.id === id && !notification.critical
+        (notification) =>
+          notification.id === id &&
+          !notification.critical &&
+          !notification.persistUntilResolved
       )
     );
 
@@ -200,7 +210,7 @@ export default function NotificationBell({
                 Notificacoes
               </div>
               <div className="mt-1 text-[11px] text-zinc-400">
-                Criticos ficam visiveis ate a resolucao.
+                Pendentes e criticos ficam visiveis ate a resolucao.
               </div>
             </div>
 
@@ -224,9 +234,17 @@ export default function NotificationBell({
                       <div className="line-clamp-1 text-sm font-bold text-zinc-900">
                         {notification.title}
                       </div>
-                      {notification.critical ? (
-                        <div className="mt-1 inline-flex rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.14em] text-rose-700">
-                          Critico
+                      {notification.critical ||
+                      notification.persistUntilResolved ? (
+                        <div
+                          className={clsx(
+                            "mt-1 inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.14em]",
+                            notification.critical
+                              ? "bg-rose-100 text-rose-700"
+                              : "bg-amber-100 text-amber-700"
+                          )}
+                        >
+                          {notification.critical ? "Critico" : "Pendente"}
                         </div>
                       ) : null}
                       <div className="mt-0.5 line-clamp-2 text-xs leading-5 text-zinc-500">
@@ -276,8 +294,8 @@ export default function NotificationBell({
               })
             ) : (
               <div className="rounded-[22px] border border-zinc-100 bg-zinc-50 p-4 text-sm text-zinc-500">
-                Tudo quieto por aqui. Quando houver assinatura vencendo,
-                aniversario, agenda finalizada ou alerta do caixa, aparece aqui.
+                Tudo quieto por aqui. Quando houver horario para confirmar,
+                assinatura vencendo, aniversario ou alerta do caixa, aparece aqui.
               </div>
             )}
           </div>

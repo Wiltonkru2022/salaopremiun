@@ -196,7 +196,7 @@ export function buildShellNotifications({
       sourceEntity: "agendamentos",
       persistUntilResolved: true,
       expiresAt: null,
-      critical: true,
+      critical: false,
     });
   }
 
