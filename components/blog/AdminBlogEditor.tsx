@@ -57,6 +57,19 @@ function estimateReadTime(value: string) {
   return `${Math.max(1, Math.ceil(words / 180))} min`;
 }
 
+function escapeHtml(value: string) {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function escapeAttribute(value: string) {
+  return escapeHtml(value).replace(/`/g, "&#96;");
+}
+
 function slugify(value: string) {
   return value
     .normalize("NFD")
@@ -70,6 +83,7 @@ function slugify(value: string) {
 export default function AdminBlogEditor({ post, categories }: Props) {
   const editorRef = useRef<HTMLDivElement>(null);
   const contentInputRef = useRef<HTMLInputElement>(null);
+  const readTimeInputRef = useRef<HTMLInputElement>(null);
   const contentValueRef = useRef(
     post?.bodyHtml || post?.rawContent || "<p>Comece seu artigo aqui.</p>"
   );
@@ -94,20 +108,29 @@ export default function AdminBlogEditor({ post, categories }: Props) {
   const previewKey = "salaopremium-blog-preview";
   const previewHref = `/admin-master/blog/${slug || "novo"}/preview`;
 
+  function updateReadTime(value: string, updateVisibleValue = false) {
+    const nextReadTime = estimateReadTime(value);
+    if (readTimeInputRef.current) readTimeInputRef.current.value = nextReadTime;
+    if (updateVisibleValue) setReadTime(nextReadTime);
+    return nextReadTime;
+  }
+
   useEffect(() => {
     if (editorInitializedRef.current || !editorRef.current) return;
     editorRef.current.innerHTML = contentValueRef.current;
     if (contentInputRef.current) {
       contentInputRef.current.value = contentValueRef.current;
     }
+    updateReadTime(contentValueRef.current, true);
     editorInitializedRef.current = true;
   }, []);
 
-  function syncContent() {
+  function syncContent(updateVisibleReadTime = false) {
     const nextContent = editorRef.current?.innerHTML || "";
     contentValueRef.current = nextContent;
     if (contentInputRef.current) contentInputRef.current.value = nextContent;
-    setReadTime(estimateReadTime(nextContent));
+    updateReadTime(nextContent, updateVisibleReadTime);
+    return nextContent;
   }
 
   function saveSelection() {
@@ -227,14 +250,14 @@ export default function AdminBlogEditor({ post, categories }: Props) {
     if (modal.type === "link") {
       if (label) {
         insertHtmlAtSelection(
-          `<a href="${url}" target="_blank" rel="noreferrer">${label}</a>`
+          `<a href="${escapeAttribute(url)}" target="_blank" rel="noreferrer">${escapeHtml(label)}</a>`
         );
       } else {
         wrapSelection("a", {}, { href: url, target: "_blank", rel: "noreferrer" });
       }
     } else {
       insertHtmlAtSelection(
-        `<p><a href="${url}" target="_blank" rel="noreferrer" class="blog-post-button">${label || "Abrir link"}</a></p>`
+        `<p><a href="${escapeAttribute(url)}" target="_blank" rel="noreferrer" class="blog-post-button">${escapeHtml(label || "Abrir link")}</a></p>`
       );
     }
 
@@ -265,6 +288,7 @@ export default function AdminBlogEditor({ post, categories }: Props) {
   }
 
   function handlePreview() {
+    const nextContent = syncContent(true);
     const payload = {
       title,
       slug,
@@ -276,8 +300,8 @@ export default function AdminBlogEditor({ post, categories }: Props) {
       coverImage,
       coverAlt,
       tags,
-      content: editorRef.current?.innerHTML || contentValueRef.current,
-      readTime,
+      content: nextContent,
+      readTime: estimateReadTime(nextContent),
       featured,
     };
     window.localStorage.setItem(previewKey, JSON.stringify(payload));
@@ -300,7 +324,12 @@ export default function AdminBlogEditor({ post, categories }: Props) {
       />
       <input type="hidden" name="imagem_capa_url" value={coverImage} />
       <input type="hidden" name="imagem_capa_alt" value={coverAlt} />
-      <input type="hidden" name="tempo_leitura" value={readTime} />
+      <input
+        ref={readTimeInputRef}
+        type="hidden"
+        name="tempo_leitura"
+        defaultValue={readTime}
+      />
       {featured ? <input type="hidden" name="destaque" value="on" /> : null}
 
       <header className="sticky top-0 z-40 border-b border-zinc-200/80 bg-white/90 backdrop-blur-xl">
@@ -324,7 +353,7 @@ export default function AdminBlogEditor({ post, categories }: Props) {
               type="submit"
               name="status"
               value="rascunho"
-              onClick={syncContent}
+              onClick={() => syncContent(true)}
               className="inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-white px-4 py-2 text-sm font-black text-zinc-800 shadow-sm hover:border-zinc-950"
             >
               <Save size={16} />
@@ -334,7 +363,7 @@ export default function AdminBlogEditor({ post, categories }: Props) {
               type="submit"
               name="status"
               value="publicado"
-              onClick={syncContent}
+              onClick={() => syncContent(true)}
               className="inline-flex items-center gap-2 rounded-full bg-zinc-950 px-4 py-2 text-sm font-black text-white shadow-sm hover:bg-zinc-800"
             >
               <Send size={16} />
@@ -467,11 +496,18 @@ export default function AdminBlogEditor({ post, categories }: Props) {
             />
           </div>
 
-          <div className="sticky top-[73px] z-30 flex flex-wrap items-center gap-2 border-b border-zinc-200 bg-white/95 p-3 backdrop-blur-xl">
+          <div
+            className="sticky top-[73px] z-30 flex flex-wrap items-center gap-2 border-b border-zinc-200 bg-white/95 p-3 backdrop-blur-xl"
+            onMouseDown={(event) => {
+              if ((event.target as HTMLElement).closest("button")) {
+                event.preventDefault();
+              }
+            }}
+          >
             <button type="button" onClick={() => applyBlock("h1")} className="rounded-xl border border-zinc-200 p-2 hover:border-zinc-950" title="Título grande">
               <Heading1 size={18} />
             </button>
-            <button type="button" onClick={() => applyBlock("h2")} className="rounded-xl border border-zinc-200 p-2 hover:border-zinc-950" title="Subtitulo">
+            <button type="button" onClick={() => applyBlock("h2")} className="rounded-xl border border-zinc-200 p-2 hover:border-zinc-950" title="Subtítulo">
               <Heading2 size={18} />
             </button>
             <button type="button" onClick={() => applyBlock("h3")} className="rounded-xl border border-zinc-200 p-2 hover:border-zinc-950" title="Chamada">
@@ -480,7 +516,7 @@ export default function AdminBlogEditor({ post, categories }: Props) {
             <button type="button" onClick={() => exec("bold")} className="rounded-xl border border-zinc-200 p-2 hover:border-zinc-950" title="Negrito">
               <Bold size={18} />
             </button>
-            <button type="button" onClick={() => exec("italic")} className="rounded-xl border border-zinc-200 p-2 hover:border-zinc-950" title="Italico">
+            <button type="button" onClick={() => exec("italic")} className="rounded-xl border border-zinc-200 p-2 hover:border-zinc-950" title="Itálico">
               <Italic size={18} />
             </button>
             <button type="button" onClick={() => exec("underline")} className="rounded-xl border border-zinc-200 p-2 hover:border-zinc-950" title="Sublinhado">
@@ -565,10 +601,13 @@ export default function AdminBlogEditor({ post, categories }: Props) {
             contentEditable
             dir="ltr"
             suppressContentEditableWarning
-            onInput={syncContent}
+            onInput={() => syncContent()}
             onMouseUp={saveSelection}
             onKeyUp={saveSelection}
-            onBlur={saveSelection}
+            onBlur={() => {
+              saveSelection();
+              syncContent(true);
+            }}
             className="blog-editor-prose min-h-[640px] px-5 py-6 text-left text-[18px] leading-8 outline-none sm:px-8"
           />
         </section>
