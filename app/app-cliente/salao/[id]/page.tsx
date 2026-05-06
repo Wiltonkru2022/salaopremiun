@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { MapPin, ParkingCircle, Wallet } from "lucide-react";
+import { CalendarClock, MapPin, ParkingCircle, Star, Wallet } from "lucide-react";
 import ClientAppFrame from "@/components/client-app/ClientAppFrame";
 import { getClientAppSalonDetail } from "@/lib/client-app/queries";
 import ClientBookingForm from "@/components/client-app/ClientBookingForm";
@@ -31,6 +31,10 @@ export default async function ClienteSalonPage({
     const salao = await getClientAppSalonDetail(id);
     const session = await validateClienteAppSession();
     const hasSession = Boolean(session.context);
+    const notaMedia = salao.avaliacoes.length
+      ? salao.avaliacoes.reduce((sum, item) => sum + item.nota, 0) /
+        salao.avaliacoes.length
+      : null;
 
     return (
       <ClientAppFrame
@@ -107,6 +111,15 @@ export default async function ClienteSalonPage({
               </div>
 
               <div className="flex flex-wrap gap-2 text-xs font-semibold text-zinc-600">
+                <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-3 py-1.5 text-amber-700">
+                  <Star size={14} fill="currentColor" />
+                  {notaMedia ? notaMedia.toFixed(1) : "Novo"}
+                  {salao.avaliacoes.length ? ` (${salao.avaliacoes.length})` : ""}
+                </span>
+                <span className="inline-flex items-center gap-1 rounded-full bg-zinc-100 px-3 py-1.5">
+                  <CalendarClock size={14} />
+                  {salao.servicos.length ? "Agenda online" : "Agenda em publicacao"}
+                </span>
                 {salao.estacionamento ? (
                   <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-3 py-1.5 text-emerald-700">
                     <ParkingCircle size={14} />

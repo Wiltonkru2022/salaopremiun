@@ -374,6 +374,41 @@ function buildDisponibilidadeDia(params: {
     }));
 }
 
+async function warmClientAppNextSlotCache(params: {
+  supabaseAdmin: any;
+  idSalao: string;
+  idServico: string;
+  idProfissional: string;
+  dias: ClienteAppAvailabilityDay[];
+}) {
+  const expiresAt = new Date(Date.now() + 1000 * 60 * 15).toISOString();
+  const rows = params.dias
+    .flatMap((dia) =>
+      dia.horarios.slice(0, 8).map((horario) => ({
+        id_salao: params.idSalao,
+        id_servico: params.idServico,
+        id_profissional: params.idProfissional,
+        data: dia.data,
+        hora_inicio: horario.horaInicio,
+        hora_fim: horario.horaFim,
+        expires_at: expiresAt,
+      }))
+    )
+    .slice(0, 40);
+
+  if (!rows.length) return;
+
+  try {
+    await (params.supabaseAdmin as any)
+      .from("client_app_next_slots")
+      .upsert(rows, {
+        onConflict: "id_salao,id_servico,id_profissional,data,hora_inicio",
+      });
+  } catch {
+    // Optional rollout cache. Booking never depends on this table being present.
+  }
+}
+
 async function loadOwnedAppointment(params: {
   supabaseAdmin: any;
   idConta: string;
@@ -746,6 +781,14 @@ export async function getClienteAppBookingAvailability(params: {
           });
         }
       }
+
+      await warmClientAppNextSlotCache({
+        supabaseAdmin,
+        idSalao,
+        idServico,
+        idProfissional,
+        dias,
+      });
 
       return {
         ok: true,

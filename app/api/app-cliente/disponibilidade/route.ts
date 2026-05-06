@@ -20,5 +20,9 @@ export async function GET(request: Request) {
     return NextResponse.json(result, { status: 400 });
   }
 
-  return NextResponse.json(result);
+  return NextResponse.json(result, {
+    headers: {
+      "Cache-Control": "private, max-age=20",
+    },
+  });
 }

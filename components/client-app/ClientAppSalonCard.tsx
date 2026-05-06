@@ -1,6 +1,15 @@
 import Link from "next/link";
-import { MapPin, ParkingCircle, Wallet } from "lucide-react";
+import { CalendarClock, MapPin, ParkingCircle, Star, Wallet } from "lucide-react";
 import type { ClientAppSalonListItem } from "@/lib/client-app/queries";
+
+function formatCurrency(value: number | null) {
+  if (value === null) return null;
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+    maximumFractionDigits: 0,
+  }).format(value);
+}
 
 export default function ClientAppSalonCard({
   salao,
@@ -21,13 +30,25 @@ export default function ClientAppSalonCard({
         ) : (
           <div className="flex h-full items-end bg-gradient-to-br from-zinc-950 via-zinc-800 to-amber-700 p-4 text-white">
             <div className="text-[11px] font-bold uppercase tracking-[0.14em] text-amber-100">
-              Premium ativo
+              Agenda online
             </div>
           </div>
         )}
       </div>
 
       <div className="space-y-4 p-4">
+        <div className="flex flex-wrap gap-2 text-xs font-bold text-zinc-700">
+          <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-3 py-1.5 text-amber-700">
+            <Star size={14} fill="currentColor" />
+            {salao.notaMedia ? salao.notaMedia.toFixed(1) : "Novo"}
+            {salao.totalAvaliacoes ? ` (${salao.totalAvaliacoes})` : ""}
+          </span>
+          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-3 py-1.5 text-emerald-700">
+            <CalendarClock size={14} />
+            {salao.proximoHorarioLabel || "Agenda online"}
+          </span>
+        </div>
+
         <div className="flex items-start gap-3">
           <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-[1.2rem] bg-zinc-100">
             {salao.logoUrl ? (
@@ -69,6 +90,46 @@ export default function ClientAppSalonCard({
             "Conheca equipe, servicos e horarios desse salao no app cliente."}
         </p>
 
+        <div className="grid grid-cols-3 gap-2 rounded-2xl border border-zinc-100 bg-zinc-50 p-3 text-center">
+          <div>
+            <div className="text-sm font-black text-zinc-950">
+              {salao.totalServicos || "-"}
+            </div>
+            <div className="mt-0.5 text-[11px] font-semibold text-zinc-500">
+              servicos
+            </div>
+          </div>
+          <div>
+            <div className="text-sm font-black text-zinc-950">
+              {salao.totalProfissionais || "-"}
+            </div>
+            <div className="mt-0.5 text-[11px] font-semibold text-zinc-500">
+              equipe
+            </div>
+          </div>
+          <div>
+            <div className="text-sm font-black text-zinc-950">
+              {formatCurrency(salao.precoMinimo) || "-"}
+            </div>
+            <div className="mt-0.5 text-[11px] font-semibold text-zinc-500">
+              a partir
+            </div>
+          </div>
+        </div>
+
+        {salao.categorias.length ? (
+          <div className="flex flex-wrap gap-2">
+            {salao.categorias.slice(0, 3).map((categoria) => (
+              <span
+                key={categoria}
+                className="rounded-full bg-zinc-100 px-3 py-1 text-xs font-semibold text-zinc-600"
+              >
+                {categoria}
+              </span>
+            ))}
+          </div>
+        ) : null}
+
         <div className="flex flex-wrap gap-2 text-xs font-semibold text-zinc-600">
           {salao.estacionamento ? (
             <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-3 py-1.5 text-emerald-700">
@@ -87,9 +148,9 @@ export default function ClientAppSalonCard({
         <div className="flex flex-wrap gap-2">
           <Link
             href={`/app-cliente/salao/${salao.id}`}
-            className="inline-flex h-11 items-center justify-center rounded-2xl bg-zinc-950 px-4 text-sm font-bold text-white transition hover:bg-zinc-800"
+            className="inline-flex h-11 flex-1 items-center justify-center rounded-2xl bg-zinc-950 px-4 text-sm font-bold text-white transition hover:bg-zinc-800"
           >
-            Ver salao
+            Agendar
           </Link>
           <Link
             href={`/app-cliente/cadastro?next=${encodeURIComponent(`/app-cliente/salao/${salao.id}`)}`}

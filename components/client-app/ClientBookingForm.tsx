@@ -75,10 +75,20 @@ export default function ClientBookingForm({
     [diasDisponiveis, selectedDate]
   );
   const canSubmit = Boolean(servicoId && profissionalId && selectedDate && selectedTime);
+  const selectedServico = useMemo(
+    () => servicos.find((item) => item.id === servicoId) || null,
+    [servicoId, servicos]
+  );
+  const selectedProfissional = useMemo(
+    () => profissionais.find((item) => item.id === profissionalId) || null,
+    [profissionalId, profissionais]
+  );
 
   useEffect(() => {
     if (!profissionaisFiltrados.some((item) => item.id === profissionalId)) {
-      setProfissionalId("");
+      setProfissionalId(
+        profissionaisFiltrados.length === 1 ? profissionaisFiltrados[0].id : ""
+      );
     }
   }, [profissionaisFiltrados, profissionalId]);
 
@@ -157,14 +167,18 @@ export default function ClientBookingForm({
       <input type="hidden" name="salao" value={idSalao} />
 
       <h3 className="text-lg font-black tracking-[-0.03em] text-zinc-950">
-        Agendar pelo app
+        Reserve seu horario
       </h3>
       <p className="mt-2 text-sm leading-6 text-zinc-500">
-        Escolha servico, profissional, data e horario. O pedido entra na sua
-        agenda com o passo de confirmacao do salao.
+        Escolha em poucos passos. O horario e validado novamente no envio para
+        evitar conflito na agenda.
       </p>
 
       <div className="mt-5 space-y-4">
+        <div className="rounded-2xl border border-zinc-100 bg-zinc-50 p-3 text-xs font-bold uppercase tracking-[0.12em] text-zinc-500">
+          1. Servico
+        </div>
+
         <div>
           <label className="mb-1.5 block text-sm font-medium text-zinc-700">
             Servico
@@ -182,6 +196,10 @@ export default function ClientBookingForm({
               </option>
             ))}
           </select>
+        </div>
+
+        <div className="rounded-2xl border border-zinc-100 bg-zinc-50 p-3 text-xs font-bold uppercase tracking-[0.12em] text-zinc-500">
+          2. Profissional
         </div>
 
         <div>
@@ -205,6 +223,10 @@ export default function ClientBookingForm({
 
         <input type="hidden" name="data" value={selectedDate} />
         <input type="hidden" name="hora_inicio" value={selectedTime} />
+
+        <div className="rounded-2xl border border-zinc-100 bg-zinc-50 p-3 text-xs font-bold uppercase tracking-[0.12em] text-zinc-500">
+          3. Data e horario
+        </div>
 
         <div className="space-y-4 rounded-2xl border border-zinc-200 bg-zinc-50 p-4">
           <div>
@@ -286,6 +308,27 @@ export default function ClientBookingForm({
             placeholder="Se quiser, deixe um recado rapido para o salao."
             className="w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-zinc-400"
           />
+        </div>
+
+        <div className="rounded-2xl border border-zinc-200 bg-white px-4 py-3">
+          <div className="text-xs font-bold uppercase tracking-[0.12em] text-zinc-500">
+            Resumo
+          </div>
+          <div className="mt-2 space-y-1 text-sm text-zinc-700">
+            <div>
+              <strong>{selectedServico?.nome || "Servico nao escolhido"}</strong>
+            </div>
+            <div>
+              {selectedProfissional
+                ? `com ${selectedProfissional.nome}`
+                : "Escolha um profissional"}
+            </div>
+            <div>
+              {selectedDate && selectedTime
+                ? `${selectedDate.split("-").reverse().join("/")} as ${selectedTime}`
+                : "Escolha data e horario disponiveis"}
+            </div>
+          </div>
         </div>
 
         {state.error ? (

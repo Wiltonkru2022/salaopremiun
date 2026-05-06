@@ -12,13 +12,13 @@ export default async function InicioClientePage({
   const busca = Array.isArray(params.busca) ? params.busca[0] : params.busca;
   const saloes = await listVisibleClientAppSaloes({
     search: busca,
-    limit: 12,
+    limit: 24,
   });
 
   return (
     <ClientAppFrame
       title="Encontre seu salao"
-      subtitle="Somente saloes com plano premium ativo aparecem aqui."
+      subtitle="Busque, compare e agende em saloes premium publicados."
     >
       <section className="grid gap-4 lg:grid-cols-[1.1fr_2fr]">
         <div className="rounded-[1.8rem] border border-white/70 bg-zinc-950 p-5 text-white shadow-[0_18px_48px_rgba(15,23,42,0.08)]">
@@ -26,11 +26,11 @@ export default async function InicioClientePage({
             App cliente
           </div>
           <h2 className="mt-3 text-[1.75rem] font-black tracking-[-0.04em]">
-            Agende com mais calma
+            Agende como cliente VIP
           </h2>
           <p className="mt-2 text-sm leading-6 text-zinc-300">
-            Veja saloes premium, conheca equipe, descubra servicos e use uma
-            conta global para agendar onde quiser.
+            Compare saloes, veja avaliacoes, escolha equipe e encontre horarios
+            sem precisar chamar cada estabelecimento no WhatsApp.
           </p>
 
           <form className="mt-5 space-y-3" action="/app-cliente/inicio">
@@ -53,6 +53,27 @@ export default async function InicioClientePage({
             <Link href="/app-cliente/login" className="font-bold text-white underline">
               Entrar
             </Link>
+          </div>
+
+          <div className="mt-5 grid grid-cols-3 gap-2 text-center">
+            <div className="rounded-2xl bg-white/10 px-3 py-3">
+              <div className="text-lg font-black">{saloes.length}</div>
+              <div className="mt-1 text-[11px] font-semibold text-zinc-300">
+                saloes
+              </div>
+            </div>
+            <div className="rounded-2xl bg-white/10 px-3 py-3">
+              <div className="text-lg font-black">24h</div>
+              <div className="mt-1 text-[11px] font-semibold text-zinc-300">
+                vitrine
+              </div>
+            </div>
+            <div className="rounded-2xl bg-white/10 px-3 py-3">
+              <div className="text-lg font-black">1</div>
+              <div className="mt-1 text-[11px] font-semibold text-zinc-300">
+                conta
+              </div>
+            </div>
           </div>
         </div>
 
