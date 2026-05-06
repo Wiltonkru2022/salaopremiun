@@ -5,6 +5,7 @@ import {
   useEffect,
   useMemo,
   useState,
+  type PointerEvent,
   type ReactNode,
 } from "react";
 import { useRouter } from "next/navigation";
@@ -152,30 +153,6 @@ function parseCoordinate(value: string | null | undefined) {
   return Number.isFinite(numeric) ? numeric : null;
 }
 
-function extractGoogleMapsCoordinates(value: string) {
-  const text = value.trim();
-  if (!text) return null;
-
-  const atMatch = text.match(/@(-?\d+(?:\.\d+)?),\s*(-?\d+(?:\.\d+)?)/);
-  const dataMatch = text.match(/!3d(-?\d+(?:\.\d+)?)!4d(-?\d+(?:\.\d+)?)/);
-  const queryMatch = text.match(/[?&]query=(-?\d+(?:\.\d+)?),\s*(-?\d+(?:\.\d+)?)/);
-  const plainMatch = text.match(/^(-?\d+(?:\.\d+)?),\s*(-?\d+(?:\.\d+)?)$/);
-  const match = atMatch || dataMatch || queryMatch || plainMatch;
-
-  if (!match) return null;
-
-  const latitude = Number(match[1]);
-  const longitude = Number(match[2]);
-
-  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null;
-  if (Math.abs(latitude) > 90 || Math.abs(longitude) > 180) return null;
-
-  return {
-    latitude: latitude.toFixed(7),
-    longitude: longitude.toFixed(7),
-  };
-}
-
 function formatMapPoint(latitude?: string, longitude?: string) {
   const lat = String(latitude || "").trim();
   const lng = String(longitude || "").trim();
@@ -196,6 +173,33 @@ function buildAddressQuery(form: SalaoForm) {
     .join(", ");
 }
 
+type MapLocationChange = {
+  latitude: string;
+  longitude: string;
+  endereco?: string;
+  numero?: string;
+  bairro?: string;
+  cidade?: string;
+  estado?: string;
+  cep?: string;
+};
+
+type ReverseAddress = {
+  road?: string;
+  pedestrian?: string;
+  footway?: string;
+  house_number?: string;
+  suburb?: string;
+  neighbourhood?: string;
+  city_district?: string;
+  city?: string;
+  town?: string;
+  village?: string;
+  municipality?: string;
+  state?: string;
+  postcode?: string;
+};
+
 function MapLocationPicker({
   latitude,
   longitude,
@@ -205,24 +209,109 @@ function MapLocationPicker({
   latitude?: string;
   longitude?: string;
   addressQuery: string;
-  onChange: (coords: { latitude: string; longitude: string }) => void;
+  onChange: (coords: MapLocationChange) => void;
 }) {
   const [loadingMap, setLoadingMap] = useState(false);
   const [lookupMessage, setLookupMessage] = useState("");
-  const [googleMapsLink, setGoogleMapsLink] = useState("");
+  const [dragging, setDragging] = useState(false);
   const currentLat = parseCoordinate(latitude) ?? -23.55052;
   const currentLng = parseCoordinate(longitude) ?? -46.633308;
-  const hasCoords =
-    parseCoordinate(latitude) !== null && parseCoordinate(longitude) !== null;
-  const googleQuery = hasCoords
-    ? `${currentLat.toFixed(7)},${currentLng.toFixed(7)}`
-    : addressQuery || "Brasil";
-  const googleEmbedUrl = `https://www.google.com/maps?q=${encodeURIComponent(
-    googleQuery
-  )}&z=17&output=embed`;
-  const googleOpenUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-    googleQuery
-  )}`;
+  const [mapCenter, setMapCenter] = useState({
+    latitude: currentLat,
+    longitude: currentLng,
+  });
+  const [dragStart, setDragStart] = useState<{
+    x: number;
+    y: number;
+    latitude: number;
+    longitude: number;
+  } | null>(null);
+  const zoom = 17;
+  const tileSize = 256;
+  const centerTileX = lonToTileX(mapCenter.longitude, zoom);
+  const centerTileY = latToTileY(mapCenter.latitude, zoom);
+  const centerTileFloorX = Math.floor(centerTileX);
+  const centerTileFloorY = Math.floor(centerTileY);
+  const centerPixelOffsetX = (centerTileX - centerTileFloorX) * tileSize;
+  const centerPixelOffsetY = (centerTileY - centerTileFloorY) * tileSize;
+  const tiles = useMemo(() => {
+    const items: Array<{
+      key: string;
+      x: number;
+      y: number;
+      left: string;
+      top: string;
+    }> = [];
+
+    for (let dx = -2; dx <= 2; dx += 1) {
+      for (let dy = -2; dy <= 2; dy += 1) {
+        const x = centerTileFloorX + dx;
+        const y = centerTileFloorY + dy;
+        items.push({
+          key: `${zoom}-${x}-${y}`,
+          x,
+          y,
+          left: `calc(50% + ${dx * tileSize - centerPixelOffsetX}px)`,
+          top: `calc(50% + ${dy * tileSize - centerPixelOffsetY}px)`,
+        });
+      }
+    }
+
+    return items;
+  }, [
+    centerPixelOffsetX,
+    centerPixelOffsetY,
+    centerTileFloorX,
+    centerTileFloorY,
+  ]);
+
+  function lonToTileX(lng: number, zoomLevel: number) {
+    return ((lng + 180) / 360) * 2 ** zoomLevel;
+  }
+
+  function latToTileY(lat: number, zoomLevel: number) {
+    const radians = (lat * Math.PI) / 180;
+    return (
+      ((1 -
+        Math.log(Math.tan(radians) + 1 / Math.cos(radians)) / Math.PI) /
+        2) *
+      2 ** zoomLevel
+    );
+  }
+
+  function tileXToLon(tileX: number, zoomLevel: number) {
+    return (tileX / 2 ** zoomLevel) * 360 - 180;
+  }
+
+  function tileYToLat(tileY: number, zoomLevel: number) {
+    const radians = Math.atan(
+      Math.sinh(Math.PI * (1 - (2 * tileY) / 2 ** zoomLevel))
+    );
+    return (radians * 180) / Math.PI;
+  }
+
+  function normalizeReverseAddress(address?: ReverseAddress) {
+    if (!address) return {};
+
+    return {
+      endereco:
+        address.road || address.pedestrian || address.footway || undefined,
+      numero: address.house_number || undefined,
+      bairro:
+        address.suburb ||
+        address.neighbourhood ||
+        address.city_district ||
+        undefined,
+      cidade:
+        address.city ||
+        address.town ||
+        address.village ||
+        address.municipality ||
+        undefined,
+      estado: address.state || undefined,
+      cep: address.postcode || undefined,
+    };
+  }
 
   const buscarEndereco = useCallback(async () => {
     if (!addressQuery) {
@@ -246,41 +335,134 @@ function MapLocationPicker({
       const nextLng = parseCoordinate(data[0]?.lon);
 
       if (nextLat !== null && nextLng !== null) {
+        setMapCenter({
+          latitude: nextLat,
+          longitude: nextLng,
+        });
         onChange({
           latitude: nextLat.toFixed(7),
           longitude: nextLng.toFixed(7),
         });
         setLookupMessage(
-          "Mapa ajustado pelo endereco cadastrado. Confira no Google Maps antes de salvar."
+          "Mapa ajustado pelo endereco cadastrado. Arraste o mapa ate o ponteiro ficar no local exato."
         );
       } else {
         setLookupMessage(
-          "Nao encontrei esse endereco automaticamente. Abra no Google Maps e confira o cadastro."
+          "Nao encontrei esse endereco automaticamente. Arraste o mapa ate o ponto do salao."
         );
       }
     } catch {
       setLookupMessage(
-        "Nao foi possivel buscar o endereco agora. O mapa do Google continua disponivel para conferencia."
+        "Nao foi possivel buscar o endereco agora. Arraste o mapa manualmente ate o ponto do salao."
       );
     } finally {
       setLoadingMap(false);
     }
   }, [addressQuery, onChange]);
 
-  function usarLinkGoogleMaps() {
-    const coords = extractGoogleMapsCoordinates(googleMapsLink);
-
-    if (!coords) {
-      setLookupMessage(
-        "Cole um link do Google Maps com o ponto marcado, ou copie as coordenadas no formato -20.123456, -51.123456."
+  async function confirmarPonto() {
+    try {
+      setLoadingMap(true);
+      setLookupMessage("");
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${mapCenter.latitude.toFixed(
+          7
+        )}&lon=${mapCenter.longitude.toFixed(7)}&addressdetails=1`
       );
+      const data = (await response.json()) as {
+        address?: ReverseAddress;
+      };
+      const endereco = normalizeReverseAddress(data.address);
+
+      onChange({
+        latitude: mapCenter.latitude.toFixed(7),
+        longitude: mapCenter.longitude.toFixed(7),
+        ...endereco,
+      });
+      setLookupMessage(
+        endereco.endereco
+          ? "Ponto confirmado e endereco atualizado. Clique em salvar para gravar no banco."
+          : "Ponto confirmado. Clique em salvar para gravar no banco."
+      );
+    } catch {
+      onChange({
+        latitude: mapCenter.latitude.toFixed(7),
+        longitude: mapCenter.longitude.toFixed(7),
+      });
+      setLookupMessage(
+        "Ponto confirmado. Nao consegui ler a rua automaticamente, mas as coordenadas serao salvas."
+      );
+    } finally {
+      setLoadingMap(false);
+    }
+  }
+
+  function usarMinhaLocalizacao() {
+    if (!navigator.geolocation) {
+      setLookupMessage("Este navegador nao liberou localizacao automatica.");
       return;
     }
 
-    onChange(coords);
-    setLookupMessage(
-      "Ponto atualizado pelo link do Google Maps. Confira o mapa antes de salvar."
+    setLoadingMap(true);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const nextCenter = {
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+        };
+        setMapCenter(nextCenter);
+        onChange({
+          latitude: nextCenter.latitude.toFixed(7),
+          longitude: nextCenter.longitude.toFixed(7),
+        });
+        setLookupMessage(
+          "Mapa centralizado na sua localizacao. Ajuste o ponteiro e confirme o ponto."
+        );
+        setLoadingMap(false);
+      },
+      () => {
+        setLookupMessage(
+          "Nao foi possivel ler sua localizacao. Arraste o mapa manualmente."
+        );
+        setLoadingMap(false);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+      }
     );
+  }
+
+  function handlePointerDown(event: PointerEvent<HTMLDivElement>) {
+    event.currentTarget.setPointerCapture(event.pointerId);
+    setDragging(true);
+    setDragStart({
+      x: event.clientX,
+      y: event.clientY,
+      latitude: mapCenter.latitude,
+      longitude: mapCenter.longitude,
+    });
+  }
+
+  function handlePointerMove(event: PointerEvent<HTMLDivElement>) {
+    if (!dragStart) return;
+
+    const deltaX = event.clientX - dragStart.x;
+    const deltaY = event.clientY - dragStart.y;
+    const startTileX = lonToTileX(dragStart.longitude, zoom);
+    const startTileY = latToTileY(dragStart.latitude, zoom);
+    const nextTileX = startTileX - deltaX / tileSize;
+    const nextTileY = startTileY - deltaY / tileSize;
+
+    setMapCenter({
+      latitude: tileYToLat(nextTileY, zoom),
+      longitude: tileXToLon(nextTileX, zoom),
+    });
+  }
+
+  function handlePointerEnd() {
+    setDragging(false);
+    setDragStart(null);
   }
 
   useEffect(() => {
@@ -312,19 +494,23 @@ function MapLocationPicker({
         initialLng = parseCoordinate(data[0]?.lon);
 
         if (initialLat !== null && initialLng !== null) {
+          setMapCenter({
+            latitude: initialLat,
+            longitude: initialLng,
+          });
           onChange({
             latitude: initialLat.toFixed(7),
             longitude: initialLng.toFixed(7),
           });
         } else {
           setLookupMessage(
-            "Endereco nao encontrado automaticamente. Confira a busca no Google Maps."
+            "Endereco nao encontrado automaticamente. Arraste o mapa ate o ponto do salao."
           );
         }
       } catch {
         if (!cancelled) {
           setLookupMessage(
-            "Nao foi possivel buscar o endereco agora. Confira a busca no Google Maps."
+            "Nao foi possivel buscar o endereco agora. Arraste o mapa manualmente."
           );
         }
       } finally {
@@ -339,6 +525,27 @@ function MapLocationPicker({
     };
   }, [addressQuery, latitude, longitude, onChange]);
 
+  useEffect(() => {
+    const nextLat = parseCoordinate(latitude);
+    const nextLng = parseCoordinate(longitude);
+
+    if (nextLat === null || nextLng === null) return;
+
+    setMapCenter((prev) => {
+      if (
+        Math.abs(prev.latitude - nextLat) < 0.000001 &&
+        Math.abs(prev.longitude - nextLng) < 0.000001
+      ) {
+        return prev;
+      }
+
+      return {
+        latitude: nextLat,
+        longitude: nextLng,
+      };
+    });
+  }, [latitude, longitude]);
+
   return (
     <div className="rounded-[22px] border border-zinc-200 bg-zinc-50 p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -347,8 +554,8 @@ function MapLocationPicker({
             Localizacao no mapa
           </div>
           <p className="mt-1 text-sm leading-6 text-zinc-600">
-            O mapa abre com o endereco cadastrado. Ajuste pelo endereco e confira
-            as ruas no Google Maps antes de salvar.
+            Arraste o mapa ate o ponteiro ficar exatamente na entrada do salao.
+            Ao confirmar, o endereco e o ponto ficam prontos para salvar.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -361,45 +568,59 @@ function MapLocationPicker({
             {loadingMap ? <Loader2 className="animate-spin" size={14} /> : null}
             Buscar endereco
           </button>
-          <a
-            href={googleOpenUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex items-center rounded-full border border-zinc-200 bg-white px-4 py-2 text-xs font-bold text-zinc-700"
-          >
-            Abrir no Google Maps
-          </a>
-        </div>
-      </div>
-      <div className="mt-4 overflow-hidden rounded-[20px] border border-zinc-200 bg-white">
-        <iframe
-          title="Mapa do salao no Google Maps"
-          src={googleEmbedUrl}
-          className="h-[360px] w-full"
-          loading="lazy"
-          referrerPolicy="no-referrer-when-downgrade"
-        />
-      </div>
-      <div className="mt-4 rounded-[20px] border border-zinc-200 bg-white p-3">
-        <label className="text-xs font-bold uppercase tracking-[0.16em] text-zinc-500">
-          Ponto exato pelo Google Maps
-        </label>
-        <div className="mt-2 flex flex-col gap-2 sm:flex-row">
-          <input
-            value={googleMapsLink}
-            onChange={(event) => setGoogleMapsLink(event.target.value)}
-            placeholder="Cole o link do ponto marcado no Google Maps"
-            className="min-h-11 flex-1 rounded-2xl border border-zinc-200 bg-white px-4 text-sm outline-none transition focus:border-zinc-950 focus:ring-4 focus:ring-zinc-100"
-          />
           <button
             type="button"
-            onClick={usarLinkGoogleMaps}
-            className="rounded-2xl border border-zinc-950 bg-white px-4 py-2 text-sm font-bold text-zinc-950 transition hover:bg-zinc-950 hover:text-white"
+            onClick={usarMinhaLocalizacao}
+            disabled={loadingMap}
+            className="inline-flex items-center rounded-full border border-zinc-200 bg-white px-4 py-2 text-xs font-bold text-zinc-700"
           >
-            Usar ponto
+            Minha localizacao
           </button>
         </div>
       </div>
+      <div
+        role="application"
+        aria-label="Mapa para selecionar o ponto exato do salao"
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerEnd}
+        onPointerCancel={handlePointerEnd}
+        className={`relative mt-4 h-[380px] touch-none overflow-hidden rounded-[20px] border border-zinc-200 bg-zinc-100 ${
+          dragging ? "cursor-grabbing" : "cursor-grab"
+        }`}
+      >
+        {tiles.map((tile) => (
+          <img
+            key={tile.key}
+            src={`https://tile.openstreetmap.org/${zoom}/${tile.x}/${tile.y}.png`}
+            alt=""
+            draggable={false}
+            className="absolute h-64 w-64 select-none"
+            style={{
+              left: tile.left,
+              top: tile.top,
+            }}
+          />
+        ))}
+        <div className="pointer-events-none absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-full flex-col items-center">
+          <div className="rounded-full bg-zinc-950 px-3 py-1 text-xs font-bold text-white shadow-lg">
+            Ponto do salao
+          </div>
+          <div className="h-6 w-6 rotate-45 rounded-br-full rounded-tl-full bg-zinc-950 shadow-lg ring-4 ring-white" />
+        </div>
+        <div className="pointer-events-none absolute bottom-3 left-3 rounded-full bg-white/95 px-3 py-1 text-[11px] font-semibold text-zinc-600 shadow-sm">
+          Arraste o mapa, nao o ponteiro
+        </div>
+      </div>
+      <button
+        type="button"
+        onClick={confirmarPonto}
+        disabled={loadingMap}
+        className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-zinc-950 px-4 py-3 text-sm font-bold text-white transition hover:-translate-y-0.5 disabled:opacity-60 sm:w-auto"
+      >
+        {loadingMap ? <Loader2 className="animate-spin" size={16} /> : null}
+        Confirmar ponto e atualizar endereco
+      </button>
       {lookupMessage ? (
         <div className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
           {lookupMessage}
@@ -538,11 +759,12 @@ export default function PerfilSalaoPage() {
   );
 
   const updateAppClienteMapLocation = useCallback(
-    (coords: { latitude: string; longitude: string }) => {
+    (coords: MapLocationChange) => {
       setAppClienteDraft((prev) => ({
         ...prev,
-        latitude: coords.latitude,
-        longitude: coords.longitude,
+        ...Object.fromEntries(
+          Object.entries(coords).filter(([, value]) => value !== undefined)
+        ),
       }));
     },
     []
@@ -920,6 +1142,12 @@ export default function PerfilSalaoPage() {
         descricao_publica: appClienteDraft.descricao_publica || "",
         foto_capa_url: appClienteDraft.foto_capa_url || "",
         logo_url: appClienteDraft.logo_url || "",
+        endereco: appClienteDraft.endereco || "",
+        numero: appClienteDraft.numero || "",
+        bairro: appClienteDraft.bairro || "",
+        cidade: appClienteDraft.cidade || "",
+        estado: appClienteDraft.estado || "",
+        cep: appClienteDraft.cep || "",
         latitude: appClienteDraft.latitude || "",
         longitude: appClienteDraft.longitude || "",
         estacionamento: Boolean(appClienteDraft.estacionamento),
