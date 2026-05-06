@@ -152,6 +152,7 @@ export default function AdminBlogEditor({ post, categories }: Props) {
   const [tags, setTags] = useState((post?.tags || []).join(", "));
   const [featured, setFeatured] = useState(Boolean(post?.featured));
   const [fontSize, setFontSize] = useState(18);
+  const [activePanel, setActivePanel] = useState<"conteudo" | "seo">("conteudo");
   const [modal, setModal] = useState<EditorModal>(null);
   const [slashMenu, setSlashMenu] = useState<FloatingMenu>({
     open: false,
@@ -919,7 +920,7 @@ export default function AdminBlogEditor({ post, categories }: Props) {
     <form
       action={formAction}
       onSubmit={handleSubmit}
-      className="min-h-screen bg-[#f6f4ee] text-zinc-950"
+      className="min-h-screen bg-slate-50 text-slate-950"
     >
       <input type="hidden" name="id" value={post?.id || ""} />
       <input
@@ -938,8 +939,8 @@ export default function AdminBlogEditor({ post, categories }: Props) {
       />
       {featured ? <input type="hidden" name="destaque" value="on" /> : null}
 
-      <header className="sticky top-0 z-40 border-b border-zinc-200/80 bg-white/90 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3">
+      <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/80 backdrop-blur-xl">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-3">
           <Link
             href="/admin-master/blog"
             className="rounded-full border border-zinc-200 px-4 py-2 text-sm font-black text-zinc-700 transition hover:border-zinc-950"
@@ -982,7 +983,7 @@ export default function AdminBlogEditor({ post, categories }: Props) {
       </header>
 
       {actionState.error || editorNotice ? (
-        <div className="mx-auto mt-4 max-w-7xl px-4">
+        <div className="mx-auto mt-4 max-w-6xl px-4">
           <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold leading-6 text-red-800">
             {actionState.error || editorNotice}
           </div>
@@ -1004,8 +1005,35 @@ export default function AdminBlogEditor({ post, categories }: Props) {
         </div>
       ) : null}
 
-      <main className="mx-auto grid max-w-7xl gap-5 px-4 py-5 xl:grid-cols-[310px_minmax(0,1fr)]">
-        <aside className="space-y-4">
+      <main className="mx-auto grid max-w-6xl justify-center gap-5 px-4 py-6 xl:grid-cols-[280px_minmax(0,800px)]">
+        <aside className="space-y-4 xl:sticky xl:top-[88px]">
+          <div className="grid grid-cols-2 rounded-2xl border border-slate-200 bg-white p-1 text-sm font-black shadow-sm">
+            <button
+              type="button"
+              onClick={() => setActivePanel("conteudo")}
+              className={`rounded-xl px-3 py-2 transition ${
+                activePanel === "conteudo"
+                  ? "bg-slate-950 text-white"
+                  : "text-slate-600 hover:bg-slate-100"
+              }`}
+            >
+              Conteudo
+            </button>
+            <button
+              type="button"
+              onClick={() => setActivePanel("seo")}
+              className={`rounded-xl px-3 py-2 transition ${
+                activePanel === "seo"
+                  ? "bg-slate-950 text-white"
+                  : "text-slate-600 hover:bg-slate-100"
+              }`}
+            >
+              SEO
+            </button>
+          </div>
+
+          {activePanel === "conteudo" ? (
+            <>
           <section className="rounded-[22px] border border-zinc-200 bg-white p-4 shadow-sm">
             <div className="text-xs font-black uppercase tracking-[0.22em] text-zinc-400">
               Configurações
@@ -1060,35 +1088,6 @@ export default function AdminBlogEditor({ post, categories }: Props) {
                 />
                 Post em destaque
               </label>
-            </div>
-          </section>
-
-          <section className="rounded-[22px] border border-zinc-200 bg-white p-4 shadow-sm">
-            <div className="flex items-center justify-between gap-3">
-              <div className="text-xs font-black uppercase tracking-[0.22em] text-zinc-400">
-                SEO em tempo real
-              </div>
-              <span className={`inline-flex items-center gap-2 text-xs font-black ${seoStatus.text}`}>
-                <span className={`h-2.5 w-2.5 rounded-full ${seoStatus.color}`} />
-                {seoStatus.label}
-              </span>
-            </div>
-            <div className="mt-4 grid gap-2">
-              {seoChecks.map((check) => (
-                <div
-                  key={check.label}
-                  className="flex items-start justify-between gap-3 rounded-2xl border border-zinc-100 bg-zinc-50 px-3 py-2 text-xs"
-                >
-                  <span className="font-black text-zinc-800">{check.label}</span>
-                  <span
-                    className={`text-right font-bold ${
-                      check.ok ? "text-emerald-700" : "text-amber-700"
-                    }`}
-                  >
-                    {check.ok ? "Ok" : check.hint}
-                  </span>
-                </div>
-              ))}
             </div>
           </section>
 
@@ -1166,10 +1165,41 @@ export default function AdminBlogEditor({ post, categories }: Props) {
               className="mt-3 w-full rounded-2xl border border-zinc-200 px-3 py-2.5 text-sm outline-none focus:border-zinc-950"
             />
           </section>
+            </>
+          ) : (
+            <section className="rounded-[22px] border border-zinc-200 bg-white p-4 shadow-sm">
+              <div className="flex items-center justify-between gap-3">
+                <div className="text-xs font-black uppercase tracking-[0.22em] text-zinc-400">
+                  SEO em tempo real
+                </div>
+                <span className={`inline-flex items-center gap-2 text-xs font-black ${seoStatus.text}`}>
+                  <span className={`h-2.5 w-2.5 rounded-full ${seoStatus.color}`} />
+                  {seoStatus.label}
+                </span>
+              </div>
+              <div className="mt-4 grid gap-2">
+                {seoChecks.map((check) => (
+                  <div
+                    key={check.label}
+                    className="flex items-start justify-between gap-3 rounded-2xl border border-zinc-100 bg-zinc-50 px-3 py-2 text-xs"
+                  >
+                    <span className="font-black text-zinc-800">{check.label}</span>
+                    <span
+                      className={`text-right font-bold ${
+                        check.ok ? "text-emerald-700" : "text-amber-700"
+                      }`}
+                    >
+                      {check.ok ? "Ok" : check.hint}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
         </aside>
 
-        <section className="overflow-hidden rounded-[24px] border border-zinc-200 bg-white shadow-sm">
-          <div className="border-b border-zinc-200 bg-zinc-50 p-3">
+        <section className="overflow-hidden rounded-[26px] border border-slate-200 bg-white shadow-[0_24px_80px_rgba(15,23,42,0.08)]">
+          <div className="border-b border-slate-200 bg-white p-5 sm:p-6">
             <input
               name="titulo"
               value={title}
@@ -1198,7 +1228,7 @@ export default function AdminBlogEditor({ post, categories }: Props) {
           </div>
 
           <div
-            className="sticky top-[73px] z-30 flex flex-wrap items-center gap-2 border-b border-zinc-200 bg-white/95 p-3 backdrop-blur-xl"
+            className="sticky top-[73px] z-30 flex max-h-32 flex-wrap items-center gap-2 overflow-y-auto border-b border-slate-200 bg-white/80 p-3 shadow-sm backdrop-blur-xl"
             onMouseDown={(event) => {
               if ((event.target as HTMLElement).closest("button")) {
                 event.preventDefault();
@@ -1337,7 +1367,7 @@ export default function AdminBlogEditor({ post, categories }: Props) {
             />
           </div>
 
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-200 bg-white px-4 py-2 text-xs font-bold text-zinc-500">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-white px-5 py-2 text-xs font-bold text-slate-500">
             <span className="inline-flex items-center gap-2">
               <CheckCircle2 size={14} className="text-emerald-600" />
               Tempo estimado: {readTime}
@@ -1431,7 +1461,7 @@ export default function AdminBlogEditor({ post, categories }: Props) {
               saveSelection();
               syncContent(true);
             }}
-            className="blog-editor-prose min-h-[640px] px-5 py-6 text-left text-[18px] leading-8 outline-none sm:px-8"
+            className="blog-editor-prose mx-auto min-h-[680px] max-w-[800px] px-6 py-8 text-left text-[18px] leading-8 outline-none sm:px-10"
           />
         </section>
       </main>

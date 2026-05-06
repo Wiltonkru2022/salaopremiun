@@ -112,14 +112,26 @@ export default function BlogSearchExperience({
         </div>
 
         {filteredPosts.length ? (
-          <div className="grid gap-4 md:grid-cols-2">
-            {filteredPosts.map((post) => (
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {filteredPosts.map((post, index) => (
               <Link
                 key={post.id}
                 href={`/${post.slug}`}
-                className="group overflow-hidden rounded-[24px] border border-zinc-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg"
+                className={`group overflow-hidden rounded-[24px] border border-zinc-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg ${
+                  index === 0 && !query && !categorySlug
+                    ? "md:col-span-2 xl:col-span-2"
+                    : ""
+                }`}
               >
-                <BlogCoverMedia src={post.coverImage} alt={post.coverAlt} />
+                <BlogCoverMedia
+                  src={post.coverImage}
+                  alt={post.coverAlt}
+                  className={`w-full object-cover ${
+                    index === 0 && !query && !categorySlug
+                      ? "aspect-[16/8]"
+                      : "aspect-[16/10]"
+                  }`}
+                />
                 <div className="p-4">
                   <div className="text-[11px] font-black uppercase tracking-[0.22em] text-zinc-400">
                     {post.categoryName} - {post.readTime}
@@ -127,7 +139,7 @@ export default function BlogSearchExperience({
                   <h3 className="mt-2 font-display text-xl font-black leading-tight">
                     {post.title}
                   </h3>
-                  <p className="mt-2 text-sm leading-6 text-zinc-600">
+                  <p className="mt-2 text-sm leading-7 text-zinc-600">
                     {post.excerpt}
                   </p>
                   <div className="mt-4 inline-flex items-center gap-2 text-sm font-black text-zinc-950">

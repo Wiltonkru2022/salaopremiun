@@ -21,6 +21,7 @@ export type BlogPost = {
   body: string[];
   bodyHtml?: string;
   featured?: boolean;
+  views?: number;
   categoryId?: string;
   status?: "rascunho" | "publicado" | "arquivado";
   rawContent?: string;

@@ -270,6 +270,21 @@ a.bg-white {
   text-decoration: none;
 }
 
+.blog-public-prose {
+  font-family: Georgia, "Times New Roman", serif;
+  line-height: 1.85;
+}
+
+.blog-public-prose h1,
+.blog-public-prose h2,
+.blog-public-prose h3,
+.blog-public-prose h4,
+.blog-public-prose h5,
+.blog-public-prose h6,
+.blog-public-prose a.blog-post-button {
+  font-family: var(--font-display), sans-serif;
+}
+
 @media (max-width: 1440px) {
   html {
     scroll-padding-top: 104px;
@@ -289,6 +304,12 @@ a.bg-white {
 }
 
 @media (max-width: 768px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+
   .app-cliente-root input,
   .app-cliente-root select,
   .app-cliente-root textarea,

@@ -47,17 +47,17 @@ export default async function BlogPage() {
       <BlogHeader />
 
       <main>
-        <section className="border-b border-zinc-200 bg-white text-zinc-950">
-          <div className="mx-auto grid max-w-7xl gap-8 px-6 py-10 lg:grid-cols-[minmax(0,1fr)_420px] lg:items-end lg:px-10 lg:py-14">
+        <section className="border-b border-slate-200 bg-white text-slate-950">
+          <div className="mx-auto max-w-7xl px-6 py-10 lg:px-10 lg:py-14">
             <div>
-              <div className="inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1.5 text-xs font-black uppercase tracking-[0.28em] text-zinc-500">
+              <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-black uppercase tracking-[0.28em] text-slate-500">
                 <Search size={15} />
                 Conteúdo para salões crescerem
               </div>
-              <h1 className="mt-5 max-w-4xl font-display text-[2.8rem] font-black leading-[1.02] sm:text-[4.8rem]">
+              <h1 className="mt-5 max-w-4xl font-display text-[2.8rem] font-black leading-[1.02] text-slate-900 sm:text-[4.8rem]">
                 Blog SalaoPremium
               </h1>
-              <p className="mt-5 max-w-3xl text-base leading-7 text-zinc-600">
+              <p className="mt-5 max-w-3xl text-base leading-8 text-slate-600">
                 Conteúdos práticos para organizar agenda, vender melhor,
                 fidelizar clientes e divulgar seu salão com mais consistência.
               </p>
@@ -66,7 +66,7 @@ export default async function BlogPage() {
             {featured ? (
               <Link
                 href={`/${featured.slug}`}
-                className="group overflow-hidden rounded-[24px] border border-zinc-200 bg-white text-zinc-950 shadow-sm transition hover:-translate-y-0.5 hover:shadow-xl"
+                className="group mt-8 grid overflow-hidden rounded-[24px] border border-slate-200 bg-white text-slate-950 shadow-sm transition hover:-translate-y-0.5 hover:shadow-xl lg:grid-cols-[minmax(0,1.25fr)_minmax(360px,0.75fr)]"
               >
                 <BlogCoverMedia
                   src={featured.coverImage}
@@ -74,16 +74,16 @@ export default async function BlogPage() {
                   width={840}
                   height={520}
                   priority
-                  className="aspect-[16/10] w-full object-cover"
+                  className="h-full min-h-[280px] w-full object-cover"
                 />
-                <div className="p-4">
+                <div className="flex flex-col justify-center p-5 sm:p-8">
                   <div className="text-xs font-black uppercase tracking-[0.22em] text-amber-700">
                     Destaque - {featured.categoryName}
                   </div>
-                  <h2 className="mt-2 font-display text-2xl font-black">
+                  <h2 className="mt-3 font-display text-3xl font-black leading-tight text-slate-900 sm:text-4xl">
                     {featured.title}
                   </h2>
-                  <p className="mt-2 text-sm leading-6 text-zinc-600">
+                  <p className="mt-4 text-base leading-8 text-slate-600">
                     {featured.excerpt}
                   </p>
                   <div className="mt-4 inline-flex items-center gap-2 text-sm font-black">

@@ -106,12 +106,12 @@ export default async function BlogPostPage({ params }: Props) {
 
           <div className="mx-auto grid max-w-7xl gap-6 px-6 py-8 lg:grid-cols-[minmax(0,760px)_320px] lg:px-10 lg:py-10">
             <div className="rounded-[24px] border border-zinc-200 bg-white p-5 shadow-sm sm:p-8">
-              <p className="text-xl font-semibold leading-8 text-zinc-800">
+              <p className="font-serif text-xl font-semibold leading-9 text-zinc-800">
                 {post.excerpt}
               </p>
 
               <div
-                className="blog-editor-prose mt-8 text-[1.03rem] leading-8 text-zinc-700"
+                className="blog-editor-prose blog-public-prose mt-8 text-[1.08rem] leading-loose text-zinc-700"
                 dangerouslySetInnerHTML={{
                   __html:
                     post.bodyHtml ||

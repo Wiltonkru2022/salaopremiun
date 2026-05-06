@@ -1,7 +1,9 @@
 import { unstable_cache, unstable_noStore as noStore } from "next/cache";
 import type { BlogCategory, BlogPost } from "@/lib/blog/content";
 import {
+  canUseBlogSupabaseAdmin,
   canUseBlogSupabasePublic,
+  getBlogSupabaseAdmin,
   getBlogSupabasePublic,
 } from "@/lib/blog/supabase";
 
@@ -26,9 +28,52 @@ type BlogDbPost = {
   tags: string[] | null;
   status?: "rascunho" | "publicado" | "arquivado";
   destaque: boolean | null;
+  views?: number | null;
   publicado_em: string | null;
   categoria: BlogDbCategory | null;
 };
+
+export type BlogAdminMetrics = {
+  totalViews: number;
+  newsletterSubscribers: number;
+  conversionRate: number;
+  topPostWeek: {
+    title: string;
+    slug: string;
+    views: number;
+  } | null;
+  viewsLast7Days: {
+    date: string;
+    label: string;
+    views: number;
+  }[];
+};
+
+function createEmptyMetrics(): BlogAdminMetrics {
+  const formatter = new Intl.DateTimeFormat("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+  });
+  const today = new Date();
+
+  return {
+    totalViews: 0,
+    newsletterSubscribers: 0,
+    conversionRate: 0,
+    topPostWeek: null,
+    viewsLast7Days: Array.from({ length: 7 }, (_, index) => {
+      const date = new Date(today);
+      date.setDate(today.getDate() - (6 - index));
+      const key = date.toISOString().slice(0, 10);
+
+      return {
+        date: key,
+        label: formatter.format(date),
+        views: 0,
+      };
+    }),
+  };
+}
 
 function canUseBlogDatabase() {
   return canUseBlogSupabasePublic();
@@ -97,6 +142,7 @@ function mapPost(post: BlogDbPost): BlogPost {
           .map((paragraph) => `<p>${paragraph}</p>`)
           .join(""),
     featured: Boolean(post.destaque),
+    views: Number(post.views || 0),
     categoryId: post.categoria_id || category?.id,
     status: post.status || "publicado",
     rawContent: post.conteudo,
@@ -107,6 +153,12 @@ async function getBlogDatabaseUnsafe() {
   if (!canUseBlogDatabase()) return null;
 
   return getBlogSupabasePublic() as any;
+}
+
+async function getBlogAdminDatabaseUnsafe() {
+  if (!canUseBlogSupabaseAdmin()) return null;
+
+  return getBlogSupabaseAdmin() as any;
 }
 
 async function loadBlogCategories(): Promise<BlogCategory[]> {
@@ -150,7 +202,7 @@ async function loadPublishedBlogPosts(): Promise<BlogPost[]> {
     const { data, error } = await supabase
       .from("blog_posts")
       .select(
-        "id, categoria_id, slug, titulo, descricao, resumo, conteudo, imagem_capa_url, imagem_capa_alt, tempo_leitura, tags, destaque, publicado_em, categoria:blog_categorias(id, slug, nome, descricao)"
+        "id, categoria_id, slug, titulo, descricao, resumo, conteudo, imagem_capa_url, imagem_capa_alt, tempo_leitura, tags, destaque, views, publicado_em, categoria:blog_categorias(id, slug, nome, descricao)"
       )
       .eq("status", "publicado")
       .order("publicado_em", { ascending: false, nullsFirst: false })
@@ -182,10 +234,89 @@ export async function getBlogPost(slug: string): Promise<BlogPost | null> {
   return posts.find((post) => post.slug === slug) || null;
 }
 
+export async function getBlogAdminMetrics(): Promise<BlogAdminMetrics> {
+  noStore();
+
+  const metrics = createEmptyMetrics();
+
+  try {
+    const supabase = await getBlogAdminDatabaseUnsafe();
+    if (!supabase) return metrics;
+
+    const [{ data: posts }, { count: subscribers }] = await Promise.all([
+      supabase.from("blog_posts").select("id, slug, titulo, views"),
+      supabase
+        .from("newsletter_subscribers")
+        .select("id", { count: "exact", head: true }),
+    ]);
+
+    const postList = (posts || []) as Array<{
+      id: string;
+      slug: string;
+      titulo: string;
+      views: number | null;
+    }>;
+
+    metrics.totalViews = postList.reduce(
+      (total, post) => total + Number(post.views || 0),
+      0
+    );
+    metrics.newsletterSubscribers = Number(subscribers || 0);
+    metrics.conversionRate = metrics.totalViews
+      ? Number(((metrics.newsletterSubscribers / metrics.totalViews) * 100).toFixed(1))
+      : 0;
+
+    const firstDay = metrics.viewsLast7Days[0]?.date;
+    if (!firstDay) return metrics;
+
+    const { data: weeklyViews } = await supabase
+      .from("blog_views")
+      .select("post_id, criado_em")
+      .gte("criado_em", `${firstDay}T00:00:00.000Z`);
+
+    const postMap = new Map(postList.map((post) => [post.id, post]));
+    const byDay = new Map(metrics.viewsLast7Days.map((day) => [day.date, day]));
+    const byPost = new Map<string, number>();
+
+    for (const view of (weeklyViews || []) as Array<{
+      post_id: string | null;
+      criado_em: string | null;
+    }>) {
+      if (!view.criado_em) continue;
+
+      const dateKey = view.criado_em.slice(0, 10);
+      const day = byDay.get(dateKey);
+      if (day) day.views += 1;
+
+      if (view.post_id) {
+        byPost.set(view.post_id, (byPost.get(view.post_id) || 0) + 1);
+      }
+    }
+
+    const topPostId = Array.from(byPost.entries()).sort((a, b) => b[1] - a[1])[0];
+    if (topPostId) {
+      const post = postMap.get(topPostId[0]);
+      if (post) {
+        metrics.topPostWeek = {
+          title: post.titulo,
+          slug: post.slug,
+          views: topPostId[1],
+        };
+      }
+    }
+
+    return metrics;
+  } catch (error) {
+    console.warn("Métricas do blog indisponíveis:", error);
+    return metrics;
+  }
+}
+
 export async function getAdminBlogData() {
   noStore();
 
   const categories = await getBlogCategories();
+  const metrics = await getBlogAdminMetrics();
 
   try {
     const supabase = await getBlogDatabaseUnsafe();
@@ -193,6 +324,7 @@ export async function getAdminBlogData() {
       return {
         categories,
         posts: [],
+        metrics,
         usingFallback: true,
         error:
           "A nova conexão do Supabase do blog não está configurada neste ambiente.",
@@ -202,7 +334,7 @@ export async function getAdminBlogData() {
     const { data, error } = await supabase
       .from("blog_posts")
       .select(
-        "id, categoria_id, slug, titulo, descricao, resumo, conteudo, imagem_capa_url, imagem_capa_alt, tempo_leitura, tags, destaque, publicado_em, status, categoria:blog_categorias(id, slug, nome, descricao)"
+        "id, categoria_id, slug, titulo, descricao, resumo, conteudo, imagem_capa_url, imagem_capa_alt, tempo_leitura, tags, destaque, views, publicado_em, status, categoria:blog_categorias(id, slug, nome, descricao)"
       )
       .order("atualizado_em", { ascending: false })
       .limit(30);
@@ -211,6 +343,7 @@ export async function getAdminBlogData() {
       return {
         categories,
         posts: [],
+        metrics,
         usingFallback: true,
         error: error.message,
       };
@@ -219,6 +352,7 @@ export async function getAdminBlogData() {
     return {
       categories,
       posts: (data || []).map(mapPost),
+      metrics,
       usingFallback: false,
       error: null,
     };
@@ -226,6 +360,7 @@ export async function getAdminBlogData() {
     return {
       categories,
       posts: [],
+      metrics,
       usingFallback: true,
       error:
         error instanceof Error
@@ -247,7 +382,7 @@ export async function getAdminBlogPostById(id: string): Promise<BlogPost | null>
     const { data, error } = await supabase
       .from("blog_posts")
       .select(
-        "id, categoria_id, slug, titulo, descricao, resumo, conteudo, imagem_capa_url, imagem_capa_alt, tempo_leitura, tags, destaque, publicado_em, status, categoria:blog_categorias(id, slug, nome, descricao)"
+        "id, categoria_id, slug, titulo, descricao, resumo, conteudo, imagem_capa_url, imagem_capa_alt, tempo_leitura, tags, destaque, views, publicado_em, status, categoria:blog_categorias(id, slug, nome, descricao)"
       )
       .eq("id", id)
       .maybeSingle();
@@ -273,7 +408,7 @@ export async function getAdminBlogPostBySlug(
     const { data, error } = await supabase
       .from("blog_posts")
       .select(
-        "id, categoria_id, slug, titulo, descricao, resumo, conteudo, imagem_capa_url, imagem_capa_alt, tempo_leitura, tags, destaque, publicado_em, status, categoria:blog_categorias(id, slug, nome, descricao)"
+        "id, categoria_id, slug, titulo, descricao, resumo, conteudo, imagem_capa_url, imagem_capa_alt, tempo_leitura, tags, destaque, views, publicado_em, status, categoria:blog_categorias(id, slug, nome, descricao)"
       )
       .eq("slug", slug)
       .maybeSingle();
