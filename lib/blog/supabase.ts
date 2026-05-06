@@ -7,7 +7,15 @@ type BlogSupabaseAdminClient = ReturnType<
 
 const globalStore = globalThis as typeof globalThis & {
   __salaopremiumBlogSupabaseAdmin?: BlogSupabaseAdminClient;
+  __salaopremiumBlogSupabasePublic?: BlogSupabaseAdminClient;
 };
+
+export function canUseBlogSupabasePublic() {
+  return Boolean(
+    String(process.env.BLOG_SUPABASE_URL || "").trim() &&
+      String(process.env.BLOG_SUPABASE_ANON_KEY || "").trim()
+  );
+}
 
 export function canUseBlogSupabaseAdmin() {
   return Boolean(
@@ -24,12 +32,45 @@ function getBlogSupabaseUrl() {
   return value;
 }
 
+function getBlogPublishableKey() {
+  const value = process.env.BLOG_SUPABASE_ANON_KEY;
+  if (!value) {
+    throw new Error("BLOG_SUPABASE_ANON_KEY nao configurada.");
+  }
+  return value;
+}
+
 function getBlogServiceRoleKey() {
   const value = process.env.BLOG_SUPABASE_SERVICE_ROLE_KEY;
   if (!value) {
     throw new Error("BLOG_SUPABASE_SERVICE_ROLE_KEY nao configurada.");
   }
   return value;
+}
+
+export function getBlogSupabasePublic(): BlogSupabaseAdminClient {
+  if (globalStore.__salaopremiumBlogSupabasePublic) {
+    return globalStore.__salaopremiumBlogSupabasePublic;
+  }
+
+  globalStore.__salaopremiumBlogSupabasePublic =
+    createClient<AnySupabaseDatabase>(
+      getBlogSupabaseUrl(),
+      getBlogPublishableKey(),
+      {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false,
+        },
+        global: {
+          headers: {
+            "x-application-name": "salaopremium-blog-public",
+          },
+        },
+      }
+    );
+
+  return globalStore.__salaopremiumBlogSupabasePublic;
 }
 
 export function getBlogSupabaseAdmin(): BlogSupabaseAdminClient {

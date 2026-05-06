@@ -77,6 +77,20 @@ create policy "blog_posts_public_read"
 
 grant select on public.blog_categorias to anon, authenticated;
 grant select on public.blog_posts to anon, authenticated;
+grant insert on public.blog_views to anon, authenticated;
+grant insert on public.newsletter_subscribers to anon, authenticated;
+
+drop policy if exists "blog_views_public_insert" on public.blog_views;
+create policy "blog_views_public_insert"
+  on public.blog_views
+  for insert
+  with check (true);
+
+drop policy if exists "newsletter_subscribers_public_insert" on public.newsletter_subscribers;
+create policy "newsletter_subscribers_public_insert"
+  on public.newsletter_subscribers
+  for insert
+  with check (origem = 'blog');
 
 create or replace function public.increment_blog_post_views(p_post_id uuid)
 returns bigint
@@ -97,7 +111,7 @@ end;
 $$;
 
 revoke all on function public.increment_blog_post_views(uuid) from public;
-grant execute on function public.increment_blog_post_views(uuid) to service_role;
+grant execute on function public.increment_blog_post_views(uuid) to anon, authenticated, service_role;
 
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values (
