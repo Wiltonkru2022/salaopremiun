@@ -23,10 +23,12 @@ export default function BlogCoverMedia({
       <video
         src={src}
         className={className}
-        controls
+        autoPlay
+        loop
         muted
         playsInline
-        preload="metadata"
+        preload="auto"
+        aria-label={alt}
       />
     );
   }

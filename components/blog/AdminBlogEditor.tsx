@@ -641,10 +641,12 @@ export default function AdminBlogEditor({ post, categories }: Props) {
                     <video
                       src={coverImage}
                       className="aspect-[4/3] w-full bg-zinc-950 object-cover"
-                      controls
+                      autoPlay
+                      loop
                       muted
                       playsInline
-                      preload="metadata"
+                      preload="auto"
+                      aria-label={coverAlt || "Vídeo de capa"}
                     />
                   ) : coverImage.startsWith("data:") ? (
                     <img src={coverImage} alt={coverAlt} className="aspect-[4/3] w-full object-cover" />

@@ -104,10 +104,12 @@ export default function AdminBlogPreview({ fallback, editHref }: Props) {
                   <video
                     src={data.coverImage}
                     className="aspect-[4/3] w-full bg-zinc-950 object-cover"
-                    controls
+                    autoPlay
+                    loop
                     muted
                     playsInline
-                    preload="metadata"
+                    preload="auto"
+                    aria-label={data.coverAlt || "Vídeo de capa"}
                   />
                 ) : (
                   <img
