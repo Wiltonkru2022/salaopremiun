@@ -11,7 +11,6 @@ function getErrorMessage(value: string | string[] | undefined) {
   if (!code) return null;
 
   const messages: Record<string, string> = {
-    sessao_expirada: "Sua sessao expirou. Entre novamente.",
     salao_indisponivel:
       "Esse salao nao esta disponivel no app cliente agora. Confira o plano ou tente outro salao.",
   };
@@ -69,7 +68,7 @@ export default async function LoginClientePage({
                 Entrar no app cliente
               </h1>
               <p className="mt-2.5 text-sm leading-6 text-zinc-300">
-                Entre com sua conta global para acompanhar horarios e agendar em qualquer salao publicado.
+                Acompanhe seus horarios e agende seus proximos cuidados.
               </p>
             </section>
 

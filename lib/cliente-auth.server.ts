@@ -152,12 +152,23 @@ export async function createClienteSession(session: ClienteAppSession) {
 
 export async function getClienteSessionFromCookie(): Promise<ClienteAppSession | null> {
   const cookieStore = await cookies();
-  const raw = cookieStore.get(COOKIE_NAME)?.value;
-  if (!raw) {
+  const candidates = cookieStore
+    .getAll(COOKIE_NAME)
+    .map((cookie) => cookie.value)
+    .filter(Boolean);
+
+  if (!candidates.length) {
     return null;
   }
 
-  return parseSession(raw);
+  for (const raw of candidates) {
+    const session = parseSession(raw);
+    if (session?.idConta) {
+      return session;
+    }
+  }
+
+  return null;
 }
 
 export async function requireClienteSession() {

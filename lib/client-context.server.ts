@@ -100,11 +100,7 @@ export async function requireClienteAppContext(): Promise<ClienteAppServerContex
   const validation = await validateClienteAppSession();
 
   if (!validation.context) {
-    redirect(
-      `/app-cliente/logout?destino=${encodeURIComponent(
-        "/app-cliente/login?erro=sessao_expirada"
-      )}`
-    );
+    redirect("/app-cliente/logout?destino=/app-cliente/login");
   }
 
   return validation.context;

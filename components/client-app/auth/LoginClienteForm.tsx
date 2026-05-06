@@ -66,11 +66,7 @@ export default function LoginClienteForm({
         <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
           Depois do login, voce volta para <strong>{salaoNome}</strong>.
         </div>
-      ) : (
-        <div className="mt-4 rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-600">
-          Seu login e global. Os vinculos com cada salao acontecem so quando voce realmente usar aquele perfil.
-        </div>
-      )}
+      ) : null}
 
       <div className="mt-5 space-y-4">
         <div>
