@@ -8,6 +8,8 @@ import {
   AlignLeft,
   AlignRight,
   Bold,
+  CheckCircle2,
+  ChevronDown,
   Eye,
   Heading1,
   Heading2,
@@ -18,6 +20,7 @@ import {
   List,
   ListOrdered,
   MousePointerClick,
+  Pilcrow,
   Quote,
   RefreshCw,
   Save,
@@ -26,6 +29,7 @@ import {
   Type,
   Underline,
   Video,
+  WifiOff,
 } from "lucide-react";
 import type { BlogCategory, BlogPost } from "@/lib/blog/content";
 import { createBlogPost } from "@/app/(admin-master)/admin-master/blog/actions";
@@ -41,6 +45,24 @@ type EditorModal =
   | { type: "button"; label: string; url: string }
   | null;
 
+type FloatingMenu = {
+  open: boolean;
+  x: number;
+  y: number;
+  query: string;
+};
+
+type BubbleMenu = {
+  open: boolean;
+  x: number;
+  y: number;
+};
+
+type UploadState = {
+  label: string;
+  progress: number;
+} | null;
+
 const fontOptions = [
   "Inter, Arial, sans-serif",
   "Manrope, Arial, sans-serif",
@@ -55,6 +77,7 @@ const fontOptions = [
 const MAX_INLINE_IMAGE_BYTES = 4 * 1024 * 1024;
 const MAX_INLINE_VIDEO_BYTES = 14 * 1024 * 1024;
 const MAX_FORM_CONTENT_BYTES = 22 * 1024 * 1024;
+const AUTOSAVE_INTERVAL_MS = 30000;
 
 function stripHtml(value: string) {
   return value.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
@@ -62,7 +85,7 @@ function stripHtml(value: string) {
 
 function estimateReadTime(value: string) {
   const words = stripHtml(value).split(/\s+/).filter(Boolean).length;
-  return `${Math.max(1, Math.ceil(words / 180))} min`;
+  return `${Math.max(1, Math.ceil(words / 200))} min`;
 }
 
 function escapeHtml(value: string) {
@@ -88,6 +111,13 @@ function slugify(value: string) {
     .slice(0, 120);
 }
 
+function getEditorImagesWithoutAlt(editor: HTMLDivElement | null) {
+  if (!editor) return 0;
+  return Array.from(editor.querySelectorAll("img")).filter(
+    (image) => !image.getAttribute("alt")?.trim()
+  ).length;
+}
+
 export default function AdminBlogEditor({ post, categories }: Props) {
   const [actionState, formAction, isSaving] = useActionState(createBlogPost, {});
   const editorRef = useRef<HTMLDivElement>(null);
@@ -105,6 +135,11 @@ export default function AdminBlogEditor({ post, categories }: Props) {
   const savedRangeRef = useRef<Range | null>(null);
   const selectedInlineImageRef = useRef<HTMLImageElement | null>(null);
   const selectedInlineVideoRef = useRef<HTMLVideoElement | null>(null);
+  const slugTouchedRef = useRef(Boolean(post?.slug));
+  const autosaveKeyRef = useRef(
+    `salaopremium-blog-autosave-${post?.id || post?.slug || "novo"}`
+  );
+  const autosaveTimerRef = useRef<number | null>(null);
   const [title, setTitle] = useState(post?.title || "");
   const [slug, setSlug] = useState(post?.slug || "");
   const [description, setDescription] = useState(post?.description || "");
@@ -118,14 +153,39 @@ export default function AdminBlogEditor({ post, categories }: Props) {
   const [featured, setFeatured] = useState(Boolean(post?.featured));
   const [fontSize, setFontSize] = useState(18);
   const [modal, setModal] = useState<EditorModal>(null);
+  const [slashMenu, setSlashMenu] = useState<FloatingMenu>({
+    open: false,
+    x: 0,
+    y: 0,
+    query: "",
+  });
+  const [bubbleMenu, setBubbleMenu] = useState<BubbleMenu>({
+    open: false,
+    x: 0,
+    y: 0,
+  });
+  const [uploadState, setUploadState] = useState<UploadState>(null);
   const [selectedInlineImageName, setSelectedInlineImageName] = useState("");
   const [selectedInlineVideoName, setSelectedInlineVideoName] = useState("");
   const [editorNotice, setEditorNotice] = useState("");
+  const [autosaveStatus, setAutosaveStatus] = useState("Rascunho local pronto");
   const [readTime, setReadTime] = useState(() =>
     estimateReadTime(contentValueRef.current)
   );
   const previewKey = "salaopremium-blog-preview";
   const previewHref = `/admin-master/blog/${slug || "novo"}/preview`;
+  const slashCommands = [
+    { id: "h2", label: "Subtítulo H2", icon: Heading2 },
+    { id: "h3", label: "Chamada H3", icon: Heading3 },
+    { id: "p", label: "Parágrafo", icon: Pilcrow },
+    { id: "image", label: "Imagem", icon: ImagePlus },
+    { id: "video", label: "Vídeo", icon: Video },
+    { id: "quote", label: "Citação", icon: Quote },
+    { id: "button", label: "Botão", icon: MousePointerClick },
+  ];
+  const filteredSlashCommands = slashCommands.filter((command) =>
+    command.label.toLowerCase().includes(slashMenu.query.toLowerCase())
+  );
 
   function updateReadTime(value: string, updateVisibleValue = false) {
     const nextReadTime = estimateReadTime(value);
@@ -134,15 +194,136 @@ export default function AdminBlogEditor({ post, categories }: Props) {
     return nextReadTime;
   }
 
+  const isNewPost = !post?.id;
+
   useEffect(() => {
     if (editorInitializedRef.current || !editorRef.current) return;
+    const savedDraft = window.localStorage.getItem(autosaveKeyRef.current);
+    if (savedDraft) {
+      try {
+        const draft = JSON.parse(savedDraft) as {
+          title?: string;
+          slug?: string;
+          description?: string;
+          excerpt?: string;
+          tags?: string;
+          coverImage?: string;
+          coverAlt?: string;
+          content?: string;
+        };
+        if (isNewPost) {
+          if (draft.title) setTitle(draft.title);
+          if (draft.slug) setSlug(draft.slug);
+          if (draft.description) setDescription(draft.description);
+          if (draft.excerpt) setExcerpt(draft.excerpt);
+          if (draft.tags) setTags(draft.tags);
+          if (draft.coverImage) setCoverImage(draft.coverImage);
+          if (draft.coverAlt) setCoverAlt(draft.coverAlt);
+        }
+        if (draft.content) contentValueRef.current = draft.content;
+        setAutosaveStatus("Rascunho local recuperado");
+      } catch {
+        setAutosaveStatus("Rascunho local pronto");
+      }
+    }
+
     editorRef.current.innerHTML = contentValueRef.current;
     if (contentInputRef.current) {
       contentInputRef.current.value = contentValueRef.current;
     }
     updateReadTime(contentValueRef.current, true);
     editorInitializedRef.current = true;
-  }, []);
+  }, [isNewPost]);
+
+  useEffect(() => {
+    autosaveTimerRef.current = window.setInterval(() => {
+      const nextContent = editorRef.current?.innerHTML || "";
+      contentValueRef.current = nextContent;
+      if (contentInputRef.current) contentInputRef.current.value = nextContent;
+      updateReadTime(nextContent, true);
+      window.localStorage.setItem(
+        autosaveKeyRef.current,
+        JSON.stringify({
+          title,
+          slug,
+          description,
+          excerpt,
+          categorySlug,
+          coverImage,
+          coverAlt,
+          tags,
+          featured,
+          content: nextContent,
+          savedAt: new Date().toISOString(),
+        })
+      );
+      setAutosaveStatus(
+        `Rascunho local salvo ${new Date().toLocaleTimeString("pt-BR", {
+          hour: "2-digit",
+          minute: "2-digit",
+        })}`
+      );
+    }, AUTOSAVE_INTERVAL_MS);
+
+    return () => {
+      if (autosaveTimerRef.current) {
+        window.clearInterval(autosaveTimerRef.current);
+      }
+    };
+  }, [
+    categorySlug,
+    coverAlt,
+    coverImage,
+    description,
+    excerpt,
+    featured,
+    slug,
+    tags,
+    title,
+  ]);
+
+  const plainContent = stripHtml(contentValueRef.current);
+  const keyword = tags
+    .split(",")
+    .map((tag) => tag.trim())
+    .filter(Boolean)[0];
+  const missingAltCount = getEditorImagesWithoutAlt(editorRef.current);
+  const seoChecks = [
+    {
+      label: "Título",
+      ok: title.trim().length >= 35 && title.trim().length <= 70,
+      hint: "35 a 70 caracteres",
+    },
+    {
+      label: "Descrição",
+      ok:
+        description.trim().length >= 90 &&
+        description.trim().length <= 160 &&
+        (!keyword ||
+          description.toLowerCase().includes(keyword.toLowerCase()) ||
+          title.toLowerCase().includes(keyword.toLowerCase())),
+      hint: keyword ? `inclua "${keyword}"` : "90 a 160 caracteres",
+    },
+    {
+      label: "Imagens",
+      ok: missingAltCount === 0 && Boolean(coverAlt.trim()),
+      hint: missingAltCount
+        ? `${missingAltCount} imagem(ns) sem alt`
+        : "capa e imagens com alt",
+    },
+    {
+      label: "Conteúdo",
+      ok: plainContent.split(/\s+/).filter(Boolean).length >= 300,
+      hint: "300+ palavras",
+    },
+  ];
+  const seoScore = seoChecks.filter((check) => check.ok).length;
+  const seoStatus =
+    seoScore >= 4
+      ? { label: "SEO forte", color: "bg-emerald-500", text: "text-emerald-700" }
+      : seoScore >= 2
+        ? { label: "SEO médio", color: "bg-amber-500", text: "text-amber-700" }
+        : { label: "SEO fraco", color: "bg-red-500", text: "text-red-700" };
 
   function syncContent(updateVisibleReadTime = false) {
     const nextContent = editorRef.current?.innerHTML || "";
@@ -150,6 +331,89 @@ export default function AdminBlogEditor({ post, categories }: Props) {
     if (contentInputRef.current) contentInputRef.current.value = nextContent;
     updateReadTime(nextContent, updateVisibleReadTime);
     return nextContent;
+  }
+
+  function saveLocalDraft() {
+    const nextContent = syncContent(true);
+    const payload = {
+      title,
+      slug,
+      description,
+      excerpt,
+      categorySlug,
+      coverImage,
+      coverAlt,
+      tags,
+      featured,
+      content: nextContent,
+      savedAt: new Date().toISOString(),
+    };
+    window.localStorage.setItem(autosaveKeyRef.current, JSON.stringify(payload));
+    setAutosaveStatus(
+      `Rascunho local salvo ${new Date().toLocaleTimeString("pt-BR", {
+        hour: "2-digit",
+        minute: "2-digit",
+      })}`
+    );
+  }
+
+  function getRangeRect(range: Range) {
+    const rect = range.getBoundingClientRect();
+    if (rect.width || rect.height) return rect;
+    const marker = document.createElement("span");
+    marker.appendChild(document.createTextNode("\u200b"));
+    range.insertNode(marker);
+    const markerRect = marker.getBoundingClientRect();
+    marker.remove();
+    return markerRect;
+  }
+
+  function updateBubbleMenu() {
+    const selection = window.getSelection();
+    if (
+      !selection ||
+      selection.rangeCount === 0 ||
+      selection.isCollapsed ||
+      !editorRef.current?.contains(selection.getRangeAt(0).commonAncestorContainer)
+    ) {
+      setBubbleMenu((current) => ({ ...current, open: false }));
+      return;
+    }
+
+    const rect = selection.getRangeAt(0).getBoundingClientRect();
+    setBubbleMenu({
+      open: true,
+      x: rect.left + rect.width / 2,
+      y: Math.max(74, rect.top - 12),
+    });
+    saveSelection();
+  }
+
+  async function uploadBlogMedia(file: File, placement: string) {
+    setUploadState({ label: `Enviando ${file.name}`, progress: 12 });
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("placement", placement);
+
+    const response = await fetch("/api/admin-master/blog/media", {
+      method: "POST",
+      body: formData,
+    });
+    setUploadState({ label: `Processando ${file.name}`, progress: 78 });
+    const payload = (await response.json().catch(() => ({}))) as {
+      publicUrl?: string;
+      message?: string;
+      type?: "image" | "video";
+      name?: string;
+    };
+
+    if (!response.ok || !payload.publicUrl) {
+      throw new Error(payload.message || "Nao foi possivel enviar a midia.");
+    }
+
+    setUploadState({ label: `${file.name} enviado`, progress: 100 });
+    window.setTimeout(() => setUploadState(null), 700);
+    return payload;
   }
 
   function saveSelection() {
@@ -283,12 +547,6 @@ export default function AdminBlogEditor({ post, categories }: Props) {
     setModal(null);
   }
 
-  function readFileAsDataUrl(file: File, callback: (value: string) => void) {
-    const reader = new FileReader();
-    reader.onload = () => callback(String(reader.result || ""));
-    reader.readAsDataURL(file);
-  }
-
   function fileSizeLabel(bytes: number) {
     return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
   }
@@ -305,7 +563,7 @@ export default function AdminBlogEditor({ post, categories }: Props) {
     return false;
   }
 
-  function handleCoverFile(file?: File) {
+  async function handleCoverFile(file?: File) {
     if (!file) return;
     const isVideo = file.type.startsWith("video/");
     if (
@@ -318,10 +576,16 @@ export default function AdminBlogEditor({ post, categories }: Props) {
       if (coverInputRef.current) coverInputRef.current.value = "";
       return;
     }
-    readFileAsDataUrl(file, (value) => {
-      setCoverImage(value);
+    try {
+      const uploaded = await uploadBlogMedia(file, "cover");
+      setCoverImage(uploaded.publicUrl || "");
       if (!coverAlt) setCoverAlt(file.name.replace(/\.[^.]+$/, ""));
-    });
+      setEditorNotice("");
+    } catch (error) {
+      setEditorNotice(
+        error instanceof Error ? error.message : "Nao foi possivel enviar a capa."
+      );
+    }
     if (coverInputRef.current) coverInputRef.current.value = "";
   }
 
@@ -331,17 +595,24 @@ export default function AdminBlogEditor({ post, categories }: Props) {
     if (coverInputRef.current) coverInputRef.current.value = "";
   }
 
-  function handleInlineImage(file?: File) {
+  async function handleInlineImage(file?: File) {
     if (!file) return;
     if (!canUseFile(file, MAX_INLINE_IMAGE_BYTES, "Imagem")) {
       if (inlineImageInputRef.current) inlineImageInputRef.current.value = "";
       return;
     }
-    readFileAsDataUrl(file, (value) => {
+    try {
+      const uploaded = await uploadBlogMedia(file, "inline-image");
       insertHtmlAtSelection(
-        `<figure><img src="${value}" alt="${escapeAttribute(file.name)}" style="width:100%;border-radius:18px;margin:16px 0" /><figcaption>${escapeHtml(file.name)}</figcaption></figure>`
+        `<figure><img src="${escapeAttribute(uploaded.publicUrl || "")}" alt="${escapeAttribute(file.name)}" style="width:100%;border-radius:18px;margin:16px 0" loading="lazy" /><figcaption>${escapeHtml(file.name)}</figcaption></figure>`
       );
-    });
+    } catch (error) {
+      setEditorNotice(
+        error instanceof Error
+          ? error.message
+          : "Nao foi possivel enviar a imagem."
+      );
+    }
     if (inlineImageInputRef.current) inlineImageInputRef.current.value = "";
   }
 
@@ -385,7 +656,7 @@ export default function AdminBlogEditor({ post, categories }: Props) {
     syncContent(true);
   }
 
-  function replaceSelectedInlineImage(file?: File) {
+  async function replaceSelectedInlineImage(file?: File) {
     const image = selectedInlineImageRef.current;
     if (!file || !image) return;
     if (!canUseFile(file, MAX_INLINE_IMAGE_BYTES, "Imagem")) {
@@ -394,31 +665,43 @@ export default function AdminBlogEditor({ post, categories }: Props) {
       }
       return;
     }
-    readFileAsDataUrl(file, (value) => {
-      image.setAttribute("src", value);
+    try {
+      const uploaded = await uploadBlogMedia(file, "inline-image");
+      image.setAttribute("src", uploaded.publicUrl || "");
       image.setAttribute("alt", file.name);
       const figure = image.closest("figure");
       const caption = figure?.querySelector("figcaption");
       if (caption) caption.textContent = file.name;
       setSelectedInlineImageName(file.name);
       syncContent(true);
-    });
+    } catch (error) {
+      setEditorNotice(
+        error instanceof Error
+          ? error.message
+          : "Nao foi possivel trocar a imagem."
+      );
+    }
     if (replaceInlineImageInputRef.current) {
       replaceInlineImageInputRef.current.value = "";
     }
   }
 
-  function handleInlineVideo(file?: File) {
+  async function handleInlineVideo(file?: File) {
     if (!file) return;
     if (!canUseFile(file, MAX_INLINE_VIDEO_BYTES, "Vídeo")) {
       if (inlineVideoInputRef.current) inlineVideoInputRef.current.value = "";
       return;
     }
-    readFileAsDataUrl(file, (value) => {
+    try {
+      const uploaded = await uploadBlogMedia(file, "inline-video");
       insertHtmlAtSelection(
-        `<figure><video src="${value}" data-name="${escapeAttribute(file.name)}" controls playsinline style="width:100%;border-radius:18px;margin:16px 0;background:#111"></video><figcaption>${escapeHtml(file.name)}</figcaption></figure>`
+        `<figure><video src="${escapeAttribute(uploaded.publicUrl || "")}" data-name="${escapeAttribute(file.name)}" controls playsinline preload="metadata" style="width:100%;border-radius:18px;margin:16px 0;background:#111"></video><figcaption>${escapeHtml(file.name)}</figcaption></figure>`
       );
-    });
+    } catch (error) {
+      setEditorNotice(
+        error instanceof Error ? error.message : "Nao foi possivel enviar o video."
+      );
+    }
     if (inlineVideoInputRef.current) inlineVideoInputRef.current.value = "";
   }
 
@@ -432,7 +715,7 @@ export default function AdminBlogEditor({ post, categories }: Props) {
     syncContent(true);
   }
 
-  function replaceSelectedInlineVideo(file?: File) {
+  async function replaceSelectedInlineVideo(file?: File) {
     const video = selectedInlineVideoRef.current;
     if (!file || !video) return;
     if (!canUseFile(file, MAX_INLINE_VIDEO_BYTES, "Vídeo")) {
@@ -441,17 +724,114 @@ export default function AdminBlogEditor({ post, categories }: Props) {
       }
       return;
     }
-    readFileAsDataUrl(file, (value) => {
-      video.setAttribute("src", value);
+    try {
+      const uploaded = await uploadBlogMedia(file, "inline-video");
+      video.setAttribute("src", uploaded.publicUrl || "");
       video.dataset.name = file.name;
       const figure = video.closest("figure");
       const caption = figure?.querySelector("figcaption");
       if (caption) caption.textContent = file.name;
       setSelectedInlineVideoName(file.name);
       syncContent(true);
-    });
+    } catch (error) {
+      setEditorNotice(
+        error instanceof Error ? error.message : "Nao foi possivel trocar o video."
+      );
+    }
     if (replaceInlineVideoInputRef.current) {
       replaceInlineVideoInputRef.current.value = "";
+    }
+  }
+
+  function getSlashQuery() {
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) return null;
+    const range = selection.getRangeAt(0);
+    if (!editorRef.current?.contains(range.commonAncestorContainer)) return null;
+
+    const preRange = range.cloneRange();
+    preRange.selectNodeContents(editorRef.current);
+    preRange.setEnd(range.endContainer, range.endOffset);
+    const text = preRange.toString();
+    const match = text.match(/(?:^|\s)\/([\p{L}\p{N}-]*)$/u);
+    return match ? match[1] : null;
+  }
+
+  function updateSlashMenu() {
+    const query = getSlashQuery();
+    if (query === null) {
+      setSlashMenu((current) => ({ ...current, open: false }));
+      return;
+    }
+
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) return;
+    const rect = getRangeRect(selection.getRangeAt(0).cloneRange());
+    setSlashMenu({
+      open: true,
+      query,
+      x: Math.max(16, rect.left),
+      y: rect.bottom + 10,
+    });
+  }
+
+  function deleteSlashCommand() {
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) return;
+    const range = selection.getRangeAt(0);
+    const query = getSlashQuery();
+    if (query === null) return;
+    const node = range.startContainer;
+    if (node.nodeType !== Node.TEXT_NODE) return;
+    const start = Math.max(0, range.startOffset - query.length - 1);
+    range.setStart(node, start);
+    range.deleteContents();
+  }
+
+  function runSlashCommand(command: string) {
+    editorRef.current?.focus();
+    restoreSelection();
+    deleteSlashCommand();
+    setSlashMenu((current) => ({ ...current, open: false }));
+
+    if (command === "h2") applyBlock("h2");
+    if (command === "h3") applyBlock("h3");
+    if (command === "p") applyBlock("p");
+    if (command === "quote") applyBlock("blockquote");
+    if (command === "button") insertButton();
+    if (command === "image") inlineImageInputRef.current?.click();
+    if (command === "video") inlineVideoInputRef.current?.click();
+    syncContent(true);
+  }
+
+  async function handleEditorPaste(event: React.ClipboardEvent<HTMLDivElement>) {
+    const image = Array.from(event.clipboardData.files).find((file) =>
+      file.type.startsWith("image/")
+    );
+    if (!image) return;
+
+    event.preventDefault();
+    saveSelection();
+    await handleInlineImage(image);
+  }
+
+  function handleEditorKeyDown(event: React.KeyboardEvent<HTMLDivElement>) {
+    if (slashMenu.open) {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setSlashMenu((current) => ({ ...current, open: false }));
+        return;
+      }
+      if (event.key === "Enter") {
+        event.preventDefault();
+        runSlashCommand(filteredSlashCommands[0]?.id || "p");
+        return;
+      }
+    }
+
+    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s") {
+      event.preventDefault();
+      saveLocalDraft();
     }
   }
 
@@ -478,7 +858,7 @@ export default function AdminBlogEditor({ post, categories }: Props) {
 
   function ensureSlug(nextTitle: string) {
     setTitle(nextTitle);
-    if (!post?.slug && !slug) setSlug(slugify(nextTitle));
+    if (!slugTouchedRef.current) setSlug(slugify(nextTitle));
   }
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -566,6 +946,21 @@ export default function AdminBlogEditor({ post, categories }: Props) {
         </div>
       ) : null}
 
+      {uploadState ? (
+        <div className="fixed bottom-5 left-1/2 z-50 w-[min(420px,calc(100vw-32px))] -translate-x-1/2 rounded-2xl border border-zinc-200 bg-white p-3 shadow-2xl">
+          <div className="flex items-center justify-between gap-3 text-xs font-black uppercase tracking-[0.18em] text-zinc-500">
+            <span>{uploadState.label}</span>
+            <span>{uploadState.progress}%</span>
+          </div>
+          <div className="mt-2 h-2 overflow-hidden rounded-full bg-zinc-100">
+            <div
+              className="h-full rounded-full bg-zinc-950 transition-all"
+              style={{ width: `${uploadState.progress}%` }}
+            />
+          </div>
+        </div>
+      ) : null}
+
       <main className="mx-auto grid max-w-7xl gap-5 px-4 py-5 xl:grid-cols-[310px_minmax(0,1fr)]">
         <aside className="space-y-4">
           <section className="rounded-[22px] border border-zinc-200 bg-white p-4 shadow-sm">
@@ -593,7 +988,10 @@ export default function AdminBlogEditor({ post, categories }: Props) {
                 <input
                   name="slug"
                   value={slug}
-                  onChange={(event) => setSlug(slugify(event.target.value))}
+                  onChange={(event) => {
+                    slugTouchedRef.current = true;
+                    setSlug(slugify(event.target.value));
+                  }}
                   className="rounded-2xl border border-zinc-200 px-3 py-2.5 text-sm outline-none focus:border-zinc-950"
                 />
               </label>
@@ -618,6 +1016,35 @@ export default function AdminBlogEditor({ post, categories }: Props) {
           </section>
 
           <section className="rounded-[22px] border border-zinc-200 bg-white p-4 shadow-sm">
+            <div className="flex items-center justify-between gap-3">
+              <div className="text-xs font-black uppercase tracking-[0.22em] text-zinc-400">
+                SEO em tempo real
+              </div>
+              <span className={`inline-flex items-center gap-2 text-xs font-black ${seoStatus.text}`}>
+                <span className={`h-2.5 w-2.5 rounded-full ${seoStatus.color}`} />
+                {seoStatus.label}
+              </span>
+            </div>
+            <div className="mt-4 grid gap-2">
+              {seoChecks.map((check) => (
+                <div
+                  key={check.label}
+                  className="flex items-start justify-between gap-3 rounded-2xl border border-zinc-100 bg-zinc-50 px-3 py-2 text-xs"
+                >
+                  <span className="font-black text-zinc-800">{check.label}</span>
+                  <span
+                    className={`text-right font-bold ${
+                      check.ok ? "text-emerald-700" : "text-amber-700"
+                    }`}
+                  >
+                    {check.ok ? "Ok" : check.hint}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section className="rounded-[22px] border border-zinc-200 bg-white p-4 shadow-sm">
             <div className="text-xs font-black uppercase tracking-[0.22em] text-zinc-400">
               Capa do post
             </div>
@@ -626,7 +1053,9 @@ export default function AdminBlogEditor({ post, categories }: Props) {
               type="file"
               accept="image/*,video/*"
               className="hidden"
-              onChange={(event) => handleCoverFile(event.target.files?.[0])}
+              onChange={(event) => {
+                void handleCoverFile(event.target.files?.[0]);
+              }}
             />
             <button
               type="button"
@@ -827,7 +1256,9 @@ export default function AdminBlogEditor({ post, categories }: Props) {
               type="file"
               accept="image/*"
               className="hidden"
-              onChange={(event) => handleInlineImage(event.target.files?.[0])}
+              onChange={(event) => {
+                void handleInlineImage(event.target.files?.[0]);
+              }}
             />
             <input
               ref={replaceInlineImageInputRef}
@@ -835,7 +1266,7 @@ export default function AdminBlogEditor({ post, categories }: Props) {
               accept="image/*"
               className="hidden"
               onChange={(event) =>
-                replaceSelectedInlineImage(event.target.files?.[0])
+                void replaceSelectedInlineImage(event.target.files?.[0])
               }
             />
             <input
@@ -843,7 +1274,9 @@ export default function AdminBlogEditor({ post, categories }: Props) {
               type="file"
               accept="video/*"
               className="hidden"
-              onChange={(event) => handleInlineVideo(event.target.files?.[0])}
+              onChange={(event) => {
+                void handleInlineVideo(event.target.files?.[0]);
+              }}
             />
             <input
               ref={replaceInlineVideoInputRef}
@@ -851,9 +1284,24 @@ export default function AdminBlogEditor({ post, categories }: Props) {
               accept="video/*"
               className="hidden"
               onChange={(event) =>
-                replaceSelectedInlineVideo(event.target.files?.[0])
+                void replaceSelectedInlineVideo(event.target.files?.[0])
               }
             />
+          </div>
+
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-200 bg-white px-4 py-2 text-xs font-bold text-zinc-500">
+            <span className="inline-flex items-center gap-2">
+              <CheckCircle2 size={14} className="text-emerald-600" />
+              Tempo estimado: {readTime}
+            </span>
+            <span className="inline-flex items-center gap-2">
+              {typeof navigator !== "undefined" && !navigator.onLine ? (
+                <WifiOff size={14} className="text-amber-600" />
+              ) : (
+                <Save size={14} className="text-zinc-400" />
+              )}
+              {autosaveStatus}
+            </span>
           </div>
 
           {selectedInlineImageName ? (
@@ -913,10 +1361,24 @@ export default function AdminBlogEditor({ post, categories }: Props) {
             contentEditable
             dir="ltr"
             suppressContentEditableWarning
-            onInput={() => syncContent()}
+            onInput={() => {
+              syncContent(true);
+              updateSlashMenu();
+            }}
             onClick={handleEditorClick}
-            onMouseUp={saveSelection}
-            onKeyUp={saveSelection}
+            onMouseUp={() => {
+              saveSelection();
+              updateBubbleMenu();
+            }}
+            onKeyDown={handleEditorKeyDown}
+            onKeyUp={() => {
+              saveSelection();
+              updateBubbleMenu();
+              updateSlashMenu();
+            }}
+            onPaste={(event) => {
+              void handleEditorPaste(event);
+            }}
             onBlur={() => {
               saveSelection();
               syncContent(true);
@@ -925,6 +1387,57 @@ export default function AdminBlogEditor({ post, categories }: Props) {
           />
         </section>
       </main>
+
+      {bubbleMenu.open ? (
+        <div
+          className="fixed z-50 flex -translate-x-1/2 -translate-y-full items-center gap-1 rounded-2xl border border-zinc-200 bg-zinc-950 p-1 text-white shadow-2xl"
+          style={{ left: bubbleMenu.x, top: bubbleMenu.y }}
+          onMouseDown={(event) => event.preventDefault()}
+        >
+          <button type="button" onClick={() => exec("bold")} className="rounded-xl p-2 hover:bg-white/10" title="Negrito">
+            <Bold size={16} />
+          </button>
+          <button type="button" onClick={() => exec("italic")} className="rounded-xl p-2 hover:bg-white/10" title="Itálico">
+            <Italic size={16} />
+          </button>
+          <button type="button" onClick={insertLink} className="rounded-xl p-2 hover:bg-white/10" title="Link">
+            <Link2 size={16} />
+          </button>
+          <button type="button" onClick={() => applyFontSize(`${fontSize}px`)} className="rounded-xl px-2 py-1 text-xs font-black hover:bg-white/10" title="Aplicar tamanho">
+            {fontSize}px
+          </button>
+        </div>
+      ) : null}
+
+      {slashMenu.open ? (
+        <div
+          className="fixed z-50 w-72 overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-2xl"
+          style={{ left: slashMenu.x, top: slashMenu.y }}
+          onMouseDown={(event) => event.preventDefault()}
+        >
+          <div className="flex items-center justify-between gap-3 border-b border-zinc-100 px-3 py-2 text-xs font-black uppercase tracking-[0.18em] text-zinc-400">
+            Inserir bloco <ChevronDown size={14} />
+          </div>
+          <div className="p-1">
+            {(filteredSlashCommands.length ? filteredSlashCommands : slashCommands).map(
+              (command) => {
+                const Icon = command.icon;
+                return (
+                  <button
+                    key={command.id}
+                    type="button"
+                    onClick={() => runSlashCommand(command.id)}
+                    className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm font-bold text-zinc-800 hover:bg-zinc-100"
+                  >
+                    <Icon size={16} />
+                    {command.label}
+                  </button>
+                );
+              }
+            )}
+          </div>
+        </div>
+      ) : null}
 
       {modal ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/55 px-4 backdrop-blur-sm">

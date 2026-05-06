@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, CalendarDays, Clock, Tag } from "lucide-react";
 import BlogCoverMedia from "@/components/blog/BlogCoverMedia";
 import { BlogFooter, BlogHeader } from "@/components/blog/BlogChrome";
+import BlogPostEngagement from "@/components/blog/BlogPostEngagement";
 import { isVideoMedia } from "@/lib/blog/media";
 import { DOMINIO_BLOG, DOMINIO_RAIZ } from "@/lib/proxy/domain-config";
 import { getBlogPost, getPublishedBlogPosts } from "@/lib/blog/service";
@@ -109,6 +110,8 @@ export default async function BlogPostPage({ params }: Props) {
                 {post.excerpt}
               </p>
 
+              <BlogPostEngagement postId={post.id} postSlug={post.slug} />
+
               <div
                 className="blog-editor-prose mt-8 text-[1.03rem] leading-8 text-zinc-700"
                 dangerouslySetInnerHTML={{
@@ -155,7 +158,7 @@ export default async function BlogPostPage({ params }: Props) {
               </section>
 
               <section className="rounded-[24px] border border-zinc-200 bg-white p-4 shadow-sm">
-                <h2 className="font-display text-2xl font-black">Leia também</h2>
+                <h2 className="font-display text-2xl font-black">Você também pode gostar</h2>
                 <div className="mt-4 space-y-3">
                   {(related.length ? related : allPosts.filter((item) => item.slug !== post.slug).slice(0, 3)).map((item) => (
                     <Link

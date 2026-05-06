@@ -67,7 +67,12 @@ function buildCsp() {
     "https://www.google.com",
     "https://maps.google.com",
   ];
-  const mediaSrc = ["'self'", "data:", "blob:"];
+  const mediaSrc = [
+    "'self'",
+    "data:",
+    "blob:",
+    ...(supabaseHostname ? [`https://${supabaseHostname}`] : []),
+  ];
   return [
     "default-src 'self'",
     "base-uri 'self'",

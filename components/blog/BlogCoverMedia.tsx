@@ -1,6 +1,9 @@
 import Image from "next/image";
 import { isVideoMedia } from "@/lib/blog/media";
 
+const BLUR_DATA_URL =
+  "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0nMTAnIGhlaWdodD0nMTAnIHZpZXdCb3g9JzAgMCAxMCAxMCcgeG1sbnM9J2h0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnJz48ZmlsdGVyIGlkPSdiJz48ZmVHYXVzc2lhbkJsdXIgc3RkRGV2aWF0aW9uPScxLjUnLz48L2ZpbHRlcj48cmVjdCB3aWR0aD0nMTAnIGhlaWdodD0nMTAnIGZpbGw9JyNlN2U1ZGUnLz48cmVjdCB3aWR0aD0nMTAnIGhlaWdodD0nNScgZmlsbD0nI2Y2ZjRlZScgZmlsdGVyPSd1cmwoI2IpJy8+PC9zdmc+";
+
 type Props = {
   src: string;
   alt: string;
@@ -44,6 +47,8 @@ export default function BlogCoverMedia({
       width={width}
       height={height}
       priority={priority}
+      placeholder="blur"
+      blurDataURL={BLUR_DATA_URL}
       className={className}
     />
   );
