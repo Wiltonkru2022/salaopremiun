@@ -47,6 +47,8 @@
     "audit:launch-readiness": "node scripts/audit/launch-readiness-audit.mjs",
     "e2e:proxy": "node scripts/e2e/proxy-smoke.mjs",
     "e2e:sales": "node scripts/e2e/saas-sales-flow.mjs",
+    "e2e:provision": "node scripts/e2e/provision-test-accounts.mjs",
+    "e2e:playwright": "node scripts/e2e/playwright-full-smoke.mjs",
     "validate": "npm run ci:validate",
     "validate:release": "npm run release:validate",
     "launch:validate": "npm run lint && npm run typecheck && npm run db:audit && npm run audit:service-role && npm run audit:admin-actions && npm run audit:admin-client-inventory && npm run audit:admin-surface && npm run audit:api-guards && npm run audit:critical-routes && npm run audit:no-wildcard-select && npm run audit:architecture-boundaries && npm run audit:launch-readiness && npm run build"

@@ -4,6 +4,7 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseHostname = supabaseUrl ? new URL(supabaseUrl).hostname : undefined;
 const appRootDomain = process.env.APP_ROOT_DOMAIN || "salaopremiun.com.br";
 const loginHost = process.env.APP_LOGIN_HOST || `login.${appRootDomain}`;
+const isDevelopment = process.env.NODE_ENV !== "production";
 const managedHosts = [
   appRootDomain,
   `www.${appRootDomain}`,
@@ -24,6 +25,16 @@ const managedHosts = [
   .filter(Boolean);
 
 function buildCsp() {
+  const devPort = process.env.PORT || "3000";
+  const formAction = ["'self'", `https://${loginHost}`];
+  if (isDevelopment) {
+    formAction.push(
+      `http://${loginHost}:${devPort}`,
+      `http://localhost:${devPort}`,
+      `http://127.0.0.1:${devPort}`
+    );
+  }
+
   const connectSrc = [
     "'self'",
     ...managedHosts.map((host) => `https://${host}`),
@@ -35,6 +46,12 @@ function buildCsp() {
     "https://*.vercel-insights.com",
     "https://va.vercel-scripts.com",
   ];
+  if (isDevelopment) {
+    for (const host of managedHosts) {
+      connectSrc.push(`http://${host}:${devPort}`, `https://${host}:${devPort}`);
+    }
+    connectSrc.push(`http://localhost:${devPort}`, `http://127.0.0.1:${devPort}`);
+  }
   const manifestSrc = ["'self'", ...managedHosts.map((host) => `https://${host}`)];
   const imgSrc = [
     "'self'",
@@ -53,10 +70,10 @@ function buildCsp() {
   return [
     "default-src 'self'",
     "base-uri 'self'",
-    `form-action 'self' https://${loginHost}`,
+    `form-action ${formAction.join(" ")}`,
     `frame-ancestors ${frameAncestors.join(" ")}`,
     "object-src 'none'",
-    "script-src 'self' 'unsafe-inline'",
+    `script-src 'self' 'unsafe-inline'${isDevelopment ? " 'unsafe-eval'" : ""}`,
     "style-src 'self' 'unsafe-inline'",
     `img-src ${imgSrc.join(" ")}`,
     "font-src 'self' data:",
@@ -64,8 +81,10 @@ function buildCsp() {
     `frame-src ${frameSrc.join(" ")}`,
     "worker-src 'self' blob:",
     `manifest-src ${Array.from(new Set(manifestSrc)).join(" ")}`,
-    "upgrade-insecure-requests",
-  ].join("; ");
+    isDevelopment ? "" : "upgrade-insecure-requests",
+  ]
+    .filter(Boolean)
+    .join("; ");
 }
 
 const securityHeaders = [

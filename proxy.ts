@@ -40,10 +40,21 @@ function hasSupabaseAuthCookies(request: NextRequest) {
     );
 }
 
+function isLocalDevHost(host: string) {
+  return (
+    process.env.NODE_ENV !== "production" &&
+    (host === "localhost" || host === "127.0.0.1" || host === "[::1]")
+  );
+}
+
 function handleUnauthenticatedRoute(
   request: NextRequest,
   ctx: ReturnType<typeof buildProxyRouteContext>
 ) {
+  if (isLocalDevHost(ctx.host) && ctx.rotaAutenticacao) {
+    return NextResponse.next();
+  }
+
   if (ctx.rotaPainel) {
     if (!ctx.isLoginHost) {
       return redirectToHost(request, DOMINIO_LOGIN, "/login");
