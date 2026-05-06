@@ -173,6 +173,24 @@ function buildAddressQuery(form: SalaoForm) {
     .join(", ");
 }
 
+function buildMapSearchCandidates(query: string) {
+  const parts = query
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean);
+  const candidates = [
+    query,
+    parts.filter((_, index) => index !== 1).join(", "),
+    parts.slice(0, 4).join(", "),
+    parts.slice(2).join(", "),
+    parts.slice(-4).join(", "),
+  ];
+
+  return Array.from(
+    new Set(candidates.map((item) => item.trim()).filter(Boolean))
+  );
+}
+
 type MapLocationChange = {
   latitude: string;
   longitude: string;
@@ -214,6 +232,7 @@ function MapLocationPicker({
   const [loadingMap, setLoadingMap] = useState(false);
   const [lookupMessage, setLookupMessage] = useState("");
   const [dragging, setDragging] = useState(false);
+  const [searchQuery, setSearchQuery] = useState(addressQuery);
   const currentLat = parseCoordinate(latitude) ?? -23.55052;
   const currentLng = parseCoordinate(longitude) ?? -46.633308;
   const [mapCenter, setMapCenter] = useState({
@@ -313,52 +332,63 @@ function MapLocationPicker({
     };
   }
 
-  const buscarEndereco = useCallback(async () => {
-    if (!addressQuery) {
-      setLookupMessage("Preencha o endereco do salao antes de buscar no mapa.");
-      return;
-    }
+  const buscarEndereco = useCallback(
+    async (query?: string) => {
+      const candidates = buildMapSearchCandidates(query || addressQuery);
 
-    try {
+      if (!candidates.length) {
+        setLookupMessage("Digite rua, bairro ou cidade para posicionar o mapa.");
+        return false;
+      }
+
       setLookupMessage("");
       setLoadingMap(true);
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(
-          addressQuery
-        )}`
-      );
-      const data = (await response.json()) as Array<{
-        lat?: string;
-        lon?: string;
-      }>;
-      const nextLat = parseCoordinate(data[0]?.lat);
-      const nextLng = parseCoordinate(data[0]?.lon);
 
-      if (nextLat !== null && nextLng !== null) {
-        setMapCenter({
-          latitude: nextLat,
-          longitude: nextLng,
-        });
-        onChange({
-          latitude: nextLat.toFixed(7),
-          longitude: nextLng.toFixed(7),
-        });
+      try {
+        for (const candidate of candidates) {
+          const response = await fetch(
+            `https://nominatim.openstreetmap.org/search?format=json&countrycodes=br&limit=1&q=${encodeURIComponent(
+              candidate
+            )}`
+          );
+          const data = (await response.json()) as Array<{
+            lat?: string;
+            lon?: string;
+          }>;
+          const nextLat = parseCoordinate(data[0]?.lat);
+          const nextLng = parseCoordinate(data[0]?.lon);
+
+          if (nextLat !== null && nextLng !== null) {
+            setMapCenter({
+              latitude: nextLat,
+              longitude: nextLng,
+            });
+            onChange({
+              latitude: nextLat.toFixed(7),
+              longitude: nextLng.toFixed(7),
+            });
+            setLookupMessage(
+              "Mapa posicionado. Arraste ate o ponteiro ficar na entrada exata do salao."
+            );
+            return true;
+          }
+        }
+
         setLookupMessage(
-          "Mapa ajustado pelo endereco cadastrado. Arraste o mapa ate o ponteiro ficar no local exato."
+          "Digite um trecho mais simples, como rua, bairro e cidade, ou arraste o mapa ate o salao."
         );
-      } else {
+        return false;
+      } catch {
         setLookupMessage(
-          "Nao encontrei esse endereco automaticamente. Arraste o mapa ate o ponto do salao."
+          "A busca do mapa oscilou agora. Voce ainda pode arrastar o mapa ate o ponto do salao."
         );
+        return false;
+      } finally {
+        setLoadingMap(false);
       }
-    } catch {
-      setLookupMessage(
-        "Nao foi possivel buscar o endereco agora. Arraste o mapa manualmente ate o ponto do salao."
-      );
-    } finally {
-      setLoadingMap(false);
-    }
-  }, [addressQuery, onChange]);
+    },
+    [addressQuery, onChange]
+  );
 
   async function confirmarPonto() {
     try {
@@ -430,64 +460,22 @@ function MapLocationPicker({
   }
 
   useEffect(() => {
-    let cancelled = false;
-
     async function localizarEnderecoInicial() {
-      let initialLat = parseCoordinate(latitude);
-      let initialLng = parseCoordinate(longitude);
+      const initialLat = parseCoordinate(latitude);
+      const initialLng = parseCoordinate(longitude);
 
       if (initialLat !== null && initialLng !== null) return;
       if (!addressQuery) return;
 
-      try {
-        setLookupMessage("");
-        setLoadingMap(true);
-        const response = await fetch(
-          `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(
-            addressQuery
-          )}`
-        );
-        const data = (await response.json()) as Array<{
-          lat?: string;
-          lon?: string;
-        }>;
-
-        if (cancelled) return;
-
-        initialLat = parseCoordinate(data[0]?.lat);
-        initialLng = parseCoordinate(data[0]?.lon);
-
-        if (initialLat !== null && initialLng !== null) {
-          setMapCenter({
-            latitude: initialLat,
-            longitude: initialLng,
-          });
-          onChange({
-            latitude: initialLat.toFixed(7),
-            longitude: initialLng.toFixed(7),
-          });
-        } else {
-          setLookupMessage(
-            "Endereco nao encontrado automaticamente. Arraste o mapa ate o ponto do salao."
-          );
-        }
-      } catch {
-        if (!cancelled) {
-          setLookupMessage(
-            "Nao foi possivel buscar o endereco agora. Arraste o mapa manualmente."
-          );
-        }
-      } finally {
-        if (!cancelled) setLoadingMap(false);
-      }
+      await buscarEndereco(addressQuery);
     }
 
     void localizarEnderecoInicial();
+  }, [addressQuery, buscarEndereco, latitude, longitude]);
 
-    return () => {
-      cancelled = true;
-    };
-  }, [addressQuery, latitude, longitude, onChange]);
+  useEffect(() => {
+    setSearchQuery(addressQuery);
+  }, [addressQuery]);
 
   useEffect(() => {
     const nextLat = parseCoordinate(latitude);
@@ -522,10 +510,16 @@ function MapLocationPicker({
             Ao confirmar, o endereco e o ponto ficam prontos para salvar.
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:min-w-[320px]">
+          <input
+            value={searchQuery}
+            onChange={(event) => setSearchQuery(event.target.value)}
+            placeholder="Rua, bairro ou cidade"
+            className="min-h-10 rounded-2xl border border-zinc-200 bg-white px-4 text-sm outline-none transition focus:border-zinc-950 focus:ring-4 focus:ring-zinc-100"
+          />
           <button
             type="button"
-            onClick={buscarEndereco}
+            onClick={() => void buscarEndereco(searchQuery)}
             disabled={loadingMap}
             className="inline-flex items-center gap-2 rounded-full bg-zinc-950 px-4 py-2 text-xs font-bold text-white disabled:opacity-60"
           >
