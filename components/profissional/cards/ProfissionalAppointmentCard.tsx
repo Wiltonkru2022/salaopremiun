@@ -15,6 +15,8 @@ export default function ProfissionalAppointmentCard({
     status === "confirmado"
       ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
       : "bg-amber-50 text-amber-700 border border-amber-200";
+  const statusLabel =
+    status === "confirmado" ? "Confirmado" : "Pendente de confirmacao";
 
   return (
     <div className="rounded-[1.2rem] border border-zinc-200 bg-white p-3.5 shadow-sm">
@@ -36,7 +38,7 @@ export default function ProfissionalAppointmentCard({
         <span
           className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium capitalize ${statusClasses}`}
         >
-          {status}
+          {statusLabel}
         </span>
       </div>
     </div>

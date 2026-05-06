@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getProfissionalSessionFromCookie } from "@/lib/profissional-auth.server";
+import { notifyClientAppointmentConfirmed } from "@/lib/push-notifications";
 import { runAdminOperation } from "@/lib/supabase/admin-ops";
 import {
   buscarConfiguracaoAgendaProfissional,
@@ -166,6 +167,16 @@ export async function atualizarAgendamentoProfissionalAction(
       },
     });
 
+    if (
+      status === "confirmado" &&
+      String(agendamento.status || "").toLowerCase() !== "confirmado"
+    ) {
+      await notifyClientAppointmentConfirmed({
+        idAgendamento,
+        idSalao: session.idSalao,
+      });
+    }
+
     revalidatePath("/app-profissional/agenda");
     revalidatePath(`/app-profissional/agenda/${idAgendamento}`);
     revalidatePath("/app-profissional/inicio");
@@ -218,6 +229,56 @@ export async function marcarClienteNaoCompareceuAction(formData: FormData) {
     if (isRedirectError(error)) throw error;
     const message =
       error instanceof Error ? error.message : "Erro ao atualizar status.";
+    redirect(buildUrl(idAgendamento || "invalido", "erro", message));
+  }
+}
+
+export async function confirmarAgendamentoProfissionalAction(formData: FormData) {
+  const session = await getSessionOrRedirect();
+  const idAgendamento = String(formData.get("id_agendamento") || "").trim();
+
+  try {
+    if (!idAgendamento) throw new Error("Agendamento invalido.");
+    const agendamento = await buscarAgendamentoPermitido({
+      idSalao: session.idSalao,
+      idProfissional: session.idProfissional,
+      idAgendamento,
+    });
+
+    if (String(agendamento.status || "").toLowerCase() !== "confirmado") {
+      await runAdminOperation({
+        action: "app_profissional_agendamento_confirmar",
+        actorId: session.idProfissional,
+        idSalao: session.idSalao,
+        run: async (supabase) => {
+          const { error } = await supabase
+            .from("agendamentos")
+            .update({
+              status: "confirmado",
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", idAgendamento)
+            .eq("id_salao", session.idSalao)
+            .eq("profissional_id", session.idProfissional);
+
+          if (error) throw new Error(error.message);
+        },
+      });
+
+      await notifyClientAppointmentConfirmed({
+        idAgendamento,
+        idSalao: session.idSalao,
+      });
+    }
+
+    revalidatePath("/app-profissional/agenda");
+    revalidatePath(`/app-profissional/agenda/${idAgendamento}`);
+    revalidatePath("/app-profissional/inicio");
+    redirect(buildUrl(idAgendamento, "ok", "Agendamento confirmado."));
+  } catch (error) {
+    if (isRedirectError(error)) throw error;
+    const message =
+      error instanceof Error ? error.message : "Erro ao confirmar agendamento.";
     redirect(buildUrl(idAgendamento || "invalido", "erro", message));
   }
 }

@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import ClientAppBottomNav from "@/components/client-app/ClientAppBottomNav";
+import PushPermissionRuntime from "@/components/push/PushPermissionRuntime";
 
 export default function ClientAppFrame({
   children,
@@ -25,26 +26,29 @@ export default function ClientAppFrame({
             <p className="mt-1 hidden text-sm text-zinc-500 sm:block">{subtitle}</p>
           </div>
 
-          <nav className="hidden flex-wrap items-center gap-2 text-sm font-semibold text-zinc-700 md:flex">
-            <Link
-              href="/app-cliente/inicio"
-              className="rounded-full border border-zinc-200 bg-zinc-50 px-3 py-2 transition hover:bg-zinc-100"
-            >
-              Saloes
-            </Link>
-            <Link
-              href="/app-cliente/agendamentos"
-              className="rounded-full border border-zinc-200 bg-zinc-50 px-3 py-2 transition hover:bg-zinc-100"
-            >
-              Meus agendamentos
-            </Link>
-            <Link
-              href="/app-cliente/perfil"
-              className="rounded-full border border-zinc-200 bg-zinc-50 px-3 py-2 transition hover:bg-zinc-100"
-            >
-              Perfil
-            </Link>
-          </nav>
+          <div className="flex flex-col items-end gap-2">
+            <PushPermissionRuntime audience="cliente_app" compact />
+            <nav className="hidden flex-wrap items-center gap-2 text-sm font-semibold text-zinc-700 md:flex">
+              <Link
+                href="/app-cliente/inicio"
+                className="rounded-full border border-zinc-200 bg-zinc-50 px-3 py-2 transition hover:bg-zinc-100"
+              >
+                Saloes
+              </Link>
+              <Link
+                href="/app-cliente/agendamentos"
+                className="rounded-full border border-zinc-200 bg-zinc-50 px-3 py-2 transition hover:bg-zinc-100"
+              >
+                Meus agendamentos
+              </Link>
+              <Link
+                href="/app-cliente/perfil"
+                className="rounded-full border border-zinc-200 bg-zinc-50 px-3 py-2 transition hover:bg-zinc-100"
+              >
+                Perfil
+              </Link>
+            </nav>
+          </div>
         </header>
 
         <main className="flex-1 py-4">{children}</main>

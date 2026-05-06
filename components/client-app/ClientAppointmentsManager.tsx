@@ -30,6 +30,16 @@ function buildWhatsappHref(item: ClientAppAppointmentListItem) {
   )}`;
 }
 
+function formatStatus(value: string) {
+  const normalized = String(value || "").toLowerCase();
+  if (normalized === "pendente") return "Pendente de confirmacao";
+  if (normalized === "confirmado") return "Confirmado";
+  if (normalized === "cancelado") return "Cancelado";
+  if (normalized === "atendido") return "Atendido";
+  if (normalized === "faltou") return "Nao compareceu";
+  return value || "Status";
+}
+
 function ActionButton({
   idleLabel,
   pendingLabel,
@@ -143,7 +153,7 @@ export default function ClientAppointmentsManager({
 }) {
   const successMessage = useMemo(() => {
     if (successKey === "agendado") {
-      return "Seu pedido de agendamento foi enviado com sucesso.";
+      return "Seu pedido foi enviado. O salao vai confirmar o horario.";
     }
     if (successKey === "cancelado") {
       return "Seu agendamento foi cancelado.";
@@ -203,7 +213,7 @@ export default function ClientAppointmentsManager({
                   </div>
                 </div>
                 <div className="rounded-full bg-zinc-950 px-3 py-1 text-xs font-bold uppercase tracking-[0.12em] text-white">
-                  {item.status}
+                  {formatStatus(item.status)}
                 </div>
               </div>
 

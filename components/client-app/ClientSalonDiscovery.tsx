@@ -8,9 +8,11 @@ import type { ClientAppSalonListItem } from "@/lib/client-app/queries";
 export default function ClientSalonDiscovery({
   saloes,
   initialSearch = "",
+  isLoggedIn = false,
 }: {
   saloes: ClientAppSalonListItem[];
   initialSearch?: string;
+  isLoggedIn?: boolean;
 }) {
   const [localSearch, setLocalSearch] = useState(initialSearch);
   const [sortMode, setSortMode] = useState<"recommended" | "rating" | "price">(
@@ -178,6 +180,7 @@ export default function ClientSalonDiscovery({
             <ClientAppSalonCard
               key={salao.id}
               salao={salao}
+              isLoggedIn={isLoggedIn}
             />
           ))}
         </div>

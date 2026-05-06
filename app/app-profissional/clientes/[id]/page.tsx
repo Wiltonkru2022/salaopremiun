@@ -83,8 +83,9 @@ function getStatusLabel(status?: string | null) {
   if (value === "aguardando_pagamento") return "Aguardando pagamento";
   if (value === "cancelado") return "Cancelado";
   if (value === "faltou") return "Nao compareceu";
+  if (value === "pendente") return "Pendente de confirmacao";
 
-  return status || "Pendente";
+  return status || "Pendente de confirmacao";
 }
 
 function getStatusTone(status?: string | null) {

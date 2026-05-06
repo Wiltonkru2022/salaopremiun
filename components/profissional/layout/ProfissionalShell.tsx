@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 import MonitoringContextBridge from "@/components/monitoring/MonitoringContextBridge";
+import PushPermissionRuntime from "@/components/push/PushPermissionRuntime";
 import ProfissionalInstallPrompt from "@/components/profissional/pwa/ProfissionalInstallPrompt";
 import ProfissionalPwaRuntime from "@/components/profissional/pwa/ProfissionalPwaRuntime";
 import type { ProfissionalAppNotification } from "@/lib/profissional-app-notification-contracts";
@@ -50,6 +51,11 @@ export default function ProfissionalShell({
       <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col overflow-x-hidden bg-[#f5f5f5]/95 shadow-[0_0_80px_rgba(15,23,42,0.08)] sm:max-w-lg lg:max-w-2xl">
         <ProfissionalHeader title={title} subtitle={subtitle} />
         {mounted ? <ProfissionalInstallPrompt /> : null}
+        {mounted ? (
+          <div className="px-3 pt-2 sm:px-4">
+            <PushPermissionRuntime audience="profissional_app" />
+          </div>
+        ) : null}
         {mounted ? <ProfissionalAlerts notifications={notifications} /> : null}
 
         <main className="min-w-0 overflow-x-hidden flex-1 px-3 pb-28 pt-3 sm:px-4 sm:pt-4">

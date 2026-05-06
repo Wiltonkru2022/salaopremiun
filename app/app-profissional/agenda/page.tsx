@@ -33,7 +33,7 @@ function getStatusMeta(status: string) {
   if (value === "faltou") return { label: "Nao compareceu", tone: "danger" as const };
   if (value === "cancelado") return { label: "Cancelado", tone: "danger" as const };
 
-  return { label: "Pendente", tone: "warning" as const };
+  return { label: "Pendente de confirmacao", tone: "warning" as const };
 }
 
 export default async function AgendaProfissionalPage({

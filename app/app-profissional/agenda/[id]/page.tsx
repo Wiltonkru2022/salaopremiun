@@ -16,6 +16,7 @@ import {
   abrirComandaDoAgendamentoAction,
   atualizarAgendamentoProfissionalAction,
   cancelarAgendamentoProfissionalAction,
+  confirmarAgendamentoProfissionalAction,
   enviarComandaDoAgendamentoParaCaixaAction,
   marcarClienteNaoCompareceuAction,
 } from "./actions";
@@ -58,7 +59,7 @@ type ComandaRow = {
 };
 
 const STATUS_OPTIONS = [
-  ["pendente", "Pendente"],
+  ["pendente", "Pendente de confirmacao"],
   ["confirmado", "Confirmado"],
   ["em_atendimento", "Em atendimento"],
   ["atendido", "Atendido"],
@@ -295,6 +296,15 @@ export default async function AgendamentoDetalheProfissionalPage({
             <div className="mt-3 rounded-[1.1rem] bg-white/10 p-3.5 text-sm text-zinc-200">
               {agendamento.observacoes}
             </div>
+          ) : null}
+
+          {String(status).toLowerCase() === "pendente" ? (
+            <form action={confirmarAgendamentoProfissionalAction} className="mt-3">
+              <input type="hidden" name="id_agendamento" value={agendamento.id} />
+              <button className="w-full rounded-[18px] bg-white px-4 py-2.5 text-sm font-black text-zinc-950 shadow-sm transition hover:bg-zinc-100">
+                Confirmar agendamento
+              </button>
+            </form>
           ) : null}
         </section>
 

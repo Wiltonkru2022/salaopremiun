@@ -77,6 +77,17 @@ function getStatusTone(status?: string | null) {
   return "warning" as const;
 }
 
+function getStatusLabel(status?: string | null) {
+  const value = String(status || "").toLowerCase();
+  if (value === "pendente") return "Pendente de confirmacao";
+  if (value === "confirmado") return "Confirmado";
+  if (value === "cancelado") return "Cancelado";
+  if (value === "faltou") return "Nao compareceu";
+  if (value === "em_atendimento") return "Em atendimento";
+  if (value === "atendido") return "Atendido";
+  return status || "Pendente de confirmacao";
+}
+
 export default async function NovoAgendamentoProfissionalPage({
   searchParams,
 }: {
@@ -379,7 +390,7 @@ export default async function NovoAgendamentoProfissionalPage({
                     </div>
 
                     <ProfissionalStatusPill
-                      label={String(item.status || "Pendente")}
+                      label={getStatusLabel(item.status)}
                       tone={getStatusTone(item.status)}
                     />
                   </div>

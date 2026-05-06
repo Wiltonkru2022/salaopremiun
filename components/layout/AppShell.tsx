@@ -6,6 +6,7 @@ import Header from "@/components/layout/Header";
 import { PainelSessionProvider } from "@/components/layout/PainelSessionProvider";
 import Sidebar from "@/components/layout/Sidebar";
 import MonitoringContextBridge from "@/components/monitoring/MonitoringContextBridge";
+import PushPermissionRuntime from "@/components/push/PushPermissionRuntime";
 import type {
   Permissoes,
   PlanoRecursos,
@@ -193,6 +194,9 @@ export default function AppShell({
               );
             }}
           >
+            <div className="mb-2 flex justify-end">
+              <PushPermissionRuntime audience="salao_painel" compact />
+            </div>
             <div className="min-h-[calc(100dvh-4.4rem)] bg-zinc-50 p-1.5 md:p-2 xl:p-2.5">
               <div className="min-w-0">{children}</div>
             </div>

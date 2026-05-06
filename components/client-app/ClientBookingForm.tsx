@@ -29,7 +29,7 @@ function SubmitButton({ disabled }: { disabled?: boolean }) {
       disabled={isDisabled}
       className="h-12 w-full rounded-2xl bg-zinc-950 text-sm font-semibold text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60"
     >
-      {pending ? "Enviando agendamento..." : "Agendar horario"}
+      {pending ? "Enviando pedido..." : "Solicitar agendamento"}
     </button>
   );
 }

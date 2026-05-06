@@ -14,9 +14,11 @@ function formatCurrency(value: number | null) {
 export default function ClientAppSalonCard({
   salao,
   distanceKm = null,
+  isLoggedIn = false,
 }: {
   salao: ClientAppSalonListItem;
   distanceKm?: number | null;
+  isLoggedIn?: boolean;
 }) {
   return (
     <article className="overflow-hidden rounded-[1.45rem] border border-zinc-200 bg-white shadow-[0_18px_48px_rgba(15,23,42,0.08)] transition hover:-translate-y-0.5 hover:border-zinc-300 hover:shadow-[0_22px_60px_rgba(15,23,42,0.12)]">
@@ -158,12 +160,14 @@ export default function ClientAppSalonCard({
           >
             Ver horarios
           </Link>
-          <Link
-            href={`/app-cliente/cadastro?next=${encodeURIComponent(`/app-cliente/salao/${salao.id}`)}`}
-            className="inline-flex h-11 items-center justify-center rounded-2xl border border-zinc-200 bg-white px-4 text-sm font-bold text-zinc-800 transition hover:bg-zinc-50"
-          >
-            Criar conta
-          </Link>
+          {!isLoggedIn ? (
+            <Link
+              href={`/app-cliente/cadastro?next=${encodeURIComponent(`/app-cliente/salao/${salao.id}`)}`}
+              className="inline-flex h-11 items-center justify-center rounded-2xl border border-zinc-200 bg-white px-4 text-sm font-bold text-zinc-800 transition hover:bg-zinc-50"
+            >
+              Criar conta
+            </Link>
+          ) : null}
         </div>
       </div>
     </article>

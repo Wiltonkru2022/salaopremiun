@@ -1,6 +1,7 @@
 import { runAdminOperation } from "@/lib/supabase/admin-ops";
 import { cancelarAgendamentoComComanda } from "@/lib/agenda/cancelarAgendamentoComComanda";
 import { canSalonAppearInClientApp } from "@/lib/client-app/eligibility";
+import { notifySalonAboutClientBooking } from "@/lib/push-notifications";
 import { ensureClienteContaVinculadaAoSalao } from "@/app/services/cliente-app/auth";
 import {
   ensureDiaFuncionamento,
@@ -275,6 +276,7 @@ async function loadBookingBaseContext(params: {
     config,
     profissional,
     duracao,
+    servicoNome: String(servicoResult.data.nome || "").trim() || "Servico",
   };
 }
 
@@ -495,7 +497,7 @@ export async function createClienteAppAppointment(
       const [clienteResult, bookingContext] = await Promise.all([
         supabaseAdmin
           .from("clientes")
-          .select("id, id_salao, status")
+          .select("id, id_salao, nome, status")
           .eq("id", idCliente)
           .eq("id_salao", idSalao)
           .limit(1)
@@ -523,7 +525,7 @@ export async function createClienteAppAppointment(
         return bookingContext;
       }
 
-      const { config, profissional, duracao } = bookingContext;
+      const { config, profissional, duracao, servicoNome } = bookingContext;
       const horaFim = addDurationToTime(horaInicio, duracao);
 
       if (!ensureDiaFuncionamento({ config, dateString: data })) {
@@ -626,7 +628,7 @@ export async function createClienteAppAppointment(
         };
       }
 
-      const { error: insertError } = await supabaseAdmin
+      const { data: insertedAppointment, error: insertError } = await supabaseAdmin
         .from("agendamentos")
         .insert({
           id_salao: idSalao,
@@ -640,19 +642,32 @@ export async function createClienteAppAppointment(
           observacoes,
           status: "pendente",
           origem: "app_cliente",
-        });
+        })
+        .select("id")
+        .maybeSingle();
 
-      if (insertError) {
+      if (insertError || !insertedAppointment?.id) {
         return {
           ok: false,
           error: "Nao foi possivel salvar seu agendamento agora.",
         };
       }
 
+      await notifySalonAboutClientBooking({
+        idAgendamento: String(insertedAppointment.id),
+        idSalao,
+        idProfissional,
+        clienteNome:
+          String(clienteResult.data.nome || "").trim() || "Cliente do app",
+        servicoNome,
+        data,
+        horaInicio,
+      });
+
       return {
         ok: true,
         message:
-          "Agendamento criado com sucesso. O salao ja pode confirmar seu horario.",
+          "Pedido enviado. O salao vai confirmar seu horario.",
       };
     },
   });
