@@ -151,9 +151,14 @@ export async function createBlogCategory(formData: FormData) {
   const nome = readText(formData, "nome");
   const descricao = readText(formData, "descricao");
   const slug = slugify(readText(formData, "slug") || nome);
+  const ordem = Number(readText(formData, "ordem") || 100);
 
   if (!nome || !slug) {
     throw new Error("Informe nome e slug da categoria.");
+  }
+
+  if (isUuidLikeCategory(nome) || isUuidLikeCategory(slug)) {
+    throw new Error("Use um nome de categoria em português, não um código interno.");
   }
 
   const supabase = getSupabaseAdmin() as any;
@@ -162,6 +167,7 @@ export async function createBlogCategory(formData: FormData) {
       nome,
       slug,
       descricao,
+      ordem: Number.isFinite(ordem) ? ordem : 100,
       ativo: true,
     },
     { onConflict: "slug" }

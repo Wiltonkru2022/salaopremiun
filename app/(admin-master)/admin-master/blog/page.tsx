@@ -1,14 +1,16 @@
 import Link from "next/link";
-import { BookOpen, Eye, Plus, SquarePen } from "lucide-react";
+import { BookOpen, Eye, FolderPlus, Plus, SquarePen } from "lucide-react";
 import BlogCoverMedia from "@/components/blog/BlogCoverMedia";
-import type { BlogPost } from "@/lib/blog/content";
+import type { BlogCategory, BlogPost } from "@/lib/blog/content";
+import { createBlogCategory } from "@/app/(admin-master)/admin-master/blog/actions";
 import { getAdminBlogData } from "@/lib/blog/service";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminMasterBlogPage() {
-  const { posts, usingFallback } = await getAdminBlogData();
+  const { posts, categories, usingFallback } = await getAdminBlogData();
   const postsList = posts as BlogPost[];
+  const categoriesList = categories as BlogCategory[];
   const publicados = postsList.filter((post) => post.status === "publicado").length;
   const rascunhos = postsList.filter((post) => post.status === "rascunho").length;
 
@@ -65,6 +67,67 @@ export default async function AdminMasterBlogPage() {
             posts criados no editor passam a vir do banco.
           </p>
         ) : null}
+      </section>
+
+      <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_420px]">
+        <div className="rounded-[24px] border border-zinc-200 bg-white p-5 shadow-sm">
+          <div className="flex items-center gap-2">
+            <FolderPlus size={19} className="text-zinc-500" />
+            <h3 className="font-display text-2xl font-black">Categorias</h3>
+          </div>
+          <div className="mt-4 flex flex-wrap gap-2">
+            {categoriesList.map((category) => (
+              <span
+                key={category.id}
+                className="rounded-full border border-zinc-200 px-3 py-1.5 text-sm font-bold text-zinc-700"
+              >
+                {category.name}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        <form
+          action={createBlogCategory}
+          className="rounded-[24px] border border-zinc-200 bg-white p-5 shadow-sm"
+        >
+          <div className="text-xs font-black uppercase tracking-[0.22em] text-zinc-400">
+            Nova categoria
+          </div>
+          <div className="mt-4 grid gap-3">
+            <input
+              name="nome"
+              required
+              placeholder="Nome da categoria"
+              className="rounded-2xl border border-zinc-200 px-4 py-3 text-sm font-bold outline-none focus:border-zinc-950"
+            />
+            <input
+              name="slug"
+              placeholder="Slug opcional"
+              className="rounded-2xl border border-zinc-200 px-4 py-3 text-sm outline-none focus:border-zinc-950"
+            />
+            <textarea
+              name="descricao"
+              rows={2}
+              placeholder="Descrição curta"
+              className="resize-none rounded-2xl border border-zinc-200 px-4 py-3 text-sm outline-none focus:border-zinc-950"
+            />
+            <input
+              name="ordem"
+              type="number"
+              min={1}
+              placeholder="Ordem"
+              className="rounded-2xl border border-zinc-200 px-4 py-3 text-sm outline-none focus:border-zinc-950"
+            />
+            <button
+              type="submit"
+              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-zinc-950 px-5 py-3 text-sm font-black text-white transition hover:bg-zinc-800"
+            >
+              <FolderPlus size={17} />
+              Criar categoria
+            </button>
+          </div>
+        </form>
       </section>
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">

@@ -109,7 +109,9 @@ export default function AdminBlogEditor({ post, categories }: Props) {
   const [slug, setSlug] = useState(post?.slug || "");
   const [description, setDescription] = useState(post?.description || "");
   const [excerpt, setExcerpt] = useState(post?.excerpt || "");
-  const [categoryId, setCategoryId] = useState(post?.categoryId || categories[0]?.id || "");
+  const [categorySlug, setCategorySlug] = useState(
+    post?.categorySlug || categories[0]?.slug || ""
+  );
   const [coverImage, setCoverImage] = useState(post?.coverImage || "");
   const [coverAlt, setCoverAlt] = useState(post?.coverAlt || "");
   const [tags, setTags] = useState((post?.tags || []).join(", "));
@@ -461,8 +463,8 @@ export default function AdminBlogEditor({ post, categories }: Props) {
       description,
       excerpt,
       categoryName:
-        categories.find((category) => category.id === categoryId)?.name || "Blog",
-      categoryId,
+        categories.find((category) => category.slug === categorySlug)?.name || "Blog",
+      categoryId: categorySlug,
       coverImage,
       coverAlt,
       tags,
@@ -575,12 +577,12 @@ export default function AdminBlogEditor({ post, categories }: Props) {
                 Categoria
                 <select
                   name="categoria_id"
-                  value={categoryId}
-                  onChange={(event) => setCategoryId(event.target.value)}
+                  value={categorySlug}
+                  onChange={(event) => setCategorySlug(event.target.value)}
                   className="rounded-2xl border border-zinc-200 px-3 py-2.5 text-sm font-semibold outline-none focus:border-zinc-950"
                 >
                   {categories.map((category) => (
-                    <option key={category.id} value={category.id}>
+                    <option key={category.id} value={category.slug}>
                       {category.name}
                     </option>
                   ))}
