@@ -5,7 +5,6 @@ import {
   useEffect,
   useMemo,
   useState,
-  type MouseEvent,
   type ReactNode,
 } from "react";
 import { useRouter } from "next/navigation";
@@ -153,6 +152,30 @@ function parseCoordinate(value: string | null | undefined) {
   return Number.isFinite(numeric) ? numeric : null;
 }
 
+function extractGoogleMapsCoordinates(value: string) {
+  const text = value.trim();
+  if (!text) return null;
+
+  const atMatch = text.match(/@(-?\d+(?:\.\d+)?),\s*(-?\d+(?:\.\d+)?)/);
+  const dataMatch = text.match(/!3d(-?\d+(?:\.\d+)?)!4d(-?\d+(?:\.\d+)?)/);
+  const queryMatch = text.match(/[?&]query=(-?\d+(?:\.\d+)?),\s*(-?\d+(?:\.\d+)?)/);
+  const plainMatch = text.match(/^(-?\d+(?:\.\d+)?),\s*(-?\d+(?:\.\d+)?)$/);
+  const match = atMatch || dataMatch || queryMatch || plainMatch;
+
+  if (!match) return null;
+
+  const latitude = Number(match[1]);
+  const longitude = Number(match[2]);
+
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null;
+  if (Math.abs(latitude) > 90 || Math.abs(longitude) > 180) return null;
+
+  return {
+    latitude: latitude.toFixed(7),
+    longitude: longitude.toFixed(7),
+  };
+}
+
 function formatMapPoint(latitude?: string, longitude?: string) {
   const lat = String(latitude || "").trim();
   const lng = String(longitude || "").trim();
@@ -173,15 +196,6 @@ function buildAddressQuery(form: SalaoForm) {
     .join(", ");
 }
 
-function getFileExtension(file: File) {
-  const byName = file.name.split(".").pop()?.toLowerCase();
-  if (byName && /^[a-z0-9]+$/.test(byName)) return byName;
-  if (file.type === "image/png") return "png";
-  if (file.type === "image/webp") return "webp";
-  if (file.type === "image/gif") return "gif";
-  return "jpg";
-}
-
 function MapLocationPicker({
   latitude,
   longitude,
@@ -195,71 +209,79 @@ function MapLocationPicker({
 }) {
   const [loadingMap, setLoadingMap] = useState(false);
   const [lookupMessage, setLookupMessage] = useState("");
-  const zoom = 16;
-  const tileSize = 256;
+  const [googleMapsLink, setGoogleMapsLink] = useState("");
   const currentLat = parseCoordinate(latitude) ?? -23.55052;
   const currentLng = parseCoordinate(longitude) ?? -46.633308;
+  const hasCoords =
+    parseCoordinate(latitude) !== null && parseCoordinate(longitude) !== null;
+  const googleQuery = hasCoords
+    ? `${currentLat.toFixed(7)},${currentLng.toFixed(7)}`
+    : addressQuery || "Brasil";
+  const googleEmbedUrl = `https://www.google.com/maps?q=${encodeURIComponent(
+    googleQuery
+  )}&z=17&output=embed`;
+  const googleOpenUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+    googleQuery
+  )}`;
 
-  function lonToTileX(lng: number, zoomLevel: number) {
-    return ((lng + 180) / 360) * 2 ** zoomLevel;
-  }
-
-  function latToTileY(lat: number, zoomLevel: number) {
-    const radians = (lat * Math.PI) / 180;
-    return (
-      ((1 -
-        Math.log(Math.tan(radians) + 1 / Math.cos(radians)) / Math.PI) /
-        2) *
-      2 ** zoomLevel
-    );
-  }
-
-  function tileXToLon(tileX: number, zoomLevel: number) {
-    return (tileX / 2 ** zoomLevel) * 360 - 180;
-  }
-
-  function tileYToLat(tileY: number, zoomLevel: number) {
-    const radians = Math.atan(Math.sinh(Math.PI * (1 - (2 * tileY) / 2 ** zoomLevel)));
-    return (radians * 180) / Math.PI;
-  }
-
-  const centerTileX = lonToTileX(currentLng, zoom);
-  const centerTileY = latToTileY(currentLat, zoom);
-  const centerTileFloorX = Math.floor(centerTileX);
-  const centerTileFloorY = Math.floor(centerTileY);
-  const centerPixelOffsetX = (centerTileX - centerTileFloorX) * tileSize;
-  const centerPixelOffsetY = (centerTileY - centerTileFloorY) * tileSize;
-
-  const tiles = useMemo(() => {
-    const items: Array<{
-      key: string;
-      x: number;
-      y: number;
-      left: string;
-      top: string;
-    }> = [];
-
-    for (let dx = -2; dx <= 2; dx += 1) {
-      for (let dy = -2; dy <= 2; dy += 1) {
-        const x = centerTileFloorX + dx;
-        const y = centerTileFloorY + dy;
-        items.push({
-          key: `${zoom}-${x}-${y}`,
-          x,
-          y,
-          left: `calc(50% + ${dx * tileSize - centerPixelOffsetX}px)`,
-          top: `calc(50% + ${dy * tileSize - centerPixelOffsetY}px)`,
-        });
-      }
+  const buscarEndereco = useCallback(async () => {
+    if (!addressQuery) {
+      setLookupMessage("Preencha o endereco do salao antes de buscar no mapa.");
+      return;
     }
 
-    return items;
-  }, [
-    centerPixelOffsetX,
-    centerPixelOffsetY,
-    centerTileFloorX,
-    centerTileFloorY,
-  ]);
+    try {
+      setLookupMessage("");
+      setLoadingMap(true);
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(
+          addressQuery
+        )}`
+      );
+      const data = (await response.json()) as Array<{
+        lat?: string;
+        lon?: string;
+      }>;
+      const nextLat = parseCoordinate(data[0]?.lat);
+      const nextLng = parseCoordinate(data[0]?.lon);
+
+      if (nextLat !== null && nextLng !== null) {
+        onChange({
+          latitude: nextLat.toFixed(7),
+          longitude: nextLng.toFixed(7),
+        });
+        setLookupMessage(
+          "Mapa ajustado pelo endereco cadastrado. Confira no Google Maps antes de salvar."
+        );
+      } else {
+        setLookupMessage(
+          "Nao encontrei esse endereco automaticamente. Abra no Google Maps e confira o cadastro."
+        );
+      }
+    } catch {
+      setLookupMessage(
+        "Nao foi possivel buscar o endereco agora. O mapa do Google continua disponivel para conferencia."
+      );
+    } finally {
+      setLoadingMap(false);
+    }
+  }, [addressQuery, onChange]);
+
+  function usarLinkGoogleMaps() {
+    const coords = extractGoogleMapsCoordinates(googleMapsLink);
+
+    if (!coords) {
+      setLookupMessage(
+        "Cole um link do Google Maps com o ponto marcado, ou copie as coordenadas no formato -20.123456, -51.123456."
+      );
+      return;
+    }
+
+    onChange(coords);
+    setLookupMessage(
+      "Ponto atualizado pelo link do Google Maps. Confira o mapa antes de salvar."
+    );
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -295,11 +317,15 @@ function MapLocationPicker({
             longitude: initialLng.toFixed(7),
           });
         } else {
-          setLookupMessage("Endereco nao encontrado automaticamente. Clique no mapa.");
+          setLookupMessage(
+            "Endereco nao encontrado automaticamente. Confira a busca no Google Maps."
+          );
         }
       } catch {
         if (!cancelled) {
-          setLookupMessage("Clique no mapa para marcar o ponto do salao.");
+          setLookupMessage(
+            "Nao foi possivel buscar o endereco agora. Confira a busca no Google Maps."
+          );
         }
       } finally {
         if (!cancelled) setLoadingMap(false);
@@ -313,19 +339,6 @@ function MapLocationPicker({
     };
   }, [addressQuery, latitude, longitude, onChange]);
 
-  function handleMapClick(event: MouseEvent<HTMLDivElement>) {
-    const rect = event.currentTarget.getBoundingClientRect();
-    const offsetX = event.clientX - rect.left - rect.width / 2;
-    const offsetY = event.clientY - rect.top - rect.height / 2;
-    const nextTileX = (centerTileX * tileSize + offsetX) / tileSize;
-    const nextTileY = (centerTileY * tileSize + offsetY) / tileSize;
-
-    onChange({
-      latitude: tileYToLat(nextTileY, zoom).toFixed(7),
-      longitude: tileXToLon(nextTileX, zoom).toFixed(7),
-    });
-  }
-
   return (
     <div className="rounded-[22px] border border-zinc-200 bg-zinc-50 p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -334,48 +347,57 @@ function MapLocationPicker({
             Localizacao no mapa
           </div>
           <p className="mt-1 text-sm leading-6 text-zinc-600">
-            Clique no mapa para colocar o marcador exatamente onde o salao fica.
+            O mapa abre com o endereco cadastrado. Ajuste pelo endereco e confira
+            as ruas no Google Maps antes de salvar.
           </p>
         </div>
-        {loadingMap ? (
-          <span className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-zinc-600">
-            <Loader2 className="animate-spin" size={14} />
-            Buscando endereco
-          </span>
-        ) : null}
-      </div>
-      <div
-        role="button"
-        tabIndex={0}
-        onClick={handleMapClick}
-        onKeyDown={(event) => {
-          if (event.key === "Enter" || event.key === " ") {
-            event.preventDefault();
-          }
-        }}
-        className="relative mt-4 h-[320px] cursor-crosshair overflow-hidden rounded-[20px] border border-zinc-200 bg-zinc-100"
-      >
-        {tiles.map((tile) => (
-          <img
-            key={tile.key}
-            src={`https://tile.openstreetmap.org/${zoom}/${tile.x}/${tile.y}.png`}
-            alt=""
-            draggable={false}
-            className="absolute h-64 w-64 select-none"
-            style={{
-              left: tile.left,
-              top: tile.top,
-            }}
-          />
-        ))}
-        <div className="pointer-events-none absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-full flex-col items-center">
-          <div className="rounded-full bg-zinc-950 px-3 py-1 text-xs font-bold text-white shadow-lg">
-            Salao
-          </div>
-          <div className="h-5 w-5 rotate-45 rounded-br-full rounded-tl-full bg-zinc-950 shadow-lg" />
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={buscarEndereco}
+            disabled={loadingMap}
+            className="inline-flex items-center gap-2 rounded-full bg-zinc-950 px-4 py-2 text-xs font-bold text-white disabled:opacity-60"
+          >
+            {loadingMap ? <Loader2 className="animate-spin" size={14} /> : null}
+            Buscar endereco
+          </button>
+          <a
+            href={googleOpenUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center rounded-full border border-zinc-200 bg-white px-4 py-2 text-xs font-bold text-zinc-700"
+          >
+            Abrir no Google Maps
+          </a>
         </div>
-        <div className="pointer-events-none absolute bottom-2 right-3 rounded-full bg-white/90 px-3 py-1 text-[10px] font-semibold text-zinc-500">
-          OpenStreetMap
+      </div>
+      <div className="mt-4 overflow-hidden rounded-[20px] border border-zinc-200 bg-white">
+        <iframe
+          title="Mapa do salao no Google Maps"
+          src={googleEmbedUrl}
+          className="h-[360px] w-full"
+          loading="lazy"
+          referrerPolicy="no-referrer-when-downgrade"
+        />
+      </div>
+      <div className="mt-4 rounded-[20px] border border-zinc-200 bg-white p-3">
+        <label className="text-xs font-bold uppercase tracking-[0.16em] text-zinc-500">
+          Ponto exato pelo Google Maps
+        </label>
+        <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+          <input
+            value={googleMapsLink}
+            onChange={(event) => setGoogleMapsLink(event.target.value)}
+            placeholder="Cole o link do ponto marcado no Google Maps"
+            className="min-h-11 flex-1 rounded-2xl border border-zinc-200 bg-white px-4 text-sm outline-none transition focus:border-zinc-950 focus:ring-4 focus:ring-zinc-100"
+          />
+          <button
+            type="button"
+            onClick={usarLinkGoogleMaps}
+            className="rounded-2xl border border-zinc-950 bg-white px-4 py-2 text-sm font-bold text-zinc-950 transition hover:bg-zinc-950 hover:text-white"
+          >
+            Usar ponto
+          </button>
         </div>
       </div>
       {lookupMessage ? (
@@ -814,31 +836,31 @@ export default function PerfilSalaoPage() {
       setErro("");
       setUploadingPublicAsset(tipo);
 
-      const extension = getFileExtension(file);
-      const path = `${idSalao}/${tipo}-${Date.now()}.${extension}`;
-      const { error } = await supabase.storage
-        .from("salao-publico")
-        .upload(path, file, {
-          cacheControl: "31536000",
-          contentType: file.type,
-          upsert: true,
-        });
+      const body = new FormData();
+      body.set("file", file);
+      body.set("tipo", tipo);
 
-      if (error) throw error;
+      const response = await fetch("/api/painel/salao-public-assets", {
+        method: "POST",
+        body,
+      });
+      const result = (await response.json().catch(() => null)) as {
+        publicUrl?: string;
+        message?: string;
+      } | null;
 
-      const { data } = supabase.storage
-        .from("salao-publico")
-        .getPublicUrl(path);
-      const publicUrl = data.publicUrl;
+      if (!response.ok) {
+        throw new Error(result?.message || "Nao foi possivel enviar a imagem.");
+      }
 
-      if (!publicUrl) {
+      if (!result?.publicUrl) {
         throw new Error("Nao foi possivel obter a URL publica da imagem.");
       }
 
       const patch =
         tipo === "logo"
-          ? { logo_url: publicUrl }
-          : { foto_capa_url: publicUrl };
+          ? { logo_url: result.publicUrl }
+          : { foto_capa_url: result.publicUrl };
 
       if (destino === "perfil") {
         await atualizarPerfil(
@@ -873,7 +895,6 @@ export default function PerfilSalaoPage() {
         email: comercialDraft.email,
         telefone: comercialDraft.telefone,
         cpf_cnpj: comercialDraft.cpf_cnpj,
-        logo_url: comercialDraft.logo_url,
       },
       "Dados comerciais atualizados com sucesso."
     );
@@ -1380,10 +1401,6 @@ export default function PerfilSalaoPage() {
                   label="CPF/CNPJ"
                   value={perfilForm.cpf_cnpj || "Nao informado"}
                 />
-                <DisplayItem
-                  label="Logo"
-                  value={perfilForm.logo_url || "Sem URL cadastrada"}
-                />
               </div>
             </SectionCard>
 
@@ -1460,11 +1477,6 @@ export default function PerfilSalaoPage() {
                   value={perfilForm.estacionamento ? "Sim" : "Nao"}
                 />
                 <DisplayItem
-                  label="Foto de capa"
-                  value={perfilForm.foto_capa_url || "Sem URL cadastrada"}
-                  multiline
-                />
-                <DisplayItem
                   label="Mapa no app cliente"
                   value={formatMapPoint(
                     perfilForm.latitude,
@@ -1506,7 +1518,7 @@ export default function PerfilSalaoPage() {
                 <SidebarAction
                   icon={<PencilLine size={16} />}
                   title="Editar dados comerciais"
-                  description="Nome, responsavel, e-mail, telefone, documento e logo."
+                  description="Nome, responsavel, e-mail, telefone e documento."
                   onClick={() => abrirModal("comercial")}
                 />
 
@@ -1564,7 +1576,7 @@ export default function PerfilSalaoPage() {
         open={activeModal === "comercial"}
         onClose={() => setActiveModal(null)}
         title="Editar dados comerciais"
-        description="Atualize identidade principal, contatos e logo do negocio."
+        description="Atualize identidade principal, contatos e documento do negocio."
         eyebrow="Perfil do salao"
         maxWidthClassName="max-w-3xl"
         footer={
@@ -1676,18 +1688,10 @@ export default function PerfilSalaoPage() {
             />
           </Field>
 
-          <Field label="Logo URL">
-            <TextInput
-              value={comercialDraft.logo_url}
-              onChange={(event) =>
-                setComercialDraft((prev) => ({
-                  ...prev,
-                  logo_url: event.target.value,
-                }))
-              }
-              placeholder="https://..."
-            />
-          </Field>
+          <div className="rounded-[18px] border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm leading-6 text-zinc-600">
+            A foto do perfil do salao agora e atualizada direto na area
+            Identidade do negocio, clicando na imagem.
+          </div>
         </div>
       </AppModal>
 
