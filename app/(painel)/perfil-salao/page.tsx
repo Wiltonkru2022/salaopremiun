@@ -397,42 +397,6 @@ function MapLocationPicker({
     }
   }
 
-  function usarMinhaLocalizacao() {
-    if (!navigator.geolocation) {
-      setLookupMessage("Este navegador nao liberou localizacao automatica.");
-      return;
-    }
-
-    setLoadingMap(true);
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const nextCenter = {
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude,
-        };
-        setMapCenter(nextCenter);
-        onChange({
-          latitude: nextCenter.latitude.toFixed(7),
-          longitude: nextCenter.longitude.toFixed(7),
-        });
-        setLookupMessage(
-          "Mapa centralizado na sua localizacao. Ajuste o ponteiro e confirme o ponto."
-        );
-        setLoadingMap(false);
-      },
-      () => {
-        setLookupMessage(
-          "Nao foi possivel ler sua localizacao. Arraste o mapa manualmente."
-        );
-        setLoadingMap(false);
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 10000,
-      }
-    );
-  }
-
   function handlePointerDown(event: PointerEvent<HTMLDivElement>) {
     event.currentTarget.setPointerCapture(event.pointerId);
     setDragging(true);
@@ -567,14 +531,6 @@ function MapLocationPicker({
           >
             {loadingMap ? <Loader2 className="animate-spin" size={14} /> : null}
             Buscar endereco
-          </button>
-          <button
-            type="button"
-            onClick={usarMinhaLocalizacao}
-            disabled={loadingMap}
-            className="inline-flex items-center rounded-full border border-zinc-200 bg-white px-4 py-2 text-xs font-bold text-zinc-700"
-          >
-            Minha localizacao
           </button>
         </div>
       </div>
