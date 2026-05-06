@@ -795,7 +795,8 @@ export default function PerfilSalaoPage() {
 
   async function uploadImagemPublica(
     file: File | undefined,
-    tipo: "logo" | "capa"
+    tipo: "logo" | "capa",
+    destino: "draft" | "perfil" = "draft"
   ) {
     if (!file || !idSalao) return;
 
@@ -834,11 +835,24 @@ export default function PerfilSalaoPage() {
         throw new Error("Nao foi possivel obter a URL publica da imagem.");
       }
 
+      const patch =
+        tipo === "logo"
+          ? { logo_url: publicUrl }
+          : { foto_capa_url: publicUrl };
+
+      if (destino === "perfil") {
+        await atualizarPerfil(
+          patch,
+          tipo === "logo"
+            ? "Foto do perfil atualizada com sucesso."
+            : "Foto de capa atualizada com sucesso."
+        );
+        return;
+      }
+
       setAppClienteDraft((prev) => ({
         ...prev,
-        ...(tipo === "logo"
-          ? { logo_url: publicUrl }
-          : { foto_capa_url: publicUrl }),
+        ...patch,
       }));
     } catch (error: unknown) {
       setErro(
@@ -1240,45 +1254,85 @@ export default function PerfilSalaoPage() {
   return (
     <>
       <div className="space-y-4">
-        <section className="overflow-hidden rounded-[28px] border border-zinc-200 bg-white p-5 text-zinc-950 shadow-sm">
-          <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-            <div className="max-w-3xl">
-              <div className="inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1 text-xs font-bold uppercase tracking-[0.2em] text-zinc-600">
-                <Building2 size={13} />
-                Identidade do negocio
-              </div>
-              <h1 className="mt-3 font-display text-3xl font-bold tracking-[-0.05em] sm:text-[2.1rem]">
-                Perfil do salao
-              </h1>
-              <p className="mt-2 text-sm leading-6 text-zinc-500 sm:text-[15px]">
-                Confira os dados do negocio em um lugar so e use as acoes da
-                lateral quando precisar atualizar alguma informacao.
-              </p>
+        <section className="overflow-hidden rounded-[28px] border border-zinc-200 bg-white text-zinc-950 shadow-sm">
+          <label className="group relative block h-56 cursor-pointer bg-zinc-100 md:h-72">
+            {perfilForm.foto_capa_url ? (
+              <img
+                src={perfilForm.foto_capa_url}
+                alt="Foto de capa do salao"
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <div className="h-full bg-gradient-to-br from-zinc-950 via-zinc-800 to-amber-700" />
+            )}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/15 to-transparent transition group-hover:bg-black/25" />
+            <div className="absolute bottom-5 right-5 rounded-2xl bg-white px-4 py-2 text-sm font-bold text-zinc-950 shadow-sm">
+              {uploadingPublicAsset === "capa" ? "Enviando..." : "Trocar capa"}
             </div>
+            <input
+              type="file"
+              accept="image/*"
+              className="sr-only"
+              onChange={(event) =>
+                void uploadImagemPublica(
+                  event.target.files?.[0],
+                  "capa",
+                  "perfil"
+                )
+              }
+            />
+          </label>
 
-            <div className="rounded-[24px] border border-zinc-200 bg-zinc-50 p-3.5">
-              <div className="flex items-center gap-3">
-                <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-2xl bg-white ring-1 ring-zinc-200">
-                  {perfilForm.logo_url ? (
-                    <img
-                      src={perfilForm.logo_url}
-                      alt={perfilForm.nome || "Salao"}
-                      className="h-full w-full object-cover"
-                    />
-                  ) : (
-                    <span className="font-display text-lg font-bold uppercase">
-                      {(perfilForm.nome || "SP").slice(0, 2)}
-                    </span>
-                  )}
+          <div className="relative p-5 pt-0">
+            <label className="group relative -mt-14 flex h-28 w-28 cursor-pointer items-center justify-center overflow-hidden rounded-[26px] border-4 border-white bg-zinc-100 text-4xl font-black text-zinc-950 shadow-xl">
+              {perfilForm.logo_url ? (
+                <img
+                  src={perfilForm.logo_url}
+                  alt={perfilForm.nome || "Salao"}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                (perfilForm.nome || "SP").slice(0, 2).toUpperCase()
+              )}
+              <span className="absolute hidden rounded-xl bg-black/70 px-3 py-1.5 text-xs font-bold text-white group-hover:block">
+                {uploadingPublicAsset === "logo" ? "Enviando" : "Trocar"}
+              </span>
+              <input
+                type="file"
+                accept="image/*"
+                className="sr-only"
+                onChange={(event) =>
+                  void uploadImagemPublica(
+                    event.target.files?.[0],
+                    "logo",
+                    "perfil"
+                  )
+                }
+              />
+            </label>
+
+            <div className="mt-4 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+              <div className="max-w-3xl">
+                <div className="inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1 text-xs font-bold uppercase tracking-[0.2em] text-zinc-600">
+                  <Building2 size={13} />
+                  Identidade do negocio
                 </div>
-                <div>
-                  <div className="font-display text-lg font-bold">
-                    {perfilForm.nome || "SalaoPremium"}
-                  </div>
-                  <div className="text-sm text-zinc-500">
-                    {String(perfilForm.plano || "sem plano").toUpperCase()} |{" "}
-                    {perfilForm.status || "status nao definido"}
-                  </div>
+                <h1 className="mt-3 font-display text-3xl font-bold tracking-[-0.05em] sm:text-[2.1rem]">
+                  Perfil do salao
+                </h1>
+                <p className="mt-2 text-sm leading-6 text-zinc-500 sm:text-[15px]">
+                  Confira os dados do negocio em um lugar so. Clique na capa ou
+                  na foto do perfil para atualizar a vitrine visual do app cliente.
+                </p>
+              </div>
+
+              <div className="rounded-[24px] border border-zinc-200 bg-zinc-50 p-3.5">
+                <div className="font-display text-lg font-bold">
+                  {perfilForm.nome || "SalaoPremium"}
+                </div>
+                <div className="text-sm text-zinc-500">
+                  {String(perfilForm.plano || "sem plano").toUpperCase()} |{" "}
+                  {perfilForm.status || "status nao definido"}
                 </div>
               </div>
             </div>
@@ -1935,59 +1989,10 @@ export default function PerfilSalaoPage() {
             />
           </Field>
 
-          <div className="overflow-hidden rounded-[24px] border border-zinc-200 bg-white">
-            <label className="group relative block h-56 cursor-pointer bg-zinc-100">
-              {appClienteDraft.foto_capa_url ? (
-                <img
-                  src={appClienteDraft.foto_capa_url}
-                  alt="Foto de capa do app cliente"
-                  className="h-full w-full object-cover"
-                />
-              ) : (
-                <div className="h-full bg-gradient-to-br from-zinc-950 via-zinc-800 to-amber-700" />
-              )}
-              <div className="absolute inset-0 bg-black/20 transition group-hover:bg-black/35" />
-              <div className="absolute bottom-4 right-4 rounded-2xl bg-white px-4 py-2 text-sm font-bold text-zinc-950 shadow-sm">
-                {uploadingPublicAsset === "capa" ? "Enviando..." : "Trocar capa"}
-              </div>
-              <input
-                type="file"
-                accept="image/*"
-                className="sr-only"
-                onChange={(event) =>
-                  void uploadImagemPublica(event.target.files?.[0], "capa")
-                }
-              />
-            </label>
-
-            <div className="relative px-5 pb-5">
-              <label className="group relative -mt-12 flex h-24 w-24 cursor-pointer items-center justify-center overflow-hidden rounded-[24px] border-4 border-white bg-zinc-100 text-3xl font-black text-zinc-950 shadow-xl">
-                {appClienteDraft.logo_url ? (
-                  <img
-                    src={appClienteDraft.logo_url}
-                    alt="Logo do salao no app cliente"
-                    className="h-full w-full object-cover"
-                  />
-                ) : (
-                  (appClienteDraft.nome || "S").slice(0, 1).toUpperCase()
-                )}
-                <span className="absolute hidden rounded-xl bg-black/70 px-3 py-1.5 text-xs font-bold text-white group-hover:block">
-                  {uploadingPublicAsset === "logo" ? "Enviando" : "Trocar"}
-                </span>
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="sr-only"
-                  onChange={(event) =>
-                    void uploadImagemPublica(event.target.files?.[0], "logo")
-                  }
-                />
-              </label>
-              <div className="mt-3 text-sm leading-6 text-zinc-600">
-                Clique na capa ou na foto do perfil para escolher uma imagem do
-                computador. Depois salve o perfil publico.
-              </div>
-            </div>
+          <div className="rounded-[22px] border border-zinc-200 bg-zinc-50 p-4 text-sm leading-6 text-zinc-600">
+            A capa e a foto do perfil agora ficam na primeira area desta pagina,
+            em <strong>Identidade do negocio</strong>. Use este modal para
+            descricao, mapa, pagamentos e publicacao.
           </div>
 
           <MapLocationPicker
