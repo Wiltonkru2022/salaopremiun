@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import AdminBlogPreview from "@/components/blog/AdminBlogPreview";
 import { requireAdminMasterUser } from "@/lib/admin-master/auth/requireAdminMasterUser";
-import { getAdminBlogPostBySlug } from "@/lib/blog/service";
+import { getAdminBlogPostBySlugOrId } from "@/lib/blog/service";
 
 type Props = {
   params: Promise<{ slug: string }>;
@@ -13,7 +13,7 @@ export default async function AdminMasterBlogPreviewPage({ params }: Props) {
   await requireAdminMasterUser("comunicacao_ver");
 
   const { slug } = await params;
-  const post = slug === "novo" ? null : await getAdminBlogPostBySlug(slug);
+  const post = slug === "novo" ? null : await getAdminBlogPostBySlugOrId(slug);
 
   if (slug !== "novo" && !post) notFound();
 

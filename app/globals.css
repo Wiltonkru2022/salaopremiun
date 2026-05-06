@@ -228,6 +228,8 @@ a.bg-white {
 
 .blog-editor-prose p {
   margin: 0 0 1rem;
+  direction: ltr;
+  text-align: left;
 }
 
 .blog-editor-prose a {
@@ -245,6 +247,17 @@ a.bg-white {
   color: #71717a;
   font-size: 0.875rem;
   text-align: center;
+}
+
+.blog-editor-prose .blog-post-button,
+.blog-editor-prose a.blog-post-button {
+  display: inline-block;
+  border-radius: 999px;
+  background: #111827;
+  color: #ffffff;
+  padding: 12px 20px;
+  font-weight: 850;
+  text-decoration: none;
 }
 
 @media (max-width: 1440px) {

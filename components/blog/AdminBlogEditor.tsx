@@ -22,6 +22,11 @@ type Props = {
   categories: BlogCategory[];
 };
 
+type EditorModal =
+  | { type: "link"; label: string; url: string }
+  | { type: "button"; label: string; url: string }
+  | null;
+
 const fontOptions = [
   "Inter, Arial, sans-serif",
   "Georgia, serif",
@@ -54,6 +59,7 @@ export default function AdminBlogEditor({ post, categories }: Props) {
   const contentInputRef = useRef<HTMLInputElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
   const inlineImageInputRef = useRef<HTMLInputElement>(null);
+  const savedRangeRef = useRef<Range | null>(null);
   const [title, setTitle] = useState(post?.title || "");
   const [slug, setSlug] = useState(post?.slug || "");
   const [description, setDescription] = useState(post?.description || "");
@@ -66,6 +72,8 @@ export default function AdminBlogEditor({ post, categories }: Props) {
   const [content, setContent] = useState(
     post?.bodyHtml || post?.rawContent || "<p>Comece seu artigo aqui.</p>"
   );
+  const [fontSize, setFontSize] = useState(18);
+  const [modal, setModal] = useState<EditorModal>(null);
   const readTime = useMemo(() => estimateReadTime(content), [content]);
   const previewKey = "salaopremium-blog-preview";
   const previewHref = `/admin-master/blog/${slug || "novo"}/preview`;
@@ -74,6 +82,77 @@ export default function AdminBlogEditor({ post, categories }: Props) {
     const nextContent = editorRef.current?.innerHTML || "";
     setContent(nextContent);
     if (contentInputRef.current) contentInputRef.current.value = nextContent;
+  }
+
+  function saveSelection() {
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) return;
+    const range = selection.getRangeAt(0);
+    if (!editorRef.current?.contains(range.commonAncestorContainer)) return;
+    savedRangeRef.current = range.cloneRange();
+  }
+
+  function restoreSelection() {
+    const range = savedRangeRef.current;
+    if (!range) return false;
+    const selection = window.getSelection();
+    if (!selection) return false;
+    selection.removeAllRanges();
+    selection.addRange(range);
+    return true;
+  }
+
+  function insertHtmlAtSelection(html: string) {
+    editorRef.current?.focus();
+    restoreSelection();
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) {
+      exec("insertHTML", html);
+      return;
+    }
+
+    const range = selection.getRangeAt(0);
+    range.deleteContents();
+    const template = document.createElement("template");
+    template.innerHTML = html;
+    const fragment = template.content;
+    const lastNode = fragment.lastChild;
+    range.insertNode(fragment);
+    if (lastNode) {
+      range.setStartAfter(lastNode);
+      range.collapse(true);
+      selection.removeAllRanges();
+      selection.addRange(range);
+    }
+    syncContent();
+    saveSelection();
+  }
+
+  function wrapSelection(
+    tag: "span" | "a",
+    styles: Partial<CSSStyleDeclaration>,
+    attrs: Record<string, string> = {}
+  ) {
+    editorRef.current?.focus();
+    if (!restoreSelection()) return;
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) return;
+    const range = selection.getRangeAt(0);
+    if (range.collapsed) return;
+
+    const element = document.createElement(tag);
+    Object.assign(element.style, styles);
+    Object.entries(attrs).forEach(([key, value]) =>
+      element.setAttribute(key, value)
+    );
+    element.appendChild(range.extractContents());
+    range.insertNode(element);
+    selection.removeAllRanges();
+    const newRange = document.createRange();
+    newRange.selectNodeContents(element);
+    selection.addRange(newRange);
+    savedRangeRef.current = newRange.cloneRange();
+    syncContent();
   }
 
   function exec(command: string, value?: string) {
@@ -87,34 +166,44 @@ export default function AdminBlogEditor({ post, categories }: Props) {
   }
 
   function applyFontSize(size: string) {
-    editorRef.current?.focus();
-    document.execCommand("fontSize", false, "7");
-    editorRef.current
-      ?.querySelectorAll("font[size='7']")
-      .forEach((node) => {
-        const span = document.createElement("span");
-        span.style.fontSize = size;
-        span.innerHTML = node.innerHTML;
-        node.replaceWith(span);
-      });
-    syncContent();
+    wrapSelection("span", { fontSize: size });
   }
 
   function insertLink() {
-    const url = window.prompt("Cole o link completo:");
-    if (!url) return;
-    exec("createLink", url);
+    saveSelection();
+    setModal({ type: "link", label: "", url: "" });
   }
 
   function insertButton() {
-    const label = window.prompt("Texto do botão:", "Conhecer o SalaoPremium");
-    if (!label) return;
-    const url = window.prompt("Link do botão:", "https://salaopremiun.com.br/cadastro-salao");
+    saveSelection();
+    setModal({
+      type: "button",
+      label: "Conhecer o SalaoPremium",
+      url: "https://salaopremiun.com.br/cadastro-salao",
+    });
+  }
+
+  function confirmModal() {
+    if (!modal) return;
+    const url = modal.url.trim();
+    const label = modal.label.trim();
     if (!url) return;
-    exec(
-      "insertHTML",
-      `<p><a href="${url}" style="display:inline-block;border-radius:999px;background:#111827;color:#fff;padding:12px 20px;font-weight:800;text-decoration:none">${label}</a></p>`
-    );
+
+    if (modal.type === "link") {
+      if (label) {
+        insertHtmlAtSelection(
+          `<a href="${url}" target="_blank" rel="noreferrer">${label}</a>`
+        );
+      } else {
+        wrapSelection("a", {}, { href: url, target: "_blank", rel: "noreferrer" });
+      }
+    } else {
+      insertHtmlAtSelection(
+        `<p><a href="${url}" target="_blank" rel="noreferrer" class="blog-post-button">${label || "Abrir link"}</a></p>`
+      );
+    }
+
+    setModal(null);
   }
 
   function readFileAsDataUrl(file: File, callback: (value: string) => void) {
@@ -134,8 +223,7 @@ export default function AdminBlogEditor({ post, categories }: Props) {
   function handleInlineImage(file?: File) {
     if (!file) return;
     readFileAsDataUrl(file, (value) => {
-      exec(
-        "insertHTML",
+      insertHtmlAtSelection(
         `<figure><img src="${value}" alt="${file.name}" style="width:100%;border-radius:18px;margin:16px 0" /><figcaption>${file.name}</figcaption></figure>`
       );
     });
@@ -352,7 +440,15 @@ export default function AdminBlogEditor({ post, categories }: Props) {
             <button type="button" onClick={insertButton} className="rounded-xl border border-zinc-200 p-2 hover:border-zinc-950" title="Adicionar botão">
               <MousePointerClick size={18} />
             </button>
-            <button type="button" onClick={() => inlineImageInputRef.current?.click()} className="rounded-xl border border-zinc-200 p-2 hover:border-zinc-950" title="Adicionar foto no post">
+            <button
+              type="button"
+              onClick={() => {
+                saveSelection();
+                inlineImageInputRef.current?.click();
+              }}
+              className="rounded-xl border border-zinc-200 p-2 hover:border-zinc-950"
+              title="Adicionar foto no post"
+            >
               <ImagePlus size={18} />
             </button>
             <select
@@ -366,18 +462,22 @@ export default function AdminBlogEditor({ post, categories }: Props) {
                 <option key={font} value={font}>{font.split(",")[0]}</option>
               ))}
             </select>
-            <select
-              onChange={(event) => applyFontSize(event.target.value)}
-              className="rounded-xl border border-zinc-200 px-3 py-2 text-sm font-bold"
-              defaultValue=""
-              title="Tamanho da fonte"
-            >
-              <option value="" disabled>Tamanho</option>
-              <option value="16px">Normal</option>
-              <option value="20px">Grande</option>
-              <option value="28px">Destaque</option>
-              <option value="38px">Título</option>
-            </select>
+            <label className="inline-flex items-center gap-2 rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm font-bold text-zinc-700">
+              Fonte
+              <input
+                type="number"
+                min={10}
+                max={80}
+                value={fontSize}
+                onChange={(event) => {
+                  const nextSize = Number(event.target.value || 18);
+                  setFontSize(nextSize);
+                  applyFontSize(`${nextSize}px`);
+                }}
+                className="w-16 bg-transparent text-right font-black outline-none"
+              />
+              px
+            </label>
             <button type="button" onClick={() => applyBlock("p")} className="rounded-xl border border-zinc-200 p-2 hover:border-zinc-950" title="Parágrafo">
               <Type size={18} />
             </button>
@@ -393,13 +493,76 @@ export default function AdminBlogEditor({ post, categories }: Props) {
           <div
             ref={editorRef}
             contentEditable
+            dir="ltr"
             suppressContentEditableWarning
             onInput={syncContent}
-            className="blog-editor-prose min-h-[640px] px-5 py-6 text-[18px] leading-8 outline-none sm:px-8"
+            onMouseUp={saveSelection}
+            onKeyUp={saveSelection}
+            onBlur={saveSelection}
+            className="blog-editor-prose min-h-[640px] px-5 py-6 text-left text-[18px] leading-8 outline-none sm:px-8"
             dangerouslySetInnerHTML={{ __html: content }}
           />
         </section>
       </main>
+
+      {modal ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/55 px-4 backdrop-blur-sm">
+          <div className="w-full max-w-lg rounded-[24px] border border-zinc-200 bg-white p-5 shadow-2xl">
+            <div className="text-xs font-black uppercase tracking-[0.24em] text-zinc-400">
+              {modal.type === "link" ? "Adicionar link" : "Adicionar botão"}
+            </div>
+            <h2 className="mt-2 font-display text-2xl font-black text-zinc-950">
+              {modal.type === "link"
+                ? "Configure o link do texto selecionado"
+                : "Configure o botão do post"}
+            </h2>
+            <div className="mt-4 grid gap-3">
+              <label className="grid gap-1.5 text-sm font-bold text-zinc-700">
+                Texto
+                <input
+                  value={modal.label}
+                  onChange={(event) =>
+                    setModal({ ...modal, label: event.target.value })
+                  }
+                  placeholder={
+                    modal.type === "link"
+                      ? "Opcional se já houver texto selecionado"
+                      : "Texto do botão"
+                  }
+                  className="rounded-2xl border border-zinc-200 px-4 py-3 text-sm outline-none focus:border-zinc-950"
+                />
+              </label>
+              <label className="grid gap-1.5 text-sm font-bold text-zinc-700">
+                Link
+                <input
+                  value={modal.url}
+                  onChange={(event) =>
+                    setModal({ ...modal, url: event.target.value })
+                  }
+                  placeholder="https://..."
+                  className="rounded-2xl border border-zinc-200 px-4 py-3 text-sm outline-none focus:border-zinc-950"
+                />
+              </label>
+            </div>
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setModal(null)}
+                className="rounded-full border border-zinc-200 px-4 py-2 text-sm font-black text-zinc-700 transition hover:border-zinc-950"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={confirmModal}
+                className="rounded-full bg-zinc-950 px-4 py-2 text-sm font-black text-white transition hover:bg-zinc-800"
+              >
+                Inserir
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </form>
   );
 }

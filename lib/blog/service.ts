@@ -271,3 +271,12 @@ export async function getAdminBlogPostBySlug(
       : null;
   }
 }
+
+export async function getAdminBlogPostBySlugOrId(
+  value: string
+): Promise<BlogPost | null> {
+  const bySlug = await getAdminBlogPostBySlug(value);
+  if (bySlug) return bySlug;
+
+  return getAdminBlogPostById(value);
+}
