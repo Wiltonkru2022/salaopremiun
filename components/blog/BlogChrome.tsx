@@ -4,7 +4,7 @@ import { DOMINIO_RAIZ } from "@/lib/proxy/domain-config";
 
 export function BlogHeader() {
   return (
-    <header className="sticky top-0 z-50 border-b border-zinc-200/70 bg-[#fbfaf6]/95 backdrop-blur-xl">
+    <header className="sticky top-0 z-50 border-b border-zinc-200/70 bg-white/95 backdrop-blur-xl">
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-4 lg:px-10">
         <Link href="/" className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-[14px] bg-zinc-950 text-white shadow-sm">
@@ -42,7 +42,7 @@ export function BlogHeader() {
 
 export function BlogFooter() {
   return (
-    <footer className="border-t border-zinc-200 bg-[#11100d] text-white">
+    <footer className="border-t border-zinc-200 bg-zinc-950 text-white">
       <div className="mx-auto grid max-w-7xl gap-6 px-6 py-8 lg:grid-cols-[1fr_auto] lg:items-center lg:px-10">
         <div>
           <div className="flex items-center gap-2 text-lg font-black">
@@ -64,4 +64,3 @@ export function BlogFooter() {
     </footer>
   );
 }
-

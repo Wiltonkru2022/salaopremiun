@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { BookOpen, Plus, SquarePen } from "lucide-react";
+import { BookOpen, Eye, Plus, SquarePen } from "lucide-react";
 import type { BlogPost } from "@/lib/blog/content";
 import { getAdminBlogData } from "@/lib/blog/service";
 
@@ -8,28 +8,51 @@ export const dynamic = "force-dynamic";
 
 export default async function AdminMasterBlogPage() {
   const { posts, usingFallback } = await getAdminBlogData();
+  const postsList = posts as BlogPost[];
+  const publicados = postsList.filter((post) => post.status === "publicado").length;
+  const rascunhos = postsList.filter((post) => post.status === "rascunho").length;
 
   return (
     <div className="space-y-5">
-      <section className="overflow-hidden rounded-[30px] bg-zinc-950 p-5 text-white shadow-sm sm:p-6">
+      <section className="overflow-hidden rounded-[30px] border border-zinc-200 bg-white p-5 text-zinc-950 shadow-sm sm:p-6">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-amber-200/20 bg-amber-200/10 px-3 py-1.5 text-xs font-black uppercase tracking-[0.28em] text-amber-100">
+            <div className="inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1.5 text-xs font-black uppercase tracking-[0.28em] text-zinc-500">
               <BookOpen size={15} />
               Blog e SEO
             </div>
             <h2 className="mt-4 max-w-4xl font-display text-[2.2rem] font-black leading-tight sm:text-[3.2rem]">
               Posts do blog
             </h2>
-            <p className="mt-3 max-w-3xl text-sm leading-6 text-zinc-300">
-              Lista limpa de artigos. Clique em um post para abrir o editor
-              completo em uma tela sem sidebar do AdminMaster.
+            <p className="mt-3 max-w-3xl text-sm leading-6 text-zinc-600">
+              Controle editorial do blog publico: escreva, revise, publique e
+              acompanhe os posts que trazem trafego organico para o SalaoPremium.
             </p>
+            <div className="mt-5 flex flex-wrap gap-2">
+              <span className="rounded-full bg-zinc-950 px-4 py-2 text-sm font-black text-white">
+                {publicados} publicados
+              </span>
+              <span className="rounded-full border border-zinc-200 bg-white px-4 py-2 text-sm font-black text-zinc-700">
+                {rascunhos} rascunhos
+              </span>
+              <span className="rounded-full border border-zinc-200 bg-white px-4 py-2 text-sm font-black text-zinc-700">
+                {postsList.length} posts no total
+              </span>
+            </div>
           </div>
 
+          <a
+            href="https://blog.salaopremiun.com.br"
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center justify-center gap-2 rounded-2xl border border-zinc-200 bg-white px-5 py-3 text-sm font-black text-zinc-800 transition hover:border-zinc-950"
+          >
+            <Eye size={17} />
+            Ver blog
+          </a>
           <Link
             href="/admin-master/blog/novo"
-            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-5 py-3 text-sm font-black text-zinc-950 transition hover:bg-amber-100"
+            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-zinc-950 px-5 py-3 text-sm font-black text-white transition hover:bg-zinc-800"
           >
             <Plus size={17} />
             Criar post
@@ -45,7 +68,7 @@ export default async function AdminMasterBlogPage() {
       </section>
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {posts.map((post: BlogPost) => (
+        {postsList.map((post) => (
           <Link
             key={post.id}
             href={`/admin-master/blog/${post.slug}`}

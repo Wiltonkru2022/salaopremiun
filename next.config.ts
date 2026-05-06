@@ -34,7 +34,6 @@ function buildCsp() {
     "https://vitals.vercel-insights.com",
     "https://*.vercel-insights.com",
     "https://va.vercel-scripts.com",
-    "https://nominatim.openstreetmap.org",
   ];
   const manifestSrc = ["'self'", ...managedHosts.map((host) => `https://${host}`)];
   const imgSrc = [
@@ -44,7 +43,6 @@ function buildCsp() {
     ...(supabaseHostname ? [`https://${supabaseHostname}`] : []),
     "https://*.googleusercontent.com",
     "https://*.gstatic.com",
-    "https://tile.openstreetmap.org",
   ];
   const frameAncestors = ["'self'"];
   const frameSrc = [

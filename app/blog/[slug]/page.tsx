@@ -11,7 +11,7 @@ type Props = {
   params: Promise<{ slug: string }>;
 };
 
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
@@ -53,43 +53,43 @@ export default async function BlogPostPage({ params }: Props) {
     .slice(0, 3);
 
   return (
-    <div className="min-h-screen bg-[#f6f4ee] text-zinc-950">
+    <div className="min-h-screen bg-white text-zinc-950">
       <BlogHeader />
 
       <main>
         <article>
-          <header className="bg-[#17120d] text-white">
+          <header className="border-b border-zinc-200 bg-white text-zinc-950">
             <div className="mx-auto grid max-w-7xl gap-8 px-6 py-8 lg:grid-cols-[minmax(0,1fr)_440px] lg:items-end lg:px-10 lg:py-12">
               <div>
                 <Link
                   href="/"
-                  className="inline-flex items-center gap-2 rounded-full border border-white/15 px-4 py-2 text-sm font-bold text-zinc-200 transition hover:bg-white/10"
+                  className="inline-flex items-center gap-2 rounded-full border border-zinc-200 px-4 py-2 text-sm font-bold text-zinc-700 transition hover:bg-zinc-50"
                 >
                   <ArrowLeft size={16} />
                   Voltar ao blog
                 </Link>
-                <div className="mt-6 inline-flex rounded-full border border-amber-200/25 bg-amber-100/10 px-3 py-1.5 text-xs font-black uppercase tracking-[0.25em] text-amber-100">
+                <div className="mt-6 inline-flex rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1.5 text-xs font-black uppercase tracking-[0.25em] text-zinc-500">
                   {post.categoryName}
                 </div>
                 <h1 className="mt-5 max-w-4xl font-display text-[2.4rem] font-black leading-[1.05] sm:text-[4.2rem]">
                   {post.title}
                 </h1>
-                <p className="mt-5 max-w-3xl text-base leading-7 text-zinc-300">
+                <p className="mt-5 max-w-3xl text-base leading-7 text-zinc-600">
                   {post.description}
                 </p>
-                <div className="mt-5 flex flex-wrap gap-2 text-sm font-bold text-zinc-300">
-                  <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5">
+                <div className="mt-5 flex flex-wrap gap-2 text-sm font-bold text-zinc-600">
+                  <span className="inline-flex items-center gap-2 rounded-full bg-zinc-100 px-3 py-1.5">
                     <CalendarDays size={15} />
                     {new Date(post.publishedAt).toLocaleDateString("pt-BR")}
                   </span>
-                  <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5">
+                  <span className="inline-flex items-center gap-2 rounded-full bg-zinc-100 px-3 py-1.5">
                     <Clock size={15} />
                     {post.readTime}
                   </span>
                 </div>
               </div>
 
-              <div className="overflow-hidden rounded-[24px] border border-white/10 bg-white shadow-2xl">
+              <div className="overflow-hidden rounded-[24px] border border-zinc-200 bg-white shadow-sm">
                 {post.coverImage.startsWith("data:") ? (
                   <img
                     src={post.coverImage}

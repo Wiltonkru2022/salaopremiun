@@ -4,15 +4,25 @@ import Image from "next/image";
 import Link from "next/link";
 import { useMemo, useRef, useState } from "react";
 import {
+  AlignCenter,
+  AlignLeft,
+  AlignRight,
   Bold,
   Eye,
   Heading1,
+  Heading2,
+  Heading3,
   ImagePlus,
+  Italic,
   Link2,
+  List,
+  ListOrdered,
   MousePointerClick,
+  Quote,
   Save,
   Send,
   Type,
+  Underline,
 } from "lucide-react";
 import type { BlogCategory, BlogPost } from "@/lib/blog/content";
 import { createBlogPost } from "@/app/(admin-master)/admin-master/blog/actions";
@@ -29,10 +39,13 @@ type EditorModal =
 
 const fontOptions = [
   "Inter, Arial, sans-serif",
+  "Manrope, Arial, sans-serif",
+  "Playfair Display, Georgia, serif",
   "Georgia, serif",
   "Arial, sans-serif",
   "Verdana, sans-serif",
   "Trebuchet MS, sans-serif",
+  "Courier New, monospace",
 ];
 
 function stripHtml(value: string) {
@@ -138,14 +151,17 @@ export default function AdminBlogEditor({ post, categories }: Props) {
     const selection = window.getSelection();
     if (!selection || selection.rangeCount === 0) return;
     const range = selection.getRangeAt(0);
-    if (range.collapsed) return;
 
     const element = document.createElement(tag);
     Object.assign(element.style, styles);
     Object.entries(attrs).forEach(([key, value]) =>
       element.setAttribute(key, value)
     );
-    element.appendChild(range.extractContents());
+    if (range.collapsed) {
+      element.textContent = "Texto";
+    } else {
+      element.appendChild(range.extractContents());
+    }
     range.insertNode(element);
     selection.removeAllRanges();
     const newRange = document.createRange();
@@ -167,6 +183,10 @@ export default function AdminBlogEditor({ post, categories }: Props) {
 
   function applyFontSize(size: string) {
     wrapSelection("span", { fontSize: size });
+  }
+
+  function applyFontFamily(fontFamily: string) {
+    wrapSelection("span", { fontFamily });
   }
 
   function insertLink() {
@@ -431,8 +451,38 @@ export default function AdminBlogEditor({ post, categories }: Props) {
             <button type="button" onClick={() => applyBlock("h1")} className="rounded-xl border border-zinc-200 p-2 hover:border-zinc-950" title="Título grande">
               <Heading1 size={18} />
             </button>
+            <button type="button" onClick={() => applyBlock("h2")} className="rounded-xl border border-zinc-200 p-2 hover:border-zinc-950" title="Subtitulo">
+              <Heading2 size={18} />
+            </button>
+            <button type="button" onClick={() => applyBlock("h3")} className="rounded-xl border border-zinc-200 p-2 hover:border-zinc-950" title="Chamada">
+              <Heading3 size={18} />
+            </button>
             <button type="button" onClick={() => exec("bold")} className="rounded-xl border border-zinc-200 p-2 hover:border-zinc-950" title="Negrito">
               <Bold size={18} />
+            </button>
+            <button type="button" onClick={() => exec("italic")} className="rounded-xl border border-zinc-200 p-2 hover:border-zinc-950" title="Italico">
+              <Italic size={18} />
+            </button>
+            <button type="button" onClick={() => exec("underline")} className="rounded-xl border border-zinc-200 p-2 hover:border-zinc-950" title="Sublinhado">
+              <Underline size={18} />
+            </button>
+            <button type="button" onClick={() => exec("insertUnorderedList")} className="rounded-xl border border-zinc-200 p-2 hover:border-zinc-950" title="Lista">
+              <List size={18} />
+            </button>
+            <button type="button" onClick={() => exec("insertOrderedList")} className="rounded-xl border border-zinc-200 p-2 hover:border-zinc-950" title="Lista numerada">
+              <ListOrdered size={18} />
+            </button>
+            <button type="button" onClick={() => applyBlock("h3")} className="rounded-xl border border-zinc-200 p-2 hover:border-zinc-950" title="Citacao">
+              <Quote size={18} />
+            </button>
+            <button type="button" onClick={() => exec("justifyLeft")} className="rounded-xl border border-zinc-200 p-2 hover:border-zinc-950" title="Alinhar esquerda">
+              <AlignLeft size={18} />
+            </button>
+            <button type="button" onClick={() => exec("justifyCenter")} className="rounded-xl border border-zinc-200 p-2 hover:border-zinc-950" title="Centralizar">
+              <AlignCenter size={18} />
+            </button>
+            <button type="button" onClick={() => exec("justifyRight")} className="rounded-xl border border-zinc-200 p-2 hover:border-zinc-950" title="Alinhar direita">
+              <AlignRight size={18} />
             </button>
             <button type="button" onClick={insertLink} className="rounded-xl border border-zinc-200 p-2 hover:border-zinc-950" title="Adicionar link">
               <Link2 size={18} />
@@ -452,7 +502,7 @@ export default function AdminBlogEditor({ post, categories }: Props) {
               <ImagePlus size={18} />
             </button>
             <select
-              onChange={(event) => exec("fontName", event.target.value)}
+              onChange={(event) => applyFontFamily(event.target.value)}
               className="rounded-xl border border-zinc-200 px-3 py-2 text-sm font-bold"
               defaultValue=""
               title="Selecionar fonte"

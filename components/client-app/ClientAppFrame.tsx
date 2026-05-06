@@ -12,9 +12,9 @@ export default function ClientAppFrame({
   subtitle: string;
 }) {
   return (
-    <div className="min-h-dvh bg-[#f5f3ef] text-zinc-950">
+    <div className="min-h-dvh bg-[linear-gradient(180deg,#ffffff_0%,#f7f7f7_42%,#eeeeee_100%)] text-zinc-950">
       <div className="mx-auto flex min-h-dvh max-w-6xl flex-col px-4 pb-24 pt-4 md:px-6 md:pb-4">
-        <header className="flex items-center justify-between gap-3 rounded-[1.5rem] border border-white/70 bg-white/90 px-4 py-3 shadow-[0_18px_48px_rgba(15,23,42,0.08)]">
+        <header className="flex items-center justify-between gap-3 rounded-[1.5rem] border border-zinc-200 bg-white/95 px-4 py-3 shadow-[0_18px_48px_rgba(15,23,42,0.08)] backdrop-blur">
           <div>
             <div className="text-[11px] font-bold uppercase tracking-[0.14em] text-zinc-500">
               SalaoPremium

@@ -19,7 +19,7 @@ export default function ClientAppSalonCard({
   distanceKm?: number | null;
 }) {
   return (
-    <article className="overflow-hidden rounded-[1.45rem] border border-white/80 bg-white shadow-[0_18px_48px_rgba(15,23,42,0.08)] transition hover:-translate-y-0.5 hover:shadow-[0_22px_60px_rgba(15,23,42,0.12)]">
+    <article className="overflow-hidden rounded-[1.45rem] border border-zinc-200 bg-white shadow-[0_18px_48px_rgba(15,23,42,0.08)] transition hover:-translate-y-0.5 hover:border-zinc-300 hover:shadow-[0_22px_60px_rgba(15,23,42,0.12)]">
       <div className="relative h-40 bg-zinc-100">
         {salao.fotoCapaUrl ? (
           <img
@@ -154,9 +154,9 @@ export default function ClientAppSalonCard({
         <div className="flex flex-wrap gap-2">
           <Link
             href={`/app-cliente/salao/${salao.id}`}
-            className="inline-flex h-11 flex-1 items-center justify-center rounded-2xl bg-zinc-950 px-4 text-sm font-bold text-white transition hover:bg-zinc-800"
+            className="inline-flex h-11 flex-1 items-center justify-center rounded-2xl bg-zinc-950 px-4 text-sm font-bold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-zinc-800"
           >
-            Agendar
+            Ver horarios
           </Link>
           <Link
             href={`/app-cliente/cadastro?next=${encodeURIComponent(`/app-cliente/salao/${salao.id}`)}`}

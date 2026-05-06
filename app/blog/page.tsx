@@ -6,7 +6,7 @@ import { BlogFooter, BlogHeader } from "@/components/blog/BlogChrome";
 import { DOMINIO_BLOG } from "@/lib/proxy/domain-config";
 import { getBlogCategories, getPublishedBlogPosts } from "@/lib/blog/service";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
 
 export const metadata: Metadata = {
   title: "Blog",
@@ -43,21 +43,21 @@ export default async function BlogPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#f6f4ee] text-zinc-950">
+    <div className="min-h-screen bg-white text-zinc-950">
       <BlogHeader />
 
       <main>
-        <section className="bg-[#17120d] text-white">
+        <section className="border-b border-zinc-200 bg-white text-zinc-950">
           <div className="mx-auto grid max-w-7xl gap-8 px-6 py-10 lg:grid-cols-[minmax(0,1fr)_420px] lg:items-end lg:px-10 lg:py-14">
             <div>
-              <div className="inline-flex items-center gap-2 rounded-full border border-amber-200/25 bg-amber-100/10 px-3 py-1.5 text-xs font-black uppercase tracking-[0.28em] text-amber-100">
+              <div className="inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1.5 text-xs font-black uppercase tracking-[0.28em] text-zinc-500">
                 <Search size={15} />
                 Conteúdo para salões crescerem
               </div>
               <h1 className="mt-5 max-w-4xl font-display text-[2.8rem] font-black leading-[1.02] sm:text-[4.8rem]">
                 Blog SalaoPremium
               </h1>
-              <p className="mt-5 max-w-3xl text-base leading-7 text-zinc-300">
+              <p className="mt-5 max-w-3xl text-base leading-7 text-zinc-600">
                 Artigos recentes, categorias e listas de leitura sobre agenda de
                 clientes, vendas, automação, fidelização e redes sociais para o
                 Google entender melhor o sistema SalaoPremium.
@@ -67,7 +67,7 @@ export default async function BlogPage() {
             {featured ? (
               <Link
                 href={`/${featured.slug}`}
-                className="group overflow-hidden rounded-[24px] border border-white/10 bg-white text-zinc-950 shadow-2xl transition hover:-translate-y-0.5"
+                className="group overflow-hidden rounded-[24px] border border-zinc-200 bg-white text-zinc-950 shadow-sm transition hover:-translate-y-0.5 hover:shadow-xl"
               >
                 {featured.coverImage.startsWith("data:") ? (
                   <img

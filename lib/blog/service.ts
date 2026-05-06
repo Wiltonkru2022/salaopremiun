@@ -1,4 +1,4 @@
-import { unstable_noStore as noStore } from "next/cache";
+import { unstable_cache, unstable_noStore as noStore } from "next/cache";
 import type { BlogCategory, BlogPost } from "@/lib/blog/content";
 import { defaultBlogCategories, defaultBlogPosts } from "@/lib/blog/content";
 
@@ -90,9 +90,7 @@ async function getSupabaseAdminUnsafe() {
   return getSupabaseAdmin() as any;
 }
 
-export async function getBlogCategories(): Promise<BlogCategory[]> {
-  noStore();
-
+async function loadBlogCategories(): Promise<BlogCategory[]> {
   try {
     const supabase = await getSupabaseAdminUnsafe();
     if (!supabase) return defaultBlogCategories;
@@ -112,9 +110,20 @@ export async function getBlogCategories(): Promise<BlogCategory[]> {
   }
 }
 
-export async function getPublishedBlogPosts(): Promise<BlogPost[]> {
-  noStore();
+const getBlogCategoriesCached = unstable_cache(
+  loadBlogCategories,
+  ["blog-categories-v2"],
+  {
+    revalidate: 600,
+    tags: ["blog-public"],
+  }
+);
 
+export async function getBlogCategories(): Promise<BlogCategory[]> {
+  return getBlogCategoriesCached();
+}
+
+async function loadPublishedBlogPosts(): Promise<BlogPost[]> {
   try {
     const supabase = await getSupabaseAdminUnsafe();
     if (!supabase) return defaultBlogPosts;
@@ -134,6 +143,19 @@ export async function getPublishedBlogPosts(): Promise<BlogPost[]> {
     console.warn("Blog usando posts padrao:", error);
     return defaultBlogPosts;
   }
+}
+
+const getPublishedBlogPostsCached = unstable_cache(
+  loadPublishedBlogPosts,
+  ["blog-posts-publicados-v2"],
+  {
+    revalidate: 300,
+    tags: ["blog-public"],
+  }
+);
+
+export async function getPublishedBlogPosts(): Promise<BlogPost[]> {
+  return getPublishedBlogPostsCached();
 }
 
 export async function getBlogPost(slug: string): Promise<BlogPost | null> {

@@ -1,32 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { LocateFixed, MapPin, Search, SlidersHorizontal, Star } from "lucide-react";
+import { MapPin, Search, SlidersHorizontal, Star } from "lucide-react";
 import ClientAppSalonCard from "@/components/client-app/ClientAppSalonCard";
 import type { ClientAppSalonListItem } from "@/lib/client-app/queries";
-
-type ClientCoords = {
-  latitude: number;
-  longitude: number;
-};
-
-function toRadians(value: number) {
-  return (value * Math.PI) / 180;
-}
-
-function calculateDistanceKm(a: ClientCoords, b: ClientCoords) {
-  const earthRadiusKm = 6371;
-  const deltaLat = toRadians(b.latitude - a.latitude);
-  const deltaLng = toRadians(b.longitude - a.longitude);
-  const latA = toRadians(a.latitude);
-  const latB = toRadians(b.latitude);
-
-  const base =
-    Math.sin(deltaLat / 2) ** 2 +
-    Math.cos(latA) * Math.cos(latB) * Math.sin(deltaLng / 2) ** 2;
-
-  return earthRadiusKm * (2 * Math.atan2(Math.sqrt(base), Math.sqrt(1 - base)));
-}
 
 export default function ClientSalonDiscovery({
   saloes,
@@ -35,19 +12,12 @@ export default function ClientSalonDiscovery({
   saloes: ClientAppSalonListItem[];
   initialSearch?: string;
 }) {
-  const [clientCoords, setClientCoords] = useState<ClientCoords | null>(null);
-  const [locationError, setLocationError] = useState<string | null>(null);
-  const [loadingLocation, setLoadingLocation] = useState(false);
   const [localSearch, setLocalSearch] = useState(initialSearch);
-  const [sortMode, setSortMode] = useState<"recommended" | "nearby" | "rating" | "price">(
+  const [sortMode, setSortMode] = useState<"recommended" | "rating" | "price">(
     "recommended"
   );
   const [onlyRated, setOnlyRated] = useState(false);
   const [onlyWithParking, setOnlyWithParking] = useState(false);
-  const saloesComMapa = useMemo(
-    () => saloes.some((item) => item.latitude !== null && item.longitude !== null),
-    [saloes]
-  );
 
   const availableCities = useMemo(
     () =>
@@ -79,28 +49,9 @@ export default function ClientSalonDiscovery({
           .toLowerCase()
           .includes(term);
       })
-      .map((salao) => {
-        if (!clientCoords || salao.latitude === null || salao.longitude === null) {
-          return { salao, distanceKm: null as number | null };
-        }
-
-        return {
-          salao,
-          distanceKm: calculateDistanceKm(clientCoords, {
-            latitude: salao.latitude,
-            longitude: salao.longitude,
-          }),
-        };
-      });
+      .map((salao) => ({ salao }));
 
     return base.sort((left, right) => {
-      if (sortMode === "nearby" || (sortMode === "recommended" && clientCoords)) {
-        if (left.distanceKm === null && right.distanceKm === null) return 0;
-        if (left.distanceKm === null) return 1;
-        if (right.distanceKm === null) return -1;
-        return left.distanceKm - right.distanceKm;
-      }
-
       if (sortMode === "rating") {
         return (
           (right.salao.notaMedia || 0) - (left.salao.notaMedia || 0) ||
@@ -123,7 +74,6 @@ export default function ClientSalonDiscovery({
       );
     });
   }, [
-    clientCoords,
     localSearch,
     onlyRated,
     onlyWithParking,
@@ -131,39 +81,6 @@ export default function ClientSalonDiscovery({
     selectedCity,
     sortMode,
   ]);
-
-  function handleUseLocation() {
-    if (!("geolocation" in navigator)) {
-      setLocationError("Busque por bairro ou cidade.");
-      return;
-    }
-
-    setLoadingLocation(true);
-    setLocationError(null);
-
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        setClientCoords({
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude,
-        });
-        setLoadingLocation(false);
-      },
-      (error) => {
-        setLocationError(
-          error.code === error.PERMISSION_DENIED
-            ? "Localizacao bloqueada no navegador. Busque por bairro ou cidade."
-            : "Busque por bairro ou cidade enquanto a localizacao nao responde."
-        );
-        setLoadingLocation(false);
-      },
-      {
-        enableHighAccuracy: false,
-        timeout: 8000,
-        maximumAge: 1000 * 60 * 10,
-      }
-    );
-  }
 
   return (
     <div className="space-y-4">
@@ -177,15 +94,6 @@ export default function ClientSalonDiscovery({
               Onde voce quer ir hoje?
             </h2>
           </div>
-          <button
-            type="button"
-            onClick={handleUseLocation}
-            disabled={loadingLocation || !saloesComMapa}
-            className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-2xl bg-zinc-950 px-4 text-sm font-bold text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            <LocateFixed size={16} />
-            {loadingLocation ? "Localizando" : "Perto de mim"}
-          </button>
         </div>
         <div className="grid gap-3 lg:grid-cols-[minmax(0,1.4fr)_auto]">
           <label className="flex h-12 items-center gap-2 rounded-2xl border border-zinc-200 bg-zinc-50 px-4">
@@ -202,12 +110,11 @@ export default function ClientSalonDiscovery({
           <select
             value={sortMode}
             onChange={(event) =>
-              setSortMode(event.target.value as "recommended" | "nearby" | "rating" | "price")
+              setSortMode(event.target.value as "recommended" | "rating" | "price")
             }
             className="h-12 rounded-2xl border border-zinc-200 bg-white px-4 text-sm font-semibold text-zinc-700 outline-none transition focus:border-zinc-400"
           >
             <option value="recommended">Recomendados</option>
-            <option value="nearby">Mais proximos</option>
             <option value="rating">Melhor avaliados</option>
             <option value="price">Menor preco</option>
           </select>
@@ -259,32 +166,18 @@ export default function ClientSalonDiscovery({
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
-        {clientCoords ? (
-          <div className="rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700">
-            Saloes mais proximos primeiro
-          </div>
-        ) : null}
-        {!saloesComMapa ? (
-          <div className="inline-flex items-center gap-1 rounded-full bg-zinc-100 px-3 py-1.5 text-xs font-semibold text-zinc-600">
-            <MapPin size={14} />
-            Use bairro ou cidade para refinar
-          </div>
-        ) : null}
-      </div>
-
-      {locationError ? (
-        <div className="rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-600">
-          {locationError}
+        <div className="inline-flex items-center gap-1 rounded-full bg-zinc-100 px-3 py-1.5 text-xs font-semibold text-zinc-600">
+          <MapPin size={14} />
+          Busque por bairro, cidade, servico ou nome do salao
         </div>
-      ) : null}
+      </div>
 
       {orderedSaloes.length ? (
         <div className="grid gap-4 md:grid-cols-2">
-          {orderedSaloes.map(({ salao, distanceKm }) => (
+          {orderedSaloes.map(({ salao }) => (
             <ClientAppSalonCard
               key={salao.id}
               salao={salao}
-              distanceKm={distanceKm}
             />
           ))}
         </div>
