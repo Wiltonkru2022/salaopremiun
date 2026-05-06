@@ -15,6 +15,21 @@ function formatDate(value: string) {
   }).format(new Date(`${value}T12:00:00`));
 }
 
+function normalizePhone(value?: string | null) {
+  const digits = String(value || "").replace(/\D/g, "");
+  if (!digits) return null;
+  return digits.startsWith("55") ? digits : `55${digits}`;
+}
+
+function buildWhatsappHref(item: ClientAppAppointmentListItem) {
+  const destination = normalizePhone(item.salaoWhatsapp || item.salaoTelefone);
+  if (!destination) return null;
+
+  return `https://wa.me/${destination}?text=${encodeURIComponent(
+    `Oi, quero falar sobre meu horario no ${item.salaoNome} em ${formatDate(item.data)} as ${item.horaInicio.slice(0, 5)} para ${item.servicoNome} com ${item.profissionalNome}.`
+  )}`;
+}
+
 function ActionButton({
   idleLabel,
   pendingLabel,
@@ -162,6 +177,19 @@ export default function ClientAppointmentsManager({
               key={item.id}
               className="space-y-3 rounded-2xl border border-zinc-100 bg-zinc-50 p-4"
             >
+              {buildWhatsappHref(item) ? (
+                <div className="flex justify-end">
+                  <a
+                    href={buildWhatsappHref(item) || "#"}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex h-10 items-center rounded-2xl bg-emerald-600 px-4 text-sm font-semibold text-white transition hover:bg-emerald-700"
+                  >
+                    Falar no WhatsApp
+                  </a>
+                </div>
+              ) : null}
+
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <div className="text-xs font-bold uppercase tracking-[0.12em] text-zinc-500">

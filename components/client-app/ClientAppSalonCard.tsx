@@ -4,8 +4,10 @@ import type { ClientAppSalonListItem } from "@/lib/client-app/queries";
 
 export default function ClientAppSalonCard({
   salao,
+  distanceKm = null,
 }: {
   salao: ClientAppSalonListItem;
+  distanceKm?: number | null;
 }) {
   return (
     <article className="overflow-hidden rounded-[1.7rem] border border-white/70 bg-white shadow-[0_18px_48px_rgba(15,23,42,0.08)]">
@@ -52,6 +54,13 @@ export default function ClientAppSalonCard({
                   "Endereco publico em atualizacao"}
               </span>
             </div>
+            {distanceKm !== null ? (
+              <div className="mt-1 text-xs font-semibold text-emerald-700">
+                {distanceKm < 1
+                  ? `${Math.max(100, Math.round(distanceKm * 1000))} m de voce`
+                  : `${distanceKm.toFixed(1)} km de voce`}
+              </div>
+            ) : null}
           </div>
         </div>
 

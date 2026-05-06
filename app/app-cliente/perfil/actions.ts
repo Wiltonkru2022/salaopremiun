@@ -3,7 +3,10 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { requireClienteAppContext } from "@/lib/client-context.server";
-import { updateClienteAppProfile } from "@/app/services/cliente-app/profile";
+import {
+  deleteClienteAppAccount,
+  updateClienteAppProfile,
+} from "@/app/services/cliente-app/profile";
 
 export type ClienteProfileState = {
   error: string | null;
@@ -33,4 +36,18 @@ export async function updateClienteProfileAction(
 
   revalidatePath("/app-cliente/perfil");
   redirect("/app-cliente/perfil?status=salvo");
+}
+
+export async function deleteClienteProfileAction() {
+  const session = await requireClienteAppContext();
+
+  const result = await deleteClienteAppAccount({
+    idConta: session.idConta,
+  });
+
+  if (!result.ok) {
+    redirect("/app-cliente/perfil?status=erro_excluir");
+  }
+
+  redirect("/app-cliente/login?status=conta_excluida");
 }

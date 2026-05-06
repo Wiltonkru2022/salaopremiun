@@ -41,6 +41,12 @@ export default async function ClientePerfilPage({
               Ver meus agendamentos
             </Link>
             <Link
+              href="/app-cliente/recuperar-acesso"
+              className="flex h-12 items-center rounded-2xl border border-zinc-200 bg-zinc-50 px-4 text-sm font-semibold text-zinc-800"
+            >
+              Recuperar acesso
+            </Link>
+            <Link
               href="/app-cliente/logout?destino=/app-cliente/login"
               className="flex h-12 items-center rounded-2xl bg-zinc-950 px-4 text-sm font-semibold text-white"
             >

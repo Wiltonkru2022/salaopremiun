@@ -1,6 +1,6 @@
 import Link from "next/link";
 import ClientAppFrame from "@/components/client-app/ClientAppFrame";
-import ClientAppSalonCard from "@/components/client-app/ClientAppSalonCard";
+import ClientSalonDiscovery from "@/components/client-app/ClientSalonDiscovery";
 import { listVisibleClientAppSaloes } from "@/lib/client-app/queries";
 
 export default async function InicioClientePage({
@@ -58,11 +58,7 @@ export default async function InicioClientePage({
 
         <div className="space-y-4">
           {saloes.length ? (
-            <div className="grid gap-4 md:grid-cols-2">
-              {saloes.map((salao) => (
-                <ClientAppSalonCard key={salao.id} salao={salao} />
-              ))}
-            </div>
+            <ClientSalonDiscovery saloes={saloes} />
           ) : (
             <div className="rounded-[1.8rem] border border-white/70 bg-white p-6 shadow-[0_18px_48px_rgba(15,23,42,0.08)]">
               <h3 className="text-lg font-black tracking-[-0.03em] text-zinc-950">

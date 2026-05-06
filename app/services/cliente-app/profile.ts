@@ -1,5 +1,8 @@
 import { runAdminOperation } from "@/lib/supabase/admin-ops";
-import { createClienteSession } from "@/lib/cliente-auth.server";
+import {
+  clearClienteSession,
+  createClienteSession,
+} from "@/lib/cliente-auth.server";
 
 type UpdateClienteProfileParams = {
   idConta: string;
@@ -149,6 +152,83 @@ export async function updateClienteAppProfile(
       return {
         ok: true,
         message: "Perfil atualizado com sucesso.",
+      };
+    },
+  });
+}
+
+export async function deleteClienteAppAccount(params: {
+  idConta: string;
+}): Promise<ClienteProfileActionResult> {
+  const idConta = String(params.idConta || "").trim();
+
+  if (!idConta) {
+    return { ok: false, error: "Nao foi possivel identificar a conta do cliente." };
+  }
+
+  return runAdminOperation({
+    action: "cliente_app_delete_account",
+    actorId: idConta,
+    run: async (supabaseAdmin) => {
+      const { data: vinculos, error: vinculosError } = await supabaseAdmin
+        .from("clientes_auth")
+        .select("id, id_cliente, id_salao")
+        .eq("app_conta_id", idConta);
+
+      if (vinculosError) {
+        return {
+          ok: false as const,
+          error: "Nao foi possivel carregar seus vinculos agora.",
+        };
+      }
+
+      const hoje = new Date().toISOString().slice(0, 10);
+
+      for (const vinculo of vinculos || []) {
+        const idCliente = String(vinculo.id_cliente || "").trim();
+        const idSalao = String(vinculo.id_salao || "").trim();
+        if (!idCliente || !idSalao) continue;
+
+        await supabaseAdmin
+          .from("agendamentos")
+          .update({
+            status: "cancelado",
+            updated_at: new Date().toISOString(),
+            observacoes: "Cancelado por encerramento da conta do app cliente.",
+          })
+          .eq("id_salao", idSalao)
+          .eq("cliente_id", idCliente)
+          .gte("data", hoje)
+          .in("status", ["pendente", "confirmado"]);
+      }
+
+      const [authUpdateResult, deleteContaResult] = await Promise.all([
+        supabaseAdmin
+          .from("clientes_auth")
+          .update({
+            app_ativo: false,
+            app_conta_id: null,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("app_conta_id", idConta),
+        (supabaseAdmin as any)
+          .from("clientes_app_auth")
+          .delete()
+          .eq("id", idConta),
+      ]);
+
+      if (authUpdateResult.error || deleteContaResult.error) {
+        return {
+          ok: false as const,
+          error: "Nao foi possivel encerrar sua conta agora.",
+        };
+      }
+
+      await clearClienteSession();
+
+      return {
+        ok: true as const,
+        message: "Conta encerrada com sucesso.",
       };
     },
   });

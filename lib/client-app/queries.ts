@@ -44,6 +44,8 @@ export type ClientAppAppointmentListItem = {
   id: string;
   idSalao: string;
   salaoNome: string;
+  salaoWhatsapp: string | null;
+  salaoTelefone: string | null;
   data: string;
   horaInicio: string;
   horaFim: string;
@@ -86,10 +88,18 @@ const listVisibleClientAppSaloesCached = unstable_cache(
           "nome",
           "nome_fantasia",
           "cidade",
+          "estado",
           "bairro",
+          "endereco",
+          "numero",
+          "cep",
           "logo_url",
+          "telefone",
+          "whatsapp",
           "descricao_publica",
           "foto_capa_url",
+          "latitude",
+          "longitude",
           "estacionamento",
           "formas_pagamento_publico",
           "status",
@@ -123,9 +133,30 @@ const listVisibleClientAppSaloesCached = unstable_cache(
         String(row.nome || "").trim() ||
         "Salao Premium",
       cidade: String(row.cidade || "").trim() || null,
+      estado: String(row.estado || "").trim() || null,
       bairro: String(row.bairro || "").trim() || null,
+      endereco: String(row.endereco || "").trim() || null,
+      numero: String(row.numero || "").trim() || null,
+      cep: String(row.cep || "").trim() || null,
+      enderecoCompleto:
+        [
+          [String(row.endereco || "").trim(), String(row.numero || "").trim()]
+            .filter(Boolean)
+            .join(", "),
+          String(row.bairro || "").trim(),
+          [String(row.cidade || "").trim(), String(row.estado || "").trim()]
+            .filter(Boolean)
+            .join(" - "),
+          String(row.cep || "").trim(),
+        ]
+          .filter(Boolean)
+          .join(" | ") || null,
       logoUrl: String(row.logo_url || "").trim() || null,
       fotoCapaUrl: String(row.foto_capa_url || "").trim() || null,
+      latitude: Number(row.latitude ?? Number.NaN) || null,
+      longitude: Number(row.longitude ?? Number.NaN) || null,
+      whatsapp: String(row.whatsapp || "").trim() || null,
+      telefone: String(row.telefone || "").trim() || null,
       descricaoPublica: String(row.descricao_publica || "").trim() || null,
       estacionamento: Boolean(row.estacionamento),
       formasPagamento: Array.isArray(row.formas_pagamento_publico)
@@ -292,7 +323,7 @@ export async function listClienteAppAppointments(params: { idConta: string }) {
   const supabaseAdmin = getSupabaseAdmin();
   const { data: vinculos, error: vinculosError } = await supabaseAdmin
     .from("clientes_auth")
-    .select("id_cliente, id_salao, saloes(nome, nome_fantasia)")
+    .select("id_cliente, id_salao, saloes(nome, nome_fantasia, whatsapp, telefone)")
     .eq("app_conta_id", params.idConta)
     .eq("app_ativo", true)
     .limit(40);
@@ -313,7 +344,15 @@ export async function listClienteAppAppointments(params: { idConta: string }) {
     return [];
   }
 
-  const salaoNomeByCliente = new Map<string, { nome: string; idSalao: string }>();
+  const salaoNomeByCliente = new Map<
+    string,
+    {
+      nome: string;
+      idSalao: string;
+      whatsapp: string | null;
+      telefone: string | null;
+    }
+  >();
   for (const item of vinculos) {
     const idCliente = String(item.id_cliente || "").trim();
     const idSalao = String(item.id_salao || "").trim();
@@ -327,6 +366,8 @@ export async function listClienteAppAppointments(params: { idConta: string }) {
         String(salaoRow?.nome_fantasia || "").trim() ||
         String(salaoRow?.nome || "").trim() ||
         "Salao Premium",
+      whatsapp: String((salaoRow as { whatsapp?: string | null } | null)?.whatsapp || "").trim() || null,
+      telefone: String((salaoRow as { telefone?: string | null } | null)?.telefone || "").trim() || null,
     });
   }
 
@@ -371,6 +412,8 @@ export async function listClienteAppAppointments(params: { idConta: string }) {
       id: String(item.id || ""),
       idSalao: salaoMeta?.idSalao || String(item.id_salao || "").trim(),
       salaoNome: salaoMeta?.nome || "Salao Premium",
+      salaoWhatsapp: salaoMeta?.whatsapp || null,
+      salaoTelefone: salaoMeta?.telefone || null,
       data: String(item.data || ""),
       horaInicio: String(item.hora_inicio || ""),
       horaFim: String(item.hora_fim || ""),

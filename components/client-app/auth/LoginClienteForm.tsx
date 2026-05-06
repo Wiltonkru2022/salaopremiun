@@ -115,6 +115,12 @@ export default function LoginClienteForm({
 
         <div className="space-y-2 pt-1 text-center">
           <Link
+            href="/app-cliente/recuperar-acesso"
+            className="block w-full text-sm font-medium text-zinc-700 underline underline-offset-4"
+          >
+            Esqueci minha senha
+          </Link>
+          <Link
             href={
               salaoId
                 ? `/app-cliente/cadastro?salao=${salaoId}${next ? `&next=${encodeURIComponent(next)}` : ""}`
