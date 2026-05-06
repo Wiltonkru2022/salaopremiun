@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, BookOpen, Layers3, ListChecks, Search } from "lucide-react";
+import BlogCoverMedia from "@/components/blog/BlogCoverMedia";
 import { BlogFooter, BlogHeader } from "@/components/blog/BlogChrome";
 import { DOMINIO_BLOG } from "@/lib/proxy/domain-config";
 import { getBlogCategories, getPublishedBlogPosts } from "@/lib/blog/service";
@@ -69,22 +69,14 @@ export default async function BlogPage() {
                 href={`/${featured.slug}`}
                 className="group overflow-hidden rounded-[24px] border border-zinc-200 bg-white text-zinc-950 shadow-sm transition hover:-translate-y-0.5 hover:shadow-xl"
               >
-                {featured.coverImage.startsWith("data:") ? (
-                  <img
-                    src={featured.coverImage}
-                    alt={featured.coverAlt}
-                    className="aspect-[16/10] w-full object-cover"
-                  />
-                ) : (
-                  <Image
-                    src={featured.coverImage}
-                    alt={featured.coverAlt}
-                    width={840}
-                    height={520}
-                    priority
-                    className="aspect-[16/10] w-full object-cover"
-                  />
-                )}
+                <BlogCoverMedia
+                  src={featured.coverImage}
+                  alt={featured.coverAlt}
+                  width={840}
+                  height={520}
+                  priority
+                  className="aspect-[16/10] w-full object-cover"
+                />
                 <div className="p-4">
                   <div className="text-xs font-black uppercase tracking-[0.22em] text-amber-700">
                     Destaque - {featured.categoryName}
@@ -118,21 +110,7 @@ export default async function BlogPage() {
                   href={`/${post.slug}`}
                   className="group overflow-hidden rounded-[24px] border border-zinc-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg"
                 >
-                  {post.coverImage.startsWith("data:") ? (
-                    <img
-                      src={post.coverImage}
-                      alt={post.coverAlt}
-                      className="aspect-[16/9] w-full object-cover"
-                    />
-                  ) : (
-                    <Image
-                      src={post.coverImage}
-                      alt={post.coverAlt}
-                      width={720}
-                      height={420}
-                      className="aspect-[16/9] w-full object-cover"
-                    />
-                  )}
+                  <BlogCoverMedia src={post.coverImage} alt={post.coverAlt} />
                   <div className="p-4">
                     <div className="text-[11px] font-black uppercase tracking-[0.22em] text-zinc-400">
                       {post.categoryName} - {post.readTime}

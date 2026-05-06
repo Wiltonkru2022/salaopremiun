@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, CalendarDays, Clock, Tag } from "lucide-react";
+import BlogCoverMedia from "@/components/blog/BlogCoverMedia";
 import { BlogFooter, BlogHeader } from "@/components/blog/BlogChrome";
+import { isVideoMedia } from "@/lib/blog/media";
 import { DOMINIO_BLOG, DOMINIO_RAIZ } from "@/lib/proxy/domain-config";
 import { getBlogPost, getPublishedBlogPosts } from "@/lib/blog/service";
 
@@ -33,7 +34,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       title: post.title,
       description: post.description,
       type: "article",
-      images: [post.coverImage],
+      images: isVideoMedia(post.coverImage) ? undefined : [post.coverImage],
     },
   };
 }
@@ -90,22 +91,14 @@ export default async function BlogPostPage({ params }: Props) {
               </div>
 
               <div className="overflow-hidden rounded-[24px] border border-zinc-200 bg-white shadow-sm">
-                {post.coverImage.startsWith("data:") ? (
-                  <img
-                    src={post.coverImage}
-                    alt={post.coverAlt}
-                    className="aspect-[4/3] w-full object-cover"
-                  />
-                ) : (
-                  <Image
-                    src={post.coverImage}
-                    alt={post.coverAlt}
-                    width={900}
-                    height={620}
-                    priority
-                    className="aspect-[4/3] w-full object-cover"
-                  />
-                )}
+                <BlogCoverMedia
+                  src={post.coverImage}
+                  alt={post.coverAlt}
+                  width={900}
+                  height={620}
+                  priority
+                  className="aspect-[4/3] w-full object-cover"
+                />
               </div>
             </div>
           </header>

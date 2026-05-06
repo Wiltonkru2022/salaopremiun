@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ArrowLeft, Send } from "lucide-react";
+import { isVideoMedia } from "@/lib/blog/media";
 
 type PreviewData = {
   title: string;
@@ -99,11 +100,22 @@ export default function AdminBlogPreview({ fallback, editHref }: Props) {
             </div>
             {data.coverImage ? (
               <div className="overflow-hidden rounded-[24px] border border-white/10 bg-white shadow-2xl">
-                <img
-                  src={data.coverImage}
-                  alt={data.coverAlt}
-                  className="aspect-[4/3] w-full object-cover"
-                />
+                {isVideoMedia(data.coverImage) ? (
+                  <video
+                    src={data.coverImage}
+                    className="aspect-[4/3] w-full bg-zinc-950 object-cover"
+                    controls
+                    muted
+                    playsInline
+                    preload="metadata"
+                  />
+                ) : (
+                  <img
+                    src={data.coverImage}
+                    alt={data.coverAlt}
+                    className="aspect-[4/3] w-full object-cover"
+                  />
+                )}
               </div>
             ) : null}
           </div>

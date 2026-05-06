@@ -1,6 +1,6 @@
-import Image from "next/image";
 import Link from "next/link";
 import { BookOpen, Eye, Plus, SquarePen } from "lucide-react";
+import BlogCoverMedia from "@/components/blog/BlogCoverMedia";
 import type { BlogPost } from "@/lib/blog/content";
 import { getAdminBlogData } from "@/lib/blog/service";
 
@@ -75,21 +75,7 @@ export default async function AdminMasterBlogPage() {
             className="group overflow-hidden rounded-[24px] border border-zinc-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:border-zinc-950 hover:shadow-lg"
           >
             <div className="relative">
-              {post.coverImage.startsWith("data:") ? (
-                <img
-                  src={post.coverImage}
-                  alt={post.coverAlt}
-                  className="aspect-[16/9] w-full object-cover"
-                />
-              ) : (
-                <Image
-                  src={post.coverImage}
-                  alt={post.coverAlt}
-                  width={720}
-                  height={420}
-                  className="aspect-[16/9] w-full object-cover"
-                />
-              )}
+              <BlogCoverMedia src={post.coverImage} alt={post.coverAlt} />
               <div className="absolute right-3 top-3 inline-flex items-center gap-1 rounded-full bg-white/95 px-3 py-1.5 text-xs font-black text-zinc-950 shadow-sm">
                 <SquarePen size={14} />
                 Editar

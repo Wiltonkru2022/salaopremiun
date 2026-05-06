@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 import type { BlogCategory, BlogPost } from "@/lib/blog/content";
 import { createBlogPost } from "@/app/(admin-master)/admin-master/blog/actions";
+import { isVideoMedia } from "@/lib/blog/media";
 
 type Props = {
   post: BlogPost | null;
@@ -304,7 +305,14 @@ export default function AdminBlogEditor({ post, categories }: Props) {
 
   function handleCoverFile(file?: File) {
     if (!file) return;
-    if (!canUseFile(file, MAX_INLINE_IMAGE_BYTES, "Imagem de capa")) {
+    const isVideo = file.type.startsWith("video/");
+    if (
+      !canUseFile(
+        file,
+        isVideo ? MAX_INLINE_VIDEO_BYTES : MAX_INLINE_IMAGE_BYTES,
+        isVideo ? "Vídeo de capa" : "Imagem de capa"
+      )
+    ) {
       if (coverInputRef.current) coverInputRef.current.value = "";
       return;
     }
@@ -609,12 +617,12 @@ export default function AdminBlogEditor({ post, categories }: Props) {
 
           <section className="rounded-[22px] border border-zinc-200 bg-white p-4 shadow-sm">
             <div className="text-xs font-black uppercase tracking-[0.22em] text-zinc-400">
-              Foto de capa
+              Capa do post
             </div>
             <input
               ref={coverInputRef}
               type="file"
-              accept="image/*"
+              accept="image/*,video/*"
               className="hidden"
               onChange={(event) => handleCoverFile(event.target.files?.[0])}
             />
@@ -623,13 +631,22 @@ export default function AdminBlogEditor({ post, categories }: Props) {
               onClick={() => coverInputRef.current?.click()}
               className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-zinc-200 px-4 py-3 text-sm font-black hover:border-zinc-950"
             >
-              <ImagePlus size={17} />
-              {coverImage ? "Trocar foto" : "Carregar do PC"}
+              {isVideoMedia(coverImage) ? <Video size={17} /> : <ImagePlus size={17} />}
+              {coverImage ? "Trocar capa" : "Carregar imagem ou vídeo"}
             </button>
             {coverImage ? (
               <div className="mt-3">
                 <div className="overflow-hidden rounded-2xl border border-zinc-200">
-                  {coverImage.startsWith("data:") ? (
+                  {isVideoMedia(coverImage) ? (
+                    <video
+                      src={coverImage}
+                      className="aspect-[4/3] w-full bg-zinc-950 object-cover"
+                      controls
+                      muted
+                      playsInline
+                      preload="metadata"
+                    />
+                  ) : coverImage.startsWith("data:") ? (
                     <img src={coverImage} alt={coverAlt} className="aspect-[4/3] w-full object-cover" />
                   ) : (
                     <Image
@@ -664,7 +681,7 @@ export default function AdminBlogEditor({ post, categories }: Props) {
             <input
               value={coverAlt}
               onChange={(event) => setCoverAlt(event.target.value)}
-              placeholder="Texto alternativo da imagem"
+              placeholder="Texto alternativo ou descrição da capa"
               className="mt-3 w-full rounded-2xl border border-zinc-200 px-3 py-2.5 text-sm outline-none focus:border-zinc-950"
             />
           </section>
