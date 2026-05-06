@@ -31,7 +31,7 @@ type BlogDbPost = {
   categoria: BlogDbCategory | null;
 };
 
-function canUseSupabaseAdmin() {
+function canUseBlogDatabase() {
   return canUseBlogSupabasePublic();
 }
 
@@ -104,28 +104,15 @@ function mapPost(post: BlogDbPost): BlogPost {
   };
 }
 
-function mapFallbackAdminPost(post: BlogPost): BlogPost {
-  const fallbackCategoryId = defaultBlogCategories.find(
-    (category) => category.slug === post.categorySlug
-  )?.id;
-
-  return {
-    ...post,
-    categoryId: fallbackCategoryId,
-    status: post.status || "publicado",
-    rawContent: post.rawContent || post.body.join("\n\n"),
-  };
-}
-
-async function getSupabaseAdminUnsafe() {
-  if (!canUseSupabaseAdmin()) return null;
+async function getBlogDatabaseUnsafe() {
+  if (!canUseBlogDatabase()) return null;
 
   return getBlogSupabasePublic() as any;
 }
 
 async function loadBlogCategories(): Promise<BlogCategory[]> {
   try {
-    const supabase = await getSupabaseAdminUnsafe();
+    const supabase = await getBlogDatabaseUnsafe();
     if (!supabase) return defaultBlogCategories;
 
     const { data, error } = await supabase
@@ -158,7 +145,7 @@ export async function getBlogCategories(): Promise<BlogCategory[]> {
 
 async function loadPublishedBlogPosts(): Promise<BlogPost[]> {
   try {
-    const supabase = await getSupabaseAdminUnsafe();
+    const supabase = await getBlogDatabaseUnsafe();
     if (!supabase) return defaultBlogPosts;
 
     const { data, error } = await supabase
@@ -202,12 +189,14 @@ export async function getAdminBlogData() {
   const categories = await getBlogCategories();
 
   try {
-    const supabase = await getSupabaseAdminUnsafe();
+    const supabase = await getBlogDatabaseUnsafe();
     if (!supabase) {
       return {
         categories,
-        posts: defaultBlogPosts,
+        posts: [],
         usingFallback: true,
+        error:
+          "A nova conexão do Supabase do blog não está configurada neste ambiente.",
       };
     }
 
@@ -222,8 +211,9 @@ export async function getAdminBlogData() {
     if (error) {
       return {
         categories,
-        posts: defaultBlogPosts,
+        posts: [],
         usingFallback: true,
+        error: error.message,
       };
     }
 
@@ -231,24 +221,28 @@ export async function getAdminBlogData() {
       categories,
       posts: (data || []).map(mapPost),
       usingFallback: false,
+      error: null,
     };
-  } catch {
+  } catch (error) {
     return {
       categories,
-      posts: defaultBlogPosts,
+      posts: [],
       usingFallback: true,
+      error:
+        error instanceof Error
+          ? error.message
+          : "Não foi possível ler os posts na nova base do blog.",
     };
   }
 }
 
 export async function getAdminBlogPostById(id: string): Promise<BlogPost | null> {
   noStore();
-  const fallbackPost = defaultBlogPosts.find((post) => post.id === id || post.slug === id);
 
   try {
-    const supabase = await getSupabaseAdminUnsafe();
+    const supabase = await getBlogDatabaseUnsafe();
     if (!supabase) {
-      return fallbackPost ? mapFallbackAdminPost(fallbackPost) : null;
+      return null;
     }
 
     const { data, error } = await supabase
@@ -259,12 +253,10 @@ export async function getAdminBlogPostById(id: string): Promise<BlogPost | null>
       .eq("id", id)
       .maybeSingle();
 
-    if (error || !data) {
-      return fallbackPost ? mapFallbackAdminPost(fallbackPost) : null;
-    }
+    if (error || !data) return null;
     return mapPost(data);
   } catch {
-    return fallbackPost ? mapFallbackAdminPost(fallbackPost) : null;
+    return null;
   }
 }
 
@@ -272,12 +264,11 @@ export async function getAdminBlogPostBySlug(
   slug: string
 ): Promise<BlogPost | null> {
   noStore();
-  const fallbackPost = defaultBlogPosts.find((post) => post.slug === slug);
 
   try {
-    const supabase = await getSupabaseAdminUnsafe();
+    const supabase = await getBlogDatabaseUnsafe();
     if (!supabase) {
-      return fallbackPost ? mapFallbackAdminPost(fallbackPost) : null;
+      return null;
     }
 
     const { data, error } = await supabase
@@ -288,12 +279,10 @@ export async function getAdminBlogPostBySlug(
       .eq("slug", slug)
       .maybeSingle();
 
-    if (error || !data) {
-      return fallbackPost ? mapFallbackAdminPost(fallbackPost) : null;
-    }
+    if (error || !data) return null;
     return mapPost(data);
   } catch {
-    return fallbackPost ? mapFallbackAdminPost(fallbackPost) : null;
+    return null;
   }
 }
 

@@ -8,7 +8,7 @@ import { getAdminBlogData } from "@/lib/blog/service";
 export const dynamic = "force-dynamic";
 
 export default async function AdminMasterBlogPage() {
-  const { posts, categories, usingFallback } = await getAdminBlogData();
+  const { posts, categories, usingFallback, error } = await getAdminBlogData();
   const postsList = posts as BlogPost[];
   const categoriesList = categories as BlogCategory[];
   const publicados = postsList.filter((post) => post.status === "publicado").length;
@@ -62,9 +62,10 @@ export default async function AdminMasterBlogPage() {
         </div>
 
         {usingFallback ? (
-          <p className="mt-5 rounded-2xl border border-amber-200/30 bg-amber-100/10 p-3 text-sm leading-6 text-amber-50">
-            Exibindo conteúdo inicial. Após aplicar a migration do blog, os
-            posts criados no editor passam a vir do banco.
+          <p className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-sm font-semibold leading-6 text-amber-950">
+            O Admin Master não conseguiu ler a nova DB do blog agora. Para não
+            confundir com posts reais, a lista abaixo fica vazia até a conexão
+            voltar. {error ? `Detalhe: ${error}` : null}
           </p>
         ) : null}
       </section>
@@ -131,6 +132,19 @@ export default async function AdminMasterBlogPage() {
       </section>
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        {postsList.length === 0 ? (
+          <div className="rounded-[24px] border border-dashed border-zinc-300 bg-white p-8 text-center shadow-sm md:col-span-2 xl:col-span-3">
+            <h3 className="font-display text-2xl font-black text-zinc-950">
+              Nenhum post carregado da nova DB
+            </h3>
+            <p className="mx-auto mt-2 max-w-2xl text-sm leading-6 text-zinc-600">
+              Quando a conexão do blog estiver ativa neste ambiente, os posts
+              do projeto Supabase separado aparecem aqui. Use o botão Criar post
+              para publicar direto na base nova.
+            </p>
+          </div>
+        ) : null}
+
         {postsList.map((post) => (
           <Link
             key={post.id}
