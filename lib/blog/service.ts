@@ -45,11 +45,27 @@ function looksLikeHtml(value: string) {
   return /<\/?[a-z][\s\S]*>/i.test(value);
 }
 
+function looksLikeUuid(value?: string | null) {
+  return Boolean(
+    String(value || "").match(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+    )
+  );
+}
+
+function readableCategoryName(category: BlogDbCategory) {
+  if (looksLikeUuid(category.slug) || looksLikeUuid(category.nome.replace(/\s+/g, "-"))) {
+    return "Agenda online";
+  }
+
+  return category.nome;
+}
+
 function mapCategory(category: BlogDbCategory): BlogCategory {
   return {
     id: category.id,
-    slug: category.slug,
-    name: category.nome,
+    slug: looksLikeUuid(category.slug) ? "agenda-online" : category.slug,
+    name: readableCategoryName(category),
     description: category.descricao || "",
   };
 }
@@ -63,8 +79,12 @@ function mapPost(post: BlogDbPost): BlogPost {
     title: post.titulo,
     description: post.descricao,
     excerpt: post.resumo || post.descricao,
-    categorySlug: category?.slug || "gestao",
-    categoryName: category?.nome || "Gestao",
+    categorySlug: category
+      ? looksLikeUuid(category.slug)
+        ? "agenda-online"
+        : category.slug
+      : "gestao",
+    categoryName: category ? readableCategoryName(category) : "Gestão",
     readTime: post.tempo_leitura || "5 min",
     publishedAt: post.publicado_em || new Date().toISOString(),
     coverImage: post.imagem_capa_url || "/marketing-kit/site-hero.png",

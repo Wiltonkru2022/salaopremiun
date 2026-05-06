@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, BookOpen, Layers3, ListChecks, Search } from "lucide-react";
+import { ArrowRight, Search } from "lucide-react";
 import BlogCoverMedia from "@/components/blog/BlogCoverMedia";
+import BlogSearchExperience from "@/components/blog/BlogSearchExperience";
 import { BlogFooter, BlogHeader } from "@/components/blog/BlogChrome";
 import { DOMINIO_BLOG } from "@/lib/proxy/domain-config";
 import { getBlogCategories, getPublishedBlogPosts } from "@/lib/blog/service";
@@ -23,7 +24,6 @@ export default async function BlogPage() {
     getBlogCategories(),
   ]);
   const featured = posts.find((post) => post.featured) || posts[0];
-  const recentPosts = posts.filter((post) => post.id !== featured?.id);
   const readingLists = [
     {
       title: "Comece pela agenda",
@@ -96,83 +96,12 @@ export default async function BlogPage() {
           </div>
         </section>
 
-        <section className="mx-auto grid max-w-7xl gap-5 px-6 py-8 lg:grid-cols-[minmax(0,1fr)_360px] lg:px-10 lg:py-10">
-          <div className="space-y-5">
-            <div className="flex items-center gap-2">
-              <BookOpen size={21} className="text-zinc-500" />
-              <h2 className="font-display text-3xl font-black">Artigos recentes</h2>
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-2">
-              {recentPosts.map((post) => (
-                <Link
-                  key={post.id}
-                  href={`/${post.slug}`}
-                  className="group overflow-hidden rounded-[24px] border border-zinc-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg"
-                >
-                  <BlogCoverMedia src={post.coverImage} alt={post.coverAlt} />
-                  <div className="p-4">
-                    <div className="text-[11px] font-black uppercase tracking-[0.22em] text-zinc-400">
-                      {post.categoryName} - {post.readTime}
-                    </div>
-                    <h3 className="mt-2 font-display text-xl font-black leading-tight">
-                      {post.title}
-                    </h3>
-                    <p className="mt-2 text-sm leading-6 text-zinc-600">
-                      {post.excerpt}
-                    </p>
-                    <div className="mt-4 inline-flex items-center gap-2 text-sm font-black text-zinc-950">
-                      Abrir post <ArrowRight size={16} />
-                    </div>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </div>
-
-          <aside className="space-y-5">
-            <section className="rounded-[24px] border border-zinc-200 bg-white p-4 shadow-sm">
-              <div className="flex items-center gap-2">
-                <Layers3 size={19} className="text-zinc-500" />
-                <h2 className="font-display text-2xl font-black">Categorias</h2>
-              </div>
-              <div className="mt-4 space-y-2.5">
-                {categories.map((category) => (
-                  <a
-                    key={category.id}
-                    href={`/#${category.slug}`}
-                    className="block rounded-2xl border border-zinc-200 p-3 transition hover:border-zinc-950"
-                    id={category.slug}
-                  >
-                    <div className="font-black">{category.name}</div>
-                    <p className="mt-1 text-sm leading-6 text-zinc-500">
-                      {category.description}
-                    </p>
-                  </a>
-                ))}
-              </div>
-            </section>
-
-            <section className="rounded-[24px] border border-zinc-200 bg-white p-4 shadow-sm">
-              <div className="flex items-center gap-2">
-                <ListChecks size={19} className="text-zinc-500" />
-                <h2 className="font-display text-2xl font-black">Listas de leitura</h2>
-              </div>
-              <div className="mt-4 space-y-2.5">
-                {readingLists.map((list) => (
-                  <Link
-                    key={list.href}
-                    href={list.href}
-                    className="block rounded-2xl bg-zinc-950 p-3 text-white transition hover:bg-zinc-800"
-                  >
-                    <div className="font-black">{list.title}</div>
-                    <p className="mt-1 text-sm leading-6 text-zinc-300">{list.body}</p>
-                  </Link>
-                ))}
-              </div>
-            </section>
-          </aside>
-        </section>
+        <BlogSearchExperience
+          posts={posts}
+          categories={categories}
+          readingLists={readingLists}
+          featuredId={featured?.id}
+        />
       </main>
 
       <BlogFooter />
