@@ -69,14 +69,22 @@ export default async function BlogPage() {
                 href={`/${featured.slug}`}
                 className="group overflow-hidden rounded-[24px] border border-white/10 bg-white text-zinc-950 shadow-2xl transition hover:-translate-y-0.5"
               >
-                <Image
-                  src={featured.coverImage}
-                  alt={featured.coverAlt}
-                  width={840}
-                  height={520}
-                  priority
-                  className="aspect-[16/10] w-full object-cover"
-                />
+                {featured.coverImage.startsWith("data:") ? (
+                  <img
+                    src={featured.coverImage}
+                    alt={featured.coverAlt}
+                    className="aspect-[16/10] w-full object-cover"
+                  />
+                ) : (
+                  <Image
+                    src={featured.coverImage}
+                    alt={featured.coverAlt}
+                    width={840}
+                    height={520}
+                    priority
+                    className="aspect-[16/10] w-full object-cover"
+                  />
+                )}
                 <div className="p-4">
                   <div className="text-xs font-black uppercase tracking-[0.22em] text-amber-700">
                     Destaque - {featured.categoryName}
@@ -110,13 +118,21 @@ export default async function BlogPage() {
                   href={`/${post.slug}`}
                   className="group overflow-hidden rounded-[24px] border border-zinc-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg"
                 >
-                  <Image
-                    src={post.coverImage}
-                    alt={post.coverAlt}
-                    width={720}
-                    height={420}
-                    className="aspect-[16/9] w-full object-cover"
-                  />
+                  {post.coverImage.startsWith("data:") ? (
+                    <img
+                      src={post.coverImage}
+                      alt={post.coverAlt}
+                      className="aspect-[16/9] w-full object-cover"
+                    />
+                  ) : (
+                    <Image
+                      src={post.coverImage}
+                      alt={post.coverAlt}
+                      width={720}
+                      height={420}
+                      className="aspect-[16/9] w-full object-cover"
+                    />
+                  )}
                   <div className="p-4">
                     <div className="text-[11px] font-black uppercase tracking-[0.22em] text-zinc-400">
                       {post.categoryName} - {post.readTime}

@@ -41,6 +41,10 @@ function splitBody(value: string) {
     .filter(Boolean);
 }
 
+function looksLikeHtml(value: string) {
+  return /<\/?[a-z][\s\S]*>/i.test(value);
+}
+
 function mapCategory(category: BlogDbCategory): BlogCategory {
   return {
     id: category.id,
@@ -67,6 +71,11 @@ function mapPost(post: BlogDbPost): BlogPost {
     coverAlt: post.imagem_capa_alt || post.titulo,
     tags: post.tags || [],
     body: splitBody(post.conteudo),
+    bodyHtml: looksLikeHtml(post.conteudo)
+      ? post.conteudo
+      : splitBody(post.conteudo)
+          .map((paragraph) => `<p>${paragraph}</p>`)
+          .join(""),
     featured: Boolean(post.destaque),
     categoryId: post.categoria_id || category?.id,
     status: post.status || "publicado",
@@ -203,6 +212,50 @@ export async function getAdminBlogPostById(id: string): Promise<BlogPost | null>
         "id, categoria_id, slug, titulo, descricao, resumo, conteudo, imagem_capa_url, imagem_capa_alt, tempo_leitura, tags, destaque, publicado_em, status, categoria:blog_categorias(id, slug, nome, descricao)"
       )
       .eq("id", id)
+      .maybeSingle();
+
+    if (error || !data) return null;
+    return mapPost(data);
+  } catch {
+    return fallbackPost
+      ? {
+          ...fallbackPost,
+          categoryId: fallbackCategoryId,
+          status: "publicado",
+          rawContent: fallbackPost.body.join("\n\n"),
+        }
+      : null;
+  }
+}
+
+export async function getAdminBlogPostBySlug(
+  slug: string
+): Promise<BlogPost | null> {
+  noStore();
+  const fallbackPost = defaultBlogPosts.find((post) => post.slug === slug);
+  const fallbackCategoryId = fallbackPost
+    ? defaultBlogCategories.find((category) => category.slug === fallbackPost.categorySlug)?.id
+    : undefined;
+
+  try {
+    const supabase = await getSupabaseAdminUnsafe();
+    if (!supabase) {
+      return fallbackPost
+        ? {
+            ...fallbackPost,
+            categoryId: fallbackCategoryId,
+            status: "publicado",
+            rawContent: fallbackPost.body.join("\n\n"),
+          }
+        : null;
+    }
+
+    const { data, error } = await supabase
+      .from("blog_posts")
+      .select(
+        "id, categoria_id, slug, titulo, descricao, resumo, conteudo, imagem_capa_url, imagem_capa_alt, tempo_leitura, tags, destaque, publicado_em, status, categoria:blog_categorias(id, slug, nome, descricao)"
+      )
+      .eq("slug", slug)
       .maybeSingle();
 
     if (error || !data) return null;

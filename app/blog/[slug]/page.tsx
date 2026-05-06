@@ -90,14 +90,22 @@ export default async function BlogPostPage({ params }: Props) {
               </div>
 
               <div className="overflow-hidden rounded-[24px] border border-white/10 bg-white shadow-2xl">
-                <Image
-                  src={post.coverImage}
-                  alt={post.coverAlt}
-                  width={900}
-                  height={620}
-                  priority
-                  className="aspect-[4/3] w-full object-cover"
-                />
+                {post.coverImage.startsWith("data:") ? (
+                  <img
+                    src={post.coverImage}
+                    alt={post.coverAlt}
+                    className="aspect-[4/3] w-full object-cover"
+                  />
+                ) : (
+                  <Image
+                    src={post.coverImage}
+                    alt={post.coverAlt}
+                    width={900}
+                    height={620}
+                    priority
+                    className="aspect-[4/3] w-full object-cover"
+                  />
+                )}
               </div>
             </div>
           </header>
@@ -108,11 +116,14 @@ export default async function BlogPostPage({ params }: Props) {
                 {post.excerpt}
               </p>
 
-              <div className="mt-8 space-y-5 text-[1.03rem] leading-8 text-zinc-700">
-                {post.body.map((paragraph, index) => (
-                  <p key={`${post.slug}-${index}`}>{paragraph}</p>
-                ))}
-              </div>
+              <div
+                className="blog-editor-prose mt-8 text-[1.03rem] leading-8 text-zinc-700"
+                dangerouslySetInnerHTML={{
+                  __html:
+                    post.bodyHtml ||
+                    post.body.map((paragraph) => `<p>${paragraph}</p>`).join(""),
+                }}
+              />
 
               <div className="mt-8 rounded-[22px] bg-zinc-950 p-5 text-white">
                 <h2 className="font-display text-2xl font-black">

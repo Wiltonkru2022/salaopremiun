@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { requireAdminMasterUser } from "@/lib/admin-master/auth/requireAdminMasterUser";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
@@ -49,7 +50,7 @@ export async function createBlogCategory(formData: FormData) {
   );
 
   if (error) {
-    throw new Error(`Nao foi possivel salvar a categoria: ${error.message}`);
+    throw new Error(`Não foi possível salvar a categoria: ${error.message}`);
   }
 
   revalidatePath("/admin-master/blog");
@@ -74,7 +75,7 @@ export async function createBlogPost(formData: FormData) {
   const tags = readTags(readText(formData, "tags"));
 
   if (!titulo || !slug || !descricao || !conteudo || !categoriaId) {
-    throw new Error("Titulo, categoria, descricao e conteudo sao obrigatorios.");
+    throw new Error("Título, categoria, descrição e conteúdo são obrigatórios.");
   }
 
   const now = new Date().toISOString();
@@ -101,10 +102,12 @@ export async function createBlogPost(formData: FormData) {
     : await supabase.from("blog_posts").upsert(payload, { onConflict: "slug" });
 
   if (error) {
-    throw new Error(`Nao foi possivel salvar o post: ${error.message}`);
+    throw new Error(`Não foi possível salvar o post: ${error.message}`);
   }
 
   revalidatePath("/admin-master/blog");
   revalidatePath("/blog");
   revalidatePath(`/blog/${slug}`);
+  revalidatePath(`/admin-master/blog/${slug}`);
+  redirect(`/admin-master/blog/${slug}`);
 }

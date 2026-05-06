@@ -205,6 +205,48 @@ a.bg-white {
   background-clip: padding-box;
 }
 
+.blog-editor-prose h1 {
+  margin: 1.2rem 0 0.7rem;
+  font-size: 2.4rem;
+  line-height: 1.08;
+  font-weight: 900;
+}
+
+.blog-editor-prose h2 {
+  margin: 1.1rem 0 0.65rem;
+  font-size: 1.8rem;
+  line-height: 1.15;
+  font-weight: 900;
+}
+
+.blog-editor-prose h3 {
+  margin: 1rem 0 0.5rem;
+  font-size: 1.35rem;
+  line-height: 1.2;
+  font-weight: 850;
+}
+
+.blog-editor-prose p {
+  margin: 0 0 1rem;
+}
+
+.blog-editor-prose a {
+  color: #7c3aed;
+  font-weight: 800;
+  text-decoration: underline;
+}
+
+.blog-editor-prose figure {
+  margin: 1.5rem 0;
+}
+
+.blog-editor-prose figcaption {
+  margin-top: 0.5rem;
+  color: #71717a;
+  font-size: 0.875rem;
+  text-align: center;
+}
+
 @media (max-width: 1440px) {
   html {
     scroll-padding-top: 104px;

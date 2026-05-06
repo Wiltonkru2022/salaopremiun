@@ -19,6 +19,7 @@ export type BlogPost = {
   coverAlt: string;
   tags: string[];
   body: string[];
+  bodyHtml?: string;
   featured?: boolean;
   categoryId?: string;
   status?: "rascunho" | "publicado" | "arquivado";
