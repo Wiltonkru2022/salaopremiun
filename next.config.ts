@@ -45,6 +45,11 @@ function buildCsp() {
     "https://*.gstatic.com",
   ];
   const frameAncestors = ["'self'"];
+  const frameSrc = [
+    "'self'",
+    "https://www.google.com",
+    "https://maps.google.com",
+  ];
   return [
     "default-src 'self'",
     "base-uri 'self'",
@@ -56,7 +61,7 @@ function buildCsp() {
     `img-src ${imgSrc.join(" ")}`,
     "font-src 'self' data:",
     `connect-src ${Array.from(new Set(connectSrc)).join(" ")}`,
-    "frame-src 'self'",
+    `frame-src ${frameSrc.join(" ")}`,
     "worker-src 'self' blob:",
     `manifest-src ${Array.from(new Set(manifestSrc)).join(" ")}`,
     "upgrade-insecure-requests",

@@ -1993,12 +1993,6 @@ export default function PerfilSalaoPage() {
             />
           </Field>
 
-          <div className="rounded-[22px] border border-zinc-200 bg-zinc-50 p-4 text-sm leading-6 text-zinc-600">
-            A capa e a foto do perfil agora ficam na primeira area desta pagina,
-            em <strong>Identidade do negocio</strong>. Use este modal para
-            descricao, mapa, pagamentos e publicacao.
-          </div>
-
           <MapLocationPicker
             latitude={appClienteDraft.latitude}
             longitude={appClienteDraft.longitude}
