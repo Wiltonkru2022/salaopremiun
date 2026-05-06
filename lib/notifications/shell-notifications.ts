@@ -162,6 +162,44 @@ export function buildShellNotifications({
     });
   }
 
+  const pendentesConfirmacao = agendamentos.filter(
+    (agendamento) =>
+      String(agendamento.status || "").toLowerCase() === "pendente" &&
+      String(agendamento.origem || "").toLowerCase() === "app_cliente"
+  );
+
+  if (pendentesConfirmacao.length > 0) {
+    const primeiro = pendentesConfirmacao[0];
+    const preview = [
+      primeiro?.cliente_nome,
+      primeiro?.servico_nome,
+      primeiro?.hora_inicio ? String(primeiro.hora_inicio).slice(0, 5) : null,
+    ]
+      .filter(Boolean)
+      .join(" - ");
+
+    notifications.push({
+      id: "agendamentos-app-cliente-pendentes",
+      title: `${pendentesConfirmacao.length} pedido(s) para confirmar`,
+      description:
+        preview ||
+        "Clientes do app aguardam confirmacao de horario pela agenda.",
+      tone: "warning",
+      category: "agenda",
+      severity: "high",
+      eventType: "client_app_appointments_pending_confirmation",
+      href: "/agenda",
+      actionLabel: "Confirmar na agenda",
+      destination: "internal",
+      icon: "agenda",
+      sourceModule: "agenda",
+      sourceEntity: "agendamentos",
+      persistUntilResolved: true,
+      expiresAt: null,
+      critical: true,
+    });
+  }
+
   const finalizados = agendamentos.filter((agendamento) =>
     ["finalizado", "finalizada", "concluido", "concluida"].includes(
       String(agendamento.status || "").toLowerCase()

@@ -68,6 +68,9 @@ export type AgendamentoNotificacao = {
   status?: string | null;
   data?: string | null;
   hora_inicio?: string | null;
+  origem?: string | null;
+  cliente_nome?: string | null;
+  servico_nome?: string | null;
 };
 
 export type CaixaMovimentoNotificacao = {

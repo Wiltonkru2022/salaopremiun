@@ -41,7 +41,13 @@ const loadPainelShellContextCached = unstable_cache(
       };
     }
 
-    const [{ data: permissoes }, { data: salao }, { data: assinatura }, planoAccess] =
+    const [
+      { data: permissoes },
+      { data: salao },
+      { data: assinatura },
+      { data: agendamentosPendentes },
+      planoAccess,
+    ] =
       await Promise.all([
         supabaseAdmin
           .from("usuarios_permissoes")
@@ -60,6 +66,15 @@ const loadPainelShellContextCached = unstable_cache(
           .eq("id_salao", usuario.id_salao)
           .limit(1)
           .maybeSingle(),
+        (supabaseAdmin as any)
+          .from("agendamentos")
+          .select("id, status, data, hora_inicio, origem, clientes(nome), servicos(nome)")
+          .eq("id_salao", usuario.id_salao)
+          .eq("status", "pendente")
+          .eq("origem", "app_cliente")
+          .order("data", { ascending: true })
+          .order("hora_inicio", { ascending: true })
+          .limit(12),
         getPlanoAccessSnapshot(usuario.id_salao),
       ]);
 
@@ -98,7 +113,26 @@ const loadPainelShellContextCached = unstable_cache(
     const notifications = buildShellNotifications({
       resumoAssinatura,
       clientes: [],
-      agendamentos: [],
+      agendamentos: ((agendamentosPendentes || []) as Array<Record<string, any>>).map(
+        (agendamento) => {
+          const cliente = Array.isArray(agendamento.clientes)
+            ? agendamento.clientes[0]
+            : agendamento.clientes;
+          const servico = Array.isArray(agendamento.servicos)
+            ? agendamento.servicos[0]
+            : agendamento.servicos;
+
+          return {
+            id: String(agendamento.id || ""),
+            status: String(agendamento.status || ""),
+            data: String(agendamento.data || ""),
+            hora_inicio: String(agendamento.hora_inicio || ""),
+            origem: String(agendamento.origem || ""),
+            cliente_nome: String(cliente?.nome || "").trim() || null,
+            servico_nome: String(servico?.nome || "").trim() || null,
+          };
+        }
+      ),
       movimentosCaixa: [],
       onboarding: null,
       tickets: [],

@@ -1,8 +1,8 @@
 export async function GET() {
   const manifest = {
     id: "/app-profissional",
-    name: "SalaoPremium Profissional",
-    short_name: "SalaoPro",
+    name: "SalaoPremium",
+    short_name: "SalaoPremium",
     description: "Agenda, clientes e comandas para profissionais do salao.",
     start_url: "/app-profissional",
     scope: "/app-profissional",

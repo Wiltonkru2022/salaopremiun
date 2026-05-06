@@ -25,6 +25,12 @@ type PushPayload = {
   tag?: string;
 };
 
+export type BroadcastPushTarget =
+  | "todos"
+  | "clientes"
+  | "profissionais"
+  | "saloes";
+
 function getPushConfig() {
   const publicKey = String(process.env.WEB_PUSH_PUBLIC_KEY || "").trim();
   const privateKey = String(process.env.WEB_PUSH_PRIVATE_KEY || "").trim();
@@ -145,6 +151,56 @@ async function sendToRows(rows: PushSubscriptionRow[], payload: PushPayload) {
   );
 }
 
+export async function broadcastPushNotification(params: {
+  target: BroadcastPushTarget;
+  title: string;
+  body: string;
+  url?: string | null;
+  idSalao?: string | null;
+}) {
+  const supabase = getSupabaseAdmin();
+  const title = String(params.title || "").trim();
+  const body = String(params.body || "").trim();
+
+  if (!title || !body) {
+    throw new Error("Informe titulo e mensagem.");
+  }
+
+  let query = (supabase as any)
+    .from("push_subscriptions")
+    .select("id, endpoint, p256dh, auth")
+    .eq("ativo", true);
+
+  if (params.target === "clientes") {
+    query = query.eq("audience", "cliente_app");
+  } else if (params.target === "profissionais") {
+    query = query.eq("audience", "profissional_app");
+  } else if (params.target === "saloes") {
+    query = query.eq("audience", "salao_painel");
+  }
+
+  if (params.idSalao) {
+    query = query.eq("id_salao", params.idSalao);
+  }
+
+  const { data: rows, error } = await query.limit(2000);
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const subscriptions = (rows || []) as PushSubscriptionRow[];
+  await sendToRows(subscriptions, {
+    title,
+    body,
+    url: params.url || "/",
+    tag: `admin-master-${Date.now()}`,
+  });
+
+  return {
+    sent: subscriptions.length,
+  };
+}
+
 function formatAppointmentDate(date?: string | null, time?: string | null) {
   const dateText = date
     ? new Intl.DateTimeFormat("pt-BR", {
@@ -183,14 +239,14 @@ export async function notifySalonAboutClientBooking(params: {
         .eq("id_profissional", params.idProfissional),
     ]);
 
-    const body = `${params.clienteNome} pediu ${params.servicoNome} em ${formatAppointmentDate(
+    const body = `${params.clienteNome} quer confirmar ${params.servicoNome} em ${formatAppointmentDate(
       params.data,
       params.horaInicio
-    )}.`;
+    )}. Toque para revisar.`;
 
     if (!salaoResult.error && salaoResult.data?.length) {
       await sendToRows(salaoResult.data as PushSubscriptionRow[], {
-        title: "Novo agendamento no app cliente",
+        title: "Pedido de horario recebido",
         body,
         url: `/agenda?agendamento=${params.idAgendamento}`,
         tag: `agendamento-${params.idAgendamento}`,
@@ -199,7 +255,7 @@ export async function notifySalonAboutClientBooking(params: {
 
     if (!profissionalResult.error && profissionalResult.data?.length) {
       await sendToRows(profissionalResult.data as PushSubscriptionRow[], {
-        title: "Novo agendamento para confirmar",
+        title: "Pedido de horario para confirmar",
         body,
         url: `/app-profissional/agenda/${params.idAgendamento}`,
         tag: `agendamento-${params.idAgendamento}`,
@@ -256,11 +312,11 @@ export async function notifyClientAppointmentConfirmed(params: {
       : { data: null };
 
     await sendToRows(rows as PushSubscriptionRow[], {
-      title: "Agendamento confirmado",
+      title: "Horario confirmado",
       body: `${servico?.nome || "Seu horario"} foi confirmado para ${formatAppointmentDate(
         agendamento.data,
         agendamento.hora_inicio
-      )}.`,
+      )}. Nos vemos em breve.`,
       url: "/app-cliente/agendamentos",
       tag: `agendamento-confirmado-${params.idAgendamento}`,
     });
