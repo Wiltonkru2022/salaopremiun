@@ -85,7 +85,7 @@ export async function upsertPushSubscription(params: {
         ultimo_uso_em: now,
         updated_at: now,
       },
-      { onConflict: "endpoint" }
+      { onConflict: "audience,endpoint" }
     );
 
   if (error) {

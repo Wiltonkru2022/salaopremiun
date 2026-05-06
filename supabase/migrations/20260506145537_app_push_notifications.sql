@@ -38,8 +38,8 @@ create table if not exists public.push_subscriptions (
   )
 );
 
-create unique index if not exists push_subscriptions_endpoint_uidx
-  on public.push_subscriptions(endpoint);
+create unique index if not exists push_subscriptions_audience_endpoint_uidx
+  on public.push_subscriptions(audience, endpoint);
 
 create index if not exists push_subscriptions_cliente_idx
   on public.push_subscriptions(cliente_app_conta_id)
