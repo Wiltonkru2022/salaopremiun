@@ -27,18 +27,21 @@ import {
   UserCog,
   Trash2,
   AlertTriangle,
+  BadgeDollarSign,
   CheckCircle2,
   Lock,
 } from "lucide-react";
 import {
   DIAS_SEMANA,
   EMPTY_CONFIG,
+  RATEIO_CONFIG_DEFAULT,
   EMPTY_SALAO,
   EMPTY_USUARIO_FORM,
   NIVEIS_USUARIO,
 } from "@/components/configuracoes/constants";
 import type {
   ConfigSalaoForm,
+  RateioConfig,
   SalaoForm,
   UsuarioForm,
   UsuarioSistema,
@@ -61,6 +64,7 @@ import { usePlanoAccessSnapshot } from "@/components/plans/usePlanoAccessSnapsho
 export type ConfiguracoesSecao =
   | "agenda"
   | "caixa"
+  | "rateio"
   | "sistema"
   | "usuarios";
 
@@ -76,6 +80,10 @@ const sectionMeta: Record<
     title: "Caixa e taxas",
     description: "Taxas de maquininha, repasses e regras financeiras.",
   },
+  rateio: {
+    title: "Rateio e impressão",
+    description: "Campos exibidos na impressão das comissões dos profissionais.",
+  },
   sistema: {
     title: "Sistema",
     description: "Preferências de leitura para quem usa o painel no dia a dia.",
@@ -85,6 +93,44 @@ const sectionMeta: Record<
     description: "Equipe administrativa, acessos, perfis e limite do plano.",
   },
 };
+
+const RATEIO_OPTIONS: Array<{
+  key: keyof RateioConfig;
+  label: string;
+  description: string;
+}> = [
+  { key: "mostrar_cliente", label: "Mostrar cliente", description: "Exibe cliente da comanda quando existir." },
+  { key: "mostrar_data", label: "Mostrar data", description: "Exibe data da venda ou competência." },
+  { key: "mostrar_servicos", label: "Mostrar serviços", description: "Mantém a descrição do serviço/produto vendido." },
+  { key: "mostrar_custo_produtos", label: "Mostrar custo de produtos", description: "Mostra custo do item só para conferência, sem virar faturamento." },
+  { key: "mostrar_taxa_maquininha", label: "Mostrar taxa maquininha", description: "Mostra taxa rateada/descontada quando existir." },
+  { key: "mostrar_acrescimo_desconto", label: "Mostrar acréscimo/desconto", description: "Mostra ajustes rateados na base da comissão." },
+  { key: "mostrar_assistente", label: "Mostrar assistente", description: "Mostra assistente vinculado ao lançamento." },
+  { key: "mostrar_pessoa", label: "Pessoa", description: "Coluna com profissional ou assistente." },
+  { key: "mostrar_descricao", label: "Descrição", description: "Coluna do item ou regra lançada." },
+  { key: "mostrar_competencia", label: "Competência", description: "Coluna de competência do rateio." },
+  { key: "mostrar_base", label: "Base", description: "Coluna da base usada no cálculo." },
+  { key: "mostrar_percentual", label: "% aplicada", description: "Coluna do percentual calculado." },
+  { key: "mostrar_origem", label: "Origem", description: "Coluna da regra de origem." },
+  { key: "mostrar_comissao", label: "Comissão", description: "Coluna do valor final da comissão." },
+  { key: "mostrar_status", label: "Status", description: "Coluna do status do lançamento." },
+  { key: "mostrar_pago_em", label: "Pago em", description: "Coluna da data de pagamento." },
+];
+
+const TAXAS_CREDITO_KEYS = [
+  "taxa_credito_1x",
+  "taxa_credito_2x",
+  "taxa_credito_3x",
+  "taxa_credito_4x",
+  "taxa_credito_5x",
+  "taxa_credito_6x",
+  "taxa_credito_7x",
+  "taxa_credito_8x",
+  "taxa_credito_9x",
+  "taxa_credito_10x",
+  "taxa_credito_11x",
+  "taxa_credito_12x",
+] as const;
 
 export default function ConfiguracoesPageClient({
   secao,
@@ -101,6 +147,7 @@ export default function ConfiguracoesPageClient({
   const meta = sectionMeta[secao];
   const mostrarAgenda = secao === "agenda";
   const mostrarCaixa = secao === "caixa";
+  const mostrarRateio = secao === "rateio";
   const mostrarSistema = secao === "sistema";
   const mostrarUsuarios = secao === "usuarios";
 
@@ -125,6 +172,7 @@ export default function ConfiguracoesPageClient({
   const [limiteUsuarios, setLimiteUsuarios] = useState(0);
 
   const [usuarioModalOpen, setUsuarioModalOpen] = useState(false);
+  const [taxasModalOpen, setTaxasModalOpen] = useState(false);
   const [usuarioForm, setUsuarioForm] = useState<UsuarioForm>(EMPTY_USUARIO_FORM);
   const [usuarioEditandoId, setUsuarioEditandoId] = useState<string | null>(null);
 
@@ -149,6 +197,17 @@ export default function ConfiguracoesPageClient({
   const fecharFeedbackModal = useCallback(() => {
     setFeedbackModalOpen(false);
   }, []);
+
+  function normalizeRateioConfig(value: unknown): RateioConfig {
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+      return RATEIO_CONFIG_DEFAULT;
+    }
+
+    return {
+      ...RATEIO_CONFIG_DEFAULT,
+      ...(value as Partial<RateioConfig>),
+    };
+  }
 
   const carregarUsuarios = useCallback(
     async (salaoIdParam?: string) => {
@@ -197,7 +256,7 @@ export default function ConfiguracoesPageClient({
         supabase.from("saloes").select("bairro, cep, cidade, complemento, cpf_cnpj, created_at, email, endereco, estado, id, inscricao_estadual, limite_profissionais, limite_usuarios, logo_url, nome, nome_fantasia, numero, plano, razao_social, renovacao_automatica, responsavel, status, telefone, tipo_pessoa, trial_ativo, trial_fim_em, trial_inicio_em, updated_at, whatsapp").eq("id", painelSession.idSalao).maybeSingle(),
         supabase
           .from("configuracoes_salao")
-          .select("cor_primaria, created_at, desconta_taxa_profissional, dias_funcionamento, exigir_cliente_na_venda, hora_abertura, hora_fechamento, id, id_salao, intervalo_minutos, modo_compacto, permitir_reabrir_venda, repassa_taxa_cliente, taxa_credito_10x, taxa_credito_11x, taxa_credito_12x, taxa_credito_1x, taxa_credito_2x, taxa_credito_3x, taxa_credito_4x, taxa_credito_5x, taxa_credito_6x, taxa_credito_7x, taxa_credito_8x, taxa_credito_9x, taxa_maquininha_boleto, taxa_maquininha_credito, taxa_maquininha_debito, taxa_maquininha_outro, taxa_maquininha_pix, taxa_maquininha_transferencia, updated_at")
+          .select("cor_primaria, created_at, desconta_taxa_profissional, dias_funcionamento, exigir_cliente_na_venda, hora_abertura, hora_fechamento, id, id_salao, intervalo_minutos, modo_compacto, permitir_reabrir_venda, rateio_config, repassa_taxa_cliente, taxa_credito_10x, taxa_credito_11x, taxa_credito_12x, taxa_credito_1x, taxa_credito_2x, taxa_credito_3x, taxa_credito_4x, taxa_credito_5x, taxa_credito_6x, taxa_credito_7x, taxa_credito_8x, taxa_credito_9x, taxa_maquininha_boleto, taxa_maquininha_credito, taxa_maquininha_debito, taxa_maquininha_outro, taxa_maquininha_pix, taxa_maquininha_transferencia, updated_at")
           .eq("id_salao", painelSession.idSalao)
           .maybeSingle(),
       ]);
@@ -248,6 +307,18 @@ export default function ConfiguracoesPageClient({
           taxa_maquininha_credito: parseNumber(configData.taxa_maquininha_credito),
           taxa_maquininha_debito: parseNumber(configData.taxa_maquininha_debito),
           taxa_maquininha_pix: parseNumber(configData.taxa_maquininha_pix),
+          taxa_credito_1x: parseNumber(configData.taxa_credito_1x),
+          taxa_credito_2x: parseNumber(configData.taxa_credito_2x),
+          taxa_credito_3x: parseNumber(configData.taxa_credito_3x),
+          taxa_credito_4x: parseNumber(configData.taxa_credito_4x),
+          taxa_credito_5x: parseNumber(configData.taxa_credito_5x),
+          taxa_credito_6x: parseNumber(configData.taxa_credito_6x),
+          taxa_credito_7x: parseNumber(configData.taxa_credito_7x),
+          taxa_credito_8x: parseNumber(configData.taxa_credito_8x),
+          taxa_credito_9x: parseNumber(configData.taxa_credito_9x),
+          taxa_credito_10x: parseNumber(configData.taxa_credito_10x),
+          taxa_credito_11x: parseNumber(configData.taxa_credito_11x),
+          taxa_credito_12x: parseNumber(configData.taxa_credito_12x),
           repassa_taxa_cliente: Boolean(configData.repassa_taxa_cliente),
           desconta_taxa_profissional: Boolean(configData.desconta_taxa_profissional),
           permitir_reabrir_venda:
@@ -258,6 +329,7 @@ export default function ConfiguracoesPageClient({
           exigir_cliente_na_venda: Boolean(configData.exigir_cliente_na_venda),
           cor_primaria: configData.cor_primaria || "#18181b",
           modo_compacto: Boolean(configData.modo_compacto),
+          rateio_config: normalizeRateioConfig(configData.rateio_config),
         });
       } else {
         setConfigForm((prev) => ({
@@ -316,6 +388,18 @@ export default function ConfiguracoesPageClient({
         payload.taxa_maquininha_debito ?? configForm.taxa_maquininha_debito,
       taxa_maquininha_pix:
         payload.taxa_maquininha_pix ?? configForm.taxa_maquininha_pix,
+      taxa_credito_1x: payload.taxa_credito_1x ?? configForm.taxa_credito_1x,
+      taxa_credito_2x: payload.taxa_credito_2x ?? configForm.taxa_credito_2x,
+      taxa_credito_3x: payload.taxa_credito_3x ?? configForm.taxa_credito_3x,
+      taxa_credito_4x: payload.taxa_credito_4x ?? configForm.taxa_credito_4x,
+      taxa_credito_5x: payload.taxa_credito_5x ?? configForm.taxa_credito_5x,
+      taxa_credito_6x: payload.taxa_credito_6x ?? configForm.taxa_credito_6x,
+      taxa_credito_7x: payload.taxa_credito_7x ?? configForm.taxa_credito_7x,
+      taxa_credito_8x: payload.taxa_credito_8x ?? configForm.taxa_credito_8x,
+      taxa_credito_9x: payload.taxa_credito_9x ?? configForm.taxa_credito_9x,
+      taxa_credito_10x: payload.taxa_credito_10x ?? configForm.taxa_credito_10x,
+      taxa_credito_11x: payload.taxa_credito_11x ?? configForm.taxa_credito_11x,
+      taxa_credito_12x: payload.taxa_credito_12x ?? configForm.taxa_credito_12x,
       repassa_taxa_cliente:
         payload.repassa_taxa_cliente ?? configForm.repassa_taxa_cliente,
       desconta_taxa_profissional:
@@ -326,13 +410,14 @@ export default function ConfiguracoesPageClient({
         payload.exigir_cliente_na_venda ?? configForm.exigir_cliente_na_venda,
       cor_primaria: payload.cor_primaria ?? configForm.cor_primaria,
       modo_compacto: payload.modo_compacto ?? configForm.modo_compacto,
+      rateio_config: payload.rateio_config ?? configForm.rateio_config,
       updated_at: new Date().toISOString(),
     };
 
     const { data, error } = await supabase
       .from("configuracoes_salao")
       .upsert(dataToSave, { onConflict: "id_salao" })
-      .select("cor_primaria, created_at, desconta_taxa_profissional, dias_funcionamento, exigir_cliente_na_venda, hora_abertura, hora_fechamento, id, id_salao, intervalo_minutos, modo_compacto, permitir_reabrir_venda, repassa_taxa_cliente, taxa_credito_10x, taxa_credito_11x, taxa_credito_12x, taxa_credito_1x, taxa_credito_2x, taxa_credito_3x, taxa_credito_4x, taxa_credito_5x, taxa_credito_6x, taxa_credito_7x, taxa_credito_8x, taxa_credito_9x, taxa_maquininha_boleto, taxa_maquininha_credito, taxa_maquininha_debito, taxa_maquininha_outro, taxa_maquininha_pix, taxa_maquininha_transferencia, updated_at")
+      .select("cor_primaria, created_at, desconta_taxa_profissional, dias_funcionamento, exigir_cliente_na_venda, hora_abertura, hora_fechamento, id, id_salao, intervalo_minutos, modo_compacto, permitir_reabrir_venda, rateio_config, repassa_taxa_cliente, taxa_credito_10x, taxa_credito_11x, taxa_credito_12x, taxa_credito_1x, taxa_credito_2x, taxa_credito_3x, taxa_credito_4x, taxa_credito_5x, taxa_credito_6x, taxa_credito_7x, taxa_credito_8x, taxa_credito_9x, taxa_maquininha_boleto, taxa_maquininha_credito, taxa_maquininha_debito, taxa_maquininha_outro, taxa_maquininha_pix, taxa_maquininha_transferencia, updated_at")
       .maybeSingle();
 
     if (error) throw error;
@@ -353,6 +438,18 @@ export default function ConfiguracoesPageClient({
         taxa_maquininha_credito: parseNumber(data.taxa_maquininha_credito),
         taxa_maquininha_debito: parseNumber(data.taxa_maquininha_debito),
         taxa_maquininha_pix: parseNumber(data.taxa_maquininha_pix),
+        taxa_credito_1x: parseNumber(data.taxa_credito_1x),
+        taxa_credito_2x: parseNumber(data.taxa_credito_2x),
+        taxa_credito_3x: parseNumber(data.taxa_credito_3x),
+        taxa_credito_4x: parseNumber(data.taxa_credito_4x),
+        taxa_credito_5x: parseNumber(data.taxa_credito_5x),
+        taxa_credito_6x: parseNumber(data.taxa_credito_6x),
+        taxa_credito_7x: parseNumber(data.taxa_credito_7x),
+        taxa_credito_8x: parseNumber(data.taxa_credito_8x),
+        taxa_credito_9x: parseNumber(data.taxa_credito_9x),
+        taxa_credito_10x: parseNumber(data.taxa_credito_10x),
+        taxa_credito_11x: parseNumber(data.taxa_credito_11x),
+        taxa_credito_12x: parseNumber(data.taxa_credito_12x),
         repassa_taxa_cliente: Boolean(data.repassa_taxa_cliente),
         desconta_taxa_profissional: Boolean(data.desconta_taxa_profissional),
         permitir_reabrir_venda:
@@ -362,6 +459,7 @@ export default function ConfiguracoesPageClient({
         exigir_cliente_na_venda: Boolean(data.exigir_cliente_na_venda),
         cor_primaria: data.cor_primaria || "#18181b",
         modo_compacto: Boolean(data.modo_compacto),
+        rateio_config: normalizeRateioConfig(data.rateio_config),
       });
     }
   }
@@ -444,6 +542,18 @@ export default function ConfiguracoesPageClient({
         taxa_maquininha_credito: configForm.taxa_maquininha_credito,
         taxa_maquininha_debito: configForm.taxa_maquininha_debito,
         taxa_maquininha_pix: configForm.taxa_maquininha_pix,
+        taxa_credito_1x: configForm.taxa_credito_1x,
+        taxa_credito_2x: configForm.taxa_credito_2x,
+        taxa_credito_3x: configForm.taxa_credito_3x,
+        taxa_credito_4x: configForm.taxa_credito_4x,
+        taxa_credito_5x: configForm.taxa_credito_5x,
+        taxa_credito_6x: configForm.taxa_credito_6x,
+        taxa_credito_7x: configForm.taxa_credito_7x,
+        taxa_credito_8x: configForm.taxa_credito_8x,
+        taxa_credito_9x: configForm.taxa_credito_9x,
+        taxa_credito_10x: configForm.taxa_credito_10x,
+        taxa_credito_11x: configForm.taxa_credito_11x,
+        taxa_credito_12x: configForm.taxa_credito_12x,
         repassa_taxa_cliente: configForm.repassa_taxa_cliente,
         desconta_taxa_profissional: configForm.desconta_taxa_profissional,
         permitir_reabrir_venda: configForm.permitir_reabrir_venda,
@@ -458,6 +568,29 @@ export default function ConfiguracoesPageClient({
         error instanceof Error ? error.message : "Erro ao salvar caixa e taxas.";
       setErroTela(mensagem);
       abrirFeedbackModal("erro", "Erro ao salvar caixa", mensagem);
+    } finally {
+      setSavingFinanceiro(false);
+    }
+  }
+
+  async function salvarRateio() {
+    try {
+      setSavingFinanceiro(true);
+      setErroTela("");
+      setMsg("");
+
+      await upsertConfiguracoes({
+        rateio_config: configForm.rateio_config,
+      });
+
+      setMsg("Configurações de impressão do rateio salvas com sucesso.");
+      abrirFeedbackModal("sucesso", "Rateio salvo", "A impressão das comissões seguirá esses campos.");
+    } catch (error: unknown) {
+      console.error(error);
+      const mensagem =
+        error instanceof Error ? error.message : "Erro ao salvar rateio.";
+      setErroTela(mensagem);
+      abrirFeedbackModal("erro", "Erro ao salvar rateio", mensagem);
     } finally {
       setSavingFinanceiro(false);
     }
@@ -500,6 +633,16 @@ export default function ConfiguracoesPageClient({
           : [...prev.dias_funcionamento, dia],
       };
     });
+  }
+
+  function setRateioOption(key: keyof RateioConfig, checked: boolean) {
+    setConfigForm((prev) => ({
+      ...prev,
+      rateio_config: {
+        ...prev.rateio_config,
+        [key]: checked,
+      },
+    }));
   }
 
   function abrirNovoUsuario() {
@@ -1156,6 +1299,26 @@ export default function ConfiguracoesPageClient({
               </Field>
             </div>
 
+            <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-zinc-200 bg-zinc-50 p-4">
+              <div>
+                <div className="text-sm font-semibold text-zinc-900">
+                  Taxas do crédito parcelado
+                </div>
+                <div className="mt-1 text-xs text-zinc-500">
+                  Configure 1x até 12x. O caixa usa a taxa da parcela escolhida.
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setTaxasModalOpen(true)}
+                className="inline-flex items-center gap-2 rounded-2xl border border-zinc-300 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-50"
+              >
+                <Percent size={16} />
+                Configurar taxas
+              </button>
+            </div>
+
             <div className="mt-5 space-y-3">
               <Toggle
                 checked={configForm.repassa_taxa_cliente}
@@ -1220,6 +1383,66 @@ export default function ConfiguracoesPageClient({
             </div>
           </SectionCard>
 
+          ) : null}
+
+          {mostrarRateio ? (
+          <SectionCard
+            icon={<BadgeDollarSign size={18} />}
+            title="Rateio e impressão"
+            description="Escolha o que aparece no documento de comissão entregue ao profissional."
+          >
+            <ComissaoHelpPanel
+              eyebrow="Impressão"
+              title="O profissional entende o cálculo sem perguntar"
+              description="Esses campos controlam a impressão do rateio. O cálculo continua vindo da venda, com base, taxa, custo, desconto, acréscimo e assistente registrados."
+              steps={[
+                {
+                  title: "Campos financeiros",
+                  description: "Base, taxa, custo, desconto e acréscimo ajudam a auditar o valor.",
+                },
+                {
+                  title: "Campos de conferência",
+                  description: "Cliente, data, serviço e status deixam o documento rastreável.",
+                },
+                {
+                  title: "Padrão por plano",
+                  description: "O sistema já vem com uma configuração segura e você ajusta o que quer mostrar.",
+                },
+              ]}
+            >
+              <div className="text-xs text-zinc-600">
+                Padrão atual: campos principais ligados, custo de produto desligado para proteger margem.
+              </div>
+            </ComissaoHelpPanel>
+
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+              {RATEIO_OPTIONS.map((option) => (
+                <Toggle
+                  key={option.key}
+                  checked={Boolean(configForm.rateio_config[option.key])}
+                  onChange={(checked) => setRateioOption(option.key, checked)}
+                  label={option.label}
+                  description={option.description}
+                />
+              ))}
+            </div>
+
+            <div className="mt-5 flex justify-end">
+              <button
+                type="button"
+                onClick={salvarRateio}
+                disabled={savingFinanceiro}
+                className="inline-flex items-center gap-2 rounded-2xl bg-zinc-900 px-5 py-2.5 text-sm font-bold text-white transition hover:opacity-95 disabled:opacity-60"
+              >
+                {savingFinanceiro ? (
+                  <Loader2 className="animate-spin" size={16} />
+                ) : (
+                  <Save size={16} />
+                )}
+                Salvar rateio
+              </button>
+            </div>
+          </SectionCard>
           ) : null}
 
           {mostrarSistema ? (
@@ -1639,6 +1862,80 @@ export default function ConfiguracoesPageClient({
               >
                 {deletingUsuario ? <Loader2 className="animate-spin" size={16} /> : <Trash2 size={16} />}
                 Excluir usuário
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {taxasModalOpen ? (
+        <div className="fixed inset-0 z-[96] flex items-center justify-center bg-black/55 p-4 backdrop-blur-md">
+          <div className="w-full max-w-4xl overflow-hidden rounded-[28px] border border-white/10 bg-white shadow-[0_30px_80px_rgba(0,0,0,0.25)]">
+            <div className="flex items-start justify-between gap-4 border-b border-zinc-200 bg-zinc-50 px-5 py-4">
+              <div>
+                <div className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-400">
+                  Crédito parcelado
+                </div>
+                <h2 className="mt-1 text-xl font-bold text-zinc-900">
+                  Configurar taxas 1x até 12x
+                </h2>
+                <p className="mt-1 text-sm text-zinc-500">
+                  Essas taxas são usadas pelo caixa quando a forma de pagamento for crédito.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setTaxasModalOpen(false)}
+                className="rounded-2xl border border-zinc-300 bg-white p-2 text-zinc-600 transition hover:bg-zinc-100"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="grid max-h-[70vh] grid-cols-1 gap-3 overflow-y-auto p-5 sm:grid-cols-2 lg:grid-cols-3">
+              {TAXAS_CREDITO_KEYS.map((key, index) => (
+                <Field key={key} label={`Crédito ${index + 1}x (%)`}>
+                  <div className="relative">
+                    <TextInput
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      value={configForm[key]}
+                      onChange={(e) =>
+                        setConfigForm((prev) => ({
+                          ...prev,
+                          [key]: parseNumber(e.target.value),
+                        }))
+                      }
+                      className="pl-11"
+                    />
+                    <Percent className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={16} />
+                  </div>
+                </Field>
+              ))}
+            </div>
+
+            <div className="flex flex-col-reverse gap-3 border-t border-zinc-200 bg-zinc-50 px-5 py-4 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={() => setTaxasModalOpen(false)}
+                className="rounded-2xl border border-zinc-300 bg-white px-5 py-2.5 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-100"
+              >
+                Fechar
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setTaxasModalOpen(false);
+                  void salvarFinanceiro();
+                }}
+                disabled={savingFinanceiro}
+                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-zinc-900 px-5 py-2.5 text-sm font-bold text-white transition hover:opacity-95 disabled:opacity-60"
+              >
+                {savingFinanceiro ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />}
+                Salvar taxas
               </button>
             </div>
           </div>

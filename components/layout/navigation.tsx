@@ -195,6 +195,16 @@ export const painelNavigationItems: PainelNavItem[] = [
     sidebar: false,
   },
   {
+    href: "/configuracoes/rateio",
+    label: "Rateio e Impressao",
+    shortLabel: "Rateio",
+    description: "Campos do documento de comissoes.",
+    icon: BadgeDollarSign,
+    permissionKey: "configuracoes_ver",
+    niveis: ["admin"],
+    sidebar: false,
+  },
+  {
     href: "/configuracoes/agenda-horarios",
     label: "Agenda e Horarios",
     shortLabel: "Horarios",

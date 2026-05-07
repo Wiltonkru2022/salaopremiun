@@ -2586,6 +2586,7 @@ export type Database = {
           intervalo_minutos: number
           modo_compacto: boolean | null
           permitir_reabrir_venda: boolean | null
+          rateio_config: Json
           repassa_taxa_cliente: boolean | null
           taxa_credito_10x: number | null
           taxa_credito_11x: number | null
@@ -2620,6 +2621,7 @@ export type Database = {
           intervalo_minutos?: number
           modo_compacto?: boolean | null
           permitir_reabrir_venda?: boolean | null
+          rateio_config?: Json
           repassa_taxa_cliente?: boolean | null
           taxa_credito_10x?: number | null
           taxa_credito_11x?: number | null
@@ -2654,6 +2656,7 @@ export type Database = {
           intervalo_minutos?: number
           modo_compacto?: boolean | null
           permitir_reabrir_venda?: boolean | null
+          rateio_config?: Json
           repassa_taxa_cliente?: boolean | null
           taxa_credito_10x?: number | null
           taxa_credito_11x?: number | null

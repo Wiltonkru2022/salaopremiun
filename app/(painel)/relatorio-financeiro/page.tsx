@@ -330,7 +330,7 @@ export default function RelatorioFinanceiroPage() {
   const [dataInicio, setDataInicio] = useState(formatDateInput(inicioMes));
   const [dataFim, setDataFim] = useState(formatDateInput(hoje));
   const [busca, setBusca] = useState("");
-  const [statusFiltro, setStatusFiltro] = useState<StatusFiltro>("fechada");
+  const [statusFiltro, setStatusFiltro] = useState<StatusFiltro>("todos");
   const [profissionalFiltro, setProfissionalFiltro] = useState("");
   const [painelLateralTab, setPainelLateralTab] =
     useState<PainelLateralTab>("pagamentos");

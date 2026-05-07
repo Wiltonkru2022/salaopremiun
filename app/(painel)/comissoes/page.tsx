@@ -55,6 +55,48 @@ function escapeHtml(value: string | null | undefined) {
     .replaceAll("'", "&#39;");
 }
 
+function extractMoneyFromObservacao(
+  observacoes: string | null | undefined,
+  label: string
+) {
+  const match = String(observacoes || "").match(
+    new RegExp(`${label}:\\s*([0-9]+(?:[,.][0-9]{1,2})?)`, "i")
+  );
+  if (!match) return 0;
+  return Number(match[1].replace(",", ".")) || 0;
+}
+
+function getPrintDetail(item: {
+  observacoes?: string | null;
+  comanda?: { desconto?: number | null; acrescimo?: number | null } | null;
+  comanda_item?: { custo_total?: number | null; tipo_item?: string | null } | null;
+}) {
+  const descontoRateado = extractMoneyFromObservacao(
+    item.observacoes,
+    "desconto rateado"
+  );
+  const acrescimoRateado = extractMoneyFromObservacao(
+    item.observacoes,
+    "acrescimo rateado"
+  );
+  const taxa = extractMoneyFromObservacao(item.observacoes, "taxa descontada");
+  const assistente = extractMoneyFromObservacao(
+    item.observacoes,
+    "assistente descontado"
+  );
+
+  return {
+    custoProduto:
+      String(item.comanda_item?.tipo_item || "").toLowerCase() === "produto"
+        ? Number(item.comanda_item?.custo_total || 0)
+        : 0,
+    descontoRateado,
+    acrescimoRateado,
+    taxa,
+    assistente,
+  };
+}
+
 function formatDocument(value: string | null | undefined) {
   const digits = String(value || "").replace(/\D/g, "");
   if (digits.length === 11) {
@@ -189,6 +231,7 @@ export default function ComissoesPage() {
     maiorLancamento,
     resumoPorTipo,
     resumoProfissionais,
+    rateioConfig,
     getTipoDestinatario,
     getValorLancamento,
     getStatusComissaoMeta,
@@ -237,7 +280,164 @@ export default function ComissoesPage() {
       (acc, item) => acc + getValorLancamento(item),
       0
     );
-    const mostrarColunaPessoa = !profissionalId;
+    const mostrarColunaPessoa = rateioConfig.mostrar_pessoa && !profissionalId;
+    const colunas = [
+      mostrarColunaPessoa
+        ? {
+            key: "pessoa",
+            label: "Pessoa",
+            className: "col-pessoa",
+            render: (item: (typeof rows)[number]) =>
+              escapeHtml(item.profissionais?.nome || "Profissional"),
+          }
+        : null,
+      rateioConfig.mostrar_cliente
+        ? {
+            key: "cliente",
+            label: "Cliente",
+            className: "col-cliente",
+            render: (item: (typeof rows)[number]) =>
+              escapeHtml(item.comanda?.clientes?.nome || "-"),
+          }
+        : null,
+      rateioConfig.mostrar_descricao || rateioConfig.mostrar_servicos
+        ? {
+            key: "descricao",
+            label: "Descrição",
+            className: "col-desc",
+            render: (item: (typeof rows)[number]) => {
+              const comboMeta = parseComboDisplayMeta(item.descricao);
+              return comboMeta.isComboItem
+                ? `
+                    <div style="font-weight:700;">${escapeHtml(comboMeta.displayTitle)}</div>
+                    <div style="margin-top:4px;font-size:9px;color:#52525b;">
+                      <span style="display:inline-block;border:1px solid #ddd6fe;background:#f5f3ff;color:#6d28d9;border-radius:999px;padding:2px 6px;font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;">Combo</span>
+                      <span style="margin-left:6px;">${escapeHtml(comboMeta.comboName)}</span>
+                    </div>
+                  `
+                : escapeHtml(item.descricao || item.comanda_item?.descricao || "-");
+            },
+          }
+        : null,
+      rateioConfig.mostrar_data
+        ? {
+            key: "data",
+            label: "Data",
+            className: "col-data",
+            render: (item: (typeof rows)[number]) =>
+              escapeHtml(formatDateTime(item.comanda?.fechada_em || item.criado_em)),
+          }
+        : null,
+      rateioConfig.mostrar_competencia
+        ? {
+            key: "competencia",
+            label: "Competência",
+            className: "col-competencia",
+            render: (item: (typeof rows)[number]) =>
+              escapeHtml(formatDate(item.competencia_data)),
+          }
+        : null,
+      rateioConfig.mostrar_base
+        ? {
+            key: "base",
+            label: "Base",
+            className: "col-base",
+            render: (item: (typeof rows)[number]) =>
+              `<span class="money">${escapeHtml(formatCurrency(item.valor_base))}</span>`,
+          }
+        : null,
+      rateioConfig.mostrar_percentual
+        ? {
+            key: "percentual",
+            label: "% Aplicada",
+            className: "col-percent",
+            render: (item: (typeof rows)[number]) =>
+              escapeHtml(formatPercent(item.percentual_aplicado)),
+          }
+        : null,
+      rateioConfig.mostrar_acrescimo_desconto
+        ? {
+            key: "ajustes",
+            label: "Desc./Acrésc.",
+            className: "col-ajuste",
+            render: (item: (typeof rows)[number]) => {
+              const detail = getPrintDetail(item);
+              return `${escapeHtml(formatCurrency(detail.descontoRateado))}<br />${escapeHtml(formatCurrency(detail.acrescimoRateado))}`;
+            },
+          }
+        : null,
+      rateioConfig.mostrar_taxa_maquininha
+        ? {
+            key: "taxa",
+            label: "Taxa maq.",
+            className: "col-taxa",
+            render: (item: (typeof rows)[number]) =>
+              escapeHtml(formatCurrency(getPrintDetail(item).taxa)),
+          }
+        : null,
+      rateioConfig.mostrar_custo_produtos
+        ? {
+            key: "custo",
+            label: "Custo prod.",
+            className: "col-custo",
+            render: (item: (typeof rows)[number]) =>
+              escapeHtml(formatCurrency(getPrintDetail(item).custoProduto)),
+          }
+        : null,
+      rateioConfig.mostrar_assistente
+        ? {
+            key: "assistente",
+            label: "Assistente",
+            className: "col-assistente",
+            render: (item: (typeof rows)[number]) => {
+              const detail = getPrintDetail(item);
+              const nome = item.assistente?.nome || "-";
+              return `${escapeHtml(nome)}<br /><span class="muted">${escapeHtml(formatCurrency(detail.assistente))}</span>`;
+            },
+          }
+        : null,
+      rateioConfig.mostrar_origem
+        ? {
+            key: "origem",
+            label: "Origem",
+            className: "col-origem",
+            render: (item: (typeof rows)[number]) =>
+              escapeHtml(origemMeta(item.origem_percentual).label),
+          }
+        : null,
+      rateioConfig.mostrar_comissao
+        ? {
+            key: "comissao",
+            label: "Comissão",
+            className: "col-comissao",
+            render: (item: (typeof rows)[number]) =>
+              `<span class="money">${escapeHtml(formatCurrency(getValorLancamento(item)))}</span>`,
+          }
+        : null,
+      rateioConfig.mostrar_status
+        ? {
+            key: "status",
+            label: "Status",
+            className: "col-status",
+            render: (item: (typeof rows)[number]) =>
+              escapeHtml(getStatusComissaoMeta(item.status).label),
+          }
+        : null,
+      rateioConfig.mostrar_pago_em
+        ? {
+            key: "pago_em",
+            label: "Pago em",
+            className: "col-pago",
+            render: (item: (typeof rows)[number]) =>
+              escapeHtml(formatDateTime(item.pago_em)),
+          }
+        : null,
+    ].filter(Boolean) as Array<{
+      key: string;
+      label: string;
+      className: string;
+      render: (item: (typeof rows)[number]) => string;
+    }>;
     const comboSummaryPrint = groupComboTotals(
       rows,
       (item) => item.descricao,
@@ -245,33 +445,9 @@ export default function ComissoesPage() {
     );
     const linhas = rows
       .map((item) => {
-        const origem = origemMeta(item.origem_percentual);
-        const statusInfo = getStatusComissaoMeta(item.status);
-        const comboMeta = parseComboDisplayMeta(item.descricao);
-        const descricaoHtml = comboMeta.isComboItem
-          ? `
-              <div style="font-weight:700;">${escapeHtml(comboMeta.displayTitle)}</div>
-              <div style="margin-top:4px;font-size:9px;color:#52525b;">
-                <span style="display:inline-block;border:1px solid #ddd6fe;background:#f5f3ff;color:#6d28d9;border-radius:999px;padding:2px 6px;font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;">Combo</span>
-                <span style="margin-left:6px;">${escapeHtml(comboMeta.comboName)}</span>
-              </div>
-            `
-          : escapeHtml(item.descricao || "-");
         return `
           <tr>
-            ${
-              mostrarColunaPessoa
-                ? `<td>${escapeHtml(item.profissionais?.nome || "Profissional")}</td>`
-                : ""
-            }
-            <td>${descricaoHtml}</td>
-            <td>${escapeHtml(formatDate(item.competencia_data))}</td>
-            <td class="money">${escapeHtml(formatCurrency(item.valor_base))}</td>
-            <td>${escapeHtml(formatPercent(item.percentual_aplicado))}</td>
-            <td>${escapeHtml(origem.label)}</td>
-            <td class="money">${escapeHtml(formatCurrency(getValorLancamento(item)))}</td>
-            <td>${escapeHtml(statusInfo.label)}</td>
-            <td>${escapeHtml(formatDateTime(item.pago_em))}</td>
+            ${colunas.map((coluna) => `<td>${coluna.render(item)}</td>`).join("")}
           </tr>
         `;
       })
@@ -356,10 +532,16 @@ export default function ComissoesPage() {
             .signature-doc { margin-top: 4px; font-size: 9px; color: #52525b; }
             .footer-note { margin-top: 10px; font-size: 9px; color: #71717a; }
             .col-pessoa { width: 15%; }
-            .col-desc { width: 28%; }
+            .col-cliente { width: 12%; }
+            .col-desc { width: 18%; }
+            .col-data { width: 12%; }
             .col-competencia { width: 10%; }
             .col-base { width: 11%; }
             .col-percent { width: 9%; }
+            .col-ajuste { width: 10%; }
+            .col-taxa { width: 9%; }
+            .col-custo { width: 9%; }
+            .col-assistente { width: 12%; }
             .col-origem { width: 15%; }
             .col-comissao { width: 11%; }
             .col-status { width: 8%; }
@@ -494,19 +676,12 @@ export default function ComissoesPage() {
               <table>
                 <thead>
                   <tr>
-                    ${
-                      mostrarColunaPessoa
-                        ? '<th class="col-pessoa">Pessoa</th>'
-                        : ""
-                    }
-                    <th class="col-desc">Descrição</th>
-                    <th class="col-competencia">Competência</th>
-                    <th class="col-base">Base</th>
-                    <th class="col-percent">% Aplicada</th>
-                    <th class="col-origem">Origem</th>
-                    <th class="col-comissao">Comissão</th>
-                    <th class="col-status">Status</th>
-                    <th class="col-pago">Pago em</th>
+                    ${colunas
+                      .map(
+                        (coluna) =>
+                          `<th class="${escapeHtml(coluna.className)}">${escapeHtml(coluna.label)}</th>`
+                      )
+                      .join("")}
                   </tr>
                 </thead>
                 <tbody>${linhas}</tbody>
@@ -1200,6 +1375,3 @@ function PremiumHintCard({
     </div>
   );
 }
-
-
-

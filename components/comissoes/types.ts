@@ -53,6 +53,9 @@ export type ComissaoResumo = {
 
 export type ComissaoRow = {
   id: string;
+  id_comanda?: string | null;
+  id_comanda_item?: string | null;
+  id_assistente?: string | null;
   id_profissional: string | null;
   tipo?: string | null;
   tipo_destinatario?: string | null;
@@ -71,6 +74,23 @@ export type ComissaoRow = {
     nome: string;
     cpf?: string | null;
     tipo_profissional?: string | null;
+  } | null;
+  assistente?: {
+    nome: string;
+  } | null;
+  comanda?: {
+    numero?: number | null;
+    fechada_em?: string | null;
+    desconto?: number | null;
+    acrescimo?: number | null;
+    clientes?: {
+      nome?: string | null;
+    } | null;
+  } | null;
+  comanda_item?: {
+    descricao?: string | null;
+    tipo_item?: string | null;
+    custo_total?: number | null;
   } | null;
 };
 

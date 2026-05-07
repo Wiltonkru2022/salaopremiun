@@ -18,6 +18,10 @@ import type {
   ComissaoRow,
   ComissaoSalaoInfo,
 } from "@/components/comissoes/types";
+import {
+  RATEIO_CONFIG_DEFAULT,
+} from "@/components/configuracoes/constants";
+import type { RateioConfig } from "@/components/configuracoes/types";
 
 function getTipoDestinatario(item: ComissaoRow) {
   return String(item.tipo_destinatario || item.tipo || "").toLowerCase() ===
@@ -47,6 +51,17 @@ function origemMetaLabel(origem: string | null | undefined) {
   if (origem === "assistente") return "assistente";
   if (origem === "manual") return "lancamento manual";
   return "sem regra definida";
+}
+
+function normalizeRateioConfig(value: unknown): RateioConfig {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return RATEIO_CONFIG_DEFAULT;
+  }
+
+  return {
+    ...RATEIO_CONFIG_DEFAULT,
+    ...(value as Partial<RateioConfig>),
+  };
 }
 
 export function useComissoesPage() {
@@ -82,6 +97,9 @@ export function useComissoesPage() {
   const [profissionais, setProfissionais] = useState<ComissaoProfissional[]>([]);
   const [salaoInfo, setSalaoInfo] = useState<ComissaoSalaoInfo | null>(null);
   const [rows, setRows] = useState<ComissaoRow[]>([]);
+  const [rateioConfig, setRateioConfig] = useState<RateioConfig>(
+    RATEIO_CONFIG_DEFAULT
+  );
   const [resumo, setResumo] = useState<ComissaoResumo>({
     total: 0,
     pendente: 0,
@@ -148,8 +166,16 @@ export function useComissoesPage() {
         const baseRows = (data as ComissaoRow[]) || [];
         const idsProfissionais = Array.from(
           new Set(
-            baseRows.map((item) => item.id_profissional).filter(Boolean)
+            baseRows
+              .flatMap((item) => [item.id_profissional, item.id_assistente])
+              .filter(Boolean)
           )
+        ) as string[];
+        const idsComandas = Array.from(
+          new Set(baseRows.map((item) => item.id_comanda).filter(Boolean))
+        ) as string[];
+        const idsItens = Array.from(
+          new Set(baseRows.map((item) => item.id_comanda_item).filter(Boolean))
         ) as string[];
 
         let mapaProfissionais = new Map<
@@ -180,6 +206,62 @@ export function useComissoesPage() {
           );
         }
 
+        let mapaComandas = new Map<
+          string,
+          {
+            numero?: number | null;
+            fechada_em?: string | null;
+            desconto?: number | null;
+            acrescimo?: number | null;
+            clientes?: { nome?: string | null } | null;
+          }
+        >();
+        if (idsComandas.length > 0) {
+          const { data: comandasData, error: comandasError } = await supabase
+            .from("comandas")
+            .select("id, numero, fechada_em, desconto, acrescimo, clientes(nome)")
+            .in("id", idsComandas);
+          if (comandasError) throw comandasError;
+          mapaComandas = new Map(
+            (
+              (comandasData as Array<{
+                id: string;
+                numero?: number | null;
+                fechada_em?: string | null;
+                desconto?: number | null;
+                acrescimo?: number | null;
+                clientes?: { nome?: string | null } | null;
+              }>) || []
+            ).map((item) => [item.id, item])
+          );
+        }
+
+        let mapaItens = new Map<
+          string,
+          {
+            descricao?: string | null;
+            tipo_item?: string | null;
+            custo_total?: number | null;
+          }
+        >();
+        if (idsItens.length > 0) {
+          const { data: itensData, error: itensError } = await supabase
+            .from("comanda_itens")
+            .select("id, descricao, tipo_item, custo_total")
+            .in("id", idsItens);
+          if (itensError) throw itensError;
+          mapaItens = new Map(
+            (
+              (itensData as Array<{
+                id: string;
+                descricao?: string | null;
+                tipo_item?: string | null;
+                custo_total?: number | null;
+              }>) || []
+            ).map((item) => [item.id, item])
+          );
+        }
+
         const termo = busca.trim().toLowerCase();
         const enriched = baseRows
           .map((item) => ({
@@ -196,6 +278,19 @@ export function useComissoesPage() {
                     mapaProfissionais.get(item.id_profissional)
                       ?.tipo_profissional || null,
                 }
+              : null,
+            assistente: item.id_assistente
+              ? {
+                  nome:
+                    mapaProfissionais.get(item.id_assistente)?.nome ||
+                    "Assistente",
+                }
+              : null,
+            comanda: item.id_comanda
+              ? mapaComandas.get(item.id_comanda) || null
+              : null,
+            comanda_item: item.id_comanda_item
+              ? mapaItens.get(item.id_comanda_item) || null
               : null,
           }))
           .filter((item) => {
@@ -267,8 +362,16 @@ export function useComissoesPage() {
         .maybeSingle();
       if (salaoError) throw salaoError;
 
+      const { data: configData, error: configError } = await supabase
+        .from("configuracoes_salao")
+        .select("rateio_config")
+        .eq("id_salao", salaoIdFinal)
+        .maybeSingle();
+      if (configError && configError.code !== "PGRST116") throw configError;
+
       setProfissionais((profissionaisData as ComissaoProfissional[]) || []);
       setSalaoInfo((salaoData as ComissaoSalaoInfo | null) || null);
+      setRateioConfig(normalizeRateioConfig(configData?.rateio_config));
       await carregarComissoes(salaoIdFinal);
     } catch (error) {
       console.error(error);
@@ -582,6 +685,7 @@ export function useComissoesPage() {
     maiorLancamento,
     resumoPorTipo,
     resumoProfissionais,
+    rateioConfig,
     getTipoDestinatario,
     getValorLancamento,
     getStatusComissaoMeta,

@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import clsx from "clsx";
 import {
   Building2,
+  BadgeDollarSign,
   CalendarClock,
   ChevronDown,
   CreditCard,
@@ -280,6 +281,15 @@ export default function Header({
                     >
                       <Percent size={16} />
                       Caixa e taxas
+                    </a>
+
+                    <a
+                      href={getRouteHref("/configuracoes/rateio")}
+                      onClick={() => setMenuOpen(false)}
+                      className="flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-semibold text-zinc-700 transition hover:bg-white"
+                    >
+                      <BadgeDollarSign size={16} />
+                      Rateio e impressão
                     </a>
 
                     <a

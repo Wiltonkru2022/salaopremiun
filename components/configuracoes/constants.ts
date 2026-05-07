@@ -1,5 +1,5 @@
 import type { UserNivel } from "@/lib/permissions";
-import type { ConfigSalaoForm, SalaoForm, UsuarioForm } from "./types";
+import type { ConfigSalaoForm, RateioConfig, SalaoForm, UsuarioForm } from "./types";
 
 export const DIAS_SEMANA = [
   { value: "segunda", label: "Segunda" },
@@ -43,6 +43,25 @@ export const EMPTY_SALAO: SalaoForm = {
   app_cliente_publicado: false,
 };
 
+export const RATEIO_CONFIG_DEFAULT: RateioConfig = {
+  mostrar_cliente: true,
+  mostrar_data: true,
+  mostrar_servicos: true,
+  mostrar_custo_produtos: false,
+  mostrar_taxa_maquininha: true,
+  mostrar_acrescimo_desconto: true,
+  mostrar_assistente: true,
+  mostrar_pessoa: true,
+  mostrar_descricao: true,
+  mostrar_competencia: true,
+  mostrar_base: true,
+  mostrar_percentual: true,
+  mostrar_origem: true,
+  mostrar_comissao: true,
+  mostrar_status: true,
+  mostrar_pago_em: true,
+};
+
 export const EMPTY_CONFIG: ConfigSalaoForm = {
   id: "",
   id_salao: "",
@@ -53,12 +72,25 @@ export const EMPTY_CONFIG: ConfigSalaoForm = {
   taxa_maquininha_credito: 0,
   taxa_maquininha_debito: 0,
   taxa_maquininha_pix: 0,
+  taxa_credito_1x: 0,
+  taxa_credito_2x: 0,
+  taxa_credito_3x: 0,
+  taxa_credito_4x: 0,
+  taxa_credito_5x: 0,
+  taxa_credito_6x: 0,
+  taxa_credito_7x: 0,
+  taxa_credito_8x: 0,
+  taxa_credito_9x: 0,
+  taxa_credito_10x: 0,
+  taxa_credito_11x: 0,
+  taxa_credito_12x: 0,
   repassa_taxa_cliente: false,
   desconta_taxa_profissional: false,
   permitir_reabrir_venda: true,
   exigir_cliente_na_venda: false,
   cor_primaria: "#18181b",
   modo_compacto: false,
+  rateio_config: RATEIO_CONFIG_DEFAULT,
 };
 
 export const EMPTY_USUARIO_FORM: UsuarioForm = {

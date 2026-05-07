@@ -41,6 +41,38 @@ export type ConfigSalaoForm = {
   exigir_cliente_na_venda: boolean;
   cor_primaria: string;
   modo_compacto: boolean;
+  taxa_credito_1x: number;
+  taxa_credito_2x: number;
+  taxa_credito_3x: number;
+  taxa_credito_4x: number;
+  taxa_credito_5x: number;
+  taxa_credito_6x: number;
+  taxa_credito_7x: number;
+  taxa_credito_8x: number;
+  taxa_credito_9x: number;
+  taxa_credito_10x: number;
+  taxa_credito_11x: number;
+  taxa_credito_12x: number;
+  rateio_config: RateioConfig;
+};
+
+export type RateioConfig = {
+  mostrar_cliente: boolean;
+  mostrar_data: boolean;
+  mostrar_servicos: boolean;
+  mostrar_custo_produtos: boolean;
+  mostrar_taxa_maquininha: boolean;
+  mostrar_acrescimo_desconto: boolean;
+  mostrar_assistente: boolean;
+  mostrar_pessoa: boolean;
+  mostrar_descricao: boolean;
+  mostrar_competencia: boolean;
+  mostrar_base: boolean;
+  mostrar_percentual: boolean;
+  mostrar_origem: boolean;
+  mostrar_comissao: boolean;
+  mostrar_status: boolean;
+  mostrar_pago_em: boolean;
 };
 
 export type UsuarioSistema = {
