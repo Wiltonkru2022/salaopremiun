@@ -33,3 +33,4 @@ coverage
 backups/
 
 .vercel
+.env*.local

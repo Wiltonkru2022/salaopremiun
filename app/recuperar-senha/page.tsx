@@ -1,10 +1,8 @@
 "use client";
 
 import { Suspense, useEffect, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
 import { useRouter, useSearchParams } from "next/navigation";
 import { getErrorMessage } from "@/lib/get-error-message";
-import { getPublicAuthUrl } from "@/lib/auth/public-auth-url";
 import {
   ArrowLeft,
   Check,
@@ -34,9 +32,6 @@ function RecuperarSenhaFallback() {
 function RecuperarSenhaContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [supabase, setSupabase] = useState<ReturnType<typeof createClient> | null>(
-    null
-  );
 
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
@@ -45,15 +40,6 @@ function RecuperarSenhaContent() {
   const [cooldown, setCooldown] = useState(0);
   const [enviadoComSucesso, setEnviadoComSucesso] = useState(false);
   const emailQuery = searchParams.get("email")?.trim() || "";
-
-  useEffect(() => {
-    try {
-      setSupabase(createClient());
-    } catch (error) {
-      console.warn("Supabase indisponivel para recuperar senha:", error);
-      setErro("Servico de autenticacao indisponivel neste ambiente.");
-    }
-  }, []);
 
   useEffect(() => {
     if (!emailQuery) return;
@@ -87,25 +73,25 @@ function RecuperarSenhaContent() {
     setEnviadoComSucesso(false);
 
     try {
-      if (!supabase) {
-        throw new Error("Servico de autenticacao indisponivel neste ambiente.");
-      }
-
       const emailLimpo = email.trim();
 
       if (!emailLimpo) {
         throw new Error("Informe seu e-mail.");
       }
 
-      const { error } = await supabase.auth.resetPasswordForEmail(emailLimpo, {
-        redirectTo: getPublicAuthUrl(
-          "/atualizar-senha",
-          typeof window === "undefined" ? undefined : window.location.hostname
-        ),
+      const response = await fetch("/api/auth/password-recovery", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email: emailLimpo }),
       });
 
-      if (error) {
-        const msg = error.message?.toLowerCase() || "";
+      if (!response.ok) {
+        const payload = (await response.json().catch(() => ({}))) as {
+          message?: string;
+        };
+        const msg = String(payload.message || "").toLowerCase();
 
         if (
           msg.includes("security purposes") ||
@@ -119,7 +105,7 @@ function RecuperarSenhaContent() {
         }
 
         throw new Error(
-          error.message || "Nao foi possivel enviar o link de recuperacao."
+          payload.message || "Nao foi possivel enviar o link de recuperacao."
         );
       }
 
