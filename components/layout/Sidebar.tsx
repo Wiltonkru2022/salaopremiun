@@ -5,9 +5,11 @@ import { useMemo } from "react";
 import clsx from "clsx";
 import {
   AlertTriangle,
+  Building2,
   ChevronRight,
   CreditCard,
   ExternalLink,
+  Settings,
   X,
 } from "lucide-react";
 import {
@@ -28,6 +30,8 @@ type Props = {
   salaoLogoUrl?: string | null;
   planoNome?: string;
   resumoAssinatura?: ResumoAssinatura | null;
+  canSeePerfilSalao: boolean;
+  canSeeConfiguracoes: boolean;
   canSeeAssinatura: boolean;
   criticalNotificationsCount: number;
   mobileOpen: boolean;
@@ -43,6 +47,8 @@ export default function Sidebar({
   salaoLogoUrl,
   planoNome,
   resumoAssinatura,
+  canSeePerfilSalao,
+  canSeeConfiguracoes,
   canSeeAssinatura,
   criticalNotificationsCount,
   mobileOpen,
@@ -74,7 +80,7 @@ export default function Sidebar({
 
       <aside
         className={clsx(
-          "fixed inset-y-0 left-0 z-50 w-[274px] -translate-x-full bg-zinc-50 p-2 text-zinc-950 transition-transform duration-300 lg:sticky lg:top-0 lg:z-20 lg:flex lg:h-screen lg:translate-x-0 lg:flex-col",
+          "fixed inset-y-0 left-0 z-50 w-[260px] -translate-x-full bg-zinc-50 p-2 text-zinc-950 transition-transform duration-300 lg:sticky lg:top-0 lg:z-20 lg:flex lg:h-screen lg:translate-x-0 lg:flex-col",
           mobileOpen ? "translate-x-0" : ""
         )}
       >
@@ -166,10 +172,10 @@ export default function Sidebar({
               </div>
             ) : null}
 
-            <div className="space-y-4">
+            <div className="space-y-5">
               {groupedItems.map((group) => (
                 <div key={group.label}>
-                  <div className="mb-2 px-2 text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-400">
+                  <div className="mb-2 px-2 text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400">
                     {group.label}
                   </div>
                   <div className="space-y-1">
@@ -190,6 +196,38 @@ export default function Sidebar({
 
             </div>
           </nav>
+
+          <div className="border-t border-zinc-100 p-3">
+            <div className="mb-2 px-2 text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400">
+              Conta
+            </div>
+            <div className="space-y-1">
+              {canSeePerfilSalao ? (
+                <SidebarUtilityLink
+                  href="/perfil-salao"
+                  label="Perfil"
+                  icon={Building2}
+                  onClose={onClose}
+                />
+              ) : null}
+              {canSeeConfiguracoes ? (
+                <SidebarUtilityLink
+                  href="/configuracoes"
+                  label="Configuracoes"
+                  icon={Settings}
+                  onClose={onClose}
+                />
+              ) : null}
+              {canSeeAssinatura ? (
+                <SidebarUtilityLink
+                  href="/meu-plano"
+                  label="Planos"
+                  icon={CreditCard}
+                  onClose={onClose}
+                />
+              ) : null}
+            </div>
+          </div>
         </div>
       </aside>
     </>
@@ -203,24 +241,20 @@ type SidebarGroup = {
 
 const GROUPS: Array<{ label: string; hrefs: string[] }> = [
   {
-    label: "Principal",
-    hrefs: ["/dashboard", "/agenda", "/caixa"],
+    label: "Salao",
+    hrefs: ["/dashboard", "/agenda", "/comandas", "/clientes"],
   },
   {
-    label: "Atendimento",
-    hrefs: ["/comandas", "/vendas"],
+    label: "Equipe e catalogo",
+    hrefs: ["/profissionais", "/servicos", "/produtos", "/estoque"],
   },
   {
-    label: "Cadastros",
-    hrefs: ["/clientes", "/profissionais"],
+    label: "Financeiro",
+    hrefs: ["/vendas", "/caixa", "/comissoes", "/relatorio-financeiro"],
   },
   {
-    label: "Catalogo",
-    hrefs: ["/servicos", "/produtos", "/estoque"],
-  },
-  {
-    label: "Gestao",
-    hrefs: ["/comissoes", "/relatorio-financeiro", "/marketing", "/suporte"],
+    label: "Crescimento",
+    hrefs: ["/marketing", "/novidades", "/suporte"],
   },
 ];
 
@@ -266,8 +300,8 @@ function SidebarLink({
       className={clsx(
         "group/item flex items-center gap-3 rounded-[14px] px-3 py-2.5 ring-1 ring-transparent transition-all duration-200",
         active
-          ? "bg-zinc-950 text-white ring-zinc-900"
-          : "text-zinc-500 hover:bg-zinc-50 hover:text-zinc-950"
+          ? "bg-zinc-950 text-white ring-zinc-900 shadow-sm"
+          : "text-zinc-600 hover:bg-zinc-50 hover:text-zinc-950"
       )}
     >
       <span
@@ -283,7 +317,7 @@ function SidebarLink({
         <span className="block truncate text-sm font-bold">{item.label}</span>
         <span
           className={clsx(
-            "mt-0.5 block truncate text-xs",
+            "mt-0.5 block truncate text-[11px]",
             active ? "text-white/60" : "text-zinc-400"
           )}
         >
@@ -307,6 +341,31 @@ function SidebarLink({
           )}
         />
       ) : null}
+    </a>
+  );
+}
+
+function SidebarUtilityLink({
+  href,
+  label,
+  icon: Icon,
+  onClose,
+}: {
+  href: string;
+  label: string;
+  icon: PainelNavItem["icon"];
+  onClose: () => void;
+}) {
+  return (
+    <a
+      href={getRouteHref(href)}
+      onClick={onClose}
+      className="flex items-center gap-3 rounded-[14px] px-3 py-2.5 text-sm font-bold text-zinc-600 transition hover:bg-zinc-50 hover:text-zinc-950"
+    >
+      <span className="flex h-8.5 w-8.5 items-center justify-center rounded-[12px] text-zinc-500">
+        <Icon size={18} />
+      </span>
+      {label}
     </a>
   );
 }

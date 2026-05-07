@@ -155,6 +155,8 @@ export default function AppShell({
           salaoLogoUrl={salaoLogoUrl}
           planoNome={planoNome}
           resumoAssinatura={resumoAssinatura}
+          canSeePerfilSalao={Boolean(permissoes?.perfil_salao_ver)}
+          canSeeConfiguracoes={Boolean(permissoes?.configuracoes_ver)}
           canSeeAssinatura={Boolean(permissoes?.assinatura_ver)}
           criticalNotificationsCount={criticalNotificationsCount}
           mobileOpen={mobileSidebarOpen}
@@ -162,7 +164,7 @@ export default function AppShell({
         />
 
         <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-          <div className="fixed left-0 right-0 top-0 z-30 bg-zinc-50 px-2 pb-1 pt-2 md:px-2.5 lg:left-[274px] lg:px-3 xl:px-4">
+          <div className="fixed left-0 right-0 top-0 z-30 bg-zinc-50 px-2 pb-1 pt-2 md:px-2.5 lg:left-[260px] lg:px-3 xl:px-4">
             <Header
               userName={userName}
               userEmail={userEmail}

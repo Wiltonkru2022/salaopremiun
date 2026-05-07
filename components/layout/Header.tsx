@@ -5,16 +5,12 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import clsx from "clsx";
 import {
   Building2,
-  BadgeDollarSign,
-  BellRing,
-  CalendarClock,
   ChevronDown,
   CreditCard,
   LogOut,
   Menu,
-  Percent,
+  Settings,
   ShieldCheck,
-  Users,
 } from "lucide-react";
 import { getPainelPageMeta } from "@/components/layout/navigation";
 import type { ResumoAssinatura } from "@/lib/assinatura-utils";
@@ -260,56 +256,14 @@ export default function Header({
                 ) : null}
 
                 {canSeeConfiguracoes ? (
-                  <div className="rounded-[22px] border border-zinc-100 bg-zinc-50 p-2">
-                    <div className="px-2 pb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-400">
-                      Configuracoes
-                    </div>
-
-                    <a
-                      href={getRouteHref("/configuracoes/usuarios")}
-                      onClick={() => setMenuOpen(false)}
-                      className="flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-semibold text-zinc-700 transition hover:bg-white"
-                    >
-                      <Users size={16} />
-                      Usuarios do sistema
-                    </a>
-
-                    <a
-                      href={getRouteHref("/configuracoes/caixa-taxas")}
-                      onClick={() => setMenuOpen(false)}
-                      className="flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-semibold text-zinc-700 transition hover:bg-white"
-                    >
-                      <Percent size={16} />
-                      Caixa e taxas
-                    </a>
-
-                    <a
-                      href={getRouteHref("/configuracoes/rateio")}
-                      onClick={() => setMenuOpen(false)}
-                      className="flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-semibold text-zinc-700 transition hover:bg-white"
-                    >
-                      <BadgeDollarSign size={16} />
-                      Rateio e impressão
-                    </a>
-
-                    <a
-                      href={getRouteHref("/configuracoes/agenda-horarios")}
-                      onClick={() => setMenuOpen(false)}
-                      className="flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-semibold text-zinc-700 transition hover:bg-white"
-                    >
-                      <CalendarClock size={16} />
-                      Agenda e horarios
-                    </a>
-
-                    <a
-                      href={getRouteHref("/configuracoes/notificacoes")}
-                      onClick={() => setMenuOpen(false)}
-                      className="flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-semibold text-zinc-700 transition hover:bg-white"
-                    >
-                      <BellRing size={16} />
-                      Notificacoes e push
-                    </a>
-                  </div>
+                  <a
+                    href={getRouteHref("/configuracoes")}
+                    onClick={() => setMenuOpen(false)}
+                    className="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-100"
+                  >
+                    <Settings size={16} />
+                    Configuracoes
+                  </a>
                 ) : null}
 
                 {canSeeAssinatura ? (
