@@ -113,9 +113,12 @@ async function markSubscriptionInactive(id: string) {
   }
 }
 
-async function sendToRows(rows: PushSubscriptionRow[], payload: PushPayload) {
+export async function sendPushToRows(
+  rows: PushSubscriptionRow[],
+  payload: PushPayload
+) {
   const config = getPushConfig();
-  if (!config || !rows.length) return;
+  if (!config || !rows.length) return { sent: 0 };
 
   const webPush = await import("web-push");
   webPush.default.setVapidDetails(
@@ -123,6 +126,8 @@ async function sendToRows(rows: PushSubscriptionRow[], payload: PushPayload) {
     config.publicKey,
     config.privateKey
   );
+
+  let sent = 0;
 
   await Promise.all(
     rows.map(async (row) => {
@@ -138,6 +143,7 @@ async function sendToRows(rows: PushSubscriptionRow[], payload: PushPayload) {
           JSON.stringify(payload),
           { TTL: 60 * 60 * 12 }
         );
+        sent += 1;
       } catch (error) {
         const statusCode =
           typeof error === "object" && error !== null && "statusCode" in error
@@ -149,6 +155,8 @@ async function sendToRows(rows: PushSubscriptionRow[], payload: PushPayload) {
       }
     })
   );
+
+  return { sent };
 }
 
 export async function broadcastPushNotification(params: {
@@ -189,7 +197,7 @@ export async function broadcastPushNotification(params: {
   }
 
   const subscriptions = (rows || []) as PushSubscriptionRow[];
-  await sendToRows(subscriptions, {
+  await sendPushToRows(subscriptions, {
     title,
     body,
     url: params.url || "/",
@@ -245,7 +253,7 @@ export async function notifySalonAboutClientBooking(params: {
     )}. Toque para revisar.`;
 
     if (!salaoResult.error && salaoResult.data?.length) {
-      await sendToRows(salaoResult.data as PushSubscriptionRow[], {
+      await sendPushToRows(salaoResult.data as PushSubscriptionRow[], {
         title: "Pedido de horario recebido",
         body,
         url: `/agenda?agendamento=${params.idAgendamento}`,
@@ -254,7 +262,7 @@ export async function notifySalonAboutClientBooking(params: {
     }
 
     if (!profissionalResult.error && profissionalResult.data?.length) {
-      await sendToRows(profissionalResult.data as PushSubscriptionRow[], {
+      await sendPushToRows(profissionalResult.data as PushSubscriptionRow[], {
         title: "Pedido de horario para confirmar",
         body,
         url: `/app-profissional/agenda/${params.idAgendamento}`,
@@ -311,7 +319,7 @@ export async function notifyClientAppointmentConfirmed(params: {
           .maybeSingle()
       : { data: null };
 
-    await sendToRows(rows as PushSubscriptionRow[], {
+    await sendPushToRows(rows as PushSubscriptionRow[], {
       title: "Horario confirmado",
       body: `${servico?.nome || "Seu horario"} foi confirmado para ${formatAppointmentDate(
         agendamento.data,

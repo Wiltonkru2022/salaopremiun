@@ -3,6 +3,10 @@
     {
       "path": "/api/cron/limpar-observabilidade",
       "schedule": "20 5 * * *"
+    },
+    {
+      "path": "/api/cron/notificacoes",
+      "schedule": "*/5 * * * *"
     }
   ]
 }

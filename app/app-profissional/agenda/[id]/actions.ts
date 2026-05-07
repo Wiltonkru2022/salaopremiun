@@ -4,6 +4,10 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getProfissionalSessionFromCookie } from "@/lib/profissional-auth.server";
 import { notifyClientAppointmentConfirmed } from "@/lib/push-notifications";
+import {
+  notifyAppointmentFinished,
+  scheduleAppointmentReminderNotifications,
+} from "@/lib/notification-jobs";
 import { runAdminOperation } from "@/lib/supabase/admin-ops";
 import {
   buscarConfiguracaoAgendaProfissional,
@@ -175,6 +179,20 @@ export async function atualizarAgendamentoProfissionalAction(
         idAgendamento,
         idSalao: session.idSalao,
       });
+      await scheduleAppointmentReminderNotifications({
+        idAgendamento,
+        idSalao: session.idSalao,
+      });
+    }
+
+    if (
+      status === "atendido" &&
+      String(agendamento.status || "").toLowerCase() !== "atendido"
+    ) {
+      await notifyAppointmentFinished({
+        idAgendamento,
+        idSalao: session.idSalao,
+      });
     }
 
     revalidatePath("/app-profissional/agenda");
@@ -266,6 +284,10 @@ export async function confirmarAgendamentoProfissionalAction(formData: FormData)
       });
 
       await notifyClientAppointmentConfirmed({
+        idAgendamento,
+        idSalao: session.idSalao,
+      });
+      await scheduleAppointmentReminderNotifications({
         idAgendamento,
         idSalao: session.idSalao,
       });

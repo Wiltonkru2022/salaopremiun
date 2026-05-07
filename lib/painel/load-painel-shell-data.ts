@@ -78,6 +78,15 @@ const loadPainelShellContextCached = unstable_cache(
         getPlanoAccessSnapshot(usuario.id_salao),
       ]);
 
+    const { data: notificacoesOperacionais } = await (supabaseAdmin as any)
+      .from("notification_jobs")
+      .select("id, tipo, titulo, mensagem, url, status, enviar_em, created_at")
+      .eq("id_salao", usuario.id_salao)
+      .eq("canal", "salao_painel")
+      .in("status", ["pendente", "enviada"])
+      .order("created_at", { ascending: false })
+      .limit(8);
+
     const permissoesPadrao = buildPermissoesByNivel(usuario.nivel);
     const permissoesDb = sanitizePermissoesDb(
       (permissoes as PermissoesDbRow | null) ?? null,
@@ -137,6 +146,27 @@ const loadPainelShellContextCached = unstable_cache(
       onboarding: null,
       tickets: [],
     });
+
+    for (const item of ((notificacoesOperacionais || []) as Array<Record<string, unknown>>)) {
+      const tipo = String(item.tipo || "");
+      notifications.push({
+        id: `notification-job-${String(item.id || "")}`,
+        title: String(item.titulo || "Notificacao do salao"),
+        description: String(item.mensagem || "Nova notificacao operacional."),
+        tone: tipo === "avaliacao_ruim" ? "warning" : "info",
+        category: tipo.includes("avaliacao") ? "agenda" : "sistema",
+        severity: tipo === "avaliacao_ruim" ? "high" : "medium",
+        eventType: tipo || "notification_job",
+        href: String(item.url || "/dashboard"),
+        actionLabel: tipo === "avaliacao_ruim" ? "Ver atendimento" : "Abrir",
+        destination: "internal",
+        icon: tipo.includes("avaliacao") ? "agenda" : "alert",
+        sourceModule: "notification_jobs",
+        sourceEntity: "notification_jobs",
+        sourceEntityId: String(item.id || ""),
+        expiresAt: item.enviar_em ? String(item.enviar_em) : null,
+      });
+    }
 
     const planoCatalogo = getPlanoCatalogo(planoAccess.planoCodigo);
 

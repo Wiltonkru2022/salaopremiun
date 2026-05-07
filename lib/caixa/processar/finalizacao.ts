@@ -1,6 +1,7 @@
 import { executarMutacaoComandaComEstoque } from "@/lib/comandas/lifecycle";
 import { getPlanoAccessSnapshot, PlanAccessError } from "@/lib/plans/access";
 import { registrarLogSistema } from "@/lib/system-logs";
+import { notifyComandaFinalizada } from "@/lib/notification-jobs";
 import type { CaixaProcessarBody, CaixaProcessarContext } from "./types";
 import { carregarSessaoAberta, sanitizeText } from "./utils";
 
@@ -64,6 +65,15 @@ export async function finalizarComanda(params: {
       });
 
       if (error) throw error;
+
+      try {
+        await notifyComandaFinalizada({
+          idComanda,
+          idSalao: ctx.idSalao,
+        });
+      } catch {
+        // A venda nao pode falhar porque uma notificacao nao foi enviada.
+      }
     },
     successMessage: "Comanda finalizada pelo servidor.",
     warningMessage: "Comanda finalizada com aviso de estoque.",

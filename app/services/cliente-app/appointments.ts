@@ -2,6 +2,7 @@ import { runAdminOperation } from "@/lib/supabase/admin-ops";
 import { cancelarAgendamentoComComanda } from "@/lib/agenda/cancelarAgendamentoComComanda";
 import { canSalonAppearInClientApp } from "@/lib/client-app/eligibility";
 import { notifySalonAboutClientBooking } from "@/lib/push-notifications";
+import { notifyReviewReceived } from "@/lib/notification-jobs";
 import { ensureClienteContaVinculadaAoSalao } from "@/app/services/cliente-app/auth";
 import {
   ensureDiaFuncionamento,
@@ -964,6 +965,17 @@ export async function reviewClienteAppAppointment(
           ok: false,
           error: "Nao foi possivel salvar sua avaliacao agora.",
         };
+      }
+
+      try {
+        await notifyReviewReceived({
+          idSalao: ownership.idSalao,
+          idAgendamento,
+          nota,
+          comentario,
+        });
+      } catch {
+        // Avaliacao salva mesmo se a notificacao do salao falhar.
       }
 
       return {
