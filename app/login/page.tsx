@@ -385,7 +385,9 @@ function LoginPageContent() {
                 <p>Deseja agendar algum servico?</p>
                 <button
                   type="button"
-                  onClick={() => router.push("/app-cliente")}
+                  onClick={() =>
+                    window.location.assign("https://salaopremiun.com.br/app-cliente")
+                  }
                   className="mt-2 font-black text-zinc-950 underline"
                 >
                   Entrar como cliente

@@ -5,9 +5,11 @@ import Link from "next/link";
 import {
   ArrowLeft,
   ChevronRight,
+  FileText,
   Loader2,
   LockKeyhole,
   Sparkles,
+  X,
 } from "lucide-react";
 import { getErrorMessage } from "@/lib/get-error-message";
 
@@ -74,6 +76,9 @@ export default function CadastroSalaoPage() {
 
 function CadastroSalaoContent() {
   const [step, setStep] = useState<StepKey>("dados");
+  const [legalModal, setLegalModal] = useState<"termos" | "privacidade" | null>(
+    null
+  );
   const [saving, setSaving] = useState(false);
   const [erro, setErro] = useState("");
   const [msg, setMsg] = useState("");
@@ -339,6 +344,12 @@ function CadastroSalaoContent() {
           </div>
         </section>
       </main>
+      {legalModal ? (
+        <LegalPreviewModal
+          type={legalModal}
+          onClose={() => setLegalModal(null)}
+        />
+      ) : null}
     </div>
   );
 
@@ -394,13 +405,21 @@ function CadastroSalaoContent() {
             />
             <span>
               Li e aceito os{" "}
-              <Link href="/termos-de-uso" className="font-bold text-zinc-950 underline">
+              <button
+                type="button"
+                onClick={() => setLegalModal("termos")}
+                className="font-bold text-zinc-950 underline"
+              >
                 termos de uso
-              </Link>{" "}
+              </button>{" "}
               e a{" "}
-              <Link href="/politica-de-privacidade" className="font-bold text-zinc-950 underline">
+              <button
+                type="button"
+                onClick={() => setLegalModal("privacidade")}
+                className="font-bold text-zinc-950 underline"
+              >
                 politica de privacidade
-              </Link>
+              </button>
               .
             </span>
           </label>
@@ -536,6 +555,113 @@ function HeroBadge({ label }: { label: string }) {
   return (
     <div className="rounded-[20px] border border-white/15 bg-white/10 px-4 py-3 text-sm font-black text-white backdrop-blur">
       {label}
+    </div>
+  );
+}
+
+function LegalPreviewModal({
+  type,
+  onClose,
+}: {
+  type: "termos" | "privacidade";
+  onClose: () => void;
+}) {
+  const isTerms = type === "termos";
+  const fullHref = isTerms
+    ? "https://salaopremiun.com.br/termos-de-uso"
+    : "https://salaopremiun.com.br/politica-de-privacidade";
+  const title = isTerms ? "Termos de Uso" : "Política de Privacidade";
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/65 px-4 py-6 backdrop-blur-sm">
+      <div className="max-h-[88vh] w-full max-w-2xl overflow-hidden rounded-[28px] border border-zinc-200 bg-white shadow-2xl">
+        <div className="flex items-start justify-between gap-4 border-b border-zinc-200 p-5">
+          <div className="flex items-start gap-3">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-zinc-950 text-[var(--app-accent)]">
+              <FileText size={18} />
+            </div>
+            <div>
+              <h2 className="font-display text-xl font-black text-zinc-950">
+                {title}
+              </h2>
+              <p className="mt-1 text-sm leading-6 text-zinc-500">
+                Resumo para conferência rápida antes de continuar o cadastro.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-10 w-10 items-center justify-center rounded-2xl border border-zinc-200 text-zinc-600 transition hover:bg-zinc-50"
+            aria-label="Fechar"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="scroll-premium max-h-[58vh] overflow-y-auto p-5 text-sm leading-7 text-zinc-700">
+          {isTerms ? <TermsSummary /> : <PrivacySummary />}
+        </div>
+
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-zinc-200 bg-zinc-50 p-5">
+          <a
+            href={fullHref}
+            target="_blank"
+            rel="noreferrer"
+            className="text-sm font-black text-zinc-950 underline"
+          >
+            Abrir documento completo
+          </a>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-2xl bg-zinc-950 px-5 py-3 text-sm font-black text-white transition hover:bg-zinc-800"
+          >
+            Entendi
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TermsSummary() {
+  return (
+    <div className="space-y-4">
+      <p>
+        Ao criar uma conta, você concorda em utilizar o SalãoPremium de forma
+        lícita, manter dados corretos e proteger suas credenciais de acesso.
+      </p>
+      <ul className="list-disc space-y-2 pl-5">
+        <li>O salão é responsável pelos dados de clientes, serviços, equipe e agenda.</li>
+        <li>Recursos podem variar conforme plano contratado, pagamento e regras comerciais.</li>
+        <li>É proibido compartilhar senha, praticar fraude, inserir dados indevidos ou comprometer a segurança da plataforma.</li>
+        <li>Agenda, notificações, app cliente e integrações dependem de configurações, permissões e disponibilidade técnica.</li>
+      </ul>
+      <p>
+        O documento completo está disponível em https://salaopremiun.com.br/termos-de-uso.
+      </p>
+    </div>
+  );
+}
+
+function PrivacySummary() {
+  return (
+    <div className="space-y-4">
+      <p>
+        O SalãoPremium trata dados pessoais para criar contas, autenticar
+        usuários, operar agenda, clientes, equipe, vendas, notificações, suporte
+        e segurança.
+      </p>
+      <ul className="list-disc space-y-2 pl-5">
+        <li>Podemos tratar dados cadastrais, dados de acesso, registros técnicos e dados operacionais do salão.</li>
+        <li>Não vendemos dados pessoais.</li>
+        <li>Dados podem ser compartilhados com provedores essenciais para hospedagem, autenticação, notificações, pagamentos e suporte.</li>
+        <li>O titular pode solicitar acesso, correção, informações e demais direitos previstos na LGPD.</li>
+      </ul>
+      <p>
+        O documento completo está disponível em https://salaopremiun.com.br/politica-de-privacidade.
+      </p>
     </div>
   );
 }
