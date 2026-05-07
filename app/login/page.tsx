@@ -1,8 +1,9 @@
 "use client";
 
 import { Suspense, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowRight, LockKeyhole, Mail, Sparkles } from "lucide-react";
+import { ArrowRight, Loader2, LockKeyhole, Mail, Sparkles } from "lucide-react";
 import { createClient } from "../../lib/supabase/client";
 import {
   clearSupabaseBrowserAuthState,
@@ -30,10 +31,8 @@ export default function LoginPage() {
 
 function LoginPageFallback() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-white p-4">
-      <div className="w-full max-w-xl rounded-[26px] border border-zinc-200 bg-white p-8 text-center shadow-xl">
-        <p className="text-sm text-zinc-500">Carregando login...</p>
-      </div>
+    <div className="flex min-h-screen items-center justify-center bg-white">
+      <Loader2 className="animate-spin text-zinc-500" size={24} />
     </div>
   );
 }
@@ -192,46 +191,65 @@ function LoginPageContent() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-white p-4">
-      <div className="grid w-full max-w-5xl overflow-hidden rounded-[26px] bg-white shadow-xl md:grid-cols-2">
-        <div className="hidden bg-zinc-900 p-8 text-white md:flex md:flex-col md:justify-between">
-          <div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.24em] text-zinc-300">
-              <Sparkles size={14} />
-              Sistema SaaS
+    <div className="min-h-screen bg-white text-zinc-950">
+      <header className="flex h-[74px] items-center justify-between border-b border-zinc-200 bg-white px-5 sm:px-8">
+        <Link href="/" className="flex items-center gap-3">
+          <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-zinc-950 text-[var(--app-accent)]">
+            <Sparkles size={18} />
+          </span>
+          <span className="font-display text-lg font-black tracking-[-0.03em]">
+            SalaoPremium
+          </span>
+        </Link>
+
+        <Link
+          href="/cadastro-salao"
+          className="rounded-full border border-zinc-200 px-4 py-2 text-sm font-black text-zinc-800 transition hover:border-zinc-950"
+        >
+          Cadastrar salao
+        </Link>
+      </header>
+
+      <main className="grid min-h-[calc(100vh-74px)] lg:grid-cols-2">
+        <section
+          className="relative hidden overflow-hidden bg-zinc-950 bg-cover bg-center lg:block"
+          style={{ backgroundImage: "url('/site/cadastro-salao-bg.jpeg')" }}
+        >
+          <div className="absolute inset-0 bg-zinc-950/58" />
+          <div className="absolute inset-0 bg-gradient-to-br from-zinc-950 via-zinc-950/55 to-transparent" />
+
+          <div className="relative flex h-full flex-col justify-between p-10 text-white xl:p-14">
+            <div className="max-w-lg">
+              <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-black uppercase tracking-[0.2em] text-white/75">
+                Painel do salao
+              </div>
+              <h1 className="mt-7 font-display text-[3.2rem] font-black leading-[0.95] tracking-[-0.05em] xl:text-[4.2rem]">
+                Menos peso na rotina, mais controle no seu negocio.
+              </h1>
+              <p className="mt-5 max-w-md text-base leading-7 text-white/78">
+                Entre para acompanhar agenda, clientes, equipe, vendas e
+                notificacoes em tempo real.
+              </p>
             </div>
 
-            <h1 className="mt-4 text-[2.2rem] font-bold leading-tight">
-              SalaoPremium
-            </h1>
-
-            <p className="mt-3 max-w-md text-sm leading-6 text-zinc-300">
-              Gestao profissional para saloes, clinicas e profissionais da
-              beleza.
-            </p>
+            <div className="grid max-w-xl gap-3 sm:grid-cols-3">
+              <LoginBadge label="Agenda protegida" />
+              <LoginBadge label="Equipe conectada" />
+              <LoginBadge label="Dados seguros" />
+            </div>
           </div>
+        </section>
 
-          <div className="space-y-2.5">
-            <div className="rounded-2xl border border-zinc-800 bg-zinc-950/50 p-3.5 text-sm text-zinc-200">
-              Agenda propria, sem calendar pronto
-            </div>
-            <div className="rounded-2xl border border-zinc-800 bg-zinc-950/50 p-3.5 text-sm text-zinc-200">
-              Multi-salao com isolamento por salao
-            </div>
-            <div className="rounded-2xl border border-zinc-800 bg-zinc-950/50 p-3.5 text-sm text-zinc-200">
-              Painel premium com financeiro, vendas e relatorios
-            </div>
-          </div>
-        </div>
-
-        <div className="p-6 md:p-8">
-          <div className="mx-auto max-w-md">
-            <div className="mb-7">
-              <h2 className="text-[2rem] font-bold text-zinc-900">Entrar</h2>
-              <p className="mt-1.5 text-sm text-zinc-500">
+        <section className="flex items-center justify-center px-5 py-8 sm:px-8 lg:px-10">
+          <div className="w-full max-w-[430px]">
+            <div className="mb-8">
+              <h2 className="font-display text-3xl font-black tracking-[-0.04em] text-zinc-950">
+                Entrar no painel
+              </h2>
+              <p className="mt-2 text-sm font-semibold text-zinc-500">
                 {agendaQuickLogin
-                  ? "Login rapido para voltar direto para a agenda"
-                  : "Acesse seu painel administrativo"}
+                  ? "Acesse para voltar direto para a agenda."
+                  : "Use o e-mail e a senha do seu salao."}
               </p>
             </div>
 
@@ -262,12 +280,12 @@ function LoginPageContent() {
               </div>
             ) : null}
 
-            <form onSubmit={handleLogin} className="space-y-4.5">
+            <form onSubmit={handleLogin} className="space-y-5">
               <div>
-                <label className="mb-2 block text-sm font-medium text-zinc-700">
+                <label className="mb-2 block text-sm font-bold text-zinc-800">
                   E-mail
                 </label>
-                <div className="flex items-center gap-3 rounded-2xl border border-zinc-300 px-4 py-2.5 transition focus-within:border-zinc-900 focus-within:ring-4 focus-within:ring-zinc-200">
+                <div className="flex min-h-12 items-center gap-3 rounded-xl border border-zinc-300 px-4 transition focus-within:border-zinc-950 focus-within:ring-4 focus-within:ring-[rgba(199,162,92,0.20)]">
                   <Mail size={18} className="text-zinc-400" />
                   <input
                     type="email"
@@ -275,17 +293,17 @@ function LoginPageContent() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     autoComplete="email"
-                    className="w-full bg-transparent text-sm text-zinc-900 outline-none"
+                    className="w-full bg-transparent text-base text-zinc-950 outline-none"
                     required
                   />
                 </div>
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-medium text-zinc-700">
+                <label className="mb-2 block text-sm font-bold text-zinc-800">
                   Senha
                 </label>
-                <div className="flex items-center gap-3 rounded-2xl border border-zinc-300 px-4 py-2.5 transition focus-within:border-zinc-900 focus-within:ring-4 focus-within:ring-zinc-200">
+                <div className="flex min-h-12 items-center gap-3 rounded-xl border border-zinc-300 px-4 transition focus-within:border-zinc-950 focus-within:ring-4 focus-within:ring-[rgba(199,162,92,0.20)]">
                   <LockKeyhole size={18} className="text-zinc-400" />
                   <input
                     type="password"
@@ -293,7 +311,7 @@ function LoginPageContent() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     autoComplete="current-password"
-                    className="w-full bg-transparent text-sm text-zinc-900 outline-none"
+                    className="w-full bg-transparent text-base text-zinc-950 outline-none"
                     required
                   />
                 </div>
@@ -333,7 +351,7 @@ function LoginPageContent() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full rounded-2xl bg-zinc-900 px-4 py-2.5 font-semibold text-white transition hover:opacity-95 disabled:opacity-60"
+                className="flex min-h-12 w-full items-center justify-center rounded-2xl bg-zinc-950 px-4 text-sm font-black text-white transition hover:bg-zinc-800 disabled:opacity-60"
               >
                 {loading ? "Entrando..." : "Entrar"}
               </button>
@@ -345,36 +363,47 @@ function LoginPageContent() {
               </div>
             ) : null}
 
-            <div className="my-5 flex items-center gap-3">
-              <div className="h-px flex-1 bg-zinc-200" />
-              <span className="text-xs font-medium uppercase tracking-wider text-zinc-400">
-                ou
-              </span>
-              <div className="h-px flex-1 bg-zinc-200" />
-            </div>
+            <div className="mt-10 space-y-6 text-center">
+              <p className="text-sm text-zinc-600">
+                Ainda nao tem conta?{" "}
+                <button
+                  type="button"
+                  onClick={() =>
+                    router.push(
+                      planoSelecionado
+                        ? `/cadastro-salao?plano=${encodeURIComponent(planoSelecionado)}`
+                        : "/cadastro-salao"
+                    )
+                  }
+                  className="font-black text-[var(--app-accent-strong)] transition hover:text-zinc-950"
+                >
+                  Cadastre-se
+                </button>
+              </p>
 
-            <button
-              type="button"
-              onClick={() =>
-                router.push(
-                  planoSelecionado
-                    ? `/cadastro-salao?plano=${encodeURIComponent(planoSelecionado)}`
-                    : "/cadastro-salao"
-                )
-              }
-              className="flex w-full items-center justify-center gap-2 rounded-2xl border border-zinc-300 bg-white px-4 py-2.5 font-semibold text-zinc-900 transition hover:border-zinc-900 hover:bg-zinc-50"
-            >
-              <span>Cadastrar salao</span>
-              <ArrowRight size={18} />
-            </button>
-
-            <div className="mt-5 rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3.5 text-sm text-zinc-600">
-              Novo por aqui? Crie seu salao, escolha o plano e comece com agenda,
-              caixa, comandas e gestao completa.
+              <div className="text-sm text-zinc-500">
+                <p>Deseja agendar algum servico?</p>
+                <button
+                  type="button"
+                  onClick={() => router.push("/app-cliente")}
+                  className="mt-2 font-black text-zinc-950 underline"
+                >
+                  Entrar como cliente
+                  <ArrowRight size={14} className="ml-1 inline" />
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      </div>
+        </section>
+      </main>
+    </div>
+  );
+}
+
+function LoginBadge({ label }: { label: string }) {
+  return (
+    <div className="rounded-[20px] border border-white/15 bg-white/10 px-4 py-3 text-sm font-black text-white backdrop-blur">
+      {label}
     </div>
   );
 }

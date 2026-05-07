@@ -1,12 +1,19 @@
 "use client";
 
 import { Suspense, useState } from "react";
-import { ArrowLeft, Loader2, MessageCircle } from "lucide-react";
+import Link from "next/link";
+import {
+  ArrowLeft,
+  ChevronRight,
+  Loader2,
+  LockKeyhole,
+  Sparkles,
+} from "lucide-react";
 import { getErrorMessage } from "@/lib/get-error-message";
 
-type StepKey = "boas_vindas" | "conta" | "salao" | "endereco" | "resumo";
+type StepKey = "dados" | "acesso" | "endereco" | "resumo";
 
-const STEPS: StepKey[] = ["boas_vindas", "conta", "salao", "endereco", "resumo"];
+const STEPS: StepKey[] = ["dados", "acesso", "endereco", "resumo"];
 
 function onlyNumbers(value: string) {
   return value.replace(/\D/g, "");
@@ -38,12 +45,10 @@ function getLoginRedirectHref(params: URLSearchParams) {
 
 function getStepTitle(step: StepKey) {
   switch (step) {
-    case "boas_vindas":
-      return "Comeco";
-    case "conta":
+    case "dados":
+      return "Dados iniciais";
+    case "acesso":
       return "Acesso";
-    case "salao":
-      return "Salao";
     case "endereco":
       return "Endereco";
     case "resumo":
@@ -57,10 +62,8 @@ export default function CadastroSalaoPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-slate-950 px-4 py-5 md:px-6">
-          <div className="mx-auto max-w-4xl rounded-[26px] border border-white/20 bg-white/90 p-8 text-center shadow-xl">
-            <p className="text-sm text-zinc-500">Carregando cadastro...</p>
-          </div>
+        <div className="flex min-h-screen items-center justify-center bg-white">
+          <Loader2 className="animate-spin text-zinc-500" size={24} />
         </div>
       }
     >
@@ -70,13 +73,13 @@ export default function CadastroSalaoPage() {
 }
 
 function CadastroSalaoContent() {
-  const [step, setStep] = useState<StepKey>("boas_vindas");
-  const [typing, setTyping] = useState(false);
+  const [step, setStep] = useState<StepKey>("dados");
   const [saving, setSaving] = useState(false);
   const [erro, setErro] = useState("");
   const [msg, setMsg] = useState("");
   const [buscandoCep, setBuscandoCep] = useState(false);
   const [checking, setChecking] = useState(false);
+  const [aceiteTermos, setAceiteTermos] = useState(false);
 
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
@@ -92,7 +95,7 @@ function CadastroSalaoContent() {
   const [estado, setEstado] = useState("");
 
   const currentStepIndex = STEPS.indexOf(step);
-  const progresso = Math.round((currentStepIndex / (STEPS.length - 1)) * 100);
+  const progresso = Math.round(((currentStepIndex + 1) / STEPS.length) * 100);
 
   async function verificarDadosExistentes(fields: {
     email?: string;
@@ -136,19 +139,22 @@ function CadastroSalaoContent() {
   async function validarStepAtual() {
     setErro("");
 
-    if (step === "conta") {
+    if (step === "dados") {
+      if (!responsavel.trim()) return setErro("Informe seu nome completo."), false;
+      if (!whatsapp.trim()) return setErro("Informe seu celular ou WhatsApp."), false;
       if (!email.trim()) return setErro("Informe o e-mail."), false;
+      if (!nomeSalao.trim()) return setErro("Informe o nome do negocio."), false;
+      if (!aceiteTermos) {
+        return setErro("Aceite os termos de uso e a politica de privacidade para continuar."), false;
+      }
+      return verificarDadosExistentes({ email, nomeSalao, whatsapp });
+    }
+
+    if (step === "acesso") {
       if (!senha.trim()) return setErro("Informe a senha."), false;
       if (senha.trim().length < 6) {
         return setErro("A senha deve ter pelo menos 6 caracteres."), false;
       }
-      return verificarDadosExistentes({ email });
-    }
-
-    if (step === "salao") {
-      if (!nomeSalao.trim()) return setErro("Informe o nome do salao."), false;
-      if (!responsavel.trim()) return setErro("Informe o responsavel."), false;
-      return verificarDadosExistentes({ nomeSalao, whatsapp });
     }
 
     if (step === "endereco") {
@@ -167,19 +173,13 @@ function CadastroSalaoContent() {
 
     const next = STEPS[currentStepIndex + 1];
     if (!next) return;
-
-    setTyping(true);
-    window.setTimeout(() => {
-      setStep(next);
-      setTyping(false);
-    }, 1200);
+    setStep(next);
   }
 
   function voltarPasso() {
     const prev = STEPS[currentStepIndex - 1];
-    if (!prev || saving || typing) return;
+    if (!prev || saving) return;
     setErro("");
-    setTyping(false);
     setStep(prev);
   }
 
@@ -240,7 +240,7 @@ function CadastroSalaoContent() {
           bairro,
           cidade,
           estado,
-          origem: "cadastro_publico_chat",
+          origem: "cadastro_publico_site",
         }),
       });
 
@@ -259,110 +259,114 @@ function CadastroSalaoContent() {
   }
 
   return (
-    <div
-      className="relative min-h-screen overflow-hidden bg-slate-950 bg-cover bg-center px-4 py-4 md:px-6 md:py-6"
-      style={{ backgroundImage: "url('/site/cadastro-salao-bg.jpeg')" }}
-    >
-      <div className="absolute inset-0 bg-slate-950/45 backdrop-blur-[3px]" />
-      <div className="absolute inset-0 bg-gradient-to-r from-slate-950/80 via-slate-950/45 to-slate-950/25" />
-
-      <div className="relative mx-auto grid max-w-6xl gap-5 xl:grid-cols-[0.72fr_1.28fr]">
-        <aside className="rounded-[28px] border border-white/20 bg-white/12 p-5 text-white shadow-2xl backdrop-blur-md md:p-6">
-          <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.18em]">
-            <MessageCircle size={15} />
+    <div className="min-h-screen bg-white text-zinc-950">
+      <header className="flex h-[74px] items-center justify-between border-b border-zinc-200 bg-white px-5 sm:px-8">
+        <Link href="/" className="flex items-center gap-3">
+          <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-zinc-950 text-[var(--app-accent)]">
+            <Sparkles size={18} />
+          </span>
+          <span className="font-display text-lg font-black tracking-[-0.03em]">
             SalaoPremium
-          </div>
-          <h1 className="mt-5 text-[2.05rem] font-black leading-tight md:text-[2.7rem]">
-            Cadastro em conversa, sem complicar.
-          </h1>
-          <p className="mt-3 text-sm leading-6 text-white/80">
-            Responda uma coisa por vez. Eu vou mostrando a proxima mensagem como
-            em um atendimento pelo WhatsApp.
-          </p>
+          </span>
+        </Link>
 
-          <div className="mt-7">
-            <div className="mb-3 flex items-center justify-between text-xs font-bold uppercase tracking-[0.16em] text-white/65">
-              <span>Progresso</span>
-              <span>{progresso}%</span>
+        <Link
+          href="/login"
+          className="rounded-full border border-zinc-200 px-4 py-2 text-sm font-black text-zinc-800 transition hover:border-zinc-950"
+        >
+          Entrar
+        </Link>
+      </header>
+
+      <main className="grid min-h-[calc(100vh-74px)] lg:grid-cols-2">
+        <section
+          className="relative hidden overflow-hidden bg-zinc-950 bg-cover bg-center lg:block"
+          style={{ backgroundImage: "url('/site/cadastro-salao-bg.jpeg')" }}
+        >
+          <div className="absolute inset-0 bg-zinc-950/58" />
+          <div className="absolute inset-0 bg-gradient-to-br from-zinc-950 via-zinc-950/55 to-transparent" />
+
+          <div className="relative flex h-full flex-col justify-between p-10 text-white xl:p-14">
+            <div className="max-w-lg">
+              <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-black uppercase tracking-[0.2em] text-white/75">
+                Gestao para beleza
+              </div>
+              <h1 className="mt-7 font-display text-[3.2rem] font-black leading-[0.95] tracking-[-0.05em] xl:text-[4.2rem]">
+                Tudo para o seu salao crescer em um so lugar.
+              </h1>
+              <p className="mt-5 max-w-md text-base leading-7 text-white/78">
+                Agenda, clientes, equipe, caixa e app cliente com uma experiencia
+                premium para sua operacao.
+              </p>
             </div>
-            <div className="h-3 overflow-hidden rounded-full bg-white/20">
-              <div
-                className="h-full rounded-full bg-white transition-all duration-500"
-                style={{ width: `${progresso}%` }}
-              />
+
+            <div className="grid max-w-xl gap-3 sm:grid-cols-3">
+              <HeroBadge label="Agenda online" />
+              <HeroBadge label="App cliente" />
+              <HeroBadge label="Controle financeiro" />
             </div>
           </div>
+        </section>
 
-          <div className="mt-6 grid grid-cols-2 gap-2.5">
-            {STEPS.slice(1).map((item, index) => {
-              const active = currentStepIndex >= index + 1;
-              return (
-                <div
-                  key={item}
-                  className={`rounded-2xl border px-4 py-3 text-sm transition ${
-                    active
-                      ? "border-white bg-white text-zinc-950"
-                      : "border-white/15 bg-white/10 text-white/70"
-                  }`}
-                >
-                  <div className="text-xs uppercase tracking-wider">Etapa {index + 1}</div>
-                  <div className="mt-1 font-bold">{getStepTitle(item)}</div>
+        <section className="flex items-center justify-center px-5 py-8 sm:px-8 lg:px-10">
+          <div className="w-full max-w-[430px]">
+            <div className="mb-8">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <h2 className="font-display text-3xl font-black tracking-[-0.04em] text-zinc-950">
+                    Cadastre seu negocio
+                  </h2>
+                  <p className="mt-1 text-sm font-semibold text-zinc-500">
+                    {getStepTitle(step)} - etapa {currentStepIndex + 1} de {STEPS.length}
+                  </p>
                 </div>
-              );
-            })}
-          </div>
-        </aside>
-
-        <main className="overflow-hidden rounded-[28px] border border-white/50 bg-[#efeae2]/95 shadow-2xl backdrop-blur">
-          <div className="flex items-center justify-between border-b border-black/10 bg-zinc-950 px-5 py-4 text-white">
-            <div className="flex items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-full bg-white text-zinc-950">
-                <MessageCircle size={22} />
+                <span className="rounded-full bg-zinc-950 px-3 py-1.5 text-xs font-black text-white">
+                  {progresso}%
+                </span>
               </div>
-              <div>
-                <h2 className="text-base font-black">Assistente SalaoPremium</h2>
-                <p className="text-xs text-white/70">
-                  {typing || checking ? "digitando..." : "online agora"}
-                </p>
+              <div className="mt-5 h-2 overflow-hidden rounded-full bg-zinc-100">
+                <div
+                  className="h-full rounded-full bg-[var(--app-accent)] transition-all"
+                  style={{ width: `${progresso}%` }}
+                />
               </div>
             </div>
-            <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-bold">
-              {currentStepIndex + 1}/{STEPS.length}
-            </span>
+
+            {erro ? <Alert tone="error">{erro}</Alert> : null}
+            {msg ? <Alert tone="success">{msg}</Alert> : null}
+
+            <div className="mt-5">{renderCurrentStepForm()}</div>
           </div>
-
-          <div className="min-h-[650px] px-4 py-5 md:px-6">
-            <div className="mx-auto max-w-3xl space-y-3">
-              {typing || checking ? <TypingBubble /> : <CurrentStepMessages step={step} email={email} />}
-
-              {erro ? <AlertBubble tone="error">{erro}</AlertBubble> : null}
-              {msg ? <AlertBubble tone="success">{msg}</AlertBubble> : null}
-
-              {typing || checking ? null : renderCurrentStepForm()}
-            </div>
-          </div>
-        </main>
-      </div>
+        </section>
+      </main>
     </div>
   );
 
   function renderCurrentStepForm() {
-    if (step === "boas_vindas") {
+    if (step === "dados") {
       return (
-        <ChatActions
-          canBack={false}
-          primaryLabel="Sim, vamos comecar"
-          onBack={voltarPasso}
-          onPrimary={irParaProximoPasso}
-        />
-      );
-    }
-
-    if (step === "conta") {
-      return (
-        <ChatFormCard>
+        <FormPanel>
           <Input
-            label="E-mail de acesso"
+            autoFocus
+            label="Nome completo"
+            value={responsavel}
+            onChange={(value) => {
+              setResponsavel(value);
+              if (erro) setErro("");
+            }}
+            placeholder="Seu nome"
+          />
+          <Input
+            label="Celular"
+            value={whatsapp}
+            onChange={(value) => {
+              setWhatsapp(maskPhone(value));
+              if (erro) setErro("");
+            }}
+            placeholder="(67) 99999-9999"
+          />
+          <Input
+            label="E-mail"
             value={email}
             onChange={(value) => {
               setEmail(value);
@@ -372,78 +376,103 @@ function CadastroSalaoContent() {
             placeholder="voce@seusalao.com"
           />
           <Input
+            label="Nome do negocio"
+            value={nomeSalao}
+            onChange={(value) => {
+              setNomeSalao(value);
+              if (erro) setErro("");
+            }}
+            placeholder="Ex: Studio Mão de Fadas"
+          />
+
+          <label className="flex items-start gap-3 text-sm leading-6 text-zinc-600">
+            <input
+              type="checkbox"
+              checked={aceiteTermos}
+              onChange={(event) => setAceiteTermos(event.target.checked)}
+              className="mt-1 h-4 w-4 rounded border-zinc-300 text-zinc-950"
+            />
+            <span>
+              Li e aceito os{" "}
+              <Link href="/termos-de-uso" className="font-bold text-zinc-950 underline">
+                termos de uso
+              </Link>{" "}
+              e a{" "}
+              <Link href="/politica-de-privacidade" className="font-bold text-zinc-950 underline">
+                politica de privacidade
+              </Link>
+              .
+            </span>
+          </label>
+
+          <FormActions
+            canBack={false}
+            primaryLabel={checking ? "Verificando..." : "Continuar cadastro"}
+            onBack={voltarPasso}
+            onPrimary={irParaProximoPasso}
+            disabled={checking}
+          />
+
+          <p className="text-center text-xs text-zinc-500">
+            Ja faz parte do SalaoPremium?{" "}
+            <Link href="/login" className="font-black text-zinc-950 underline">
+              Acesse sua conta
+            </Link>
+          </p>
+        </FormPanel>
+      );
+    }
+
+    if (step === "acesso") {
+      return (
+        <FormPanel>
+          <div className="rounded-[22px] border border-zinc-200 bg-zinc-50 p-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-zinc-950 text-white">
+                <LockKeyhole size={18} />
+              </div>
+              <div>
+                <h3 className="font-black text-zinc-950">Crie sua senha</h3>
+                <p className="text-sm text-zinc-500">Ela sera usada no login do painel.</p>
+              </div>
+            </div>
+          </div>
+          <Input
+            autoFocus
             label="Senha"
             value={senha}
             onChange={setSenha}
             type="password"
             placeholder="Minimo de 6 caracteres"
           />
-          <ChatActions
+          <FormActions
             canBack
             primaryLabel="Continuar"
             onBack={voltarPasso}
             onPrimary={irParaProximoPasso}
           />
-        </ChatFormCard>
-      );
-    }
-
-    if (step === "salao") {
-      return (
-        <ChatFormCard>
-          <div className="grid gap-3 md:grid-cols-2">
-            <Input
-              label="Nome do salao"
-              value={nomeSalao}
-              onChange={(value) => {
-                setNomeSalao(value);
-                if (erro) setErro("");
-              }}
-              placeholder="Ex: Salao Bella"
-            />
-            <Input
-              label="Responsavel"
-              value={responsavel}
-              onChange={setResponsavel}
-              placeholder="Seu nome completo"
-            />
-            <div className="md:col-span-2">
-              <Input
-                label="WhatsApp do salao"
-                value={whatsapp}
-                onChange={(v) => {
-                  setWhatsapp(maskPhone(v));
-                  if (erro) setErro("");
-                }}
-                placeholder="(67) 99999-9999"
-              />
-            </div>
-          </div>
-          <ChatActions
-            canBack
-            primaryLabel="Proximo passo"
-            onBack={voltarPasso}
-            onPrimary={irParaProximoPasso}
-          />
-        </ChatFormCard>
+        </FormPanel>
       );
     }
 
     if (step === "endereco") {
       return (
-        <ChatFormCard>
-          <div className="grid gap-3 md:grid-cols-2">
+        <FormPanel>
+          <div className="grid gap-4 sm:grid-cols-2">
             <Input
+              autoFocus
               label="CEP"
               value={cep}
-              onChange={(v) => setCep(maskCep(v))}
+              onChange={(value) => setCep(maskCep(value))}
               onBlur={buscarCep}
               placeholder="00000-000"
             />
-            <InfoMini
-              text={buscandoCep ? "Buscando endereco..." : "Ao sair do CEP eu tento completar."}
-            />
-            <div className="md:col-span-2">
+            <div className="flex min-h-[74px] items-end">
+              <div className="w-full rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm font-semibold text-zinc-600">
+                {buscandoCep ? "Buscando endereco..." : "Preencha pelo CEP ou manualmente."}
+              </div>
+            </div>
+            <div className="sm:col-span-2">
               <Input
                 label="Endereco"
                 value={endereco}
@@ -463,26 +492,26 @@ function CadastroSalaoContent() {
             <Input
               label="Estado"
               value={estado}
-              onChange={(v) => setEstado(v.toUpperCase().slice(0, 2))}
+              onChange={(value) => setEstado(value.toUpperCase().slice(0, 2))}
               placeholder="UF"
             />
           </div>
-          <ChatActions
+          <FormActions
             canBack
             primaryLabel="Revisar cadastro"
             onBack={voltarPasso}
             onPrimary={irParaProximoPasso}
           />
-        </ChatFormCard>
+        </FormPanel>
       );
     }
 
     return (
-      <ChatFormCard>
-        <div className="grid gap-3 md:grid-cols-2">
-          <SummaryCard label="E-mail" value={email || "-"} />
-          <SummaryCard label="Salao" value={nomeSalao || "-"} />
+      <FormPanel>
+        <div className="grid gap-3">
           <SummaryCard label="Responsavel" value={responsavel || "-"} />
+          <SummaryCard label="E-mail" value={email || "-"} />
+          <SummaryCard label="Negocio" value={nomeSalao || "-"} />
           <SummaryCard label="WhatsApp" value={whatsapp || "-"} />
           <SummaryCard
             label="Endereco"
@@ -491,136 +520,31 @@ function CadastroSalaoContent() {
               .join(" - ") || "-"}
           />
         </div>
-        <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-700">
-          Quando finalizar, sua conta sera criada e voce segue para o login do painel.
-        </div>
-        <ChatActions
+        <FormActions
           canBack
-          primaryLabel={saving ? "Finalizando..." : "Cadastrar salao"}
+          primaryLabel={saving ? "Cadastrando..." : "Cadastrar negocio"}
           onBack={voltarPasso}
           onPrimary={handleFinish}
           disabled={saving}
         />
-      </ChatFormCard>
+      </FormPanel>
     );
   }
 }
 
-function CurrentStepMessages({
-  step,
-  email,
-}: {
-  step: StepKey;
-  email: string;
-}) {
-  if (step === "boas_vindas") {
-    return (
-      <>
-        <AssistantBubble>Ola! Que bom ter voce aqui. Vamos comecar seu cadastro?</AssistantBubble>
-        <AssistantBubble>
-          Eu vou perguntar uma coisa por vez. Assim fica leve, rapido e sem tela cheia de campo.
-        </AssistantBubble>
-        <AssistantBubble>
-          O plano voce escolhe depois, dentro do painel. Agora vamos criar seu salao primeiro.
-        </AssistantBubble>
-      </>
-    );
-  }
-
-  if (step === "conta") {
-    return (
-      <>
-        <AssistantBubble>Primeiro, digite o e-mail que voce quer usar para entrar no painel do salao.</AssistantBubble>
-        <AssistantBubble>
-          {email.trim()
-            ? `Bem-vindo, ${email.trim()}. Agora vamos criar sua senha.`
-            : "Depois do e-mail, eu peço a senha e seguimos para os dados do salao."}
-        </AssistantBubble>
-      </>
-    );
-  }
-
-  if (step === "salao") {
-    return (
-      <>
-        <AssistantBubble>Vi que voce ja deu o proximo passo. Agora vamos colocar seu salao no sistema.</AssistantBubble>
-        <AssistantBubble>Digite o nome do salao, o responsavel e o WhatsApp principal.</AssistantBubble>
-      </>
-    );
-  }
-
-  if (step === "endereco") {
-    return (
-      <>
-        <AssistantBubble>Voce esta fazendo a melhor escolha. Agora falta o endereco do salao.</AssistantBubble>
-        <AssistantBubble>Digite o CEP. Quando sair do campo, eu tento completar rua, bairro, cidade e estado.</AssistantBubble>
-      </>
-    );
-  }
-
+function HeroBadge({ label }: { label: string }) {
   return (
-    <>
-      <AssistantBubble>Pronto, chegamos na revisao.</AssistantBubble>
-      <AssistantBubble>Confere os dados abaixo. Se estiver tudo certo, eu crio o cadastro do salao para voce.</AssistantBubble>
-    </>
-  );
-}
-
-function AssistantBubble({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="flex justify-start">
-      <div className="max-w-[86%] rounded-[20px] rounded-tl-md bg-white px-4 py-3 text-sm leading-6 text-zinc-900 shadow-sm ring-1 ring-black/5">
-        {children}
-        <div className="mt-1 text-right text-[10px] font-medium text-zinc-400">agora</div>
-      </div>
+    <div className="rounded-[20px] border border-white/15 bg-white/10 px-4 py-3 text-sm font-black text-white backdrop-blur">
+      {label}
     </div>
   );
 }
 
-function TypingBubble() {
-  return (
-    <div className="flex justify-start">
-      <div className="inline-flex items-center gap-2 rounded-[20px] rounded-tl-md bg-white px-4 py-3 text-sm text-zinc-500 shadow-sm ring-1 ring-black/5">
-        <span>digitando</span>
-        <span className="flex gap-1">
-          <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-zinc-400" />
-          <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-zinc-400 [animation-delay:120ms]" />
-          <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-zinc-400 [animation-delay:240ms]" />
-        </span>
-      </div>
-    </div>
-  );
+function FormPanel({ children }: { children: React.ReactNode }) {
+  return <div className="space-y-5">{children}</div>;
 }
 
-function AlertBubble({
-  tone,
-  children,
-}: {
-  tone: "error" | "success";
-  children: React.ReactNode;
-}) {
-  return (
-    <div
-      className={`rounded-2xl border px-4 py-3 text-sm ${
-        tone === "error"
-          ? "border-red-200 bg-red-50 text-red-700"
-          : "border-sky-200 bg-sky-50 text-sky-700"
-      }`}
-    >
-      {children}
-    </div>
-  );
-}
-
-function ChatFormCard({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="ml-auto max-w-[92%] space-y-4 rounded-[22px] rounded-tr-md bg-white/95 p-4 shadow-sm ring-1 ring-black/5">
-      {children}
-    </div>
-  );
-}
-
-function ChatActions({
+function FormActions({
   canBack,
   primaryLabel,
   onBack,
@@ -634,12 +558,12 @@ function ChatActions({
   disabled?: boolean;
 }) {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3">
+    <div className="flex items-center justify-between gap-3">
       <button
         type="button"
         onClick={onBack}
         disabled={!canBack || disabled}
-        className="inline-flex min-h-11 items-center gap-2 rounded-2xl border border-zinc-200 bg-white px-4 text-sm font-bold text-zinc-700 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-40"
+        className="inline-flex min-h-12 items-center gap-2 rounded-2xl border border-zinc-200 bg-white px-4 text-sm font-black text-zinc-700 transition hover:bg-zinc-50 disabled:pointer-events-none disabled:opacity-40"
       >
         <ArrowLeft size={16} />
         Voltar
@@ -650,10 +574,11 @@ function ChatActions({
           void onPrimary();
         }}
         disabled={disabled}
-        className="inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl bg-zinc-950 px-5 text-sm font-black text-white shadow-sm transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60"
+        className="inline-flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl bg-zinc-950 px-5 text-sm font-black text-white shadow-sm transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60"
       >
         {disabled ? <Loader2 size={16} className="animate-spin" /> : null}
         {primaryLabel}
+        {!disabled ? <ChevronRight size={16} /> : null}
       </button>
     </div>
   );
@@ -662,16 +587,28 @@ function ChatActions({
 function SummaryCard({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3">
-      <p className="text-xs font-bold uppercase tracking-wider text-zinc-500">{label}</p>
-      <p className="mt-2 text-sm font-bold text-zinc-900">{value}</p>
+      <p className="text-xs font-black uppercase tracking-[0.16em] text-zinc-400">{label}</p>
+      <p className="mt-1.5 text-sm font-black text-zinc-900">{value}</p>
     </div>
   );
 }
 
-function InfoMini({ text }: { text: string }) {
+function Alert({
+  tone,
+  children,
+}: {
+  tone: "error" | "success";
+  children: React.ReactNode;
+}) {
   return (
-    <div className="flex min-h-12 items-center rounded-2xl border border-zinc-200 bg-zinc-50 px-4 text-sm text-zinc-600">
-      {text}
+    <div
+      className={`rounded-2xl border px-4 py-3 text-sm font-semibold ${
+        tone === "error"
+          ? "border-red-200 bg-red-50 text-red-700"
+          : "border-emerald-200 bg-emerald-50 text-emerald-800"
+      }`}
+    >
+      {children}
     </div>
   );
 }
@@ -683,6 +620,7 @@ function Input({
   type = "text",
   placeholder,
   onBlur,
+  autoFocus,
 }: {
   label: string;
   value: string;
@@ -690,17 +628,19 @@ function Input({
   type?: string;
   placeholder?: string;
   onBlur?: () => void;
+  autoFocus?: boolean;
 }) {
   return (
     <label className="block">
-      <span className="mb-2 block text-sm font-bold text-zinc-700">{label}</span>
+      <span className="mb-2 block text-sm font-bold text-zinc-800">{label}</span>
       <input
         type={type}
         value={value}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={(event) => onChange(event.target.value)}
         onBlur={onBlur}
         placeholder={placeholder}
-        className="min-h-12 w-full rounded-2xl border border-zinc-300 bg-white px-4 text-base text-zinc-900 outline-none transition focus:border-zinc-900 focus:ring-4 focus:ring-zinc-200"
+        autoFocus={autoFocus}
+        className="min-h-12 w-full rounded-xl border border-zinc-300 bg-white px-4 text-base text-zinc-950 outline-none transition focus:border-zinc-950 focus:ring-4 focus:ring-[rgba(199,162,92,0.20)]"
       />
     </label>
   );
