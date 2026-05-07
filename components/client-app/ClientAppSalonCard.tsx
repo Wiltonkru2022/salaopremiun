@@ -21,6 +21,8 @@ export default function ClientAppSalonCard({
   distanceKm?: number | null;
   isLoggedIn?: boolean;
 }) {
+  const publicPath = `/salao/${encodeURIComponent(salao.appClienteSlug || salao.id)}`;
+
   return (
     <article className="overflow-hidden rounded-[1.45rem] border border-zinc-200 bg-white shadow-[0_18px_48px_rgba(15,23,42,0.08)] transition hover:-translate-y-0.5 hover:border-zinc-300 hover:shadow-[0_22px_60px_rgba(15,23,42,0.12)]">
       <div className="relative h-40 bg-zinc-100">
@@ -156,7 +158,7 @@ export default function ClientAppSalonCard({
 
         <div className="flex flex-wrap gap-2">
           <ClientAppPendingLink
-            href={`/app-cliente/salao/${salao.id}`}
+            href={publicPath}
             pendingLabel="Abrindo"
             className="inline-flex h-11 flex-1 items-center justify-center gap-1.5 rounded-2xl bg-zinc-950 px-4 text-sm font-bold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-zinc-800"
           >
@@ -164,7 +166,9 @@ export default function ClientAppSalonCard({
           </ClientAppPendingLink>
           {!isLoggedIn ? (
             <Link
-              href={`/app-cliente/cadastro?next=${encodeURIComponent(`/app-cliente/salao/${salao.id}`)}`}
+              href={`/app-cliente/cadastro?salao=${encodeURIComponent(
+                salao.appClienteSlug || salao.id
+              )}&next=${encodeURIComponent(publicPath)}`}
               className="inline-flex h-11 items-center justify-center rounded-2xl border border-zinc-200 bg-white px-4 text-sm font-bold text-zinc-800 transition hover:bg-zinc-50"
             >
               Criar conta

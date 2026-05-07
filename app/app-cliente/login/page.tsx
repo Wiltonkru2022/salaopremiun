@@ -4,6 +4,7 @@ import LoginClienteForm from "@/components/client-app/auth/LoginClienteForm";
 import { getClienteSessionFromCookie } from "@/lib/cliente-auth.server";
 import { validateClienteAppSession } from "@/lib/client-context.server";
 import { canSalonAppearInClientApp } from "@/lib/client-app/eligibility";
+import { buildSalaoPublicPath } from "@/lib/saloes/public-link";
 
 function getErrorMessage(value: string | string[] | undefined) {
   const code = Array.isArray(value) ? value[0] : value;
@@ -43,6 +44,11 @@ export default async function LoginClientePage({
   const salaoContext = salaoId
     ? await canSalonAppearInClientApp(salaoId).catch(() => null)
     : null;
+  const salaoPublicPath = salaoContext?.salao
+    ? buildSalaoPublicPath(salaoContext.salao.appClienteSlug || salaoContext.salao.id)
+    : salaoId
+      ? buildSalaoPublicPath(salaoId)
+      : null;
 
   return (
     <div className="min-h-dvh overflow-x-hidden bg-[radial-gradient(circle_at_top,#fff2c5_0,#f5f5f5_42%,#e7ecf2_100%)]">
@@ -50,8 +56,8 @@ export default async function LoginClientePage({
         <header className="px-4 pt-4">
           <Link
             href={
-              salaoContext?.salao?.id
-                ? `/app-cliente/salao/${salaoContext.salao.id}`
+              salaoPublicPath
+                ? salaoPublicPath
                 : "/app-cliente/inicio"
             }
             className="inline-flex items-center gap-2 text-sm font-semibold text-zinc-600"
@@ -78,7 +84,7 @@ export default async function LoginClientePage({
               salaoId={salaoContext?.salao?.id || salaoId || null}
               salaoNome={salaoContext?.salao?.nome || null}
               oauthError={getErrorMessage(params.erro)}
-              next={next || (salaoId ? `/app-cliente/salao/${salaoId}` : null)}
+              next={next || salaoPublicPath}
             />
           </div>
         </main>

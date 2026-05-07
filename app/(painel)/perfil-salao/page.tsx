@@ -35,6 +35,7 @@ import type { SalaoForm } from "@/components/configuracoes/types";
 import { getPlanoCatalogo } from "@/lib/plans/catalog";
 import {
   buildDefaultSalaoSlug,
+  buildFallbackSalaoSlug,
   buildSalaoPublicUrl,
   normalizeSalaoSlug,
 } from "@/lib/saloes/public-link";
@@ -272,8 +273,8 @@ export default function PerfilSalaoPage() {
   const publicSlug = useMemo(
     () =>
       normalizeSalaoSlug(perfilForm.app_cliente_slug || "") ||
-      buildDefaultSalaoSlug(perfilForm.nome, perfilForm.id || idSalao),
-    [idSalao, perfilForm.app_cliente_slug, perfilForm.id, perfilForm.nome]
+      buildDefaultSalaoSlug(perfilForm.nome),
+    [perfilForm.app_cliente_slug, perfilForm.nome]
   );
   const publicUrl = useMemo(() => buildSalaoPublicUrl(publicSlug), [publicSlug]);
   const qrCodeUrl = useMemo(
@@ -438,7 +439,7 @@ export default function PerfilSalaoPage() {
             "Salao pausado no momento. Em breve a agenda online volta ao normal.",
           app_cliente_slug:
             row.app_cliente_slug ||
-            buildDefaultSalaoSlug(row.nome || "", row.id || ""),
+            buildFallbackSalaoSlug(row.nome || "", row.id || ""),
         };
 
         setPerfilForm(nextForm);
@@ -558,7 +559,7 @@ export default function PerfilSalaoPage() {
         app_cliente_slug:
           normalizeSalaoSlug(
             patch.app_cliente_slug ?? perfilForm.app_cliente_slug ?? ""
-          ) || buildDefaultSalaoSlug(patch.nome ?? perfilForm.nome, idSalao),
+          ) || buildDefaultSalaoSlug(patch.nome ?? perfilForm.nome),
         updated_at: new Date().toISOString(),
       };
 
@@ -725,7 +726,7 @@ export default function PerfilSalaoPage() {
           appClienteDraft.app_cliente_pausa_mensagem || "",
         app_cliente_slug:
           normalizeSalaoSlug(appClienteDraft.app_cliente_slug || "") ||
-          buildDefaultSalaoSlug(appClienteDraft.nome || perfilForm.nome, idSalao),
+          buildDefaultSalaoSlug(appClienteDraft.nome || perfilForm.nome),
       },
       planoPremium
         ? "Perfil publico do app cliente atualizado com sucesso."
@@ -1264,7 +1265,11 @@ export default function PerfilSalaoPage() {
 
             <SectionCard
               icon={<Globe size={18} />}
-              title="App cliente"
+              title={
+                planoPremium && !perfilForm.app_cliente_publicado
+                  ? "Criar vitrine para o app cliente"
+                  : "App cliente"
+              }
               description="Resumo do perfil publico usado na vitrine do aplicativo do cliente."
             >
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -1276,7 +1281,7 @@ export default function PerfilSalaoPage() {
                         ? perfilForm.app_cliente_pausado
                           ? "Publicado, mas pausado: sai da vitrine e bloqueia novos agendamentos."
                           : "Publicado na vitrine do app cliente."
-                        : "Ainda nao publicado."
+                        : "Vitrine pronta para configurar e publicar."
                       : "Disponivel somente no plano Pro ou Premium."
                   }
                   multiline
@@ -1386,8 +1391,16 @@ export default function PerfilSalaoPage() {
 
                 <SidebarAction
                   icon={<Globe size={16} />}
-                  title="App cliente"
-                  description="Monte a vitrine publica do salao e publique quando o Pro ou Premium estiver ativo."
+                  title={
+                    planoPremium && !perfilForm.app_cliente_publicado
+                      ? "Criar vitrine"
+                      : "App cliente"
+                  }
+                  description={
+                    planoPremium
+                      ? "Configure link, QR Code, aviso de pausa e publicacao no app cliente."
+                      : "Monte a vitrine publica e publique quando o Pro ou Premium estiver ativo."
+                  }
                   onClick={() => abrirModal("app_cliente")}
                 />
 
@@ -1783,7 +1796,11 @@ export default function PerfilSalaoPage() {
       <AppModal
         open={activeModal === "app_cliente"}
         onClose={() => setActiveModal(null)}
-        title="Perfil publico do app cliente"
+        title={
+          planoPremium && !perfilForm.app_cliente_publicado
+            ? "Criar vitrine para o app cliente"
+            : "Perfil publico do app cliente"
+        }
         description="Defina como o salao aparece na vitrine do cliente final e publique quando o plano Pro ou Premium estiver ativo."
         eyebrow="App cliente"
         maxWidthClassName="max-w-3xl"
@@ -1822,8 +1839,8 @@ export default function PerfilSalaoPage() {
           >
             {planoPremium ? (
               <>
-                Este salao ja pode aparecer no app cliente. Basta completar os
-                dados abaixo e ativar a publicacao.
+                O link e o QR Code ja ficam prontos pelo nome do salao. Complete
+                a vitrine e ative a publicacao quando quiser aparecer no app cliente.
               </>
             ) : (
               <>
@@ -1874,8 +1891,7 @@ export default function PerfilSalaoPage() {
                   setAppClienteDraft((prev) => ({
                     ...prev,
                     app_cliente_slug: buildDefaultSalaoSlug(
-                      prev.nome || perfilForm.nome,
-                      idSalao
+                      prev.nome || perfilForm.nome
                     ),
                   }))
                 }

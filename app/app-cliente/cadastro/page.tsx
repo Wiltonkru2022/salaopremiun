@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import CadastroClienteForm from "@/components/client-app/auth/CadastroClienteForm";
 import { getClienteSessionFromCookie } from "@/lib/cliente-auth.server";
 import { canSalonAppearInClientApp } from "@/lib/client-app/eligibility";
+import { buildSalaoPublicPath } from "@/lib/saloes/public-link";
 
 export default async function CadastroClientePage({
   searchParams,
@@ -22,6 +23,11 @@ export default async function CadastroClientePage({
   const salaoContext = salaoId
     ? await canSalonAppearInClientApp(salaoId).catch(() => null)
     : null;
+  const salaoPublicPath = salaoContext?.salao
+    ? buildSalaoPublicPath(salaoContext.salao.appClienteSlug || salaoContext.salao.id)
+    : salaoId
+      ? buildSalaoPublicPath(salaoId)
+      : null;
 
   return (
     <div className="min-h-dvh overflow-x-hidden bg-[radial-gradient(circle_at_top,#fff2c5_0,#f5f5f5_42%,#e7ecf2_100%)]">
@@ -29,8 +35,8 @@ export default async function CadastroClientePage({
         <header className="px-4 pt-4">
           <Link
             href={
-              salaoContext?.salao?.id
-                ? `/app-cliente/salao/${salaoContext.salao.id}`
+              salaoPublicPath
+                ? salaoPublicPath
                 : "/app-cliente/inicio"
             }
             className="inline-flex items-center gap-2 text-sm font-semibold text-zinc-600"
@@ -56,7 +62,7 @@ export default async function CadastroClientePage({
             <CadastroClienteForm
               salaoId={salaoContext?.salao?.id || salaoId || null}
               salaoNome={salaoContext?.salao?.nome || null}
-              next={next || (salaoId ? `/app-cliente/salao/${salaoId}` : null)}
+              next={next || salaoPublicPath}
             />
           </div>
         </main>

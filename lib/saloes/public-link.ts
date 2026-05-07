@@ -9,8 +9,12 @@ export function normalizeSalaoSlug(value: string) {
     .slice(0, 64);
 }
 
-export function buildDefaultSalaoSlug(nome: string, idSalao: string) {
-  const base = normalizeSalaoSlug(nome) || "salao";
+export function buildDefaultSalaoSlug(nome: string) {
+  return normalizeSalaoSlug(nome) || "salao";
+}
+
+export function buildFallbackSalaoSlug(nome: string, idSalao: string) {
+  const base = buildDefaultSalaoSlug(nome);
   const suffix = String(idSalao || "").replace(/-/g, "").slice(0, 6);
   return suffix ? `${base}-${suffix}` : base;
 }

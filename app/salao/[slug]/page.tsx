@@ -1,4 +1,4 @@
-import { redirect } from "next/navigation";
+import ClienteSalonPage from "@/app/app-cliente/salao/[id]/page";
 
 export default async function PublicSalaoShortcutPage({
   params,
@@ -6,5 +6,5 @@ export default async function PublicSalaoShortcutPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  redirect(`/app-cliente/salao/${encodeURIComponent(slug)}`);
+  return <ClienteSalonPage params={Promise.resolve({ id: slug })} />;
 }

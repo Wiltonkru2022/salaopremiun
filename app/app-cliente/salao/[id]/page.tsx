@@ -12,6 +12,7 @@ import ClientAppFrame from "@/components/client-app/ClientAppFrame";
 import { getClientAppSalonDetail } from "@/lib/client-app/queries";
 import ClientBookingForm from "@/components/client-app/ClientBookingForm";
 import { validateClienteAppSession } from "@/lib/client-context.server";
+import { buildSalaoPublicPath } from "@/lib/saloes/public-link";
 
 function formatCurrency(value: number | null) {
   if (value === null) return null;
@@ -47,6 +48,9 @@ export default async function ClienteSalonPage({
     const pausaMensagem =
       salao.appClientePausaMensagem ||
       "Salao pausado no momento. Assim que a agenda voltar, voce podera reservar por aqui.";
+    const salaoPublicPath = buildSalaoPublicPath(
+      salao.appClienteSlug || salao.id
+    );
 
     return (
       <ClientAppFrame title={salao.nome} subtitle="Agendamento online">
@@ -194,7 +198,9 @@ export default async function ClienteSalonPage({
                     pelo menu Agenda.
                   </p>
                   <Link
-                    href={`/app-cliente/login?salao=${salao.id}&next=${encodeURIComponent(`/app-cliente/salao/${salao.id}`)}`}
+                    href={`/app-cliente/login?salao=${encodeURIComponent(
+                      salao.appClienteSlug || salao.id
+                    )}&next=${encodeURIComponent(salaoPublicPath)}`}
                     className="mt-3 inline-flex h-11 items-center justify-center rounded-2xl bg-zinc-950 px-4 text-sm font-bold text-white"
                   >
                     Entrar ou criar conta

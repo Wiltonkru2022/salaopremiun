@@ -10,7 +10,9 @@ const navItems = [
     label: "Saloes",
     icon: Store,
     match: (pathname: string) =>
-      pathname === "/app-cliente/inicio" || pathname.startsWith("/app-cliente/salao/"),
+      pathname === "/app-cliente/inicio" ||
+      pathname.startsWith("/app-cliente/salao/") ||
+      pathname.startsWith("/salao/"),
   },
   {
     href: "/app-cliente/agendamentos",
