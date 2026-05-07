@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useState } from "react";
-import { ArrowLeft, Check, Loader2, MessageCircle } from "lucide-react";
+import { ArrowLeft, Loader2, MessageCircle } from "lucide-react";
 import { getErrorMessage } from "@/lib/get-error-message";
 
 type StepKey = "boas_vindas" | "conta" | "salao" | "endereco" | "resumo";
@@ -76,6 +76,7 @@ function CadastroSalaoContent() {
   const [erro, setErro] = useState("");
   const [msg, setMsg] = useState("");
   const [buscandoCep, setBuscandoCep] = useState(false);
+  const [checking, setChecking] = useState(false);
 
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
@@ -93,7 +94,46 @@ function CadastroSalaoContent() {
   const currentStepIndex = STEPS.indexOf(step);
   const progresso = Math.round((currentStepIndex / (STEPS.length - 1)) * 100);
 
-  function validarStepAtual() {
+  async function verificarDadosExistentes(fields: {
+    email?: string;
+    nomeSalao?: string;
+    whatsapp?: string;
+  }) {
+    const hasValue = Object.values(fields).some((value) => String(value || "").trim());
+    if (!hasValue) return true;
+
+    setChecking(true);
+    try {
+      const response = await fetch("/api/cadastro-salao/verificar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(fields),
+      });
+      const data = await response.json();
+      const exists = data?.exists || {};
+
+      if (fields.email && exists.email) {
+        setErro("Esse e-mail ja esta cadastrado. Use outro e-mail ou entre no login.");
+        return false;
+      }
+      if (fields.nomeSalao && exists.nomeSalao) {
+        setErro("Ja existe um salao com esse nome. Ajuste o nome para continuar.");
+        return false;
+      }
+      if (fields.whatsapp && exists.whatsapp) {
+        setErro("Esse WhatsApp ja aparece em outro cadastro de salao.");
+        return false;
+      }
+
+      return true;
+    } catch {
+      return true;
+    } finally {
+      setChecking(false);
+    }
+  }
+
+  async function validarStepAtual() {
     setErro("");
 
     if (step === "conta") {
@@ -102,11 +142,13 @@ function CadastroSalaoContent() {
       if (senha.trim().length < 6) {
         return setErro("A senha deve ter pelo menos 6 caracteres."), false;
       }
+      return verificarDadosExistentes({ email });
     }
 
     if (step === "salao") {
       if (!nomeSalao.trim()) return setErro("Informe o nome do salao."), false;
       if (!responsavel.trim()) return setErro("Informe o responsavel."), false;
+      return verificarDadosExistentes({ nomeSalao, whatsapp });
     }
 
     if (step === "endereco") {
@@ -120,8 +162,8 @@ function CadastroSalaoContent() {
     return true;
   }
 
-  function irParaProximoPasso() {
-    if (!validarStepAtual()) return;
+  async function irParaProximoPasso() {
+    if (!(await validarStepAtual())) return;
 
     const next = STEPS[currentStepIndex + 1];
     if (!next) return;
@@ -216,8 +258,6 @@ function CadastroSalaoContent() {
     }
   }
 
-  const completedSteps = STEPS.slice(0, currentStepIndex);
-
   return (
     <div
       className="relative min-h-screen overflow-hidden bg-slate-950 bg-cover bg-center px-4 py-4 md:px-6 md:py-6"
@@ -247,7 +287,7 @@ function CadastroSalaoContent() {
             </div>
             <div className="h-3 overflow-hidden rounded-full bg-white/20">
               <div
-                className="h-full rounded-full bg-emerald-400 transition-all duration-500"
+                className="h-full rounded-full bg-white transition-all duration-500"
                 style={{ width: `${progresso}%` }}
               />
             </div>
@@ -274,15 +314,15 @@ function CadastroSalaoContent() {
         </aside>
 
         <main className="overflow-hidden rounded-[28px] border border-white/50 bg-[#efeae2]/95 shadow-2xl backdrop-blur">
-          <div className="flex items-center justify-between border-b border-black/10 bg-emerald-800 px-5 py-4 text-white">
+          <div className="flex items-center justify-between border-b border-black/10 bg-zinc-950 px-5 py-4 text-white">
             <div className="flex items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-full bg-white text-emerald-800">
+              <div className="flex h-11 w-11 items-center justify-center rounded-full bg-white text-zinc-950">
                 <MessageCircle size={22} />
               </div>
               <div>
                 <h2 className="text-base font-black">Assistente SalaoPremium</h2>
-                <p className="text-xs text-emerald-50/80">
-                  {typing ? "digitando..." : "online agora"}
+                <p className="text-xs text-white/70">
+                  {typing || checking ? "digitando..." : "online agora"}
                 </p>
               </div>
             </div>
@@ -291,28 +331,14 @@ function CadastroSalaoContent() {
             </span>
           </div>
 
-          <div className="max-h-[calc(100vh-150px)] min-h-[650px] overflow-y-auto px-4 py-5 md:px-6">
+          <div className="min-h-[650px] px-4 py-5 md:px-6">
             <div className="mx-auto max-w-3xl space-y-3">
-              {completedSteps.map((item) => (
-                <StepTranscript
-                  key={item}
-                  step={item}
-                  email={email}
-                  nomeSalao={nomeSalao}
-                  responsavel={responsavel}
-                  whatsapp={whatsapp}
-                  endereco={[endereco, numero, bairro, cidade, estado]
-                    .filter(Boolean)
-                    .join(" - ")}
-                />
-              ))}
-
-              <CurrentStepMessages step={step} email={email} />
+              {typing || checking ? <TypingBubble /> : <CurrentStepMessages step={step} email={email} />}
 
               {erro ? <AlertBubble tone="error">{erro}</AlertBubble> : null}
               {msg ? <AlertBubble tone="success">{msg}</AlertBubble> : null}
 
-              {typing ? <TypingBubble /> : <CurrentStepForm />}
+              {typing || checking ? null : renderCurrentStepForm()}
             </div>
           </div>
         </main>
@@ -320,7 +346,7 @@ function CadastroSalaoContent() {
     </div>
   );
 
-  function CurrentStepForm() {
+  function renderCurrentStepForm() {
     if (step === "boas_vindas") {
       return (
         <ChatActions
@@ -338,7 +364,10 @@ function CadastroSalaoContent() {
           <Input
             label="E-mail de acesso"
             value={email}
-            onChange={setEmail}
+            onChange={(value) => {
+              setEmail(value);
+              if (erro) setErro("");
+            }}
             type="email"
             placeholder="voce@seusalao.com"
           />
@@ -366,7 +395,10 @@ function CadastroSalaoContent() {
             <Input
               label="Nome do salao"
               value={nomeSalao}
-              onChange={setNomeSalao}
+              onChange={(value) => {
+                setNomeSalao(value);
+                if (erro) setErro("");
+              }}
               placeholder="Ex: Salao Bella"
             />
             <Input
@@ -379,7 +411,10 @@ function CadastroSalaoContent() {
               <Input
                 label="WhatsApp do salao"
                 value={whatsapp}
-                onChange={(v) => setWhatsapp(maskPhone(v))}
+                onChange={(v) => {
+                  setWhatsapp(maskPhone(v));
+                  if (erro) setErro("");
+                }}
                 placeholder="(67) 99999-9999"
               />
             </div>
@@ -456,7 +491,7 @@ function CadastroSalaoContent() {
               .join(" - ") || "-"}
           />
         </div>
-        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+        <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-700">
           Quando finalizar, sua conta sera criada e voce segue para o login do painel.
         </div>
         <ChatActions
@@ -531,89 +566,12 @@ function CurrentStepMessages({
   );
 }
 
-function StepTranscript({
-  step,
-  email,
-  nomeSalao,
-  responsavel,
-  whatsapp,
-  endereco,
-}: {
-  step: StepKey;
-  email: string;
-  nomeSalao: string;
-  responsavel: string;
-  whatsapp: string;
-  endereco: string;
-}) {
-  if (step === "boas_vindas") {
-    return (
-      <>
-        <AssistantBubble>Ola! Que bom ter voce aqui. Vamos comecar seu cadastro?</AssistantBubble>
-        <UserBubble>Vamos sim.</UserBubble>
-      </>
-    );
-  }
-
-  if (step === "conta") {
-    return (
-      <>
-        <AssistantBubble>Perfeito. Me passe seu e-mail de acesso e crie uma senha.</AssistantBubble>
-        <UserBubble>
-          E-mail: {email || "-"}
-          <br />
-          Senha criada com seguranca.
-        </UserBubble>
-      </>
-    );
-  }
-
-  if (step === "salao") {
-    return (
-      <>
-        <AssistantBubble>Agora me conte os dados principais do salao.</AssistantBubble>
-        <UserBubble>
-          Salao: {nomeSalao || "-"}
-          <br />
-          Responsavel: {responsavel || "-"}
-          <br />
-          WhatsApp: {whatsapp || "-"}
-        </UserBubble>
-      </>
-    );
-  }
-
-  if (step === "endereco") {
-    return (
-      <>
-        <AssistantBubble>Agora vamos deixar o endereco pronto.</AssistantBubble>
-        <UserBubble>{endereco || "Endereco informado."}</UserBubble>
-      </>
-    );
-  }
-
-  return null;
-}
-
 function AssistantBubble({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex justify-start">
       <div className="max-w-[86%] rounded-[20px] rounded-tl-md bg-white px-4 py-3 text-sm leading-6 text-zinc-900 shadow-sm ring-1 ring-black/5">
         {children}
         <div className="mt-1 text-right text-[10px] font-medium text-zinc-400">agora</div>
-      </div>
-    </div>
-  );
-}
-
-function UserBubble({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="flex justify-end">
-      <div className="max-w-[86%] rounded-[20px] rounded-tr-md bg-[#d9fdd3] px-4 py-3 text-sm leading-6 text-zinc-900 shadow-sm ring-1 ring-emerald-900/5">
-        {children}
-        <div className="mt-1 flex items-center justify-end gap-1 text-[10px] font-medium text-emerald-800/70">
-          enviado <Check size={12} />
-        </div>
       </div>
     </div>
   );
@@ -646,7 +604,7 @@ function AlertBubble({
       className={`rounded-2xl border px-4 py-3 text-sm ${
         tone === "error"
           ? "border-red-200 bg-red-50 text-red-700"
-          : "border-emerald-200 bg-emerald-50 text-emerald-700"
+          : "border-sky-200 bg-sky-50 text-sky-700"
       }`}
     >
       {children}
@@ -692,7 +650,7 @@ function ChatActions({
           void onPrimary();
         }}
         disabled={disabled}
-        className="inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl bg-emerald-700 px-5 text-sm font-black text-white shadow-sm transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
+        className="inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl bg-zinc-950 px-5 text-sm font-black text-white shadow-sm transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60"
       >
         {disabled ? <Loader2 size={16} className="animate-spin" /> : null}
         {primaryLabel}
@@ -742,7 +700,7 @@ function Input({
         onChange={(e) => onChange(e.target.value)}
         onBlur={onBlur}
         placeholder={placeholder}
-        className="min-h-12 w-full rounded-2xl border border-zinc-300 bg-white px-4 text-base text-zinc-900 outline-none transition focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100"
+        className="min-h-12 w-full rounded-2xl border border-zinc-300 bg-white px-4 text-base text-zinc-900 outline-none transition focus:border-zinc-900 focus:ring-4 focus:ring-zinc-200"
       />
     </label>
   );
