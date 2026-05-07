@@ -13,7 +13,6 @@ import {
   LogOut,
   Menu,
   Percent,
-  Settings,
   ShieldCheck,
   Users,
 } from "lucide-react";
@@ -235,7 +234,7 @@ export default function Header({
           </button>
 
           {menuOpen ? (
-            <div className="absolute right-0 top-[calc(100%+0.5rem)] z-50 w-[min(92vw,300px)] rounded-[18px] border border-zinc-200 bg-white p-3 shadow-[0_18px_40px_rgba(15,23,42,0.12)]">
+            <div className="absolute right-0 top-[calc(100%+0.5rem)] z-50 w-[min(94vw,420px)] rounded-[22px] border border-zinc-200 bg-white p-3 shadow-[0_18px_40px_rgba(15,23,42,0.12)]">
               <div className="rounded-[16px] border border-zinc-200 bg-zinc-50 p-4 text-zinc-950">
                 <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">
                   Perfil do salao
@@ -309,15 +308,6 @@ export default function Header({
                     >
                       <BellRing size={16} />
                       Notificacoes e push
-                    </a>
-
-                    <a
-                      href={getRouteHref("/configuracoes/sistema")}
-                      onClick={() => setMenuOpen(false)}
-                      className="flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-semibold text-zinc-700 transition hover:bg-white"
-                    >
-                      <Settings size={16} />
-                      Sistema
                     </a>
                   </div>
                 ) : null}

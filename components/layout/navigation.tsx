@@ -215,16 +215,6 @@ export const painelNavigationItems: PainelNavItem[] = [
     sidebar: false,
   },
   {
-    href: "/configuracoes/sistema",
-    label: "Sistema",
-    shortLabel: "Sistema",
-    description: "Preferencias e regras gerais.",
-    icon: Settings,
-    permissionKey: "configuracoes_ver",
-    niveis: ["admin"],
-    sidebar: false,
-  },
-  {
     href: "/configuracoes",
     label: "Configuracoes",
     shortLabel: "Config",

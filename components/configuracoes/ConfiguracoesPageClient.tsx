@@ -10,7 +10,6 @@ import {
   Building2,
   CalendarClock,
   CreditCard,
-  MonitorCog,
   Save,
   Loader2,
   Phone,
@@ -30,6 +29,7 @@ import {
   BadgeDollarSign,
   CheckCircle2,
   Lock,
+  TimerReset,
 } from "lucide-react";
 import {
   DIAS_SEMANA,
@@ -58,6 +58,10 @@ import {
   TextInput,
   Toggle,
 } from "@/components/configuracoes/ui";
+import {
+  ConfigMetricCard,
+  ConfiguracoesHero,
+} from "@/components/configuracoes/ConfiguracoesChrome";
 import PlanoLimiteNotice from "@/components/plans/PlanoLimiteNotice";
 import { usePlanoAccessSnapshot } from "@/components/plans/usePlanoAccessSnapshot";
 
@@ -65,7 +69,6 @@ export type ConfiguracoesSecao =
   | "agenda"
   | "caixa"
   | "rateio"
-  | "sistema"
   | "usuarios";
 
 const sectionMeta: Record<
@@ -84,14 +87,17 @@ const sectionMeta: Record<
     title: "Rateio e impressão",
     description: "Campos exibidos na impressão das comissões dos profissionais.",
   },
-  sistema: {
-    title: "Sistema",
-    description: "Preferências de leitura para quem usa o painel no dia a dia.",
-  },
   usuarios: {
     title: "Usuários do sistema",
     description: "Equipe administrativa, acessos, perfis e limite do plano.",
   },
+};
+
+const sectionHref: Record<ConfiguracoesSecao, string> = {
+  agenda: "/configuracoes/agenda-horarios",
+  caixa: "/configuracoes/caixa-taxas",
+  rateio: "/configuracoes/rateio",
+  usuarios: "/configuracoes/usuarios",
 };
 
 const RATEIO_OPTIONS: Array<{
@@ -148,7 +154,6 @@ export default function ConfiguracoesPageClient({
   const mostrarAgenda = secao === "agenda";
   const mostrarCaixa = secao === "caixa";
   const mostrarRateio = secao === "rateio";
-  const mostrarSistema = secao === "sistema";
   const mostrarUsuarios = secao === "usuarios";
 
   const [loading, setLoading] = useState(true);
@@ -157,7 +162,6 @@ export default function ConfiguracoesPageClient({
   const [savingSalao, setSavingSalao] = useState(false);
   const [savingAgenda, setSavingAgenda] = useState(false);
   const [savingFinanceiro, setSavingFinanceiro] = useState(false);
-  const [savingSistema, setSavingSistema] = useState(false);
   const [savingUsuario, setSavingUsuario] = useState(false);
   const [deletingUsuario, setDeletingUsuario] = useState(false);
 
@@ -596,32 +600,6 @@ export default function ConfiguracoesPageClient({
     }
   }
 
-  async function salvarSistema() {
-    try {
-      setSavingSistema(true);
-      setErroTela("");
-      setMsg("");
-
-      await upsertConfiguracoes({
-        permitir_reabrir_venda: configForm.permitir_reabrir_venda,
-        exigir_cliente_na_venda: configForm.exigir_cliente_na_venda,
-        cor_primaria: configForm.cor_primaria,
-        modo_compacto: configForm.modo_compacto,
-      });
-
-      setMsg("Preferências do sistema salvas com sucesso.");
-      abrirFeedbackModal("sucesso", "Sistema salvo", "As preferências do sistema foram salvas com sucesso.");
-    } catch (error: unknown) {
-      console.error(error);
-      const mensagem =
-        error instanceof Error ? error.message : "Erro ao salvar preferências do sistema.";
-      setErroTela(mensagem);
-      abrirFeedbackModal("erro", "Erro ao salvar sistema", mensagem);
-    } finally {
-      setSavingSistema(false);
-    }
-  }
-
   function toggleDiaFuncionamento(dia: string) {
     setConfigForm((prev) => {
       const exists = prev.dias_funcionamento.includes(dia);
@@ -906,15 +884,32 @@ export default function ConfiguracoesPageClient({
   return (
     <>
       <div className="space-y-4">
-        <section className="rounded-[24px] border border-zinc-200 bg-white px-5 py-4 text-zinc-950 shadow-sm">
-          <div className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-500">
-            Configurações
+        <ConfiguracoesHero
+          activeHref={sectionHref[secao]}
+          title={meta.title}
+          description={meta.description}
+        >
+          <div className="grid gap-3 md:grid-cols-3">
+            <ConfigMetricCard
+              label="Salao"
+              value={salaoForm.nome || "SalaoPremium"}
+              detail={salaoForm.status || "Cadastro ativo"}
+              icon={<Building2 size={18} />}
+            />
+            <ConfigMetricCard
+              label="Agenda"
+              value={`${configForm.hora_abertura} - ${configForm.hora_fechamento}`}
+              detail={`${configForm.intervalo_minutos} min por bloco`}
+              icon={<TimerReset size={18} />}
+            />
+            <ConfigMetricCard
+              label="Usuarios"
+              value={`${usuariosAtivosCount}/${limiteUsuariosPlano || "-"}`}
+              detail="Ativos dentro do limite do plano"
+              icon={<Users size={18} />}
+            />
           </div>
-          <h1 className="mt-2 text-[1.85rem] font-bold tracking-tight">{meta.title}</h1>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-500">
-            {meta.description}
-          </p>
-        </section>
+        </ConfiguracoesHero>
 
         {erroTela ? (
           <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
@@ -1445,45 +1440,6 @@ export default function ConfiguracoesPageClient({
           </SectionCard>
           ) : null}
 
-          {mostrarSistema ? (
-          <SectionCard
-            icon={<MonitorCog size={18} />}
-            title="Sistema"
-            description="Ajustes visuais para deixar a leitura do painel mais confortável."
-          >
-            <div className="grid grid-cols-1 gap-4 md:max-w-sm">
-              <Field label="Layout">
-                <SelectInput
-                  value={configForm.modo_compacto ? "compacto" : "normal"}
-                  onChange={(e) =>
-                    setConfigForm((prev) => ({
-                      ...prev,
-                      modo_compacto: e.target.value === "compacto",
-                    }))
-                  }
-                >
-                  <option value="normal">Normal</option>
-                  <option value="compacto">Compacto</option>
-                </SelectInput>
-                <p className="mt-2 text-sm leading-6 text-zinc-500">
-                  Ajusta a densidade visual das telas para quem prefere um painel mais enxuto.
-                </p>
-              </Field>
-            </div>
-
-            <div className="mt-5 flex justify-end">
-              <button
-                type="button"
-                onClick={salvarSistema}
-                disabled={savingSistema}
-                className="inline-flex items-center gap-2 rounded-2xl bg-zinc-900 px-5 py-2.5 text-sm font-bold text-white transition hover:opacity-95 disabled:opacity-60"
-              >
-                {savingSistema ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />}
-                Salvar sistema
-              </button>
-            </div>
-          </SectionCard>
-          ) : null}
         </div>
 
         {mostrarUsuarios ? (
