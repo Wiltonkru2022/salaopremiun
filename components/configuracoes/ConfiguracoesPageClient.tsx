@@ -1097,7 +1097,7 @@ export default function ConfiguracoesPageClient({
             title="Agenda e horários"
             description="Dias de funcionamento, abertura, fechamento e intervalo."
           >
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-3">
               <Field label="Hora de abertura">
                 <div className="relative">
                   <TextInput
