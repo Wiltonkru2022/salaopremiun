@@ -193,6 +193,7 @@ export default function CaixaPage() {
     observacaoPagamento,
     descontoInput,
     acrescimoInput,
+    totalPago,
     podeOperarCaixa,
     podeEditarCaixa,
     podeGerenciarPagamentos,

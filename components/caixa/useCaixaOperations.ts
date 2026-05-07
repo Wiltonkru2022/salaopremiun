@@ -47,6 +47,7 @@ type UseCaixaOperationsParams = {
   observacaoPagamento: string;
   descontoInput: string;
   acrescimoInput: string;
+  totalPago: number;
   podeOperarCaixa: boolean;
   podeEditarCaixa: boolean;
   podeGerenciarPagamentos: boolean;
@@ -84,6 +85,7 @@ export function useCaixaOperations({
   observacaoPagamento,
   descontoInput,
   acrescimoInput,
+  totalPago,
   podeOperarCaixa,
   podeEditarCaixa,
   podeGerenciarPagamentos,
@@ -396,6 +398,23 @@ export function useCaixaOperations({
 
       const desconto = parseMoney(descontoInput);
       const acrescimo = parseMoney(acrescimoInput);
+      const subtotalAtual = Number(comandaSelecionada.subtotal || 0);
+      const novoTotal = Math.max(
+        Number((subtotalAtual - desconto + acrescimo).toFixed(2)),
+        0
+      );
+
+      if (desconto > subtotalAtual + acrescimo) {
+        throw new Error(
+          "O desconto nao pode deixar o total da comanda negativo."
+        );
+      }
+
+      if (totalPago > novoTotal) {
+        throw new Error(
+          "Este ajuste deixaria a comanda com pagamento acima do total. Remova ou ajuste o pagamento antes de salvar desconto/acrescimo."
+        );
+      }
 
       await processarComanda({
         acao: "salvar_base",
@@ -423,6 +442,7 @@ export function useCaixaOperations({
     processarComanda,
     setErroTela,
     setMsg,
+    totalPago,
   ]);
 
   const adicionarPagamento = useCallback(async (options?: {

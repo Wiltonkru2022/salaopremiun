@@ -1765,6 +1765,7 @@ export default function RelatorioFinanceiroPage() {
             icon={<BadgeDollarSign size={18} />}
             label="Faturamento bruto"
             value={formatCurrency(resumo.faturamentoBruto)}
+            helper="Preço vendido, sem custo de produto"
           />
           <KpiCard
             icon={<TrendingUp size={18} />}
@@ -1807,12 +1808,13 @@ export default function RelatorioFinanceiroPage() {
             icon={<CreditCard size={18} />}
             label="Taxa maquininha"
             value={formatCurrency(resumo.taxaMaquininha)}
+            helper="Sobre pagamentos, não sobre custos"
           />
           <KpiCard
             icon={<Receipt size={18} />}
             label="Custo dos itens"
             value={formatCurrency(resumo.custoItens)}
-            helper="Somente comandas fechadas"
+            helper="Despesa do lucro, não faturamento"
           />
           </div>
 
