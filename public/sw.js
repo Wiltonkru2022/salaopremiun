@@ -23,8 +23,8 @@ self.addEventListener("push", (event) => {
   event.waitUntil(
     self.registration.showNotification(payload.title || fallback.title, {
       body: payload.body || fallback.body,
-      icon: "/app-profissional-icon.svg",
-      badge: "/app-profissional-icon.svg",
+      icon: "/favicon-preview.png",
+      badge: "/favicon-preview.png",
       tag: payload.tag || "salaopremium-update",
       renotify: true,
       data: {

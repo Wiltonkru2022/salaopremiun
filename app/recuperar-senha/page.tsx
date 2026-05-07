@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { getErrorMessage } from "@/lib/get-error-message";
 import {
   ArrowLeft,
@@ -128,9 +129,34 @@ function RecuperarSenhaContent() {
   }
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-white px-4 py-6">
-      <div className="relative grid w-full max-w-5xl overflow-hidden rounded-[28px] bg-white shadow-[0_22px_70px_rgba(0,0,0,0.12)] md:grid-cols-2">
-        <div className="hidden bg-zinc-950 p-8 text-white md:flex md:flex-col md:justify-between">
+    <div className="min-h-screen bg-white text-zinc-950">
+      <header className="flex h-[74px] items-center justify-between border-b border-zinc-200 bg-white px-5 sm:px-8">
+        <Link href="/" className="flex items-center gap-3">
+          <span className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-2xl bg-zinc-950">
+            <img src="/favicon-preview.png" alt="" className="h-full w-full object-cover" />
+          </span>
+          <span className="font-display text-lg font-black tracking-[-0.03em]">
+            SalaoPremium
+          </span>
+        </Link>
+
+        <Link
+          href="/login"
+          className="rounded-full border border-zinc-200 px-4 py-2 text-sm font-black text-zinc-800 transition hover:border-zinc-950"
+        >
+          Entrar
+        </Link>
+      </header>
+
+      <main className="grid min-h-[calc(100vh-74px)] lg:grid-cols-2">
+        <section
+          className="relative hidden overflow-hidden bg-zinc-950 bg-cover bg-center lg:block"
+          style={{ backgroundImage: "url('/site/cadastro-salao-bg.jpeg')" }}
+        >
+          <div className="absolute inset-0 bg-zinc-950/58" />
+          <div className="absolute inset-0 bg-gradient-to-br from-zinc-950 via-zinc-950/55 to-transparent" />
+
+          <div className="relative flex h-full flex-col justify-between p-10 text-white xl:p-14">
           <div>
             <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.24em] text-zinc-300">
               <Sparkles size={14} />
@@ -190,9 +216,10 @@ function RecuperarSenhaContent() {
               </div>
             </div>
           </div>
-        </div>
+          </div>
+        </section>
 
-        <div className="p-6 md:p-8">
+        <section className="flex items-center justify-center px-5 py-8 sm:px-8 lg:px-10">
           <div className="mx-auto max-w-md">
             <button
               type="button"
@@ -330,8 +357,8 @@ function RecuperarSenhaContent() {
               </div>
             )}
           </div>
-        </div>
-      </div>
+        </section>
+      </main>
     </div>
   );
 }

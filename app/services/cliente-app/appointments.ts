@@ -2,6 +2,7 @@ import { runAdminOperation } from "@/lib/supabase/admin-ops";
 import { cancelarAgendamentoComComanda } from "@/lib/agenda/cancelarAgendamentoComComanda";
 import { canSalonAppearInClientApp } from "@/lib/client-app/eligibility";
 import { notifySalonAboutClientBooking } from "@/lib/push-notifications";
+import { hasBlockedReviewLanguage } from "@/lib/content-moderation";
 import {
   notifyAppointmentCanceled,
   notifyAppointmentRescheduled,
@@ -1179,6 +1180,13 @@ export async function reviewClienteAppAppointment(
 
   if (!Number.isInteger(nota) || nota < 1 || nota > 5) {
     return { ok: false, error: "Escolha uma nota de 1 a 5 para avaliar." };
+  }
+
+  if (comentario && hasBlockedReviewLanguage(comentario)) {
+    return {
+      ok: false,
+      error: "Revise seu comentario para seguir as normas do app.",
+    };
   }
 
   return runAdminOperation({

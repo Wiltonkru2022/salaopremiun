@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import { ShieldCheck, Sparkles } from "lucide-react";
 import LoginProfissionalForm from "@/components/profissional/auth/LoginProfissionalForm";
 import ProfissionalHeader from "@/components/profissional/layout/ProfissionalHeader";
 import { getPlanoMinimoParaRecurso } from "@/lib/plans/catalog";
@@ -75,7 +76,31 @@ export default async function LoginProfissionalPage({
         />
 
         <main className="flex flex-1 items-start px-4 py-4">
-          <div className="w-full">
+          <div className="w-full space-y-3.5">
+            <section className="overflow-hidden rounded-[1.5rem] bg-zinc-950 px-4 py-4 text-white shadow-[0_16px_34px_rgba(15,23,42,0.15)]">
+              <div className="flex items-center gap-3">
+                <span className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white/10">
+                  <img src="/favicon-preview.png" alt="" className="h-full w-full object-cover" />
+                </span>
+                <div className="min-w-0">
+                  <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.12em] text-amber-100">
+                    <Sparkles size={14} />
+                    App profissional
+                  </div>
+                  <h1 className="mt-2 text-[1.5rem] font-black tracking-[-0.04em] leading-none">
+                    Entrar na rotina do salao
+                  </h1>
+                </div>
+              </div>
+              <p className="mt-2.5 text-sm leading-6 text-zinc-300">
+                Agenda, comandas, clientes e comissoes em um acesso leve e seguro.
+              </p>
+              <div className="mt-4 flex items-center gap-2 rounded-2xl bg-white/10 px-3 py-2 text-xs font-semibold text-white/80">
+                <ShieldCheck size={15} />
+                Login por CPF e senha cadastrados pelo salao.
+              </div>
+            </section>
+
             {planoSemApp ? (
               <div className="mb-3.5 rounded-[1.4rem] border border-amber-200 bg-amber-50 p-3.5 text-amber-900 shadow-sm">
                 <div className="text-[11px] font-bold uppercase tracking-[0.14em] text-amber-700">

@@ -44,6 +44,7 @@ export default function ClientProfileForm({
   return (
     <div className="space-y-4">
       <form
+        id="editar-cadastro"
         action={formAction}
         className="rounded-[1.8rem] border border-white/70 bg-white p-5 shadow-[0_18px_48px_rgba(15,23,42,0.08)]"
       >

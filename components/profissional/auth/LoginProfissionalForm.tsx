@@ -79,7 +79,7 @@ export default function LoginProfissionalForm({
             placeholder="000.000.000-00"
             value={cpfFormatado}
             onChange={(event) => setCpf(formatCpf(event.target.value))}
-            className="h-12 w-full rounded-2xl border border-zinc-200 bg-white px-4 text-sm outline-none transition focus:border-zinc-400"
+            className="h-12 w-full rounded-2xl border border-zinc-200 bg-white px-4 text-base outline-none transition focus:border-zinc-400"
           />
         </div>
 
@@ -92,7 +92,7 @@ export default function LoginProfissionalForm({
             name="senha"
             type="password"
             placeholder="Digite sua senha"
-            className="h-12 w-full rounded-2xl border border-zinc-200 bg-white px-4 text-sm outline-none transition focus:border-zinc-400"
+            className="h-12 w-full rounded-2xl border border-zinc-200 bg-white px-4 text-base outline-none transition focus:border-zinc-400"
           />
         </div>
 

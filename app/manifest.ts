@@ -14,9 +14,9 @@ export default function manifest(): MetadataRoute.Manifest {
     orientation: "any",
     icons: [
       {
-        src: "/app-profissional-icon.svg",
-        sizes: "any",
-        type: "image/svg+xml",
+        src: "/favicon-preview.png",
+        sizes: "512x512",
+        type: "image/png",
         purpose: "maskable",
       },
     ],

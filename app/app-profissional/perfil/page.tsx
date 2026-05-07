@@ -2,6 +2,7 @@ import Link from "next/link";
 import ProfissionalShell from "@/components/profissional/layout/ProfissionalShell";
 import ProfissionalSectionHeader from "@/components/profissional/ui/ProfissionalSectionHeader";
 import ProfissionalSurface from "@/components/profissional/ui/ProfissionalSurface";
+import PushPermissionRuntime from "@/components/push/PushPermissionRuntime";
 import { runAdminOperation } from "@/lib/supabase/admin-ops";
 import { requireProfissionalAppContext } from "@/lib/profissional-context.server";
 import { sairProfissionalAction } from "./actions";
@@ -186,6 +187,7 @@ export default async function PerfilProfissionalPage({
           ) : null}
         </section>
 
+        <div id="dados">
         <ProfissionalSurface>
           <ProfissionalSectionHeader
             title="Contato"
@@ -213,6 +215,7 @@ export default async function PerfilProfissionalPage({
             ))}
           </div>
         </ProfissionalSurface>
+        </div>
 
         <ProfissionalSurface>
           <ProfissionalSectionHeader
@@ -243,10 +246,40 @@ export default async function PerfilProfissionalPage({
         <ProfissionalSurface>
           <ProfissionalSectionHeader
             title="Acoes"
-            description="Atalhos rapidos da sua conta."
+            description="Atalhos rapidos da sua conta, avisos e reputacao."
           />
 
+          <div className="mb-3 rounded-[18px] border border-zinc-200 bg-zinc-50/80 p-3.5">
+            <div className="text-sm font-black text-zinc-950">
+              Notificacoes do app
+            </div>
+            <p className="mt-1 text-xs leading-5 text-zinc-500">
+              Receba lembretes de agenda, cancelamentos e avisos de comanda.
+            </p>
+            <div className="mt-3">
+              <PushPermissionRuntime audience="profissional_app" />
+            </div>
+          </div>
+
           <div className="grid gap-2.5 sm:grid-cols-2">
+            <Link
+              href="/app-profissional/perfil#dados"
+              className="flex h-11 w-full items-center justify-center rounded-[18px] border border-zinc-200 bg-white text-sm font-bold text-zinc-800"
+            >
+              Editar cadastro
+            </Link>
+            <Link
+              href="/app-profissional/avaliacoes"
+              className="flex h-11 w-full items-center justify-center rounded-[18px] border border-zinc-200 bg-white text-sm font-bold text-zinc-800"
+            >
+              Avaliacoes recebidas
+            </Link>
+            <Link
+              href="/app-profissional/recuperar-senha"
+              className="flex h-11 w-full items-center justify-center rounded-[18px] border border-zinc-200 bg-white text-sm font-bold text-zinc-800"
+            >
+              Recuperar acesso
+            </Link>
             <Link
               href="/app-profissional/suporte"
               className="flex h-11 w-full items-center justify-center rounded-[18px] border border-[#d8b36b] bg-white text-sm font-bold text-[#b07b19]"

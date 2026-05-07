@@ -66,7 +66,7 @@ export default function RecuperarSenhaProfissionalForm() {
             placeholder="000.000.000-00"
             value={cpf}
             onChange={(event) => setCpf(formatCpf(event.target.value))}
-            className="mt-2 h-12 w-full rounded-2xl border border-zinc-200 bg-white px-4 text-sm outline-none transition focus:border-zinc-400"
+            className="mt-2 h-12 w-full rounded-2xl border border-zinc-200 bg-white px-4 text-base outline-none transition focus:border-zinc-400"
             required
           />
         </label>
@@ -77,7 +77,7 @@ export default function RecuperarSenhaProfissionalForm() {
             name="contato"
             type="text"
             placeholder="Opcional"
-            className="mt-2 h-12 w-full rounded-2xl border border-zinc-200 bg-white px-4 text-sm outline-none transition focus:border-zinc-400"
+            className="mt-2 h-12 w-full rounded-2xl border border-zinc-200 bg-white px-4 text-base outline-none transition focus:border-zinc-400"
           />
         </label>
 

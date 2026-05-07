@@ -69,12 +69,19 @@ export default async function LoginClientePage({
         <main className="flex flex-1 items-start px-4 pb-6 pt-4">
           <div className="w-full space-y-3.5">
             <section className="overflow-hidden rounded-[1.5rem] bg-zinc-950 px-4 py-4 text-white shadow-[0_16px_34px_rgba(15,23,42,0.15)]">
-              <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.12em] text-amber-100">
-                Cliente premium
+              <div className="flex items-center gap-3">
+                <span className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white/10">
+                  <img src="/favicon-preview.png" alt="" className="h-full w-full object-cover" />
+                </span>
+                <div className="min-w-0">
+                  <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.12em] text-amber-100">
+                    Cliente premium
+                  </div>
+                  <h1 className="mt-2 text-[1.5rem] font-black leading-none">
+                    Entrar no app cliente
+                  </h1>
+                </div>
               </div>
-              <h1 className="mt-3 text-[1.5rem] font-black leading-none">
-                Entrar no app cliente
-              </h1>
               <p className="mt-2.5 text-sm leading-6 text-zinc-300">
                 Acompanhe seus horarios e agende seus proximos cuidados.
               </p>

@@ -160,8 +160,8 @@ export default function PushPermissionRuntime({
       type="button"
       onClick={handleEnable}
       disabled={enabled || denied || status === "saving"}
-      className={`inline-flex items-center justify-center gap-2 rounded-full border text-xs font-black transition disabled:cursor-default ${
-        compact ? "h-9 px-3" : "h-10 px-4"
+      className={`inline-flex min-w-0 items-center justify-center gap-2 rounded-full border text-xs font-black transition disabled:cursor-default ${
+        compact ? "h-9 w-9 px-0 sm:w-auto sm:px-3" : "h-10 px-4"
       } ${
         enabled
           ? "border-emerald-200 bg-emerald-50 text-emerald-700"
@@ -176,7 +176,9 @@ export default function PushPermissionRuntime({
       }
     >
       {enabled ? <BellRing size={15} /> : <Bell size={15} />}
-      {label}
+      <span className={compact ? "hidden whitespace-nowrap sm:inline" : "whitespace-nowrap"}>
+        {label}
+      </span>
     </button>
   );
 }

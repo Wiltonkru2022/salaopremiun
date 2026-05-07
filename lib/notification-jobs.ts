@@ -585,7 +585,7 @@ export async function notifyAppointmentFinished(params: {
           tipo: "atendimento_finalizado_cliente",
           titulo: "Atendimento finalizado",
           mensagem: `Atendimento finalizado. Obrigado pela preferencia, volte sempre.${valorLabel}`,
-          url: "/app-cliente/agendamentos",
+          url: `/app-cliente/agendamentos/${agendamento.id}/avaliar`,
           tag: `fim-cliente-${agendamento.id}`,
           idempotencyKey: `atendimento_finalizado:${agendamento.id}:cliente`,
         })

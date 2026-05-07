@@ -12,9 +12,9 @@ export async function GET() {
     orientation: "portrait",
     icons: [
       {
-        src: "/app-profissional-icon.svg",
-        sizes: "any",
-        type: "image/svg+xml",
+        src: "/favicon-preview.png",
+        sizes: "512x512",
+        type: "image/png",
         purpose: "any maskable",
       },
     ],

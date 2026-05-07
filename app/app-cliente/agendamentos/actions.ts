@@ -82,5 +82,6 @@ export async function reviewClienteAppointmentAction(
   }
 
   revalidatePath("/app-cliente/agendamentos");
-  redirect(buildReturnUrl("avaliado"));
+  revalidatePath(`/app-cliente/agendamentos/${idAgendamento}/avaliar`);
+  redirect(`/app-cliente/agendamentos/${idAgendamento}/avaliar?status=avaliado`);
 }

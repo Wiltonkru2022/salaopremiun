@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
-import { AlertCircle, ArrowLeft, LockKeyhole, RefreshCcw } from "lucide-react";
+import Link from "next/link";
+import { AlertCircle, ArrowLeft, LockKeyhole, RefreshCcw, ShieldCheck, Sparkles } from "lucide-react";
 import { getErrorMessage } from "@/lib/get-error-message";
 
 const MENSAGEM_ERRO_LINK =
@@ -241,7 +242,63 @@ export default function AtualizarSenhaPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-white p-4">
+    <div className="min-h-screen bg-white text-zinc-950">
+      <header className="flex h-[74px] items-center justify-between border-b border-zinc-200 bg-white px-5 sm:px-8">
+        <Link href="/" className="flex items-center gap-3">
+          <span className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-2xl bg-zinc-950">
+            <img src="/favicon-preview.png" alt="" className="h-full w-full object-cover" />
+          </span>
+          <span className="font-display text-lg font-black tracking-[-0.03em]">
+            SalaoPremium
+          </span>
+        </Link>
+
+        <Link
+          href="/login"
+          className="rounded-full border border-zinc-200 px-4 py-2 text-sm font-black text-zinc-800 transition hover:border-zinc-950"
+        >
+          Login
+        </Link>
+      </header>
+
+      <main className="grid min-h-[calc(100vh-74px)] lg:grid-cols-2">
+        <section
+          className="relative hidden overflow-hidden bg-zinc-950 bg-cover bg-center lg:block"
+          style={{ backgroundImage: "url('/site/cadastro-salao-bg.jpeg')" }}
+        >
+          <div className="absolute inset-0 bg-zinc-950/60" />
+          <div className="absolute inset-0 bg-gradient-to-br from-zinc-950 via-zinc-950/60 to-transparent" />
+          <div className="relative flex h-full flex-col justify-between p-10 text-white xl:p-14">
+            <div>
+              <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-black uppercase tracking-[0.2em] text-white/75">
+                <Sparkles size={14} />
+                Acesso protegido
+              </div>
+              <h1 className="mt-7 font-display text-[3.2rem] font-black leading-[0.95] tracking-[-0.05em] xl:text-[4.2rem]">
+                Nova senha, sessao limpa e conta segura.
+              </h1>
+              <p className="mt-5 max-w-md text-base leading-7 text-white/78">
+                Finalize a troca pelo link seguro e entre novamente no painel com a nova credencial.
+              </p>
+            </div>
+
+            <div className="rounded-[22px] border border-white/10 bg-white/[0.06] p-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-[18px] bg-white/10">
+                  <ShieldCheck size={20} />
+                </div>
+                <div>
+                  <p className="font-semibold">Sessao encerrada depois da troca</p>
+                  <p className="mt-1 text-sm text-zinc-400">
+                    Isso evita acesso antigo aberto em outro navegador.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="flex items-center justify-center px-5 py-8 sm:px-8 lg:px-10">
       <div className="w-full max-w-md rounded-[24px] border border-zinc-200 bg-white p-6 shadow-xl">
         <div className="mb-2 flex items-center justify-between gap-3">
           <h2 className="text-[1.85rem] font-bold text-zinc-900">Nova senha</h2>
@@ -379,6 +436,8 @@ export default function AtualizarSenhaPage() {
           </button>
         </form>
       </div>
+        </section>
+      </main>
     </div>
   );
 }
