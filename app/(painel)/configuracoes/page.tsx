@@ -5,9 +5,7 @@ import {
   CalendarClock,
   ChevronRight,
   CreditCard,
-  ShieldCheck,
   SlidersHorizontal,
-  Sparkles,
   Users,
 } from "lucide-react";
 
@@ -59,13 +57,6 @@ const configCards = [
   },
 ];
 
-const quickChecks = [
-  "Permissoes revisadas",
-  "Horarios atualizados",
-  "Push funcionando",
-  "Taxas conferidas",
-];
-
 export default function ConfiguracoesPage() {
   return (
     <div className="space-y-5">
@@ -77,41 +68,35 @@ export default function ConfiguracoesPage() {
               Central de configuracoes
             </div>
             <h1 className="mt-4 max-w-3xl font-display text-3xl font-black tracking-[-0.04em] sm:text-[2.6rem]">
-              Ajustes do salao em um lugar so
+              Configuracoes do salao
             </h1>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-zinc-300">
-              Perfil fica separado no menu da conta. Aqui entram as regras que
-              controlam acesso, agenda, caixa, notificacoes e repasses.
+              Ajuste acessos, horarios, notificacoes, caixa e regras de repasse
+              com seguranca.
             </p>
-            <div className="mt-5 flex flex-wrap gap-2">
-              {quickChecks.map((item) => (
-                <span
-                  key={item}
-                  className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-bold text-white/80"
-                >
-                  <ShieldCheck size={14} />
-                  {item}
-                </span>
-              ))}
-            </div>
           </div>
 
           <div className="bg-gradient-to-br from-zinc-50 via-white to-amber-50 p-5 sm:p-6">
-            <div className="rounded-[24px] border border-white/80 bg-white/90 p-5 shadow-sm">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[rgba(199,162,92,0.18)] text-[var(--app-accent-strong)]">
-                <Sparkles size={20} />
+            <div className="grid h-full content-center gap-3">
+              <div className="text-xs font-black uppercase tracking-[0.2em] text-zinc-400">
+                Modulos
               </div>
-              <h2 className="mt-4 font-display text-2xl font-black tracking-[-0.04em] text-zinc-950">
-                Configuracao sem bagunca
-              </h2>
-              <p className="mt-2 text-sm leading-6 text-zinc-600">
-                Em vez de varios links soltos no topo, cada modulo aparece como
-                uma escolha clara. Abriu, ajustou, voltou para operar.
-              </p>
-              <div className="mt-5 grid grid-cols-2 gap-3">
-                <Metric label="Areas" value={configCards.length} />
-                <Metric label="Fluxo" value="Unico" />
-              </div>
+              {configCards.slice(0, 4).map((item) => {
+                const Icon = item.icon;
+
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className="flex items-center gap-3 rounded-[18px] border border-zinc-200 bg-white px-4 py-3 text-sm font-black text-zinc-800 shadow-sm transition hover:border-zinc-300 hover:bg-zinc-50"
+                  >
+                    <span className={`flex h-9 w-9 items-center justify-center rounded-2xl ${item.tone}`}>
+                      <Icon size={16} />
+                    </span>
+                    {item.title}
+                  </Link>
+                );
+              })}
             </div>
           </div>
         </div>
@@ -150,17 +135,6 @@ export default function ConfiguracoesPage() {
           );
         })}
       </section>
-    </div>
-  );
-}
-
-function Metric({ label, value }: { label: string; value: string | number }) {
-  return (
-    <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-3">
-      <div className="text-[10px] font-black uppercase tracking-[0.16em] text-zinc-400">
-        {label}
-      </div>
-      <div className="mt-1 text-lg font-black text-zinc-950">{value}</div>
     </div>
   );
 }
