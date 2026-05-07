@@ -36,13 +36,13 @@ export default function ClientProfileShortcuts() {
       <div className="rounded-[1.6rem] border border-white/70 bg-white p-5 shadow-[0_18px_48px_rgba(15,23,42,0.08)]">
       <h2 className="text-lg font-black text-zinc-950">Atalhos</h2>
       <div className="mt-5 space-y-3">
-        <a
-          href="#editar-cadastro"
+        <Link
+          href="/app-cliente/perfil/editar"
           className="flex h-12 items-center gap-3 rounded-2xl border border-zinc-200 bg-zinc-50 px-4 text-sm font-semibold text-zinc-800"
         >
           <UserPen size={18} />
           Editar cadastro
-        </a>
+        </Link>
         <ClientAppPendingLink
           href="/app-cliente/agendamentos"
           icon={CalendarDays}

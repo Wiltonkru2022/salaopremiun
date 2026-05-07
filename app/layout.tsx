@@ -31,7 +31,8 @@ export const metadata: Metadata = {
     follow: true,
   },
   icons: {
-    icon: "/app-profissional-icon.svg",
+    icon: "/favicon.ico",
+    apple: "/favicon-preview.png",
   },
 };
 
