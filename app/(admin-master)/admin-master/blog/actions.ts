@@ -257,3 +257,31 @@ export async function createBlogPost(
   revalidateTag("blog-public", "max");
   redirect(`/admin-master/blog/${slug}`);
 }
+
+export async function deleteBlogPost(formData: FormData) {
+  await requireAdminMasterUser("comunicacao_ver");
+
+  const rawId = readText(formData, "id");
+  const id = isUuid(rawId) ? rawId : "";
+  const slug = slugify(readText(formData, "slug"));
+
+  if (!id) {
+    throw new Error("Post inválido para exclusão.");
+  }
+
+  const supabase = getBlogSupabaseAdmin() as any;
+  const { error } = await supabase.from("blog_posts").delete().eq("id", id);
+
+  if (error) {
+    throw new Error(`Não foi possível excluir o post: ${error.message}`);
+  }
+
+  revalidatePath("/admin-master/blog");
+  revalidatePath("/blog");
+  if (slug) {
+    revalidatePath(`/blog/${slug}`);
+    revalidatePath(`/admin-master/blog/${slug}`);
+  }
+  revalidateTag("blog-public", "max");
+  redirect("/admin-master/blog");
+}

@@ -32,7 +32,10 @@ import {
   WifiOff,
 } from "lucide-react";
 import type { BlogCategory, BlogPost } from "@/lib/blog/content";
-import { createBlogPost } from "@/app/(admin-master)/admin-master/blog/actions";
+import {
+  createBlogPost,
+  deleteBlogPost,
+} from "@/app/(admin-master)/admin-master/blog/actions";
 import { isVideoMedia } from "@/lib/blog/media";
 
 type Props = {
@@ -154,6 +157,7 @@ export default function AdminBlogEditor({ post, categories }: Props) {
   const [fontSize, setFontSize] = useState(18);
   const [activePanel, setActivePanel] = useState<"conteudo" | "seo">("conteudo");
   const [modal, setModal] = useState<EditorModal>(null);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [slashMenu, setSlashMenu] = useState<FloatingMenu>({
     open: false,
     x: 0,
@@ -906,6 +910,15 @@ export default function AdminBlogEditor({ post, categories }: Props) {
   }
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    const submitter = (event.nativeEvent as SubmitEvent).submitter;
+    if (
+      submitter instanceof HTMLButtonElement &&
+      submitter.name === "_intent" &&
+      submitter.value === "delete"
+    ) {
+      return;
+    }
+
     const nextContent = syncContent(true);
     const totalSize = new Blob([nextContent, coverImage]).size;
     if (totalSize > MAX_FORM_CONTENT_BYTES) {
@@ -948,6 +961,16 @@ export default function AdminBlogEditor({ post, categories }: Props) {
             Voltar
           </Link>
           <div className="flex flex-wrap gap-2">
+            {!isNewPost ? (
+              <button
+                type="button"
+                onClick={() => setDeleteModalOpen(true)}
+                className="inline-flex items-center gap-2 rounded-full border border-red-200 bg-white px-4 py-2 text-sm font-black text-red-700 shadow-sm hover:border-red-500 hover:bg-red-50"
+              >
+                <Trash2 size={16} />
+                Excluir post
+              </button>
+            ) : null}
             <button
               type="button"
               onClick={handlePreview}
@@ -1570,6 +1593,42 @@ export default function AdminBlogEditor({ post, categories }: Props) {
                 className="rounded-full bg-zinc-950 px-4 py-2 text-sm font-black text-white transition hover:bg-zinc-800"
               >
                 Inserir
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {deleteModalOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/55 px-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-[24px] border border-red-100 bg-white p-5 shadow-2xl">
+            <div className="text-xs font-black uppercase tracking-[0.24em] text-red-500">
+              Excluir post
+            </div>
+            <h2 className="mt-2 font-display text-2xl font-black text-zinc-950">
+              Excluir este post do blog?
+            </h2>
+            <p className="mt-3 text-sm font-semibold leading-6 text-zinc-600">
+              O post sai da listagem do Admin Master e do blog público. Essa
+              ação não apaga arquivos já enviados no Storage.
+            </p>
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setDeleteModalOpen(false)}
+                className="rounded-full border border-zinc-200 px-4 py-2 text-sm font-black text-zinc-700 transition hover:border-zinc-950"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                name="_intent"
+                value="delete"
+                formAction={deleteBlogPost}
+                className="inline-flex items-center gap-2 rounded-full bg-red-600 px-4 py-2 text-sm font-black text-white transition hover:bg-red-700"
+              >
+                <Trash2 size={16} />
+                Excluir post
               </button>
             </div>
           </div>

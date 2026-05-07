@@ -69,6 +69,7 @@ function buildCsp() {
     ...(blogSupabaseHostname ? [`https://${blogSupabaseHostname}`] : []),
     "https://*.googleusercontent.com",
     "https://*.gstatic.com",
+    "https://images.unsplash.com",
   ];
   const frameAncestors = ["'self'"];
   const frameSrc = [
@@ -187,6 +188,11 @@ const nextConfig: NextConfig = {
             },
           ]
         : []),
+      {
+        protocol: "https",
+        hostname: "images.unsplash.com",
+        pathname: "/**",
+      },
     ],
   },
   async headers() {
