@@ -899,20 +899,50 @@ export async function resolverItemPayload(params: {
       throw new Error("Produto obrigatorio para item de produto.");
     }
 
-    const { data: produto, error: produtoError } = await supabaseAdmin
-      .from("produtos")
-      .select("id, nome, custo_real, comissao_revenda_percentual")
-      .eq("id", idProduto)
-      .eq("id_salao", idSalao)
-      .maybeSingle();
+    const [
+      { data: produto, error: produtoError },
+      { data: profissional, error: profissionalError },
+    ] = await Promise.all([
+      supabaseAdmin
+        .from("produtos")
+        .select("id, nome, custo_real, comissao_revenda_percentual")
+        .eq("id", idProduto)
+        .eq("id_salao", idSalao)
+        .maybeSingle(),
+      idProfissional
+        ? supabaseAdmin
+            .from("profissionais")
+            .select("id, nome, comissao_produto_percentual, tipo_profissional")
+            .eq("id", idProfissional)
+            .eq("id_salao", idSalao)
+            .maybeSingle()
+        : Promise.resolve({ data: null, error: null }),
+    ]);
 
     if (produtoError || !produto) {
       throw new Error("Produto nao encontrado para este salao.");
     }
 
+    if (profissionalError) {
+      throw new Error("Erro ao validar profissional do item.");
+    }
+
+    if (
+      profissional &&
+      String(profissional.tipo_profissional || "profissional").toLowerCase() ===
+        "assistente"
+    ) {
+      throw new Error("Selecione um profissional principal, nao um assistente.");
+    }
+
     descricao = descricao || produto.nome || "Produto";
     custoTotal = sanitizeMoney(Number(produto.custo_real || 0) * quantidade);
-    comissaoPercentual = sanitizeMoney(produto.comissao_revenda_percentual);
+    const comissaoProduto = sanitizeMoney(produto.comissao_revenda_percentual);
+    const comissaoProfissional = sanitizeMoney(
+      profissional?.comissao_produto_percentual
+    );
+    comissaoPercentual =
+      comissaoProduto > 0 ? comissaoProduto : comissaoProfissional;
   } else {
     descricao = descricao || "Item manual";
     custoTotal = sanitizeMoney(item.custo_total);

@@ -110,7 +110,37 @@ export async function obterDetalhesVenda(params: {
     throw error;
   }
 
-  return { detalhe: data || null };
+  if (!data || typeof data !== "object" || Array.isArray(data)) {
+    return { detalhe: data || null };
+  }
+
+  const detalhe = data as Record<string, unknown>;
+  const comanda =
+    detalhe.comanda && typeof detalhe.comanda === "object"
+      ? (detalhe.comanda as Record<string, unknown>)
+      : null;
+
+  if (!comanda?.clientes && comanda?.id_cliente) {
+    const { data: cliente } = await supabaseAdmin
+      .from("clientes")
+      .select("nome")
+      .eq("id", String(comanda.id_cliente))
+      .maybeSingle();
+
+    if (cliente) {
+      return {
+        detalhe: {
+          ...detalhe,
+          comanda: {
+            ...comanda,
+            clientes: cliente,
+          },
+        },
+      };
+    }
+  }
+
+  return { detalhe };
 }
 
 export async function reabrirVenda(params: {

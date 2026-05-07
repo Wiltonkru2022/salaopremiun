@@ -55,6 +55,19 @@ function escapeHtml(value: string | null | undefined) {
     .replaceAll("'", "&#39;");
 }
 
+function mergeComandaDetalhe(
+  venda: ComandaVenda,
+  detalheComanda: ComandaVenda | null | undefined
+): ComandaVenda {
+  if (!detalheComanda) return venda;
+
+  return {
+    ...venda,
+    ...detalheComanda,
+    clientes: detalheComanda.clientes ?? venda.clientes,
+  };
+}
+
 export default function VendasPage() {
   const supabase = createClient();
   const router = useRouter();
@@ -463,9 +476,13 @@ export default function VendasPage() {
         acao: "detalhes",
         idComanda: venda.id,
       });
+      const comandaDetalhe = data.detalhe?.comanda as
+        | ComandaVenda
+        | null
+        | undefined;
 
       setDetalheVenda({
-        comanda: (data.detalhe?.comanda as ComandaVenda) || venda,
+        comanda: mergeComandaDetalhe(venda, comandaDetalhe),
         itens: (data.detalhe?.itens as ItemVenda[]) || [],
         pagamentos: (data.detalhe?.pagamentos as Pagamento[]) || [],
         agendamentos: (data.detalhe?.agendamentos as unknown[]) || [],
@@ -801,8 +818,12 @@ export default function VendasPage() {
       }
 
       */
+      const comandaDetalhe = data.detalhe?.comanda as
+        | ComandaVenda
+        | null
+        | undefined;
       const detalhe: VendaDetalhe = {
-        comanda: (data.detalhe?.comanda as ComandaVenda) || venda,
+        comanda: mergeComandaDetalhe(venda, comandaDetalhe),
         itens: (data.detalhe?.itens as ItemVenda[]) || [],
         pagamentos: (data.detalhe?.pagamentos as Pagamento[]) || [],
         agendamentos: (data.detalhe?.agendamentos as unknown[]) || [],
@@ -1639,5 +1660,4 @@ function ComboItemLabel({ descricao }: { descricao: string }) {
     </div>
   );
 }
-
 
