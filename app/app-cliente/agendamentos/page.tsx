@@ -6,7 +6,7 @@ import { listClienteAppAppointments } from "@/lib/client-app/queries";
 export default async function ClienteAppointmentsPage({
   searchParams,
 }: {
-  searchParams?: Promise<{ status?: string }>;
+  searchParams?: Promise<{ status?: string; todos?: string }>;
 }) {
   const session = await requireClienteAppContext();
   const agendamentos = await listClienteAppAppointments({
@@ -19,10 +19,11 @@ export default async function ClienteAppointmentsPage({
       title="Meus agendamentos"
       subtitle={`Acompanhamento de ${session.nome}`}
     >
-      <ClientAppointmentsManager
-        agendamentos={agendamentos}
-        successKey={params?.status || null}
-      />
+          <ClientAppointmentsManager
+            agendamentos={agendamentos}
+            successKey={params?.status || null}
+            showAll={params?.todos === "1"}
+          />
     </ClientAppFrame>
   );
 }

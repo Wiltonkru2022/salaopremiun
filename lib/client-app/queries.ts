@@ -70,6 +70,10 @@ export type ClientAppAppointmentListItem = {
   avaliado: boolean;
 };
 
+export type ClientAppAppointmentReviewDetail = ClientAppAppointmentListItem & {
+  clienteNome: string | null;
+};
+
 export type ClientAppProfileData = {
   nome: string;
   email: string;
@@ -670,6 +674,20 @@ export async function listClienteAppAppointments(params: { idConta: string }) {
   } catch {
     return [];
   }
+}
+
+export async function getClienteAppAppointmentForReview(params: {
+  idConta: string;
+  idAgendamento: string;
+}) {
+  const appointments = await listClienteAppAppointments({
+    idConta: params.idConta,
+  });
+  const item = appointments.find(
+    (appointment) => appointment.id === params.idAgendamento
+  );
+
+  return item ? ({ ...item, clienteNome: null } satisfies ClientAppAppointmentReviewDetail) : null;
 }
 
 export async function getClienteAppProfileData(params: { idConta: string }) {

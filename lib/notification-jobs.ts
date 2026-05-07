@@ -599,7 +599,7 @@ export async function notifyAppointmentFinished(params: {
           tipo: "avaliar_atendimento",
           titulo: "Avalie seu atendimento",
           mensagem: `Como foi seu atendimento com ${profissionalNome}? Sua avaliacao ajuda o salao a cuidar melhor de voce.`,
-          url: "/app-cliente/agendamentos",
+          url: `/app-cliente/agendamentos/${agendamento.id}/avaliar`,
           tag: `avaliar-${agendamento.id}`,
           idempotencyKey: `avaliar_atendimento:${agendamento.id}:cliente`,
         })
