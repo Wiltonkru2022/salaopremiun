@@ -4,11 +4,11 @@ import Link from "next/link";
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 import {
-  requestClienteRecoveryLinkAction,
-  type RecoverClienteAccessState,
-} from "@/app/app-cliente/recuperar-acesso/actions";
+  resetClientePasswordAction,
+  type ResetClientePasswordState,
+} from "@/app/app-cliente/recuperar-acesso/[token]/actions";
 
-const initialState: RecoverClienteAccessState = {
+const initialState: ResetClientePasswordState = {
   error: null,
   success: null,
 };
@@ -22,14 +22,14 @@ function SubmitButton() {
       disabled={pending}
       className="h-12 w-full rounded-2xl bg-zinc-950 text-sm font-semibold text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60"
     >
-      {pending ? "Enviando link..." : "Enviar link de recuperacao"}
+      {pending ? "Salvando senha..." : "Salvar nova senha"}
     </button>
   );
 }
 
-export default function RecuperarAcessoClienteForm() {
+export default function RedefinirSenhaClienteForm({ token }: { token: string }) {
   const [state, formAction] = useActionState(
-    requestClienteRecoveryLinkAction,
+    resetClientePasswordAction,
     initialState
   );
 
@@ -38,32 +38,45 @@ export default function RecuperarAcessoClienteForm() {
       action={formAction}
       className="overflow-hidden rounded-[1.9rem] border border-white/70 bg-white p-5 shadow-[0_18px_48px_rgba(15,23,42,0.08)]"
     >
+      <input type="hidden" name="token" value={token} />
+
       <div className="mb-4 inline-flex rounded-full bg-zinc-100 p-1 text-xs font-bold text-zinc-600">
         <span className="rounded-full bg-zinc-950 px-3 py-1.5 text-white">
-          Recuperacao
+          Nova senha
         </span>
         <span className="px-3 py-1.5">Cliente</span>
       </div>
 
       <h2 className="text-[1.55rem] font-semibold text-zinc-950">
-        Recuperar acesso
+        Criar nova senha
       </h2>
       <p className="mt-2 text-sm leading-6 text-zinc-500">
-        Informe o e-mail da conta global para receber um link seguro de
-        redefinicao de senha.
+        Defina uma nova senha para voltar ao app cliente.
       </p>
 
       <div className="mt-5 space-y-4">
         <div>
           <label className="mb-1.5 block text-sm font-medium text-zinc-700">
-            E-mail da conta
+            Nova senha
           </label>
           <input
-            name="email"
-            type="email"
-            autoComplete="email"
-            inputMode="email"
-            placeholder="voce@exemplo.com"
+            name="senha"
+            type="password"
+            autoComplete="new-password"
+            placeholder="Pelo menos 6 caracteres"
+            className="h-12 w-full rounded-2xl border border-zinc-200 bg-white px-4 text-base outline-none transition focus:border-zinc-400"
+          />
+        </div>
+
+        <div>
+          <label className="mb-1.5 block text-sm font-medium text-zinc-700">
+            Confirmar nova senha
+          </label>
+          <input
+            name="confirmacao"
+            type="password"
+            autoComplete="new-password"
+            placeholder="Repita a nova senha"
             className="h-12 w-full rounded-2xl border border-zinc-200 bg-white px-4 text-base outline-none transition focus:border-zinc-400"
           />
         </div>
@@ -82,14 +95,12 @@ export default function RecuperarAcessoClienteForm() {
 
         <SubmitButton />
 
-        <div className="space-y-2 pt-1 text-center">
-          <Link
-            href="/app-cliente/login"
-            className="block w-full text-sm font-medium text-zinc-700 underline underline-offset-4"
-          >
-            Voltar para o login
-          </Link>
-        </div>
+        <Link
+          href="/app-cliente/login"
+          className="block w-full text-center text-sm font-medium text-zinc-700 underline underline-offset-4"
+        >
+          Voltar para o login
+        </Link>
       </div>
     </form>
   );
