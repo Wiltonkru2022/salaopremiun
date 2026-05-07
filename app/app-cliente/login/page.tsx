@@ -38,8 +38,6 @@ export default async function LoginClientePage({
     if (validation?.context) {
       redirect(next || "/app-cliente/agendamentos");
     }
-
-    redirect("/app-cliente/logout?destino=/app-cliente/login");
   }
 
   const salaoContext = salaoId

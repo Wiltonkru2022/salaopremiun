@@ -1,10 +1,7 @@
 import { redirect } from "next/navigation";
 import { unstable_cache } from "next/cache";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
-import {
-  getClientePasswordSessionDigest,
-  getClienteSessionFromCookie,
-} from "@/lib/cliente-auth.server";
+import { getClienteSessionFromCookie } from "@/lib/cliente-auth.server";
 
 export type ClienteAppServerContext = {
   idConta: string;
@@ -22,7 +19,7 @@ const getClienteAppAccountCached = unstable_cache(
     const supabaseAdmin = getSupabaseAdmin();
     const { data: conta, error } = await (supabaseAdmin as any)
       .from("clientes_app_auth")
-      .select("id, nome, email, telefone, senha_hash, ativo")
+      .select("id, nome, email, telefone, ativo")
       .eq("id", idConta)
       .limit(1)
       .maybeSingle();
@@ -37,7 +34,6 @@ const getClienteAppAccountCached = unstable_cache(
           nome?: string | null;
           email?: string | null;
           telefone?: string | null;
-          senha_hash?: string | null;
           ativo?: boolean | null;
         }
       | null;
@@ -73,13 +69,6 @@ async function loadClienteAppServerContext(): Promise<ClienteAppServerContext> {
     throw new Error("UNAUTHORIZED");
   }
 
-  if (session.passwordDigest) {
-    const currentPasswordDigest = getClientePasswordSessionDigest(conta.senha_hash);
-    if (!currentPasswordDigest || currentPasswordDigest !== session.passwordDigest) {
-      throw new Error("UNAUTHORIZED");
-    }
-  }
-
   return {
     idConta: conta.id,
     nome:
@@ -111,7 +100,7 @@ export async function requireClienteAppContext(): Promise<ClienteAppServerContex
   const validation = await validateClienteAppSession();
 
   if (!validation.context) {
-    redirect("/app-cliente/logout?destino=/app-cliente/login");
+    redirect("/app-cliente/login");
   }
 
   return validation.context;
