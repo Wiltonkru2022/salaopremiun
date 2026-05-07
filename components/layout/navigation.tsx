@@ -13,6 +13,7 @@ import {
   Scissors,
   Settings,
   ShoppingCart,
+  Sparkles,
   LifeBuoy,
   UserSquare2,
   Users,
@@ -47,6 +48,7 @@ const NAV_PLAN_FEATURE_MAP: Record<string, string> = {
   "/comissoes": "comissoes_basicas",
   "/relatorio-financeiro": "relatorios_basicos",
   "/marketing": "marketing",
+  "/novidades": "dashboard",
 };
 
 export const painelNavigationItems: PainelNavItem[] = [
@@ -155,6 +157,14 @@ export const painelNavigationItems: PainelNavItem[] = [
     description: "Acoes de retorno, aniversarios e campanhas.",
     icon: Megaphone,
     permissionKey: "marketing_ver",
+  },
+  {
+    href: "/novidades",
+    label: "Novidades",
+    shortLabel: "Novidades",
+    description: "Roadmap, recursos novos e proximas entregas.",
+    icon: Sparkles,
+    permissionKey: "dashboard_ver",
   },
   {
     href: "/suporte",
