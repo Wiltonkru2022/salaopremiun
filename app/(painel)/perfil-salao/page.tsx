@@ -278,7 +278,7 @@ export default function PerfilSalaoPage() {
   const publicUrl = useMemo(() => buildSalaoPublicUrl(publicSlug), [publicSlug]);
   const qrCodeUrl = useMemo(
     () =>
-      `https://api.qrserver.com/v1/create-qr-code/?size=320x320&margin=12&data=${encodeURIComponent(
+      `/api/painel/qrcode?text=${encodeURIComponent(
         publicUrl
       )}`,
     [publicUrl]
@@ -1345,11 +1345,11 @@ export default function PerfilSalaoPage() {
                       <Copy size={16} />
                       Copiar link
                     </button>
-                    <a
-                      href={qrCodeUrl}
-                      download={`qrcode-${publicSlug}.png`}
-                      className="inline-flex h-11 items-center gap-2 rounded-2xl bg-zinc-950 px-4 text-sm font-bold text-white transition hover:bg-zinc-800"
-                    >
+                      <a
+                        href={qrCodeUrl}
+                        download={`qrcode-${publicSlug}.svg`}
+                        className="inline-flex h-11 items-center gap-2 rounded-2xl bg-zinc-950 px-4 text-sm font-bold text-white transition hover:bg-zinc-800"
+                      >
                       <Download size={16} />
                       Baixar QR Code
                     </a>
