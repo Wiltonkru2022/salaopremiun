@@ -9,6 +9,8 @@ export type ClienteAppSession = {
   nome: string;
   email: string;
   telefone?: string | null;
+  issuedAt?: number;
+  passwordDigest?: string;
   tipo: "cliente";
 };
 
@@ -105,7 +107,10 @@ function decryptEnvelope(token: string): SessionEnvelope | null {
 
 function serializeSession(session: ClienteAppSession) {
   const envelope: SessionEnvelope = {
-    session,
+    session: {
+      ...session,
+      issuedAt: session.issuedAt || Date.now(),
+    },
     exp: Math.floor(Date.now() / 1000) + SESSION_TTL_SECONDS,
   };
 
@@ -122,6 +127,13 @@ function parseSession(token: string): ClienteAppSession | null {
 
 export async function hashClientePassword(password: string) {
   return bcrypt.hash(password, 10);
+}
+
+export function getClientePasswordSessionDigest(passwordHash?: string | null) {
+  const value = String(passwordHash || "").trim();
+  if (!value) return "";
+
+  return crypto.createHash("sha256").update(value).digest("hex");
 }
 
 export async function verifyClientePassword(password: string, hash: string) {

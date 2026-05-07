@@ -212,6 +212,15 @@ export default function AtualizarSenhaPage() {
         throw new Error(error.message || "Nao foi possivel atualizar a senha.");
       }
 
+      await fetch("/api/auth/password-changed-notice", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      }).catch((noticeError) => {
+        console.warn("Aviso de senha alterada nao enviado:", noticeError);
+      });
+
       await supabase.auth.signOut();
 
       setSucesso(

@@ -27,7 +27,13 @@ function SubmitButton() {
   );
 }
 
-export default function RecuperarAcessoClienteForm() {
+type RecuperarAcessoClienteFormProps = {
+  initialEmail?: string;
+};
+
+export default function RecuperarAcessoClienteForm({
+  initialEmail = "",
+}: RecuperarAcessoClienteFormProps) {
   const [state, formAction] = useActionState(
     requestClienteRecoveryLinkAction,
     initialState
@@ -63,6 +69,7 @@ export default function RecuperarAcessoClienteForm() {
             type="email"
             autoComplete="email"
             inputMode="email"
+            defaultValue={initialEmail}
             placeholder="voce@exemplo.com"
             className="h-12 w-full rounded-2xl border border-zinc-200 bg-white px-4 text-base outline-none transition focus:border-zinc-400"
           />

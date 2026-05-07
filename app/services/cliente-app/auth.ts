@@ -1,5 +1,6 @@
 import { runAdminOperation } from "@/lib/supabase/admin-ops";
 import {
+  getClientePasswordSessionDigest,
   hashClientePassword,
   verifyClientePassword,
   type ClienteAppSession,
@@ -37,7 +38,10 @@ function normalizePhone(value: string) {
 }
 
 function buildSessionFromAccount(
-  account: Pick<ClienteAppAccountRow, "id" | "nome" | "email" | "telefone">
+  account: Pick<
+    ClienteAppAccountRow,
+    "id" | "nome" | "email" | "telefone"
+  > & { senha_hash?: string | null }
 ): ClienteAppSession {
   return {
     idConta: String(account.id),
@@ -46,6 +50,7 @@ function buildSessionFromAccount(
       normalizeEmail(String(account.email || "").trim()) ||
       "cliente@salaopremium.local",
     telefone: String(account.telefone || "").trim() || null,
+    passwordDigest: getClientePasswordSessionDigest(account.senha_hash),
     tipo: "cliente",
   };
 }
@@ -355,7 +360,7 @@ export async function createClienteAppAccount(params: {
           senha_hash: senhaHash,
           ativo: true,
         })
-        .select("id, nome, email, telefone")
+        .select("id, nome, email, telefone, senha_hash")
         .maybeSingle();
 
       if (error || !(data as { id?: string } | null)?.id) {

@@ -1,5 +1,6 @@
 "use server";
 
+import { headers } from "next/headers";
 import { resetClienteAppPasswordWithToken } from "@/app/services/cliente-app/recovery";
 
 export type ResetClientePasswordState = {
@@ -14,11 +15,19 @@ export async function resetClientePasswordAction(
   const token = String(formData.get("token") || "");
   const senha = String(formData.get("senha") || "");
   const confirmacao = String(formData.get("confirmacao") || "");
+  const headerStore = await headers();
+  const ip =
+    headerStore.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    headerStore.get("x-real-ip") ||
+    null;
+  const userAgent = headerStore.get("user-agent") || null;
 
   const result = await resetClienteAppPasswordWithToken({
     token,
     senha,
     confirmacao,
+    ip,
+    userAgent,
   });
 
   if (!result.ok) {

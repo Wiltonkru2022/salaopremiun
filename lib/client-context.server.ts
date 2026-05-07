@@ -1,7 +1,10 @@
 import { redirect } from "next/navigation";
 import { unstable_cache } from "next/cache";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
-import { getClienteSessionFromCookie } from "@/lib/cliente-auth.server";
+import {
+  getClientePasswordSessionDigest,
+  getClienteSessionFromCookie,
+} from "@/lib/cliente-auth.server";
 
 export type ClienteAppServerContext = {
   idConta: string;
@@ -19,7 +22,7 @@ const getClienteAppAccountCached = unstable_cache(
     const supabaseAdmin = getSupabaseAdmin();
     const { data: conta, error } = await (supabaseAdmin as any)
       .from("clientes_app_auth")
-      .select("id, nome, email, telefone, ativo")
+      .select("id, nome, email, telefone, senha_hash, ativo")
       .eq("id", idConta)
       .limit(1)
       .maybeSingle();
@@ -34,6 +37,7 @@ const getClienteAppAccountCached = unstable_cache(
           nome?: string | null;
           email?: string | null;
           telefone?: string | null;
+          senha_hash?: string | null;
           ativo?: boolean | null;
         }
       | null;
@@ -67,6 +71,13 @@ async function loadClienteAppServerContext(): Promise<ClienteAppServerContext> {
 
   if (!conta?.id || conta.ativo === false) {
     throw new Error("UNAUTHORIZED");
+  }
+
+  if (session.passwordDigest) {
+    const currentPasswordDigest = getClientePasswordSessionDigest(conta.senha_hash);
+    if (!currentPasswordDigest || currentPasswordDigest !== session.passwordDigest) {
+      throw new Error("UNAUTHORIZED");
+    }
   }
 
   return {
