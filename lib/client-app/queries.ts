@@ -338,6 +338,7 @@ export async function listVisibleClientAppSaloes(params?: {
 
 async function getClientAppSalonDetailLive(idSalao: string) {
     const salao = await assertSalonCanAppearInClientApp(idSalao);
+    const resolvedSalaoId = salao.id;
     const supabaseAdmin = getSupabaseAdmin();
 
     const [profissionaisResult, servicosResult, avaliacoesResult, vinculosResult, configResult] =
@@ -345,7 +346,7 @@ async function getClientAppSalonDetailLive(idSalao: string) {
         (supabaseAdmin as any)
           .from("profissionais")
           .select("id, nome, nome_exibicao, especialidade_publica, bio_publica, foto_url")
-          .eq("id_salao", idSalao)
+          .eq("id_salao", resolvedSalaoId)
           .eq("ativo", true)
           .eq("app_cliente_visivel", true)
           .or("eh_assistente.is.null,eh_assistente.eq.false")
@@ -355,7 +356,7 @@ async function getClientAppSalonDetailLive(idSalao: string) {
         (supabaseAdmin as any)
           .from("servicos")
           .select("id, nome, descricao_publica, descricao, preco, preco_padrao, duracao, duracao_minutos, exige_avaliacao")
-          .eq("id_salao", idSalao)
+          .eq("id_salao", resolvedSalaoId)
           .eq("ativo", true)
           .eq("app_cliente_visivel", true)
           .order("nome", { ascending: true })
@@ -363,18 +364,18 @@ async function getClientAppSalonDetailLive(idSalao: string) {
         (supabaseAdmin as any)
           .from("clientes_avaliacoes")
           .select("id, nota, comentario, created_at, clientes(nome)")
-          .eq("id_salao", idSalao)
+          .eq("id_salao", resolvedSalaoId)
           .order("created_at", { ascending: false })
           .limit(12),
         supabaseAdmin
           .from("profissional_servicos")
           .select("id_profissional, id_servico, ativo")
-          .eq("id_salao", idSalao)
+          .eq("id_salao", resolvedSalaoId)
           .eq("ativo", true),
         supabaseAdmin
           .from("configuracoes_salao")
           .select("intervalo_minutos")
-          .eq("id_salao", idSalao)
+          .eq("id_salao", resolvedSalaoId)
           .limit(1)
           .maybeSingle(),
       ]);
