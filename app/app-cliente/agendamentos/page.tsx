@@ -17,13 +17,13 @@ export default async function ClienteAppointmentsPage({
   return (
     <ClientAppFrame
       title="Meus agendamentos"
-      subtitle={`Acompanhamento de ${session.nome}`}
+      subtitle={`Tudo certo, ${session.nome}. Veja o que esta marcado e o que ja pode avaliar.`}
     >
-          <ClientAppointmentsManager
-            agendamentos={agendamentos}
-            successKey={params?.status || null}
-            showAll={params?.todos === "1"}
-          />
+      <ClientAppointmentsManager
+        agendamentos={agendamentos}
+        successKey={params?.status || null}
+        showAll={params?.todos === "1"}
+      />
     </ClientAppFrame>
   );
 }

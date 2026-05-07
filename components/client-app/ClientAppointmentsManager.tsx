@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { CalendarClock, ChevronRight, MessageCircle, Scissors, Star } from "lucide-react";
+import { CalendarClock, ChevronRight, Info, MessageCircle, Scissors, Sparkles, Star } from "lucide-react";
 import { useActionState, useMemo, useState } from "react";
 import { useFormStatus } from "react-dom";
 import {
@@ -275,6 +275,10 @@ export default function ClientAppointmentsManager({
 }) {
   const visibleAppointments = showAll ? agendamentos : agendamentos.slice(0, 10);
   const hasMore = agendamentos.length > visibleAppointments.length;
+  const nextAppointments = agendamentos.filter((item) =>
+    ["pendente", "confirmado"].includes(String(item.status || "").toLowerCase())
+  ).length;
+  const pendingReviews = agendamentos.filter((item) => item.podeAvaliar).length;
   const successMessage = useMemo(() => {
     if (successKey === "agendado") {
       return "Seu pedido foi enviado. O salao vai confirmar o horario.";
@@ -312,6 +316,34 @@ export default function ClientAppointmentsManager({
             <div className="text-2xl font-black">{agendamentos.length}</div>
             <div className="text-xs font-semibold text-zinc-300">registros</div>
           </div>
+        </div>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-3">
+        <div className="rounded-[1.3rem] border border-white/70 bg-white px-4 py-3 shadow-[0_12px_28px_rgba(15,23,42,0.05)]">
+          <div className="text-xs font-bold uppercase tracking-[0.14em] text-zinc-400">
+            Proximos
+          </div>
+          <div className="mt-1 text-2xl font-black text-zinc-950">
+            {nextAppointments}
+          </div>
+        </div>
+        <div className="rounded-[1.3rem] border border-white/70 bg-white px-4 py-3 shadow-[0_12px_28px_rgba(15,23,42,0.05)]">
+          <div className="text-xs font-bold uppercase tracking-[0.14em] text-zinc-400">
+            Para avaliar
+          </div>
+          <div className="mt-1 text-2xl font-black text-zinc-950">
+            {pendingReviews}
+          </div>
+        </div>
+        <div className="rounded-[1.3rem] border border-amber-100 bg-amber-50 px-4 py-3 text-amber-900 shadow-[0_12px_28px_rgba(15,23,42,0.04)]">
+          <div className="inline-flex items-center gap-1 text-xs font-bold uppercase tracking-[0.14em]">
+            <Sparkles size={14} />
+            Dica
+          </div>
+          <p className="mt-1 text-sm leading-5">
+            Chegue alguns minutos antes para manter sua experiencia tranquila.
+          </p>
         </div>
       </div>
 
@@ -356,6 +388,14 @@ export default function ClientAppointmentsManager({
                     {item.horaFim ? ` ate ${item.horaFim.slice(0, 5)}` : ""}
                   </div>
                 </div>
+
+                {["pendente", "confirmado"].includes(String(item.status || "").toLowerCase()) ? (
+                  <div className="inline-flex items-start gap-2 rounded-2xl bg-blue-50 px-3 py-2 text-xs font-semibold leading-5 text-blue-800">
+                    <Info size={15} className="mt-0.5 shrink-0" />
+                    O salao e o profissional acompanham este horario. Se precisar
+                    mudar, use Reagendar ou fale pelo WhatsApp.
+                  </div>
+                ) : null}
 
                 {item.observacoes ? (
                   <p className="text-sm leading-6 text-zinc-500">
@@ -407,9 +447,20 @@ export default function ClientAppointmentsManager({
             </article>
           ))
         ) : (
-          <div className="rounded-2xl border border-zinc-100 bg-zinc-50 p-4 text-sm leading-6 text-zinc-500">
-            Ainda nao encontramos agendamentos para esta conta. Assim que voce
-            marcar um horario, ele aparece aqui.
+          <div className="rounded-[1.6rem] border border-white/70 bg-white p-5 shadow-[0_18px_48px_rgba(15,23,42,0.08)]">
+            <h3 className="text-lg font-black text-zinc-950">
+              Sua agenda esta livre
+            </h3>
+            <p className="mt-2 text-sm leading-6 text-zinc-500">
+              Escolha um salao, marque seu primeiro horario e acompanhe tudo por
+              aqui: confirmacao, reagendamento, cancelamento e avaliacao.
+            </p>
+            <Link
+              href="/app-cliente/inicio"
+              className="mt-4 inline-flex h-11 items-center justify-center rounded-2xl bg-zinc-950 px-4 text-sm font-bold text-white"
+            >
+              Encontrar um salao
+            </Link>
           </div>
         )}
       </div>

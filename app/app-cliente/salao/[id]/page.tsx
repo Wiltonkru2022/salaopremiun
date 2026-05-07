@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import Link from "next/link";
 import { CalendarClock, MapPin, ParkingCircle, Star, Wallet } from "lucide-react";
 import ClientAppFrame from "@/components/client-app/ClientAppFrame";
 import { getClientAppSalonDetail } from "@/lib/client-app/queries";
@@ -144,9 +145,20 @@ export default async function ClienteSalonPage({
                   />
                 </div>
               ) : (
-                <div className="mt-4 rounded-2xl border border-zinc-100 bg-zinc-50 p-4 text-sm leading-6 text-zinc-600">
-                  Entre pelo menu Perfil para liberar a escolha de servico,
-                  profissional e horario.
+                <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900">
+                  <div className="font-bold text-amber-950">
+                    Entre para reservar seu horario
+                  </div>
+                  <p className="mt-1">
+                    Assim o salao recebe seus dados certos e voce acompanha tudo
+                    pelo menu Agenda.
+                  </p>
+                  <Link
+                    href={`/app-cliente/login?salao=${salao.id}&next=${encodeURIComponent(`/app-cliente/salao/${salao.id}`)}`}
+                    className="mt-3 inline-flex h-11 items-center justify-center rounded-2xl bg-zinc-950 px-4 text-sm font-bold text-white"
+                  >
+                    Entrar ou criar conta
+                  </Link>
                 </div>
               )}
             </div>
