@@ -19,7 +19,7 @@ const cadastroSalaoSchema = z.object({
   nomeSalao: z.string().trim().min(1, "Informe o nome do salao."),
   responsavel: z.string().trim().min(1, "Informe o responsavel."),
   whatsapp: optionalString,
-  cpfCnpj: z.string().trim().min(1, "Informe CPF/CNPJ."),
+  cpfCnpj: optionalString,
   cep: optionalString,
   endereco: optionalString,
   bairro: optionalString,

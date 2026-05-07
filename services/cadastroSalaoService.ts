@@ -7,7 +7,7 @@ export type CadastroSalaoBody = {
   nomeSalao: string;
   responsavel: string;
   whatsapp?: string;
-  cpfCnpj: string;
+  cpfCnpj?: string;
   cep?: string;
   endereco?: string;
   bairro?: string;
@@ -69,7 +69,7 @@ export function createCadastroSalaoService() {
         nomeSalaoNormalizado: body.nomeSalao.trim(),
         responsavelNormalizado: body.responsavel.trim(),
         whatsappNormalizado: body.whatsapp?.trim() || null,
-        cpfCnpjLimpo: onlyNumbers(body.cpfCnpj),
+        cpfCnpjLimpo: onlyNumbers(body.cpfCnpj || ""),
         cepLimpo: onlyNumbers(body.cep || "") || null,
         enderecoNormalizado: body.endereco?.trim() || null,
         bairroNormalizado: body.bairro?.trim() || null,
@@ -122,7 +122,7 @@ export function createCadastroSalaoService() {
           p_nome_salao: params.payload.nomeSalaoNormalizado,
           p_responsavel: params.payload.responsavelNormalizado,
           p_whatsapp: params.payload.whatsappNormalizado || undefined,
-          p_cpf_cnpj: params.payload.cpfCnpjLimpo,
+          p_cpf_cnpj: params.payload.cpfCnpjLimpo || undefined,
           p_cep: params.payload.cepLimpo || undefined,
           p_endereco: params.payload.enderecoNormalizado || undefined,
           p_numero: params.payload.numeroNormalizado || undefined,

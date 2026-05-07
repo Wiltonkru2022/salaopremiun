@@ -8,7 +8,6 @@ type StepKey =
   | "boas_vindas"
   | "conta"
   | "salao"
-  | "documento"
   | "endereco"
   | "resumo";
 
@@ -16,7 +15,6 @@ const STEPS: StepKey[] = [
   "boas_vindas",
   "conta",
   "salao",
-  "documento",
   "endereco",
   "resumo",
 ];
@@ -38,29 +36,6 @@ function maskPhone(value: string) {
   if (v.length <= 6) return `(${v.slice(0, 2)}) ${v.slice(2)}`;
   if (v.length <= 10) return `(${v.slice(0, 2)}) ${v.slice(2, 6)}-${v.slice(6)}`;
   return `(${v.slice(0, 2)}) ${v.slice(2, 7)}-${v.slice(7)}`;
-}
-
-function maskCpfCnpj(value: string) {
-  const v = onlyNumbers(value).slice(0, 14);
-
-  if (v.length <= 11) {
-    if (v.length <= 3) return v;
-    if (v.length <= 6) return `${v.slice(0, 3)}.${v.slice(3)}`;
-    if (v.length <= 9) return `${v.slice(0, 3)}.${v.slice(3, 6)}.${v.slice(6)}`;
-    return `${v.slice(0, 3)}.${v.slice(3, 6)}.${v.slice(6, 9)}-${v.slice(9)}`;
-  }
-
-  if (v.length <= 2) return v;
-  if (v.length <= 5) return `${v.slice(0, 2)}.${v.slice(2)}`;
-  if (v.length <= 8) return `${v.slice(0, 2)}.${v.slice(2, 5)}.${v.slice(5)}`;
-  if (v.length <= 12) {
-    return `${v.slice(0, 2)}.${v.slice(2, 5)}.${v.slice(5, 8)}/${v.slice(8)}`;
-  }
-
-  return `${v.slice(0, 2)}.${v.slice(2, 5)}.${v.slice(5, 8)}/${v.slice(
-    8,
-    12
-  )}-${v.slice(12)}`;
 }
 
 function normalizarPlanoSelecionado(value: string | null) {
@@ -98,13 +73,11 @@ function getLoginRedirectHref(params: URLSearchParams) {
 function getStepTitle(step: StepKey) {
   switch (step) {
     case "boas_vindas":
-      return "Bem-vinda ao SalaoPremium";
+      return "Ola, vamos comecar?";
     case "conta":
       return "Vamos criar sua conta";
     case "salao":
       return "Agora os dados do salao";
-    case "documento":
-      return "Dados fiscais";
     case "endereco":
       return "Endereco do salao";
     case "resumo":
@@ -117,13 +90,11 @@ function getStepTitle(step: StepKey) {
 function getStepSubtitle(step: StepKey) {
   switch (step) {
     case "boas_vindas":
-      return "Vou te guiar em um cadastro rapido e bonito, passo a passo.";
+      return "Um cadastro conversado, simples e com cara de sistema profissional.";
     case "conta":
       return "Essa conta sera a administradora principal do seu salao.";
     case "salao":
       return "Essas informacoes aparecem na operacao e no cadastro principal.";
-    case "documento":
-      return "Aqui ficam os dados fiscais do estabelecimento.";
     case "endereco":
       return "Pode digitar o CEP que eu preencho parte do endereco automaticamente.";
     case "resumo":
@@ -165,7 +136,7 @@ function CadastroSalaoContent() {
   const [responsavel, setResponsavel] = useState("");
   const [whatsapp, setWhatsapp] = useState("");
 
-  const [cpfCnpj, setCpfCnpj] = useState("");
+  const [cpfCnpj] = useState("");
 
   const [cep, setCep] = useState("");
   const [endereco, setEndereco] = useState("");
@@ -218,13 +189,6 @@ function CadastroSalaoContent() {
       }
       if (!responsavel.trim()) {
         setErro("Informe o responsavel.");
-        return false;
-      }
-    }
-
-    if (step === "documento") {
-      if (!cpfCnpj.trim()) {
-        setErro("Informe o CPF ou CNPJ.");
         return false;
       }
     }
@@ -302,8 +266,6 @@ function CadastroSalaoContent() {
       if (!senha.trim()) throw new Error("Informe a senha.");
       if (!nomeSalao.trim()) throw new Error("Informe o nome do salao.");
       if (!responsavel.trim()) throw new Error("Informe o responsavel.");
-      if (!cpfCnpj.trim()) throw new Error("Informe CPF/CNPJ.");
-
       const res = await fetch("/api/cadastro-salao", {
         method: "POST",
         headers: {
@@ -359,13 +321,14 @@ function CadastroSalaoContent() {
         return (
           <div className="space-y-5">
             <AssistantBubble>
-              Oi! Vou te ajudar a criar o seu salao no sistema em poucos passos.
+              Oi! Eu vou te guiar como se fosse uma conversa. Primeiro a gente
+              cria seu acesso, depois completa os dados principais do salao.
             </AssistantBubble>
 
             <AssistantBubble>
               {planoSelecionado
-                ? `Seu plano ${planoLabel} vai seguir com voce para a assinatura logo apos o primeiro login.`
-                : "Depois do primeiro login, voce escolhe o plano na tela de assinatura e pode iniciar o teste gratis por la."}
+                ? `Vi que voce escolheu o plano ${planoLabel}. Boa escolha, ele segue com voce para o primeiro login.`
+                : "Voce esta dando o primeiro passo. Depois do login, escolhe o plano ideal dentro da assinatura."}
             </AssistantBubble>
 
             <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
@@ -389,8 +352,13 @@ function CadastroSalaoContent() {
         return (
           <div className="space-y-5">
             <AssistantBubble>
-              Primeiro, vamos criar sua conta de acesso principal.
+              Perfeito. Agora digite o e-mail que voce quer usar para entrar no painel do salao.
             </AssistantBubble>
+            {email.trim() ? (
+              <AssistantBubble>
+                Bem-vindo, {email.trim()}. Agora vamos criar uma senha segura para proteger seu acesso.
+              </AssistantBubble>
+            ) : null}
 
             <div className="grid grid-cols-1 gap-4">
               <Input
@@ -416,7 +384,7 @@ function CadastroSalaoContent() {
         return (
           <div className="space-y-5">
             <AssistantBubble>
-              Agora me fale os dados principais do seu salao.
+              Voce ja deu o proximo passo. Agora me conte como seu salao deve aparecer no sistema.
             </AssistantBubble>
 
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -424,14 +392,14 @@ function CadastroSalaoContent() {
                 label="Nome do salao"
                 value={nomeSalao}
                 onChange={setNomeSalao}
-                placeholder="Ex: Studio Mao de Fadas"
+                placeholder="Ex: Salao Bella"
               />
 
               <Input
                 label="Responsavel"
                 value={responsavel}
                 onChange={setResponsavel}
-                placeholder="Ex: Kawane Natiely"
+                placeholder="Seu nome completo"
               />
 
               <div className="md:col-span-2">
@@ -446,29 +414,11 @@ function CadastroSalaoContent() {
           </div>
         );
 
-      case "documento":
-        return (
-          <div className="space-y-5">
-            <AssistantBubble>
-              Agora preciso do documento do salao para o cadastro fiscal.
-            </AssistantBubble>
-
-            <div className="grid grid-cols-1 gap-4">
-              <Input
-                label="CPF ou CNPJ"
-                value={cpfCnpj}
-                onChange={(v) => setCpfCnpj(maskCpfCnpj(v))}
-                placeholder="Digite CPF ou CNPJ"
-              />
-            </div>
-          </div>
-        );
-
       case "endereco":
         return (
           <div className="space-y-5">
             <AssistantBubble>
-              Digite o CEP e eu completo parte do endereco automaticamente.
+              Voce esta fazendo uma boa escolha. Agora digite o endereco do salao para deixar tudo pronto.
             </AssistantBubble>
 
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -547,7 +497,6 @@ function CadastroSalaoContent() {
               <SummaryCard label="Salao" value={nomeSalao || "-"} />
               <SummaryCard label="Responsavel" value={responsavel || "-"} />
               <SummaryCard label="WhatsApp" value={whatsapp || "-"} />
-              <SummaryCard label="CPF/CNPJ" value={cpfCnpj || "-"} />
               {planoSelecionado ? (
                 <SummaryCard label="Plano" value={planoLabel} />
               ) : null}
@@ -579,12 +528,18 @@ function CadastroSalaoContent() {
   }
 
   return (
-    <div className="min-h-screen bg-white px-4 py-5 md:px-6">
+    <div
+      className="min-h-screen bg-slate-950 bg-cover bg-center px-4 py-5 md:px-6"
+      style={{
+        backgroundImage:
+          "linear-gradient(90deg, rgba(15,23,42,.9), rgba(15,23,42,.62)), url('/site/salon-bg.svg')",
+      }}
+    >
       <div className="mx-auto max-w-6xl">
-        <div className="grid grid-cols-1 gap-5 xl:grid-cols-[0.95fr_1.05fr]">
-          <aside className="overflow-hidden rounded-[26px] border border-zinc-200 bg-white text-zinc-950 shadow-sm">
+        <div className="grid grid-cols-1 gap-5 xl:grid-cols-[0.78fr_1.22fr]">
+          <aside className="overflow-hidden rounded-[26px] border border-white/15 bg-white/10 text-white shadow-sm backdrop-blur-md">
             <div className="p-6">
-              <div className="inline-flex rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.22em] text-zinc-600">
+              <div className="inline-flex rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.22em] text-white">
                 SalaoPremium
               </div>
 
@@ -594,39 +549,24 @@ function CadastroSalaoContent() {
                 </div>
               ) : null}
 
-              <h1 className="mt-5 text-[2rem] font-bold leading-tight md:text-[2.3rem]">
-                Cadastro bonito, guiado e profissional para o seu salao
+              <h1 className="mt-5 text-[2rem] font-bold leading-tight md:text-[2.5rem]">
+                Vamos criar seu salao juntos.
               </h1>
 
-              <p className="mt-3 text-sm leading-6 text-zinc-500 md:text-[15px]">
-                Crie sua conta, configure seu salao e comece com agenda, caixa,
-                comandas, servicos, clientes e gestao completa em um unico sistema.
+              <p className="mt-3 text-sm leading-6 text-white/75 md:text-[15px]">
+                Poucos passos, linguagem humana e foco no que importa para voce
+                entrar no painel sem confusao.
               </p>
 
-              <div className="mt-6 space-y-3">
-                <BenefitItem
-                  title="Cadastro guiado"
-                  text="Voce preenche passo a passo, sem confusao."
-                />
-                <BenefitItem
-                  title="Visual premium"
-                  text="Experiencia moderna, elegante e mais profissional."
-                />
-                <BenefitItem
-                  title="Pronto para crescer"
-                  text="Estrutura preparada para operacao real de salao."
-                />
-              </div>
-
               <div className="mt-7">
-                <div className="mb-3 flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-zinc-400">
+                <div className="mb-3 flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-white/60">
                   <span>Progresso</span>
                   <span>{progresso}%</span>
                 </div>
 
-                <div className="h-3 overflow-hidden rounded-full bg-zinc-100">
+                <div className="h-3 overflow-hidden rounded-full bg-white/15">
                   <div
-                    className="h-full rounded-full bg-zinc-950 transition-all duration-300"
+                    className="h-full rounded-full bg-emerald-400 transition-all duration-300"
                     style={{ width: `${progresso}%` }}
                   />
                 </div>
@@ -642,8 +582,8 @@ function CadastroSalaoContent() {
                       key={item}
                       className={`rounded-2xl border px-4 py-3 text-sm transition ${
                         active
-                          ? "border-zinc-950 bg-zinc-950 text-white"
-                          : "border-zinc-200 bg-zinc-50 text-zinc-500"
+                          ? "border-white bg-white text-zinc-950"
+                          : "border-white/15 bg-white/10 text-white/70"
                       }`}
                     >
                       <div className="text-xs uppercase tracking-wider">
@@ -657,7 +597,7 @@ function CadastroSalaoContent() {
             </div>
           </aside>
 
-          <main className="rounded-[26px] border border-zinc-200 bg-white shadow-xl">
+          <main className="rounded-[26px] border border-white/70 bg-white shadow-xl">
             <div className="border-b border-zinc-200 px-6 py-5 md:px-7">
               <div className="inline-flex rounded-full bg-zinc-100 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-zinc-600">
                 Etapa {Math.max(currentStepIndex, 1)} de {STEPS.length - 1}
@@ -744,21 +684,6 @@ function FeatureCard({
     <div className="rounded-[22px] border border-zinc-200 bg-zinc-50 p-4">
       <h3 className="text-sm font-bold text-zinc-900">{title}</h3>
       <p className="mt-2 text-sm leading-6 text-zinc-500">{text}</p>
-    </div>
-  );
-}
-
-function BenefitItem({
-  title,
-  text,
-}: {
-  title: string;
-  text: string;
-}) {
-  return (
-    <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3.5">
-      <p className="font-semibold text-zinc-950">{title}</p>
-      <p className="mt-1 text-sm text-zinc-500">{text}</p>
     </div>
   );
 }

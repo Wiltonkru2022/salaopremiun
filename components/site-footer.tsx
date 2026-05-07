@@ -9,8 +9,8 @@ export default function SiteFooter() {
             <h3 className="text-[1.35rem] font-bold">SalaoPremium</h3>
             <p className="mt-3 text-sm leading-6 text-zinc-500">
               Plataforma para saloes, barbearias, clinicas e studios que desejam
-              gestao forte no computador, praticidade no celular para o
-              profissional e um fluxo comercial pronto para vender.
+              gestao forte no computador, app cliente, app profissional e um
+              fluxo comercial pronto para vender.
             </p>
           </div>
 
@@ -23,8 +23,8 @@ export default function SiteFooter() {
                 </Link>
               </li>
               <li>
-                <Link href="/#app-profissional" className="hover:text-zinc-950">
-                  App profissional
+                <Link href="/#apps" className="hover:text-zinc-950">
+                  Apps cliente e profissional
                 </Link>
               </li>
               <li>
@@ -41,29 +41,26 @@ export default function SiteFooter() {
           </div>
 
           <div>
-            <h4 className="text-base font-bold">Institucional</h4>
+            <h4 className="text-base font-bold">Acessos</h4>
             <ul className="mt-3 space-y-2.5 text-sm text-zinc-500">
               <li>
-                <Link href="/quem-somos" className="hover:text-zinc-950">
-                  Quem somos
+                <Link href="/login" className="hover:text-zinc-950">
+                  Login salao
                 </Link>
               </li>
               <li>
-                <Link href="/termos-de-uso" className="hover:text-zinc-950">
-                  Termos de uso
+                <Link href="/app-cliente/login" className="hover:text-zinc-950">
+                  App cliente
                 </Link>
               </li>
               <li>
-                <Link
-                  href="/politica-de-privacidade"
-                  className="hover:text-zinc-950"
-                >
-                  Politica de privacidade
+                <Link href="/app-profissional/login" className="hover:text-zinc-950">
+                  App profissional
                 </Link>
               </li>
               <li>
-                <Link href="/#suporte" className="hover:text-zinc-950">
-                  Suporte
+                <Link href="/cadastro-salao" className="hover:text-zinc-950">
+                  Cadastrar salao
                 </Link>
               </li>
             </ul>
@@ -72,15 +69,23 @@ export default function SiteFooter() {
           <div>
             <h4 className="text-base font-bold">Contato</h4>
             <ul className="mt-3 space-y-2.5 text-sm text-zinc-500">
-              <li>contato@seusistema.com.br</li>
-              <li>(00) 00000-0000</li>
-              <li>Atendimento comercial e suporte</li>
+              <li>
+                <a href="https://wa.me/5567984341742" className="hover:text-zinc-950">
+                  WhatsApp: (67) 98434-1742
+                </a>
+              </li>
+              <li>Atendimento comercial e suporte em PT-BR</li>
+              <li>
+                <Link href="/politica-de-privacidade" className="hover:text-zinc-950">
+                  Politica de privacidade
+                </Link>
+              </li>
             </ul>
           </div>
         </div>
 
         <div className="mt-10 border-t border-zinc-200 pt-5 text-sm text-zinc-500">
-          © 2026 SalaoPremium. Todos os direitos reservados.
+          Criado por WILTON KRUSZCIAKO. 2026 SalaoPremium. Todos os direitos reservados.
         </div>
       </div>
     </footer>

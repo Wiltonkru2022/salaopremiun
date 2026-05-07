@@ -1,128 +1,70 @@
 import Link from "next/link";
 import {
   ArrowRight,
-  BadgeCheck,
   BarChart3,
-  Bot,
   CalendarDays,
   Check,
-  ChevronRight,
   CreditCard,
   LayoutGrid,
   MonitorSmartphone,
   Scissors,
-  ShieldCheck,
   Smartphone,
   Sparkles,
   Users,
   Wallet,
+  type LucideIcon,
 } from "lucide-react";
 import SiteFooter from "@/components/site-footer";
 import SiteHeader from "@/components/site-header";
-
-const trustItems = [
-  "Agenda visual por profissional",
-  "Caixa com fechamento e taxas",
-  "Comissoes com regras por servico",
-  "App profissional no celular",
-];
-
-const highlights = [
-  {
-    icon: CalendarDays,
-    title: "Agenda que puxa a operacao",
-    text: "Atendimento, status, profissional e abertura para comanda no mesmo fluxo.",
-  },
-  {
-    icon: CreditCard,
-    title: "Caixa com venda real",
-    text: "Pagamento, taxa, desconto, acrescimo e fechamento sem gambiarra manual.",
-  },
-  {
-    icon: Wallet,
-    title: "Comissao que fecha certo",
-    text: "Profissional, assistente e regras por servico com calculo consistente.",
-  },
-  {
-    icon: BarChart3,
-    title: "Leitura do negocio",
-    text: "Vendas, relatorios, historico operacional e visao do que esta acontecendo.",
-  },
-];
+import WhatsAppSupportForm from "@/components/site/WhatsAppSupportForm";
 
 const modules = [
-  { icon: CalendarDays, title: "Agenda", text: "Horario, status, fila e passagem rapida para a venda." },
-  { icon: Users, title: "Clientes", text: "Cadastro, historico e continuidade do relacionamento." },
-  { icon: Scissors, title: "Servicos", text: "Preco, duracao, combos e regras por profissional." },
-  { icon: CreditCard, title: "Caixa", text: "Pagamentos, taxas, fechamento, reabertura e trilha de venda." },
-  { icon: Wallet, title: "Comissoes", text: "Lancamentos por item, assistente e status de pagamento." },
-  { icon: BarChart3, title: "Relatorios", text: "Leitura operacional e financeira sem depender de planilha." },
-];
-
-const professionalFeatures = [
-  "Agenda do dia no celular",
-  "Comissao por periodo",
-  "Comanda durante o atendimento",
-  "Cadastro rapido de cliente",
-  "Suporte dentro do app",
+  { icon: CalendarDays, title: "Agenda cheia", text: "Dia por profissional, status, horarios e passagem para comanda." },
+  { icon: CreditCard, title: "Caixa e vendas", text: "Pagamento, desconto, taxa, produto e fechamento no mesmo fluxo." },
+  { icon: Wallet, title: "Comissoes", text: "Calculo por profissional, assistente, servico e periodo." },
+  { icon: Users, title: "Clientes", text: "Cadastro, historico e retorno para manter o relacionamento." },
+  { icon: Scissors, title: "Servicos", text: "Precos, duracao, combos e regras da operacao." },
+  { icon: BarChart3, title: "Relatorios", text: "Leitura simples para saber o que entrou, saiu e vendeu." },
 ];
 
 const plans = [
   {
-    name: "Essencial",
+    name: "Basico",
     slug: "basico",
-    price: "R$ 39,90",
-    description: "Para comecar a organizar a recepcao e a agenda.",
-    featured: false,
-    items: ["Agenda e clientes", "Servicos e vendas", "Painel principal no PC"],
+    price: "R$ 5,00",
+    note: "desconto de lancamento",
+    description: "Para comecar com agenda, clientes, servicos, caixa e vendas.",
+    items: ["Agenda e clientes", "Caixa e comandas", "Vendas e comissao basica"],
   },
   {
-    name: "Profissional",
+    name: "Pro",
     slug: "pro",
-    price: "R$ 79,90",
-    description: "Para operar caixa, comanda, comissao e equipe com mais controle.",
+    price: "R$ 29,90",
+    note: "mais vendido",
+    description: "Para salao com equipe, estoque, relatorios e app profissional.",
     featured: true,
-    items: ["Tudo do Essencial", "Caixa e comandas", "Comissoes e relatorios", "App profissional"],
+    items: ["Tudo do Basico", "Estoque e relatorios", "App profissional"],
   },
   {
     name: "Premium",
     slug: "premium",
-    price: "R$ 149,90",
-    description: "Para saloes que precisam de operacao mais completa e mais governanca.",
-    featured: false,
-    items: ["Tudo do Profissional", "Estrutura ampliada", "Mais controle operacional"],
-  },
-];
-
-const faqItems = [
-  {
-    question: "Funciona melhor no computador ou no celular?",
-    answer:
-      "A operacao principal foi feita para computador. O celular fica com o app profissional, pensado para a rotina da equipe.",
-  },
-  {
-    question: "O profissional precisa instalar app de loja?",
-    answer:
-      "Nao. O acesso pode ser instalado direto pela tela inicial do navegador, como web app.",
-  },
-  {
-    question: "O sistema controla comissao de assistente?",
-    answer:
-      "Sim. O calculo respeita as regras do servico, do profissional e do vinculo do assistente.",
+    price: "R$ 59,90",
+    note: "completo",
+    description: "Para liberar a vitrine do app cliente, campanhas e estrutura completa.",
+    items: ["Tudo do Pro", "App cliente publicado", "WhatsApp e campanhas"],
   },
 ];
 
 export default function HomeLanding() {
   return (
-    <main className="min-h-screen bg-[#f5f1eb] text-zinc-950">
+    <main className="min-h-screen bg-slate-50 text-zinc-950">
       <SiteHeader />
       <HeroSection />
-      <ProofSection />
+      <SystemScreensSection />
+      <AppsSection />
       <ModulesSection />
-      <ProfessionalSection />
       <PlansSection />
-      <FaqSection />
-      <FinalSection />
+      <SupportSection />
       <SiteFooter />
     </main>
   );
@@ -130,258 +72,283 @@ export default function HomeLanding() {
 
 function HeroSection() {
   return (
-    <section className="overflow-hidden border-b border-zinc-200 bg-[#f5f1eb]">
-      <div className="mx-auto max-w-7xl px-6 pb-12 pt-8 lg:px-10 lg:pb-16 lg:pt-12">
-        <div className="grid items-center gap-9 lg:grid-cols-[0.9fr_1.1fr]">
-          <div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-zinc-300 bg-white/80 px-3 py-1.5 text-sm font-semibold text-zinc-700">
-              <Sparkles size={16} />
-              Sistema para salao com operacao completa
-            </div>
-
-            <h1 className="mt-5 max-w-3xl text-[2.4rem] font-bold tracking-tight text-zinc-950 lg:text-[3.8rem]">
-              Agenda, caixa, comanda e comissao em uma operacao que parece premium de verdade.
-            </h1>
-
-            <p className="mt-4 max-w-2xl text-[15px] leading-7 text-zinc-600 lg:text-base">
-              O SalaoPremium organiza a rotina da recepcao no computador e entrega ao profissional um app leve no celular para agenda, comissao e atendimento.
-            </p>
-
-            <div className="mt-6 flex flex-wrap gap-3">
-              <Link
-                href="/cadastro-salao"
-                className="inline-flex items-center gap-2 rounded-full bg-zinc-950 px-6 py-3 text-sm font-semibold text-white transition hover:opacity-95"
-              >
-                Criar conta
-                <ArrowRight size={18} />
-              </Link>
-              <Link
-                href="#produto"
-                className="inline-flex items-center gap-2 rounded-full border border-zinc-300 bg-white px-6 py-3 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-50"
-              >
-                Ver o sistema
-                <ChevronRight size={18} />
-              </Link>
-            </div>
-
-            <div className="mt-7 grid gap-2.5 sm:grid-cols-2">
-              {trustItems.map((item) => (
-                <div
-                  key={item}
-                  className="flex items-center gap-3 rounded-2xl border border-zinc-200 bg-white/90 px-4 py-3.5 text-sm font-medium text-zinc-700 shadow-sm"
-                >
-                  <BadgeCheck size={16} className="text-emerald-600" />
-                  {item}
-                </div>
-              ))}
-            </div>
+    <section id="inicio" className="overflow-hidden border-b border-zinc-200 bg-white">
+      <div className="mx-auto grid max-w-7xl items-center gap-10 px-5 py-10 md:px-8 lg:grid-cols-[0.88fr_1.12fr] lg:px-10 lg:py-14">
+        <div>
+          <div className="inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-slate-50 px-3 py-1.5 text-sm font-semibold text-zinc-700">
+            <Sparkles size={16} />
+            Sistema completo para salao de beleza
           </div>
 
-          <div className="relative">
-            <div className="absolute inset-x-10 top-6 h-32 rounded-full bg-[#d6c6b0]/45 blur-3xl" />
-            <div className="absolute bottom-10 right-6 h-36 w-36 rounded-full bg-[#d9a67a]/25 blur-3xl" />
+          <h1 className="mt-5 max-w-3xl text-[2.3rem] font-bold leading-[1.04] tracking-tight text-zinc-950 md:text-[4.2rem]">
+            Agenda, caixa, app cliente e app profissional em um so lugar.
+          </h1>
 
-            <div className="relative rounded-[28px] border border-zinc-200 bg-[#171717] p-3.5 shadow-[0_28px_84px_rgba(32,22,10,0.16)]">
-              <div className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
-                <div className="rounded-[24px] bg-[#fbfaf8] p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-500">
-                        Agenda do dia
-                      </p>
-                      <h2 className="mt-2 text-[1.35rem] font-semibold text-zinc-950">
-                        Recepcao no controle
-                      </h2>
-                    </div>
-                    <div className="rounded-full bg-zinc-950 px-3 py-1 text-xs font-semibold text-white">
-                      Ao vivo
-                    </div>
-                  </div>
+          <p className="mt-5 max-w-2xl text-base leading-8 text-zinc-600 md:text-lg">
+            O SalaoPremium organiza a recepcao no painel do salao, entrega agenda
+            e comissao para o profissional no celular e permite que o cliente veja
+            saloes, acompanhe agendamentos e mantenha o perfil atualizado.
+          </p>
 
-                  <div className="mt-4 grid grid-cols-3 gap-2.5">
-                    {[
-                      ["Confirmados", "18"],
-                      ["Em atendimento", "6"],
-                      ["Fila do caixa", "4"],
-                    ].map(([label, value]) => (
-                      <div key={label} className="rounded-2xl bg-white px-3 py-2.5 ring-1 ring-zinc-200">
-                        <p className="text-[11px] uppercase tracking-[0.16em] text-zinc-500">{label}</p>
-                        <p className="mt-2 text-lg font-semibold text-zinc-950">{value}</p>
-                      </div>
-                    ))}
-                  </div>
+          <div className="mt-7 grid gap-3 sm:grid-cols-2">
+            <Link className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-zinc-950 px-5 py-3 text-sm font-bold text-white" href="/cadastro-salao">
+              Cadastrar meu salao
+              <ArrowRight size={18} />
+            </Link>
+            <Link className="inline-flex min-h-12 items-center justify-center rounded-2xl border border-zinc-300 bg-white px-5 py-3 text-sm font-bold text-zinc-900" href="/login">
+              Login do salao
+            </Link>
+            <Link className="inline-flex min-h-12 items-center justify-center rounded-2xl border border-zinc-300 bg-white px-5 py-3 text-sm font-bold text-zinc-900" href="/app-cliente/login">
+              App cliente
+            </Link>
+            <Link className="inline-flex min-h-12 items-center justify-center rounded-2xl border border-zinc-300 bg-white px-5 py-3 text-sm font-bold text-zinc-900" href="/app-profissional/login">
+              App profissional
+            </Link>
+          </div>
+        </div>
 
-                  <div className="mt-4 space-y-2.5">
-                    {[
-                      {
-                        hour: "09:00",
-                        client: "Marina Costa",
-                        service: "Coloracao premium",
-                        professional: "Wilton",
-                        tone: "bg-emerald-50 text-emerald-700",
-                        tag: "Confirmado",
-                      },
-                      {
-                        hour: "10:30",
-                        client: "Bianca Alves",
-                        service: "Escova + finalizacao",
-                        professional: "Camila",
-                        tone: "bg-amber-50 text-amber-700",
-                        tag: "Em atendimento",
-                      },
-                      {
-                        hour: "11:40",
-                        client: "Paula Reis",
-                        service: "Combo corte + hidratacao",
-                        professional: "Michele",
-                        tone: "bg-violet-50 text-violet-700",
-                        tag: "Pronto para caixa",
-                      },
-                    ].map((row) => (
-                      <div
-                        key={`${row.hour}-${row.client}`}
-                        className="grid grid-cols-[68px_1fr_auto] items-center gap-3 rounded-2xl border border-zinc-200 bg-white px-3 py-2.5"
-                      >
-                        <p className="text-sm font-semibold text-zinc-700">{row.hour}</p>
-                        <div>
-                          <p className="text-sm font-semibold text-zinc-950">{row.client}</p>
-                          <p className="text-xs text-zinc-500">
-                            {row.service} · {row.professional}
-                          </p>
-                        </div>
-                        <span className={`rounded-full px-3 py-1 text-xs font-semibold ${row.tone}`}>
-                          {row.tag}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+        <ProductFrame />
+      </div>
+    </section>
+  );
+}
 
-                <div className="grid gap-4">
-                  <div className="rounded-[28px] bg-[#222222] p-4 text-white">
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/10">
-                        <CreditCard size={18} />
-                      </div>
-                      <div>
-                        <p className="text-sm font-semibold">Fechamento de venda</p>
-                        <p className="text-xs text-zinc-400">Servico, produto, taxa e pagamento</p>
-                      </div>
-                    </div>
+function ProductFrame() {
+  return (
+    <div className="rounded-[30px] border border-zinc-200 bg-zinc-950 p-3 shadow-[0_28px_90px_rgba(15,23,42,0.2)]">
+      <div className="rounded-[24px] bg-slate-100 p-4">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-zinc-500">Painel do salao</p>
+            <h2 className="mt-1 text-xl font-bold text-zinc-950">Operacao de hoje</h2>
+          </div>
+          <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-700">
+            Agenda cheia
+          </span>
+        </div>
 
-                    <div className="mt-5 space-y-3">
-                      {[
-                        ["Subtotal", "R$ 420,00"],
-                        ["Taxa", "R$ 12,00"],
-                        ["Total", "R$ 408,00"],
-                      ].map(([label, value]) => (
-                        <div key={label} className="flex items-center justify-between rounded-2xl bg-white/5 px-4 py-3">
-                          <span className="text-sm text-zinc-300">{label}</span>
-                          <span className="text-sm font-semibold text-white">{value}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
+        <div className="mt-4 grid grid-cols-3 gap-2">
+          {[
+            ["Atendimentos", "32"],
+            ["Vendas", "R$ 4.860"],
+            ["Comissao", "R$ 1.214"],
+          ].map(([label, value]) => (
+            <div key={label} className="rounded-2xl bg-white p-3 ring-1 ring-zinc-200">
+              <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-zinc-400">{label}</p>
+              <p className="mt-2 text-lg font-black text-zinc-950">{value}</p>
+            </div>
+          ))}
+        </div>
 
-                  <div className="rounded-[28px] bg-[#efe8dc] p-4 text-zinc-950">
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-zinc-950 text-white">
-                        <Smartphone size={18} />
-                      </div>
-                      <div>
-                        <p className="text-sm font-semibold">App profissional</p>
-                        <p className="text-xs text-zinc-600">Agenda e comissao no celular</p>
-                      </div>
-                    </div>
-
-                    <div className="mt-4 rounded-[24px] bg-white px-4 py-4 ring-1 ring-zinc-200">
-                      <p className="text-xs uppercase tracking-[0.16em] text-zinc-500">Hoje</p>
-                      <p className="mt-2 text-sm font-semibold text-zinc-950">Wilton</p>
-                      <div className="mt-3 space-y-2">
-                        {["08:30 Corte", "10:00 Coloracao", "13:30 Escova", "16:00 Hidratacao"].map((item) => (
-                          <div key={item} className="rounded-2xl bg-zinc-100 px-3 py-3 text-sm font-medium text-zinc-700">
-                            {item}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
+        <div className="mt-4 grid gap-3 lg:grid-cols-[1.2fr_0.8fr]">
+          <div className="space-y-2">
+            {[
+              ["08:30", "Amanda Souza", "Corte + escova", "Confirmado"],
+              ["09:40", "Bianca Lima", "Coloracao premium", "Em atendimento"],
+              ["11:10", "Marina Costa", "Hidratacao + finalizacao", "Aguardando caixa"],
+              ["13:20", "Paula Reis", "Manicure + pedicure", "Confirmado"],
+            ].map(([hora, cliente, servico, status]) => (
+              <div key={`${hora}-${cliente}`} className="grid grid-cols-[54px_1fr] gap-3 rounded-2xl bg-white p-3 ring-1 ring-zinc-200">
+                <p className="text-sm font-bold text-zinc-700">{hora}</p>
+                <div>
+                  <p className="text-sm font-bold text-zinc-950">{cliente}</p>
+                  <p className="text-xs text-zinc-500">{servico}</p>
+                  <p className="mt-2 inline-flex rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-bold text-zinc-700">{status}</p>
                 </div>
               </div>
+            ))}
+          </div>
+
+          <div className="space-y-3">
+            <div className="rounded-2xl bg-white p-4 ring-1 ring-zinc-200">
+              <p className="text-xs font-bold uppercase tracking-[0.16em] text-zinc-500">Caixa</p>
+              <p className="mt-2 text-2xl font-black text-zinc-950">R$ 1.780,00</p>
+              <p className="mt-1 text-sm text-zinc-500">Aberto agora</p>
+            </div>
+            <div className="rounded-2xl bg-zinc-950 p-4 text-white">
+              <p className="text-xs font-bold uppercase tracking-[0.16em] text-zinc-400">App cliente</p>
+              <p className="mt-2 text-sm font-semibold">3 novos agendamentos online</p>
+              <p className="mt-1 text-xs text-zinc-400">Perfil, historico e saloes favoritos.</p>
             </div>
           </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SystemScreensSection() {
+  return (
+    <section id="sistema" className="bg-slate-50 py-16">
+      <div className="mx-auto max-w-7xl px-5 md:px-8 lg:px-10">
+        <div className="max-w-3xl">
+          <p className="text-sm font-bold uppercase tracking-[0.18em] text-zinc-500">Imagens do sistema</p>
+          <h2 className="mt-3 text-3xl font-black tracking-tight text-zinc-950 md:text-5xl">
+            Telas com dados de rotina real: agenda, caixa, vendas e comissoes.
+          </h2>
+        </div>
+
+        <div className="mt-9 grid gap-5 lg:grid-cols-3">
+          <DashboardShot />
+          <CashShot />
+          <CommissionShot />
         </div>
       </div>
     </section>
   );
 }
 
-function ProofSection() {
+function DashboardShot() {
   return (
-    <section id="produto" className="bg-white py-20">
-      <div className="mx-auto max-w-7xl px-6 lg:px-10">
-        <div className="grid gap-12 lg:grid-cols-[0.82fr_1.18fr]">
-          <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-zinc-500">
-              O que o cliente compra
-            </p>
-            <h2 className="mt-3 text-3xl font-bold tracking-tight text-zinc-950 lg:text-5xl">
-              Um sistema que segura a rotina inteira do salao, do agendamento ao fechamento.
-            </h2>
-            <p className="mt-5 text-lg leading-8 text-zinc-600">
-              Em vez de parecer site genérico de software, a home precisa mostrar tela, contexto e fluxo operacional.
-            </p>
+    <article className="rounded-[26px] border border-zinc-200 bg-white p-4 shadow-sm">
+      <div className="flex items-center gap-2 border-b border-zinc-100 pb-3">
+        <LayoutGrid size={18} />
+        <h3 className="font-bold">Agenda do dia</h3>
+      </div>
+      <div className="mt-4 space-y-2">
+        {["08:00 Camila - Luzes", "09:30 Rodrigo - Barba", "10:00 Fernanda - Unhas", "11:30 Julia - Corte", "14:00 Priscila - Coloracao"].map((item, index) => (
+          <div key={item} className="rounded-2xl bg-slate-50 px-3 py-3 text-sm font-semibold text-zinc-700 ring-1 ring-zinc-100">
+            <span className={index === 1 ? "text-amber-600" : "text-emerald-600"}>{index === 1 ? "Em atendimento" : "Confirmado"}</span>
+            <span className="ml-2">{item}</span>
           </div>
+        ))}
+      </div>
+    </article>
+  );
+}
 
-          <div className="grid gap-5 md:grid-cols-2">
-            {highlights.map((item) => {
-              const Icon = item.icon;
-              return (
-                <article
-                  key={item.title}
-                  className="rounded-[28px] border border-zinc-200 bg-[#faf7f2] p-6 shadow-sm"
-                >
-                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-zinc-950 text-white">
-                    <Icon size={20} />
-                  </div>
-                  <h3 className="mt-5 text-xl font-semibold text-zinc-950">{item.title}</h3>
-                  <p className="mt-3 text-sm leading-7 text-zinc-600">{item.text}</p>
-                </article>
-              );
-            })}
+function CashShot() {
+  return (
+    <article className="rounded-[26px] border border-zinc-200 bg-white p-4 shadow-sm">
+      <div className="flex items-center gap-2 border-b border-zinc-100 pb-3">
+        <CreditCard size={18} />
+        <h3 className="font-bold">Caixa e vendas</h3>
+      </div>
+      <div className="mt-4 grid grid-cols-2 gap-3">
+        {[
+          ["Pix", "R$ 920"],
+          ["Cartao", "R$ 1.430"],
+          ["Dinheiro", "R$ 310"],
+          ["Produtos", "R$ 580"],
+        ].map(([label, value]) => (
+          <div key={label} className="rounded-2xl bg-slate-50 p-3 ring-1 ring-zinc-100">
+            <p className="text-xs text-zinc-500">{label}</p>
+            <p className="mt-1 text-lg font-black">{value}</p>
           </div>
-        </div>
+        ))}
+      </div>
+      <div className="mt-3 rounded-2xl bg-zinc-950 p-4 text-white">
+        <p className="text-sm text-zinc-300">Total vendido hoje</p>
+        <p className="mt-1 text-3xl font-black">R$ 3.240</p>
+      </div>
+    </article>
+  );
+}
+
+function CommissionShot() {
+  return (
+    <article className="rounded-[26px] border border-zinc-200 bg-white p-4 shadow-sm">
+      <div className="flex items-center gap-2 border-b border-zinc-100 pb-3">
+        <Wallet size={18} />
+        <h3 className="font-bold">Comissoes</h3>
+      </div>
+      <div className="mt-4 space-y-3">
+        {[
+          ["Camila", "R$ 430", "8 servicos"],
+          ["Marcos", "R$ 290", "5 servicos"],
+          ["Julia", "R$ 510", "9 servicos"],
+        ].map(([nome, valor, servicos]) => (
+          <div key={nome} className="flex items-center justify-between rounded-2xl bg-slate-50 p-3 ring-1 ring-zinc-100">
+            <div>
+              <p className="font-bold">{nome}</p>
+              <p className="text-xs text-zinc-500">{servicos}</p>
+            </div>
+            <p className="font-black text-emerald-700">{valor}</p>
+          </div>
+        ))}
+      </div>
+    </article>
+  );
+}
+
+function AppsSection() {
+  return (
+    <section id="apps" className="border-y border-zinc-200 bg-white py-16">
+      <div className="mx-auto grid max-w-7xl gap-6 px-5 md:px-8 lg:grid-cols-2 lg:px-10">
+        <AppCard
+          title="App cliente"
+          href="/app-cliente/login"
+          icon={Smartphone}
+          text="O cliente entra pelo celular para acessar perfil, saloes, agendamentos e acompanhar a propria rotina."
+          items={["Perfil do cliente", "Saloes publicados", "Agendamentos", "Historico e acesso rapido"]}
+        />
+        <AppCard
+          title="App profissional"
+          href="/app-profissional/login"
+          icon={MonitorSmartphone}
+          text="O profissional consulta agenda, atendimento, comissoes e suporte sem precisar mexer no painel do salao."
+          items={["Agenda no celular", "Comandas", "Comissoes", "Suporte da equipe"]}
+        />
       </div>
     </section>
+  );
+}
+
+function AppCard({
+  title,
+  href,
+  icon: Icon,
+  text,
+  items,
+}: {
+  title: string;
+  href: string;
+  icon: LucideIcon;
+  text: string;
+  items: string[];
+}) {
+  return (
+    <article className="rounded-[30px] border border-zinc-200 bg-slate-50 p-6">
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-zinc-950 p-3 text-white">
+          <Icon size={22} />
+        </div>
+        <Link href={href} className="rounded-full bg-white px-4 py-2 text-sm font-bold text-zinc-950 ring-1 ring-zinc-200">
+          Acessar
+        </Link>
+      </div>
+      <h2 className="mt-5 text-3xl font-black text-zinc-950">{title}</h2>
+      <p className="mt-3 text-base leading-7 text-zinc-600">{text}</p>
+      <div className="mt-5 grid gap-2 sm:grid-cols-2">
+        {items.map((item) => (
+          <div key={item} className="flex items-center gap-2 rounded-2xl bg-white px-3 py-3 text-sm font-semibold text-zinc-700 ring-1 ring-zinc-100">
+            <Check size={15} className="text-emerald-600" />
+            {item}
+          </div>
+        ))}
+      </div>
+    </article>
   );
 }
 
 function ModulesSection() {
   return (
-    <section className="border-y border-zinc-200 bg-[#171717] py-20 text-white">
-      <div className="mx-auto max-w-7xl px-6 lg:px-10">
-        <div className="mx-auto max-w-3xl text-center">
-          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-zinc-400">
-            Plataforma completa
-          </p>
-          <h2 className="mt-3 text-3xl font-bold tracking-tight lg:text-5xl">
-            Feita para salao que precisa operar bem, cobrar bem e acompanhar bem.
+    <section id="comercial" className="bg-zinc-950 py-16 text-white">
+      <div className="mx-auto max-w-7xl px-5 md:px-8 lg:px-10">
+        <div className="max-w-3xl">
+          <p className="text-sm font-bold uppercase tracking-[0.18em] text-zinc-400">Tudo conectado</p>
+          <h2 className="mt-3 text-3xl font-black tracking-tight md:text-5xl">
+            Um painel para vender, atender, receber e entender o salao.
           </h2>
         </div>
-
-        <div className="mt-14 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+        <div className="mt-9 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {modules.map((item) => {
             const Icon = item.icon;
             return (
-              <article
-                key={item.title}
-                className="rounded-[28px] border border-white/10 bg-white/5 p-6"
-              >
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-zinc-950">
-                  <Icon size={20} />
-                </div>
-                <h3 className="mt-5 text-xl font-semibold text-white">{item.title}</h3>
-                <p className="mt-3 text-sm leading-7 text-zinc-300">{item.text}</p>
+              <article key={item.title} className="rounded-[24px] border border-white/10 bg-white/5 p-5">
+                <Icon size={22} className="text-emerald-300" />
+                <h3 className="mt-4 text-xl font-bold">{item.title}</h3>
+                <p className="mt-2 text-sm leading-6 text-zinc-300">{item.text}</p>
               </article>
             );
           })}
@@ -391,160 +358,36 @@ function ModulesSection() {
   );
 }
 
-function ProfessionalSection() {
-  return (
-    <section className="bg-[#f5f1eb] py-20">
-      <div className="mx-auto max-w-7xl px-6 lg:px-10">
-        <div className="grid items-center gap-10 lg:grid-cols-[1.02fr_0.98fr]">
-          <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-zinc-500">
-              App profissional
-            </p>
-            <h2 className="mt-3 text-3xl font-bold tracking-tight text-zinc-950 lg:text-5xl">
-              O profissional acessa o que importa no celular sem baguncar a operacao da recepcao.
-            </h2>
-            <p className="mt-5 text-lg leading-8 text-zinc-600">
-              Agenda do dia, comissao, comanda e suporte em um web app simples de instalar e rapido para usar.
-            </p>
-
-            <div className="mt-8 grid gap-3 sm:grid-cols-2">
-              {professionalFeatures.map((item) => (
-                <div
-                  key={item}
-                  className="flex items-center gap-3 rounded-2xl border border-zinc-200 bg-white px-4 py-4 text-sm font-medium text-zinc-700 shadow-sm"
-                >
-                  <Check size={16} className="text-emerald-600" />
-                  {item}
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="grid gap-5 md:grid-cols-[0.78fr_1.22fr]">
-            <div className="rounded-[32px] border border-zinc-200 bg-zinc-950 p-4 shadow-lg">
-              <div className="rounded-[28px] bg-white p-4">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-zinc-950 text-white">
-                    <Smartphone size={18} />
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold text-zinc-950">Rotina no app</p>
-                    <p className="text-xs text-zinc-500">Dia do profissional</p>
-                  </div>
-                </div>
-
-                <div className="mt-4 space-y-2">
-                  {["09:00 Marina", "10:30 Bianca", "13:30 Paula", "17:10 Luciana"].map((item) => (
-                    <div key={item} className="rounded-2xl bg-zinc-100 px-3 py-3 text-sm font-medium text-zinc-700">
-                      {item}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <div className="rounded-[32px] border border-zinc-200 bg-white p-6 shadow-sm">
-              <div className="flex items-center gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#efe8dc] text-zinc-950">
-                  <MonitorSmartphone size={20} />
-                </div>
-                <div>
-                  <p className="text-lg font-semibold text-zinc-950">PC para recepcao, celular para equipe</p>
-                  <p className="text-sm text-zinc-500">Cada tela com a responsabilidade certa</p>
-                </div>
-              </div>
-
-              <div className="mt-6 grid gap-4 sm:grid-cols-2">
-                {[
-                  { icon: LayoutGrid, title: "Sistema principal", text: "Agenda, clientes, comandas, caixa e configuracao." },
-                  { icon: Smartphone, title: "App profissional", text: "Agenda, comissao, atendimento e suporte." },
-                  { icon: ShieldCheck, title: "Mais controle", text: "Menos risco de misturar permissao e operacao." },
-                  { icon: Bot, title: "Suporte guiado", text: "Ajuda de uso dentro do fluxo do profissional." },
-                ].map((item) => {
-                  const Icon = item.icon;
-                  return (
-                    <article key={item.title} className="rounded-2xl bg-zinc-100 px-4 py-4">
-                      <Icon size={18} className="text-zinc-700" />
-                      <h3 className="mt-3 text-sm font-semibold text-zinc-950">{item.title}</h3>
-                      <p className="mt-2 text-sm leading-6 text-zinc-600">{item.text}</p>
-                    </article>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}
-
 function PlansSection() {
   return (
-    <section id="planos" className="bg-white py-20">
-      <div className="mx-auto max-w-7xl px-6 lg:px-10">
-        <div className="mx-auto max-w-3xl text-center">
-          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-zinc-500">
-            Planos
-          </p>
-          <h2 className="mt-3 text-3xl font-bold tracking-tight text-zinc-950 lg:text-5xl">
-            Escolha o plano que acompanha o tamanho da sua operacao.
+    <section id="planos" className="bg-white py-16">
+      <div className="mx-auto max-w-7xl px-5 md:px-8 lg:px-10">
+        <div className="max-w-3xl">
+          <p className="text-sm font-bold uppercase tracking-[0.18em] text-zinc-500">Planos</p>
+          <h2 className="mt-3 text-3xl font-black tracking-tight md:text-5xl">
+            Precos de lancamento para colocar o salao no digital agora.
           </h2>
         </div>
-
-        <div className="mt-14 grid gap-6 lg:grid-cols-3">
+        <div className="mt-9 grid gap-5 lg:grid-cols-3">
           {plans.map((plan) => (
-            <article
-              key={plan.name}
-              className={`rounded-[32px] border p-7 shadow-sm ${
-                plan.featured
-                  ? "border-zinc-950 bg-zinc-950 text-white"
-                  : "border-zinc-200 bg-[#faf7f2] text-zinc-950"
-              }`}
-            >
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <h3 className="text-2xl font-semibold">{plan.name}</h3>
-                  <p className={`mt-3 text-sm leading-6 ${plan.featured ? "text-zinc-300" : "text-zinc-600"}`}>
-                    {plan.description}
-                  </p>
-                </div>
-                {plan.featured ? (
-                  <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-zinc-950">
-                    Recomendado
-                  </span>
-                ) : null}
-              </div>
-
-              <div className="mt-8">
-                <p className="text-4xl font-bold">{plan.price}</p>
-                <p className={`mt-2 text-sm ${plan.featured ? "text-zinc-300" : "text-zinc-500"}`}>por mes</p>
-              </div>
-
-              <div className="mt-8 space-y-4">
+            <article key={plan.slug} className={`rounded-[30px] border p-6 ${plan.featured ? "border-zinc-950 bg-zinc-950 text-white" : "border-zinc-200 bg-slate-50 text-zinc-950"}`}>
+              <span className={`rounded-full px-3 py-1 text-xs font-bold uppercase tracking-[0.14em] ${plan.featured ? "bg-white text-zinc-950" : "bg-white text-zinc-600 ring-1 ring-zinc-200"}`}>
+                {plan.note}
+              </span>
+              <h3 className="mt-5 text-3xl font-black">{plan.name}</h3>
+              <p className={`mt-3 text-sm leading-6 ${plan.featured ? "text-zinc-300" : "text-zinc-600"}`}>{plan.description}</p>
+              <p className="mt-7 text-4xl font-black">{plan.price}</p>
+              <p className={`mt-1 text-sm ${plan.featured ? "text-zinc-400" : "text-zinc-500"}`}>por mes</p>
+              <div className="mt-6 space-y-3">
                 {plan.items.map((item) => (
-                  <div key={item} className="flex items-start gap-3">
-                    <div
-                      className={`mt-0.5 flex h-6 w-6 items-center justify-center rounded-full ${
-                        plan.featured ? "bg-white/10 text-white" : "bg-zinc-950 text-white"
-                      }`}
-                    >
-                      <Check size={14} />
-                    </div>
-                    <p className={`text-sm leading-6 ${plan.featured ? "text-zinc-100" : "text-zinc-700"}`}>{item}</p>
-                  </div>
+                  <p key={item} className={`flex items-center gap-2 text-sm font-semibold ${plan.featured ? "text-zinc-100" : "text-zinc-700"}`}>
+                    <Check size={15} className="text-emerald-500" />
+                    {item}
+                  </p>
                 ))}
               </div>
-
-              <Link
-                href={`/cadastro-salao?plano=${plan.slug}`}
-                className={`mt-10 inline-flex w-full items-center justify-center rounded-full px-5 py-4 text-sm font-semibold transition ${
-                  plan.featured
-                    ? "bg-white text-zinc-950 hover:bg-zinc-100"
-                    : "bg-zinc-950 text-white hover:opacity-95"
-                }`}
-              >
-                Comecar agora
+              <Link href={`/cadastro-salao?plano=${plan.slug}`} className={`mt-8 inline-flex min-h-12 w-full items-center justify-center rounded-2xl px-5 text-sm font-bold ${plan.featured ? "bg-white text-zinc-950" : "bg-zinc-950 text-white"}`}>
+                Comecar com {plan.name}
               </Link>
             </article>
           ))}
@@ -554,92 +397,21 @@ function PlansSection() {
   );
 }
 
-function FaqSection() {
+function SupportSection() {
   return (
-    <section className="border-y border-zinc-200 bg-[#171717] py-20 text-white">
-      <div className="mx-auto max-w-5xl px-6 lg:px-10">
-        <div className="mx-auto max-w-3xl text-center">
-          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-zinc-400">
-            Duvidas frequentes
-          </p>
-          <h2 className="mt-3 text-3xl font-bold tracking-tight lg:text-5xl">
-            O visitante precisa bater o olho e entender o produto.
+    <section id="suporte" className="bg-slate-50 py-16">
+      <div className="mx-auto grid max-w-7xl items-center gap-8 px-5 md:px-8 lg:grid-cols-[1fr_0.82fr] lg:px-10">
+        <div>
+          <p className="text-sm font-bold uppercase tracking-[0.18em] text-zinc-500">Suporte humano</p>
+          <h2 className="mt-3 text-3xl font-black tracking-tight text-zinc-950 md:text-5xl">
+            Quer tirar duvida antes de cadastrar?
           </h2>
+          <p className="mt-4 max-w-2xl text-base leading-8 text-zinc-600">
+            Fale direto pelo WhatsApp. A mensagem ja chega organizada com seu nome
+            e a duvida para agilizar o atendimento.
+          </p>
         </div>
-
-        <div className="mt-12 space-y-4">
-          {faqItems.map((faq) => (
-            <details
-              key={faq.question}
-              className="rounded-[28px] border border-white/10 bg-white/5 px-6 py-5"
-            >
-              <summary className="cursor-pointer list-none text-lg font-semibold text-white">
-                {faq.question}
-              </summary>
-              <p className="mt-4 text-sm leading-7 text-zinc-300">{faq.answer}</p>
-            </details>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function FinalSection() {
-  return (
-    <section className="bg-[#f5f1eb] py-20">
-      <div className="mx-auto max-w-7xl px-6 lg:px-10">
-        <div className="rounded-[40px] border border-zinc-200 bg-white px-8 py-10 shadow-[0_26px_80px_rgba(40,28,12,0.1)] lg:px-12 lg:py-14">
-          <div className="grid gap-10 lg:grid-cols-[1fr_0.95fr]">
-            <div>
-              <p className="text-sm font-semibold uppercase tracking-[0.2em] text-zinc-500">
-                Comece agora
-              </p>
-              <h2 className="mt-3 max-w-3xl text-3xl font-bold tracking-tight text-zinc-950 lg:text-5xl">
-                Um sistema bonito ajuda. Um sistema claro, forte e vendavel ajuda muito mais.
-              </h2>
-              <p className="mt-5 max-w-2xl text-lg leading-8 text-zinc-600">
-                Entre no cadastro do salao e veja a operacao funcionando com agenda, caixa, equipe, venda e comissao no mesmo produto.
-              </p>
-
-              <div className="mt-8 flex flex-wrap gap-4">
-                <Link
-                  href="/cadastro-salao"
-                  className="inline-flex items-center gap-2 rounded-full bg-zinc-950 px-6 py-4 text-sm font-semibold text-white transition hover:opacity-95"
-                >
-                  Criar conta do salao
-                  <ArrowRight size={18} />
-                </Link>
-                <Link
-                  href="/login"
-                  className="inline-flex items-center gap-2 rounded-full border border-zinc-300 bg-white px-6 py-4 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-50"
-                >
-                  Entrar no sistema
-                </Link>
-              </div>
-            </div>
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              {[
-                { icon: LayoutGrid, title: "Sistema no PC", text: "Recepcao, agenda, caixa, relatorios e configuracao." },
-                { icon: Smartphone, title: "App da equipe", text: "Agenda, comissao e atendimento no celular." },
-                { icon: CreditCard, title: "Assinatura online", text: "Cadastro e continuidade comercial mais organizada." },
-                { icon: ShieldCheck, title: "Fluxo consistente", text: "Menos improviso operacional e mais previsibilidade." },
-              ].map((item) => {
-                const Icon = item.icon;
-                return (
-                  <article key={item.title} className="rounded-[26px] bg-[#faf7f2] p-5 ring-1 ring-zinc-200">
-                    <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-zinc-950 text-white">
-                      <Icon size={18} />
-                    </div>
-                    <h3 className="mt-4 text-lg font-semibold text-zinc-950">{item.title}</h3>
-                    <p className="mt-2 text-sm leading-6 text-zinc-600">{item.text}</p>
-                  </article>
-                );
-              })}
-            </div>
-          </div>
-        </div>
+        <WhatsAppSupportForm />
       </div>
     </section>
   );

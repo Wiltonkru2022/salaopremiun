@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Menu, Sparkles, X } from "lucide-react";
+import { Menu, MessageCircle, Sparkles, X } from "lucide-react";
 
 export default function SiteHeader() {
   const [open, setOpen] = useState(false);
@@ -33,16 +33,16 @@ export default function SiteHeader() {
             Sistema
           </Link>
           <Link
-            href="/#app-profissional"
+            href="/#apps"
             className="text-sm font-medium text-zinc-700 transition hover:text-[#2c0a45]"
           >
-            App Profissional
+            Apps
           </Link>
           <Link
             href="/#comercial"
             className="text-sm font-medium text-zinc-700 transition hover:text-[#2c0a45]"
           >
-            Comercial
+            Recursos
           </Link>
           <Link
             href="/#planos"
@@ -63,14 +63,14 @@ export default function SiteHeader() {
             href="/login"
             className="rounded-full border border-zinc-300 px-5 py-2 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-100"
           >
-            Entrar
+            Login salao
           </Link>
 
           <Link
-            href="/#cta-final"
-            className="rounded-full bg-[#2c0a45] px-5 py-2 text-sm font-semibold text-white shadow-lg transition hover:opacity-95"
+            href="/cadastro-salao"
+            className="rounded-full bg-zinc-950 px-5 py-2 text-sm font-semibold text-white shadow-lg transition hover:bg-zinc-800"
           >
-            Assinar agora
+            Cadastrar salao
           </Link>
         </div>
 
@@ -95,18 +95,18 @@ export default function SiteHeader() {
               Sistema para salao
             </Link>
             <Link
-              href="/#app-profissional"
+              href="/#apps"
               className="border-b border-zinc-100 py-3.5 text-base font-medium text-zinc-800"
               onClick={() => setOpen(false)}
             >
-              App profissional
+              Apps cliente e profissional
             </Link>
             <Link
               href="/#comercial"
               className="border-b border-zinc-100 py-3.5 text-base font-medium text-zinc-800"
               onClick={() => setOpen(false)}
             >
-              Comercial
+              Recursos do sistema
             </Link>
             <Link
               href="/#planos"
@@ -150,16 +150,38 @@ export default function SiteHeader() {
                 className="inline-flex items-center justify-center rounded-full border border-zinc-300 px-5 py-2.5 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-100"
                 onClick={() => setOpen(false)}
               >
-                Entrar
+                Login salao
               </Link>
 
               <Link
-                href="/#cta-final"
-                className="inline-flex items-center justify-center rounded-full bg-[#2c0a45] px-5 py-2.5 text-sm font-semibold text-white shadow-lg transition hover:opacity-95"
+                href="/app-cliente/login"
+                className="inline-flex items-center justify-center rounded-full border border-zinc-300 px-5 py-2.5 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-100"
                 onClick={() => setOpen(false)}
               >
-                Assinar agora
+                App cliente
               </Link>
+              <Link
+                href="/app-profissional/login"
+                className="inline-flex items-center justify-center rounded-full border border-zinc-300 px-5 py-2.5 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-100"
+                onClick={() => setOpen(false)}
+              >
+                App profissional
+              </Link>
+              <Link
+                href="/cadastro-salao"
+                className="inline-flex items-center justify-center rounded-full bg-zinc-950 px-5 py-2.5 text-sm font-semibold text-white shadow-lg transition hover:bg-zinc-800"
+                onClick={() => setOpen(false)}
+              >
+                Cadastrar salao
+              </Link>
+              <a
+                href="https://wa.me/5567984341742"
+                className="inline-flex items-center justify-center gap-2 rounded-full bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg transition hover:bg-emerald-700"
+                onClick={() => setOpen(false)}
+              >
+                <MessageCircle size={16} />
+                WhatsApp suporte
+              </a>
             </div>
           </div>
         </div>

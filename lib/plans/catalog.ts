@@ -124,7 +124,7 @@ export const PLANOS_CATALOGO: Record<PlanoCodigo, PlanoCatalogo> = {
       "Libera operacao mais densa, relatorios mais fortes e app profissional para a equipe ganhar autonomia.",
     foco: "Equipe em crescimento",
     idealPara: "Saloes em expansao, com mais atendimento e gestao.",
-    valorMensal: 89.9,
+    valorMensal: 29.9,
     ordem: 2,
     destaque: true,
     recursosLiberados: [
@@ -162,7 +162,7 @@ export const PLANOS_CATALOGO: Record<PlanoCodigo, PlanoCatalogo> = {
       "Plano completo para quem ja opera pesado ou quer crescer sem bater em limite de estrutura.",
     foco: "Tudo liberado",
     idealPara: "Operacao madura, multiatendimento e gestao completa.",
-    valorMensal: 149.9,
+    valorMensal: 59.9,
     ordem: 3,
     destaque: true,
     recursosLiberados: [
