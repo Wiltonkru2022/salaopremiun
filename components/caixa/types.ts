@@ -100,6 +100,8 @@ export type ComandaPagamento = {
   valor: number;
   parcelas: number;
   valor_credito_cliente?: number | null;
+  valor_troco?: number | null;
+  destino_excedente?: "troco" | "credito_cliente" | string | null;
 
   taxa_maquininha_percentual?: number | null;
   taxa_maquininha_valor?: number | null;

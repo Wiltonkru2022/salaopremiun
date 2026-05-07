@@ -124,7 +124,18 @@ export function useCaixaPageState() {
   }, [configCaixa, formaPagamento, parcelas]);
 
   const totalPago = useMemo(
-    () => pagamentos.reduce((acc, item) => acc + Number(item.valor || 0), 0),
+    () =>
+      pagamentos.reduce(
+        (acc, item) =>
+          acc +
+          Math.max(
+            Number(item.valor || 0) -
+              Number(item.valor_credito_cliente || 0) -
+              Number(item.valor_troco || 0),
+            0
+          ),
+        0
+      ),
     [pagamentos]
   );
   const totalCreditoGerado = useMemo(
@@ -138,7 +149,10 @@ export function useCaixaPageState() {
 
   const totalComanda = Number(comandaSelecionada?.total || 0);
   const faltaReceber = Math.max(totalComanda - totalPago, 0);
-  const troco = Math.max(totalPago - totalComanda - totalCreditoGerado, 0);
+  const troco = pagamentos.reduce(
+    (acc, item) => acc + Number(item.valor_troco || 0),
+    0
+  );
   const creditoClienteDisponivel = Number(
     (Array.isArray(comandaSelecionada?.clientes)
       ? comandaSelecionada?.clientes[0]?.cashback

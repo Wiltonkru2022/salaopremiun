@@ -57,6 +57,7 @@ export type ProcessarCaixaResponse = {
   taxaValor?: number;
   valorFinalCobrado?: number;
   valorCreditoGerado?: number;
+  valorTroco?: number;
   creditoClienteUsado?: number;
   repassaTaxaCliente?: boolean;
   idempotentReplay?: boolean;

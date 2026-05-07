@@ -26,6 +26,7 @@ type PagamentoResumoRow = {
   id: string;
   forma_pagamento: string;
   valor_credito_cliente?: number | null;
+  valor_troco?: number | null;
 };
 
 type PagamentoIdempotenteRow = {
@@ -37,6 +38,8 @@ type PagamentoIdempotenteRow = {
   taxa_maquininha_percentual?: number | null;
   taxa_maquininha_valor?: number | null;
   valor_credito_cliente?: number | null;
+  valor_troco?: number | null;
+  destino_excedente?: string | null;
   observacoes?: string | null;
 };
 
@@ -68,7 +71,7 @@ async function carregarResumoComanda(
 
   const { data: pagamentos, error: pagamentosError } = await ctx.supabaseAdmin
     .from("comanda_pagamentos")
-    .select("valor")
+    .select("valor, valor_credito_cliente, valor_troco")
     .eq("id_salao", ctx.idSalao)
     .eq("id_comanda", idComanda);
 
@@ -78,8 +81,23 @@ async function carregarResumoComanda(
 
   const total = sanitizeMoney(comanda.total);
   const totalPago = sanitizeMoney(
-    ((pagamentos as Array<{ valor?: number | null }> | null) || []).reduce(
-      (acc, item) => acc + Number(item.valor || 0),
+    (
+      (pagamentos as
+        | Array<{
+            valor?: number | null;
+            valor_credito_cliente?: number | null;
+            valor_troco?: number | null;
+          }>
+        | null) || []
+    ).reduce(
+      (acc, item) =>
+        acc +
+        Math.max(
+          Number(item.valor || 0) -
+            Number(item.valor_credito_cliente || 0) -
+            Number(item.valor_troco || 0),
+          0
+        ),
       0
     )
   );
@@ -104,7 +122,7 @@ async function carregarPagamentoPorIdempotencia(params: {
   const { data, error } = await ctx.supabaseAdmin
     .from("comanda_pagamentos")
     .select(
-      "id, id_movimentacao, forma_pagamento, valor, parcelas, taxa_maquininha_percentual, taxa_maquininha_valor, valor_credito_cliente, observacoes"
+      "id, id_movimentacao, forma_pagamento, valor, parcelas, taxa_maquininha_percentual, taxa_maquininha_valor, valor_credito_cliente, valor_troco, destino_excedente, observacoes"
     )
     .eq("id_salao", ctx.idSalao)
     .eq("id_comanda", idComanda)
@@ -281,10 +299,9 @@ export async function adicionarPagamento(params: {
       ),
       taxaValor: sanitizeMoney(pagamentoExistente.taxa_maquininha_valor),
       valorFinalCobrado: sanitizeMoney(pagamentoExistente.valor),
-      valorCreditoGerado: sanitizeMoney(
-        pagamentoExistente.valor_credito_cliente
-      ),
+      valorCreditoGerado: sanitizeMoney(pagamentoExistente.valor_credito_cliente),
       creditoClienteUsado: 0,
+      valorTroco: sanitizeMoney(pagamentoExistente.valor_troco),
       idempotentReplay: true,
     };
   }
@@ -293,6 +310,19 @@ export async function adicionarPagamento(params: {
 
   if (resumoAntesDoPagamento.faltaReceber <= 0) {
     throw new CaixaInputError("Esta comanda ja esta quitada.");
+  }
+
+  const excedentePrevisto = sanitizeMoney(
+    Math.max(valorFinalCobrado - resumoAntesDoPagamento.faltaReceber, 0)
+  );
+  if (
+    excedentePrevisto > 0 &&
+    destinoExcedente !== "troco" &&
+    destinoExcedente !== "credito_cliente"
+  ) {
+    throw new CaixaInputError(
+      "Pagamento acima do total precisa informar se o excedente e troco ou credito da cliente."
+    );
   }
 
   const pagamentoPayload = {
@@ -341,11 +371,10 @@ export async function adicionarPagamento(params: {
   const jaExistia = Boolean(resultRow?.ja_existia);
 
   let valorCreditoGerado = 0;
+  let valorTroco = 0;
   if (destinoExcedente === "credito_cliente") {
     const resumoComanda = resumoAntesDoPagamento;
-    const excedente = sanitizeMoney(
-      Math.max(valorFinalCobrado - Number(resumoComanda?.faltaReceber || 0), 0)
-    );
+    const excedente = excedentePrevisto;
 
     if (!resumoComanda?.idCliente) {
       throw new CaixaInputError(
@@ -376,6 +405,54 @@ export async function adicionarPagamento(params: {
 
     if (creditoError) throw creditoError;
     valorCreditoGerado = excedente;
+    const { error: pagamentoCreditoUpdateError } = await ctx.supabaseAdmin
+      .from("comanda_pagamentos")
+      .update({ destino_excedente: "credito_cliente" })
+      .eq("id", idPagamento)
+      .eq("id_comanda", idComanda)
+      .eq("id_salao", ctx.idSalao);
+
+    if (pagamentoCreditoUpdateError) throw pagamentoCreditoUpdateError;
+  } else if (destinoExcedente === "troco") {
+    const excedente = excedentePrevisto;
+
+    if (excedente <= 0) {
+      throw new CaixaInputError("Nao existe excedente para registrar como troco.");
+    }
+
+    if (!idPagamento) {
+      throw new Error("Pagamento sem identificador para registrar o troco.");
+    }
+
+    valorTroco = excedente;
+    const valorLiquidoCaixa = sanitizeMoney(valorFinalCobrado - excedente);
+
+    const { error: pagamentoUpdateError } = await ctx.supabaseAdmin
+      .from("comanda_pagamentos")
+      .update({
+        valor_troco: valorTroco,
+        destino_excedente: "troco",
+      })
+      .eq("id", idPagamento)
+      .eq("id_comanda", idComanda)
+      .eq("id_salao", ctx.idSalao);
+
+    if (pagamentoUpdateError) throw pagamentoUpdateError;
+
+    if (idMovimentacao) {
+      const { error: movimentoUpdateError } = await ctx.supabaseAdmin
+        .from("caixa_movimentacoes")
+        .update({
+          valor: valorLiquidoCaixa,
+          descricao: `${observacoes || "Pagamento da comanda"} | Cliente pagou ${valorFinalCobrado.toFixed(
+            2
+          )}; troco ${valorTroco.toFixed(2)}.`,
+        })
+        .eq("id", idMovimentacao)
+        .eq("id_salao", ctx.idSalao);
+
+      if (movimentoUpdateError) throw movimentoUpdateError;
+    }
   }
 
   await registrarLogSistema({
@@ -398,6 +475,7 @@ export async function adicionarPagamento(params: {
       taxa_percentual: taxaPercentual,
       taxa_valor: taxaValor,
       destino_excedente: destinoExcedente,
+      valor_troco: valorTroco,
       valor_credito_gerado: valorCreditoGerado,
       idempotency_key: idempotencyKey,
       ja_existia: jaExistia,
@@ -412,6 +490,7 @@ export async function adicionarPagamento(params: {
     taxaValor,
     valorFinalCobrado,
     valorCreditoGerado,
+    valorTroco,
     creditoClienteUsado: 0,
     idempotentReplay: jaExistia,
   };
@@ -431,7 +510,7 @@ export async function removerPagamento(params: {
 
   const { data: pagamento, error: pagamentoError } = await ctx.supabaseAdmin
     .from("comanda_pagamentos")
-    .select("id, forma_pagamento, valor_credito_cliente")
+    .select("id, forma_pagamento, valor_credito_cliente, valor_troco")
     .eq("id", idPagamento)
     .eq("id_comanda", idComanda)
     .eq("id_salao", ctx.idSalao)
@@ -494,6 +573,7 @@ export async function removerPagamento(params: {
       id_pagamento: idPagamento,
       forma_pagamento: pagamentoRow.forma_pagamento,
       valor_credito_cliente: Number(pagamentoRow.valor_credito_cliente || 0),
+      valor_troco: Number(pagamentoRow.valor_troco || 0),
     },
   });
 

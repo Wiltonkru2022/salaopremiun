@@ -1959,6 +1959,7 @@ export type Database = {
       comanda_pagamentos: {
         Row: {
           created_at: string
+          destino_excedente: string | null
           forma_pagamento: string
           id: string
           id_comanda: string
@@ -1972,9 +1973,12 @@ export type Database = {
           taxa_maquininha_percentual: number | null
           taxa_maquininha_valor: number | null
           valor: number
+          valor_credito_cliente: number
+          valor_troco: number
         }
         Insert: {
           created_at?: string
+          destino_excedente?: string | null
           forma_pagamento: string
           id?: string
           id_comanda: string
@@ -1988,9 +1992,12 @@ export type Database = {
           taxa_maquininha_percentual?: number | null
           taxa_maquininha_valor?: number | null
           valor?: number
+          valor_credito_cliente?: number
+          valor_troco?: number
         }
         Update: {
           created_at?: string
+          destino_excedente?: string | null
           forma_pagamento?: string
           id?: string
           id_comanda?: string
@@ -2004,6 +2011,8 @@ export type Database = {
           taxa_maquininha_percentual?: number | null
           taxa_maquininha_valor?: number | null
           valor?: number
+          valor_credito_cliente?: number
+          valor_troco?: number
         }
         Relationships: [
           {

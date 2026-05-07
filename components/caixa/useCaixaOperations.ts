@@ -503,6 +503,14 @@ export function useCaixaOperations({
                 style: "currency",
                 currency: "BRL",
               })} ficou salvo como crédito da cliente.`
+            : result.valorTroco && Number(result.valorTroco) > 0
+            ? `Pagamento adicionado e ${Number(result.valorTroco).toLocaleString(
+                "pt-BR",
+                {
+                  style: "currency",
+                  currency: "BRL",
+                }
+              )} registrado como troco.`
             : result.repassaTaxaCliente && Number(result.taxaValor || 0) > 0
               ? `Pagamento adicionado com taxa repassada ao cliente (${Number(
                   result.taxaValor || 0

@@ -153,8 +153,7 @@ export default function CaixaPagamentos({
     if (
       formaPagamento !== "credito_cliente" &&
       valorBaseDigitado > faltaReceber &&
-      faltaReceber > 0 &&
-      comandaSelecionada?.id_cliente
+      faltaReceber > 0
     ) {
       setConfirmarExcedenteOpen(true);
       return;
@@ -235,6 +234,14 @@ export default function CaixaPagamentos({
                         <Wallet size={12} />
                         Crédito gerado:{" "}
                         {formatCurrency(Number(pagamento.valor_credito_cliente || 0))}
+                      </div>
+                    ) : null}
+
+                    {Number(pagamento.valor_troco || 0) > 0 ? (
+                      <div className="mt-1.5 inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+                        <Wallet size={12} />
+                        Troco registrado:{" "}
+                        {formatCurrency(Number(pagamento.valor_troco || 0))}
                       </div>
                     ) : null}
 

@@ -49,6 +49,9 @@ type PagamentoRow = {
   id_comanda: string;
   forma_pagamento: string;
   valor: number | null;
+  valor_credito_cliente?: number | null;
+  valor_troco?: number | null;
+  destino_excedente?: string | null;
   parcelas?: number | null;
   taxa_maquininha_percentual?: number | null;
   taxa_maquininha_valor?: number | null;
@@ -109,6 +112,10 @@ type ResumoFinanceiro = {
   acrescimos: number;
   faturamentoLiquido: number;
   recebido: number;
+  recebidoBruto: number;
+  creditoGerado: number;
+  troco: number;
+  divergenciaRecebimento: number;
   taxaMaquininha: number;
   comissaoPendente: number;
   comissaoPaga: number;
@@ -480,6 +487,9 @@ export default function RelatorioFinanceiroPage() {
               id_comanda,
               forma_pagamento,
               valor,
+              valor_credito_cliente,
+              valor_troco,
+              destino_excedente,
               parcelas,
               taxa_maquininha_percentual,
               taxa_maquininha_valor,
@@ -624,6 +634,14 @@ export default function RelatorioFinanceiroPage() {
     [comandasFiltradas]
   );
 
+  const idsComandasFechadasFiltradas = useMemo(
+    () =>
+      comandasFiltradas
+        .filter((item) => item.status === "fechada")
+        .map((item) => item.id),
+    [comandasFiltradas]
+  );
+
   const pagamentosFiltrados = useMemo(() => {
     return pagamentos.filter((item) => idsComandasFiltradas.includes(item.id_comanda));
   }, [pagamentos, idsComandasFiltradas]);
@@ -639,14 +657,14 @@ export default function RelatorioFinanceiroPage() {
 
   const itensComandaFiltrados = useMemo(() => {
     return itensComanda.filter((item) => {
-      const matchesComanda = idsComandasFiltradas.includes(item.id_comanda);
+      const matchesComanda = idsComandasFechadasFiltradas.includes(item.id_comanda);
       const matchesProfissional =
         !profissionalFiltro ||
         item.id_profissional === profissionalFiltro ||
         item.id_assistente === profissionalFiltro;
       return matchesComanda && matchesProfissional;
     });
-  }, [itensComanda, idsComandasFiltradas, profissionalFiltro]);
+  }, [itensComanda, idsComandasFechadasFiltradas, profissionalFiltro]);
 
   const profissionalSelecionado = useMemo(
     () => profissionais.find((item) => item.id === profissionalFiltro) || null,
@@ -670,7 +688,29 @@ export default function RelatorioFinanceiroPage() {
       .filter((item) => item.status === "fechada")
       .reduce((acc, item) => acc + Number(item.total || 0), 0);
 
-    const recebido = pagamentosFiltrados.reduce((acc, item) => acc + Number(item.valor || 0), 0);
+    const recebidoBruto = pagamentosFiltrados.reduce(
+      (acc, item) => acc + Number(item.valor || 0),
+      0
+    );
+    const creditoGerado = pagamentosFiltrados.reduce(
+      (acc, item) => acc + Number(item.valor_credito_cliente || 0),
+      0
+    );
+    const troco = pagamentosFiltrados.reduce(
+      (acc, item) => acc + Number(item.valor_troco || 0),
+      0
+    );
+    const recebido = pagamentosFiltrados.reduce(
+      (acc, item) =>
+        acc +
+        Math.max(
+          Number(item.valor || 0) -
+            Number(item.valor_credito_cliente || 0) -
+            Number(item.valor_troco || 0),
+          0
+        ),
+      0
+    );
 
     const taxaMaquininha = pagamentosFiltrados.reduce(
       (acc, item) => acc + Number(item.taxa_maquininha_valor || 0),
@@ -705,6 +745,10 @@ export default function RelatorioFinanceiroPage() {
       acrescimos,
       faturamentoLiquido,
       recebido,
+      recebidoBruto,
+      creditoGerado,
+      troco,
+      divergenciaRecebimento: recebido - faturamentoLiquido,
       taxaMaquininha,
       comissaoPendente,
       comissaoPaga,
@@ -723,18 +767,42 @@ export default function RelatorioFinanceiroPage() {
   ]);
 
   const pagamentosPorForma = useMemo(() => {
-    const mapa = new Map<string, { forma: string; total: number; taxa: number; qtd: number }>();
+    const mapa = new Map<
+      string,
+      {
+        forma: string;
+        total: number;
+        bruto: number;
+        creditoGerado: number;
+        troco: number;
+        taxa: number;
+        qtd: number;
+      }
+    >();
 
     pagamentosFiltrados.forEach((item) => {
       const chave = item.forma_pagamento || "outro";
       const atual = mapa.get(chave) || {
         forma: chave,
         total: 0,
+        bruto: 0,
+        creditoGerado: 0,
+        troco: 0,
         taxa: 0,
         qtd: 0,
       };
 
-      atual.total += Number(item.valor || 0);
+      const bruto = Number(item.valor || 0);
+      const creditoGerado = Number(item.valor_credito_cliente || 0);
+      const troco = Number(item.valor_troco || 0);
+
+      atual.total += Math.max(
+        bruto - creditoGerado - troco,
+        0
+      );
+      atual.bruto += bruto;
+      atual.creditoGerado += creditoGerado;
+      atual.troco += troco;
       atual.taxa += Number(item.taxa_maquininha_valor || 0);
       atual.qtd += 1;
 
@@ -1009,6 +1077,9 @@ export default function RelatorioFinanceiroPage() {
                 <tr>
                   <td>${escapeHtml(formatFormaPagamentoLabel(item.forma))}</td>
                   <td>${escapeHtml(String(item.qtd))}</td>
+                  <td>${escapeHtml(formatCurrency(item.bruto))}</td>
+                  <td>${escapeHtml(formatCurrency(item.troco))}</td>
+                  <td>${escapeHtml(formatCurrency(item.creditoGerado))}</td>
                   <td>${escapeHtml(formatCurrency(item.taxa))}</td>
                   <td>${escapeHtml(formatCurrency(item.total))}</td>
                 </tr>
@@ -1017,7 +1088,7 @@ export default function RelatorioFinanceiroPage() {
             .join("")
         : `
           <tr>
-            <td colspan="4" class="empty">Nenhum pagamento encontrado.</td>
+            <td colspan="7" class="empty">Nenhum pagamento encontrado.</td>
           </tr>
         `;
 
@@ -1123,15 +1194,18 @@ export default function RelatorioFinanceiroPage() {
           <section class="report-card">
             <div class="section-head">
               <h2>Pagamentos por forma</h2>
-              <p>Total recebido agrupado por forma de pagamento.</p>
+              <p>Valor bruto, troco, crédito gerado e total aplicado nas vendas.</p>
             </div>
             <table>
               <thead>
                 <tr>
                   <th>Forma</th>
                   <th>Pagamentos</th>
+                  <th>Bruto</th>
+                  <th>Troco</th>
+                  <th>Crédito</th>
                   <th>Taxa</th>
-                  <th>Total</th>
+                  <th>Aplicado</th>
                 </tr>
               </thead>
               <tbody>${pagamentosRows}</tbody>
@@ -1725,8 +1799,9 @@ export default function RelatorioFinanceiroPage() {
           />
           <KpiCard
             icon={<Wallet size={18} />}
-            label="Recebido"
+            label="Recebido aplicado"
             value={formatCurrency(resumo.recebido)}
+            helper={`Bruto: ${formatCurrency(resumo.recebidoBruto)}`}
           />
           <KpiCard
             icon={<CreditCard size={18} />}
@@ -1737,6 +1812,7 @@ export default function RelatorioFinanceiroPage() {
             icon={<Receipt size={18} />}
             label="Custo dos itens"
             value={formatCurrency(resumo.custoItens)}
+            helper="Somente comandas fechadas"
           />
           </div>
 
@@ -1762,6 +1838,33 @@ export default function RelatorioFinanceiroPage() {
             icon={<Receipt size={18} />}
             label="Quantidade de vendas"
             value={String(resumo.quantidadeVendas)}
+          />
+          </div>
+
+          <div className="grid grid-cols-1 gap-3 xl:grid-cols-4">
+          <KpiCard
+            icon={<Wallet size={18} />}
+            label="Troco registrado"
+            value={formatCurrency(resumo.troco)}
+            helper="Excedente devolvido ao cliente"
+          />
+          <KpiCard
+            icon={<Wallet size={18} />}
+            label="Crédito gerado"
+            value={formatCurrency(resumo.creditoGerado)}
+            helper="Excedente guardado para cliente"
+          />
+          <KpiCard
+            icon={<ShieldAlert size={18} />}
+            label="Diferença recebimento"
+            value={formatCurrency(resumo.divergenciaRecebimento)}
+            helper="Aplicado na venda - faturamento líquido"
+          />
+          <KpiCard
+            icon={<Receipt size={18} />}
+            label="Regra do lucro"
+            value="Fechadas"
+            helper="Canceladas não geram lucro"
           />
           </div>
         </section>
@@ -2013,7 +2116,7 @@ export default function RelatorioFinanceiroPage() {
               <div className="border-b border-zinc-200 px-5 py-4">
                 <div className="text-lg font-bold text-zinc-900">Pagamentos por forma</div>
                 <div className="mt-1 text-sm text-zinc-500">
-                  Total recebido agrupado por forma de pagamento.
+                  Total aplicado nas vendas, já separando troco e crédito gerado.
                 </div>
               </div>
 
@@ -2021,13 +2124,27 @@ export default function RelatorioFinanceiroPage() {
                 {pagamentosPorForma.map((item) => (
                   <div key={item.forma} className="flex items-center justify-between px-5 py-4">
                     <div>
-                      <div className="font-semibold capitalize text-zinc-900">{item.forma}</div>
+                      <div className="font-semibold text-zinc-900">
+                        {formatFormaPagamentoLabel(item.forma)}
+                      </div>
                       <div className="text-xs text-zinc-500">
-                        {item.qtd} pagamento(s) • Taxa: {formatCurrency(item.taxa)}
+                        {item.qtd} pagamento(s) • Bruto: {formatCurrency(item.bruto)}
+                      </div>
+                      <div className="mt-1 text-xs text-zinc-500">
+                        Troco: {formatCurrency(item.troco)} • Crédito:{" "}
+                        {formatCurrency(item.creditoGerado)} • Taxa:{" "}
+                        {formatCurrency(item.taxa)}
                       </div>
                     </div>
 
-                    <div className="text-sm font-bold text-zinc-900">{formatCurrency(item.total)}</div>
+                    <div className="text-right">
+                      <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-400">
+                        Aplicado
+                      </div>
+                      <div className="text-sm font-bold text-zinc-900">
+                        {formatCurrency(item.total)}
+                      </div>
+                    </div>
                   </div>
                 ))}
 
