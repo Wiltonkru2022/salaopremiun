@@ -39,6 +39,7 @@ import { getErrorMessage } from "@/lib/get-error-message";
 import { getAssinaturaUrl } from "@/lib/site-urls";
 import {
   Ban,
+  CalendarClock,
   CalendarPlus,
   CheckCircle2,
   ClipboardList,
@@ -1201,6 +1202,13 @@ export default function AgendaPage() {
                   ...(canEdit
                     ? [
                         {
+                          label: "Reagendar cliente",
+                          description:
+                            "Abre o atendimento no painel lateral para trocar data e horario.",
+                          icon: CalendarClock,
+                          onClick: () => openEditModal(item),
+                        },
+                        {
                           label: "Editar agendamento",
                           description:
                             "Abra o formulario completo e ajuste servico, horario e observacoes.",
@@ -1465,4 +1473,3 @@ function ReasonSidebarPanel({
     </div>
   );
 }
-

@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { requireClienteAppContext } from "@/lib/client-context.server";
 import {
   cancelClienteAppAppointment,
+  rescheduleClienteAppAppointment,
   reviewClienteAppAppointment,
 } from "@/app/services/cliente-app/appointments";
 
@@ -34,6 +35,30 @@ export async function cancelClienteAppointmentAction(
 
   revalidatePath("/app-cliente/agendamentos");
   redirect(buildReturnUrl("cancelado"));
+}
+
+export async function rescheduleClienteAppointmentAction(
+  _prevState: ClienteAppointmentActionState,
+  formData: FormData
+): Promise<ClienteAppointmentActionState> {
+  const session = await requireClienteAppContext();
+  const idAgendamento = String(formData.get("agendamento") || "").trim();
+  const data = String(formData.get("data") || "").trim();
+  const horaInicio = String(formData.get("hora_inicio") || "").trim();
+
+  const result = await rescheduleClienteAppAppointment({
+    idConta: session.idConta,
+    idAgendamento,
+    data,
+    horaInicio,
+  });
+
+  if (!result.ok) {
+    return { error: result.error };
+  }
+
+  revalidatePath("/app-cliente/agendamentos");
+  redirect(buildReturnUrl("reagendado"));
 }
 
 export async function reviewClienteAppointmentAction(

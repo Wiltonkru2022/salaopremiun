@@ -5,6 +5,7 @@ import {
   sendPushToRows,
   type PushAudience,
 } from "@/lib/push-notifications";
+import { loadSalonNotificationSettings } from "@/lib/salon-notification-settings";
 
 type NotificationChannel = "cliente_app" | "profissional_app" | "salao_painel";
 type NotificationStatus = "pendente" | "processando" | "enviada" | "falhou" | "cancelada";
@@ -65,10 +66,47 @@ function sanitizeText(value: string, fallback: string) {
   return String(value || "").trim() || fallback;
 }
 
+async function isNotificationTypeEnabled(params: {
+  idSalao?: string | null;
+  tipo: string;
+}) {
+  if (!params.idSalao) return true;
+
+  try {
+    const settings = await loadSalonNotificationSettings(params.idSalao);
+    const tipo = String(params.tipo || "").toLowerCase();
+
+    if (tipo === "agendamento_confirmado_cliente") return settings.clienteAgendamentoConfirmado;
+    if (tipo === "lembrete_30min_cliente") return settings.clienteLembrete30min;
+    if (tipo === "atendimento_finalizado_cliente") return settings.clienteAtendimentoFinalizado;
+    if (tipo === "avaliar_atendimento") return settings.clienteAvaliarAtendimento;
+    if (tipo === "reagendamento_cliente") return settings.clienteReagendamento;
+    if (tipo === "cancelamento_cliente") return settings.clienteCancelamento;
+    if (tipo === "lembrete_30min_profissional") return settings.profissionalLembrete30min;
+    if (tipo === "atendimento_finalizado_profissional") return settings.profissionalAtendimentoFinalizado;
+    if (tipo === "reagendamento_profissional") return settings.profissionalReagendamento;
+    if (tipo === "cancelamento_profissional") return settings.profissionalCancelamento;
+    if (tipo === "novo_agendamento_app_salao") return settings.salaoNovoAgendamentoApp;
+    if (tipo === "cancelamento_cliente_salao") return settings.salaoCancelamentoCliente;
+    if (tipo === "reagendamento_cliente_salao") return settings.salaoReagendamentoCliente;
+    if (tipo === "avaliacao_ruim" || tipo === "avaliacao_recebida") return settings.salaoAvaliacoes;
+
+    return true;
+  } catch {
+    return true;
+  }
+}
+
 export async function queueNotificationJob(params: QueueNotificationJobParams) {
   const supabase = getSupabaseAdmin();
   const idempotencyKey = sanitizeText(params.idempotencyKey, "");
   if (!idempotencyKey) return { ok: false as const, error: "Chave da notificacao ausente." };
+
+  const enabled = await isNotificationTypeEnabled({
+    idSalao: params.idSalao,
+    tipo: params.tipo,
+  });
+  if (!enabled) return { ok: true as const, skipped: true as const };
 
   const { error } = await (supabase as any)
     .from("notification_jobs")
@@ -304,7 +342,9 @@ export async function scheduleAppointmentReminderNotifications(params: {
 
   const start = appointmentDateTime(agendamento.data, agendamento.hora_inicio);
   if (!start) return;
-  const enviarEm = addMinutes(start, -30);
+  const settings = await loadSalonNotificationSettings(params.idSalao);
+  const minutosAntes = settings.lembreteMinutosAntes || 30;
+  const enviarEm = addMinutes(start, -minutosAntes);
   if (enviarEm.getTime() <= Date.now()) return;
 
   const cliente = firstRelation(agendamento.clientes);
@@ -328,7 +368,7 @@ export async function scheduleAppointmentReminderNotifications(params: {
           canal: "profissional_app",
           tipo: "lembrete_30min_profissional",
           titulo: "Atendimento proximo",
-          mensagem: `Ola, ${profissionalNome}. Seu atendimento com ${clienteNome} (${servicoNome}) começa em 30 minutos, ${quando}.`,
+          mensagem: `Ola, ${profissionalNome}. Seu atendimento com ${clienteNome} (${servicoNome}) comeca em ${minutosAntes} minutos, ${quando}.`,
           url: `/app-profissional/agenda/${agendamento.id}`,
           tag: `lembrete-profissional-${agendamento.id}`,
           enviarEm,
@@ -343,7 +383,7 @@ export async function scheduleAppointmentReminderNotifications(params: {
           canal: "cliente_app",
           tipo: "lembrete_30min_cliente",
           titulo: "Seu horario esta chegando",
-          mensagem: `Cuidado com atrasos: seu atendimento e daqui 30 minutos. Organize-se para nao atrasar o profissional ${profissionalNome}.`,
+          mensagem: `Cuidado com atrasos: seu atendimento e daqui ${minutosAntes} minutos. Organize-se para nao atrasar o profissional ${profissionalNome}.`,
           url: "/app-cliente/agendamentos",
           tag: `lembrete-cliente-${agendamento.id}`,
           enviarEm,
@@ -351,6 +391,148 @@ export async function scheduleAppointmentReminderNotifications(params: {
         })
       : Promise.resolve(),
   ]);
+}
+
+export async function notifyAppointmentRescheduled(params: {
+  idAgendamento: string;
+  idSalao: string;
+  actor: "cliente" | "profissional" | "salao";
+  previousDate?: string | null;
+  previousTime?: string | null;
+}) {
+  const agendamento = await loadAppointmentContext(params.idAgendamento, params.idSalao);
+  if (!agendamento) return;
+
+  const cliente = firstRelation(agendamento.clientes);
+  const profissional = firstRelation(agendamento.profissionais);
+  const servico = firstRelation(agendamento.servicos);
+  const clienteNome = String(cliente?.nome || "Cliente").trim();
+  const profissionalNome =
+    String(profissional?.nome_exibicao || profissional?.nome || "profissional").trim();
+  const servicoNome = String(servico?.nome || "atendimento").trim();
+  const quando = formatAppointmentDate(agendamento.data, agendamento.hora_inicio);
+  const antes =
+    params.previousDate || params.previousTime
+      ? ` Antes estava em ${formatAppointmentDate(params.previousDate, params.previousTime)}.`
+      : "";
+  const clienteAppContaId = await findClienteAppContaId({
+    idSalao: params.idSalao,
+    idCliente: agendamento.cliente_id,
+  });
+  const currentKey = `${agendamento.data}:${String(agendamento.hora_inicio).slice(0, 5)}`;
+
+  await Promise.all([
+    clienteAppContaId
+      ? queueNotificationJob({
+          idSalao: params.idSalao,
+          idCliente: agendamento.cliente_id,
+          clienteAppContaId,
+          canal: "cliente_app",
+          tipo: "reagendamento_cliente",
+          titulo: "Horario reagendado",
+          mensagem: `${servicoNome} com ${profissionalNome} ficou para ${quando}.${antes}`,
+          url: "/app-cliente/agendamentos",
+          tag: `reagendamento-cliente-${agendamento.id}`,
+          idempotencyKey: `reagendamento:${agendamento.id}:cliente:${currentKey}`,
+        })
+      : Promise.resolve(),
+    agendamento.profissional_id
+      ? queueNotificationJob({
+          idSalao: params.idSalao,
+          idProfissional: agendamento.profissional_id,
+          canal: "profissional_app",
+          tipo: "reagendamento_profissional",
+          titulo: "Horario reagendado",
+          mensagem: `${clienteNome} esta remarcado para ${quando}.${antes}`,
+          url: `/app-profissional/agenda/${agendamento.id}`,
+          tag: `reagendamento-profissional-${agendamento.id}`,
+          idempotencyKey: `reagendamento:${agendamento.id}:profissional:${currentKey}`,
+        })
+      : Promise.resolve(),
+    queueNotificationJob({
+      idSalao: params.idSalao,
+      canal: "salao_painel",
+      tipo: params.actor === "cliente" ? "reagendamento_cliente_salao" : "reagendamento_salao",
+      titulo: params.actor === "cliente" ? "Cliente reagendou pelo app" : "Horario reagendado",
+      mensagem: `${clienteNome} agora esta marcado para ${quando}.${antes}`,
+      url: `/agenda?agendamento=${agendamento.id}`,
+      tag: `reagendamento-salao-${agendamento.id}`,
+      idempotencyKey: `reagendamento:${agendamento.id}:salao:${currentKey}`,
+    }),
+  ]);
+
+  await scheduleAppointmentReminderNotifications({
+    idAgendamento: params.idAgendamento,
+    idSalao: params.idSalao,
+  });
+  await processPendingNotificationJobs(20);
+}
+
+export async function notifyAppointmentCanceled(params: {
+  idSalao: string;
+  idAgendamento: string;
+  idCliente?: string | null;
+  idProfissional?: string | null;
+  clienteAppContaId?: string | null;
+  clienteNome?: string | null;
+  profissionalNome?: string | null;
+  servicoNome?: string | null;
+  data?: string | null;
+  horaInicio?: string | null;
+  actor: "cliente" | "profissional" | "salao";
+}) {
+  const quando = formatAppointmentDate(params.data, params.horaInicio);
+  const clienteNome = String(params.clienteNome || "Cliente").trim();
+  const profissionalNome = String(params.profissionalNome || "profissional").trim();
+  const servicoNome = String(params.servicoNome || "atendimento").trim();
+  const clienteAppContaId =
+    params.clienteAppContaId ||
+    (await findClienteAppContaId({
+      idSalao: params.idSalao,
+      idCliente: params.idCliente,
+    }));
+
+  await Promise.all([
+    params.actor !== "cliente" && clienteAppContaId
+      ? queueNotificationJob({
+          idSalao: params.idSalao,
+          idCliente: params.idCliente,
+          clienteAppContaId,
+          canal: "cliente_app",
+          tipo: "cancelamento_cliente",
+          titulo: "Horario cancelado",
+          mensagem: `${servicoNome} com ${profissionalNome} em ${quando} foi cancelado.`,
+          url: "/app-cliente/agendamentos",
+          tag: `cancelamento-cliente-${params.idAgendamento}`,
+          idempotencyKey: `cancelamento:${params.idAgendamento}:cliente`,
+        })
+      : Promise.resolve(),
+    params.idProfissional
+      ? queueNotificationJob({
+          idSalao: params.idSalao,
+          idProfissional: params.idProfissional,
+          canal: "profissional_app",
+          tipo: "cancelamento_profissional",
+          titulo: "Horario cancelado",
+          mensagem: `${clienteNome} cancelou ${servicoNome} de ${quando}. O horario foi liberado.`,
+          url: "/app-profissional/agenda",
+          tag: `cancelamento-profissional-${params.idAgendamento}`,
+          idempotencyKey: `cancelamento:${params.idAgendamento}:profissional`,
+        })
+      : Promise.resolve(),
+    queueNotificationJob({
+      idSalao: params.idSalao,
+      canal: "salao_painel",
+      tipo: params.actor === "cliente" ? "cancelamento_cliente_salao" : "cancelamento_salao",
+      titulo: params.actor === "cliente" ? "Cliente cancelou pelo app" : "Horario cancelado",
+      mensagem: `${clienteNome} cancelou ${servicoNome} de ${quando}. O horario ficou livre na agenda.`,
+      url: "/agenda",
+      tag: `cancelamento-salao-${params.idAgendamento}`,
+      idempotencyKey: `cancelamento:${params.idAgendamento}:salao`,
+    }),
+  ]);
+
+  await processPendingNotificationJobs(20);
 }
 
 export async function notifyAppointmentFinished(params: {

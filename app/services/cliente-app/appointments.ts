@@ -2,7 +2,11 @@ import { runAdminOperation } from "@/lib/supabase/admin-ops";
 import { cancelarAgendamentoComComanda } from "@/lib/agenda/cancelarAgendamentoComComanda";
 import { canSalonAppearInClientApp } from "@/lib/client-app/eligibility";
 import { notifySalonAboutClientBooking } from "@/lib/push-notifications";
-import { notifyReviewReceived } from "@/lib/notification-jobs";
+import {
+  notifyAppointmentCanceled,
+  notifyAppointmentRescheduled,
+  notifyReviewReceived,
+} from "@/lib/notification-jobs";
 import { ensureClienteContaVinculadaAoSalao } from "@/app/services/cliente-app/auth";
 import {
   ensureDiaFuncionamento,
@@ -44,6 +48,11 @@ type ClienteCancelParams = {
   idAgendamento: string;
 };
 
+type ClienteRescheduleParams = ClienteCancelParams & {
+  data: string;
+  horaInicio: string;
+};
+
 type ClienteReviewParams = {
   idConta: string;
   idAgendamento: string;
@@ -54,8 +63,16 @@ type ClienteReviewParams = {
 type ClienteAgendamentoOwnership = {
   idSalao: string;
   idCliente: string;
+  idProfissional: string | null;
+  idServico: string | null;
+  data: string | null;
+  horaInicio: string | null;
+  horaFim: string | null;
   status: string;
   idComanda: string | null;
+  clienteNome: string | null;
+  profissionalNome: string | null;
+  servicoNome: string | null;
 };
 
 export type ClienteAppAvailabilitySlot = {
@@ -158,8 +175,16 @@ function hasAppointmentConflictWithBuffer(params: {
   horaFim: string;
   agendamentos: Array<Record<string, unknown>>;
   bufferMinutes?: number;
+  ignoreAgendamentoId?: string | null;
 }) {
   return params.agendamentos.some((item) => {
+    if (
+      params.ignoreAgendamentoId &&
+      String(item.id || "") === params.ignoreAgendamentoId
+    ) {
+      return false;
+    }
+
     const expanded = expandAppointmentWindow({
       horaInicio: normalizeTimeString(String(item.hora_inicio || "")),
       horaFim: normalizeTimeString(String(item.hora_fim || "")),
@@ -288,6 +313,7 @@ function buildDisponibilidadeDia(params: {
   duracao: number;
   bloqueios: Array<Record<string, unknown>>;
   agendamentos: Array<Record<string, unknown>>;
+  ignoreAgendamentoId?: string | null;
 }) {
   if (!ensureDiaFuncionamento({ config: params.config, dateString: params.data })) {
     return [] as ClienteAppAvailabilitySlot[];
@@ -369,6 +395,7 @@ function buildDisponibilidadeDia(params: {
         horaFim,
         agendamentos: params.agendamentos,
         bufferMinutes: CLIENT_BOOKING_BUFFER_MINUTES,
+        ignoreAgendamentoId: params.ignoreAgendamentoId,
       });
     })
     .map((slot) => ({
@@ -419,7 +446,9 @@ async function loadOwnedAppointment(params: {
 }): Promise<ClienteAgendamentoOwnership | null> {
   const { data: agendamento, error } = await params.supabaseAdmin
     .from("agendamentos")
-    .select("id, id_salao, cliente_id, id_comanda, status")
+    .select(
+      "id, id_salao, cliente_id, profissional_id, servico_id, id_comanda, status, data, hora_inicio, hora_fim, clientes(nome), profissionais(nome, nome_exibicao), servicos(nome)"
+    )
     .eq("id", params.idAgendamento)
     .limit(1)
     .maybeSingle();
@@ -444,8 +473,34 @@ async function loadOwnedAppointment(params: {
   return {
     idSalao: String(agendamento.id_salao || ""),
     idCliente: String(agendamento.cliente_id || ""),
+    idProfissional: String(agendamento.profissional_id || "").trim() || null,
+    idServico: String(agendamento.servico_id || "").trim() || null,
+    data: String(agendamento.data || "").trim() || null,
+    horaInicio: String(agendamento.hora_inicio || "").trim() || null,
+    horaFim: String(agendamento.hora_fim || "").trim() || null,
     status: String(agendamento.status || "").trim() || "pendente",
     idComanda: String(agendamento.id_comanda || "").trim() || null,
+    clienteNome:
+      String(
+        Array.isArray(agendamento.clientes)
+          ? agendamento.clientes[0]?.nome
+          : agendamento.clientes?.nome || ""
+      ).trim() || null,
+    profissionalNome:
+      String(
+        Array.isArray(agendamento.profissionais)
+          ? agendamento.profissionais[0]?.nome_exibicao ||
+              agendamento.profissionais[0]?.nome
+          : agendamento.profissionais?.nome_exibicao ||
+              agendamento.profissionais?.nome ||
+              ""
+      ).trim() || null,
+    servicoNome:
+      String(
+        Array.isArray(agendamento.servicos)
+          ? agendamento.servicos[0]?.nome
+          : agendamento.servicos?.nome || ""
+      ).trim() || null,
   };
 }
 
@@ -678,6 +733,7 @@ export async function getClienteAppBookingAvailability(params: {
   idSalao: string;
   idServico: string;
   idProfissional: string;
+  ignoreAgendamentoId?: string | null;
 }): Promise<ClienteAppAvailabilityResult> {
   const idSalao = String(params.idSalao || "").trim();
   const idServico = String(params.idServico || "").trim();
@@ -787,6 +843,7 @@ export async function getClienteAppBookingAvailability(params: {
           duracao,
           bloqueios: bloqueiosByDate.get(dateString) || [],
           agendamentos: agendamentosByDate.get(dateString) || [],
+          ignoreAgendamentoId: params.ignoreAgendamentoId || null,
         });
 
         if (horarios.length) {
@@ -879,9 +936,230 @@ export async function cancelClienteAppAppointment(
         }
       }
 
+      try {
+        await notifyAppointmentCanceled({
+          idSalao: ownership.idSalao,
+          idAgendamento,
+          idCliente: ownership.idCliente,
+          idProfissional: ownership.idProfissional,
+          clienteNome: ownership.clienteNome,
+          profissionalNome: ownership.profissionalNome,
+          servicoNome: ownership.servicoNome,
+          data: ownership.data,
+          horaInicio: ownership.horaInicio,
+          actor: "cliente",
+        });
+      } catch {
+        // Cancelamento do cliente nao deve depender de push.
+      }
+
+      const { error: deleteError } = await supabaseAdmin
+        .from("agendamentos")
+        .delete()
+        .eq("id", idAgendamento)
+        .eq("id_salao", ownership.idSalao)
+        .eq("cliente_id", ownership.idCliente);
+
+      if (deleteError) {
+        return {
+          ok: false,
+          error: "O agendamento foi cancelado, mas nao foi possivel liberar a agenda agora.",
+        };
+      }
+
       return {
         ok: true,
         message: "Agendamento cancelado com sucesso.",
+      };
+    },
+  });
+}
+
+export async function rescheduleClienteAppAppointment(
+  params: ClienteRescheduleParams
+): Promise<ClienteAppActionResult> {
+  const idConta = String(params.idConta || "").trim();
+  const idAgendamento = String(params.idAgendamento || "").trim();
+  const data = normalizeDate(params.data);
+  const horaInicio = normalizeTimeString(params.horaInicio);
+
+  if (!idConta || !idAgendamento || !data || !horaInicio) {
+    return { ok: false, error: "Informe o novo dia e horario." };
+  }
+
+  if (isPastDateTime(data, horaInicio)) {
+    return { ok: false, error: "Escolha um horario futuro para reagendar." };
+  }
+
+  return runAdminOperation({
+    action: "cliente_app_reschedule_appointment",
+    actorId: idConta,
+    run: async (supabaseAdmin) => {
+      const ownership = await loadOwnedAppointment({
+        supabaseAdmin,
+        idConta,
+        idAgendamento,
+      });
+
+      if (!ownership) {
+        return { ok: false, error: "Agendamento nao encontrado." };
+      }
+
+      const status = ownership.status.toLowerCase();
+      if (status !== "confirmado" && status !== "pendente") {
+        return {
+          ok: false,
+          error: "Este agendamento nao pode mais ser reagendado pelo app.",
+        };
+      }
+
+      if (!ownership.idServico || !ownership.idProfissional) {
+        return {
+          ok: false,
+          error: "Nao foi possivel identificar servico e profissional.",
+        };
+      }
+
+      const bookingContext = await loadBookingBaseContext({
+        supabaseAdmin,
+        idSalao: ownership.idSalao,
+        idServico: ownership.idServico,
+        idProfissional: ownership.idProfissional,
+      });
+
+      if (!bookingContext.ok) return bookingContext;
+
+      const { config, profissional, duracao } = bookingContext;
+      const horaFim = addDurationToTime(horaInicio, duracao);
+
+      const range = validateAgendaTimeRange({
+        config,
+        profissionais: [profissional],
+        getProfessionalAutoBloqueiosFn: () => [],
+        profissionalId: profissional.id,
+        date: data,
+        horaInicio,
+        horaFim,
+      });
+
+      if (!range.ok) {
+        return { ok: false, error: range.message };
+      }
+
+      const [{ data: bloqueios, error: bloqueiosError }, { data: agendamentos, error: agendamentosError }] =
+        await Promise.all([
+          supabaseAdmin
+            .from("agenda_bloqueios")
+            .select("id, id_salao, profissional_id, data, hora_inicio, hora_fim, motivo")
+            .eq("id_salao", ownership.idSalao)
+            .eq("profissional_id", ownership.idProfissional)
+            .eq("data", data),
+          supabaseAdmin
+            .from("agendamentos")
+            .select("id, hora_inicio, hora_fim, status")
+            .eq("id_salao", ownership.idSalao)
+            .eq("profissional_id", ownership.idProfissional)
+            .eq("data", data)
+            .neq("status", "cancelado"),
+        ]);
+
+      if (bloqueiosError || agendamentosError) {
+        return {
+          ok: false,
+          error: "Nao foi possivel validar a disponibilidade desse horario.",
+        };
+      }
+
+      const autoBloqueios = mergeBloqueios(
+        buildPausasBloqueiosDoProfissional({
+          idSalao: ownership.idSalao,
+          profissionalId: ownership.idProfissional,
+          date: data,
+          pausas: profissional.pausas,
+        }),
+        buildForaExpedienteBloqueiosDoProfissional({
+          idSalao: ownership.idSalao,
+          profissionalId: ownership.idProfissional,
+          date: data,
+          agendaInicio: config.hora_abertura,
+          agendaFim: config.hora_fechamento,
+          diasTrabalho: profissional.dias_trabalho,
+        })
+      );
+
+      const conflitoBloqueio = mergeBloqueios(
+        ((bloqueios || []) as Array<Record<string, unknown>>).map((item) => ({
+          id: String(item.id || ""),
+          id_salao: String(item.id_salao || ownership.idSalao),
+          profissional_id: String(item.profissional_id || ownership.idProfissional),
+          data: String(item.data || data),
+          hora_inicio: normalizeTimeString(String(item.hora_inicio || "")),
+          hora_fim: normalizeTimeString(String(item.hora_fim || "")),
+          motivo: String(item.motivo || "").trim() || null,
+        })),
+        autoBloqueios
+      ).some((item) =>
+        overlaps(horaInicio, horaFim, item.hora_inicio, item.hora_fim)
+      );
+
+      if (conflitoBloqueio) {
+        return {
+          ok: false,
+          error: "Este horario esta bloqueado para o profissional escolhido.",
+        };
+      }
+
+      const conflitoAgendamento = hasAppointmentConflictWithBuffer({
+        horaInicio,
+        horaFim,
+        agendamentos: (agendamentos || []) as Array<Record<string, unknown>>,
+        bufferMinutes: CLIENT_BOOKING_BUFFER_MINUTES,
+        ignoreAgendamentoId: idAgendamento,
+      });
+
+      if (conflitoAgendamento) {
+        return {
+          ok: false,
+          error: "Este horario ja foi ocupado. Escolha outro horario.",
+        };
+      }
+
+      const { error: updateError } = await supabaseAdmin
+        .from("agendamentos")
+        .update({
+          data,
+          hora_inicio: horaInicio,
+          hora_fim: horaFim,
+          duracao_minutos: duracao,
+          status: "confirmado",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", idAgendamento)
+        .eq("id_salao", ownership.idSalao)
+        .eq("cliente_id", ownership.idCliente);
+
+      if (updateError) {
+        return {
+          ok: false,
+          error: "Nao foi possivel reagendar agora.",
+        };
+      }
+
+      try {
+        await notifyAppointmentRescheduled({
+          idAgendamento,
+          idSalao: ownership.idSalao,
+          actor: "cliente",
+          previousDate: ownership.data,
+          previousTime: ownership.horaInicio,
+        });
+      } catch {
+        // Reagendamento salvo mesmo se push falhar.
+      }
+
+      return {
+        ok: true,
+        message: "Agendamento reagendado com sucesso.",
       };
     },
   });

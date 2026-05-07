@@ -53,6 +53,8 @@ export type ClientAppSalonDetail = ClientAppEligibleSalon & {
 export type ClientAppAppointmentListItem = {
   id: string;
   idSalao: string;
+  idServico: string;
+  idProfissional: string;
   salaoNome: string;
   salaoWhatsapp: string | null;
   salaoTelefone: string | null;
@@ -594,7 +596,7 @@ export async function listClienteAppAppointments(params: { idConta: string }) {
     const { data, error } = await supabaseAdmin
       .from("agendamentos")
       .select(
-        "id, cliente_id, id_salao, data, hora_inicio, hora_fim, status, observacoes, servicos(nome), profissionais(nome, nome_exibicao)"
+        "id, cliente_id, id_salao, servico_id, profissional_id, data, hora_inicio, hora_fim, status, observacoes, servicos(nome), profissionais(nome, nome_exibicao)"
       )
       .in("cliente_id", clientesIds)
       .order("data", { ascending: false })
@@ -631,6 +633,8 @@ export async function listClienteAppAppointments(params: { idConta: string }) {
       return {
         id: String(item.id || ""),
         idSalao: salaoMeta?.idSalao || String(item.id_salao || "").trim(),
+        idServico: String(item.servico_id || "").trim(),
+        idProfissional: String(item.profissional_id || "").trim(),
         salaoNome: salaoMeta?.nome || "Salao Premium",
         salaoWhatsapp: salaoMeta?.whatsapp || null,
         salaoTelefone: salaoMeta?.telefone || null,

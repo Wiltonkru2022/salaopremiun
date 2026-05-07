@@ -1,5 +1,6 @@
 import "server-only";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { loadSalonNotificationSettings } from "@/lib/salon-notification-settings";
 
 export type PushAudience = "cliente_app" | "profissional_app" | "salao_painel";
 
@@ -230,6 +231,7 @@ export async function notifySalonAboutClientBooking(params: {
   horaInicio: string;
 }) {
   try {
+    const settings = await loadSalonNotificationSettings(params.idSalao);
     const supabase = getSupabaseAdmin();
     const [salaoResult, profissionalResult] = await Promise.all([
       (supabase as any)
@@ -252,7 +254,7 @@ export async function notifySalonAboutClientBooking(params: {
       params.horaInicio
     )}. Toque para revisar.`;
 
-    if (!salaoResult.error && salaoResult.data?.length) {
+    if (settings.salaoNovoAgendamentoApp && !salaoResult.error && salaoResult.data?.length) {
       await sendPushToRows(salaoResult.data as PushSubscriptionRow[], {
         title: "Pedido de horario recebido",
         body,
@@ -279,6 +281,9 @@ export async function notifyClientAppointmentConfirmed(params: {
   idSalao: string;
 }) {
   try {
+    const settings = await loadSalonNotificationSettings(params.idSalao);
+    if (!settings.clienteAgendamentoConfirmado) return;
+
     const supabase = getSupabaseAdmin();
     const { data: agendamento, error: appointmentError } = await (supabase as any)
       .from("agendamentos")

@@ -6,6 +6,7 @@ import clsx from "clsx";
 import {
   Building2,
   BadgeDollarSign,
+  BellRing,
   CalendarClock,
   ChevronDown,
   CreditCard,
@@ -299,6 +300,15 @@ export default function Header({
                     >
                       <CalendarClock size={16} />
                       Agenda e horarios
+                    </a>
+
+                    <a
+                      href={getRouteHref("/configuracoes/notificacoes")}
+                      onClick={() => setMenuOpen(false)}
+                      className="flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-semibold text-zinc-700 transition hover:bg-white"
+                    >
+                      <BellRing size={16} />
+                      Notificacoes e push
                     </a>
 
                     <a

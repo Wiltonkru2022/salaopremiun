@@ -5,7 +5,9 @@ import { redirect } from "next/navigation";
 import { getProfissionalSessionFromCookie } from "@/lib/profissional-auth.server";
 import { notifyClientAppointmentConfirmed } from "@/lib/push-notifications";
 import {
+  notifyAppointmentCanceled,
   notifyAppointmentFinished,
+  notifyAppointmentRescheduled,
   scheduleAppointmentReminderNotifications,
 } from "@/lib/notification-jobs";
 import { runAdminOperation } from "@/lib/supabase/admin-ops";
@@ -171,6 +173,18 @@ export async function atualizarAgendamentoProfissionalAction(
       },
     });
 
+    const previousDate = String(agendamento.data || "").slice(0, 10);
+    const previousTime = normalizeTime(String(agendamento.hora_inicio || ""));
+    if (previousDate !== data || previousTime !== horaInicio) {
+      await notifyAppointmentRescheduled({
+        idAgendamento,
+        idSalao: session.idSalao,
+        actor: "profissional",
+        previousDate,
+        previousTime,
+      });
+    }
+
     if (
       status === "confirmado" &&
       String(agendamento.status || "").toLowerCase() !== "confirmado"
@@ -311,7 +325,7 @@ export async function cancelarAgendamentoProfissionalAction(formData: FormData) 
 
   try {
     if (!idAgendamento) throw new Error("Agendamento invalido.");
-    await buscarAgendamentoPermitido({
+    const agendamento = await buscarAgendamentoPermitido({
       idSalao: session.idSalao,
       idProfissional: session.idProfissional,
       idAgendamento,
@@ -335,6 +349,16 @@ export async function cancelarAgendamentoProfissionalAction(formData: FormData) 
 
         if (error) throw new Error(error.message);
       },
+    });
+
+    await notifyAppointmentCanceled({
+      idSalao: session.idSalao,
+      idAgendamento,
+      idCliente: agendamento.cliente_id,
+      idProfissional: session.idProfissional,
+      data: agendamento.data,
+      horaInicio: agendamento.hora_inicio,
+      actor: "profissional",
     });
 
     revalidatePath("/app-profissional/agenda");

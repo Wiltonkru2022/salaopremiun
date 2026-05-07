@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CalendarDays, CircleDollarSign, Plus, Receipt } from "lucide-react";
+import { CalendarClock, CalendarDays, CircleDollarSign, Plus, Receipt } from "lucide-react";
 import AgendaDayStrip from "@/components/profissional/agenda/AgendaDayStrip";
 import ProfissionalShell from "@/components/profissional/layout/ProfissionalShell";
 import ProfissionalEmptyState from "@/components/profissional/ui/ProfissionalEmptyState";
@@ -152,6 +152,16 @@ export default async function AgendaProfissionalPage({
                       >
                         Ver detalhes
                       </Link>
+
+                      {["pendente", "confirmado"].includes(String(card.status || "").toLowerCase()) ? (
+                        <Link
+                          href={`/app-profissional/agenda/${card.id}#reagendar`}
+                          className="inline-flex h-8.5 items-center gap-2 rounded-full border border-zinc-200 bg-white px-3 text-xs font-bold text-zinc-700"
+                        >
+                          <CalendarClock size={14} />
+                          Reagendar
+                        </Link>
+                      ) : null}
 
                       {card.idComanda ? (
                         <Link

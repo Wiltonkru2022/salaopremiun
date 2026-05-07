@@ -4,6 +4,7 @@ import { useActionState, useMemo, useState } from "react";
 import { useFormStatus } from "react-dom";
 import {
   cancelClienteAppointmentAction,
+  rescheduleClienteAppointmentAction,
   reviewClienteAppointmentAction,
   type ClienteAppointmentActionState,
 } from "@/app/app-cliente/agendamentos/actions";
@@ -66,6 +67,17 @@ function ActionButton({
   );
 }
 
+type AvailabilitySlot = {
+  horaInicio: string;
+  horaFim: string;
+};
+
+type AvailabilityDay = {
+  data: string;
+  rotulo: string;
+  horarios: AvailabilitySlot[];
+};
+
 function CancelAppointmentForm({ idAgendamento }: { idAgendamento: string }) {
   const initialState: ClienteAppointmentActionState = { error: null };
   const [state, formAction] = useActionState<
@@ -87,6 +99,155 @@ function CancelAppointmentForm({ idAgendamento }: { idAgendamento: string }) {
         </div>
       ) : null}
     </form>
+  );
+}
+
+function RescheduleAppointmentForm({
+  item,
+}: {
+  item: ClientAppAppointmentListItem;
+}) {
+  const initialState: ClienteAppointmentActionState = { error: null };
+  const [state, formAction] = useActionState<
+    ClienteAppointmentActionState,
+    FormData
+  >(rescheduleClienteAppointmentAction, initialState);
+  const [open, setOpen] = useState(false);
+  const [dias, setDias] = useState<AvailabilityDay[]>([]);
+  const [selectedDate, setSelectedDate] = useState("");
+  const [selectedTime, setSelectedTime] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const horarios = useMemo(
+    () => dias.find((dia) => dia.data === selectedDate)?.horarios || [],
+    [dias, selectedDate]
+  );
+
+  async function loadAvailability() {
+    setOpen(true);
+    if (dias.length || loading) return;
+
+    try {
+      setLoading(true);
+      setError(null);
+      const params = new URLSearchParams({
+        salao: item.idSalao,
+        servico: item.idServico,
+        profissional: item.idProfissional,
+        ignorar: item.id,
+      });
+      const response = await fetch(`/api/app-cliente/disponibilidade?${params.toString()}`, {
+        method: "GET",
+        credentials: "same-origin",
+      });
+      const payload = await response.json();
+      if (!response.ok || !payload?.ok) {
+        throw new Error(payload?.error || "Nao foi possivel carregar horarios.");
+      }
+      const nextDias = Array.isArray(payload.dias) ? payload.dias as AvailabilityDay[] : [];
+      setDias(nextDias);
+      setSelectedDate(nextDias[0]?.data || "");
+      setSelectedTime(nextDias[0]?.horarios[0]?.horaInicio || "");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Nao foi possivel carregar horarios.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="space-y-3">
+      <button
+        type="button"
+        onClick={() => void loadAvailability()}
+        className="h-10 rounded-2xl bg-zinc-950 px-4 text-sm font-semibold text-white transition hover:opacity-95"
+      >
+        Reagendar
+      </button>
+
+      {open ? (
+        <form action={formAction} className="space-y-3 rounded-2xl border border-zinc-200 bg-white p-3">
+          <input type="hidden" name="agendamento" value={item.id} />
+          <input type="hidden" name="data" value={selectedDate} />
+          <input type="hidden" name="hora_inicio" value={selectedTime} />
+
+          {loading ? (
+            <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-500">
+              Buscando horarios livres...
+            </div>
+          ) : error ? (
+            <div className="rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+              {error}
+            </div>
+          ) : dias.length ? (
+            <>
+              <div>
+                <div className="mb-2 text-xs font-bold uppercase tracking-[0.12em] text-zinc-500">
+                  Novo dia
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {dias.map((dia) => (
+                    <button
+                      key={dia.data}
+                      type="button"
+                      onClick={() => {
+                        setSelectedDate(dia.data);
+                        setSelectedTime(dia.horarios[0]?.horaInicio || "");
+                      }}
+                      className={`rounded-2xl border px-3 py-2 text-sm font-semibold ${
+                        selectedDate === dia.data
+                          ? "border-zinc-950 bg-zinc-950 text-white"
+                          : "border-zinc-200 bg-zinc-50 text-zinc-700"
+                      }`}
+                    >
+                      {dia.rotulo}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <div className="mb-2 text-xs font-bold uppercase tracking-[0.12em] text-zinc-500">
+                  Novo horario
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {horarios.map((horario) => (
+                    <button
+                      key={`${selectedDate}-${horario.horaInicio}`}
+                      type="button"
+                      onClick={() => setSelectedTime(horario.horaInicio)}
+                      className={`rounded-2xl border px-3 py-2 text-sm font-semibold ${
+                        selectedTime === horario.horaInicio
+                          ? "border-zinc-950 bg-zinc-950 text-white"
+                          : "border-zinc-200 bg-zinc-50 text-zinc-700"
+                      }`}
+                    >
+                      {horario.horaInicio}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <ActionButton
+                idleLabel="Confirmar reagendamento"
+                pendingLabel="Reagendando..."
+              />
+            </>
+          ) : (
+            <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-500">
+              Sem horarios livres para esse atendimento.
+            </div>
+          )}
+
+          {state.error ? (
+            <div className="rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+              {state.error}
+            </div>
+          ) : null}
+        </form>
+      ) : null}
+    </div>
   );
 }
 
@@ -156,7 +317,10 @@ export default function ClientAppointmentsManager({
       return "Seu pedido foi enviado. O salao vai confirmar o horario.";
     }
     if (successKey === "cancelado") {
-      return "Seu agendamento foi cancelado.";
+      return "Seu agendamento foi cancelado e o horario foi liberado.";
+    }
+    if (successKey === "reagendado") {
+      return "Seu agendamento foi reagendado.";
     }
     if (successKey === "avaliado") {
       return "Sua avaliacao foi enviada.";
@@ -229,7 +393,10 @@ export default function ClientAppointmentsManager({
               ) : null}
 
               {item.podeCancelar ? (
-                <CancelAppointmentForm idAgendamento={item.id} />
+                <div className="space-y-3">
+                  <RescheduleAppointmentForm item={item} />
+                  <CancelAppointmentForm idAgendamento={item.id} />
+                </div>
               ) : null}
 
               {item.podeAvaliar ? (

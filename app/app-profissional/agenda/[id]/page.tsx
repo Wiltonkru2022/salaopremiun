@@ -1,6 +1,7 @@
 import Link from "next/link";
 import {
   ArrowLeft,
+  CalendarClock,
   Clock,
   Scissors,
   Trash2,
@@ -377,6 +378,22 @@ export default async function AgendamentoDetalheProfissionalPage({
             title="Editar atendimento"
             description="Ajuste horario, status e observacoes."
           />
+
+          {["pendente", "confirmado"].includes(String(status || "").toLowerCase()) ? (
+            <div
+              id="reagendar"
+              className="mb-3 flex items-start gap-3 rounded-[1.1rem] border border-zinc-200 bg-zinc-50 p-3.5 text-sm text-zinc-600"
+            >
+              <CalendarClock size={18} className="mt-0.5 shrink-0 text-zinc-900" />
+              <div>
+                <div className="font-bold text-zinc-950">Reagendar atendimento</div>
+                <div className="mt-1 leading-5">
+                  Troque a data ou a hora abaixo e salve. O cliente e o salao
+                  recebem aviso conforme a configuracao de notificacoes.
+                </div>
+              </div>
+            </div>
+          ) : null}
 
           <form action={atualizarAgendamentoProfissionalAction} className="space-y-2.5">
             <input type="hidden" name="id_agendamento" value={agendamento.id} />

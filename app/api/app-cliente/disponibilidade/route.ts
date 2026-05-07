@@ -9,11 +9,13 @@ export async function GET(request: Request) {
   const idSalao = String(searchParams.get("salao") || "").trim();
   const idServico = String(searchParams.get("servico") || "").trim();
   const idProfissional = String(searchParams.get("profissional") || "").trim();
+  const ignoreAgendamentoId = String(searchParams.get("ignorar") || "").trim() || null;
 
   const result = await getClienteAppBookingAvailability({
     idSalao,
     idServico,
     idProfissional,
+    ignoreAgendamentoId,
   });
 
   if (!result.ok) {
