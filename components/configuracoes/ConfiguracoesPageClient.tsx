@@ -1235,63 +1235,74 @@ export default function ConfiguracoesPageClient({
               </div>
             </ComissaoHelpPanel>
 
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-              <Field label="Taxa crédito (%)">
-                <div className="relative">
-                  <TextInput
-                    type="number"
-                    min={0}
-                    step="0.01"
-                    value={configForm.taxa_maquininha_credito}
-                    onChange={(e) =>
-                      setConfigForm((prev) => ({
-                        ...prev,
-                        taxa_maquininha_credito: parseNumber(e.target.value),
-                      }))
-                    }
-                    className="pl-11"
-                  />
-                  <Percent className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={16} />
+            <div className="mt-8 border-t border-zinc-100 pt-6">
+              <div className="mb-4">
+                <div className="text-sm font-black text-zinc-950">
+                  Taxas principais
                 </div>
-              </Field>
+                <p className="mt-1 text-sm leading-5 text-zinc-500">
+                  Informe as taxas gerais usadas no fechamento das vendas.
+                </p>
+              </div>
 
-              <Field label="Taxa débito (%)">
-                <div className="relative">
-                  <TextInput
-                    type="number"
-                    min={0}
-                    step="0.01"
-                    value={configForm.taxa_maquininha_debito}
-                    onChange={(e) =>
-                      setConfigForm((prev) => ({
-                        ...prev,
-                        taxa_maquininha_debito: parseNumber(e.target.value),
-                      }))
-                    }
-                    className="pl-11"
-                  />
-                  <Percent className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={16} />
-                </div>
-              </Field>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                <Field label="Taxa crédito (%)">
+                  <div className="relative">
+                    <TextInput
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      value={configForm.taxa_maquininha_credito}
+                      onChange={(e) =>
+                        setConfigForm((prev) => ({
+                          ...prev,
+                          taxa_maquininha_credito: parseNumber(e.target.value),
+                        }))
+                      }
+                      className="pl-11"
+                    />
+                    <Percent className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={16} />
+                  </div>
+                </Field>
 
-              <Field label="Taxa PIX (%)">
-                <div className="relative">
-                  <TextInput
-                    type="number"
-                    min={0}
-                    step="0.01"
-                    value={configForm.taxa_maquininha_pix}
-                    onChange={(e) =>
-                      setConfigForm((prev) => ({
-                        ...prev,
-                        taxa_maquininha_pix: parseNumber(e.target.value),
-                      }))
-                    }
-                    className="pl-11"
-                  />
-                  <Percent className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={16} />
-                </div>
-              </Field>
+                <Field label="Taxa débito (%)">
+                  <div className="relative">
+                    <TextInput
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      value={configForm.taxa_maquininha_debito}
+                      onChange={(e) =>
+                        setConfigForm((prev) => ({
+                          ...prev,
+                          taxa_maquininha_debito: parseNumber(e.target.value),
+                        }))
+                      }
+                      className="pl-11"
+                    />
+                    <Percent className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={16} />
+                  </div>
+                </Field>
+
+                <Field label="Taxa PIX (%)">
+                  <div className="relative">
+                    <TextInput
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      value={configForm.taxa_maquininha_pix}
+                      onChange={(e) =>
+                        setConfigForm((prev) => ({
+                          ...prev,
+                          taxa_maquininha_pix: parseNumber(e.target.value),
+                        }))
+                      }
+                      className="pl-11"
+                    />
+                    <Percent className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={16} />
+                  </div>
+                </Field>
+              </div>
             </div>
 
             <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-zinc-200 bg-zinc-50 p-4">
@@ -1410,16 +1421,27 @@ export default function ConfiguracoesPageClient({
               </div>
             </ComissaoHelpPanel>
 
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
-              {RATEIO_OPTIONS.map((option) => (
-                <Toggle
-                  key={option.key}
-                  checked={Boolean(configForm.rateio_config[option.key])}
-                  onChange={(checked) => setRateioOption(option.key, checked)}
-                  label={option.label}
-                  description={option.description}
-                />
-              ))}
+            <div className="mt-8 border-t border-zinc-100 pt-6">
+              <div className="mb-4">
+                <div className="text-sm font-black text-zinc-950">
+                  Campos da impressão
+                </div>
+                <p className="mt-1 text-sm leading-5 text-zinc-500">
+                  Ative apenas o que deve aparecer no documento entregue ao profissional.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+                {RATEIO_OPTIONS.map((option) => (
+                  <Toggle
+                    key={option.key}
+                    checked={Boolean(configForm.rateio_config[option.key])}
+                    onChange={(checked) => setRateioOption(option.key, checked)}
+                    label={option.label}
+                    description={option.description}
+                  />
+                ))}
+              </div>
             </div>
 
             <div className="mt-5 flex justify-end">

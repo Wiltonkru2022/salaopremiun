@@ -91,22 +91,22 @@ export function Toggle({
     <button
       type="button"
       onClick={() => onChange(!checked)}
-      className="flex w-full items-start justify-between gap-4 rounded-[22px] border border-zinc-200 bg-zinc-50 px-4 py-4 text-left transition hover:border-zinc-300 hover:bg-white"
+      className="flex w-full items-start justify-between gap-4 rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-left transition hover:border-zinc-300 hover:bg-white"
     >
-      <div>
+      <div className="min-w-0">
         <div className="text-sm font-semibold text-zinc-900">{label}</div>
         {description ? (
-          <div className="mt-1 text-xs text-zinc-500">{description}</div>
+          <div className="mt-1 text-xs leading-5 text-zinc-500">{description}</div>
         ) : null}
       </div>
 
       <div
-        className={`relative mt-0.5 h-7 w-12 rounded-full transition ${
+        className={`relative mt-0.5 h-6 w-11 shrink-0 rounded-full transition ${
           checked ? "bg-zinc-900" : "bg-zinc-300"
         }`}
       >
         <div
-          className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow transition ${
+          className={`absolute top-1 h-4 w-4 rounded-full bg-white shadow transition ${
             checked ? "left-6" : "left-1"
           }`}
         />
