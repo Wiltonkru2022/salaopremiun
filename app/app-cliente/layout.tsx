@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
+import ClientSessionKeepAlive from "@/components/client-app/ClientSessionKeepAlive";
 
 export const metadata: Metadata = {
   title: "SalaoPremium Cliente",
@@ -25,6 +26,7 @@ export default function AppClienteLayout({
 }) {
   return (
     <div className="app-cliente-root min-h-dvh bg-[#f7f7f5] text-zinc-900">
+      <ClientSessionKeepAlive />
       {children}
     </div>
   );

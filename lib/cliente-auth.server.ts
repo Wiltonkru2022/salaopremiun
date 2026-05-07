@@ -13,7 +13,7 @@ export type ClienteAppSession = {
 };
 
 const COOKIE_NAME = "sp_cliente_session";
-const SESSION_TTL_SECONDS = 60 * 60 * 24 * 30;
+const SESSION_TTL_SECONDS = 60 * 60 * 24 * 180;
 const ENC_ALGORITHM = "aes-256-gcm";
 const IV_LENGTH = 12;
 
