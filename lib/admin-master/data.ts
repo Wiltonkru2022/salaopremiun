@@ -61,6 +61,7 @@ export type AdminMasterDashboardData = {
   recentes: AdminTableRow[];
   cancelados: number;
   operational: AdminMasterOperationalSnapshot;
+  digitalizacao: AdminTableRow[];
 };
 
 type CountResult = {
@@ -99,6 +100,10 @@ function safeNumber(value: unknown) {
 
 function percent(value: number) {
   return `${value.toFixed(1).replace(".", ",")}%`;
+}
+
+function normalizePhoneForGrouping(value: unknown) {
+  return String(value || "").replace(/\D/g, "").trim();
 }
 
 function safeCount(result: CountResult) {
@@ -251,6 +256,9 @@ export async function getAdminMasterDashboard(): Promise<AdminMasterDashboardDat
     checkoutsFalhos,
     ticketsAbertos,
     alertasCriticos,
+    totalClientes,
+    clientesAppVinculados,
+    clientesParaDiagnostico,
     planos,
     recentes,
   ] = await Promise.all([
@@ -296,6 +304,17 @@ export async function getAdminMasterDashboard(): Promise<AdminMasterDashboardDat
       .select("id", { count: "exact", head: true })
       .eq("resolvido", false)
       .in("gravidade", ["alta", "critica"]),
+    supabase.from("clientes").select("id", { count: "exact", head: true }),
+    supabase
+      .from("clientes_auth")
+      .select("id", { count: "exact", head: true })
+      .eq("app_ativo", true)
+      .not("app_conta_id", "is", null),
+    supabase
+      .from("clientes")
+      .select("id_salao, nome, telefone, whatsapp")
+      .or("telefone.not.is.null,whatsapp.not.is.null")
+      .limit(2000),
     supabase
       .from("planos_saas")
       .select("codigo, nome, valor_mensal, destaque")
@@ -325,6 +344,46 @@ export async function getAdminMasterDashboard(): Promise<AdminMasterDashboardDat
       )
     )
     .reduce((acc, row) => acc + safeNumber(row.valor), 0);
+  const totalClientesCount = safeCount(totalClientes);
+  const clientesAppCount = safeCount(clientesAppVinculados);
+  const taxaDigitalizacao =
+    totalClientesCount > 0 ? (clientesAppCount / totalClientesCount) * 100 : 0;
+  const diagnosticoRows =
+    ((clientesParaDiagnostico.data || []) as Array<{
+      id_salao?: string | null;
+      nome?: string | null;
+      telefone?: string | null;
+      whatsapp?: string | null;
+    }>) || [];
+  const phoneGroups = new Map<
+    string,
+    { saloes: Set<string>; nomes: Set<string>; total: number }
+  >();
+
+  for (const row of diagnosticoRows) {
+    const telefone = normalizePhoneForGrouping(row.whatsapp || row.telefone);
+    if (telefone.length < 10) continue;
+    const current =
+      phoneGroups.get(telefone) ||
+      { saloes: new Set<string>(), nomes: new Set<string>(), total: 0 };
+    current.total += 1;
+    if (row.id_salao) current.saloes.add(row.id_salao);
+    const nome = String(row.nome || "").trim().toLowerCase();
+    if (nome) current.nomes.add(nome);
+    phoneGroups.set(telefone, current);
+  }
+
+  const digitalizacao = Array.from(phoneGroups.entries())
+    .filter(([, group]) => group.saloes.size > 1 && group.nomes.size > 1)
+    .sort((a, b) => b[1].total - a[1].total)
+    .slice(0, 8)
+    .map(([telefone, group]) => ({
+      telefone,
+      saloes: group.saloes.size,
+      nomes: group.nomes.size,
+      cadastros: group.total,
+      sinal: "Conferir nomes diferentes",
+    }));
 
   return {
     kpis: [
@@ -370,6 +429,12 @@ export async function getAdminMasterDashboard(): Promise<AdminMasterDashboardDat
         hint: "Operacao e webhooks",
         tone: "red",
       },
+      {
+        label: "Taxa de digitalizacao",
+        value: percent(taxaDigitalizacao),
+        hint: `${clientesAppCount} de ${totalClientesCount} clientes conectados ao app`,
+        tone: taxaDigitalizacao >= 35 ? "green" : "blue",
+      },
     ] satisfies AdminKpi[],
     planos: (planos.data || []) as AdminTableRow[],
     recentes: ((recentes.data || []) as {
@@ -391,6 +456,7 @@ export async function getAdminMasterDashboard(): Promise<AdminMasterDashboardDat
     })),
     cancelados,
     operational,
+    digitalizacao,
   };
 }
 

@@ -136,7 +136,7 @@ export default function ClientProfileForm({
           Encerrar conta
         </h2>
         <p className="mt-2 text-sm leading-6 text-red-800">
-          Isso desativa seu acesso global, cancela agendamentos futuros feitos
+          Isso desativa seu acesso ao app, cancela agendamentos futuros feitos
           por este app e remove sua sessao atual. O historico operacional do
           salao continua preservado.
         </p>

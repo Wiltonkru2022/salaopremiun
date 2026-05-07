@@ -59,7 +59,7 @@ export default function CadastroClienteForm({
         Crie sua conta no app cliente
       </h2>
       <p className="mt-2 text-sm leading-6 text-zinc-500">
-        Sua conta nasce global. Quando voce decidir agendar em um salao, o sistema vincula sua ficha por tras sem pedir novo cadastro.
+        Crie uma vez e use o mesmo acesso nos saloes publicados no app. Se seu telefone ja estiver cadastrado em algum salao, a ficha sera conectada automaticamente.
       </p>
 
       {salaoNome ? (

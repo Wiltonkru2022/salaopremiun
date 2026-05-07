@@ -3,6 +3,7 @@ import {
   clearClienteSession,
   createClienteSession,
 } from "@/lib/cliente-auth.server";
+import { syncClienteAppLinksByPhone } from "@/app/services/cliente-app/linking";
 
 type UpdateClienteProfileParams = {
   idConta: string;
@@ -51,13 +52,13 @@ export async function updateClienteAppProfile(
     run: async (supabaseAdmin) => {
       const { data: contaAtual, error: contaError } = await (supabaseAdmin as any)
         .from("clientes_app_auth")
-        .select("id, email")
+        .select("id, email, telefone")
         .eq("id", idConta)
         .limit(1)
         .maybeSingle();
 
       if (contaError || !contaAtual?.id) {
-        return { ok: false, error: "Nao foi possivel localizar sua conta global." };
+        return { ok: false, error: "Nao foi possivel localizar sua conta do app." };
       }
 
       if (email !== String(contaAtual.email || "").trim().toLowerCase()) {
@@ -79,7 +80,32 @@ export async function updateClienteAppProfile(
         if (duplicateRows?.length) {
           return {
             ok: false,
-            error: "Ja existe outra conta global com esse e-mail.",
+            error: "Ja existe outra conta do app com esse e-mail.",
+          };
+        }
+      }
+
+      if (telefone && telefone !== String(contaAtual.telefone || "").trim()) {
+        const { data: duplicatePhoneRows, error: duplicatePhoneError } =
+          await (supabaseAdmin as any)
+            .from("clientes_app_auth")
+            .select("id")
+            .eq("telefone", telefone)
+            .neq("id", idConta)
+            .limit(1);
+
+        if (duplicatePhoneError) {
+          return {
+            ok: false,
+            error: "Nao foi possivel validar seu novo telefone agora.",
+          };
+        }
+
+        if (duplicatePhoneRows?.length) {
+          return {
+            ok: false,
+            error:
+              "Ja existe outra conta do app com esse telefone. Use Recuperar acesso se esse numero for seu.",
           };
         }
       }
@@ -140,6 +166,8 @@ export async function updateClienteAppProfile(
             .eq("id_salao", idSalao),
         ]);
       }
+
+      await syncClienteAppLinksByPhone({ idConta });
 
       await createClienteSession({
         idConta,

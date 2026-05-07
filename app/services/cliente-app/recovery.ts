@@ -312,7 +312,7 @@ export async function resetClienteAppPasswordWithToken(
       if (error || !conta?.id || conta.ativo === false) {
         return {
           ok: false as const,
-          error: "Nao encontramos uma conta global ativa para este link.",
+          error: "Nao encontramos uma conta ativa do app para este link.",
         };
       }
 

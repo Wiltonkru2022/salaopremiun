@@ -9,6 +9,11 @@ import {
   canSalonAppearInClientApp,
   listEligibleSalonIdsByEmail,
 } from "@/lib/client-app/eligibility";
+import {
+  normalizeClienteAppEmail,
+  normalizeClienteAppPhone,
+  syncClienteAppLinksByPhone,
+} from "@/app/services/cliente-app/linking";
 
 type ClienteLoginResult =
   | {
@@ -30,11 +35,11 @@ type ClienteAppAccountRow = {
 };
 
 function normalizeEmail(value: string) {
-  return String(value || "").trim().toLowerCase();
+  return normalizeClienteAppEmail(value);
 }
 
 function normalizePhone(value: string) {
-  return String(value || "").replace(/\D/g, "").trim();
+  return normalizeClienteAppPhone(value);
 }
 
 function buildSessionFromAccount(
@@ -60,6 +65,24 @@ async function findGlobalAccountByEmail(supabaseAdmin: any, email: string) {
     .from("clientes_app_auth")
     .select("id, nome, email, telefone, senha_hash, ativo")
     .eq("email", email)
+    .limit(1)
+    .maybeSingle();
+
+  if (error || !data?.id) {
+    return null;
+  }
+
+  return data as ClienteAppAccountRow;
+}
+
+async function findGlobalAccountByPhone(supabaseAdmin: any, telefone: string) {
+  const normalizedPhone = normalizePhone(telefone);
+  if (!normalizedPhone) return null;
+
+  const { data, error } = await (supabaseAdmin as any)
+    .from("clientes_app_auth")
+    .select("id, nome, email, telefone, senha_hash, ativo")
+    .eq("telefone", normalizedPhone)
     .limit(1)
     .maybeSingle();
 
@@ -166,8 +189,16 @@ export async function ensureClienteContaVinculadaAoSalao(params: {
       const email = normalizeEmail(account.email || "");
       const telefone = normalizePhone(account.telefone || "");
 
-      const [{ data: authByEmailRows, error: authByEmailError }, { data: clientesByEmailRows, error: clienteByEmailError }] =
+      const [{ data: clienteByPhoneRows, error: clienteByPhoneError }, { data: authByEmailRows, error: authByEmailError }, { data: clientesByEmailRows, error: clienteByEmailError }] =
         await Promise.all([
+          telefone
+            ? supabaseAdmin
+                .from("clientes")
+                .select("id")
+                .eq("id_salao", idSalao)
+                .or(`telefone.eq.${telefone},whatsapp.eq.${telefone}`)
+                .limit(1)
+            : Promise.resolve({ data: [], error: null }),
           email
             ? supabaseAdmin
                 .from("clientes_auth")
@@ -186,38 +217,21 @@ export async function ensureClienteContaVinculadaAoSalao(params: {
             : Promise.resolve({ data: [], error: null }),
         ]);
 
-      if (authByEmailError || clienteByEmailError) {
+      if (clienteByPhoneError || authByEmailError || clienteByEmailError) {
         return {
           ok: false as const,
           error: "Nao foi possivel validar sua ficha neste salao agora.",
         };
       }
 
-      let idCliente = String(authByEmailRows?.[0]?.id_cliente || "").trim();
+      let idCliente = String(clienteByPhoneRows?.[0]?.id || "").trim();
+
+      if (!idCliente) {
+        idCliente = String(authByEmailRows?.[0]?.id_cliente || "").trim();
+      }
 
       if (!idCliente && clientesByEmailRows?.[0]?.id) {
         idCliente = String(clientesByEmailRows[0].id);
-      }
-
-      if (!idCliente && telefone) {
-        const { data: clienteByPhoneRows, error: clienteByPhoneError } =
-          await supabaseAdmin
-            .from("clientes")
-            .select("id")
-            .eq("id_salao", idSalao)
-            .or(`telefone.eq.${telefone},whatsapp.eq.${telefone}`)
-            .limit(1);
-
-        if (clienteByPhoneError) {
-          return {
-            ok: false as const,
-            error: "Nao foi possivel validar seu telefone neste salao agora.",
-          };
-        }
-
-        if (clienteByPhoneRows?.[0]?.id) {
-          idCliente = String(clienteByPhoneRows[0].id);
-        }
       }
 
       if (idCliente) {
@@ -267,8 +281,25 @@ export async function ensureClienteContaVinculadaAoSalao(params: {
         idCliente = String(createdCliente.id);
       }
 
+      const { data: authByClientRows, error: authByClientError } =
+        await supabaseAdmin
+          .from("clientes_auth")
+          .select("id")
+          .eq("id_salao", idSalao)
+          .eq("id_cliente", idCliente)
+          .limit(1);
+
+      if (authByClientError) {
+        return {
+          ok: false as const,
+          error: "Nao foi possivel ativar seu acesso neste salao.",
+        };
+      }
+
+      const authByClient = authByClientRows?.[0];
       const authByEmail = authByEmailRows?.[0];
-      if (authByEmail?.id) {
+      const authRowId = authByClient?.id || authByEmail?.id;
+      if (authRowId) {
         const { error: authUpdateError } = await supabaseAdmin
           .from("clientes_auth")
           .update({
@@ -279,7 +310,7 @@ export async function ensureClienteContaVinculadaAoSalao(params: {
             app_ativo: true,
             updated_at: new Date().toISOString(),
           })
-          .eq("id", authByEmail.id);
+          .eq("id", authRowId);
 
         if (authUpdateError) {
           return {
@@ -346,7 +377,19 @@ export async function createClienteAppAccount(params: {
       if (existing?.id) {
         return {
           ok: false,
-          error: "Ja existe uma conta global com este e-mail.",
+          error:
+            "Ja existe uma conta do app com este e-mail. Use Entrar ou Recuperar acesso.",
+        };
+      }
+
+      const existingPhone = telefone
+        ? await findGlobalAccountByPhone(supabaseAdmin, telefone)
+        : null;
+      if (existingPhone?.id) {
+        return {
+          ok: false,
+          error:
+            "Ja existe uma conta do app com este telefone. Use Recuperar acesso para receber um link seguro no e-mail cadastrado.",
         };
       }
 
@@ -366,14 +409,21 @@ export async function createClienteAppAccount(params: {
       if (error || !(data as { id?: string } | null)?.id) {
         return {
           ok: false,
-          error: "Nao foi possivel criar sua conta global agora.",
+          error: "Nao foi possivel criar sua conta do app agora.",
         };
       }
+
+      await syncClienteAppLinksByPhone({
+        idConta: String((data as { id: string }).id),
+      });
 
       return {
         ok: true,
         session: buildSessionFromAccount(
-          data as Pick<ClienteAppAccountRow, "id" | "nome" | "email" | "telefone">
+          data as Pick<
+            ClienteAppAccountRow,
+            "id" | "nome" | "email" | "telefone" | "senha_hash"
+          >
         ),
       };
     },
@@ -411,6 +461,8 @@ export async function loginClienteAppByEmailSenha(params: {
             .from("clientes_app_auth")
             .update({ ultimo_login_em: new Date().toISOString() })
             .eq("id", globalAccount.id);
+
+          await syncClienteAppLinksByPhone({ idConta: globalAccount.id });
 
           return {
             ok: true,
@@ -478,7 +530,7 @@ export async function loginClienteAppByEmailSenha(params: {
       if (!contaGlobal?.id) {
         return {
           ok: false,
-          error: "Nao foi possivel concluir a migracao da sua conta agora.",
+          error: "Nao foi possivel concluir a atualizacao da sua conta agora.",
         };
       }
 
@@ -508,6 +560,8 @@ export async function loginClienteAppByEmailSenha(params: {
           })
           .eq("id", contaGlobal.id),
       ]);
+
+      await syncClienteAppLinksByPhone({ idConta: contaGlobal.id });
 
       return {
         ok: true,

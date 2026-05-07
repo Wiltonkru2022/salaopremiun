@@ -25,6 +25,7 @@ type Cliente = {
   status?: string | null;
   ativo?: boolean | null;
   created_at?: string | null;
+  appStatus?: "conectado" | "pendente";
 };
 
 type Permissoes = Record<string, boolean>;
@@ -45,6 +46,9 @@ export default function ClientesPage() {
   const [statusFiltro, setStatusFiltro] = useState<
     "todos" | "ativo" | "inativo"
   >("todos");
+  const [appFiltro, setAppFiltro] = useState<"todos" | "conectados" | "pendentes">(
+    "todos"
+  );
   const [idSalao, setIdSalao] = useState("");
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [clientesPage, setClientesPage] = useState(0);
@@ -129,7 +133,33 @@ export default function ClientesPage() {
       if (error) throw error;
 
       const rows = ((data ?? []) as unknown as Cliente[]) || [];
-      setClientes((prev) => (append ? [...prev, ...rows] : rows));
+      const ids = rows.map((item) => item.id).filter(Boolean);
+      const { data: authRows } = ids.length
+        ? await supabase
+            .from("clientes_auth")
+            .select("id_cliente, app_conta_id, app_ativo")
+            .eq("id_salao", salaoId)
+            .in("id_cliente", ids)
+        : { data: [] };
+
+      const conectados = new Set(
+        ((authRows || []) as Array<{
+          id_cliente?: string | null;
+          app_conta_id?: string | null;
+          app_ativo?: boolean | null;
+        }>)
+          .filter((item) => item.app_conta_id && item.app_ativo !== false)
+          .map((item) => String(item.id_cliente || "").trim())
+          .filter(Boolean)
+      );
+      const rowsComStatus = rows.map((item) => ({
+        ...item,
+        appStatus: conectados.has(item.id)
+          ? ("conectado" as const)
+          : ("pendente" as const),
+      }));
+
+      setClientes((prev) => (append ? [...prev, ...rowsComStatus] : rowsComStatus));
       setClientesPage(page);
       setClientesHasMore(rows.length === CLIENTES_PAGE_SIZE);
     },
@@ -273,7 +303,17 @@ export default function ClientesPage() {
     }
   }
 
-  const listaFiltrada = useMemo(() => clientes, [clientes]);
+  const listaFiltrada = useMemo(() => {
+    if (appFiltro === "conectados") {
+      return clientes.filter((item) => item.appStatus === "conectado");
+    }
+
+    if (appFiltro === "pendentes") {
+      return clientes.filter((item) => item.appStatus !== "conectado");
+    }
+
+    return clientes;
+  }, [clientes, appFiltro]);
 
   const resumo = useMemo(() => {
     const ativos = listaFiltrada.filter(
@@ -281,6 +321,9 @@ export default function ClientesPage() {
     );
     const comWhatsapp = listaFiltrada.filter((item) => item.whatsapp);
     const comEmail = listaFiltrada.filter((item) => item.email);
+    const conectadosApp = listaFiltrada.filter(
+      (item) => item.appStatus === "conectado"
+    );
     const novos30dias = listaFiltrada.filter((item) => {
       if (!item.created_at) return false;
       const createdAt = new Date(item.created_at).getTime();
@@ -297,9 +340,24 @@ export default function ClientesPage() {
       ),
       comWhatsapp: comWhatsapp.length,
       comEmail: comEmail.length,
+      conectadosApp: conectadosApp.length,
       novos30dias: novos30dias.length,
     };
   }, [listaFiltrada]);
+
+  function buildConviteAppLink(cliente: Cliente) {
+    const telefone = String(cliente.whatsapp || cliente.telefone || "").replace(
+      /\D/g,
+      ""
+    );
+    if (!telefone) return "";
+
+    const nome = String(cliente.nome || "").trim() || "tudo bem";
+    const mensagem = `Oi, ${nome}! O salao agora usa o App Cliente do SalaoPremium. Crie seu acesso com este telefone para ver saloes e agendar online: https://salaopremiun.com.br/app-cliente/cadastro`;
+    return `https://wa.me/55${telefone.replace(/^55/, "")}?text=${encodeURIComponent(
+      mensagem
+    )}`;
+  }
 
   if (loading || !acessoCarregado) {
     return (
@@ -405,6 +463,12 @@ export default function ClientesPage() {
               icon={Mail}
             />
             <ResumoCard
+              title="No app cliente"
+              value={`${resumo.conectadosApp}`}
+              description="Clientes com conta conectada e prontos para recursos digitais"
+              icon={Users}
+            />
+            <ResumoCard
               title="Novas em 30 dias"
               value={`${resumo.novos30dias}`}
               description="Leitura rapida da base mais recente"
@@ -455,7 +519,7 @@ export default function ClientesPage() {
           ) : null}
 
           <section className="rounded-[22px] border border-zinc-200 bg-white p-3.5 shadow-sm">
-            <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1.6fr)_220px_220px]">
+            <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1.6fr)_190px_190px_220px]">
               <input
                 type="text"
                 placeholder="Buscar por nome, WhatsApp, e-mail, bairro ou profissao"
@@ -476,6 +540,20 @@ export default function ClientesPage() {
                 <option value="todos">Todos os status</option>
                 <option value="ativo">Apenas ativos</option>
                 <option value="inativo">Apenas inativos</option>
+              </select>
+
+              <select
+                value={appFiltro}
+                onChange={(e) =>
+                  setAppFiltro(
+                    e.target.value as "todos" | "conectados" | "pendentes"
+                  )
+                }
+                className="w-full rounded-2xl border border-zinc-300 px-4 py-2.5 text-sm outline-none focus:border-zinc-900"
+              >
+                <option value="todos">Todos no app</option>
+                <option value="conectados">App conectado</option>
+                <option value="pendentes">App pendente</option>
               </select>
 
               <div className="flex items-center rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-2.5 text-sm text-zinc-600">
@@ -510,6 +588,7 @@ export default function ClientesPage() {
                             {item.nome}
                           </h2>
                           <StatusBadge ativo={ativoAtual} />
+                          <AppStatusBadge status={item.appStatus} />
                           {Number(item.cashback || 0) > 0 ? (
                             <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-800">
                               Credito{" "}
@@ -559,6 +638,23 @@ export default function ClientesPage() {
 
                         {podeGerenciar ? (
                           <>
+                            {item.appStatus !== "conectado" ? (
+                              buildConviteAppLink(item) ? (
+                                <a
+                                  href={buildConviteAppLink(item)}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-2.5 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100"
+                                >
+                                  Convidar
+                                </a>
+                              ) : (
+                                <span className="rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-2.5 text-xs font-medium text-zinc-500">
+                                  Sem WhatsApp
+                                </span>
+                              )
+                            ) : null}
+
                             <button
                               type="button"
                               onClick={() => alternarStatus(item)}
@@ -645,6 +741,21 @@ function StatusBadge({ ativo }: { ativo: boolean }) {
       }`}
     >
       {ativo ? "Ativo" : "Inativo"}
+    </span>
+  );
+}
+
+function AppStatusBadge({ status }: { status?: "conectado" | "pendente" }) {
+  const conectado = status === "conectado";
+  return (
+    <span
+      className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${
+        conectado
+          ? "bg-emerald-100 text-emerald-700"
+          : "bg-zinc-100 text-zinc-600"
+      }`}
+    >
+      {conectado ? "App conectado" : "App pendente"}
     </span>
   );
 }

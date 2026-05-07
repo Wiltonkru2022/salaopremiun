@@ -12,6 +12,7 @@ export default async function AdminMasterPage() {
       recentes={data.recentes}
       planos={data.planos}
       operational={data.operational}
+      digitalizacao={data.digitalizacao}
     />
   );
 }

@@ -454,11 +454,13 @@ export function AdminDashboardView({
   recentes,
   planos,
   operational,
+  digitalizacao,
 }: {
   kpis: AdminKpi[];
   recentes: AdminTableRow[];
   planos: AdminTableRow[];
   operational: AdminMasterOperationalSnapshot;
+  digitalizacao: AdminTableRow[];
 }) {
   const incidentsRows: AdminTableRow[] = operational.incidents.map((item) => ({
     incidente: item.title,
@@ -512,6 +514,7 @@ export function AdminDashboardView({
   const checkoutsKpi = findKpi(kpis, "Checkouts assinatura");
   const ticketsKpi = findKpi(kpis, "Tickets abertos");
   const alertasKpi = findKpi(kpis, "Alertas criticos");
+  const digitalizacaoKpi = findKpi(kpis, "Taxa de digitalizacao");
   const primarySuggestion = operational.suggestions[0];
   const primaryIncident = operational.incidents[0];
 
@@ -555,6 +558,12 @@ export function AdminDashboardView({
                 value={alertasKpi?.value || "0"}
                 description={alertasKpi?.hint || "Operacao e webhooks"}
                 href="/admin-master/alertas"
+              />
+              <PrioritySignal
+                label="App cliente"
+                value={digitalizacaoKpi?.value || "0%"}
+                description={digitalizacaoKpi?.hint || "Clientes conectados"}
+                href="/admin-master/relatorios"
               />
             </div>
           </div>
@@ -614,6 +623,12 @@ export function AdminDashboardView({
           title="Base e conversao"
           body={`${totalSaloesKpi?.value || "0"} saloes no sistema. ${trialsKpi?.value || "0"} trials ativos para converter em assinatura.`}
           tone="dark"
+        />
+        <ExecutiveLinkCard
+          href="/admin-master/relatorios"
+          title="Digitalizacao"
+          body={`${digitalizacaoKpi?.value || "0%"} da base de clientes ja esta conectada ao app. Use convites no painel do salao para acelerar adesao.`}
+          tone="light"
         />
       </section>
 
@@ -711,6 +726,38 @@ export function AdminDashboardView({
           <AdminDataTable
             rows={healthCheckRows}
             columns={["nome", "status", "score", "atualizado"]}
+          />
+        </DashboardPanel>
+      </section>
+
+      <section className="grid gap-4 xl:grid-cols-[1fr_420px]">
+        <DashboardPanel
+          title="Adesao Ao App Cliente"
+          description="Taxa de digitalizacao e sinais de cadastros que precisam de revisao humana."
+        >
+          <div className="grid gap-3 md:grid-cols-2">
+            <ExecutiveMetricCard
+              label="Taxa de digitalizacao"
+              value={digitalizacaoKpi?.value || "0%"}
+              hint={digitalizacaoKpi?.hint || "Clientes vinculados ao app"}
+              tone={digitalizacaoKpi?.tone}
+            />
+            <ExecutiveMetricCard
+              label="Sinais para revisar"
+              value={String(digitalizacao.length)}
+              hint="Telefones em saloes diferentes com nomes diferentes"
+              tone={digitalizacao.length ? "amber" : "green"}
+            />
+          </div>
+        </DashboardPanel>
+
+        <DashboardPanel
+          title="Monitor De Vinculos"
+          description="Telefones repetidos com nomes diferentes podem indicar erro de cadastro."
+        >
+          <AdminDataTable
+            rows={digitalizacao}
+            columns={["telefone", "saloes", "nomes", "cadastros", "sinal"]}
           />
         </DashboardPanel>
       </section>
