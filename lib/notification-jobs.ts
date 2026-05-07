@@ -601,6 +601,7 @@ export async function notifyAppointmentFinished(params: {
           mensagem: `Como foi seu atendimento com ${profissionalNome}? Sua avaliacao ajuda o salao a cuidar melhor de voce.`,
           url: `/app-cliente/agendamentos/${agendamento.id}/avaliar`,
           tag: `avaliar-${agendamento.id}`,
+          enviarEm: addMinutes(new Date(), 2),
           idempotencyKey: `avaliar_atendimento:${agendamento.id}:cliente`,
         })
       : Promise.resolve(),

@@ -8,7 +8,7 @@ async function handleCron(req: Request) {
   }
 
   try {
-    const result = await processPendingNotificationJobs(120);
+    const result = await processPendingNotificationJobs(60);
     return NextResponse.json({ ok: true, ...result });
   } catch (error) {
     return NextResponse.json(

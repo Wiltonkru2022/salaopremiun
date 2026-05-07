@@ -24,6 +24,10 @@ type PushPayload = {
   body: string;
   url: string;
   tag?: string;
+  renotify?: boolean;
+  requireInteraction?: boolean;
+  silent?: boolean;
+  timestamp?: number;
 };
 
 export type BroadcastPushTarget =
@@ -31,6 +35,15 @@ export type BroadcastPushTarget =
   | "clientes"
   | "profissionais"
   | "saloes";
+
+type PushBurstState = {
+  lastSentAt: number;
+  tagSentAt: Map<string, number>;
+};
+
+const PUSH_BURST_WINDOW_MS = 25 * 1000;
+const PUSH_SAME_TAG_WINDOW_MS = 10 * 60 * 1000;
+const recentPushByEndpoint = new Map<string, PushBurstState>();
 
 function getPushConfig() {
   const publicKey = String(process.env.WEB_PUSH_PUBLIC_KEY || "").trim();
@@ -114,12 +127,69 @@ async function markSubscriptionInactive(id: string) {
   }
 }
 
+function pruneRecentPushes(now: number) {
+  for (const [endpoint, state] of recentPushByEndpoint.entries()) {
+    if (now - state.lastSentAt > PUSH_SAME_TAG_WINDOW_MS) {
+      recentPushByEndpoint.delete(endpoint);
+      continue;
+    }
+
+    for (const [tag, sentAt] of state.tagSentAt.entries()) {
+      if (now - sentAt > PUSH_SAME_TAG_WINDOW_MS) {
+        state.tagSentAt.delete(tag);
+      }
+    }
+  }
+}
+
+function shouldThrottlePush(endpoint: string, payload: PushPayload) {
+  const now = Date.now();
+  pruneRecentPushes(now);
+
+  const tag = payload.tag || "salaopremium-update";
+  const state = recentPushByEndpoint.get(endpoint);
+  if (!state) return false;
+
+  const sameTagAt = state.tagSentAt.get(tag);
+  if (sameTagAt && now - sameTagAt < PUSH_SAME_TAG_WINDOW_MS) {
+    return true;
+  }
+
+  if (
+    !payload.renotify &&
+    !payload.requireInteraction &&
+    now - state.lastSentAt < PUSH_BURST_WINDOW_MS
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
+function rememberPushSent(endpoint: string, payload: PushPayload) {
+  const now = Date.now();
+  const tag = payload.tag || "salaopremium-update";
+  const state =
+    recentPushByEndpoint.get(endpoint) ||
+    ({
+      lastSentAt: 0,
+      tagSentAt: new Map<string, number>(),
+    } satisfies PushBurstState);
+
+  state.lastSentAt = now;
+  state.tagSentAt.set(tag, now);
+  recentPushByEndpoint.set(endpoint, state);
+}
+
 export async function sendPushToRows(
   rows: PushSubscriptionRow[],
   payload: PushPayload
 ) {
   const config = getPushConfig();
   if (!config || !rows.length) return { sent: 0 };
+  const uniqueRows = Array.from(
+    new Map(rows.map((row) => [row.endpoint, row])).values()
+  );
 
   const webPush = await import("web-push");
   webPush.default.setVapidDetails(
@@ -129,9 +199,18 @@ export async function sendPushToRows(
   );
 
   let sent = 0;
+  const pushPayload: PushPayload = {
+    ...payload,
+    renotify: payload.renotify ?? false,
+    requireInteraction: payload.requireInteraction ?? false,
+    silent: payload.silent ?? false,
+    timestamp: payload.timestamp || Date.now(),
+  };
 
   await Promise.all(
-    rows.map(async (row) => {
+    uniqueRows.map(async (row) => {
+      if (shouldThrottlePush(row.endpoint, pushPayload)) return;
+
       try {
         await webPush.default.sendNotification(
           {
@@ -141,9 +220,10 @@ export async function sendPushToRows(
               auth: row.auth,
             },
           },
-          JSON.stringify(payload),
+          JSON.stringify(pushPayload),
           { TTL: 60 * 60 * 12 }
         );
+        rememberPushSent(row.endpoint, pushPayload);
         sent += 1;
       } catch (error) {
         const statusCode =
@@ -198,15 +278,15 @@ export async function broadcastPushNotification(params: {
   }
 
   const subscriptions = (rows || []) as PushSubscriptionRow[];
-  await sendPushToRows(subscriptions, {
+  const result = await sendPushToRows(subscriptions, {
     title,
     body,
     url: params.url || "/",
-    tag: `admin-master-${Date.now()}`,
+    tag: `admin-master-${params.target}-${params.idSalao || "geral"}`,
   });
 
   return {
-    sent: subscriptions.length,
+    sent: result.sent,
   };
 }
 

@@ -20,13 +20,18 @@ self.addEventListener("push", (event) => {
     payload = fallback;
   }
 
+  const asBoolean = (value) => value === true || value === "true";
+
   event.waitUntil(
     self.registration.showNotification(payload.title || fallback.title, {
       body: payload.body || fallback.body,
       icon: "/favicon-preview.png",
       badge: "/favicon-preview.png",
       tag: payload.tag || "salaopremium-update",
-      renotify: true,
+      renotify: asBoolean(payload.renotify),
+      requireInteraction: asBoolean(payload.requireInteraction),
+      silent: asBoolean(payload.silent),
+      timestamp: Number(payload.timestamp || Date.now()),
       data: {
         url: payload.url || fallback.url,
       },
