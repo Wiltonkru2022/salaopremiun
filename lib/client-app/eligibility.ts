@@ -149,7 +149,7 @@ function buildBaseSalonQuery() {
     .eq("status", "ativo")
     .eq("app_cliente_publicado", true)
     .eq("assinaturas.status", "ativo")
-    .eq("assinaturas.plano", "premium");
+    .in("assinaturas.plano", ["pro", "premium"]);
 }
 
 const getEligibleSalonByIdCached = unstable_cache(
@@ -180,7 +180,7 @@ export async function canSalonAppearInClientApp(idSalao: string) {
     salao,
     reason: salao
       ? null
-      : "Salao sem publicacao ativa no app cliente premium.",
+      : "Salao sem publicacao ativa no app cliente Pro ou Premium.",
   };
 }
 

@@ -154,7 +154,7 @@ export default function AgendaModalResumo({
             </div>
             <p className="mt-1 text-xs leading-5 text-zinc-500">
               {whatsappLiberado
-                ? "A mensagem acompanha o status do agendamento."
+                ? "Mensagem manual pronta para abrir no WhatsApp."
                 : "A mensagem fica preparada aqui, mas o disparo entra no Pro ou Premium."}
             </p>
           </div>

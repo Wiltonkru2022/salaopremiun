@@ -362,7 +362,7 @@ const listVisibleClientAppSaloesCached = unstable_cache(
       .eq("status", "ativo")
       .eq("app_cliente_publicado", true)
       .eq("assinaturas.status", "ativo")
-      .eq("assinaturas.plano", "premium")
+      .in("assinaturas.plano", ["pro", "premium"])
       .order("nome", { ascending: true })
       .limit(pageSize);
 

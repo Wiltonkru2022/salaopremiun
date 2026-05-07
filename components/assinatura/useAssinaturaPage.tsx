@@ -293,8 +293,8 @@ export function useAssinaturaPage() {
     PLANOS_INFO[assinatura?.plano || ""]?.nome || assinatura?.plano || "-";
 
   const valorAtual =
-    assinatura?.valor ??
     PLANOS_INFO[assinatura?.plano || ""]?.valor ??
+    assinatura?.valor ??
     PLANOS_INFO[planoSelecionado]?.valor ??
     0;
 

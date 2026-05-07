@@ -123,9 +123,14 @@ function normalizePlanoCode(value?: string | null) {
 }
 
 function isPlanoPremium(planoCodigo?: string | null, planoNome?: string | null) {
+  const codigo = normalizePlanoCode(planoCodigo);
+  const nome = normalizePlanoCode(planoNome);
+
   return (
-    normalizePlanoCode(planoCodigo) === "premium" ||
-    normalizePlanoCode(planoNome) === "premium"
+    codigo === "pro" ||
+    codigo === "premium" ||
+    nome === "pro" ||
+    nome === "premium"
   );
 }
 

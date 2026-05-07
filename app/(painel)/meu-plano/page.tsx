@@ -10,6 +10,7 @@ import {
   getPlanoCatalogo,
   getPlanoDowngradeCatalogo,
   getPlanoUpgradeCatalogo,
+  PLANOS_TABELA_FEATURES,
 } from "@/lib/plans/catalog";
 import { getPainelUserContext } from "@/lib/auth/get-painel-user-context";
 import { getAssinaturaUrl } from "@/lib/site-urls";
@@ -76,6 +77,18 @@ function getUsoTone(percent: number) {
   return "text-emerald-700 bg-emerald-50 border-emerald-200";
 }
 
+function featureStatusTone(value: string, isCurrentPlan: boolean) {
+  const normalized = value.toLowerCase();
+
+  if (!normalized.includes("liberado") && !normalized.includes("ilimitado")) {
+    return "border-zinc-200 bg-zinc-50 text-zinc-500";
+  }
+
+  return isCurrentPlan
+    ? "border-emerald-300 bg-emerald-50 text-emerald-800"
+    : "border-emerald-200 bg-white text-emerald-700";
+}
+
 export default async function MeuPlanoPage({
   searchParams,
 }: {
@@ -105,7 +118,11 @@ export default async function MeuPlanoPage({
   const upgradePlano = getPlanoUpgradeCatalogo(access.planoCodigo);
   const downgradePlano = getPlanoDowngradeCatalogo(access.planoCodigo);
   const recursos = PLANO_RECURSOS_PADRAO.filter(
-    (codigo) => codigo !== "agendamentos_mensais"
+    (codigo) =>
+      codigo !== "agendamentos_mensais" &&
+      codigo !== "marketing" &&
+      codigo !== "campanhas" &&
+      codigo !== "recursos_beta"
   ).map((codigo) => ({
     codigo,
     label: getPlanoRecursoLabel(codigo),
@@ -324,6 +341,66 @@ export default async function MeuPlanoPage({
             </div>
           );
         })}
+      </section>
+
+      <section className="rounded-[26px] border border-zinc-200 bg-white p-5 shadow-sm">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <div className="text-xs font-black uppercase tracking-[0.20em] text-zinc-400">
+              Tabela oficial dos planos
+            </div>
+            <h2 className="mt-2 text-xl font-black text-zinc-950">
+              O que cada plano libera hoje
+            </h2>
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-zinc-600">
+              Marketing e WhatsApp automático não entram nesta venda. O WhatsApp
+              atual é manual pela agenda.
+            </p>
+          </div>
+          <Link
+            href="/comparar-planos"
+            className="rounded-full border border-zinc-200 px-4 py-2 text-sm font-black text-zinc-900 transition hover:border-zinc-950"
+          >
+            Comparar planos
+          </Link>
+        </div>
+
+        <div className="mt-5 overflow-x-auto">
+          <table className="min-w-[860px] w-full border-separate border-spacing-0 text-left text-sm">
+            <thead>
+              <tr className="text-xs uppercase tracking-[0.16em] text-zinc-400">
+                <th className="rounded-l-2xl bg-zinc-50 px-5 py-3">Funcionalidade</th>
+                <th className="bg-zinc-50 px-5 py-3">Básico</th>
+                <th className="bg-zinc-50 px-5 py-3">Pro</th>
+                <th className="rounded-r-2xl bg-zinc-50 px-5 py-3">Premium</th>
+              </tr>
+            </thead>
+            <tbody>
+              {PLANOS_TABELA_FEATURES.map((item) => (
+                <tr key={`${item.grupo}-${item.nome}`} className="border-b border-zinc-100">
+                  <td className="px-5 py-3">
+                    <div className="text-[11px] font-black uppercase tracking-[0.14em] text-zinc-400">
+                      {item.grupo}
+                    </div>
+                    <div className="mt-1 font-black text-zinc-950">{item.nome}</div>
+                  </td>
+                  {(["basico", "pro", "premium"] as const).map((plano) => (
+                    <td key={plano} className="px-5 py-3">
+                      <span
+                        className={`inline-flex rounded-full border px-3 py-1 text-xs font-black ${featureStatusTone(
+                          item[plano],
+                          plano === planoCatalogo.codigo
+                        )}`}
+                      >
+                        {item[plano]}
+                      </span>
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </section>
 
       <section className="grid gap-4 xl:grid-cols-[1fr_340px]">

@@ -5,6 +5,7 @@ export type PlanoRecursoUpgrade =
   | "relatorios_avancados"
   | "comissoes_avancadas"
   | "app_profissional"
+  | "app_cliente"
   | "estoque"
   | "marketing"
   | "whatsapp"
@@ -36,11 +37,11 @@ export type PlanoCatalogo = {
 export const PLANOS_CATALOGO: Record<PlanoCodigo, PlanoCatalogo> = {
   teste_gratis: {
     codigo: "teste_gratis",
-    nome: "Teste gratis",
-    subtitulo: "Prove a operacao antes de pagar.",
+    nome: "Teste grátis",
+    subtitulo: "Prove a operação antes de pagar.",
     descricao:
       "Ideal para validar agenda, caixa e fluxo de venda sem compromisso.",
-    foco: "Provar a operacao",
+    foco: "Provar a operação",
     idealPara: "Quem quer testar o sistema antes de assinar.",
     valorMensal: 0,
     ordem: 0,
@@ -48,24 +49,23 @@ export const PLANOS_CATALOGO: Record<PlanoCodigo, PlanoCatalogo> = {
       "Agenda",
       "Clientes",
       "Profissionais",
-      "Servicos",
-      "Servicos extras",
+      "Serviços",
+      "Serviços extras",
       "Produtos",
       "Caixa",
       "Comandas",
       "Vendas",
-      "Comissoes basicas",
-      "Relatorios basicos",
+      "Comissões básicas",
+      "Relatórios básicos",
     ],
     recursosBloqueados: [
       "Estoque",
       "Marketing",
-      "App profissional",
-      "WhatsApp",
+      "App do profissional",
+      "App do cliente",
       "Campanhas",
-      "Comissoes avancadas",
-      "Relatorios avancados",
-      "Dashboard avancado",
+      "Comissões avançadas",
+      "Relatórios e dashboard avançados",
     ],
     limites: {
       usuarios: 1,
@@ -77,41 +77,40 @@ export const PLANOS_CATALOGO: Record<PlanoCodigo, PlanoCatalogo> = {
   },
   basico: {
     codigo: "basico",
-    nome: "Basico",
-    subtitulo: "O essencial para um salao pequeno operar bem.",
+    nome: "Básico",
+    subtitulo: "O essencial para um salão pequeno operar bem.",
     descricao:
-      "Plano enxuto para rodar agenda, caixa e venda sem pagar por estrutura que ainda nao usa.",
-    foco: "Salao pequeno operando bem",
-    idealPara: "Operacao pequena, de 1 a 3 profissionais.",
+      "Plano enxuto para agenda, clientes, serviços, comandas, caixa, vendas e comissão básica.",
+    foco: "Operação pequena",
+    idealPara: "Salão pequeno, de 1 a 3 profissionais.",
     valorMensal: 5,
     ordem: 1,
     recursosLiberados: [
       "Agenda",
       "Clientes",
       "Profissionais",
-      "Servicos",
-      "Servicos extras",
+      "Serviços",
+      "Serviços extras",
       "Produtos",
       "Caixa",
       "Comandas",
       "Vendas",
-      "Comissoes basicas",
-      "Relatorios basicos",
+      "Comissões básicas",
+      "Relatórios básicos",
+      "Agenda com link manual do WhatsApp",
     ],
     recursosBloqueados: [
       "Estoque",
-      "Marketing",
-      "App profissional",
-      "WhatsApp",
-      "Campanhas",
-      "Comissoes avancadas",
-      "Relatorios avancados",
-      "Dashboard avancado",
+      "App do profissional",
+      "App do cliente",
+      "Comissões avançadas",
+      "Relatórios e dashboard avançados",
+      "Suporte prioritário",
     ],
     limites: {
       usuarios: 2,
       profissionais: 3,
-      clientes: 2000,
+      clientes: null,
       servicos: 80,
       agendamentosMensais: 250,
     },
@@ -121,9 +120,9 @@ export const PLANOS_CATALOGO: Record<PlanoCodigo, PlanoCatalogo> = {
     nome: "Pro",
     subtitulo: "Estrutura para equipe em crescimento.",
     descricao:
-      "Libera operacao mais densa, relatorios mais fortes e app profissional para a equipe ganhar autonomia.",
+      "Tudo do Básico, com estoque, comissões avançadas, relatórios melhores e apps para profissional e cliente.",
     foco: "Equipe em crescimento",
-    idealPara: "Saloes em expansao, com mais atendimento e gestao.",
+    idealPara: "Salões em expansão, com mais atendimento e gestão.",
     valorMensal: 29.9,
     ordem: 2,
     destaque: true,
@@ -131,25 +130,26 @@ export const PLANOS_CATALOGO: Record<PlanoCodigo, PlanoCatalogo> = {
       "Agenda",
       "Clientes",
       "Profissionais",
-      "Servicos",
-      "Servicos extras",
+      "Serviços",
+      "Serviços extras",
       "Produtos",
       "Estoque",
       "Caixa",
       "Comandas",
       "Vendas",
-      "Comissoes basicas",
-      "Comissoes avancadas",
-      "Relatorios basicos",
-      "Relatorios avancados",
-      "Dashboard avancado",
-      "App profissional",
+      "Comissões básicas",
+      "Comissões avançadas",
+      "Relatórios básicos",
+      "Relatórios e dashboard avançados",
+      "App do profissional",
+      "App do cliente",
+      "Agenda com link manual do WhatsApp",
     ],
-    recursosBloqueados: ["Marketing", "WhatsApp avancado", "Campanhas premium"],
+    recursosBloqueados: ["Suporte prioritário"],
     limites: {
       usuarios: 5,
       profissionais: 10,
-      clientes: 10000,
+      clientes: null,
       servicos: 250,
       agendamentosMensais: 900,
     },
@@ -157,11 +157,11 @@ export const PLANOS_CATALOGO: Record<PlanoCodigo, PlanoCatalogo> = {
   premium: {
     codigo: "premium",
     nome: "Premium",
-    subtitulo: "Tudo liberado para operacao sem teto pratico.",
+    subtitulo: "Tudo liberado para operação sem teto prático.",
     descricao:
-      "Plano completo para quem ja opera pesado ou quer crescer sem bater em limite de estrutura.",
+      "Plano completo para operar sem limite prático de agenda, profissionais, usuários e serviços.",
     foco: "Tudo liberado",
-    idealPara: "Operacao madura, multiatendimento e gestao completa.",
+    idealPara: "Operação madura, multiatendimento e gestão completa.",
     valorMensal: 59.9,
     ordem: 3,
     destaque: true,
@@ -169,25 +169,23 @@ export const PLANOS_CATALOGO: Record<PlanoCodigo, PlanoCatalogo> = {
       "Agenda",
       "Clientes",
       "Profissionais",
-      "Servicos",
-      "Servicos extras",
+      "Serviços",
+      "Serviços extras",
       "Produtos",
       "Estoque",
       "Caixa",
       "Comandas",
       "Vendas",
-      "Comissoes basicas",
-      "Comissoes avancadas",
-      "Relatorios basicos",
-      "Relatorios avancados",
-      "Dashboard avancado",
-      "WhatsApp",
-      "Campanhas",
-      "App profissional",
-      "Recursos beta",
-      "Suporte prioritario",
+      "Comissões básicas",
+      "Comissões avançadas",
+      "Relatórios básicos",
+      "Relatórios e dashboard avançados",
+      "App do profissional",
+      "App do cliente",
+      "Agenda com link manual do WhatsApp",
+      "Suporte prioritário",
     ],
-    recursosBloqueados: ["Marketing"],
+    recursosBloqueados: [],
     limites: {
       usuarios: null,
       profissionais: null,
@@ -197,6 +195,143 @@ export const PLANOS_CATALOGO: Record<PlanoCodigo, PlanoCatalogo> = {
     },
   },
 };
+
+export type PlanoTabelaFeature = {
+  grupo: string;
+  nome: string;
+  basico: string;
+  pro: string;
+  premium: string;
+};
+
+export const PLANOS_TABELA_FEATURES: PlanoTabelaFeature[] = [
+  {
+    grupo: "Limites",
+    nome: "Agendamentos",
+    basico: "250 / mês",
+    pro: "900 / mês",
+    premium: "Ilimitado",
+  },
+  {
+    grupo: "Limites",
+    nome: "Profissionais",
+    basico: "3",
+    pro: "10",
+    premium: "Ilimitado",
+  },
+  {
+    grupo: "Limites",
+    nome: "Usuários do sistema",
+    basico: "2",
+    pro: "5",
+    premium: "Ilimitado",
+  },
+  {
+    grupo: "Limites",
+    nome: "Serviços cadastrados",
+    basico: "80",
+    pro: "250",
+    premium: "Ilimitado",
+  },
+  {
+    grupo: "Limites",
+    nome: "Clientes",
+    basico: "Ilimitado",
+    pro: "Ilimitado",
+    premium: "Ilimitado",
+  },
+  {
+    grupo: "Gestão e operação",
+    nome: "Agenda com link manual do WhatsApp",
+    basico: "Liberado",
+    pro: "Liberado",
+    premium: "Liberado",
+  },
+  {
+    grupo: "Gestão e operação",
+    nome: "Cadastro de clientes e serviços",
+    basico: "Liberado",
+    pro: "Liberado",
+    premium: "Liberado",
+  },
+  {
+    grupo: "Gestão e operação",
+    nome: "Serviços extras e produtos",
+    basico: "Liberado",
+    pro: "Liberado",
+    premium: "Liberado",
+  },
+  {
+    grupo: "Gestão e operação",
+    nome: "Comandas e caixa",
+    basico: "Liberado",
+    pro: "Liberado",
+    premium: "Liberado",
+  },
+  {
+    grupo: "Gestão e operação",
+    nome: "Controle de estoque",
+    basico: "Não liberado",
+    pro: "Liberado",
+    premium: "Liberado",
+  },
+  {
+    grupo: "Financeiro e relatórios",
+    nome: "Vendas",
+    basico: "Liberado",
+    pro: "Liberado",
+    premium: "Liberado",
+  },
+  {
+    grupo: "Financeiro e relatórios",
+    nome: "Comissões básicas",
+    basico: "Liberado",
+    pro: "Liberado",
+    premium: "Liberado",
+  },
+  {
+    grupo: "Financeiro e relatórios",
+    nome: "Relatórios básicos",
+    basico: "Liberado",
+    pro: "Liberado",
+    premium: "Liberado",
+  },
+  {
+    grupo: "Financeiro e relatórios",
+    nome: "Comissões avançadas",
+    basico: "Não liberado",
+    pro: "Liberado",
+    premium: "Liberado",
+  },
+  {
+    grupo: "Financeiro e relatórios",
+    nome: "Relatórios e dashboard avançados",
+    basico: "Não liberado",
+    pro: "Liberado",
+    premium: "Liberado",
+  },
+  {
+    grupo: "Aplicativos e autoridade",
+    nome: "App do profissional",
+    basico: "Não liberado",
+    pro: "Liberado",
+    premium: "Liberado",
+  },
+  {
+    grupo: "Aplicativos e autoridade",
+    nome: "App do cliente (agendamento)",
+    basico: "Não liberado",
+    pro: "Liberado",
+    premium: "Liberado",
+  },
+  {
+    grupo: "Aplicativos e autoridade",
+    nome: "Suporte prioritário",
+    basico: "Não liberado",
+    pro: "Não liberado",
+    premium: "Liberado",
+  },
+];
 
 export function getPlanoCatalogo(plano?: string | null) {
   const codigo = String(plano || "")
@@ -256,13 +391,17 @@ export function getPlanoMinimoParaRecurso(
     recurso === "relatorios_avancados" ||
     recurso === "comissoes_avancadas" ||
     recurso === "app_profissional" ||
-    recurso === "estoque" ||
-    recurso === "marketing"
+    recurso === "app_cliente" ||
+    recurso === "estoque"
   ) {
     return "pro";
   }
 
-  if (recurso === "whatsapp" || recurso === "campanhas") {
+  if (recurso === "whatsapp") {
+    return "basico";
+  }
+
+  if (recurso === "campanhas" || recurso === "marketing") {
     return "premium";
   }
 

@@ -259,7 +259,10 @@ export default function PerfilSalaoPage() {
     [perfilForm.formas_pagamento_publico]
   );
   const planoPremium = useMemo(
-    () => getPlanoCatalogo(perfilForm.plano).codigo === "premium",
+    () => {
+      const codigo = getPlanoCatalogo(perfilForm.plano).codigo;
+      return codigo === "pro" || codigo === "premium";
+    },
     [perfilForm.plano]
   );
   const autenticadorAtivo = Boolean(totpFactor?.id);
@@ -664,7 +667,7 @@ export default function PerfilSalaoPage() {
       },
       planoPremium
         ? "Perfil publico do app cliente atualizado com sucesso."
-        : "Perfil publico salvo. A publicacao fica disponivel quando o salao estiver no Premium."
+        : "Perfil publico salvo. A publicacao fica disponivel quando o salao estiver no Pro ou Premium."
     );
   }
 
@@ -1190,7 +1193,7 @@ export default function PerfilSalaoPage() {
 
             <SectionCard
               icon={<Globe size={18} />}
-              title="App cliente premium"
+              title="App cliente"
               description="Resumo do perfil publico usado na vitrine do aplicativo do cliente."
             >
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -1199,9 +1202,9 @@ export default function PerfilSalaoPage() {
                   value={
                     planoPremium
                       ? perfilForm.app_cliente_publicado
-                        ? "Publicado na vitrine premium."
+                        ? "Publicado na vitrine do app cliente."
                         : "Ainda nao publicado."
-                      : "Disponivel somente no plano Premium."
+                      : "Disponivel somente no plano Pro ou Premium."
                   }
                   multiline
                 />
@@ -1262,8 +1265,8 @@ export default function PerfilSalaoPage() {
 
                 <SidebarAction
                   icon={<Globe size={16} />}
-                  title="App cliente premium"
-                  description="Monte a vitrine publica do salao e publique quando o Premium estiver ativo."
+                  title="App cliente"
+                  description="Monte a vitrine publica do salao e publique quando o Pro ou Premium estiver ativo."
                   onClick={() => abrirModal("app_cliente")}
                 />
 
@@ -1660,7 +1663,7 @@ export default function PerfilSalaoPage() {
         open={activeModal === "app_cliente"}
         onClose={() => setActiveModal(null)}
         title="Perfil publico do app cliente"
-        description="Defina como o salao aparece na vitrine do cliente final e publique quando o plano Premium estiver ativo."
+        description="Defina como o salao aparece na vitrine do cliente final e publique quando o plano Pro ou Premium estiver ativo."
         eyebrow="App cliente"
         maxWidthClassName="max-w-3xl"
         footer={
@@ -1704,7 +1707,7 @@ export default function PerfilSalaoPage() {
             ) : (
               <>
                 Voce pode preparar a descricao e os dados publicos agora, mas a
-                publicacao na vitrine fica liberada somente no plano Premium.
+                  publicacao na vitrine fica liberada somente no plano Pro ou Premium.
               </>
             )}
           </div>

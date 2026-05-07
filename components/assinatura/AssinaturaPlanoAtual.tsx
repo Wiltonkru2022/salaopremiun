@@ -16,6 +16,11 @@ type Props = {
   valorAtual: number;
 };
 
+function formatLimit(value?: number | null) {
+  if (value == null) return "Sem plano definido";
+  return value >= 999 ? "Ilimitado" : String(value);
+}
+
 export default function AssinaturaPlanoAtual({
   assinatura,
   salao,
@@ -33,7 +38,7 @@ export default function AssinaturaPlanoAtual({
         </div>
         <p className="mt-1 text-sm text-zinc-500">
           {assinatura?.limite_profissionais != null
-            ? `${assinatura.limite_profissionais} profissionais`
+            ? `${formatLimit(assinatura.limite_profissionais)} profissionais`
             : "Sem plano definido"}
         </p>
       </div>
@@ -109,7 +114,7 @@ export default function AssinaturaPlanoAtual({
           Limite profissionais
         </div>
         <div className="mt-3 text-2xl font-bold text-zinc-950">
-          {assinatura?.limite_profissionais ?? 0}
+          {formatLimit(assinatura?.limite_profissionais)}
         </div>
       </div>
 
@@ -118,7 +123,7 @@ export default function AssinaturaPlanoAtual({
           Limite usuários
         </div>
         <div className="mt-3 text-2xl font-bold text-zinc-950">
-          {assinatura?.limite_usuarios ?? 0}
+          {formatLimit(assinatura?.limite_usuarios)}
         </div>
       </div>
 

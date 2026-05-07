@@ -438,9 +438,7 @@ export function useAgendaModal({
     limiteAgendamentosMensais != null &&
     usoAgendamentosMensais >= limiteAgendamentosMensais;
   const upgradeTarget = getUpgradeTarget(planoAccess?.planoCodigo);
-  const whatsappLiberado =
-    planoAccess?.recursos?.whatsapp === true ||
-    planoAccess?.recursos?.marketing === true;
+  const whatsappLiberado = true;
 
   useEffect(() => {
     if (mode !== "agendamento") return;

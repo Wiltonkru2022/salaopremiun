@@ -30,7 +30,7 @@ async function listDynamicSalonRoutes(baseUrl: URL, now: Date) {
     .eq("status", "ativo")
     .eq("app_cliente_publicado", true)
     .eq("assinaturas.status", "ativo")
-    .eq("assinaturas.plano", "premium")
+    .in("assinaturas.plano", ["pro", "premium"])
     .limit(500);
 
   return ((data as Array<{ id?: string }> | null) || [])

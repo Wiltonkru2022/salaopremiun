@@ -457,7 +457,7 @@ export default function ClientesPage() {
               value={`${resumo.comEmail}`}
               description={
                 whatsappLiberado
-                  ? "Ajuda em recibo, marketing e acesso futuro"
+                  ? "Ajuda em recibo, contato manual e acesso futuro"
                   : "Ajuda em recibo, comunicacao futura e acesso posterior"
               }
               icon={Mail}

@@ -23,6 +23,7 @@ export type PlanoRecursoCodigo =
   | "whatsapp"
   | "campanhas"
   | "app_profissional"
+  | "app_cliente"
   | "marketing"
   | "recursos_beta"
   | "suporte_prioritario";
@@ -75,6 +76,7 @@ export const PLANO_RECURSOS_PADRAO: PlanoRecursoCodigo[] = [
   "whatsapp",
   "campanhas",
   "app_profissional",
+  "app_cliente",
   "marketing",
   "recursos_beta",
   "suporte_prioritario",
@@ -85,25 +87,26 @@ export const PLANO_RECURSO_LABELS: Record<PlanoRecursoCodigo, string> = {
   agendamentos_mensais: "Agendamentos mensais",
   clientes: "Clientes",
   profissionais: "Profissionais",
-  usuarios: "Usuarios do sistema",
-  servicos: "Servicos",
-  servicos_extras: "Servicos extras",
+  usuarios: "Usuários do sistema",
+  servicos: "Serviços",
+  servicos_extras: "Serviços extras",
   produtos: "Produtos",
   estoque: "Estoque",
   caixa: "Caixa",
   comandas: "Comandas",
   vendas: "Vendas",
-  comissoes_basicas: "Comissoes basicas",
-  comissoes_avancadas: "Comissoes avancadas",
-  relatorios_basicos: "Relatorios basicos",
-  relatorios_avancados: "Relatorios avancados",
-  dashboard_avancado: "Dashboard avancado",
-  whatsapp: "WhatsApp",
+  comissoes_basicas: "Comissões básicas",
+  comissoes_avancadas: "Comissões avançadas",
+  relatorios_basicos: "Relatórios básicos",
+  relatorios_avancados: "Relatórios avançados",
+  dashboard_avancado: "Dashboard avançado",
+  whatsapp: "WhatsApp manual",
   campanhas: "Campanhas",
-  app_profissional: "App profissional",
+  app_profissional: "App do profissional",
+  app_cliente: "App do cliente",
   marketing: "Marketing",
   recursos_beta: "Recursos beta",
-  suporte_prioritario: "Suporte prioritario",
+  suporte_prioritario: "Suporte prioritário",
 };
 
 export const PLANO_RECURSO_GROUPS: Record<PlanoRecursoCodigo, string> = {
@@ -127,6 +130,7 @@ export const PLANO_RECURSO_GROUPS: Record<PlanoRecursoCodigo, string> = {
   whatsapp: "Comunicacao",
   campanhas: "Comunicacao",
   app_profissional: "Equipe",
+  app_cliente: "Equipe",
   marketing: "Comunicacao",
   recursos_beta: "Premium",
   suporte_prioritario: "Premium",
@@ -353,7 +357,9 @@ async function getPlanoAccessSnapshotUncached(
 
   // Marketing segue em preparação operacional. Mesmo que exista configuração
   // antiga no banco, não liberamos o módulo até a integração estar pronta.
+  recursos.whatsapp = true;
   recursos.marketing = false;
+  recursos.campanhas = false;
 
   const assinaturaStatus = String(assinaturaRow?.status || salaoRow?.status || "")
     .trim()

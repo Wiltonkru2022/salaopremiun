@@ -1,5 +1,9 @@
 import Link from "next/link";
-import { getPlanoCatalogo, getPlanosOrdenados } from "@/lib/plans/catalog";
+import {
+  getPlanoCatalogo,
+  getPlanosCobraveisOrdenados,
+  PLANOS_TABELA_FEATURES,
+} from "@/lib/plans/catalog";
 import { getPainelUserContext } from "@/lib/auth/get-painel-user-context";
 import { getAssinaturaUrl } from "@/lib/site-urls";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
@@ -57,6 +61,14 @@ function getPlanoAction(params: {
   };
 }
 
+function statusClass(value: string) {
+  const normalized = value.toLowerCase();
+  if (normalized.includes("liberado") || normalized.includes("ilimitado")) {
+    return "border-emerald-200 bg-emerald-50 text-emerald-800";
+  }
+  return "border-zinc-200 bg-zinc-50 text-zinc-500";
+}
+
 export default async function CompararPlanosPage() {
   const { user, usuario } = await getPainelUserContext();
   const supabaseAdmin = getSupabaseAdmin();
@@ -95,9 +107,7 @@ export default async function CompararPlanosPage() {
   const planoAtualInfo = getPlanoCatalogo(planoAtual);
   const mostrarPlanoTrial =
     planoAtualInfo.codigo === "teste_gratis" || (!jaUsouTrial && !jaPossuiAssinatura);
-  const planos = getPlanosOrdenados().filter(
-    (plano) => plano.codigo !== "teste_gratis" || mostrarPlanoTrial
-  );
+  const planos = getPlanosCobraveisOrdenados();
 
   return (
     <div className="space-y-4">
@@ -111,7 +121,7 @@ export default async function CompararPlanosPage() {
               Veja os pacotes de assinatura com clareza
             </h1>
             <p className="mt-3 max-w-3xl text-sm leading-6 text-zinc-300">
-              Compare preco, limites e recursos de cada plano sem ficar
+              Compare preço, limites e recursos de cada plano sem ficar
               adivinhando o que libera ou bloqueia no sistema.
             </p>
             <div className="mt-5 flex flex-wrap gap-2">
@@ -140,10 +150,10 @@ export default async function CompararPlanosPage() {
               </div>
               <p className="mt-2 text-sm leading-6 text-zinc-500">
                 {jaPossuiAssinatura
-                  ? "Voce ja possui uma assinatura. Ao clicar em um pacote, a tela de assinatura abre com esse plano pronto para upgrade, downgrade ou renovacao."
+                  ? "Você já possui uma assinatura. Ao clicar em um pacote, a tela de assinatura abre com esse plano pronto para upgrade, downgrade ou renovação."
                   : mostrarPlanoTrial
-                    ? "Seu salao ainda pode usar o periodo inicial antes da primeira contratacao."
-                    : "O teste gratis ja foi usado neste salao. Agora o fluxo segue apenas pelos planos pagos."}
+                    ? "Seu salão ainda pode usar o período inicial, mas a comparação abaixo mostra somente os planos pagos vendidos hoje."
+                    : "O teste grátis já foi usado neste salão. Agora o fluxo segue apenas pelos planos pagos."}
               </p>
             </div>
           </div>
@@ -152,13 +162,69 @@ export default async function CompararPlanosPage() {
 
       {jaPossuiAssinatura ? (
         <section className="rounded-[24px] border border-sky-200 bg-sky-50 p-4 text-sm leading-6 text-sky-900 shadow-sm">
-          <strong>Voce ja possui uma assinatura em andamento.</strong> Escolha
+          <strong>Você já possui uma assinatura em andamento.</strong> Escolha
           o pacote desejado abaixo e nos vamos abrir a tela de assinatura com a
-          mudanca pronta para voce concluir.
+          mudança pronta para você concluir.
         </section>
       ) : null}
 
-      <section className="grid gap-4 xl:grid-cols-4">
+      <section className="overflow-hidden rounded-[28px] border border-zinc-200 bg-white shadow-sm">
+        <div className="border-b border-zinc-200 px-5 py-4">
+          <div className="text-xs font-black uppercase tracking-[0.22em] text-zinc-400">
+            Tabela oficial
+          </div>
+          <h2 className="mt-1 text-xl font-black text-zinc-950">
+            Planos e liberações
+          </h2>
+          <p className="mt-1 text-sm text-zinc-500">
+            Marketing e WhatsApp automático não entram nesta venda. Hoje o WhatsApp é manual pela agenda.
+          </p>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="min-w-[880px] w-full">
+            <thead>
+              <tr className="border-b border-zinc-100 text-left text-xs uppercase tracking-[0.18em] text-zinc-500">
+                <th className="px-5 py-3">Funcionalidade / limite</th>
+                <th className="px-5 py-3">Básico</th>
+                <th className="px-5 py-3">Pro</th>
+                <th className="px-5 py-3">Premium</th>
+              </tr>
+            </thead>
+            <tbody>
+              {PLANOS_TABELA_FEATURES.map((item, index, rows) => {
+                const showGroup = index === 0 || rows[index - 1]?.grupo !== item.grupo;
+
+                return (
+                  <tr key={`${item.grupo}-${item.nome}`} className="border-b border-zinc-100 last:border-b-0">
+                    <td className="px-5 py-4">
+                      {showGroup ? (
+                        <div className="mb-1 text-[10px] font-black uppercase tracking-[0.18em] text-zinc-400">
+                          {item.grupo}
+                        </div>
+                      ) : null}
+                      <div className="text-sm font-bold text-zinc-950">{item.nome}</div>
+                    </td>
+                    {(["basico", "pro", "premium"] as const).map((plano) => (
+                      <td key={plano} className="px-5 py-4">
+                        <span
+                          className={`inline-flex rounded-full border px-3 py-1 text-xs font-black ${statusClass(
+                            item[plano]
+                          )}`}
+                        >
+                          {item[plano]}
+                        </span>
+                      </td>
+                    ))}
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section className="grid gap-4 xl:grid-cols-3">
         {planos.map((plano) => {
           const atual = plano.codigo === planoAtualInfo.codigo;
           const action = getPlanoAction({
@@ -216,7 +282,7 @@ export default async function CompararPlanosPage() {
 
               <div className="mt-4 text-2xl font-black">
                 {plano.valorMensal === 0
-                  ? "Gratis"
+                  ? "Grátis"
                   : formatCurrency(plano.valorMensal)}
                 {plano.valorMensal > 0 ? (
                   <span
@@ -224,7 +290,7 @@ export default async function CompararPlanosPage() {
                       plano.destaque ? "text-zinc-300" : "text-zinc-500"
                     }`}
                   >
-                    / mes
+                    / mês
                   </span>
                 ) : null}
               </div>
@@ -248,15 +314,15 @@ export default async function CompararPlanosPage() {
                     <div>
                       {formatLimit(
                         plano.limites.agendamentosMensais,
-                        " agendamentos/mes"
+                        " agendamentos/mês"
                       )}
                     </div>
                     <div>{formatLimit(plano.limites.clientes, " clientes")}</div>
-                    <div>{formatLimit(plano.limites.servicos, " servicos")}</div>
+                    <div>{formatLimit(plano.limites.servicos, " serviços")}</div>
                     <div>
                       {formatLimit(plano.limites.profissionais, " profissionais")}
                     </div>
-                    <div>{formatLimit(plano.limites.usuarios, " usuarios")}</div>
+                    <div>{formatLimit(plano.limites.usuarios, " usuários")}</div>
                   </div>
                 </div>
 
