@@ -52,7 +52,7 @@ export default function NovoClienteForm() {
   return (
     <form
       action={formAction}
-      className="space-y-3.5 rounded-[1.35rem] border border-zinc-200 bg-white p-3.5 shadow-[0_12px_30px_rgba(15,23,42,0.05)]"
+      className="max-w-full space-y-3.5 overflow-hidden rounded-[1.35rem] border border-zinc-200 bg-white p-3.5 shadow-[0_12px_30px_rgba(15,23,42,0.05)]"
     >
       <ProfissionalSectionHeader
         title="Novo cliente"
@@ -67,7 +67,7 @@ export default function NovoClienteForm() {
           name="nome"
           type="text"
           placeholder="Digite o nome do cliente"
-          className="h-11 w-full rounded-[18px] border border-zinc-200 bg-white px-4 text-sm outline-none transition focus:border-zinc-400"
+          className="h-11 w-full min-w-0 rounded-[18px] border border-zinc-200 bg-white px-4 text-base outline-none transition focus:border-zinc-400"
         />
       </div>
 
@@ -82,7 +82,7 @@ export default function NovoClienteForm() {
           value={telefoneFormatado}
           onChange={(e) => setTelefone(formatTelefone(e.target.value))}
           placeholder="(00) 00000-0000"
-          className="h-11 w-full rounded-[18px] border border-zinc-200 bg-white px-4 text-sm outline-none transition focus:border-zinc-400"
+          className="h-11 w-full min-w-0 rounded-[18px] border border-zinc-200 bg-white px-4 text-base outline-none transition focus:border-zinc-400"
         />
       </div>
 
@@ -94,7 +94,7 @@ export default function NovoClienteForm() {
           name="email"
           type="email"
           placeholder="cliente@email.com"
-          className="h-11 w-full rounded-[18px] border border-zinc-200 bg-white px-4 text-sm outline-none transition focus:border-zinc-400"
+          className="h-11 w-full min-w-0 rounded-[18px] border border-zinc-200 bg-white px-4 text-base outline-none transition focus:border-zinc-400"
         />
       </div>
 
@@ -105,7 +105,7 @@ export default function NovoClienteForm() {
         <textarea
           name="observacoes"
           placeholder="Ex.: prefere atendimento pela manha"
-          className="min-h-[96px] w-full rounded-[18px] border border-zinc-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-zinc-400"
+          className="min-h-[96px] w-full min-w-0 rounded-[18px] border border-zinc-200 bg-white px-4 py-3 text-base outline-none transition focus:border-zinc-400"
         />
       </div>
 
