@@ -12,6 +12,8 @@ import {
   Building2,
   CheckCircle2,
   CircleAlert,
+  Copy,
+  Download,
   Globe,
   LifeBuoy,
   KeyRound,
@@ -20,6 +22,7 @@ import {
   MapPin,
   PencilLine,
   Phone,
+  QrCode,
   ShieldCheck,
   Sparkles,
 } from "lucide-react";
@@ -30,6 +33,11 @@ import { Field, SectionCard, TextInput } from "@/components/configuracoes/ui";
 import { EMPTY_SALAO } from "@/components/configuracoes/constants";
 import type { SalaoForm } from "@/components/configuracoes/types";
 import { getPlanoCatalogo } from "@/lib/plans/catalog";
+import {
+  buildDefaultSalaoSlug,
+  buildSalaoPublicUrl,
+  normalizeSalaoSlug,
+} from "@/lib/saloes/public-link";
 import { createClient } from "@/lib/supabase/client";
 
 type PasswordForm = {
@@ -93,6 +101,9 @@ type SalaoProfileRow = {
   estacionamento?: boolean | null;
   formas_pagamento_publico?: string[] | string | null;
   app_cliente_publicado?: boolean | null;
+  app_cliente_pausado?: boolean | null;
+  app_cliente_pausa_mensagem?: string | null;
+  app_cliente_slug?: string | null;
 };
 
 const EMPTY_PASSWORD: PasswordForm = {
@@ -258,6 +269,20 @@ export default function PerfilSalaoPage() {
     () => formatPaymentMethods(perfilForm.formas_pagamento_publico),
     [perfilForm.formas_pagamento_publico]
   );
+  const publicSlug = useMemo(
+    () =>
+      normalizeSalaoSlug(perfilForm.app_cliente_slug || "") ||
+      buildDefaultSalaoSlug(perfilForm.nome, perfilForm.id || idSalao),
+    [idSalao, perfilForm.app_cliente_slug, perfilForm.id, perfilForm.nome]
+  );
+  const publicUrl = useMemo(() => buildSalaoPublicUrl(publicSlug), [publicSlug]);
+  const qrCodeUrl = useMemo(
+    () =>
+      `https://api.qrserver.com/v1/create-qr-code/?size=320x320&margin=12&data=${encodeURIComponent(
+        publicUrl
+      )}`,
+    [publicUrl]
+  );
   const planoPremium = useMemo(
     () => {
       const codigo = getPlanoCatalogo(perfilForm.plano).codigo;
@@ -365,7 +390,7 @@ export default function PerfilSalaoPage() {
       const { data, error } = await supabase
         .from("saloes")
         .select(
-          "id, nome, responsavel, email, telefone, cpf_cnpj, endereco, numero, bairro, cidade, estado, cep, logo_url, plano, status, descricao_publica, foto_capa_url, latitude, longitude, estacionamento, formas_pagamento_publico, app_cliente_publicado"
+          "id, nome, responsavel, email, telefone, cpf_cnpj, endereco, numero, bairro, cidade, estado, cep, logo_url, plano, status, descricao_publica, foto_capa_url, latitude, longitude, estacionamento, formas_pagamento_publico, app_cliente_publicado, app_cliente_pausado, app_cliente_pausa_mensagem, app_cliente_slug"
         )
         .eq("id", painelSession.idSalao)
         .maybeSingle();
@@ -407,6 +432,13 @@ export default function PerfilSalaoPage() {
               : row.formas_pagamento_publico
           ),
           app_cliente_publicado: Boolean(row.app_cliente_publicado),
+          app_cliente_pausado: Boolean(row.app_cliente_pausado),
+          app_cliente_pausa_mensagem:
+            row.app_cliente_pausa_mensagem ||
+            "Salao pausado no momento. Em breve a agenda online volta ao normal.",
+          app_cliente_slug:
+            row.app_cliente_slug ||
+            buildDefaultSalaoSlug(row.nome || "", row.id || ""),
         };
 
         setPerfilForm(nextForm);
@@ -516,6 +548,17 @@ export default function PerfilSalaoPage() {
               patch.app_cliente_publicado ?? perfilForm.app_cliente_publicado
             )
           : false,
+        app_cliente_pausado: Boolean(
+          patch.app_cliente_pausado ?? perfilForm.app_cliente_pausado
+        ),
+        app_cliente_pausa_mensagem:
+          (patch.app_cliente_pausa_mensagem ??
+            perfilForm.app_cliente_pausa_mensagem) ||
+          "Salao pausado no momento. Em breve a agenda online volta ao normal.",
+        app_cliente_slug:
+          normalizeSalaoSlug(
+            patch.app_cliente_slug ?? perfilForm.app_cliente_slug ?? ""
+          ) || buildDefaultSalaoSlug(patch.nome ?? perfilForm.nome, idSalao),
         updated_at: new Date().toISOString(),
       };
 
@@ -526,7 +569,15 @@ export default function PerfilSalaoPage() {
 
       if (error) throw error;
 
-      const nextForm = { ...perfilForm, ...patch };
+      try {
+        await (supabase as any).rpc("refresh_client_app_marketplace_cache", {
+          p_id_salao: idSalao,
+        });
+      } catch {
+        // A funcao pode nao existir em ambientes antigos; a vitrine tambem tem fallback ao vivo.
+      }
+
+      const nextForm = { ...perfilForm, ...patch, app_cliente_slug: payload.app_cliente_slug };
       setPerfilForm(nextForm);
       setComercialDraft(nextForm);
       setEnderecoDraft(nextForm);
@@ -536,8 +587,13 @@ export default function PerfilSalaoPage() {
       router.refresh();
       return true;
     } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "";
+      if (message.includes("saloes_app_cliente_slug_uidx")) {
+        setErro("Esse link de divulgacao ja esta em uso. Escolha outro final para o link.");
+        return false;
+      }
       setErro(
-        error instanceof Error ? error.message : "Erro ao salvar perfil."
+        message || "Erro ao salvar perfil."
       );
       return false;
     } finally {
@@ -664,11 +720,26 @@ export default function PerfilSalaoPage() {
         app_cliente_publicado: planoPremium
           ? Boolean(appClienteDraft.app_cliente_publicado)
           : false,
+        app_cliente_pausado: Boolean(appClienteDraft.app_cliente_pausado),
+        app_cliente_pausa_mensagem:
+          appClienteDraft.app_cliente_pausa_mensagem || "",
+        app_cliente_slug:
+          normalizeSalaoSlug(appClienteDraft.app_cliente_slug || "") ||
+          buildDefaultSalaoSlug(appClienteDraft.nome || perfilForm.nome, idSalao),
       },
       planoPremium
         ? "Perfil publico do app cliente atualizado com sucesso."
         : "Perfil publico salvo. A publicacao fica disponivel quando o salao estiver no Pro ou Premium."
     );
+  }
+
+  async function copiarLinkPublico() {
+    try {
+      await navigator.clipboard.writeText(publicUrl);
+      setMsg("Link de divulgacao copiado.");
+    } catch {
+      setErro("Nao foi possivel copiar o link automaticamente.");
+    }
   }
 
   async function verificarTotpCode(
@@ -1202,10 +1273,17 @@ export default function PerfilSalaoPage() {
                   value={
                     planoPremium
                       ? perfilForm.app_cliente_publicado
-                        ? "Publicado na vitrine do app cliente."
+                        ? perfilForm.app_cliente_pausado
+                          ? "Publicado, mas pausado: sai da vitrine e bloqueia novos agendamentos."
+                          : "Publicado na vitrine do app cliente."
                         : "Ainda nao publicado."
                       : "Disponivel somente no plano Pro ou Premium."
                   }
+                  multiline
+                />
+                <DisplayItem
+                  label="Link de divulgacao"
+                  value={publicUrl}
                   multiline
                 />
                 <DisplayItem
@@ -1237,6 +1315,49 @@ export default function PerfilSalaoPage() {
                     }
                     multiline
                   />
+                </div>
+              </div>
+            </SectionCard>
+
+            <SectionCard
+              icon={<QrCode size={18} />}
+              title="Divulgacao do salao"
+              description="Link e QR Code para levar o cliente direto para a pagina do salao no app."
+            >
+              <div className="grid gap-4 md:grid-cols-[190px_minmax(0,1fr)]">
+                <div className="rounded-[24px] border border-zinc-200 bg-white p-3">
+                  <img
+                    src={qrCodeUrl}
+                    alt={`QR Code do salao ${perfilForm.nome || "SalaoPremium"}`}
+                    className="aspect-square w-full rounded-[18px] bg-white object-contain"
+                  />
+                </div>
+                <div className="space-y-3">
+                  <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm font-semibold text-zinc-800">
+                    <div className="break-all">{publicUrl}</div>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={copiarLinkPublico}
+                      className="inline-flex h-11 items-center gap-2 rounded-2xl border border-zinc-200 bg-white px-4 text-sm font-bold text-zinc-800 transition hover:bg-zinc-50"
+                    >
+                      <Copy size={16} />
+                      Copiar link
+                    </button>
+                    <a
+                      href={qrCodeUrl}
+                      download={`qrcode-${publicSlug}.png`}
+                      className="inline-flex h-11 items-center gap-2 rounded-2xl bg-zinc-950 px-4 text-sm font-bold text-white transition hover:bg-zinc-800"
+                    >
+                      <Download size={16} />
+                      Baixar QR Code
+                    </a>
+                  </div>
+                  <p className="text-sm leading-6 text-zinc-500">
+                    Se o cliente abrir esse link sem estar logado, ele entra ou
+                    cria conta e volta direto para esta pagina do salao.
+                  </p>
                 </div>
               </div>
             </SectionCard>
@@ -1727,6 +1848,44 @@ export default function PerfilSalaoPage() {
             />
           </Field>
 
+          <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto]">
+            <Field label="Link de divulgacao">
+              <div className="flex rounded-2xl border border-zinc-300 bg-white focus-within:border-zinc-900">
+                <span className="hidden shrink-0 items-center border-r border-zinc-200 px-4 text-sm font-semibold text-zinc-500 md:flex">
+                  salaopremiun.com.br/salao/
+                </span>
+                <input
+                  value={appClienteDraft.app_cliente_slug || ""}
+                  onChange={(event) =>
+                    setAppClienteDraft((prev) => ({
+                      ...prev,
+                      app_cliente_slug: normalizeSalaoSlug(event.target.value),
+                    }))
+                  }
+                  placeholder="nome-do-salao"
+                  className="min-w-0 flex-1 rounded-2xl bg-transparent px-4 py-3 text-sm outline-none"
+                />
+              </div>
+            </Field>
+            <div className="flex items-end">
+              <button
+                type="button"
+                onClick={() =>
+                  setAppClienteDraft((prev) => ({
+                    ...prev,
+                    app_cliente_slug: buildDefaultSalaoSlug(
+                      prev.nome || perfilForm.nome,
+                      idSalao
+                    ),
+                  }))
+                }
+                className="h-12 rounded-2xl border border-zinc-200 px-4 text-sm font-bold text-zinc-700 transition hover:bg-zinc-50"
+              >
+                Gerar link
+              </button>
+            </div>
+          </div>
+
           <div className="rounded-[22px] border border-zinc-200 bg-zinc-50 p-4">
             <div className="text-sm font-bold text-zinc-950">
               Endereco exibido no app cliente
@@ -1792,6 +1951,42 @@ export default function PerfilSalaoPage() {
               />
               Publicar na vitrine do app cliente
             </label>
+          </div>
+
+          <div className="rounded-[22px] border border-zinc-200 bg-zinc-50 p-4">
+            <label className="flex items-center gap-3 text-sm font-bold text-zinc-900">
+              <input
+                type="checkbox"
+                checked={Boolean(appClienteDraft.app_cliente_pausado)}
+                disabled={!appClienteDraft.app_cliente_publicado}
+                onChange={(event) =>
+                  setAppClienteDraft((prev) => ({
+                    ...prev,
+                    app_cliente_pausado: event.target.checked,
+                  }))
+                }
+                className="h-4 w-4 rounded border-zinc-300"
+              />
+              Pausar no app cliente
+            </label>
+            <p className="mt-2 text-sm leading-6 text-zinc-600">
+              Pausado sai da vitrine de saloes, mas o link direto continua
+              abrindo a pagina com aviso e sem permitir agendar.
+            </p>
+            <div className="mt-3">
+              <Field label="Mensagem exibida quando estiver pausado">
+                <TextInput
+                  value={appClienteDraft.app_cliente_pausa_mensagem || ""}
+                  onChange={(event) =>
+                    setAppClienteDraft((prev) => ({
+                      ...prev,
+                      app_cliente_pausa_mensagem: event.target.value,
+                    }))
+                  }
+                  placeholder="Estamos de ferias e voltamos em breve."
+                />
+              </Field>
+            </div>
           </div>
         </div>
       </AppModal>

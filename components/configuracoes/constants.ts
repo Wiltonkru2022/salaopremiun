@@ -41,6 +41,9 @@ export const EMPTY_SALAO: SalaoForm = {
   estacionamento: false,
   formas_pagamento_publico: "",
   app_cliente_publicado: false,
+  app_cliente_pausado: false,
+  app_cliente_pausa_mensagem: "",
+  app_cliente_slug: "",
 };
 
 export const RATEIO_CONFIG_DEFAULT: RateioConfig = {

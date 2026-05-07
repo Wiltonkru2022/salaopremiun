@@ -23,6 +23,9 @@ export type SalaoForm = {
   estacionamento?: boolean;
   formas_pagamento_publico?: string;
   app_cliente_publicado?: boolean;
+  app_cliente_pausado?: boolean;
+  app_cliente_pausa_mensagem?: string;
+  app_cliente_slug?: string;
 };
 
 export type ConfigSalaoForm = {

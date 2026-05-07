@@ -186,8 +186,8 @@ export default function NotificationBell({
         type="button"
         onClick={() => setOpen((prev) => !prev)}
         className={clsx(
-          "relative inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-zinc-200 bg-white text-zinc-800 shadow-sm transition hover:-translate-y-0.5 hover:border-[var(--app-accent)] hover:text-zinc-950",
-          open && "border-[var(--app-accent)] text-zinc-950"
+          "relative inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-zinc-200 bg-white text-zinc-800 shadow-sm transition hover:-translate-y-0.5 hover:border-[var(--app-accent)] hover:bg-zinc-50 hover:text-zinc-950",
+          open && "border-[var(--app-accent)] bg-zinc-50 text-zinc-950"
         )}
         aria-label="Abrir notificacoes"
       >

@@ -127,17 +127,17 @@ export default function Header({
   return (
     <header
       className={clsx(
-        "rounded-[14px] border px-2.5 py-2 transition-all duration-200 md:px-3",
+        "rounded-[18px] border px-3 py-2.5 transition-all duration-200 md:px-4",
         scrolled
-          ? "border-zinc-200 bg-white/95 shadow-sm backdrop-blur"
-          : "border-zinc-200 bg-white/92 backdrop-blur"
+          ? "border-zinc-200 bg-white/95 shadow-[0_12px_34px_rgba(15,23,42,0.08)] backdrop-blur"
+          : "border-white/80 bg-white/90 shadow-[0_10px_28px_rgba(15,23,42,0.05)] backdrop-blur"
       )}
     >
-      <div className="flex min-h-10 flex-wrap items-center gap-2 lg:flex-nowrap">
+      <div className="flex min-h-11 flex-wrap items-center gap-2.5 lg:flex-nowrap">
         <button
           type="button"
           onClick={onOpenSidebar}
-          className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-zinc-200 bg-white text-zinc-900 transition hover:border-zinc-300 hover:bg-zinc-50 lg:hidden"
+          className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-zinc-200 bg-white text-zinc-900 shadow-sm transition hover:border-zinc-300 hover:bg-zinc-50 lg:hidden"
           aria-label="Abrir menu lateral"
         >
           <Menu size={18} />
@@ -173,7 +173,7 @@ export default function Header({
           href={canSeeAssinatura ? getRouteHref("/meu-plano") : "#"}
           aria-disabled={!canSeeAssinatura}
           className={clsx(
-            "hidden min-w-0 items-center gap-2 rounded-lg border border-zinc-200 bg-zinc-50 px-2 py-1.5 text-sm md:flex xl:px-2.5",
+            "hidden min-w-0 items-center gap-2 rounded-2xl border border-zinc-200 bg-zinc-50 px-2.5 py-2 text-sm md:flex xl:px-3",
             canSeeAssinatura
               ? "transition hover:border-zinc-300 hover:bg-white"
               : "pointer-events-none opacity-70"
@@ -203,10 +203,10 @@ export default function Header({
           <button
             type="button"
             onClick={() => setMenuOpen((prev) => !prev)}
-            className="flex h-9 max-w-full items-center gap-2 rounded-lg border border-zinc-200 bg-white py-1 pl-1 pr-1.5 text-left text-zinc-900 transition hover:border-zinc-300 hover:bg-zinc-50"
+            className="flex h-10 max-w-full items-center gap-2 rounded-2xl border border-zinc-200 bg-white py-1 pl-1 pr-2 text-left text-zinc-900 shadow-sm transition hover:border-zinc-300 hover:bg-zinc-50"
             aria-label="Abrir menu da conta"
           >
-              <span className="flex h-7.5 w-7.5 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-zinc-100 ring-1 ring-zinc-200">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-zinc-100 ring-1 ring-zinc-200">
               {salaoLogoUrl ? (
                 <img
                   src={salaoLogoUrl}

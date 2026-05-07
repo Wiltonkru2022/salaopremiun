@@ -1,5 +1,4 @@
 import "server-only";
-import { unstable_cache } from "next/cache";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import {
   assertSalonCanAppearInClientApp,
@@ -90,52 +89,6 @@ function parseNullableNumber(value: unknown) {
   return Number.isFinite(numeric) ? numeric : null;
 }
 
-function parseStringArray(value: unknown) {
-  if (!Array.isArray(value)) return [];
-  return value.map((item) => String(item || "").trim()).filter(Boolean);
-}
-
-function normalizeCachePayload(value: unknown) {
-  return (value && typeof value === "object" ? value : {}) as Record<
-    string,
-    unknown
-  >;
-}
-
-function mapCacheSalonRow(row: Record<string, unknown>): ClientAppSalonListItem {
-  const payload = normalizeCachePayload(row.payload);
-  return {
-    id: String(row.id_salao || payload.id || ""),
-    nome: String(payload.nome || "").trim() || "Salao Premium",
-    cidade: String(payload.cidade || "").trim() || null,
-    estado: String(payload.estado || "").trim() || null,
-    bairro: String(payload.bairro || "").trim() || null,
-    endereco: String(payload.endereco || "").trim() || null,
-    numero: String(payload.numero || "").trim() || null,
-    cep: String(payload.cep || "").trim() || null,
-    enderecoCompleto: String(payload.enderecoCompleto || "").trim() || null,
-    logoUrl: String(payload.logoUrl || "").trim() || null,
-    fotoCapaUrl: String(payload.fotoCapaUrl || "").trim() || null,
-    latitude: parseNullableNumber(payload.latitude),
-    longitude: parseNullableNumber(payload.longitude),
-    whatsapp: String(payload.whatsapp || "").trim() || null,
-    telefone: String(payload.telefone || "").trim() || null,
-    descricaoPublica: String(payload.descricaoPublica || "").trim() || null,
-    estacionamento: Boolean(payload.estacionamento),
-    formasPagamento: parseStringArray(payload.formasPagamento),
-    notaMedia: parseNullableNumber(row.nota_media),
-    totalAvaliacoes: Number(row.total_avaliacoes || 0) || 0,
-    precoMinimo: parseNullableNumber(row.preco_minimo),
-    duracaoMinima: parseNullableNumber(row.duracao_minima),
-    totalServicos: Number(row.total_servicos || 0) || 0,
-    totalProfissionais: Number(row.total_profissionais || 0) || 0,
-    proximoHorarioLabel:
-      String(row.proximo_horario_label || "").trim() ||
-      (Number(row.total_servicos || 0) > 0 ? "Agenda online" : null),
-    categorias: parseStringArray(row.categorias),
-  };
-}
-
 function mapLiveSalonRow(row: Record<string, unknown>): ClientAppSalonListItem {
   return {
     id: String(row.id || ""),
@@ -175,6 +128,10 @@ function mapLiveSalonRow(row: Record<string, unknown>): ClientAppSalonListItem {
           .map((item) => String(item || "").trim())
           .filter(Boolean)
       : [],
+    appClientePausado: Boolean(row.app_cliente_pausado),
+    appClientePausaMensagem:
+      String(row.app_cliente_pausa_mensagem || "").trim() || null,
+    appClienteSlug: String(row.app_cliente_slug || "").trim() || null,
     notaMedia: null,
     totalAvaliacoes: 0,
     precoMinimo: null,
@@ -307,36 +264,10 @@ async function attachMarketplaceMetrics(
   });
 }
 
-const listVisibleClientAppSaloesCached = unstable_cache(
-  async (search: string, limit: number) => {
+async function listVisibleClientAppSaloesLive(search: string, limit: number) {
     const term = normalizeSearch(search);
     const pageSize = Math.min(Math.max(limit, 1), 24);
     const supabaseAdmin = getSupabaseAdmin();
-
-    try {
-      let cacheQuery: any = (supabaseAdmin as any)
-        .from("client_app_marketplace_cache")
-        .select(
-          "id_salao, payload, nota_media, total_avaliacoes, preco_minimo, duracao_minima, total_servicos, total_profissionais, proximo_horario_label, categorias"
-        )
-        .eq("publicado", true)
-        .order("ranking_score", { ascending: false })
-        .order("nome", { ascending: true })
-        .limit(pageSize);
-
-      if (term) {
-        cacheQuery = cacheQuery.ilike("search_text", `%${term}%`);
-      }
-
-      const { data: cachedRows, error: cacheError } = await cacheQuery;
-      if (!cacheError && cachedRows?.length) {
-        return ((cachedRows as Array<Record<string, unknown>>) || []).map(
-          mapCacheSalonRow
-        );
-      }
-    } catch {
-      // The cache table is optional during rollout; live queries remain the fallback.
-    }
 
     let query: any = supabaseAdmin
       .from("saloes")
@@ -362,11 +293,15 @@ const listVisibleClientAppSaloesCached = unstable_cache(
           "formas_pagamento_publico",
           "status",
           "app_cliente_publicado",
+          "app_cliente_pausado",
+          "app_cliente_pausa_mensagem",
+          "app_cliente_slug",
           "assinaturas!inner(plano,status)",
         ].join(",")
       )
       .eq("status", "ativo")
       .eq("app_cliente_publicado", true)
+      .eq("app_cliente_pausado", false)
       .eq("assinaturas.status", "ativo")
       .in("assinaturas.plano", ["pro", "premium"])
       .order("nome", { ascending: true })
@@ -389,26 +324,19 @@ const listVisibleClientAppSaloesCached = unstable_cache(
     );
 
     return attachMarketplaceMetrics(supabaseAdmin, saloes);
-  },
-  ["client-app-visible-saloes-v2"],
-  {
-    revalidate: 60,
-    tags: ["client-app-saloes"],
-  }
-);
+}
 
 export async function listVisibleClientAppSaloes(params?: {
   search?: string;
   limit?: number;
 }) {
-  return listVisibleClientAppSaloesCached(
+  return listVisibleClientAppSaloesLive(
     normalizeSearch(params?.search),
     params?.limit ?? 12
   );
 }
 
-const getClientAppSalonDetailCached = unstable_cache(
-  async (idSalao: string) => {
+async function getClientAppSalonDetailLive(idSalao: string) {
     const salao = await assertSalonCanAppearInClientApp(idSalao);
     const supabaseAdmin = getSupabaseAdmin();
 
@@ -532,16 +460,10 @@ const getClientAppSalonDetailCached = unstable_cache(
           ? Number(configResult.value.data?.intervalo_minutos || 15) || 15
           : 15,
     } satisfies ClientAppSalonDetail;
-  },
-  ["client-app-salon-detail-v2"],
-  {
-    revalidate: 60,
-    tags: ["client-app-saloes"],
   }
-);
 
 export async function getClientAppSalonDetail(idSalao: string) {
-  return getClientAppSalonDetailCached(idSalao);
+  return getClientAppSalonDetailLive(idSalao);
 }
 
 export async function listClienteAppAppointments(params: { idConta: string }) {

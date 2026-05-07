@@ -1,5 +1,4 @@
 import "server-only";
-import { unstable_cache } from "next/cache";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 type EligibleSalonRow = {
@@ -22,6 +21,9 @@ type EligibleSalonRow = {
   estacionamento?: boolean | null;
   formas_pagamento_publico?: unknown;
   app_cliente_publicado?: boolean | null;
+  app_cliente_pausado?: boolean | null;
+  app_cliente_pausa_mensagem?: string | null;
+  app_cliente_slug?: string | null;
   status: string | null;
   assinaturas:
     | Array<{
@@ -50,6 +52,9 @@ export type ClientAppEligibleSalon = {
   descricaoPublica: string | null;
   estacionamento: boolean;
   formasPagamento: string[];
+  appClientePausado: boolean;
+  appClientePausaMensagem: string | null;
+  appClienteSlug: string | null;
 };
 
 function normalizePlanCode(value?: string | null) {
@@ -72,6 +77,12 @@ function parseStringArray(value: unknown) {
 function parseNumber(value: unknown) {
   const numeric = Number(value);
   return Number.isFinite(numeric) ? numeric : null;
+}
+
+function isUuid(value: string) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    value
+  );
 }
 
 function buildEnderecoCompleto(row: EligibleSalonRow) {
@@ -114,6 +125,10 @@ function mapSalonRow(row: EligibleSalonRow): ClientAppEligibleSalon {
     descricaoPublica: String(row.descricao_publica || "").trim() || null,
     estacionamento: Boolean(row.estacionamento),
     formasPagamento: parseStringArray(row.formas_pagamento_publico),
+    appClientePausado: Boolean(row.app_cliente_pausado),
+    appClientePausaMensagem:
+      String(row.app_cliente_pausa_mensagem || "").trim() || null,
+    appClienteSlug: String(row.app_cliente_slug || "").trim() || null,
   };
 }
 
@@ -142,6 +157,9 @@ function buildBaseSalonQuery() {
         "estacionamento",
         "formas_pagamento_publico",
         "app_cliente_publicado",
+        "app_cliente_pausado",
+        "app_cliente_pausa_mensagem",
+        "app_cliente_slug",
         "status",
         "assinaturas!inner(plano,status)",
       ].join(",")
@@ -152,28 +170,25 @@ function buildBaseSalonQuery() {
     .in("assinaturas.plano", ["pro", "premium"]);
 }
 
-const getEligibleSalonByIdCached = unstable_cache(
-  async (idSalao: string) => {
-    const { data, error } = await buildBaseSalonQuery()
-      .eq("id", idSalao)
-      .limit(1)
-      .maybeSingle();
+async function getEligibleSalonByIdLive(idSalaoOrSlug: string) {
+  const normalized = String(idSalaoOrSlug || "").trim();
+  const query = buildBaseSalonQuery();
+  const { data, error } = await (isUuid(normalized)
+    ? query.eq("id", normalized)
+    : query.eq("app_cliente_slug", normalized)
+  )
+    .limit(1)
+    .maybeSingle();
 
-    if (error || !data) {
-      return null;
-    }
-
-    return mapSalonRow(data as unknown as EligibleSalonRow);
-  },
-  ["client-app-eligible-salon-by-id-v2"],
-  {
-    revalidate: 60,
-    tags: ["client-app-saloes"],
+  if (error || !data) {
+    return null;
   }
-);
+
+  return mapSalonRow(data as unknown as EligibleSalonRow);
+}
 
 export async function canSalonAppearInClientApp(idSalao: string) {
-  const salao = await getEligibleSalonByIdCached(idSalao);
+  const salao = await getEligibleSalonByIdLive(idSalao);
 
   return {
     allowed: Boolean(salao?.id),
