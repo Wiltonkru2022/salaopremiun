@@ -9,10 +9,14 @@ import {
   BadgeDollarSign,
   CalendarDays,
   CreditCard,
+  Download,
+  FileText,
   Printer,
   Receipt,
   Scissors,
   Search,
+  TrendingUp,
+  UserRound,
   Wallet,
   ShieldAlert,
 } from "lucide-react";
@@ -66,6 +70,26 @@ type ComissaoRow = {
   pago_em?: string | null;
 };
 
+type ProfissionalRow = {
+  id: string;
+  nome: string;
+  tipo_profissional?: string | null;
+  status?: string | null;
+};
+
+type ComandaItemRow = {
+  id: string;
+  id_comanda: string;
+  tipo_item?: string | null;
+  descricao?: string | null;
+  quantidade?: number | null;
+  valor_unitario?: number | null;
+  valor_total?: number | null;
+  custo_total?: number | null;
+  id_profissional?: string | null;
+  id_assistente?: string | null;
+};
+
 type CaixaSessaoResumoRow = {
   id: string;
   status: string;
@@ -91,6 +115,8 @@ type ResumoFinanceiro = {
   canceladas: number;
   quantidadeVendas: number;
   ticketMedio: number;
+  custoItens: number;
+  lucroLiquidoSalao: number;
 };
 
 type ResumoCaixa = {
@@ -103,7 +129,8 @@ type ResumoCaixa = {
 
 type StatusFiltro = "fechada" | "cancelada" | "todos";
 type PainelLateralTab = "pagamentos" | "comissoes";
-type PrintSectionKey = "vendas" | "pagamentos" | "comissoes";
+type DatePresetKey = "hoje" | "ontem" | "7dias" | "mes";
+type PrintSectionKey = "vendas" | "pagamentos" | "comissoes" | "caixa" | "itens";
 type PrintSelection = Record<PrintSectionKey, boolean>;
 
 function toArray<T>(value: T | T[] | null | undefined): T[] {
@@ -140,6 +167,43 @@ function formatDateInput(date: Date) {
   return `${y}-${m}-${d}`;
 }
 
+function addDays(date: Date, amount: number) {
+  const next = new Date(date);
+  next.setDate(next.getDate() + amount);
+  return next;
+}
+
+function getDatePresetRange(key: DatePresetKey) {
+  const today = new Date();
+
+  if (key === "ontem") {
+    const yesterday = addDays(today, -1);
+    return {
+      start: formatDateInput(yesterday),
+      end: formatDateInput(yesterday),
+    };
+  }
+
+  if (key === "7dias") {
+    return {
+      start: formatDateInput(addDays(today, -6)),
+      end: formatDateInput(today),
+    };
+  }
+
+  if (key === "mes") {
+    return {
+      start: formatDateInput(new Date(today.getFullYear(), today.getMonth(), 1)),
+      end: formatDateInput(today),
+    };
+  }
+
+  return {
+    start: formatDateInput(today),
+    end: formatDateInput(today),
+  };
+}
+
 function escapeHtml(value: string) {
   return value
     .replaceAll("&", "&amp;")
@@ -161,6 +225,20 @@ function formatFormaPagamentoLabel(value: string) {
   if (!key) return "-";
 
   return key.charAt(0).toUpperCase() + key.slice(1);
+}
+
+function formatTipoItemLabel(value?: string | null) {
+  const key = (value || "").trim().toLowerCase();
+  if (key === "servico") return "Serviço";
+  if (key === "produto") return "Produto";
+  if (key === "extra") return "Extra";
+  if (key === "ajuste") return "Ajuste";
+  return key ? key.charAt(0).toUpperCase() + key.slice(1) : "-";
+}
+
+function csvCell(value: string | number | null | undefined) {
+  const normalized = String(value ?? "").replaceAll('"', '""');
+  return `"${normalized}"`;
 }
 
 function getStatusBadgeClass(status: string) {
@@ -246,6 +324,7 @@ export default function RelatorioFinanceiroPage() {
   const [dataFim, setDataFim] = useState(formatDateInput(hoje));
   const [busca, setBusca] = useState("");
   const [statusFiltro, setStatusFiltro] = useState<StatusFiltro>("fechada");
+  const [profissionalFiltro, setProfissionalFiltro] = useState("");
   const [painelLateralTab, setPainelLateralTab] =
     useState<PainelLateralTab>("pagamentos");
   const [printModalOpen, setPrintModalOpen] = useState(false);
@@ -254,11 +333,15 @@ export default function RelatorioFinanceiroPage() {
     vendas: true,
     pagamentos: true,
     comissoes: true,
+    caixa: true,
+    itens: true,
   });
 
   const [comandas, setComandas] = useState<ComandaRow[]>([]);
   const [pagamentos, setPagamentos] = useState<PagamentoRow[]>([]);
   const [comissoes, setComissoes] = useState<ComissaoRow[]>([]);
+  const [profissionais, setProfissionais] = useState<ProfissionalRow[]>([]);
+  const [itensComanda, setItensComanda] = useState<ComandaItemRow[]>([]);
   const [caixaSessoes, setCaixaSessoes] = useState<CaixaSessaoResumoRow[]>([]);
 
   const carregarRelatorio = useCallback(
@@ -275,6 +358,20 @@ export default function RelatorioFinanceiroPage() {
         setRelatoriosAvancados(
           Boolean(painelSession?.planoRecursos?.relatorios_avancados)
         );
+
+        const { data: profissionaisData, error: profissionaisError } = await supabase
+          .from("profissionais")
+          .select("id, nome, tipo_profissional, status")
+          .eq("id_salao", salaoId)
+          .order("nome", { ascending: true });
+
+        if (profissionaisError) {
+          console.error(profissionaisError);
+          setErroTela("Erro ao carregar profissionais do relatório.");
+          return;
+        }
+
+        setProfissionais((profissionaisData as ProfissionalRow[]) || []);
 
         let queryComandas = supabase
           .from("comandas")
@@ -367,12 +464,14 @@ export default function RelatorioFinanceiroPage() {
         if (idsComandas.length === 0) {
           setPagamentos([]);
           setComissoes([]);
+          setItensComanda([]);
           return;
         }
 
         const [
           { data: pagamentosData, error: pagamentosError },
           { data: comissoesData, error: comissoesError },
+          { data: itensData, error: itensError },
         ] = await Promise.all([
           supabase
             .from("comanda_pagamentos")
@@ -405,6 +504,22 @@ export default function RelatorioFinanceiroPage() {
               pago_em
             `)
             .in("id_comanda", idsComandas),
+
+          supabase
+            .from("comanda_itens")
+            .select(`
+              id,
+              id_comanda,
+              tipo_item,
+              descricao,
+              quantidade,
+              valor_unitario,
+              valor_total,
+              custo_total,
+              id_profissional,
+              id_assistente
+            `)
+            .in("id_comanda", idsComandas),
         ]);
 
         if (pagamentosError) {
@@ -419,8 +534,15 @@ export default function RelatorioFinanceiroPage() {
           return;
         }
 
+        if (itensError) {
+          console.error(itensError);
+          setErroTela("Erro ao carregar itens vendidos do relatório.");
+          return;
+        }
+
         setPagamentos((pagamentosData as PagamentoRow[]) || []);
         setComissoes((comissoesData as ComissaoRow[]) || []);
+        setItensComanda((itensData as ComandaItemRow[]) || []);
       } catch (error: unknown) {
         console.error(error);
         setErroTela(
@@ -472,14 +594,30 @@ export default function RelatorioFinanceiroPage() {
 
   const comandasFiltradas = useMemo(() => {
     const termo = busca.trim().toLowerCase();
-    if (!termo) return comandas;
 
     return comandas.filter((item) => {
       const numero = String(item.numero || "");
       const cliente = getJoinedName(item.clientes, "").toLowerCase();
-      return numero.includes(termo) || cliente.includes(termo);
+      const matchesBusca = !termo || numero.includes(termo) || cliente.includes(termo);
+
+      if (!matchesBusca) return false;
+      if (!profissionalFiltro) return true;
+
+      return (
+        comissoes.some(
+          (comissao) =>
+            comissao.id_comanda === item.id &&
+            comissao.id_profissional === profissionalFiltro
+        ) ||
+        itensComanda.some(
+          (itemComanda) =>
+            itemComanda.id_comanda === item.id &&
+            (itemComanda.id_profissional === profissionalFiltro ||
+              itemComanda.id_assistente === profissionalFiltro)
+        )
+      );
     });
-  }, [busca, comandas]);
+  }, [busca, comandas, profissionalFiltro, comissoes, itensComanda]);
 
   const idsComandasFiltradas = useMemo(
     () => comandasFiltradas.map((item) => item.id),
@@ -491,10 +629,29 @@ export default function RelatorioFinanceiroPage() {
   }, [pagamentos, idsComandasFiltradas]);
 
   const comissoesFiltradas = useMemo(() => {
-    return comissoes.filter(
-      (item) => item.id_comanda && idsComandasFiltradas.includes(item.id_comanda)
-    );
-  }, [comissoes, idsComandasFiltradas]);
+    return comissoes.filter((item) => {
+      const matchesComanda = item.id_comanda && idsComandasFiltradas.includes(item.id_comanda);
+      const matchesProfissional =
+        !profissionalFiltro || item.id_profissional === profissionalFiltro;
+      return matchesComanda && matchesProfissional;
+    });
+  }, [comissoes, idsComandasFiltradas, profissionalFiltro]);
+
+  const itensComandaFiltrados = useMemo(() => {
+    return itensComanda.filter((item) => {
+      const matchesComanda = idsComandasFiltradas.includes(item.id_comanda);
+      const matchesProfissional =
+        !profissionalFiltro ||
+        item.id_profissional === profissionalFiltro ||
+        item.id_assistente === profissionalFiltro;
+      return matchesComanda && matchesProfissional;
+    });
+  }, [itensComanda, idsComandasFiltradas, profissionalFiltro]);
+
+  const profissionalSelecionado = useMemo(
+    () => profissionais.find((item) => item.id === profissionalFiltro) || null,
+    [profissionais, profissionalFiltro]
+  );
 
   const resumo = useMemo<ResumoFinanceiro>(() => {
     const faturamentoBruto = comandasFiltradas
@@ -528,6 +685,10 @@ export default function RelatorioFinanceiroPage() {
       .filter((item) => item.status === "pago")
       .reduce((acc, item) => acc + Number(item.valor_comissao || 0), 0);
 
+    const custoItens = itensComandaFiltrados
+      .filter((item) => idsComandasFiltradas.includes(item.id_comanda))
+      .reduce((acc, item) => acc + Number(item.custo_total || 0), 0);
+
     const canceladas = comandasFiltradas
       .filter((item) => item.status === "cancelada")
       .reduce((acc, item) => acc + Number(item.total || 0), 0);
@@ -535,6 +696,8 @@ export default function RelatorioFinanceiroPage() {
     const quantidadeVendas = comandasFiltradas.filter((item) => item.status === "fechada").length;
 
     const ticketMedio = quantidadeVendas > 0 ? faturamentoLiquido / quantidadeVendas : 0;
+    const lucroLiquidoSalao =
+      faturamentoLiquido - taxaMaquininha - custoItens - comissaoPendente - comissaoPaga;
 
     return {
       faturamentoBruto,
@@ -548,8 +711,16 @@ export default function RelatorioFinanceiroPage() {
       canceladas,
       quantidadeVendas,
       ticketMedio,
+      custoItens,
+      lucroLiquidoSalao,
     };
-  }, [comandasFiltradas, pagamentosFiltrados, comissoesFiltradas]);
+  }, [
+    comandasFiltradas,
+    pagamentosFiltrados,
+    comissoesFiltradas,
+    itensComandaFiltrados,
+    idsComandasFiltradas,
+  ]);
 
   const pagamentosPorForma = useMemo(() => {
     const mapa = new Map<string, { forma: string; total: number; taxa: number; qtd: number }>();
@@ -623,6 +794,69 @@ export default function RelatorioFinanceiroPage() {
     };
   }, [comissoesFiltradas]);
 
+  const rankingItens = useMemo(() => {
+    const mapa = new Map<
+      string,
+      {
+        chave: string;
+        descricao: string;
+        tipo: string;
+        quantidade: number;
+        faturamento: number;
+        custo: number;
+        lucro: number;
+      }
+    >();
+
+    itensComandaFiltrados.forEach((item) => {
+      const descricao = parseComboDisplayMeta(item.descricao).displayTitle || "Item";
+      const tipo = item.tipo_item || "outro";
+      const chave = `${tipo}:${descricao.toLowerCase()}`;
+      const atual = mapa.get(chave) || {
+        chave,
+        descricao,
+        tipo,
+        quantidade: 0,
+        faturamento: 0,
+        custo: 0,
+        lucro: 0,
+      };
+      const faturamento = Number(item.valor_total || 0);
+      const custo = Number(item.custo_total || 0);
+
+      atual.quantidade += Number(item.quantidade || 1);
+      atual.faturamento += faturamento;
+      atual.custo += custo;
+      atual.lucro += faturamento - custo;
+      mapa.set(chave, atual);
+    });
+
+    return Array.from(mapa.values())
+      .sort((a, b) => b.lucro - a.lucro)
+      .slice(0, 8);
+  }, [itensComandaFiltrados]);
+
+  const vendasPorDiaSemana = useMemo(() => {
+    const labels = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+    const mapa = labels.map((label) => ({ label, total: 0, vendas: 0 }));
+
+    comandasFiltradas
+      .filter((item) => item.status === "fechada")
+      .forEach((item) => {
+        const date = new Date(item.fechada_em || item.aberta_em || "");
+        if (Number.isNaN(date.getTime())) return;
+        const bucket = mapa[date.getDay()];
+        bucket.total += Number(item.total || 0);
+        bucket.vendas += 1;
+      });
+
+    const maiorTotal = Math.max(...mapa.map((item) => item.total), 1);
+    return mapa.map((item) => ({
+      ...item,
+      percentual: Math.max(4, Math.round((item.total / maiorTotal) * 100)),
+    }));
+  }, [comandasFiltradas]);
+
   const totalSecoesSelecionadas = useMemo(
     () => Object.values(printSelection).filter(Boolean).length,
     [printSelection]
@@ -640,8 +874,89 @@ export default function RelatorioFinanceiroPage() {
       vendas: true,
       pagamentos: true,
       comissoes: true,
+      caixa: true,
+      itens: true,
     });
   }, []);
+
+  const aplicarPresetData = useCallback((key: DatePresetKey) => {
+    const range = getDatePresetRange(key);
+    setDataInicio(range.start);
+    setDataFim(range.end);
+  }, []);
+
+  const fecharMes = useCallback(() => {
+    const range = getDatePresetRange("mes");
+    setDataInicio(range.start);
+    setDataFim(range.end);
+    marcarTodasSecoes();
+    setPrintModalOpen(true);
+    setMsg("Fechamento do mês preparado. Confira as seções e clique em imprimir.");
+  }, [marcarTodasSecoes]);
+
+  const exportarCsv = useCallback(() => {
+    const linhas = [
+      [
+        "Relatório",
+        "Período inicial",
+        "Período final",
+        "Profissional",
+        "Comanda",
+        "Cliente",
+        "Status",
+        "Data",
+        "Subtotal",
+        "Desconto",
+        "Acréscimo",
+        "Total",
+      ],
+      ...comandasFiltradas.map((item) => [
+        "Vendas",
+        dataInicio,
+        dataFim,
+        profissionalSelecionado?.nome || "Todos",
+        `#${item.numero}`,
+        getJoinedName(item.clientes, "Sem cliente"),
+        item.status || "-",
+        formatDateTime(item.fechada_em || item.cancelada_em || item.aberta_em),
+        Number(item.subtotal || 0).toFixed(2),
+        Number(item.desconto || 0).toFixed(2),
+        Number(item.acrescimo || 0).toFixed(2),
+        Number(item.total || 0).toFixed(2),
+      ]),
+      [],
+      ["Item", "Tipo", "Quantidade", "Faturamento", "Custo", "Lucro"],
+      ...rankingItens.map((item) => [
+        item.descricao,
+        formatTipoItemLabel(item.tipo),
+        item.quantidade.toFixed(2),
+        item.faturamento.toFixed(2),
+        item.custo.toFixed(2),
+        item.lucro.toFixed(2),
+      ]),
+    ];
+
+    const csv = linhas
+      .map((linha) => linha.map((celula) => csvCell(celula)).join(";"))
+      .join("\n");
+    const blob = new Blob([`\uFEFF${csv}`], {
+      type: "text/csv;charset=utf-8",
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `relatorio-financeiro-${dataInicio}-${dataFim}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  }, [
+    comandasFiltradas,
+    dataInicio,
+    dataFim,
+    profissionalSelecionado,
+    rankingItens,
+  ]);
 
   const imprimirRelatorio = useCallback(() => {
     const sections = Object.entries(printSelection)
@@ -658,6 +973,7 @@ export default function RelatorioFinanceiroPage() {
 
     const periodLabel = `Período de ${dataInicio} até ${dataFim}`;
     const generatedAt = new Date().toLocaleString("pt-BR");
+    const professionalLabel = profissionalSelecionado?.nome || "Todos os profissionais";
 
     const vendasRows =
       comandasFiltradas.length > 0
@@ -731,6 +1047,51 @@ export default function RelatorioFinanceiroPage() {
           </tr>
         `;
 
+    const caixaRows =
+      caixaSessoes.length > 0
+        ? caixaSessoes
+            .map(
+              (item) => `
+                <tr>
+                  <td>${escapeHtml(formatDateTime(item.aberto_em))}</td>
+                  <td>${escapeHtml(formatDateTime(item.fechado_em))}</td>
+                  <td>${escapeHtml(formatCurrency(item.valor_abertura))}</td>
+                  <td>${escapeHtml(formatCurrency(item.valor_previsto_fechamento))}</td>
+                  <td>${escapeHtml(formatCurrency(item.valor_fechamento_informado))}</td>
+                  <td>${escapeHtml(formatCurrency(item.valor_diferenca_fechamento))}</td>
+                  <td>${escapeHtml(item.tipo_fechamento || "-")}</td>
+                </tr>
+              `
+            )
+            .join("")
+        : `
+          <tr>
+            <td colspan="7" class="empty">Nenhum fechamento de caixa no período.</td>
+          </tr>
+        `;
+
+    const itensRows =
+      rankingItens.length > 0
+        ? rankingItens
+            .map(
+              (item) => `
+                <tr>
+                  <td>${escapeHtml(item.descricao)}</td>
+                  <td>${escapeHtml(formatTipoItemLabel(item.tipo))}</td>
+                  <td>${escapeHtml(item.quantidade.toLocaleString("pt-BR"))}</td>
+                  <td>${escapeHtml(formatCurrency(item.faturamento))}</td>
+                  <td>${escapeHtml(formatCurrency(item.custo))}</td>
+                  <td>${escapeHtml(formatCurrency(item.lucro))}</td>
+                </tr>
+              `
+            )
+            .join("")
+        : `
+          <tr>
+            <td colspan="6" class="empty">Nenhum item vendido no período.</td>
+          </tr>
+        `;
+
     const sectionBlocks = [
       printSelection.vendas
         ? `
@@ -783,7 +1144,7 @@ export default function RelatorioFinanceiroPage() {
           <section class="report-card">
             <div class="section-head">
               <h2>Comissões do período</h2>
-              <p>Resumo das comissoes ligadas as vendas filtradas.</p>
+              <p>Resumo das comissões ligadas às vendas filtradas.</p>
             </div>
             <div class="summary-grid">
               <div class="summary-card">
@@ -810,6 +1171,53 @@ export default function RelatorioFinanceiroPage() {
                 </tr>
               </thead>
               <tbody>${comissoesRows}</tbody>
+            </table>
+          </section>
+        `
+        : "",
+      printSelection.caixa
+        ? `
+          <section class="report-card">
+            <div class="section-head">
+              <h2>Fechamento de caixa</h2>
+              <p>Saldo inicial, previsto, contado e diferença dos caixas fechados.</p>
+            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Abertura</th>
+                  <th>Fechamento</th>
+                  <th>Saldo inicial</th>
+                  <th>Previsto</th>
+                  <th>Contado</th>
+                  <th>Diferença</th>
+                  <th>Tipo</th>
+                </tr>
+              </thead>
+              <tbody>${caixaRows}</tbody>
+            </table>
+          </section>
+        `
+        : "",
+      printSelection.itens
+        ? `
+          <section class="report-card">
+            <div class="section-head">
+              <h2>Ranking de vendas e lucro</h2>
+              <p>Itens que mais contribuíram para o resultado do período.</p>
+            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Item</th>
+                  <th>Tipo</th>
+                  <th>Quantidade</th>
+                  <th>Faturamento</th>
+                  <th>Custo</th>
+                  <th>Lucro</th>
+                </tr>
+              </thead>
+              <tbody>${itensRows}</tbody>
             </table>
           </section>
         `
@@ -938,6 +1346,9 @@ export default function RelatorioFinanceiroPage() {
               font-size: 13px;
               vertical-align: top;
             }
+            tbody tr:nth-child(even) td {
+              background: #fafafa;
+            }
             tbody tr:last-child td {
               border-bottom: none;
             }
@@ -945,6 +1356,12 @@ export default function RelatorioFinanceiroPage() {
               text-align: center;
               color: #71717a;
               padding: 22px 12px;
+            }
+            .report-footer {
+              margin-top: 22px;
+              color: #71717a;
+              font-size: 12px;
+              text-align: center;
             }
             @media print {
               body {
@@ -959,6 +1376,9 @@ export default function RelatorioFinanceiroPage() {
               .summary-card {
                 box-shadow: none;
               }
+              @page {
+                margin: 14mm;
+              }
             }
           </style>
         </head>
@@ -968,9 +1388,25 @@ export default function RelatorioFinanceiroPage() {
               <div class="eyebrow">Relatório financeiro</div>
               <h1>Resumo do período</h1>
               <div class="subtitle">${escapeHtml(periodLabel)}</div>
+              <div class="meta">Profissional: ${escapeHtml(professionalLabel)}</div>
               <div class="meta">Gerado em ${escapeHtml(generatedAt)}</div>
+              <div class="summary-grid">
+                <div class="summary-card">
+                  <span>Faturamento bruto</span>
+                  <strong>${escapeHtml(formatCurrency(resumo.faturamentoBruto))}</strong>
+                </div>
+                <div class="summary-card">
+                  <span>Lucro líquido salão</span>
+                  <strong>${escapeHtml(formatCurrency(resumo.lucroLiquidoSalao))}</strong>
+                </div>
+                <div class="summary-card">
+                  <span>Comissões a pagar</span>
+                  <strong>${escapeHtml(formatCurrency(resumo.comissaoPendente))}</strong>
+                </div>
+              </div>
             </header>
             ${sectionBlocks}
+            <footer class="report-footer">Gerado pelo Sistema Salão Premium</footer>
           </main>
         </body>
       </html>
@@ -1023,13 +1459,17 @@ export default function RelatorioFinanceiroPage() {
     printSelection,
     dataInicio,
     dataFim,
+    caixaSessoes,
+    profissionalSelecionado,
+    rankingItens,
+    resumo,
   ]);
 
   if (loading) {
     return (
       <AppLoading
-        title="Carregando relatorio financeiro"
-        message="Aguarde enquanto cruzamos vendas, pagamentos, taxas e comissoes do periodo."
+        title="Carregando relatório financeiro"
+        message="Aguarde enquanto cruzamos vendas, pagamentos, taxas e comissões do período."
         fullHeight={false}
       />
     );
@@ -1063,17 +1503,33 @@ export default function RelatorioFinanceiroPage() {
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
               <div className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-400">
-                Visao do periodo
+                Visão do período
               </div>
               <h1 className="mt-1 text-[1.95rem] font-bold tracking-[-0.04em] md:text-[2.1rem]">
-                Relatorio financeiro
+                Relatório financeiro
               </h1>
               <p className="mt-2 text-sm text-zinc-500">
-                Vendas, recebimentos, comissoes e fechamento de caixa em blocos mais diretos.
+                Vendas, recebimentos, comissões e fechamento de caixa em blocos mais diretos.
               </p>
             </div>
 
             <div className="flex flex-wrap items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={fecharMes}
+                className="inline-flex items-center justify-center gap-2 rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-50"
+              >
+                <FileText size={16} />
+                Fechar mês
+              </button>
+              <button
+                type="button"
+                onClick={exportarCsv}
+                className="inline-flex items-center justify-center gap-2 rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-50"
+              >
+                <Download size={16} />
+                Exportar Excel
+              </button>
               <button
                 type="button"
                 onClick={() => setPrintModalOpen(true)}
@@ -1106,7 +1562,25 @@ export default function RelatorioFinanceiroPage() {
         ) : null}
 
         <div className="rounded-[28px] border border-zinc-200 bg-white p-4 shadow-sm">
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-5">
+          <div className="mb-4 flex flex-wrap gap-2">
+            {[
+              { key: "hoje" as const, label: "Hoje" },
+              { key: "ontem" as const, label: "Ontem" },
+              { key: "7dias" as const, label: "Últimos 7 dias" },
+              { key: "mes" as const, label: "Mês atual" },
+            ].map((preset) => (
+              <button
+                key={preset.key}
+                type="button"
+                onClick={() => aplicarPresetData(preset.key)}
+                className="rounded-full border border-zinc-200 bg-zinc-50 px-3 py-2 text-xs font-semibold text-zinc-700 transition hover:border-zinc-900 hover:bg-white"
+              >
+                {preset.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-6">
             <div className="xl:col-span-2">
               <label className="mb-2 block text-sm font-semibold text-zinc-700">
                 Buscar
@@ -1137,6 +1611,31 @@ export default function RelatorioFinanceiroPage() {
                 <option value="cancelada">Canceladas</option>
                 <option value="todos">Todos</option>
               </select>
+            </div>
+
+            <div>
+              <label className="mb-2 block text-sm font-semibold text-zinc-700">
+                Profissional
+              </label>
+
+              <div className="relative">
+                <select
+                  value={profissionalFiltro}
+                  onChange={(e) => setProfissionalFiltro(e.target.value)}
+                  className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-3 pr-9 text-sm outline-none transition focus:border-zinc-900"
+                >
+                  <option value="">Todos</option>
+                  {profissionais.map((profissional) => (
+                    <option key={profissional.id} value={profissional.id}>
+                      {profissional.nome}
+                    </option>
+                  ))}
+                </select>
+                <UserRound
+                  className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-zinc-400"
+                  size={16}
+                />
+              </div>
             </div>
 
             <div>
@@ -1183,25 +1682,46 @@ export default function RelatorioFinanceiroPage() {
           <div>
             <h2 className="text-base font-semibold text-zinc-950">Vendas e recebimentos</h2>
             <p className="text-sm text-zinc-500">
-              Leitura rapida do que entrou no periodo filtrado.
+              Leitura rápida do que entrou no período filtrado.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 gap-3 xl:grid-cols-5">
+          <div className="grid grid-cols-1 gap-3 xl:grid-cols-4">
           <KpiCard
             icon={<BadgeDollarSign size={18} />}
             label="Faturamento bruto"
             value={formatCurrency(resumo.faturamentoBruto)}
           />
           <KpiCard
+            icon={<TrendingUp size={18} />}
+            label="Lucro líquido salão"
+            value={formatCurrency(resumo.lucroLiquidoSalao)}
+            helper={
+              relatoriosAvancados
+                ? `Após taxas, custos e comissões`
+                : "Estimativa do período"
+            }
+          />
+          <KpiCard
+            icon={<Scissors size={18} />}
+            label="Comissões a pagar"
+            value={formatCurrency(resumo.comissaoPendente)}
+            helper={`Paga: ${formatCurrency(resumo.comissaoPaga)}`}
+          />
+          <KpiCard
+            icon={<Wallet size={18} />}
+            label="Saldo em caixa"
+            value={formatCurrency(resumoCaixa.contadoFechamento)}
+            helper={`${resumoCaixa.sessoesFechadas} fechamento(s)`}
+          />
+          </div>
+
+          <div className="grid grid-cols-1 gap-3 xl:grid-cols-4">
+          <KpiCard
             icon={<Receipt size={18} />}
             label="Faturamento líquido"
             value={formatCurrency(resumo.faturamentoLiquido)}
-            helper={
-              relatoriosAvancados
-                ? `Ticket médio: ${formatCurrency(resumo.ticketMedio)}`
-                : "Leitura básica do período"
-            }
+            helper={`Ticket médio: ${formatCurrency(resumo.ticketMedio)}`}
           />
           <KpiCard
             icon={<Wallet size={18} />}
@@ -1214,10 +1734,9 @@ export default function RelatorioFinanceiroPage() {
             value={formatCurrency(resumo.taxaMaquininha)}
           />
           <KpiCard
-            icon={<Scissors size={18} />}
-            label="Comissão pendente"
-            value={formatCurrency(resumo.comissaoPendente)}
-            helper={`Paga: ${formatCurrency(resumo.comissaoPaga)}`}
+            icon={<Receipt size={18} />}
+            label="Custo dos itens"
+            value={formatCurrency(resumo.custoItens)}
           />
           </div>
 
@@ -1290,6 +1809,92 @@ export default function RelatorioFinanceiroPage() {
             description="Fechamento de caixa com quebra, sobra e leitura mais gerencial entra no Pro ou Premium."
           />
         )}
+
+        <div className="grid grid-cols-1 gap-5 xl:grid-cols-[0.8fr_1.2fr]">
+          <section className="rounded-[28px] border border-zinc-200 bg-white p-5 shadow-sm">
+            <div>
+              <h2 className="text-base font-semibold text-zinc-950">
+                Dias fortes da semana
+              </h2>
+              <p className="mt-1 text-sm text-zinc-500">
+                Ajuda a decidir promoção, escala e campanha por dia.
+              </p>
+            </div>
+
+            <div className="mt-5 space-y-3">
+              {vendasPorDiaSemana.map((item) => (
+                <div key={item.label} className="grid grid-cols-[42px_1fr_96px] items-center gap-3">
+                  <span className="text-xs font-bold uppercase tracking-[0.12em] text-zinc-500">
+                    {item.label}
+                  </span>
+                  <div className="h-3 overflow-hidden rounded-full bg-zinc-100">
+                    <div
+                      className="h-full rounded-full bg-zinc-900"
+                      style={{ width: `${item.percentual}%` }}
+                    />
+                  </div>
+                  <span className="text-right text-xs font-semibold text-zinc-700">
+                    {formatCurrency(item.total)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section className="overflow-hidden rounded-[28px] border border-zinc-200 bg-white shadow-sm">
+            <div className="border-b border-zinc-200 px-5 py-4">
+              <h2 className="text-base font-semibold text-zinc-950">
+                Ranking de vendas e lucro
+              </h2>
+              <p className="mt-1 text-sm text-zinc-500">
+                Mostra o que trouxe mais resultado, não só volume.
+              </p>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="min-w-[680px] w-full">
+                <thead>
+                  <tr className="border-b border-zinc-100 text-left text-xs uppercase tracking-wider text-zinc-500">
+                    <th className="px-5 py-3">Item</th>
+                    <th className="px-5 py-3">Tipo</th>
+                    <th className="px-5 py-3">Qtd.</th>
+                    <th className="px-5 py-3">Faturamento</th>
+                    <th className="px-5 py-3">Lucro</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rankingItens.map((item) => (
+                    <tr key={item.chave} className="border-b border-zinc-100 last:border-b-0">
+                      <td className="px-5 py-4 text-sm font-semibold text-zinc-900">
+                        {item.descricao}
+                      </td>
+                      <td className="px-5 py-4 text-sm text-zinc-600">
+                        {formatTipoItemLabel(item.tipo)}
+                      </td>
+                      <td className="px-5 py-4 text-sm text-zinc-600">
+                        {item.quantidade.toLocaleString("pt-BR")}
+                      </td>
+                      <td className="px-5 py-4 text-sm text-zinc-600">
+                        {formatCurrency(item.faturamento)}
+                      </td>
+                      <td className="px-5 py-4 text-sm font-bold text-zinc-950">
+                        {formatCurrency(item.lucro)}
+                      </td>
+                    </tr>
+                  ))}
+
+                  {rankingItens.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="px-5 py-8 text-center text-sm text-zinc-500">
+                        Nenhum item vendido no período.
+                      </td>
+                    </tr>
+                  ) : null}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </div>
 
         <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1.2fr_0.8fr]">
           <div className="overflow-hidden rounded-[28px] border border-zinc-200 bg-white shadow-sm">
@@ -1418,7 +2023,7 @@ export default function RelatorioFinanceiroPage() {
                     <div>
                       <div className="font-semibold capitalize text-zinc-900">{item.forma}</div>
                       <div className="text-xs text-zinc-500">
-                        {item.qtd} pagamento(s) â€¢ Taxa: {formatCurrency(item.taxa)}
+                        {item.qtd} pagamento(s) • Taxa: {formatCurrency(item.taxa)}
                       </div>
                     </div>
 
@@ -1442,25 +2047,25 @@ export default function RelatorioFinanceiroPage() {
               <div className="border-b border-zinc-200 px-5 py-4">
                 <div className="text-lg font-bold text-zinc-900">Comissões do período</div>
                 <div className="mt-1 text-sm text-zinc-500">
-                  Resumo das comissoes ligadas as vendas filtradas.
+                  Resumo das comissões ligadas às vendas filtradas.
                 </div>
               </div>
 
               <div className="grid grid-cols-1 gap-3 border-b border-zinc-200 px-5 py-4 sm:grid-cols-3">
                 <ResumoLateralCard
-                  label="Lancamentos"
+                  label="Lançamentos"
                   value={String(resumoComissoes.totalLancamentos)}
-                  helper="Comissoes no filtro atual"
+                  helper="Comissões no filtro atual"
                 />
                 <ResumoLateralCard
                   label="Pendentes"
                   value={formatCurrency(resumoComissoes.valorPendente)}
-                  helper={`${resumoComissoes.pendentes} lancamento(s)`}
+                  helper={`${resumoComissoes.pendentes} lançamento(s)`}
                 />
                 <ResumoLateralCard
                   label="Pagas"
                   value={formatCurrency(resumoComissoes.valorPago)}
-                  helper={`${resumoComissoes.pagas} lancamento(s)`}
+                  helper={`${resumoComissoes.pagas} lançamento(s)`}
                 />
               </div>
 
@@ -1579,7 +2184,7 @@ export default function RelatorioFinanceiroPage() {
             </div>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
             <PrintOptionCard
               checked={printSelection.vendas}
               title="Vendas do período"
@@ -1597,6 +2202,18 @@ export default function RelatorioFinanceiroPage() {
               title="Comissões do período"
               description="Resumo e tabela curta das comissões filtradas."
               onToggle={() => togglePrintSelection("comissoes")}
+            />
+            <PrintOptionCard
+              checked={printSelection.caixa}
+              title="Fechamento de caixa"
+              description="Previsto, contado, sobra e quebra."
+              onToggle={() => togglePrintSelection("caixa")}
+            />
+            <PrintOptionCard
+              checked={printSelection.itens}
+              title="Ranking de lucro"
+              description="Serviços e produtos com melhor resultado."
+              onToggle={() => togglePrintSelection("itens")}
             />
           </div>
 
@@ -1680,7 +2297,7 @@ function PrintOptionCard({
               : "border-zinc-300 bg-zinc-50 text-zinc-500"
           }`}
         >
-          {checked ? "âœ“" : ""}
+          {checked ? "✓" : ""}
         </span>
       </div>
     </button>
@@ -1719,10 +2336,3 @@ function UpgradePanel({
     </section>
   );
 }
-
-
-
-
-
-
-
