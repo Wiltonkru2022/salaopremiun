@@ -199,7 +199,7 @@ export default function AgendaModal(props: Props) {
       <div className="space-y-3">
         <PlanoLimiteNotice
           titulo="Agendamentos mensais controlados pelo plano"
-          descricao="A agenda continua disponivel para consulta e edicao. O limite vale para novos horarios criados no mes."
+          descricao="A agenda continua disponível para consulta e edição. O limite vale para novos horários criados no mes."
           usado={usoAgendamentosMensais}
           limite={limiteAgendamentosMensais}
           planoNome={planoAccess?.planoNome}
@@ -265,7 +265,7 @@ export default function AgendaModal(props: Props) {
                 Escolha o status
               </h3>
               <p className="mt-1 text-sm text-zinc-500">
-                O restante do painel fica oculto ate voce confirmar a troca.
+                O restante do painel fica oculto até você confirmar a troca.
               </p>
 
               <div className="mt-4 space-y-2">

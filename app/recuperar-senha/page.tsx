@@ -24,7 +24,7 @@ function RecuperarSenhaFallback() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-white p-4">
       <div className="w-full max-w-xl rounded-[24px] border border-zinc-200 bg-white p-8 text-center shadow-xl">
-        <p className="text-sm text-zinc-500">Carregando recuperacao...</p>
+        <p className="text-sm text-zinc-500">Carregando recuperação...</p>
       </div>
     </div>
   );
@@ -101,17 +101,17 @@ function RecuperarSenhaContent() {
         ) {
           setCooldown(30);
           throw new Error(
-            "Aguarde alguns segundos para solicitar um novo link. Por seguranca, limitamos o envio de e-mails em sequencia."
+            "Aguarde alguns segundos para solicitar um novo link. Por segurança, limitamos o envio de e-mails em sequência."
           );
         }
 
         throw new Error(
-          payload.message || "Nao foi possivel enviar o link de recuperacao."
+          payload.message || "Não foi possível enviar o link de recuperação."
         );
       }
 
       setSucesso(
-        "Enviamos o link de recuperacao com sucesso. Verifique sua caixa de entrada e tambem o spam."
+        "Enviamos o link de recuperação com sucesso. Verifique sua caixa de entrada e também o spam."
       );
       setEnviadoComSucesso(true);
       setCooldown(30);
@@ -120,7 +120,7 @@ function RecuperarSenhaContent() {
       setErro(
         getErrorMessage(
           e,
-          "Nao foi possivel enviar o link de recuperacao."
+          "Não foi possível enviar o link de recuperação."
         )
       );
     } finally {
@@ -151,7 +151,7 @@ function RecuperarSenhaContent() {
       <main className="grid min-h-[calc(100vh-74px)] lg:grid-cols-2">
         <section
           className="relative hidden overflow-hidden bg-zinc-950 bg-cover bg-center lg:block"
-          style={{ backgroundImage: "url('/site/cadastro-salao-bg.jpeg')" }}
+          style={{ backgroundImage: "url('/site/cadastro-salão-bg.jpeg')" }}
         >
           <div className="absolute inset-0 bg-zinc-950/58" />
           <div className="absolute inset-0 bg-gradient-to-br from-zinc-950 via-zinc-950/55 to-transparent" />
@@ -164,12 +164,12 @@ function RecuperarSenhaContent() {
             </div>
 
             <h1 className="mt-5 text-[2.2rem] font-bold leading-tight">
-              Recuperacao de acesso com seguranca
+              Recuperacao de acesso com segurança
             </h1>
 
             <p className="mt-3 max-w-md text-sm leading-6 text-zinc-300">
               Envie um link de redefinicao para seu e-mail e recupere o acesso
-              ao painel do seu salao de forma rapida e segura.
+              ao painel do seu salão de forma rápida e segura.
             </p>
           </div>
 
@@ -196,7 +196,7 @@ function RecuperarSenhaContent() {
                 <div>
                   <p className="font-semibold">Link por e-mail</p>
                   <p className="mt-1 text-sm text-zinc-400">
-                    Verifique tambem a pasta de spam.
+                    Verifique também a pasta de spam.
                   </p>
                 </div>
               </div>
@@ -208,9 +208,9 @@ function RecuperarSenhaContent() {
                   <Check size={20} />
                 </div>
                 <div>
-                  <p className="font-semibold">Redefinicao rapida</p>
+                  <p className="font-semibold">Redefinicao rápida</p>
                   <p className="mt-1 text-sm text-zinc-400">
-                    Em poucos passos voce volta ao sistema.
+                    Em poucos passos você volta ao sistema.
                   </p>
                 </div>
               </div>
@@ -268,7 +268,7 @@ function RecuperarSenhaContent() {
 
                   {cooldown > 0 && !enviadoComSucesso ? (
                     <div className="rounded-[20px] border border-amber-200 bg-amber-50 px-4 py-3.5 text-sm leading-6 text-amber-800">
-                      Voce podera solicitar novamente em{" "}
+                      Você podera solicitar novamente em{" "}
                       <span className="font-bold">{cooldown}s</span>.
                     </div>
                   ) : null}
@@ -286,13 +286,13 @@ function RecuperarSenhaContent() {
                     ) : cooldown > 0 ? (
                       `Aguarde ${cooldown}s`
                     ) : (
-                      "Enviar link de recuperacao"
+                      "Enviar link de recuperação"
                     )}
                   </button>
                 </form>
 
                 <div className="mt-5 rounded-[22px] border border-zinc-200 bg-zinc-50 px-5 py-4 text-sm leading-6 text-zinc-600">
-                  Depois de clicar no link enviado por e-mail, voce sera
+                  Depois de clicar no link enviado por e-mail, você será
                   redirecionado para criar uma nova senha.
                 </div>
               </>
@@ -310,7 +310,7 @@ function RecuperarSenhaContent() {
                   </h2>
 
                   <p className="mt-3 max-w-sm text-sm leading-7 text-zinc-500">
-                    Enviamos as instrucoes de recuperacao para o e-mail{" "}
+                    Enviamos as instrucoes de recuperação para o e-mail{" "}
                     <span className="font-semibold text-zinc-800">{email}</span>.
                   </p>
 
@@ -323,7 +323,7 @@ function RecuperarSenhaContent() {
                     <p className="font-semibold text-zinc-800">Importante</p>
                     <p className="mt-1">
                       Abra o link no mesmo navegador e dispositivo em que a
-                      solicitacao foi feita. Para evitar erro de dominio ou
+                      solicitação foi feita. Para evitar erro de dominio ou
                       sessao velha, finalize a troca de senha sempre pelo link
                       seguro enviado no e-mail.
                     </p>

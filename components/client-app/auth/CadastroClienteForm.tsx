@@ -146,7 +146,7 @@ export default function CadastroClienteForm({
             }
             className="block w-full text-sm font-medium text-zinc-700 underline underline-offset-4"
           >
-            Ja tenho conta
+            Já tenho conta
           </Link>
           <Link
             href="/app-cliente/inicio"

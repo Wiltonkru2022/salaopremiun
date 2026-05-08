@@ -63,7 +63,7 @@ export default function LoginProfissionalForm({
         Acesse sua conta
       </h2>
       <p className="mt-2 text-sm leading-6 text-zinc-500">
-        Login rapido para abrir agenda, comandas e clientes direto no celular.
+        Login rápido para abrir agenda, comandas e clientes direto no celular.
       </p>
 
       <div className="mt-5 space-y-4">

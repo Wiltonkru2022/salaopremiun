@@ -253,7 +253,7 @@ export default function ItemExtraForm({ modo }: ItemExtraFormProps) {
 
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
           <div className="space-y-6 xl:col-span-2">
-            <Card title="1. Dados do extra" subtitle="Informacoes principais do item adicional.">
+            <Card title="1. Dados do extra" subtitle="Informações principais do item adicional.">
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <Input
                   label="Nome"
@@ -278,7 +278,7 @@ export default function ItemExtraForm({ modo }: ItemExtraFormProps) {
               </div>
             </Card>
 
-            <Card title="2. Preco e custo" subtitle="Valores usados na cobranca do extra.">
+            <Card title="2. Preço e custo" subtitle="Valores usados na cobrança do extra.">
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <Input
                   label="Preço de venda"
@@ -314,7 +314,7 @@ export default function ItemExtraForm({ modo }: ItemExtraFormProps) {
           </div>
 
           <div className="space-y-6">
-            <Card title="Resumo" subtitle="Visao rapida dos valores informados.">
+            <Card title="Resumo" subtitle="Visão rápida dos valores informados.">
               <div className="space-y-4">
                 <Info
                   label="Preço de venda"

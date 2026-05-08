@@ -52,7 +52,7 @@ export default function RecuperarSenhaProfissionalForm() {
         Esqueceu sua senha?
       </h2>
       <p className="mt-2 text-sm leading-6 text-zinc-500">
-        Informe seu CPF. O sistema abre um pedido seguro para o salao redefinir
+        Informe seu CPF. O sistema abre um pedido seguro para o salão redefinir
         seu acesso.
       </p>
 
@@ -88,17 +88,17 @@ export default function RecuperarSenhaProfissionalForm() {
               Pedido seguro
             </div>
             <p className="mt-2 text-xs leading-5 text-zinc-500">
-              Sua senha atual nao aparece nem precisa ser informada.
+              Sua senha atual não aparece nem precisa ser informada.
             </p>
           </div>
 
           <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4">
             <div className="flex items-center gap-2 text-sm font-semibold text-zinc-900">
               <PhoneCall size={16} />
-              Retorno rapido
+              Retorno rápido
             </div>
             <p className="mt-2 text-xs leading-5 text-zinc-500">
-              Se quiser, informe um contato para a equipe falar com voce.
+              Se quiser, informe um contato para a equipe falar com você.
             </p>
           </div>
         </div>

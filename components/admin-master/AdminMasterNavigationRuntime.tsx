@@ -49,7 +49,7 @@ function buildLabel(pathname: string) {
   if (pathname.includes("/webhooks")) return "Abrindo webhooks...";
   if (pathname.includes("/logs")) return "Abrindo logs...";
   if (pathname.includes("/assinaturas")) return "Abrindo receita e assinaturas...";
-  if (pathname.includes("/saloes")) return "Abrindo saloes...";
+  if (pathname.includes("/saloes")) return "Abrindo salões...";
   return "Carregando modulo do AdminMaster...";
 }
 

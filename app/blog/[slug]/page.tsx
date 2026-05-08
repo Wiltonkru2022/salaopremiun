@@ -124,7 +124,7 @@ export default async function BlogPostPage({ params }: Props) {
                   Quer organizar agenda, vendas e clientes?
                 </h2>
                 <p className="mt-2 text-sm leading-6 text-zinc-300">
-                  O SalaoPremium conecta agenda online, comandas, caixa,
+                  O SalãoPremium conecta agenda online, comandas, caixa,
                   profissionais, estoque e marketing para o salão vender com
                   mais controle.
                 </p>

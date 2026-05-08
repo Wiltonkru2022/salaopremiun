@@ -9,15 +9,15 @@ export const metadata: Metadata = {
     : undefined,
   title: {
     default: "SalaoPremium",
-    template: "%s | SalaoPremium",
+    template: "%s | SalãoPremium",
   },
   description:
-    "Gestao premium para saloes: agenda, caixa, comandas, profissionais, estoque, comissoes e assinatura em um SaaS multi-tenant.",
+    "Gestao premium para salões: agenda, caixa, comandas, profissionais, estoque, comissões e assinatura em um SaaS multi-tenant.",
   applicationName: "SalaoPremium",
   openGraph: {
     title: "SalaoPremium",
     description:
-      "Gestao premium para saloes com agenda, caixa, comandas, estoque, comissoes e assinatura.",
+      "Gestao premium para salões com agenda, caixa, comandas, estoque, comissões e assinatura.",
     type: "website",
     locale: "pt_BR",
   },
@@ -25,7 +25,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "SalaoPremium",
     description:
-      "Gestao premium para saloes com operacao, financeiro e assinatura no mesmo sistema.",
+      "Gestao premium para salões com operação, financeiro e assinatura no mesmo sistema.",
   },
   robots: {
     index: true,

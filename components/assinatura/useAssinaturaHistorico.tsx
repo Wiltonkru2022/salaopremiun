@@ -37,8 +37,8 @@ export function useAssinaturaHistorico({
           screen: "assinatura_historico",
           entity: "salao",
           entityId: salao.id,
-          successMessage: "Historico de cobrancas carregado.",
-          errorMessage: "Falha ao carregar historico de cobrancas.",
+          successMessage: "Histórico de cobranças carregado.",
+          errorMessage: "Falha ao carregar histórico de cobranças.",
         },
         () =>
           fetch("/api/assinatura/historico", {
@@ -59,13 +59,13 @@ export function useAssinaturaHistorico({
       };
 
       if (!response.ok) {
-        throw new Error(data.error || "Erro ao carregar historico.");
+        throw new Error(data.error || "Erro ao carregar histórico.");
       }
 
       setHistoricoCobrancas(Array.isArray(data.historico) ? data.historico : []);
     } catch (error: unknown) {
       setErro(
-        error instanceof Error ? error.message : "Erro ao carregar historico."
+        error instanceof Error ? error.message : "Erro ao carregar histórico."
       );
       setHistoricoCobrancas([]);
     } finally {

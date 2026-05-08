@@ -166,7 +166,7 @@ export default async function AdminMasterWebhookDetailPage({
 
           <div className="rounded-[30px] border border-zinc-200 bg-white p-5 shadow-sm">
             <div className="text-xs font-black uppercase tracking-[0.25em] text-zinc-400">
-              Diagnostico rapido
+              Diagnostico rápido
             </div>
             <div className="mt-4 space-y-3 text-sm text-zinc-600">
               <div>
@@ -182,7 +182,7 @@ export default async function AdminMasterWebhookDetailPage({
                 {formatWebhookDate(webhook.primeiro_recebido_em)}
               </div>
               <div>
-                <span className="font-semibold text-zinc-900">Ultimo recebido:</span>{" "}
+                <span className="font-semibold text-zinc-900">Último recebido:</span>{" "}
                 {formatWebhookDate(webhook.ultimo_recebido_em)}
               </div>
               <div>

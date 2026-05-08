@@ -24,7 +24,7 @@ export default async function AdminMasterTicketDetailPage({
           Ticket #{detail.ticket.numero}
         </h2>
         <p className="mt-2 text-sm text-zinc-300">
-          {detail.salao?.nome || "Salao nao identificado"} •{" "}
+          {detail.salao?.nome || "Salão não identificado"} •{" "}
           {detail.ticket.assunto}
         </p>
       </section>

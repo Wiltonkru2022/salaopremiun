@@ -378,7 +378,7 @@ export default function AgendaPage() {
     if (assinaturaBloqueada) {
       abrirAviso(
         "Acesso bloqueado",
-        "Sua assinatura esta vencida. Regularize para acessar o caixa.",
+        "Sua assinatura está vencida. Regularize para acessar o caixa.",
         "danger",
         getAssinaturaUrl("/assinatura")
       );
@@ -393,7 +393,7 @@ export default function AgendaPage() {
         screen: "agenda_grid",
         entity: "agendamento",
         entityId: item.id,
-        message: "Usuario abriu o caixa a partir de um agendamento ja vinculado.",
+        message: "Usuário abriu o caixa a partir de um agendamento já vinculado.",
         details: {
           idSalao,
           idComanda: item.id_comanda,
@@ -418,7 +418,7 @@ export default function AgendaPage() {
     if (!item.servico_id || !item.profissional_id) {
       abrirAviso(
         "Agendamento incompleto",
-        "Nao encontrei o servico ou a profissional desse agendamento para abrir no caixa.",
+        "Não encontrei o serviço ou a profissional desse agendamento para abrir no caixa.",
         "warning"
       );
       return;
@@ -442,7 +442,7 @@ export default function AgendaPage() {
         screen: "agenda_grid",
         entity: "agendamento",
         entityId: item.id,
-        message: "Usuario enviou o agendamento para o caixa.",
+        message: "Usuário enviou o agendamento para o caixa.",
         details: {
           idSalao,
           idComanda: comanda.id,
@@ -458,7 +458,7 @@ export default function AgendaPage() {
         "Erro ao receber cliente",
         getErrorMessage(
           error,
-          "Nao foi possivel abrir esse agendamento no caixa agora."
+          "Não foi possível abrir esse agendamento no caixa agora."
         ),
         "danger"
       );
@@ -473,14 +473,14 @@ export default function AgendaPage() {
     if (!creditClienteId) {
       abrirAviso(
         "Cliente obrigatoria",
-        "Escolha a cliente antes de registrar o credito.",
+        "Escolha a cliente antes de registrar o crédito.",
         "warning"
       );
       return;
     }
 
     if (!idSalao) {
-      abrirAviso("Salao indisponivel", "Nao foi possivel identificar o salao.", "danger");
+      abrirAviso("Salão indisponível", "Não foi possível identificar o salão.", "danger");
       return;
     }
 
@@ -505,7 +505,7 @@ export default function AgendaPage() {
       };
 
       if (!response.ok) {
-        throw new Error(data.error || "Nao foi possivel registrar o credito.");
+        throw new Error(data.error || "Não foi possível registrar o crédito.");
       }
 
       const saldoAtual = Number(data.saldoAtual || 0);
@@ -514,7 +514,7 @@ export default function AgendaPage() {
       resetCreditForm();
       await loadAgenda();
       abrirAviso(
-        "Credito registrado",
+        "Crédito registrado",
         `Saldo atualizado da cliente: ${saldoAtual.toLocaleString("pt-BR", {
           style: "currency",
           currency: "BRL",
@@ -524,8 +524,8 @@ export default function AgendaPage() {
     } catch (error) {
       console.error(error);
       abrirAviso(
-        "Erro ao registrar credito",
-        getErrorMessage(error, "Nao foi possivel registrar o credito da cliente."),
+        "Erro ao registrar crédito",
+        getErrorMessage(error, "Não foi possível registrar o crédito da cliente."),
         "danger"
       );
     } finally {
@@ -601,8 +601,8 @@ export default function AgendaPage() {
         },
       ]);
       abrirAviso(
-        "Historico parcial",
-        "Nao foi possivel carregar o historico completo agora. Vou abrir pelo menos os dados do agendamento atual.",
+        "Histórico parcial",
+        "Não foi possível carregar o histórico completo agora. Vou abrir pelo menos os dados do agendamento atual.",
         "warning"
       );
     } finally {
@@ -662,7 +662,7 @@ export default function AgendaPage() {
     return (
       <AppLoading
         title="Carregando agenda"
-        message="Aguarde enquanto organizamos horarios, profissionais e atendimentos do periodo."
+        message="Aguarde enquanto organizamos horários, profissionais e atendimentos do periodo."
         fullHeight={false}
       />
     );
@@ -672,7 +672,7 @@ export default function AgendaPage() {
     return (
       <div className="p-6">
         <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-rose-700">
-          Voce nao tem permissao para acessar a agenda.
+          Você não tem permissão para acessar a agenda.
         </div>
       </div>
     );
@@ -682,7 +682,7 @@ export default function AgendaPage() {
     return (
       <div className="p-6">
         <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-rose-700">
-          {erroTela || "Nao foi possivel carregar as configuracoes do salao."}
+          {erroTela || "Não foi possível carregar as configurações do salão."}
         </div>
       </div>
     );
@@ -767,7 +767,7 @@ export default function AgendaPage() {
 
   async function handleCreateClientFromSidebar() {
     if (!idSalao) {
-      abrirAviso("Salao indisponivel", "Nao foi possivel identificar o salao atual.");
+      abrirAviso("Salão indisponível", "Não foi possível identificar o salão atual.");
       return;
     }
 
@@ -801,7 +801,7 @@ export default function AgendaPage() {
       };
 
       if (!response.ok || !data.idCliente) {
-        throw new Error(data.error || "Nao foi possivel cadastrar a cliente.");
+        throw new Error(data.error || "Não foi possível cadastrar a cliente.");
       }
 
       const novaCliente = {
@@ -818,7 +818,7 @@ export default function AgendaPage() {
       setClientCreateOpen(false);
       setClientCreateName("");
       setClientCreateWhatsapp("");
-      abrirAviso("Cliente criado", "Cadastro rapido concluido com sucesso.");
+      abrirAviso("Cliente criado", "Cadastro rápido concluido com sucesso.");
     } catch (error) {
       abrirAviso("Erro ao cadastrar cliente", getErrorMessage(error), "danger");
     } finally {
@@ -883,8 +883,8 @@ export default function AgendaPage() {
       }
     : confirmModal.open
       ? {
-          title: confirmModal.title || "Confirmar acao",
-          subtitle: "Revise a acao antes de continuar.",
+          title: confirmModal.title || "Confirmar ação",
+          subtitle: "Revise a ação antes de continuar.",
           onBack: () => {
             fecharConfirmacao();
             setSidebarView("overview");
@@ -971,7 +971,7 @@ export default function AgendaPage() {
             : clienteProfileOpen
               ? {
                   title: "Perfil da cliente",
-                  subtitle: "Historico recente, observacoes e leitura rapida da cliente.",
+                  subtitle: "Histórico recente, observações e leitura rápida da cliente.",
                   onBack: () => {
                     setClienteProfileOpen(false);
                     setSidebarView("overview");
@@ -994,7 +994,7 @@ export default function AgendaPage() {
                 }
               : creditModalOpen
                   ? {
-                    title: "Credito da cliente",
+                    title: "Crédito da cliente",
                     subtitle: "Registre saldo para uso futuro sem criar venda.",
                     onBack: () => {
                       setCreditModalOpen(false);
@@ -1187,7 +1187,7 @@ export default function AgendaPage() {
         title={
           contextMenu.open && contextMenu.type === "appointment"
             ? contextMenu.item.cliente?.nome || "Agendamento"
-            : "Horario livre"
+            : "Horário livre"
         }
         subtitle={
           contextMenu.open && contextMenu.type === "appointment"
@@ -1227,7 +1227,7 @@ export default function AgendaPage() {
                   {
                     label: "Abrir perfil da cliente",
                     description:
-                      "Veja historico recente, observacoes e leitura rapida da cliente.",
+                      "Veja histórico recente, observações e leitura rápida da cliente.",
                     icon: UserRound,
                     onClick: () => void openClientProfile(item),
                   },
@@ -1248,14 +1248,14 @@ export default function AgendaPage() {
                         {
                           label: "Reagendar cliente",
                           description:
-                            "Abre o atendimento no painel lateral para trocar data e horario.",
+                            "Abre o atendimento no painel lateral para trocar data e horário.",
                           icon: CalendarClock,
                           onClick: () => openEditModal(item),
                         },
                         {
                           label: "Editar agendamento",
                           description:
-                            "Abra o formulario completo e ajuste servico, horario e observacoes.",
+                            "Abra o formulario completo e ajuste serviço, horário e observações.",
                           icon: PencilLine,
                           onClick: () => openEditModal(item),
                         },
@@ -1266,7 +1266,7 @@ export default function AgendaPage() {
                         {
                           label: "Excluir agendamento",
                           description:
-                            "Remove o horario da agenda e registra a operacao no historico.",
+                            "Remove o horário da agenda e registra a operação no histórico.",
                           icon: Trash2,
                           tone: "danger" as const,
                           onClick: () => void handleDeleteEvent(item),
@@ -1291,21 +1291,21 @@ export default function AgendaPage() {
                   ? [
                       {
                         label: "Marcar como confirmado",
-                        description: "Sinal verde para recepcao e para o profissional.",
+                        description: "Sinal verde para recepção e para o profissional.",
                         icon: CheckCircle2,
                         onClick: () => void handleQuickStatusChange(item, "confirmado"),
                       },
                       {
                         label: "Marcar como pendente",
                         description:
-                          "Deixa claro que ainda falta resposta ou confirmacao.",
+                          "Deixa claro que ainda falta resposta ou confirmação.",
                         icon: ClipboardList,
                         onClick: () => void handleQuickStatusChange(item, "pendente"),
                       },
                       {
                         label: "Marcar como atendido",
                         description:
-                          "Use quando o atendimento ja estiver concluido na agenda.",
+                          "Use quando o atendimento já estiver concluido na agenda.",
                         icon: CheckCircle2,
                         onClick: () => void handleQuickStatusChange(item, "atendido"),
                       },
@@ -1314,13 +1314,13 @@ export default function AgendaPage() {
 
                 return [
                   {
-                    title: "Acoes rapidas",
+                    title: "Ações rapidas",
                     actions: quickActions,
                   },
                   ...(statusActions.length > 0
                     ? [
                         {
-                          title: "Troca rapida de status",
+                          title: "Troca rápida de status",
                           actions: statusActions,
                         },
                       ]
@@ -1333,12 +1333,12 @@ export default function AgendaPage() {
                   actions: [
                     {
                       label: "Novo agendamento",
-                      description: "Abre o modal organizado ja no horario que voce clicou.",
+                      description: "Abre o modal organizado já no horário que você clicou.",
                       icon: CalendarPlus,
                       onClick: () => openCreateModal(selectedDate, selectedTime),
                     },
                     {
-                      label: "Registrar credito da cliente",
+                      label: "Registrar crédito da cliente",
                       description:
                         "Lanca saldo para a cliente usar depois, sem criar venda.",
                       icon: Wallet,
@@ -1351,7 +1351,7 @@ export default function AgendaPage() {
                   actions: [
                     {
                       label: "Almoco 30 min",
-                      description: "Bloqueio rapido para pausa curta do profissional.",
+                      description: "Bloqueio rápido para pausa curta do profissional.",
                       icon: Coffee,
                       badge: "30 min",
                       onClick: () =>
@@ -1373,7 +1373,7 @@ export default function AgendaPage() {
                     },
                     {
                       label: "Outro bloqueio",
-                      description: "Abra o modal de ausencia e defina motivo e horario final.",
+                      description: "Abra o modal de ausência e defina motivo e horário final.",
                       icon: Ban,
                       onClick: () => openBlockModal(selectedDate, selectedTime),
                     },

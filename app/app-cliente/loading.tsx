@@ -30,7 +30,7 @@ function SkeletonCard() {
 
 export default function ClienteAppLoading() {
   return (
-    <ClientAppFrame title="Carregando" subtitle="Preparando sua experiencia.">
+    <ClientAppFrame title="Carregando" subtitle="Preparando sua experiência.">
       <section className="space-y-4" aria-busy="true" aria-label="Carregando">
         <div className="rounded-[1.6rem] border border-white/70 bg-white p-4 shadow-[0_18px_48px_rgba(15,23,42,0.08)]">
           <SkeletonLine className="h-3 w-24" />

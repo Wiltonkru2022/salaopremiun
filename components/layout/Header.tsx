@@ -154,13 +154,13 @@ export default function Header({
           </p>
           {showCriticalState ? (
             <p className="mt-1 text-xs font-semibold text-rose-700">
-              {criticalNotificationsCount} alerta(s) critico(s) pedem acao agora.
+              {criticalNotificationsCount} alerta(s) crítico(s) pedem ação agora.
             </p>
           ) : showSubscriptionRisk ? (
             <p className="mt-1 text-xs font-semibold text-amber-700">
               {resumoAssinatura?.bloqueioTotal
                 ? "Assinatura com bloqueio ativo. Revise o status comercial agora."
-                : "Assinatura vencendo em breve. Vale revisar cobranca e renovacao."}
+                : "Assinatura vencendo em breve. Vale revisar cobrança e renovação."}
             </p>
           ) : null}
         </div>
@@ -232,7 +232,7 @@ export default function Header({
             <div className="absolute right-0 top-[calc(100%+0.5rem)] z-50 w-[min(94vw,420px)] rounded-[22px] border border-zinc-200 bg-white p-3 shadow-[0_18px_40px_rgba(15,23,42,0.12)]">
               <div className="rounded-[16px] border border-zinc-200 bg-zinc-50 p-4 text-zinc-950">
                 <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-                  Perfil do salao
+                  Perfil do salão
                 </div>
                 <div className="mt-2 truncate font-display text-xl font-bold">
                   {salaoNome || "SalaoPremium"}
@@ -250,7 +250,7 @@ export default function Header({
                     className="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-100"
                   >
                     <Building2 size={16} />
-                    Perfil do salao
+                    Perfil do salão
                   </a>
                 ) : null}
 

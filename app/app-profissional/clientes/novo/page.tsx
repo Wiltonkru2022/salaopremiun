@@ -8,7 +8,7 @@ export default async function NovoClientePage() {
   return (
     <ProfissionalShell
       title="Cadastrar cliente"
-      subtitle="Novo cadastro no salao"
+      subtitle="Novo cadastro no salão"
     >
       <NovoClienteForm />
     </ProfissionalShell>

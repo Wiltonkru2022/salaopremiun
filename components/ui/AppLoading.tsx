@@ -42,7 +42,7 @@ function toneClasses(theme: Props["theme"] = "painel") {
 
 export default function AppLoading({
   title,
-  message = "Aguarde enquanto organizamos os dados da tela para voce.",
+  message = "Aguarde enquanto organizamos os dados da tela para você.",
   fullHeight = true,
   theme = "painel",
 }: Props) {

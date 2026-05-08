@@ -123,7 +123,7 @@ export default async function NovaComandaProfissionalPage({
             <div className="min-w-0">
               <div className="inline-flex max-w-full items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.12em] text-amber-100">
                 <Receipt size={14} />
-                <span className="min-w-0 truncate">Atendimento rapido</span>
+                <span className="min-w-0 truncate">Atendimento rápido</span>
               </div>
               <h1 className="mt-3 break-words text-[1.45rem] font-black leading-none tracking-[-0.04em]">
                 Abrir comanda
@@ -146,7 +146,7 @@ export default async function NovaComandaProfissionalPage({
         <ProfissionalSurface>
           <ProfissionalSectionHeader
             title="Dados da comanda"
-            description="Escolha cliente, servico e horario para abrir tudo pronto."
+            description="Escolha cliente, serviço e horário para abrir tudo pronto."
           />
 
           <form action={criarComandaProfissionalAction} className="space-y-3.5">
@@ -169,14 +169,14 @@ export default async function NovaComandaProfissionalPage({
             </label>
 
             <label className="block text-sm font-medium text-zinc-700">
-              Servico inicial
+              Serviço inicial
               <select
                 name="servico_id"
                 defaultValue={query.servico_id || ""}
                 className={inputClass()}
                 required
               >
-                <option value="">Selecione o servico inicial</option>
+                <option value="">Selecione o serviço inicial</option>
                 {servicos.map((servico) => (
                   <option key={servico.id} value={servico.id}>
                     {servico.nome}
@@ -215,7 +215,7 @@ export default async function NovaComandaProfissionalPage({
               <textarea
                 name="observacoes"
                 defaultValue={query.observacoes || ""}
-                placeholder="Ex.: cliente ja chegou e vai iniciar atendimento"
+                placeholder="Ex.: cliente já chegou e vai iniciar atendimento"
                 className="mt-2 min-h-[90px] w-full min-w-0 rounded-[18px] border border-zinc-200 bg-white px-4 py-3 text-base outline-none transition focus:border-zinc-400"
               />
             </label>
@@ -243,7 +243,7 @@ export default async function NovaComandaProfissionalPage({
               Hora reservada
             </div>
             <p className="mt-2 text-sm leading-6 text-zinc-500">
-              O atendimento ja nasce vinculado ao horario informado.
+              O atendimento já nasce vinculado ao horário informado.
             </p>
           </ProfissionalSurface>
         </div>
@@ -255,11 +255,11 @@ export default async function NovaComandaProfissionalPage({
             </div>
             <div className="min-w-0">
               <div className="text-[15px] font-bold tracking-[-0.02em] text-zinc-950">
-                Fluxo mais rapido
+                Fluxo mais rápido
               </div>
               <p className="mt-1.5 text-sm leading-6 text-zinc-500">
-                Esse atalho existe para o profissional nao precisar voltar ao painel:
-                a comanda ja sai pronta para continuar no app e depois seguir ao caixa.
+                Esse atalho existe para o profissional não precisar voltar ao painel:
+                a comanda já sai pronta para continuar no app e depois seguir ao caixa.
               </p>
             </div>
           </div>

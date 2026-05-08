@@ -58,11 +58,11 @@ export default function MovimentacaoForm() {
       const usuarioLogado = await getUsuarioLogado();
 
       if (!usuarioLogado) {
-        throw new Error("Usuario nao autenticado.");
+        throw new Error("Usuário não autenticado.");
       }
 
       if (!usuarioLogado.idSalao) {
-        throw new Error("Nao foi possivel identificar o salao do usuario.");
+        throw new Error("Não foi possível identificar o salão do usuário.");
       }
 
       setIdSalao(usuarioLogado.idSalao);
@@ -105,7 +105,7 @@ export default function MovimentacaoForm() {
 
       const produto = produtos.find((item) => item.id === produtoId);
       if (!produto) {
-        throw new Error("Produto nao encontrado.");
+        throw new Error("Produto não encontrado.");
       }
 
       const qtd = Number(quantidade);
@@ -122,7 +122,7 @@ export default function MovimentacaoForm() {
       }
 
       if (novoEstoque < 0) {
-        throw new Error("O estoque nao pode ficar negativo.");
+        throw new Error("O estoque não pode ficar negativo.");
       }
 
       const response = await fetch("/api/estoque/processar", {
@@ -198,7 +198,7 @@ export default function MovimentacaoForm() {
             Nova movimentacao
           </h1>
           <p className="mt-2 text-sm text-zinc-500">
-            Registre entrada, saida, ajuste, consumo interno ou venda.
+            Registre entrada, saída, ajuste, consumo interno ou venda.
           </p>
         </div>
 

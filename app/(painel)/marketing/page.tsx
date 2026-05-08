@@ -19,7 +19,7 @@ const itens = [
   },
   {
     icon: <ShieldCheck size={18} />,
-    title: "Liberação com validação técnica",
+    title: "Liberação com válidação técnica",
     description:
       "A ativação pública só entra quando webhook, provedor e rastreabilidade estiverem 100% consistentes.",
   },

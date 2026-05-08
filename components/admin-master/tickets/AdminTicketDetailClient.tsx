@@ -115,7 +115,7 @@ export default function AdminTicketDetailClient({ detail, canEdit }: Props) {
 
   async function handleReply() {
     if (!reply.trim()) {
-      setError("Digite a resposta para o salao.");
+      setError("Digite a resposta para o salão.");
       return;
     }
 
@@ -135,7 +135,7 @@ export default function AdminTicketDetailClient({ detail, canEdit }: Props) {
         })
       );
       setReply("");
-      setFeedback("Resposta enviada para o salao.");
+      setFeedback("Resposta enviada para o salão.");
       router.refresh();
     } catch (currentError) {
       setError(
@@ -198,7 +198,7 @@ export default function AdminTicketDetailClient({ detail, canEdit }: Props) {
       );
       setFeedback(
         action === "approve"
-          ? "Recuperacao aprovada e colocada em carencia."
+          ? "Recuperacao aprovada e colocada em carência."
           : action === "reject"
             ? "Recuperacao recusada. O ticket segue aguardando novos dados."
             : "Recuperacao concluida e autenticador removido."
@@ -208,7 +208,7 @@ export default function AdminTicketDetailClient({ detail, canEdit }: Props) {
       setError(
         currentError instanceof Error
           ? currentError.message
-          : "Erro ao processar a recuperacao do autenticador."
+          : "Erro ao processar a recuperação do autenticador."
       );
     } finally {
       setSaving(null);
@@ -295,7 +295,7 @@ export default function AdminTicketDetailClient({ detail, canEdit }: Props) {
           <div className="rounded-[24px] border border-zinc-200 bg-zinc-50 p-4 text-sm text-zinc-600">
             <div>Responsavel atual</div>
             <div className="mt-1 font-semibold text-zinc-950">
-              {detail.responsavelAdmin?.nome || "Nao assumido"}
+              {detail.responsavelAdmin?.nome || "Não assumido"}
             </div>
           </div>
         </div>
@@ -307,7 +307,7 @@ export default function AdminTicketDetailClient({ detail, canEdit }: Props) {
             <div className="rounded-[24px] border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-900">
               <div className="font-bold">Recuperacao do autenticador</div>
               <div className="mt-2 leading-6">
-                Codigo da solicitacao:{" "}
+                Codigo da solicitação:{" "}
                 <span className="font-mono font-bold">
                   {mfaRecoveryContext.recoveryCode || "-"}
                 </span>
@@ -325,10 +325,10 @@ export default function AdminTicketDetailClient({ detail, canEdit }: Props) {
                 </strong>
               </div>
               <ul className="mt-3 list-disc space-y-1 pl-5 leading-6">
-                <li>Validar selfie com documento e codigo escrito a mao.</li>
-                <li>Conferir contato atual no proprio ticket.</li>
+                <li>Validar selfie com documento e código escrito a mao.</li>
+                <li>Conferir contato atual no próprio ticket.</li>
                 <li>
-                  Depois da aprovacao, respeitar a carencia de ate{" "}
+                  Depois da aprovacao, respeitar a carência de até{" "}
                   {mfaRecoveryContext.delayHours} horas antes de concluir.
                 </li>
               </ul>
@@ -394,7 +394,7 @@ export default function AdminTicketDetailClient({ detail, canEdit }: Props) {
                 value={reply}
                 onChange={(event) => setReply(event.target.value)}
                 rows={4}
-                placeholder="Responder para o salao..."
+                placeholder="Responder para o salão..."
                 className="w-full resize-none rounded-[18px] bg-white px-4 py-4 text-sm outline-none"
               />
               <div className="mt-3 flex justify-end">
@@ -415,7 +415,7 @@ export default function AdminTicketDetailClient({ detail, canEdit }: Props) {
         <aside className="space-y-4">
           <div className="rounded-[30px] border border-zinc-200 bg-white p-5 shadow-sm">
             <div className="text-lg font-bold text-zinc-950">
-              Operacao do ticket
+              Operação do ticket
             </div>
             <div className="mt-4 grid gap-3">
               {mfaRecoveryContext ? (
@@ -495,7 +495,7 @@ export default function AdminTicketDetailClient({ detail, canEdit }: Props) {
                     disabled={!canEdit || saving === "status"}
                     className="rounded-2xl border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800 transition hover:bg-emerald-100 disabled:opacity-60"
                   >
-                    Aprovar com carencia
+                    Aprovar com carência
                   </button>
                   <button
                     type="button"
@@ -515,7 +515,7 @@ export default function AdminTicketDetailClient({ detail, canEdit }: Props) {
                   disabled={!canEdit || saving === "status"}
                   className="rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-900 transition hover:bg-amber-100 disabled:opacity-60"
                 >
-                  Concluir apos carencia
+                  Concluir após carência
                 </button>
               ) : null}
             </div>

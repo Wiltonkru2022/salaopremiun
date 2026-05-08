@@ -32,7 +32,7 @@ export default async function ClienteAppointmentReviewPage({
   return (
     <ClientAppFrame
       title="Avaliar atendimento"
-      subtitle="Sua opiniao ajuda o salao a melhorar"
+      subtitle="Sua opiniao ajuda o salão a melhorar"
     >
       <div className="space-y-4">
         <Link
@@ -45,30 +45,30 @@ export default async function ClienteAppointmentReviewPage({
 
         {query.status === "avaliado" ? (
           <div className="rounded-[1.4rem] border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">
-            Avaliacao enviada com sucesso.
+            Avaliação enviada com sucesso.
           </div>
         ) : null}
 
         {!appointment ? (
           <section className="rounded-[1.8rem] border border-red-200 bg-red-50 p-5 text-sm leading-6 text-red-700">
-            Nao encontramos este atendimento na sua conta.
+            Não encontramos este atendimento na sua conta.
           </section>
         ) : appointment.avaliado ? (
           <section className="rounded-[1.8rem] border border-emerald-200 bg-emerald-50 p-5 text-emerald-800">
             <div className="flex items-center gap-2 text-base font-black">
               <CheckCircle2 size={20} />
-              Avaliacao ja enviada
+              Avaliação já enviada
             </div>
             <p className="mt-2 text-sm leading-6">
-              Obrigado por avaliar este atendimento. Sua resposta ja foi
-              registrada para o salao.
+              Obrigado por avaliar este atendimento. Sua resposta já foi
+              registrada para o salão.
             </p>
           </section>
         ) : !appointment.podeAvaliar ? (
           <section className="rounded-[1.8rem] border border-amber-200 bg-amber-50 p-5 text-amber-800">
-            <div className="text-base font-black">Ainda nao esta liberado</div>
+            <div className="text-base font-black">Ainda não está liberado</div>
             <p className="mt-2 text-sm leading-6">
-              A avaliacao fica disponivel depois que o atendimento for marcado
+              A avaliação fica disponível depois que o atendimento for marcado
               como finalizado.
             </p>
           </section>
@@ -77,14 +77,14 @@ export default async function ClienteAppointmentReviewPage({
             <section className="overflow-hidden rounded-[2rem] bg-zinc-950 p-5 text-white shadow-[0_22px_56px_rgba(15,23,42,0.18)]">
               <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-bold uppercase tracking-[0.14em] text-zinc-300">
                 <Star size={14} />
-                Avalie sua experiencia
+                Avalie sua experiência
               </div>
               <h1 className="mt-3 text-2xl font-black tracking-[-0.05em]">
                 Como foi seu atendimento?
               </h1>
               <p className="mt-2 text-sm leading-6 text-zinc-300">
-                Responda em poucos segundos. O salao recebe seu feedback para
-                cuidar melhor dos proximos atendimentos.
+                Responda em poucos segundos. O salão recebe seu feedback para
+                cuidar melhor dos próximos atendimentos.
               </p>
 
               <div className="mt-4 grid gap-3 rounded-[1.4rem] bg-white/10 p-4">

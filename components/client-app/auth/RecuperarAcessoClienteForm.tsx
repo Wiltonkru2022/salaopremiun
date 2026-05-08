@@ -22,7 +22,7 @@ function SubmitButton() {
       disabled={pending}
       className="h-12 w-full rounded-2xl bg-zinc-950 text-sm font-semibold text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60"
     >
-      {pending ? "Enviando link..." : "Enviar link de recuperacao"}
+      {pending ? "Enviando link..." : "Enviar link de recuperação"}
     </button>
   );
 }

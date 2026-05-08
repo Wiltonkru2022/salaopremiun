@@ -100,7 +100,7 @@ function AdminMasterLoginContent() {
       if (!loginResponse.ok || !loginPayload?.ok) {
         setErro(
           loginPayload?.message ||
-            "Nao foi possivel concluir o login do Admin Master."
+            "Não foi possível concluir o login do Admin Master."
         );
         return;
       }
@@ -127,20 +127,20 @@ function AdminMasterLoginContent() {
               </div>
 
               <h1 className="mt-5 max-w-xl text-[2.2rem] font-black leading-[1.05] text-[#fff6ea] md:text-[3rem]">
-                Admin Master com entrada propria e operacao centralizada.
+                Admin Master com entrada própria e operação centralizada.
               </h1>
 
               <p className="mt-4 max-w-xl text-sm leading-6 text-[#d9cbb8] md:text-[15px]">
-                Este ambiente e exclusivo para operacao, financeiro, produto e
-                suporte do SalaoPremium. O acesso passa por validacao dedicada
+                Este ambiente e exclusivo para operação, financeiro, produto e
+                suporte do SalãoPremium. O acesso passa por validacao dedicada
                 antes de liberar o painel executivo.
               </p>
             </div>
 
             <div className="grid gap-3 md:grid-cols-3">
               {[
-                "Monitora assinaturas, cobrancas e risco operacional em um unico shell.",
-                "Centraliza tickets, webhooks, onboarding e saude comercial dos saloes.",
+                "Monitora assinaturas, cobrancas e risco operacional em um único shell.",
+                "Centraliza tickets, webhooks, onboarding e saude comercial dos salões.",
                 "Mantem o fluxo separado do login de cliente para reduzir erro humano.",
               ].map((item) => (
                 <div
@@ -159,7 +159,7 @@ function AdminMasterLoginContent() {
               </div>
 
               <p className="mt-3 max-w-2xl text-sm leading-6 text-[#dccfbd]">
-                Depois do login, o sistema confirma se o e-mail esta ativo em
+                Depois do login, o sistema confirma se o e-mail está ativo em
                 <code className="mx-1 rounded bg-white/10 px-1.5 py-0.5 text-xs text-white">
                   admin_master_usuarios
                 </code>
@@ -180,14 +180,14 @@ function AdminMasterLoginContent() {
               </h2>
               <p className="mt-2.5 text-sm leading-6 text-[#6b5b45]">
                 Use seu e-mail interno para abrir o ambiente administrativo
-                executivo. Essa sessao nao compartilha login com o painel do
-                salao.
+                executivo. Essa sessao não compartilha login com o painel do
+                salão.
               </p>
             </div>
 
             {nextPath !== ADMIN_MASTER_HOME_PATH ? (
               <div className="mb-4 rounded-[20px] border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-                Apos autenticar, vamos continuar em{" "}
+                Após autenticar, vamos continuar em{" "}
                 <code className="rounded bg-white px-1.5 py-0.5 text-xs">
                   {nextPath}
                 </code>
@@ -237,7 +237,7 @@ function AdminMasterLoginContent() {
                   href={salaoLoginUrl}
                   className="text-sm font-medium text-[#7d6240] transition hover:text-[#2e2115]"
                 >
-                  Login do salao
+                  Login do salão
                 </a>
 
                 <a
@@ -265,8 +265,8 @@ function AdminMasterLoginContent() {
             </form>
 
             <div className="mt-5 rounded-[20px] border border-[#eadcc8] bg-[#fff6ea] px-4 py-3.5 text-sm leading-6 text-[#654f35]">
-              O Admin Master usa uma sessao separada do painel do salao. Mesmo
-              com o mesmo navegador aberto, um acesso nao derruba o outro.
+              O Admin Master usa uma sessao separada do painel do salão. Mesmo
+              com o mesmo navegador aberto, um acesso não derruba o outro.
             </div>
           </div>
         </section>

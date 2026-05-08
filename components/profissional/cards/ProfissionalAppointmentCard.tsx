@@ -16,7 +16,7 @@ export default function ProfissionalAppointmentCard({
       ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
       : "bg-amber-50 text-amber-700 border border-amber-200";
   const statusLabel =
-    status === "confirmado" ? "Confirmado" : "Pendente de confirmacao";
+    status === "confirmado" ? "Confirmado" : "Pendente de confirmação";
 
   return (
     <div className="rounded-[1.2rem] border border-zinc-200 bg-white p-3.5 shadow-sm">

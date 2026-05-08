@@ -94,7 +94,7 @@ export default function WhatsAppPackagesCard({
       setCopiado(true);
       window.setTimeout(() => setCopiado(false), 1800);
     } catch {
-      setErro("Nao foi possivel copiar o PIX agora.");
+      setErro("Não foi possível copiar o PIX agora.");
     }
   }
 
@@ -109,7 +109,7 @@ export default function WhatsAppPackagesCard({
           Compre creditos e ative o envio comercial
         </h2>
         <p className="mt-2 text-sm leading-6 text-zinc-500">
-          O credito entra automaticamente no salao depois que o pagamento do PIX
+          O crédito entra automaticamente no salão depois que o pagamento do PIX
           for confirmado no webhook.
         </p>
       </div>
@@ -167,10 +167,10 @@ export default function WhatsAppPackagesCard({
               Checkout {checkout.reused ? "reaproveitado" : "gerado"}
             </div>
             <h3 className="mt-2 text-xl font-bold">
-              Pagamento pronto para ativar {checkout.quantidadeCreditos} credito(s)
+              Pagamento pronto para ativar {checkout.quantidadeCreditos} crédito(s)
             </h3>
             <p className="mt-2 text-sm text-emerald-800">
-              Assim que o PIX for confirmado, o pacote entra no saldo do salao e o
+              Assim que o PIX for confirmado, o pacote entra no saldo do salão e o
               recurso WhatsApp fica habilitado automaticamente.
             </p>
 

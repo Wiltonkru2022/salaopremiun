@@ -101,7 +101,7 @@ export default function AgendaContextMenu({
       >
         <div className="border-b border-zinc-200 bg-zinc-50/70 px-4 py-3">
           <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-400">
-            Menu rapido
+            Menu rápido
           </div>
           <div className="mt-1 text-sm font-bold text-zinc-900">{title}</div>
           {subtitle ? (

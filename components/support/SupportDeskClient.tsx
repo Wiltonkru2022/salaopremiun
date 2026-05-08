@@ -151,7 +151,7 @@ function getMfaRecoveryContext(detail: SalaoTicketDetail | null) {
 function formatRecoveryStatus(value?: string | null) {
   const normalized = String(value || "").toLowerCase();
 
-  if (normalized === "cooldown") return "Em carencia de seguranca";
+  if (normalized === "cooldown") return "Em carência de segurança";
   if (normalized === "rejected") return "Aguardando novos dados";
   if (normalized === "completed") return "Concluida";
   return "Em analise";
@@ -535,11 +535,11 @@ export default function SupportDeskClient({
               Central de suporte
             </div>
             <h1 className="mt-2.5 font-display text-3xl font-bold tracking-[-0.05em] text-zinc-950 sm:text-[2rem]">
-              Tickets e atendimento do salao em um fluxo unico
+              Tickets e atendimento do salão em um fluxo único
             </h1>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-500 sm:text-[15px]">
-              Abra chamados, acompanhe respostas e mantenha o historico visivel
-              para a equipe do salao em um fluxo unico.
+              Abra chamados, acompanhe respostas e mantenha o histórico visível
+              para a equipe do salão em um fluxo único.
             </p>
           </div>
 
@@ -566,9 +566,9 @@ export default function SupportDeskClient({
       </section>
 
       <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-        <MetricCard label="Tickets" value={metrics.total} helper="Historico do salao" />
+        <MetricCard label="Tickets" value={metrics.total} helper="Histórico do salão" />
         <MetricCard label="Em andamento" value={metrics.abertos} helper="Ativos agora" tone="amber" />
-        <MetricCard label="Aguardando voce" value={metrics.aguardandoCliente} helper="Responder suporte" tone="blue" />
+        <MetricCard label="Aguardando você" value={metrics.aguardandoCliente} helper="Responder suporte" tone="blue" />
         <MetricCard label="Criticos" value={metrics.criticos} helper="Prioridade alta" tone="red" />
       </section>
 
@@ -610,7 +610,7 @@ export default function SupportDeskClient({
             value={newTicket.mensagem}
             onChange={(event) => setNewTicket((current) => ({ ...current, mensagem: event.target.value }))}
             rows={5}
-            placeholder="Descreva o problema com o maximo de contexto util."
+            placeholder="Descreva o problema com o máximo de contexto util."
             className="mt-4 w-full rounded-[22px] border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm outline-none transition focus:border-zinc-950 focus:bg-white"
           />
           <div className="mt-4 flex flex-wrap gap-3">
@@ -773,15 +773,15 @@ export default function SupportDeskClient({
                           Recuperacao do autenticador
                         </div>
                         <h3 className="mt-1.5 text-base font-bold text-zinc-950">
-                          Solicitacao em analise de seguranca
+                          Solicitacao em analise de segurança
                         </h3>
                         <p className="mt-2 text-sm leading-6 text-zinc-700">
-                          Codigo da solicitacao:{" "}
+                          Codigo da solicitação:{" "}
                           <span className="font-mono font-bold">
                             {mfaRecoveryContext.recoveryCode || "-"}
                           </span>
                           . Responda este ticket com uma selfie segurando o
-                          documento e um papel com esse codigo escrito a mao.
+                          documento e um papel com esse código escrito a mao.
                         </p>
                         <p className="mt-2 text-sm leading-6 text-zinc-700">
                           Estado atual:{" "}
@@ -803,8 +803,8 @@ export default function SupportDeskClient({
                           .
                         </p>
                         <p className="mt-2 text-sm leading-6 text-zinc-700">
-                          Depois da aprovacao, a liberacao entra em carencia de
-                          ate {mfaRecoveryContext.delayHours} horas por seguranca.
+                          Depois da aprovacao, a liberacao entra em carência de
+                          até {mfaRecoveryContext.delayHours} horas por segurança.
                         </p>
                       </div>
                     </div>
@@ -880,7 +880,7 @@ export default function SupportDeskClient({
                           Anexar evidencia no mesmo envio
                         </div>
                         <p className="mt-1 text-xs leading-5 text-zinc-500">
-                          Aceita imagem JPG, PNG, WEBP ou PDF com ate 10 MB.
+                          Aceita imagem JPG, PNG, WEBP ou PDF com até 10 MB.
                         </p>
                         <input
                           type="file"

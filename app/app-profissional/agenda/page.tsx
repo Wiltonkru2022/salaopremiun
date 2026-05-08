@@ -30,10 +30,10 @@ function getStatusMeta(status: string) {
   if (value === "aguardando_pagamento") {
     return { label: "Aguardando pagamento", tone: "warning" as const };
   }
-  if (value === "faltou") return { label: "Nao compareceu", tone: "danger" as const };
+  if (value === "faltou") return { label: "Não compareceu", tone: "danger" as const };
   if (value === "cancelado") return { label: "Cancelado", tone: "danger" as const };
 
-  return { label: "Pendente de confirmacao", tone: "warning" as const };
+  return { label: "Pendente de confirmação", tone: "warning" as const };
 }
 
 export default async function AgendaProfissionalPage({
@@ -180,13 +180,13 @@ export default async function AgendaProfissionalPage({
           ) : (
             <ProfissionalEmptyState
               title="Nenhum agendamento nesta data"
-              description="Seu dia esta livre. Se quiser, crie um novo horario agora."
+              description="Seu dia está livre. Se quiser, crie um novo horário agora."
               action={
                 <Link
                   href={`/app-profissional/agenda/novo?data=${agenda.dataSelecionada}`}
                   className="inline-flex h-10 items-center justify-center rounded-[18px] bg-zinc-950 px-4 text-sm font-bold text-white"
                 >
-                  Criar horario
+                  Criar horário
                 </Link>
               }
             />

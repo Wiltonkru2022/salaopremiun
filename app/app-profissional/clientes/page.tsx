@@ -54,9 +54,9 @@ export default async function ClientesPage({
     })) as ClienteRow[];
   } catch {
     return (
-      <ProfissionalShell title="Clientes" subtitle="Cadastros do salao">
+      <ProfissionalShell title="Clientes" subtitle="Cadastros do salão">
         <div className="rounded-[1.5rem] border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 shadow-sm">
-          Nao foi possivel carregar os clientes.
+          Não foi possível carregar os clientes.
         </div>
       </ProfissionalShell>
     );
@@ -71,7 +71,7 @@ export default async function ClientesPage({
   });
 
   return (
-    <ProfissionalShell title="Clientes" subtitle="Cadastros do salao">
+    <ProfissionalShell title="Clientes" subtitle="Cadastros do salão">
       <div className="space-y-3.5">
         <section className="overflow-hidden rounded-[1.5rem] bg-zinc-950 px-4 py-4 text-white shadow-[0_16px_34px_rgba(15,23,42,0.15)]">
           <div className="flex items-start justify-between gap-3">
@@ -86,7 +86,7 @@ export default async function ClientesPage({
               </h2>
 
               <p className="mt-2.5 text-sm leading-6 text-zinc-300">
-                Busque rapido, abra o cadastro e siga para agendamento ou comanda.
+                Busque rápido, abra o cadastro e siga para agendamento ou comanda.
               </p>
             </div>
 
@@ -133,7 +133,7 @@ export default async function ClientesPage({
             description={
               buscaLimpa
                 ? `Resultados para "${buscaLimpa}".`
-                : "Clientes ativos mais recentes para voce acessar rapido."
+                : "Clientes ativos mais recentes para você acessar rápido."
             }
           />
 

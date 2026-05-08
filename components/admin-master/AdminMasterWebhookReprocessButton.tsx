@@ -33,7 +33,7 @@ export default function AdminMasterWebhookReprocessButton({
       };
 
       if (!response.ok || data.ok === false) {
-        throw new Error(data.error || "Nao foi possivel reprocessar o webhook.");
+        throw new Error(data.error || "Não foi possível reprocessar o webhook.");
       }
 
       setTone("success");

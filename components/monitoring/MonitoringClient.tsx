@@ -97,7 +97,7 @@ export default function MonitoringClient() {
           event.reason instanceof Error
             ? event.reason
             : new Error(String(event.reason || "Promise rejeitada")),
-        fallbackMessage: "Falha nao tratada na interface.",
+        fallbackMessage: "Falha não tratada na interface.",
         details: {
           reason:
             event.reason instanceof Error

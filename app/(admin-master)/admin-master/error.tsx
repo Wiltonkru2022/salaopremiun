@@ -28,8 +28,8 @@ export default function AdminMasterError({
     <div className="rounded-[30px] border border-red-200 bg-red-50 p-8 text-red-800 shadow-sm">
       <h2 className="font-display text-2xl font-black">Erro no AdminMaster</h2>
       <p className="mt-2 text-sm leading-6">
-        O modulo abriu com falha e nao conseguiu concluir a renderizacao com
-        seguranca. Tente novamente agora. Se esse erro voltar, acompanhe o
+        O módulo abriu com falha e não conseguiu concluir a renderizacao com
+        segurança. Tente novamente agora. Se esse erro voltar, acompanhe o
         alerta no painel de saude e nos logs internos.
       </p>
       {error.digest ? (

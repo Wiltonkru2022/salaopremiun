@@ -35,7 +35,7 @@ function firstRelation<T>(value: T | T[] | null | undefined): T | null {
 }
 
 function formatDate(value?: string | null, time?: string | null) {
-  if (!value) return "Data nao informada";
+  if (!value) return "Data não informada";
   const date = new Intl.DateTimeFormat("pt-BR", {
     day: "2-digit",
     month: "2-digit",
@@ -65,7 +65,7 @@ async function carregarAvaliacoes(params: {
         .limit(80);
 
       if (error) {
-        throw new Error(error.message || "Erro ao carregar avaliacoes.");
+        throw new Error(error.message || "Erro ao carregar avaliações.");
       }
 
       return ((data || []) as ReviewRow[]).filter((item) => {
@@ -106,13 +106,13 @@ export default async function ProfissionalAvaliacoesPage({
 
         {params?.status === "removida" ? (
           <div className="rounded-[1.15rem] border border-emerald-200 bg-emerald-50 p-3.5 text-sm font-semibold text-emerald-700">
-            Avaliacao removida da visualizacao.
+            Avaliação removida da visualização.
           </div>
         ) : null}
 
         {params?.status === "erro" ? (
           <div className="rounded-[1.15rem] border border-red-200 bg-red-50 p-3.5 text-sm font-semibold text-red-700">
-            Nao foi possivel remover esta avaliacao agora.
+            Não foi possível remover esta avaliação agora.
           </div>
         ) : null}
 
@@ -183,7 +183,7 @@ export default async function ProfissionalAvaliacoesPage({
                         className="inline-flex h-10 items-center gap-2 rounded-[16px] border border-red-200 bg-white px-3 text-xs font-black text-red-600"
                       >
                         <Trash2 size={14} />
-                        Remover avaliacao
+                        Remover avaliação
                       </button>
                     </form>
                   </article>
@@ -191,7 +191,7 @@ export default async function ProfissionalAvaliacoesPage({
               })
             ) : (
               <div className="rounded-[20px] border border-zinc-200 bg-zinc-50 p-4 text-sm leading-6 text-zinc-500">
-                Nenhuma avaliacao recebida ainda.
+                Nenhuma avaliação recebida ainda.
               </div>
             )}
           </div>

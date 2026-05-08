@@ -116,7 +116,7 @@ export default function WhatsAppSendCard({
       };
 
       if (!response.ok) {
-        throw new Error(data.error || "Nao foi possivel enviar a mensagem.");
+        throw new Error(data.error || "Não foi possível enviar a mensagem.");
       }
 
       setHistorico((current) => [
@@ -134,12 +134,12 @@ export default function WhatsAppSendCard({
       ]);
       setTo("");
       setMessage("");
-      setFeedback("Mensagem enviada e registrada no historico.");
+      setFeedback("Mensagem enviada e registrada no histórico.");
     } catch (error) {
       setFeedback(
         error instanceof Error
           ? error.message
-          : "Nao foi possivel enviar a mensagem."
+          : "Não foi possível enviar a mensagem."
       );
     } finally {
       setSending(false);
@@ -150,7 +150,7 @@ export default function WhatsAppSendCard({
     <section className="rounded-[30px] border border-zinc-200 bg-white p-6 shadow-sm">
       <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
         <MessageCircle size={14} />
-        Disparo real + historico
+        Disparo real + histórico
       </div>
 
       <div className="mt-3 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
@@ -159,8 +159,8 @@ export default function WhatsAppSendCard({
             WhatsApp real ligado ao saldo do pacote
           </h2>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-500">
-            Cada envio manual consome 1 credito, registra a saida e depois recebe
-            os retornos de status da Meta no historico.
+            Cada envio manual consome 1 crédito, registra a saída e depois recebe
+            os retornos de status da Meta no histórico.
           </p>
         </div>
 
@@ -178,7 +178,7 @@ export default function WhatsAppSendCard({
         <div className="space-y-4 rounded-[24px] border border-zinc-200 bg-zinc-50 p-4">
           <label className="block">
             <div className="text-xs font-semibold uppercase tracking-[0.16em] text-zinc-400">
-              Numero do cliente
+              Número do cliente
             </div>
             <input
               value={to}
@@ -195,12 +195,12 @@ export default function WhatsAppSendCard({
             <textarea
               value={message}
               onChange={(event) => setMessage(event.target.value.slice(0, 4000))}
-              placeholder="Oi, seu horario ficou livre hoje. Se quiser, eu consigo te atender ainda nesta tarde."
+              placeholder="Oi, seu horário ficou livre hoje. Se quiser, eu consigo te atender ainda nesta tarde."
               rows={6}
               className="mt-2 w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-950 outline-none transition focus:border-zinc-950"
             />
             <div className="mt-2 text-right text-xs text-zinc-400">
-              {charsLeft} caractere(s) disponivel(is)
+              {charsLeft} caractere(s) disponível(is)
             </div>
           </label>
 
@@ -216,10 +216,10 @@ export default function WhatsAppSendCard({
 
           <div className="rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-xs leading-5 text-zinc-500">
             {!recursoAtivo
-              ? "O recurso WhatsApp ainda nao esta liberado no plano ou no extra contratado."
+              ? "O recurso WhatsApp ainda não está liberado no plano ou no extra contratado."
               : creditosDisponiveis <= 0
                 ? "Seu saldo chegou a zero. Compre um novo pacote para continuar enviando."
-                : "Os retornos da Meta entram no historico conforme a operadora entrega, le ou falha a mensagem."}
+                : "Os retornos da Meta entram no histórico conforme a operadora entrega, le ou falha a mensagem."}
           </div>
 
           {feedback ? (
@@ -233,7 +233,7 @@ export default function WhatsAppSendCard({
           <div className="rounded-[24px] border border-zinc-200 bg-zinc-50 p-4">
             <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-zinc-400">
               <ShieldCheck size={14} />
-              Historico de envios
+              Histórico de envios
             </div>
 
             <div className="mt-4 space-y-3">

@@ -171,8 +171,8 @@ export default function PushPermissionRuntime({
       }`}
       title={
         denied
-          ? "Libere as notificacoes nas permissoes do navegador."
-          : "Receber notificacoes na barra do celular."
+          ? "Libere as notificações nas permissoes do navegador."
+          : "Receber notificações na barra do celular."
       }
     >
       {enabled ? <BellRing size={15} /> : <Bell size={15} />}

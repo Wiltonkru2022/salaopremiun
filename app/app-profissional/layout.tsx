@@ -5,7 +5,7 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "App Profissional",
-  description: "Agenda, clientes, comandas e comissoes para profissionais do salao.",
+  description: "Agenda, clientes, comandas e comissões para profissionais do salão.",
 };
 
 export default function AppProfissionalLayout({

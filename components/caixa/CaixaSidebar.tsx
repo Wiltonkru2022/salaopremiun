@@ -256,7 +256,7 @@ export default function CaixaSidebar({
         onClose={() => setSessaoOpen(false)}
         closeDisabled={saving}
         title="Sessão do caixa"
-        description="Abra, feche e movimente o caixa em uma area dedicada, com leitura mais limpa."
+        description="Abra, feche e movimente o caixa em uma área dedicada, com leitura mais limpa."
         eyebrow="Operação da sessão"
         maxWidthClassName="max-w-6xl"
         panelClassName="max-h-[calc(100dvh-2rem)]"

@@ -159,7 +159,7 @@ export default function ComandaItemModal({
       const valorUnitarioNumero = parseMoneyToNumber(valorUnitario);
 
       if (tipoItem === "servico" && !idServico) {
-        throw new Error("Selecione um servico antes de adicionar.");
+        throw new Error("Selecione um serviço antes de adicionar.");
       }
 
       if (tipoItem === "produto" && !idProduto) {
@@ -167,7 +167,7 @@ export default function ComandaItemModal({
       }
 
       if (tipoItem === "extra" && !String(descricao || "").trim()) {
-        throw new Error("Informe a descricao do item manual.");
+        throw new Error("Informe a descrição do item manual.");
       }
 
       let payload: ComandaItemModalPayload = {
@@ -222,7 +222,7 @@ export default function ComandaItemModal({
       setErro(
         error instanceof Error && error.message
           ? error.message
-          : "Nao foi possivel adicionar o item."
+          : "Não foi possível adicionar o item."
       );
     } finally {
       setSaving(false);

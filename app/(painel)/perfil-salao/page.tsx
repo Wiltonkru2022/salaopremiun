@@ -135,10 +135,10 @@ function formatAddress(form: SalaoForm) {
 }
 
 function formatDateTime(value: string | null | undefined) {
-  if (!value) return "Nao registrado";
+  if (!value) return "Não registrado";
 
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "Nao registrado";
+  if (Number.isNaN(date.getTime())) return "Não registrado";
 
   return new Intl.DateTimeFormat("pt-BR", {
     dateStyle: "short",
@@ -362,7 +362,7 @@ export default function PerfilSalaoPage() {
           String(snapshot.sensitiveActionLockedUntil || "") || null,
       });
     } catch (error) {
-      console.warn("Nao foi possivel carregar status do autenticador:", error);
+      console.warn("Não foi possível carregar status do autenticador:", error);
       setTotpFactor(null);
       setMfaSnapshot(EMPTY_MFA_SNAPSHOT);
     } finally {
@@ -378,7 +378,7 @@ export default function PerfilSalaoPage() {
       setSemPermissao(false);
 
       if (!painelSession?.idSalao || !painelSession?.permissoes) {
-        setErro("Nao foi possivel identificar o salao da conta atual.");
+        setErro("Não foi possível identificar o salão da conta atual.");
         return;
       }
 
@@ -437,7 +437,7 @@ export default function PerfilSalaoPage() {
           app_cliente_pausado: Boolean(row.app_cliente_pausado),
           app_cliente_pausa_mensagem:
             row.app_cliente_pausa_mensagem ||
-            "Salao pausado no momento. Em breve a agenda online volta ao normal.",
+            "Salão pausado no momento. Em breve a agenda online volta ao normal.",
           app_cliente_slug:
             row.app_cliente_slug ||
             buildFallbackSalaoSlug(row.nome || "", row.id || ""),
@@ -470,7 +470,7 @@ export default function PerfilSalaoPage() {
           factorId: totpSetup.factorId,
         });
       } catch (error) {
-        console.warn("Nao foi possivel limpar enrolamento pendente:", error);
+        console.warn("Não foi possível limpar enrolamento pendente:", error);
       }
     }
 
@@ -556,7 +556,7 @@ export default function PerfilSalaoPage() {
         app_cliente_pausa_mensagem:
           (patch.app_cliente_pausa_mensagem ??
             perfilForm.app_cliente_pausa_mensagem) ||
-          "Salao pausado no momento. Em breve a agenda online volta ao normal.",
+          "Salão pausado no momento. Em breve a agenda online volta ao normal.",
         app_cliente_slug:
           normalizeSalaoSlug(
             patch.app_cliente_slug ?? perfilForm.app_cliente_slug ?? ""
@@ -591,7 +591,7 @@ export default function PerfilSalaoPage() {
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "";
       if (message.includes("saloes_app_cliente_slug_uidx")) {
-        setErro("Esse link de divulgacao ja esta em uso. Escolha outro final para o link.");
+        setErro("Esse link de divulgação já está em uso. Escolha outro final para o link.");
         return false;
       }
       setErro(
@@ -616,7 +616,7 @@ export default function PerfilSalaoPage() {
     }
 
     if (file.size > 5 * 1024 * 1024) {
-      setErro("A imagem precisa ter ate 5MB.");
+      setErro("A imagem precisa ter até 5MB.");
       return;
     }
 
@@ -638,11 +638,11 @@ export default function PerfilSalaoPage() {
       } | null;
 
       if (!response.ok) {
-        throw new Error(result?.message || "Nao foi possivel enviar a imagem.");
+        throw new Error(result?.message || "Não foi possível enviar a imagem.");
       }
 
       if (!result?.publicUrl) {
-        throw new Error("Nao foi possivel obter a URL publica da imagem.");
+        throw new Error("Não foi possível obter a URL pública da imagem.");
       }
 
       const patch =
@@ -668,7 +668,7 @@ export default function PerfilSalaoPage() {
       setErro(
         error instanceof Error
           ? error.message
-          : "Nao foi possivel enviar a imagem."
+          : "Não foi possível enviar a imagem."
       );
     } finally {
       setUploadingPublicAsset(null);
@@ -698,7 +698,7 @@ export default function PerfilSalaoPage() {
         estado: enderecoDraft.estado,
         cep: enderecoDraft.cep,
       },
-      "Endereco do salao atualizado com sucesso."
+      "Endereço do salão atualizado com sucesso."
     );
   }
 
@@ -730,17 +730,17 @@ export default function PerfilSalaoPage() {
           buildDefaultSalaoSlug(appClienteDraft.nome || perfilForm.nome),
       },
       planoPremium
-        ? "Perfil publico do app cliente atualizado com sucesso."
-        : "Perfil publico salvo. A publicacao fica disponivel quando o salao estiver no Pro ou Premium."
+        ? "Perfil público do app cliente atualizado com sucesso."
+        : "Perfil público salvo. A publicação fica disponível quando o salão estiver no Pro ou Premium."
     );
   }
 
   async function copiarLinkPublico() {
     try {
       await navigator.clipboard.writeText(publicUrl);
-      setMsg("Link de divulgacao copiado.");
+      setMsg("Link de divulgação copiado.");
     } catch {
-      setErro("Nao foi possivel copiar o link automaticamente.");
+      setErro("Não foi possível copiar o link automaticamente.");
     }
   }
 
@@ -764,7 +764,7 @@ export default function PerfilSalaoPage() {
     const challengeId = (challengeData as { id?: string } | null)?.id || "";
 
     if (!challengeId) {
-      throw new Error("Nao foi possivel iniciar a verificacao do autenticador.");
+      throw new Error("Não foi possível iniciar a verificacao do autenticador.");
     }
 
     const { error: verifyError } = await supabase.auth.mfa.verify({
@@ -795,7 +795,7 @@ export default function PerfilSalaoPage() {
       return true;
     }
 
-    setErro("Informe o codigo do autenticador ou um backup code.");
+    setErro("Informe o código do autenticador ou um backup code.");
     return false;
   }
 
@@ -811,7 +811,7 @@ export default function PerfilSalaoPage() {
       }
 
       if (passwordForm.novaSenha !== passwordForm.confirmarSenha) {
-        setErro("A confirmacao da senha nao confere.");
+        setErro("A confirmação da senha não confere.");
         return;
       }
 
@@ -864,7 +864,7 @@ export default function PerfilSalaoPage() {
       } | null;
 
       if (!payload?.id || !payload.totp?.qr_code || !payload.totp?.secret) {
-        throw new Error("Nao foi possivel preparar o autenticador.");
+        throw new Error("Não foi possível preparar o autenticador.");
       }
 
       setTotpSetup({
@@ -892,7 +892,7 @@ export default function PerfilSalaoPage() {
       }
 
       if (setupCode.trim().length < 6) {
-        setErro("Informe o codigo de 6 digitos do autenticador.");
+        setErro("Informe o código de 6 digitos do autenticador.");
         return;
       }
 
@@ -929,7 +929,7 @@ export default function PerfilSalaoPage() {
   async function regenerarBackupCodes() {
     try {
       if (!manageCode.trim()) {
-        setErro("Informe o codigo atual do autenticador para gerar novos backup codes.");
+        setErro("Informe o código atual do autenticador para gerar novos backup codes.");
         return;
       }
 
@@ -964,7 +964,7 @@ export default function PerfilSalaoPage() {
   async function desativarAutenticadorPorTotp() {
     try {
       if (!manageCode.trim()) {
-        setErro("Informe o codigo atual do autenticador para desativar.");
+        setErro("Informe o código atual do autenticador para desativar.");
         return;
       }
 
@@ -994,7 +994,7 @@ export default function PerfilSalaoPage() {
   async function desativarAutenticadorPorBackupCode() {
     try {
       if (!disableBackupCode.trim()) {
-        setErro("Informe um backup code valido para desativar.");
+        setErro("Informe um backup code válido para desativar.");
         return;
       }
 
@@ -1041,7 +1041,7 @@ export default function PerfilSalaoPage() {
 
       if (!response.ok || payload.ok === false || !payload.ticket?.id) {
         throw new Error(
-          payload.error || "Nao foi possivel abrir a recuperacao do autenticador."
+          payload.error || "Não foi possível abrir a recuperação do autenticador."
         );
       }
 
@@ -1056,7 +1056,7 @@ export default function PerfilSalaoPage() {
       setErro(
         error instanceof Error
           ? error.message
-          : "Erro ao abrir recuperacao do autenticador."
+          : "Erro ao abrir recuperação do autenticador."
       );
     } finally {
       setCreatingRecoveryTicket(false);
@@ -1066,8 +1066,8 @@ export default function PerfilSalaoPage() {
   if (loading) {
     return (
       <AppLoading
-        title="Carregando perfil do salao"
-        message="Aguarde enquanto reunimos identidade do negocio, contatos e seguranca da conta."
+        title="Carregando perfil do salão"
+        message="Aguarde enquanto reunimos identidade do negocio, contatos e segurança da conta."
         fullHeight={false}
       />
     );
@@ -1076,7 +1076,7 @@ export default function PerfilSalaoPage() {
   if (semPermissao) {
     return (
       <div className="rounded-[30px] border border-amber-200 bg-amber-50 p-6 text-amber-800">
-        Apenas administradores podem editar o perfil do salao.
+        Apenas administradores podem editar o perfil do salão.
       </div>
     );
   }
@@ -1089,7 +1089,7 @@ export default function PerfilSalaoPage() {
             {perfilForm.foto_capa_url ? (
               <img
                 src={perfilForm.foto_capa_url}
-                alt="Foto de capa do salao"
+                alt="Foto de capa do salão"
                 className="h-full w-full object-cover"
               />
             ) : (
@@ -1148,10 +1148,10 @@ export default function PerfilSalaoPage() {
                   Identidade do negocio
                 </div>
                 <h1 className="mt-3 font-display text-3xl font-bold tracking-[-0.05em] sm:text-[2.1rem]">
-                  Perfil do salao
+                  Perfil do salão
                 </h1>
                 <p className="mt-2 text-sm leading-6 text-zinc-500 sm:text-[15px]">
-                  Confira os dados do negocio em um lugar so. Clique na capa ou
+                  Confira os dados do negocio em um lugar só. Clique na capa ou
                   na foto do perfil para atualizar a vitrine visual do app cliente.
                 </p>
               </div>
@@ -1162,7 +1162,7 @@ export default function PerfilSalaoPage() {
                 </div>
                 <div className="text-sm text-zinc-500">
                   {String(perfilForm.plano || "sem plano").toUpperCase()} |{" "}
-                  {perfilForm.status || "status nao definido"}
+                  {perfilForm.status || "status não definido"}
                 </div>
               </div>
             </div>
@@ -1191,24 +1191,24 @@ export default function PerfilSalaoPage() {
             >
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <DisplayItem
-                  label="Nome do salao"
-                  value={perfilForm.nome || "Nao informado"}
+                  label="Nome do salão"
+                  value={perfilForm.nome || "Não informado"}
                 />
                 <DisplayItem
                   label="Responsavel"
-                  value={perfilForm.responsavel || "Nao informado"}
+                  value={perfilForm.responsavel || "Não informado"}
                 />
                 <DisplayItem
                   label="E-mail"
-                  value={perfilForm.email || "Nao informado"}
+                  value={perfilForm.email || "Não informado"}
                 />
                 <DisplayItem
                   label="Telefone"
-                  value={perfilForm.telefone || "Nao informado"}
+                  value={perfilForm.telefone || "Não informado"}
                 />
                 <DisplayItem
                   label="CPF/CNPJ"
-                  value={perfilForm.cpf_cnpj || "Nao informado"}
+                  value={perfilForm.cpf_cnpj || "Não informado"}
                 />
               </div>
             </SectionCard>
@@ -1216,19 +1216,19 @@ export default function PerfilSalaoPage() {
             <SectionCard
               icon={<MapPin size={18} />}
               title="Endereco"
-              description="Base de localizacao usada em fichas, impressos e referencias do salao."
+              description="Base de localizacao usada em fichas, impressos e referências do salão."
             >
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div className="md:col-span-2">
                   <DisplayItem
-                    label="Endereco principal"
-                    value={linhasEndereco[0] || "Nao informado"}
+                    label="Endereço principal"
+                    value={linhasEndereco[0] || "Não informado"}
                   />
                 </div>
                 <div className="md:col-span-2">
                   <DisplayItem
                     label="Complemento de localizacao"
-                    value={linhasEndereco[1] || "Nao informado"}
+                    value={linhasEndereco[1] || "Não informado"}
                     multiline
                   />
                 </div>
@@ -1245,7 +1245,7 @@ export default function PerfilSalaoPage() {
                   label="Troca de senha"
                   value={
                     autenticadorAtivo
-                      ? "Exige codigo do autenticador ou backup code antes de salvar."
+                      ? "Exige código do autenticador ou backup code antes de salvar."
                       : "Protegida pela sessao autenticada atual."
                   }
                   multiline
@@ -1257,7 +1257,7 @@ export default function PerfilSalaoPage() {
                       ? "Verificando status..."
                       : autenticadorAtivo
                         ? `Ativo com ${mfaSnapshot.backupCodesRemaining} backup code(s) restantes.`
-                        : "Ainda nao ativado nesta conta."
+                        : "Ainda não ativado nesta conta."
                   }
                   multiline
                 />
@@ -1271,7 +1271,7 @@ export default function PerfilSalaoPage() {
                   ? "Criar vitrine para o app cliente"
                   : "App cliente"
               }
-              description="Resumo do perfil publico usado na vitrine do aplicativo do cliente."
+              description="Resumo do perfil público usado na vitrine do aplicativo do cliente."
             >
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <DisplayItem
@@ -1283,12 +1283,12 @@ export default function PerfilSalaoPage() {
                           ? "Publicado, mas pausado: sai da vitrine e bloqueia novos agendamentos."
                           : "Publicado na vitrine do app cliente."
                         : "Vitrine pronta para configurar e publicar."
-                      : "Disponivel somente no plano Pro ou Premium."
+                      : "Disponível somente no plano Pro ou Premium."
                   }
                   multiline
                 />
                 <DisplayItem
-                  label="Link de divulgacao"
+                  label="Link de divulgação"
                   value={publicUrl}
                   multiline
                 />
@@ -1297,16 +1297,16 @@ export default function PerfilSalaoPage() {
                   value={perfilForm.estacionamento ? "Sim" : "Nao"}
                 />
                 <DisplayItem
-                  label="Endereco no app cliente"
-                  value={linhasEndereco[0] || "Usando endereco do cadastro"}
+                  label="Endereço no app cliente"
+                  value={linhasEndereco[0] || "Usando endereço do cadastro"}
                   multiline
                 />
                 <div className="md:col-span-2">
                   <DisplayItem
-                    label="Descricao publica"
+                    label="Descrição pública"
                     value={
                       perfilForm.descricao_publica ||
-                      "Nenhuma descricao publica cadastrada."
+                      "Nenhuma descrição pública cadastrada."
                     }
                     multiline
                   />
@@ -1317,7 +1317,7 @@ export default function PerfilSalaoPage() {
                     value={
                       metodosPagamento.length
                         ? metodosPagamento.join(" | ")
-                        : "Nenhuma forma de pagamento publica cadastrada."
+                        : "Nenhuma forma de pagamento pública cadastrada."
                     }
                     multiline
                   />
@@ -1327,8 +1327,8 @@ export default function PerfilSalaoPage() {
 
             <SectionCard
               icon={<QrCode size={18} />}
-              title="Divulgacao do salao"
-              description="Link e QR Code para levar o cliente direto para a pagina do salao no app."
+              title="Divulgacao do salão"
+              description="Link e QR Code para levar o cliente direto para a página do salão no app."
             >
               <div className="grid gap-4 md:grid-cols-[190px_minmax(0,1fr)]">
                 <div className="rounded-[24px] border border-zinc-200 bg-white p-3">
@@ -1362,7 +1362,7 @@ export default function PerfilSalaoPage() {
                   </div>
                   <p className="text-sm leading-6 text-zinc-500">
                     Se o cliente abrir esse link sem estar logado, ele entra ou
-                    cria conta e volta direto para esta pagina do salao.
+                    cria conta e volta direto para esta página do salão.
                   </p>
                 </div>
               </div>
@@ -1372,8 +1372,8 @@ export default function PerfilSalaoPage() {
           <aside className="space-y-4 xl:sticky xl:top-24 xl:self-start">
             <SectionCard
               icon={<Sparkles size={18} />}
-              title="Acoes do perfil"
-              description="Escolha o que deseja atualizar sem perder a visao geral do perfil."
+              title="Ações do perfil"
+              description="Escolha o que deseja atualizar sem perder a visão geral do perfil."
             >
               <div className="space-y-3">
                 <SidebarAction
@@ -1385,8 +1385,8 @@ export default function PerfilSalaoPage() {
 
                 <SidebarAction
                   icon={<MapPin size={16} />}
-                  title="Editar endereco"
-                  description="Rua, numero, bairro, cidade, estado e CEP."
+                  title="Editar endereço"
+                  description="Rua, número, bairro, cidade, estado e CEP."
                   onClick={() => abrirModal("endereco")}
                 />
 
@@ -1399,8 +1399,8 @@ export default function PerfilSalaoPage() {
                   }
                   description={
                     planoPremium
-                      ? "Configure link, QR Code, aviso de pausa e publicacao no app cliente."
-                      : "Monte a vitrine publica e publique quando o Pro ou Premium estiver ativo."
+                      ? "Configure link, QR Code, aviso de pausa e publicação no app cliente."
+                      : "Monte a vitrine pública e publique quando o Pro ou Premium estiver ativo."
                   }
                   onClick={() => abrirModal("app_cliente")}
                 />
@@ -1416,7 +1416,7 @@ export default function PerfilSalaoPage() {
                 <SidebarAction
                   icon={<ShieldCheck size={16} />}
                   title="Autenticador"
-                  description="Ative TOTP, gere backup codes e desative a protecao com criterio."
+                  description="Ative TOTP, gere backup codes e desative a proteção com criterio."
                   onClick={() => abrirModal("autenticador")}
                   tone="security"
                 />
@@ -1431,8 +1431,8 @@ export default function PerfilSalaoPage() {
                     Protecao da conta
                   </div>
                   <p className="mt-1.5 text-sm leading-5 text-zinc-600">
-                    Ative o autenticador para reforcar a seguranca da conta e
-                    manter uma forma segura de recuperacao com backup codes.
+                    Ative o autenticador para reforcar a segurança da conta e
+                    manter uma forma segura de recuperação com backup codes.
                   </p>
                 </div>
               </div>
@@ -1446,7 +1446,7 @@ export default function PerfilSalaoPage() {
         onClose={() => setActiveModal(null)}
         title="Editar dados comerciais"
         description="Atualize identidade principal, contatos e documento do negocio."
-        eyebrow="Perfil do salao"
+        eyebrow="Perfil do salão"
         maxWidthClassName="max-w-3xl"
         footer={
           <>
@@ -1474,7 +1474,7 @@ export default function PerfilSalaoPage() {
         }
       >
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <Field label="Nome do salao">
+          <Field label="Nome do salão">
             <TextInput
               value={comercialDraft.nome}
               onChange={(event) =>
@@ -1483,7 +1483,7 @@ export default function PerfilSalaoPage() {
                   nome: event.target.value,
                 }))
               }
-              placeholder="Ex.: Salao Premium"
+              placeholder="Ex.: Salão Premium"
             />
           </Field>
 
@@ -1558,7 +1558,7 @@ export default function PerfilSalaoPage() {
           </Field>
 
           <div className="rounded-[18px] border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm leading-6 text-zinc-600">
-            A foto do perfil do salao agora e atualizada direto na area
+            A foto do perfil do salão agora é atualizada direto na área
             Identidade do negocio, clicando na imagem.
           </div>
         </div>
@@ -1567,9 +1567,9 @@ export default function PerfilSalaoPage() {
       <AppModal
         open={activeModal === "endereco"}
         onClose={() => setActiveModal(null)}
-        title="Editar endereco"
-        description="Atualize os dados de localizacao do salao."
-        eyebrow="Perfil do salao"
+        title="Editar endereço"
+        description="Atualize os dados de localizacao do salão."
+        eyebrow="Perfil do salão"
         maxWidthClassName="max-w-3xl"
         footer={
           <>
@@ -1591,7 +1591,7 @@ export default function PerfilSalaoPage() {
               ) : (
                 <CheckCircle2 size={16} />
               )}
-              Salvar endereco
+              Salvar endereço
             </button>
           </>
         }
@@ -1722,13 +1722,13 @@ export default function PerfilSalaoPage() {
           <div className="rounded-[22px] border border-zinc-200 bg-zinc-50 p-4 text-sm text-zinc-700">
             {autenticadorAtivo ? (
               <p className="leading-6">
-                Esta conta ja esta protegida com autenticador. Para trocar a
-                senha, confirme com o codigo do app ou use um backup code.
+                Esta conta já está protegida com autenticador. Para trocar a
+                senha, confirme com o código do app ou use um backup code.
               </p>
             ) : (
               <p className="leading-6">
-                Se quiser reforcar a protecao da conta, ative o autenticador.
-                Depois disso, toda troca de senha pede confirmacao adicional.
+                Se quiser reforcar a proteção da conta, ative o autenticador.
+                Depois disso, toda troca de senha pede confirmação adicional.
               </p>
             )}
           </div>
@@ -1743,7 +1743,7 @@ export default function PerfilSalaoPage() {
                   novaSenha: event.target.value,
                 }))
               }
-              placeholder="Minimo 6 caracteres"
+              placeholder="Mínimo 6 caracteres"
             />
           </Field>
 
@@ -1800,9 +1800,9 @@ export default function PerfilSalaoPage() {
         title={
           planoPremium && !perfilForm.app_cliente_publicado
             ? "Criar vitrine para o app cliente"
-            : "Perfil publico do app cliente"
+            : "Perfil público do app cliente"
         }
-        description="Defina como o salao aparece na vitrine do cliente final e publique quando o plano Pro ou Premium estiver ativo."
+        description="Defina como o salão aparece na vitrine do cliente final e publique quando o plano Pro ou Premium estiver ativo."
         eyebrow="App cliente"
         maxWidthClassName="max-w-3xl"
         footer={
@@ -1825,7 +1825,7 @@ export default function PerfilSalaoPage() {
               ) : (
                 <CheckCircle2 size={16} />
               )}
-              Salvar perfil publico
+              Salvar perfil público
             </button>
           </>
         }
@@ -1840,18 +1840,18 @@ export default function PerfilSalaoPage() {
           >
             {planoPremium ? (
               <>
-                O link e o QR Code ja ficam prontos pelo nome do salao. Complete
-                a vitrine e ative a publicacao quando quiser aparecer no app cliente.
+                O link e o QR Code já ficam prontos pelo nome do salão. Complete
+                a vitrine e ative a públicação quando quiser aparecer no app cliente.
               </>
             ) : (
               <>
-                Voce pode preparar a descricao e os dados publicos agora, mas a
-                  publicacao na vitrine fica liberada somente no plano Pro ou Premium.
+                Você pode preparar a descrição e os dados públicos agora, mas a
+                  públicação na vitrine fica liberada somente no plano Pro ou Premium.
               </>
             )}
           </div>
 
-          <Field label="Descricao publica">
+          <Field label="Descrição pública">
             <textarea
               value={appClienteDraft.descricao_publica || ""}
               onChange={(event) =>
@@ -1861,13 +1861,13 @@ export default function PerfilSalaoPage() {
                 }))
               }
               rows={4}
-              placeholder="Conte em poucas linhas o estilo do salao, especialidades e o que faz a experiencia valer a visita."
+              placeholder="Conte em poucas linhas o estilo do salão, especialidades e o que faz a experiência valer a visita."
               className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-zinc-900"
             />
           </Field>
 
           <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto]">
-            <Field label="Link de divulgacao">
+            <Field label="Link de divulgação">
               <div className="flex rounded-2xl border border-zinc-300 bg-white focus-within:border-zinc-900">
                 <span className="hidden shrink-0 items-center border-r border-zinc-200 px-4 text-sm font-semibold text-zinc-500 md:flex">
                   salaopremiun.com.br/salao/
@@ -1905,16 +1905,16 @@ export default function PerfilSalaoPage() {
 
           <div className="rounded-[22px] border border-zinc-200 bg-zinc-50 p-4">
             <div className="text-sm font-bold text-zinc-950">
-              Endereco exibido no app cliente
+              Endereço exibido no app cliente
             </div>
             <p className="mt-2 text-sm leading-6 text-zinc-600">
-              O app cliente usa o endereco cadastrado na area Endereco deste
-              perfil. Para alterar rua, numero, bairro, cidade, estado ou CEP,
-              feche este modal e use a acao Editar endereco.
+              O app cliente usa o endereço cadastrado na área Endereço deste
+              perfil. Para alterar rua, número, bairro, cidade, estado ou CEP,
+              feche este modal e use a ação Editar endereço.
             </p>
             <div className="mt-3 rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm font-semibold text-zinc-800">
               {formatAddress(appClienteDraft).join(" | ") ||
-                "Endereco ainda nao informado."}
+                "Endereço ainda não informado."}
             </div>
           </div>
 
@@ -1927,7 +1927,7 @@ export default function PerfilSalaoPage() {
                   formas_pagamento_publico: event.target.value,
                 }))
               }
-              placeholder="Pix, Credito, Debito, Dinheiro"
+              placeholder="Pix, Crédito, Débito, Dinheiro"
             />
           </Field>
 
@@ -1944,7 +1944,7 @@ export default function PerfilSalaoPage() {
                 }
                 className="h-4 w-4 rounded border-zinc-300"
               />
-              Informar estacionamento disponivel
+              Informar estacionamento disponível
             </label>
 
             <label
@@ -1987,8 +1987,8 @@ export default function PerfilSalaoPage() {
               Pausar no app cliente
             </label>
             <p className="mt-2 text-sm leading-6 text-zinc-600">
-              Pausado sai da vitrine de saloes, mas o link direto continua
-              abrindo a pagina com aviso e sem permitir agendar.
+              Pausado sai da vitrine de salões, mas o link direto continua
+              abrindo a página com aviso e sem permitir agendar.
             </p>
             <div className="mt-3">
               <Field label="Mensagem exibida quando estiver pausado">
@@ -2012,7 +2012,7 @@ export default function PerfilSalaoPage() {
         open={activeModal === "autenticador"}
         onClose={fecharModalAutenticador}
         title="Autenticador da conta"
-        description="Adicione uma segunda etapa de confirmacao para proteger melhor o acesso."
+        description="Adicione uma segunda etapa de confirmação para proteger melhor o acesso."
         eyebrow="Seguranca"
         maxWidthClassName="max-w-3xl"
         closeDisabled={mfaBusy}
@@ -2031,7 +2031,7 @@ export default function PerfilSalaoPage() {
                     ? "Verificando..."
                     : autenticadorAtivo
                       ? "Ativa"
-                      : "Nao ativada"
+                      : "Não ativada"
                 }
               />
               <DisplayItem
@@ -2043,13 +2043,13 @@ export default function PerfilSalaoPage() {
                 value={formatDateTime(mfaSnapshot.backupCodesGeneratedAt)}
               />
               <DisplayItem
-                label="Ultimo uso"
+                label="Último uso"
                 value={formatDateTime(mfaSnapshot.backupCodesLastUsedAt)}
               />
             </div>
             {mfaSnapshot.backupCodesLockedUntil ? (
               <p className="mt-3 text-sm leading-6 text-amber-700">
-                Backup codes bloqueados ate{" "}
+                Backup codes bloqueados até{" "}
                 {formatDateTime(mfaSnapshot.backupCodesLockedUntil)} por excesso
                 de tentativas.
               </p>
@@ -2089,7 +2089,7 @@ export default function PerfilSalaoPage() {
               </div>
               <p className="mt-2 text-sm leading-6 text-zinc-600">
                 Escaneie o QR code no seu aplicativo autenticador ou use o
-                segredo manual. Depois confirme com o codigo gerado.
+                segredo manual. Depois confirme com o código gerado.
               </p>
 
               <div className="mt-4 grid gap-4 lg:grid-cols-[220px_minmax(0,1fr)]">
@@ -2107,7 +2107,7 @@ export default function PerfilSalaoPage() {
                     />
                   ) : (
                     <div className="flex min-h-[190px] items-center justify-center rounded-2xl bg-white p-4 text-center text-sm text-zinc-500">
-                      Nao foi possivel montar o QR code. Use o segredo manual ao lado.
+                      Não foi possível montar o QR code. Use o segredo manual ao lado.
                     </div>
                   )}
                 </div>
@@ -2202,11 +2202,11 @@ export default function PerfilSalaoPage() {
 
               <div className="rounded-[22px] border border-[rgba(199,162,92,0.35)] bg-[rgba(199,162,92,0.10)] p-4">
                 <div className="text-sm font-bold text-zinc-950">
-                  Desativar 2FA com seguranca
+                  Desativar 2FA com segurança
                 </div>
                 <p className="mt-2 text-sm leading-6 text-zinc-700">
-                  Se precisar remover essa protecao, confirme com o codigo atual
-                  do autenticador ou com um backup code valido.
+                  Se precisar remover essa proteção, confirme com o código atual
+                  do autenticador ou com um backup code válido.
                 </p>
 
                 <div className="mt-4 space-y-3">
@@ -2237,7 +2237,7 @@ export default function PerfilSalaoPage() {
                       onChange={(event) =>
                         setDisableBackupCode(event.target.value.toUpperCase())
                       }
-                      placeholder="Backup code de recuperacao"
+                      placeholder="Backup code de recuperação"
                     />
                     <button
                       type="button"
@@ -2259,8 +2259,8 @@ export default function PerfilSalaoPage() {
                 Backup codes gerados
               </div>
               <p className="mt-2 text-sm leading-6 text-emerald-800">
-                Guarde estes codigos em um local seguro. Cada codigo funciona
-                uma unica vez.
+                Guarde estes codigos em um local seguro. Cada código funciona
+                uma única vez.
               </p>
               <div className="mt-4 grid gap-2 sm:grid-cols-2">
                 {revealedBackupCodes.map((code) => (
@@ -2280,8 +2280,8 @@ export default function PerfilSalaoPage() {
               Como funciona
             </div>
             <p className="mt-2 text-sm leading-6 text-zinc-700">
-              Depois de ativar o autenticador, a conta passa a pedir confirmacao
-              extra em alteracoes sensiveis e voce continua com backup codes
+              Depois de ativar o autenticador, a conta passa a pedir confirmação
+              extra em alterações sensíveis e você continua com backup codes
               para emergencias.
             </p>
           </div>
@@ -2292,9 +2292,9 @@ export default function PerfilSalaoPage() {
                 Perdeu acesso ao aplicativo autenticador?
               </div>
               <p className="mt-2 text-sm leading-6 text-zinc-700">
-                Abra uma solicitacao segura para recuperacao. A equipe pode pedir
-                confirmacao da titularidade e o processo pode levar ate 24 horas
-                por seguranca.
+                Abra uma solicitação segura para recuperação. A equipe pode pedir
+                confirmação da titularidade e o processo pode levar até 24 horas
+                por segurança.
               </p>
               <button
                 type="button"
@@ -2307,7 +2307,7 @@ export default function PerfilSalaoPage() {
                 ) : (
                   <LifeBuoy size={16} />
                 )}
-                Abrir recuperacao segura
+                Abrir recuperação segura
               </button>
             </div>
           ) : null}

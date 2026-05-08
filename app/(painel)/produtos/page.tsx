@@ -247,7 +247,7 @@ export default function ProdutosPage() {
 
   async function alternarStatus(produto: Produto) {
     if (!podeGerenciar) {
-      setErro("Voce nao tem permissao para alterar status de produtos.");
+      setErro("Você não tem permissão para alterar status de produtos.");
       return;
     }
 
@@ -286,7 +286,7 @@ export default function ProdutosPage() {
 
   async function excluirProduto(id: string) {
     if (!podeGerenciar) {
-      setErro("Voce nao tem permissao para excluir produtos.");
+      setErro("Você não tem permissão para excluir produtos.");
       return;
     }
 
@@ -302,7 +302,7 @@ export default function ProdutosPage() {
 
       setProdutos((prev) => prev.filter((item) => item.id !== id));
       setProdutoParaExcluir(null);
-      setMsg("Produto excluido com sucesso.");
+      setMsg("Produto excluído com sucesso.");
     } catch (e: unknown) {
       console.error(e);
       setErro(getErrorMessage(e, "Erro ao excluir produto."));
@@ -347,7 +347,7 @@ export default function ProdutosPage() {
     return (
       <AppLoading
         title="Carregando produtos"
-        message="Aguarde enquanto sincronizamos catalogo, margem, preco e situacao do estoque."
+        message="Aguarde enquanto sincronizamos catálogo, margem, preço e situação do estoque."
         fullHeight={false}
       />
     );
@@ -357,7 +357,7 @@ export default function ProdutosPage() {
     return (
       <div className="p-6">
         <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-rose-700">
-          Voce nao tem permissao para acessar Produtos.
+          Você não tem permissão para acessar Produtos.
         </div>
       </div>
     );
@@ -375,8 +375,8 @@ export default function ProdutosPage() {
               <h1 className="mt-2 text-2xl font-bold md:text-3xl">Produtos</h1>
               <p className="mt-3 max-w-2xl text-sm leading-6 text-zinc-600">
                 {estoqueLiberado
-                  ? "O cadastro de produto precisa responder tres perguntas rapido: quanto custa, quanto vende e se o estoque esta ficando perigoso."
-                  : "O cadastro de produto segue liberado para revenda, custo e margem. O controle de estoque entra quando o salao sobe para Pro ou Premium."}
+                  ? "O cadastro de produto precisa responder três perguntas rápido: quanto custa, quanto vende e se o estoque está ficando perigoso."
+                  : "O cadastro de produto segue liberado para revenda, custo e margem. O controle de estoque entra quando o salão sobe para Pro ou Premium."}
               </p>
             </div>
 
@@ -423,7 +423,7 @@ export default function ProdutosPage() {
           className={`grid grid-cols-1 gap-3 md:grid-cols-2 ${estoqueLiberado ? "xl:grid-cols-4" : "xl:grid-cols-3"}`}
         >
           <ResumoCard
-            title="Catalogo ativo"
+            title="Catálogo ativo"
             value={`${resumo.ativos}`}
             description={`${resumo.total} produtos no filtro atual`}
             icon={Boxes}
@@ -432,20 +432,20 @@ export default function ProdutosPage() {
             <ResumoCard
               title="Baixo estoque"
               value={`${resumo.baixoEstoque}`}
-              description="Itens que ja pedem reposicao ou revisao"
+              description="Itens que já pedem reposicao ou revisao"
               icon={AlertTriangle}
             />
           ) : null}
           <ResumoCard
-            title="Preco medio"
+            title="Preço medio"
             value={formatCurrency(resumo.ticketMedio)}
-            description="Media de venda do catalogo filtrado"
+            description="Media de venda do catálogo filtrado"
             icon={Wallet}
           />
           <ResumoCard
             title="Margem media"
             value={`${resumo.margemMedia.toFixed(1)}%`}
-            description="Leitura rapida entre custo real e venda"
+            description="Leitura rápida entre custo real e venda"
             icon={ArrowUpDown}
           />
         </div>
@@ -467,17 +467,17 @@ export default function ProdutosPage() {
         >
           <GuideCard
             title="Custo antes de cadastro"
-            text="Nao vale cadastrar so nome e preco. Custo real e o que protege sua margem na hora de revender."
+            text="Não vale cadastrar só nome e preço. Custo real é o que protege sua margem na hora de revender."
           />
           {estoqueLiberado ? (
             <GuideCard
               title="Estoque com leitura util"
-              text="Quantidade atual sozinha nao basta. O minimo ajuda a enxergar risco antes de faltar produto no atendimento."
+              text="Quantidade atual sozinha não basta. O mínimo ajuda a enxergar risco antes de faltar produto no atendimento."
             />
           ) : null}
           <GuideCard
             title="Exclusao com trava"
-            text="Produto com historico de estoque, uso em comanda ou consumo em servico agora pede inativacao em vez de sumir do mapa."
+            text="Produto com histórico de estoque, uso em comanda ou consumo em serviço agora pede inativacao em vez de sumir do mapa."
           />
         </div>
 
@@ -561,7 +561,7 @@ export default function ProdutosPage() {
                           detail="Base para ler margem e recompra"
                         />
                         <MetricBlock
-                          label="Preco de venda"
+                          label="Preço de venda"
                           value={formatCurrency(item.preco_venda)}
                           detail="Valor base para revenda ao cliente"
                         />
@@ -570,8 +570,8 @@ export default function ProdutosPage() {
                           value={`${margem.toFixed(1)}%`}
                           detail={
                             margem <= 0
-                              ? "A venda esta sem sobra clara"
-                              : "Leitura rapida entre custo e venda"
+                              ? "A venda está sem sobra clara"
+                              : "Leitura rápida entre custo e venda"
                           }
                         />
                         {estoqueLiberado ? (

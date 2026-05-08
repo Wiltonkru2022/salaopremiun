@@ -4,7 +4,7 @@ export default function ClienteSalaoLoading() {
   return (
     <ClientAppPageSkeleton
       title="Salao"
-      subtitle="Preparando servicos, equipe e horarios."
+      subtitle="Preparando serviços, equipe e horários."
       panels={4}
     />
   );

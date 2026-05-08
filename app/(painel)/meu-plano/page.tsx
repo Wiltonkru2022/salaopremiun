@@ -48,7 +48,7 @@ function getMotivoMeta(motivo?: string | null) {
     return {
       title: "Estoque bloqueado no plano atual",
       message:
-        "Os produtos e movimentacoes ja cadastrados nao foram apagados. O modulo so fica pausado ate o salao voltar para um plano que libera estoque.",
+        "Os produtos e movimentacoes já cadastrados não foram apagados. O módulo só fica pausado até o salão voltar para um plano que libera estoque.",
     };
   }
 
@@ -56,7 +56,7 @@ function getMotivoMeta(motivo?: string | null) {
     return {
       title: "Marketing bloqueado no plano atual",
       message:
-        "As configuracoes do modulo ficam preservadas, mas o uso do marketing volta a liberar apenas quando o plano incluir esse recurso.",
+        "As configurações do módulo ficam preservadas, mas o uso do marketing volta a liberar apenas quando o plano incluir esse recurso.",
     };
   }
 
@@ -64,7 +64,7 @@ function getMotivoMeta(motivo?: string | null) {
     return {
       title: "App profissional bloqueado no plano atual",
       message:
-        "Os acessos ja preparados para a equipe continuam cadastrados, mas o login do app fica pausado ate o salao voltar para o Pro ou Premium.",
+        "Os acessos já preparados para a equipe continuam cadastrados, mas o login do app fica pausado até o salão voltar para o Pro ou Premium.",
     };
   }
 
@@ -209,7 +209,7 @@ export default async function MeuPlanoPage({
 
               <div className="rounded-[22px] border border-white/10 bg-white/5 p-4">
                 <div className="text-[11px] font-black uppercase tracking-[0.20em] text-zinc-400">
-                  Leitura rapida
+                  Leitura rápida
                 </div>
                 <div className="mt-2 text-lg font-black text-white">
                   {recursosLiberados.length} recursos liberados
@@ -263,15 +263,15 @@ export default async function MeuPlanoPage({
               </div>
               <div className="mt-3 space-y-2 text-sm leading-6 text-zinc-600">
                 <p>
-                  Status do salao:{" "}
+                  Status do salão:{" "}
                   <span className="font-bold capitalize text-zinc-900">
                     {statusLabel(access.salaoStatus)}
                   </span>
                 </p>
                 <p>
                   {possuiAssinatura
-                    ? "Voce ja possui uma assinatura. Quando quiser trocar de pacote, entre em assinatura ou use os atalhos de upgrade e downgrade acima."
-                    : "Seu salao ainda esta na fase inicial. Compare os pacotes e escolha o primeiro plano pago quando quiser seguir."}
+                    ? "Você já possui uma assinatura. Quando quiser trocar de pacote, entre em assinatura ou use os atalhos de upgrade e downgrade acima."
+                    : "Seu salão ainda está na fase inicial. Compare os pacotes e escolha o primeiro plano pago quando quiser seguir."}
                 </p>
               </div>
             </div>
@@ -286,15 +286,15 @@ export default async function MeuPlanoPage({
         </div>
       ) : access.modoRestrito ? (
         <div className="rounded-[24px] border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900 shadow-sm">
-          <strong>Modo restrito ativo.</strong> Voce ainda pode consultar dados,
+          <strong>Modo restrito ativo.</strong> Você ainda pode consultar dados,
           pagar a assinatura e falar com suporte, mas novas operacoes criticas
-          ficam bloqueadas ate a regularizacao.
+          ficam bloqueadas até a regularizacao.
         </div>
       ) : null}
 
       {possuiAssinatura ? (
         <div className="rounded-[24px] border border-sky-200 bg-sky-50 p-4 text-sm leading-6 text-sky-900 shadow-sm">
-          <strong>Voce ja possui uma assinatura.</strong> Para fazer upgrade ou
+          <strong>Você já possui uma assinatura.</strong> Para fazer upgrade ou
           downgrade, escolha o pacote desejado em <Link href="/comparar-planos" className="font-black underline">Comparar planos</Link> ou abra direto a{" "}
           <Link href={assinaturaHref} className="font-black underline">
             tela de assinatura
@@ -411,7 +411,7 @@ export default async function MeuPlanoPage({
                 Matriz do plano
               </div>
               <h2 className="mt-2 text-xl font-black text-zinc-950">
-                O que esta liberado e o que ainda falta destravar
+                O que está liberado e o que ainda falta destravar
               </h2>
             </div>
             <Link
@@ -456,11 +456,11 @@ export default async function MeuPlanoPage({
               Proxima decisao
             </div>
             <h3 className="mt-2 text-xl font-black">
-              O plano precisa acompanhar o tamanho da operacao.
+              O plano precisa acompanhar o tamanho da operação.
             </h3>
             <p className="mt-3 text-sm leading-6 text-zinc-300">
-              Quando voce bater limite de agenda, equipe ou recursos premium, o
-              upgrade libera o proximo nivel sem apagar nada do salao.
+              Quando você bater limite de agenda, equipe ou recursos premium, o
+              upgrade libera o próximo nivel sem apagar nada do salão.
             </p>
             <div className="mt-4 flex flex-col gap-2">
               <Link

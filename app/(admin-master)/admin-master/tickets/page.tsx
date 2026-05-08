@@ -26,7 +26,7 @@ function formatRecoveryStage(item: {
   }
   if (item.recoveryStatus === "cooldown") {
     return {
-      label: "Em carencia",
+      label: "Em carência",
       className: "border-violet-200 bg-violet-50 text-violet-700",
     };
   }
@@ -60,16 +60,16 @@ export default async function AdminMasterTicketsPage() {
         </div>
         <h2 className="mt-3 font-display text-4xl font-black">Tickets e suporte</h2>
         <p className="mt-3 max-w-3xl text-sm leading-6 text-zinc-300">
-          Painel operacional para acompanhar chamados do salao, SLA, prioridade,
+          Painel operacional para acompanhar chamados do salão, SLA, prioridade,
           ultima resposta e dono do atendimento.
         </p>
       </section>
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {[
-          { label: "Tickets", value: metrics.total, hint: "Historico recente", tone: "default" as const },
-          { label: "Em andamento", value: metrics.abertos, hint: "Ainda nao encerrados", tone: "amber" as const },
-          { label: "Aguardando cliente", value: metrics.aguardandoCliente, hint: "Pedir retorno do salao", tone: "blue" as const },
+          { label: "Tickets", value: metrics.total, hint: "Histórico recente", tone: "default" as const },
+          { label: "Em andamento", value: metrics.abertos, hint: "Ainda não encerrados", tone: "amber" as const },
+          { label: "Aguardando cliente", value: metrics.aguardandoCliente, hint: "Pedir retorno do salão", tone: "blue" as const },
           { label: "Criticos", value: metrics.criticos, hint: "Prioridade alta", tone: "red" as const },
         ].map((item) => (
           <div key={item.label} className={`rounded-[28px] border p-5 shadow-sm ${kpiToneClass(item.tone)}`}>
@@ -91,7 +91,7 @@ export default async function AdminMasterTicketsPage() {
             tone: "blue" as const,
           },
           {
-            label: "Em carencia",
+            label: "Em carência",
             value: metrics.recoveryCooldown,
             hint: "Aprovadas e aguardando o prazo",
             tone: "amber" as const,
@@ -99,7 +99,7 @@ export default async function AdminMasterTicketsPage() {
           {
             label: "Prontas para concluir",
             value: metrics.recoveryReadyToComplete,
-            hint: "Ja podem remover o autenticador",
+            hint: "Já podem remover o autenticador",
             tone: "red" as const,
           },
         ].map((item) => (

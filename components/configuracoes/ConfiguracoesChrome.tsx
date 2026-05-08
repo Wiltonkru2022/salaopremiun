@@ -34,13 +34,13 @@ export const CONFIGURACOES_MENU: ConfiguracoesNavItem[] = [
   {
     href: "/configuracoes/rateio",
     label: "Rateio",
-    description: "Impressao de comissoes",
+    description: "Impressao de comissões",
     icon: BadgeDollarSign,
   },
   {
     href: "/configuracoes/agenda-horarios",
     label: "Agenda",
-    description: "Dias e horarios",
+    description: "Dias e horários",
     icon: CalendarClock,
   },
   {
@@ -69,7 +69,7 @@ export function ConfiguracoesHero({
           <div className="min-w-0">
             <div className="inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-white px-3 py-1 text-[11px] font-black uppercase tracking-[0.18em] text-zinc-500">
               <Sparkles size={14} />
-              Central de configuracoes
+              Central de configurações
             </div>
             <h1 className="mt-3 font-display text-3xl font-black tracking-[-0.05em] text-zinc-950 md:text-4xl">
               {title}
@@ -85,10 +85,10 @@ export function ConfiguracoesHero({
               Operacao
             </div>
             <div className="text-sm font-bold text-zinc-900">
-              Mudancas salvas por salao
+              Mudancas salvas por salão
             </div>
             <div className="text-xs leading-5 text-zinc-500">
-              Ajuste com calma: cada modulo mexe em uma parte especifica do painel.
+              Ajuste com calma: cada módulo mexe em uma parte especifica do painel.
             </div>
           </div>
         </div>

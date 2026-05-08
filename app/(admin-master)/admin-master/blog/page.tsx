@@ -55,8 +55,8 @@ export default async function AdminMasterBlogPage() {
               Posts do blog
             </h2>
             <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600">
-              Controle editorial com foco em publicacao, trafego organico,
-              newsletter e leitura real do blog SalaoPremium.
+              Controle editorial com foco em públicação, tráfego orgânico,
+              newsletter e leitura real do blog SalãoPremium.
             </p>
             <div className="mt-5 flex flex-wrap gap-2">
               <span className="rounded-full bg-slate-950 px-4 py-2 text-sm font-black text-white">
@@ -93,8 +93,8 @@ export default async function AdminMasterBlogPage() {
 
         {usingFallback ? (
           <p className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-sm font-semibold leading-6 text-amber-950">
-            O Admin Master nao conseguiu ler a nova DB do blog agora. A lista
-            fica vazia para nao confundir com posts reais.{" "}
+            O Admin Master não conseguiu ler a nova DB do blog agora. A lista
+            fica vazia para não confundir com posts reais.{" "}
             {error ? `Detalhe: ${error}` : null}
           </p>
         ) : null}
@@ -206,7 +206,7 @@ export default async function AdminMasterBlogPage() {
             <textarea
               name="descricao"
               rows={2}
-              placeholder="Descricao curta"
+              placeholder="Descrição curta"
               className="resize-none rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-950"
             />
             <input

@@ -23,7 +23,7 @@ export default function AppProfissionalError({
     <div className="min-h-dvh bg-[radial-gradient(circle_at_top,#fff2c5_0,#f5f5f5_42%,#e7ecf2_100%)]">
       <div className="mx-auto flex min-h-dvh max-w-md flex-col bg-[#f5f5f5]/95 shadow-[0_0_80px_rgba(15,23,42,0.08)]">
         <ProfissionalHeader
-          title="Area profissional"
+          title="Área profissional"
           subtitle="Encontramos um problema ao abrir sua tela."
         />
 
@@ -34,7 +34,7 @@ export default function AppProfissionalError({
             </div>
 
             <h1 className="mt-3 text-[1.3rem] font-black tracking-[-0.03em] text-zinc-950">
-              Nao foi possivel carregar esta tela
+              Não foi possível carregar esta tela
             </h1>
 
             <p className="mt-2.5 text-sm leading-6 text-zinc-600">

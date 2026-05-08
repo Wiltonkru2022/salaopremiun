@@ -154,11 +154,11 @@ export function useAssinaturaAccess({
         .maybeSingle<UsuarioSistemaRow>();
 
       if (usuarioError || !usuarioDb?.id || !usuarioDb?.id_salao) {
-        throw new Error("Nao foi possivel localizar o usuario do sistema.");
+        throw new Error("Não foi possível localizar o usuário do sistema.");
       }
 
       if (String(usuarioDb.status || "").toLowerCase() !== "ativo") {
-        throw new Error("Usuario inativo.");
+        throw new Error("Usuário inativo.");
       }
 
       const { data: permissoesDb } = await supabase

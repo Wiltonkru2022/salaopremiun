@@ -57,7 +57,7 @@ function formatTelefone(value?: string | null) {
 }
 
 function formatDate(value?: string | null) {
-  if (!value) return "Data nao informada";
+  if (!value) return "Data não informada";
 
   const [year, month, day] = value.split("-").map(Number);
 
@@ -82,10 +82,10 @@ function getStatusLabel(status?: string | null) {
   if (value === "atendido") return "Atendido";
   if (value === "aguardando_pagamento") return "Aguardando pagamento";
   if (value === "cancelado") return "Cancelado";
-  if (value === "faltou") return "Nao compareceu";
-  if (value === "pendente") return "Pendente de confirmacao";
+  if (value === "faltou") return "Não compareceu";
+  if (value === "pendente") return "Pendente de confirmação";
 
-  return status || "Pendente de confirmacao";
+  return status || "Pendente de confirmação";
 }
 
 function getStatusTone(status?: string | null) {
@@ -172,8 +172,8 @@ export default async function ClienteDetalheProfissionalPage({
           </Link>
 
           <ProfissionalEmptyState
-            title="Cliente nao encontrado"
-            description="Esse cadastro nao foi localizado no seu salao."
+            title="Cliente não encontrado"
+            description="Esse cadastro não foi localizado no seu salão."
             action={
               <Link
                 href="/app-profissional/clientes"
@@ -229,7 +229,7 @@ export default async function ClienteDetalheProfissionalPage({
             <CalendarPlus2 size={18} className="text-zinc-700" />
             <div>
               <div className="text-sm font-bold text-zinc-950">Novo agendamento</div>
-              <div className="mt-1 text-xs text-zinc-500">Ja entra com o cliente preenchido</div>
+              <div className="mt-1 text-xs text-zinc-500">Já entra com o cliente preenchido</div>
             </div>
           </Link>
 
@@ -281,7 +281,7 @@ export default async function ClienteDetalheProfissionalPage({
         <ProfissionalSurface>
           <ProfissionalSectionHeader
             title="Ultimos agendamentos"
-            description="Historico recente desse cliente com voce."
+            description="Histórico recente desse cliente com você."
           />
 
           {agendamentos.length ? (
@@ -311,7 +311,7 @@ export default async function ClienteDetalheProfissionalPage({
             </div>
           ) : (
             <div className="rounded-[1.15rem] border border-dashed border-zinc-300 bg-zinc-50/80 px-4 py-4 text-center text-sm text-zinc-500">
-              Ainda nao existe agendamento desse cliente com este profissional.
+              Ainda não existe agendamento desse cliente com este profissional.
             </div>
           )}
         </ProfissionalSurface>
@@ -319,7 +319,7 @@ export default async function ClienteDetalheProfissionalPage({
         <ProfissionalSurface>
           <ProfissionalSectionHeader
             title="Ultimas comandas"
-            description="Historico recente para retomar atendimento mais rapido."
+            description="Histórico recente para retomar atendimento mais rápido."
           />
 
           {comandas.length ? (

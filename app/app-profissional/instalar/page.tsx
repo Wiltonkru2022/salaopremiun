@@ -9,8 +9,8 @@ type SearchParams = Promise<{
 function stepsFor(device: string) {
   if (device === "ios") {
     return [
-      "Abra esta pagina no Safari do iPhone.",
-      "Toque no botao de compartilhar.",
+      "Abra esta página no Safari do iPhone.",
+      "Toque no botão de compartilhar.",
       "Escolha Adicionar a Tela de Inicio.",
       "Confirme em Adicionar.",
     ];
@@ -18,9 +18,9 @@ function stepsFor(device: string) {
 
   if (device === "android") {
     return [
-      "Abra esta pagina no Chrome do Android.",
+      "Abra esta página no Chrome do Android.",
       "Toque em Instalar app, se aparecer.",
-      "Se nao aparecer, abra o menu de tres pontos.",
+      "Se não aparecer, abra o menu de três pontos.",
       "Escolha Adicionar a tela inicial.",
     ];
   }
@@ -29,7 +29,7 @@ function stepsFor(device: string) {
     "Abra o app no navegador principal do aparelho.",
     "Procure por Instalar app ou Adicionar a tela inicial.",
     "Confirme o atalho.",
-    "Depois abra pelo icone SalaoPremium.",
+    "Depois abra pelo icone SalãoPremium.",
   ];
 }
 

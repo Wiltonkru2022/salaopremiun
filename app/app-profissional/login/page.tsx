@@ -15,10 +15,10 @@ function getGoogleErrorMessage(value: string | string[] | undefined) {
   if (!code) return null;
 
   const messages: Record<string, string> = {
-    google_indisponivel: "Login Google indisponivel agora. Use CPF e senha.",
+    google_indisponivel: "Login Google indisponível agora. Use CPF e senha.",
     google_codigo_ausente: "Retorno do Google invalido. Tente novamente.",
-    google_sessao_invalida: "Nao foi possivel validar sua sessao Google.",
-    google_usuario_invalido: "Nao foi possivel identificar sua conta Google.",
+    google_sessao_invalida: "Não foi possível validar sua sessao Google.",
+    google_usuario_invalido: "Não foi possível identificar sua conta Google.",
     sessao_expirada: "Sessao expirada. Entre novamente para conectar o Google.",
   };
 
@@ -26,7 +26,7 @@ function getGoogleErrorMessage(value: string | string[] | undefined) {
     messages[code] ||
     (code.includes("Conta Google")
       ? code
-      : "Nao foi possivel entrar com Google. Use CPF e senha.")
+      : "Não foi possível entrar com Google. Use CPF e senha.")
   );
 }
 
@@ -88,16 +88,16 @@ export default async function LoginProfissionalPage({
                     App profissional
                   </div>
                   <h1 className="mt-2 text-[1.5rem] font-black tracking-[-0.04em] leading-none">
-                    Entrar na rotina do salao
+                    Entrar na rotina do salão
                   </h1>
                 </div>
               </div>
               <p className="mt-2.5 text-sm leading-6 text-zinc-300">
-                Agenda, comandas, clientes e comissoes em um acesso leve e seguro.
+                Agenda, comandas, clientes e comissões em um acesso leve e seguro.
               </p>
               <div className="mt-4 flex items-center gap-2 rounded-2xl bg-white/10 px-3 py-2 text-xs font-semibold text-white/80">
                 <ShieldCheck size={15} />
-                Login por CPF e senha cadastrados pelo salao.
+                Login por CPF e senha cadastrados pelo salão.
               </div>
             </section>
 
@@ -110,7 +110,7 @@ export default async function LoginProfissionalPage({
                   App profissional liberado no Pro ou Premium
                 </h2>
                 <p className="mt-1.5 text-sm leading-6 text-amber-800">
-                  Este salao ainda nao tem acesso ao app profissional no plano
+                  Este salão ainda não tem acesso ao app profissional no plano
                   atual. Para usar agenda, comandas e clientes no celular, o
                   administrador precisa fazer upgrade.
                 </p>

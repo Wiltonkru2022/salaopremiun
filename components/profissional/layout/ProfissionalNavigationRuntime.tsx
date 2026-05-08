@@ -21,7 +21,7 @@ function buildLabel(pathname: string) {
   if (pathname.includes("/agenda")) return "Abrindo agenda...";
   if (pathname.includes("/clientes")) return "Abrindo clientes...";
   if (pathname.includes("/comandas")) return "Abrindo comandas...";
-  if (pathname.includes("/comissao")) return "Abrindo comissao...";
+  if (pathname.includes("/comissao")) return "Abrindo comissão...";
   if (pathname.includes("/perfil")) return "Abrindo perfil...";
   if (pathname.includes("/suporte")) return "Abrindo suporte...";
   if (pathname.includes("/inicio")) return "Abrindo inicio...";

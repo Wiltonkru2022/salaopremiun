@@ -76,7 +76,7 @@ function formatMoneyFromDb(value: unknown) {
 }
 
 function formatPercentPreview(value: string) {
-  if (!value.trim()) return "Nao definido";
+  if (!value.trim()) return "Não definido";
 
   return `${Number(value || 0).toLocaleString("pt-BR", {
     minimumFractionDigits: 2,
@@ -89,8 +89,8 @@ function formatBaseCalculoLabel(value: string) {
 }
 
 function formatTaxaMaquininhaLabel(value: boolean | null | undefined) {
-  if (value === null || value === undefined) return "Usar padrao do servico";
-  return value ? "Descontar taxa" : "Nao descontar taxa";
+  if (value === null || value === undefined) return "Usar padrao do serviço";
+  return value ? "Descontar taxa" : "Não descontar taxa";
 }
 
 function hasRegraComissaoPersonalizada(vinculo: VinculoProfissionalServico) {
@@ -198,11 +198,11 @@ export default function ServicoForm({ modo }: ServicoFormProps) {
       const usuarioLogado = await getUsuarioLogado();
 
       if (!usuarioLogado) {
-        throw new Error("Usuario nao autenticado.");
+        throw new Error("Usuário não autenticado.");
       }
 
       if (!usuarioLogado.idSalao) {
-        throw new Error("Nao foi possivel identificar o salao do usuario.");
+        throw new Error("Não foi possível identificar o salão do usuário.");
       }
 
       setIdSalao(usuarioLogado.idSalao);
@@ -277,7 +277,7 @@ export default function ServicoForm({ modo }: ServicoFormProps) {
         );
       }
     } catch (e: unknown) {
-      console.error("Erro no bootstrap do servico:", e);
+      console.error("Erro no bootstrap do serviço:", e);
       setErro(e instanceof Error ? e.message : "Erro ao carregar formulario.");
     } finally {
       setLoading(false);
@@ -297,17 +297,17 @@ export default function ServicoForm({ modo }: ServicoFormProps) {
       .maybeSingle();
 
     if (error) {
-      console.error("Erro ao buscar servico:", error);
-      throw new Error("Falha ao buscar servico.");
+      console.error("Erro ao buscar serviço:", error);
+      throw new Error("Falha ao buscar serviço.");
     }
 
     if (!row) {
-      throw new Error("Servico nao encontrado.");
+      throw new Error("Serviço não encontrado.");
     }
 
     const rowIdSalao = row.id_salao;
     if (!rowIdSalao) {
-      throw new Error("Servico sem salao vinculado.");
+      throw new Error("Serviço sem salão vinculado.");
     }
 
     setServico({
@@ -343,8 +343,8 @@ export default function ServicoForm({ modo }: ServicoFormProps) {
       .eq("id_servico", id);
 
     if (vinculosError) {
-      console.error("Erro ao buscar vinculos:", vinculosError);
-      throw new Error("Falha ao buscar vinculos do servico.");
+      console.error("Erro ao buscar vínculos:", vinculosError);
+      throw new Error("Falha ao buscar vínculos do serviço.");
     }
 
     const mapaVinculos = new Map<string, VinculoServicoRow>(
@@ -489,7 +489,7 @@ export default function ServicoForm({ modo }: ServicoFormProps) {
       setMsg("");
 
       if (!servico.nome.trim()) {
-        throw new Error("Informe o nome do servico.");
+        throw new Error("Informe o nome do serviço.");
       }
 
       if (atingiuLimiteServicos) {
@@ -609,7 +609,7 @@ export default function ServicoForm({ modo }: ServicoFormProps) {
         ServicoProcessarErrorResponse;
 
       if (!response.ok) {
-        throw new Error(result.error || "Erro ao salvar servico.");
+        throw new Error(result.error || "Erro ao salvar serviço.");
       }
 
       if (result.categoria?.id) {
@@ -633,10 +633,10 @@ export default function ServicoForm({ modo }: ServicoFormProps) {
         return;
       }
 
-      setMsg("Servico atualizado com sucesso.");
+      setMsg("Serviço atualizado com sucesso.");
     } catch (e: unknown) {
-      console.error("Erro ao salvar servico:", e);
-      setErro(e instanceof Error ? e.message : "Erro ao salvar servico.");
+      console.error("Erro ao salvar serviço:", e);
+      setErro(e instanceof Error ? e.message : "Erro ao salvar serviço.");
     } finally {
       setSaving(false);
     }
@@ -646,7 +646,7 @@ export default function ServicoForm({ modo }: ServicoFormProps) {
     return (
       <div className="p-6">
         <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
-          Carregando cadastro de servico...
+          Carregando cadastro de serviço...
         </div>
       </div>
     );
@@ -664,20 +664,20 @@ export default function ServicoForm({ modo }: ServicoFormProps) {
       <div className="mx-auto max-w-7xl space-y-6">
         <div className="rounded-3xl border border-zinc-200 bg-white p-6 text-zinc-950 shadow-sm">
           <h1 className="mt-2 text-2xl font-bold md:text-3xl">
-            {modo === "novo" ? "Novo Servico" : "Editar Servico"}
+            {modo === "novo" ? "Novo Serviço" : "Editar Serviço"}
           </h1>
           <p className="mt-2 text-sm text-zinc-500">
-            Cadastro do servico com informacoes de atendimento, valores e regras de comissao.
+            Cadastro do serviço com informações de atendimento, valores e regras de comissão.
           </p>
           <p className="mt-2 text-xs font-medium text-zinc-500">
-            Comece pelos dados basicos e abra as demais secoes conforme precisar.
+            Comece pelos dados básicos e abra as demais seções conforme precisar.
           </p>
         </div>
 
         {modo === "novo" && limiteServicos != null ? (
           <PlanoLimiteNotice
-            titulo="Cadastro de servicos controlado pelo plano"
-            descricao="O limite considera servicos e combos novos. O catalogo atual continua preservado."
+            titulo="Cadastro de serviços controlado pelo plano"
+            descricao="O limite considera serviços e combos novos. O catálogo atual continua preservado."
             usado={usoServicos}
             limite={limiteServicos}
             planoNome={planoAccess?.planoNome}
@@ -716,8 +716,8 @@ export default function ServicoForm({ modo }: ServicoFormProps) {
             {saving
               ? "Salvando..."
               : modo === "novo"
-                ? "Salvar servico"
-                : "Atualizar servico"}
+                ? "Salvar serviço"
+                : "Atualizar serviço"}
           </button>
         </div>
 

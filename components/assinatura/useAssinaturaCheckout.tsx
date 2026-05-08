@@ -218,8 +218,8 @@ export function useAssinaturaCheckout({
             plano: planoParaCobranca,
             idempotencyKey,
           },
-          successMessage: "Cobranca de assinatura criada.",
-          errorMessage: "Falha ao criar cobranca de assinatura.",
+          successMessage: "Cobrança de assinatura criada.",
+          errorMessage: "Falha ao criar cobrança de assinatura.",
         },
         () =>
           fetch("/api/assinatura/criar-cobranca", {
@@ -364,7 +364,7 @@ export function useAssinaturaCheckout({
       screen: "assinatura_checkout",
       entity: "cobranca",
       entityId: checkout.paymentId,
-      message: "Codigo Pix copiado pelo usuario.",
+      message: "Codigo Pix copiado pelo usuário.",
       details: {
         idSalao: salao?.id || null,
         billingType: checkout.billingType,

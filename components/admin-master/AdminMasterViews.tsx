@@ -36,9 +36,9 @@ function healthToneClass(status: AdminMasterOperationalSnapshot["health"]["statu
 function formatSuggestionKind(
   kind: AdminMasterOperationalSnapshot["suggestions"][number]["kind"]
 ) {
-  if (kind === "automatico") return "Correcao automatica";
+  if (kind === "automatico") return "Correcao automática";
   if (kind === "sugerido") return "Sugestao operacional";
-  return "Acao manual";
+  return "Ação manual";
 }
 
 function isActionColumn(column: string) {
@@ -235,9 +235,9 @@ function HealthRing({
           {[
             ["Erro 24h", `${health.errorRate24h.toFixed(1)}%`],
             ["Incidentes", String(health.openIncidents)],
-            ["Saloes afetados", String(health.impactedSalons)],
+            ["Salões afetados", String(health.impactedSalons)],
             ["Rotas lentas", String(health.slowRoutes)],
-            ["Acoes criticas", String(health.failingCriticalActions)],
+            ["Ações criticas", String(health.failingCriticalActions)],
           ].map(([label, value]) => (
             <div
               key={label}
@@ -423,7 +423,7 @@ export function AdminSectionView({ data }: { data: AdminSectionData }) {
         <aside className="space-y-4">
           <div className="rounded-[24px] border border-zinc-200 bg-white p-4 shadow-sm">
             <div className="text-xs font-bold uppercase tracking-[0.25em] text-zinc-400">
-              Acoes do modulo
+              Ações do módulo
             </div>
             <div className="mt-3 space-y-2">
               {data.actions.map((action) => (
@@ -437,10 +437,10 @@ export function AdminSectionView({ data }: { data: AdminSectionData }) {
           </div>
 
           <div className="rounded-[24px] border border-amber-200 bg-amber-50 p-4 text-amber-950">
-            <div className="text-sm font-black">Regra de seguranca</div>
+            <div className="text-sm font-black">Regra de segurança</div>
             <p className="mt-2 text-sm leading-6">
-              Toda acao critica do AdminMaster deve passar pelo servidor,
-              validar permissao interna e registrar auditoria.
+              Toda ação critica do AdminMaster deve passar pelo servidor,
+              validar permissão interna e registrar auditoria.
             </p>
           </div>
         </aside>
@@ -507,7 +507,7 @@ export function AdminDashboardView({
     score: item.score,
     atualizado: item.updatedAt,
   }));
-  const totalSaloesKpi = findKpi(kpis, "Total de saloes");
+  const totalSaloesKpi = findKpi(kpis, "Total de salões");
   const trialsKpi = findKpi(kpis, "Trials ativos");
   const mrrKpi = findKpi(kpis, "MRR atual");
   const receitaMesKpi = findKpi(kpis, "Receita do mes");
@@ -527,11 +527,11 @@ export function AdminDashboardView({
               Sala de decisao
             </div>
             <h2 className="mt-4 max-w-4xl font-display text-[2.3rem] font-black leading-[1.02] sm:text-[3.7rem]">
-              Comando comercial e operacional do SalaoPremium.
+              Comando comercial e operacional do SalãoPremium.
             </h2>
             <p className="mt-4 max-w-3xl text-sm leading-6 text-zinc-300 sm:text-[15px]">
               A primeira dobra agora mostra o que precisa de decisao hoje:
-              receita, trials, cobrancas, suporte e estabilidade da plataforma.
+              receita, trials, cobranças, suporte e estabilidade da plataforma.
             </p>
 
             <div className="mt-5 grid gap-2.5 md:grid-cols-2 xl:grid-cols-4">
@@ -556,7 +556,7 @@ export function AdminDashboardView({
               <PrioritySignal
                 label="Alertas"
                 value={alertasKpi?.value || "0"}
-                description={alertasKpi?.hint || "Operacao e webhooks"}
+                description={alertasKpi?.hint || "Operação e webhooks"}
                 href="/admin-master/alertas"
               />
               <PrioritySignal
@@ -571,12 +571,12 @@ export function AdminDashboardView({
           <div className="flex flex-col justify-between rounded-[24px] border border-white/10 bg-white/10 p-4 backdrop-blur">
             <div>
               <div className="text-xs font-black uppercase tracking-[0.28em] text-amber-100">
-                Proxima melhor acao
+                Proxima melhor ação
               </div>
               <h3 className="mt-3 font-display text-[2rem] font-black">
                 {primarySuggestion?.title ||
                   primaryIncident?.recommendedAction ||
-                  "Monitorar operacao do dia"}
+                  "Monitorar operação do dia"}
               </h3>
               <p className="mt-2.5 text-sm leading-6 text-zinc-300">
                 {primarySuggestion?.detail ||
@@ -635,7 +635,7 @@ export function AdminDashboardView({
       <section className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_400px]">
         <DashboardPanel
           title="Saude Do Sistema"
-          description="Score operacional em tempo real calculado por incidentes, taxa de erro, lentidao e impacto em saloes."
+          description="Score operacional em tempo real calculado por incidentes, taxa de erro, lentidao e impacto em salões."
         >
           <HealthRing health={operational.health} />
         </DashboardPanel>
@@ -665,7 +665,7 @@ export function AdminDashboardView({
       <section className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
         <DashboardPanel
           title="Centro De Incidentes"
-          description="Onde a operacao esta quebrando agora e qual a resposta recomendada."
+          description="Onde a operação está quebrando agora e qual a resposta recomendada."
         >
           <AdminDataTable
             rows={incidentsRows}
@@ -682,8 +682,8 @@ export function AdminDashboardView({
         </DashboardPanel>
 
         <DashboardPanel
-          title="Automacoes E Acoes"
-          description="Beneficios, correcao segura e proximo passo recomendado."
+          title="Automacoes E Ações"
+          description="Beneficios, correção segura e próximo passo recomendado."
         >
           <BulletList
             items={operational.suggestions.map((item) => ({
@@ -721,7 +721,7 @@ export function AdminDashboardView({
 
         <DashboardPanel
           title="Health Checks"
-          description="Sinais operacionais mantidos pelo proprio sistema."
+          description="Sinais operacionais mantidos pelo próprio sistema."
         >
           <AdminDataTable
             rows={healthCheckRows}
@@ -745,14 +745,14 @@ export function AdminDashboardView({
             <ExecutiveMetricCard
               label="Sinais para revisar"
               value={String(digitalizacao.length)}
-              hint="Telefones em saloes diferentes com nomes diferentes"
+              hint="Telefones em salões diferentes com nomes diferentes"
               tone={digitalizacao.length ? "amber" : "green"}
             />
           </div>
         </DashboardPanel>
 
         <DashboardPanel
-          title="Monitor De Vinculos"
+          title="Monitor De Vínculos"
           description="Telefones repetidos com nomes diferentes podem indicar erro de cadastro."
         >
           <AdminDataTable
@@ -764,8 +764,8 @@ export function AdminDashboardView({
 
       <section className="grid gap-4 xl:grid-cols-2">
         <DashboardPanel
-          title="Saloes Em Risco"
-          description="Priorize suporte, retencao e correcao onde o churn esta mais perto."
+          title="Salões Em Risco"
+          description="Priorize suporte, retenção e correção onde o churn está mais perto."
         >
           <AdminDataTable
             rows={riskRows}
@@ -774,8 +774,8 @@ export function AdminDashboardView({
         </DashboardPanel>
 
         <DashboardPanel
-          title="Saloes Engajados"
-          description="Quem esta usando bem o produto e pode receber expansao, upgrade ou trial extra."
+          title="Salões Engajados"
+          description="Quem está usando bem o produto e pode receber expansão, upgrade ou trial extra."
         >
           <AdminDataTable
             rows={engagementRows}
@@ -786,7 +786,7 @@ export function AdminDashboardView({
 
       <section className="grid gap-4 xl:grid-cols-2">
         <div className="space-y-2.5">
-          <h3 className="font-display text-2xl font-black">Saloes recentes</h3>
+          <h3 className="font-display text-2xl font-black">Salões recentes</h3>
           <AdminDataTable
             rows={recentes}
             columns={["salao", "responsavel", "plano", "status", "criado"]}

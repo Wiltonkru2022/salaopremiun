@@ -86,7 +86,7 @@ export default function AssinaturaCheckoutBox({
         ? "Cobrança no cartão reaproveitada"
         : "Cobrança no cartão criada",
       body:
-        "A transação pode passar por validação do gateway. Se ficar pendente, aguarde alguns segundos e verifique novamente.",
+        "A transação pode passar por válidação do gateway. Se ficar pendente, aguarde alguns segundos e verifique novamente.",
       className: "border-blue-200 bg-blue-50 text-blue-900",
     };
   }

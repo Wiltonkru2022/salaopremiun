@@ -8,7 +8,7 @@ import { AlertCircle, ArrowLeft, LockKeyhole, RefreshCcw, ShieldCheck, Sparkles 
 import { getErrorMessage } from "@/lib/get-error-message";
 
 const MENSAGEM_ERRO_LINK =
-  "Nao foi possivel validar este link de recuperacao. Por seguranca, a redefinicao de senha deve ser concluida no mesmo navegador e dispositivo em que a solicitacao foi feita. Solicite um novo link e abra-o no mesmo navegador para continuar.";
+  "Não foi possível validar este link de recuperação. Por segurança, a redefinicao de senha deve ser concluida no mesmo navegador e dispositivo em que a solicitacao foi feita. Solicite um novo link e abra-o no mesmo navegador para continuar.";
 
 function getRecoveryRedirectReason(error: unknown) {
   const text =
@@ -51,8 +51,8 @@ export default function AtualizarSenhaPage() {
     try {
       setSupabase(createClient());
     } catch (error) {
-      console.warn("Supabase indisponivel para atualizar senha:", error);
-      setErro("Servico de autenticacao indisponivel neste ambiente.");
+      console.warn("Supabase indisponível para atualizar senha:", error);
+      setErro("Serviço de autenticacao indisponível neste ambiente.");
       setValidandoLink(false);
     }
   }, []);
@@ -155,7 +155,7 @@ export default function AtualizarSenhaPage() {
       } catch (e: unknown) {
         console.error("ERRO AO PREPARAR SESSAO:", e);
         setModoSenha(null);
-        setErro(getErrorMessage(e, "Erro ao validar link de recuperacao."));
+        setErro(getErrorMessage(e, "Erro ao validar link de recuperação."));
       } finally {
         setValidandoLink(false);
       }
@@ -173,7 +173,7 @@ export default function AtualizarSenhaPage() {
 
     try {
       if (!supabase) {
-        throw new Error("Servico de autenticacao indisponivel neste ambiente.");
+        throw new Error("Serviço de autenticacao indisponível neste ambiente.");
       }
 
       if (!senha.trim()) {
@@ -185,7 +185,7 @@ export default function AtualizarSenhaPage() {
       }
 
       if (senha !== confirmarSenha) {
-        throw new Error("As senhas nao coincidem.");
+        throw new Error("As senhas não coincidem.");
       }
 
       const {
@@ -210,7 +210,7 @@ export default function AtualizarSenhaPage() {
           throw new Error(MENSAGEM_ERRO_LINK);
         }
 
-        throw new Error(error.message || "Nao foi possivel atualizar a senha.");
+        throw new Error(error.message || "Não foi possível atualizar a senha.");
       }
 
       await fetch("/api/auth/password-changed-notice", {
@@ -219,14 +219,14 @@ export default function AtualizarSenhaPage() {
           Authorization: `Bearer ${session.access_token}`,
         },
       }).catch((noticeError) => {
-        console.warn("Aviso de senha alterada nao enviado:", noticeError);
+        console.warn("Aviso de senha alterada não enviado:", noticeError);
       });
 
       await supabase.auth.signOut({ scope: "local" });
 
       setSucesso(
         modoSenha === "authenticated"
-          ? "Senha atualizada com sucesso. Encerrando a sessao atual para voce entrar novamente com a nova senha..."
+          ? "Senha atualizada com sucesso. Encerrando a sessao atual para você entrar novamente com a nova senha..."
           : "Senha atualizada com sucesso. Redirecionando para o login..."
       );
 
@@ -264,7 +264,7 @@ export default function AtualizarSenhaPage() {
       <main className="grid min-h-[calc(100vh-74px)] lg:grid-cols-2">
         <section
           className="relative hidden overflow-hidden bg-zinc-950 bg-cover bg-center lg:block"
-          style={{ backgroundImage: "url('/site/cadastro-salao-bg.jpeg')" }}
+          style={{ backgroundImage: "url('/site/cadastro-salão-bg.jpeg')" }}
         >
           <div className="absolute inset-0 bg-zinc-950/60" />
           <div className="absolute inset-0 bg-gradient-to-br from-zinc-950 via-zinc-950/60 to-transparent" />
@@ -315,7 +315,7 @@ export default function AtualizarSenhaPage() {
 
         <p className="mt-2 text-sm text-zinc-500">
           {modoSenha === "authenticated"
-            ? "Voce ja esta autenticado neste navegador. Atualize sua senha e entre novamente com a nova credencial."
+            ? "Você já está autenticado neste navegador. Atualize sua senha e entre novamente com a nova credencial."
             : "Digite e confirme sua nova senha"}
         </p>
 
@@ -356,7 +356,7 @@ export default function AtualizarSenhaPage() {
 
           {validandoLink ? (
             <div className="rounded-[20px] border border-zinc-200 bg-zinc-50 p-3 text-sm text-zinc-600">
-              Validando link de recuperacao...
+              Validando link de recuperação...
             </div>
           ) : null}
 
@@ -364,8 +364,8 @@ export default function AtualizarSenhaPage() {
             <div className="rounded-[20px] border border-sky-200 bg-sky-50 p-3.5 text-sm text-sky-800">
               <p className="font-semibold">Sessao autenticada detectada</p>
               <p className="mt-1 leading-6">
-                Esta troca de senha esta sendo feita a partir de uma sessao ja autenticada
-                neste navegador. Depois de salvar a nova senha, o acesso atual sera encerrado
+                Esta troca de senha está sendo feita a partir de uma sessao já autenticada
+                neste navegador. Depois de salvar a nova senha, o acesso atual será encerrado
                 para evitar sessao velha.
               </p>
             </div>
@@ -376,7 +376,7 @@ export default function AtualizarSenhaPage() {
               <div className="flex items-start gap-3">
                 <AlertCircle size={18} className="mt-0.5 shrink-0" />
                 <div>
-                  <p className="font-semibold">Nao foi possivel concluir a validacao.</p>
+                  <p className="font-semibold">Não foi possível concluir a validacao.</p>
                   <p className="mt-1 leading-6">{erro}</p>
                 </div>
               </div>
@@ -387,11 +387,11 @@ export default function AtualizarSenhaPage() {
             <div className="rounded-[20px] border border-amber-200 bg-amber-50 p-3.5 text-sm text-amber-800">
               <p className="font-semibold">Como resolver</p>
               <p className="mt-1 leading-6">
-                Solicite um novo link de recuperacao e abra-o no mesmo navegador e dispositivo
+                Solicite um novo link de recuperação e abra-o no mesmo navegador e dispositivo
                 em que o pedido foi feito.
               </p>
               <p className="mt-2 leading-6">
-                Exemplo: se voce pediu a recuperacao no Safari do iPhone, finalize tambem pelo
+                Exemplo: se você pediu a recuperação no Safari do iPhone, finalize também pelo
                 Safari do iPhone.
               </p>
 

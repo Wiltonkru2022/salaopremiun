@@ -125,7 +125,7 @@ export default function ServicosExtrasPage() {
 
   async function excluirItem(id: string) {
     if (!podeGerenciar) {
-      setErro("Voce nao tem permissao para excluir servicos extras.");
+      setErro("Você não tem permissão para excluir serviços extras.");
       return;
     }
 
@@ -143,10 +143,10 @@ export default function ServicosExtrasPage() {
       if (error) throw error;
 
       setItens((prev) => prev.filter((item) => item.id !== id));
-      setMsg("Servico extra excluido com sucesso.");
+      setMsg("Serviço extra excluído com sucesso.");
     } catch (e: unknown) {
       console.error(e);
-      setErro(e instanceof Error ? e.message : "Erro ao excluir servico extra.");
+      setErro(e instanceof Error ? e.message : "Erro ao excluir serviço extra.");
     } finally {
       setSavingId(null);
     }
@@ -168,8 +168,8 @@ export default function ServicosExtrasPage() {
   if (loading || !acessoCarregado) {
     return (
       <AppLoading
-        title="Carregando servicos extras"
-        message="Aguarde enquanto montamos o catalogo de extras, custos e disponibilidade."
+        title="Carregando serviços extras"
+        message="Aguarde enquanto montamos o catálogo de extras, custos e disponibilidade."
         fullHeight={false}
       />
     );
@@ -179,7 +179,7 @@ export default function ServicosExtrasPage() {
     return (
       <div className="p-6">
         <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-rose-700">
-          Voce nao tem permissao para acessar Servicos extras.
+          Você não tem permissão para acessar Serviços extras.
         </div>
       </div>
     );
@@ -189,8 +189,8 @@ export default function ServicosExtrasPage() {
     <>
       <ConfirmActionModal
         open={Boolean(itemParaExcluir)}
-        title="Excluir servico extra"
-        description="Este servico extra sera removido do catalogo e deixara de aparecer para novas comandas."
+        title="Excluir serviço extra"
+        description="Este serviço extra será removido do catálogo e deixará de aparecer para novas comandas."
         confirmLabel="Excluir extra"
         tone="danger"
         loading={Boolean(savingId)}
@@ -207,11 +207,11 @@ export default function ServicosExtrasPage() {
           <section className="rounded-[24px] border border-zinc-200 bg-white p-4 text-zinc-950 shadow-sm">
             <div className="mt-1 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
               <div>
-                <h1 className="text-2xl font-bold md:text-3xl">Servicos extras</h1>
+                <h1 className="text-2xl font-bold md:text-3xl">Serviços extras</h1>
                 <p className="mt-2 text-sm leading-6 text-zinc-500">
                   {estoqueLiberado
-                    ? "Cadastre extras cobrados a parte, com preco, custo e estoque."
-                    : "Cadastre extras cobrados a parte, com preco e custo. O controle de estoque libera no Pro ou Premium."}
+                    ? "Cadastre extras cobrados à parte, com preço, custo e estoque."
+                    : "Cadastre extras cobrados à parte, com preço e custo. O controle de estoque libera no Pro ou Premium."}
                 </p>
               </div>
 
@@ -220,7 +220,7 @@ export default function ServicosExtrasPage() {
                   href="/servicos"
                   className="inline-flex items-center justify-center rounded-2xl border border-zinc-200 bg-white px-4 py-2.5 text-sm font-bold text-zinc-800 transition hover:bg-zinc-50"
                 >
-                  Ver servicos
+                  Ver serviços
                 </Link>
 
                 {podeGerenciar ? (
@@ -241,7 +241,7 @@ export default function ServicosExtrasPage() {
                 <div>
                   <div className="font-bold">Controle de estoque bloqueado no plano atual</div>
                   <p className="mt-1 leading-6 text-sky-800">
-                    Os extras continuam liberados para venda, preco e custo. O acompanhamento de saldo e consumo de estoque entra quando o salao sobe para Pro ou Premium.
+                    Os extras continuam liberados para venda, preço e custo. O acompanhamento de saldo e consumo de estoque entra quando o salão sobe para Pro ou Premium.
                   </p>
                 </div>
 
@@ -279,7 +279,7 @@ export default function ServicosExtrasPage() {
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <input
                 type="text"
-                placeholder="Buscar por nome, categoria ou descricao"
+                placeholder="Buscar por nome, categoria ou descrição"
                 value={busca}
                 onChange={(e) => setBusca(e.target.value)}
                 className="w-full rounded-2xl border border-zinc-300 px-4 py-2.5 text-sm outline-none focus:border-zinc-900"
@@ -294,7 +294,7 @@ export default function ServicosExtrasPage() {
           <div className="overflow-hidden rounded-[22px] border border-zinc-200 bg-white shadow-sm">
             {listaFiltrada.length === 0 ? (
               <div className="p-5 text-sm text-zinc-600">
-                Nenhum servico extra encontrado.
+                Nenhum serviço extra encontrado.
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -348,7 +348,7 @@ export default function ServicosExtrasPage() {
                           <td className="px-4 py-3.5 text-sm text-zinc-700">
                             {item.controla_estoque
                               ? `${formatQuantidade(item.estoque_atual)} un`
-                              : "Nao controla"}
+                              : "Não controla"}
                           </td>
                         ) : null}
 

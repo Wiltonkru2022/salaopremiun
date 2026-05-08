@@ -78,7 +78,7 @@ function resolveModuleAction(action: string): ModuleAction {
       kind: "api",
       endpoint: "/api/admin-master/operacao/sincronizar",
       loadingLabel: "Rodando...",
-      successLabel: "Operacao sincronizada",
+      successLabel: "Operação sincronizada",
     };
   }
 
@@ -301,7 +301,7 @@ export default function AdminMasterModuleActionButton({
       };
 
       if (!response.ok || data.ok === false) {
-        throw new Error(data.error || "Nao foi possivel executar esta acao.");
+        throw new Error(data.error || "Não foi possível executar esta ação.");
       }
 
       setState("success");
@@ -313,7 +313,7 @@ export default function AdminMasterModuleActionButton({
       }, 2200);
     } catch (error) {
       setState("error");
-      setLabel(error instanceof Error ? error.message : "Falha na acao.");
+      setLabel(error instanceof Error ? error.message : "Falha na ação.");
       window.setTimeout(() => {
         setState("idle");
         setLabel(action);

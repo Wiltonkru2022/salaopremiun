@@ -111,8 +111,8 @@ export default async function InicioProfissionalPage() {
       <div className="space-y-3.5">
         {hasLoadWarning ? (
           <div className="rounded-[1.1rem] border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-sm text-amber-800 shadow-sm">
-            Parte dos dados do inicio nao carregou agora. O app continua funcionando
-            e voce pode seguir para agenda, comandas e clientes.
+            Parte dos dados do inicio não carregou agora. O app continua funcionando
+            e você pode seguir para agenda, comandas e clientes.
           </div>
         ) : null}
 
@@ -129,7 +129,7 @@ export default async function InicioProfissionalPage() {
               </h2>
 
               <p className="mt-2 max-w-md text-sm leading-6 text-zinc-300">
-                Seu dia no salao, pronto para atender, abrir comandas e seguir
+                Seu dia no salão, pronto para atender, abrir comandas e seguir
                 a agenda sem perder tempo.
               </p>
             </div>
@@ -173,8 +173,8 @@ export default async function InicioProfissionalPage() {
 
         <ProfissionalSurface>
           <ProfissionalSectionHeader
-            title="Acoes rapidas"
-            description="Tudo o que voce mais usa no dia a dia."
+            title="Ações rapidas"
+            description="Tudo o que você mais usa no dia a dia."
           />
 
           <div className="grid grid-cols-2 gap-2.5">
@@ -189,7 +189,7 @@ export default async function InicioProfissionalPage() {
             <Link href="/app-profissional/agenda/novo" className="block">
               <ProfissionalActionCard
                 icon={<CalendarPlus2 size={18} />}
-                title="Novo horario"
+                title="Novo horário"
                 subtitle="Abrir agenda"
               />
             </Link>
@@ -252,7 +252,7 @@ export default async function InicioProfissionalPage() {
                   href="/app-profissional/agenda/novo"
                   className="inline-flex h-11 items-center justify-center rounded-2xl bg-zinc-950 px-4 text-sm font-bold text-white"
                 >
-                  Criar horario
+                  Criar horário
                 </Link>
               }
             />
@@ -267,7 +267,7 @@ export default async function InicioProfissionalPage() {
 
           <div className="grid grid-cols-2 gap-3">
             <ProfissionalStatCard
-              label="Comissao do mes"
+              label="Comissão do mes"
               value={formatarMoeda(resumo.totalComissaoMes)}
               helper="Valor acumulado"
             />

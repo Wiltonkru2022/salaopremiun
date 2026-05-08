@@ -79,13 +79,13 @@ function getStatusTone(status?: string | null) {
 
 function getStatusLabel(status?: string | null) {
   const value = String(status || "").toLowerCase();
-  if (value === "pendente") return "Pendente de confirmacao";
+  if (value === "pendente") return "Pendente de confirmação";
   if (value === "confirmado") return "Confirmado";
   if (value === "cancelado") return "Cancelado";
-  if (value === "faltou") return "Nao compareceu";
+  if (value === "faltou") return "Não compareceu";
   if (value === "em_atendimento") return "Em atendimento";
   if (value === "atendido") return "Atendido";
-  return status || "Pendente de confirmacao";
+  return status || "Pendente de confirmação";
 }
 
 export default async function NovoAgendamentoProfissionalPage({
@@ -192,7 +192,7 @@ export default async function NovoAgendamentoProfissionalPage({
   return (
     <ProfissionalShell
       title="Novo agendamento"
-      subtitle="Criar atendimento no seu horario"
+      subtitle="Criar atendimento no seu horário"
     >
       <div className="space-y-3.5 pb-20">
         {query.erro ? (
@@ -204,7 +204,7 @@ export default async function NovoAgendamentoProfissionalPage({
         {query.conflito === "1" ? (
           <div className="rounded-[1.25rem] border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 shadow-sm">
             {query.conflito_msg ||
-              "Ja existe horario ocupado. Confirme se deseja agendar mesmo assim."}
+              "Já existe horário ocupado. Confirme se deseja agendar mesmo assim."}
           </div>
         ) : null}
 
@@ -216,10 +216,10 @@ export default async function NovoAgendamentoProfissionalPage({
                 Agenda do profissional
               </div>
               <h1 className="mt-3 text-[1.45rem] font-black tracking-[-0.04em] leading-none">
-                Novo horario
+                Novo horário
               </h1>
               <p className="mt-2.5 text-sm leading-6 text-zinc-300">
-                Escolha cliente, servico e horario. O app ja te avisa quando houver
+                Escolha cliente, serviço e horário. O app já te avisa quando houver
                 conflito no mesmo periodo.
               </p>
             </div>
@@ -238,7 +238,7 @@ export default async function NovoAgendamentoProfissionalPage({
         <ProfissionalSurface>
           <ProfissionalSectionHeader
             title="Regras do profissional"
-            description="Confira os dias ativos e as pausas antes de criar o horario."
+            description="Confira os dias ativos e as pausas antes de criar o horário."
           />
 
           <div className="grid gap-2.5">
@@ -273,7 +273,7 @@ export default async function NovoAgendamentoProfissionalPage({
         <ProfissionalSurface>
           <ProfissionalSectionHeader
             title="Criar agendamento"
-            description="Preencha o essencial para reservar o horario com clareza."
+            description="Preencha o essencial para reservar o horário com clareza."
           />
 
           <form action={criarAgendamentoProfissionalAction} className="space-y-3.5">
@@ -303,7 +303,7 @@ export default async function NovoAgendamentoProfissionalPage({
                 className={inputClass()}
                 required
               >
-                <option value="">Selecione o servico</option>
+                <option value="">Selecione o serviço</option>
                 {servicos.map((servico) => (
                   <option key={servico.id} value={servico.id}>
                     {servico.nome}
@@ -342,7 +342,7 @@ export default async function NovoAgendamentoProfissionalPage({
               <textarea
                 name="observacoes"
                 defaultValue={query.observacoes || ""}
-                placeholder="Ex.: cliente pediu encaixe rapido"
+                placeholder="Ex.: cliente pediu encaixe rápido"
                 className={textAreaClass()}
               />
             </label>
@@ -355,7 +355,7 @@ export default async function NovoAgendamentoProfissionalPage({
                   value="true"
                   className="mt-1"
                 />
-                Confirmo que desejo agendar mesmo com outro cliente neste horario.
+                Confirmo que desejo agendar mesmo com outro cliente neste horário.
               </label>
             ) : null}
 
@@ -368,7 +368,7 @@ export default async function NovoAgendamentoProfissionalPage({
         <ProfissionalSurface>
           <ProfissionalSectionHeader
             title="Agenda deste dia"
-            description="Veja rapidamente o que ja existe antes de encaixar um novo horario."
+            description="Veja rapidamente o que já existe antes de encaixar um novo horário."
           />
 
           {agendaDia.length ? (
@@ -414,8 +414,8 @@ export default async function NovoAgendamentoProfissionalPage({
                 Dica para ganhar tempo
               </div>
               <p className="mt-1.5 text-sm leading-6 text-zinc-500">
-                Se o cliente ainda nao existir, cadastre primeiro e depois volte para
-                este horario com os campos preenchidos mais rapido.
+                Se o cliente ainda não existir, cadastre primeiro e depois volte para
+                este horário com os campos preenchidos mais rápido.
               </p>
             </div>
           </div>

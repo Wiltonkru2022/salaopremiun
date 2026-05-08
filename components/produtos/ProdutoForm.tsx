@@ -346,7 +346,7 @@ async function bootstrap() {
 
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
           <div className="space-y-6 xl:col-span-2">
-            <Card title="1. Dados basicos" subtitle="Informacoes principais para identificar o produto.">
+            <Card title="1. Dados básicos" subtitle="Informações principais para identificar o produto.">
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <Input label="Nome do produto" value={produto.nome} onChange={(v) => setField("nome", v)} required />
                 <Input label="SKU" value={produto.sku} onChange={(v) => setField("sku", v)} />
@@ -398,7 +398,7 @@ async function bootstrap() {
               </div>
             </Card>
 
-            <Card title="2. Valores e custos" subtitle="Preco de venda, custo e comissao de revenda.">
+            <Card title="2. Valores e custos" subtitle="Preço de venda, custo e comissão de revenda.">
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <Input
                   label="Preço de custo"
@@ -470,7 +470,7 @@ async function bootstrap() {
               </div>
             </Card>
 
-            <Card title="4. Fornecedor e observacoes" subtitle="Dados de compra e anotacoes do produto.">
+            <Card title="4. Fornecedor e observações" subtitle="Dados de compra e anotacoes do produto.">
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <Input
                   label="Fornecedor / distribuidor"

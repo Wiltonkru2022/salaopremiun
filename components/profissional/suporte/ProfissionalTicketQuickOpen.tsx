@@ -54,7 +54,7 @@ export default function ProfissionalTicketQuickOpen() {
     <section className="rounded-[1.35rem] border border-zinc-200 bg-white p-3.5 shadow-[0_12px_30px_rgba(15,23,42,0.05)]">
       <ProfissionalSectionHeader
         title="Atendimento humano"
-        description="Se a IA nao resolver, abra um chamado e a equipe recebe o contexto."
+        description="Se a IA não resolver, abra um chamado e a equipe recebe o contexto."
         action={
           <div className="inline-flex h-9 w-9 items-center justify-center rounded-[16px] bg-amber-50 text-amber-700">
             <Headset size={18} />
@@ -78,7 +78,7 @@ export default function ProfissionalTicketQuickOpen() {
         <input
           value={assunto}
           onChange={(event) => setAssunto(event.target.value)}
-          placeholder="Assunto rapido"
+          placeholder="Assunto rápido"
           className="h-10 w-full rounded-[16px] border border-zinc-200 bg-zinc-50 px-3 text-sm outline-none"
         />
         <textarea
@@ -99,7 +99,7 @@ export default function ProfissionalTicketQuickOpen() {
 
         <div className="flex items-start gap-2 rounded-[16px] border border-zinc-200 bg-zinc-50 px-3 py-3 text-xs leading-5 text-zinc-500">
           <LifeBuoy size={14} className="mt-0.5 shrink-0" />
-          Envie um resumo curto e objetivo. Isso ajuda a equipe a responder mais rapido.
+          Envie um resumo curto e objetivo. Isso ajuda a equipe a responder mais rápido.
         </div>
       </div>
     </section>

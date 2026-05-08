@@ -47,7 +47,7 @@ export default async function ClienteSalonPage({
     const salaoPausado = salao.appClientePausado;
     const pausaMensagem =
       salao.appClientePausaMensagem ||
-      "Salao pausado no momento. Assim que a agenda voltar, voce podera reservar por aqui.";
+      "Salão pausado no momento. Assim que a agenda voltar, você podera reservar por aqui.";
     const salaoPublicPath = buildSalaoPublicPath(
       salao.appClienteSlug || salao.id
     );
@@ -77,7 +77,7 @@ export default async function ClienteSalonPage({
                       <span className="inline-flex items-center gap-1 rounded-full bg-white/15 px-3 py-1.5 backdrop-blur">
                         <MapPin size={15} />
                         {[salao.bairro, salao.cidade].filter(Boolean).join(" - ") ||
-                          "Endereco em atualizacao"}
+                          "Endereço em atualização"}
                       </span>
                       <span className="inline-flex items-center gap-1 rounded-full bg-white/15 px-3 py-1.5 backdrop-blur">
                         <Star size={15} fill="currentColor" />
@@ -108,7 +108,7 @@ export default async function ClienteSalonPage({
                   </h1>
                   <p className="mt-2 max-w-4xl text-sm leading-6 text-zinc-600">
                     {salao.descricaoPublica ||
-                      "Conheca equipe, servicos e avaliacoes deste salao antes de agendar."}
+                      "Conheça equipe, serviços e avaliações deste salão antes de agendar."}
                   </p>
                 </div>
               </div>
@@ -121,7 +121,7 @@ export default async function ClienteSalonPage({
                 </span>
                 <span className="inline-flex items-center gap-1 rounded-full bg-zinc-100 px-3 py-1.5">
                   <CalendarClock size={14} />
-                  {salao.servicos.length ? "Agenda online" : "Agenda em publicacao"}
+                  {salao.servicos.length ? "Agenda online" : "Agenda em publicação"}
                 </span>
                 {salao.estacionamento ? (
                   <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-3 py-1.5 text-emerald-700">
@@ -159,7 +159,7 @@ export default async function ClienteSalonPage({
                 </div>
                 <div>
                   <h3 className="text-lg font-black tracking-[-0.03em]">
-                    Salao pausado no momento
+                    Salão pausado no momento
                   </h3>
                   <p className="mt-2 text-sm leading-6 text-amber-900">
                     {pausaMensagem}
@@ -176,8 +176,8 @@ export default async function ClienteSalonPage({
               </h3>
               {salaoPausado ? (
                 <div className="mt-4 rounded-2xl border border-zinc-200 bg-zinc-50 p-4 text-sm leading-6 text-zinc-600">
-                  A agenda online esta temporariamente indisponivel para este
-                  salao. Voce ainda pode consultar servicos, equipe e avaliacoes.
+                  A agenda online está temporariamente indisponível para este
+                  salão. Você ainda pode consultar serviços, equipe e avaliações.
                 </div>
               ) : hasSession ? (
                 <div className="mt-4">
@@ -191,10 +191,10 @@ export default async function ClienteSalonPage({
               ) : (
                 <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900">
                   <div className="font-bold text-amber-950">
-                    Entre para reservar seu horario
+                    Entre para reservar seu horário
                   </div>
                   <p className="mt-1">
-                    Assim o salao recebe seus dados certos e voce acompanha tudo
+                    Assim o salão recebe seus dados certos e você acompanha tudo
                     pelo menu Agenda.
                   </p>
                   <Link
@@ -213,12 +213,12 @@ export default async function ClienteSalonPage({
               <h3 className="text-lg font-black">Escolha e confirme</h3>
               <div className="mt-4 grid gap-3 text-sm">
                 <div className="rounded-2xl bg-white/10 p-4">
-                  <div className="font-bold">1. Servico</div>
+                  <div className="font-bold">1. Serviço</div>
                   <div className="mt-1 text-white/70">Veja valor, tempo e equipe.</div>
                 </div>
                 <div className="rounded-2xl bg-white/10 p-4">
-                  <div className="font-bold">2. Horario</div>
-                  <div className="mt-1 text-white/70">O app mostra os proximos encaixes.</div>
+                  <div className="font-bold">2. Horário</div>
+                  <div className="mt-1 text-white/70">O app mostra os próximos encaixes.</div>
                 </div>
                 <div className="rounded-2xl bg-white/10 p-4">
                   <div className="font-bold">3. Acompanhe</div>
@@ -258,7 +258,7 @@ export default async function ClienteSalonPage({
                           {profissional.nome}
                         </div>
                         <div className="mt-1 text-xs font-semibold uppercase tracking-[0.12em] text-amber-700">
-                          {profissional.especialidade || "Atendimento do salao"}
+                          {profissional.especialidade || "Atendimento do salão"}
                         </div>
                         {profissional.bio ? (
                           <p className="mt-1 text-sm leading-6 text-zinc-500">
@@ -271,7 +271,7 @@ export default async function ClienteSalonPage({
                 ) : (
                   <p className="text-sm leading-6 text-zinc-500">
                     Os profissionais visiveis no app cliente entram aqui assim que
-                    o salao terminar a publicacao.
+                    o salão terminar a públicação.
                   </p>
                 )}
               </div>
@@ -301,7 +301,7 @@ export default async function ClienteSalonPage({
                         </div>
                         <div className="shrink-0 text-right text-sm font-bold text-zinc-900">
                           {servico.exigeAvaliacao
-                            ? "Exige avaliacao"
+                            ? "Exige avaliação"
                             : formatCurrency(servico.preco) || "Sob consulta"}
                           <div className="mt-1 text-xs font-medium text-zinc-500">
                             {servico.duracaoMinutos
@@ -314,7 +314,7 @@ export default async function ClienteSalonPage({
                   ))
                 ) : (
                   <p className="text-sm leading-6 text-zinc-500">
-                    Os servicos publicos aparecem aqui assim que o salao liberar a
+                    Os serviços públicos aparecem aqui assim que o salão liberar a
                     vitrine do app cliente.
                   </p>
                 )}
@@ -352,7 +352,7 @@ export default async function ClienteSalonPage({
                   ))
                 ) : (
                   <p className="text-sm leading-6 text-zinc-500">
-                    As avaliacoes reais entram aqui depois dos primeiros
+                    As avaliações reais entram aqui depois dos primeiros
                     atendimentos confirmados no app cliente.
                   </p>
                 )}

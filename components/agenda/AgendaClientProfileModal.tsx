@@ -112,11 +112,11 @@ function ProfileBody({
       <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5">
         {loading ? (
           <div className="rounded-[20px] border border-zinc-200 bg-zinc-50 px-4 py-8 text-center text-sm text-zinc-500">
-            Carregando historico da cliente...
+            Carregando histórico da cliente...
           </div>
         ) : historico.length === 0 ? (
           <div className="rounded-[20px] border border-zinc-200 bg-zinc-50 px-4 py-8 text-center text-sm text-zinc-500">
-            Ainda nao encontramos agendamentos anteriores dessa cliente.
+            Ainda não encontramos agendamentos anteriores dessa cliente.
           </div>
         ) : (
           <div className="space-y-4">
@@ -127,11 +127,11 @@ function ProfileBody({
                 helper="Ultimos agendamentos da cliente"
               />
               <ProfileStat
-                label="Ultimo servico"
+                label="Último serviço"
                 value={historico[0]?.servicoNome || "-"}
               />
               <ProfileStat
-                label="Credito disponivel"
+                label="Crédito disponível"
                 value={creditoDisponivel.toLocaleString("pt-BR", {
                   style: "currency",
                   currency: "BRL",

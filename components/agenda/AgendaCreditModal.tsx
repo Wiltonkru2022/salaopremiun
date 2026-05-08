@@ -40,13 +40,13 @@ export default function AgendaCreditModal({
     <div className="overflow-hidden rounded-[24px] border border-zinc-200 bg-white shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
       <div className="border-b border-zinc-200 bg-zinc-50/70 px-5 py-4">
         <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-400">
-          Credito da cliente
+          Crédito da cliente
         </div>
         <h3 className="mt-1 text-lg font-bold text-zinc-900">
-          Registrar credito
+          Registrar crédito
         </h3>
         <p className="mt-1 text-sm text-zinc-500">
-          Lance um saldo para a cliente usar depois no caixa. Isso nao cria venda nem comanda.
+          Lance um saldo para a cliente usar depois no caixa. Isso não cria venda nem comanda.
         </p>
       </div>
 
@@ -54,7 +54,7 @@ export default function AgendaCreditModal({
         <div className="rounded-[20px] border border-zinc-200 bg-zinc-50 px-4 py-3">
           <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-zinc-900">
             <Wallet size={16} />
-            Cliente para o credito
+            Cliente para o crédito
           </div>
           <SearchableSelect
             placeholder="Digite o nome da cliente"
@@ -67,7 +67,7 @@ export default function AgendaCreditModal({
 
         <div className="rounded-[20px] border border-zinc-200 bg-zinc-50 px-4 py-3">
           <label className="mb-2 block text-sm font-semibold text-zinc-900">
-            Valor do credito
+            Valor do crédito
           </label>
           <input
             type="text"
@@ -87,7 +87,7 @@ export default function AgendaCreditModal({
             rows={3}
             value={observacao}
             onChange={(event) => onObservacaoChange(event.target.value)}
-            placeholder="Ex.: credito por retorno, ajuste autorizado, cortesia..."
+            placeholder="Ex.: crédito por retorno, ajuste autorizado, cortesia..."
             className="w-full rounded-2xl border border-zinc-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-zinc-900"
           />
         </div>
@@ -109,7 +109,7 @@ export default function AgendaCreditModal({
           className="inline-flex items-center justify-center gap-2 rounded-2xl bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-95 disabled:opacity-60"
         >
           <Receipt size={15} />
-          {loading ? "Registrando..." : "Registrar credito"}
+          {loading ? "Registrando..." : "Registrar crédito"}
         </button>
       </div>
     </div>

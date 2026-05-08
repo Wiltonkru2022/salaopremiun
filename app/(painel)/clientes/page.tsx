@@ -240,7 +240,7 @@ export default function ClientesPage() {
 
   async function alternarStatus(cliente: Cliente) {
     if (!podeGerenciar) {
-      setErro("Voce nao tem permissao para alterar status de clientes.");
+      setErro("Você não tem permissão para alterar status de clientes.");
       return;
     }
 
@@ -278,7 +278,7 @@ export default function ClientesPage() {
 
   async function excluirCliente(id: string) {
     if (!podeGerenciar) {
-      setErro("Voce nao tem permissao para excluir clientes.");
+      setErro("Você não tem permissão para excluir clientes.");
       return;
     }
 
@@ -294,7 +294,7 @@ export default function ClientesPage() {
 
       setClientes((prev) => prev.filter((item) => item.id !== id));
       setClienteParaExcluir(null);
-      setMsg("Cliente excluido com sucesso.");
+      setMsg("Cliente excluído com sucesso.");
     } catch (e: unknown) {
       console.error(e);
       setErro(getErrorMessage(e, "Erro ao excluir cliente."));
@@ -363,7 +363,7 @@ export default function ClientesPage() {
     return (
       <AppLoading
         title="Carregando clientes"
-        message="Aguarde enquanto montamos cadastro, relacionamento e historico das clientes."
+        message="Aguarde enquanto montamos cadastro, relacionamento e histórico das clientes."
         fullHeight={false}
       />
     );
@@ -373,7 +373,7 @@ export default function ClientesPage() {
     return (
       <div className="p-6">
         <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-rose-700">
-          Voce nao tem permissao para acessar Clientes.
+          Você não tem permissão para acessar Clientes.
         </div>
       </div>
     );
@@ -410,8 +410,8 @@ export default function ClientesPage() {
                   Clientes
                 </h1>
                 <p className="mt-1.5 max-w-2xl text-sm leading-6 text-zinc-600">
-                  Contato, credito e historico em uma leitura mais direta para a
-                  recepcao.
+                  Contato, crédito e histórico em uma leitura mais direta para a
+                  recepção.
                 </p>
               </div>
 
@@ -434,7 +434,7 @@ export default function ClientesPage() {
               icon={Users}
             />
             <ResumoCard
-              title="Credito em aberto"
+              title="Crédito em aberto"
               value={resumo.creditoTotal.toLocaleString("pt-BR", {
                 style: "currency",
                 currency: "BRL",
@@ -447,7 +447,7 @@ export default function ClientesPage() {
               value={`${resumo.comWhatsapp}`}
               description={
                 whatsappLiberado
-                  ? "Cadastros com contato rapido para confirmacao"
+                  ? "Cadastros com contato rápido para confirmação"
                   : "Contatos prontos para uso quando o modulo de comunicacao for liberado"
               }
               icon={HeartHandshake}
@@ -471,7 +471,7 @@ export default function ClientesPage() {
             <ResumoCard
               title="Novas em 30 dias"
               value={`${resumo.novos30dias}`}
-              description="Leitura rapida da base mais recente"
+              description="Leitura rápida da base mais recente"
               icon={CalendarClock}
             />
           </div>
@@ -496,7 +496,7 @@ export default function ClientesPage() {
                     Comunicacao premium bloqueada no plano atual
                   </div>
                   <p className="mt-1 text-sm leading-6 text-sky-900">
-                    Os contatos de WhatsApp e e-mail continuam salvos para a recepcao. Disparos, campanhas e automacoes entram quando o salao sobe para Pro ou Premium.
+                    Os contatos de WhatsApp e e-mail continuam salvos para a recepção. Disparos, campanhas e automacoes entram quando o salão sobe para Pro ou Premium.
                   </p>
                 </div>
 

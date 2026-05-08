@@ -20,7 +20,7 @@ export default function SiteHeader() {
               SalaoPremium
             </h1>
             <p className="text-[11px] text-zinc-500">
-              Gestao profissional para saloes
+              Gestao profissional para salões
             </p>
           </div>
         </a>
@@ -63,14 +63,14 @@ export default function SiteHeader() {
             href="/login"
             className="rounded-full border border-zinc-300 px-5 py-2 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-100"
           >
-            Login salao
+            Login salão
           </Link>
 
           <Link
             href="/cadastro-salao"
             className="rounded-full bg-zinc-950 px-5 py-2 text-sm font-semibold text-white shadow-lg transition hover:bg-zinc-800"
           >
-            Cadastrar salao
+            Cadastrar salão
           </Link>
         </div>
 
@@ -92,7 +92,7 @@ export default function SiteHeader() {
               className="border-b border-zinc-100 py-3.5 text-base font-medium text-zinc-800"
               onClick={() => setOpen(false)}
             >
-              Sistema para salao
+              Sistema para salão
             </Link>
             <Link
               href="/#apps"
@@ -150,7 +150,7 @@ export default function SiteHeader() {
                 className="inline-flex items-center justify-center rounded-full border border-zinc-300 px-5 py-2.5 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-100"
                 onClick={() => setOpen(false)}
               >
-                Login salao
+                Login salão
               </Link>
 
               <Link
@@ -172,7 +172,7 @@ export default function SiteHeader() {
                 className="inline-flex items-center justify-center rounded-full bg-zinc-950 px-5 py-2.5 text-sm font-semibold text-white shadow-lg transition hover:bg-zinc-800"
                 onClick={() => setOpen(false)}
               >
-                Cadastrar salao
+                Cadastrar salão
               </Link>
               <a
                 href="https://wa.me/5567984341742"

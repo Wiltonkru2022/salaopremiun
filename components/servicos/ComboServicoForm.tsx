@@ -173,7 +173,7 @@ export default function ComboServicoForm({ modo }: { modo: "novo" | "editar" }) 
 
       const usuario = await getUsuarioLogado();
       if (!usuario?.idSalao) {
-        throw new Error("Nao foi possivel identificar o salao.");
+        throw new Error("Não foi possível identificar o salão.");
       }
 
       setIdSalao(usuario.idSalao);
@@ -236,8 +236,8 @@ export default function ComboServicoForm({ modo }: { modo: "novo" | "editar" }) 
 
         if (comboError) throw comboError;
         const comboRow = comboRowRaw as ComboServicoRow | null;
-        if (!comboRow?.id) throw new Error("Combo nao encontrado.");
-        if (!comboRow.eh_combo) throw new Error("Este servico nao e um combo.");
+        if (!comboRow?.id) throw new Error("Combo não encontrado.");
+        if (!comboRow.eh_combo) throw new Error("Este serviço não é um combo.");
 
         const { data: itensRows, error: itensError } = await supabase
           .from("servicos_combo_itens")
@@ -305,11 +305,11 @@ export default function ComboServicoForm({ modo }: { modo: "novo" | "editar" }) 
       }
 
       if (comboSelecionado.length < 2) {
-        throw new Error("Selecione pelo menos dois servicos para o combo.");
+        throw new Error("Selecione pelo menos dois serviços para o combo.");
       }
 
       if (precoFinalNumero <= 0) {
-        throw new Error("Informe um preco final valido para o combo.");
+        throw new Error("Informe um preço final válido para o combo.");
       }
 
       const categoriaSelecionada =
@@ -404,7 +404,7 @@ export default function ComboServicoForm({ modo }: { modo: "novo" | "editar" }) 
     return (
       <div className="p-6">
         <div className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm">
-          Carregando combo de servicos...
+          Carregando combo de serviços...
         </div>
       </div>
     );
@@ -417,15 +417,15 @@ export default function ComboServicoForm({ modo }: { modo: "novo" | "editar" }) 
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div className="max-w-3xl">
               <div className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-400">
-                Catalogo premium
+                Catálogo premium
               </div>
               <h1 className="mt-2 text-2xl font-bold md:text-3xl">
-                {modo === "novo" ? "Criar combo de servicos" : "Editar combo de servicos"}
+                {modo === "novo" ? "Criar combo de serviços" : "Editar combo de serviços"}
               </h1>
               <p className="mt-3 max-w-2xl text-sm leading-6 text-zinc-600">
-                Monte um preco final unico usando varios servicos do catalogo.
-                A agenda enxerga o combo como um servico so, e o caixa divide
-                internamente para comissao e relatorio.
+                Monte um preço final único usando vários serviços do catálogo.
+                A agenda enxerga o combo como um serviço só, e o caixa divide
+                internamente para comissão e relatório.
               </p>
             </div>
 
@@ -434,7 +434,7 @@ export default function ComboServicoForm({ modo }: { modo: "novo" | "editar" }) 
               onClick={() => router.push("/servicos")}
               className="rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm font-semibold text-zinc-700"
             >
-              Voltar para servicos
+              Voltar para serviços
             </button>
           </div>
         </section>
@@ -464,7 +464,7 @@ export default function ComboServicoForm({ modo }: { modo: "novo" | "editar" }) 
                   />
                 </Field>
 
-                <Field label="Preco final do combo">
+                <Field label="Preço final do combo">
                   <input
                     value={precoCombo}
                     onChange={(e) => setPrecoCombo(formatMoneyInput(e.target.value))}
@@ -535,7 +535,7 @@ export default function ComboServicoForm({ modo }: { modo: "novo" | "editar" }) 
                       value={descricao}
                       onChange={(e) => setDescricao(e.target.value)}
                       className="min-h-[120px] w-full rounded-2xl border border-zinc-300 px-4 py-3 text-sm outline-none focus:border-zinc-900"
-                      placeholder="Explique quando usar o combo, o resultado esperado e o que esta incluso."
+                      placeholder="Explique quando usar o combo, o resultado esperado e o que está incluído."
                     />
                   </Field>
                 </div>
@@ -549,11 +549,11 @@ export default function ComboServicoForm({ modo }: { modo: "novo" | "editar" }) 
                     Estrutura do combo
                   </div>
                   <h2 className="mt-2 text-xl font-bold text-zinc-950">
-                    Servicos internos
+                    Serviços internos
                   </h2>
                   <p className="mt-2 text-sm leading-6 text-zinc-600">
-                    Escolha os servicos que formam o combo. O valor do combo sera
-                    rateado automaticamente entre eles para vendas e comissoes.
+                    Escolha os serviços que formam o combo. O valor do combo será
+                    rateado automaticamente entre eles para vendas e comissões.
                   </p>
                 </div>
 
@@ -563,7 +563,7 @@ export default function ComboServicoForm({ modo }: { modo: "novo" | "editar" }) 
                   className="inline-flex items-center gap-2 rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm font-semibold text-zinc-700"
                 >
                   <Plus size={16} />
-                  Adicionar servico
+                  Adicionar serviço
                 </button>
               </div>
 
@@ -591,7 +591,7 @@ export default function ComboServicoForm({ modo }: { modo: "novo" | "editar" }) 
                           />
                         </Field>
 
-                        <Field label="Servico do combo">
+                        <Field label="Serviço do combo">
                           <select
                             value={item.id_servico_item}
                             onChange={(e) =>
@@ -599,7 +599,7 @@ export default function ComboServicoForm({ modo }: { modo: "novo" | "editar" }) 
                             }
                             className="w-full rounded-2xl border border-zinc-300 px-4 py-3 text-sm outline-none focus:border-zinc-900"
                           >
-                            <option value="">Selecione um servico</option>
+                            <option value="">Selecione um serviço</option>
                             {servicosBase.map((servico) => (
                               <option key={servico.id} value={servico.id}>
                                 {servico.nome}
@@ -624,7 +624,7 @@ export default function ComboServicoForm({ modo }: { modo: "novo" | "editar" }) 
                       {servicoAtual ? (
                         <div className="mt-3 grid gap-3 md:grid-cols-3">
                           <MiniInfo
-                            label="Preco base"
+                            label="Preço base"
                             value={formatCurrency(
                               Number(servicoAtual.preco_padrao ?? servicoAtual.preco ?? 0)
                             )}
@@ -670,9 +670,9 @@ export default function ComboServicoForm({ modo }: { modo: "novo" | "editar" }) 
               </div>
 
               <div className="mt-5 space-y-3">
-                <MiniInfo label="Resumo rapido" value={resumoCombo || "Sem servicos selecionados"} />
+                <MiniInfo label="Resumo rápido" value={resumoCombo || "Sem serviços selecionados"} />
                 <MiniInfo label="Duracao total" value={`${duracaoTotal} min`} />
-                <MiniInfo label="Preco final" value={formatCurrency(precoFinalNumero)} />
+                <MiniInfo label="Preço final" value={formatCurrency(precoFinalNumero)} />
                 <MiniInfo label="Custo somado" value={formatCurrency(custoTotal)} />
                 <MiniInfo
                   label="Profissionais liberados"
@@ -692,7 +692,7 @@ export default function ComboServicoForm({ modo }: { modo: "novo" | "editar" }) 
               <div className="mt-4 space-y-3">
                 {comboNormalizado.length === 0 ? (
                   <div className="rounded-2xl border border-dashed border-zinc-300 bg-zinc-50 px-4 py-5 text-sm text-zinc-500">
-                    Selecione os servicos para ver o rateio do combo.
+                    Selecione os serviços para ver o rateio do combo.
                   </div>
                 ) : (
                   comboNormalizado.map((item, index) => (

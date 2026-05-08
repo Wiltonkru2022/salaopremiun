@@ -55,7 +55,7 @@ export default function LoginClienteForm({
       </div>
 
       <h2 className="text-[1.55rem] font-semibold text-zinc-950">
-        Entre para acompanhar seus horarios
+        Entre para acompanhar seus horários
       </h2>
       <p className="mt-2 text-sm leading-6 text-zinc-500">
         Use seu e-mail e senha para ver seus agendamentos, acompanhar o salão e

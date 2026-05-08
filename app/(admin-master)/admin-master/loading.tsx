@@ -4,7 +4,7 @@ export default function AdminMasterLoading() {
   return (
     <AppLoading
       title="Carregando Admin Master"
-      message="Aguarde enquanto sincronizamos indicadores, operacao e modulos administrativos."
+      message="Aguarde enquanto sincronizamos indicadores, operação e módulos administrativos."
       theme="admin"
       fullHeight={false}
     />

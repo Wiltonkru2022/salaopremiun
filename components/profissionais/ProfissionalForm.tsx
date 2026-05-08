@@ -494,7 +494,7 @@ async function salvarAcessoProfissional(idProfissional: string) {
   }
 
   if (recoveryTicketId && !acesso.senha.trim()) {
-    throw new Error("Informe a nova senha para concluir a recuperacao do profissional.");
+    throw new Error("Informe a nova senha para concluir a recuperação do profissional.");
   }
 
   const response = await fetch("/api/profissionais-acessos", {
@@ -640,7 +640,7 @@ async function salvarAcessoProfissional(idProfissional: string) {
 
       setMsg(
         recoveryTicketId && acesso.senha.trim()
-          ? "Profissional atualizado e senha redefinida com notificacao para o app."
+          ? "Profissional atualizado e senha redefinida com notificação para o app."
           : "Profissional atualizado com sucesso."
       );
       setAcesso((prev) => ({ ...prev, senha: "", possuiCadastro: true }));
@@ -674,7 +674,7 @@ async function salvarAcessoProfissional(idProfissional: string) {
             {modo === "novo" ? "Novo Profissional" : "Editar Profissional"}
           </h1>
           <p className="mt-2 text-sm text-zinc-500">
-            Cadastro simples com dados principais, disponibilidade de referencia e acesso ao app profissional.
+            Cadastro simples com dados principais, disponibilidade de referência e acesso ao app profissional.
           </p>
         </div>
 
@@ -744,7 +744,7 @@ async function salvarAcessoProfissional(idProfissional: string) {
 
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
           <div className="space-y-6 xl:col-span-2">
-            <Card title="1. Dados pessoais" subtitle="Informacoes basicas para identificar e falar com o profissional.">
+            <Card title="1. Dados pessoais" subtitle="Informações básicas para identificar e falar com o profissional.">
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <Input label="Nome completo" value={form.nome} onChange={(v) => handleChange("nome", v)} required />
                 <Input label="Nome social / artístico" value={form.nome_social} onChange={(v) => handleChange("nome_social", v)} />
@@ -765,16 +765,16 @@ async function salvarAcessoProfissional(idProfissional: string) {
               </div>
             </Card>
 
-            <Card title="2. Dados profissionais" subtitle="Funcao, especialidades e uma descricao curta do profissional.">
+            <Card title="2. Dados profissionais" subtitle="Funcao, especialidades e uma descrição curta do profissional.">
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <Input label="Cargo / Função" value={form.cargo} onChange={(v) => handleChange("cargo", v)} />
                 <Select
-                  label="Funcao no salao"
+                  label="Funcao no salão"
                   value={form.tipo_profissional}
                   onChange={(v) => handleChange("tipo_profissional", v)}
                   options={[
                     { value: "profissional", label: "Profissional (agenda e app)" },
-                    { value: "assistente", label: "Assistente do salao" },
+                    { value: "assistente", label: "Assistente do salão" },
                   ]}
                 />
                 <Input label="Categoria" value={form.categoria} onChange={(v) => handleChange("categoria", v)} />
@@ -819,10 +819,10 @@ async function salvarAcessoProfissional(idProfissional: string) {
                 </div>
               </div>
             </Card>
-            <Card title="3. Disponibilidade de referencia" subtitle="Dias e horarios apenas para consulta. O bloqueio agora e feito direto na agenda.">
+            <Card title="3. Disponibilidade de referência" subtitle="Dias e horários apenas para consulta. O bloqueio agora e feito direto na agenda.">
               <div className="space-y-4">
                 <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-                  Os dias e horarios abaixo nao bloqueiam mais a agenda. Para travar atendimento, use os bloqueios criados diretamente na agenda.
+                  Os dias e horários abaixo não bloqueiam mais a agenda. Para travar atendimento, use os bloqueios criados diretamente na agenda.
                 </div>
 
                 <div className="overflow-x-auto rounded-2xl border border-zinc-200">
@@ -870,10 +870,10 @@ async function salvarAcessoProfissional(idProfissional: string) {
               </div>
             </Card>
 
-            <Card title="4. Servicos vinculados" subtitle="Escolha os servicos atendidos por este profissional e ajuste a duracao, se precisar.">
+            <Card title="4. Serviços vinculados" subtitle="Escolha os serviços atendidos por este profissional e ajuste a duração, se precisar.">
               {isAssistenteSalao ? (
                 <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-600">
-                  Assistente do salao nao recebe servicos vinculados nem acesso ao app profissional.
+                  Assistente do salão não recebe serviços vinculados nem acesso ao app profissional.
                 </div>
               ) : (
               <div className="space-y-3">
@@ -1110,13 +1110,13 @@ async function salvarAcessoProfissional(idProfissional: string) {
 
                   {recoveryTicketId ? (
                     <div className="mt-4 rounded-2xl border border-violet-200 bg-violet-50 px-4 py-3 text-sm text-violet-800">
-                      Esta alteracao veio de um ticket de recuperacao de senha. Ao salvar uma nova senha, o sistema resolve o ticket e avisa o profissional no app.
+                      Esta alteracao veio de um ticket de recuperação de senha. Ao salvar uma nova senha, o sistema resolve o ticket e avisa o profissional no app.
                     </div>
                   ) : null}
 
                   {isAssistenteSalao ? (
                     <div className="mt-4 rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-600">
-                      Assistente do salao nao acessa o app profissional. O sistema mantem qualquer acesso existente desativado ao salvar.
+                      Assistente do salão não acessa o app profissional. O sistema mantém qualquer acesso existente desativado ao salvar.
                     </div>
                   ) : (
                   <div className="mt-4 space-y-4">

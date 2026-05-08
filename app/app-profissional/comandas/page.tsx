@@ -41,7 +41,7 @@ export default async function ComandasPage() {
     return (
       <ProfissionalShell title="Comandas" subtitle="Abertas e atendimentos">
         <div className="rounded-[1.5rem] border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 shadow-sm">
-          Nao foi possivel carregar as comandas agora.
+          Não foi possível carregar as comandas agora.
         </div>
       </ProfissionalShell>
     );
@@ -60,7 +60,7 @@ export default async function ComandasPage() {
             <div className="min-w-0">
               <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.12em] text-amber-100">
                 <Receipt size={14} />
-                Controle rapido
+                Controle rápido
               </div>
 
               <h2 className="mt-3 text-[1.45rem] font-black tracking-[-0.04em] leading-none">
@@ -68,7 +68,7 @@ export default async function ComandasPage() {
               </h2>
 
               <p className="mt-2.5 text-sm leading-6 text-zinc-300">
-                Veja o que esta em andamento e entre direto na comanda certa.
+                Veja o que está em andamento e entre direto na comanda certa.
               </p>
             </div>
 

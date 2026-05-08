@@ -8,7 +8,7 @@ export default function SiteFooter() {
           <div>
             <h3 className="text-[1.35rem] font-bold">SalaoPremium</h3>
             <p className="mt-3 text-sm leading-6 text-zinc-500">
-              Plataforma para saloes, barbearias, clinicas e studios que desejam
+              Plataforma para salões, barbearias, clínicas e studios que desejam
               gestao forte no computador, app cliente, app profissional e um
               fluxo comercial pronto para vender.
             </p>
@@ -19,7 +19,7 @@ export default function SiteFooter() {
             <ul className="mt-3 space-y-2.5 text-sm text-zinc-500">
               <li>
                 <Link href="/#sistema" className="hover:text-zinc-950">
-                  Sistema para salao
+                  Sistema para salão
                 </Link>
               </li>
               <li>
@@ -34,7 +34,7 @@ export default function SiteFooter() {
               </li>
               <li>
                 <Link href="/#planos" className="hover:text-zinc-950">
-                  Planos e precos
+                  Planos e preços
                 </Link>
               </li>
             </ul>
@@ -45,7 +45,7 @@ export default function SiteFooter() {
             <ul className="mt-3 space-y-2.5 text-sm text-zinc-500">
               <li>
                 <Link href="/login" className="hover:text-zinc-950">
-                  Login salao
+                  Login salão
                 </Link>
               </li>
               <li>
@@ -60,7 +60,7 @@ export default function SiteFooter() {
               </li>
               <li>
                 <Link href="/cadastro-salao" className="hover:text-zinc-950">
-                  Cadastrar salao
+                  Cadastrar salão
                 </Link>
               </li>
             </ul>
@@ -85,7 +85,7 @@ export default function SiteFooter() {
         </div>
 
         <div className="mt-10 border-t border-zinc-200 pt-5 text-sm text-zinc-500">
-          Criado por WILTON KRUSZCIAKO. 2026 SalaoPremium. Todos os direitos reservados.
+          Criado por WILTON KRUSZCIAKO. 2026 SalãoPremium. Todos os direitos reservados.
         </div>
       </div>
     </footer>

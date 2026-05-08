@@ -59,7 +59,7 @@ export default function TermosDeUsoPage() {
         Cada usuário é responsável por manter suas credenciais em sigilo. É
         proibido compartilhar senhas, permitir acesso indevido ou utilizar conta
         de terceiros. O SalãoPremium poderá adotar medidas de proteção, bloqueio
-        ou validação adicional em caso de suspeita de risco, fraude ou uso
+        ou válidação adicional em caso de suspeita de risco, fraude ou uso
         inadequado.
       </p>
 

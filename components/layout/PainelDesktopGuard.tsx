@@ -64,12 +64,12 @@ export default function PainelDesktopGuard({ children }: Props) {
         </div>
 
         <h1 className="mt-4 text-2xl font-black tracking-tight">
-          Tudo pronto, mas o painel do salao e para computador
+          Tudo pronto, mas o painel do salão e para computador
         </h1>
 
         <p className="mt-3 text-sm leading-6 text-zinc-600">
-          Para proteger sua operacao e evitar telas quebradas, o painel do
-          salao abre apenas em PC ou notebook. Entre pelo navegador do
+          Para proteger sua operação e evitar telas quebradas, o painel do
+          salão abre apenas em PC ou notebook. Entre pelo navegador do
           computador para continuar.
         </p>
 
@@ -77,7 +77,7 @@ export default function PainelDesktopGuard({ children }: Props) {
           <div className="flex items-start gap-3">
             <Monitor className="mt-0.5 shrink-0 text-zinc-900" size={20} />
             <div>
-              <div className="text-sm font-bold">Proximo passo</div>
+              <div className="text-sm font-bold">Próximo passo</div>
               <p className="mt-1 text-xs leading-5 text-zinc-600">
                 Abra este mesmo login no computador. Depois de entrar, o
                 sistema mostra a instalacao do Dashboard, Agenda e Caixa.

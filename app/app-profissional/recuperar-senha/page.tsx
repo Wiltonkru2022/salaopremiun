@@ -32,7 +32,7 @@ export default function RecuperarSenhaProfissionalPage() {
               </h1>
               <p className="mt-2.5 text-sm leading-6 text-zinc-300">
                 Informe seu CPF e um contato opcional. O pedido segue para o suporte
-                do salao sem expor senha no app.
+                do salão sem expor senha no app.
               </p>
             </section>
 
@@ -48,8 +48,8 @@ export default function RecuperarSenhaProfissionalPage() {
                     Como funciona
                   </div>
                   <p className="mt-1.5 text-sm leading-6 text-zinc-500">
-                    Assim que o pedido entrar, a equipe do salao pode redefinir seu
-                    acesso com seguranca e te orientar pelo contato informado.
+                    Assim que o pedido entrar, a equipe do salão pode redefinir seu
+                    acesso com segurança e te orientar pelo contato informado.
                   </p>
                 </div>
               </div>

@@ -198,7 +198,7 @@ export default async function ComandaDetalhePage({
     return (
       <ProfissionalShell title="Comanda" subtitle="Detalhes">
         <div className="rounded-[1.25rem] border border-zinc-200 bg-white p-4 text-sm text-zinc-500 shadow-sm">
-          Comanda nao encontrada.
+          Comanda não encontrada.
         </div>
       </ProfissionalShell>
     );
@@ -208,7 +208,7 @@ export default async function ComandaDetalhePage({
     return (
       <ProfissionalShell title="Comanda" subtitle="Detalhes">
         <div className="rounded-[1.25rem] border border-red-200 bg-red-50 p-4 text-sm text-red-700 shadow-sm">
-          Voce nao tem acesso a esta comanda.
+          Você não tem acesso a esta comanda.
         </div>
       </ProfissionalShell>
     );
@@ -310,15 +310,15 @@ export default async function ComandaDetalhePage({
 
         {!permiteEdicao ? (
           <div className="rounded-[1.25rem] border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 shadow-sm">
-            Esta comanda esta {String(comanda.status || "").toLowerCase()}. Nao e
-            possivel adicionar itens nem enviar ao caixa.
+            Esta comanda está {String(comanda.status || "").toLowerCase()}. Não e
+            possível adicionar itens nem enviar ao caixa.
           </div>
         ) : null}
 
         <ProfissionalSurface>
           <ProfissionalSectionHeader
             title="Itens da comanda"
-            description="Revise o que ja foi lancado antes de enviar ao caixa."
+            description="Revise o que já foi lancado antes de enviar ao caixa."
           />
 
           {itens?.length ? (
@@ -379,8 +379,8 @@ export default async function ComandaDetalhePage({
           <>
             <ProfissionalSurface>
               <ProfissionalSectionHeader
-                title="Adicionar servico"
-                description="Use para lancar servicos executados no atendimento."
+                title="Adicionar serviço"
+                description="Use para lancar serviços executados no atendimento."
                 action={<PlusCircle size={18} className="text-zinc-400" />}
               />
 
@@ -397,7 +397,7 @@ export default async function ComandaDetalhePage({
                   className="h-11 w-full rounded-[18px] border border-zinc-200 bg-white px-4 text-sm outline-none"
                   defaultValue=""
                 >
-                  <option value="">Selecione um servico</option>
+                  <option value="">Selecione um serviço</option>
                   {((servicos ?? []) as ServicoOption[]).map((servico) => {
                     const valor = Number(servico.preco ?? servico.preco_padrao ?? 0);
 
@@ -422,7 +422,7 @@ export default async function ComandaDetalhePage({
                   type="submit"
                   className="h-11 w-full rounded-[18px] bg-zinc-950 text-sm font-semibold text-white"
                 >
-                  Adicionar servico
+                  Adicionar serviço
                 </button>
               </form>
             </ProfissionalSurface>

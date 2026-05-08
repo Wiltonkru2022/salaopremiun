@@ -65,8 +65,8 @@ export function useRenovacaoAutomatica({
             idSalao: salao.id,
             renovacaoAutomatica: value,
           },
-          successMessage: "Renovacao automatica atualizada.",
-          errorMessage: "Falha ao atualizar renovacao automatica.",
+          successMessage: "Renovação automática atualizada.",
+          errorMessage: "Falha ao atualizar renovação automática.",
         },
         () =>
           fetch("/api/assinatura/toggle-renovacao", {

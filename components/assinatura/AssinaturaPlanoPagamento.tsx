@@ -114,12 +114,12 @@ export default function AssinaturaPlanosPagamento({
           Gerenciar assinatura
         </h2>
         <p className="mt-2 text-sm text-zinc-500">
-          Sua assinatura atual esta em dia. Quando o vencimento se aproximar ou
-          houver cobranca pendente, a troca de plano e a renovacao aparecem aqui.
+          Sua assinatura atual está em dia. Quando o vencimento se aproximar ou
+          houver cobrança pendente, a troca de plano e a renovação aparecem aqui.
         </p>
 
         <div className="mt-8 rounded-[24px] border border-dashed border-zinc-300 bg-zinc-50 p-8 text-center text-sm text-zinc-500">
-          Nenhuma cobranca disponivel no momento.
+          Nenhuma cobrança disponível no momento.
         </div>
       </section>
     );
@@ -264,7 +264,7 @@ export default function AssinaturaPlanosPagamento({
               tipo: "CREDIT_CARD" as BillingType,
               titulo: "Cartão de crédito",
               subtitulo:
-                "Pode passar por validação do gateway e depois habilitar recorrência mensal no Asaas.",
+                "Pode passar por válidação do gateway e depois habilitar recorrência mensal no Asaas.",
             },
           ]).map((item) => {
             const ativo = billingType === item.tipo;

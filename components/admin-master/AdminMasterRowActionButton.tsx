@@ -77,9 +77,9 @@ function buildActionRequest(actionType: string, actionId: string) {
       kind: "api",
       endpoint: `/api/admin-master/saloes/${encodeURIComponent(actionId)}/criar-ticket`,
       body: {
-        assunto: "Cobranca em atraso no AdminMaster",
+        assunto: "Cobrança em atraso no AdminMaster",
         mensagem:
-          "Cobranca pendente ou vencida identificada no painel financeiro. Validar contato, pagamento e regularizacao.",
+          "Cobrança pendente ou vencida identificada no painel financeiro. Validar contato, pagamento e regularizacao.",
         prioridade: "alta",
         categoria: "financeiro",
       },
@@ -185,7 +185,7 @@ export default function AdminMasterRowActionButton({
       const data = (await response.json().catch(() => ({}))) as CreateTicketResponse;
 
       if (!response.ok || !data.ok) {
-        throw new Error(data.error || "Nao foi possivel executar a acao.");
+        throw new Error(data.error || "Não foi possível executar a ação.");
       }
 
       if (apiRequest.successLabel) {
@@ -198,13 +198,13 @@ export default function AdminMasterRowActionButton({
       }
 
       if (!data.resultado?.ticketId) {
-        throw new Error(data.error || "Nao foi possivel criar o ticket.");
+        throw new Error(data.error || "Não foi possível criar o ticket.");
       }
 
       const ticketLabel = data.resultado.ticketNumero
         ? `Ticket #${data.resultado.ticketNumero}`
         : "Ticket criado";
-      const suffix = data.resultado.existed ? " ja existe" : " criado";
+      const suffix = data.resultado.existed ? " já existe" : " criado";
 
       setState({
         status: "success",

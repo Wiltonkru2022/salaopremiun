@@ -237,7 +237,7 @@ export default function ProfissionaisListPage() {
 
   async function alternarStatus(profissional: Profissional) {
     if (!podeGerenciar) {
-      setErro("Voce nao tem permissao para alterar status de profissionais.");
+      setErro("Você não tem permissão para alterar status de profissionais.");
       return;
     }
 
@@ -281,7 +281,7 @@ export default function ProfissionaisListPage() {
 
   async function excluirProfissional(id: string) {
     if (!podeGerenciar) {
-      setErro("Voce nao tem permissao para excluir profissionais.");
+      setErro("Você não tem permissão para excluir profissionais.");
       return;
     }
 
@@ -297,7 +297,7 @@ export default function ProfissionaisListPage() {
 
       setProfissionais((prev) => prev.filter((item) => item.id !== id));
       setProfissionalParaExcluir(null);
-      setMsg("Profissional excluido com sucesso.");
+      setMsg("Profissional excluído com sucesso.");
     } catch (e: unknown) {
       console.error(e);
       setErro(getErrorMessage(e, "Erro ao excluir profissional."));
@@ -363,7 +363,7 @@ export default function ProfissionaisListPage() {
     return (
       <div className="p-6">
         <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-rose-700">
-          Voce nao tem permissao para acessar Profissionais.
+          Você não tem permissão para acessar Profissionais.
         </div>
       </div>
     );
@@ -404,8 +404,8 @@ export default function ProfissionaisListPage() {
                   Profissionais
                 </h1>
                 <p className="mt-1.5 max-w-2xl text-sm leading-6 text-zinc-600">
-                  Equipe, comissao, acesso e apoio em uma leitura mais curta
-                  para a operacao do salao.
+                  Equipe, comissão, acesso e apoio em uma leitura mais curta
+                  para a operação do salão.
                 </p>
               </div>
 
@@ -573,7 +573,7 @@ export default function ProfissionaisListPage() {
                                 item.tipo_vinculo,
                               ]
                                 .filter(Boolean)
-                                .join(" • ") || "Sem cargo, categoria ou vinculo informado"}
+                                .join(" • ") || "Sem cargo, categoria ou vínculo informado"}
                             </p>
 
                             <div className="mt-2.5 flex flex-wrap gap-2 text-xs text-zinc-500">
@@ -592,7 +592,7 @@ export default function ProfissionaisListPage() {
                               <MetricBlock
                                 label="Funcao"
                                 value={item.cargo || item.categoria || "-"}
-                                detail="Papel principal no salao"
+                                detail="Papel principal no salão"
                               />
                               <MetricBlock
                                 label="Assistentes"
@@ -600,7 +600,7 @@ export default function ProfissionaisListPage() {
                                 detail="Apoios vinculados"
                               />
                               <MetricBlock
-                                label="Comissao produto"
+                                label="Comissão produto"
                                 value={`${Number(
                                   item.comissao_produto_percentual || 0
                                 ).toFixed(2)}%`}

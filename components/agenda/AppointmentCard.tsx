@@ -522,7 +522,7 @@ export default function AppointmentCard({
             "absolute bottom-0 left-0 right-0 cursor-ns-resize bg-zinc-500/12",
             isTiny ? "h-1.5 rounded-b-[12px]" : "h-2 rounded-b-[16px]"
           )}
-          title="Arraste para alterar duracao"
+          title="Arraste para alterar duração"
         />
       </div>
     </>

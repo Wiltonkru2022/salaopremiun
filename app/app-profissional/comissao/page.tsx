@@ -41,12 +41,12 @@ export default async function ComissaoProfissionalPage() {
   return (
     <ProfissionalPrivate
       title="Comissao"
-      subtitle="Resumo dos seus repasses e lancamentos"
+      subtitle="Resumo dos seus repasses e lançamentos"
     >
       <div className="space-y-4">
         <section className="grid grid-cols-2 gap-2.5">
           <ProfissionalStatCard
-            label="Comissao do mes"
+            label="Comissão do mes"
             value={formatarMoeda(resumo.totalMes)}
             helper={`${resumo.totalLancamentos} lancamentos`}
           />
@@ -63,7 +63,7 @@ export default async function ComissaoProfissionalPage() {
           <ProfissionalStatCard
             label="Ticket medio"
             value={formatarMoeda(resumo.ticketMedio)}
-            helper="Base por lancamento"
+            helper="Base por lançamento"
           />
         </section>
 
@@ -74,7 +74,7 @@ export default async function ComissaoProfissionalPage() {
                 Lancamentos recentes
               </h2>
               <p className="mt-1 text-sm text-zinc-500">
-                Valores reais calculados no seu salao.
+                Valores reais calculados no seu salão.
               </p>
             </div>
 
@@ -93,7 +93,7 @@ export default async function ComissaoProfissionalPage() {
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <p className="text-sm font-semibold text-zinc-950">
-                        {item.descricao || "Comissao registrada"}
+                        {item.descricao || "Comissão registrada"}
                       </p>
                       <p className="mt-1 text-xs text-zinc-500">
                         Competencia {formatarData(item.competenciaData)} - Base{" "}
@@ -124,7 +124,7 @@ export default async function ComissaoProfissionalPage() {
               ))
             ) : (
               <div className="rounded-[1.15rem] border border-dashed border-zinc-300 bg-zinc-50 px-4 py-5 text-sm text-zinc-500">
-                Ainda nao ha lancamentos de comissao para este profissional.
+                Ainda não ha lançamentos de comissão para este profissional.
               </div>
             )}
           </div>

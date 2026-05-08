@@ -49,8 +49,8 @@ function getStatusLabel(status: string) {
   if (valor === "em_atendimento") return "Em atendimento";
   if (valor === "atendido") return "Atendido";
   if (valor === "aguardando_pagamento") return "Aguardando pagamento";
-  if (valor === "pendente") return "Pendente de confirmacao";
-  if (valor === "faltou") return "Nao compareceu";
+  if (valor === "pendente") return "Pendente de confirmação";
+  if (valor === "faltou") return "Não compareceu";
   if (valor === "cancelado") return "Cancelado";
 
   return status;

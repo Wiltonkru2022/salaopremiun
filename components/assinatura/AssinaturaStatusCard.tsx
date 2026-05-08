@@ -58,7 +58,7 @@ export default function AssinaturaStatusCard({
     <div className="space-y-3.5">
       {!podeGerenciar ? (
         <div className="rounded-[24px] border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-700">
-          Voce esta em modo de <strong>somente leitura</strong>.
+          Você está em modo de <strong>somente leitura</strong>.
         </div>
       ) : null}
 
@@ -73,14 +73,14 @@ export default function AssinaturaStatusCard({
           <div className="flex flex-col gap-3.5 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <div className="text-xs font-semibold uppercase tracking-[0.25em] text-red-600">
-                Bloqueio automatico
+                Bloqueio automático
               </div>
               <h2 className="mt-1.5 text-[1.7rem] font-bold">
-                Seu acesso principal esta bloqueado
+                Seu acesso principal está bloqueado
               </h2>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-red-700">
                 A assinatura passou do limite permitido sem regularizacao. Para
-                liberar novamente o painel, gere uma nova cobranca e conclua o
+                liberar novamente o painel, gere uma nova cobrança e conclua o
                 pagamento.
               </p>
             </div>
@@ -99,12 +99,12 @@ export default function AssinaturaStatusCard({
                     ? "Gerando PIX..."
                     : billingType === "BOLETO"
                       ? "Gerando boleto..."
-                      : "Gerando cobranca no cartao..."
+                      : "Gerando cobrança no cartão..."
                   : billingType === "PIX"
                     ? "Regularizar com PIX"
                     : billingType === "BOLETO"
                       ? "Regularizar com boleto"
-                      : "Regularizar no cartao"}
+                      : "Regularizar no cartão"}
               </button>
             ) : null}
           </div>
@@ -116,20 +116,20 @@ export default function AssinaturaStatusCard({
           Situacao da assinatura
         </div>
         <div className="mt-1 text-sm text-zinc-500">
-          Acompanhe periodo de uso, vencimento, risco de bloqueio e renovacao.
+          Acompanhe periodo de uso, vencimento, risco de bloqueio e renovação.
         </div>
 
         <div className="mt-3.5 space-y-3">
           {resumoAssinatura.vencida ? (
             <div className="rounded-[22px] border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-              Sua assinatura esta vencida
+              Sua assinatura está vencida
               {resumoAssinatura.diasAtraso != null
                 ? ` ha ${resumoAssinatura.diasAtraso} dia(s).`
                 : "."}
             </div>
           ) : resumoAssinatura.emTesteGratis ? (
             <div className="rounded-[22px] border border-violet-200 bg-violet-50 px-4 py-3 text-sm text-violet-800">
-              Teste gratis ativo: voce tem
+              Teste grátis ativo: você tem
               {resumoAssinatura.diasRestantes != null
                 ? ` ${resumoAssinatura.diasRestantes} dia(s) restante(s).`
                 : " acesso liberado no periodo de teste."}
@@ -143,7 +143,7 @@ export default function AssinaturaStatusCard({
             </div>
           ) : resumoAssinatura.ativa ? (
             <div className="rounded-[22px] border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-              Sua assinatura esta ativa e liberada.
+              Sua assinatura está ativa e liberada.
             </div>
           ) : (
             <div className="rounded-[22px] border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-700">
@@ -159,7 +159,7 @@ export default function AssinaturaStatusCard({
                 disabled={iniciandoTrial}
                 className="rounded-2xl bg-violet-700 px-4.5 py-2.5 text-sm font-semibold text-white transition hover:bg-violet-600 disabled:opacity-60"
               >
-                {iniciandoTrial ? "Iniciando teste..." : "Comecar 15 dias gratis"}
+                {iniciandoTrial ? "Iniciando teste..." : "Comecar 15 dias grátis"}
               </button>
             ) : null}
 
@@ -177,12 +177,12 @@ export default function AssinaturaStatusCard({
                     ? "Gerando PIX..."
                     : billingType === "BOLETO"
                       ? "Gerando boleto..."
-                      : "Gerando cobranca no cartao..."
+                      : "Gerando cobrança no cartão..."
                   : billingType === "PIX"
                     ? "Gerar PIX"
                     : billingType === "BOLETO"
                       ? "Gerar boleto"
-                      : "Gerar cobranca no cartao"}
+                      : "Gerar cobrança no cartão"}
               </button>
             ) : null}
           </div>
@@ -194,10 +194,10 @@ export default function AssinaturaStatusCard({
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
               <div className="font-semibold">
-                Aguardando confirmacao do pagamento...
+                Aguardando confirmação do pagamento...
               </div>
               <div className="text-xs text-amber-700">
-                O sistema esta consultando automaticamente. Voce tambem pode
+                O sistema está consultando automaticamente. Você também pode
                 verificar manualmente.
               </div>
             </div>

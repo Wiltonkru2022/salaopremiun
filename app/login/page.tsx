@@ -81,8 +81,8 @@ function LoginPageContent() {
         })
         .catch(() => undefined);
     } catch (error) {
-      console.warn("Supabase indisponivel para login:", error);
-      setErro("Servico de autenticacao indisponivel neste ambiente.");
+      console.warn("Supabase indisponível para login:", error);
+      setErro("Serviço de autenticacao indisponível neste ambiente.");
     }
   }, [redirectHref]);
 
@@ -164,7 +164,7 @@ function LoginPageContent() {
 
     try {
       if (!supabase) {
-        throw new Error("Servico de autenticacao indisponivel neste ambiente.");
+        throw new Error("Serviço de autenticacao indisponível neste ambiente.");
       }
 
       const { error } = await supabase.auth.signInWithPassword({
@@ -181,7 +181,7 @@ function LoginPageContent() {
       setRedirectMessage(
         agendaQuickLogin
           ? "Login aceito. Abrindo a agenda em modo foco..."
-          : "Login aceito. Entrando no painel e montando o resumo do salao..."
+          : "Login aceito. Entrando no painel e montando o resumo do salão..."
       );
 
       window.location.replace(redirectHref);
@@ -216,14 +216,14 @@ function LoginPageContent() {
           href="/cadastro-salao"
           className="rounded-full border border-zinc-200 px-4 py-2 text-sm font-black text-zinc-800 transition hover:border-zinc-950"
         >
-          Cadastrar salao
+          Cadastrar salão
         </Link>
       </header>
 
       <main className="grid min-h-[calc(100vh-74px)] lg:grid-cols-2">
         <section
           className="relative hidden overflow-hidden bg-zinc-950 bg-cover bg-center lg:block"
-          style={{ backgroundImage: "url('/site/cadastro-salao-bg.jpeg')" }}
+          style={{ backgroundImage: "url('/site/cadastro-salão-bg.jpeg')" }}
         >
           <div className="absolute inset-0 bg-zinc-950/58" />
           <div className="absolute inset-0 bg-gradient-to-br from-zinc-950 via-zinc-950/55 to-transparent" />
@@ -231,14 +231,14 @@ function LoginPageContent() {
           <div className="relative flex h-full flex-col justify-between p-10 text-white xl:p-14">
             <div className="max-w-lg">
               <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-black uppercase tracking-[0.2em] text-white/75">
-                Painel do salao
+                Painel do salão
               </div>
               <h1 className="mt-7 font-display text-[3.2rem] font-black leading-[0.95] tracking-[-0.05em] xl:text-[4.2rem]">
                 Menos peso na rotina, mais controle no seu negocio.
               </h1>
               <p className="mt-5 max-w-md text-base leading-7 text-white/78">
                 Entre para acompanhar agenda, clientes, equipe, vendas e
-                notificacoes em tempo real.
+                notificações em tempo real.
               </p>
             </div>
 
@@ -259,7 +259,7 @@ function LoginPageContent() {
               <p className="mt-2 text-sm font-semibold text-zinc-500">
                 {agendaQuickLogin
                   ? "Acesse para voltar direto para a agenda."
-                  : "Use o e-mail e a senha do seu salao."}
+                  : "Use o e-mail e a senha do seu salão."}
               </p>
             </div>
 
@@ -267,7 +267,7 @@ function LoginPageContent() {
               <div className="mb-5 rounded-2xl border border-violet-200 bg-violet-50 px-4 py-3 text-sm text-violet-800">
                 <p className="font-semibold">Agenda em modo foco</p>
                 <p className="mt-1">
-                  Entre novamente e voce volta direto para a agenda, sem passar pelo
+                  Entre novamente e você volta direto para a agenda, sem passar pelo
                   dashboard.
                 </p>
               </div>
@@ -375,7 +375,7 @@ function LoginPageContent() {
 
             <div className="mt-10 space-y-6 text-center">
               <p className="text-sm text-zinc-600">
-                Ainda nao tem conta?{" "}
+                Ainda não tem conta?{" "}
                 <button
                   type="button"
                   onClick={() =>
@@ -392,7 +392,7 @@ function LoginPageContent() {
               </p>
 
               <div className="text-sm text-zinc-500">
-                <p>Deseja agendar algum servico?</p>
+                <p>Deseja agendar algum serviço?</p>
                 <button
                   type="button"
                   onClick={() =>

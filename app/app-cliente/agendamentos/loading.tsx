@@ -4,7 +4,7 @@ export default function ClienteAgendamentosLoading() {
   return (
     <ClientAppPageSkeleton
       title="Meus agendamentos"
-      subtitle="Buscando seus proximos horarios."
+      subtitle="Buscando seus próximos horários."
       panels={4}
     />
   );

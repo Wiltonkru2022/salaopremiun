@@ -14,7 +14,7 @@ export default function WhatsAppSupportForm() {
       `Ola, meu nome e ${nome.trim() || "visitante"}.`,
       duvida.trim()
         ? `Minha duvida sobre o SalaoPremium: ${duvida.trim()}`
-        : "Quero tirar uma duvida sobre o SalaoPremium.",
+        : "Quero tirar uma duvida sobre o SalãoPremium.",
     ].join("\n\n");
 
     window.open(

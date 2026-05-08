@@ -645,7 +645,7 @@ export default function VendasPage() {
         <body onload="window.print(); window.close();">
           <div class="cupom">
             <div class="center">
-              <div class="salao">${salao?.nome || "Salao Premium"}</div>
+              <div class="salao">${salao?.nome || "Salão Premium"}</div>
               ${salao?.cpf_cnpj ? `<div class="muted">CNPJ: ${salao.cpf_cnpj}</div>` : ""}
               ${salao?.telefone ? `<div class="muted">Telefone: ${salao.telefone}</div>` : ""}
               ${salao?.endereco ? `<div class="muted">${salao.endereco}</div>` : ""}

@@ -26,7 +26,7 @@ type ProfissionalPerfilRow = {
 
 function formatCpf(value: string | null | undefined) {
   const digits = String(value || "").replace(/\D/g, "");
-  if (digits.length !== 11) return value || "Nao informado";
+  if (digits.length !== 11) return value || "Não informado";
 
   return digits
     .replace(/^(\d{3})(\d)/, "$1.$2")
@@ -125,7 +125,7 @@ export default async function PerfilProfissionalPage({
     return (
       <ProfissionalShell title="Meu perfil" subtitle="Dados do profissional">
         <div className="rounded-[1.25rem] border border-red-200 bg-red-50 p-4 text-sm text-red-700 shadow-sm">
-          Nao foi possivel carregar os dados do profissional.
+          Não foi possível carregar os dados do profissional.
         </div>
       </ProfissionalShell>
     );
@@ -175,7 +175,7 @@ export default async function PerfilProfissionalPage({
               </div>
               <div className="mt-1 text-sm text-amber-200">{categoria}</div>
               <div className="mt-2 text-xs uppercase tracking-[0.14em] text-zinc-400">
-                SalaoPremium profissional
+                SalãoPremium profissional
               </div>
             </div>
           </div>
@@ -191,14 +191,14 @@ export default async function PerfilProfissionalPage({
         <ProfissionalSurface>
           <ProfissionalSectionHeader
             title="Contato"
-            description="Informacoes usadas no dia a dia."
+            description="Informações usadas no dia a dia."
           />
 
           <div className="space-y-2.5">
             {[
-              ["Telefone", profissional.telefone || "Nao informado"],
-              ["WhatsApp", profissional.whatsapp || "Nao informado"],
-              ["Email", profissional.email || "Nao informado"],
+              ["Telefone", profissional.telefone || "Não informado"],
+              ["WhatsApp", profissional.whatsapp || "Não informado"],
+              ["Email", profissional.email || "Não informado"],
               ["CPF", formatCpf(profissional.cpf)],
             ].map(([label, value]) => (
               <div
@@ -225,8 +225,8 @@ export default async function PerfilProfissionalPage({
 
           <div className="space-y-2.5">
             {[
-              ["Tipo de chave Pix", profissional.pix_tipo || "Nao informado"],
-              ["Chave Pix", profissional.pix_chave || "Nao informado"],
+              ["Tipo de chave Pix", profissional.pix_tipo || "Não informado"],
+              ["Chave Pix", profissional.pix_chave || "Não informado"],
             ].map(([label, value]) => (
               <div
                 key={label}
@@ -251,7 +251,7 @@ export default async function PerfilProfissionalPage({
 
           <div className="mb-3 rounded-[18px] border border-zinc-200 bg-zinc-50/80 p-3.5">
             <div className="text-sm font-black text-zinc-950">
-              Notificacoes do app
+              Notificações do app
             </div>
             <p className="mt-1 text-xs leading-5 text-zinc-500">
               Receba lembretes de agenda, cancelamentos e avisos de comanda.

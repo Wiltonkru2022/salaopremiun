@@ -235,7 +235,7 @@ export function useAssinaturaPage() {
 
         if (!response.ok) {
           throw new Error(
-            data?.error || "Erro ao sincronizar cartao da assinatura."
+            data?.error || "Erro ao sincronizar cartão da assinatura."
           );
         }
 
@@ -243,7 +243,7 @@ export function useAssinaturaPage() {
           await carregarDados();
         }
       } catch (error) {
-        console.error("Falha ao sincronizar token do cartao da assinatura:", error);
+        console.error("Falha ao sincronizar token do cartão da assinatura:", error);
       }
     })();
   }, [

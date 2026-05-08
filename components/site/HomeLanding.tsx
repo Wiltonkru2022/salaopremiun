@@ -19,11 +19,11 @@ import SiteHeader from "@/components/site-header";
 import WhatsAppSupportForm from "@/components/site/WhatsAppSupportForm";
 
 const modules = [
-  { icon: CalendarDays, title: "Agenda cheia", text: "Dia por profissional, status, horarios e passagem para comanda." },
+  { icon: CalendarDays, title: "Agenda cheia", text: "Dia por profissional, status, horários e passagem para comanda." },
   { icon: CreditCard, title: "Caixa e vendas", text: "Pagamento, desconto, taxa, produto e fechamento no mesmo fluxo." },
-  { icon: Wallet, title: "Comissoes", text: "Calculo por profissional, assistente, servico e periodo." },
-  { icon: Users, title: "Clientes", text: "Cadastro, historico e retorno para manter o relacionamento." },
-  { icon: Scissors, title: "Servicos", text: "Precos, duracao, combos e regras da operacao." },
+  { icon: Wallet, title: "Comissoes", text: "Calculo por profissional, assistente, serviço e periodo." },
+  { icon: Users, title: "Clientes", text: "Cadastro, histórico e retorno para manter o relacionamento." },
+  { icon: Scissors, title: "Servicos", text: "Preços, duração, combos e regras da operação." },
   { icon: BarChart3, title: "Relatorios", text: "Leitura simples para saber o que entrou, saiu e vendeu." },
 ];
 
@@ -32,18 +32,18 @@ const plans = [
     name: "Basico",
     slug: "basico",
     price: "R$ 5,00",
-    note: "desconto de lancamento",
-    description: "Para comecar com agenda, clientes, servicos, caixa e vendas.",
-    items: ["Agenda e clientes", "Caixa e comandas", "Vendas e comissao basica"],
+    note: "desconto de lançamento",
+    description: "Para começar com agenda, clientes, serviços, caixa e vendas.",
+    items: ["Agenda e clientes", "Caixa e comandas", "Vendas e comissão basica"],
   },
   {
     name: "Pro",
     slug: "pro",
     price: "R$ 29,90",
     note: "mais vendido",
-    description: "Para salao com equipe, estoque, relatorios e app profissional.",
+    description: "Para salão com equipe, estoque, relatórios e app profissional.",
     featured: true,
-    items: ["Tudo do Basico", "Estoque e relatorios", "App profissional"],
+    items: ["Tudo do Basico", "Estoque e relatórios", "App profissional"],
   },
   {
     name: "Premium",
@@ -77,26 +77,26 @@ function HeroSection() {
         <div>
           <div className="inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-slate-50 px-3 py-1.5 text-sm font-semibold text-zinc-700">
             <Sparkles size={16} />
-            Sistema completo para salao de beleza
+            Sistema completo para salão de beleza
           </div>
 
           <h1 className="mt-5 max-w-3xl text-[2.3rem] font-bold leading-[1.04] tracking-tight text-zinc-950 md:text-[4.2rem]">
-            Agenda, caixa, app cliente e app profissional em um so lugar.
+            Agenda, caixa, app cliente e app profissional em um só lugar.
           </h1>
 
           <p className="mt-5 max-w-2xl text-base leading-8 text-zinc-600 md:text-lg">
-            O SalaoPremium organiza a recepcao no painel do salao, entrega agenda
-            e comissao para o profissional no celular e permite que o cliente veja
-            saloes, acompanhe agendamentos e mantenha o perfil atualizado.
+            O SalãoPremium organiza a recepção no painel do salão, entrega agenda
+            e comissão para o profissional no celular e permite que o cliente veja
+            salões, acompanhe agendamentos e mantenha o perfil atualizado.
           </p>
 
           <div className="mt-7 grid gap-3 sm:grid-cols-2">
             <Link className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-zinc-950 px-5 py-3 text-sm font-bold text-white" href="/cadastro-salao">
-              Cadastrar meu salao
+              Cadastrar meu salão
               <ArrowRight size={18} />
             </Link>
             <Link className="inline-flex min-h-12 items-center justify-center rounded-2xl border border-zinc-300 bg-white px-5 py-3 text-sm font-bold text-zinc-900" href="/login">
-              Login do salao
+              Login do salão
             </Link>
             <Link className="inline-flex min-h-12 items-center justify-center rounded-2xl border border-zinc-300 bg-white px-5 py-3 text-sm font-bold text-zinc-900" href="/app-cliente/login">
               App cliente
@@ -119,8 +119,8 @@ function ProductFrame() {
       <div className="rounded-[24px] bg-slate-100 p-4">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-zinc-500">Painel do salao</p>
-            <h2 className="mt-1 text-xl font-bold text-zinc-950">Operacao de hoje</h2>
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-zinc-500">Painel do salão</p>
+            <h2 className="mt-1 text-xl font-bold text-zinc-950">Operação de hoje</h2>
           </div>
           <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-700">
             Agenda cheia
@@ -168,7 +168,7 @@ function ProductFrame() {
             <div className="rounded-2xl bg-zinc-950 p-4 text-white">
               <p className="text-xs font-bold uppercase tracking-[0.16em] text-zinc-400">App cliente</p>
               <p className="mt-2 text-sm font-semibold">3 novos agendamentos online</p>
-              <p className="mt-1 text-xs text-zinc-400">Perfil, historico e saloes favoritos.</p>
+              <p className="mt-1 text-xs text-zinc-400">Perfil, histórico e salões favoritos.</p>
             </div>
           </div>
         </div>
@@ -184,7 +184,7 @@ function SystemScreensSection() {
         <div className="max-w-3xl">
           <p className="text-sm font-bold uppercase tracking-[0.18em] text-zinc-500">Imagens do sistema</p>
           <h2 className="mt-3 text-3xl font-black tracking-tight text-zinc-950 md:text-5xl">
-            Telas com dados de rotina real: agenda, caixa, vendas e comissoes.
+            Telas com dados de rotina real: agenda, caixa, vendas e comissões.
           </h2>
         </div>
 
@@ -254,9 +254,9 @@ function CommissionShot() {
       </div>
       <div className="mt-4 space-y-3">
         {[
-          ["Camila", "R$ 430", "8 servicos"],
-          ["Marcos", "R$ 290", "5 servicos"],
-          ["Julia", "R$ 510", "9 servicos"],
+          ["Camila", "R$ 430", "8 serviços"],
+          ["Marcos", "R$ 290", "5 serviços"],
+          ["Julia", "R$ 510", "9 serviços"],
         ].map(([nome, valor, servicos]) => (
           <div key={nome} className="flex items-center justify-between rounded-2xl bg-slate-50 p-3 ring-1 ring-zinc-100">
             <div>
@@ -279,14 +279,14 @@ function AppsSection() {
           title="App cliente"
           href="/app-cliente/login"
           icon={Smartphone}
-          text="O cliente entra pelo celular para acessar perfil, saloes, agendamentos e acompanhar a propria rotina."
-          items={["Perfil do cliente", "Saloes publicados", "Agendamentos", "Historico e acesso rapido"]}
+          text="O cliente entra pelo celular para acessar perfil, salões, agendamentos e acompanhar a própria rotina."
+          items={["Perfil do cliente", "Salões publicados", "Agendamentos", "Histórico e acesso rápido"]}
         />
         <AppCard
           title="App profissional"
           href="/app-profissional/login"
           icon={MonitorSmartphone}
-          text="O profissional consulta agenda, atendimento, comissoes e suporte sem precisar mexer no painel do salao."
+          text="O profissional consulta agenda, atendimento, comissões e suporte sem precisar mexer no painel do salão."
           items={["Agenda no celular", "Comandas", "Comissoes", "Suporte da equipe"]}
         />
       </div>
@@ -338,7 +338,7 @@ function ModulesSection() {
         <div className="max-w-3xl">
           <p className="text-sm font-bold uppercase tracking-[0.18em] text-zinc-400">Tudo conectado</p>
           <h2 className="mt-3 text-3xl font-black tracking-tight md:text-5xl">
-            Um painel para vender, atender, receber e entender o salao.
+            Um painel para vender, atender, receber e entender o salão.
           </h2>
         </div>
         <div className="mt-9 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -365,7 +365,7 @@ function PlansSection() {
         <div className="max-w-3xl">
           <p className="text-sm font-bold uppercase tracking-[0.18em] text-zinc-500">Planos</p>
           <h2 className="mt-3 text-3xl font-black tracking-tight md:text-5xl">
-            Precos de lancamento para colocar o salao no digital agora.
+            Preços de lançamento para colocar o salão no digital agora.
           </h2>
         </div>
         <div className="mt-9 grid gap-5 lg:grid-cols-3">
@@ -407,7 +407,7 @@ function SupportSection() {
             Quer tirar duvida antes de cadastrar?
           </h2>
           <p className="mt-4 max-w-2xl text-base leading-8 text-zinc-600">
-            Fale direto pelo WhatsApp. A mensagem ja chega organizada com seu nome
+            Fale direto pelo WhatsApp. A mensagem já chega organizada com seu nome
             e a duvida para agilizar o atendimento.
           </p>
         </div>

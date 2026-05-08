@@ -22,7 +22,7 @@ function SkeletonPanel() {
 
 export default function ClientAppPageSkeleton({
   title = "Carregando",
-  subtitle = "Preparando sua tela com seguranca.",
+  subtitle = "Preparando sua tela com segurança.",
   panels = 3,
 }: {
   title?: string;

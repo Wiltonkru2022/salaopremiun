@@ -75,7 +75,7 @@ export default function ClientAppointmentReviewForm({
         <textarea
           name="comentario"
           rows={compact ? 3 : 5}
-          placeholder="Conte como foi sua experiencia."
+          placeholder="Conte como foi sua experiência."
           className="w-full rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-800 outline-none transition focus:border-zinc-400 focus:bg-white"
         />
       </div>

@@ -26,7 +26,7 @@ export default function AgendaModalComandaDecision({
   const content = (
     <div className="w-full rounded-[24px] bg-white p-5 shadow-2xl">
       <h3 className="text-base font-bold text-zinc-900">
-        Cliente ja possui comanda aberta
+        Cliente já possui comanda aberta
       </h3>
 
       <p className="mt-2 text-sm text-zinc-500">

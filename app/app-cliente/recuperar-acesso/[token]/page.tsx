@@ -11,7 +11,7 @@ export default async function RedefinirSenhaClientePage({
   return (
     <ClientAppFrame
       title="Nova senha"
-      subtitle="Finalize a recuperacao da sua conta global."
+      subtitle="Finalize a recuperação da sua conta global."
     >
       <section className="mx-auto max-w-2xl">
         <RedefinirSenhaClienteForm token={token} />

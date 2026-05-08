@@ -426,7 +426,7 @@ export default function AdminBlogEditor({ post, categories }: Props) {
     };
 
     if (!response.ok || !payload.publicUrl) {
-      throw new Error(payload.message || "Nao foi possivel enviar a midia.");
+      throw new Error(payload.message || "Não foi possível enviar a mídia.");
     }
 
     setUploadState({ label: `${file.name} enviado`, progress: 100 });
@@ -552,7 +552,7 @@ export default function AdminBlogEditor({ post, categories }: Props) {
     saveSelection();
     setModal({
       type: "button",
-      label: "Conhecer o SalaoPremium",
+      label: "Conhecer o SalãoPremium",
       url: "https://salaopremiun.com.br/cadastro-salao",
     });
   }
@@ -620,7 +620,7 @@ export default function AdminBlogEditor({ post, categories }: Props) {
       setEditorNotice("");
     } catch (error) {
       setEditorNotice(
-        error instanceof Error ? error.message : "Nao foi possivel enviar a capa."
+        error instanceof Error ? error.message : "Não foi possível enviar a capa."
       );
     }
     if (coverInputRef.current) coverInputRef.current.value = "";
@@ -648,7 +648,7 @@ export default function AdminBlogEditor({ post, categories }: Props) {
       setEditorNotice(
         error instanceof Error
           ? error.message
-          : "Nao foi possivel enviar a imagem."
+          : "Não foi possível enviar a imagem."
       );
     }
     if (inlineImageInputRef.current) inlineImageInputRef.current.value = "";
@@ -721,7 +721,7 @@ export default function AdminBlogEditor({ post, categories }: Props) {
       setEditorNotice(
         error instanceof Error
           ? error.message
-          : "Nao foi possivel trocar a imagem."
+          : "Não foi possível trocar a imagem."
       );
     }
     if (replaceInlineImageInputRef.current) {
@@ -742,7 +742,7 @@ export default function AdminBlogEditor({ post, categories }: Props) {
       );
     } catch (error) {
       setEditorNotice(
-        error instanceof Error ? error.message : "Nao foi possivel enviar o video."
+        error instanceof Error ? error.message : "Não foi possível enviar o video."
       );
     }
     if (inlineVideoInputRef.current) inlineVideoInputRef.current.value = "";
@@ -783,7 +783,7 @@ export default function AdminBlogEditor({ post, categories }: Props) {
       }
     } catch (error) {
       setEditorNotice(
-        error instanceof Error ? error.message : "Nao foi possivel trocar o video."
+        error instanceof Error ? error.message : "Não foi possível trocar o video."
       );
     }
     if (replaceInlineVideoInputRef.current) {

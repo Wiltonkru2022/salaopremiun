@@ -80,7 +80,7 @@ function ChatSuporteInner() {
         content:
           data?.answer ||
           data?.error ||
-          "Nao consegui responder agora. Tente novamente.",
+          "Não consegui responder agora. Tente novamente.",
       };
 
       setMessages((prev) => [...prev, assistantMessage]);
@@ -136,7 +136,7 @@ function ChatSuporteInner() {
         {
           id: crypto.randomUUID(),
           role: "assistant",
-          content: "Nao consegui finalizar o chat agora.",
+          content: "Não consegui finalizar o chat agora.",
         },
       ]);
     }
@@ -154,11 +154,11 @@ function ChatSuporteInner() {
               Suporte inteligente
             </div>
             <h2 className="mt-2.5 text-[1.05rem] font-black text-zinc-950">
-              Ajuda rapida do profissional
+              Ajuda rápida do profissional
             </h2>
             <p className="mt-1.5 text-sm leading-6 text-zinc-600">
               Pergunte em linguagem simples e eu respondo usando o contexto da
-              tela em que voce esta.
+              tela em que você está.
             </p>
           </div>
 
@@ -176,12 +176,12 @@ function ChatSuporteInner() {
             {
               icon: <Bot size={15} />,
               title: "Contexto da tela",
-              body: "Levo em conta pagina, comanda, cliente e agendamento quando existirem.",
+              body: "Levo em conta página, comanda, cliente e agendamento quando existirem.",
             },
             {
               icon: <LifeBuoy size={15} />,
               title: "Chamado humano",
-              body: "Se a IA nao resolver, voce pode abrir um ticket logo abaixo.",
+              body: "Se a IA não resolver, você pode abrir um ticket logo abaixo.",
             },
           ].map((item) => (
             <div

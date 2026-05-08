@@ -26,11 +26,11 @@ export default async function AdminMasterNovaNotificacaoPage({
             Comunicacao
           </div>
           <h1 className="mt-2 font-display text-3xl font-black tracking-[-0.04em] text-zinc-950">
-            Disparar notificacao
+            Disparar notificação
           </h1>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-500">
             Envie avisos para a barra do celular de clientes, profissionais ou
-            saloes que ja ativaram notificacoes no app.
+            salões que já ativaram notificações no app.
           </p>
         </div>
 
@@ -84,15 +84,15 @@ export default async function AdminMasterNovaNotificacaoPage({
                 <option value="todos">Todos os aparelhos ativos</option>
                 <option value="clientes">Clientes do app cliente</option>
                 <option value="profissionais">Profissionais do app profissional</option>
-                <option value="saloes">Painel dos saloes</option>
+                <option value="saloes">Painel dos salões</option>
               </select>
             </label>
 
             <label className="block text-sm font-bold text-zinc-700">
-              ID do salao (opcional)
+              ID do salão (opcional)
               <input
                 name="id_salao"
-                placeholder="Use apenas para disparo de um salao especifico"
+                placeholder="Use apenas para disparo de um salão especifico"
                 className="mt-2 h-12 w-full rounded-2xl border border-zinc-200 bg-white px-4 text-sm outline-none focus:border-zinc-400"
               />
             </label>
@@ -115,7 +115,7 @@ export default async function AdminMasterNovaNotificacaoPage({
                 required
                 rows={5}
                 maxLength={220}
-                defaultValue="Voce ja agendou seu horario hoje? Da uma olhadinha no app, temos novidades."
+                defaultValue="Você já agendou seu horário hoje? Dê uma olhadinha no app, temos novidades."
                 className="mt-2 w-full resize-none rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm outline-none focus:border-zinc-400"
               />
             </label>
@@ -131,7 +131,7 @@ export default async function AdminMasterNovaNotificacaoPage({
 
             <button className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-zinc-950 px-5 text-sm font-black text-white transition hover:bg-zinc-800">
               <SendHorizontal size={18} />
-              Enviar notificacao
+              Enviar notificação
             </button>
           </div>
         </form>
@@ -145,13 +145,13 @@ export default async function AdminMasterNovaNotificacaoPage({
               Dia das maes chegou
             </div>
             <p className="mt-2 text-sm leading-6 text-zinc-500">
-              Voce ja agendou seu horario hoje? Da uma olhadinha no app, temos
+              Você já agendou seu horário hoje? Dê uma olhadinha no app, temos
               novidades.
             </p>
           </div>
           <p className="mt-4 text-sm leading-6 text-zinc-500">
             O sistema operacional pode mostrar a origem do app abaixo da
-            notificacao. O texto principal acima fica sob nosso controle.
+            notificação. O texto principal acima fica sob nosso controle.
           </p>
         </aside>
       </section>

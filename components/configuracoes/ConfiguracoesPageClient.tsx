@@ -1754,7 +1754,7 @@ export default function ConfiguracoesPageClient({
                   Limite do plano
                 </div>
                 <div className="mt-2 text-lg font-bold text-zinc-900">
-                  {limiteUsuariosPlano ?? "-"} usuario(s)
+                  {limiteUsuariosPlano ?? "-"} usuário(s)
                 </div>
                 <div className="mt-1 text-sm text-zinc-500">
                   Cadastrados ativos: {usoUsuariosPlano}

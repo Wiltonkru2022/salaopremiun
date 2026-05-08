@@ -56,11 +56,11 @@ export default function BlogPostEngagement({ postId, postSlug }: Props) {
       message?: string;
     };
     if (!response.ok) {
-      setStatus(payload.message || "Nao foi possivel salvar.");
+      setStatus(payload.message || "Não foi possível salvar.");
       return;
     }
     setEmail("");
-    setStatus("Pronto. Voce vai receber as novidades do SalaoPremium.");
+    setStatus("Pronto. Você vai receber as novidades do SalãoPremium.");
   }
 
   return (
@@ -73,7 +73,7 @@ export default function BlogPostEngagement({ postId, postSlug }: Props) {
         className="rounded-[22px] border border-zinc-200 bg-zinc-50 p-5"
       >
         <h2 className="font-display text-2xl font-black text-zinc-950">
-          Gostou? Receba novidades do SalaoPremium
+          Gostou? Receba novidades do SalãoPremium
         </h2>
         <div className="mt-4 flex flex-col gap-2 sm:flex-row">
           <input

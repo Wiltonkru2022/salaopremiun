@@ -260,7 +260,7 @@ export default function ClientBookingForm({
               </div>
             ) : loadingAvailability ? (
               <div className="rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-500">
-                Buscando horarios...
+                Buscando horários...
               </div>
             ) : availabilityError ? (
               <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
@@ -285,14 +285,14 @@ export default function ClientBookingForm({
               </div>
             ) : (
               <div className="rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-500">
-                Sem horarios livres para essa combinacao.
+                Sem horários livres para essa combinacao.
               </div>
             )}
           </div>
 
           <div>
             <div className="mb-1.5 block text-sm font-medium text-zinc-700">
-              Horarios disponiveis
+              Horários disponiveis
             </div>
             {selectedDate && horariosDoDiaSelecionado.length ? (
               <div className="flex flex-wrap gap-2">

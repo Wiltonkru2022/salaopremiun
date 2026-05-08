@@ -152,7 +152,7 @@ export default function ServicosPage() {
       setServicos(((data ?? []) as unknown as ServicoListItem[]) || []);
     } catch (e: unknown) {
       console.error(e);
-      setErro(getErrorMessage(e, "Erro ao carregar servicos."));
+      setErro(getErrorMessage(e, "Erro ao carregar serviços."));
     } finally {
       setLoading(false);
     }
@@ -184,7 +184,7 @@ export default function ServicosPage() {
       ServicoProcessarErrorResponse;
 
     if (!response.ok) {
-      throw new Error(result.error || "Erro ao processar servico.");
+      throw new Error(result.error || "Erro ao processar serviço.");
     }
 
     return result as ServicoProcessarResponse;
@@ -192,7 +192,7 @@ export default function ServicosPage() {
 
   async function alternarStatus(servico: ServicoListItem) {
     if (!podeGerenciar) {
-      setErro("Voce nao tem permissao para alterar status de servicos.");
+      setErro("Você não tem permissão para alterar status de serviços.");
       return;
     }
 
@@ -223,7 +223,7 @@ export default function ServicosPage() {
       setMsg(`Servico ${novoAtivo ? "ativado" : "inativado"} com sucesso.`);
     } catch (e: unknown) {
       console.error(e);
-      setErro(getErrorMessage(e, "Erro ao alterar status do servico."));
+      setErro(getErrorMessage(e, "Erro ao alterar status do serviço."));
     } finally {
       setSavingId(null);
     }
@@ -231,7 +231,7 @@ export default function ServicosPage() {
 
   async function excluirServico(id: string) {
     if (!podeGerenciar) {
-      setErro("Voce nao tem permissao para excluir servicos.");
+      setErro("Você não tem permissão para excluir serviços.");
       return;
     }
 
@@ -247,10 +247,10 @@ export default function ServicosPage() {
 
       setServicos((prev) => prev.filter((item) => item.id !== id));
       setServicoParaExcluir(null);
-      setMsg("Servico excluido com sucesso.");
+      setMsg("Serviço excluído com sucesso.");
     } catch (e: unknown) {
       console.error(e);
-      setErro(getErrorMessage(e, "Erro ao excluir servico."));
+      setErro(getErrorMessage(e, "Erro ao excluir serviço."));
     } finally {
       setSavingId(null);
     }
@@ -300,8 +300,8 @@ export default function ServicosPage() {
   if (loading || !acessoCarregado) {
     return (
       <AppLoading
-        title="Carregando servicos"
-        message="Aguarde enquanto organizamos duracao, comissao, preco e regras do catalogo."
+        title="Carregando serviços"
+        message="Aguarde enquanto organizamos duração, comissão, preço e regras do catálogo."
         fullHeight={false}
       />
     );
@@ -311,7 +311,7 @@ export default function ServicosPage() {
     return (
       <div className="p-6">
         <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-rose-700">
-          Voce nao tem permissao para acessar Servicos.
+          Você não tem permissão para acessar Serviços.
         </div>
       </div>
     );
@@ -324,12 +324,12 @@ export default function ServicosPage() {
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div className="max-w-3xl">
               <div className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-[0.22em] text-zinc-400">
-                <span>Catalogo operacional</span>
+                <span>Catálogo operacional</span>
                 <button
                   type="button"
                   onClick={() => setAjudaOpen(true)}
                   className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-zinc-300 bg-white text-zinc-500 transition hover:border-zinc-400 hover:text-zinc-700"
-                  aria-label="Abrir ajuda da pagina de servicos"
+                  aria-label="Abrir ajuda da página de serviços"
                   title="Ajuda"
                 >
                   <CircleHelp className="h-3.5 w-3.5" />
@@ -338,9 +338,9 @@ export default function ServicosPage() {
               <h1 className="mt-2 text-2xl font-bold md:text-3xl">Servicos</h1>
               <p className="mt-3 max-w-2xl text-sm leading-6 text-zinc-600">
                 Aqui ficam as regras que alimentam agenda, comandas, caixa,
-                vendas e comissoes: preco, duracao, custo, comissao por
-                profissional e agora tambem combos com varios servicos e um
-                preco final unico.
+                vendas e comissões: preço, duração, custo, comissão por
+                profissional e agora também combos com vários serviços e um
+                preço final único.
               </p>
             </div>
 
@@ -356,7 +356,7 @@ export default function ServicosPage() {
                 href="/servicos-extras"
                 className="inline-flex items-center justify-center rounded-xl border border-zinc-200 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-50"
               >
-                Servicos extras
+                Serviços extras
               </Link>
 
               {podeGerenciar ? (
@@ -364,7 +364,7 @@ export default function ServicosPage() {
                   href="/servicos/novo"
                   className="inline-flex items-center justify-center rounded-xl bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-95"
                 >
-                  Novo servico
+                  Novo serviço
                 </Link>
               ) : null}
             </div>
@@ -373,7 +373,7 @@ export default function ServicosPage() {
 
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
           <ResumoCard
-            title="Servicos ativos"
+            title="Serviços ativos"
             value={`${resumo.ativos}`}
             description={`${resumo.total} visiveis na tela agora`}
             icon={Clock3}
@@ -381,11 +381,11 @@ export default function ServicosPage() {
           <ResumoCard
             title="Ticket base medio"
             value={formatCurrency(resumo.ticketMedio)}
-            description="Preco padrao medio do catalogo filtrado"
+            description="Preço padrão medio do catálogo filtrado"
             icon={Wallet}
           />
           <ResumoCard
-            title="Preco sob avaliacao"
+            title="Preço sob avaliação"
             value={`${resumo.precosVariaveis}`}
             description="Itens que precisam de combinacao antes de fechar"
             icon={AlertTriangle}
@@ -393,7 +393,7 @@ export default function ServicosPage() {
           <ResumoCard
             title="Exigem leitura atenta"
             value={`${resumo.comAvaliacao}`}
-            description="Servicos que pedem avaliacao antes da execucao"
+            description="Serviços que pedem avaliação antes da execucao"
             icon={Percent}
           />
         </div>
@@ -414,7 +414,7 @@ export default function ServicosPage() {
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.6fr)_220px_220px]">
             <input
               type="text"
-              placeholder="Buscar por nome, categoria ou descricao"
+              placeholder="Buscar por nome, categoria ou descrição"
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
               className="w-full rounded-2xl border border-zinc-300 px-4 py-2.5 text-sm outline-none focus:border-zinc-900"
@@ -433,7 +433,7 @@ export default function ServicosPage() {
             </select>
 
             <div className="flex items-center rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-2.5 text-sm text-zinc-600">
-              Catalogo filtrado:
+              Catálogo filtrado:
               <strong className="ml-2 text-zinc-900">{listaFiltrada.length}</strong>
             </div>
           </div>
@@ -442,7 +442,7 @@ export default function ServicosPage() {
         <section className="space-y-3">
           {listaFiltrada.length === 0 ? (
             <div className="rounded-[22px] border border-zinc-200 bg-white p-5 text-sm text-zinc-600 shadow-sm">
-              Nenhum servico encontrado com esse filtro.
+              Nenhum serviço encontrado com esse filtro.
             </div>
           ) : (
             listaFiltrada.map((item) => {
@@ -471,12 +471,12 @@ export default function ServicosPage() {
                         ) : null}
                         {precoVariavel ? (
                           <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-700">
-                            Sob avaliacao
+                            Sob avaliação
                           </span>
                         ) : null}
                         {item.exige_avaliacao ? (
                           <span className="rounded-full bg-sky-100 px-2.5 py-1 text-xs font-semibold text-sky-700">
-                            Exige avaliacao
+                            Exige avaliação
                           </span>
                         ) : null}
                       </div>
@@ -506,13 +506,13 @@ export default function ServicosPage() {
                           }
                         />
                         <MetricBlock
-                          label="Preco base"
+                          label="Preço base"
                           value={
                             precoVariavel
                               ? `A partir de ${formatCurrency(item.preco_padrao)}`
                               : formatCurrency(item.preco_padrao)
                           }
-                          detail="Valor exibido para a recepcao como base do servico"
+                          detail="Valor exibido para a recepcao como base do serviço"
                         />
                         <MetricBlock
                           label="Custo previsto"
@@ -520,16 +520,16 @@ export default function ServicosPage() {
                           detail="Ajuda a enxergar margem e impacto de consumo"
                         />
                         <MetricBlock
-                          label="Comissao padrao"
+                          label="Comissão padrão"
                           value={
                             ehCombo
-                              ? "Por servico"
+                              ? "Por serviço"
                               : `${formatPercent(item.comissao_percentual_padrao)}%`
                           }
                           detail={
                             ehCombo
-                              ? "Cada servico interno mantem a propria regra de comissao"
-                              : "Vale enquanto nao houver excecao por profissional"
+                              ? "Cada serviço interno mantém a propria regra de comissão"
+                              : "Vale enquanto não houver exceção por profissional"
                           }
                         />
                       </div>
@@ -538,7 +538,7 @@ export default function ServicosPage() {
                         {item.gatilho_retorno_dias ? (
                           <TagHint>{`Retorno sugerido em ${item.gatilho_retorno_dias} dias`}</TagHint>
                         ) : null}
-                        <TagHint>Excecoes e consumo ficam no detalhe do servico</TagHint>
+                        <TagHint>Exceções e consumo ficam no detalhe do serviço</TagHint>
                       </div>
                     </div>
 
@@ -547,14 +547,14 @@ export default function ServicosPage() {
                         href={hrefEdicao}
                         className="inline-flex items-center justify-center rounded-xl border border-zinc-300 bg-white px-4 py-2 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50"
                       >
-                        {ehCombo ? "Editar combo" : "Editar servico"}
+                        {ehCombo ? "Editar combo" : "Editar serviço"}
                       </Link>
 
                       <Link
                         href={hrefEdicao}
                         className="inline-flex items-center justify-center rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-2 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-100"
                       >
-                        {ehCombo ? "Ver composicao" : "Ver excecoes"}
+                        {ehCombo ? "Ver composicao" : "Ver exceções"}
                       </Link>
 
                       {podeGerenciar ? (
@@ -593,11 +593,11 @@ export default function ServicosPage() {
 
       <ConfirmActionModal
         open={Boolean(servicoParaExcluir)}
-        title="Excluir servico"
+        title="Excluir serviço"
         description={`Confirme a exclusao de ${
-          servicoParaExcluir?.nome || "este servico"
+          servicoParaExcluir?.nome || "este serviço"
         }.`}
-        confirmLabel="Excluir servico"
+        confirmLabel="Excluir serviço"
         tone="danger"
         loading={Boolean(servicoParaExcluir && savingId === servicoParaExcluir.id)}
         onClose={() => {
@@ -611,30 +611,30 @@ export default function ServicosPage() {
       <AppModal
         open={ajudaOpen}
         onClose={() => setAjudaOpen(false)}
-        title="Ajuda de comissao e operacao"
-        description="Regras de comissao, taxa e excecao ficam aqui quando voce precisar consultar."
+        title="Ajuda de comissão e operação"
+        description="Regras de comissão, taxa e exceção ficam aqui quando você precisar consultar."
         maxWidthClassName="max-w-5xl"
         bodyClassName="bg-[#f7f8fb]"
       >
         <ComissaoHelpPanel
           eyebrow="Comissao"
-          title="Padrao primeiro. Excecao so quando fizer sentido."
-          description="Defina a regra principal no servico. Quando um profissional foge do padrao, ajuste somente aquele vinculo."
+          title="Padrão primeiro. Excecao só quando fizer sentido."
+          description="Defina a regra principal no serviço. Quando um profissional foge do padrão, ajuste somente aquele vínculo."
           steps={[
             {
-              title: "Regra padrao",
+              title: "Regra padrão",
               description:
-                "A comissao da lista vale para o servico inteiro ate que voce crie uma excecao por profissional.",
+                "A comissão da lista vale para o serviço inteiro até que você crie uma exceção por profissional.",
             },
             {
               title: "Excecao pontual",
               description:
-                "Use o detalhe do servico para mudar preco, duracao, base ou comissao apenas para quem precisa.",
+                "Use o detalhe do serviço para mudar preço, duração, base ou comissão apenas para quem precisa.",
             },
             {
               title: "Taxa de maquininha",
               description:
-                "A taxa geral fica em Configuracoes. Aqui voce decide se ela entra ou nao no calculo da comissao.",
+                "A taxa geral fica em Configurações. Aqui você decide se ela entra ou não no cálculo da comissão.",
             },
           ]}
         >
@@ -643,7 +643,7 @@ export default function ServicosPage() {
               href="/configuracoes"
               className="inline-flex items-center justify-center rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50"
             >
-              Abrir Configuracoes
+              Abrir Configurações
             </Link>
           </div>
         </ComissaoHelpPanel>

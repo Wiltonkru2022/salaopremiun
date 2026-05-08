@@ -92,8 +92,8 @@ export default function AssinaturaHistoricoModal({
     <AppModal
       open={open}
       onClose={onClose}
-      title="Historico de pagamentos"
-      description="Veja as cobrancas ja geradas da assinatura."
+      title="Histórico de pagamentos"
+      description="Veja as cobranças já geradas da assinatura."
       maxWidthClassName="max-w-5xl"
       zIndexClassName="z-[120]"
       panelClassName="max-h-[90vh]"
@@ -110,11 +110,11 @@ export default function AssinaturaHistoricoModal({
     >
       {loading ? (
         <div className="rounded-[24px] border border-zinc-200 bg-zinc-50 p-8 text-sm text-zinc-500">
-          Carregando historico...
+          Carregando histórico...
         </div>
       ) : historico.length === 0 ? (
         <div className="rounded-[24px] border border-dashed border-zinc-300 bg-zinc-50 p-8 text-sm text-zinc-500">
-          Nenhum historico encontrado.
+          Nenhum histórico encontrado.
         </div>
       ) : (
         <div className="space-y-4">

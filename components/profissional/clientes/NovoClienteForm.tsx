@@ -56,7 +56,7 @@ export default function NovoClienteForm() {
     >
       <ProfissionalSectionHeader
         title="Novo cliente"
-        description="Cadastre o essencial para agendar e abrir comandas mais rapido."
+        description="Cadastre o essencial para agendar e abrir comandas mais rápido."
       />
 
       <div>
@@ -115,7 +115,7 @@ export default function NovoClienteForm() {
         </div>
       ) : (
         <div className="rounded-[18px] border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-500">
-          Depois do cadastro, o cliente ja fica disponivel para agenda e comanda.
+          Depois do cadastro, o cliente já fica disponível para agenda e comanda.
         </div>
       )}
 

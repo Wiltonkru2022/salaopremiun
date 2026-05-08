@@ -120,8 +120,8 @@ export default function AgendaModalFormAgendamento({
         <div className="mt-3">
           <SearchableSelect
             label="Servico"
-            placeholder="Digite o nome do servico"
-            emptyText="Nenhum servico encontrado."
+            placeholder="Digite o nome do serviço"
+            emptyText="Nenhum serviço encontrado."
             options={servicosOptions}
             value={servicoId}
             onChange={onServicoChange}
@@ -129,7 +129,7 @@ export default function AgendaModalFormAgendamento({
         </div>
       </Section>
 
-      <Section eyebrow="Fluxo" title="Horario, status e caixa">
+      <Section eyebrow="Fluxo" title="Horário, status e caixa">
         <div className="space-y-3">
           <div>
             <label className="mb-1.5 flex items-center gap-2 text-xs font-semibold text-zinc-700">
@@ -199,7 +199,7 @@ export default function AgendaModalFormAgendamento({
         </div>
       </Section>
 
-      <Section eyebrow="Detalhes" title="Observacoes da recepcao e do atendimento">
+      <Section eyebrow="Detalhes" title="Observacoes da recepção e do atendimento">
         <label className="mb-1.5 flex items-center gap-2 text-xs font-semibold text-zinc-700">
           <StickyNote size={13} />
           Observacoes
@@ -209,7 +209,7 @@ export default function AgendaModalFormAgendamento({
           value={observacoes}
           onChange={(e) => onObservacoesChange(e.target.value)}
           className="min-h-[120px] w-full rounded-2xl border border-zinc-200 bg-zinc-50 px-3 py-3 text-sm outline-none transition focus:border-zinc-900 focus:bg-white"
-          placeholder="Anotacoes internas, combinados, preferencias ou observacoes importantes."
+          placeholder="Anotacoes internas, combinados, preferencias ou observações importantes."
         />
       </Section>
 

@@ -93,13 +93,13 @@ export default async function CompararPlanosPage() {
           <div className="bg-zinc-950 p-6 text-white sm:p-8">
             <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-black uppercase tracking-[0.20em] text-[var(--app-accent)]">
               <Sparkles size={14} />
-              Planos SalaoPremium
+              Planos SalãoPremium
             </div>
             <h1 className="mt-4 max-w-3xl font-display text-[2.45rem] font-black leading-tight tracking-[-0.05em]">
               Escolha o plano certo sem poluicao.
             </h1>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-zinc-300">
-              Agora a comparacao mostra somente o que importa: preco, capacidade
+              Agora a comparacao mostra somente o que importa: preço, capacidade
               da equipe e recursos principais para operar melhor.
             </p>
           </div>
@@ -114,8 +114,8 @@ export default async function CompararPlanosPage() {
               </div>
               <p className="mt-2 text-sm leading-6 text-zinc-500">
                 {jaPossuiAssinatura
-                  ? "Escolha outro plano para abrir a tela de assinatura ja pronta para upgrade ou downgrade."
-                  : "Escolha um plano para ativar a assinatura do seu salao."}
+                  ? "Escolha outro plano para abrir a tela de assinatura já pronta para upgrade ou downgrade."
+                  : "Escolha um plano para ativar a assinatura do seu salão."}
               </p>
               <Link
                 href="/meu-plano"

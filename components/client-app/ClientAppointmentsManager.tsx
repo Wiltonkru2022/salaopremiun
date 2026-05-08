@@ -187,7 +187,7 @@ function RescheduleAppointmentForm({
 
           {loading ? (
             <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-500">
-              Buscando horarios livres...
+              Buscando horários livres...
             </div>
           ) : error ? (
             <div className="rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
@@ -249,7 +249,7 @@ function RescheduleAppointmentForm({
             </>
           ) : (
             <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-500">
-              Sem horarios livres para esse atendimento.
+              Sem horários livres para esse atendimento.
             </div>
           )}
 
@@ -302,14 +302,14 @@ export default function ClientAppointmentsManager({
           <div>
             <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-bold uppercase tracking-[0.14em] text-zinc-300">
               <CalendarClock size={14} />
-              Meus horarios
+              Meus horários
             </div>
             <h2 className="mt-3 text-2xl font-black tracking-[-0.05em]">
               Sua agenda no salão
             </h2>
             <p className="mt-2 text-sm leading-6 text-zinc-300">
-              Veja seus proximos horarios, reagende quando precisar e avalie
-              atendimentos concluidos.
+              Veja seus próximos horários, reagende quando precisar e avalie
+              atendimentos concluídos.
             </p>
           </div>
           <div className="rounded-2xl bg-white/10 px-4 py-3 text-right">
@@ -342,7 +342,7 @@ export default function ClientAppointmentsManager({
             Dica
           </div>
           <p className="mt-1 text-sm leading-5">
-            Chegue alguns minutos antes para manter sua experiencia tranquila.
+            Chegue alguns minutos antes para manter sua experiência tranquila.
           </p>
         </div>
       </div>
@@ -449,7 +449,7 @@ export default function ClientAppointmentsManager({
         ) : (
           <div className="rounded-[1.6rem] border border-white/70 bg-white p-5 shadow-[0_18px_48px_rgba(15,23,42,0.08)]">
             <h3 className="text-lg font-black text-zinc-950">
-              Sua agenda esta livre
+              Sua agenda está livre
             </h3>
             <p className="mt-2 text-sm leading-6 text-zinc-500">
               Escolha um salão, marque seu primeiro horário e acompanhe tudo por

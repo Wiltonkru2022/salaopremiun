@@ -137,7 +137,7 @@ export default function ComandaForm({ modo }: ComandaFormProps) {
 
   function exigirComandaEditavel() {
     if (comandaBloqueada) {
-      throw new Error("Comanda fechada ou cancelada nao pode ser editada.");
+      throw new Error("Comanda fechada ou cancelada não pode ser editada.");
     }
   }
 
@@ -216,11 +216,11 @@ export default function ComandaForm({ modo }: ComandaFormProps) {
       );
 
       if (!usuarioLogado) {
-        throw new Error("Usuario nao autenticado.");
+        throw new Error("Usuário não autenticado.");
       }
 
       if (!usuarioLogado.idSalao) {
-        throw new Error("Nao foi possivel identificar o salao.");
+        throw new Error("Não foi possível identificar o salão.");
       }
 
       setIdSalao(usuarioLogado.idSalao);
@@ -357,7 +357,7 @@ export default function ComandaForm({ modo }: ComandaFormProps) {
       .maybeSingle();
 
     if (error) throw error;
-    if (!comanda) throw new Error("Comanda nao encontrada.");
+    if (!comanda) throw new Error("Comanda não encontrada.");
 
     setNumero(comanda.numero);
     setClienteId(comanda.id_cliente || "");
@@ -370,14 +370,14 @@ export default function ComandaForm({ modo }: ComandaFormProps) {
   }
 
   async function salvarComandaBase() {
-    if (!numero) throw new Error("Numero da comanda nao definido.");
+    if (!numero) throw new Error("Número da comanda não definido.");
     if (modo === "editar") {
       exigirComandaEditavel();
     }
 
     const result = await processarComanda("salvar_base");
     if (!result.idComanda) {
-      throw new Error("Nao foi possivel salvar a comanda.");
+      throw new Error("Não foi possível salvar a comanda.");
     }
 
     return result.idComanda;
@@ -499,7 +499,7 @@ export default function ComandaForm({ modo }: ComandaFormProps) {
       <ConfirmActionModal
         open={Boolean(itemParaRemover)}
         title="Remover item da comanda"
-        description="Este item sera removido da comanda e o total sera recalculado."
+        description="Este item será removido da comanda e o total será recalculado."
         confirmLabel="Remover item"
         tone="danger"
         onClose={() => setItemParaRemover(null)}
@@ -522,7 +522,7 @@ export default function ComandaForm({ modo }: ComandaFormProps) {
                   {modo === "novo" ? "Nova Comanda" : `Comanda #${numero}`}
                 </h1>
                 <p className="mt-2 text-sm text-zinc-500">
-                  Controle atendimento, consumo, servicos, produtos e
+                  Controle atendimento, consumo, serviços, produtos e
                   fechamento.
                 </p>
               </div>
@@ -547,8 +547,8 @@ export default function ComandaForm({ modo }: ComandaFormProps) {
 
           {comandaBloqueada ? (
             <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-              Esta comanda esta {status}. Edicao de itens, valores e envio para
-              pagamento fica bloqueada para manter o caixa e as comissoes
+              Esta comanda está {status}. Edição de itens, valores e envio para
+              pagamento fica bloqueada para manter o caixa e as comissões
               consistentes.
             </div>
           ) : null}

@@ -12,7 +12,7 @@ export function BlogHeader() {
           </div>
           <div>
             <div className="text-[1.2rem] font-black tracking-tight text-zinc-950">
-              Blog SalaoPremium
+              Blog SalãoPremium
             </div>
             <div className="text-[11px] font-bold uppercase tracking-[0.2em] text-zinc-500">
               Conteúdo para gestão de salões
@@ -47,7 +47,7 @@ export function BlogFooter() {
         <div>
           <div className="flex items-center gap-2 text-lg font-black">
             <Sparkles size={18} className="text-amber-200" />
-            Blog SalaoPremium
+            Blog SalãoPremium
           </div>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-400">
             Artigos sobre agenda online, vendas, automação, redes sociais,
@@ -58,7 +58,7 @@ export function BlogFooter() {
           href={`https://${DOMINIO_RAIZ}`}
           className="inline-flex justify-center rounded-full border border-white/15 px-5 py-2.5 text-sm font-black text-zinc-100 transition hover:bg-white/10"
         >
-          Voltar ao SalaoPremium
+          Voltar ao SalãoPremium
         </Link>
       </div>
     </footer>

@@ -31,7 +31,7 @@ export default function AgendaQuickClientModal({
         <div className="flex items-start justify-between gap-4 border-b border-zinc-200 bg-zinc-50/70 px-5 py-4">
           <div>
             <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-400">
-              Cadastro rapido
+              Cadastro rápido
             </div>
             <h3 className="mt-1 text-lg font-bold text-zinc-900">
               Nova cliente

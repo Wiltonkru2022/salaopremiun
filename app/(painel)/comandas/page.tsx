@@ -277,7 +277,7 @@ export default function ComandasPage() {
     return (
       <div className="p-6">
         <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-rose-700">
-          Voce nao tem permissao para acessar Comandas.
+          Você não tem permissão para acessar Comandas.
         </div>
       </div>
     );
@@ -297,7 +297,7 @@ export default function ComandasPage() {
               </h1>
               <p className="mt-2 text-sm leading-6 text-zinc-600">
                 Consumo, status e total da venda em uma leitura mais direta para
-                recepcao e caixa.
+                recepção e caixa.
               </p>
             </div>
 
@@ -332,7 +332,7 @@ export default function ComandasPage() {
             value={formatCurrency(resumoComandas.totalAberto)}
           />
           <ResumoCard
-            label="Fechadas no historico"
+            label="Fechadas no histórico"
             value={String(resumoComandas.fechadas)}
           />
         </div>
@@ -347,7 +347,7 @@ export default function ComandasPage() {
           <div className="grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1.5fr)_220px_160px]">
             <input
               type="text"
-              placeholder="Buscar por numero da comanda ou cliente"
+              placeholder="Buscar por número da comanda ou cliente"
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
               className="w-full rounded-2xl border border-zinc-300 px-4 py-2.5 text-sm outline-none focus:border-zinc-900"

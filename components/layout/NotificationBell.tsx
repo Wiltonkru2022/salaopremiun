@@ -158,9 +158,9 @@ export default function NotificationBell({
 
     const installNotification: ShellNotification = {
       id: INSTALL_NOTIFICATION_ID,
-      title: "Instalar app do salao",
+      title: "Instalar app do salão",
       description:
-        "Instale o SalaoPremium no computador para abrir o painel como aplicativo.",
+        "Instale o SalãoPremium no computador para abrir o painel como aplicativo.",
       tone: "info",
       category: "sistema",
       severity: "medium",
@@ -297,7 +297,7 @@ export default function NotificationBell({
           "relative inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-zinc-200 bg-white text-zinc-800 shadow-sm transition hover:-translate-y-0.5 hover:border-[var(--app-accent)] hover:bg-zinc-50 hover:text-zinc-950",
           open && "border-[var(--app-accent)] bg-zinc-50 text-zinc-950"
         )}
-        aria-label="Abrir notificacoes"
+        aria-label="Abrir notificações"
       >
         <Bell size={18} />
         {unreadCount > 0 ? (
@@ -318,7 +318,7 @@ export default function NotificationBell({
                 Notificacoes
               </div>
               <div className="mt-1 text-[11px] text-zinc-400">
-                Pendentes e criticos ficam visiveis ate a resolucao.
+                Pendentes e críticos ficam visiveis até a resolucao.
               </div>
             </div>
 
@@ -417,8 +417,8 @@ export default function NotificationBell({
               })
             ) : (
               <div className="rounded-[22px] border border-zinc-100 bg-zinc-50 p-4 text-sm text-zinc-500">
-                Tudo quieto por aqui. Quando houver horario para confirmar,
-                assinatura vencendo, aniversario ou alerta do caixa, aparece aqui.
+                Tudo quieto por aqui. Quando houver horário para confirmar,
+                assinatura vencendo, aniversário ou alerta do caixa, aparece aqui.
               </div>
             )}
           </div>

@@ -58,7 +58,7 @@ export default function AssinaturaPage() {
     return (
       <AppLoading
         title="Carregando assinatura"
-        message="Aguarde enquanto consultamos plano, cobrancas, renovacao e historico de pagamentos."
+        message="Aguarde enquanto consultamos plano, cobranças, renovação e histórico de pagamentos."
         fullHeight={false}
       />
     );
@@ -67,7 +67,7 @@ export default function AssinaturaPage() {
   if (permissoes && !permissoes.assinatura_ver) {
     return (
       <div className="rounded-[24px] border border-rose-200 bg-rose-50 p-5 text-rose-700 shadow-sm">
-        Voce nao tem permissao para acessar Assinatura.
+        Você não tem permissão para acessar Assinatura.
       </div>
     );
   }
@@ -113,7 +113,7 @@ export default function AssinaturaPage() {
           onClick={abrirHistoricoModal}
           className="rounded-2xl border border-violet-200 bg-violet-50 px-4.5 py-2 text-sm font-semibold text-violet-700 transition hover:bg-violet-100"
         >
-          Ver historico de pagamentos
+          Ver histórico de pagamentos
         </button>
       </div>
 
@@ -135,13 +135,13 @@ export default function AssinaturaPage() {
 
       {jaPossuiAssinatura ? (
         <section className="rounded-[24px] border border-sky-200 bg-sky-50 px-4 py-3.5 text-sm leading-6 text-sky-900 shadow-sm">
-          <strong>Voce ja possui uma assinatura.</strong> Escolha o pacote
-          desejado abaixo e conclua a cobranca para registrar o upgrade,
-          downgrade ou a renovacao do plano atual.
+          <strong>Você já possui uma assinatura.</strong> Escolha o pacote
+          desejado abaixo e conclua a cobrança para registrar o upgrade,
+          downgrade ou a renovação do plano atual.
         </section>
       ) : !mostrarBotaoIniciarTrial && jaUsouTrial ? (
         <section className="rounded-[24px] border border-amber-200 bg-amber-50 px-4 py-3.5 text-sm leading-6 text-amber-900 shadow-sm">
-          <strong>O teste gratis ja foi usado neste salao.</strong> Agora a
+          <strong>O teste grátis já foi usado neste salão.</strong> Agora a
           contratacao segue pelos planos pagos.
         </section>
       ) : null}
@@ -179,13 +179,13 @@ export default function AssinaturaPage() {
       ) : mostrarCardAssinaturaAtiva ? (
         <section className="rounded-[24px] border border-zinc-200 bg-white p-4.5 shadow-sm">
           <h2 className="text-2xl font-bold text-zinc-950">
-            {trialAtivo ? "Teste gratis ativo" : "Assinatura ativa"}
+            {trialAtivo ? "Teste grátis ativo" : "Assinatura ativa"}
           </h2>
 
           <p className="mt-2 text-sm text-zinc-500">
             {trialAtivo
-              ? "Seu teste gratis esta liberado com acesso completo. Escolha um plano antes do prazo terminar para continuar sem interrupcao."
-              : "Seu acesso esta liberado. A area de renovacao aparecera apenas quando estiver perto do vencimento ou se houver cobranca pendente."}
+              ? "Seu teste grátis está liberado com acesso completo. Escolha um plano antes do prazo terminar para continuar sem interrupcao."
+              : "Seu acesso está liberado. A área de renovação aparecera apenas quando estiver perto do vencimento ou se houver cobrança pendente."}
           </p>
 
           {resumoAssinatura.diasRestantes != null ? (

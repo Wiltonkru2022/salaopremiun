@@ -60,17 +60,17 @@ type ComandaRow = {
 };
 
 const STATUS_OPTIONS = [
-  ["pendente", "Pendente de confirmacao"],
+  ["pendente", "Pendente de confirmação"],
   ["confirmado", "Confirmado"],
   ["em_atendimento", "Em atendimento"],
   ["atendido", "Atendido"],
   ["aguardando_pagamento", "Aguardando pagamento"],
-  ["faltou", "Cliente nao compareceu"],
+  ["faltou", "Cliente não compareceu"],
   ["cancelado", "Cancelado"],
 ] as const;
 
 function formatDate(value?: string | null) {
-  if (!value) return "Data nao informada";
+  if (!value) return "Data não informada";
   const [year, month, day] = value.split("-").map(Number);
   return new Intl.DateTimeFormat("pt-BR", {
     weekday: "long",
@@ -213,7 +213,7 @@ export default async function AgendamentoDetalheProfissionalPage({
             Voltar para agenda
           </Link>
           <div className="rounded-[1.5rem] border border-red-200 bg-red-50 p-4 text-sm text-red-700 shadow-sm">
-            Agendamento nao encontrado ou fora da sua agenda.
+            Agendamento não encontrado ou fora da sua agenda.
           </div>
         </div>
       </ProfissionalShell>
@@ -376,7 +376,7 @@ export default async function AgendamentoDetalheProfissionalPage({
         <ProfissionalSurface>
           <ProfissionalSectionHeader
             title="Editar atendimento"
-            description="Ajuste horario, status e observacoes."
+            description="Ajuste horário, status e observações."
           />
 
           {["pendente", "confirmado"].includes(String(status || "").toLowerCase()) ? (
@@ -388,8 +388,8 @@ export default async function AgendamentoDetalheProfissionalPage({
               <div>
                 <div className="font-bold text-zinc-950">Reagendar atendimento</div>
                 <div className="mt-1 leading-5">
-                  Troque a data ou a hora abaixo e salve. O cliente e o salao
-                  recebem aviso conforme a configuracao de notificacoes.
+                  Troque a data ou a hora abaixo e salve. O cliente e o salão
+                  recebem aviso conforme a configuração de notificações.
                 </div>
               </div>
             </div>
@@ -437,7 +437,7 @@ export default async function AgendamentoDetalheProfissionalPage({
                 className={`${inputClass()} min-h-24 resize-none`}
                 name="observacoes"
                 defaultValue={agendamento.observacoes || ""}
-                placeholder="Ex.: cliente pediu ajuste de horario"
+                placeholder="Ex.: cliente pediu ajuste de horário"
               />
             </label>
 
@@ -448,18 +448,18 @@ export default async function AgendamentoDetalheProfissionalPage({
                 value="true"
                 className="mt-1"
               />
-              Salvar mesmo se houver conflito com outro horario.
+              Salvar mesmo se houver conflito com outro horário.
             </label>
 
             <button className="w-full rounded-[18px] bg-zinc-950 px-4 py-2.5 text-sm font-bold text-white">
-              Salvar alteracoes
+              Salvar alterações
             </button>
           </form>
         </ProfissionalSurface>
 
         <ProfissionalSurface>
           <ProfissionalSectionHeader
-            title="Acoes rapidas"
+            title="Ações rapidas"
             description="Use quando o atendimento mudar de rumo."
           />
 
@@ -468,7 +468,7 @@ export default async function AgendamentoDetalheProfissionalPage({
               <input type="hidden" name="id_agendamento" value={agendamento.id} />
               <button className="flex w-full items-center justify-center gap-2 rounded-[18px] border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm font-bold text-amber-800">
                 <UserX size={18} />
-                Cliente nao compareceu
+                Cliente não compareceu
               </button>
             </form>
 

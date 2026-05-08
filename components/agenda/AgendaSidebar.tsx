@@ -147,8 +147,8 @@ export default function AgendaSidebar(props: Props) {
     : view === "clientSearch"
       ? "Busque no cadastro e abra a ficha da cliente."
       : view === "waitlist"
-        ? "Fila rapida de clientes e atendimentos pendentes."
-        : "Visao geral do periodo";
+        ? "Fila rápida de clientes e atendimentos pendentes."
+        : "Visão geral do periodo";
 
   const showBackButton = Boolean(panel) || view !== "overview";
 
@@ -345,7 +345,7 @@ export default function AgendaSidebar(props: Props) {
 
               <section className="rounded-[24px] border border-zinc-200/80 bg-white/98 p-3.5 shadow-[0_12px_28px_rgba(15,23,42,0.05)] transition duration-300 hover:-translate-y-[1px] hover:shadow-[0_18px_40px_rgba(15,23,42,0.07)]">
                 <h3 className="text-[1.15rem] font-semibold tracking-[-0.04em] text-slate-900">
-                  Acoes rapidas
+                  Ações rapidas
                 </h3>
 
                 <div className="mt-3 grid grid-cols-2 gap-2">
@@ -356,7 +356,7 @@ export default function AgendaSidebar(props: Props) {
                   />
                   <QuickAction
                     icon={<Lock size={16} />}
-                    label="Bloquear horario"
+                    label="Bloquear horário"
                     onClick={onOpenBlock}
                   />
                   <QuickAction
@@ -371,7 +371,7 @@ export default function AgendaSidebar(props: Props) {
                   />
                   <QuickAction
                     icon={<CreditCard size={16} />}
-                    label="Abrir credito"
+                    label="Abrir crédito"
                     onClick={onOpenCredit}
                   />
                   <QuickAction
@@ -490,7 +490,7 @@ function ClientSearchView({
           </div>
         ) : (
           <div className="mt-4 rounded-[20px] border border-dashed border-zinc-200 bg-zinc-50 px-4 py-4">
-            <div className="text-sm font-semibold text-zinc-900">Nao encontrado</div>
+            <div className="text-sm font-semibold text-zinc-900">Não encontrado</div>
             <p className="mt-1 text-sm text-zinc-500">
               Deseja criar novo cliente?
             </p>
@@ -562,7 +562,7 @@ function WaitlistView({ items }: { items: AgendaWaitlistItem[] }) {
           Clientes aguardando
         </div>
         <p className="mt-1 text-sm text-zinc-500">
-          Lista rapida para acompanhar encaixes e pendencias da agenda.
+          Lista rápida para acompanhar encaixes e pendencias da agenda.
         </p>
 
         {items.length > 0 ? (

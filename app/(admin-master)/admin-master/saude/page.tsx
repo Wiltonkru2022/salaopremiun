@@ -105,8 +105,8 @@ export default async function AdminMasterSaudePage() {
                 Webhooks, checkouts, bloqueios e jobs em uma tela acionavel.
               </h1>
               <p className="mt-4 max-w-3xl text-sm leading-6 text-zinc-300">
-                Esta pagina junta os sinais que mais afetam venda de assinatura:
-                cobranca Asaas, cron de renovacao, saloes bloqueados, alertas e
+                Esta página junta os sinais que mais afetam venda de assinatura:
+                cobrança Asaas, cron de renovação, salões bloqueados, alertas e
                 falhas recentes.
               </p>
             </div>

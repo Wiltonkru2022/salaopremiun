@@ -4,7 +4,7 @@ export default function ClientePerfilLoading() {
   return (
     <ClientAppPageSkeleton
       title="Perfil"
-      subtitle="Carregando seus dados com seguranca."
+      subtitle="Carregando seus dados com segurança."
       panels={2}
     />
   );

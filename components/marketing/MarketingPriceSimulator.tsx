@@ -47,7 +47,7 @@ export default function MarketingPriceSimulator() {
             WhatsApp comercial
           </div>
           <h2 className="mt-2 font-display text-2xl font-bold tracking-[-0.04em] text-zinc-950">
-            Simulador de cobranca por mensagem
+            Simulador de cobrança por mensagem
           </h2>
         </div>
 
@@ -57,7 +57,7 @@ export default function MarketingPriceSimulator() {
       </div>
 
       <p className="mt-3 text-sm text-zinc-500">
-        Ajuste o custo da operacao e o valor cobrado do cliente para montar sua
+        Ajuste o custo da operação e o valor cobrado do cliente para montar sua
         oferta de disparo por mensagem.
       </p>
 
@@ -77,7 +77,7 @@ export default function MarketingPriceSimulator() {
         />
 
         <Field
-          label="Preco cobrado por mensagem"
+          label="Preço cobrado por mensagem"
           value={cobrancaPorMensagem}
           onChange={setCobrancaPorMensagem}
           placeholder="0,35"

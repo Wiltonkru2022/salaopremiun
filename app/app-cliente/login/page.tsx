@@ -85,7 +85,7 @@ export default async function LoginClientePage({
                 </div>
               </div>
               <p className="mt-2.5 text-sm leading-6 text-zinc-300">
-                Acompanhe seus horarios e agende seus proximos cuidados.
+                Acompanhe seus horários e agende seus próximos cuidados.
               </p>
             </section>
 

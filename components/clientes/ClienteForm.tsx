@@ -174,7 +174,7 @@ async function bootstrap() {
 
     const row = clienteRows?.[0];
     const rowIdSalao = row?.id_salao;
-    if (!rowIdSalao) throw new Error("Cliente sem salao vinculado.");
+    if (!rowIdSalao) throw new Error("Cliente sem salão vinculado.");
     if (!row) throw new Error("Cliente não encontrado.");
 
     setCliente({
@@ -482,7 +482,7 @@ async function bootstrap() {
             Cadastro simples com os dados principais, cuidados de atendimento e status da cliente.
           </p>
           <div className="mt-4 inline-flex rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-800">
-            Credito disponivel:{" "}
+            Crédito disponível:{" "}
             {cliente.cashback.toLocaleString("pt-BR", {
               style: "currency",
               currency: "BRL",
@@ -552,7 +552,7 @@ async function bootstrap() {
 
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
           <div className="space-y-6 xl:col-span-2">
-            <Card title="1. Dados principais" subtitle="Informacoes basicas para identificar e atender bem a cliente.">
+            <Card title="1. Dados principais" subtitle="Informações básicas para identificar e atender bem a cliente.">
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <Input label="Nome completo" value={cliente.nome} onChange={(v) => setClienteField("nome", v)} required />
                 <Input label="Nome social" value={cliente.nome_social} onChange={(v) => setClienteField("nome_social", v)} />
@@ -613,7 +613,7 @@ async function bootstrap() {
               </div>
             </Card>
 
-            <Card title="2. Cuidados e ficha tecnica" subtitle="Informacoes importantes para um atendimento seguro.">
+            <Card title="2. Cuidados e ficha tecnica" subtitle="Informações importantes para um atendimento seguro.">
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <Textarea label="Alergias" value={ficha.alergias} onChange={(v) => setFichaField("alergias", v)} />
                 <Textarea
@@ -656,7 +656,7 @@ async function bootstrap() {
               </div>
             </Card>
 
-            <Card title="3. Preferencias de atendimento" subtitle="Detalhes que ajudam a personalizar a experiencia.">
+            <Card title="3. Preferencias de atendimento" subtitle="Detalhes que ajudam a personalizar a experiência.">
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <Input
                   label="Bebida favorita"

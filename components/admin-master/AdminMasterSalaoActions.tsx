@@ -46,7 +46,7 @@ async function parseApiResponse(response: Response) {
   };
 
   if (!response.ok || data.ok === false) {
-    throw new Error(data.error || "Nao foi possivel concluir a acao.");
+    throw new Error(data.error || "Não foi possível concluir a ação.");
   }
 
   return data;
@@ -75,9 +75,9 @@ export default function AdminMasterSalaoActions({
   const [vencimento, setVencimento] = useState(formatDateInput(vencimentoAtual));
   const [notaTitulo, setNotaTitulo] = useState("");
   const [notaTexto, setNotaTexto] = useState("");
-  const [ticketAssunto, setTicketAssunto] = useState("Acompanhar salao pelo AdminMaster");
+  const [ticketAssunto, setTicketAssunto] = useState("Acompanhar salão pelo AdminMaster");
   const [ticketMensagem, setTicketMensagem] = useState(
-    "Abrindo ticket interno para acompanhamento operacional deste salao."
+    "Abrindo ticket interno para acompanhamento operacional deste salão."
   );
 
   const salaoBloqueado = String(statusSalao || "").toLowerCase() === "bloqueado";
@@ -123,7 +123,7 @@ export default function AdminMasterSalaoActions({
       setFeedback({
         tone: "error",
         message:
-          error instanceof Error ? error.message : "Falha ao executar a acao.",
+          error instanceof Error ? error.message : "Falha ao executar a ação.",
       });
     } finally {
       setLoadingKey(null);
@@ -137,10 +137,10 @@ export default function AdminMasterSalaoActions({
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <div className="text-xs font-bold uppercase tracking-[0.25em] text-zinc-400">
-                Acoes operacionais
+                Ações operacionais
               </div>
               <h3 className="mt-2 font-display text-2xl font-black text-zinc-950">
-                Ajustes rapidos do salao
+                Ajustes rapidos do salão
               </h3>
             </div>
 
@@ -161,10 +161,10 @@ export default function AdminMasterSalaoActions({
                   `/api/admin-master/saloes/${idSalao}/${salaoBloqueado ? "desbloquear" : "bloquear"}`,
                   {
                     motivo: salaoBloqueado
-                      ? "Desbloqueio rapido pelo detalhe do salao."
-                      : "Bloqueio rapido pelo detalhe do salao.",
+                      ? "Desbloqueio rápido pelo detalhe do salão."
+                      : "Bloqueio rápido pelo detalhe do salão.",
                   },
-                  salaoBloqueado ? "Salao desbloqueado." : "Salao bloqueado."
+                  salaoBloqueado ? "Salão desbloqueado." : "Salão bloqueado."
                 )
               }
               disabled={loadingKey !== null}
@@ -178,12 +178,12 @@ export default function AdminMasterSalaoActions({
                 Status
               </div>
               <div className="mt-2 text-xl font-black">
-                {salaoBloqueado ? "Desbloquear salao" : "Bloquear salao"}
+                {salaoBloqueado ? "Desbloquear salão" : "Bloquear salão"}
               </div>
               <div className="mt-2 text-sm opacity-80">
                 {salaoBloqueado
                   ? "Restaura acesso operacional do cliente."
-                  : "Impede novas operacoes ate revisao."}
+                  : "Impede novas operacoes até revisao."}
               </div>
             </button>
 
@@ -204,7 +204,7 @@ export default function AdminMasterSalaoActions({
           </div>
 
           <div className={`mt-5 rounded-[22px] border px-4 py-3 text-sm ${feedbackClass}`}>
-            {feedback.message || "Tudo que voce fizer aqui passa pelo servidor e atualiza a tela em seguida."}
+            {feedback.message || "Tudo que você fizer aqui passa pelo servidor e atualiza a tela em seguida."}
           </div>
         </div>
 
@@ -214,7 +214,7 @@ export default function AdminMasterSalaoActions({
           </div>
           <div className="mt-5 grid gap-4 md:grid-cols-2">
             <div className="rounded-[24px] border border-zinc-200 bg-zinc-50 p-4">
-              <label className="text-sm font-bold text-zinc-700">Plano do salao</label>
+              <label className="text-sm font-bold text-zinc-700">Plano do salão</label>
               <select
                 value={planoSelecionado}
                 onChange={(event) => setPlanoSelecionado(event.target.value)}
@@ -287,13 +287,13 @@ export default function AdminMasterSalaoActions({
               type="text"
               value={notaTitulo}
               onChange={(event) => setNotaTitulo(event.target.value)}
-              placeholder="Titulo rapido da observacao"
+              placeholder="Titulo rápido da observacao"
               className="w-full rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm font-semibold text-zinc-950 outline-none focus:border-zinc-950"
             />
             <textarea
               value={notaTexto}
               onChange={(event) => setNotaTexto(event.target.value)}
-              placeholder="Escreva o contexto interno do salao aqui."
+              placeholder="Escreva o contexto interno do salão aqui."
               rows={4}
               className="w-full rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-900 outline-none focus:border-zinc-950"
             />
@@ -364,7 +364,7 @@ export default function AdminMasterSalaoActions({
               disabled={loadingKey !== null || !ticketAssunto.trim() || !ticketMensagem.trim()}
               className="w-full rounded-2xl bg-zinc-950 px-4 py-3 text-sm font-black text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:bg-zinc-400"
             >
-              Criar ticket do salao
+              Criar ticket do salão
             </button>
           </div>
         </div>

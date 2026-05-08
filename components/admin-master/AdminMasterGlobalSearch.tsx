@@ -101,7 +101,7 @@ export default function AdminMasterGlobalSearch() {
           onBlur={() => {
             window.setTimeout(() => setOpen(false), 140);
           }}
-          placeholder="Buscar salao, cobranca, ticket, webhook, admin ou plano"
+          placeholder="Buscar salão, cobrança, ticket, webhook, admin ou plano"
           className="w-full bg-transparent text-sm font-medium text-zinc-900 outline-none placeholder:text-zinc-400"
         />
         <span className="hidden rounded-full bg-zinc-100 px-2.5 py-1 text-[11px] font-black uppercase tracking-[0.2em] text-zinc-500 md:inline-flex">

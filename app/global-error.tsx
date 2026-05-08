@@ -33,11 +33,11 @@ export default function GlobalError({
               Falha global
             </div>
             <h1 className="mt-4 font-display text-4xl font-black">
-              O SalaoPremium encontrou um erro inesperado
+              O SalãoPremium encontrou um erro inesperado
             </h1>
             <p className="mt-4 text-sm leading-7 text-zinc-600">
               O incidente foi capturado pela nova camada de monitoramento. Tente
-              recarregar a aplicacao. Se a falha persistir, o Admin Master ja tera o
+              recarregar a aplicacao. Se a falha persistir, o Admin Master já tera o
               contexto para diagnosticar.
             </p>
             <div className="mt-6 flex flex-wrap gap-3">

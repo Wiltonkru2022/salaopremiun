@@ -144,7 +144,7 @@ export default function Sidebar({
                     </p>
                     <p className="mt-1 text-xs leading-5 opacity-80">
                       {criticalNotificationsCount > 0
-                        ? "Use o sininho e a area de assinatura para nao deixar risco escondido."
+                        ? "Use o sininho e a área de assinatura para não deixar risco escondido."
                         : `${planoNome || "Plano atual"} exige revisao para manter a operacao sem interrupcao.`}
                     </p>
                     {canSeeAssinatura ? (
@@ -238,7 +238,7 @@ const GROUPS: Array<{ label: string; hrefs: string[] }> = [
     hrefs: ["/dashboard", "/agenda", "/comandas", "/clientes"],
   },
   {
-    label: "Equipe e catalogo",
+    label: "Equipe e catálogo",
     hrefs: ["/profissionais", "/servicos", "/produtos", "/estoque"],
   },
   {

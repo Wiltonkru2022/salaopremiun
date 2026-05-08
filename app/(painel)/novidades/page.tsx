@@ -84,18 +84,18 @@ export default async function NovidadesPage() {
           <div className="bg-zinc-950 px-5 py-6 text-white sm:px-6 sm:py-7">
             <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.22em] text-white/70">
               <Sparkles size={14} />
-              Roadmap do SalaoPremium
+              Roadmap do SalãoPremium
             </div>
             <h1 className="mt-4 max-w-3xl font-display text-3xl font-bold tracking-[-0.04em] sm:text-[2.7rem]">
-              O que esta entrando no produto
+              O que está entrando no produto
             </h1>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-white/70 sm:text-[15px]">
-              Uma visao direta das entregas que deixam o painel, o app cliente e
-              a operacao do salao mais fortes. NFS-e e WhatsApp automatico ficam
-              marcados como novidades em implementacao.
+              Uma visão direta das entregas que deixam o painel, o app cliente e
+              a operação do salão mais fortes. NFS-e e WhatsApp automático ficam
+              marcados como novidades em implementação.
             </p>
             <div className="mt-5 flex flex-wrap gap-2">
-              <HeroMetric value={inProgress.length} label="em implementacao" />
+              <HeroMetric value={inProgress.length} label="em implementação" />
               <HeroMetric value={planned.length} label="planejadas" />
               <HeroMetric value={delivered.length} label="disponiveis" />
             </div>
@@ -122,9 +122,9 @@ export default async function NovidadesPage() {
                     Evolucao com controle
                   </div>
                   <p className="mt-1 text-sm leading-6 text-zinc-600">
-                    Recursos que mexem com agenda, cobranca e mensagem entram em
-                    etapas para preservar estabilidade, notificacoes e dados do
-                    salao.
+                    Recursos que mexem com agenda, cobrança e mensagem entram em
+                    etapas para preservar estabilidade, notificações e dados do
+                    salão.
                   </p>
                 </div>
               </div>

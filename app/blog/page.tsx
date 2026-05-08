@@ -12,7 +12,7 @@ export const revalidate = 300;
 export const metadata: Metadata = {
   title: "Blog",
   description:
-    "Artigos sobre agenda online, vendas, fidelização, redes sociais e gestão para salões com o ecossistema SalaoPremium.",
+    "Artigos sobre agenda online, vendas, fidelização, redes sociais e gestão para salões com o ecossistema SalãoPremium.",
   alternates: {
     canonical: `https://${DOMINIO_BLOG}`,
   },
@@ -55,7 +55,7 @@ export default async function BlogPage() {
                 Conteúdo para salões crescerem
               </div>
               <h1 className="mt-5 max-w-4xl font-display text-[2.8rem] font-black leading-[1.02] text-slate-900 sm:text-[4.8rem]">
-                Blog SalaoPremium
+                Blog SalãoPremium
               </h1>
               <p className="mt-5 max-w-3xl text-base leading-8 text-slate-600">
                 Conteúdos práticos para organizar agenda, vender melhor,

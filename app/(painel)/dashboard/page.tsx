@@ -269,7 +269,7 @@ export default function DashboardPage() {
   const [erro, setErro] = useState("");
   const [semPermissao, setSemPermissao] = useState(false);
   const [faseCarregamento, setFaseCarregamento] = useState(
-    "Carregando resumo principal do salao."
+    "Carregando resumo principal do salão."
   );
   const [ultimaAtualizacao, setUltimaAtualizacao] = useState<string | null>(null);
   const [resumo, setResumo] = useState<DashboardResumo>(RESUMO_INICIAL);
@@ -284,7 +284,7 @@ export default function DashboardPage() {
       setFaseCarregamento("Validando acesso ao painel.");
 
       if (!painelSession?.idSalao) {
-        throw new Error("Nao foi possivel identificar o salao do usuario.");
+        throw new Error("Não foi possível identificar o salão do usuário.");
       }
 
       if (!painelSession.permissoes?.dashboard_ver) {
@@ -399,7 +399,7 @@ export default function DashboardPage() {
             <div>
               <h1 className="text-[1.6rem] font-bold text-zinc-900">Acesso negado</h1>
               <p className="mt-2 text-sm text-zinc-500">
-                Voce nao tem permissao para visualizar o dashboard.
+                Você não tem permissão para visualizar o dashboard.
               </p>
             </div>
           </div>
@@ -420,14 +420,14 @@ export default function DashboardPage() {
         <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
           <div className="max-w-3xl">
             <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-zinc-400">
-              Resumo do salao
+              Resumo do salão
             </div>
             <h1 className="mt-1.5 text-[1.85rem] font-bold tracking-[-0.04em] text-zinc-950">
               Dashboard
             </h1>
             <p className="mt-1.5 text-sm leading-6 text-zinc-500">
               O painel abre primeiro com o essencial e termina o restante em
-              segundo plano para voce entrar mais rapido no sistema.
+              segundo plano para você entrar mais rápido no sistema.
             </p>
           </div>
 
@@ -462,10 +462,10 @@ export default function DashboardPage() {
           title="Clientes ativos"
           value={String(resumo.clientesAtivos)}
           icon={Users}
-          subtitle="Base ativa do salao"
+          subtitle="Base ativa do salão"
         />
         <KpiCard
-          title="Servicos do mes"
+          title="Serviços do mes"
           value={String(resumo.servicosMes)}
           icon={Scissors}
           subtitle="Comandas fechadas no periodo"
@@ -485,10 +485,10 @@ export default function DashboardPage() {
             <div className="flex items-center justify-between gap-3">
               <div>
                 <div className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-400">
-                  Visao geral
+                  Visão geral
                 </div>
                 <div className="mt-1 text-lg font-bold text-zinc-950">
-                  Indicadores de operacao
+                  Indicadores de operação
                 </div>
               </div>
               <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-2.5 text-zinc-700">
@@ -503,7 +503,7 @@ export default function DashboardPage() {
                 helper="Valor medio por comanda fechada"
               />
               <InfoMetric
-                title="Comissao pendente"
+                title="Comissão pendente"
                 value={formatCurrency(resumo.comissaoPendenteMes)}
                 helper="Pronto para conferencia"
               />
@@ -536,9 +536,9 @@ export default function DashboardPage() {
             </div>
 
             <p className="mt-3 max-w-2xl text-sm leading-6 text-zinc-500">
-              Ticket medio, retorno, comissao pendente e leitura gerencial mais
+              Ticket medio, retorno, comissão pendente e leitura gerencial mais
               forte entram no {dashboardUpgradeLabel} ou acima. O painel atual continua mostrando
-              o essencial da operacao.
+              o essencial da operação.
             </p>
             <UpgradeActions plan={dashboardUpgradePlan} />
           </div>
@@ -548,7 +548,7 @@ export default function DashboardPage() {
           <div className="flex items-center justify-between gap-3">
             <div>
               <div className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-400">
-                Status rapido
+                Status rápido
               </div>
               <div className="mt-1 text-lg font-bold text-zinc-950">
                 Leitura do dia
@@ -569,7 +569,7 @@ export default function DashboardPage() {
             <InfoMetric
               title="Aguardando pagamento"
               value={String(resumo.aguardandoPagamento)}
-              helper="Comandas que pedem acao"
+              helper="Comandas que pedem ação"
             />
             <InfoMetric
               title="Cancelamentos"
@@ -577,7 +577,7 @@ export default function DashboardPage() {
               helper={
                 dashboardAvancado
                   ? "Ocorrencias no mes"
-                  : "Disponivel no dashboard avancado"
+                  : "Disponível no dashboard avancado"
               }
             />
           </div>
@@ -604,7 +604,7 @@ export default function DashboardPage() {
         />
         <MiniStatusCard
           icon={<CreditCard size={18} className="text-amber-600" />}
-          title="Comissao pendente"
+          title="Comissão pendente"
           value={
             dashboardAvancado
               ? formatCurrency(resumo.comissaoPendenteMes)

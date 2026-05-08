@@ -36,9 +36,9 @@ export default function AgendaSlotActionsModal({
     <AppModal
       open={open}
       onClose={onClose}
-      title="O que voce quer registrar?"
+      title="O que você quer registrar?"
       description={`${date} as ${time}`}
-      eyebrow="Acao rapida do horario"
+      eyebrow="Ação rápida do horário"
       maxWidthClassName="max-w-3xl"
       panelClassName="rounded-[22px]"
       bodyClassName="px-5 py-4"
@@ -48,41 +48,41 @@ export default function AgendaSlotActionsModal({
         <ActionCard
           icon={<CalendarPlus2 size={18} />}
           title="Novo agendamento"
-          description="Abrir o cadastro completo do atendimento nesse horario."
+          description="Abrir o cadastro completo do atendimento nesse horário."
           onClick={onNewAppointment}
           primary
         />
 
         <ActionCard
           icon={<CircleDollarSign size={18} />}
-          title="Registrar credito da cliente"
-          description="Abrir o fluxo de credito da cliente a partir do caixa."
+          title="Registrar crédito da cliente"
+          description="Abrir o fluxo de crédito da cliente a partir do caixa."
           onClick={onCustomerCredit}
         />
       </div>
 
       <div className="mt-4 rounded-[18px] border border-zinc-200 bg-zinc-50 p-3">
         <div className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
-          Registrar ausencia
+          Registrar ausência
         </div>
 
         <div className="mt-3 grid gap-3 md:grid-cols-3">
           <ActionCard
             icon={<Coffee size={18} />}
             title="Almoco 30 min"
-            description="Bloqueia rapido meia hora a partir do horario clicado."
+            description="Bloqueia rápido meia hora a partir do horário clicado."
             onClick={onQuickLunch30}
           />
           <ActionCard
             icon={<Clock3 size={18} />}
             title="Almoco 1 hora"
-            description="Bloqueia rapido uma hora a partir do horario clicado."
+            description="Bloqueia rápido uma hora a partir do horário clicado."
             onClick={onQuickLunch60}
           />
           <ActionCard
             icon={<Plus size={18} />}
             title="Outro bloqueio"
-            description="Abrir o modal para definir motivo e duracao manualmente."
+            description="Abrir o modal para definir motivo e duração manualmente."
             onClick={onOtherAbsence}
           />
         </div>

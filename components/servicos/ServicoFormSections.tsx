@@ -56,10 +56,10 @@ export function ServicoFormGeralSection({
   setNovaCategoria: (value: string) => void;
 }) {
   return (
-    <Card title="1. Dados basicos e descricao" subtitle="O que esta sendo vendido">
+    <Card title="1. Dados básicos e descrição" subtitle="O que está sendo vendido">
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <Input
-          label="Nome do servico"
+          label="Nome do serviço"
           value={servico.nome}
           onChange={(v) => setField("nome", v)}
           required
@@ -108,7 +108,7 @@ export function ServicoFormGeralSection({
 
         <div className="md:col-span-2">
           <Textarea
-            label="Descricao do servico"
+            label="Descrição do serviço"
             value={servico.descricao}
             onChange={(v) => setField("descricao", v)}
           />
@@ -117,12 +117,12 @@ export function ServicoFormGeralSection({
         {planoPremium ? (
           <div className="md:col-span-2">
             <Switch
-              label="Mostrar servico no app cliente"
+              label="Mostrar serviço no app cliente"
               checked={servico.app_cliente_visivel}
               onChange={(v) => setField("app_cliente_visivel", v)}
             />
             <p className="mt-2 text-xs leading-5 text-zinc-500">
-              O app cliente mostra apenas servicos ativos e marcados para aparecer.
+              O app cliente mostra apenas serviços ativos e marcados para aparecer.
             </p>
           </div>
         ) : null}
@@ -152,7 +152,7 @@ export function ServicoFormAgendaSection({
           onChange={(v) => setField("pausa_minutos", v)}
         />
         <Switch
-          label="Exige avaliacao"
+          label="Exige avaliação"
           checked={servico.exige_avaliacao}
           onChange={(v) => setField("exige_avaliacao", v)}
         />
@@ -169,16 +169,16 @@ export function ServicoFormPrecoSection({
   setField: SetServicoField;
 }) {
   return (
-    <Card title="3. Precificacao e custos" subtitle="Lucro real do servico" defaultOpen={false}>
+    <Card title="3. Precificacao e custos" subtitle="Lucro real do serviço" defaultOpen={false}>
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <Input
-          label="Preco padrao"
+          label="Preço padrão"
           value={servico.preco_padrao}
           onChange={(v) => setField("preco_padrao", maskMoneyInput(v))}
         />
 
         <Input
-          label="Preco minimo"
+          label="Preço mínimo"
           value={servico.preco_minimo}
           onChange={(v) => setField("preco_minimo", maskMoneyInput(v))}
         />
@@ -190,7 +190,7 @@ export function ServicoFormPrecoSection({
         />
 
         <Switch
-          label="Preco variavel / a partir de"
+          label="Preço variável / a partir de"
           checked={servico.preco_variavel}
           onChange={(v) => setField("preco_variavel", v)}
         />
@@ -211,26 +211,26 @@ export function ServicoFormComissaoSection({
   formatBaseCalculoLabel: (value: string) => string;
 }) {
   return (
-    <Card title="4. Regras de comissao" subtitle="Padrao do servico" defaultOpen={false}>
+    <Card title="4. Regras de comissão" subtitle="Padrão do serviço" defaultOpen={false}>
       <div className="space-y-4">
         <ComissaoHelpPanel
-          title="Use uma regra padrao e mexa so nas excecoes"
-          description="A forma mais simples de trabalhar com comissao e definir o padrao do servico aqui e personalizar apenas quem foge da regra."
+          title="Use uma regra padrão e mexa só nas exceções"
+          description="A forma mais simples de trabalhar com comissão é definir o padrão do serviço aqui e personalizar apenas quem foge da regra."
           steps={[
             {
-              title: "Defina o padrao do servico",
+              title: "Defina o padrão do serviço",
               description:
-                "Esse percentual vira a referencia principal para o caixa e para os proximos lancamentos.",
+                "Esse percentual vira a referência principal para o caixa e para os próximos lançamentos.",
             },
             {
-              title: "Personalize so quando precisar",
+              title: "Personalize só quando precisar",
               description:
-                "Campos vazios na secao de profissionais significam herdar o padrao deste servico.",
+                "Campos vazios na seção de profissionais significam herdar o padrão deste serviço.",
             },
             {
               title: "Revise a taxa da maquininha",
               description:
-                "A taxa geral do salao fica em Configuracoes. Aqui voce decide se este servico entra nessa regra.",
+                "A taxa geral do salão fica em Configurações. Aqui você decide se este serviço entra nessa regra.",
             },
           ]}
         />
@@ -246,25 +246,25 @@ export function ServicoFormComissaoSection({
             Base: {formatBaseCalculoLabel(servico.base_calculo)}
           </span>
           <span className="rounded-full bg-zinc-100 px-3 py-1">
-            Taxa: {servico.desconta_taxa_maquininha ? "Desconta taxa" : "Nao desconta taxa"}
+            Taxa: {servico.desconta_taxa_maquininha ? "Desconta taxa" : "Não desconta taxa"}
           </span>
         </div>
 
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <Input
-            label="Comissao profissional (%)"
+            label="Comissão profissional (%)"
             value={servico.comissao_percentual_padrao}
             onChange={(v) => setField("comissao_percentual_padrao", v)}
           />
 
           <Input
-            label="Comissao assistente (%)"
+            label="Comissão assistente (%)"
             value={servico.comissao_assistente_percentual}
             onChange={(v) => setField("comissao_assistente_percentual", v)}
           />
 
           <Select
-            label="Base de calculo"
+            label="Base de cálculo"
             value={servico.base_calculo}
             onChange={(v) => setField("base_calculo", v)}
             options={[
@@ -316,41 +316,41 @@ export function ServicoFormProfissionaisSection({
   return (
     <Card
       title="5. Profissionais vinculados"
-      subtitle="Onde voce controla 40%, 50% etc."
+      subtitle="Onde você controla 40%, 50% etc."
       defaultOpen={false}
     >
       <div className="space-y-4">
         <ComissaoHelpPanel
           eyebrow="Excecoes"
-          title="Deixe vazio para usar o padrao do servico"
-          description="Esta area serve para excecoes por profissional. Quando voce nao preencher uma regra aqui, o sistema usa o padrao configurado acima."
+          title="Deixe vazio para usar o padrão do serviço"
+          description="Esta área serve para exceções por profissional. Quando você não preencher uma regra aqui, o sistema usa o padrão configurado acima."
           steps={[
             {
               title: "Ative o profissional",
               description:
-                "O vinculo libera o agendamento e, se necessario, permite personalizar preco, tempo e comissao.",
+                "O vínculo libera o agendamento e, se necessário, permite personalizar preço, tempo e comissão.",
             },
             {
-              title: "Preencha so o que muda",
+              title: "Preencha só o que muda",
               description:
-                "Comissao, base e taxa podem ficar vazias para herdar a configuracao principal do servico.",
+                "Comissão, base e taxa podem ficar vazias para herdar a configuração principal do serviço.",
             },
             {
-              title: "Volte ao padrao com um clique",
+              title: "Volte ao padrão com um clique",
               description:
-                "Use o botao de limpar excecoes quando o profissional voltar a seguir a regra geral.",
+                "Use o botão de limpar exceções quando o profissional voltar a seguir a regra geral.",
             },
           ]}
         >
           <div className="flex flex-wrap gap-2 text-xs font-medium text-zinc-600">
             <span className="rounded-full bg-white px-3 py-1 ring-1 ring-zinc-200">
-              Vinculos ativos: {vinculosAtivos.length}
+              Vínculos ativos: {vinculosAtivos.length}
             </span>
             <span className="rounded-full bg-white px-3 py-1 ring-1 ring-zinc-200">
               Regras personalizadas: {totalRegrasPersonalizadas}
             </span>
             <span className="rounded-full bg-white px-3 py-1 ring-1 ring-zinc-200">
-              Herdando padrao: {Math.max(vinculosAtivos.length - totalRegrasPersonalizadas, 0)}
+              Herdando padrão: {Math.max(vinculosAtivos.length - totalRegrasPersonalizadas, 0)}
             </span>
           </div>
         </ComissaoHelpPanel>
@@ -378,12 +378,12 @@ export function ServicoFormProfissionaisSection({
                       }`}
                     >
                       {usaPadraoServico
-                        ? "Usando padrao do servico"
+                        ? "Usando padrao do serviço"
                         : "Regra personalizada"}
                     </span>
                   </div>
                   <p className="text-sm text-zinc-500">
-                    Ative para permitir agendamento deste servico com esse profissional
+                    Ative para permitir agendamento deste serviço com esse profissional
                   </p>
                 </div>
 
@@ -394,7 +394,7 @@ export function ServicoFormProfissionaisSection({
                       onClick={() => limparRegraComissao(profissional.id)}
                       className="rounded-xl border border-zinc-300 px-3 py-2 text-xs font-semibold text-zinc-700 transition hover:bg-zinc-50"
                     >
-                      Limpar excecoes
+                      Limpar exceções
                     </button>
                   ) : null}
 
@@ -419,7 +419,7 @@ export function ServicoFormProfissionaisSection({
                   />
 
                   <Input
-                    label="Preco personalizado"
+                    label="Preço personalizado"
                     value={vinculo.preco_personalizado}
                     onChange={(v) =>
                       updateVinculo(
@@ -431,7 +431,7 @@ export function ServicoFormProfissionaisSection({
                   />
 
                   <Input
-                    label="Comissao (%)"
+                    label="Comissão (%)"
                     value={vinculo.comissao_percentual}
                     onChange={(v) =>
                       updateVinculo(profissional.id, "comissao_percentual", v)
@@ -439,7 +439,7 @@ export function ServicoFormProfissionaisSection({
                   />
 
                   <Input
-                    label="Comissao assistente (%)"
+                    label="Comissão assistente (%)"
                     value={vinculo.comissao_assistente_percentual}
                     onChange={(v) =>
                       updateVinculo(
@@ -451,13 +451,13 @@ export function ServicoFormProfissionaisSection({
                   />
 
                   <Select
-                    label="Base calculo"
+                    label="Base cálculo"
                     value={vinculo.base_calculo}
                     onChange={(v) =>
                       updateVinculo(profissional.id, "base_calculo", v)
                     }
                     options={[
-                      { value: "", label: "Usar padrao" },
+                      { value: "", label: "Usar padrão" },
                       { value: "bruto", label: "Bruto" },
                       { value: "liquido", label: "Liquido" },
                     ]}
@@ -476,9 +476,9 @@ export function ServicoFormProfissionaisSection({
                       )
                     }
                     options={[
-                      { value: "", label: "Usar padrao do servico" },
+                      { value: "", label: "Usar padrão do serviço" },
                       { value: "descontar", label: "Descontar taxa" },
-                      { value: "nao_descontar", label: "Nao descontar taxa" },
+                      { value: "nao_descontar", label: "Não descontar taxa" },
                     ]}
                   />
 
@@ -489,7 +489,7 @@ export function ServicoFormProfissionaisSection({
                     base{" "}
                     {vinculo.base_calculo
                       ? formatBaseCalculoLabel(vinculo.base_calculo)
-                      : "usar padrao do servico"}{" "}
+                      : "usar padrao do serviço"}{" "}
                     e{" "}
                     {formatTaxaMaquininhaLabel(
                       vinculo.desconta_taxa_maquininha
@@ -611,10 +611,10 @@ export function ServicoFormResumoStatus({
 }) {
   return (
     <div className="space-y-6">
-      <Card title="Resumo" subtitle="Visao rapida">
+      <Card title="Resumo" subtitle="Visão rápida">
         <div className="space-y-4">
           <Info
-            label="Preco padrao"
+            label="Preço padrão"
             value={`R$ ${precoPadraoNumero.toFixed(2)}`}
           />
           <Info

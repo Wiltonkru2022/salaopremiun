@@ -94,7 +94,7 @@ export default function ProfissionalInstallPrompt() {
 
           <div className="min-w-0">
             <div className="text-sm font-bold text-zinc-950">
-              Acesse mais rapido
+              Acesse mais rápido
             </div>
             <p className="mt-1 text-xs leading-5 text-zinc-600">
               Instale o app na tela inicial para abrir agenda e comandas sem

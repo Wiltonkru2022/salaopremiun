@@ -87,7 +87,7 @@ export default async function ConfiguracoesNotificacoesPage({
   if (!usuario?.id_salao || !settings) {
     return (
       <div className="rounded-[24px] border border-red-200 bg-red-50 p-5 text-sm text-red-700">
-        Nao foi possivel identificar o salao atual.
+        Não foi possível identificar o salão atual.
       </div>
     );
   }
@@ -96,7 +96,7 @@ export default async function ConfiguracoesNotificacoesPage({
     <form action={salvarConfiguracoesNotificacoesAction} className="space-y-5">
       <ConfiguracoesHero
         activeHref="/configuracoes/notificacoes"
-        title="Notificacoes e push"
+        title="Notificações e push"
         description="Controle os avisos que o app cliente, o app profissional e o painel podem enviar para a barra do celular."
       >
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
@@ -132,13 +132,13 @@ export default async function ConfiguracoesNotificacoesPage({
               {
                 name: "clienteAgendamentoConfirmado",
                 title: "Agendamento confirmado",
-                description: "Envia quando o salao confirma um horario.",
+                description: "Envia quando o salão confirma um horário.",
                 defaultChecked: settings.clienteAgendamentoConfirmado,
               },
               {
                 name: "clienteLembrete30min",
                 title: "Lembrete antes do atendimento",
-                description: "Avisa o cliente antes do horario marcado.",
+                description: "Avisa o cliente antes do horário marcado.",
                 defaultChecked: settings.clienteLembrete30min,
               },
               {
@@ -149,20 +149,20 @@ export default async function ConfiguracoesNotificacoesPage({
               },
               {
                 name: "clienteAvaliarAtendimento",
-                title: "Pedido de avaliacao",
-                description: "Pede avaliacao depois do atendimento finalizado.",
+                title: "Pedido de avaliação",
+                description: "Pede avaliação depois do atendimento finalizado.",
                 defaultChecked: settings.clienteAvaliarAtendimento,
               },
               {
                 name: "clienteReagendamento",
                 title: "Reagendamento",
-                description: "Confirma quando o horario foi reagendado.",
+                description: "Confirma quando o horário foi reagendado.",
                 defaultChecked: settings.clienteReagendamento,
               },
               {
                 name: "clienteCancelamento",
                 title: "Cancelamento",
-                description: "Avisa o cliente quando um horario for cancelado.",
+                description: "Avisa o cliente quando um horário for cancelado.",
                 defaultChecked: settings.clienteCancelamento,
               },
             ]}
@@ -175,7 +175,7 @@ export default async function ConfiguracoesNotificacoesPage({
             items={[
               {
                 name: "profissionalLembrete30min",
-                title: "Atendimento proximo",
+                title: "Atendimento próximo",
                 description: "Lembrete antes do atendimento com nome do cliente.",
                 defaultChecked: settings.profissionalLembrete30min,
               },
@@ -188,7 +188,7 @@ export default async function ConfiguracoesNotificacoesPage({
               {
                 name: "profissionalReagendamento",
                 title: "Reagendamento",
-                description: "Avisa quando um cliente ou o salao muda o horario.",
+                description: "Avisa quando um cliente ou o salão muda o horário.",
                 defaultChecked: settings.profissionalReagendamento,
               },
               {
@@ -202,25 +202,25 @@ export default async function ConfiguracoesNotificacoesPage({
 
           <SettingsGroup
             icon={<MonitorSmartphone size={20} />}
-            title="Painel do salao"
+            title="Painel do salão"
             description="Alertas internos no sino e push do painel."
             items={[
               {
                 name: "salaoNovoAgendamentoApp",
                 title: "Pedido vindo do app cliente",
-                description: "Avisa quando um cliente solicita horario.",
+                description: "Avisa quando um cliente solicita horário.",
                 defaultChecked: settings.salaoNovoAgendamentoApp,
               },
               {
                 name: "salaoCancelamentoCliente",
                 title: "Cancelamento feito pelo cliente",
-                description: "Avisa o salao quando o cliente libera o horario.",
+                description: "Avisa o salão quando o cliente libera o horário.",
                 defaultChecked: settings.salaoCancelamentoCliente,
               },
               {
                 name: "salaoReagendamentoCliente",
                 title: "Reagendamento feito pelo cliente",
-                description: "Avisa o salao quando o cliente troca data ou hora.",
+                description: "Avisa o salão quando o cliente troca data ou hora.",
                 defaultChecked: settings.salaoReagendamentoCliente,
               },
               {
@@ -236,10 +236,10 @@ export default async function ConfiguracoesNotificacoesPage({
         <aside className="h-fit rounded-[24px] border border-zinc-200 bg-white p-5 shadow-sm">
           <div className="flex items-center gap-2 text-sm font-bold text-zinc-950">
             <CalendarClock size={18} />
-            Lembrete de horario
+            Lembrete de horário
           </div>
           <p className="mt-2 text-sm leading-6 text-zinc-500">
-            Padrao recomendado: 30 minutos antes. Pode aumentar se seu salao
+            Padrão recomendado: 30 minutos antes. Pode aumentar se seu salão
             costuma ter deslocamento longo.
           </p>
           <label className="mt-4 block text-sm font-semibold text-zinc-700">
@@ -261,8 +261,8 @@ export default async function ConfiguracoesNotificacoesPage({
               Entrega tecnica
             </div>
             <p className="mt-2 text-sm leading-6 text-zinc-500">
-              Notificacao push depende do cliente/profissional permitir avisos
-              no celular. A fila segura duplicidade mesmo se a acao for clicada
+              Notificação push depende do cliente/profissional permitir avisos
+              no celular. A fila segura duplicidade mesmo se a ação for clicada
               duas vezes.
             </p>
           </div>
@@ -270,9 +270,9 @@ export default async function ConfiguracoesNotificacoesPage({
           <div className="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm leading-6 text-emerald-800">
             <div className="mb-1 flex items-center gap-2 font-bold">
               <CheckCircle2 size={16} />
-              Configuracao salva por salao
+              Configuração salva por salão
             </div>
-            Cada salao escolhe seu proprio comportamento.
+            Cada salão escolhe seu próprio comportamento.
           </div>
         </aside>
       </section>

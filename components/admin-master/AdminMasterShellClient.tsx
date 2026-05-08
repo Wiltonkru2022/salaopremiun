@@ -334,7 +334,7 @@ export default function AdminMasterShellClient({
             </div>
             <div className="mt-2 font-display text-[1.55rem] font-bold">AdminMaster</div>
             <div className="mt-3 rounded-2xl border border-white/10 bg-white/5 p-2.5 text-xs leading-5 text-zinc-300">
-              Centro de comando do SaaS, cobrancas, suporte, produto e operacao.
+              Centro de comando do SaaS, cobranças, suporte, produto e operação.
             </div>
           </div>
 

@@ -19,7 +19,7 @@ export default async function AdminMasterSalaoDetalhePage({
 
   const { data: planos } = await supabase
     .from("planos_saas")
-    .select("codigo, nome")
+    .select("código, nome")
     .eq("ativo", true)
     .order("ordem", { ascending: true });
 
@@ -46,7 +46,7 @@ export default async function AdminMasterSalaoDetalhePage({
           href="/admin-master/saloes"
           className="text-sm font-bold text-amber-200"
         >
-          Voltar para saloes
+          Voltar para salões
         </Link>
         <h2 className="mt-4 font-display text-4xl font-black">
           {String(salao.nome || "Salao")}
@@ -83,7 +83,7 @@ export default async function AdminMasterSalaoDetalhePage({
           {
             label: "Assinatura",
             value: data.access.assinaturaStatus || "-",
-            hint: data.access.bloqueioTotal ? "Bloqueio total" : "Operacao liberada",
+            hint: data.access.bloqueioTotal ? "Bloqueio total" : "Operação liberada",
             tone: data.access.bloqueioTotal ? "red" : "green",
           },
           {

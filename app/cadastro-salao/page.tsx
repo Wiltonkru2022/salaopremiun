@@ -21,11 +21,11 @@ type StepKey = "dados" | "acesso" | "endereco" | "resumo";
 
 const STEPS: StepKey[] = ["dados", "acesso", "endereco", "resumo"];
 const CREATION_STEPS = [
-  "Seja bem-vindo ao SalaoPremium",
+  "Seja bem-vindo ao SalãoPremium",
   "Estamos criando seu acesso",
   "Estamos criando seu ambiente",
-  "Criando seu usuario principal",
-  "Criando o perfil do seu salao",
+  "Criando seu usuário principal",
+  "Criando o perfil do seu salão",
   "Organizando agenda, caixa e clientes",
   "Por favor, aguarde...",
 ];
@@ -236,15 +236,15 @@ function CadastroSalaoContent() {
       const exists = data?.exists || {};
 
       if (fields.email && exists.email) {
-        setErro("Esse e-mail ja esta cadastrado. Use outro e-mail ou entre no login.");
+        setErro("Esse e-mail já está cadastrado. Use outro e-mail ou entre no login.");
         return false;
       }
       if (fields.nomeSalao && exists.nomeSalao) {
-        setErro("Ja existe um salao com esse nome. Ajuste o nome para continuar.");
+        setErro("Já existe um salão com esse nome. Ajuste o nome para continuar.");
         return false;
       }
       if (fields.whatsapp && exists.whatsapp) {
-        setErro("Esse WhatsApp ja aparece em outro cadastro de salao.");
+        setErro("Esse WhatsApp já aparece em outro cadastro de salão.");
         return false;
       }
 
@@ -279,7 +279,7 @@ function CadastroSalaoContent() {
 
     if (step === "endereco") {
       if (!cep.trim()) return setErro("Informe o CEP."), false;
-      if (!endereco.trim()) return setErro("Informe o endereco."), false;
+      if (!endereco.trim()) return setErro("Informe o endereço."), false;
       if (!bairro.trim()) return setErro("Informe o bairro."), false;
       if (!cidade.trim()) return setErro("Informe a cidade."), false;
       if (!estado.trim()) return setErro("Informe o estado."), false;
@@ -314,7 +314,7 @@ function CadastroSalaoContent() {
       const response = await fetch(`https://viacep.com.br/ws/${cepLimpo}/json/`);
       const data = await response.json();
 
-      if (data.erro) throw new Error("CEP nao encontrado.");
+      if (data.erro) throw new Error("CEP não encontrado.");
 
       setEndereco(data.logradouro || "");
       setBairro(data.bairro || "");
@@ -324,7 +324,7 @@ function CadastroSalaoContent() {
       const message = getErrorMessage(e, "Erro ao buscar CEP.");
       setErro(
         message === "Failed to fetch"
-          ? "Nao foi possivel buscar o CEP automaticamente. Preencha manualmente."
+          ? "Não foi possível buscar o CEP automaticamente. Preencha manualmente."
           : message
       );
     } finally {
@@ -340,7 +340,7 @@ function CadastroSalaoContent() {
 
       if (!email.trim()) throw new Error("Informe o e-mail.");
       if (!senha.trim()) throw new Error("Informe a senha.");
-      if (!nomeSalao.trim()) throw new Error("Informe o nome do salao.");
+      if (!nomeSalao.trim()) throw new Error("Informe o nome do salão.");
       if (!responsavel.trim()) throw new Error("Informe o responsavel.");
 
       const res = await fetch("/api/cadastro-salao", {
@@ -365,12 +365,12 @@ function CadastroSalaoContent() {
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data?.error || "Erro ao cadastrar salao.");
+      if (!res.ok) throw new Error(data?.error || "Erro ao cadastrar salão.");
 
       setMsg("");
       setCreatingExperience(true);
     } catch (e: unknown) {
-      setErro(getErrorMessage(e, "Erro ao cadastrar salao."));
+      setErro(getErrorMessage(e, "Erro ao cadastrar salão."));
     } finally {
       if (!creatingExperience) {
         setSaving(false);
@@ -412,7 +412,7 @@ function CadastroSalaoContent() {
       <main className="grid min-h-[calc(100vh-74px)] lg:grid-cols-2">
         <section
           className="relative hidden overflow-hidden bg-zinc-950 bg-cover bg-center lg:block"
-          style={{ backgroundImage: "url('/site/cadastro-salao-bg.jpeg')" }}
+          style={{ backgroundImage: "url('/site/cadastro-salão-bg.jpeg')" }}
         >
           <div className="absolute inset-0 bg-zinc-950/58" />
           <div className="absolute inset-0 bg-gradient-to-br from-zinc-950 via-zinc-950/55 to-transparent" />
@@ -423,11 +423,11 @@ function CadastroSalaoContent() {
                 Gestao para beleza
               </div>
               <h1 className="mt-7 font-display text-[3.2rem] font-black leading-[0.95] tracking-[-0.05em] xl:text-[4.2rem]">
-                Tudo para o seu salao crescer em um so lugar.
+                Tudo para o seu salão crescer em um só lugar.
               </h1>
               <p className="mt-5 max-w-md text-base leading-7 text-white/78">
-                Agenda, clientes, equipe, caixa e app cliente com uma experiencia
-                premium para sua operacao.
+                Agenda, clientes, equipe, caixa e app cliente com uma experiência
+                premium para sua operação.
               </p>
             </div>
 
@@ -559,7 +559,7 @@ function CadastroSalaoContent() {
           />
 
           <p className="text-center text-xs text-zinc-500">
-            Ja faz parte do SalaoPremium?{" "}
+            Já faz parte do SalãoPremium?{" "}
             <Link href="/login" className="font-black text-zinc-950 underline">
               Acesse sua conta
             </Link>
@@ -578,7 +578,7 @@ function CadastroSalaoContent() {
               </div>
               <div>
                 <h3 className="font-black text-zinc-950">Crie sua senha</h3>
-                <p className="text-sm text-zinc-500">Ela sera usada no login do painel.</p>
+                <p className="text-sm text-zinc-500">Ela será usada no login do painel.</p>
               </div>
             </div>
           </div>
@@ -588,7 +588,7 @@ function CadastroSalaoContent() {
             value={senha}
             onChange={setSenha}
             type="password"
-            placeholder="Minimo de 6 caracteres"
+            placeholder="Mínimo de 6 caracteres"
           />
           <FormActions
             canBack
@@ -614,7 +614,7 @@ function CadastroSalaoContent() {
             />
             <div className="flex min-h-[74px] items-end">
               <div className="w-full rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm font-semibold text-zinc-600">
-                {buscandoCep ? "Buscando endereco..." : "Preencha pelo CEP ou manualmente."}
+                {buscandoCep ? "Buscando endereço..." : "Preencha pelo CEP ou manualmente."}
               </div>
             </div>
             <div className="sm:col-span-2">
@@ -728,8 +728,8 @@ function CadastroCreationExperience({
                 Celular detectado
               </div>
               <p className="text-sm leading-6 text-zinc-700">
-                Seu salao foi criado e o teste gratis ja esta ativo. So temos um
-                ponto importante: o painel do salao foi feito para PC ou
+                Seu salão foi criado e o teste grátis já está ativo. Só temos um
+                ponto importante: o painel do salão foi feito para PC ou
                 notebook, porque Agenda e Caixa precisam de tela grande.
               </p>
               <div className="rounded-[22px] border border-zinc-200 bg-white p-4">
@@ -766,7 +766,7 @@ function CadastroCreationExperience({
         {!mobileBlocked ? (
           <div className="mt-7 flex items-center justify-center gap-2 text-sm font-semibold text-zinc-500">
             <Loader2 size={16} className="animate-spin" />
-            Tudo pronto em alguns segundos. Nao feche esta tela.
+            Tudo pronto em alguns segundos. Não feche esta tela.
           </div>
         ) : null}
       </div>

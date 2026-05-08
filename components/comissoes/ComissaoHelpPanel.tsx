@@ -14,7 +14,7 @@ type ComissaoHelpPanelProps = {
 };
 
 export function ComissaoHelpPanel({
-  eyebrow = "Guia rapido",
+  eyebrow = "Guia rápido",
   title,
   description,
   steps,
