@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import AppLoading from "@/components/ui/AppLoading";
 import ConfirmActionModal from "@/components/ui/ConfirmActionModal";
+import PaginationControls from "@/components/ui/PaginationControls";
 import { usePainelSession } from "@/components/layout/PainelSessionProvider";
 import { usePlanoAccessSnapshot } from "@/components/plans/usePlanoAccessSnapshot";
 import { getErrorMessage } from "@/lib/get-error-message";
@@ -38,7 +39,7 @@ type Produto = {
 };
 
 type Permissoes = Record<string, boolean>;
-const PRODUTOS_PAGE_SIZE = 100;
+const PRODUTOS_PAGE_SIZE = 10;
 
 function formatCurrency(value?: number | null) {
   return Number(value || 0).toLocaleString("pt-BR", {
@@ -80,6 +81,7 @@ export default function ProdutosPage() {
   const [produtos, setProdutos] = useState<Produto[]>([]);
   const [produtosPage, setProdutosPage] = useState(0);
   const [produtosHasMore, setProdutosHasMore] = useState(false);
+  const [produtosTotal, setProdutosTotal] = useState(0);
   const [loadingMore, setLoadingMore] = useState(false);
   const [produtoParaExcluir, setProdutoParaExcluir] = useState<Produto | null>(
     null
@@ -146,7 +148,8 @@ export default function ProdutosPage() {
             "estoque_minimo",
             "status",
             "ativo",
-          ].join(", ")
+          ].join(", "),
+          { count: "exact" }
         )
         .eq("id_salao", salaoId)
         .order("nome", { ascending: true });
@@ -167,14 +170,15 @@ export default function ProdutosPage() {
         );
       }
 
-      const { data, error } = await query.range(from, to);
+      const { data, error, count } = await query.range(from, to);
 
       if (error) throw error;
 
       const rows = ((data ?? []) as unknown as Produto[]) || [];
       setProdutos((prev) => (append ? [...prev, ...rows] : rows));
       setProdutosPage(page);
-      setProdutosHasMore(rows.length === PRODUTOS_PAGE_SIZE);
+      setProdutosTotal(count ?? (append ? from + rows.length : rows.length));
+      setProdutosHasMore((count ?? 0) > to + 1);
     },
     [supabase, statusFiltro, buscaAplicada]
   );
@@ -202,16 +206,16 @@ export default function ProdutosPage() {
     void bootstrap();
   }, [bootstrap]);
 
-  async function carregarMaisProdutos() {
-    if (!idSalao || loadingMore || !produtosHasMore) return;
+  async function mudarPaginaProdutos(page: number) {
+    if (!idSalao || loadingMore || page < 0) return;
 
     try {
       setLoadingMore(true);
       setErro("");
-      await carregarProdutos(idSalao, produtosPage + 1, true);
+      await carregarProdutos(idSalao, page, false);
     } catch (e: unknown) {
       console.error(e);
-      setErro(getErrorMessage(e, "Erro ao carregar mais produtos."));
+      setErro(getErrorMessage(e, "Erro ao carregar produtos."));
     } finally {
       setLoadingMore(false);
     }
@@ -505,7 +509,7 @@ export default function ProdutosPage() {
 
             <div className="flex items-center rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-2.5 text-sm text-zinc-600">
               Itens visiveis:
-              <strong className="ml-2 text-zinc-900">{listaFiltrada.length}</strong>
+              <strong className="ml-2 text-zinc-900">{produtosTotal || listaFiltrada.length}</strong>
             </div>
           </div>
         </section>
@@ -633,18 +637,14 @@ export default function ProdutosPage() {
               );
             })
           )}
-          {produtosHasMore ? (
-            <div className="flex justify-center pt-2">
-              <button
-                type="button"
-                onClick={() => void carregarMaisProdutos()}
-                disabled={loadingMore}
-                className="rounded-xl border border-zinc-300 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-60"
-              >
-                {loadingMore ? "Carregando..." : "Carregar mais produtos"}
-              </button>
-            </div>
-          ) : null}
+          <PaginationControls
+            currentPage={produtosPage}
+            pageSize={PRODUTOS_PAGE_SIZE}
+            totalItems={produtosTotal}
+            hasMore={produtosHasMore}
+            onPageChange={(page) => void mudarPaginaProdutos(page)}
+            className={loadingMore ? "opacity-60" : ""}
+          />
         </section>
       </div>
 

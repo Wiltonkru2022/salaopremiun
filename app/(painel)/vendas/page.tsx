@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import AppLoading from "@/components/ui/AppLoading";
+import PaginationControls from "@/components/ui/PaginationControls";
 import { usePainelSession } from "@/components/layout/PainelSessionProvider";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
@@ -45,7 +46,7 @@ import type {
 } from "@/types/vendas";
 import { openPainelWorkspaceWindow } from "@/lib/painel/workspace-windows";
 
-const VENDAS_PAGE_SIZE = 80;
+const VENDAS_PAGE_SIZE = 10;
 
 function escapeHtml(value: string | null | undefined) {
   return String(value || "-")
@@ -403,16 +404,16 @@ export default function VendasPage() {
     );
   }
 
-  async function carregarMaisVendas() {
-    if (!idSalao || loadingMore || !vendasHasMore) return;
+  async function mudarPaginaVendas(page: number) {
+    if (!idSalao || loadingMore || page < 0) return;
 
     try {
       setLoadingMore(true);
-      await carregarVendas(idSalao, vendasPage + 1, true);
+      await carregarVendas(idSalao, page, false);
     } catch (error: unknown) {
       console.error(error);
       setErroTela(
-        error instanceof Error ? error.message : "Erro ao carregar mais vendas."
+        error instanceof Error ? error.message : "Erro ao carregar vendas."
       );
     } finally {
       setLoadingMore(false);
@@ -1253,18 +1254,15 @@ export default function VendasPage() {
                 </tbody>
               </table>
             </div>
-            {vendasHasMore ? (
-              <div className="flex justify-center border-t border-zinc-200 px-4 py-4">
-                <button
-                  type="button"
-                  onClick={() => void carregarMaisVendas()}
-                  disabled={loadingMore}
-                  className="rounded-xl border border-zinc-300 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-60"
-                >
-                  {loadingMore ? "Carregando..." : "Carregar mais vendas"}
-                </button>
-              </div>
-            ) : null}
+            <div className="border-t border-zinc-200 px-4 py-4">
+              <PaginationControls
+                currentPage={vendasPage}
+                pageSize={VENDAS_PAGE_SIZE}
+                hasMore={vendasHasMore}
+                onPageChange={(page) => void mudarPaginaVendas(page)}
+                className={loadingMore ? "opacity-60" : ""}
+              />
+            </div>
           </div>
         </div>
       </div>

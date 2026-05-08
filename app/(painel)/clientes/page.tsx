@@ -8,6 +8,7 @@ import { usePainelSession } from "@/components/layout/PainelSessionProvider";
 import { usePlanoAccessSnapshot } from "@/components/plans/usePlanoAccessSnapshot";
 import AppLoading from "@/components/ui/AppLoading";
 import ConfirmActionModal from "@/components/ui/ConfirmActionModal";
+import PaginationControls from "@/components/ui/PaginationControls";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { getPlanoMinimoParaRecurso } from "@/lib/plans/catalog";
 import { getAssinaturaUrl } from "@/lib/site-urls";
@@ -29,7 +30,7 @@ type Cliente = {
 };
 
 type Permissoes = Record<string, boolean>;
-const CLIENTES_PAGE_SIZE = 100;
+const CLIENTES_PAGE_SIZE = 10;
 
 export default function ClientesPage() {
   const supabase = useMemo(() => createClient(), []);
@@ -53,6 +54,7 @@ export default function ClientesPage() {
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [clientesPage, setClientesPage] = useState(0);
   const [clientesHasMore, setClientesHasMore] = useState(false);
+  const [clientesTotal, setClientesTotal] = useState(0);
   const [loadingMore, setLoadingMore] = useState(false);
   const [clienteParaExcluir, setClienteParaExcluir] = useState<Cliente | null>(
     null
@@ -106,7 +108,8 @@ export default function ClientesPage() {
       let query = supabase
         .from("clientes")
         .select(
-          "id, nome, cashback, whatsapp, telefone, email, bairro, profissao, status, ativo, created_at"
+          "id, nome, cashback, whatsapp, telefone, email, bairro, profissao, status, ativo, created_at",
+          { count: "exact" }
         )
         .eq("id_salao", salaoId)
         .order("nome", { ascending: true });
@@ -128,7 +131,7 @@ export default function ClientesPage() {
         );
       }
 
-      const { data, error } = await query.range(from, to);
+      const { data, error, count } = await query.range(from, to);
 
       if (error) throw error;
 
@@ -161,7 +164,8 @@ export default function ClientesPage() {
 
       setClientes((prev) => (append ? [...prev, ...rowsComStatus] : rowsComStatus));
       setClientesPage(page);
-      setClientesHasMore(rows.length === CLIENTES_PAGE_SIZE);
+      setClientesTotal(count ?? (append ? from + rows.length : rows.length));
+      setClientesHasMore((count ?? 0) > to + 1);
     },
     [supabase, statusFiltro, buscaAplicada]
   );
@@ -189,16 +193,16 @@ export default function ClientesPage() {
     void bootstrap();
   }, [bootstrap]);
 
-  async function carregarMaisClientes() {
-    if (!idSalao || loadingMore || !clientesHasMore) return;
+  async function mudarPaginaClientes(page: number) {
+    if (!idSalao || loadingMore || page < 0) return;
 
     try {
       setLoadingMore(true);
       setErro("");
-      await carregarClientes(idSalao, clientesPage + 1, true);
+      await carregarClientes(idSalao, page, false);
     } catch (e: unknown) {
       console.error(e);
-      setErro(getErrorMessage(e, "Erro ao carregar mais clientes."));
+      setErro(getErrorMessage(e, "Erro ao carregar clientes."));
     } finally {
       setLoadingMore(false);
     }
@@ -559,7 +563,7 @@ export default function ClientesPage() {
               <div className="flex items-center rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-2.5 text-sm text-zinc-600">
                 Pessoas visiveis:
                 <strong className="ml-2 text-zinc-900">
-                  {listaFiltrada.length}
+                  {clientesTotal || listaFiltrada.length}
                 </strong>
               </div>
             </div>
@@ -685,18 +689,14 @@ export default function ClientesPage() {
               })
             )}
 
-            {clientesHasMore ? (
-              <div className="flex justify-center pt-2">
-                <button
-                  type="button"
-                  onClick={() => void carregarMaisClientes()}
-                  disabled={loadingMore}
-                  className="rounded-xl border border-zinc-300 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-60"
-                >
-                  {loadingMore ? "Carregando..." : "Carregar mais clientes"}
-                </button>
-              </div>
-            ) : null}
+            <PaginationControls
+              currentPage={clientesPage}
+              pageSize={CLIENTES_PAGE_SIZE}
+              totalItems={clientesTotal}
+              hasMore={clientesHasMore}
+              onPageChange={(page) => void mudarPaginaClientes(page)}
+              className={loadingMore ? "opacity-60" : ""}
+            />
           </section>
         </div>
       </div>

@@ -27,19 +27,27 @@ type ClienteNomeRow = {
 
 export async function listarComandasProfissional(
   idSalao: string,
-  idProfissional: string
+  idProfissional: string,
+  options: { limit?: number; page?: number } = {}
 ): Promise<ComandaResumo[]> {
   return runAdminOperation({
     action: "profissional_listar_comandas",
     actorId: idProfissional,
     idSalao,
     run: async (supabase) => {
+      const limit = options.limit ?? 10;
+      const page = Math.max(0, options.page ?? 0);
+      const from = page * limit;
+      const to = from + limit - 1;
+
       const { data: agendamentos, error: agendamentosError } = await supabase
         .from("agendamentos")
         .select("id_comanda")
         .eq("id_salao", idSalao)
         .eq("profissional_id", idProfissional)
-        .not("id_comanda", "is", null);
+        .not("id_comanda", "is", null)
+        .order("data", { ascending: false })
+        .range(from, to);
 
       if (agendamentosError) {
         throw new Error(

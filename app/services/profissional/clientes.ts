@@ -12,6 +12,7 @@ export type ClienteProfissional = {
 type ListarClientesOptions = {
   busca?: string;
   limit?: number;
+  page?: number;
 };
 
 export async function listarClientesDoSalao(
@@ -23,12 +24,16 @@ export async function listarClientesDoSalao(
     idSalao,
     run: async (supabase) => {
       const buscaLimpa = String(options.busca || "").trim();
+      const limit = options.limit ?? 10;
+      const page = Math.max(0, options.page ?? 0);
+      const from = page * limit;
+      const to = from + limit - 1;
+
       let query = supabase
         .from("clientes")
         .select("id, nome, telefone, email, status, ativo")
         .eq("id_salao", idSalao)
-        .order("nome", { ascending: true })
-        .limit(options.limit ?? 60);
+        .order("nome", { ascending: true });
 
       if (buscaLimpa) {
         query = query.or(
@@ -36,7 +41,7 @@ export async function listarClientesDoSalao(
         );
       }
 
-      const { data, error } = await query;
+      const { data, error } = await query.range(from, to);
 
       if (error) {
         throw new Error(error.message || "Erro ao carregar clientes.");

@@ -6,13 +6,18 @@ import { listClienteAppAppointments } from "@/lib/client-app/queries";
 export default async function ClienteAppointmentsPage({
   searchParams,
 }: {
-  searchParams?: Promise<{ status?: string; todos?: string }>;
+  searchParams?: Promise<{ status?: string; pagina?: string }>;
 }) {
   const session = await requireClienteAppContext();
+  const params = searchParams ? await searchParams : undefined;
+  const paginaAtual = Math.max(0, Number(params?.pagina || 1) - 1);
+  const pageSize = 10;
   const agendamentos = await listClienteAppAppointments({
     idConta: session.idConta,
+    page: paginaAtual,
+    limit: pageSize + 1,
   });
-  const params = searchParams ? await searchParams : undefined;
+  const hasMore = agendamentos.length > pageSize;
 
   return (
     <ClientAppFrame
@@ -20,9 +25,10 @@ export default async function ClienteAppointmentsPage({
       subtitle={`Tudo certo, ${session.nome}. Veja o que esta marcado e o que ja pode avaliar.`}
     >
       <ClientAppointmentsManager
-        agendamentos={agendamentos}
+        agendamentos={agendamentos.slice(0, pageSize)}
         successKey={params?.status || null}
-        showAll={params?.todos === "1"}
+        currentPage={paginaAtual}
+        hasMore={hasMore}
       />
     </ClientAppFrame>
   );

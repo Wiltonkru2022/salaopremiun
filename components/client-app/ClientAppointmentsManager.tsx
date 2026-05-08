@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { CalendarClock, ChevronRight, Info, MessageCircle, Scissors, Sparkles, Star } from "lucide-react";
+import { CalendarClock, Info, MessageCircle, Scissors, Sparkles, Star } from "lucide-react";
 import { useActionState, useMemo, useState } from "react";
 import { useFormStatus } from "react-dom";
 import {
@@ -11,6 +11,7 @@ import {
 } from "@/app/app-cliente/agendamentos/actions";
 import type { ClientAppAppointmentListItem } from "@/lib/client-app/queries";
 import ClientAppointmentReviewForm from "@/components/client-app/ClientAppointmentReviewForm";
+import PaginationControls from "@/components/ui/PaginationControls";
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("pt-BR", {
@@ -267,14 +268,15 @@ function RescheduleAppointmentForm({
 export default function ClientAppointmentsManager({
   agendamentos,
   successKey,
-  showAll = false,
+  currentPage = 0,
+  hasMore = false,
 }: {
   agendamentos: ClientAppAppointmentListItem[];
   successKey?: string | null;
-  showAll?: boolean;
+  currentPage?: number;
+  hasMore?: boolean;
 }) {
-  const visibleAppointments = showAll ? agendamentos : agendamentos.slice(0, 10);
-  const hasMore = agendamentos.length > visibleAppointments.length;
+  const visibleAppointments = agendamentos;
   const nextAppointments = agendamentos.filter((item) =>
     ["pendente", "confirmado"].includes(String(item.status || "").toLowerCase())
   ).length;
@@ -466,14 +468,13 @@ export default function ClientAppointmentsManager({
       </div>
 
       {hasMore ? (
-        <div className="rounded-[1.4rem] border border-dashed border-zinc-300 bg-white px-4 py-3 text-center">
-          <Link
-            href="/app-cliente/agendamentos?todos=1"
-            className="inline-flex items-center gap-2 text-sm font-bold text-zinc-800"
-          >
-            Ver mais agendamentos
-            <ChevronRight size={16} />
-          </Link>
+        <div className="rounded-[1.4rem] border border-dashed border-zinc-300 bg-white px-4 py-3">
+          <PaginationControls
+            currentPage={currentPage}
+            pageSize={10}
+            hasMore={hasMore}
+            buildHref={(page) => `/app-cliente/agendamentos?pagina=${page + 1}`}
+          />
         </div>
       ) : null}
     </section>

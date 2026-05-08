@@ -472,9 +472,17 @@ export async function getClientAppSalonDetail(idSalao: string) {
   return getClientAppSalonDetailLive(idSalao);
 }
 
-export async function listClienteAppAppointments(params: { idConta: string }) {
+export async function listClienteAppAppointments(params: {
+  idConta: string;
+  page?: number;
+  limit?: number;
+}) {
   try {
     const supabaseAdmin = getSupabaseAdmin();
+    const limit = params.limit ?? 10;
+    const page = Math.max(0, params.page ?? 0);
+    const from = page * limit;
+    const to = from + limit - 1;
     const { data: vinculos, error: vinculosError } = await supabaseAdmin
       .from("clientes_auth")
       .select("id_cliente, id_salao, saloes(nome, nome_fantasia, whatsapp, telefone)")
@@ -533,7 +541,7 @@ export async function listClienteAppAppointments(params: { idConta: string }) {
       .in("cliente_id", clientesIds)
       .order("data", { ascending: false })
       .order("hora_inicio", { ascending: false })
-      .limit(40);
+      .range(from, to);
 
     if (error || !data) {
       return [];

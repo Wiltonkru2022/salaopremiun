@@ -9,6 +9,7 @@ import { ComissaoHelpPanel } from "@/components/comissoes/ComissaoHelpPanel";
 import AppLoading from "@/components/ui/AppLoading";
 import AppModal from "@/components/ui/AppModal";
 import ConfirmActionModal from "@/components/ui/ConfirmActionModal";
+import PaginationControls from "@/components/ui/PaginationControls";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { createClient } from "@/lib/supabase/client";
 import type {
@@ -36,6 +37,7 @@ type ServicoListItem = {
 };
 
 type Permissoes = Record<string, boolean>;
+const SERVICOS_PAGE_SIZE = 10;
 
 function formatCurrency(value?: number | null) {
   return Number(value || 0).toLocaleString("pt-BR", {
@@ -72,11 +74,16 @@ export default function ServicosPage() {
   const [erro, setErro] = useState("");
   const [msg, setMsg] = useState("");
   const [busca, setBusca] = useState("");
+  const [buscaAplicada, setBuscaAplicada] = useState("");
   const [statusFiltro, setStatusFiltro] = useState<
     "todos" | "ativo" | "inativo"
   >("todos");
   const [idSalao, setIdSalao] = useState("");
   const [servicos, setServicos] = useState<ServicoListItem[]>([]);
+  const [servicosPage, setServicosPage] = useState(0);
+  const [servicosTotal, setServicosTotal] = useState(0);
+  const [servicosHasMore, setServicosHasMore] = useState(false);
+  const [loadingPage, setLoadingPage] = useState(false);
   const [servicoParaExcluir, setServicoParaExcluir] =
     useState<ServicoListItem | null>(null);
   const [ajudaOpen, setAjudaOpen] = useState(false);
@@ -111,18 +118,20 @@ export default function ServicosPage() {
     };
   }, [painelSession, router]);
 
-  const bootstrap = useCallback(async () => {
-    try {
-      setLoading(true);
-      setErro("");
-      setMsg("");
+  useEffect(() => {
+    const handle = window.setTimeout(() => {
+      setBuscaAplicada(busca.trim());
+    }, 300);
 
-      const acesso = await carregarAcesso();
-      if (!acesso) return;
+    return () => window.clearTimeout(handle);
+  }, [busca]);
 
-      setIdSalao(acesso.idSalao);
+  const carregarServicos = useCallback(
+    async (salaoId: string, page = 0) => {
+      const from = page * SERVICOS_PAGE_SIZE;
+      const to = from + SERVICOS_PAGE_SIZE - 1;
 
-      const { data, error } = await supabase
+      let query = supabase
         .from("servicos")
         .select(
           [
@@ -142,25 +151,75 @@ export default function ServicosPage() {
             "ativo",
             "eh_combo",
             "combo_resumo",
-          ].join(", ")
+          ].join(", "),
+          { count: "exact" }
         )
-        .eq("id_salao", acesso.idSalao)
+        .eq("id_salao", salaoId)
         .order("nome", { ascending: true });
 
+      if (statusFiltro !== "todos") {
+        query = query.eq("status", statusFiltro);
+      }
+
+      if (buscaAplicada) {
+        query = query.or(
+          [
+            `nome.ilike.%${buscaAplicada}%`,
+            `categoria.ilike.%${buscaAplicada}%`,
+            `descricao.ilike.%${buscaAplicada}%`,
+          ].join(",")
+        );
+      }
+
+      const { data, error, count } = await query.range(from, to);
       if (error) throw error;
 
       setServicos(((data ?? []) as unknown as ServicoListItem[]) || []);
+      setServicosPage(page);
+      setServicosTotal(count ?? 0);
+      setServicosHasMore((count ?? 0) > to + 1);
+    },
+    [buscaAplicada, statusFiltro, supabase]
+  );
+
+  const bootstrap = useCallback(async () => {
+    try {
+      setLoading(true);
+      setErro("");
+      setMsg("");
+
+      const acesso = await carregarAcesso();
+      if (!acesso) return;
+
+      setIdSalao(acesso.idSalao);
+
+      await carregarServicos(acesso.idSalao, 0);
     } catch (e: unknown) {
       console.error(e);
       setErro(getErrorMessage(e, "Erro ao carregar serviços."));
     } finally {
       setLoading(false);
     }
-  }, [carregarAcesso, supabase]);
+  }, [carregarAcesso, carregarServicos]);
 
   useEffect(() => {
     void bootstrap();
   }, [bootstrap]);
+
+  async function mudarPaginaServicos(page: number) {
+    if (!idSalao || loadingPage || page < 0) return;
+
+    try {
+      setLoadingPage(true);
+      setErro("");
+      await carregarServicos(idSalao, page);
+    } catch (e: unknown) {
+      console.error(e);
+      setErro(getErrorMessage(e, "Erro ao carregar serviços."));
+    } finally {
+      setLoadingPage(false);
+    }
+  }
 
   async function processarServico(params: {
     acao: "salvar" | "alterar_status" | "excluir";
@@ -257,24 +316,8 @@ export default function ServicosPage() {
   }
 
   const listaFiltrada = useMemo(() => {
-    const termo = busca.toLowerCase().trim();
-
-    return servicos.filter((item) => {
-      const ativoAtual = item.ativo ?? item.status === "ativo";
-      const bateBusca =
-        !termo ||
-        item.nome?.toLowerCase().includes(termo) ||
-        item.categoria?.toLowerCase().includes(termo) ||
-        item.descricao?.toLowerCase().includes(termo);
-
-      const bateStatus =
-        statusFiltro === "todos" ||
-        (statusFiltro === "ativo" && ativoAtual) ||
-        (statusFiltro === "inativo" && !ativoAtual);
-
-      return bateBusca && bateStatus;
-    });
-  }, [busca, servicos, statusFiltro]);
+    return servicos;
+  }, [servicos]);
 
   const resumo = useMemo(() => {
     const ativos = listaFiltrada.filter(
@@ -434,7 +477,7 @@ export default function ServicosPage() {
 
             <div className="flex items-center rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-2.5 text-sm text-zinc-600">
               Catálogo filtrado:
-              <strong className="ml-2 text-zinc-900">{listaFiltrada.length}</strong>
+              <strong className="ml-2 text-zinc-900">{servicosTotal || listaFiltrada.length}</strong>
             </div>
           </div>
         </section>
@@ -588,6 +631,14 @@ export default function ServicosPage() {
               );
             })
           )}
+          <PaginationControls
+            currentPage={servicosPage}
+            pageSize={SERVICOS_PAGE_SIZE}
+            totalItems={servicosTotal}
+            hasMore={servicosHasMore}
+            onPageChange={(page) => void mudarPaginaServicos(page)}
+            className={loadingPage ? "opacity-60" : ""}
+          />
         </section>
       </div>
 

@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { usePainelSession } from "@/components/layout/PainelSessionProvider";
 import AppLoading from "@/components/ui/AppLoading";
+import PaginationControls from "@/components/ui/PaginationControls";
 import { createClient } from "@/lib/supabase/client";
 import { getWorkspaceWindowTarget } from "@/lib/painel/workspace-windows";
 
@@ -39,7 +40,7 @@ type Comanda = {
 };
 
 type Permissoes = Record<string, boolean>;
-const COMANDAS_PAGE_SIZE = 80;
+const COMANDAS_PAGE_SIZE = 10;
 
 function formatCurrency(value: number | null | undefined) {
   return Number(value || 0).toLocaleString("pt-BR", {
@@ -95,6 +96,7 @@ export default function ComandasPage() {
   const [comandas, setComandas] = useState<Comanda[]>([]);
   const [comandasPage, setComandasPage] = useState(0);
   const [comandasHasMore, setComandasHasMore] = useState(false);
+  const [comandasTotal, setComandasTotal] = useState(0);
   const [loadingMore, setLoadingMore] = useState(false);
 
   const [permissoes, setPermissoes] = useState<Permissoes | null>(null);
@@ -144,7 +146,7 @@ export default function ComandasPage() {
           total,
           aberta_em,
           id_cliente
-        `)
+        `, { count: "exact" })
         .eq("id_salao", salaoId)
         .order("aberta_em", { ascending: false });
 
@@ -152,7 +154,7 @@ export default function ComandasPage() {
         comandasQuery = comandasQuery.eq("status", statusFiltro);
       }
 
-      const { data: comandasData, error: comandasError } = await comandasQuery.range(from, to);
+      const { data: comandasData, error: comandasError, count } = await comandasQuery.range(from, to);
 
       if (comandasError) throw comandasError;
 
@@ -194,7 +196,8 @@ export default function ComandasPage() {
 
       setComandas((prev) => (append ? [...prev, ...rows] : rows));
       setComandasPage(page);
-      setComandasHasMore(rows.length === COMANDAS_PAGE_SIZE);
+      setComandasTotal(count ?? (append ? from + rows.length : rows.length));
+      setComandasHasMore((count ?? 0) > to + 1);
     },
     [supabase, statusFiltro]
   );
@@ -219,16 +222,16 @@ export default function ComandasPage() {
     void bootstrap();
   }, [bootstrap]);
 
-  async function carregarMaisComandas() {
-    if (!painelSession?.idSalao || loadingMore || !comandasHasMore) return;
+  async function mudarPaginaComandas(page: number) {
+    if (!painelSession?.idSalao || loadingMore || page < 0) return;
 
     try {
       setLoadingMore(true);
       setErro("");
-      await carregarComandas(painelSession.idSalao, comandasPage + 1, true);
+      await carregarComandas(painelSession.idSalao, page, false);
     } catch (e: unknown) {
       console.error(e);
-      setErro(e instanceof Error ? e.message : "Erro ao carregar mais comandas.");
+      setErro(e instanceof Error ? e.message : "Erro ao carregar comandas.");
     } finally {
       setLoadingMore(false);
     }
@@ -368,7 +371,7 @@ export default function ComandasPage() {
 
             <div className="flex items-center rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-2.5 text-sm text-zinc-600">
               Total:
-              <strong className="ml-2 text-zinc-900">{listaFiltrada.length}</strong>
+              <strong className="ml-2 text-zinc-900">{comandasTotal || listaFiltrada.length}</strong>
             </div>
           </div>
         </section>
@@ -446,18 +449,16 @@ export default function ComandasPage() {
               </table>
             </div>
           )}
-          {comandasHasMore ? (
-            <div className="flex justify-center border-t border-zinc-200 px-4 py-4">
-              <button
-                type="button"
-                onClick={() => void carregarMaisComandas()}
-                disabled={loadingMore}
-                className="rounded-xl border border-zinc-300 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-60"
-              >
-                {loadingMore ? "Carregando..." : "Carregar mais comandas"}
-              </button>
-            </div>
-          ) : null}
+          <div className="border-t border-zinc-200 px-4 py-4">
+            <PaginationControls
+              currentPage={comandasPage}
+              pageSize={COMANDAS_PAGE_SIZE}
+              totalItems={comandasTotal}
+              hasMore={comandasHasMore}
+              onPageChange={(page) => void mudarPaginaComandas(page)}
+              className={loadingMore ? "opacity-60" : ""}
+            />
+          </div>
         </div>
       </div>
     </div>

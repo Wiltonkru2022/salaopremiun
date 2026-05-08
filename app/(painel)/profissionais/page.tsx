@@ -12,6 +12,7 @@ import {
 import { usePainelSession } from "@/components/layout/PainelSessionProvider";
 import AppLoading from "@/components/ui/AppLoading";
 import ConfirmActionModal from "@/components/ui/ConfirmActionModal";
+import PaginationControls from "@/components/ui/PaginationControls";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { getPlanoMinimoParaRecurso } from "@/lib/plans/catalog";
 import { getAssinaturaUrl } from "@/lib/site-urls";
@@ -40,6 +41,7 @@ type Profissional = {
 };
 
 type Permissoes = Record<string, boolean>;
+const PROFISSIONAIS_PAGE_SIZE = 10;
 
 export default function ProfissionaisListPage() {
   const supabase = useMemo(() => createClient(), []);
@@ -51,11 +53,16 @@ export default function ProfissionaisListPage() {
   const [erro, setErro] = useState("");
   const [msg, setMsg] = useState("");
   const [busca, setBusca] = useState("");
+  const [buscaAplicada, setBuscaAplicada] = useState("");
   const [statusFiltro, setStatusFiltro] = useState<
     "todos" | "ativo" | "inativo"
   >("todos");
   const [idSalao, setIdSalao] = useState("");
   const [profissionais, setProfissionais] = useState<Profissional[]>([]);
+  const [profissionaisPage, setProfissionaisPage] = useState(0);
+  const [profissionaisTotal, setProfissionaisTotal] = useState(0);
+  const [profissionaisHasMore, setProfissionaisHasMore] = useState(false);
+  const [loadingPage, setLoadingPage] = useState(false);
   const [profissionalParaExcluir, setProfissionalParaExcluir] =
     useState<Profissional | null>(null);
   const [permissoes, setPermissoes] = useState<Permissoes | null>(null);
@@ -95,9 +102,20 @@ export default function ProfissionaisListPage() {
     };
   }, [painelSession, router]);
 
+  useEffect(() => {
+    const handle = window.setTimeout(() => {
+      setBuscaAplicada(busca.trim());
+    }, 300);
+
+    return () => window.clearTimeout(handle);
+  }, [busca]);
+
   const carregarProfissionais = useCallback(
-    async (salaoId: string) => {
-      const { data, error } = await supabase
+    async (salaoId: string, page = 0) => {
+      const from = page * PROFISSIONAIS_PAGE_SIZE;
+      const to = from + PROFISSIONAIS_PAGE_SIZE - 1;
+
+      let query = supabase
         .from("profissionais")
         .select(
           [
@@ -118,10 +136,29 @@ export default function ProfissionaisListPage() {
             "comissao_produto_percentual",
             "pix_tipo",
             "pix_chave",
-          ].join(", ")
+          ].join(", "),
+          { count: "exact" }
         )
         .eq("id_salao", salaoId)
         .order("nome", { ascending: true });
+
+      if (statusFiltro !== "todos") {
+        query = query.eq("status", statusFiltro);
+      }
+
+      if (buscaAplicada) {
+        query = query.or(
+          [
+            `nome.ilike.%${buscaAplicada}%`,
+            `nome_social.ilike.%${buscaAplicada}%`,
+            `categoria.ilike.%${buscaAplicada}%`,
+            `cargo.ilike.%${buscaAplicada}%`,
+            `email.ilike.%${buscaAplicada}%`,
+          ].join(",")
+        );
+      }
+
+      const { data, error, count } = await query.range(from, to);
 
       if (error) throw error;
 
@@ -129,6 +166,9 @@ export default function ProfissionaisListPage() {
 
       if (listaBase.length === 0) {
         setProfissionais([]);
+        setProfissionaisPage(page);
+        setProfissionaisTotal(count ?? 0);
+        setProfissionaisHasMore(false);
         return;
       }
 
@@ -171,8 +211,11 @@ export default function ProfissionaisListPage() {
           app_ativo: acessoPorProfissional.get(item.id) || false,
         }))
       );
+      setProfissionaisPage(page);
+      setProfissionaisTotal(count ?? listaBase.length);
+      setProfissionaisHasMore((count ?? 0) > to + 1);
     },
-    [supabase]
+    [buscaAplicada, statusFiltro, supabase]
   );
 
   const bootstrap = useCallback(async () => {
@@ -185,7 +228,7 @@ export default function ProfissionaisListPage() {
       if (!acesso) return;
 
       setIdSalao(acesso.idSalao);
-      await carregarProfissionais(acesso.idSalao);
+      await carregarProfissionais(acesso.idSalao, 0);
     } catch (e: unknown) {
       console.error(e);
       setErro(getErrorMessage(e, "Erro ao carregar profissionais."));
@@ -197,6 +240,21 @@ export default function ProfissionaisListPage() {
   useEffect(() => {
     void bootstrap();
   }, [bootstrap]);
+
+  async function mudarPaginaProfissionais(page: number) {
+    if (!idSalao || loadingPage || page < 0) return;
+
+    try {
+      setLoadingPage(true);
+      setErro("");
+      await carregarProfissionais(idSalao, page);
+    } catch (e: unknown) {
+      console.error(e);
+      setErro(getErrorMessage(e, "Erro ao carregar profissionais."));
+    } finally {
+      setLoadingPage(false);
+    }
+  }
 
   async function processarProfissional(params: {
     acao: "alterar_status" | "excluir";
@@ -307,26 +365,8 @@ export default function ProfissionaisListPage() {
   }
 
   const listaFiltrada = useMemo(() => {
-    const termo = busca.toLowerCase().trim();
-
-    return profissionais.filter((item) => {
-      const bateBusca =
-        !termo ||
-        item.nome?.toLowerCase().includes(termo) ||
-        item.nome_social?.toLowerCase().includes(termo) ||
-        item.categoria?.toLowerCase().includes(termo) ||
-        item.cargo?.toLowerCase().includes(termo) ||
-        item.email?.toLowerCase().includes(termo);
-
-      const ativoAtual = item.ativo ?? item.status === "ativo";
-      const bateStatus =
-        statusFiltro === "todos" ||
-        (statusFiltro === "ativo" && ativoAtual) ||
-        (statusFiltro === "inativo" && !ativoAtual);
-
-      return bateBusca && bateStatus;
-    });
-  }, [profissionais, busca, statusFiltro]);
+    return profissionais;
+  }, [profissionais]);
 
   const resumo = useMemo(() => {
     const ativos = listaFiltrada.filter(
@@ -517,7 +557,7 @@ export default function ProfissionaisListPage() {
               <div className="flex items-center rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-2.5 text-sm text-zinc-600">
                 Pessoas visiveis:
                 <strong className="ml-2 text-zinc-900">
-                  {listaFiltrada.length}
+                  {profissionaisTotal || listaFiltrada.length}
                 </strong>
               </div>
             </div>
@@ -659,6 +699,14 @@ export default function ProfissionaisListPage() {
                 );
               })
             )}
+            <PaginationControls
+              currentPage={profissionaisPage}
+              pageSize={PROFISSIONAIS_PAGE_SIZE}
+              totalItems={profissionaisTotal}
+              hasMore={profissionaisHasMore}
+              onPageChange={(page) => void mudarPaginaProfissionais(page)}
+              className={loadingPage ? "opacity-60" : ""}
+            />
           </section>
         </div>
       </div>

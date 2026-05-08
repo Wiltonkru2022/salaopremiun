@@ -5,6 +5,7 @@ import ProfissionalEmptyState from "@/components/profissional/ui/ProfissionalEmp
 import ProfissionalSectionHeader from "@/components/profissional/ui/ProfissionalSectionHeader";
 import ProfissionalStatusPill from "@/components/profissional/ui/ProfissionalStatusPill";
 import ProfissionalSurface from "@/components/profissional/ui/ProfissionalSurface";
+import PaginationLinks from "@/components/ui/PaginationLinks";
 import { listarComandasProfissional } from "@/app/services/profissional/comandas";
 import { requireProfissionalAppContext } from "@/lib/profissional-context.server";
 
@@ -28,14 +29,26 @@ function getStatusMeta(status: string) {
   return { label: status || "Status", tone: "neutral" as const };
 }
 
-export default async function ComandasPage() {
+type SearchParams = Promise<{
+  pagina?: string;
+}>;
+
+export default async function ComandasPage({
+  searchParams,
+}: {
+  searchParams: SearchParams;
+}) {
   const session = await requireProfissionalAppContext();
+  const { pagina = "1" } = await searchParams;
+  const paginaAtual = Math.max(0, Number(pagina || 1) - 1);
+  const pageSize = 10;
   let comandas = [];
 
   try {
     comandas = await listarComandasProfissional(
       session.idSalao,
-      session.idProfissional
+      session.idProfissional,
+      { limit: pageSize + 1, page: paginaAtual }
     );
   } catch {
     return (
@@ -47,6 +60,8 @@ export default async function ComandasPage() {
     );
   }
 
+  const hasMore = comandas.length > pageSize;
+  const comandasVisiveis = comandas.slice(0, pageSize);
   const abertas = comandas.filter(
     (comanda) => String(comanda.status).toLowerCase() === "aberta"
   );
@@ -103,9 +118,9 @@ export default async function ComandasPage() {
             description="Toque em uma comanda para adicionar itens, revisar ou enviar ao caixa."
           />
 
-          {comandas.length ? (
+          {comandasVisiveis.length ? (
             <div className="space-y-2.5">
-              {comandas.map((comanda) => {
+              {comandasVisiveis.map((comanda) => {
                 const status = getStatusMeta(comanda.status);
 
                 return (
@@ -154,6 +169,14 @@ export default async function ComandasPage() {
               }
             />
           )}
+
+          <PaginationLinks
+            currentPage={paginaAtual}
+            pageSize={pageSize}
+            hasMore={hasMore}
+            getHref={(page) => `/app-profissional/comandas?pagina=${page + 1}`}
+            className="mt-4"
+          />
         </ProfissionalSurface>
       </div>
     </ProfissionalShell>

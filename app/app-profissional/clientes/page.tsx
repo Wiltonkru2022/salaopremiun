@@ -4,11 +4,13 @@ import ProfissionalShell from "@/components/profissional/layout/ProfissionalShel
 import ProfissionalEmptyState from "@/components/profissional/ui/ProfissionalEmptyState";
 import ProfissionalSectionHeader from "@/components/profissional/ui/ProfissionalSectionHeader";
 import ProfissionalSurface from "@/components/profissional/ui/ProfissionalSurface";
+import PaginationLinks from "@/components/ui/PaginationLinks";
 import { listarClientesDoSalao } from "@/app/services/profissional/clientes";
 import { requireProfissionalAppContext } from "@/lib/profissional-context.server";
 
 type SearchParams = Promise<{
   busca?: string;
+  pagina?: string;
 }>;
 
 type ClienteRow = {
@@ -42,15 +44,18 @@ export default async function ClientesPage({
   searchParams: SearchParams;
 }) {
   const session = await requireProfissionalAppContext();
-  const { busca = "" } = await searchParams;
+  const { busca = "", pagina = "1" } = await searchParams;
   const buscaLimpa = busca.trim();
+  const paginaAtual = Math.max(0, Number(pagina || 1) - 1);
+  const pageSize = 10;
 
   let data: ClienteRow[] = [];
 
   try {
     data = (await listarClientesDoSalao(session.idSalao, {
       busca: buscaLimpa,
-      limit: 60,
+      limit: pageSize + 1,
+      page: paginaAtual,
     })) as ClienteRow[];
   } catch {
     return (
@@ -62,13 +67,22 @@ export default async function ClientesPage({
     );
   }
 
-  const clientes = data.filter((item) => {
+  const clientesFiltrados = data.filter((item) => {
     const ativo =
       item.ativo === true || item.ativo === "true" || item.ativo === 1;
     const status = String(item.status || "").toLowerCase();
 
     return ativo && status !== "inativo";
   });
+  const hasMore = clientesFiltrados.length > pageSize;
+  const clientes = clientesFiltrados.slice(0, pageSize);
+
+  const getPageHref = (page: number) => {
+    const params = new URLSearchParams();
+    if (buscaLimpa) params.set("busca", buscaLimpa);
+    params.set("pagina", String(page + 1));
+    return `/app-profissional/clientes?${params.toString()}`;
+  };
 
   return (
     <ProfissionalShell title="Clientes" subtitle="Cadastros do salão">
@@ -181,6 +195,14 @@ export default async function ClientesPage({
               ))}
             </div>
           )}
+
+          <PaginationLinks
+            currentPage={paginaAtual}
+            pageSize={pageSize}
+            hasMore={hasMore}
+            getHref={getPageHref}
+            className="mt-4"
+          />
         </ProfissionalSurface>
       </div>
     </ProfissionalShell>
