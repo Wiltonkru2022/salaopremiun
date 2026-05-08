@@ -1,14 +1,12 @@
 "use client";
 
-import { type ReactNode, useMemo } from "react";
+import { useMemo } from "react";
 import {
   CheckCircle2,
   CircleAlert,
   Pencil,
   Plus,
   Receipt,
-  Scissors,
-  ShoppingBag,
   Trash2,
   WalletCards,
 } from "lucide-react";
@@ -33,13 +31,8 @@ type Props = {
   onCancelarComanda: () => void;
   onFinalizarComanda: () => void;
   onNovoServico: () => void;
-  onNovoProduto: () => void;
-  onNovoExtra: () => void;
-  onNovoAjuste: () => void;
   onEditarItem: (item: ComandaItem) => void;
   onRemoverItem: (idItem: string) => void;
-  podeLancarProduto?: boolean;
-  mensagemBloqueioProduto?: string;
 };
 
 const ITEM_SECTIONS = ["servico", "produto", "extra", "ajuste"] as const;
@@ -54,13 +47,8 @@ export default function CaixaDetalhe({
   onCancelarComanda,
   onFinalizarComanda,
   onNovoServico,
-  onNovoProduto,
-  onNovoExtra,
-  onNovoAjuste,
   onEditarItem,
   onRemoverItem,
-  podeLancarProduto = true,
-  mensagemBloqueioProduto,
 }: Props) {
   const itensAgrupados = useMemo(
     () =>
@@ -131,6 +119,15 @@ export default function CaixaDetalhe({
                 </button>
                 <button
                   type="button"
+                  onClick={onNovoServico}
+                  disabled={saving}
+                  className="inline-flex min-h-9 items-center gap-1.5 rounded-xl border border-zinc-200 bg-white px-3 text-xs font-semibold text-zinc-800 transition hover:bg-zinc-50 disabled:opacity-60"
+                >
+                  <Plus size={14} />
+                  Lançar item manual
+                </button>
+                <button
+                  type="button"
                   onClick={onCancelarComanda}
                   disabled={saving}
                   className="inline-flex min-h-9 items-center gap-1.5 rounded-xl border border-rose-200 bg-white px-3 text-xs font-semibold text-rose-700 transition hover:bg-rose-50 disabled:opacity-60"
@@ -169,35 +166,6 @@ export default function CaixaDetalhe({
           </div>
         </div>
 
-        {podeEditar ? (
-          <div className="rounded-[18px] border border-zinc-200 bg-zinc-50 p-2.5">
-            <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <div className="text-xs font-semibold uppercase tracking-[0.14em] text-zinc-500">
-                  Lançar item manual
-                </div>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-1.5 xl:grid-cols-4">
-              <ActionCard icon={<Scissors size={16} />} label="Serviço" onClick={onNovoServico} />
-              <ActionCard
-                icon={<ShoppingBag size={16} />}
-                label="Produto"
-                onClick={onNovoProduto}
-                disabled={!podeLancarProduto}
-                title={mensagemBloqueioProduto}
-              />
-              <ActionCard icon={<WalletCards size={16} />} label="Extra" onClick={onNovoExtra} />
-              <ActionCard icon={<Plus size={16} />} label="Ajuste" onClick={onNovoAjuste} />
-            </div>
-            {!podeLancarProduto && mensagemBloqueioProduto ? (
-              <div className="mt-2 text-xs font-medium text-amber-700">
-                {mensagemBloqueioProduto}
-              </div>
-            ) : null}
-          </div>
-        ) : null}
       </div>
 
       <div className="mt-2 min-h-0 flex-1 overflow-y-auto pr-1">
@@ -330,33 +298,6 @@ function HighlightCard({
       <div className="text-[10px] uppercase tracking-[0.12em] text-zinc-500">{label}</div>
       <div className="mt-1 break-words text-xs font-semibold leading-4">{value}</div>
     </div>
-  );
-}
-
-function ActionCard({
-  icon,
-  label,
-  onClick,
-  disabled = false,
-  title,
-}: {
-  icon: ReactNode;
-  label: string;
-  onClick: () => void;
-  disabled?: boolean;
-  title?: string;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      title={title}
-      className="flex min-h-9 items-center justify-center gap-1.5 rounded-xl border border-zinc-200 bg-white px-2.5 text-xs font-semibold text-zinc-800 transition hover:border-zinc-300 hover:bg-zinc-100 disabled:cursor-not-allowed disabled:border-zinc-200 disabled:bg-zinc-100 disabled:text-zinc-400"
-    >
-      {icon}
-      {label}
-    </button>
   );
 }
 

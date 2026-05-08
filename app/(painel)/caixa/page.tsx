@@ -419,13 +419,8 @@ export default function CaixaPage() {
                 onCancelarComanda={abrirModalCancelamento}
                 onFinalizarComanda={finalizarComanda}
                 onNovoServico={() => abrirModalNovoItem("servico")}
-                onNovoProduto={() => abrirModalNovoItem("produto")}
-                onNovoExtra={() => abrirModalNovoItem("extra")}
-                onNovoAjuste={() => abrirModalNovoItem("ajuste")}
                 onEditarItem={abrirModalEditarItem}
                 onRemoverItem={setItemParaRemover}
-                podeLancarProduto={!vendaProdutoBloqueadaNoPlano}
-                mensagemBloqueioProduto="Venda de produtos no caixa fica liberada a partir do plano Pro."
               />
 
               <CaixaSidebar
