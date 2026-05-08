@@ -36,6 +36,14 @@ type Props = {
   onOpenHelp?: () => void;
 };
 
+type BeforeInstallPromptEvent = Event & {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: "accepted" | "dismissed"; platform: string }>;
+};
+
+const INSTALL_NOTIFICATION_ID = "instalar-app-salao";
+const INSTALL_STATE_KEY = "sp_painel_app_installed";
+
 const toneClass: Record<ShellNotificationTone, string> = {
   danger: "bg-rose-50 text-rose-700 ring-rose-100",
   warning: "bg-amber-50 text-amber-700 ring-amber-100",
@@ -78,6 +86,20 @@ function buildStorageKey(storageKey?: string) {
   return storageKey ? `salaopremium:notificacoes:${storageKey}` : null;
 }
 
+function isStandaloneApp() {
+  if (typeof window === "undefined") return false;
+
+  return (
+    window.matchMedia("(display-mode: standalone)").matches ||
+    (window.navigator as Navigator & { standalone?: boolean }).standalone === true
+  );
+}
+
+function isDesktopViewport() {
+  if (typeof window === "undefined") return false;
+  return window.matchMedia("(min-width: 1024px)").matches;
+}
+
 export default function NotificationBell({
   notifications,
   storageKey,
@@ -86,8 +108,75 @@ export default function NotificationBell({
   const [open, setOpen] = useState(false);
   const [readIds, setReadIds] = useState<string[]>([]);
   const [hydrated, setHydrated] = useState(false);
+  const [installPrompt, setInstallPrompt] =
+    useState<BeforeInstallPromptEvent | null>(null);
+  const [showInstallNotice, setShowInstallNotice] = useState(false);
   const wrapperRef = useRef<HTMLDivElement | null>(null);
   const persistedKey = buildStorageKey(storageKey);
+
+  useEffect(() => {
+    function refreshInstallNotice() {
+      const alreadyInstalled =
+        isStandaloneApp() ||
+        window.localStorage.getItem(INSTALL_STATE_KEY) === "1";
+
+      setShowInstallNotice(isDesktopViewport() && !alreadyInstalled);
+    }
+
+    refreshInstallNotice();
+
+    const onBeforeInstallPrompt = (event: Event) => {
+      event.preventDefault();
+      setInstallPrompt(event as BeforeInstallPromptEvent);
+      setShowInstallNotice(isDesktopViewport() && !isStandaloneApp());
+    };
+
+    const onAppInstalled = () => {
+      window.localStorage.setItem(INSTALL_STATE_KEY, "1");
+      setInstallPrompt(null);
+      setShowInstallNotice(false);
+    };
+
+    const viewportQuery = window.matchMedia("(min-width: 1024px)");
+    const standaloneQuery = window.matchMedia("(display-mode: standalone)");
+
+    window.addEventListener("beforeinstallprompt", onBeforeInstallPrompt);
+    window.addEventListener("appinstalled", onAppInstalled);
+    viewportQuery.addEventListener("change", refreshInstallNotice);
+    standaloneQuery.addEventListener("change", refreshInstallNotice);
+
+    return () => {
+      window.removeEventListener("beforeinstallprompt", onBeforeInstallPrompt);
+      window.removeEventListener("appinstalled", onAppInstalled);
+      viewportQuery.removeEventListener("change", refreshInstallNotice);
+      standaloneQuery.removeEventListener("change", refreshInstallNotice);
+    };
+  }, []);
+
+  const allNotifications = useMemo(() => {
+    if (!showInstallNotice) return notifications;
+
+    const installNotification: ShellNotification = {
+      id: INSTALL_NOTIFICATION_ID,
+      title: "Instalar app do salao",
+      description:
+        "Instale o SalaoPremium no computador para abrir o painel como aplicativo.",
+      tone: "info",
+      category: "sistema",
+      severity: "medium",
+      eventType: "install_salon_app",
+      actionLabel: installPrompt
+        ? "Instalar agora"
+        : "Use o icone de instalar do navegador",
+      destination: "internal",
+      icon: "onboarding",
+      sourceModule: "pwa",
+      persistUntilResolved: true,
+      expiresAt: null,
+    };
+
+    return [installNotification, ...notifications];
+  }, [installPrompt, notifications, showInstallNotice]);
 
   useEffect(() => {
     if (!persistedKey) {
@@ -131,7 +220,7 @@ export default function NotificationBell({
   }
 
   function markAllAsRead() {
-    const next = notifications
+    const next = allNotifications
       .filter(
         (notification) =>
           !notification.critical && !notification.persistUntilResolved
@@ -142,7 +231,7 @@ export default function NotificationBell({
 
   const visibleNotifications = useMemo(
     () =>
-      [...notifications]
+      [...allNotifications]
         .filter((notification) => !isRead(notification))
         .sort((a, b) => {
           const bPinned = Boolean(b.critical || b.persistUntilResolved);
@@ -150,11 +239,11 @@ export default function NotificationBell({
           return Number(bPinned) - Number(aPinned);
         })
         .slice(0, 8),
-    [isRead, notifications]
+    [allNotifications, isRead]
   );
   const unreadCount = useMemo(
-    () => notifications.filter((notification) => !isRead(notification)).length,
-    [isRead, notifications]
+    () => allNotifications.filter((notification) => !isRead(notification)).length,
+    [allNotifications, isRead]
   );
 
   useEffect(() => {
@@ -169,10 +258,10 @@ export default function NotificationBell({
   }, []);
 
   useEffect(() => {
-    if (!hydrated || !notifications.length || !readIds.length) return;
+    if (!hydrated || !allNotifications.length || !readIds.length) return;
 
     const validIds = readIds.filter((id) =>
-      notifications.some(
+      allNotifications.some(
         (notification) =>
           notification.id === id &&
           !notification.critical &&
@@ -183,7 +272,21 @@ export default function NotificationBell({
     if (validIds.length !== readIds.length) {
       persistReadIds(validIds);
     }
-  }, [hydrated, notifications, persistReadIds, readIds]);
+  }, [allNotifications, hydrated, persistReadIds, readIds]);
+
+  async function handleInstallApp() {
+    if (!installPrompt) return;
+
+    await installPrompt.prompt();
+    const choice = await installPrompt.userChoice;
+    setInstallPrompt(null);
+
+    if (choice.outcome === "accepted") {
+      window.localStorage.setItem(INSTALL_STATE_KEY, "1");
+      setShowInstallNotice(false);
+      setOpen(false);
+    }
+  }
 
   return (
     <div className="relative" ref={wrapperRef}>
@@ -300,6 +403,10 @@ export default function NotificationBell({
                     type="button"
                     key={notification.id}
                     onClick={() => {
+                      if (notification.id === INSTALL_NOTIFICATION_ID) {
+                        void handleInstallApp();
+                        return;
+                      }
                       markAsRead(notification.id);
                     }}
                     className="flex w-full items-start gap-3 rounded-[22px] border border-zinc-100 bg-zinc-50/80 p-3 text-left transition hover:border-zinc-200 hover:bg-white"

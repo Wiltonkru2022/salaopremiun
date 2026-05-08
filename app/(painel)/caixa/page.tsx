@@ -7,7 +7,6 @@ import CaixaCancelModal from "@/components/caixa/CaixaCancelModal";
 import CaixaDetalhe from "@/components/caixa/CaixaDetalhe";
 import CaixaFila from "@/components/caixa/CaixaFila";
 import CaixaHeader from "@/components/caixa/CaixaHeader";
-import CaixaInstallPrompt from "@/components/caixa/CaixaInstallPrompt";
 import CaixaItemModal from "@/components/caixa/CaixaItemModal";
 import CaixaSidebar from "@/components/caixa/CaixaSidebar";
 import { usePainelSession } from "@/components/layout/PainelSessionProvider";
@@ -335,8 +334,6 @@ export default function CaixaPage() {
               caixaAberto={caixaAberto}
               onAbrirSessao={() => setSessaoOpen(true)}
             />
-
-            <CaixaInstallPrompt />
 
             {!podeOperarCaixa || erroTela || msg || comandaSelecionada ? (
               <div className="grid gap-2 xl:grid-cols-[minmax(0,1fr)_minmax(280px,360px)]">

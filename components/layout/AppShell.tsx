@@ -7,7 +7,6 @@ import { PainelSessionProvider } from "@/components/layout/PainelSessionProvider
 import PainelDesktopGuard from "@/components/layout/PainelDesktopGuard";
 import { PAINEL_SESSION_STORAGE_KEY } from "@/lib/painel/session-snapshot";
 import Sidebar from "@/components/layout/Sidebar";
-import PainelInstallSetup from "@/components/pwa/PainelInstallSetup";
 import PainelPwaRuntime from "@/components/pwa/PainelPwaRuntime";
 import MonitoringContextBridge from "@/components/monitoring/MonitoringContextBridge";
 import PushPermissionRuntime from "@/components/push/PushPermissionRuntime";
@@ -260,7 +259,6 @@ export default function AppShell({
               <PushPermissionRuntime audience="salao_painel" compact />
             </div>
             <div className="min-h-[calc(100dvh-4.4rem)] bg-zinc-50 p-1.5 md:p-2 xl:p-2.5">
-              <PainelInstallSetup />
               <div className="min-w-0">{children}</div>
             </div>
           </main>
