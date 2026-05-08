@@ -125,6 +125,14 @@ function parseSession(token: string): ClienteAppSession | null {
   return envelope.session;
 }
 
+export function createClienteSessionRestoreToken(session: ClienteAppSession) {
+  return serializeSession(session);
+}
+
+export function parseClienteSessionRestoreToken(token: string) {
+  return parseSession(token);
+}
+
 export async function hashClientePassword(password: string) {
   return bcrypt.hash(password, 10);
 }

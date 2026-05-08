@@ -51,7 +51,7 @@ export default function LoginClienteForm({
         <span className="rounded-full bg-zinc-950 px-3 py-1.5 text-white">
           Cliente
         </span>
-        <span className="px-3 py-1.5">SalaoPremium</span>
+        <span className="px-3 py-1.5">SalãoPremium</span>
       </div>
 
       <h2 className="text-[1.55rem] font-semibold text-zinc-950">

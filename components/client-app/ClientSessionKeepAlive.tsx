@@ -3,7 +3,8 @@
 import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 
-const REFRESH_INTERVAL_MS = 1000 * 60 * 60 * 6;
+const REFRESH_INTERVAL_MS = 1000 * 60 * 5;
+const RESTORE_TOKEN_KEY = "salaopremium:cliente:restore-token";
 const AUTH_ROUTES = [
   "/app-cliente/login",
   "/app-cliente/cadastro",
@@ -32,11 +33,30 @@ export default function ClientSessionKeepAlive() {
 
       lastRefreshRef.current = now;
 
-      await fetch("/api/app-cliente/session/refresh", {
+      const restoreToken =
+        window.localStorage.getItem(RESTORE_TOKEN_KEY) || "";
+
+      const response = await fetch("/api/app-cliente/session/refresh", {
         method: "POST",
         cache: "no-store",
         credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ restoreToken }),
       }).catch(() => null);
+
+      if (!response?.ok) {
+        return;
+      }
+
+      const payload = (await response.json().catch(() => null)) as {
+        restoreToken?: string;
+      } | null;
+
+      if (payload?.restoreToken) {
+        window.localStorage.setItem(RESTORE_TOKEN_KEY, payload.restoreToken);
+      }
     }
 
     void refreshSession(true);

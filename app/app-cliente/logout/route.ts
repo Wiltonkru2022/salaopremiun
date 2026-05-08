@@ -3,7 +3,9 @@ import { clearClienteSession } from "@/lib/cliente-auth.server";
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
-  const destino = String(url.searchParams.get("destino") || "/app-cliente/login");
+  const destino = String(
+    url.searchParams.get("destino") || "/app-cliente/login?logout=1"
+  );
 
   await clearClienteSession();
   return NextResponse.redirect(new URL(destino, url.origin));

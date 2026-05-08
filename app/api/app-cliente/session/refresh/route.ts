@@ -1,17 +1,31 @@
 import { NextResponse } from "next/server";
 import {
-  clearClienteSession,
   createClienteSession,
+  createClienteSessionRestoreToken,
   getClienteSessionFromCookie,
+  parseClienteSessionRestoreToken,
 } from "@/lib/cliente-auth.server";
 
-export async function POST() {
-  const session = await getClienteSessionFromCookie();
+async function readRestoreToken(request: Request) {
+  try {
+    const body = (await request.json()) as { restoreToken?: unknown };
+    return typeof body.restoreToken === "string" ? body.restoreToken : "";
+  } catch {
+    return "";
+  }
+}
+
+export async function POST(request: Request) {
+  const cookieSession = await getClienteSessionFromCookie();
+  const restoreToken = cookieSession ? "" : await readRestoreToken(request);
+  const restoredSession = restoreToken
+    ? parseClienteSessionRestoreToken(restoreToken)
+    : null;
+  const session = cookieSession || restoredSession;
 
   if (!session?.idConta) {
-    await clearClienteSession();
     return NextResponse.json(
-      { ok: false, message: "Sessão do cliente expirada." },
+      { ok: false, message: "Sessão do cliente indisponível." },
       { status: 401 }
     );
   }
@@ -19,7 +33,7 @@ export async function POST() {
   await createClienteSession(session);
 
   return NextResponse.json(
-    { ok: true },
+    { ok: true, restoreToken: createClienteSessionRestoreToken(session) },
     {
       headers: {
         "Cache-Control": "no-store, max-age=0",
