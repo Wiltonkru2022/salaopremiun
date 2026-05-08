@@ -977,7 +977,7 @@ export default function PerfilSalaoPage() {
         method: "aal2",
       });
 
-      await supabase.auth.signOut();
+      await supabase.auth.signOut({ scope: "local" });
       router.push("/login?motivo=autenticador_desativado");
     } catch (error: unknown) {
       setErro(
@@ -1007,7 +1007,7 @@ export default function PerfilSalaoPage() {
         backupCode: disableBackupCode.trim(),
       });
 
-      await supabase.auth.signOut();
+      await supabase.auth.signOut({ scope: "local" });
       router.push("/login?motivo=autenticador_desativado");
     } catch (error: unknown) {
       setErro(

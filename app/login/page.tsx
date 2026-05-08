@@ -69,12 +69,22 @@ function LoginPageContent() {
 
   useEffect(() => {
     try {
-      setSupabase(createClient());
+      const client = createClient();
+      setSupabase(client);
+
+      client.auth
+        .getSession()
+        .then(({ data }) => {
+          if (data.session?.user) {
+            window.location.replace(redirectHref);
+          }
+        })
+        .catch(() => undefined);
     } catch (error) {
       console.warn("Supabase indisponivel para login:", error);
       setErro("Servico de autenticacao indisponivel neste ambiente.");
     }
-  }, []);
+  }, [redirectHref]);
 
   useEffect(() => {
     if (!emailQuery) return;

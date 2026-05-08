@@ -222,7 +222,7 @@ export default function AtualizarSenhaPage() {
         console.warn("Aviso de senha alterada nao enviado:", noticeError);
       });
 
-      await supabase.auth.signOut();
+      await supabase.auth.signOut({ scope: "local" });
 
       setSucesso(
         modoSenha === "authenticated"

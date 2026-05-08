@@ -19,7 +19,6 @@ import type {
   ShellNotification,
 } from "@/lib/notifications/contracts";
 import { createClient } from "@/lib/supabase/client";
-import { clearSupabaseBrowserAuthState } from "@/lib/supabase/auth-client-recovery";
 import { monitorClientOperation } from "@/lib/monitoring/client";
 
 type Props = {
@@ -111,55 +110,6 @@ export default function AppShell({
     setShellNotifications(notifications);
   }, [notifications]);
 
-  useEffect(() => {
-    let active = true;
-    const supabase = createClient();
-
-    function redirectToExpiredLogin() {
-      if (!active || typeof window === "undefined") return;
-
-      try {
-        window.localStorage.removeItem(PAINEL_SESSION_STORAGE_KEY);
-      } catch {
-        // Best effort only. Storage can be blocked by browser settings.
-      }
-
-      clearSupabaseBrowserAuthState();
-      window.location.assign("/login?motivo=sessao_expirada");
-    }
-
-    async function validateCurrentSession() {
-      try {
-        const { data, error } = await supabase.auth.getUser();
-
-        if (!active) return;
-
-        if (error || !data.user) {
-          redirectToExpiredLogin();
-        }
-      } catch (error) {
-        console.warn("Nao foi possivel validar a sessao do painel:", error);
-      }
-    }
-
-    void validateCurrentSession();
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, session) => {
-      if (!active) return;
-
-      if (event === "SIGNED_OUT" || !session?.user) {
-        redirectToExpiredLogin();
-      }
-    });
-
-    return () => {
-      active = false;
-      subscription.unsubscribe();
-    };
-  }, []);
-
   async function handleLogout() {
     await monitorClientOperation(
       {
@@ -172,14 +122,13 @@ export default function AppShell({
       async () => {
         const supabase = createClient();
         try {
-          await supabase.auth.signOut();
+          await supabase.auth.signOut({ scope: "local" });
         } finally {
           try {
             window.localStorage.removeItem(PAINEL_SESSION_STORAGE_KEY);
           } catch {
             // Best effort only.
           }
-          clearSupabaseBrowserAuthState();
         }
         router.push("/login?motivo=logout");
         router.refresh();

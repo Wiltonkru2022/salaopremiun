@@ -437,11 +437,15 @@ export async function proxy(request: NextRequest) {
 
   const resumo = getProxyResumoAssinatura(assinatura);
 
-  // Usuario autenticado no proprio host de login pode ter cookies antigos
-  // presos ao subdominio. Evita loop login -> painel -> login.
   if (ctx.rotaLogin) {
-    if (ctx.isLoginHost) return response;
+    return redirectToHost(
+      request,
+      resumo.bloqueioTotal ? DOMINIO_ASSINATURA : DOMINIO_PAINEL,
+      resumo.bloqueioTotal ? "/assinatura" : "/dashboard"
+    );
+  }
 
+  if (ctx.rotaCadastro) {
     return redirectToHost(
       request,
       resumo.bloqueioTotal ? DOMINIO_ASSINATURA : DOMINIO_PAINEL,
