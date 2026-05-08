@@ -8,6 +8,7 @@ import PainelDesktopGuard from "@/components/layout/PainelDesktopGuard";
 import { PAINEL_SESSION_STORAGE_KEY } from "@/lib/painel/session-snapshot";
 import Sidebar from "@/components/layout/Sidebar";
 import PainelInstallSetup from "@/components/pwa/PainelInstallSetup";
+import PainelPwaRuntime from "@/components/pwa/PainelPwaRuntime";
 import MonitoringContextBridge from "@/components/monitoring/MonitoringContextBridge";
 import PushPermissionRuntime from "@/components/push/PushPermissionRuntime";
 import type {
@@ -197,6 +198,7 @@ export default function AppShell({
         idSalao={idSalao || null}
         idUsuario={idUsuario || null}
       />
+      <PainelPwaRuntime />
 
       {hideShellChrome ? (
         <main className="min-h-screen bg-zinc-50">

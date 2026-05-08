@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { CalendarDays, Download, MonitorSmartphone, X } from "lucide-react";
+import InstallHelpDialog from "@/components/pwa/InstallHelpDialog";
 
 type BeforeInstallPromptEvent = Event & {
   prompt: () => Promise<void>;
@@ -31,6 +32,7 @@ function detectDevice() {
 
 export default function AgendaInstallPrompt() {
   const [ready, setReady] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
   const [deferredPrompt, setDeferredPrompt] =
     useState<BeforeInstallPromptEvent | null>(null);
   const device = useMemo(detectDevice, []);
@@ -77,6 +79,12 @@ export default function AgendaInstallPrompt() {
   if (!ready) return null;
 
   return (
+    <>
+    <InstallHelpDialog
+      area="a Agenda"
+      open={helpOpen}
+      onClose={() => setHelpOpen(false)}
+    />
     <div className="rounded-[16px] border border-violet-200 bg-gradient-to-r from-violet-50 via-white to-sky-50 px-3 py-2 shadow-[0_8px_18px_rgba(76,29,149,0.05)]">
       <div className="flex flex-wrap items-center gap-2.5">
         <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-zinc-950 text-white">
@@ -112,10 +120,14 @@ export default function AgendaInstallPrompt() {
               Instalar
             </button>
           ) : (
-            <div className="inline-flex h-8 items-center gap-2 rounded-full border border-zinc-200 bg-white px-3.5 text-[11px] font-bold text-zinc-700">
+            <button
+              type="button"
+              onClick={() => setHelpOpen(true)}
+              className="inline-flex h-8 items-center gap-2 rounded-full border border-zinc-200 bg-white px-3.5 text-[11px] font-bold text-zinc-700 transition hover:bg-zinc-50"
+            >
               <MonitorSmartphone size={14} />
               Ver atalho
-            </div>
+            </button>
           )}
 
           <button
@@ -129,5 +141,6 @@ export default function AgendaInstallPrompt() {
         </div>
       </div>
     </div>
+    </>
   );
 }

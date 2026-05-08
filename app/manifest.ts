@@ -2,11 +2,11 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    id: "/",
+    id: "/dashboard",
     name: "SalaoPremium",
     short_name: "SalaoPremium",
     description: "Gestao premium para saloes com agenda, caixa, comandas e financeiro.",
-    start_url: "/login",
+    start_url: "/dashboard",
     scope: "/",
     display: "standalone",
     background_color: "#ffffff",

@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { useSearchParams } from "next/navigation";
 import { CalendarDays, LayoutDashboard, MonitorDown, WalletCards, X } from "lucide-react";
 import { openPainelWorkspaceWindow } from "@/lib/painel/workspace-windows";
+import InstallHelpDialog from "@/components/pwa/InstallHelpDialog";
 
 type BeforeInstallPromptEvent = Event & {
   prompt: () => Promise<void>;
@@ -30,6 +31,7 @@ function isDesktop() {
 export default function PainelInstallSetup() {
   const searchParams = useSearchParams();
   const [open, setOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
   const [deferredPrompt, setDeferredPrompt] =
     useState<BeforeInstallPromptEvent | null>(null);
   const shouldForce = useMemo(
@@ -57,7 +59,7 @@ export default function PainelInstallSetup() {
 
   async function installMainApp() {
     if (!deferredPrompt) {
-      window.localStorage.setItem(INSTALL_SETUP_DONE_KEY, "1");
+      setHelpOpen(true);
       return;
     }
 
@@ -79,6 +81,12 @@ export default function PainelInstallSetup() {
   if (!open) return null;
 
   return (
+    <>
+    <InstallHelpDialog
+      area="o Painel principal"
+      open={helpOpen}
+      onClose={() => setHelpOpen(false)}
+    />
     <div className="fixed inset-0 z-[420] flex items-center justify-center bg-zinc-950/45 px-4 py-6 backdrop-blur-sm">
       <section className="w-full max-w-4xl overflow-hidden rounded-[30px] border border-white/80 bg-white text-zinc-950 shadow-[0_30px_90px_rgba(15,23,42,0.25)]">
         <div className="flex items-start justify-between gap-4 border-b border-zinc-100 px-5 py-4">
@@ -111,7 +119,7 @@ export default function PainelInstallSetup() {
             icon={<LayoutDashboard size={22} />}
             title="Painel principal"
             description="Dashboard, clientes, planos, configuracoes e gestao do salao."
-            actionLabel={deferredPrompt ? "Instalar painel" : "Ja pode usar"}
+            actionLabel={deferredPrompt ? "Instalar painel" : "Ver atalho"}
             onClick={installMainApp}
           />
           <InstallCard
@@ -136,6 +144,7 @@ export default function PainelInstallSetup() {
         </div>
       </section>
     </div>
+    </>
   );
 }
 
