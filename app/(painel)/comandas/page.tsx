@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { usePainelSession } from "@/components/layout/PainelSessionProvider";
 import AppLoading from "@/components/ui/AppLoading";
 import { createClient } from "@/lib/supabase/client";
+import { getWorkspaceWindowTarget } from "@/lib/painel/workspace-windows";
 
 type ComandaRow = {
   id: string;
@@ -310,8 +311,7 @@ export default function ComandasPage() {
                 </Link>
                 <Link
                   href="/caixa"
-                  target="_blank"
-                  rel="noreferrer"
+                  target={getWorkspaceWindowTarget("/caixa")}
                   className="inline-flex items-center justify-center rounded-2xl border border-zinc-200 bg-white px-5 py-3 text-sm font-bold text-zinc-800 transition hover:bg-zinc-50"
                 >
                   Ir para o caixa

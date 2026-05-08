@@ -43,6 +43,7 @@ import type {
   VendaProcessarErrorResponse,
   VendaProcessarResponse,
 } from "@/types/vendas";
+import { openPainelWorkspaceWindow } from "@/lib/painel/workspace-windows";
 
 const VENDAS_PAGE_SIZE = 80;
 
@@ -541,11 +542,7 @@ export default function VendasPage() {
         if (typeof window === "undefined") {
           router.push(`/caixa?comanda_id=${vendaSelecionada.id}`);
         } else {
-          window.open(
-            `/caixa?comanda_id=${vendaSelecionada.id}`,
-            "_blank",
-            "noopener,noreferrer"
-          );
+          openPainelWorkspaceWindow(`/caixa?comanda_id=${vendaSelecionada.id}`);
         }
       }
     } catch (error: unknown) {
@@ -1660,4 +1657,3 @@ function ComboItemLabel({ descricao }: { descricao: string }) {
     </div>
   );
 }
-

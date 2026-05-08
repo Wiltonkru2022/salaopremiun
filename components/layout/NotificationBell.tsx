@@ -24,6 +24,10 @@ import type {
   ShellNotificationTone,
 } from "@/lib/notifications/contracts";
 import { getAssinaturaUrl, getPainelUrl } from "@/lib/site-urls";
+import {
+  getWorkspaceWindowTarget,
+  openPainelWorkspaceWindow,
+} from "@/lib/painel/workspace-windows";
 
 type Props = {
   notifications: ShellNotification[];
@@ -264,13 +268,23 @@ export default function NotificationBell({
                 );
 
                 if (notification.href) {
+                  const notificationHref = notification.href;
+                  const workspaceTarget = getWorkspaceWindowTarget(
+                    notificationHref
+                  );
+
                   return (
                     <a
                       key={notification.id}
-                      href={getNotificationHref(notification.href)}
-                      onClick={() => {
+                      href={getNotificationHref(notificationHref)}
+                      target={workspaceTarget}
+                      onClick={(event) => {
                         markAsRead(notification.id);
                         setOpen(false);
+                        if (workspaceTarget) {
+                          event.preventDefault();
+                          openPainelWorkspaceWindow(notificationHref);
+                        }
                       }}
                       className="flex items-start gap-3 rounded-[22px] border border-zinc-100 bg-zinc-50/80 p-3 transition hover:border-zinc-200 hover:bg-white"
                     >

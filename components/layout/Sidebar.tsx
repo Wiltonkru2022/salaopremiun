@@ -20,6 +20,7 @@ import {
 } from "@/components/layout/navigation";
 import type { ResumoAssinatura } from "@/lib/assinatura-utils";
 import { getAssinaturaUrl, getPainelUrl } from "@/lib/site-urls";
+import { getWorkspaceWindowTarget } from "@/lib/painel/workspace-windows";
 
 type Props = {
   permissoes: Permissoes;
@@ -278,12 +279,14 @@ function SidebarLink({
   onClose: () => void;
 }) {
   const Icon = item.icon;
+  const workspaceTarget = getWorkspaceWindowTarget(item.href);
+  const target = workspaceTarget || (item.openInNewTab ? "_blank" : undefined);
 
   return (
     <a
       href={getRouteHref(item.href)}
-      target={item.openInNewTab ? "_blank" : undefined}
-      rel={item.openInNewTab ? "noreferrer" : undefined}
+      target={target}
+      rel={target === "_blank" ? "noreferrer" : undefined}
       onClick={onClose}
       className={clsx(
         "group/item flex items-center gap-3 rounded-[14px] px-3 py-2.5 ring-1 ring-transparent transition-all duration-200",
@@ -320,7 +323,7 @@ function SidebarLink({
           active ? "text-white/60" : "text-zinc-300"
         )}
       />
-      {item.openInNewTab ? (
+      {target ? (
         <ExternalLink
           size={14}
           className={clsx(

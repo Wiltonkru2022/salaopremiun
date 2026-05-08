@@ -37,6 +37,7 @@ import type { Agendamento, ConfigSalao } from "@/types/agenda";
 import { normalizeTimeString } from "@/lib/utils/agenda";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { getAssinaturaUrl } from "@/lib/site-urls";
+import { openPainelWorkspaceWindow } from "@/lib/painel/workspace-windows";
 import {
   Ban,
   CalendarClock,
@@ -699,7 +700,7 @@ export default function AgendaPage() {
       return;
     }
 
-    window.open(href, "_blank", "noopener,noreferrer");
+    openPainelWorkspaceWindow(href);
   }
 
   const waitlistItems: AgendaWaitlistItem[] = agendamentos
