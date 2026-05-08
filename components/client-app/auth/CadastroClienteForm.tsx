@@ -59,16 +59,16 @@ export default function CadastroClienteForm({
         Crie sua conta no app cliente
       </h2>
       <p className="mt-2 text-sm leading-6 text-zinc-500">
-        Crie uma vez e use o mesmo acesso nos saloes publicados no app. Se seu telefone ja estiver cadastrado em algum salao, a ficha sera conectada automaticamente.
+        Crie uma vez e use o mesmo acesso nos salões publicados no app. Se seu telefone já estiver cadastrado em algum salão, a ficha será conectada automaticamente.
       </p>
 
       {salaoNome ? (
         <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-          Depois do cadastro, voce volta para <strong>{salaoNome}</strong> e decide se quer agendar ali.
+          Depois do cadastro, você volta para <strong>{salaoNome}</strong> e decide se quer agendar ali.
         </div>
       ) : (
         <div className="mt-4 rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-600">
-          Crie a conta uma vez e use o mesmo acesso em qualquer salao publicado no app cliente.
+          Crie a conta uma vez e use o mesmo acesso em qualquer salão publicado no app cliente.
         </div>
       )}
 
@@ -152,7 +152,7 @@ export default function CadastroClienteForm({
             href="/app-cliente/inicio"
             className="block w-full text-sm font-medium text-zinc-500 underline underline-offset-4"
           >
-            Voltar para os saloes
+            Voltar para os salões
           </Link>
         </div>
       </div>

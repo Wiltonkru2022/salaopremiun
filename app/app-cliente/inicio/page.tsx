@@ -18,8 +18,8 @@ export default async function InicioClientePage({
 
   return (
     <ClientAppFrame
-      title="Saloes"
-      subtitle="Escolha um salao e agende em poucos toques."
+      title="Salões"
+      subtitle="Escolha um salão e agende em poucos toques."
     >
       <section className="space-y-4">
         {saloes.length ? (
@@ -31,10 +31,10 @@ export default async function InicioClientePage({
         ) : (
           <div className="rounded-[1.6rem] border border-white/70 bg-white p-6 shadow-[0_18px_48px_rgba(15,23,42,0.08)]">
             <h3 className="text-lg font-black text-zinc-950">
-              Nenhum salao encontrado agora
+              Nenhum salão encontrado agora
             </h3>
             <p className="mt-2 text-sm leading-6 text-zinc-500">
-              Tente buscar por outro bairro, cidade ou servico.
+              Tente buscar por outro bairro, cidade ou serviço.
             </p>
           </div>
         )}

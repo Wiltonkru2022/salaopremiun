@@ -20,10 +20,10 @@ export default function ClientProfileShortcuts() {
             </div>
             <div className="min-w-0 flex-1">
               <div className="text-sm font-black text-zinc-950">
-                Notificacoes do app
+                Notificações do app
               </div>
               <p className="mt-1 text-xs leading-5 text-zinc-500">
-                Receba lembretes, confirmacoes e pedidos de avaliacao.
+                Receba lembretes, confirmações e pedidos de avaliação.
               </p>
               <div className="mt-3">
                 <PushPermissionRuntime audience="cliente_app" />
@@ -56,7 +56,7 @@ export default function ClientProfileShortcuts() {
           icon={Search}
           className="flex h-12 items-center gap-3 rounded-2xl border border-zinc-200 bg-zinc-50 px-4 text-sm font-semibold text-zinc-800"
         >
-          Buscar saloes
+          Buscar salões
         </ClientAppPendingLink>
         <Link
           href="/app-cliente/recuperar-acesso"

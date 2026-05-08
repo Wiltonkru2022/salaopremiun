@@ -29,17 +29,17 @@ function buildWhatsappHref(item: ClientAppAppointmentListItem) {
   if (!destination) return null;
 
   return `https://wa.me/${destination}?text=${encodeURIComponent(
-    `Oi, quero falar sobre meu horario no ${item.salaoNome} em ${formatDate(item.data)} as ${item.horaInicio.slice(0, 5)} para ${item.servicoNome} com ${item.profissionalNome}.`
+    `Oi, quero falar sobre meu horário no ${item.salaoNome} em ${formatDate(item.data)} às ${item.horaInicio.slice(0, 5)} para ${item.servicoNome} com ${item.profissionalNome}.`
   )}`;
 }
 
 function formatStatus(value: string) {
   const normalized = String(value || "").toLowerCase();
-  if (normalized === "pendente") return "Pendente de confirmacao";
+  if (normalized === "pendente") return "Pendente de confirmação";
   if (normalized === "confirmado") return "Confirmado";
   if (normalized === "cancelado") return "Cancelado";
   if (normalized === "atendido") return "Atendido";
-  if (normalized === "faltou") return "Nao compareceu";
+  if (normalized === "faltou") return "Não compareceu";
   return value || "Status";
 }
 
@@ -156,14 +156,14 @@ function RescheduleAppointmentForm({
       });
       const payload = await response.json();
       if (!response.ok || !payload?.ok) {
-        throw new Error(payload?.error || "Nao foi possivel carregar horarios.");
+        throw new Error(payload?.error || "Não foi possível carregar horários.");
       }
       const nextDias = Array.isArray(payload.dias) ? payload.dias as AvailabilityDay[] : [];
       setDias(nextDias);
       setSelectedDate(nextDias[0]?.data || "");
       setSelectedTime(nextDias[0]?.horarios[0]?.horaInicio || "");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Nao foi possivel carregar horarios.");
+      setError(err instanceof Error ? err.message : "Não foi possível carregar horários.");
     } finally {
       setLoading(false);
     }
@@ -222,7 +222,7 @@ function RescheduleAppointmentForm({
 
               <div>
                 <div className="mb-2 text-xs font-bold uppercase tracking-[0.12em] text-zinc-500">
-                  Novo horario
+                  Novo horário
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {horarios.map((horario) => (
@@ -281,16 +281,16 @@ export default function ClientAppointmentsManager({
   const pendingReviews = agendamentos.filter((item) => item.podeAvaliar).length;
   const successMessage = useMemo(() => {
     if (successKey === "agendado") {
-      return "Seu pedido foi enviado. O salao vai confirmar o horario.";
+      return "Seu pedido foi enviado. O salão vai confirmar o horário.";
     }
     if (successKey === "cancelado") {
-      return "Seu agendamento foi cancelado e o horario foi liberado.";
+      return "Seu agendamento foi cancelado e o horário foi liberado.";
     }
     if (successKey === "reagendado") {
       return "Seu agendamento foi reagendado.";
     }
     if (successKey === "avaliado") {
-      return "Sua avaliacao foi enviada.";
+      return "Sua avaliação foi enviada.";
     }
     return null;
   }, [successKey]);
@@ -305,7 +305,7 @@ export default function ClientAppointmentsManager({
               Meus horarios
             </div>
             <h2 className="mt-3 text-2xl font-black tracking-[-0.05em]">
-              Sua agenda no salao
+              Sua agenda no salão
             </h2>
             <p className="mt-2 text-sm leading-6 text-zinc-300">
               Veja seus proximos horarios, reagende quando precisar e avalie
@@ -381,7 +381,7 @@ export default function ClientAppointmentsManager({
 
                 <div className="rounded-2xl border border-zinc-100 bg-zinc-50 px-4 py-3">
                   <div className="text-xs font-bold uppercase tracking-[0.14em] text-zinc-500">
-                    Data e horario
+                    Data e horário
                   </div>
                   <div className="mt-1 text-sm font-bold text-zinc-900">
                     {formatDate(item.data)} as {item.horaInicio.slice(0, 5)}
@@ -392,7 +392,7 @@ export default function ClientAppointmentsManager({
                 {["pendente", "confirmado"].includes(String(item.status || "").toLowerCase()) ? (
                   <div className="inline-flex items-start gap-2 rounded-2xl bg-blue-50 px-3 py-2 text-xs font-semibold leading-5 text-blue-800">
                     <Info size={15} className="mt-0.5 shrink-0" />
-                    O salao e o profissional acompanham este horario. Se precisar
+                    O salão e o profissional acompanham este horário. Se precisar
                     mudar, use Reagendar ou fale pelo WhatsApp.
                   </div>
                 ) : null}
@@ -440,7 +440,7 @@ export default function ClientAppointmentsManager({
 
                 {item.avaliado ? (
                   <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700">
-                    Avaliacao enviada para este atendimento.
+                    Avaliação enviada para este atendimento.
                   </div>
                 ) : null}
               </div>
@@ -452,14 +452,14 @@ export default function ClientAppointmentsManager({
               Sua agenda esta livre
             </h3>
             <p className="mt-2 text-sm leading-6 text-zinc-500">
-              Escolha um salao, marque seu primeiro horario e acompanhe tudo por
-              aqui: confirmacao, reagendamento, cancelamento e avaliacao.
+              Escolha um salão, marque seu primeiro horário e acompanhe tudo por
+              aqui: confirmação, reagendamento, cancelamento e avaliação.
             </p>
             <Link
               href="/app-cliente/inicio"
               className="mt-4 inline-flex h-11 items-center justify-center rounded-2xl bg-zinc-950 px-4 text-sm font-bold text-white"
             >
-              Encontrar um salao
+              Encontrar um salão
             </Link>
           </div>
         )}

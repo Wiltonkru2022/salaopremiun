@@ -15,10 +15,10 @@ function getErrorMessage(value: string | string[] | undefined) {
     sessao_expirada:
       "Sua sessao expirou neste aparelho. Entre novamente para continuar.",
     salao_indisponivel:
-      "Esse salao nao esta disponivel no app cliente agora. Confira o plano ou tente outro salao.",
+      "Esse salão não está disponível no app cliente agora. Confira o plano ou tente outro salão.",
   };
 
-  return messages[code] || "Nao foi possivel entrar agora. Tente novamente.";
+  return messages[code] || "Não foi possível entrar agora. Tente novamente.";
 }
 
 export default async function LoginClientePage({

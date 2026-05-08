@@ -29,7 +29,7 @@ export default function ClientAppSalonCard({
         {salao.fotoCapaUrl ? (
           <img
             src={salao.fotoCapaUrl}
-            alt={`Capa do salao ${salao.nome}`}
+            alt={`Capa do salão ${salao.nome}`}
             className="h-full w-full object-cover"
           />
         ) : (
@@ -62,7 +62,7 @@ export default function ClientAppSalonCard({
           </span>
           {salao.totalAvaliacoes ? (
             <span className="rounded-full bg-amber-50 px-3 py-1.5 text-amber-700">
-              {salao.totalAvaliacoes} avaliacoes
+              {salao.totalAvaliacoes} avaliações
             </span>
           ) : null}
         </div>
@@ -72,7 +72,7 @@ export default function ClientAppSalonCard({
             {salao.logoUrl ? (
               <img
                 src={salao.logoUrl}
-                alt={`Logo do salao ${salao.nome}`}
+                alt={`Logo do salão ${salao.nome}`}
                 className="h-full w-full object-cover"
               />
             ) : (
@@ -90,7 +90,7 @@ export default function ClientAppSalonCard({
               <MapPin size={15} />
               <span className="truncate">
                 {[salao.bairro, salao.cidade].filter(Boolean).join(" - ") ||
-                  "Endereco publico em atualizacao"}
+                  "Endereço público em atualização"}
               </span>
             </div>
           </div>
@@ -98,7 +98,7 @@ export default function ClientAppSalonCard({
 
         <p className="line-clamp-3 text-sm leading-6 text-zinc-600">
           {salao.descricaoPublica ||
-            "Conheca equipe, servicos e horarios desse salao no app cliente."}
+            "Conheça equipe, serviços e horários desse salão no app cliente."}
         </p>
 
         <div className="grid grid-cols-3 gap-2 rounded-2xl border border-zinc-100 bg-zinc-50 p-3 text-center">
@@ -107,7 +107,7 @@ export default function ClientAppSalonCard({
               {salao.totalServicos || "-"}
             </div>
             <div className="mt-0.5 text-[11px] font-semibold text-zinc-500">
-              servicos
+              serviços
             </div>
           </div>
           <div>
@@ -162,7 +162,7 @@ export default function ClientAppSalonCard({
             pendingLabel="Abrindo"
             className="inline-flex h-11 flex-1 items-center justify-center gap-1.5 rounded-2xl bg-zinc-950 px-4 text-sm font-bold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-zinc-800"
           >
-            Ver horarios
+            Ver horários
           </ClientAppPendingLink>
           {!isLoggedIn ? (
             <Link

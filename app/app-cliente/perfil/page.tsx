@@ -51,7 +51,7 @@ export default async function ClientePerfilPage({
 
         {params?.status === "erro_excluir" ? (
           <div className="rounded-[1.3rem] border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
-            Nao foi possivel encerrar sua conta agora.
+            Não foi possível encerrar sua conta agora.
           </div>
         ) : null}
 
@@ -102,7 +102,7 @@ export default async function ClientePerfilPage({
                     Telefone
                   </div>
                   <div className="mt-2 text-sm font-semibold text-zinc-800">
-                    {profile.telefone || "Nao informado"}
+                    {profile.telefone || "Não informado"}
                   </div>
                 </div>
               </div>
@@ -120,7 +120,7 @@ export default async function ClientePerfilPage({
               <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
                 <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.12em] text-amber-700">
                   <WalletCards size={15} />
-                  Credito disponivel
+                  Crédito disponível
                 </div>
                 {profile.creditos.length ? (
                   <div className="mt-3 space-y-2">
@@ -143,7 +143,7 @@ export default async function ClientePerfilPage({
                   </div>
                 ) : (
                   <p className="mt-2 text-sm leading-6 text-amber-800">
-                    Voce ainda nao tem credito registrado nos saloes vinculados.
+                    Você ainda não tem crédito registrado nos salões vinculados.
                   </p>
                 )}
               </div>

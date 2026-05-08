@@ -12,29 +12,29 @@ import {
 const configCards = [
   {
     href: "/configuracoes/usuarios",
-    title: "Usuarios do sistema",
+    title: "Usuários do sistema",
     description:
-      "Controle quem acessa o painel, niveis de permissao e limite de contas do plano.",
+      "Controle quem acessa o painel, níveis de permissão e limite de contas do plano.",
     icon: Users,
     area: "Conta",
     tone: "bg-zinc-950 text-white",
   },
   {
     href: "/configuracoes/agenda-horarios",
-    title: "Agenda e horarios",
+    title: "Agenda e horários",
     description:
-      "Defina funcionamento, intervalos e regras que deixam a agenda fiel ao salao.",
+      "Defina funcionamento, intervalos e regras que deixam a agenda fiel ao salão.",
     icon: CalendarClock,
     area: "Agenda",
     tone: "bg-[var(--app-accent)] text-zinc-950",
   },
   {
     href: "/configuracoes/notificacoes",
-    title: "Notificacoes e push",
+    title: "Notificações e push",
     description:
       "Ajuste alertas, push no celular e avisos importantes para equipe e clientes.",
     icon: BellRing,
-    area: "Comunicacao",
+    area: "Comunicação",
     tone: "bg-emerald-600 text-white",
   },
   {
@@ -48,11 +48,11 @@ const configCards = [
   },
   {
     href: "/configuracoes/rateio",
-    title: "Rateio e impressao",
+    title: "Rateio e impressão",
     description:
-      "Configure documentos, rateios e detalhes usados no fechamento de comissoes.",
+      "Configure documentos, rateios e detalhes usados no fechamento de comissões.",
     icon: BadgeDollarSign,
-    area: "Comissoes",
+    area: "Comissões",
     tone: "bg-amber-500 text-zinc-950",
   },
 ];
@@ -65,21 +65,21 @@ export default function ConfiguracoesPage() {
           <div className="bg-zinc-950 p-6 text-white sm:p-7">
             <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.22em] text-white/70">
               <SlidersHorizontal size={14} />
-              Central de configuracoes
+              Central de configurações
             </div>
             <h1 className="mt-4 max-w-3xl font-display text-3xl font-black tracking-[-0.04em] sm:text-[2.6rem]">
-              Configuracoes do salao
+              Configurações do salão
             </h1>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-zinc-300">
-              Ajuste acessos, horarios, notificacoes, caixa e regras de repasse
-              com seguranca.
+              Ajuste acessos, horários, notificações, caixa e regras de repasse
+              com segurança.
             </p>
           </div>
 
           <div className="bg-gradient-to-br from-zinc-50 via-white to-amber-50 p-5 sm:p-6">
             <div className="grid h-full content-center gap-3">
               <div className="text-xs font-black uppercase tracking-[0.2em] text-zinc-400">
-                Modulos
+                Módulos
               </div>
               {configCards.slice(0, 4).map((item) => {
                 const Icon = item.icon;

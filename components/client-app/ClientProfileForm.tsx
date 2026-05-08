@@ -115,7 +115,7 @@ export default function ClientProfileForm({
 
           {successKey === "erro_excluir" ? (
             <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-              Nao foi possivel encerrar sua conta agora.
+              Não foi possível encerrar sua conta agora.
             </div>
           ) : null}
 
@@ -138,8 +138,8 @@ export default function ClientProfileForm({
         </h2>
         <p className="mt-2 text-sm leading-6 text-red-800">
           Isso desativa seu acesso ao app, cancela agendamentos futuros feitos
-          por este app e remove sua sessao atual. O historico operacional do
-          salao continua preservado.
+          por este app e remove sua sessão atual. O histórico operacional do
+          salão continua preservado.
         </p>
         <button
           type="submit"

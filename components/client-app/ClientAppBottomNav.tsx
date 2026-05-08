@@ -7,7 +7,7 @@ import ClientAppPendingLink from "@/components/client-app/ClientAppPendingLink";
 const navItems = [
   {
     href: "/app-cliente/inicio",
-    label: "Saloes",
+    label: "Salões",
     icon: Store,
     match: (pathname: string) =>
       pathname === "/app-cliente/inicio" ||

@@ -16,7 +16,7 @@ function ReviewButton() {
       disabled={pending}
       className="h-12 w-full rounded-2xl bg-zinc-950 px-5 text-sm font-bold text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60"
     >
-      {pending ? "Enviando avaliacao..." : "Enviar avaliacao"}
+      {pending ? "Enviando avaliação..." : "Enviar avaliação"}
     </button>
   );
 }

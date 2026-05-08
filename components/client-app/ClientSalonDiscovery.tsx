@@ -90,14 +90,14 @@ export default function ClientSalonDiscovery({
         <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
           <div>
             <div className="text-[11px] font-black uppercase tracking-[0.16em] text-zinc-400">
-              Descobrir saloes
+              Descobrir salões
             </div>
             <h2 className="mt-1 text-2xl font-black text-zinc-950">
-              Escolha seu proximo cuidado
+              Escolha seu próximo cuidado
             </h2>
             <p className="mt-1 max-w-xl text-sm leading-6 text-zinc-500">
-              Veja servicos, profissionais e avaliacoes antes de marcar. Tudo que
-              voce agenda fica salvo no menu Agenda.
+              Veja serviços, profissionais e avaliações antes de marcar. Tudo que
+              você agenda fica salvo no menu Agenda.
             </p>
           </div>
           <div className="inline-flex items-center gap-2 rounded-2xl border border-emerald-100 bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-700">
@@ -112,7 +112,7 @@ export default function ClientSalonDiscovery({
               type="search"
               value={localSearch}
               onChange={(event) => setLocalSearch(event.target.value)}
-              placeholder="Servico, bairro ou salao"
+              placeholder="Serviço, bairro ou salão"
               className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-zinc-400"
             />
           </label>
@@ -126,7 +126,7 @@ export default function ClientSalonDiscovery({
           >
             <option value="recommended">Recomendados</option>
             <option value="rating">Melhor avaliados</option>
-            <option value="price">Menor preco</option>
+            <option value="price">Menor preço</option>
           </select>
         </div>
 
@@ -159,7 +159,7 @@ export default function ClientSalonDiscovery({
             }`}
           >
             <Star size={14} fill={onlyRated ? "currentColor" : "none"} />
-            Com avaliacoes
+            Com avaliações
           </button>
           <button
             type="button"
@@ -178,17 +178,17 @@ export default function ClientSalonDiscovery({
       <div className="flex flex-wrap items-center gap-2">
         <div className="inline-flex items-center gap-1 rounded-full bg-zinc-100 px-3 py-1.5 text-xs font-semibold text-zinc-600">
           <MapPin size={14} />
-          Busque por bairro, cidade, servico ou nome do salao
+          Busque por bairro, cidade, serviço ou nome do salão
         </div>
         {isLoggedIn ? (
           <div className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-800">
             <CalendarCheck size={14} />
-            Depois de confirmar, seu horario aparece na Agenda
+            Depois de confirmar, seu horário aparece na Agenda
           </div>
         ) : (
           <div className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-800">
             <CalendarCheck size={14} />
-            Entre na conta para reservar horario
+            Entre na conta para reservar horário
           </div>
         )}
       </div>
@@ -206,10 +206,10 @@ export default function ClientSalonDiscovery({
       ) : (
         <div className="rounded-[1.8rem] border border-white/70 bg-white p-6 shadow-[0_18px_48px_rgba(15,23,42,0.08)]">
           <h3 className="text-lg font-black tracking-[-0.03em] text-zinc-950">
-            Nenhum salao com esses filtros
+            Nenhum salão com esses filtros
           </h3>
           <p className="mt-2 text-sm leading-6 text-zinc-500">
-            Limpe algum filtro ou tente buscar por outro bairro, cidade ou servico.
+            Limpe algum filtro ou tente buscar por outro bairro, cidade ou serviço.
           </p>
         </div>
       )}

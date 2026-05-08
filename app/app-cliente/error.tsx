@@ -17,10 +17,10 @@ export default function AppClienteError({
             App cliente
           </div>
           <h1 className="mt-2 text-2xl font-black text-zinc-950">
-            Nao foi possivel abrir esta tela
+            Não foi possível abrir esta tela
           </h1>
           <p className="mt-3 text-sm leading-6 text-zinc-500">
-            Tente recarregar. Se nao resolver, volte para Saloes e continue
+            Tente recarregar. Se não resolver, volte para Salões e continue
             navegando pelo app.
           </p>
 
@@ -38,7 +38,7 @@ export default function AppClienteError({
               className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl border border-zinc-200 bg-zinc-50 px-4 text-sm font-bold text-zinc-800"
             >
               <Store size={17} />
-              Ir para Saloes
+              Ir para Salões
             </Link>
           </div>
         </section>

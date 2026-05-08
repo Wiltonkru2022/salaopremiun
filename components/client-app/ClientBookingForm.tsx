@@ -128,7 +128,7 @@ export default function ClientBookingForm({
         const payload = await response.json();
         if (!response.ok || !payload?.ok) {
           throw new Error(
-            payload?.error || "Nao foi possivel carregar os horarios agora."
+            payload?.error || "Não foi possível carregar os horários agora."
           );
         }
 
@@ -149,7 +149,7 @@ export default function ClientBookingForm({
         setAvailabilityError(
           error instanceof Error
             ? error.message
-            : "Nao foi possivel carregar os horarios agora."
+            : "Não foi possível carregar os horários agora."
         );
       })
       .finally(() => {
@@ -181,7 +181,7 @@ export default function ClientBookingForm({
       <div className="mt-5 space-y-4">
         <div>
           <label className="mb-1.5 block text-sm font-medium text-zinc-700">
-            Servico
+            Serviço
           </label>
           <select
             name="servico"
@@ -189,12 +189,12 @@ export default function ClientBookingForm({
             onChange={(event) => setServicoId(event.target.value)}
             className="h-12 w-full rounded-2xl border border-zinc-200 bg-white px-4 text-sm outline-none transition focus:border-zinc-400"
           >
-            <option value="">Selecione um servico</option>
+            <option value="">Selecione um serviço</option>
             {servicos.map((servico) => (
               <option key={servico.id} value={servico.id}>
                 {servico.nome} -{" "}
                 {servico.exigeAvaliacao
-                  ? "Exige avaliacao"
+                  ? "Exige avaliação"
                   : formatCurrency(servico.preco)}
               </option>
             ))}
@@ -214,7 +214,7 @@ export default function ClientBookingForm({
                 </div>
                 <div className="shrink-0 text-right text-sm font-black text-zinc-950">
                   {selectedServico.exigeAvaliacao
-                    ? "Exige avaliacao"
+                    ? "Exige avaliação"
                     : formatCurrency(selectedServico.preco)}
                   <div className="mt-1 text-xs font-semibold text-zinc-500">
                     {selectedServico.duracaoMinutos
@@ -252,11 +252,11 @@ export default function ClientBookingForm({
         <div className="space-y-4 rounded-2xl border border-zinc-200 bg-zinc-50 p-4">
           <div>
             <div className="mb-1.5 block text-sm font-medium text-zinc-700">
-              Dias disponiveis
+              Dias disponíveis
             </div>
             {!servicoId || !profissionalId ? (
               <div className="rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-500">
-                Escolha servico e profissional.
+                Escolha serviço e profissional.
               </div>
             ) : loadingAvailability ? (
               <div className="rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-500">
@@ -326,18 +326,18 @@ export default function ClientBookingForm({
           <textarea
             name="observacoes"
             rows={3}
-            placeholder="Se quiser, deixe um recado rapido para o salao."
+            placeholder="Se quiser, deixe um recado rápido para o salão."
             className="w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-zinc-400"
           />
         </div>
 
         <div className="rounded-2xl border border-zinc-200 bg-white px-4 py-3">
           <div className="text-xs font-bold uppercase tracking-[0.12em] text-zinc-500">
-            Confirmacao
+            Confirmação
           </div>
           <div className="mt-2 space-y-1 text-sm text-zinc-700">
             <div>
-              <strong>{selectedServico?.nome || "Servico nao escolhido"}</strong>
+              <strong>{selectedServico?.nome || "Serviço não escolhido"}</strong>
             </div>
             <div>
               {selectedProfissional
@@ -346,8 +346,8 @@ export default function ClientBookingForm({
             </div>
             <div>
               {selectedDate && selectedTime
-                ? `${selectedDate.split("-").reverse().join("/")} as ${selectedTime}`
-                : "Escolha data e horario"}
+                ? `${selectedDate.split("-").reverse().join("/")} às ${selectedTime}`
+                : "Escolha data e horário"}
             </div>
           </div>
         </div>
