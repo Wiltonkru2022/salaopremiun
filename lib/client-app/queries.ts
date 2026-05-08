@@ -78,6 +78,11 @@ export type ClientAppProfileData = {
   email: string;
   telefone: string | null;
   preferenciasGerais: string | null;
+  creditos: Array<{
+    idSalao: string;
+    salaoNome: string;
+    credito: number;
+  }>;
 };
 
 function normalizeSearch(value?: string) {
@@ -616,18 +621,46 @@ export async function getClienteAppAppointmentForReview(params: {
 export async function getClienteAppProfileData(params: { idConta: string }) {
   try {
     const supabaseAdmin = getSupabaseAdmin();
-    const { data: conta } = await (supabaseAdmin as any)
-      .from("clientes_app_auth")
-      .select("nome, email, telefone, preferencias_gerais")
-      .eq("id", params.idConta)
-      .limit(1)
-      .maybeSingle();
+    const [{ data: conta }, { data: vinculos }] = await Promise.all([
+      (supabaseAdmin as any)
+        .from("clientes_app_auth")
+        .select("nome, email, telefone, preferencias_gerais")
+        .eq("id", params.idConta)
+        .limit(1)
+        .maybeSingle(),
+      (supabaseAdmin as any)
+        .from("clientes_auth")
+        .select("id_salao, id_cliente, saloes(nome, nome_fantasia), clientes(cashback)")
+        .eq("app_conta_id", params.idConta)
+        .eq("app_ativo", true)
+        .limit(50),
+    ]);
+
+    const creditos = ((vinculos || []) as Array<Record<string, unknown>>)
+      .map((item) => {
+        const salao = item.saloes as
+          | { nome?: string | null; nome_fantasia?: string | null }
+          | null
+          | undefined;
+        const cliente = item.clientes as { cashback?: number | null } | null | undefined;
+        return {
+          idSalao: String(item.id_salao || ""),
+          salaoNome:
+            String(salao?.nome_fantasia || "").trim() ||
+            String(salao?.nome || "").trim() ||
+            "Salao",
+          credito: Number(cliente?.cashback || 0),
+        };
+      })
+      .filter((item) => item.idSalao && item.credito > 0)
+      .sort((a, b) => b.credito - a.credito);
 
     return {
       nome: String(conta?.nome || "").trim(),
       email: String(conta?.email || "").trim(),
       telefone: String(conta?.telefone || "").trim() || null,
       preferenciasGerais: String(conta?.preferencias_gerais || "").trim() || null,
+      creditos,
     } satisfies ClientAppProfileData;
   } catch {
     return {
@@ -635,6 +668,7 @@ export async function getClienteAppProfileData(params: { idConta: string }) {
       email: "",
       telefone: null,
       preferenciasGerais: null,
+      creditos: [],
     } satisfies ClientAppProfileData;
   }
 }

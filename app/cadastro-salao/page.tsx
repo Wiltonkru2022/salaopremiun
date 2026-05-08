@@ -1,6 +1,7 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -12,10 +13,20 @@ import {
   X,
 } from "lucide-react";
 import { getErrorMessage } from "@/lib/get-error-message";
+import { createClient } from "@/lib/supabase/client";
 
 type StepKey = "dados" | "acesso" | "endereco" | "resumo";
 
 const STEPS: StepKey[] = ["dados", "acesso", "endereco", "resumo"];
+const CREATION_STEPS = [
+  "Seja bem-vindo ao SalaoPremium",
+  "Estamos criando seu acesso",
+  "Estamos criando seu ambiente",
+  "Criando seu usuario principal",
+  "Criando o perfil do seu salao",
+  "Organizando agenda, caixa e clientes",
+  "Por favor, aguarde...",
+];
 
 function onlyNumbers(value: string) {
   return value.replace(/\D/g, "");
@@ -43,6 +54,15 @@ function getLoginRedirectHref(params: URLSearchParams) {
     "login.salaopremiun.com.br";
 
   return `https://${String(host).replace(/^https?:\/\//, "")}/login?${params.toString()}`;
+}
+
+function getDashboardRedirectHref() {
+  if (typeof window === "undefined") return "/dashboard?boot=1";
+
+  const isManagedHost = window.location.hostname.endsWith("salaopremiun.com.br");
+  if (!isManagedHost) return "/dashboard?boot=1";
+
+  return "https://painel.salaopremiun.com.br/dashboard?boot=1&novo=1";
 }
 
 function getStepTitle(step: StepKey) {
@@ -85,6 +105,9 @@ function CadastroSalaoContent() {
   const [buscandoCep, setBuscandoCep] = useState(false);
   const [checking, setChecking] = useState(false);
   const [aceiteTermos, setAceiteTermos] = useState(false);
+  const [creatingExperience, setCreatingExperience] = useState(false);
+  const [creationStepIndex, setCreationStepIndex] = useState(0);
+  const [typedCreationText, setTypedCreationText] = useState("");
 
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
@@ -101,6 +124,66 @@ function CadastroSalaoContent() {
 
   const currentStepIndex = STEPS.indexOf(step);
   const progresso = Math.round(((currentStepIndex + 1) / STEPS.length) * 100);
+
+  useEffect(() => {
+    if (!creatingExperience) return;
+
+    let cancelled = false;
+    const timers: number[] = [];
+
+    function wait(ms: number) {
+      return new Promise<void>((resolve) => {
+        const timer = window.setTimeout(resolve, ms);
+        timers.push(timer);
+      });
+    }
+
+    async function typeStep(text: string, index: number) {
+      setCreationStepIndex(index);
+      setTypedCreationText("");
+
+      for (let i = 1; i <= text.length; i += 1) {
+        if (cancelled) return;
+        setTypedCreationText(text.slice(0, i));
+        await wait(28);
+      }
+
+      await wait(index === 0 ? 850 : 620);
+    }
+
+    async function finalizeCadastro() {
+      try {
+        const supabase = createClient();
+        const { error: loginError } = await supabase.auth.signInWithPassword({
+          email: email.trim(),
+          password: senha.trim(),
+        });
+
+        if (loginError) throw loginError;
+
+        window.location.assign(getDashboardRedirectHref());
+      } catch {
+        const params = new URLSearchParams({ email: email.trim(), criado: "1" });
+        window.location.assign(getLoginRedirectHref(params));
+      }
+    }
+
+    async function run() {
+      for (let index = 0; index < CREATION_STEPS.length; index += 1) {
+        await typeStep(CREATION_STEPS[index], index);
+        if (cancelled) return;
+      }
+
+      await finalizeCadastro();
+    }
+
+    void run();
+
+    return () => {
+      cancelled = true;
+      timers.forEach((timer) => window.clearTimeout(timer));
+    };
+  }, [creatingExperience, email, senha]);
 
   async function verificarDadosExistentes(fields: {
     email?: string;
@@ -252,15 +335,25 @@ function CadastroSalaoContent() {
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || "Erro ao cadastrar salao.");
 
-      setMsg("Cadastro realizado com sucesso.");
-
-      const params = new URLSearchParams({ email: email.trim() });
-      window.location.assign(getLoginRedirectHref(params));
+      setMsg("");
+      setCreatingExperience(true);
     } catch (e: unknown) {
       setErro(getErrorMessage(e, "Erro ao cadastrar salao."));
     } finally {
-      setSaving(false);
+      if (!creatingExperience) {
+        setSaving(false);
+      }
     }
+  }
+
+  if (creatingExperience) {
+    return (
+      <CadastroCreationExperience
+        typedText={typedCreationText}
+        stepIndex={creationStepIndex}
+        totalSteps={CREATION_STEPS.length}
+      />
+    );
   }
 
   return (
@@ -549,6 +642,65 @@ function CadastroSalaoContent() {
       </FormPanel>
     );
   }
+}
+
+function CadastroCreationExperience({
+  typedText,
+  stepIndex,
+  totalSteps,
+}: {
+  typedText: string;
+  stepIndex: number;
+  totalSteps: number;
+}) {
+  const progress = Math.min(
+    100,
+    Math.round(((stepIndex + 1) / totalSteps) * 100)
+  );
+
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-white px-5 text-zinc-950">
+      <div className="w-full max-w-[520px] text-center">
+        <div className="mx-auto flex h-24 w-24 items-center justify-center rounded-[2rem] border border-zinc-200 bg-white shadow-[0_24px_80px_rgba(15,23,42,0.12)]">
+          <Image
+            src="/favicon-preview.png"
+            alt="SalaoPremium"
+            width={64}
+            height={64}
+            className="h-16 w-16 rounded-[1.35rem]"
+          />
+        </div>
+
+        <div className="mt-8 min-h-[118px]">
+          <p className="text-xs font-black uppercase tracking-[0.22em] text-zinc-400">
+            Cadastro aprovado
+          </p>
+          <h1 className="mt-3 font-display text-[2.25rem] font-black leading-tight tracking-[-0.05em] text-zinc-950 sm:text-[3rem]">
+            {typedText}
+            <span className="ml-1 inline-block h-8 w-[3px] translate-y-1 animate-pulse rounded-full bg-[var(--app-accent)]" />
+          </h1>
+        </div>
+
+        <div className="mx-auto mt-4 max-w-sm rounded-[1.6rem] border border-zinc-200 bg-zinc-50 p-4">
+          <div className="flex items-center justify-between text-xs font-black uppercase tracking-[0.16em] text-zinc-500">
+            <span>Preparando sistema</span>
+            <span>{progress}%</span>
+          </div>
+          <div className="mt-3 h-2 overflow-hidden rounded-full bg-white">
+            <div
+              className="h-full rounded-full bg-[var(--app-accent)] transition-all duration-500"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+        </div>
+
+        <div className="mt-7 flex items-center justify-center gap-2 text-sm font-semibold text-zinc-500">
+          <Loader2 size={16} className="animate-spin" />
+          Tudo pronto em alguns segundos. Nao feche esta tela.
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function HeroBadge({ label }: { label: string }) {

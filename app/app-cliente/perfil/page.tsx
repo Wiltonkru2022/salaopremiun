@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Mail, Phone, UserPen } from "lucide-react";
+import { Mail, Phone, UserPen, WalletCards } from "lucide-react";
 import ClientAppFrame from "@/components/client-app/ClientAppFrame";
 import ClientProfileShortcuts from "@/components/client-app/ClientProfileShortcuts";
 import { requireClienteAppContext } from "@/lib/client-context.server";
@@ -115,6 +115,37 @@ export default async function ClientePerfilPage({
                   {profile.preferenciasGerais ||
                     "Nenhuma preferencia cadastrada ainda."}
                 </p>
+              </div>
+
+              <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
+                <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.12em] text-amber-700">
+                  <WalletCards size={15} />
+                  Credito disponivel
+                </div>
+                {profile.creditos.length ? (
+                  <div className="mt-3 space-y-2">
+                    {profile.creditos.map((item) => (
+                      <div
+                        key={item.idSalao}
+                        className="flex items-center justify-between gap-3 rounded-2xl border border-amber-200 bg-white px-3 py-2.5"
+                      >
+                        <span className="min-w-0 truncate text-sm font-black text-zinc-900">
+                          {item.salaoNome}
+                        </span>
+                        <span className="shrink-0 text-sm font-black text-amber-800">
+                          {item.credito.toLocaleString("pt-BR", {
+                            style: "currency",
+                            currency: "BRL",
+                          })}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="mt-2 text-sm leading-6 text-amber-800">
+                    Voce ainda nao tem credito registrado nos saloes vinculados.
+                  </p>
+                )}
               </div>
             </div>
           </div>
