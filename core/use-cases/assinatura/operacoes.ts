@@ -186,7 +186,7 @@ export async function iniciarTrialAssinaturaUseCase(params: {
 
     const planoTeste = await params.service.buscarPlanoTeste();
     const agora = new Date();
-    const trialFim = addDays(agora, 7);
+    const trialFim = addDays(agora, 15);
     const agoraIso = agora.toISOString();
     const trialFimIso = trialFim.toISOString();
     const vencimentoEm = format(trialFim, "yyyy-MM-dd");

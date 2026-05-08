@@ -1,6 +1,9 @@
 import { registrarLogSistema } from "@/lib/system-logs";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
+const TRIAL_GRATIS_DIAS = 15;
+const TRIAL_LIMITE_ILIMITADO = 999;
+
 export type CadastroSalaoBody = {
   email: string;
   senha: string;
@@ -153,6 +156,75 @@ export function createCadastroSalaoService() {
       return idSalao;
     },
 
+    async ativarTrialInicial(idSalao: string) {
+      const supabaseAdmin = getSupabaseAdmin();
+      const agora = new Date();
+      const trialFim = new Date(agora);
+      trialFim.setDate(trialFim.getDate() + TRIAL_GRATIS_DIAS);
+
+      const agoraIso = agora.toISOString();
+      const trialFimIso = trialFim.toISOString();
+      const vencimentoEm = trialFimIso.slice(0, 10);
+
+      const { error: assinaturaError } = await supabaseAdmin
+        .from("assinaturas")
+        .insert({
+          id_salao: idSalao,
+          plano: "teste_gratis",
+          valor: 0,
+          status: "teste_gratis",
+          vencimento_em: vencimentoEm,
+          limite_profissionais: TRIAL_LIMITE_ILIMITADO,
+          limite_usuarios: TRIAL_LIMITE_ILIMITADO,
+          pago_em: null,
+          trial_ativo: "true",
+          trial_inicio_em: agoraIso,
+          trial_fim_em: trialFimIso,
+          gateway: null,
+          forma_pagamento_atual: null,
+          id_cobranca_atual: null,
+          referencia_atual: null,
+          asaas_payment_id: null,
+          renovacao_automatica: false,
+        });
+
+      if (assinaturaError) {
+        throw new CadastroSalaoServiceError(
+          assinaturaError.message || "Erro ao ativar teste gratis inicial.",
+          500
+        );
+      }
+
+      const { error: salaoError } = await supabaseAdmin
+        .from("saloes")
+        .update({
+          status: "teste_gratis",
+          plano: "teste_gratis",
+          trial_ativo: true,
+          trial_inicio_em: agoraIso,
+          trial_fim_em: trialFimIso,
+          limite_profissionais: TRIAL_LIMITE_ILIMITADO,
+          limite_usuarios: TRIAL_LIMITE_ILIMITADO,
+        })
+        .eq("id", idSalao);
+
+      if (salaoError) {
+        throw new CadastroSalaoServiceError(
+          salaoError.message || "Erro ao atualizar teste gratis do salao.",
+          500
+        );
+      }
+
+      return {
+        status: "teste_gratis",
+        plano: "teste_gratis",
+        trial_inicio_em: agoraIso,
+        trial_fim_em: trialFimIso,
+        vencimento_em: vencimentoEm,
+        dias: TRIAL_GRATIS_DIAS,
+      };
+    },
+
     async registrarCadastro(params: {
       idSalao: string;
       origem: string;
@@ -163,11 +235,12 @@ export function createCadastroSalaoService() {
         gravidade: "info",
         modulo: "cadastro_salao",
         idSalao: params.idSalao,
-        mensagem: "Salao cadastrado pendente de ativacao comercial.",
+        mensagem: "Salao cadastrado com teste gratis ativo.",
         detalhes: {
           origem: params.origem,
           plano_interesse: params.plano,
-          status_inicial: "pendente",
+          status_inicial: "teste_gratis",
+          trial_dias: TRIAL_GRATIS_DIAS,
           email: params.email,
         },
       });

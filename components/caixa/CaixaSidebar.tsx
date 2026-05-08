@@ -127,22 +127,22 @@ export default function CaixaSidebar({
   return (
     <>
       <aside className="w-full min-h-0">
-        <div className="flex h-full min-h-0 flex-col rounded-[34px] border border-white/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(250,251,255,0.96)_100%)] p-5 shadow-[0_24px_80px_rgba(15,23,42,0.09)]">
+        <div className="flex h-full min-h-0 flex-col rounded-[24px] border border-white/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(250,251,255,0.96)_100%)] p-2.5 shadow-[0_24px_80px_rgba(15,23,42,0.09)]">
         <div className="min-h-0 flex-1 overflow-y-auto pr-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          <div className="space-y-4">
-            <div className="rounded-[28px] border border-zinc-200 bg-white p-5 shadow-sm">
-              <div className="flex items-start justify-between gap-3">
+          <div className="space-y-2">
+            <div className="rounded-[20px] border border-zinc-200 bg-white p-3 shadow-sm">
+              <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
-                  <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-400">
+                  <div className="text-[9px] font-semibold uppercase tracking-[0.16em] text-zinc-400">
                     Operação do caixa
                   </div>
-                  <h2 className="mt-1 text-[1.55rem] font-semibold leading-none text-slate-900">
+                  <h2 className="mt-0.5 text-[1.35rem] font-semibold leading-none text-slate-900">
                     Operação
                   </h2>
                 </div>
 
                 <span
-                  className={`shrink-0 rounded-full border px-3 py-1 text-[11px] font-bold uppercase ${
+                  className={`shrink-0 rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase ${
                     caixaAberto
                       ? "border-emerald-200 bg-emerald-50 text-emerald-700"
                       : "border-zinc-200 bg-zinc-100 text-zinc-600"
@@ -152,7 +152,7 @@ export default function CaixaSidebar({
                 </span>
               </div>
 
-              <div className="mt-3 grid gap-3">
+              <div className="mt-2 grid gap-2">
                 <SidebarInfo
                   label="Cliente"
                   value={
@@ -161,7 +161,7 @@ export default function CaixaSidebar({
                       : "Selecione uma venda"
                   }
                 />
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                   <SidebarInfo
                     label="Total da venda"
                     value={comandaSelecionada ? formatCurrency(totalComanda) : "R$ 0,00"}
@@ -174,7 +174,7 @@ export default function CaixaSidebar({
                 </div>
               </div>
 
-              <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-3">
                 <MiniInfoCard label="Total pago" value={formatMoney(totalPago)} />
                 <MiniInfoCard
                   label="Falta receber"
@@ -184,7 +184,7 @@ export default function CaixaSidebar({
                 <MiniInfoCard label="Troco" value={formatMoney(troco)} />
               </div>
 
-              <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
                 <MiniInfoCard
                   label="Crédito gerado"
                   value={formatMoney(totalCreditoGerado)}
@@ -297,11 +297,11 @@ function MiniInfoCard({
         : "border-zinc-200 bg-white text-zinc-900";
 
   return (
-    <div className={`rounded-[22px] border px-3 py-3 ${toneClass}`}>
-      <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-current/60">
+    <div className={`rounded-[14px] border px-2 py-2 ${toneClass}`}>
+      <div className="text-[8.5px] font-semibold uppercase tracking-[0.12em] text-current/60">
         {label}
       </div>
-      <div className="mt-1 break-words text-sm font-bold leading-5">{value}</div>
+      <div className="mt-0.5 break-words text-xs font-bold leading-4">{value}</div>
     </div>
   );
 }
@@ -352,11 +352,11 @@ function SidebarInfo({
           : "border-zinc-200 bg-zinc-50";
 
   return (
-    <div className={`rounded-2xl border px-4 py-3.5 ${toneClass}`}>
-      <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-400">
+    <div className={`rounded-[14px] border px-2.5 py-2 ${toneClass}`}>
+      <div className="text-[8.5px] font-semibold uppercase tracking-[0.12em] text-zinc-400">
         {label}
       </div>
-      <div className="mt-1.5 break-words text-sm font-semibold leading-5 text-zinc-900">
+      <div className="mt-0.5 break-words text-xs font-semibold leading-4 text-zinc-900">
         {value}
       </div>
     </div>

@@ -266,12 +266,23 @@ async function getPlanoAccessSnapshotUncached(
 
   const salaoRow = salao as SalaoRow | null;
   const assinaturaRow = assinatura as AssinaturaRow | null;
+  const assinaturaStatus = String(assinaturaRow?.status || salaoRow?.status || "")
+    .trim()
+    .toLowerCase();
+  const salaoStatus = String(salaoRow?.status || "").trim().toLowerCase();
+  const resumo = getResumoAssinatura({
+    status: assinaturaRow?.status || salaoRow?.status,
+    vencimentoEm: assinaturaRow?.vencimento_em || null,
+    trialFimEm: assinaturaRow?.trial_fim_em || null,
+  });
   const planoCodigo = normalizePlano(assinaturaRow?.plano || salaoRow?.plano);
+  const planoCodigoEfetivo =
+    resumo.emTesteGratis && resumo.ativa ? "premium" : planoCodigo;
 
   const { data: plano } = await supabaseAdmin
     .from("planos_saas")
     .select("id, codigo, nome, limite_usuarios, limite_profissionais")
-    .eq("codigo", planoCodigo)
+    .eq("codigo", planoCodigoEfetivo)
     .maybeSingle();
 
   const planoRow = plano as PlanoRow | null;
@@ -361,16 +372,6 @@ async function getPlanoAccessSnapshotUncached(
   recursos.marketing = false;
   recursos.campanhas = false;
 
-  const assinaturaStatus = String(assinaturaRow?.status || salaoRow?.status || "")
-    .trim()
-    .toLowerCase();
-  const salaoStatus = String(salaoRow?.status || "").trim().toLowerCase();
-  const resumo = getResumoAssinatura({
-    status: assinaturaRow?.status || salaoRow?.status,
-    vencimentoEm: assinaturaRow?.vencimento_em || null,
-    trialFimEm: assinaturaRow?.trial_fim_em || null,
-  });
-
   const bloqueadoManual =
     STATUS_RESTRITO.has(assinaturaStatus) || STATUS_RESTRITO.has(salaoStatus);
   const bloqueioTotal = bloqueadoManual || resumo.bloqueioTotal;
@@ -403,7 +404,7 @@ async function getPlanoAccessSnapshotUncached(
   return {
     idSalao,
     planoCodigo,
-    planoNome: planoRow?.nome || planoCodigo,
+    planoNome: resumo.emTesteGratis && resumo.ativa ? "Teste gratis" : planoRow?.nome || planoCodigo,
     assinaturaStatus,
     salaoStatus,
     bloqueioTotal,

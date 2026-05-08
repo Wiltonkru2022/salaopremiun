@@ -36,6 +36,15 @@ export function getWorkspaceWindowTarget(href: string) {
   return kind ? WORKSPACE_WINDOW_NAMES[kind] : undefined;
 }
 
+export function isPainelStandaloneWindow() {
+  if (typeof window === "undefined") return false;
+
+  return (
+    window.matchMedia("(display-mode: standalone)").matches ||
+    (window.navigator as Navigator & { standalone?: boolean }).standalone === true
+  );
+}
+
 export function openPainelWorkspaceWindow(href: string) {
   if (typeof window === "undefined") return;
 
@@ -43,6 +52,11 @@ export function openPainelWorkspaceWindow(href: string) {
   const url = /^https?:\/\//i.test(href) ? href : getPainelUrl(href);
 
   if (!target) {
+    window.location.assign(url);
+    return;
+  }
+
+  if (isPainelStandaloneWindow()) {
     window.location.assign(url);
     return;
   }

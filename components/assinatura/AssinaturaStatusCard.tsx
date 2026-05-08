@@ -13,6 +13,7 @@ type Props = {
     diasAtraso: number | null;
     vencimentoEm: string | null;
     bloqueioTotal: boolean;
+    emTesteGratis?: boolean;
   };
   mostrarBotaoRegularizar: boolean;
   mostrarBotaoIniciarTrial: boolean;
@@ -126,6 +127,13 @@ export default function AssinaturaStatusCard({
                 ? ` ha ${resumoAssinatura.diasAtraso} dia(s).`
                 : "."}
             </div>
+          ) : resumoAssinatura.emTesteGratis ? (
+            <div className="rounded-[22px] border border-violet-200 bg-violet-50 px-4 py-3 text-sm text-violet-800">
+              Teste gratis ativo: voce tem
+              {resumoAssinatura.diasRestantes != null
+                ? ` ${resumoAssinatura.diasRestantes} dia(s) restante(s).`
+                : " acesso liberado no periodo de teste."}
+            </div>
           ) : resumoAssinatura.vencendoLogo ? (
             <div className="rounded-[22px] border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
               Sua assinatura vence em
@@ -151,7 +159,7 @@ export default function AssinaturaStatusCard({
                 disabled={iniciandoTrial}
                 className="rounded-2xl bg-violet-700 px-4.5 py-2.5 text-sm font-semibold text-white transition hover:bg-violet-600 disabled:opacity-60"
               >
-                {iniciandoTrial ? "Iniciando teste..." : "Comecar 7 dias gratis"}
+                {iniciandoTrial ? "Iniciando teste..." : "Comecar 15 dias gratis"}
               </button>
             ) : null}
 

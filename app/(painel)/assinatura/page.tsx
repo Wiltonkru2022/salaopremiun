@@ -102,6 +102,9 @@ export default function AssinaturaPage() {
         salvandoRenovacaoAutomatica={salvandoRenovacaoAutomatica}
         podeGerenciar={podeGerenciar}
         tipoMudancaPlano={tipoMudancaPlano}
+        diasRestantesTrial={
+          resumoAssinatura.emTesteGratis ? resumoAssinatura.diasRestantes : null
+        }
       />
 
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
@@ -181,13 +184,15 @@ export default function AssinaturaPage() {
 
           <p className="mt-2 text-sm text-zinc-500">
             {trialAtivo
-              ? "Seu teste esta liberado. A area de renovacao aparecera quando o periodo terminar."
+              ? "Seu teste gratis esta liberado com acesso completo. Escolha um plano antes do prazo terminar para continuar sem interrupcao."
               : "Seu acesso esta liberado. A area de renovacao aparecera apenas quando estiver perto do vencimento ou se houver cobranca pendente."}
           </p>
 
           {resumoAssinatura.diasRestantes != null ? (
             <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-              Restam {resumoAssinatura.diasRestantes} dia(s) para o vencimento.
+              {trialAtivo
+                ? `Teste gratis: voce tem ${resumoAssinatura.diasRestantes} dia(s) restante(s).`
+                : `Restam ${resumoAssinatura.diasRestantes} dia(s) para o vencimento.`}
             </div>
           ) : null}
         </section>

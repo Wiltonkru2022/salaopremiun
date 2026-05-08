@@ -37,10 +37,10 @@ const PLANO_TRIAL_PADRAO: PlanoTrialRow = {
   id: null,
   codigo: "teste_gratis",
   nome: "Teste gratis",
-  descricao: "Periodo de teste gratuito de 7 dias.",
+  descricao: "Periodo de teste gratuito de 15 dias com tudo liberado.",
   valor_mensal: 0,
-  limite_usuarios: 1,
-  limite_profissionais: 3,
+  limite_usuarios: 999,
+  limite_profissionais: 999,
   ativo: true,
 };
 
@@ -326,7 +326,16 @@ export function createAssinaturaService() {
         );
       }
 
-      return (data as PlanoTrialRow | null) || PLANO_TRIAL_PADRAO;
+      const plano = (data as PlanoTrialRow | null) || PLANO_TRIAL_PADRAO;
+
+      return {
+        ...plano,
+        nome: plano.nome || PLANO_TRIAL_PADRAO.nome,
+        descricao: PLANO_TRIAL_PADRAO.descricao,
+        valor_mensal: 0,
+        limite_usuarios: 999,
+        limite_profissionais: 999,
+      };
     },
 
     async buscarSalaoBasico(idSalao: string) {
@@ -358,9 +367,9 @@ export function createAssinaturaService() {
       vencimentoEm: string;
     }) {
       const valorMensal = Number(params.planoTeste.valor_mensal || 0);
-      const limiteUsuarios = Number(params.planoTeste.limite_usuarios || 0);
+      const limiteUsuarios = Number(params.planoTeste.limite_usuarios || 999);
       const limiteProfissionais = Number(
-        params.planoTeste.limite_profissionais || 0
+        params.planoTeste.limite_profissionais || 999
       );
 
       if (params.assinaturaExistente?.id) {

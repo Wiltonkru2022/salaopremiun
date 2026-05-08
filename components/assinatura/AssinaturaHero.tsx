@@ -13,6 +13,7 @@ type Props = {
   salvandoRenovacaoAutomatica?: boolean;
   podeGerenciar?: boolean;
   tipoMudancaPlano?: "upgrade" | "downgrade" | null;
+  diasRestantesTrial?: number | null;
 };
 
 function getBadgeMudancaPlano(
@@ -57,18 +58,26 @@ export default function AssinaturaHero({
   salvandoRenovacaoAutomatica = false,
   podeGerenciar = false,
   tipoMudancaPlano = null,
+  diasRestantesTrial = null,
 }: Props) {
   const status = String(assinaturaStatus || "").toLowerCase();
   const badgeMudanca = getBadgeMudancaPlano(tipoMudancaPlano);
+  const trialAtivo = ["teste_gratis", "trial", "trialing"].includes(status);
 
   const titulo = bloqueioTotal
     ? "Seu acesso esta bloqueado ate regularizar a assinatura"
+    : trialAtivo
+      ? "Teste gratis ativo com tudo liberado"
     : vencendoLogo
       ? "Sua assinatura esta perto do vencimento"
       : "Escolha seu plano e mantenha seu salao sempre liberado";
 
   const descricao = bloqueioTotal
     ? "O sistema identificou bloqueio automatico por vencimento. Regularize agora para voltar a usar todas as areas do painel."
+    : trialAtivo
+      ? `Voce esta testando o SalaoPremium completo por 15 dias${
+          diasRestantesTrial != null ? ` e ainda tem ${diasRestantesTrial} dia(s) restante(s)` : ""
+        }. Antes de terminar, escolha um plano para continuar sem interrupcao.`
     : vencendoLogo
       ? "Evite interrupcoes. Gere a cobranca, ajuste seu plano e mantenha sua operacao ativa sem sair da pagina."
       : "Controle teste gratis, vencimento, historico, upgrade, downgrade e cobranca por PIX, boleto ou cartao em uma experiencia premium.";

@@ -49,6 +49,12 @@ html {
   text-size-adjust: 100%;
 }
 
+@media (min-width: 1024px) {
+  html {
+    font-size: 14px;
+  }
+}
+
 body {
   background: #ffffff;
   color: var(--app-ink);

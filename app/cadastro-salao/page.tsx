@@ -9,7 +9,9 @@ import {
   FileText,
   Loader2,
   LockKeyhole,
+  Monitor,
   Sparkles,
+  Smartphone,
   X,
 } from "lucide-react";
 import { getErrorMessage } from "@/lib/get-error-message";
@@ -27,6 +29,9 @@ const CREATION_STEPS = [
   "Organizando agenda, caixa e clientes",
   "Por favor, aguarde...",
 ];
+const CREATION_TYPING_DELAY_MS = 58;
+const CREATION_FIRST_STEP_PAUSE_MS = 1200;
+const CREATION_STEP_PAUSE_MS = 900;
 
 function onlyNumbers(value: string) {
   return value.replace(/\D/g, "");
@@ -108,6 +113,7 @@ function CadastroSalaoContent() {
   const [creatingExperience, setCreatingExperience] = useState(false);
   const [creationStepIndex, setCreationStepIndex] = useState(0);
   const [typedCreationText, setTypedCreationText] = useState("");
+  const [mobileCreationBlocked, setMobileCreationBlocked] = useState(false);
 
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
@@ -145,13 +151,23 @@ function CadastroSalaoContent() {
       for (let i = 1; i <= text.length; i += 1) {
         if (cancelled) return;
         setTypedCreationText(text.slice(0, i));
-        await wait(28);
+        await wait(CREATION_TYPING_DELAY_MS);
       }
 
-      await wait(index === 0 ? 850 : 620);
+      await wait(index === 0 ? CREATION_FIRST_STEP_PAUSE_MS : CREATION_STEP_PAUSE_MS);
     }
 
     async function finalizeCadastro() {
+      const isMobileDevice =
+        window.matchMedia("(max-width: 1023px)").matches ||
+        (window.matchMedia("(pointer: coarse)").matches && window.screen.width < 1100);
+
+      if (isMobileDevice) {
+        setMobileCreationBlocked(true);
+        setSaving(false);
+        return;
+      }
+
       try {
         const supabase = createClient();
         const { error: loginError } = await supabase.auth.signInWithPassword({
@@ -352,6 +368,7 @@ function CadastroSalaoContent() {
         typedText={typedCreationText}
         stepIndex={creationStepIndex}
         totalSteps={CREATION_STEPS.length}
+        mobileBlocked={mobileCreationBlocked}
       />
     );
   }
@@ -645,10 +662,12 @@ function CadastroSalaoContent() {
 }
 
 function CadastroCreationExperience({
+  mobileBlocked,
   typedText,
   stepIndex,
   totalSteps,
 }: {
+  mobileBlocked: boolean;
   typedText: string;
   stepIndex: number;
   totalSteps: number;
@@ -673,31 +692,67 @@ function CadastroCreationExperience({
 
         <div className="mt-8 min-h-[118px]">
           <p className="text-xs font-black uppercase tracking-[0.22em] text-zinc-400">
-            Cadastro aprovado
+            {mobileBlocked ? "Acesso criado" : "Cadastro aprovado"}
           </p>
           <h1 className="mt-3 font-display text-[2.25rem] font-black leading-tight tracking-[-0.05em] text-zinc-950 sm:text-[3rem]">
-            {typedText}
-            <span className="ml-1 inline-block h-8 w-[3px] translate-y-1 animate-pulse rounded-full bg-[var(--app-accent)]" />
+            {mobileBlocked
+              ? "Tudo pronto, mas o painel e para computador"
+              : typedText}
+            {!mobileBlocked ? (
+              <span className="ml-1 inline-block h-8 w-[3px] translate-y-1 animate-pulse rounded-full bg-[var(--app-accent)]" />
+            ) : null}
           </h1>
         </div>
 
         <div className="mx-auto mt-4 max-w-sm rounded-[1.6rem] border border-zinc-200 bg-zinc-50 p-4">
-          <div className="flex items-center justify-between text-xs font-black uppercase tracking-[0.16em] text-zinc-500">
-            <span>Preparando sistema</span>
-            <span>{progress}%</span>
-          </div>
-          <div className="mt-3 h-2 overflow-hidden rounded-full bg-white">
-            <div
-              className="h-full rounded-full bg-[var(--app-accent)] transition-all duration-500"
-              style={{ width: `${progress}%` }}
-            />
-          </div>
+          {mobileBlocked ? (
+            <div className="space-y-4 text-left">
+              <div className="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-bold uppercase tracking-[0.16em] text-amber-800">
+                <Smartphone size={14} />
+                Celular detectado
+              </div>
+              <p className="text-sm leading-6 text-zinc-700">
+                Seu salao foi criado e o teste gratis ja esta ativo. So temos um
+                ponto importante: o painel do salao foi feito para PC ou
+                notebook, porque Agenda e Caixa precisam de tela grande.
+              </p>
+              <div className="rounded-[22px] border border-zinc-200 bg-white p-4">
+                <div className="flex items-start gap-3">
+                  <Monitor size={20} className="mt-0.5 shrink-0 text-zinc-950" />
+                  <div>
+                    <div className="text-sm font-black text-zinc-950">
+                      Abra no computador
+                    </div>
+                    <p className="mt-1 text-xs leading-5 text-zinc-600">
+                      Entre pelo PC com o mesmo e-mail e senha. Depois do login,
+                      o sistema mostra a instalacao do Dashboard, Agenda e Caixa.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="flex items-center justify-between text-xs font-black uppercase tracking-[0.16em] text-zinc-500">
+                <span>Preparando sistema</span>
+                <span>{progress}%</span>
+              </div>
+              <div className="mt-3 h-2 overflow-hidden rounded-full bg-white">
+                <div
+                  className="h-full rounded-full bg-[var(--app-accent)] transition-all duration-500"
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
+            </>
+          )}
         </div>
 
-        <div className="mt-7 flex items-center justify-center gap-2 text-sm font-semibold text-zinc-500">
-          <Loader2 size={16} className="animate-spin" />
-          Tudo pronto em alguns segundos. Nao feche esta tela.
-        </div>
+        {!mobileBlocked ? (
+          <div className="mt-7 flex items-center justify-center gap-2 text-sm font-semibold text-zinc-500">
+            <Loader2 size={16} className="animate-spin" />
+            Tudo pronto em alguns segundos. Nao feche esta tela.
+          </div>
+        ) : null}
       </div>
     </div>
   );

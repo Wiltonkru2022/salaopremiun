@@ -4,8 +4,10 @@ import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Header from "@/components/layout/Header";
 import { PainelSessionProvider } from "@/components/layout/PainelSessionProvider";
+import PainelDesktopGuard from "@/components/layout/PainelDesktopGuard";
 import { PAINEL_SESSION_STORAGE_KEY } from "@/lib/painel/session-snapshot";
 import Sidebar from "@/components/layout/Sidebar";
+import PainelInstallSetup from "@/components/pwa/PainelInstallSetup";
 import MonitoringContextBridge from "@/components/monitoring/MonitoringContextBridge";
 import PushPermissionRuntime from "@/components/push/PushPermissionRuntime";
 import type {
@@ -187,6 +189,7 @@ export default function AppShell({
 
   return (
     <PainelSessionProvider value={sessionSnapshot}>
+    <PainelDesktopGuard>
     <div className="min-h-screen bg-zinc-50 text-[var(--app-ink)]">
       <MonitoringContextBridge
         actorType="usuario_salao"
@@ -255,6 +258,7 @@ export default function AppShell({
               <PushPermissionRuntime audience="salao_painel" compact />
             </div>
             <div className="min-h-[calc(100dvh-4.4rem)] bg-zinc-50 p-1.5 md:p-2 xl:p-2.5">
+              <PainelInstallSetup />
               <div className="min-w-0">{children}</div>
             </div>
           </main>
@@ -263,6 +267,7 @@ export default function AppShell({
       )}
 
     </div>
+    </PainelDesktopGuard>
     </PainelSessionProvider>
   );
 }

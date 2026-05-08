@@ -116,6 +116,32 @@ export function buildShellNotifications({
       expiresAt: null,
       critical: true,
     });
+  } else if (
+    resumoAssinatura?.emTesteGratis &&
+    resumoAssinatura.diasRestantes != null &&
+    resumoAssinatura.diasRestantes <= 1
+  ) {
+    notifications.push({
+      id: "teste-gratis-expirando",
+      title: "Teste gratis expirando",
+      description:
+        resumoAssinatura.diasRestantes === 1
+          ? "Seu teste gratis termina em 1 dia. Escolha um plano para manter tudo liberado."
+          : "Seu teste gratis termina hoje. Escolha um plano para evitar bloqueio.",
+      tone: "warning",
+      category: "assinatura",
+      severity: "high",
+      eventType: "free_trial_due_soon",
+      href: "/assinatura",
+      actionLabel: "Ver assinatura",
+      destination: "internal",
+      icon: "assinatura",
+      sourceModule: "assinatura",
+      persistUntilResolved: true,
+      expiresAt: resumoAssinatura.vencimentoEm
+        ? new Date(resumoAssinatura.vencimentoEm).toISOString()
+        : null,
+    });
   } else if (resumoAssinatura?.vencendoLogo) {
     notifications.push({
       id: "assinatura-vencendo",

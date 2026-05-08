@@ -6,6 +6,7 @@ export type ResumoAssinatura = {
   diasAtraso: number | null;
   vencimentoEm: string | null;
   bloqueioTotal: boolean;
+  emTesteGratis: boolean;
 };
 
 function diferencaEmDias(dataAlvo: Date, dataBase: Date) {
@@ -43,6 +44,12 @@ function parseDataVencimento(valor?: string | null) {
   return dataFimDia;
 }
 
+function isStatusTesteGratis(status?: string | null) {
+  return ["teste_gratis", "trial", "trialing"].includes(
+    String(status || "").toLowerCase()
+  );
+}
+
 type GetResumoAssinaturaParams = {
   status?: string | null;
   vencimentoEm?: string | null;
@@ -55,9 +62,10 @@ export function getResumoAssinatura({
   trialFimEm,
 }: GetResumoAssinaturaParams): ResumoAssinatura {
   const statusNormalizado = String(status || "").toLowerCase();
+  const emTesteGratis = isStatusTesteGratis(statusNormalizado);
 
   const vencimentoBase =
-    ["teste_gratis", "trial", "trialing"].includes(statusNormalizado)
+    emTesteGratis
       ? trialFimEm || vencimentoEm || null
       : vencimentoEm || trialFimEm || null;
 
@@ -70,6 +78,7 @@ export function getResumoAssinatura({
       diasAtraso: null,
       vencimentoEm: null,
       bloqueioTotal: true,
+      emTesteGratis,
     };
   }
 
@@ -84,6 +93,7 @@ export function getResumoAssinatura({
       diasAtraso: null,
       vencimentoEm: vencimentoBase,
       bloqueioTotal: true,
+      emTesteGratis,
     };
   }
 
@@ -91,7 +101,7 @@ export function getResumoAssinatura({
   const diasRestantes = diferencaEmDias(vencimentoValido, hoje);
   const vencida = diasRestantes < 0;
   const diasAtraso = vencida ? Math.abs(diasRestantes) : 0;
-  const vencendoLogo = !vencida && diasRestantes <= 3;
+  const vencendoLogo = !vencida && (emTesteGratis ? diasRestantes <= 1 : diasRestantes <= 3);
 
   if (["cancelada", "vencida"].includes(statusNormalizado)) {
     return {
@@ -102,10 +112,11 @@ export function getResumoAssinatura({
       diasAtraso,
       vencimentoEm: vencimentoBase,
       bloqueioTotal: true,
+      emTesteGratis,
     };
   }
 
-  if (["teste_gratis", "trial", "trialing"].includes(statusNormalizado)) {
+  if (emTesteGratis) {
     return {
       ativa: !vencida,
       vencida,
@@ -114,6 +125,7 @@ export function getResumoAssinatura({
       diasAtraso: vencida ? diasAtraso : 0,
       vencimentoEm: vencimentoBase,
       bloqueioTotal: vencida,
+      emTesteGratis: true,
     };
   }
 
@@ -126,6 +138,7 @@ export function getResumoAssinatura({
       diasAtraso: vencida ? diasAtraso : 0,
       vencimentoEm: vencimentoBase,
       bloqueioTotal: vencida && diasAtraso > 3,
+      emTesteGratis,
     };
   }
 
@@ -138,6 +151,7 @@ export function getResumoAssinatura({
       diasAtraso: vencida ? diasAtraso : 0,
       vencimentoEm: vencimentoBase,
       bloqueioTotal: vencida && diasAtraso > 3,
+      emTesteGratis,
     };
   }
 
@@ -149,5 +163,6 @@ export function getResumoAssinatura({
     diasAtraso,
     vencimentoEm: vencimentoBase,
     bloqueioTotal: true,
+    emTesteGratis,
   };
 }

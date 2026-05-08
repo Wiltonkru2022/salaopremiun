@@ -1,14 +1,14 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { CalendarDays, Download, MonitorSmartphone, X } from "lucide-react";
+import { Download, MonitorSmartphone, WalletCards, X } from "lucide-react";
 
 type BeforeInstallPromptEvent = Event & {
   prompt: () => Promise<void>;
   userChoice: Promise<{ outcome: "accepted" | "dismissed"; platform: string }>;
 };
 
-const DISMISS_KEY = "sp_agenda_install_dismissed";
+const DISMISS_KEY = "sp_caixa_install_dismissed";
 
 function isStandalone() {
   if (typeof window === "undefined") return false;
@@ -29,7 +29,7 @@ function detectDevice() {
   return "desktop";
 }
 
-export default function AgendaInstallPrompt() {
+export default function CaixaInstallPrompt() {
   const [ready, setReady] = useState(false);
   const [deferredPrompt, setDeferredPrompt] =
     useState<BeforeInstallPromptEvent | null>(null);
@@ -77,27 +77,22 @@ export default function AgendaInstallPrompt() {
   if (!ready) return null;
 
   return (
-    <div className="rounded-[16px] border border-violet-200 bg-gradient-to-r from-violet-50 via-white to-sky-50 px-3 py-2 shadow-[0_8px_18px_rgba(76,29,149,0.05)]">
+    <div className="rounded-[16px] border border-amber-200 bg-gradient-to-r from-amber-50 via-white to-sky-50 px-3 py-2 shadow-[0_8px_18px_rgba(146,64,14,0.05)]">
       <div className="flex flex-wrap items-center gap-2.5">
         <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-zinc-950 text-white">
-          <CalendarDays size={16} />
+          <WalletCards size={16} />
         </div>
 
         <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="text-[13px] font-bold text-zinc-950">
-              Instale a agenda
-            </div>
-            <span className="rounded-full border border-white/80 bg-white/80 px-2.5 py-1 text-[11px] font-semibold text-zinc-600">
-              Mais foco
-            </span>
+          <div className="text-[13px] font-bold text-zinc-950">
+            Instale o caixa
           </div>
           <p className="mt-1 text-xs leading-4.5 text-zinc-600">
             {deferredPrompt
-              ? "Seu navegador ja permite instalar a agenda agora."
+              ? "Seu navegador ja permite instalar o caixa agora."
               : device === "desktop"
-                ? "Use o atalho do navegador e abra a agenda separada do resto do painel."
-                : "Use Adicionar a tela inicial para voltar mais rapido para a agenda."}
+                ? "Use o atalho do navegador para abrir o caixa como app focado."
+                : "O caixa e indicado para PC. Abra pelo computador para instalar."}
           </p>
         </div>
 
@@ -106,7 +101,7 @@ export default function AgendaInstallPrompt() {
             <button
               type="button"
               onClick={installNow}
-            className="inline-flex h-8 items-center gap-2 rounded-full bg-zinc-950 px-3.5 text-[11px] font-bold text-white transition hover:bg-zinc-800"
+              className="inline-flex h-8 items-center gap-2 rounded-full bg-zinc-950 px-3.5 text-[11px] font-bold text-white transition hover:bg-zinc-800"
             >
               <Download size={14} />
               Instalar
@@ -122,7 +117,7 @@ export default function AgendaInstallPrompt() {
             type="button"
             onClick={close}
             className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-zinc-200 bg-white text-zinc-600 transition hover:bg-zinc-50"
-            aria-label="Fechar dica de instalacao da agenda"
+            aria-label="Fechar dica de instalacao do caixa"
           >
             <X size={14} />
           </button>

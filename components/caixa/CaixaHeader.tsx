@@ -24,21 +24,21 @@ export default function CaixaHeader({
   onAbrirSessao,
 }: Props) {
   return (
-    <div className="overflow-hidden rounded-[24px] border border-white/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(248,250,252,0.96)_100%)] shadow-[0_18px_50px_rgba(15,23,42,0.06)]">
-      <div className="px-4 py-2.5 text-zinc-950">
-        <div className="flex flex-col gap-2.5 xl:flex-row xl:items-center xl:justify-between">
+    <div className="overflow-hidden rounded-[20px] border border-white/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(248,250,252,0.96)_100%)] shadow-[0_18px_50px_rgba(15,23,42,0.06)]">
+      <div className="px-3 py-2 text-zinc-950">
+        <div className="flex flex-col gap-2 xl:flex-row xl:items-center xl:justify-between">
           <div className="min-w-0">
-            <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-zinc-400">
+            <div className="text-[9px] font-semibold uppercase tracking-[0.18em] text-zinc-400">
               Workspace do caixa
             </div>
-            <div className="mt-1 flex flex-wrap items-end gap-2">
-              <h1 className="text-[1.65rem] font-semibold leading-none text-slate-900">
+            <div className="mt-0.5 flex flex-wrap items-end gap-2">
+              <h1 className="text-[1.45rem] font-semibold leading-none text-slate-900">
                 Caixa
               </h1>
             </div>
           </div>
 
-          <div className="grid flex-1 gap-2 sm:grid-cols-2 xl:max-w-[1200px] xl:grid-cols-5">
+          <div className="grid flex-1 gap-1.5 sm:grid-cols-2 xl:max-w-[1120px] xl:grid-cols-5">
             <StatCard
               icon={<CircleDollarSign size={15} />}
               label="Em andamento agora"
@@ -95,13 +95,13 @@ function ActionCard({
     <button
       type="button"
       onClick={onClick}
-      className="rounded-[18px] border border-zinc-200 bg-white px-3.5 py-2 text-left text-zinc-900 transition hover:border-zinc-300 hover:bg-zinc-50"
+      className="rounded-[16px] border border-zinc-200 bg-white px-2.5 py-1.5 text-left text-zinc-900 transition hover:border-zinc-300 hover:bg-zinc-50"
     >
-      <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
+      <div className="flex items-center gap-1.5 text-[9px] font-semibold uppercase tracking-[0.12em] text-zinc-500">
         {icon}
-        <span>{label}</span>
+        <span className="truncate">{label}</span>
       </div>
-      <div className="mt-1 text-[11px] leading-4 text-zinc-600">
+      <div className="mt-0.5 line-clamp-2 text-[10px] leading-3 text-zinc-600">
         {description}
       </div>
     </button>
@@ -129,12 +129,12 @@ function StatCard({
           : "border-zinc-200 bg-zinc-50 text-zinc-900";
 
   return (
-    <div className={`rounded-[18px] border px-3.5 py-2 ${toneClass}`}>
-      <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.14em]">
+    <div className={`rounded-[16px] border px-2.5 py-1.5 ${toneClass}`}>
+      <div className="flex items-center gap-1.5 text-[9px] font-semibold uppercase tracking-[0.12em]">
         {icon}
-        <span>{label}</span>
+        <span className="truncate">{label}</span>
       </div>
-      <div className="mt-1 text-2xl font-bold leading-none">{value}</div>
+      <div className="mt-0.5 text-xl font-bold leading-none">{value}</div>
     </div>
   );
 }

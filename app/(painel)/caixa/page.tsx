@@ -7,6 +7,7 @@ import CaixaCancelModal from "@/components/caixa/CaixaCancelModal";
 import CaixaDetalhe from "@/components/caixa/CaixaDetalhe";
 import CaixaFila from "@/components/caixa/CaixaFila";
 import CaixaHeader from "@/components/caixa/CaixaHeader";
+import CaixaInstallPrompt from "@/components/caixa/CaixaInstallPrompt";
 import CaixaItemModal from "@/components/caixa/CaixaItemModal";
 import CaixaSidebar from "@/components/caixa/CaixaSidebar";
 import { usePainelSession } from "@/components/layout/PainelSessionProvider";
@@ -324,8 +325,8 @@ export default function CaixaPage() {
   return (
     <>
       <div className="h-screen overflow-hidden bg-[#f4f5f7] text-[var(--app-ink)]">
-        <div className="mx-auto h-full max-w-[1920px] p-4">
-          <div className="flex h-full min-h-0 flex-col gap-3 overflow-hidden">
+        <div className="mx-auto h-full max-w-[1920px] p-2.5 xl:p-3">
+          <div className="flex h-full min-h-0 flex-col gap-2 overflow-hidden">
             <CaixaHeader
               agendamentosPendentes={agendamentosFila.length}
               comandasAtivas={comandasFila.length}
@@ -335,9 +336,11 @@ export default function CaixaPage() {
               onAbrirSessao={() => setSessaoOpen(true)}
             />
 
+            <CaixaInstallPrompt />
+
             {!podeOperarCaixa || erroTela || msg || comandaSelecionada ? (
-              <div className="grid gap-2 xl:grid-cols-[minmax(0,1fr)_minmax(320px,420px)]">
-                <div className="flex min-h-[48px] items-center rounded-2xl border border-zinc-200 bg-white px-4 py-2.5 text-sm text-zinc-600 shadow-sm">
+              <div className="grid gap-2 xl:grid-cols-[minmax(0,1fr)_minmax(280px,360px)]">
+                <div className="flex min-h-10 items-center rounded-2xl border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-600 shadow-sm">
                   {!podeOperarCaixa ? (
                     <>
                       <CircleAlert size={16} className="mr-2 text-zinc-500" />
@@ -378,7 +381,7 @@ export default function CaixaPage() {
                 </div>
                 {comandaSelecionada ? (
                   <div
-                    className={`flex min-h-[48px] items-center rounded-2xl border px-4 py-2.5 text-sm shadow-sm ${
+                    className={`flex min-h-10 items-center rounded-2xl border px-3 py-2 text-xs shadow-sm ${
                       faltaReceber > 0
                         ? "border-amber-200 bg-amber-50 text-amber-900"
                         : "border-emerald-200 bg-emerald-50 text-emerald-800"
@@ -393,7 +396,7 @@ export default function CaixaPage() {
               </div>
             ) : null}
 
-            <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 xl:grid-cols-[330px_minmax(0,1fr)_360px]">
+            <div className="grid min-h-0 flex-1 grid-cols-1 gap-2 xl:grid-cols-[260px_minmax(0,1fr)_270px] 2xl:grid-cols-[285px_minmax(0,1fr)_310px]">
               <CaixaFila
                 aba={aba}
                 setAba={setAba}

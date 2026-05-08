@@ -26,6 +26,7 @@ import type {
 import { getAssinaturaUrl, getPainelUrl } from "@/lib/site-urls";
 import {
   getWorkspaceWindowTarget,
+  isPainelStandaloneWindow,
   openPainelWorkspaceWindow,
 } from "@/lib/painel/workspace-windows";
 
@@ -272,12 +273,13 @@ export default function NotificationBell({
                   const workspaceTarget = getWorkspaceWindowTarget(
                     notificationHref
                   );
+                  const standalone = isPainelStandaloneWindow();
 
                   return (
                     <a
                       key={notification.id}
                       href={getNotificationHref(notificationHref)}
-                      target={workspaceTarget}
+                      target={workspaceTarget && !standalone ? workspaceTarget : undefined}
                       onClick={(event) => {
                         markAsRead(notification.id);
                         setOpen(false);

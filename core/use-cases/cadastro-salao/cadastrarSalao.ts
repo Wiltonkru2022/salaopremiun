@@ -63,6 +63,7 @@ export async function cadastrarSalaoUseCase(params: {
       authUserId: user.id,
       payload,
     });
+    const trial = await params.service.ativarTrialInicial(idSalao);
 
     await params.service.registrarCadastro({
       idSalao,
@@ -76,6 +77,7 @@ export async function cadastrarSalaoUseCase(params: {
       body: {
         ok: true,
         id_salao: idSalao,
+        assinatura: trial,
       },
     };
   } catch (error) {
