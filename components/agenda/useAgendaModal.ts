@@ -123,6 +123,7 @@ export function useAgendaModal({
 
   const [horaFimBloqueio, setHoraFimBloqueio] = useState(selectedTime);
   const [motivoBloqueio, setMotivoBloqueio] = useState("");
+  const [dataBloqueio, setDataBloqueio] = useState(selectedDate);
 
   const [comandaId, setComandaId] = useState("");
   const [comandaNumero, setComandaNumero] = useState<number | null>(null);
@@ -284,6 +285,7 @@ export function useAgendaModal({
     if (mode === "bloqueio") {
       if (editingBlock) {
         setProfissionalId(editingBlock.profissional_id || selectedProfissionalId);
+        setDataBloqueio(editingBlock.data || selectedDate);
         setHoraInicio(normalizeTimeString(editingBlock.hora_inicio));
         setHoraFimBloqueio(normalizeTimeString(editingBlock.hora_fim));
         setMotivoBloqueio(editingBlock.motivo || "");
@@ -295,6 +297,7 @@ export function useAgendaModal({
         const endMin = String(endMinutes % 60).padStart(2, "0");
 
         setProfissionalId(selectedProfissionalId || "");
+        setDataBloqueio(selectedDate);
         setHoraInicio(start);
         setHoraFimBloqueio(initialBlockEndTime || `${endHour}:${endMin}`);
         setMotivoBloqueio(initialBlockReason || "");
@@ -313,6 +316,7 @@ export function useAgendaModal({
     editingItem,
     editingBlock,
     selectedProfissionalId,
+    selectedDate,
     selectedTime,
     initialBlockEndTime,
     initialBlockReason,
@@ -719,10 +723,10 @@ export function useAgendaModal({
     }
 
     if (mode === "bloqueio") {
-      if (!profissionalId || !horaInicio || !horaFimBloqueio) {
+      if (!profissionalId || !dataBloqueio || !horaInicio || !horaFimBloqueio) {
         abrirAviso(
           "Campos obrigatórios",
-          "Preencha profissional, hora de início e hora de fim.",
+          "Preencha profissional, data, hora de inicio e hora de fim.",
           "warning"
         );
         return;
@@ -771,7 +775,7 @@ export function useAgendaModal({
           tipo: "bloqueio",
           id: editingBlock?.id || null,
           profissionalId,
-          data: editingBlock?.data || selectedDate,
+          data: dataBloqueio,
           horaInicio: normalizeTimeString(horaInicio),
           horaFim: normalizeTimeString(horaFimBloqueio),
           motivo: motivoBloqueio,
@@ -804,6 +808,8 @@ export function useAgendaModal({
     setObservacoes,
     status,
     setStatus,
+    dataBloqueio,
+    setDataBloqueio,
     horaFimBloqueio,
     setHoraFimBloqueio,
     motivoBloqueio,

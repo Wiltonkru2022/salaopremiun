@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertCircle, Clock3 } from "lucide-react";
+import { AlertCircle, CalendarDays, Clock3 } from "lucide-react";
 import SearchableSelect, {
   type SearchableOption,
 } from "@/components/ui/SearchableSelect";
@@ -8,10 +8,12 @@ import SearchableSelect, {
 type Props = {
   profissionaisOptions: SearchableOption[];
   profissionalId: string;
+  dataBloqueio: string;
   horaInicio: string;
   horaFimBloqueio: string;
   motivoBloqueio: string;
   onProfissionalChange: (value: string) => void;
+  onDataChange: (value: string) => void;
   onHoraInicioChange: (value: string) => void;
   onHoraFimChange: (value: string) => void;
   onMotivoChange: (value: string) => void;
@@ -20,10 +22,12 @@ type Props = {
 export default function AgendaModalFormBloqueio({
   profissionaisOptions,
   profissionalId,
+  dataBloqueio,
   horaInicio,
   horaFimBloqueio,
   motivoBloqueio,
   onProfissionalChange,
+  onDataChange,
   onHoraInicioChange,
   onHoraFimChange,
   onMotivoChange,
@@ -54,7 +58,22 @@ export default function AgendaModalFormBloqueio({
         </div>
       </div>
 
-      <div className="grid gap-3 md:grid-cols-2">
+      <div className="grid gap-3 md:grid-cols-3">
+        <div>
+          <label className="mb-1.5 flex items-center gap-2 text-xs font-semibold text-zinc-700">
+            <CalendarDays size={13} />
+            Data do bloqueio
+          </label>
+
+          <input
+            type="date"
+            value={dataBloqueio}
+            onChange={(e) => onDataChange(e.target.value)}
+            className="w-full rounded-2xl border border-zinc-200 bg-zinc-50 px-3 py-2.5 text-sm outline-none transition focus:border-zinc-900 focus:bg-white"
+            required
+          />
+        </div>
+
         <div>
           <label className="mb-1.5 flex items-center gap-2 text-xs font-semibold text-zinc-700">
             <Clock3 size={13} />

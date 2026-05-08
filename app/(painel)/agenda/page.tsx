@@ -112,6 +112,8 @@ export default function AgendaPage() {
   >([]);
   const [creditModalOpen, setCreditModalOpen] = useState(false);
   const [creditClienteId, setCreditClienteId] = useState("");
+  const [creditValue, setCreditValue] = useState("");
+  const [creditObservation, setCreditObservation] = useState("");
   const [creditLoading, setCreditLoading] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [sidebarView, setSidebarView] = useState<AgendaSidebarView>("overview");
@@ -180,6 +182,12 @@ export default function AgendaPage() {
     totalBloqueios,
     valorPotencial,
   } = useAgendaPageState();
+
+  function resetCreditForm() {
+    setCreditClienteId("");
+    setCreditValue("");
+    setCreditObservation("");
+  }
 
   const {
     avisoModal,
@@ -466,25 +474,59 @@ export default function AgendaPage() {
     if (!creditClienteId) {
       abrirAviso(
         "Cliente obrigatoria",
-        "Escolha a cliente antes de abrir o credito no caixa.",
+        "Escolha a cliente antes de registrar o credito.",
         "warning"
       );
       return;
     }
 
+    if (!idSalao) {
+      abrirAviso("Salao indisponivel", "Nao foi possivel identificar o salao.", "danger");
+      return;
+    }
+
     try {
       setCreditLoading(true);
-      const comandas = await buscarComandasAbertasDoCliente(creditClienteId);
-      const comanda = comandas[0] || (await criarNovaComanda(creditClienteId));
+      const response = await fetch("/api/clientes/credito", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          idSalao,
+          clienteId: creditClienteId,
+          valor: creditValue,
+          observacao: creditObservation,
+        }),
+      });
+
+      const data = (await response.json().catch(() => ({}))) as {
+        error?: string;
+        saldoAtual?: number;
+      };
+
+      if (!response.ok) {
+        throw new Error(data.error || "Nao foi possivel registrar o credito.");
+      }
+
+      const saldoAtual = Number(data.saldoAtual || 0);
 
       setCreditModalOpen(false);
-      setCreditClienteId("");
-      openCashierWindow(`/caixa?comanda_id=${comanda.id}`);
+      resetCreditForm();
+      await loadAgenda();
+      abrirAviso(
+        "Credito registrado",
+        `Saldo atualizado da cliente: ${saldoAtual.toLocaleString("pt-BR", {
+          style: "currency",
+          currency: "BRL",
+        })}.`,
+        "default"
+      );
     } catch (error) {
       console.error(error);
       abrirAviso(
-        "Erro ao abrir credito",
-        "Nao foi possivel abrir a comanda da cliente no caixa agora.",
+        "Erro ao registrar credito",
+        getErrorMessage(error, "Nao foi possivel registrar o credito da cliente."),
         "danger"
       );
     } finally {
@@ -805,7 +847,7 @@ export default function AgendaPage() {
     }
     if (creditModalOpen) {
       setCreditModalOpen(false);
-      setCreditClienteId("");
+      resetCreditForm();
     }
     if (avisoModal.open) {
       fecharAviso();
@@ -952,18 +994,20 @@ export default function AgendaPage() {
                   ),
                 }
               : creditModalOpen
-                ? {
+                  ? {
                     title: "Credito da cliente",
-                    subtitle: "Abra ou vincule a comanda certa sem sair da agenda.",
+                    subtitle: "Registre saldo para uso futuro sem criar venda.",
                     onBack: () => {
                       setCreditModalOpen(false);
-                      setCreditClienteId("");
+                      resetCreditForm();
                       setSidebarView("overview");
                     },
                     content: (
                       <AgendaCreditModal
                         open={creditModalOpen}
                         clienteId={creditClienteId}
+                        valor={creditValue}
+                        observacao={creditObservation}
                         loading={creditLoading}
                         clientesOptions={clientes.map((cliente) => ({
                           value: cliente.id,
@@ -972,10 +1016,12 @@ export default function AgendaPage() {
                         }))}
                         onClose={() => {
                           setCreditModalOpen(false);
-                          setCreditClienteId("");
+                          resetCreditForm();
                           setSidebarView("overview");
                         }}
                         onClienteChange={setCreditClienteId}
+                        onValorChange={setCreditValue}
+                        onObservacaoChange={setCreditObservation}
                         onSubmit={handleOpenCreditFlow}
                         variant="sidebar"
                       />
@@ -1297,7 +1343,7 @@ export default function AgendaPage() {
                     {
                       label: "Registrar credito da cliente",
                       description:
-                        "Escolha a cliente e eu abro ou crio a comanda certa no caixa.",
+                        "Lanca saldo para a cliente usar depois, sem criar venda.",
                       icon: Wallet,
                       onClick: () => setCreditModalOpen(true),
                     },

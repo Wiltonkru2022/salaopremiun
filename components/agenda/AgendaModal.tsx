@@ -46,6 +46,8 @@ export default function AgendaModal(props: Props) {
     setObservacoes,
     status,
     setStatus,
+    dataBloqueio,
+    setDataBloqueio,
     horaFimBloqueio,
     setHoraFimBloqueio,
     motivoBloqueio,
@@ -159,10 +161,12 @@ export default function AgendaModal(props: Props) {
       <AgendaModalFormBloqueio
         profissionaisOptions={profissionaisOptions}
         profissionalId={profissionalId}
+        dataBloqueio={dataBloqueio}
         horaInicio={horaInicio}
         horaFimBloqueio={horaFimBloqueio}
         motivoBloqueio={motivoBloqueio}
         onProfissionalChange={setProfissionalId}
+        onDataChange={setDataBloqueio}
         onHoraInicioChange={setHoraInicio}
         onHoraFimChange={setHoraFimBloqueio}
         onMotivoChange={setMotivoBloqueio}

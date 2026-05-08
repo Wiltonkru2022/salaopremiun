@@ -8,14 +8,14 @@ export const metadata: Metadata = {
     ? new URL(process.env.NEXT_PUBLIC_APP_URL)
     : undefined,
   title: {
-    default: "SALÃO PREMIUM",
-    template: "%s | SALÃO PREMIUM",
+    default: "SalaoPremium",
+    template: "%s | SalaoPremium",
   },
   description:
     "Gestao premium para saloes: agenda, caixa, comandas, profissionais, estoque, comissoes e assinatura em um SaaS multi-tenant.",
-  applicationName: "SALÃO PREMIUM",
+  applicationName: "SalaoPremium",
   openGraph: {
-    title: "SALÃO PREMIUM",
+    title: "SalaoPremium",
     description:
       "Gestao premium para saloes com agenda, caixa, comandas, estoque, comissoes e assinatura.",
     type: "website",
@@ -23,7 +23,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "SALÃO PREMIUM",
+    title: "SalaoPremium",
     description:
       "Gestao premium para saloes com operacao, financeiro e assinatura no mesmo sistema.",
   },

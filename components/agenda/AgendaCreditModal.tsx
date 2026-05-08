@@ -8,10 +8,14 @@ import SearchableSelect, {
 type Props = {
   open: boolean;
   clienteId: string;
+  valor: string;
+  observacao: string;
   loading: boolean;
   clientesOptions: SearchableOption[];
   onClose: () => void;
   onClienteChange: (value: string) => void;
+  onValorChange: (value: string) => void;
+  onObservacaoChange: (value: string) => void;
   onSubmit: () => Promise<void>;
   variant?: "modal" | "sidebar";
 };
@@ -19,10 +23,14 @@ type Props = {
 export default function AgendaCreditModal({
   open,
   clienteId,
+  valor,
+  observacao,
   loading,
   clientesOptions,
   onClose,
   onClienteChange,
+  onValorChange,
+  onObservacaoChange,
   onSubmit,
   variant = "modal",
 }: Props) {
@@ -35,10 +43,10 @@ export default function AgendaCreditModal({
           Credito da cliente
         </div>
         <h3 className="mt-1 text-lg font-bold text-zinc-900">
-          Abrir credito no caixa
+          Registrar credito
         </h3>
         <p className="mt-1 text-sm text-zinc-500">
-          Escolha a cliente e eu abro a comanda certa no caixa para voce continuar o lancamento.
+          Lance um saldo para a cliente usar depois no caixa. Isso nao cria venda nem comanda.
         </p>
       </div>
 
@@ -56,6 +64,33 @@ export default function AgendaCreditModal({
             onChange={onClienteChange}
           />
         </div>
+
+        <div className="rounded-[20px] border border-zinc-200 bg-zinc-50 px-4 py-3">
+          <label className="mb-2 block text-sm font-semibold text-zinc-900">
+            Valor do credito
+          </label>
+          <input
+            type="text"
+            inputMode="decimal"
+            value={valor}
+            onChange={(event) => onValorChange(event.target.value)}
+            placeholder="Ex.: 50,00"
+            className="w-full rounded-2xl border border-zinc-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-zinc-900"
+          />
+        </div>
+
+        <div className="rounded-[20px] border border-zinc-200 bg-zinc-50 px-4 py-3">
+          <label className="mb-2 block text-sm font-semibold text-zinc-900">
+            Observacao
+          </label>
+          <textarea
+            rows={3}
+            value={observacao}
+            onChange={(event) => onObservacaoChange(event.target.value)}
+            placeholder="Ex.: credito por retorno, ajuste autorizado, cortesia..."
+            className="w-full rounded-2xl border border-zinc-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-zinc-900"
+          />
+        </div>
       </div>
 
       <div className="flex flex-col-reverse gap-2 border-t border-zinc-200 px-5 py-4 sm:flex-row sm:justify-end">
@@ -70,11 +105,11 @@ export default function AgendaCreditModal({
         <button
           type="button"
           onClick={() => void onSubmit()}
-          disabled={loading || !clienteId}
+          disabled={loading || !clienteId || !valor.trim()}
           className="inline-flex items-center justify-center gap-2 rounded-2xl bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-95 disabled:opacity-60"
         >
           <Receipt size={15} />
-          {loading ? "Abrindo..." : "Abrir no caixa"}
+          {loading ? "Registrando..." : "Registrar credito"}
         </button>
       </div>
     </div>
