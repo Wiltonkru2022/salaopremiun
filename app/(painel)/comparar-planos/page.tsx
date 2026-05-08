@@ -89,7 +89,7 @@ export default async function CompararPlanosPage() {
   return (
     <div className="space-y-5">
       <section className="overflow-hidden rounded-[30px] border border-zinc-200 bg-white shadow-sm">
-        <div className="grid gap-0 lg:grid-cols-[1.2fr_0.8fr]">
+        <div className="grid gap-0 2xl:grid-cols-[1.2fr_0.8fr]">
           <div className="bg-zinc-950 p-6 text-white sm:p-8">
             <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-black uppercase tracking-[0.20em] text-[var(--app-accent)]">
               <Sparkles size={14} />

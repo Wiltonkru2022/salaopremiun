@@ -378,7 +378,7 @@ export async function getAdminBlogPostById(id: string): Promise<BlogPost | null>
   noStore();
 
   try {
-    const supabase = await getBlogDatabaseUnsafe();
+    const supabase = (await getBlogAdminDatabaseUnsafe()) || (await getBlogDatabaseUnsafe());
     if (!supabase) {
       return null;
     }
@@ -404,7 +404,7 @@ export async function getAdminBlogPostBySlug(
   noStore();
 
   try {
-    const supabase = await getBlogDatabaseUnsafe();
+    const supabase = (await getBlogAdminDatabaseUnsafe()) || (await getBlogDatabaseUnsafe());
     if (!supabase) {
       return null;
     }

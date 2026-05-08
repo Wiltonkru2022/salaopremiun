@@ -61,7 +61,7 @@ export default function ConfiguracoesPage() {
   return (
     <div className="space-y-5">
       <section className="overflow-hidden rounded-[28px] border border-zinc-200 bg-white shadow-sm">
-        <div className="grid gap-0 xl:grid-cols-[1.15fr_0.85fr]">
+        <div className="grid gap-0 2xl:grid-cols-[1.15fr_0.85fr]">
           <div className="bg-zinc-950 p-6 text-white sm:p-7">
             <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.22em] text-white/70">
               <SlidersHorizontal size={14} />

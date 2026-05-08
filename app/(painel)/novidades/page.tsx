@@ -79,14 +79,14 @@ export default async function NovidadesPage() {
 
   return (
     <div className="space-y-5">
-      <section className="overflow-hidden rounded-[28px] border border-zinc-200 bg-white shadow-sm">
-        <div className="grid gap-0 lg:grid-cols-[1.05fr_0.95fr]">
-          <div className="bg-zinc-950 px-5 py-6 text-white sm:px-6 sm:py-7">
+      <section className="overflow-hidden rounded-[24px] border border-zinc-200 bg-white shadow-sm">
+        <div className="grid gap-0 2xl:grid-cols-[1.05fr_0.95fr]">
+          <div className="bg-zinc-950 px-4 py-5 text-white sm:px-5 sm:py-6">
             <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.22em] text-white/70">
               <Sparkles size={14} />
               Roadmap do SalãoPremium
             </div>
-            <h1 className="mt-4 max-w-3xl font-display text-3xl font-bold tracking-[-0.04em] sm:text-[2.7rem]">
+            <h1 className="mt-3 max-w-3xl font-display text-3xl font-bold tracking-[-0.04em] sm:text-[2.15rem]">
               O que está entrando no produto
             </h1>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-white/70 sm:text-[15px]">
@@ -101,7 +101,7 @@ export default async function NovidadesPage() {
             </div>
           </div>
 
-          <div className="grid content-between gap-4 bg-zinc-50 p-5 sm:p-6">
+          <div className="grid content-between gap-3 bg-zinc-50 p-4 sm:p-5">
             <div>
               <div className="text-xs font-bold uppercase tracking-[0.2em] text-zinc-400">
                 Proxima leva
@@ -133,7 +133,7 @@ export default async function NovidadesPage() {
         </div>
       </section>
 
-      <section className="grid gap-4 xl:grid-cols-3">
+      <section className="grid gap-3 lg:grid-cols-2 2xl:grid-cols-3">
         <RoadmapColumn status="em_implementacao" items={inProgress} />
         <RoadmapColumn status="planejado" items={planned} />
         <RoadmapColumn status="entregue" items={delivered} />

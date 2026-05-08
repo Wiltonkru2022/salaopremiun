@@ -82,14 +82,14 @@ export default function Sidebar({
 
       <aside
         className={clsx(
-          "fixed inset-y-0 left-0 z-50 w-[232px] -translate-x-full bg-zinc-50 p-1.5 text-zinc-950 transition-transform duration-300 lg:sticky lg:top-0 lg:z-20 lg:flex lg:h-screen lg:translate-x-0 lg:flex-col",
+          "fixed inset-y-0 left-0 z-50 w-[204px] -translate-x-full bg-zinc-50 p-1 text-zinc-950 transition-transform duration-300 lg:sticky lg:top-0 lg:z-20 lg:flex lg:h-screen lg:translate-x-0 lg:flex-col",
           mobileOpen ? "translate-x-0" : ""
         )}
       >
-        <div className="flex h-full flex-col overflow-hidden rounded-[20px] border border-zinc-200 bg-white shadow-sm">
-          <div className="flex items-start justify-between gap-3 px-3.5 py-3 lg:block">
-            <div className="flex min-w-0 items-center gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-zinc-950 text-white ring-1 ring-zinc-900/10">
+        <div className="flex h-full flex-col overflow-hidden rounded-[18px] border border-zinc-200 bg-white shadow-sm">
+          <div className="flex items-start justify-between gap-2 px-3 py-2.5 lg:block">
+            <div className="flex min-w-0 items-center gap-2.5">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-zinc-950 text-white ring-1 ring-zinc-900/10">
                 <img
                   src="/favicon-preview.png"
                   alt="SALÃO PREMIUM"
@@ -101,7 +101,7 @@ export default function Sidebar({
                 <div className="truncate text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-400">
                   Sistema
                 </div>
-                <div className="mt-1 truncate font-display text-base font-bold tracking-[-0.02em] text-zinc-950">
+                <div className="mt-0.5 truncate font-display text-[0.94rem] font-bold tracking-[-0.02em] text-zinc-950">
                   SALÃO PREMIUM
                 </div>
               </div>
@@ -117,11 +117,11 @@ export default function Sidebar({
             </button>
           </div>
 
-          <nav className="scroll-premium min-h-0 flex-1 overflow-y-auto px-2.5 pb-3">
+          <nav className="scroll-premium min-h-0 flex-1 overflow-y-auto px-2 pb-2.5">
             {subscriptionAtRisk || criticalNotificationsCount > 0 ? (
               <div
                 className={clsx(
-                  "mb-4 rounded-[16px] border px-3 py-3",
+                  "mb-3 rounded-[14px] border px-2.5 py-2.5",
                   resumoAssinatura?.bloqueioTotal || criticalNotificationsCount > 0
                     ? "border-rose-200 bg-rose-50 text-rose-800"
                     : "border-amber-200 bg-amber-50 text-amber-800"
@@ -165,10 +165,10 @@ export default function Sidebar({
               </div>
             ) : null}
 
-            <div className="space-y-4">
+            <div className="space-y-3">
               {groupedItems.map((group) => (
                 <div key={group.label}>
-                  <div className="mb-1.5 px-2 text-[10px] font-bold uppercase tracking-[0.16em] text-zinc-400">
+                  <div className="mb-1 px-2 text-[9px] font-bold uppercase tracking-[0.16em] text-zinc-400">
                     {group.label}
                   </div>
                   <div className="space-y-1">
@@ -190,8 +190,8 @@ export default function Sidebar({
             </div>
           </nav>
 
-          <div className="border-t border-zinc-100 p-2.5">
-            <div className="mb-1.5 px-2 text-[10px] font-bold uppercase tracking-[0.16em] text-zinc-400">
+          <div className="border-t border-zinc-100 p-2">
+            <div className="mb-1 px-2 text-[9px] font-bold uppercase tracking-[0.16em] text-zinc-400">
               Conta
             </div>
             <div className="space-y-1">
@@ -305,7 +305,7 @@ function SidebarLink({
         }
       }}
       className={clsx(
-        "group/item flex min-w-0 items-center gap-2.5 rounded-[14px] px-2.5 py-2.5 ring-1 ring-transparent transition-all duration-200",
+        "group/item flex min-w-0 items-center gap-2 rounded-[13px] px-2 py-2 ring-1 ring-transparent transition-all duration-200",
         active
           ? "bg-zinc-950 text-white ring-zinc-900 shadow-sm"
           : "text-zinc-600 hover:bg-zinc-50 hover:text-zinc-950"
@@ -314,7 +314,7 @@ function SidebarLink({
     >
       <span
         className={clsx(
-          "flex h-8.5 w-8.5 shrink-0 items-center justify-center rounded-[12px] transition",
+          "flex h-8 w-8 shrink-0 items-center justify-center rounded-[11px] transition",
           active ? "bg-white/12 text-white" : "bg-transparent"
         )}
       >
@@ -322,7 +322,7 @@ function SidebarLink({
       </span>
 
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-[13px] font-bold">{item.label}</span>
+        <span className="block truncate text-[12.5px] font-bold">{item.label}</span>
       </span>
 
       <ChevronRight
@@ -360,9 +360,9 @@ function SidebarUtilityLink({
     <a
       href={getRouteHref(href)}
       onClick={onClose}
-      className="flex min-w-0 items-center gap-2.5 rounded-[14px] px-2.5 py-2.5 text-[13px] font-bold text-zinc-600 transition hover:bg-zinc-50 hover:text-zinc-950"
+      className="flex min-w-0 items-center gap-2 rounded-[13px] px-2 py-2 text-[12.5px] font-bold text-zinc-600 transition hover:bg-zinc-50 hover:text-zinc-950"
     >
-      <span className="flex h-8.5 w-8.5 items-center justify-center rounded-[12px] text-zinc-500">
+      <span className="flex h-8 w-8 items-center justify-center rounded-[11px] text-zinc-500">
         <Icon size={18} />
       </span>
       <span className="truncate">{label}</span>

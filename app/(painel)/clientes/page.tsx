@@ -430,7 +430,7 @@ export default function ClientesPage() {
             </div>
           </section>
 
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-5">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5">
             <ResumoCard
               title="Clientes ativos"
               value={`${resumo.ativos}`}
@@ -585,7 +585,7 @@ export default function ClientesPage() {
                     key={item.id}
                     className="rounded-[20px] border border-zinc-200 bg-white p-3.5 shadow-sm"
                   >
-                    <div className="grid gap-3 xl:grid-cols-[minmax(0,1.55fr)_230px] xl:items-center">
+                    <div className="grid gap-3 2xl:grid-cols-[minmax(0,1.55fr)_230px] 2xl:items-center">
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
                           <h2 className="text-[1rem] font-semibold text-zinc-950">

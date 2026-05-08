@@ -64,14 +64,14 @@ export function ConfiguracoesHero({
 }) {
   return (
     <section className="overflow-hidden rounded-[28px] border border-zinc-200 bg-white text-zinc-950 shadow-sm">
-      <div className="border-b border-zinc-100 bg-zinc-50/70 px-4 py-4 md:px-5">
+      <div className="border-b border-zinc-100 bg-zinc-50/70 px-4 py-3 md:px-4">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
           <div className="min-w-0">
             <div className="inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-white px-3 py-1 text-[11px] font-black uppercase tracking-[0.18em] text-zinc-500">
               <Sparkles size={14} />
               Central de configurações
             </div>
-            <h1 className="mt-3 font-display text-3xl font-black tracking-[-0.05em] text-zinc-950 md:text-4xl">
+            <h1 className="mt-2 font-display text-2xl font-black tracking-[-0.04em] text-zinc-950 md:text-3xl">
               {title}
             </h1>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-zinc-500">
@@ -79,7 +79,7 @@ export function ConfiguracoesHero({
             </p>
           </div>
 
-          <div className="grid min-w-[220px] gap-2 rounded-[22px] border border-zinc-200 bg-white p-3">
+          <div className="grid min-w-[190px] gap-1.5 rounded-[18px] border border-zinc-200 bg-white p-2.5">
             <div className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.16em] text-zinc-400">
               <ShieldCheck size={14} />
               Operacao
@@ -96,14 +96,14 @@ export function ConfiguracoesHero({
 
       <ConfiguracoesTopNav activeHref={activeHref} />
 
-      {children ? <div className="border-t border-zinc-100 p-4 md:p-5">{children}</div> : null}
+      {children ? <div className="border-t border-zinc-100 p-3 md:p-4">{children}</div> : null}
     </section>
   );
 }
 
 export function ConfiguracoesTopNav({ activeHref }: { activeHref: string }) {
   return (
-    <div className="grid gap-2 p-3 sm:grid-cols-2 xl:grid-cols-5">
+    <div className="grid gap-2 p-2.5 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5">
       {CONFIGURACOES_MENU.map((item) => {
         const Icon = item.icon;
         const active = activeHref === item.href;

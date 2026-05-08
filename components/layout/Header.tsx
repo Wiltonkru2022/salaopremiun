@@ -123,13 +123,13 @@ export default function Header({
   return (
     <header
       className={clsx(
-        "rounded-[18px] border px-3 py-2.5 transition-all duration-200 md:px-4",
+        "rounded-[16px] border px-2.5 py-2 transition-all duration-200 md:px-3",
         scrolled
           ? "border-zinc-200 bg-white/95 shadow-[0_12px_34px_rgba(15,23,42,0.08)] backdrop-blur"
           : "border-white/80 bg-white/90 shadow-[0_10px_28px_rgba(15,23,42,0.05)] backdrop-blur"
       )}
     >
-      <div className="flex min-h-11 flex-wrap items-center gap-2.5 lg:flex-nowrap">
+      <div className="flex min-h-10 flex-wrap items-center gap-2 lg:flex-nowrap">
         <button
           type="button"
           onClick={onOpenSidebar}
@@ -141,7 +141,7 @@ export default function Header({
 
         <div className="min-w-0 flex-1 basis-[180px] overflow-hidden">
           <div className="flex min-w-0 items-center gap-2">
-            <h1 className="truncate font-display text-[1rem] font-bold tracking-[-0.02em] text-zinc-950 sm:text-[1.05rem] xl:text-[1.2rem]">
+            <h1 className="truncate font-display text-[0.98rem] font-bold tracking-[-0.02em] text-zinc-950 sm:text-[1rem] xl:text-[1.08rem]">
               {pageMeta.title}
             </h1>
             <span className="hidden rounded-full border border-zinc-200 bg-zinc-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.16em] text-zinc-500 sm:inline-flex">
@@ -169,7 +169,7 @@ export default function Header({
           href={canSeeAssinatura ? getRouteHref("/meu-plano") : "#"}
           aria-disabled={!canSeeAssinatura}
           className={clsx(
-            "hidden min-w-0 items-center gap-2 rounded-2xl border border-zinc-200 bg-zinc-50 px-2.5 py-2 text-sm 2xl:flex 2xl:px-3",
+            "hidden min-w-0 items-center gap-2 rounded-xl border border-zinc-200 bg-zinc-50 px-2 py-1.5 text-sm 2xl:flex 2xl:px-2.5",
             canSeeAssinatura
               ? "transition hover:border-zinc-300 hover:bg-white"
               : "pointer-events-none opacity-70"
@@ -198,10 +198,10 @@ export default function Header({
           <button
             type="button"
             onClick={() => setMenuOpen((prev) => !prev)}
-            className="flex h-10 max-w-full items-center gap-2 rounded-2xl border border-zinc-200 bg-white py-1 pl-1 pr-2 text-left text-zinc-900 shadow-sm transition hover:border-zinc-300 hover:bg-zinc-50"
+            className="flex h-9 max-w-full items-center gap-2 rounded-xl border border-zinc-200 bg-white py-1 pl-1 pr-2 text-left text-zinc-900 shadow-sm transition hover:border-zinc-300 hover:bg-zinc-50"
             aria-label="Abrir menu da conta"
           >
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-zinc-100 ring-1 ring-zinc-200">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-zinc-100 ring-1 ring-zinc-200">
               {salaoLogoUrl ? (
                 <img
                   src={salaoLogoUrl}

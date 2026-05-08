@@ -981,7 +981,7 @@ export default function VendasPage() {
           ) : null}
 
           <div className="rounded-[24px] border border-zinc-200 bg-white p-3.5 shadow-sm">
-            <div className="grid grid-cols-1 gap-2.5 md:grid-cols-2 xl:grid-cols-5">
+            <div className="grid grid-cols-1 gap-2.5 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5">
               <div className="xl:col-span-2">
                 <label className="mb-2 block text-sm font-semibold text-zinc-700">
                   Busca avançada
@@ -1043,7 +1043,7 @@ export default function VendasPage() {
               </div>
             </div>
 
-            <div className="mt-2.5 grid grid-cols-1 gap-2.5 md:grid-cols-2 xl:grid-cols-6">
+            <div className="mt-2.5 grid grid-cols-1 gap-2.5 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
               <div>
                 <label className="mb-2 block text-sm font-semibold text-zinc-700">
                   Cliente
@@ -1293,7 +1293,7 @@ export default function VendasPage() {
             </div>
 
             <div className="min-h-0 flex-1 overflow-hidden">
-              <div className="grid h-full min-h-0 grid-cols-1 xl:grid-cols-[minmax(0,1fr)_360px]">
+              <div className="grid h-full min-h-0 grid-cols-1 2xl:grid-cols-[minmax(0,1fr)_340px]">
                 <div className="min-h-0 overflow-y-auto p-6 agenda-scroll">
                   <div className="space-y-4">
                     <div className="rounded-[20px] border border-zinc-200 bg-white">

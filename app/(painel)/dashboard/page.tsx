@@ -479,7 +479,7 @@ export default function DashboardPage() {
         />
       </section>
 
-      <section className="grid gap-3 xl:grid-cols-[1.2fr_0.8fr]">
+      <section className="grid gap-3 2xl:grid-cols-[1.2fr_0.8fr]">
         {dashboardAvancado ? (
           <div className="rounded-[22px] border border-zinc-200 bg-white p-4 shadow-sm">
             <div className="flex items-center justify-between gap-3">

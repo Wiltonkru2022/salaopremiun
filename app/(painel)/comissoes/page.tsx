@@ -801,7 +801,7 @@ export default function ComissoesPage() {
                 </div>
               </div>
             </div>
-            <div className="grid gap-2.5 px-3 py-3 md:grid-cols-2 xl:grid-cols-7">
+            <div className="grid gap-2.5 px-3 py-3 md:grid-cols-3 2xl:grid-cols-7">
               <ResumoCard
                 title="Total"
                 value={formatCurrency(resumo.total)}
@@ -925,7 +925,7 @@ export default function ComissoesPage() {
           ) : null}
 
           <div className="rounded-[24px] border border-zinc-200 bg-white p-3.5 shadow-sm">
-            <div className="grid grid-cols-1 gap-2.5 md:grid-cols-2 xl:grid-cols-[minmax(220px,1.05fr)_minmax(124px,0.64fr)_minmax(124px,0.64fr)_minmax(172px,0.88fr)_minmax(138px,0.7fr)_minmax(138px,0.7fr)]">
+            <div className="grid grid-cols-1 gap-2.5 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-[minmax(220px,1.05fr)_minmax(124px,0.64fr)_minmax(124px,0.64fr)_minmax(172px,0.88fr)_minmax(138px,0.7fr)_minmax(138px,0.7fr)]">
               <Field label="Buscar">
                 <div className="relative">
                   <Search

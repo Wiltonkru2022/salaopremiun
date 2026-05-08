@@ -579,7 +579,7 @@ export default function ProfissionaisListPage() {
                     key={item.id}
                     className="rounded-[20px] border border-zinc-200 bg-white p-3.5 shadow-sm"
                   >
-                    <div className="grid gap-3 xl:grid-cols-[minmax(0,1.7fr)_210px] xl:items-center">
+                    <div className="grid gap-3 2xl:grid-cols-[minmax(0,1.7fr)_210px] 2xl:items-center">
                       <div className="min-w-0 flex-1">
                         <div className="flex items-start gap-3">
                           <Avatar profissional={item} />

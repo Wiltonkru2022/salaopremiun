@@ -1,4 +1,3 @@
-import { notFound } from "next/navigation";
 import AdminBlogEditor from "@/components/blog/AdminBlogEditor";
 import type { BlogPost } from "@/lib/blog/content";
 import { requireAdminMasterUser } from "@/lib/admin-master/auth/requireAdminMasterUser";
@@ -34,6 +33,43 @@ function preparePostForEditor(post: BlogPost | null, categories: Awaited<ReturnT
   };
 }
 
+function titleFromSlug(slug: string) {
+  return slug
+    .split("-")
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+function createDraftFromMissingSlug(
+  slug: string,
+  categories: Awaited<ReturnType<typeof getBlogCategories>>
+): BlogPost {
+  const category = categories[0];
+
+  return {
+    id: "",
+    slug,
+    title: titleFromSlug(slug) || "Novo post",
+    description: "Revise o conteúdo antes de publicar.",
+    excerpt: "Revise o conteúdo antes de publicar.",
+    categorySlug: category?.slug || "gestao",
+    categoryName: category?.name || "Gestão",
+    categoryId: category?.id,
+    readTime: "5 min",
+    publishedAt: new Date().toISOString(),
+    coverImage: "/marketing-kit/site-hero.png",
+    coverAlt: titleFromSlug(slug) || "Post do blog",
+    tags: [],
+    body: ["Revise o conteúdo do post antes de publicar."],
+    bodyHtml: "<p>Revise o conteúdo do post antes de publicar.</p>",
+    rawContent: "<p>Revise o conteúdo do post antes de publicar.</p>",
+    status: "rascunho",
+    featured: false,
+    views: 0,
+  };
+}
+
 export default async function AdminMasterBlogEditorPage({ params }: Props) {
   await requireAdminMasterUser("comunicacao_ver");
 
@@ -41,7 +77,14 @@ export default async function AdminMasterBlogEditorPage({ params }: Props) {
   const categories = await getBlogCategories();
   const post = slug === "novo" ? null : await getAdminBlogPostBySlugOrId(slug);
 
-  if (slug !== "novo" && !post) notFound();
+  if (slug !== "novo" && !post) {
+    return (
+      <AdminBlogEditor
+        post={preparePostForEditor(createDraftFromMissingSlug(slug, categories), categories)}
+        categories={categories}
+      />
+    );
+  }
 
   return <AdminBlogEditor post={preparePostForEditor(post, categories)} categories={categories} />;
 }

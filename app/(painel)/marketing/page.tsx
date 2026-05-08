@@ -76,7 +76,7 @@ export default async function MarketingPage() {
         </div>
       </section>
 
-      <section className="grid gap-4 xl:grid-cols-[1.08fr_0.92fr]">
+      <section className="grid gap-4 2xl:grid-cols-[1.08fr_0.92fr]">
         <div className="rounded-[26px] border border-zinc-200 bg-white p-5 shadow-sm">
           <div className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-400">
             Status do módulo

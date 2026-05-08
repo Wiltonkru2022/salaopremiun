@@ -182,7 +182,7 @@ export default async function MeuPlanoPage({
   return (
     <div className="space-y-4">
       <section className="overflow-hidden rounded-[28px] border border-zinc-200 bg-white shadow-sm">
-        <div className="grid gap-0 xl:grid-cols-[1.15fr_0.85fr]">
+        <div className="grid gap-0 2xl:grid-cols-[1.15fr_0.85fr]">
           <div className="bg-zinc-950 p-6 text-white sm:p-7">
             <div className="text-xs font-black uppercase tracking-[0.28em] text-emerald-200">
               Meu plano
@@ -308,7 +308,7 @@ export default async function MeuPlanoPage({
         </div>
       ) : null}
 
-      <section className="grid gap-3 xl:grid-cols-5">
+      <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5">
         {metrics.map((metric) => {
           const percent = usagePercent(metric.used, metric.limit);
           const tone = getUsoTone(percent);
@@ -403,7 +403,7 @@ export default async function MeuPlanoPage({
         </div>
       </section>
 
-      <section className="grid gap-4 xl:grid-cols-[1fr_340px]">
+      <section className="grid gap-4 2xl:grid-cols-[1fr_320px]">
         <div className="rounded-[26px] border border-zinc-200 bg-white p-5 shadow-sm">
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>

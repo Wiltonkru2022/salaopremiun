@@ -188,6 +188,108 @@ a.bg-white {
   background-clip: padding-box;
 }
 
+@media (min-width: 1024px) {
+  .painel-density {
+    --painel-card-radius-lg: 20px;
+  }
+
+  .painel-density .text-sm {
+    font-size: 0.8125rem;
+    line-height: 1.2rem;
+  }
+
+  .painel-density .text-xs {
+    font-size: 0.6875rem;
+    line-height: 0.95rem;
+  }
+
+  .painel-density .text-base {
+    font-size: 0.92rem;
+    line-height: 1.28rem;
+  }
+
+  .painel-density .text-xl {
+    font-size: 1.1rem;
+    line-height: 1.45rem;
+  }
+
+  .painel-density .text-2xl {
+    font-size: 1.28rem;
+    line-height: 1.65rem;
+  }
+
+  .painel-density .text-3xl {
+    font-size: 1.72rem;
+    line-height: 2rem;
+  }
+
+  .painel-density .p-6 {
+    padding: 1rem;
+  }
+
+  .painel-density .p-5 {
+    padding: 0.95rem;
+  }
+
+  .painel-density .px-5 {
+    padding-left: 0.95rem;
+    padding-right: 0.95rem;
+  }
+
+  .painel-density .py-5 {
+    padding-top: 0.95rem;
+    padding-bottom: 0.95rem;
+  }
+
+  .painel-density .py-4 {
+    padding-top: 0.8rem;
+    padding-bottom: 0.8rem;
+  }
+
+  .painel-density .gap-5 {
+    gap: 0.9rem;
+  }
+
+  .painel-density .gap-4 {
+    gap: 0.75rem;
+  }
+
+  .painel-density .rounded-\[28px\],
+  .painel-density .rounded-\[26px\],
+  .painel-density .rounded-\[24px\] {
+    border-radius: var(--painel-card-radius-lg);
+  }
+
+  .painel-density [class*="text-[1.9rem]"],
+  .painel-density [class*="text-[1.95rem]"],
+  .painel-density [class*="text-[2.1rem]"],
+  .painel-density [class*="text-[2.7rem]"],
+  .painel-density [class*="text-[2.8rem]"] {
+    font-size: 1.62rem;
+    line-height: 1.95rem;
+  }
+
+  .painel-density [class*="fixed"][class*="inset-0"] > [class*="max-w-"] {
+    max-height: calc(100dvh - 2rem);
+  }
+
+  .painel-density [class*="fixed"][class*="inset-0"] [class*="text-4xl"],
+  .painel-density [class*="fixed"][class*="inset-0"] [class*="text-3xl"] {
+    font-size: 1.55rem;
+    line-height: 1.85rem;
+  }
+
+  .painel-density [class*="fixed"][class*="inset-0"] [class*="px-6"] {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  .painel-density [class*="fixed"][class*="inset-0"] [class*="py-6"] {
+    padding-top: 1rem;
+    padding-bottom: 1rem;
+  }
+}
+
 .agenda-scroll {
   scrollbar-width: thin;
   scrollbar-color: rgba(16, 24, 40, 0.14) transparent;

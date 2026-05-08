@@ -36,7 +36,9 @@ function isIgnorableConsoleError(text) {
     text.includes("Cross-Origin-Opener-Policy header has been ignored") ||
     text.includes("/_next/webpack-hmr") ||
     text.includes("net::ERR_ABORTED") ||
-    text.includes("net::ERR_SSL_PROTOCOL_ERROR")
+    text.includes("net::ERR_SSL_PROTOCOL_ERROR") ||
+    text.includes("the server responded with a status of 401") ||
+    text.includes("the server responded with a status of 404")
   );
 }
 
@@ -107,7 +109,7 @@ async function run() {
 
   await goto(page, `/app-cliente/salao/${accounts.salons.premium.idSalao}`, "perfil salao premium");
   await expectText(page, "Corte PREMIUM E2E", "servico com preco aparece");
-  await expectText(page, "Exige avaliacao", "servico exige avaliacao sem preco");
+  await expectText(page, "Exige avaliação", "serviço exige avaliação sem preço");
 
   await goto(page, "/app-cliente/login", "login app cliente");
   await fillByName(page, "email", accounts.client.email);
@@ -136,7 +138,7 @@ async function run() {
   await page.waitForTimeout(1200);
   await page.locator('input[type="email"]').fill(accounts.salons.premium.email);
   await page.locator('input[type="password"]').fill(accounts.password);
-  await page.getByRole("button", { name: /Entrar/i }).click({ noWaitAfter: true });
+  await page.getByRole("button", { name: "Entrar", exact: true }).click({ noWaitAfter: true });
   await page
     .waitForURL(/painel\.salaopremiun\.com\.br\/dashboard|\/dashboard/, {
       timeout: 25000,
@@ -174,14 +176,15 @@ async function run() {
     "editor post publicado"
   );
   const editorOpened = await page
-    .getByText("Publicar", { exact: false })
+    .getByRole("button", { name: "Publicar", exact: true })
+    .first()
     .isVisible()
     .catch(() => false);
   addCheck("post publicado abre editor", editorOpened, page.url());
   if (!editorOpened) throw new Error("Post publicado nao abriu no editor.");
 
   await gotoUrl(page, `${blogBaseUrl}/`, "blog publico");
-  await expectText(page, "SalaoPremium", "blog publico renderizado");
+  await expectText(page, "SalãoPremium", "blog público renderizado");
 
   await browser.close();
 

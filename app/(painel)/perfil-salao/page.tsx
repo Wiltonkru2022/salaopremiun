@@ -1182,7 +1182,7 @@ export default function PerfilSalaoPage() {
           </div>
         ) : null}
 
-        <div className="grid gap-4 xl:grid-cols-[minmax(0,1.45fr)_360px]">
+        <div className="grid gap-4 2xl:grid-cols-[minmax(0,1.45fr)_340px]">
           <div className="space-y-4">
             <SectionCard
               icon={<Building2 size={18} />}

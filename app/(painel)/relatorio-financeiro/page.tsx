@@ -1654,7 +1654,7 @@ export default function RelatorioFinanceiroPage() {
             ))}
           </div>
 
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-6">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
             <div className="xl:col-span-2">
               <label className="mb-2 block text-sm font-semibold text-zinc-700">
                 Buscar
@@ -1880,7 +1880,7 @@ export default function RelatorioFinanceiroPage() {
               </p>
             </div>
 
-            <div className="grid grid-cols-1 gap-3 xl:grid-cols-5">
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 2xl:grid-cols-5">
             <KpiCard
               icon={<Wallet size={18} />}
               label="Fechamentos de caixa"
@@ -1915,7 +1915,7 @@ export default function RelatorioFinanceiroPage() {
           />
         )}
 
-        <div className="grid grid-cols-1 gap-5 xl:grid-cols-[0.8fr_1.2fr]">
+        <div className="grid grid-cols-1 gap-4 2xl:grid-cols-[0.8fr_1.2fr]">
           <section className="rounded-[28px] border border-zinc-200 bg-white p-5 shadow-sm">
             <div>
               <h2 className="text-base font-semibold text-zinc-950">
@@ -2001,7 +2001,7 @@ export default function RelatorioFinanceiroPage() {
           </section>
         </div>
 
-        <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1.2fr_0.8fr]">
+        <div className="grid grid-cols-1 gap-4 2xl:grid-cols-[1.2fr_0.8fr]">
           <div className="overflow-hidden rounded-[28px] border border-zinc-200 bg-white shadow-sm">
             <div className="border-b border-zinc-200 px-5 py-4">
               <div className="text-lg font-bold text-zinc-900">Vendas do período</div>

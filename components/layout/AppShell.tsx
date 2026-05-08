@@ -139,7 +139,7 @@ export default function AppShell({
   return (
     <PainelSessionProvider value={sessionSnapshot}>
     <PainelDesktopGuard>
-    <div className="min-h-screen bg-zinc-50 text-[var(--app-ink)]">
+    <div className="painel-density min-h-screen bg-zinc-50 text-[var(--app-ink)]">
       <MonitoringContextBridge
         actorType="usuario_salao"
         surface="painel"
@@ -172,7 +172,7 @@ export default function AppShell({
         />
 
         <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-          <div className="fixed left-0 right-0 top-0 z-30 bg-zinc-50 px-2 pb-1 pt-2 md:px-2.5 lg:left-[232px] lg:px-3 xl:px-4">
+          <div className="fixed left-0 right-0 top-0 z-30 bg-zinc-50 px-1.5 pb-1 pt-1.5 md:px-2 lg:left-[204px] lg:px-2.5">
             <Header
               userName={userName}
               userEmail={userEmail}
@@ -196,7 +196,7 @@ export default function AppShell({
           </div>
 
           <main
-            className="scroll-premium min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto bg-zinc-50 px-2 pb-2 pt-[4.9rem] md:px-2.5 lg:px-3 lg:pt-[5.1rem] xl:px-4"
+            className="scroll-premium min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto bg-zinc-50 px-1.5 pb-1.5 pt-[4.45rem] md:px-2 lg:px-2.5 lg:pt-[4.65rem]"
             onScroll={(event) => {
               const nextScrolled = event.currentTarget.scrollTop > 12;
               setContentScrolled((current) =>
@@ -207,7 +207,7 @@ export default function AppShell({
             <div className="mb-2 flex justify-end">
               <PushPermissionRuntime audience="salao_painel" compact />
             </div>
-            <div className="min-h-[calc(100dvh-4.4rem)] bg-zinc-50 p-1.5 md:p-2 xl:p-2.5">
+            <div className="min-h-[calc(100dvh-4.1rem)] bg-zinc-50 p-1 md:p-1.5">
               <div className="min-w-0">{children}</div>
             </div>
           </main>
