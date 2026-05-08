@@ -58,8 +58,6 @@ export default function CaixaDetalhe({
       })).filter((group) => group.itens.length > 0),
     [itens]
   );
-  const gruposAtivos = itensAgrupados.length;
-
   if (!comandaSelecionada) {
     return (
       <div className="flex h-full min-h-0 flex-col rounded-[28px] border border-zinc-200 bg-white p-5 shadow-sm">
@@ -172,25 +170,12 @@ export default function CaixaDetalhe({
         <div className="space-y-2">
           <div className="rounded-[20px] border border-zinc-200 bg-white">
           <div className="border-b border-zinc-200 px-3 py-2.5">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div className="max-w-2xl">
-                <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-400">
-                  Leitura da venda
-                </div>
-                <div className="mt-0.5 text-base font-bold leading-tight text-zinc-900">
-                  Itens da comanda
-                </div>
+            <div className="max-w-2xl">
+              <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-400">
+                Leitura da venda
               </div>
-
-              <div className="grid min-w-[170px] gap-1.5 sm:grid-cols-2">
-                <HeaderStat
-                  label="Itens ativos"
-                  value={String(itens.length)}
-                />
-                <HeaderStat
-                  label="Grupos"
-                  value={String(gruposAtivos)}
-                />
+              <div className="mt-0.5 text-base font-bold leading-tight text-zinc-900">
+                Itens da comanda
               </div>
             </div>
           </div>
@@ -198,29 +183,6 @@ export default function CaixaDetalhe({
           <div className="space-y-2.5 p-3">
             {itensAgrupados.map((group) => (
               <section key={group.tipo} className="space-y-1.5">
-                <div className="flex items-center justify-between gap-2 rounded-[16px] border border-zinc-200 bg-zinc-50 px-3 py-2">
-                  <div className="flex min-w-0 items-center gap-2 text-zinc-900">
-                    <div className="rounded-xl border border-zinc-200 bg-white p-1.5 text-zinc-600 shadow-sm">
-                      {tipoItemIcon(group.tipo)}
-                    </div>
-                    <div className="min-w-0">
-                      <div className="truncate text-sm font-semibold">{getTipoItemLabel(group.tipo)}</div>
-                      <div className="text-[10px] uppercase tracking-[0.12em] text-zinc-500">
-                        {group.itens.length} item(ns)
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="shrink-0 rounded-full border border-zinc-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-zinc-700">
-                    {formatCurrency(
-                      group.itens.reduce(
-                        (acc, current) => acc + Number(current.valor_total || 0),
-                        0
-                      )
-                    )}
-                  </div>
-                </div>
-
                 <div className="grid gap-1.5">
                   {group.itens.map((item) => (
                     <ItemCard
@@ -262,17 +224,6 @@ export default function CaixaDetalhe({
           ) : null}
         </div>
       </div>
-    </div>
-  );
-}
-
-function HeaderStat({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-xl border border-zinc-200 bg-zinc-50 px-2.5 py-2">
-      <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-500">
-        {label}
-      </div>
-      <div className="mt-0.5 break-words text-sm font-bold leading-5 text-zinc-950">{value}</div>
     </div>
   );
 }
@@ -352,34 +303,39 @@ function ItemCard({
         </div>
       </div>
 
-      <div className="mt-2 grid gap-1.5 md:grid-cols-2 xl:grid-cols-4">
-        <InfoPill label="Profissional" value={getJoinedName(item.profissionais, "-")} />
-        <InfoPill label="Assistente" value={getJoinedName(item.assistente_ref, "-")} />
-        <InfoPill label="Quantidade" value={String(Number(item.quantidade || 0))} />
-        <InfoPill label="Unitario" value={formatCurrency(item.valor_unitario)} />
-      </div>
-
-      {podeEditar ? (
-        <div className="mt-2 flex justify-end gap-1.5">
-          <button
-            type="button"
-            onClick={() => onEditarItem(item)}
-            className="rounded-lg border border-zinc-200 bg-white p-1.5 text-zinc-700 transition hover:bg-zinc-100"
-            title="Editar item"
-          >
-            <Pencil size={15} />
-          </button>
-
-          <button
-            type="button"
-            onClick={() => onRemoverItem(item.id)}
-            className="rounded-lg border border-rose-200 bg-rose-50 p-1.5 text-rose-600 transition hover:bg-rose-100"
-            title="Remover item"
-          >
-            <Trash2 size={15} />
-          </button>
+      <div className="mt-2 grid gap-1.5 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+        <div className="grid gap-1.5 md:grid-cols-2">
+          <InfoPill label="Profissional" value={getJoinedName(item.profissionais, "-")} />
+          <InfoPill label="Assistente" value={getJoinedName(item.assistente_ref, "-")} />
         </div>
-      ) : null}
+
+        <div className="flex flex-wrap items-end justify-end gap-1.5">
+          <CompactInfoPill label="Qtd." value={String(Number(item.quantidade || 0))} />
+          <CompactInfoPill label="Unitário" value={formatCurrency(item.valor_unitario)} />
+
+          {podeEditar ? (
+            <div className="flex h-9 items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => onEditarItem(item)}
+                className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-zinc-200 bg-white text-zinc-700 transition hover:bg-zinc-100"
+                title="Editar item"
+              >
+                <Pencil size={15} />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => onRemoverItem(item.id)}
+                className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-rose-200 bg-rose-50 text-rose-600 transition hover:bg-rose-100"
+                title="Remover item"
+              >
+                <Trash2 size={15} />
+              </button>
+            </div>
+          ) : null}
+        </div>
+      </div>
     </div>
   );
 }
@@ -389,6 +345,19 @@ function InfoPill({ label, value }: { label: string; value: string }) {
     <div className="rounded-xl border border-zinc-200 bg-white px-2.5 py-1.5">
       <div className="text-[10px] uppercase tracking-[0.12em] text-zinc-500">{label}</div>
       <div className="mt-0.5 break-words text-xs font-semibold leading-4 text-zinc-900">{value}</div>
+    </div>
+  );
+}
+
+function CompactInfoPill({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="min-w-[74px] rounded-lg border border-zinc-200 bg-white px-2 py-1">
+      <div className="text-[9px] font-semibold uppercase tracking-[0.1em] text-zinc-500">
+        {label}
+      </div>
+      <div className="mt-0.5 whitespace-nowrap text-[11px] font-bold leading-4 text-zinc-900">
+        {value}
+      </div>
     </div>
   );
 }
