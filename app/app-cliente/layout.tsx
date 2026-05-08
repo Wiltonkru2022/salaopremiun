@@ -3,13 +3,13 @@ import type { ReactNode } from "react";
 import ClientSessionKeepAlive from "@/components/client-app/ClientSessionKeepAlive";
 
 export const metadata: Metadata = {
-  title: "SalaoPremium Cliente",
+  title: "App Cliente",
   description:
     "Agende horarios, acompanhe visitas e avalie atendimentos no app cliente do SalaoPremium.",
   manifest: "/app-cliente/manifest.webmanifest",
   appleWebApp: {
     capable: true,
-    title: "SalaoPremium Cliente",
+    title: "App Cliente",
     statusBarStyle: "default",
   },
 };

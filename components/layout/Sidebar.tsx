@@ -42,9 +42,6 @@ export default function Sidebar({
   permissoes,
   planoRecursos,
   nivel,
-  salaoNome,
-  salaoResponsavel,
-  salaoLogoUrl,
   planoNome,
   resumoAssinatura,
   canSeePerfilSalao,
@@ -88,28 +85,19 @@ export default function Sidebar({
           <div className="flex items-start justify-between gap-3 px-4 py-3.5 lg:block lg:px-3.5 lg:py-3.5 xl:px-4">
             <div className="flex min-w-0 items-center gap-3">
               <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-zinc-950 text-white ring-1 ring-zinc-900/10">
-                {salaoLogoUrl ? (
-                  <img
-                    src={salaoLogoUrl}
-                    alt={salaoNome || "Salao"}
-                    className="h-full w-full object-cover"
-                  />
-                ) : (
-                  <span className="font-display text-lg font-black uppercase">
-                    {(salaoNome || "SP").slice(0, 2)}
-                  </span>
-                )}
+                <img
+                  src="/favicon-preview.png"
+                  alt="SALÃO PREMIUM"
+                  className="h-full w-full object-cover"
+                />
               </div>
 
               <div className="min-w-0">
                 <div className="truncate text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-400">
-                  SalaoPremium
+                  Sistema
                 </div>
                 <div className="mt-1 truncate font-display text-base font-bold tracking-[-0.02em] text-zinc-950">
-                  {salaoNome || "SalaoPremium"}
-                </div>
-                <div className="mt-0.5 truncate text-xs text-zinc-500">
-                  {salaoResponsavel || "Gestao do salao"}
+                  SALÃO PREMIUM
                 </div>
               </div>
             </div>

@@ -1,6 +1,12 @@
+import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "App Profissional",
+  description: "Agenda, clientes, comandas e comissoes para profissionais do salao.",
+};
 
 export default function AppProfissionalLayout({
   children,

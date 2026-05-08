@@ -192,7 +192,6 @@ export default function Header({
         <NotificationBell
           notifications={notifications}
           storageKey={notificationStorageKey}
-          onOpenHelp={() => {}}
         />
 
         <div className="relative" ref={menuRef}>
