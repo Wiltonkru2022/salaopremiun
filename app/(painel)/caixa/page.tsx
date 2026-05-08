@@ -393,7 +393,7 @@ export default function CaixaPage() {
               </div>
             ) : null}
 
-            <div className="grid min-h-0 flex-1 grid-cols-1 gap-2 xl:grid-cols-[260px_minmax(0,1fr)_270px] 2xl:grid-cols-[285px_minmax(0,1fr)_310px]">
+            <div className="grid min-h-0 flex-1 grid-cols-1 gap-2 xl:grid-cols-[232px_minmax(0,1fr)_248px] 2xl:grid-cols-[285px_minmax(0,1fr)_310px]">
               <CaixaFila
                 aba={aba}
                 setAba={setAba}

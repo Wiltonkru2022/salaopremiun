@@ -139,7 +139,7 @@ export default function Header({
           <Menu size={18} />
         </button>
 
-        <div className="min-w-0 flex-1 basis-[220px]">
+        <div className="min-w-0 flex-1 basis-[180px] overflow-hidden">
           <div className="flex min-w-0 items-center gap-2">
             <h1 className="truncate font-display text-[1rem] font-bold tracking-[-0.02em] text-zinc-950 sm:text-[1.05rem] xl:text-[1.2rem]">
               {pageMeta.title}
@@ -149,7 +149,7 @@ export default function Header({
             </span>
           </div>
 
-          <p className="mt-0.5 hidden max-w-2xl truncate text-[11px] text-zinc-500 xl:block">
+          <p className="mt-0.5 hidden max-w-2xl truncate text-[11px] text-zinc-500 2xl:block">
             {pageMeta.description}
           </p>
           {showCriticalState ? (
@@ -169,14 +169,14 @@ export default function Header({
           href={canSeeAssinatura ? getRouteHref("/meu-plano") : "#"}
           aria-disabled={!canSeeAssinatura}
           className={clsx(
-            "hidden min-w-0 items-center gap-2 rounded-2xl border border-zinc-200 bg-zinc-50 px-2.5 py-2 text-sm md:flex xl:px-3",
+            "hidden min-w-0 items-center gap-2 rounded-2xl border border-zinc-200 bg-zinc-50 px-2.5 py-2 text-sm 2xl:flex 2xl:px-3",
             canSeeAssinatura
               ? "transition hover:border-zinc-300 hover:bg-white"
               : "pointer-events-none opacity-70"
           )}
         >
           <ShieldCheck size={16} className="shrink-0 text-[var(--app-accent-strong)]" />
-          <span className="hidden truncate text-xs font-semibold text-zinc-900 xl:inline">
+          <span className="hidden max-w-[120px] truncate text-xs font-semibold text-zinc-900 2xl:inline">
             {planoNome || "Sem plano"}
           </span>
           <span
@@ -214,10 +214,10 @@ export default function Header({
             </span>
 
             <span className="hidden min-w-0 sm:block">
-              <span className="block max-w-[116px] truncate text-[13px] font-semibold xl:max-w-[144px]">
+              <span className="block max-w-[104px] truncate text-[13px] font-semibold 2xl:max-w-[144px]">
                 {userName || "Usuario"}
               </span>
-                  <span className="block max-w-[116px] truncate text-[10px] text-zinc-500 xl:max-w-[144px]">
+                  <span className="block max-w-[104px] truncate text-[10px] text-zinc-500 2xl:max-w-[144px]">
                 {salaoNome || userEmail || "Conta principal"}
               </span>
             </span>
