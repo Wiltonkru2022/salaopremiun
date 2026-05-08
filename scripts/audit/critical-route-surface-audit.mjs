@@ -35,6 +35,8 @@ const GUARD_HINTS = [
   "requireProfissionalServerContext(",
   "getProfissionalTicketContext(",
   "getPainelTicketContext(",
+  "getPainelUserContext(",
+  "getAuthenticatedContext(",
   "carregarContextoVenda(",
   "createAdminMaster",
   "createAdminSalaoRouteService(",
@@ -47,6 +49,9 @@ const GUARD_HINTS = [
   "createAssinaturaCheckoutService(",
   "createMonitoringService(",
   "createSuporteTicketService(",
+  "resolveAdminMasterAccessForIdentity(",
+  "assertPublicRateLimit(",
+  "auth.getUser(",
 ];
 
 function walk(dir) {

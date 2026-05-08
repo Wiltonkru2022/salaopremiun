@@ -25,6 +25,9 @@ const GUARD_HINTS = [
   "requireProfissionalServerContext(",
   "getProfissionalTicketContext(",
   "getPainelTicketContext(",
+  "getPainelUserContext(",
+  "getClienteSessionFromCookie(",
+  "requireClienteAppContext(",
   "carregarContextoVenda(",
   "createAdminMaster",
   "createAdminSalaoRouteService(",
@@ -39,6 +42,8 @@ const GUARD_HINTS = [
   "createSuporteTicketService(",
   "createShellNotificationService(",
   "getUser(",
+  "resolveAdminMasterAccessForIdentity(",
+  "assertPublicRateLimit(",
   "createClient(",
   "auth.uid",
 ];

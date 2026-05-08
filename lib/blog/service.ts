@@ -6,6 +6,10 @@ import {
   getBlogSupabaseAdmin,
   getBlogSupabasePublic,
 } from "@/lib/blog/supabase";
+import {
+  asLooseSupabaseClient,
+  type LooseSupabaseClient,
+} from "@/lib/supabase/loose-client";
 
 type BlogDbCategory = {
   id: string;
@@ -149,16 +153,16 @@ function mapPost(post: BlogDbPost): BlogPost {
   };
 }
 
-async function getBlogDatabaseUnsafe() {
+async function getBlogDatabaseUnsafe(): Promise<LooseSupabaseClient | null> {
   if (!canUseBlogDatabase()) return null;
 
-  return getBlogSupabasePublic() as any;
+  return asLooseSupabaseClient(getBlogSupabasePublic());
 }
 
-async function getBlogAdminDatabaseUnsafe() {
+async function getBlogAdminDatabaseUnsafe(): Promise<LooseSupabaseClient | null> {
   if (!canUseBlogSupabaseAdmin()) return null;
 
-  return getBlogSupabaseAdmin() as any;
+  return asLooseSupabaseClient(getBlogSupabaseAdmin());
 }
 
 async function loadBlogCategories(): Promise<BlogCategory[]> {
@@ -167,14 +171,14 @@ async function loadBlogCategories(): Promise<BlogCategory[]> {
     if (!supabase) return [];
 
     const { data, error } = await supabase
-      .from("blog_categorias")
+      .from<BlogDbCategory[]>("blog_categorias")
       .select("id, slug, nome, descricao")
       .eq("ativo", true)
       .order("ordem", { ascending: true })
       .order("nome", { ascending: true });
 
     if (error || !data?.length) return [];
-    return data.map(mapCategory);
+    return (data as BlogDbCategory[]).map(mapCategory);
   } catch (error) {
     console.warn("Blog sem categorias carregadas:", error);
     return [];
@@ -200,7 +204,7 @@ async function loadPublishedBlogPosts(): Promise<BlogPost[]> {
     if (!supabase) return [];
 
     const { data, error } = await supabase
-      .from("blog_posts")
+      .from<BlogDbPost[]>("blog_posts")
       .select(
         "id, categoria_id, slug, titulo, descricao, resumo, conteudo, imagem_capa_url, imagem_capa_alt, tempo_leitura, tags, destaque, views, publicado_em, categoria:blog_categorias(id, slug, nome, descricao)"
       )
@@ -209,7 +213,7 @@ async function loadPublishedBlogPosts(): Promise<BlogPost[]> {
       .order("criado_em", { ascending: false });
 
     if (error || !data?.length) return [];
-    return data.map(mapPost);
+    return (data as BlogDbPost[]).map(mapPost);
   } catch (error) {
     console.warn("Blog sem posts carregados:", error);
     return [];
@@ -351,7 +355,7 @@ export async function getAdminBlogData() {
 
     return {
       categories,
-      posts: (data || []).map(mapPost),
+      posts: ((data || []) as BlogDbPost[]).map(mapPost),
       metrics,
       usingFallback: false,
       error: null,
@@ -388,7 +392,7 @@ export async function getAdminBlogPostById(id: string): Promise<BlogPost | null>
       .maybeSingle();
 
     if (error || !data) return null;
-    return mapPost(data);
+    return mapPost(data as BlogDbPost);
   } catch {
     return null;
   }
@@ -414,7 +418,7 @@ export async function getAdminBlogPostBySlug(
       .maybeSingle();
 
     if (error || !data) return null;
-    return mapPost(data);
+    return mapPost(data as BlogDbPost);
   } catch {
     return null;
   }

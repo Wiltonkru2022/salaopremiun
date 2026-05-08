@@ -61,7 +61,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ message: "Sessao nao informada." }, { status: 401 });
   }
 
-  const supabase = getSupabaseAdmin() as any;
+  const supabase = getSupabaseAdmin();
   const { data, error } = await supabase.auth.getUser(token);
   const email = String(data?.user?.email || "").trim().toLowerCase();
 

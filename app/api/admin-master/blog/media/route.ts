@@ -1,75 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireAdminMasterUser } from "@/lib/admin-master/auth/requireAdminMasterUser";
-import { getBlogSupabaseAdmin } from "@/lib/blog/supabase";
-
-const BUCKET_ID = "blog-media";
-const MAX_IMAGE_SIZE = 6 * 1024 * 1024;
-const MAX_VIDEO_SIZE = 20 * 1024 * 1024;
-const ALLOWED_IMAGE_TYPES = new Set([
-  "image/jpeg",
-  "image/png",
-  "image/webp",
-  "image/gif",
-]);
-const ALLOWED_VIDEO_TYPES = new Set(["video/mp4", "video/webm", "video/quicktime"]);
-
-function getFileExtension(file: File) {
-  const byName = file.name.split(".").pop()?.toLowerCase();
-  if (byName && /^[a-z0-9]+$/.test(byName)) return byName;
-  if (file.type === "image/png") return "png";
-  if (file.type === "image/webp") return "webp";
-  if (file.type === "image/gif") return "gif";
-  if (file.type === "video/webm") return "webm";
-  if (file.type === "video/quicktime") return "mov";
-  return file.type.startsWith("video/") ? "mp4" : "jpg";
-}
-
-function getStoragePathFromPublicUrl(publicUrl: string) {
-  try {
-    const url = new URL(publicUrl);
-    const marker = `/storage/v1/object/public/${BUCKET_ID}/`;
-    const markerIndex = url.pathname.indexOf(marker);
-    if (markerIndex < 0) return null;
-
-    return decodeURIComponent(url.pathname.slice(markerIndex + marker.length));
-  } catch {
-    return null;
-  }
-}
-
-async function ensureBlogBucket() {
-  if (!process.env.BLOG_SUPABASE_SERVICE_ROLE_KEY) {
-    return;
-  }
-
-  const supabaseAdmin = getBlogSupabaseAdmin();
-  const { data: bucket, error: getBucketError } =
-    await supabaseAdmin.storage.getBucket(BUCKET_ID);
-
-  if (bucket) return;
-
-  if (
-    getBucketError &&
-    /not authorized|permission|row-level security/i.test(
-      getBucketError.message || ""
-    )
-  ) {
-    return;
-  }
-
-  const { error } = await supabaseAdmin.storage.createBucket(BUCKET_ID, {
-    public: true,
-    fileSizeLimit: MAX_VIDEO_SIZE,
-    allowedMimeTypes: [
-      ...Array.from(ALLOWED_IMAGE_TYPES),
-      ...Array.from(ALLOWED_VIDEO_TYPES),
-    ],
-  });
-
-  if (error && !/already exists/i.test(error.message || "")) {
-    throw error;
-  }
-}
+import { removeBlogMedia, uploadBlogMedia } from "@/services/blogMediaService";
 
 export async function POST(request: Request) {
   await requireAdminMasterUser("comunicacao_ver");
@@ -85,58 +16,8 @@ export async function POST(request: Request) {
     );
   }
 
-  const isImage = ALLOWED_IMAGE_TYPES.has(file.type);
-  const isVideo = ALLOWED_VIDEO_TYPES.has(file.type);
-
-  if (!isImage && !isVideo) {
-    return NextResponse.json(
-      { message: "Envie JPG, PNG, WEBP, GIF, MP4, WEBM ou MOV." },
-      { status: 400 }
-    );
-  }
-
-  const maxSize = isVideo ? MAX_VIDEO_SIZE : MAX_IMAGE_SIZE;
-  if (file.size > maxSize) {
-    return NextResponse.json(
-      {
-        message: `${isVideo ? "Video" : "Imagem"} precisa ter ate ${Math.round(
-          maxSize / 1024 / 1024
-        )}MB.`,
-      },
-      { status: 400 }
-    );
-  }
-
   try {
-    await ensureBlogBucket();
-
-    const supabaseAdmin = getBlogSupabaseAdmin();
-    const safePlacement = placement.replace(/[^a-z0-9-]/gi, "-").toLowerCase();
-    const path = `${safePlacement}/${new Date()
-      .toISOString()
-      .slice(0, 10)}/${crypto.randomUUID()}.${getFileExtension(file)}`;
-
-    const { error } = await supabaseAdmin.storage
-      .from(BUCKET_ID)
-      .upload(path, file, {
-        cacheControl: "31536000",
-        contentType: file.type,
-        upsert: false,
-      });
-
-    if (error) throw error;
-
-    const { data } = supabaseAdmin.storage.from(BUCKET_ID).getPublicUrl(path);
-
-    if (!data.publicUrl) {
-      throw new Error("Nao foi possivel obter a URL publica da midia.");
-    }
-
-    return NextResponse.json({
-      publicUrl: data.publicUrl,
-      type: isVideo ? "video" : "image",
-      name: file.name,
-    });
+    return NextResponse.json(await uploadBlogMedia({ file, placement }));
   } catch (error: unknown) {
     return NextResponse.json(
       {
@@ -156,24 +37,19 @@ export async function DELETE(request: Request) {
   const body = (await request.json().catch(() => null)) as {
     publicUrl?: string;
   } | null;
-  const path = getStoragePathFromPublicUrl(String(body?.publicUrl || ""));
 
-  if (!path) {
+  try {
+    await removeBlogMedia(String(body?.publicUrl || ""));
+    return NextResponse.json({ ok: true });
+  } catch (error) {
     return NextResponse.json(
-      { message: "URL de mídia inválida para remoção." },
-      { status: 400 }
-    );
-  }
-
-  const supabaseAdmin = getBlogSupabaseAdmin();
-  const { error } = await supabaseAdmin.storage.from(BUCKET_ID).remove([path]);
-
-  if (error) {
-    return NextResponse.json(
-      { message: `Não foi possível remover a mídia: ${error.message}` },
+      {
+        message:
+          error instanceof Error
+            ? error.message
+            : "Nao foi possivel remover a midia.",
+      },
       { status: 500 }
     );
   }
-
-  return NextResponse.json({ ok: true });
 }

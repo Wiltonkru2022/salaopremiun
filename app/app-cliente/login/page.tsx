@@ -12,6 +12,8 @@ function getErrorMessage(value: string | string[] | undefined) {
   if (!code) return null;
 
   const messages: Record<string, string> = {
+    sessao_expirada:
+      "Sua sessao expirou neste aparelho. Entre novamente para continuar.",
     salao_indisponivel:
       "Esse salao nao esta disponivel no app cliente agora. Confira o plano ou tente outro salao.",
   };

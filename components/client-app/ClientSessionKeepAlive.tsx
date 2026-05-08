@@ -4,22 +4,24 @@ import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 
 const REFRESH_INTERVAL_MS = 1000 * 60 * 60 * 6;
-const PROTECTED_ROUTES = [
-  "/app-cliente/agendamentos",
-  "/app-cliente/perfil",
+const AUTH_ROUTES = [
+  "/app-cliente/login",
+  "/app-cliente/cadastro",
+  "/app-cliente/recuperar-acesso",
 ];
 
 export default function ClientSessionKeepAlive() {
   const pathname = usePathname();
   const lastRefreshRef = useRef(0);
 
-  const isProtectedRoute = PROTECTED_ROUTES.some((route) =>
+  const isAuthRoute = AUTH_ROUTES.some((route) =>
     pathname.startsWith(route)
   );
+  const shouldRefresh = pathname.startsWith("/app-cliente") && !isAuthRoute;
 
   useEffect(() => {
     async function refreshSession(force = false) {
-      if (!isProtectedRoute) {
+      if (!shouldRefresh) {
         return;
       }
 
@@ -57,7 +59,7 @@ export default function ClientSessionKeepAlive() {
       window.removeEventListener("focus", refreshWhenVisible);
       document.removeEventListener("visibilitychange", refreshWhenVisible);
     };
-  }, [isProtectedRoute]);
+  }, [shouldRefresh]);
 
   return null;
 }

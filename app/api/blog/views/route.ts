@@ -1,5 +1,11 @@
 import { NextResponse } from "next/server";
-import { getBlogSupabaseAdmin } from "@/lib/blog/supabase";
+import {
+  assertPublicRateLimit,
+  getPublicRateLimitIdentity,
+} from "@/lib/security/public-rate-limit";
+import { registrarVisualizacaoBlog } from "@/services/blogRouteService";
+
+export const publicRoute = "rota publica: contador de visualizacao do blog com rate limit.";
 
 export async function POST(request: Request) {
   const body = (await request.json().catch(() => ({}))) as {
@@ -12,22 +18,20 @@ export async function POST(request: Request) {
   }
 
   try {
-    const supabase = getBlogSupabaseAdmin() as any;
+    assertPublicRateLimit({
+      key: getPublicRateLimitIdentity(request, `blog-views:${body.postId}`),
+      limit: 30,
+      windowMs: 5 * 60 * 1000,
+    });
+
     const userAgent = request.headers.get("user-agent")?.slice(0, 300) || null;
-
-    await supabase.from("blog_views").insert({
-      post_id: body.postId,
-      session_id: body.sessionId || null,
-      user_agent: userAgent,
+    const views = await registrarVisualizacaoBlog({
+      postId: body.postId,
+      sessionId: body.sessionId || null,
+      userAgent,
     });
 
-    const { data, error } = await supabase.rpc("increment_blog_post_views", {
-      p_post_id: body.postId,
-    });
-
-    if (error) throw error;
-
-    return NextResponse.json({ views: Number(data || 0) });
+    return NextResponse.json({ views });
   } catch (error: unknown) {
     return NextResponse.json(
       {

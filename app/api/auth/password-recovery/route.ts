@@ -1,10 +1,15 @@
 import { NextResponse } from "next/server";
 import { getPublicAuthUrl } from "@/lib/auth/public-auth-url";
 import { htmlEscape, sendResendEmail } from "@/lib/email/resend";
+import {
+  assertPublicRateLimit,
+  getPublicRateLimitIdentity,
+} from "@/lib/security/public-rate-limit";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+export const publicRoute = "rota publica: recuperacao de senha com rate limit por IP.";
 
 function isValidEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
@@ -55,7 +60,13 @@ export async function POST(request: Request) {
   }
 
   try {
-    const supabase = getSupabaseAdmin() as any;
+    assertPublicRateLimit({
+      key: getPublicRateLimitIdentity(request, `password-recovery:${email}`),
+      limit: 3,
+      windowMs: 15 * 60 * 1000,
+    });
+
+    const supabase = getSupabaseAdmin();
     const redirectTo = getPublicAuthUrl(
       "/atualizar-senha",
       getRequestHost(request)

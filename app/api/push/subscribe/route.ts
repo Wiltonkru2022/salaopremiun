@@ -1,10 +1,9 @@
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 import { getClienteSessionFromCookie } from "@/lib/cliente-auth.server";
+import { getPainelUserContext } from "@/lib/auth/get-painel-user-context";
 import { getProfissionalSessionFromCookie } from "@/lib/profissional-auth.server";
 import { upsertPushSubscription, type PushAudience } from "@/lib/push-notifications";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
-import { createClient } from "@/lib/supabase/server";
 
 function isAudience(value: unknown): value is PushAudience {
   return (
@@ -15,24 +14,10 @@ function isAudience(value: unknown): value is PushAudience {
 }
 
 async function getSalaoPainelContext() {
-  const supabaseServer = await createClient();
-  const {
-    data: { user },
-    error,
-  } = await supabaseServer.auth.getUser();
-
-  if (error || !user?.id) {
-    return null;
-  }
-
-  const { data: usuario, error: usuarioError } = await (getSupabaseAdmin() as any)
-    .from("usuarios")
-    .select("id, id_salao, status")
-    .eq("auth_user_id", user.id)
-    .maybeSingle();
+  const { user, usuario } = await getPainelUserContext();
 
   if (
-    usuarioError ||
+    !user?.id ||
     !usuario?.id ||
     !usuario?.id_salao ||
     String(usuario.status || "").toLowerCase() !== "ativo"

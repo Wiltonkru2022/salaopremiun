@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getPainelUserContext } from "@/lib/auth/get-painel-user-context";
 import { runAdminOperation } from "@/lib/supabase/admin-ops";
+import { asLooseSupabaseClient } from "@/lib/supabase/loose-client";
 import {
   DEFAULT_SALON_NOTIFICATION_SETTINGS,
   mapSettingsToDbPayload,
@@ -56,7 +57,8 @@ export async function salvarConfiguracoesNotificacoesAction(formData: FormData) 
       actorId: usuario.id,
       idSalao: usuario.id_salao,
       run: async (supabase) => {
-        const { error } = await (supabase as any)
+        const db = asLooseSupabaseClient(supabase);
+        const { error } = await db
           .from("configuracoes_notificacoes")
           .upsert(
             {

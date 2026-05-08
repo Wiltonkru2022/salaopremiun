@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { clearAdminMasterSessionCookie } from "@/lib/admin-master/auth/session";
 
+export const publicRoute = "rota publica: logout idempotente apenas limpa cookie.";
+
 function getRequestHost(request: Request) {
   return (
     request.headers.get("x-forwarded-host")?.split(",")[0] ||

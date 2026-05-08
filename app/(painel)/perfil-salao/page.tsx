@@ -40,6 +40,7 @@ import {
   normalizeSalaoSlug,
 } from "@/lib/saloes/public-link";
 import { createClient } from "@/lib/supabase/client";
+import { asLooseSupabaseClient } from "@/lib/supabase/loose-client";
 
 type PasswordForm = {
   novaSenha: string;
@@ -571,7 +572,7 @@ export default function PerfilSalaoPage() {
       if (error) throw error;
 
       try {
-        await (supabase as any).rpc("refresh_client_app_marketplace_cache", {
+        await asLooseSupabaseClient(supabase).rpc("refresh_client_app_marketplace_cache", {
           p_id_salao: idSalao,
         });
       } catch {

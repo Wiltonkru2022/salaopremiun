@@ -1,5 +1,11 @@
 import { NextResponse } from "next/server";
-import { getBlogSupabaseAdmin } from "@/lib/blog/supabase";
+import {
+  assertPublicRateLimit,
+  getPublicRateLimitIdentity,
+} from "@/lib/security/public-rate-limit";
+import { cadastrarNewsletterBlog } from "@/services/blogRouteService";
+
+export const publicRoute = "rota publica: newsletter do blog com rate limit.";
 
 function isValidEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
@@ -20,17 +26,16 @@ export async function POST(request: Request) {
   }
 
   try {
-    const supabase = getBlogSupabaseAdmin() as any;
-    const { error } = await supabase.from("newsletter_subscribers").upsert(
-      {
-        email,
-        origem: "blog",
-        post_slug: body.postSlug || null,
-      },
-      { onConflict: "email" }
-    );
+    assertPublicRateLimit({
+      key: getPublicRateLimitIdentity(request, `blog-newsletter:${email}`),
+      limit: 5,
+      windowMs: 15 * 60 * 1000,
+    });
 
-    if (error) throw error;
+    await cadastrarNewsletterBlog({
+      email,
+      postSlug: body.postSlug || null,
+    });
 
     return NextResponse.json({ ok: true });
   } catch (error: unknown) {

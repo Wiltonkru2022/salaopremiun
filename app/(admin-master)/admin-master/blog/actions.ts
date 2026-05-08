@@ -4,6 +4,12 @@ import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAdminMasterUser } from "@/lib/admin-master/auth/requireAdminMasterUser";
 import { getBlogSupabaseAdmin } from "@/lib/blog/supabase";
+import {
+  asLooseSupabaseClient,
+  type LooseSupabaseClient,
+} from "@/lib/supabase/loose-client";
+
+type BlogSupabaseClient = LooseSupabaseClient;
 
 function slugify(value: string) {
   return value
@@ -55,12 +61,12 @@ function isUnsafeCategory(category?: { slug?: string | null; nome?: string | nul
   );
 }
 
-async function getDefaultCategoryId(supabase: any) {
+async function getDefaultCategoryId(supabase: BlogSupabaseClient) {
   const { data: existing, error: existingError } = await supabase
     .from("blog_categorias")
     .select("id")
     .eq("slug", "agenda-online")
-    .maybeSingle();
+    .maybeSingle<{ id?: string | null }>();
 
   if (existingError) throw existingError;
   if (existing?.id) return existing.id;
@@ -78,13 +84,13 @@ async function getDefaultCategoryId(supabase: any) {
       { onConflict: "slug" }
     )
     .select("id")
-    .single();
+    .single<{ id?: string | null }>();
 
   if (error || !data?.id) throw error || new Error("Categoria padrão inválida.");
   return data.id;
 }
 
-async function resolveCategoryId(supabase: any, value: string) {
+async function resolveCategoryId(supabase: BlogSupabaseClient, value: string) {
   const cleanValue = value.trim();
 
   if (isUuid(cleanValue)) {
@@ -92,7 +98,7 @@ async function resolveCategoryId(supabase: any, value: string) {
       .from("blog_categorias")
       .select("id, slug, nome")
       .eq("id", cleanValue)
-      .maybeSingle();
+      .maybeSingle<{ id?: string | null; slug?: string | null; nome?: string | null }>();
 
     if (error) throw error;
     if (data?.id && !isUnsafeCategory(data)) return data.id;
@@ -109,7 +115,7 @@ async function resolveCategoryId(supabase: any, value: string) {
     .from("blog_categorias")
     .select("id, slug, nome")
     .eq("slug", slug)
-    .maybeSingle();
+    .maybeSingle<{ id?: string | null; slug?: string | null; nome?: string | null }>();
 
   if (existingError) throw existingError;
   if (existing?.id && !isUnsafeCategory(existing)) return existing.id;
@@ -130,7 +136,7 @@ async function resolveCategoryId(supabase: any, value: string) {
       { onConflict: "slug" }
     )
     .select("id")
-    .single();
+    .single<{ id?: string | null }>();
 
   if (error || !data?.id) {
     throw new Error(
@@ -161,7 +167,7 @@ export async function createBlogCategory(formData: FormData) {
     throw new Error("Use um nome de categoria em português, não um código interno.");
   }
 
-  const supabase = getBlogSupabaseAdmin() as any;
+  const supabase = asLooseSupabaseClient(getBlogSupabaseAdmin());
   const { error } = await supabase.from("blog_categorias").upsert(
     {
       nome,
@@ -210,7 +216,7 @@ export async function createBlogPost(
   }
 
   const now = new Date().toISOString();
-  const supabase = getBlogSupabaseAdmin() as any;
+  const supabase = asLooseSupabaseClient(getBlogSupabaseAdmin());
   try {
     const resolvedCategoryId = await resolveCategoryId(supabase, categoriaId);
     const payload = {
@@ -269,7 +275,7 @@ export async function deleteBlogPost(formData: FormData) {
     throw new Error("Post inválido para exclusão.");
   }
 
-  const supabase = getBlogSupabaseAdmin() as any;
+  const supabase = asLooseSupabaseClient(getBlogSupabaseAdmin());
   const { error } = await supabase.from("blog_posts").delete().eq("id", id);
 
   if (error) {

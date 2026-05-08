@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireProfissionalAppContext } from "@/lib/profissional-context.server";
 import { runAdminOperation } from "@/lib/supabase/admin-ops";
+import { asLooseSupabaseClient } from "@/lib/supabase/loose-client";
 
 export async function removerAvaliacaoProfissionalAction(formData: FormData) {
   const session = await requireProfissionalAppContext();
@@ -18,12 +19,19 @@ export async function removerAvaliacaoProfissionalAction(formData: FormData) {
     actorId: session.idProfissional,
     idSalao: session.idSalao,
     run: async (supabase) => {
-      const { data: avaliacao, error } = await (supabase as any)
+      const db = asLooseSupabaseClient(supabase);
+      const { data: avaliacao, error } = await db
         .from("clientes_avaliacoes")
         .select("id, id_salao, agendamentos(profissional_id)")
         .eq("id", idAvaliacao)
         .eq("id_salao", session.idSalao)
-        .maybeSingle();
+        .maybeSingle<{
+          id?: string | null;
+          agendamentos?:
+            | { profissional_id?: string | null }
+            | Array<{ profissional_id?: string | null }>
+            | null;
+        }>();
 
       const profissionalId = Array.isArray(avaliacao?.agendamentos)
         ? avaliacao?.agendamentos[0]?.profissional_id
@@ -33,7 +41,7 @@ export async function removerAvaliacaoProfissionalAction(formData: FormData) {
         return { ok: false as const };
       }
 
-      const { error: deleteError } = await (supabase as any)
+      const { error: deleteError } = await db
         .from("clientes_avaliacoes")
         .delete()
         .eq("id", idAvaliacao)

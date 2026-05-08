@@ -6,7 +6,8 @@ const routeRoot = path.join(cwd, "app", "api");
 
 const GUARDRULES = [
   ["admin_master", /requireAdminMasterUser|adminMasterUser|admin_master_usuarios|auth\/access/],
-  ["supabase_user", /auth\.getUser\(|getUser\(|validarSalaoDoUsuario|getPainelTicketContext|requireSalao/],
+  ["supabase_user", /auth\.getUser\(|getUser\(|getPainelUserContext|validarSalaoDoUsuario|getPainelTicketContext|requireSalao/],
+  ["public_rate_limit", /assertPublicRateLimit|getPublicRateLimitIdentity/],
   ["salao_admin", /requireAdminSalao/],
   ["profissional_session", /getProfissionalSessionFromCookie|getProfissionalTicketContext|requireProfissionalSession/],
   [
@@ -60,6 +61,10 @@ function classify(source) {
   return GUARDRULES.filter(([, regex]) => regex.test(source)).map(([name]) => name);
 }
 
+function hasPublicAbuseGuard(guards) {
+  return guards.includes("public_rate_limit");
+}
+
 function isPublicRegistrationRoute(rel, source) {
   return (
     rel === "app/api/cadastro-salao/route.ts" &&
@@ -83,7 +88,11 @@ const rows = walk(routeRoot).map((file) => {
   const risk =
     usesServiceRole && guards.length === 0 && !publicRegistration
       ? "high"
-      : usesServiceRole && critical && !tenantGuard && !publicRegistration
+      : usesServiceRole &&
+          critical &&
+          !tenantGuard &&
+          !publicRegistration &&
+          !hasPublicAbuseGuard(guards)
         ? "medium"
         : usesServiceRole
           ? "review"

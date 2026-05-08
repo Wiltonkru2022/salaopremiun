@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getBlogSupabaseAdmin } from "@/lib/blog/supabase";
+import { listarAssinantesNewsletterBlog } from "@/services/blogRouteService";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -18,10 +18,6 @@ type BlogPostWebhookPayload = {
   table?: string;
   record?: BlogPostWebhookRecord | null;
   old_record?: BlogPostWebhookRecord | null;
-};
-
-type NewsletterSubscriber = {
-  email: string;
 };
 
 const RESEND_API_URL = "https://api.resend.com/emails";
@@ -117,20 +113,7 @@ export async function POST(request: Request) {
   }
 
   const record = payload.record as BlogPostWebhookRecord;
-  const supabase = getBlogSupabaseAdmin() as any;
-  const { data, error } = await supabase
-    .from("newsletter_subscribers")
-    .select("email")
-    .eq("origem", "blog")
-    .order("criado_em", { ascending: false });
-
-  if (error) {
-    return NextResponse.json({ message: error.message }, { status: 500 });
-  }
-
-  const subscribers = ((data || []) as NewsletterSubscriber[])
-    .map((subscriber) => subscriber.email.trim().toLowerCase())
-    .filter(Boolean);
+  const subscribers = await listarAssinantesNewsletterBlog();
 
   if (subscribers.length === 0) {
     return NextResponse.json({ ok: true, sent: 0 });

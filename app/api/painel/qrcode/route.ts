@@ -1,6 +1,8 @@
 import QRCode from "qrcode";
 import { NextResponse } from "next/server";
 
+export const publicRoute = "rota publica: gerador de QR code sem dados sensiveis.";
+
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const text = String(url.searchParams.get("text") || "").trim();

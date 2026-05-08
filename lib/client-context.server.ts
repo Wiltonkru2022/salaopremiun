@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
-import { unstable_cache } from "next/cache";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { getClienteSessionFromCookie } from "@/lib/cliente-auth.server";
+import { asLooseSupabaseClient } from "@/lib/supabase/loose-client";
 
 export type ClienteAppServerContext = {
   idConta: string;
@@ -14,36 +14,27 @@ function isUnauthorizedError(error: unknown) {
   return error instanceof Error && error.message === "UNAUTHORIZED";
 }
 
-const getClienteAppAccountCached = unstable_cache(
-  async (idConta: string) => {
-    const supabaseAdmin = getSupabaseAdmin();
-    const { data: conta, error } = await (supabaseAdmin as any)
-      .from("clientes_app_auth")
-      .select("id, nome, email, telefone, ativo")
-      .eq("id", idConta)
-      .limit(1)
-      .maybeSingle();
+async function getClienteAppAccount(idConta: string) {
+  const supabaseAdmin = asLooseSupabaseClient(getSupabaseAdmin());
+  const { data: conta, error } = await supabaseAdmin
+    .from("clientes_app_auth")
+    .select("id, nome, email, telefone, ativo")
+    .eq("id", idConta)
+    .limit(1)
+    .maybeSingle<{
+      id?: string | null;
+      nome?: string | null;
+      email?: string | null;
+      telefone?: string | null;
+      ativo?: boolean | null;
+    }>();
 
-    if (error) {
-      throw new Error("ACCOUNT_LOOKUP_FAILED");
-    }
-
-    return conta as
-      | {
-          id?: string | null;
-          nome?: string | null;
-          email?: string | null;
-          telefone?: string | null;
-          ativo?: boolean | null;
-        }
-      | null;
-  },
-  ["cliente-app-account-context-v1"],
-  {
-    revalidate: 60,
-    tags: ["cliente-app-session"],
+  if (error) {
+    throw new Error("ACCOUNT_LOOKUP_FAILED");
   }
-);
+
+  return conta;
+}
 
 async function loadClienteAppServerContext(): Promise<ClienteAppServerContext> {
   const session = await getClienteSessionFromCookie();
@@ -52,10 +43,10 @@ async function loadClienteAppServerContext(): Promise<ClienteAppServerContext> {
     throw new Error("UNAUTHORIZED");
   }
 
-  let conta: Awaited<ReturnType<typeof getClienteAppAccountCached>>;
+  let conta: Awaited<ReturnType<typeof getClienteAppAccount>>;
 
   try {
-    conta = await getClienteAppAccountCached(session.idConta);
+    conta = await getClienteAppAccount(session.idConta);
   } catch {
     return {
       idConta: session.idConta,
@@ -100,7 +91,8 @@ export async function requireClienteAppContext(): Promise<ClienteAppServerContex
   const validation = await validateClienteAppSession();
 
   if (!validation.context) {
-    redirect("/app-cliente/login");
+    const destino = "/app-cliente/login?erro=sessao_expirada";
+    redirect(`/app-cliente/logout?destino=${encodeURIComponent(destino)}`);
   }
 
   return validation.context;

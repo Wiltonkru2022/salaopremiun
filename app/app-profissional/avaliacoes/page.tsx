@@ -5,6 +5,7 @@ import ProfissionalSurface from "@/components/profissional/ui/ProfissionalSurfac
 import ProfissionalSectionHeader from "@/components/profissional/ui/ProfissionalSectionHeader";
 import { requireProfissionalAppContext } from "@/lib/profissional-context.server";
 import { runAdminOperation } from "@/lib/supabase/admin-ops";
+import { asLooseSupabaseClient } from "@/lib/supabase/loose-client";
 import { removerAvaliacaoProfissionalAction } from "./actions";
 
 type ReviewRow = {
@@ -53,8 +54,9 @@ async function carregarAvaliacoes(params: {
     actorId: params.idProfissional,
     idSalao: params.idSalao,
     run: async (supabase) => {
-      const { data, error } = await (supabase as any)
-        .from("clientes_avaliacoes")
+      const db = asLooseSupabaseClient(supabase);
+      const { data, error } = await db
+        .from<ReviewRow[]>("clientes_avaliacoes")
         .select(
           "id, nota, comentario, created_at, clientes(nome), agendamentos(profissional_id, data, hora_inicio, servicos(nome))"
         )
