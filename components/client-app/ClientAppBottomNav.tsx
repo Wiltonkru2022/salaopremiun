@@ -6,19 +6,19 @@ import ClientAppPendingLink from "@/components/client-app/ClientAppPendingLink";
 
 const navItems = [
   {
-    href: "/app-cliente/inicio",
     label: "Meu app",
     icon: Heart,
-    match: (pathname: string) =>
-      pathname === "/app-cliente/inicio" ||
-      pathname.startsWith("/app-cliente/salao/") ||
-      pathname.startsWith("/salao/"),
+    href: "/app-cliente",
+    match: (pathname: string) => pathname === "/app-cliente",
   },
   {
     href: "/app-cliente/inicio",
     label: "Explorar",
     icon: Search,
-    match: (pathname: string) => pathname === "/app-cliente/inicio",
+    match: (pathname: string) =>
+      pathname === "/app-cliente/inicio" ||
+      pathname.startsWith("/app-cliente/salao/") ||
+      pathname.startsWith("/salao/"),
   },
   {
     href: "/app-cliente/agendamentos",
