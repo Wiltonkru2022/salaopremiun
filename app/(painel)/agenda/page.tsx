@@ -610,6 +610,79 @@ export default function AgendaPage() {
     }
   }
 
+  async function openClientProfileFromSearch(clientId: string) {
+    const cliente = clientes.find((item) => item.id === clientId);
+    setSidebarView("clientSearch");
+    setClienteProfileOpen(true);
+    setClienteProfileLoading(true);
+    setClienteProfileNome(cliente?.nome || "Cliente");
+    setClienteProfileWhatsapp(cliente?.whatsapp || null);
+    setClienteProfileCredito(Number(cliente?.cashback || 0));
+    setClienteProfileHistorico([]);
+
+    try {
+      const [{ data: clienteData, error: clienteError }, { data, error }] =
+        await Promise.all([
+          supabase
+            .from("clientes")
+            .select("nome, whatsapp, cashback")
+            .eq("id_salao", idSalao)
+            .eq("id", clientId)
+            .maybeSingle(),
+          supabase
+            .from("agendamentos")
+            .select(
+              "id, data, hora_inicio, hora_fim, status, observacoes, servicos(nome)"
+            )
+            .eq("id_salao", idSalao)
+            .eq("cliente_id", clientId)
+            .order("data", { ascending: false })
+            .order("hora_inicio", { ascending: false })
+            .limit(6),
+        ]);
+
+      if (clienteError) throw clienteError;
+      if (error) throw error;
+
+      setClienteProfileNome(String(clienteData?.nome || cliente?.nome || "Cliente"));
+      setClienteProfileWhatsapp(
+        String(clienteData?.whatsapp || cliente?.whatsapp || "") || null
+      );
+      setClienteProfileCredito(Number(clienteData?.cashback || cliente?.cashback || 0));
+
+      const historico = ((data || []) as Array<{
+        id: string;
+        data: string;
+        hora_inicio: string;
+        hora_fim: string;
+        status: string;
+        observacoes: string | null;
+        servicos?: { nome?: string | null } | Array<{ nome?: string | null }> | null;
+      }>).map((row) => ({
+        id: row.id,
+        data: row.data,
+        horaInicio: normalizeTimeString(row.hora_inicio),
+        horaFim: normalizeTimeString(row.hora_fim),
+        status: row.status,
+        servicoNome: Array.isArray(row.servicos)
+          ? row.servicos[0]?.nome || "Servico"
+          : row.servicos?.nome || "Servico",
+        observacoes: row.observacoes,
+      }));
+
+      setClienteProfileHistorico(historico);
+    } catch (error) {
+      console.error(error);
+      abrirAviso(
+        "Perfil parcial",
+        "Nao foi possivel carregar todo o historico agora. Mantive os dados principais da cliente no painel lateral.",
+        "warning"
+      );
+    } finally {
+      setClienteProfileLoading(false);
+    }
+  }
+
   function openSlotMenu(
     date: string,
     time: string,
@@ -727,7 +800,7 @@ export default function AgendaPage() {
   const normalizedClientSearch = clientSearchQuery.trim().toLowerCase();
   const clientSearchResults = clientes
     .filter((cliente) => {
-      if (!normalizedClientSearch) return true;
+      if (!normalizedClientSearch) return false;
 
       return (
         cliente.nome.toLowerCase().includes(normalizedClientSearch) ||
@@ -1175,7 +1248,7 @@ export default function AgendaPage() {
               onCancelCreateClient={handleCancelCreateClient}
               onCreateClientNameChange={setClientCreateName}
               onCreateClientWhatsappChange={setClientCreateWhatsapp}
-              onOpenClient={(clientId) => router.push(`/clientes/${clientId}`)}
+              onOpenClient={openClientProfileFromSearch}
             />
           </div>
         </div>

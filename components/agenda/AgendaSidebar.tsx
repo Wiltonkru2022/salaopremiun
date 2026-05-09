@@ -442,6 +442,8 @@ function ClientSearchView({
   onCreateWhatsappChange: (value: string) => void;
   onOpenClient: (clientId: string) => void;
 }) {
+  const hasQuery = query.trim().length > 0;
+
   return (
     <div className="space-y-3">
       <section className="rounded-[24px] border border-zinc-200/80 bg-white p-4 shadow-[0_12px_32px_rgba(15,23,42,0.05)]">
@@ -465,7 +467,12 @@ function ClientSearchView({
           Resultado
         </div>
 
-        {results.length > 0 ? (
+        {!hasQuery ? (
+          <div className="mt-4 rounded-[20px] border border-dashed border-zinc-200 bg-zinc-50 px-4 py-5 text-sm leading-6 text-zinc-500">
+            Digite nome ou WhatsApp para buscar uma cliente. A lista completa fica
+            fora deste painel para manter a agenda leve.
+          </div>
+        ) : results.length > 0 ? (
           <div className="mt-4 space-y-2.5">
             {results.map((client) => (
               <button

@@ -34,7 +34,7 @@ export default function AgendaModalFormBloqueio({
 }: Props) {
   return (
     <div className="space-y-3.5">
-      <div className="grid gap-3 md:grid-cols-2">
+      <div className="grid gap-3">
         <div>
           <SearchableSelect
             label="Profissional"
@@ -58,7 +58,7 @@ export default function AgendaModalFormBloqueio({
         </div>
       </div>
 
-      <div className="grid gap-3 md:grid-cols-3">
+      <div className="grid gap-3">
         <div>
           <label className="mb-1.5 flex items-center gap-2 text-xs font-semibold text-zinc-700">
             <CalendarDays size={13} />
