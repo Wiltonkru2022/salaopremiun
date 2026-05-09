@@ -2,9 +2,9 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import ClientSessionAutoRestore from "@/components/client-app/ClientSessionAutoRestore";
 import LoginClienteForm from "@/components/client-app/auth/LoginClienteForm";
+import { canSalonAppearInClientApp } from "@/lib/client-app/eligibility";
 import { getClienteSessionFromCookie } from "@/lib/cliente-auth.server";
 import { validateClienteAppSession } from "@/lib/client-context.server";
-import { canSalonAppearInClientApp } from "@/lib/client-app/eligibility";
 import { buildSalaoPublicPath } from "@/lib/saloes/public-link";
 
 function getErrorMessage(value: string | string[] | undefined) {
@@ -14,12 +14,12 @@ function getErrorMessage(value: string | string[] | undefined) {
 
   const messages: Record<string, string> = {
     sessao_expirada:
-      "Estamos restaurando seu acesso neste aparelho. Se não voltar sozinho, entre novamente.",
+      "Estamos restaurando seu acesso neste aparelho. Se nao voltar sozinho, entre novamente.",
     salao_indisponivel:
-      "Esse salão não está disponível no app cliente agora. Confira o plano ou tente outro salão.",
+      "Esse salao nao esta disponivel no app cliente agora. Confira o plano ou tente outro salao.",
   };
 
-  return messages[code] || "Não foi possível entrar agora. Tente novamente.";
+  return messages[code] || "Nao foi possivel entrar agora. Tente novamente.";
 }
 
 export default async function LoginClientePage({
@@ -95,7 +95,7 @@ export default async function LoginClientePage({
                 </div>
               </div>
               <p className="mt-2.5 text-sm leading-6 text-zinc-300">
-                Acompanhe seus horários e agende seus próximos cuidados.
+                Acompanhe seus horarios e agende seus proximos cuidados.
               </p>
             </section>
 

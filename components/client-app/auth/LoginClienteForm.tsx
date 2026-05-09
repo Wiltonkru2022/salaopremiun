@@ -51,20 +51,20 @@ export default function LoginClienteForm({
         <span className="rounded-full bg-zinc-950 px-3 py-1.5 text-white">
           Cliente
         </span>
-        <span className="px-3 py-1.5">SalãoPremium</span>
+        <span className="px-3 py-1.5">SalaoPremium</span>
       </div>
 
       <h2 className="text-[1.55rem] font-semibold text-zinc-950">
-        Entre para acompanhar seus horários
+        Entre para acompanhar seus horarios
       </h2>
       <p className="mt-2 text-sm leading-6 text-zinc-500">
-        Use seu e-mail e senha para ver seus agendamentos, acompanhar o salão e
-        voltar mais rápido na próxima visita.
+        Use seu e-mail e senha para ver seus agendamentos, acompanhar o salao e
+        voltar mais rapido na proxima visita.
       </p>
 
       {salaoNome ? (
         <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-          Depois do login, você volta para <strong>{salaoNome}</strong>.
+          Depois do login, voce volta para <strong>{salaoNome}</strong>.
         </div>
       ) : null}
 
@@ -73,7 +73,6 @@ export default function LoginClienteForm({
           <label className="mb-1.5 block text-sm font-medium text-zinc-700">
             E-mail
           </label>
-
           <input
             name="email"
             type="email"
@@ -88,7 +87,6 @@ export default function LoginClienteForm({
           <label className="mb-1.5 block text-sm font-medium text-zinc-700">
             Senha
           </label>
-
           <input
             name="senha"
             type="password"
@@ -135,7 +133,7 @@ export default function LoginClienteForm({
             href="/app-cliente/inicio"
             className="block w-full text-sm font-medium text-zinc-500 underline underline-offset-4"
           >
-            Voltar para os salões
+            Voltar para os saloes
           </Link>
         </div>
       </div>

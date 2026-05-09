@@ -245,6 +245,12 @@ export default function ClientBookingForm({
       }).format(new Date(`${selectedDate}T12:00:00`))
     : "";
   const canSubmit = Boolean(servicoId && profissionalId && selectedDate && selectedTime);
+  const friendlyAvailabilityError = availabilityError
+    ? availabilityError.toLowerCase().includes("vinculado") ||
+      availabilityError.toLowerCase().includes("profissional")
+      ? "Esse profissional ainda nao atende esse servico no app. Escolha outro profissional ou volte para servicos."
+      : availabilityError
+    : null;
 
   useEffect(() => {
     if (!profissionalId) return;
@@ -651,9 +657,26 @@ export default function ClientBookingForm({
                 <div className="mt-5 rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-4 text-sm font-semibold text-zinc-600">
                   Carregando horarios disponiveis...
                 </div>
-              ) : availabilityError ? (
-                <div className="mt-5 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
-                  {availabilityError}
+              ) : friendlyAvailabilityError ? (
+                <div className="mt-5 space-y-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-900">
+                  <div className="font-black">Nao encontramos horarios para esta escolha.</div>
+                  <p className="leading-6">{friendlyAvailabilityError}</p>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setStep("servico")}
+                      className="rounded-xl bg-white px-3 py-2 text-xs font-black text-amber-900 shadow-sm"
+                    >
+                      Trocar servico
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setStep("profissional")}
+                      className="rounded-xl bg-white px-3 py-2 text-xs font-black text-amber-900 shadow-sm"
+                    >
+                      Trocar profissional
+                    </button>
+                  </div>
                 </div>
               ) : (
                 <div className="mt-4 grid grid-cols-7 gap-2">
@@ -719,9 +742,14 @@ export default function ClientBookingForm({
                     </button>
                   ))}
                 </div>
+              ) : friendlyAvailabilityError ? (
+                <div className="rounded-2xl border border-dashed border-amber-300 bg-amber-50 px-4 py-4 text-sm leading-6 text-amber-900">
+                  Ajuste o profissional ou o servico para ver horarios livres.
+                </div>
               ) : (
                 <div className="rounded-2xl border border-dashed border-zinc-300 bg-zinc-50 px-4 py-4 text-sm text-zinc-500">
-                  Selecione um dia disponivel para ver os horarios.
+                  Ainda nao ha horarios disponiveis para os proximos dias.
+                  Tente outro profissional ou fale com o salao.
                 </div>
               )}
             </div>
