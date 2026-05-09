@@ -153,8 +153,8 @@ export default function AgendaSidebar(props: Props) {
   const showBackButton = Boolean(panel) || view !== "overview";
 
   return (
-    <aside className="w-full min-h-0 lg:h-full lg:max-w-[432px] lg:min-w-[432px] xl:max-w-[448px] xl:min-w-[448px]">
-      <div className="flex h-full min-h-0 flex-col rounded-[24px] border border-white/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(250,251,255,0.96)_100%)] p-3.5 shadow-[0_16px_40px_rgba(15,23,42,0.07)]">
+    <aside className="w-full min-h-0 lg:h-full lg:max-w-[332px] lg:min-w-[318px] xl:max-w-[348px] xl:min-w-[332px] 2xl:max-w-[380px] 2xl:min-w-[380px]">
+      <div className="flex h-full min-h-0 flex-col rounded-[20px] border border-white/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(250,251,255,0.96)_100%)] p-2.5 shadow-[0_14px_34px_rgba(15,23,42,0.065)]">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             {showBackButton ? (
@@ -168,10 +168,10 @@ export default function AgendaSidebar(props: Props) {
               </button>
             ) : null}
 
-            <h2 className="text-[1.5rem] font-semibold tracking-[-0.06em] text-slate-900">
+            <h2 className="text-[1.18rem] font-semibold tracking-[-0.04em] text-slate-900">
               {headerTitle}
             </h2>
-            <p className="mt-1 max-w-[24rem] text-sm leading-5 text-zinc-500">
+            <p className="mt-0.5 max-w-[21rem] text-xs leading-4 text-zinc-500">
               {headerSubtitle}
             </p>
           </div>
@@ -179,7 +179,7 @@ export default function AgendaSidebar(props: Props) {
           <button
             type="button"
             onClick={onToggleOpen}
-            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl border border-zinc-200 bg-white text-zinc-500 shadow-[0_10px_24px_rgba(15,23,42,0.06)] transition duration-200 hover:-translate-y-[1px] hover:bg-zinc-50 hover:text-zinc-900"
+            className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-zinc-200 bg-white text-zinc-500 shadow-[0_10px_24px_rgba(15,23,42,0.06)] transition duration-200 hover:-translate-y-[1px] hover:bg-zinc-50 hover:text-zinc-900"
             title="Fechar painel"
           >
             <X size={18} />
@@ -187,7 +187,7 @@ export default function AgendaSidebar(props: Props) {
         </div>
 
         {!panel ? (
-          <div className="mt-4 grid grid-cols-3 gap-2 rounded-[20px] border border-zinc-200/80 bg-zinc-50/85 p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.75)]">
+          <div className="mt-2.5 grid grid-cols-3 gap-1.5 rounded-[16px] border border-zinc-200/80 bg-zinc-50/85 p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.75)]">
             <SidebarNavButton
               active={view === "overview"}
               onClick={() => onSetView("overview")}
@@ -209,7 +209,7 @@ export default function AgendaSidebar(props: Props) {
           </div>
         ) : null}
 
-        <div className="mt-3 min-h-0 flex-1 overflow-y-auto pr-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div className="mt-2.5 min-h-0 flex-1 overflow-y-auto pr-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {panel ? (
             <div className="h-full">{panel.content}</div>
           ) : view === "clientSearch" ? (
@@ -231,41 +231,41 @@ export default function AgendaSidebar(props: Props) {
           ) : view === "waitlist" ? (
             <WaitlistView items={waitlistItems} />
           ) : (
-            <div className="space-y-2.5">
-              <section className="rounded-[20px] border border-zinc-200/80 bg-white/98 p-3 shadow-[0_12px_28px_rgba(15,23,42,0.05)] transition duration-300 hover:-translate-y-[1px] hover:shadow-[0_18px_40px_rgba(15,23,42,0.07)]">
+            <div className="space-y-2">
+              <section className="rounded-[18px] border border-zinc-200/80 bg-white/98 p-2.5 shadow-[0_10px_24px_rgba(15,23,42,0.045)] transition duration-300 hover:-translate-y-[1px] hover:shadow-[0_18px_40px_rgba(15,23,42,0.07)]">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="text-sm font-medium text-zinc-950">Valor total</p>
-                    <p className="mt-1 truncate text-[1.45rem] font-semibold tracking-[-0.05em] text-emerald-600">
+                    <p className="text-xs font-medium text-zinc-950">Valor total</p>
+                    <p className="mt-0.5 truncate text-[1.18rem] font-semibold tracking-[-0.03em] text-emerald-600">
                       {potentialValueVisible ? totalValueLabel : "R$ ******"}
                     </p>
                   </div>
                   <button
                     type="button"
                     onClick={onTogglePotentialValueVisible}
-                    className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-zinc-200 bg-zinc-50/80 text-zinc-600 transition duration-200 hover:-translate-y-[1px] hover:bg-white"
+                    className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-zinc-200 bg-zinc-50/80 text-zinc-600 transition duration-200 hover:-translate-y-[1px] hover:bg-white"
                     title={potentialValueVisible ? "Ocultar valor" : "Mostrar valor"}
                   >
                     <Eye size={18} />
                   </button>
                 </div>
-                <div className="mt-2 text-sm text-zinc-500">
+                <div className="mt-1.5 text-xs text-zinc-500">
                   {totalValueCaption}
                 </div>
               </section>
 
-              <section className="rounded-[24px] border border-zinc-200/80 bg-white/98 p-3.5 shadow-[0_12px_28px_rgba(15,23,42,0.05)] transition duration-300 hover:-translate-y-[1px] hover:shadow-[0_18px_40px_rgba(15,23,42,0.07)]">
+              <section className="rounded-[18px] border border-zinc-200/80 bg-white/98 p-2.5 shadow-[0_10px_24px_rgba(15,23,42,0.045)] transition duration-300 hover:-translate-y-[1px] hover:shadow-[0_18px_40px_rgba(15,23,42,0.07)]">
                 <button
                   type="button"
                   className="flex w-full items-center justify-between gap-3 text-left"
                 >
-                  <span className="truncate text-[1.45rem] font-semibold tracking-[-0.05em] text-slate-900 capitalize">
+                  <span className="truncate text-[1.15rem] font-semibold tracking-[-0.03em] text-slate-900 capitalize">
                     {currentMonthLabel}
                   </span>
                   <ChevronDown size={18} className="shrink-0 text-zinc-500" />
                 </button>
 
-                <div className="mt-3 grid grid-cols-2 gap-3">
+                <div className="mt-2.5 grid grid-cols-2 gap-2">
                   <MetricCard
                     icon={<UserRoundSearch size={16} />}
                     label="Atendimentos"
@@ -293,12 +293,12 @@ export default function AgendaSidebar(props: Props) {
                 </div>
               </section>
 
-              <section className="rounded-[24px] border border-zinc-200/80 bg-white/98 p-3.5 shadow-[0_12px_28px_rgba(15,23,42,0.05)] transition duration-300 hover:-translate-y-[1px] hover:shadow-[0_18px_40px_rgba(15,23,42,0.07)]">
-                <h3 className="text-[1.15rem] font-semibold tracking-[-0.04em] text-slate-900">
+              <section className="rounded-[18px] border border-zinc-200/80 bg-white/98 p-2.5 shadow-[0_10px_24px_rgba(15,23,42,0.045)] transition duration-300 hover:-translate-y-[1px] hover:shadow-[0_18px_40px_rgba(15,23,42,0.07)]">
+                <h3 className="text-[1rem] font-semibold tracking-[-0.03em] text-slate-900">
                   Status dos atendimentos
                 </h3>
 
-                <div className="mt-3 grid grid-cols-2 gap-2">
+                <div className="mt-2 grid grid-cols-2 gap-1.5">
                   <StatusCard label="Confirmados" value={statusCounts.confirmado} tone="emerald" />
                   <StatusCard label="Pendentes" value={statusCounts.pendente} tone="amber" />
                   <StatusCard
@@ -310,12 +310,12 @@ export default function AgendaSidebar(props: Props) {
                 </div>
               </section>
 
-              <section className="rounded-[24px] border border-zinc-200/80 bg-white/98 p-3.5 shadow-[0_12px_28px_rgba(15,23,42,0.05)] transition duration-300 hover:-translate-y-[1px] hover:shadow-[0_18px_40px_rgba(15,23,42,0.07)]">
-                <h3 className="text-[1.15rem] font-semibold tracking-[-0.04em] text-slate-900">
+              <section className="rounded-[18px] border border-zinc-200/80 bg-white/98 p-2.5 shadow-[0_10px_24px_rgba(15,23,42,0.045)] transition duration-300 hover:-translate-y-[1px] hover:shadow-[0_18px_40px_rgba(15,23,42,0.07)]">
+                <h3 className="text-[1rem] font-semibold tracking-[-0.03em] text-slate-900">
                   Visualizacao
                 </h3>
 
-                <div className="mt-3 grid grid-cols-3 gap-2">
+                <div className="mt-2 grid grid-cols-3 gap-1.5">
                   <ToggleButton active={false} onClick={onToday}>
                     Hoje
                   </ToggleButton>
@@ -327,7 +327,7 @@ export default function AgendaSidebar(props: Props) {
                   </ToggleButton>
                 </div>
 
-                <div className="mt-3 grid grid-cols-2 gap-2">
+                <div className="mt-2 grid grid-cols-2 gap-1.5">
                   <ModeButton
                     active={densityMode === "reception"}
                     label="Recepcao"
@@ -343,12 +343,12 @@ export default function AgendaSidebar(props: Props) {
                 </div>
               </section>
 
-              <section className="rounded-[24px] border border-zinc-200/80 bg-white/98 p-3.5 shadow-[0_12px_28px_rgba(15,23,42,0.05)] transition duration-300 hover:-translate-y-[1px] hover:shadow-[0_18px_40px_rgba(15,23,42,0.07)]">
-                <h3 className="text-[1.15rem] font-semibold tracking-[-0.04em] text-slate-900">
+              <section className="rounded-[18px] border border-zinc-200/80 bg-white/98 p-2.5 shadow-[0_10px_24px_rgba(15,23,42,0.045)] transition duration-300 hover:-translate-y-[1px] hover:shadow-[0_18px_40px_rgba(15,23,42,0.07)]">
+                <h3 className="text-[1rem] font-semibold tracking-[-0.03em] text-slate-900">
                   Ações rapidas
                 </h3>
 
-                <div className="mt-3 grid grid-cols-2 gap-2">
+                <div className="mt-2 grid grid-cols-2 gap-1.5">
                   <QuickAction
                     icon={<CalendarDays size={16} />}
                     label="Novo agendamento"
@@ -404,8 +404,8 @@ function SidebarNavButton({
       onClick={onClick}
       className={
         active
-          ? "rounded-[16px] bg-white px-3 py-2 text-sm font-semibold text-violet-700 shadow-[0_10px_24px_rgba(124,58,237,0.14)] transition duration-200"
-          : "rounded-[16px] px-3 py-2 text-sm font-medium text-zinc-600 transition duration-200 hover:bg-white/70"
+          ? "rounded-[13px] bg-white px-2.5 py-1.5 text-xs font-semibold text-violet-700 shadow-[0_10px_24px_rgba(124,58,237,0.14)] transition duration-200"
+          : "rounded-[13px] px-2.5 py-1.5 text-xs font-medium text-zinc-600 transition duration-200 hover:bg-white/70"
       }
     >
       {children}
@@ -623,16 +623,16 @@ function MetricCard({
           : "bg-sky-50 text-sky-700";
 
   return (
-    <div className="rounded-[20px] border border-zinc-200 bg-white p-3 shadow-[0_8px_20px_rgba(15,23,42,0.04)] transition duration-200 hover:-translate-y-[1px] hover:shadow-[0_14px_28px_rgba(15,23,42,0.06)]">
-      <div className="flex items-start gap-3">
+    <div className="rounded-[16px] border border-zinc-200 bg-white p-2.5 shadow-[0_8px_20px_rgba(15,23,42,0.04)] transition duration-200 hover:-translate-y-[1px] hover:shadow-[0_14px_28px_rgba(15,23,42,0.06)]">
+      <div className="flex items-start gap-2">
         <div
-          className={`inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl ${toneClasses}`}
+          className={`inline-flex h-8.5 w-8.5 shrink-0 items-center justify-center rounded-xl ${toneClasses}`}
         >
           {icon}
         </div>
         <div className="min-w-0">
-          <div className="text-[12px] leading-tight text-zinc-600">{label}</div>
-          <div className="mt-1 text-[1.35rem] font-semibold tracking-[-0.05em] text-slate-900">
+          <div className="text-[11px] leading-tight text-zinc-600">{label}</div>
+          <div className="mt-0.5 text-[1.12rem] font-semibold tracking-[-0.03em] text-slate-900">
             {value}
           </div>
         </div>
@@ -660,9 +660,9 @@ function StatusCard({
           : "bg-sky-50 text-sky-700";
 
   return (
-    <div className={`rounded-[18px] px-3.5 py-2.5 transition duration-200 ${toneClasses}`}>
-      <div className="text-[12px] font-medium leading-tight">{label}</div>
-      <div className="mt-1 text-[1.3rem] font-semibold tracking-[-0.05em]">{value}</div>
+    <div className={`rounded-[15px] px-3 py-2 transition duration-200 ${toneClasses}`}>
+      <div className="text-[11px] font-medium leading-tight">{label}</div>
+      <div className="mt-0.5 text-[1.08rem] font-semibold tracking-[-0.03em]">{value}</div>
     </div>
   );
 }
@@ -682,8 +682,8 @@ function ToggleButton({
       onClick={onClick}
       className={
         active
-          ? "rounded-2xl bg-violet-600 px-3 py-2.5 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(124,58,237,0.28)] transition duration-200"
-          : "rounded-2xl border border-zinc-200 bg-white px-3 py-2.5 text-sm font-medium text-zinc-700 transition duration-200 hover:-translate-y-[1px] hover:bg-zinc-50"
+          ? "rounded-xl bg-violet-600 px-2.5 py-2 text-xs font-semibold text-white shadow-[0_12px_30px_rgba(124,58,237,0.28)] transition duration-200"
+          : "rounded-xl border border-zinc-200 bg-white px-2.5 py-2 text-xs font-medium text-zinc-700 transition duration-200 hover:-translate-y-[1px] hover:bg-zinc-50"
       }
     >
       {children}
@@ -708,8 +708,8 @@ function ModeButton({
       onClick={onClick}
       className={
         active
-          ? "flex items-center justify-center gap-2 rounded-[20px] border border-violet-300 bg-violet-50 px-3 py-3 text-sm font-semibold text-violet-700 shadow-[0_12px_30px_rgba(124,58,237,0.12)] transition duration-200"
-          : "flex items-center justify-center gap-2 rounded-[20px] border border-zinc-200 bg-white px-3 py-3 text-sm font-medium text-zinc-700 transition duration-200 hover:-translate-y-[1px] hover:bg-zinc-50"
+          ? "flex items-center justify-center gap-1.5 rounded-[15px] border border-violet-300 bg-violet-50 px-2.5 py-2 text-xs font-semibold text-violet-700 shadow-[0_12px_30px_rgba(124,58,237,0.12)] transition duration-200"
+          : "flex items-center justify-center gap-1.5 rounded-[15px] border border-zinc-200 bg-white px-2.5 py-2 text-xs font-medium text-zinc-700 transition duration-200 hover:-translate-y-[1px] hover:bg-zinc-50"
       }
     >
       {icon}
@@ -731,9 +731,9 @@ function QuickAction({
     <button
       type="button"
       onClick={onClick}
-      className="flex min-w-0 items-center gap-3 rounded-[20px] border border-zinc-200 bg-white px-3.5 py-3 text-left text-[13px] font-medium text-zinc-700 shadow-[0_8px_20px_rgba(15,23,42,0.04)] transition duration-200 hover:-translate-y-[1px] hover:bg-zinc-50/80 hover:shadow-[0_16px_35px_rgba(15,23,42,0.08)]"
+      className="flex min-w-0 items-center gap-2 rounded-[15px] border border-zinc-200 bg-white px-2.5 py-2 text-left text-[12px] font-medium text-zinc-700 shadow-[0_8px_20px_rgba(15,23,42,0.04)] transition duration-200 hover:-translate-y-[1px] hover:bg-zinc-50/80 hover:shadow-[0_16px_35px_rgba(15,23,42,0.08)]"
     >
-      <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-zinc-50 text-zinc-700">
+      <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-zinc-50 text-zinc-700">
         {icon}
       </span>
       <span className="min-w-0 break-words leading-tight">{label}</span>

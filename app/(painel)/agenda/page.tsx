@@ -1033,22 +1033,22 @@ export default function AgendaPage() {
       <div
         className={
           showFocusMode
-            ? "fixed inset-0 z-[320] flex min-h-0 flex-col gap-4 bg-white p-3 md:p-4"
+            ? "fixed inset-0 z-[320] flex min-h-0 flex-col gap-2.5 bg-white p-2 md:p-3"
             : isStandaloneAgendaRoute
-              ? "flex h-dvh min-h-dvh min-w-0 flex-col overflow-hidden bg-[radial-gradient(circle_at_top,#fdfcff_0%,#fafbfe_38%,#f5f7fb_100%)] p-3"
+              ? "flex h-dvh min-h-dvh min-w-0 flex-col overflow-hidden bg-[radial-gradient(circle_at_top,#fdfcff_0%,#fafbfe_38%,#f5f7fb_100%)] p-2"
               : densityMode === "reception"
-                ? "flex h-[calc(100dvh-4.9rem)] min-h-[720px] min-w-0 flex-col overflow-hidden bg-[radial-gradient(circle_at_top,#faf6ff_0%,#f8fafc_24%,#f3f6fb_58%,#eef2f7_100%)] p-3"
-                : "flex h-[calc(100dvh-5.2rem)] min-h-[700px] min-w-0 flex-col overflow-hidden bg-[radial-gradient(circle_at_top,#faf6ff_0%,#f8fafc_24%,#f3f6fb_58%,#eef2f7_100%)] p-3"
+                ? "flex h-[calc(100dvh-4.45rem)] min-h-[620px] min-w-0 flex-col overflow-hidden bg-[radial-gradient(circle_at_top,#faf6ff_0%,#f8fafc_24%,#f3f6fb_58%,#eef2f7_100%)] p-2"
+                : "flex h-[calc(100dvh-4.55rem)] min-h-[640px] min-w-0 flex-col overflow-hidden bg-[radial-gradient(circle_at_top,#faf6ff_0%,#f8fafc_24%,#f3f6fb_58%,#eef2f7_100%)] p-2"
         }
       >
         <div
-          className={`grid h-full min-h-0 min-w-0 gap-3 ${
+          className={`grid h-full min-h-0 min-w-0 gap-2.5 ${
             sidebarOpen
-              ? "lg:grid-cols-[minmax(0,1fr)_360px] 2xl:grid-cols-[minmax(0,1fr)_420px]"
+              ? "lg:grid-cols-[minmax(0,1fr)_318px] xl:grid-cols-[minmax(0,1fr)_332px] 2xl:grid-cols-[minmax(0,1fr)_380px]"
               : "lg:grid-cols-[minmax(0,1fr)]"
           }`}
         >
-          <div className="flex min-h-0 min-w-0 flex-col gap-3">
+          <div className="flex min-h-0 min-w-0 flex-col gap-2.5">
             <ProfissionaisBar
               profissionais={profissionais}
               selectedProfissionalId={selectedProfissionalId}
