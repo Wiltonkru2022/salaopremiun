@@ -10,6 +10,8 @@ import {
 import { useRouter } from "next/navigation";
 import {
   Building2,
+  CalendarClock,
+  Camera,
   CheckCircle2,
   CircleAlert,
   Copy,
@@ -23,8 +25,10 @@ import {
   PencilLine,
   Phone,
   QrCode,
+  Scissors,
   ShieldCheck,
   Sparkles,
+  Users,
 } from "lucide-react";
 import { usePainelSession } from "@/components/layout/PainelSessionProvider";
 import AppLoading from "@/components/ui/AppLoading";
@@ -1322,6 +1326,91 @@ export default function PerfilSalaoPage() {
                     multiline
                   />
                 </div>
+              </div>
+            </SectionCard>
+
+            <SectionCard
+              icon={<Sparkles size={18} />}
+              title="Configurar vitrine"
+              description="Complete o que o cliente vê antes de reservar pelo app."
+            >
+              <div className="grid gap-3 md:grid-cols-2">
+                <div className="rounded-[22px] border border-zinc-200 bg-zinc-50 p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="rounded-2xl border border-zinc-200 bg-white p-2.5 text-zinc-800">
+                      <Camera size={17} />
+                    </div>
+                    <div>
+                      <div className="text-sm font-bold text-zinc-950">
+                        Fotos da vitrine
+                      </div>
+                      <p className="mt-1 text-sm leading-5 text-zinc-600">
+                        Use a foto de capa e a logo acima. O portfólio aparece
+                        na página pública quando houver fotos de trabalhos.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <a
+                  href="/configuracoes/agenda-horarios"
+                  className="rounded-[22px] border border-zinc-200 bg-zinc-50 p-4 transition hover:-translate-y-0.5 hover:bg-zinc-100"
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="rounded-2xl border border-zinc-200 bg-white p-2.5 text-zinc-800">
+                      <CalendarClock size={17} />
+                    </div>
+                    <div>
+                      <div className="text-sm font-bold text-zinc-950">
+                        Horário de funcionamento
+                      </div>
+                      <p className="mt-1 text-sm leading-5 text-zinc-600">
+                        Ajuste dias, abertura, fechamento e intervalo usados no
+                        app cliente.
+                      </p>
+                    </div>
+                  </div>
+                </a>
+
+                <a
+                  href="/servicos"
+                  className="rounded-[22px] border border-zinc-200 bg-zinc-50 p-4 transition hover:-translate-y-0.5 hover:bg-zinc-100"
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="rounded-2xl border border-zinc-200 bg-white p-2.5 text-zinc-800">
+                      <Scissors size={17} />
+                    </div>
+                    <div>
+                      <div className="text-sm font-bold text-zinc-950">
+                        Serviços visíveis no app
+                      </div>
+                      <p className="mt-1 text-sm leading-5 text-zinc-600">
+                        Abra cada serviço e ative a opção de aparecer no app
+                        cliente.
+                      </p>
+                    </div>
+                  </div>
+                </a>
+
+                <a
+                  href="/profissionais"
+                  className="rounded-[22px] border border-zinc-200 bg-zinc-50 p-4 transition hover:-translate-y-0.5 hover:bg-zinc-100"
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="rounded-2xl border border-zinc-200 bg-white p-2.5 text-zinc-800">
+                      <Users size={17} />
+                    </div>
+                    <div>
+                      <div className="text-sm font-bold text-zinc-950">
+                        Profissionais visíveis no app
+                      </div>
+                      <p className="mt-1 text-sm leading-5 text-zinc-600">
+                        Selecione quem atende pelo app cliente e mantenha a
+                        agenda pronta para reservas.
+                      </p>
+                    </div>
+                  </div>
+                </a>
               </div>
             </SectionCard>
 
