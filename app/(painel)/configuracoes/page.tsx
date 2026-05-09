@@ -61,42 +61,41 @@ export default function ConfiguracoesPage() {
   return (
     <div className="space-y-5">
       <section className="overflow-hidden rounded-[28px] border border-zinc-200 bg-white shadow-sm">
-        <div className="grid gap-0 2xl:grid-cols-[1.15fr_0.85fr]">
-          <div className="bg-zinc-950 p-6 text-white sm:p-7">
-            <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.22em] text-white/70">
-              <SlidersHorizontal size={14} />
-              Central de configurações
-            </div>
-            <h1 className="mt-4 max-w-3xl font-display text-3xl font-black tracking-[-0.04em] sm:text-[2.6rem]">
-              Configurações do salão
-            </h1>
-            <p className="mt-3 max-w-2xl text-sm leading-6 text-zinc-300">
-              Ajuste acessos, horários, notificações, caixa e regras de repasse
-              com segurança.
-            </p>
-          </div>
-
-          <div className="bg-gradient-to-br from-zinc-50 via-white to-amber-50 p-5 sm:p-6">
-            <div className="grid h-full content-center gap-3">
-              <div className="text-xs font-black uppercase tracking-[0.2em] text-zinc-400">
-                Módulos
+        <div className="bg-zinc-950 p-6 text-white sm:p-7">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+            <div className="min-w-0">
+              <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.22em] text-white/70">
+                <SlidersHorizontal size={14} />
+                Central de configurações
               </div>
-              {configCards.slice(0, 4).map((item) => {
-                const Icon = item.icon;
+              <h1 className="mt-4 max-w-3xl font-display text-3xl font-black tracking-[-0.04em] sm:text-[2.6rem]">
+                Configurações do salão
+              </h1>
+              <p className="mt-3 max-w-2xl text-sm leading-6 text-zinc-300">
+                Ajuste acessos, horários, notificações, caixa e regras de repasse
+                com segurança. Cada card abaixo abre uma área específica.
+              </p>
+            </div>
 
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className="flex items-center gap-3 rounded-[18px] border border-zinc-200 bg-white px-4 py-3 text-sm font-black text-zinc-800 shadow-sm transition hover:border-zinc-300 hover:bg-zinc-50"
-                  >
-                    <span className={`flex h-9 w-9 items-center justify-center rounded-2xl ${item.tone}`}>
-                      <Icon size={16} />
-                    </span>
-                    {item.title}
-                  </Link>
-                );
-              })}
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:min-w-[24rem]">
+              <div className="rounded-[20px] border border-white/10 bg-white/10 px-4 py-3">
+                <div className="text-2xl font-black">{configCards.length}</div>
+                <div className="mt-1 text-[11px] font-bold uppercase tracking-[0.16em] text-white/60">
+                  Módulos
+                </div>
+              </div>
+              <div className="rounded-[20px] border border-white/10 bg-white/10 px-4 py-3">
+                <div className="text-2xl font-black">1</div>
+                <div className="mt-1 text-[11px] font-bold uppercase tracking-[0.16em] text-white/60">
+                  Menu claro
+                </div>
+              </div>
+              <div className="rounded-[20px] border border-white/10 bg-white/10 px-4 py-3">
+                <div className="text-2xl font-black">100%</div>
+                <div className="mt-1 text-[11px] font-bold uppercase tracking-[0.16em] text-white/60">
+                  Por área
+                </div>
+              </div>
             </div>
           </div>
         </div>
