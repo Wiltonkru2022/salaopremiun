@@ -35,7 +35,7 @@ export default async function ClienteProfileReviewsPage() {
 
         <Link
           href="/app-cliente/inicio"
-          className="mt-8 inline-flex h-14 items-center justify-center rounded-2xl bg-teal-600 px-6 text-base font-black text-white"
+          className="mt-8 inline-flex h-14 items-center justify-center rounded-2xl bg-zinc-950 px-6 text-base font-black text-white"
         >
           Agende ja
         </Link>

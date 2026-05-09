@@ -19,15 +19,18 @@ function ProfileRow({
   label,
   icon: Icon,
   muted,
+  prefetch,
 }: {
   href: string;
   label: string;
   icon: LucideIcon;
   muted?: boolean;
+  prefetch?: boolean;
 }) {
   return (
     <Link
       href={href}
+      prefetch={prefetch}
       className={`flex min-h-16 items-center justify-between border-b border-zinc-100 px-1 text-lg ${
         muted ? "text-zinc-400" : "text-zinc-950"
       }`}
@@ -137,6 +140,7 @@ export default async function ClientePerfilPage({
             label="Sair"
             icon={LogOut}
             muted
+            prefetch={false}
           />
         </div>
       </section>

@@ -109,7 +109,7 @@ function SubmitButton({ disabled }: { disabled?: boolean }) {
     <button
       type="submit"
       disabled={isDisabled}
-      className="h-14 w-full rounded-2xl bg-teal-600 text-base font-black text-white transition hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-50"
+      className="h-14 w-full rounded-2xl bg-zinc-950 text-base font-black text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
     >
       {pending ? "Enviando..." : "Continuar"}
     </button>
@@ -133,7 +133,7 @@ function StepBadge({
         active
           ? "border-zinc-950 bg-zinc-950 text-white"
           : done
-            ? "border-teal-200 bg-teal-50 text-teal-800"
+            ? "border-amber-200 bg-amber-50 text-amber-900"
             : "border-zinc-200 bg-white text-zinc-500"
       }`}
     >
@@ -142,7 +142,7 @@ function StepBadge({
           active
             ? "bg-white text-zinc-950"
             : done
-              ? "bg-teal-100 text-teal-800"
+              ? "bg-amber-100 text-amber-900"
               : "bg-zinc-100 text-zinc-500"
         }`}
       >
@@ -591,7 +591,7 @@ export default function ClientBookingForm({
                     <span
                       className={`relative mx-auto flex h-14 w-14 items-center justify-center overflow-hidden rounded-full border text-sm font-black ${
                         selected
-                          ? "border-teal-600 bg-teal-50 text-teal-700"
+                          ? "border-zinc-950 bg-amber-50 text-amber-800"
                           : "border-zinc-200 bg-zinc-50 text-zinc-400"
                       }`}
                     >
@@ -605,7 +605,7 @@ export default function ClientBookingForm({
                         profissional.nome.slice(0, 1).toUpperCase()
                       )}
                       {selected ? (
-                        <span className="absolute right-0 top-0 flex h-5 w-5 items-center justify-center rounded-full bg-teal-600 text-white">
+                        <span className="absolute right-0 top-0 flex h-5 w-5 items-center justify-center rounded-full bg-zinc-950 text-white">
                           <Check size={12} />
                         </span>
                       ) : null}
@@ -695,7 +695,7 @@ export default function ClientBookingForm({
                         }}
                         className={`relative aspect-square rounded-full border text-sm font-semibold transition ${
                           selectedDate === day.date
-                            ? "border-teal-600 bg-teal-50 text-zinc-950 ring-2 ring-teal-600"
+                            ? "border-zinc-950 bg-amber-50 text-zinc-950 ring-2 ring-zinc-950"
                             : day.available
                               ? "border-zinc-100 bg-zinc-100 text-zinc-900"
                               : "border-zinc-100 bg-white text-zinc-300"
@@ -734,7 +734,7 @@ export default function ClientBookingForm({
                       onClick={() => setSelectedTime(horario.horaInicio)}
                       className={`h-14 min-w-28 rounded-full border px-5 text-lg font-black ${
                         selectedTime === horario.horaInicio
-                          ? "border-teal-600 bg-teal-50 text-zinc-950 ring-2 ring-teal-600"
+                          ? "border-zinc-950 bg-amber-50 text-zinc-950 ring-2 ring-zinc-950"
                           : "border-zinc-100 bg-zinc-100 text-zinc-900"
                       }`}
                     >

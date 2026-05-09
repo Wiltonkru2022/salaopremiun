@@ -55,8 +55,8 @@ export default function ClientOnboarding() {
 
       <section className="flex flex-1 flex-col items-center justify-center text-center">
         <div className="relative mb-10 flex h-56 w-full max-w-sm items-center justify-center">
-          <div className="absolute inset-x-0 top-8 h-32 rounded-[3rem] bg-[repeating-linear-gradient(0deg,transparent_0,transparent_18px,rgba(13,148,136,0.35)_19px,transparent_21px)]" />
-          <div className="relative flex h-36 w-36 items-center justify-center rounded-[2.5rem] bg-teal-600 text-white shadow-[0_24px_60px_rgba(13,148,136,0.25)]">
+          <div className="absolute inset-x-0 top-8 h-32 rounded-[3rem] bg-[repeating-linear-gradient(0deg,transparent_0,transparent_18px,rgba(199,162,92,0.35)_19px,transparent_21px)]" />
+          <div className="relative flex h-36 w-36 items-center justify-center rounded-[2.5rem] bg-zinc-950 text-white shadow-[0_24px_60px_rgba(199,162,92,0.24)]">
             <Icon size={70} />
           </div>
         </div>
@@ -71,7 +71,7 @@ export default function ClientOnboarding() {
       {isLast ? (
         <Link
           href="/app-cliente/inicio"
-          className="mb-4 flex h-14 items-center justify-center rounded-2xl bg-teal-600 text-base font-black text-white"
+          className="mb-4 flex h-14 items-center justify-center rounded-2xl bg-zinc-950 text-base font-black text-white"
         >
           Entrar no app
         </Link>
@@ -79,7 +79,7 @@ export default function ClientOnboarding() {
         <button
           type="button"
           onClick={() => void continueFlow()}
-          className="mb-4 h-14 rounded-2xl bg-teal-600 text-base font-black text-white"
+          className="mb-4 h-14 rounded-2xl bg-zinc-950 text-base font-black text-white"
         >
           {current.action}
         </button>

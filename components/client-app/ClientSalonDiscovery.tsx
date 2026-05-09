@@ -112,7 +112,7 @@ export default function ClientSalonDiscovery({
 
   return (
     <div className="space-y-8">
-      <section className="-mx-4 -mt-4 overflow-hidden bg-[radial-gradient(circle_at_10%_0%,rgba(20,184,166,0.22),transparent_32%),linear-gradient(145deg,#071b1f,#18181b)] px-4 pb-8 pt-8 text-white md:-mx-6 md:px-6">
+      <section className="-mx-4 -mt-4 overflow-hidden bg-[radial-gradient(circle_at_10%_0%,rgba(199,162,92,0.28),transparent_32%),linear-gradient(145deg,#071b1f,#18181b)] px-4 pb-8 pt-8 text-white md:-mx-6 md:px-6">
         <div className="mx-auto max-w-6xl">
           <div className="text-center text-3xl font-black tracking-[-0.06em]">
             SalaoPremium

@@ -20,7 +20,7 @@ function ToggleRow({
       </div>
       <span
         className={`relative h-9 w-16 rounded-full transition ${
-          enabled ? "bg-teal-600" : "bg-zinc-200"
+          enabled ? "bg-zinc-950" : "bg-zinc-200"
         }`}
       >
         <span

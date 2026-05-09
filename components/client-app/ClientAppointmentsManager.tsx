@@ -64,7 +64,7 @@ function ActionButton({
       ? "border border-red-200 bg-red-50 text-red-700"
       : tone === "light"
         ? "border border-zinc-200 bg-white text-zinc-900"
-        : "bg-teal-600 text-white";
+        : "bg-zinc-950 text-white";
 
   return (
     <button
@@ -211,7 +211,7 @@ function RescheduleAppointmentForm({
                     onClick={() => setSelectedTime(horario.horaInicio)}
                     className={`rounded-full px-4 py-2 text-sm font-black ${
                       selectedTime === horario.horaInicio
-                        ? "bg-teal-600 text-white"
+                        ? "bg-zinc-950 text-white"
                         : "bg-white text-zinc-700"
                     }`}
                   >
@@ -297,7 +297,7 @@ export default function ClientAppointmentsManager({
                   {canBookAgain(item) ? (
                     <Link
                       href={`/app-cliente/salao/${item.idSalao}`}
-                      className="inline-flex h-11 items-center rounded-xl bg-teal-600 px-4 text-sm font-black text-white"
+                      className="inline-flex h-11 items-center rounded-xl bg-zinc-950 px-4 text-sm font-black text-white"
                     >
                       Reserve novamente
                     </Link>
@@ -353,7 +353,7 @@ export default function ClientAppointmentsManager({
             </p>
             <Link
               href="/app-cliente/inicio"
-              className="mt-6 inline-flex h-12 items-center justify-center rounded-2xl bg-teal-600 px-6 text-sm font-black text-white"
+              className="mt-6 inline-flex h-12 items-center justify-center rounded-2xl bg-zinc-950 px-6 text-sm font-black text-white"
             >
               Agende ja
             </Link>

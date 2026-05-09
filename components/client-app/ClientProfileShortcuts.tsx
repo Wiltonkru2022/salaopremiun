@@ -67,6 +67,7 @@ export default function ClientProfileShortcuts() {
         </Link>
         <Link
           href="/app-cliente/logout?destino=/app-cliente/login"
+          prefetch={false}
           className="flex h-12 items-center gap-3 rounded-2xl bg-zinc-950 px-4 text-sm font-semibold text-white"
         >
           <LogOut size={18} />

@@ -183,7 +183,7 @@ export default async function ClienteSalonPage({
                     <Star size={18} fill="currentColor" />
                     {notaMedia ? notaMedia.toFixed(1) : "Novo"}
                   </span>
-                  <span className="font-bold text-teal-700">
+                  <span className="font-bold text-amber-800">
                     ({salao.avaliacoes.length} avaliacoes)
                   </span>
                   <span className="text-zinc-400">Agendamento online</span>
@@ -266,7 +266,7 @@ export default async function ClienteSalonPage({
                           </div>
                           <a
                             href="#agendar"
-                            className="mt-3 inline-flex h-11 items-center justify-center rounded-xl bg-teal-600 px-5 text-sm font-black text-white"
+                            className="mt-3 inline-flex h-11 items-center justify-center rounded-xl bg-zinc-950 px-5 text-sm font-black text-white"
                           >
                             Reservar
                           </a>
@@ -301,7 +301,7 @@ export default async function ClienteSalonPage({
                       href={`/app-cliente/login?salao=${encodeURIComponent(
                         salao.appClienteSlug || salao.id
                       )}&next=${encodeURIComponent(salaoPublicPath)}`}
-                      className="mt-4 inline-flex h-12 w-full items-center justify-center rounded-xl bg-teal-600 px-4 text-sm font-black text-white"
+                      className="mt-4 inline-flex h-12 w-full items-center justify-center rounded-xl bg-zinc-950 px-4 text-sm font-black text-white"
                     >
                       Entrar ou criar conta
                     </Link>
@@ -380,7 +380,7 @@ export default async function ClienteSalonPage({
                             {formatDate(avaliacao.createdAt)}
                           </div>
                         </div>
-                        <span className="rounded-full bg-teal-50 px-3 py-1 text-xs font-bold text-teal-700">
+                        <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-bold text-amber-800">
                           Cliente confirmado
                         </span>
                       </div>

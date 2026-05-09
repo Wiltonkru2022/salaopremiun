@@ -49,7 +49,7 @@ export default function ClientAppBottomNav() {
   }
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-zinc-800 bg-zinc-950 px-2 pb-[max(env(safe-area-inset-bottom),0.45rem)] pt-2 shadow-[0_-18px_48px_rgba(15,23,42,0.18)] md:hidden">
+    <nav className="fixed inset-x-0 bottom-0 z-40 translate-y-0 border-t border-zinc-200 bg-white px-2 pb-[max(env(safe-area-inset-bottom),0.45rem)] pt-2 shadow-[0_-14px_34px_rgba(15,23,42,0.10)] md:hidden">
       <div className="mx-auto grid max-w-md grid-cols-4 gap-1">
         {navItems.map((item) => {
           const Icon = item.icon;
@@ -63,8 +63,8 @@ export default function ClientAppBottomNav() {
               iconSize={20}
               className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-2xl text-[11px] font-semibold transition ${
                 active
-                  ? "text-white"
-                  : "text-zinc-500 hover:bg-white/5 hover:text-zinc-200"
+                  ? "bg-zinc-100 text-zinc-950"
+                  : "text-zinc-700 hover:bg-zinc-50 hover:text-zinc-950"
               }`}
             >
               {item.label}
