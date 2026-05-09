@@ -37,6 +37,40 @@ function normalizePhone(value?: string | null) {
   return digits.startsWith("55") ? digits : `55${digits}`;
 }
 
+const DIAS_LABEL: Record<string, string> = {
+  domingo: "Domingo",
+  segunda: "Segunda",
+  terca: "Terça",
+  quarta: "Quarta",
+  quinta: "Quinta",
+  sexta: "Sexta",
+  sabado: "Sábado",
+};
+
+const DIAS_BY_INDEX = [
+  "domingo",
+  "segunda",
+  "terca",
+  "quarta",
+  "quinta",
+  "sexta",
+  "sabado",
+];
+
+function normalizeDia(value: string) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+}
+
+function formatDiasFuncionamento(dias: string[]) {
+  const normalized = dias.map(normalizeDia).filter(Boolean);
+  if (!normalized.length) return "Dias em atualização";
+  return normalized.map((dia) => DIAS_LABEL[dia] || dia).join(", ");
+}
+
 function RatingStars({ nota }: { nota: number }) {
   return (
     <span className="inline-flex items-center gap-0.5 text-amber-500">
@@ -82,6 +116,15 @@ export default async function ClienteSalonPage({
           salao.enderecoCompleto
         )}`
       : null;
+    const hojeKey = DIAS_BY_INDEX[new Date().getDay()];
+    const diasFuncionamento = salao.horarioFuncionamento.diasFuncionamento.map(
+      normalizeDia
+    );
+    const abertoHoje = diasFuncionamento.includes(hojeKey);
+    const horarioLabel = `${salao.horarioFuncionamento.horaAbertura} - ${salao.horarioFuncionamento.horaFechamento}`;
+    const diasLabel = formatDiasFuncionamento(
+      salao.horarioFuncionamento.diasFuncionamento
+    );
 
     return (
       <ClientAppFrame title={salao.nome} subtitle="Agendamento online">
@@ -427,8 +470,18 @@ export default async function ClienteSalonPage({
                 </div>
                 <div className="divide-y divide-zinc-100">
                   <div className="flex items-center justify-between px-4 py-5">
-                    <span className="text-zinc-500">Hoje</span>
-                    <span className="font-black text-zinc-950">08:00 - 19:00</span>
+                    <span className="text-zinc-500">
+                      {abertoHoje ? "Aberto hoje" : "Fechado hoje"}
+                    </span>
+                    <span className="font-black text-zinc-950">
+                      {abertoHoje ? horarioLabel : diasLabel}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between gap-4 px-4 py-5">
+                    <span className="text-zinc-500">Funcionamento</span>
+                    <span className="max-w-[68%] text-right font-semibold text-zinc-950">
+                      {diasLabel}
+                    </span>
                   </div>
                   {phone ? (
                     <div className="flex items-center justify-between gap-4 px-4 py-5">

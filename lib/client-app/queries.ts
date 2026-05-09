@@ -48,11 +48,18 @@ export type ClientAppPortfolioPhoto = {
   legenda: string | null;
 };
 
+export type ClientAppSalonHours = {
+  horaAbertura: string;
+  horaFechamento: string;
+  diasFuncionamento: string[];
+};
+
 export type ClientAppSalonDetail = ClientAppEligibleSalon & {
   profissionais: ClientAppProfessionalListItem[];
   servicos: ClientAppServiceListItem[];
   avaliacoes: ClientAppReviewListItem[];
   portfolio: ClientAppPortfolioPhoto[];
+  horarioFuncionamento: ClientAppSalonHours;
   intervaloAgendaMinutos: number;
 };
 
@@ -401,7 +408,7 @@ async function getClientAppSalonDetailLive(idSalao: string) {
           .eq("ativo", true),
         supabaseAdmin
           .from("configuracoes_salao")
-          .select("intervalo_minutos")
+          .select("intervalo_minutos, hora_abertura, hora_fechamento, dias_funcionamento")
           .eq("id_salao", resolvedSalaoId)
           .limit(1)
           .maybeSingle(),
@@ -495,6 +502,20 @@ async function getClientAppSalonDetailLive(idSalao: string) {
       servicos,
       avaliacoes,
       portfolio,
+      horarioFuncionamento:
+        configResult.status === "fulfilled"
+          ? {
+              horaAbertura: String(configResult.value.data?.hora_abertura || "08:00").slice(0, 5),
+              horaFechamento: String(configResult.value.data?.hora_fechamento || "19:00").slice(0, 5),
+              diasFuncionamento: Array.isArray(configResult.value.data?.dias_funcionamento)
+                ? configResult.value.data.dias_funcionamento.map((dia: unknown) => String(dia || "")).filter(Boolean)
+                : ["segunda", "terca", "quarta", "quinta", "sexta", "sabado"],
+            }
+          : {
+              horaAbertura: "08:00",
+              horaFechamento: "19:00",
+              diasFuncionamento: ["segunda", "terca", "quarta", "quinta", "sexta", "sabado"],
+            },
       intervaloAgendaMinutos:
         configResult.status === "fulfilled"
           ? Number(configResult.value.data?.intervalo_minutos || 15) || 15
