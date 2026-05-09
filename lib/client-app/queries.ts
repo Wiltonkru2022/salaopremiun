@@ -42,10 +42,17 @@ export type ClientAppReviewListItem = {
   createdAt: string;
 };
 
+export type ClientAppPortfolioPhoto = {
+  id: string;
+  imagemUrl: string;
+  legenda: string | null;
+};
+
 export type ClientAppSalonDetail = ClientAppEligibleSalon & {
   profissionais: ClientAppProfessionalListItem[];
   servicos: ClientAppServiceListItem[];
   avaliacoes: ClientAppReviewListItem[];
+  portfolio: ClientAppPortfolioPhoto[];
   intervaloAgendaMinutos: number;
 };
 
@@ -346,7 +353,14 @@ async function getClientAppSalonDetailLive(idSalao: string) {
     const resolvedSalaoId = salao.id;
     const supabaseAdmin = getSupabaseAdmin();
 
-    const [profissionaisResult, servicosResult, avaliacoesResult, vinculosResult, configResult] =
+    const [
+      profissionaisResult,
+      servicosResult,
+      avaliacoesResult,
+      portfolioResult,
+      vinculosResult,
+      configResult,
+    ] =
       await Promise.allSettled([
         (supabaseAdmin as any)
           .from("profissionais")
@@ -370,6 +384,14 @@ async function getClientAppSalonDetailLive(idSalao: string) {
           .from("clientes_avaliacoes")
           .select("id, nota, comentario, created_at, clientes(nome)")
           .eq("id_salao", resolvedSalaoId)
+          .order("created_at", { ascending: false })
+          .limit(12),
+        (supabaseAdmin as any)
+          .from("salao_portfolio_fotos")
+          .select("id, imagem_url, legenda")
+          .eq("id_salao", resolvedSalaoId)
+          .eq("ativo", true)
+          .order("ordem", { ascending: true })
           .order("created_at", { ascending: false })
           .limit(12),
         supabaseAdmin
@@ -456,11 +478,23 @@ async function getClientAppSalonDetailLive(idSalao: string) {
           )
         : [];
 
+    const portfolio =
+      portfolioResult.status === "fulfilled"
+        ? (((portfolioResult.value.data || []) as unknown as Array<Record<string, unknown>>) || []).map(
+            (item) => ({
+              id: String(item.id || ""),
+              imagemUrl: String(item.imagem_url || "").trim(),
+              legenda: String(item.legenda || "").trim() || null,
+            })
+          )
+        : [];
+
     return {
       ...salao,
       profissionais,
       servicos,
       avaliacoes,
+      portfolio,
       intervaloAgendaMinutos:
         configResult.status === "fulfilled"
           ? Number(configResult.value.data?.intervalo_minutos || 15) || 15

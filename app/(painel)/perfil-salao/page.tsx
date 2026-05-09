@@ -28,6 +28,7 @@ import {
   Scissors,
   ShieldCheck,
   Sparkles,
+  Trash2,
   Users,
 } from "lucide-react";
 import { usePainelSession } from "@/components/layout/PainelSessionProvider";
@@ -82,6 +83,13 @@ type TotpSetupState = {
   factorId: string;
   qrCode: string;
   secret: string;
+};
+
+type PortfolioFoto = {
+  id: string;
+  imagemUrl: string;
+  legenda: string;
+  ordem: number;
 };
 
 type SalaoProfileRow = {
@@ -246,7 +254,7 @@ export default function PerfilSalaoPage() {
   const [savingPerfil, setSavingPerfil] = useState(false);
   const [savingSenha, setSavingSenha] = useState(false);
   const [uploadingPublicAsset, setUploadingPublicAsset] = useState<
-    "logo" | "capa" | null
+    "logo" | "capa" | "portfolio" | null
   >(null);
   const [loadingMfa, setLoadingMfa] = useState(false);
   const [mfaBusy, setMfaBusy] = useState(false);
@@ -259,6 +267,7 @@ export default function PerfilSalaoPage() {
   const [enderecoDraft, setEnderecoDraft] = useState<SalaoForm>(EMPTY_SALAO);
   const [appClienteDraft, setAppClienteDraft] =
     useState<SalaoForm>(EMPTY_SALAO);
+  const [portfolioFotos, setPortfolioFotos] = useState<PortfolioFoto[]>([]);
   const [passwordForm, setPasswordForm] =
     useState<PasswordForm>(EMPTY_PASSWORD);
   const [activeModal, setActiveModal] = useState<ModalKey>(null);
@@ -374,6 +383,28 @@ export default function PerfilSalaoPage() {
     }
   }, [callMfaApi, supabase]);
 
+  const carregarPortfolio = useCallback(async () => {
+    try {
+      const response = await fetch("/api/painel/salao-portfolio", {
+        method: "GET",
+        cache: "no-store",
+      });
+      const payload = (await response.json().catch(() => ({}))) as {
+        fotos?: PortfolioFoto[];
+        message?: string;
+      };
+
+      if (!response.ok) {
+        throw new Error(payload.message || "Nao foi possivel carregar o portfolio.");
+      }
+
+      setPortfolioFotos(Array.isArray(payload.fotos) ? payload.fotos : []);
+    } catch (error) {
+      console.warn("Nao foi possivel carregar portfolio do salao:", error);
+      setPortfolioFotos([]);
+    }
+  }, []);
+
   const carregarPerfil = useCallback(async () => {
     try {
       setLoading(true);
@@ -453,7 +484,7 @@ export default function PerfilSalaoPage() {
         setAppClienteDraft(nextForm);
       }
 
-      await carregarMfa();
+      await Promise.all([carregarMfa(), carregarPortfolio()]);
     } catch (error: unknown) {
       setErro(
         error instanceof Error ? error.message : "Erro ao carregar perfil."
@@ -461,7 +492,7 @@ export default function PerfilSalaoPage() {
     } finally {
       setLoading(false);
     }
-  }, [carregarMfa, supabase, painelSession]);
+  }, [carregarMfa, carregarPortfolio, supabase, painelSession]);
 
   useEffect(() => {
     void carregarPerfil();
@@ -676,6 +707,85 @@ export default function PerfilSalaoPage() {
       );
     } finally {
       setUploadingPublicAsset(null);
+    }
+  }
+
+  async function enviarFotoPortfolio(file: File | undefined) {
+    if (!file || !idSalao) return;
+
+    if (!file.type.startsWith("image/")) {
+      setErro("Selecione um arquivo de imagem.");
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setErro("A imagem precisa ter ate 5MB.");
+      return;
+    }
+
+    try {
+      setErro("");
+      setMsg("");
+      setUploadingPublicAsset("portfolio");
+
+      const body = new FormData();
+      body.set("file", file);
+
+      const response = await fetch("/api/painel/salao-portfolio", {
+        method: "POST",
+        body,
+      });
+      const payload = (await response.json().catch(() => ({}))) as {
+        foto?: PortfolioFoto;
+        message?: string;
+      };
+
+      if (!response.ok || !payload.foto) {
+        throw new Error(payload.message || "Nao foi possivel enviar a foto.");
+      }
+
+      setPortfolioFotos((prev) => [...prev, payload.foto as PortfolioFoto]);
+      setMsg("Foto adicionada ao portfolio do app cliente.");
+      router.refresh();
+    } catch (error: unknown) {
+      setErro(
+        error instanceof Error
+          ? error.message
+          : "Nao foi possivel enviar a foto do portfolio."
+      );
+    } finally {
+      setUploadingPublicAsset(null);
+    }
+  }
+
+  async function removerFotoPortfolio(id: string) {
+    if (!id) return;
+
+    try {
+      setErro("");
+      setMsg("");
+
+      const response = await fetch(
+        `/api/painel/salao-portfolio?id=${encodeURIComponent(id)}`,
+        { method: "DELETE" }
+      );
+      const payload = (await response.json().catch(() => ({}))) as {
+        message?: string;
+      };
+
+      if (!response.ok) {
+        throw new Error(payload.message || "Nao foi possivel remover a foto.");
+      }
+
+      setPortfolioFotos((prev) => prev.filter((foto) => foto.id !== id));
+      setMsg("Foto removida do portfolio.");
+      router.refresh();
+    } catch (error: unknown) {
+      setErro(
+        error instanceof Error
+          ? error.message
+          : "Nao foi possivel remover a foto do portfolio."
+      );
     }
   }
 
@@ -1335,21 +1445,78 @@ export default function PerfilSalaoPage() {
               description="Complete o que o cliente vê antes de reservar pelo app."
             >
               <div className="grid gap-3 md:grid-cols-2">
-                <div className="rounded-[22px] border border-zinc-200 bg-zinc-50 p-4">
-                  <div className="flex items-start gap-3">
-                    <div className="rounded-2xl border border-zinc-200 bg-white p-2.5 text-zinc-800">
-                      <Camera size={17} />
-                    </div>
-                    <div>
-                      <div className="text-sm font-bold text-zinc-950">
-                        Fotos da vitrine
+                <div className="rounded-[22px] border border-zinc-200 bg-zinc-50 p-4 md:col-span-2">
+                  <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                    <div className="flex items-start gap-3">
+                      <div className="rounded-2xl border border-zinc-200 bg-white p-2.5 text-zinc-800">
+                        <Camera size={17} />
                       </div>
-                      <p className="mt-1 text-sm leading-5 text-zinc-600">
-                        Use a foto de capa e a logo acima. O portfólio aparece
-                        na página pública quando houver fotos de trabalhos.
-                      </p>
+                      <div>
+                        <div className="text-sm font-bold text-zinc-950">
+                          Fotos da vitrine e portfólio
+                        </div>
+                        <p className="mt-1 max-w-xl text-sm leading-5 text-zinc-600">
+                          Use a foto de capa e a logo acima. Adicione até 12
+                          fotos reais de trabalhos para aparecer na aba
+                          Portfólio do app cliente.
+                        </p>
+                      </div>
                     </div>
+                    <label className="inline-flex h-11 cursor-pointer items-center justify-center gap-2 rounded-2xl bg-zinc-950 px-4 text-sm font-bold text-white transition hover:bg-zinc-800">
+                      {uploadingPublicAsset === "portfolio" ? (
+                        <Loader2 className="animate-spin" size={16} />
+                      ) : (
+                        <Camera size={16} />
+                      )}
+                      Adicionar foto
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="sr-only"
+                        disabled={uploadingPublicAsset === "portfolio"}
+                        onChange={(event) => {
+                          void enviarFotoPortfolio(event.target.files?.[0]);
+                          event.currentTarget.value = "";
+                        }}
+                      />
+                    </label>
                   </div>
+
+                  {portfolioFotos.length ? (
+                    <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                      {portfolioFotos.map((foto) => (
+                        <figure
+                          key={foto.id}
+                          className="group overflow-hidden rounded-[20px] border border-zinc-200 bg-white"
+                        >
+                          <img
+                            src={foto.imagemUrl}
+                            alt={foto.legenda || "Foto do portfolio"}
+                            className="h-36 w-full object-cover"
+                          />
+                          <figcaption className="flex items-center justify-between gap-2 px-3 py-2">
+                            <span className="truncate text-xs font-semibold text-zinc-600">
+                              {foto.legenda || "Foto do portfolio"}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => void removerFotoPortfolio(foto.id)}
+                              className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-rose-600 transition hover:bg-rose-50"
+                              aria-label="Remover foto do portfolio"
+                            >
+                              <Trash2 size={15} />
+                            </button>
+                          </figcaption>
+                        </figure>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="mt-4 rounded-2xl border border-dashed border-zinc-300 bg-white px-4 py-5 text-sm text-zinc-500">
+                      Nenhuma foto no portfólio ainda. Adicione imagens reais do
+                      salão, antes e depois, cortes, unhas, cabelo ou trabalhos
+                      que ajudem o cliente a decidir.
+                    </div>
+                  )}
                 </div>
 
                 <a
