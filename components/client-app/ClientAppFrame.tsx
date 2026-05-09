@@ -15,14 +15,13 @@ export default function ClientAppFrame({
   subtitle: string;
 }) {
   return (
-    <div className="min-h-dvh overflow-x-hidden bg-[linear-gradient(180deg,#fffaf0_0%,#f8fafc_34%,#eeeeee_100%)] text-zinc-950">
-      <div className="pointer-events-none fixed inset-x-0 top-0 h-56 bg-[radial-gradient(circle_at_20%_0%,rgba(245,158,11,0.22),transparent_34%),radial-gradient(circle_at_90%_12%,rgba(24,24,27,0.10),transparent_32%)]" />
-      <div className="relative mx-auto flex min-h-dvh max-w-6xl flex-col px-4 pb-24 pt-4 md:px-6 md:pb-4">
-        <header className="flex items-center justify-between gap-2 rounded-[1.5rem] border border-white/80 bg-white/92 px-3 py-3 shadow-[0_18px_48px_rgba(15,23,42,0.08)] backdrop-blur sm:gap-3 sm:px-4">
+    <div className="min-h-dvh overflow-x-hidden bg-white text-zinc-950">
+      <div className="relative mx-auto flex min-h-dvh max-w-6xl flex-col pb-24 md:pb-4">
+        <header className="mx-4 mt-4 flex items-center justify-between gap-2 rounded-[1.5rem] border border-zinc-100 bg-white px-3 py-3 shadow-[0_12px_30px_rgba(15,23,42,0.06)] sm:gap-3 sm:px-4 md:mx-6">
           <div className="min-w-0 flex-1">
             <div className="inline-flex max-w-full items-center gap-1.5 truncate rounded-full bg-amber-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.12em] text-amber-800 sm:tracking-[0.14em]">
               <Sparkles size={12} />
-              <span className="truncate">SalãoPremium Cliente</span>
+              <span className="truncate">SalaoPremium Cliente</span>
             </div>
             <h1 className="mt-2 max-w-full truncate text-[1.22rem] font-black tracking-[-0.04em] sm:text-[1.35rem] md:text-[1.55rem]">
               {title}
@@ -39,14 +38,14 @@ export default function ClientAppFrame({
                 href="/app-cliente/inicio"
                 className="inline-flex min-h-10 items-center gap-1.5 rounded-full border border-zinc-200 bg-zinc-50 px-3 py-2 transition hover:bg-zinc-100"
               >
-                Salões
+                Saloes
               </ClientAppPendingLink>
               <ClientAppPendingLink
                 href="/app-cliente/agendamentos"
                 pendingLabel="Abrindo"
                 className="inline-flex min-h-10 items-center gap-1.5 rounded-full border border-zinc-200 bg-zinc-50 px-3 py-2 transition hover:bg-zinc-100"
               >
-                Meus agendamentos
+                Agendamentos
               </ClientAppPendingLink>
               <ClientAppPendingLink
                 href="/app-cliente/perfil"
@@ -60,7 +59,7 @@ export default function ClientAppFrame({
 
         <main className="flex-1 py-4">{children}</main>
 
-        <footer className="pb-4 text-center text-xs text-zinc-500">
+        <footer className="px-4 pb-4 text-center text-xs text-zinc-500">
           <div className="flex flex-wrap items-center justify-center gap-3">
             <Link href="/termos-de-uso" className="underline underline-offset-4">
               Termos de uso
@@ -69,7 +68,7 @@ export default function ClientAppFrame({
               href="/politica-de-privacidade"
               className="underline underline-offset-4"
             >
-              Política de privacidade
+              Politica de privacidade
             </Link>
             <Link
               href="/app-cliente/recuperar-acesso"

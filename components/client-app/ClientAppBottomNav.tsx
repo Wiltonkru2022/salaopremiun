@@ -1,18 +1,24 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { CalendarDays, Store, UserRound } from "lucide-react";
+import { CalendarDays, Heart, Search, UserRound } from "lucide-react";
 import ClientAppPendingLink from "@/components/client-app/ClientAppPendingLink";
 
 const navItems = [
   {
     href: "/app-cliente/inicio",
-    label: "Salões",
-    icon: Store,
+    label: "Meu app",
+    icon: Heart,
     match: (pathname: string) =>
       pathname === "/app-cliente/inicio" ||
       pathname.startsWith("/app-cliente/salao/") ||
       pathname.startsWith("/salao/"),
+  },
+  {
+    href: "/app-cliente/inicio",
+    label: "Explorar",
+    icon: Search,
+    match: (pathname: string) => pathname === "/app-cliente/inicio",
   },
   {
     href: "/app-cliente/agendamentos",
@@ -32,6 +38,7 @@ const hiddenRoutes = [
   "/app-cliente/login",
   "/app-cliente/cadastro",
   "/app-cliente/recuperar-acesso",
+  "/app-cliente/onboarding",
 ];
 
 export default function ClientAppBottomNav() {
@@ -42,8 +49,8 @@ export default function ClientAppBottomNav() {
   }
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-zinc-200/80 bg-white/95 px-3 pb-[max(env(safe-area-inset-bottom),0.5rem)] pt-2 shadow-[0_-18px_48px_rgba(15,23,42,0.12)] backdrop-blur md:hidden">
-      <div className="mx-auto grid max-w-md grid-cols-3 gap-1">
+    <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-zinc-800 bg-zinc-950 px-2 pb-[max(env(safe-area-inset-bottom),0.45rem)] pt-2 shadow-[0_-18px_48px_rgba(15,23,42,0.18)] md:hidden">
+      <div className="mx-auto grid max-w-md grid-cols-4 gap-1">
         {navItems.map((item) => {
           const Icon = item.icon;
           const active = item.match(pathname);
@@ -53,11 +60,11 @@ export default function ClientAppBottomNav() {
               key={item.label}
               href={item.href}
               icon={Icon}
-              iconSize={19}
-              className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-2xl text-[11px] font-bold transition ${
+              iconSize={20}
+              className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-2xl text-[11px] font-semibold transition ${
                 active
-                  ? "bg-zinc-950 text-white"
-                  : "text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900"
+                  ? "text-white"
+                  : "text-zinc-500 hover:bg-white/5 hover:text-zinc-200"
               }`}
             >
               {item.label}

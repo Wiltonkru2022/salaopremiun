@@ -1,14 +1,53 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { CalendarCheck, MapPin, Search, ShieldCheck, SlidersHorizontal, Star } from "lucide-react";
+import { CalendarDays, MapPin, Search, SlidersHorizontal } from "lucide-react";
 import ClientAppSalonCard from "@/components/client-app/ClientAppSalonCard";
 import type { ClientAppSalonListItem } from "@/lib/client-app/queries";
+
+const categories = [
+  {
+    label: "Barbeiros",
+    query: "barba corte",
+    image:
+      "https://images.unsplash.com/photo-1503951914875-452162b0f3f1?q=80&w=240&auto=format&fit=crop",
+  },
+  {
+    label: "Cabeleireiro",
+    query: "cabelo escova",
+    image:
+      "https://images.unsplash.com/photo-1522338242992-e1a54906a8da?q=80&w=240&auto=format&fit=crop",
+  },
+  {
+    label: "Manicure",
+    query: "unha manicure",
+    image:
+      "https://images.unsplash.com/photo-1604654894610-df63bc536371?q=80&w=240&auto=format&fit=crop",
+  },
+  {
+    label: "Sobrancelha",
+    query: "sobrancelha",
+    image:
+      "https://images.unsplash.com/photo-1516975080664-ed2fc6a32937?q=80&w=240&auto=format&fit=crop",
+  },
+  {
+    label: "Estetica",
+    query: "estetica pele",
+    image:
+      "https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?q=80&w=240&auto=format&fit=crop",
+  },
+];
+
+function normalize(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+}
 
 export default function ClientSalonDiscovery({
   saloes,
   initialSearch = "",
-  isLoggedIn = false,
 }: {
   saloes: ClientAppSalonListItem[];
   initialSearch?: string;
@@ -18,8 +57,7 @@ export default function ClientSalonDiscovery({
   const [sortMode, setSortMode] = useState<"recommended" | "rating" | "price">(
     "recommended"
   );
-  const [onlyRated, setOnlyRated] = useState(false);
-  const [onlyWithParking, setOnlyWithParking] = useState(false);
+  const [selectedCity, setSelectedCity] = useState("");
 
   const availableCities = useMemo(
     () =>
@@ -28,18 +66,15 @@ export default function ClientSalonDiscovery({
         .slice(0, 6),
     [saloes]
   );
-  const [selectedCity, setSelectedCity] = useState("");
 
   const orderedSaloes = useMemo(() => {
-    const term = localSearch.trim().toLowerCase();
-    const base = saloes
-      .filter((salao) => {
-        if (selectedCity && salao.cidade !== selectedCity) return false;
-        if (onlyRated && !salao.notaMedia) return false;
-        if (onlyWithParking && !salao.estacionamento) return false;
-        if (!term) return true;
+    const term = normalize(localSearch.trim());
+    const base = saloes.filter((salao) => {
+      if (selectedCity && salao.cidade !== selectedCity) return false;
+      if (!term) return true;
 
-        return [
+      return normalize(
+        [
           salao.nome,
           salao.bairro,
           salao.cidade,
@@ -48,171 +83,142 @@ export default function ClientSalonDiscovery({
         ]
           .filter(Boolean)
           .join(" ")
-          .toLowerCase()
-          .includes(term);
-      })
-      .map((salao) => ({ salao }));
+      ).includes(term);
+    });
 
     return base.sort((left, right) => {
       if (sortMode === "rating") {
         return (
-          (right.salao.notaMedia || 0) - (left.salao.notaMedia || 0) ||
-          right.salao.totalAvaliacoes - left.salao.totalAvaliacoes
+          (right.notaMedia || 0) - (left.notaMedia || 0) ||
+          right.totalAvaliacoes - left.totalAvaliacoes
         );
       }
 
       if (sortMode === "price") {
-        if (left.salao.precoMinimo === null && right.salao.precoMinimo === null) return 0;
-        if (left.salao.precoMinimo === null) return 1;
-        if (right.salao.precoMinimo === null) return -1;
-        return left.salao.precoMinimo - right.salao.precoMinimo;
+        if (left.precoMinimo === null && right.precoMinimo === null) return 0;
+        if (left.precoMinimo === null) return 1;
+        if (right.precoMinimo === null) return -1;
+        return left.precoMinimo - right.precoMinimo;
       }
 
       return (
-        Number(Boolean(right.salao.notaMedia)) - Number(Boolean(left.salao.notaMedia)) ||
-        right.salao.totalAvaliacoes - left.salao.totalAvaliacoes ||
-        right.salao.totalServicos - left.salao.totalServicos ||
-        left.salao.nome.localeCompare(right.salao.nome)
+        Number(Boolean(right.notaMedia)) - Number(Boolean(left.notaMedia)) ||
+        right.totalAvaliacoes - left.totalAvaliacoes ||
+        right.totalServicos - left.totalServicos ||
+        left.nome.localeCompare(right.nome)
       );
     });
-  }, [
-    localSearch,
-    onlyRated,
-    onlyWithParking,
-    saloes,
-    selectedCity,
-    sortMode,
-  ]);
+  }, [localSearch, saloes, selectedCity, sortMode]);
 
   return (
-    <div className="space-y-4">
-      <div className="rounded-[1.6rem] border border-white/70 bg-white p-4 shadow-[0_18px_48px_rgba(15,23,42,0.08)]">
-        <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <div className="text-[11px] font-black uppercase tracking-[0.16em] text-zinc-400">
-              Descobrir salões
-            </div>
-            <h2 className="mt-1 text-2xl font-black text-zinc-950">
-              Escolha seu próximo cuidado
-            </h2>
-            <p className="mt-1 max-w-xl text-sm leading-6 text-zinc-500">
-              Veja serviços, profissionais e avaliações antes de marcar. Tudo que
-              você agenda fica salvo no menu Agenda.
-            </p>
+    <div className="space-y-8">
+      <section className="-mx-4 -mt-4 overflow-hidden bg-[radial-gradient(circle_at_10%_0%,rgba(20,184,166,0.22),transparent_32%),linear-gradient(145deg,#071b1f,#18181b)] px-4 pb-8 pt-8 text-white md:-mx-6 md:px-6">
+        <div className="mx-auto max-w-6xl">
+          <div className="text-center text-3xl font-black tracking-[-0.06em]">
+            SalaoPremium
           </div>
-          <div className="inline-flex items-center gap-2 rounded-2xl border border-emerald-100 bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-700">
-            <ShieldCheck size={15} />
-            App seguro
-          </div>
-        </div>
-        <div className="grid gap-3 lg:grid-cols-[minmax(0,1.4fr)_auto]">
-          <label className="flex h-12 items-center gap-2 rounded-2xl border border-zinc-200 bg-zinc-50 px-4">
-            <Search size={17} className="text-zinc-500" />
+          <label className="mt-7 flex h-16 items-center gap-3 rounded-2xl border border-white/20 bg-white px-5 shadow-2xl">
+            <Search size={25} className="text-zinc-500" />
             <input
               type="search"
               value={localSearch}
               onChange={(event) => setLocalSearch(event.target.value)}
-              placeholder="Serviço, bairro ou salão"
-              className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-zinc-400"
+              placeholder="Pesquise servicos ou saloes"
+              className="min-w-0 flex-1 bg-transparent text-base font-medium text-zinc-950 outline-none placeholder:text-zinc-400"
             />
           </label>
 
+          <div className="mt-7 flex gap-5 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none]">
+            {categories.map((category) => (
+              <button
+                key={category.label}
+                type="button"
+                onClick={() => setLocalSearch(category.query)}
+                className="min-w-[96px] text-center"
+              >
+                <img
+                  src={category.image}
+                  alt={category.label}
+                  className="mx-auto h-24 w-24 rounded-full object-cover shadow-[0_12px_30px_rgba(0,0,0,0.22)]"
+                />
+                <div className="mt-3 text-sm font-bold text-white">
+                  {category.label}
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="px-4 md:px-6">
+        <div className="flex gap-3 overflow-x-auto pb-2">
+          <button className="inline-flex h-12 shrink-0 items-center gap-2 rounded-xl bg-zinc-100 px-4 text-sm font-bold text-zinc-950">
+            <SlidersHorizontal size={18} />
+            Filtros
+          </button>
           <select
             value={sortMode}
             onChange={(event) =>
               setSortMode(event.target.value as "recommended" | "rating" | "price")
             }
-            className="h-12 rounded-2xl border border-zinc-200 bg-white px-4 text-sm font-semibold text-zinc-700 outline-none transition focus:border-zinc-400"
+            className="h-12 shrink-0 rounded-xl border-0 bg-zinc-100 px-4 text-sm font-bold text-zinc-950 outline-none"
           >
-            <option value="recommended">Recomendados</option>
+            <option value="recommended">Ordenar: Recomendado</option>
             <option value="rating">Melhor avaliados</option>
-            <option value="price">Menor preço</option>
+            <option value="price">Menor preco</option>
           </select>
-        </div>
-
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-          <div className="inline-flex items-center gap-1 rounded-full bg-zinc-100 px-3 py-1.5 text-xs font-bold text-zinc-600">
-            <SlidersHorizontal size={14} />
-            Filtros
-          </div>
           {availableCities.map((city) => (
             <button
               key={city}
               type="button"
               onClick={() => setSelectedCity(selectedCity === city ? "" : city)}
-              className={`rounded-full border px-3 py-1.5 text-xs font-bold transition ${
+              className={`h-12 shrink-0 rounded-xl px-4 text-sm font-bold ${
                 selectedCity === city
-                  ? "border-zinc-950 bg-zinc-950 text-white"
-                  : "border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50"
+                  ? "bg-zinc-950 text-white"
+                  : "bg-zinc-100 text-zinc-950"
               }`}
             >
               {city}
             </button>
           ))}
-          <button
-            type="button"
-            onClick={() => setOnlyRated((value) => !value)}
-            className={`inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-xs font-bold transition ${
-              onlyRated
-                ? "border-amber-700 bg-amber-50 text-amber-800"
-                : "border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50"
-            }`}
-          >
-            <Star size={14} fill={onlyRated ? "currentColor" : "none"} />
-            Com avaliações
-          </button>
-          <button
-            type="button"
-            onClick={() => setOnlyWithParking((value) => !value)}
-            className={`rounded-full border px-3 py-1.5 text-xs font-bold transition ${
-              onlyWithParking
-                ? "border-emerald-700 bg-emerald-50 text-emerald-800"
-                : "border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50"
-            }`}
-          >
-            Estacionamento
-          </button>
         </div>
-      </div>
 
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="inline-flex items-center gap-1 rounded-full bg-zinc-100 px-3 py-1.5 text-xs font-semibold text-zinc-600">
-          <MapPin size={14} />
-          Busque por bairro, cidade, serviço ou nome do salão
-        </div>
-        {isLoggedIn ? (
-          <div className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-800">
-            <CalendarCheck size={14} />
-            Depois de confirmar, seu horário aparece na Agenda
-          </div>
-        ) : (
-          <div className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-800">
-            <CalendarCheck size={14} />
-            Entre na conta para reservar horário
-          </div>
-        )}
-      </div>
-
-      {orderedSaloes.length ? (
-        <div className="grid gap-4 md:grid-cols-2">
-          {orderedSaloes.map(({ salao }) => (
-            <ClientAppSalonCard
-              key={salao.id}
-              salao={salao}
-              isLoggedIn={isLoggedIn}
-            />
-          ))}
-        </div>
-      ) : (
-        <div className="rounded-[1.8rem] border border-white/70 bg-white p-6 shadow-[0_18px_48px_rgba(15,23,42,0.08)]">
-          <h3 className="text-lg font-black tracking-[-0.03em] text-zinc-950">
-            Nenhum salão com esses filtros
-          </h3>
-          <p className="mt-2 text-sm leading-6 text-zinc-500">
-            Limpe algum filtro ou tente buscar por outro bairro, cidade ou serviço.
+        <div className="mt-8">
+          <h2 className="text-3xl font-black tracking-[-0.05em] text-zinc-950">
+            Resultados ({orderedSaloes.length})
+          </h2>
+          <p className="mt-1 text-sm text-zinc-500">
+            Escolha um salao, veja avaliacoes e reserve seu horario.
           </p>
         </div>
-      )}
+
+        <div className="mt-6 grid gap-7 md:grid-cols-2">
+          {orderedSaloes.map((salao) => (
+            <ClientAppSalonCard key={salao.id} salao={salao} />
+          ))}
+        </div>
+
+        {!orderedSaloes.length ? (
+          <div className="mt-8 rounded-[1.8rem] border border-zinc-200 bg-white p-6 text-center">
+            <h3 className="text-lg font-black text-zinc-950">
+              Nenhum salao com esses filtros
+            </h3>
+            <p className="mt-2 text-sm leading-6 text-zinc-500">
+              Tente outro servico, bairro ou cidade.
+            </p>
+          </div>
+        ) : null}
+      </section>
+
+      {availableCities.length ? (
+        <button
+          type="button"
+          className="fixed bottom-24 right-4 z-30 inline-flex h-14 items-center gap-2 rounded-full bg-zinc-950 px-5 text-base font-black text-white shadow-2xl md:hidden"
+        >
+          <MapPin size={22} />
+          Mapa
+        </button>
+      ) : null}
     </div>
   );
 }

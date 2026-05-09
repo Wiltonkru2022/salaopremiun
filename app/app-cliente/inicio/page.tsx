@@ -18,10 +18,10 @@ export default async function InicioClientePage({
 
   return (
     <ClientAppFrame
-      title="Salões"
-      subtitle="Escolha um salão e agende em poucos toques."
+      title="Explorar"
+      subtitle="Encontre saloes e servicos perto de voce."
     >
-      <section className="space-y-4">
+      <section>
         {saloes.length ? (
           <ClientSalonDiscovery
             saloes={saloes}
@@ -29,12 +29,12 @@ export default async function InicioClientePage({
             isLoggedIn={Boolean(session.context)}
           />
         ) : (
-          <div className="rounded-[1.6rem] border border-white/70 bg-white p-6 shadow-[0_18px_48px_rgba(15,23,42,0.08)]">
+          <div className="mx-4 rounded-[1.6rem] border border-zinc-200 bg-white p-6 text-center shadow-[0_18px_48px_rgba(15,23,42,0.08)] md:mx-6">
             <h3 className="text-lg font-black text-zinc-950">
-              Nenhum salão encontrado agora
+              Nenhum salao encontrado agora
             </h3>
             <p className="mt-2 text-sm leading-6 text-zinc-500">
-              Tente buscar por outro bairro, cidade ou serviço.
+              Tente buscar por outro bairro, cidade ou servico.
             </p>
           </div>
         )}

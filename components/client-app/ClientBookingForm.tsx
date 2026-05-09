@@ -1,5 +1,16 @@
 "use client";
 
+import {
+  ArrowLeft,
+  CalendarDays,
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  Clock3,
+  Search,
+  Scissors,
+  UserRound,
+} from "lucide-react";
 import { useActionState, useEffect, useMemo, useState } from "react";
 import { useFormStatus } from "react-dom";
 import {
@@ -10,29 +21,6 @@ import type {
   ClientAppProfessionalListItem,
   ClientAppServiceListItem,
 } from "@/lib/client-app/queries";
-
-function formatCurrency(value: number | null) {
-  if (value === null) return "Sob consulta";
-  return new Intl.NumberFormat("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-  }).format(value);
-}
-
-function SubmitButton({ disabled }: { disabled?: boolean }) {
-  const { pending } = useFormStatus();
-  const isDisabled = pending || disabled;
-
-  return (
-    <button
-      type="submit"
-      disabled={isDisabled}
-      className="h-12 w-full rounded-2xl bg-zinc-950 text-sm font-semibold text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60"
-    >
-      {pending ? "Enviando pedido..." : "Solicitar agendamento"}
-    </button>
-  );
-}
 
 type AvailabilitySlot = {
   horaInicio: string;
@@ -45,11 +33,138 @@ type AvailabilityDay = {
   horarios: AvailabilitySlot[];
 };
 
+type StepKey = "profissional" | "servico" | "horario";
+
+function normalizeSearch(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+}
+
+function formatCurrency(value: number | null | undefined) {
+  if (value === null || value === undefined) return "Sob consulta";
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  }).format(value);
+}
+
+function formatMonthLabel(dateValue: string) {
+  const base = dateValue ? new Date(`${dateValue}T12:00:00`) : new Date();
+  return new Intl.DateTimeFormat("pt-BR", {
+    month: "long",
+    year: "numeric",
+  }).format(base);
+}
+
+function buildCalendarDays(diasDisponiveis: AvailabilityDay[]) {
+  const availableDates = new Set(diasDisponiveis.map((dia) => dia.data));
+  const firstDate = diasDisponiveis[0]?.data
+    ? new Date(`${diasDisponiveis[0].data}T12:00:00`)
+    : new Date();
+  const year = firstDate.getFullYear();
+  const month = firstDate.getMonth();
+  const firstDay = new Date(year, month, 1);
+  const lastDay = new Date(year, month + 1, 0);
+  const cells: Array<{
+    key: string;
+    label: string;
+    date: string;
+    currentMonth: boolean;
+    available: boolean;
+  }> = [];
+
+  for (let index = 0; index < firstDay.getDay(); index += 1) {
+    cells.push({
+      key: `blank-${index}`,
+      label: "",
+      date: "",
+      currentMonth: false,
+      available: false,
+    });
+  }
+
+  for (let day = 1; day <= lastDay.getDate(); day += 1) {
+    const date = new Date(year, month, day);
+    const iso = date.toISOString().slice(0, 10);
+    cells.push({
+      key: iso,
+      label: String(day),
+      date: iso,
+      currentMonth: true,
+      available: availableDates.has(iso),
+    });
+  }
+
+  return cells;
+}
+
+function SubmitButton({ disabled }: { disabled?: boolean }) {
+  const { pending } = useFormStatus();
+  const isDisabled = pending || disabled;
+
+  return (
+    <button
+      type="submit"
+      disabled={isDisabled}
+      className="h-14 w-full rounded-2xl bg-teal-600 text-base font-black text-white transition hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-50"
+    >
+      {pending ? "Enviando..." : "Continuar"}
+    </button>
+  );
+}
+
+function StepBadge({
+  active,
+  done,
+  index,
+  label,
+}: {
+  active: boolean;
+  done: boolean;
+  index: number;
+  label: string;
+}) {
+  return (
+    <div
+      className={`flex min-w-0 items-center gap-2 rounded-2xl border px-3 py-2 text-xs font-bold transition ${
+        active
+          ? "border-zinc-950 bg-zinc-950 text-white"
+          : done
+            ? "border-teal-200 bg-teal-50 text-teal-800"
+            : "border-zinc-200 bg-white text-zinc-500"
+      }`}
+    >
+      <span
+        className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] ${
+          active
+            ? "bg-white text-zinc-950"
+            : done
+              ? "bg-teal-100 text-teal-800"
+              : "bg-zinc-100 text-zinc-500"
+        }`}
+      >
+        {index}
+      </span>
+      <span className="truncate">{label}</span>
+    </div>
+  );
+}
+
+function EmptySearch({ text }: { text: string }) {
+  return (
+    <div className="rounded-2xl border border-dashed border-zinc-300 bg-zinc-50 px-4 py-5 text-center text-sm text-zinc-500">
+      {text}
+    </div>
+  );
+}
+
 export default function ClientBookingForm({
   idSalao,
   servicos,
   profissionais,
-  intervaloMinutos,
 }: {
   idSalao: string;
   servicos: ClientAppServiceListItem[];
@@ -61,44 +176,86 @@ export default function ClientBookingForm({
     createClienteBookingAction,
     initialState
   );
-  const [servicoId, setServicoId] = useState(servicos[0]?.id || "");
+  const [step, setStep] = useState<StepKey>("profissional");
   const [profissionalId, setProfissionalId] = useState("");
+  const [servicoId, setServicoId] = useState("");
+  const [buscaProfissional, setBuscaProfissional] = useState("");
+  const [buscaServico, setBuscaServico] = useState("");
   const [diasDisponiveis, setDiasDisponiveis] = useState<AvailabilityDay[]>([]);
   const [selectedDate, setSelectedDate] = useState("");
   const [selectedTime, setSelectedTime] = useState("");
   const [loadingAvailability, setLoadingAvailability] = useState(false);
   const [availabilityError, setAvailabilityError] = useState<string | null>(null);
-  const [bufferMinutos, setBufferMinutos] = useState(5);
+
+  const selectedProfissional = useMemo(
+    () => profissionais.find((item) => item.id === profissionalId) || null,
+    [profissionalId, profissionais]
+  );
+  const selectedServico = useMemo(
+    () => servicos.find((item) => item.id === servicoId) || null,
+    [servicoId, servicos]
+  );
+
+  const servicosDoProfissional = useMemo(() => {
+    if (!profissionalId) return [];
+    return servicos.filter((servico) => {
+      if (!servico.profissionaisPermitidos?.length) return true;
+      return servico.profissionaisPermitidos.includes(profissionalId);
+    });
+  }, [profissionalId, servicos]);
 
   const profissionaisFiltrados = useMemo(() => {
-    const servico = servicos.find((item) => item.id === servicoId);
-    if (!servico?.profissionaisPermitidos?.length) return profissionais;
-    return profissionais.filter((item) =>
-      servico.profissionaisPermitidos.includes(item.id)
+    const term = normalizeSearch(buscaProfissional);
+    if (!term) return profissionais;
+    return profissionais.filter((profissional) =>
+      normalizeSearch(
+        [profissional.nome, profissional.especialidade, profissional.bio]
+          .filter(Boolean)
+          .join(" ")
+      ).includes(term)
     );
-  }, [profissionais, servicos, servicoId]);
+  }, [buscaProfissional, profissionais]);
+
+  const servicosFiltrados = useMemo(() => {
+    const term = normalizeSearch(buscaServico);
+    if (!term) return servicosDoProfissional;
+    return servicosDoProfissional.filter((servico) =>
+      normalizeSearch(
+        [servico.nome, servico.descricao, String(servico.preco ?? "")]
+          .filter(Boolean)
+          .join(" ")
+      ).includes(term)
+    );
+  }, [buscaServico, servicosDoProfissional]);
 
   const horariosDoDiaSelecionado = useMemo(
     () => diasDisponiveis.find((dia) => dia.data === selectedDate)?.horarios || [],
     [diasDisponiveis, selectedDate]
   );
+  const calendarDays = useMemo(
+    () => buildCalendarDays(diasDisponiveis),
+    [diasDisponiveis]
+  );
+  const monthLabel = formatMonthLabel(selectedDate || diasDisponiveis[0]?.data || "");
+  const selectedDayLabel = selectedDate
+    ? new Intl.DateTimeFormat("pt-BR", {
+        weekday: "short",
+        day: "2-digit",
+        month: "short",
+      }).format(new Date(`${selectedDate}T12:00:00`))
+    : "";
   const canSubmit = Boolean(servicoId && profissionalId && selectedDate && selectedTime);
-  const selectedServico = useMemo(
-    () => servicos.find((item) => item.id === servicoId) || null,
-    [servicoId, servicos]
-  );
-  const selectedProfissional = useMemo(
-    () => profissionais.find((item) => item.id === profissionalId) || null,
-    [profissionalId, profissionais]
-  );
 
   useEffect(() => {
-    if (!profissionaisFiltrados.some((item) => item.id === profissionalId)) {
-      setProfissionalId(
-        profissionaisFiltrados.length === 1 ? profissionaisFiltrados[0].id : ""
-      );
+    if (!profissionalId) return;
+    if (servicoId && !servicosDoProfissional.some((item) => item.id === servicoId)) {
+      setServicoId("");
+      setSelectedDate("");
+      setSelectedTime("");
+      setDiasDisponiveis([]);
+      setStep("servico");
     }
-  }, [profissionaisFiltrados, profissionalId]);
+  }, [profissionalId, servicoId, servicosDoProfissional]);
 
   useEffect(() => {
     setDiasDisponiveis([]);
@@ -106,9 +263,7 @@ export default function ClientBookingForm({
     setSelectedTime("");
     setAvailabilityError(null);
 
-    if (!servicoId || !profissionalId) {
-      return;
-    }
+    if (!servicoId || !profissionalId) return;
 
     const controller = new AbortController();
     const params = new URLSearchParams({
@@ -128,20 +283,18 @@ export default function ClientBookingForm({
         const payload = await response.json();
         if (!response.ok || !payload?.ok) {
           throw new Error(
-            payload?.error || "Não foi possível carregar os horários agora."
+            payload?.error || "Nao foi possivel carregar os horarios agora."
           );
         }
 
-        const dias = Array.isArray(payload.dias) ? (payload.dias as AvailabilityDay[]) : [];
+        const dias = Array.isArray(payload.dias)
+          ? (payload.dias as AvailabilityDay[])
+          : [];
         setDiasDisponiveis(dias);
-        setBufferMinutos(Number(payload.bufferMinutos || 5) || 5);
 
         if (dias.length) {
           setSelectedDate(dias[0].data);
           setSelectedTime(dias[0].horarios[0]?.horaInicio || "");
-        } else {
-          setSelectedDate("");
-          setSelectedTime("");
         }
       })
       .catch((error: unknown) => {
@@ -149,13 +302,11 @@ export default function ClientBookingForm({
         setAvailabilityError(
           error instanceof Error
             ? error.message
-            : "Não foi possível carregar os horários agora."
+            : "Nao foi possivel carregar os horarios agora."
         );
       })
       .finally(() => {
-        if (!controller.signal.aborted) {
-          setLoadingAvailability(false);
-        }
+        if (!controller.signal.aborted) setLoadingAvailability(false);
       });
 
     return () => controller.abort();
@@ -167,202 +318,456 @@ export default function ClientBookingForm({
     }
   }, [horariosDoDiaSelecionado, selectedTime]);
 
+  function selectProfissional(id: string) {
+    setProfissionalId(id);
+    setBuscaServico("");
+    setStep("servico");
+  }
+
+  function selectServico(id: string) {
+    setServicoId(id);
+    setStep("horario");
+  }
+
   return (
     <form
       action={formAction}
-      className="rounded-[1.8rem] border border-white/70 bg-white p-5 shadow-[0_18px_48px_rgba(15,23,42,0.08)]"
+      className="overflow-hidden rounded-[1.8rem] border border-zinc-200 bg-white shadow-[0_20px_56px_rgba(15,23,42,0.1)]"
     >
       <input type="hidden" name="salao" value={idSalao} />
+      <input type="hidden" name="profissional" value={profissionalId} />
+      <input type="hidden" name="servico" value={servicoId} />
+      <input type="hidden" name="data" value={selectedDate} />
+      <input type="hidden" name="hora_inicio" value={selectedTime} />
 
-      <h3 className="text-lg font-black text-zinc-950">
-        Agendar
-      </h3>
-
-      <div className="mt-5 space-y-4">
-        <div>
-          <label className="mb-1.5 block text-sm font-medium text-zinc-700">
-            Serviço
-          </label>
-          <select
-            name="servico"
-            value={servicoId}
-            onChange={(event) => setServicoId(event.target.value)}
-            className="h-12 w-full rounded-2xl border border-zinc-200 bg-white px-4 text-sm outline-none transition focus:border-zinc-400"
-          >
-            <option value="">Selecione um serviço</option>
-            {servicos.map((servico) => (
-              <option key={servico.id} value={servico.id}>
-                {servico.nome} -{" "}
-                {servico.exigeAvaliacao
-                  ? "Exige avaliação"
-                  : formatCurrency(servico.preco)}
-              </option>
-            ))}
-          </select>
-          {selectedServico ? (
-            <div className="mt-3 rounded-2xl border border-zinc-100 bg-zinc-50 p-3">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <div className="text-sm font-bold text-zinc-950">
-                    {selectedServico.nome}
-                  </div>
-                  {selectedServico.descricao ? (
-                    <p className="mt-1 text-sm leading-5 text-zinc-500">
-                      {selectedServico.descricao}
-                    </p>
-                  ) : null}
-                </div>
-                <div className="shrink-0 text-right text-sm font-black text-zinc-950">
-                  {selectedServico.exigeAvaliacao
-                    ? "Exige avaliação"
-                    : formatCurrency(selectedServico.preco)}
-                  <div className="mt-1 text-xs font-semibold text-zinc-500">
-                    {selectedServico.duracaoMinutos
-                      ? `${selectedServico.duracaoMinutos} min`
-                      : "Tempo sob consulta"}
-                  </div>
-                </div>
-              </div>
-            </div>
-          ) : null}
+      <div className="border-b border-zinc-100 bg-white p-5">
+        <div className="inline-flex items-center gap-2 rounded-full bg-zinc-100 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.14em] text-zinc-600">
+          <CalendarDays size={14} />
+          Reserva online
         </div>
+        <h3 className="mt-3 text-2xl font-black tracking-[-0.04em] text-zinc-950">
+          Escolha seu atendimento
+        </h3>
+        <p className="mt-2 text-sm leading-6 text-zinc-500">
+          Primeiro o profissional, depois o servico e por ultimo data e hora.
+        </p>
 
-        <div>
-          <label className="mb-1.5 block text-sm font-medium text-zinc-700">
-            Profissional
-          </label>
-          <select
-            name="profissional"
-            value={profissionalId}
-            onChange={(event) => setProfissionalId(event.target.value)}
-            className="h-12 w-full rounded-2xl border border-zinc-200 bg-white px-4 text-sm outline-none transition focus:border-zinc-400"
-          >
-            <option value="">Selecione um profissional</option>
-            {profissionaisFiltrados.map((profissional) => (
-              <option key={profissional.id} value={profissional.id}>
-                {profissional.nome}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <input type="hidden" name="data" value={selectedDate} />
-        <input type="hidden" name="hora_inicio" value={selectedTime} />
-
-        <div className="space-y-4 rounded-2xl border border-zinc-200 bg-zinc-50 p-4">
-          <div>
-            <div className="mb-1.5 block text-sm font-medium text-zinc-700">
-              Dias disponíveis
-            </div>
-            {!servicoId || !profissionalId ? (
-              <div className="rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-500">
-                Escolha serviço e profissional.
-              </div>
-            ) : loadingAvailability ? (
-              <div className="rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-500">
-                Buscando horários...
-              </div>
-            ) : availabilityError ? (
-              <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                {availabilityError}
-              </div>
-            ) : diasDisponiveis.length ? (
-              <div className="flex flex-wrap gap-2">
-                {diasDisponiveis.map((dia) => (
-                  <button
-                    key={dia.data}
-                    type="button"
-                    onClick={() => setSelectedDate(dia.data)}
-                    className={`rounded-2xl border px-3 py-2 text-sm font-semibold transition ${
-                      selectedDate === dia.data
-                        ? "border-zinc-950 bg-zinc-950 text-white"
-                        : "border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-100"
-                    }`}
-                  >
-                    {dia.rotulo}
-                  </button>
-                ))}
-              </div>
-            ) : (
-              <div className="rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-500">
-                Sem horários livres para essa combinacao.
-              </div>
-            )}
-          </div>
-
-          <div>
-            <div className="mb-1.5 block text-sm font-medium text-zinc-700">
-              Horários disponiveis
-            </div>
-            {selectedDate && horariosDoDiaSelecionado.length ? (
-              <div className="flex flex-wrap gap-2">
-                {horariosDoDiaSelecionado.map((horario) => (
-                  <button
-                    key={`${selectedDate}-${horario.horaInicio}`}
-                    type="button"
-                    onClick={() => setSelectedTime(horario.horaInicio)}
-                    className={`rounded-2xl border px-3 py-2 text-sm font-semibold transition ${
-                      selectedTime === horario.horaInicio
-                        ? "border-zinc-950 bg-zinc-950 text-white"
-                        : "border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-100"
-                    }`}
-                  >
-                    {horario.horaInicio}
-                  </button>
-                ))}
-              </div>
-            ) : (
-              <div className="rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-500">
-                Escolha um dia.
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div>
-          <label className="mb-1.5 block text-sm font-medium text-zinc-700">
-            Observacoes
-          </label>
-          <textarea
-            name="observacoes"
-            rows={3}
-            placeholder="Se quiser, deixe um recado rápido para o salão."
-            className="w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-zinc-400"
+        <div className="mt-4 grid gap-2 sm:grid-cols-3">
+          <StepBadge
+            index={1}
+            label="Profissional"
+            active={step === "profissional"}
+            done={Boolean(profissionalId)}
+          />
+          <StepBadge
+            index={2}
+            label="Servico"
+            active={step === "servico"}
+            done={Boolean(servicoId)}
+          />
+          <StepBadge
+            index={3}
+            label="Horario"
+            active={step === "horario"}
+            done={Boolean(selectedDate && selectedTime)}
           />
         </div>
+      </div>
 
-        <div className="rounded-2xl border border-zinc-200 bg-white px-4 py-3">
-          <div className="text-xs font-bold uppercase tracking-[0.12em] text-zinc-500">
-            Confirmação
-          </div>
-          <div className="mt-2 space-y-1 text-sm text-zinc-700">
-            <div>
-              <strong>{selectedServico?.nome || "Serviço não escolhido"}</strong>
+      <div className="space-y-4 p-4 sm:p-5">
+        {step === "profissional" ? (
+          <section className="space-y-3">
+            <div className="flex items-start gap-3">
+              <div className="rounded-2xl bg-zinc-100 p-3 text-zinc-800">
+                <UserRound size={20} />
+              </div>
+              <div>
+                <h4 className="text-lg font-black text-zinc-950">
+                  Escolha o profissional
+                </h4>
+                <p className="mt-1 text-sm leading-6 text-zinc-500">
+                  Digite o nome ou toque em uma opcao para continuar.
+                </p>
+              </div>
             </div>
-            <div>
-              {selectedProfissional
-                ? `com ${selectedProfissional.nome}`
-                : "Escolha um profissional"}
+
+            <label className="flex h-12 items-center gap-2 rounded-2xl border border-zinc-200 bg-zinc-50 px-4">
+              <Search size={17} className="text-zinc-500" />
+              <input
+                type="search"
+                value={buscaProfissional}
+                onChange={(event) => setBuscaProfissional(event.target.value)}
+                placeholder="Buscar profissional"
+                className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-zinc-400"
+              />
+            </label>
+
+            <div className="grid gap-2">
+              {profissionaisFiltrados.length ? (
+                profissionaisFiltrados.map((profissional) => (
+                  <button
+                    key={profissional.id}
+                    type="button"
+                    onClick={() => selectProfissional(profissional.id)}
+                    className={`flex items-center gap-3 rounded-2xl border p-3 text-left transition ${
+                      profissionalId === profissional.id
+                        ? "border-zinc-950 bg-zinc-950 text-white"
+                        : "border-zinc-200 bg-white text-zinc-900 hover:border-zinc-300 hover:bg-zinc-50"
+                    }`}
+                  >
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-zinc-100 text-sm font-black text-zinc-700">
+                      {profissional.fotoUrl ? (
+                        <img
+                          src={profissional.fotoUrl}
+                          alt={profissional.nome}
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        profissional.nome.slice(0, 1).toUpperCase()
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-sm font-black">
+                        {profissional.nome}
+                      </div>
+                      <div
+                        className={`mt-0.5 text-xs ${
+                          profissionalId === profissional.id
+                            ? "text-zinc-300"
+                            : "text-zinc-500"
+                        }`}
+                      >
+                        {profissional.especialidade || "Atendimento do salao"}
+                      </div>
+                    </div>
+                  </button>
+                ))
+              ) : (
+                <EmptySearch text="Nenhum profissional encontrado." />
+              )}
             </div>
-            <div>
-              {selectedDate && selectedTime
-                ? `${selectedDate.split("-").reverse().join("/")} às ${selectedTime}`
-                : "Escolha data e horário"}
+          </section>
+        ) : null}
+
+        {step === "servico" ? (
+          <section className="space-y-3">
+            <button
+              type="button"
+              onClick={() => setStep("profissional")}
+              className="inline-flex items-center gap-1 text-sm font-bold text-zinc-600 underline underline-offset-4"
+            >
+              <ArrowLeft size={14} />
+              Trocar profissional
+            </button>
+
+            <div className="flex items-start gap-3">
+              <div className="rounded-2xl bg-zinc-100 p-3 text-zinc-800">
+                <Scissors size={20} />
+              </div>
+              <div>
+                <h4 className="text-lg font-black text-zinc-950">
+                  Agora escolha o servico
+                </h4>
+                <p className="mt-1 text-sm leading-6 text-zinc-500">
+                  Mostrando servicos disponiveis com {selectedProfissional?.nome}.
+                </p>
+              </div>
             </div>
-          </div>
-        </div>
+
+            <label className="flex h-12 items-center gap-2 rounded-2xl border border-zinc-200 bg-zinc-50 px-4">
+              <Search size={17} className="text-zinc-500" />
+              <input
+                type="search"
+                value={buscaServico}
+                onChange={(event) => setBuscaServico(event.target.value)}
+                placeholder="Buscar servico"
+                className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-zinc-400"
+              />
+            </label>
+
+            <div className="grid gap-2">
+              {servicosFiltrados.length ? (
+                servicosFiltrados.map((servico) => (
+                  <button
+                    key={servico.id}
+                    type="button"
+                    onClick={() => selectServico(servico.id)}
+                    className={`rounded-2xl border p-3 text-left transition ${
+                      servicoId === servico.id
+                        ? "border-zinc-950 bg-zinc-950 text-white"
+                        : "border-zinc-200 bg-white text-zinc-900 hover:border-zinc-300 hover:bg-zinc-50"
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="break-words text-sm font-black">
+                          {servico.nome}
+                        </div>
+                        {servico.descricao ? (
+                          <div
+                            className={`mt-1 line-clamp-2 text-xs leading-5 ${
+                              servicoId === servico.id
+                                ? "text-zinc-300"
+                                : "text-zinc-500"
+                            }`}
+                          >
+                            {servico.descricao}
+                          </div>
+                        ) : null}
+                      </div>
+                      <div className="shrink-0 text-right">
+                        <div className="text-sm font-black">
+                          {servico.exigeAvaliacao
+                            ? "A avaliar"
+                            : formatCurrency(servico.preco)}
+                        </div>
+                        <div
+                          className={`mt-1 text-xs font-semibold ${
+                            servicoId === servico.id
+                              ? "text-zinc-300"
+                              : "text-zinc-500"
+                          }`}
+                        >
+                          {servico.duracaoMinutos
+                            ? `${servico.duracaoMinutos} min`
+                            : "Tempo sob consulta"}
+                        </div>
+                      </div>
+                    </div>
+                  </button>
+                ))
+              ) : (
+                <EmptySearch text="Nenhum servico encontrado para esse profissional." />
+              )}
+            </div>
+          </section>
+        ) : null}
+
+        {step === "horario" ? (
+          <section className="space-y-4">
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => setStep("profissional")}
+                className="inline-flex items-center gap-1 rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-xs font-bold text-zinc-700"
+              >
+                <ArrowLeft size={13} />
+                Profissional
+              </button>
+              <button
+                type="button"
+                onClick={() => setStep("servico")}
+                className="rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-xs font-bold text-zinc-700"
+              >
+                Servico
+              </button>
+            </div>
+
+            <div className="text-center">
+              <h4 className="text-2xl font-black tracking-[-0.04em] text-zinc-950">
+                Selecione data e hora
+              </h4>
+              <p className="mt-1 text-sm text-zinc-500">
+                Horarios livres para {selectedProfissional?.nome}.
+              </p>
+            </div>
+
+            <div className="-mx-2 flex gap-4 overflow-x-auto px-2 pb-1">
+              {profissionais.map((profissional) => {
+                const selected = profissional.id === profissionalId;
+                return (
+                  <button
+                    key={profissional.id}
+                    type="button"
+                    onClick={() => selectProfissional(profissional.id)}
+                    className="w-20 shrink-0 text-center"
+                  >
+                    <span
+                      className={`relative mx-auto flex h-14 w-14 items-center justify-center overflow-hidden rounded-full border text-sm font-black ${
+                        selected
+                          ? "border-teal-600 bg-teal-50 text-teal-700"
+                          : "border-zinc-200 bg-zinc-50 text-zinc-400"
+                      }`}
+                    >
+                      {profissional.fotoUrl ? (
+                        <img
+                          src={profissional.fotoUrl}
+                          alt={profissional.nome}
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        profissional.nome.slice(0, 1).toUpperCase()
+                      )}
+                      {selected ? (
+                        <span className="absolute right-0 top-0 flex h-5 w-5 items-center justify-center rounded-full bg-teal-600 text-white">
+                          <Check size={12} />
+                        </span>
+                      ) : null}
+                    </span>
+                    <span
+                      className={`mt-2 block truncate text-xs font-bold ${
+                        selected ? "text-zinc-950" : "text-zinc-500"
+                      }`}
+                    >
+                      {profissional.nome}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="rounded-[1.4rem] border border-zinc-200 bg-white p-4">
+              <div className="mb-4 flex items-center justify-between gap-3">
+                <h5 className="text-xl font-black capitalize text-zinc-950">
+                  {monthLabel}
+                </h5>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    className="flex h-11 w-11 items-center justify-center rounded-xl border border-zinc-200 bg-white text-zinc-700"
+                    aria-label="Mes anterior"
+                  >
+                    <ChevronLeft size={20} />
+                  </button>
+                  <button
+                    type="button"
+                    className="flex h-11 w-11 items-center justify-center rounded-xl border border-zinc-200 bg-white text-zinc-700"
+                    aria-label="Proximo mes"
+                  >
+                    <ChevronRight size={20} />
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-7 gap-2 text-center text-xs font-medium text-zinc-500">
+                {["Dom.", "Seg.", "Ter.", "Qua.", "Qui.", "Sex.", "Sab."].map(
+                  (day) => (
+                    <span key={day}>{day}</span>
+                  )
+                )}
+              </div>
+
+              {loadingAvailability ? (
+                <div className="mt-5 rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-4 text-sm font-semibold text-zinc-600">
+                  Carregando horarios disponiveis...
+                </div>
+              ) : availabilityError ? (
+                <div className="mt-5 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+                  {availabilityError}
+                </div>
+              ) : (
+                <div className="mt-4 grid grid-cols-7 gap-2">
+                  {calendarDays.map((day) =>
+                    day.currentMonth ? (
+                      <button
+                        key={day.key}
+                        type="button"
+                        disabled={!day.available}
+                        onClick={() => {
+                          const nextDay = diasDisponiveis.find(
+                            (item) => item.data === day.date
+                          );
+                          setSelectedDate(day.date);
+                          setSelectedTime(nextDay?.horarios[0]?.horaInicio || "");
+                        }}
+                        className={`relative aspect-square rounded-full border text-sm font-semibold transition ${
+                          selectedDate === day.date
+                            ? "border-teal-600 bg-teal-50 text-zinc-950 ring-2 ring-teal-600"
+                            : day.available
+                              ? "border-zinc-100 bg-zinc-100 text-zinc-900"
+                              : "border-zinc-100 bg-white text-zinc-300"
+                        }`}
+                      >
+                        {day.label}
+                        {day.available ? (
+                          <span
+                            className={`absolute bottom-2 left-1/2 h-1 w-6 -translate-x-1/2 rounded-full ${
+                              selectedDate === day.date
+                                ? "bg-amber-500"
+                                : "bg-emerald-500"
+                            }`}
+                          />
+                        ) : null}
+                      </button>
+                    ) : (
+                      <span key={day.key} />
+                    )
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div className="border-y border-zinc-200 py-4">
+              <div className="mb-3 flex items-center gap-2 text-sm font-bold text-zinc-600">
+                <Clock3 size={16} />
+                {selectedDayLabel || "Escolha um dia"}
+              </div>
+              {horariosDoDiaSelecionado.length ? (
+                <div className="flex gap-3 overflow-x-auto pb-1">
+                  {horariosDoDiaSelecionado.map((horario) => (
+                    <button
+                      key={`${selectedDate}-${horario.horaInicio}`}
+                      type="button"
+                      onClick={() => setSelectedTime(horario.horaInicio)}
+                      className={`h-14 min-w-28 rounded-full border px-5 text-lg font-black ${
+                        selectedTime === horario.horaInicio
+                          ? "border-teal-600 bg-teal-50 text-zinc-950 ring-2 ring-teal-600"
+                          : "border-zinc-100 bg-zinc-100 text-zinc-900"
+                      }`}
+                    >
+                      {horario.horaInicio}
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded-2xl border border-dashed border-zinc-300 bg-zinc-50 px-4 py-4 text-sm text-zinc-500">
+                  Selecione um dia disponivel para ver os horarios.
+                </div>
+              )}
+            </div>
+
+            <div className="rounded-[1.4rem] bg-zinc-50 p-4">
+              <div className="rounded-2xl bg-white p-4 shadow-sm">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <div className="text-sm text-zinc-500">
+                      1 servico
+                      {selectedServico?.duracaoMinutos
+                        ? ` - ${selectedServico.duracaoMinutos}min`
+                        : ""}
+                    </div>
+                    <div className="mt-1 text-3xl font-black text-zinc-950">
+                      {selectedServico?.exigeAvaliacao
+                        ? "A avaliar"
+                        : formatCurrency(selectedServico?.preco)}
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="font-bold text-zinc-950">
+                      {selectedServico?.nome || "Servico"}
+                    </div>
+                    <div className="mt-1 text-sm text-zinc-500">
+                      {selectedTime || "--:--"}
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-4">
+                  <SubmitButton disabled={!canSubmit} />
+                </div>
+                <p className="mt-3 text-center text-xs leading-5 text-zinc-500">
+                  Seus dados pessoais serao usados apenas para processar este
+                  agendamento com o salao.
+                </p>
+              </div>
+            </div>
+          </section>
+        ) : null}
 
         {state.error ? (
-          <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
             {state.error}
           </div>
         ) : null}
-
-        <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-xs leading-5 text-zinc-500">
-          Grade de {intervaloMinutos} min. Intervalo tecnico de {bufferMinutos} min.
-        </div>
-
-        <SubmitButton disabled={!canSubmit} />
       </div>
     </form>
   );

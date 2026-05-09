@@ -1,181 +1,73 @@
-import Link from "next/link";
-import { CalendarClock, MapPin, ParkingCircle, Star, Wallet } from "lucide-react";
+import { MapPin, Star } from "lucide-react";
 import ClientAppPendingLink from "@/components/client-app/ClientAppPendingLink";
 import type { ClientAppSalonListItem } from "@/lib/client-app/queries";
-
-function formatCurrency(value: number | null) {
-  if (value === null) return null;
-  return new Intl.NumberFormat("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-    maximumFractionDigits: 0,
-  }).format(value);
-}
 
 export default function ClientAppSalonCard({
   salao,
   distanceKm = null,
-  isLoggedIn = false,
 }: {
   salao: ClientAppSalonListItem;
   distanceKm?: number | null;
   isLoggedIn?: boolean;
 }) {
   const publicPath = `/salao/${encodeURIComponent(salao.appClienteSlug || salao.id)}`;
+  const cover =
+    salao.fotoCapaUrl ||
+    "https://images.unsplash.com/photo-1560066984-138dadb4c035?q=80&w=1200&auto=format&fit=crop";
 
   return (
-    <article className="overflow-hidden rounded-[1.45rem] border border-zinc-200 bg-white shadow-[0_18px_48px_rgba(15,23,42,0.08)] transition hover:-translate-y-0.5 hover:border-zinc-300 hover:shadow-[0_22px_60px_rgba(15,23,42,0.12)]">
-      <div className="relative h-40 bg-zinc-100">
-        {salao.fotoCapaUrl ? (
+    <article className="group border-b border-zinc-200 pb-7">
+      <ClientAppPendingLink href={publicPath} className="block">
+        <div className="relative overflow-hidden rounded-[0.9rem] bg-zinc-100">
           <img
-            src={salao.fotoCapaUrl}
-            alt={`Capa do salão ${salao.nome}`}
-            className="h-full w-full object-cover"
+            src={cover}
+            alt={`Capa do salao ${salao.nome}`}
+            className="aspect-[1.74/1] w-full object-cover transition duration-500 group-hover:scale-[1.02]"
           />
-        ) : (
-          <div className="flex h-full items-end bg-gradient-to-br from-zinc-950 via-zinc-800 to-amber-700 p-4 text-white">
-            <div className="text-[11px] font-bold uppercase tracking-[0.14em] text-amber-100">
-              Agenda online
+          <div className="absolute right-3 top-3 rounded-xl bg-zinc-950/82 px-3 py-2 text-right text-white backdrop-blur">
+            <div className="flex items-center justify-end gap-1 text-lg font-black leading-none">
+              <Star size={15} fill="currentColor" />
+              {salao.notaMedia ? salao.notaMedia.toFixed(1) : "Novo"}
+            </div>
+            <div className="mt-0.5 text-xs text-white/80">
+              {salao.totalAvaliacoes || 0} avaliacoes
             </div>
           </div>
-        )}
-        <div className="absolute inset-x-3 bottom-3 flex items-center justify-between gap-2">
-          <span className="inline-flex items-center gap-1 rounded-full bg-white/95 px-3 py-1.5 text-xs font-black text-zinc-950 shadow-sm">
-            <Star size={14} fill="currentColor" className="text-amber-600" />
-            {salao.notaMedia ? salao.notaMedia.toFixed(1) : "Novo"}
-          </span>
           {distanceKm !== null ? (
-            <span className="rounded-full bg-zinc-950/90 px-3 py-1.5 text-xs font-bold text-white">
+            <div className="absolute bottom-3 left-3 rounded-full bg-white/95 px-3 py-1 text-xs font-bold text-zinc-900">
               {distanceKm < 1
                 ? `${Math.max(100, Math.round(distanceKm * 1000))} m`
                 : `${distanceKm.toFixed(1)} km`}
+            </div>
+          ) : null}
+        </div>
+
+        <div className="mt-4 space-y-2">
+          <div className="inline-flex rounded-full border border-zinc-200 bg-white px-3 py-1 text-xs font-bold text-zinc-800">
+            Recomendado pelo SalaoPremium
+          </div>
+          <h2 className="text-[1.6rem] font-black leading-tight tracking-[-0.04em] text-zinc-950">
+            {salao.nome}
+          </h2>
+          <div className="flex items-start gap-1.5 text-base leading-6 text-zinc-500">
+            <MapPin size={18} className="mt-0.5 shrink-0" />
+            <span>
+              {[salao.bairro, salao.cidade, salao.estado].filter(Boolean).join(" - ") ||
+                salao.enderecoCompleto ||
+                "Endereco em atualizacao"}
             </span>
+          </div>
+          {salao.precoMinimo !== null ? (
+            <div className="text-sm font-semibold text-zinc-700">
+              A partir de{" "}
+              {salao.precoMinimo.toLocaleString("pt-BR", {
+                style: "currency",
+                currency: "BRL",
+              })}
+            </div>
           ) : null}
         </div>
-      </div>
-
-      <div className="space-y-4 p-4">
-        <div className="flex flex-wrap gap-2 text-xs font-bold text-zinc-700">
-          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-3 py-1.5 text-emerald-700">
-            <CalendarClock size={14} />
-            {salao.proximoHorarioLabel || "Agenda online"}
-          </span>
-          {salao.totalAvaliacoes ? (
-            <span className="rounded-full bg-amber-50 px-3 py-1.5 text-amber-700">
-              {salao.totalAvaliacoes} avaliações
-            </span>
-          ) : null}
-        </div>
-
-        <div className="flex items-start gap-3">
-          <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-[1.2rem] bg-zinc-100">
-            {salao.logoUrl ? (
-              <img
-                src={salao.logoUrl}
-                alt={`Logo do salão ${salao.nome}`}
-                className="h-full w-full object-cover"
-              />
-            ) : (
-              <div className="text-lg font-black text-zinc-700">
-                {salao.nome.slice(0, 1).toUpperCase()}
-              </div>
-            )}
-          </div>
-
-          <div className="min-w-0">
-            <h2 className="text-lg font-black tracking-[-0.03em] text-zinc-950">
-              {salao.nome}
-            </h2>
-            <div className="mt-1 flex items-center gap-1.5 text-sm text-zinc-500">
-              <MapPin size={15} />
-              <span className="truncate">
-                {[salao.bairro, salao.cidade].filter(Boolean).join(" - ") ||
-                  "Endereço público em atualização"}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        <p className="line-clamp-3 text-sm leading-6 text-zinc-600">
-          {salao.descricaoPublica ||
-            "Conheça equipe, serviços e horários desse salão no app cliente."}
-        </p>
-
-        <div className="grid grid-cols-3 gap-2 rounded-2xl border border-zinc-100 bg-zinc-50 p-3 text-center">
-          <div>
-            <div className="text-sm font-black text-zinc-950">
-              {salao.totalServicos || "-"}
-            </div>
-            <div className="mt-0.5 text-[11px] font-semibold text-zinc-500">
-              serviços
-            </div>
-          </div>
-          <div>
-            <div className="text-sm font-black text-zinc-950">
-              {salao.totalProfissionais || "-"}
-            </div>
-            <div className="mt-0.5 text-[11px] font-semibold text-zinc-500">
-              equipe
-            </div>
-          </div>
-          <div>
-            <div className="text-sm font-black text-zinc-950">
-              {formatCurrency(salao.precoMinimo) || "-"}
-            </div>
-            <div className="mt-0.5 text-[11px] font-semibold text-zinc-500">
-              a partir
-            </div>
-          </div>
-        </div>
-
-        {salao.categorias.length ? (
-          <div className="flex flex-wrap gap-2">
-            {salao.categorias.slice(0, 3).map((categoria) => (
-              <span
-                key={categoria}
-                className="rounded-full bg-zinc-100 px-3 py-1 text-xs font-semibold text-zinc-600"
-              >
-                {categoria}
-              </span>
-            ))}
-          </div>
-        ) : null}
-
-        <div className="flex flex-wrap gap-2 text-xs font-semibold text-zinc-600">
-          {salao.estacionamento ? (
-            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-3 py-1.5 text-emerald-700">
-              <ParkingCircle size={14} />
-              Estacionamento
-            </span>
-          ) : null}
-          {salao.formasPagamento.length ? (
-            <span className="inline-flex items-center gap-1 rounded-full bg-zinc-100 px-3 py-1.5">
-              <Wallet size={14} />
-              {salao.formasPagamento.slice(0, 2).join(" - ")}
-            </span>
-          ) : null}
-        </div>
-
-        <div className="flex flex-wrap gap-2">
-          <ClientAppPendingLink
-            href={publicPath}
-            pendingLabel="Abrindo"
-            className="inline-flex h-11 flex-1 items-center justify-center gap-1.5 rounded-2xl bg-zinc-950 px-4 text-sm font-bold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-zinc-800"
-          >
-            Ver horários
-          </ClientAppPendingLink>
-          {!isLoggedIn ? (
-            <Link
-              href={`/app-cliente/cadastro?salao=${encodeURIComponent(
-                salao.appClienteSlug || salao.id
-              )}&next=${encodeURIComponent(publicPath)}`}
-              className="inline-flex h-11 items-center justify-center rounded-2xl border border-zinc-200 bg-white px-4 text-sm font-bold text-zinc-800 transition hover:bg-zinc-50"
-            >
-              Criar conta
-            </Link>
-          ) : null}
-        </div>
-      </div>
+      </ClientAppPendingLink>
     </article>
   );
 }
