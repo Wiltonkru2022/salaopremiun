@@ -86,6 +86,67 @@ function buildStorageKey(storageKey?: string) {
   return storageKey ? `salaopremium:notificacoes:${storageKey}` : null;
 }
 
+function buildCookieName(storageKey?: string | null) {
+  if (!storageKey || typeof window === "undefined") return null;
+
+  const encoded = window
+    .btoa(storageKey)
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/, "");
+
+  return `sp_notificacoes_lidas_${encoded}`;
+}
+
+function getSharedCookieDomain() {
+  if (typeof window === "undefined") return "";
+
+  const hostname = window.location.hostname.toLowerCase();
+  if (
+    hostname === "localhost" ||
+    hostname === "127.0.0.1" ||
+    hostname === "[::1]"
+  ) {
+    return "";
+  }
+
+  if (
+    hostname === "salaopremiun.com.br" ||
+    hostname.endsWith(".salaopremiun.com.br")
+  ) {
+    return "; Domain=.salaopremiun.com.br";
+  }
+
+  return "";
+}
+
+function readReadIdsFromCookie(cookieName?: string | null) {
+  if (!cookieName || typeof document === "undefined") return null;
+
+  const match = document.cookie
+    .split("; ")
+    .find((item) => item.startsWith(`${cookieName}=`));
+
+  if (!match) return null;
+
+  try {
+    const parsed = JSON.parse(decodeURIComponent(match.split("=").slice(1).join("=")));
+    return Array.isArray(parsed)
+      ? parsed.filter((item) => typeof item === "string")
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+function persistReadIdsCookie(cookieName: string | null, readIds: string[]) {
+  if (!cookieName || typeof document === "undefined") return;
+
+  const value = encodeURIComponent(JSON.stringify(readIds.slice(-80)));
+  const secure = window.location.protocol === "https:" ? "; Secure" : "";
+  document.cookie = `${cookieName}=${value}; Path=/; Max-Age=31536000; SameSite=Lax${secure}${getSharedCookieDomain()}`;
+}
+
 function isStandaloneApp() {
   if (typeof window === "undefined") return false;
 
@@ -113,6 +174,7 @@ export default function NotificationBell({
   const [showInstallNotice, setShowInstallNotice] = useState(false);
   const wrapperRef = useRef<HTMLDivElement | null>(null);
   const persistedKey = buildStorageKey(storageKey);
+  const cookieName = buildCookieName(persistedKey);
 
   useEffect(() => {
     function refreshInstallNotice() {
@@ -186,15 +248,22 @@ export default function NotificationBell({
     }
 
     try {
-      const raw = window.localStorage.getItem(persistedKey);
-      const parsed = raw ? JSON.parse(raw) : [];
-      setReadIds(Array.isArray(parsed) ? parsed.filter((item) => typeof item === "string") : []);
+      const cookieReadIds = readReadIdsFromCookie(cookieName);
+      const raw = cookieReadIds ? null : window.localStorage.getItem(persistedKey);
+      const parsed = cookieReadIds || (raw ? JSON.parse(raw) : []);
+      const next = Array.isArray(parsed)
+        ? parsed.filter((item) => typeof item === "string")
+        : [];
+      setReadIds(next);
+      if (!cookieReadIds && next.length) {
+        persistReadIdsCookie(cookieName, next);
+      }
     } catch {
       setReadIds([]);
     } finally {
       setHydrated(true);
     }
-  }, [persistedKey]);
+  }, [cookieName, persistedKey]);
 
   const persistReadIds = useCallback((next: string[]) => {
     setReadIds(next);
@@ -203,11 +272,13 @@ export default function NotificationBell({
 
     try {
       window.localStorage.setItem(persistedKey, JSON.stringify(next));
+      persistReadIdsCookie(cookieName, next);
     } catch {
       // localStorage pode falhar em navegadores restritos; nesse caso,
       // mantemos o estado apenas em memoria durante a sessao atual.
+      persistReadIdsCookie(cookieName, next);
     }
-  }, [persistedKey]);
+  }, [cookieName, persistedKey]);
 
   const isRead = useCallback((notification: ShellNotification) => {
     if (notification.critical || notification.persistUntilResolved) return false;
