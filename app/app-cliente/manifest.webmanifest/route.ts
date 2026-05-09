@@ -7,7 +7,7 @@ export function GET() {
     short_name: "SalaoPremium",
     description:
       "Agende horarios, acompanhe visitas e avalie seu atendimento pelo app cliente do SalaoPremium.",
-    start_url: "/app-cliente/inicio",
+    start_url: "/app-cliente",
     scope: "/app-cliente",
     display: "standalone",
     background_color: "#f7f7f5",
