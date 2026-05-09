@@ -17,6 +17,7 @@ type PushSubscriptionRow = {
   endpoint: string;
   p256dh: string;
   auth: string;
+  cliente_app_conta_id?: string | null;
 };
 
 type PushPayload = {
@@ -125,6 +126,79 @@ async function markSubscriptionInactive(id: string) {
   } catch {
     // Push cleanup is best effort.
   }
+}
+
+async function isClienteAppPushEnabled(clienteAppContaId?: string | null) {
+  const id = String(clienteAppContaId || "").trim();
+  if (!id) return false;
+
+  const { data, error } = await (getSupabaseAdmin() as any)
+    .from("clientes_app_auth")
+    .select("notificacoes_ativas, notificacao_app_ativa")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (error) {
+    const message = String(error.message || "");
+    if (
+      message.includes("notificacoes_ativas") ||
+      message.includes("notificacao_app_ativa")
+    ) {
+      return true;
+    }
+    return false;
+  }
+
+  if (!data) return false;
+  return data.notificacoes_ativas !== false && data.notificacao_app_ativa !== false;
+}
+
+async function filterClienteAppSubscriptionsByPreference(
+  rows: PushSubscriptionRow[]
+) {
+  const ids = Array.from(
+    new Set(
+      rows
+        .map((row) => String(row.cliente_app_conta_id || "").trim())
+        .filter(Boolean)
+    )
+  );
+
+  if (!ids.length) return [];
+
+  const { data, error } = await (getSupabaseAdmin() as any)
+    .from("clientes_app_auth")
+    .select("id, notificacoes_ativas, notificacao_app_ativa")
+    .in("id", ids);
+
+  if (error) {
+    const message = String(error.message || "");
+    if (
+      message.includes("notificacoes_ativas") ||
+      message.includes("notificacao_app_ativa")
+    ) {
+      return rows;
+    }
+    return [];
+  }
+
+  const enabledIds = new Set(
+    ((data || []) as Array<{
+      id: string;
+      notificacoes_ativas?: boolean | null;
+      notificacao_app_ativa?: boolean | null;
+    }>)
+      .filter(
+        (cliente) =>
+          cliente.notificacoes_ativas !== false &&
+          cliente.notificacao_app_ativa !== false
+      )
+      .map((cliente) => cliente.id)
+  );
+
+  return rows.filter((row) =>
+    enabledIds.has(String(row.cliente_app_conta_id || "").trim())
+  );
 }
 
 function pruneRecentPushes(now: number) {
@@ -257,7 +331,7 @@ export async function broadcastPushNotification(params: {
 
   let query = (supabase as any)
     .from("push_subscriptions")
-    .select("id, endpoint, p256dh, auth")
+    .select("id, endpoint, p256dh, auth, cliente_app_conta_id")
     .eq("ativo", true);
 
   if (params.target === "clientes") {
@@ -277,7 +351,11 @@ export async function broadcastPushNotification(params: {
     throw new Error(error.message);
   }
 
-  const subscriptions = (rows || []) as PushSubscriptionRow[];
+  let subscriptions = (rows || []) as PushSubscriptionRow[];
+  if (params.target === "clientes") {
+    subscriptions = await filterClienteAppSubscriptionsByPreference(subscriptions);
+  }
+
   const result = await sendPushToRows(subscriptions, {
     title,
     body,
@@ -385,6 +463,10 @@ export async function notifyClientAppointmentConfirmed(params: {
       .maybeSingle();
 
     if (authError || !clienteAuth?.app_conta_id) return;
+    const clientePushEnabled = await isClienteAppPushEnabled(
+      clienteAuth.app_conta_id
+    );
+    if (!clientePushEnabled) return;
 
     const { data: rows, error: rowsError } = await (supabase as any)
       .from("push_subscriptions")

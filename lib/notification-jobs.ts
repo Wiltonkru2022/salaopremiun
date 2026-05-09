@@ -66,6 +66,31 @@ function sanitizeText(value: string, fallback: string) {
   return String(value || "").trim() || fallback;
 }
 
+async function isClienteAppPushEnabled(clienteAppContaId?: string | null) {
+  const id = sanitizeId(clienteAppContaId);
+  if (!id) return false;
+
+  const { data, error } = await (getSupabaseAdmin() as any)
+    .from("clientes_app_auth")
+    .select("notificacoes_ativas, notificacao_app_ativa")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (error) {
+    const message = String(error.message || "");
+    if (
+      message.includes("notificacoes_ativas") ||
+      message.includes("notificacao_app_ativa")
+    ) {
+      return true;
+    }
+    return false;
+  }
+
+  if (!data) return false;
+  return data.notificacoes_ativas !== false && data.notificacao_app_ativa !== false;
+}
+
 async function isNotificationTypeEnabled(params: {
   idSalao?: string | null;
   tipo: string;
@@ -148,6 +173,8 @@ async function findSubscriptionsForJob(job: NotificationJobRow) {
 
   if (job.canal === "cliente_app") {
     if (!job.cliente_app_conta_id) return [];
+    const enabled = await isClienteAppPushEnabled(job.cliente_app_conta_id);
+    if (!enabled) return [];
     query = query.eq("cliente_app_conta_id", job.cliente_app_conta_id);
   }
 

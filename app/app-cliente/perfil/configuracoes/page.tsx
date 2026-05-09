@@ -1,40 +1,23 @@
 import Link from "next/link";
 import { ArrowLeft, ChevronRight } from "lucide-react";
 import ClientAppFrame from "@/components/client-app/ClientAppFrame";
+import ClientNotificationSettings from "@/components/client-app/ClientNotificationSettings";
 import { requireClienteAppContext } from "@/lib/client-context.server";
-
-function ToggleRow({
-  label,
-  helper,
-  enabled = true,
-}: {
-  label: string;
-  helper?: string;
-  enabled?: boolean;
-}) {
-  return (
-    <div className="flex min-h-20 items-center justify-between gap-4 border-b border-zinc-100 px-1">
-      <div>
-        <div className="text-lg text-zinc-950">{label}</div>
-        {helper ? <div className="mt-1 text-sm text-zinc-500">{helper}</div> : null}
-      </div>
-      <span
-        className={`relative h-9 w-16 rounded-full transition ${
-          enabled ? "bg-zinc-950" : "bg-zinc-200"
-        }`}
-      >
-        <span
-          className={`absolute top-1 h-7 w-7 rounded-full bg-white transition ${
-            enabled ? "left-8" : "left-1"
-          }`}
-        />
-      </span>
-    </div>
-  );
-}
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 export default async function ClienteProfileSettingsPage() {
-  await requireClienteAppContext();
+  const session = await requireClienteAppContext();
+  const { data } = await (getSupabaseAdmin() as any)
+    .from("clientes_app_auth")
+    .select("notificacoes_ativas, notificacao_app_ativa, notificacao_email_ativa")
+    .eq("id", session.idConta)
+    .maybeSingle();
+
+  const notificationSettings = {
+    notificacoes_ativas: data?.notificacoes_ativas !== false,
+    notificacao_app_ativa: data?.notificacao_app_ativa !== false,
+    notificacao_email_ativa: data?.notificacao_email_ativa !== false,
+  };
 
   return (
     <ClientAppFrame title="Configuracoes" subtitle="Preferencias do app cliente.">
@@ -48,15 +31,7 @@ export default async function ClienteProfileSettingsPage() {
         </Link>
 
         <div className="rounded-[1.5rem] bg-white p-4 shadow-[0_18px_45px_rgba(15,23,42,0.08)]">
-          <div className="mb-3 bg-zinc-50 px-3 py-3 text-xs font-bold uppercase tracking-[0.12em] text-zinc-500">
-            Notificacoes
-          </div>
-          <ToggleRow label="Ativar notificacoes" />
-          <ToggleRow
-            label="Notificacao do app"
-            helper="Avisos de reserva, reagendamento e avaliacao."
-          />
-          <ToggleRow label="E-mail" helper="Confirmacoes importantes no e-mail." />
+          <ClientNotificationSettings initialSettings={notificationSettings} />
 
           <div className="mb-3 mt-6 bg-zinc-50 px-3 py-3 text-xs font-bold uppercase tracking-[0.12em] text-zinc-500">
             Conta
