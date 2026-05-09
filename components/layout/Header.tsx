@@ -169,14 +169,14 @@ export default function Header({
           href={canSeeAssinatura ? getRouteHref("/meu-plano") : "#"}
           aria-disabled={!canSeeAssinatura}
           className={clsx(
-            "hidden min-w-0 items-center gap-2 rounded-xl border border-zinc-200 bg-zinc-50 px-2 py-1.5 text-sm 2xl:flex 2xl:px-2.5",
+            "hidden min-w-0 shrink-0 items-center gap-1.5 rounded-xl border border-zinc-200 bg-zinc-50 px-2 py-1.5 text-sm lg:flex xl:gap-2 xl:px-2.5",
             canSeeAssinatura
               ? "transition hover:border-zinc-300 hover:bg-white"
               : "pointer-events-none opacity-70"
           )}
         >
-          <ShieldCheck size={16} className="shrink-0 text-[var(--app-accent-strong)]" />
-          <span className="hidden max-w-[120px] truncate text-xs font-semibold text-zinc-900 2xl:inline">
+          <ShieldCheck size={15} className="shrink-0 text-[var(--app-accent-strong)]" />
+          <span className="hidden max-w-[92px] truncate text-xs font-semibold text-zinc-900 xl:inline 2xl:max-w-[120px]">
             {planoNome || "Sem plano"}
           </span>
           <span
