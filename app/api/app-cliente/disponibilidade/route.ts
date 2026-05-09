@@ -10,12 +10,14 @@ export async function GET(request: Request) {
   const idServico = String(searchParams.get("servico") || "").trim();
   const idProfissional = String(searchParams.get("profissional") || "").trim();
   const ignoreAgendamentoId = String(searchParams.get("ignorar") || "").trim() || null;
+  const startDate = String(searchParams.get("inicio") || "").trim() || null;
 
   const result = await getClienteAppBookingAvailability({
     idSalao,
     idServico,
     idProfissional,
     ignoreAgendamentoId,
+    startDate,
   });
 
   if (!result.ok) {

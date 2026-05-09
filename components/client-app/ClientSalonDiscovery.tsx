@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { MapPin, Search, SlidersHorizontal } from "lucide-react";
+import { LocateFixed, MapPin, Navigation, Search, SlidersHorizontal, X } from "lucide-react";
 import ClientAppSalonCard from "@/components/client-app/ClientAppSalonCard";
 import type { ClientAppSalonListItem } from "@/lib/client-app/queries";
 
@@ -45,6 +45,21 @@ function normalize(value: string) {
     .toLowerCase();
 }
 
+function distanceInKm(
+  from: { latitude: number; longitude: number },
+  to: { latitude: number; longitude: number }
+) {
+  const radius = 6371;
+  const dLat = ((to.latitude - from.latitude) * Math.PI) / 180;
+  const dLon = ((to.longitude - from.longitude) * Math.PI) / 180;
+  const lat1 = (from.latitude * Math.PI) / 180;
+  const lat2 = (to.latitude * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.sin(dLon / 2) * Math.sin(dLon / 2) * Math.cos(lat1) * Math.cos(lat2);
+  return radius * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
 export default function ClientSalonDiscovery({
   saloes,
   initialSearch = "",
@@ -58,6 +73,12 @@ export default function ClientSalonDiscovery({
     "recommended"
   );
   const [selectedCity, setSelectedCity] = useState("");
+  const [location, setLocation] = useState<{
+    latitude: number;
+    longitude: number;
+  } | null>(null);
+  const [locationError, setLocationError] = useState<string | null>(null);
+  const [showMapPanel, setShowMapPanel] = useState(false);
 
   const availableCities = useMemo(
     () =>
@@ -67,9 +88,24 @@ export default function ClientSalonDiscovery({
     [saloes]
   );
 
+  const saloesWithDistance = useMemo(
+    () =>
+      saloes.map((salao) => ({
+        ...salao,
+        distanceKm:
+          location && salao.latitude !== null && salao.longitude !== null
+            ? distanceInKm(location, {
+                latitude: salao.latitude,
+                longitude: salao.longitude,
+              })
+            : null,
+      })),
+    [location, saloes]
+  );
+
   const orderedSaloes = useMemo(() => {
     const term = normalize(localSearch.trim());
-    const base = saloes.filter((salao) => {
+    const base = saloesWithDistance.filter((salao) => {
       if (selectedCity && salao.cidade !== selectedCity) return false;
       if (!term) return true;
 
@@ -101,6 +137,10 @@ export default function ClientSalonDiscovery({
         return left.precoMinimo - right.precoMinimo;
       }
 
+      if (location && left.distanceKm !== null && right.distanceKm !== null) {
+        return left.distanceKm - right.distanceKm;
+      }
+
       return (
         Number(Boolean(right.notaMedia)) - Number(Boolean(left.notaMedia)) ||
         right.totalAvaliacoes - left.totalAvaliacoes ||
@@ -108,7 +148,31 @@ export default function ClientSalonDiscovery({
         left.nome.localeCompare(right.nome)
       );
     });
-  }, [localSearch, saloes, selectedCity, sortMode]);
+  }, [localSearch, location, saloesWithDistance, selectedCity, sortMode]);
+
+  function requestLocation() {
+    setLocationError(null);
+    if (!navigator.geolocation) {
+      setLocationError("Seu navegador nao liberou localizacao.");
+      setShowMapPanel(true);
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setLocation({
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+        });
+        setShowMapPanel(true);
+      },
+      () => {
+        setLocationError("Nao conseguimos acessar sua localizacao agora.");
+        setShowMapPanel(true);
+      },
+      { enableHighAccuracy: true, timeout: 9000, maximumAge: 1000 * 60 * 5 }
+    );
+  }
 
   return (
     <div className="space-y-8">
@@ -151,7 +215,7 @@ export default function ClientSalonDiscovery({
       </section>
 
       <section className="px-4 md:px-6">
-        <div className="flex gap-3 overflow-x-auto pb-2">
+          <div className="flex gap-3 overflow-x-auto pb-2">
           <button className="inline-flex h-12 shrink-0 items-center gap-2 rounded-xl bg-zinc-100 px-4 text-sm font-bold text-zinc-950">
             <SlidersHorizontal size={18} />
             Filtros
@@ -167,6 +231,14 @@ export default function ClientSalonDiscovery({
             <option value="rating">Melhor avaliados</option>
             <option value="price">Menor preco</option>
           </select>
+          <button
+            type="button"
+            onClick={requestLocation}
+            className="inline-flex h-12 shrink-0 items-center gap-2 rounded-xl bg-zinc-100 px-4 text-sm font-bold text-zinc-950"
+          >
+            <LocateFixed size={18} />
+            Perto de mim
+          </button>
           {availableCities.map((city) => (
             <button
               key={city}
@@ -194,7 +266,11 @@ export default function ClientSalonDiscovery({
 
         <div className="mt-6 grid gap-7 md:grid-cols-2">
           {orderedSaloes.map((salao) => (
-            <ClientAppSalonCard key={salao.id} salao={salao} />
+            <ClientAppSalonCard
+              key={salao.id}
+              salao={salao}
+              distanceKm={salao.distanceKm}
+            />
           ))}
         </div>
 
@@ -210,14 +286,79 @@ export default function ClientSalonDiscovery({
         ) : null}
       </section>
 
-      {availableCities.length ? (
+      {saloes.some((salao) => salao.latitude !== null && salao.longitude !== null) ? (
         <button
           type="button"
+          onClick={location ? () => setShowMapPanel(true) : requestLocation}
           className="fixed bottom-24 right-4 z-30 inline-flex h-14 items-center gap-2 rounded-full bg-zinc-950 px-5 text-base font-black text-white shadow-2xl md:hidden"
         >
           <MapPin size={22} />
           Mapa
         </button>
+      ) : null}
+
+      {showMapPanel ? (
+        <div className="fixed inset-x-0 bottom-0 z-50 rounded-t-[2rem] border border-zinc-200 bg-white p-4 shadow-[0_-24px_60px_rgba(15,23,42,0.22)] md:left-auto md:right-6 md:max-w-md md:rounded-[2rem]">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h3 className="text-lg font-black text-zinc-950">
+                Saloes perto de voce
+              </h3>
+              <p className="mt-1 text-sm leading-6 text-zinc-500">
+                Usamos sua localizacao apenas para calcular distancia e abrir rota.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowMapPanel(false)}
+              className="flex h-10 w-10 items-center justify-center rounded-full bg-zinc-100 text-zinc-700"
+              aria-label="Fechar mapa"
+            >
+              <X size={18} />
+            </button>
+          </div>
+
+          {locationError ? (
+            <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-sm font-semibold text-amber-900">
+              {locationError}
+            </div>
+          ) : null}
+
+          <div className="mt-4 max-h-[46vh] space-y-3 overflow-y-auto pr-1">
+            {orderedSaloes
+              .filter((salao) => salao.latitude !== null && salao.longitude !== null)
+              .slice(0, 8)
+              .map((salao) => {
+                const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${salao.latitude},${salao.longitude}`;
+                return (
+                  <div
+                    key={salao.id}
+                    className="flex items-center justify-between gap-3 rounded-2xl border border-zinc-200 p-3"
+                  >
+                    <div className="min-w-0">
+                      <div className="truncate text-sm font-black text-zinc-950">
+                        {salao.nome}
+                      </div>
+                      <div className="mt-1 text-xs text-zinc-500">
+                        {salao.distanceKm !== null
+                          ? `${salao.distanceKm.toFixed(1)} km`
+                          : [salao.bairro, salao.cidade].filter(Boolean).join(" - ")}
+                      </div>
+                    </div>
+                    <a
+                      href={mapsUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex h-10 shrink-0 items-center gap-1 rounded-xl bg-zinc-950 px-3 text-xs font-black text-white"
+                    >
+                      <Navigation size={15} />
+                      Rota
+                    </a>
+                  </div>
+                );
+              })}
+          </div>
+        </div>
       ) : null}
     </div>
   );

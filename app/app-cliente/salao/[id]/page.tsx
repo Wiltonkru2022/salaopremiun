@@ -2,17 +2,19 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import {
   ArrowLeft,
-  Heart,
   MapPin,
   MessageCircle,
   Navigation,
   Phone,
-  Share2,
   Star,
 } from "lucide-react";
 import ClientAppFrame from "@/components/client-app/ClientAppFrame";
 import ClientBookingForm from "@/components/client-app/ClientBookingForm";
-import { getClientAppSalonDetail } from "@/lib/client-app/queries";
+import ClientSalonHeaderActions from "@/components/client-app/ClientSalonHeaderActions";
+import {
+  getClientAppSalonDetail,
+  isClienteAppSalonFavorite,
+} from "@/lib/client-app/queries";
 import { validateClienteAppSession } from "@/lib/client-context.server";
 import { buildSalaoPublicPath } from "@/lib/saloes/public-link";
 
@@ -96,6 +98,12 @@ export default async function ClienteSalonPage({
     const salao = await getClientAppSalonDetail(id);
     const session = await validateClienteAppSession();
     const hasSession = Boolean(session.context);
+    const isFavorite = session.context
+      ? await isClienteAppSalonFavorite({
+          idConta: session.context.idConta,
+          idSalao: salao.id,
+        })
+      : false;
     const notaMedia = salao.avaliacoes.length
       ? salao.avaliacoes.reduce((sum, item) => sum + item.nota, 0) /
         salao.avaliacoes.length
@@ -146,22 +154,13 @@ export default async function ClienteSalonPage({
                 >
                   <ArrowLeft size={24} />
                 </Link>
-                <div className="flex gap-3">
-                  <button
-                    type="button"
-                    className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/95 text-zinc-950 shadow-xl"
-                    aria-label="Compartilhar"
-                  >
-                    <Share2 size={22} />
-                  </button>
-                  <button
-                    type="button"
-                    className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/95 text-zinc-950 shadow-xl"
-                    aria-label="Favoritar"
-                  >
-                    <Heart size={23} />
-                  </button>
-                </div>
+                <ClientSalonHeaderActions
+                  idSalao={salao.id}
+                  salaoNome={salao.nome}
+                  publicPath={salaoPublicPath}
+                  initialFavorite={isFavorite}
+                  canFavorite={hasSession}
+                />
               </div>
             </div>
 

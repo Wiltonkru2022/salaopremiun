@@ -735,6 +735,7 @@ export async function getClienteAppBookingAvailability(params: {
   idServico: string;
   idProfissional: string;
   ignoreAgendamentoId?: string | null;
+  startDate?: string | null;
 }): Promise<ClienteAppAvailabilityResult> {
   const idSalao = String(params.idSalao || "").trim();
   const idServico = String(params.idServico || "").trim();
@@ -773,11 +774,23 @@ export async function getClienteAppBookingAvailability(params: {
 
       const { config, profissional, duracao } = bookingContext;
       const today = new Date();
-      const startDate = new Date(
+      const todayStart = new Date(
         today.getFullYear(),
         today.getMonth(),
         today.getDate()
       );
+      const requestedStart = params.startDate
+        ? new Date(`${String(params.startDate).slice(0, 10)}T12:00:00`)
+        : todayStart;
+      const safeRequestedStart = Number.isNaN(requestedStart.getTime())
+        ? todayStart
+        : new Date(
+            requestedStart.getFullYear(),
+            requestedStart.getMonth(),
+            requestedStart.getDate()
+          );
+      const startDate =
+        safeRequestedStart < todayStart ? todayStart : safeRequestedStart;
       const endDate = new Date(startDate);
       endDate.setDate(endDate.getDate() + CLIENT_BOOKING_LOOKAHEAD_DAYS - 1);
 

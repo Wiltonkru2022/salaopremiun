@@ -4,6 +4,7 @@ import {
   CreditCard,
   HelpCircle,
   LogOut,
+  Bell,
   Settings,
   Star,
   UserRound,
@@ -116,6 +117,11 @@ export default async function ClientePerfilPage({
             icon={UserRound}
           />
           <ProfileRow
+            href="/app-cliente/favoritos"
+            label="Saloes favoritos"
+            icon={Star}
+          />
+          <ProfileRow
             href="/app-cliente/perfil/avaliacoes"
             label="Avaliacoes"
             icon={Star}
@@ -129,6 +135,11 @@ export default async function ClientePerfilPage({
             href="/app-cliente/perfil/configuracoes"
             label="Configuracoes"
             icon={Settings}
+          />
+          <ProfileRow
+            href="/app-cliente/notificacoes"
+            label="Notificacoes"
+            icon={Bell}
           />
           <ProfileRow
             href="https://wa.me/5567984341742"

@@ -66,6 +66,11 @@ export default function ClientAppSalonCard({
               })}
             </div>
           ) : null}
+          <div className="pt-1">
+            <span className="inline-flex h-11 items-center justify-center rounded-xl bg-zinc-950 px-5 text-sm font-black text-white">
+              Reservar
+            </span>
+          </div>
         </div>
       </ClientAppPendingLink>
     </article>

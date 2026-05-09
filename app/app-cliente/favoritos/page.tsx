@@ -1,0 +1,58 @@
+import Link from "next/link";
+import { ArrowLeft, Heart } from "lucide-react";
+import ClientAppFrame from "@/components/client-app/ClientAppFrame";
+import ClientAppSalonCard from "@/components/client-app/ClientAppSalonCard";
+import { listClienteAppFavoriteSaloes } from "@/lib/client-app/queries";
+import { requireClienteAppContext } from "@/lib/client-context.server";
+
+export default async function ClienteFavoritesPage() {
+  const session = await requireClienteAppContext();
+  const saloes = await listClienteAppFavoriteSaloes({ idConta: session.idConta });
+
+  return (
+    <ClientAppFrame title="Favoritos" subtitle="Saloes que voce salvou.">
+      <section className="mx-auto max-w-4xl px-4 py-4 md:px-6">
+        <Link
+          href="/app-cliente/perfil"
+          className="mb-6 inline-flex h-12 w-12 items-center justify-center rounded-full bg-white text-zinc-950 shadow-sm"
+          aria-label="Voltar"
+        >
+          <ArrowLeft size={24} />
+        </Link>
+
+        <h1 className="text-3xl font-black tracking-[-0.04em] text-zinc-950">
+          Saloes favoritos
+        </h1>
+        <p className="mt-2 text-base leading-7 text-zinc-500">
+          Salve os saloes que voce mais gosta e volte para agendar rapido.
+        </p>
+
+        {saloes.length ? (
+          <div className="mt-7 grid gap-7 md:grid-cols-2">
+            {saloes.map((salao) => (
+              <ClientAppSalonCard key={salao.id} salao={salao} />
+            ))}
+          </div>
+        ) : (
+          <div className="mt-16 flex flex-col items-center text-center">
+            <div className="mb-6 flex h-28 w-28 items-center justify-center rounded-[2rem] border border-zinc-200 bg-zinc-50 text-zinc-300">
+              <Heart size={54} />
+            </div>
+            <h2 className="text-2xl font-black text-zinc-800">
+              Nenhum favorito ainda
+            </h2>
+            <p className="mt-3 max-w-md text-base leading-7 text-zinc-500">
+              Abra a pagina de um salao e toque no coracao para salvar.
+            </p>
+            <Link
+              href="/app-cliente/inicio"
+              className="mt-8 inline-flex h-14 items-center justify-center rounded-2xl bg-zinc-950 px-8 text-base font-black text-white"
+            >
+              Explorar saloes
+            </Link>
+          </div>
+        )}
+      </section>
+    </ClientAppFrame>
+  );
+}

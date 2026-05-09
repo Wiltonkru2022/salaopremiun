@@ -51,21 +51,28 @@ function formatCurrency(value: number | null | undefined) {
   }).format(value);
 }
 
-function formatMonthLabel(dateValue: string) {
-  const base = dateValue ? new Date(`${dateValue}T12:00:00`) : new Date();
+function formatDateInput(date: Date) {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate())
+    .toISOString()
+    .slice(0, 10);
+}
+
+function addMonths(date: Date, amount: number) {
+  return new Date(date.getFullYear(), date.getMonth() + amount, 1);
+}
+
+function formatMonthLabel(date: Date) {
+  const base = new Date(date.getFullYear(), date.getMonth(), 1);
   return new Intl.DateTimeFormat("pt-BR", {
     month: "long",
     year: "numeric",
   }).format(base);
 }
 
-function buildCalendarDays(diasDisponiveis: AvailabilityDay[]) {
+function buildCalendarDays(diasDisponiveis: AvailabilityDay[], monthCursor: Date) {
   const availableDates = new Set(diasDisponiveis.map((dia) => dia.data));
-  const firstDate = diasDisponiveis[0]?.data
-    ? new Date(`${diasDisponiveis[0].data}T12:00:00`)
-    : new Date();
-  const year = firstDate.getFullYear();
-  const month = firstDate.getMonth();
+  const year = monthCursor.getFullYear();
+  const month = monthCursor.getMonth();
   const firstDay = new Date(year, month, 1);
   const lastDay = new Date(year, month + 1, 0);
   const cells: Array<{
@@ -184,6 +191,10 @@ export default function ClientBookingForm({
   const [diasDisponiveis, setDiasDisponiveis] = useState<AvailabilityDay[]>([]);
   const [selectedDate, setSelectedDate] = useState("");
   const [selectedTime, setSelectedTime] = useState("");
+  const [monthCursor, setMonthCursor] = useState(() => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), 1);
+  });
   const [loadingAvailability, setLoadingAvailability] = useState(false);
   const [availabilityError, setAvailabilityError] = useState<string | null>(null);
 
@@ -233,10 +244,15 @@ export default function ClientBookingForm({
     [diasDisponiveis, selectedDate]
   );
   const calendarDays = useMemo(
-    () => buildCalendarDays(diasDisponiveis),
-    [diasDisponiveis]
+    () => buildCalendarDays(diasDisponiveis, monthCursor),
+    [diasDisponiveis, monthCursor]
   );
-  const monthLabel = formatMonthLabel(selectedDate || diasDisponiveis[0]?.data || "");
+  const monthLabel = formatMonthLabel(monthCursor);
+  const minMonth = useMemo(() => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), 1);
+  }, []);
+  const canGoPreviousMonth = monthCursor > minMonth;
   const selectedDayLabel = selectedDate
     ? new Intl.DateTimeFormat("pt-BR", {
         weekday: "short",
@@ -276,6 +292,7 @@ export default function ClientBookingForm({
       salao: idSalao,
       servico: servicoId,
       profissional: profissionalId,
+      inicio: formatDateInput(monthCursor),
     });
 
     setLoadingAvailability(true);
@@ -316,7 +333,7 @@ export default function ClientBookingForm({
       });
 
     return () => controller.abort();
-  }, [idSalao, profissionalId, servicoId]);
+  }, [idSalao, monthCursor, profissionalId, servicoId]);
 
   useEffect(() => {
     if (!horariosDoDiaSelecionado.some((item) => item.horaInicio === selectedTime)) {
@@ -332,6 +349,8 @@ export default function ClientBookingForm({
 
   function selectServico(id: string) {
     setServicoId(id);
+    const now = new Date();
+    setMonthCursor(new Date(now.getFullYear(), now.getMonth(), 1));
     setStep("horario");
   }
 
@@ -630,6 +649,10 @@ export default function ClientBookingForm({
                 <div className="flex gap-2">
                   <button
                     type="button"
+                    disabled={!canGoPreviousMonth}
+                    onClick={() =>
+                      setMonthCursor((current) => addMonths(current, -1))
+                    }
                     className="flex h-11 w-11 items-center justify-center rounded-xl border border-zinc-200 bg-white text-zinc-700"
                     aria-label="Mes anterior"
                   >
@@ -637,6 +660,9 @@ export default function ClientBookingForm({
                   </button>
                   <button
                     type="button"
+                    onClick={() =>
+                      setMonthCursor((current) => addMonths(current, 1))
+                    }
                     className="flex h-11 w-11 items-center justify-center rounded-xl border border-zinc-200 bg-white text-zinc-700"
                     aria-label="Proximo mes"
                   >

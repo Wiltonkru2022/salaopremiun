@@ -4,6 +4,7 @@ import {
   assertSalonCanAppearInClientApp,
   type ClientAppEligibleSalon,
 } from "@/lib/client-app/eligibility";
+import { captureSystemError } from "@/lib/monitoring/server";
 
 export type ClientAppSalonListItem = ClientAppEligibleSalon & {
   notaMedia: number | null;
@@ -97,6 +98,38 @@ export type ClientAppProfileData = {
     salaoNome: string;
     credito: number;
   }>;
+};
+
+export type ClientAppReceiptListItem = {
+  id: string;
+  numero: number | null;
+  salaoNome: string;
+  total: number;
+  data: string | null;
+  status: string;
+  formasPagamento: string | null;
+  itens: string | null;
+};
+
+export type ClientAppWrittenReviewListItem = {
+  id: string;
+  salaoNome: string;
+  servicoNome: string;
+  profissionalNome: string;
+  nota: number;
+  comentario: string | null;
+  createdAt: string;
+};
+
+export type ClientAppNotificationListItem = {
+  id: string;
+  titulo: string;
+  mensagem: string;
+  tipo: string;
+  status: string;
+  url: string | null;
+  enviarEm: string | null;
+  createdAt: string | null;
 };
 
 function normalizeSearch(value?: string) {
@@ -335,6 +368,11 @@ async function listVisibleClientAppSaloesLive(search: string, limit: number) {
     const { data, error } = await query;
 
     if (error || !data) {
+      if (error) {
+        await logClientAppQueryError("cliente_app_discovery_live", error, {
+          search: term,
+        });
+      }
       return [] as ClientAppSalonListItem[];
     }
 
@@ -343,6 +381,23 @@ async function listVisibleClientAppSaloesLive(search: string, limit: number) {
     );
 
     return attachMarketplaceMetrics(supabaseAdmin, saloes);
+}
+
+async function logClientAppQueryError(
+  action: string,
+  error: unknown,
+  details?: Record<string, unknown>
+) {
+  await captureSystemError({
+    module: "client_app",
+    action,
+    surface: "public",
+    origin: "server",
+    severity: "warning",
+    error,
+    fallbackMessage: `Falha silenciosa no App Cliente: ${action}`,
+    details,
+  });
 }
 
 export async function listVisibleClientAppSaloes(params?: {
@@ -662,7 +717,10 @@ export async function listClienteAppAppointments(params: {
         avaliado,
       } satisfies ClientAppAppointmentListItem;
     });
-  } catch {
+  } catch (error) {
+    await logClientAppQueryError("cliente_app_appointments", error, {
+      idConta: params.idConta,
+    });
     return [];
   }
 }
@@ -679,6 +737,228 @@ export async function getClienteAppAppointmentForReview(params: {
   );
 
   return item ? ({ ...item, clienteNome: null } satisfies ClientAppAppointmentReviewDetail) : null;
+}
+
+async function listClienteAppLinkedClientIds(idConta: string) {
+  const supabaseAdmin = getSupabaseAdmin();
+  const { data, error } = await supabaseAdmin
+    .from("clientes_auth")
+    .select("id_cliente, id_salao, saloes(nome, nome_fantasia)")
+    .eq("app_conta_id", idConta)
+    .eq("app_ativo", true)
+    .limit(80);
+
+  if (error) throw error;
+
+  const salaoByCliente = new Map<string, string>();
+  const clientesIds = ((data || []) as Array<Record<string, unknown>>)
+    .map((item) => {
+      const idCliente = String(item.id_cliente || "").trim();
+      const salao = item.saloes as
+        | { nome?: string | null; nome_fantasia?: string | null }
+        | null;
+      if (idCliente) {
+        salaoByCliente.set(
+          idCliente,
+          String(salao?.nome_fantasia || "").trim() ||
+            String(salao?.nome || "").trim() ||
+            "Salao Premium"
+        );
+      }
+      return idCliente;
+    })
+    .filter(Boolean);
+
+  return {
+    clientesIds: Array.from(new Set(clientesIds)),
+    salaoByCliente,
+  };
+}
+
+export async function isClienteAppSalonFavorite(params: {
+  idConta: string;
+  idSalao: string;
+}) {
+  try {
+    const supabaseAdmin = getSupabaseAdmin();
+    const { data, error } = await (supabaseAdmin as any)
+      .from("clientes_app_favoritos")
+      .select("id")
+      .eq("cliente_app_conta_id", params.idConta)
+      .eq("id_salao", params.idSalao)
+      .limit(1)
+      .maybeSingle();
+
+    if (error) throw error;
+    return Boolean(data?.id);
+  } catch (error) {
+    await logClientAppQueryError("cliente_app_favorite_lookup", error, {
+      idSalao: params.idSalao,
+    });
+    return false;
+  }
+}
+
+export async function listClienteAppFavoriteSaloes(params: { idConta: string }) {
+  try {
+    const supabaseAdmin = getSupabaseAdmin();
+    const { data, error } = await (supabaseAdmin as any)
+      .from("clientes_app_favoritos")
+      .select(
+        [
+          "id_salao",
+          "saloes(id, nome, nome_fantasia, cidade, estado, bairro, endereco, numero, cep, logo_url, telefone, whatsapp, descricao_publica, foto_capa_url, latitude, longitude, estacionamento, formas_pagamento_publico, status, app_cliente_publicado, app_cliente_pausado, app_cliente_pausa_mensagem, app_cliente_slug)",
+        ].join(",")
+      )
+      .eq("cliente_app_conta_id", params.idConta)
+      .order("created_at", { ascending: false })
+      .limit(40);
+
+    if (error) throw error;
+
+    const rows = ((data || []) as Array<Record<string, unknown>>)
+      .map((item) => item.saloes as Record<string, unknown> | null)
+      .filter((item): item is Record<string, unknown> =>
+        Boolean(item?.id && item?.app_cliente_publicado && !item?.app_cliente_pausado)
+      )
+      .map(mapLiveSalonRow);
+
+    return attachMarketplaceMetrics(supabaseAdmin, rows);
+  } catch (error) {
+    await logClientAppQueryError("cliente_app_favorite_saloes", error);
+    return [] as ClientAppSalonListItem[];
+  }
+}
+
+export async function listClienteAppReceipts(params: { idConta: string }) {
+  try {
+    const supabaseAdmin = getSupabaseAdmin();
+    const { clientesIds, salaoByCliente } = await listClienteAppLinkedClientIds(
+      params.idConta
+    );
+
+    if (!clientesIds.length) return [] as ClientAppReceiptListItem[];
+
+    const { data, error } = await (supabaseAdmin as any)
+      .from("comandas")
+      .select(
+        "id, numero, status, total, fechada_em, cancelada_em, formas_pagamento, itens_descricoes, id_cliente, saloes(nome, nome_fantasia)"
+      )
+      .in("id_cliente", clientesIds)
+      .in("status", ["fechada", "cancelada"])
+      .order("fechada_em", { ascending: false, nullsFirst: false })
+      .limit(30);
+
+    if (error) throw error;
+
+    return ((data || []) as Array<Record<string, unknown>>).map((item) => {
+      const salao = item.saloes as
+        | { nome?: string | null; nome_fantasia?: string | null }
+        | null;
+      const idCliente = String(item.id_cliente || "");
+      return {
+        id: String(item.id || ""),
+        numero: Number(item.numero || 0) || null,
+        salaoNome:
+          String(salao?.nome_fantasia || "").trim() ||
+          String(salao?.nome || "").trim() ||
+          salaoByCliente.get(idCliente) ||
+          "Salao Premium",
+        total: Number(item.total || 0),
+        data:
+          String(item.fechada_em || "").trim() ||
+          String(item.cancelada_em || "").trim() ||
+          null,
+        status: String(item.status || ""),
+        formasPagamento: String(item.formas_pagamento || "").trim() || null,
+        itens: String(item.itens_descricoes || "").trim() || null,
+      } satisfies ClientAppReceiptListItem;
+    });
+  } catch (error) {
+    await logClientAppQueryError("cliente_app_receipts", error);
+    return [] as ClientAppReceiptListItem[];
+  }
+}
+
+export async function listClienteAppWrittenReviews(params: { idConta: string }) {
+  try {
+    const { clientesIds, salaoByCliente } = await listClienteAppLinkedClientIds(
+      params.idConta
+    );
+    if (!clientesIds.length) return [] as ClientAppWrittenReviewListItem[];
+
+    const supabaseAdmin = getSupabaseAdmin();
+    const { data, error } = await (supabaseAdmin as any)
+      .from("clientes_avaliacoes")
+      .select(
+        "id, id_cliente, nota, comentario, created_at, saloes(nome, nome_fantasia), servicos(nome), profissionais(nome, nome_exibicao)"
+      )
+      .in("id_cliente", clientesIds)
+      .order("created_at", { ascending: false })
+      .limit(30);
+
+    if (error) throw error;
+
+    return ((data || []) as Array<Record<string, unknown>>).map((item) => {
+      const idCliente = String(item.id_cliente || "");
+      const salao = item.saloes as
+        | { nome?: string | null; nome_fantasia?: string | null }
+        | null;
+      const servico = item.servicos as { nome?: string | null } | null;
+      const profissional = item.profissionais as
+        | { nome?: string | null; nome_exibicao?: string | null }
+        | null;
+
+      return {
+        id: String(item.id || ""),
+        salaoNome:
+          String(salao?.nome_fantasia || "").trim() ||
+          String(salao?.nome || "").trim() ||
+          salaoByCliente.get(idCliente) ||
+          "Salao Premium",
+        servicoNome: String(servico?.nome || "").trim() || "Atendimento",
+        profissionalNome:
+          String(profissional?.nome_exibicao || "").trim() ||
+          String(profissional?.nome || "").trim() ||
+          "Profissional",
+        nota: Number(item.nota || 0),
+        comentario: String(item.comentario || "").trim() || null,
+        createdAt: String(item.created_at || ""),
+      } satisfies ClientAppWrittenReviewListItem;
+    });
+  } catch (error) {
+    await logClientAppQueryError("cliente_app_written_reviews", error);
+    return [] as ClientAppWrittenReviewListItem[];
+  }
+}
+
+export async function listClienteAppNotifications(params: { idConta: string }) {
+  try {
+    const supabaseAdmin = getSupabaseAdmin();
+    const { data, error } = await (supabaseAdmin as any)
+      .from("notification_jobs")
+      .select("id, tipo, titulo, mensagem, status, url, enviar_em, created_at")
+      .eq("cliente_app_conta_id", params.idConta)
+      .eq("canal", "cliente_app")
+      .order("created_at", { ascending: false })
+      .limit(50);
+
+    if (error) throw error;
+
+    return ((data || []) as Array<Record<string, unknown>>).map((item) => ({
+      id: String(item.id || ""),
+      titulo: String(item.titulo || "").trim() || "Notificacao",
+      mensagem: String(item.mensagem || "").trim() || "",
+      tipo: String(item.tipo || "").trim(),
+      status: String(item.status || "").trim(),
+      url: String(item.url || "").trim() || null,
+      enviarEm: String(item.enviar_em || "").trim() || null,
+      createdAt: String(item.created_at || "").trim() || null,
+    })) satisfies ClientAppNotificationListItem[];
+  } catch (error) {
+    await logClientAppQueryError("cliente_app_notifications", error);
+    return [] as ClientAppNotificationListItem[];
+  }
 }
 
 export async function getClienteAppProfileData(params: { idConta: string }) {
@@ -725,7 +1005,10 @@ export async function getClienteAppProfileData(params: { idConta: string }) {
       preferenciasGerais: String(conta?.preferencias_gerais || "").trim() || null,
       creditos,
     } satisfies ClientAppProfileData;
-  } catch {
+  } catch (error) {
+    await logClientAppQueryError("cliente_app_profile_data", error, {
+      idConta: params.idConta,
+    });
     return {
       nome: "",
       email: "",
