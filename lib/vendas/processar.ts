@@ -151,6 +151,22 @@ export async function reabrirVenda(params: {
   idUsuario: string;
 }) {
   const { supabaseAdmin, idSalao, idComanda, motivo, idUsuario } = params;
+  const { data: configuracao, error: configuracaoError } = await supabaseAdmin
+    .from("configuracoes_salao")
+    .select("permitir_reabrir_venda")
+    .eq("id_salao", idSalao)
+    .maybeSingle();
+
+  if (configuracaoError) {
+    throw configuracaoError;
+  }
+
+  if (configuracao?.permitir_reabrir_venda === false) {
+    throw new Error(
+      "Reabertura de venda desativada em Caixa e taxas. Ative a opção para mandar venda fechada novamente para o caixa."
+    );
+  }
+
   return executarMutacaoComandaComEstoque({
     supabaseAdmin,
     idSalao,

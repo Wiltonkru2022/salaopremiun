@@ -38,13 +38,21 @@ export function formatDateInput(date: Date) {
 
 export function getStatusBadgeClass(status: string) {
   if (status === "fechada") {
-    return "bg-emerald-100 text-emerald-700 border border-emerald-200";
+    return "border border-emerald-200 bg-emerald-50 text-emerald-700";
   }
   if (status === "cancelada") {
-    return "bg-rose-100 text-rose-700 border border-rose-200";
+    return "border border-rose-200 bg-rose-50 text-rose-700";
   }
   if (status === "aguardando_pagamento") {
-    return "bg-amber-100 text-amber-700 border border-amber-200";
+    return "border border-amber-200 bg-amber-50 text-amber-700";
   }
   return "bg-zinc-100 text-zinc-700 border border-zinc-200";
+}
+
+export function getStatusLabel(status: string) {
+  const normalized = String(status || "").toLowerCase();
+  if (normalized === "fechada") return "Fechada";
+  if (normalized === "cancelada") return "Cancelada";
+  if (normalized === "aguardando_pagamento") return "No caixa";
+  return status || "-";
 }

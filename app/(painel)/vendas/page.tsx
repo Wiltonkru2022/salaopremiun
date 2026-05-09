@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import AppLoading from "@/components/ui/AppLoading";
 import PaginationControls from "@/components/ui/PaginationControls";
 import { usePainelSession } from "@/components/layout/PainelSessionProvider";
@@ -34,6 +34,7 @@ import {
   formatDateTime,
   getJoinedName,
   getStatusBadgeClass,
+  getStatusLabel,
 } from "@/components/vendas/utils";
 import { KpiCard, ResumoRow } from "@/components/vendas/ui";
 import { groupComboTotals, parseComboDisplayMeta } from "@/lib/combo/display";
@@ -83,6 +84,7 @@ export default function VendasPage() {
 
   const [permissoes, setPermissoes] = useState<Record<string, boolean> | null>(null);
   const [acessoCarregado, setAcessoCarregado] = useState(false);
+  const [permitirReabrirVenda, setPermitirReabrirVenda] = useState(true);
 
   const [salaoInfo, setSalaoInfo] = useState<SalaoInfo | null>(null);
   const [vendas, setVendas] = useState<ComandaVenda[]>([]);
@@ -133,7 +135,7 @@ export default function VendasPage() {
         : [],
     [detalheVenda]
   );
-  const podeReabrirVenda = Boolean(permissoes?.vendas_reabrir);
+  const podeReabrirVenda = Boolean(permissoes?.vendas_reabrir) && permitirReabrirVenda;
   const podeExcluirVenda = Boolean(permissoes?.vendas_excluir);
 
   useEffect(() => {
@@ -211,6 +213,18 @@ export default function VendasPage() {
         console.error(salaoError);
       } else {
         setSalaoInfo((salaoData as SalaoInfo) || null);
+      }
+
+      const { data: configData, error: configError } = await supabase
+        .from("configuracoes_salao")
+        .select("permitir_reabrir_venda")
+        .eq("id_salao", painelSession.idSalao)
+        .maybeSingle();
+
+      if (configError) {
+        console.error(configError);
+      } else {
+        setPermitirReabrirVenda(configData?.permitir_reabrir_venda !== false);
       }
 
       const { data: clientesData, error: clientesError } = await supabase
@@ -925,7 +939,7 @@ export default function VendasPage() {
 
   return (
     <>
-      <div className="bg-white">
+      <div className="bg-zinc-50">
         <div className="mx-auto max-w-[1700px] space-y-4">
           <div className="rounded-[24px] border border-zinc-200 bg-white p-4 text-zinc-950 shadow-sm">
             <div className="flex flex-wrap items-center justify-between gap-4">
@@ -1136,18 +1150,25 @@ export default function VendasPage() {
             </div>
           </div>
 
-          <div className="rounded-[24px] border border-zinc-200 bg-white shadow-sm">
-            <div className="border-b border-zinc-200 px-4 py-3.5">
+          <div className="overflow-hidden rounded-[24px] border border-zinc-200 bg-white shadow-sm">
+            <div className="flex flex-col gap-3 border-b border-zinc-200 px-4 py-3.5 md:flex-row md:items-center md:justify-between">
+              <div>
               <div className="text-lg font-bold text-zinc-900">Lista de vendas</div>
               <div className="mt-1 text-sm text-zinc-500">
                 Consulte, imprima, reabra ou exclua vendas com segurança.
               </div>
+              </div>
+              {!permitirReabrirVenda ? (
+                <div className="rounded-2xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">
+                  Reabertura desativada em Caixa e taxas
+                </div>
+              ) : null}
             </div>
 
             <div className="overflow-x-auto">
-              <table className="min-w-full">
+              <table className="min-w-[1120px]">
                 <thead>
-                  <tr className="border-b border-zinc-100 text-left text-xs uppercase tracking-wider text-zinc-500">
+                  <tr className="border-b border-zinc-100 bg-zinc-50/80 text-left text-[11px] uppercase tracking-[0.16em] text-zinc-500">
                     <th className="px-4 py-3">Comanda</th>
                     <th className="px-4 py-3">Cliente</th>
                     <th className="px-4 py-3">Status</th>
@@ -1163,7 +1184,7 @@ export default function VendasPage() {
                     const rowBusca = vendasBusca.find((row) => row.id === item.id);
 
                     return (
-                      <tr key={item.id} className="border-b border-zinc-100 last:border-b-0">
+                      <tr key={item.id} className="border-b border-zinc-100 align-top transition hover:bg-zinc-50/70 last:border-b-0">
                         <td className="px-4 py-3.5">
                           <div className="font-semibold text-zinc-900">#{item.numero}</div>
                           <div className="text-xs text-zinc-500">
@@ -1171,13 +1192,15 @@ export default function VendasPage() {
                           </div>
                         </td>
 
-                        <td className="px-4 py-3.5 text-sm text-zinc-700">
-                          {getJoinedName(item.clientes, "Sem cliente")}
+                        <td className="max-w-[210px] px-4 py-3.5 text-sm font-medium text-zinc-800">
+                          <div className="line-clamp-2">
+                            {getJoinedName(item.clientes, "Sem cliente")}
+                          </div>
                         </td>
 
                         <td className="px-4 py-3.5">
-                          <span className={`rounded-full px-3 py-1 text-xs font-semibold uppercase ${getStatusBadgeClass(item.status)}`}>
-                            {item.status}
+                          <span className={`inline-flex max-w-[9.5rem] items-center rounded-full px-3 py-1 text-[11px] font-black uppercase tracking-[0.12em] ${getStatusBadgeClass(item.status)}`}>
+                            <span className="truncate">{getStatusLabel(item.status)}</span>
                           </span>
                         </td>
 
@@ -1189,54 +1212,48 @@ export default function VendasPage() {
                           {formatCurrency(item.total)}
                         </td>
 
-                        <td className="px-4 py-3.5 text-sm text-zinc-700">
-                          {rowBusca?.profissionais_nomes || "-"}
+                        <td className="max-w-[210px] px-4 py-3.5 text-sm text-zinc-700">
+                          <div className="line-clamp-2 break-words">
+                            {(rowBusca?.profissionais_nomes || "-").replaceAll("|", ", ")}
+                          </div>
                         </td>
 
-                        <td className="px-4 py-3.5 text-sm text-zinc-700">
-                          {rowBusca?.formas_pagamento || "-"}
+                        <td className="max-w-[190px] px-4 py-3.5 text-sm text-zinc-700">
+                          <div className="line-clamp-2 break-words">
+                            {(rowBusca?.formas_pagamento || "-").replaceAll("|", ", ")}
+                          </div>
                         </td>
 
                         <td className="px-4 py-3.5">
-                          <div className="flex items-center justify-end gap-2">
-                            <button
-                              type="button"
+                          <div className="flex min-w-[330px] flex-wrap items-center justify-end gap-2">
+                            <VendaActionButton
+                              icon={<Eye size={15} />}
+                              label="Detalhes"
                               onClick={() => abrirDetalhes(item)}
-                              className="rounded-xl border border-zinc-200 bg-white p-2 text-zinc-700 transition hover:bg-zinc-100"
-                              title="Ver detalhes"
-                            >
-                              <Eye size={16} />
-                            </button>
+                            />
 
-                            <button
-                              type="button"
+                            <VendaActionButton
+                              icon={<Printer size={15} />}
+                              label="Cupom"
                               onClick={() => imprimirCupomCompleto(item)}
-                              className="rounded-xl border border-zinc-200 bg-white p-2 text-zinc-700 transition hover:bg-zinc-100"
-                              title="Imprimir cupom"
-                            >
-                              <Printer size={16} />
-                            </button>
+                            />
 
                             {item.status === "fechada" && podeReabrirVenda ? (
-                              <button
-                                type="button"
+                              <VendaActionButton
+                                icon={<RotateCcw size={15} />}
+                                label="Caixa"
                                 onClick={() => abrirModalReabrir(item)}
-                                className="rounded-xl border border-amber-200 bg-amber-50 p-2 text-amber-700 transition hover:bg-amber-100"
-                                title="Mandar para o caixa"
-                              >
-                                <RotateCcw size={16} />
-                              </button>
+                                tone="amber"
+                              />
                             ) : null}
 
                             {podeExcluirVenda ? (
-                              <button
-                                type="button"
+                              <VendaActionButton
+                                icon={<Trash2 size={15} />}
+                                label="Excluir"
                                 onClick={() => abrirModalExcluir(item)}
-                                className="rounded-xl border border-rose-200 bg-rose-50 p-2 text-rose-600 transition hover:bg-rose-100"
-                                title="Excluir venda"
-                              >
-                                <Trash2 size={16} />
-                              </button>
+                                tone="rose"
+                              />
                             ) : null}
                           </div>
                         </td>
@@ -1269,13 +1286,16 @@ export default function VendasPage() {
 
       {detalheOpen && detalheVenda ? (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-          <div className="flex h-[92vh] w-full max-w-6xl flex-col overflow-hidden rounded-[28px] border border-zinc-200 bg-white shadow-2xl">
-            <div className="flex items-center justify-between border-b border-zinc-200 bg-white px-5 py-4">
-              <div>
-                <h2 className="text-[1.6rem] font-bold text-zinc-900">
+          <div className="flex h-[min(92vh,820px)] w-full max-w-[1180px] flex-col overflow-hidden rounded-[24px] border border-zinc-200 bg-white shadow-2xl">
+            <div className="flex items-start justify-between gap-4 border-b border-zinc-200 bg-white px-5 py-4">
+              <div className="min-w-0">
+                <div className="mb-2 inline-flex rounded-full border border-zinc-200 bg-zinc-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-zinc-500">
+                  Detalhes da venda
+                </div>
+                <h2 className="truncate text-[1.35rem] font-black tracking-[-0.03em] text-zinc-900">
                   Detalhes da venda #{detalheVenda.comanda?.numero}
                 </h2>
-                <p className="mt-1 text-sm text-zinc-500">
+                <p className="mt-1 line-clamp-1 text-sm text-zinc-500">
                   Cliente: {getJoinedName(detalheVenda.comanda?.clientes, "Sem cliente")}
                 </p>
               </div>
@@ -1286,16 +1306,16 @@ export default function VendasPage() {
                   setDetalheOpen(false);
                   setDetalheVenda(null);
                 }}
-                className="rounded-xl border border-zinc-200 bg-white p-2 text-zinc-700 transition hover:bg-zinc-100"
+                className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-zinc-200 bg-white text-zinc-700 transition hover:bg-zinc-100"
               >
                 <X size={18} />
               </button>
             </div>
 
             <div className="min-h-0 flex-1 overflow-hidden">
-              <div className="grid h-full min-h-0 grid-cols-1 2xl:grid-cols-[minmax(0,1fr)_340px]">
-                <div className="min-h-0 overflow-y-auto p-6 agenda-scroll">
-                  <div className="space-y-4">
+              <div className="grid h-full min-h-0 grid-cols-1 xl:grid-cols-[minmax(0,1fr)_330px]">
+                <div className="min-h-0 overflow-y-auto p-4 agenda-scroll md:p-5">
+                  <div className="space-y-3.5">
                     <div className="rounded-[20px] border border-zinc-200 bg-white">
                       <div className="border-b border-zinc-200 px-4 py-3.5">
                         <div className="flex items-center gap-2 text-lg font-bold text-zinc-900">
@@ -1435,8 +1455,8 @@ export default function VendasPage() {
                   </div>
                 </div>
 
-                <div className="min-h-0 overflow-y-auto border-t border-zinc-200 bg-zinc-50 p-6 agenda-scroll xl:border-l xl:border-t-0">
-                  <div className="space-y-5">
+                <div className="min-h-0 overflow-y-auto border-t border-zinc-200 bg-zinc-50 p-4 agenda-scroll xl:border-l xl:border-t-0">
+                  <div className="space-y-4">
                     <div className="rounded-[20px] border border-zinc-200 bg-white p-4 shadow-sm">
                       <div className="mb-3.5 text-lg font-bold text-zinc-900">Resumo</div>
 
@@ -1451,7 +1471,7 @@ export default function VendasPage() {
                         />
                         <ResumoRow
                           label="Status"
-                          value={detalheVenda.comanda?.status || "-"}
+                          value={getStatusLabel(detalheVenda.comanda?.status || "")}
                         />
                         <ResumoRow
                           label="Abertura"
@@ -1635,6 +1655,36 @@ export default function VendasPage() {
         </div>
       ) : null}
     </>
+  );
+}
+
+function VendaActionButton({
+  icon,
+  label,
+  onClick,
+  tone = "neutral",
+}: {
+  icon: ReactNode;
+  label: string;
+  onClick: () => void;
+  tone?: "neutral" | "amber" | "rose";
+}) {
+  const className =
+    tone === "amber"
+      ? "border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100"
+      : tone === "rose"
+        ? "border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100"
+        : "border-zinc-200 bg-white text-zinc-800 hover:bg-zinc-100";
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`inline-flex h-9 items-center justify-center gap-1.5 rounded-xl border px-3 text-xs font-black transition ${className}`}
+    >
+      {icon}
+      <span>{label}</span>
+    </button>
   );
 }
 
