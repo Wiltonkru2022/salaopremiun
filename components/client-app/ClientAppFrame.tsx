@@ -17,7 +17,7 @@ export default function ClientAppFrame({
   return (
     <div className="min-h-dvh overflow-x-hidden bg-white text-zinc-950">
       <div className="relative mx-auto flex min-h-dvh max-w-6xl flex-col pb-24 md:pb-4">
-        <header className="mx-4 mt-4 flex items-center justify-between gap-2 rounded-[1.5rem] border border-zinc-100 bg-white px-3 py-3 shadow-[0_12px_30px_rgba(15,23,42,0.06)] sm:gap-3 sm:px-4 md:mx-6">
+        <header className="sticky top-0 z-50 flex items-center justify-between gap-2 border-b border-zinc-100 bg-white/95 px-3 py-3 shadow-[0_12px_30px_rgba(15,23,42,0.06)] backdrop-blur-xl sm:gap-3 sm:px-4 md:top-3 md:mx-6 md:rounded-[1.5rem] md:border">
           <div className="min-w-0 flex-1">
             <div className="inline-flex max-w-full items-center gap-1.5 truncate rounded-full bg-amber-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.12em] text-amber-800 sm:tracking-[0.14em]">
               <Sparkles size={12} />

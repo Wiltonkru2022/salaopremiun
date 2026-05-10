@@ -4,6 +4,10 @@ import ClientAppFrame from "@/components/client-app/ClientAppFrame";
 import { listClienteAppNotifications } from "@/lib/client-app/queries";
 import { requireClienteAppContext } from "@/lib/client-context.server";
 
+export const metadata = {
+  title: "Notificacoes | SalaoPremium",
+};
+
 function formatDate(value: string | null) {
   if (!value) return "";
   return new Intl.DateTimeFormat("pt-BR", {

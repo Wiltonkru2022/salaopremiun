@@ -197,7 +197,7 @@ export default async function ClienteSalonPage({
             </div>
           </section>
 
-          <nav className="sticky top-0 z-20 border-b border-zinc-200 bg-white/95 px-4 backdrop-blur md:px-6">
+          <nav className="sticky top-[88px] z-20 border-b border-zinc-200 bg-white/95 px-4 backdrop-blur md:top-[108px] md:px-6">
             <div className="mx-auto flex max-w-6xl gap-8 overflow-x-auto text-sm font-black uppercase tracking-[0.08em] text-zinc-500">
               {[
                 ["Servicos", "servicos"],

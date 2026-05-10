@@ -5,6 +5,10 @@ import ClientNotificationSettings from "@/components/client-app/ClientNotificati
 import { requireClienteAppContext } from "@/lib/client-context.server";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
+export const metadata = {
+  title: "Configuracoes | SalaoPremium",
+};
+
 export default async function ClienteProfileSettingsPage() {
   const session = await requireClienteAppContext();
   const { data } = await (getSupabaseAdmin() as any)

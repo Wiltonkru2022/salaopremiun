@@ -4,6 +4,10 @@ import ClientAppFrame from "@/components/client-app/ClientAppFrame";
 import { listClienteAppReceipts } from "@/lib/client-app/queries";
 import { requireClienteAppContext } from "@/lib/client-context.server";
 
+export const metadata = {
+  title: "Pagamentos | SalaoPremium",
+};
+
 function formatCurrency(value: number) {
   return value.toLocaleString("pt-BR", {
     style: "currency",
