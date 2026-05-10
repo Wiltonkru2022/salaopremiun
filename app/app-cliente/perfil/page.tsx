@@ -15,6 +15,10 @@ import ClientAppFrame from "@/components/client-app/ClientAppFrame";
 import { getClienteAppProfileData } from "@/lib/client-app/queries";
 import { requireClienteAppContext } from "@/lib/client-context.server";
 
+export const metadata = {
+  title: "Perfil do Cliente | SalaoPremium",
+};
+
 function ProfileRow({
   href,
   label,
@@ -58,7 +62,7 @@ export default async function ClientePerfilPage({
   const initial = (profile.nome || session.nome || "C").slice(0, 1).toUpperCase();
 
   return (
-    <ClientAppFrame title="Perfil" subtitle="Sua conta no Salão Premium.">
+    <ClientAppFrame title="Perfil" subtitle="Sua conta no SalaoPremium.">
       <section className="mx-auto max-w-3xl px-4 py-4 md:px-6">
         <div className="flex items-center gap-5 py-6">
           <div className="relative flex h-24 w-24 shrink-0 items-center justify-center rounded-full border-4 border-zinc-900 bg-zinc-100 text-4xl font-black text-zinc-900">

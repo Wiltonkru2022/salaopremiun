@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
 import {
   deleteClienteProfileAction,
@@ -35,6 +35,7 @@ export default function ClientProfileForm({
   preferenciasGerais?: string | null;
   successKey?: string | null;
 }) {
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const initialState: ClienteProfileState = { error: null };
   const [state, formAction] = useActionState<ClienteProfileState, FormData>(
     updateClienteProfileAction,
@@ -141,12 +142,36 @@ export default function ClientProfileForm({
           por este app e remove sua sessão atual. O histórico operacional do
           salão continua preservado.
         </p>
-        <button
-          type="submit"
-          className="mt-4 inline-flex h-11 items-center justify-center rounded-2xl bg-red-700 px-4 text-sm font-bold text-white transition hover:bg-red-800"
-        >
-          Excluir minha conta
-        </button>
+        {confirmDelete ? (
+          <div className="mt-4 rounded-2xl border border-red-200 bg-white p-3">
+            <p className="text-sm font-semibold text-red-900">
+              Tem certeza? Essa ação encerra seu acesso ao app cliente.
+            </p>
+            <div className="mt-3 grid gap-2 sm:grid-cols-2">
+              <button
+                type="button"
+                onClick={() => setConfirmDelete(false)}
+                className="h-11 rounded-2xl border border-zinc-200 bg-white px-4 text-sm font-bold text-zinc-800"
+              >
+                Manter minha conta
+              </button>
+              <button
+                type="submit"
+                className="h-11 rounded-2xl bg-red-700 px-4 text-sm font-bold text-white transition hover:bg-red-800"
+              >
+                Sim, encerrar conta
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setConfirmDelete(true)}
+            className="mt-4 inline-flex h-11 items-center justify-center rounded-2xl bg-red-700 px-4 text-sm font-bold text-white transition hover:bg-red-800"
+          >
+            Excluir minha conta
+          </button>
+        )}
       </form>
     </div>
   );
