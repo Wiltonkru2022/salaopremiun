@@ -18,6 +18,16 @@ type NominatimPlace = {
   lat?: string;
   lon?: string;
   importance?: number;
+  addresstype?: string;
+  type?: string;
+  address?: {
+    house_number?: string;
+    road?: string;
+    city?: string;
+    town?: string;
+    municipality?: string;
+    state?: string;
+  };
 };
 
 const BRAZIL_BOUNDS = {
@@ -33,6 +43,15 @@ function clean(value: string | null | undefined) {
 
 function onlyNumbers(value: string | null | undefined) {
   return clean(value).replace(/\D/g, "");
+}
+
+function normalizeHouseNumber(value: string | null | undefined) {
+  return clean(value)
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, "")
+    .replace(/[^\da-z/-]/g, "");
 }
 
 function isInsideBrazil(latitude: number, longitude: number) {
@@ -53,6 +72,7 @@ function isValidCoordinatePair(latitude: number, longitude: number) {
 
 type GeocodeAttempt = {
   precision: SalonCoordinates["precision"];
+  expectedHouseNumber: string | null;
   params: Record<string, string>;
 };
 
@@ -72,6 +92,7 @@ function buildGeocodeAttempts(input: SalonAddressInput): GeocodeAttempt[] {
   if (structuredStreet && cidade && estado) {
     attempts.push({
       precision: "endereco",
+      expectedHouseNumber: numero,
       params: {
         street: structuredStreet,
         city: cidade,
@@ -85,6 +106,7 @@ function buildGeocodeAttempts(input: SalonAddressInput): GeocodeAttempt[] {
   if (streetLine && cidade && estado) {
     attempts.push({
       precision: "endereco",
+      expectedHouseNumber: numero,
       params: {
         q: [streetLine, bairro, cidade, estado, cep, "Brasil"]
           .filter(Boolean)
@@ -93,9 +115,10 @@ function buildGeocodeAttempts(input: SalonAddressInput): GeocodeAttempt[] {
     });
   }
 
-  if (cidade && estado) {
+  if (cidade && estado && !numero) {
     attempts.push({
       precision: "cidade",
+      expectedHouseNumber: null,
       params: {
         city: cidade,
         state: estado,
@@ -109,12 +132,22 @@ function buildGeocodeAttempts(input: SalonAddressInput): GeocodeAttempt[] {
 
 function mapNominatimPlace(
   place: NominatimPlace | null | undefined,
-  precision: SalonCoordinates["precision"]
+  precision: SalonCoordinates["precision"],
+  expectedHouseNumber: string | null
 ): SalonCoordinates | null {
   const latitude = Number(place?.lat);
   const longitude = Number(place?.lon);
 
   if (!isValidCoordinatePair(latitude, longitude)) return null;
+
+  if (precision === "endereco") {
+    const returnedHouseNumber = normalizeHouseNumber(place?.address?.house_number);
+    const expected = normalizeHouseNumber(expectedHouseNumber);
+
+    if (!expected || !returnedHouseNumber || returnedHouseNumber !== expected) {
+      return null;
+    }
+  }
 
   return {
     latitude: Number(latitude.toFixed(7)),
@@ -155,7 +188,8 @@ export async function geocodeSalonAddress(
 
     const coordinates = mapNominatimPlace(
       data[0] as NominatimPlace | undefined,
-      attempt.precision
+      attempt.precision,
+      attempt.expectedHouseNumber
     );
 
     if (coordinates) return coordinates;
