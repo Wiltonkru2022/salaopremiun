@@ -130,6 +130,7 @@ export type ClientAppNotificationListItem = {
   url: string | null;
   enviarEm: string | null;
   createdAt: string | null;
+  lidaEm: string | null;
 };
 
 function normalizeSearch(value?: string) {
@@ -926,32 +927,59 @@ export async function listClienteAppWrittenReviews(params: { idConta: string }) 
   }
 }
 
-export async function listClienteAppNotifications(params: { idConta: string }) {
+export async function listClienteAppNotifications(params: {
+  idConta: string;
+  read?: boolean;
+  page?: number;
+  limit?: number;
+}) {
   try {
     const supabaseAdmin = getSupabaseAdmin();
     const { data, error } = await (supabaseAdmin as any)
       .from("notification_jobs")
-      .select("id, tipo, titulo, mensagem, status, url, enviar_em, created_at")
+      .select("id, tipo, titulo, mensagem, status, url, enviar_em, created_at, metadata")
       .eq("cliente_app_conta_id", params.idConta)
       .eq("canal", "cliente_app")
       .order("created_at", { ascending: false })
-      .limit(50);
+      .limit(200);
 
     if (error) throw error;
 
-    return ((data || []) as Array<Record<string, unknown>>).map((item) => ({
-      id: String(item.id || ""),
-      titulo: String(item.titulo || "").trim() || "Notificacao",
-      mensagem: String(item.mensagem || "").trim() || "",
-      tipo: String(item.tipo || "").trim(),
-      status: String(item.status || "").trim(),
-      url: String(item.url || "").trim() || null,
-      enviarEm: String(item.enviar_em || "").trim() || null,
-      createdAt: String(item.created_at || "").trim() || null,
-    })) satisfies ClientAppNotificationListItem[];
+    const mapped = ((data || []) as Array<Record<string, unknown>>).map((item) => {
+      const metadata = (item.metadata || {}) as Record<string, unknown>;
+      return {
+        id: String(item.id || ""),
+        titulo: String(item.titulo || "").trim() || "Notificacao",
+        mensagem: String(item.mensagem || "").trim() || "",
+        tipo: String(item.tipo || "").trim(),
+        status: String(item.status || "").trim(),
+        url: String(item.url || "").trim() || null,
+        enviarEm: String(item.enviar_em || "").trim() || null,
+        createdAt: String(item.created_at || "").trim() || null,
+        lidaEm: String(metadata.cliente_lida_em || "").trim() || null,
+      };
+    }) satisfies ClientAppNotificationListItem[];
+
+    const shouldRead = params.read === true;
+    const filtered = mapped.filter((item) =>
+      shouldRead ? Boolean(item.lidaEm) : !item.lidaEm
+    );
+    const limit = Math.min(Math.max(params.limit ?? 10, 1), 20);
+    const page = Math.max(params.page ?? 0, 0);
+    const from = page * limit;
+
+    return {
+      items: filtered.slice(from, from + limit),
+      hasMore: filtered.length > from + limit,
+      total: filtered.length,
+    };
   } catch (error) {
     await logClientAppQueryError("cliente_app_notifications", error);
-    return [] as ClientAppNotificationListItem[];
+    return {
+      items: [] as ClientAppNotificationListItem[],
+      hasMore: false,
+      total: 0,
+    };
   }
 }
 
