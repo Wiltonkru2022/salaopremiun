@@ -28,7 +28,7 @@ import type { ConfigSalao, Profissional } from "@/types/agenda";
 
 const CLIENT_BOOKING_BUFFER_MINUTES = 5;
 const CLIENT_BOOKING_SLOT_STEP_MINUTES = 5;
-const CLIENT_BOOKING_LOOKAHEAD_DAYS = 14;
+const CLIENT_BOOKING_LOOKAHEAD_DAYS = 45;
 
 type ClienteAppActionResult =
   | { ok: true; message: string }

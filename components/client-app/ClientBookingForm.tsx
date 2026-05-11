@@ -641,7 +641,7 @@ export default function ClientBookingForm({
               })}
             </div>
 
-            <div className="rounded-[1.4rem] border border-zinc-200 bg-white p-4">
+            <div className="rounded-[1.4rem] border border-zinc-200 bg-white p-4 shadow-sm">
               <div className="mb-4 flex items-center justify-between gap-3">
                 <h5 className="text-xl font-black capitalize text-zinc-950">
                   {monthLabel}
@@ -721,7 +721,7 @@ export default function ClientBookingForm({
                         }}
                         className={`relative aspect-square rounded-full border text-sm font-semibold transition ${
                           selectedDate === day.date
-                            ? "border-zinc-950 bg-amber-50 text-zinc-950 ring-2 ring-zinc-950"
+                            ? "border-cyan-700 bg-cyan-50 text-zinc-950 ring-2 ring-cyan-700"
                             : day.available
                               ? "border-zinc-100 bg-zinc-100 text-zinc-900"
                               : "border-zinc-100 bg-white text-zinc-300"
@@ -752,16 +752,16 @@ export default function ClientBookingForm({
                 {selectedDayLabel || "Escolha um dia"}
               </div>
               {horariosDoDiaSelecionado.length ? (
-                <div className="flex gap-3 overflow-x-auto pb-1">
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                   {horariosDoDiaSelecionado.map((horario) => (
                     <button
                       key={`${selectedDate}-${horario.horaInicio}`}
                       type="button"
                       onClick={() => setSelectedTime(horario.horaInicio)}
-                      className={`h-14 min-w-28 rounded-full border px-5 text-lg font-black ${
+                      className={`h-14 rounded-2xl border px-5 text-lg font-black shadow-sm transition ${
                         selectedTime === horario.horaInicio
-                          ? "border-zinc-950 bg-amber-50 text-zinc-950 ring-2 ring-zinc-950"
-                          : "border-zinc-100 bg-zinc-100 text-zinc-900"
+                          ? "border-cyan-700 bg-cyan-50 text-cyan-950 ring-2 ring-cyan-700"
+                          : "border-zinc-100 bg-zinc-100 text-zinc-900 hover:border-zinc-300"
                       }`}
                     >
                       {horario.horaInicio}

@@ -840,9 +840,9 @@ export async function listClienteAppReceipts(params: { idConta: string }) {
     if (!clientesIds.length) return [] as ClientAppReceiptListItem[];
 
     const { data, error } = await (supabaseAdmin as any)
-      .from("comandas")
+      .from("vw_vendas_busca")
       .select(
-        "id, numero, status, total, fechada_em, cancelada_em, formas_pagamento, itens_descricoes, id_cliente, saloes(nome, nome_fantasia)"
+        "id, id_salao, numero, status, total, fechada_em, cancelada_em, formas_pagamento, itens_descricoes, id_cliente"
       )
       .in("id_cliente", clientesIds)
       .in("status", ["fechada", "cancelada"])
@@ -852,18 +852,12 @@ export async function listClienteAppReceipts(params: { idConta: string }) {
     if (error) throw error;
 
     return ((data || []) as Array<Record<string, unknown>>).map((item) => {
-      const salao = item.saloes as
-        | { nome?: string | null; nome_fantasia?: string | null }
-        | null;
       const idCliente = String(item.id_cliente || "");
       return {
         id: String(item.id || ""),
         numero: Number(item.numero || 0) || null,
         salaoNome:
-          String(salao?.nome_fantasia || "").trim() ||
-          String(salao?.nome || "").trim() ||
-          salaoByCliente.get(idCliente) ||
-          "Salao Premium",
+          salaoByCliente.get(idCliente) || "Salao Premium",
         total: Number(item.total || 0),
         data:
           String(item.fechada_em || "").trim() ||
