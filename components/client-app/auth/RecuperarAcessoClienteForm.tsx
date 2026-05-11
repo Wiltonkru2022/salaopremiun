@@ -55,7 +55,7 @@ export default function RecuperarAcessoClienteForm({
         Recuperar acesso
       </h2>
       <p className="mt-2 text-sm leading-6 text-zinc-500">
-        Informe o e-mail da conta global para receber um link seguro de
+        Informe o e-mail da sua conta para receber um link seguro de
         redefinicao de senha.
       </p>
 

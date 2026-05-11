@@ -3,6 +3,10 @@ import ClientSalonDiscovery from "@/components/client-app/ClientSalonDiscovery";
 import { validateClienteAppSession } from "@/lib/client-context.server";
 import { listVisibleClientAppSaloes } from "@/lib/client-app/queries";
 
+export const metadata = {
+  title: "Explorar Saloes | SalaoPremium",
+};
+
 export default async function InicioClientePage({
   searchParams,
 }: {

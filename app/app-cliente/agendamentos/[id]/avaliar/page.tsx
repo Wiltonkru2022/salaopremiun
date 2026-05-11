@@ -5,6 +5,10 @@ import ClientAppointmentReviewForm from "@/components/client-app/ClientAppointme
 import { requireClienteAppContext } from "@/lib/client-context.server";
 import { getClienteAppAppointmentForReview } from "@/lib/client-app/queries";
 
+export const metadata = {
+  title: "Avaliar Atendimento | SalaoPremium",
+};
+
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{ status?: string }>;
 

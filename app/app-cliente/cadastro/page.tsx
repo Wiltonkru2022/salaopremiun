@@ -5,6 +5,10 @@ import { getClienteSessionFromCookie } from "@/lib/cliente-auth.server";
 import { canSalonAppearInClientApp } from "@/lib/client-app/eligibility";
 import { buildSalaoPublicPath } from "@/lib/saloes/public-link";
 
+export const metadata = {
+  title: "Cadastro do Cliente | SalaoPremium",
+};
+
 export default async function CadastroClientePage({
   searchParams,
 }: {

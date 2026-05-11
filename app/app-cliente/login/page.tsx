@@ -7,6 +7,10 @@ import { getClienteSessionFromCookie } from "@/lib/cliente-auth.server";
 import { validateClienteAppSession } from "@/lib/client-context.server";
 import { buildSalaoPublicPath } from "@/lib/saloes/public-link";
 
+export const metadata = {
+  title: "Login do Cliente | SalaoPremium",
+};
+
 function getErrorMessage(value: string | string[] | undefined) {
   const code = Array.isArray(value) ? value[0] : value;
 

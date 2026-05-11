@@ -3,6 +3,10 @@ import ClientAppointmentsManager from "@/components/client-app/ClientAppointment
 import { requireClienteAppContext } from "@/lib/client-context.server";
 import { listClienteAppAppointments } from "@/lib/client-app/queries";
 
+export const metadata = {
+  title: "Meus Agendamentos | SalaoPremium",
+};
+
 export default async function ClienteAppointmentsPage({
   searchParams,
 }: {

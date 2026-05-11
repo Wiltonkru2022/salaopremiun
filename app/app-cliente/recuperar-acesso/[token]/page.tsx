@@ -1,6 +1,10 @@
 import ClientAppFrame from "@/components/client-app/ClientAppFrame";
 import RedefinirSenhaClienteForm from "@/components/client-app/auth/RedefinirSenhaClienteForm";
 
+export const metadata = {
+  title: "Criar Nova Senha | SalaoPremium",
+};
+
 export default async function RedefinirSenhaClientePage({
   params,
 }: {
@@ -11,7 +15,7 @@ export default async function RedefinirSenhaClientePage({
   return (
     <ClientAppFrame
       title="Nova senha"
-      subtitle="Finalize a recuperação da sua conta global."
+      subtitle="Finalize a recuperacao da sua conta do app cliente."
     >
       <section className="mx-auto max-w-2xl">
         <RedefinirSenhaClienteForm token={token} />

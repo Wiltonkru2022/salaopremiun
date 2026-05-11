@@ -1,6 +1,10 @@
 import ClientAppFrame from "@/components/client-app/ClientAppFrame";
 import RecuperarAcessoClienteForm from "@/components/client-app/auth/RecuperarAcessoClienteForm";
 
+export const metadata = {
+  title: "Recuperar Acesso | SalaoPremium",
+};
+
 type RecuperarAcessoClientePageProps = {
   searchParams: Promise<{ email?: string | string[] }>;
 };
@@ -15,7 +19,7 @@ export default async function RecuperarAcessoClientePage({
   return (
     <ClientAppFrame
       title="Recuperar acesso"
-      subtitle="Atualize sua senha da conta global do app cliente."
+      subtitle="Atualize sua senha do app cliente."
     >
       <section className="mx-auto max-w-2xl">
         <RecuperarAcessoClienteForm initialEmail={initialEmail} />

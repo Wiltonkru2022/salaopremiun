@@ -15,6 +15,10 @@ import {
   listVisibleClientAppSaloes,
 } from "@/lib/client-app/queries";
 
+export const metadata = {
+  title: "Meu App | SalaoPremium",
+};
+
 function formatDate(date: string) {
   if (!date) return "Data a confirmar";
   return new Intl.DateTimeFormat("pt-BR", {

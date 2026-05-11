@@ -18,6 +18,10 @@ import {
 import { validateClienteAppSession } from "@/lib/client-context.server";
 import { buildSalaoPublicPath } from "@/lib/saloes/public-link";
 
+export const metadata = {
+  title: "Salao | SalaoPremium",
+};
+
 function formatCurrency(value: number | null) {
   if (value === null) return "Sob consulta";
   return new Intl.NumberFormat("pt-BR", {

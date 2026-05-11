@@ -5,6 +5,10 @@ import ClientAppSalonCard from "@/components/client-app/ClientAppSalonCard";
 import { listClienteAppFavoriteSaloes } from "@/lib/client-app/queries";
 import { requireClienteAppContext } from "@/lib/client-context.server";
 
+export const metadata = {
+  title: "Favoritos | SalaoPremium",
+};
+
 export default async function ClienteFavoritesPage() {
   const session = await requireClienteAppContext();
   const saloes = await listClienteAppFavoriteSaloes({ idConta: session.idConta });
