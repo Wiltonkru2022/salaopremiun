@@ -1,12 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import {
-  ArrowLeft,
-  MapPin,
-  MessageCircle,
-  Navigation,
-  Phone,
-} from "lucide-react";
+import { ArrowLeft, Clock, MapPinned, MessageCircle, Navigation, Phone } from "lucide-react";
 import ClientAppFrame from "@/components/client-app/ClientAppFrame";
 import ClientSalonSectionTabs from "@/components/client-app/ClientSalonSectionTabs";
 import { getClientAppSalonDetail } from "@/lib/client-app/queries";
@@ -18,11 +12,11 @@ export const metadata = {
 const DIAS_LABEL: Record<string, string> = {
   domingo: "Domingo",
   segunda: "Segunda",
-  terca: "Terca",
+  terca: "Terça",
   quarta: "Quarta",
   quinta: "Quinta",
   sexta: "Sexta",
-  sabado: "Sabado",
+  sabado: "Sábado",
 };
 
 const DIAS_BY_INDEX = [
@@ -100,26 +94,43 @@ export default async function ClienteSalonDetailsPage({
           </p>
 
           <div className="mt-6 overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm">
-            <div className="relative h-64 bg-zinc-100">
-              <div className="absolute inset-0 bg-[linear-gradient(135deg,#f4f1ea,#e5e7eb)]" />
-              <MapPin
-                className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-full text-zinc-950"
-                size={58}
-                fill="currentColor"
-              />
-              <div className="absolute inset-x-4 bottom-4 rounded-2xl bg-white p-4 shadow-xl">
-                <div className="font-black text-zinc-950">{salao.nome}</div>
-                <div className="mt-1 text-sm text-zinc-500">
-                  {salao.enderecoCompleto || "Endereço em atualização"}
+            <div className="grid gap-4 border-b border-zinc-100 p-5 md:grid-cols-[1fr_auto] md:items-center">
+              <div className="flex min-w-0 gap-4">
+                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-zinc-950 text-white">
+                  <MapPinned size={22} />
+                </span>
+                <div className="min-w-0">
+                  <div className="text-sm font-black uppercase tracking-[0.16em] text-zinc-400">
+                    Endereço
+                  </div>
+                  <div className="mt-1 text-lg font-black text-zinc-950">
+                    {salao.nome}
+                  </div>
+                  <p className="mt-1 text-sm leading-6 text-zinc-500">
+                    {salao.enderecoCompleto || "Endereço em atualização"}
+                  </p>
                 </div>
               </div>
+              {mapsUrl ? (
+                <a
+                  href={mapsUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex h-12 items-center justify-center gap-2 rounded-xl border border-zinc-200 px-5 text-sm font-black text-zinc-950"
+                >
+                  <Navigation size={18} />
+                  Abrir rota
+                </a>
+              ) : null}
             </div>
+
             <div className="divide-y divide-zinc-100">
-              <div className="flex items-center justify-between px-4 py-5">
-                <span className="text-zinc-500">
+              <div className="flex items-center justify-between gap-4 px-4 py-5">
+                <span className="inline-flex items-center gap-3 text-zinc-500">
+                  <Clock size={20} className="text-zinc-400" />
                   {abertoHoje ? "Aberto hoje" : "Fechado hoje"}
                 </span>
-                <span className="font-black text-zinc-950">
+                <span className="text-right font-black text-zinc-950">
                   {abertoHoje ? horarioLabel : diasLabel}
                 </span>
               </div>
@@ -155,20 +166,6 @@ export default async function ClienteSalonDetailsPage({
                   <span className="inline-flex items-center gap-3">
                     <MessageCircle size={22} className="text-zinc-400" />
                     WhatsApp
-                  </span>
-                  <span className="text-zinc-300">{">"}</span>
-                </a>
-              ) : null}
-              {mapsUrl ? (
-                <a
-                  href={mapsUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="flex items-center justify-between px-4 py-5 text-lg"
-                >
-                  <span className="inline-flex items-center gap-3">
-                    <Navigation size={22} className="text-zinc-400" />
-                    Abrir rota no mapa
                   </span>
                   <span className="text-zinc-300">{">"}</span>
                 </a>

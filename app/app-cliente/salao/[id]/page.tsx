@@ -1,17 +1,9 @@
-import { notFound } from "next/navigation";
 import Link from "next/link";
-import {
-  ArrowLeft,
-  MapPin,
-  MessageCircle,
-  Navigation,
-  Phone,
-  Star,
-} from "lucide-react";
+import { notFound } from "next/navigation";
+import { ArrowLeft, Star } from "lucide-react";
 import ClientAppFrame from "@/components/client-app/ClientAppFrame";
 import ClientBookingForm from "@/components/client-app/ClientBookingForm";
 import ClientSalonHeaderActions from "@/components/client-app/ClientSalonHeaderActions";
-import ClientSalonSectionTabs from "@/components/client-app/ClientSalonSectionTabs";
 import {
   getClientAppSalonDetail,
   isClienteAppSalonFavorite,
@@ -29,67 +21,6 @@ function formatCurrency(value: number | null) {
     style: "currency",
     currency: "BRL",
   }).format(value);
-}
-
-function formatDate(value: string) {
-  if (!value) return "";
-  return new Intl.DateTimeFormat("pt-BR", {
-    dateStyle: "medium",
-  }).format(new Date(value));
-}
-
-function normalizePhone(value?: string | null) {
-  const digits = String(value || "").replace(/\D/g, "");
-  if (!digits) return null;
-  return digits.startsWith("55") ? digits : `55${digits}`;
-}
-
-const DIAS_LABEL: Record<string, string> = {
-  domingo: "Domingo",
-  segunda: "Segunda",
-  terca: "Terça",
-  quarta: "Quarta",
-  quinta: "Quinta",
-  sexta: "Sexta",
-  sabado: "Sábado",
-};
-
-const DIAS_BY_INDEX = [
-  "domingo",
-  "segunda",
-  "terca",
-  "quarta",
-  "quinta",
-  "sexta",
-  "sabado",
-];
-
-function normalizeDia(value: string) {
-  return String(value || "")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .trim();
-}
-
-function formatDiasFuncionamento(dias: string[]) {
-  const normalized = dias.map(normalizeDia).filter(Boolean);
-  if (!normalized.length) return "Dias em atualização";
-  return normalized.map((dia) => DIAS_LABEL[dia] || dia).join(", ");
-}
-
-function RatingStars({ nota }: { nota: number }) {
-  return (
-    <span className="inline-flex items-center gap-0.5 text-amber-500">
-      {Array.from({ length: 5 }).map((_, index) => (
-        <Star
-          key={index}
-          size={15}
-          fill={index < Math.round(nota) ? "currentColor" : "none"}
-        />
-      ))}
-    </span>
-  );
 }
 
 type ServiceRowProps = {
@@ -116,7 +47,9 @@ function ServiceRow({ servico }: ServiceRowProps) {
       </div>
       <div className="text-right">
         <div className="text-lg font-black text-zinc-950">
-          {servico.exigeAvaliacao ? "A avaliar" : formatCurrency(servico.preco)}
+          {servico.exigeAvaliacao
+            ? "Exige avaliação"
+            : formatCurrency(servico.preco)}
         </div>
         <div className="mt-1 text-sm text-zinc-500">
           {servico.duracaoMinutos
@@ -127,7 +60,7 @@ function ServiceRow({ servico }: ServiceRowProps) {
           href="#agendar"
           className="mt-3 inline-flex h-11 items-center justify-center rounded-xl bg-zinc-950 px-5 text-sm font-black text-white"
         >
-          Reservar
+          Agendar
         </a>
       </div>
     </div>
@@ -158,28 +91,13 @@ export default async function ClienteSalonPage({
     const salaoPausado = salao.appClientePausado;
     const pausaMensagem =
       salao.appClientePausaMensagem ||
-      "Salão pausado no momento. Assim que a agenda voltar, você podera reservar por aqui.";
+      "Salão pausado no momento. Assim que a agenda voltar, você poderá reservar por aqui.";
     const salaoPublicPath = buildSalaoPublicPath(
       salao.appClienteSlug || salao.id
     );
     const cover =
       salao.fotoCapaUrl ||
       "https://images.unsplash.com/photo-1560066984-138dadb4c035?q=80&w=1400&auto=format&fit=crop";
-    const phone = normalizePhone(salao.whatsapp || salao.telefone);
-    const mapsUrl = salao.enderecoCompleto
-      ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-          salao.enderecoCompleto
-        )}`
-      : null;
-    const hojeKey = DIAS_BY_INDEX[new Date().getDay()];
-    const diasFuncionamento = salao.horarioFuncionamento.diasFuncionamento.map(
-      normalizeDia
-    );
-    const abertoHoje = diasFuncionamento.includes(hojeKey);
-    const horarioLabel = `${salao.horarioFuncionamento.horaAbertura} - ${salao.horarioFuncionamento.horaFechamento}`;
-    const diasLabel = formatDiasFuncionamento(
-      salao.horarioFuncionamento.diasFuncionamento
-    );
     const popularServices = salao.servicos.slice(0, 5);
     const otherServices = salao.servicos.slice(5);
 
@@ -246,8 +164,6 @@ export default async function ClienteSalonPage({
             </div>
           </section>
 
-          <ClientSalonSectionTabs salonId={id} active="servicos" />
-
           {salaoPausado ? (
             <section className="px-4 py-5 md:px-6">
               <div className="mx-auto max-w-6xl rounded-2xl border border-amber-200 bg-amber-50 p-5 text-amber-950">
@@ -270,8 +186,8 @@ export default async function ClienteSalonPage({
                     ))
                   ) : (
                     <p className="text-sm leading-6 text-zinc-500">
-                      Os serviços públicos aparecem aqui assim que o salão liberar
-                      a vitrine.
+                      Os serviços públicos aparecem aqui assim que o salão
+                      liberar a vitrine.
                     </p>
                   )}
                 </div>
@@ -300,7 +216,7 @@ export default async function ClienteSalonPage({
                   />
                 ) : (
                   <div className="rounded-[1.5rem] border border-zinc-200 bg-zinc-50 p-5">
-                    <h3 className="text-xl font-black">Entre para reservar</h3>
+                    <h3 className="text-xl font-black">Entre para agendar</h3>
                     <p className="mt-2 text-sm leading-6 text-zinc-500">
                       Depois do login você volta para esta página e escolhe seu
                       horário.
@@ -316,227 +232,6 @@ export default async function ClienteSalonPage({
                   </div>
                 )}
               </aside>
-            </div>
-          </section>
-
-          <section
-            id="avaliacoes"
-            className="border-t border-zinc-200 px-4 py-8 md:px-6"
-          >
-            <div className="mx-auto max-w-6xl">
-              <div className="rounded-2xl border border-zinc-200 bg-white p-5">
-                <div className="grid gap-6 md:grid-cols-[260px_1fr]">
-                  <div className="text-center">
-                    <div className="text-6xl font-light text-zinc-700">
-                      {notaMedia ? notaMedia.toFixed(1) : "0,0"}
-                      <span className="text-2xl">/5</span>
-                    </div>
-                    <div className="mt-3">
-                      <RatingStars nota={notaMedia || 0} />
-                    </div>
-                    <div className="mt-2 text-zinc-500">
-                      {salao.avaliacoes.length} avaliações
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    {[5, 4, 3, 2, 1].map((nota) => {
-                      const count = salao.avaliacoes.filter(
-                        (avaliacao) => Math.round(avaliacao.nota) === nota
-                      ).length;
-                      const percent = salao.avaliacoes.length
-                        ? (count / salao.avaliacoes.length) * 100
-                        : 0;
-                      return (
-                        <div
-                          key={nota}
-                          className="grid grid-cols-[20px_1fr_30px] items-center gap-3 text-sm text-zinc-500"
-                        >
-                          <span>{nota}</span>
-                          <div className="h-1.5 rounded-full bg-zinc-100">
-                            <div
-                              className="h-full rounded-full bg-amber-500"
-                              style={{ width: `${percent}%` }}
-                            />
-                          </div>
-                          <span>{count}</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-
-              <div className="mt-7 space-y-5">
-                <h2 className="text-3xl font-black tracking-[-0.05em]">
-                  Avaliações ({salao.avaliacoes.length})
-                </h2>
-                {salao.avaliacoes.length ? (
-                  salao.avaliacoes.map((avaliacao) => (
-                    <article
-                      key={avaliacao.id}
-                      className="border-b border-zinc-200 pb-5"
-                    >
-                      <div className="flex items-start justify-between gap-4">
-                        <div>
-                          <div className="font-bold text-zinc-950">
-                            {avaliacao.clienteNome}
-                          </div>
-                          <div className="mt-1">
-                            <RatingStars nota={avaliacao.nota} />
-                          </div>
-                          <div className="mt-1 text-sm text-zinc-400">
-                            {formatDate(avaliacao.createdAt)}
-                          </div>
-                        </div>
-                        <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-bold text-amber-800">
-                          Cliente confirmado
-                        </span>
-                      </div>
-                      {avaliacao.comentario ? (
-                        <p className="mt-3 text-lg leading-7 text-zinc-700">
-                          {avaliacao.comentario}
-                        </p>
-                      ) : null}
-                    </article>
-                  ))
-                ) : (
-                  <p className="text-sm leading-6 text-zinc-500">
-                    As avaliações reais entram aqui depois dos primeiros
-                    atendimentos confirmados.
-                  </p>
-                )}
-              </div>
-            </div>
-          </section>
-
-          <section
-            id="portfolio"
-            className="border-t border-zinc-200 px-4 py-10 md:px-6"
-          >
-            <div className="mx-auto max-w-6xl">
-              <h2 className="text-3xl font-black tracking-[-0.05em]">
-                Portfólio
-              </h2>
-              {salao.portfolio.length ? (
-                <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                  {salao.portfolio.map((foto, index) => (
-                    <figure
-                      key={foto.id}
-                      className={`group overflow-hidden rounded-[1.75rem] bg-zinc-100 ${
-                        index === 0 ? "sm:col-span-2 sm:row-span-2" : ""
-                      }`}
-                    >
-                      <img
-                        src={foto.imagemUrl}
-                        alt={foto.legenda || `Foto do portfólio de ${salao.nome}`}
-                        className={`w-full object-cover transition duration-500 group-hover:scale-105 ${
-                          index === 0 ? "h-[420px]" : "h-64"
-                        }`}
-                      />
-                      {foto.legenda ? (
-                        <figcaption className="border-x border-b border-zinc-100 px-4 py-3 text-sm font-semibold text-zinc-600">
-                          {foto.legenda}
-                        </figcaption>
-                      ) : null}
-                    </figure>
-                  ))}
-                </div>
-              ) : (
-                <div className="mt-20 text-center text-zinc-500">
-                  <div className="mx-auto mb-5 h-24 w-36 rounded-2xl border border-zinc-200 bg-zinc-50" />
-                  <div className="text-2xl text-zinc-950">Nenhuma foto ainda</div>
-                  <p className="mt-2 text-lg">
-                    Volte em breve para ver imagens dos trabalhos do salão.
-                  </p>
-                </div>
-              )}
-            </div>
-          </section>
-
-          <section
-            id="detalhes"
-            className="border-t border-zinc-200 px-4 py-8 md:px-6"
-          >
-            <div className="mx-auto max-w-6xl">
-              <h2 className="text-2xl font-black uppercase tracking-[-0.02em]">
-                Contato e horário de funcionamento
-              </h2>
-              <div className="mt-6 overflow-hidden rounded-2xl border border-zinc-200 bg-white">
-                <div className="relative h-56 bg-zinc-100">
-                  <div className="absolute inset-0 bg-[linear-gradient(135deg,#f4f1ea,#e5e7eb)]" />
-                  <MapPin
-                    className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-full text-zinc-950"
-                    size={52}
-                    fill="currentColor"
-                  />
-                  <div className="absolute inset-x-4 bottom-4 rounded-2xl bg-white p-4 shadow-xl">
-                    <div className="font-black text-zinc-950">{salao.nome}</div>
-                    <div className="mt-1 text-sm text-zinc-500">
-                      {salao.enderecoCompleto || "Endereço em atualização"}
-                    </div>
-                  </div>
-                </div>
-                <div className="divide-y divide-zinc-100">
-                  <div className="flex items-center justify-between px-4 py-5">
-                    <span className="text-zinc-500">
-                      {abertoHoje ? "Aberto hoje" : "Fechado hoje"}
-                    </span>
-                    <span className="font-black text-zinc-950">
-                      {abertoHoje ? horarioLabel : diasLabel}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between gap-4 px-4 py-5">
-                    <span className="text-zinc-500">Funcionamento</span>
-                    <span className="max-w-[68%] text-right font-semibold text-zinc-950">
-                      {diasLabel}
-                    </span>
-                  </div>
-                  {phone ? (
-                    <div className="flex items-center justify-between gap-4 px-4 py-5">
-                      <div className="flex min-w-0 items-center gap-3 text-lg">
-                        <Phone size={22} className="shrink-0 text-zinc-400" />
-                        <span className="truncate">
-                          {salao.telefone || salao.whatsapp}
-                        </span>
-                      </div>
-                      <a
-                        href={`tel:+${phone}`}
-                        className="rounded-xl border border-zinc-200 px-5 py-2 text-sm font-black"
-                      >
-                        Ligar
-                      </a>
-                    </div>
-                  ) : null}
-                  {phone ? (
-                    <a
-                      href={`https://wa.me/${phone}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="flex items-center justify-between px-4 py-5 text-lg"
-                    >
-                      <span className="inline-flex items-center gap-3">
-                        <MessageCircle size={22} className="text-zinc-400" />
-                        WhatsApp
-                      </span>
-                      <span className="text-zinc-300">{">"}</span>
-                    </a>
-                  ) : null}
-                  {mapsUrl ? (
-                    <a
-                      href={mapsUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="flex items-center justify-between px-4 py-5 text-lg"
-                    >
-                      <span className="inline-flex items-center gap-3">
-                        <Navigation size={22} className="text-zinc-400" />
-                        Abrir rota no mapa
-                      </span>
-                      <span className="text-zinc-300">{">"}</span>
-                    </a>
-                  ) : null}
-                </div>
-              </div>
             </div>
           </section>
         </div>
