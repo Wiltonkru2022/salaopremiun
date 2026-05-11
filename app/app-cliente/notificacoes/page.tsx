@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { ArrowLeft, Bell, CalendarDays, CheckCircle2 } from "lucide-react";
 import ClientAppFrame from "@/components/client-app/ClientAppFrame";
-import PaginationControls from "@/components/ui/PaginationControls";
 import {
   markAllClienteNotificationsReadAction,
   markClienteNotificationReadAction,
@@ -31,6 +30,10 @@ function notificationIcon(tipo: string) {
     return CheckCircle2;
   }
   return Bell;
+}
+
+function buildNotificationsHref(tab: string, page: number) {
+  return `/app-cliente/notificacoes?aba=${tab}&pagina=${page + 1}`;
 }
 
 function FilterLink({
@@ -97,9 +100,6 @@ export default async function ClienteNotificationsPage({
   ]);
   const notifications = currentResult.items;
   const hasMore = currentResult.hasMore;
-
-  const buildPageHref = (page: number) =>
-    `/app-cliente/notificacoes?aba=${activeTab}&pagina=${page + 1}`;
 
   return (
     <ClientAppFrame title="Notificacoes" subtitle="Tudo que importa do seu atendimento.">
@@ -245,13 +245,26 @@ export default async function ClienteNotificationsPage({
         )}
 
         {notifications.length || hasMore || currentPage > 0 ? (
-          <div className="mt-5 rounded-[1.4rem] border border-dashed border-zinc-300 bg-white px-4 py-3">
-            <PaginationControls
-              currentPage={currentPage}
-              pageSize={pageSize}
-              hasMore={hasMore}
-              buildHref={buildPageHref}
-            />
+          <div className="mt-5 flex flex-wrap items-center justify-center gap-2 rounded-[1.4rem] border border-dashed border-zinc-300 bg-white px-4 py-3">
+            {currentPage > 0 ? (
+              <Link
+                href={buildNotificationsHref(activeTab, currentPage - 1)}
+                className="inline-flex h-10 items-center justify-center rounded-xl border border-zinc-200 bg-white px-3 text-sm font-bold text-zinc-700"
+              >
+                Anterior
+              </Link>
+            ) : null}
+            <span className="inline-flex h-10 items-center justify-center rounded-xl bg-zinc-950 px-4 text-sm font-bold text-white">
+              Pagina {currentPage + 1}
+            </span>
+            {hasMore ? (
+              <Link
+                href={buildNotificationsHref(activeTab, currentPage + 1)}
+                className="inline-flex h-10 items-center justify-center rounded-xl border border-zinc-200 bg-white px-3 text-sm font-bold text-zinc-700"
+              >
+                Proxima
+              </Link>
+            ) : null}
           </div>
         ) : null}
       </section>
