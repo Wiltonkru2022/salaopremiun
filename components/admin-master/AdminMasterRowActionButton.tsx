@@ -14,7 +14,7 @@ type RowActionState =
   | { status: "idle"; label: string; href?: undefined }
   | { status: "loading"; label: string; href?: undefined }
   | { status: "success"; label: string; href?: string }
-  | { status: "error"; label: string; href?: undefined };
+  | { status: "error"; label: string; detail: string; href?: undefined };
 
 type CreateTicketResponse = {
   ok?: boolean;
@@ -213,13 +213,20 @@ export default function AdminMasterRowActionButton({
       });
       router.refresh();
     } catch (error) {
+      const detail =
+        error instanceof Error ? error.message : "Erro ao executar acao.";
+      const time = new Date().toLocaleTimeString("pt-BR", {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
       setState({
         status: "error",
-        label: error instanceof Error ? error.message : "Erro ao criar ticket",
+        label: `Erro ${time}`,
+        detail,
       });
       window.setTimeout(() => {
         setState({ status: "idle", label: normalizedLabel });
-      }, 3200);
+      }, 12000);
     }
   }
 
@@ -250,7 +257,7 @@ export default function AdminMasterRowActionButton({
           ? "bg-red-50 text-red-700 ring-red-200"
           : "bg-zinc-950 text-white ring-zinc-950 hover:bg-zinc-800 disabled:cursor-wait disabled:bg-zinc-400"
       }`}
-      title={state.status === "error" ? state.label : undefined}
+      title={state.status === "error" ? state.detail : undefined}
     >
       <span className="inline-flex items-center gap-1">
         {state.status === "loading" ? (
@@ -260,6 +267,9 @@ export default function AdminMasterRowActionButton({
         ) : null}
         {state.label}
       </span>
+      {state.status === "error" ? (
+        <span className="sr-only">{state.detail}</span>
+      ) : null}
     </button>
   );
 }

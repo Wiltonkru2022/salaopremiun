@@ -67,6 +67,7 @@ export async function reportOperationalIncident(
       payload_json: details,
       automatico: true,
       resolvido: false,
+      resolvido_por: null,
       resolvido_em: null,
       atualizado_em: agoraIso,
     },

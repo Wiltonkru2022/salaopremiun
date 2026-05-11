@@ -93,6 +93,74 @@ function dateTimeValue(value?: string | null) {
   });
 }
 
+function relativeTimeValue(value?: string | null) {
+  if (!value) return "-";
+  const date = new Date(value);
+  const diffMs = Date.now() - date.getTime();
+  if (Number.isNaN(date.getTime())) return "-";
+  if (diffMs < 60_000) return "agora";
+
+  const minutes = Math.floor(diffMs / 60_000);
+  if (minutes < 60) return `ha ${minutes} min`;
+
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `ha ${hours} h`;
+
+  const days = Math.floor(hours / 24);
+  if (days < 30) return `ha ${days} d`;
+
+  const months = Math.floor(days / 30);
+  return `ha ${months} mes`;
+}
+
+function getPayloadText(
+  payload: Record<string, unknown> | null | undefined,
+  keys: string[]
+) {
+  if (!payload || typeof payload !== "object") return "";
+
+  for (const key of keys) {
+    const value = payload[key];
+    if (typeof value === "string" && value.trim()) return value.trim();
+    if (typeof value === "number" && Number.isFinite(value)) return String(value);
+  }
+
+  return "";
+}
+
+function getAlertDiagnostic(
+  descricao?: string | null,
+  payload?: Record<string, unknown> | null
+) {
+  const detail =
+    getPayloadText(payload, [
+      "latestMessage",
+      "message",
+      "erro",
+      "error",
+      "erro_texto",
+      "response",
+      "status",
+    ]) ||
+    descricao ||
+    "-";
+
+  if (detail === "[object Object]") {
+    const latestDetails = payload?.latestDetails;
+    if (latestDetails && typeof latestDetails === "object") {
+      try {
+        return JSON.stringify(latestDetails).slice(0, 180);
+      } catch {
+        return "Erro sem mensagem legivel.";
+      }
+    }
+
+    return "Erro sem mensagem legivel.";
+  }
+
+  return detail.slice(0, 220);
+}
+
 function safeNumber(value: unknown) {
   const parsed = Number(value || 0);
   return Number.isFinite(parsed) ? parsed : 0;
@@ -2421,7 +2489,7 @@ export async function getAdminMasterSection(
     const { data: alertas } = await supabase
       .from("alertas_sistema")
       .select(
-        "id, tipo, gravidade, origem_modulo, id_salao, titulo, descricao, resolvido, criado_em, atualizado_em, automatico, id_ticket"
+        "id, tipo, gravidade, origem_modulo, id_salao, titulo, descricao, payload_json, resolvido, resolvido_em, criado_em, atualizado_em, automatico, id_ticket"
       )
       .order("resolvido", { ascending: true })
       .order("criado_em", { ascending: false })
@@ -2436,7 +2504,9 @@ export async function getAdminMasterSection(
         id_salao?: string | null;
         titulo?: string | null;
         descricao?: string | null;
+        payload_json?: Record<string, unknown> | null;
         resolvido?: boolean | null;
+        resolvido_em?: string | null;
         criado_em?: string | null;
         atualizado_em?: string | null;
         automatico?: boolean | null;
@@ -2491,7 +2561,18 @@ export async function getAdminMasterSection(
       titulo: row.titulo || "-",
       salao: row.id_salao ? salaoById.get(row.id_salao) || row.id_salao : "-",
       origem: row.origem_modulo || "-",
-      status: row.resolvido ? "Resolvido" : "Ativo",
+      status: row.resolvido
+        ? "Resolvido"
+        : row.resolvido_em
+          ? "Ativo reaberto"
+          : "Ativo",
+      idade: relativeTimeValue(row.criado_em),
+      ultima: relativeTimeValue(row.atualizado_em || row.criado_em),
+      resolucao: row.resolvido
+        ? dateTimeValue(row.resolvido_em)
+        : row.resolvido_em
+          ? `Reaberto depois de ${dateTimeValue(row.resolvido_em)}`
+          : "-",
       ticket: row.id_ticket
         ? (() => {
             const ticket = ticketById.get(row.id_ticket);
@@ -2502,7 +2583,7 @@ export async function getAdminMasterSection(
       automatico: row.automatico ? "Sim" : "Nao",
       criado: dateTimeValue(row.criado_em),
       atualizado: dateTimeValue(row.atualizado_em),
-      detalhe: row.descricao || "-",
+      detalhe: getAlertDiagnostic(row.descricao, row.payload_json),
       ticket_acao: !row.resolvido && !row.id_ticket ? "Criar ticket" : "-",
       ticket_acao_tipo: !row.resolvido && !row.id_ticket ? "alert_ticket" : null,
       ticket_acao_id: !row.resolvido && !row.id_ticket ? row.id || null : null,
@@ -2511,13 +2592,33 @@ export async function getAdminMasterSection(
       resolver_acao_id: row.resolvido ? null : row.id || null,
     }));
 
-    const ativos = rows.filter((row) => row.status === "Ativo").length;
-    const criticos = rows.filter((row) =>
-      ["alta", "critica"].includes(String(row.gravidade).toLowerCase())
+    const ativos = rows.filter((row) =>
+      String(row.status).startsWith("Ativo")
+    ).length;
+    const ativosReabertos = rows.filter(
+      (row) => row.status === "Ativo reaberto"
+    ).length;
+    const criticos = rows.filter(
+      (row) =>
+        String(row.status).startsWith("Ativo") &&
+        ["alta", "critica"].includes(String(row.gravidade).toLowerCase())
     ).length;
     const comTicket = rows.filter((row) => row.ticket !== "-").length;
     const renovacoesEmRisco =
       sync.renovacoesComConfigInvalida + sync.renovacoesSemCobranca;
+    const ativosPorOrigem = rows
+      .filter((row) => String(row.status).startsWith("Ativo"))
+      .reduce<Record<string, number>>((acc, row) => {
+        const origem = String(row.origem || "sistema");
+        acc[origem] = (acc[origem] || 0) + 1;
+        return acc;
+      }, {});
+    const focoPrincipal = Object.entries(ativosPorOrigem).sort(
+      (a, b) => b[1] - a[1]
+    )[0];
+    const alertaMaisAntigo = rows.find((row) =>
+      String(row.status).startsWith("Ativo")
+    );
 
     return {
       title: "Alertas",
@@ -2555,6 +2656,33 @@ export async function getAdminMasterSection(
           tone: comTicket > 0 ? "green" : "dark",
         },
       ],
+      diagnostics: [
+        {
+          label: "Foco principal",
+          value: focoPrincipal ? focoPrincipal[0] : "Sem foco ativo",
+          detail: focoPrincipal
+            ? `${focoPrincipal[1]} alerta(s) ativo(s) nessa origem.`
+            : "Nenhum alerta ativo no snapshot atual.",
+          tone: focoPrincipal ? "amber" : "green",
+        },
+        {
+          label: "Mais antigo ativo",
+          value: alertaMaisAntigo?.idade ? String(alertaMaisAntigo.idade) : "-",
+          detail: alertaMaisAntigo
+            ? `${alertaMaisAntigo.titulo} - ultima ocorrencia ${alertaMaisAntigo.ultima}.`
+            : "Sem alerta ativo aguardando acao.",
+          tone: alertaMaisAntigo ? "red" : "green",
+        },
+        {
+          label: "Resolvidos que voltaram",
+          value: String(ativosReabertos),
+          detail:
+            ativosReabertos > 0
+              ? "O mesmo erro voltou depois de uma resolucao manual. O horario antigo aparece na coluna resolucao."
+              : "Nenhum alerta ativo esta carregando horario antigo de resolucao.",
+          tone: ativosReabertos > 0 ? "red" : "green",
+        },
+      ],
       rows,
       columns: [
         "gravidade",
@@ -2562,9 +2690,10 @@ export async function getAdminMasterSection(
         "salao",
         "origem",
         "status",
+        "idade",
+        "ultima",
+        "resolucao",
         "ticket",
-        "automatico",
-        "criado",
         "detalhe",
         "ticket_acao",
         "resolver_acao",

@@ -93,7 +93,15 @@ export function AdminDataTable({
               rows.map((row, index) => (
                 <tr key={index} className="hover:bg-zinc-50/80">
                   {columns.map((column) => (
-                    <td key={column} className="max-w-[260px] truncate px-4 py-3.5">
+                    <td
+                      key={column}
+                      title={String(row[column] ?? "-")}
+                      className={`max-w-[320px] px-4 py-3.5 ${
+                        column === "detalhe" || column === "titulo"
+                          ? "whitespace-normal break-words leading-5"
+                          : "truncate"
+                      }`}
+                    >
                       {isActionColumn(column) ? (
                         <AdminMasterRowActionButton
                           actionType={String(row[getActionField(column, "tipo")] || "")}

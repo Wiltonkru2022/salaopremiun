@@ -48,6 +48,26 @@ type RegisterAutomationActionParams = {
 };
 
 function normalizeText(value: unknown) {
+  if (typeof value === "string") return value.trim();
+  if (value instanceof Error) return value.message.trim();
+  if (value && typeof value === "object") {
+    const candidate = value as {
+      message?: unknown;
+      error?: unknown;
+      title?: unknown;
+      name?: unknown;
+    };
+    const preferred =
+      candidate.message || candidate.error || candidate.title || candidate.name;
+    if (preferred && preferred !== value) return normalizeText(preferred);
+
+    try {
+      return JSON.stringify(value).slice(0, 500);
+    } catch {
+      return "";
+    }
+  }
+
   return String(value || "").trim();
 }
 
@@ -328,6 +348,8 @@ async function upsertIncident(params: CaptureSystemEventParams, severity: Monito
       descricao,
       payload_json: referencia,
       resolvido: false,
+      resolvido_por: null,
+      resolvido_em: null,
       automatico: true,
       atualizado_em: new Date().toISOString(),
     },
