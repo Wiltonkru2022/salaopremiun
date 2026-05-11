@@ -3,6 +3,7 @@ import { ArrowLeft, CalendarClock, Star, Trash2 } from "lucide-react";
 import ProfissionalShell from "@/components/profissional/layout/ProfissionalShell";
 import ProfissionalSurface from "@/components/profissional/ui/ProfissionalSurface";
 import ProfissionalSectionHeader from "@/components/profissional/ui/ProfissionalSectionHeader";
+import PaginationLinks from "@/components/ui/PaginationLinks";
 import { requireProfissionalAppContext } from "@/lib/profissional-context.server";
 import { runAdminOperation } from "@/lib/supabase/admin-ops";
 import { asLooseSupabaseClient } from "@/lib/supabase/loose-client";
@@ -45,9 +46,12 @@ function formatDate(value?: string | null, time?: string | null) {
   return hour ? `${date} as ${hour}` : date;
 }
 
+const AVALIACOES_PAGE_SIZE = 10;
+
 async function carregarAvaliacoes(params: {
   idSalao: string;
   idProfissional: string;
+  page: number;
 }) {
   return runAdminOperation({
     action: "profissional_avaliacoes_listar",
@@ -55,23 +59,27 @@ async function carregarAvaliacoes(params: {
     idSalao: params.idSalao,
     run: async (supabase) => {
       const db = asLooseSupabaseClient(supabase);
-      const { data, error } = await db
+      const from = params.page * AVALIACOES_PAGE_SIZE;
+      const to = from + AVALIACOES_PAGE_SIZE - 1;
+      const { data, error, count } = await db
         .from<ReviewRow[]>("clientes_avaliacoes")
         .select(
-          "id, nota, comentario, created_at, clientes(nome), agendamentos(profissional_id, data, hora_inicio, servicos(nome))"
+          "id, nota, comentario, created_at, clientes(nome), agendamentos!inner(profissional_id, data, hora_inicio, servicos(nome))",
+          { count: "exact" }
         )
         .eq("id_salao", params.idSalao)
+        .eq("agendamentos.profissional_id", params.idProfissional)
         .order("created_at", { ascending: false })
-        .limit(80);
+        .range(from, to);
 
       if (error) {
         throw new Error(error.message || "Erro ao carregar avaliações.");
       }
 
-      return ((data || []) as ReviewRow[]).filter((item) => {
-        const agendamento = firstRelation(item.agendamentos);
-        return agendamento?.profissional_id === params.idProfissional;
-      });
+      return {
+        items: ((data || []) as ReviewRow[]) || [],
+        total: count || 0,
+      };
     },
   });
 }
@@ -79,14 +87,17 @@ async function carregarAvaliacoes(params: {
 export default async function ProfissionalAvaliacoesPage({
   searchParams,
 }: {
-  searchParams?: Promise<{ status?: string }>;
+  searchParams?: Promise<{ status?: string; pagina?: string }>;
 }) {
   const session = await requireProfissionalAppContext();
   const params = searchParams ? await searchParams : {};
-  const avaliacoes = await carregarAvaliacoes({
+  const paginaAtual = Math.max(0, Number(params?.pagina || 1) - 1);
+  const avaliacoesResult = await carregarAvaliacoes({
     idSalao: session.idSalao,
     idProfissional: session.idProfissional,
-  }).catch(() => []);
+    page: paginaAtual,
+  }).catch(() => ({ items: [] as ReviewRow[], total: 0 }));
+  const avaliacoes = avaliacoesResult.items;
 
   const media = avaliacoes.length
     ? avaliacoes.reduce((sum, item) => sum + Number(item.nota || 0), 0) /
@@ -126,7 +137,7 @@ export default async function ProfissionalAvaliacoesPage({
           </h1>
           <p className="mt-1 text-sm leading-6 text-zinc-300">
             {avaliacoes.length
-              ? `${avaliacoes.length} avaliacao(oes) recebida(s) pelos seus atendimentos.`
+              ? `${avaliacoesResult.total} avaliacao(oes) recebida(s) pelos seus atendimentos.`
               : "Quando clientes avaliarem seus atendimentos, tudo aparece aqui."}
           </p>
         </section>
@@ -195,6 +206,14 @@ export default async function ProfissionalAvaliacoesPage({
               </div>
             )}
           </div>
+
+          <PaginationLinks
+            currentPage={paginaAtual}
+            pageSize={AVALIACOES_PAGE_SIZE}
+            totalItems={avaliacoesResult.total}
+            getHref={(page) => `/app-profissional/avaliacoes?pagina=${page + 1}`}
+            className="mt-4"
+          />
         </ProfissionalSurface>
       </div>
     </ProfissionalShell>

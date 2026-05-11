@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowUpRight, MessageCircle, Phone, RotateCcw } from "lucide-react";
 import { requireAdminMasterUser } from "@/lib/admin-master/auth/requireAdminMasterUser";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import PaginationLinks from "@/components/ui/PaginationLinks";
 
 export const dynamic = "force-dynamic";
 
@@ -24,6 +25,8 @@ type SalaoExcluidoRow = {
   origem: string | null;
 };
 
+const SALOES_EXCLUIDOS_PAGE_SIZE = 10;
+
 function formatDate(value: string | null | undefined) {
   if (!value) return "-";
   const date = new Date(value);
@@ -39,19 +42,29 @@ function onlyDigits(value: string | null | undefined) {
   return String(value || "").replace(/\D/g, "");
 }
 
-export default async function AdminMasterSaloesExcluidosPage() {
+export default async function AdminMasterSaloesExcluidosPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ pagina?: string }>;
+}) {
   await requireAdminMasterUser("saloes_ver");
+  const params = searchParams ? await searchParams : {};
+  const paginaAtual = Math.max(0, Number(params?.pagina || 1) - 1);
+  const from = paginaAtual * SALOES_EXCLUIDOS_PAGE_SIZE;
+  const to = from + SALOES_EXCLUIDOS_PAGE_SIZE - 1;
 
   const supabase = getSupabaseAdmin();
-  const { data, error } = await (supabase as any)
+  const { data, error, count } = await (supabase as any)
     .from("reativar_salao")
     .select(
-      "id, id_salao_original, nome_salao, nome_responsavel, email, telefone, whatsapp, cpf_cnpj, endereco_completo, cidade, estado, bairro, cep, data_exclusao, motivo, origem"
+      "id, id_salao_original, nome_salao, nome_responsavel, email, telefone, whatsapp, cpf_cnpj, endereco_completo, cidade, estado, bairro, cep, data_exclusao, motivo, origem",
+      { count: "exact" }
     )
     .order("data_exclusao", { ascending: false })
-    .limit(100);
+    .range(from, to);
 
   const rows = ((data || []) as SalaoExcluidoRow[]) || [];
+  const totalRows = count || 0;
 
   return (
     <div className="space-y-5">
@@ -93,7 +106,7 @@ export default async function AdminMasterSaloesExcluidosPage() {
             Registros
           </div>
           <div className="mt-2.5 font-display text-[2rem] font-black">
-            {rows.length}
+            {totalRows}
           </div>
           <p className="mt-1 text-sm text-zinc-500">Últimos 100 salões excluídos.</p>
         </div>
@@ -215,6 +228,13 @@ export default async function AdminMasterSaloesExcluidosPage() {
           </table>
         </div>
       </section>
+
+      <PaginationLinks
+        currentPage={paginaAtual}
+        pageSize={SALOES_EXCLUIDOS_PAGE_SIZE}
+        totalItems={totalRows}
+        getHref={(page) => `/admin-master/saloes-excluidos?pagina=${page + 1}`}
+      />
     </div>
   );
 }

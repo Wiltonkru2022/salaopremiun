@@ -810,9 +810,17 @@ export async function isClienteAppSalonFavorite(params: {
   }
 }
 
-export async function listClienteAppFavoriteSaloes(params: { idConta: string }) {
+export async function listClienteAppFavoriteSaloes(params: {
+  idConta: string;
+  page?: number;
+  limit?: number;
+}) {
   try {
     const supabaseAdmin = getSupabaseAdmin();
+    const limit = Math.min(Math.max(params.limit ?? 10, 1), 24);
+    const page = Math.max(params.page ?? 0, 0);
+    const from = page * limit;
+    const to = from + limit - 1;
     const { data, error } = await (supabaseAdmin as any)
       .from("clientes_app_favoritos")
       .select(
@@ -823,7 +831,7 @@ export async function listClienteAppFavoriteSaloes(params: { idConta: string }) 
       )
       .eq("cliente_app_conta_id", params.idConta)
       .order("created_at", { ascending: false })
-      .limit(40);
+      .range(from, to);
 
     if (error) throw error;
 
@@ -1019,17 +1027,29 @@ export async function listClienteAppNotifications(params: {
 }) {
   try {
     const supabaseAdmin = getSupabaseAdmin();
-    const { data, error } = await (supabaseAdmin as any)
+    const limit = Math.min(Math.max(params.limit ?? 10, 1), 20);
+    const page = Math.max(params.page ?? 0, 0);
+    const from = page * limit;
+    const to = from + limit - 1;
+    const shouldRead = params.read === true;
+    let query = (supabaseAdmin as any)
       .from("notification_jobs")
-      .select("id, tipo, titulo, mensagem, status, url, enviar_em, created_at, metadata")
+      .select("id, tipo, titulo, mensagem, status, url, enviar_em, created_at, metadata", {
+        count: "exact",
+      })
       .eq("cliente_app_conta_id", params.idConta)
       .eq("canal", "cliente_app")
-      .order("created_at", { ascending: false })
-      .limit(200);
+      .order("created_at", { ascending: false });
+
+    query = shouldRead
+      ? query.not("metadata->>cliente_lida_em", "is", null)
+      : query.is("metadata->>cliente_lida_em", null);
+
+    const { data, error, count } = await query.range(from, to);
 
     if (error) throw error;
 
-    const mapped = ((data || []) as Array<Record<string, unknown>>).map((item) => {
+    const items = ((data || []) as Array<Record<string, unknown>>).map((item) => {
       const metadata = (item.metadata || {}) as Record<string, unknown>;
       return {
         id: String(item.id || ""),
@@ -1044,18 +1064,10 @@ export async function listClienteAppNotifications(params: {
       };
     }) satisfies ClientAppNotificationListItem[];
 
-    const shouldRead = params.read === true;
-    const filtered = mapped.filter((item) =>
-      shouldRead ? Boolean(item.lidaEm) : !item.lidaEm
-    );
-    const limit = Math.min(Math.max(params.limit ?? 10, 1), 20);
-    const page = Math.max(params.page ?? 0, 0);
-    const from = page * limit;
-
     return {
-      items: filtered.slice(from, from + limit),
-      hasMore: filtered.length > from + limit,
-      total: filtered.length,
+      items,
+      hasMore: (count || 0) > to + 1,
+      total: count || 0,
     };
   } catch (error) {
     await logClientAppQueryError("cliente_app_notifications", error);

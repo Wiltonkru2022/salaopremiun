@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { usePainelSession } from "@/components/layout/PainelSessionProvider";
 import AppLoading from "@/components/ui/AppLoading";
+import PaginationControls from "@/components/ui/PaginationControls";
 import { createClient } from "@/lib/supabase/client";
 
 type ProdutoEstoque = {
@@ -33,6 +34,8 @@ type Alerta = {
 
 type Permissoes = Record<string, boolean>;
 
+const ESTOQUE_PAGE_SIZE = 10;
+
 export default function EstoquePage() {
   const supabase = createClient();
   const router = useRouter();
@@ -42,6 +45,8 @@ export default function EstoquePage() {
   const [erro, setErro] = useState("");
   const [msg, setMsg] = useState("");
   const [busca, setBusca] = useState("");
+  const [paginaAtual, setPaginaAtual] = useState(0);
+  const [totalProdutos, setTotalProdutos] = useState(0);
   const [produtos, setProdutos] = useState<ProdutoEstoque[]>([]);
   const [alertas, setAlertas] = useState<Alerta[]>([]);
 
@@ -91,7 +96,10 @@ export default function EstoquePage() {
       if (!acesso) return;
 
 
-      const { data: produtosRows, error: produtosError } = await supabase
+      const termoBusca = busca.trim();
+      const from = paginaAtual * ESTOQUE_PAGE_SIZE;
+      const to = from + ESTOQUE_PAGE_SIZE - 1;
+      let produtosQuery = supabase
         .from("produtos")
         .select(`
           id,
@@ -107,9 +115,25 @@ export default function EstoquePage() {
           lote,
           ativo,
           status
-        `)
+        `, { count: "exact" })
         .eq("id_salao", acesso.idSalao)
         .order("nome", { ascending: true });
+
+      if (termoBusca) {
+        const filtro = `%${termoBusca.replaceAll("%", "\\%").replaceAll("_", "\\_")}%`;
+        produtosQuery = produtosQuery.or(
+          [
+            `nome.ilike.${filtro}`,
+            `marca.ilike.${filtro}`,
+            `linha.ilike.${filtro}`,
+            `categoria.ilike.${filtro}`,
+            `lote.ilike.${filtro}`,
+          ].join(",")
+        );
+      }
+
+      const { data: produtosRows, error: produtosError, count } =
+        await produtosQuery.range(from, to);
 
       if (produtosError) throw produtosError;
 
@@ -118,11 +142,13 @@ export default function EstoquePage() {
         .select("id, id_produto, tipo, mensagem, resolvido")
         .eq("id_salao", acesso.idSalao)
         .eq("resolvido", false)
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false })
+        .limit(6);
 
       if (alertasError) throw alertasError;
 
       setProdutos((produtosRows as ProdutoEstoque[]) || []);
+      setTotalProdutos(count || 0);
       setAlertas((alertasRows as Alerta[]) || []);
     } catch (e: unknown) {
       console.error(e);
@@ -130,26 +156,13 @@ export default function EstoquePage() {
     } finally {
       setLoading(false);
     }
-  }, [carregarAcesso, supabase]);
+  }, [busca, carregarAcesso, paginaAtual, supabase]);
 
   useEffect(() => {
     void bootstrap();
   }, [bootstrap]);
 
-  const listaFiltrada = useMemo(() => {
-    const termo = busca.toLowerCase().trim();
-
-    return produtos.filter((item) => {
-      return (
-        !termo ||
-        item.nome?.toLowerCase().includes(termo) ||
-        item.marca?.toLowerCase().includes(termo) ||
-        item.linha?.toLowerCase().includes(termo) ||
-        item.categoria?.toLowerCase().includes(termo) ||
-        item.lote?.toLowerCase().includes(termo)
-      );
-    });
-  }, [produtos, busca]);
+  const listaFiltrada = useMemo(() => produtos, [produtos]);
 
   function getStatusEstoque(item: ProdutoEstoque) {
     const atual = Number(item.estoque_atual ?? 0);
@@ -253,12 +266,15 @@ export default function EstoquePage() {
               type="text"
               placeholder="Buscar por nome, marca, linha, categoria ou lote"
               value={busca}
-              onChange={(e) => setBusca(e.target.value)}
+              onChange={(e) => {
+                setPaginaAtual(0);
+                setBusca(e.target.value);
+              }}
               className="w-full rounded-2xl border border-zinc-300 px-4 py-3 text-sm outline-none focus:border-zinc-900"
             />
 
             <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-600">
-              Produtos: <strong className="ml-2 text-zinc-900">{listaFiltrada.length}</strong>
+              Produtos: <strong className="ml-2 text-zinc-900">{totalProdutos}</strong>
             </div>
 
             <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-600">
@@ -359,6 +375,14 @@ export default function EstoquePage() {
             </div>
           )}
         </div>
+
+        <PaginationControls
+          currentPage={paginaAtual}
+          pageSize={ESTOQUE_PAGE_SIZE}
+          totalItems={totalProdutos}
+          onPageChange={setPaginaAtual}
+          className="pb-2"
+        />
       </div>
     </div>
   );

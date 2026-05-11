@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowLeft, Heart } from "lucide-react";
 import ClientAppFrame from "@/components/client-app/ClientAppFrame";
 import ClientAppSalonCard from "@/components/client-app/ClientAppSalonCard";
+import PaginationLinks from "@/components/ui/PaginationLinks";
 import { listClienteAppFavoriteSaloes } from "@/lib/client-app/queries";
 import { requireClienteAppContext } from "@/lib/client-context.server";
 
@@ -9,9 +10,23 @@ export const metadata = {
   title: "Favoritos | Salão Premium",
 };
 
-export default async function ClienteFavoritesPage() {
+const FAVORITOS_PAGE_SIZE = 10;
+
+export default async function ClienteFavoritesPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ pagina?: string }>;
+}) {
   const session = await requireClienteAppContext();
-  const saloes = await listClienteAppFavoriteSaloes({ idConta: session.idConta });
+  const params = searchParams ? await searchParams : {};
+  const paginaAtual = Math.max(0, Number(params?.pagina || 1) - 1);
+  const saloesResult = await listClienteAppFavoriteSaloes({
+    idConta: session.idConta,
+    limit: FAVORITOS_PAGE_SIZE + 1,
+    page: paginaAtual,
+  });
+  const hasMore = saloesResult.length > FAVORITOS_PAGE_SIZE;
+  const saloes = saloesResult.slice(0, FAVORITOS_PAGE_SIZE);
 
   return (
     <ClientAppFrame title="Favoritos" subtitle="Salões que você salvou.">
@@ -56,6 +71,14 @@ export default async function ClienteFavoritesPage() {
             </Link>
           </div>
         )}
+
+        <PaginationLinks
+          currentPage={paginaAtual}
+          pageSize={FAVORITOS_PAGE_SIZE}
+          hasMore={hasMore}
+          getHref={(page) => `/app-cliente/favoritos?pagina=${page + 1}`}
+          className="mt-8"
+        />
       </section>
     </ClientAppFrame>
   );

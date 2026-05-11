@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requireAdminMasterUser } from "@/lib/admin-master/auth/requireAdminMasterUser";
 import { listAdminTickets } from "@/lib/support/tickets";
+import PaginationLinks from "@/components/ui/PaginationLinks";
 
 export const dynamic = "force-dynamic";
 
@@ -48,9 +49,20 @@ function formatRecoveryStage(item: {
   };
 }
 
-export default async function AdminMasterTicketsPage() {
+const ADMIN_TICKETS_PAGE_SIZE = 10;
+
+export default async function AdminMasterTicketsPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ pagina?: string }>;
+}) {
   await requireAdminMasterUser("tickets_ver");
-  const { items, metrics } = await listAdminTickets();
+  const params = searchParams ? await searchParams : {};
+  const paginaAtual = Math.max(0, Number(params?.pagina || 1) - 1);
+  const { items, metrics, total } = await listAdminTickets({
+    limit: ADMIN_TICKETS_PAGE_SIZE,
+    page: paginaAtual,
+  });
 
   return (
     <div className="space-y-6">
@@ -173,6 +185,13 @@ export default async function AdminMasterTicketsPage() {
           </table>
         </div>
       </section>
+
+      <PaginationLinks
+        currentPage={paginaAtual}
+        pageSize={ADMIN_TICKETS_PAGE_SIZE}
+        totalItems={total}
+        getHref={(page) => `/admin-master/tickets?pagina=${page + 1}`}
+      />
     </div>
   );
 }

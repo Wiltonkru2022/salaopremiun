@@ -7,6 +7,7 @@ import { usePainelSession } from "@/components/layout/PainelSessionProvider";
 import { usePlanoAccessSnapshot } from "@/components/plans/usePlanoAccessSnapshot";
 import ConfirmActionModal from "@/components/ui/ConfirmActionModal";
 import AppLoading from "@/components/ui/AppLoading";
+import PaginationControls from "@/components/ui/PaginationControls";
 import { getPlanoMinimoParaRecurso } from "@/lib/plans/catalog";
 import { getAssinaturaUrl } from "@/lib/site-urls";
 import { createClient } from "@/lib/supabase/client";
@@ -23,6 +24,8 @@ type ItemExtra = {
 };
 
 type Permissoes = Record<string, boolean>;
+
+const EXTRAS_PAGE_SIZE = 10;
 
 function formatCurrency(value?: number | null) {
   return Number(value || 0).toLocaleString("pt-BR", {
@@ -49,6 +52,8 @@ export default function ServicosExtrasPage() {
   const [erro, setErro] = useState("");
   const [msg, setMsg] = useState("");
   const [busca, setBusca] = useState("");
+  const [paginaAtual, setPaginaAtual] = useState(0);
+  const [totalItens, setTotalItens] = useState(0);
   const [idSalao, setIdSalao] = useState("");
   const [itens, setItens] = useState<ItemExtra[]>([]);
   const [itemParaExcluir, setItemParaExcluir] = useState<string | null>(null);
@@ -86,18 +91,36 @@ export default function ServicosExtrasPage() {
 
   const carregarItens = useCallback(
     async (salaoId: string) => {
-      const { data, error } = await supabase
+      const termoBusca = busca.trim();
+      const from = paginaAtual * EXTRAS_PAGE_SIZE;
+      const to = from + EXTRAS_PAGE_SIZE - 1;
+      let query = supabase
         .from("itens_extras")
         .select(
-          "id, nome, categoria, descricao, preco_venda, custo, controla_estoque, estoque_atual"
+          "id, nome, categoria, descricao, preco_venda, custo, controla_estoque, estoque_atual",
+          { count: "exact" }
         )
         .eq("id_salao", salaoId)
         .order("nome", { ascending: true });
 
+      if (termoBusca) {
+        const filtro = `%${termoBusca.replaceAll("%", "\\%").replaceAll("_", "\\_")}%`;
+        query = query.or(
+          [
+            `nome.ilike.${filtro}`,
+            `categoria.ilike.${filtro}`,
+            `descricao.ilike.${filtro}`,
+          ].join(",")
+        );
+      }
+
+      const { data, error, count } = await query.range(from, to);
+
       if (error) throw error;
       setItens((data as ItemExtra[]) || []);
+      setTotalItens(count || 0);
     },
-    [supabase]
+    [busca, paginaAtual, supabase]
   );
 
   const bootstrap = useCallback(async () => {
@@ -142,7 +165,7 @@ export default function ServicosExtrasPage() {
 
       if (error) throw error;
 
-      setItens((prev) => prev.filter((item) => item.id !== id));
+      await carregarItens(idSalao);
       setMsg("Serviço extra excluído com sucesso.");
     } catch (e: unknown) {
       console.error(e);
@@ -152,18 +175,7 @@ export default function ServicosExtrasPage() {
     }
   }
 
-  const listaFiltrada = useMemo(() => {
-    const termo = busca.toLowerCase().trim();
-
-    return itens.filter((item) => {
-      return (
-        !termo ||
-        item.nome?.toLowerCase().includes(termo) ||
-        item.categoria?.toLowerCase().includes(termo) ||
-        item.descricao?.toLowerCase().includes(termo)
-      );
-    });
-  }, [itens, busca]);
+  const listaFiltrada = useMemo(() => itens, [itens]);
 
   if (loading || !acessoCarregado) {
     return (
@@ -281,12 +293,15 @@ export default function ServicosExtrasPage() {
                 type="text"
                 placeholder="Buscar por nome, categoria ou descrição"
                 value={busca}
-                onChange={(e) => setBusca(e.target.value)}
+                onChange={(e) => {
+                  setPaginaAtual(0);
+                  setBusca(e.target.value);
+                }}
                 className="w-full rounded-2xl border border-zinc-300 px-4 py-2.5 text-sm outline-none focus:border-zinc-900"
               />
 
               <div className="flex items-center rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-2.5 text-sm text-zinc-600">
-                Total: <strong className="ml-2 text-zinc-900">{listaFiltrada.length}</strong>
+                Total: <strong className="ml-2 text-zinc-900">{totalItens}</strong>
               </div>
             </div>
           </div>
@@ -386,6 +401,14 @@ export default function ServicosExtrasPage() {
               </div>
             )}
           </div>
+
+          <PaginationControls
+            currentPage={paginaAtual}
+            pageSize={EXTRAS_PAGE_SIZE}
+            totalItems={totalItens}
+            onPageChange={setPaginaAtual}
+            className="pb-2"
+          />
         </div>
       </div>
     </>

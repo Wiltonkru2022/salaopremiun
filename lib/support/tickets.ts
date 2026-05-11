@@ -631,18 +631,23 @@ export async function listSalaoTickets(idSalao: string) {
   });
 }
 
-export async function listAdminTickets() {
+export async function listAdminTickets(params?: { page?: number; limit?: number }) {
   return runAdminOperation({
     action: "support_list_admin_tickets",
     run: async (supabase) => {
-      const { data: tickets, error } = await supabase
+      const limit = Math.min(Math.max(params?.limit ?? 10, 1), 50);
+      const page = Math.max(params?.page ?? 0, 0);
+      const from = page * limit;
+      const to = from + limit - 1;
+      const { data: tickets, error, count } = await supabase
         .from("tickets")
         .select(
-          "id, id_salao, numero, assunto, categoria, prioridade, status, origem, criado_em, atualizado_em, ultima_interacao_em, solicitante_nome, sla_limite_em, origem_contexto"
+          "id, id_salao, numero, assunto, categoria, prioridade, status, origem, criado_em, atualizado_em, ultima_interacao_em, solicitante_nome, sla_limite_em, origem_contexto",
+          { count: "exact" }
         )
         .neq("origem", "app_profissional_login")
         .order("ultima_interacao_em", { ascending: false })
-        .limit(150);
+        .range(from, to);
 
       if (error) {
         throw new Error(error.message || "Erro ao listar tickets do AdminMaster.");
@@ -709,6 +714,7 @@ export async function listAdminTickets() {
       return {
         items,
         metrics: buildTicketMetrics(items),
+        total: count || 0,
       };
     }
   });
