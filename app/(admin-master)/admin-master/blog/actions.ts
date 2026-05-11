@@ -8,6 +8,7 @@ import {
   asLooseSupabaseClient,
   type LooseSupabaseClient,
 } from "@/lib/supabase/loose-client";
+import { enviarNewsletterPostPublicado } from "@/services/blogNewsletterEmail";
 
 type BlogSupabaseClient = LooseSupabaseClient;
 
@@ -207,6 +208,8 @@ export async function createBlogPost(
   const tempoLeitura = readText(formData, "tempo_leitura") || "5 min";
   const status = readText(formData, "status") || "rascunho";
   const destaque = readText(formData, "destaque") === "on";
+  const enviarEmailNewsletter =
+    readText(formData, "enviar_email_newsletter") === "on";
   const tags = readTags(readText(formData, "tags"));
 
   if (!titulo || !slug || !descricao || !conteudo || !categoriaId) {
@@ -219,6 +222,21 @@ export async function createBlogPost(
   const supabase = asLooseSupabaseClient(getBlogSupabaseAdmin());
   try {
     const resolvedCategoryId = await resolveCategoryId(supabase, categoriaId);
+    const { data: existingPost } = id
+      ? await supabase
+          .from("blog_posts")
+          .select("status")
+          .eq("id", id)
+          .maybeSingle<{ status?: string | null }>()
+      : await supabase
+          .from("blog_posts")
+          .select("status")
+          .eq("slug", slug)
+          .maybeSingle<{ status?: string | null }>();
+    const shouldSendNewsletter =
+      status === "publicado" &&
+      enviarEmailNewsletter &&
+      existingPost?.status !== "publicado";
     const payload = {
       categoria_id: resolvedCategoryId,
       titulo,
@@ -246,6 +264,23 @@ export async function createBlogPost(
       return {
         error: `Não foi possível salvar o post: ${error.message}`,
       };
+    }
+    if (shouldSendNewsletter) {
+      try {
+        await enviarNewsletterPostPublicado({
+          slug,
+          titulo,
+          descricao,
+          resumo: resumo || descricao,
+        });
+      } catch (newsletterError) {
+        return {
+          error:
+            newsletterError instanceof Error
+              ? `Post salvo, mas o e-mail nao foi enviado: ${newsletterError.message}`
+              : "Post salvo, mas o e-mail nao foi enviado.",
+        };
+      }
     }
   } catch (error) {
     return {

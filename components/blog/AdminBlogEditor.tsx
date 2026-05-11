@@ -154,6 +154,7 @@ export default function AdminBlogEditor({ post, categories }: Props) {
   const [coverAlt, setCoverAlt] = useState(post?.coverAlt || "");
   const [tags, setTags] = useState((post?.tags || []).join(", "));
   const [featured, setFeatured] = useState(Boolean(post?.featured));
+  const [sendNewsletter, setSendNewsletter] = useState(false);
   const [fontSize, setFontSize] = useState(18);
   const [activePanel, setActivePanel] = useState<"conteudo" | "seo">("conteudo");
   const [modal, setModal] = useState<EditorModal>(null);
@@ -227,6 +228,7 @@ export default function AdminBlogEditor({ post, categories }: Props) {
           tags?: string;
           coverImage?: string;
           coverAlt?: string;
+          sendNewsletter?: boolean;
           content?: string;
         };
         if (isNewPost) {
@@ -237,6 +239,9 @@ export default function AdminBlogEditor({ post, categories }: Props) {
           if (draft.tags) setTags(draft.tags);
           if (draft.coverImage) setCoverImage(draft.coverImage);
           if (draft.coverAlt) setCoverAlt(draft.coverAlt);
+          if (typeof draft.sendNewsletter === "boolean") {
+            setSendNewsletter(draft.sendNewsletter);
+          }
         }
         if (draft.content) contentValueRef.current = draft.content;
         setAutosaveStatus("Rascunho local recuperado");
@@ -271,6 +276,7 @@ export default function AdminBlogEditor({ post, categories }: Props) {
           coverAlt,
           tags,
           featured,
+          sendNewsletter,
           content: nextContent,
           savedAt: new Date().toISOString(),
         })
@@ -295,6 +301,7 @@ export default function AdminBlogEditor({ post, categories }: Props) {
     description,
     excerpt,
     featured,
+    sendNewsletter,
     slug,
     tags,
     title,
@@ -363,6 +370,7 @@ export default function AdminBlogEditor({ post, categories }: Props) {
       coverAlt,
       tags,
       featured,
+      sendNewsletter,
       content: nextContent,
       savedAt: new Date().toISOString(),
     };
@@ -1110,6 +1118,22 @@ export default function AdminBlogEditor({ post, categories }: Props) {
                   onChange={(event) => setFeatured(event.target.checked)}
                 />
                 Post em destaque
+              </label>
+              <label className="flex items-start gap-3 rounded-2xl border border-zinc-200 px-3 py-2.5 text-sm font-bold">
+                <input
+                  name="enviar_email_newsletter"
+                  type="checkbox"
+                  checked={sendNewsletter}
+                  onChange={(event) => setSendNewsletter(event.target.checked)}
+                  className="mt-1"
+                />
+                <span>
+                  Enviar e-mail aos inscritos
+                  <span className="mt-1 block text-xs font-semibold leading-5 text-zinc-500">
+                    Use somente quando quiser avisar quem se cadastrou para
+                    receber novidades do blog.
+                  </span>
+                </span>
               </label>
             </div>
           </section>

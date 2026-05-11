@@ -197,5 +197,6 @@ export async function listarAssinantesNewsletterBlog() {
 
   return ((data || []) as NewsletterSubscriber[])
     .map((subscriber) => subscriber.email.trim().toLowerCase())
-    .filter(Boolean);
+    .filter(Boolean)
+    .filter((email, index, emails) => emails.indexOf(email) === index);
 }
