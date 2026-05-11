@@ -16,7 +16,6 @@ import type {
   ProdutoConsumoServico,
   ProdutoServico,
   ProfissionalServico,
-  RecursoServico,
   ServicoState,
   VinculoProfissionalServico,
 } from "@/types/servicos";
@@ -42,7 +41,6 @@ export function ServicoFormGeralSection({
   servico,
   categorias,
   novaCategoria,
-  recursos,
   planoPremium,
   setField,
   setNovaCategoria,
@@ -50,7 +48,6 @@ export function ServicoFormGeralSection({
   servico: ServicoState;
   categorias: CategoriaServico[];
   novaCategoria: string;
-  recursos: RecursoServico[];
   planoPremium: boolean;
   setField: SetServicoField;
   setNovaCategoria: (value: string) => void;
@@ -88,23 +85,6 @@ export function ServicoFormGeralSection({
             onChange={setNovaCategoria}
           />
         ) : null}
-        <Input
-          label="Gatilho de retorno (dias)"
-          value={servico.gatilho_retorno_dias}
-          onChange={(v) => setField("gatilho_retorno_dias", v)}
-        />
-        <Select
-          label="Recurso especifico"
-          value={servico.recurso_nome}
-          onChange={(v) => setField("recurso_nome", v)}
-          options={[
-            { value: "", label: "Nenhum" },
-            ...recursos.map((recurso) => ({
-              value: recurso.nome,
-              label: recurso.nome,
-            })),
-          ]}
-        />
 
         <div className="md:col-span-2">
           <Textarea

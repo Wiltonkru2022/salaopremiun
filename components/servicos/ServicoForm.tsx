@@ -24,7 +24,6 @@ import type {
   ProdutoConsumoServico,
   ProdutoServico,
   ProfissionalServico,
-  RecursoServico,
   ServicoProcessarBody,
   ServicoProcessarErrorResponse,
   ServicoProcessarPayload,
@@ -153,7 +152,6 @@ export default function ServicoForm({ modo }: ServicoFormProps) {
   const [novaCategoria, setNovaCategoria] = useState("");
   const [profissionais, setProfissionais] = useState<ProfissionalServico[]>([]);
   const [produtos, setProdutos] = useState<ProdutoServico[]>([]);
-  const [recursos, setRecursos] = useState<RecursoServico[]>([]);
   const [vinculos, setVinculos] = useState<VinculoProfissionalServico[]>([]);
   const [consumos, setConsumos] = useState<ProdutoConsumoServico[]>([]);
 
@@ -227,15 +225,6 @@ export default function ServicoForm({ modo }: ServicoFormProps) {
 
       if (prodError) throw prodError;
 
-      const { data: recursosRows, error: recError } = await supabase
-        .from("recursos_agenda")
-        .select("id, nome")
-        .eq("id_salao", usuarioLogado.idSalao)
-        .eq("ativo", true)
-        .order("nome", { ascending: true });
-
-      if (recError) throw recError;
-
       const { data: categoriasRows, error: categoriasError } = await supabase
         .from("servicos_categorias")
         .select("id, nome")
@@ -251,7 +240,6 @@ export default function ServicoForm({ modo }: ServicoFormProps) {
       setCategorias((categoriasRows as CategoriaServico[]) || []);
       setProfissionais(listaProfissionais);
       setProdutos(listaProdutos);
-      setRecursos((recursosRows as RecursoServico[]) || []);
 
       if (modo === "novo") {
         setVinculos(
@@ -512,12 +500,10 @@ export default function ServicoForm({ modo }: ServicoFormProps) {
             ? categoriaSalvar?.nome || novaCategoria.trim() || null
             : categoriaSalvar?.nome || null,
         descricao: servico.descricao.trim() || null,
-        gatilho_retorno_dias: servico.gatilho_retorno_dias
-          ? Number(servico.gatilho_retorno_dias)
-          : null,
+        gatilho_retorno_dias: null,
         duracao_minutos: Number(servico.duracao_minutos || 0),
         pausa_minutos: Number(servico.pausa_minutos || 0),
-        recurso_nome: servico.recurso_nome.trim() || null,
+        recurso_nome: null,
         preco_padrao: parseMoneyToNumber(servico.preco_padrao),
         preco_variavel: servico.preco_variavel,
         preco_minimo: servico.preco_minimo
@@ -744,7 +730,6 @@ export default function ServicoForm({ modo }: ServicoFormProps) {
               servico={servico}
               categorias={categorias}
               novaCategoria={novaCategoria}
-              recursos={recursos}
               planoPremium={planoPremium}
               setField={setField}
               setNovaCategoria={setNovaCategoria}
