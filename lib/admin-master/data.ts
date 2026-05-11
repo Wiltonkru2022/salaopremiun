@@ -1498,6 +1498,7 @@ export async function getAdminMasterSection(
       ],
       actions: [
         "Abrir saloes",
+        "Abrir saloes excluidos",
         "Abrir tickets",
         "Abrir financeiro",
       ],

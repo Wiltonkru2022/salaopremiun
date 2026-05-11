@@ -25,6 +25,7 @@ import {
   ShieldCheck,
   Sparkles,
   Ticket,
+  Trash2,
   Users,
   Wallet,
   Webhook,
@@ -77,6 +78,12 @@ const MENU_GROUPS: MenuGroup[] = [
         href: "/admin-master/saloes",
         label: "Saloes",
         icon: Building2,
+        permission: "saloes_ver",
+      },
+      {
+        href: "/admin-master/saloes-excluidos",
+        label: "Saloes excluidos",
+        icon: Trash2,
         permission: "saloes_ver",
       },
       {

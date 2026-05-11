@@ -99,6 +99,7 @@ function resolveModuleAction(action: string): ModuleAction {
     "criar ticket": "/admin-master/tickets",
     "criar alerta": "/admin-master/alertas",
     "abrir saloes": "/admin-master/saloes",
+    "abrir saloes excluidos": "/admin-master/saloes-excluidos",
     "abrir tickets": "/admin-master/tickets",
     "abrir cobrancas": "/admin-master/assinaturas/cobrancas",
     "abrir planos": "/admin-master/planos",

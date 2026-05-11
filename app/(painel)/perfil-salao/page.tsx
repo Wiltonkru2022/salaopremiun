@@ -37,6 +37,7 @@ import AppModal from "@/components/ui/AppModal";
 import { Field, SectionCard, TextInput } from "@/components/configuracoes/ui";
 import { EMPTY_SALAO } from "@/components/configuracoes/constants";
 import type { SalaoForm } from "@/components/configuracoes/types";
+import { PAINEL_SESSION_STORAGE_KEY } from "@/lib/painel/session-snapshot";
 import { getPlanoCatalogo } from "@/lib/plans/catalog";
 import {
   buildDefaultSalaoSlug,
@@ -60,6 +61,7 @@ type ModalKey =
   | "senha"
   | "autenticador"
   | "app_cliente"
+  | "excluir_salao"
   | null;
 
 type TotpFactor = {
@@ -241,14 +243,16 @@ function SidebarAction({
   title: string;
   description: string;
   onClick: () => void;
-  tone?: "default" | "security";
+  tone?: "default" | "security" | "danger";
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
       className={`w-full rounded-[22px] border p-4 text-left transition hover:-translate-y-0.5 ${
-        tone === "security"
+        tone === "danger"
+          ? "border-red-200 bg-red-50 text-red-950 hover:bg-red-100"
+          : tone === "security"
           ? "border-[rgba(199,162,92,0.35)] bg-[rgba(199,162,92,0.10)]"
           : "border-zinc-200 bg-zinc-50 hover:bg-zinc-100"
       }`}
@@ -256,7 +260,9 @@ function SidebarAction({
       <div className="flex items-start gap-3">
         <div
           className={`rounded-2xl border p-2.5 ${
-            tone === "security"
+            tone === "danger"
+              ? "border-red-200 bg-white text-red-700"
+              : tone === "security"
               ? "border-[rgba(199,162,92,0.35)] bg-white text-zinc-900"
               : "border-zinc-200 bg-white text-zinc-700"
           }`}
@@ -289,8 +295,11 @@ export default function PerfilSalaoPage() {
   const [loadingMfa, setLoadingMfa] = useState(false);
   const [mfaBusy, setMfaBusy] = useState(false);
   const [creatingRecoveryTicket, setCreatingRecoveryTicket] = useState(false);
+  const [deletingSalao, setDeletingSalao] = useState(false);
   const [erro, setErro] = useState("");
   const [msg, setMsg] = useState("");
+  const [deleteConfirmacao, setDeleteConfirmacao] = useState("");
+  const [deleteMotivo, setDeleteMotivo] = useState("");
   const [idSalao, setIdSalao] = useState("");
   const [perfilForm, setPerfilForm] = useState<SalaoForm>(EMPTY_SALAO);
   const [comercialDraft, setComercialDraft] = useState<SalaoForm>(EMPTY_SALAO);
@@ -574,7 +583,63 @@ export default function PerfilSalaoPage() {
       setRevealedBackupCodes([]);
     }
 
+    if (modal === "excluir_salao") {
+      setDeleteConfirmacao("");
+      setDeleteMotivo("");
+    }
+
     setActiveModal(modal);
+  }
+
+  async function excluirSalaoDefinitivamente() {
+    if (deleteConfirmacao.trim() !== "EXCLUIR") {
+      setErro("Digite EXCLUIR para confirmar a exclusão definitiva.");
+      return;
+    }
+
+    try {
+      setDeletingSalao(true);
+      setErro("");
+      setMsg("");
+
+      const response = await fetch("/api/painel/excluir-salao", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          confirmacao: "EXCLUIR",
+          motivo: deleteMotivo.trim() || null,
+        }),
+      });
+      const payload = (await response.json().catch(() => ({}))) as {
+        ok?: boolean;
+        error?: string;
+      };
+
+      if (!response.ok || !payload.ok) {
+        throw new Error(
+          payload.error || "Não foi possível excluir o salão agora."
+        );
+      }
+
+      try {
+        window.localStorage.removeItem(PAINEL_SESSION_STORAGE_KEY);
+        window.sessionStorage.clear();
+      } catch {
+        // Navegadores privados podem bloquear storage; o logout ainda continua.
+      }
+
+      await supabase.auth.signOut({ scope: "local" });
+      router.replace("/salao-excluido");
+      router.refresh();
+    } catch (error) {
+      setErro(
+        error instanceof Error
+          ? error.message
+          : "Erro inesperado ao excluir o salão."
+      );
+    } finally {
+      setDeletingSalao(false);
+    }
   }
 
   async function atualizarPerfil(patch: Partial<SalaoForm>, sucesso: string) {
@@ -1716,6 +1781,14 @@ export default function PerfilSalaoPage() {
                   onClick={() => abrirModal("autenticador")}
                   tone="security"
                 />
+
+                <SidebarAction
+                  icon={<Trash2 size={16} />}
+                  title="Excluir salão"
+                  description="Apaga agenda, clientes, profissionais, comandas, serviços, produtos e configurações deste salão."
+                  onClick={() => abrirModal("excluir_salao")}
+                  tone="danger"
+                />
               </div>
             </SectionCard>
 
@@ -1736,6 +1809,72 @@ export default function PerfilSalaoPage() {
           </aside>
         </div>
       </div>
+
+      <AppModal
+        open={activeModal === "excluir_salao"}
+        onClose={() => {
+          if (!deletingSalao) setActiveModal(null);
+        }}
+        title="Deseja realmente excluir este salão?"
+        description="Essa ação apaga agenda, clientes, profissionais, comandas, serviços, produtos e configurações do salão. Não será possível acessar esta conta novamente."
+        eyebrow="Exclusão definitiva"
+        maxWidthClassName="max-w-2xl"
+        footer={
+          <>
+            <button
+              type="button"
+              onClick={() => setActiveModal(null)}
+              disabled={deletingSalao}
+              className="rounded-2xl border border-zinc-200 px-4 py-2.5 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-60"
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              onClick={excluirSalaoDefinitivamente}
+              disabled={deletingSalao || deleteConfirmacao.trim() !== "EXCLUIR"}
+              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-red-600 px-5 py-2.5 text-sm font-bold text-white transition hover:-translate-y-0.5 hover:bg-red-700 disabled:opacity-60"
+            >
+              {deletingSalao ? (
+                <Loader2 className="animate-spin" size={16} />
+              ) : (
+                <Trash2 size={16} />
+              )}
+              Excluir salão definitivamente
+            </button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <div className="rounded-[22px] border border-red-200 bg-red-50 p-4 text-sm leading-6 text-red-950">
+            Esta confirmação é permanente. Antes de continuar, confira se não
+            há agendamentos, vendas ou dados que ainda precisam ser consultados.
+          </div>
+
+          <Field label="Digite EXCLUIR para confirmar">
+            <TextInput
+              value={deleteConfirmacao}
+              onChange={(event) =>
+                setDeleteConfirmacao(event.target.value.toUpperCase())
+              }
+              placeholder="EXCLUIR"
+              autoCapitalize="characters"
+              autoComplete="off"
+              disabled={deletingSalao}
+            />
+          </Field>
+
+          <Field label="Motivo da saída (opcional)">
+            <textarea
+              value={deleteMotivo}
+              onChange={(event) => setDeleteMotivo(event.target.value)}
+              placeholder="Conte em poucas palavras o motivo. Isso ajuda o Admin Master a entender e recuperar o contato depois."
+              disabled={deletingSalao}
+              className="min-h-28 w-full resize-none rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-900 outline-none transition placeholder:text-zinc-400 focus:border-zinc-950 disabled:opacity-60"
+            />
+          </Field>
+        </div>
+      </AppModal>
 
       <AppModal
         open={activeModal === "comercial"}
