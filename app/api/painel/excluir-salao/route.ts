@@ -20,6 +20,11 @@ type SupabaseRpcError = {
   hint?: string | null;
 };
 
+type PainelAuthUserRow = {
+  auth_user_id?: string | null;
+  email?: string | null;
+};
+
 export async function POST(request: Request) {
   try {
     const payload = (await request.json().catch(() => ({}))) as ExcluirSalaoPayload;
@@ -48,6 +53,36 @@ export async function POST(request: Request) {
     );
 
     const supabaseAdmin = getSupabaseAdmin();
+    const { data: painelAuthUsers, error: painelAuthUsersError } =
+      await supabaseAdmin
+        .from("usuarios")
+        .select("auth_user_id, email")
+        .eq("id_salao", membership.usuario.id_salao)
+        .not("auth_user_id", "is", null);
+
+    if (painelAuthUsersError) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error:
+            "Nao foi possivel preparar a exclusao dos usuarios de autenticacao.",
+          debug: {
+            message: painelAuthUsersError.message,
+            code: painelAuthUsersError.code,
+          },
+        },
+        { status: 500 }
+      );
+    }
+
+    const authUsersToDelete = Array.from(
+      new Set(
+        ((painelAuthUsers || []) as PainelAuthUserRow[])
+          .map((row) => String(row.auth_user_id || "").trim())
+          .filter(Boolean)
+      )
+    );
+
     const { data, error } = await (supabaseAdmin as any).rpc(
       "excluir_salao_definitivo",
       {
@@ -88,7 +123,32 @@ export async function POST(request: Request) {
       );
     }
 
-    return NextResponse.json({ ok: true, resultado: data });
+    const authDeleteResults = await Promise.all(
+      authUsersToDelete.map(async (authUserId) => {
+        const result = await supabaseAdmin.auth.admin.deleteUser(authUserId);
+        return {
+          authUserId,
+          ok: !result.error,
+          error: result.error?.message || null,
+        };
+      })
+    );
+
+    const authDeleteErrors = authDeleteResults.filter((item) => !item.ok);
+
+    if (authDeleteErrors.length) {
+      console.error("Salao excluido, mas alguns usuarios Auth nao foram apagados:", {
+        idSalao: membership.usuario.id_salao,
+        authDeleteErrors,
+      });
+    }
+
+    return NextResponse.json({
+      ok: true,
+      resultado: data,
+      authUsuariosApagados: authDeleteResults.filter((item) => item.ok).length,
+      authUsuariosComErro: authDeleteErrors,
+    });
   } catch (error) {
     if (error instanceof AuthzError) {
       return NextResponse.json(
