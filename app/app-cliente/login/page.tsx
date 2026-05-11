@@ -45,7 +45,7 @@ export default async function LoginClientePage({
     : params.logout;
   const session = await getClienteSessionFromCookie();
 
-  if (session) {
+  if (session && logout !== "1") {
     const validation = await validateClienteAppSession().catch(() => null);
     if (validation?.context) {
       redirect(next || "/app-cliente/agendamentos");

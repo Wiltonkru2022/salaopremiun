@@ -3,6 +3,7 @@ import {
   createClienteSession,
   createClienteSessionRestoreToken,
   getClienteSessionFromCookie,
+  hasClienteLogoutMarker,
   parseClienteSessionRestoreToken,
 } from "@/lib/cliente-auth.server";
 
@@ -16,6 +17,13 @@ async function readRestoreToken(request: Request) {
 }
 
 export async function POST(request: Request) {
+  if (await hasClienteLogoutMarker()) {
+    return NextResponse.json(
+      { ok: false, message: "Sessão encerrada neste aparelho." },
+      { status: 401 }
+    );
+  }
+
   const cookieSession = await getClienteSessionFromCookie();
   const restoreToken = cookieSession ? "" : await readRestoreToken(request);
   const restoredSession = restoreToken

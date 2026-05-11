@@ -15,6 +15,7 @@ export type ClienteAppSession = {
 };
 
 const COOKIE_NAME = "sp_cliente_session";
+const LOGOUT_MARKER_COOKIE_NAME = "sp_cliente_logout";
 const SESSION_TTL_SECONDS = 60 * 60 * 24 * 180;
 const ENC_ALGORITHM = "aes-256-gcm";
 const IV_LENGTH = 12;
@@ -159,10 +160,19 @@ export async function createClienteSession(session: ClienteAppSession) {
     maxAge: SESSION_TTL_SECONDS,
   } as const;
 
+  cookieStore.set(LOGOUT_MARKER_COOKIE_NAME, "", {
+    ...baseOptions,
+    maxAge: 0,
+  });
   cookieStore.set(COOKIE_NAME, token, baseOptions);
 
   const cookieDomain = getCookieDomain();
   if (cookieDomain) {
+    cookieStore.set(LOGOUT_MARKER_COOKIE_NAME, "", {
+      ...baseOptions,
+      domain: cookieDomain,
+      maxAge: 0,
+    });
     cookieStore.set(COOKIE_NAME, token, {
       ...baseOptions,
       domain: cookieDomain,
@@ -172,6 +182,10 @@ export async function createClienteSession(session: ClienteAppSession) {
 
 export async function getClienteSessionFromCookie(): Promise<ClienteAppSession | null> {
   const cookieStore = await cookies();
+  if (cookieStore.get(LOGOUT_MARKER_COOKIE_NAME)?.value) {
+    return null;
+  }
+
   const candidates = cookieStore
     .getAll(COOKIE_NAME)
     .map((cookie) => cookie.value)
@@ -210,13 +224,27 @@ export async function clearClienteSession() {
     maxAge: 0,
   } as const;
 
+  cookieStore.set(LOGOUT_MARKER_COOKIE_NAME, String(Date.now()), {
+    ...baseOptions,
+    maxAge: SESSION_TTL_SECONDS,
+  });
   cookieStore.set(COOKIE_NAME, "", baseOptions);
 
   const cookieDomain = getCookieDomain();
   if (cookieDomain) {
+    cookieStore.set(LOGOUT_MARKER_COOKIE_NAME, String(Date.now()), {
+      ...baseOptions,
+      domain: cookieDomain,
+      maxAge: SESSION_TTL_SECONDS,
+    });
     cookieStore.set(COOKIE_NAME, "", {
       ...baseOptions,
       domain: cookieDomain,
     });
   }
+}
+
+export async function hasClienteLogoutMarker() {
+  const cookieStore = await cookies();
+  return Boolean(cookieStore.get(LOGOUT_MARKER_COOKIE_NAME)?.value);
 }
