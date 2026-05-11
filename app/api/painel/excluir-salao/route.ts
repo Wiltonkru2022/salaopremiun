@@ -13,6 +13,13 @@ type ExcluirSalaoPayload = {
   motivo?: string;
 };
 
+type SupabaseRpcError = {
+  code?: string;
+  message?: string;
+  details?: string | null;
+  hint?: string | null;
+};
+
 export async function POST(request: Request) {
   try {
     const payload = (await request.json().catch(() => ({}))) as ExcluirSalaoPayload;
@@ -52,12 +59,30 @@ export async function POST(request: Request) {
     );
 
     if (error) {
-      console.error("Erro ao excluir salao definitivamente:", error);
+      const rpcError = error as SupabaseRpcError;
+      const debugId = crypto.randomUUID();
+      console.error("Erro ao excluir salao definitivamente:", {
+        debugId,
+        idSalao: membership.usuario.id_salao,
+        idUsuario: membership.usuario.id,
+        code: rpcError.code,
+        message: rpcError.message,
+        details: rpcError.details,
+        hint: rpcError.hint,
+      });
+
       return NextResponse.json(
         {
           ok: false,
           error:
             "Nao foi possivel excluir o salao agora. Nenhum dado foi removido; tente novamente ou fale com o suporte.",
+          debugId,
+          debug: {
+            code: rpcError.code || null,
+            message: rpcError.message || "Erro sem mensagem do Supabase.",
+            details: rpcError.details || null,
+            hint: rpcError.hint || null,
+          },
         },
         { status: 500 }
       );
@@ -72,9 +97,21 @@ export async function POST(request: Request) {
       );
     }
 
-    console.error("Falha inesperada ao excluir salao:", error);
+    const debugId = crypto.randomUUID();
+    console.error("Falha inesperada ao excluir salao:", {
+      debugId,
+      error,
+    });
     return NextResponse.json(
-      { ok: false, error: "Erro inesperado ao excluir o salao." },
+      {
+        ok: false,
+        error: "Erro inesperado ao excluir o salao.",
+        debugId,
+        debug: {
+          message:
+            error instanceof Error ? error.message : "Erro sem mensagem.",
+        },
+      },
       { status: 500 }
     );
   }
