@@ -92,6 +92,48 @@ function RatingStars({ nota }: { nota: number }) {
   );
 }
 
+type ServiceRowProps = {
+  servico: {
+    id: string;
+    nome: string;
+    descricao: string | null;
+    preco: number | null;
+    duracaoMinutos: number | null;
+    exigeAvaliacao: boolean;
+  };
+};
+
+function ServiceRow({ servico }: ServiceRowProps) {
+  return (
+    <div className="grid grid-cols-[1fr_auto] items-center gap-4 py-5">
+      <div>
+        <div className="text-xl font-medium text-zinc-950">{servico.nome}</div>
+        {servico.descricao ? (
+          <p className="mt-1 text-sm leading-6 text-zinc-500">
+            {servico.descricao}
+          </p>
+        ) : null}
+      </div>
+      <div className="text-right">
+        <div className="text-lg font-black text-zinc-950">
+          {servico.exigeAvaliacao ? "A avaliar" : formatCurrency(servico.preco)}
+        </div>
+        <div className="mt-1 text-sm text-zinc-500">
+          {servico.duracaoMinutos
+            ? `${servico.duracaoMinutos} min`
+            : "Tempo sob consulta"}
+        </div>
+        <a
+          href="#agendar"
+          className="mt-3 inline-flex h-11 items-center justify-center rounded-xl bg-zinc-950 px-5 text-sm font-black text-white"
+        >
+          Reservar
+        </a>
+      </div>
+    </div>
+  );
+}
+
 export default async function ClienteSalonPage({
   params,
 }: {
@@ -138,6 +180,8 @@ export default async function ClienteSalonPage({
     const diasLabel = formatDiasFuncionamento(
       salao.horarioFuncionamento.diasFuncionamento
     );
+    const popularServices = salao.servicos.slice(0, 5);
+    const otherServices = salao.servicos.slice(5);
 
     return (
       <ClientAppFrame title={salao.nome} subtitle="Agendamento online">
@@ -221,40 +265,8 @@ export default async function ClienteSalonPage({
                 </h2>
                 <div className="mt-5 divide-y divide-zinc-100">
                   {salao.servicos.length ? (
-                    salao.servicos.map((servico) => (
-                      <div
-                        key={servico.id}
-                        className="grid grid-cols-[1fr_auto] items-center gap-4 py-5"
-                      >
-                        <div>
-                          <div className="text-xl font-medium text-zinc-950">
-                            {servico.nome}
-                          </div>
-                          {servico.descricao ? (
-                            <p className="mt-1 text-sm leading-6 text-zinc-500">
-                              {servico.descricao}
-                            </p>
-                          ) : null}
-                        </div>
-                        <div className="text-right">
-                          <div className="text-lg font-black text-zinc-950">
-                            {servico.exigeAvaliacao
-                              ? "A avaliar"
-                              : formatCurrency(servico.preco)}
-                          </div>
-                          <div className="mt-1 text-sm text-zinc-500">
-                            {servico.duracaoMinutos
-                              ? `${servico.duracaoMinutos} min`
-                              : "Tempo sob consulta"}
-                          </div>
-                          <a
-                            href="#agendar"
-                            className="mt-3 inline-flex h-11 items-center justify-center rounded-xl bg-zinc-950 px-5 text-sm font-black text-white"
-                          >
-                            Reservar
-                          </a>
-                        </div>
-                      </div>
+                    popularServices.map((servico) => (
+                      <ServiceRow key={servico.id} servico={servico} />
                     ))
                   ) : (
                     <p className="text-sm leading-6 text-zinc-500">
@@ -263,6 +275,19 @@ export default async function ClienteSalonPage({
                     </p>
                   )}
                 </div>
+
+                {otherServices.length ? (
+                  <div className="mt-9">
+                    <h2 className="text-3xl font-black tracking-[-0.05em]">
+                      Outros servicos
+                    </h2>
+                    <div className="mt-5 divide-y divide-zinc-100">
+                      {otherServices.map((servico) => (
+                        <ServiceRow key={servico.id} servico={servico} />
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
               </div>
 
               <aside id="agendar" className="lg:sticky lg:top-20 lg:self-start">
