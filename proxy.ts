@@ -411,8 +411,17 @@ export async function proxy(request: NextRequest) {
   const idSalao = usuario?.id_salao;
 
   if (!idSalao) {
-    if (ctx.rotaPainel || ctx.rotaLogin) {
-      return redirectToHost(request, DOMINIO_ASSINATURA, "/assinatura");
+    if (ctx.rotaLogin || ctx.rotaCadastro) {
+      return response;
+    }
+
+    if (ctx.rotaPainel) {
+      return redirectToHost(
+        request,
+        DOMINIO_LOGIN,
+        "/login",
+        "?motivo=salao_excluido"
+      );
     }
     return response;
   }

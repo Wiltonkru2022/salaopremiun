@@ -98,6 +98,15 @@ export function getLoginRedirectNotice(
     };
   }
 
+  if (reason === "salao_excluido") {
+    return {
+      tone: "warning",
+      title: "Este salao foi excluido",
+      description:
+        "A conta nao esta mais vinculada a um salao ativo. Limpe a sessao local ou cadastre um novo salao para continuar.",
+    };
+  }
+
   if (reason === "senha_atualizada") {
     return {
       tone: "success",

@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { ArrowRight, Loader2, LockKeyhole, Mail, Sparkles } from "lucide-react";
 import { createClient } from "../../lib/supabase/client";
 import {
@@ -38,7 +38,6 @@ function LoginPageFallback() {
 }
 
 function LoginPageContent() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const submittingRef = useRef(false);
   const [supabase, setSupabase] = useState<ReturnType<typeof createClient> | null>(
@@ -72,19 +71,11 @@ function LoginPageContent() {
       const client = createClient();
       setSupabase(client);
 
-      client.auth
-        .getSession()
-        .then(({ data }) => {
-          if (data.session?.user) {
-            window.location.replace(redirectHref);
-          }
-        })
-        .catch(() => undefined);
     } catch (error) {
       console.warn("Supabase indisponível para login:", error);
       setErro("Serviço de autenticacao indisponível neste ambiente.");
     }
-  }, [redirectHref]);
+  }, []);
 
   useEffect(() => {
     if (!emailQuery) return;
@@ -200,6 +191,10 @@ function LoginPageContent() {
     setErro("Sessao local limpa. Aguarde alguns segundos e tente entrar de novo.");
   }
 
+  function abrirCadastroSalao() {
+    window.location.assign(getManagedHostHref("/cadastro-salao", "cadastro"));
+  }
+
   return (
     <div className="min-h-screen bg-white text-zinc-950">
       <header className="flex h-[74px] items-center justify-between border-b border-zinc-200 bg-white px-5 sm:px-8">
@@ -212,12 +207,13 @@ function LoginPageContent() {
           </span>
         </Link>
 
-        <Link
-          href="/cadastro-salao"
+        <button
+          type="button"
+          onClick={abrirCadastroSalao}
           className="rounded-full border border-zinc-200 px-4 py-2 text-sm font-black text-zinc-800 transition hover:border-zinc-950"
         >
           Cadastrar salão
-        </Link>
+        </button>
       </header>
 
       <main className="grid min-h-[calc(100vh-74px)] lg:grid-cols-2">
@@ -330,13 +326,12 @@ function LoginPageContent() {
               <div className="flex items-center justify-end">
                 <button
                   type="button"
-                  onClick={() =>
-                    router.push(
-                      email.trim()
-                        ? `/recuperar-senha?email=${encodeURIComponent(email.trim())}`
-                        : "/recuperar-senha"
-                    )
-                  }
+                  onClick={() => {
+                    const path = email.trim()
+                      ? `/recuperar-senha?email=${encodeURIComponent(email.trim())}`
+                      : "/recuperar-senha";
+                    window.location.assign(path);
+                  }}
                   className="text-sm font-medium text-zinc-500 transition hover:text-zinc-900"
                 >
                   Esqueci minha senha
@@ -378,13 +373,12 @@ function LoginPageContent() {
                 Ainda não tem conta?{" "}
                 <button
                   type="button"
-                  onClick={() =>
-                    router.push(
-                      planoSelecionado
-                        ? `/cadastro-salao?plano=${encodeURIComponent(planoSelecionado)}`
-                        : "/cadastro-salao"
-                    )
-                  }
+                  onClick={() => {
+                    const path = planoSelecionado
+                      ? `/cadastro-salao?plano=${encodeURIComponent(planoSelecionado)}`
+                      : "/cadastro-salao";
+                    window.location.assign(getManagedHostHref(path, "cadastro"));
+                  }}
                   className="font-black text-[var(--app-accent-strong)] transition hover:text-zinc-950"
                 >
                   Cadastre-se
@@ -420,7 +414,10 @@ function LoginBadge({ label }: { label: string }) {
   );
 }
 
-function getManagedHostHref(path: string, host: "painel" | "assinatura") {
+function getManagedHostHref(
+  path: string,
+  host: "painel" | "assinatura" | "cadastro"
+) {
   if (typeof window === "undefined") {
     return path;
   }
@@ -434,7 +431,9 @@ function getManagedHostHref(path: string, host: "painel" | "assinatura") {
   const targetHost =
     host === "assinatura"
       ? "assinatura.salaopremiun.com.br"
-      : "painel.salaopremiun.com.br";
+      : host === "cadastro"
+        ? "cadastro.salaopremiun.com.br"
+        : "painel.salaopremiun.com.br";
 
   return `https://${targetHost}${path}`;
 }
