@@ -896,7 +896,7 @@ export async function listClienteAppWrittenReviews(params: { idConta: string }) 
     const { data, error } = await (supabaseAdmin as any)
       .from("clientes_avaliacoes")
       .select(
-        "id, id_cliente, nota, comentario, created_at, saloes(nome, nome_fantasia), servicos(nome), profissionais(nome, nome_exibicao)"
+        "id, id_cliente, id_salao, id_agendamento, nota, comentario, created_at"
       )
       .in("id_cliente", clientesIds)
       .order("created_at", { ascending: false })
@@ -904,8 +904,77 @@ export async function listClienteAppWrittenReviews(params: { idConta: string }) 
 
     if (error) throw error;
 
-    return ((data || []) as Array<Record<string, unknown>>).map((item) => {
+    const rows = ((data || []) as Array<Record<string, unknown>>) || [];
+    const salaoIds = Array.from(
+      new Set(rows.map((item) => String(item.id_salao || "")).filter(Boolean))
+    );
+    const agendamentoIds = Array.from(
+      new Set(
+        rows.map((item) => String(item.id_agendamento || "")).filter(Boolean)
+      )
+    );
+
+    const [saloesResult, agendamentosResult] = await Promise.allSettled([
+      salaoIds.length
+        ? (supabaseAdmin as any)
+            .from("saloes")
+            .select("id, nome, nome_fantasia")
+            .in("id", salaoIds)
+        : Promise.resolve({ data: [] }),
+      agendamentoIds.length
+        ? (supabaseAdmin as any)
+            .from("agendamentos")
+            .select("id, servicos(nome), profissionais(nome, nome_exibicao)")
+            .in("id", agendamentoIds)
+        : Promise.resolve({ data: [] }),
+    ]);
+
+    const salaoById = new Map<string, string>();
+    if (saloesResult.status === "fulfilled") {
+      for (const salao of ((saloesResult.value.data || []) as Array<
+        Record<string, unknown>
+      >)) {
+        const id = String(salao.id || "");
+        if (!id) continue;
+        salaoById.set(
+          id,
+          String(salao.nome_fantasia || "").trim() ||
+            String(salao.nome || "").trim() ||
+            "SalaoPremium"
+        );
+      }
+    }
+
+    const atendimentoById = new Map<
+      string,
+      { servicoNome: string; profissionalNome: string }
+    >();
+    if (agendamentosResult.status === "fulfilled") {
+      for (const agendamento of ((agendamentosResult.value.data || []) as Array<
+        Record<string, unknown>
+      >)) {
+        const id = String(agendamento.id || "");
+        if (!id) continue;
+        const servico = agendamento.servicos as { nome?: string | null } | null;
+        const profissional = agendamento.profissionais as
+          | { nome?: string | null; nome_exibicao?: string | null }
+          | null;
+        atendimentoById.set(id, {
+          servicoNome: String(servico?.nome || "").trim() || "Atendimento",
+          profissionalNome:
+            String(profissional?.nome_exibicao || "").trim() ||
+            String(profissional?.nome || "").trim() ||
+            "Profissional",
+        });
+      }
+    }
+
+    return rows.map((item) => {
       const idCliente = String(item.id_cliente || "");
+      const idSalao = String(item.id_salao || "");
+      const atendimento = atendimentoById.get(
+        String(item.id_agendamento || "")
+      );
       const salao = item.saloes as
         | { nome?: string | null; nome_fantasia?: string | null }
         | null;
@@ -917,12 +986,17 @@ export async function listClienteAppWrittenReviews(params: { idConta: string }) 
       return {
         id: String(item.id || ""),
         salaoNome:
+          salaoById.get(idSalao) ||
           String(salao?.nome_fantasia || "").trim() ||
           String(salao?.nome || "").trim() ||
           salaoByCliente.get(idCliente) ||
           "Salão Premium",
-        servicoNome: String(servico?.nome || "").trim() || "Atendimento",
+        servicoNome:
+          atendimento?.servicoNome ||
+          String(servico?.nome || "").trim() ||
+          "Atendimento",
         profissionalNome:
+          atendimento?.profissionalNome ||
           String(profissional?.nome_exibicao || "").trim() ||
           String(profissional?.nome || "").trim() ||
           "Profissional",
