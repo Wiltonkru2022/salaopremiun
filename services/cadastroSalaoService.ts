@@ -1,4 +1,5 @@
 import { registrarLogSistema } from "@/lib/system-logs";
+import { geocodeSalonAddress } from "@/lib/saloes/geocoding";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 const TRIAL_GRATIS_DIAS = 15;
@@ -151,6 +152,41 @@ export function createCadastroSalaoService() {
             "Erro ao criar salao em transacao. Verifique a migration fn_cadastrar_salao_transacional.",
           400
         );
+      }
+
+      const coordinates = await geocodeSalonAddress({
+        cep: params.payload.cepLimpo,
+        endereco: params.payload.enderecoNormalizado,
+        numero: params.payload.numeroNormalizado,
+        bairro: params.payload.bairroNormalizado,
+        cidade: params.payload.cidadeNormalizada,
+        estado: params.payload.estadoNormalizado,
+      }).catch(() => null);
+
+      if (coordinates) {
+        const { error: coordenadasError } = await supabaseAdmin
+          .from("saloes")
+          .update({
+            latitude: coordinates.latitude,
+            longitude: coordinates.longitude,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", idSalao);
+
+        if (!coordenadasError) {
+          await registrarLogSistema({
+            gravidade: "info",
+            modulo: "cadastro_salao",
+            idSalao,
+            mensagem: "Coordenadas do salao preenchidas automaticamente no cadastro.",
+            detalhes: {
+              provider: coordinates.provider,
+              precision: coordinates.precision,
+              latitude: coordinates.latitude,
+              longitude: coordinates.longitude,
+            },
+          }).catch(() => undefined);
+        }
       }
 
       return idSalao;
