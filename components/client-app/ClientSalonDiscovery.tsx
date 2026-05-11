@@ -5,6 +5,8 @@ import { LocateFixed, MapPin, Navigation, Search, SlidersHorizontal, X } from "l
 import ClientAppSalonCard from "@/components/client-app/ClientAppSalonCard";
 import type { ClientAppSalonListItem } from "@/lib/client-app/queries";
 
+const MAX_REASONABLE_DISTANCE_KM = 2500;
+
 const categories = [
   {
     label: "Barbeiros",
@@ -60,6 +62,14 @@ function distanceInKm(
   return radius * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
+function safeDistanceInKm(
+  from: { latitude: number; longitude: number },
+  to: { latitude: number; longitude: number }
+) {
+  const distance = distanceInKm(from, to);
+  return distance > MAX_REASONABLE_DISTANCE_KM ? null : distance;
+}
+
 export default function ClientSalonDiscovery({
   saloes,
   initialSearch = "",
@@ -94,7 +104,7 @@ export default function ClientSalonDiscovery({
         ...salao,
         distanceKm:
           location && salao.latitude !== null && salao.longitude !== null
-            ? distanceInKm(location, {
+            ? safeDistanceInKm(location, {
                 latitude: salao.latitude,
                 longitude: salao.longitude,
               })
@@ -160,6 +170,15 @@ export default function ClientSalonDiscovery({
 
     navigator.geolocation.getCurrentPosition(
       (position) => {
+        if (position.coords.accuracy > 50000) {
+          setLocationError(
+            "Sua localização veio muito imprecisa. Use o filtro de cidade ou tente novamente."
+          );
+          setLocation(null);
+          setShowMapPanel(true);
+          return;
+        }
+
         setLocation({
           latitude: position.coords.latitude,
           longitude: position.coords.longitude,

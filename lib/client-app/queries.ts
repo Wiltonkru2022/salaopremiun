@@ -142,7 +142,17 @@ function parseNullableNumber(value: unknown) {
   return Number.isFinite(numeric) ? numeric : null;
 }
 
+function hasValidCoordinatePair(latitude: number | null, longitude: number | null) {
+  if (latitude === null || longitude === null) return false;
+  if (Math.abs(latitude) > 90 || Math.abs(longitude) > 180) return false;
+  return !(latitude === 0 && longitude === 0);
+}
+
 function mapLiveSalonRow(row: Record<string, unknown>): ClientAppSalonListItem {
+  const latitude = parseNullableNumber(row.latitude);
+  const longitude = parseNullableNumber(row.longitude);
+  const hasCoordinates = hasValidCoordinatePair(latitude, longitude);
+
   return {
     id: String(row.id || ""),
     nome:
@@ -170,8 +180,8 @@ function mapLiveSalonRow(row: Record<string, unknown>): ClientAppSalonListItem {
         .join(" | ") || null,
     logoUrl: String(row.logo_url || "").trim() || null,
     fotoCapaUrl: String(row.foto_capa_url || "").trim() || null,
-    latitude: parseNullableNumber(row.latitude),
-    longitude: parseNullableNumber(row.longitude),
+    latitude: hasCoordinates ? latitude : null,
+    longitude: hasCoordinates ? longitude : null,
     whatsapp: String(row.whatsapp || "").trim() || null,
     telefone: String(row.telefone || "").trim() || null,
     descricaoPublica: String(row.descricao_publica || "").trim() || null,

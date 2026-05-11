@@ -79,6 +79,12 @@ function parseNumber(value: unknown) {
   return Number.isFinite(numeric) ? numeric : null;
 }
 
+function hasValidCoordinatePair(latitude: number | null, longitude: number | null) {
+  if (latitude === null || longitude === null) return false;
+  if (Math.abs(latitude) > 90 || Math.abs(longitude) > 180) return false;
+  return !(latitude === 0 && longitude === 0);
+}
+
 function isUuid(value: string) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
     value
@@ -103,6 +109,10 @@ function buildEnderecoCompleto(row: EligibleSalonRow) {
 }
 
 function mapSalonRow(row: EligibleSalonRow): ClientAppEligibleSalon {
+  const latitude = parseNumber(row.latitude);
+  const longitude = parseNumber(row.longitude);
+  const hasCoordinates = hasValidCoordinatePair(latitude, longitude);
+
   return {
     id: row.id,
     nome:
@@ -118,8 +128,8 @@ function mapSalonRow(row: EligibleSalonRow): ClientAppEligibleSalon {
     enderecoCompleto: buildEnderecoCompleto(row),
     logoUrl: String(row.logo_url || "").trim() || null,
     fotoCapaUrl: String(row.foto_capa_url || "").trim() || null,
-    latitude: parseNumber(row.latitude),
-    longitude: parseNumber(row.longitude),
+    latitude: hasCoordinates ? latitude : null,
+    longitude: hasCoordinates ? longitude : null,
     whatsapp: String(row.whatsapp || "").trim() || null,
     telefone: String(row.telefone || "").trim() || null,
     descricaoPublica: String(row.descricao_publica || "").trim() || null,
