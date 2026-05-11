@@ -50,7 +50,7 @@ function buildSessionFromAccount(
 ): ClienteAppSession {
   return {
     idConta: String(account.id),
-    nome: String(account.nome || "").trim() || "Cliente SalaoPremium",
+    nome: String(account.nome || "").trim() || "Cliente Salão Premium",
     email:
       normalizeEmail(String(account.email || "").trim()) ||
       "cliente@salaopremium.local",
@@ -103,7 +103,7 @@ async function createGlobalAccountFromLegacy(params: {
   const { data, error } = await params.supabaseAdmin
     .from("clientes_app_auth")
     .insert({
-      nome: String(params.nome || "").trim() || "Cliente SalaoPremium",
+      nome: String(params.nome || "").trim() || "Cliente Salão Premium",
       email: params.email,
       telefone: String(params.telefone || "").trim() || null,
       senha_hash: params.legacyHash,
@@ -130,7 +130,7 @@ export async function ensureClienteContaVinculadaAoSalao(params: {
   if (!idConta || !idSalao) {
     return {
       ok: false as const,
-      error: "Nao foi possivel identificar a conta para este salao.",
+      error: "Não foi possível identificar a conta para este salão.",
     };
   }
 
@@ -138,7 +138,7 @@ export async function ensureClienteContaVinculadaAoSalao(params: {
   if (!elegibilidade.allowed) {
     return {
       ok: false as const,
-      error: "Este salao nao esta publicado no app cliente agora.",
+      error: "Este salão não está publicado no app cliente agora.",
     };
   }
 
@@ -157,7 +157,7 @@ export async function ensureClienteContaVinculadaAoSalao(params: {
       if (accountError || !accountRow?.id || accountRow.ativo === false) {
         return {
           ok: false as const,
-          error: "Sua conta global de cliente nao esta disponivel agora.",
+          error: "Sua conta global de cliente não está disponível agora.",
         };
       }
 
@@ -174,7 +174,7 @@ export async function ensureClienteContaVinculadaAoSalao(params: {
       if (linkedAuthError) {
         return {
           ok: false as const,
-          error: "Nao foi possivel validar seu acesso ao salao agora.",
+          error: "Não foi possível validar seu acesso ao salão agora.",
         };
       }
 
@@ -220,7 +220,7 @@ export async function ensureClienteContaVinculadaAoSalao(params: {
       if (clienteByPhoneError || authByEmailError || clienteByEmailError) {
         return {
           ok: false as const,
-          error: "Nao foi possivel validar sua ficha neste salao agora.",
+          error: "Não foi possível validar sua ficha neste salão agora.",
         };
       }
 
@@ -252,7 +252,7 @@ export async function ensureClienteContaVinculadaAoSalao(params: {
         if (clienteUpdateError) {
           return {
             ok: false as const,
-            error: "Nao foi possivel atualizar seu cadastro neste salao.",
+            error: "Não foi possível atualizar seu cadastro neste salão.",
           };
         }
       } else {
@@ -274,7 +274,7 @@ export async function ensureClienteContaVinculadaAoSalao(params: {
         if (insertClienteError || !createdCliente?.id) {
           return {
             ok: false as const,
-            error: "Nao foi possivel criar sua ficha de cliente neste salao.",
+            error: "Não foi possível criar sua ficha de cliente neste salão.",
           };
         }
 
@@ -292,7 +292,7 @@ export async function ensureClienteContaVinculadaAoSalao(params: {
       if (authByClientError) {
         return {
           ok: false as const,
-          error: "Nao foi possivel ativar seu acesso neste salao.",
+          error: "Não foi possível ativar seu acesso neste salão.",
         };
       }
 
@@ -315,7 +315,7 @@ export async function ensureClienteContaVinculadaAoSalao(params: {
         if (authUpdateError) {
           return {
             ok: false as const,
-            error: "Nao foi possivel ativar seu acesso neste salao.",
+            error: "Não foi possível ativar seu acesso neste salão.",
           };
         }
       } else {
@@ -333,7 +333,7 @@ export async function ensureClienteContaVinculadaAoSalao(params: {
         if (authInsertError) {
           return {
             ok: false as const,
-            error: "Nao foi possivel ativar seu acesso neste salao.",
+            error: "Não foi possível ativar seu acesso neste salão.",
           };
         }
       }
@@ -378,7 +378,7 @@ export async function createClienteAppAccount(params: {
         return {
           ok: false,
           error:
-            "Ja existe uma conta do app com este e-mail. Use Entrar ou Recuperar acesso.",
+            "Já existe uma conta do app com este e-mail. Use Entrar ou Recuperar acesso.",
         };
       }
 
@@ -389,7 +389,7 @@ export async function createClienteAppAccount(params: {
         return {
           ok: false,
           error:
-            "Ja existe uma conta do app com este telefone. Use Recuperar acesso para receber um link seguro no e-mail cadastrado.",
+            "Já existe uma conta do app com este telefone. Use Recuperar acesso para receber um link seguro no e-mail cadastrado.",
         };
       }
 
@@ -409,7 +409,7 @@ export async function createClienteAppAccount(params: {
       if (error || !(data as { id?: string } | null)?.id) {
         return {
           ok: false,
-          error: "Nao foi possivel criar sua conta do app agora.",
+          error: "Não foi possível criar sua conta do app agora.",
         };
       }
 
@@ -493,7 +493,7 @@ export async function loginClienteAppByEmailSenha(params: {
           return {
             ok: false,
             error:
-              "Sua conta antiga ainda aparece em mais de um salao. Entre pela pagina do salao desejado para concluir a migracao.",
+              "Sua conta antiga ainda aparece em mais de um salão. Entre pela página do salão desejado para concluir a migração.",
           };
         }
       }
@@ -530,7 +530,7 @@ export async function loginClienteAppByEmailSenha(params: {
       if (!contaGlobal?.id) {
         return {
           ok: false,
-          error: "Nao foi possivel concluir a atualizacao da sua conta agora.",
+          error: "Não foi possível concluir a atualização da sua conta agora.",
         };
       }
 
@@ -552,7 +552,7 @@ export async function loginClienteAppByEmailSenha(params: {
             ultimo_login_em: new Date().toISOString(),
             nome:
               String(contaGlobal.nome || cliente?.nome || "").trim() ||
-              "Cliente SalaoPremium",
+              "Cliente SalãoPremium",
             telefone:
               String(
                 contaGlobal.telefone || cliente?.telefone || cliente?.whatsapp || ""
@@ -569,7 +569,7 @@ export async function loginClienteAppByEmailSenha(params: {
           ...contaGlobal,
           nome:
             String(contaGlobal.nome || cliente?.nome || "").trim() ||
-            "Cliente SalaoPremium",
+            "Cliente SalãoPremium",
           telefone:
             String(
               contaGlobal.telefone || cliente?.telefone || cliente?.whatsapp || ""

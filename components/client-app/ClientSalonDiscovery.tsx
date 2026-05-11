@@ -31,7 +31,7 @@ const categories = [
       "https://images.unsplash.com/photo-1516975080664-ed2fc6a32937?q=80&w=240&auto=format&fit=crop",
   },
   {
-    label: "Estetica",
+    label: "Estética",
     query: "estetica pele",
     image:
       "https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?q=80&w=240&auto=format&fit=crop",
@@ -153,7 +153,7 @@ export default function ClientSalonDiscovery({
   function requestLocation() {
     setLocationError(null);
     if (!navigator.geolocation) {
-      setLocationError("Seu navegador nao liberou localizacao.");
+      setLocationError("Seu navegador não liberou localização.");
       setShowMapPanel(true);
       return;
     }
@@ -167,7 +167,7 @@ export default function ClientSalonDiscovery({
         setShowMapPanel(true);
       },
       () => {
-        setLocationError("Nao conseguimos acessar sua localizacao agora.");
+        setLocationError("Não conseguimos acessar sua localização agora.");
         setShowMapPanel(true);
       },
       { enableHighAccuracy: true, timeout: 9000, maximumAge: 1000 * 60 * 5 }
@@ -179,7 +179,7 @@ export default function ClientSalonDiscovery({
       <section className="-mx-4 -mt-4 overflow-hidden bg-[radial-gradient(circle_at_10%_0%,rgba(199,162,92,0.28),transparent_32%),linear-gradient(145deg,#071b1f,#18181b)] px-4 pb-8 pt-8 text-white md:-mx-6 md:px-6">
         <div className="mx-auto max-w-6xl">
           <div className="text-center text-3xl font-black tracking-[-0.06em]">
-            SalaoPremium
+            Salão Premium
           </div>
           <label className="mt-7 flex h-16 items-center gap-3 rounded-2xl border border-white/20 bg-white px-5 shadow-2xl">
             <Search size={25} className="text-zinc-500" />
@@ -187,7 +187,7 @@ export default function ClientSalonDiscovery({
               type="search"
               value={localSearch}
               onChange={(event) => setLocalSearch(event.target.value)}
-              placeholder="Pesquise servicos ou saloes"
+              placeholder="Pesquise serviços ou salões"
               className="min-w-0 flex-1 bg-transparent text-base font-medium text-zinc-950 outline-none placeholder:text-zinc-400"
             />
           </label>
@@ -229,7 +229,7 @@ export default function ClientSalonDiscovery({
           >
             <option value="recommended">Ordenar: Recomendado</option>
             <option value="rating">Melhor avaliados</option>
-            <option value="price">Menor preco</option>
+            <option value="price">Menor preço</option>
           </select>
           <button
             type="button"
@@ -260,7 +260,7 @@ export default function ClientSalonDiscovery({
             Resultados ({orderedSaloes.length})
           </h2>
           <p className="mt-1 text-sm text-zinc-500">
-            Escolha um salao, veja avaliacoes e reserve seu horario.
+            Escolha um salão, veja avaliações e reserve seu horário.
           </p>
         </div>
 
@@ -277,10 +277,10 @@ export default function ClientSalonDiscovery({
         {!orderedSaloes.length ? (
           <div className="mt-8 rounded-[1.8rem] border border-zinc-200 bg-white p-6 text-center">
             <h3 className="text-lg font-black text-zinc-950">
-              Nenhum salao com esses filtros
+              Nenhum salão com esses filtros
             </h3>
             <p className="mt-2 text-sm leading-6 text-zinc-500">
-              Tente outro servico, bairro ou cidade.
+              Tente outro serviço, bairro ou cidade.
             </p>
           </div>
         ) : null}
@@ -302,10 +302,10 @@ export default function ClientSalonDiscovery({
           <div className="flex items-start justify-between gap-4">
             <div>
               <h3 className="text-lg font-black text-zinc-950">
-                Saloes perto de voce
+                Salões perto de você
               </h3>
               <p className="mt-1 text-sm leading-6 text-zinc-500">
-                Usamos sua localizacao apenas para calcular distancia e abrir rota.
+                Usamos sua localização apenas para calcular distância e abrir rota.
               </p>
             </div>
             <button

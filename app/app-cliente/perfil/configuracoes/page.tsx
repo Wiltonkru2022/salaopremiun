@@ -6,14 +6,14 @@ import { requireClienteAppContext } from "@/lib/client-context.server";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 export const metadata = {
-  title: "Configuracoes | SalaoPremium",
+  title: "Configurações | Salão Premium",
 };
 
 export default async function ClienteProfileSettingsPage() {
   const session = await requireClienteAppContext();
   const { data } = await (getSupabaseAdmin() as any)
     .from("clientes_app_auth")
-    .select("notificacoes_ativas, notificacao_app_ativa, notificacao_email_ativa")
+    .select("notificações_ativas, notificação_app_ativa, notificação_email_ativa")
     .eq("id", session.idConta)
     .maybeSingle();
 
@@ -24,7 +24,7 @@ export default async function ClienteProfileSettingsPage() {
   };
 
   return (
-    <ClientAppFrame title="Configuracoes" subtitle="Preferencias do app cliente.">
+    <ClientAppFrame title="Configurações" subtitle="Preferências do app cliente.">
       <section className="mx-auto max-w-3xl px-4 py-4 md:px-6">
         <Link
           href="/app-cliente/perfil"

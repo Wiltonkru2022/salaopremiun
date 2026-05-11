@@ -6,7 +6,7 @@ import { canSalonAppearInClientApp } from "@/lib/client-app/eligibility";
 import { buildSalaoPublicPath } from "@/lib/saloes/public-link";
 
 export const metadata = {
-  title: "Cadastro do Cliente | SalaoPremium",
+  title: "Cadastro do Cliente | Salão Premium",
 };
 
 export default async function CadastroClientePage({

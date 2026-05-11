@@ -16,7 +16,7 @@ import { getClienteAppProfileData } from "@/lib/client-app/queries";
 import { requireClienteAppContext } from "@/lib/client-context.server";
 
 export const metadata = {
-  title: "Perfil do Cliente | SalaoPremium",
+  title: "Perfil do Cliente | Salão Premium",
 };
 
 function ProfileRow({
@@ -62,7 +62,7 @@ export default async function ClientePerfilPage({
   const initial = (profile.nome || session.nome || "C").slice(0, 1).toUpperCase();
 
   return (
-    <ClientAppFrame title="Perfil" subtitle="Sua conta no SalaoPremium.">
+    <ClientAppFrame title="Perfil" subtitle="Sua conta no Salão Premium.">
       <section className="mx-auto max-w-3xl px-4 py-4 md:px-6">
         <div className="flex items-center gap-5 py-6">
           <div className="relative flex h-24 w-24 shrink-0 items-center justify-center rounded-full border-4 border-zinc-900 bg-zinc-100 text-4xl font-black text-zinc-900">
@@ -91,7 +91,7 @@ export default async function ClientePerfilPage({
           <div className="mb-5 rounded-2xl bg-amber-50 p-4">
             <div className="flex items-center gap-2 text-sm font-black text-amber-800">
               <WalletCards size={18} />
-              Credito disponivel no salao
+              Crédito disponível no salão
             </div>
             <div className="mt-3 space-y-2">
               {profile.creditos.map((item) => (
@@ -122,12 +122,12 @@ export default async function ClientePerfilPage({
           />
           <ProfileRow
             href="/app-cliente/favoritos"
-            label="Saloes favoritos"
+            label="Salões favoritos"
             icon={Star}
           />
           <ProfileRow
             href="/app-cliente/perfil/avaliacoes"
-            label="Avaliacoes"
+            label="Avaliações"
             icon={Star}
           />
           <ProfileRow
@@ -137,12 +137,12 @@ export default async function ClientePerfilPage({
           />
           <ProfileRow
             href="/app-cliente/perfil/configuracoes"
-            label="Configuracoes"
+            label="Configurações"
             icon={Settings}
           />
           <ProfileRow
             href="/app-cliente/notificacoes"
-            label="Notificacoes"
+            label="Notificações"
             icon={Bell}
           />
           <ProfileRow

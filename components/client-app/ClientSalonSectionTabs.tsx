@@ -6,9 +6,9 @@ type ClientSalonSectionTabsProps = {
 };
 
 const tabs = [
-  { key: "servicos", label: "Servicos", href: "" },
-  { key: "avaliacoes", label: "Avaliacoes", href: "/avaliacoes" },
-  { key: "portfolio", label: "Portfolio", href: "/portfolio" },
+  { key: "servicos", label: "Serviços", href: "" },
+  { key: "avaliacoes", label: "Avaliações", href: "/avaliacoes" },
+  { key: "portfolio", label: "Portfólio", href: "/portfolio" },
   { key: "detalhes", label: "Detalhes", href: "/detalhes" },
 ] as const;
 

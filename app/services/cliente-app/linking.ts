@@ -34,7 +34,7 @@ async function upsertClienteAuthLink(params: {
   await params.supabaseAdmin
     .from("clientes")
     .update({
-      nome: String(params.account.nome || "").trim() || "Cliente SalaoPremium",
+      nome: String(params.account.nome || "").trim() || "Cliente SalãoPremium",
       email: email || null,
       telefone: telefone || null,
       whatsapp: telefone || null,

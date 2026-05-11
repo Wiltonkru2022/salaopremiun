@@ -41,7 +41,7 @@ function formatStatus(value: string) {
   if (normalized === "confirmado") return "Confirmada";
   if (normalized === "cancelado") return "Cancelada";
   if (normalized === "atendido") return "Finalizada";
-  if (normalized === "faltou") return "Nao compareceu";
+  if (normalized === "faltou") return "Não compareceu";
   return value || "Status";
 }
 
@@ -141,7 +141,7 @@ function RescheduleAppointmentForm({
       );
       const payload = await response.json();
       if (!response.ok || !payload?.ok) {
-        throw new Error(payload?.error || "Nao foi possivel carregar horarios.");
+        throw new Error(payload?.error || "Não foi possível carregar horários.");
       }
       const nextDias = Array.isArray(payload.dias)
         ? (payload.dias as AvailabilityDay[])
@@ -151,7 +151,7 @@ function RescheduleAppointmentForm({
       setSelectedTime(nextDias[0]?.horarios[0]?.horaInicio || "");
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Nao foi possivel carregar horarios."
+        err instanceof Error ? err.message : "Não foi possível carregar horários."
       );
     } finally {
       setLoading(false);
@@ -176,7 +176,7 @@ function RescheduleAppointmentForm({
 
           {loading ? (
             <div className="rounded-xl bg-white px-3 py-2 text-sm text-zinc-500">
-              Buscando horarios livres...
+              Buscando horários livres...
             </div>
           ) : error ? (
             <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
@@ -226,7 +226,7 @@ function RescheduleAppointmentForm({
             </>
           ) : (
             <div className="rounded-xl bg-white px-3 py-2 text-sm text-zinc-500">
-              Sem horarios livres para esse atendimento.
+              Sem horários livres para esse atendimento.
             </div>
           )}
 
@@ -254,13 +254,13 @@ export default function ClientAppointmentsManager({
 }) {
   const successMessage = useMemo(() => {
     if (successKey === "agendado") {
-      return "Seu pedido foi enviado. O salao vai confirmar o horario.";
+      return "Seu pedido foi enviado. O salão vai confirmar o horário.";
     }
     if (successKey === "cancelado") {
-      return "Seu agendamento foi cancelado e o horario foi liberado.";
+      return "Seu agendamento foi cancelado e o horário foi liberado.";
     }
     if (successKey === "reagendado") return "Seu agendamento foi reagendado.";
-    if (successKey === "avaliado") return "Sua avaliacao foi enviada.";
+    if (successKey === "avaliado") return "Sua avaliação foi enviada.";
     return null;
   }, [successKey]);
 
@@ -325,7 +325,7 @@ export default function ClientAppointmentsManager({
                 ) : null}
                 {item.avaliado ? (
                   <div className="mt-4 rounded-xl bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-700">
-                    Avaliacao enviada.
+                    Avaliação enviada.
                   </div>
                 ) : null}
               </div>
@@ -345,17 +345,17 @@ export default function ClientAppointmentsManager({
           <div className="flex min-h-[55vh] flex-col items-center justify-center rounded-[1.5rem] bg-white p-8 text-center shadow-[0_18px_45px_rgba(15,23,42,0.08)]">
             <div className="mb-6 h-24 w-36 rounded-2xl border border-zinc-200 bg-zinc-50" />
             <h2 className="text-2xl font-black text-zinc-950">
-              Ainda nao ha agendamentos
+              Ainda não há agendamentos
             </h2>
             <p className="mt-2 max-w-sm text-sm leading-6 text-zinc-500">
-              Quando voce reservar um horario, ele aparece aqui com status,
-              reagendamento, cancelamento e avaliacao.
+              Quando você reservar um horário, ele aparece aqui com status,
+              reagendamento, cancelamento e avaliação.
             </p>
             <Link
               href="/app-cliente/inicio"
               className="mt-6 inline-flex h-12 items-center justify-center rounded-2xl bg-zinc-950 px-6 text-sm font-black text-white"
             >
-              Agende ja
+              Agende já
             </Link>
           </div>
         )}

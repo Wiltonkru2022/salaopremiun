@@ -8,7 +8,7 @@ import { validateClienteAppSession } from "@/lib/client-context.server";
 import { buildSalaoPublicPath } from "@/lib/saloes/public-link";
 
 export const metadata = {
-  title: "Login do Cliente | SalaoPremium",
+  title: "Login do Cliente | Salão Premium",
 };
 
 function getErrorMessage(value: string | string[] | undefined) {
@@ -18,12 +18,12 @@ function getErrorMessage(value: string | string[] | undefined) {
 
   const messages: Record<string, string> = {
     sessao_expirada:
-      "Estamos restaurando seu acesso neste aparelho. Se nao voltar sozinho, entre novamente.",
+      "Estamos restaurando seu acesso neste aparelho. Se não voltar sozinho, entre novamente.",
     salao_indisponivel:
-      "Esse salao nao esta disponivel no app cliente agora. Confira o plano ou tente outro salao.",
+      "Esse salão não esta disponível no app cliente agora. Confira o plano ou tente outro salão.",
   };
 
-  return messages[code] || "Nao foi possivel entrar agora. Tente novamente.";
+  return messages[code] || "Não foi possível entrar agora. Tente novamente.";
 }
 
 export default async function LoginClientePage({
@@ -99,7 +99,7 @@ export default async function LoginClientePage({
                 </div>
               </div>
               <p className="mt-2.5 text-sm leading-6 text-zinc-300">
-                Acompanhe seus horarios e agende seus proximos cuidados.
+                Acompanhe seus horários e agende seus próximos cuidados.
               </p>
             </section>
 

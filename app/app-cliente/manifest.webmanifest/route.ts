@@ -3,10 +3,10 @@ import { NextResponse } from "next/server";
 export function GET() {
   return NextResponse.json({
     id: "/app-cliente",
-    name: "SalaoPremium",
-    short_name: "SalaoPremium",
+    name: "Salão Premium",
+    short_name: "Salão Premium",
     description:
-      "Agende horarios, acompanhe visitas e avalie seu atendimento pelo app cliente do SalaoPremium.",
+      "Agende horários, acompanhe visitas e avalie seu atendimento pelo app cliente do Salão Premium.",
     start_url: "/app-cliente",
     scope: "/app-cliente",
     display: "standalone",

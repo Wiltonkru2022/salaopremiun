@@ -264,7 +264,7 @@ export default function ClientBookingForm({
   const friendlyAvailabilityError = availabilityError
     ? availabilityError.toLowerCase().includes("vinculado") ||
       availabilityError.toLowerCase().includes("profissional")
-      ? "Esse profissional ainda nao atende esse servico no app. Escolha outro profissional ou volte para servicos."
+      ? "Esse profissional ainda não atende esse serviço no app. Escolha outro profissional ou volte para serviços."
       : availabilityError
     : null;
 
@@ -306,7 +306,7 @@ export default function ClientBookingForm({
         const payload = await response.json();
         if (!response.ok || !payload?.ok) {
           throw new Error(
-            payload?.error || "Nao foi possivel carregar os horarios agora."
+            payload?.error || "Não foi possível carregar os horários agora."
           );
         }
 
@@ -325,7 +325,7 @@ export default function ClientBookingForm({
         setAvailabilityError(
           error instanceof Error
             ? error.message
-            : "Nao foi possivel carregar os horarios agora."
+            : "Não foi possível carregar os horários agora."
         );
       })
       .finally(() => {
@@ -374,7 +374,7 @@ export default function ClientBookingForm({
           Escolha seu atendimento
         </h3>
         <p className="mt-2 text-sm leading-6 text-zinc-500">
-          Primeiro o profissional, depois o servico e por ultimo data e hora.
+          Primeiro o profissional, depois o serviço e por último data e hora.
         </p>
 
         <div className="mt-4 grid gap-2 sm:grid-cols-3">
@@ -386,13 +386,13 @@ export default function ClientBookingForm({
           />
           <StepBadge
             index={2}
-            label="Servico"
+            label="Serviço"
             active={step === "servico"}
             done={Boolean(servicoId)}
           />
           <StepBadge
             index={3}
-            label="Horario"
+            label="Horário"
             active={step === "horario"}
             done={Boolean(selectedDate && selectedTime)}
           />
@@ -411,7 +411,7 @@ export default function ClientBookingForm({
                   Escolha o profissional
                 </h4>
                 <p className="mt-1 text-sm leading-6 text-zinc-500">
-                  Digite o nome ou toque em uma opcao para continuar.
+                  Digite o nome ou toque em uma opção para continuar.
                 </p>
               </div>
             </div>
@@ -462,7 +462,7 @@ export default function ClientBookingForm({
                             : "text-zinc-500"
                         }`}
                       >
-                        {profissional.especialidade || "Atendimento do salao"}
+                        {profissional.especialidade || "Atendimento do salão"}
                       </div>
                     </div>
                   </button>
@@ -491,10 +491,10 @@ export default function ClientBookingForm({
               </div>
               <div>
                 <h4 className="text-lg font-black text-zinc-950">
-                  Agora escolha o servico
+                  Agora escolha o serviço
                 </h4>
                 <p className="mt-1 text-sm leading-6 text-zinc-500">
-                  Mostrando servicos disponiveis com {selectedProfissional?.nome}.
+                  Mostrando serviços disponíveis com {selectedProfissional?.nome}.
                 </p>
               </div>
             </div>
@@ -505,7 +505,7 @@ export default function ClientBookingForm({
                 type="search"
                 value={buscaServico}
                 onChange={(event) => setBuscaServico(event.target.value)}
-                placeholder="Buscar servico"
+                placeholder="Buscar serviço"
                 className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-zinc-400"
               />
             </label>
@@ -562,7 +562,7 @@ export default function ClientBookingForm({
                   </button>
                 ))
               ) : (
-                <EmptySearch text="Nenhum servico encontrado para esse profissional." />
+                <EmptySearch text="Nenhum serviço encontrado para esse profissional." />
               )}
             </div>
           </section>
@@ -584,7 +584,7 @@ export default function ClientBookingForm({
                 onClick={() => setStep("servico")}
                 className="rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-xs font-bold text-zinc-700"
               >
-                Servico
+                Serviço
               </button>
             </div>
 
@@ -593,7 +593,7 @@ export default function ClientBookingForm({
                 Selecione data e hora
               </h4>
               <p className="mt-1 text-sm text-zinc-500">
-                Horarios livres para {selectedProfissional?.nome}.
+                Horários livres para {selectedProfissional?.nome}.
               </p>
             </div>
 
@@ -681,11 +681,11 @@ export default function ClientBookingForm({
 
               {loadingAvailability ? (
                 <div className="mt-5 rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-4 text-sm font-semibold text-zinc-600">
-                  Carregando horarios disponiveis...
+                  Carregando horários disponíveis...
                 </div>
               ) : friendlyAvailabilityError ? (
                 <div className="mt-5 space-y-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-900">
-                  <div className="font-black">Nao encontramos horarios para esta escolha.</div>
+                  <div className="font-black">Não encontramos horários para esta escolha.</div>
                   <p className="leading-6">{friendlyAvailabilityError}</p>
                   <div className="flex flex-wrap gap-2">
                     <button
@@ -693,7 +693,7 @@ export default function ClientBookingForm({
                       onClick={() => setStep("servico")}
                       className="rounded-xl bg-white px-3 py-2 text-xs font-black text-amber-900 shadow-sm"
                     >
-                      Trocar servico
+                      Trocar serviço
                     </button>
                     <button
                       type="button"
@@ -770,12 +770,12 @@ export default function ClientBookingForm({
                 </div>
               ) : friendlyAvailabilityError ? (
                 <div className="rounded-2xl border border-dashed border-amber-300 bg-amber-50 px-4 py-4 text-sm leading-6 text-amber-900">
-                  Ajuste o profissional ou o servico para ver horarios livres.
+                  Ajuste o profissional ou o serviço para ver horários livres.
                 </div>
               ) : (
                 <div className="rounded-2xl border border-dashed border-zinc-300 bg-zinc-50 px-4 py-4 text-sm text-zinc-500">
-                  Ainda nao ha horarios disponiveis para os proximos dias.
-                  Tente outro profissional ou fale com o salao.
+                  Ainda não há horários disponíveis para os próximos dias.
+                  Tente outro profissional ou fale com o salão.
                 </div>
               )}
             </div>
@@ -785,7 +785,7 @@ export default function ClientBookingForm({
                 <div className="flex items-start justify-between gap-4">
                   <div>
                     <div className="text-sm text-zinc-500">
-                      1 servico
+                      1 serviço
                       {selectedServico?.duracaoMinutos
                         ? ` - ${selectedServico.duracaoMinutos}min`
                         : ""}
@@ -798,7 +798,7 @@ export default function ClientBookingForm({
                   </div>
                   <div className="text-right">
                     <div className="font-bold text-zinc-950">
-                      {selectedServico?.nome || "Servico"}
+                      {selectedServico?.nome || "Serviço"}
                     </div>
                     <div className="mt-1 text-sm text-zinc-500">
                       {selectedTime || "--:--"}
@@ -809,8 +809,8 @@ export default function ClientBookingForm({
                   <SubmitButton disabled={!canSubmit} />
                 </div>
                 <p className="mt-3 text-center text-xs leading-5 text-zinc-500">
-                  Seus dados pessoais serao usados apenas para processar este
-                  agendamento com o salao.
+                  Seus dados pessoais serão usados apenas para processar este
+                  agendamento com o salão.
                 </p>
               </div>
             </div>

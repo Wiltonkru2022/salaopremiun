@@ -251,11 +251,11 @@ async function loadBookingBaseContext(params: {
   );
 
   if (!config) {
-    return { ok: false as const, error: "A agenda deste salao ainda nao esta configurada." };
+    return { ok: false as const, error: "A agenda deste salão ainda não está configurada." };
   }
 
   if (profissionalResult.error || !profissionalResult.data?.id) {
-    return { ok: false as const, error: "Profissional nao encontrado." };
+    return { ok: false as const, error: "Profissional não encontrado." };
   }
 
   if (
@@ -265,12 +265,12 @@ async function loadBookingBaseContext(params: {
   ) {
     return {
       ok: false as const,
-      error: "Este profissional nao esta disponivel no app cliente.",
+      error: "Este profissional não está disponível no app cliente.",
     };
   }
 
   if (servicoResult.error || !servicoResult.data?.id) {
-    return { ok: false as const, error: "Servico nao encontrado." };
+    return { ok: false as const, error: "Serviço não encontrado." };
   }
 
   if (
@@ -279,14 +279,14 @@ async function loadBookingBaseContext(params: {
   ) {
     return {
       ok: false as const,
-      error: "Este servico nao esta disponivel no app cliente.",
+      error: "Este serviço não está disponível no app cliente.",
     };
   }
 
   if (vinculoResult.error || !vinculoResult.data?.id) {
     return {
       ok: false as const,
-      error: "Este servico nao esta vinculado ao profissional escolhido.",
+      error: "Este serviço não está vinculado ao profissional escolhido.",
     };
   }
 
@@ -303,7 +303,7 @@ async function loadBookingBaseContext(params: {
     config,
     profissional,
     duracao,
-    servicoNome: String(servicoResult.data.nome || "").trim() || "Servico",
+    servicoNome: String(servicoResult.data.nome || "").trim() || "Serviço",
   };
 }
 
@@ -517,13 +517,13 @@ export async function createClienteAppAppointment(
   const observacoes = String(params.observacoes || "").trim() || null;
 
   if (!idSalao || !idConta || !idServico || !idProfissional || !data) {
-    return { ok: false, error: "Preencha servico, profissional, data e horario." };
+    return { ok: false, error: "Preencha serviço, profissional, data e horário." };
   }
 
   if (isPastDateTime(data, horaInicio)) {
     return {
       ok: false,
-      error: "Escolha um horario futuro para criar o agendamento.",
+      error: "Escolha um horário futuro para criar o agendamento.",
     };
   }
 
@@ -531,7 +531,7 @@ export async function createClienteAppAppointment(
   if (!elegibilidade.allowed) {
     return {
       ok: false,
-      error: "Este salao nao esta publicado no app cliente agora.",
+      error: "Este salão não está publicado no app cliente agora.",
     };
   }
 
@@ -574,7 +574,7 @@ export async function createClienteAppAppointment(
       ) {
         return {
           ok: false,
-          error: "Sua conta de cliente nao esta apta para agendar.",
+          error: "Sua conta de cliente não está apta para agendar.",
         };
       }
 
@@ -588,7 +588,7 @@ export async function createClienteAppAppointment(
       if (!ensureDiaFuncionamento({ config, dateString: data })) {
         return {
           ok: false,
-          error: "Este dia nao esta disponivel para agendamento no salao.",
+          error: "Este dia não está disponível para agendamento no salão.",
         };
       }
 
@@ -628,7 +628,7 @@ export async function createClienteAppAppointment(
       if (bloqueiosError || agendamentosError) {
         return {
           ok: false,
-          error: "Nao foi possivel validar a disponibilidade desse horario.",
+          error: "Não foi possível validar a disponibilidade desse horário.",
         };
       }
 
@@ -667,7 +667,7 @@ export async function createClienteAppAppointment(
       if (conflitoBloqueio) {
         return {
           ok: false,
-          error: "Este horario esta bloqueado para o profissional escolhido.",
+          error: "Este horário está bloqueado para o profissional escolhido.",
         };
       }
 
@@ -681,7 +681,7 @@ export async function createClienteAppAppointment(
       if (conflitoAgendamento) {
         return {
           ok: false,
-          error: "Este horario ja foi ocupado. Escolha outro horario.",
+          error: "Este horário já foi ocupado. Escolha outro horário.",
         };
       }
 
@@ -706,7 +706,7 @@ export async function createClienteAppAppointment(
       if (insertError || !insertedAppointment?.id) {
         return {
           ok: false,
-          error: "Nao foi possivel salvar seu agendamento agora.",
+          error: "Não foi possível salvar seu agendamento agora.",
         };
       }
 
@@ -724,7 +724,7 @@ export async function createClienteAppAppointment(
       return {
         ok: true,
         message:
-          "Pedido enviado. O salao vai confirmar seu horario.",
+          "Pedido enviado. O salão vai confirmar seu horário.",
       };
     },
   });
@@ -744,7 +744,7 @@ export async function getClienteAppBookingAvailability(params: {
   if (!idSalao || !idServico || !idProfissional) {
     return {
       ok: false,
-      error: "Escolha servico e profissional para ver os horarios disponiveis.",
+      error: "Escolha serviço e profissional para ver os horários disponíveis.",
     };
   }
 
@@ -752,7 +752,7 @@ export async function getClienteAppBookingAvailability(params: {
   if (!elegibilidade.allowed) {
     return {
       ok: false,
-      error: "Este salao nao esta publicado no app cliente agora.",
+      error: "Este salão não está publicado no app cliente agora.",
     };
   }
 
@@ -821,7 +821,7 @@ export async function getClienteAppBookingAvailability(params: {
       if (bloqueiosError || agendamentosError) {
         return {
           ok: false,
-          error: "Nao foi possivel carregar a disponibilidade agora.",
+          error: "Não foi possível carregar a disponibilidade agora.",
         };
       }
 
@@ -895,7 +895,7 @@ export async function cancelClienteAppAppointment(
   const idAgendamento = String(params.idAgendamento || "").trim();
 
   if (!idConta || !idAgendamento) {
-    return { ok: false, error: "Agendamento invalido para cancelamento." };
+    return { ok: false, error: "Agendamento inválido para cancelamento." };
   }
 
   return runAdminOperation({
@@ -909,19 +909,19 @@ export async function cancelClienteAppAppointment(
       });
 
       if (!ownership) {
-        return { ok: false, error: "Agendamento nao encontrado." };
+        return { ok: false, error: "Agendamento não encontrado." };
       }
 
       const status = ownership.status.toLowerCase();
       if (status === "cancelado") {
-        return { ok: false, error: "Este agendamento ja foi cancelado." };
+        return { ok: false, error: "Este agendamento já foi cancelado." };
       }
 
       if (status === "atendido" || status === "aguardando_pagamento") {
         return {
           ok: false,
           error:
-            "Esse atendimento ja aconteceu e nao pode mais ser cancelado pelo app.",
+            "Esse atendimento já aconteceu e não pode mais ser cancelado pelo app.",
         };
       }
 
@@ -945,7 +945,7 @@ export async function cancelClienteAppAppointment(
         if (updateError) {
           return {
             ok: false,
-            error: "Nao foi possivel cancelar o agendamento agora.",
+            error: "Não foi possível cancelar o agendamento agora.",
           };
         }
       }
@@ -977,7 +977,7 @@ export async function cancelClienteAppAppointment(
       if (deleteError) {
         return {
           ok: false,
-          error: "O agendamento foi cancelado, mas nao foi possivel liberar a agenda agora.",
+          error: "O agendamento foi cancelado, mas não foi possível liberar a agenda agora.",
         };
       }
 
@@ -998,11 +998,11 @@ export async function rescheduleClienteAppAppointment(
   const horaInicio = normalizeTimeString(params.horaInicio);
 
   if (!idConta || !idAgendamento || !data || !horaInicio) {
-    return { ok: false, error: "Informe o novo dia e horario." };
+    return { ok: false, error: "Informe o novo dia e horário." };
   }
 
   if (isPastDateTime(data, horaInicio)) {
-    return { ok: false, error: "Escolha um horario futuro para reagendar." };
+    return { ok: false, error: "Escolha um horário futuro para reagendar." };
   }
 
   return runAdminOperation({
@@ -1016,21 +1016,21 @@ export async function rescheduleClienteAppAppointment(
       });
 
       if (!ownership) {
-        return { ok: false, error: "Agendamento nao encontrado." };
+        return { ok: false, error: "Agendamento não encontrado." };
       }
 
       const status = ownership.status.toLowerCase();
       if (status !== "confirmado" && status !== "pendente") {
         return {
           ok: false,
-          error: "Este agendamento nao pode mais ser reagendado pelo app.",
+          error: "Este agendamento não pode mais ser reagendado pelo app.",
         };
       }
 
       if (!ownership.idServico || !ownership.idProfissional) {
         return {
           ok: false,
-          error: "Nao foi possivel identificar servico e profissional.",
+          error: "Não foi possível identificar serviço e profissional.",
         };
       }
 
@@ -1080,7 +1080,7 @@ export async function rescheduleClienteAppAppointment(
       if (bloqueiosError || agendamentosError) {
         return {
           ok: false,
-          error: "Nao foi possivel validar a disponibilidade desse horario.",
+          error: "Não foi possível validar a disponibilidade desse horário.",
         };
       }
 
@@ -1119,7 +1119,7 @@ export async function rescheduleClienteAppAppointment(
       if (conflitoBloqueio) {
         return {
           ok: false,
-          error: "Este horario esta bloqueado para o profissional escolhido.",
+          error: "Este horário está bloqueado para o profissional escolhido.",
         };
       }
 
@@ -1134,7 +1134,7 @@ export async function rescheduleClienteAppAppointment(
       if (conflitoAgendamento) {
         return {
           ok: false,
-          error: "Este horario ja foi ocupado. Escolha outro horario.",
+          error: "Este horário já foi ocupado. Escolha outro horário.",
         };
       }
 
@@ -1155,7 +1155,7 @@ export async function rescheduleClienteAppAppointment(
       if (updateError) {
         return {
           ok: false,
-          error: "Nao foi possivel reagendar agora.",
+          error: "Não foi possível reagendar agora.",
         };
       }
 
@@ -1188,7 +1188,7 @@ export async function reviewClienteAppAppointment(
   const comentario = String(params.comentario || "").trim() || null;
 
   if (!idConta || !idAgendamento) {
-    return { ok: false, error: "Nao foi possivel identificar o atendimento." };
+    return { ok: false, error: "Não foi possível identificar o atendimento." };
   }
 
   if (!Number.isInteger(nota) || nota < 1 || nota > 5) {
@@ -1213,14 +1213,14 @@ export async function reviewClienteAppAppointment(
       });
 
       if (!ownership) {
-        return { ok: false, error: "Atendimento nao encontrado para avaliacao." };
+        return { ok: false, error: "Atendimento não encontrado para avaliação." };
       }
 
       const status = ownership.status.toLowerCase();
       if (status !== "atendido" && status !== "aguardando_pagamento") {
         return {
           ok: false,
-          error: "A avaliacao so pode ser enviada depois do atendimento.",
+          error: "A avaliação só pode ser enviada depois do atendimento.",
         };
       }
 
@@ -1237,7 +1237,7 @@ export async function reviewClienteAppAppointment(
       if (existingReviewError) {
         return {
           ok: false,
-          error: "Nao foi possivel validar sua avaliacao agora.",
+          error: "Não foi possível validar sua avaliação agora.",
         };
       }
 
@@ -1262,7 +1262,7 @@ export async function reviewClienteAppAppointment(
       if (reviewMutation.error) {
         return {
           ok: false,
-          error: "Nao foi possivel salvar sua avaliacao agora.",
+          error: "Não foi possível salvar sua avaliação agora.",
         };
       }
 
@@ -1279,7 +1279,7 @@ export async function reviewClienteAppAppointment(
 
       return {
         ok: true,
-        message: "Avaliacao enviada com sucesso.",
+        message: "Avaliação enviada com sucesso.",
       };
     },
   });

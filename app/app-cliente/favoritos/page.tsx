@@ -6,7 +6,7 @@ import { listClienteAppFavoriteSaloes } from "@/lib/client-app/queries";
 import { requireClienteAppContext } from "@/lib/client-context.server";
 
 export const metadata = {
-  title: "Favoritos | SalaoPremium",
+  title: "Favoritos | Salão Premium",
 };
 
 export default async function ClienteFavoritesPage() {
@@ -14,7 +14,7 @@ export default async function ClienteFavoritesPage() {
   const saloes = await listClienteAppFavoriteSaloes({ idConta: session.idConta });
 
   return (
-    <ClientAppFrame title="Favoritos" subtitle="Saloes que voce salvou.">
+    <ClientAppFrame title="Favoritos" subtitle="Salões que você salvou.">
       <section className="mx-auto max-w-4xl px-4 py-4 md:px-6">
         <Link
           href="/app-cliente/perfil"
@@ -25,10 +25,10 @@ export default async function ClienteFavoritesPage() {
         </Link>
 
         <h1 className="text-3xl font-black tracking-[-0.04em] text-zinc-950">
-          Saloes favoritos
+          Salões favoritos
         </h1>
         <p className="mt-2 text-base leading-7 text-zinc-500">
-          Salve os saloes que voce mais gosta e volte para agendar rapido.
+          Salve os salões que você mais gosta e volte para agendar rápido.
         </p>
 
         {saloes.length ? (
@@ -46,13 +46,13 @@ export default async function ClienteFavoritesPage() {
               Nenhum favorito ainda
             </h2>
             <p className="mt-3 max-w-md text-base leading-7 text-zinc-500">
-              Abra a pagina de um salao e toque no coracao para salvar.
+              Abra a página de um salão e toque no coração para salvar.
             </p>
             <Link
               href="/app-cliente/inicio"
               className="mt-8 inline-flex h-14 items-center justify-center rounded-2xl bg-zinc-950 px-8 text-base font-black text-white"
             >
-              Explorar saloes
+              Explorar salões
             </Link>
           </div>
         )}

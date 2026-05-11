@@ -51,20 +51,20 @@ export default function LoginClienteForm({
         <span className="rounded-full bg-zinc-950 px-3 py-1.5 text-white">
           Cliente
         </span>
-        <span className="px-3 py-1.5">SalaoPremium</span>
+        <span className="px-3 py-1.5">Salão Premium</span>
       </div>
 
       <h2 className="text-[1.55rem] font-semibold text-zinc-950">
-        Entre para acompanhar seus horarios
+        Entre para acompanhar seus horários
       </h2>
       <p className="mt-2 text-sm leading-6 text-zinc-500">
-        Use seu e-mail e senha para ver seus agendamentos, acompanhar o salao e
+        Use seu e-mail e senha para ver seus agendamentos, acompanhar o salão e
         voltar mais rapido na proxima visita.
       </p>
 
       {salaoNome ? (
         <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-          Depois do login, voce volta para <strong>{salaoNome}</strong>.
+          Depois do login, você volta para <strong>{salaoNome}</strong>.
         </div>
       ) : null}
 
@@ -78,7 +78,7 @@ export default function LoginClienteForm({
             type="email"
             autoComplete="email"
             inputMode="email"
-            placeholder="voce@exemplo.com"
+            placeholder="você@exemplo.com"
             className="h-12 w-full rounded-2xl border border-zinc-200 bg-white px-4 text-base outline-none transition focus:border-zinc-400"
           />
         </div>
@@ -133,7 +133,7 @@ export default function LoginClienteForm({
             href="/app-cliente/inicio"
             className="block w-full text-sm font-medium text-zinc-500 underline underline-offset-4"
           >
-            Voltar para os saloes
+            Voltar para os salões
           </Link>
         </div>
       </div>

@@ -108,7 +108,7 @@ function mapSalonRow(row: EligibleSalonRow): ClientAppEligibleSalon {
     nome:
       String(row.nome_fantasia || "").trim() ||
       String(row.nome || "").trim() ||
-      "Salao Premium",
+      "Salão Premium",
     cidade: String(row.cidade || "").trim() || null,
     estado: String(row.estado || "").trim() || null,
     bairro: String(row.bairro || "").trim() || null,
@@ -195,7 +195,7 @@ export async function canSalonAppearInClientApp(idSalao: string) {
     salao,
     reason: salao
       ? null
-      : "Salao sem publicacao ativa no app cliente Pro ou Premium.",
+      : "Salão sem publicação ativa no app cliente Pro ou Premium.",
   };
 }
 
@@ -203,7 +203,7 @@ export async function assertSalonCanAppearInClientApp(idSalao: string) {
   const result = await canSalonAppearInClientApp(idSalao);
 
   if (!result.allowed || !result.salao) {
-    throw new Error(result.reason || "Salao indisponivel no app cliente.");
+    throw new Error(result.reason || "Salão indisponível no app cliente.");
   }
 
   return result.salao;

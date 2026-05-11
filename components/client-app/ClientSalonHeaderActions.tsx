@@ -31,7 +31,7 @@ export default function ClientSalonHeaderActions({
       if (navigator.share) {
         await navigator.share({
           title: salaoNome,
-          text: `Agende seu horario no ${salaoNome}`,
+          text: `Agende seu horário no ${salaoNome}`,
           url: absoluteUrl,
         });
         return;
@@ -65,7 +65,7 @@ export default function ClientSalonHeaderActions({
         type="button"
         onClick={shareSalon}
         className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/95 text-zinc-950 shadow-xl"
-        aria-label="Compartilhar salao"
+        aria-label="Compartilhar salão"
       >
         <Share2 size={22} />
       </button>
@@ -76,7 +76,7 @@ export default function ClientSalonHeaderActions({
         className={`flex h-12 w-12 items-center justify-center rounded-2xl bg-white/95 shadow-xl transition ${
           favorite ? "text-rose-600" : "text-zinc-950"
         } disabled:opacity-60`}
-        aria-label={favorite ? "Remover dos favoritos" : "Favoritar salao"}
+        aria-label={favorite ? "Remover dos favoritos" : "Favoritar salão"}
       >
         <Heart size={23} fill={favorite ? "currentColor" : "none"} />
       </button>

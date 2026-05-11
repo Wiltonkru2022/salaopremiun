@@ -53,7 +53,7 @@ function buildClienteRecoveryEmailHtml(params: { link: string; email: string }) 
         </div>
         <div style="padding:20px 30px 30px">
           <p style="margin:0;font-size:13px;line-height:1.7;color:#64748b">
-            Se voce nao pediu esta recuperacao, ignore este e-mail. O link expira em 15 minutos e funciona somente uma vez.
+            Se você não pediu esta recuperação, ignore este e-mail. O link expira em 15 minutos e funciona somente uma vez.
           </p>
         </div>
       </div>
@@ -167,15 +167,15 @@ function buildPasswordChangedEmailHtml(params: {
             A senha de ${htmlEscape(params.context)} da conta ${htmlEscape(params.email)} foi alterada em ${htmlEscape(formattedDate)}.
           </p>
           <p style="margin:14px 0 0;font-size:13px;line-height:1.7;color:#64748b">
-            IP: ${htmlEscape(params.ip || "nao identificado")}<br />
-            Navegador/dispositivo: ${htmlEscape(params.userAgent || "nao identificado")}
+            IP: ${htmlEscape(params.ip || "não identificado")}<br />
+            Navegador/dispositivo: ${htmlEscape(params.userAgent || "não identificado")}
           </p>
           <p style="margin:18px 0 0;font-size:14px;line-height:1.7;color:#64748b">
-            Se foi voce, confirme abaixo. Se nao foi voce, solicite imediatamente uma nova recuperacao de senha e avise o suporte.
+            Se foi você, confirme abaixo. Se não foi você, solicite imediatamente uma nova recuperação de senha e avise o suporte.
           </p>
           <div style="margin-top:22px;display:flex;gap:10px;flex-wrap:wrap">
             <a href="${htmlEscape(okUrl)}" style="display:inline-block;background:#ecfdf5;color:#065f46;text-decoration:none;border-radius:999px;padding:12px 18px;font-size:14px;font-weight:800">Fui eu</a>
-            <a href="${htmlEscape(recoveryUrl)}" style="display:inline-block;background:#fee2e2;color:#991b1b;text-decoration:none;border-radius:999px;padding:12px 18px;font-size:14px;font-weight:800">Nao fui eu</a>
+            <a href="${htmlEscape(recoveryUrl)}" style="display:inline-block;background:#fee2e2;color:#991b1b;text-decoration:none;border-radius:999px;padding:12px 18px;font-size:14px;font-weight:800">Não fui eu</a>
           </div>
         </div>
       </div>
@@ -197,9 +197,9 @@ async function sendPasswordChangedNotice(params: {
   await sendResendEmail({
     from:
       process.env.PASSWORD_RECOVERY_EMAIL_FROM ||
-      "SalaoPremium <recuperar@salaopremiun.com.br>",
+      "Salão Premium <recuperar@salaopremiun.com.br>",
     to: email,
-    subject: "Sua senha foi alterada - SalaoPremium",
+    subject: "Sua senha foi alterada - Salão Premium",
     html: buildPasswordChangedEmailHtml({
       email,
       context: params.context,
@@ -207,7 +207,7 @@ async function sendPasswordChangedNotice(params: {
       ip: params.ip,
       userAgent: params.userAgent,
     }),
-    text: `Sua senha de ${params.context} foi alterada em ${occurredAt.toLocaleString("pt-BR")}. IP: ${params.ip || "nao identificado"}. Navegador/dispositivo: ${params.userAgent || "nao identificado"}. Se nao foi voce, solicite uma nova recuperacao e fale com o suporte.`,
+    text: `Sua senha de ${params.context} foi alterada em ${occurredAt.toLocaleString("pt-BR")}. IP: ${params.ip || "não identificado"}. Navegador/dispositivo: ${params.userAgent || "não identificado"}. Se não foi você, solicite uma nova recuperação e fale com o suporte.`,
     replyTo: process.env.PASSWORD_RECOVERY_EMAIL_REPLY_TO || undefined,
   });
 }
@@ -235,7 +235,7 @@ export async function requestClienteAppRecovery(
       if (error) {
         return {
           ok: false as const,
-          error: "Nao foi possivel iniciar a recuperacao agora.",
+          error: "Não foi possível iniciar a recuperação agora.",
         };
       }
 
@@ -249,9 +249,9 @@ export async function requestClienteAppRecovery(
         await sendResendEmail({
           from:
             process.env.PASSWORD_RECOVERY_EMAIL_FROM ||
-            "SalaoPremium <recuperar@salaopremiun.com.br>",
+            "Salão Premium <recuperar@salaopremiun.com.br>",
           to: email,
-          subject: "Recuperar acesso do app cliente - SalaoPremium",
+          subject: "Recuperar acesso do app cliente - Salão Premium",
           html: buildClienteRecoveryEmailHtml({ link, email }),
           text: `Use este link para criar uma nova senha no app cliente: ${link}. Ele expira em 15 minutos e funciona somente uma vez.`,
           replyTo: process.env.PASSWORD_RECOVERY_EMAIL_REPLY_TO || undefined,
@@ -261,7 +261,7 @@ export async function requestClienteAppRecovery(
       return {
         ok: true as const,
         message:
-          "Se esse e-mail existir no app cliente, enviaremos um link de recuperacao.",
+          "Se esse e-mail existir no app cliente, enviaremos um link de recuperação.",
       };
     },
   });
@@ -277,7 +277,7 @@ export async function resetClienteAppPasswordWithToken(
   if (!rawToken) {
     return {
       ok: false,
-      error: "Link de recuperacao invalido ou expirado. Solicite um novo link.",
+      error: "Link de recuperação inválido ou expirado. Solicite um novo link.",
     };
   }
 
@@ -286,7 +286,7 @@ export async function resetClienteAppPasswordWithToken(
   }
 
   if (senha !== confirmacao) {
-    return { ok: false, error: "A confirmacao da senha nao confere." };
+    return { ok: false, error: "A confirmação da senha não confere." };
   }
 
   return runAdminOperation({
@@ -298,7 +298,7 @@ export async function resetClienteAppPasswordWithToken(
       if (!recoveryToken) {
         return {
           ok: false as const,
-          error: "Link de recuperacao invalido ou expirado. Solicite um novo link.",
+          error: "Link de recuperação inválido ou expirado. Solicite um novo link.",
         };
       }
 
@@ -312,7 +312,7 @@ export async function resetClienteAppPasswordWithToken(
       if (error || !conta?.id || conta.ativo === false) {
         return {
           ok: false as const,
-          error: "Nao encontramos uma conta ativa do app para este link.",
+          error: "Não encontramos uma conta ativa do app para este link.",
         };
       }
 
@@ -322,7 +322,7 @@ export async function resetClienteAppPasswordWithToken(
       if (currentPasswordHashDigest !== recoveryToken.passwordHashDigest) {
         return {
           ok: false as const,
-          error: "Este link ja foi usado. Solicite uma nova recuperacao.",
+          error: "Este link já foi usado. Solicite uma nova recuperação.",
         };
       }
 
@@ -344,7 +344,7 @@ export async function resetClienteAppPasswordWithToken(
       if (updateContaResult.error || vinculosResult.error) {
         return {
           ok: false as const,
-          error: "Nao foi possivel atualizar sua senha agora.",
+          error: "Não foi possível atualizar sua senha agora.",
         };
       }
 
@@ -369,7 +369,7 @@ export async function resetClienteAppPasswordWithToken(
       return {
         ok: true as const,
         message:
-          "Senha atualizada com sucesso. Agora voce ja pode voltar ao login.",
+          "Senha atualizada com sucesso. Agora você já pode voltar ao login.",
       };
     },
   });

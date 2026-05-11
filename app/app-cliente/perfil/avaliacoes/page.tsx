@@ -5,7 +5,7 @@ import { listClienteAppWrittenReviews } from "@/lib/client-app/queries";
 import { requireClienteAppContext } from "@/lib/client-context.server";
 
 export const metadata = {
-  title: "Avaliacoes | SalaoPremium",
+  title: "Avaliações | Salão Premium",
 };
 
 function formatDate(value: string) {
@@ -37,7 +37,7 @@ export default async function ClienteProfileReviewsPage() {
   });
 
   return (
-    <ClientAppFrame title="Avaliacoes" subtitle="Avaliacoes escritas por voce.">
+    <ClientAppFrame title="Avaliações" subtitle="Avaliações escritas por você.">
       <section className="mx-auto max-w-3xl px-4 py-4 md:px-6">
         <Link
           href="/app-cliente/perfil"
@@ -48,10 +48,10 @@ export default async function ClienteProfileReviewsPage() {
         </Link>
 
         <h1 className="text-3xl font-black tracking-[-0.04em] text-zinc-950">
-          Avaliacoes escritas por voce
+          Avaliações escritas por você
         </h1>
         <p className="mt-2 text-base leading-7 text-zinc-500">
-          Historico real dos atendimentos que voce ja avaliou.
+          Histórico real dos atendimentos que você já avaliou.
         </p>
 
         {reviews.length ? (
@@ -84,7 +84,7 @@ export default async function ClienteProfileReviewsPage() {
                   </p>
                 ) : (
                   <p className="mt-4 text-sm text-zinc-400">
-                    Avaliacao sem comentario.
+                    Avaliação sem comentário.
                   </p>
                 )}
               </article>
@@ -96,16 +96,16 @@ export default async function ClienteProfileReviewsPage() {
               <Star size={54} />
             </div>
             <h2 className="text-2xl font-black text-zinc-800">
-              Nenhuma avaliacao ainda
+              Nenhuma avaliação ainda
             </h2>
             <p className="mt-3 max-w-md text-base leading-7 text-zinc-500">
-              Depois de um atendimento finalizado, voce pode avaliar e acompanhar tudo por aqui.
+              Depois de um atendimento finalizado, você pode avaliar e acompanhar tudo por aqui.
             </p>
             <Link
               href="/app-cliente/inicio"
               className="mt-8 inline-flex h-14 items-center justify-center rounded-2xl bg-zinc-950 px-8 text-base font-black text-white"
             >
-              Agende ja
+              Agende já
             </Link>
           </div>
         )}

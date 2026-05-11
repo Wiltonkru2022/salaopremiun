@@ -6,7 +6,7 @@ import ClientSalonSectionTabs from "@/components/client-app/ClientSalonSectionTa
 import { getClientAppSalonDetail } from "@/lib/client-app/queries";
 
 export const metadata = {
-  title: "Portfolio | SalaoPremium",
+  title: "Portfólio | Salão Premium",
 };
 
 export default async function ClienteSalonPortfolioPage({
@@ -20,7 +20,7 @@ export default async function ClienteSalonPortfolioPage({
     const salao = await getClientAppSalonDetail(id);
 
     return (
-      <ClientAppFrame title={salao.nome} subtitle="Portfolio do salao">
+      <ClientAppFrame title={salao.nome} subtitle="Portfólio do salão">
         <ClientSalonSectionTabs salonId={id} active="portfolio" />
         <section className="mx-auto max-w-6xl px-4 py-5 md:px-6">
           <Link
@@ -32,10 +32,10 @@ export default async function ClienteSalonPortfolioPage({
           </Link>
 
           <h1 className="text-3xl font-black tracking-[-0.04em] text-zinc-950">
-            Portfolio
+            Portfólio
           </h1>
           <p className="mt-2 text-base leading-7 text-zinc-500">
-            Fotos reais publicadas pelo salao para voce conhecer o trabalho.
+            Fotos reais publicadas pelo salão para você conhecer o trabalho.
           </p>
 
           {salao.portfolio.length ? (
@@ -49,7 +49,7 @@ export default async function ClienteSalonPortfolioPage({
                 >
                   <img
                     src={foto.imagemUrl}
-                    alt={foto.legenda || `Foto do portfolio de ${salao.nome}`}
+                    alt={foto.legenda || `Foto do portfólio de ${salao.nome}`}
                     className={`w-full object-cover transition duration-500 group-hover:scale-105 ${
                       index === 0 ? "h-[420px]" : "h-64"
                     }`}
@@ -69,7 +69,7 @@ export default async function ClienteSalonPortfolioPage({
               </div>
               <div className="text-2xl text-zinc-950">Nenhuma foto ainda</div>
               <p className="mt-2 text-lg">
-                Volte em breve para ver imagens dos trabalhos do salao.
+                Volte em breve para ver imagens dos trabalhos do salão.
               </p>
             </div>
           )}

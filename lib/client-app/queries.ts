@@ -148,7 +148,7 @@ function mapLiveSalonRow(row: Record<string, unknown>): ClientAppSalonListItem {
     nome:
       String(row.nome_fantasia || "").trim() ||
       String(row.nome || "").trim() ||
-      "Salao Premium",
+      "Salão Premium",
     cidade: String(row.cidade || "").trim() || null,
     estado: String(row.estado || "").trim() || null,
     bairro: String(row.bairro || "").trim() || null,
@@ -308,7 +308,7 @@ async function attachMarketplaceMetrics(
         salao.totalProfissionais || professionalCounts.get(salao.id) || 0,
       proximoHorarioLabel:
         salao.proximoHorarioLabel ||
-        (totalServicos ? "Agenda online" : "Servicos em publicacao"),
+        (totalServicos ? "Agenda online" : "Serviços em publicação"),
       categorias:
         salao.categorias.length || !services
           ? salao.categorias
@@ -511,7 +511,7 @@ async function getClientAppSalonDetailLive(idSalao: string) {
         ? (((servicosResult.value.data || []) as unknown as Array<Record<string, unknown>>) || []).map(
             (item) => ({
               id: String(item.id || ""),
-              nome: String(item.nome || "").trim() || "Servico",
+              nome: String(item.nome || "").trim() || "Serviço",
               descricao:
                 String(item.descricao_publica || item.descricao || "").trim() ||
                 null,
@@ -638,7 +638,7 @@ export async function listClienteAppAppointments(params: {
         nome:
           String(salaoRow?.nome_fantasia || "").trim() ||
           String(salaoRow?.nome || "").trim() ||
-          "Salao Premium",
+          "Salão Premium",
         whatsapp: String((salaoRow as { whatsapp?: string | null } | null)?.whatsapp || "").trim() || null,
         telefone: String((salaoRow as { telefone?: string | null } | null)?.telefone || "").trim() || null,
       });
@@ -686,7 +686,7 @@ export async function listClienteAppAppointments(params: {
         idSalao: salaoMeta?.idSalao || String(item.id_salao || "").trim(),
         idServico: String(item.servico_id || "").trim(),
         idProfissional: String(item.profissional_id || "").trim(),
-        salaoNome: salaoMeta?.nome || "Salao Premium",
+        salaoNome: salaoMeta?.nome || "Salão Premium",
         salaoWhatsapp: salaoMeta?.whatsapp || null,
         salaoTelefone: salaoMeta?.telefone || null,
         data: String(item.data || ""),
@@ -696,7 +696,7 @@ export async function listClienteAppAppointments(params: {
         observacoes: String(item.observacoes || "").trim() || null,
         servicoNome:
           String((item.servicos as { nome?: string } | null)?.nome || "").trim() ||
-          "Servico",
+          "Serviço",
         profissionalNome:
           String(
             (
@@ -763,7 +763,7 @@ async function listClienteAppLinkedClientIds(idConta: string) {
           idCliente,
           String(salao?.nome_fantasia || "").trim() ||
             String(salao?.nome || "").trim() ||
-            "Salao Premium"
+            "Salão Premium"
         );
       }
       return idCliente;
@@ -858,7 +858,7 @@ export async function listClienteAppReceipts(params: { idConta: string }) {
         id: String(item.id || ""),
         numero: Number(item.numero || 0) || null,
         salaoNome:
-          salaoByCliente.get(idCliente) || "Salao Premium",
+          salaoByCliente.get(idCliente) || "Salão Premium",
         total: Number(item.total || 0),
         data:
           String(item.fechada_em || "").trim() ||
@@ -910,7 +910,7 @@ export async function listClienteAppWrittenReviews(params: { idConta: string }) 
           String(salao?.nome_fantasia || "").trim() ||
           String(salao?.nome || "").trim() ||
           salaoByCliente.get(idCliente) ||
-          "Salao Premium",
+          "Salão Premium",
         servicoNome: String(servico?.nome || "").trim() || "Atendimento",
         profissionalNome:
           String(profissional?.nome_exibicao || "").trim() ||
@@ -1013,7 +1013,7 @@ export async function getClienteAppProfileData(params: { idConta: string }) {
           salaoNome:
             String(salao?.nome_fantasia || "").trim() ||
             String(salao?.nome || "").trim() ||
-            "Salao",
+            "Salão",
           credito: Number(cliente?.cashback || 0),
         };
       })

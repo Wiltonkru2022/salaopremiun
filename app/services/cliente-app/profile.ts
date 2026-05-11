@@ -35,7 +35,7 @@ export async function updateClienteAppProfile(
   const preferencias = String(params.preferencias || "").trim() || null;
 
   if (!idConta) {
-    return { ok: false, error: "Nao foi possivel identificar a conta do cliente." };
+    return { ok: false, error: "Não foi possível identificar a conta do cliente." };
   }
 
   if (!nome) {
@@ -58,7 +58,7 @@ export async function updateClienteAppProfile(
         .maybeSingle();
 
       if (contaError || !contaAtual?.id) {
-        return { ok: false, error: "Nao foi possivel localizar sua conta do app." };
+        return { ok: false, error: "Não foi possível localizar sua conta do app." };
       }
 
       if (email !== String(contaAtual.email || "").trim().toLowerCase()) {
@@ -73,14 +73,14 @@ export async function updateClienteAppProfile(
         if (duplicateError) {
           return {
             ok: false,
-            error: "Nao foi possivel validar seu novo e-mail agora.",
+            error: "Não foi possível validar seu novo e-mail agora.",
           };
         }
 
         if (duplicateRows?.length) {
           return {
             ok: false,
-            error: "Ja existe outra conta do app com esse e-mail.",
+            error: "Já existe outra conta do app com esse e-mail.",
           };
         }
       }
@@ -97,7 +97,7 @@ export async function updateClienteAppProfile(
         if (duplicatePhoneError) {
           return {
             ok: false,
-            error: "Nao foi possivel validar seu novo telefone agora.",
+            error: "Não foi possível validar seu novo telefone agora.",
           };
         }
 
@@ -105,7 +105,7 @@ export async function updateClienteAppProfile(
           return {
             ok: false,
             error:
-              "Ja existe outra conta do app com esse telefone. Use Recuperar acesso se esse numero for seu.",
+              "Já existe outra conta do app com esse telefone. Use Recuperar acesso se esse numero for seu.",
           };
         }
       }
@@ -130,7 +130,7 @@ export async function updateClienteAppProfile(
       if (contaUpdateResult.error || clientesAuthRowsResult.error) {
         return {
           ok: false,
-          error: "Nao foi possivel salvar seu perfil agora.",
+          error: "Não foi possível salvar seu perfil agora.",
         };
       }
 
@@ -191,7 +191,7 @@ export async function deleteClienteAppAccount(params: {
   const idConta = String(params.idConta || "").trim();
 
   if (!idConta) {
-    return { ok: false, error: "Nao foi possivel identificar a conta do cliente." };
+    return { ok: false, error: "Não foi possível identificar a conta do cliente." };
   }
 
   return runAdminOperation({
@@ -206,7 +206,7 @@ export async function deleteClienteAppAccount(params: {
       if (vinculosError) {
         return {
           ok: false as const,
-          error: "Nao foi possivel carregar seus vinculos agora.",
+          error: "Não foi possível carregar seus vínculos agora.",
         };
       }
 
@@ -248,7 +248,7 @@ export async function deleteClienteAppAccount(params: {
       if (authUpdateResult.error || deleteContaResult.error) {
         return {
           ok: false as const,
-          error: "Nao foi possivel encerrar sua conta agora.",
+          error: "Não foi possível encerrar sua conta agora.",
         };
       }
 

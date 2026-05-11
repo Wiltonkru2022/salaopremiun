@@ -6,7 +6,7 @@ import ClientSalonSectionTabs from "@/components/client-app/ClientSalonSectionTa
 import { getClientAppSalonDetail } from "@/lib/client-app/queries";
 
 export const metadata = {
-  title: "Avaliacoes | SalaoPremium",
+  title: "Avaliações | Salão Premium",
 };
 
 function formatDate(value: string) {
@@ -45,7 +45,7 @@ export default async function ClienteSalonReviewsPage({
       : 0;
 
     return (
-      <ClientAppFrame title={salao.nome} subtitle="Avaliacoes reais">
+      <ClientAppFrame title={salao.nome} subtitle="Avaliações reais">
         <ClientSalonSectionTabs salonId={id} active="avaliacoes" />
         <section className="mx-auto max-w-4xl px-4 py-5 md:px-6">
           <Link
@@ -67,7 +67,7 @@ export default async function ClienteSalonReviewsPage({
                   <RatingStars nota={notaMedia} />
                 </div>
                 <div className="mt-2 text-zinc-500">
-                  {salao.avaliacoes.length} avaliacoes
+                  {salao.avaliacoes.length} avaliações
                 </div>
               </div>
               <div className="space-y-3">
@@ -100,7 +100,7 @@ export default async function ClienteSalonReviewsPage({
 
           <div className="mt-7 space-y-5">
             <h1 className="text-3xl font-black tracking-[-0.04em] text-zinc-950">
-              Avaliacoes ({salao.avaliacoes.length})
+              Avaliações ({salao.avaliacoes.length})
             </h1>
             {salao.avaliacoes.length ? (
               salao.avaliacoes.map((avaliacao) => (
@@ -133,7 +133,7 @@ export default async function ClienteSalonReviewsPage({
               ))
             ) : (
               <div className="rounded-2xl bg-white p-8 text-center text-zinc-500 shadow-sm">
-                Este salao ainda nao recebeu avaliacoes pelo app.
+                Este salão ainda não recebeu avaliações pelo app.
               </div>
             )}
           </div>

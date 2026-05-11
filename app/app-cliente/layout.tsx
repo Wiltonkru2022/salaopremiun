@@ -7,7 +7,7 @@ import ClientSessionKeepAlive from "@/components/client-app/ClientSessionKeepAli
 export const metadata: Metadata = {
   title: "App Cliente",
   description:
-    "Agende horários, acompanhe visitas e avalie atendimentos no app cliente do SalãoPremium.",
+    "Agende horários, acompanhe visitas e avalie atendimentos no app cliente do Salão Premium.",
   manifest: "/app-cliente/manifest.webmanifest",
   appleWebApp: {
     capable: true,

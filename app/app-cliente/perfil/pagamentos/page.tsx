@@ -5,7 +5,7 @@ import { listClienteAppReceipts } from "@/lib/client-app/queries";
 import { requireClienteAppContext } from "@/lib/client-context.server";
 
 export const metadata = {
-  title: "Pagamentos | SalaoPremium",
+  title: "Pagamentos | Salão Premium",
 };
 
 function formatCurrency(value: number) {
@@ -16,7 +16,7 @@ function formatCurrency(value: number) {
 }
 
 function formatDate(value: string | null) {
-  if (!value) return "Data em atualizacao";
+  if (!value) return "Data em atualização";
   return new Intl.DateTimeFormat("pt-BR", {
     dateStyle: "medium",
     timeStyle: "short",
@@ -28,7 +28,7 @@ export default async function ClienteProfilePaymentsPage() {
   const receipts = await listClienteAppReceipts({ idConta: session.idConta });
 
   return (
-    <ClientAppFrame title="Pagamentos" subtitle="Recibos reais dos saloes.">
+    <ClientAppFrame title="Pagamentos" subtitle="Recibos reais dos salões.">
       <section className="mx-auto max-w-3xl px-4 py-4 md:px-6">
         <Link
           href="/app-cliente/perfil"
@@ -42,7 +42,7 @@ export default async function ClienteProfilePaymentsPage() {
           Seus recibos
         </h1>
         <p className="mt-2 text-base leading-7 text-zinc-500">
-          Tudo que o salao finalizar no caixa aparece aqui para voce consultar.
+          Tudo que o salão finalizar no caixa aparece aqui para você consultar.
         </p>
 
         {receipts.length ? (

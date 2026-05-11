@@ -21,7 +21,7 @@ export default function ClientAppSalonCard({
         <div className="relative overflow-hidden rounded-[0.9rem] bg-zinc-100">
           <img
             src={cover}
-            alt={`Capa do salao ${salao.nome}`}
+            alt={`Capa do salão ${salao.nome}`}
             className="aspect-[1.74/1] w-full object-cover transition duration-500 group-hover:scale-[1.02]"
           />
           <div className="absolute right-3 top-3 rounded-xl bg-zinc-950/82 px-3 py-2 text-right text-white backdrop-blur">
@@ -30,7 +30,7 @@ export default function ClientAppSalonCard({
               {salao.notaMedia ? salao.notaMedia.toFixed(1) : "Novo"}
             </div>
             <div className="mt-0.5 text-xs text-white/80">
-              {salao.totalAvaliacoes || 0} avaliacoes
+              {salao.totalAvaliacoes || 0} avaliações
             </div>
           </div>
           {distanceKm !== null ? (
@@ -44,7 +44,7 @@ export default function ClientAppSalonCard({
 
         <div className="mt-4 space-y-2">
           <div className="inline-flex rounded-full border border-zinc-200 bg-white px-3 py-1 text-xs font-bold text-zinc-800">
-            Recomendado pelo SalaoPremium
+            Recomendado pelo Salão Premium
           </div>
           <h2 className="text-[1.6rem] font-black leading-tight tracking-[-0.04em] text-zinc-950">
             {salao.nome}
@@ -54,7 +54,7 @@ export default function ClientAppSalonCard({
             <span>
               {[salao.bairro, salao.cidade, salao.estado].filter(Boolean).join(" - ") ||
                 salao.enderecoCompleto ||
-                "Endereco em atualizacao"}
+                "Endereço em atualização"}
             </span>
           </div>
           {salao.precoMinimo !== null ? (

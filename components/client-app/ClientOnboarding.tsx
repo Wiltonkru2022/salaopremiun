@@ -7,20 +7,20 @@ import { ONBOARDING_DONE_KEY } from "@/components/client-app/ClientInstallOnboar
 
 const steps = [
   {
-    title: "Bem-vindo ao Salao Premium",
-    text: "Encontre saloes, veja servicos, escolha profissionais e agende sem precisar ligar.",
+    title: "Bem-vindo ao Salão Premium",
+    text: "Encontre salões, veja serviços, escolha profissionais e agende sem precisar ligar.",
     icon: Sparkles,
     action: "Comecar",
   },
   {
-    title: "Veja saloes perto de voce",
-    text: "Use sua localizacao para encontrar opcoes proximas e chegar no horario certo.",
+    title: "Veja salões perto de você",
+    text: "Use sua localização para encontrar opções próximas e chegar no horário certo.",
     icon: MapPin,
     action: "Proximo",
   },
   {
     title: "Nunca perca um agendamento",
-    text: "Receba lembretes, mudancas de horario e avisos importantes do seu atendimento.",
+    text: "Receba lembretes, mudancas de horário e avisos importantes do seu atendimento.",
     icon: Bell,
     action: "Finalizar",
   },

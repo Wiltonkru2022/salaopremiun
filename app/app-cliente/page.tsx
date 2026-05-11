@@ -16,7 +16,7 @@ import {
 } from "@/lib/client-app/queries";
 
 export const metadata = {
-  title: "Meu App | SalaoPremium",
+  title: "Meu App | Salão Premium",
 };
 
 function formatDate(date: string) {
@@ -62,7 +62,7 @@ export default async function AppClienteIndexPage() {
       title="Meu app"
       subtitle={
         isLoggedIn
-          ? "Sua experiencia no SalaoPremium."
+          ? "Sua experiência no Salão Premium."
           : "Entre para acompanhar seus agendamentos."
       }
     >
@@ -70,7 +70,7 @@ export default async function AppClienteIndexPage() {
         <div className="rounded-[2rem] bg-zinc-950 p-5 text-white shadow-[0_24px_70px_rgba(15,23,42,0.22)] sm:p-6">
           <div className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.18em] text-amber-200">
             <Sparkles size={16} />
-            SalaoPremium
+            Salão Premium
           </div>
           <h2 className="mt-5 text-3xl font-black tracking-[-0.04em] sm:text-4xl">
             {isLoggedIn
@@ -78,7 +78,7 @@ export default async function AppClienteIndexPage() {
               : "Bem-vindo ao seu app de beleza"}
           </h2>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-zinc-300 sm:text-base">
-            Encontre saloes, acompanhe seus horarios, veja creditos e volte para
+            Encontre salões, acompanhe seus horários, veja créditos e volte para
             seus atendimentos sem se perder.
           </p>
           <div className="mt-5 flex flex-wrap gap-3">
@@ -87,7 +87,7 @@ export default async function AppClienteIndexPage() {
               className="inline-flex min-h-12 items-center gap-2 rounded-full bg-white px-5 text-sm font-black text-zinc-950"
             >
               <Search size={18} />
-              Explorar saloes
+              Explorar salões
             </Link>
             {!isLoggedIn ? (
               <Link
@@ -138,10 +138,10 @@ export default async function AppClienteIndexPage() {
               </span>
               <div>
                 <h3 className="text-lg font-black text-zinc-950">
-                  Ainda nao ha agendamento ativo
+                  Ainda não há agendamento ativo
                 </h3>
                 <p className="text-sm text-zinc-500">
-                  Escolha um salao e reserve quando quiser.
+                  Escolha um salão e reserve quando quiser.
                 </p>
               </div>
             </div>
@@ -152,7 +152,7 @@ export default async function AppClienteIndexPage() {
           <div className="rounded-[1.7rem] border border-amber-100 bg-amber-50 p-5">
             <div className="flex items-center gap-2 text-sm font-black text-amber-900">
               <WalletCards size={18} />
-              Credito disponivel
+              Crédito disponível
             </div>
             <div className="mt-3 grid gap-2 sm:grid-cols-2">
               {profile.creditos.slice(0, 4).map((item) => (
@@ -202,7 +202,7 @@ export default async function AppClienteIndexPage() {
                     </h4>
                     <p className="mt-1 truncate text-sm text-zinc-500">
                       {[salao.bairro, salao.cidade].filter(Boolean).join(", ") ||
-                        "Salao parceiro"}
+                        "Salão parceiro"}
                     </p>
                   </div>
                   <div className="inline-flex items-center gap-1 rounded-full bg-zinc-100 px-2.5 py-1 text-xs font-black text-zinc-900">

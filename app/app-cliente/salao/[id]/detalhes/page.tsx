@@ -12,7 +12,7 @@ import ClientSalonSectionTabs from "@/components/client-app/ClientSalonSectionTa
 import { getClientAppSalonDetail } from "@/lib/client-app/queries";
 
 export const metadata = {
-  title: "Detalhes do Salao | SalaoPremium",
+  title: "Detalhes do Salão | Salão Premium",
 };
 
 const DIAS_LABEL: Record<string, string> = {
@@ -51,7 +51,7 @@ function normalizeDia(value: string) {
 
 function formatDiasFuncionamento(dias: string[]) {
   const normalized = dias.map(normalizeDia).filter(Boolean);
-  if (!normalized.length) return "Dias em atualizacao";
+  if (!normalized.length) return "Dias em atualização";
   return normalized.map((dia) => DIAS_LABEL[dia] || dia).join(", ");
 }
 
@@ -96,7 +96,7 @@ export default async function ClienteSalonDetailsPage({
             Detalhes
           </h1>
           <p className="mt-2 text-base leading-7 text-zinc-500">
-            Endereco, horario de funcionamento e canais de contato do salao.
+            Endereço, horário de funcionamento e canais de contato do salão.
           </p>
 
           <div className="mt-6 overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm">
@@ -110,7 +110,7 @@ export default async function ClienteSalonDetailsPage({
               <div className="absolute inset-x-4 bottom-4 rounded-2xl bg-white p-4 shadow-xl">
                 <div className="font-black text-zinc-950">{salao.nome}</div>
                 <div className="mt-1 text-sm text-zinc-500">
-                  {salao.enderecoCompleto || "Endereco em atualizacao"}
+                  {salao.enderecoCompleto || "Endereço em atualização"}
                 </div>
               </div>
             </div>

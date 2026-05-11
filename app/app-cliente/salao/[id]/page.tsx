@@ -20,7 +20,7 @@ import { validateClienteAppSession } from "@/lib/client-context.server";
 import { buildSalaoPublicPath } from "@/lib/saloes/public-link";
 
 export const metadata = {
-  title: "Salao | SalaoPremium",
+  title: "Salão | Salão Premium",
 };
 
 function formatCurrency(value: number | null) {
@@ -158,7 +158,7 @@ export default async function ClienteSalonPage({
     const salaoPausado = salao.appClientePausado;
     const pausaMensagem =
       salao.appClientePausaMensagem ||
-      "Salao pausado no momento. Assim que a agenda voltar, voce podera reservar por aqui.";
+      "Salão pausado no momento. Assim que a agenda voltar, você podera reservar por aqui.";
     const salaoPublicPath = buildSalaoPublicPath(
       salao.appClienteSlug || salao.id
     );
@@ -190,7 +190,7 @@ export default async function ClienteSalonPage({
             <div className="relative h-[360px] overflow-hidden bg-zinc-200 md:h-[460px]">
               <img
                 src={cover}
-                alt={`Capa do salao ${salao.nome}`}
+                alt={`Capa do salão ${salao.nome}`}
                 className="h-full w-full object-cover"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-black/35" />
@@ -223,7 +223,7 @@ export default async function ClienteSalonPage({
                     [salao.bairro, salao.cidade, salao.estado]
                       .filter(Boolean)
                       .join(" - ") ||
-                    "Endereco em atualizacao"}
+                    "Endereço em atualização"}
                 </p>
 
                 <div className="mt-4 flex flex-wrap items-center gap-3">
@@ -232,7 +232,7 @@ export default async function ClienteSalonPage({
                     {notaMedia ? notaMedia.toFixed(1) : "Novo"}
                   </span>
                   <span className="font-bold text-amber-800">
-                    ({salao.avaliacoes.length} avaliacoes)
+                    ({salao.avaliacoes.length} avaliações)
                   </span>
                   <span className="text-zinc-400">Agendamento online</span>
                 </div>
@@ -251,7 +251,7 @@ export default async function ClienteSalonPage({
           {salaoPausado ? (
             <section className="px-4 py-5 md:px-6">
               <div className="mx-auto max-w-6xl rounded-2xl border border-amber-200 bg-amber-50 p-5 text-amber-950">
-                <h3 className="text-lg font-black">Salao pausado no momento</h3>
+                <h3 className="text-lg font-black">Salão pausado no momento</h3>
                 <p className="mt-2 text-sm leading-6">{pausaMensagem}</p>
               </div>
             </section>
@@ -261,7 +261,7 @@ export default async function ClienteSalonPage({
             <div className="mx-auto grid max-w-6xl gap-8 lg:grid-cols-[1fr_420px]">
               <div>
                 <h2 className="text-3xl font-black tracking-[-0.05em]">
-                  Servicos populares
+                  Serviços populares
                 </h2>
                 <div className="mt-5 divide-y divide-zinc-100">
                   {salao.servicos.length ? (
@@ -270,7 +270,7 @@ export default async function ClienteSalonPage({
                     ))
                   ) : (
                     <p className="text-sm leading-6 text-zinc-500">
-                      Os servicos publicos aparecem aqui assim que o salao liberar
+                      Os serviços públicos aparecem aqui assim que o salão liberar
                       a vitrine.
                     </p>
                   )}
@@ -279,7 +279,7 @@ export default async function ClienteSalonPage({
                 {otherServices.length ? (
                   <div className="mt-9">
                     <h2 className="text-3xl font-black tracking-[-0.05em]">
-                      Outros servicos
+                      Outros serviços
                     </h2>
                     <div className="mt-5 divide-y divide-zinc-100">
                       {otherServices.map((servico) => (
@@ -302,8 +302,8 @@ export default async function ClienteSalonPage({
                   <div className="rounded-[1.5rem] border border-zinc-200 bg-zinc-50 p-5">
                     <h3 className="text-xl font-black">Entre para reservar</h3>
                     <p className="mt-2 text-sm leading-6 text-zinc-500">
-                      Depois do login voce volta para esta pagina e escolhe seu
-                      horario.
+                      Depois do login você volta para esta página e escolhe seu
+                      horário.
                     </p>
                     <Link
                       href={`/app-cliente/login?salao=${encodeURIComponent(
@@ -335,7 +335,7 @@ export default async function ClienteSalonPage({
                       <RatingStars nota={notaMedia || 0} />
                     </div>
                     <div className="mt-2 text-zinc-500">
-                      {salao.avaliacoes.length} avaliacoes
+                      {salao.avaliacoes.length} avaliações
                     </div>
                   </div>
                   <div className="space-y-2">
@@ -368,7 +368,7 @@ export default async function ClienteSalonPage({
 
               <div className="mt-7 space-y-5">
                 <h2 className="text-3xl font-black tracking-[-0.05em]">
-                  Avaliacoes ({salao.avaliacoes.length})
+                  Avaliações ({salao.avaliacoes.length})
                 </h2>
                 {salao.avaliacoes.length ? (
                   salao.avaliacoes.map((avaliacao) => (
@@ -401,7 +401,7 @@ export default async function ClienteSalonPage({
                   ))
                 ) : (
                   <p className="text-sm leading-6 text-zinc-500">
-                    As avaliacoes reais entram aqui depois dos primeiros
+                    As avaliações reais entram aqui depois dos primeiros
                     atendimentos confirmados.
                   </p>
                 )}
@@ -415,7 +415,7 @@ export default async function ClienteSalonPage({
           >
             <div className="mx-auto max-w-6xl">
               <h2 className="text-3xl font-black tracking-[-0.05em]">
-                Portfolio
+                Portfólio
               </h2>
               {salao.portfolio.length ? (
                 <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -428,7 +428,7 @@ export default async function ClienteSalonPage({
                     >
                       <img
                         src={foto.imagemUrl}
-                        alt={foto.legenda || `Foto do portfolio de ${salao.nome}`}
+                        alt={foto.legenda || `Foto do portfólio de ${salao.nome}`}
                         className={`w-full object-cover transition duration-500 group-hover:scale-105 ${
                           index === 0 ? "h-[420px]" : "h-64"
                         }`}
@@ -446,7 +446,7 @@ export default async function ClienteSalonPage({
                   <div className="mx-auto mb-5 h-24 w-36 rounded-2xl border border-zinc-200 bg-zinc-50" />
                   <div className="text-2xl text-zinc-950">Nenhuma foto ainda</div>
                   <p className="mt-2 text-lg">
-                    Volte em breve para ver imagens dos trabalhos do salao.
+                    Volte em breve para ver imagens dos trabalhos do salão.
                   </p>
                 </div>
               )}
@@ -459,7 +459,7 @@ export default async function ClienteSalonPage({
           >
             <div className="mx-auto max-w-6xl">
               <h2 className="text-2xl font-black uppercase tracking-[-0.02em]">
-                Contato e horario de funcionamento
+                Contato e horário de funcionamento
               </h2>
               <div className="mt-6 overflow-hidden rounded-2xl border border-zinc-200 bg-white">
                 <div className="relative h-56 bg-zinc-100">
@@ -472,7 +472,7 @@ export default async function ClienteSalonPage({
                   <div className="absolute inset-x-4 bottom-4 rounded-2xl bg-white p-4 shadow-xl">
                     <div className="font-black text-zinc-950">{salao.nome}</div>
                     <div className="mt-1 text-sm text-zinc-500">
-                      {salao.enderecoCompleto || "Endereco em atualizacao"}
+                      {salao.enderecoCompleto || "Endereço em atualização"}
                     </div>
                   </div>
                 </div>

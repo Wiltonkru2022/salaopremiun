@@ -106,21 +106,21 @@ export default function ClientNotificationSettings({
 
       if (!result.ok) {
         setSettings(previous);
-        setMessage(result.error || "Nao foi possivel salvar agora.");
+        setMessage(result.error || "Não foi possível salvar agora.");
         return;
       }
 
-      setMessage("Preferencia salva.");
+      setMessage("Preferência salva.");
     });
   }
 
   return (
     <div>
       <div className="mb-3 bg-zinc-50 px-3 py-3 text-xs font-bold uppercase tracking-[0.12em] text-zinc-500">
-        Notificacoes
+        Notificações
       </div>
       <ToggleRow
-        label="Ativar notificacoes"
+        label="Ativar notificações"
         helper="Liga ou desliga todos os avisos da sua conta no app cliente."
         preferenceKey="notificacoes_ativas"
         settings={settings}
@@ -128,8 +128,8 @@ export default function ClientNotificationSettings({
         onToggle={handleToggle}
       />
       <ToggleRow
-        label="Notificacao do app"
-        helper="Avisos de reserva, reagendamento e avaliacao."
+        label="Notificação do app"
+        helper="Avisos de reserva, reagendamento e avaliação."
         preferenceKey="notificacao_app_ativa"
         settings={settings}
         disabled={isPending || !settings.notificacoes_ativas}
@@ -137,7 +137,7 @@ export default function ClientNotificationSettings({
       />
       <ToggleRow
         label="E-mail"
-        helper="Confirmacoes importantes no e-mail."
+        helper="Confirmações importantes no e-mail."
         preferenceKey="notificacao_email_ativa"
         settings={settings}
         disabled={isPending || !settings.notificacoes_ativas}

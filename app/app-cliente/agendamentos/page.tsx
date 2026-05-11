@@ -4,7 +4,7 @@ import { requireClienteAppContext } from "@/lib/client-context.server";
 import { listClienteAppAppointments } from "@/lib/client-app/queries";
 
 export const metadata = {
-  title: "Meus Agendamentos | SalaoPremium",
+  title: "Meus Agendamentos | Salão Premium",
 };
 
 export default async function ClienteAppointmentsPage({
@@ -26,7 +26,7 @@ export default async function ClienteAppointmentsPage({
   return (
     <ClientAppFrame
       title="Meus agendamentos"
-      subtitle={`Tudo certo, ${session.nome}. Veja o que esta marcado e o que ja pode avaliar.`}
+      subtitle={`Tudo certo, ${session.nome}. Veja o que está marcado e o que já pode avaliar.`}
     >
       <ClientAppointmentsManager
         agendamentos={agendamentos.slice(0, pageSize)}

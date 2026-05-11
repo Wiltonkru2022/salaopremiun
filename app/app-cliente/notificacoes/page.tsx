@@ -10,7 +10,7 @@ import { listClienteAppNotifications } from "@/lib/client-app/queries";
 import { requireClienteAppContext } from "@/lib/client-context.server";
 
 export const metadata = {
-  title: "Notificacoes | SalaoPremium",
+  title: "Notificações | Salão Premium",
 };
 
 function formatDate(value: string | null) {
@@ -102,7 +102,7 @@ export default async function ClienteNotificationsPage({
   const hasMore = currentResult.hasMore;
 
   return (
-    <ClientAppFrame title="Notificacoes" subtitle="Tudo que importa do seu atendimento.">
+    <ClientAppFrame title="Notificações" subtitle="Tudo que importa do seu atendimento.">
       <section className="mx-auto max-w-3xl px-4 py-4 md:px-6">
         <Link
           href="/app-cliente/perfil"
@@ -115,10 +115,10 @@ export default async function ClienteNotificationsPage({
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <h1 className="text-3xl font-black tracking-[-0.04em] text-zinc-950">
-              Central de notificacoes
+              Central de notificações
             </h1>
             <p className="mt-2 text-base leading-7 text-zinc-500">
-              Confirmacoes, lembretes, cancelamentos e pedidos de avaliacao ficam reunidos aqui.
+              Confirmações, lembretes, cancelamentos e pedidos de avaliação ficam reunidos aqui.
             </p>
           </div>
           {activeTab === "nao-lidas" && unreadCounter.total > 0 ? (
@@ -134,13 +134,13 @@ export default async function ClienteNotificationsPage({
           <FilterLink
             href="/app-cliente/notificacoes?aba=nao-lidas"
             active={activeTab === "nao-lidas"}
-            label="Nao lidas"
+            label="Não lidas"
             count={unreadCounter.total}
           />
           <FilterLink
             href="/app-cliente/notificacoes?aba=lidas"
             active={activeTab === "lidas"}
-            label="Ja lidas"
+            label="Já lidas"
             count={readCounter.total}
           />
         </div>
@@ -208,7 +208,7 @@ export default async function ClienteNotificationsPage({
                           value={notification.id}
                         />
                         <button className="h-10 rounded-xl border border-zinc-200 bg-white px-4 text-sm font-black text-zinc-800">
-                          Marcar como nao lida
+                          Marcar como não lida
                         </button>
                       </form>
                     ) : (
@@ -234,12 +234,12 @@ export default async function ClienteNotificationsPage({
               <Bell size={54} />
             </div>
             <h2 className="text-2xl font-black text-zinc-800">
-              {activeTab === "lidas" ? "Nenhuma notificacao lida" : "Nada novo por enquanto"}
+              {activeTab === "lidas" ? "Nenhuma notificação lida" : "Nada novo por enquanto"}
             </h2>
             <p className="mt-3 max-w-md text-base leading-7 text-zinc-500">
               {activeTab === "lidas"
-                ? "Quando voce marcar avisos como lidos, eles ficam guardados aqui."
-                : "Quando o salao confirmar, reagendar ou finalizar um atendimento, voce recebe o aviso aqui."}
+                ? "Quando você marcar avisos como lidos, eles ficam guardados aqui."
+                : "Quando o salão confirmar, reagendar ou finalizar um atendimento, você recebe o aviso aqui."}
             </p>
           </div>
         )}
@@ -255,14 +255,14 @@ export default async function ClienteNotificationsPage({
               </Link>
             ) : null}
             <span className="inline-flex h-10 items-center justify-center rounded-xl bg-zinc-950 px-4 text-sm font-bold text-white">
-              Pagina {currentPage + 1}
+              Página {currentPage + 1}
             </span>
             {hasMore ? (
               <Link
                 href={buildNotificationsHref(activeTab, currentPage + 1)}
                 className="inline-flex h-10 items-center justify-center rounded-xl border border-zinc-200 bg-white px-3 text-sm font-bold text-zinc-700"
               >
-                Proxima
+                Próxima
               </Link>
             ) : null}
           </div>

@@ -56,7 +56,7 @@ export async function toggleClienteNotificationPreferenceAction(
   if (error) {
     return {
       ok: false,
-      error: "Nao foi possivel salvar sua preferencia agora.",
+      error: "Não foi possível salvar sua preferencia agora.",
     };
   }
 

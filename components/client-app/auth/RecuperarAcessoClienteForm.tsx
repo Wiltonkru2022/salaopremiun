@@ -70,7 +70,7 @@ export default function RecuperarAcessoClienteForm({
             autoComplete="email"
             inputMode="email"
             defaultValue={initialEmail}
-            placeholder="voce@exemplo.com"
+            placeholder="você@exemplo.com"
             className="h-12 w-full rounded-2xl border border-zinc-200 bg-white px-4 text-base outline-none transition focus:border-zinc-400"
           />
         </div>
