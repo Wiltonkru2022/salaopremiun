@@ -132,22 +132,6 @@ function CadastroSalaoContent() {
   const progresso = Math.round(((currentStepIndex + 1) / STEPS.length) * 100);
 
   useEffect(() => {
-    try {
-      const supabase = createClient();
-      supabase.auth
-        .getSession()
-        .then(({ data }) => {
-          if (data.session?.user) {
-            window.location.replace(getDashboardRedirectHref());
-          }
-        })
-        .catch(() => undefined);
-    } catch {
-      // Se o Supabase nao estiver pronto no navegador, o cadastro segue normal.
-    }
-  }, []);
-
-  useEffect(() => {
     if (!creatingExperience) return;
 
     let cancelled = false;

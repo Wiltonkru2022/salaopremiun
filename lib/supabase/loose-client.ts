@@ -25,6 +25,7 @@ export type LooseSupabaseQuery<T = unknown> = PromiseLike<LooseSupabaseResult<T>
   or(filters: string): LooseSupabaseQuery<T>;
   order(column: string, options?: Record<string, unknown>): LooseSupabaseQuery<T>;
   limit(count: number): LooseSupabaseQuery<T>;
+  range(from: number, to: number): LooseSupabaseQuery<T>;
   maybeSingle<Row = T>(): PromiseLike<LooseSupabaseResult<Row | null>>;
   single<Row = T>(): PromiseLike<LooseSupabaseResult<Row>>;
 };
