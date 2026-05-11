@@ -177,6 +177,36 @@ function parseCoordinate(value: string | null | undefined) {
   return Number.isFinite(numeric) ? numeric : null;
 }
 
+async function buscarCoordenadasEndereco(form: SalaoForm) {
+  const response = await fetch("/api/painel/salao-geocode", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      endereco: form.endereco || "",
+      numero: form.numero || "",
+      bairro: form.bairro || "",
+      cidade: form.cidade || "",
+      estado: form.estado || "",
+      cep: form.cep || "",
+    }),
+  });
+
+  const payload = (await response.json().catch(() => ({}))) as {
+    coordinates?: {
+      latitude?: number;
+      longitude?: number;
+      precision?: "endereco" | "cidade";
+    } | null;
+    message?: string;
+  };
+
+  if (!response.ok) {
+    throw new Error(payload.message || "Nao foi possivel localizar o endereco.");
+  }
+
+  return payload.coordinates || null;
+}
+
 function DisplayItem({
   label,
   value,
@@ -803,6 +833,10 @@ export default function PerfilSalaoPage() {
   }
 
   async function salvarEndereco() {
+    const coordenadas = await buscarCoordenadasEndereco(enderecoDraft).catch(
+      () => null
+    );
+
     await atualizarPerfil(
       {
         endereco: enderecoDraft.endereco,
@@ -811,6 +845,12 @@ export default function PerfilSalaoPage() {
         cidade: enderecoDraft.cidade,
         estado: enderecoDraft.estado,
         cep: enderecoDraft.cep,
+        latitude:
+          coordenadas?.latitude === undefined ? "" : String(coordenadas.latitude),
+        longitude:
+          coordenadas?.longitude === undefined
+            ? ""
+            : String(coordenadas.longitude),
       },
       "Endereço do salão atualizado com sucesso."
     );

@@ -100,7 +100,6 @@ function buildGeocodeAttempts(input: SalonAddressInput): GeocodeAttempt[] {
         city: cidade,
         state: estado,
         country: "Brasil",
-        ...(cep ? { postalcode: cep } : {}),
       },
     });
   }
