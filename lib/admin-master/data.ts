@@ -1735,8 +1735,8 @@ export async function getAdminMasterSection(
         leitura,
         cliques,
         sinal: stats?.falhas ? `${stats.falhas} falha(s)` : proximaAcao,
-        acao: item.id ? "Auditar" : "-",
-        acao_tipo: item.id ? "audit" : null,
+        acao: item.id ? "Detalhes" : "-",
+        acao_tipo: item.id ? "notificacao_detail" : null,
         acao_id: item.id || null,
       };
     });
@@ -1879,8 +1879,8 @@ export async function getAdminMasterSection(
         inicio: dateValue(item.inicio_em),
         fim: dateValue(item.fim_em),
         sinal,
-        acao: item.id ? "Auditar" : "-",
-        acao_tipo: item.id ? "audit" : null,
+        acao: item.id ? "Detalhes" : "-",
+        acao_tipo: item.id ? "campanha_detail" : null,
         acao_id: item.id || null,
       };
     });
@@ -2028,9 +2028,9 @@ export async function getAdminMasterSection(
       creditos: row.custo_creditos || 0,
       criado: dateTimeValue(row.criado_em),
       sinal: row.erro_texto ? "Falha de envio" : row.enviado_em ? "Enviado" : "Aguardando",
-      acao: row.id_salao ? "Abrir salao" : "-",
-      acao_tipo: row.id_salao ? "salao_detail" : null,
-      acao_id: row.id_salao || null,
+      acao: row.id ? "Detalhes" : row.id_salao ? "Abrir salao" : "-",
+      acao_tipo: row.id ? "whatsapp_detail" : row.id_salao ? "salao_detail" : null,
+      acao_id: row.id ? `envio:${row.id}` : row.id_salao || null,
     }));
     const filaRows = ((filas || []) as {
       id?: string | null;
@@ -2050,12 +2050,13 @@ export async function getAdminMasterSection(
       creditos: 0,
       criado: dateTimeValue(row.criado_em),
       sinal: row.ultimo_erro ? "Reprocessar" : row.processado_em ? "Processada" : "Pendente",
-      acao: row.id_salao ? "Abrir salao" : "-",
-      acao_tipo: row.id_salao ? "salao_detail" : null,
-      acao_id: row.id_salao || null,
+      acao: row.id ? "Detalhes" : row.id_salao ? "Abrir salao" : "-",
+      acao_tipo: row.id ? "whatsapp_detail" : row.id_salao ? "salao_detail" : null,
+      acao_id: row.id ? `fila:${row.id}` : row.id_salao || null,
     }));
     const saldoRows = ((saldos || []) as {
       id_salao?: string | null;
+      id?: string | null;
       creditos_total?: number | null;
       creditos_usados?: number | null;
       creditos_saldo?: number | null;
@@ -2073,9 +2074,9 @@ export async function getAdminMasterSection(
         creditos: row.creditos_usados || 0,
         criado: dateValue(row.expira_em),
         sinal: safeNumber(row.creditos_saldo) <= 10 ? "Creditos baixos" : "Acompanhar",
-        acao: row.id_salao ? "Abrir salao" : "-",
-        acao_tipo: row.id_salao ? "salao_detail" : null,
-        acao_id: row.id_salao || null,
+        acao: row.id ? "Detalhes" : row.id_salao ? "Abrir salao" : "-",
+        acao_tipo: row.id ? "whatsapp_detail" : row.id_salao ? "salao_detail" : null,
+        acao_id: row.id ? `saldo:${row.id}` : row.id_salao || null,
       }));
     const rows = [...filaRows, ...saldoRows, ...envioRows]
       .sort((a, b) => String(b._sort).localeCompare(String(a._sort)))

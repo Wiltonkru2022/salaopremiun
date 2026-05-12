@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
+import AdminMasterDataTableClient from "@/components/admin-master/AdminMasterDataTableClient";
 import AdminMasterModuleActionButton from "@/components/admin-master/AdminMasterModuleActionButton";
-import AdminMasterRowActionButton from "@/components/admin-master/AdminMasterRowActionButton";
 import type {
   AdminKpi,
   AdminSectionData,
@@ -41,14 +41,6 @@ function formatSuggestionKind(
   return "Ação manual";
 }
 
-function isActionColumn(column: string) {
-  return column === "acao" || column.endsWith("_acao");
-}
-
-function getActionField(column: string, suffix: "tipo" | "id") {
-  return column === "acao" ? `acao_${suffix}` : `${column}_${suffix}`;
-}
-
 export function AdminKpiGrid({ kpis }: { kpis: AdminKpi[] }) {
   return (
     <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
@@ -80,61 +72,12 @@ export function AdminDataTable({
   emptyDescription?: string;
 }) {
   return (
-    <div className="overflow-hidden rounded-[24px] border border-zinc-200 bg-white shadow-sm">
-      <div className="scroll-premium overflow-x-auto">
-        <table className="min-w-full divide-y divide-zinc-100 text-sm">
-          <thead className="bg-zinc-50 text-left text-xs uppercase tracking-[0.2em] text-zinc-500">
-            <tr>
-              {columns.map((column) => (
-                <th key={column} className="px-4 py-3.5 font-bold">
-                  {column.replace(/_/g, " ")}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-zinc-100">
-            {rows.length ? (
-              rows.map((row, index) => (
-                <tr key={index} className="hover:bg-zinc-50/80">
-                  {columns.map((column) => (
-                    <td
-                      key={column}
-                      title={String(row[column] ?? "-")}
-                      className={`max-w-[320px] px-4 py-3.5 ${
-                        column === "detalhe" || column === "titulo"
-                          ? "whitespace-normal break-words leading-5"
-                          : "truncate"
-                      }`}
-                    >
-                      {isActionColumn(column) ? (
-                        <AdminMasterRowActionButton
-                          actionType={String(row[getActionField(column, "tipo")] || "")}
-                          actionId={String(row[getActionField(column, "id")] || "")}
-                          label={String(row[column] || "-")}
-                        />
-                      ) : (
-                        String(row[column] ?? "-")
-                      )}
-                    </td>
-                  ))}
-                </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan={columns.length} className="px-4 py-10 text-center">
-                  <div className="mx-auto max-w-md">
-                    <div className="text-sm font-black text-zinc-800">{emptyTitle}</div>
-                    <div className="mt-2 text-sm leading-6 text-zinc-500">
-                      {emptyDescription}
-                    </div>
-                  </div>
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-    </div>
+    <AdminMasterDataTableClient
+      rows={rows}
+      columns={columns}
+      emptyTitle={emptyTitle}
+      emptyDescription={emptyDescription}
+    />
   );
 }
 

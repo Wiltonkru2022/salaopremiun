@@ -56,6 +56,27 @@ function buildActionRequest(actionType: string, actionId: string) {
     } satisfies RowActionRequest;
   }
 
+  if (actionType === "campanha_detail") {
+    return {
+      kind: "link",
+      href: `/admin-master/campanhas/${encodeURIComponent(actionId)}`,
+    } satisfies RowActionRequest;
+  }
+
+  if (actionType === "notificacao_detail") {
+    return {
+      kind: "link",
+      href: `/admin-master/notificacoes/${encodeURIComponent(actionId)}`,
+    } satisfies RowActionRequest;
+  }
+
+  if (actionType === "whatsapp_detail") {
+    return {
+      kind: "link",
+      href: `/admin-master/whatsapp/${encodeURIComponent(actionId)}`,
+    } satisfies RowActionRequest;
+  }
+
   if (actionType === "audit") {
     return {
       kind: "link",
