@@ -372,6 +372,12 @@ async function getPlanoAccessSnapshotUncached(
   recursos.marketing = false;
   recursos.campanhas = false;
 
+  if (resumo.emTesteGratis && resumo.ativa) {
+    PLANO_RECURSOS_PADRAO.forEach((codigo) => {
+      recursos[codigo] = true;
+    });
+  }
+
   const bloqueadoManual =
     STATUS_RESTRITO.has(assinaturaStatus) || STATUS_RESTRITO.has(salaoStatus);
   const bloqueioTotal = bloqueadoManual || resumo.bloqueioTotal;

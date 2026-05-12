@@ -503,7 +503,7 @@ function CadastroSalaoContent() {
               setNomeSalao(value);
               if (erro) setErro("");
             }}
-            placeholder="Ex: Studio Mão de Fadas"
+            placeholder="Ex: Studio Salão Premium"
           />
 
           <label className="flex items-start gap-3 text-sm leading-6 text-zinc-600">

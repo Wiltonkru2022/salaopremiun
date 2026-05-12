@@ -1,8 +1,9 @@
 "use client";
 
-import type { ReactNode } from "react";
-import { useState } from "react";
-import { Pencil, SlidersHorizontal, X } from "lucide-react";
+import type { FormEvent, ReactNode } from "react";
+import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { LoaderCircle, Pencil, Save, SlidersHorizontal, X } from "lucide-react";
 
 type PlanoEditorRow = {
   id: string;
@@ -91,12 +92,14 @@ function Field({
   defaultValue,
   type = "text",
   placeholder,
+  step,
 }: {
   label: string;
   name: string;
   defaultValue?: string | number | null;
   type?: string;
   placeholder?: string;
+  step?: string;
 }) {
   return (
     <label className="block">
@@ -106,6 +109,7 @@ function Field({
       <input
         name={name}
         type={type}
+        step={step}
         defaultValue={defaultValue ?? ""}
         placeholder={placeholder}
         className="mt-2 w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm font-semibold text-zinc-900 outline-none transition focus:border-zinc-950 focus:ring-4 focus:ring-zinc-950/10"
@@ -160,6 +164,61 @@ function ToggleField({
         className="h-5 w-5 accent-zinc-950"
       />
     </label>
+  );
+}
+
+function ActionForm({
+  action,
+  onDone,
+  children,
+  className,
+}: {
+  action: ServerAction;
+  onDone: () => void;
+  children: ReactNode;
+  className?: string;
+}) {
+  const [error, setError] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+  const router = useRouter();
+
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError(null);
+    const formData = new FormData(event.currentTarget);
+
+    startTransition(async () => {
+      try {
+        await action(formData);
+        router.refresh();
+        onDone();
+      } catch (caught) {
+        setError(
+          caught instanceof Error
+            ? caught.message
+            : "Não foi possível salvar. Revise os dados e tente novamente."
+        );
+      }
+    });
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className={className}>
+      {children}
+      {error ? (
+        <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-800 md:col-span-2">
+          {error}
+        </div>
+      ) : null}
+      <button
+        type="submit"
+        disabled={isPending}
+        className="inline-flex flex-1 items-center justify-center gap-2 rounded-2xl bg-zinc-950 px-4 py-3 text-sm font-black text-white transition hover:bg-zinc-800 disabled:cursor-wait disabled:opacity-70"
+      >
+        {isPending ? <LoaderCircle size={16} className="animate-spin" /> : <Save size={16} />}
+        {isPending ? "Salvando..." : "Salvar alterações"}
+      </button>
+    </form>
   );
 }
 
@@ -254,7 +313,11 @@ export function AdminMasterPlanEditor({
           description="Mudanças aqui afetam venda, assinatura, limite e promessa comercial."
           onClose={() => setEditing(null)}
         >
-          <form action={salvarPlano} className="grid gap-4 md:grid-cols-2">
+          <ActionForm
+            action={salvarPlano}
+            onDone={() => setEditing(null)}
+            className="grid gap-4 md:grid-cols-2"
+          >
             <input type="hidden" name="id" value={editing.id} />
             <Field label="Nome" name="nome" defaultValue={editing.nome} />
             <Field label="Subtítulo" name="subtitulo" defaultValue={editing.subtitulo} />
@@ -262,12 +325,14 @@ export function AdminMasterPlanEditor({
               label="Preço mensal"
               name="valor_mensal"
               type="number"
+              step="0.01"
               defaultValue={editing.valor_mensal}
             />
             <Field
               label="Preço anual"
               name="preco_anual"
               type="number"
+              step="0.01"
               defaultValue={editing.preco_anual}
             />
             <Field
@@ -305,14 +370,8 @@ export function AdminMasterPlanEditor({
               >
                 Cancelar
               </button>
-              <button
-                type="submit"
-                className="flex-1 rounded-2xl bg-zinc-950 px-4 py-3 text-sm font-black text-white transition hover:bg-zinc-800"
-              >
-                Salvar plano
-              </button>
             </div>
-          </form>
+          </ActionForm>
         </DialogShell>
       ) : null}
     </section>
@@ -395,7 +454,11 @@ export function AdminMasterResourceMatrixEditor({
           description="Essa regra controla o que o salão pode acessar naquele plano."
           onClose={() => setEditing(null)}
         >
-          <form action={salvarRecurso} className="grid gap-4">
+          <ActionForm
+            action={salvarRecurso}
+            onDone={() => setEditing(null)}
+            className="grid gap-4"
+          >
             <input type="hidden" name="id_plano" value={editing.idPlano} />
             <input type="hidden" name="recurso_codigo" value={editing.recursoCodigo} />
             <ToggleField
@@ -424,14 +487,8 @@ export function AdminMasterResourceMatrixEditor({
               >
                 Cancelar
               </button>
-              <button
-                type="submit"
-                className="flex-1 rounded-2xl bg-zinc-950 px-4 py-3 text-sm font-black text-white transition hover:bg-zinc-800"
-              >
-                Salvar recurso
-              </button>
             </div>
-          </form>
+          </ActionForm>
         </DialogShell>
       ) : null}
     </section>
