@@ -624,6 +624,15 @@ export default function ConfiguracoesPageClient({
   }
 
   function abrirNovoUsuario() {
+    if (!usuariosRecursoLiberado) {
+      abrirFeedbackModal(
+        "erro",
+        "Recurso bloqueado",
+        "Usuários do sistema não estão liberados no plano atual."
+      );
+      return;
+    }
+
     setUsuarioEditandoId(null);
     setUsuarioForm(EMPTY_USUARIO_FORM);
     setUsuarioModalOpen(true);
@@ -671,6 +680,7 @@ export default function ConfiguracoesPageClient({
 
   const limiteUsuariosPlano = planoAccess?.limites?.usuarios ?? limiteUsuarios;
   const usoUsuariosPlano = planoAccess?.uso?.usuarios ?? usuariosAtivosCount;
+  const usuariosRecursoLiberado = planoAccess?.recursos?.usuarios !== false;
   const atingiuLimiteUsuarios =
     !usuarioEditandoId &&
     limiteUsuariosPlano != null &&
@@ -690,6 +700,10 @@ export default function ConfiguracoesPageClient({
       setSavingUsuario(true);
       setErroTela("");
       setMsg("");
+
+      if (!usuariosRecursoLiberado) {
+        throw new Error("Usuários do sistema não estão liberados no plano atual.");
+      }
 
       if (!usuarioForm.nome.trim()) {
         throw new Error("Informe o nome do usuário.");
@@ -794,6 +808,10 @@ export default function ConfiguracoesPageClient({
       setDeletingUsuario(true);
       setErroTela("");
       setMsg("");
+
+      if (!usuariosRecursoLiberado) {
+        throw new Error("Usuários do sistema não estão liberados no plano atual.");
+      }
 
       const response = await fetch("/api/usuarios/excluir", {
         method: "DELETE",
@@ -1527,7 +1545,11 @@ export default function ConfiguracoesPageClient({
             <button
               type="button"
               onClick={abrirNovoUsuario}
-              disabled={!podeCriarUsuario || atingiuLimiteUsuarios}
+              disabled={
+                !usuariosRecursoLiberado ||
+                !podeCriarUsuario ||
+                atingiuLimiteUsuarios
+              }
               className="inline-flex items-center gap-2 rounded-2xl bg-zinc-900 px-4 py-2 text-sm font-bold text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <Plus size={16} />
@@ -1764,7 +1786,11 @@ export default function ConfiguracoesPageClient({
                 </div>
               </div>
 
-              {!usuarioEditandoId && atingiuLimiteUsuarios ? (
+              {!usuariosRecursoLiberado ? (
+                <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-900">
+                  Usuários do sistema não estão liberados no plano atual.
+                </div>
+              ) : !usuarioEditandoId && atingiuLimiteUsuarios ? (
                 <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-900">
                   O limite de usuários do plano atual foi atingido. Compare os planos ou faça upgrade para liberar novos acessos.
                 </div>
@@ -1784,7 +1810,11 @@ export default function ConfiguracoesPageClient({
               <button
                 type="button"
                 onClick={salvarUsuario}
-                disabled={savingUsuario || (!usuarioEditandoId && atingiuLimiteUsuarios)}
+                disabled={
+                  savingUsuario ||
+                  !usuariosRecursoLiberado ||
+                  (!usuarioEditandoId && atingiuLimiteUsuarios)
+                }
                 className="inline-flex items-center justify-center gap-2 rounded-2xl bg-zinc-900 px-5 py-2.5 text-sm font-bold text-white transition hover:opacity-95 disabled:opacity-60"
               >
                 {savingUsuario ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />}

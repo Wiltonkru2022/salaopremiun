@@ -14,7 +14,10 @@ export async function POST(req: NextRequest) {
   try {
     const input = parseCriarUsuarioInput(await req.json());
 
-    await createAdminSalaoRouteService().validarAdmin(input.idSalao);
+    await createAdminSalaoRouteService().validarAdminComRecurso(
+      input.idSalao,
+      "usuarios"
+    );
 
     const result = await criarUsuarioUseCase({
       input,

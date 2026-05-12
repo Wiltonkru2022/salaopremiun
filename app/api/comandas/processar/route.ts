@@ -34,15 +34,27 @@ export async function POST(req: NextRequest) {
     );
     await assertCanMutatePlanFeature(idSalao, "comandas");
 
-    if (
-      (acao === "adicionar_item" || acao === "editar_item") &&
-      input.item?.tipo_item === "produto"
-    ) {
+    if (acao === "adicionar_item" || acao === "editar_item") {
       const snapshot = await getPlanoAccessSnapshot(idSalao);
-      if (snapshot.planoCodigo === "basico") {
+
+      if (input.item?.tipo_item === "servico" && !snapshot.recursos.servicos) {
         throw new PlanAccessError(
-          "Venda de produtos no caixa fica liberada a partir do plano Pro.",
+          "Serviços não estão liberados no plano atual.",
+          "SERVICES_PLAN_REQUIRED"
+        );
+      }
+
+      if (input.item?.tipo_item === "produto" && !snapshot.recursos.produtos) {
+        throw new PlanAccessError(
+          "Venda de produtos não está liberada no plano atual.",
           "PRODUCT_SALES_PLAN_REQUIRED"
+        );
+      }
+
+      if (input.item?.tipo_item === "extra" && !snapshot.recursos.servicos_extras) {
+        throw new PlanAccessError(
+          "Serviços extras não estão liberados no plano atual.",
+          "EXTRAS_PLAN_REQUIRED"
         );
       }
     }

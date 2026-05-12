@@ -14,7 +14,10 @@ export async function PATCH(req: NextRequest) {
   try {
     const input = parseAtualizarUsuarioInput(await req.json());
 
-    await createAdminSalaoRouteService().validarAdmin(input.idSalao);
+    await createAdminSalaoRouteService().validarAdminComRecurso(
+      input.idSalao,
+      "usuarios"
+    );
 
     const result = await atualizarUsuarioUseCase({
       input,

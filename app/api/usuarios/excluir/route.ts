@@ -14,7 +14,10 @@ export async function DELETE(req: Request) {
   try {
     const input = parseExcluirUsuarioInput(await req.json());
 
-    await createAdminSalaoRouteService().validarAdmin(input.idSalao);
+    await createAdminSalaoRouteService().validarAdminComRecurso(
+      input.idSalao,
+      "usuarios"
+    );
 
     const result = await excluirUsuarioUseCase({
       input,
