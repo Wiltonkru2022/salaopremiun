@@ -1,5 +1,7 @@
 import type { MetadataRoute } from "next";
 import { DOMINIO_BLOG, DOMINIO_RAIZ } from "@/lib/proxy/domain-config";
+import { isSalaoStatusOperational } from "@/lib/plans/access";
+import { buildSalaoPublicPath } from "@/lib/saloes/public-link";
 
 function getBaseUrl() {
   const configured = String(process.env.NEXT_PUBLIC_APP_URL || "").trim();
@@ -26,18 +28,33 @@ async function listDynamicSalonRoutes(baseUrl: URL, now: Date) {
   const supabaseAdmin = getSupabaseAdmin();
   const { data } = await supabaseAdmin
     .from("saloes")
-    .select("id, assinaturas!inner(plano,status)")
-    .eq("status", "ativo")
+    .select("id, app_cliente_slug, status, assinaturas!inner(plano,status)")
     .eq("app_cliente_publicado", true)
-    .eq("assinaturas.status", "ativo")
-    .in("assinaturas.plano", ["pro", "premium"])
+    .in("assinaturas.plano", ["teste_gratis", "pro", "premium"])
     .limit(500);
 
-  return ((data as Array<{ id?: string }> | null) || [])
-    .map((item) => String(item.id || "").trim())
+  return (
+    (data as Array<{
+      id?: string | null;
+      app_cliente_slug?: string | null;
+      status?: string | null;
+      assinaturas?: { status?: string | null } | Array<{ status?: string | null }> | null;
+    }> | null) || []
+  )
+    .filter((item) => {
+      const assinatura = Array.isArray(item.assinaturas)
+        ? item.assinaturas[0]
+        : item.assinaturas;
+
+      return (
+        isSalaoStatusOperational(item.status) &&
+        isSalaoStatusOperational(assinatura?.status)
+      );
+    })
+    .map((item) => String(item.app_cliente_slug || item.id || "").trim())
     .filter(Boolean)
-    .map((idSalao) => ({
-      url: new URL(`/app-cliente/salao/${idSalao}`, baseUrl).toString(),
+    .map((slugOrId) => ({
+      url: new URL(buildSalaoPublicPath(slugOrId), baseUrl).toString(),
       lastModified: now,
       changeFrequency: "daily" as const,
       priority: 0.7,
