@@ -1,5 +1,6 @@
 import { runAdminOperation } from "@/lib/supabase/admin-ops";
 import type { SupabaseAdminClient } from "@/lib/supabase/admin";
+import { isSalaoStatusOperational } from "@/lib/plans/access";
 import { verifyPassword } from "@/lib/profissional-auth.server";
 
 type LoginResult =
@@ -77,8 +78,8 @@ async function buildProfissionalSession(params: {
     return { ok: false, error: "Salao nao encontrado." };
   }
 
-  if (String(salao.status || "").toLowerCase() !== "ativo") {
-    return { ok: false, error: "Salao inativo ou bloqueado." };
+  if (!isSalaoStatusOperational(salao.status)) {
+    return { ok: false, error: "Salão inativo ou bloqueado." };
   }
 
   if (params.acessoId) {
