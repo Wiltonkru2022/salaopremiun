@@ -1006,10 +1006,9 @@ export async function getAdminMasterPlanosSection(): Promise<AdminSectionData> {
       "ativo",
     ],
     actions: [
-      "Editar preco e limites",
       "Ajustar matriz de recursos",
-      "Abrir planos",
       "Ver saloes no plano",
+      "Auditar",
     ],
   };
 }
@@ -1166,7 +1165,6 @@ export async function getAdminMasterRecursosSection(): Promise<AdminSectionData>
     rows,
     columns: ["recurso", ...planCodes, "entrada", "status", "observacao"],
     actions: [
-      "Ajustar matriz de recursos",
       "Editar preco e limites",
       "Ver saloes no plano",
       "Auditar",
@@ -1957,7 +1955,7 @@ export async function getAdminMasterSection(
       ],
       rows,
       columns: ["nome", "tipo", "publico", "objetivo", "status", "inicio", "fim", "sinal", "acao"],
-      actions: ["Criar campanha", "Ver notificacoes", "Abrir relatorios", "Auditar"],
+      actions: ["Ver notificacoes", "Abrir relatorios", "Auditar"],
     };
   }
 
@@ -2283,7 +2281,7 @@ export async function getAdminMasterSection(
       ],
       rows,
       columns: ["recurso", "liberacao", "global", "planos", "saloes", "inicio", "fim", "sinal", "detalhe", "acao"],
-      actions: ["Ver feature flags", "Ajustar matriz de recursos", "Abrir logs", "Auditar"],
+      actions: ["Ajustar matriz de recursos", "Abrir logs", "Auditar"],
     };
   }
 
@@ -2398,7 +2396,7 @@ export async function getAdminMasterSection(
       ],
       rows,
       columns: ["nome", "email", "perfil", "status", "permissoes", "auditoria", "ultimo_acesso", "atualizado", "sinal", "acao"],
-      actions: ["Ver admins internos", "Ver logs", "Auditar"],
+      actions: ["Ver logs", "Auditar"],
     };
   }
 
@@ -2502,7 +2500,7 @@ export async function getAdminMasterSection(
       ],
       rows,
       columns: ["chave", "descricao", "valor", "alteracoes", "atualizado_por", "atualizado", "sinal", "acao"],
-      actions: ["Ver configs globais", "Ver logs", "Auditar"],
+      actions: ["Ver logs", "Auditar"],
     };
   }
 
