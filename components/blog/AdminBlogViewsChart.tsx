@@ -19,9 +19,9 @@ export default function AdminBlogViewsChart({ data }: Props) {
   const hasViews = data.some((item) => item.views > 0);
 
   return (
-    <div className="h-64 w-full">
+    <div className="h-64 min-w-0 w-full">
       {hasViews ? (
-        <ResponsiveContainer width="100%" height="100%">
+        <ResponsiveContainer width="100%" height={256} minWidth={280} minHeight={256}>
           <LineChart data={data} margin={{ left: -24, right: 8, top: 12, bottom: 0 }}>
             <CartesianGrid stroke="#e2e8f0" strokeDasharray="4 4" vertical={false} />
             <XAxis
