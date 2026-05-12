@@ -154,6 +154,9 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   compress: true,
   productionBrowserSourceMaps: false,
+  compiler: {
+    removeConsole: true,
+  },
   experimental: {
     serverActions: {
       bodySizeLimit: "25mb",

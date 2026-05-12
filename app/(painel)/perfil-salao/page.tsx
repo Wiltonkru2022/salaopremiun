@@ -2280,12 +2280,12 @@ export default function PerfilSalaoPage() {
             {planoPremium ? (
               <>
                 O link e o QR Code já ficam prontos pelo nome do salão. Complete
-                a vitrine e ative a públicação quando quiser aparecer no app cliente.
+                a vitrine e ative a publicação quando quiser aparecer no app cliente.
               </>
             ) : (
               <>
                 Você pode preparar a descrição e os dados públicos agora, mas a
-                  públicação na vitrine fica liberada somente no plano Pro ou Premium.
+                  publicação na vitrine fica liberada somente no plano Pro ou Premium.
               </>
             )}
           </div>

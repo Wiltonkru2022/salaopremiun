@@ -1,4 +1,4 @@
-export type ComboDisplayMeta = {
+﻿export type ComboDisplayMeta = {
   isComboItem: boolean;
   comboName: string | null;
   childName: string | null;
@@ -12,7 +12,7 @@ export type ComboGroupedTotal = {
   childLabels: string[];
 };
 
-const COMBO_SEPARATOR = " â€¢ ";
+const COMBO_SEPARATOR = " • ";
 
 export function parseComboDisplayMeta(
   descricao: string | null | undefined
@@ -83,3 +83,4 @@ export function groupComboTotals<T>(
 
   return Array.from(map.values()).sort((a, b) => b.total - a.total);
 }
+

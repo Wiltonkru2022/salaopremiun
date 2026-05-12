@@ -55,7 +55,7 @@ export default async function AdminMasterBlogPage() {
               Posts do blog
             </h2>
             <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600">
-              Controle editorial com foco em públicação, tráfego orgânico,
+              Controle editorial com foco em publicação, tráfego orgânico,
               newsletter e leitura real do blog SalãoPremium.
             </p>
             <div className="mt-5 flex flex-wrap gap-2">

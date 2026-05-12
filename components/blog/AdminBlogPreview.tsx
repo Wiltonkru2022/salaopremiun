@@ -28,6 +28,7 @@ type Props = {
 export default function AdminBlogPreview({ fallback, editHref }: Props) {
   const [data, setData] = useState<PreviewData>(fallback);
   const [publishing, setPublishing] = useState(false);
+  const [publishError, setPublishError] = useState<string | null>(null);
 
   useEffect(() => {
     const stored = window.localStorage.getItem("salaopremium-blog-preview");
@@ -57,6 +58,7 @@ export default function AdminBlogPreview({ fallback, editHref }: Props) {
             className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-black text-zinc-950"
             onClick={async () => {
               setPublishing(true);
+              setPublishError(null);
               try {
                 const response = await fetch("/api/admin-master/blog/publicar-preview", {
                   method: "POST",
@@ -69,7 +71,9 @@ export default function AdminBlogPreview({ fallback, editHref }: Props) {
                   ? `/admin-master/blog/${result.slug}`
                   : editHref;
               } catch (error) {
-                window.alert(error instanceof Error ? error.message : "Falha ao publicar.");
+                setPublishError(
+                  error instanceof Error ? error.message : "Falha ao publicar."
+                );
               } finally {
                 setPublishing(false);
               }
@@ -79,6 +83,11 @@ export default function AdminBlogPreview({ fallback, editHref }: Props) {
             {publishing ? "Publicando" : "Publicar"}
           </button>
         </div>
+        {publishError ? (
+          <div className="mx-auto mt-2 max-w-6xl rounded-2xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-800 shadow-sm">
+            {publishError}
+          </div>
+        ) : null}
       </div>
 
       <article>
