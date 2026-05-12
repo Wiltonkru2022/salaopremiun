@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { requireAdminMasterUser } from "@/lib/admin-master/auth/requireAdminMasterUser";
 import { registrarAdminMasterAuditoria } from "@/lib/admin-master/actions";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
@@ -69,6 +69,7 @@ export async function salvarPlanoAdminMaster(formData: FormData) {
 
   revalidatePath("/admin-master/planos");
   revalidatePath("/admin-master/recursos");
+  revalidateTag("plano-access-snapshot", "max");
 }
 
 export async function salvarRecursoPlanoAdminMaster(formData: FormData) {
@@ -109,4 +110,5 @@ export async function salvarRecursoPlanoAdminMaster(formData: FormData) {
 
   revalidatePath("/admin-master/planos");
   revalidatePath("/admin-master/recursos");
+  revalidateTag("plano-access-snapshot", "max");
 }

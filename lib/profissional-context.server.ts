@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { canUsePlanFeature } from "@/lib/plans/access";
+import { canUsePlanFeature, isSalaoStatusOperational } from "@/lib/plans/access";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import {
   getProfissionalSessionFromCookie,
@@ -51,7 +51,7 @@ async function loadProfissionalServerContext(): Promise<ProfissionalServerContex
   if (
     salaoError ||
     !salao?.id ||
-    String(salao.status || "").toLowerCase() !== "ativo"
+    !isSalaoStatusOperational(salao.status)
   ) {
     throw new Error("UNAUTHORIZED");
   }

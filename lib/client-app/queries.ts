@@ -5,6 +5,7 @@ import {
   type ClientAppEligibleSalon,
 } from "@/lib/client-app/eligibility";
 import { captureSystemError } from "@/lib/monitoring/server";
+import { canUsePlanFeature, isSalaoStatusOperational } from "@/lib/plans/access";
 
 export type ClientAppSalonListItem = ClientAppEligibleSalon & {
   notaMedia: number | null;
@@ -327,6 +328,19 @@ async function attachMarketplaceMetrics(
   });
 }
 
+async function filterClientAppPlanAllowed<T extends { id: string }>(items: T[]) {
+  const allowed: T[] = [];
+
+  for (const item of items) {
+    const access = await canUsePlanFeature(item.id, "app_cliente").catch(() => ({
+      allowed: false,
+    }));
+    if (access.allowed) allowed.push(item);
+  }
+
+  return allowed;
+}
+
 async function listVisibleClientAppSaloesLive(search: string, limit: number) {
     const term = normalizeSearch(search);
     const pageSize = Math.min(Math.max(limit, 1), 24);
@@ -359,14 +373,10 @@ async function listVisibleClientAppSaloesLive(search: string, limit: number) {
           "app_cliente_pausado",
           "app_cliente_pausa_mensagem",
           "app_cliente_slug",
-          "assinaturas!inner(plano,status)",
         ].join(",")
       )
-      .eq("status", "ativo")
       .eq("app_cliente_publicado", true)
       .eq("app_cliente_pausado", false)
-      .eq("assinaturas.status", "ativo")
-      .in("assinaturas.plano", ["pro", "premium"])
       .order("nome", { ascending: true })
       .limit(pageSize);
 
@@ -387,11 +397,13 @@ async function listVisibleClientAppSaloesLive(search: string, limit: number) {
       return [] as ClientAppSalonListItem[];
     }
 
-    const saloes = ((data as unknown as Array<Record<string, unknown>>) || []).map(
-      mapLiveSalonRow
-    );
+    const saloes = ((data as unknown as Array<Record<string, unknown>>) || [])
+      .filter((row) => isSalaoStatusOperational(String(row.status || "")))
+      .map(mapLiveSalonRow);
 
-    return attachMarketplaceMetrics(supabaseAdmin, saloes);
+    const allowed = await filterClientAppPlanAllowed(saloes);
+
+    return attachMarketplaceMetrics(supabaseAdmin, allowed);
 }
 
 async function logClientAppQueryError(
@@ -838,11 +850,18 @@ export async function listClienteAppFavoriteSaloes(params: {
     const rows = ((data || []) as Array<Record<string, unknown>>)
       .map((item) => item.saloes as Record<string, unknown> | null)
       .filter((item): item is Record<string, unknown> =>
-        Boolean(item?.id && item?.app_cliente_publicado && !item?.app_cliente_pausado)
+        Boolean(
+          item?.id &&
+            item?.app_cliente_publicado &&
+            !item?.app_cliente_pausado &&
+            isSalaoStatusOperational(String(item.status || ""))
+        )
       )
       .map(mapLiveSalonRow);
 
-    return attachMarketplaceMetrics(supabaseAdmin, rows);
+    const allowed = await filterClientAppPlanAllowed(rows);
+
+    return attachMarketplaceMetrics(supabaseAdmin, allowed);
   } catch (error) {
     await logClientAppQueryError("cliente_app_favorite_saloes", error);
     return [] as ClientAppSalonListItem[];

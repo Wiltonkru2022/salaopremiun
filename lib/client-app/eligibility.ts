@@ -1,5 +1,6 @@
 import "server-only";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { canUsePlanFeature, isSalaoStatusOperational } from "@/lib/plans/access";
 
 type EligibleSalonRow = {
   id: string;
@@ -25,12 +26,6 @@ type EligibleSalonRow = {
   app_cliente_pausa_mensagem?: string | null;
   app_cliente_slug?: string | null;
   status: string | null;
-  assinaturas:
-    | Array<{
-        plano: string | null;
-        status: string | null;
-      }>
-    | null;
 };
 
 export type ClientAppEligibleSalon = {
@@ -57,15 +52,6 @@ export type ClientAppEligibleSalon = {
   appClienteSlug: string | null;
 };
 
-function normalizePlanCode(value?: string | null) {
-  return String(value || "")
-    .trim()
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[-\s]+/g, "_");
-}
-
 function parseStringArray(value: unknown) {
   if (!Array.isArray(value)) return [];
   return value
@@ -77,6 +63,15 @@ function parseStringArray(value: unknown) {
 function parseNumber(value: unknown) {
   const numeric = Number(value);
   return Number.isFinite(numeric) ? numeric : null;
+}
+
+function normalizePlanCode(value?: string | null) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[-\s]+/g, "_");
 }
 
 function hasValidCoordinatePair(latitude: number | null, longitude: number | null) {
@@ -171,13 +166,9 @@ function buildBaseSalonQuery() {
         "app_cliente_pausa_mensagem",
         "app_cliente_slug",
         "status",
-        "assinaturas!inner(plano,status)",
       ].join(",")
     )
-    .eq("status", "ativo")
-    .eq("app_cliente_publicado", true)
-    .eq("assinaturas.status", "ativo")
-    .in("assinaturas.plano", ["pro", "premium"]);
+    .eq("app_cliente_publicado", true);
 }
 
 async function getEligibleSalonByIdLive(idSalaoOrSlug: string) {
@@ -194,7 +185,18 @@ async function getEligibleSalonByIdLive(idSalaoOrSlug: string) {
     return null;
   }
 
-  return mapSalonRow(data as unknown as EligibleSalonRow);
+  const row = data as unknown as EligibleSalonRow;
+
+  if (!isSalaoStatusOperational(row.status)) {
+    return null;
+  }
+
+  const access = await canUsePlanFeature(row.id, "app_cliente");
+  if (!access.allowed) {
+    return null;
+  }
+
+  return mapSalonRow(row);
 }
 
 export async function canSalonAppearInClientApp(idSalao: string) {

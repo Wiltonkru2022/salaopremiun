@@ -126,8 +126,10 @@ function isPlanoPremium(planoCodigo?: string | null, planoNome?: string | null) 
   const nome = normalizePlanoCode(planoNome);
 
   return (
+    codigo === "teste_gratis" ||
     codigo === "pro" ||
     codigo === "premium" ||
+    nome === "teste_gratis" ||
     nome === "pro" ||
     nome === "premium"
   );
@@ -171,8 +173,14 @@ export default function ServicoForm({ modo }: ServicoFormProps) {
   );
 
   const planoPremium = useMemo(
-    () => isPlanoPremium(planoAccess?.planoCodigo, planoAccess?.planoNome),
-    [planoAccess?.planoCodigo, planoAccess?.planoNome]
+    () => {
+      if (planoAccess?.recursos) {
+        return planoAccess.recursos.app_cliente !== false;
+      }
+
+      return isPlanoPremium(planoAccess?.planoCodigo, planoAccess?.planoNome);
+    },
+    [planoAccess?.planoCodigo, planoAccess?.planoNome, planoAccess?.recursos]
   );
 
   const totalRegrasPersonalizadas = useMemo(

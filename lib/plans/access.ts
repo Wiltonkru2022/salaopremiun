@@ -192,6 +192,27 @@ type UsageLimitKey =
   | "agendamentosMensais";
 
 const STATUS_RESTRITO = new Set(["vencida", "cancelada", "bloqueada", "suspensa"]);
+const SALAO_STATUS_OPERACIONAL = new Set([
+  "ativo",
+  "ativa",
+  "teste_gratis",
+  "trial",
+  "trialing",
+  "em_teste",
+  "pago",
+  "active",
+]);
+
+export function isSalaoStatusOperational(status?: string | null) {
+  const normalized = String(status || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase()
+    .replace(/[-\s]+/g, "_");
+
+  return SALAO_STATUS_OPERACIONAL.has(normalized);
+}
 
 function normalizePlano(plano?: string | null) {
   const normalized = String(plano || "teste_gratis")

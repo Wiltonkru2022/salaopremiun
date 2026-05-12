@@ -339,10 +339,14 @@ export default function PerfilSalaoPage() {
   );
   const planoPremium = useMemo(
     () => {
+      if (painelSession?.planoRecursos) {
+        return painelSession.planoRecursos.app_cliente !== false;
+      }
+
       const codigo = getPlanoCatalogo(perfilForm.plano).codigo;
-      return codigo === "pro" || codigo === "premium";
+      return codigo === "teste_gratis" || codigo === "pro" || codigo === "premium";
     },
-    [perfilForm.plano]
+    [painelSession?.planoRecursos, perfilForm.plano]
   );
   const autenticadorAtivo = Boolean(totpFactor?.id);
   const qrCodeMarkup = useMemo(() => {
