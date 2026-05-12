@@ -2,7 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { getProfissionalSessionFromCookie } from "@/lib/profissional-auth.server";
+import { assertCanMutatePlanFeature, PlanAccessError } from "@/lib/plans/access";
+import { requireProfissionalAppContext } from "@/lib/profissional-context.server";
 import { notifyClientAppointmentConfirmed } from "@/lib/push-notifications";
 import {
   notifyAppointmentCanceled,
@@ -53,9 +54,7 @@ function isRedirectError(error: unknown) {
 }
 
 async function getSessionOrRedirect() {
-  const session = await getProfissionalSessionFromCookie();
-  if (!session) redirect("/app-profissional/login");
-  return session;
+  return requireProfissionalAppContext();
 }
 
 async function buscarAgendamentoPermitido(params: {
@@ -103,6 +102,7 @@ export async function atualizarAgendamentoProfissionalAction(
     if (!idAgendamento) throw new Error("Agendamento invalido.");
     if (!data || !horaInicio) throw new Error("Informe data e horario.");
     if (!STATUS_PERMITIDOS.has(status)) throw new Error("Status invalido.");
+    await assertCanMutatePlanFeature(session.idSalao, "agenda");
 
     const agendamento = await buscarAgendamentoPermitido({
       idSalao: session.idSalao,
@@ -216,7 +216,11 @@ export async function atualizarAgendamentoProfissionalAction(
   } catch (error) {
     if (isRedirectError(error)) throw error;
     const message =
-      error instanceof Error ? error.message : "Erro ao atualizar agendamento.";
+      error instanceof PlanAccessError
+        ? error.message
+        : error instanceof Error
+          ? error.message
+          : "Erro ao atualizar agendamento.";
     redirect(buildUrl(idAgendamento || "invalido", "erro", message));
   }
 }
@@ -227,6 +231,7 @@ export async function marcarClienteNaoCompareceuAction(formData: FormData) {
 
   try {
     if (!idAgendamento) throw new Error("Agendamento invalido.");
+    await assertCanMutatePlanFeature(session.idSalao, "agenda");
     await buscarAgendamentoPermitido({
       idSalao: session.idSalao,
       idProfissional: session.idProfissional,
@@ -260,7 +265,11 @@ export async function marcarClienteNaoCompareceuAction(formData: FormData) {
   } catch (error) {
     if (isRedirectError(error)) throw error;
     const message =
-      error instanceof Error ? error.message : "Erro ao atualizar status.";
+      error instanceof PlanAccessError
+        ? error.message
+        : error instanceof Error
+          ? error.message
+          : "Erro ao atualizar status.";
     redirect(buildUrl(idAgendamento || "invalido", "erro", message));
   }
 }
@@ -271,6 +280,7 @@ export async function confirmarAgendamentoProfissionalAction(formData: FormData)
 
   try {
     if (!idAgendamento) throw new Error("Agendamento invalido.");
+    await assertCanMutatePlanFeature(session.idSalao, "agenda");
     const agendamento = await buscarAgendamentoPermitido({
       idSalao: session.idSalao,
       idProfissional: session.idProfissional,
@@ -314,7 +324,11 @@ export async function confirmarAgendamentoProfissionalAction(formData: FormData)
   } catch (error) {
     if (isRedirectError(error)) throw error;
     const message =
-      error instanceof Error ? error.message : "Erro ao confirmar agendamento.";
+      error instanceof PlanAccessError
+        ? error.message
+        : error instanceof Error
+          ? error.message
+          : "Erro ao confirmar agendamento.";
     redirect(buildUrl(idAgendamento || "invalido", "erro", message));
   }
 }
@@ -325,6 +339,7 @@ export async function cancelarAgendamentoProfissionalAction(formData: FormData) 
 
   try {
     if (!idAgendamento) throw new Error("Agendamento invalido.");
+    await assertCanMutatePlanFeature(session.idSalao, "agenda");
     const agendamento = await buscarAgendamentoPermitido({
       idSalao: session.idSalao,
       idProfissional: session.idProfissional,
@@ -367,7 +382,11 @@ export async function cancelarAgendamentoProfissionalAction(formData: FormData) 
   } catch (error) {
     if (isRedirectError(error)) throw error;
     const message =
-      error instanceof Error ? error.message : "Erro ao cancelar agendamento.";
+      error instanceof PlanAccessError
+        ? error.message
+        : error instanceof Error
+          ? error.message
+          : "Erro ao cancelar agendamento.";
     redirect(buildUrl(idAgendamento || "invalido", "erro", message));
   }
 }
@@ -378,6 +397,10 @@ export async function abrirComandaDoAgendamentoAction(formData: FormData) {
 
   try {
     if (!idAgendamento) throw new Error("Agendamento invalido.");
+    await Promise.all([
+      assertCanMutatePlanFeature(session.idSalao, "agenda"),
+      assertCanMutatePlanFeature(session.idSalao, "comandas"),
+    ]);
     const agendamento = await buscarAgendamentoPermitido({
       idSalao: session.idSalao,
       idProfissional: session.idProfissional,
@@ -460,7 +483,11 @@ export async function abrirComandaDoAgendamentoAction(formData: FormData) {
   } catch (error) {
     if (isRedirectError(error)) throw error;
     const message =
-      error instanceof Error ? error.message : "Erro ao abrir comanda.";
+      error instanceof PlanAccessError
+        ? error.message
+        : error instanceof Error
+          ? error.message
+          : "Erro ao abrir comanda.";
     redirect(buildUrl(idAgendamento || "invalido", "erro", message));
   }
 }
@@ -473,6 +500,11 @@ export async function enviarComandaDoAgendamentoParaCaixaAction(
 
   try {
     if (!idAgendamento) throw new Error("Agendamento invalido.");
+    await Promise.all([
+      assertCanMutatePlanFeature(session.idSalao, "agenda"),
+      assertCanMutatePlanFeature(session.idSalao, "comandas"),
+      assertCanMutatePlanFeature(session.idSalao, "caixa"),
+    ]);
     const agendamento = await buscarAgendamentoPermitido({
       idSalao: session.idSalao,
       idProfissional: session.idProfissional,
@@ -556,7 +588,11 @@ export async function enviarComandaDoAgendamentoParaCaixaAction(
   } catch (error) {
     if (isRedirectError(error)) throw error;
     const message =
-      error instanceof Error ? error.message : "Erro ao enviar para o caixa.";
+      error instanceof PlanAccessError
+        ? error.message
+        : error instanceof Error
+          ? error.message
+          : "Erro ao enviar para o caixa.";
     redirect(buildUrl(idAgendamento || "invalido", "erro", message));
   }
 }

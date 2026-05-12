@@ -1,9 +1,13 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { assertCanCreateWithinLimit, PlanAccessError } from "@/lib/plans/access";
+import {
+  assertCanCreateWithinLimit,
+  assertCanMutatePlanFeature,
+  PlanAccessError,
+} from "@/lib/plans/access";
 import { createClient } from "@/lib/supabase/server";
-import { getProfissionalSessionFromCookie } from "@/lib/profissional-auth.server";
+import { requireProfissionalAppContext } from "@/lib/profissional-context.server";
 
 export type NovoClienteState = {
   error: string | null;
@@ -17,11 +21,7 @@ export async function criarClienteProfissionalAction(
   _prevState: NovoClienteState,
   formData: FormData
 ): Promise<NovoClienteState> {
-  const session = await getProfissionalSessionFromCookie();
-
-  if (!session) {
-    return { error: "Sessao expirada. Faca login novamente." };
-  }
+  const session = await requireProfissionalAppContext();
 
   const nome = String(formData.get("nome") || "").trim();
   const telefone = somenteDigitos(String(formData.get("telefone") || ""));
@@ -34,6 +34,7 @@ export async function criarClienteProfissionalAction(
 
   const supabase = await createClient();
   try {
+    await assertCanMutatePlanFeature(session.idSalao, "clientes");
     await assertCanCreateWithinLimit(session.idSalao, "clientes");
   } catch (error) {
     if (error instanceof PlanAccessError) {

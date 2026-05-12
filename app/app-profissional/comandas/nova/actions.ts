@@ -2,8 +2,12 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { assertCanCreateAgendaInCurrentMonth, PlanAccessError } from "@/lib/plans/access";
-import { getProfissionalSessionFromCookie } from "@/lib/profissional-auth.server";
+import {
+  assertCanCreateAgendaInCurrentMonth,
+  assertCanMutatePlanFeature,
+  PlanAccessError,
+} from "@/lib/plans/access";
+import { requireProfissionalAppContext } from "@/lib/profissional-context.server";
 import { runAdminOperation } from "@/lib/supabase/admin-ops";
 import {
   buscarConfiguracaoAgendaProfissional,
@@ -41,11 +45,7 @@ function normalizeTime(value: string) {
 }
 
 export async function criarComandaProfissionalAction(formData: FormData) {
-  const session = await getProfissionalSessionFromCookie();
-
-  if (!session) {
-    redirect("/app-profissional/login");
-  }
+  const session = await requireProfissionalAppContext();
 
   const clienteId = String(formData.get("cliente_id") || "").trim();
   const servicoId = String(formData.get("servico_id") || "").trim();
@@ -73,7 +73,11 @@ export async function criarComandaProfissionalAction(formData: FormData) {
       );
     }
 
-    await assertCanCreateAgendaInCurrentMonth(session.idSalao);
+    await Promise.all([
+      assertCanMutatePlanFeature(session.idSalao, "comandas"),
+      assertCanMutatePlanFeature(session.idSalao, "servicos"),
+      assertCanCreateAgendaInCurrentMonth(session.idSalao),
+    ]);
 
     const [configProfissional, servico] = await Promise.all([
       buscarConfiguracaoAgendaProfissional(

@@ -3,7 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { runAdminOperation } from "@/lib/supabase/admin-ops";
-import { getProfissionalSessionFromCookie } from "@/lib/profissional-auth.server";
+import { assertCanMutatePlanFeature, PlanAccessError } from "@/lib/plans/access";
+import { requireProfissionalAppContext } from "@/lib/profissional-context.server";
 import {
   buscarVinculoProfissionalServico,
   criarCamposAplicacaoComissao,
@@ -74,11 +75,7 @@ async function buscarComandaPermitida(idComanda: string) {
     throw new Error("Comanda invalida.");
   }
 
-  const session = await getProfissionalSessionFromCookie();
-
-  if (!session) {
-    redirect("/app-profissional/login");
-  }
+  const session = await requireProfissionalAppContext();
 
   const comanda = await runAdminOperation({
     action: "app_profissional_comanda_buscar_permitida",
@@ -174,6 +171,12 @@ export async function adicionarServicoNaComandaAction(formData: FormData) {
   );
 
   try {
+    const context = await requireProfissionalAppContext();
+    await Promise.all([
+      assertCanMutatePlanFeature(context.idSalao, "comandas"),
+      assertCanMutatePlanFeature(context.idSalao, "servicos"),
+    ]);
+
     const { session, comanda } = await buscarComandaPermitida(idComanda);
 
     await runAdminOperation({
@@ -328,7 +331,11 @@ export async function adicionarServicoNaComandaAction(formData: FormData) {
     });
   } catch (error) {
     const message =
-      error instanceof Error ? error.message : "Erro ao adicionar servico.";
+      error instanceof PlanAccessError
+        ? error.message
+        : error instanceof Error
+          ? error.message
+          : "Erro ao adicionar servico.";
     redirectUrl = buildRedirectUrl(idComanda, "erro", message);
   }
 
@@ -348,6 +355,12 @@ export async function adicionarExtraNaComandaAction(formData: FormData) {
   );
 
   try {
+    const context = await requireProfissionalAppContext();
+    await Promise.all([
+      assertCanMutatePlanFeature(context.idSalao, "comandas"),
+      assertCanMutatePlanFeature(context.idSalao, "servicos_extras"),
+    ]);
+
     const { session, comanda } = await buscarComandaPermitida(idComanda);
 
     await runAdminOperation({
@@ -481,7 +494,11 @@ export async function adicionarExtraNaComandaAction(formData: FormData) {
     });
   } catch (error) {
     const message =
-      error instanceof Error ? error.message : "Erro ao adicionar item extra.";
+      error instanceof PlanAccessError
+        ? error.message
+        : error instanceof Error
+          ? error.message
+          : "Erro ao adicionar item extra.";
     redirectUrl = buildRedirectUrl(idComanda, "erro", message);
   }
 
@@ -500,6 +517,7 @@ export async function excluirItemDaComandaAction(formData: FormData) {
 
   try {
     const { session, comanda } = await buscarComandaPermitida(idComanda);
+    await assertCanMutatePlanFeature(session.idSalao, "comandas");
 
     await runAdminOperation({
       action: "app_profissional_comanda_excluir_item",
@@ -588,7 +606,11 @@ export async function excluirItemDaComandaAction(formData: FormData) {
     });
   } catch (error) {
     const message =
-      error instanceof Error ? error.message : "Erro ao remover item.";
+      error instanceof PlanAccessError
+        ? error.message
+        : error instanceof Error
+          ? error.message
+          : "Erro ao remover item.";
     redirectUrl = buildRedirectUrl(idComanda, "erro", message);
   }
 
@@ -606,6 +628,10 @@ export async function enviarComandaParaCaixaAction(formData: FormData) {
 
   try {
     const { session, comanda } = await buscarComandaPermitida(idComanda);
+    await Promise.all([
+      assertCanMutatePlanFeature(session.idSalao, "comandas"),
+      assertCanMutatePlanFeature(session.idSalao, "caixa"),
+    ]);
 
     await runAdminOperation({
       action: "app_profissional_comanda_enviar_caixa",
@@ -684,7 +710,11 @@ export async function enviarComandaParaCaixaAction(formData: FormData) {
     });
   } catch (error) {
     const message =
-      error instanceof Error ? error.message : "Erro ao enviar comanda.";
+      error instanceof PlanAccessError
+        ? error.message
+        : error instanceof Error
+          ? error.message
+          : "Erro ao enviar comanda.";
     redirectUrl = buildRedirectUrl(idComanda, "erro", message);
   }
 

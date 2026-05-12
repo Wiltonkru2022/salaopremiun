@@ -2,7 +2,12 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { getProfissionalSessionFromCookie } from "@/lib/profissional-auth.server";
+import {
+  assertCanCreateAgendaInCurrentMonth,
+  assertCanMutatePlanFeature,
+  PlanAccessError,
+} from "@/lib/plans/access";
+import { requireProfissionalAppContext } from "@/lib/profissional-context.server";
 import { runAdminOperation } from "@/lib/supabase/admin-ops";
 import {
   buscarConfiguracaoAgendaProfissional,
@@ -37,11 +42,7 @@ function isRedirectError(error: unknown) {
 }
 
 export async function criarAgendamentoProfissionalAction(formData: FormData) {
-  const session = await getProfissionalSessionFromCookie();
-
-  if (!session) {
-    redirect("/app-profissional/login");
-  }
+  const session = await requireProfissionalAppContext();
 
   const clienteId = String(formData.get("cliente_id") || "");
   const servicoId = String(formData.get("servico_id") || "");
@@ -67,6 +68,12 @@ export async function criarAgendamentoProfissionalAction(formData: FormData) {
         })
       );
     }
+
+    await Promise.all([
+      assertCanMutatePlanFeature(session.idSalao, "agenda"),
+      assertCanMutatePlanFeature(session.idSalao, "servicos"),
+      assertCanCreateAgendaInCurrentMonth(session.idSalao),
+    ]);
 
     const [configProfissional, servico] = await Promise.all([
       buscarConfiguracaoAgendaProfissional(session.idSalao, session.idProfissional),
@@ -160,7 +167,11 @@ export async function criarAgendamentoProfissionalAction(formData: FormData) {
     }
 
     const message =
-      error instanceof Error ? error.message : "Erro ao criar agendamento.";
+      error instanceof PlanAccessError
+        ? error.message
+        : error instanceof Error
+          ? error.message
+          : "Erro ao criar agendamento.";
 
     redirect(
       buildNovoUrl({
