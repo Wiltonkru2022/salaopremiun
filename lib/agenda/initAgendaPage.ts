@@ -205,6 +205,14 @@ export async function initAgendaPage(params: {
     };
   }
 
+  if (sessionSnapshot?.planoRecursos?.agenda === false) {
+    return {
+      ok: true,
+      permissoes: permissoesNivel,
+      redirectTo: "/meu-plano?motivo=recurso_agenda_bloqueado",
+    };
+  }
+
   const [
     configRes,
     profissionaisRes,

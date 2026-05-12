@@ -92,6 +92,8 @@ export default function ServicosPage() {
   const [acessoCarregado, setAcessoCarregado] = useState(false);
 
   const podeGerenciar = nivel === "admin" || nivel === "gerente";
+  const servicosExtrasLiberado =
+    painelSession?.planoRecursos?.servicos_extras !== false;
 
   const carregarAcesso = useCallback(async () => {
     if (!painelSession?.idSalao || !painelSession?.permissoes) {
@@ -108,6 +110,11 @@ export default function ServicosPage() {
 
     if (!permissoesFinal.servicos_ver) {
       router.replace("/dashboard?motivo=sem_permissao");
+      return null;
+    }
+
+    if (painelSession.planoRecursos?.servicos === false) {
+      router.replace("/meu-plano?motivo=recurso_servicos_bloqueado");
       return null;
     }
 
@@ -395,12 +402,14 @@ export default function ServicosPage() {
                 Criar combo
               </Link>
 
-              <Link
-                href="/servicos-extras"
-                className="inline-flex items-center justify-center rounded-xl border border-zinc-200 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-50"
-              >
-                Serviços extras
-              </Link>
+              {servicosExtrasLiberado ? (
+                <Link
+                  href="/servicos-extras"
+                  className="inline-flex items-center justify-center rounded-xl border border-zinc-200 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-50"
+                >
+                  Serviços extras
+                </Link>
+              ) : null}
 
               {podeGerenciar ? (
                 <Link

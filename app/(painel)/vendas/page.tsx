@@ -203,6 +203,11 @@ export default function VendasPage() {
         return;
       }
 
+      if (painelSession.planoRecursos?.vendas === false) {
+        router.replace("/meu-plano?motivo=recurso_vendas_bloqueado");
+        return;
+      }
+
       const { data: salaoData, error: salaoError } = await supabase
         .from("saloes")
         .select("id, nome, cpf_cnpj, telefone, endereco")

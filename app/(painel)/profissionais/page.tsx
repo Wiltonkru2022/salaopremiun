@@ -91,6 +91,12 @@ export default function ProfissionaisListPage() {
       router.replace("/dashboard?motivo=sem_permissao");
       return null;
     }
+
+    if (painelSession.planoRecursos?.profissionais === false) {
+      router.replace("/meu-plano?motivo=recurso_profissionais_bloqueado");
+      return null;
+    }
+
     setAppProfissionalLiberado(
       painelSession.planoRecursos?.app_profissional !== false
     );

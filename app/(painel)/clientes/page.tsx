@@ -85,6 +85,11 @@ export default function ClientesPage() {
       return null;
     }
 
+    if (painelSession.planoRecursos?.clientes === false) {
+      router.replace("/meu-plano?motivo=recurso_clientes_bloqueado");
+      return null;
+    }
+
     return {
       idSalao: painelSession.idSalao,
       nivel: nivelAtual,

@@ -580,6 +580,11 @@ export default function RelatorioFinanceiroPage() {
         return;
       }
 
+      if (painelSession.planoRecursos?.relatorios_basicos === false) {
+        setErroTela("Relatórios não estão liberados no plano atual.");
+        return;
+      }
+
       setIdSalao(painelSession.idSalao);
       await carregarRelatorio(painelSession.idSalao);
     } catch (error: unknown) {

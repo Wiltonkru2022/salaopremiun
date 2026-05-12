@@ -83,6 +83,11 @@ export default function ServicosExtrasPage() {
       return null;
     }
 
+    if (painelSession.planoRecursos?.servicos_extras === false) {
+      router.replace("/meu-plano?motivo=recurso_servicos_extras_bloqueado");
+      return null;
+    }
+
     return {
       idSalao: painelSession.idSalao,
       permissoes: permissoesFinal,

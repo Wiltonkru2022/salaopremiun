@@ -112,6 +112,11 @@ export default function ProdutosPage() {
       return null;
     }
 
+    if (painelSession.planoRecursos?.produtos === false) {
+      router.replace("/meu-plano?motivo=recurso_produtos_bloqueado");
+      return null;
+    }
+
     return {
       idSalao: painelSession.idSalao,
       nivel: nivelAtual,

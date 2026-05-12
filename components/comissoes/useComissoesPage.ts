@@ -130,6 +130,11 @@ export function useComissoesPage() {
       return null;
     }
 
+    if (painelSession.planoRecursos?.comissoes_basicas === false) {
+      router.replace("/meu-plano?motivo=recurso_comissoes_basicas_bloqueado");
+      return null;
+    }
+
     return { idSalao: painelSession.idSalao };
   }, [painelSession, router]);
 

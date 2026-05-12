@@ -33,6 +33,10 @@ export async function carregarAcessoCaixa(
   sessionSnapshot?: PainelSessionSnapshot | null
 ) {
   if (sessionSnapshot?.idSalao && sessionSnapshot?.permissoes) {
+    if (sessionSnapshot.planoRecursos?.caixa === false) {
+      throw new Error("Caixa não está liberado no plano atual.");
+    }
+
     return {
       precisaLogin: false as const,
       usuario: {

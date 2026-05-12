@@ -387,12 +387,6 @@ async function getPlanoAccessSnapshotUncached(
     }
   });
 
-  // Marketing segue em preparação operacional. Mesmo que exista configuração
-  // antiga no banco, não liberamos o módulo até a integração estar pronta.
-  recursos.whatsapp = true;
-  recursos.marketing = false;
-  recursos.campanhas = false;
-
   if (resumo.emTesteGratis && resumo.ativa) {
     PLANO_RECURSOS_PADRAO.forEach((codigo) => {
       recursos[codigo] = true;

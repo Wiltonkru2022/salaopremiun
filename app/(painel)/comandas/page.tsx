@@ -122,6 +122,11 @@ export default function ComandasPage() {
       return null;
     }
 
+    if (painelSession.planoRecursos?.comandas === false) {
+      router.replace("/meu-plano?motivo=recurso_comandas_bloqueado");
+      return null;
+    }
+
     return {
       idSalao: painelSession.idSalao,
       nivel: nivelAtual,
