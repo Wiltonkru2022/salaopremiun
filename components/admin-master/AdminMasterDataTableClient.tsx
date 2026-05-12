@@ -49,6 +49,15 @@ function csvCell(value: unknown) {
   return `"${text}"`;
 }
 
+function htmlCell(value: unknown) {
+  return String(value ?? "-")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
 function columnLabel(column: string) {
   return column.replace(/_/g, " ");
 }
@@ -132,6 +141,74 @@ export default function AdminMasterDataTableClient({
     URL.revokeObjectURL(url);
   }
 
+  function exportPdf() {
+    const exportColumns = columns.filter((column) => !isActionColumn(column));
+    const title = document.title || "AdminMaster";
+    const generatedAt = new Intl.DateTimeFormat("pt-BR", {
+      dateStyle: "short",
+      timeStyle: "short",
+      timeZone: "America/Sao_Paulo",
+    }).format(new Date());
+    const tableRows = filteredRows.length
+      ? filteredRows
+          .map(
+            (row) =>
+              `<tr>${exportColumns
+                .map((column) => `<td>${htmlCell(row[column])}</td>`)
+                .join("")}</tr>`
+          )
+          .join("")
+      : `<tr><td colspan="${exportColumns.length}">${htmlCell(emptyTitle)}</td></tr>`;
+    const printFrame = document.createElement("iframe");
+
+    printFrame.setAttribute("title", "Exportar tabela em PDF");
+    printFrame.style.position = "fixed";
+    printFrame.style.right = "0";
+    printFrame.style.bottom = "0";
+    printFrame.style.width = "0";
+    printFrame.style.height = "0";
+    printFrame.style.border = "0";
+
+    printFrame.srcdoc = `<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <title>${htmlCell(title)}</title>
+    <style>
+      @page { size: A4 landscape; margin: 12mm; }
+      * { box-sizing: border-box; }
+      body { margin: 0; font-family: Arial, Helvetica, sans-serif; color: #18181b; }
+      header { margin-bottom: 18px; }
+      h1 { margin: 0; font-size: 20px; line-height: 1.2; }
+      p { margin: 6px 0 0; color: #52525b; font-size: 12px; }
+      table { width: 100%; border-collapse: collapse; font-size: 10px; }
+      th { background: #f4f4f5; color: #3f3f46; text-align: left; text-transform: uppercase; letter-spacing: .08em; }
+      th, td { border: 1px solid #e4e4e7; padding: 8px; vertical-align: top; word-break: break-word; }
+      tr:nth-child(even) td { background: #fafafa; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>${htmlCell(title)}</h1>
+      <p>Exportado em ${htmlCell(generatedAt)}. Registros: ${filteredRows.length}.</p>
+    </header>
+    <table>
+      <thead>
+        <tr>${exportColumns.map((column) => `<th>${htmlCell(columnLabel(column))}</th>`).join("")}</tr>
+      </thead>
+      <tbody>${tableRows}</tbody>
+    </table>
+  </body>
+</html>`;
+
+    document.body.appendChild(printFrame);
+    printFrame.onload = () => {
+      printFrame.contentWindow?.focus();
+      printFrame.contentWindow?.print();
+      window.setTimeout(() => printFrame.remove(), 1200);
+    };
+  }
+
   return (
     <div className="overflow-hidden rounded-[24px] border border-zinc-200 bg-white shadow-sm">
       {columns.length ? (
@@ -182,7 +259,7 @@ export default function AdminMasterDataTableClient({
               </button>
               <button
                 type="button"
-                onClick={() => window.print()}
+                onClick={exportPdf}
                 className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-zinc-200 bg-white px-3 text-sm font-black text-zinc-800 transition hover:border-zinc-300 hover:bg-zinc-50"
               >
                 <FileText className="h-4 w-4" />

@@ -89,6 +89,7 @@ function formatDateTime(value?: string | null) {
   return date.toLocaleString("pt-BR", {
     dateStyle: "short",
     timeStyle: "short",
+    timeZone: "America/Sao_Paulo",
   });
 }
 
