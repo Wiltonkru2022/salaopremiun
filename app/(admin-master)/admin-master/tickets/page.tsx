@@ -88,8 +88,9 @@ export default async function AdminMasterTicketsPage({
           Painel operacional para acompanhar chamados do salao, SLA, prioridade,
           ultima resposta e dono do atendimento.
         </p>
-        <div className="mt-5 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-5 grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
           {[
+            ["Novo ticket interno", "/admin-master/tickets/novo"],
             ["Investigar logs", "/admin-master/logs"],
             ["Ver saude 24h", "/admin-master/saude"],
             ["Alertas ativos", "/admin-master/alertas"],

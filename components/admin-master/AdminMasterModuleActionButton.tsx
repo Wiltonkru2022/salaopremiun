@@ -96,7 +96,7 @@ function resolveModuleAction(action: string): ModuleAction {
 
   const linkByAction: Record<string, string> = {
     "abrir ticket": "/admin-master/tickets",
-    "criar ticket": "/admin-master/tickets",
+    "criar ticket": "/admin-master/tickets/novo",
     "criar alerta": "/admin-master/alertas",
     "abrir saloes": "/admin-master/saloes",
     "abrir saloes excluidos": "/admin-master/saloes-excluidos",
@@ -157,7 +157,7 @@ function resolveModuleAction(action: string): ModuleAction {
     resolver: "/admin-master/alertas",
     "ver webhooks com erro": "/admin-master/webhooks",
     "investigar tenant guard": "/admin-master/logs",
-    "abrir ticket interno": "/admin-master/tickets",
+    "abrir ticket interno": "/admin-master/tickets/novo",
     "reconciliar checkout": "/admin-master/logs",
     "exportar logs": "/admin-master/logs",
     "ver detalhe": "/admin-master/logs",
