@@ -71,9 +71,13 @@ export function AdminKpiGrid({ kpis }: { kpis: AdminKpi[] }) {
 export function AdminDataTable({
   rows,
   columns,
+  emptyTitle = "Nenhum registro encontrado ainda.",
+  emptyDescription = "Quando o sistema receber dados dessa area, eles aparecem aqui com contexto e acao.",
 }: {
   rows: AdminTableRow[];
   columns: string[];
+  emptyTitle?: string;
+  emptyDescription?: string;
 }) {
   return (
     <div className="overflow-hidden rounded-[24px] border border-zinc-200 bg-white shadow-sm">
@@ -117,8 +121,13 @@ export function AdminDataTable({
               ))
             ) : (
               <tr>
-                <td colSpan={columns.length} className="px-4 py-8 text-center text-zinc-500">
-                  Nenhum registro encontrado ainda.
+                <td colSpan={columns.length} className="px-4 py-10 text-center">
+                  <div className="mx-auto max-w-md">
+                    <div className="text-sm font-black text-zinc-800">{emptyTitle}</div>
+                    <div className="mt-2 text-sm leading-6 text-zinc-500">
+                      {emptyDescription}
+                    </div>
+                  </div>
                 </td>
               </tr>
             )}
@@ -396,6 +405,8 @@ function PrioritySignal({
 }
 
 export function AdminSectionView({ data }: { data: AdminSectionData }) {
+  const hasRows = data.rows.length > 0;
+
   return (
     <div className="space-y-5">
       <section className="rounded-[28px] bg-zinc-950 p-5 text-white shadow-sm">
@@ -426,9 +437,33 @@ export function AdminSectionView({ data }: { data: AdminSectionData }) {
       <AdminSectionDiagnostics diagnostics={data.diagnostics || []} />
 
       <section className="grid gap-4 xl:grid-cols-[1fr_340px]">
-        <AdminDataTable rows={data.rows} columns={data.columns} />
+        <AdminDataTable
+          rows={data.rows}
+          columns={data.columns}
+          emptyTitle={`Sem registros em ${data.title}.`}
+          emptyDescription="Isso pode ser normal depois do reset do banco ou indicar que essa rotina ainda nao esta alimentando dados. Use as acoes do modulo para investigar."
+        />
 
         <aside className="space-y-4">
+          <div className="rounded-[24px] border border-zinc-200 bg-white p-4 shadow-sm">
+            <div className="text-xs font-bold uppercase tracking-[0.25em] text-zinc-400">
+              Diagnostico rapido
+            </div>
+            <div className="mt-3 space-y-3 text-sm leading-6 text-zinc-600">
+              <p>
+                {hasRows
+                  ? "Esta tela tem dados operacionais. Use as acoes e tickets para resolver o que estiver pendente."
+                  : "Esta tela esta vazia. O Admin Master deve diferenciar falta de dados, rotina parada e modulo ainda nao configurado."}
+              </p>
+              <Link
+                href="/admin-master/logs"
+                className="inline-flex rounded-full bg-zinc-950 px-3 py-2 text-xs font-black text-white transition hover:bg-zinc-800"
+              >
+                Ver logs do modulo
+              </Link>
+            </div>
+          </div>
+
           <div className="rounded-[24px] border border-zinc-200 bg-white p-4 shadow-sm">
             <div className="text-xs font-bold uppercase tracking-[0.25em] text-zinc-400">
               Ações do módulo

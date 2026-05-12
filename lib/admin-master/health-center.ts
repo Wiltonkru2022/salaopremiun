@@ -1,5 +1,6 @@
 import {
   getAdminMasterOperationalSnapshot,
+  type AdminMasterOperationalSnapshot,
   type AdminHealthOverview,
 } from "@/lib/admin-master/operability";
 import { runAdminOperation } from "@/lib/supabase/admin-ops";
@@ -36,6 +37,7 @@ export type AdminMasterHealthCenter = {
   statusLabel: string;
   statusTone: HealthTone;
   summary: string;
+  operational: AdminMasterOperationalSnapshot;
   metrics: HealthMetric[];
   actions: HealthAction[];
   webhooks: HealthRow[];
@@ -330,6 +332,7 @@ export async function getAdminMasterHealthCenter(): Promise<AdminMasterHealthCen
       return {
     score,
     ...status,
+    operational,
     metrics: [
       {
         label: "Webhooks erro 24h",

@@ -617,6 +617,7 @@ export async function getAdminMasterSaloes() {
 
 export async function getAdminMasterSalaoDetail(idSalao: string) {
   const supabase = getSupabaseAdmin();
+  const last24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
   const [
     { data: salao },
     { data: assinatura },
@@ -624,6 +625,9 @@ export async function getAdminMasterSalaoDetail(idSalao: string) {
     { data: cobrancas },
     { data: anotacoes },
     { data: tags },
+    { data: scoreSaude },
+    { data: eventos24h },
+    { data: alertasAtivos },
     access,
   ] = await Promise.all([
     supabase
@@ -658,8 +662,78 @@ export async function getAdminMasterSalaoDetail(idSalao: string) {
       .from("admin_master_salao_tags")
       .select("admin_master_tags_salao(nome, cor)")
       .eq("id_salao", idSalao),
+    supabase
+      .from("score_saude_salao")
+      .select("score_total, uso_recente, inadimplencia_risco, tickets_abertos, risco_cancelamento, atualizado_em")
+      .eq("id_salao", idSalao)
+      .maybeSingle(),
+    supabase
+      .from("eventos_sistema")
+      .select("id, modulo, tipo_evento, severidade, mensagem, rota, acao, response_ms, sucesso, created_at")
+      .eq("id_salao", idSalao)
+      .gte("created_at", last24h)
+      .order("created_at", { ascending: false })
+      .limit(20),
+    supabase
+      .from("alertas_sistema")
+      .select("id, tipo, gravidade, titulo, descricao, origem_modulo, criado_em, atualizado_em, resolvido")
+      .eq("id_salao", idSalao)
+      .eq("resolvido", false)
+      .order("criado_em", { ascending: false })
+      .limit(12),
     getPlanoAccessSnapshot(idSalao),
   ]);
+
+  const eventosRows = ((eventos24h || []) as Array<{
+    id?: string | null;
+    modulo?: string | null;
+    tipo_evento?: string | null;
+    severidade?: string | null;
+    mensagem?: string | null;
+    rota?: string | null;
+    acao?: string | null;
+    response_ms?: number | null;
+    sucesso?: boolean | null;
+    created_at?: string | null;
+  }>).map((evento) => ({
+    horario: dateTimeValue(evento.created_at),
+    modulo: evento.modulo || "-",
+    tipo: evento.tipo_evento || "-",
+    severidade: evento.severidade || "-",
+    rota: evento.rota || "-",
+    acao: evento.acao || "-",
+    tempo: evento.response_ms ? `${Math.round(evento.response_ms)} ms` : "-",
+    resultado: evento.sucesso === false ? "Falhou" : "OK",
+    detalhe: evento.mensagem || "-",
+  }));
+
+  const alertasRows = ((alertasAtivos || []) as Array<{
+    id?: string | null;
+    tipo?: string | null;
+    gravidade?: string | null;
+    titulo?: string | null;
+    descricao?: string | null;
+    origem_modulo?: string | null;
+    criado_em?: string | null;
+  }>).map((alerta) => ({
+    criado: dateTimeValue(alerta.criado_em),
+    gravidade: alerta.gravidade || "-",
+    origem: alerta.origem_modulo || "-",
+    titulo: alerta.titulo || alerta.tipo || "-",
+    detalhe: alerta.descricao || "-",
+    acao: "Criar ticket",
+    acao_tipo: "alert_ticket",
+    acao_id: alerta.id || "",
+  }));
+
+  const score = (scoreSaude || {}) as {
+    score_total?: number | null;
+    uso_recente?: number | null;
+    inadimplencia_risco?: number | null;
+    tickets_abertos?: number | null;
+    risco_cancelamento?: number | null;
+    atualizado_em?: string | null;
+  };
 
   return {
     salao: salao as Record<string, unknown> | null,
@@ -667,6 +741,16 @@ export async function getAdminMasterSalaoDetail(idSalao: string) {
     tickets: (tickets || []) as AdminTableRow[],
     cobrancas: (cobrancas || []) as AdminTableRow[],
     anotacoes: (anotacoes || []) as AdminTableRow[],
+    scoreSaude: {
+      score_total: score.score_total ?? null,
+      uso_recente: score.uso_recente ?? null,
+      inadimplencia_risco: score.inadimplencia_risco ?? null,
+      tickets_abertos: score.tickets_abertos ?? null,
+      risco_cancelamento: score.risco_cancelamento ?? null,
+      atualizado_em: dateTimeValue(score.atualizado_em),
+    },
+    eventos24h: eventosRows,
+    alertasAtivos: alertasRows,
     tags: ((tags || []) as { admin_master_tags_salao?: { nome?: string; cor?: string } | { nome?: string; cor?: string }[] | null }[]).map(
       (item) => {
         const tag = Array.isArray(item.admin_master_tags_salao)
