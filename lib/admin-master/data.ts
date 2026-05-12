@@ -1623,6 +1623,528 @@ export async function getAdminMasterSection(
     };
   }
 
+  if (section === "notificacoes") {
+    const [{ data: notificacoes }, { data: destinos }] = await Promise.all([
+      supabase
+        .from("notificacoes_globais")
+        .select(
+          "id, titulo, descricao, tipo, publico_tipo, status, agendada_em, enviada_em, criada_em, link_url"
+        )
+        .order("criada_em", { ascending: false })
+        .limit(100),
+      supabase
+        .from("notificacoes_destinos")
+        .select("id_notificacao, id_salao, status, entregue_em, lida_em, clicada_em")
+        .limit(1000),
+    ]);
+
+    const destinoStats = new Map<
+      string,
+      { total: number; entregues: number; lidas: number; cliques: number; falhas: number }
+    >();
+
+    for (const destino of (destinos || []) as {
+      id_notificacao?: string | null;
+      status?: string | null;
+      entregue_em?: string | null;
+      lida_em?: string | null;
+      clicada_em?: string | null;
+    }[]) {
+      if (!destino.id_notificacao) continue;
+      const stats =
+        destinoStats.get(destino.id_notificacao) ||
+        { total: 0, entregues: 0, lidas: 0, cliques: 0, falhas: 0 };
+      const status = normalizeStatus(destino.status);
+
+      stats.total += 1;
+      if (destino.entregue_em || ["entregue", "lida", "clicada"].includes(status)) {
+        stats.entregues += 1;
+      }
+      if (destino.lida_em || ["lida", "clicada"].includes(status)) stats.lidas += 1;
+      if (destino.clicada_em || status === "clicada") stats.cliques += 1;
+      if (["erro", "falha", "failed"].includes(status)) stats.falhas += 1;
+      destinoStats.set(destino.id_notificacao, stats);
+    }
+
+    const rows = ((notificacoes || []) as {
+      id?: string | null;
+      titulo?: string | null;
+      descricao?: string | null;
+      tipo?: string | null;
+      publico_tipo?: string | null;
+      status?: string | null;
+      agendada_em?: string | null;
+      enviada_em?: string | null;
+      criada_em?: string | null;
+      link_url?: string | null;
+    }[]).map((item) => {
+      const stats = item.id ? destinoStats.get(item.id) : null;
+      const status = normalizeStatus(item.status);
+      const agendadaPara = daysUntil(item.agendada_em);
+      const leitura =
+        stats && stats.total > 0 ? `${Math.round((stats.lidas / stats.total) * 100)}%` : "-";
+      const cliques =
+        stats && stats.total > 0 ? `${Math.round((stats.cliques / stats.total) * 100)}%` : "-";
+
+      let proximaAcao = "Monitorar leitura";
+      if (status === "rascunho") proximaAcao = "Revisar e agendar";
+      if (status === "agendada" && typeof agendadaPara === "number" && agendadaPara < 0) {
+        proximaAcao = "Verificar envio atrasado";
+      }
+      if (stats?.falhas) proximaAcao = "Auditar falhas de entrega";
+      if (status === "enviada" && !stats?.total) proximaAcao = "Confirmar destinos";
+
+      return {
+        titulo: item.titulo || "-",
+        tipo: item.tipo || "-",
+        publico: item.publico_tipo || "-",
+        status: item.status || "-",
+        criada: dateTimeValue(item.criada_em),
+        agendada: dateTimeValue(item.agendada_em),
+        enviada: dateTimeValue(item.enviada_em),
+        destinos: stats?.total || 0,
+        leitura,
+        cliques,
+        sinal: stats?.falhas ? `${stats.falhas} falha(s)` : proximaAcao,
+        acao: item.id ? "Auditar" : "-",
+        acao_tipo: item.id ? "audit" : null,
+        acao_id: item.id || null,
+      };
+    });
+
+    const agendadas = rows.filter((row) => normalizeStatus(row.status) === "agendada").length;
+    const enviadas = rows.filter((row) => normalizeStatus(row.status) === "enviada").length;
+    const falhas = Array.from(destinoStats.values()).reduce((acc, stats) => acc + stats.falhas, 0);
+    const totalDestinos = Array.from(destinoStats.values()).reduce(
+      (acc, stats) => acc + stats.total,
+      0
+    );
+    const totalLidas = Array.from(destinoStats.values()).reduce(
+      (acc, stats) => acc + stats.lidas,
+      0
+    );
+    const leituraMedia =
+      totalDestinos > 0 ? `${Math.round((totalLidas / totalDestinos) * 100)}%` : "0%";
+
+    return {
+      title: "Notificacoes globais",
+      description:
+        "Comunicados para saloes com leitura, cliques, falhas de entrega e proxima acao operacional.",
+      kpis: [
+        {
+          label: "Notificacoes",
+          value: String(rows.length),
+          hint: "Ultimas criadas",
+          tone: "dark",
+        },
+        {
+          label: "Agendadas",
+          value: String(agendadas),
+          hint: "Aguardando disparo",
+          tone: agendadas > 0 ? "blue" : "dark",
+        },
+        {
+          label: "Enviadas",
+          value: String(enviadas),
+          hint: "Ja disparadas",
+          tone: "green",
+        },
+        {
+          label: "Falhas",
+          value: String(falhas),
+          hint: "Destinos com problema",
+          tone: falhas > 0 ? "red" : "green",
+        },
+        {
+          label: "Leitura media",
+          value: leituraMedia,
+          hint: `${totalLidas} de ${totalDestinos} destino(s)`,
+          tone: totalDestinos > 0 ? "blue" : "dark",
+        },
+      ],
+      diagnostics: [
+        {
+          label: "Entrega",
+          value: falhas > 0 ? "Revisar" : "Saudavel",
+          detail:
+            falhas > 0
+              ? "Existem destinos com falha. Audite antes de disparar comunicados criticos."
+              : "Nao ha falha de destino registrada no recorte atual.",
+          tone: falhas > 0 ? "red" : "green",
+          href: "/admin-master/logs",
+        },
+        {
+          label: "Campanhas",
+          value: "Conversao",
+          detail:
+            "Use notificacoes globais para avisos institucionais; campanha deve ter objetivo, periodo e publico claros.",
+          tone: "blue",
+          href: "/admin-master/campanhas",
+        },
+        {
+          label: "Nova mensagem",
+          value: "Pronta",
+          detail:
+            "O botao de nova notificacao abre o fluxo seguro para criar aviso em PT-BR e segmentar saloes.",
+          tone: "green",
+          href: "/admin-master/notificacoes/nova",
+        },
+      ],
+      rows,
+      columns: [
+        "titulo",
+        "tipo",
+        "publico",
+        "status",
+        "criada",
+        "agendada",
+        "enviada",
+        "destinos",
+        "leitura",
+        "cliques",
+        "sinal",
+        "acao",
+      ],
+      actions: ["Nova notificacao", "Ver campanhas", "Abrir logs", "Auditar"],
+    };
+  }
+
+  if (section === "campanhas") {
+    const { data } = await supabase
+      .from("campanhas")
+      .select("id, nome, tipo, publico_tipo, objetivo, status, inicio_em, fim_em, criada_em")
+      .order("criada_em", { ascending: false })
+      .limit(100);
+
+    const rows = ((data || []) as {
+      id?: string | null;
+      nome?: string | null;
+      tipo?: string | null;
+      publico_tipo?: string | null;
+      objetivo?: string | null;
+      status?: string | null;
+      inicio_em?: string | null;
+      fim_em?: string | null;
+      criada_em?: string | null;
+    }[]).map((item) => {
+      const status = normalizeStatus(item.status);
+      const diasInicio = daysUntil(item.inicio_em);
+      const diasFim = daysUntil(item.fim_em);
+
+      let sinal = "Monitorar resultado";
+      if (!item.objetivo) sinal = "Definir objetivo";
+      if (status === "rascunho") sinal = "Preparar publico";
+      if (typeof diasInicio === "number" && diasInicio > 0) {
+        sinal = `Comeca em ${diasInicio}d`;
+      }
+      if (typeof diasFim === "number" && diasFim < 0) {
+        sinal = "Encerrada";
+      }
+
+      return {
+        nome: item.nome || "-",
+        tipo: item.tipo || "-",
+        publico: item.publico_tipo || "-",
+        objetivo: item.objetivo || "Sem objetivo",
+        status: item.status || "-",
+        inicio: dateValue(item.inicio_em),
+        fim: dateValue(item.fim_em),
+        sinal,
+        acao: item.id ? "Auditar" : "-",
+        acao_tipo: item.id ? "audit" : null,
+        acao_id: item.id || null,
+      };
+    });
+
+    const ativas = rows.filter((row) => normalizeStatus(row.status) === "ativa").length;
+    const rascunhos = rows.filter((row) => normalizeStatus(row.status) === "rascunho").length;
+    const semObjetivo = rows.filter((row) => row.objetivo === "Sem objetivo").length;
+    const futuras = rows.filter((row) => String(row.sinal).startsWith("Comeca")).length;
+
+    return {
+      title: "Campanhas",
+      description:
+        "Painel de crescimento com objetivo, publico, periodo e sinais de acao para campanhas comerciais.",
+      kpis: [
+        {
+          label: "Campanhas",
+          value: String(rows.length),
+          hint: "Historico recente",
+          tone: "dark",
+        },
+        {
+          label: "Ativas",
+          value: String(ativas),
+          hint: "Em execucao",
+          tone: ativas > 0 ? "green" : "dark",
+        },
+        {
+          label: "Futuras",
+          value: String(futuras),
+          hint: "Agendadas para iniciar",
+          tone: futuras > 0 ? "blue" : "dark",
+        },
+        {
+          label: "Rascunhos",
+          value: String(rascunhos),
+          hint: "Precisam preparo",
+          tone: rascunhos > 0 ? "amber" : "green",
+        },
+        {
+          label: "Sem objetivo",
+          value: String(semObjetivo),
+          hint: "Nao da para medir campanha sem meta",
+          tone: semObjetivo > 0 ? "red" : "green",
+        },
+      ],
+      diagnostics: [
+        {
+          label: "Regra de qualidade",
+          value: semObjetivo > 0 ? "Ajustar" : "Ok",
+          detail:
+            semObjetivo > 0
+              ? "Campanha sem objetivo vira disparo solto. Defina conversao, retencao ou recuperacao antes de ativar."
+              : "As campanhas listadas possuem objetivo registrado.",
+          tone: semObjetivo > 0 ? "amber" : "green",
+        },
+        {
+          label: "Notificacoes",
+          value: "Canal",
+          detail:
+            "Campanha precisa conversar com notificacoes globais, WhatsApp e metricas para nao virar pagina sem efeito.",
+          tone: "blue",
+          href: "/admin-master/notificacoes",
+        },
+        {
+          label: "Relatorios",
+          value: "Medir",
+          detail:
+            "Depois de publicar, acompanhe saloes impactados, leitura e conversao no painel de relatorios.",
+          tone: "dark",
+          href: "/admin-master/relatorios",
+        },
+      ],
+      rows,
+      columns: ["nome", "tipo", "publico", "objetivo", "status", "inicio", "fim", "sinal", "acao"],
+      actions: ["Criar campanha", "Ver notificacoes", "Abrir relatorios", "Auditar"],
+    };
+  }
+
+  if (section === "whatsapp") {
+    const last24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    const [{ data: envios }, { data: filas }, { data: saldos }, { data: templates }] =
+      await Promise.all([
+        supabase
+          .from("whatsapp_envios")
+          .select(
+            "id, id_salao, tipo, destino, template, status, custo_creditos, erro_texto, criado_em, enviado_em"
+          )
+          .order("criado_em", { ascending: false })
+          .limit(120),
+        supabase
+          .from("whatsapp_filas")
+          .select("id, id_salao, status, tentativas, ultimo_erro, criado_em, processado_em")
+          .order("criado_em", { ascending: false })
+          .limit(120),
+        supabase
+          .from("whatsapp_pacote_saloes")
+          .select("id, id_salao, creditos_total, creditos_usados, creditos_saldo, status, expira_em")
+          .order("comprado_em", { ascending: false })
+          .limit(200),
+        supabase
+          .from("whatsapp_templates")
+          .select("id, nome, categoria, ativo, criado_em")
+          .order("criado_em", { ascending: false })
+          .limit(80),
+      ]);
+
+    const salaoIds = Array.from(
+      new Set(
+        [
+          ...((envios || []) as { id_salao?: string | null }[]).map((row) => row.id_salao),
+          ...((filas || []) as { id_salao?: string | null }[]).map((row) => row.id_salao),
+          ...((saldos || []) as { id_salao?: string | null }[]).map((row) => row.id_salao),
+        ].filter(Boolean)
+      )
+    ) as string[];
+    const { data: saloes } = salaoIds.length
+      ? await supabase.from("saloes").select("id, nome").in("id", salaoIds).limit(salaoIds.length)
+      : { data: [] as Array<{ id: string; nome?: string | null }> };
+    const salaoById = new Map(
+      ((saloes || []) as { id: string; nome?: string | null }[]).map((salao) => [
+        salao.id,
+        salao.nome || salao.id,
+      ])
+    );
+
+    type WhatsAppAdminRow = AdminTableRow & { _sort: string };
+    const envioRows = ((envios || []) as {
+      id?: string | null;
+      id_salao?: string | null;
+      tipo?: string | null;
+      destino?: string | null;
+      template?: string | null;
+      status?: string | null;
+      custo_creditos?: number | null;
+      erro_texto?: string | null;
+      criado_em?: string | null;
+      enviado_em?: string | null;
+    }[]).map((row): WhatsAppAdminRow => ({
+      _sort: row.criado_em || "",
+      tipo: "envio",
+      salao: row.id_salao ? salaoById.get(row.id_salao) || row.id_salao : "-",
+      status: row.status || "-",
+      destino: row.destino || "-",
+      detalhe: row.erro_texto || row.template || row.tipo || "-",
+      creditos: row.custo_creditos || 0,
+      criado: dateTimeValue(row.criado_em),
+      sinal: row.erro_texto ? "Falha de envio" : row.enviado_em ? "Enviado" : "Aguardando",
+      acao: row.id_salao ? "Abrir salao" : "-",
+      acao_tipo: row.id_salao ? "salao_detail" : null,
+      acao_id: row.id_salao || null,
+    }));
+    const filaRows = ((filas || []) as {
+      id?: string | null;
+      id_salao?: string | null;
+      status?: string | null;
+      tentativas?: number | null;
+      ultimo_erro?: string | null;
+      criado_em?: string | null;
+      processado_em?: string | null;
+    }[]).map((row): WhatsAppAdminRow => ({
+      _sort: row.criado_em || "",
+      tipo: "fila",
+      salao: row.id_salao ? salaoById.get(row.id_salao) || row.id_salao : "-",
+      status: row.status || "-",
+      destino: "-",
+      detalhe: row.ultimo_erro || `${row.tentativas || 0} tentativa(s)`,
+      creditos: 0,
+      criado: dateTimeValue(row.criado_em),
+      sinal: row.ultimo_erro ? "Reprocessar" : row.processado_em ? "Processada" : "Pendente",
+      acao: row.id_salao ? "Abrir salao" : "-",
+      acao_tipo: row.id_salao ? "salao_detail" : null,
+      acao_id: row.id_salao || null,
+    }));
+    const saldoRows = ((saldos || []) as {
+      id_salao?: string | null;
+      creditos_total?: number | null;
+      creditos_usados?: number | null;
+      creditos_saldo?: number | null;
+      status?: string | null;
+      expira_em?: string | null;
+    }[])
+      .filter((row) => safeNumber(row.creditos_saldo) <= 10 || normalizeStatus(row.status) !== "ativo")
+      .map((row): WhatsAppAdminRow => ({
+        _sort: row.expira_em || "",
+        tipo: "saldo",
+        salao: row.id_salao ? salaoById.get(row.id_salao) || row.id_salao : "-",
+        status: row.status || "-",
+        destino: "-",
+        detalhe: `Saldo ${row.creditos_saldo || 0} de ${row.creditos_total || 0}`,
+        creditos: row.creditos_usados || 0,
+        criado: dateValue(row.expira_em),
+        sinal: safeNumber(row.creditos_saldo) <= 10 ? "Creditos baixos" : "Acompanhar",
+        acao: row.id_salao ? "Abrir salao" : "-",
+        acao_tipo: row.id_salao ? "salao_detail" : null,
+        acao_id: row.id_salao || null,
+      }));
+    const rows = [...filaRows, ...saldoRows, ...envioRows]
+      .sort((a, b) => String(b._sort).localeCompare(String(a._sort)))
+      .slice(0, 140)
+      .map(({ _sort: _sort, ...row }) => row);
+
+    const envios24h = envioRows.filter((row) => String(row._sort) >= last24h).length;
+    const falhas24h = envioRows.filter(
+      (row) => String(row._sort) >= last24h && String(row.sinal) === "Falha de envio"
+    ).length;
+    const filaPendente = filaRows.filter((row) =>
+      ["pendente", "retry", "erro"].includes(normalizeStatus(row.status))
+    ).length;
+    const saldosBaixos = saldoRows.filter((row) => row.sinal === "Creditos baixos").length;
+    const templatesAtivos = ((templates || []) as { ativo?: boolean | null }[]).filter(
+      (template) => template.ativo !== false
+    ).length;
+
+    return {
+      title: "WhatsApp e pacotes",
+      description:
+        "Controle de envios, filas, saldo de creditos, templates e riscos de comunicacao por salao.",
+      kpis: [
+        {
+          label: "Envios 24h",
+          value: String(envios24h),
+          hint: "Mensagens recentes",
+          tone: "blue",
+        },
+        {
+          label: "Falhas 24h",
+          value: String(falhas24h),
+          hint: "Precisam auditoria",
+          tone: falhas24h > 0 ? "red" : "green",
+        },
+        {
+          label: "Fila pendente",
+          value: String(filaPendente),
+          hint: "Mensagens ainda nao processadas",
+          tone: filaPendente > 0 ? "amber" : "green",
+        },
+        {
+          label: "Saldo baixo",
+          value: String(saldosBaixos),
+          hint: "Saloes com ate 10 creditos",
+          tone: saldosBaixos > 0 ? "amber" : "green",
+        },
+        {
+          label: "Templates ativos",
+          value: String(templatesAtivos),
+          hint: "Modelos prontos para uso",
+          tone: templatesAtivos > 0 ? "green" : "amber",
+        },
+      ],
+      diagnostics: [
+        {
+          label: "Fila",
+          value: filaPendente > 0 ? "Acompanhar" : "Ok",
+          detail:
+            filaPendente > 0
+              ? "Existe fila pendente ou com erro. Revise antes de prometer disparo para o salao."
+              : "Fila de WhatsApp sem pendencia critica no recorte atual.",
+          tone: filaPendente > 0 ? "amber" : "green",
+          href: "/admin-master/logs",
+        },
+        {
+          label: "Creditos",
+          value: `${saldosBaixos} baixo(s)`,
+          detail:
+            "Saloes com poucos creditos podem parar comunicacao automatica; use pacotes antes de falhar atendimento.",
+          tone: saldosBaixos > 0 ? "amber" : "green",
+          href: "/admin-master/whatsapp/pacotes",
+        },
+        {
+          label: "Templates",
+          value: String(templatesAtivos),
+          detail:
+            "Templates ativos reduzem erro de texto e ajudam padronizar avisos de agenda, recuperacao e campanhas.",
+          tone: templatesAtivos > 0 ? "blue" : "amber",
+          href: "/admin-master/whatsapp/templates",
+        },
+      ],
+      rows,
+      columns: [
+        "tipo",
+        "salao",
+        "status",
+        "destino",
+        "detalhe",
+        "creditos",
+        "criado",
+        "sinal",
+        "acao",
+      ],
+      actions: ["Ver pacotes WhatsApp", "Ver templates WhatsApp", "Abrir logs", "Auditar"],
+    };
+  }
+
   if (section === "assinaturas") {
     const { data } = await supabase
       .from("assinaturas")
