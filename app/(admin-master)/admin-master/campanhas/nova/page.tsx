@@ -1,9 +1,13 @@
-import { AdminSectionView } from "@/components/admin-master/AdminMasterViews";
-import { getAdminMasterSection } from "@/lib/admin-master/data";
+import { AdminCampaignEditor } from "@/components/admin-master/AdminMasterCommunicationEditor";
+import { salvarCampanhaAdminMaster } from "@/app/(admin-master)/admin-master/campanhas/actions";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminMasterNovaCampanhaPage() {
-  const data = await getAdminMasterSection("campanhas");
-  return <AdminSectionView data={{ ...data, title: "Nova campanha" }} />;
+  return (
+    <AdminCampaignEditor
+      rows={[]}
+      salvarCampanha={salvarCampanhaAdminMaster}
+    />
+  );
 }
