@@ -134,7 +134,7 @@ export default function AdminMasterDataTableClient({
 
   return (
     <div className="overflow-hidden rounded-[24px] border border-zinc-200 bg-white shadow-sm">
-      {rows.length ? (
+      {columns.length ? (
         <div className="border-b border-zinc-100 bg-white p-3">
           <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
             <label className="flex min-h-11 flex-1 items-center gap-2 rounded-2xl border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-600">
@@ -150,8 +150,9 @@ export default function AdminMasterDataTableClient({
               />
             </label>
 
-            <div className="flex flex-wrap gap-2">
-              {filterColumns.map((column) => (
+            {filterColumns.length ? (
+              <div className="flex flex-wrap gap-2">
+                {filterColumns.map((column) => (
                 <select
                   key={column}
                   value={filters[column] ?? ""}
@@ -166,8 +167,9 @@ export default function AdminMasterDataTableClient({
                     </option>
                   ))}
                 </select>
-              ))}
-            </div>
+                ))}
+              </div>
+            ) : null}
 
             <div className="flex flex-wrap gap-2">
               <button
@@ -245,7 +247,7 @@ export default function AdminMasterDataTableClient({
         </table>
       </div>
 
-      {rows.length ? (
+      {columns.length ? (
         <div className="flex flex-col gap-3 border-t border-zinc-100 bg-zinc-50 px-3 py-3 text-sm text-zinc-600 md:flex-row md:items-center md:justify-between">
           <div className="font-semibold">
             Mostrando {filteredRows.length ? start + 1 : 0}-
