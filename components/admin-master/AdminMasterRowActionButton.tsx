@@ -56,6 +56,13 @@ function buildActionRequest(actionType: string, actionId: string) {
     } satisfies RowActionRequest;
   }
 
+  if (actionType === "audit") {
+    return {
+      kind: "link",
+      href: `/admin-master/logs?busca=${encodeURIComponent(actionId)}`,
+    } satisfies RowActionRequest;
+  }
+
   if (actionType === "salao_ticket_assinatura") {
     return {
       kind: "api",
