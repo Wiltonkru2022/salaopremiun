@@ -203,7 +203,8 @@ function AdminMasterLoginContent() {
                 <div className="flex items-center gap-3 rounded-[20px] border border-[#d8c7af] bg-white px-4 py-3 transition focus-within:border-[#8e6f3d] focus-within:ring-4 focus-within:ring-amber-100">
                   <Mail size={18} className="text-[#96703b]" />
                   <input
-                    type="email"
+                    type="text"
+                    inputMode="email"
                     autoComplete="email"
                     placeholder="voce@salaopremiun.com.br"
                     value={email}
