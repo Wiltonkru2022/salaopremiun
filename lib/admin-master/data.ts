@@ -162,6 +162,15 @@ function getAlertDiagnostic(
 }
 
 function safeNumber(value: unknown) {
+  if (typeof value === "string") {
+    const normalized = value
+      .replace(/[^\d,.-]/g, "")
+      .replace(/\.(?=\d{3}(\D|$))/g, "")
+      .replace(",", ".");
+    const parsedString = Number(normalized || 0);
+    return Number.isFinite(parsedString) ? parsedString : 0;
+  }
+
   const parsed = Number(value || 0);
   return Number.isFinite(parsed) ? parsed : 0;
 }
@@ -1270,6 +1279,17 @@ async function getAdminMasterFinanceiroSection(): Promise<AdminSectionData> {
       PENDING_CHARGE_STATUSES.has(normalizeStatus(cobranca.status))
     )
     .reduce((acc, cobranca) => acc + safeNumber(cobranca.valor), 0);
+  const previsao30Dias = cobrancaRows
+    .filter((cobranca) => {
+      const dias = daysUntil(cobranca.data_expiracao);
+      return (
+        PENDING_CHARGE_STATUSES.has(normalizeStatus(cobranca.status)) &&
+        typeof dias === "number" &&
+        dias >= 0 &&
+        dias <= 30
+      );
+    })
+    .reduce((acc, cobranca) => acc + safeNumber(cobranca.valor), 0);
   const cobrancasAtrasadas = cobrancaRows.filter((cobranca) => {
     const dias = daysUntil(cobranca.data_expiracao);
     return (
@@ -1283,6 +1303,12 @@ async function getAdminMasterFinanceiroSection(): Promise<AdminSectionData> {
     0
   );
   const assinaturasEmRisco = assinaturasEmRiscoCount || 0;
+  const valorAssinaturasEmRisco = assinaturaRows
+    .filter((assinatura) =>
+      RISK_SUBSCRIPTION_STATUSES.has(normalizeStatus(assinatura.status))
+    )
+    .reduce((acc, assinatura) => acc + safeNumber(assinatura.valor), 0);
+  const mrrAnualizado = mrr * 12;
   const checkoutsComFalha = checkoutRows.filter((checkout) =>
     ["erro", "expirado"].includes(normalizeStatus(checkout.status))
   ).length;
@@ -1353,7 +1379,7 @@ async function getAdminMasterFinanceiroSection(): Promise<AdminSectionData> {
       {
         label: "MRR atual",
         value: currency(mrr),
-        hint: "Assinaturas ativas ou pagas",
+        hint: `${currency(mrrAnualizado)} anualizado`,
         tone: "green",
       },
       {
@@ -1365,7 +1391,7 @@ async function getAdminMasterFinanceiroSection(): Promise<AdminSectionData> {
       {
         label: "Pendentes",
         value: currency(pendenteValor),
-        hint: "Valor aguardando pagamento",
+        hint: `${currency(previsao30Dias)} vence em ate 30 dias`,
         tone: pendenteValor > 0 ? "amber" : "green",
       },
       {
@@ -1377,7 +1403,7 @@ async function getAdminMasterFinanceiroSection(): Promise<AdminSectionData> {
       {
         label: "Assinaturas em risco",
         value: String(assinaturasEmRisco),
-        hint: "Churn, bloqueio ou inadimplencia",
+        hint: `${currency(valorAssinaturasEmRisco)} de exposicao`,
         tone: assinaturasEmRisco > 0 ? "red" : "green",
       },
     ],
@@ -1396,6 +1422,14 @@ async function getAdminMasterFinanceiroSection(): Promise<AdminSectionData> {
         detail:
           "Percentual recebido nas ultimas cobrancas listadas. Queda aqui vira acao de cobranca e suporte.",
         tone: taxaRecebimento >= 70 ? "green" : "amber",
+      },
+      {
+        label: "Forecast 30 dias",
+        value: currency(previsao30Dias),
+        detail:
+          "Valor pendente com vencimento nos proximos 30 dias. Use junto com renovacao automatica para evitar susto no caixa.",
+        tone: previsao30Dias > 0 ? "blue" : "green",
+        href: "/admin-master/assinaturas",
       },
       {
         label: "Reconciliacao",
@@ -1729,6 +1763,20 @@ export async function getAdminMasterSection(
         risco = "Sem renovacao automatica";
       }
 
+      const proximaAcao = (() => {
+        if (RISK_SUBSCRIPTION_STATUSES.has(status)) return "Abrir ticket e revisar acesso";
+        if (diasParaVencer !== null && diasParaVencer < 0) return "Cobrar e validar bloqueio";
+        if (item.renovacao_automatica && !renovacaoInfo.estaProntaParaCobranca) {
+          return "Corrigir renovacao automatica";
+        }
+        if (pendingCharges > 0) return "Acompanhar cobranca pendente";
+        if (!item.renovacao_automatica && diasParaVencer !== null && diasParaVencer <= 15) {
+          return "Ativar renovacao ou avisar salao";
+        }
+        if (diasParaVencer !== null && diasParaVencer <= 7) return "Confirmar pagamento";
+        return "Monitorar";
+      })();
+
       let cobranca = "-";
       if (latestCharge) {
         if (PENDING_CHARGE_STATUSES.has(latestChargeStatus)) {
@@ -1755,20 +1803,33 @@ export async function getAdminMasterSection(
           : "Desativada",
         cobranca,
         risco,
+        proxima_acao: proximaAcao,
         acao,
         acao_tipo: acaoTipo,
         acao_id: idSalao,
         _dias_para_vencer: diasParaVencer,
+        _valor_numero: safeNumber(item.valor),
       };
     });
 
-    const rows = parsedRows.map(({ _dias_para_vencer: _diasParaVencer, ...row }) => row);
+    const rows = parsedRows.map(
+      ({ _dias_para_vencer: _diasParaVencer, _valor_numero: _valorNumero, ...row }) => row
+    );
     const vencendoSeteDias = parsedRows.filter((row) => {
       const diasParaVencer = row._dias_para_vencer;
       return typeof diasParaVencer === "number" && diasParaVencer >= 0 && diasParaVencer <= 7;
     }).length;
     const emRisco = parsedRows.filter(
       (row) => row.acao_tipo === "salao_ticket_assinatura"
+    ).length;
+    const valorEmRisco = parsedRows
+      .filter((row) => row.acao_tipo === "salao_ticket_assinatura")
+      .reduce((acc, row) => acc + safeNumber(row._valor_numero), 0);
+    const renovacaoComAjuste = parsedRows.filter(
+      (row) => row.risco === "Auto-renovacao com ajuste"
+    ).length;
+    const semRenovacaoProxima = parsedRows.filter(
+      (row) => row.risco === "Sem renovacao automatica"
     ).length;
     const mrr = ((data || []) as { status?: string | null; valor?: number | string | null }[])
       .filter((item) => ACTIVE_SUBSCRIPTION_STATUSES.has(normalizeStatus(item.status)))
@@ -1804,7 +1865,7 @@ export async function getAdminMasterSection(
         {
           label: "Em risco",
           value: String(emRisco),
-          hint: "Ja pede ticket ou revisao",
+          hint: `${currency(valorEmRisco)} expostos`,
           tone: "red",
         },
         {
@@ -1839,6 +1900,16 @@ export async function getAdminMasterSection(
           tone: "blue",
           href: "/admin-master/financeiro",
         },
+        {
+          label: "Renovacao automatica",
+          value: `${renovacaoComAjuste} ajuste(s)`,
+          detail:
+            semRenovacaoProxima > 0
+              ? `${semRenovacaoProxima} assinatura(s) vencem em ate 15 dias sem renovacao automatica.`
+              : "Sem assinatura proxima exigindo troca manual de renovacao.",
+          tone: renovacaoComAjuste || semRenovacaoProxima ? "amber" : "green",
+          href: "/admin-master/assinaturas/cobrancas",
+        },
       ],
       rows,
       columns: [
@@ -1850,6 +1921,7 @@ export async function getAdminMasterSection(
         "renovacao",
         "cobranca",
         "risco",
+        "proxima_acao",
         "acao",
       ],
       actions: [
@@ -2077,12 +2149,21 @@ export async function getAdminMasterSection(
     const cobrancasPendentes = cobrancaRows.filter((row) =>
       PENDING_CHARGE_STATUSES.has(normalizeStatus(row.status))
     ).length;
+    const valorPendente = cobrancaRows
+      .filter((row) => PENDING_CHARGE_STATUSES.has(normalizeStatus(row.status)))
+      .reduce((acc, row) => acc + safeNumber(row.valor), 0);
     const cobrancasRecebidas = cobrancaRows.filter((row) =>
       PAID_CHARGE_STATUSES.has(normalizeStatus(row.status))
     ).length;
+    const valorRecebido = cobrancaRows
+      .filter((row) => PAID_CHARGE_STATUSES.has(normalizeStatus(row.status)))
+      .reduce((acc, row) => acc + safeNumber(row.valor), 0);
     const cobrancasEmAtraso = cobrancaRows.filter(
       (row) => row.acao_tipo === "salao_ticket_financeiro"
     ).length;
+    const valorEmAtraso = cobrancaRows
+      .filter((row) => row.acao_tipo === "salao_ticket_financeiro")
+      .reduce((acc, row) => acc + safeNumber(row.valor), 0);
 
     return {
       title: "Cobrancas",
@@ -2098,14 +2179,20 @@ export async function getAdminMasterSection(
         {
           label: "Recebidas",
           value: String(cobrancasRecebidas),
-          hint: `${cobrancasPendentes} ainda aguardando pagamento`,
+          hint: `${currency(valorRecebido)} confirmado`,
           tone: "green",
         },
         {
           label: "Em atraso",
           value: String(cobrancasEmAtraso),
-          hint: "Ja pedem contato ou ticket",
+          hint: `${currency(valorEmAtraso)} em risco`,
           tone: cobrancasEmAtraso > 0 ? "red" : "green",
+        },
+        {
+          label: "Pendente",
+          value: currency(valorPendente),
+          hint: `${cobrancasPendentes} cobranca(s) aguardando`,
+          tone: valorPendente > 0 ? "amber" : "green",
         },
         {
           label: "Falhas checkout",
@@ -2119,7 +2206,7 @@ export async function getAdminMasterSection(
           label: "Recebimento",
           value: `${cobrancasRecebidas}/${cobrancaRows.length}`,
           detail:
-            "Acompanhe a proporcao de cobrancas recebidas contra a fila recente para medir conversao real de caixa.",
+            `${currency(valorRecebido)} confirmado contra ${currency(valorPendente)} ainda pendente na fila recente.`,
           tone: cobrancasRecebidas > 0 ? "green" : "amber",
           href: "/admin-master/financeiro",
         },
@@ -2127,7 +2214,7 @@ export async function getAdminMasterSection(
           label: "Atraso",
           value: String(cobrancasEmAtraso),
           detail:
-            "Cobranca pendente vencida deve abrir acao no salao para reduzir inadimplencia antes do bloqueio.",
+            `Existe ${currency(valorEmAtraso)} em cobrancas vencidas. Cobranca pendente vencida deve abrir acao no salao antes do bloqueio.`,
           tone: cobrancasEmAtraso > 0 ? "red" : "green",
           href: "/admin-master/suporte",
         },
