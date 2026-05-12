@@ -161,6 +161,37 @@ function getAlertDiagnostic(
   return detail.slice(0, 220);
 }
 
+function summarizeSafeJson(value: unknown) {
+  if (!value || typeof value !== "object") return "-";
+
+  const text = JSON.stringify(value, (key, current) => {
+    const normalizedKey = key.toLowerCase();
+    if (
+      normalizedKey.includes("secret") ||
+      normalizedKey.includes("token") ||
+      normalizedKey.includes("senha") ||
+      normalizedKey.includes("password") ||
+      normalizedKey.includes("api_key") ||
+      normalizedKey.includes("apikey")
+    ) {
+      return "***";
+    }
+
+    return current;
+  });
+
+  return text.length > 140 ? `${text.slice(0, 137)}...` : text;
+}
+
+function countEnabledPermissions(row: Record<string, unknown>) {
+  return Object.entries(row).filter(
+    ([key, value]) =>
+      typeof value === "boolean" &&
+      value === true &&
+      !["id"].includes(key)
+  ).length;
+}
+
 function safeNumber(value: unknown) {
   if (typeof value === "string") {
     const normalized = value
@@ -2142,6 +2173,336 @@ export async function getAdminMasterSection(
         "acao",
       ],
       actions: ["Ver pacotes WhatsApp", "Ver templates WhatsApp", "Abrir logs", "Auditar"],
+    };
+  }
+
+  if (section === "feature-flags") {
+    const [{ data: flags }, { data: releases }] = await Promise.all([
+      supabase
+        .from("feature_flags")
+        .select("id, nome, descricao, status_global, tipo_liberacao, planos_json, data_inicio, data_fim, criado_em")
+        .order("criado_em", { ascending: false })
+        .limit(100),
+      supabase
+        .from("feature_flag_saloes")
+        .select("id_feature_flag, id_salao, ativo, criado_em")
+        .limit(1000),
+    ]);
+
+    const releasesByFlag = new Map<string, { total: number; ativos: number }>();
+    for (const release of (releases || []) as {
+      id_feature_flag?: string | null;
+      ativo?: boolean | null;
+    }[]) {
+      if (!release.id_feature_flag) continue;
+      const current = releasesByFlag.get(release.id_feature_flag) || { total: 0, ativos: 0 };
+      current.total += 1;
+      if (release.ativo !== false) current.ativos += 1;
+      releasesByFlag.set(release.id_feature_flag, current);
+    }
+
+    const rows = ((flags || []) as {
+      id?: string | null;
+      nome?: string | null;
+      descricao?: string | null;
+      status_global?: boolean | null;
+      tipo_liberacao?: string | null;
+      planos_json?: unknown;
+      data_inicio?: string | null;
+      data_fim?: string | null;
+      criado_em?: string | null;
+    }[]).map((flag) => {
+      const stats = flag.id ? releasesByFlag.get(flag.id) : null;
+      const fim = daysUntil(flag.data_fim);
+      const planos = Array.isArray(flag.planos_json)
+        ? flag.planos_json.join(", ")
+        : summarizeSafeJson(flag.planos_json);
+      let sinal = "Controlada";
+
+      if (flag.status_global) sinal = "Global ativa";
+      if (flag.tipo_liberacao === "salao" && !stats?.ativos) sinal = "Sem salao liberado";
+      if (typeof fim === "number" && fim < 0) sinal = "Janela expirada";
+      if (typeof fim === "number" && fim >= 0 && fim <= 7) sinal = `Expira em ${fim}d`;
+
+      return {
+        recurso: flag.nome || "-",
+        liberacao: flag.tipo_liberacao || "-",
+        global: flag.status_global ? "Ativa" : "Nao",
+        planos: planos || "-",
+        saloes: stats?.ativos || 0,
+        inicio: dateValue(flag.data_inicio),
+        fim: dateValue(flag.data_fim),
+        sinal,
+        detalhe: flag.descricao || "-",
+        acao: "Auditar",
+      };
+    });
+
+    const globais = rows.filter((row) => row.global === "Ativa").length;
+    const expiradas = rows.filter((row) => row.sinal === "Janela expirada").length;
+    const semSalao = rows.filter((row) => row.sinal === "Sem salao liberado").length;
+    const expirando = rows.filter((row) => String(row.sinal).startsWith("Expira em")).length;
+
+    return {
+      title: "Feature flags",
+      description:
+        "Controle de liberacoes por plano, salao e janela de teste para evitar recurso solto em producao.",
+      kpis: [
+        { label: "Flags", value: String(rows.length), hint: "Recursos cadastrados", tone: "dark" },
+        { label: "Globais", value: String(globais), hint: "Ativas para todos", tone: globais > 0 ? "amber" : "green" },
+        { label: "Expiradas", value: String(expiradas), hint: "Janela terminou", tone: expiradas > 0 ? "red" : "green" },
+        { label: "Expirando", value: String(expirando), hint: "Proximos 7 dias", tone: expirando > 0 ? "amber" : "green" },
+        { label: "Sem salao", value: String(semSalao), hint: "Flag por salao sem destino", tone: semSalao > 0 ? "amber" : "green" },
+      ],
+      diagnostics: [
+        {
+          label: "Risco de producao",
+          value: globais > 0 ? "Acompanhar" : "Baixo",
+          detail:
+            "Flag global altera todos os saloes. Use apenas quando o recurso ja passou por teste controlado.",
+          tone: globais > 0 ? "amber" : "green",
+        },
+        {
+          label: "Limpeza",
+          value: `${expiradas} expirada(s)`,
+          detail:
+            expiradas > 0
+              ? "Revise flags com data final vencida para nao deixar regra antiga interferindo no sistema."
+              : "Nenhuma janela expirada no recorte atual.",
+          tone: expiradas > 0 ? "red" : "green",
+          href: "/admin-master/logs",
+        },
+        {
+          label: "Matriz de recursos",
+          value: "Planos",
+          detail:
+            "Quando uma flag virar recurso fixo, mova para planos/recursos em vez de manter excecao manual.",
+          tone: "blue",
+          href: "/admin-master/recursos",
+        },
+      ],
+      rows,
+      columns: ["recurso", "liberacao", "global", "planos", "saloes", "inicio", "fim", "sinal", "detalhe", "acao"],
+      actions: ["Ver feature flags", "Ajustar matriz de recursos", "Abrir logs", "Auditar"],
+    };
+  }
+
+  if (section === "usuarios-admin") {
+    const [{ data: admins }, { data: permissions }, { data: audits }] = await Promise.all([
+      supabase
+        .from("admin_master_usuarios")
+        .select("id, nome, email, perfil, status, ultimo_acesso_em, criado_em, atualizado_em")
+        .order("atualizado_em", { ascending: false })
+        .limit(100),
+      supabase
+        .from("admin_master_permissoes")
+        .select("*")
+        .limit(200),
+      supabase
+        .from("admin_master_auditoria")
+        .select("id_admin_usuario, acao, criado_em")
+        .order("criado_em", { ascending: false })
+        .limit(300),
+    ]);
+
+    const permissionsByAdmin = new Map(
+      ((permissions || []) as Record<string, unknown>[]).map((row) => [
+        String(row.id_admin_master_usuario || ""),
+        row,
+      ])
+    );
+    const auditCountByAdmin = new Map<string, number>();
+    for (const audit of (audits || []) as { id_admin_usuario?: string | null }[]) {
+      if (!audit.id_admin_usuario) continue;
+      auditCountByAdmin.set(
+        audit.id_admin_usuario,
+        (auditCountByAdmin.get(audit.id_admin_usuario) || 0) + 1
+      );
+    }
+
+    const rows = ((admins || []) as {
+      id?: string | null;
+      nome?: string | null;
+      email?: string | null;
+      perfil?: string | null;
+      status?: string | null;
+      ultimo_acesso_em?: string | null;
+      criado_em?: string | null;
+      atualizado_em?: string | null;
+    }[]).map((admin) => {
+      const perms = admin.id ? permissionsByAdmin.get(admin.id) : null;
+      const enabled = perms ? countEnabledPermissions(perms) : 0;
+      const lastAccessDays = daysUntil(admin.ultimo_acesso_em);
+      let sinal = "Ok";
+
+      if (normalizeStatus(admin.status) !== "ativo") sinal = "Sem acesso ativo";
+      else if (!perms) sinal = "Sem permissoes";
+      else if (enabled >= 22) sinal = "Acesso amplo";
+      else if (typeof lastAccessDays === "number" && lastAccessDays < -30) sinal = "Inativo ha 30d";
+
+      return {
+        nome: admin.nome || "-",
+        email: admin.email || "-",
+        perfil: admin.perfil || "-",
+        status: admin.status || "-",
+        permissoes: enabled,
+        auditoria: admin.id ? auditCountByAdmin.get(admin.id) || 0 : 0,
+        ultimo_acesso: dateTimeValue(admin.ultimo_acesso_em),
+        atualizado: dateTimeValue(admin.atualizado_em),
+        sinal,
+        acao: "Auditar",
+      };
+    });
+
+    const ativos = rows.filter((row) => normalizeStatus(row.status) === "ativo").length;
+    const acessoAmplo = rows.filter((row) => row.sinal === "Acesso amplo").length;
+    const semPermissoes = rows.filter((row) => row.sinal === "Sem permissoes").length;
+    const inativos = rows.filter((row) => row.sinal === "Inativo ha 30d").length;
+
+    return {
+      title: "Usuarios AdminMaster",
+      description:
+        "Governanca de admins internos com status, permissoes habilitadas, auditoria recente e risco de acesso.",
+      kpis: [
+        { label: "Admins", value: String(rows.length), hint: "Usuarios internos", tone: "dark" },
+        { label: "Ativos", value: String(ativos), hint: "Podem acessar", tone: "green" },
+        { label: "Acesso amplo", value: String(acessoAmplo), hint: "Permissoes sensiveis", tone: acessoAmplo > 0 ? "amber" : "green" },
+        { label: "Sem permissao", value: String(semPermissoes), hint: "Cadastro incompleto", tone: semPermissoes > 0 ? "red" : "green" },
+        { label: "Inativos", value: String(inativos), hint: "Sem acesso ha 30 dias", tone: inativos > 0 ? "amber" : "green" },
+      ],
+      diagnostics: [
+        {
+          label: "Seguranca",
+          value: `${acessoAmplo} amplo(s)`,
+          detail:
+            "Admins com acesso amplo devem ser poucos e auditados. Eles podem mexer em saloes, cobrancas, planos e usuarios.",
+          tone: acessoAmplo > 0 ? "amber" : "green",
+        },
+        {
+          label: "Cadastro",
+          value: `${semPermissoes} incompleto(s)`,
+          detail:
+            semPermissoes > 0
+              ? "Usuario sem permissao vira erro de acesso. Ajuste antes de pedir que ele investigue chamados."
+              : "Todos os admins listados possuem matriz de permissao.",
+          tone: semPermissoes > 0 ? "red" : "green",
+        },
+        {
+          label: "Auditoria",
+          value: "Obrigatoria",
+          detail:
+            "Toda acao sensivel do AdminMaster deve deixar trilha para diagnostico e responsabilizacao.",
+          tone: "blue",
+          href: "/admin-master/logs",
+        },
+      ],
+      rows,
+      columns: ["nome", "email", "perfil", "status", "permissoes", "auditoria", "ultimo_acesso", "atualizado", "sinal", "acao"],
+      actions: ["Ver admins internos", "Ver logs", "Auditar"],
+    };
+  }
+
+  if (section === "configuracoes-globais") {
+    const [{ data: configs }, { data: history }, { data: admins }] = await Promise.all([
+      supabase
+        .from("configuracoes_globais")
+        .select("id, chave, descricao, valor_json, atualizado_por, atualizado_em")
+        .order("atualizado_em", { ascending: false })
+        .limit(120),
+      supabase
+        .from("configuracoes_globais_historico")
+        .select("chave, atualizado_por, atualizado_em")
+        .order("atualizado_em", { ascending: false })
+        .limit(250),
+      supabase
+        .from("admin_master_usuarios")
+        .select("id, nome")
+        .limit(200),
+    ]);
+
+    const adminById = new Map(
+      ((admins || []) as { id: string; nome?: string | null }[]).map((admin) => [
+        admin.id,
+        admin.nome || admin.id,
+      ])
+    );
+    const changesByKey = new Map<string, number>();
+    for (const item of (history || []) as { chave?: string | null }[]) {
+      if (!item.chave) continue;
+      changesByKey.set(item.chave, (changesByKey.get(item.chave) || 0) + 1);
+    }
+
+    const sensitiveWords = ["manutencao", "bloqueio", "webhook", "asaas", "resend", "push", "seguranca", "auth"];
+    const rows = ((configs || []) as {
+      chave?: string | null;
+      descricao?: string | null;
+      valor_json?: unknown;
+      atualizado_por?: string | null;
+      atualizado_em?: string | null;
+    }[]).map((config) => {
+      const chave = config.chave || "-";
+      const isSensitive = sensitiveWords.some((word) => chave.toLowerCase().includes(word));
+      const changes = changesByKey.get(chave) || 0;
+      const updatedDays = daysUntil(config.atualizado_em);
+      let sinal = isSensitive ? "Sensivel" : "Ok";
+
+      if (changes >= 5) sinal = "Mudanca frequente";
+      if (typeof updatedDays === "number" && updatedDays < -90) sinal = "Revisar validade";
+
+      return {
+        chave,
+        descricao: config.descricao || "-",
+        valor: summarizeSafeJson(config.valor_json),
+        alteracoes: changes,
+        atualizado_por: config.atualizado_por ? adminById.get(config.atualizado_por) || "-" : "-",
+        atualizado: dateTimeValue(config.atualizado_em),
+        sinal,
+        acao: "Auditar",
+      };
+    });
+
+    const sensiveis = rows.filter((row) => row.sinal === "Sensivel").length;
+    const frequentes = rows.filter((row) => row.sinal === "Mudanca frequente").length;
+    const revisar = rows.filter((row) => row.sinal === "Revisar validade").length;
+
+    return {
+      title: "Configuracoes globais",
+      description:
+        "Controle de chaves globais, historico de alteracoes, configuracoes sensiveis e validade operacional.",
+      kpis: [
+        { label: "Configs", value: String(rows.length), hint: "Chaves globais", tone: "dark" },
+        { label: "Sensiveis", value: String(sensiveis), hint: "Podem afetar producao", tone: sensiveis > 0 ? "amber" : "green" },
+        { label: "Mudanca frequente", value: String(frequentes), hint: "Historico movimentado", tone: frequentes > 0 ? "amber" : "green" },
+        { label: "Revisar", value: String(revisar), hint: "Sem ajuste ha 90 dias", tone: revisar > 0 ? "blue" : "green" },
+        { label: "Historico", value: String((history || []).length), hint: "Ultimas alteracoes", tone: "blue" },
+      ],
+      diagnostics: [
+        {
+          label: "Segredos",
+          value: "Mascarados",
+          detail:
+            "Valores com token, senha, secret ou api_key aparecem mascarados para reduzir vazamento visual no suporte.",
+          tone: "green",
+        },
+        {
+          label: "Mudanca critica",
+          value: `${sensiveis} sensivel(is)`,
+          detail:
+            "Config global sensivel deve ter motivo, horario e responsavel claros antes de mexer em producao.",
+          tone: sensiveis > 0 ? "amber" : "green",
+          href: "/admin-master/logs",
+        },
+        {
+          label: "Historico",
+          value: "Rastreavel",
+          detail:
+            "O historico ajuda descobrir quem alterou comportamento global quando saloes relatam instabilidade.",
+          tone: "blue",
+        },
+      ],
+      rows,
+      columns: ["chave", "descricao", "valor", "alteracoes", "atualizado_por", "atualizado", "sinal", "acao"],
+      actions: ["Ver configs globais", "Ver logs", "Auditar"],
     };
   }
 
