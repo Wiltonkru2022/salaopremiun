@@ -2793,7 +2793,8 @@ export async function getAdminMasterSection(
   }
 
   if (section === "logs") {
-    const [{ data: logs }, { data: checkoutLocks }] = await Promise.all([
+    const last24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    const [{ data: logs }, { data: checkoutLocks }, { data: eventosSistema }] = await Promise.all([
       supabase
         .from("logs_sistema")
         .select(
@@ -2811,6 +2812,14 @@ export async function getAdminMasterSection(
         .is("id_cobranca", null)
         .order("updated_at", { ascending: false })
         .limit(60),
+      supabase
+        .from("eventos_sistema")
+        .select(
+          "id, id_salao, modulo, tipo_evento, severidade, mensagem, rota, acao, response_ms, sucesso, created_at"
+        )
+        .gte("created_at", last24h)
+        .order("created_at", { ascending: false })
+        .limit(180),
     ]);
 
     const salaoIds = Array.from(
@@ -2818,6 +2827,9 @@ export async function getAdminMasterSection(
         [
           ...((logs || []) as { id_salao?: string | null }[]).map((row) => row.id_salao),
           ...((checkoutLocks || []) as { id_salao?: string | null }[]).map(
+            (row) => row.id_salao
+          ),
+          ...((eventosSistema || []) as { id_salao?: string | null }[]).map(
             (row) => row.id_salao
           ),
         ].filter(Boolean)
@@ -2901,7 +2913,40 @@ export async function getAdminMasterSection(
       acao_id: row.id || null,
     }));
 
-    const rows = [...reconciliationRows, ...logRows]
+    const monitoringRows = ((eventosSistema || []) as {
+      id?: string | null;
+      id_salao?: string | null;
+      modulo?: string | null;
+      tipo_evento?: string | null;
+      severidade?: string | null;
+      mensagem?: string | null;
+      rota?: string | null;
+      acao?: string | null;
+      response_ms?: number | null;
+      sucesso?: boolean | null;
+      created_at?: string | null;
+    }[]).map((row): AdminLogRow => ({
+      _sort: row.created_at || "",
+      tipo: row.sucesso === false ? "falha_monitorada" : "evento_monitorado",
+      gravidade: row.severidade || (row.sucesso === false ? "error" : "info"),
+      modulo: row.modulo || "-",
+      salao: row.id_salao ? salaoById.get(row.id_salao) || row.id_salao : "-",
+      mensagem: row.mensagem || "-",
+      referencia: row.rota || row.acao || row.tipo_evento || row.id || "-",
+      criado: dateTimeValue(row.created_at),
+      detalhe: [
+        row.tipo_evento ? `tipo ${row.tipo_evento}` : null,
+        row.acao ? `acao ${row.acao}` : null,
+        row.response_ms ? `${Math.round(row.response_ms)} ms` : null,
+      ]
+        .filter(Boolean)
+        .join(" | ") || "-",
+      acao: row.id_salao ? "Abrir salao" : "-",
+      acao_tipo: row.id_salao ? "salao_detail" : null,
+      acao_id: row.id_salao || null,
+    }));
+
+    const rows = [...reconciliationRows, ...monitoringRows, ...logRows]
       .sort((a, b) => String(b._sort).localeCompare(String(a._sort)))
       .slice(0, 150)
       .map(({ _sort: _sort, ...row }) => row);
@@ -2912,12 +2957,19 @@ export async function getAdminMasterSection(
     const errorsCount = rows.filter((row) =>
       ["error", "erro"].includes(String(row.gravidade).toLowerCase())
     ).length;
+    const monitoredFailures = monitoringRows.filter((row) =>
+      ["error", "erro", "critical"].includes(String(row.gravidade).toLowerCase())
+    ).length;
+    const slowRoutes = monitoringRows.filter((row) =>
+      String(row.detalhe).includes(" ms") &&
+      safeNumber(String(row.detalhe).match(/(\d+) ms/)?.[1]) >= 3000
+    ).length;
     const modulesCount = new Set(rows.map((row) => String(row.modulo))).size;
 
     return {
-      title: "Logs e seguranca",
+      title: "Logs e investigacao",
       description:
-        "Visao operacional dos eventos recentes, tentativas multi-tenant bloqueadas e checkouts que precisam de reconciliacao financeira.",
+        "Central para descobrir onde o problema nasceu: logs internos, eventos monitorados, rotas lentas, tenant guard e checkouts que precisam de reconciliacao.",
       kpis: [
         {
           label: "Tenant guard",
@@ -2936,6 +2988,48 @@ export async function getAdminMasterSection(
           value: String(errorsCount),
           hint: `${modulesCount} modulos com eventos`,
           tone: errorsCount > 0 ? "amber" : "green",
+        },
+        {
+          label: "Eventos 24h",
+          value: String(monitoringRows.length),
+          hint: `${monitoredFailures} falha(s) monitorada(s)`,
+          tone: monitoredFailures > 0 ? "amber" : "green",
+        },
+        {
+          label: "Rotas lentas",
+          value: String(slowRoutes),
+          hint: "Eventos acima de 3000 ms",
+          tone: slowRoutes > 0 ? "red" : "green",
+        },
+      ],
+      diagnostics: [
+        {
+          label: "Como investigar",
+          value: "Modulo + rota",
+          detail:
+            "Comece pelo modulo, confira a rota/referencia e abra o salao quando o evento tiver id_salao. Assim o suporte ve assinatura, alertas e logs juntos.",
+          tone: "blue",
+          href: "/admin-master/saude",
+        },
+        {
+          label: "Sinal de lentidao",
+          value: `${slowRoutes} rota(s)`,
+          detail:
+            slowRoutes > 0
+              ? "Existe pelo menos uma acao acima de 3 segundos nas ultimas 24h."
+              : "Nenhuma rota lenta monitorada nas ultimas 24h.",
+          tone: slowRoutes > 0 ? "red" : "green",
+          href: "/admin-master/saude",
+        },
+        {
+          label: "Falha monitorada",
+          value: String(monitoredFailures),
+          detail:
+            monitoredFailures > 0
+              ? "Use a coluna acao para abrir o salao afetado e criar ticket quando for recorrente."
+              : "Sem falhas monitoradas no recorte atual.",
+          tone: monitoredFailures > 0 ? "amber" : "green",
+          href: "/admin-master/tickets",
         },
       ],
       rows,
