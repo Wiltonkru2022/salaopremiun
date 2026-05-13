@@ -124,7 +124,7 @@ export default async function InicioProfissionalPage() {
                 Acesso ativo
               </div>
 
-              <h2 className="mt-2.5 text-[1.42rem] font-black leading-none tracking-[-0.04em]">
+              <h2 className="mt-2.5 break-words text-[1.28rem] font-black leading-tight tracking-[-0.02em] sm:text-[1.42rem]">
                 {session.nome}
               </h2>
 

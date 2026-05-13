@@ -217,14 +217,14 @@ export default function ClientSalonDiscovery({
                 key={category.label}
                 type="button"
                 onClick={() => setLocalSearch(category.query)}
-                className="min-w-[96px] text-center"
+                className="w-[96px] shrink-0 text-center"
               >
                 <img
                   src={category.image}
                   alt={category.label}
                   className="mx-auto h-24 w-24 rounded-full object-cover shadow-[0_12px_30px_rgba(0,0,0,0.22)]"
                 />
-                <div className="mt-3 text-sm font-bold text-white">
+                <div className="mt-3 whitespace-nowrap text-xs font-bold leading-tight text-white sm:text-sm">
                   {category.label}
                 </div>
               </button>

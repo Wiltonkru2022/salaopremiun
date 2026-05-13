@@ -82,7 +82,7 @@ export default function ProfissionalInstallPrompt() {
           type="button"
           onClick={close}
           className="absolute right-2 top-2 rounded-full bg-white/80 p-1 text-zinc-500 shadow-sm"
-          aria-label="Fechar dica de instalacao"
+          aria-label="Fechar dica de instalação"
         >
           <X size={15} />
         </button>
