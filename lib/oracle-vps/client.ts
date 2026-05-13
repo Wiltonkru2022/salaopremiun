@@ -94,6 +94,16 @@ async function requestOracleVps(
   return data;
 }
 
+export async function requestOracleVpsProtected<T = unknown>(
+  path: string,
+  options: Omit<OracleVpsRequestOptions, "protected"> = {}
+): Promise<T> {
+  return requestOracleVps(path, {
+    ...options,
+    protected: true,
+  }) as Promise<T>;
+}
+
 type OracleVpsOperationalCheck = {
   modulo: string;
   rota: string;
@@ -531,6 +541,20 @@ export async function getOracleVpsOperationalSnapshot(params?: {
     checkOracleVpsGet({
       modulo: "Notificações",
       path: `/notificacoes${query}`,
+      amostra,
+    }),
+    checkOracleVpsGet({
+      modulo: "App Cliente",
+      path: "/app-cliente/saloes?limit=3",
+      amostra,
+    }),
+    checkOracleVpsGet({
+      modulo: "App Profissional",
+      path: `/app-profissional/agenda${buildQuery({
+        id_salao: idSalao,
+        id_profissional: "health-check",
+        limit: 1,
+      })}`,
       amostra,
     }),
     checkOracleVpsGet({

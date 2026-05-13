@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { reportOperationalIncident } from "@/lib/monitoring/operational-incidents";
+import { requestOracleVpsProtected } from "@/lib/oracle-vps/client";
 import { getProfissionalSessionFromCookie } from "@/lib/profissional-auth.server";
 import { runAdminOperation } from "@/lib/supabase/admin-ops";
 import {
@@ -17,9 +18,31 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Sessao invalida." }, { status: 401 });
     }
     idSalao = session.idSalao;
+    const body = await req.json().catch(() => null);
+
+    try {
+      const upstream = await requestOracleVpsProtected<Record<string, unknown>>(
+        "/app-profissional/suporte",
+        {
+          method: "POST",
+          timeoutMs: 9000,
+          body: {
+            ...(body && typeof body === "object" ? body : {}),
+            id_salao: session.idSalao,
+            id_profissional: session.idProfissional,
+            nome: session.nome,
+            email: null,
+          },
+        }
+      );
+
+      return NextResponse.json(upstream, { status: 200 });
+    } catch {
+      // Fallback local para nao derrubar o suporte se a VPS estiver instavel.
+    }
 
     const result = await processarSuporteIAUseCase({
-      body: await req.json().catch(() => null),
+      body,
       service: createAppProfissionalSuporteService(),
     });
     idSalao = result.idSalao || "";
