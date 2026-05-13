@@ -3,6 +3,8 @@ import { addDays, subDays } from "date-fns";
 import type { Agendamento, Bloqueio, Cliente, Servico, ViewMode } from "@/types/agenda";
 import { formatFullDate, normalizeTimeString } from "@/lib/utils/agenda";
 
+const AGENDA_VIEW_LIMIT = 320;
+
 export async function loadAgendaData(params: {
   supabase: SupabaseClient;
   idSalao: string;
@@ -64,7 +66,8 @@ export async function loadAgendaData(params: {
       .gte("data", startDate)
       .lte("data", endDate)
       .order("data")
-      .order("hora_inicio"),
+      .order("hora_inicio")
+      .limit(AGENDA_VIEW_LIMIT),
 
     supabase
       .from("agenda_bloqueios")
@@ -74,7 +77,8 @@ export async function loadAgendaData(params: {
       .gte("data", startDate)
       .lte("data", endDate)
       .order("data")
-      .order("hora_inicio"),
+      .order("hora_inicio")
+      .limit(AGENDA_VIEW_LIMIT),
   ]);
 
   if (agRes.error) console.error("Erro ao buscar agendamentos:", agRes.error);

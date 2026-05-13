@@ -250,7 +250,7 @@ export default function CaixaPage() {
       if (comandaSelecionada?.id) {
         void aplicarDetalheComanda(comandaSelecionada.id);
       }
-    }, 15000);
+    }, 45000);
 
     const coldInterval = window.setInterval(() => {
       if (document.visibilityState !== "visible") {
@@ -258,7 +258,7 @@ export default function CaixaPage() {
       }
 
       void carregarHistorico(idSalao);
-    }, 60000);
+    }, 180000);
 
     window.addEventListener("focus", refreshOnReturn);
     document.addEventListener("visibilitychange", refreshOnReturn);

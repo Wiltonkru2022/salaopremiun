@@ -44,6 +44,7 @@ type PushBurstState = {
 
 const PUSH_BURST_WINDOW_MS = 25 * 1000;
 const PUSH_SAME_TAG_WINDOW_MS = 10 * 60 * 1000;
+const PUSH_SUBSCRIPTION_REFRESH_MS = 12 * 60 * 60 * 1000;
 const recentPushByEndpoint = new Map<string, PushBurstState>();
 
 function getPushConfig() {
@@ -88,6 +89,33 @@ export async function upsertPushSubscription(params: {
   const parsed = parseSubscription(params.subscription);
   const supabase = getSupabaseAdmin();
   const now = new Date().toISOString();
+  const { data: existing } = await (supabase as any)
+    .from("push_subscriptions")
+    .select(
+      "id, p256dh, auth, id_salao, id_usuario, id_profissional, cliente_app_conta_id, ativo, updated_at"
+    )
+    .eq("audience", params.audience)
+    .eq("endpoint", parsed.endpoint)
+    .maybeSingle();
+
+  if (existing?.id) {
+    const sameOwner =
+      String(existing.id_salao || "") === String(params.idSalao || "") &&
+      String(existing.id_usuario || "") === String(params.idUsuario || "") &&
+      String(existing.id_profissional || "") === String(params.idProfissional || "") &&
+      String(existing.cliente_app_conta_id || "") === String(params.clienteAppContaId || "");
+    const sameKeys =
+      String(existing.p256dh || "") === parsed.p256dh &&
+      String(existing.auth || "") === parsed.auth;
+    const updatedAt = new Date(String(existing.updated_at || 0)).getTime();
+    const recentlyTouched =
+      Number.isFinite(updatedAt) &&
+      Date.now() - updatedAt < PUSH_SUBSCRIPTION_REFRESH_MS;
+
+    if (existing.ativo !== false && sameOwner && sameKeys && recentlyTouched) {
+      return;
+    }
+  }
 
   const { error } = await (supabase as any)
     .from("push_subscriptions")

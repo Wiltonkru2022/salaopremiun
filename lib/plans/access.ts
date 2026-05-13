@@ -458,7 +458,7 @@ const getPlanoAccessSnapshotCached = unstable_cache(
   async (idSalao: string) => getPlanoAccessSnapshotUncached(idSalao),
   ["plano-access-snapshot"],
   {
-    revalidate: 60,
+    revalidate: 300,
     tags: ["plano-access-snapshot"],
   }
 );

@@ -220,6 +220,32 @@ function shouldOpenIncident(params: CaptureSystemEventParams, severity: Monitori
   return severity === "error" || severity === "critical";
 }
 
+function shouldPersistMonitoringEvent(
+  params: CaptureSystemEventParams,
+  severity: MonitoringSeverity
+) {
+  if (shouldOpenIncident(params, severity)) return true;
+  if (params.success === false) return true;
+  if (severity === "warning" || severity === "error" || severity === "critical") {
+    return true;
+  }
+
+  const responseMs =
+    typeof params.responseMs === "number" ? Math.max(0, params.responseMs) : 0;
+  if (responseMs >= 1500) return true;
+
+  const eventType = normalizeText(params.eventType).toLowerCase();
+  const origin = normalizeOrigin(params.origin);
+
+  return (
+    origin === "webhook" ||
+    eventType.includes("webhook") ||
+    eventType.includes("security") ||
+    eventType.includes("bloqueio") ||
+    eventType.includes("assinatura")
+  );
+}
+
 function buildIncidentTitle(params: CaptureSystemEventParams) {
   if (isOpaqueServerComponentMessage(normalizeText(params.message))) {
     const route =
@@ -360,6 +386,10 @@ async function upsertIncident(params: CaptureSystemEventParams, severity: Monito
 export async function captureSystemEvent(params: CaptureSystemEventParams) {
   try {
     const severity = normalizeSeverity(params.severity);
+    if (!shouldPersistMonitoringEvent(params, severity)) {
+      return;
+    }
+
     const supabase = getSupabaseAdmin();
     const message = normalizeText(params.message) || "Evento operacional";
     const isUserError =

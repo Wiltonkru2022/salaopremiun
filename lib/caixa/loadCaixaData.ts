@@ -27,6 +27,8 @@ type UsuarioCaixa = {
 type CatalogoServicoRow = CatalogoServico;
 
 const CAIXA_CANCELADAS_RECENTES_LIMIT = 120;
+const CAIXA_FILA_OPERACIONAL_LIMIT = 80;
+const CAIXA_HISTORICO_DIA_LIMIT = 60;
 
 export async function carregarAcessoCaixa(
   supabase: CaixaSupabaseClient,
@@ -261,7 +263,8 @@ async function carregarFilaComandas(
     `)
     .eq("id_salao", idSalao)
     .in("status", ["aberta", "em_atendimento", "aguardando_pagamento"])
-    .order("aberta_em", { ascending: true });
+    .order("aberta_em", { ascending: true })
+    .limit(CAIXA_FILA_OPERACIONAL_LIMIT);
 
   if (error) {
     console.error(error);
@@ -292,7 +295,8 @@ async function carregarAgendamentosSemComanda(
     .is("id_comanda", null)
     .eq("status", "aguardando_pagamento")
     .order("data", { ascending: true })
-    .order("hora_inicio", { ascending: true });
+    .order("hora_inicio", { ascending: true })
+    .limit(CAIXA_FILA_OPERACIONAL_LIMIT);
 
   if (error) {
     console.error("Erro Supabase agendamentos sem comanda:", error);
@@ -418,7 +422,8 @@ async function carregarFechadasHoje(
     .eq("status", "fechada")
     .gte("fechada_em", inicio.toISOString())
     .lte("fechada_em", fim.toISOString())
-    .order("fechada_em", { ascending: false });
+    .order("fechada_em", { ascending: false })
+    .limit(CAIXA_HISTORICO_DIA_LIMIT);
 
   if (error) {
     console.error(error);

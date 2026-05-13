@@ -2,11 +2,7 @@
 
 import { useEffect } from "react";
 import { usePathname } from "next/navigation";
-import {
-  captureClientError,
-  captureClientEvent,
-  setClientMonitoringContext,
-} from "@/lib/monitoring/client";
+import { captureClientError, setClientMonitoringContext } from "@/lib/monitoring/client";
 
 function inferSurface(pathname: string) {
   if (pathname.startsWith("/admin-master")) return "admin_master";
@@ -57,16 +53,8 @@ export default function MonitoringClient() {
       surface: inferSurface(pathname),
     });
 
-    void captureClientEvent({
-      module: inferModule(pathname),
-      eventType: "page_view",
-      message: `Visualizacao de ${pathname}`,
-      action: "page_view",
-      route: pathname,
-      screen: pathname,
-      surface: inferSurface(pathname),
-      useBeacon: true,
-    });
+    // Page views foram desligadas aqui para proteger o plano free do Supabase.
+    // A camada de monitoramento continua registrando falhas, lentidão e alertas reais.
   }, [pathname]);
 
   useEffect(() => {

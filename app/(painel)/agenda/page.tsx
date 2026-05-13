@@ -341,7 +341,7 @@ export default function AgendaPage() {
       }
 
       void loadAgenda();
-    }, 6000);
+    }, 30000);
 
     window.addEventListener("focus", refreshOnReturn);
     document.addEventListener("visibilitychange", refreshOnReturn);

@@ -14,6 +14,33 @@ type PushStatus =
   | "denied"
   | "saving";
 
+const SUBSCRIPTION_SAVE_TTL_MS = 12 * 60 * 60 * 1000;
+
+function getSubscriptionCacheKey(audience: PushAudience, subscription: PushSubscription) {
+  return `salaopremium:push-subscription:${audience}:${subscription.endpoint}`;
+}
+
+function wasSubscriptionSavedRecently(audience: PushAudience, subscription: PushSubscription) {
+  try {
+    const value = window.localStorage.getItem(getSubscriptionCacheKey(audience, subscription));
+    const lastSavedAt = Number(value || "0");
+    return Number.isFinite(lastSavedAt) && Date.now() - lastSavedAt < SUBSCRIPTION_SAVE_TTL_MS;
+  } catch {
+    return false;
+  }
+}
+
+function markSubscriptionSaved(audience: PushAudience, subscription: PushSubscription) {
+  try {
+    window.localStorage.setItem(
+      getSubscriptionCacheKey(audience, subscription),
+      String(Date.now())
+    );
+  } catch {
+    // Cache local e apenas uma economia de chamadas.
+  }
+}
+
 function urlBase64ToUint8Array(value: string) {
   const padding = "=".repeat((4 - (value.length % 4)) % 4);
   const base64 = `${value}${padding}`.replace(/-/g, "+").replace(/_/g, "/");
@@ -44,6 +71,10 @@ function arrayBufferToUrlBase64(value: ArrayBuffer | null) {
 }
 
 async function saveSubscription(audience: PushAudience, subscription: PushSubscription) {
+  if (wasSubscriptionSavedRecently(audience, subscription)) {
+    return new Response(JSON.stringify({ ok: true, cached: true }), { status: 200 });
+  }
+
   return fetch("/api/push/subscribe", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -52,6 +83,11 @@ async function saveSubscription(audience: PushAudience, subscription: PushSubscr
       audience,
       subscription: subscription.toJSON(),
     }),
+  }).then((response) => {
+    if (response.ok) {
+      markSubscriptionSaved(audience, subscription);
+    }
+    return response;
   });
 }
 
