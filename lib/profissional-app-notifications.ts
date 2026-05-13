@@ -20,7 +20,30 @@ type TicketEventoRow = {
   criado_em?: string | null;
 };
 
-async function fetchProfissionalAppNotifications(
+type NotificationJobRow = {
+  id: string;
+  tipo?: string | null;
+  titulo?: string | null;
+  mensagem?: string | null;
+  status?: string | null;
+  url?: string | null;
+  enviar_em?: string | null;
+  created_at?: string | null;
+};
+
+function notificationActionLabel(type?: string | null) {
+  const normalized = String(type || "").toLowerCase();
+
+  if (normalized.includes("lembrete")) return "Ver agenda";
+  if (normalized.includes("finalizado")) return "Ver atendimento";
+  if (normalized.includes("cancelamento")) return "Ver agenda";
+  if (normalized.includes("reagendamento")) return "Ver novo horário";
+  if (normalized.includes("comanda")) return "Ver comanda";
+
+  return "Abrir";
+}
+
+async function fetchPasswordNotifications(
   idSalao: string,
   idProfissional: string
 ): Promise<ProfissionalAppNotification[]> {
@@ -82,10 +105,75 @@ async function fetchProfissionalAppNotifications(
         evento.descricao?.trim() ||
         `O salão ${nomeSalao} redefiniu sua senha de acesso ao app profissional.`,
       createdAt: evento.criado_em || null,
+      type: "senha_redefinida_salao",
+      status: "enviada",
       actionLabel: numeroTicket ? `Ticket #${numeroTicket}` : "Ver notificação",
       href: `/app-profissional/notificacoes?notificacao=${encodeURIComponent(evento.id)}`,
     };
   });
+}
+
+async function fetchJobNotifications(
+  idSalao: string,
+  idProfissional: string
+): Promise<ProfissionalAppNotification[]> {
+  const supabaseAdmin = getSupabaseAdmin();
+  const { data, error } = await (supabaseAdmin as any)
+    .from("notification_jobs")
+    .select("id, tipo, titulo, mensagem, status, url, enviar_em, created_at")
+    .eq("id_salao", idSalao)
+    .eq("id_profissional", idProfissional)
+    .eq("canal", "profissional_app")
+    .neq("status", "cancelada")
+    .lte("enviar_em", new Date().toISOString())
+    .order("created_at", { ascending: false })
+    .limit(30);
+
+  if (error) {
+    const message = String(error.message || "");
+    if (message.includes("notification_jobs") || message.includes("does not exist")) {
+      return [];
+    }
+
+    throw error;
+  }
+
+  return ((data || []) as NotificationJobRow[]).map((item) => {
+    const type = String(item.tipo || "").trim();
+    const url = String(item.url || "").trim();
+
+    return {
+      id: item.id,
+      title: String(item.titulo || "").trim() || "Notificação do atendimento",
+      description:
+        String(item.mensagem || "").trim() ||
+        "Você tem uma atualização importante no App Profissional.",
+      createdAt: String(item.created_at || item.enviar_em || "").trim() || null,
+      type,
+      status: String(item.status || "").trim() || null,
+      actionLabel: notificationActionLabel(type),
+      href: url || "/app-profissional/notificacoes",
+    };
+  });
+}
+
+async function fetchProfissionalAppNotifications(
+  idSalao: string,
+  idProfissional: string
+): Promise<ProfissionalAppNotification[]> {
+  const [passwordNotifications, jobNotifications] = await Promise.all([
+    fetchPasswordNotifications(idSalao, idProfissional),
+    fetchJobNotifications(idSalao, idProfissional),
+  ]);
+
+  return [...passwordNotifications, ...jobNotifications]
+    .sort((a, b) => {
+      const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+
+      return dateB - dateA;
+    })
+    .slice(0, 40);
 }
 
 const getCachedProfissionalAppNotifications = unstable_cache(
@@ -93,7 +181,7 @@ const getCachedProfissionalAppNotifications = unstable_cache(
     fetchProfissionalAppNotifications(cachedSalaoId, cachedProfissionalId),
   ["profissional-app-notifications"],
   {
-    revalidate: 60,
+    revalidate: 30,
   }
 );
 

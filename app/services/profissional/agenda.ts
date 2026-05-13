@@ -78,6 +78,24 @@ function toDateLabel(dateISO: string) {
   }).format(new Date(y, m - 1, d));
 }
 
+function monthRange(dateISO: string) {
+  const [y, m] = dateISO.split("-").map(Number);
+  const start = new Date(y, m - 1, 1);
+  const end = new Date(y, m, 0);
+  const format = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+
+    return `${year}-${month}-${day}`;
+  };
+
+  return {
+    inicio: format(start),
+    fim: format(end),
+  };
+}
+
 function dayNamePt(dateISO: string) {
   const [y, m, d] = dateISO.split("-").map(Number);
 
@@ -276,6 +294,7 @@ export async function buscarAgendaProfissional(
 
   const {
     agendamentos,
+    diasComAtendimento,
     clientesMap,
     servicosMap,
     profissionalNome,
@@ -287,8 +306,10 @@ export async function buscarAgendaProfissional(
     actorId: idProfissional,
     idSalao,
     run: async (supabase) => {
+      const rangeMes = monthRange(dataSelecionada);
       const [
         { data: agendamentosData, error: agendamentosError },
+        { data: agendamentosMesData, error: agendamentosMesError },
         { data: profissionalData, error: profissionalError },
       ] = await Promise.all([
         supabase
@@ -299,6 +320,15 @@ export async function buscarAgendaProfissional(
           .eq("data", dataSelecionada)
           .order("hora_inicio", { ascending: true }),
         supabase
+          .from("agendamentos")
+          .select("data")
+          .eq("id_salao", idSalao)
+          .eq("profissional_id", idProfissional)
+          .gte("data", rangeMes.inicio)
+          .lte("data", rangeMes.fim)
+          .not("status", "eq", "cancelado")
+          .limit(120),
+        supabase
           .from("profissionais")
           .select("nome, nome_exibicao, dias_trabalho")
           .eq("id", idProfissional)
@@ -307,6 +337,7 @@ export async function buscarAgendaProfissional(
       ]);
 
       if (agendamentosError) throw new Error(agendamentosError.message);
+      if (agendamentosMesError) throw new Error(agendamentosMesError.message);
       if (profissionalError) throw new Error(profissionalError.message);
 
       const rows = (agendamentosData ?? []) as AgendamentoAgendaRow[];
@@ -341,6 +372,13 @@ export async function buscarAgendaProfissional(
 
       return {
         agendamentos: rows,
+        diasComAtendimento: Array.from(
+          new Set(
+            ((agendamentosMesData ?? []) as Array<{ data?: string | null }>)
+              .map((item) => String(item.data || "").slice(0, 10))
+              .filter(Boolean)
+          )
+        ),
         profissionalNome:
           profissionalData?.nome_exibicao || profissionalData?.nome || "Profissional",
         expedienteAtivo: Boolean(regraDia?.ativo),
@@ -424,6 +462,7 @@ export async function buscarAgendaProfissional(
       horaFimExpediente || minutesToTime(fimMinutos),
     totalAtendimentos: agendamentos.length,
     totalPrevisto,
+    diasComAtendimento,
     cards,
     labels,
     pausas: [],

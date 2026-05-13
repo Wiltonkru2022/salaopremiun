@@ -61,8 +61,8 @@ export default async function AgendaProfissionalPage({
 
         <ProfissionalSurface>
           <ProfissionalSectionHeader
-            title="Dias da semana"
-            description="Deslize e toque no dia para ver os atendimentos."
+            title="Calendário"
+            description="Toque em um dia para ver os atendimentos."
             action={
               <Link
                 href={`/app-profissional/agenda/novo?data=${agenda.dataSelecionada}`}
@@ -77,6 +77,7 @@ export default async function AgendaProfissionalPage({
           <AgendaDayStrip
             dataSelecionada={agenda.dataSelecionada}
             basePath="/app-profissional/agenda"
+            diasComAtendimento={agenda.diasComAtendimento}
           />
         </ProfissionalSurface>
 

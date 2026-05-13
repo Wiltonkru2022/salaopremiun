@@ -1362,10 +1362,13 @@ export default function AgendaPage() {
                 const canReceiveFromClient =
                   !hasClosedComanda &&
                   (isInteractiveStatus || isWaitingCashierStatus);
+                const isCanceledAppointment =
+                  String(item.status || "").toLowerCase() === "cancelado";
                 const canDelete =
-                  !item.id_comanda &&
-                  !hasClosedComanda &&
-                  isInteractiveStatus;
+                  isCanceledAppointment ||
+                  (!item.id_comanda &&
+                    !hasClosedComanda &&
+                    isInteractiveStatus);
                 const canEdit = !hasClosedComanda && isInteractiveStatus;
                 const canCancel = !hasClosedComanda && isInteractiveStatus;
                 const canChangeStatus =

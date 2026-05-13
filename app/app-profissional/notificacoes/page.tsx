@@ -1,9 +1,76 @@
 import Link from "next/link";
-import { BellRing, CheckCircle2, ChevronLeft, KeyRound } from "lucide-react";
+import {
+  BellRing,
+  CalendarDays,
+  CheckCircle2,
+  ChevronLeft,
+  Clock3,
+  KeyRound,
+  RefreshCw,
+  Scissors,
+  XCircle,
+} from "lucide-react";
 import ProfissionalShell from "@/components/profissional/layout/ProfissionalShell";
 import ProfissionalSurface from "@/components/profissional/ui/ProfissionalSurface";
 import { listProfissionalAppNotifications } from "@/lib/profissional-app-notifications";
+import type { ProfissionalAppNotification } from "@/lib/profissional-app-notification-contracts";
 import { requireProfissionalAppContext } from "@/lib/profissional-context.server";
+
+function getNotificationVisual(item?: ProfissionalAppNotification | null) {
+  const type = String(item?.type || "").toLowerCase();
+
+  if (type.includes("senha")) {
+    return { Icon: KeyRound, label: "Aviso de acesso", tone: "amber" as const };
+  }
+
+  if (type.includes("lembrete")) {
+    return { Icon: Clock3, label: "Lembrete de agenda", tone: "sky" as const };
+  }
+
+  if (type.includes("finalizado")) {
+    return {
+      Icon: CheckCircle2,
+      label: "Atendimento finalizado",
+      tone: "emerald" as const,
+    };
+  }
+
+  if (type.includes("cancelamento")) {
+    return { Icon: XCircle, label: "Agenda atualizada", tone: "rose" as const };
+  }
+
+  if (type.includes("reagendamento")) {
+    return { Icon: RefreshCw, label: "Horário reagendado", tone: "violet" as const };
+  }
+
+  if (type.includes("comanda")) {
+    return { Icon: Scissors, label: "Comanda", tone: "zinc" as const };
+  }
+
+  return { Icon: CalendarDays, label: "Aviso do app", tone: "zinc" as const };
+}
+
+function toneClasses(tone: ReturnType<typeof getNotificationVisual>["tone"]) {
+  if (tone === "amber") return "bg-amber-100 text-amber-700";
+  if (tone === "sky") return "bg-sky-100 text-sky-700";
+  if (tone === "emerald") return "bg-emerald-100 text-emerald-700";
+  if (tone === "rose") return "bg-rose-100 text-rose-700";
+  if (tone === "violet") return "bg-violet-100 text-violet-700";
+  return "bg-zinc-100 text-zinc-700";
+}
+
+function formatDate(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+
+  return new Intl.DateTimeFormat("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+}
 
 export default async function ProfissionalNotificacoesPage({
   searchParams,
@@ -19,9 +86,11 @@ export default async function ProfissionalNotificacoesPage({
     () => []
   );
   const selected = notifications.find((item) => item.id === selectedId) || null;
+  const selectedVisual = getNotificationVisual(selected);
+  const SelectedIcon = selectedVisual.Icon;
 
   return (
-    <ProfissionalShell title="Notificações" subtitle="Avisos do seu acesso">
+    <ProfissionalShell title="Notificações" subtitle="Avisos do seu app">
       <div className="space-y-3.5">
         <Link
           href="/app-profissional/perfil"
@@ -35,11 +104,11 @@ export default async function ProfissionalNotificacoesPage({
           <section className="rounded-[1.6rem] bg-zinc-950 p-4 text-white shadow-[0_18px_40px_rgba(15,23,42,0.18)]">
             <div className="flex items-start gap-3">
               <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[18px] bg-white/10 text-amber-200">
-                <KeyRound size={20} />
+                <SelectedIcon size={20} />
               </div>
               <div className="min-w-0 flex-1">
                 <div className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-200">
-                  Aviso importante
+                  {selectedVisual.label}
                 </div>
                 <h2 className="mt-1 text-xl font-black tracking-[-0.04em]">
                   {selected.title}
@@ -51,6 +120,14 @@ export default async function ProfissionalNotificacoesPage({
                   <CheckCircle2 size={14} />
                   Lida nesta central
                 </div>
+                {selected.href && !selected.href.includes("/notificacoes") ? (
+                  <Link
+                    href={selected.href}
+                    className="ml-2 mt-3 inline-flex min-h-9 items-center justify-center rounded-full bg-white px-4 text-xs font-black text-zinc-950"
+                  >
+                    {selected.actionLabel || "Abrir"}
+                  </Link>
+                ) : null}
               </div>
             </div>
           </section>
@@ -72,8 +149,8 @@ export default async function ProfissionalNotificacoesPage({
           </div>
 
           <p className="mt-2 text-sm leading-6 text-zinc-500">
-            Aqui ficam avisos de segurança, acesso e eventos importantes do App
-            Profissional.
+            Aqui ficam avisos de acesso, agenda, reagendamentos, cancelamentos e
+            atendimentos finalizados.
           </p>
         </ProfissionalSurface>
 
@@ -81,6 +158,9 @@ export default async function ProfissionalNotificacoesPage({
           <div className="space-y-2.5">
             {notifications.map((item) => {
               const active = item.id === selectedId;
+              const visual = getNotificationVisual(item);
+              const Icon = visual.Icon;
+              const formattedDate = item.createdAt ? formatDate(item.createdAt) : null;
 
               return (
                 <Link
@@ -95,12 +175,10 @@ export default async function ProfissionalNotificacoesPage({
                   <div className="flex items-start gap-3">
                     <div
                       className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-[17px] ${
-                        active
-                          ? "bg-amber-100 text-amber-700"
-                          : "bg-zinc-100 text-zinc-700"
+                        active ? "bg-amber-100 text-amber-700" : toneClasses(visual.tone)
                       }`}
                     >
-                      <KeyRound size={18} />
+                      <Icon size={18} />
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="text-sm font-black text-zinc-950">
@@ -109,17 +187,16 @@ export default async function ProfissionalNotificacoesPage({
                       <p className="mt-1 line-clamp-2 text-sm leading-5 text-zinc-500">
                         {item.description}
                       </p>
-                      {item.createdAt ? (
-                        <div className="mt-2 text-[11px] font-bold uppercase tracking-[0.12em] text-zinc-400">
-                          {new Intl.DateTimeFormat("pt-BR", {
-                            day: "2-digit",
-                            month: "2-digit",
-                            year: "numeric",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          }).format(new Date(item.createdAt))}
-                        </div>
-                      ) : null}
+                      <div className="mt-2 flex flex-wrap items-center gap-2">
+                        <span className="inline-flex rounded-full bg-zinc-100 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.12em] text-zinc-500">
+                          {visual.label}
+                        </span>
+                        {formattedDate ? (
+                          <span className="text-[11px] font-bold uppercase tracking-[0.12em] text-zinc-400">
+                            {formattedDate}
+                          </span>
+                        ) : null}
+                      </div>
                     </div>
                   </div>
                 </Link>
@@ -136,7 +213,7 @@ export default async function ProfissionalNotificacoesPage({
                 Nenhuma notificação por enquanto
               </h2>
               <p className="mx-auto mt-2 max-w-xs text-sm leading-6 text-zinc-500">
-                Quando houver aviso de acesso, segurança ou suporte, ele aparece
+                Quando houver aviso de acesso, agenda ou atendimento, ele aparece
                 aqui.
               </p>
             </div>
