@@ -254,6 +254,8 @@ Use idempotência em webhooks e notificações para evitar envio duplicado.
 
 A VPS Oracle não substitui Vercel nem Supabase. Ela funciona como braço auxiliar para monitoramento, jobs leves, webhooks internos e rotinas controladas.
 
+Runbook completo: `docs/oracle-vps-api.md`.
+
 Configuração no projeto principal:
 
 ```env
