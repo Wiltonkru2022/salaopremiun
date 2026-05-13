@@ -2,15 +2,19 @@ import Link from "next/link";
 import {
   Bell,
   ChevronRight,
+  FileText,
   HelpCircle,
+  Info,
   KeyRound,
   LogOut,
   MessageCircle,
+  ShieldCheck,
   Star,
   UserRound,
   WalletCards,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import AppVersionBadge from "@/components/app-mobile/AppVersionBadge";
 import ProfissionalShell from "@/components/profissional/layout/ProfissionalShell";
 import ProfissionalNotificationSettings from "@/components/profissional/ProfissionalNotificationSettings";
 import { runAdminOperation } from "@/lib/supabase/admin-ops";
@@ -283,6 +287,24 @@ export default async function PerfilProfissionalPage({
             label="Comentários e suporte"
             icon={HelpCircle}
           />
+          <ProfileRow
+            href="/app-profissional/duvidas"
+            label="Dúvidas do app"
+            icon={Info}
+          />
+          <ProfileRow
+            href="/app-profissional/termos"
+            label="Termos de uso"
+            icon={FileText}
+          />
+          <ProfileRow
+            href="/app-profissional/privacidade"
+            label="Privacidade"
+            icon={ShieldCheck}
+          />
+          <div className="pt-4">
+            <AppVersionBadge label="App Profissional" />
+          </div>
         </div>
 
         <div

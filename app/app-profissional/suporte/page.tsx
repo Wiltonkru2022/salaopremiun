@@ -1,17 +1,13 @@
 import ProfissionalPrivate from "@/components/profissional/layout/ProfissionalPrivate";
-import ChatSuporte from "@/components/profissional/suporte/ChatSuporte";
 import ProfissionalTicketQuickOpen from "@/components/profissional/suporte/ProfissionalTicketQuickOpen";
 
 export default async function SuporteProfissionalPage() {
   return (
     <ProfissionalPrivate
       title="Suporte"
-      subtitle="IA para ajuda rápida e chamado humano quando precisar"
+      subtitle="Atendimento humano para resolver acesso, agenda e comandas."
     >
-      <div className="space-y-3.5">
-        <ChatSuporte />
-        <ProfissionalTicketQuickOpen />
-      </div>
+      <ProfissionalTicketQuickOpen />
     </ProfissionalPrivate>
   );
 }

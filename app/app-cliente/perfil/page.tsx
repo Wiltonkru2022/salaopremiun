@@ -2,15 +2,19 @@ import Link from "next/link";
 import {
   ChevronRight,
   CreditCard,
+  FileText,
   HelpCircle,
+  Info,
   LogOut,
   Bell,
+  ShieldCheck,
   Settings,
   Star,
   UserRound,
   WalletCards,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import AppVersionBadge from "@/components/app-mobile/AppVersionBadge";
 import ClientAppFrame from "@/components/client-app/ClientAppFrame";
 import { getClienteAppProfileData } from "@/lib/client-app/queries";
 import { requireClienteAppContext } from "@/lib/client-context.server";
@@ -146,9 +150,24 @@ export default async function ClientePerfilPage({
             icon={Bell}
           />
           <ProfileRow
-            href="https://wa.me/5567984341742"
-            label="Comentarios e suporte"
+            href="/app-cliente/duvidas"
+            label="Dúvidas do app"
+            icon={Info}
+          />
+          <ProfileRow
+            href="/app-cliente/suporte"
+            label="Comentários e suporte"
             icon={HelpCircle}
+          />
+          <ProfileRow
+            href="/app-cliente/termos"
+            label="Termos de uso"
+            icon={FileText}
+          />
+          <ProfileRow
+            href="/app-cliente/privacidade"
+            label="Privacidade"
+            icon={ShieldCheck}
           />
           <ProfileRow
             href="/app-cliente/logout?destino=/app-cliente/login"
@@ -157,6 +176,9 @@ export default async function ClientePerfilPage({
             muted
             prefetch={false}
           />
+        </div>
+        <div className="mt-4">
+          <AppVersionBadge label="App Cliente" />
         </div>
       </section>
     </ClientAppFrame>

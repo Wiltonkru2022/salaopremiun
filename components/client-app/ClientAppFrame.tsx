@@ -1,5 +1,4 @@
 import type { ReactNode } from "react";
-import Link from "next/link";
 import { Sparkles } from "lucide-react";
 import ClientAppPendingLink from "@/components/client-app/ClientAppPendingLink";
 import ClientAppBottomNav from "@/components/client-app/ClientAppBottomNav";
@@ -59,25 +58,7 @@ export default function ClientAppFrame({
 
         <main className="flex-1 py-4">{children}</main>
 
-        <footer className="px-4 pb-4 text-center text-xs text-zinc-500">
-          <div className="flex flex-wrap items-center justify-center gap-3">
-            <Link href="/termos-de-uso" className="underline underline-offset-4">
-              Termos de uso
-            </Link>
-            <Link
-              href="/politica-de-privacidade"
-              className="underline underline-offset-4"
-            >
-              Política de privacidade
-            </Link>
-            <Link
-              href="/app-cliente/recuperar-acesso"
-              className="underline underline-offset-4"
-            >
-              Recuperar acesso
-            </Link>
-          </div>
-        </footer>
+        <div className="h-2" />
       </div>
       <ClientAppBottomNav />
     </div>

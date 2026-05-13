@@ -15,6 +15,11 @@ const PREFETCH_ROUTES = [
   "/app-profissional/comissao",
   "/app-profissional/perfil",
   "/app-profissional/suporte",
+  "/app-profissional/duvidas",
+  "/app-profissional/termos",
+  "/app-profissional/privacidade",
+  "/app-profissional/notificacoes",
+  "/app-profissional/avaliacoes",
 ];
 
 function buildLabel(pathname: string) {
@@ -24,6 +29,11 @@ function buildLabel(pathname: string) {
   if (pathname.includes("/comissao")) return "Abrindo comissão...";
   if (pathname.includes("/perfil")) return "Abrindo perfil...";
   if (pathname.includes("/suporte")) return "Abrindo suporte...";
+  if (pathname.includes("/duvidas")) return "Abrindo dúvidas...";
+  if (pathname.includes("/termos")) return "Abrindo termos...";
+  if (pathname.includes("/privacidade")) return "Abrindo privacidade...";
+  if (pathname.includes("/notificacoes")) return "Abrindo notificações...";
+  if (pathname.includes("/avaliacoes")) return "Abrindo avaliações...";
   if (pathname.includes("/inicio")) return "Abrindo início...";
   return "Carregando tela...";
 }
@@ -146,18 +156,14 @@ export default function ProfissionalNavigationRuntime() {
         }`}
       />
 
-      <div
-        className={`pointer-events-none fixed left-1/2 top-[calc(env(safe-area-inset-top)+0.75rem)] z-[81] -translate-x-1/2 transition-all duration-200 ${
-          visible
-            ? "translate-y-0 opacity-100"
-            : "-translate-y-2 opacity-0"
-        }`}
-      >
-        <div className="inline-flex items-center gap-2 rounded-full border border-white/70 bg-white/95 px-3 py-2 text-xs font-semibold text-zinc-700 shadow-[0_12px_30px_rgba(15,23,42,0.12)] backdrop-blur-xl">
-          <LoaderCircle size={14} className="animate-spin text-[#b07b19]" />
-          {buildLabel(pendingPath || "")}
+      {visible ? (
+        <div className="pointer-events-none fixed left-1/2 top-[calc(env(safe-area-inset-top)+0.75rem)] z-[81] -translate-x-1/2 transition-all duration-200">
+          <div className="inline-flex items-center gap-2 rounded-full border border-white/70 bg-white/95 px-3 py-2 text-xs font-semibold text-zinc-700 shadow-[0_12px_30px_rgba(15,23,42,0.12)] backdrop-blur-xl">
+            <LoaderCircle size={14} className="animate-spin text-[#b07b19]" />
+            {buildLabel(pendingPath || "")}
+          </div>
         </div>
-      </div>
+      ) : null}
     </>
   );
 }

@@ -1,9 +1,12 @@
+import { APP_VERSION } from "@/lib/app-version";
+
 export async function GET() {
   const manifest = {
     id: "/app-profissional",
-    name: "SalaoPremium",
-    short_name: "SalaoPremium",
-    description: "Agenda, clientes e comandas para profissionais do salao.",
+    name: "Salão Premium Profissional",
+    short_name: "Salão Premium",
+    description: "Agenda, clientes e comandas para profissionais do salão.",
+    version: APP_VERSION,
     start_url: "/app-profissional/inicio",
     scope: "/app-profissional",
     display: "standalone",

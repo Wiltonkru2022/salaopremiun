@@ -54,7 +54,7 @@ export default function ProfissionalTicketQuickOpen() {
     <section className="rounded-[1.35rem] border border-zinc-200 bg-white p-3.5 shadow-[0_12px_30px_rgba(15,23,42,0.05)]">
       <ProfissionalSectionHeader
         title="Atendimento humano"
-        description="Se a IA não resolver, abra um chamado e a equipe recebe o contexto."
+        description="Abra um chamado humano e acompanhe o retorno da equipe do Salão Premium."
         action={
           <div className="inline-flex h-9 w-9 items-center justify-center rounded-[16px] bg-amber-50 text-amber-700">
             <Headset size={18} />

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { APP_VERSION } from "@/lib/app-version";
 
 export function GET() {
   return NextResponse.json({
@@ -7,6 +8,7 @@ export function GET() {
     short_name: "Salão Premium",
     description:
       "Agende horários, acompanhe visitas e avalie seu atendimento pelo app cliente do Salão Premium.",
+    version: APP_VERSION,
     start_url: "/app-cliente",
     scope: "/app-cliente",
     display: "standalone",
