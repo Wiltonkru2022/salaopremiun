@@ -4,7 +4,7 @@ export async function GET() {
     name: "SalaoPremium",
     short_name: "SalaoPremium",
     description: "Agenda, clientes e comandas para profissionais do salao.",
-    start_url: "/app-profissional",
+    start_url: "/app-profissional/inicio",
     scope: "/app-profissional",
     display: "standalone",
     background_color: "#f5f5f5",

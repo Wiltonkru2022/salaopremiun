@@ -4,6 +4,7 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  CalendarSync,
   PanelRightOpen,
   SlidersHorizontal,
 } from "lucide-react";
@@ -22,6 +23,8 @@ type Props = {
   onToday: () => void;
   onChangeView: (view: ViewMode) => void;
   onSelectDate: (date: Date) => void;
+  onGoogleCalendarSync?: () => void;
+  googleCalendarSyncing?: boolean;
   sidebarOpen: boolean;
   onToggleSidebar: () => void;
 };
@@ -36,6 +39,8 @@ export default function AgendaToolbar({
   onToday,
   onChangeView,
   onSelectDate,
+  onGoogleCalendarSync,
+  googleCalendarSyncing = false,
   sidebarOpen,
   onToggleSidebar,
 }: Props) {
@@ -169,6 +174,19 @@ export default function AgendaToolbar({
               Semana
             </button>
           </div>
+
+          <button
+            type="button"
+            onClick={onGoogleCalendarSync}
+            disabled={!onGoogleCalendarSync || googleCalendarSyncing}
+            className="inline-flex h-8 items-center gap-1.5 rounded-xl border border-sky-200 bg-sky-50 px-2.5 text-xs font-black text-sky-700 shadow-[0_8px_18px_rgba(14,165,233,0.08)] transition hover:bg-sky-100 disabled:cursor-not-allowed disabled:opacity-60"
+            title="Preparar horários confirmados para importar no Google Agenda"
+          >
+            <CalendarSync size={16} />
+            <span className="hidden sm:inline">
+              {googleCalendarSyncing ? "Sincronizando..." : "Google Calendar"}
+            </span>
+          </button>
 
           <button
             type="button"

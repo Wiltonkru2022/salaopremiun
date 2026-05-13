@@ -122,6 +122,7 @@ export default function AgendaPage() {
   const [clientCreateName, setClientCreateName] = useState("");
   const [clientCreateWhatsapp, setClientCreateWhatsapp] = useState("");
   const [clientCreateSaving, setClientCreateSaving] = useState(false);
+  const [googleCalendarSyncing, setGoogleCalendarSyncing] = useState(false);
 
   const {
     supabase,
@@ -933,6 +934,79 @@ export default function AgendaPage() {
     setSidebarView("overview");
   }
 
+  async function handleGoogleCalendarSync() {
+    if (!idSalao || !selectedProfissionalId) {
+      setErroTela("Selecione um profissional para sincronizar com o Google Agenda.");
+      return;
+    }
+
+    setGoogleCalendarSyncing(true);
+    setErroTela("");
+
+    try {
+      const response = await fetch("/api/agenda/google-calendar", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          idSalao,
+          profissionalId: selectedProfissionalId,
+          viewMode,
+          data: format(currentDate, "yyyy-MM-dd"),
+        }),
+      });
+
+      const payload = (await response.json().catch(() => ({}))) as {
+        ok?: boolean;
+        error?: string;
+        total?: number;
+        fileName?: string;
+        ics?: string;
+        googleCalendarUrl?: string;
+        nextSuggestion?: string;
+      };
+
+      if (!response.ok || !payload.ok) {
+        throw new Error(
+          payload.error || "Não foi possível preparar o Google Agenda."
+        );
+      }
+
+      if (!payload.total || !payload.ics) {
+        setErroTela(
+          payload.nextSuggestion ||
+            "Nenhum atendimento confirmado neste período para sincronizar."
+        );
+        return;
+      }
+
+      const blob = new Blob([payload.ics], {
+        type: "text/calendar;charset=utf-8",
+      });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = payload.fileName || "salaopremium-agenda.ics";
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(url);
+
+      if (payload.googleCalendarUrl) {
+        window.open(payload.googleCalendarUrl, "_blank", "noopener,noreferrer");
+      }
+    } catch (error) {
+      setErroTela(
+        error instanceof Error
+          ? error.message
+          : "Erro ao sincronizar com Google Agenda."
+      );
+    } finally {
+      setGoogleCalendarSyncing(false);
+    }
+  }
+
   const sidebarPanel: AgendaSidebarPanel | null = motivoModal.open
     ? {
         title: motivoModal.title || "Motivo da exclusao",
@@ -1149,6 +1223,8 @@ export default function AgendaPage() {
               onToday={() => setCurrentDate(new Date())}
               onChangeView={setViewMode}
               onSelectDate={setCurrentDate}
+              onGoogleCalendarSync={handleGoogleCalendarSync}
+              googleCalendarSyncing={googleCalendarSyncing}
               sidebarOpen={sidebarOpen}
               onToggleSidebar={() => {
                 setSidebarOpen((prev) => !prev);
