@@ -68,7 +68,7 @@ function textAreaClass() {
 }
 
 function nativeDateTimeClass() {
-  return `${inputClass()} appearance-none overflow-hidden text-left [color-scheme:light]`;
+  return `${inputClass()} sp-native-date-time appearance-none overflow-hidden text-left [color-scheme:light]`;
 }
 
 const nativeDateTimeStyle = {
@@ -76,6 +76,9 @@ const nativeDateTimeStyle = {
   maxWidth: "100%",
   minWidth: 0,
   boxSizing: "border-box",
+  lineHeight: "48px",
+  paddingTop: 0,
+  paddingBottom: 0,
   WebkitAppearance: "none",
   appearance: "none",
 } as const;

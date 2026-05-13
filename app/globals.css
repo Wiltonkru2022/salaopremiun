@@ -110,6 +110,21 @@ textarea:focus-visible {
   box-shadow: 0 0 0 4px var(--app-ring);
 }
 
+.sp-native-date-time::-webkit-date-and-time-value {
+  display: flex;
+  align-items: center;
+  min-height: 48px;
+  line-height: 48px;
+  text-align: left;
+}
+
+.sp-native-date-time::-webkit-datetime-edit {
+  display: flex;
+  align-items: center;
+  min-height: 48px;
+  padding: 0;
+}
+
 .app-cliente-root button:focus-visible,
 .app-cliente-root a:focus-visible,
 .app-cliente-root input:focus-visible,
