@@ -60,12 +60,25 @@ type AgendaDiaRow = {
 };
 
 function inputClass() {
-  return "mt-2 h-12 w-full min-w-0 rounded-[18px] border border-zinc-200 bg-white px-4 text-base outline-none transition focus:border-zinc-400";
+  return "mt-2 h-12 block w-full min-w-0 max-w-full box-border rounded-[18px] border border-zinc-200 bg-white px-4 text-base outline-none transition focus:border-zinc-400";
 }
 
 function textAreaClass() {
-  return "mt-2 min-h-[96px] w-full rounded-[18px] border border-zinc-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-zinc-400";
+  return "mt-2 block min-h-[96px] w-full min-w-0 max-w-full box-border rounded-[18px] border border-zinc-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-zinc-400";
 }
+
+function nativeDateTimeClass() {
+  return `${inputClass()} appearance-none overflow-hidden text-left [color-scheme:light]`;
+}
+
+const nativeDateTimeStyle = {
+  width: "100%",
+  maxWidth: "100%",
+  minWidth: 0,
+  boxSizing: "border-box",
+  WebkitAppearance: "none",
+  appearance: "none",
+} as const;
 
 function getStatusTone(status?: string | null) {
   const value = String(status || "").toLowerCase();
@@ -313,25 +326,27 @@ export default async function NovoAgendamentoProfissionalPage({
               </select>
             </label>
 
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <label className="block min-w-0 text-sm font-medium text-zinc-700">
+            <div className="grid w-full min-w-0 grid-cols-1 gap-3 overflow-hidden sm:grid-cols-2">
+              <label className="block w-full min-w-0 overflow-hidden text-sm font-medium text-zinc-700">
                 Data
                 <input
                   type="date"
                   name="data"
                   defaultValue={dataSelecionada}
-                  className={inputClass()}
+                  className={nativeDateTimeClass()}
+                  style={nativeDateTimeStyle}
                   required
                 />
               </label>
 
-              <label className="block min-w-0 text-sm font-medium text-zinc-700">
+              <label className="block w-full min-w-0 overflow-hidden text-sm font-medium text-zinc-700">
                 Hora
                 <input
                   type="time"
                   name="hora_inicio"
                   defaultValue={query.hora_inicio || ""}
-                  className={inputClass()}
+                  className={nativeDateTimeClass()}
+                  style={nativeDateTimeStyle}
                   required
                 />
               </label>
