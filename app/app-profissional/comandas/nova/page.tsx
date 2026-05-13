@@ -2,6 +2,7 @@ import { Clock3, Receipt, Sparkles, UserRound } from "lucide-react";
 import { criarComandaProfissionalAction } from "@/app/app-profissional/comandas/nova/actions";
 import ProfissionalShell from "@/components/profissional/layout/ProfissionalShell";
 import ProfissionalSectionHeader from "@/components/profissional/ui/ProfissionalSectionHeader";
+import ProfissionalSearchableFormField from "@/components/profissional/ui/ProfissionalSearchableFormField";
 import ProfissionalSurface from "@/components/profissional/ui/ProfissionalSurface";
 import { requireProfissionalAppContext } from "@/lib/profissional-context.server";
 import { runAdminOperation } from "@/lib/supabase/admin-ops";
@@ -40,7 +41,7 @@ function horaAtualArredondada() {
 }
 
 function inputClass() {
-  return "mt-2 h-11 w-full min-w-0 rounded-[18px] border border-zinc-200 bg-white px-4 text-base outline-none transition focus:border-zinc-400";
+  return "mt-2 h-12 w-full min-w-0 rounded-[18px] border border-zinc-200 bg-white px-4 text-base leading-none outline-none transition focus:border-zinc-400";
 }
 
 export default async function NovaComandaProfissionalPage({
@@ -149,11 +150,42 @@ export default async function NovaComandaProfissionalPage({
             description="Escolha cliente, serviço e horário para abrir tudo pronto."
           />
 
-          <form action={criarComandaProfissionalAction} className="space-y-3.5">
+          <form
+            action={criarComandaProfissionalAction}
+            className="space-y-3.5 [&>label:nth-of-type(-n+2)]:hidden"
+          >
+            <ProfissionalSearchableFormField
+              name="cliente_id"
+              label="Cliente"
+              defaultValue={query.cliente_id || ""}
+              placeholder="Digite nome ou telefone"
+              emptyText="Nenhum cliente encontrado."
+              options={clientes.map((cliente) => ({
+                value: cliente.id,
+                label: cliente.nome,
+                description: cliente.telefone || null,
+              }))}
+            />
+
+            <ProfissionalSearchableFormField
+              name="servico_id"
+              label="Serviço inicial"
+              defaultValue={query.servico_id || ""}
+              placeholder="Digite o nome do serviço"
+              emptyText="Nenhum serviço encontrado."
+              options={servicos.map((servico) => ({
+                value: servico.id,
+                label: servico.nome,
+                description: servico.duracao_minutos
+                  ? `${servico.duracao_minutos} min`
+                  : null,
+              }))}
+            />
             <label className="block text-sm font-medium text-zinc-700">
               Cliente
               <select
-                name="cliente_id"
+                disabled
+                name="_cliente_id_legacy"
                 defaultValue={query.cliente_id || ""}
                 className={inputClass()}
                 required
@@ -171,7 +203,8 @@ export default async function NovaComandaProfissionalPage({
             <label className="block text-sm font-medium text-zinc-700">
               Serviço inicial
               <select
-                name="servico_id"
+                disabled
+                name="_servico_id_legacy"
                 defaultValue={query.servico_id || ""}
                 className={inputClass()}
                 required
@@ -186,7 +219,7 @@ export default async function NovaComandaProfissionalPage({
               </select>
             </label>
 
-            <div className="grid grid-cols-1 gap-2.5 min-[380px]:grid-cols-2">
+            <div className="grid grid-cols-1 gap-3 min-[520px]:grid-cols-2">
               <label className="block text-sm font-medium text-zinc-700">
                 Data
                 <input
@@ -211,7 +244,7 @@ export default async function NovaComandaProfissionalPage({
             </div>
 
             <label className="block text-sm font-medium text-zinc-700">
-              Observacoes
+              Observações
               <textarea
                 name="observacoes"
                 defaultValue={query.observacoes || ""}

@@ -8,6 +8,7 @@ import {
   KeyRound,
   LogOut,
   MessageCircle,
+  Settings,
   ShieldCheck,
   Star,
   UserRound,
@@ -213,7 +214,6 @@ export default async function PerfilProfissionalPage({
     notificacao_app_ativa: profissional.notificacao_app_ativa !== false,
     notificacao_email_ativa: profissional.notificacao_email_ativa !== false,
   };
-
   return (
     <ProfissionalShell title="Perfil" subtitle="Sua conta no Salão Premium.">
       <section className="mx-auto max-w-3xl py-2">
@@ -263,7 +263,7 @@ export default async function PerfilProfissionalPage({
 
         <div className="rounded-[1.5rem] bg-white p-4 shadow-[0_18px_45px_rgba(15,23,42,0.08)]">
           <ProfileRow
-            href="/app-profissional/perfil#dados"
+            href="/app-profissional/perfil/detalhes"
             label="Detalhes da conta"
             icon={UserRound}
           />
@@ -276,6 +276,11 @@ export default async function PerfilProfissionalPage({
             href="/app-profissional/notificacoes"
             label="Notificações"
             icon={Bell}
+          />
+          <ProfileRow
+            href="/app-profissional/perfil/configuracoes"
+            label="Configurações"
+            icon={Settings}
           />
           <ProfileRow
             href="/app-profissional/recuperar-senha"
@@ -302,14 +307,11 @@ export default async function PerfilProfissionalPage({
             label="Privacidade"
             icon={ShieldCheck}
           />
-          <div className="pt-4">
-            <AppVersionBadge label="App Profissional" />
-          </div>
         </div>
 
         <div
           id="dados"
-          className="mt-5 rounded-[1.5rem] bg-white p-4 shadow-[0_18px_45px_rgba(15,23,42,0.08)]"
+          className="hidden"
         >
           <div className="mb-3 bg-zinc-50 px-3 py-3 text-xs font-bold uppercase tracking-[0.12em] text-zinc-500">
             Dados profissionais
@@ -346,7 +348,7 @@ export default async function PerfilProfissionalPage({
           ))}
         </div>
 
-        <div className="mt-5 rounded-[1.5rem] bg-white p-4 shadow-[0_18px_45px_rgba(15,23,42,0.08)]">
+        <div className="hidden">
           <ProfissionalNotificationSettings
             initialSettings={notificationSettings}
           />
@@ -383,6 +385,10 @@ export default async function PerfilProfissionalPage({
             Fale com o salão para atualizar informações profissionais, Pix ou
             foto de perfil.
           </p>
+        </div>
+
+        <div className="mt-5">
+          <AppVersionBadge label="App Profissional" />
         </div>
       </section>
     </ProfissionalShell>

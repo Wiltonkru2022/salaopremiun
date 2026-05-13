@@ -3,6 +3,7 @@ import { buscarConfiguracaoAgendaProfissional } from "@/app/services/profissiona
 import { criarAgendamentoProfissionalAction } from "@/app/app-profissional/agenda/actions";
 import ProfissionalShell from "@/components/profissional/layout/ProfissionalShell";
 import ProfissionalSectionHeader from "@/components/profissional/ui/ProfissionalSectionHeader";
+import ProfissionalSearchableFormField from "@/components/profissional/ui/ProfissionalSearchableFormField";
 import ProfissionalStatusPill from "@/components/profissional/ui/ProfissionalStatusPill";
 import ProfissionalSurface from "@/components/profissional/ui/ProfissionalSurface";
 import { requireProfissionalAppContext } from "@/lib/profissional-context.server";
@@ -302,11 +303,42 @@ export default async function NovoAgendamentoProfissionalPage({
             description="Preencha o essencial para reservar o horário com clareza."
           />
 
-          <form action={criarAgendamentoProfissionalAction} className="space-y-3.5">
+          <form
+            action={criarAgendamentoProfissionalAction}
+            className="space-y-3.5 [&>label:nth-of-type(-n+2)]:hidden"
+          >
+            <ProfissionalSearchableFormField
+              name="cliente_id"
+              label="Cliente"
+              defaultValue={query.cliente_id || ""}
+              placeholder="Digite nome ou telefone"
+              emptyText="Nenhum cliente encontrado."
+              options={clientes.map((cliente) => ({
+                value: cliente.id,
+                label: cliente.nome,
+                description: cliente.telefone || null,
+              }))}
+            />
+
+            <ProfissionalSearchableFormField
+              name="servico_id"
+              label="Serviço"
+              defaultValue={query.servico_id || ""}
+              placeholder="Digite o nome do serviço"
+              emptyText="Nenhum serviço encontrado."
+              options={servicos.map((servico) => ({
+                value: servico.id,
+                label: servico.nome,
+                description: servico.duracao_minutos
+                  ? `${servico.duracao_minutos} min`
+                  : null,
+              }))}
+            />
             <label className="block text-sm font-medium text-zinc-700">
               Cliente
               <select
-                name="cliente_id"
+                disabled
+                name="_cliente_id_legacy"
                 defaultValue={query.cliente_id || ""}
                 className={inputClass()}
                 required
@@ -324,7 +356,8 @@ export default async function NovoAgendamentoProfissionalPage({
             <label className="block text-sm font-medium text-zinc-700">
               Serviço
               <select
-                name="servico_id"
+                disabled
+                name="_servico_id_legacy"
                 defaultValue={query.servico_id || ""}
                 className={inputClass()}
                 required

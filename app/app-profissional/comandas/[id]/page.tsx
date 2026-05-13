@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ArrowLeft, PlusCircle, Receipt } from "lucide-react";
 import ProfissionalShell from "@/components/profissional/layout/ProfissionalShell";
 import ProfissionalSectionHeader from "@/components/profissional/ui/ProfissionalSectionHeader";
+import ProfissionalSearchableFormField from "@/components/profissional/ui/ProfissionalSearchableFormField";
 import ProfissionalStatusPill from "@/components/profissional/ui/ProfissionalStatusPill";
 import ProfissionalSurface from "@/components/profissional/ui/ProfissionalSurface";
 import { requireProfissionalAppContext } from "@/lib/profissional-context.server";
@@ -384,7 +385,10 @@ export default async function ComandaDetalhePage({
                 action={<PlusCircle size={18} className="text-zinc-400" />}
               />
 
-              <form action={adicionarServicoNaComandaAction} className="space-y-2.5">
+              <form
+                action={adicionarServicoNaComandaAction}
+                className="space-y-2.5 [&>select:first-of-type]:hidden"
+              >
                 <input type="hidden" name="id_comanda" value={comanda.id} />
                 <input
                   type="hidden"
@@ -392,8 +396,25 @@ export default async function ComandaDetalhePage({
                   value={servicoIdempotencyKey}
                 />
 
-                <select
+                <ProfissionalSearchableFormField
                   name="id_servico"
+                  label="Serviço"
+                  placeholder="Digite o serviço"
+                  emptyText="Nenhum serviço encontrado."
+                  options={((servicos ?? []) as ServicoOption[]).map((servico) => {
+                    const valor = Number(servico.preco ?? servico.preco_padrao ?? 0);
+
+                    return {
+                      value: servico.id,
+                      label: servico.nome,
+                      description: formatarMoeda(valor),
+                    };
+                  })}
+                />
+
+                <select
+                  disabled
+                  name="_id_servico_legacy"
                   className="h-11 w-full rounded-[18px] border border-zinc-200 bg-white px-4 text-sm outline-none"
                   defaultValue=""
                 >
@@ -435,7 +456,10 @@ export default async function ComandaDetalhePage({
               />
 
               {(extras ?? []).length ? (
-                <form action={adicionarExtraNaComandaAction} className="space-y-2.5">
+                <form
+                  action={adicionarExtraNaComandaAction}
+                  className="space-y-2.5 [&>select:first-of-type]:hidden"
+                >
                   <input type="hidden" name="id_comanda" value={comanda.id} />
                   <input
                     type="hidden"
@@ -443,8 +467,21 @@ export default async function ComandaDetalhePage({
                     value={extraIdempotencyKey}
                   />
 
-                  <select
+                  <ProfissionalSearchableFormField
                     name="id_item_extra"
+                    label="Item extra"
+                    placeholder="Digite o item extra"
+                    emptyText="Nenhum item extra encontrado."
+                    options={(extras ?? []).map((extra) => ({
+                      value: extra.id,
+                      label: extra.nome,
+                      description: formatarMoeda(Number(extra.preco_venda || 0)),
+                    }))}
+                  />
+
+                  <select
+                    disabled
+                    name="_id_item_extra_legacy"
                     className="h-11 w-full rounded-[18px] border border-zinc-200 bg-white px-4 text-sm outline-none"
                     defaultValue=""
                   >

@@ -47,7 +47,7 @@ export default function ProfissionalShell({
         <ProfissionalHeader title={title} subtitle={subtitle} />
         {mounted ? <ProfissionalInstallPrompt /> : null}
 
-        <main className="min-w-0 overflow-x-hidden flex-1 px-3 pb-28 pt-3 sm:px-4 sm:pt-4">
+        <main className="min-w-0 overflow-x-hidden flex-1 px-3 pb-28 pt-[8.25rem] sm:px-4 sm:pt-[8.75rem]">
           {children}
         </main>
 
