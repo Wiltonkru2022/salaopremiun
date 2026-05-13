@@ -308,3 +308,46 @@ export async function queueOracleVpsReport(payload?: Record<string, unknown>) {
     },
   });
 }
+
+async function getOracleVpsProtectedReport(path: string) {
+  const config = getOracleVpsConfig();
+
+  if (!config.configured) {
+    return {
+      configured: false,
+      ok: false,
+      error:
+        "Integração da VPS Oracle ainda não configurada. Defina ORACLE_VPS_API_URL e ORACLE_VPS_API_TOKEN no ambiente.",
+    };
+  }
+
+  try {
+    const result = await requestOracleVps(path, {
+      protected: true,
+      timeoutMs: 5000,
+    });
+
+    return {
+      configured: true,
+      ok: true,
+      result,
+    };
+  } catch (error) {
+    return {
+      configured: true,
+      ok: false,
+      error:
+        error instanceof Error
+          ? error.message
+          : "Falha ao consultar relatório na VPS Oracle.",
+    };
+  }
+}
+
+export async function getOracleVpsSalesReport() {
+  return getOracleVpsProtectedReport("/relatorios/vendas");
+}
+
+export async function getOracleVpsProfessionalsReport() {
+  return getOracleVpsProtectedReport("/relatorios/profissionais");
+}

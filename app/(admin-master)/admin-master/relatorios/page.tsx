@@ -11,6 +11,10 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { requireAdminMasterUser } from "@/lib/admin-master/auth/requireAdminMasterUser";
+import {
+  getOracleVpsProfessionalsReport,
+  getOracleVpsSalesReport,
+} from "@/lib/oracle-vps/client";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
@@ -120,6 +124,25 @@ function salonName(map: Map<string, SalonRow>, id: string | null | undefined) {
   return map.get(id)?.nome || id;
 }
 
+function asRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" ? (value as Record<string, unknown>) : {};
+}
+
+function asNumber(value: unknown) {
+  const numberValue = Number(value);
+  return Number.isFinite(numberValue) ? numberValue : 0;
+}
+
+function getVpsReportMetric(
+  response: Awaited<ReturnType<typeof getOracleVpsSalesReport>>,
+  key: string
+) {
+  if (!response.configured || !response.ok) return 0;
+  const result = asRecord(response.result);
+  const report = asRecord(result.relatorio);
+  return asNumber(report[key]);
+}
+
 function isPaidCharge(row: ChargeRow) {
   const status = String(row.status || "").toLowerCase();
   return Boolean(row.pago_em || row.paid_em) || ["pago", "paid", "received", "confirmado"].includes(status);
@@ -210,6 +233,8 @@ export default async function AdminMasterRelatoriosPage() {
     { data: comandasData },
     { data: logsData },
     { data: saudeData },
+    oracleSalesReport,
+    oracleProfessionalsReport,
   ] = await Promise.all([
     supabase
       .from("saloes")
@@ -245,6 +270,8 @@ export default async function AdminMasterRelatoriosPage() {
       .select("id_salao, score_total, uso_recente, inadimplencia_risco, tickets_abertos, risco_cancelamento, atualizado_em")
       .order("score_total", { ascending: true })
       .limit(100),
+    getOracleVpsSalesReport(),
+    getOracleVpsProfessionalsReport(),
   ]);
 
   const saloes = ((saloesData || []) as SalonRow[]) || [];
@@ -318,6 +345,14 @@ export default async function AdminMasterRelatoriosPage() {
     },
   ];
   const maxModuleUse = Math.max(...usageModules.map((item) => item.value), 1);
+  const oracleSalesCount = getVpsReportMetric(oracleSalesReport, "totalRegistros");
+  const oracleProfessionalCount = getVpsReportMetric(
+    oracleProfessionalsReport,
+    "totalCalculos"
+  );
+  const oracleConfigured =
+    oracleSalesReport.configured && oracleProfessionalsReport.configured;
+  const oracleOnline = oracleSalesReport.ok && oracleProfessionalsReport.ok;
 
   const topRevenueSalons = Array.from(
     comandasFechadas.reduce((map, item) => {
@@ -384,6 +419,60 @@ export default async function AdminMasterRelatoriosPage() {
           icon={AlertTriangle}
           tone={inadimplente.length ? "amber" : "white"}
         />
+      </section>
+
+      <section className="rounded-[24px] border border-blue-200 bg-blue-50 p-4 text-blue-950 shadow-sm">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <div className="inline-flex items-center gap-2 rounded-full bg-white/80 px-3 py-1 text-xs font-black uppercase tracking-[0.2em] text-blue-700">
+              <Activity size={14} />
+              Oracle VPS
+            </div>
+            <h2 className="mt-3 font-display text-2xl font-black">
+              RelatÃ³rio espelhado na VPS
+            </h2>
+            <p className="mt-1 max-w-3xl text-sm font-semibold leading-6 text-blue-800/80">
+              A Vercel continua sendo a fonte oficial. A VPS entra como leitura
+              comparativa para validar relatÃ³rios leves antes de migrar cÃ¡lculos
+              maiores de vendas, profissionais e comissÃµes.
+            </p>
+          </div>
+          <div className="grid gap-2 sm:grid-cols-3 lg:min-w-[520px]">
+            <div className="rounded-[18px] border border-blue-200 bg-white p-3">
+              <div className="text-xs font-black uppercase tracking-[0.18em] text-blue-500">
+                Status
+              </div>
+              <div className="mt-2 text-lg font-black">
+                {oracleOnline
+                  ? "Online"
+                  : oracleConfigured
+                    ? "AtenÃ§Ã£o"
+                    : "NÃ£o configurada"}
+              </div>
+            </div>
+            <div className="rounded-[18px] border border-blue-200 bg-white p-3">
+              <div className="text-xs font-black uppercase tracking-[0.18em] text-blue-500">
+                Vendas VPS
+              </div>
+              <div className="mt-2 text-lg font-black">{oracleSalesCount}</div>
+            </div>
+            <div className="rounded-[18px] border border-blue-200 bg-white p-3">
+              <div className="text-xs font-black uppercase tracking-[0.18em] text-blue-500">
+                Profissionais VPS
+              </div>
+              <div className="mt-2 text-lg font-black">{oracleProfessionalCount}</div>
+            </div>
+          </div>
+        </div>
+        {!oracleOnline ? (
+          <p className="mt-3 rounded-[16px] border border-blue-200 bg-white/80 p-3 text-sm font-semibold text-blue-900">
+            {oracleSalesReport.configured
+              ? oracleSalesReport.error ||
+                oracleProfessionalsReport.error ||
+                "A VPS nÃ£o respondeu aos relatÃ³rios leves agora."
+              : "Configure ORACLE_VPS_API_URL e ORACLE_VPS_API_TOKEN para ativar esta leitura."}
+          </p>
+        ) : null}
       </section>
 
       <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_420px]">
