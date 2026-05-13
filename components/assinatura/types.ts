@@ -10,6 +10,17 @@ export type CardForm = {
   ccv: string;
 };
 
+export type PlanoAssinaturaInfo = {
+  codigo?: string;
+  nome: string;
+  valor: number;
+  descricao: string;
+  recursos: string[];
+  ordem: number;
+  foco?: string;
+  destaque?: boolean;
+};
+
 export type SalaoRow = {
   id: string;
   nome: string | null;

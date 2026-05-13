@@ -7,11 +7,12 @@ import {
   PLANO_RECURSOS_PADRAO,
 } from "@/lib/plans/access";
 import {
-  getPlanoCatalogo,
-  getPlanoDowngradeCatalogo,
-  getPlanoUpgradeCatalogo,
   PLANOS_TABELA_FEATURES,
 } from "@/lib/plans/catalog";
+import {
+  getPlanoSaasCatalogo,
+  getPlanosSaasCobraveisOrdenados,
+} from "@/lib/plans/catalog-server";
 import { getPainelUserContext } from "@/lib/auth/get-painel-user-context";
 import { getAssinaturaUrl } from "@/lib/site-urls";
 
@@ -31,14 +32,12 @@ function statusLabel(status: string) {
   return normalized || "sem status";
 }
 
-function getPlanoCheckoutHref(planoAtual: string) {
-  const planoCatalogo = getPlanoCatalogo(planoAtual);
-
-  if (planoCatalogo.codigo === "teste_gratis") {
+function getPlanoCheckoutHref(planoCodigo: string) {
+  if (planoCodigo === "teste_gratis") {
     return getAssinaturaUrl("/assinatura?plano=basico");
   }
 
-  return getAssinaturaUrl(`/assinatura?plano=${planoCatalogo.codigo}`);
+  return getAssinaturaUrl(`/assinatura?plano=${planoCodigo}`);
 }
 
 function getMotivoMeta(motivo?: string | null) {
@@ -112,11 +111,18 @@ export default async function MeuPlanoPage({
     redirect(getAssinaturaUrl("/assinatura"));
   }
 
-  const access = await getPlanoAccessSnapshot(usuario.id_salao);
-  const planoCatalogo = getPlanoCatalogo(access.planoCodigo);
+  const [access, planosCobraveis] = await Promise.all([
+    getPlanoAccessSnapshot(usuario.id_salao),
+    getPlanosSaasCobraveisOrdenados(),
+  ]);
+  const planoCatalogo = await getPlanoSaasCatalogo(access.planoCodigo);
   const assinaturaHref = getPlanoCheckoutHref(access.planoCodigo);
-  const upgradePlano = getPlanoUpgradeCatalogo(access.planoCodigo);
-  const downgradePlano = getPlanoDowngradeCatalogo(access.planoCodigo);
+  const planoAtualOrdem = planoCatalogo.ordem;
+  const upgradePlano =
+    planosCobraveis.find((plano) => plano.ordem > planoAtualOrdem) || null;
+  const downgradePlano =
+    [...planosCobraveis].reverse().find((plano) => plano.ordem < planoAtualOrdem) ||
+    null;
   const recursos = PLANO_RECURSOS_PADRAO.filter(
     (codigo) =>
       codigo !== "agendamentos_mensais" &&

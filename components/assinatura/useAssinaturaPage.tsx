@@ -18,6 +18,7 @@ import { useRenovacaoAutomatica } from "./useRenovacaoAutomatica";
 import { useAssinaturaStatus } from "./useAssinaturaStatus";
 import {
   PLANOS_INFO,
+  type PlanoAssinaturaInfo,
   type BillingType,
   type CardForm,
 } from "./types";
@@ -32,6 +33,8 @@ export function useAssinaturaPage() {
 
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState("");
+  const [planosInfo, setPlanosInfo] =
+    useState<Record<string, PlanoAssinaturaInfo>>(PLANOS_INFO);
 
   const [planoSelecionado, setPlanoSelecionado] = useState<string>("pro");
   const [billingType, setBillingType] = useState<BillingType>("PIX");
@@ -135,6 +138,53 @@ export function useAssinaturaPage() {
     }
   }, [carregarAcesso, carregarStatusAssinatura]);
 
+  const carregarCatalogoPlanos = useCallback(async () => {
+    try {
+      const response = await fetch("/api/planos-saas", {
+        method: "GET",
+        cache: "no-store",
+      });
+      const data = (await response.json().catch(() => null)) as
+        | {
+            ok?: boolean;
+            planos?: Array<{
+              codigo: string;
+              nome: string;
+              valorMensal: number;
+              subtitulo?: string;
+              foco?: string;
+              ordem: number;
+              destaque?: boolean;
+              recursosLiberados?: string[];
+            }>;
+          }
+        | null;
+
+      if (!response.ok || !data?.ok || !Array.isArray(data.planos)) return;
+
+      const nextInfo = data.planos.reduce<Record<string, PlanoAssinaturaInfo>>(
+        (acc, plano) => {
+          acc[plano.codigo] = {
+            codigo: plano.codigo,
+            nome: plano.nome,
+            valor: Number(plano.valorMensal || 0),
+            descricao: plano.subtitulo || "",
+            recursos: (plano.recursosLiberados || []).slice(0, 6),
+            ordem: Number(plano.ordem || 0),
+            foco: plano.foco,
+            destaque: plano.destaque,
+          };
+          return acc;
+        },
+        { ...PLANOS_INFO }
+      );
+
+      setPlanosInfo(nextInfo);
+    } catch {
+      setPlanosInfo(PLANOS_INFO);
+    }
+  }, []);
+
   const {
     gerandoCobranca,
     verificandoAgora,
@@ -187,7 +237,8 @@ export function useAssinaturaPage() {
 
   useEffect(() => {
     void carregarDados();
-  }, [carregarDados]);
+    void carregarCatalogoPlanos();
+  }, [carregarDados, carregarCatalogoPlanos]);
 
   useEffect(() => {
     setRenovacaoAutomatica(Boolean(assinatura?.renovacao_automatica));
@@ -290,12 +341,12 @@ export function useAssinaturaPage() {
   });
 
   const planoAtualNome =
-    PLANOS_INFO[assinatura?.plano || ""]?.nome || assinatura?.plano || "-";
+    planosInfo[assinatura?.plano || ""]?.nome || assinatura?.plano || "-";
 
   const valorAtual =
-    PLANOS_INFO[assinatura?.plano || ""]?.valor ??
+    planosInfo[assinatura?.plano || ""]?.valor ??
     assinatura?.valor ??
-    PLANOS_INFO[planoSelecionado]?.valor ??
+    planosInfo[planoSelecionado]?.valor ??
     0;
 
   const statusNormalizado = String(assinatura?.status || "").toLowerCase();
@@ -345,6 +396,7 @@ export function useAssinaturaPage() {
     assinatura,
     checkout,
     planoSelecionado,
+    planosInfo,
     setPlanoSelecionado: selecionarPlano,
     billingType,
     setBillingType,

@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import type { BillingType, CardForm } from "./types";
+import type { BillingType, CardForm, PlanoAssinaturaInfo } from "./types";
 import { PLANOS_INFO } from "./types";
 import {
   formatarAno,
@@ -12,6 +12,7 @@ import {
 
 type Props = {
   podeGerenciar: boolean;
+  planosInfo: Record<string, PlanoAssinaturaInfo>;
   planoSelecionado: string;
   setPlanoSelecionado: React.Dispatch<React.SetStateAction<string>>;
   planoAtual: string | null;
@@ -47,10 +48,11 @@ function LoadingDot() {
 
 function getMovimentoPlano(
   planoAtual: string | null,
-  planoSelecionado: string
+  planoSelecionado: string,
+  planosInfo: Record<string, PlanoAssinaturaInfo>
 ): MovimentoPlano | null {
-  const infoAtual = planoAtual ? PLANOS_INFO[planoAtual] : null;
-  const infoSelecionado = PLANOS_INFO[planoSelecionado];
+  const infoAtual = planoAtual ? planosInfo[planoAtual] || PLANOS_INFO[planoAtual] : null;
+  const infoSelecionado = planosInfo[planoSelecionado] || PLANOS_INFO[planoSelecionado];
 
   if (!infoSelecionado) {
     return null;
@@ -96,6 +98,7 @@ function getMovimentoPlano(
 
 export default function AssinaturaPlanosPagamento({
   podeGerenciar,
+  planosInfo,
   planoSelecionado,
   setPlanoSelecionado,
   planoAtual,
@@ -125,7 +128,7 @@ export default function AssinaturaPlanosPagamento({
     );
   }
 
-  const movimentoPlano = getMovimentoPlano(planoAtual, planoSelecionado);
+  const movimentoPlano = getMovimentoPlano(planoAtual, planoSelecionado, planosInfo);
 
   return (
     <section className="rounded-[30px] border border-zinc-200 bg-white p-6 shadow-sm">
@@ -164,10 +167,11 @@ export default function AssinaturaPlanosPagamento({
         <div className="mt-5 grid gap-4 md:grid-cols-3">
           {(["basico", "pro", "premium"] as string[]).map((plano) => {
             const info = PLANOS_INFO[plano];
+            const dynamicInfo = planosInfo[plano] || info;
             const ativo = planoSelecionado === plano;
-            const badge = getMovimentoPlano(planoAtual, plano);
+            const badge = getMovimentoPlano(planoAtual, plano, planosInfo);
 
-            if (!info) return null;
+            if (!dynamicInfo) return null;
 
             return (
               <button
@@ -203,22 +207,22 @@ export default function AssinaturaPlanosPagamento({
                   ) : null}
                 </div>
 
-                <div className="text-3xl font-bold leading-none">{info.nome}</div>
+                <div className="text-3xl font-bold leading-none">{dynamicInfo.nome}</div>
 
                 <div
                   className={`mt-4 text-base ${
                     ativo ? "text-zinc-600" : "text-zinc-500"
                   }`}
                 >
-                  {info.descricao}
+                  {dynamicInfo.descricao}
                 </div>
 
                 <div className="mt-6 text-4xl font-bold">
-                  {formatarMoeda(info.valor)}
+                  {formatarMoeda(dynamicInfo.valor)}
                 </div>
 
                 <div className="mt-6 space-y-2 text-sm text-zinc-600">
-                  {info.recursos.map((item) => (
+                  {dynamicInfo.recursos.map((item) => (
                     <div key={item}>{item}</div>
                   ))}
                 </div>

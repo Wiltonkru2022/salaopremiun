@@ -56,6 +56,7 @@ function LoginPageContent() {
   const returnTo = sanitizeLoginReturnTo(searchParams.get("returnTo"));
   const loginContext = searchParams.get("context")?.trim() || "";
   const redirectNotice = getLoginRedirectNotice(searchParams);
+  const googleErro = searchParams.get("erro")?.trim() || "";
   const agendaQuickLogin = loginContext === "agenda" || returnTo === "/agenda";
   const redirectHref = returnTo
     ? getManagedHostHrefForPath(appendBootParam(returnTo))
@@ -185,6 +186,38 @@ function LoginPageContent() {
     }
   }
 
+  async function handleGoogleLogin() {
+    try {
+      if (!supabase) {
+        throw new Error("Serviço de autenticação indisponível neste ambiente.");
+      }
+
+      setLoading(true);
+      setErro("");
+
+      const callbackUrl = new URL("/auth/callback", window.location.origin);
+      callbackUrl.searchParams.set("next", returnTo || "/dashboard?boot=1");
+
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: callbackUrl.toString(),
+          queryParams: {
+            access_type: "offline",
+            prompt: "select_account",
+          },
+        },
+      });
+
+      if (error) {
+        throw error;
+      }
+    } catch (error) {
+      setLoading(false);
+      setErro(getLoginErrorMessage(error));
+    }
+  }
+
   function limparSessaoLocal() {
     clearSupabaseBrowserAuthState();
     setRateLimited(false);
@@ -286,6 +319,13 @@ function LoginPageContent() {
               </div>
             ) : null}
 
+            {googleErro ? (
+              <div className="mb-5 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                Não foi possível concluir o login com Google agora. Use e-mail e
+                senha ou tente novamente.
+              </div>
+            ) : null}
+
             <form onSubmit={handleLogin} className="space-y-5">
               <div>
                 <label className="mb-2 block text-sm font-bold text-zinc-800">
@@ -361,6 +401,24 @@ function LoginPageContent() {
                 {loading ? "Entrando..." : "Entrar"}
               </button>
             </form>
+
+            <div className="my-5 flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.18em] text-zinc-400">
+              <span className="h-px flex-1 bg-zinc-200" />
+              ou
+              <span className="h-px flex-1 bg-zinc-200" />
+            </div>
+
+            <button
+              type="button"
+              onClick={handleGoogleLogin}
+              disabled={loading || !supabase}
+              className="flex min-h-12 w-full items-center justify-center gap-3 rounded-2xl border border-zinc-300 bg-white px-4 text-sm font-black text-zinc-900 transition hover:border-zinc-950 disabled:opacity-60"
+            >
+              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white text-base font-black text-zinc-950 shadow-sm ring-1 ring-zinc-200">
+                G
+              </span>
+              Entrar com Google
+            </button>
 
             {loading && redirectMessage ? (
               <div className="mt-4 rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-700">

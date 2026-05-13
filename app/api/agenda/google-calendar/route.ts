@@ -5,6 +5,12 @@ import {
   AuthzError,
   requireSalaoAnyPermission,
 } from "@/lib/auth/require-salao-permission";
+import {
+  getGoogleCalendarConnection,
+  getValidGoogleCalendarAccessToken,
+  isGoogleCalendarConfigured,
+  upsertGoogleCalendarEvent,
+} from "@/lib/google-calendar/oauth";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 const payloadSchema = z.object({
@@ -21,24 +27,11 @@ type AppointmentRow = {
   hora_fim: string;
   observacoes?: string | null;
   status?: string | null;
+  google_calendar_event_id?: string | null;
   clientes?: { nome?: string | null; whatsapp?: string | null } | null;
   profissionais?: { nome?: string | null; nome_exibicao?: string | null } | null;
   servicos?: { nome?: string | null; preco?: number | string | null } | null;
 };
-
-function escapeIcsText(value: unknown) {
-  return String(value || "")
-    .replace(/\\/g, "\\\\")
-    .replace(/\n/g, "\\n")
-    .replace(/,/g, "\\,")
-    .replace(/;/g, "\\;");
-}
-
-function toGoogleCalendarDate(value: string, time: string) {
-  const date = String(value || "").slice(0, 10).replace(/-/g, "");
-  const [hour = "00", minute = "00"] = String(time || "00:00").split(":");
-  return `${date}T${hour.padStart(2, "0")}${minute.padStart(2, "0")}00`;
-}
 
 function getPeriod(viewMode: "day" | "week", data: string) {
   const date = new Date(`${data}T12:00:00`);
@@ -51,54 +44,36 @@ function getPeriod(viewMode: "day" | "week", data: string) {
   };
 }
 
-function buildIcs(params: {
-  idSalao: string;
-  profissionalId: string;
-  periodStart: string;
-  periodEnd: string;
-  rows: AppointmentRow[];
-}) {
-  const now = new Date().toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
-  const lines = [
-    "BEGIN:VCALENDAR",
-    "VERSION:2.0",
-    "PRODID:-//SalaoPremium//Agenda//PT-BR",
-    "CALSCALE:GREGORIAN",
-    "METHOD:PUBLISH",
-    "X-WR-CALNAME:SalaoPremium - Agenda profissional",
-  ];
+function toGoogleDateTime(date: string, time: string) {
+  return `${date}T${String(time || "00:00").slice(0, 5)}:00-04:00`;
+}
 
-  params.rows.forEach((row) => {
-    const clienteNome = row.clientes?.nome || "Cliente";
-    const servicoNome = row.servicos?.nome || "Atendimento";
-    const profissionalNome =
-      row.profissionais?.nome_exibicao || row.profissionais?.nome || "Profissional";
-    const summary = `${servicoNome} - ${clienteNome}`;
-    const description = [
+function buildGoogleEvent(row: AppointmentRow) {
+  const clienteNome = row.clientes?.nome || "Cliente";
+  const servicoNome = row.servicos?.nome || "Atendimento";
+  const profissionalNome =
+    row.profissionais?.nome_exibicao || row.profissionais?.nome || "Profissional";
+
+  return {
+    summary: `${servicoNome} - ${clienteNome}`,
+    description: [
       `Cliente: ${clienteNome}`,
       `Profissional: ${profissionalNome}`,
       row.clientes?.whatsapp ? `WhatsApp: ${row.clientes.whatsapp}` : "",
       row.observacoes ? `Observações: ${row.observacoes}` : "",
-      "Sincronizado pelo Salão Premium.",
+      "Sincronizado automaticamente pelo Salão Premium.",
     ]
       .filter(Boolean)
-      .join("\\n");
-
-    lines.push(
-      "BEGIN:VEVENT",
-      `UID:${row.id}@salaopremiun.com.br`,
-      `DTSTAMP:${now}`,
-      `DTSTART;TZID=America/Sao_Paulo:${toGoogleCalendarDate(row.data, row.hora_inicio)}`,
-      `DTEND;TZID=America/Sao_Paulo:${toGoogleCalendarDate(row.data, row.hora_fim)}`,
-      `SUMMARY:${escapeIcsText(summary)}`,
-      `DESCRIPTION:${escapeIcsText(description)}`,
-      "STATUS:CONFIRMED",
-      "END:VEVENT"
-    );
-  });
-
-  lines.push("END:VCALENDAR");
-  return lines.join("\r\n");
+      .join("\n"),
+    start: {
+      dateTime: toGoogleDateTime(row.data, row.hora_inicio),
+      timeZone: "America/Campo_Grande",
+    },
+    end: {
+      dateTime: toGoogleDateTime(row.data, row.hora_fim),
+      timeZone: "America/Campo_Grande",
+    },
+  };
 }
 
 export async function POST(req: NextRequest) {
@@ -106,13 +81,38 @@ export async function POST(req: NextRequest) {
     const body = payloadSchema.parse(await req.json());
     await requireSalaoAnyPermission(body.idSalao, ["agenda_ver", "agenda_editar"]);
 
+    if (!isGoogleCalendarConfigured()) {
+      return NextResponse.json(
+        {
+          ok: false,
+          requiresConfig: true,
+          error:
+            "Google Calendar ainda não está configurado. Cadastre GOOGLE_CALENDAR_CLIENT_ID, GOOGLE_CALENDAR_CLIENT_SECRET e GOOGLE_CALENDAR_REDIRECT_URI na produção.",
+        },
+        { status: 409 }
+      );
+    }
+
+    const connection = await getGoogleCalendarConnection(body.idSalao);
+    if (!connection) {
+      return NextResponse.json(
+        {
+          ok: false,
+          requiresConnection: true,
+          connectUrl: "/api/integracoes/google-calendar/connect",
+          error:
+            "Conecte a conta Google do salão antes de sincronizar a agenda automaticamente.",
+        },
+        { status: 409 }
+      );
+    }
+
     const period = getPeriod(body.viewMode, body.data);
     const supabase = getSupabaseAdmin();
-
     const { data, error } = await (supabase as any)
       .from("agendamentos")
       .select(
-        "id, data, hora_inicio, hora_fim, observacoes, status, clientes(nome, whatsapp), profissionais(nome, nome_exibicao), servicos(nome, preco)"
+        "id, data, hora_inicio, hora_fim, observacoes, status, google_calendar_event_id, clientes(nome, whatsapp), profissionais(nome, nome_exibicao), servicos(nome, preco)"
       )
       .eq("id_salao", body.idSalao)
       .eq("profissional_id", body.profissionalId)
@@ -126,47 +126,49 @@ export async function POST(req: NextRequest) {
       throw new Error(error.message || "Erro ao buscar agenda confirmada.");
     }
 
-    const rows = ((data || []) as AppointmentRow[]).filter(
+    const rows = ((data || []) as unknown as AppointmentRow[]).filter(
       (item) => item.data && item.hora_inicio && item.hora_fim
     );
-    const ids = rows.map((item) => item.id);
 
-    if (ids.length) {
+    if (!rows.length) {
+      return NextResponse.json({
+        ok: true,
+        total: 0,
+        period,
+        nextSuggestion: "Nenhum atendimento confirmado neste período.",
+      });
+    }
+
+    const accessToken = await getValidGoogleCalendarAccessToken(connection);
+    let synced = 0;
+
+    for (const row of rows) {
+      const eventId = await upsertGoogleCalendarEvent({
+        accessToken,
+        calendarId: connection.calendar_id || "primary",
+        eventId: row.google_calendar_event_id,
+        event: buildGoogleEvent(row),
+      });
+
       await (supabase as any)
         .from("agendamentos")
         .update({
+          google_calendar_event_id: eventId,
           google_calendar_sync_status: "sincronizado",
           google_calendar_synced_at: new Date().toISOString(),
         })
-        .in("id", ids)
+        .eq("id", row.id)
         .eq("id_salao", body.idSalao);
+
+      synced += 1;
     }
-
-    const ics = buildIcs({
-      idSalao: body.idSalao,
-      profissionalId: body.profissionalId,
-      periodStart: period.start,
-      periodEnd: period.end,
-      rows,
-    });
-
-    const googleCalendarUrl = "https://calendar.google.com/calendar/u/0/r/settings/export";
-    const fileName =
-      body.viewMode === "week"
-        ? `salaopremium-agenda-${period.start}-a-${period.end}.ics`
-        : `salaopremium-agenda-${period.start}.ics`;
 
     return NextResponse.json({
       ok: true,
-      total: rows.length,
+      total: synced,
       period,
-      fileName,
-      googleCalendarUrl,
-      ics,
-      nextSuggestion:
-        rows.length > 0
-          ? "Arquivo pronto para importar no Google Agenda."
-          : "Nenhum atendimento confirmado neste período.",
+      googleEmail: connection.google_email,
+      nextSuggestion: `${synced} atendimento(s) sincronizado(s) automaticamente com o Google Calendar.`,
     });
   } catch (error) {
     if (error instanceof ZodError) {
@@ -189,7 +191,7 @@ export async function POST(req: NextRequest) {
         error:
           error instanceof Error
             ? error.message
-            : "Erro ao preparar integração com Google Agenda.",
+            : "Erro ao sincronizar com Google Calendar.",
       },
       { status: 500 }
     );

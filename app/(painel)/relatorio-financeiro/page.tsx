@@ -11,6 +11,7 @@ import {
   CreditCard,
   Download,
   FileText,
+  MessageCircle,
   Printer,
   Receipt,
   Scissors,
@@ -1544,6 +1545,20 @@ export default function RelatorioFinanceiroPage() {
     resumo,
   ]);
 
+  const enviarRelatorioWhatsApp = useCallback(() => {
+    imprimirRelatorio();
+    const texto = [
+      `Relatório financeiro Salão Premium`,
+      `Período: ${dataInicio} até ${dataFim}`,
+      "O PDF foi gerado pela janela de impressão do sistema. Anexe o arquivo salvo nesta conversa para compartilhar com segurança.",
+    ].join("\n");
+    window.open(
+      `https://wa.me/?text=${encodeURIComponent(texto)}`,
+      "_blank",
+      "noopener,noreferrer"
+    );
+  }, [dataFim, dataInicio, imprimirRelatorio]);
+
   if (loading) {
     return (
       <AppLoading
@@ -2294,6 +2309,14 @@ export default function RelatorioFinanceiroPage() {
             >
               <Printer size={16} />
               Imprimir agora
+            </button>
+            <button
+              type="button"
+              onClick={enviarRelatorioWhatsApp}
+              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-700"
+            >
+              <MessageCircle size={16} />
+              Enviar para WhatsApp
             </button>
           </>
         }

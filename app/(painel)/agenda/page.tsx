@@ -961,19 +961,22 @@ export default function AgendaPage() {
         ok?: boolean;
         error?: string;
         total?: number;
-        fileName?: string;
-        ics?: string;
-        googleCalendarUrl?: string;
+        requiresConnection?: boolean;
+        connectUrl?: string;
         nextSuggestion?: string;
       };
 
       if (!response.ok || !payload.ok) {
+        if (payload.requiresConnection && payload.connectUrl) {
+          window.location.assign(payload.connectUrl);
+          return;
+        }
         throw new Error(
           payload.error || "Não foi possível preparar o Google Agenda."
         );
       }
 
-      if (!payload.total || !payload.ics) {
+      if (!payload.total) {
         setErroTela(
           payload.nextSuggestion ||
             "Nenhum atendimento confirmado neste período para sincronizar."
@@ -981,21 +984,10 @@ export default function AgendaPage() {
         return;
       }
 
-      const blob = new Blob([payload.ics], {
-        type: "text/calendar;charset=utf-8",
-      });
-      const url = URL.createObjectURL(blob);
-      const anchor = document.createElement("a");
-      anchor.href = url;
-      anchor.download = payload.fileName || "salaopremium-agenda.ics";
-      document.body.appendChild(anchor);
-      anchor.click();
-      anchor.remove();
-      URL.revokeObjectURL(url);
-
-      if (payload.googleCalendarUrl) {
-        window.open(payload.googleCalendarUrl, "_blank", "noopener,noreferrer");
-      }
+      setErroTela(
+        payload.nextSuggestion ||
+          `${payload.total} atendimento(s) sincronizado(s) com o Google Calendar.`
+      );
     } catch (error) {
       setErroTela(
         error instanceof Error

@@ -20,6 +20,7 @@ export default function AssinaturaPage() {
     assinatura,
     checkout,
     planoSelecionado,
+    planosInfo,
     setPlanoSelecionado,
     billingType,
     setBillingType,
@@ -157,6 +158,7 @@ export default function AssinaturaPage() {
         <section className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
           <AssinaturaPlanosPagamento
             podeGerenciar={podeGerenciar}
+            planosInfo={planosInfo}
             planoSelecionado={planoSelecionado}
             setPlanoSelecionado={setPlanoSelecionado}
             planoAtual={assinatura?.plano || null}

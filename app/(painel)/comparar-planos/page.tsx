@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { Check, Crown, Sparkles } from "lucide-react";
 import {
-  getPlanoCatalogo,
-  getPlanosCobraveisOrdenados,
-} from "@/lib/plans/catalog";
+  getPlanoSaasCatalogo,
+  getPlanosSaasCobraveisOrdenados,
+} from "@/lib/plans/catalog-server";
 import { getPainelUserContext } from "@/lib/auth/get-painel-user-context";
 import { getAssinaturaUrl } from "@/lib/site-urls";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
@@ -83,8 +83,10 @@ export default async function CompararPlanosPage() {
     jaPossuiAssinatura = Boolean(assinatura?.id);
   }
 
-  const planoAtualInfo = getPlanoCatalogo(planoAtual);
-  const planos = getPlanosCobraveisOrdenados();
+  const [planoAtualInfo, planos] = await Promise.all([
+    getPlanoSaasCatalogo(planoAtual),
+    getPlanosSaasCobraveisOrdenados(),
+  ]);
 
   return (
     <div className="space-y-5">
