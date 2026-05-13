@@ -27,6 +27,22 @@ function urlBase64ToUint8Array(value: string) {
   return outputArray;
 }
 
+function arrayBufferToUrlBase64(value: ArrayBuffer | null) {
+  if (!value) return "";
+
+  const bytes = new Uint8Array(value);
+  let binary = "";
+  bytes.forEach((byte) => {
+    binary += String.fromCharCode(byte);
+  });
+
+  return window
+    .btoa(binary)
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/g, "");
+}
+
 async function saveSubscription(audience: PushAudience, subscription: PushSubscription) {
   return fetch("/api/push/subscribe", {
     method: "POST",
@@ -93,9 +109,30 @@ export default function PushPermissionRuntime({
       const registration = await navigator.serviceWorker
         .register("/sw.js", { scope: "/" })
         .catch(() => null);
-      const subscription = await registration?.pushManager
+      let subscription = await registration?.pushManager
         .getSubscription()
         .catch(() => null);
+
+      const subscriptionKey = arrayBufferToUrlBase64(
+        subscription?.options.applicationServerKey || null
+      );
+
+      if (
+        registration &&
+        subscription &&
+        subscriptionKey &&
+        subscriptionKey !== String(payload.publicKey)
+      ) {
+        await subscription.unsubscribe().catch(() => false);
+        subscription = null;
+
+        if (permission === "granted") {
+          subscription = await registration.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array(String(payload.publicKey)),
+          });
+        }
+      }
 
       if (subscription) {
         await saveSubscription(audience, subscription).catch(() => null);
