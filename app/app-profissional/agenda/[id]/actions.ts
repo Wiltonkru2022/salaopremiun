@@ -100,7 +100,7 @@ export async function atualizarAgendamentoProfissionalAction(
 
   try {
     if (!idAgendamento) throw new Error("Agendamento invalido.");
-    if (!data || !horaInicio) throw new Error("Informe data e horario.");
+    if (!data || !horaInicio) throw new Error("Informe data e horário.");
     if (!STATUS_PERMITIDOS.has(status)) throw new Error("Status invalido.");
     await assertCanMutatePlanFeature(session.idSalao, "agenda");
 
@@ -144,7 +144,7 @@ export async function atualizarAgendamentoProfissionalAction(
         buildUrl(
           idAgendamento,
           "erro",
-          "Ja existe outro atendimento neste horario. Marque confirmar conflito para salvar mesmo assim."
+          "Já existe outro atendimento neste horário. Marque confirmar conflito para salvar mesmo assim."
         )
       );
     }

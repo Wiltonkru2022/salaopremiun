@@ -107,7 +107,7 @@ export default async function AgendaProfissionalPage({
             title="Dia de trabalho"
             description={
               agenda.expedienteAtivo
-                ? `Expediente das ${agenda.horaInicioExpediente} as ${agenda.horaFimExpediente}.`
+                ? `Expediente das ${agenda.horaInicioExpediente} às ${agenda.horaFimExpediente}.`
                 : "Sem expediente ativo neste dia."
             }
           />

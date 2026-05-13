@@ -68,7 +68,7 @@ export async function criarComandaProfissionalAction(formData: FormData) {
       redirect(
         buildNovaComandaUrl({
           ...redirectBase,
-          erro: "Preencha cliente, servico, data e horario.",
+          erro: "Preencha cliente, serviço, data e horário.",
         })
       );
     }

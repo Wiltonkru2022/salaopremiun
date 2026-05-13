@@ -654,7 +654,7 @@ export default function ClientBookingForm({
                       setMonthCursor((current) => addMonths(current, -1))
                     }
                     className="flex h-11 w-11 items-center justify-center rounded-xl border border-zinc-200 bg-white text-zinc-700"
-                    aria-label="Mes anterior"
+                    aria-label="Mês anterior"
                   >
                     <ChevronLeft size={20} />
                   </button>
@@ -664,7 +664,7 @@ export default function ClientBookingForm({
                       setMonthCursor((current) => addMonths(current, 1))
                     }
                     className="flex h-11 w-11 items-center justify-center rounded-xl border border-zinc-200 bg-white text-zinc-700"
-                    aria-label="Proximo mes"
+                    aria-label="Próximo mês"
                   >
                     <ChevronRight size={20} />
                   </button>

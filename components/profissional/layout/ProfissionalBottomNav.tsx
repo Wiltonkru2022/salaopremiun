@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import { CalendarDays, Home, Receipt, User2, Users } from "lucide-react";
 
 const items = [
-  { href: "/app-profissional/inicio", label: "Inicio", icon: Home, key: "inicio" },
+  { href: "/app-profissional/inicio", label: "Início", icon: Home, key: "inicio" },
   { href: "/app-profissional/clientes", label: "Clientes", icon: Users, key: "clientes" },
   { href: "/app-profissional/agenda", label: "Agenda", icon: CalendarDays, key: "agenda" },
   { href: "/app-profissional/comandas", label: "Comandas", icon: Receipt, key: "comandas" },

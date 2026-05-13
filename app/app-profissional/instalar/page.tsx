@@ -11,7 +11,7 @@ function stepsFor(device: string) {
     return [
       "Abra esta página no Safari do iPhone.",
       "Toque no botão de compartilhar.",
-      "Escolha Adicionar a Tela de Inicio.",
+      "Escolha Adicionar à Tela de Início.",
       "Confirme em Adicionar.",
     ];
   }

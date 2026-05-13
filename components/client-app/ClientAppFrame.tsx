@@ -68,7 +68,7 @@ export default function ClientAppFrame({
               href="/politica-de-privacidade"
               className="underline underline-offset-4"
             >
-              Politica de privacidade
+              Política de privacidade
             </Link>
             <Link
               href="/app-cliente/recuperar-acesso"

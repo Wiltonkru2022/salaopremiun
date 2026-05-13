@@ -14,6 +14,16 @@ function hojeISO() {
   return local.toISOString().slice(0, 10);
 }
 
+function formatarDataCompacta(dataISO: string) {
+  const [ano, mes, dia] = dataISO.split("-");
+
+  if (!ano || !mes || !dia) {
+    return dataISO;
+  }
+
+  return `${dia}/${mes}/${ano}`;
+}
+
 type SearchParams = Promise<{
   cliente_id?: string;
   servico_id?: string;
@@ -240,12 +250,12 @@ export default async function NovoAgendamentoProfissionalPage({
               </p>
             </div>
 
-            <div className="rounded-[1.1rem] bg-white/10 px-4 py-2.5 text-right">
-              <div className="text-[11px] uppercase tracking-[0.12em] text-zinc-400">
-                Dia selecionado
+            <div className="w-[6.4rem] shrink-0 rounded-[1.1rem] bg-white/10 px-3 py-2.5 text-center">
+              <div className="text-[10px] uppercase leading-none tracking-[0.1em] text-zinc-400">
+                Dia
               </div>
-              <div className="mt-1 text-sm font-bold text-white">
-                {dataSelecionada}
+              <div className="mt-1 whitespace-nowrap text-[13px] font-bold text-white">
+                {formatarDataCompacta(dataSelecionada)}
               </div>
             </div>
           </div>

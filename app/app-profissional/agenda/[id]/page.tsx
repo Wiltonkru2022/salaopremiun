@@ -459,7 +459,7 @@ export default async function AgendamentoDetalheProfissionalPage({
 
         <ProfissionalSurface>
           <ProfissionalSectionHeader
-            title="Ações rapidas"
+            title="Ações rápidas"
             description="Use quando o atendimento mudar de rumo."
           />
 

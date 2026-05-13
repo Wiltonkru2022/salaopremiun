@@ -16,7 +16,7 @@ const steps = [
     title: "Veja salões perto de você",
     text: "Use sua localização para encontrar opções próximas e chegar no horário certo.",
     icon: MapPin,
-    action: "Proximo",
+    action: "Próximo",
   },
   {
     title: "Nunca perca um agendamento",
@@ -117,7 +117,7 @@ export default function ClientOnboarding() {
         onClick={() => void continueFlow()}
         className="mb-4 inline-flex h-14 items-center justify-center gap-2 rounded-2xl bg-zinc-950 text-base font-black text-white shadow-[0_18px_36px_rgba(15,23,42,0.18)]"
       >
-        {step === 0 ? "Proximo" : current.action}
+        {step === 0 ? "Próximo" : current.action}
         <ChevronRight size={20} />
       </button>
     </main>

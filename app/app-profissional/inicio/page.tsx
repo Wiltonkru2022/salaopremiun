@@ -1,9 +1,9 @@
 import Link from "next/link";
 import {
   ArrowRight,
+  BadgeDollarSign,
   CalendarPlus2,
   Clock3,
-  MessageCircleQuestion,
   Receipt,
   Sparkles,
   UserPlus2,
@@ -105,7 +105,7 @@ export default async function InicioProfissionalPage() {
 
   return (
     <ProfissionalShell
-      title="Inicio"
+      title="Início"
       subtitle={`${saudacao()}, ${session.nome}`}
     >
       <div className="space-y-3.5">
@@ -146,7 +146,7 @@ export default async function InicioProfissionalPage() {
           <div className="mt-3.5 grid grid-cols-3 gap-2">
             <div className="rounded-[18px] bg-white/10 p-2.5">
               <div className="text-[11px] uppercase tracking-[0.12em] text-zinc-400">
-                Proximo
+                Próximo
               </div>
               <div className="mt-1 text-lg font-bold">{primeiroHorario}</div>
             </div>
@@ -162,7 +162,7 @@ export default async function InicioProfissionalPage() {
 
             <div className="rounded-[18px] bg-white/10 p-2.5">
               <div className="text-[11px] uppercase tracking-[0.12em] text-zinc-400">
-                Mes
+                Mês
               </div>
               <div className="mt-1 text-lg font-bold">
                 {resumo.atendimentosMes}
@@ -173,7 +173,7 @@ export default async function InicioProfissionalPage() {
 
         <ProfissionalSurface>
           <ProfissionalSectionHeader
-            title="Ações rapidas"
+            title="Ações rápidas"
             description="Tudo o que você mais usa no dia a dia."
           />
 
@@ -202,11 +202,11 @@ export default async function InicioProfissionalPage() {
               />
             </Link>
 
-            <Link href="/app-profissional/suporte" className="block">
+            <Link href="/app-profissional/comissao" className="block">
               <ProfissionalActionCard
-                icon={<MessageCircleQuestion size={18} />}
-                title="Suporte"
-                subtitle="Tirar duvidas"
+                icon={<BadgeDollarSign size={18} />}
+                title="Comissões"
+                subtitle="Ver repasses"
               />
             </Link>
           </div>
@@ -267,7 +267,7 @@ export default async function InicioProfissionalPage() {
 
           <div className="grid grid-cols-2 gap-3">
             <ProfissionalStatCard
-              label="Comissão do mes"
+              label="Comissão do mês"
               value={formatarMoeda(resumo.totalComissaoMes)}
               helper="Valor acumulado"
             />
@@ -275,7 +275,7 @@ export default async function InicioProfissionalPage() {
             <ProfissionalStatCard
               label="Atendimentos hoje"
               value={String(resumo.atendimentosHoje)}
-              helper={`${resumo.atendimentosMes} no mes`}
+              helper={`${resumo.atendimentosMes} no mês`}
             />
           </div>
         </ProfissionalSurface>
@@ -291,7 +291,7 @@ export default async function InicioProfissionalPage() {
                 Precisa de ajuda?
               </div>
               <p className="mt-1.5 text-sm leading-6 text-zinc-500">
-                Use o suporte para login, agenda, comandas, caixa e duvidas
+                Use o suporte para login, agenda, comandas, caixa e dúvidas
                 operacionais do app profissional.
               </p>
               <Link
