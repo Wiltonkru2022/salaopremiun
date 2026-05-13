@@ -13,6 +13,34 @@ type ComissaoLancamentoRow = {
   pago_em: string | null;
 };
 
+export type ResumoComissaoProfissional = {
+  itens: Array<{
+    id: string;
+    competenciaData: string | null;
+    descricao: string;
+    percentualAplicado: number;
+    valorBase: number;
+    valor: number;
+    status: string;
+    pagoEm: string | null;
+  }>;
+  totalMes: number;
+  totalPago: number;
+  totalPendente: number;
+  totalLancamentos: number;
+  ticketMedio: number;
+  erro?: string;
+};
+
+export const RESUMO_COMISSAO_VAZIO: ResumoComissaoProfissional = {
+  itens: [],
+  totalMes: 0,
+  totalPago: 0,
+  totalPendente: 0,
+  totalLancamentos: 0,
+  ticketMedio: 0,
+};
+
 function inicioMesISO() {
   const now = new Date();
   return new Date(now.getFullYear(), now.getMonth(), 1)
@@ -40,7 +68,7 @@ function getValorLancamento(item: ComissaoLancamentoRow) {
 export async function buscarResumoComissaoProfissional(
   idSalao: string,
   idProfissional: string
-) {
+): Promise<ResumoComissaoProfissional> {
   const inicioMes = inicioMesISO();
   const fimMes = fimMesISO();
 
@@ -49,22 +77,42 @@ export async function buscarResumoComissaoProfissional(
     actorId: idProfissional,
     idSalao,
     run: async (supabaseAdmin) => {
-      const { data, error } = await supabaseAdmin
+      const select =
+        "id, competencia_data, descricao, percentual_aplicado, valor_base, valor_comissao, valor_comissao_assistente, tipo_destinatario, status, pago_em";
+
+      let result = await supabaseAdmin
         .from("comissoes_lancamentos")
-        .select(
-          "id, competencia_data, descricao, percentual_aplicado, valor_base, valor_comissao, valor_comissao_assistente, tipo_destinatario, status, pago_em"
-        )
+        .select(select)
         .eq("id_salao", idSalao)
         .eq("id_profissional", idProfissional)
         .gte("competencia_data", inicioMes)
         .lte("competencia_data", fimMes)
         .order("competencia_data", { ascending: false })
-        .order("created_at", { ascending: false })
+        .order("criado_em", { ascending: false })
         .limit(50);
+
+      if (result.error) {
+        const message = String(result.error.message || "");
+
+        if (
+          message.includes("criado_em") ||
+          message.includes("competencia_data") ||
+          message.includes("does not exist")
+        ) {
+          result = await supabaseAdmin
+            .from("comissoes_lancamentos")
+            .select(select)
+            .eq("id_salao", idSalao)
+            .eq("id_profissional", idProfissional)
+            .limit(50);
+        }
+      }
+
+      const { data, error } = result;
 
       if (error) {
         throw new Error(
-          error.message || "Erro ao carregar comissoes do profissional."
+          error.message || "Erro ao carregar comissões do profissional."
         );
       }
 
@@ -75,7 +123,7 @@ export async function buscarResumoComissaoProfissional(
         return {
           id: item.id,
           competenciaData: item.competencia_data,
-          descricao: item.descricao || "Lancamento de comissao",
+          descricao: item.descricao || "Lançamento de comissão",
           percentualAplicado: Number(item.percentual_aplicado || 0),
           valorBase: Number(item.valor_base || 0),
           valor,
