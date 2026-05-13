@@ -2,9 +2,14 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { CheckCircle2, LoaderCircle, ServerCog, TriangleAlert } from "lucide-react";
+import {
+  CheckCircle2,
+  LoaderCircle,
+  ServerCog,
+  TriangleAlert,
+} from "lucide-react";
 
-type OracleVpsAction = "ping" | "backup" | "notifications" | "report";
+type OracleVpsAction = "ping" | "backup" | "notifications" | "report" | "cleanup";
 
 const ACTION_COPY: Record<
   OracleVpsAction,
@@ -33,6 +38,12 @@ const ACTION_COPY: Record<
     loading: "Registrando...",
     success: "Relatório registrado",
     endpoint: "/api/admin-master/oracle-vps/report",
+  },
+  cleanup: {
+    label: "Limpar logs antigos",
+    loading: "Limpando...",
+    success: "Limpeza concluída",
+    endpoint: "/api/admin-master/oracle-vps/cleanup",
   },
 };
 

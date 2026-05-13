@@ -17,6 +17,8 @@ export type OracleVpsApiStatus =
       monitoringErrors: unknown;
       monitoringPerformance: unknown;
       jobs: unknown;
+      backups: unknown;
+      reprocess: unknown;
       checkedAt: string;
       error?: string;
     };
@@ -181,6 +183,8 @@ export async function getOracleVpsStatus(): Promise<OracleVpsApiStatus> {
       monitoringErrors,
       monitoringPerformance,
       jobs,
+      backups,
+      reprocess,
     ] = await Promise.all([
       requestOracleVps("/status"),
       requestOracleVps("/admin/system", { protected: true }),
@@ -188,6 +192,8 @@ export async function getOracleVpsStatus(): Promise<OracleVpsApiStatus> {
       requestOracleVps("/admin/monitoring/errors?limit=5", { protected: true }),
       requestOracleVps("/admin/monitoring/performance", { protected: true }),
       requestOracleVps("/admin/jobs?limit=10", { protected: true }),
+      requestOracleVps("/backup", { protected: true }),
+      requestOracleVps("/admin/reprocess", { protected: true }),
     ]);
 
     return {
@@ -199,6 +205,8 @@ export async function getOracleVpsStatus(): Promise<OracleVpsApiStatus> {
       monitoringErrors,
       monitoringPerformance,
       jobs,
+      backups,
+      reprocess,
       checkedAt: new Date().toISOString(),
     };
   } catch (error) {
@@ -211,6 +219,8 @@ export async function getOracleVpsStatus(): Promise<OracleVpsApiStatus> {
       monitoringErrors: null,
       monitoringPerformance: null,
       jobs: null,
+      backups: null,
+      reprocess: null,
       checkedAt: new Date().toISOString(),
       error:
         error instanceof Error
@@ -383,6 +393,18 @@ export async function queueOracleVpsBackup(payload?: Record<string, unknown>) {
   });
 }
 
+export async function queueOracleVpsCleanup(payload?: Record<string, unknown>) {
+  return requestOracleVps("/admin/cleanup", {
+    method: "POST",
+    protected: true,
+    timeoutMs: 5000,
+    body: {
+      source: "salaopremium-next",
+      ...payload,
+    },
+  });
+}
+
 export async function queueOracleVpsNotificationProcessing(
   payload?: Record<string, unknown>
 ) {
@@ -513,7 +535,17 @@ export async function getOracleVpsOperationalSnapshot(params?: {
     }),
     checkOracleVpsGet({
       modulo: "Backup",
-      path: "/admin/backups?limit=5",
+      path: "/backup",
+      amostra,
+    }),
+    checkOracleVpsGet({
+      modulo: "Reprocessamento",
+      path: "/admin/reprocess",
+      amostra,
+    }),
+    checkOracleVpsGet({
+      modulo: "Limpeza de logs",
+      path: "/admin/jobs?limit=5",
       amostra,
     }),
   ]);

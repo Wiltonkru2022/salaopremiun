@@ -159,7 +159,18 @@ export default async function AdminMasterSaudePage() {
   const oracleJobs = Array.isArray(oracleJobsPayload.items)
     ? (oracleJobsPayload.items as Record<string, unknown>[])
     : [];
+  const oracleBackupsPayload = oracleVps.configured ? asRecord(oracleVps.backups) : {};
+  const oracleBackups = Array.isArray(oracleBackupsPayload.items)
+    ? (oracleBackupsPayload.items as Record<string, unknown>[])
+    : [];
+  const oracleReprocessPayload = oracleVps.configured ? asRecord(oracleVps.reprocess) : {};
+  const oracleReprocess = Array.isArray(oracleReprocessPayload.items)
+    ? (oracleReprocessPayload.items as Record<string, unknown>[])
+    : [];
   const pendingJobs = oracleJobs.filter(
+    (job) => String(job.status || "").toLowerCase() === "queued"
+  ).length;
+  const pendingReprocess = oracleReprocess.filter(
     (job) => String(job.status || "").toLowerCase() === "queued"
   ).length;
   const oracleErrorsPayload = oracleVps.configured
@@ -187,6 +198,23 @@ export default async function AdminMasterSaudePage() {
     status: String(job.status || "-"),
     criado: String(job.createdAt || "-"),
     processado: String(job.processedAt || "-"),
+  }));
+  const oracleBackupRows = oracleBackups.slice(0, 5).map((backup) => ({
+    id: String(backup.id || "-"),
+    tipo: String(backup.type || "-"),
+    status: String(backup.status || "-"),
+    tabelas:
+      backup.counts && typeof backup.counts === "object"
+        ? String(Object.keys(backup.counts as Record<string, unknown>).length)
+        : "-",
+    criado: String(backup.createdAt || "-"),
+  }));
+  const oracleReprocessRows = oracleReprocess.slice(0, 5).map((item) => ({
+    id: String(item.id || "-"),
+    tipo: String(item.type || "-"),
+    status: String(item.status || "-"),
+    motivo: String(item.reason || "-"),
+    criado: String(item.createdAt || "-"),
   }));
   const oracleErrorRows = oracleErrors.slice(0, 5).map((item) => ({
     id: String(item.id || "-"),
@@ -327,6 +355,7 @@ export default async function AdminMasterSaudePage() {
             <OracleVpsActionButton action="backup" />
             <OracleVpsActionButton action="notifications" />
             <OracleVpsActionButton action="report" />
+            <OracleVpsActionButton action="cleanup" />
           </div>
         </div>
 
@@ -337,6 +366,7 @@ export default async function AdminMasterSaudePage() {
             ["Disco", formatPercent(oracleDisk.usedPercent)],
             ["Uptime", formatUptime(oraclePublic.uptimeSeconds)],
             ["Jobs pendentes", String(pendingJobs)],
+            ["Reprocessar", String(pendingReprocess)],
           ].map(([label, value]) => (
             <div
               key={label}
@@ -405,6 +435,35 @@ export default async function AdminMasterSaudePage() {
                 columns={["severidade", "tipo", "rota", "mensagem", "quando"]}
                 emptyTitle="Nenhum erro espelhado na VPS."
                 emptyDescription="Erros globais, webhooks, crons e rotas lentas começam a aparecer aqui quando ocorrerem."
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-5 grid gap-4 xl:grid-cols-2">
+          <div className="rounded-[24px] border border-black/10 bg-white/60 p-4">
+            <div className="text-xs font-black uppercase tracking-[0.24em] opacity-60">
+              Backups controlados
+            </div>
+            <div className="mt-3">
+              <AdminDataTable
+                rows={oracleBackupRows}
+                columns={["tipo", "status", "tabelas", "criado"]}
+                emptyTitle="Nenhum backup metadata-only recente."
+                emptyDescription="Use o backup leve para registrar contagens sem gerar carga pesada na VPS."
+              />
+            </div>
+          </div>
+          <div className="rounded-[24px] border border-black/10 bg-white/60 p-4">
+            <div className="text-xs font-black uppercase tracking-[0.24em] opacity-60">
+              Fila de reprocessamento
+            </div>
+            <div className="mt-3">
+              <AdminDataTable
+                rows={oracleReprocessRows}
+                columns={["tipo", "status", "motivo", "criado"]}
+                emptyTitle="Nenhum item aguardando reprocessamento."
+                emptyDescription="Falhas de webhook, notificação ou cobrança entram aqui para revisão segura."
               />
             </div>
           </div>
