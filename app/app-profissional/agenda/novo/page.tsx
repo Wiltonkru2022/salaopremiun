@@ -60,7 +60,7 @@ type AgendaDiaRow = {
 };
 
 function inputClass() {
-  return "mt-2 h-11 w-full rounded-[18px] border border-zinc-200 bg-white px-4 text-sm outline-none transition focus:border-zinc-400";
+  return "mt-2 h-12 w-full min-w-0 rounded-[18px] border border-zinc-200 bg-white px-4 text-base outline-none transition focus:border-zinc-400";
 }
 
 function textAreaClass() {
@@ -180,7 +180,7 @@ export default async function NovoAgendamentoProfissionalPage({
       : item.clientes?.nome || "Cliente",
     servico_nome: Array.isArray(item.servicos)
       ? item.servicos[0]?.nome
-      : item.servicos?.nome || "Servico",
+      : item.servicos?.nome || "Serviço",
     status: item.status,
   }));
 
@@ -220,7 +220,7 @@ export default async function NovoAgendamentoProfissionalPage({
               </h1>
               <p className="mt-2.5 text-sm leading-6 text-zinc-300">
                 Escolha cliente, serviço e horário. O app já te avisa quando houver
-                conflito no mesmo periodo.
+                conflito no mesmo período.
               </p>
             </div>
 
@@ -245,7 +245,7 @@ export default async function NovoAgendamentoProfissionalPage({
             <div className="rounded-[1.1rem] border border-zinc-200 bg-zinc-50/80 p-3.5">
               <div className="flex items-center gap-2 text-sm font-semibold text-zinc-900">
                 <Clock3 size={16} />
-                Dias disponiveis
+                Dias disponíveis
               </div>
               <div className="mt-2 text-sm leading-6 text-zinc-500">
                 {diasAtivos.length ? diasAtivos.join(", ") : "Nenhum dia ativo configurado."}
@@ -296,7 +296,7 @@ export default async function NovoAgendamentoProfissionalPage({
             </label>
 
             <label className="block text-sm font-medium text-zinc-700">
-              Servico
+              Serviço
               <select
                 name="servico_id"
                 defaultValue={query.servico_id || ""}
@@ -313,8 +313,8 @@ export default async function NovoAgendamentoProfissionalPage({
               </select>
             </label>
 
-            <div className="grid grid-cols-2 gap-2.5">
-              <label className="block text-sm font-medium text-zinc-700">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <label className="block min-w-0 text-sm font-medium text-zinc-700">
                 Data
                 <input
                   type="date"
@@ -325,7 +325,7 @@ export default async function NovoAgendamentoProfissionalPage({
                 />
               </label>
 
-              <label className="block text-sm font-medium text-zinc-700">
+              <label className="block min-w-0 text-sm font-medium text-zinc-700">
                 Hora
                 <input
                   type="time"
@@ -338,7 +338,7 @@ export default async function NovoAgendamentoProfissionalPage({
             </div>
 
             <label className="block text-sm font-medium text-zinc-700">
-              Observacoes
+              Observações
               <textarea
                 name="observacoes"
                 defaultValue={query.observacoes || ""}
