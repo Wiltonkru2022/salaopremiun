@@ -14,6 +14,8 @@ export type OracleVpsApiStatus =
       publicStatus: unknown;
       system: unknown;
       monitoringSummary: unknown;
+      monitoringErrors: unknown;
+      monitoringPerformance: unknown;
       jobs: unknown;
       checkedAt: string;
       error?: string;
@@ -23,6 +25,7 @@ type OracleVpsRequestOptions = {
   method?: "GET" | "POST";
   body?: unknown;
   protected?: boolean;
+  timeoutMs?: number;
 };
 
 function getOracleVpsConfig() {
@@ -64,6 +67,7 @@ async function requestOracleVps(
     headers,
     body: options.body === undefined ? undefined : JSON.stringify(options.body),
     cache: "no-store",
+    signal: AbortSignal.timeout(options.timeoutMs || 7000),
   });
 
   const text = await response.text();
@@ -99,10 +103,19 @@ export async function getOracleVpsStatus(): Promise<OracleVpsApiStatus> {
   }
 
   try {
-    const [publicStatus, system, monitoringSummary, jobs] = await Promise.all([
+    const [
+      publicStatus,
+      system,
+      monitoringSummary,
+      monitoringErrors,
+      monitoringPerformance,
+      jobs,
+    ] = await Promise.all([
       requestOracleVps("/status"),
       requestOracleVps("/admin/system", { protected: true }),
       requestOracleVps("/admin/monitoring/summary", { protected: true }),
+      requestOracleVps("/admin/monitoring/errors?limit=5", { protected: true }),
+      requestOracleVps("/admin/monitoring/performance", { protected: true }),
       requestOracleVps("/admin/jobs?limit=10", { protected: true }),
     ]);
 
@@ -112,6 +125,8 @@ export async function getOracleVpsStatus(): Promise<OracleVpsApiStatus> {
       publicStatus,
       system,
       monitoringSummary,
+      monitoringErrors,
+      monitoringPerformance,
       jobs,
       checkedAt: new Date().toISOString(),
     };
@@ -122,6 +137,8 @@ export async function getOracleVpsStatus(): Promise<OracleVpsApiStatus> {
       publicStatus: null,
       system: null,
       monitoringSummary: null,
+      monitoringErrors: null,
+      monitoringPerformance: null,
       jobs: null,
       checkedAt: new Date().toISOString(),
       error:
@@ -148,6 +165,7 @@ export async function sendOracleVpsPing(payload?: Record<string, unknown>) {
     const result = await requestOracleVps("/jobs/ping", {
       method: "POST",
       protected: true,
+      timeoutMs: 5000,
       body: {
         source: "salaopremium-next",
         ...payload,
@@ -170,4 +188,79 @@ export async function sendOracleVpsPing(payload?: Record<string, unknown>) {
           : "Falha ao enviar ping para a VPS Oracle.",
     };
   }
+}
+
+export async function sendOracleVpsMonitoringEvent(
+  payload: Record<string, unknown>
+) {
+  const config = getOracleVpsConfig();
+
+  if (!config.configured) {
+    return { ok: false, configured: false };
+  }
+
+  try {
+    await requestOracleVps("/monitoring/event", {
+      method: "POST",
+      protected: true,
+      timeoutMs: 2500,
+      body: {
+        source: "salaopremium-next",
+        ...payload,
+        mirroredAt: new Date().toISOString(),
+      },
+    });
+
+    return { ok: true, configured: true };
+  } catch (error) {
+    return {
+      ok: false,
+      configured: true,
+      error:
+        error instanceof Error
+          ? error.message
+          : "Falha ao espelhar evento para a VPS Oracle.",
+    };
+  }
+}
+
+export async function queueOracleVpsBackup(payload?: Record<string, unknown>) {
+  return requestOracleVps("/jobs/backup/supabase", {
+    method: "POST",
+    protected: true,
+    timeoutMs: 5000,
+    body: {
+      mode: "metadata_only",
+      source: "salaopremium-next",
+      ...payload,
+    },
+  });
+}
+
+export async function queueOracleVpsNotificationProcessing(
+  payload?: Record<string, unknown>
+) {
+  return requestOracleVps("/jobs/notifications/process", {
+    method: "POST",
+    protected: true,
+    timeoutMs: 5000,
+    body: {
+      dryRun: true,
+      source: "salaopremium-next",
+      ...payload,
+    },
+  });
+}
+
+export async function queueOracleVpsReport(payload?: Record<string, unknown>) {
+  return requestOracleVps("/jobs/reports/generate", {
+    method: "POST",
+    protected: true,
+    timeoutMs: 5000,
+    body: {
+      dryRun: true,
+      source: "salaopremium-next",
+      ...payload,
+    },
+  });
 }

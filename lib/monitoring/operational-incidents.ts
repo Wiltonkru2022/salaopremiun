@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { registrarLogSistema } from "@/lib/system-logs";
+import { sendOracleVpsMonitoringEvent } from "@/lib/oracle-vps/client";
 
 type OperationalAlertSeverity = "baixa" | "media" | "alta" | "critica";
 
@@ -73,6 +74,20 @@ export async function reportOperationalIncident(
     },
     { onConflict: "chave" }
   );
+
+  await sendOracleVpsMonitoringEvent({
+    severity: mapLogSeverity(severity),
+    type: "operational_incident",
+    route: String(details.route || details.path || ""),
+    source: params.webhook ? "webhook" : "server",
+    message: params.title,
+    module: params.module,
+    idSalao: params.idSalao || null,
+    details: {
+      descricao: params.description,
+      ...details,
+    },
+  }).catch(() => null);
 
   if (!params.webhook) {
     return;

@@ -250,6 +250,42 @@ Rotas sensíveis devem validar segredo:
 
 Use idempotência em webhooks e notificações para evitar envio duplicado.
 
+### Oracle VPS Auxiliar
+
+A VPS Oracle não substitui Vercel nem Supabase. Ela funciona como braço auxiliar para monitoramento, jobs leves, webhooks internos e rotinas controladas.
+
+Configuração no projeto principal:
+
+```env
+ORACLE_VPS_API_URL=https://api.salaopremiun.com.br
+ORACLE_VPS_API_TOKEN=
+```
+
+O token da VPS fica no servidor em:
+
+```txt
+/opt/salaopremium-api/.env
+```
+
+Na VPS ele se chama `API_ADMIN_TOKEN`; na Vercel ele deve ser cadastrado como `ORACLE_VPS_API_TOKEN`. Nunca publique esse valor no GitHub.
+
+Rotação segura do token:
+
+1. Gerar novo token na VPS.
+2. Atualizar `API_ADMIN_TOKEN` em `/opt/salaopremium-api/.env`.
+3. Reiniciar o container `salaopremium-api`.
+4. Atualizar `ORACLE_VPS_API_TOKEN` na Vercel.
+5. Fazer redeploy.
+6. Testar `/api/admin-master/oracle-vps/status` e `/api/admin-master/oracle-vps/ping`.
+
+Segurança atual recomendada:
+
+- Portainer apenas via túnel SSH.
+- Nginx Proxy Manager admin apenas via túnel SSH.
+- Público somente `22`, `80` e `443`.
+- Fail2ban ativo para SSH.
+- Backup diário local de `/opt/salaopremium-api` com retenção curta.
+
 ## DNS e Proteção
 
 ### Registro.br / DNS
