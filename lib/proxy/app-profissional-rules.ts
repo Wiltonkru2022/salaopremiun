@@ -16,6 +16,13 @@ import { redirectAdminMasterLoginFromForeignHost } from "@/lib/proxy/admin-maste
 export function handleAppProfissionalHost(ctx: ProxyRouteContext) {
   const { request, pathname, pathnameNormalizado } = ctx;
 
+  if (
+    pathnameNormalizado === "/dashboard" ||
+    pathnameNormalizado === "/app-profissional/dashboard"
+  ) {
+    return redirectToHost(request, DOMINIO_APP, "/inicio", "");
+  }
+
   if (ctx.rotaAdminMasterLogin) {
     return redirectAdminMasterLoginFromForeignHost(ctx);
   }
