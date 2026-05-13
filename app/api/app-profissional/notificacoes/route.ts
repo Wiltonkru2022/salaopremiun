@@ -1,11 +1,26 @@
 import { NextResponse } from "next/server";
 import { listProfissionalAppNotifications } from "@/lib/profissional-app-notifications";
 import { requestOracleVpsProtected } from "@/lib/oracle-vps/client";
-import { requireProfissionalAppContext } from "@/lib/profissional-context.server";
+import { validateProfissionalAppSession } from "@/lib/profissional-context.server";
 
 export async function GET() {
   try {
-    const context = await requireProfissionalAppContext();
+    const validation = await validateProfissionalAppSession();
+
+    if (!validation.context) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error:
+            validation.reason === "plan_blocked"
+              ? "Seu salão não tem acesso ativo ao App Profissional."
+              : "Sessão inválida.",
+        },
+        { status: 401 }
+      );
+    }
+
+    const context = validation.context;
     const query = new URLSearchParams({
       id_salao: context.idSalao,
       id_profissional: context.idProfissional,
