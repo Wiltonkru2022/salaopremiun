@@ -136,7 +136,7 @@ function RecuperarSenhaContent() {
             <img src="/favicon-preview.png" alt="" className="h-full w-full object-cover" />
           </span>
           <span className="font-display text-lg font-black tracking-[-0.03em]">
-            SalaoPremium
+            SalãoPremium
           </span>
         </Link>
 
@@ -151,7 +151,7 @@ function RecuperarSenhaContent() {
       <main className="grid min-h-[calc(100vh-74px)] lg:grid-cols-2">
         <section
           className="relative hidden overflow-hidden bg-zinc-950 bg-cover bg-center lg:block"
-          style={{ backgroundImage: "url('/site/cadastro-salão-bg.jpeg')" }}
+          style={{ backgroundImage: "url('/site/cadastro-salao-bg.jpeg')" }}
         >
           <div className="absolute inset-0 bg-zinc-950/58" />
           <div className="absolute inset-0 bg-gradient-to-br from-zinc-950 via-zinc-950/55 to-transparent" />
@@ -160,15 +160,15 @@ function RecuperarSenhaContent() {
           <div>
             <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.24em] text-zinc-300">
               <Sparkles size={14} />
-              SalaoPremium
+              SalãoPremium
             </div>
 
             <h1 className="mt-5 text-[2.2rem] font-bold leading-tight">
-              Recuperacao de acesso com segurança
+              Recuperação de acesso com segurança
             </h1>
 
             <p className="mt-3 max-w-md text-sm leading-6 text-zinc-300">
-              Envie um link de redefinicao para seu e-mail e recupere o acesso
+              Envie um link de redefinição para seu e-mail e recupere o acesso
               ao painel do seu salão de forma rápida e segura.
             </p>
           </div>
@@ -182,7 +182,7 @@ function RecuperarSenhaContent() {
                 <div>
                   <p className="font-semibold">Fluxo protegido</p>
                   <p className="mt-1 text-sm text-zinc-400">
-                    Recuperacao com validacao segura.
+                    Recuperação com validação segura.
                   </p>
                 </div>
               </div>
@@ -208,7 +208,7 @@ function RecuperarSenhaContent() {
                   <Check size={20} />
                 </div>
                 <div>
-                  <p className="font-semibold">Redefinicao rápida</p>
+                  <p className="font-semibold">Redefinição rápida</p>
                   <p className="mt-1 text-sm text-zinc-400">
                     Em poucos passos você volta ao sistema.
                   </p>
@@ -237,7 +237,7 @@ function RecuperarSenhaContent() {
                     Recuperar senha
                   </h2>
                   <p className="mt-2 text-sm leading-6 text-zinc-500">
-                    Digite seu e-mail para receber o link de redefinicao
+                    Digite seu e-mail para receber o link de redefinição
                   </p>
                 </div>
 
@@ -310,7 +310,7 @@ function RecuperarSenhaContent() {
                   </h2>
 
                   <p className="mt-3 max-w-sm text-sm leading-7 text-zinc-500">
-                    Enviamos as instrucoes de recuperação para o e-mail{" "}
+                    Enviamos as instruções de recuperação para o e-mail{" "}
                     <span className="font-semibold text-zinc-800">{email}</span>.
                   </p>
 
@@ -323,8 +323,8 @@ function RecuperarSenhaContent() {
                     <p className="font-semibold text-zinc-800">Importante</p>
                     <p className="mt-1">
                       Abra o link no mesmo navegador e dispositivo em que a
-                      solicitação foi feita. Para evitar erro de dominio ou
-                      sessao velha, finalize a troca de senha sempre pelo link
+                      solicitação foi feita. Para evitar erro de domínio ou
+                      sessão antiga, finalize a troca de senha sempre pelo link
                       seguro enviado no e-mail.
                     </p>
                   </div>

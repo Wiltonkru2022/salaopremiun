@@ -127,7 +127,7 @@ export function createProfissionalAcessoService(
       }
 
       if (!params.senhaHash) {
-        throw new Error("Senha obrigatoria para criar acesso profissional.");
+        throw new Error("Senha obrigatória para criar acesso profissional.");
       }
 
       const { error } = await supabaseAdmin
@@ -173,7 +173,7 @@ export function createProfissionalAcessoService(
       }
 
       const now = new Date().toISOString();
-      const mensagem = `Senha do app redefinida pelo salao ${params.nomeSalao}. O profissional ja pode entrar com a nova senha.`;
+      const mensagem = `Senha do app redefinida pelo salão ${params.nomeSalao}. O profissional já pode entrar com a nova senha.`;
 
       await supabaseAdmin.from("ticket_mensagens").insert({
         id_ticket: params.idTicket,
@@ -186,7 +186,7 @@ export function createProfissionalAcessoService(
       const { data: eventoSenha } = await supabaseAdmin.from("ticket_eventos").insert({
         id_ticket: params.idTicket,
         evento: "senha_redefinida_salao",
-        descricao: `Senha redefinida pelo salao ${params.nomeSalao} para ${params.nomeProfissional}.`,
+        descricao: `Senha redefinida pelo salão ${params.nomeSalao} para ${params.nomeProfissional}.`,
         payload_json: {
           nome_salao: params.nomeSalao,
           nome_profissional: params.nomeProfissional,

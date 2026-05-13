@@ -8,7 +8,7 @@ import { AlertCircle, ArrowLeft, LockKeyhole, RefreshCcw, ShieldCheck, Sparkles 
 import { getErrorMessage } from "@/lib/get-error-message";
 
 const MENSAGEM_ERRO_LINK =
-  "Não foi possível validar este link de recuperação. Por segurança, a redefinicao de senha deve ser concluida no mesmo navegador e dispositivo em que a solicitacao foi feita. Solicite um novo link e abra-o no mesmo navegador para continuar.";
+  "Não foi possível validar este link de recuperação. Por segurança, a redefinição de senha deve ser concluída no mesmo navegador e dispositivo em que a solicitação foi feita. Solicite um novo link e abra-o no mesmo navegador para continuar.";
 
 function getRecoveryRedirectReason(error: unknown) {
   const text =
@@ -52,7 +52,7 @@ export default function AtualizarSenhaPage() {
       setSupabase(createClient());
     } catch (error) {
       console.warn("Supabase indisponível para atualizar senha:", error);
-      setErro("Serviço de autenticacao indisponível neste ambiente.");
+      setErro("Serviço de autenticação indisponível neste ambiente.");
       setValidandoLink(false);
     }
   }, []);
@@ -173,7 +173,7 @@ export default function AtualizarSenhaPage() {
 
     try {
       if (!supabase) {
-        throw new Error("Serviço de autenticacao indisponível neste ambiente.");
+        throw new Error("Serviço de autenticação indisponível neste ambiente.");
       }
 
       if (!senha.trim()) {
@@ -226,7 +226,7 @@ export default function AtualizarSenhaPage() {
 
       setSucesso(
         modoSenha === "authenticated"
-          ? "Senha atualizada com sucesso. Encerrando a sessao atual para você entrar novamente com a nova senha..."
+          ? "Senha atualizada com sucesso. Encerrando a sessão atual para você entrar novamente com a nova senha..."
           : "Senha atualizada com sucesso. Redirecionando para o login..."
       );
 
@@ -249,7 +249,7 @@ export default function AtualizarSenhaPage() {
             <img src="/favicon-preview.png" alt="" className="h-full w-full object-cover" />
           </span>
           <span className="font-display text-lg font-black tracking-[-0.03em]">
-            SalaoPremium
+            SalãoPremium
           </span>
         </Link>
 
@@ -264,7 +264,7 @@ export default function AtualizarSenhaPage() {
       <main className="grid min-h-[calc(100vh-74px)] lg:grid-cols-2">
         <section
           className="relative hidden overflow-hidden bg-zinc-950 bg-cover bg-center lg:block"
-          style={{ backgroundImage: "url('/site/cadastro-salão-bg.jpeg')" }}
+          style={{ backgroundImage: "url('/site/cadastro-salao-bg.jpeg')" }}
         >
           <div className="absolute inset-0 bg-zinc-950/60" />
           <div className="absolute inset-0 bg-gradient-to-br from-zinc-950 via-zinc-950/60 to-transparent" />
@@ -275,7 +275,7 @@ export default function AtualizarSenhaPage() {
                 Acesso protegido
               </div>
               <h1 className="mt-7 font-display text-[3.2rem] font-black leading-[0.95] tracking-[-0.05em] xl:text-[4.2rem]">
-                Nova senha, sessao limpa e conta segura.
+                Nova senha, sessão limpa e conta segura.
               </h1>
               <p className="mt-5 max-w-md text-base leading-7 text-white/78">
                 Finalize a troca pelo link seguro e entre novamente no painel com a nova credencial.
@@ -288,7 +288,7 @@ export default function AtualizarSenhaPage() {
                   <ShieldCheck size={20} />
                 </div>
                 <div>
-                  <p className="font-semibold">Sessao encerrada depois da troca</p>
+                  <p className="font-semibold">Sessão encerrada depois da troca</p>
                   <p className="mt-1 text-sm text-zinc-400">
                     Isso evita acesso antigo aberto em outro navegador.
                   </p>
@@ -362,11 +362,11 @@ export default function AtualizarSenhaPage() {
 
           {modoSenha === "authenticated" && !validandoLink ? (
             <div className="rounded-[20px] border border-sky-200 bg-sky-50 p-3.5 text-sm text-sky-800">
-              <p className="font-semibold">Sessao autenticada detectada</p>
+              <p className="font-semibold">Sessão autenticada detectada</p>
               <p className="mt-1 leading-6">
-                Esta troca de senha está sendo feita a partir de uma sessao já autenticada
+                Esta troca de senha está sendo feita a partir de uma sessão já autenticada
                 neste navegador. Depois de salvar a nova senha, o acesso atual será encerrado
-                para evitar sessao velha.
+                para evitar sessão antiga.
               </p>
             </div>
           ) : null}
@@ -376,7 +376,7 @@ export default function AtualizarSenhaPage() {
               <div className="flex items-start gap-3">
                 <AlertCircle size={18} className="mt-0.5 shrink-0" />
                 <div>
-                  <p className="font-semibold">Não foi possível concluir a validacao.</p>
+                  <p className="font-semibold">Não foi possível concluir a validação.</p>
                   <p className="mt-1 leading-6">{erro}</p>
                 </div>
               </div>

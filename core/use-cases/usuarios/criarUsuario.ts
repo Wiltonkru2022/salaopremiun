@@ -67,7 +67,7 @@ export async function criarUsuarioUseCase(params: {
 
     if (reusedPassword?.id) {
       throw new UsuarioUseCaseError(
-        "Esta senha ja esta sendo usada por outro usuario deste salao. Escolha uma senha diferente.",
+        "Esta senha já está sendo usada por outro usuário deste salão. Escolha uma senha diferente.",
         409
       );
     }

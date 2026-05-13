@@ -484,7 +484,7 @@ export async function loginClienteAppByEmailSenha(params: {
 
       const { data: authRows, error } = await query;
       if (error || !authRows?.length) {
-        return { ok: false, error: "E-mail ou senha invalidos." };
+        return { ok: false, error: "E-mail ou senha inválidos." };
       }
 
       if (!idSalao && authRows.length > 1) {
@@ -500,12 +500,12 @@ export async function loginClienteAppByEmailSenha(params: {
 
       const acesso = authRows[0];
       if (!acesso?.senha_hash) {
-        return { ok: false, error: "E-mail ou senha invalidos." };
+        return { ok: false, error: "E-mail ou senha inválidos." };
       }
 
       const senhaOk = await verifyClientePassword(senha, acesso.senha_hash);
       if (!senhaOk) {
-        return { ok: false, error: "E-mail ou senha invalidos." };
+        return { ok: false, error: "E-mail ou senha inválidos." };
       }
 
       const { data: cliente } = await supabaseAdmin

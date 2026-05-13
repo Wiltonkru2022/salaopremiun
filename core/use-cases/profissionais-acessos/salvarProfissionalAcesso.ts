@@ -53,7 +53,7 @@ function resolveHttpStatus(error: unknown) {
 
   const message = error instanceof Error ? error.message.toLowerCase() : "";
   if (!message) return 500;
-  if (message.includes("nao encontrado")) return 404;
+  if (message.includes("não encontrado") || message.includes("nao encontrado")) return 404;
   if (message.includes("obrigatorio") || message.includes("informe ")) return 400;
   return 500;
 }
@@ -85,7 +85,7 @@ export async function salvarProfissionalAcessoUseCase(params: {
     const profissional = await service.buscarProfissional(input.idProfissional);
 
     if (!profissional?.id || !profissional.id_salao) {
-      throw new Error("Profissional nao encontrado.");
+      throw new Error("Profissional não encontrado.");
     }
 
     if (input.ativo) {
@@ -100,7 +100,7 @@ export async function salvarProfissionalAcessoUseCase(params: {
 
     if (cpfEmUso?.id) {
       throw new SalvarProfissionalAcessoUseCaseError(
-        "Este CPF ja esta vinculado a outro acesso profissional.",
+        "Este CPF já está vinculado a outro acesso profissional.",
         409
       );
     }

@@ -20,7 +20,7 @@ function getErrorMessage(value: string | string[] | undefined) {
     sessao_expirada:
       "Estamos restaurando seu acesso neste aparelho. Se não voltar sozinho, entre novamente.",
     salao_indisponivel:
-      "Esse salão não esta disponível no app cliente agora. Confira o plano ou tente outro salão.",
+      "Esse salão não está disponível no app cliente agora. Confira o plano ou tente outro salão.",
   };
 
   return messages[code] || "Não foi possível entrar agora. Tente novamente.";

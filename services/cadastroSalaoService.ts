@@ -100,7 +100,7 @@ export function createCadastroSalaoService() {
 
       if (error || !data.user) {
         throw new CadastroSalaoServiceError(
-          error?.message || "Erro ao criar usuario.",
+          error?.message || "Erro ao criar usuário.",
           400
         );
       }
@@ -149,7 +149,7 @@ export function createCadastroSalaoService() {
       if (error || !idSalao) {
         throw new CadastroSalaoServiceError(
           error?.message ||
-            "Erro ao criar salao em transacao. Verifique a migration fn_cadastrar_salao_transacional.",
+            "Erro ao criar salão em transação. Verifique a migration fn_cadastrar_salao_transacional.",
           400
         );
       }
@@ -178,7 +178,7 @@ export function createCadastroSalaoService() {
             gravidade: "info",
             modulo: "cadastro_salao",
             idSalao,
-            mensagem: "Coordenadas do salao preenchidas automaticamente no cadastro.",
+            mensagem: "Coordenadas do salão preenchidas automaticamente no cadastro.",
             detalhes: {
               provider: coordinates.provider,
               precision: coordinates.precision,
@@ -226,7 +226,7 @@ export function createCadastroSalaoService() {
 
       if (assinaturaError) {
         throw new CadastroSalaoServiceError(
-          assinaturaError.message || "Erro ao ativar teste gratis inicial.",
+          assinaturaError.message || "Erro ao ativar teste grátis inicial.",
           500
         );
       }
@@ -246,7 +246,7 @@ export function createCadastroSalaoService() {
 
       if (salaoError) {
         throw new CadastroSalaoServiceError(
-          salaoError.message || "Erro ao atualizar teste gratis do salao.",
+          salaoError.message || "Erro ao atualizar teste grátis do salão.",
           500
         );
       }
@@ -271,7 +271,7 @@ export function createCadastroSalaoService() {
         gravidade: "info",
         modulo: "cadastro_salao",
         idSalao: params.idSalao,
-        mensagem: "Salao cadastrado com teste gratis ativo.",
+        mensagem: "Salão cadastrado com teste grátis ativo.",
         detalhes: {
           origem: params.origem,
           plano_interesse: params.plano,

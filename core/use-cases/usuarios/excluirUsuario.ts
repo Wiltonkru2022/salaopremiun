@@ -35,7 +35,7 @@ export async function excluirUsuarioUseCase(params: {
     });
 
     if (!usuario?.id) {
-      throw new UsuarioUseCaseError("Usuario nao encontrado.", 404);
+      throw new UsuarioUseCaseError("Usuário não encontrado.", 404);
     }
 
     const nivelUsuario = String(usuario.nivel || "").toLowerCase();
@@ -43,7 +43,7 @@ export async function excluirUsuarioUseCase(params: {
       const adminsCount = await service.contarAdminsAtivos(input.idSalao);
       if (adminsCount <= 1) {
         throw new UsuarioUseCaseError(
-          "Nao e permitido excluir o ultimo admin ativo do salao.",
+          "Não é permitido excluir o último admin ativo do salão.",
           409
         );
       }
@@ -69,13 +69,13 @@ export async function excluirUsuarioUseCase(params: {
 
       if (authDeleteError) {
         authAviso =
-          "Usuario removido das tabelas, mas nao foi possivel excluir do Supabase Auth.";
+          "Usuário removido das tabelas, mas não foi possível excluir do Supabase Auth.";
       } else {
         authRemovido = true;
       }
     } else {
       authAviso =
-        "Usuario removido das tabelas. Nao havia auth_user_id para excluir no Supabase Auth.";
+        "Usuário removido das tabelas. Não havia auth_user_id para excluir no Supabase Auth.";
     }
 
     return {

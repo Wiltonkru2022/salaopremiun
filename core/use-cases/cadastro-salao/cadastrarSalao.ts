@@ -10,14 +10,14 @@ const optionalString = z
   .transform((value) => (typeof value === "string" ? value.trim() : undefined));
 
 const cadastroSalaoSchema = z.object({
-  email: z.string().trim().email("Informe um e-mail valido."),
+  email: z.string().trim().email("Informe um e-mail válido."),
   senha: z
     .string()
     .trim()
     .min(1, "Informe a senha.")
     .min(6, "A senha deve ter pelo menos 6 caracteres."),
-  nomeSalao: z.string().trim().min(1, "Informe o nome do salao."),
-  responsavel: z.string().trim().min(1, "Informe o responsavel."),
+  nomeSalao: z.string().trim().min(1, "Informe o nome do salão."),
+  responsavel: z.string().trim().min(1, "Informe o responsável."),
   whatsapp: optionalString,
   cpfCnpj: optionalString,
   cep: optionalString,
@@ -95,7 +95,7 @@ export async function cadastrarSalaoUseCase(params: {
 
     if (error instanceof z.ZodError) {
       throw new CadastroSalaoUseCaseError(
-        error.issues[0]?.message || "Payload invalido.",
+        error.issues[0]?.message || "Dados inválidos para cadastro.",
         400
       );
     }

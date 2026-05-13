@@ -22,7 +22,7 @@ function SubmitButton() {
       disabled={pending}
       className="h-12 w-full rounded-2xl bg-zinc-950 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
     >
-      {pending ? "Enviando pedido..." : "Solicitar redefinicao"}
+      {pending ? "Enviando pedido..." : "Solicitar redefinição"}
     </button>
   );
 }

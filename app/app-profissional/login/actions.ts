@@ -41,7 +41,7 @@ export async function loginProfissionalAction(
       error:
         error instanceof Error
           ? error.message
-          : "Nao foi possivel validar o limite de tentativas.",
+          : "Não foi possível validar o limite de tentativas.",
     };
   }
 

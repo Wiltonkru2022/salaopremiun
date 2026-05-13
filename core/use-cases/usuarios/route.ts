@@ -26,7 +26,7 @@ export function mapUsuarioRouteError(
   if (error instanceof ZodError) {
     const firstIssue = error.issues[0];
     throw new UsuarioRouteUseCaseError(
-      firstIssue?.message || "Payload invalido.",
+      firstIssue?.message || "Dados inválidos.",
       400,
       undefined,
       error.flatten()

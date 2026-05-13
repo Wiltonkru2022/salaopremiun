@@ -42,7 +42,7 @@ async function buildProfissionalSession(params: {
   }
 
   if (!profissional) {
-    return { ok: false, error: "Profissional nao encontrado." };
+    return { ok: false, error: "Profissional não encontrado." };
   }
 
   if (!profissional.ativo) {
@@ -55,12 +55,12 @@ async function buildProfissionalSession(params: {
   ) {
     return {
       ok: false,
-      error: "Assistente do salao nao possui acesso ao app profissional.",
+      error: "Assistente do salão não possui acesso ao app profissional.",
     };
   }
 
   if (!profissional.id_salao) {
-    return { ok: false, error: "Profissional sem salao vinculado." };
+    return { ok: false, error: "Profissional sem salão vinculado." };
   }
 
   const { data: salao, error: salaoError } = await params.supabaseAdmin
@@ -71,11 +71,11 @@ async function buildProfissionalSession(params: {
     .maybeSingle();
 
   if (salaoError) {
-    return { ok: false, error: "Erro ao buscar salao." };
+    return { ok: false, error: "Erro ao buscar salão." };
   }
 
   if (!salao) {
-    return { ok: false, error: "Salao nao encontrado." };
+    return { ok: false, error: "Salão não encontrado." };
   }
 
   if (!isSalaoStatusOperational(salao.status)) {
@@ -125,13 +125,13 @@ export async function loginProfissionalByCpfSenha(
       }
 
       if (!acesso) {
-        return { ok: false, error: "CPF ou senha invalidos." };
+        return { ok: false, error: "CPF ou senha inválidos." };
       }
 
       const senhaOk = await verifyPassword(senhaLimpa, acesso.senha_hash);
 
       if (!senhaOk) {
-        return { ok: false, error: "CPF ou senha invalidos." };
+        return { ok: false, error: "CPF ou senha inválidos." };
       }
 
       return buildProfissionalSession({

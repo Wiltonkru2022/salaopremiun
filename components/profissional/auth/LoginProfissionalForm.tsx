@@ -123,7 +123,7 @@ export default function LoginProfissionalForm({
         </Link>
 
         <div className="pt-2 text-center text-xs text-zinc-400">
-          Versao 1.0.0
+          Versão 1.0.0
         </div>
       </div>
     </form>

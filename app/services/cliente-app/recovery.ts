@@ -44,7 +44,7 @@ function buildClienteRecoveryEmailHtml(params: { link: string; email: string }) 
     <div style="font-family:Inter,Arial,sans-serif;background:#f8fafc;padding:32px;color:#0f172a">
       <div style="max-width:620px;margin:0 auto;background:#ffffff;border:1px solid #e2e8f0;border-radius:20px;overflow:hidden">
         <div style="padding:30px 30px 12px">
-          <p style="margin:0 0 10px;font-size:12px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:#64748b">App cliente SalaoPremium</p>
+          <p style="margin:0 0 10px;font-size:12px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:#64748b">App cliente SalãoPremium</p>
           <h1 style="margin:0;font-size:30px;line-height:1.15;color:#0f172a">Recuperar acesso</h1>
           <p style="margin:18px 0 0;font-size:16px;line-height:1.7;color:#475569">
             Use o link abaixo para criar uma nova senha da conta ${htmlEscape(params.email)}.
@@ -161,7 +161,7 @@ function buildPasswordChangedEmailHtml(params: {
     <div style="font-family:Inter,Arial,sans-serif;background:#f8fafc;padding:32px;color:#0f172a">
       <div style="max-width:620px;margin:0 auto;background:#ffffff;border:1px solid #e2e8f0;border-radius:20px;overflow:hidden">
         <div style="padding:30px 30px 12px">
-          <p style="margin:0 0 10px;font-size:12px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:#64748b">Seguranca SalaoPremium</p>
+          <p style="margin:0 0 10px;font-size:12px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:#64748b">Segurança SalãoPremium</p>
           <h1 style="margin:0;font-size:28px;line-height:1.15;color:#0f172a">Sua senha foi alterada</h1>
           <p style="margin:18px 0 0;font-size:16px;line-height:1.7;color:#475569">
             A senha de ${htmlEscape(params.context)} da conta ${htmlEscape(params.email)} foi alterada em ${htmlEscape(formattedDate)}.

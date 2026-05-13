@@ -53,7 +53,7 @@ export async function solicitarRecuperacaoSenhaProfissionalAction(
         .from("tickets")
         .insert({
           id_salao: profissional.id_salao,
-          assunto: "Recuperacao de senha do profissional",
+          assunto: "Recuperação de senha do profissional",
           categoria: "acesso",
           prioridade: "media",
           status: "aberto",
@@ -80,7 +80,7 @@ export async function solicitarRecuperacaoSenhaProfissionalAction(
           autor_tipo: "profissional",
           autor_nome: nome,
           mensagem:
-            "Profissional solicitou recuperacao de senha pela tela de login do app.",
+            "Profissional solicitou recuperação de senha pela tela de login do app.",
           interna: false,
           id_profissional: profissional.id,
         });
@@ -91,6 +91,6 @@ export async function solicitarRecuperacaoSenhaProfissionalAction(
   return {
     ok: true,
     message:
-      "Se o CPF estiver cadastrado, o pedido foi enviado ao suporte do salao para redefinir seu acesso.",
+      "Se o CPF estiver cadastrado, o pedido foi enviado ao suporte do salão para redefinir seu acesso.",
   };
 }

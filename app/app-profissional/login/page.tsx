@@ -16,10 +16,10 @@ function getGoogleErrorMessage(value: string | string[] | undefined) {
 
   const messages: Record<string, string> = {
     google_indisponivel: "Login Google indisponível agora. Use CPF e senha.",
-    google_codigo_ausente: "Retorno do Google invalido. Tente novamente.",
-    google_sessao_invalida: "Não foi possível validar sua sessao Google.",
+    google_codigo_ausente: "Retorno do Google inválido. Tente novamente.",
+    google_sessao_invalida: "Não foi possível validar sua sessão Google.",
     google_usuario_invalido: "Não foi possível identificar sua conta Google.",
-    sessao_expirada: "Sessao expirada. Entre novamente para conectar o Google.",
+    sessao_expirada: "Sessão expirada. Entre novamente para conectar o Google.",
   };
 
   return (
@@ -71,7 +71,7 @@ export default async function LoginProfissionalPage({
     <div className="min-h-dvh bg-[radial-gradient(circle_at_top,#fff2c5_0,#f5f5f5_42%,#e7ecf2_100%)]">
       <div className="mx-auto flex min-h-dvh max-w-md flex-col bg-[#f5f5f5]/95 shadow-[0_0_80px_rgba(15,23,42,0.08)]">
         <ProfissionalHeader
-          title="SalaoPremium"
+          title="SalãoPremium"
           subtitle="Acesso do profissional"
         />
 

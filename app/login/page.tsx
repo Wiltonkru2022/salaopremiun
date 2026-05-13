@@ -73,7 +73,7 @@ function LoginPageContent() {
 
     } catch (error) {
       console.warn("Supabase indisponível para login:", error);
-      setErro("Serviço de autenticacao indisponível neste ambiente.");
+      setErro("Serviço de autenticação indisponível neste ambiente.");
     }
   }, []);
 
@@ -155,7 +155,7 @@ function LoginPageContent() {
 
     try {
       if (!supabase) {
-        throw new Error("Serviço de autenticacao indisponível neste ambiente.");
+        throw new Error("Serviço de autenticação indisponível neste ambiente.");
       }
 
       const { error } = await supabase.auth.signInWithPassword({
@@ -188,7 +188,7 @@ function LoginPageContent() {
   function limparSessaoLocal() {
     clearSupabaseBrowserAuthState();
     setRateLimited(false);
-    setErro("Sessao local limpa. Aguarde alguns segundos e tente entrar de novo.");
+    setErro("Sessão local limpa. Aguarde alguns segundos e tente entrar de novo.");
   }
 
   function abrirCadastroSalao() {
@@ -203,7 +203,7 @@ function LoginPageContent() {
             <Sparkles size={18} />
           </span>
           <span className="font-display text-lg font-black tracking-[-0.03em]">
-            SalaoPremium
+            SalãoPremium
           </span>
         </Link>
 
@@ -219,7 +219,7 @@ function LoginPageContent() {
       <main className="grid min-h-[calc(100vh-74px)] lg:grid-cols-2">
         <section
           className="relative hidden overflow-hidden bg-zinc-950 bg-cover bg-center lg:block"
-          style={{ backgroundImage: "url('/site/cadastro-salão-bg.jpeg')" }}
+          style={{ backgroundImage: "url('/site/cadastro-salao-bg.jpeg')" }}
         >
           <div className="absolute inset-0 bg-zinc-950/58" />
           <div className="absolute inset-0 bg-gradient-to-br from-zinc-950 via-zinc-950/55 to-transparent" />
@@ -347,7 +347,7 @@ function LoginPageContent() {
                       onClick={limparSessaoLocal}
                       className="mt-3 rounded-xl border border-rose-200 bg-white px-3 py-2 text-xs font-semibold text-rose-700"
                     >
-                      Limpar sessao local
+                      Limpar sessão local
                     </button>
                   ) : null}
                 </div>

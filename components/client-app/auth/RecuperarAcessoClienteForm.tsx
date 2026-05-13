@@ -46,7 +46,7 @@ export default function RecuperarAcessoClienteForm({
     >
       <div className="mb-4 inline-flex rounded-full bg-zinc-100 p-1 text-xs font-bold text-zinc-600">
         <span className="rounded-full bg-zinc-950 px-3 py-1.5 text-white">
-          Recuperacao
+          Recuperação
         </span>
         <span className="px-3 py-1.5">Cliente</span>
       </div>
@@ -56,7 +56,7 @@ export default function RecuperarAcessoClienteForm({
       </h2>
       <p className="mt-2 text-sm leading-6 text-zinc-500">
         Informe o e-mail da sua conta para receber um link seguro de
-        redefinicao de senha.
+        redefinição de senha.
       </p>
 
       <div className="mt-5 space-y-4">

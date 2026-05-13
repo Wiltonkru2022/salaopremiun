@@ -9,7 +9,7 @@ import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-export const publicRoute = "rota publica: recuperacao de senha com rate limit por IP.";
+export const publicRoute = "rota pública: recuperação de senha com limite por IP.";
 
 function isValidEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
@@ -31,16 +31,16 @@ function buildRecoveryEmailHtml(params: { link: string; email: string }) {
     <div style="font-family:Inter,Arial,sans-serif;background:#f8fafc;padding:32px;color:#0f172a">
       <div style="max-width:620px;margin:0 auto;background:#ffffff;border:1px solid #e2e8f0;border-radius:20px;overflow:hidden">
         <div style="padding:30px 30px 12px">
-          <p style="margin:0 0 10px;font-size:12px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:#64748b">SalaoPremium</p>
+          <p style="margin:0 0 10px;font-size:12px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:#64748b">SalãoPremium</p>
           <h1 style="margin:0;font-size:30px;line-height:1.15;color:#0f172a">Recuperar acesso</h1>
           <p style="margin:18px 0 0;font-size:16px;line-height:1.7;color:#475569">
-            Recebemos uma solicitacao para redefinir a senha da conta ${email}.
+            Recebemos uma solicitação para redefinir a senha da conta ${email}.
           </p>
           <a href="${link}" style="display:inline-block;margin-top:24px;background:#0f172a;color:#ffffff;text-decoration:none;border-radius:999px;padding:13px 20px;font-size:14px;font-weight:800">Criar nova senha</a>
         </div>
         <div style="padding:20px 30px 30px">
           <p style="margin:0;font-size:13px;line-height:1.7;color:#64748b">
-            Se voce nao solicitou essa recuperacao, ignore este e-mail. Por seguranca, o link expira automaticamente.
+            Se você não solicitou essa recuperação, ignore este e-mail. Por segurança, o link expira automaticamente.
           </p>
         </div>
       </div>
@@ -54,7 +54,7 @@ export async function POST(request: Request) {
 
   if (!isValidEmail(email)) {
     return NextResponse.json(
-      { message: "Informe um e-mail valido." },
+      { message: "Informe um e-mail válido." },
       { status: 400 }
     );
   }
@@ -91,15 +91,15 @@ export async function POST(request: Request) {
 
     const actionLink = data?.properties?.action_link;
     if (!actionLink) {
-      throw new Error("Link de recuperacao nao foi gerado.");
+      throw new Error("Link de recuperação não foi gerado.");
     }
 
     await sendResendEmail({
       from:
         process.env.PASSWORD_RECOVERY_EMAIL_FROM ||
-        "SalaoPremium <recuperar@salaopremiun.com.br>",
+        "SalãoPremium <recuperar@salaopremiun.com.br>",
       to: email,
-      subject: "Recuperar senha - SalaoPremium",
+      subject: "Recuperar senha - SalãoPremium",
       html: buildRecoveryEmailHtml({ link: actionLink, email }),
       text: `Use este link para criar uma nova senha: ${actionLink}`,
       replyTo: process.env.PASSWORD_RECOVERY_EMAIL_REPLY_TO || undefined,
@@ -113,7 +113,7 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.json(
-      { message: "Nao foi possivel enviar o link de recuperacao." },
+      { message: "Não foi possível enviar o link de recuperação." },
       { status: 500 }
     );
   }

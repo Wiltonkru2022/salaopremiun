@@ -10,19 +10,19 @@ export const NIVEIS_USUARIO = [
 export const STATUS_USUARIO = ["ativo", "inativo"] as const;
 
 export const criarUsuarioSchema = z.object({
-  idSalao: z.string().trim().min(1, "Salao nao informado."),
-  nome: z.string().trim().min(1, "Nome e obrigatorio."),
-  email: z.string().trim().min(1, "E-mail e obrigatorio."),
+  idSalao: z.string().trim().min(1, "Salão não informado."),
+  nome: z.string().trim().min(1, "Nome é obrigatório."),
+  email: z.string().trim().min(1, "E-mail é obrigatório."),
   senha: z.string().min(6, "A senha deve ter pelo menos 6 caracteres."),
   nivel: z.enum(NIVEIS_USUARIO),
   status: z.enum(STATUS_USUARIO),
 });
 
 export const atualizarUsuarioSchema = z.object({
-  idUsuario: z.string().trim().min(1, "Usuario invalido."),
-  idSalao: z.string().trim().min(1, "Usuario invalido."),
-  nome: z.string().trim().min(1, "Nome e obrigatorio."),
-  email: z.string().trim().min(1, "E-mail e obrigatorio."),
+  idUsuario: z.string().trim().min(1, "Usuário inválido."),
+  idSalao: z.string().trim().min(1, "Usuário inválido."),
+  nome: z.string().trim().min(1, "Nome é obrigatório."),
+  email: z.string().trim().min(1, "E-mail é obrigatório."),
   nivel: z.enum(NIVEIS_USUARIO),
   status: z.enum(STATUS_USUARIO),
   senha: z.string().optional().default(""),
