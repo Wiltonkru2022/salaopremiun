@@ -1,6 +1,10 @@
 import Link from "next/link";
 import { getAdminMasterHealthCenter, type HealthTone } from "@/lib/admin-master/health-center";
-import { getOracleVpsStatus } from "@/lib/oracle-vps/client";
+import {
+  getOracleVpsOperationalSnapshot,
+  getOracleVpsStatus,
+} from "@/lib/oracle-vps/client";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { AdminDataTable } from "@/components/admin-master/AdminMasterViews";
 import OracleVpsActionButton from "@/components/admin-master/OracleVpsActionButton";
 
@@ -118,11 +122,34 @@ function HealthList({
   );
 }
 
+async function getOracleVpsSampleSalon() {
+  try {
+    const { data } = await getSupabaseAdmin()
+      .from("saloes")
+      .select("id, nome")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    return {
+      id: String(data?.id || ""),
+      nome: String(data?.nome || "Salão de amostra"),
+    };
+  } catch {
+    return { id: "", nome: "" };
+  }
+}
+
 export default async function AdminMasterSaudePage() {
-  const [data, oracleVps] = await Promise.all([
+  const [data, oracleVps, oracleSampleSalon] = await Promise.all([
     getAdminMasterHealthCenter(),
     getOracleVpsStatus(),
+    getOracleVpsSampleSalon(),
   ]);
+  const oracleOperational = await getOracleVpsOperationalSnapshot({
+    idSalao: oracleSampleSalon.id,
+    salaoNome: oracleSampleSalon.nome,
+  });
   const oraclePublic = oracleVps.configured ? asRecord(oracleVps.publicStatus) : {};
   const oracleSystem = oracleVps.configured ? asRecord(oracleVps.system) : {};
   const oracleHost = asRecord(oracleSystem.host);
@@ -176,6 +203,13 @@ export default async function AdminMasterSaudePage() {
     rota: String(item.route || "-"),
     mensagem: `${String(item.durationMs || "-")}ms`,
     quando: String(item.createdAt || "-"),
+  }));
+  const oracleOperationalRows = oracleOperational.items.map((item) => ({
+    modulo: item.modulo,
+    status: item.status === "online" ? "Online" : "Atenção",
+    rota: item.rota,
+    amostra: item.amostra || oracleOperational.amostra,
+    detalhe: item.detalhe,
   }));
   const incidentRows = data.operational.incidents.map((item) => ({
     incidente: item.title,
@@ -314,6 +348,37 @@ export default async function AdminMasterSaudePage() {
               <div className="mt-2 font-display text-2xl font-black">{value}</div>
             </div>
           ))}
+        </div>
+
+        <div className="mt-5 rounded-[24px] border border-black/10 bg-white/60 p-4">
+          <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+            <div>
+              <div className="text-xs font-black uppercase tracking-[0.24em] opacity-60">
+                APIs operacionais na VPS
+              </div>
+              <p className="mt-2 text-sm leading-6 opacity-75">
+                {oracleOperational.online}/{oracleOperational.total} rotas respondendo.
+                Amostra: {oracleOperational.amostra}.
+              </p>
+            </div>
+            <span
+              className={`rounded-full border px-3 py-1 text-[11px] font-black ${
+                oracleOperational.ok
+                  ? "border-emerald-200 bg-emerald-100 text-emerald-950"
+                  : "border-amber-200 bg-amber-100 text-amber-950"
+              }`}
+            >
+              {oracleOperational.ok ? "Tudo online" : `${oracleOperational.failed} falha(s)`}
+            </span>
+          </div>
+          <div className="mt-4">
+            <AdminDataTable
+              rows={oracleOperationalRows}
+              columns={["modulo", "status", "rota", "amostra", "detalhe"]}
+              emptyTitle="Nenhuma API operacional testada."
+              emptyDescription="Quando houver um salão de amostra, o Admin Master valida as rotas operacionais da VPS aqui."
+            />
+          </div>
         </div>
 
         <div className="mt-5 grid gap-4 xl:grid-cols-2">

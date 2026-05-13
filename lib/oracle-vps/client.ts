@@ -92,6 +92,75 @@ async function requestOracleVps(
   return data;
 }
 
+type OracleVpsOperationalCheck = {
+  modulo: string;
+  rota: string;
+  ok: boolean;
+  status: "online" | "falhou" | "nao_configurado";
+  detalhe: string;
+  amostra?: string;
+};
+
+function buildQuery(params: Record<string, string | number | null | undefined>) {
+  const query = new URLSearchParams();
+
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== null && value !== undefined && String(value).trim()) {
+      query.set(key, String(value));
+    }
+  });
+
+  const serialized = query.toString();
+  return serialized ? `?${serialized}` : "";
+}
+
+async function checkOracleVpsGet(params: {
+  modulo: string;
+  path: string;
+  amostra?: string;
+}): Promise<OracleVpsOperationalCheck> {
+  const config = getOracleVpsConfig();
+
+  if (!config.configured) {
+    return {
+      modulo: params.modulo,
+      rota: params.path,
+      ok: false,
+      status: "nao_configurado",
+      detalhe: "Variáveis da VPS não configuradas.",
+      amostra: params.amostra,
+    };
+  }
+
+  try {
+    await requestOracleVps(params.path, {
+      protected: true,
+      timeoutMs: 6000,
+    });
+
+    return {
+      modulo: params.modulo,
+      rota: params.path,
+      ok: true,
+      status: "online",
+      detalhe: "Respondendo com dados reais.",
+      amostra: params.amostra,
+    };
+  } catch (error) {
+    return {
+      modulo: params.modulo,
+      rota: params.path,
+      ok: false,
+      status: "falhou",
+      detalhe:
+        error instanceof Error
+          ? error.message
+          : "Falha ao consultar rota operacional.",
+      amostra: params.amostra,
+    };
+  }
+}
+
 export async function getOracleVpsStatus(): Promise<OracleVpsApiStatus> {
   const config = getOracleVpsConfig();
 
@@ -350,6 +419,83 @@ export async function getOracleVpsSalesReport() {
 
 export async function getOracleVpsProfessionalsReport() {
   return getOracleVpsProtectedReport("/relatorios/profissionais");
+}
+
+export async function getOracleVpsOperationalSnapshot(params?: {
+  idSalao?: string | null;
+  salaoNome?: string | null;
+}) {
+  const idSalao = String(params?.idSalao || "").trim();
+  const amostra = params?.salaoNome
+    ? `${params.salaoNome} (${idSalao || "sem id"})`
+    : idSalao || "sem salão de amostra";
+
+  if (!idSalao) {
+    return {
+      ok: false,
+      checkedAt: new Date().toISOString(),
+      amostra,
+      total: 0,
+      online: 0,
+      failed: 0,
+      items: [
+        {
+          modulo: "Amostra",
+          rota: "-",
+          ok: false,
+          status: "falhou" as const,
+          detalhe: "Nenhum salão encontrado para testar as APIs operacionais.",
+          amostra,
+        },
+      ] satisfies OracleVpsOperationalCheck[],
+    };
+  }
+
+  const query = buildQuery({ id_salao: idSalao, limit: 5 });
+  const checks = await Promise.all([
+    checkOracleVpsGet({
+      modulo: "Caixa",
+      path: `/caixa${query}`,
+      amostra,
+    }),
+    checkOracleVpsGet({
+      modulo: "Vendas",
+      path: `/vendas${query}`,
+      amostra,
+    }),
+    checkOracleVpsGet({
+      modulo: "Comissões",
+      path: `/comissoes${query}`,
+      amostra,
+    }),
+    checkOracleVpsGet({
+      modulo: "Relatório financeiro",
+      path: `/relatorio-financeiro${query}`,
+      amostra,
+    }),
+    checkOracleVpsGet({
+      modulo: "Notificações",
+      path: `/notificacoes${query}`,
+      amostra,
+    }),
+    checkOracleVpsGet({
+      modulo: "Backup",
+      path: "/admin/backups?limit=5",
+      amostra,
+    }),
+  ]);
+
+  const online = checks.filter((item) => item.ok).length;
+
+  return {
+    ok: online === checks.length,
+    checkedAt: new Date().toISOString(),
+    amostra,
+    total: checks.length,
+    online,
+    failed: checks.length - online,
+    items: checks,
+  };
 }
 
 async function safeOracleVpsPost(
