@@ -1,5 +1,9 @@
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import type { Json } from "@/types/database.generated";
+import {
+  processPendingNotificationJobs,
+  queueNotificationJob,
+} from "@/lib/notification-jobs";
 
 type SupabaseAdminClient = ReturnType<typeof getSupabaseAdmin>;
 
@@ -179,7 +183,7 @@ export function createProfissionalAcessoService(
         interna: false,
       });
 
-      await supabaseAdmin.from("ticket_eventos").insert({
+      const { data: eventoSenha } = await supabaseAdmin.from("ticket_eventos").insert({
         id_ticket: params.idTicket,
         evento: "senha_redefinida_salao",
         descricao: `Senha redefinida pelo salao ${params.nomeSalao} para ${params.nomeProfissional}.`,
@@ -188,7 +192,30 @@ export function createProfissionalAcessoService(
           nome_profissional: params.nomeProfissional,
           id_profissional: params.idProfissional,
         } as Json,
+      }).select("id").maybeSingle();
+
+      const notificationId = String(eventoSenha?.id || "").trim();
+
+      await queueNotificationJob({
+        idSalao: params.idSalao,
+        idProfissional: params.idProfissional,
+        canal: "profissional_app",
+        tipo: "senha_redefinida_salao",
+        titulo: "Senha alterada pelo salão",
+        mensagem: `O salão ${params.nomeSalao} redefiniu sua senha de acesso ao App Profissional.`,
+        url: notificationId
+          ? `/app-profissional/notificacoes?notificacao=${encodeURIComponent(notificationId)}`
+          : "/app-profissional/notificacoes",
+        tag: `senha-redefinida-${params.idTicket}`,
+        idempotencyKey: `senha_redefinida_salao:${params.idTicket}:${params.idProfissional}`,
+        metadata: {
+          id_ticket: params.idTicket,
+          id_evento: notificationId || null,
+          nome_salao: params.nomeSalao,
+        },
       });
+
+      await processPendingNotificationJobs(10);
 
       const { error: updateError } = await supabaseAdmin
         .from("tickets")

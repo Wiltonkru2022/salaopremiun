@@ -5,9 +5,7 @@ import MonitoringContextBridge from "@/components/monitoring/MonitoringContextBr
 import PushPermissionRuntime from "@/components/push/PushPermissionRuntime";
 import ProfissionalInstallPrompt from "@/components/profissional/pwa/ProfissionalInstallPrompt";
 import ProfissionalPwaRuntime from "@/components/profissional/pwa/ProfissionalPwaRuntime";
-import type { ProfissionalAppNotification } from "@/lib/profissional-app-notification-contracts";
 import ProfissionalNavigationRuntime from "./ProfissionalNavigationRuntime";
-import ProfissionalAlerts from "./ProfissionalAlerts";
 import ProfissionalHeader from "./ProfissionalHeader";
 import ProfissionalBottomNav from "./ProfissionalBottomNav";
 
@@ -16,7 +14,6 @@ type Props = {
   title?: string;
   subtitle?: string;
   showBottomNav?: boolean;
-  notifications?: ProfissionalAppNotification[];
 };
 
 export default function ProfissionalShell({
@@ -24,7 +21,6 @@ export default function ProfissionalShell({
   title,
   subtitle,
   showBottomNav = true,
-  notifications = [],
 }: Props) {
   const [mounted, setMounted] = useState(false);
 
@@ -56,7 +52,6 @@ export default function ProfissionalShell({
             <PushPermissionRuntime audience="profissional_app" />
           </div>
         ) : null}
-        {mounted ? <ProfissionalAlerts notifications={notifications} /> : null}
 
         <main className="min-w-0 overflow-x-hidden flex-1 px-3 pb-28 pt-3 sm:px-4 sm:pt-4">
           {children}

@@ -77,13 +77,13 @@ async function fetchProfissionalAppNotifications(
 
     return {
       id: evento.id,
-      title: "Senha alterada pelo salao",
+      title: "Senha alterada pelo salão",
       description:
         evento.descricao?.trim() ||
-        `O salao ${nomeSalao} redefiniu sua senha de acesso ao app profissional.`,
+        `O salão ${nomeSalao} redefiniu sua senha de acesso ao app profissional.`,
       createdAt: evento.criado_em || null,
-      actionLabel: numeroTicket ? `Ticket #${numeroTicket}` : "Ver suporte",
-      href: "/app-profissional/suporte",
+      actionLabel: numeroTicket ? `Ticket #${numeroTicket}` : "Ver notificação",
+      href: `/app-profissional/notificacoes?notificacao=${encodeURIComponent(evento.id)}`,
     };
   });
 }

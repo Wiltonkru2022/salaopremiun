@@ -1,6 +1,5 @@
 import type { ReactNode } from "react";
 import ProfissionalShell from "@/components/profissional/layout/ProfissionalShell";
-import { listProfissionalAppNotifications } from "@/lib/profissional-app-notifications";
 import { requireProfissionalAppContext } from "@/lib/profissional-context.server";
 
 type Props = {
@@ -16,17 +15,13 @@ export default async function ProfissionalPrivate({
   subtitle,
   showBottomNav,
 }: Props) {
-  const context = await requireProfissionalAppContext();
-  const notifications = await listProfissionalAppNotifications(context).catch(
-    () => []
-  );
+  await requireProfissionalAppContext();
 
   return (
     <ProfissionalShell
       title={title}
       subtitle={subtitle}
       showBottomNav={showBottomNav}
-      notifications={notifications}
     >
       {children}
     </ProfissionalShell>

@@ -275,6 +275,12 @@ export default async function PerfilProfissionalPage({
               Avaliacoes recebidas
             </Link>
             <Link
+              href="/app-profissional/notificacoes"
+              className="flex h-11 w-full items-center justify-center rounded-[18px] border border-zinc-200 bg-white text-sm font-bold text-zinc-800"
+            >
+              Notificações
+            </Link>
+            <Link
               href="/app-profissional/recuperar-senha"
               className="flex h-11 w-full items-center justify-center rounded-[18px] border border-zinc-200 bg-white text-sm font-bold text-zinc-800"
             >
