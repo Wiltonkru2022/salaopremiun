@@ -26,6 +26,7 @@ type OracleVpsRequestOptions = {
   body?: unknown;
   protected?: boolean;
   timeoutMs?: number;
+  headers?: Record<string, string>;
 };
 
 function getOracleVpsConfig() {
@@ -46,8 +47,9 @@ async function requestOracleVps(
   options: OracleVpsRequestOptions = {}
 ) {
   const config = getOracleVpsConfig();
-  const headers: HeadersInit = {
+  const headers: Record<string, string> = {
     Accept: "application/json",
+    ...(options.headers || {}),
   };
 
   if (options.protected) {
@@ -220,6 +222,48 @@ export async function sendOracleVpsMonitoringEvent(
         error instanceof Error
           ? error.message
           : "Falha ao espelhar evento para a VPS Oracle.",
+    };
+  }
+}
+
+export async function mirrorAsaasWebhookToOracleVps(
+  payload: Record<string, unknown>
+) {
+  const config = getOracleVpsConfig();
+  const asaasWebhookToken = String(process.env.ASAAS_WEBHOOK_TOKEN || "").trim();
+
+  if (!config.configured || !asaasWebhookToken) {
+    return { ok: false, configured: config.configured };
+  }
+
+  try {
+    const result = await requestOracleVps("/webhooks/asaas", {
+      method: "POST",
+      timeoutMs: 2500,
+      body: {
+        source: "salaopremium-next",
+        mode: "mirror",
+        mirroredAt: new Date().toISOString(),
+        payload,
+      },
+      headers: {
+        "asaas-access-token": asaasWebhookToken,
+      },
+    });
+
+    return {
+      ok: true,
+      configured: true,
+      result,
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      configured: true,
+      error:
+        error instanceof Error
+          ? error.message
+          : "Falha ao espelhar webhook Asaas para a VPS Oracle.",
     };
   }
 }
