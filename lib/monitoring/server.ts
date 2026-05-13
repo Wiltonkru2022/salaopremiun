@@ -386,6 +386,7 @@ async function upsertIncident(params: CaptureSystemEventParams, severity: Monito
 export async function captureSystemEvent(params: CaptureSystemEventParams) {
   try {
     const severity = normalizeSeverity(params.severity);
+
     if (!shouldPersistMonitoringEvent(params, severity)) {
       return;
     }

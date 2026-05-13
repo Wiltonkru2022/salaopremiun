@@ -422,7 +422,7 @@ export async function getAdminMasterDashboard(): Promise<AdminMasterDashboardDat
       .from("clientes")
       .select("id_salao, nome, telefone, whatsapp")
       .or("telefone.not.is.null,whatsapp.not.is.null")
-      .limit(2000),
+      .limit(300),
     supabase
       .from("planos_saas")
       .select("codigo, nome, valor_mensal, destaque")

@@ -34,7 +34,8 @@ async function mirrorToOracleVps(payload: MonitoringPayload, kind: string) {
     severity === "critical" ||
     Number(payload.responseMs || 0) >= 1000 ||
     payload.origin === "webhook" ||
-    payload.origin === "cron";
+    payload.origin === "cron" ||
+    payload.origin === "integration";
 
   if (!shouldMirror) return;
 

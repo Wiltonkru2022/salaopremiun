@@ -316,7 +316,7 @@ export async function getAdminMasterOperationalSnapshot(): Promise<AdminMasterOp
       )
       .gte("created_at", last24h)
       .order("created_at", { ascending: false })
-      .limit(4000),
+      .limit(300),
     supabase
       .from("incidentes_sistema")
       .select(
@@ -330,7 +330,7 @@ export async function getAdminMasterOperationalSnapshot(): Promise<AdminMasterOp
       .select("chave, nome, status, score, atualizado_em")
       .order("atualizado_em", { ascending: false })
       .limit(12),
-    supabase.from("saloes").select("id, nome, plano, status").limit(1000),
+    supabase.from("saloes").select("id, nome, plano, status").limit(300),
     supabase
       .from("score_saude_salao")
       .select(
@@ -357,7 +357,7 @@ export async function getAdminMasterOperationalSnapshot(): Promise<AdminMasterOp
       .from("assinaturas")
       .select("id_salao, status, trial_fim_em")
       .in("status", ["teste_gratis", "trial"])
-      .limit(300),
+      .limit(120),
     supabase
       .from("acoes_automaticas_sistema")
       .select("tipo, referencia, executada, sucesso, log, created_at")

@@ -240,31 +240,31 @@ export default async function AdminMasterRelatoriosPage() {
       .from("saloes")
       .select("id, nome, email, cidade, estado, plano, status, trial_ativo, created_at")
       .order("created_at", { ascending: false })
-      .limit(500),
+      .limit(200),
     supabase
       .from("assinaturas_saloes")
       .select("id_salao, status, trial_ativo, valor_mensal, vencimento_em, trial_fim_em")
-      .limit(500),
+      .limit(200),
     supabase
       .from("assinaturas_cobrancas")
       .select("id_salao, valor, status, created_at, pago_em, paid_em, data_expiracao")
       .gte("created_at", last90)
-      .limit(1000),
+      .limit(300),
     supabase
       .from("agendamentos")
       .select("id_salao, status, origem, created_at, data")
       .gte("created_at", last90)
-      .limit(1000),
+      .limit(300),
     supabase
       .from("comandas")
       .select("id_salao, status, total, created_at, fechada_em")
       .gte("created_at", last90)
-      .limit(1000),
+      .limit(300),
     supabase
       .from("logs_sistema")
       .select("id_salao, gravidade, modulo, criado_em")
       .gte("criado_em", last30)
-      .limit(1000),
+      .limit(300),
     supabase
       .from("score_saude_salao")
       .select("id_salao, score_total, uso_recente, inadimplencia_risco, tickets_abertos, risco_cancelamento, atualizado_em")
