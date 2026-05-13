@@ -18,6 +18,7 @@ type PushSubscriptionRow = {
   p256dh: string;
   auth: string;
   cliente_app_conta_id?: string | null;
+  id_profissional?: string | null;
 };
 
 type PushPayload = {
@@ -229,6 +230,54 @@ async function filterClienteAppSubscriptionsByPreference(
   );
 }
 
+async function filterProfissionalAppSubscriptionsByPreference(
+  rows: PushSubscriptionRow[]
+) {
+  const ids = Array.from(
+    new Set(
+      rows
+        .map((row) => String(row.id_profissional || "").trim())
+        .filter(Boolean)
+    )
+  );
+
+  if (!ids.length) return [];
+
+  const { data, error } = await (getSupabaseAdmin() as any)
+    .from("profissionais")
+    .select("id, notificacoes_ativas, notificacao_app_ativa")
+    .in("id", ids);
+
+  if (error) {
+    const message = String(error.message || "");
+    if (
+      message.includes("notificacoes_ativas") ||
+      message.includes("notificacao_app_ativa")
+    ) {
+      return rows;
+    }
+    return [];
+  }
+
+  const enabledIds = new Set(
+    ((data || []) as Array<{
+      id: string;
+      notificacoes_ativas?: boolean | null;
+      notificacao_app_ativa?: boolean | null;
+    }>)
+      .filter(
+        (profissional) =>
+          profissional.notificacoes_ativas !== false &&
+          profissional.notificacao_app_ativa !== false
+      )
+      .map((profissional) => profissional.id)
+  );
+
+  return rows.filter((row) =>
+    enabledIds.has(String(row.id_profissional || "").trim())
+  );
+}
+
 function pruneRecentPushes(now: number) {
   for (const [endpoint, state] of recentPushByEndpoint.entries()) {
     if (now - state.lastSentAt > PUSH_SAME_TAG_WINDOW_MS) {
@@ -359,7 +408,7 @@ export async function broadcastPushNotification(params: {
 
   let query = (supabase as any)
     .from("push_subscriptions")
-    .select("id, endpoint, p256dh, auth, cliente_app_conta_id")
+    .select("id, endpoint, p256dh, auth, cliente_app_conta_id, id_profissional")
     .eq("ativo", true);
 
   if (params.target === "clientes") {
@@ -382,6 +431,10 @@ export async function broadcastPushNotification(params: {
   let subscriptions = (rows || []) as PushSubscriptionRow[];
   if (params.target === "clientes") {
     subscriptions = await filterClienteAppSubscriptionsByPreference(subscriptions);
+  }
+  if (params.target === "profissionais") {
+    subscriptions =
+      await filterProfissionalAppSubscriptionsByPreference(subscriptions);
   }
 
   const result = await sendPushToRows(subscriptions, {
@@ -428,7 +481,7 @@ export async function notifySalonAboutClientBooking(params: {
         .eq("id_salao", params.idSalao),
       (supabase as any)
         .from("push_subscriptions")
-        .select("id, endpoint, p256dh, auth")
+        .select("id, endpoint, p256dh, auth, id_profissional")
         .eq("audience", "profissional_app")
         .eq("ativo", true)
         .eq("id_salao", params.idSalao)
@@ -450,7 +503,11 @@ export async function notifySalonAboutClientBooking(params: {
     }
 
     if (!profissionalResult.error && profissionalResult.data?.length) {
-      await sendPushToRows(profissionalResult.data as PushSubscriptionRow[], {
+      const profissionais =
+        await filterProfissionalAppSubscriptionsByPreference(
+          profissionalResult.data as PushSubscriptionRow[]
+        );
+      await sendPushToRows(profissionais, {
         title: "Pedido de horario para confirmar",
         body,
         url: `/app-profissional/agenda/${params.idAgendamento}`,

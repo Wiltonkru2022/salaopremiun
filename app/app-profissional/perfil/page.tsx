@@ -1,8 +1,18 @@
 import Link from "next/link";
+import {
+  Bell,
+  ChevronRight,
+  HelpCircle,
+  KeyRound,
+  LogOut,
+  MessageCircle,
+  Star,
+  UserRound,
+  WalletCards,
+} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import ProfissionalShell from "@/components/profissional/layout/ProfissionalShell";
-import ProfissionalSectionHeader from "@/components/profissional/ui/ProfissionalSectionHeader";
-import ProfissionalSurface from "@/components/profissional/ui/ProfissionalSurface";
-import PushPermissionRuntime from "@/components/push/PushPermissionRuntime";
+import ProfissionalNotificationSettings from "@/components/profissional/ProfissionalNotificationSettings";
 import { runAdminOperation } from "@/lib/supabase/admin-ops";
 import { requireProfissionalAppContext } from "@/lib/profissional-context.server";
 import { sairProfissionalAction } from "./actions";
@@ -22,6 +32,9 @@ type ProfissionalPerfilRow = {
   bio?: string | null;
   pix_tipo?: string | null;
   pix_chave?: string | null;
+  notificacoes_ativas?: boolean | null;
+  notificacao_app_ativa?: boolean | null;
+  notificacao_email_ativa?: boolean | null;
 };
 
 function formatCpf(value: string | null | undefined) {
@@ -46,6 +59,36 @@ function getInitials(nome: string | null | undefined) {
   return `${partes[0][0]}${partes[1][0]}`.toUpperCase();
 }
 
+function ProfileRow({
+  href,
+  label,
+  icon: Icon,
+  muted,
+  prefetch,
+}: {
+  href: string;
+  label: string;
+  icon: LucideIcon;
+  muted?: boolean;
+  prefetch?: boolean;
+}) {
+  return (
+    <Link
+      href={href}
+      prefetch={prefetch}
+      className={`flex min-h-16 items-center justify-between border-b border-zinc-100 px-1 text-lg ${
+        muted ? "text-zinc-400" : "text-zinc-950"
+      }`}
+    >
+      <span className="inline-flex min-w-0 items-center gap-3">
+        <Icon size={22} className="shrink-0 text-zinc-400" />
+        <span className="truncate">{label}</span>
+      </span>
+      <ChevronRight size={26} className="shrink-0 text-zinc-300" />
+    </Link>
+  );
+}
+
 async function carregarPerfil(params: {
   idSalao: string;
   idProfissional: string;
@@ -55,16 +98,38 @@ async function carregarPerfil(params: {
     actorId: params.idProfissional,
     idSalao: params.idSalao,
     run: async (supabase) => {
+      const select =
+        "id, nome, nome_social, nome_exibicao, categoria, cargo, telefone, whatsapp, email, cpf, foto_url, bio, pix_tipo, pix_chave, notificacoes_ativas, notificacao_app_ativa, notificacao_email_ativa";
       const { data, error } = await supabase
         .from("profissionais")
-        .select(
-          "id, nome, nome_social, nome_exibicao, categoria, cargo, telefone, whatsapp, email, cpf, foto_url, bio, pix_tipo, pix_chave"
-        )
+        .select(select)
         .eq("id", params.idProfissional)
         .eq("id_salao", params.idSalao)
         .maybeSingle();
 
       if (error) {
+        const message = String(error.message || "");
+        if (
+          message.includes("notificacoes_ativas") ||
+          message.includes("notificacao_app_ativa") ||
+          message.includes("notificacao_email_ativa")
+        ) {
+          const fallback = await supabase
+            .from("profissionais")
+            .select(
+              "id, nome, nome_social, nome_exibicao, categoria, cargo, telefone, whatsapp, email, cpf, foto_url, bio, pix_tipo, pix_chave"
+            )
+            .eq("id", params.idProfissional)
+            .eq("id_salao", params.idSalao)
+            .maybeSingle();
+
+          if (fallback.error) {
+            throw new Error(fallback.error.message || "Erro ao carregar perfil.");
+          }
+
+          return (fallback.data ?? null) as ProfissionalPerfilRow | null;
+        }
+
         throw new Error(error.message || "Erro ao carregar perfil.");
       }
 
@@ -123,7 +188,7 @@ export default async function PerfilProfissionalPage({
 
   if (!profissional) {
     return (
-      <ProfissionalShell title="Meu perfil" subtitle="Dados do profissional">
+      <ProfissionalShell title="Perfil" subtitle="Sua conta profissional.">
         <div className="rounded-[1.25rem] border border-red-200 bg-red-50 p-4 text-sm text-red-700 shadow-sm">
           Não foi possível carregar os dados do profissional.
         </div>
@@ -139,168 +204,165 @@ export default async function PerfilProfissionalPage({
   const categoria =
     profissional.categoria || profissional.cargo || "Profissional";
   const notice = getPerfilNotice(params);
+  const notificationSettings = {
+    notificacoes_ativas: profissional.notificacoes_ativas !== false,
+    notificacao_app_ativa: profissional.notificacao_app_ativa !== false,
+    notificacao_email_ativa: profissional.notificacao_email_ativa !== false,
+  };
 
   return (
-    <ProfissionalShell title="Meu perfil" subtitle="Dados do profissional">
-      <div className="space-y-3.5">
+    <ProfissionalShell title="Perfil" subtitle="Sua conta no Salão Premium.">
+      <section className="mx-auto max-w-3xl py-2">
+        <div className="flex items-center gap-5 py-6">
+          {profissional.foto_url ? (
+            <img
+              src={profissional.foto_url}
+              alt={nomeExibido}
+              className="h-24 w-24 shrink-0 rounded-full border-4 border-zinc-900 object-cover"
+            />
+          ) : (
+            <div className="relative flex h-24 w-24 shrink-0 items-center justify-center rounded-full border-4 border-zinc-900 bg-zinc-100 text-3xl font-black text-zinc-900">
+              {getInitials(nomeExibido)}
+              <span className="absolute -bottom-1 -right-1 flex h-10 w-10 items-center justify-center rounded-full border-4 border-white bg-zinc-100 text-zinc-700">
+                <UserRound size={20} />
+              </span>
+            </div>
+          )}
+
+          <div className="min-w-0">
+            <h1 className="break-words text-3xl font-black tracking-[-0.04em] text-zinc-800">
+              {nomeExibido}
+            </h1>
+            <p className="mt-2 text-lg text-zinc-500">
+              {profissional.telefone || profissional.email || categoria}
+            </p>
+          </div>
+        </div>
+
         {notice ? (
           <div
             className={
               notice.type === "success"
-                ? "rounded-[1.15rem] border border-emerald-200 bg-emerald-50 p-3.5 text-sm text-emerald-700 shadow-sm"
-                : "rounded-[1.15rem] border border-red-200 bg-red-50 p-3.5 text-sm text-red-700 shadow-sm"
+                ? "mb-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800"
+                : "mb-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700"
             }
           >
             {notice.message}
           </div>
         ) : null}
 
-        <section className="overflow-hidden rounded-[1.5rem] bg-zinc-950 px-4 py-4 text-white shadow-[0_16px_34px_rgba(15,23,42,0.15)]">
-          <div className="flex items-center gap-4">
-            {profissional.foto_url ? (
-              <img
-                src={profissional.foto_url}
-                alt={nomeExibido}
-                className="h-16 w-16 rounded-full border border-white/20 object-cover"
-              />
-            ) : (
-              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-white/10 text-lg font-black">
-                {getInitials(nomeExibido)}
-              </div>
-            )}
-
-            <div className="min-w-0">
-              <div className="text-[1.2rem] font-black tracking-[-0.03em]">
-                {nomeExibido}
-              </div>
-              <div className="mt-1 text-sm text-amber-200">{categoria}</div>
-              <div className="mt-2 text-xs uppercase tracking-[0.14em] text-zinc-400">
-                SalãoPremium profissional
-              </div>
-            </div>
+        {profissional.bio ? (
+          <div className="mb-5 rounded-2xl bg-zinc-50 p-4 text-sm leading-6 text-zinc-600">
+            {profissional.bio}
           </div>
+        ) : null}
 
-          {profissional.bio ? (
-            <p className="mt-3 text-sm leading-6 text-zinc-300">
-              {profissional.bio}
-            </p>
-          ) : null}
-        </section>
-
-        <div id="dados">
-        <ProfissionalSurface>
-          <ProfissionalSectionHeader
-            title="Contato"
-            description="Informações usadas no dia a dia."
+        <div className="rounded-[1.5rem] bg-white p-4 shadow-[0_18px_45px_rgba(15,23,42,0.08)]">
+          <ProfileRow
+            href="/app-profissional/perfil#dados"
+            label="Detalhes da conta"
+            icon={UserRound}
           />
-
-          <div className="space-y-2.5">
-            {[
-              ["Telefone", profissional.telefone || "Não informado"],
-              ["WhatsApp", profissional.whatsapp || "Não informado"],
-              ["Email", profissional.email || "Não informado"],
-              ["CPF", formatCpf(profissional.cpf)],
-            ].map(([label, value]) => (
-              <div
-                key={label}
-                className="rounded-[18px] border border-zinc-200 bg-zinc-50/80 px-4 py-2.5"
-              >
-                <div className="text-[11px] font-bold uppercase tracking-[0.12em] text-zinc-400">
-                  {label}
-                </div>
-                <div className="mt-1 break-all text-sm font-semibold text-zinc-900">
-                  {value}
-                </div>
-              </div>
-            ))}
-          </div>
-        </ProfissionalSurface>
+          <ProfileRow
+            href="/app-profissional/avaliacoes"
+            label="Avaliações recebidas"
+            icon={Star}
+          />
+          <ProfileRow
+            href="/app-profissional/notificacoes"
+            label="Notificações"
+            icon={Bell}
+          />
+          <ProfileRow
+            href="/app-profissional/recuperar-senha"
+            label="Alterar senha"
+            icon={KeyRound}
+          />
+          <ProfileRow
+            href="/app-profissional/suporte"
+            label="Comentários e suporte"
+            icon={HelpCircle}
+          />
         </div>
 
-        <ProfissionalSurface>
-          <ProfissionalSectionHeader
-            title="Recebimento"
-            description="Dados de pagamento e repasse."
-          />
-
-          <div className="space-y-2.5">
-            {[
-              ["Tipo de chave Pix", profissional.pix_tipo || "Não informado"],
-              ["Chave Pix", profissional.pix_chave || "Não informado"],
-            ].map(([label, value]) => (
-              <div
-                key={label}
-                className="rounded-[18px] border border-zinc-200 bg-zinc-50/80 px-4 py-2.5"
-              >
-                <div className="text-[11px] font-bold uppercase tracking-[0.12em] text-zinc-400">
-                  {label}
-                </div>
-                <div className="mt-1 break-all text-sm font-semibold text-zinc-900">
-                  {value}
-                </div>
-              </div>
-            ))}
+        <div
+          id="dados"
+          className="mt-5 rounded-[1.5rem] bg-white p-4 shadow-[0_18px_45px_rgba(15,23,42,0.08)]"
+        >
+          <div className="mb-3 bg-zinc-50 px-3 py-3 text-xs font-bold uppercase tracking-[0.12em] text-zinc-500">
+            Dados profissionais
           </div>
-        </ProfissionalSurface>
-
-        <ProfissionalSurface>
-          <ProfissionalSectionHeader
-            title="Acoes"
-            description="Atalhos rapidos da sua conta, avisos e reputacao."
-          />
-
-          <div className="mb-3 rounded-[18px] border border-zinc-200 bg-zinc-50/80 p-3.5">
-            <div className="text-sm font-black text-zinc-950">
-              Notificações do app
+          {[
+            ["Telefone", profissional.telefone || "Não informado"],
+            ["WhatsApp", profissional.whatsapp || "Não informado"],
+            ["E-mail", profissional.email || "Não informado"],
+            ["CPF", formatCpf(profissional.cpf)],
+          ].map(([label, value]) => (
+            <div
+              key={label}
+              className="flex min-h-16 flex-col justify-center border-b border-zinc-100 px-1"
+            >
+              <span className="text-sm text-zinc-500">{label}</span>
+              <span className="break-all text-lg text-zinc-950">{value}</span>
             </div>
-            <p className="mt-1 text-xs leading-5 text-zinc-500">
-              Receba lembretes de agenda, cancelamentos e avisos de comanda.
-            </p>
-            <div className="mt-3">
-              <PushPermissionRuntime audience="profissional_app" />
+          ))}
+
+          <div className="mb-3 mt-6 bg-zinc-50 px-3 py-3 text-xs font-bold uppercase tracking-[0.12em] text-zinc-500">
+            Recebimento
+          </div>
+          {[
+            ["Tipo de chave Pix", profissional.pix_tipo || "Não informado"],
+            ["Chave Pix", profissional.pix_chave || "Não informado"],
+          ].map(([label, value]) => (
+            <div
+              key={label}
+              className="flex min-h-16 flex-col justify-center border-b border-zinc-100 px-1"
+            >
+              <span className="text-sm text-zinc-500">{label}</span>
+              <span className="break-all text-lg text-zinc-950">{value}</span>
             </div>
-          </div>
+          ))}
+        </div>
 
-          <div className="grid gap-2.5 sm:grid-cols-2">
-            <Link
-              href="/app-profissional/perfil#dados"
-              className="flex h-11 w-full items-center justify-center rounded-[18px] border border-zinc-200 bg-white text-sm font-bold text-zinc-800"
-            >
-              Editar cadastro
-            </Link>
-            <Link
-              href="/app-profissional/avaliacoes"
-              className="flex h-11 w-full items-center justify-center rounded-[18px] border border-zinc-200 bg-white text-sm font-bold text-zinc-800"
-            >
-              Avaliacoes recebidas
-            </Link>
-            <Link
-              href="/app-profissional/notificacoes"
-              className="flex h-11 w-full items-center justify-center rounded-[18px] border border-zinc-200 bg-white text-sm font-bold text-zinc-800"
-            >
-              Notificações
-            </Link>
-            <Link
-              href="/app-profissional/recuperar-senha"
-              className="flex h-11 w-full items-center justify-center rounded-[18px] border border-zinc-200 bg-white text-sm font-bold text-zinc-800"
-            >
-              Recuperar acesso
-            </Link>
-            <Link
-              href="/app-profissional/suporte"
-              className="flex h-11 w-full items-center justify-center rounded-[18px] border border-[#d8b36b] bg-white text-sm font-bold text-[#b07b19]"
-            >
-              Abrir suporte
-            </Link>
+        <div className="mt-5 rounded-[1.5rem] bg-white p-4 shadow-[0_18px_45px_rgba(15,23,42,0.08)]">
+          <ProfissionalNotificationSettings
+            initialSettings={notificationSettings}
+          />
+        </div>
 
-            <form action={sairProfissionalAction}>
-              <button className="h-11 w-full rounded-[18px] border border-red-200 bg-red-50 text-sm font-bold text-red-600">
-                Sair da conta
-              </button>
-            </form>
+        <div className="mt-5 rounded-[1.5rem] bg-white p-4 shadow-[0_18px_45px_rgba(15,23,42,0.08)]">
+          <Link
+            href="/app-profissional/comissao"
+            className="flex min-h-16 items-center justify-between border-b border-zinc-100 px-1 text-lg text-zinc-950"
+          >
+            <span className="inline-flex items-center gap-3">
+              <WalletCards size={22} className="text-zinc-400" />
+              Comissões e repasses
+            </span>
+            <ChevronRight size={26} className="text-zinc-300" />
+          </Link>
+          <form action={sairProfissionalAction}>
+            <button className="flex min-h-16 w-full items-center justify-between px-1 text-left text-lg text-zinc-400">
+              <span className="inline-flex items-center gap-3">
+                <LogOut size={22} className="text-zinc-300" />
+                Sair
+              </span>
+              <ChevronRight size={26} className="text-zinc-300" />
+            </button>
+          </form>
+        </div>
+
+        <div className="mt-5 rounded-2xl bg-zinc-50 p-4 text-sm leading-6 text-zinc-500">
+          <div className="flex items-center gap-2 font-bold text-zinc-800">
+            <MessageCircle size={18} />
+            Precisa alterar dados?
           </div>
-        </ProfissionalSurface>
-      </div>
+          <p className="mt-1">
+            Fale com o salão para atualizar informações profissionais, Pix ou
+            foto de perfil.
+          </p>
+        </div>
+      </section>
     </ProfissionalShell>
   );
 }

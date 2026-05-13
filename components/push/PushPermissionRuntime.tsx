@@ -103,9 +103,9 @@ export default function PushPermissionRuntime({
 
   const label = useMemo(() => {
     if (status === "saving") return "Ativando...";
-    if (status === "enabled") return "Avisos ativos";
-    if (status === "denied") return "Avisos bloqueados";
-    return "Ativar avisos";
+    if (status === "enabled") return "Notificações";
+    if (status === "denied") return "Bloqueado";
+    return "Ativar";
   }, [status]);
 
   useEffect(() => {
@@ -244,7 +244,7 @@ export default function PushPermissionRuntime({
       }`}
       title={
         denied
-          ? "Libere as notificações nas permissoes do navegador."
+          ? "Libere as notificações nas permissões do navegador."
           : "Receber notificações na barra do celular."
       }
     >

@@ -91,6 +91,31 @@ async function isClienteAppPushEnabled(clienteAppContaId?: string | null) {
   return data.notificacoes_ativas !== false && data.notificacao_app_ativa !== false;
 }
 
+async function isProfissionalAppPushEnabled(idProfissional?: string | null) {
+  const id = sanitizeId(idProfissional);
+  if (!id) return false;
+
+  const { data, error } = await (getSupabaseAdmin() as any)
+    .from("profissionais")
+    .select("notificacoes_ativas, notificacao_app_ativa")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (error) {
+    const message = String(error.message || "");
+    if (
+      message.includes("notificacoes_ativas") ||
+      message.includes("notificacao_app_ativa")
+    ) {
+      return true;
+    }
+    return false;
+  }
+
+  if (!data) return false;
+  return data.notificacoes_ativas !== false && data.notificacao_app_ativa !== false;
+}
+
 async function isNotificationTypeEnabled(params: {
   idSalao?: string | null;
   tipo: string;
@@ -180,6 +205,8 @@ async function findSubscriptionsForJob(job: NotificationJobRow) {
 
   if (job.canal === "profissional_app") {
     if (!job.id_salao || !job.id_profissional) return [];
+    const enabled = await isProfissionalAppPushEnabled(job.id_profissional);
+    if (!enabled) return [];
     query = query.eq("id_salao", job.id_salao).eq("id_profissional", job.id_profissional);
   }
 

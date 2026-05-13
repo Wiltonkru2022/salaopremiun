@@ -24,7 +24,7 @@ function buildLabel(pathname: string) {
   if (pathname.includes("/comissao")) return "Abrindo comissão...";
   if (pathname.includes("/perfil")) return "Abrindo perfil...";
   if (pathname.includes("/suporte")) return "Abrindo suporte...";
-  if (pathname.includes("/inicio")) return "Abrindo inicio...";
+  if (pathname.includes("/inicio")) return "Abrindo início...";
   return "Carregando tela...";
 }
 
@@ -85,7 +85,7 @@ export default function ProfissionalNavigationRuntime() {
       clearTimer();
       timeoutRef.current = window.setTimeout(() => {
         setPendingPath(null);
-      }, 15000);
+      }, 3000);
     }
 
     function handleIntent(event: Event) {
