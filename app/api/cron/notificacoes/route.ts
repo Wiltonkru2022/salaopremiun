@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { verifyBearerSecret } from "@/lib/auth/verify-secret";
 import { processPendingNotificationJobs } from "@/lib/notification-jobs";
-import { mirrorOracleVpsNotificationProcessing } from "@/lib/oracle-vps/client";
+import { queueOracleVpsNotificationProcessing } from "@/lib/oracle-vps/client";
 
 async function handleCron(req: Request) {
   if (!verifyBearerSecret(req.headers.get("authorization"), process.env.CRON_SECRET)) {
@@ -9,12 +9,24 @@ async function handleCron(req: Request) {
   }
 
   try {
-    const result = await processPendingNotificationJobs(60);
-    void mirrorOracleVpsNotificationProcessing({
-      trigger: "cron",
-      localResult: result,
-    });
-    return NextResponse.json({ ok: true, ...result });
+    try {
+      const vpsResult = await queueOracleVpsNotificationProcessing({
+        trigger: "cron",
+        limit: 60,
+      });
+      return NextResponse.json({ ok: true, provider: "oracle-vps", result: vpsResult });
+    } catch (oracleError) {
+      const result = await processPendingNotificationJobs(60);
+      return NextResponse.json({
+        ok: true,
+        provider: "vercel-fallback",
+        oracleError:
+          oracleError instanceof Error
+            ? oracleError.message
+            : "Falha ao processar notificações na VPS.",
+        ...result,
+      });
+    }
   } catch (error) {
     return NextResponse.json(
       {

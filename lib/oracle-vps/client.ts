@@ -337,6 +337,39 @@ export async function mirrorAsaasWebhookToOracleVps(
   }
 }
 
+export async function processAsaasWebhookOnOracleVps(
+  body: Record<string, unknown>
+) {
+  const config = getOracleVpsConfig();
+  const asaasWebhookToken = String(process.env.ASAAS_WEBHOOK_TOKEN || "").trim();
+
+  if (!config.configured || !asaasWebhookToken) {
+    return { ok: false, configured: config.configured, error: "VPS ou token Asaas não configurado." };
+  }
+
+  try {
+    const result = await requestOracleVps("/webhooks/asaas", {
+      method: "POST",
+      timeoutMs: 10000,
+      body,
+      headers: {
+        "asaas-access-token": asaasWebhookToken,
+      },
+    });
+
+    return { ok: true, configured: true, result };
+  } catch (error) {
+    return {
+      ok: false,
+      configured: true,
+      error:
+        error instanceof Error
+          ? error.message
+          : "Falha ao processar webhook Asaas na VPS Oracle.",
+    };
+  }
+}
+
 export async function queueOracleVpsBackup(payload?: Record<string, unknown>) {
   return requestOracleVps("/backup/executar", {
     method: "POST",

@@ -3,12 +3,24 @@ import {
   AsaasWebhookUseCaseError,
   processarWebhookAsaasUseCase,
 } from "@/core/use-cases/assinatura/webhook-asaas";
-import { mirrorAsaasWebhookToOracleVps } from "@/lib/oracle-vps/client";
+import { processAsaasWebhookOnOracleVps } from "@/lib/oracle-vps/client";
 import { createAsaasWebhookService } from "@/services/asaasWebhookService";
 
 export async function POST(req: Request) {
   try {
     const body = (await req.json()) as Record<string, unknown>;
+    const oracleResult = await processAsaasWebhookOnOracleVps(body);
+
+    if (oracleResult.ok) {
+      return NextResponse.json(
+        {
+          ok: true,
+          provider: "oracle-vps",
+          result: oracleResult.result,
+        },
+        { status: 200 }
+      );
+    }
 
     const result = await processarWebhookAsaasUseCase({
       headers: req.headers,
@@ -16,17 +28,14 @@ export async function POST(req: Request) {
       service: createAsaasWebhookService(),
     });
 
-    await mirrorAsaasWebhookToOracleVps({
-      event: body.event || null,
-      paymentId:
-        body.payment && typeof body.payment === "object"
-          ? String((body.payment as Record<string, unknown>).id || "")
-          : null,
-      status: result.status,
-      body,
-    });
-
-    return NextResponse.json(result.body, { status: result.status });
+    return NextResponse.json(
+      {
+        ...result.body,
+        provider: "vercel-fallback",
+        oracleError: oracleResult.error || null,
+      },
+      { status: result.status }
+    );
   } catch (error) {
     if (error instanceof AsaasWebhookUseCaseError) {
       return NextResponse.json({ error: error.message }, { status: error.status });
