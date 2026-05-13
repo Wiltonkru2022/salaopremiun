@@ -9,6 +9,7 @@ import {
   PlanAccessError,
 } from "@/lib/plans/access";
 import { reportOperationalIncident } from "@/lib/monitoring/operational-incidents";
+import { mirrorOracleVpsComissoesOperation } from "@/lib/oracle-vps/client";
 import { runAdminOperation } from "@/lib/supabase/admin-ops";
 import {
   parseProcessarComissoesInput,
@@ -33,6 +34,13 @@ export async function POST(req: NextRequest) {
       input,
       idUsuario: membership.usuario.id,
       service: createComissaoService(),
+    });
+
+    void mirrorOracleVpsComissoesOperation({
+      idSalao,
+      acao,
+      ids: input.ids,
+      responseBody: result.body,
     });
 
     return NextResponse.json(result.body, { status: result.status });

@@ -269,7 +269,7 @@ export async function mirrorAsaasWebhookToOracleVps(
 }
 
 export async function queueOracleVpsBackup(payload?: Record<string, unknown>) {
-  return requestOracleVps("/jobs/backup/supabase", {
+  return requestOracleVps("/backup/executar", {
     method: "POST",
     protected: true,
     timeoutMs: 5000,
@@ -284,12 +284,12 @@ export async function queueOracleVpsBackup(payload?: Record<string, unknown>) {
 export async function queueOracleVpsNotificationProcessing(
   payload?: Record<string, unknown>
 ) {
-  return requestOracleVps("/jobs/notifications/process", {
+  return requestOracleVps("/notificacoes/processar", {
     method: "POST",
     protected: true,
     timeoutMs: 5000,
     body: {
-      dryRun: true,
+      limit: 50,
       source: "salaopremium-next",
       ...payload,
     },
@@ -350,4 +350,108 @@ export async function getOracleVpsSalesReport() {
 
 export async function getOracleVpsProfessionalsReport() {
   return getOracleVpsProtectedReport("/relatorios/profissionais");
+}
+
+async function safeOracleVpsPost(
+  path: string,
+  payload: Record<string, unknown>,
+  timeoutMs = 2500
+) {
+  const config = getOracleVpsConfig();
+
+  if (!config.configured) {
+    return { ok: false, configured: false };
+  }
+
+  try {
+    const result = await requestOracleVps(path, {
+      method: "POST",
+      protected: true,
+      timeoutMs,
+      body: {
+        source: "salaopremium-next",
+        mirroredAt: new Date().toISOString(),
+        ...payload,
+      },
+    });
+
+    return { ok: true, configured: true, result };
+  } catch (error) {
+    return {
+      ok: false,
+      configured: true,
+      error:
+        error instanceof Error
+          ? error.message
+          : "Falha ao enviar operação para a VPS Oracle.",
+    };
+  }
+}
+
+export async function mirrorOracleVpsCaixaOperation(payload: {
+  idSalao?: string;
+  acao?: string;
+  requestBody?: Record<string, unknown>;
+  responseBody?: Record<string, unknown>;
+}) {
+  if (payload.acao === "fechar_caixa") {
+    const sessao = (payload.requestBody?.sessao || {}) as Record<string, unknown>;
+    return safeOracleVpsPost("/caixa/fechar", {
+      id_salao: payload.idSalao,
+      id_sessao: sessao.idSessao || null,
+      valor_fechamento_informado: sessao.valorFechamento || 0,
+      acao: payload.acao,
+      response: payload.responseBody || null,
+    });
+  }
+
+  return safeOracleVpsPost("/webhooks/internal", {
+    type: "caixa:processar",
+    id_salao: payload.idSalao || null,
+    acao: payload.acao || null,
+    request: payload.requestBody || null,
+    response: payload.responseBody || null,
+  });
+}
+
+export async function mirrorOracleVpsVendaOperation(payload: {
+  idSalao?: string;
+  acao?: string;
+  idComanda?: string;
+  responseBody?: Record<string, unknown>;
+}) {
+  return safeOracleVpsPost("/webhooks/internal", {
+    type: "vendas:processar",
+    id_salao: payload.idSalao || null,
+    acao: payload.acao || null,
+    id_comanda: payload.idComanda || null,
+    response: payload.responseBody || null,
+  });
+}
+
+export async function mirrorOracleVpsComissoesOperation(payload: {
+  idSalao?: string;
+  acao?: string;
+  ids?: string[];
+  responseBody?: Record<string, unknown>;
+}) {
+  return safeOracleVpsPost("/comissoes/calcular", {
+    id_salao: payload.idSalao,
+    acao: payload.acao || null,
+    ids: payload.ids || [],
+    response: payload.responseBody || null,
+  });
+}
+
+export async function mirrorOracleVpsNotificationProcessing(
+  payload: Record<string, unknown>
+) {
+  return safeOracleVpsPost(
+    "/notificacoes/processar",
+    {
+      limit: 50,
+      ...payload,
+    },
+    5000
+  );
 }

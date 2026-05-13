@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createCaixaService } from "@/services/caixaService";
 import { createCaixaRouteService } from "@/services/caixaRouteService";
 import { getErrorMessage } from "@/lib/get-error-message";
+import { mirrorOracleVpsCaixaOperation } from "@/lib/oracle-vps/client";
 import {
   ProcessarCaixaRouteUseCaseError,
   processarCaixaRouteUseCase,
@@ -9,10 +10,18 @@ import {
 
 export async function POST(req: NextRequest) {
   try {
+    const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
     const result = await processarCaixaRouteUseCase({
-      body: await req.json().catch(() => ({})),
+      body,
       caixaService: createCaixaService(),
       routeService: createCaixaRouteService(),
+    });
+
+    void mirrorOracleVpsCaixaOperation({
+      idSalao: String(body.idSalao || ""),
+      acao: String(body.acao || ""),
+      requestBody: body,
+      responseBody: result.body,
     });
 
     return NextResponse.json(result.body, { status: result.status });
