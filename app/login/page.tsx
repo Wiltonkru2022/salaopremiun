@@ -335,8 +335,9 @@ function LoginPageContent() {
 
             {googleErro ? (
               <div className="mb-5 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-                Não foi possível concluir o login com Google agora. Use e-mail e
-                senha ou tente novamente.
+                {googleErro === "google_nao_vinculado"
+                  ? "Esta conta Google ainda não está conectada no perfil do salão. Entre com e-mail e senha, conecte o Google no Perfil do Salão e tente novamente."
+                  : "Não foi possível concluir o login com Google agora. Use e-mail e senha ou tente novamente."}
               </div>
             ) : null}
 

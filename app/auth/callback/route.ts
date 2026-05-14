@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { getSupabaseCookieOptions } from "@/lib/supabase/cookie-options";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
 
@@ -33,13 +34,56 @@ function getRedirectOrigin(nextPath: string, fallbackOrigin: string) {
   return fallbackOrigin;
 }
 
+function redirectToLogin(requestUrl: URL, erro: string) {
+  return NextResponse.redirect(
+    new URL(`/login?erro=${encodeURIComponent(erro)}`, requestUrl.origin)
+  );
+}
+
+function buildRedirectBridge(targetUrl: URL) {
+  const href = targetUrl.toString();
+  const html = `<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta http-equiv="refresh" content="1;url=${href}" />
+    <title>Entrando no painel | SalãoPremium</title>
+    <style>
+      body{margin:0;min-height:100vh;display:grid;place-items:center;background:#fff;color:#09090b;font-family:Inter,Arial,sans-serif}
+      main{max-width:420px;padding:32px;text-align:center}
+      .logo{width:56px;height:56px;margin:0 auto 18px;border-radius:18px;background:#09090b;color:#d8b76a;display:grid;place-items:center;font-size:26px;font-weight:900}
+      h1{font-size:24px;margin:0 0 10px;font-weight:900}
+      p{margin:0;color:#52525b;line-height:1.6}
+      a{color:#09090b;font-weight:800}
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="logo">✦</div>
+      <h1>Login confirmado</h1>
+      <p>Estamos abrindo seu painel automaticamente. Se não abrir, <a href="${href}">clique aqui</a>.</p>
+      <script>setTimeout(function(){ window.location.replace(${JSON.stringify(href)}); }, 600);</script>
+    </main>
+  </body>
+</html>`;
+
+  return new NextResponse(html, {
+    status: 200,
+    headers: {
+      "content-type": "text/html; charset=utf-8",
+      "cache-control": "no-store",
+    },
+  });
+}
+
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get("code");
   const next = sanitizeNextPath(requestUrl.searchParams.get("next"));
 
   if (!code) {
-    return NextResponse.redirect(new URL("/login?erro=google_codigo_ausente", requestUrl.origin));
+    return redirectToLogin(requestUrl, "google_codigo_ausente");
   }
 
   const cookieStore = await cookies();
@@ -47,7 +91,7 @@ export async function GET(request: NextRequest) {
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   if (!supabaseUrl || !supabaseAnonKey) {
-    return NextResponse.redirect(new URL("/login?erro=google_indisponivel", requestUrl.origin));
+    return redirectToLogin(requestUrl, "google_indisponivel");
   }
 
   const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
@@ -70,8 +114,59 @@ export async function GET(request: NextRequest) {
   const { error } = await supabase.auth.exchangeCodeForSession(code);
 
   if (error) {
-    return NextResponse.redirect(new URL("/login?erro=google_sessao_invalida", requestUrl.origin));
+    return redirectToLogin(requestUrl, "google_sessao_invalida");
   }
 
-  return NextResponse.redirect(new URL(next, getRedirectOrigin(next, requestUrl.origin)));
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const email = user?.email?.trim().toLowerCase() || "";
+
+  if (!user || !email) {
+    await supabase.auth.signOut();
+    return redirectToLogin(requestUrl, "google_sessao_invalida");
+  }
+
+  const admin = getSupabaseAdmin();
+  const { data: usuarios } = await admin
+    .from("usuarios")
+    .select("id, id_salao, email, auth_user_id, status")
+    .or(`auth_user_id.eq.${user.id},email.eq.${email}`)
+    .limit(5);
+
+  const usuario = (usuarios || []).find(
+    (item) =>
+      String(item.email || "").toLowerCase() === email ||
+      item.auth_user_id === user.id
+  );
+
+  if (!usuario?.id_salao || String(usuario.status || "").toLowerCase() !== "ativo") {
+    await supabase.auth.signOut();
+    return redirectToLogin(requestUrl, "google_nao_vinculado");
+  }
+
+  const { data: connection } = await (admin as any)
+    .from("saloes_google_calendar_connections")
+    .select("id_salao, google_email, ativo")
+    .eq("id_salao", usuario.id_salao)
+    .eq("google_email", email)
+    .eq("ativo", true)
+    .maybeSingle();
+
+  if (!connection) {
+    await supabase.auth.signOut();
+    return redirectToLogin(requestUrl, "google_nao_vinculado");
+  }
+
+  if (usuario.auth_user_id !== user.id) {
+    await admin
+      .from("usuarios")
+      .update({ auth_user_id: user.id })
+      .eq("id", usuario.id);
+  }
+
+  return buildRedirectBridge(
+    new URL(next, getRedirectOrigin(next, requestUrl.origin))
+  );
 }

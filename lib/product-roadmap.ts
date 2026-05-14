@@ -60,8 +60,8 @@ export const productRoadmap: RoadmapItem[] = [
     description:
       "Sincronizacao dos horarios confirmados com a agenda externa do profissional.",
     category: "Agenda",
-    status: "planejado",
-    eta: "Planejado",
+    status: "entregue",
+    eta: "Disponivel",
     impact: "Menos conflito entre agenda pessoal e agenda do salao.",
   },
   {

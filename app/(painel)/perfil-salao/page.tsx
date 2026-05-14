@@ -1596,8 +1596,8 @@ export default function PerfilSalaoPage() {
 
             <SectionCard
               icon={<CalendarClock size={18} />}
-              title="Google"
-              description="Conecte o Google para login e sincronização automática da agenda."
+              title="Google Calendar e login integração"
+              description="Conecte a conta Google autorizada do salão para sincronizar agenda e liberar login com Google."
             >
               <div className="grid gap-3">
                 <div className="rounded-[22px] border border-zinc-200 bg-zinc-50 p-4">
@@ -1675,8 +1675,8 @@ export default function PerfilSalaoPage() {
                     </button>
                   )}
                   <p className="mt-3 text-xs leading-5 text-zinc-500">
-                    O login com Google continua disponível na tela de entrada do
-                    salão quando o provedor Google estiver ativo no Supabase.
+                    Somente a conta Google conectada aqui poderá entrar no painel
+                    pelo botão Entrar com Google.
                   </p>
                 </div>
               </div>
