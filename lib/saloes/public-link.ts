@@ -1,3 +1,5 @@
+import { DOMINIO_APP } from "@/lib/proxy/domain-config";
+
 export function normalizeSalaoSlug(value: string) {
   return String(value || "")
     .trim()
@@ -20,9 +22,9 @@ export function buildFallbackSalaoSlug(nome: string, idSalao: string) {
 }
 
 export function buildSalaoPublicPath(slugOrId: string) {
-  return `/salao/${encodeURIComponent(slugOrId)}`;
+  return `/app-cliente/salao/${encodeURIComponent(slugOrId)}`;
 }
 
 export function buildSalaoPublicUrl(slugOrId: string) {
-  return `https://salaopremiun.com.br${buildSalaoPublicPath(slugOrId)}`;
+  return `https://${DOMINIO_APP}${buildSalaoPublicPath(slugOrId)}`;
 }

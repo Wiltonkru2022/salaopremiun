@@ -123,6 +123,15 @@ function handlePublicHostRouting(ctx: ReturnType<typeof buildProxyRouteContext>)
         removeAppProfissionalPrefix(pathnameNormalizado)
       );
     }
+    if (ctx.rotaAppCliente) {
+      return redirectToHost(
+        request,
+        DOMINIO_APP,
+        pathnameNormalizado,
+        request.nextUrl.search,
+        301
+      );
+    }
     return NextResponse.next();
   }
 
@@ -157,7 +166,10 @@ function handlePublicHostRouting(ctx: ReturnType<typeof buildProxyRouteContext>)
           removeAppProfissionalPrefix(pathnameNormalizado)
         );
       }
-      return redirectToHost(request, DOMINIO_LOGIN, "/login");
+      if (ctx.rotaAppCliente) {
+        return redirectToHost(request, DOMINIO_APP, pathnameNormalizado);
+      }
+      return NextResponse.next();
     }
   }
 
@@ -188,7 +200,10 @@ function handlePublicHostRouting(ctx: ReturnType<typeof buildProxyRouteContext>)
           removeAppProfissionalPrefix(pathnameNormalizado)
         );
       }
-      return redirectToHost(request, DOMINIO_CADASTRO, CADASTRO_PATH);
+      if (ctx.rotaAppCliente) {
+        return redirectToHost(request, DOMINIO_APP, pathnameNormalizado);
+      }
+      return NextResponse.next();
     }
     if (pathnameNormalizado === "/cadastro") {
       return redirectToHost(request, DOMINIO_CADASTRO, CADASTRO_PATH);
@@ -226,7 +241,10 @@ function handlePublicHostRouting(ctx: ReturnType<typeof buildProxyRouteContext>)
           removeAppProfissionalPrefix(pathnameNormalizado)
         );
       }
-      return redirectToHost(request, DOMINIO_ASSINATURA, "/assinatura");
+      if (ctx.rotaAppCliente) {
+        return redirectToHost(request, DOMINIO_APP, pathnameNormalizado);
+      }
+      return NextResponse.next();
     }
   }
 
@@ -259,6 +277,9 @@ function handlePublicHostRouting(ctx: ReturnType<typeof buildProxyRouteContext>)
         DOMINIO_APP,
         removeAppProfissionalPrefix(pathnameNormalizado)
       );
+    }
+    if (ctx.rotaAppCliente) {
+      return redirectToHost(request, DOMINIO_APP, pathnameNormalizado);
     }
   }
 

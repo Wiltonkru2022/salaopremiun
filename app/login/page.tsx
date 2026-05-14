@@ -510,7 +510,7 @@ function LoginPageContent() {
                 <button
                   type="button"
                   onClick={() =>
-                    window.location.assign("https://salaopremiun.com.br/app-cliente")
+                    window.location.assign("https://app.salaopremiun.com.br/app-cliente")
                   }
                   className="mt-2 font-black text-zinc-950 underline"
                 >

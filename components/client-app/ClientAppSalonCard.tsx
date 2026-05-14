@@ -1,6 +1,7 @@
 import { MapPin, Star } from "lucide-react";
 import ClientAppPendingLink from "@/components/client-app/ClientAppPendingLink";
 import type { ClientAppSalonListItem } from "@/lib/client-app/queries";
+import { buildSalaoPublicPath } from "@/lib/saloes/public-link";
 
 export default function ClientAppSalonCard({
   salao,
@@ -10,7 +11,7 @@ export default function ClientAppSalonCard({
   distanceKm?: number | null;
   isLoggedIn?: boolean;
 }) {
-  const publicPath = `/salao/${encodeURIComponent(salao.appClienteSlug || salao.id)}`;
+  const publicPath = buildSalaoPublicPath(salao.appClienteSlug || salao.id);
   const cover =
     salao.fotoCapaUrl ||
     "https://images.unsplash.com/photo-1560066984-138dadb4c035?q=80&w=1200&auto=format&fit=crop";

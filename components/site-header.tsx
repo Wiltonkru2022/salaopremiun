@@ -98,7 +98,7 @@ export default function SiteHeader() {
               <Link href="/login" className="inline-flex items-center justify-center rounded-full border border-zinc-300 px-5 py-2.5 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-100" onClick={() => setOpen(false)}>
                 Login salão
               </Link>
-              <Link href="/app-cliente/login" className="inline-flex items-center justify-center rounded-full border border-zinc-300 px-5 py-2.5 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-100" onClick={() => setOpen(false)}>
+              <Link href="https://app.salaopremiun.com.br/app-cliente/login" className="inline-flex items-center justify-center rounded-full border border-zinc-300 px-5 py-2.5 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-100" onClick={() => setOpen(false)}>
                 App cliente
               </Link>
               <Link href="/app-profissional/login" className="inline-flex items-center justify-center rounded-full border border-zinc-300 px-5 py-2.5 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-100" onClick={() => setOpen(false)}>

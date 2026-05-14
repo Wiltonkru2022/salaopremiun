@@ -5,6 +5,7 @@ import {
   DOMINIO_ASSINATURA,
   DOMINIO_CADASTRO,
   getCadastroPath,
+  isAppClienteRoute,
   isAppProfissionalRoute,
   isArquivoPublico,
   redirectToHost,
@@ -49,6 +50,10 @@ export function handleAppProfissionalHost(ctx: ProxyRouteContext) {
       DOMINIO_APP,
       removeAppProfissionalPrefix(pathnameNormalizado)
     );
+  }
+
+  if (isAppClienteRoute(pathnameNormalizado)) {
+    return NextResponse.next();
   }
 
   if (

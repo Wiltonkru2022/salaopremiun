@@ -3,6 +3,7 @@ import { revalidateTag } from "next/cache";
 import { runAdminOperation } from "@/lib/supabase/admin-ops";
 import { hashClientePassword } from "@/lib/cliente-auth.server";
 import { htmlEscape, sendResendEmail } from "@/lib/email/resend";
+import { DOMINIO_APP } from "@/lib/proxy/domain-config";
 
 type RecoverClienteAppAccessResult =
   | { ok: true; message: string }
@@ -32,7 +33,7 @@ function getClientAppBaseUrl() {
   const root =
     process.env.NEXT_PUBLIC_APP_URL ||
     process.env.APP_MAIN_HOST ||
-    "https://salaopremiun.com.br";
+    `https://${DOMINIO_APP}`;
 
   if (root.startsWith("http")) return root.replace(/\/$/, "");
 

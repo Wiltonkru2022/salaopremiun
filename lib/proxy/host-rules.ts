@@ -30,6 +30,7 @@ export {
 };
 
 export const CADASTRO_PATH = "/cadastro-salao";
+export const APP_CLIENTE_PREFIX = "/app-cliente";
 export const APP_PROFISSIONAL_PREFIX = "/app-profissional";
 export const ADMIN_MASTER_PREFIX = ADMIN_MASTER_HOME_PATH;
 export const BLOG_PREFIX = "/blog";
@@ -93,6 +94,7 @@ export type ProxyRouteContext = {
   rotaAssinatura: boolean;
   rotaCadastro: boolean;
   rotaAppProfissional: boolean;
+  rotaAppCliente: boolean;
   rotaAdminMaster: boolean;
   rotaAdminMasterLogin: boolean;
   rotaAdminMasterProtegida: boolean;
@@ -144,6 +146,10 @@ export function isAppProfissionalRoute(pathname: string) {
     pathname === APP_PROFISSIONAL_PREFIX ||
     pathname.startsWith(`${APP_PROFISSIONAL_PREFIX}/`)
   );
+}
+
+export function isAppClienteRoute(pathname: string) {
+  return pathname === APP_CLIENTE_PREFIX || pathname.startsWith(`${APP_CLIENTE_PREFIX}/`);
 }
 
 export function isBlogRoute(pathname: string) {
@@ -288,6 +294,7 @@ export function buildProxyRouteContext(
     rotaAssinatura: pathnameNormalizado.startsWith("/assinatura"),
     rotaCadastro: isCadastroRoute(pathnameNormalizado),
     rotaAppProfissional: isAppProfissionalRoute(pathnameNormalizado),
+    rotaAppCliente: isAppClienteRoute(pathnameNormalizado),
     rotaAdminMaster,
     rotaAdminMasterLogin,
     rotaAdminMasterProtegida: rotaAdminMaster && !rotaAdminMasterLogin,

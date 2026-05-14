@@ -2760,7 +2760,7 @@ export default function PerfilSalaoPage() {
             <Field label="Link de divulgação">
               <div className="flex rounded-2xl border border-zinc-300 bg-white focus-within:border-zinc-900">
                 <span className="hidden shrink-0 items-center border-r border-zinc-200 px-4 text-sm font-semibold text-zinc-500 md:flex">
-                  salaopremiun.com.br/salao/
+                  app.salaopremiun.com.br/app-cliente/salao/
                 </span>
                 <input
                   value={appClienteDraft.app_cliente_slug || ""}

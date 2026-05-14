@@ -99,7 +99,7 @@ function HeroSection() {
             <Link className="inline-flex min-h-12 items-center justify-center rounded-2xl border border-zinc-300 bg-white px-5 py-3 text-sm font-bold text-zinc-900" href="/login">
               Login do salão
             </Link>
-            <Link className="inline-flex min-h-12 items-center justify-center rounded-2xl border border-zinc-300 bg-white px-5 py-3 text-sm font-bold text-zinc-900" href="/app-cliente/login">
+            <Link className="inline-flex min-h-12 items-center justify-center rounded-2xl border border-zinc-300 bg-white px-5 py-3 text-sm font-bold text-zinc-900" href="https://app.salaopremiun.com.br/app-cliente/login">
               App cliente
             </Link>
             <Link className="inline-flex min-h-12 items-center justify-center rounded-2xl border border-zinc-300 bg-white px-5 py-3 text-sm font-bold text-zinc-900" href="/app-profissional/login">
@@ -278,7 +278,7 @@ function AppsSection() {
       <div className="mx-auto grid max-w-7xl gap-6 px-5 md:px-8 lg:grid-cols-2 lg:px-10">
         <AppCard
           title="App cliente"
-          href="/app-cliente/login"
+          href="https://app.salaopremiun.com.br/app-cliente/login"
           icon={Smartphone}
           text="O cliente entra pelo celular para acessar perfil, salões, agendamentos e acompanhar a própria rotina."
           items={["Perfil do cliente", "Salões publicados", "Agendamentos", "Histórico e acesso rápido"]}

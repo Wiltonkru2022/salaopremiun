@@ -49,7 +49,7 @@ export default function SiteFooter() {
                 </Link>
               </li>
               <li>
-                <Link href="/app-cliente/login" className="hover:text-zinc-950">
+                <Link href="https://app.salaopremiun.com.br/app-cliente/login" className="hover:text-zinc-950">
                   App cliente
                 </Link>
               </li>

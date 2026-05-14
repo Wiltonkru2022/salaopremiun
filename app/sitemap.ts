@@ -5,7 +5,7 @@ import {
   DOMINIO_RAIZ,
 } from "@/lib/proxy/domain-config";
 import { isSalaoStatusOperational } from "@/lib/plans/access";
-import { buildSalaoPublicPath } from "@/lib/saloes/public-link";
+import { buildSalaoPublicUrl } from "@/lib/saloes/public-link";
 import { isSeoBlockedSalonSlug } from "@/lib/seo/public-routes";
 
 function getBaseUrl() {
@@ -24,7 +24,7 @@ function canUseSupabaseAdminInBuild() {
   );
 }
 
-async function listDynamicSalonRoutes(baseUrl: URL, now: Date) {
+async function listDynamicSalonRoutes(now: Date) {
   if (!canUseSupabaseAdminInBuild()) {
     return [];
   }
@@ -60,7 +60,7 @@ async function listDynamicSalonRoutes(baseUrl: URL, now: Date) {
     .filter(Boolean)
     .filter((slugOrId) => !isSeoBlockedSalonSlug(slugOrId))
     .map((slugOrId) => ({
-      url: new URL(buildSalaoPublicPath(slugOrId), baseUrl).toString(),
+      url: buildSalaoPublicUrl(slugOrId),
       lastModified: now,
       changeFrequency: "daily" as const,
       priority: 0.7,
@@ -99,7 +99,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   ];
 
   const [dynamicSalonRoutes, blogRoutes] = await Promise.all([
-    listDynamicSalonRoutes(baseUrl, now),
+    listDynamicSalonRoutes(now),
     listBlogRoutes(now),
   ]);
 

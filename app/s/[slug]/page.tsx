@@ -1,4 +1,5 @@
-import ClienteSalonPage from "@/app/app-cliente/salao/[id]/page";
+import { permanentRedirect } from "next/navigation";
+import { buildSalaoPublicUrl } from "@/lib/saloes/public-link";
 
 export default async function ShortPublicSalaoPage({
   params,
@@ -6,5 +7,5 @@ export default async function ShortPublicSalaoPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  return <ClienteSalonPage params={Promise.resolve({ id: slug })} />;
+  permanentRedirect(buildSalaoPublicUrl(slug));
 }
