@@ -50,6 +50,8 @@ export default function AppLoading({
 
   return (
     <div
+      aria-busy="true"
+      aria-label={`${title}. ${message}`}
       className={
         fullHeight
           ? "flex min-h-[44vh] items-center justify-center p-5"
@@ -66,12 +68,6 @@ export default function AppLoading({
                 <span className={`h-2.5 w-2.5 animate-pulse rounded-full ${tone.dot}`} />
                 Aguarde
               </div>
-              <h2 className="mt-2.5 text-[1.55rem] font-semibold tracking-[-0.05em]">
-                {title}
-              </h2>
-              <p className="mt-1.5 max-w-[34rem] text-sm leading-6 opacity-75">
-                {message}
-              </p>
             </div>
 
             <div className="hidden items-center gap-1.5 sm:flex">

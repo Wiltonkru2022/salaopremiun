@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { type ReactNode, useEffect, useMemo, useState } from "react";
+import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { usePainelSession } from "@/components/layout/PainelSessionProvider";
 import AppLoading from "@/components/ui/AppLoading";
 import ConfirmActionModal from "@/components/ui/ConfirmActionModal";
@@ -211,6 +211,8 @@ export default function ComissoesPage() {
   const { snapshot: painelSession } = usePainelSession();
   const [comissoesAvancadas, setComissoesAvancadas] = useState(false);
   const [comissaoAbertaId, setComissaoAbertaId] = useState<string | null>(null);
+  const [comissaoCarregandoId, setComissaoCarregandoId] = useState<string | null>(null);
+  const comissaoClickTimerRef = useRef<number | null>(null);
   const {
     loading,
     saving,
@@ -290,6 +292,29 @@ export default function ComissoesPage() {
       setComissaoAbertaId(null);
     }
   }, [comissaoAberta, comissaoAbertaId]);
+
+  useEffect(
+    () => () => {
+      if (comissaoClickTimerRef.current) {
+        window.clearTimeout(comissaoClickTimerRef.current);
+      }
+    },
+    []
+  );
+
+  function abrirComissaoDetalhe(id: string) {
+    if (saving || comissaoCarregandoId) return;
+
+    setComissaoCarregandoId(id);
+    if (comissaoClickTimerRef.current) {
+      window.clearTimeout(comissaoClickTimerRef.current);
+    }
+    comissaoClickTimerRef.current = window.setTimeout(() => {
+      setComissaoAbertaId(id);
+      setComissaoCarregandoId(null);
+      comissaoClickTimerRef.current = null;
+    }, 140);
+  }
 
   function imprimirRateio() {
     const win = window.open("", "_blank");
@@ -1367,7 +1392,15 @@ export default function ComissoesPage() {
                 Lançamentos detalhados
               </div>
             </div>
-            <div className="overflow-x-auto pb-2 [scrollbar-gutter:stable]">
+            <div className="relative overflow-x-auto pb-2 [scrollbar-gutter:stable]">
+              {comissaoCarregandoId ? (
+                <div className="absolute inset-0 z-20 flex cursor-wait items-center justify-center bg-white/10 backdrop-blur-[1px]">
+                  <span
+                    className="h-8 w-8 animate-spin rounded-full border-4 border-zinc-300 border-t-zinc-950 shadow-sm"
+                    aria-label="Abrindo comissão"
+                  />
+                </div>
+              ) : null}
               <table className="w-full min-w-[980px] table-fixed text-[13px]">
                 <colgroup>
                   <col className="w-[15%]" />
@@ -1408,19 +1441,28 @@ export default function ComissoesPage() {
                       const nome = item.profissionais?.nome || "Profissional";
                       const origem = origemMeta(item.origem_percentual);
                       const statusInfo = getStatusComissaoMeta(item.status);
+                      const rowLoading = comissaoCarregandoId === item.id;
+                      const listBlocked = Boolean(comissaoCarregandoId);
                       return (
                         <tr
                           key={item.id}
                           role="button"
-                          tabIndex={0}
-                          onClick={() => setComissaoAbertaId(item.id)}
+                          aria-disabled={listBlocked}
+                          tabIndex={listBlocked && !rowLoading ? -1 : 0}
+                          onClick={() => abrirComissaoDetalhe(item.id)}
                           onKeyDown={(event) => {
                             if (event.key === "Enter" || event.key === " ") {
                               event.preventDefault();
-                              setComissaoAbertaId(item.id);
+                              abrirComissaoDetalhe(item.id);
                             }
                           }}
-                          className="cursor-pointer border-b border-zinc-100 align-top transition hover:bg-zinc-50 focus:bg-zinc-50 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-zinc-900/15"
+                          className={`border-b border-zinc-100 align-top transition ${
+                            rowLoading
+                              ? "cursor-wait bg-zinc-200/80 text-zinc-500"
+                              : listBlocked
+                                ? "cursor-wait opacity-50"
+                                : "cursor-pointer hover:bg-zinc-50 focus:bg-zinc-50 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-zinc-900/15"
+                          }`}
                         >
                           <td className="px-3 py-3">
                             <div className="flex min-w-0 items-center gap-2.5">

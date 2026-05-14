@@ -116,6 +116,7 @@ export default function VendasPage() {
   const [detalheOpen, setDetalheOpen] = useState(false);
   const [detalheVenda, setDetalheVenda] = useState<VendaDetalhe | null>(null);
   const [vendaSelecionada, setVendaSelecionada] = useState<ComandaVenda | null>(null);
+  const [vendaCarregandoId, setVendaCarregandoId] = useState<string | null>(null);
 
   const [reabrirModalOpen, setReabrirModalOpen] = useState(false);
   const [motivoReabertura, setMotivoReabertura] = useState("");
@@ -487,8 +488,11 @@ export default function VendasPage() {
   }
 
   async function abrirDetalhes(venda: ComandaVenda) {
+    if (saving || vendaCarregandoId) return;
+
     try {
       setSaving(true);
+      setVendaCarregandoId(venda.id);
       setErroTela("");
       setVendaSelecionada(venda);
 
@@ -516,6 +520,7 @@ export default function VendasPage() {
         error instanceof Error ? error.message : "Erro ao abrir detalhes."
       );
     } finally {
+      setVendaCarregandoId(null);
       setSaving(false);
     }
   }
@@ -1129,7 +1134,15 @@ export default function VendasPage() {
               ) : null}
             </div>
 
-            <div className="overflow-x-auto">
+            <div className="relative overflow-x-auto">
+              {vendaCarregandoId ? (
+                <div className="absolute inset-0 z-20 flex cursor-wait items-center justify-center bg-white/10 backdrop-blur-[1px]">
+                  <span
+                    className="h-8 w-8 animate-spin rounded-full border-4 border-zinc-300 border-t-zinc-950 shadow-sm"
+                    aria-label="Abrindo venda"
+                  />
+                </div>
+              ) : null}
               <table className="min-w-[1120px]">
                 <thead>
                   <tr className="border-b border-zinc-100 bg-zinc-50/80 text-left text-[11px] uppercase tracking-[0.16em] text-zinc-500">
@@ -1145,12 +1158,15 @@ export default function VendasPage() {
                 <tbody>
                   {vendasFiltradas.map((item) => {
                     const rowBusca = vendasBusca.find((row) => row.id === item.id);
+                    const rowLoading = vendaCarregandoId === item.id;
+                    const listBlocked = Boolean(vendaCarregandoId);
 
                     return (
                       <tr
                         key={item.id}
                         role="button"
-                        tabIndex={0}
+                        aria-disabled={listBlocked}
+                        tabIndex={listBlocked && !rowLoading ? -1 : 0}
                         onClick={() => abrirDetalhes(item)}
                         onKeyDown={(event) => {
                           if (event.key === "Enter" || event.key === " ") {
@@ -1158,7 +1174,13 @@ export default function VendasPage() {
                             abrirDetalhes(item);
                           }
                         }}
-                        className="cursor-pointer border-b border-zinc-100 align-top transition hover:bg-zinc-50/80 focus-visible:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900/10 last:border-b-0"
+                        className={`border-b border-zinc-100 align-top transition last:border-b-0 ${
+                          rowLoading
+                            ? "cursor-wait bg-zinc-200/80 text-zinc-500"
+                            : listBlocked
+                              ? "cursor-wait opacity-50"
+                              : "cursor-pointer hover:bg-zinc-50/80 focus-visible:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900/10"
+                        }`}
                       >
                         <td className="px-4 py-3.5">
                           <div className="font-semibold text-zinc-900">#{item.numero}</div>
