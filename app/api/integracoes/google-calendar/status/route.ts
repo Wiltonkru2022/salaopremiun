@@ -77,28 +77,44 @@ export async function DELETE() {
   }
 
   const userClient = await createClient();
-  const {
-    data: { user: currentUser },
-  } = await userClient.auth.getUser();
-  const googleIdentity = currentUser?.identities?.find(
+  const { data: identitiesData, error: identitiesError } =
+    await userClient.auth.getUserIdentities();
+
+  if (identitiesError) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error:
+          "A integração foi desativada, mas não foi possível ler as identidades da conta para remover o Google do Supabase Auth.",
+      },
+      { status: 500 }
+    );
+  }
+
+  const googleIdentity = identitiesData.identities.find(
     (identity) => String(identity.provider || "").toLowerCase() === "google"
   );
 
   let identityUnlinked = false;
-  let identityWarning: string | null = null;
 
   if (googleIdentity) {
     const { error: unlinkError } = await userClient.auth.unlinkIdentity(
-      googleIdentity as any
+      googleIdentity
     );
 
     if (unlinkError) {
-      identityWarning =
-        "Integração desconectada. A identidade Google será removida quando houver outro método de entrada confirmado na conta.";
+      return NextResponse.json(
+        {
+          ok: false,
+          error:
+            "A integração foi desativada, mas o Supabase não permitiu remover a identidade Google. Verifique se a conta tem e-mail/senha ativo e se Manual Linking está habilitado em Auth.",
+        },
+        { status: 409 }
+      );
     } else {
       identityUnlinked = true;
     }
   }
 
-  return NextResponse.json({ ok: true, identityUnlinked, identityWarning });
+  return NextResponse.json({ ok: true, identityUnlinked });
 }
