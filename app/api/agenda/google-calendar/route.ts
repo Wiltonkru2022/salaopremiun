@@ -89,6 +89,13 @@ function isGoogleCalendarSchemaError(message: string) {
   );
 }
 
+function googleCalendarActionError(payload: Record<string, unknown>) {
+  return NextResponse.json({
+    ok: false,
+    ...payload,
+  });
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = payloadSchema.parse(await req.json());
@@ -259,15 +266,13 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    return NextResponse.json(
-      {
-        ok: false,
-        error:
-          error instanceof Error
-            ? error.message
-            : "Erro ao sincronizar com Google Calendar.",
-      },
-      { status: 500 }
-    );
+    return googleCalendarActionError({
+      requiresConfig: true,
+      connectUrl: "/perfil-salao?google_calendar=configure",
+      error:
+        error instanceof Error
+          ? error.message
+          : "Erro ao sincronizar com Google Calendar.",
+    });
   }
 }
