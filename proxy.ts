@@ -111,7 +111,9 @@ function handlePublicHostRouting(ctx: ReturnType<typeof buildProxyRouteContext>)
       return redirectToHost(
         request,
         DOMINIO_CADASTRO,
-        getCadastroPath(pathnameNormalizado)
+        getCadastroPath(pathnameNormalizado),
+        request.nextUrl.search,
+        301
       );
     }
     if (ctx.rotaAppProfissional) {

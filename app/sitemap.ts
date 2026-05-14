@@ -1,5 +1,9 @@
 import type { MetadataRoute } from "next";
-import { DOMINIO_BLOG, DOMINIO_RAIZ } from "@/lib/proxy/domain-config";
+import {
+  DOMINIO_BLOG,
+  DOMINIO_CADASTRO,
+  DOMINIO_RAIZ,
+} from "@/lib/proxy/domain-config";
 import { isSalaoStatusOperational } from "@/lib/plans/access";
 import { buildSalaoPublicPath } from "@/lib/saloes/public-link";
 import { isSeoBlockedSalonSlug } from "@/lib/seo/public-routes";
@@ -100,6 +104,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   ]);
 
   return [
+    {
+      url: `https://${DOMINIO_CADASTRO}/cadastro-salao`,
+      lastModified: now,
+      changeFrequency: "monthly" as const,
+      priority: 0.65,
+    },
     ...staticRoutes.map((path, index) => ({
       url: new URL(path || "/", baseUrl).toString(),
       lastModified: now,

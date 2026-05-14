@@ -215,7 +215,8 @@ export function redirectToHost(
   request: NextRequest,
   host: string,
   pathname: string,
-  search = request.nextUrl.search
+  search = request.nextUrl.search,
+  status = 307
 ) {
   const currentHost = getRequestHost(request);
   const currentPath = request.nextUrl.pathname;
@@ -229,7 +230,10 @@ export function redirectToHost(
     return NextResponse.next();
   }
 
-  return NextResponse.redirect(buildAbsoluteUrl(request, host, pathname, search));
+  return NextResponse.redirect(
+    buildAbsoluteUrl(request, host, pathname, search),
+    status
+  );
 }
 
 export function redirectToAdminMasterLogin(
