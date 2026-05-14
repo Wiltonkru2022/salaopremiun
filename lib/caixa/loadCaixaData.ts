@@ -11,7 +11,11 @@ import type {
   ConfigCaixaSalao,
   ProfissionalResumo,
 } from "@/components/caixa/types";
-import { SELECT_COMANDAS, SELECT_COMANDA_PAGAMENTOS } from "@/lib/db/selects";
+import {
+  SELECT_COMANDAS,
+  SELECT_COMANDA_ITENS,
+  SELECT_COMANDA_PAGAMENTOS,
+} from "@/lib/db/selects";
 import type { PainelSessionSnapshot } from "@/lib/painel/session-snapshot";
 import { createClient } from "@/lib/supabase/client";
 
@@ -29,6 +33,8 @@ type CatalogoServicoRow = CatalogoServico;
 const CAIXA_CANCELADAS_RECENTES_LIMIT = 120;
 const CAIXA_FILA_OPERACIONAL_LIMIT = 80;
 const CAIXA_HISTORICO_DIA_LIMIT = 60;
+const SELECT_COMANDA_ITENS_FALLBACK =
+  "ativo, created_at, custo_total, descricao, id, id_agendamento, id_assistente, id_comanda, id_item_extra, id_produto, id_profissional, id_salao, id_servico, observacoes, origem, quantidade, tipo, tipo_item, updated_at, valor_total, valor_unitario";
 
 export async function carregarAcessoCaixa(
   supabase: CaixaSupabaseClient,
@@ -465,6 +471,47 @@ async function carregarCanceladas(
   return (data as ComandaFila[]) || [];
 }
 
+async function carregarItensComandaDetalhe(
+  supabase: CaixaSupabaseClient,
+  idSalao: string,
+  idComanda: string
+) {
+  const selecoes = [SELECT_COMANDA_ITENS, SELECT_COMANDA_ITENS_FALLBACK];
+  let ultimoErro: unknown = null;
+
+  for (const [indice, select] of selecoes.entries()) {
+    const { data, error } = await supabase
+      .from("comanda_itens")
+      .select(select)
+      .eq("id_salao", idSalao)
+      .eq("id_comanda", idComanda)
+      .eq("ativo", true);
+
+    if (!error) {
+      if (indice > 0) {
+        console.warn(
+          "[caixa] itens da comanda carregados pelo fallback compacto.",
+          { idSalao, idComanda }
+        );
+      }
+
+      return ((data || []) as unknown as ComandaItem[]) || [];
+    }
+
+    ultimoErro = error;
+    console.error(
+      indice === 0
+        ? "Erro Supabase comanda_itens (detalhado):"
+        : "Erro Supabase comanda_itens (fallback):",
+      error
+    );
+  }
+
+  throw ultimoErro instanceof Error
+    ? ultimoErro
+    : new Error("Erro ao carregar itens da comanda.");
+}
+
 export async function carregarListasCaixa(
   supabase: CaixaSupabaseClient,
   idSalao: string
@@ -544,17 +591,11 @@ export async function carregarComandaDetalhe(
     throw new Error("Nao foi possivel identificar o salao da comanda.");
   }
 
-  const { data: itensData, error: itensError } = await supabase
-    .from("comanda_itens")
-    .select("ativo, base_calculo_aplicada, comissao_assistente_percentual_aplicada, comissao_assistente_valor_aplicado, comissao_percentual_aplicada, comissao_valor_aplicado, created_at, custo_total, desconta_taxa_maquininha_aplicada, descricao, id, id_agendamento, id_assistente, id_comanda, id_item_extra, id_produto, id_profissional, id_salao, id_servico, idempotency_key, observacoes, origem, quantidade, tipo, tipo_item, updated_at, valor_total, valor_unitario")
-    .eq("id_salao", idSalao)
-    .eq("id_comanda", idComanda)
-    .eq("ativo", true);
-
-  if (itensError) {
-    console.error("Erro Supabase comanda_itens:", itensError);
-    throw new Error("Erro ao carregar itens da comanda.");
-  }
+  const itensData = await carregarItensComandaDetalhe(
+    supabase,
+    idSalao,
+    idComanda
+  );
 
   const { data: pagamentosData, error: pagamentosError } = await supabase
     .from("comanda_pagamentos")
