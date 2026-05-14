@@ -17,6 +17,7 @@ type ClienteRow = {
   id: string;
   nome: string | null;
   telefone?: string | null;
+  whatsapp?: string | null;
   email?: string | null;
   ativo?: boolean | string | number | null;
   status?: string | null;
@@ -121,6 +122,7 @@ export default async function ClientesPage({
           />
 
           <form method="GET" className="space-y-3">
+            <input type="hidden" name="pagina" value="1" />
             <div className="flex items-center gap-2 rounded-[1.15rem] border border-zinc-200 bg-zinc-50 px-3">
               <Search size={16} className="shrink-0 text-zinc-400" />
               <input
@@ -132,12 +134,20 @@ export default async function ClientesPage({
               />
             </div>
 
-            <Link
-              href="/app-profissional/clientes/novo"
-              className="flex h-11 w-full items-center justify-center rounded-[18px] bg-zinc-950 text-sm font-bold text-white"
-            >
-              Cadastrar cliente
-            </Link>
+            <div className="grid gap-2 min-[380px]:grid-cols-2">
+              <button
+                type="submit"
+                className="flex h-11 w-full items-center justify-center rounded-[18px] bg-zinc-950 text-sm font-bold text-white"
+              >
+                Buscar
+              </button>
+              <Link
+                href="/app-profissional/clientes/novo"
+                className="flex h-11 w-full items-center justify-center rounded-[18px] border border-zinc-200 bg-white text-sm font-bold text-zinc-800"
+              >
+                Cadastrar cliente
+              </Link>
+            </div>
           </form>
         </ProfissionalSurface>
 
@@ -185,7 +195,7 @@ export default async function ClientesPage({
                   </div>
 
                   <div className="mt-1.5 break-words text-sm text-zinc-500">
-                    {formatTelefone(cliente.telefone)}
+                    {formatTelefone(cliente.telefone || cliente.whatsapp)}
                   </div>
 
                   <div className="mt-1 break-all text-sm text-zinc-400">

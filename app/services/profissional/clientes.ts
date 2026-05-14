@@ -4,6 +4,7 @@ export type ClienteProfissional = {
   id: string;
   nome: string | null;
   telefone: string | null;
+  whatsapp?: string | null;
   email: string | null;
   status: string | null;
   ativo: string | null;
@@ -24,6 +25,7 @@ export async function listarClientesDoSalao(
     idSalao,
     run: async (supabase) => {
       const buscaLimpa = String(options.busca || "").trim();
+      const buscaDigits = buscaLimpa.replace(/\D/g, "");
       const limit = options.limit ?? 10;
       const page = Math.max(0, options.page ?? 0);
       const from = page * limit;
@@ -31,14 +33,27 @@ export async function listarClientesDoSalao(
 
       let query = supabase
         .from("clientes")
-        .select("id, nome, telefone, email, status, ativo")
+        .select("id, nome, telefone, whatsapp, email, status, ativo")
         .eq("id_salao", idSalao)
         .order("nome", { ascending: true });
 
       if (buscaLimpa) {
-        query = query.or(
-          `nome.ilike.%${buscaLimpa}%,telefone.ilike.%${buscaLimpa}%,email.ilike.%${buscaLimpa}%`
-        );
+        const termo = buscaLimpa.replaceAll("%", "\\%").replaceAll("_", "\\_");
+        const filtros = [
+          `nome.ilike.%${termo}%`,
+          `telefone.ilike.%${termo}%`,
+          `whatsapp.ilike.%${termo}%`,
+          `email.ilike.%${termo}%`,
+        ];
+
+        if (buscaDigits && buscaDigits !== termo) {
+          filtros.push(
+            `telefone.ilike.%${buscaDigits}%`,
+            `whatsapp.ilike.%${buscaDigits}%`
+          );
+        }
+
+        query = query.or(filtros.join(","));
       }
 
       const { data, error } = await query.range(from, to);
