@@ -80,6 +80,11 @@ export default function SiteFooter() {
                   Política de privacidade
                 </Link>
               </li>
+              <li>
+                <Link href="/termos-de-uso" className="hover:text-zinc-950">
+                  Termos de uso
+                </Link>
+              </li>
             </ul>
           </div>
         </div>
