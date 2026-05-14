@@ -120,10 +120,17 @@ export async function obterDetalhesVenda(params: {
       ? (detalhe.comanda as Record<string, unknown>)
       : null;
 
-  if (!comanda?.clientes && comanda?.id_cliente) {
+  const clienteAtual =
+    comanda?.clientes && typeof comanda.clientes === "object"
+      ? (Array.isArray(comanda.clientes)
+          ? (comanda.clientes[0] as Record<string, unknown> | undefined)
+          : (comanda.clientes as Record<string, unknown>))
+      : null;
+
+  if ((!clienteAtual || !clienteAtual.cpf) && comanda?.id_cliente) {
     const { data: cliente } = await supabaseAdmin
       .from("clientes")
-      .select("nome")
+      .select("nome, cpf")
       .eq("id", String(comanda.id_cliente))
       .maybeSingle();
 
@@ -133,7 +140,10 @@ export async function obterDetalhesVenda(params: {
           ...detalhe,
           comanda: {
             ...comanda,
-            clientes: cliente,
+            clientes: {
+              ...(clienteAtual || {}),
+              ...cliente,
+            },
           },
         },
       };

@@ -57,6 +57,34 @@ function escapeHtml(value: string | null | undefined) {
     .replaceAll("'", "&#39;");
 }
 
+function getFirstJoined<T>(value: T | T[] | null | undefined): T | null {
+  if (Array.isArray(value)) return value[0] || null;
+  return value || null;
+}
+
+function formatDocumentLabel(value?: string | null) {
+  const digits = String(value || "").replace(/\D/g, "");
+  if (!digits) return "";
+  return digits.length > 11 ? "CNPJ" : "CPF";
+}
+
+function buildSalaoEndereco(salao?: SalaoInfo | null) {
+  if (!salao) return "";
+  const linha1 = [
+    salao.endereco ? escapeHtml(salao.endereco) : null,
+    salao.numero ? `nº ${escapeHtml(salao.numero)}` : null,
+    salao.complemento ? escapeHtml(salao.complemento) : null,
+  ]
+    .filter(Boolean)
+    .join(", ");
+  const linha2 = [salao.bairro, salao.cidade, salao.estado]
+    .map((item) => (item ? escapeHtml(item) : null))
+    .filter(Boolean)
+    .join(" - ");
+  const linha3 = salao.cep ? `CEP ${escapeHtml(salao.cep)}` : "";
+  return [linha1, linha2, linha3].filter(Boolean).join("<br />");
+}
+
 function mergeComandaDetalhe(
   venda: ComandaVenda,
   detalheComanda: ComandaVenda | null | undefined
@@ -210,7 +238,7 @@ export default function VendasPage() {
 
       const { data: salaoData, error: salaoError } = await supabase
         .from("saloes")
-        .select("id, nome, cpf_cnpj, telefone, endereco")
+        .select("id, nome, cpf_cnpj, telefone, endereco, numero, bairro, cidade, estado, cep, complemento, logo_url")
         .eq("id", painelSession.idSalao)
         .maybeSingle();
 
@@ -626,7 +654,11 @@ export default function VendasPage() {
   ) {
     const itens = detalhe?.itens || [];
     const pagamentos = detalhe?.pagamentos || [];
+    const cliente = getFirstJoined(venda.clientes);
     const clienteNome = getJoinedName(venda.clientes, "Sem cliente");
+    const clienteCpf = cliente?.cpf || "";
+    const salaoDocumentoLabel = formatDocumentLabel(salao?.cpf_cnpj);
+    const enderecoSalao = buildSalaoEndereco(salao);
     const comboSummary = groupComboTotals(
       itens,
       (item) => item.descricao,
@@ -650,6 +682,7 @@ export default function VendasPage() {
             .cupom { width: 100%; max-width: 420px; margin: 0 auto; }
             .center { text-align: center; }
             .salao { font-size: 22px; font-weight: 700; margin-bottom: 4px; }
+            .logo { display: block; max-width: 86px; max-height: 86px; object-fit: contain; margin: 0 auto 8px; border-radius: 18px; }
             .muted { color: #666; font-size: 12px; line-height: 1.45; }
             .line { border-top: 1px dashed #999; margin: 14px 0; }
             .section-title { font-size: 13px; font-weight: 700; margin-bottom: 8px; text-transform: uppercase; letter-spacing: .08em; }
@@ -669,10 +702,11 @@ export default function VendasPage() {
         <body onload="window.print(); window.close();">
           <div class="cupom">
             <div class="center">
-              <div class="salao">${salao?.nome || "Salão Premium"}</div>
-              ${salao?.cpf_cnpj ? `<div class="muted">CNPJ: ${salao.cpf_cnpj}</div>` : ""}
-              ${salao?.telefone ? `<div class="muted">Telefone: ${salao.telefone}</div>` : ""}
-              ${salao?.endereco ? `<div class="muted">${salao.endereco}</div>` : ""}
+              ${salao?.logo_url ? `<img class="logo" src="${escapeHtml(salao.logo_url)}" alt="Logo do salão" />` : ""}
+              <div class="salao">${escapeHtml(salao?.nome || "Salão Premium")}</div>
+              ${salao?.cpf_cnpj ? `<div class="muted">${salaoDocumentoLabel || "Documento"}: ${escapeHtml(salao.cpf_cnpj)}</div>` : ""}
+              ${salao?.telefone ? `<div class="muted">Telefone: ${escapeHtml(salao.telefone)}</div>` : ""}
+              ${enderecoSalao ? `<div class="muted">${enderecoSalao}</div>` : ""}
             </div>
 
             <div class="line"></div>
@@ -682,7 +716,8 @@ export default function VendasPage() {
             <div class="row"><span>Comanda</span><strong>#${venda.numero}</strong></div>
             <div class="row"><span>Status</span><strong>${venda.status}</strong></div>
             <div class="row"><span>Data</span><strong>${formatDateTime(venda.fechada_em || venda.cancelada_em)}</strong></div>
-            <div class="row"><span>Cliente</span><strong>${clienteNome}</strong></div>
+            <div class="row"><span>Cliente</span><strong>${escapeHtml(clienteNome)}</strong></div>
+            ${clienteCpf ? `<div class="row"><span>CPF do cliente</span><strong>${escapeHtml(clienteCpf)}</strong></div>` : ""}
 
             <div class="line"></div>
 
