@@ -15,6 +15,7 @@ import {
   Sparkles,
   User2,
   WalletCards,
+  XCircle,
 } from "lucide-react";
 import { groupComboTotals, parseComboDisplayMeta } from "@/lib/combo/display";
 import { getPlanoMinimoParaRecurso, type PlanoCobravelCodigo } from "@/lib/plans/catalog";
@@ -44,6 +45,20 @@ function formatDateTime(value: string | null | undefined) {
   if (!value) return "-";
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? value : date.toLocaleString("pt-BR");
+}
+
+function formatDateTimeCompact(value: string | null | undefined) {
+  if (!value) return "-";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return `${date.toLocaleDateString("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "2-digit",
+  })} ${date.toLocaleTimeString("pt-BR", {
+    hour: "2-digit",
+    minute: "2-digit",
+  })}`;
 }
 
 function escapeHtml(value: string | null | undefined) {
@@ -174,18 +189,18 @@ function ComboDescriptionBlock({
 
   return (
     <>
-      <div className="text-sm font-medium text-zinc-900">
+      <div className="max-w-[230px] truncate text-[13px] font-semibold text-zinc-900">
         {comboMeta.displayTitle}
       </div>
       {comboMeta.isComboItem && comboMeta.comboName ? (
-        <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-zinc-500">
+        <div className="mt-1 flex max-w-[230px] items-center gap-2 overflow-hidden text-xs text-zinc-500">
           <span className="rounded-full border border-violet-200 bg-violet-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-violet-700">
             Combo
           </span>
-          <span>{comboMeta.comboName}</span>
+          <span className="truncate">{comboMeta.comboName}</span>
         </div>
       ) : null}
-      <div className="mt-1 text-xs text-zinc-500">
+      <div className="mt-1 max-h-10 max-w-[230px] overflow-hidden text-[11px] leading-5 text-zinc-500">
         {observacoes || "Sem observações adicionais."}
       </div>
     </>
@@ -1133,29 +1148,39 @@ export default function ComissoesPage() {
                 Lançamentos detalhados
               </div>
             </div>
-            <div className="overflow-x-auto">
-              <table className="min-w-[960px] w-full">
+            <div className="overflow-x-auto pb-2 [scrollbar-gutter:stable]">
+              <table className="w-full min-w-[1040px] table-fixed text-[13px]">
+                <colgroup>
+                  <col className="w-[15%]" />
+                  <col className="w-[22%]" />
+                  <col className="w-[8%]" />
+                  <col className="w-[10%]" />
+                  {comissoesAvancadas ? <col className="w-[12%]" /> : null}
+                  <col className="w-[10%]" />
+                  <col className="w-[9%]" />
+                  <col className="w-[8%]" />
+                  <col className="w-[6%]" />
+                </colgroup>
                 <thead>
-                  <tr className="border-b border-zinc-200 bg-zinc-50 text-left text-xs uppercase tracking-[0.14em] text-zinc-500">
-                    <th className="px-4 py-3">Pessoa</th>
-                    <th className="px-4 py-3">Descrição</th>
-                    <th className="px-4 py-3">Competência</th>
-                    <th className="px-4 py-3">Base</th>
-                    <th className="px-4 py-3">% Aplicada</th>
+                  <tr className="border-b border-zinc-200 bg-zinc-50 text-left text-[10px] uppercase tracking-[0.12em] text-zinc-500">
+                    <th className="px-3 py-2.5">Pessoa</th>
+                    <th className="px-3 py-2.5">Descrição</th>
+                    <th className="px-3 py-2.5">Data</th>
+                    <th className="px-3 py-2.5">Base / %</th>
                     {comissoesAvancadas ? (
-                      <th className="px-4 py-3">Origem</th>
+                      <th className="px-3 py-2.5">Origem</th>
                     ) : null}
-                    <th className="px-4 py-3">Comissão</th>
-                    <th className="px-4 py-3">Status</th>
-                    <th className="px-4 py-3">Pago</th>
-                    <th className="px-4 py-3 text-right">Ações</th>
+                    <th className="px-3 py-2.5">Comissão</th>
+                    <th className="px-3 py-2.5">Status</th>
+                    <th className="px-3 py-2.5">Pago</th>
+                    <th className="px-3 py-2.5 text-right">Ações</th>
                   </tr>
                 </thead>
                 <tbody>
                   {rows.length === 0 ? (
                     <tr>
                       <td
-                      colSpan={comissoesAvancadas ? 10 : 9}
+                      colSpan={comissoesAvancadas ? 9 : 8}
                         className="px-4 py-10 text-center text-sm text-zinc-500"
                       >
                         Nenhuma comissão encontrada com os filtros atuais.
@@ -1171,16 +1196,16 @@ export default function ComissoesPage() {
                           key={item.id}
                           className="border-b border-zinc-100 align-top"
                         >
-                          <td className="px-4 py-3.5">
-                            <div className="flex items-center gap-3">
-                              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-zinc-100 text-sm font-bold text-zinc-700">
+                          <td className="px-3 py-3">
+                            <div className="flex min-w-0 items-center gap-2.5">
+                              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-xs font-bold text-zinc-700">
                                 {getInitials(nome) || <User2 size={16} />}
                               </div>
                               <div className="min-w-0">
-                                <div className="truncate font-semibold text-zinc-900">
+                                <div className="truncate text-[13px] font-semibold text-zinc-900">
                                   {nome}
                                 </div>
-                                <div className="text-xs text-zinc-500">
+                                <div className="text-[11px] text-zinc-500">
                                   {getTipoDestinatario(item) === "assistente"
                                     ? "Assistente"
                                     : "Profissional"}
@@ -1188,56 +1213,59 @@ export default function ComissoesPage() {
                               </div>
                             </div>
                           </td>
-                          <td className="px-4 py-3.5 min-w-[180px]">
+                          <td className="px-3 py-3">
                             <ComboDescriptionBlock
                               descricao={item.descricao}
                               observacoes={item.observacoes}
                             />
                           </td>
-                          <td className="px-4 py-3.5 text-sm text-zinc-700">
+                          <td className="whitespace-nowrap px-3 py-3 text-[12px] text-zinc-700">
                             {formatDate(item.competencia_data)}
                           </td>
-                          <td className="px-4 py-3.5 text-sm font-medium text-zinc-800">
-                            {formatCurrency(item.valor_base)}
-                          </td>
-                          <td className="px-4 py-3.5 text-sm font-medium text-zinc-800">
-                            {formatPercent(item.percentual_aplicado)}
+                          <td className="px-3 py-3">
+                            <div className="whitespace-nowrap text-[12px] font-semibold text-zinc-900">
+                              {formatCurrency(item.valor_base)}
+                            </div>
+                            <div className="mt-1 whitespace-nowrap text-[11px] font-medium text-zinc-500">
+                              {formatPercent(item.percentual_aplicado)}
+                            </div>
                           </td>
                           {comissoesAvancadas ? (
-                            <td className="px-4 py-3.5">
+                            <td className="px-3 py-3">
                               <div
-                                className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${origem.badgeClass}`}
+                                className={`inline-flex max-w-[120px] rounded-full border px-2.5 py-1 text-center text-[11px] font-semibold leading-4 ${origem.badgeClass}`}
+                                title={`${origem.label}. ${origem.description}`}
                               >
                                 {origem.label}
                               </div>
-                              <div className="mt-2 text-xs text-zinc-500">
+                              <div className="mt-1.5 hidden max-w-[132px] text-[11px] leading-4 text-zinc-500 2xl:block">
                                 {origem.description}
                               </div>
                             </td>
                           ) : null}
-                          <td className="px-4 py-3.5">
-                            <div className="text-sm font-bold text-zinc-900">
+                          <td className="px-3 py-3">
+                            <div className="whitespace-nowrap text-[13px] font-bold text-zinc-900">
                               {formatCurrency(getValorLancamento(item))}
                             </div>
-                            <div className="mt-1 text-xs text-zinc-500">
+                            <div className="mt-1 whitespace-nowrap text-[11px] text-zinc-500">
                               Base {formatCurrency(item.valor_base)}
                             </div>
                           </td>
-                          <td className="px-4 py-3.5">
+                          <td className="px-3 py-3">
                             <span
-                              className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${statusInfo.badgeClass}`}
+                              className={`inline-flex rounded-full border px-2.5 py-1 text-[11px] font-semibold ${statusInfo.badgeClass}`}
                             >
                               {statusInfo.label}
                             </span>
-                            <div className="mt-2 text-xs text-zinc-500">
+                            <div className="mt-1.5 hidden text-[11px] leading-4 text-zinc-500 xl:block">
                               {statusInfo.description}
                             </div>
                           </td>
-                          <td className="px-4 py-3.5 text-sm text-zinc-700">
-                            {formatDateTime(item.pago_em)}
+                          <td className="px-3 py-3 text-[12px] leading-5 text-zinc-700">
+                            {formatDateTimeCompact(item.pago_em)}
                           </td>
-                          <td className="px-4 py-3.5">
-                            <div className="flex justify-end gap-2">
+                          <td className="px-3 py-3">
+                            <div className="flex justify-end gap-1.5">
                               {podeGerenciar ? (
                                 <>
                                   {normalizeStatusComissao(item.status) ===
@@ -1245,9 +1273,9 @@ export default function ComissoesPage() {
                                     <button
                                       onClick={() => void marcarComoPago(item.id)}
                                       disabled={saving}
-                                      className="rounded-xl bg-zinc-900 px-3 py-2 text-xs font-semibold text-white transition hover:opacity-95 disabled:opacity-50"
+                                      className="inline-flex h-8 items-center justify-center whitespace-nowrap rounded-xl bg-zinc-900 px-2.5 text-[11px] font-semibold text-white transition hover:opacity-95 disabled:opacity-50"
                                     >
-                                      Marcar pago
+                                      Pagar
                                     </button>
                                   ) : null}
                                   {normalizeStatusComissao(item.status) !==
@@ -1260,14 +1288,16 @@ export default function ComissoesPage() {
                                         })
                                       }
                                       disabled={saving}
-                                      className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-100 disabled:opacity-50"
+                                      aria-label="Cancelar lançamento"
+                                      title="Cancelar lançamento"
+                                      className="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-rose-200 bg-rose-50 text-rose-700 transition hover:bg-rose-100 disabled:opacity-50"
                                     >
-                                      Cancelar
+                                      <XCircle size={15} />
                                     </button>
                                   ) : null}
                                 </>
                               ) : (
-                                <span className="text-xs font-medium text-zinc-400">
+                                <span className="text-[11px] font-medium text-zinc-400">
                                   Somente leitura
                                 </span>
                               )}
