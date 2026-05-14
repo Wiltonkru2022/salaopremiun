@@ -624,7 +624,7 @@ export default function ProfissionaisListPage() {
                               ) : null}
                             </div>
 
-                            <p className="mt-1.5 text-sm text-zinc-500">
+                            <p className="hidden text-sm text-zinc-500">
                               {[
                                 nomeExibicao !== item.nome ? nomeExibicao : null,
                                 item.cargo || item.categoria,
@@ -634,7 +634,7 @@ export default function ProfissionaisListPage() {
                                 .join(" • ") || "Sem cargo, categoria ou vínculo informado"}
                             </p>
 
-                            <div className="mt-2.5 flex flex-wrap gap-2 text-xs text-zinc-500">
+                            <div className="hidden flex-wrap gap-2 text-xs text-zinc-500">
                               <TagHint>{item.email || "Sem e-mail"}</TagHint>
                               <TagHint>
                                 {item.whatsapp || item.telefone || "Sem telefone"}
@@ -646,7 +646,7 @@ export default function ProfissionaisListPage() {
                               </TagHint>
                             </div>
 
-                            <div className="mt-2.5 flex flex-wrap gap-2">
+                            <div className="hidden flex-wrap gap-2">
                               <MetricBlock
                                 label="Funcao"
                                 value={item.cargo || item.categoria || "-"}

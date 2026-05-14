@@ -567,13 +567,13 @@ export default function ProdutosPage() {
                           "Sem marca ou linha informada"}
                       </p>
 
-                      <div className="mt-2.5 flex flex-wrap gap-2 text-xs text-zinc-500">
+                      <div className="hidden flex-wrap gap-2 text-xs text-zinc-500">
                         <TagHint>{item.categoria || "Sem categoria"}</TagHint>
                         <TagHint>{item.destinacao || "Sem destinacao"}</TagHint>
                       </div>
 
                       <div
-                        className={`mt-3 grid grid-cols-1 gap-2.5 md:grid-cols-2 ${estoqueLiberado ? "xl:grid-cols-4" : "xl:grid-cols-3"}`}
+                        className={`hidden grid-cols-1 gap-2.5 md:grid-cols-2 ${estoqueLiberado ? "xl:grid-cols-4" : "xl:grid-cols-3"}`}
                       >
                         <MetricBlock
                           label="Custo real"

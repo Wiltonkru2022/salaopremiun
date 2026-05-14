@@ -560,7 +560,7 @@ export default function ServicosPage() {
                         </p>
                       ) : null}
 
-                      <div className="mt-3 grid grid-cols-1 gap-2.5 md:grid-cols-2 xl:grid-cols-4">
+                      <div className="hidden grid-cols-1 gap-2.5 md:grid-cols-2 xl:grid-cols-4">
                         <MetricBlock
                           label="Tempo operacional"
                           value={formatMinutes(item.duracao_minutos)}
@@ -601,7 +601,6 @@ export default function ServicosPage() {
                         {item.gatilho_retorno_dias ? (
                           <TagHint>{`Retorno sugerido em ${item.gatilho_retorno_dias} dias`}</TagHint>
                         ) : null}
-                        <TagHint>Exceções e consumo ficam no detalhe do serviço</TagHint>
                       </div>
                     </div>
 

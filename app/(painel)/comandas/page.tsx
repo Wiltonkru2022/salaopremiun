@@ -492,13 +492,17 @@ export default function ComandasPage() {
                   >
                     Abrir comanda
                   </Link>
-                  <Link
-                    href={`/caixa?comanda_id=${comandaSelecionada.id}`}
-                    target={getWorkspaceWindowTarget("/caixa")}
-                    className="inline-flex items-center justify-center rounded-2xl bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-zinc-800"
-                  >
-                    Ir para pagamento
-                  </Link>
+                  {["aberta", "aguardando_pagamento", "em_atendimento"].includes(
+                    String(comandaSelecionada.status || "").toLowerCase()
+                  ) ? (
+                    <Link
+                      href={`/caixa?comanda_id=${comandaSelecionada.id}`}
+                      target={getWorkspaceWindowTarget("/caixa")}
+                      className="inline-flex items-center justify-center rounded-2xl bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-zinc-800"
+                    >
+                      Ir para pagamento
+                    </Link>
+                  ) : null}
                 </>
               ) : null}
             </>
