@@ -2,6 +2,7 @@ import type { MetadataRoute } from "next";
 import { DOMINIO_BLOG, DOMINIO_RAIZ } from "@/lib/proxy/domain-config";
 import { isSalaoStatusOperational } from "@/lib/plans/access";
 import { buildSalaoPublicPath } from "@/lib/saloes/public-link";
+import { isSeoBlockedSalonSlug } from "@/lib/seo/public-routes";
 
 function getBaseUrl() {
   const configured = String(process.env.NEXT_PUBLIC_APP_URL || "").trim();
@@ -53,6 +54,7 @@ async function listDynamicSalonRoutes(baseUrl: URL, now: Date) {
     })
     .map((item) => String(item.app_cliente_slug || item.id || "").trim())
     .filter(Boolean)
+    .filter((slugOrId) => !isSeoBlockedSalonSlug(slugOrId))
     .map((slugOrId) => ({
       url: new URL(buildSalaoPublicPath(slugOrId), baseUrl).toString(),
       lastModified: now,
@@ -90,7 +92,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     "/quem-somos",
     "/termos-de-uso",
     "/politica-de-privacidade",
-    "/cadastro-salao",
   ];
 
   const [dynamicSalonRoutes, blogRoutes] = await Promise.all([
