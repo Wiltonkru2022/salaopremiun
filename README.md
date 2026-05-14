@@ -4,7 +4,7 @@ Sistema SaaS para gestão de salões, barbearias e profissionais de beleza. O pr
 
 Este README é o guia principal para manutenção, publicação, migração de banco/Auth, deploy em VPS e configuração de DNS/proteção.
 
-Última atualização: 12/05/2026.
+Última atualização: 14/05/2026.
 
 ## Visão Geral
 
@@ -62,12 +62,22 @@ Antes de alterar código Next.js, leia a documentação local da versão instala
 | `www.salaopremiun.com.br` | Redirecionamento/site público |
 | `painel.salaopremiun.com.br` | Painel do Salão e Admin Master |
 | `login.salaopremiun.com.br` | Login, recuperação e atualização de senha |
-| `cadastro.salaopremiun.com.br` | Cadastro de salão |
+| `cadastro.salaopremiun.com.br` | Cadastro oficial de salão em `/cadastro-salao` |
 | `assinatura.salaopremiun.com.br` | Páginas de planos/assinatura quando isoladas |
 | `app.salaopremiun.com.br` | App Profissional |
 | `blog.salaopremiun.com.br` | Blog público |
+| `api.salaopremiun.com.br` | API auxiliar na Oracle VPS |
 
 O roteamento por domínio fica em `proxy.ts` e em `lib/proxy/host-rules.ts`. Ao mudar domínio, subdomínio ou proxy, teste login, cadastro, painel, App Cliente, App Profissional e Admin Master.
+
+### Canonical e SEO por domínio
+
+- A URL oficial do cadastro é `https://cadastro.salaopremiun.com.br/cadastro-salao`.
+- A rota `https://salaopremiun.com.br/cadastro-salao` deve redirecionar com 301 para a URL oficial.
+- O sitemap principal deve publicar a URL oficial do cadastro no subdomínio.
+- Páginas privadas, login, painel, Admin Master, App Cliente e App Profissional devem ficar fora do índice público.
+- Rotas de teste, salões de teste e posts automáticos não devem entrar no sitemap.
+- A home usa schema `Organization`/`WebSite` com logo pública para ajudar o Google a atualizar identidade visual.
 
 ## Variáveis de Ambiente
 
@@ -122,11 +132,35 @@ ASAAS_API_KEY=
 ASAAS_WEBHOOK_TOKEN=
 PASSWORD_REUSE_SECRET=
 PROFISSIONAL_SESSION_SECRET=
-NEXT_PUBLIC_WEB_PUSH_VAPID_PUBLIC_KEY=
-WEB_PUSH_VAPID_PRIVATE_KEY=
+WEB_PUSH_PUBLIC_KEY=
+WEB_PUSH_PRIVATE_KEY=
+WEB_PUSH_SUBJECT=mailto:suporte@salaopremiun.com.br
+GOOGLE_CALENDAR_CLIENT_ID=
+GOOGLE_CALENDAR_CLIENT_SECRET=
+GOOGLE_CALENDAR_REDIRECT_URI=
+ORACLE_VPS_API_URL=https://api.salaopremiun.com.br
+ORACLE_VPS_API_TOKEN=
 ```
 
 Essas chaves protegem rotas internas, webhooks, notificações e fluxos sensíveis.
+
+### Google Calendar e login com Google
+
+```env
+GOOGLE_CALENDAR_CLIENT_ID=
+GOOGLE_CALENDAR_CLIENT_SECRET=
+GOOGLE_CALENDAR_REDIRECT_URI=https://painel.salaopremiun.com.br/api/integracoes/google-calendar/callback
+```
+
+Regras atuais:
+
+- O Google Calendar é integração de agenda, não substitui o login por e-mail/senha.
+- A conexão da agenda fica no Perfil do Salão.
+- A sincronização automática só deve ser liberada para plano Pro, Premium ou teste grátis ativo.
+- Se o salão estiver no Básico, o botão na agenda deve informar que o recurso está nos planos Pro/Premium.
+- Login com Google é separado da agenda. Para entrar com Google, o usuário precisa ter vinculado o login Google antes.
+- Remover login com Google deve desvincular apenas a identity/provider Google do usuário Supabase, sem apagar `auth.users`.
+- Desconectar Google Calendar deve remover tokens de agenda e revogar a integração da agenda, sem mexer no login por e-mail/senha.
 
 ## Rodando Localmente
 
@@ -288,6 +322,38 @@ Segurança atual recomendada:
 - Fail2ban ativo para SSH.
 - Backup diário local de `/opt/salaopremium-api` com retenção curta.
 
+Fluxos que podem ir para a VPS, mantendo Supabase como banco/Auth:
+
+- Monitoramento e logs pesados.
+- Jobs de notificações e reprocessamento.
+- Relatórios pesados e pré-cálculos.
+- Webhooks externos, como Asaas, Resend e Meta.
+- Backup metadata-only e, no futuro, backup compactado com retenção.
+- Cálculos financeiros, comissões, caixa e conciliação quando estiverem estáveis.
+
+Fluxos que continuam no projeto principal:
+
+- UI do site, painel, apps e Admin Master.
+- Supabase Auth e sessão SSR.
+- Storage principal.
+- Server Actions que precisam responder imediatamente à UI.
+- Blog público no Supabase separado.
+
+Validação da integração:
+
+```bash
+curl https://api.salaopremiun.com.br/health
+curl https://api.salaopremiun.com.br/ready
+```
+
+Pelo Admin Master, valide:
+
+- status da VPS;
+- ping;
+- jobs;
+- monitoramento;
+- alertas de disco, memória, uptime e erros recentes.
+
 ## DNS e Proteção
 
 ### Registro.br / DNS
@@ -310,6 +376,7 @@ Checklist de DNS:
 - `app`
 - `blog`
 - registros SPF/DKIM/DMARC do Resend
+- `api` apontando para a Oracle VPS quando a API auxiliar estiver ativa
 
 ### Proteção
 
@@ -321,6 +388,20 @@ O projeto já aplica headers de segurança no Next/Vercel. Ao usar Cloudflare ou
 - Evite bloquear webhooks do Asaas, Supabase, Resend ou Meta.
 - Configure rate limit em login, recuperação de senha e APIs públicas.
 - Use modo de desafio com cuidado para não quebrar App Cliente/App Profissional.
+
+### Verificação Google OAuth
+
+Para a verificação do Google, mantenha públicos e coerentes:
+
+- Página inicial com nome do app, descrição clara e links para política/termos.
+- Política de privacidade em `https://salaopremiun.com.br/politica-de-privacidade`.
+- Termos de uso em `https://salaopremiun.com.br/termos-de-uso`.
+- Funcionalidade real do app demonstrável com conta teste.
+- Escopos mínimos do Google, principalmente Calendar quando a função é sincronizar agenda.
+- Marca sem uso indevido de logos Google.
+- Endpoint seguro para Cross-Account Protection/RISC quando aplicável.
+
+Não coloque páginas de app privado no sitemap público. Use `noindex` para áreas internas.
 
 ## Migração para Outro Supabase
 
@@ -471,6 +552,10 @@ Use este checklist antes de dizer que está pronto para produção:
 - [ ] Webhooks têm segredo e idempotência.
 - [ ] DNS e certificados estão válidos.
 - [ ] Resend está validado com SPF/DKIM/DMARC.
+- [ ] Sitemap não inclui rotas privadas nem rotas de teste.
+- [ ] Cadastro oficial aparece como `https://cadastro.salaopremiun.com.br/cadastro-salao`.
+- [ ] Google Calendar/login Google foram testados com conta conectada e desconectada.
+- [ ] API Oracle VPS responde `/health`, `/ready` e aparece saudável no Admin Master.
 
 ## Runbook de Incidentes
 
