@@ -429,12 +429,12 @@ export default async function AdminMasterRelatoriosPage() {
               Oracle VPS
             </div>
             <h2 className="mt-3 font-display text-2xl font-black">
-              RelatÃ³rio espelhado na VPS
+              Relatório espelhado na VPS
             </h2>
             <p className="mt-1 max-w-3xl text-sm font-semibold leading-6 text-blue-800/80">
               A Vercel continua sendo a fonte oficial. A VPS entra como leitura
-              comparativa para validar relatÃ³rios leves antes de migrar cÃ¡lculos
-              maiores de vendas, profissionais e comissÃµes.
+              comparativa para validar relatórios leves antes de migrar cálculos
+              maiores de vendas, profissionais e comissões.
             </p>
           </div>
           <div className="grid gap-2 sm:grid-cols-3 lg:min-w-[520px]">
@@ -446,8 +446,8 @@ export default async function AdminMasterRelatoriosPage() {
                 {oracleOnline
                   ? "Online"
                   : oracleConfigured
-                    ? "AtenÃ§Ã£o"
-                    : "NÃ£o configurada"}
+                    ? "Atenção"
+                    : "Não configurada"}
               </div>
             </div>
             <div className="rounded-[18px] border border-blue-200 bg-white p-3">
@@ -469,7 +469,7 @@ export default async function AdminMasterRelatoriosPage() {
             {oracleSalesReport.configured
               ? oracleSalesReport.error ||
                 oracleProfessionalsReport.error ||
-                "A VPS nÃ£o respondeu aos relatÃ³rios leves agora."
+                "A VPS não respondeu aos relatórios leves agora."
               : "Configure ORACLE_VPS_API_URL e ORACLE_VPS_API_TOKEN para ativar esta leitura."}
           </p>
         ) : null}
