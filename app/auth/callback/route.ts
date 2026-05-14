@@ -77,6 +77,19 @@ function buildRedirectBridge(targetUrl: URL) {
   });
 }
 
+async function unlinkCurrentGoogleIdentity(
+  supabase: Awaited<ReturnType<typeof createServerClient>>,
+  user: { identities?: Array<{ provider?: string; identity_id?: string }> | null }
+) {
+  const googleIdentity = user.identities?.find(
+    (identity) => String(identity.provider || "").toLowerCase() === "google"
+  );
+
+  if (!googleIdentity?.identity_id) return;
+
+  await supabase.auth.unlinkIdentity(googleIdentity as any).catch(() => null);
+}
+
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get("code");
@@ -142,6 +155,7 @@ export async function GET(request: NextRequest) {
   );
 
   if (!usuario?.id_salao || String(usuario.status || "").toLowerCase() !== "ativo") {
+    await unlinkCurrentGoogleIdentity(supabase as any, user);
     await supabase.auth.signOut();
     return redirectToLogin(requestUrl, "google_nao_vinculado");
   }
@@ -155,6 +169,7 @@ export async function GET(request: NextRequest) {
     .maybeSingle();
 
   if (!connection) {
+    await unlinkCurrentGoogleIdentity(supabase as any, user);
     await supabase.auth.signOut();
     return redirectToLogin(requestUrl, "google_nao_vinculado");
   }

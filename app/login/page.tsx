@@ -79,6 +79,22 @@ function LoginPageContent() {
   }, []);
 
   useEffect(() => {
+    if (!supabase || googleErro) return;
+
+    let cancelled = false;
+
+    supabase.auth.getSession().then(({ data }) => {
+      if (cancelled || !data.session) return;
+      setRedirectMessage("Sessão encontrada. Abrindo seu painel...");
+      window.location.replace(redirectHref);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [googleErro, redirectHref, supabase]);
+
+  useEffect(() => {
     if (!emailQuery) return;
     setEmail((current) => current || emailQuery);
   }, [emailQuery]);
@@ -336,7 +352,7 @@ function LoginPageContent() {
             {googleErro ? (
               <div className="mb-5 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
                 {googleErro === "google_nao_vinculado"
-                  ? "Esta conta Google ainda não está conectada no perfil do salão. Entre com e-mail e senha, conecte o Google no Perfil do Salão e tente novamente."
+                  ? "Sua conta não tem integração com Google. Entre com e-mail e senha, conecte o Google no Perfil do Salão e tente novamente."
                   : "Não foi possível concluir o login com Google agora. Use e-mail e senha ou tente novamente."}
               </div>
             ) : null}

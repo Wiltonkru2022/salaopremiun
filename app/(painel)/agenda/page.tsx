@@ -961,14 +961,20 @@ export default function AgendaPage() {
         ok?: boolean;
         error?: string;
         total?: number;
+        requiresConfig?: boolean;
         requiresConnection?: boolean;
         connectUrl?: string;
         nextSuggestion?: string;
       };
 
       if (!response.ok || !payload.ok) {
-        if (payload.requiresConnection && payload.connectUrl) {
-          window.location.assign(payload.connectUrl);
+        if (payload.requiresConnection || payload.requiresConfig) {
+          abrirAviso(
+            "Configure a integração com Google Calendar",
+            "Conecte a conta Google no Perfil do Salão para sincronizar a agenda automaticamente e liberar a facilidade de login com Google.",
+            "warning",
+            "/perfil-salao?google_calendar=configure"
+          );
           return;
         }
         throw new Error(

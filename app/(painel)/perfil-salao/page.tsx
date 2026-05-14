@@ -1041,7 +1041,7 @@ export default function PerfilSalaoPage() {
         method: "DELETE",
       });
       const data = (await response.json().catch(() => null)) as
-        | { ok?: boolean; error?: string }
+        | { ok?: boolean; error?: string; identityWarning?: string | null }
         | null;
 
       if (!response.ok || !data?.ok) {
@@ -1053,7 +1053,7 @@ export default function PerfilSalaoPage() {
         connected: false,
         googleEmail: null,
       }));
-      setMsg("Conta Google desconectada do Google Calendar.");
+      setMsg(data?.identityWarning || "Conta Google desconectada do Google Calendar.");
     } catch (error) {
       setErro(
         error instanceof Error
