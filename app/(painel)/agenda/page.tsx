@@ -963,11 +963,22 @@ export default function AgendaPage() {
         total?: number;
         requiresConfig?: boolean;
         requiresConnection?: boolean;
+        requiresPlan?: boolean;
         connectUrl?: string;
         nextSuggestion?: string;
       };
 
       if (!response.ok || !payload.ok) {
+        if (payload.requiresPlan) {
+          abrirAviso(
+            "Integração disponível no Pro e Premium",
+            "A sincronização com Google Calendar fica liberada no plano Pro, no plano Premium ou durante o teste grátis ativo de 15 dias.",
+            "warning",
+            "/comparar-planos"
+          );
+          return;
+        }
+
         if (payload.requiresConnection || payload.requiresConfig) {
           abrirAviso(
             "Configure a integração com Google Calendar",
