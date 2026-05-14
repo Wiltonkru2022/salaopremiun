@@ -110,25 +110,50 @@ export async function upsertGoogleCalendarEvent(params: {
   event: Record<string, unknown>;
 }) {
   const calendarId = encodeURIComponent(params.calendarId || "primary");
-  const endpoint = params.eventId
-    ? `${GOOGLE_EVENTS_URL}/${calendarId}/events/${encodeURIComponent(params.eventId)}`
-    : `${GOOGLE_EVENTS_URL}/${calendarId}/events`;
+  const createEndpoint = `${GOOGLE_EVENTS_URL}/${calendarId}/events`;
 
-  const response = await fetch(endpoint, {
-    method: params.eventId ? "PATCH" : "POST",
-    headers: {
-      Authorization: `Bearer ${params.accessToken}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(params.event),
-  });
+  async function sendGoogleEvent(endpoint: string, method: "PATCH" | "POST") {
+    const response = await fetch(endpoint, {
+      method,
+      headers: {
+        Authorization: `Bearer ${params.accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(params.event),
+    });
 
-  const data = (await response.json().catch(() => null)) as
-    | { id?: string; error?: { message?: string } }
-    | null;
+    const data = (await response.json().catch(() => null)) as
+      | { id?: string; error?: { message?: string } }
+      | null;
+
+    return { response, data };
+  }
+
+  if (params.eventId) {
+    const updateEndpoint = `${GOOGLE_EVENTS_URL}/${calendarId}/events/${encodeURIComponent(
+      params.eventId
+    )}`;
+    const { response, data } = await sendGoogleEvent(updateEndpoint, "PATCH");
+
+    if (response.ok && data?.id) {
+      return data.id;
+    }
+
+    const message = data?.error?.message || "";
+    const eventWasRemoved =
+      response.status === 404 ||
+      response.status === 410 ||
+      message.toLowerCase().includes("not found");
+
+    if (!eventWasRemoved) {
+      throw new Error(message || "Google nao aceitou o evento.");
+    }
+  }
+
+  const { response, data } = await sendGoogleEvent(createEndpoint, "POST");
 
   if (!response.ok || !data?.id) {
-    throw new Error(data?.error?.message || "Google não aceitou o evento.");
+    throw new Error(data?.error?.message || "Google nao aceitou o evento.");
   }
 
   return data.id;
