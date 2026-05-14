@@ -47,6 +47,10 @@ export default function AppLoading({
   theme = "painel",
 }: Props) {
   const tone = toneClasses(theme);
+  const shellSize =
+    theme === "painel"
+      ? "max-w-[1180px] min-h-[390px]"
+      : "max-w-[760px]";
 
   return (
     <div
@@ -54,11 +58,11 @@ export default function AppLoading({
       aria-label={`${title}. ${message}`}
       className={
         fullHeight
-          ? "flex min-h-[44vh] items-center justify-center p-5"
-          : "p-5"
+          ? "flex min-h-[52vh] w-full items-center justify-center p-5"
+          : "w-full p-5"
       }
     >
-      <div className={`w-full max-w-[760px] overflow-hidden rounded-[24px] border p-5 ${tone.shell}`}>
+      <div className={`w-full overflow-hidden rounded-[24px] border p-5 ${shellSize} ${tone.shell}`}>
         <div className="flex flex-col gap-5">
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
@@ -83,20 +87,20 @@ export default function AppLoading({
             </div>
           </div>
 
-          <div className="grid gap-3.5 xl:grid-cols-[1.1fr_0.9fr]">
+          <div className="grid flex-1 gap-3.5 xl:grid-cols-[1.15fr_0.85fr]">
             <div className="space-y-3.5">
-              <div className={`h-12 animate-pulse rounded-[18px] ${tone.line}`} />
+              <div className={`h-14 animate-pulse rounded-[18px] ${tone.line}`} />
               <div className="grid gap-3 sm:grid-cols-2">
-                <div className={`h-24 animate-pulse rounded-[20px] ${tone.lineSoft}`} />
-                <div className={`h-24 animate-pulse rounded-[20px] ${tone.lineSoft}`} />
+                <div className={`h-28 animate-pulse rounded-[20px] ${tone.lineSoft}`} />
+                <div className={`h-28 animate-pulse rounded-[20px] ${tone.lineSoft}`} />
               </div>
-              <div className={`h-36 animate-pulse rounded-[22px] ${tone.lineSoft}`} />
+              <div className={`h-40 animate-pulse rounded-[22px] ${tone.lineSoft}`} />
             </div>
 
             <div className="space-y-3.5">
-              <div className={`h-20 animate-pulse rounded-[20px] ${tone.line}`} />
-              <div className={`h-20 animate-pulse rounded-[20px] ${tone.lineSoft}`} />
-              <div className={`h-20 animate-pulse rounded-[20px] ${tone.lineSoft}`} />
+              <div className={`h-24 animate-pulse rounded-[20px] ${tone.line}`} />
+              <div className={`h-24 animate-pulse rounded-[20px] ${tone.lineSoft}`} />
+              <div className={`h-24 animate-pulse rounded-[20px] ${tone.lineSoft}`} />
             </div>
           </div>
         </div>
