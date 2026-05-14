@@ -16,6 +16,19 @@ import { useCaixaApi } from "@/components/caixa/useCaixaApi";
 import { useCaixaLoaders } from "@/components/caixa/useCaixaLoaders";
 import { useCaixaOperations } from "@/components/caixa/useCaixaOperations";
 import { useCaixaPageState } from "@/components/caixa/useCaixaPageState";
+import type { ComandaDetalhe } from "@/components/caixa/types";
+
+function montarAvisoReabertura(comanda: ComandaDetalhe) {
+  const observacoes = String(comanda.observacoes || "");
+  const usuarioMatch = observacoes.match(/\[reabertura\]\s*usuario=(.*?)(?:\s+motivo=|$)/i);
+  const usuario = usuarioMatch?.[1]?.trim();
+
+  if (usuario) {
+    return `Comanda #${comanda.numero} reaberta pelo usuário ${usuario}.`;
+  }
+
+  return `Comanda #${comanda.numero} reaberta para o caixa.`;
+}
 
 export default function CaixaPage() {
   const router = useRouter();
@@ -26,6 +39,7 @@ export default function CaixaPage() {
     supabase,
     requestedComandaId,
     requestedAgendamentoId,
+    requestedReaberta,
     loading,
     setLoading,
     erroTela,
@@ -215,6 +229,7 @@ export default function CaixaPage() {
   });
 
   const agendamentoAutoOpenRef = useRef<string | null>(null);
+  const avisoReaberturaRef = useRef<string | null>(null);
 
   useEffect(() => {
     void init();
@@ -300,6 +315,19 @@ export default function CaixaPage() {
     loading,
     requestedAgendamentoId,
   ]);
+
+  useEffect(() => {
+    if (!requestedReaberta || !comandaSelecionada?.id) {
+      return;
+    }
+
+    if (avisoReaberturaRef.current === comandaSelecionada.id) {
+      return;
+    }
+
+    avisoReaberturaRef.current = comandaSelecionada.id;
+    setMsg(montarAvisoReabertura(comandaSelecionada));
+  }, [requestedReaberta, comandaSelecionada, setMsg]);
 
   if (loading || !acessoCarregado) {
     return (

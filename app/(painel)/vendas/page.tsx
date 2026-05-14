@@ -557,12 +557,12 @@ export default function VendasPage() {
       );
       await carregarVendas();
 
-      if (!avisoEstoque) {
-        if (typeof window === "undefined") {
-          router.push(`/caixa?comanda_id=${vendaSelecionada.id}`);
-        } else {
-          openPainelWorkspaceWindow(`/caixa?comanda_id=${vendaSelecionada.id}`);
-        }
+      const caixaHref = `/caixa?comanda_id=${vendaSelecionada.id}&reaberta=1`;
+
+      if (typeof window === "undefined") {
+        router.push(caixaHref);
+      } else {
+        openPainelWorkspaceWindow(caixaHref);
       }
     } catch (error: unknown) {
       console.error(error);
