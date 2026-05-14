@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { LoaderCircle } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 
 const PREFETCH_ROUTES = [
@@ -157,19 +158,9 @@ export default function ProfissionalNavigationRuntime() {
 
       {visible ? (
         <div className="pointer-events-none fixed left-1/2 top-[calc(env(safe-area-inset-top)+0.75rem)] z-[81] -translate-x-1/2 transition-all duration-200">
-          <div
-            className="inline-flex h-9 items-center gap-1.5 rounded-full border border-white/70 bg-white/95 px-3 shadow-[0_12px_30px_rgba(15,23,42,0.12)] backdrop-blur-xl"
-            aria-label={buildLabel(pendingPath || "")}
-          >
-            <span className="h-2 w-2 animate-bounce rounded-full bg-[#b07b19]" />
-            <span
-              className="h-2 w-2 animate-bounce rounded-full bg-[#b07b19]"
-              style={{ animationDelay: "0.12s" }}
-            />
-            <span
-              className="h-2 w-2 animate-bounce rounded-full bg-[#b07b19]"
-              style={{ animationDelay: "0.24s" }}
-            />
+          <div className="inline-flex items-center gap-2 rounded-full border border-white/70 bg-white/95 px-3 py-2 text-xs font-semibold text-zinc-700 shadow-[0_12px_30px_rgba(15,23,42,0.12)] backdrop-blur-xl">
+            <LoaderCircle size={14} className="animate-spin text-[#b07b19]" />
+            {buildLabel(pendingPath || "")}
           </div>
         </div>
       ) : null}

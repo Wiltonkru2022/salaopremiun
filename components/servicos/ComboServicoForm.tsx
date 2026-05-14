@@ -13,6 +13,7 @@ import {
   normalizeComboComponents,
 } from "@/lib/servicos/combo-utils";
 import type { CategoriaServico, ComboServicoItemState } from "@/types/servicos";
+import AppLoading from "@/components/ui/AppLoading";
 
 type BaseServico = {
   id: string;
@@ -401,13 +402,7 @@ export default function ComboServicoForm({ modo }: { modo: "novo" | "editar" }) 
   }
 
   if (loading) {
-    return (
-      <div className="p-6">
-        <div className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm">
-          Carregando combo de serviços...
-        </div>
-      </div>
-    );
+    return <AppLoading title="Combo de serviços" fullHeight={false} />;
   }
 
   return (

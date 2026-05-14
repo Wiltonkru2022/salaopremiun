@@ -8,6 +8,7 @@ import { createClient } from "@/lib/supabase/client";
 import { getUsuarioLogado } from "@/lib/auth/getUsuarioLogado";
 import { getErrorMessage } from "@/lib/get-error-message";
 import PlanoLimiteNotice from "@/components/plans/PlanoLimiteNotice";
+import AppLoading from "@/components/ui/AppLoading";
 import { usePlanoAccessSnapshot } from "@/components/plans/usePlanoAccessSnapshot";
 import type {
   ProfissionalProcessarBody,
@@ -657,13 +658,7 @@ async function salvarAcessoProfissional(idProfissional: string) {
   const isAssistenteSalao = form.tipo_profissional === "assistente";
 
   if (loading) {
-    return (
-      <div className="p-6">
-        <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
-          Carregando cadastro de profissionais...
-        </div>
-      </div>
-    );
+    return <AppLoading title="Cadastro de profissional" fullHeight={false} />;
   }
 
   return (

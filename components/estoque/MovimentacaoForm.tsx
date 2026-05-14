@@ -8,6 +8,7 @@ import {
   maskMoneyInput,
   parseMoneyToNumber,
 } from "@/lib/utils/produtoMasks";
+import AppLoading from "@/components/ui/AppLoading";
 
 type Produto = {
   id: string;
@@ -181,13 +182,7 @@ export default function MovimentacaoForm() {
   }
 
   if (loading) {
-    return (
-      <div className="p-6">
-        <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
-          Carregando movimentacao...
-        </div>
-      </div>
-    );
+    return <AppLoading title="Movimentação de estoque" fullHeight={false} />;
   }
 
   return (

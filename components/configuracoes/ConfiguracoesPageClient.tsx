@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePainelSession } from "@/components/layout/PainelSessionProvider";
+import AppLoading from "@/components/ui/AppLoading";
 import { createClient } from "@/lib/supabase/client";
 import type { UserNivel } from "@/lib/permissions";
 import { ComissaoHelpPanel } from "@/components/comissoes/ComissaoHelpPanel";
@@ -866,16 +867,7 @@ export default function ConfiguracoesPageClient({
   }, [salaoForm.status, salaoForm.plano, limiteUsuarios]);
 
   if (loading) {
-    return (
-      <div className="flex min-h-[400px] items-center justify-center">
-        <div className="flex items-center gap-3 rounded-2xl border border-zinc-200 bg-white px-5 py-4 shadow-sm">
-          <Loader2 className="animate-spin text-zinc-700" size={18} />
-          <span className="text-sm font-medium text-zinc-700">
-            Carregando configurações...
-          </span>
-        </div>
-      </div>
-    );
+    return <AppLoading title="Configurações" fullHeight={false} />;
   }
 
   if (semPermissao) {

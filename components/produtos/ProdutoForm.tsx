@@ -10,6 +10,7 @@ import type {
   ProdutoProcessarErrorResponse,
   ProdutoProcessarResponse,
 } from "@/types/produtos";
+import AppLoading from "@/components/ui/AppLoading";
 
 import {
   calculateCostPerDose,
@@ -292,13 +293,7 @@ async function bootstrap() {
   }
 
   if (loading) {
-    return (
-      <div className="p-6">
-        <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
-          Carregando cadastro de produto...
-        </div>
-      </div>
-    );
+    return <AppLoading title="Cadastro de produto" fullHeight={false} />;
   }
 
   return (

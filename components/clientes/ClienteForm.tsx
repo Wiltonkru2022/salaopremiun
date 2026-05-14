@@ -8,6 +8,7 @@ import { createClient } from "@/lib/supabase/client";
 import { getUsuarioLogado } from "@/lib/auth/getUsuarioLogado";
 import { getErrorMessage } from "@/lib/get-error-message";
 import PlanoLimiteNotice from "@/components/plans/PlanoLimiteNotice";
+import AppLoading from "@/components/ui/AppLoading";
 import { usePlanoAccessSnapshot } from "@/components/plans/usePlanoAccessSnapshot";
 import type {
   AutorizacoesCliente,
@@ -455,13 +456,7 @@ async function bootstrap() {
   }
 
   if (loading) {
-    return (
-      <div className="p-6">
-        <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
-          Carregando cadastro de cliente...
-        </div>
-      </div>
-    );
+    return <AppLoading title="Cadastro de cliente" fullHeight={false} />;
   }
 
   const limiteClientes = planoAccess?.limites?.clientes ?? null;

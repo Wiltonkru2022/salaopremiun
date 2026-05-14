@@ -7,6 +7,7 @@ import ComandaItemModal, {
   type ComandaItemModalPayload,
 } from "@/components/comandas/ComandaItemModal";
 import ConfirmActionModal from "@/components/ui/ConfirmActionModal";
+import AppLoading from "@/components/ui/AppLoading";
 import { getUsuarioLogado } from "@/lib/auth/getUsuarioLogado";
 import { monitorClientOperation } from "@/lib/monitoring/client";
 import type {
@@ -476,13 +477,7 @@ export default function ComandaForm({ modo }: ComandaFormProps) {
   }
 
   if (loading) {
-    return (
-      <div className="p-6">
-        <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
-          Carregando comanda...
-        </div>
-      </div>
-    );
+    return <AppLoading title="Comanda" fullHeight={false} />;
   }
 
   return (
