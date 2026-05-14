@@ -153,6 +153,18 @@ function mapPost(post: BlogDbPost): BlogPost {
   };
 }
 
+function isSeoBlockedBlogPost(post: BlogDbPost) {
+  const slug = String(post.slug || "").toLowerCase();
+  const title = String(post.titulo || "").toLowerCase();
+
+  return (
+    slug.startsWith("post-teste-automatico") ||
+    slug.startsWith("teste-automatico") ||
+    title.includes("post teste automático") ||
+    title.includes("post teste automatico")
+  );
+}
+
 async function getBlogDatabaseUnsafe(): Promise<LooseSupabaseClient | null> {
   if (!canUseBlogDatabase()) return null;
 
@@ -213,7 +225,7 @@ async function loadPublishedBlogPosts(): Promise<BlogPost[]> {
       .order("criado_em", { ascending: false });
 
     if (error || !data?.length) return [];
-    return (data as BlogDbPost[]).map(mapPost);
+    return (data as BlogDbPost[]).filter((post) => !isSeoBlockedBlogPost(post)).map(mapPost);
   } catch (error) {
     console.warn("Blog sem posts carregados:", error);
     return [];

@@ -1,8 +1,16 @@
+import type { Metadata } from "next";
 import AdminMasterShell from "@/components/admin-master/AdminMasterShell";
 import { getAdminMasterShellData } from "@/lib/admin-master/data";
 import { requireAdminMasterUser } from "@/lib/admin-master/auth/requireAdminMasterUser";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
 
 export default async function AdminMasterLayout({
   children,

@@ -91,12 +91,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     "/termos-de-uso",
     "/politica-de-privacidade",
     "/cadastro-salao",
-    "/login",
-    "/recuperar-senha",
-    "/app-cliente",
-    "/app-cliente/inicio",
-    "/app-cliente/login",
-    "/app-cliente/cadastro",
   ];
 
   const [dynamicSalonRoutes, blogRoutes] = await Promise.all([
@@ -108,8 +102,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...staticRoutes.map((path, index) => ({
       url: new URL(path || "/", baseUrl).toString(),
       lastModified: now,
-      changeFrequency: path.startsWith("/app-cliente") ? ("daily" as const) : ("weekly" as const),
-      priority: index === 0 ? 1 : path.startsWith("/app-cliente") ? 0.8 : 0.6,
+      changeFrequency: "weekly" as const,
+      priority: index === 0 ? 1 : 0.6,
     })),
     ...dynamicSalonRoutes,
     ...blogRoutes,
