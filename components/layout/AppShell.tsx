@@ -117,7 +117,7 @@ export default function AppShell({
         action: "logout",
         screen: "painel_shell",
         successMessage: "Logout executado com sucesso.",
-        errorMessage: "Falha ao encerrar sessao.",
+        errorMessage: "Falha ao encerrar sessão.",
       },
       async () => {
         const supabase = createClient();

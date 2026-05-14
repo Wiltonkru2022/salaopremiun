@@ -150,7 +150,7 @@ export default async function MeuPlanoPage({
 
   const metrics = [
     {
-      title: "Usuarios",
+      title: "Usuários",
       used: access.uso.usuarios,
       limit: access.limites.usuarios,
       color: "bg-zinc-950",
@@ -168,7 +168,7 @@ export default async function MeuPlanoPage({
       color: "bg-violet-600",
     },
     {
-      title: "Servicos",
+      title: "Serviços",
       used: access.uso.servicos,
       limit: access.limites.servicos,
       color: "bg-amber-500",

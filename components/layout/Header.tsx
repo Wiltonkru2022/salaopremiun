@@ -205,7 +205,7 @@ export default function Header({
               {salaoLogoUrl ? (
                 <img
                   src={salaoLogoUrl}
-                  alt={salaoNome || "Salao"}
+                  alt={salaoNome || "Salão"}
                   className="h-full w-full object-cover"
                 />
               ) : (
@@ -215,7 +215,7 @@ export default function Header({
 
             <span className="hidden min-w-0 sm:block">
               <span className="block max-w-[104px] truncate text-[13px] font-semibold 2xl:max-w-[144px]">
-                {userName || "Usuario"}
+                {userName || "Usuário"}
               </span>
                   <span className="block max-w-[104px] truncate text-[10px] text-zinc-500 2xl:max-w-[144px]">
                 {salaoNome || userEmail || "Conta principal"}
@@ -261,7 +261,7 @@ export default function Header({
                     className="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-100"
                   >
                     <Settings size={16} />
-                    Configuracoes
+                    Configurações
                   </a>
                 ) : null}
 

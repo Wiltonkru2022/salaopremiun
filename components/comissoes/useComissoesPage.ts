@@ -49,7 +49,7 @@ function origemMetaLabel(origem: string | null | undefined) {
   if (origem === "servico_padrao") return "padrao do servico";
   if (origem === "profissional_padrao") return "padrao antigo do profissional";
   if (origem === "assistente") return "assistente";
-  if (origem === "manual") return "lancamento manual";
+  if (origem === "manual") return "lançamento manual";
   return "sem regra definida";
 }
 
@@ -410,7 +410,7 @@ export function useComissoesPage() {
 
       if (!response.ok) {
         throw new Error(
-          result?.error || "Erro ao processar lancamentos de comissao."
+          result?.error || "Erro ao processar lançamentos de comissão."
         );
       }
 
@@ -428,7 +428,7 @@ export function useComissoesPage() {
   const marcarComoPago = useCallback(
     async (id: string) => {
       if (!podeGerenciar) {
-        setErro("Voce nao tem permissao para marcar como pago.");
+        setErro("Você não tem permissão para marcar como pago.");
         return;
       }
 
@@ -458,7 +458,7 @@ export function useComissoesPage() {
   const cancelarLancamento = useCallback(
     async (id: string) => {
       if (!podeGerenciar) {
-        setErro("Voce nao tem permissao para cancelar lancamento.");
+        setErro("Você não tem permissão para cancelar lançamento.");
         return;
       }
 
@@ -468,7 +468,7 @@ export function useComissoesPage() {
         await carregarComissoes();
         setMsg(
           resultado.totalLancamentos === 0
-            ? "Nenhum lancamento elegivel foi cancelado."
+            ? "Nenhum lançamento elegível foi cancelado."
             : "Lancamento cancelado."
         );
       } catch (error) {
@@ -476,7 +476,7 @@ export function useComissoesPage() {
         setErro(
           error instanceof Error
             ? error.message
-            : "Erro ao cancelar lancamento."
+            : "Erro ao cancelar lançamento."
         );
       } finally {
         setSaving(false);
@@ -492,12 +492,12 @@ export function useComissoesPage() {
     const ids = pendentes.map((item) => item.id);
 
     if (!podeGerenciar) {
-      setErro("Voce nao tem permissao para marcar rateio como pago.");
+      setErro("Você não tem permissão para marcar rateio como pago.");
       return;
     }
 
     if (ids.length === 0) {
-      setErro("Nao ha comissoes pendentes no filtro atual.");
+      setErro("Não há comissões pendentes no filtro atual.");
       return;
     }
 
@@ -514,12 +514,12 @@ export function useComissoesPage() {
     );
 
     if (pendentes.length === 0) {
-      setErro("Nao ha lancamentos pendentes no filtro atual para apurar.");
+      setErro("Não há lançamentos pendentes no filtro atual para apurar.");
       return;
     }
 
     setMsg(
-      `Rateio apurado com ${pendentes.length} lancamento(s). Total pendente: ${formatCurrency(total)}.`
+      `Rateio apurado com ${pendentes.length} lançamento(s). Total pendente: ${formatCurrency(total)}.`
     );
   }, [rows]);
 

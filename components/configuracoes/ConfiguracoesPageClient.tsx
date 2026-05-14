@@ -921,7 +921,7 @@ export default function ConfiguracoesPageClient({
               icon={<TimerReset size={18} />}
             />
             <ConfigMetricCard
-              label="Usuarios"
+              label="Usuários"
               value={`${usuariosAtivosCount}/${limiteUsuariosPlano || "-"}`}
               detail="Ativos dentro do limite do plano"
               icon={<Users size={18} />}

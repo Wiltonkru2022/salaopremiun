@@ -21,7 +21,7 @@ export type ConfiguracoesNavItem = {
 export const CONFIGURACOES_MENU: ConfiguracoesNavItem[] = [
   {
     href: "/configuracoes/usuarios",
-    label: "Usuarios",
+    label: "Usuários",
     description: "Equipe, perfis e acesso",
     icon: Users,
   },
@@ -34,7 +34,7 @@ export const CONFIGURACOES_MENU: ConfiguracoesNavItem[] = [
   {
     href: "/configuracoes/rateio",
     label: "Rateio",
-    description: "Impressao de comissões",
+    description: "Impressão de comissões",
     icon: BadgeDollarSign,
   },
   {
@@ -45,7 +45,7 @@ export const CONFIGURACOES_MENU: ConfiguracoesNavItem[] = [
   },
   {
     href: "/configuracoes/notificacoes",
-    label: "Notificacoes",
+    label: "Notificações",
     description: "Push e avisos",
     icon: BellRing,
   },
@@ -82,13 +82,13 @@ export function ConfiguracoesHero({
           <div className="grid min-w-[190px] gap-1.5 rounded-[18px] border border-zinc-200 bg-white p-2.5">
             <div className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.16em] text-zinc-400">
               <ShieldCheck size={14} />
-              Operacao
+              Operação
             </div>
             <div className="text-sm font-bold text-zinc-900">
-              Mudancas salvas por salão
+              Mudanças salvas por salão
             </div>
             <div className="text-xs leading-5 text-zinc-500">
-              Ajuste com calma: cada módulo mexe em uma parte especifica do painel.
+              Ajuste com calma: cada módulo mexe em uma parte específica do painel.
             </div>
           </div>
         </div>

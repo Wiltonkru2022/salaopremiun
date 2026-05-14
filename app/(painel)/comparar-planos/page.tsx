@@ -209,9 +209,9 @@ export default async function CompararPlanosPage() {
                 }`}
               >
                 <PlanMetric label="Clientes" value={formatShortLimit(plano.limites.clientes)} dark={destaque} />
-                <PlanMetric label="Servicos" value={formatShortLimit(plano.limites.servicos)} dark={destaque} />
+                <PlanMetric label="Serviços" value={formatShortLimit(plano.limites.servicos)} dark={destaque} />
                 <PlanMetric label="Equipe" value={formatShortLimit(plano.limites.profissionais)} dark={destaque} />
-                <PlanMetric label="Usuarios" value={formatShortLimit(plano.limites.usuarios)} dark={destaque} />
+                <PlanMetric label="Usuários" value={formatShortLimit(plano.limites.usuarios)} dark={destaque} />
               </div>
 
               <div className="mt-5 flex flex-wrap gap-2">

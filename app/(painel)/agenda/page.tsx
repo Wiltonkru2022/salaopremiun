@@ -582,8 +582,8 @@ export default function AgendaPage() {
         horaFim: normalizeTimeString(row.hora_fim),
         status: row.status,
         servicoNome: Array.isArray(row.servicos)
-          ? row.servicos[0]?.nome || "Servico"
-          : row.servicos?.nome || "Servico",
+          ? row.servicos[0]?.nome || "Serviço"
+          : row.servicos?.nome || "Serviço",
         observacoes: row.observacoes,
       }));
 
@@ -597,7 +597,7 @@ export default function AgendaPage() {
           horaInicio: normalizeTimeString(item.hora_inicio),
           horaFim: normalizeTimeString(item.hora_fim),
           status: item.status,
-          servicoNome: item.servico?.nome || "Servico",
+          servicoNome: item.servico?.nome || "Serviço",
           observacoes: item.observacoes,
         },
       ]);
@@ -666,8 +666,8 @@ export default function AgendaPage() {
         horaFim: normalizeTimeString(row.hora_fim),
         status: row.status,
         servicoNome: Array.isArray(row.servicos)
-          ? row.servicos[0]?.nome || "Servico"
-          : row.servicos?.nome || "Servico",
+          ? row.servicos[0]?.nome || "Serviço"
+          : row.servicos?.nome || "Serviço",
         observacoes: row.observacoes,
       }));
 
@@ -676,7 +676,7 @@ export default function AgendaPage() {
       console.error(error);
       abrirAviso(
         "Perfil parcial",
-        "Nao foi possivel carregar todo o historico agora. Mantive os dados principais da cliente no painel lateral.",
+        "Não foi possível carregar todo o histórico agora. Mantive os dados principais da cliente no painel lateral.",
         "warning"
       );
     } finally {
@@ -831,7 +831,7 @@ export default function AgendaPage() {
     .map((item) => ({
       id: item.id,
       clientName: item.cliente?.nome || "Cliente sem nome",
-      serviceName: item.servico?.nome || "Servico",
+      serviceName: item.servico?.nome || "Serviço",
       dateLabel: format(new Date(`${item.data}T12:00:00`), "dd/MM"),
       timeLabel: `${normalizeTimeString(item.hora_inicio)} - ${normalizeTimeString(
         item.hora_fim
@@ -981,9 +981,9 @@ export default function AgendaPage() {
 
         if (payload.requiresConnection) {
           abrirAviso(
-            "Google Calendar precisa de aten??o",
+            "Google Calendar precisa de atenção",
             payload.error ||
-              "Conecte ou reconecte o Google Calendar no Perfil do Sal?o para sincronizar a agenda automaticamente.",
+              "Conecte ou reconecte o Google Calendar no Perfil do Salão para sincronizar a agenda automaticamente.",
             "warning",
             payload.connectUrl || "/perfil-salao?google_calendar=configure"
           );
@@ -992,9 +992,9 @@ export default function AgendaPage() {
 
         if (payload.requiresConfig) {
           abrirAviso(
-            "Configura??o do Google Calendar",
+            "Configuração do Google Calendar",
             payload.error ||
-              "Confira a configura??o do Google Calendar antes de sincronizar a agenda automaticamente.",
+              "Confira a configuração do Google Calendar antes de sincronizar a agenda automaticamente.",
             "warning",
             payload.connectUrl || "/perfil-salao?google_calendar=configure"
           );

@@ -50,13 +50,13 @@ const statusTone: Record<
 
 const itemIcons: Record<string, React.ReactNode> = {
   "NFS-e": <FileText size={18} />,
-  "WhatsApp automatico": <MessageCircle size={18} />,
-  "Cobranca de sinal": <CreditCard size={18} />,
+  "WhatsApp automático": <MessageCircle size={18} />,
+  "Cobrança de sinal": <CreditCard size={18} />,
   "Google Calendar": <CalendarClock size={18} />,
   "Agendamento em grupo": <Users size={18} />,
-  Recorrencia: <Layers3 size={18} />,
+  Recorrência: <Layers3 size={18} />,
   "Linha do tempo do cliente": <Users size={18} />,
-  "Link publico direto": <Link2 size={18} />,
+  "Link público direto": <Link2 size={18} />,
   "Bloqueios da agenda": <CalendarClock size={18} />,
 };
 
@@ -97,14 +97,14 @@ export default async function NovidadesPage() {
             <div className="mt-5 flex flex-wrap gap-2">
               <HeroMetric value={inProgress.length} label="em implementação" />
               <HeroMetric value={planned.length} label="planejadas" />
-              <HeroMetric value={delivered.length} label="disponiveis" />
+              <HeroMetric value={delivered.length} label="disponíveis" />
             </div>
           </div>
 
           <div className="grid content-between gap-3 bg-zinc-50 p-4 sm:p-5">
             <div>
               <div className="text-xs font-bold uppercase tracking-[0.2em] text-zinc-400">
-                Proxima leva
+                Próxima leva
               </div>
               <div className="mt-3 grid gap-3">
                 {inProgress.map((item) => (
@@ -119,7 +119,7 @@ export default async function NovidadesPage() {
                 </div>
                 <div>
                   <div className="text-sm font-bold text-zinc-950">
-                    Evolucao com controle
+                    Evolução com controle
                   </div>
                   <p className="mt-1 text-sm leading-6 text-zinc-600">
                     Recursos que mexem com agenda, cobrança e mensagem entram em

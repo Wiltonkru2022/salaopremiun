@@ -46,7 +46,7 @@ function buildRedirect(status: "salvo" | "erro", message: string) {
 export async function salvarConfiguracoesNotificacoesAction(formData: FormData) {
   const { usuario } = await getPainelUserContext();
   if (!usuario?.id_salao) {
-    redirect(buildRedirect("erro", "Nao foi possivel identificar seu salao."));
+    redirect(buildRedirect("erro", "Não foi possível identificar seu salão."));
   }
 
   const settings = readSettings(formData);
@@ -76,10 +76,10 @@ export async function salvarConfiguracoesNotificacoesAction(formData: FormData) 
     const message =
       error instanceof Error
         ? error.message
-        : "Nao foi possivel salvar as configuracoes.";
+        : "Não foi possível salvar as configurações.";
     redirect(buildRedirect("erro", message));
   }
 
   revalidatePath("/configuracoes/notificacoes");
-  redirect(buildRedirect("salvo", "Configuracoes de notificacao salvas."));
+  redirect(buildRedirect("salvo", "Configurações de notificação salvas."));
 }

@@ -215,7 +215,7 @@ export function useCaixaOperations({
           valorFechamento: payload.valorFechamento,
           observacoes: payload.observacoes,
         });
-        setMsg("Caixa fechado com sucesso. O relatorio de fechamento foi enviado para impressao.");
+        setMsg("Caixa fechado com sucesso. O relatório de fechamento foi enviado para impressão.");
       } catch (error: unknown) {
         console.error(error);
         setErroTela(getErrorMessage(error, "Erro ao fechar caixa."));
@@ -406,13 +406,13 @@ export function useCaixaOperations({
 
       if (desconto > subtotalAtual + acrescimo) {
         throw new Error(
-          "O desconto nao pode deixar o total da comanda negativo."
+          "O desconto não pode deixar o total da comanda negativo."
         );
       }
 
       if (totalPago > novoTotal) {
         throw new Error(
-          "Este ajuste deixaria a comanda com pagamento acima do total. Remova ou ajuste o pagamento antes de salvar desconto/acrescimo."
+          "Este ajuste deixaria a comanda com pagamento acima do total. Remova ou ajuste o pagamento antes de salvar desconto/acréscimo."
         );
       }
 

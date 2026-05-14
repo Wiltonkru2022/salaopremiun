@@ -275,7 +275,7 @@ export default function NotificationBell({
       persistReadIdsCookie(cookieName, next);
     } catch {
       // localStorage pode falhar em navegadores restritos; nesse caso,
-      // mantemos o estado apenas em memoria durante a sessao atual.
+      // mantemos o estado apenas em memória durante a sessão atual.
       persistReadIdsCookie(cookieName, next);
     }
   }, [cookieName, persistedKey]);
@@ -386,7 +386,7 @@ export default function NotificationBell({
                 Central
               </div>
               <div className="font-display text-lg font-bold text-zinc-950">
-                Notificacoes
+                Notificações
               </div>
               <div className="mt-1 text-[11px] text-zinc-400">
                 Pendentes e críticos ficam visiveis até a resolucao.

@@ -137,7 +137,7 @@ export default function Sidebar({
                     </div>
                     <p className="mt-1 text-sm font-semibold">
                       {criticalNotificationsCount > 0
-                        ? `${criticalNotificationsCount} alerta(s) critico(s) em aberto`
+                        ? `${criticalNotificationsCount} alerta(s) crítico(s) em aberto`
                         : resumoAssinatura?.bloqueioTotal
                           ? "Assinatura com bloqueio ativo"
                           : "Assinatura vencendo em breve"}
@@ -145,7 +145,7 @@ export default function Sidebar({
                     <p className="mt-1 text-xs leading-5 opacity-80">
                       {criticalNotificationsCount > 0
                         ? "Use o sininho e a área de assinatura para não deixar risco escondido."
-                        : `${planoNome || "Plano atual"} exige revisao para manter a operacao sem interrupcao.`}
+                        : `${planoNome || "Plano atual"} exige revisão para manter a operação sem interrupção.`}
                     </p>
                     {canSeeAssinatura ? (
                       <button
@@ -206,7 +206,7 @@ export default function Sidebar({
               {canSeeConfiguracoes ? (
                 <SidebarUtilityLink
                   href="/configuracoes"
-                  label="Configuracoes"
+                  label="Configurações"
                   icon={Settings}
                   onClose={onClose}
                 />

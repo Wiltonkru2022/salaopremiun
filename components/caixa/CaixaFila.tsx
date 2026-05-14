@@ -281,7 +281,7 @@ function AgendamentoFilaCard({
       </div>
 
       <div className="mt-2.5 grid grid-cols-2 gap-1.5">
-        <MetaCard label="Horario" value={`${item.data} - ${item.hora_inicio}`} />
+        <MetaCard label="Horário" value={`${item.data} - ${item.hora_inicio}`} />
         <MetaCard label="Valor previsto" value={formatCurrency(Number(servico?.preco || 0))} />
       </div>
     </button>

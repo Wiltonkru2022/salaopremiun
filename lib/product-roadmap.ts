@@ -14,15 +14,15 @@ export const roadmapStatusCopy: Record<
   { label: string; description: string }
 > = {
   em_implementacao: {
-    label: "Em implementacao",
-    description: "Ja esta na esteira tecnica ou entrando em producao controlada.",
+    label: "Em implementação",
+    description: "Já está na esteira técnica ou entrando em produção controlada.",
   },
   planejado: {
     label: "Planejado",
-    description: "Desenhado para entrar depois das entregas mais criticas.",
+    description: "Desenhado para entrar depois das entregas mais críticas.",
   },
   entregue: {
-    label: "Disponivel",
+    label: "Disponível",
     description: "Base pronta no produto e pronta para evoluir com uso real.",
   },
 };
@@ -31,52 +31,52 @@ export const productRoadmap: RoadmapItem[] = [
   {
     title: "NFS-e",
     description:
-      "Emissao fiscal integrada ao fluxo financeiro, com cuidado para prefeitura, rastreio e operacao diaria.",
+      "Emissão fiscal integrada ao fluxo financeiro, com cuidado para prefeitura, rastreio e operação diária.",
     category: "Financeiro",
     status: "em_implementacao",
-    eta: "Em implementacao",
+    eta: "Em implementação",
     impact: "Menos trabalho manual depois do atendimento.",
   },
   {
-    title: "WhatsApp automatico",
+    title: "WhatsApp automático",
     description:
-      "Lembretes, confirmacoes e mensagens de relacionamento com disparo profissional e controle no painel.",
-    category: "Comunicacao",
+      "Lembretes, confirmações e mensagens de relacionamento com disparo profissional e controle no painel.",
+    category: "Comunicação",
     status: "em_implementacao",
-    eta: "Em implementacao",
+    eta: "Em implementação",
     impact: "Cliente mais avisado, agenda mais protegida.",
   },
   {
-    title: "Cobranca de sinal",
+    title: "Cobrança de sinal",
     description:
-      "Entrada configuravel por servico para reduzir faltas, proteger horarios longos e organizar confirmacoes.",
+      "Entrada configurável por serviço para reduzir faltas, proteger horários longos e organizar confirmações.",
     category: "Agenda",
     status: "em_implementacao",
-    eta: "Proxima etapa",
-    impact: "Mais seguranca para horarios disputados.",
+    eta: "Próxima etapa",
+    impact: "Mais segurança para horários disputados.",
   },
   {
     title: "Google Calendar",
     description:
-      "Sincronizacao dos horarios confirmados com a agenda externa do profissional.",
+      "Sincronização dos horários confirmados com a agenda externa do profissional.",
     category: "Agenda",
     status: "entregue",
-    eta: "Disponivel",
-    impact: "Menos conflito entre agenda pessoal e agenda do salao.",
+    eta: "Disponível",
+    impact: "Menos conflito entre agenda pessoal e agenda do salão.",
   },
   {
     title: "Agendamento em grupo",
     description:
-      "Controle de capacidade por horario para aulas, pacotes, turmas e atendimentos coletivos.",
+      "Controle de capacidade por horário para aulas, pacotes, turmas e atendimentos coletivos.",
     category: "Agenda",
     status: "planejado",
     eta: "Planejado",
-    impact: "Um horario, varias vagas, sem bagunca operacional.",
+    impact: "Um horário, várias vagas, sem bagunça operacional.",
   },
   {
-    title: "Recorrencia",
+    title: "Recorrência",
     description:
-      "Criacao de repeticoes semanais ou mensais para clientes fixos, pacotes e planos recorrentes.",
+      "Criação de repetições semanais ou mensais para clientes fixos, pacotes e planos recorrentes.",
     category: "Agenda",
     status: "planejado",
     eta: "Planejado",
@@ -85,29 +85,29 @@ export const productRoadmap: RoadmapItem[] = [
   {
     title: "Linha do tempo do cliente",
     description:
-      "Historico unificado com agendamentos, observacoes, pagamentos, avaliacoes e contatos.",
+      "Histórico unificado com agendamentos, observações, pagamentos, avaliações e contatos.",
     category: "Clientes",
     status: "planejado",
     eta: "Planejado",
     impact: "Atendimento mais pessoal e equipe mais informada.",
   },
   {
-    title: "Link publico direto",
+    title: "Link público direto",
     description:
-      "Link curto e divulgavel para abrir o perfil publico do salao no app cliente.",
+      "Link curto e divulgável para abrir o perfil público do salão no app cliente.",
     category: "App cliente",
     status: "entregue",
-    eta: "Disponivel",
-    impact: "Mais facil colocar na bio, campanha e WhatsApp.",
+    eta: "Disponível",
+    impact: "Mais fácil colocar na bio, campanha e WhatsApp.",
   },
   {
     title: "Bloqueios da agenda",
     description:
-      "Base para pausas, ferias, feriados, dia inteiro e futuras repeticoes de indisponibilidade.",
+      "Base para pausas, férias, feriados, dia inteiro e futuras repetições de indisponibilidade.",
     category: "Agenda",
     status: "entregue",
     eta: "Base pronta",
-    impact: "Agenda mais fiel ao que o salao realmente atende.",
+    impact: "Agenda mais fiel ao que o salão realmente atende.",
   },
 ];
 

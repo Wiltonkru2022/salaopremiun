@@ -219,7 +219,7 @@ async function buscarCoordenadasEndereco(form: SalaoForm) {
   };
 
   if (!response.ok) {
-    throw new Error(payload.message || "Nao foi possivel localizar o endereco.");
+    throw new Error(payload.message || "Não foi possível localizar o endereço.");
   }
 
   return payload.coordinates || null;
@@ -474,12 +474,12 @@ export default function PerfilSalaoPage() {
       };
 
       if (!response.ok) {
-        throw new Error(payload.message || "Nao foi possivel carregar o portfolio.");
+        throw new Error(payload.message || "Não foi possível carregar o portfólio.");
       }
 
       setPortfolioFotos(Array.isArray(payload.fotos) ? payload.fotos : []);
     } catch (error) {
-      console.warn("Nao foi possivel carregar portfolio do salao:", error);
+      console.warn("Não foi possível carregar portfólio do salão:", error);
       setPortfolioFotos([]);
     }
   }, []);
@@ -860,7 +860,7 @@ export default function PerfilSalaoPage() {
           p_id_salao: idSalao,
         });
       } catch {
-        // A funcao pode nao existir em ambientes antigos; a vitrine tambem tem fallback ao vivo.
+        // A função pode não existir em ambientes antigos; a vitrine também tem fallback ao vivo.
       }
 
       const nextForm = { ...perfilForm, ...patch, app_cliente_slug: payload.app_cliente_slug };
@@ -990,17 +990,17 @@ export default function PerfilSalaoPage() {
       };
 
       if (!response.ok || !payload.foto) {
-        throw new Error(payload.message || "Nao foi possivel enviar a foto.");
+        throw new Error(payload.message || "Não foi possível enviar a foto.");
       }
 
       setPortfolioFotos((prev) => [...prev, payload.foto as PortfolioFoto]);
-      setMsg("Foto adicionada ao portfolio do app cliente.");
+      setMsg("Foto adicionada ao portfólio do app cliente.");
       router.refresh();
     } catch (error: unknown) {
       setErro(
         error instanceof Error
           ? error.message
-          : "Nao foi possivel enviar a foto do portfolio."
+          : "Não foi possível enviar a foto do portfólio."
       );
     } finally {
       setUploadingPublicAsset(null);
@@ -1023,17 +1023,17 @@ export default function PerfilSalaoPage() {
       };
 
       if (!response.ok) {
-        throw new Error(payload.message || "Nao foi possivel remover a foto.");
+        throw new Error(payload.message || "Não foi possível remover a foto.");
       }
 
       setPortfolioFotos((prev) => prev.filter((foto) => foto.id !== id));
-      setMsg("Foto removida do portfolio.");
+      setMsg("Foto removida do portfólio.");
       router.refresh();
     } catch (error: unknown) {
       setErro(
         error instanceof Error
           ? error.message
-          : "Nao foi possivel remover a foto do portfolio."
+          : "Não foi possível remover a foto do portfólio."
       );
     }
   }
@@ -1776,7 +1776,7 @@ export default function PerfilSalaoPage() {
                   value={
                     autenticadorAtivo
                       ? "Exige código do autenticador ou backup code antes de salvar."
-                      : "Protegida pela sessao autenticada atual."
+                      : "Protegida pela sessão autenticada atual."
                   }
                   multiline
                 />
@@ -2051,18 +2051,18 @@ export default function PerfilSalaoPage() {
                         >
                           <img
                             src={foto.imagemUrl}
-                            alt={foto.legenda || "Foto do portfolio"}
+                            alt={foto.legenda || "Foto do portfólio"}
                             className="h-36 w-full object-cover"
                           />
                           <figcaption className="flex items-center justify-between gap-2 px-3 py-2">
                             <span className="truncate text-xs font-semibold text-zinc-600">
-                              {foto.legenda || "Foto do portfolio"}
+                              {foto.legenda || "Foto do portfólio"}
                             </span>
                             <button
                               type="button"
                               onClick={() => void removerFotoPortfolio(foto.id)}
                               className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-rose-600 transition hover:bg-rose-50"
-                              aria-label="Remover foto do portfolio"
+                              aria-label="Remover foto do portfólio"
                             >
                               <Trash2 size={15} />
                             </button>
@@ -2150,7 +2150,7 @@ export default function PerfilSalaoPage() {
                 <div className="rounded-[24px] border border-zinc-200 bg-white p-3">
                   <img
                     src={qrCodeUrl}
-                    alt={`QR Code do salao ${perfilForm.nome || "SalaoPremium"}`}
+                    alt={`QR Code do salão ${perfilForm.nome || "SalaoPremium"}`}
                     className="aspect-square w-full rounded-[18px] bg-white object-contain"
                   />
                 </div>
@@ -2890,7 +2890,7 @@ export default function PerfilSalaoPage() {
                       app_cliente_pausa_mensagem: event.target.value,
                     }))
                   }
-                  placeholder="Estamos de ferias e voltamos em breve."
+                  placeholder="Estamos de férias e voltamos em breve."
                 />
               </Field>
             </div>

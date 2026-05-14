@@ -44,11 +44,11 @@ function formatFormaPagamento(value?: string | null) {
   const normalized = String(value || "").toLowerCase();
   if (normalized === "pix") return "Pix";
   if (normalized === "dinheiro") return "Dinheiro";
-  if (normalized === "debito") return "Debito";
-  if (normalized === "credito") return "Credito";
-  if (normalized === "transferencia") return "Transferencia";
-  if (normalized === "credito_cliente") return "Credito da cliente";
-  return normalized ? normalized.replace(/_/g, " ") : "Nao informado";
+  if (normalized === "debito") return "Débito";
+  if (normalized === "credito") return "Crédito";
+  if (normalized === "transferencia") return "Transferência";
+  if (normalized === "credito_cliente") return "Crédito da cliente";
+  return normalized ? normalized.replace(/_/g, " ") : "Não informado";
 }
 
 function getClienteNome(comanda?: ComandaResumo | null) {
@@ -101,9 +101,9 @@ function buildHtml(params: {
       <div class="stack">
         <div>
           <div class="eyebrow">Fechamento do caixa</div>
-          <h1 style="margin-top:8px;font-size:30px;">Relatorio do dia</h1>
+          <h1 style="margin-top:8px;font-size:30px;">Relatório do dia</h1>
           <p class="helper" style="margin-top:8px;">
-            Sessao ${sessao.id} aberta em ${formatDateTime(sessao.aberto_em)} e fechada em ${formatDateTime(
+            Sessão ${sessao.id} aberta em ${formatDateTime(sessao.aberto_em)} e fechada em ${formatDateTime(
               sessao.fechado_em || new Date().toISOString()
             )}.
           </p>
@@ -145,7 +145,7 @@ function buildHtml(params: {
                           `<tr><td>${item.forma}</td><td>${formatCurrency(item.valor)}</td></tr>`
                       )
                       .join("")
-                  : `<tr><td colspan="2">Nenhuma venda registrada na sessao.</td></tr>`
+                  : `<tr><td colspan="2">Nenhuma venda registrada na sessão.</td></tr>`
               }
             </tbody>
           </table>
@@ -170,7 +170,7 @@ function buildHtml(params: {
                           )}</td></tr>`
                       )
                       .join("")
-                  : `<tr><td colspan="4">Nenhuma comanda fechada foi encontrada para a sessao.</td></tr>`
+                  : `<tr><td colspan="4">Nenhuma comanda fechada foi encontrada para a sessão.</td></tr>`
               }
             </tbody>
           </table>
@@ -180,7 +180,7 @@ function buildHtml(params: {
           <div class="eyebrow">Movimentos adicionais</div>
           <table style="margin-top:10px;">
             <thead>
-              <tr><th>Tipo</th><th>Descricao</th><th>Valor</th><th>Horario</th></tr>
+              <tr><th>Tipo</th><th>Descrição</th><th>Valor</th><th>Horário</th></tr>
             </thead>
             <tbody>
               ${
@@ -195,7 +195,7 @@ function buildHtml(params: {
                           )}</td></tr>`
                       )
                       .join("")
-                  : `<tr><td colspan="4">Sem sangria, suprimento, vale ou ajuste na sessao.</td></tr>`
+                  : `<tr><td colspan="4">Sem sangria, suprimento, vale ou ajuste na sessão.</td></tr>`
               }
             </tbody>
           </table>
@@ -203,7 +203,7 @@ function buildHtml(params: {
 
         ${
           observacoes
-            ? `<div class="card"><div class="eyebrow">Observacoes do fechamento</div><p class="helper" style="margin-top:10px;">${observacoes}</p></div>`
+            ? `<div class="card"><div class="eyebrow">Observações do fechamento</div><p class="helper" style="margin-top:10px;">${observacoes}</p></div>`
             : ""
         }
       </div>
@@ -295,7 +295,7 @@ export async function imprimirRelatorioFechamentoCaixa(
   const doc = iframe.contentDocument;
   if (!doc) {
     cleanup();
-    throw new Error("Nao foi possivel montar o relatorio de fechamento.");
+    throw new Error("Não foi possível montar o relatório de fechamento.");
   }
 
   doc.open();

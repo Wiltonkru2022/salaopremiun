@@ -286,7 +286,7 @@ export default function ServicosPage() {
         )
       );
 
-      setMsg(`Servico ${novoAtivo ? "ativado" : "inativado"} com sucesso.`);
+      setMsg(`Serviço ${novoAtivo ? "ativado" : "inativado"} com sucesso.`);
     } catch (e: unknown) {
       console.error(e);
       setErro(getErrorMessage(e, "Erro ao alterar status do serviço."));
@@ -385,7 +385,7 @@ export default function ServicosPage() {
                   <CircleHelp className="h-3.5 w-3.5" />
                 </button>
               </div>
-              <h1 className="mt-2 text-2xl font-bold md:text-3xl">Servicos</h1>
+              <h1 className="mt-2 text-2xl font-bold md:text-3xl">Serviços</h1>
               <p className="mt-3 max-w-2xl text-sm leading-6 text-zinc-600">
                 Aqui ficam as regras que alimentam agenda, comandas, caixa,
                 vendas e comissões: preço, duração, custo, comissão por
