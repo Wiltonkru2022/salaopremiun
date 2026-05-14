@@ -94,6 +94,13 @@ type PortfolioFoto = {
   ordem: number;
 };
 
+type GoogleCalendarConnectionState = {
+  loading: boolean;
+  connected: boolean;
+  configured: boolean;
+  googleEmail: string | null;
+};
+
 type SalaoProfileRow = {
   id?: string | null;
   nome?: string | null;
@@ -295,6 +302,14 @@ export default function PerfilSalaoPage() {
   >(null);
   const [loadingMfa, setLoadingMfa] = useState(false);
   const [mfaBusy, setMfaBusy] = useState(false);
+  const [googleCalendar, setGoogleCalendar] =
+    useState<GoogleCalendarConnectionState>({
+      loading: true,
+      connected: false,
+      configured: false,
+      googleEmail: null,
+    });
+  const [disconnectingGoogle, setDisconnectingGoogle] = useState(false);
   const [creatingRecoveryTicket, setCreatingRecoveryTicket] = useState(false);
   const [deletingSalao, setDeletingSalao] = useState(false);
   const [erro, setErro] = useState("");
@@ -450,6 +465,42 @@ export default function PerfilSalaoPage() {
     }
   }, []);
 
+  const carregarGoogleCalendar = useCallback(async () => {
+    try {
+      setGoogleCalendar((current) => ({ ...current, loading: true }));
+      const response = await fetch("/api/integracoes/google-calendar/status", {
+        method: "GET",
+        cache: "no-store",
+      });
+      const data = (await response.json().catch(() => null)) as
+        | {
+            ok?: boolean;
+            configured?: boolean;
+            connected?: boolean;
+            googleEmail?: string | null;
+          }
+        | null;
+
+      if (!response.ok || !data?.ok) {
+        throw new Error("Não foi possível verificar o Google Calendar.");
+      }
+
+      setGoogleCalendar({
+        loading: false,
+        configured: Boolean(data.configured),
+        connected: Boolean(data.connected),
+        googleEmail: data.googleEmail || null,
+      });
+    } catch {
+      setGoogleCalendar({
+        loading: false,
+        configured: false,
+        connected: false,
+        googleEmail: null,
+      });
+    }
+  }, []);
+
   const carregarPerfil = useCallback(async () => {
     try {
       setLoading(true);
@@ -529,7 +580,11 @@ export default function PerfilSalaoPage() {
         setAppClienteDraft(nextForm);
       }
 
-      await Promise.all([carregarMfa(), carregarPortfolio()]);
+      await Promise.all([
+        carregarMfa(),
+        carregarPortfolio(),
+        carregarGoogleCalendar(),
+      ]);
     } catch (error: unknown) {
       setErro(
         error instanceof Error ? error.message : "Erro ao carregar perfil."
@@ -537,7 +592,13 @@ export default function PerfilSalaoPage() {
     } finally {
       setLoading(false);
     }
-  }, [carregarMfa, carregarPortfolio, supabase, painelSession]);
+  }, [
+    carregarGoogleCalendar,
+    carregarMfa,
+    carregarPortfolio,
+    supabase,
+    painelSession,
+  ]);
 
   useEffect(() => {
     void carregarPerfil();
@@ -958,6 +1019,40 @@ export default function PerfilSalaoPage() {
         ? "Perfil público do app cliente atualizado com sucesso."
         : "Perfil público salvo. A publicação fica disponível quando o salão estiver no Pro ou Premium."
     );
+  }
+
+  async function desconectarGoogleCalendar() {
+    try {
+      setDisconnectingGoogle(true);
+      setErro("");
+      setMsg("");
+
+      const response = await fetch("/api/integracoes/google-calendar/status", {
+        method: "DELETE",
+      });
+      const data = (await response.json().catch(() => null)) as
+        | { ok?: boolean; error?: string }
+        | null;
+
+      if (!response.ok || !data?.ok) {
+        throw new Error(data?.error || "Não foi possível desconectar a conta Google.");
+      }
+
+      setGoogleCalendar((current) => ({
+        ...current,
+        connected: false,
+        googleEmail: null,
+      }));
+      setMsg("Conta Google desconectada do Google Calendar.");
+    } catch (error) {
+      setErro(
+        error instanceof Error
+          ? error.message
+          : "Erro ao desconectar a conta Google."
+      );
+    } finally {
+      setDisconnectingGoogle(false);
+    }
   }
 
   async function copiarLinkPublico() {
@@ -1494,7 +1589,7 @@ export default function PerfilSalaoPage() {
               title="Google"
               description="Conecte o Google para login e sincronização automática da agenda."
             >
-              <div className="grid gap-3 md:grid-cols-2">
+              <div className="grid gap-3">
                 <div className="rounded-[22px] border border-zinc-200 bg-zinc-50 p-4">
                   <div className="text-sm font-bold text-zinc-950">
                     Google Calendar
@@ -1504,6 +1599,15 @@ export default function PerfilSalaoPage() {
                     enviados automaticamente para o Google Calendar, sem baixar
                     arquivo manual.
                   </p>
+                  <div className="mt-3 rounded-2xl border border-zinc-200 bg-white px-3 py-2 text-sm font-semibold text-zinc-700">
+                    {googleCalendar.loading
+                      ? "Verificando conexão..."
+                      : googleCalendar.connected
+                        ? `Conectado em ${googleCalendar.googleEmail || "conta Google"}`
+                        : googleCalendar.configured
+                          ? "Ainda não conectado."
+                          : "A integração ainda não está configurada na Vercel."}
+                  </div>
                   {googleCalendarStatus === "connected" ? (
                     <div className="mt-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700">
                       Google Calendar conectado com sucesso.
@@ -1519,31 +1623,46 @@ export default function PerfilSalaoPage() {
                       Google Cloud e tente novamente.
                     </div>
                   ) : null}
-                  <a
-                    href="/api/integracoes/google-calendar/connect"
-                    className="mt-4 inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-zinc-950 px-4 text-sm font-bold text-white transition hover:bg-zinc-800"
-                  >
-                    <CalendarClock size={16} />
-                    Conectar Google Calendar
-                  </a>
-                </div>
-
-                <div className="rounded-[22px] border border-zinc-200 bg-white p-4">
-                  <div className="text-sm font-bold text-zinc-950">
-                    Login com Google
-                  </div>
-                  <p className="mt-2 text-sm leading-6 text-zinc-600">
-                    O botão “Entrar com Google” aparece no login do salão. Para
-                    funcionar, o provedor Google precisa estar ativo em
-                    Supabase Auth &gt; Sign In / Providers.
+                  {googleCalendar.connected ? (
+                    <button
+                      type="button"
+                      onClick={desconectarGoogleCalendar}
+                      disabled={disconnectingGoogle}
+                      className="mt-4 inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-rose-200 bg-white px-4 text-sm font-bold text-rose-700 transition hover:bg-rose-50 disabled:opacity-60"
+                    >
+                      {disconnectingGoogle ? (
+                        <Loader2 className="animate-spin" size={16} />
+                      ) : (
+                        <Trash2 size={16} />
+                      )}
+                      Desconectar conta Google
+                    </button>
+                  ) : googleCalendar.configured ? (
+                    <a
+                      href="/api/integracoes/google-calendar/connect"
+                      className={`mt-4 inline-flex h-11 items-center justify-center gap-2 rounded-2xl px-4 text-sm font-bold transition ${
+                        googleCalendar.loading
+                          ? "pointer-events-none bg-zinc-200 text-zinc-500"
+                          : "bg-zinc-950 text-white hover:bg-zinc-800"
+                      }`}
+                    >
+                      <CalendarClock size={16} />
+                      Conectar Google Calendar
+                    </a>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled
+                      className="mt-4 inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-zinc-200 px-4 text-sm font-bold text-zinc-500"
+                    >
+                      <CalendarClock size={16} />
+                      Google Calendar indisponível
+                    </button>
+                  )}
+                  <p className="mt-3 text-xs leading-5 text-zinc-500">
+                    O login com Google continua disponível na tela de entrada do
+                    salão quando o provedor Google estiver ativo no Supabase.
                   </p>
-                  <a
-                    href="https://login.salaopremiun.com.br/login"
-                    className="mt-4 inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-zinc-300 bg-white px-4 text-sm font-bold text-zinc-800 transition hover:border-zinc-950"
-                  >
-                    <KeyRound size={16} />
-                    Testar login Google
-                  </a>
                 </div>
               </div>
             </SectionCard>
@@ -1559,7 +1678,7 @@ export default function PerfilSalaoPage() {
             >
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <DisplayItem
-                  label="Publicacao"
+                  label="Publicação"
                   value={
                     planoPremium
                       ? perfilForm.app_cliente_publicado
@@ -1578,7 +1697,7 @@ export default function PerfilSalaoPage() {
                 />
                 <DisplayItem
                   label="Estacionamento"
-                  value={perfilForm.estacionamento ? "Sim" : "Nao"}
+                  value={perfilForm.estacionamento ? "Sim" : "Não"}
                 />
                 <DisplayItem
                   label="Endereço no app cliente"
