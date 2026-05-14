@@ -11,6 +11,27 @@ function sanitizeNextPath(value: string | null) {
   return value;
 }
 
+function getRedirectOrigin(nextPath: string, fallbackOrigin: string) {
+  if (nextPath === "/assinatura" || nextPath.startsWith("/assinatura")) {
+    return "https://assinatura.salaopremiun.com.br";
+  }
+
+  if (
+    nextPath === "/dashboard" ||
+    nextPath.startsWith("/dashboard") ||
+    nextPath === "/agenda" ||
+    nextPath.startsWith("/agenda") ||
+    nextPath === "/perfil-salao" ||
+    nextPath.startsWith("/perfil-salao") ||
+    nextPath === "/meu-plano" ||
+    nextPath.startsWith("/meu-plano")
+  ) {
+    return "https://painel.salaopremiun.com.br";
+  }
+
+  return fallbackOrigin;
+}
+
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get("code");
@@ -47,6 +68,5 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(new URL("/login?erro=google_sessao_invalida", requestUrl.origin));
   }
 
-  return NextResponse.redirect(new URL(next, requestUrl.origin));
+  return NextResponse.redirect(new URL(next, getRedirectOrigin(next, requestUrl.origin)));
 }
-
