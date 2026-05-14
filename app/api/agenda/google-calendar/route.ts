@@ -77,6 +77,18 @@ function buildGoogleEvent(row: AppointmentRow) {
   };
 }
 
+function isGoogleCalendarSchemaError(message: string) {
+  const normalized = message.toLowerCase();
+  return (
+    normalized.includes("google_calendar_event_id") ||
+    normalized.includes("google_calendar_sync_status") ||
+    normalized.includes("google_calendar_synced_at") ||
+    normalized.includes("saloes_google_calendar_connections") ||
+    normalized.includes("does not exist") ||
+    normalized.includes("schema cache")
+  );
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = payloadSchema.parse(await req.json());
@@ -102,7 +114,7 @@ export async function POST(req: NextRequest) {
         {
           ok: false,
           requiresConnection: true,
-          connectUrl: "/api/integracoes/google-calendar/connect",
+          connectUrl: "/perfil-salao?google_calendar=configure",
           error:
             "Conecte a conta Google do salão antes de sincronizar a agenda automaticamente.",
         },
@@ -126,7 +138,20 @@ export async function POST(req: NextRequest) {
       .order("hora_inicio", { ascending: true });
 
     if (error) {
-      throw new Error(error.message || "Erro ao buscar agenda confirmada.");
+      const message = error.message || "Erro ao buscar agenda confirmada.";
+      if (isGoogleCalendarSchemaError(message)) {
+        return NextResponse.json(
+          {
+            ok: false,
+            requiresConfig: true,
+            connectUrl: "/perfil-salao?google_calendar=migration",
+            error:
+              "A estrutura do Google Calendar ainda não está aplicada no banco. Rode as migrations do Google Calendar antes de sincronizar.",
+          },
+          { status: 409 }
+        );
+      }
+      throw new Error(message);
     }
 
     const rows = ((data || []) as unknown as AppointmentRow[]).filter(
@@ -153,7 +178,7 @@ export async function POST(req: NextRequest) {
         event: buildGoogleEvent(row),
       });
 
-      await (supabase as any)
+      const { error: updateError } = await (supabase as any)
         .from("agendamentos")
         .update({
           google_calendar_event_id: eventId,
@@ -162,6 +187,24 @@ export async function POST(req: NextRequest) {
         })
         .eq("id", row.id)
         .eq("id_salao", body.idSalao);
+
+      if (updateError) {
+        const message =
+          updateError.message || "Erro ao registrar sincronização do Google Calendar.";
+        if (isGoogleCalendarSchemaError(message)) {
+          return NextResponse.json(
+            {
+              ok: false,
+              requiresConfig: true,
+              connectUrl: "/perfil-salao?google_calendar=migration",
+              error:
+                "A estrutura do Google Calendar ainda não está aplicada no banco. Rode as migrations do Google Calendar antes de sincronizar.",
+            },
+            { status: 409 }
+          );
+        }
+        throw new Error(message);
+      }
 
       synced += 1;
     }
@@ -197,6 +240,22 @@ export async function POST(req: NextRequest) {
           code: error.code,
         },
         { status: error.status }
+      );
+    }
+
+    if (
+      error instanceof Error &&
+      isGoogleCalendarSchemaError(error.message || "")
+    ) {
+      return NextResponse.json(
+        {
+          ok: false,
+          requiresConfig: true,
+          connectUrl: "/perfil-salao?google_calendar=migration",
+          error:
+            "A estrutura do Google Calendar ainda não está aplicada no banco. Rode as migrations do Google Calendar antes de sincronizar.",
+        },
+        { status: 409 }
       );
     }
 
