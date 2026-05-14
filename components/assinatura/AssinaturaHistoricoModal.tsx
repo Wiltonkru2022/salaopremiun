@@ -109,8 +109,10 @@ export default function AssinaturaHistoricoModal({
       }
     >
       {loading ? (
-        <div className="rounded-[24px] border border-zinc-200 bg-zinc-50 p-8 text-sm text-zinc-500">
-          Carregando histórico...
+        <div className="space-y-3 rounded-[24px] border border-zinc-200 bg-zinc-50 p-8" aria-busy="true">
+          <div className="h-4 w-44 animate-pulse rounded-full bg-zinc-200" />
+          <div className="h-16 animate-pulse rounded-2xl bg-zinc-100" />
+          <div className="h-16 animate-pulse rounded-2xl bg-zinc-100" />
         </div>
       ) : historico.length === 0 ? (
         <div className="rounded-[24px] border border-dashed border-zinc-300 bg-zinc-50 p-8 text-sm text-zinc-500">

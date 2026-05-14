@@ -7,6 +7,7 @@ import { CalendarClock, HeartHandshake, Mail, Users } from "lucide-react";
 import { usePainelSession } from "@/components/layout/PainelSessionProvider";
 import { usePlanoAccessSnapshot } from "@/components/plans/usePlanoAccessSnapshot";
 import AppLoading from "@/components/ui/AppLoading";
+import AppModal from "@/components/ui/AppModal";
 import ConfirmActionModal from "@/components/ui/ConfirmActionModal";
 import PaginationControls from "@/components/ui/PaginationControls";
 import { getErrorMessage } from "@/lib/get-error-message";
@@ -59,6 +60,7 @@ export default function ClientesPage() {
   const [clienteParaExcluir, setClienteParaExcluir] = useState<Cliente | null>(
     null
   );
+  const [clienteSelecionado, setClienteSelecionado] = useState<Cliente | null>(null);
   const [permissoes, setPermissoes] = useState<Permissoes | null>(null);
   const [nivel, setNivel] = useState("");
   const [acessoCarregado, setAcessoCarregado] = useState(false);
@@ -588,9 +590,18 @@ export default function ClientesPage() {
                 return (
                   <article
                     key={item.id}
-                    className="rounded-[20px] border border-zinc-200 bg-white p-3.5 shadow-sm"
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => setClienteSelecionado(item)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        setClienteSelecionado(item);
+                      }
+                    }}
+                    className="cursor-pointer rounded-[20px] border border-zinc-200 bg-white p-3.5 shadow-sm transition hover:border-zinc-300 hover:bg-zinc-50 focus:border-zinc-400 focus:outline-none"
                   >
-                    <div className="grid gap-3 2xl:grid-cols-[minmax(0,1.55fr)_230px] 2xl:items-center">
+                    <div className="grid gap-3 2xl:grid-cols-[minmax(0,1fr)] 2xl:items-center">
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
                           <h2 className="text-[1rem] font-semibold text-zinc-950">
@@ -637,57 +648,6 @@ export default function ClientesPage() {
                         </div>
                       </div>
 
-                      <div className="flex shrink-0 flex-wrap gap-2 xl:justify-end">
-                        <Link
-                          href={`/clientes/${item.id}`}
-                          className="inline-flex min-w-[96px] items-center justify-center rounded-xl bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-95"
-                        >
-                          Abrir
-                        </Link>
-
-                        {podeGerenciar ? (
-                          <>
-                            {item.appStatus !== "conectado" ? (
-                              buildConviteAppLink(item) ? (
-                                <a
-                                  href={buildConviteAppLink(item)}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  className="rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-2.5 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100"
-                                >
-                                  Convidar
-                                </a>
-                              ) : (
-                                <span className="rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-2.5 text-xs font-medium text-zinc-500">
-                                  Sem WhatsApp
-                                </span>
-                              )
-                            ) : null}
-
-                            <button
-                              type="button"
-                              onClick={() => alternarStatus(item)}
-                              disabled={savingId === item.id}
-                              className="rounded-xl border border-zinc-300 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-60"
-                            >
-                              {ativoAtual ? "Inativar" : "Ativar"}
-                            </button>
-
-                            <button
-                              type="button"
-                              onClick={() => setClienteParaExcluir(item)}
-                              disabled={savingId === item.id}
-                              className="rounded-xl border border-red-300 bg-red-50 px-4 py-2.5 text-sm font-semibold text-red-600 transition hover:bg-red-100 disabled:opacity-60"
-                            >
-                              Excluir
-                            </button>
-                          </>
-                        ) : (
-                          <div className="rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-2.5 text-xs font-medium text-zinc-500">
-                            Somente leitura
-                          </div>
-                        )}
-                      </div>
                     </div>
                   </article>
                 );
@@ -705,6 +665,80 @@ export default function ClientesPage() {
           </section>
         </div>
       </div>
+
+      <AppModal
+        open={Boolean(clienteSelecionado)}
+        onClose={() => setClienteSelecionado(null)}
+        title={clienteSelecionado?.nome || "Cliente"}
+        description="Ficha rápida para conferir antes de abrir o cadastro completo."
+        maxWidthClassName="max-w-4xl"
+        footer={
+          clienteSelecionado ? (
+            <>
+              <button
+                type="button"
+                onClick={() => setClienteSelecionado(null)}
+                className="rounded-2xl border border-zinc-200 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50"
+              >
+                Fechar
+              </button>
+              {clienteSelecionado.appStatus !== "conectado" && buildConviteAppLink(clienteSelecionado) ? (
+                <a
+                  href={buildConviteAppLink(clienteSelecionado)}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center justify-center rounded-2xl border border-emerald-300 bg-emerald-50 px-4 py-2.5 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100"
+                >
+                  Convidar no WhatsApp
+                </a>
+              ) : null}
+              {podeGerenciar ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => void alternarStatus(clienteSelecionado)}
+                    disabled={savingId === clienteSelecionado.id}
+                    className="rounded-2xl border border-zinc-300 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-60"
+                  >
+                    {(clienteSelecionado.ativo ?? clienteSelecionado.status === "ativo") ? "Inativar" : "Ativar"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setClienteParaExcluir(clienteSelecionado)}
+                    disabled={savingId === clienteSelecionado.id}
+                    className="rounded-2xl border border-red-300 bg-red-50 px-4 py-2.5 text-sm font-semibold text-red-600 transition hover:bg-red-100 disabled:opacity-60"
+                  >
+                    Excluir
+                  </button>
+                </>
+              ) : null}
+              <Link
+                href={`/clientes/${clienteSelecionado.id}`}
+                className="inline-flex items-center justify-center rounded-2xl bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-zinc-800"
+              >
+                Abrir cadastro completo
+              </Link>
+            </>
+          ) : null
+        }
+      >
+        {clienteSelecionado ? (
+          <div className="grid gap-3 md:grid-cols-2">
+            <QuickBox label="Telefone" value={clienteSelecionado.whatsapp || clienteSelecionado.telefone || "Sem telefone"} />
+            <QuickBox label="E-mail" value={clienteSelecionado.email || "Sem e-mail"} />
+            <QuickBox label="Bairro" value={clienteSelecionado.bairro || "Sem bairro"} />
+            <QuickBox label="Profissão" value={clienteSelecionado.profissao || "Sem profissão"} />
+            <QuickBox
+              label="Crédito disponível"
+              value={Number(clienteSelecionado.cashback || 0).toLocaleString("pt-BR", {
+                style: "currency",
+                currency: "BRL",
+              })}
+            />
+            <QuickBox label="Status App" value={clienteSelecionado.appStatus === "conectado" ? "Conectado" : "Pendente"} />
+          </div>
+        ) : null}
+      </AppModal>
     </>
   );
 }
@@ -734,6 +768,17 @@ function ResumoCard({
         </div>
       </div>
       <p className="mt-3 text-sm leading-6 text-zinc-600">{description}</p>
+    </div>
+  );
+}
+
+function QuickBox({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4">
+      <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-zinc-400">
+        {label}
+      </div>
+      <div className="mt-2 break-words text-base font-bold text-zinc-950">{value}</div>
     </div>
   );
 }

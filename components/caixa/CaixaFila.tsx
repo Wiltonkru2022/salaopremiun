@@ -230,7 +230,15 @@ function ComandaFilaCard({
           selecionada ? "text-zinc-300" : "text-zinc-500"
         }`}
       >
-        {carregando ? "Carregando dados da comanda..." : status.description}
+        {carregando ? (
+          <span className="inline-flex items-center gap-1" aria-label="Abrindo comanda">
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-current" />
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-current [animation-delay:120ms]" />
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-current [animation-delay:240ms]" />
+          </span>
+        ) : (
+          status.description
+        )}
       </div>
 
       <div className="mt-2.5 grid grid-cols-2 gap-1.5">

@@ -10,6 +10,7 @@ import {
   Wallet,
 } from "lucide-react";
 import AppLoading from "@/components/ui/AppLoading";
+import AppModal from "@/components/ui/AppModal";
 import ConfirmActionModal from "@/components/ui/ConfirmActionModal";
 import PaginationControls from "@/components/ui/PaginationControls";
 import { usePainelSession } from "@/components/layout/PainelSessionProvider";
@@ -86,6 +87,7 @@ export default function ProdutosPage() {
   const [produtoParaExcluir, setProdutoParaExcluir] = useState<Produto | null>(
     null
   );
+  const [produtoSelecionado, setProdutoSelecionado] = useState<Produto | null>(null);
   const [permissoes, setPermissoes] = useState<Permissoes | null>(null);
   const [nivel, setNivel] = useState("");
   const [acessoCarregado, setAcessoCarregado] = useState(false);
@@ -535,7 +537,16 @@ export default function ProdutosPage() {
               return (
                 <article
                   key={item.id}
-                  className="rounded-[22px] border border-zinc-200 bg-white p-4 shadow-sm"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => setProdutoSelecionado(item)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      setProdutoSelecionado(item);
+                    }
+                  }}
+                  className="cursor-pointer rounded-[22px] border border-zinc-200 bg-white p-4 shadow-sm transition hover:border-zinc-300 hover:bg-zinc-50 focus:border-zinc-400 focus:outline-none"
                 >
                   <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
                     <div className="min-w-0 flex-1">
@@ -596,7 +607,7 @@ export default function ProdutosPage() {
                       </div>
                     </div>
 
-                    <div className="flex shrink-0 flex-col gap-2 xl:w-48">
+                    <div className="hidden shrink-0 flex-col gap-2 xl:w-48">
                       <Link
                         href={`/produtos/${item.id}`}
                         className="inline-flex items-center justify-center rounded-xl border border-zinc-300 bg-white px-4 py-2 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50"
@@ -669,6 +680,75 @@ export default function ProdutosPage() {
           if (produtoParaExcluir) void excluirProduto(produtoParaExcluir.id);
         }}
       />
+
+      <AppModal
+        open={Boolean(produtoSelecionado)}
+        onClose={() => setProdutoSelecionado(null)}
+        title={produtoSelecionado?.nome || "Produto"}
+        description="Estoque, custo, margem e movimentações do produto."
+        maxWidthClassName="max-w-5xl"
+        footer={
+          produtoSelecionado ? (
+            <>
+              <button
+                type="button"
+                onClick={() => setProdutoSelecionado(null)}
+                className="rounded-2xl border border-zinc-200 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50"
+              >
+                Fechar
+              </button>
+              {estoqueLiberado ? (
+                <Link
+                  href="/estoque/movimentar"
+                  className="inline-flex items-center justify-center rounded-2xl border border-zinc-300 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-50"
+                >
+                  Movimentar estoque
+                </Link>
+              ) : null}
+              {podeGerenciar ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => void alternarStatus(produtoSelecionado)}
+                    disabled={savingId === produtoSelecionado.id}
+                    className="rounded-2xl border border-zinc-300 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-60"
+                  >
+                    {(produtoSelecionado.ativo ?? produtoSelecionado.status === "ativo") ? "Inativar" : "Ativar"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setProdutoParaExcluir(produtoSelecionado)}
+                    disabled={savingId === produtoSelecionado.id}
+                    className="rounded-2xl border border-red-300 bg-red-50 px-4 py-2.5 text-sm font-semibold text-red-600 transition hover:bg-red-100 disabled:opacity-60"
+                  >
+                    Excluir
+                  </button>
+                </>
+              ) : null}
+              <Link
+                href={`/produtos/${produtoSelecionado.id}`}
+                className="inline-flex items-center justify-center rounded-2xl bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-zinc-800"
+              >
+                Abrir produto
+              </Link>
+            </>
+          ) : null
+        }
+      >
+        {produtoSelecionado ? (
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            <MetricBlock label="Custo real" value={formatCurrency(produtoSelecionado.custo_real)} detail="Base para ler margem e recompra" />
+            <MetricBlock label="Preço de venda" value={formatCurrency(produtoSelecionado.preco_venda)} detail="Valor base para revenda" />
+            <MetricBlock label="Margem estimada" value={`${getMargemPercentual(produtoSelecionado).toFixed(1)}%`} detail="Diferença entre custo e venda" />
+            <MetricBlock
+              label="Estoque"
+              value={`${formatQuantity(produtoSelecionado.estoque_atual)} un`}
+              detail={`Mínimo esperado: ${formatQuantity(produtoSelecionado.estoque_minimo)} un`}
+              tone={Number(produtoSelecionado.estoque_atual ?? 0) <= Number(produtoSelecionado.estoque_minimo ?? 0) ? "warning" : "neutral"}
+            />
+          </div>
+        ) : null}
+      </AppModal>
     </div>
   );
 }

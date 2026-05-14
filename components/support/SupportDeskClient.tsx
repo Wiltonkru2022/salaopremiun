@@ -692,8 +692,10 @@ export default function SupportDeskClient({
         <div className="space-y-4">
           {selectedId ? (
             loadingDetail && !detail ? (
-              <div className="rounded-[24px] border border-zinc-200 bg-white p-5 text-sm text-zinc-500 shadow-sm">
-                Carregando ticket...
+              <div className="space-y-3 rounded-[24px] border border-zinc-200 bg-white p-5 shadow-sm" aria-busy="true">
+                <div className="h-4 w-40 animate-pulse rounded-full bg-zinc-200" />
+                <div className="h-20 animate-pulse rounded-2xl bg-zinc-100" />
+                <div className="h-20 animate-pulse rounded-2xl bg-zinc-100" />
               </div>
             ) : detail ? (
               <>

@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { usePainelSession } from "@/components/layout/PainelSessionProvider";
 import AppLoading from "@/components/ui/AppLoading";
+import AppModal from "@/components/ui/AppModal";
 import ConfirmActionModal from "@/components/ui/ConfirmActionModal";
 import PaginationControls from "@/components/ui/PaginationControls";
 import { getErrorMessage } from "@/lib/get-error-message";
@@ -64,6 +65,8 @@ export default function ProfissionaisListPage() {
   const [profissionaisHasMore, setProfissionaisHasMore] = useState(false);
   const [loadingPage, setLoadingPage] = useState(false);
   const [profissionalParaExcluir, setProfissionalParaExcluir] =
+    useState<Profissional | null>(null);
+  const [profissionalSelecionado, setProfissionalSelecionado] =
     useState<Profissional | null>(null);
   const [permissoes, setPermissoes] = useState<Permissoes | null>(null);
   const [nivel, setNivel] = useState("");
@@ -583,9 +586,18 @@ export default function ProfissionaisListPage() {
                 return (
                   <article
                     key={item.id}
-                    className="rounded-[20px] border border-zinc-200 bg-white p-3.5 shadow-sm"
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => setProfissionalSelecionado(item)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        setProfissionalSelecionado(item);
+                      }
+                    }}
+                    className="cursor-pointer rounded-[20px] border border-zinc-200 bg-white p-3.5 shadow-sm transition hover:border-zinc-300 hover:bg-zinc-50 focus:border-zinc-400 focus:outline-none"
                   >
-                    <div className="grid gap-3 2xl:grid-cols-[minmax(0,1.7fr)_210px] 2xl:items-center">
+                    <div className="grid gap-3 2xl:grid-cols-[minmax(0,1fr)] 2xl:items-center">
                       <div className="min-w-0 flex-1">
                         <div className="flex items-start gap-3">
                           <Avatar profissional={item} />
@@ -666,40 +678,6 @@ export default function ProfissionaisListPage() {
                         </div>
                       </div>
 
-                      <div className="flex shrink-0 flex-wrap gap-2 xl:self-start xl:justify-end">
-                        <Link
-                          href={`/profissionais/${item.id}`}
-                          className="inline-flex min-w-[96px] items-center justify-center rounded-xl bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-95"
-                        >
-                          Abrir
-                        </Link>
-
-                        {podeGerenciar ? (
-                          <>
-                            <button
-                              type="button"
-                              onClick={() => alternarStatus(item)}
-                              disabled={savingId === item.id}
-                              className="rounded-xl border border-zinc-300 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-60"
-                            >
-                              {ativo ? "Inativar" : "Ativar"}
-                            </button>
-
-                            <button
-                              type="button"
-                              onClick={() => setProfissionalParaExcluir(item)}
-                              disabled={savingId === item.id}
-                              className="rounded-xl border border-red-300 bg-red-50 px-4 py-2.5 text-sm font-semibold text-red-600 transition hover:bg-red-100 disabled:opacity-60"
-                            >
-                              Excluir
-                            </button>
-                          </>
-                        ) : (
-                          <div className="rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-2.5 text-xs font-medium text-zinc-500">
-                            Somente leitura
-                          </div>
-                        )}
-                      </div>
                     </div>
                   </article>
                 );
@@ -716,6 +694,68 @@ export default function ProfissionaisListPage() {
           </section>
         </div>
       </div>
+
+      <AppModal
+        open={Boolean(profissionalSelecionado)}
+        onClose={() => setProfissionalSelecionado(null)}
+        title={profissionalSelecionado?.nome || "Profissional"}
+        description="Resumo rápido de acesso, função, comissão e dados de repasse."
+        maxWidthClassName="max-w-5xl"
+        footer={
+          profissionalSelecionado ? (
+            <>
+              <button
+                type="button"
+                onClick={() => setProfissionalSelecionado(null)}
+                className="rounded-2xl border border-zinc-200 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50"
+              >
+                Fechar
+              </button>
+              {podeGerenciar ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => void alternarStatus(profissionalSelecionado)}
+                    disabled={savingId === profissionalSelecionado.id}
+                    className="rounded-2xl border border-zinc-300 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-60"
+                  >
+                    {(profissionalSelecionado.ativo ?? profissionalSelecionado.status === "ativo") ? "Inativar" : "Ativar"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setProfissionalParaExcluir(profissionalSelecionado)}
+                    disabled={savingId === profissionalSelecionado.id}
+                    className="rounded-2xl border border-red-300 bg-red-50 px-4 py-2.5 text-sm font-semibold text-red-600 transition hover:bg-red-100 disabled:opacity-60"
+                  >
+                    Excluir
+                  </button>
+                </>
+              ) : null}
+              <Link
+                href={`/profissionais/${profissionalSelecionado.id}`}
+                className="inline-flex items-center justify-center rounded-2xl bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-zinc-800"
+              >
+                Abrir cadastro
+              </Link>
+            </>
+          ) : null
+        }
+      >
+        {profissionalSelecionado ? (
+          <div className="space-y-4">
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+              <MetricBlock label="E-mail" value={profissionalSelecionado.email || "Sem e-mail"} detail="Contato de acesso e avisos" />
+              <MetricBlock label="Telefone" value={profissionalSelecionado.whatsapp || profissionalSelecionado.telefone || "Sem telefone"} detail="Contato operacional" />
+              <MetricBlock label="Acesso" value={profissionalSelecionado.nivel_acesso ? formatNivelAcesso(profissionalSelecionado.nivel_acesso) : "Sem acesso"} detail="Escopo dentro da agenda" />
+              <MetricBlock label="Função" value={profissionalSelecionado.cargo || profissionalSelecionado.categoria || "-"} detail="Papel principal no salão" />
+              <MetricBlock label="Assistentes" value={`${profissionalSelecionado.total_assistentes || 0}`} detail="Apoios vinculados" />
+              <MetricBlock label="Comissão produto" value={`${Number(profissionalSelecionado.comissao_produto_percentual || 0).toFixed(2)}%`} detail="Base usada em revenda" />
+              <MetricBlock label="PIX" value={profissionalSelecionado.pix_tipo || "-"} detail={profissionalSelecionado.pix_chave ? "Chave cadastrada" : "Sem chave cadastrada"} />
+              <MetricBlock label="CPF" value="Abrir" detail="Documento e dados completos no cadastro" />
+            </div>
+          </div>
+        ) : null}
+      </AppModal>
     </>
   );
 }

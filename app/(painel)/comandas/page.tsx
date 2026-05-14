@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { usePainelSession } from "@/components/layout/PainelSessionProvider";
 import AppLoading from "@/components/ui/AppLoading";
+import AppModal from "@/components/ui/AppModal";
 import PaginationControls from "@/components/ui/PaginationControls";
 import { createClient } from "@/lib/supabase/client";
 import { getWorkspaceWindowTarget } from "@/lib/painel/workspace-windows";
@@ -98,6 +99,7 @@ export default function ComandasPage() {
   const [comandasHasMore, setComandasHasMore] = useState(false);
   const [comandasTotal, setComandasTotal] = useState(0);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [comandaSelecionada, setComandaSelecionada] = useState<Comanda | null>(null);
 
   const [permissoes, setPermissoes] = useState<Permissoes | null>(null);
   const [nivel, setNivel] = useState("");
@@ -406,15 +408,24 @@ export default function ComandasPage() {
                     <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-zinc-600">
                       Abertura
                     </th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-zinc-600">
-                      Acoes
-                    </th>
                   </tr>
                 </thead>
 
                 <tbody className="divide-y divide-zinc-200 bg-white">
                   {listaFiltrada.map((item) => (
-                    <tr key={item.id} className="transition hover:bg-zinc-50">
+                    <tr
+                      key={item.id}
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => setComandaSelecionada(item)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          setComandaSelecionada(item);
+                        }
+                      }}
+                      className="cursor-pointer transition hover:bg-zinc-50 focus:bg-zinc-50 focus:outline-none"
+                    >
                       <td className="px-4 py-3.5 font-semibold text-zinc-900">
                         #{item.numero}
                       </td>
@@ -434,20 +445,6 @@ export default function ComandasPage() {
                       <td className="px-4 py-3.5 text-sm text-zinc-700">
                         {new Date(item.aberta_em).toLocaleString("pt-BR")}
                       </td>
-                      <td className="px-4 py-3.5 text-right">
-                        {podeGerenciar ? (
-                          <Link
-                            href={`/comandas/${item.id}`}
-                            className="inline-flex items-center rounded-xl bg-zinc-900 px-3 py-2 text-sm font-semibold text-white transition hover:opacity-95"
-                          >
-                            Abrir
-                          </Link>
-                        ) : (
-                          <span className="text-xs font-medium text-zinc-400">
-                            Somente leitura
-                          </span>
-                        )}
-                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -466,6 +463,65 @@ export default function ComandasPage() {
           </div>
         </div>
       </div>
+
+      <AppModal
+        open={Boolean(comandaSelecionada)}
+        onClose={() => setComandaSelecionada(null)}
+        title={
+          comandaSelecionada
+            ? `Comanda #${comandaSelecionada.numero}`
+            : "Comanda"
+        }
+        description="Resumo rápido de cliente, itens, pagamento e ações."
+        maxWidthClassName="max-w-4xl"
+        footer={
+          comandaSelecionada ? (
+            <>
+              <button
+                type="button"
+                onClick={() => setComandaSelecionada(null)}
+                className="rounded-2xl border border-zinc-200 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50"
+              >
+                Fechar
+              </button>
+              {podeGerenciar ? (
+                <>
+                  <Link
+                    href={`/comandas/${comandaSelecionada.id}`}
+                    className="inline-flex items-center justify-center rounded-2xl border border-zinc-300 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-50"
+                  >
+                    Abrir comanda
+                  </Link>
+                  <Link
+                    href={`/caixa?comanda_id=${comandaSelecionada.id}`}
+                    target={getWorkspaceWindowTarget("/caixa")}
+                    className="inline-flex items-center justify-center rounded-2xl bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-zinc-800"
+                  >
+                    Ir para pagamento
+                  </Link>
+                </>
+              ) : null}
+            </>
+          ) : null
+        }
+      >
+        {comandaSelecionada ? (
+          <div className="space-y-4">
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+              <DetailBox label="Cliente" value={comandaSelecionada.cliente_nome || "Sem cliente"} />
+              <DetailBox label="Status" value={getStatusMeta(comandaSelecionada.status).label} />
+              <DetailBox label="Abertura" value={new Date(comandaSelecionada.aberta_em).toLocaleString("pt-BR")} />
+              <DetailBox label="Total" value={formatCurrency(comandaSelecionada.total)} />
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-3">
+              <DetailBox label="Itens da comanda" value="Abrir comanda" detail="Lista completa de serviços, produtos, extras e ajustes." />
+              <DetailBox label="Profissional" value="No detalhe" detail="Profissional e assistente ficam vinculados aos itens." />
+              <DetailBox label="Pagamento" value={formatCurrency(comandaSelecionada.total)} detail="Use o caixa para receber, conferir ou finalizar." />
+            </div>
+          </div>
+        ) : null}
+      </AppModal>
     </div>
   );
 }
@@ -479,6 +535,28 @@ function ResumoCard({ label, value }: { label: string; value: string }) {
       <div className="mt-2 text-[1.9rem] font-bold tracking-[-0.05em] text-zinc-950">
         {value}
       </div>
+    </div>
+  );
+}
+
+function DetailBox({
+  label,
+  value,
+  detail,
+}: {
+  label: string;
+  value: string;
+  detail?: string;
+}) {
+  return (
+    <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4">
+      <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-zinc-400">
+        {label}
+      </div>
+      <div className="mt-2 break-words text-base font-bold text-zinc-950">
+        {value}
+      </div>
+      {detail ? <p className="mt-1 text-sm leading-5 text-zinc-500">{detail}</p> : null}
     </div>
   );
 }

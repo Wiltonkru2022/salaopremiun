@@ -386,7 +386,11 @@ export default function CaixaPage() {
                       <CheckCircle2 size={16} className="mr-2 text-zinc-500" />
                       <span>
                         {comandaCarregandoId === comandaSelecionada.id ? (
-                          "Abrindo comanda..."
+                          <span className="inline-flex items-center gap-1 align-middle" aria-label="Abrindo comanda">
+                            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-current" />
+                            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-current [animation-delay:120ms]" />
+                            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-current [animation-delay:240ms]" />
+                          </span>
                         ) : (
                           <>
                             Comanda em foco <strong>#{comandaSelecionada.numero}</strong>.{" "}

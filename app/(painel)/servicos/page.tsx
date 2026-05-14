@@ -86,6 +86,8 @@ export default function ServicosPage() {
   const [loadingPage, setLoadingPage] = useState(false);
   const [servicoParaExcluir, setServicoParaExcluir] =
     useState<ServicoListItem | null>(null);
+  const [servicoSelecionado, setServicoSelecionado] =
+    useState<ServicoListItem | null>(null);
   const [ajudaOpen, setAjudaOpen] = useState(false);
   const [permissoes, setPermissoes] = useState<Permissoes | null>(null);
   const [nivel, setNivel] = useState("");
@@ -507,7 +509,16 @@ export default function ServicosPage() {
               return (
                 <article
                   key={item.id}
-                  className="rounded-[22px] border border-zinc-200 bg-white p-4 shadow-sm"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => setServicoSelecionado(item)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      setServicoSelecionado(item);
+                    }
+                  }}
+                  className="cursor-pointer rounded-[22px] border border-zinc-200 bg-white p-4 shadow-sm transition hover:border-zinc-300 hover:bg-zinc-50 focus:border-zinc-400 focus:outline-none"
                 >
                   <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
                     <div className="min-w-0 flex-1">
@@ -594,7 +605,7 @@ export default function ServicosPage() {
                       </div>
                     </div>
 
-                    <div className="flex shrink-0 flex-col gap-2 xl:w-48">
+                    <div className="hidden shrink-0 flex-col gap-2 xl:w-48">
                       <Link
                         href={hrefEdicao}
                         className="inline-flex items-center justify-center rounded-xl border border-zinc-300 bg-white px-4 py-2 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50"
@@ -707,6 +718,83 @@ export default function ServicosPage() {
             </Link>
           </div>
         </ComissaoHelpPanel>
+      </AppModal>
+
+      <AppModal
+        open={Boolean(servicoSelecionado)}
+        onClose={() => setServicoSelecionado(null)}
+        title={servicoSelecionado?.nome || "Serviço"}
+        description="Detalhe rápido do serviço, com regras operacionais e ações."
+        maxWidthClassName="max-w-5xl"
+        footer={
+          servicoSelecionado ? (
+            <>
+              <button
+                type="button"
+                onClick={() => setServicoSelecionado(null)}
+                className="rounded-2xl border border-zinc-200 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50"
+              >
+                Fechar
+              </button>
+              {podeGerenciar ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => void alternarStatus(servicoSelecionado)}
+                    disabled={savingId === servicoSelecionado.id}
+                    className="rounded-2xl border border-zinc-300 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-60"
+                  >
+                    {(servicoSelecionado.ativo ?? servicoSelecionado.status === "ativo") ? "Inativar" : "Ativar"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setServicoParaExcluir(servicoSelecionado)}
+                    disabled={savingId === servicoSelecionado.id}
+                    className="rounded-2xl border border-red-300 bg-red-50 px-4 py-2.5 text-sm font-semibold text-red-600 transition hover:bg-red-100 disabled:opacity-60"
+                  >
+                    Excluir
+                  </button>
+                </>
+              ) : null}
+              <Link
+                href={servicoSelecionado.eh_combo ? `/servicos/combos/${servicoSelecionado.id}` : `/servicos/${servicoSelecionado.id}`}
+                className="inline-flex items-center justify-center rounded-2xl bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-zinc-800"
+              >
+                Abrir detalhe completo
+              </Link>
+            </>
+          ) : null
+        }
+      >
+        {servicoSelecionado ? (
+          <div className="space-y-4">
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+              <MetricBlock
+                label="Tempo operacional"
+                value={formatMinutes(servicoSelecionado.duracao_minutos)}
+                detail={Number(servicoSelecionado.pausa_minutos || 0) > 0 ? `${servicoSelecionado.pausa_minutos} min de pausa` : "Sem pausa adicional"}
+              />
+              <MetricBlock
+                label="Preço base"
+                value={servicoSelecionado.preco_variavel ? `A partir de ${formatCurrency(servicoSelecionado.preco_padrao)}` : formatCurrency(servicoSelecionado.preco_padrao)}
+                detail="Valor exibido para a recepção como base do serviço"
+              />
+              <MetricBlock
+                label="Custo previsto"
+                value={formatCurrency(servicoSelecionado.custo_produto)}
+                detail="Ajuda a enxergar margem e impacto de consumo"
+              />
+              <MetricBlock
+                label="Comissão padrão"
+                value={servicoSelecionado.eh_combo ? "Por serviço" : `${formatPercent(servicoSelecionado.comissao_percentual_padrao)}%`}
+                detail="Vale enquanto não houver exceção por profissional"
+              />
+            </div>
+            <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4 text-sm leading-6 text-zinc-600">
+              Exceções por profissional, consumo de produtos e composição de combo ficam no detalhe completo do serviço.
+            </div>
+          </div>
+        ) : null}
       </AppModal>
     </div>
   );
