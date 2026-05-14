@@ -1,5 +1,9 @@
 import type { MetadataRoute } from "next";
-import { DOMINIO_RAIZ } from "@/lib/proxy/domain-config";
+import {
+  DOMINIO_BLOG,
+  DOMINIO_CADASTRO,
+  DOMINIO_RAIZ,
+} from "@/lib/proxy/domain-config";
 
 export default function robots(): MetadataRoute.Robots {
   const baseUrl = `https://${DOMINIO_RAIZ}`;
@@ -35,7 +39,10 @@ export default function robots(): MetadataRoute.Robots {
         "/assinatura",
       ],
     },
-    sitemap: `${baseUrl}/sitemap.xml`,
-    host: baseUrl,
+    sitemap: [
+      `${baseUrl}/sitemap.xml`,
+      `https://${DOMINIO_BLOG}/sitemap.xml`,
+      `https://${DOMINIO_CADASTRO}/sitemap.xml`,
+    ],
   };
 }
