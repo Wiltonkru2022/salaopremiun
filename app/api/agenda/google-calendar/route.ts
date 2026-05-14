@@ -88,6 +88,7 @@ export async function POST(req: NextRequest) {
         {
           ok: false,
           requiresConfig: true,
+          connectUrl: "/perfil-salao?google_calendar=env",
           error:
             "Google Calendar ainda não está configurado. Cadastre GOOGLE_CALENDAR_CLIENT_ID, GOOGLE_CALENDAR_CLIENT_SECRET e GOOGLE_CALENDAR_REDIRECT_URI na produção.",
         },

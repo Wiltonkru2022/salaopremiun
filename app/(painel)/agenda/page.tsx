@@ -979,6 +979,13 @@ export default function AgendaPage() {
           return;
         }
 
+        if (payload.requiresConnection && payload.connectUrl) {
+          window.location.assign(
+            new URL(payload.connectUrl, window.location.origin).toString()
+          );
+          return;
+        }
+
         if (payload.requiresConnection || payload.requiresConfig) {
           abrirAviso(
             "Configure a integração com Google Calendar",
