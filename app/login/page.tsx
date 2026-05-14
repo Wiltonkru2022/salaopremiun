@@ -210,6 +210,37 @@ function LoginPageContent() {
 
       setLoading(true);
       setErro("");
+      setRedirectMessage("Verificando se o Login com Google está configurado...");
+
+      const emailDigitado = email.trim().toLowerCase();
+      if (!emailDigitado) {
+        setErro("Digite seu e-mail antes de entrar com Google.");
+        setLoading(false);
+        setRedirectMessage("");
+        return;
+      }
+
+      const precheckResponse = await fetch("/api/auth/google-login-precheck", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: emailDigitado }),
+      });
+      const precheck = (await precheckResponse.json().catch(() => ({}))) as {
+        ok?: boolean;
+        allowed?: boolean;
+        error?: string;
+      };
+
+      if (!precheckResponse.ok || !precheck.ok || !precheck.allowed) {
+        setErro(
+          precheck.error ||
+            "Este e-mail ainda não tem Login com Google configurado. Entre com e-mail e senha e ative em Perfil do Salão > Login com Google."
+        );
+        setLoading(false);
+        setRedirectMessage("");
+        return;
+      }
+
       setRedirectMessage("Abrindo login com Google...");
 
       const callbackUrl = new URL(
