@@ -430,6 +430,49 @@ export async function queueOracleVpsNotificationProcessing(
   });
 }
 
+export async function queueOracleVpsTrialAlerts(
+  payload?: Record<string, unknown>
+) {
+  return requestOracleVps("/jobs/trial-alerts/process", {
+    method: "POST",
+    protected: true,
+    timeoutMs: 12000,
+    body: {
+      limit: 80,
+      source: "salaopremium-next",
+      ...payload,
+    },
+  });
+}
+
+export async function sendOracleVpsTrialAlertNow(
+  payload: Record<string, unknown>
+) {
+  return requestOracleVps("/trial-alerts/send-now", {
+    method: "POST",
+    protected: true,
+    timeoutMs: 12000,
+    body: {
+      source: "salaopremium-next",
+      ...payload,
+    },
+  });
+}
+
+export async function extendOracleVpsTrial(
+  payload: Record<string, unknown>
+) {
+  return requestOracleVps("/trial-alerts/extend", {
+    method: "POST",
+    protected: true,
+    timeoutMs: 12000,
+    body: {
+      source: "salaopremium-next",
+      ...payload,
+    },
+  });
+}
+
 export async function queueOracleVpsReport(payload?: Record<string, unknown>) {
   return requestOracleVps("/jobs/reports/generate", {
     method: "POST",

@@ -11,6 +11,10 @@
     {
       "path": "/api/cron/oracle-vps-ping",
       "schedule": "35 6 * * *"
+    },
+    {
+      "path": "/api/cron/trial-alerts",
+      "schedule": "0 12 * * *"
     }
   ]
 }

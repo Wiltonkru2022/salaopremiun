@@ -23,6 +23,14 @@ export default async function AdminMasterSalaoDetalhePage({
     .eq("ativo", true)
     .order("ordem", { ascending: true });
 
+  const { data: trialControle } = await supabase
+    .from("assinaturas")
+    .select(
+      "trial_fim_em, email_trial_3d_sent_at, email_trial_1d_sent_at, email_trial_today_sent_at, email_trial_expired_sent_at"
+    )
+    .eq("id_salao", id)
+    .maybeSingle();
+
   const planosOptions = ((planos || []) as { codigo?: string | null; nome?: string | null }[])
     .filter((plano) => plano.codigo && plano.nome)
     .map((plano) => ({
@@ -73,6 +81,32 @@ export default async function AdminMasterSalaoDetalhePage({
         planoAtual={planoAtual}
         vencimentoAtual={vencimentoAtual}
         planos={planosOptions}
+        trialInfo={{
+          status: String(assinatura.status || data.access.assinaturaStatus || "-"),
+          plano: planoAtual,
+          trialFimEm: String(
+            (trialControle as { trial_fim_em?: string | null } | null)?.trial_fim_em ||
+              assinatura.trial_fim_em ||
+              salao.trial_fim_em ||
+              ""
+          ),
+          emailTrial3dSentAt:
+            (trialControle as { email_trial_3d_sent_at?: string | null } | null)
+              ?.email_trial_3d_sent_at || null,
+          emailTrial1dSentAt:
+            (trialControle as { email_trial_1d_sent_at?: string | null } | null)
+              ?.email_trial_1d_sent_at || null,
+          emailTrialTodaySentAt:
+            (trialControle as { email_trial_today_sent_at?: string | null } | null)
+              ?.email_trial_today_sent_at || null,
+          emailTrialExpiredSentAt:
+            (trialControle as { email_trial_expired_sent_at?: string | null } | null)
+              ?.email_trial_expired_sent_at || null,
+          email: String(salao.email || ""),
+          whatsapp: String(salao.whatsapp || salao.telefone || ""),
+          responsavel: String(salao.responsavel || ""),
+          nomeSalao: String(salao.nome_fantasia || salao.nome || "Salao"),
+        }}
       />
 
       <AdminKpiGrid

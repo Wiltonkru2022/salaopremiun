@@ -14,6 +14,20 @@ type FeedbackState = {
   message: string;
 };
 
+type TrialInfo = {
+  status: string;
+  plano: string;
+  trialFimEm?: string | null;
+  emailTrial3dSentAt?: string | null;
+  emailTrial1dSentAt?: string | null;
+  emailTrialTodaySentAt?: string | null;
+  emailTrialExpiredSentAt?: string | null;
+  email?: string | null;
+  whatsapp?: string | null;
+  responsavel?: string | null;
+  nomeSalao?: string | null;
+};
+
 function formatDateInput(value?: string | null) {
   if (!value) return "";
 
@@ -52,18 +66,54 @@ async function parseApiResponse(response: Response) {
   return data;
 }
 
+function normalizeWhatsapp(value?: string | null) {
+  const digits = String(value || "").replace(/\D/g, "");
+  if (!digits) return "";
+  return digits.startsWith("55") ? digits : `55${digits}`;
+}
+
+function buildWhatsappUrl(phone: string, message: string) {
+  return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+}
+
+function formatDateTime(value?: string | null) {
+  if (!value) return "-";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "-";
+  return new Intl.DateTimeFormat("pt-BR", {
+    dateStyle: "short",
+    timeStyle: "short",
+  }).format(date);
+}
+
+function formatDate(value?: string | null) {
+  if (!value) return "-";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "-";
+  return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short" }).format(date);
+}
+
+function daysLeft(value?: string | null) {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return Math.ceil((date.getTime() - Date.now()) / (24 * 60 * 60 * 1000));
+}
+
 export default function AdminMasterSalaoActions({
   idSalao,
   statusSalao,
   planoAtual,
   vencimentoAtual,
   planos,
+  trialInfo,
 }: {
   idSalao: string;
   statusSalao: string;
   planoAtual: string;
   vencimentoAtual?: string | null;
   planos: PlanoOption[];
+  trialInfo?: TrialInfo | null;
 }) {
   const router = useRouter();
   const [loadingKey, setLoadingKey] = useState<string | null>(null);
@@ -80,7 +130,31 @@ export default function AdminMasterSalaoActions({
     "Abrindo ticket interno para acompanhamento operacional deste salão."
   );
 
+  const [trialDias, setTrialDias] = useState(3);
   const salaoBloqueado = String(statusSalao || "").toLowerCase() === "bloqueado";
+  const trialDaysLeft = daysLeft(trialInfo?.trialFimEm);
+  const trialStatus =
+    trialDaysLeft === null
+      ? "Sem data de trial"
+      : trialDaysLeft < 0
+        ? `Vencido ha ${Math.abs(trialDaysLeft)} dia(s)`
+        : trialDaysLeft === 0
+          ? "Vence hoje"
+          : `Vence em ${trialDaysLeft} dia(s)`;
+  const lastTrialEmail = [
+    trialInfo?.emailTrial3dSentAt,
+    trialInfo?.emailTrial1dSentAt,
+    trialInfo?.emailTrialTodaySentAt,
+    trialInfo?.emailTrialExpiredSentAt,
+  ]
+    .filter(Boolean)
+    .sort((a, b) => new Date(String(b)).getTime() - new Date(String(a)).getTime())[0];
+  const whatsappPhone = normalizeWhatsapp(trialInfo?.whatsapp);
+  const salaoNome = trialInfo?.nomeSalao || "seu salao";
+  const whatsappTrialMessage =
+    "Oi, tudo bem?\n\nSeu periodo de teste do SalaoPremium esta chegando ao fim.\n\nSe quiser continuar usando a plataforma, posso te ajudar com a ativacao do plano ou tirar qualquer duvida.\n\nTambem podemos liberar mais alguns dias para voce testar com calma.";
+  const whatsappUpgradeMessage = `Oi, tudo bem?\n\nVi que o ${salaoNome} ja esta usando o SalaoPremium. Posso te ajudar a ativar o plano ideal para continuar com agenda, clientes, caixa e notificacoes funcionando.`;
+  const whatsappExtraDaysMessage = `Oi, tudo bem?\n\nPodemos liberar mais alguns dias de teste no SalaoPremium para voce avaliar com calma. Quer que eu prorrogue o acesso do ${salaoNome}?`;
 
   const feedbackClass = useMemo(() => {
     if (feedback.tone === "success") {
@@ -133,6 +207,178 @@ export default function AdminMasterSalaoActions({
   return (
     <section className="grid gap-5 xl:grid-cols-[1.15fr_0.85fr]">
       <div className="space-y-5">
+        <div className="rounded-[30px] border border-amber-200 bg-gradient-to-br from-amber-50 via-white to-white p-6 shadow-sm">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <div className="text-xs font-bold uppercase tracking-[0.25em] text-amber-700">
+                Relacionamento / Trial
+              </div>
+              <h3 className="mt-2 font-display text-2xl font-black text-zinc-950">
+                Acompanhe o teste gratis deste salao
+              </h3>
+              <p className="mt-2 text-sm leading-6 text-zinc-600">
+                Os e-mails automaticos rodam pela VPS uma vez por dia. Aqui voce pode agir
+                manualmente sem duplicar disparos do cron.
+              </p>
+            </div>
+            <div className="rounded-2xl border border-amber-200 bg-white px-4 py-3 text-right">
+              <div className="text-[11px] font-black uppercase tracking-[0.2em] text-amber-700">
+                Status
+              </div>
+              <div className="mt-1 text-lg font-black text-zinc-950">{trialStatus}</div>
+            </div>
+          </div>
+
+          <div className="mt-5 grid gap-3 md:grid-cols-4">
+            {[
+              ["Plano", trialInfo?.plano || planoAtual || "-"],
+              ["E-mail", trialInfo?.email || "-"],
+              ["WhatsApp", trialInfo?.whatsapp || "-"],
+              ["Fim do teste", formatDate(trialInfo?.trialFimEm)],
+              ["Ultimo aviso", formatDateTime(lastTrialEmail)],
+              ["3 dias", formatDateTime(trialInfo?.emailTrial3dSentAt)],
+              ["1 dia", formatDateTime(trialInfo?.emailTrial1dSentAt)],
+              ["Vencido", formatDateTime(trialInfo?.emailTrialExpiredSentAt)],
+            ].map(([label, value]) => (
+              <div key={label} className="rounded-2xl border border-zinc-200 bg-white px-4 py-3">
+                <div className="text-[11px] font-black uppercase tracking-[0.2em] text-zinc-400">
+                  {label}
+                </div>
+                <div className="mt-1 break-words text-sm font-black text-zinc-950">
+                  {value}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-5 grid gap-3 lg:grid-cols-3">
+            <a
+              href={whatsappPhone ? buildWhatsappUrl(whatsappPhone, whatsappTrialMessage) : undefined}
+              target="_blank"
+              rel="noreferrer"
+              aria-disabled={!whatsappPhone}
+              className={`rounded-2xl border px-4 py-3 text-center text-sm font-black transition ${
+                whatsappPhone
+                  ? "border-emerald-200 bg-emerald-50 text-emerald-800 hover:border-emerald-400"
+                  : "pointer-events-none border-zinc-200 bg-zinc-100 text-zinc-400"
+              }`}
+            >
+              Enviar WhatsApp
+            </a>
+            <a
+              href={whatsappPhone ? buildWhatsappUrl(whatsappPhone, whatsappUpgradeMessage) : undefined}
+              target="_blank"
+              rel="noreferrer"
+              aria-disabled={!whatsappPhone}
+              className={`rounded-2xl border px-4 py-3 text-center text-sm font-black transition ${
+                whatsappPhone
+                  ? "border-blue-200 bg-blue-50 text-blue-800 hover:border-blue-400"
+                  : "pointer-events-none border-zinc-200 bg-zinc-100 text-zinc-400"
+              }`}
+            >
+              Enviar cobranca/upgrade
+            </a>
+            <a
+              href={whatsappPhone ? buildWhatsappUrl(whatsappPhone, whatsappExtraDaysMessage) : undefined}
+              target="_blank"
+              rel="noreferrer"
+              aria-disabled={!whatsappPhone}
+              className={`rounded-2xl border px-4 py-3 text-center text-sm font-black transition ${
+                whatsappPhone
+                  ? "border-violet-200 bg-violet-50 text-violet-800 hover:border-violet-400"
+                  : "pointer-events-none border-zinc-200 bg-zinc-100 text-zinc-400"
+              }`}
+            >
+              Oferecer mais dias
+            </a>
+          </div>
+
+          <div className="mt-4 grid gap-3 md:grid-cols-4">
+            <button
+              type="button"
+              onClick={() =>
+                void runAction(
+                  "trial-email",
+                  `/api/admin-master/saloes/${idSalao}/trial-email`,
+                  { tipo: "manual" },
+                  "E-mail de trial enviado pela VPS."
+                )
+              }
+              disabled={loadingKey !== null}
+              className="rounded-2xl bg-zinc-950 px-4 py-3 text-sm font-black text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:bg-zinc-400"
+            >
+              Enviar e-mail agora
+            </button>
+            <div className="flex gap-2 rounded-2xl border border-zinc-200 bg-white p-2">
+              <input
+                type="number"
+                min={1}
+                max={30}
+                value={trialDias}
+                onChange={(event) => setTrialDias(Number(event.target.value || 3))}
+                className="min-w-0 flex-1 rounded-xl border border-zinc-100 px-3 text-sm font-black outline-none focus:border-zinc-950"
+                aria-label="Dias para prorrogar"
+              />
+              <button
+                type="button"
+                onClick={() =>
+                  void runAction(
+                    "trial-extend",
+                    `/api/admin-master/saloes/${idSalao}/trial-extend`,
+                    {
+                      dias: trialDias,
+                      currentTrialEndsAt: trialInfo?.trialFimEm || null,
+                      motivo: `Prorrogacao manual de ${trialDias} dia(s) pelo Admin Master.`,
+                    },
+                    "Teste gratis prorrogado pela VPS."
+                  )
+                }
+                disabled={loadingKey !== null}
+                className="rounded-xl bg-amber-500 px-4 py-2 text-sm font-black text-zinc-950 transition hover:bg-amber-400 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                Prorrogar
+              </button>
+            </div>
+            <button
+              type="button"
+              onClick={() =>
+                void runAction(
+                  "trial-converter",
+                  `/api/admin-master/saloes/${idSalao}/trocar-plano`,
+                  {
+                    plano: planoSelecionado === "teste_gratis" ? "pro" : planoSelecionado,
+                    motivo:
+                      "Conversao manual do teste gratis para plano pago pelo Admin Master.",
+                  },
+                  "Salao convertido para plano pago."
+                )
+              }
+              disabled={loadingKey !== null}
+              className="rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-black text-blue-800 transition hover:border-blue-400 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              Converter para plano pago
+            </button>
+            <button
+              type="button"
+              onClick={() =>
+                void runAction(
+                  "trial-bloquear",
+                  `/api/admin-master/saloes/${idSalao}/bloquear`,
+                  {
+                    motivo:
+                      "Bloqueio apos vencimento do teste gratis pelo bloco Relacionamento / Trial.",
+                  },
+                  "Salao bloqueado apos vencimento do trial."
+                )
+              }
+              disabled={loadingKey !== null}
+              className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-black text-red-800 transition hover:border-red-400 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              Bloquear apos vencimento
+            </button>
+          </div>
+        </div>
+
         <div className="rounded-[30px] border border-zinc-200 bg-white p-6 shadow-sm">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
