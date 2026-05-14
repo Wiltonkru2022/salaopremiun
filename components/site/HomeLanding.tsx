@@ -21,15 +21,15 @@ import WhatsAppSupportForm from "@/components/site/WhatsAppSupportForm";
 const modules = [
   { icon: CalendarDays, title: "Agenda cheia", text: "Dia por profissional, status, horários e passagem para comanda." },
   { icon: CreditCard, title: "Caixa e vendas", text: "Pagamento, desconto, taxa, produto e fechamento no mesmo fluxo." },
-  { icon: Wallet, title: "Comissoes", text: "Calculo por profissional, assistente, serviço e periodo." },
+  { icon: Wallet, title: "Comissões", text: "Cálculo por profissional, assistente, serviço e período." },
   { icon: Users, title: "Clientes", text: "Cadastro, histórico e retorno para manter o relacionamento." },
-  { icon: Scissors, title: "Servicos", text: "Preços, duração, combos e regras da operação." },
-  { icon: BarChart3, title: "Relatorios", text: "Leitura simples para saber o que entrou, saiu e vendeu." },
+  { icon: Scissors, title: "Serviços", text: "Preços, duração, combos e regras da operação." },
+  { icon: BarChart3, title: "Relatórios", text: "Leitura simples para saber o que entrou, saiu e vendeu." },
 ];
 
 const plans = [
   {
-    name: "Basico",
+    name: "Básico",
     slug: "basico",
     price: "R$ 5,00",
     note: "desconto de lançamento",
@@ -43,7 +43,7 @@ const plans = [
     note: "mais vendido",
     description: "Para salão com equipe, estoque, relatórios e app profissional.",
     featured: true,
-    items: ["Tudo do Basico", "Estoque e relatórios", "App profissional"],
+    items: ["Tudo do Básico", "Estoque e relatórios", "App profissional"],
   },
   {
     name: "Premium",
@@ -62,6 +62,7 @@ export default function HomeLanding() {
       <HeroSection />
       <SystemScreensSection />
       <AppsSection />
+      <GoogleSection />
       <ModulesSection />
       <PlansSection />
       <SupportSection />
@@ -131,7 +132,7 @@ function ProductFrame() {
           {[
             ["Atendimentos", "32"],
             ["Vendas", "R$ 4.860"],
-            ["Comissao", "R$ 1.214"],
+            ["Comissão", "R$ 1.214"],
           ].map(([label, value]) => (
             <div key={label} className="rounded-2xl bg-white p-3 ring-1 ring-zinc-200">
               <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-zinc-400">{label}</p>
@@ -144,8 +145,8 @@ function ProductFrame() {
           <div className="space-y-2">
             {[
               ["08:30", "Amanda Souza", "Corte + escova", "Confirmado"],
-              ["09:40", "Bianca Lima", "Coloracao premium", "Em atendimento"],
-              ["11:10", "Marina Costa", "Hidratacao + finalizacao", "Aguardando caixa"],
+              ["09:40", "Bianca Lima", "Coloração premium", "Em atendimento"],
+              ["11:10", "Marina Costa", "Hidratação + finalização", "Aguardando caixa"],
               ["13:20", "Paula Reis", "Manicure + pedicure", "Confirmado"],
             ].map(([hora, cliente, servico, status]) => (
               <div key={`${hora}-${cliente}`} className="grid grid-cols-[54px_1fr] gap-3 rounded-2xl bg-white p-3 ring-1 ring-zinc-200">
@@ -206,7 +207,7 @@ function DashboardShot() {
         <h3 className="font-bold">Agenda do dia</h3>
       </div>
       <div className="mt-4 space-y-2">
-        {["08:00 Camila - Luzes", "09:30 Rodrigo - Barba", "10:00 Fernanda - Unhas", "11:30 Julia - Corte", "14:00 Priscila - Coloracao"].map((item, index) => (
+        {["08:00 Camila - Luzes", "09:30 Rodrigo - Barba", "10:00 Fernanda - Unhas", "11:30 Julia - Corte", "14:00 Priscila - Coloração"].map((item, index) => (
           <div key={item} className="rounded-2xl bg-slate-50 px-3 py-3 text-sm font-semibold text-zinc-700 ring-1 ring-zinc-100">
             <span className={index === 1 ? "text-amber-600" : "text-emerald-600"}>{index === 1 ? "Em atendimento" : "Confirmado"}</span>
             <span className="ml-2">{item}</span>
@@ -227,7 +228,7 @@ function CashShot() {
       <div className="mt-4 grid grid-cols-2 gap-3">
         {[
           ["Pix", "R$ 920"],
-          ["Cartao", "R$ 1.430"],
+          ["Cartão", "R$ 1.430"],
           ["Dinheiro", "R$ 310"],
           ["Produtos", "R$ 580"],
         ].map(([label, value]) => (
@@ -250,7 +251,7 @@ function CommissionShot() {
     <article className="rounded-[26px] border border-zinc-200 bg-white p-4 shadow-sm">
       <div className="flex items-center gap-2 border-b border-zinc-100 pb-3">
         <Wallet size={18} />
-        <h3 className="font-bold">Comissoes</h3>
+        <h3 className="font-bold">Comissões</h3>
       </div>
       <div className="mt-4 space-y-3">
         {[
@@ -287,7 +288,7 @@ function AppsSection() {
           href="/app-profissional/login"
           icon={MonitorSmartphone}
           text="O profissional consulta agenda, atendimento, comissões e suporte sem precisar mexer no painel do salão."
-          items={["Agenda no celular", "Comandas", "Comissoes", "Suporte da equipe"]}
+          items={["Agenda no celular", "Comandas", "Comissões", "Suporte da equipe"]}
         />
       </div>
     </section>
@@ -328,6 +329,59 @@ function AppCard({
         ))}
       </div>
     </article>
+  );
+}
+
+function GoogleSection() {
+  return (
+    <section id="google" className="bg-white py-16">
+      <div className="mx-auto grid max-w-7xl gap-6 px-5 md:px-8 lg:grid-cols-[0.86fr_1.14fr] lg:px-10">
+        <div>
+          <p className="text-sm font-bold uppercase tracking-[0.18em] text-zinc-500">
+            Integrações Google
+          </p>
+          <h2 className="mt-3 text-3xl font-black tracking-tight text-zinc-950 md:text-5xl">
+            Login com Google e agenda externa com uso transparente dos dados.
+          </h2>
+          <p className="mt-4 text-base leading-8 text-zinc-600">
+            O SalãoPremium solicita dados do Google apenas quando o usuário ativa
+            a integração no Perfil do Salão. A conexão é opcional, pode ser
+            removida pelo próprio usuário e serve somente para autenticação ou
+            sincronização dos atendimentos confirmados.
+          </p>
+          <Link
+            href="/politica-de-privacidade"
+            className="mt-6 inline-flex min-h-12 items-center justify-center rounded-2xl border border-zinc-300 bg-white px-5 py-3 text-sm font-bold text-zinc-900"
+          >
+            Ver política de privacidade
+          </Link>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <article className="rounded-[28px] border border-zinc-200 bg-slate-50 p-5">
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-zinc-950 text-white">
+              <Sparkles size={18} />
+            </div>
+            <h3 className="mt-5 text-xl font-black text-zinc-950">Login com Google</h3>
+            <p className="mt-3 text-sm leading-6 text-zinc-600">
+              Usa nome, e-mail, identificador da conta e foto, quando fornecida
+              pelo Google, para autenticar o usuário do painel do salão.
+            </p>
+          </article>
+
+          <article className="rounded-[28px] border border-zinc-200 bg-slate-50 p-5">
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-zinc-950 text-white">
+              <CalendarDays size={18} />
+            </div>
+            <h3 className="mt-5 text-xl font-black text-zinc-950">Google Calendar</h3>
+            <p className="mt-3 text-sm leading-6 text-zinc-600">
+              Usa a permissão de eventos do calendário para criar, atualizar ou
+              recriar eventos dos atendimentos confirmados do salão.
+            </p>
+          </article>
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -377,7 +431,7 @@ function PlansSection() {
               <h3 className="mt-5 text-3xl font-black">{plan.name}</h3>
               <p className={`mt-3 text-sm leading-6 ${plan.featured ? "text-zinc-300" : "text-zinc-600"}`}>{plan.description}</p>
               <p className="mt-7 text-4xl font-black">{plan.price}</p>
-              <p className={`mt-1 text-sm ${plan.featured ? "text-zinc-400" : "text-zinc-500"}`}>por mes</p>
+              <p className={`mt-1 text-sm ${plan.featured ? "text-zinc-400" : "text-zinc-500"}`}>por mês</p>
               <div className="mt-6 space-y-3">
                 {plan.items.map((item) => (
                   <p key={item} className={`flex items-center gap-2 text-sm font-semibold ${plan.featured ? "text-zinc-100" : "text-zinc-700"}`}>
@@ -387,7 +441,7 @@ function PlansSection() {
                 ))}
               </div>
               <Link href={`/cadastro-salao?plano=${plan.slug}`} className={`mt-8 inline-flex min-h-12 w-full items-center justify-center rounded-2xl px-5 text-sm font-bold ${plan.featured ? "bg-white text-zinc-950" : "bg-zinc-950 text-white"}`}>
-                Comecar com {plan.name}
+                Começar com {plan.name}
               </Link>
             </article>
           ))}
@@ -404,11 +458,11 @@ function SupportSection() {
         <div>
           <p className="text-sm font-bold uppercase tracking-[0.18em] text-zinc-500">Suporte humano</p>
           <h2 className="mt-3 text-3xl font-black tracking-tight text-zinc-950 md:text-5xl">
-            Quer tirar duvida antes de cadastrar?
+            Quer tirar dúvida antes de cadastrar?
           </h2>
           <p className="mt-4 max-w-2xl text-base leading-8 text-zinc-600">
             Fale direto pelo WhatsApp. A mensagem já chega organizada com seu nome
-            e a duvida para agilizar o atendimento.
+            e a dúvida para agilizar o atendimento.
           </p>
         </div>
         <WhatsAppSupportForm />

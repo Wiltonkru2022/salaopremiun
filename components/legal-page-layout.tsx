@@ -50,7 +50,7 @@ export default function LegalPageLayout({
 
       <section className="mx-auto max-w-6xl px-6 py-8 lg:px-10 lg:py-10">
         <div className="rounded-[28px] border border-zinc-200 bg-white p-5 shadow-sm lg:p-8">
-          <div className="prose prose-zinc max-w-none prose-headings:scroll-mt-24 prose-headings:font-black prose-h2:mt-9 prose-h2:text-zinc-950 prose-p:leading-7 prose-li:leading-7">
+          <div className="prose prose-zinc max-w-none prose-headings:scroll-mt-24 prose-headings:font-black prose-h2:mt-12 prose-h2:border-t prose-h2:border-zinc-100 prose-h2:pt-8 prose-h2:text-xl prose-h2:text-zinc-950 prose-p:leading-8 prose-li:leading-8 prose-strong:font-black prose-strong:text-zinc-950">
             {children}
           </div>
         </div>

@@ -6,10 +6,10 @@ export default function SiteFooter() {
       <div className="mx-auto max-w-7xl px-6 py-10 lg:px-10 lg:py-12">
         <div className="grid gap-8 lg:grid-cols-4">
           <div>
-            <h3 className="text-[1.35rem] font-bold">SalaoPremium</h3>
+            <h3 className="text-[1.35rem] font-bold">SalãoPremium</h3>
             <p className="mt-3 text-sm leading-6 text-zinc-500">
               Plataforma para salões, barbearias, clínicas e studios que desejam
-              gestao forte no computador, app cliente, app profissional e um
+              gestão forte no computador, app cliente, app profissional e um
               fluxo comercial pronto para vender.
             </p>
           </div>
@@ -77,7 +77,7 @@ export default function SiteFooter() {
               <li>Atendimento comercial e suporte em PT-BR</li>
               <li>
                 <Link href="/politica-de-privacidade" className="hover:text-zinc-950">
-                  Politica de privacidade
+                  Política de privacidade
                 </Link>
               </li>
             </ul>

@@ -7,19 +7,19 @@ import { getPainelPageMeta } from "@/components/layout/navigation";
 const SYSTEM_NAME = "SalaoPremium";
 
 const exactTitles: Record<string, string> = {
-  "/": "Inicio",
+  "/": "Início",
   "/login": "Login",
   "/cadastro-salao": "Cadastro do Salão",
   "/recuperar-senha": "Recuperar Senha",
   "/atualizar-senha": "Atualizar Senha",
   "/quem-somos": "Quem Somos",
-  "/politica-de-privacidade": "Politica de Privacidade",
+  "/politica-de-privacidade": "Política de Privacidade",
   "/termos-de-uso": "Termos de Uso",
   "/blog": "Blog",
   "/admin-master": "Admin Master",
   "/admin-master/login": "Login Admin Master",
   "/app-cliente": "App Cliente",
-  "/app-cliente/inicio": "Saloes",
+  "/app-cliente/inicio": "Salões",
   "/app-cliente/login": "Login do Cliente",
   "/app-cliente/cadastro": "Cadastro do Cliente",
   "/app-cliente/agendamentos": "Meus Agendamentos",
@@ -28,21 +28,21 @@ const exactTitles: Record<string, string> = {
   "/app-cliente/recuperar-acesso": "Recuperar Acesso",
   "/app-profissional": "App Profissional",
   "/app-profissional/login": "Login Profissional",
-  "/app-profissional/inicio": "Inicio Profissional",
+  "/app-profissional/inicio": "Início Profissional",
   "/app-profissional/agenda": "Agenda Profissional",
   "/app-profissional/clientes": "Clientes Profissional",
   "/app-profissional/comandas": "Comandas Profissional",
   "/app-profissional/comissao": "Comissão Profissional",
   "/app-profissional/perfil": "Perfil Profissional",
-  "/app-profissional/avaliacoes": "Avaliacoes Recebidas",
+  "/app-profissional/avaliacoes": "Avaliações Recebidas",
   "/app-profissional/suporte": "Suporte Profissional",
   "/app-profissional/recuperar-senha": "Recuperar Senha Profissional",
 };
 
 const prefixTitles: Array<[string, string]> = [
   ["/blog/", "Blog"],
-  ["/salao/", "Salao"],
-  ["/s/", "Salao"],
+  ["/salao/", "Salão"],
+  ["/s/", "Salão"],
   ["/admin-master/blog", "Blog Admin"],
   ["/admin-master/saloes", "Salões Admin"],
   ["/admin-master/tickets", "Tickets Admin"],
@@ -52,7 +52,7 @@ const prefixTitles: Array<[string, string]> = [
   ["/admin-master/", "Admin Master"],
   ["/app-cliente/agendamentos/", "Avaliação do Atendimento"],
   ["/app-cliente/recuperar-acesso/", "Novo Acesso"],
-  ["/app-cliente/salao/", "Salao"],
+  ["/app-cliente/salao/", "Salão"],
   ["/app-profissional/agenda/", "Detalhe do Atendimento"],
   ["/app-profissional/clientes/", "Cliente Profissional"],
   ["/app-profissional/comandas/", "Comanda Profissional"],
@@ -78,20 +78,8 @@ export default function RouteDocumentTitle() {
   const pathname = usePathname();
 
   useEffect(() => {
-    const applyTitle = () => {
-      const pageTitle = resolvePageTitle(pathname || "/");
-      document.title =
-        pageTitle === SYSTEM_NAME ? SYSTEM_NAME : `${pageTitle} | ${SYSTEM_NAME}`;
-    };
-
-    applyTitle();
-    const immediateTimer = window.setTimeout(applyTitle, 0);
-    const settledTimer = window.setTimeout(applyTitle, 250);
-
-    return () => {
-      window.clearTimeout(immediateTimer);
-      window.clearTimeout(settledTimer);
-    };
+    const title = resolvePageTitle(pathname || "/");
+    document.title = `${title} | ${SYSTEM_NAME}`;
   }, [pathname]);
 
   return null;

@@ -17,59 +17,37 @@ export default function SiteHeader() {
 
           <div>
             <h1 className="text-[1.35rem] font-bold tracking-tight text-zinc-950">
-              SalaoPremium
+              SalãoPremium
             </h1>
             <p className="text-[11px] text-zinc-500">
-              Gestao profissional para salões
+              Gestão profissional para salões
             </p>
           </div>
         </a>
 
         <nav className="hidden items-center gap-7 lg:flex">
-          <Link
-            href="/#sistema"
-            className="text-sm font-medium text-zinc-700 transition hover:text-[#2c0a45]"
-          >
+          <Link href="/#sistema" className="text-sm font-medium text-zinc-700 transition hover:text-[#2c0a45]">
             Sistema
           </Link>
-          <Link
-            href="/#apps"
-            className="text-sm font-medium text-zinc-700 transition hover:text-[#2c0a45]"
-          >
+          <Link href="/#apps" className="text-sm font-medium text-zinc-700 transition hover:text-[#2c0a45]">
             Apps
           </Link>
-          <Link
-            href="/#comercial"
-            className="text-sm font-medium text-zinc-700 transition hover:text-[#2c0a45]"
-          >
-            Recursos
+          <Link href="/#google" className="text-sm font-medium text-zinc-700 transition hover:text-[#2c0a45]">
+            Google
           </Link>
-          <Link
-            href="/#planos"
-            className="text-sm font-medium text-zinc-700 transition hover:text-[#2c0a45]"
-          >
+          <Link href="/#planos" className="text-sm font-medium text-zinc-700 transition hover:text-[#2c0a45]">
             Planos
           </Link>
-          <Link
-            href="/#suporte"
-            className="text-sm font-medium text-zinc-700 transition hover:text-[#2c0a45]"
-          >
+          <Link href="/#suporte" className="text-sm font-medium text-zinc-700 transition hover:text-[#2c0a45]">
             Suporte
           </Link>
         </nav>
 
         <div className="hidden items-center gap-3 lg:flex">
-          <Link
-            href="/login"
-            className="rounded-full border border-zinc-300 px-5 py-2 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-100"
-          >
+          <Link href="/login" className="rounded-full border border-zinc-300 px-5 py-2 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-100">
             Login salão
           </Link>
-
-          <Link
-            href="/cadastro-salao"
-            className="rounded-full bg-zinc-950 px-5 py-2 text-sm font-semibold text-white shadow-lg transition hover:bg-zinc-800"
-          >
+          <Link href="/cadastro-salao" className="rounded-full bg-zinc-950 px-5 py-2 text-sm font-semibold text-white shadow-lg transition hover:bg-zinc-800">
             Cadastrar salão
           </Link>
         </div>
@@ -87,98 +65,49 @@ export default function SiteHeader() {
       {open ? (
         <div className="border-t border-zinc-200 bg-white lg:hidden">
           <div className="mx-auto flex max-w-7xl flex-col px-6 py-4">
-            <Link
-              href="/#sistema"
-              className="border-b border-zinc-100 py-3.5 text-base font-medium text-zinc-800"
-              onClick={() => setOpen(false)}
-            >
+            <MobileLink href="/#sistema" onClick={() => setOpen(false)}>
               Sistema para salão
-            </Link>
-            <Link
-              href="/#apps"
-              className="border-b border-zinc-100 py-3.5 text-base font-medium text-zinc-800"
-              onClick={() => setOpen(false)}
-            >
+            </MobileLink>
+            <MobileLink href="/#apps" onClick={() => setOpen(false)}>
               Apps cliente e profissional
-            </Link>
-            <Link
-              href="/#comercial"
-              className="border-b border-zinc-100 py-3.5 text-base font-medium text-zinc-800"
-              onClick={() => setOpen(false)}
-            >
-              Recursos do sistema
-            </Link>
-            <Link
-              href="/#planos"
-              className="border-b border-zinc-100 py-3.5 text-base font-medium text-zinc-800"
-              onClick={() => setOpen(false)}
-            >
+            </MobileLink>
+            <MobileLink href="/#google" onClick={() => setOpen(false)}>
+              Integrações Google
+            </MobileLink>
+            <MobileLink href="/#planos" onClick={() => setOpen(false)}>
               Planos
-            </Link>
-            <Link
-              href="/#suporte"
-              className="border-b border-zinc-100 py-3.5 text-base font-medium text-zinc-800"
-              onClick={() => setOpen(false)}
-            >
+            </MobileLink>
+            <MobileLink href="/#suporte" onClick={() => setOpen(false)}>
               Suporte
-            </Link>
-            <Link
-              href="/quem-somos"
-              className="border-b border-zinc-100 py-3.5 text-base font-medium text-zinc-800"
-              onClick={() => setOpen(false)}
-            >
+            </MobileLink>
+            <MobileLink href="/quem-somos" onClick={() => setOpen(false)}>
               Quem somos
-            </Link>
-            <Link
-              href="/termos-de-uso"
-              className="border-b border-zinc-100 py-3.5 text-base font-medium text-zinc-800"
-              onClick={() => setOpen(false)}
-            >
+            </MobileLink>
+            <MobileLink href="/termos-de-uso" onClick={() => setOpen(false)}>
               Termos de uso
-            </Link>
+            </MobileLink>
             <Link
               href="/politica-de-privacidade"
               className="py-3.5 text-base font-medium text-zinc-800"
               onClick={() => setOpen(false)}
             >
-              Politica de privacidade
+              Política de privacidade
             </Link>
 
             <div className="mt-4 grid gap-3">
-              <Link
-                href="/login"
-                className="inline-flex items-center justify-center rounded-full border border-zinc-300 px-5 py-2.5 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-100"
-                onClick={() => setOpen(false)}
-              >
+              <Link href="/login" className="inline-flex items-center justify-center rounded-full border border-zinc-300 px-5 py-2.5 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-100" onClick={() => setOpen(false)}>
                 Login salão
               </Link>
-
-              <Link
-                href="/app-cliente/login"
-                className="inline-flex items-center justify-center rounded-full border border-zinc-300 px-5 py-2.5 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-100"
-                onClick={() => setOpen(false)}
-              >
+              <Link href="/app-cliente/login" className="inline-flex items-center justify-center rounded-full border border-zinc-300 px-5 py-2.5 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-100" onClick={() => setOpen(false)}>
                 App cliente
               </Link>
-              <Link
-                href="/app-profissional/login"
-                className="inline-flex items-center justify-center rounded-full border border-zinc-300 px-5 py-2.5 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-100"
-                onClick={() => setOpen(false)}
-              >
+              <Link href="/app-profissional/login" className="inline-flex items-center justify-center rounded-full border border-zinc-300 px-5 py-2.5 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-100" onClick={() => setOpen(false)}>
                 App profissional
               </Link>
-              <Link
-                href="/cadastro-salao"
-                className="inline-flex items-center justify-center rounded-full bg-zinc-950 px-5 py-2.5 text-sm font-semibold text-white shadow-lg transition hover:bg-zinc-800"
-                onClick={() => setOpen(false)}
-              >
+              <Link href="/cadastro-salao" className="inline-flex items-center justify-center rounded-full bg-zinc-950 px-5 py-2.5 text-sm font-semibold text-white shadow-lg transition hover:bg-zinc-800" onClick={() => setOpen(false)}>
                 Cadastrar salão
               </Link>
-              <a
-                href="https://wa.me/5567984341742"
-                className="inline-flex items-center justify-center gap-2 rounded-full bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg transition hover:bg-emerald-700"
-                onClick={() => setOpen(false)}
-              >
+              <a href="https://wa.me/5567984341742" className="inline-flex items-center justify-center gap-2 rounded-full bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg transition hover:bg-emerald-700" onClick={() => setOpen(false)}>
                 <MessageCircle size={16} />
                 WhatsApp suporte
               </a>
@@ -187,5 +116,25 @@ export default function SiteHeader() {
         </div>
       ) : null}
     </header>
+  );
+}
+
+function MobileLink({
+  href,
+  onClick,
+  children,
+}: {
+  href: string;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <Link
+      href={href}
+      className="border-b border-zinc-100 py-3.5 text-base font-medium text-zinc-800"
+      onClick={onClick}
+    >
+      {children}
+    </Link>
   );
 }
