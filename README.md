@@ -140,9 +140,58 @@ GOOGLE_CALENDAR_CLIENT_SECRET=
 GOOGLE_CALENDAR_REDIRECT_URI=
 ORACLE_VPS_API_URL=https://api.salaopremiun.com.br
 ORACLE_VPS_API_TOKEN=
+SECURITY_SUPABASE_URL=https://qwabnqbzbhtxicwizxmv.supabase.co
+SECURITY_SUPABASE_SERVICE_ROLE_KEY=
+SECURITY_EVENTS_TABLE=security_events
 ```
 
 Essas chaves protegem rotas internas, webhooks, notificações e fluxos sensíveis.
+
+### Camada de segurança automatizada
+
+O sistema usa uma trilha leve de segurança para bloquear acesso e registrar risco sem sobrecarregar o banco principal:
+
+- `user_security_status` controla o status por usuário.
+- `saloes.status_seguranca` controla bloqueio, verificação e análise do salão.
+- Rotas protegidas verificam a camada de segurança antes de renderizar.
+- `app/conta-bloqueada` e `app/seguranca/verificacao` mostram as respostas de bloqueio e verificação.
+- A Oracle VPS recebe `POST /monitoring/security-event`.
+- Os logs de segurança devem ir para um Supabase separado quando disponível, usando `SECURITY_SUPABASE_URL`.
+
+Fluxo principal:
+
+1. Next.js bloqueia a navegação quando o status não está `ativo`.
+2. A VPS recebe os eventos espelhados.
+3. O Supabase separado guarda os logs de segurança.
+4. O Admin Master acompanha e libera quando necessário.
+
+No Supabase separado de segurança, crie a tabela de logs antes de ligar a variável `SECURITY_SUPABASE_SERVICE_ROLE_KEY` na VPS:
+
+```sql
+create table if not exists public.security_events (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid null,
+  id_salao uuid null,
+  tipo_usuario text null,
+  evento text not null,
+  risco text not null default 'baixo',
+  ip text null,
+  user_agent text null,
+  detalhes jsonb not null default '{}',
+  criado_em timestamptz not null default timezone('utc', now())
+);
+
+create index if not exists idx_security_events_criado_em
+  on public.security_events (criado_em desc);
+
+create index if not exists idx_security_events_salao
+  on public.security_events (id_salao, criado_em desc)
+  where id_salao is not null;
+
+create index if not exists idx_security_events_usuario
+  on public.security_events (user_id, criado_em desc)
+  where user_id is not null;
+```
 
 ### Google Calendar e login com Google
 

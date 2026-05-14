@@ -3,6 +3,11 @@ import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { getSupabaseCookieOptions } from "@/lib/supabase/cookie-options";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import {
+  buildSecurityBlockPath,
+  buildSecurityVerificationPath,
+  getSecurityAccessDecision,
+} from "@/lib/security/user-security";
 
 export const dynamic = "force-dynamic";
 
@@ -160,6 +165,34 @@ export async function GET(request: NextRequest) {
     await unlinkCurrentGoogleIdentity(supabase as any, user);
     await supabase.auth.signOut();
     return redirectToLogin(requestUrl, "google_nao_vinculado");
+  }
+
+  const securityDecision = await getSecurityAccessDecision({
+    tipoUsuario: "salao",
+    userId: usuario.id,
+    idSalao: usuario.id_salao,
+  });
+
+  if (!securityDecision.allowed) {
+    await supabase.auth.signOut();
+
+    const blockedPath = securityDecision.verificacaoNecessaria
+      ? buildSecurityVerificationPath({
+          tipoUsuario: "salao",
+          motivo: securityDecision.motivo || null,
+          origem: "google_callback",
+          returnTo: next,
+        })
+      : buildSecurityBlockPath({
+          tipoUsuario: "salao",
+          motivo: securityDecision.motivo || null,
+          origem: "google_callback",
+          returnTo: next,
+        });
+
+    return buildRedirectBridge(
+      new URL(blockedPath, getRedirectOrigin(next, requestUrl.origin))
+    );
   }
 
   return buildRedirectBridge(

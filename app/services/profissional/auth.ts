@@ -2,6 +2,11 @@ import { runAdminOperation } from "@/lib/supabase/admin-ops";
 import type { SupabaseAdminClient } from "@/lib/supabase/admin";
 import { isSalaoStatusOperational } from "@/lib/plans/access";
 import { verifyPassword } from "@/lib/profissional-auth.server";
+import { emitSecurityEvent } from "@/lib/security/security-events";
+import {
+  getSecurityAccessDecision,
+  getSecurityStatusMessage,
+} from "@/lib/security/user-security";
 
 type LoginResult =
   | {
@@ -17,6 +22,7 @@ type LoginResult =
   | {
       ok: false;
       error: string;
+      redirectTo?: string;
     };
 
 function normalizeCpf(value: string) {
@@ -82,6 +88,24 @@ async function buildProfissionalSession(params: {
     return { ok: false, error: "Salão inativo ou bloqueado." };
   }
 
+  const securityAccess = await getSecurityAccessDecision({
+    tipoUsuario: "profissional",
+    userId: profissional.id,
+    idSalao: profissional.id_salao,
+  });
+
+  if (!securityAccess.allowed) {
+    return {
+      ok: false,
+      error: getSecurityStatusMessage({
+        status: securityAccess.status,
+        motivo: securityAccess.motivo,
+        bloqueadoAte: securityAccess.bloqueadoAte,
+      }),
+      redirectTo: securityAccess.redirectPath || undefined,
+    };
+  }
+
   if (params.acessoId) {
     await params.supabaseAdmin
       .from("profissionais_acessos")
@@ -125,21 +149,46 @@ export async function loginProfissionalByCpfSenha(
       }
 
       if (!acesso) {
+        void emitSecurityEvent({
+          evento: "profissional_app_login_falhou",
+          tipoUsuario: "profissional",
+          origem: "app-profissional",
+          detalhes: { cpf: cpfLimpo },
+        });
         return { ok: false, error: "CPF ou senha inválidos." };
       }
 
       const senhaOk = await verifyPassword(senhaLimpa, acesso.senha_hash);
 
       if (!senhaOk) {
+        void emitSecurityEvent({
+          evento: "profissional_app_login_falhou",
+          tipoUsuario: "profissional",
+          origem: "app-profissional",
+          detalhes: { cpf: cpfLimpo },
+        });
         return { ok: false, error: "CPF ou senha inválidos." };
       }
 
-      return buildProfissionalSession({
+      const session = await buildProfissionalSession({
         supabaseAdmin,
         idProfissional: acesso.id_profissional,
         cpf: cpfLimpo,
         acessoId: acesso.id,
       });
+
+      if (session.ok) {
+        void emitSecurityEvent({
+          evento: "profissional_app_login_sucesso",
+          tipoUsuario: "profissional",
+          userId: acesso.id_profissional,
+          idSalao: session.session.idSalao,
+          origem: "app-profissional",
+          detalhes: { cpf: cpfLimpo },
+        });
+      }
+
+      return session;
     },
   });
 }

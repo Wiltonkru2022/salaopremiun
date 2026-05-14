@@ -4,6 +4,10 @@ import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import {
   getProfissionalSessionFromCookie,
 } from "@/lib/profissional-auth.server";
+import {
+  buildSecurityBlockPath,
+  getSecurityAccessDecision,
+} from "@/lib/security/user-security";
 
 export type ProfissionalServerContext = {
   idProfissional: string;
@@ -56,6 +60,16 @@ async function loadProfissionalServerContext(): Promise<ProfissionalServerContex
     throw new Error("UNAUTHORIZED");
   }
 
+  const securityDecision = await getSecurityAccessDecision({
+    tipoUsuario: "profissional",
+    userId: profissional.id,
+    idSalao: session.idSalao,
+  });
+
+  if (!securityDecision.allowed) {
+    throw new Error("SECURITY_BLOCKED");
+  }
+
   return {
     idProfissional: profissional.id,
     idSalao: session.idSalao,
@@ -73,7 +87,7 @@ export async function requireProfissionalServerContext(): Promise<ProfissionalSe
 
 export async function validateProfissionalAppSession(): Promise<{
   context: ProfissionalServerContext | null;
-  reason: "unauthorized" | "plan_blocked" | null;
+  reason: "unauthorized" | "security_blocked" | "plan_blocked" | null;
 }> {
   let context: ProfissionalServerContext;
 
@@ -82,6 +96,10 @@ export async function validateProfissionalAppSession(): Promise<{
   } catch (error) {
     if (isUnauthorizedError(error)) {
       return { context: null, reason: "unauthorized" };
+    }
+
+    if (error instanceof Error && error.message === "SECURITY_BLOCKED") {
+      return { context: null, reason: "security_blocked" };
     }
 
     throw error;
@@ -101,9 +119,15 @@ export async function requireProfissionalAppContext(): Promise<ProfissionalServe
 
   if (!validation.context) {
     const destino =
-      validation.reason === "plan_blocked"
-        ? "/app-profissional/login?erro=plano_sem_app"
-        : "/app-profissional/login?erro=sessao_expirada";
+      validation.reason === "security_blocked"
+        ? buildSecurityBlockPath({
+            tipoUsuario: "profissional",
+            origem: "profissional_app_context",
+            returnTo: "/app-profissional",
+          })
+        : validation.reason === "plan_blocked"
+          ? "/app-profissional/login?erro=plano_sem_app"
+          : "/app-profissional/login?erro=sessao_expirada";
 
     redirect(
       `/app-profissional/logout?destino=${encodeURIComponent(destino)}`

@@ -171,6 +171,61 @@ type SaloesRecursosExtrasTableExtensions = {
   };
 };
 
+type SaloesSecurityTableExtensions = {
+  Row: {
+    status_seguranca: string | null;
+    motivo_seguranca: string | null;
+    bloqueado_ate: string | null;
+  };
+  Insert: {
+    status_seguranca?: string | null;
+    motivo_seguranca?: string | null;
+    bloqueado_ate?: string | null;
+  };
+  Update: {
+    status_seguranca?: string | null;
+    motivo_seguranca?: string | null;
+    bloqueado_ate?: string | null;
+  };
+};
+
+type UserSecurityStatusTable = {
+  Row: {
+    user_id: string;
+    tipo_usuario: string;
+    status: string;
+    motivo: string | null;
+    risco_atual: string;
+    bloqueado_ate: string | null;
+    verificacao_necessaria: boolean;
+    criado_em: string;
+    atualizado_em: string;
+  };
+  Insert: {
+    user_id: string;
+    tipo_usuario: string;
+    status?: string;
+    motivo?: string | null;
+    risco_atual?: string;
+    bloqueado_ate?: string | null;
+    verificacao_necessaria?: boolean;
+    criado_em?: string;
+    atualizado_em?: string;
+  };
+  Update: {
+    user_id?: string;
+    tipo_usuario?: string;
+    status?: string;
+    motivo?: string | null;
+    risco_atual?: string;
+    bloqueado_ate?: string | null;
+    verificacao_necessaria?: boolean;
+    criado_em?: string;
+    atualizado_em?: string;
+  };
+  Relationships: [];
+};
+
 type DatabaseWithAppExtensions = Database & {
   public: Database["public"] & {
     Tables: Database["public"]["Tables"] & {
@@ -179,6 +234,8 @@ type DatabaseWithAppExtensions = Database & {
       saloes_recursos_extras:
         Database["public"]["Tables"]["saloes_recursos_extras"] &
         SaloesRecursosExtrasTableExtensions;
+      saloes: Database["public"]["Tables"]["saloes"] & SaloesSecurityTableExtensions;
+      user_security_status: UserSecurityStatusTable;
       whatsapp_pacote_compras: WhatsappPacoteComprasTable;
     };
     Functions: Database["public"]["Functions"] & {

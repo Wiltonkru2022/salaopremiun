@@ -14,6 +14,11 @@ import {
   normalizeClienteAppPhone,
   syncClienteAppLinksByPhone,
 } from "@/app/services/cliente-app/linking";
+import {
+  getSecurityAccessDecision,
+  getSecurityStatusMessage,
+} from "@/lib/security/user-security";
+import { emitSecurityEvent } from "@/lib/security/security-events";
 
 type ClienteLoginResult =
   | {
@@ -23,6 +28,7 @@ type ClienteLoginResult =
   | {
       ok: false;
       error: string;
+      redirectTo?: string;
     };
 
 type ClienteAppAccountRow = {
@@ -91,6 +97,30 @@ async function findGlobalAccountByPhone(supabaseAdmin: any, telefone: string) {
   }
 
   return data as ClienteAppAccountRow;
+}
+
+async function assertClienteSecurityAccess(params: {
+  userId: string;
+  idSalao?: string | null;
+}) {
+  const decision = await getSecurityAccessDecision({
+    tipoUsuario: "cliente",
+    userId: params.userId,
+    idSalao: String(params.idSalao || "").trim() || undefined,
+  });
+
+  if (decision.allowed) {
+    return null;
+  }
+
+  return {
+    error: getSecurityStatusMessage({
+      status: decision.status,
+      motivo: decision.motivo,
+      bloqueadoAte: decision.bloqueadoAte,
+    }),
+    redirectTo: decision.redirectPath || undefined,
+  };
 }
 
 async function createGlobalAccountFromLegacy(params: {
@@ -417,6 +447,14 @@ export async function createClienteAppAccount(params: {
         idConta: String((data as { id: string }).id),
       });
 
+      void emitSecurityEvent({
+        evento: "cliente_app_cadastro_sucesso",
+        tipoUsuario: "cliente",
+        userId: String((data as { id: string }).id),
+        origem: "cliente-app",
+        detalhes: { email },
+      });
+
       return {
         ok: true,
         session: buildSessionFromAccount(
@@ -457,12 +495,43 @@ export async function loginClienteAppByEmailSenha(params: {
         );
 
         if (senhaOk && globalAccount.ativo !== false) {
+          const securityAccess = await assertClienteSecurityAccess({
+            userId: globalAccount.id,
+            idSalao,
+          });
+
+          if (securityAccess) {
+            void emitSecurityEvent({
+              evento: "cliente_app_login_bloqueado_seguranca",
+              tipoUsuario: "cliente",
+              userId: globalAccount.id,
+              idSalao,
+              origem: "cliente-app",
+              detalhes: { email },
+            });
+
+            return {
+              ok: false,
+              error: securityAccess.error,
+              redirectTo: securityAccess.redirectTo,
+            };
+          }
+
           await (supabaseAdmin as any)
             .from("clientes_app_auth")
             .update({ ultimo_login_em: new Date().toISOString() })
             .eq("id", globalAccount.id);
 
           await syncClienteAppLinksByPhone({ idConta: globalAccount.id });
+
+          void emitSecurityEvent({
+            evento: "cliente_app_login_sucesso",
+            tipoUsuario: "cliente",
+            userId: globalAccount.id,
+            idSalao,
+            origem: "cliente-app",
+            detalhes: { email },
+          });
 
           return {
             ok: true,
@@ -505,6 +574,14 @@ export async function loginClienteAppByEmailSenha(params: {
 
       const senhaOk = await verifyClientePassword(senha, acesso.senha_hash);
       if (!senhaOk) {
+        void emitSecurityEvent({
+          evento: "cliente_app_login_falhou",
+          tipoUsuario: "cliente",
+          userId: null,
+          idSalao: acesso.id_salao,
+          origem: "cliente-app",
+          detalhes: { email },
+        });
         return { ok: false, error: "E-mail ou senha inválidos." };
       }
 
@@ -531,6 +608,28 @@ export async function loginClienteAppByEmailSenha(params: {
         return {
           ok: false,
           error: "Não foi possível concluir a atualização da sua conta agora.",
+        };
+      }
+
+      const securityAccess = await assertClienteSecurityAccess({
+        userId: contaGlobal.id,
+        idSalao: acesso.id_salao,
+      });
+
+      if (securityAccess) {
+        void emitSecurityEvent({
+          evento: "cliente_app_login_bloqueado_seguranca",
+          tipoUsuario: "cliente",
+          userId: contaGlobal.id,
+          idSalao: acesso.id_salao,
+          origem: "cliente-app",
+          detalhes: { email },
+        });
+
+        return {
+          ok: false,
+          error: securityAccess.error,
+          redirectTo: securityAccess.redirectTo,
         };
       }
 
@@ -562,6 +661,15 @@ export async function loginClienteAppByEmailSenha(params: {
       ]);
 
       await syncClienteAppLinksByPhone({ idConta: contaGlobal.id });
+
+      void emitSecurityEvent({
+        evento: "cliente_app_login_sucesso",
+        tipoUsuario: "cliente",
+        userId: contaGlobal.id,
+        idSalao: acesso.id_salao,
+        origem: "cliente-app",
+        detalhes: { email },
+      });
 
       return {
         ok: true,

@@ -8,6 +8,7 @@ import {
   getProfissionalSessionFromCookie,
 } from "@/lib/profissional-auth.server";
 import { validateProfissionalAppSession } from "@/lib/profissional-context.server";
+import { buildSecurityBlockPath } from "@/lib/security/user-security";
 
 function getGoogleErrorMessage(value: string | string[] | undefined) {
   const code = Array.isArray(value) ? value[0] : value;
@@ -55,6 +56,17 @@ export default async function LoginProfissionalPage({
 
     if (validation?.context) {
       redirect("/app-profissional/inicio");
+    }
+
+    if (validation?.reason === "security_blocked") {
+      const destino = buildSecurityBlockPath({
+        tipoUsuario: "profissional",
+        origem: "profissional_login",
+        returnTo: "/app-profissional",
+      });
+      redirect(
+        `/app-profissional/logout?destino=${encodeURIComponent(destino)}`
+      );
     }
 
     const destino =

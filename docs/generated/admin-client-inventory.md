@@ -74,6 +74,7 @@ Use este arquivo para revisar onde o service role ou `auth.admin` aparece. Qualq
 | `lib/proxy/admin-master-rules.ts` | - | sim | nao | revisar | revisar |
 | `lib/push-notifications.ts` | - | sim | nao | sim | revisar |
 | `lib/salon-notification-settings.ts` | - | sim | nao | sim | revisar |
+| `lib/security/user-security.ts` | - | sim | nao | sim | revisar |
 | `lib/supabase/admin-ops.ts` | - | sim | nao | sim | revisar |
 | `lib/supabase/admin.ts` | - | sim | nao | revisar | revisar |
 | `lib/support/tickets.ts` | - | nao | sim | sim | sim |

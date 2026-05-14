@@ -315,6 +315,40 @@ export async function sendOracleVpsMonitoringEvent(
   }
 }
 
+export async function sendOracleVpsSecurityEvent(
+  payload: Record<string, unknown>
+) {
+  const config = getOracleVpsConfig();
+
+  if (!config.configured) {
+    return { ok: false, configured: false };
+  }
+
+  try {
+    await requestOracleVps("/monitoring/security-event", {
+      method: "POST",
+      protected: true,
+      timeoutMs: 2500,
+      body: {
+        source: "salaopremium-next",
+        ...payload,
+        mirroredAt: new Date().toISOString(),
+      },
+    });
+
+    return { ok: true, configured: true };
+  } catch (error) {
+    return {
+      ok: false,
+      configured: true,
+      error:
+        error instanceof Error
+          ? error.message
+          : "Falha ao espelhar evento de seguranca para a VPS Oracle.",
+    };
+  }
+}
+
 export async function mirrorAsaasWebhookToOracleVps(
   payload: Record<string, unknown>
 ) {

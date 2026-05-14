@@ -24,6 +24,9 @@ export async function loginClienteAction(
   });
 
   if (!result.ok) {
+    if (result.redirectTo) {
+      redirect(result.redirectTo);
+    }
     return { error: result.error };
   }
 

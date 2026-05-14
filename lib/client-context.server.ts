@@ -2,6 +2,10 @@ import { redirect } from "next/navigation";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { getClienteSessionFromCookie } from "@/lib/cliente-auth.server";
 import { asLooseSupabaseClient } from "@/lib/supabase/loose-client";
+import {
+  buildSecurityBlockPath,
+  getSecurityAccessDecision,
+} from "@/lib/security/user-security";
 
 export type ClienteAppServerContext = {
   idConta: string;
@@ -36,6 +40,13 @@ async function getClienteAppAccount(idConta: string) {
   return conta;
 }
 
+async function getClienteSecurityDecision(context: ClienteAppServerContext) {
+  return getSecurityAccessDecision({
+    tipoUsuario: "cliente",
+    userId: context.idConta,
+  });
+}
+
 async function loadClienteAppServerContext(): Promise<ClienteAppServerContext> {
   const session = await getClienteSessionFromCookie();
 
@@ -48,19 +59,26 @@ async function loadClienteAppServerContext(): Promise<ClienteAppServerContext> {
   try {
     conta = await getClienteAppAccount(session.idConta);
   } catch {
-    return {
+    const context = {
       idConta: session.idConta,
       nome: session.nome || "Cliente SalaoPremium",
       email: session.email || "cliente@salaopremium.local",
       telefone: session.telefone || null,
     };
+
+    const securityDecision = await getClienteSecurityDecision(context);
+    if (!securityDecision.allowed) {
+      throw new Error("SECURITY_BLOCKED");
+    }
+
+    return context;
   }
 
   if (!conta?.id || conta.ativo === false) {
     throw new Error("UNAUTHORIZED");
   }
 
-  return {
+  const context = {
     idConta: conta.id,
     nome:
       String(conta.nome || "").trim() || session.nome || "Cliente SalaoPremium",
@@ -69,11 +87,18 @@ async function loadClienteAppServerContext(): Promise<ClienteAppServerContext> {
       "cliente@salaopremium.local",
     telefone: String(conta.telefone || session.telefone || "").trim() || null,
   };
+
+  const securityDecision = await getClienteSecurityDecision(context);
+  if (!securityDecision.allowed) {
+    throw new Error("SECURITY_BLOCKED");
+  }
+
+  return context;
 }
 
 export async function validateClienteAppSession(): Promise<{
   context: ClienteAppServerContext | null;
-  reason: "unauthorized" | null;
+  reason: "unauthorized" | "security_blocked" | null;
 }> {
   try {
     const context = await loadClienteAppServerContext();
@@ -81,6 +106,10 @@ export async function validateClienteAppSession(): Promise<{
   } catch (error) {
     if (isUnauthorizedError(error)) {
       return { context: null, reason: "unauthorized" };
+    }
+
+    if (error instanceof Error && error.message === "SECURITY_BLOCKED") {
+      return { context: null, reason: "security_blocked" };
     }
 
     throw error;
@@ -91,7 +120,14 @@ export async function requireClienteAppContext(): Promise<ClienteAppServerContex
   const validation = await validateClienteAppSession();
 
   if (!validation.context) {
-    const destino = "/app-cliente/login?erro=sessao_expirada";
+    const destino =
+      validation.reason === "security_blocked"
+        ? buildSecurityBlockPath({
+            tipoUsuario: "cliente",
+            origem: "cliente_app_context",
+            returnTo: "/app-cliente",
+          })
+        : "/app-cliente/login?erro=sessao_expirada";
     redirect(`/app-cliente/logout?destino=${encodeURIComponent(destino)}`);
   }
 

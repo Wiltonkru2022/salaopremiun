@@ -48,6 +48,9 @@ export async function loginProfissionalAction(
   const result = await loginProfissionalByCpfSenha(cpf, senha);
 
   if (!result.ok) {
+    if (result.redirectTo) {
+      redirect(result.redirectTo);
+    }
     await registerProfissionalLoginFailure(rateLimitKey);
     return { error: result.error };
   }

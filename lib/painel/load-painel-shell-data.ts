@@ -12,6 +12,10 @@ import { buildShellNotifications } from "@/lib/notifications/shell-notifications
 import { getPlanoAccessSnapshot } from "@/lib/plans/access";
 import { getPlanoCatalogo } from "@/lib/plans/catalog";
 import { PERMISSIONS } from "@/lib/permissions";
+import {
+  getSecurityAccessDecision,
+  getSecurityStatusMessage,
+} from "@/lib/security/user-security";
 
 type PermissoesDbRow = Record<string, boolean | string | null>;
 
@@ -38,6 +42,24 @@ const loadPainelShellContextCached = unstable_cache(
       return {
         ok: false as const,
         error: "Erro ao carregar usuario do sistema.",
+      };
+    }
+
+    const securityDecision = await getSecurityAccessDecision({
+      tipoUsuario: "salao",
+      userId: usuario.id,
+      idSalao: usuario.id_salao,
+    });
+
+    if (!securityDecision.allowed) {
+      return {
+        ok: false as const,
+        error: getSecurityStatusMessage({
+          status: securityDecision.status,
+          motivo: securityDecision.motivo,
+          bloqueadoAte: securityDecision.bloqueadoAte,
+        }),
+        redirectPath: securityDecision.redirectPath,
       };
     }
 
@@ -217,6 +239,10 @@ export async function loadPainelShellData() {
   const result = await loadPainelShellContextCached(user.id);
 
   if (!result.ok) {
+    if ("redirectPath" in result && result.redirectPath) {
+      redirect(result.redirectPath);
+    }
+
     return result;
   }
 

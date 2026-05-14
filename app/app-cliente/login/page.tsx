@@ -6,6 +6,7 @@ import { canSalonAppearInClientApp } from "@/lib/client-app/eligibility";
 import { getClienteSessionFromCookie } from "@/lib/cliente-auth.server";
 import { validateClienteAppSession } from "@/lib/client-context.server";
 import { buildSalaoPublicPath } from "@/lib/saloes/public-link";
+import { buildSecurityBlockPath } from "@/lib/security/user-security";
 
 export const metadata = {
   title: "Login do Cliente | Salão Premium",
@@ -49,6 +50,17 @@ export default async function LoginClientePage({
     const validation = await validateClienteAppSession().catch(() => null);
     if (validation?.context) {
       redirect(next || "/app-cliente/agendamentos");
+    }
+
+    if (validation?.reason === "security_blocked") {
+      const destino = buildSecurityBlockPath({
+        tipoUsuario: "cliente",
+        origem: "cliente_login",
+        returnTo: next || "/app-cliente",
+      });
+      redirect(
+        `/app-cliente/logout?destino=${encodeURIComponent(destino)}`
+      );
     }
   }
 
