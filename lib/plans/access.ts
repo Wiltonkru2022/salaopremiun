@@ -22,6 +22,7 @@ export type PlanoRecursoCodigo =
   | "dashboard_avancado"
   | "whatsapp"
   | "campanhas"
+  | "google_calendar"
   | "app_profissional"
   | "app_cliente"
   | "marketing"
@@ -75,6 +76,7 @@ export const PLANO_RECURSOS_PADRAO: PlanoRecursoCodigo[] = [
   "dashboard_avancado",
   "whatsapp",
   "campanhas",
+  "google_calendar",
   "app_profissional",
   "app_cliente",
   "marketing",
@@ -102,6 +104,7 @@ export const PLANO_RECURSO_LABELS: Record<PlanoRecursoCodigo, string> = {
   dashboard_avancado: "Dashboard avançado",
   whatsapp: "WhatsApp manual",
   campanhas: "Campanhas",
+  google_calendar: "Google Calendar",
   app_profissional: "App do profissional",
   app_cliente: "App do cliente",
   marketing: "Marketing",
@@ -129,6 +132,7 @@ export const PLANO_RECURSO_GROUPS: Record<PlanoRecursoCodigo, string> = {
   dashboard_avancado: "Relatorios",
   whatsapp: "Comunicacao",
   campanhas: "Comunicacao",
+  google_calendar: "Agenda",
   app_profissional: "Equipe",
   app_cliente: "Equipe",
   marketing: "Comunicacao",

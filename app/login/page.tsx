@@ -196,7 +196,10 @@ function LoginPageContent() {
       setErro("");
       setRedirectMessage("Abrindo login com Google...");
 
-      const callbackUrl = new URL("/auth/callback", window.location.origin);
+      const callbackUrl = new URL(
+        getManagedHostHref("/auth/callback", "painel"),
+        window.location.origin
+      );
       callbackUrl.searchParams.set("next", returnTo || "/dashboard?boot=1");
 
       const { data, error } = await supabase.auth.signInWithOAuth({

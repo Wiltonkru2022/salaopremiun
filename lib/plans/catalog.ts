@@ -6,6 +6,7 @@ export type PlanoRecursoUpgrade =
   | "comissoes_avancadas"
   | "app_profissional"
   | "app_cliente"
+  | "google_calendar"
   | "estoque"
   | "marketing"
   | "whatsapp"
@@ -63,6 +64,7 @@ export const PLANOS_CATALOGO: Record<PlanoCodigo, PlanoCatalogo> = {
       "App do profissional",
       "App do cliente",
       "Agenda com link manual do WhatsApp",
+      "Google Calendar",
       "Suporte prioritário",
     ],
     recursosBloqueados: [],
@@ -105,6 +107,7 @@ export const PLANOS_CATALOGO: Record<PlanoCodigo, PlanoCatalogo> = {
       "Comissões avançadas",
       "Relatórios e dashboard avançados",
       "Suporte prioritário",
+      "Google Calendar",
     ],
     limites: {
       usuarios: 2,
@@ -143,6 +146,7 @@ export const PLANOS_CATALOGO: Record<PlanoCodigo, PlanoCatalogo> = {
       "App do profissional",
       "App do cliente",
       "Agenda com link manual do WhatsApp",
+      "Google Calendar",
     ],
     recursosBloqueados: ["Suporte prioritário"],
     limites: {
@@ -182,6 +186,7 @@ export const PLANOS_CATALOGO: Record<PlanoCodigo, PlanoCatalogo> = {
       "App do profissional",
       "App do cliente",
       "Agenda com link manual do WhatsApp",
+      "Google Calendar",
       "Suporte prioritário",
     ],
     recursosBloqueados: [],
@@ -243,6 +248,13 @@ export const PLANOS_TABELA_FEATURES: PlanoTabelaFeature[] = [
     grupo: "Gestão e operação",
     nome: "Agenda com link manual do WhatsApp",
     basico: "Liberado",
+    pro: "Liberado",
+    premium: "Liberado",
+  },
+  {
+    grupo: "Gestão e operação",
+    nome: "Google Calendar automático",
+    basico: "Não liberado",
     pro: "Liberado",
     premium: "Liberado",
   },
@@ -391,6 +403,7 @@ export function getPlanoMinimoParaRecurso(
     recurso === "comissoes_avancadas" ||
     recurso === "app_profissional" ||
     recurso === "app_cliente" ||
+    recurso === "google_calendar" ||
     recurso === "estoque"
   ) {
     return "pro";

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getPainelUserContext } from "@/lib/auth/get-painel-user-context";
 import { getGoogleCalendarEnv, isGoogleCalendarConfigured } from "@/lib/google-calendar/oauth";
+import { canUsePlanFeature } from "@/lib/plans/access";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +19,13 @@ export async function GET() {
   if (!isGoogleCalendarConfigured()) {
     return NextResponse.redirect(
       "https://painel.salaopremiun.com.br/perfil-salao?google_calendar=env"
+    );
+  }
+
+  const feature = await canUsePlanFeature(usuario.id_salao, "google_calendar");
+  if (!feature.allowed) {
+    return NextResponse.redirect(
+      "https://painel.salaopremiun.com.br/meu-plano?motivo=recurso_google_calendar_bloqueado"
     );
   }
 
@@ -47,4 +55,3 @@ export async function GET() {
 
   return NextResponse.redirect(url);
 }
-

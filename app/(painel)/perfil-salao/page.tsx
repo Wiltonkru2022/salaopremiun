@@ -98,6 +98,8 @@ type GoogleCalendarConnectionState = {
   loading: boolean;
   connected: boolean;
   configured: boolean;
+  allowed: boolean;
+  blockReason: string | null;
   googleEmail: string | null;
 };
 
@@ -307,6 +309,8 @@ export default function PerfilSalaoPage() {
       loading: true,
       connected: false,
       configured: false,
+      allowed: false,
+      blockReason: null,
       googleEmail: null,
     });
   const [disconnectingGoogle, setDisconnectingGoogle] = useState(false);
@@ -476,6 +480,8 @@ export default function PerfilSalaoPage() {
         | {
             ok?: boolean;
             configured?: boolean;
+            allowed?: boolean;
+            blockReason?: string | null;
             connected?: boolean;
             googleEmail?: string | null;
           }
@@ -488,6 +494,8 @@ export default function PerfilSalaoPage() {
       setGoogleCalendar({
         loading: false,
         configured: Boolean(data.configured),
+        allowed: Boolean(data.allowed),
+        blockReason: data.blockReason || null,
         connected: Boolean(data.connected),
         googleEmail: data.googleEmail || null,
       });
@@ -495,6 +503,8 @@ export default function PerfilSalaoPage() {
       setGoogleCalendar({
         loading: false,
         configured: false,
+        allowed: false,
+        blockReason: null,
         connected: false,
         googleEmail: null,
       });
@@ -1604,6 +1614,9 @@ export default function PerfilSalaoPage() {
                       ? "Verificando conexão..."
                       : googleCalendar.connected
                         ? `Conectado em ${googleCalendar.googleEmail || "conta Google"}`
+                        : !googleCalendar.allowed
+                          ? googleCalendar.blockReason ||
+                            "Google Calendar está disponível no Pro, Premium ou teste grátis."
                         : googleCalendar.configured
                           ? "Ainda não conectado."
                           : "A integração ainda não está configurada na Vercel."}
@@ -1637,7 +1650,7 @@ export default function PerfilSalaoPage() {
                       )}
                       Desconectar conta Google
                     </button>
-                  ) : googleCalendar.configured ? (
+                  ) : googleCalendar.configured && googleCalendar.allowed ? (
                     <a
                       href="/api/integracoes/google-calendar/connect"
                       className={`mt-4 inline-flex h-11 items-center justify-center gap-2 rounded-2xl px-4 text-sm font-bold transition ${
@@ -1656,7 +1669,9 @@ export default function PerfilSalaoPage() {
                       className="mt-4 inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-zinc-200 px-4 text-sm font-bold text-zinc-500"
                     >
                       <CalendarClock size={16} />
-                      Google Calendar indisponível
+                      {googleCalendar.allowed
+                        ? "Google Calendar indisponível"
+                        : "Disponível no Pro e Premium"}
                     </button>
                   )}
                   <p className="mt-3 text-xs leading-5 text-zinc-500">

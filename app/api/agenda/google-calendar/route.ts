@@ -5,6 +5,7 @@ import {
   AuthzError,
   requireSalaoAnyPermission,
 } from "@/lib/auth/require-salao-permission";
+import { assertCanUsePlanFeature, PlanAccessError } from "@/lib/plans/access";
 import {
   getGoogleCalendarConnection,
   getValidGoogleCalendarAccessToken,
@@ -80,6 +81,7 @@ export async function POST(req: NextRequest) {
   try {
     const body = payloadSchema.parse(await req.json());
     await requireSalaoAnyPermission(body.idSalao, ["agenda_ver", "agenda_editar"]);
+    await assertCanUsePlanFeature(body.idSalao, "google_calendar");
 
     if (!isGoogleCalendarConfigured()) {
       return NextResponse.json(
@@ -181,6 +183,18 @@ export async function POST(req: NextRequest) {
     if (error instanceof AuthzError) {
       return NextResponse.json(
         { ok: false, error: error.message, code: error.code },
+        { status: error.status }
+      );
+    }
+
+    if (error instanceof PlanAccessError) {
+      return NextResponse.json(
+        {
+          ok: false,
+          requiresPlan: true,
+          error: error.message,
+          code: error.code,
+        },
         { status: error.status }
       );
     }

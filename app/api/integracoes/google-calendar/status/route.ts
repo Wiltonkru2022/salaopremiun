@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getPainelUserContext } from "@/lib/auth/get-painel-user-context";
 import { isGoogleCalendarConfigured } from "@/lib/google-calendar/oauth";
+import { canUsePlanFeature } from "@/lib/plans/access";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
@@ -12,6 +13,7 @@ export async function GET() {
     return NextResponse.json({ ok: false, error: "Sessão inválida." }, { status: 401 });
   }
 
+  const feature = await canUsePlanFeature(usuario.id_salao, "google_calendar");
   const supabase = getSupabaseAdmin();
   const { data, error } = await (supabase as any)
     .from("saloes_google_calendar_connections")
@@ -24,6 +26,8 @@ export async function GET() {
     return NextResponse.json({
       ok: true,
       configured: isGoogleCalendarConfigured(),
+      allowed: feature.allowed,
+      blockReason: feature.reason,
       connected: false,
       googleEmail: null,
     });
@@ -32,6 +36,8 @@ export async function GET() {
   return NextResponse.json({
     ok: true,
     configured: isGoogleCalendarConfigured(),
+    allowed: feature.allowed,
+    blockReason: feature.reason,
     connected: Boolean(data),
     googleEmail: data?.google_email || null,
     calendarId: data?.calendar_id || "primary",
@@ -65,4 +71,3 @@ export async function DELETE() {
 
   return NextResponse.json({ ok: true });
 }
-

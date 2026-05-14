@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { getSupabaseCookieOptions } from "@/lib/supabase/cookie-options";
 
 export const dynamic = "force-dynamic";
 
@@ -50,13 +51,17 @@ export async function GET(request: NextRequest) {
   }
 
   const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
+    cookieOptions: getSupabaseCookieOptions(requestUrl.host),
     cookies: {
       getAll() {
         return cookieStore.getAll();
       },
       setAll(cookiesToSet) {
         cookiesToSet.forEach(({ name, value, options }) => {
-          cookieStore.set(name, value, options);
+          cookieStore.set(name, value, {
+            ...options,
+            ...getSupabaseCookieOptions(requestUrl.host),
+          });
         });
       },
     },

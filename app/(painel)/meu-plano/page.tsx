@@ -67,6 +67,14 @@ function getMotivoMeta(motivo?: string | null) {
     };
   }
 
+  if (normalized === "recurso_google_calendar_bloqueado") {
+    return {
+      title: "Google Calendar bloqueado no plano atual",
+      message:
+        "A sincronização automática da agenda com o Google Calendar fica disponível no plano Pro, Premium ou durante o teste grátis ativo.",
+    };
+  }
+
   return null;
 }
 
