@@ -7,7 +7,7 @@ export type ClienteProfissional = {
   whatsapp?: string | null;
   email: string | null;
   status: string | null;
-  ativo: string | null;
+  ativo: boolean | string | number | null;
 };
 
 type ListarClientesOptions = {
@@ -38,7 +38,12 @@ export async function listarClientesDoSalao(
         .order("nome", { ascending: true });
 
       if (buscaLimpa) {
-        const termo = buscaLimpa.replaceAll("%", "\\%").replaceAll("_", "\\_");
+        const termo = buscaLimpa
+          .replaceAll("\\", "\\\\")
+          .replaceAll("%", "\\%")
+          .replaceAll("_", "\\_")
+          .replaceAll(",", " ")
+          .trim();
         const filtros = [
           `nome.ilike.%${termo}%`,
           `telefone.ilike.%${termo}%`,

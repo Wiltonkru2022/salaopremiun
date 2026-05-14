@@ -39,6 +39,24 @@ function formatTelefone(value?: string | null) {
   return value || "Sem telefone";
 }
 
+function clienteEstaAtivo(cliente: ClienteRow) {
+  const status = String(cliente.status || "").trim().toLowerCase();
+  if (["inativo", "inactive", "bloqueado", "excluido", "excluído"].includes(status)) {
+    return false;
+  }
+
+  if (cliente.ativo === false || cliente.ativo === 0) {
+    return false;
+  }
+
+  const ativo = String(cliente.ativo ?? "").trim().toLowerCase();
+  if (["false", "0", "nao", "não", "inativo", "inactive", "bloqueado"].includes(ativo)) {
+    return false;
+  }
+
+  return true;
+}
+
 export default async function ClientesPage({
   searchParams,
 }: {
@@ -68,13 +86,7 @@ export default async function ClientesPage({
     );
   }
 
-  const clientesFiltrados = data.filter((item) => {
-    const ativo =
-      item.ativo === true || item.ativo === "true" || item.ativo === 1;
-    const status = String(item.status || "").toLowerCase();
-
-    return ativo && status !== "inativo";
-  });
+  const clientesFiltrados = data.filter(clienteEstaAtivo);
   const hasMore = clientesFiltrados.length > pageSize;
   const clientes = clientesFiltrados.slice(0, pageSize);
 
