@@ -19,6 +19,7 @@ import {
   Globe,
   LifeBuoy,
   KeyRound,
+  LockKeyhole,
   Loader2,
   Mail,
   MapPin,
@@ -314,6 +315,7 @@ export default function PerfilSalaoPage() {
       googleEmail: null,
     });
   const [disconnectingGoogle, setDisconnectingGoogle] = useState(false);
+  const [unlinkingGoogleLogin, setUnlinkingGoogleLogin] = useState(false);
   const [creatingRecoveryTicket, setCreatingRecoveryTicket] = useState(false);
   const [deletingSalao, setDeletingSalao] = useState(false);
   const [erro, setErro] = useState("");
@@ -1041,7 +1043,7 @@ export default function PerfilSalaoPage() {
         method: "DELETE",
       });
       const data = (await response.json().catch(() => null)) as
-        | { ok?: boolean; error?: string; identityWarning?: string | null }
+        | { ok?: boolean; error?: string }
         | null;
 
       if (!response.ok || !data?.ok) {
@@ -1053,7 +1055,7 @@ export default function PerfilSalaoPage() {
         connected: false,
         googleEmail: null,
       }));
-      setMsg(data?.identityWarning || "Conta Google desconectada do Google Calendar.");
+      setMsg("Google Calendar desconectado. O login com Google continua separado e pode ser removido no botão abaixo.");
     } catch (error) {
       setErro(
         error instanceof Error
@@ -1062,6 +1064,58 @@ export default function PerfilSalaoPage() {
       );
     } finally {
       setDisconnectingGoogle(false);
+    }
+  }
+
+  async function removerLoginGoogle() {
+    try {
+      setUnlinkingGoogleLogin(true);
+      setErro("");
+      setMsg("");
+
+      const { data, error } = await supabase.auth.getUserIdentities();
+
+      if (error) {
+        throw new Error(
+          error.message ||
+            "Não foi possível consultar os vínculos de login desta conta."
+        );
+      }
+
+      const googleIdentity = data.identities.find(
+        (identity) => identity.provider === "google"
+      );
+
+      if (!googleIdentity) {
+        setMsg("Esta conta já não possui login com Google vinculado.");
+        return;
+      }
+
+      if (data.identities.length < 2) {
+        throw new Error(
+          "Para remover o login com Google, mantenha e-mail e senha ativos nesta conta."
+        );
+      }
+
+      const { error: unlinkError } =
+        await supabase.auth.unlinkIdentity(googleIdentity);
+
+      if (unlinkError) {
+        throw new Error(
+          unlinkError.message ||
+            "Não foi possível remover o login com Google desta conta."
+        );
+      }
+
+      setMsg("Login com Google removido. Esta conta continua entrando por e-mail e senha.");
+    } catch (error) {
+      setErro(
+        error instanceof Error
+          ? error.message
+          : "Erro ao remover o login com Google."
+      );
+    } finally {
+      setUnlinkingGoogleLogin(false);
     }
   }
 
@@ -1637,19 +1691,34 @@ export default function PerfilSalaoPage() {
                     </div>
                   ) : null}
                   {googleCalendar.connected ? (
-                    <button
-                      type="button"
-                      onClick={desconectarGoogleCalendar}
-                      disabled={disconnectingGoogle}
-                      className="mt-4 inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-rose-200 bg-white px-4 text-sm font-bold text-rose-700 transition hover:bg-rose-50 disabled:opacity-60"
-                    >
-                      {disconnectingGoogle ? (
-                        <Loader2 className="animate-spin" size={16} />
-                      ) : (
-                        <Trash2 size={16} />
-                      )}
-                      Desconectar conta Google
-                    </button>
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={desconectarGoogleCalendar}
+                        disabled={disconnectingGoogle}
+                        className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-rose-200 bg-white px-4 text-sm font-bold text-rose-700 transition hover:bg-rose-50 disabled:opacity-60"
+                      >
+                        {disconnectingGoogle ? (
+                          <Loader2 className="animate-spin" size={16} />
+                        ) : (
+                          <Trash2 size={16} />
+                        )}
+                        Desconectar Google Agenda
+                      </button>
+                      <button
+                        type="button"
+                        onClick={removerLoginGoogle}
+                        disabled={unlinkingGoogleLogin}
+                        className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-zinc-200 bg-white px-4 text-sm font-bold text-zinc-800 transition hover:border-zinc-950 disabled:opacity-60"
+                      >
+                        {unlinkingGoogleLogin ? (
+                          <Loader2 className="animate-spin" size={16} />
+                        ) : (
+                          <LockKeyhole size={16} />
+                        )}
+                        Remover login com Google
+                      </button>
+                    </div>
                   ) : googleCalendar.configured && googleCalendar.allowed ? (
                     <a
                       href="/api/integracoes/google-calendar/connect"

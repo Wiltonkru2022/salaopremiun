@@ -3,7 +3,6 @@ import { getPainelUserContext } from "@/lib/auth/get-painel-user-context";
 import { isGoogleCalendarConfigured } from "@/lib/google-calendar/oauth";
 import { canUsePlanFeature } from "@/lib/plans/access";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
-import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
@@ -76,45 +75,5 @@ export async function DELETE() {
     );
   }
 
-  const userClient = await createClient();
-  const { data: identitiesData, error: identitiesError } =
-    await userClient.auth.getUserIdentities();
-
-  if (identitiesError) {
-    return NextResponse.json(
-      {
-        ok: false,
-        error:
-          "A integração foi desativada, mas não foi possível ler as identidades da conta para remover o Google do Supabase Auth.",
-      },
-      { status: 500 }
-    );
-  }
-
-  const googleIdentity = identitiesData.identities.find(
-    (identity) => String(identity.provider || "").toLowerCase() === "google"
-  );
-
-  let identityUnlinked = false;
-
-  if (googleIdentity) {
-    const { error: unlinkError } = await userClient.auth.unlinkIdentity(
-      googleIdentity
-    );
-
-    if (unlinkError) {
-      return NextResponse.json(
-        {
-          ok: false,
-          error:
-            "A integração foi desativada, mas o Supabase não permitiu remover a identidade Google. Verifique se a conta tem e-mail/senha ativo e se Manual Linking está habilitado em Auth.",
-        },
-        { status: 409 }
-      );
-    } else {
-      identityUnlinked = true;
-    }
-  }
-
-  return NextResponse.json({ ok: true, identityUnlinked });
+  return NextResponse.json({ ok: true });
 }
