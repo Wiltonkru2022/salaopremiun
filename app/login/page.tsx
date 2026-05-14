@@ -194,14 +194,16 @@ function LoginPageContent() {
 
       setLoading(true);
       setErro("");
+      setRedirectMessage("Abrindo login com Google...");
 
       const callbackUrl = new URL("/auth/callback", window.location.origin);
       callbackUrl.searchParams.set("next", returnTo || "/dashboard?boot=1");
 
-      const { error } = await supabase.auth.signInWithOAuth({
+      const { data, error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
           redirectTo: callbackUrl.toString(),
+          skipBrowserRedirect: true,
           queryParams: {
             access_type: "offline",
             prompt: "select_account",
@@ -212,6 +214,15 @@ function LoginPageContent() {
       if (error) {
         throw error;
       }
+
+      if (data?.url) {
+        window.location.assign(data.url);
+        return;
+      }
+
+      throw new Error(
+        "Não foi possível abrir o Google. Verifique se o provedor Google está ativo no Supabase."
+      );
     } catch (error) {
       setLoading(false);
       setErro(getLoginErrorMessage(error));

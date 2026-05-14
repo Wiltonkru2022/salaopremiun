@@ -7,7 +7,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Building2,
   CalendarClock,
@@ -283,6 +283,7 @@ function SidebarAction({
 export default function PerfilSalaoPage() {
   const supabase = createClient();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { snapshot: painelSession } = usePainelSession();
 
   const [loading, setLoading] = useState(true);
@@ -330,6 +331,7 @@ export default function PerfilSalaoPage() {
     [perfilForm.app_cliente_slug, perfilForm.nome]
   );
   const publicUrl = useMemo(() => buildSalaoPublicUrl(publicSlug), [publicSlug]);
+  const googleCalendarStatus = searchParams.get("google_calendar");
   const qrCodeUrl = useMemo(
     () =>
       `/api/painel/qrcode?text=${encodeURIComponent(
@@ -1484,6 +1486,65 @@ export default function PerfilSalaoPage() {
                   }
                   multiline
                 />
+              </div>
+            </SectionCard>
+
+            <SectionCard
+              icon={<CalendarClock size={18} />}
+              title="Google"
+              description="Conecte o Google para login e sincronização automática da agenda."
+            >
+              <div className="grid gap-3 md:grid-cols-2">
+                <div className="rounded-[22px] border border-zinc-200 bg-zinc-50 p-4">
+                  <div className="text-sm font-bold text-zinc-950">
+                    Google Calendar
+                  </div>
+                  <p className="mt-2 text-sm leading-6 text-zinc-600">
+                    Ao conectar, os atendimentos confirmados da agenda podem ser
+                    enviados automaticamente para o Google Calendar, sem baixar
+                    arquivo manual.
+                  </p>
+                  {googleCalendarStatus === "connected" ? (
+                    <div className="mt-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700">
+                      Google Calendar conectado com sucesso.
+                    </div>
+                  ) : googleCalendarStatus === "env" ? (
+                    <div className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-800">
+                      Configure as variáveis do Google Calendar na Vercel antes
+                      de conectar.
+                    </div>
+                  ) : googleCalendarStatus === "erro" ? (
+                    <div className="mt-3 rounded-2xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-semibold text-rose-700">
+                      Não foi possível concluir a conexão. Confira o redirect do
+                      Google Cloud e tente novamente.
+                    </div>
+                  ) : null}
+                  <a
+                    href="/api/integracoes/google-calendar/connect"
+                    className="mt-4 inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-zinc-950 px-4 text-sm font-bold text-white transition hover:bg-zinc-800"
+                  >
+                    <CalendarClock size={16} />
+                    Conectar Google Calendar
+                  </a>
+                </div>
+
+                <div className="rounded-[22px] border border-zinc-200 bg-white p-4">
+                  <div className="text-sm font-bold text-zinc-950">
+                    Login com Google
+                  </div>
+                  <p className="mt-2 text-sm leading-6 text-zinc-600">
+                    O botão “Entrar com Google” aparece no login do salão. Para
+                    funcionar, o provedor Google precisa estar ativo em
+                    Supabase Auth &gt; Sign In / Providers.
+                  </p>
+                  <a
+                    href="https://login.salaopremiun.com.br/login"
+                    className="mt-4 inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-zinc-300 bg-white px-4 text-sm font-bold text-zinc-800 transition hover:border-zinc-950"
+                  >
+                    <KeyRound size={16} />
+                    Testar login Google
+                  </a>
+                </div>
               </div>
             </SectionCard>
 
