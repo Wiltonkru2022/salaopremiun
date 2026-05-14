@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState } from "react";
 import AppLoading from "@/components/ui/AppLoading";
 import PaginationControls from "@/components/ui/PaginationControls";
 import { usePainelSession } from "@/components/layout/PainelSessionProvider";
@@ -8,7 +8,6 @@ import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import {
   CalendarDays,
-  Eye,
   FileText,
   Printer,
   Receipt,
@@ -603,12 +602,12 @@ export default function VendasPage() {
       setMotivoExclusao("");
       setDetalheOpen(false);
       setDetalheVenda(null);
-      setMsg(`Venda #${vendaSelecionada.numero} excluída com sucesso.`);
+      setMsg(`Venda #${vendaSelecionada.numero} cancelada com sucesso.`);
       await carregarVendas();
     } catch (error: unknown) {
       console.error(error);
       setErroTela(
-        error instanceof Error ? error.message : "Erro ao excluir venda."
+        error instanceof Error ? error.message : "Erro ao cancelar venda."
       );
     } finally {
       setSaving(false);
@@ -816,46 +815,6 @@ export default function VendasPage() {
     printWindow.document.open();
     printWindow.document.write(html);
     printWindow.document.close();
-  }
-
-  async function imprimirCupomCompleto(venda: ComandaVenda) {
-    try {
-      setSaving(true);
-      setErroTela("");
-
-      const data = await processarVenda({
-        acao: "detalhes",
-        idComanda: venda.id,
-      });
-
-      /* Legacy error block removed after routing detalhes through /api/vendas/processar.
-      if (error.message === "__never__") {
-
-        throw new Error(error.message || "Erro ao carregar dados para impressão.");
-      }
-
-      */
-      const comandaDetalhe = data.detalhe?.comanda as
-        | ComandaVenda
-        | null
-        | undefined;
-      const detalhe: VendaDetalhe = {
-        comanda: mergeComandaDetalhe(venda, comandaDetalhe),
-        itens: (data.detalhe?.itens as ItemVenda[]) || [],
-        pagamentos: (data.detalhe?.pagamentos as Pagamento[]) || [],
-        agendamentos: (data.detalhe?.agendamentos as unknown[]) || [],
-        comissoes: (data.detalhe?.comissoes as unknown[]) || [],
-      };
-
-      imprimirCupom(venda, detalhe, salaoInfo);
-    } catch (error: unknown) {
-      console.error(error);
-      setErroTela(
-        error instanceof Error ? error.message : "Erro ao imprimir cupom."
-      );
-    } finally {
-      setSaving(false);
-    }
   }
 
   const formasPagamentoDisponiveis = useMemo(() => {
@@ -1160,7 +1119,7 @@ export default function VendasPage() {
               <div>
               <div className="text-lg font-bold text-zinc-900">Lista de vendas</div>
               <div className="mt-1 text-sm text-zinc-500">
-                Consulte, imprima, reabra ou exclua vendas com segurança.
+                Clique em uma venda para ver resumo, itens, pagamento e ações.
               </div>
               </div>
               {!permitirReabrirVenda ? (
@@ -1181,7 +1140,6 @@ export default function VendasPage() {
                     <th className="px-4 py-3">Total</th>
                     <th className="px-4 py-3">Profissional</th>
                     <th className="px-4 py-3">Pagamento</th>
-                    <th className="px-4 py-3 text-right">Ações</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1189,7 +1147,19 @@ export default function VendasPage() {
                     const rowBusca = vendasBusca.find((row) => row.id === item.id);
 
                     return (
-                      <tr key={item.id} className="border-b border-zinc-100 align-top transition hover:bg-zinc-50/70 last:border-b-0">
+                      <tr
+                        key={item.id}
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => abrirDetalhes(item)}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter" || event.key === " ") {
+                            event.preventDefault();
+                            abrirDetalhes(item);
+                          }
+                        }}
+                        className="cursor-pointer border-b border-zinc-100 align-top transition hover:bg-zinc-50/80 focus-visible:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900/10 last:border-b-0"
+                      >
                         <td className="px-4 py-3.5">
                           <div className="font-semibold text-zinc-900">#{item.numero}</div>
                           <div className="text-xs text-zinc-500">
@@ -1228,47 +1198,13 @@ export default function VendasPage() {
                             {(rowBusca?.formas_pagamento || "-").replaceAll("|", ", ")}
                           </div>
                         </td>
-
-                        <td className="px-4 py-3.5">
-                          <div className="flex min-w-[330px] flex-wrap items-center justify-end gap-2">
-                            <VendaActionButton
-                              icon={<Eye size={15} />}
-                              label="Detalhes"
-                              onClick={() => abrirDetalhes(item)}
-                            />
-
-                            <VendaActionButton
-                              icon={<Printer size={15} />}
-                              label="Cupom"
-                              onClick={() => imprimirCupomCompleto(item)}
-                            />
-
-                            {item.status === "fechada" && podeReabrirVenda ? (
-                              <VendaActionButton
-                                icon={<RotateCcw size={15} />}
-                                label="Caixa"
-                                onClick={() => abrirModalReabrir(item)}
-                                tone="amber"
-                              />
-                            ) : null}
-
-                            {podeExcluirVenda ? (
-                              <VendaActionButton
-                                icon={<Trash2 size={15} />}
-                                label="Excluir"
-                                onClick={() => abrirModalExcluir(item)}
-                                tone="rose"
-                              />
-                            ) : null}
-                          </div>
-                        </td>
                       </tr>
                     );
                   })}
 
                   {vendasFiltradas.length === 0 ? (
                     <tr>
-                      <td colSpan={8} className="px-4 py-10 text-center text-sm text-zinc-500">
+                      <td colSpan={7} className="px-4 py-10 text-center text-sm text-zinc-500">
                         Nenhuma venda encontrada para os filtros informados.
                       </td>
                     </tr>
@@ -1298,10 +1234,10 @@ export default function VendasPage() {
                   Detalhes da venda
                 </div>
                 <h2 className="truncate text-[1.35rem] font-black tracking-[-0.03em] text-zinc-900">
-                  Detalhes da venda #{detalheVenda.comanda?.numero}
+                  Venda #{detalheVenda.comanda?.numero}
                 </h2>
                 <p className="mt-1 line-clamp-1 text-sm text-zinc-500">
-                  Cliente: {getJoinedName(detalheVenda.comanda?.clientes, "Sem cliente")}
+                  Resumo, itens, pagamentos e ações da venda.
                 </p>
               </div>
 
@@ -1475,6 +1411,14 @@ export default function VendasPage() {
                           value={getJoinedName(detalheVenda.comanda?.clientes, "Sem cliente")}
                         />
                         <ResumoRow
+                          label="Itens"
+                          value={String(detalheVenda.itens.length)}
+                        />
+                        <ResumoRow
+                          label="Pagamentos"
+                          value={String(detalheVenda.pagamentos.length)}
+                        />
+                        <ResumoRow
                           label="Status"
                           value={getStatusLabel(detalheVenda.comanda?.status || "")}
                         />
@@ -1555,7 +1499,7 @@ export default function VendasPage() {
                             className="flex items-center justify-center gap-2 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700 transition hover:bg-rose-100"
                           >
                             <Trash2 size={16} />
-                            Excluir venda
+                            Cancelar venda
                           </button>
                         ) : null}
                       </div>
@@ -1618,21 +1562,21 @@ export default function VendasPage() {
         <div className="fixed inset-0 z-[95] flex items-center justify-center bg-black/45 p-4 backdrop-blur-sm">
           <div className="w-full max-w-lg rounded-[28px] border border-zinc-200 bg-white shadow-2xl">
             <div className="border-b border-zinc-200 px-6 py-5">
-              <h2 className="text-xl font-bold text-zinc-900">Excluir venda</h2>
+              <h2 className="text-xl font-bold text-zinc-900">Cancelar venda</h2>
               <p className="mt-1 text-sm text-zinc-500">
-                A venda #{vendaSelecionada.numero} será removida junto com comissões, pagamentos, itens e agendamentos vinculados.
+                A venda #{vendaSelecionada.numero} será marcada como cancelada e as comissões vinculadas serão canceladas.
               </p>
             </div>
 
             <div className="px-6 py-5">
               <label className="mb-2 block text-sm font-semibold text-zinc-700">
-                Motivo da exclusão
+                Motivo do cancelamento
               </label>
               <textarea
                 rows={4}
                 value={motivoExclusao}
                 onChange={(e) => setMotivoExclusao(e.target.value)}
-                placeholder="Descreva o motivo da exclusão da venda..."
+                placeholder="Descreva o motivo do cancelamento da venda..."
                 className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-zinc-900"
               />
             </div>
@@ -1653,43 +1597,13 @@ export default function VendasPage() {
                 disabled={saving}
                 className="rounded-2xl bg-rose-600 px-5 py-3 text-sm font-bold text-white transition hover:opacity-95 disabled:opacity-60"
               >
-                {saving ? "Excluindo..." : "Confirmar exclusão"}
+                {saving ? "Cancelando..." : "Confirmar cancelamento"}
               </button>
             </div>
           </div>
         </div>
       ) : null}
     </>
-  );
-}
-
-function VendaActionButton({
-  icon,
-  label,
-  onClick,
-  tone = "neutral",
-}: {
-  icon: ReactNode;
-  label: string;
-  onClick: () => void;
-  tone?: "neutral" | "amber" | "rose";
-}) {
-  const className =
-    tone === "amber"
-      ? "border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100"
-      : tone === "rose"
-        ? "border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100"
-        : "border-zinc-200 bg-white text-zinc-800 hover:bg-zinc-100";
-
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`inline-flex h-9 items-center justify-center gap-1.5 rounded-xl border px-3 text-xs font-black transition ${className}`}
-    >
-      {icon}
-      <span>{label}</span>
-    </button>
   );
 }
 
