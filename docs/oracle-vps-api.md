@@ -2,7 +2,7 @@
 
 Este documento registra a arquitetura atual da VPS Oracle e o caminho correto para evoluir a API auxiliar do SalaoPremium sem prejudicar Vercel, Supabase ou a seguranca do sistema.
 
-Ultima atualizacao: 13/05/2026.
+Ultima atualizacao: 14/05/2026.
 
 ## Estrutura Atual
 
@@ -224,11 +224,14 @@ CRON_SECRET=
 API_SECRET=
 
 RESEND_API_KEY=
-WEB_PUSH_VAPID_PRIVATE_KEY=
-NEXT_PUBLIC_WEB_PUSH_VAPID_PUBLIC_KEY=
+WEB_PUSH_PRIVATE_KEY=
+WEB_PUSH_PUBLIC_KEY=
+WEB_PUSH_SUBJECT=mailto:suporte@salaopremiun.com.br
 ```
 
-Nunca colocar `SUPABASE_SERVICE_ROLE_KEY`, `API_ADMIN_TOKEN`, Asaas, Resend ou VAPID privado no frontend.
+Compatibilidade: a API tambem aceita `WEB_PUSH_VAPID_PRIVATE_KEY` e `NEXT_PUBLIC_WEB_PUSH_VAPID_PUBLIC_KEY`, mas o padrao atual dos projetos e `WEB_PUSH_PRIVATE_KEY` e `WEB_PUSH_PUBLIC_KEY`.
+
+Nunca colocar `SUPABASE_SERVICE_ROLE_KEY`, `API_ADMIN_TOKEN`, Asaas, Resend ou chave privada de Web Push no frontend.
 
 ## Docker Compose Atual
 
@@ -381,42 +384,36 @@ Quando puder, subir para:
 2 OCPU / 12 GB RAM
 ```
 
-## Proxima API Real Separada
+## API Separada
 
-Quando for separar em repositorio proprio:
-
-```text
-Wiltonkru2022/salaopremiun-api
-```
-
-Estrutura recomendada:
+A API separada ja existe em:
 
 ```text
-Node.js
-Fastify ou Express
-Dockerfile
-docker-compose.yml
-.env.example
-rotas /health, /caixa, /comissoes, /relatorios, /webhooks/asaas
-cliente Supabase server-side
-validacao de token por rota
-logs estruturados
-idempotencia para webhooks/jobs
+https://github.com/Wiltonkru2022/salaopremiun-api
 ```
 
-Endpoints futuros:
+Este documento registra a operacao da VPS. O README do repositorio da API e a fonte principal para rotas, Docker, deploy e variaveis da API auxiliar.
 
-```text
-GET  /health
-POST /webhooks/asaas
-POST /caixa/fechar
-GET  /caixa/resumo
-POST /comissoes/calcular
-GET  /relatorios/vendas
-GET  /relatorios/profissionais
-POST /notificacoes/enviar
-POST /backup/executar
+## Validacao Real Antes de Dizer 100%
+
+Documentacao nao substitui teste de producao. Antes de considerar o sistema pronto, valide:
+
+```bash
+npm run lint
+npm run typecheck
+npm run build
+npm run launch:validate
 ```
+
+Tambem valide em producao:
+
+- `https://api.salaopremiun.com.br/health`
+- `https://api.salaopremiun.com.br/ready`
+- `https://api.salaopremiun.com.br/status`
+- Admin Master lendo a VPS sem erro.
+- Google Calendar conectado/desconectado.
+- App Cliente e App Profissional sem queda de sessao.
+- Agenda, caixa, assinatura, planos e recursos.
 
 ## Regra Final
 

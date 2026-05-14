@@ -51,7 +51,12 @@ export async function getAdminMasterGovernanceEditorData(): Promise<AdminMasterG
       .select("id, auth_user_id, nome, email, perfil, status, ultimo_acesso_em, criado_em, atualizado_em")
       .order("atualizado_em", { ascending: false })
       .limit(100),
-    supabase.from("admin_master_permissoes").select("*").limit(200),
+    supabase
+      .from("admin_master_permissoes")
+      .select(
+        "id, id_admin_master_usuario, dashboard_ver, saloes_ver, saloes_editar, saloes_entrar_como, financeiro_ver, relatorios_ver, assinaturas_ver, assinaturas_ajustar, cobrancas_ver, cobrancas_reprocessar, planos_editar, recursos_editar, produto_ver, operacao_ver, operacao_reprocessar, tickets_ver, tickets_editar, suporte_ver, notificacoes_editar, campanhas_editar, comunicacao_ver, whatsapp_ver, whatsapp_editar, feature_flags_editar, usuarios_admin_ver, usuarios_admin_editar, auditoria_ver, criado_em, atualizado_em"
+      )
+      .limit(200),
     supabase
       .from("configuracoes_globais")
       .select("id, chave, descricao, valor_json, atualizado_por, atualizado_em")

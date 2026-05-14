@@ -14,6 +14,8 @@ const GUARDRULES = [
     "webhook_secret",
     /validarTokenWebhook|ASAAS_WEBHOOK_TOKEN|verifyHeaderSecret|isMetaWebhookSignatureValid|getMetaWhatsAppAppSecret|isMetaWebhookVerifyRequest/,
   ],
+  ["google_risc_jwt", /validateSecurityEventToken|GOOGLE_RISC_CLIENT_IDS|RISC_CONFIGURATION_URL/],
+  ["oauth_state", /verifyGoogleCalendarState|createGoogleCalendarState/],
   ["cron_secret", /validarCron|CRON_SECRET|verifyBearerSecret/],
 ];
 

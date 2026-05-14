@@ -1,13 +1,10 @@
 import { NextResponse } from "next/server";
 import { getPainelUserContext } from "@/lib/auth/get-painel-user-context";
 import { getGoogleCalendarEnv, isGoogleCalendarConfigured } from "@/lib/google-calendar/oauth";
+import { createGoogleCalendarState } from "@/lib/google-calendar/state";
 import { canUsePlanFeature } from "@/lib/plans/access";
 
 export const dynamic = "force-dynamic";
-
-function toBase64Url(value: unknown) {
-  return Buffer.from(JSON.stringify(value), "utf8").toString("base64url");
-}
 
 export async function GET() {
   const { user, usuario } = await getPainelUserContext();
@@ -47,7 +44,7 @@ export async function GET() {
   );
   url.searchParams.set(
     "state",
-    toBase64Url({
+    createGoogleCalendarState({
       idSalao: usuario.id_salao,
       returnTo: "/perfil-salao?google_calendar=connected",
     })

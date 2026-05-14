@@ -3,6 +3,7 @@ import { getPlanosSaasCatalogo } from "@/lib/plans/catalog-server";
 
 export const dynamic = "force-dynamic";
 
+// Rota publica: usada por telas de planos, assinatura e comparacao antes do login.
 export async function GET() {
   const planos = await getPlanosSaasCatalogo();
 
@@ -11,4 +12,3 @@ export async function GET() {
     planos: planos.filter((plano) => plano.ativo !== false),
   });
 }
-

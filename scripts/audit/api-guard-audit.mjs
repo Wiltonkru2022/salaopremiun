@@ -20,6 +20,7 @@ const GUARD_HINTS = [
   "requireAdminMasterUser(",
   "getAdminMasterAccess(",
   "getProfissionalSessionFromCookie(",
+  "validateProfissionalAppSession(",
   "requireProfissionalSession(",
   "requireProfissionalAppContext(",
   "requireProfissionalServerContext(",
@@ -44,6 +45,8 @@ const GUARD_HINTS = [
   "getUser(",
   "resolveAdminMasterAccessForIdentity(",
   "assertPublicRateLimit(",
+  "validateSecurityEventToken(",
+  "verifyGoogleCalendarState(",
   "createClient(",
   "auth.uid",
 ];

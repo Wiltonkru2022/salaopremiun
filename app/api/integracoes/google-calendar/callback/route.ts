@@ -1,28 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { getGoogleCalendarEnv, isGoogleCalendarConfigured } from "@/lib/google-calendar/oauth";
+import { verifyGoogleCalendarState } from "@/lib/google-calendar/state";
 
 export const dynamic = "force-dynamic";
-
-type GoogleState = {
-  idSalao?: string;
-  returnTo?: string;
-};
-
-function parseState(value: string | null): GoogleState {
-  if (!value) return {};
-  try {
-    return JSON.parse(Buffer.from(value, "base64url").toString("utf8")) as GoogleState;
-  } catch {
-    return {};
-  }
-}
 
 export async function GET(request: NextRequest) {
   const url = new URL(request.url);
   const code = url.searchParams.get("code");
-  const state = parseState(url.searchParams.get("state"));
-  const idSalao = String(state.idSalao || "").trim();
+  const state = isGoogleCalendarConfigured()
+    ? verifyGoogleCalendarState(url.searchParams.get("state"))
+    : null;
+  const idSalao = String(state?.idSalao || "").trim();
 
   if (!code || !idSalao || !isGoogleCalendarConfigured()) {
     return NextResponse.redirect(
@@ -95,6 +84,6 @@ export async function GET(request: NextRequest) {
   }
 
   return NextResponse.redirect(
-    `https://painel.salaopremiun.com.br${state.returnTo || "/perfil-salao?google_calendar=connected"}`
+    `https://painel.salaopremiun.com.br${state?.returnTo || "/perfil-salao?google_calendar=connected"}`
   );
 }

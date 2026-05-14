@@ -19,6 +19,15 @@ function Info(props: { label: string; value: string }) {
 
 export const dynamic = "force-dynamic";
 
+const WHATSAPP_DETAIL_COLUMNS: Record<string, string> = {
+  whatsapp_envios:
+    "id, id_salao, tipo, destino, template, status, custo_creditos, erro_texto, criado_em, enviado_em",
+  whatsapp_filas:
+    "id, id_salao, status, tentativas, ultimo_erro, criado_em, processado_em",
+  whatsapp_pacote_saloes:
+    "id, id_salao, creditos_total, creditos_usados, creditos_saldo, status, comprado_em, expira_em",
+};
+
 export default async function AdminMasterWhatsappDetailPage({
   params,
 }: {
@@ -40,7 +49,11 @@ export default async function AdminMasterWhatsappDetailPage({
           : null;
   if (!table) notFound();
 
-  const { data } = await supabase.from(table).select("*").eq("id", rawId).maybeSingle();
+  const { data } = await (supabase as any)
+    .from(table)
+    .select(WHATSAPP_DETAIL_COLUMNS[table])
+    .eq("id", rawId)
+    .maybeSingle();
   if (!data?.id) notFound();
 
   const row = data as Record<string, unknown>;

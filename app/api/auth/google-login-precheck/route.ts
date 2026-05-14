@@ -1,4 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
+import {
+  assertPublicRateLimit,
+  getPublicRateLimitIdentity,
+} from "@/lib/security/public-rate-limit";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
@@ -25,6 +29,26 @@ export async function POST(request: NextRequest) {
         error: "Digite o e-mail do salão antes de entrar com Google.",
       },
       { status: 400 }
+    );
+  }
+
+  try {
+    assertPublicRateLimit({
+      key: getPublicRateLimitIdentity(request, `google-login-precheck:${email}`),
+      limit: 12,
+      windowMs: 10 * 60 * 1000,
+    });
+  } catch (error) {
+    return NextResponse.json(
+      {
+        ok: false,
+        allowed: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : "Muitas tentativas. Aguarde alguns minutos e tente novamente.",
+      },
+      { status: 429 }
     );
   }
 

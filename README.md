@@ -557,6 +557,29 @@ Use este checklist antes de dizer que está pronto para produção:
 - [ ] Google Calendar/login Google foram testados com conta conectada e desconectada.
 - [ ] API Oracle VPS responde `/health`, `/ready` e aparece saudável no Admin Master.
 
+## Validação Real
+
+Este README descreve a arquitetura correta, mas não substitui teste real. Para dizer que o sistema está redondo, rode validação local e confira produção:
+
+```bash
+npm run lint
+npm run typecheck
+npm run build
+npm run launch:validate
+```
+
+Depois teste manualmente:
+
+- site público, sitemap e robots;
+- cadastro oficial em `https://cadastro.salaopremiun.com.br/cadastro-salao`;
+- login, recuperação e atualização de senha;
+- painel do salão, agenda, caixa e assinatura;
+- App Cliente, reserva, perfil, notificações e avaliação;
+- App Profissional, agenda, comandas, perfil e notificações;
+- Admin Master, saúde operacional, logs e planos;
+- API VPS em `/health`, `/ready`, `/status`;
+- Google Calendar conectado, desconectado e bloqueado por plano.
+
 ## Runbook de Incidentes
 
 Quando algo falhar em produção:

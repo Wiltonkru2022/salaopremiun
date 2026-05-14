@@ -27,6 +27,9 @@ type DeletedSalonRow = {
   metadata: Json | null;
 };
 
+const DELETED_SALON_COLUMNS =
+  "id, id_salao_original, nome_salao, nome_responsavel, email, telefone, whatsapp, cpf_cnpj, endereco_completo, cidade, estado, bairro, cep, data_exclusao, motivo, origem, metadata";
+
 function metadataObject(value: Json | null | undefined): Record<string, Json> {
   if (!value || typeof value !== "object" || Array.isArray(value)) return {};
   return value as Record<string, Json>;
@@ -46,7 +49,7 @@ async function carregarSalaoExcluido(id: string) {
   const supabase = getSupabaseAdmin();
   const { data, error } = await (supabase as any)
     .from("reativar_salao")
-    .select("*")
+    .select(DELETED_SALON_COLUMNS)
     .eq("id", id)
     .maybeSingle();
 

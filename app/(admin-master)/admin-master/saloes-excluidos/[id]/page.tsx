@@ -43,6 +43,9 @@ type DeletedSalonDetail = {
   created_at: string | null;
 };
 
+const DELETED_SALON_DETAIL_COLUMNS =
+  "id, id_salao_original, nome_salao, nome_responsavel, email, telefone, whatsapp, cpf_cnpj, endereco_completo, cidade, estado, bairro, cep, data_exclusao, motivo, origem, metadata, created_at";
+
 function formatDate(value: string | null | undefined) {
   if (!value) return "-";
   const date = new Date(value);
@@ -122,7 +125,7 @@ export default async function AdminMasterSalaoExcluidoDetailPage({
 
   const { data, error } = await (supabase as any)
     .from("reativar_salao")
-    .select("*")
+    .select(DELETED_SALON_DETAIL_COLUMNS)
     .eq("id", id)
     .maybeSingle();
 

@@ -30,6 +30,7 @@ const GUARD_HINTS = [
   "requireAdminMasterUser(",
   "getAdminMasterAccess(",
   "getProfissionalSessionFromCookie(",
+  "validateProfissionalAppSession(",
   "requireProfissionalSession(",
   "requireProfissionalAppContext(",
   "requireProfissionalServerContext(",
@@ -51,6 +52,7 @@ const GUARD_HINTS = [
   "createSuporteTicketService(",
   "resolveAdminMasterAccessForIdentity(",
   "assertPublicRateLimit(",
+  "validateSecurityEventToken(",
   "auth.getUser(",
 ];
 
