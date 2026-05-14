@@ -96,6 +96,20 @@ function googleCalendarActionError(payload: Record<string, unknown>) {
   });
 }
 
+function isGoogleCalendarAccessError(message: string) {
+  const normalized = message.toLowerCase();
+  return (
+    normalized.includes("invalid_grant") ||
+    normalized.includes("invalid credentials") ||
+    normalized.includes("unauthorized") ||
+    normalized.includes("access not configured") ||
+    normalized.includes("google n") ||
+    normalized.includes("token") ||
+    normalized.includes("renovou") ||
+    normalized.includes("aceitou o evento")
+  );
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = payloadSchema.parse(await req.json());
@@ -266,9 +280,19 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    if (
+      error instanceof Error &&
+      isGoogleCalendarAccessError(error.message || "")
+    ) {
+      return googleCalendarActionError({
+        requiresConnection: true,
+        connectUrl: "/perfil-salao?google_calendar=reconnect",
+        error:
+          "O Google Calendar está conectado, mas o Google recusou o acesso. Desconecte e conecte a agenda novamente no Perfil do Salão.",
+      });
+    }
+
     return googleCalendarActionError({
-      requiresConfig: true,
-      connectUrl: "/perfil-salao?google_calendar=configure",
       error:
         error instanceof Error
           ? error.message

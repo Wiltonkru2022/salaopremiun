@@ -979,19 +979,24 @@ export default function AgendaPage() {
           return;
         }
 
-        if (payload.requiresConnection && payload.connectUrl) {
-          window.location.assign(
-            new URL(payload.connectUrl, window.location.origin).toString()
+        if (payload.requiresConnection) {
+          abrirAviso(
+            "Google Calendar precisa de aten??o",
+            payload.error ||
+              "Conecte ou reconecte o Google Calendar no Perfil do Sal?o para sincronizar a agenda automaticamente.",
+            "warning",
+            payload.connectUrl || "/perfil-salao?google_calendar=configure"
           );
           return;
         }
 
-        if (payload.requiresConnection || payload.requiresConfig) {
+        if (payload.requiresConfig) {
           abrirAviso(
-            "Configure a integração com Google Calendar",
-            "Conecte o Google Calendar no Perfil do Salão para sincronizar a agenda automaticamente.",
+            "Configura??o do Google Calendar",
+            payload.error ||
+              "Confira a configura??o do Google Calendar antes de sincronizar a agenda automaticamente.",
             "warning",
-            "/perfil-salao?google_calendar=configure"
+            payload.connectUrl || "/perfil-salao?google_calendar=configure"
           );
           return;
         }
