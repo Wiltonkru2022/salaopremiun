@@ -104,6 +104,12 @@ type GoogleCalendarConnectionState = {
   googleEmail: string | null;
 };
 
+type GoogleLoginConnectionState = {
+  loading: boolean;
+  connected: boolean;
+  googleEmail: string | null;
+};
+
 type SalaoProfileRow = {
   id?: string | null;
   nome?: string | null;
@@ -314,7 +320,13 @@ export default function PerfilSalaoPage() {
       blockReason: null,
       googleEmail: null,
     });
+  const [googleLogin, setGoogleLogin] = useState<GoogleLoginConnectionState>({
+    loading: true,
+    connected: false,
+    googleEmail: null,
+  });
   const [disconnectingGoogle, setDisconnectingGoogle] = useState(false);
+  const [linkingGoogleLogin, setLinkingGoogleLogin] = useState(false);
   const [unlinkingGoogleLogin, setUnlinkingGoogleLogin] = useState(false);
   const [creatingRecoveryTicket, setCreatingRecoveryTicket] = useState(false);
   const [deletingSalao, setDeletingSalao] = useState(false);
@@ -353,6 +365,7 @@ export default function PerfilSalaoPage() {
   );
   const publicUrl = useMemo(() => buildSalaoPublicUrl(publicSlug), [publicSlug]);
   const googleCalendarStatus = searchParams.get("google_calendar");
+  const googleLoginStatus = searchParams.get("google_login");
   const qrCodeUrl = useMemo(
     () =>
       `/api/painel/qrcode?text=${encodeURIComponent(
@@ -513,6 +526,39 @@ export default function PerfilSalaoPage() {
     }
   }, []);
 
+  const carregarGoogleLogin = useCallback(async () => {
+    try {
+      setGoogleLogin((current) => ({ ...current, loading: true }));
+      const response = await fetch("/api/integracoes/google-login/status", {
+        method: "GET",
+        cache: "no-store",
+      });
+      const data = (await response.json().catch(() => null)) as
+        | {
+            ok?: boolean;
+            connected?: boolean;
+            googleEmail?: string | null;
+          }
+        | null;
+
+      if (!response.ok || !data?.ok) {
+        throw new Error("Não foi possível verificar o login com Google.");
+      }
+
+      setGoogleLogin({
+        loading: false,
+        connected: Boolean(data.connected),
+        googleEmail: data.googleEmail || null,
+      });
+    } catch {
+      setGoogleLogin({
+        loading: false,
+        connected: false,
+        googleEmail: null,
+      });
+    }
+  }, []);
+
   const carregarPerfil = useCallback(async () => {
     try {
       setLoading(true);
@@ -596,6 +642,7 @@ export default function PerfilSalaoPage() {
         carregarMfa(),
         carregarPortfolio(),
         carregarGoogleCalendar(),
+        carregarGoogleLogin(),
       ]);
     } catch (error: unknown) {
       setErro(
@@ -606,6 +653,7 @@ export default function PerfilSalaoPage() {
     }
   }, [
     carregarGoogleCalendar,
+    carregarGoogleLogin,
     carregarMfa,
     carregarPortfolio,
     supabase,
@@ -615,6 +663,33 @@ export default function PerfilSalaoPage() {
   useEffect(() => {
     void carregarPerfil();
   }, [carregarPerfil]);
+
+  useEffect(() => {
+    if (loading) return;
+
+    if (googleLoginStatus === "connected") {
+      setErro("");
+      setMsg("Login com Google integrado com sucesso.");
+      return;
+    }
+
+    if (googleCalendarStatus === "connected") {
+      setErro("");
+      setMsg("Google Calendar conectado com sucesso.");
+      return;
+    }
+
+    if (googleCalendarStatus === "env") {
+      setMsg("");
+      setErro("Configure as variáveis do Google Calendar na Vercel antes de conectar.");
+      return;
+    }
+
+    if (googleCalendarStatus === "erro") {
+      setMsg("");
+      setErro("Não foi possível concluir a conexão com Google Calendar. Confira o redirect do Google Cloud e tente novamente.");
+    }
+  }, [googleCalendarStatus, googleLoginStatus, loading]);
 
   async function fecharModalAutenticador() {
     if (totpSetup?.factorId && !autenticadorAtivo) {
@@ -1047,7 +1122,7 @@ export default function PerfilSalaoPage() {
         | null;
 
       if (!response.ok || !data?.ok) {
-        throw new Error(data?.error || "Não foi possível desconectar a conta Google.");
+        throw new Error(data?.error || "Não foi possível desconectar o Google Calendar.");
       }
 
       setGoogleCalendar((current) => ({
@@ -1055,15 +1130,60 @@ export default function PerfilSalaoPage() {
         connected: false,
         googleEmail: null,
       }));
-      setMsg("Google Calendar desconectado. O login com Google continua separado e pode ser removido no botão abaixo.");
+      setMsg("Google Calendar desconectado. O login com Google continua separado.");
     } catch (error) {
       setErro(
         error instanceof Error
           ? error.message
-          : "Erro ao desconectar a conta Google."
+          : "Erro ao desconectar o Google Calendar."
       );
     } finally {
       setDisconnectingGoogle(false);
+    }
+  }
+
+  async function integrarLoginGoogle() {
+    try {
+      setLinkingGoogleLogin(true);
+      setErro("");
+      setMsg("");
+
+      const callbackUrl = new URL("/auth/callback", window.location.origin);
+      callbackUrl.searchParams.set(
+        "next",
+        "/perfil-salao?google_login=connected"
+      );
+
+      const { data, error } = await supabase.auth.linkIdentity({
+        provider: "google",
+        options: {
+          redirectTo: callbackUrl.toString(),
+          queryParams: {
+            access_type: "offline",
+            prompt: "select_account",
+          },
+        },
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      if (data?.url) {
+        window.location.assign(data.url);
+        return;
+      }
+
+      setMsg("Login com Google já está vinculado nesta conta.");
+      await carregarGoogleLogin();
+    } catch (error) {
+      setErro(
+        error instanceof Error
+          ? error.message
+          : "Não foi possível integrar o login com Google."
+      );
+    } finally {
+      setLinkingGoogleLogin(false);
     }
   }
 
@@ -1073,41 +1193,30 @@ export default function PerfilSalaoPage() {
       setErro("");
       setMsg("");
 
-      const { data, error } = await supabase.auth.getUserIdentities();
+      const response = await fetch("/api/integracoes/google-login/status", {
+        method: "DELETE",
+      });
+      const result = (await response.json().catch(() => null)) as
+        | { ok?: boolean; error?: string; message?: string }
+        | null;
 
-      if (error) {
+      if (!response.ok || !result?.ok) {
         throw new Error(
-          error.message ||
-            "Não foi possível consultar os vínculos de login desta conta."
-        );
-      }
-
-      const googleIdentity = data.identities.find(
-        (identity) => identity.provider === "google"
-      );
-
-      if (!googleIdentity) {
-        setMsg("Esta conta já não possui login com Google vinculado.");
-        return;
-      }
-
-      if (data.identities.length < 2) {
-        throw new Error(
-          "Para remover o login com Google, mantenha e-mail e senha ativos nesta conta."
-        );
-      }
-
-      const { error: unlinkError } =
-        await supabase.auth.unlinkIdentity(googleIdentity);
-
-      if (unlinkError) {
-        throw new Error(
-          unlinkError.message ||
+          result?.error ||
             "Não foi possível remover o login com Google desta conta."
         );
       }
 
-      setMsg("Login com Google removido. Esta conta continua entrando por e-mail e senha.");
+      setGoogleLogin({
+        loading: false,
+        connected: false,
+        googleEmail: null,
+      });
+      setMsg(
+        result.message ||
+          "Login com Google removido. Esta conta continua entrando por e-mail e senha."
+      );
+      await carregarGoogleLogin();
     } catch (error) {
       setErro(
         error instanceof Error
@@ -1566,6 +1675,43 @@ export default function PerfilSalaoPage() {
           </div>
         ) : null}
 
+        <AppModal
+          open={Boolean(erro || msg)}
+          onClose={() => {
+            setErro("");
+            setMsg("");
+          }}
+          title={erro ? "Atenção" : "Tudo certo"}
+          description={
+            erro
+              ? "Revise a mensagem antes de continuar."
+              : "A ação foi concluída com segurança."
+          }
+          maxWidthClassName="max-w-md"
+          footer={
+            <button
+              type="button"
+              onClick={() => {
+                setErro("");
+                setMsg("");
+              }}
+              className="inline-flex h-11 w-full items-center justify-center rounded-2xl bg-zinc-950 px-4 text-sm font-black text-white transition hover:bg-zinc-800"
+            >
+              Entendi
+            </button>
+          }
+        >
+          <div
+            className={`rounded-2xl border px-4 py-3 text-sm font-semibold leading-6 ${
+              erro
+                ? "border-rose-200 bg-rose-50 text-rose-700"
+                : "border-emerald-200 bg-emerald-50 text-emerald-700"
+            }`}
+          >
+            {erro || msg}
+          </div>
+        </AppModal>
+
         <div className="grid gap-4 2xl:grid-cols-[minmax(0,1.45fr)_340px]">
           <div className="space-y-4">
             <SectionCard
@@ -1650,79 +1796,65 @@ export default function PerfilSalaoPage() {
 
             <SectionCard
               icon={<CalendarClock size={18} />}
-              title="Google Calendar e login integração"
-              description="Conecte a conta Google autorizada do salão para sincronizar agenda e liberar login com Google."
+              title="Google Calendar"
+              description="Conecte a agenda externa do salão para sincronizar atendimentos confirmados automaticamente."
             >
-              <div className="grid gap-3">
-                <div className="rounded-[22px] border border-zinc-200 bg-zinc-50 p-4">
-                  <div className="text-sm font-bold text-zinc-950">
-                    Google Calendar
+              <div className="rounded-[22px] border border-zinc-200 bg-zinc-50 p-4">
+                <div className="text-sm font-bold text-zinc-950">
+                  Integração da agenda
+                </div>
+                <p className="mt-2 text-sm leading-6 text-zinc-600">
+                  Ao conectar, os atendimentos confirmados da agenda podem ser
+                  enviados automaticamente para o Google Calendar, sem baixar
+                  arquivo manual.
+                </p>
+                <div className="mt-3 rounded-2xl border border-zinc-200 bg-white px-3 py-2 text-sm font-semibold text-zinc-700">
+                  {googleCalendar.loading
+                    ? "Verificando conexão..."
+                    : googleCalendar.connected
+                      ? `Conectado em ${googleCalendar.googleEmail || "conta Google"}`
+                      : !googleCalendar.allowed
+                        ? googleCalendar.blockReason ||
+                          "Google Calendar está disponível no Pro, Premium ou teste grátis."
+                      : googleCalendar.configured
+                        ? "Ainda não conectado."
+                        : "A integração ainda não está configurada na Vercel."}
+                </div>
+                {googleCalendarStatus === "connected" ? (
+                  <div className="mt-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700">
+                    Google Calendar conectado com sucesso.
                   </div>
-                  <p className="mt-2 text-sm leading-6 text-zinc-600">
-                    Ao conectar, os atendimentos confirmados da agenda podem ser
-                    enviados automaticamente para o Google Calendar, sem baixar
-                    arquivo manual.
-                  </p>
-                  <div className="mt-3 rounded-2xl border border-zinc-200 bg-white px-3 py-2 text-sm font-semibold text-zinc-700">
-                    {googleCalendar.loading
-                      ? "Verificando conexão..."
-                      : googleCalendar.connected
-                        ? `Conectado em ${googleCalendar.googleEmail || "conta Google"}`
-                        : !googleCalendar.allowed
-                          ? googleCalendar.blockReason ||
-                            "Google Calendar está disponível no Pro, Premium ou teste grátis."
-                        : googleCalendar.configured
-                          ? "Ainda não conectado."
-                          : "A integração ainda não está configurada na Vercel."}
+                ) : googleCalendarStatus === "env" ? (
+                  <div className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-800">
+                    Configure as variáveis do Google Calendar na Vercel antes
+                    de conectar.
                   </div>
-                  {googleCalendarStatus === "connected" ? (
-                    <div className="mt-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700">
-                      Google Calendar conectado com sucesso.
-                    </div>
-                  ) : googleCalendarStatus === "env" ? (
-                    <div className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-800">
-                      Configure as variáveis do Google Calendar na Vercel antes
-                      de conectar.
-                    </div>
-                  ) : googleCalendarStatus === "erro" ? (
-                    <div className="mt-3 rounded-2xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-semibold text-rose-700">
-                      Não foi possível concluir a conexão. Confira o redirect do
-                      Google Cloud e tente novamente.
-                    </div>
-                  ) : null}
+                ) : googleCalendarStatus === "erro" ? (
+                  <div className="mt-3 rounded-2xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-semibold text-rose-700">
+                    Não foi possível concluir a conexão. Confira o redirect do
+                    Google Cloud e tente novamente.
+                  </div>
+                ) : null}
+
+                <div className="mt-4 flex flex-wrap gap-2">
                   {googleCalendar.connected ? (
-                    <div className="mt-4 flex flex-wrap gap-2">
-                      <button
-                        type="button"
-                        onClick={desconectarGoogleCalendar}
-                        disabled={disconnectingGoogle}
-                        className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-rose-200 bg-white px-4 text-sm font-bold text-rose-700 transition hover:bg-rose-50 disabled:opacity-60"
-                      >
-                        {disconnectingGoogle ? (
-                          <Loader2 className="animate-spin" size={16} />
-                        ) : (
-                          <Trash2 size={16} />
-                        )}
-                        Desconectar Google Agenda
-                      </button>
-                      <button
-                        type="button"
-                        onClick={removerLoginGoogle}
-                        disabled={unlinkingGoogleLogin}
-                        className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-zinc-200 bg-white px-4 text-sm font-bold text-zinc-800 transition hover:border-zinc-950 disabled:opacity-60"
-                      >
-                        {unlinkingGoogleLogin ? (
-                          <Loader2 className="animate-spin" size={16} />
-                        ) : (
-                          <LockKeyhole size={16} />
-                        )}
-                        Remover login com Google
-                      </button>
-                    </div>
+                    <button
+                      type="button"
+                      onClick={desconectarGoogleCalendar}
+                      disabled={disconnectingGoogle}
+                      className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-rose-200 bg-white px-4 text-sm font-bold text-rose-700 transition hover:bg-rose-50 disabled:opacity-60"
+                    >
+                      {disconnectingGoogle ? (
+                        <Loader2 className="animate-spin" size={16} />
+                      ) : (
+                        <Trash2 size={16} />
+                      )}
+                      Desconectar Google Agenda
+                    </button>
                   ) : googleCalendar.configured && googleCalendar.allowed ? (
                     <a
                       href="/api/integracoes/google-calendar/connect"
-                      className={`mt-4 inline-flex h-11 items-center justify-center gap-2 rounded-2xl px-4 text-sm font-bold transition ${
+                      className={`inline-flex h-11 items-center justify-center gap-2 rounded-2xl px-4 text-sm font-bold transition ${
                         googleCalendar.loading
                           ? "pointer-events-none bg-zinc-200 text-zinc-500"
                           : "bg-zinc-950 text-white hover:bg-zinc-800"
@@ -1735,18 +1867,73 @@ export default function PerfilSalaoPage() {
                     <button
                       type="button"
                       disabled
-                      className="mt-4 inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-zinc-200 px-4 text-sm font-bold text-zinc-500"
+                      className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-zinc-200 px-4 text-sm font-bold text-zinc-500"
                     >
                       <CalendarClock size={16} />
                       {googleCalendar.allowed
                         ? "Google Calendar indisponível"
-                        : "Disponível no Pro e Premium"}
+                        : "Dispon?vel no Pro e Premium"}
                     </button>
                   )}
-                  <p className="mt-3 text-xs leading-5 text-zinc-500">
-                    Somente a conta Google conectada aqui poderá entrar no painel
-                    pelo botão Entrar com Google.
-                  </p>
+                </div>
+              </div>
+            </SectionCard>
+
+            <SectionCard
+              icon={<LockKeyhole size={18} />}
+              title="Login com Google"
+              description="Controle separado do acesso ao painel usando a conta Google vinculada ao usuário."
+            >
+              <div className="rounded-[22px] border border-zinc-200 bg-zinc-50 p-4">
+                <div className="text-sm font-bold text-zinc-950">
+                  Segurança do acesso
+                </div>
+                <p className="mt-2 text-sm leading-6 text-zinc-600">
+                  Este bloco libera ou remove o login com Google no painel. Ele não
+                  mexe na sincronização do Google Calendar.
+                </p>
+                <div className="mt-3 rounded-2xl border border-zinc-200 bg-white px-3 py-2 text-sm font-semibold text-zinc-700">
+                  {googleLogin.loading
+                    ? "Verificando login com Google..."
+                    : googleLogin.connected
+                      ? `Login integrado em ${googleLogin.googleEmail || "conta Google"}.`
+                      : "Login com Google ainda não integrado nesta conta."}
+                </div>
+                {googleLoginStatus === "connected" ? (
+                  <div className="mt-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700">
+                    Login com Google integrado com sucesso.
+                  </div>
+                ) : null}
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {!googleLogin.connected ? (
+                    <button
+                      type="button"
+                      onClick={integrarLoginGoogle}
+                      disabled={linkingGoogleLogin || googleLogin.loading}
+                      className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-zinc-950 px-4 text-sm font-bold text-white transition hover:bg-zinc-800 disabled:opacity-60"
+                    >
+                      {linkingGoogleLogin ? (
+                        <Loader2 className="animate-spin" size={16} />
+                      ) : (
+                        <LockKeyhole size={16} />
+                      )}
+                      Integrar login com Google
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={removerLoginGoogle}
+                      disabled={unlinkingGoogleLogin}
+                      className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-rose-200 bg-white px-4 text-sm font-bold text-rose-700 transition hover:bg-rose-50 disabled:opacity-60"
+                    >
+                      {unlinkingGoogleLogin ? (
+                        <Loader2 className="animate-spin" size={16} />
+                      ) : (
+                        <Trash2 size={16} />
+                      )}
+                      Remover login com Google
+                    </button>
+                  )}
                 </div>
               </div>
             </SectionCard>

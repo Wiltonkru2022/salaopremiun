@@ -982,7 +982,7 @@ export default function AgendaPage() {
         if (payload.requiresConnection || payload.requiresConfig) {
           abrirAviso(
             "Configure a integração com Google Calendar",
-            "Conecte a conta Google no Perfil do Salão para sincronizar a agenda automaticamente e liberar a facilidade de login com Google.",
+            "Conecte o Google Calendar no Perfil do Salão para sincronizar a agenda automaticamente.",
             "warning",
             "/perfil-salao?google_calendar=configure"
           );

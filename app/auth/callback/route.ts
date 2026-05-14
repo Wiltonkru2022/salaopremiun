@@ -148,11 +148,7 @@ export async function GET(request: NextRequest) {
     .or(`auth_user_id.eq.${user.id},email.eq.${email}`)
     .limit(5);
 
-  const usuario = (usuarios || []).find(
-    (item) =>
-      String(item.email || "").toLowerCase() === email ||
-      item.auth_user_id === user.id
-  );
+  const usuario = (usuarios || []).find((item) => item.auth_user_id === user.id);
 
   if (!usuario?.id_salao || String(usuario.status || "").toLowerCase() !== "ativo") {
     await unlinkCurrentGoogleIdentity(supabase as any, user);
@@ -160,25 +156,10 @@ export async function GET(request: NextRequest) {
     return redirectToLogin(requestUrl, "google_nao_vinculado");
   }
 
-  const { data: connection } = await (admin as any)
-    .from("saloes_google_calendar_connections")
-    .select("id_salao, google_email, ativo")
-    .eq("id_salao", usuario.id_salao)
-    .eq("google_email", email)
-    .eq("ativo", true)
-    .maybeSingle();
-
-  if (!connection) {
+  if (String(usuario.email || "").trim().toLowerCase() !== email) {
     await unlinkCurrentGoogleIdentity(supabase as any, user);
     await supabase.auth.signOut();
     return redirectToLogin(requestUrl, "google_nao_vinculado");
-  }
-
-  if (usuario.auth_user_id !== user.id) {
-    await admin
-      .from("usuarios")
-      .update({ auth_user_id: user.id })
-      .eq("id", usuario.id);
   }
 
   return buildRedirectBridge(
