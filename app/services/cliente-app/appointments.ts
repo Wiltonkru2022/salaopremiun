@@ -345,6 +345,7 @@ async function validarCupomAgendamento(params: {
   codigoCupom: string;
   subtotal: number;
   idServico: string;
+  data: string;
 }) {
   if (!params.codigoCupom) {
     return { cupom: null as Record<string, unknown> | null, desconto: 0, erro: null as string | null };
@@ -354,7 +355,7 @@ async function validarCupomAgendamento(params: {
   const { data: cupom, error } = await (params.supabaseAdmin as any)
     .from("cupons_salao")
     .select(
-      "id, codigo, nome, tipo_desconto, valor_desconto, valor_minimo, limite_uso_total, limite_uso_cliente, valido_de, valido_ate, ativo, requer_resgate, status_campanha"
+      "id, codigo, nome, tipo_desconto, valor_desconto, valor_minimo, limite_uso_total, limite_uso_cliente, limite_uso_dia, limite_por_telefone_email, valido_de, valido_ate, ativo, requer_resgate, status_campanha"
     )
     .eq("id_salao", params.idSalao)
     .eq("codigo", params.codigoCupom)
@@ -401,6 +402,59 @@ async function validarCupomAgendamento(params: {
 
   if (cupom.limite_uso_cliente && Number(usosCliente || 0) >= Number(cupom.limite_uso_cliente)) {
     return { cupom: null, desconto: 0, erro: "Você já usou este cupom." };
+  }
+
+  const limiteDia = Number(cupom.limite_uso_dia || 0);
+  if (limiteDia > 0) {
+    const { count: usosDia } = await (params.supabaseAdmin as any)
+      .from("cupom_salao_usos")
+      .select("id", { count: "exact", head: true })
+      .eq("id_cupom", cupom.id)
+      .eq("id_salao", params.idSalao)
+      .eq("metadata->>data", params.data);
+
+    if (Number(usosDia || 0) >= limiteDia) {
+      return {
+        cupom: null,
+        desconto: 0,
+        erro: "O limite desta campanha para esse dia acabou.",
+      };
+    }
+  }
+
+  if (cupom.limite_por_telefone_email !== false) {
+    const { data: contaCupom } = await (params.supabaseAdmin as any)
+      .from("clientes_app_auth")
+      .select("email, telefone")
+      .eq("id", params.clienteAppContaId)
+      .limit(1)
+      .maybeSingle();
+    const email = String(contaCupom?.email || "").trim().toLowerCase();
+    const telefone = String(contaCupom?.telefone || "").replace(/\D/g, "");
+
+    if (email || telefone) {
+      const filtros = [
+        email ? `metadata->>email.eq.${email}` : "",
+        telefone ? `metadata->>telefone.eq.${telefone}` : "",
+      ]
+        .filter(Boolean)
+        .join(",");
+      const { data: usosMesmoContato } = await (params.supabaseAdmin as any)
+        .from("cupom_salao_usos")
+        .select("id")
+        .eq("id_cupom", cupom.id)
+        .eq("id_salao", params.idSalao)
+        .or(filtros)
+        .limit(1);
+
+      if (usosMesmoContato?.length) {
+        return {
+          cupom: null,
+          desconto: 0,
+          erro: "Este contato ja usou esta campanha.",
+        };
+      }
+    }
   }
 
   if (cupom.requer_resgate !== false) {
@@ -741,7 +795,7 @@ export async function createClienteAppAppointment(
       const [clienteResult, bookingContext] = await Promise.all([
         supabaseAdmin
           .from("clientes")
-          .select("id, id_salao, nome, status")
+          .select("id, id_salao, nome, status, email, telefone")
           .eq("id", idCliente)
           .eq("id_salao", idSalao)
           .limit(1)
@@ -925,6 +979,7 @@ export async function createClienteAppAppointment(
         codigoCupom,
         subtotal: subtotalEstimado,
         idServico,
+        data,
       });
 
       if (cupomResult.erro) {
@@ -997,7 +1052,13 @@ export async function createClienteAppAppointment(
           codigo: codigoCupom,
           valor_desconto: cupomResult.desconto,
           status: "reservado",
-          metadata: { origem: "app_cliente", id_servico: idServico },
+          metadata: {
+            origem: "app_cliente",
+            id_servico: idServico,
+            data,
+            telefone: String(clienteResult.data.telefone || "").replace(/\D/g, "") || null,
+            email: String(clienteResult.data.email || "").trim().toLowerCase() || null,
+          },
         });
 
         await (supabaseAdmin as any).from("campanha_eventos").insert({

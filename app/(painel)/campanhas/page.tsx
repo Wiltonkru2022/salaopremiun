@@ -410,7 +410,7 @@ export default async function CampanhasPage({
                         {statusAtual === "ativa" ? "Pausar" : "Ativar"}
                       </button>
                     </form>
-                    <a href={`#relatorio-${cupom.id}`} className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-zinc-200 bg-white px-4 text-sm font-black text-zinc-950">
+                    <a href={`/campanhas/${cupom.id}`} className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-zinc-200 bg-white px-4 text-sm font-black text-zinc-950">
                       <BarChart3 size={16} /> Relatorio
                     </a>
                   </div>
