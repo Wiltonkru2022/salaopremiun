@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { getPainelUserContext } from "@/lib/auth/get-painel-user-context";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import PaginationLinks from "@/components/ui/PaginationLinks";
 import {
   adicionarClienteCampanhaAction,
   atualizarCampanhaAction,
@@ -70,8 +71,10 @@ function statusClass(label: string) {
   return "border-amber-200 bg-amber-50 text-amber-800";
 }
 
-async function loadCampanhaDetalhe(idSalao: string, id: string) {
+async function loadCampanhaDetalhe(idSalao: string, id: string, usosPage: number, usosPageSize: number) {
   const supabase = getSupabaseAdmin();
+  const usosFrom = usosPage * usosPageSize;
+  const usosTo = usosFrom + usosPageSize - 1;
   const [
     campanhaResult,
     servicosResult,
@@ -96,11 +99,11 @@ async function loadCampanhaDetalhe(idSalao: string, id: string) {
       .limit(120),
     (supabase as any)
       .from("cupom_salao_usos")
-      .select("id, id_cliente, id_agendamento, valor_desconto, status, created_at, metadata, clientes(nome, telefone, email)")
+      .select("id, id_cliente, id_agendamento, valor_desconto, status, created_at, metadata, clientes(nome, telefone, email)", { count: "exact" })
       .eq("id_salao", idSalao)
       .eq("id_cupom", id)
       .order("created_at", { ascending: false })
-      .limit(200),
+      .range(usosFrom, usosTo),
     (supabase as any)
       .from("campanha_eventos")
       .select("id, tipo, metadata, created_at, clientes(nome)")
@@ -140,6 +143,7 @@ async function loadCampanhaDetalhe(idSalao: string, id: string) {
   if (!campanhaResult.data?.id) return null;
 
   const usos = (usosResult.data || []) as Array<Record<string, any>>;
+  const totalUsos = Number(usosResult.count || usos.length);
   const eventos = (eventosResult.data || []) as Array<Record<string, any>>;
   const agendamentos = (agendamentosResult.data || []) as Array<Record<string, any>>;
   const cliques = eventos.filter((evento) => evento.tipo === "clique").length;
@@ -147,7 +151,7 @@ async function loadCampanhaDetalhe(idSalao: string, id: string) {
   const cancelados = agendamentos.filter((agenda) => String(agenda.status) === "cancelado").length;
   const clientesNovos = usos.filter((uso) => String(uso.metadata?.origem || "") === "app_cliente").length;
   const descontoTotal = usos.reduce((sum, uso) => sum + Number(uso.valor_desconto || 0), 0);
-  const conversao = cliques > 0 ? Math.round((usos.length / cliques) * 100) : 0;
+  const conversao = cliques > 0 ? Math.round((totalUsos / cliques) * 100) : 0;
   const servicos = (servicosResult.data || []) as Array<Record<string, any>>;
   const servicosMaisVendidos = servicos.map((servico) => {
     const idServico = String(servico.id_servico || "");
@@ -166,6 +170,7 @@ async function loadCampanhaDetalhe(idSalao: string, id: string) {
     clientes: (clientesResult.data || []) as Array<Record<string, any>>,
     servicosDisponiveis: (servicosDisponiveisResult.data || []) as Array<Record<string, any>>,
     metricas: {
+      totalUsos,
       cliques,
       agendamentos: agendamentosEvento || agendamentos.length,
       clientesNovos,
@@ -182,7 +187,7 @@ export default async function CampanhaDetalhePage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ ok?: string | string[]; erro?: string | string[] }>;
+  searchParams: Promise<{ ok?: string | string[]; erro?: string | string[]; pagina_usos?: string | string[] }>;
 }) {
   const { id } = await params;
   const query = await searchParams;
@@ -190,7 +195,10 @@ export default async function CampanhaDetalhePage({
   if (!user || !usuario?.id_salao) redirect("/login");
   if (String(usuario.nivel || "").toLowerCase() !== "admin") redirect("/dashboard");
 
-  const data = await loadCampanhaDetalhe(usuario.id_salao, id);
+  const paginaUsosParam = Array.isArray(query.pagina_usos) ? query.pagina_usos[0] : query.pagina_usos;
+  const paginaUsos = Math.max(0, Number(paginaUsosParam || 1) - 1);
+  const usosPageSize = 10;
+  const data = await loadCampanhaDetalhe(usuario.id_salao, id, paginaUsos, usosPageSize);
   if (!data) redirect("/campanhas?erro=Campanha%20nao%20encontrada.");
 
   const campanha = data.campanha;
@@ -205,7 +213,7 @@ export default async function CampanhaDetalhePage({
   ].join("\n");
   const whatsappDivulgacaoUrl = `https://wa.me/?text=${encodeURIComponent(mensagemDivulgacao)}`;
   const statusAtual = String(campanha.status_campanha || "ativa");
-  const statusReal = statusLabel(campanha, data.usos.length);
+  const statusReal = statusLabel(campanha, data.metricas.totalUsos);
   const ok = Array.isArray(query.ok) ? query.ok[0] : query.ok;
   const erro = Array.isArray(query.erro) ? query.erro[0] : query.erro;
   const servicosVinculadosMap = new Map(
@@ -215,8 +223,9 @@ export default async function CampanhaDetalhePage({
     { label: "Cliques", value: data.metricas.cliques, icon: Link2 },
     { label: "Agendamentos", value: data.metricas.agendamentos, icon: CalendarDays },
     { label: "Conversao", value: `${data.metricas.conversao}%`, icon: BarChart3 },
-    { label: "Desconto usado", value: money(data.metricas.descontoTotal), icon: Gift },
+    { label: "Desconto listado", value: money(data.metricas.descontoTotal), icon: Gift },
   ];
+  const getUsosHref = (page: number) => `/campanhas/${campanha.id}?pagina_usos=${page + 1}`;
 
   return (
     <main className="space-y-6">
@@ -563,7 +572,7 @@ export default async function CampanhaDetalhePage({
             <Users size={18} /> Clientes que usaram
           </h2>
           <div className="mt-4 overflow-hidden rounded-2xl border border-zinc-200">
-            {data.usos.slice(0, 12).map((uso) => {
+            {data.usos.map((uso) => {
               const cliente = Array.isArray(uso.clientes) ? uso.clientes[0] : uso.clientes;
               return (
                 <div key={String(uso.id)} className="grid grid-cols-[1fr_auto] gap-3 border-b border-zinc-100 px-4 py-3 text-sm last:border-b-0">
@@ -576,6 +585,13 @@ export default async function CampanhaDetalhePage({
               <p className="p-4 text-sm text-zinc-500">Nenhum uso ainda.</p>
             ) : null}
           </div>
+          <PaginationLinks
+            currentPage={paginaUsos}
+            pageSize={usosPageSize}
+            totalItems={data.metricas.totalUsos}
+            getHref={getUsosHref}
+            className="mt-4"
+          />
         </div>
 
         <div className="rounded-[1.75rem] border border-zinc-200 bg-white p-5 shadow-sm">
