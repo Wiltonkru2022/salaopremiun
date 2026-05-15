@@ -9,6 +9,7 @@ import {
   getClientAppSalonDetail,
   listClienteAppAvailableCoupons,
 } from "@/lib/client-app/queries";
+import { getCampaignAvailability, loadPublicCampaign } from "@/lib/campanhas/public";
 import { validateClienteAppSession } from "@/lib/client-context.server";
 import { buildSalaoPublicPath } from "@/lib/saloes/public-link";
 
@@ -21,13 +22,16 @@ export default async function ClienteSalonReservaPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ cupom?: string | string[] }>;
+  searchParams: Promise<{ cupom?: string | string[]; campanha?: string | string[] }>;
 }) {
   const { id } = await params;
   const query = await searchParams;
   const cupomInicial = String(
     Array.isArray(query.cupom) ? query.cupom[0] : query.cupom || ""
   ).trim().toUpperCase();
+  const campanhaSlug = String(
+    Array.isArray(query.campanha) ? query.campanha[0] : query.campanha || ""
+  ).trim();
 
   try {
     const salao = await getClientAppSalonDetail(id);
@@ -41,6 +45,18 @@ export default async function ClienteSalonReservaPage({
           idSalao: salao.id,
         })
       : [];
+    const campanha = campanhaSlug
+      ? await loadPublicCampaign(campanhaSlug).catch(() => null)
+      : null;
+    const campanhaOk =
+      campanha && campanha.idSalao === salao.id && getCampaignAvailability(campanha).ok;
+    const servicosCampanhaIds = new Set(
+      campanhaOk ? campanha.services.map((servico) => servico.id) : []
+    );
+    const servicosReserva =
+      campanhaOk && servicosCampanhaIds.size
+        ? salao.servicos.filter((servico) => servicosCampanhaIds.has(servico.id))
+        : salao.servicos;
 
     return (
       <ClientAppFrame title={salao.nome} subtitle="Reserva online">
@@ -65,7 +81,7 @@ export default async function ClienteSalonReservaPage({
           ) : session.context ? (
             <ClientBookingForm
               idSalao={salao.id}
-              servicos={salao.servicos}
+              servicos={servicosReserva}
               profissionais={salao.profissionais}
               intervaloMinutos={salao.intervaloAgendaMinutos}
               cuponsDisponiveis={cuponsDisponiveis}

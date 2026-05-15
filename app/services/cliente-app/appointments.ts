@@ -344,6 +344,7 @@ async function validarCupomAgendamento(params: {
   clienteAppContaId: string;
   codigoCupom: string;
   subtotal: number;
+  idServico: string;
 }) {
   if (!params.codigoCupom) {
     return { cupom: null as Record<string, unknown> | null, desconto: 0, erro: null as string | null };
@@ -353,7 +354,7 @@ async function validarCupomAgendamento(params: {
   const { data: cupom, error } = await (params.supabaseAdmin as any)
     .from("cupons_salao")
     .select(
-      "id, codigo, nome, tipo_desconto, valor_desconto, valor_minimo, limite_uso_total, limite_uso_cliente, valido_de, valido_ate, ativo, requer_resgate"
+      "id, codigo, nome, tipo_desconto, valor_desconto, valor_minimo, limite_uso_total, limite_uso_cliente, valido_de, valido_ate, ativo, requer_resgate, status_campanha"
     )
     .eq("id_salao", params.idSalao)
     .eq("codigo", params.codigoCupom)
@@ -371,6 +372,10 @@ async function validarCupomAgendamento(params: {
 
   if (cupom.valido_ate && String(cupom.valido_ate) < hoje) {
     return { cupom: null, desconto: 0, erro: "Este cupom expirou." };
+  }
+
+  if (String((cupom as any).status_campanha || "ativa") !== "ativa") {
+    return { cupom: null, desconto: 0, erro: "Essa campanha nao esta mais disponivel." };
   }
 
   const valorMinimo = Number(cupom.valor_minimo || 0);
@@ -417,13 +422,66 @@ async function validarCupomAgendamento(params: {
     }
   }
 
+  const { data: servicosCampanha } = await (params.supabaseAdmin as any)
+    .from("cupom_salao_servicos")
+    .select("id_servico, tipo_beneficio, valor_beneficio, limite_uso_servico")
+    .eq("id_cupom", cupom.id)
+    .eq("id_salao", params.idSalao)
+    .limit(200);
+
+  let desconto = calcularDescontoCupom({
+    tipo: String(cupom.tipo_desconto || "percentual"),
+    valor: Number(cupom.valor_desconto || 0),
+    subtotal: params.subtotal,
+  });
+
+  if (servicosCampanha?.length) {
+    const servicoCupom = (servicosCampanha as Array<Record<string, unknown>>).find(
+      (item) => String(item.id_servico || "") === params.idServico
+    );
+    if (!servicoCupom) {
+      return {
+        cupom: null,
+        desconto: 0,
+        erro: "Essa campanha nao esta disponivel para o servico escolhido.",
+      };
+    }
+
+    const limiteServico = Number(servicoCupom.limite_uso_servico || 0);
+    if (limiteServico > 0) {
+      const { count: usosServico } = await (params.supabaseAdmin as any)
+        .from("cupom_salao_usos")
+        .select("id", { count: "exact", head: true })
+        .eq("id_cupom", cupom.id)
+        .eq("id_salao", params.idSalao)
+        .eq("metadata->>id_servico", params.idServico);
+      if (Number(usosServico || 0) >= limiteServico) {
+        return {
+          cupom: null,
+          desconto: 0,
+          erro: "O limite desta campanha para esse servico acabou.",
+        };
+      }
+    }
+
+    const tipoBeneficio = String(servicoCupom.tipo_beneficio || "");
+    const valorBeneficio = Number(servicoCupom.valor_beneficio || 0);
+    if (tipoBeneficio === "preco_fixo") {
+      desconto = Math.max(0, params.subtotal - valorBeneficio);
+    } else if (tipoBeneficio === "desconto_valor") {
+      desconto = Math.min(params.subtotal, valorBeneficio);
+    } else if (tipoBeneficio === "desconto_percentual") {
+      desconto = calcularDescontoCupom({
+        tipo: "percentual",
+        valor: valorBeneficio,
+        subtotal: params.subtotal,
+      });
+    }
+  }
+
   return {
     cupom: cupom as Record<string, unknown>,
-    desconto: calcularDescontoCupom({
-      tipo: String(cupom.tipo_desconto || "percentual"),
-      valor: Number(cupom.valor_desconto || 0),
-      subtotal: params.subtotal,
-    }),
+    desconto,
     erro: null,
   };
 }
@@ -866,6 +924,7 @@ export async function createClienteAppAppointment(
         clienteAppContaId: idConta,
         codigoCupom,
         subtotal: subtotalEstimado,
+        idServico,
       });
 
       if (cupomResult.erro) {
@@ -938,7 +997,16 @@ export async function createClienteAppAppointment(
           codigo: codigoCupom,
           valor_desconto: cupomResult.desconto,
           status: "reservado",
-          metadata: { origem: "app_cliente" },
+          metadata: { origem: "app_cliente", id_servico: idServico },
+        });
+
+        await (supabaseAdmin as any).from("campanha_eventos").insert({
+          id_salao: idSalao,
+          id_cupom: cupomResult.cupom.id,
+          cliente_app_conta_id: idConta,
+          id_cliente: idCliente,
+          tipo: "agendamento",
+          metadata: { id_agendamento: idAgendamento, id_servico: idServico },
         });
 
         await (supabaseAdmin as any)
