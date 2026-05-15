@@ -77,13 +77,30 @@ async function loadCampanhaDetalhe(
   usosPage: number,
   usosPageSize: number,
   clientesPage: number,
-  clientesPageSize: number
+  clientesPageSize: number,
+  buscaCliente: string
 ) {
   const supabase = getSupabaseAdmin();
   const usosFrom = usosPage * usosPageSize;
   const usosTo = usosFrom + usosPageSize - 1;
   const clientesFrom = clientesPage * clientesPageSize;
   const clientesTo = clientesFrom + clientesPageSize - 1;
+  const buscaLimpa = buscaCliente.trim();
+  const buscaSegura = buscaLimpa.replace(/[%_(),]/g, " ").replace(/\s+/g, " ").trim();
+  const clientesDisponiveisQuery = (supabase as any)
+    .from("clientes")
+    .select("id, nome, telefone, email, whatsapp")
+    .eq("id_salao", idSalao)
+    .eq("ativo", true)
+    .order("nome", { ascending: true })
+    .limit(buscaSegura ? 50 : 30);
+
+  const clientesDisponiveisResult = buscaSegura
+    ? clientesDisponiveisQuery.or(
+        `nome.ilike.%${buscaSegura}%,telefone.ilike.%${buscaSegura}%,whatsapp.ilike.%${buscaSegura}%,email.ilike.%${buscaSegura}%`
+      )
+    : clientesDisponiveisQuery;
+
   const [
     campanhaResult,
     servicosResult,
@@ -133,13 +150,7 @@ async function loadCampanhaDetalhe(
       .eq("id_salao", idSalao)
       .eq("id_cupom", id)
       .range(clientesFrom, clientesTo),
-    (supabase as any)
-      .from("clientes")
-      .select("id, nome, telefone, email, whatsapp")
-      .eq("id_salao", idSalao)
-      .eq("ativo", true)
-      .order("nome", { ascending: true })
-      .limit(300),
+    clientesDisponiveisResult,
     (supabase as any)
       .from("servicos")
       .select("id, nome, preco, preco_padrao, ativo, app_cliente_visivel")
@@ -202,6 +213,7 @@ export default async function CampanhaDetalhePage({
     erro?: string | string[];
     pagina_usos?: string | string[];
     pagina_clientes?: string | string[];
+    busca_cliente?: string | string[];
   }>;
 }) {
   const { id } = await params;
@@ -212,6 +224,8 @@ export default async function CampanhaDetalhePage({
 
   const paginaUsosParam = Array.isArray(query.pagina_usos) ? query.pagina_usos[0] : query.pagina_usos;
   const paginaClientesParam = Array.isArray(query.pagina_clientes) ? query.pagina_clientes[0] : query.pagina_clientes;
+  const buscaClienteParam = Array.isArray(query.busca_cliente) ? query.busca_cliente[0] : query.busca_cliente;
+  const buscaCliente = String(buscaClienteParam || "").trim();
   const paginaUsos = Math.max(0, Number(paginaUsosParam || 1) - 1);
   const paginaClientes = Math.max(0, Number(paginaClientesParam || 1) - 1);
   const usosPageSize = 10;
@@ -222,7 +236,8 @@ export default async function CampanhaDetalhePage({
     paginaUsos,
     usosPageSize,
     paginaClientes,
-    clientesPageSize
+    clientesPageSize,
+    buscaCliente
   );
   if (!data) redirect("/campanhas?erro=Campanha%20nao%20encontrada.");
 
@@ -254,12 +269,14 @@ export default async function CampanhaDetalhePage({
     const params = new URLSearchParams();
     params.set("pagina_usos", String(page + 1));
     if (paginaClientes > 0) params.set("pagina_clientes", String(paginaClientes + 1));
+    if (buscaCliente) params.set("busca_cliente", buscaCliente);
     return `/campanhas/${campanha.id}?${params.toString()}`;
   };
   const getClientesHref = (page: number) => {
     const params = new URLSearchParams();
     if (paginaUsos > 0) params.set("pagina_usos", String(paginaUsos + 1));
     params.set("pagina_clientes", String(page + 1));
+    if (buscaCliente) params.set("busca_cliente", buscaCliente);
     return `/campanhas/${campanha.id}?${params.toString()}`;
   };
 
@@ -540,10 +557,25 @@ export default async function CampanhaDetalhePage({
             Use quando o publico da campanha estiver como clientes especificos.
           </p>
 
-          <form action={adicionarClienteCampanhaAction} className="mt-4 flex flex-col gap-3 md:flex-row">
+          <form method="GET" className="mt-4 grid gap-3 md:grid-cols-[1fr_auto]">
+            {paginaUsos > 0 ? <input type="hidden" name="pagina_usos" value={String(paginaUsos + 1)} /> : null}
+            <input
+              name="busca_cliente"
+              defaultValue={buscaCliente}
+              className="h-12 rounded-2xl border border-zinc-200 bg-zinc-50 px-4 text-sm font-bold outline-none focus:border-zinc-950"
+              placeholder="Buscar cliente por nome, telefone, WhatsApp ou e-mail"
+            />
+            <button className="h-12 rounded-2xl bg-zinc-950 px-5 text-sm font-black text-white" type="submit">
+              Buscar cliente
+            </button>
+          </form>
+
+          <form action={adicionarClienteCampanhaAction} className="mt-3 flex flex-col gap-3 md:flex-row">
             <input type="hidden" name="id_campanha" value={String(campanha.id)} />
             <select name="id_cliente" className="h-12 flex-1 rounded-2xl border border-zinc-200 bg-zinc-50 px-4 text-sm font-bold outline-none">
-              <option value="">Selecionar cliente</option>
+              <option value="">
+                {buscaCliente ? "Selecionar cliente encontrado" : "Busque ou selecione um cliente recente"}
+              </option>
               {data.clientes.map((cliente) => (
                 <option key={String(cliente.id)} value={String(cliente.id)}>
                   {String(cliente.nome || "Cliente")} {cliente.telefone ? `- ${cliente.telefone}` : ""}
@@ -554,6 +586,11 @@ export default async function CampanhaDetalhePage({
               Adicionar
             </button>
           </form>
+          {!data.clientes.length ? (
+            <p className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-800">
+              Nenhum cliente encontrado para adicionar. Tente outro nome, telefone ou e-mail.
+            </p>
+          ) : null}
 
           <div className="mt-4 grid gap-3 md:grid-cols-2">
             {data.clientesPermitidos.map((row) => {
