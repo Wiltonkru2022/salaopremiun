@@ -193,6 +193,7 @@ export default function ClientBookingForm({
   const [selectedDate, setSelectedDate] = useState("");
   const [selectedTime, setSelectedTime] = useState("");
   const [adicionaisSelecionados, setAdicionaisSelecionados] = useState<string[]>([]);
+  const [codigoCupom, setCodigoCupom] = useState("");
   const [monthCursor, setMonthCursor] = useState(() => {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1);
@@ -903,6 +904,23 @@ export default function ClientBookingForm({
                       </div>
                     </div>
                   ) : null}
+                  <label className="mb-4 block rounded-2xl border border-zinc-100 bg-white p-3 text-left">
+                    <span className="text-xs font-black uppercase tracking-[0.14em] text-zinc-500">
+                      Cupom
+                    </span>
+                    <input
+                      name="cupom"
+                      value={codigoCupom}
+                      onChange={(event) =>
+                        setCodigoCupom(event.target.value.toUpperCase())
+                      }
+                      placeholder="Ex.: SAUDADES"
+                      className="mt-2 h-11 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 text-sm font-bold uppercase outline-none focus:border-zinc-950"
+                    />
+                    <span className="mt-2 block text-xs leading-5 text-zinc-500">
+                      Se o salão enviou um cupom, ele será validado antes de confirmar a reserva.
+                    </span>
+                  </label>
                   <SubmitButton disabled={!canSubmit} />
                 </div>
                 <p className="mt-3 text-center text-xs leading-5 text-zinc-500">

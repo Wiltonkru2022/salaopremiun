@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { verifyBearerSecret } from "@/lib/auth/verify-secret";
 import { processPendingNotificationJobs } from "@/lib/notification-jobs";
 import { queueOracleVpsNotificationProcessing } from "@/lib/oracle-vps/client";
+import { processInactiveClientRecovery } from "@/lib/client-app/inactive-recovery";
 
 async function handleCron(req: Request) {
   if (!verifyBearerSecret(req.headers.get("authorization"), process.env.CRON_SECRET)) {
@@ -9,17 +10,24 @@ async function handleCron(req: Request) {
   }
 
   try {
+    const recovery = await processInactiveClientRecovery(20);
     try {
       const vpsResult = await queueOracleVpsNotificationProcessing({
         trigger: "cron",
         limit: 60,
       });
-      return NextResponse.json({ ok: true, provider: "oracle-vps", result: vpsResult });
+      return NextResponse.json({
+        ok: true,
+        provider: "oracle-vps",
+        recovery,
+        result: vpsResult,
+      });
     } catch (oracleError) {
       const result = await processPendingNotificationJobs(60);
       return NextResponse.json({
         ok: true,
         provider: "vercel-fallback",
+        recovery,
         oracleError:
           oracleError instanceof Error
             ? oracleError.message

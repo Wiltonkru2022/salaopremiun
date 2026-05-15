@@ -114,6 +114,9 @@ export default async function ClienteSalonPage({
       "https://images.unsplash.com/photo-1560066984-138dadb4c035?q=80&w=1400&auto=format&fit=crop";
     const popularServices = salao.servicos.slice(0, 5);
     const otherServices = salao.servicos.slice(5);
+    const destaqueAvaliacoes = salao.avaliacoes
+      .filter((avaliacao) => avaliacao.nota >= 4 && avaliacao.comentario)
+      .slice(0, 3);
 
     return (
       <ClientAppFrame title={salao.nome} subtitle="Agendamento online">
@@ -232,6 +235,45 @@ export default async function ClienteSalonPage({
                       ))}
                     </div>
                   </div>
+                ) : null}
+
+                {destaqueAvaliacoes.length ? (
+                  <section className="mt-10 rounded-[1.5rem] bg-zinc-950 p-5 text-white">
+                    <div className="flex flex-wrap items-end justify-between gap-3">
+                      <div>
+                        <p className="text-xs font-black uppercase tracking-[0.16em] text-amber-300">
+                          Clientes reais
+                        </p>
+                        <h2 className="mt-2 text-2xl font-black tracking-[-0.04em]">
+                          O que estão falando
+                        </h2>
+                      </div>
+                      <Link
+                        href={`/app-cliente/salao/${id}/avaliacoes`}
+                        className="rounded-full bg-white px-4 py-2 text-xs font-black text-zinc-950"
+                      >
+                        Ver avaliações
+                      </Link>
+                    </div>
+                    <div className="mt-5 grid gap-3 md:grid-cols-3">
+                      {destaqueAvaliacoes.map((avaliacao) => (
+                        <article
+                          key={avaliacao.id}
+                          className="rounded-2xl border border-white/10 bg-white/10 p-4"
+                        >
+                          <div className="text-sm font-black text-amber-200">
+                            {"★".repeat(Math.max(1, Math.min(5, avaliacao.nota)))}
+                          </div>
+                          <p className="mt-3 line-clamp-4 text-sm leading-6 text-zinc-100">
+                            {avaliacao.comentario}
+                          </p>
+                          <p className="mt-4 text-xs font-bold text-zinc-400">
+                            {avaliacao.clienteNome}
+                          </p>
+                        </article>
+                      ))}
+                    </div>
+                  </section>
                 ) : null}
               </div>
 

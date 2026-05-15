@@ -8,6 +8,7 @@ import {
   notifyAppointmentRescheduled,
   notifyReviewReceived,
   queueNotificationJob,
+  scheduleAppointmentReminderNotifications,
 } from "@/lib/notification-jobs";
 import { ensureClienteContaVinculadaAoSalao } from "@/app/services/cliente-app/auth";
 import {
@@ -44,6 +45,7 @@ type ClienteBookingParams = {
   horaInicio: string;
   observacoes?: string | null;
   adicionaisIds?: string[] | null;
+  codigoCupom?: string | null;
 };
 
 type ClienteCancelParams = {
@@ -316,6 +318,95 @@ async function loadBookingBaseContext(params: {
     profissional,
     duracao,
     servicoNome: String(servicoResult.data.nome || "").trim() || "Serviço",
+    servicoPreco:
+      Number(servicoResult.data.preco_padrao ?? servicoResult.data.preco ?? 0) || 0,
+  };
+}
+
+function calcularDescontoCupom(params: {
+  tipo: string;
+  valor: number;
+  subtotal: number;
+}) {
+  if (params.subtotal <= 0 || params.valor <= 0) return 0;
+  const desconto =
+    params.tipo === "valor_fixo"
+      ? params.valor
+      : (params.subtotal * params.valor) / 100;
+  return Math.max(0, Math.min(params.subtotal, Number(desconto.toFixed(2))));
+}
+
+async function validarCupomAgendamento(params: {
+  supabaseAdmin: any;
+  idSalao: string;
+  idCliente: string;
+  clienteAppContaId: string;
+  codigoCupom: string;
+  subtotal: number;
+}) {
+  if (!params.codigoCupom) {
+    return { cupom: null as Record<string, unknown> | null, desconto: 0, erro: null as string | null };
+  }
+
+  const hoje = new Date().toISOString().slice(0, 10);
+  const { data: cupom, error } = await (params.supabaseAdmin as any)
+    .from("cupons_salao")
+    .select(
+      "id, codigo, nome, tipo_desconto, valor_desconto, valor_minimo, limite_uso_total, limite_uso_cliente, valido_de, valido_ate, ativo"
+    )
+    .eq("id_salao", params.idSalao)
+    .eq("codigo", params.codigoCupom)
+    .eq("ativo", true)
+    .limit(1)
+    .maybeSingle();
+
+  if (error || !cupom?.id) {
+    return { cupom: null, desconto: 0, erro: "Cupom não encontrado ou inativo." };
+  }
+
+  if (cupom.valido_de && String(cupom.valido_de) > hoje) {
+    return { cupom: null, desconto: 0, erro: "Este cupom ainda não está válido." };
+  }
+
+  if (cupom.valido_ate && String(cupom.valido_ate) < hoje) {
+    return { cupom: null, desconto: 0, erro: "Este cupom expirou." };
+  }
+
+  const valorMinimo = Number(cupom.valor_minimo || 0);
+  if (valorMinimo > 0 && params.subtotal < valorMinimo) {
+    return { cupom: null, desconto: 0, erro: "Este cupom exige um valor mínimo maior." };
+  }
+
+  const [{ count: totalUsos }, { count: usosCliente }] = await Promise.all([
+    (params.supabaseAdmin as any)
+      .from("cupom_salao_usos")
+      .select("id", { count: "exact", head: true })
+      .eq("id_cupom", cupom.id)
+      .in("status", ["reservado", "aplicado"]),
+    (params.supabaseAdmin as any)
+      .from("cupom_salao_usos")
+      .select("id", { count: "exact", head: true })
+      .eq("id_cupom", cupom.id)
+      .eq("id_cliente", params.idCliente)
+      .in("status", ["reservado", "aplicado"]),
+  ]);
+
+  if (cupom.limite_uso_total && Number(totalUsos || 0) >= Number(cupom.limite_uso_total)) {
+    return { cupom: null, desconto: 0, erro: "O limite de uso deste cupom acabou." };
+  }
+
+  if (cupom.limite_uso_cliente && Number(usosCliente || 0) >= Number(cupom.limite_uso_cliente)) {
+    return { cupom: null, desconto: 0, erro: "Você já usou este cupom." };
+  }
+
+  return {
+    cupom: cupom as Record<string, unknown>,
+    desconto: calcularDescontoCupom({
+      tipo: String(cupom.tipo_desconto || "percentual"),
+      valor: Number(cupom.valor_desconto || 0),
+      subtotal: params.subtotal,
+    }),
+    erro: null,
   };
 }
 
@@ -593,6 +684,7 @@ export async function createClienteAppAppointment(
   const data = normalizeDate(params.data);
   const horaInicio = normalizeTimeString(params.horaInicio);
   const observacoes = String(params.observacoes || "").trim() || null;
+  const codigoCupom = String(params.codigoCupom || "").trim().toUpperCase();
   const adicionaisIds = Array.from(
     new Set(
       (params.adicionaisIds || [])
@@ -667,7 +759,7 @@ export async function createClienteAppAppointment(
         return bookingContext;
       }
 
-      const { config, profissional, duracao, servicoNome } = bookingContext;
+      const { config, profissional, duracao, servicoNome, servicoPreco } = bookingContext;
       const horaFim = addDurationToTime(horaInicio, duracao);
 
       if (!ensureDiaFuncionamento({ config, dateString: data })) {
@@ -771,6 +863,7 @@ export async function createClienteAppAppointment(
       }
 
       let observacoesComAdicionais = observacoes;
+      let adicionaisRowsSalvos: Array<Record<string, unknown>> = [];
 
       if (adicionaisIds.length) {
         const { data: adicionaisRows } = await (supabaseAdmin as any)
@@ -782,7 +875,8 @@ export async function createClienteAppAppointment(
           .in("id", adicionaisIds)
           .limit(3);
 
-        const adicionaisTexto = ((adicionaisRows || []) as Array<Record<string, unknown>>)
+        adicionaisRowsSalvos = ((adicionaisRows || []) as Array<Record<string, unknown>>);
+        const adicionaisTexto = adicionaisRowsSalvos
           .map((item) => {
             const nome = String(item.nome || "").trim();
             const preco = Number(item.preco_padrao ?? item.preco ?? Number.NaN);
@@ -807,6 +901,37 @@ export async function createClienteAppAppointment(
         }
       }
 
+      const subtotalEstimado =
+        Number(servicoPreco || 0) +
+        adicionaisRowsSalvos.reduce(
+          (sum, item) => sum + Number(item.preco_padrao ?? item.preco ?? 0),
+          0
+        );
+      const cupomResult = await validarCupomAgendamento({
+        supabaseAdmin,
+        idSalao,
+        idCliente,
+        clienteAppContaId: idConta,
+        codigoCupom,
+        subtotal: subtotalEstimado,
+      });
+
+      if (cupomResult.erro) {
+        return { ok: false, error: cupomResult.erro };
+      }
+
+      if (cupomResult.cupom?.id && cupomResult.desconto > 0) {
+        observacoesComAdicionais = [
+          observacoesComAdicionais,
+          `Cupom aplicado: ${codigoCupom} (-${cupomResult.desconto.toLocaleString("pt-BR", {
+            style: "currency",
+            currency: "BRL",
+          })}).`,
+        ]
+          .filter(Boolean)
+          .join("\n\n");
+      }
+
       const { data: insertedAppointment, error: insertError } = await supabaseAdmin
         .from("agendamentos")
         .insert({
@@ -819,6 +944,9 @@ export async function createClienteAppAppointment(
           hora_fim: horaFim,
           duracao_minutos: duracao,
           observacoes: observacoesComAdicionais,
+          id_cupom_salao: cupomResult.cupom?.id || null,
+          codigo_cupom: cupomResult.cupom?.id ? codigoCupom : null,
+          desconto_cupom_valor: cupomResult.desconto,
           status: "pendente",
           origem: "app_cliente",
         })
@@ -832,8 +960,38 @@ export async function createClienteAppAppointment(
         };
       }
 
+      const idAgendamento = String(insertedAppointment.id);
+
+      if (adicionaisRowsSalvos.length) {
+        await (supabaseAdmin as any).from("agendamento_adicionais").insert(
+          adicionaisRowsSalvos.map((item) => ({
+            id_salao: idSalao,
+            id_agendamento: idAgendamento,
+            id_servico: item.id,
+            nome: String(item.nome || "Adicional").trim(),
+            preco: Number(item.preco_padrao ?? item.preco ?? 0) || null,
+            status: "sugerido",
+            origem: "app_cliente_upsell",
+          }))
+        );
+      }
+
+      if (cupomResult.cupom?.id && cupomResult.desconto > 0) {
+        await (supabaseAdmin as any).from("cupom_salao_usos").insert({
+          id_salao: idSalao,
+          id_cupom: cupomResult.cupom.id,
+          id_cliente: idCliente,
+          cliente_app_conta_id: idConta,
+          id_agendamento: idAgendamento,
+          codigo: codigoCupom,
+          valor_desconto: cupomResult.desconto,
+          status: "reservado",
+          metadata: { origem: "app_cliente" },
+        });
+      }
+
       await notifySalonAboutClientBooking({
-        idAgendamento: String(insertedAppointment.id),
+        idAgendamento,
         idSalao,
         idProfissional,
         clienteNome:
@@ -841,6 +999,11 @@ export async function createClienteAppAppointment(
         servicoNome,
         data,
         horaInicio,
+      });
+
+      await scheduleAppointmentReminderNotifications({
+        idAgendamento,
+        idSalao,
       });
 
       return {
@@ -1097,6 +1260,16 @@ export async function cancelClienteAppAppointment(
       } catch {
         // A agenda deve ser liberada mesmo se a lista de espera falhar.
       }
+
+      await (supabaseAdmin as any)
+        .from("cupom_salao_usos")
+        .update({
+          status: "cancelado",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id_salao", ownership.idSalao)
+        .eq("id_agendamento", idAgendamento)
+        .eq("status", "reservado");
 
       const { error: deleteError } = await supabaseAdmin
         .from("agendamentos")

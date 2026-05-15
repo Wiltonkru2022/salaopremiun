@@ -587,7 +587,7 @@ export async function sincronizarAgendamentoComComandaNoCaixa(params: {
     await Promise.all([
       supabase
         .from("agendamentos")
-        .select("id, cliente_id, observacoes")
+        .select("id, cliente_id, observacoes, id_cupom_salao, codigo_cupom, desconto_cupom_valor")
         .eq("id", idAgendamento)
         .eq("id_salao", idSalao)
         .maybeSingle(),
@@ -649,6 +649,79 @@ export async function sincronizarAgendamentoComComandaNoCaixa(params: {
     },
     idempotencyKey: `agenda-sync:${idAgendamento}:${comanda.id}:${idServico}:${idProfissional}`,
   });
+
+  const { data: adicionais } = await (supabase as any)
+    .from("agendamento_adicionais")
+    .select("id, id_servico, nome, preco, status")
+    .eq("id_salao", idSalao)
+    .eq("id_agendamento", idAgendamento)
+    .in("status", ["sugerido", "aceito"])
+    .limit(10);
+
+  for (const adicional of ((adicionais || []) as Array<Record<string, unknown>>)) {
+    const idServicoAdicional = String(adicional.id_servico || "").trim();
+    if (!idServicoAdicional || idServicoAdicional === idServico) continue;
+
+    await adicionarItemComanda({
+      supabaseAdmin: supabase,
+      idSalao,
+      comanda: {
+        idComanda: comanda.id,
+        idCliente: comanda.id_cliente || agendamento.cliente_id || null,
+        desconto: Number(comanda.desconto || 0),
+        acrescimo: Number(comanda.acrescimo || 0),
+      },
+      item: {
+        tipo_item: "servico",
+        quantidade: 1,
+        id_servico: idServicoAdicional,
+        id_agendamento: idAgendamento,
+        id_profissional: idProfissional,
+        observacoes: "Adicional escolhido no app cliente.",
+        origem: "app_cliente_upsell",
+      },
+      idempotencyKey: `agenda-upsell:${idAgendamento}:${comanda.id}:${idServicoAdicional}`,
+    });
+
+    await (supabase as any)
+      .from("agendamento_adicionais")
+      .update({
+        status: "convertido",
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", adicional.id)
+      .eq("id_salao", idSalao);
+  }
+
+  const descontoCupom = Number(agendamento.desconto_cupom_valor || 0);
+  if (agendamento.id_cupom_salao && descontoCupom > 0) {
+    const descontoAtual = Number(comanda.desconto || 0);
+    await supabase
+      .from("comandas")
+      .update({
+        desconto: Math.max(descontoAtual, descontoCupom),
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", comanda.id)
+      .eq("id_salao", idSalao);
+
+    await (supabase as any)
+      .from("cupom_salao_usos")
+      .update({
+        id_comanda: comanda.id,
+        status: "aplicado",
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id_salao", idSalao)
+      .eq("id_agendamento", idAgendamento)
+      .eq("id_cupom", agendamento.id_cupom_salao);
+
+    await recalcularTotaisComanda({
+      supabase,
+      idSalao,
+      idComanda: comanda.id,
+    });
+  }
 
   const { error: updateAgendamentoError } = await supabase
     .from("agendamentos")

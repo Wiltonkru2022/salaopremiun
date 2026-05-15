@@ -24,6 +24,7 @@ export async function createClienteBookingAction(
   const data = String(formData.get("data") || "");
   const horaInicio = String(formData.get("hora_inicio") || "");
   const observacoes = String(formData.get("observacoes") || "");
+  const codigoCupom = String(formData.get("cupom") || "");
   const adicionaisIds = formData
     .getAll("adicionais")
     .map((item) => String(item || "").trim())
@@ -38,6 +39,7 @@ export async function createClienteBookingAction(
     horaInicio,
     observacoes,
     adicionaisIds,
+    codigoCupom,
   });
 
   if (!result.ok) {
