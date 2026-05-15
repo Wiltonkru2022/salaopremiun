@@ -86,31 +86,48 @@ export async function redeemClienteCoupon(params: {
     return { ok: false as const, error: "Voce ja usou este cupom." };
   }
 
-  const { error: upsertError } = await (supabase as any)
-    .from("cupom_salao_resgates")
-    .upsert(
-      {
-        id: resgateExistente?.id,
-        id_salao: idSalao,
-        id_cupom: cupom.id,
-        cliente_app_conta_id: idConta,
-        id_cliente: vinculo.idCliente,
-        token,
-        status: "resgatado",
-        resgatado_em: new Date().toISOString(),
-        metadata: { origem: "link_whatsapp_manual" },
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: "id_cupom,cliente_app_conta_id" }
-    );
+  const resgatePayload = {
+    id_salao: idSalao,
+    id_cupom: cupom.id,
+    cliente_app_conta_id: idConta,
+    id_cliente: vinculo.idCliente,
+    token,
+    status: "resgatado",
+    resgatado_em: new Date().toISOString(),
+    metadata: { origem: "link_whatsapp_manual" },
+    updated_at: new Date().toISOString(),
+  };
 
-  if (upsertError) {
+  const { error: resgateError } = resgateExistente?.id
+    ? await (supabase as any)
+        .from("cupom_salao_resgates")
+        .update(resgatePayload)
+        .eq("id", resgateExistente.id)
+    : await (supabase as any)
+        .from("cupom_salao_resgates")
+        .insert(resgatePayload);
+
+  if (resgateError) {
     return { ok: false as const, error: "Nao foi possivel resgatar o cupom agora." };
   }
 
   const salaoRel = Array.isArray(cupom.saloes) ? cupom.saloes[0] : cupom.saloes;
   const salaoSlug = String(salaoRel?.app_cliente_slug || idSalao).trim();
   const titulo = String(cupom.titulo_push || cupom.nome || "Voce recebeu um cupom").trim();
+  const codigoCupom = String(cupom.codigo || "").trim();
+
+  await (supabase as any)
+    .from("campanha_eventos")
+    .insert({
+      id_salao: idSalao,
+      id_cupom: cupom.id,
+      cliente_app_conta_id: idConta,
+      id_cliente: vinculo.idCliente,
+      tipo: "resgate",
+      metadata: { origem: "link_whatsapp_manual", codigo: codigoCupom },
+    })
+    .catch(() => null);
+
   await queueNotificationJob({
     idSalao,
     idCliente: vinculo.idCliente,
@@ -119,11 +136,11 @@ export async function redeemClienteCoupon(params: {
     tipo: "cupom_recebido_cliente",
     titulo,
     mensagem: buildCouponPushMessage(cupom as Record<string, unknown>),
-    url: `/app-cliente/salao/${salaoSlug}/reserva`,
+    url: `/app-cliente/salao/${salaoSlug}/reserva?cupom=${encodeURIComponent(codigoCupom)}`,
     tag: `cupom-${cupom.id}`,
     enviarEm: addMinutesIso(Number(cupom.push_delay_minutos || 5)),
     idempotencyKey: `cupom-resgatado:${idConta}:${cupom.id}`,
-    metadata: { id_cupom: cupom.id, codigo: cupom.codigo },
+    metadata: { id_cupom: cupom.id, codigo: codigoCupom },
   }).catch(() => null);
 
   await (supabase as any)

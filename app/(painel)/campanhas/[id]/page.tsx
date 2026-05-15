@@ -19,6 +19,7 @@ import {
   atualizarCampanhaAction,
   atualizarServicosCampanhaAction,
   atualizarStatusCampanhaAction,
+  excluirCampanhaAction,
   removerClienteCampanhaAction,
 } from "../actions";
 
@@ -545,6 +546,29 @@ export default async function CampanhaDetalhePage({
           <button className="mt-4 h-11 rounded-2xl bg-zinc-950 px-5 text-sm font-black text-white" type="submit">
             Salvar servicos
           </button>
+        </form>
+
+        <form action={excluirCampanhaAction} className="rounded-[1.75rem] border border-red-200 bg-red-50 p-5 shadow-sm xl:col-span-2">
+          <input type="hidden" name="id_campanha" value={String(campanha.id)} />
+          <div className="grid gap-4 lg:grid-cols-[1fr_auto] lg:items-end">
+            <div>
+              <h2 className="text-xl font-black text-red-800">Excluir campanha</h2>
+              <p className="mt-1 max-w-3xl text-sm leading-6 text-red-700">
+                Remove o link, os servicos vinculados, clientes permitidos, resgates e eventos da campanha. Agendamentos que ja usaram o cupom ficam preservados, mas sem vinculo ativo com esta campanha.
+              </p>
+              <label className="mt-4 grid max-w-sm gap-2 text-sm font-black text-red-800">
+                Digite EXCLUIR para confirmar
+                <input
+                  name="confirmacao"
+                  className="h-12 rounded-2xl border border-red-200 bg-white px-4 text-sm font-black uppercase outline-none focus:border-red-700"
+                  placeholder="EXCLUIR"
+                />
+              </label>
+            </div>
+            <button className="h-12 rounded-2xl bg-red-700 px-5 text-sm font-black text-white hover:bg-red-800" type="submit">
+              Excluir campanha
+            </button>
+          </div>
         </form>
       </section>
 

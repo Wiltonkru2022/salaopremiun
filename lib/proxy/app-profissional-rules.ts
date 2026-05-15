@@ -14,6 +14,15 @@ import {
 } from "@/lib/proxy/host-rules";
 import { redirectAdminMasterLoginFromForeignHost } from "@/lib/proxy/admin-master-rules";
 
+function isCampaignPublicRoute(pathname: string) {
+  return (
+    pathname === "/campanha" ||
+    pathname.startsWith("/campanha/") ||
+    pathname === "/resgatar-cupom" ||
+    pathname.startsWith("/resgatar-cupom/")
+  );
+}
+
 export function handleAppProfissionalHost(ctx: ProxyRouteContext) {
   const { request, pathname, pathnameNormalizado } = ctx;
 
@@ -53,6 +62,10 @@ export function handleAppProfissionalHost(ctx: ProxyRouteContext) {
   }
 
   if (isAppClienteRoute(pathnameNormalizado)) {
+    return NextResponse.next();
+  }
+
+  if (isCampaignPublicRoute(pathnameNormalizado)) {
     return NextResponse.next();
   }
 

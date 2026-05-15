@@ -293,6 +293,43 @@ export async function removerClienteCampanhaAction(formData: FormData) {
   redirect(`/campanhas/${idCampanha}?ok=Cliente%20removido.`);
 }
 
+export async function excluirCampanhaAction(formData: FormData) {
+  const { usuario } = await requireCampaignAdmin();
+  const idCampanha = String(formData.get("id_campanha") || "").trim();
+  const confirmacao = String(formData.get("confirmacao") || "").trim().toUpperCase();
+
+  if (!idCampanha || confirmacao !== "EXCLUIR") {
+    redirect(`/campanhas/${idCampanha || ""}?erro=Digite%20EXCLUIR%20para%20confirmar.`);
+  }
+
+  const supabase = getSupabaseAdmin();
+  const { data: campanha } = await (supabase as any)
+    .from("cupons_salao")
+    .select("id, id_salao")
+    .eq("id", idCampanha)
+    .eq("id_salao", usuario.id_salao)
+    .limit(1)
+    .maybeSingle();
+
+  if (!campanha?.id) {
+    redirect("/campanhas?erro=Campanha%20nao%20encontrada.");
+  }
+
+  const { error } = await (supabase as any)
+    .from("cupons_salao")
+    .delete()
+    .eq("id", idCampanha)
+    .eq("id_salao", usuario.id_salao);
+
+  if (error) {
+    redirect(`/campanhas/${idCampanha}?erro=${encodeURIComponent(error.message)}`);
+  }
+
+  revalidatePath("/campanhas");
+  revalidatePath(`/campanhas/${idCampanha}`);
+  redirect("/campanhas?ok=Campanha%20excluida.");
+}
+
 export async function atualizarServicosCampanhaAction(formData: FormData) {
   const { usuario } = await requireCampaignAdmin();
   const idCampanha = String(formData.get("id_campanha") || "").trim();
