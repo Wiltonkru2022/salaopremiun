@@ -20,6 +20,7 @@ import {
   atualizarStatusCampanhaAction,
   criarCampanhaCupomAction,
 } from "./actions";
+import PaginationLinks from "@/components/ui/PaginationLinks";
 
 export const metadata = {
   title: "Campanhas",
@@ -28,6 +29,7 @@ export const metadata = {
 type SearchParams = {
   ok?: string | string[];
   erro?: string | string[];
+  pagina?: string | string[];
 };
 
 function firstParam(value?: string | string[]) {
@@ -72,29 +74,28 @@ function statusClass(label: string) {
   return "border-amber-200 bg-amber-50 text-amber-800";
 }
 
-async function loadCampanhasData(idSalao: string) {
+async function loadCampanhasData(idSalao: string, page: number, pageSize: number) {
   const supabase = getSupabaseAdmin();
   const hoje = new Date();
   const mesAtual = String(hoje.getMonth() + 1).padStart(2, "0");
   const limiteInativos = new Date();
   limiteInativos.setDate(limiteInativos.getDate() - 30);
+  const from = page * pageSize;
+  const to = from + pageSize - 1;
 
   const [
     cuponsResult,
     servicosResult,
-    vinculosResult,
-    usosResult,
-    eventosResult,
     aniversariantesResult,
     clientesResult,
     agendamentosRecentesResult,
   ] = await Promise.all([
     (supabase as any)
       .from("cupons_salao")
-      .select("id, codigo, nome, descricao, descricao_interna, mensagem_cliente, tipo_campanha, publico_alvo, publico_tipo, valor_desconto, tipo_desconto, valido_de, valido_ate, ativo, status_campanha, resgate_token, slug, limite_uso_total, limite_uso_cliente, limite_uso_dia, created_at")
+      .select("id, codigo, nome, descricao, descricao_interna, mensagem_cliente, tipo_campanha, publico_alvo, publico_tipo, valor_desconto, tipo_desconto, valido_de, valido_ate, ativo, status_campanha, resgate_token, slug, limite_uso_total, limite_uso_cliente, limite_uso_dia, created_at", { count: "exact" })
       .eq("id_salao", idSalao)
       .order("created_at", { ascending: false })
-      .limit(20),
+      .range(from, to),
     (supabase as any)
       .from("servicos")
       .select("id, nome, preco, preco_padrao, ativo, app_cliente_visivel")
@@ -102,22 +103,6 @@ async function loadCampanhasData(idSalao: string) {
       .eq("ativo", true)
       .order("nome", { ascending: true })
       .limit(120),
-    (supabase as any)
-      .from("cupom_salao_servicos")
-      .select("id_cupom, id_servico, tipo_beneficio, valor_beneficio, brinde_descricao, limite_uso_servico, servicos(nome)")
-      .eq("id_salao", idSalao)
-      .limit(500),
-    (supabase as any)
-      .from("cupom_salao_usos")
-      .select("id_cupom, valor_desconto, status, created_at")
-      .eq("id_salao", idSalao)
-      .limit(1000),
-    (supabase as any)
-      .from("campanha_eventos")
-      .select("id_cupom, tipo, metadata, created_at")
-      .eq("id_salao", idSalao)
-      .order("created_at", { ascending: false })
-      .limit(1000),
     (supabase as any)
       .from("clientes")
       .select("id, nome, telefone, whatsapp, data_nascimento")
@@ -139,6 +124,38 @@ async function loadCampanhasData(idSalao: string) {
       .gte("data", limiteInativos.toISOString().slice(0, 10))
       .limit(500),
   ]);
+
+  const cupomIds = ((cuponsResult.data || []) as Array<Record<string, unknown>>)
+    .map((cupom) => String(cupom.id || ""))
+    .filter(Boolean);
+
+  const [vinculosResult, usosResult, eventosResult] = cupomIds.length
+    ? await Promise.all([
+        (supabase as any)
+          .from("cupom_salao_servicos")
+          .select("id_cupom, id_servico, tipo_beneficio, valor_beneficio, brinde_descricao, limite_uso_servico, servicos(nome)")
+          .eq("id_salao", idSalao)
+          .in("id_cupom", cupomIds)
+          .limit(pageSize * 40),
+        (supabase as any)
+          .from("cupom_salao_usos")
+          .select("id_cupom, valor_desconto, status, created_at")
+          .eq("id_salao", idSalao)
+          .in("id_cupom", cupomIds)
+          .limit(pageSize * 100),
+        (supabase as any)
+          .from("campanha_eventos")
+          .select("id_cupom, tipo, metadata, created_at")
+          .eq("id_salao", idSalao)
+          .in("id_cupom", cupomIds)
+          .order("created_at", { ascending: false })
+          .limit(pageSize * 100),
+      ])
+    : [
+        { data: [] },
+        { data: [] },
+        { data: [] },
+      ];
 
   const usosPorCupom = new Map<string, Array<Record<string, unknown>>>();
   for (const uso of ((usosResult.data || []) as Array<Record<string, unknown>>)) {
@@ -191,6 +208,7 @@ async function loadCampanhasData(idSalao: string) {
 
   return {
     cupons,
+    totalCupons: Number(cuponsResult.count || 0),
     servicos: (servicosResult.data || []) as Array<Record<string, unknown>>,
     aniversariantes,
     inativos,
@@ -214,8 +232,11 @@ export default async function CampanhasPage({
   if (String(usuario.nivel || "").toLowerCase() !== "admin") redirect("/dashboard");
 
   const params = await searchParams;
-  const data = await loadCampanhasData(usuario.id_salao).catch(() => ({
+  const paginaAtual = Math.max(0, Number(firstParam(params.pagina) || 1) - 1);
+  const pageSize = 10;
+  const data = await loadCampanhasData(usuario.id_salao, paginaAtual, pageSize).catch(() => ({
     cupons: [],
+    totalCupons: 0,
     servicos: [],
     aniversariantes: [],
     inativos: [],
@@ -225,6 +246,11 @@ export default async function CampanhasPage({
   const baseUrl = siteUrl();
   const campanhas = data.cupons as Array<Record<string, any>>;
   const servicosCadastro = data.servicos as Array<Record<string, unknown>>;
+  const getPageHref = (page: number) => {
+    const nextParams = new URLSearchParams();
+    nextParams.set("pagina", String(page + 1));
+    return `/campanhas?${nextParams.toString()}`;
+  };
   const kpiCards = [
     { label: "Campanhas ativas", value: data.kpis.ativas, icon: Sparkles },
     { label: "Cliques no link", value: data.kpis.cliques, icon: Link2 },
@@ -427,6 +453,13 @@ export default async function CampanhasPage({
                 <p className="mt-2 text-sm text-zinc-500">Monte um link privado, escolha os servicos e acompanhe o resultado.</p>
               </div>
             ) : null}
+            <PaginationLinks
+              currentPage={paginaAtual}
+              pageSize={pageSize}
+              totalItems={Number(data.totalCupons || 0)}
+              getHref={getPageHref}
+              className="pt-2"
+            />
           </div>
         </div>
 
