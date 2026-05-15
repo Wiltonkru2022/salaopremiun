@@ -49,6 +49,27 @@ function normalizeWhatsApp(value: unknown) {
   return digits;
 }
 
+function statusLabel(campanha: Record<string, unknown>, usos: number) {
+  const today = new Date().toISOString().slice(0, 10);
+  const status = String(campanha.status_campanha || "ativa");
+  const validoDe = String(campanha.valido_de || "").slice(0, 10);
+  const validoAte = String(campanha.valido_ate || "").slice(0, 10);
+  const limite = Number(campanha.limite_uso_total || 0);
+  if (validoDe && validoDe > today) return "Programada";
+  if (validoAte && validoAte < today) return "Expirada";
+  if (limite > 0 && usos >= limite) return "Esgotada";
+  if (status === "pausada") return "Pausada";
+  return "Ativa";
+}
+
+function statusClass(label: string) {
+  if (label === "Ativa") return "border-emerald-200 bg-emerald-50 text-emerald-800";
+  if (label === "Pausada") return "border-zinc-200 bg-zinc-100 text-zinc-700";
+  if (label === "Esgotada") return "border-red-200 bg-red-50 text-red-700";
+  if (label === "Programada") return "border-blue-200 bg-blue-50 text-blue-700";
+  return "border-amber-200 bg-amber-50 text-amber-800";
+}
+
 async function loadCampanhaDetalhe(idSalao: string, id: string) {
   const supabase = getSupabaseAdmin();
   const [
@@ -184,6 +205,7 @@ export default async function CampanhaDetalhePage({
   ].join("\n");
   const whatsappDivulgacaoUrl = `https://wa.me/?text=${encodeURIComponent(mensagemDivulgacao)}`;
   const statusAtual = String(campanha.status_campanha || "ativa");
+  const statusReal = statusLabel(campanha, data.usos.length);
   const ok = Array.isArray(query.ok) ? query.ok[0] : query.ok;
   const erro = Array.isArray(query.erro) ? query.erro[0] : query.erro;
   const servicosVinculadosMap = new Map(
@@ -345,7 +367,9 @@ export default async function CampanhaDetalhePage({
           <div className="mt-4 grid gap-3 md:grid-cols-3">
             <div className="rounded-2xl bg-zinc-50 p-4">
               <p className="text-xs font-black uppercase tracking-[0.14em] text-zinc-400">Status</p>
-              <strong>{statusAtual}</strong>
+              <strong className={`mt-2 inline-flex rounded-full border px-3 py-1 text-xs font-black ${statusClass(statusReal)}`}>
+                {statusReal}
+              </strong>
             </div>
             <div className="rounded-2xl bg-zinc-50 p-4">
               <p className="text-xs font-black uppercase tracking-[0.14em] text-zinc-400">Validade</p>

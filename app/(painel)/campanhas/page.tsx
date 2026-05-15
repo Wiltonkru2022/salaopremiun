@@ -53,9 +53,11 @@ function formatDate(value: unknown) {
 function statusLabel(cupom: Record<string, unknown>) {
   const today = new Date().toISOString().slice(0, 10);
   const status = String(cupom.status_campanha || "ativa");
+  const validoDe = String(cupom.valido_de || "").slice(0, 10);
   const validoAte = String(cupom.valido_ate || "").slice(0, 10);
   const limite = Number(cupom.limite_uso_total || 0);
   const usos = Number(cupom.usos || 0);
+  if (validoDe && validoDe > today) return "Programada";
   if (validoAte && validoAte < today) return "Expirada";
   if (limite > 0 && usos >= limite) return "Esgotada";
   if (status === "pausada") return "Pausada";
@@ -66,6 +68,7 @@ function statusClass(label: string) {
   if (label === "Ativa") return "border-emerald-200 bg-emerald-50 text-emerald-800";
   if (label === "Pausada") return "border-zinc-200 bg-zinc-100 text-zinc-700";
   if (label === "Esgotada") return "border-red-200 bg-red-50 text-red-700";
+  if (label === "Programada") return "border-blue-200 bg-blue-50 text-blue-700";
   return "border-amber-200 bg-amber-50 text-amber-800";
 }
 
