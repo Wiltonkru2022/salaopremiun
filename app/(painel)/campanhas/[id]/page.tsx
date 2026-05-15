@@ -12,7 +12,12 @@ import {
 } from "lucide-react";
 import { getPainelUserContext } from "@/lib/auth/get-painel-user-context";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
-import { atualizarStatusCampanhaAction } from "../actions";
+import {
+  adicionarClienteCampanhaAction,
+  atualizarCampanhaAction,
+  atualizarStatusCampanhaAction,
+  removerClienteCampanhaAction,
+} from "../actions";
 
 export const metadata = {
   title: "Relatorio da campanha",
@@ -42,6 +47,8 @@ async function loadCampanhaDetalhe(idSalao: string, id: string) {
     usosResult,
     eventosResult,
     agendamentosResult,
+    clientesPermitidosResult,
+    clientesResult,
   ] = await Promise.all([
     (supabase as any)
       .from("cupons_salao")
@@ -76,6 +83,19 @@ async function loadCampanhaDetalhe(idSalao: string, id: string) {
       .eq("id_cupom_salao", id)
       .order("data", { ascending: false })
       .limit(200),
+    (supabase as any)
+      .from("cupom_salao_clientes")
+      .select("id_cliente, clientes(id, nome, telefone, email, whatsapp)")
+      .eq("id_salao", idSalao)
+      .eq("id_cupom", id)
+      .limit(300),
+    (supabase as any)
+      .from("clientes")
+      .select("id, nome, telefone, email, whatsapp")
+      .eq("id_salao", idSalao)
+      .eq("ativo", true)
+      .order("nome", { ascending: true })
+      .limit(300),
   ]);
 
   if (!campanhaResult.data?.id) return null;
@@ -103,6 +123,8 @@ async function loadCampanhaDetalhe(idSalao: string, id: string) {
     usos,
     eventos,
     agendamentos,
+    clientesPermitidos: (clientesPermitidosResult.data || []) as Array<Record<string, any>>,
+    clientes: (clientesResult.data || []) as Array<Record<string, any>>,
     metricas: {
       cliques,
       agendamentos: agendamentosEvento || agendamentos.length,
@@ -117,10 +139,13 @@ async function loadCampanhaDetalhe(idSalao: string, id: string) {
 
 export default async function CampanhaDetalhePage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ ok?: string | string[]; erro?: string | string[] }>;
 }) {
   const { id } = await params;
+  const query = await searchParams;
   const { user, usuario } = await getPainelUserContext();
   if (!user || !usuario?.id_salao) redirect("/login");
   if (String(usuario.nivel || "").toLowerCase() !== "admin") redirect("/dashboard");
@@ -133,6 +158,8 @@ export default async function CampanhaDetalhePage({
     ? `${siteUrl()}/campanha/${campanha.slug}`
     : `${siteUrl()}/resgatar-cupom/${campanha.resgate_token}`;
   const statusAtual = String(campanha.status_campanha || "ativa");
+  const ok = Array.isArray(query.ok) ? query.ok[0] : query.ok;
+  const erro = Array.isArray(query.erro) ? query.erro[0] : query.erro;
   const kpiCards = [
     { label: "Cliques", value: data.metricas.cliques, icon: Link2 },
     { label: "Agendamentos", value: data.metricas.agendamentos, icon: CalendarDays },
@@ -145,6 +172,17 @@ export default async function CampanhaDetalhePage({
       <Link href="/campanhas" className="inline-flex h-11 items-center gap-2 rounded-2xl border border-zinc-200 bg-white px-4 text-sm font-black text-zinc-950">
         <ArrowLeft size={16} /> Voltar
       </Link>
+
+      {ok ? (
+        <p className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-800">
+          {ok}
+        </p>
+      ) : null}
+      {erro ? (
+        <p className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700">
+          {erro}
+        </p>
+      ) : null}
 
       <section className="overflow-hidden rounded-[2rem] border border-zinc-200 bg-zinc-950 p-6 text-white shadow-[0_24px_70px_rgba(15,23,42,0.24)] md:p-8">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
@@ -178,6 +216,72 @@ export default async function CampanhaDetalhePage({
       </section>
 
       <section className="grid gap-5 xl:grid-cols-[1fr_1fr]">
+        <form action={atualizarCampanhaAction} className="rounded-[1.75rem] border border-zinc-200 bg-white p-5 shadow-sm xl:col-span-2">
+          <input type="hidden" name="id" value={String(campanha.id)} />
+          <h2 className="text-xl font-black text-zinc-950">Editar campanha</h2>
+          <p className="mt-1 text-sm text-zinc-500">Ajuste a campanha sem criar outra promocao.</p>
+
+          <div className="mt-5 grid gap-4 lg:grid-cols-3">
+            <label className="grid gap-2 text-sm font-bold text-zinc-700">
+              Nome
+              <input name="titulo" defaultValue={String(campanha.nome || "")} className="h-12 rounded-2xl border border-zinc-200 bg-zinc-50 px-4 outline-none focus:border-zinc-950" />
+            </label>
+            <label className="grid gap-2 text-sm font-bold text-zinc-700">
+              Status
+              <select name="status_campanha" defaultValue={statusAtual} className="h-12 rounded-2xl border border-zinc-200 bg-zinc-50 px-4 outline-none">
+                <option value="ativa">Ativa</option>
+                <option value="pausada">Pausada</option>
+              </select>
+            </label>
+            <label className="grid gap-2 text-sm font-bold text-zinc-700">
+              Publico
+              <select name="publico_tipo" defaultValue={String(campanha.publico_tipo || "link")} className="h-12 rounded-2xl border border-zinc-200 bg-zinc-50 px-4 outline-none">
+                <option value="link">Aberta pelo link</option>
+                <option value="clientes_especificos">Clientes especificos</option>
+                <option value="novos_clientes">Novos clientes</option>
+              </select>
+            </label>
+          </div>
+
+          <div className="mt-4 grid gap-4 lg:grid-cols-2">
+            <label className="grid gap-2 text-sm font-bold text-zinc-700">
+              Descricao interna
+              <textarea name="descricao_interna" rows={3} defaultValue={String(campanha.descricao_interna || "")} className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 outline-none focus:border-zinc-950" />
+            </label>
+            <label className="grid gap-2 text-sm font-bold text-zinc-700">
+              Mensagem para cliente
+              <textarea name="mensagem_cliente" rows={3} defaultValue={String(campanha.mensagem_cliente || campanha.descricao || "")} className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 outline-none focus:border-zinc-950" />
+            </label>
+          </div>
+
+          <div className="mt-4 grid gap-4 lg:grid-cols-5">
+            <label className="grid gap-2 text-sm font-bold text-zinc-700">
+              Inicio
+              <input name="valido_de" type="date" defaultValue={String(campanha.valido_de || "").slice(0, 10)} className="h-12 rounded-2xl border border-zinc-200 bg-zinc-50 px-4 outline-none" />
+            </label>
+            <label className="grid gap-2 text-sm font-bold text-zinc-700">
+              Fim
+              <input name="valido_ate" type="date" defaultValue={String(campanha.valido_ate || "").slice(0, 10)} className="h-12 rounded-2xl border border-zinc-200 bg-zinc-50 px-4 outline-none" />
+            </label>
+            <label className="grid gap-2 text-sm font-bold text-zinc-700">
+              Limite total
+              <input name="limite_total" type="number" min="1" defaultValue={Number(campanha.limite_uso_total || 0) || ""} className="h-12 rounded-2xl border border-zinc-200 bg-zinc-50 px-4 outline-none" />
+            </label>
+            <label className="grid gap-2 text-sm font-bold text-zinc-700">
+              Limite por cliente
+              <input name="limite_cliente" type="number" min="1" defaultValue={Number(campanha.limite_uso_cliente || 1)} className="h-12 rounded-2xl border border-zinc-200 bg-zinc-50 px-4 outline-none" />
+            </label>
+            <label className="grid gap-2 text-sm font-bold text-zinc-700">
+              Limite por dia
+              <input name="limite_dia" type="number" min="1" defaultValue={Number(campanha.limite_uso_dia || 0) || ""} className="h-12 rounded-2xl border border-zinc-200 bg-zinc-50 px-4 outline-none" />
+            </label>
+          </div>
+
+          <button className="mt-5 h-12 rounded-2xl bg-zinc-950 px-5 text-sm font-black text-white" type="submit">
+            Salvar campanha
+          </button>
+        </form>
+
         <div className="rounded-[1.75rem] border border-zinc-200 bg-white p-5 shadow-sm">
           <h2 className="flex items-center gap-2 text-xl font-black text-zinc-950">
             <Copy size={18} /> Link e divulgacao
@@ -228,6 +332,56 @@ export default async function CampanhaDetalhePage({
       </section>
 
       <section className="grid gap-5 xl:grid-cols-[1fr_1fr]">
+        <div className="rounded-[1.75rem] border border-zinc-200 bg-white p-5 shadow-sm xl:col-span-2">
+          <h2 className="flex items-center gap-2 text-xl font-black text-zinc-950">
+            <Users size={18} /> Clientes permitidos
+          </h2>
+          <p className="mt-1 text-sm text-zinc-500">
+            Use quando o publico da campanha estiver como clientes especificos.
+          </p>
+
+          <form action={adicionarClienteCampanhaAction} className="mt-4 flex flex-col gap-3 md:flex-row">
+            <input type="hidden" name="id_campanha" value={String(campanha.id)} />
+            <select name="id_cliente" className="h-12 flex-1 rounded-2xl border border-zinc-200 bg-zinc-50 px-4 text-sm font-bold outline-none">
+              <option value="">Selecionar cliente</option>
+              {data.clientes.map((cliente) => (
+                <option key={String(cliente.id)} value={String(cliente.id)}>
+                  {String(cliente.nome || "Cliente")} {cliente.telefone ? `- ${cliente.telefone}` : ""}
+                </option>
+              ))}
+            </select>
+            <button className="h-12 rounded-2xl bg-zinc-950 px-5 text-sm font-black text-white" type="submit">
+              Adicionar
+            </button>
+          </form>
+
+          <div className="mt-4 grid gap-3 md:grid-cols-2">
+            {data.clientesPermitidos.map((row) => {
+              const cliente = Array.isArray(row.clientes) ? row.clientes[0] : row.clientes;
+              return (
+                <div key={String(row.id_cliente)} className="flex items-center justify-between gap-3 rounded-2xl border border-zinc-100 bg-zinc-50 px-4 py-3">
+                  <div className="min-w-0">
+                    <strong className="block truncate text-sm text-zinc-950">{String(cliente?.nome || "Cliente")}</strong>
+                    <span className="text-xs font-bold text-zinc-500">{String(cliente?.telefone || cliente?.whatsapp || cliente?.email || "")}</span>
+                  </div>
+                  <form action={removerClienteCampanhaAction}>
+                    <input type="hidden" name="id_campanha" value={String(campanha.id)} />
+                    <input type="hidden" name="id_cliente" value={String(row.id_cliente)} />
+                    <button className="rounded-xl border border-zinc-200 bg-white px-3 py-2 text-xs font-black text-zinc-600" type="submit">
+                      Remover
+                    </button>
+                  </form>
+                </div>
+              );
+            })}
+            {!data.clientesPermitidos.length ? (
+              <p className="rounded-2xl border border-dashed border-zinc-200 p-4 text-sm text-zinc-500">
+                Nenhum cliente especifico adicionado.
+              </p>
+            ) : null}
+          </div>
+        </div>
+
         <div className="rounded-[1.75rem] border border-zinc-200 bg-white p-5 shadow-sm">
           <h2 className="flex items-center gap-2 text-xl font-black text-zinc-950">
             <Users size={18} /> Clientes que usaram

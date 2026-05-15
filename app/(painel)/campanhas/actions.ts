@@ -199,3 +199,96 @@ export async function atualizarStatusCampanhaAction(formData: FormData) {
   revalidatePath("/campanhas");
   redirect("/campanhas?ok=Campanha%20atualizada.");
 }
+
+export async function atualizarCampanhaAction(formData: FormData) {
+  const { usuario } = await requireCampaignAdmin();
+  const id = String(formData.get("id") || "").trim();
+  const titulo = String(formData.get("titulo") || "").trim();
+  const mensagemCliente = String(formData.get("mensagem_cliente") || "").trim();
+  const descricaoInterna = String(formData.get("descricao_interna") || "").trim();
+  const statusCampanha =
+    String(formData.get("status_campanha") || "ativa") === "pausada"
+      ? "pausada"
+      : "ativa";
+  const publicoTipo = String(formData.get("publico_tipo") || "link");
+
+  if (!id || !titulo) {
+    redirect(`/campanhas/${id || ""}?erro=Preencha%20o%20nome%20da%20campanha.`);
+  }
+
+  const { error } = await (getSupabaseAdmin() as any)
+    .from("cupons_salao")
+    .update({
+      nome: titulo,
+      descricao_interna: descricaoInterna,
+      mensagem_cliente: mensagemCliente,
+      descricao: mensagemCliente,
+      status_campanha: statusCampanha,
+      ativo: statusCampanha === "ativa",
+      publico_tipo: ["link", "clientes_especificos", "novos_clientes"].includes(publicoTipo)
+        ? publicoTipo
+        : "link",
+      valido_de: String(formData.get("valido_de") || "").slice(0, 10) || null,
+      valido_ate: String(formData.get("valido_ate") || "").slice(0, 10) || null,
+      limite_uso_total: Number(formData.get("limite_total") || 0) || null,
+      limite_uso_cliente: Number(formData.get("limite_cliente") || 1) || 1,
+      limite_uso_dia: Number(formData.get("limite_dia") || 0) || null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", id)
+    .eq("id_salao", usuario.id_salao);
+
+  if (error) {
+    redirect(`/campanhas/${id}?erro=${encodeURIComponent(error.message)}`);
+  }
+
+  revalidatePath("/campanhas");
+  revalidatePath(`/campanhas/${id}`);
+  redirect(`/campanhas/${id}?ok=Campanha%20atualizada.`);
+}
+
+export async function adicionarClienteCampanhaAction(formData: FormData) {
+  const { usuario } = await requireCampaignAdmin();
+  const idCampanha = String(formData.get("id_campanha") || "").trim();
+  const idCliente = String(formData.get("id_cliente") || "").trim();
+
+  if (!idCampanha || !idCliente) {
+    redirect(`/campanhas/${idCampanha || ""}?erro=Selecione%20um%20cliente.`);
+  }
+
+  const { error } = await (getSupabaseAdmin() as any)
+    .from("cupom_salao_clientes")
+    .upsert(
+      {
+        id_salao: usuario.id_salao,
+        id_cupom: idCampanha,
+        id_cliente: idCliente,
+      },
+      { onConflict: "id_cupom,id_cliente" }
+    );
+
+  if (error) {
+    redirect(`/campanhas/${idCampanha}?erro=${encodeURIComponent(error.message)}`);
+  }
+
+  revalidatePath(`/campanhas/${idCampanha}`);
+  redirect(`/campanhas/${idCampanha}?ok=Cliente%20adicionado.`);
+}
+
+export async function removerClienteCampanhaAction(formData: FormData) {
+  const { usuario } = await requireCampaignAdmin();
+  const idCampanha = String(formData.get("id_campanha") || "").trim();
+  const idCliente = String(formData.get("id_cliente") || "").trim();
+
+  if (!idCampanha || !idCliente) redirect("/campanhas?erro=Cliente%20invalido.");
+
+  await (getSupabaseAdmin() as any)
+    .from("cupom_salao_clientes")
+    .delete()
+    .eq("id_salao", usuario.id_salao)
+    .eq("id_cupom", idCampanha)
+    .eq("id_cliente", idCliente);
+
+  revalidatePath(`/campanhas/${idCampanha}`);
+  redirect(`/campanhas/${idCampanha}?ok=Cliente%20removido.`);
+}

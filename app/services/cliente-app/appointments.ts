@@ -355,7 +355,7 @@ async function validarCupomAgendamento(params: {
   const { data: cupom, error } = await (params.supabaseAdmin as any)
     .from("cupons_salao")
     .select(
-      "id, codigo, nome, tipo_desconto, valor_desconto, valor_minimo, limite_uso_total, limite_uso_cliente, limite_uso_dia, limite_por_telefone_email, valido_de, valido_ate, ativo, requer_resgate, status_campanha"
+      "id, codigo, nome, tipo_desconto, valor_desconto, valor_minimo, limite_uso_total, limite_uso_cliente, limite_uso_dia, limite_por_telefone_email, publico_tipo, valido_de, valido_ate, ativo, requer_resgate, status_campanha"
     )
     .eq("id_salao", params.idSalao)
     .eq("codigo", params.codigoCupom)
@@ -454,6 +454,43 @@ async function validarCupomAgendamento(params: {
           erro: "Este contato ja usou esta campanha.",
         };
       }
+    }
+  }
+
+  const publicoTipo = String(cupom.publico_tipo || "link");
+  if (publicoTipo === "clientes_especificos") {
+    const { data: clientePermitido } = await (params.supabaseAdmin as any)
+      .from("cupom_salao_clientes")
+      .select("id")
+      .eq("id_cupom", cupom.id)
+      .eq("id_salao", params.idSalao)
+      .eq("id_cliente", params.idCliente)
+      .limit(1)
+      .maybeSingle();
+
+    if (!clientePermitido?.id) {
+      return {
+        cupom: null,
+        desconto: 0,
+        erro: "Essa campanha esta liberada apenas para clientes selecionados.",
+      };
+    }
+  }
+
+  if (publicoTipo === "novos_clientes") {
+    const { count: atendimentosAnteriores } = await (params.supabaseAdmin as any)
+      .from("agendamentos")
+      .select("id", { count: "exact", head: true })
+      .eq("id_salao", params.idSalao)
+      .eq("cliente_id", params.idCliente)
+      .neq("status", "cancelado");
+
+    if (Number(atendimentosAnteriores || 0) > 0) {
+      return {
+        cupom: null,
+        desconto: 0,
+        erro: "Essa campanha e exclusiva para novos clientes.",
+      };
     }
   }
 
