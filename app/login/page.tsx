@@ -181,10 +181,24 @@ function LoginPageContent() {
       });
 
       if (error) {
+        const securityEvent = await reportSalaoLoginSecurityEvent({
+          email,
+          evento: "login_falhou",
+          detalhes: { motivo: error.message || "erro_login" },
+        });
         setRateLimited(isSupabaseAuthRateLimit(error));
+        if (securityEvent?.blocked && securityEvent.redirectTo) {
+          window.location.replace(securityEvent.redirectTo);
+          return;
+        }
         setErro(getLoginErrorMessage(error));
         return;
       }
+
+      void reportSalaoLoginSecurityEvent({
+        email,
+        evento: "login_sucesso",
+      });
 
       setRedirectMessage(
         agendaQuickLogin
@@ -524,6 +538,33 @@ function LoginPageContent() {
       </main>
     </div>
   );
+}
+
+async function reportSalaoLoginSecurityEvent(params: {
+  email: string;
+  evento: "login_falhou" | "login_sucesso";
+  detalhes?: Record<string, unknown>;
+}) {
+  try {
+    const response = await fetch("/api/auth/security-login-event", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email: params.email.trim().toLowerCase(),
+        evento: params.evento,
+        origem: "login-salao",
+        route: "/login",
+        detalhes: params.detalhes || {},
+      }),
+      keepalive: params.evento === "login_sucesso",
+    });
+
+    return (await response.json().catch(() => null)) as
+      | { blocked?: boolean; redirectTo?: string | null }
+      | null;
+  } catch {
+    return null;
+  }
 }
 
 function LoginBadge({ label }: { label: string }) {

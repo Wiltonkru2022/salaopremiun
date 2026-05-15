@@ -2,6 +2,7 @@ import { runAdminOperation } from "@/lib/supabase/admin-ops";
 import type { SupabaseAdminClient } from "@/lib/supabase/admin";
 import { isSalaoStatusOperational } from "@/lib/plans/access";
 import { verifyPassword } from "@/lib/profissional-auth.server";
+import { recordSecurityLoginFailure } from "@/lib/security/login-attempts";
 import { emitSecurityEvent } from "@/lib/security/security-events";
 import {
   getSecurityAccessDecision,
@@ -149,9 +150,10 @@ export async function loginProfissionalByCpfSenha(
       }
 
       if (!acesso) {
-        void emitSecurityEvent({
+        void recordSecurityLoginFailure({
           evento: "profissional_app_login_falhou",
           tipoUsuario: "profissional",
+          identidade: cpfLimpo,
           origem: "app-profissional",
           detalhes: { cpf: cpfLimpo },
         });
@@ -161,9 +163,11 @@ export async function loginProfissionalByCpfSenha(
       const senhaOk = await verifyPassword(senhaLimpa, acesso.senha_hash);
 
       if (!senhaOk) {
-        void emitSecurityEvent({
+        void recordSecurityLoginFailure({
           evento: "profissional_app_login_falhou",
           tipoUsuario: "profissional",
+          userId: acesso.id_profissional,
+          identidade: cpfLimpo,
           origem: "app-profissional",
           detalhes: { cpf: cpfLimpo },
         });

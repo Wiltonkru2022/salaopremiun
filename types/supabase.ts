@@ -226,6 +226,43 @@ type UserSecurityStatusTable = {
   Relationships: [];
 };
 
+type SecurityLoginAttemptsTable = {
+  Row: {
+    id: string;
+    tipo_usuario: string;
+    user_id: string | null;
+    id_salao: string | null;
+    identidade: string | null;
+    ip: string | null;
+    user_agent: string | null;
+    risco: string;
+    criado_em: string;
+  };
+  Insert: {
+    id?: string;
+    tipo_usuario: string;
+    user_id?: string | null;
+    id_salao?: string | null;
+    identidade?: string | null;
+    ip?: string | null;
+    user_agent?: string | null;
+    risco?: string;
+    criado_em?: string;
+  };
+  Update: {
+    id?: string;
+    tipo_usuario?: string;
+    user_id?: string | null;
+    id_salao?: string | null;
+    identidade?: string | null;
+    ip?: string | null;
+    user_agent?: string | null;
+    risco?: string;
+    criado_em?: string;
+  };
+  Relationships: [];
+};
+
 type DatabaseWithAppExtensions = Database & {
   public: Database["public"] & {
     Tables: Database["public"]["Tables"] & {
@@ -235,6 +272,7 @@ type DatabaseWithAppExtensions = Database & {
         Database["public"]["Tables"]["saloes_recursos_extras"] &
         SaloesRecursosExtrasTableExtensions;
       saloes: Database["public"]["Tables"]["saloes"] & SaloesSecurityTableExtensions;
+      security_login_attempts: SecurityLoginAttemptsTable;
       user_security_status: UserSecurityStatusTable;
       whatsapp_pacote_compras: WhatsappPacoteComprasTable;
     };

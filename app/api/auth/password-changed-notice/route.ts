@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { htmlEscape, sendResendEmail } from "@/lib/email/resend";
+import { emitSecurityEvent } from "@/lib/security/security-events";
+import { findSalaoUsuarioByAuthOrEmail } from "@/lib/security/salao-user-lookup";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 export const runtime = "nodejs";
@@ -75,6 +77,23 @@ export async function POST(request: Request) {
     request.headers.get("x-real-ip") ||
     null;
   const userAgent = request.headers.get("user-agent") || null;
+  const usuario = await findSalaoUsuarioByAuthOrEmail({
+    authUserId: data.user.id,
+    email,
+  });
+
+  void emitSecurityEvent({
+    evento: "senha_alterada",
+    tipoUsuario: "salao",
+    userId: usuario?.id || data.user.id,
+    idSalao: usuario?.id_salao || null,
+    risco: "medio",
+    ip,
+    userAgent,
+    origem: "password-changed-notice",
+    route: "/atualizar-senha",
+    detalhes: { email },
+  });
 
   await sendResendEmail({
     from:

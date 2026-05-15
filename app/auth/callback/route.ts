@@ -8,6 +8,7 @@ import {
   buildSecurityVerificationPath,
   getSecurityAccessDecision,
 } from "@/lib/security/user-security";
+import { emitSecurityEvent } from "@/lib/security/security-events";
 
 export const dynamic = "force-dynamic";
 
@@ -194,6 +195,22 @@ export async function GET(request: NextRequest) {
       new URL(blockedPath, getRedirectOrigin(next, requestUrl.origin))
     );
   }
+
+  void emitSecurityEvent({
+    evento: "google_login_sucesso",
+    tipoUsuario: "salao",
+    userId: usuario.id,
+    idSalao: usuario.id_salao,
+    risco: "baixo",
+    ip:
+      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+      request.headers.get("x-real-ip") ||
+      null,
+    userAgent: request.headers.get("user-agent") || null,
+    origem: "google-login",
+    route: "/auth/callback",
+    detalhes: { email, next },
+  });
 
   return buildRedirectBridge(
     new URL(next, getRedirectOrigin(next, requestUrl.origin))

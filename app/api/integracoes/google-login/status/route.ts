@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { emitSecurityEvent } from "@/lib/security/security-events";
+import { findSalaoUsuarioByAuthOrEmail } from "@/lib/security/salao-user-lookup";
 import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -106,6 +108,25 @@ export async function DELETE() {
       { status: 409 }
     );
   }
+
+  const usuario = await findSalaoUsuarioByAuthOrEmail({
+    authUserId: user.id,
+    email: String(user.email || "").trim().toLowerCase(),
+  });
+
+  void emitSecurityEvent({
+    evento: "google_login_desconectado",
+    tipoUsuario: "salao",
+    userId: usuario?.id || user.id,
+    idSalao: usuario?.id_salao || null,
+    risco: "baixo",
+    origem: "google-login",
+    route: "/api/integracoes/google-login/status",
+    detalhes: {
+      email: usuario?.email || user.email || null,
+      google_email: googleIdentity.identity_data?.email || null,
+    },
+  });
 
   return NextResponse.json({
     ok: true,

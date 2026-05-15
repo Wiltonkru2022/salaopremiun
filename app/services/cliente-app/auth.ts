@@ -18,6 +18,7 @@ import {
   getSecurityAccessDecision,
   getSecurityStatusMessage,
 } from "@/lib/security/user-security";
+import { recordSecurityLoginFailure } from "@/lib/security/login-attempts";
 import { emitSecurityEvent } from "@/lib/security/security-events";
 
 type ClienteLoginResult =
@@ -538,6 +539,16 @@ export async function loginClienteAppByEmailSenha(params: {
             session: buildSessionFromAccount(globalAccount),
           };
         }
+
+        void recordSecurityLoginFailure({
+          evento: "cliente_app_login_falhou",
+          tipoUsuario: "cliente",
+          userId: globalAccount.id,
+          idSalao,
+          identidade: email,
+          origem: "cliente-app",
+          detalhes: { email },
+        });
       }
 
       let query = supabaseAdmin
@@ -553,6 +564,14 @@ export async function loginClienteAppByEmailSenha(params: {
 
       const { data: authRows, error } = await query;
       if (error || !authRows?.length) {
+        void recordSecurityLoginFailure({
+          evento: "cliente_app_login_falhou",
+          tipoUsuario: "cliente",
+          idSalao,
+          identidade: email,
+          origem: "cliente-app",
+          detalhes: { email },
+        });
         return { ok: false, error: "E-mail ou senha inválidos." };
       }
 
@@ -569,16 +588,25 @@ export async function loginClienteAppByEmailSenha(params: {
 
       const acesso = authRows[0];
       if (!acesso?.senha_hash) {
+        void recordSecurityLoginFailure({
+          evento: "cliente_app_login_falhou",
+          tipoUsuario: "cliente",
+          idSalao: acesso?.id_salao || idSalao,
+          identidade: email,
+          origem: "cliente-app",
+          detalhes: { email },
+        });
         return { ok: false, error: "E-mail ou senha inválidos." };
       }
 
       const senhaOk = await verifyClientePassword(senha, acesso.senha_hash);
       if (!senhaOk) {
-        void emitSecurityEvent({
+        void recordSecurityLoginFailure({
           evento: "cliente_app_login_falhou",
           tipoUsuario: "cliente",
           userId: null,
           idSalao: acesso.id_salao,
+          identidade: email,
           origem: "cliente-app",
           detalhes: { email },
         });

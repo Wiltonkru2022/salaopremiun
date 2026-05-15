@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getPainelUserContext } from "@/lib/auth/get-painel-user-context";
 import { isGoogleCalendarConfigured } from "@/lib/google-calendar/oauth";
 import { canUsePlanFeature } from "@/lib/plans/access";
+import { emitSecurityEvent } from "@/lib/security/security-events";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
@@ -74,6 +75,17 @@ export async function DELETE() {
       { status: 500 }
     );
   }
+
+  void emitSecurityEvent({
+    evento: "google_calendar_desconectado",
+    tipoUsuario: "salao",
+    userId: usuario.id,
+    idSalao: usuario.id_salao,
+    risco: "baixo",
+    origem: "google-calendar",
+    route: "/api/integracoes/google-calendar/status",
+    detalhes: { email: user.email || null },
+  });
 
   return NextResponse.json({ ok: true });
 }

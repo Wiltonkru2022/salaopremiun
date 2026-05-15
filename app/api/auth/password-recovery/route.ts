@@ -5,6 +5,8 @@ import {
   assertPublicRateLimit,
   getPublicRateLimitIdentity,
 } from "@/lib/security/public-rate-limit";
+import { emitSecurityEvent } from "@/lib/security/security-events";
+import { findSalaoUsuarioByEmail } from "@/lib/security/salao-user-lookup";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 export const runtime = "nodejs";
@@ -19,6 +21,14 @@ function getRequestHost(request: Request) {
   return (
     request.headers.get("x-forwarded-host") ||
     request.headers.get("host") ||
+    null
+  );
+}
+
+function getClientIp(request: Request) {
+  return (
+    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    request.headers.get("x-real-ip") ||
     null
   );
 }
@@ -67,6 +77,21 @@ export async function POST(request: Request) {
     });
 
     const supabase = getSupabaseAdmin();
+    const usuario = await findSalaoUsuarioByEmail(email);
+
+    void emitSecurityEvent({
+      evento: "recuperacao_senha_solicitada",
+      tipoUsuario: "salao",
+      userId: usuario?.id || null,
+      idSalao: usuario?.id_salao || null,
+      risco: "baixo",
+      ip: getClientIp(request),
+      userAgent: request.headers.get("user-agent") || null,
+      origem: "password-recovery",
+      route: "/recuperar-senha",
+      detalhes: { email },
+    });
+
     const redirectTo = getPublicAuthUrl(
       "/atualizar-senha",
       getRequestHost(request)

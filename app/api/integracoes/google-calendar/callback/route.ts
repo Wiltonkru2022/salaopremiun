@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { getGoogleCalendarEnv, isGoogleCalendarConfigured } from "@/lib/google-calendar/oauth";
 import { verifyGoogleCalendarState } from "@/lib/google-calendar/state";
+import { emitSecurityEvent } from "@/lib/security/security-events";
 
 export const dynamic = "force-dynamic";
 
@@ -82,6 +83,24 @@ export async function GET(request: NextRequest) {
       "https://painel.salaopremiun.com.br/perfil-salao?google_calendar=erro"
     );
   }
+
+  void emitSecurityEvent({
+    evento: "google_calendar_conectado",
+    tipoUsuario: "salao",
+    idSalao,
+    risco: "baixo",
+    ip:
+      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+      request.headers.get("x-real-ip") ||
+      null,
+    userAgent: request.headers.get("user-agent") || null,
+    origem: "google-calendar",
+    route: "/api/integracoes/google-calendar/callback",
+    detalhes: {
+      google_email: googleEmail,
+      calendar_id: "primary",
+    },
+  });
 
   return NextResponse.redirect(
     `https://painel.salaopremiun.com.br${state?.returnTo || "/perfil-salao?google_calendar=connected"}`

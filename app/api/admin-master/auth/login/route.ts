@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { sanitizeAdminMasterNextPath } from "@/lib/admin-master/auth/login-path";
 import { resolveAdminMasterAccessForIdentity } from "@/lib/admin-master/auth/requireAdminMasterUser";
 import { setAdminMasterSessionCookie } from "@/lib/admin-master/auth/session";
+import { emitSecurityEvent } from "@/lib/security/security-events";
 import { getLoginErrorMessage } from "@/lib/supabase/auth-client-recovery";
 
 type LoginRequestBody = {
@@ -15,6 +16,14 @@ function getRequestHost(request: Request) {
   return (
     request.headers.get("x-forwarded-host")?.split(",")[0] ||
     request.headers.get("host")
+  );
+}
+
+function getClientIp(request: Request) {
+  return (
+    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    request.headers.get("x-real-ip") ||
+    null
   );
 }
 
@@ -52,6 +61,17 @@ export async function POST(request: Request) {
   });
 
   if (error || !data.user) {
+    void emitSecurityEvent({
+      evento: "admin_master_login_falhou",
+      tipoUsuario: "salao",
+      risco: "medio",
+      ip: getClientIp(request),
+      userAgent: request.headers.get("user-agent") || null,
+      origem: "admin-master",
+      route: "/admin-master/login",
+      detalhes: { email, motivo: error?.message || "usuario_nao_retornado" },
+    });
+
     return NextResponse.json(
       {
         ok: false,
@@ -71,6 +91,18 @@ export async function POST(request: Request) {
   );
 
   if (!access.ok) {
+    void emitSecurityEvent({
+      evento: "admin_master_login_falhou",
+      tipoUsuario: "salao",
+      userId: data.user.id,
+      risco: "medio",
+      ip: getClientIp(request),
+      userAgent: request.headers.get("user-agent") || null,
+      origem: "admin-master",
+      route: "/admin-master/login",
+      detalhes: { email, motivo: access.message },
+    });
+
     return NextResponse.json(
       {
         ok: false,
@@ -102,6 +134,18 @@ export async function POST(request: Request) {
     authUserId: data.user.id,
     email,
     host: getRequestHost(request),
+  });
+
+  void emitSecurityEvent({
+    evento: "admin_master_login_sucesso",
+    tipoUsuario: "salao",
+    userId: data.user.id,
+    risco: "baixo",
+    ip: getClientIp(request),
+    userAgent: request.headers.get("user-agent") || null,
+    origem: "admin-master",
+    route: "/admin-master/login",
+    detalhes: { email, admin_id: access.usuario.id },
   });
 
   return response;
