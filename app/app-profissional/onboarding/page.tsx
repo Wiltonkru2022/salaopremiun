@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import ProfissionalOnboarding from "@/components/profissional/ProfissionalOnboarding";
 
 export const metadata = {
-  title: "Primeiros passos | Salão Premium",
+  title: "Primeiros passos",
 };
 
 export default function ProfissionalOnboardingPage() {

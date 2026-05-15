@@ -7,7 +7,7 @@ import { listClienteAppFavoriteSaloes } from "@/lib/client-app/queries";
 import { requireClienteAppContext } from "@/lib/client-context.server";
 
 export const metadata = {
-  title: "Favoritos | Salão Premium",
+  title: "Favoritos",
 };
 
 const FAVORITOS_PAGE_SIZE = 10;

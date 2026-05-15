@@ -1,7 +1,7 @@
 import ClientOnboarding from "@/components/client-app/ClientOnboarding";
 
 export const metadata = {
-  title: "Bem-vindo | Salão Premium",
+  title: "Bem-vindo",
 };
 
 export default function ClienteOnboardingPage() {

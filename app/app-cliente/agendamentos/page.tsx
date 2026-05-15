@@ -4,7 +4,7 @@ import { requireClienteAppContext } from "@/lib/client-context.server";
 import { listClienteAppAppointments } from "@/lib/client-app/queries";
 
 export const metadata = {
-  title: "Meus Agendamentos | Salão Premium",
+  title: "Meus Agendamentos",
 };
 
 export default async function ClienteAppointmentsPage({

@@ -6,7 +6,7 @@ import ClientSalonSectionTabs from "@/components/client-app/ClientSalonSectionTa
 import { getClientAppSalonDetail } from "@/lib/client-app/queries";
 
 export const metadata = {
-  title: "Avaliações | Salão Premium",
+  title: "Avaliações",
 };
 
 function formatDate(value: string) {

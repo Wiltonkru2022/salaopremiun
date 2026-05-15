@@ -2,7 +2,7 @@ import ClientAppFrame from "@/components/client-app/ClientAppFrame";
 import RedefinirSenhaClienteForm from "@/components/client-app/auth/RedefinirSenhaClienteForm";
 
 export const metadata = {
-  title: "Criar Nova Senha | Salão Premium",
+  title: "Criar Nova Senha",
 };
 
 export default async function RedefinirSenhaClientePage({

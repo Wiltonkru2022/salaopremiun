@@ -5,7 +5,7 @@ import { listClienteAppReceipts } from "@/lib/client-app/queries";
 import { requireClienteAppContext } from "@/lib/client-context.server";
 
 export const metadata = {
-  title: "Pagamentos | Salão Premium",
+  title: "Pagamentos",
 };
 
 function formatCurrency(value: number) {

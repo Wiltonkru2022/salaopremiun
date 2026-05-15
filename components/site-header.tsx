@@ -4,6 +4,12 @@ import { useState } from "react";
 import Link from "next/link";
 import { Menu, MessageCircle, Sparkles, X } from "lucide-react";
 
+const LOGIN_SALAO_URL = "https://login.salaopremiun.com.br/login";
+const CADASTRO_SALAO_URL = "https://cadastro.salaopremiun.com.br/cadastro-salao";
+const APP_CLIENTE_URL = "https://app.salaopremiun.com.br/app-cliente/login";
+const APP_PROFISSIONAL_URL =
+  "https://app.salaopremiun.com.br/app-profissional/login";
+
 export default function SiteHeader() {
   const [open, setOpen] = useState(false);
 
@@ -44,12 +50,12 @@ export default function SiteHeader() {
         </nav>
 
         <div className="hidden items-center gap-3 lg:flex">
-          <Link href="/login" className="rounded-full border border-zinc-300 px-5 py-2 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-100">
+          <a href={LOGIN_SALAO_URL} className="rounded-full border border-zinc-300 px-5 py-2 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-100">
             Login salão
-          </Link>
-          <Link href="/cadastro-salao" className="rounded-full bg-zinc-950 px-5 py-2 text-sm font-semibold text-white shadow-lg transition hover:bg-zinc-800">
+          </a>
+          <a href={CADASTRO_SALAO_URL} className="rounded-full bg-zinc-950 px-5 py-2 text-sm font-semibold text-white shadow-lg transition hover:bg-zinc-800">
             Cadastrar salão
-          </Link>
+          </a>
         </div>
 
         <button
@@ -95,18 +101,18 @@ export default function SiteHeader() {
             </Link>
 
             <div className="mt-4 grid gap-3">
-              <Link href="/login" className="inline-flex items-center justify-center rounded-full border border-zinc-300 px-5 py-2.5 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-100" onClick={() => setOpen(false)}>
+              <a href={LOGIN_SALAO_URL} className="inline-flex items-center justify-center rounded-full border border-zinc-300 px-5 py-2.5 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-100" onClick={() => setOpen(false)}>
                 Login salão
-              </Link>
-              <Link href="https://app.salaopremiun.com.br/app-cliente/login" className="inline-flex items-center justify-center rounded-full border border-zinc-300 px-5 py-2.5 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-100" onClick={() => setOpen(false)}>
+              </a>
+              <a href={APP_CLIENTE_URL} className="inline-flex items-center justify-center rounded-full border border-zinc-300 px-5 py-2.5 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-100" onClick={() => setOpen(false)}>
                 App cliente
-              </Link>
-              <Link href="/app-profissional/login" className="inline-flex items-center justify-center rounded-full border border-zinc-300 px-5 py-2.5 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-100" onClick={() => setOpen(false)}>
+              </a>
+              <a href={APP_PROFISSIONAL_URL} className="inline-flex items-center justify-center rounded-full border border-zinc-300 px-5 py-2.5 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-100" onClick={() => setOpen(false)}>
                 App profissional
-              </Link>
-              <Link href="/cadastro-salao" className="inline-flex items-center justify-center rounded-full bg-zinc-950 px-5 py-2.5 text-sm font-semibold text-white shadow-lg transition hover:bg-zinc-800" onClick={() => setOpen(false)}>
+              </a>
+              <a href={CADASTRO_SALAO_URL} className="inline-flex items-center justify-center rounded-full bg-zinc-950 px-5 py-2.5 text-sm font-semibold text-white shadow-lg transition hover:bg-zinc-800" onClick={() => setOpen(false)}>
                 Cadastrar salão
-              </Link>
+              </a>
               <a href="https://wa.me/5567984341742" className="inline-flex items-center justify-center gap-2 rounded-full bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg transition hover:bg-emerald-700" onClick={() => setOpen(false)}>
                 <MessageCircle size={16} />
                 WhatsApp suporte

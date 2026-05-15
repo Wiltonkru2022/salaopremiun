@@ -4,7 +4,7 @@ import { validateClienteAppSession } from "@/lib/client-context.server";
 import { listVisibleClientAppSaloes } from "@/lib/client-app/queries";
 
 export const metadata = {
-  title: "Explorar Salões | Salão Premium",
+  title: "Explorar Salões",
 };
 
 export default async function InicioClientePage({

@@ -6,7 +6,7 @@ import { requireClienteAppContext } from "@/lib/client-context.server";
 import { getClienteAppProfileData } from "@/lib/client-app/queries";
 
 export const metadata = {
-  title: "Editar Perfil | Salão Premium",
+  title: "Editar Perfil",
 };
 
 export default async function ClientePerfilEditarPage() {

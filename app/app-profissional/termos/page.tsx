@@ -1,7 +1,7 @@
 import ProfissionalShell from "@/components/profissional/layout/ProfissionalShell";
 
 export const metadata = {
-  title: "Termos do App Profissional | Salão Premium",
+  title: "Termos do App Profissional",
 };
 
 export default function ProfissionalTermosPage() {

@@ -6,7 +6,7 @@ import { requireClienteAppContext } from "@/lib/client-context.server";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 export const metadata = {
-  title: "Configurações | Salão Premium",
+  title: "Configurações",
 };
 
 export default async function ClienteProfileSettingsPage() {

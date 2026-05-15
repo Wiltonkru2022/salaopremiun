@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 export const metadata = {
-  title: "Salao excluido | SalaoPremium",
+  title: "Salao excluido",
 };
 
 export default function SalaoExcluidoPage() {

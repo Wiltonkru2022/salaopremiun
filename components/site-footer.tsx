@@ -1,5 +1,11 @@
 import Link from "next/link";
 
+const LOGIN_SALAO_URL = "https://login.salaopremiun.com.br/login";
+const CADASTRO_SALAO_URL = "https://cadastro.salaopremiun.com.br/cadastro-salao";
+const APP_CLIENTE_URL = "https://app.salaopremiun.com.br/app-cliente/login";
+const APP_PROFISSIONAL_URL =
+  "https://app.salaopremiun.com.br/app-profissional/login";
+
 export default function SiteFooter() {
   return (
     <footer className="border-t border-zinc-200 bg-white text-zinc-950">
@@ -44,24 +50,24 @@ export default function SiteFooter() {
             <h4 className="text-base font-bold">Acessos</h4>
             <ul className="mt-3 space-y-2.5 text-sm text-zinc-500">
               <li>
-                <Link href="/login" className="hover:text-zinc-950">
+                <a href={LOGIN_SALAO_URL} className="hover:text-zinc-950">
                   Login salão
-                </Link>
+                </a>
               </li>
               <li>
-                <Link href="https://app.salaopremiun.com.br/app-cliente/login" className="hover:text-zinc-950">
+                <a href={APP_CLIENTE_URL} className="hover:text-zinc-950">
                   App cliente
-                </Link>
+                </a>
               </li>
               <li>
-                <Link href="/app-profissional/login" className="hover:text-zinc-950">
+                <a href={APP_PROFISSIONAL_URL} className="hover:text-zinc-950">
                   App profissional
-                </Link>
+                </a>
               </li>
               <li>
-                <Link href="/cadastro-salao" className="hover:text-zinc-950">
+                <a href={CADASTRO_SALAO_URL} className="hover:text-zinc-950">
                   Cadastrar salão
-                </Link>
+                </a>
               </li>
             </ul>
           </div>

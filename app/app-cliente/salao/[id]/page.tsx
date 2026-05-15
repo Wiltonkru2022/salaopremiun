@@ -13,7 +13,7 @@ import { validateClienteAppSession } from "@/lib/client-context.server";
 import { buildSalaoPublicPath } from "@/lib/saloes/public-link";
 
 export const metadata = {
-  title: "Salão | Salão Premium",
+  title: "Salão",
 };
 
 function formatCurrency(value: number | null) {

@@ -1,7 +1,7 @@
 import ClientAppFrame from "@/components/client-app/ClientAppFrame";
 
 export const metadata = {
-  title: "Termos do App Cliente | Salão Premium",
+  title: "Termos do App Cliente",
 };
 
 export default function ClienteTermosPage() {

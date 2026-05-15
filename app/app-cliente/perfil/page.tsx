@@ -20,7 +20,7 @@ import { getClienteAppProfileData } from "@/lib/client-app/queries";
 import { requireClienteAppContext } from "@/lib/client-context.server";
 
 export const metadata = {
-  title: "Perfil do Cliente | Salão Premium",
+  title: "Perfil do Cliente",
 };
 
 function ProfileRow({

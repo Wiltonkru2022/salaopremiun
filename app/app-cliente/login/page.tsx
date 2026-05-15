@@ -9,7 +9,7 @@ import { buildSalaoPublicPath } from "@/lib/saloes/public-link";
 import { buildSecurityBlockPath } from "@/lib/security/user-security";
 
 export const metadata = {
-  title: "Login do Cliente | Salão Premium",
+  title: "Login do Cliente",
 };
 
 function getErrorMessage(value: string | string[] | undefined) {

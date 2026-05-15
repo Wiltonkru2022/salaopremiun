@@ -5,7 +5,7 @@ import { listClienteAppWrittenReviews } from "@/lib/client-app/queries";
 import { requireClienteAppContext } from "@/lib/client-context.server";
 
 export const metadata = {
-  title: "Avaliações | Salão Premium",
+  title: "Avaliações",
 };
 
 function formatDate(value: string) {

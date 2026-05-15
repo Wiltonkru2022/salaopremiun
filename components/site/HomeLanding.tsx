@@ -55,6 +55,12 @@ const plans = [
   },
 ];
 
+const LOGIN_SALAO_URL = "https://login.salaopremiun.com.br/login";
+const CADASTRO_SALAO_URL = "https://cadastro.salaopremiun.com.br/cadastro-salao";
+const APP_CLIENTE_URL = "https://app.salaopremiun.com.br/app-cliente/login";
+const APP_PROFISSIONAL_URL =
+  "https://app.salaopremiun.com.br/app-profissional/login";
+
 export default function HomeLanding() {
   return (
     <main className="min-h-screen bg-slate-50 text-zinc-950">
@@ -92,19 +98,19 @@ function HeroSection() {
           </p>
 
           <div className="mt-7 grid gap-3 sm:grid-cols-2">
-            <Link className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-zinc-950 px-5 py-3 text-sm font-bold text-white" href="/cadastro-salao">
+            <a className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-zinc-950 px-5 py-3 text-sm font-bold text-white" href={CADASTRO_SALAO_URL}>
               Cadastrar meu salão
               <ArrowRight size={18} />
-            </Link>
-            <Link className="inline-flex min-h-12 items-center justify-center rounded-2xl border border-zinc-300 bg-white px-5 py-3 text-sm font-bold text-zinc-900" href="/login">
+            </a>
+            <a className="inline-flex min-h-12 items-center justify-center rounded-2xl border border-zinc-300 bg-white px-5 py-3 text-sm font-bold text-zinc-900" href={LOGIN_SALAO_URL}>
               Login do salão
-            </Link>
-            <Link className="inline-flex min-h-12 items-center justify-center rounded-2xl border border-zinc-300 bg-white px-5 py-3 text-sm font-bold text-zinc-900" href="https://app.salaopremiun.com.br/app-cliente/login">
+            </a>
+            <a className="inline-flex min-h-12 items-center justify-center rounded-2xl border border-zinc-300 bg-white px-5 py-3 text-sm font-bold text-zinc-900" href={APP_CLIENTE_URL}>
               App cliente
-            </Link>
-            <Link className="inline-flex min-h-12 items-center justify-center rounded-2xl border border-zinc-300 bg-white px-5 py-3 text-sm font-bold text-zinc-900" href="/app-profissional/login">
+            </a>
+            <a className="inline-flex min-h-12 items-center justify-center rounded-2xl border border-zinc-300 bg-white px-5 py-3 text-sm font-bold text-zinc-900" href={APP_PROFISSIONAL_URL}>
               App profissional
-            </Link>
+            </a>
           </div>
         </div>
 
@@ -278,14 +284,14 @@ function AppsSection() {
       <div className="mx-auto grid max-w-7xl gap-6 px-5 md:px-8 lg:grid-cols-2 lg:px-10">
         <AppCard
           title="App cliente"
-          href="https://app.salaopremiun.com.br/app-cliente/login"
+          href={APP_CLIENTE_URL}
           icon={Smartphone}
           text="O cliente entra pelo celular para acessar perfil, salões, agendamentos e acompanhar a própria rotina."
           items={["Perfil do cliente", "Salões publicados", "Agendamentos", "Histórico e acesso rápido"]}
         />
         <AppCard
           title="App profissional"
-          href="/app-profissional/login"
+          href={APP_PROFISSIONAL_URL}
           icon={MonitorSmartphone}
           text="O profissional consulta agenda, atendimento, comissões e suporte sem precisar mexer no painel do salão."
           items={["Agenda no celular", "Comandas", "Comissões", "Suporte da equipe"]}
@@ -314,9 +320,9 @@ function AppCard({
         <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-zinc-950 p-3 text-white">
           <Icon size={22} />
         </div>
-        <Link href={href} className="rounded-full bg-white px-4 py-2 text-sm font-bold text-zinc-950 ring-1 ring-zinc-200">
+        <a href={href} className="rounded-full bg-white px-4 py-2 text-sm font-bold text-zinc-950 ring-1 ring-zinc-200">
           Acessar
-        </Link>
+        </a>
       </div>
       <h2 className="mt-5 text-3xl font-black text-zinc-950">{title}</h2>
       <p className="mt-3 text-base leading-7 text-zinc-600">{text}</p>
@@ -440,9 +446,9 @@ function PlansSection() {
                   </p>
                 ))}
               </div>
-              <Link href={`/cadastro-salao?plano=${plan.slug}`} className={`mt-8 inline-flex min-h-12 w-full items-center justify-center rounded-2xl px-5 text-sm font-bold ${plan.featured ? "bg-white text-zinc-950" : "bg-zinc-950 text-white"}`}>
+              <a href={`${CADASTRO_SALAO_URL}?plano=${plan.slug}`} className={`mt-8 inline-flex min-h-12 w-full items-center justify-center rounded-2xl px-5 text-sm font-bold ${plan.featured ? "bg-white text-zinc-950" : "bg-zinc-950 text-white"}`}>
                 Começar com {plan.name}
-              </Link>
+              </a>
             </article>
           ))}
         </div>

@@ -2,7 +2,7 @@ import ClientAppFrame from "@/components/client-app/ClientAppFrame";
 import RecuperarAcessoClienteForm from "@/components/client-app/auth/RecuperarAcessoClienteForm";
 
 export const metadata = {
-  title: "Recuperar Acesso | Salão Premium",
+  title: "Recuperar Acesso",
 };
 
 type RecuperarAcessoClientePageProps = {

@@ -561,7 +561,7 @@ export default function AdminBlogEditor({ post, categories }: Props) {
     setModal({
       type: "button",
       label: "Conhecer o SalãoPremium",
-      url: "https://salaopremiun.com.br/cadastro-salao",
+      url: "https://cadastro.salaopremiun.com.br/cadastro-salao",
     });
   }
 

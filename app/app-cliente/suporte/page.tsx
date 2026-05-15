@@ -3,7 +3,7 @@ import { MessageCircle, Phone } from "lucide-react";
 import ClientAppFrame from "@/components/client-app/ClientAppFrame";
 
 export const metadata = {
-  title: "Suporte | Salão Premium",
+  title: "Suporte",
 };
 
 export default function ClienteSuportePage() {

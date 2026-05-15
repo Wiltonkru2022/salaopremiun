@@ -10,7 +10,7 @@ import { listClienteAppNotifications } from "@/lib/client-app/queries";
 import { requireClienteAppContext } from "@/lib/client-context.server";
 
 export const metadata = {
-  title: "Notificações | Salão Premium",
+  title: "Notificações",
 };
 
 function formatDate(value: string | null) {

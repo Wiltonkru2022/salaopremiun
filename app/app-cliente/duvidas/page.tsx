@@ -30,7 +30,7 @@ const faq = [
 ];
 
 export const metadata = {
-  title: "Dúvidas | Salão Premium",
+  title: "Dúvidas",
 };
 
 export default function ClienteDuvidasPage() {

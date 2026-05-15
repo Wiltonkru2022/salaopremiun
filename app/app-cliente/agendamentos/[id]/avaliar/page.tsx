@@ -6,7 +6,7 @@ import { requireClienteAppContext } from "@/lib/client-context.server";
 import { getClienteAppAppointmentForReview } from "@/lib/client-app/queries";
 
 export const metadata = {
-  title: "Avaliar Atendimento | Salão Premium",
+  title: "Avaliar Atendimento",
 };
 
 type Params = Promise<{ id: string }>;

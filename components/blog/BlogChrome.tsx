@@ -2,6 +2,8 @@ import Link from "next/link";
 import { ArrowUpRight, BookOpen, Sparkles } from "lucide-react";
 import { DOMINIO_RAIZ } from "@/lib/proxy/domain-config";
 
+const CADASTRO_SALAO_URL = "https://cadastro.salaopremiun.com.br/cadastro-salao";
+
 export function BlogHeader() {
   return (
     <header className="sticky top-0 z-50 border-b border-zinc-200/70 bg-white/95 backdrop-blur-xl">
@@ -27,13 +29,13 @@ export function BlogHeader() {
           >
             Site principal
           </Link>
-          <Link
-            href={`https://${DOMINIO_RAIZ}/cadastro-salao`}
+          <a
+            href={CADASTRO_SALAO_URL}
             className="inline-flex items-center gap-2 rounded-full bg-zinc-950 px-4 py-2 text-sm font-black text-white shadow-sm transition hover:bg-zinc-800"
           >
             Conhecer sistema
             <ArrowUpRight size={15} />
-          </Link>
+          </a>
         </div>
       </div>
     </header>

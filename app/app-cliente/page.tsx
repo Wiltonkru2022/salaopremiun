@@ -16,7 +16,7 @@ import {
 } from "@/lib/client-app/queries";
 
 export const metadata = {
-  title: "Meu App | Salão Premium",
+  title: "Meu App",
 };
 
 function formatDate(date: string) {

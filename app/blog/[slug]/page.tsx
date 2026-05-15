@@ -6,7 +6,9 @@ import BlogCoverMedia from "@/components/blog/BlogCoverMedia";
 import { BlogFooter, BlogHeader } from "@/components/blog/BlogChrome";
 import BlogPostEngagement from "@/components/blog/BlogPostEngagement";
 import { isVideoMedia } from "@/lib/blog/media";
-import { DOMINIO_BLOG, DOMINIO_RAIZ } from "@/lib/proxy/domain-config";
+import { DOMINIO_BLOG } from "@/lib/proxy/domain-config";
+
+const CADASTRO_SALAO_URL = "https://cadastro.salaopremiun.com.br/cadastro-salao";
 import { getBlogPost, getPublishedBlogPosts } from "@/lib/blog/service";
 
 type Props = {
@@ -128,12 +130,12 @@ export default async function BlogPostPage({ params }: Props) {
                   profissionais, estoque e marketing para o salão vender com
                   mais controle.
                 </p>
-                <Link
-                  href={`https://${DOMINIO_RAIZ}/cadastro-salao`}
+                <a
+                  href={CADASTRO_SALAO_URL}
                   className="mt-4 inline-flex rounded-full bg-white px-5 py-2.5 text-sm font-black text-zinc-950"
                 >
                   Conhecer o sistema
-                </Link>
+                </a>
               </div>
             </div>
 

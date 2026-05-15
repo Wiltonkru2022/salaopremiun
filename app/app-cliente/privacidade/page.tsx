@@ -1,7 +1,7 @@
 import ClientAppFrame from "@/components/client-app/ClientAppFrame";
 
 export const metadata = {
-  title: "Privacidade do App Cliente | Salão Premium",
+  title: "Privacidade do App Cliente",
 };
 
 export default function ClientePrivacidadePage() {

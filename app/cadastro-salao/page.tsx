@@ -32,6 +32,7 @@ const CREATION_STEPS = [
 const CREATION_TYPING_DELAY_MS = 58;
 const CREATION_FIRST_STEP_PAUSE_MS = 1200;
 const CREATION_STEP_PAUSE_MS = 900;
+const LOGIN_SALAO_URL = "https://login.salaopremiun.com.br/login";
 
 function onlyNumbers(value: string) {
   return value.replace(/\D/g, "");
@@ -385,18 +386,18 @@ function CadastroSalaoContent() {
           </span>
         </Link>
 
-        <Link
-          href="/login"
+        <a
+          href={LOGIN_SALAO_URL}
           className="rounded-full border border-zinc-200 px-4 py-2 text-sm font-black text-zinc-800 transition hover:border-zinc-950"
         >
           Entrar
-        </Link>
+        </a>
       </header>
 
       <main className="grid min-h-[calc(100vh-74px)] lg:grid-cols-2">
         <section
           className="relative hidden overflow-hidden bg-zinc-950 bg-cover bg-center lg:block"
-          style={{ backgroundImage: "url('/site/cadastro-salão-bg.jpeg')" }}
+          style={{ backgroundImage: "url('/site/cadastro-salao-bg.jpeg')" }}
         >
           <div className="absolute inset-0 bg-zinc-950/58" />
           <div className="absolute inset-0 bg-gradient-to-br from-zinc-950 via-zinc-950/55 to-transparent" />
@@ -544,9 +545,9 @@ function CadastroSalaoContent() {
 
           <p className="text-center text-xs text-zinc-500">
             Já faz parte do SalãoPremium?{" "}
-            <Link href="/login" className="font-black text-zinc-950 underline">
+            <a href={LOGIN_SALAO_URL} className="font-black text-zinc-950 underline">
               Acesse sua conta
-            </Link>
+            </a>
           </p>
         </FormPanel>
       );

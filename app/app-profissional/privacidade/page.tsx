@@ -1,7 +1,7 @@
 import ProfissionalShell from "@/components/profissional/layout/ProfissionalShell";
 
 export const metadata = {
-  title: "Privacidade do App Profissional | Salão Premium",
+  title: "Privacidade do App Profissional",
 };
 
 export default function ProfissionalPrivacidadePage() {

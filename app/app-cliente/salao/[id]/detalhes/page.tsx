@@ -6,7 +6,7 @@ import ClientSalonSectionTabs from "@/components/client-app/ClientSalonSectionTa
 import { getClientAppSalonDetail } from "@/lib/client-app/queries";
 
 export const metadata = {
-  title: "Detalhes do Salão | Salão Premium",
+  title: "Detalhes do Salão",
 };
 
 const DIAS_LABEL: Record<string, string> = {

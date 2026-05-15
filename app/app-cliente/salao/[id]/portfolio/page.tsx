@@ -6,7 +6,7 @@ import ClientSalonSectionTabs from "@/components/client-app/ClientSalonSectionTa
 import { getClientAppSalonDetail } from "@/lib/client-app/queries";
 
 export const metadata = {
-  title: "Portfólio | Salão Premium",
+  title: "Portfólio",
 };
 
 export default async function ClienteSalonPortfolioPage({
