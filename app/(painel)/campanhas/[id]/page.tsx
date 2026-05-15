@@ -71,10 +71,19 @@ function statusClass(label: string) {
   return "border-amber-200 bg-amber-50 text-amber-800";
 }
 
-async function loadCampanhaDetalhe(idSalao: string, id: string, usosPage: number, usosPageSize: number) {
+async function loadCampanhaDetalhe(
+  idSalao: string,
+  id: string,
+  usosPage: number,
+  usosPageSize: number,
+  clientesPage: number,
+  clientesPageSize: number
+) {
   const supabase = getSupabaseAdmin();
   const usosFrom = usosPage * usosPageSize;
   const usosTo = usosFrom + usosPageSize - 1;
+  const clientesFrom = clientesPage * clientesPageSize;
+  const clientesTo = clientesFrom + clientesPageSize - 1;
   const [
     campanhaResult,
     servicosResult,
@@ -120,10 +129,10 @@ async function loadCampanhaDetalhe(idSalao: string, id: string, usosPage: number
       .limit(200),
     (supabase as any)
       .from("cupom_salao_clientes")
-      .select("id_cliente, clientes(id, nome, telefone, email, whatsapp)")
+      .select("id_cliente, clientes(id, nome, telefone, email, whatsapp)", { count: "exact" })
       .eq("id_salao", idSalao)
       .eq("id_cupom", id)
-      .limit(300),
+      .range(clientesFrom, clientesTo),
     (supabase as any)
       .from("clientes")
       .select("id, nome, telefone, email, whatsapp")
@@ -167,6 +176,7 @@ async function loadCampanhaDetalhe(idSalao: string, id: string, usosPage: number
     eventos,
     agendamentos,
     clientesPermitidos: (clientesPermitidosResult.data || []) as Array<Record<string, any>>,
+    totalClientesPermitidos: Number(clientesPermitidosResult.count || 0),
     clientes: (clientesResult.data || []) as Array<Record<string, any>>,
     servicosDisponiveis: (servicosDisponiveisResult.data || []) as Array<Record<string, any>>,
     metricas: {
@@ -187,7 +197,12 @@ export default async function CampanhaDetalhePage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ ok?: string | string[]; erro?: string | string[]; pagina_usos?: string | string[] }>;
+  searchParams: Promise<{
+    ok?: string | string[];
+    erro?: string | string[];
+    pagina_usos?: string | string[];
+    pagina_clientes?: string | string[];
+  }>;
 }) {
   const { id } = await params;
   const query = await searchParams;
@@ -196,9 +211,19 @@ export default async function CampanhaDetalhePage({
   if (String(usuario.nivel || "").toLowerCase() !== "admin") redirect("/dashboard");
 
   const paginaUsosParam = Array.isArray(query.pagina_usos) ? query.pagina_usos[0] : query.pagina_usos;
+  const paginaClientesParam = Array.isArray(query.pagina_clientes) ? query.pagina_clientes[0] : query.pagina_clientes;
   const paginaUsos = Math.max(0, Number(paginaUsosParam || 1) - 1);
+  const paginaClientes = Math.max(0, Number(paginaClientesParam || 1) - 1);
   const usosPageSize = 10;
-  const data = await loadCampanhaDetalhe(usuario.id_salao, id, paginaUsos, usosPageSize);
+  const clientesPageSize = 10;
+  const data = await loadCampanhaDetalhe(
+    usuario.id_salao,
+    id,
+    paginaUsos,
+    usosPageSize,
+    paginaClientes,
+    clientesPageSize
+  );
   if (!data) redirect("/campanhas?erro=Campanha%20nao%20encontrada.");
 
   const campanha = data.campanha;
@@ -225,7 +250,18 @@ export default async function CampanhaDetalhePage({
     { label: "Conversao", value: `${data.metricas.conversao}%`, icon: BarChart3 },
     { label: "Desconto listado", value: money(data.metricas.descontoTotal), icon: Gift },
   ];
-  const getUsosHref = (page: number) => `/campanhas/${campanha.id}?pagina_usos=${page + 1}`;
+  const getUsosHref = (page: number) => {
+    const params = new URLSearchParams();
+    params.set("pagina_usos", String(page + 1));
+    if (paginaClientes > 0) params.set("pagina_clientes", String(paginaClientes + 1));
+    return `/campanhas/${campanha.id}?${params.toString()}`;
+  };
+  const getClientesHref = (page: number) => {
+    const params = new URLSearchParams();
+    if (paginaUsos > 0) params.set("pagina_usos", String(paginaUsos + 1));
+    params.set("pagina_clientes", String(page + 1));
+    return `/campanhas/${campanha.id}?${params.toString()}`;
+  };
 
   return (
     <main className="space-y-6">
@@ -565,6 +601,13 @@ export default async function CampanhaDetalhePage({
               </p>
             ) : null}
           </div>
+          <PaginationLinks
+            currentPage={paginaClientes}
+            pageSize={clientesPageSize}
+            totalItems={data.totalClientesPermitidos}
+            getHref={getClientesHref}
+            className="mt-4"
+          />
         </div>
 
         <div className="rounded-[1.75rem] border border-zinc-200 bg-white p-5 shadow-sm">
