@@ -116,17 +116,20 @@ export async function redeemClienteCoupon(params: {
   const titulo = String(cupom.titulo_push || cupom.nome || "Voce recebeu um cupom").trim();
   const codigoCupom = String(cupom.codigo || "").trim();
 
-  await (supabase as any)
-    .from("campanha_eventos")
-    .insert({
-      id_salao: idSalao,
-      id_cupom: cupom.id,
-      cliente_app_conta_id: idConta,
-      id_cliente: vinculo.idCliente,
-      tipo: "resgate",
-      metadata: { origem: "link_whatsapp_manual", codigo: codigoCupom },
-    })
-    .catch(() => null);
+  try {
+    await (supabase as any)
+      .from("campanha_eventos")
+      .insert({
+        id_salao: idSalao,
+        id_cupom: cupom.id,
+        cliente_app_conta_id: idConta,
+        id_cliente: vinculo.idCliente,
+        tipo: "resgate",
+        metadata: { origem: "link_whatsapp_manual", codigo: codigoCupom },
+      });
+  } catch {
+    // O resgate nao deve falhar se a telemetria da campanha oscilar.
+  }
 
   await queueNotificationJob({
     idSalao,
