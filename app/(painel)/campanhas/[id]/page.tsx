@@ -7,6 +7,7 @@ import {
   Copy,
   Gift,
   Link2,
+  MessageCircle,
   Scissors,
   Users,
 } from "lucide-react";
@@ -38,6 +39,14 @@ function money(value: number) {
 function formatDate(value: unknown) {
   const iso = String(value || "").slice(0, 10);
   return iso ? iso.split("-").reverse().join("/") : "Sem data";
+}
+
+function normalizeWhatsApp(value: unknown) {
+  const digits = String(value || "").replace(/\D/g, "");
+  if (!digits) return "";
+  if (digits.startsWith("55")) return digits;
+  if (digits.length >= 10 && digits.length <= 11) return `55${digits}`;
+  return digits;
 }
 
 async function loadCampanhaDetalhe(idSalao: string, id: string) {
@@ -167,6 +176,13 @@ export default async function CampanhaDetalhePage({
   const link = campanha.slug
     ? `${siteUrl()}/campanha/${campanha.slug}`
     : `${siteUrl()}/resgatar-cupom/${campanha.resgate_token}`;
+  const mensagemDivulgacao = [
+    String(campanha.mensagem_cliente || campanha.descricao || `Voce recebeu uma campanha especial: ${campanha.nome}`),
+    "",
+    "Resgate pelo link:",
+    link,
+  ].join("\n");
+  const whatsappDivulgacaoUrl = `https://wa.me/?text=${encodeURIComponent(mensagemDivulgacao)}`;
   const statusAtual = String(campanha.status_campanha || "ativa");
   const ok = Array.isArray(query.ok) ? query.ok[0] : query.ok;
   const erro = Array.isArray(query.erro) ? query.erro[0] : query.erro;
@@ -302,6 +318,30 @@ export default async function CampanhaDetalhePage({
           <code className="mt-4 block truncate rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-xs text-zinc-600">
             {link}
           </code>
+          <div className="mt-4 rounded-2xl border border-emerald-100 bg-emerald-50 p-4">
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.14em] text-emerald-700">WhatsApp manual</p>
+                <p className="mt-1 text-sm font-bold text-emerald-950">
+                  Mensagem pronta para copiar ou abrir direto no WhatsApp.
+                </p>
+              </div>
+              <a
+                href={whatsappDivulgacaoUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-4 text-sm font-black text-white shadow-sm transition hover:bg-emerald-700"
+              >
+                <MessageCircle size={17} /> Abrir WhatsApp
+              </a>
+            </div>
+            <textarea
+              readOnly
+              rows={5}
+              value={mensagemDivulgacao}
+              className="mt-4 w-full resize-none rounded-2xl border border-emerald-100 bg-white px-4 py-3 text-sm font-semibold leading-6 text-zinc-700 outline-none"
+            />
+          </div>
           <div className="mt-4 grid gap-3 md:grid-cols-3">
             <div className="rounded-2xl bg-zinc-50 p-4">
               <p className="text-xs font-black uppercase tracking-[0.14em] text-zinc-400">Status</p>
@@ -449,19 +489,40 @@ export default async function CampanhaDetalhePage({
           <div className="mt-4 grid gap-3 md:grid-cols-2">
             {data.clientesPermitidos.map((row) => {
               const cliente = Array.isArray(row.clientes) ? row.clientes[0] : row.clientes;
+              const whatsapp = normalizeWhatsApp(cliente?.whatsapp || cliente?.telefone);
+              const mensagemCliente = [
+                `Oi, ${String(cliente?.nome || "tudo bem")}.`,
+                String(campanha.mensagem_cliente || campanha.descricao || `Voce recebeu uma campanha especial: ${campanha.nome}`),
+                "",
+                "Resgate pelo link:",
+                link,
+              ].join("\n");
+              const whatsappClienteUrl = whatsapp
+                ? `https://wa.me/${whatsapp}?text=${encodeURIComponent(mensagemCliente)}`
+                : whatsappDivulgacaoUrl;
               return (
                 <div key={String(row.id_cliente)} className="flex items-center justify-between gap-3 rounded-2xl border border-zinc-100 bg-zinc-50 px-4 py-3">
                   <div className="min-w-0">
                     <strong className="block truncate text-sm text-zinc-950">{String(cliente?.nome || "Cliente")}</strong>
                     <span className="text-xs font-bold text-zinc-500">{String(cliente?.telefone || cliente?.whatsapp || cliente?.email || "")}</span>
                   </div>
-                  <form action={removerClienteCampanhaAction}>
-                    <input type="hidden" name="id_campanha" value={String(campanha.id)} />
-                    <input type="hidden" name="id_cliente" value={String(row.id_cliente)} />
-                    <button className="rounded-xl border border-zinc-200 bg-white px-3 py-2 text-xs font-black text-zinc-600" type="submit">
-                      Remover
-                    </button>
-                  </form>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <a
+                      href={whatsappClienteUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1 rounded-xl border border-emerald-200 bg-white px-3 py-2 text-xs font-black text-emerald-700"
+                    >
+                      <MessageCircle size={14} /> Enviar
+                    </a>
+                    <form action={removerClienteCampanhaAction}>
+                      <input type="hidden" name="id_campanha" value={String(campanha.id)} />
+                      <input type="hidden" name="id_cliente" value={String(row.id_cliente)} />
+                      <button className="rounded-xl border border-zinc-200 bg-white px-3 py-2 text-xs font-black text-zinc-600" type="submit">
+                        Remover
+                      </button>
+                    </form>
+                  </div>
                 </div>
               );
             })}
