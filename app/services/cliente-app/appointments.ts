@@ -11,6 +11,7 @@ import {
   scheduleAppointmentReminderNotifications,
 } from "@/lib/notification-jobs";
 import { ensureClienteContaVinculadaAoSalao } from "@/app/services/cliente-app/auth";
+import { notifyWaitlistAboutReleasedSlot } from "@/lib/client-app/waitlist";
 import {
   ensureDiaFuncionamento,
   validateAgendaTimeRange,
@@ -608,72 +609,6 @@ async function loadOwnedAppointment(params: {
   };
 }
 
-async function notifyWaitlistAboutReleasedSlot(params: {
-  supabaseAdmin: any;
-  ownership: ClienteAgendamentoOwnership;
-}) {
-  if (!params.ownership.idServico || !params.ownership.idProfissional) return;
-
-  const { data } = await (params.supabaseAdmin as any)
-    .from("lista_espera_agendamentos")
-    .select("id, cliente_app_conta_id, id_cliente, id_servico, id_profissional, data_preferida")
-    .eq("id_salao", params.ownership.idSalao)
-    .eq("status", "ativo")
-    .order("created_at", { ascending: true })
-    .limit(50);
-
-  const candidates = ((data || []) as Array<Record<string, unknown>>)
-    .filter((item) => {
-      const idServico = String(item.id_servico || "").trim();
-      const idProfissional = String(item.id_profissional || "").trim();
-      const dataPreferida = String(item.data_preferida || "").trim();
-
-      return (
-        (!idServico || idServico === params.ownership.idServico) &&
-        (!idProfissional || idProfissional === params.ownership.idProfissional) &&
-        (!dataPreferida || dataPreferida === params.ownership.data)
-      );
-    })
-    .slice(0, 10);
-
-  if (!candidates.length) return;
-
-  const now = new Date().toISOString();
-  await (params.supabaseAdmin as any)
-    .from("lista_espera_agendamentos")
-    .update({
-      status: "avisado",
-      ultimo_aviso_em: now,
-      updated_at: now,
-    })
-    .in(
-      "id",
-      candidates.map((item) => String(item.id || "")).filter(Boolean)
-    );
-
-  await Promise.allSettled(
-    candidates.map((item) =>
-      queueNotificationJob({
-        idSalao: params.ownership.idSalao,
-        idCliente: String(item.id_cliente || "").trim() || null,
-        clienteAppContaId:
-          String(item.cliente_app_conta_id || "").trim() || null,
-        canal: "cliente_app",
-        tipo: "lista_espera_horario_liberado",
-        titulo: "Horário liberado",
-        mensagem: `${params.ownership.servicoNome || "Um serviço"} abriu vaga em ${params.ownership.data || "uma data próxima"} às ${String(params.ownership.horaInicio || "").slice(0, 5)}.`,
-        url: `/app-cliente/salao/${params.ownership.idSalao}`,
-        tag: `lista-espera-${params.ownership.idSalao}`,
-        idempotencyKey: `lista-espera-${params.ownership.idSalao}-${params.ownership.idServico}-${params.ownership.idProfissional}-${params.ownership.data}-${params.ownership.horaInicio}-${item.id}`,
-        metadata: {
-          origem: "lista_espera",
-          idListaEspera: item.id,
-        },
-      })
-    )
-  );
-}
-
 export async function createClienteAppAppointment(
   params: ClienteBookingParams
 ): Promise<ClienteAppActionResult> {
@@ -1255,7 +1190,14 @@ export async function cancelClienteAppAppointment(
       try {
         await notifyWaitlistAboutReleasedSlot({
           supabaseAdmin,
-          ownership,
+          releasedSlot: {
+            idSalao: ownership.idSalao,
+            idServico: ownership.idServico,
+            idProfissional: ownership.idProfissional,
+            data: ownership.data,
+            horaInicio: ownership.horaInicio,
+            servicoNome: ownership.servicoNome,
+          },
         });
       } catch {
         // A agenda deve ser liberada mesmo se a lista de espera falhar.
@@ -1647,6 +1589,22 @@ export async function rescheduleClienteAppAppointment(
         });
       } catch {
         // Reagendamento salvo mesmo se push falhar.
+      }
+
+      try {
+        await notifyWaitlistAboutReleasedSlot({
+          supabaseAdmin,
+          releasedSlot: {
+            idSalao: ownership.idSalao,
+            idServico: ownership.idServico,
+            idProfissional: ownership.idProfissional,
+            data: ownership.data,
+            horaInicio: ownership.horaInicio,
+            servicoNome: ownership.servicoNome,
+          },
+        });
+      } catch {
+        // Reagendamento salvo mesmo se a lista de espera falhar.
       }
 
       return {

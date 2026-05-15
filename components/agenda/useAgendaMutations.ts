@@ -38,6 +38,25 @@ function addMinutesToTime(time: string, minutes: number) {
   );
 }
 
+async function notifyReleasedSlotToWaitlist(params: {
+  idSalao: string;
+  item: Agendamento;
+}) {
+  await fetch("/api/agenda/lista-espera/liberar", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "same-origin",
+    body: JSON.stringify({
+      idSalao: params.idSalao,
+      idServico: params.item.servico_id || null,
+      idProfissional: params.item.profissional_id || null,
+      data: params.item.data,
+      horaInicio: params.item.hora_inicio || null,
+      servicoNome: params.item.servico?.nome || null,
+    }),
+  });
+}
+
 type UseAgendaMutationsParams = {
   supabase: ReturnType<typeof import("@/lib/supabase/client").createClient>;
   idSalao: string;
@@ -519,6 +538,19 @@ export function useAgendaMutations({
         }
       }
 
+      try {
+        const previousSlotChanged =
+          item.data !== move.newDate ||
+          normalizeTimeString(item.hora_inicio) !== startTime ||
+          normalizeTimeString(item.hora_fim) !== novoFim;
+
+        if (previousSlotChanged) {
+          await notifyReleasedSlotToWaitlist({ idSalao, item });
+        }
+      } catch {
+        // A agenda ja foi movida; a fila de espera nao deve travar a operacao.
+      }
+
       void loadAgenda();
     },
     [
@@ -564,12 +596,19 @@ export function useAgendaMutations({
             throw new Error("Erro ao excluir agendamento.");
           }
 
+          try {
+            await notifyReleasedSlotToWaitlist({ idSalao, item });
+          } catch {
+            // A exclusao ja foi salva; a fila de espera nao deve travar a operacao.
+          }
+
           await loadAgenda();
         },
       });
     },
     [
       bloquearSeAssinaturaInvalida,
+      idSalao,
       loadAgenda,
       sincronizarAgendamento,
       supabase,
@@ -622,6 +661,14 @@ export function useAgendaMutations({
         return;
       }
 
+      if (nextStatus === "cancelado") {
+        try {
+          await notifyReleasedSlotToWaitlist({ idSalao, item });
+        } catch {
+          // O status ja foi salvo; a fila de espera nao deve travar a operacao.
+        }
+      }
+
       await loadAgenda();
     },
     [
@@ -649,6 +696,12 @@ export function useAgendaMutations({
             idSalao,
             idAgendamento: item.id,
           });
+
+          try {
+            await notifyReleasedSlotToWaitlist({ idSalao, item });
+          } catch {
+            // O cancelamento ja foi salvo; a fila de espera nao deve travar a operacao.
+          }
 
           setModalOpen(false);
           setEditingItem(null);

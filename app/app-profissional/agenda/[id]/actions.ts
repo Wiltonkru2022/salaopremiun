@@ -18,6 +18,7 @@ import {
   buscarServicoPorId,
   validarHorarioAgendamento,
 } from "@/app/services/profissional/agenda";
+import { notifyWaitlistAboutReleasedSlot } from "@/lib/client-app/waitlist";
 
 const STATUS_PERMITIDOS = new Set([
   "pendente",
@@ -183,6 +184,28 @@ export async function atualizarAgendamentoProfissionalAction(
         previousDate,
         previousTime,
       });
+
+      try {
+        await runAdminOperation({
+          action: "app_profissional_lista_espera_horario_liberado",
+          actorId: session.idProfissional,
+          idSalao: session.idSalao,
+          run: async (supabaseAdmin) =>
+            notifyWaitlistAboutReleasedSlot({
+              supabaseAdmin,
+              releasedSlot: {
+                idSalao: session.idSalao,
+                idServico: agendamento.servico_id || null,
+                idProfissional: session.idProfissional,
+                data: previousDate,
+                horaInicio: previousTime,
+                servicoNome: servico.nome || null,
+              },
+            }),
+        });
+      } catch {
+        // O reagendamento ja foi salvo; a lista de espera nao deve travar o fluxo.
+      }
     }
 
     if (
@@ -375,6 +398,32 @@ export async function cancelarAgendamentoProfissionalAction(formData: FormData) 
       horaInicio: agendamento.hora_inicio,
       actor: "profissional",
     });
+
+    try {
+      const servico = await buscarServicoPorId(
+        session.idSalao,
+        agendamento.servico_id
+      );
+      await runAdminOperation({
+        action: "app_profissional_lista_espera_cancelamento",
+        actorId: session.idProfissional,
+        idSalao: session.idSalao,
+        run: async (supabaseAdmin) =>
+          notifyWaitlistAboutReleasedSlot({
+            supabaseAdmin,
+            releasedSlot: {
+              idSalao: session.idSalao,
+              idServico: agendamento.servico_id || null,
+              idProfissional: session.idProfissional,
+              data: String(agendamento.data || "").slice(0, 10),
+              horaInicio: normalizeTime(String(agendamento.hora_inicio || "")),
+              servicoNome: servico.nome || null,
+            },
+          }),
+      });
+    } catch {
+      // O cancelamento ja foi salvo; a lista de espera nao deve travar o fluxo.
+    }
 
     revalidatePath("/app-profissional/agenda");
     revalidatePath("/app-profissional/inicio");
