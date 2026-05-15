@@ -292,3 +292,49 @@ export async function removerClienteCampanhaAction(formData: FormData) {
   revalidatePath(`/campanhas/${idCampanha}`);
   redirect(`/campanhas/${idCampanha}?ok=Cliente%20removido.`);
 }
+
+export async function atualizarServicosCampanhaAction(formData: FormData) {
+  const { usuario } = await requireCampaignAdmin();
+  const idCampanha = String(formData.get("id_campanha") || "").trim();
+  const servicos = formData
+    .getAll("servicos")
+    .map((item) => String(item || "").trim())
+    .filter(Boolean);
+
+  if (!idCampanha) redirect("/campanhas?erro=Campanha%20invalida.");
+
+  const supabase = getSupabaseAdmin();
+  const { error: deleteError } = await (supabase as any)
+    .from("cupom_salao_servicos")
+    .delete()
+    .eq("id_salao", usuario.id_salao)
+    .eq("id_cupom", idCampanha);
+
+  if (deleteError) {
+    redirect(`/campanhas/${idCampanha}?erro=${encodeURIComponent(deleteError.message)}`);
+  }
+
+  if (servicos.length) {
+    const rows = servicos.map((idServico) => ({
+      id_salao: usuario.id_salao,
+      id_cupom: idCampanha,
+      id_servico: idServico,
+      tipo_beneficio: String(formData.get(`beneficio_tipo_${idServico}`) || "desconto_percentual"),
+      valor_beneficio: Number(formData.get(`beneficio_valor_${idServico}`) || 0) || null,
+      brinde_descricao: String(formData.get(`beneficio_brinde_${idServico}`) || "").trim() || null,
+      limite_uso_servico: Number(formData.get(`limite_servico_${idServico}`) || 0) || null,
+    }));
+
+    const { error: insertError } = await (supabase as any)
+      .from("cupom_salao_servicos")
+      .insert(rows);
+
+    if (insertError) {
+      redirect(`/campanhas/${idCampanha}?erro=${encodeURIComponent(insertError.message)}`);
+    }
+  }
+
+  revalidatePath("/campanhas");
+  revalidatePath(`/campanhas/${idCampanha}`);
+  redirect(`/campanhas/${idCampanha}?ok=Servicos%20atualizados.`);
+}

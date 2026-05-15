@@ -15,6 +15,7 @@ import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import {
   adicionarClienteCampanhaAction,
   atualizarCampanhaAction,
+  atualizarServicosCampanhaAction,
   atualizarStatusCampanhaAction,
   removerClienteCampanhaAction,
 } from "../actions";
@@ -49,6 +50,7 @@ async function loadCampanhaDetalhe(idSalao: string, id: string) {
     agendamentosResult,
     clientesPermitidosResult,
     clientesResult,
+    servicosDisponiveisResult,
   ] = await Promise.all([
     (supabase as any)
       .from("cupons_salao")
@@ -96,6 +98,13 @@ async function loadCampanhaDetalhe(idSalao: string, id: string) {
       .eq("ativo", true)
       .order("nome", { ascending: true })
       .limit(300),
+    (supabase as any)
+      .from("servicos")
+      .select("id, nome, preco, preco_padrao, ativo, app_cliente_visivel")
+      .eq("id_salao", idSalao)
+      .eq("ativo", true)
+      .order("nome", { ascending: true })
+      .limit(200),
   ]);
 
   if (!campanhaResult.data?.id) return null;
@@ -125,6 +134,7 @@ async function loadCampanhaDetalhe(idSalao: string, id: string) {
     agendamentos,
     clientesPermitidos: (clientesPermitidosResult.data || []) as Array<Record<string, any>>,
     clientes: (clientesResult.data || []) as Array<Record<string, any>>,
+    servicosDisponiveis: (servicosDisponiveisResult.data || []) as Array<Record<string, any>>,
     metricas: {
       cliques,
       agendamentos: agendamentosEvento || agendamentos.length,
@@ -160,6 +170,9 @@ export default async function CampanhaDetalhePage({
   const statusAtual = String(campanha.status_campanha || "ativa");
   const ok = Array.isArray(query.ok) ? query.ok[0] : query.ok;
   const erro = Array.isArray(query.erro) ? query.erro[0] : query.erro;
+  const servicosVinculadosMap = new Map(
+    data.servicos.map((servico) => [String(servico.id_servico), servico])
+  );
   const kpiCards = [
     { label: "Cliques", value: data.metricas.cliques, icon: Link2 },
     { label: "Agendamentos", value: data.metricas.agendamentos, icon: CalendarDays },
@@ -329,6 +342,84 @@ export default async function CampanhaDetalhePage({
             ) : null}
           </div>
         </div>
+
+        <form action={atualizarServicosCampanhaAction} className="rounded-[1.75rem] border border-zinc-200 bg-white p-5 shadow-sm xl:col-span-2">
+          <input type="hidden" name="id_campanha" value={String(campanha.id)} />
+          <h2 className="flex items-center gap-2 text-xl font-black text-zinc-950">
+            <Scissors size={18} /> Editar servicos permitidos
+          </h2>
+          <p className="mt-1 text-sm text-zinc-500">
+            Marque os servicos que aparecem na pagina publica da campanha e ajuste o beneficio.
+          </p>
+          <div className="mt-4 grid gap-3 lg:grid-cols-2">
+            {data.servicosDisponiveis.map((servico) => {
+              const vinculo = servicosVinculadosMap.get(String(servico.id));
+              const preco = Number(servico.preco_padrao ?? servico.preco ?? 0);
+              return (
+                <label key={String(servico.id)} className="block rounded-2xl border border-zinc-100 bg-zinc-50 p-4">
+                  <div className="flex items-start gap-3">
+                    <input
+                      name="servicos"
+                      value={String(servico.id)}
+                      type="checkbox"
+                      defaultChecked={Boolean(vinculo)}
+                      className="mt-1 h-4 w-4 accent-zinc-950"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
+                        <strong className="truncate text-zinc-950">{String(servico.nome || "Servico")}</strong>
+                        <span className="text-xs font-black text-zinc-500">{money(preco)}</span>
+                      </div>
+                      <div className="mt-3 grid gap-2 md:grid-cols-3">
+                        <select
+                          name={`beneficio_tipo_${servico.id}`}
+                          defaultValue={String(vinculo?.tipo_beneficio || "desconto_percentual")}
+                          className="h-10 rounded-xl border border-zinc-200 bg-white px-2 text-xs font-bold"
+                        >
+                          <option value="desconto_percentual">Desconto %</option>
+                          <option value="desconto_valor">Desconto R$</option>
+                          <option value="preco_fixo">Preco fixo</option>
+                          <option value="brinde">Brinde</option>
+                        </select>
+                        <input
+                          name={`beneficio_valor_${servico.id}`}
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          defaultValue={vinculo?.valor_beneficio ?? ""}
+                          className="h-10 rounded-xl border border-zinc-200 bg-white px-2 text-xs font-bold"
+                          placeholder="Valor"
+                        />
+                        <input
+                          name={`limite_servico_${servico.id}`}
+                          type="number"
+                          min="1"
+                          defaultValue={vinculo?.limite_uso_servico ?? ""}
+                          className="h-10 rounded-xl border border-zinc-200 bg-white px-2 text-xs font-bold"
+                          placeholder="Limite"
+                        />
+                      </div>
+                      <input
+                        name={`beneficio_brinde_${servico.id}`}
+                        defaultValue={String(vinculo?.brinde_descricao || "")}
+                        className="mt-2 h-10 w-full rounded-xl border border-zinc-200 bg-white px-2 text-xs font-bold"
+                        placeholder="Descricao do brinde, se houver"
+                      />
+                    </div>
+                  </div>
+                </label>
+              );
+            })}
+            {!data.servicosDisponiveis.length ? (
+              <p className="rounded-2xl border border-dashed border-zinc-200 p-4 text-sm text-zinc-500">
+                Nenhum servico ativo encontrado.
+              </p>
+            ) : null}
+          </div>
+          <button className="mt-4 h-11 rounded-2xl bg-zinc-950 px-5 text-sm font-black text-white" type="submit">
+            Salvar servicos
+          </button>
+        </form>
       </section>
 
       <section className="grid gap-5 xl:grid-cols-[1fr_1fr]">
