@@ -7,6 +7,7 @@ import {
   notifyAppointmentCanceled,
   notifyAppointmentRescheduled,
   notifyReviewReceived,
+  queueNotificationJob,
 } from "@/lib/notification-jobs";
 import { ensureClienteContaVinculadaAoSalao } from "@/app/services/cliente-app/auth";
 import {
@@ -42,11 +43,22 @@ type ClienteBookingParams = {
   data: string;
   horaInicio: string;
   observacoes?: string | null;
+  adicionaisIds?: string[] | null;
 };
 
 type ClienteCancelParams = {
   idConta: string;
   idAgendamento: string;
+};
+
+type ClienteConfirmParams = ClienteCancelParams;
+
+type ClienteWaitlistParams = {
+  idConta: string;
+  idSalao: string;
+  idServico: string;
+  idProfissional: string;
+  dataPreferida?: string | null;
 };
 
 type ClienteRescheduleParams = ClienteCancelParams & {
@@ -505,6 +517,72 @@ async function loadOwnedAppointment(params: {
   };
 }
 
+async function notifyWaitlistAboutReleasedSlot(params: {
+  supabaseAdmin: any;
+  ownership: ClienteAgendamentoOwnership;
+}) {
+  if (!params.ownership.idServico || !params.ownership.idProfissional) return;
+
+  const { data } = await (params.supabaseAdmin as any)
+    .from("lista_espera_agendamentos")
+    .select("id, cliente_app_conta_id, id_cliente, id_servico, id_profissional, data_preferida")
+    .eq("id_salao", params.ownership.idSalao)
+    .eq("status", "ativo")
+    .order("created_at", { ascending: true })
+    .limit(50);
+
+  const candidates = ((data || []) as Array<Record<string, unknown>>)
+    .filter((item) => {
+      const idServico = String(item.id_servico || "").trim();
+      const idProfissional = String(item.id_profissional || "").trim();
+      const dataPreferida = String(item.data_preferida || "").trim();
+
+      return (
+        (!idServico || idServico === params.ownership.idServico) &&
+        (!idProfissional || idProfissional === params.ownership.idProfissional) &&
+        (!dataPreferida || dataPreferida === params.ownership.data)
+      );
+    })
+    .slice(0, 10);
+
+  if (!candidates.length) return;
+
+  const now = new Date().toISOString();
+  await (params.supabaseAdmin as any)
+    .from("lista_espera_agendamentos")
+    .update({
+      status: "avisado",
+      ultimo_aviso_em: now,
+      updated_at: now,
+    })
+    .in(
+      "id",
+      candidates.map((item) => String(item.id || "")).filter(Boolean)
+    );
+
+  await Promise.allSettled(
+    candidates.map((item) =>
+      queueNotificationJob({
+        idSalao: params.ownership.idSalao,
+        idCliente: String(item.id_cliente || "").trim() || null,
+        clienteAppContaId:
+          String(item.cliente_app_conta_id || "").trim() || null,
+        canal: "cliente_app",
+        tipo: "lista_espera_horario_liberado",
+        titulo: "Horário liberado",
+        mensagem: `${params.ownership.servicoNome || "Um serviço"} abriu vaga em ${params.ownership.data || "uma data próxima"} às ${String(params.ownership.horaInicio || "").slice(0, 5)}.`,
+        url: `/app-cliente/salao/${params.ownership.idSalao}`,
+        tag: `lista-espera-${params.ownership.idSalao}`,
+        idempotencyKey: `lista-espera-${params.ownership.idSalao}-${params.ownership.idServico}-${params.ownership.idProfissional}-${params.ownership.data}-${params.ownership.horaInicio}-${item.id}`,
+        metadata: {
+          origem: "lista_espera",
+          idListaEspera: item.id,
+        },
+      })
+    )
+  );
+}
+
 export async function createClienteAppAppointment(
   params: ClienteBookingParams
 ): Promise<ClienteAppActionResult> {
@@ -515,6 +593,13 @@ export async function createClienteAppAppointment(
   const data = normalizeDate(params.data);
   const horaInicio = normalizeTimeString(params.horaInicio);
   const observacoes = String(params.observacoes || "").trim() || null;
+  const adicionaisIds = Array.from(
+    new Set(
+      (params.adicionaisIds || [])
+        .map((item) => String(item || "").trim())
+        .filter((item) => item && item !== idServico)
+    )
+  ).slice(0, 3);
 
   if (!idSalao || !idConta || !idServico || !idProfissional || !data) {
     return { ok: false, error: "Preencha serviço, profissional, data e horário." };
@@ -685,6 +770,43 @@ export async function createClienteAppAppointment(
         };
       }
 
+      let observacoesComAdicionais = observacoes;
+
+      if (adicionaisIds.length) {
+        const { data: adicionaisRows } = await (supabaseAdmin as any)
+          .from("servicos")
+          .select("id, nome, preco, preco_padrao")
+          .eq("id_salao", idSalao)
+          .eq("ativo", true)
+          .eq("app_cliente_visivel", true)
+          .in("id", adicionaisIds)
+          .limit(3);
+
+        const adicionaisTexto = ((adicionaisRows || []) as Array<Record<string, unknown>>)
+          .map((item) => {
+            const nome = String(item.nome || "").trim();
+            const preco = Number(item.preco_padrao ?? item.preco ?? Number.NaN);
+            const precoLabel = Number.isFinite(preco)
+              ? new Intl.NumberFormat("pt-BR", {
+                  style: "currency",
+                  currency: "BRL",
+                }).format(preco)
+              : "valor sob consulta";
+            return nome ? `${nome} (${precoLabel})` : null;
+          })
+          .filter(Boolean)
+          .join(", ");
+
+        if (adicionaisTexto) {
+          observacoesComAdicionais = [
+            observacoes,
+            `Interesse em adicionais: ${adicionaisTexto}.`,
+          ]
+            .filter(Boolean)
+            .join("\n\n");
+        }
+      }
+
       const { data: insertedAppointment, error: insertError } = await supabaseAdmin
         .from("agendamentos")
         .insert({
@@ -696,7 +818,7 @@ export async function createClienteAppAppointment(
           hora_inicio: horaInicio,
           hora_fim: horaFim,
           duracao_minutos: duracao,
-          observacoes,
+          observacoes: observacoesComAdicionais,
           status: "pendente",
           origem: "app_cliente",
         })
@@ -967,6 +1089,15 @@ export async function cancelClienteAppAppointment(
         // Cancelamento do cliente nao deve depender de push.
       }
 
+      try {
+        await notifyWaitlistAboutReleasedSlot({
+          supabaseAdmin,
+          ownership,
+        });
+      } catch {
+        // A agenda deve ser liberada mesmo se a lista de espera falhar.
+      }
+
       const { error: deleteError } = await supabaseAdmin
         .from("agendamentos")
         .delete()
@@ -984,6 +1115,157 @@ export async function cancelClienteAppAppointment(
       return {
         ok: true,
         message: "Agendamento cancelado com sucesso.",
+      };
+    },
+  });
+}
+
+export async function confirmClienteAppAppointment(
+  params: ClienteConfirmParams
+): Promise<ClienteAppActionResult> {
+  const idConta = String(params.idConta || "").trim();
+  const idAgendamento = String(params.idAgendamento || "").trim();
+
+  if (!idConta || !idAgendamento) {
+    return { ok: false, error: "Agendamento inválido para confirmação." };
+  }
+
+  return runAdminOperation({
+    action: "cliente_app_confirm_appointment",
+    actorId: idConta,
+    run: async (supabaseAdmin) => {
+      const ownership = await loadOwnedAppointment({
+        supabaseAdmin,
+        idConta,
+        idAgendamento,
+      });
+
+      if (!ownership) {
+        return { ok: false, error: "Agendamento não encontrado." };
+      }
+
+      const status = ownership.status.toLowerCase();
+      if (status === "cancelado") {
+        return { ok: false, error: "Este agendamento foi cancelado." };
+      }
+
+      if (status === "atendido" || status === "aguardando_pagamento") {
+        return {
+          ok: false,
+          error: "Esse atendimento já aconteceu.",
+        };
+      }
+
+      const now = new Date().toISOString();
+      const { error: updateError } = await (supabaseAdmin as any)
+        .from("agendamentos")
+        .update({
+          cliente_confirmacao_status: "confirmado",
+          cliente_confirmou_em: now,
+          cliente_cancelou_em: null,
+          updated_at: now,
+        })
+        .eq("id", idAgendamento)
+        .eq("id_salao", ownership.idSalao)
+        .eq("cliente_id", ownership.idCliente);
+
+      if (updateError) {
+        return {
+          ok: false,
+          error: "Não foi possível confirmar sua presença agora.",
+        };
+      }
+
+      try {
+        await queueNotificationJob({
+          idSalao: ownership.idSalao,
+          idCliente: ownership.idCliente,
+          idProfissional: ownership.idProfissional,
+          canal: "salao_painel",
+          tipo: "cliente_confirmou_agendamento",
+          titulo: "Cliente confirmou presença",
+          mensagem: `${ownership.clienteNome || "Cliente"} confirmou ${ownership.servicoNome || "o atendimento"} para ${ownership.data || "a data marcada"} às ${String(ownership.horaInicio || "").slice(0, 5)}.`,
+          url: `/agenda?agendamento=${idAgendamento}`,
+          tag: `cliente-confirmou-${idAgendamento}`,
+          idempotencyKey: `cliente-confirmou-${idAgendamento}`,
+          metadata: {
+            origem: "app_cliente",
+            idAgendamento,
+          },
+        });
+      } catch {
+        // A confirmação do cliente não deve depender do push do salão.
+      }
+
+      return {
+        ok: true,
+        message: "Presença confirmada com sucesso.",
+      };
+    },
+  });
+}
+
+export async function joinClienteAppWaitlist(
+  params: ClienteWaitlistParams
+): Promise<ClienteAppActionResult> {
+  const idConta = String(params.idConta || "").trim();
+  const idSalao = String(params.idSalao || "").trim();
+  const idServico = String(params.idServico || "").trim();
+  const idProfissional = String(params.idProfissional || "").trim();
+  const dataPreferida = normalizeDate(String(params.dataPreferida || ""));
+
+  if (!idConta || !idSalao || !idServico || !idProfissional) {
+    return {
+      ok: false,
+      error: "Escolha serviço e profissional para entrar na lista de espera.",
+    };
+  }
+
+  const elegibilidade = await canSalonAppearInClientApp(idSalao);
+  if (!elegibilidade.allowed) {
+    return {
+      ok: false,
+      error: "Este salão não está publicado no app cliente agora.",
+    };
+  }
+
+  return runAdminOperation({
+    action: "cliente_app_join_waitlist",
+    actorId: idConta,
+    idSalao,
+    run: async (supabaseAdmin) => {
+      const vinculoConta = await ensureClienteContaVinculadaAoSalao({
+        idConta,
+        idSalao,
+      });
+
+      if (!vinculoConta.ok) {
+        return vinculoConta;
+      }
+
+      const { error } = await (supabaseAdmin as any)
+        .from("lista_espera_agendamentos")
+        .insert({
+          id_salao: idSalao,
+          cliente_app_conta_id: idConta,
+          id_cliente: vinculoConta.idCliente,
+          id_servico: idServico,
+          id_profissional: idProfissional,
+          data_preferida: dataPreferida || null,
+          status: "ativo",
+          origem: "app_cliente",
+        });
+
+      if (error) {
+        return {
+          ok: false,
+          error: "Não foi possível entrar na lista de espera agora.",
+        };
+      }
+
+      return {
+        ok: true,
+        message: "Você entrou na lista de espera.",
       };
     },
   });

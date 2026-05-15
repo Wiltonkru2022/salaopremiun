@@ -5,6 +5,7 @@ import { useActionState, useMemo, useState } from "react";
 import { useFormStatus } from "react-dom";
 import {
   cancelClienteAppointmentAction,
+  confirmClienteAppointmentAction,
   rescheduleClienteAppointmentAction,
   type ClienteAppointmentActionState,
 } from "@/app/app-cliente/agendamentos/actions";
@@ -45,8 +46,34 @@ function formatStatus(value: string) {
   return value || "Status";
 }
 
+function formatClientConfirmation(value: string) {
+  const normalized = String(value || "").toLowerCase();
+  if (normalized === "confirmado") return "Você confirmou presença";
+  if (normalized === "cancelado") return "Cancelado pelo cliente";
+  return "Aguardando sua confirmação";
+}
+
 function canBookAgain(item: ClientAppAppointmentListItem) {
   return Boolean(item.idSalao);
+}
+
+function canConfirmPresence(item: ClientAppAppointmentListItem) {
+  const status = String(item.status || "").toLowerCase();
+  const clientStatus = String(item.confirmacaoClienteStatus || "").toLowerCase();
+  return (
+    (status === "pendente" || status === "confirmado") &&
+    clientStatus !== "confirmado"
+  );
+}
+
+function buildWhatsappLink(item: ClientAppAppointmentListItem) {
+  const phone = String(item.salaoWhatsapp || item.salaoTelefone || "").replace(/\D/g, "");
+  if (!phone) return null;
+  const brPhone = phone.length <= 11 ? `55${phone}` : phone;
+  const message = encodeURIComponent(
+    `Olá, ${item.salaoNome}. Quero falar sobre meu agendamento de ${item.servicoNome} no dia ${item.data} às ${item.horaInicio.slice(0, 5)}.`
+  );
+  return `https://wa.me/${brPhone}?text=${message}`;
 }
 
 function ActionButton({
@@ -88,6 +115,29 @@ function CancelAppointmentForm({ idAgendamento }: { idAgendamento: string }) {
     <form action={formAction} className="space-y-2">
       <input type="hidden" name="agendamento" value={idAgendamento} />
       <ActionButton label="Cancelar" pendingLabel="Cancelando..." tone="light" />
+      {state.error ? (
+        <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+          {state.error}
+        </div>
+      ) : null}
+    </form>
+  );
+}
+
+function ConfirmAppointmentForm({ idAgendamento }: { idAgendamento: string }) {
+  const initialState: ClienteAppointmentActionState = { error: null };
+  const [state, formAction] = useActionState<
+    ClienteAppointmentActionState,
+    FormData
+  >(confirmClienteAppointmentAction, initialState);
+
+  return (
+    <form action={formAction} className="space-y-2">
+      <input type="hidden" name="agendamento" value={idAgendamento} />
+      <ActionButton
+        label="Confirmar presença"
+        pendingLabel="Confirmando..."
+      />
       {state.error ? (
         <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
           {state.error}
@@ -259,6 +309,9 @@ export default function ClientAppointmentsManager({
     if (successKey === "cancelado") {
       return "Seu agendamento foi cancelado e o horário foi liberado.";
     }
+    if (successKey === "confirmado") {
+      return "Sua presença foi confirmada para o salão.";
+    }
     if (successKey === "reagendado") return "Seu agendamento foi reagendado.";
     if (successKey === "avaliado") return "Sua avaliação foi enviada.";
     return null;
@@ -280,9 +333,22 @@ export default function ClientAppointmentsManager({
               className="grid grid-cols-[1fr_96px] gap-4 rounded-[1.5rem] bg-white p-4 shadow-[0_18px_45px_rgba(15,23,42,0.08)]"
             >
               <div className="min-w-0">
-                <span className="inline-flex rounded-full bg-zinc-100 px-3 py-1 text-xs font-bold text-zinc-500">
-                  {formatStatus(item.status)}
-                </span>
+                <div className="flex flex-wrap gap-2">
+                  <span className="inline-flex rounded-full bg-zinc-100 px-3 py-1 text-xs font-bold text-zinc-500">
+                    {formatStatus(item.status)}
+                  </span>
+                  {item.podeCancelar ? (
+                    <span
+                      className={`inline-flex rounded-full px-3 py-1 text-xs font-bold ${
+                        item.confirmacaoClienteStatus === "confirmado"
+                          ? "bg-emerald-50 text-emerald-700"
+                          : "bg-amber-50 text-amber-700"
+                      }`}
+                    >
+                      {formatClientConfirmation(item.confirmacaoClienteStatus)}
+                    </span>
+                  ) : null}
+                </div>
                 <h2 className="mt-3 break-words text-xl font-black text-zinc-950">
                   {item.servicoNome}
                 </h2>
@@ -294,6 +360,9 @@ export default function ClientAppointmentsManager({
                 </p>
 
                 <div className="mt-4 flex flex-wrap gap-2">
+                  {canConfirmPresence(item) ? (
+                    <ConfirmAppointmentForm idAgendamento={item.id} />
+                  ) : null}
                   {canBookAgain(item) ? (
                     <Link
                       href={`/app-cliente/salao/${item.idSalao}`}
@@ -307,6 +376,16 @@ export default function ClientAppointmentsManager({
                       <RescheduleAppointmentForm item={item} />
                       <CancelAppointmentForm idAgendamento={item.id} />
                     </>
+                  ) : null}
+                  {buildWhatsappLink(item) ? (
+                    <a
+                      href={buildWhatsappLink(item) || "#"}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex h-11 items-center rounded-xl border border-emerald-200 bg-emerald-50 px-4 text-sm font-black text-emerald-700"
+                    >
+                      Falar no WhatsApp
+                    </a>
                   ) : null}
                   {item.podeAvaliar ? (
                     <Link

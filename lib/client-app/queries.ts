@@ -33,6 +33,8 @@ export type ClientAppServiceListItem = {
   preco: number | null;
   duracaoMinutos: number | null;
   exigeAvaliacao: boolean;
+  ehCombo: boolean;
+  comboResumo: string | null;
   profissionaisPermitidos: string[];
 };
 
@@ -77,6 +79,8 @@ export type ClientAppAppointmentListItem = {
   horaInicio: string;
   horaFim: string;
   status: string;
+  confirmacaoClienteStatus: string;
+  clienteConfirmouEm: string | null;
   observacoes: string | null;
   servicoNome: string;
   profissionalNome: string;
@@ -459,7 +463,7 @@ async function getClientAppSalonDetailLive(idSalao: string) {
           .limit(16),
         (supabaseAdmin as any)
           .from("servicos")
-          .select("id, nome, descricao_publica, descricao, preco, preco_padrao, duracao, duracao_minutos, exige_avaliacao")
+          .select("id, nome, descricao_publica, descricao, preco, preco_padrao, duracao, duracao_minutos, exige_avaliacao, eh_combo, combo_resumo")
           .eq("id_salao", resolvedSalaoId)
           .eq("ativo", true)
           .eq("app_cliente_visivel", true)
@@ -541,6 +545,8 @@ async function getClientAppSalonDetailLive(idSalao: string) {
               duracaoMinutos:
                 Number(item.duracao_minutos ?? item.duracao ?? 0) || null,
               exigeAvaliacao: Boolean(item.exige_avaliacao),
+              ehCombo: Boolean(item.eh_combo),
+              comboResumo: String(item.combo_resumo || "").trim() || null,
               profissionaisPermitidos:
                 vinculosPorServico.get(String(item.id || "").trim()) || [],
             })
@@ -666,10 +672,10 @@ export async function listClienteAppAppointments(params: {
       });
     }
 
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await (supabaseAdmin as any)
       .from("agendamentos")
       .select(
-        "id, cliente_id, id_salao, servico_id, profissional_id, data, hora_inicio, hora_fim, status, observacoes, servicos(nome), profissionais(nome, nome_exibicao)"
+        "id, cliente_id, id_salao, servico_id, profissional_id, data, hora_inicio, hora_fim, status, cliente_confirmacao_status, cliente_confirmou_em, observacoes, servicos(nome), profissionais(nome, nome_exibicao)"
       )
       .in("cliente_id", clientesIds)
       .order("data", { ascending: false })
@@ -715,6 +721,10 @@ export async function listClienteAppAppointments(params: {
         horaInicio: String(item.hora_inicio || ""),
         horaFim: String(item.hora_fim || ""),
         status,
+        confirmacaoClienteStatus:
+          String(item.cliente_confirmacao_status || "").trim() || "aguardando",
+        clienteConfirmouEm:
+          String(item.cliente_confirmou_em || "").trim() || null,
         observacoes: String(item.observacoes || "").trim() || null,
         servicoNome:
           String((item.servicos as { nome?: string } | null)?.nome || "").trim() ||

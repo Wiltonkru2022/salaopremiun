@@ -3,7 +3,10 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { requireClienteAppContext } from "@/lib/client-context.server";
-import { createClienteAppAppointment } from "@/app/services/cliente-app/appointments";
+import {
+  createClienteAppAppointment,
+  joinClienteAppWaitlist,
+} from "@/app/services/cliente-app/appointments";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 export type ClienteBookingState = {
@@ -21,6 +24,10 @@ export async function createClienteBookingAction(
   const data = String(formData.get("data") || "");
   const horaInicio = String(formData.get("hora_inicio") || "");
   const observacoes = String(formData.get("observacoes") || "");
+  const adicionaisIds = formData
+    .getAll("adicionais")
+    .map((item) => String(item || "").trim())
+    .filter(Boolean);
 
   const result = await createClienteAppAppointment({
     idSalao,
@@ -30,6 +37,7 @@ export async function createClienteBookingAction(
     data,
     horaInicio,
     observacoes,
+    adicionaisIds,
   });
 
   if (!result.ok) {
@@ -39,6 +47,29 @@ export async function createClienteBookingAction(
   revalidatePath(`/app-cliente/salao/${idSalao}`);
   revalidatePath("/app-cliente/agendamentos");
   redirect("/app-cliente/agendamentos?status=agendado");
+}
+
+export async function joinClienteWaitlistAction(formData: FormData) {
+  const session = await requireClienteAppContext();
+  const idSalao = String(formData.get("salao") || "").trim();
+  const idServico = String(formData.get("servico") || "").trim();
+  const idProfissional = String(formData.get("profissional") || "").trim();
+  const dataPreferida = String(formData.get("data") || "").trim();
+
+  const result = await joinClienteAppWaitlist({
+    idConta: session.idConta,
+    idSalao,
+    idServico,
+    idProfissional,
+    dataPreferida,
+  });
+
+  if (!result.ok) {
+    redirect(`/app-cliente/salao/${idSalao}?status=lista_espera_erro`);
+  }
+
+  revalidatePath(`/app-cliente/salao/${idSalao}`);
+  redirect(`/app-cliente/salao/${idSalao}?status=lista_espera`);
 }
 
 export async function toggleClienteSalonFavoriteAction(formData: FormData) {

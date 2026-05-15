@@ -15,6 +15,7 @@ import { useActionState, useEffect, useMemo, useState } from "react";
 import { useFormStatus } from "react-dom";
 import {
   createClienteBookingAction,
+  joinClienteWaitlistAction,
   type ClienteBookingState,
 } from "@/app/app-cliente/salao/[id]/actions";
 import type {
@@ -191,6 +192,7 @@ export default function ClientBookingForm({
   const [diasDisponiveis, setDiasDisponiveis] = useState<AvailabilityDay[]>([]);
   const [selectedDate, setSelectedDate] = useState("");
   const [selectedTime, setSelectedTime] = useState("");
+  const [adicionaisSelecionados, setAdicionaisSelecionados] = useState<string[]>([]);
   const [monthCursor, setMonthCursor] = useState(() => {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1);
@@ -214,6 +216,17 @@ export default function ClientBookingForm({
       return servico.profissionaisPermitidos.includes(profissionalId);
     });
   }, [profissionalId, servicos]);
+
+  const sugestoesAdicionais = useMemo(() => {
+    if (!servicoId) return [];
+    const combos = servicosDoProfissional.filter(
+      (servico) => servico.id !== servicoId && servico.ehCombo
+    );
+    const extras = servicosDoProfissional.filter(
+      (servico) => servico.id !== servicoId && !servico.ehCombo
+    );
+    return [...combos, ...extras].slice(0, 3);
+  }, [servicoId, servicosDoProfissional]);
 
   const profissionaisFiltrados = useMemo(() => {
     const term = normalizeSearch(buscaProfissional);
@@ -349,9 +362,20 @@ export default function ClientBookingForm({
 
   function selectServico(id: string) {
     setServicoId(id);
+    setAdicionaisSelecionados([]);
     const now = new Date();
     setMonthCursor(new Date(now.getFullYear(), now.getMonth(), 1));
     setStep("horario");
+  }
+
+  function toggleAdicional(id: string) {
+    setAdicionaisSelecionados((current) =>
+      current.includes(id)
+        ? current.filter((item) => item !== id)
+        : current.length >= 3
+          ? current
+          : [...current, id]
+    );
   }
 
   return (
@@ -364,6 +388,9 @@ export default function ClientBookingForm({
       <input type="hidden" name="servico" value={servicoId} />
       <input type="hidden" name="data" value={selectedDate} />
       <input type="hidden" name="hora_inicio" value={selectedTime} />
+      {adicionaisSelecionados.map((id) => (
+        <input key={id} type="hidden" name="adicionais" value={id} />
+      ))}
 
       <div className="border-b border-zinc-100 bg-white p-5">
         <div className="inline-flex items-center gap-2 rounded-full bg-zinc-100 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.14em] text-zinc-600">
@@ -525,8 +552,21 @@ export default function ClientBookingForm({
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <div className="break-words text-sm font-black">
-                          {servico.nome}
+                        <div className="flex flex-wrap items-center gap-2">
+                          {servico.ehCombo ? (
+                            <span
+                              className={`rounded-full px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.12em] ${
+                                servicoId === servico.id
+                                  ? "bg-white/15 text-white"
+                                  : "bg-amber-50 text-amber-700"
+                              }`}
+                            >
+                              Combo
+                            </span>
+                          ) : null}
+                          <div className="break-words text-sm font-black">
+                            {servico.nome}
+                          </div>
                         </div>
                         {servico.descricao ? (
                           <div
@@ -776,6 +816,15 @@ export default function ClientBookingForm({
                 <div className="rounded-2xl border border-dashed border-zinc-300 bg-zinc-50 px-4 py-4 text-sm text-zinc-500">
                   Ainda não há horários disponíveis para os próximos dias.
                   Tente outro profissional ou fale com o salão.
+                  {servicoId && profissionalId ? (
+                    <button
+                      type="submit"
+                      formAction={joinClienteWaitlistAction}
+                      className="mt-3 inline-flex h-11 items-center justify-center rounded-xl bg-zinc-950 px-4 text-sm font-black text-white"
+                    >
+                      Avisar quando liberar
+                    </button>
+                  ) : null}
                 </div>
               )}
             </div>
@@ -806,6 +855,54 @@ export default function ClientBookingForm({
                   </div>
                 </div>
                 <div className="mt-4">
+                  {sugestoesAdicionais.length ? (
+                    <div className="mb-4 rounded-2xl border border-amber-100 bg-amber-50/70 p-3 text-left">
+                      <div className="text-xs font-black uppercase tracking-[0.14em] text-amber-700">
+                        Combine com
+                      </div>
+                      <p className="mt-1 text-xs leading-5 text-zinc-600">
+                        Marque adicionais para o salão já receber seu interesse junto com a reserva.
+                      </p>
+                      <div className="mt-3 grid gap-2">
+                        {sugestoesAdicionais.map((servico) => {
+                          const selected = adicionaisSelecionados.includes(servico.id);
+                          return (
+                            <button
+                              key={servico.id}
+                              type="button"
+                              onClick={() => toggleAdicional(servico.id)}
+                              className={`flex items-center justify-between gap-3 rounded-xl border px-3 py-2 text-left transition ${
+                                selected
+                                  ? "border-zinc-950 bg-white text-zinc-950"
+                                  : "border-amber-100 bg-white/75 text-zinc-700"
+                              }`}
+                            >
+                              <span className="min-w-0">
+                                <span className="block truncate text-xs font-black">
+                                  {servico.ehCombo ? "Combo: " : ""}
+                                  {servico.nome}
+                                </span>
+                                <span className="mt-0.5 block text-[11px] text-zinc-500">
+                                  {servico.exigeAvaliacao
+                                    ? "A avaliar"
+                                    : formatCurrency(servico.preco)}
+                                </span>
+                              </span>
+                              <span
+                                className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-[11px] font-black ${
+                                  selected
+                                    ? "border-zinc-950 bg-zinc-950 text-white"
+                                    : "border-zinc-200 bg-white text-zinc-400"
+                                }`}
+                              >
+                                {selected ? <Check size={13} /> : "+"}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ) : null}
                   <SubmitButton disabled={!canSubmit} />
                 </div>
                 <p className="mt-3 text-center text-xs leading-5 text-zinc-500">

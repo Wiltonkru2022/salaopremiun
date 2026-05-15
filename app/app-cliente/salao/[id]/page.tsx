@@ -32,6 +32,7 @@ type ServiceRowProps = {
     preco: number | null;
     duracaoMinutos: number | null;
     exigeAvaliacao: boolean;
+    ehCombo?: boolean;
   };
 };
 
@@ -39,7 +40,14 @@ function ServiceRow({ servico }: ServiceRowProps) {
   return (
     <div className="grid grid-cols-[1fr_auto] items-center gap-4 py-5">
       <div>
-        <div className="text-xl font-medium text-zinc-950">{servico.nome}</div>
+        <div className="flex flex-wrap items-center gap-2">
+          {servico.ehCombo ? (
+            <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.12em] text-amber-700">
+              Combo
+            </span>
+          ) : null}
+          <div className="text-xl font-medium text-zinc-950">{servico.nome}</div>
+        </div>
         {servico.descricao ? (
           <p className="mt-1 text-sm leading-6 text-zinc-500">
             {servico.descricao}
@@ -70,12 +78,15 @@ function ServiceRow({ servico }: ServiceRowProps) {
 
 export default async function ClienteSalonPage({
   params,
+  searchParams,
   publicOnly = false,
 }: {
   params: Promise<{ id: string }>;
+  searchParams?: Promise<{ status?: string }>;
   publicOnly?: boolean;
 }) {
   const { id } = await params;
+  const query = searchParams ? await searchParams : undefined;
 
   try {
     const salao = await getClientAppSalonDetail(id);
@@ -185,6 +196,15 @@ export default async function ClienteSalonPage({
           <section id="servicos" className="px-4 py-7 md:px-6">
             <div className="mx-auto grid max-w-6xl gap-8 lg:grid-cols-[1fr_420px]">
               <div>
+                {query?.status === "lista_espera" ? (
+                  <div className="mb-5 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
+                    Pronto. Vamos avisar pelo app quando surgir uma vaga para essa escolha.
+                  </div>
+                ) : query?.status === "lista_espera_erro" ? (
+                  <div className="mb-5 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+                    Não foi possível entrar na lista de espera agora. Tente novamente em instantes.
+                  </div>
+                ) : null}
                 <h2 className="text-3xl font-black tracking-[-0.05em]">
                   Serviços populares
                 </h2>
