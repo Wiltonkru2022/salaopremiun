@@ -8,6 +8,7 @@ import ClientSalonSectionTabs from "@/components/client-app/ClientSalonSectionTa
 import {
   getClientAppSalonDetail,
   isClienteAppSalonFavorite,
+  listClienteAppAvailableCoupons,
 } from "@/lib/client-app/queries";
 import { validateClienteAppSession } from "@/lib/client-context.server";
 import { buildSalaoPublicPath } from "@/lib/saloes/public-link";
@@ -98,6 +99,12 @@ export default async function ClienteSalonPage({
           idSalao: salao.id,
         })
       : false;
+    const cuponsDisponiveis = session.context
+      ? await listClienteAppAvailableCoupons({
+          idConta: session.context.idConta,
+          idSalao: salao.id,
+        })
+      : [];
     const notaMedia = salao.avaliacoes.length
       ? salao.avaliacoes.reduce((sum, item) => sum + item.nota, 0) /
         salao.avaliacoes.length
@@ -284,6 +291,7 @@ export default async function ClienteSalonPage({
                     servicos={salao.servicos}
                     profissionais={salao.profissionais}
                     intervaloMinutos={salao.intervaloAgendaMinutos}
+                    cuponsDisponiveis={cuponsDisponiveis}
                   />
                 ) : (
                   <div className="rounded-[1.5rem] border border-zinc-200 bg-zinc-50 p-5">

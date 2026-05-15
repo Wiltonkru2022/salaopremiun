@@ -1333,6 +1333,7 @@ export async function confirmClienteAppAppointment(
       const { error: updateError } = await (supabaseAdmin as any)
         .from("agendamentos")
         .update({
+          status: status === "pendente" ? "confirmado" : ownership.status,
           cliente_confirmacao_status: "confirmado",
           cliente_confirmou_em: now,
           cliente_cancelou_em: null,
@@ -1414,6 +1415,28 @@ export async function joinClienteAppWaitlist(
 
       if (!vinculoConta.ok) {
         return vinculoConta;
+      }
+
+      let existingQuery = (supabaseAdmin as any)
+        .from("lista_espera_agendamentos")
+        .select("id")
+        .eq("id_salao", idSalao)
+        .eq("cliente_app_conta_id", idConta)
+        .eq("id_servico", idServico)
+        .eq("id_profissional", idProfissional)
+        .eq("status", "ativo")
+        .limit(1);
+
+      existingQuery = dataPreferida
+        ? existingQuery.eq("data_preferida", dataPreferida)
+        : existingQuery.is("data_preferida", null);
+
+      const { data: existingWaitlist } = await existingQuery.maybeSingle();
+      if (existingWaitlist?.id) {
+        return {
+          ok: true,
+          message: "Você já está na lista de espera para essa escolha.",
+        };
       }
 
       const { error } = await (supabaseAdmin as any)

@@ -6,6 +6,7 @@ import {
 } from "@/lib/client-app/eligibility";
 import { captureSystemError } from "@/lib/monitoring/server";
 import { canUsePlanFeature, isSalaoStatusOperational } from "@/lib/plans/access";
+import { ensureRecoveryCoupons } from "@/lib/client-app/inactive-recovery";
 
 export type ClientAppSalonListItem = ClientAppEligibleSalon & {
   notaMedia: number | null;
@@ -65,6 +66,14 @@ export type ClientAppSalonDetail = ClientAppEligibleSalon & {
   portfolio: ClientAppPortfolioPhoto[];
   horarioFuncionamento: ClientAppSalonHours;
   intervaloAgendaMinutos: number;
+};
+
+export type ClientAppAvailableCoupon = {
+  codigo: string;
+  nome: string;
+  descricao: string | null;
+  descontoLabel: string;
+  diasInativo: number | null;
 };
 
 export type ClientAppAppointmentListItem = {
@@ -145,6 +154,28 @@ function normalizeSearch(value?: string) {
 function parseNullableNumber(value: unknown) {
   const numeric = Number(value ?? Number.NaN);
   return Number.isFinite(numeric) ? numeric : null;
+}
+
+function diffDaysFromDate(dateString: string) {
+  const date = new Date(`${String(dateString || "").slice(0, 10)}T12:00:00`);
+  if (!Number.isFinite(date.getTime())) return 0;
+  return Math.floor((Date.now() - date.getTime()) / 86400000);
+}
+
+function formatCouponDiscountLabel(cupom: Record<string, unknown>) {
+  const tipo = String(cupom.tipo_desconto || "percentual");
+  const valor = Number(cupom.valor_desconto || 0);
+
+  if (tipo === "valor_fixo") {
+    return `${new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    }).format(valor)} de desconto`;
+  }
+
+  return `${valor.toLocaleString("pt-BR", {
+    maximumFractionDigits: 0,
+  })}% de desconto`;
 }
 
 function hasValidCoordinatePair(latitude: number | null, longitude: number | null) {
@@ -609,6 +640,111 @@ async function getClientAppSalonDetailLive(idSalao: string) {
 
 export async function getClientAppSalonDetail(idSalao: string) {
   return getClientAppSalonDetailLive(idSalao);
+}
+
+export async function listClienteAppAvailableCoupons(params: {
+  idConta: string;
+  idSalao: string;
+}): Promise<ClientAppAvailableCoupon[]> {
+  const idConta = String(params.idConta || "").trim();
+  const idSalao = String(params.idSalao || "").trim();
+  if (!idConta || !idSalao) return [];
+
+  try {
+    const supabaseAdmin = getSupabaseAdmin();
+    await ensureRecoveryCoupons(idSalao);
+
+    const { data: vinculo } = await (supabaseAdmin as any)
+      .from("clientes_auth")
+      .select("id_cliente, clientes(created_at)")
+      .eq("id_salao", idSalao)
+      .eq("app_conta_id", idConta)
+      .eq("app_ativo", true)
+      .limit(1)
+      .maybeSingle();
+
+    const idCliente = String(vinculo?.id_cliente || "").trim();
+    if (!idCliente) return [];
+
+    const { data: ultimoAgendamento } = await (supabaseAdmin as any)
+      .from("agendamentos")
+      .select("data")
+      .eq("id_salao", idSalao)
+      .eq("cliente_id", idCliente)
+      .in("status", ["atendido", "aguardando_pagamento"])
+      .order("data", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const clienteCreatedAt = String(
+      (vinculo.clientes as { created_at?: string | null } | null)?.created_at ||
+        ""
+    ).slice(0, 10);
+    const { data: conta } = await (supabaseAdmin as any)
+      .from("clientes_app_auth")
+      .select("created_at")
+      .eq("id", idConta)
+      .limit(1)
+      .maybeSingle();
+    const contaCreatedAt = String(
+      (conta as { created_at?: string | null } | null)?.created_at || ""
+    ).slice(0, 10);
+    const referenceDate =
+      String(ultimoAgendamento?.data || "").slice(0, 10) ||
+      clienteCreatedAt ||
+      contaCreatedAt;
+    const inactiveDays = diffDaysFromDate(referenceDate);
+    if (inactiveDays <= 0) return [];
+
+    const { data: cupons } = await (supabaseAdmin as any)
+      .from("cupons_salao")
+      .select(
+        "id, codigo, nome, descricao, dias_cliente_inativo, tipo_desconto, valor_desconto"
+      )
+      .eq("id_salao", idSalao)
+      .eq("ativo", true)
+      .eq("automatico_recuperacao", true)
+      .lte("dias_cliente_inativo", inactiveDays)
+      .order("dias_cliente_inativo", { ascending: false })
+      .limit(3);
+
+    if (!cupons?.length) return [];
+
+    const cupomIds = cupons
+      .map((cupom: Record<string, unknown>) => String(cupom.id || "").trim())
+      .filter(Boolean);
+    const { data: usos } = cupomIds.length
+      ? await (supabaseAdmin as any)
+          .from("cupom_salao_usos")
+          .select("id_cupom")
+          .eq("id_salao", idSalao)
+          .eq("id_cliente", idCliente)
+          .in("id_cupom", cupomIds)
+          .neq("status", "cancelado")
+      : { data: [] };
+    const usedCouponIds = new Set(
+      ((usos || []) as Array<Record<string, unknown>>).map((uso) =>
+        String(uso.id_cupom || "").trim()
+      )
+    );
+
+    return ((cupons || []) as Array<Record<string, unknown>>)
+      .filter((cupom) => !usedCouponIds.has(String(cupom.id || "").trim()))
+      .map((cupom) => ({
+        codigo: String(cupom.codigo || "").trim(),
+        nome: String(cupom.nome || "").trim() || "Cupom Saudades",
+        descricao: String(cupom.descricao || "").trim() || null,
+        descontoLabel: formatCouponDiscountLabel(cupom),
+        diasInativo: Number(cupom.dias_cliente_inativo || 0) || null,
+      }))
+      .filter((cupom) => cupom.codigo);
+  } catch (error) {
+    await logClientAppQueryError("cliente_app_available_coupons", error, {
+      idConta,
+      idSalao,
+    });
+    return [];
+  }
 }
 
 export async function listClienteAppAppointments(params: {

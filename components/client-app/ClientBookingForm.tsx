@@ -34,6 +34,14 @@ type AvailabilityDay = {
   horarios: AvailabilitySlot[];
 };
 
+export type ClientBookingCoupon = {
+  codigo: string;
+  nome: string;
+  descricao: string | null;
+  descontoLabel: string;
+  diasInativo: number | null;
+};
+
 type StepKey = "profissional" | "servico" | "horario";
 
 function normalizeSearch(value: string) {
@@ -77,6 +85,33 @@ function getWaitlistDefaultDate(monthCursor: Date) {
   return formatDateInput(monthStart > today ? monthStart : today);
 }
 
+function getInitialBookingDate(dias: AvailabilityDay[], monthCursor: Date) {
+  const preferredDate = getWaitlistDefaultDate(monthCursor);
+  const preferredDay = dias.find((dia) => dia.data === preferredDate);
+
+  if (preferredDay) {
+    return {
+      data: preferredDay.data,
+      horaInicio: preferredDay.horarios[0]?.horaInicio || "",
+    };
+  }
+
+  if (
+    monthCursor.getFullYear() === getTodayDate().getFullYear() &&
+    monthCursor.getMonth() === getTodayDate().getMonth()
+  ) {
+    return {
+      data: preferredDate,
+      horaInicio: "",
+    };
+  }
+
+  return {
+    data: dias[0]?.data || preferredDate,
+    horaInicio: dias[0]?.horarios[0]?.horaInicio || "",
+  };
+}
+
 function addMonths(date: Date, amount: number) {
   return new Date(date.getFullYear(), date.getMonth() + amount, 1);
 }
@@ -91,7 +126,7 @@ function formatMonthLabel(date: Date) {
 
 function buildCalendarDays(diasDisponiveis: AvailabilityDay[], monthCursor: Date) {
   const availableDates = new Set(diasDisponiveis.map((dia) => dia.data));
-  const today = getTodayDate();
+  const todayKey = formatDateInput(getTodayDate());
   const year = monthCursor.getFullYear();
   const month = monthCursor.getMonth();
   const firstDay = new Date(year, month, 1);
@@ -118,14 +153,14 @@ function buildCalendarDays(diasDisponiveis: AvailabilityDay[], monthCursor: Date
 
   for (let day = 1; day <= lastDay.getDate(); day += 1) {
     const date = new Date(year, month, day);
-    const iso = date.toISOString().slice(0, 10);
+    const iso = formatDateInput(date);
     cells.push({
       key: iso,
       label: String(day),
       date: iso,
       currentMonth: true,
       available: availableDates.has(iso),
-      selectable: date >= today,
+      selectable: iso >= todayKey,
     });
   }
 
@@ -196,11 +231,13 @@ export default function ClientBookingForm({
   idSalao,
   servicos,
   profissionais,
+  cuponsDisponiveis = [],
 }: {
   idSalao: string;
   servicos: ClientAppServiceListItem[];
   profissionais: ClientAppProfessionalListItem[];
   intervaloMinutos: number;
+  cuponsDisponiveis?: ClientBookingCoupon[];
 }) {
   const initialState: ClienteBookingState = { error: null };
   const [state, formAction] = useActionState<ClienteBookingState, FormData>(
@@ -216,7 +253,9 @@ export default function ClientBookingForm({
   const [selectedDate, setSelectedDate] = useState("");
   const [selectedTime, setSelectedTime] = useState("");
   const [adicionaisSelecionados, setAdicionaisSelecionados] = useState<string[]>([]);
-  const [codigoCupom, setCodigoCupom] = useState("");
+  const [codigoCupom, setCodigoCupom] = useState(
+    cuponsDisponiveis[0]?.codigo || ""
+  );
   const [monthCursor, setMonthCursor] = useState(() => {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1);
@@ -352,13 +391,9 @@ export default function ClientBookingForm({
           : [];
         setDiasDisponiveis(dias);
 
-        if (dias.length) {
-          setSelectedDate(dias[0].data);
-          setSelectedTime(dias[0].horarios[0]?.horaInicio || "");
-        } else {
-          setSelectedDate(getWaitlistDefaultDate(monthCursor));
-          setSelectedTime("");
-        }
+        const initialDate = getInitialBookingDate(dias, monthCursor);
+        setSelectedDate(initialDate.data);
+        setSelectedTime(initialDate.horaInicio);
       })
       .catch((error: unknown) => {
         if (controller.signal.aborted) return;
@@ -942,11 +977,50 @@ export default function ClientBookingForm({
                       </div>
                     </div>
                   ) : null}
-                  <label className="mb-4 block rounded-2xl border border-zinc-100 bg-white p-3 text-left">
-                    <span className="text-xs font-black uppercase tracking-[0.14em] text-zinc-500">
+                  <div className="mb-4 rounded-2xl border border-zinc-100 bg-white p-3 text-left">
+                    <label
+                      htmlFor="cliente-booking-cupom"
+                      className="text-xs font-black uppercase tracking-[0.14em] text-zinc-500"
+                    >
                       Cupom
-                    </span>
+                    </label>
+                    {cuponsDisponiveis.length ? (
+                      <div className="mb-3 mt-2 space-y-2">
+                        {cuponsDisponiveis.map((cupom) => {
+                          const selected =
+                            codigoCupom.trim().toUpperCase() === cupom.codigo;
+                          return (
+                            <button
+                              key={cupom.codigo}
+                              type="button"
+                              onClick={() => setCodigoCupom(cupom.codigo)}
+                              className={`w-full rounded-2xl border px-3 py-3 text-left transition ${
+                                selected
+                                  ? "border-emerald-300 bg-emerald-50 text-emerald-950"
+                                  : "border-zinc-200 bg-zinc-50 text-zinc-800"
+                              }`}
+                            >
+                              <span className="flex items-center justify-between gap-3">
+                                <span className="text-sm font-black">
+                                  {cupom.nome}
+                                </span>
+                                <span className="shrink-0 rounded-full bg-white px-2 py-1 text-[11px] font-black text-emerald-700">
+                                  {cupom.codigo}
+                                </span>
+                              </span>
+                              <span className="mt-1 block text-xs leading-5 text-zinc-600">
+                                {cupom.descontoLabel}
+                                {cupom.diasInativo
+                                  ? ` para voltar depois de ${cupom.diasInativo} dias.`
+                                  : "."}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    ) : null}
                     <input
+                      id="cliente-booking-cupom"
                       name="cupom"
                       value={codigoCupom}
                       onChange={(event) =>
@@ -958,7 +1032,7 @@ export default function ClientBookingForm({
                     <span className="mt-2 block text-xs leading-5 text-zinc-500">
                       Se o salão enviou um cupom, ele será validado antes de confirmar a reserva.
                     </span>
-                  </label>
+                  </div>
                   <SubmitButton disabled={!canSubmit} />
                 </div>
                 <p className="mt-3 text-center text-xs leading-5 text-zinc-500">

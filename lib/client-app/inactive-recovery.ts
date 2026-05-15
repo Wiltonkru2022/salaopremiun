@@ -9,8 +9,19 @@ function buildCouponCode(days: number) {
   return `SAUDADES${days}`;
 }
 
-async function ensureRecoveryCoupons(idSalao: string) {
+export async function ensureRecoveryCoupons(idSalao: string) {
   const supabase = getSupabaseAdmin();
+  const { count } = await (supabase as any)
+    .from("cupons_salao")
+    .select("id", { count: "exact", head: true })
+    .eq("id_salao", idSalao)
+    .eq("automatico_recuperacao", true)
+    .in("dias_cliente_inativo", DEFAULT_DAYS);
+
+  if (Number(count || 0) >= DEFAULT_DAYS.length) {
+    return;
+  }
+
   const rows = DEFAULT_DAYS.map((days) => ({
     id_salao: idSalao,
     codigo: buildCouponCode(days),
@@ -40,12 +51,29 @@ async function getLastAppointmentDate(params: {
     .select("data")
     .eq("id_salao", params.idSalao)
     .eq("cliente_id", params.idCliente)
-    .in("status", ["atendido", "aguardando_pagamento", "confirmado"])
+    .in("status", ["atendido", "aguardando_pagamento"])
     .order("data", { ascending: false })
     .limit(1)
     .maybeSingle();
 
   return String(data?.data || "").slice(0, 10) || null;
+}
+
+async function getClientReferenceDate(params: {
+  clienteAppContaId: string;
+  clienteCreatedAt?: string | null;
+}) {
+  const clienteCreatedAt = String(params.clienteCreatedAt || "").slice(0, 10);
+  if (clienteCreatedAt) return clienteCreatedAt;
+
+  const { data } = await (getSupabaseAdmin() as any)
+    .from("clientes_app_auth")
+    .select("created_at")
+    .eq("id", params.clienteAppContaId)
+    .limit(1)
+    .maybeSingle();
+
+  return String(data?.created_at || "").slice(0, 10) || null;
 }
 
 function diffDays(dateString: string) {
@@ -99,8 +127,17 @@ export async function processInactiveClientRecovery(limitSaloes = 20) {
       checked += 1;
 
       const lastDate = await getLastAppointmentDate({ idSalao, idCliente });
-      if (!lastDate) continue;
-      const inactiveDays = diffDays(lastDate);
+      const referenceDate =
+        lastDate ||
+        (await getClientReferenceDate({
+          clienteAppContaId,
+          clienteCreatedAt: String(
+            (vinculo.clientes as { created_at?: string | null } | null)
+              ?.created_at || ""
+          ),
+        }));
+      if (!referenceDate) continue;
+      const inactiveDays = diffDays(referenceDate);
       const cupom = couponRows.find(
         (item) => inactiveDays >= Number(item.dias_cliente_inativo || 0)
       );
@@ -128,7 +165,7 @@ export async function processInactiveClientRecovery(limitSaloes = 20) {
           dias_inativo: Number(cupom.dias_cliente_inativo || 0),
           status: "enviada",
           enviada_em: new Date().toISOString(),
-          metadata: { lastDate, inactiveDays },
+          metadata: { lastDate, referenceDate, inactiveDays },
         })
         .select("id")
         .maybeSingle();
