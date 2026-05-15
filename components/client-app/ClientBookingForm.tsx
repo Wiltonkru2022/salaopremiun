@@ -58,6 +58,25 @@ function formatDateInput(date: Date) {
     .slice(0, 10);
 }
 
+function getTodayDate() {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+}
+
+function getWaitlistDefaultDate(monthCursor: Date) {
+  const today = getTodayDate();
+  const monthStart = new Date(monthCursor.getFullYear(), monthCursor.getMonth(), 1);
+
+  if (
+    monthStart.getFullYear() === today.getFullYear() &&
+    monthStart.getMonth() === today.getMonth()
+  ) {
+    return formatDateInput(today);
+  }
+
+  return formatDateInput(monthStart > today ? monthStart : today);
+}
+
 function addMonths(date: Date, amount: number) {
   return new Date(date.getFullYear(), date.getMonth() + amount, 1);
 }
@@ -72,6 +91,7 @@ function formatMonthLabel(date: Date) {
 
 function buildCalendarDays(diasDisponiveis: AvailabilityDay[], monthCursor: Date) {
   const availableDates = new Set(diasDisponiveis.map((dia) => dia.data));
+  const today = getTodayDate();
   const year = monthCursor.getFullYear();
   const month = monthCursor.getMonth();
   const firstDay = new Date(year, month, 1);
@@ -82,6 +102,7 @@ function buildCalendarDays(diasDisponiveis: AvailabilityDay[], monthCursor: Date
     date: string;
     currentMonth: boolean;
     available: boolean;
+    selectable: boolean;
   }> = [];
 
   for (let index = 0; index < firstDay.getDay(); index += 1) {
@@ -91,6 +112,7 @@ function buildCalendarDays(diasDisponiveis: AvailabilityDay[], monthCursor: Date
       date: "",
       currentMonth: false,
       available: false,
+      selectable: false,
     });
   }
 
@@ -103,6 +125,7 @@ function buildCalendarDays(diasDisponiveis: AvailabilityDay[], monthCursor: Date
       date: iso,
       currentMonth: true,
       available: availableDates.has(iso),
+      selectable: date >= today,
     });
   }
 
@@ -332,6 +355,9 @@ export default function ClientBookingForm({
         if (dias.length) {
           setSelectedDate(dias[0].data);
           setSelectedTime(dias[0].horarios[0]?.horaInicio || "");
+        } else {
+          setSelectedDate(getWaitlistDefaultDate(monthCursor));
+          setSelectedTime("");
         }
       })
       .catch((error: unknown) => {
@@ -752,7 +778,7 @@ export default function ClientBookingForm({
                       <button
                         key={day.key}
                         type="button"
-                        disabled={!day.available}
+                        disabled={!day.selectable}
                         onClick={() => {
                           const nextDay = diasDisponiveis.find(
                             (item) => item.data === day.date
@@ -765,8 +791,17 @@ export default function ClientBookingForm({
                             ? "border-cyan-700 bg-cyan-50 text-zinc-950 ring-2 ring-cyan-700"
                             : day.available
                               ? "border-zinc-100 bg-zinc-100 text-zinc-900"
-                              : "border-zinc-100 bg-white text-zinc-300"
+                              : day.selectable
+                                ? "border-amber-100 bg-amber-50 text-amber-900 hover:border-amber-300"
+                                : "border-zinc-100 bg-white text-zinc-300"
                         }`}
+                        title={
+                          day.available
+                            ? "Horários disponíveis"
+                            : day.selectable
+                              ? "Sem horário livre; disponível para fila de espera"
+                              : undefined
+                        }
                       >
                         {day.label}
                         {day.available ? (
@@ -777,6 +812,8 @@ export default function ClientBookingForm({
                                 : "bg-emerald-500"
                             }`}
                           />
+                        ) : day.selectable ? (
+                          <span className="absolute bottom-2 left-1/2 h-1 w-6 -translate-x-1/2 rounded-full bg-amber-400" />
                         ) : null}
                       </button>
                     ) : (
@@ -815,15 +852,16 @@ export default function ClientBookingForm({
                 </div>
               ) : (
                 <div className="rounded-2xl border border-dashed border-zinc-300 bg-zinc-50 px-4 py-4 text-sm text-zinc-500">
-                  Ainda não há horários disponíveis para os próximos dias.
-                  Tente outro profissional ou fale com o salão.
-                  {servicoId && profissionalId ? (
+                  Ainda não há horários livres
+                  {selectedDayLabel ? ` para ${selectedDayLabel}` : ""}. Entre na
+                  fila de espera e o salão recebe sua preferência de data.
+                  {servicoId && profissionalId && selectedDate ? (
                     <button
                       type="submit"
                       formAction={joinClienteWaitlistAction}
                       className="mt-3 inline-flex h-11 items-center justify-center rounded-xl bg-zinc-950 px-4 text-sm font-black text-white"
                     >
-                      Avisar quando liberar
+                      Entrar na fila de espera
                     </button>
                   ) : null}
                 </div>
