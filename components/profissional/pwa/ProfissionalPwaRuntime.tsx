@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import MobileViewportRuntime from "@/components/pwa/MobileViewportRuntime";
 
 export default function ProfissionalPwaRuntime() {
   useEffect(() => {
@@ -12,5 +13,5 @@ export default function ProfissionalPwaRuntime() {
     });
   }, []);
 
-  return null;
+  return <MobileViewportRuntime />;
 }

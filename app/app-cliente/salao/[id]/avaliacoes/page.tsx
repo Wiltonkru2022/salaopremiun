@@ -1,13 +1,20 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Star } from "lucide-react";
+
 import ClientAppFrame from "@/components/client-app/ClientAppFrame";
 import ClientSalonSectionTabs from "@/components/client-app/ClientSalonSectionTabs";
-import { getClientAppSalonDetail } from "@/lib/client-app/queries";
+import PaginationLinks from "@/components/ui/PaginationLinks";
+import {
+  getClientAppSalonDetail,
+  listClienteAppSalonReviews,
+} from "@/lib/client-app/queries";
 
 export const metadata = {
   title: "Avaliações",
 };
+
+const REVIEWS_PAGE_SIZE = 10;
 
 function formatDate(value: string) {
   if (!value) return "";
@@ -32,16 +39,28 @@ function RatingStars({ nota }: { nota: number }) {
 
 export default async function ClienteSalonReviewsPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams?: Promise<{ pagina?: string }>;
 }) {
   const { id } = await params;
+  const query = searchParams ? await searchParams : {};
+  const paginaAtual = Math.max(0, Number(query?.pagina || 1) - 1);
 
   try {
     const salao = await getClientAppSalonDetail(id);
-    const notaMedia = salao.avaliacoes.length
-      ? salao.avaliacoes.reduce((sum, item) => sum + item.nota, 0) /
-        salao.avaliacoes.length
+    const reviewsResult = await listClienteAppSalonReviews({
+      idSalao: salao.id,
+      page: paginaAtual,
+      limit: REVIEWS_PAGE_SIZE,
+    });
+    const reviews = reviewsResult.items;
+    const summaryReviews = salao.avaliacoes;
+    const totalReviews = reviewsResult.total || summaryReviews.length;
+    const notaMedia = summaryReviews.length
+      ? summaryReviews.reduce((sum, item) => sum + item.nota, 0) /
+        summaryReviews.length
       : 0;
 
     return (
@@ -67,16 +86,16 @@ export default async function ClienteSalonReviewsPage({
                   <RatingStars nota={notaMedia} />
                 </div>
                 <div className="mt-2 text-zinc-500">
-                  {salao.avaliacoes.length} avaliações
+                  {totalReviews} avaliações
                 </div>
               </div>
               <div className="space-y-3">
                 {[5, 4, 3, 2, 1].map((nota) => {
-                  const count = salao.avaliacoes.filter(
+                  const count = summaryReviews.filter(
                     (avaliacao) => Math.round(avaliacao.nota) === nota
                   ).length;
-                  const percent = salao.avaliacoes.length
-                    ? (count / salao.avaliacoes.length) * 100
+                  const percent = summaryReviews.length
+                    ? (count / summaryReviews.length) * 100
                     : 0;
                   return (
                     <div
@@ -100,10 +119,10 @@ export default async function ClienteSalonReviewsPage({
 
           <div className="mt-7 space-y-5">
             <h1 className="text-3xl font-black tracking-[-0.04em] text-zinc-950">
-              Avaliações ({salao.avaliacoes.length})
+              Avaliações ({totalReviews})
             </h1>
-            {salao.avaliacoes.length ? (
-              salao.avaliacoes.map((avaliacao) => (
+            {reviews.length ? (
+              reviews.map((avaliacao) => (
                 <article
                   key={avaliacao.id}
                   className="border-b border-zinc-200 bg-white pb-5"
@@ -137,6 +156,16 @@ export default async function ClienteSalonReviewsPage({
               </div>
             )}
           </div>
+
+          <PaginationLinks
+            currentPage={paginaAtual}
+            pageSize={REVIEWS_PAGE_SIZE}
+            totalItems={reviewsResult.total}
+            getHref={(page) =>
+              `/app-cliente/salao/${id}/avaliacoes?pagina=${page + 1}`
+            }
+            className="mt-8"
+          />
         </section>
       </ClientAppFrame>
     );

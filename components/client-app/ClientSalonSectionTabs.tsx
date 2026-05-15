@@ -2,11 +2,12 @@ import Link from "next/link";
 
 type ClientSalonSectionTabsProps = {
   salonId: string;
-  active: "servicos" | "avaliacoes" | "portfolio" | "detalhes";
+  active: "servicos" | "reserva" | "avaliacoes" | "portfolio" | "detalhes";
 };
 
 const tabs = [
   { key: "servicos", label: "Serviços", href: "" },
+  { key: "reserva", label: "Reserva online", href: "/reserva" },
   { key: "avaliacoes", label: "Avaliações", href: "/avaliacoes" },
   { key: "portfolio", label: "Portfólio", href: "/portfolio" },
   { key: "detalhes", label: "Detalhes", href: "/detalhes" },
@@ -17,7 +18,7 @@ export default function ClientSalonSectionTabs({
   active,
 }: ClientSalonSectionTabsProps) {
   return (
-    <nav className="sticky top-[76px] z-20 border-b border-zinc-200 bg-white/95 px-4 backdrop-blur md:top-[88px] md:px-6">
+    <nav className="sticky top-[calc(env(safe-area-inset-top)+76px)] z-20 border-b border-zinc-200 bg-white/95 px-4 backdrop-blur md:top-[88px] md:px-6">
       <div className="mx-auto flex max-w-6xl gap-8 overflow-x-auto text-sm font-black uppercase tracking-[0.08em] text-zinc-500">
         {tabs.map((tab) => (
           <Link

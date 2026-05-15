@@ -159,6 +159,15 @@ export const painelNavigationItems: PainelNavItem[] = [
     permissionKey: "marketing_ver",
   },
   {
+    href: "/campanhas",
+    label: "Campanhas",
+    shortLabel: "Campanhas",
+    description: "Cupons, recuperacao e links de resgate.",
+    icon: Megaphone,
+    permissionKey: "dashboard_ver",
+    niveis: ["admin"],
+  },
+  {
     href: "/novidades",
     label: "Novidades",
     shortLabel: "Novidades",

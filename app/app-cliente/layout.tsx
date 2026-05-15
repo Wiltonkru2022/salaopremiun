@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { Suspense } from "react";
 import ClientInstallOnboardingGate from "@/components/client-app/ClientInstallOnboardingGate";
 import ClientSessionKeepAlive from "@/components/client-app/ClientSessionKeepAlive";
+import MobileViewportRuntime from "@/components/pwa/MobileViewportRuntime";
 
 export const metadata: Metadata = {
   title: "App Cliente",
@@ -35,6 +36,7 @@ export default function AppClienteLayout({
       <Suspense fallback={null}>
         <ClientInstallOnboardingGate />
       </Suspense>
+      <MobileViewportRuntime />
       <ClientSessionKeepAlive />
       {children}
     </div>

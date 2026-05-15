@@ -232,12 +232,14 @@ export default function ClientBookingForm({
   servicos,
   profissionais,
   cuponsDisponiveis = [],
+  cupomInicial = "",
 }: {
   idSalao: string;
   servicos: ClientAppServiceListItem[];
   profissionais: ClientAppProfessionalListItem[];
   intervaloMinutos: number;
   cuponsDisponiveis?: ClientBookingCoupon[];
+  cupomInicial?: string;
 }) {
   const initialState: ClienteBookingState = { error: null };
   const [state, formAction] = useActionState<ClienteBookingState, FormData>(
@@ -254,7 +256,7 @@ export default function ClientBookingForm({
   const [selectedTime, setSelectedTime] = useState("");
   const [adicionaisSelecionados, setAdicionaisSelecionados] = useState<string[]>([]);
   const [codigoCupom, setCodigoCupom] = useState(
-    cuponsDisponiveis[0]?.codigo || ""
+    cupomInicial || cuponsDisponiveis[0]?.codigo || ""
   );
   const [monthCursor, setMonthCursor] = useState(() => {
     const now = new Date();

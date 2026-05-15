@@ -2,13 +2,11 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Star } from "lucide-react";
 import ClientAppFrame from "@/components/client-app/ClientAppFrame";
-import ClientBookingForm from "@/components/client-app/ClientBookingForm";
 import ClientSalonHeaderActions from "@/components/client-app/ClientSalonHeaderActions";
 import ClientSalonSectionTabs from "@/components/client-app/ClientSalonSectionTabs";
 import {
   getClientAppSalonDetail,
   isClienteAppSalonFavorite,
-  listClienteAppAvailableCoupons,
 } from "@/lib/client-app/queries";
 import { validateClienteAppSession } from "@/lib/client-context.server";
 import { buildSalaoPublicPath } from "@/lib/saloes/public-link";
@@ -26,6 +24,7 @@ function formatCurrency(value: number | null) {
 }
 
 type ServiceRowProps = {
+  salonId: string;
   servico: {
     id: string;
     nome: string;
@@ -37,7 +36,7 @@ type ServiceRowProps = {
   };
 };
 
-function ServiceRow({ servico }: ServiceRowProps) {
+function ServiceRow({ salonId, servico }: ServiceRowProps) {
   return (
     <div className="grid grid-cols-[1fr_auto] items-center gap-4 py-5">
       <div>
@@ -66,12 +65,14 @@ function ServiceRow({ servico }: ServiceRowProps) {
             ? `${servico.duracaoMinutos} min`
             : "Tempo sob consulta"}
         </div>
-        <a
-          href="#agendar"
+        <Link
+          href={`/app-cliente/salao/${salonId}/reserva?servico=${encodeURIComponent(
+            servico.id
+          )}`}
           className="mt-3 inline-flex h-11 items-center justify-center rounded-xl bg-zinc-950 px-5 text-sm font-black text-white"
         >
           Agendar
-        </a>
+        </Link>
       </div>
     </div>
   );
@@ -99,12 +100,6 @@ export default async function ClienteSalonPage({
           idSalao: salao.id,
         })
       : false;
-    const cuponsDisponiveis = session.context
-      ? await listClienteAppAvailableCoupons({
-          idConta: session.context.idConta,
-          idSalao: salao.id,
-        })
-      : [];
     const notaMedia = salao.avaliacoes.length
       ? salao.avaliacoes.reduce((sum, item) => sum + item.nota, 0) /
         salao.avaliacoes.length
@@ -123,7 +118,7 @@ export default async function ClienteSalonPage({
     const otherServices = salao.servicos.slice(5);
     const destaqueAvaliacoes = salao.avaliacoes
       .filter((avaliacao) => avaliacao.nota >= 4 && avaliacao.comentario)
-      .slice(0, 3);
+      .slice(0, 2);
 
     return (
       <ClientAppFrame title={salao.nome} subtitle="Agendamento online">
@@ -204,7 +199,7 @@ export default async function ClienteSalonPage({
           ) : null}
 
           <section id="servicos" className="px-4 py-7 md:px-6">
-            <div className="mx-auto grid max-w-6xl gap-8 lg:grid-cols-[1fr_420px]">
+            <div className="mx-auto max-w-6xl">
               <div>
                 {query?.status === "lista_espera" ? (
                   <div className="mb-5 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
@@ -221,7 +216,11 @@ export default async function ClienteSalonPage({
                 <div className="mt-5 divide-y divide-zinc-100">
                   {salao.servicos.length ? (
                     popularServices.map((servico) => (
-                      <ServiceRow key={servico.id} servico={servico} />
+                      <ServiceRow
+                        key={servico.id}
+                        salonId={id}
+                        servico={servico}
+                      />
                     ))
                   ) : (
                     <p className="text-sm leading-6 text-zinc-500">
@@ -238,7 +237,11 @@ export default async function ClienteSalonPage({
                     </h2>
                     <div className="mt-5 divide-y divide-zinc-100">
                       {otherServices.map((servico) => (
-                        <ServiceRow key={servico.id} servico={servico} />
+                        <ServiceRow
+                          key={servico.id}
+                          salonId={id}
+                          servico={servico}
+                        />
                       ))}
                     </div>
                   </div>
@@ -262,7 +265,7 @@ export default async function ClienteSalonPage({
                         Ver avaliações
                       </Link>
                     </div>
-                    <div className="mt-5 grid gap-3 md:grid-cols-3">
+                    <div className="mt-5 grid gap-3 md:grid-cols-2">
                       {destaqueAvaliacoes.map((avaliacao) => (
                         <article
                           key={avaliacao.id}
@@ -283,34 +286,6 @@ export default async function ClienteSalonPage({
                   </section>
                 ) : null}
               </div>
-
-              <aside id="agendar" className="lg:sticky lg:top-20 lg:self-start">
-                {hasSession ? (
-                  <ClientBookingForm
-                    idSalao={salao.id}
-                    servicos={salao.servicos}
-                    profissionais={salao.profissionais}
-                    intervaloMinutos={salao.intervaloAgendaMinutos}
-                    cuponsDisponiveis={cuponsDisponiveis}
-                  />
-                ) : (
-                  <div className="rounded-[1.5rem] border border-zinc-200 bg-zinc-50 p-5">
-                    <h3 className="text-xl font-black">Reserva online</h3>
-                    <p className="mt-2 text-sm leading-6 text-zinc-500">
-                      Escolha seu atendimento, entre na sua conta e confirme o
-                      melhor horário.
-                    </p>
-                    <Link
-                      href={`/app-cliente/login?salao=${encodeURIComponent(
-                        salao.appClienteSlug || salao.id
-                      )}&next=${encodeURIComponent(salaoPublicPath)}`}
-                      className="mt-4 inline-flex h-12 w-full items-center justify-center rounded-xl bg-zinc-950 px-4 text-sm font-black text-white"
-                    >
-                      Entrar ou criar conta
-                    </Link>
-                  </div>
-                )}
-              </aside>
             </div>
           </section>
         </div>

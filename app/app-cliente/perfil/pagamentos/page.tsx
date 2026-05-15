@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowLeft, ReceiptText } from "lucide-react";
 import ClientAppFrame from "@/components/client-app/ClientAppFrame";
+import PaginationLinks from "@/components/ui/PaginationLinks";
 import { listClienteAppReceipts } from "@/lib/client-app/queries";
 import { requireClienteAppContext } from "@/lib/client-context.server";
 
@@ -23,9 +24,22 @@ function formatDate(value: string | null) {
   }).format(new Date(value));
 }
 
-export default async function ClienteProfilePaymentsPage() {
+const RECEIPTS_PAGE_SIZE = 10;
+
+export default async function ClienteProfilePaymentsPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ pagina?: string }>;
+}) {
   const session = await requireClienteAppContext();
-  const receipts = await listClienteAppReceipts({ idConta: session.idConta });
+  const params = searchParams ? await searchParams : {};
+  const paginaAtual = Math.max(0, Number(params?.pagina || 1) - 1);
+  const receiptsResult = await listClienteAppReceipts({
+    idConta: session.idConta,
+    page: paginaAtual,
+    limit: RECEIPTS_PAGE_SIZE,
+  });
+  const receipts = receiptsResult.items;
 
   return (
     <ClientAppFrame title="Pagamentos" subtitle="Recibos reais dos salões.">
@@ -101,6 +115,15 @@ export default async function ClienteProfilePaymentsPage() {
             </p>
           </div>
         )}
+        <PaginationLinks
+          currentPage={paginaAtual}
+          pageSize={RECEIPTS_PAGE_SIZE}
+          totalItems={receiptsResult.total}
+          getHref={(page) =>
+            `/app-cliente/perfil/pagamentos?pagina=${page + 1}`
+          }
+          className="mt-8"
+        />
       </section>
     </ClientAppFrame>
   );

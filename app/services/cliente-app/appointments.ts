@@ -353,7 +353,7 @@ async function validarCupomAgendamento(params: {
   const { data: cupom, error } = await (params.supabaseAdmin as any)
     .from("cupons_salao")
     .select(
-      "id, codigo, nome, tipo_desconto, valor_desconto, valor_minimo, limite_uso_total, limite_uso_cliente, valido_de, valido_ate, ativo"
+      "id, codigo, nome, tipo_desconto, valor_desconto, valor_minimo, limite_uso_total, limite_uso_cliente, valido_de, valido_ate, ativo, requer_resgate"
     )
     .eq("id_salao", params.idSalao)
     .eq("codigo", params.codigoCupom)
@@ -382,14 +382,12 @@ async function validarCupomAgendamento(params: {
     (params.supabaseAdmin as any)
       .from("cupom_salao_usos")
       .select("id", { count: "exact", head: true })
-      .eq("id_cupom", cupom.id)
-      .in("status", ["reservado", "aplicado"]),
+      .eq("id_cupom", cupom.id),
     (params.supabaseAdmin as any)
       .from("cupom_salao_usos")
       .select("id", { count: "exact", head: true })
       .eq("id_cupom", cupom.id)
-      .eq("id_cliente", params.idCliente)
-      .in("status", ["reservado", "aplicado"]),
+      .eq("id_cliente", params.idCliente),
   ]);
 
   if (cupom.limite_uso_total && Number(totalUsos || 0) >= Number(cupom.limite_uso_total)) {
@@ -398,6 +396,25 @@ async function validarCupomAgendamento(params: {
 
   if (cupom.limite_uso_cliente && Number(usosCliente || 0) >= Number(cupom.limite_uso_cliente)) {
     return { cupom: null, desconto: 0, erro: "Você já usou este cupom." };
+  }
+
+  if (cupom.requer_resgate !== false) {
+    const { data: resgate } = await (params.supabaseAdmin as any)
+      .from("cupom_salao_resgates")
+      .select("id")
+      .eq("id_cupom", cupom.id)
+      .eq("cliente_app_conta_id", params.clienteAppContaId)
+      .eq("status", "resgatado")
+      .limit(1)
+      .maybeSingle();
+
+    if (!resgate?.id) {
+      return {
+        cupom: null,
+        desconto: 0,
+        erro: "Resgate este cupom pelo link enviado pelo salao antes de usar.",
+      };
+    }
   }
 
   return {
@@ -923,6 +940,16 @@ export async function createClienteAppAppointment(
           status: "reservado",
           metadata: { origem: "app_cliente" },
         });
+
+        await (supabaseAdmin as any)
+          .from("cupom_salao_resgates")
+          .update({
+            status: "usado",
+            usado_em: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id_cupom", cupomResult.cupom.id)
+          .eq("cliente_app_conta_id", idConta);
       }
 
       await notifySalonAboutClientBooking({

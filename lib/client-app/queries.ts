@@ -693,20 +693,17 @@ export async function listClienteAppAvailableCoupons(params: {
       String(ultimoAgendamento?.data || "").slice(0, 10) ||
       clienteCreatedAt ||
       contaCreatedAt;
-    const inactiveDays = diffDaysFromDate(referenceDate);
-    if (inactiveDays <= 0) return [];
+    const inactiveDays = Math.max(0, diffDaysFromDate(referenceDate));
 
     const { data: cupons } = await (supabaseAdmin as any)
       .from("cupons_salao")
       .select(
-        "id, codigo, nome, descricao, dias_cliente_inativo, tipo_desconto, valor_desconto"
+        "id, codigo, nome, descricao, dias_cliente_inativo, tipo_desconto, valor_desconto, requer_resgate, valido_de, valido_ate"
       )
       .eq("id_salao", idSalao)
       .eq("ativo", true)
-      .eq("automatico_recuperacao", true)
-      .lte("dias_cliente_inativo", inactiveDays)
-      .order("dias_cliente_inativo", { ascending: false })
-      .limit(3);
+      .order("created_at", { ascending: false })
+      .limit(20);
 
     if (!cupons?.length) return [];
 
@@ -727,9 +724,40 @@ export async function listClienteAppAvailableCoupons(params: {
         String(uso.id_cupom || "").trim()
       )
     );
+    const { data: resgates } = cupomIds.length
+      ? await (supabaseAdmin as any)
+          .from("cupom_salao_resgates")
+          .select("id_cupom")
+          .eq("id_salao", idSalao)
+          .eq("cliente_app_conta_id", idConta)
+          .eq("status", "resgatado")
+          .in("id_cupom", cupomIds)
+      : { data: [] };
+    const redeemedCouponIds = new Set(
+      ((resgates || []) as Array<Record<string, unknown>>).map((resgate) =>
+        String(resgate.id_cupom || "").trim()
+      )
+    );
 
     return ((cupons || []) as Array<Record<string, unknown>>)
-      .filter((cupom) => !usedCouponIds.has(String(cupom.id || "").trim()))
+      .filter((cupom) => {
+        const idCupom = String(cupom.id || "").trim();
+        const hoje = new Date().toISOString().slice(0, 10);
+        const validoDe = String(cupom.valido_de || "").slice(0, 10);
+        const validoAte = String(cupom.valido_ate || "").slice(0, 10);
+        const diasInativo = Number(cupom.dias_cliente_inativo || 0);
+        if (usedCouponIds.has(idCupom)) return false;
+        if (validoDe && validoDe > hoje) return false;
+        if (validoAte && validoAte < hoje) return false;
+        if (cupom.requer_resgate !== false && !redeemedCouponIds.has(idCupom)) {
+          return false;
+        }
+        if (cupom.requer_resgate === false && diasInativo > 0 && diasInativo > inactiveDays) {
+          return false;
+        }
+        return true;
+      })
+      .slice(0, 3)
       .map((cupom) => ({
         codigo: String(cupom.codigo || "").trim(),
         nome: String(cupom.nome || "").trim() || "Cupom Saudades",
@@ -1014,28 +1042,43 @@ export async function listClienteAppFavoriteSaloes(params: {
   }
 }
 
-export async function listClienteAppReceipts(params: { idConta: string }) {
+export async function listClienteAppReceipts(params: {
+  idConta: string;
+  page?: number;
+  limit?: number;
+}) {
   try {
     const supabaseAdmin = getSupabaseAdmin();
     const { clientesIds, salaoByCliente } = await listClienteAppLinkedClientIds(
       params.idConta
     );
 
-    if (!clientesIds.length) return [] as ClientAppReceiptListItem[];
+    if (!clientesIds.length) {
+      return {
+        items: [] as ClientAppReceiptListItem[],
+        total: 0,
+        hasMore: false,
+      };
+    }
 
-    const { data, error } = await (supabaseAdmin as any)
+    const limit = Math.min(Math.max(params.limit ?? 10, 1), 20);
+    const page = Math.max(params.page ?? 0, 0);
+    const from = page * limit;
+    const to = from + limit - 1;
+    const { data, error, count } = await (supabaseAdmin as any)
       .from("vw_vendas_busca")
       .select(
-        "id, id_salao, numero, status, total, fechada_em, cancelada_em, formas_pagamento, itens_descricoes, id_cliente"
+        "id, id_salao, numero, status, total, fechada_em, cancelada_em, formas_pagamento, itens_descricoes, id_cliente",
+        { count: "exact" }
       )
       .in("id_cliente", clientesIds)
       .in("status", ["fechada", "cancelada"])
       .order("fechada_em", { ascending: false, nullsFirst: false })
-      .limit(30);
+      .range(from, to);
 
     if (error) throw error;
 
-    return ((data || []) as Array<Record<string, unknown>>).map((item) => {
+    const items = ((data || []) as Array<Record<string, unknown>>).map((item) => {
       const idCliente = String(item.id_cliente || "");
       return {
         id: String(item.id || ""),
@@ -1052,28 +1095,53 @@ export async function listClienteAppReceipts(params: { idConta: string }) {
         itens: String(item.itens_descricoes || "").trim() || null,
       } satisfies ClientAppReceiptListItem;
     });
+
+    return {
+      items,
+      total: count || 0,
+      hasMore: (count || 0) > to + 1,
+    };
   } catch (error) {
     await logClientAppQueryError("cliente_app_receipts", error);
-    return [] as ClientAppReceiptListItem[];
+    return {
+      items: [] as ClientAppReceiptListItem[],
+      total: 0,
+      hasMore: false,
+    };
   }
 }
 
-export async function listClienteAppWrittenReviews(params: { idConta: string }) {
+export async function listClienteAppWrittenReviews(params: {
+  idConta: string;
+  page?: number;
+  limit?: number;
+}) {
   try {
     const { clientesIds, salaoByCliente } = await listClienteAppLinkedClientIds(
       params.idConta
     );
-    if (!clientesIds.length) return [] as ClientAppWrittenReviewListItem[];
+    if (!clientesIds.length) {
+      return {
+        items: [] as ClientAppWrittenReviewListItem[],
+        total: 0,
+        hasMore: false,
+      };
+    }
 
     const supabaseAdmin = getSupabaseAdmin();
-    const { data, error } = await (supabaseAdmin as any)
+    const limit = Math.min(Math.max(params.limit ?? 10, 1), 20);
+    const page = Math.max(params.page ?? 0, 0);
+    const from = page * limit;
+    const to = from + limit - 1;
+    const { data, error, count } = await (supabaseAdmin as any)
       .from("clientes_avaliacoes")
       .select(
-        "id, id_cliente, id_salao, id_agendamento, nota, comentario, created_at"
+        "id, id_cliente, id_salao, id_agendamento, nota, comentario, created_at",
+        { count: "exact" }
       )
       .in("id_cliente", clientesIds)
       .order("created_at", { ascending: false })
-      .limit(30);
+      .range(from, to);
 
     if (error) throw error;
 
@@ -1142,7 +1210,7 @@ export async function listClienteAppWrittenReviews(params: { idConta: string }) 
       }
     }
 
-    return rows.map((item) => {
+    const items = rows.map((item) => {
       const idCliente = String(item.id_cliente || "");
       const idSalao = String(item.id_salao || "");
       const atendimento = atendimentoById.get(
@@ -1178,9 +1246,78 @@ export async function listClienteAppWrittenReviews(params: { idConta: string }) 
         createdAt: String(item.created_at || ""),
       } satisfies ClientAppWrittenReviewListItem;
     });
+
+    return {
+      items,
+      total: count || 0,
+      hasMore: (count || 0) > to + 1,
+    };
   } catch (error) {
     await logClientAppQueryError("cliente_app_written_reviews", error);
-    return [] as ClientAppWrittenReviewListItem[];
+    return {
+      items: [] as ClientAppWrittenReviewListItem[],
+      total: 0,
+      hasMore: false,
+    };
+  }
+}
+
+export async function listClienteAppSalonReviews(params: {
+  idSalao: string;
+  page?: number;
+  limit?: number;
+}) {
+  const idSalao = String(params.idSalao || "").trim();
+  if (!idSalao) {
+    return {
+      items: [] as ClientAppReviewListItem[],
+      total: 0,
+      hasMore: false,
+    };
+  }
+
+  try {
+    const supabaseAdmin = getSupabaseAdmin();
+    const limit = Math.min(Math.max(params.limit ?? 10, 1), 20);
+    const page = Math.max(params.page ?? 0, 0);
+    const from = page * limit;
+    const to = from + limit - 1;
+
+    const { data, error, count } = await (supabaseAdmin as any)
+      .from("clientes_avaliacoes")
+      .select("id, nota, comentario, created_at, clientes(nome)", {
+        count: "exact",
+      })
+      .eq("id_salao", idSalao)
+      .order("created_at", { ascending: false })
+      .range(from, to);
+
+    if (error) throw error;
+
+    const items = ((data || []) as Array<Record<string, unknown>>).map(
+      (item) => ({
+        id: String(item.id || ""),
+        clienteNome:
+          String((item.clientes as { nome?: string } | null)?.nome || "").trim() ||
+          "Cliente",
+        nota: Number(item.nota ?? 0) || 0,
+        comentario: String(item.comentario || "").trim() || null,
+        createdAt: String(item.created_at || ""),
+      })
+    ) satisfies ClientAppReviewListItem[];
+
+    return {
+      items,
+      total: count || 0,
+      hasMore: (count || 0) > to + 1,
+    };
+  } catch (error) {
+    await logClientAppQueryError("cliente_app_salon_reviews", error);
+    return {
+      items: [] as ClientAppReviewListItem[],
+      total: 0,
+      hasMore: false,
+    };
   }
 }
 

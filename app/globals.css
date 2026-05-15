@@ -57,6 +57,16 @@ body {
   min-width: 0;
 }
 
+.sp-mobile-fixed {
+  transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
+  contain: paint;
+}
+
+.sp-mobile-resume-repaint .sp-mobile-fixed {
+  transform: translate3d(0, 0, 0.01px);
+}
+
 a {
   color: inherit;
   text-decoration: none;

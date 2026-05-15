@@ -76,7 +76,7 @@ export default function ProfissionalInstallPrompt() {
   if (!ready) return null;
 
   return (
-    <div className="px-3 pt-3 sm:px-4">
+    <div className="mb-4">
       <div className="relative overflow-hidden rounded-[1.35rem] border border-amber-200 bg-gradient-to-br from-amber-50 via-white to-zinc-50 p-3 shadow-sm">
         <button
           type="button"

@@ -45,9 +45,9 @@ export default function ProfissionalShell({
 
       <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col overflow-x-hidden bg-[#f5f5f5]/95 shadow-[0_0_80px_rgba(15,23,42,0.08)] sm:max-w-lg lg:max-w-2xl">
         <ProfissionalHeader title={title} subtitle={subtitle} />
-        {mounted ? <ProfissionalInstallPrompt /> : null}
 
         <main className="min-w-0 overflow-x-hidden flex-1 px-3 pb-28 pt-[8.25rem] sm:px-4 sm:pt-[8.75rem]">
+          {mounted ? <ProfissionalInstallPrompt /> : null}
           {children}
         </main>
 

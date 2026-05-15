@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowLeft, Star } from "lucide-react";
 import ClientAppFrame from "@/components/client-app/ClientAppFrame";
+import PaginationLinks from "@/components/ui/PaginationLinks";
 import { listClienteAppWrittenReviews } from "@/lib/client-app/queries";
 import { requireClienteAppContext } from "@/lib/client-context.server";
 
@@ -30,11 +31,22 @@ function RatingStars({ nota }: { nota: number }) {
   );
 }
 
-export default async function ClienteProfileReviewsPage() {
+const REVIEWS_PAGE_SIZE = 10;
+
+export default async function ClienteProfileReviewsPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ pagina?: string }>;
+}) {
   const session = await requireClienteAppContext();
-  const reviews = await listClienteAppWrittenReviews({
+  const params = searchParams ? await searchParams : {};
+  const paginaAtual = Math.max(0, Number(params?.pagina || 1) - 1);
+  const reviewsResult = await listClienteAppWrittenReviews({
     idConta: session.idConta,
+    page: paginaAtual,
+    limit: REVIEWS_PAGE_SIZE,
   });
+  const reviews = reviewsResult.items;
 
   return (
     <ClientAppFrame title="Avaliações" subtitle="Avaliações escritas por você.">
@@ -109,6 +121,15 @@ export default async function ClienteProfileReviewsPage() {
             </Link>
           </div>
         )}
+        <PaginationLinks
+          currentPage={paginaAtual}
+          pageSize={REVIEWS_PAGE_SIZE}
+          totalItems={reviewsResult.total}
+          getHref={(page) =>
+            `/app-cliente/perfil/avaliacoes?pagina=${page + 1}`
+          }
+          className="mt-8"
+        />
       </section>
     </ClientAppFrame>
   );

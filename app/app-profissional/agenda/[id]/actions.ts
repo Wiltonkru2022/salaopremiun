@@ -68,10 +68,10 @@ async function buscarAgendamentoPermitido(params: {
     actorId: params.idProfissional,
     idSalao: params.idSalao,
     run: async (supabase) => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("agendamentos")
         .select(
-          "id, id_salao, profissional_id, cliente_id, servico_id, data, hora_inicio, hora_fim, status, id_comanda, observacoes, duracao_minutos"
+          "id, id_salao, profissional_id, cliente_id, servico_id, data, hora_inicio, hora_fim, status, id_comanda, observacoes, duracao_minutos, id_cupom_salao, codigo_cupom, desconto_cupom_valor"
         )
         .eq("id", params.idAgendamento)
         .eq("id_salao", params.idSalao)
@@ -485,7 +485,7 @@ export async function abrirComandaDoAgendamentoAction(formData: FormData) {
             origem: "app_profissional_agenda",
             observacoes: agendamento.observacoes || null,
             subtotal: 0,
-            desconto: 0,
+            desconto: Number(agendamento.desconto_cupom_valor || 0),
             acrescimo: 0,
             total: 0,
           })
@@ -516,6 +516,19 @@ export async function abrirComandaDoAgendamentoAction(formData: FormData) {
           .eq("id_salao", session.idSalao);
 
         if (comandaUpdateError) throw new Error(comandaUpdateError.message);
+
+        if (agendamento.id_cupom_salao && Number(agendamento.desconto_cupom_valor || 0) > 0) {
+          await (supabase as any)
+            .from("cupom_salao_usos")
+            .update({
+              id_comanda: comanda.id,
+              status: "aplicado",
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id_salao", session.idSalao)
+            .eq("id_agendamento", idAgendamento)
+            .eq("id_cupom", agendamento.id_cupom_salao);
+        }
 
         return String(comanda.id);
       },
