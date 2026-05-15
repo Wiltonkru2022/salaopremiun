@@ -23,6 +23,8 @@ Use este arquivo para revisar onde o service role ou `auth.admin` aparece. Qualq
 | `app/(admin-master)/admin-master/saloes-excluidos/page.tsx` | - | sim | nao | sim | revisar |
 | `app/(admin-master)/admin-master/saloes/[id]/page.tsx` | - | sim | nao | sim | sim |
 | `app/(admin-master)/admin-master/saude/page.tsx` | - | sim | nao | sim | sim |
+| `app/(admin-master)/admin-master/seguranca/actions.ts` | - | sim | nao | sim | revisar |
+| `app/(admin-master)/admin-master/seguranca/page.tsx` | - | sim | nao | sim | revisar |
 | `app/(admin-master)/admin-master/tickets/novo/page.tsx` | - | sim | nao | sim | sim |
 | `app/(admin-master)/admin-master/usuarios-admin/actions.ts` | - | sim | nao | sim | revisar |
 | `app/(admin-master)/admin-master/webhooks/[id]/page.tsx` | - | sim | nao | sim | revisar |
@@ -74,6 +76,7 @@ Use este arquivo para revisar onde o service role ou `auth.admin` aparece. Qualq
 | `lib/proxy/admin-master-rules.ts` | - | sim | nao | revisar | revisar |
 | `lib/push-notifications.ts` | - | sim | nao | sim | revisar |
 | `lib/salon-notification-settings.ts` | - | sim | nao | sim | revisar |
+| `lib/security/cleanup.ts` | - | sim | nao | revisar | revisar |
 | `lib/security/login-attempts.ts` | - | sim | nao | sim | revisar |
 | `lib/security/user-security.ts` | - | sim | nao | sim | revisar |
 | `lib/supabase/admin-ops.ts` | - | sim | nao | sim | revisar |

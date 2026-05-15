@@ -13,6 +13,10 @@
       "schedule": "35 6 * * *"
     },
     {
+      "path": "/api/cron/security-cleanup",
+      "schedule": "45 6 * * *"
+    },
+    {
       "path": "/api/cron/trial-alerts",
       "schedule": "0 12 * * *"
     }

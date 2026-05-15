@@ -449,6 +449,48 @@ export async function queueOracleVpsCleanup(payload?: Record<string, unknown>) {
   });
 }
 
+export async function getOracleVpsSecurityEvents(params?: {
+  limit?: number;
+  risco?: string | null;
+  evento?: string | null;
+  tipoUsuario?: string | null;
+}) {
+  const query = buildQuery({
+    limit: params?.limit || 80,
+    risco: params?.risco || null,
+    evento: params?.evento || null,
+    tipo_usuario: params?.tipoUsuario || null,
+  });
+
+  return requestOracleVps(`/admin/security/events${query}`, {
+    protected: true,
+    timeoutMs: 7000,
+  }) as Promise<{
+    ok: boolean;
+    service: string;
+    provider: string;
+    total: number;
+    byRisk?: Record<string, number>;
+    byEvent?: Record<string, number>;
+    items?: Record<string, unknown>[];
+  }>;
+}
+
+export async function queueOracleVpsSecurityCleanup(
+  payload?: Record<string, unknown>
+) {
+  return requestOracleVps("/admin/security/cleanup", {
+    method: "POST",
+    protected: true,
+    timeoutMs: 7000,
+    body: {
+      source: "salaopremium-next",
+      securityRetentionDays: 90,
+      ...payload,
+    },
+  });
+}
+
 export async function queueOracleVpsNotificationProcessing(
   payload?: Record<string, unknown>
 ) {

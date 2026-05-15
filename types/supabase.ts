@@ -263,6 +263,55 @@ type SecurityLoginAttemptsTable = {
   Relationships: [];
 };
 
+type ClientesAppAuthTable = {
+  Row: {
+    id: string;
+    nome: string;
+    email: string;
+    telefone: string | null;
+    senha_hash: string;
+    preferencias_gerais: string | null;
+    ativo: boolean;
+    ultimo_login_em: string | null;
+    created_at: string;
+    updated_at: string;
+    notificacoes_ativas?: boolean | null;
+    notificacao_app_ativa?: boolean | null;
+    notificacao_email_ativa?: boolean | null;
+  };
+  Insert: {
+    id?: string;
+    nome: string;
+    email: string;
+    telefone?: string | null;
+    senha_hash: string;
+    preferencias_gerais?: string | null;
+    ativo?: boolean;
+    ultimo_login_em?: string | null;
+    created_at?: string;
+    updated_at?: string;
+    notificacoes_ativas?: boolean | null;
+    notificacao_app_ativa?: boolean | null;
+    notificacao_email_ativa?: boolean | null;
+  };
+  Update: {
+    id?: string;
+    nome?: string;
+    email?: string;
+    telefone?: string | null;
+    senha_hash?: string;
+    preferencias_gerais?: string | null;
+    ativo?: boolean;
+    ultimo_login_em?: string | null;
+    created_at?: string;
+    updated_at?: string;
+    notificacoes_ativas?: boolean | null;
+    notificacao_app_ativa?: boolean | null;
+    notificacao_email_ativa?: boolean | null;
+  };
+  Relationships: [];
+};
+
 type DatabaseWithAppExtensions = Database & {
   public: Database["public"] & {
     Tables: Database["public"]["Tables"] & {
@@ -272,6 +321,7 @@ type DatabaseWithAppExtensions = Database & {
         Database["public"]["Tables"]["saloes_recursos_extras"] &
         SaloesRecursosExtrasTableExtensions;
       saloes: Database["public"]["Tables"]["saloes"] & SaloesSecurityTableExtensions;
+      clientes_app_auth: ClientesAppAuthTable;
       security_login_attempts: SecurityLoginAttemptsTable;
       user_security_status: UserSecurityStatusTable;
       whatsapp_pacote_compras: WhatsappPacoteComprasTable;

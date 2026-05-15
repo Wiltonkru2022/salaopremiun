@@ -146,6 +146,12 @@ const MENU_GROUPS: MenuGroup[] = [
         badge: "alertas",
       },
       {
+        href: "/admin-master/seguranca",
+        label: "Seguranca",
+        icon: ShieldCheck,
+        permission: "operacao_ver",
+      },
+      {
         href: "/admin-master/webhooks",
         label: "Webhooks",
         icon: Webhook,

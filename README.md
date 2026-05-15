@@ -4,7 +4,7 @@ Sistema SaaS para gestão de salões, barbearias e profissionais de beleza. O pr
 
 Este README é o guia principal para manutenção, publicação, migração de banco/Auth, deploy em VPS e configuração de DNS/proteção.
 
-Última atualização: 14/05/2026.
+Última atualização: 15/05/2026.
 
 ## Visão Geral
 
@@ -58,13 +58,14 @@ Antes de alterar código Next.js, leia a documentação local da versão instala
 
 | Domínio | Uso |
 | --- | --- |
-| `salaopremiun.com.br` | Site público e App Cliente |
+| `salaopremiun.com.br` | Site público |
 | `www.salaopremiun.com.br` | Redirecionamento/site público |
 | `painel.salaopremiun.com.br` | Painel do Salão e Admin Master |
 | `login.salaopremiun.com.br` | Login, recuperação e atualização de senha |
 | `cadastro.salaopremiun.com.br` | Cadastro oficial de salão em `/cadastro-salao` |
 | `assinatura.salaopremiun.com.br` | Páginas de planos/assinatura quando isoladas |
 | `app.salaopremiun.com.br` | App Profissional |
+| `app.salaopremiun.com.br` | App Cliente |
 | `blog.salaopremiun.com.br` | Blog público |
 | `api.salaopremiun.com.br` | API auxiliar na Oracle VPS |
 
@@ -143,6 +144,7 @@ ORACLE_VPS_API_TOKEN=
 SECURITY_SUPABASE_URL=https://qwabnqbzbhtxicwizxmv.supabase.co
 SECURITY_SUPABASE_SERVICE_ROLE_KEY=
 SECURITY_EVENTS_TABLE=security_events
+SECURITY_EMAIL_FROM=SalãoPremium Segurança <recuperar@salaopremiun.com.br>
 ```
 
 Essas chaves protegem rotas internas, webhooks, notificações e fluxos sensíveis.
@@ -157,6 +159,9 @@ O sistema usa uma trilha leve de segurança para bloquear acesso e registrar ris
 - `app/conta-bloqueada` e `app/seguranca/verificacao` mostram as respostas de bloqueio e verificação.
 - A Oracle VPS recebe `POST /monitoring/security-event`.
 - Os logs de segurança devem ir para um Supabase separado quando disponível, usando `SECURITY_SUPABASE_URL`.
+- O Admin Master visualiza a trilha em `/admin-master/seguranca`, com eventos da VPS, bloqueios ativos, salões em análise, desbloqueio auditado e limpeza de retenção.
+- Quando a conta entra em bloqueio temporário por excesso de tentativas, o sistema envia e-mail automático via Resend para o e-mail identificado.
+- A rota cron `/api/cron/security-cleanup` limpa tentativas antigas do banco principal e pede à VPS para limpar eventos antigos do Supabase separado.
 
 Fluxo principal:
 
@@ -164,6 +169,14 @@ Fluxo principal:
 2. A VPS recebe os eventos espelhados.
 3. O Supabase separado guarda os logs de segurança.
 4. O Admin Master acompanha e libera quando necessário.
+
+Retenção padrão:
+
+- `security_login_attempts` no banco principal: 30 dias.
+- `security_events` no banco separado de segurança: 90 dias.
+- NDJSON local da VPS: controlado por `RETENTION_DAYS` e `MAX_NDJSON_LINES`.
+
+Observação operacional: a coluna `ip` de `security_events` deve receber o IP real enviado pelo Next.js. A VPS usa o IP da conexão apenas como fallback.
 
 No Supabase separado de segurança, crie a tabela de logs antes de ligar a variável `SECURITY_SUPABASE_SERVICE_ROLE_KEY` na VPS:
 
