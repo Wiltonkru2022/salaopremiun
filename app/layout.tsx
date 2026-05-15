@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import ChunkRecoveryRuntime from "@/components/monitoring/ChunkRecoveryRuntime";
 import MonitoringClient from "@/components/monitoring/MonitoringClient";
 import RouteDocumentTitle from "@/components/layout/RouteDocumentTitle";
 import "./globals.css";
@@ -60,6 +61,7 @@ export default function RootLayout({
     <html lang="pt-BR">
       <body>
         <RouteDocumentTitle />
+        <ChunkRecoveryRuntime />
         <MonitoringClient />
         {children}
       </body>
