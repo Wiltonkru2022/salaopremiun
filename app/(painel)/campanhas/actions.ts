@@ -27,6 +27,11 @@ const SPECIAL_TEMPLATES: Record<string, { nome: string; descricao: string; codig
     descricao: "Oferta por tempo limitado para agendar seu atendimento.",
     codigo: "BLACK",
   },
+  aniversario: {
+    nome: "Aniversariantes do mes",
+    descricao: "Um presente especial para clientes que fazem aniversario neste mes.",
+    codigo: "NIVER",
+  },
 };
 
 function token() {
@@ -173,6 +178,30 @@ export async function criarCampanhaCupomAction(formData: FormData) {
     await (supabase as any).from("cupom_salao_servicos").insert(rows);
   }
 
+  if (publicoAlvo === "aniversariantes_mes") {
+    const mesAtual = String(new Date().getMonth() + 1).padStart(2, "0");
+    const { data: aniversariantes } = await (supabase as any)
+      .from("clientes")
+      .select("id, data_nascimento")
+      .eq("id_salao", usuario.id_salao)
+      .or("status.eq.ativo,ativo.eq.ativo")
+      .not("data_nascimento", "is", null)
+      .limit(200);
+
+    const rowsClientes = ((aniversariantes || []) as Array<Record<string, unknown>>)
+      .filter((cliente) => String(cliente.data_nascimento || "").slice(5, 7) === mesAtual)
+      .map((cliente) => ({
+        id_salao: usuario.id_salao,
+        id_cupom: cupom.id,
+        id_cliente: String(cliente.id || ""),
+      }))
+      .filter((row) => row.id_cliente);
+
+    if (rowsClientes.length) {
+      await (supabase as any).from("cupom_salao_clientes").insert(rowsClientes);
+    }
+  }
+
   revalidatePath("/campanhas");
   redirect("/campanhas?ok=Campanha%20criada.");
 }
@@ -256,16 +285,36 @@ export async function adicionarClienteCampanhaAction(formData: FormData) {
     redirect(`/campanhas/${idCampanha || ""}?erro=Selecione%20um%20cliente.`);
   }
 
-  const { error } = await (getSupabaseAdmin() as any)
+  const supabase = getSupabaseAdmin();
+  const { data: cliente } = await (supabase as any)
+    .from("clientes")
+    .select("id")
+    .eq("id_salao", usuario.id_salao)
+    .eq("id", idCliente)
+    .or("status.eq.ativo,ativo.eq.ativo")
+    .limit(1)
+    .maybeSingle();
+
+  if (!cliente?.id) {
+    redirect(`/campanhas/${idCampanha}?erro=Cliente%20ativo%20nao%20encontrado.`);
+  }
+
+  const { data: existente } = await (supabase as any)
     .from("cupom_salao_clientes")
-    .upsert(
-      {
+    .select("id_cupom")
+    .eq("id_salao", usuario.id_salao)
+    .eq("id_cupom", idCampanha)
+    .eq("id_cliente", idCliente)
+    .limit(1)
+    .maybeSingle();
+
+  const { error } = existente?.id_cupom
+    ? { error: null }
+    : await (supabase as any).from("cupom_salao_clientes").insert({
         id_salao: usuario.id_salao,
         id_cupom: idCampanha,
         id_cliente: idCliente,
-      },
-      { onConflict: "id_cupom,id_cliente" }
-    );
+      });
 
   if (error) {
     redirect(`/campanhas/${idCampanha}?erro=${encodeURIComponent(error.message)}`);

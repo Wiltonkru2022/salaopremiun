@@ -169,7 +169,7 @@ export async function loadCouponByToken(tokenValue: string) {
 
   const { data } = await (getSupabaseAdmin() as any)
     .from("cupons_salao")
-    .select("id, codigo, nome, descricao, valido_ate, ativo, saloes(id, nome, nome_fantasia, app_cliente_slug)")
+    .select("id, codigo, nome, descricao, tipo_desconto, valor_desconto, valido_ate, ativo, saloes(id, nome, nome_fantasia, app_cliente_slug)")
     .eq("resgate_token", token)
     .eq("ativo", true)
     .limit(1)

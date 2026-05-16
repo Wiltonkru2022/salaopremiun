@@ -1,6 +1,6 @@
 "use client";
 
-import { ReceiptText, Wallet } from "lucide-react";
+import { ReceiptText, TicketPercent, Wallet } from "lucide-react";
 import { ComandaDetalhe } from "./types";
 import { formatCurrency, getStatusCaixaMeta, moneyMask } from "./utils";
 
@@ -73,6 +73,36 @@ export default function CaixaResumo({
               <InfoCard label="Acréscimo" value={formatCurrency(comandaSelecionada.acrescimo)} />
             </div>
           </div>
+
+            {comandaSelecionada.cupom_aplicado ? (
+              <div className="rounded-[22px] border border-emerald-100 bg-emerald-50 px-4 py-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex min-w-0 items-start gap-3">
+                    <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-white text-emerald-700">
+                      <TicketPercent size={18} />
+                    </span>
+                    <div className="min-w-0">
+                      <div className="text-xs font-black uppercase tracking-[0.14em] text-emerald-700">
+                        Cupom aplicado
+                      </div>
+                      <div className="mt-1 truncate text-sm font-black text-emerald-950">
+                        {comandaSelecionada.cupom_aplicado.nome || comandaSelecionada.cupom_aplicado.codigo || "Campanha"}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="shrink-0 text-right">
+                    <div className="text-sm font-black text-emerald-800">
+                      - {formatCurrency(Number(comandaSelecionada.cupom_aplicado.valor_desconto || 0))}
+                    </div>
+                    {comandaSelecionada.cupom_aplicado.codigo ? (
+                      <div className="mt-1 text-[11px] font-black uppercase text-emerald-700">
+                        {comandaSelecionada.cupom_aplicado.codigo}
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
+              </div>
+            ) : null}
 
           {comandaSelecionada.status !== "fechada" &&
           comandaSelecionada.status !== "cancelada" ? (

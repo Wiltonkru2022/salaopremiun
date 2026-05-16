@@ -107,14 +107,14 @@ async function loadCampanhasData(idSalao: string, page: number, pageSize: number
       .from("clientes")
       .select("id, nome, telefone, whatsapp, data_nascimento")
       .eq("id_salao", idSalao)
-      .eq("ativo", true)
+      .or("status.eq.ativo,ativo.eq.ativo")
       .not("data_nascimento", "is", null)
       .limit(80),
     (supabase as any)
       .from("clientes")
       .select("id, nome, telefone, whatsapp, created_at")
       .eq("id_salao", idSalao)
-      .eq("ativo", true)
+      .or("status.eq.ativo,ativo.eq.ativo")
       .limit(160),
     (supabase as any)
       .from("agendamentos")
@@ -484,6 +484,28 @@ export default async function CampanhasPage({
               <Cake size={18} /> Aniversariantes
             </h2>
             <p className="mt-1 text-sm text-zinc-500">{data.aniversariantes.length} cliente(s) neste mes.</p>
+            <form action={criarCampanhaCupomAction} className="mt-4 rounded-2xl border border-amber-100 bg-amber-50 p-4">
+              <input type="hidden" name="tipo" value="aniversariantes" />
+              <input type="hidden" name="template" value="aniversario" />
+              <input type="hidden" name="publico_alvo" value="aniversariantes_mes" />
+              <input type="hidden" name="publico_tipo" value="clientes_especificos" />
+              <input type="hidden" name="status_campanha" value="ativa" />
+              <input type="hidden" name="tipo_desconto" value="percentual" />
+              <input type="hidden" name="valor_desconto" value="10" />
+              <input type="hidden" name="limite_cliente" value="1" />
+              <input type="hidden" name="limite_total" value={String(Math.max(data.aniversariantes.length, 1))} />
+              <input type="hidden" name="mensagem_cliente" value="Feliz aniversario! Voce ganhou um cupom especial para cuidar de voce neste mes." />
+              <p className="text-sm font-bold leading-6 text-amber-950">
+                Cria um cupom de 10% e libera automaticamente para os aniversariantes ativos deste mês.
+              </p>
+              <button
+                className="mt-3 inline-flex h-10 items-center justify-center rounded-xl bg-zinc-950 px-4 text-xs font-black text-white disabled:opacity-50"
+                type="submit"
+                disabled={!data.aniversariantes.length}
+              >
+                Criar cupom de aniversário
+              </button>
+            </form>
             <div className="mt-4 space-y-2">
               {data.aniversariantes.slice(0, 5).map((cliente) => (
                 <div key={String(cliente.id)} className="rounded-2xl border border-zinc-100 bg-zinc-50 px-4 py-3 text-sm">

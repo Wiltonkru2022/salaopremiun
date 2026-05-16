@@ -74,6 +74,17 @@ export type ClientAppAvailableCoupon = {
   descricao: string | null;
   descontoLabel: string;
   diasInativo: number | null;
+  tipoDesconto: "percentual" | "valor_fixo";
+  valorDesconto: number;
+  validoAte: string | null;
+};
+
+export type ClientAppCouponWalletItem = ClientAppAvailableCoupon & {
+  id: string;
+  salaoId: string;
+  salaoNome: string;
+  status: "disponivel" | "usado" | "expirado";
+  usadoEm: string | null;
 };
 
 export type ClientAppAppointmentListItem = {
@@ -764,6 +775,11 @@ export async function listClienteAppAvailableCoupons(params: {
         descricao: String(cupom.descricao || "").trim() || null,
         descontoLabel: formatCouponDiscountLabel(cupom),
         diasInativo: Number(cupom.dias_cliente_inativo || 0) || null,
+        tipoDesconto: (String(cupom.tipo_desconto || "percentual") === "valor_fixo"
+          ? "valor_fixo"
+          : "percentual") as "percentual" | "valor_fixo",
+        valorDesconto: Number(cupom.valor_desconto || 0),
+        validoAte: String(cupom.valido_ate || "").slice(0, 10) || null,
       }))
       .filter((cupom) => cupom.codigo);
   } catch (error) {
@@ -771,6 +787,123 @@ export async function listClienteAppAvailableCoupons(params: {
       idConta,
       idSalao,
     });
+    return [];
+  }
+}
+
+export async function listClienteAppCouponWallet(params: {
+  idConta: string;
+}): Promise<ClientAppCouponWalletItem[]> {
+  const idConta = String(params.idConta || "").trim();
+  if (!idConta) return [];
+
+  try {
+    const supabaseAdmin = getSupabaseAdmin();
+    const { data: vinculos } = await (supabaseAdmin as any)
+      .from("clientes_auth")
+      .select("id_cliente, id_salao, app_ativo, saloes(id, nome, nome_fantasia)")
+      .eq("app_conta_id", idConta)
+      .eq("app_ativo", true)
+      .limit(80);
+
+    const vinculosValidos = ((vinculos || []) as Array<Record<string, any>>)
+      .map((vinculo) => ({
+        idCliente: String(vinculo.id_cliente || "").trim(),
+        idSalao: String(vinculo.id_salao || "").trim(),
+        salao: Array.isArray(vinculo.saloes) ? vinculo.saloes[0] : vinculo.saloes,
+      }))
+      .filter((vinculo) => vinculo.idCliente && vinculo.idSalao);
+
+    if (!vinculosValidos.length) return [];
+
+    const idSaloes = Array.from(new Set(vinculosValidos.map((item) => item.idSalao)));
+    const idClientes = Array.from(new Set(vinculosValidos.map((item) => item.idCliente)));
+    const salaoById = new Map(
+      vinculosValidos.map((item) => [
+        item.idSalao,
+        String(item.salao?.nome_fantasia || item.salao?.nome || "Salão"),
+      ])
+    );
+
+    const { data: cupons } = await (supabaseAdmin as any)
+      .from("cupons_salao")
+      .select(
+        "id, id_salao, codigo, nome, descricao, tipo_desconto, valor_desconto, dias_cliente_inativo, valido_de, valido_ate, requer_resgate, ativo, status_campanha"
+      )
+      .in("id_salao", idSaloes)
+      .eq("ativo", true)
+      .order("created_at", { ascending: false })
+      .limit(120);
+
+    const cupomIds = ((cupons || []) as Array<Record<string, unknown>>)
+      .map((cupom) => String(cupom.id || "").trim())
+      .filter(Boolean);
+    if (!cupomIds.length) return [];
+
+    const [usosResult, resgatesResult] = await Promise.all([
+      (supabaseAdmin as any)
+        .from("cupom_salao_usos")
+        .select("id_cupom, id_cliente, status, created_at")
+        .in("id_cupom", cupomIds)
+        .in("id_cliente", idClientes)
+        .neq("status", "cancelado"),
+      (supabaseAdmin as any)
+        .from("cupom_salao_resgates")
+        .select("id_cupom, status, created_at")
+        .eq("cliente_app_conta_id", idConta)
+        .eq("status", "resgatado")
+        .in("id_cupom", cupomIds),
+    ]);
+
+    const usedByCoupon = new Map<string, Record<string, unknown>>();
+    for (const uso of ((usosResult.data || []) as Array<Record<string, unknown>>)) {
+      usedByCoupon.set(String(uso.id_cupom || ""), uso);
+    }
+    const redeemedIds = new Set(
+      ((resgatesResult.data || []) as Array<Record<string, unknown>>).map((resgate) =>
+        String(resgate.id_cupom || "")
+      )
+    );
+    const today = new Date().toISOString().slice(0, 10);
+
+    return ((cupons || []) as Array<Record<string, unknown>>)
+      .filter((cupom) => {
+        const requerResgate = cupom.requer_resgate !== false;
+        const idCupom = String(cupom.id || "");
+        if (requerResgate && !redeemedIds.has(idCupom) && !usedByCoupon.has(idCupom)) return false;
+        return true;
+      })
+      .map((cupom) => {
+        const idCupom = String(cupom.id || "");
+        const validoAte = String(cupom.valido_ate || "").slice(0, 10) || null;
+        const usado = usedByCoupon.get(idCupom);
+        const expirado = Boolean(validoAte && validoAte < today);
+        const status: ClientAppCouponWalletItem["status"] = usado
+          ? "usado"
+          : expirado
+            ? "expirado"
+            : "disponivel";
+
+        return {
+          id: idCupom,
+          salaoId: String(cupom.id_salao || ""),
+          salaoNome: salaoById.get(String(cupom.id_salao || "")) || "Salão",
+          codigo: String(cupom.codigo || "").trim(),
+          nome: String(cupom.nome || "").trim() || "Cupom especial",
+          descricao: String(cupom.descricao || "").trim() || null,
+          descontoLabel: formatCouponDiscountLabel(cupom),
+          diasInativo: Number(cupom.dias_cliente_inativo || 0) || null,
+          tipoDesconto: String(cupom.tipo_desconto || "percentual") === "valor_fixo"
+            ? "valor_fixo"
+            : "percentual",
+          valorDesconto: Number(cupom.valor_desconto || 0),
+          validoAte,
+          status,
+          usadoEm: String(usado?.created_at || "").slice(0, 10) || null,
+        };
+      });
+  } catch (error) {
+    await logClientAppQueryError("cliente_app_coupon_wallet", error, { idConta });
     return [];
   }
 }

@@ -40,6 +40,9 @@ export type ClientBookingCoupon = {
   descricao: string | null;
   descontoLabel: string;
   diasInativo: number | null;
+  tipoDesconto: "percentual" | "valor_fixo";
+  valorDesconto: number;
+  validoAte: string | null;
 };
 
 type StepKey = "profissional" | "servico" | "horario";
@@ -273,6 +276,13 @@ export default function ClientBookingForm({
     () => servicos.find((item) => item.id === servicoId) || null,
     [servicoId, servicos]
   );
+  const selectedCoupon = useMemo(
+    () =>
+      cuponsDisponiveis.find(
+        (cupom) => codigoCupom.trim().toUpperCase() === cupom.codigo
+      ) || null,
+    [codigoCupom, cuponsDisponiveis]
+  );
 
   const servicosDoProfissional = useMemo(() => {
     if (!profissionalId) return [];
@@ -292,6 +302,29 @@ export default function ClientBookingForm({
     );
     return [...combos, ...extras].slice(0, 3);
   }, [servicoId, servicosDoProfissional]);
+  const adicionaisDetalhe = useMemo(
+    () => servicos.filter((servico) => adicionaisSelecionados.includes(servico.id)),
+    [adicionaisSelecionados, servicos]
+  );
+  const subtotalEstimado = useMemo(() => {
+    const base = selectedServico?.exigeAvaliacao ? 0 : Number(selectedServico?.preco || 0);
+    const adicionais = adicionaisDetalhe.reduce((sum, servico) => {
+      if (servico.exigeAvaliacao) return sum;
+      return sum + Number(servico.preco || 0);
+    }, 0);
+    return base + adicionais;
+  }, [adicionaisDetalhe, selectedServico]);
+  const descontoEstimado = useMemo(() => {
+    if (!selectedCoupon || subtotalEstimado <= 0) return 0;
+    if (selectedCoupon.tipoDesconto === "valor_fixo") {
+      return Math.min(subtotalEstimado, Number(selectedCoupon.valorDesconto || 0));
+    }
+    return Math.min(
+      subtotalEstimado,
+      subtotalEstimado * (Number(selectedCoupon.valorDesconto || 0) / 100)
+    );
+  }, [selectedCoupon, subtotalEstimado]);
+  const totalEstimado = Math.max(0, subtotalEstimado - descontoEstimado);
 
   const profissionaisFiltrados = useMemo(() => {
     const term = normalizeSearch(buscaProfissional);
@@ -1035,6 +1068,24 @@ export default function ClientBookingForm({
                       Se o salão enviou um cupom, ele será validado antes de confirmar a reserva.
                     </span>
                   </div>
+                  {selectedCoupon && subtotalEstimado > 0 ? (
+                    <div className="mb-4 rounded-2xl border border-emerald-100 bg-emerald-50 p-3 text-left">
+                      <div className="flex items-center justify-between gap-3 text-sm">
+                        <span className="font-bold text-emerald-900">Preço normal</span>
+                        <strong className="text-emerald-950">{formatCurrency(subtotalEstimado)}</strong>
+                      </div>
+                      <div className="mt-2 flex items-center justify-between gap-3 text-sm">
+                        <span className="font-bold text-emerald-900">Cupom {selectedCoupon.codigo}</span>
+                        <strong className="text-emerald-700">- {formatCurrency(descontoEstimado)}</strong>
+                      </div>
+                      <div className="mt-3 border-t border-emerald-200 pt-3">
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="text-sm font-black text-emerald-950">Total com cupom</span>
+                          <strong className="text-xl font-black text-emerald-950">{formatCurrency(totalEstimado)}</strong>
+                        </div>
+                      </div>
+                    </div>
+                  ) : null}
                   <SubmitButton disabled={!canSubmit} />
                 </div>
                 <p className="mt-3 text-center text-xs leading-5 text-zinc-500">

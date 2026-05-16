@@ -8,7 +8,9 @@ import {
   Gift,
   Link2,
   MessageCircle,
+  Search,
   Scissors,
+  UserPlus,
   Users,
 } from "lucide-react";
 import { getPainelUserContext } from "@/lib/auth/get-painel-user-context";
@@ -88,17 +90,23 @@ async function loadCampanhaDetalhe(
   const clientesTo = clientesFrom + clientesPageSize - 1;
   const buscaLimpa = buscaCliente.trim();
   const buscaSegura = buscaLimpa.replace(/[%_(),]/g, " ").replace(/\s+/g, " ").trim();
+  const buscaNumeros = buscaSegura.replace(/\D/g, "");
   const clientesDisponiveisQuery = (supabase as any)
     .from("clientes")
     .select("id, nome, telefone, email, whatsapp")
     .eq("id_salao", idSalao)
-    .eq("ativo", true)
+    .or("status.eq.ativo,ativo.eq.ativo")
     .order("nome", { ascending: true })
     .limit(buscaSegura ? 50 : 30);
 
   const clientesDisponiveisResult = buscaSegura
     ? clientesDisponiveisQuery.or(
-        `nome.ilike.%${buscaSegura}%,telefone.ilike.%${buscaSegura}%,whatsapp.ilike.%${buscaSegura}%,email.ilike.%${buscaSegura}%`
+        [
+          `nome.ilike.%${buscaSegura}%`,
+          `email.ilike.%${buscaSegura}%`,
+          `telefone.ilike.%${buscaNumeros || buscaSegura}%`,
+          `whatsapp.ilike.%${buscaNumeros || buscaSegura}%`,
+        ].join(",")
       )
     : clientesDisponiveisQuery;
 
@@ -578,41 +586,54 @@ export default async function CampanhaDetalhePage({
             <Users size={18} /> Clientes permitidos
           </h2>
           <p className="mt-1 text-sm text-zinc-500">
-            Use quando o publico da campanha estiver como clientes especificos.
+            Use quando o público da campanha estiver como clientes específicos. Busque, confira o contato e adicione com um clique.
           </p>
 
           <form method="GET" className="mt-4 grid gap-3 md:grid-cols-[1fr_auto]">
             {paginaUsos > 0 ? <input type="hidden" name="pagina_usos" value={String(paginaUsos + 1)} /> : null}
-            <input
-              name="busca_cliente"
-              defaultValue={buscaCliente}
-              className="h-12 rounded-2xl border border-zinc-200 bg-zinc-50 px-4 text-sm font-bold outline-none focus:border-zinc-950"
-              placeholder="Buscar cliente por nome, telefone, WhatsApp ou e-mail"
-            />
+            <label className="relative block">
+              <Search className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={18} />
+              <input
+                name="busca_cliente"
+                defaultValue={buscaCliente}
+                className="h-12 w-full rounded-2xl border border-zinc-200 bg-zinc-50 pl-11 pr-4 text-sm font-bold outline-none focus:border-zinc-950"
+                placeholder="Nome, telefone, WhatsApp ou e-mail"
+              />
+            </label>
             <button className="h-12 rounded-2xl bg-zinc-950 px-5 text-sm font-black text-white" type="submit">
-              Buscar cliente
+              Buscar
             </button>
           </form>
 
-          <form action={adicionarClienteCampanhaAction} className="mt-3 flex flex-col gap-3 md:flex-row">
-            <input type="hidden" name="id_campanha" value={String(campanha.id)} />
-            <select name="id_cliente" className="h-12 flex-1 rounded-2xl border border-zinc-200 bg-zinc-50 px-4 text-sm font-bold outline-none">
-              <option value="">
-                {buscaCliente ? "Selecionar cliente encontrado" : "Busque ou selecione um cliente recente"}
-              </option>
-              {data.clientes.map((cliente) => (
-                <option key={String(cliente.id)} value={String(cliente.id)}>
-                  {String(cliente.nome || "Cliente")} {cliente.telefone ? `- ${cliente.telefone}` : ""}
-                </option>
-              ))}
-            </select>
-            <button className="h-12 rounded-2xl bg-zinc-950 px-5 text-sm font-black text-white" type="submit">
-              Adicionar
-            </button>
-          </form>
+          <div className="mt-4 grid gap-3 lg:grid-cols-2">
+            {data.clientes.map((cliente) => (
+              <form
+                key={String(cliente.id)}
+                action={adicionarClienteCampanhaAction}
+                className="flex items-center justify-between gap-3 rounded-2xl border border-zinc-100 bg-zinc-50 px-4 py-3"
+              >
+                <input type="hidden" name="id_campanha" value={String(campanha.id)} />
+                <input type="hidden" name="id_cliente" value={String(cliente.id)} />
+                <div className="min-w-0">
+                  <strong className="block truncate text-sm text-zinc-950">{String(cliente.nome || "Cliente")}</strong>
+                  <span className="block truncate text-xs font-bold text-zinc-500">
+                    {String(cliente.telefone || cliente.whatsapp || cliente.email || "Sem contato")}
+                  </span>
+                </div>
+                <button
+                  className="inline-flex h-10 shrink-0 items-center gap-2 rounded-xl bg-zinc-950 px-3 text-xs font-black text-white"
+                  type="submit"
+                >
+                  <UserPlus size={14} /> Adicionar
+                </button>
+              </form>
+            ))}
+          </div>
           {!data.clientes.length ? (
-            <p className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-800">
-              Nenhum cliente encontrado para adicionar. Tente outro nome, telefone ou e-mail.
+            <p className="mt-3 rounded-2xl border border-dashed border-zinc-200 bg-zinc-50 px-4 py-4 text-sm font-bold text-zinc-600">
+              {buscaCliente
+                ? "Nenhum cliente encontrado. Tente nome, telefone, WhatsApp ou e-mail."
+                : "Digite uma busca ou escolha um cliente recente para liberar esta campanha."}
             </p>
           ) : null}
 
@@ -622,7 +643,7 @@ export default async function CampanhaDetalhePage({
               const whatsapp = normalizeWhatsApp(cliente?.whatsapp || cliente?.telefone);
               const mensagemCliente = [
                 `Oi, ${String(cliente?.nome || "tudo bem")}.`,
-                String(campanha.mensagem_cliente || campanha.descricao || `Voce recebeu uma campanha especial: ${campanha.nome}`),
+                String(campanha.mensagem_cliente || campanha.descricao || `Você recebeu uma campanha especial: ${campanha.nome}`),
                 "",
                 "Resgate pelo link:",
                 link,
@@ -658,7 +679,7 @@ export default async function CampanhaDetalhePage({
             })}
             {!data.clientesPermitidos.length ? (
               <p className="rounded-2xl border border-dashed border-zinc-200 p-4 text-sm text-zinc-500">
-                Nenhum cliente especifico adicionado.
+                Nenhum cliente específico adicionado.
               </p>
             ) : null}
           </div>

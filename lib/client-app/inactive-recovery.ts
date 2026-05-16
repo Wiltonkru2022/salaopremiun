@@ -32,6 +32,7 @@ export async function ensureRecoveryCoupons(idSalao: string) {
     limite_uso_cliente: 1,
     dias_cliente_inativo: days,
     ativo: true,
+    requer_resgate: false,
     automatico_recuperacao: true,
     metadata: { origem: "recuperacao_automatica" },
   }));
@@ -114,7 +115,7 @@ export async function processInactiveClientRecovery(limitSaloes = 20) {
 
     const { data: vinculos } = await (supabase as any)
       .from("clientes_auth")
-      .select("id_cliente, app_conta_id, clientes(nome, status)")
+      .select("id_cliente, app_conta_id, clientes(nome, status, created_at)")
       .eq("id_salao", idSalao)
       .eq("app_ativo", true)
       .not("app_conta_id", "is", null)

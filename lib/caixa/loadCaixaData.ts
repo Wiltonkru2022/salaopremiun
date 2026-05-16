@@ -608,6 +608,16 @@ export async function carregarComandaDetalhe(
     throw new Error("Erro ao carregar pagamentos da comanda.");
   }
 
+  const { data: cupomUsoData } = await (supabase as any)
+    .from("cupom_salao_usos")
+    .select("codigo, valor_desconto, status, cupons_salao(nome)")
+    .eq("id_salao", idSalao)
+    .eq("id_comanda", idComanda)
+    .neq("status", "cancelado")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
   const itensBase = (itensData as ComandaItem[]) || [];
   const idsProfissionais = Array.from(
     new Set(
@@ -649,7 +659,21 @@ export async function carregarComandaDetalhe(
       : null,
   })) as ComandaItem[];
 
-  const detalhe = comandaData as ComandaDetalhe;
+  const detalhe = {
+    ...(comandaData as ComandaDetalhe),
+    cupom_aplicado: cupomUsoData
+      ? {
+          codigo: String((cupomUsoData as any).codigo || ""),
+          nome: String(
+            Array.isArray((cupomUsoData as any).cupons_salao)
+              ? (cupomUsoData as any).cupons_salao[0]?.nome || ""
+              : (cupomUsoData as any).cupons_salao?.nome || ""
+          ),
+          valor_desconto: Number((cupomUsoData as any).valor_desconto || 0),
+          status: String((cupomUsoData as any).status || ""),
+        }
+      : null,
+  } as ComandaDetalhe;
 
   return {
     acrescimoInput: Number(detalhe.acrescimo || 0).toLocaleString("pt-BR", {

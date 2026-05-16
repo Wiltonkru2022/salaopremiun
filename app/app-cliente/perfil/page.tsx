@@ -10,6 +10,7 @@ import {
   ShieldCheck,
   Settings,
   Star,
+  TicketPercent,
   UserRound,
   WalletCards,
 } from "lucide-react";
@@ -128,6 +129,11 @@ export default async function ClientePerfilPage({
             href="/app-cliente/favoritos"
             label="Salões favoritos"
             icon={Star}
+          />
+          <ProfileRow
+            href="/app-cliente/cupons"
+            label="Meus cupons"
+            icon={TicketPercent}
           />
           <ProfileRow
             href="/app-cliente/perfil/avaliacoes"

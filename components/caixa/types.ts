@@ -53,6 +53,12 @@ export type ComandaDetalhe = {
   cancelada_em?: string | null;
   id_cliente?: string | null;
   clientes?: ClienteJoin | ClienteJoin[] | null;
+  cupom_aplicado?: {
+    codigo?: string | null;
+    nome?: string | null;
+    valor_desconto?: number | null;
+    status?: string | null;
+  } | null;
 };
 
 export type TipoItemComanda = "servico" | "produto" | "extra" | "ajuste";
