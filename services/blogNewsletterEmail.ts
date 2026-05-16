@@ -67,7 +67,7 @@ export async function enviarNewsletterPostPublicado(input: {
 }) {
   const resendApiKey = process.env.RESEND_API_KEY;
   if (!resendApiKey) {
-    throw new Error("RESEND_API_KEY nao configurada.");
+    throw new Error("RESEND_API_KEY não configurada.");
   }
 
   const subscribers = await listarAssinantesNewsletterBlog();
@@ -79,11 +79,11 @@ export async function enviarNewsletterPostPublicado(input: {
   const blogBaseUrl =
     process.env.BLOG_PUBLIC_URL || "https://blog.salaopremiun.com.br";
   const postUrl = `${blogBaseUrl.replace(/\/$/, "")}/${input.slug || ""}`;
-  const title = input.titulo || "Novo post no Blog SalaoPremium";
+  const title = input.titulo || "Novo post no Blog SalãoPremium";
   const summary = input.resumo || input.descricao || "Tem artigo novo no blog.";
   const from =
     process.env.BLOG_EMAIL_FROM ||
-    "Blog SalaoPremium <novidades@salaopremiun.com.br>";
+    "Blog SalãoPremium <novidades@salaopremiun.com.br>";
   const to = process.env.BLOG_EMAIL_AUDIENCE_TO || "novidades@salaopremiun.com.br";
   const replyTo = process.env.BLOG_EMAIL_REPLY_TO || undefined;
 
@@ -91,13 +91,13 @@ export async function enviarNewsletterPostPublicado(input: {
     <div style="font-family:Inter,Arial,sans-serif;background:#f8fafc;padding:32px;color:#0f172a">
       <div style="max-width:620px;margin:0 auto;background:#ffffff;border:1px solid #e2e8f0;border-radius:20px;overflow:hidden">
         <div style="padding:28px 28px 10px">
-          <p style="margin:0 0 10px;font-size:12px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:#64748b">Blog SalaoPremium</p>
+          <p style="margin:0 0 10px;font-size:12px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:#64748b">Blog SalãoPremium</p>
           <h1 style="margin:0;font-size:30px;line-height:1.15;color:#0f172a">${htmlEscape(title)}</h1>
           <p style="margin:18px 0 0;font-size:16px;line-height:1.7;color:#475569">${htmlEscape(summary)}</p>
           <a href="${htmlEscape(postUrl)}" style="display:inline-block;margin-top:24px;background:#0f172a;color:#ffffff;text-decoration:none;border-radius:999px;padding:13px 20px;font-size:14px;font-weight:800">Ler artigo</a>
         </div>
         <div style="padding:20px 28px 28px">
-          <p style="margin:0;font-size:12px;line-height:1.6;color:#64748b">Voce recebeu este aviso porque se cadastrou na newsletter do Blog SalaoPremium.</p>
+          <p style="margin:0;font-size:12px;line-height:1.6;color:#64748b">Você recebeu este aviso porque se cadastrou na newsletter do Blog SalãoPremium.</p>
         </div>
       </div>
     </div>

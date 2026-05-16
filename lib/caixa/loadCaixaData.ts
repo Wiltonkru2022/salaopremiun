@@ -393,7 +393,7 @@ async function carregarAgendamentosSemComanda(
       : null,
     servicos: item.servico_id
       ? {
-          nome: mapaServicos.get(item.servico_id)?.nome || "Servico",
+          nome: mapaServicos.get(item.servico_id)?.nome || "Serviço",
           preco: mapaServicos.get(item.servico_id)?.preco || 0,
         }
       : null,

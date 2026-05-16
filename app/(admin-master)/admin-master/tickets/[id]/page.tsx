@@ -13,7 +13,7 @@ export default async function AdminMasterTicketDetailPage({
   const admin = await requireAdminMasterUser("tickets_ver");
   const { id } = await params;
   const detail = await getAdminTicketDetail(id);
-  const salaoNome = detail.salao?.nome || "Salao nao identificado";
+  const salaoNome = detail.salao?.nome || "Salão não identificado";
 
   return (
     <div className="space-y-6">
@@ -33,7 +33,7 @@ export default async function AdminMasterTicketDetailPage({
               href={`/admin-master/saloes/${detail.salao.id}`}
               className="rounded-2xl border border-white/15 bg-white/10 px-4 py-3 text-sm font-black text-white transition hover:bg-white/20"
             >
-              Raio-x do salao
+              Raio-x do salão
             </Link>
           ) : null}
           <Link

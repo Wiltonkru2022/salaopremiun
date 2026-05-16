@@ -381,7 +381,7 @@ export default async function CampanhasPage({
                 </p>
                 <h3 className="mt-2 text-2xl font-black">Escova por R$ 60</h3>
                 <p className="mt-2 text-sm text-zinc-500">
-                  Link privado aberto. Cliente escolhe servico, profissional e horario.
+                  Link privado aberto. Cliente escolhe serviço, profissional e horário.
                 </p>
                 <div className="mt-4 h-3 overflow-hidden rounded-full bg-zinc-100">
                   <div className="h-full w-3/4 rounded-full bg-zinc-950" />

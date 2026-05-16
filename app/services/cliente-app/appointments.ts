@@ -376,7 +376,7 @@ async function validarCupomAgendamento(params: {
   }
 
   if (String((cupom as any).status_campanha || "ativa") !== "ativa") {
-    return { cupom: null, desconto: 0, erro: "Essa campanha nao esta mais disponivel." };
+    return { cupom: null, desconto: 0, erro: "Essa campanha não está mais disponível." };
   }
 
   const valorMinimo = Number(cupom.valor_minimo || 0);
@@ -508,7 +508,7 @@ async function validarCupomAgendamento(params: {
       return {
         cupom: null,
         desconto: 0,
-        erro: "Resgate este cupom pelo link enviado pelo salao antes de usar.",
+        erro: "Resgate este cupom pelo link enviado pelo salão antes de usar.",
       };
     }
   }
@@ -534,7 +534,7 @@ async function validarCupomAgendamento(params: {
       return {
         cupom: null,
         desconto: 0,
-        erro: "Essa campanha nao esta disponivel para o servico escolhido.",
+        erro: "Essa campanha não está disponível para o serviço escolhido.",
       };
     }
 
@@ -550,7 +550,7 @@ async function validarCupomAgendamento(params: {
         return {
           cupom: null,
           desconto: 0,
-          erro: "O limite desta campanha para esse servico acabou.",
+          erro: "O limite desta campanha para esse serviço acabou.",
         };
       }
     }

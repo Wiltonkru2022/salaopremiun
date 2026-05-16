@@ -198,10 +198,10 @@ export default function AdminTicketDetailClient({ detail, canEdit }: Props) {
       );
       setFeedback(
         action === "approve"
-          ? "Recuperacao aprovada e colocada em carência."
+          ? "Recuperação aprovada e colocada em carência."
           : action === "reject"
-            ? "Recuperacao recusada. O ticket segue aguardando novos dados."
-            : "Recuperacao concluida e autenticador removido."
+            ? "Recuperação recusada. O ticket segue aguardando novos dados."
+            : "Recuperação concluída e autenticador removido."
       );
       router.refresh();
     } catch (currentError) {
@@ -285,7 +285,7 @@ export default function AdminTicketDetailClient({ detail, canEdit }: Props) {
               {detail.ticket.assunto}
             </h2>
             <div className="mt-3 flex flex-wrap gap-3 text-sm text-zinc-500">
-              <span>Salao {detail.salao?.nome || "-"}</span>
+              <span>Salão {detail.salao?.nome || "-"}</span>
               <span>Solicitante {detail.ticket.solicitanteNome}</span>
               <span>Atualizado {detail.ticket.ultimaInteracaoLabel}</span>
               <span>Origem {detail.ticket.origem}</span>
@@ -305,7 +305,7 @@ export default function AdminTicketDetailClient({ detail, canEdit }: Props) {
         <div className="space-y-4 rounded-[30px] border border-zinc-200 bg-white p-5 shadow-sm">
           {mfaRecoveryContext ? (
             <div className="rounded-[24px] border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-900">
-              <div className="font-bold">Recuperacao do autenticador</div>
+              <div className="font-bold">Recuperação do autenticador</div>
               <div className="mt-2 leading-6">
                 Codigo da solicitação:{" "}
                 <span className="font-mono font-bold">

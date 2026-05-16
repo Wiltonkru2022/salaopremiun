@@ -98,7 +98,7 @@ export async function POST(request: Request) {
         error:
           error instanceof Error
             ? error.message
-            : "Nao foi possivel ativar as notificacoes.",
+            : "Não foi possível ativar as notificações.",
       },
       { status: 500 }
     );

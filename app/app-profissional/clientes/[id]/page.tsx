@@ -101,8 +101,8 @@ function getStatusTone(status?: string | null) {
 function getServicoNome(
   servicos: { nome?: string | null } | { nome?: string | null }[] | null | undefined
 ) {
-  if (Array.isArray(servicos)) return servicos[0]?.nome || "Servico";
-  return servicos?.nome || "Servico";
+  if (Array.isArray(servicos)) return servicos[0]?.nome || "Serviço";
+  return servicos?.nome || "Serviço";
 }
 
 export default async function ClienteDetalheProfissionalPage({

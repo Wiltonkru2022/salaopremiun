@@ -162,7 +162,7 @@ export const painelNavigationItems: PainelNavItem[] = [
     href: "/campanhas",
     label: "Campanhas",
     shortLabel: "Campanhas",
-    description: "Cupons, recuperacao e links de resgate.",
+    description: "Cupons, recuperação e links de resgate.",
     icon: Megaphone,
     permissionKey: "dashboard_ver",
     niveis: ["admin"],

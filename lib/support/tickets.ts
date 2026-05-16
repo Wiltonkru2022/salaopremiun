@@ -399,7 +399,7 @@ function mapTicketSummary(
     ultimaInteracaoLabel: dateTimeValue(
       row.ultima_interacao_em || row.atualizado_em || row.criado_em
     ),
-    solicitanteNome: row.solicitante_nome || "Salao",
+    solicitanteNome: row.solicitante_nome || "Salão",
     ultimaMensagem: normalizeText(latestMessage?.mensagem),
     ultimaMensagemAutor:
       normalizeText(latestMessage?.autor_nome) ||
@@ -430,7 +430,7 @@ function mapTicketHeader(row: TicketHeaderRow): TicketHeader {
     ultimaInteracaoLabel: dateTimeValue(
       row.ultima_interacao_em || row.atualizado_em || row.criado_em
     ),
-    solicitanteNome: row.solicitante_nome || "Salao",
+    solicitanteNome: row.solicitante_nome || "Salão",
     solicitanteEmail: normalizeText(row.solicitante_email) || null,
     origemContexto:
       row.origem_contexto && typeof row.origem_contexto === "object"
@@ -1382,7 +1382,7 @@ export async function updateAdminTicketStatus(params: {
       if (params.mfaEvidenceReviewAction) {
         if (!isMfaRecoveryTicket) {
           throw new Error(
-            "Este ticket nao foi aberto como recuperacao do autenticador."
+            "Este ticket não foi aberto como recuperação do autenticador."
           );
         }
 
@@ -1395,7 +1395,7 @@ export async function updateAdminTicketStatus(params: {
           eventName = "mfa_recovery_evidence_valid";
           eventDescription =
             normalizeText(params.motivo) ||
-            "Evidencias marcadas como completas para a recuperacao do autenticador.";
+            "Evidências marcadas como completas para a recuperação do autenticador.";
           customerMessage = buildMfaRecoveryEvidenceAcceptedMessage({
             code: recoveryCode || "REC",
           });
@@ -1429,7 +1429,7 @@ export async function updateAdminTicketStatus(params: {
       if (params.mfaRecoveryAction) {
         if (!isMfaRecoveryTicket) {
           throw new Error(
-            "Este ticket nao foi aberto como recuperacao do autenticador."
+            "Este ticket não foi aberto como recuperação do autenticador."
           );
         }
 
@@ -1452,7 +1452,7 @@ export async function updateAdminTicketStatus(params: {
           eventName = "mfa_recovery_approved";
           eventDescription =
             normalizeText(params.motivo) ||
-            `Recuperacao do autenticador aprovada com carencia ate ${unlockAt}.`;
+            `Recuperação do autenticador aprovada com carência até ${unlockAt}.`;
           customerMessage = buildMfaRecoveryApprovedMessage({
             code: recoveryCode || "REC",
             unlockAt,
@@ -1467,7 +1467,7 @@ export async function updateAdminTicketStatus(params: {
           eventName = "mfa_recovery_rejected";
           eventDescription =
             normalizeText(params.motivo) ||
-            "Recuperacao do autenticador recusada. Aguardando novos dados do cliente.";
+            "Recuperação do autenticador recusada. Aguardando novos dados do cliente.";
           customerMessage = buildMfaRecoveryRejectedMessage({
             code: recoveryCode || "REC",
           });
@@ -1491,7 +1491,7 @@ export async function updateAdminTicketStatus(params: {
               : "";
 
           if (!ticket.id_salao || !userIdSalao) {
-            throw new Error("Nao foi possivel localizar a conta desta recuperacao.");
+            throw new Error("Não foi possível localizar a conta desta recuperação.");
           }
 
           const { data: usuarioSalao, error: usuarioSalaoError } = await supabase
@@ -1504,7 +1504,7 @@ export async function updateAdminTicketStatus(params: {
           if (usuarioSalaoError || !usuarioSalao?.auth_user_id) {
             throw new Error(
               usuarioSalaoError?.message ||
-                "Nao foi possivel localizar a conta autenticada desta recuperacao."
+                "Não foi possível localizar a conta autenticada desta recuperação."
             );
           }
 
@@ -1535,7 +1535,7 @@ export async function updateAdminTicketStatus(params: {
             if (deleteFactorError) {
               throw new Error(
                 deleteFactorError.message ||
-                  "Nao foi possivel remover o autenticador desta conta."
+                  "Não foi possível remover o autenticador desta conta."
               );
             }
           }
@@ -1546,7 +1546,7 @@ export async function updateAdminTicketStatus(params: {
           if (authUserError || !authUserData?.user) {
             throw new Error(
               authUserError?.message ||
-                "Nao foi possivel atualizar a conta autenticada."
+                "Não foi possível atualizar a conta autenticada."
             );
           }
 
@@ -1575,7 +1575,7 @@ export async function updateAdminTicketStatus(params: {
           if (updateAuthError) {
             throw new Error(
               updateAuthError.message ||
-                "Nao foi possivel finalizar a recuperacao do autenticador."
+                "Não foi possível finalizar a recuperação do autenticador."
             );
           }
 

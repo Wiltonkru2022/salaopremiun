@@ -294,7 +294,7 @@ export default function ComandaItemModal({
               onChange={(e) => setTipoItem(e.target.value)}
               className="w-full rounded-2xl border border-zinc-300 px-4 py-3"
             >
-              <option value="servico">Servico</option>
+              <option value="servico">Serviço</option>
               <option value="produto">Produto</option>
               <option value="extra">Extra</option>
             </select>
@@ -303,7 +303,7 @@ export default function ComandaItemModal({
           {tipoItem === "servico" ? (
             <>
               <div className="md:col-span-2">
-                <label className="mb-1 block text-sm font-semibold text-zinc-700">Servico</label>
+                <label className="mb-1 block text-sm font-semibold text-zinc-700">Serviço</label>
                 <select
                   value={idServico}
                   onChange={(e) => preencherAutomaticoServico(e.target.value)}

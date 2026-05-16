@@ -23,7 +23,7 @@ export async function sendResendEmail(input: {
   const apiKey = process.env.RESEND_API_KEY;
 
   if (!apiKey) {
-    throw new Error("RESEND_API_KEY nao configurada.");
+    throw new Error("RESEND_API_KEY não configurada.");
   }
 
   const headers: Record<string, string> = {

@@ -94,7 +94,7 @@ export function createAdminMasterSearchService() {
         }[]).map((item) => ({
           id: String(item.id || ""),
           type: "salao" as const,
-          title: item.nome || "Salao sem nome",
+          title: item.nome || "Salão sem nome",
           subtitle: `${item.responsavel || "-"} / ${item.email || "-"} / ${item.status || "-"}`,
           href: `/admin-master/saloes/${item.id}`,
         })),
@@ -109,7 +109,7 @@ export function createAdminMasterSearchService() {
           id: String(item.id || ""),
           type: "cobranca" as const,
           title: item.referencia || `Cobranca ${item.id || ""}`,
-          subtitle: `${item.descricao || "-"} / ${item.status || "-"} / Salao ${item.id_salao || "-"}`,
+          subtitle: `${item.descricao || "-"} / ${item.status || "-"} / Salão ${item.id_salao || "-"}`,
           href: `/admin-master/assinaturas/cobrancas?referencia=${encodeURIComponent(
             item.referencia || String(item.id || "")
           )}`,
@@ -124,7 +124,7 @@ export function createAdminMasterSearchService() {
           id: String(item.id || ""),
           type: "ticket" as const,
           title: `#${item.numero || "-"} ${item.assunto || "Ticket"}`,
-          subtitle: `${item.status || "-"} / Salao ${item.id_salao || "-"}`,
+          subtitle: `${item.status || "-"} / Salão ${item.id_salao || "-"}`,
           href: `/admin-master/tickets/${item.id}`,
         })),
         ...((webhooks || []) as {
@@ -137,7 +137,7 @@ export function createAdminMasterSearchService() {
           id: String(item.id || ""),
           type: "webhook" as const,
           title: item.evento || "Webhook",
-          subtitle: `${item.origem || "-"} / ${item.status || "-"} / Salao ${item.id_salao || "-"}`,
+          subtitle: `${item.origem || "-"} / ${item.status || "-"} / Salão ${item.id_salao || "-"}`,
           href: "/admin-master/webhooks",
         })),
         ...((admins || []) as {

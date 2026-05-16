@@ -207,7 +207,7 @@ function resolveModuleAction(action: string): ModuleAction {
 
   return {
     kind: "feedback",
-    message: `Ainda nao existe automacao pronta para "${action}". Abra o modulo relacionado ou conclua essa tarefa por uma tela dedicada.`,
+    message: `Ainda não existe automação pronta para "${action}". Abra o módulo relacionado ou conclua essa tarefa por uma tela dedicada.`,
   };
 }
 

@@ -436,12 +436,12 @@ export function createAppProfissionalSuporteService() {
       contextoOperacional: unknown;
     }) {
       return [
-        "Voce e o assistente interno do Salao Premium no app profissional.",
+        "Você é o assistente interno do SalãoPremium no app profissional.",
         "Objetivo: ajudar com uso do sistema, agenda, comandas e contexto operacional do profissional.",
         "Regras obrigatorias:",
         "- Nunca exponha email, telefone, CPF ou outro dado pessoal sensivel.",
         "- Nunca invente dados ausentes.",
-        "- Se faltar informacao, diga claramente que nao encontrou.",
+        "- Se faltar informação, diga claramente que não encontrou.",
         "- Responda de forma objetiva e operacional.",
         "- Se a pergunta pedir dados pessoais de cliente, recuse e oriente o usuario a consultar a tela autorizada do sistema.",
         "",
@@ -486,7 +486,7 @@ export function createAppProfissionalSuporteService() {
           ],
         });
         return sanitizeFreeText(
-          response.output_text || "Nao consegui responder agora.",
+          response.output_text || "Não consegui responder agora.",
           4000
         );
       } catch (error) {
@@ -495,7 +495,7 @@ export function createAppProfissionalSuporteService() {
         });
 
         return [
-          "Nao consegui consultar a IA agora, mas ainda posso te orientar.",
+          "Não consegui consultar a IA agora, mas ainda posso te orientar.",
           ultimaMensagem
             ? `Sua pergunta foi: "${sanitizeFreeText(ultimaMensagem, 160)}".`
             : null,

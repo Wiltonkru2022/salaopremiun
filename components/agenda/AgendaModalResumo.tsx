@@ -103,20 +103,20 @@ export default function AgendaModalResumo({
                 value={clienteSelecionado?.nome || "Selecione"}
               />
               <SummaryItem
-                label="Servico"
+                label="Serviço"
                 value={servicoSelecionado?.nome || "Selecione"}
               />
 
               <div className="grid grid-cols-2 gap-2">
                 <InfoCard
-                  label="Inicio"
+                  label="Início"
                   value={normalizeTimeString(horaInicio)}
                 />
                 <InfoCard label="Fim" value={horaFimPreview || "--:--"} />
               </div>
 
               <InfoCard
-                label="Duracao"
+                label="Duração"
                 value={`${servicoSelecionado?.duracao_minutos ?? 0} min`}
               />
               <InfoCard

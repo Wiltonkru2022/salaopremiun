@@ -99,23 +99,23 @@ async function validarSalaoAdmin() {
 
   if (authError) {
     throw new WhatsappPacoteCheckoutServiceError(
-      "Erro ao validar usuario autenticado.",
+      "Erro ao validar usuário autenticado.",
       401
     );
   }
 
   if (!user?.id) {
-    throw new WhatsappPacoteCheckoutServiceError("Usuario nao autenticado.", 401);
+    throw new WhatsappPacoteCheckoutServiceError("Usuário não autenticado.", 401);
   }
 
   const usuario = await getPainelUserContextByAuthUserId(user.id);
 
   if (!usuario?.id_salao) {
-    throw new WhatsappPacoteCheckoutServiceError("Usuario sem salao vinculado.", 403);
+    throw new WhatsappPacoteCheckoutServiceError("Usuário sem salão vinculado.", 403);
   }
 
   if (String(usuario.status || "").toLowerCase() !== "ativo") {
-    throw new WhatsappPacoteCheckoutServiceError("Usuario inativo.", 403);
+    throw new WhatsappPacoteCheckoutServiceError("Usuário inativo.", 403);
   }
 
   if (String(usuario.nivel || "").toLowerCase() !== "admin") {
@@ -148,7 +148,7 @@ async function carregarPacote(pacoteId: string) {
 
   if (!pacote?.id) {
     throw new WhatsappPacoteCheckoutServiceError(
-      "Pacote de WhatsApp nao encontrado.",
+      "Pacote de WhatsApp não encontrado.",
       404
     );
   }
@@ -166,7 +166,7 @@ async function carregarSalao(idSalao: string) {
 
   if (error) {
     throw new WhatsappPacoteCheckoutServiceError(
-      "Erro ao carregar dados do salao.",
+      "Erro ao carregar dados do salão.",
       500
     );
   }
@@ -174,12 +174,12 @@ async function carregarSalao(idSalao: string) {
   const salao = data as SalaoRow | null;
 
   if (!salao?.id) {
-    throw new WhatsappPacoteCheckoutServiceError("Salao nao encontrado.", 404);
+    throw new WhatsappPacoteCheckoutServiceError("Salão não encontrado.", 404);
   }
 
   if (!String(salao.email || "").trim()) {
     throw new WhatsappPacoteCheckoutServiceError(
-      "O salao precisa ter e-mail cadastrado para comprar pacote.",
+      "O salão precisa ter e-mail cadastrado para comprar pacote.",
       400
     );
   }
@@ -251,7 +251,7 @@ export function createWhatsappPacoteCheckoutService() {
       }
 
       const clienteAsaas = await criarOuBuscarCliente({
-        nome: String(salao.responsavel || salao.nome || "SalaoPremium").trim(),
+        nome: String(salao.responsavel || salao.nome || "SalãoPremium").trim(),
         email: String(salao.email || "").trim(),
         cpfCnpj: onlyNumbers(salao.cpf_cnpj),
         telefone: onlyNumbers(salao.whatsapp || salao.telefone),
@@ -299,7 +299,7 @@ export function createWhatsappPacoteCheckoutService() {
 
       if (!paymentId) {
         throw new WhatsappPacoteCheckoutServiceError(
-          "O provedor nao retornou um pagamento valido para o pacote.",
+          "O provedor não retornou um pagamento válido para o pacote.",
           502
         );
       }

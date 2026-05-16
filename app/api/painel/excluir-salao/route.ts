@@ -43,7 +43,7 @@ export async function POST(request: Request) {
     const { usuario } = await getPainelUserContext();
 
     if (!usuario?.id_salao) {
-      throw new AuthzError("Salao nao identificado para exclusao.", 401);
+      throw new AuthzError("Salão não identificado para exclusão.", 401);
     }
 
     const membership = await requireSalaoPermission(
@@ -65,7 +65,7 @@ export async function POST(request: Request) {
         {
           ok: false,
           error:
-            "Nao foi possivel preparar a exclusao dos usuarios de autenticacao.",
+            "Não foi possível preparar a exclusão dos usuários de autenticação.",
           debug: {
             message: painelAuthUsersError.message,
             code: painelAuthUsersError.code,
@@ -110,7 +110,7 @@ export async function POST(request: Request) {
         {
           ok: false,
           error:
-            "Nao foi possivel excluir o salao agora. Nenhum dado foi removido; tente novamente ou fale com o suporte.",
+            "Não foi possível excluir o salão agora. Nenhum dado foi removido; tente novamente ou fale com o suporte.",
           debugId,
           debug: {
             code: rpcError.code || null,

@@ -119,7 +119,7 @@ export default function AgendaModalFormAgendamento({
 
         <div className="mt-3">
           <SearchableSelect
-            label="Servico"
+            label="Serviço"
             placeholder="Digite o nome do serviço"
             emptyText="Nenhum serviço encontrado."
             options={servicosOptions}

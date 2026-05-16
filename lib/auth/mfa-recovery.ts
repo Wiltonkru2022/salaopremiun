@@ -8,21 +8,21 @@ export function generateMfaRecoveryCode() {
 }
 
 export function buildMfaRecoverySubject(code: string) {
-  return `Recuperacao do autenticador - ${code}`;
+  return `Recuperação do autenticador - ${code}`;
 }
 
 export function buildMfaRecoveryMessage(code: string) {
   return [
     "Preciso recuperar o acesso ao autenticador desta conta.",
     "",
-    `Codigo da solicitacao: ${code}`,
+    `Código da solicitação: ${code}`,
     "",
-    "Para seguir com seguranca, envie nesta conversa:",
+    "Para seguir com segurança, envie nesta conversa:",
     "1. Uma selfie segurando o documento.",
-    `2. Um papel com o codigo ${code} escrito a mao.`,
+    `2. Um papel com o código ${code} escrito à mão.`,
     "3. Um telefone ou e-mail de contato atual.",
     "",
-    `Depois da aprovacao, a remocao da protecao entra em carencia de ${MFA_RECOVERY_DELAY_HOURS} horas por seguranca.`,
+    `Depois da aprovação, a remoção da proteção entra em carência de ${MFA_RECOVERY_DELAY_HOURS} horas por segurança.`,
   ].join("\n");
 }
 
@@ -45,21 +45,21 @@ export function buildMfaRecoveryApprovedMessage(params: {
   unlockAt: string;
 }) {
   return [
-    "Sua solicitacao de recuperacao do autenticador foi aprovada.",
+    "Sua solicitação de recuperação do autenticador foi aprovada.",
     "",
-    `Codigo da solicitacao: ${params.code}`,
-    `Por seguranca, a liberacao entra em carencia ate ${formatDateTime(params.unlockAt)}.`,
+    `Código da solicitação: ${params.code}`,
+    `Por segurança, a liberação entra em carência até ${formatDateTime(params.unlockAt)}.`,
     "",
-    "Se este pedido nao foi feito por voce, responda este ticket imediatamente.",
+    "Se este pedido não foi feito por você, responda este ticket imediatamente.",
   ].join("\n");
 }
 
 export function buildMfaRecoveryRejectedMessage(params: { code: string }) {
   return [
-    "Ainda nao foi possivel aprovar a recuperacao do autenticador.",
+    "Ainda não foi possível aprovar a recuperação do autenticador.",
     "",
-    `Codigo da solicitacao: ${params.code}`,
-    "Envie novamente a selfie com o documento e o papel com o codigo escrito a mao para continuar a analise.",
+    `Código da solicitação: ${params.code}`,
+    "Envie novamente a selfie com o documento e o papel com o código escrito à mão para continuar a análise.",
   ].join("\n");
 }
 
@@ -68,11 +68,11 @@ export function buildMfaRecoveryCompletedMessage(params: {
   lockUntil: string;
 }) {
   return [
-    "A recuperacao do autenticador foi concluida.",
+    "A recuperação do autenticador foi concluída.",
     "",
-    `Codigo da solicitacao: ${params.code}`,
-    "Agora voce pode configurar um novo autenticador no seu perfil.",
-    `Por seguranca, troca de senha e outras alteracoes sensiveis ficam bloqueadas ate ${formatDateTime(params.lockUntil)}.`,
+    `Código da solicitação: ${params.code}`,
+    "Agora você pode configurar um novo autenticador no seu perfil.",
+    `Por segurança, troca de senha e outras alterações sensíveis ficam bloqueadas até ${formatDateTime(params.lockUntil)}.`,
   ].join("\n");
 }
 
@@ -80,10 +80,10 @@ export function buildMfaRecoveryEvidenceAcceptedMessage(params: {
   code: string;
 }) {
   return [
-    "Recebemos as evidencias da recuperacao do autenticador.",
+    "Recebemos as evidências da recuperação do autenticador.",
     "",
-    `Codigo da solicitacao: ${params.code}`,
-    "Os documentos ficaram marcados como completos e seguem para a etapa final de analise.",
+    `Código da solicitação: ${params.code}`,
+    "Os documentos ficaram marcados como completos e seguem para a etapa final de análise.",
   ].join("\n");
 }
 
@@ -91,10 +91,10 @@ export function buildMfaRecoveryEvidenceIllegibleMessage(params: {
   code: string;
 }) {
   return [
-    "As evidencias enviadas ainda nao estao legiveis o suficiente para aprovar a recuperacao.",
+    "As evidências enviadas ainda não estão legíveis o suficiente para aprovar a recuperação.",
     "",
-    `Codigo da solicitacao: ${params.code}`,
-    "Envie novamente a selfie e o documento com imagem mais nitida para continuar.",
+    `Código da solicitação: ${params.code}`,
+    "Envie novamente a selfie e o documento com imagem mais nítida para continuar.",
   ].join("\n");
 }
 
@@ -102,9 +102,9 @@ export function buildMfaRecoveryEvidenceDivergentMessage(params: {
   code: string;
 }) {
   return [
-    "Encontramos divergencia entre os dados enviados e a conta da solicitacao.",
+    "Encontramos divergência entre os dados enviados e a conta da solicitação.",
     "",
-    `Codigo da solicitacao: ${params.code}`,
-    "Responda este ticket com novas evidencias e um contato atualizado para seguirmos com seguranca.",
+    `Código da solicitação: ${params.code}`,
+    "Responda este ticket com novas evidências e um contato atualizado para seguirmos com segurança.",
   ].join("\n");
 }

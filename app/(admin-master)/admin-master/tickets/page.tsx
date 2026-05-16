@@ -85,8 +85,8 @@ export default async function AdminMasterTicketsPage({
         </div>
         <h2 className="mt-3 font-display text-4xl font-black">Tickets e suporte</h2>
         <p className="mt-3 max-w-3xl text-sm leading-6 text-zinc-300">
-          Painel operacional para acompanhar chamados do salao, SLA, prioridade,
-          ultima resposta e dono do atendimento.
+            Painel operacional para acompanhar chamados do salão, SLA, prioridade,
+            última resposta e dono do atendimento.
         </p>
         <div className="mt-5 grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
           {[
@@ -109,10 +109,10 @@ export default async function AdminMasterTicketsPage({
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {[
-          { label: "Tickets", value: metrics.total, hint: "Historico recente", tone: "default" as const },
-          { label: "Em andamento", value: metrics.abertos, hint: "Ainda nao encerrados", tone: "amber" as const },
-          { label: "Aguardando cliente", value: metrics.aguardandoCliente, hint: "Pedir retorno do salao", tone: "blue" as const },
-          { label: "Criticos", value: metrics.criticos, hint: "Prioridade alta", tone: "red" as const },
+          { label: "Tickets", value: metrics.total, hint: "Histórico recente", tone: "default" as const },
+          { label: "Em andamento", value: metrics.abertos, hint: "Ainda não encerrados", tone: "amber" as const },
+          { label: "Aguardando cliente", value: metrics.aguardandoCliente, hint: "Pedir retorno do salão", tone: "blue" as const },
+          { label: "Críticos", value: metrics.criticos, hint: "Prioridade alta", tone: "red" as const },
         ].map((item) => (
           <div key={item.label} className={`rounded-[28px] border p-5 shadow-sm ${kpiToneClass(item.tone)}`}>
             <div className="text-xs font-bold uppercase tracking-[0.24em] opacity-60">
@@ -179,15 +179,15 @@ export default async function AdminMasterTicketsPage({
             Resolver, responder ou encaminhar
           </h3>
           <p className="mt-1 text-sm leading-6 text-zinc-500">
-            Cada ticket deve terminar com uma resposta para o salao, uma alteracao de status
-            ou um vinculo com logs e alertas.
+              Cada ticket deve terminar com uma resposta para o salão, uma alteração de status
+              ou um vínculo com logs e alertas.
           </p>
         </div>
         <div className="scroll-premium overflow-x-auto">
           <table className="min-w-full divide-y divide-zinc-100 text-sm">
             <thead className="bg-zinc-50 text-left text-xs uppercase tracking-[0.2em] text-zinc-500">
               <tr>
-                {["ticket", "salao", "solicitante", "prioridade", "status", "recuperacao", "atualizado", "detalhe"].map((column) => (
+                {["ticket", "salão", "solicitante", "prioridade", "status", "recuperação", "atualizado", "detalhe"].map((column) => (
                   <th key={column} className="px-5 py-4 font-bold">
                     {column}
                   </th>
@@ -238,7 +238,7 @@ export default async function AdminMasterTicketsPage({
                     <div className="mx-auto max-w-md">
                       <div className="font-black text-zinc-800">Nenhum ticket encontrado ainda.</div>
                       <div className="mt-2 text-sm leading-6 text-zinc-500">
-                        Quando um salao abrir suporte ou um alerta gerar ticket, a fila aparece aqui com prioridade e SLA.
+                        Quando um salão abrir suporte ou um alerta gerar ticket, a fila aparece aqui com prioridade e SLA.
                       </div>
                     </div>
                   </td>

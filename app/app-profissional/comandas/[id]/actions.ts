@@ -107,7 +107,7 @@ async function buscarComandaPermitida(idComanda: string) {
       }
 
       if (!count) {
-        throw new Error("Voce nao tem acesso a esta comanda.");
+        throw new Error("Você não tem acesso a esta comanda.");
       }
 
       return comandaData;
@@ -167,7 +167,7 @@ export async function adicionarServicoNaComandaAction(formData: FormData) {
   let redirectUrl = buildRedirectUrl(
     idComanda,
     "ok",
-    "Servico adicionado com sucesso."
+    "Serviço adicionado com sucesso."
   );
 
   try {
@@ -226,7 +226,7 @@ export async function adicionarServicoNaComandaAction(formData: FormData) {
           redirectUrl = buildRedirectUrl(
             idComanda,
             "erro",
-            "Servico nao encontrado."
+            "Serviço não encontrado."
           );
           return;
         }
@@ -235,13 +235,13 @@ export async function adicionarServicoNaComandaAction(formData: FormData) {
           redirectUrl = buildRedirectUrl(
             idComanda,
             "erro",
-            "Profissional nao encontrado."
+            "Profissional não encontrado."
           );
           return;
         }
 
         if (!servico.ativo || servico.status !== "ativo") {
-          redirectUrl = buildRedirectUrl(idComanda, "erro", "Servico inativo.");
+          redirectUrl = buildRedirectUrl(idComanda, "erro", "Serviço inativo.");
           return;
         }
 
@@ -274,7 +274,7 @@ export async function adicionarServicoNaComandaAction(formData: FormData) {
             p_id_agendamento: null as unknown as string,
             p_id_servico: idServico,
             p_id_produto: null as unknown as string,
-            p_descricao: servico.nome || "Servico",
+            p_descricao: servico.nome || "Serviço",
             p_quantidade: quantidade,
             p_valor_unitario: regra.valorUnitario,
             p_custo_total: sanitizeMoney(servico.custo_produto),
@@ -314,8 +314,8 @@ export async function adicionarServicoNaComandaAction(formData: FormData) {
           modulo: "app_profissional",
           idSalao: session.idSalao,
           mensagem: jaExistia
-            ? "Servico da comanda reaproveitado por idempotencia no app profissional."
-            : "Servico adicionado na comanda pelo app profissional.",
+            ? "Serviço da comanda reaproveitado por idempotência no app profissional."
+            : "Serviço adicionado na comanda pelo app profissional.",
           detalhes: {
             acao: "adicionar_servico",
             id_comanda: idComanda,
@@ -397,7 +397,7 @@ export async function adicionarExtraNaComandaAction(formData: FormData) {
           redirectUrl = buildRedirectUrl(
             idComanda,
             "erro",
-            "Item extra nao encontrado."
+            "Item extra não encontrado."
           );
           return;
         }
@@ -537,7 +537,7 @@ export async function excluirItemDaComandaAction(formData: FormData) {
           redirectUrl = buildRedirectUrl(
             idComanda,
             "erro",
-            "Item invalido ou nao encontrado."
+            "Item inválido ou não encontrado."
           );
           return;
         }
@@ -564,7 +564,7 @@ export async function excluirItemDaComandaAction(formData: FormData) {
           redirectUrl = buildRedirectUrl(
             idComanda,
             "erro",
-            "Item nao encontrado ou ja removido."
+            "Item não encontrado ou já removido."
           );
           return;
         }

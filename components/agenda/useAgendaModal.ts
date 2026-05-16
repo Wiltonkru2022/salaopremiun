@@ -221,7 +221,7 @@ export function useAgendaModal({
         value: s.id,
         label: s.nome,
         description: [
-          s.eh_combo ? "Combo" : "Servico",
+          s.eh_combo ? "Combo" : "Serviço",
           `${s.duracao_minutos} min`,
           Number(s.preco_padrao ?? s.preco ?? 0).toLocaleString("pt-BR", {
             style: "currency",
@@ -606,19 +606,19 @@ export function useAgendaModal({
 
   async function handleQuickCreateClient() {
     if (!idSalao) {
-      abrirAviso("Salao indisponivel", "Nao foi possivel identificar o salao atual.", "danger");
+      abrirAviso("Salão indisponível", "Não foi possível identificar o salão atual.", "danger");
       return;
     }
 
     if (!String(quickClientName || "").trim()) {
-      abrirAviso("Nome obrigatorio", "Informe pelo menos o nome da cliente.", "warning");
+      abrirAviso("Nome obrigatório", "Informe pelo menos o nome da cliente.", "warning");
       return;
     }
 
     if (atingiuLimiteClientes) {
       abrirAviso(
         "Limite de clientes atingido",
-        `Seu plano chegou a ${usoClientes} de ${limiteClientes} clientes. Faca upgrade para liberar novos cadastros.`,
+        `Seu plano chegou a ${usoClientes} de ${limiteClientes} clientes. Faça upgrade para liberar novos cadastros.`,
         "warning"
       );
       return;
@@ -645,7 +645,7 @@ export function useAgendaModal({
       const data = (await response.json()) as { idCliente?: string; error?: string };
 
       if (!response.ok || !data.idCliente) {
-        throw new Error(data.error || "Nao foi possivel cadastrar a cliente.");
+        throw new Error(data.error || "Não foi possível cadastrar a cliente.");
       }
 
       const novoCliente: Cliente = {

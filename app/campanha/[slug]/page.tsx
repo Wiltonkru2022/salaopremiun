@@ -157,7 +157,7 @@ export default async function PublicCampaignPage({
           <div className="grid gap-6 p-5 md:p-8 lg:grid-cols-[1.1fr_0.9fr]">
             <div>
               <h2 className="flex items-center gap-2 text-2xl font-black">
-                <Scissors size={22} /> Servicos da campanha
+                <Scissors size={22} /> Serviços da campanha
               </h2>
               <div className="mt-4 grid gap-3">
                 {campaign.services.map((servico) => (
@@ -180,7 +180,7 @@ export default async function PublicCampaignPage({
                 ))}
                 {!campaign.services.length ? (
                   <p className="rounded-2xl border border-dashed border-zinc-200 p-5 text-sm text-zinc-500">
-                    Nenhum servico vinculado a esta campanha.
+                    Nenhum serviço vinculado a esta campanha.
                   </p>
                 ) : null}
               </div>

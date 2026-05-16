@@ -169,7 +169,7 @@ export async function queueNotificationJob(params: QueueNotificationJobParams) {
         canal: params.canal,
         tipo: sanitizeText(params.tipo, "notificacao"),
         titulo: sanitizeText(params.titulo, "SalaoPremium"),
-        mensagem: sanitizeText(params.mensagem, "Voce tem uma nova notificacao."),
+        mensagem: sanitizeText(params.mensagem, "Você tem uma nova notificação."),
         url: sanitizeId(params.url),
         tag: sanitizeId(params.tag),
         status: "pendente",

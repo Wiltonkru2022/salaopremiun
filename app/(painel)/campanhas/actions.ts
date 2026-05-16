@@ -153,7 +153,7 @@ export async function criarCampanhaCupomAction(formData: FormData) {
     tipo_campanha: tipo,
     publico_alvo: publicoAlvo,
     titulo_push: titulo,
-    mensagem_push: mensagemCliente || `Voce recebeu um cupom: ${titulo}.`,
+    mensagem_push: mensagemCliente || `Você recebeu um cupom: ${titulo}.`,
     resgate_token: token(),
     slug,
     requer_resgate: true,

@@ -60,7 +60,7 @@ export default async function AdminMasterSalaoDetalhePage({
           Voltar para saloes
         </Link>
         <h2 className="mt-4 font-display text-4xl font-black">
-          {String(salao.nome || "Salao")}
+          {String(salao.nome || "Salão")}
         </h2>
         <p className="mt-2 text-sm text-zinc-300">
           {String(salao.responsavel || "-")} | {String(salao.email || "-")}
@@ -105,7 +105,7 @@ export default async function AdminMasterSalaoDetalhePage({
           email: String(salao.email || ""),
           whatsapp: String(salao.whatsapp || salao.telefone || ""),
           responsavel: String(salao.responsavel || ""),
-          nomeSalao: String(salao.nome_fantasia || salao.nome || "Salao"),
+          nomeSalao: String(salao.nome_fantasia || salao.nome || "Salão"),
         }}
       />
 
@@ -156,7 +156,7 @@ export default async function AdminMasterSalaoDetalhePage({
       <section className="grid gap-5 xl:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]">
         <div className="rounded-[30px] border border-zinc-200 bg-white p-6 shadow-sm">
           <div className="text-xs font-black uppercase tracking-[0.25em] text-zinc-400">
-            Raio-x do salao
+            Raio-x do salão
           </div>
           <h3 className="mt-2 font-display text-2xl font-black">
             Diagnostico operacional
@@ -168,9 +168,9 @@ export default async function AdminMasterSalaoDetalhePage({
 
           <div className="mt-5 grid gap-3">
             {[
-              ["Uso recente", scoreSaude.uso_recente ?? "-", "Quanto o salao esta usando o sistema."],
+              ["Uso recente", scoreSaude.uso_recente ?? "-", "Quanto o salão está usando o sistema."],
               ["Risco inadimplencia", scoreSaude.inadimplencia_risco ?? "-", "Sinal financeiro que pode virar bloqueio."],
-              ["Tickets abertos", scoreSaude.tickets_abertos ?? data.tickets.length, "Suporte pendente para este salao."],
+              ["Tickets abertos", scoreSaude.tickets_abertos ?? data.tickets.length, "Suporte pendente para este salão."],
               ["Risco cancelamento", scoreSaude.risco_cancelamento ?? "-", "Probabilidade operacional de churn."],
             ].map(([label, value, hint]) => (
               <div
@@ -265,7 +265,7 @@ export default async function AdminMasterSalaoDetalhePage({
               Eventos das ultimas 24h
             </div>
             <h3 className="mt-2 font-display text-2xl font-black">
-              Logs filtrados deste salao
+              Logs filtrados deste salão
             </h3>
             <p className="mt-2 text-sm leading-6 text-zinc-500">
               Aqui o Admin Master mostra onde o erro nasceu: modulo, rota, acao,

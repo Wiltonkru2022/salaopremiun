@@ -389,9 +389,9 @@ export default function SupportDeskClient({
         atualizadoEm: now,
         ultimaInteracaoEm: now,
         ultimaInteracaoLabel: "Agora",
-        solicitanteNome: "Salao",
+        solicitanteNome: "Salão",
         ultimaMensagem: newTicket.mensagem.trim(),
-        ultimaMensagemAutor: "Voce",
+        ultimaMensagemAutor: "Você",
         slaLimiteEm: null,
       };
 
@@ -483,7 +483,7 @@ export default function SupportDeskClient({
           ultimaInteracaoEm: now,
           ultimaInteracaoLabel: "Agora",
           ultimaMensagem: message,
-          ultimaMensagemAutor: "Voce",
+          ultimaMensagemAutor: "Você",
         }));
       }
 
@@ -747,7 +747,7 @@ export default function SupportDeskClient({
                     <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                       <div>
                         <div className="text-xs font-semibold uppercase tracking-[0.22em] text-violet-500">
-                          Recuperacao de senha do app profissional
+                          Recuperação de senha do app profissional
                         </div>
                         <h3 className="mt-1.5 text-base font-bold text-zinc-950">
                           Redefina a senha de {detail.ticket.solicitanteNome}
@@ -772,18 +772,18 @@ export default function SupportDeskClient({
                     <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                       <div>
                         <div className="text-xs font-semibold uppercase tracking-[0.22em] text-amber-700">
-                          Recuperacao do autenticador
+                          Recuperação do autenticador
                         </div>
                         <h3 className="mt-1.5 text-base font-bold text-zinc-950">
-                          Solicitacao em analise de segurança
+                          Solicitação em análise de segurança
                         </h3>
                         <p className="mt-2 text-sm leading-6 text-zinc-700">
-                          Codigo da solicitação:{" "}
+                          Código da solicitação:{" "}
                           <span className="font-mono font-bold">
                             {mfaRecoveryContext.recoveryCode || "-"}
                           </span>
                           . Responda este ticket com uma selfie segurando o
-                          documento e um papel com esse código escrito a mao.
+                          documento e um papel com esse código escrito à mão.
                         </p>
                         <p className="mt-2 text-sm leading-6 text-zinc-700">
                           Estado atual:{" "}
@@ -791,12 +791,12 @@ export default function SupportDeskClient({
                             {formatRecoveryStatus(mfaRecoveryContext.recoveryStatus)}
                           </strong>
                           {mfaRecoveryContext.unlockAt
-                            ? ` ate ${formatDate(mfaRecoveryContext.unlockAt)}`
+                            ? ` até ${formatDate(mfaRecoveryContext.unlockAt)}`
                             : ""}
                           .
                         </p>
                         <p className="mt-2 text-sm leading-6 text-zinc-700">
-                          Revisao da evidencia:{" "}
+                          Revisão da evidência:{" "}
                           <strong>
                             {formatRecoveryReviewStatus(
                               mfaRecoveryContext.reviewStatus
@@ -805,7 +805,7 @@ export default function SupportDeskClient({
                           .
                         </p>
                         <p className="mt-2 text-sm leading-6 text-zinc-700">
-                          Depois da aprovacao, a liberacao entra em carência de
+                          Depois da aprovação, a liberação entra em carência de
                           até {mfaRecoveryContext.delayHours} horas por segurança.
                         </p>
                       </div>

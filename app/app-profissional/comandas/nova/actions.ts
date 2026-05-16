@@ -123,7 +123,7 @@ export async function criarComandaProfissionalAction(formData: FormData) {
           .maybeSingle();
 
         if (clienteError) throw new Error(clienteError.message);
-        if (!cliente?.id) throw new Error("Cliente nao encontrado.");
+        if (!cliente?.id) throw new Error("Cliente não encontrado.");
 
         const { data: ultimaComandaRows, error: ultimaError } =
           await supabaseAdmin

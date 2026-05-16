@@ -461,7 +461,7 @@ export async function syncAdminMasterAlerts() {
   webhookRows.forEach((row) => {
     const salaoNome = row.id_salao
       ? salaoNameById.get(row.id_salao) || row.id_salao
-      : "Salao nao identificado";
+      : "Salão não identificado";
 
     candidates.push({
       chave: `alerta:webhook_asaas_erro:${row.id}`,
@@ -506,7 +506,7 @@ export async function syncAdminMasterAlerts() {
     .forEach((row) => {
       const salaoNome = row.id_salao
         ? salaoNameById.get(row.id_salao) || row.id_salao
-        : "Salao nao identificado";
+        : "Salão não identificado";
       const payload =
         row.payload_json && typeof row.payload_json === "object"
           ? row.payload_json
@@ -541,7 +541,7 @@ export async function syncAdminMasterAlerts() {
   cobrancasVencidas.forEach((row) => {
     const salaoNome = row.id_salao
       ? salaoNameById.get(row.id_salao) || row.id_salao
-      : "Salao nao identificado";
+      : "Salão não identificado";
 
     candidates.push({
       chave: `alerta:cobranca_vencida:${row.id}`,
@@ -572,7 +572,7 @@ export async function syncAdminMasterAlerts() {
   trials.forEach((row) => {
     const salaoNome = row.id_salao
       ? salaoNameById.get(row.id_salao) || row.id_salao
-      : "Salao nao identificado";
+      : "Salão não identificado";
 
     candidates.push({
       chave: `alerta:trial_vencendo:${row.id}`,
@@ -601,7 +601,7 @@ export async function syncAdminMasterAlerts() {
   renewalRows.forEach((row) => {
     const salaoNome = row.id_salao
       ? salaoNameById.get(row.id_salao) || row.id_salao
-      : "Salao nao identificado";
+      : "Salão não identificado";
     const diasParaVencer = daysUntil(row.vencimento_em);
     const renovacaoInfo = getRenovacaoAutomaticaInfo({
       assinaturaExiste: true,

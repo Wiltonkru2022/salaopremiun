@@ -494,7 +494,7 @@ export default function AppointmentCard({
                 {!isSmall ? (
                   <div className="flex items-center gap-1.5 text-[10px] opacity-95">
                     <Scissors size={10} />
-                    <span className="truncate">{item.servico?.nome || "Servico"}</span>
+                    <span className="truncate">{item.servico?.nome || "Serviço"}</span>
                   </div>
                 ) : null}
 

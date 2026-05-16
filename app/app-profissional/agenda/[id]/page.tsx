@@ -282,10 +282,10 @@ export default async function AgendamentoDetalheProfissionalPage({
             <div className="rounded-[1.1rem] bg-white/10 p-3.5">
               <div className="flex items-center gap-2 text-sm text-zinc-300">
                 <Scissors size={17} />
-                Servico
+                Serviço
               </div>
               <div className="mt-2 text-sm font-bold text-white">
-                {servico?.nome || "Servico"}
+                {servico?.nome || "Serviço"}
               </div>
               <div className="mt-1 text-xs text-zinc-300">
                 {formatMoney(servico?.preco ?? servico?.preco_padrao)}

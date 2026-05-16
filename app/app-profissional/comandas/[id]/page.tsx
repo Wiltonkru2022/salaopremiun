@@ -37,7 +37,7 @@ function getStatusMeta(status: string) {
 
 function traduzirTipoItem(tipo: string | null | undefined) {
   const valor = String(tipo || "").toLowerCase();
-  if (valor === "servico") return "Servico";
+  if (valor === "servico") return "Serviço";
   if (valor === "extra") return "Item extra";
   if (valor === "produto") return "Produto";
   return "Item";

@@ -215,7 +215,7 @@ export function useAgendaData({
       if (requestId !== loadAgendaSeqRef.current) return;
 
       console.error("Erro ao atualizar agenda:", error);
-      setErroTela("Nao foi possivel atualizar a agenda agora.");
+      setErroTela("Não foi possível atualizar a agenda agora.");
     }
   }, [
     clientes,

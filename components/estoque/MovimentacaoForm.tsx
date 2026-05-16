@@ -247,9 +247,9 @@ export default function MovimentacaoForm() {
                 { value: "manual", label: "Manual" },
                 { value: "compra", label: "Compra" },
                 { value: "pdv", label: "PDV" },
-                { value: "servico", label: "Servico" },
+                { value: "servico", label: "Serviço" },
                 { value: "perda", label: "Perda" },
-                { value: "devolucao", label: "Devolucao" },
+                { value: "devolucao", label: "Devolução" },
               ]}
             />
           </div>

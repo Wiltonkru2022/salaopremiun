@@ -569,7 +569,7 @@ export default function ProdutosPage() {
 
                       <div className="hidden flex-wrap gap-2 text-xs text-zinc-500">
                         <TagHint>{item.categoria || "Sem categoria"}</TagHint>
-                        <TagHint>{item.destinacao || "Sem destinacao"}</TagHint>
+                        <TagHint>{item.destinacao || "Sem destinação"}</TagHint>
                       </div>
 
                       <div

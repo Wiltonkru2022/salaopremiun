@@ -438,7 +438,7 @@ export async function processarCriacaoPorAgendamento(params: {
     .maybeSingle();
 
   if (agendamentoError || !agendamentoBase?.id) {
-    throw new Error("Agendamento nao encontrado para este salao.");
+    throw new Error("Agendamento não encontrado para este salão.");
   }
 
   const { data, error } = await supabaseAdmin.rpc(
@@ -804,7 +804,7 @@ export async function resolverItemPayload(params: {
 
   if (tipoItem === "servico") {
     if (!idServico) {
-      throw new Error("Servico obrigatorio para item de servico.");
+      throw new Error("Serviço obrigatório para item de serviço.");
     }
 
     const [
@@ -830,7 +830,7 @@ export async function resolverItemPayload(params: {
     ]);
 
     if (servicoError || !servico) {
-      throw new Error("Servico nao encontrado para este salao.");
+      throw new Error("Serviço não encontrado para este salão.");
     }
 
     if (profissionalError) {
@@ -877,7 +877,7 @@ export async function resolverItemPayload(params: {
       vinculo,
     });
 
-    descricao = descricao || servico.nome || "Servico";
+    descricao = descricao || servico.nome || "Serviço";
     custoTotal = sanitizeMoney(servico.custo_produto);
     comissaoPercentual = servico.eh_combo ? 0 : regra.comissaoPercentual;
     comissaoAssistentePercentual =
@@ -920,7 +920,7 @@ export async function resolverItemPayload(params: {
     ]);
 
     if (produtoError || !produto) {
-      throw new Error("Produto nao encontrado para este salao.");
+      throw new Error("Produto não encontrado para este salão.");
     }
 
     if (profissionalError) {

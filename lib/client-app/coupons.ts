@@ -22,7 +22,7 @@ function buildCouponPushMessage(cupom: Record<string, unknown>) {
   return (
     String(cupom.mensagem_push || "").trim() ||
     descricao ||
-    `Seu cupom ${nome || "especial"} ja esta liberado para o proximo agendamento.`
+    `Seu cupom ${nome || "especial"} já está liberado para o próximo agendamento.`
   );
 }
 
@@ -34,7 +34,7 @@ export async function redeemClienteCoupon(params: {
   const idConta = String(params.idConta || "").trim();
 
   if (!token || !idConta) {
-    return { ok: false as const, error: "Nao foi possivel identificar o cupom." };
+    return { ok: false as const, error: "Não foi possível identificar o cupom." };
   }
 
   const supabase = getSupabaseAdmin();
@@ -50,11 +50,11 @@ export async function redeemClienteCoupon(params: {
     .maybeSingle();
 
   if (error || !cupom?.id) {
-    return { ok: false as const, error: "Cupom nao encontrado ou inativo." };
+    return { ok: false as const, error: "Cupom não encontrado ou inativo." };
   }
 
   if (cupom.valido_de && String(cupom.valido_de) > hoje) {
-    return { ok: false as const, error: "Este cupom ainda nao esta valido." };
+    return { ok: false as const, error: "Este cupom ainda não está válido." };
   }
 
   if (cupom.valido_ate && String(cupom.valido_ate) < hoje) {
@@ -83,7 +83,7 @@ export async function redeemClienteCoupon(params: {
   ]);
 
   if (Number(usosCliente || 0) > 0) {
-    return { ok: false as const, error: "Voce ja usou este cupom." };
+    return { ok: false as const, error: "Você já usou este cupom." };
   }
 
   const resgatePayload = {
@@ -108,12 +108,12 @@ export async function redeemClienteCoupon(params: {
         .insert(resgatePayload);
 
   if (resgateError) {
-    return { ok: false as const, error: "Nao foi possivel resgatar o cupom agora." };
+    return { ok: false as const, error: "Não foi possível resgatar o cupom agora." };
   }
 
   const salaoRel = Array.isArray(cupom.saloes) ? cupom.saloes[0] : cupom.saloes;
   const salaoSlug = String(salaoRel?.app_cliente_slug || idSalao).trim();
-  const titulo = String(cupom.titulo_push || cupom.nome || "Voce recebeu um cupom").trim();
+  const titulo = String(cupom.titulo_push || cupom.nome || "Você recebeu um cupom").trim();
   const codigoCupom = String(cupom.codigo || "").trim();
 
   try {
@@ -128,7 +128,7 @@ export async function redeemClienteCoupon(params: {
         metadata: { origem: "link_whatsapp_manual", codigo: codigoCupom },
       });
   } catch {
-    // O resgate nao deve falhar se a telemetria da campanha oscilar.
+    // O resgate não deve falhar se a telemetria da campanha oscilar.
   }
 
   await queueNotificationJob({

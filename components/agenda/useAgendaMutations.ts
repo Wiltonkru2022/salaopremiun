@@ -657,7 +657,7 @@ export function useAgendaMutations({
 
       if (error) {
         console.error(error);
-        abrirAviso("Erro", "Nao foi possivel atualizar o status.", "danger");
+        abrirAviso("Erro", "Não foi possível atualizar o status.", "danger");
         return;
       }
 

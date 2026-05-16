@@ -110,7 +110,7 @@ export async function loadPublicCampaign(slugOrCode: string) {
       const valor = Number.isFinite(valorRaw) ? valorRaw : null;
       return {
         id: String(servico.id),
-        nome: String(servico.nome || "Servico"),
+        nome: String(servico.nome || "Serviço"),
         preco,
         tipoBeneficio: tipo,
         valorBeneficio: valor,

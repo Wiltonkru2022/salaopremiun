@@ -333,7 +333,7 @@ async function loadCampanhaDetalhe(
     const idServico = String(servico.id_servico || "");
     const total = usosEfetivos.filter((uso) => String(uso.metadata?.id_servico || "") === idServico).length;
     const rel = getRelationOne(servico.servicos);
-    return { nome: String(rel?.nome || "Servico"), total };
+    return { nome: String(rel?.nome || "Serviço"), total };
   });
 
   return {
@@ -414,7 +414,7 @@ export default async function CampanhaDetalhePage({
     ? `${siteUrl()}/campanha/${campanha.slug}`
     : `${siteUrl()}/resgatar-cupom/${campanha.resgate_token}`;
   const mensagemDivulgacao = [
-    String(campanha.mensagem_cliente || campanha.descricao || `Voce recebeu uma campanha especial: ${campanha.nome}`),
+    String(campanha.mensagem_cliente || campanha.descricao || `Você recebeu uma campanha especial: ${campanha.nome}`),
     "",
     "Resgate pelo link:",
     link,
@@ -570,7 +570,7 @@ export default async function CampanhaDetalhePage({
 
         <div className="rounded-[1.75rem] border border-zinc-200 bg-white p-5 shadow-sm">
           <h2 className="flex items-center gap-2 text-xl font-black text-zinc-950">
-            <Copy size={18} /> Link e divulgacao
+            <Copy size={18} /> Link e divulgação
           </h2>
           <code className="mt-4 block truncate rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-xs text-zinc-600">
             {link}
@@ -641,7 +641,7 @@ export default async function CampanhaDetalhePage({
             })}
             {!data.servicos.length ? (
               <p className="rounded-2xl border border-dashed border-zinc-200 p-4 text-sm text-zinc-500">
-                Nenhum servico vinculado.
+                  Nenhum serviço vinculado.
               </p>
             ) : null}
           </div>
@@ -716,7 +716,7 @@ export default async function CampanhaDetalhePage({
             })}
             {!data.servicosDisponiveis.length ? (
               <p className="rounded-2xl border border-dashed border-zinc-200 p-4 text-sm text-zinc-500">
-                Nenhum servico ativo encontrado.
+                  Nenhum serviço ativo encontrado.
               </p>
             ) : null}
           </div>
@@ -903,7 +903,7 @@ export default async function CampanhaDetalhePage({
             ))}
             {!data.metricas.servicosMaisVendidos.length ? (
               <p className="rounded-2xl border border-dashed border-zinc-200 p-4 text-sm text-zinc-500">
-                Sem dados de servico ainda.
+                  Sem dados de serviço ainda.
               </p>
             ) : null}
           </div>

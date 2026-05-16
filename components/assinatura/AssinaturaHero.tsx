@@ -75,9 +75,9 @@ export default function AssinaturaHero({
   const descricao = bloqueioTotal
     ? "O sistema identificou bloqueio automático por vencimento. Regularize agora para voltar a usar todas as áreas do painel."
     : trialAtivo
-      ? `Voce esta testando o SalaoPremium completo por 15 dias${
+      ? `Você está testando o SalãoPremium completo por 15 dias${
           diasRestantesTrial != null ? ` e ainda tem ${diasRestantesTrial} dia(s) restante(s)` : ""
-        }. Antes de terminar, escolha um plano para continuar sem interrupcao.`
+        }. Antes de terminar, escolha um plano para continuar sem interrupção.`
     : vencendoLogo
       ? "Evite interrupções. Gere a cobrança, ajuste seu plano e mantenha sua operação ativa sem sair da página."
       : "Controle teste grátis, vencimento, histórico, upgrade, downgrade e cobrança por PIX, boleto ou cartão em uma experiência premium.";

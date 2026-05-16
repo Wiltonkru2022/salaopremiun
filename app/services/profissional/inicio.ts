@@ -132,8 +132,8 @@ export async function listarProximosAgendamentosProfissional(
               ? clientesMap.get(item.cliente_id) ?? "Cliente"
               : "Cliente",
             servico_nome: item.servico_id
-              ? servicosMap.get(item.servico_id) ?? "Servico"
-              : "Servico",
+              ? servicosMap.get(item.servico_id) ?? "Serviço"
+              : "Serviço",
           }));
         },
       }),

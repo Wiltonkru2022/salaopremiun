@@ -157,7 +157,7 @@ export async function buscarConfiguracaoAgendaProfissional(
         .maybeSingle();
 
       if (error) throw new Error(error.message);
-      if (!data) throw new Error("Profissional nao encontrado.");
+      if (!data) throw new Error("Profissional não encontrado.");
 
       return {
         id: data.id,
@@ -185,7 +185,7 @@ export async function buscarServicoPorId(idSalao: string, idServico: string) {
         .maybeSingle();
 
       if (error) throw new Error(error.message);
-      if (!data) throw new Error("Servico nao encontrado.");
+      if (!data) throw new Error("Serviço não encontrado.");
 
       return data;
     },
@@ -212,7 +212,7 @@ export async function validarServicoVinculadoAoProfissional(
         .maybeSingle();
 
       if (error) throw new Error(error.message);
-      if (!data) throw new Error("Servico nao vinculado ao profissional.");
+      if (!data) throw new Error("Serviço não vinculado ao profissional.");
 
       return true;
     },
@@ -263,7 +263,7 @@ export function validarHorarioAgendamento({
     (d) => normalizeDia(d.dia) === normalizeDia(dia)
   );
 
-  if (!regra?.ativo) throw new Error("Nao atende neste dia.");
+  if (!regra?.ativo) throw new Error("Não atende neste dia.");
 
   const ini = timeToMinutes(horaInicio);
   const fim = ini + duracaoMinutos;
@@ -438,7 +438,7 @@ export async function buscarAgendaProfissional(
       cliente: item.cliente_id
         ? clientesMap.get(item.cliente_id) ?? "Cliente"
         : "Cliente",
-      servico: servico?.nome ?? "Servico",
+      servico: servico?.nome ?? "Serviço",
       valorPrevisto: servico?.valor ?? 0,
       status: item.status,
       top: Math.max((inicio - inicioMinutos) * pixelsPorMinuto, 0),
