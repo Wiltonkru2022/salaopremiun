@@ -169,11 +169,43 @@ export async function loadCouponByToken(tokenValue: string) {
 
   const { data } = await (getSupabaseAdmin() as any)
     .from("cupons_salao")
-    .select("id, codigo, nome, descricao, valido_ate, ativo, saloes(nome, nome_fantasia)")
+    .select("id, codigo, nome, descricao, valido_ate, ativo, saloes(id, nome, nome_fantasia, app_cliente_slug)")
     .eq("resgate_token", token)
     .eq("ativo", true)
     .limit(1)
     .maybeSingle();
 
   return data || null;
+}
+
+export async function loadCouponRedemptionForAccount(params: {
+  idCupom?: string | null;
+  idConta?: string | null;
+}) {
+  const idCupom = String(params.idCupom || "").trim();
+  const idConta = String(params.idConta || "").trim();
+  if (!idCupom || !idConta) return null;
+
+  const supabase = getSupabaseAdmin();
+  const [{ data: resgate }, { count: usosCliente }] = await Promise.all([
+    (supabase as any)
+      .from("cupom_salao_resgates")
+      .select("id, status")
+      .eq("id_cupom", idCupom)
+      .eq("cliente_app_conta_id", idConta)
+      .limit(1)
+      .maybeSingle(),
+    (supabase as any)
+      .from("cupom_salao_usos")
+      .select("id", { count: "exact", head: true })
+      .eq("id_cupom", idCupom)
+      .eq("cliente_app_conta_id", idConta),
+  ]);
+
+  if (!resgate?.id && Number(usosCliente || 0) <= 0) return null;
+
+  return {
+    status: String(resgate?.status || "").trim() || "resgatado",
+    jaUsou: Number(usosCliente || 0) > 0,
+  };
 }

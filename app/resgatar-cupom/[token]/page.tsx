@@ -2,7 +2,11 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { validateClienteAppSession } from "@/lib/client-context.server";
-import { loadCouponByToken, redeemClienteCoupon } from "@/lib/client-app/coupons";
+import {
+  loadCouponByToken,
+  loadCouponRedemptionForAccount,
+  redeemClienteCoupon,
+} from "@/lib/client-app/coupons";
 
 export const metadata = {
   title: "Resgatar cupom",
@@ -28,6 +32,20 @@ export default async function ResgatarCupomPage({
       ? cupom.saloes[0]
       : cupom.saloes
     : null;
+  const resgateAtual =
+    cupom?.id && validation.context?.idConta
+      ? await loadCouponRedemptionForAccount({
+          idCupom: String(cupom.id),
+          idConta: validation.context.idConta,
+        })
+      : null;
+  const salaoSlug = String(salao?.app_cliente_slug || salao?.id || "").trim();
+  const codigoCupom = String(cupom?.codigo || "").trim();
+  const agendarHref = resgateAtual?.jaUsou
+    ? `/app-cliente/salao/${encodeURIComponent(salaoSlug)}/reserva`
+    : `/app-cliente/salao/${encodeURIComponent(salaoSlug)}/reserva?cupom=${encodeURIComponent(
+        codigoCupom
+      )}`;
 
   async function resgatarAction() {
     "use server";
@@ -102,7 +120,21 @@ export default async function ResgatarCupomPage({
                 </p>
               ) : null}
 
-              {validation.context ? (
+              {validation.context && resgateAtual ? (
+                <div className="mt-5 grid gap-3">
+                  <p className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-800">
+                    {resgateAtual.jaUsou
+                      ? "Cupom ja resgatado por voce. Esse beneficio ja foi usado, mas voce pode agendar normalmente neste salao."
+                      : "Cupom ja resgatado por voce."}
+                  </p>
+                  <Link
+                    href={agendarHref}
+                    className="flex h-12 items-center justify-center rounded-2xl bg-zinc-950 px-4 text-sm font-black text-white shadow-[0_14px_24px_rgba(15,23,42,0.18)] transition hover:bg-zinc-800"
+                  >
+                    Agendar agora
+                  </Link>
+                </div>
+              ) : validation.context ? (
                 <form action={resgatarAction} className="mt-5">
                   <button
                     type="submit"
