@@ -5,19 +5,65 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import clsx from "clsx";
 import {
   Building2,
+  CalendarClock,
   ChevronDown,
   CreditCard,
+  Loader2,
   LogOut,
   Menu,
+  ReceiptText,
+  Scissors,
   Search,
   Settings,
   ShieldCheck,
+  Sparkles,
+  Users,
 } from "lucide-react";
 import { getPainelPageMeta } from "@/components/layout/navigation";
 import type { ResumoAssinatura } from "@/lib/assinatura-utils";
 import NotificationBell from "@/components/layout/NotificationBell";
 import type { ShellNotification } from "@/lib/notifications/contracts";
 import { getAssinaturaUrl, getPainelUrl } from "@/lib/site-urls";
+
+type SearchResultType = "cliente" | "agendamento" | "comanda" | "servico";
+
+type TopbarSearchResult = {
+  id: string;
+  type: SearchResultType;
+  title: string;
+  description: string;
+  href: string;
+};
+
+const SEARCH_TYPE_META: Record<
+  SearchResultType,
+  {
+    label: string;
+    icon: typeof Users;
+    className: string;
+  }
+> = {
+  cliente: {
+    label: "Cliente",
+    icon: Users,
+    className: "bg-blue-50 text-blue-700 ring-blue-100",
+  },
+  agendamento: {
+    label: "Agenda",
+    icon: CalendarClock,
+    className: "bg-emerald-50 text-emerald-700 ring-emerald-100",
+  },
+  comanda: {
+    label: "Comanda",
+    icon: ReceiptText,
+    className: "bg-amber-50 text-amber-700 ring-amber-100",
+  },
+  servico: {
+    label: "Serviço",
+    icon: Scissors,
+    className: "bg-fuchsia-50 text-fuchsia-700 ring-fuchsia-100",
+  },
+};
 
 type Props = {
   userName?: string;
@@ -97,14 +143,24 @@ export default function Header({
 }: Props) {
   const pathname = usePathname();
   const menuRef = useRef<HTMLDivElement | null>(null);
+  const searchRef = useRef<HTMLDivElement | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<TopbarSearchResult[]>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchError, setSearchError] = useState("");
   const pageMeta = useMemo(() => getPainelPageMeta(pathname), [pathname]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (!menuRef.current) return;
-      if (menuRef.current.contains(event.target as Node)) return;
-      setMenuOpen(false);
+      const target = event.target as Node;
+      if (menuRef.current && !menuRef.current.contains(target)) {
+        setMenuOpen(false);
+      }
+      if (searchRef.current && !searchRef.current.contains(target)) {
+        setSearchOpen(false);
+      }
     }
 
     window.addEventListener("mousedown", handleClickOutside);
@@ -113,7 +169,60 @@ export default function Header({
 
   useEffect(() => {
     setMenuOpen(false);
+    setSearchOpen(false);
   }, [pathname]);
+
+  useEffect(() => {
+    const query = searchQuery.trim();
+    if (query.length < 2) {
+      setSearchResults([]);
+      setSearchError("");
+      setSearchLoading(false);
+      return;
+    }
+
+    const controller = new AbortController();
+    const handle = window.setTimeout(async () => {
+      try {
+        setSearchLoading(true);
+        setSearchError("");
+        const response = await fetch(
+          `/api/painel/busca-global?q=${encodeURIComponent(query)}`,
+          {
+            signal: controller.signal,
+            headers: {
+              accept: "application/json",
+            },
+          }
+        );
+        const payload = (await response.json()) as {
+          results?: TopbarSearchResult[];
+          error?: string;
+        };
+
+        if (!response.ok) {
+          throw new Error(payload.error || "Não foi possível buscar agora.");
+        }
+
+        setSearchResults(payload.results || []);
+      } catch (error) {
+        if (controller.signal.aborted) return;
+        setSearchError(
+          error instanceof Error ? error.message : "Não foi possível buscar agora."
+        );
+        setSearchResults([]);
+      } finally {
+        if (!controller.signal.aborted) {
+          setSearchLoading(false);
+        }
+      }
+    }, 250);
+
+    return () => {
+      controller.abort();
+      window.clearTimeout(handle);
+    };
+  }, [searchQuery]);
 
   const initials = (userName || salaoNome || "SP").slice(0, 2);
   const showCriticalState = criticalNotificationsCount > 0;
@@ -121,13 +230,19 @@ export default function Header({
     !showCriticalState &&
     Boolean(resumoAssinatura?.bloqueioTotal || resumoAssinatura?.vencendoLogo);
 
+  const goToSearchResult = (result: TopbarSearchResult) => {
+    setSearchOpen(false);
+    setSearchQuery("");
+    window.location.assign(getRouteHref(result.href));
+  };
+
   return (
     <header
       className={clsx(
-        "rounded-[18px] border px-3 py-2.5 transition-all duration-200 md:px-4",
+        "border-b border-zinc-200 bg-white px-3 py-2.5 transition-all duration-200 md:px-4",
         scrolled
-          ? "border-zinc-200 bg-white/95 shadow-[0_12px_34px_rgba(15,23,42,0.08)] backdrop-blur"
-          : "border-zinc-200 bg-white shadow-sm"
+          ? "shadow-[0_10px_24px_rgba(15,23,42,0.05)]"
+          : "shadow-[0_1px_0_rgba(15,23,42,0.02)]"
       )}
     >
       <div className="flex min-h-10 flex-wrap items-center gap-3 lg:flex-nowrap">
@@ -166,9 +281,115 @@ export default function Header({
           ) : null}
         </div>
 
-        <div className="hidden min-w-[240px] max-w-[420px] flex-1 items-center gap-2 rounded-2xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-500 shadow-inner xl:flex">
-          <Search size={16} className="shrink-0 text-zinc-400" />
-          <span className="truncate">Buscar cliente, horário, comanda ou serviço</span>
+        <div
+          ref={searchRef}
+          className="relative hidden min-w-[260px] max-w-[520px] flex-1 xl:block"
+        >
+          <div
+            className={clsx(
+              "flex items-center gap-2 rounded-2xl border bg-white px-3 py-2 text-sm shadow-inner transition",
+              searchOpen
+                ? "border-zinc-900 ring-4 ring-zinc-100"
+                : "border-zinc-200 hover:border-zinc-300"
+            )}
+          >
+            <Search size={16} className="shrink-0 text-zinc-400" />
+            <input
+              value={searchQuery}
+              onChange={(event) => {
+                setSearchQuery(event.target.value);
+                setSearchOpen(true);
+              }}
+              onFocus={() => setSearchOpen(true)}
+              onKeyDown={(event) => {
+                if (event.key === "Escape") {
+                  setSearchOpen(false);
+                }
+                if (event.key === "Enter" && searchResults[0]) {
+                  event.preventDefault();
+                  goToSearchResult(searchResults[0]);
+                }
+              }}
+              className="min-w-0 flex-1 bg-transparent text-sm font-medium text-zinc-900 outline-none placeholder:text-zinc-400"
+              placeholder="Busca avançada: cliente, horário, comanda ou serviço"
+              aria-label="Busca avançada do painel"
+            />
+            {searchLoading ? (
+              <Loader2 size={15} className="shrink-0 animate-spin text-zinc-400" />
+            ) : (
+              <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.14em] text-zinc-500">
+                Enter
+              </span>
+            )}
+          </div>
+          {searchOpen && searchQuery.trim().length > 0 ? (
+            <div className="absolute left-0 right-0 top-[calc(100%+0.55rem)] z-50 overflow-hidden rounded-[22px] border border-zinc-200 bg-white shadow-[0_24px_60px_rgba(15,23,42,0.14)]">
+              <div className="border-b border-zinc-100 px-4 py-3">
+                <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.16em] text-zinc-500">
+                  <Sparkles size={13} />
+                  Busca avançada
+                </div>
+                <p className="mt-1 text-xs text-zinc-500">
+                  Abra clientes, agendamentos, comandas e serviços sem sair do fluxo.
+                </p>
+              </div>
+
+              {searchQuery.trim().length < 2 ? (
+                <div className="px-4 py-5 text-sm text-zinc-500">
+                  Digite pelo menos 2 caracteres para buscar.
+                </div>
+              ) : searchError ? (
+                <div className="px-4 py-5 text-sm font-semibold text-rose-700">
+                  {searchError}
+                </div>
+              ) : searchLoading && searchResults.length === 0 ? (
+                <div className="flex items-center gap-2 px-4 py-5 text-sm text-zinc-500">
+                  <Loader2 size={16} className="animate-spin" />
+                  Buscando no salão...
+                </div>
+              ) : searchResults.length > 0 ? (
+                <div className="max-h-[420px] overflow-y-auto p-2">
+                  {searchResults.map((result) => {
+                    const meta = SEARCH_TYPE_META[result.type];
+                    const Icon = meta.icon;
+
+                    return (
+                      <button
+                        key={`${result.type}-${result.id}`}
+                        type="button"
+                        onClick={() => goToSearchResult(result)}
+                        className="flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left transition hover:bg-zinc-50"
+                      >
+                        <span
+                          className={clsx(
+                            "flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl ring-1",
+                            meta.className
+                          )}
+                        >
+                          <Icon size={17} />
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-sm font-bold text-zinc-950">
+                            {result.title}
+                          </span>
+                          <span className="mt-0.5 block truncate text-xs text-zinc-500">
+                            {result.description}
+                          </span>
+                        </span>
+                        <span className="shrink-0 rounded-full bg-zinc-100 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-zinc-500">
+                          {meta.label}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="px-4 py-5 text-sm text-zinc-500">
+                  Nenhum resultado encontrado para esta busca.
+                </div>
+              )}
+            </div>
+          ) : null}
         </div>
 
         <a

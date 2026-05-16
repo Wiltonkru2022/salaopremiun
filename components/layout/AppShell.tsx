@@ -169,7 +169,7 @@ export default function AppShell({
         />
 
         <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-          <div className="fixed left-0 right-0 top-0 z-30 bg-zinc-50 px-1.5 pb-1 pt-1.5 md:px-2 lg:left-[214px] lg:px-2.5">
+          <div className="fixed left-0 right-0 top-0 z-30 border-b border-zinc-200 bg-white lg:left-[214px]">
             <Header
               userName={userName}
               userEmail={userEmail}
@@ -193,7 +193,7 @@ export default function AppShell({
           </div>
 
           <main
-            className="scroll-premium min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto bg-zinc-50 px-1.5 pb-1.5 pt-[4.45rem] md:px-2 lg:px-2.5 lg:pt-[4.65rem]"
+            className="scroll-premium min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto bg-zinc-50 px-1.5 pb-1.5 pt-[4.1rem] md:px-2 lg:px-2.5 lg:pt-[4.25rem]"
             onScroll={(event) => {
               const nextScrolled = event.currentTarget.scrollTop > 12;
               setContentScrolled((current) =>
