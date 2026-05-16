@@ -2,7 +2,10 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { CalendarDays, Clock3, Gift, Scissors, Sparkles } from "lucide-react";
 import { validateClienteAppSession } from "@/lib/client-context.server";
-import { redeemClienteCoupon } from "@/lib/client-app/coupons";
+import {
+  loadCouponRedemptionForAccount,
+  redeemClienteCoupon,
+} from "@/lib/client-app/coupons";
 import {
   getCampaignAvailability,
   loadPublicCampaign,
@@ -11,6 +14,12 @@ import {
 
 export const metadata = {
   title: "Campanha",
+  manifest: "/app-cliente/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    title: "SalaoPremium Cliente",
+    statusBarStyle: "default" as const,
+  },
 };
 
 function money(value: number) {
@@ -26,10 +35,13 @@ function brDate(value: string | null) {
 
 export default async function PublicCampaignPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<{ erro?: string }>;
 }) {
   const { slug } = await params;
+  const query = await searchParams;
   const campaign = await loadPublicCampaign(slug);
   const availability = getCampaignAvailability(campaign);
   const session = await validateClienteAppSession().catch(() => ({
@@ -61,6 +73,13 @@ export default async function PublicCampaignPage({
       idConta: validation.context.idConta,
     });
     if (!result.ok) {
+      const normalizedError = result.error
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase();
+      if (normalizedError.includes("ja usou")) {
+        redirect(`/campanha/${slug}?erro=cupom_usado`);
+      }
       redirect(`/campanha/${slug}?erro=${encodeURIComponent(result.error)}`);
     }
     redirect(
@@ -71,6 +90,24 @@ export default async function PublicCampaignPage({
   }
 
   const salao = campaign?.salao;
+  const salaoReservaHref = campaign
+    ? `/app-cliente/salao/${campaign.salao?.app_cliente_slug || campaign.idSalao}/reserva`
+    : "/app-cliente";
+  const resgateAtual =
+    campaign?.id && session.context?.idConta
+      ? await loadCouponRedemptionForAccount({
+          idCupom: campaign.id,
+          idConta: session.context.idConta,
+        })
+      : null;
+  const erroNormalizado = String(query.erro || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+  const cupomJaUsado =
+    resgateAtual?.jaUsou ||
+    query.erro === "cupom_usado" ||
+    erroNormalizado.includes("ja usou");
 
   return (
     <main className="min-h-dvh bg-[#f7f3ea] px-4 py-6 text-zinc-950">
@@ -157,7 +194,25 @@ export default async function PublicCampaignPage({
               <p className="mt-2 text-sm leading-6 text-zinc-300">
                 O beneficio sera validado antes de confirmar o horario.
               </p>
-              {session.context ? (
+              {query.erro && !cupomJaUsado ? (
+                <p className="mt-4 rounded-2xl border border-red-400/40 bg-red-500/10 px-4 py-3 text-sm font-bold text-red-100">
+                  {query.erro}
+                </p>
+              ) : null}
+              {cupomJaUsado ? (
+                <div className="mt-5 rounded-[1.25rem] border border-amber-300 bg-amber-50 p-4 text-amber-950">
+                  <h3 className="text-lg font-black">Cupom já resgatado</h3>
+                  <p className="mt-1 text-sm leading-6">
+                    Esse benefício já foi usado por você, mas o agendamento normal continua liberado.
+                  </p>
+                  <Link
+                    href={salaoReservaHref}
+                    className="mt-4 flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-zinc-950 px-5 text-sm font-black text-white"
+                  >
+                    <CalendarDays size={18} /> Agendar sem cupom
+                  </Link>
+                </div>
+              ) : session.context ? (
                 <form action={resgatarEAgendarAction} className="mt-5">
                   <button className="flex h-13 w-full items-center justify-center gap-2 rounded-2xl bg-white px-5 py-4 text-sm font-black text-zinc-950">
                     <CalendarDays size={18} /> Agendar agora

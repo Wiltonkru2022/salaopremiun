@@ -10,8 +10,11 @@ export function GET() {
       "Agende horários, acompanhe visitas e avalie seu atendimento pelo app cliente do Salão Premium.",
     version: APP_VERSION,
     start_url: "/app-cliente",
-    scope: "/app-cliente",
+    scope: "/",
     display: "standalone",
+    launch_handler: {
+      client_mode: ["navigate-existing", "auto"],
+    },
     background_color: "#f7f7f5",
     theme_color: "#09090b",
     orientation: "portrait",

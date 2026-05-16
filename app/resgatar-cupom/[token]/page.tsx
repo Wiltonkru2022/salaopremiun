@@ -12,6 +12,12 @@ import { registerCampaignClick } from "@/lib/campanhas/public";
 
 export const metadata = {
   title: "Resgatar cupom",
+  manifest: "/app-cliente/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    title: "SalãoPremium Cliente",
+    statusBarStyle: "default" as const,
+  },
 };
 
 export default async function ResgatarCupomPage({
@@ -34,6 +40,7 @@ export default async function ResgatarCupomPage({
       ? cupom.saloes[0]
       : cupom.saloes
     : null;
+
   if (cupom?.id && cupom?.id_salao) {
     await registerCampaignClick({
       idCampanha: String(cupom.id),
@@ -41,6 +48,7 @@ export default async function ResgatarCupomPage({
       metadata: { origem: "resgatar_cupom", token },
     }).catch(() => null);
   }
+
   const resgateAtual =
     cupom?.id && validation.context?.idConta
       ? await loadCouponRedemptionForAccount({
@@ -55,10 +63,21 @@ export default async function ResgatarCupomPage({
     : "Sem validade definida";
   const descontoLabel = cupom
     ? String(cupom.tipo_desconto || "percentual") === "valor_fixo"
-      ? new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(Number(cupom.valor_desconto || 0))
-      : `${Number(cupom.valor_desconto || 0).toLocaleString("pt-BR", { maximumFractionDigits: 0 })}%`
+      ? new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(
+          Number(cupom.valor_desconto || 0)
+        )
+      : `${Number(cupom.valor_desconto || 0).toLocaleString("pt-BR", {
+          maximumFractionDigits: 0,
+        })}%`
     : "";
-  const agendarHref = resgateAtual?.jaUsou
+  const erroNormalizado = String(query.erro || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+  const cupomJaUsado = Boolean(
+    resgateAtual?.jaUsou || erroNormalizado.includes("ja usou")
+  );
+  const agendarHref = cupomJaUsado
     ? `/app-cliente/salao/${encodeURIComponent(salaoSlug)}/reserva`
     : `/app-cliente/salao/${encodeURIComponent(salaoSlug)}/reserva?cupom=${encodeURIComponent(
         codigoCupom
@@ -78,6 +97,13 @@ export default async function ResgatarCupomPage({
     });
 
     if (!result.ok) {
+      const normalizedError = result.error
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase();
+      if (normalizedError.includes("ja usou")) {
+        redirect(`${nextPath}?erro=${encodeURIComponent("Você já usou este cupom.")}`);
+      }
       redirect(`${nextPath}?erro=${encodeURIComponent(result.error)}`);
     }
 
@@ -123,17 +149,21 @@ export default async function ResgatarCupomPage({
                 ) : null}
                 <div className="mt-5 grid grid-cols-2 gap-2">
                   <div className="rounded-2xl bg-white/10 p-3">
-                    <p className="text-[11px] font-black uppercase tracking-[0.12em] text-zinc-400">Benefício</p>
+                    <p className="text-[11px] font-black uppercase tracking-[0.12em] text-zinc-400">
+                      Benefício
+                    </p>
                     <strong className="mt-1 block text-xl">{descontoLabel}</strong>
                   </div>
                   <div className="rounded-2xl bg-white/10 p-3">
-                    <p className="text-[11px] font-black uppercase tracking-[0.12em] text-zinc-400">Validade</p>
+                    <p className="text-[11px] font-black uppercase tracking-[0.12em] text-zinc-400">
+                      Validade
+                    </p>
                     <strong className="mt-1 block text-xl">{validadeLabel}</strong>
                   </div>
                 </div>
               </div>
 
-              {query.erro ? (
+              {query.erro && !cupomJaUsado ? (
                 <p className="mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700">
                   {query.erro}
                 </p>
@@ -141,14 +171,14 @@ export default async function ResgatarCupomPage({
 
               {query.status === "ok" ? (
                 <p className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-800">
-                  Cupom resgatado. Ele ja aparece no app cliente para agendar neste salao.
+                  Cupom resgatado. Ele já aparece no app cliente para agendar neste salão.
                 </p>
               ) : null}
 
-              {validation.context && resgateAtual ? (
+              {validation.context && (resgateAtual || cupomJaUsado) ? (
                 <div className="mt-5 grid gap-3">
                   <p className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-800">
-                  {resgateAtual.jaUsou
+                    {cupomJaUsado
                       ? "Cupom já resgatado por você. Esse benefício já foi usado, mas você pode agendar normalmente neste salão."
                       : "Cupom já resgatado por você."}
                   </p>
@@ -157,7 +187,7 @@ export default async function ResgatarCupomPage({
                     className="flex h-12 items-center justify-center gap-2 rounded-2xl bg-zinc-950 px-4 text-sm font-black text-white shadow-[0_14px_24px_rgba(15,23,42,0.18)] transition hover:bg-zinc-800"
                   >
                     <CalendarDays size={17} />
-                    Agendar agora
+                    {cupomJaUsado ? "Agendar sem cupom" : "Agendar agora"}
                   </Link>
                 </div>
               ) : validation.context ? (
