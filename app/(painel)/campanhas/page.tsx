@@ -138,7 +138,7 @@ async function loadCampanhasData(idSalao: string, page: number, pageSize: number
           .limit(pageSize * 40),
         (supabase as any)
           .from("cupom_salao_usos")
-          .select("id_cupom, valor_desconto, status, created_at")
+          .select("id_cupom, id_comanda, valor_desconto, status, created_at")
           .eq("id_salao", idSalao)
           .in("id_cupom", cupomIds)
           .limit(pageSize * 100),
@@ -160,13 +160,7 @@ async function loadCampanhasData(idSalao: string, page: number, pageSize: number
   if (cupomIds.length) {
     const metricas = await Promise.all(
       cupomIds.map(async (idCupom) => {
-        const [usosCount, cliquesCount, agendamentosCount, resgatesCount] = await Promise.all([
-          (supabase as any)
-            .from("cupom_salao_usos")
-            .select("id", { count: "exact", head: true })
-            .eq("id_salao", idSalao)
-            .eq("id_cupom", idCupom)
-            .neq("status", "cancelado"),
+        const [cliquesCount, agendamentosCount, resgatesCount] = await Promise.all([
           (supabase as any)
             .from("campanha_eventos")
             .select("id", { count: "exact", head: true })
@@ -188,7 +182,7 @@ async function loadCampanhasData(idSalao: string, page: number, pageSize: number
         return [
           idCupom,
           {
-            usos: Number(usosCount.count || 0),
+            usos: 0,
             cliques: Number(cliquesCount.count || 0),
             agendamentos: Number(agendamentosCount.count || 0),
             resgates: Number(resgatesCount.count || 0),
@@ -207,6 +201,28 @@ async function loadCampanhasData(idSalao: string, page: number, pageSize: number
     usosPorCupom.set(id, [...(usosPorCupom.get(id) || []), uso]);
   }
 
+  const comandaIds = Array.from(
+    new Set(
+      ((usosResult.data || []) as Array<Record<string, unknown>>)
+        .map((uso) => String(uso.id_comanda || ""))
+        .filter(Boolean)
+    )
+  ).slice(0, pageSize * 100);
+  const comandasFechadas = new Set<string>();
+  if (comandaIds.length) {
+    const { data: comandasData } = await (supabase as any)
+      .from("comandas")
+      .select("id, status")
+      .eq("id_salao", idSalao)
+      .in("id", comandaIds)
+      .eq("status", "fechada")
+      .limit(comandaIds.length);
+    for (const comanda of ((comandasData || []) as Array<Record<string, unknown>>)) {
+      const idComanda = String(comanda.id || "");
+      if (idComanda) comandasFechadas.add(idComanda);
+    }
+  }
+
   const eventosPorCupom = new Map<string, Array<Record<string, unknown>>>();
   for (const evento of ((eventosResult.data || []) as Array<Record<string, unknown>>)) {
     const id = String(evento.id_cupom || "");
@@ -222,15 +238,20 @@ async function loadCampanhasData(idSalao: string, page: number, pageSize: number
   const cupons = ((cuponsResult.data || []) as Array<Record<string, unknown>>).map((cupom) => {
     const id = String(cupom.id || "");
     const usos = usosPorCupom.get(id) || [];
+    const usosEfetivos = usos.filter((uso) => {
+      const status = String(uso.status || "").trim().toLowerCase();
+      const idComanda = String(uso.id_comanda || "");
+      return status !== "cancelado" && status !== "cancelada" && idComanda && comandasFechadas.has(idComanda);
+    });
     const metricas = metricasPorCupom.get(id);
     const servicos = servicosPorCupom.get(id) || [];
     return {
       ...cupom,
-      usos: metricas?.usos ?? usos.length,
+      usos: usosEfetivos.length,
       cliques: metricas?.cliques ?? 0,
       resgates: metricas?.resgates ?? 0,
       agendamentos: metricas?.agendamentos ?? 0,
-      descontos: usos.reduce((sum, uso) => sum + Number(uso.valor_desconto || 0), 0),
+      descontos: usosEfetivos.reduce((sum, uso) => sum + Number(uso.valor_desconto || 0), 0),
       servicos,
     };
   });
@@ -248,8 +269,9 @@ async function loadCampanhasData(idSalao: string, page: number, pageSize: number
     .slice(0, 8);
 
   const totalUsos = cupons.reduce((sum, cupom) => sum + Number(cupom.usos || 0), 0);
+  const totalAgendamentos = cupons.reduce((sum, cupom) => sum + Number(cupom.agendamentos || 0), 0);
   const totalCliques = cupons.reduce((sum, cupom) => sum + Number(cupom.cliques || 0), 0);
-  const conversao = totalCliques > 0 ? Math.round((totalUsos / totalCliques) * 100) : 0;
+  const conversao = totalCliques > 0 ? Math.round((totalAgendamentos / totalCliques) * 100) : 0;
 
   return {
     cupons,
@@ -259,6 +281,7 @@ async function loadCampanhasData(idSalao: string, page: number, pageSize: number
     kpis: {
       ativas: cupons.filter((cupom) => statusLabel(cupom) === "Ativa").length,
       usos: totalUsos,
+      agendamentos: totalAgendamentos,
       cliques: totalCliques,
       conversao,
     },
@@ -293,7 +316,7 @@ export default async function CampanhasPage({
     aniversariantes: [],
     inativos: [],
     eventosRecentes: [],
-    kpis: { ativas: 0, usos: 0, cliques: 0, conversao: 0 },
+    kpis: { ativas: 0, usos: 0, agendamentos: 0, cliques: 0, conversao: 0 },
   }));
   const baseUrl = siteUrl();
   const campanhas = data.cupons as Array<Record<string, any>>;
@@ -305,7 +328,7 @@ export default async function CampanhasPage({
   const kpiCards = [
     { label: "Campanhas ativas", value: data.kpis.ativas, icon: Sparkles },
     { label: "Cliques no link", value: data.kpis.cliques, icon: Link2 },
-    { label: "Agendamentos", value: data.kpis.usos, icon: Megaphone },
+    { label: "Agendamentos", value: data.kpis.agendamentos, icon: Megaphone },
     { label: "Conversão", value: `${data.kpis.conversao}%`, icon: BarChart3 },
   ];
 

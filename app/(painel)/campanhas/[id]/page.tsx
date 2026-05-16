@@ -75,6 +75,23 @@ function statusClass(label: string) {
   return "border-amber-200 bg-amber-50 text-amber-800";
 }
 
+function isCanceledStatus(value: unknown) {
+  const status = String(value || "").trim().toLowerCase();
+  return status === "cancelado" || status === "cancelada";
+}
+
+function isClosedComanda(value: unknown) {
+  return String(value || "").trim().toLowerCase() === "fechada";
+}
+
+function toDateKey(value: unknown) {
+  return String(value || "").slice(0, 10);
+}
+
+function getRelationOne<T extends Record<string, any>>(value: T | T[] | null | undefined) {
+  return Array.isArray(value) ? value[0] : value || null;
+}
+
 async function loadCampanhaDetalhe(
   idSalao: string,
   id: string,
@@ -120,6 +137,8 @@ async function loadCampanhaDetalhe(
     agendamentosEventosCountResult,
     resgatesCountResult,
     agendamentosResult,
+    agendamentosCountResult,
+    canceladosCountResult,
     usosMetricasResult,
     clientesPermitidosResult,
     clientesResult,
@@ -139,11 +158,11 @@ async function loadCampanhaDetalhe(
       .limit(120),
     (supabase as any)
       .from("cupom_salao_usos")
-      .select("id, id_cliente, id_agendamento, valor_desconto, status, created_at, metadata, clientes(nome, telefone, email)", { count: "exact" })
+      .select("id, id_cliente, id_agendamento, id_comanda, valor_desconto, status, created_at, metadata, clientes(nome, telefone, email), comandas(status)")
       .eq("id_salao", idSalao)
       .eq("id_cupom", id)
       .order("created_at", { ascending: false })
-      .range(usosFrom, usosTo),
+      .limit(5000),
     (supabase as any)
       .from("campanha_eventos")
       .select("id, tipo, metadata, created_at, clientes(nome)")
@@ -170,17 +189,27 @@ async function loadCampanhaDetalhe(
       .eq("id_cupom", id),
     (supabase as any)
       .from("agendamentos")
-      .select("id, data, status, cliente_id, servico_id, desconto_cupom_valor, id_comanda, clientes(nome), servicos(nome, preco, preco_padrao), comandas(total, subtotal)")
+      .select("id, data, created_at, status, cliente_id, servico_id, desconto_cupom_valor, id_comanda, clientes(nome, created_at), servicos(nome, preco, preco_padrao), comandas(id, total, subtotal, status, fechada_em)")
       .eq("id_salao", idSalao)
       .eq("id_cupom_salao", id)
       .order("data", { ascending: false })
-      .limit(200),
+      .limit(1000),
+    (supabase as any)
+      .from("agendamentos")
+      .select("id", { count: "exact", head: true })
+      .eq("id_salao", idSalao)
+      .eq("id_cupom_salao", id),
+    (supabase as any)
+      .from("agendamentos")
+      .select("id", { count: "exact", head: true })
+      .eq("id_salao", idSalao)
+      .eq("id_cupom_salao", id)
+      .in("status", ["cancelado", "cancelada"]),
     (supabase as any)
       .from("cupom_salao_usos")
       .select("id, id_cliente, valor_desconto, status, metadata, id_agendamento, id_comanda")
       .eq("id_salao", idSalao)
       .eq("id_cupom", id)
-      .neq("status", "cancelado")
       .limit(5000),
     (supabase as any)
       .from("cupom_salao_clientes")
@@ -201,41 +230,83 @@ async function loadCampanhaDetalhe(
   if (!campanhaResult.data?.id) return null;
 
   const usos = (usosResult.data || []) as Array<Record<string, any>>;
-  const totalUsos = Number(usosResult.count || usos.length);
+  const totalUsos = usos.length;
   const eventos = (eventosResult.data || []) as Array<Record<string, any>>;
   const agendamentos = (agendamentosResult.data || []) as Array<Record<string, any>>;
   const usosMetricas = (usosMetricasResult.data || []) as Array<Record<string, any>>;
   const cliques = Number(cliquesCountResult.count || 0);
   const agendamentosEvento = Number(agendamentosEventosCountResult.count || 0);
   const resgates = Number(resgatesCountResult.count || 0);
-  const cancelados = agendamentos.filter((agenda) => String(agenda.status) === "cancelado").length;
-  const clientesNovos = new Set(
-    usosMetricas
-      .filter((uso) => String(uso.metadata?.cliente_novo || "") === "true")
-      .map((uso) => String(uso.id_cliente || ""))
-      .filter(Boolean)
-  ).size;
-  const descontoTotal = usosMetricas.reduce((sum, uso) => sum + Number(uso.valor_desconto || 0), 0);
+  const totalAgendamentos = Number(agendamentosCountResult.count || agendamentos.length);
+  const cancelados = Number(canceladosCountResult.count || agendamentos.filter((agenda) => isCanceledStatus(agenda.status)).length);
+  const comandasFechadas = new Map<string, Record<string, any>>();
+  for (const agenda of agendamentos) {
+    const comanda = getRelationOne(agenda.comandas);
+    const idComanda = String(comanda?.id || agenda.id_comanda || "");
+    if (idComanda && isClosedComanda(comanda?.status)) {
+      comandasFechadas.set(idComanda, comanda);
+    }
+  }
+  const usosEfetivos = usosMetricas.filter((uso) => {
+    const idComanda = String(uso.id_comanda || "");
+    return !isCanceledStatus(uso.status) && idComanda && comandasFechadas.has(idComanda);
+  });
+  const usosPageEfetivos = usos.filter((uso) => {
+    const comanda = getRelationOne(uso.comandas);
+    return !isCanceledStatus(uso.status) && isClosedComanda(comanda?.status);
+  }).slice(usosFrom, usosTo + 1);
+  const descontoTotal = usosEfetivos.reduce((sum, uso) => sum + Number(uso.valor_desconto || 0), 0);
   const receitaGerada = agendamentos.reduce((sum, agenda) => {
-    const comanda = Array.isArray(agenda.comandas) ? agenda.comandas[0] : agenda.comandas;
-    const servico = Array.isArray(agenda.servicos) ? agenda.servicos[0] : agenda.servicos;
+    const comanda = getRelationOne(agenda.comandas);
+    if (!isClosedComanda(comanda?.status)) return sum;
     const totalComanda = Number(comanda?.total ?? comanda?.subtotal ?? 0);
-    const precoServico = Number(servico?.preco_padrao ?? servico?.preco ?? 0);
-    return sum + (Number.isFinite(totalComanda) && totalComanda > 0 ? totalComanda : Number.isFinite(precoServico) ? precoServico : 0);
+    return sum + (Number.isFinite(totalComanda) && totalComanda > 0 ? totalComanda : 0);
   }, 0);
-  const conversao = cliques > 0 ? Math.round((Math.max(agendamentosEvento, totalUsos) / cliques) * 100) : 0;
+  const clienteIdsCampanha = Array.from(
+    new Set(agendamentos.map((agenda) => String(agenda.cliente_id || "")).filter(Boolean))
+  ).slice(0, 500);
+  const historicoClientesResult = clienteIdsCampanha.length
+    ? await (supabase as any)
+        .from("agendamentos")
+        .select("id, cliente_id, data, created_at, status")
+        .eq("id_salao", idSalao)
+        .in("cliente_id", clienteIdsCampanha)
+        .order("data", { ascending: true })
+        .limit(5000)
+    : { data: [] };
+  const historicoPorCliente = new Map<string, Array<Record<string, any>>>();
+  for (const item of ((historicoClientesResult.data || []) as Array<Record<string, any>>)) {
+    const idCliente = String(item.cliente_id || "");
+    if (!idCliente || isCanceledStatus(item.status)) continue;
+    historicoPorCliente.set(idCliente, [...(historicoPorCliente.get(idCliente) || []), item]);
+  }
+  const clientesNovos = new Set<string>();
+  for (const agenda of agendamentos) {
+    if (isCanceledStatus(agenda.status)) continue;
+    const idCliente = String(agenda.cliente_id || "");
+    if (!idCliente) continue;
+    const dataAgenda = toDateKey(agenda.data || agenda.created_at);
+    const historico = historicoPorCliente.get(idCliente) || [];
+    const tinhaHistoricoAntes = historico.some((item) => {
+      if (String(item.id || "") === String(agenda.id || "")) return false;
+      const dataHistorico = toDateKey(item.data || item.created_at);
+      return dataHistorico && dataAgenda && dataHistorico < dataAgenda;
+    });
+    if (!tinhaHistoricoAntes) clientesNovos.add(idCliente);
+  }
+  const conversao = cliques > 0 ? Math.round((totalAgendamentos / cliques) * 100) : 0;
   const servicos = (servicosResult.data || []) as Array<Record<string, any>>;
   const servicosMaisVendidos = servicos.map((servico) => {
     const idServico = String(servico.id_servico || "");
-    const total = usosMetricas.filter((uso) => String(uso.metadata?.id_servico || "") === idServico).length;
-    const rel = Array.isArray(servico.servicos) ? servico.servicos[0] : servico.servicos;
+    const total = usosEfetivos.filter((uso) => String(uso.metadata?.id_servico || "") === idServico).length;
+    const rel = getRelationOne(servico.servicos);
     return { nome: String(rel?.nome || "Servico"), total };
   });
 
   return {
     campanha: campanhaResult.data as Record<string, any>,
     servicos,
-    usos,
+    usos: usosPageEfetivos,
     eventos,
     agendamentos,
     clientesPermitidos: (clientesPermitidosResult.data || []) as Array<Record<string, any>>,
@@ -243,11 +314,12 @@ async function loadCampanhaDetalhe(
     clientes: (clientesResult.data || []) as Array<Record<string, any>>,
     servicosDisponiveis: (servicosDisponiveisResult.data || []) as Array<Record<string, any>>,
     metricas: {
-      totalUsos,
+      totalUsos: usosEfetivos.length,
+      totalUsosRegistrados: totalUsos,
       cliques,
-      agendamentos: agendamentosEvento || agendamentos.length,
+      agendamentos: totalAgendamentos || agendamentosEvento || agendamentos.length,
       resgates,
-      clientesNovos,
+      clientesNovos: clientesNovos.size,
       descontoTotal,
       receitaGerada,
       cancelados,
