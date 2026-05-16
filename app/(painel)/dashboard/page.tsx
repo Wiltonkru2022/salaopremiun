@@ -1,23 +1,36 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { usePainelSession } from "@/components/layout/PainelSessionProvider";
-import AppLoading from "@/components/ui/AppLoading";
 import {
   AlertCircle,
+  ArrowUpRight,
+  BarChart3,
   CalendarDays,
   CheckCircle2,
+  Clock3,
   CreditCard,
+  Crown,
   DollarSign,
   Scissors,
   ShieldAlert,
-  TrendingUp,
+  Sparkles,
   UserCheck,
   Users,
-  Wallet,
 } from "lucide-react";
+import { usePainelSession } from "@/components/layout/PainelSessionProvider";
+import AppLoading from "@/components/ui/AppLoading";
 import { getPlanoMinimoParaRecurso, type PlanoCobravelCodigo } from "@/lib/plans/catalog";
 import { getAssinaturaUrl } from "@/lib/site-urls";
+
+type AgendaResumoItem = {
+  id: string;
+  data?: string | null;
+  horario: string;
+  cliente: string;
+  profissional: string;
+  servico: string;
+  status: string;
+};
 
 type DashboardResumo = {
   agendamentosHoje: number;
@@ -34,6 +47,20 @@ type DashboardResumo = {
   aguardandoPagamento: number;
   planoSalao: string;
   notificacoesPendentes: number;
+  agendaHoje: AgendaResumoItem[];
+  proximosAgendamentos: AgendaResumoItem[];
+  topProfissionais: Array<{ nome: string; total: number; atendimentos: number }>;
+  servicosMaisAgendados: Array<{ nome: string; total: number; receita: number }>;
+  clientesInativos: Array<{
+    id: string;
+    nome: string;
+    contato: string;
+    ultimaVisita: string | null;
+    diasSemVir: number;
+  }>;
+  clientesSemVir45Dias: number;
+  faturamentoSerie: Array<{ data: string; total: number }>;
+  metaMensal: number;
 };
 
 type DashboardRpcResumo = {
@@ -52,12 +79,13 @@ type DashboardClientCachePayload = {
   ultimaAtualizacao: string;
 };
 
-const DASHBOARD_CLIENT_CACHE_TTL_MS = 30 * 1000;
-const DASHBOARD_CLIENT_CACHE_PREFIX = "salaopremium:dashboard:";
 type IconType = React.ComponentType<{
   size?: number;
   className?: string;
 }>;
+
+const DASHBOARD_CLIENT_CACHE_TTL_MS = 30 * 1000;
+const DASHBOARD_CLIENT_CACHE_PREFIX = "salaopremium:dashboard:";
 
 const RESUMO_INICIAL: DashboardResumo = {
   agendamentosHoje: 0,
@@ -74,6 +102,14 @@ const RESUMO_INICIAL: DashboardResumo = {
   aguardandoPagamento: 0,
   planoSalao: "-",
   notificacoesPendentes: 0,
+  agendaHoje: [],
+  proximosAgendamentos: [],
+  topProfissionais: [],
+  servicosMaisAgendados: [],
+  clientesInativos: [],
+  clientesSemVir45Dias: 0,
+  faturamentoSerie: [],
+  metaMensal: 0,
 };
 
 function getDashboardCacheKey(idSalao: string) {
@@ -81,47 +117,25 @@ function getDashboardCacheKey(idSalao: string) {
 }
 
 function readDashboardClientCache(idSalao: string): DashboardClientCachePayload | null {
-  if (typeof window === "undefined") {
-    return null;
-  }
-
+  if (typeof window === "undefined") return null;
   try {
     const raw = window.sessionStorage.getItem(getDashboardCacheKey(idSalao));
-    if (!raw) {
-      return null;
-    }
-
+    if (!raw) return null;
     const parsed = JSON.parse(raw) as DashboardClientCachePayload;
-    if (!parsed?.ultimaAtualizacao || !parsed?.resumo) {
-      return null;
-    }
-
+    if (!parsed?.ultimaAtualizacao || !parsed?.resumo) return null;
     const age = Date.now() - new Date(parsed.ultimaAtualizacao).getTime();
-    if (!Number.isFinite(age) || age > DASHBOARD_CLIENT_CACHE_TTL_MS) {
-      return null;
-    }
-
-    return parsed;
+    return Number.isFinite(age) && age <= DASHBOARD_CLIENT_CACHE_TTL_MS ? parsed : null;
   } catch {
     return null;
   }
 }
 
-function writeDashboardClientCache(
-  idSalao: string,
-  payload: DashboardClientCachePayload
-) {
-  if (typeof window === "undefined") {
-    return;
-  }
-
+function writeDashboardClientCache(idSalao: string, payload: DashboardClientCachePayload) {
+  if (typeof window === "undefined") return;
   try {
-    window.sessionStorage.setItem(
-      getDashboardCacheKey(idSalao),
-      JSON.stringify(payload)
-    );
+    window.sessionStorage.setItem(getDashboardCacheKey(idSalao), JSON.stringify(payload));
   } catch {
-    // Ignora falhas de storage e segue com a resposta em memoria.
+    // Cache local é apenas um conforto visual.
   }
 }
 
@@ -136,6 +150,14 @@ function formatPercent(value?: number | null) {
   return `${Number(value || 0)}%`;
 }
 
+function formatShortDate(value?: string | null) {
+  const iso = String(value || "").slice(0, 10);
+  if (!iso) return "Sem data";
+  const [year, month, day] = iso.split("-");
+  void year;
+  return `${day}/${month}`;
+}
+
 function normalizePlanCode(value?: string | null) {
   return String(value || "")
     .normalize("NFD")
@@ -148,6 +170,14 @@ function normalizePlanCode(value?: string | null) {
 function getDashboardUpgradePlan(planoSalao?: string | null): PlanoCobravelCodigo {
   const minimo = getPlanoMinimoParaRecurso("dashboard_avancado");
   return normalizePlanCode(planoSalao) === minimo ? "premium" : minimo;
+}
+
+function statusBadgeClass(status: string) {
+  const normalized = normalizePlanCode(status);
+  if (normalized.includes("confirmado")) return "bg-emerald-100 text-emerald-800";
+  if (normalized.includes("pendente")) return "bg-amber-100 text-amber-800";
+  if (normalized.includes("atendido")) return "bg-sky-100 text-sky-800";
+  return "bg-zinc-100 text-zinc-700";
 }
 
 function KpiCard({
@@ -175,86 +205,65 @@ function KpiCard({
           : "border-zinc-200 bg-white";
 
   return (
-    <div className={`rounded-[22px] border p-3.5 shadow-sm ${toneClass}`}>
+    <div className={`rounded-[24px] border p-4 shadow-sm ${toneClass}`}>
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <div className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
+          <p className="text-xs font-black uppercase tracking-[0.16em] text-zinc-500">
             {title}
-          </div>
-          <div className="mt-1.5 text-[1.7rem] font-bold tracking-[-0.04em] text-zinc-950">
+          </p>
+          <strong className="mt-2 block text-3xl font-black tracking-[-0.05em] text-zinc-950">
             {loading ? "..." : value}
-          </div>
-          <div className="mt-1.5 text-sm text-zinc-500">{subtitle}</div>
+          </strong>
+          <p className="mt-2 text-sm text-zinc-500">{subtitle}</p>
         </div>
-
-        <div className="rounded-2xl border border-zinc-200 bg-white p-2.5 text-zinc-700">
-          <Icon size={18} />
+        <div className="rounded-2xl border border-zinc-200 bg-white p-3 text-zinc-800">
+          <Icon size={20} />
         </div>
       </div>
     </div>
   );
 }
 
-function InfoMetric({
-  title,
-  value,
-  helper,
-}: {
-  title: string;
-  value: string;
-  helper: string;
-}) {
+function InfoMetric({ title, value, helper }: { title: string; value: string; helper: string }) {
   return (
-    <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-3.5 py-2.5">
-      <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-400">
+    <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3">
+      <p className="text-[11px] font-black uppercase tracking-[0.16em] text-zinc-400">
         {title}
-      </div>
-      <div className="mt-1 text-lg font-bold text-zinc-950">{value}</div>
-      <div className="mt-1 text-xs leading-5 text-zinc-500">{helper}</div>
+      </p>
+      <strong className="mt-1 block text-lg font-black text-zinc-950">{value}</strong>
+      <p className="mt-1 text-xs leading-5 text-zinc-500">{helper}</p>
     </div>
   );
 }
 
-function MiniStatusCard({
-  icon,
-  title,
-  value,
-}: {
-  icon: React.ReactNode;
-  title: string;
-  value: string;
-}) {
+function MiniStatusCard({ icon, title, value }: { icon: React.ReactNode; title: string; value: string }) {
   return (
     <div className="rounded-[20px] border border-zinc-200 bg-white p-3.5 shadow-sm">
       <div className="flex items-center gap-3">
         <div className="rounded-2xl bg-zinc-100 p-2.5">{icon}</div>
         <div className="min-w-0">
-          <div className="text-xs font-semibold uppercase tracking-[0.16em] text-zinc-400">
+          <p className="text-xs font-black uppercase tracking-[0.14em] text-zinc-400">
             {title}
-          </div>
-          <div className="mt-1 text-lg font-bold text-zinc-950">{value}</div>
+          </p>
+          <strong className="mt-1 block text-base font-black text-zinc-950">{value}</strong>
         </div>
       </div>
     </div>
   );
 }
 
-function UpgradeActions({
-  plan = getPlanoMinimoParaRecurso("dashboard_avancado"),
-}: {
-  plan?: PlanoCobravelCodigo;
-}) {
+function UpgradeActions({ plan = getPlanoMinimoParaRecurso("dashboard_avancado") }: { plan?: PlanoCobravelCodigo }) {
   return (
     <div className="mt-4 flex flex-wrap gap-2">
       <a
         href="/comparar-planos"
-        className="inline-flex items-center justify-center rounded-2xl border border-zinc-300 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-50"
+        className="inline-flex items-center justify-center rounded-2xl border border-zinc-300 bg-white px-4 py-2.5 text-sm font-black text-zinc-800 transition hover:bg-zinc-50"
       >
         Comparar planos
       </a>
       <a
         href={getAssinaturaUrl(`/assinatura?plano=${plan}`)}
-        className="inline-flex items-center justify-center rounded-2xl bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-zinc-800"
+        className="inline-flex items-center justify-center rounded-2xl bg-zinc-900 px-4 py-2.5 text-sm font-black text-white transition hover:bg-zinc-800"
       >
         Fazer upgrade
       </a>
@@ -262,15 +271,87 @@ function UpgradeActions({
   );
 }
 
+function LockedPanel({ plan }: { plan: PlanoCobravelCodigo }) {
+  return (
+    <div className="relative overflow-hidden rounded-[28px] border border-zinc-200 bg-zinc-950 p-5 text-white shadow-sm">
+      <div className="pointer-events-none absolute -right-16 -top-16 h-40 w-40 rounded-full bg-amber-400/20 blur-3xl" />
+      <div className="relative flex items-start gap-3">
+        <div className="rounded-2xl bg-white/10 p-3 text-amber-200">
+          <Crown size={22} />
+        </div>
+        <div>
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-amber-100">
+            Dashboard avançado
+          </p>
+          <h3 className="mt-2 text-2xl font-black tracking-[-0.04em]">
+            Liberado no {plan === "premium" ? "Premium" : "Pro"}
+          </h3>
+          <p className="mt-2 text-sm leading-6 text-zinc-300">
+            Rankings, clientes sem retorno, curva de faturamento e agenda executiva
+            ficam disponíveis nos planos mais completos.
+          </p>
+          <UpgradeActions plan={plan} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MiniBarChart({ data }: { data: DashboardResumo["faturamentoSerie"] }) {
+  const rows = data.length ? data : Array.from({ length: 7 }, (_, index) => ({ data: String(index), total: 0 }));
+  const max = Math.max(...rows.map((item) => Number(item.total || 0)), 1);
+  return (
+    <div className="flex h-44 items-end gap-2 rounded-[24px] border border-zinc-100 bg-zinc-50 px-4 py-4">
+      {rows.map((item) => {
+        const height = Math.max(10, Math.round((Number(item.total || 0) / max) * 100));
+        return (
+          <div key={item.data} className="flex min-w-0 flex-1 flex-col items-center gap-2">
+            <div className="flex h-28 w-full items-end justify-center">
+              <div
+                className="w-full max-w-8 rounded-t-2xl bg-gradient-to-t from-zinc-950 to-amber-400 shadow-sm transition-all"
+                style={{ height: `${height}%` }}
+                title={formatCurrency(item.total)}
+              />
+            </div>
+            <span className="text-[10px] font-bold text-zinc-400">{formatShortDate(item.data)}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function RankingItem({
+  title,
+  value,
+  helper,
+  index,
+}: {
+  title: string;
+  value: string;
+  helper: string;
+  index: number;
+}) {
+  return (
+    <div className="flex items-center gap-3 rounded-2xl border border-zinc-100 bg-white px-3 py-3">
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-zinc-950 text-sm font-black text-white">
+        {index + 1}
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-black text-zinc-950">{title}</p>
+        <p className="text-xs font-semibold text-zinc-500">{helper}</p>
+      </div>
+      <strong className="text-sm font-black text-zinc-950">{value}</strong>
+    </div>
+  );
+}
+
 export default function DashboardPage() {
   const { snapshot: painelSession } = usePainelSession();
-
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState("");
   const [semPermissao, setSemPermissao] = useState(false);
-  const [faseCarregamento, setFaseCarregamento] = useState(
-    "Carregando resumo principal do salão."
-  );
+  const [faseCarregamento, setFaseCarregamento] = useState("Carregando resumo principal do salão.");
   const [ultimaAtualizacao, setUltimaAtualizacao] = useState<string | null>(null);
   const [resumo, setResumo] = useState<DashboardResumo>(RESUMO_INICIAL);
   const [dashboardAvancado, setDashboardAvancado] = useState(false);
@@ -292,9 +373,7 @@ export default function DashboardPage() {
         return;
       }
 
-      const dashboardAvancadoSession = Boolean(
-        painelSession.planoRecursos?.dashboard_avancado
-      );
+      const dashboardAvancadoSession = Boolean(painelSession.planoRecursos?.dashboard_avancado);
       setDashboardAvancado(dashboardAvancadoSession);
 
       const cached = readDashboardClientCache(painelSession.idSalao);
@@ -307,22 +386,15 @@ export default function DashboardPage() {
         return;
       }
 
-      const response = await fetch("/api/painel/dashboard-resumo", {
-        cache: "no-store",
-      });
-
-      const payload = (await response.json().catch(() => ({}))) as
-        | DashboardRpcResumo
-        | { error?: string };
+      const response = await fetch("/api/painel/dashboard-resumo", { cache: "no-store" });
+      const payload = (await response.json().catch(() => ({}))) as DashboardRpcResumo | { error?: string };
 
       if (!response.ok) {
-        const errorMessage =
-          "error" in payload ? payload.error : "Erro ao carregar dashboard.";
+        const errorMessage = "error" in payload ? payload.error : "Erro ao carregar dashboard.";
         throw new Error(errorMessage || "Erro ao carregar dashboard.");
       }
 
       const rpcData = payload as DashboardRpcResumo;
-
       setFaseCarregamento("Carregando indicadores principais.");
       const nextResumo: DashboardResumo = {
         ...RESUMO_INICIAL,
@@ -341,6 +413,24 @@ export default function DashboardPage() {
         aguardandoPagamento: Number(rpcData.resumo?.aguardandoPagamento || 0),
         planoSalao: String(rpcData.resumo?.planoSalao || "-"),
         notificacoesPendentes: Number(rpcData.resumo?.notificacoesPendentes || 0),
+        agendaHoje: Array.isArray(rpcData.resumo?.agendaHoje) ? rpcData.resumo.agendaHoje : [],
+        proximosAgendamentos: Array.isArray(rpcData.resumo?.proximosAgendamentos)
+          ? rpcData.resumo.proximosAgendamentos
+          : [],
+        topProfissionais: Array.isArray(rpcData.resumo?.topProfissionais)
+          ? rpcData.resumo.topProfissionais
+          : [],
+        servicosMaisAgendados: Array.isArray(rpcData.resumo?.servicosMaisAgendados)
+          ? rpcData.resumo.servicosMaisAgendados
+          : [],
+        clientesInativos: Array.isArray(rpcData.resumo?.clientesInativos)
+          ? rpcData.resumo.clientesInativos
+          : [],
+        clientesSemVir45Dias: Number(rpcData.resumo?.clientesSemVir45Dias || 0),
+        faturamentoSerie: Array.isArray(rpcData.resumo?.faturamentoSerie)
+          ? rpcData.resumo.faturamentoSerie
+          : [],
+        metaMensal: Number(rpcData.resumo?.metaMensal || 0),
       };
       const nowIso = new Date().toISOString();
 
@@ -352,12 +442,9 @@ export default function DashboardPage() {
         ultimaAtualizacao: nowIso,
       });
       setFaseCarregamento("Resumo atualizado.");
-      setLoading(false);
     } catch (error: unknown) {
       console.error(error);
-      setErro(
-        error instanceof Error ? error.message : "Erro ao carregar dashboard."
-      );
+      setErro(error instanceof Error ? error.message : "Erro ao carregar dashboard.");
     } finally {
       setLoading(false);
     }
@@ -367,24 +454,18 @@ export default function DashboardPage() {
     void init();
   }, [init]);
 
-  const statusCaixa = useMemo(() => {
-    return resumo.aguardandoPagamento > 0 ? "Com pendencias" : "Organizado";
-  }, [resumo.aguardandoPagamento]);
+  const statusCaixa = useMemo(
+    () => (resumo.aguardandoPagamento > 0 ? "Com pendências" : "Organizado"),
+    [resumo.aguardandoPagamento]
+  );
   const dashboardUpgradePlan = useMemo(
     () => getDashboardUpgradePlan(resumo.planoSalao),
     [resumo.planoSalao]
   );
-  const dashboardUpgradeLabel =
-    dashboardUpgradePlan === "premium" ? "Premium" : "Pro";
+  const dashboardUpgradeLabel = dashboardUpgradePlan === "premium" ? "Premium" : "Pro";
 
   if (loading) {
-    return (
-      <AppLoading
-        title="Carregando dashboard"
-        message={faseCarregamento}
-        fullHeight={false}
-      />
-    );
+    return <AppLoading title="Carregando dashboard" message={faseCarregamento} fullHeight={false} />;
   }
 
   if (semPermissao) {
@@ -395,7 +476,6 @@ export default function DashboardPage() {
             <div className="rounded-2xl bg-rose-100 p-3">
               <ShieldAlert size={24} className="text-rose-600" />
             </div>
-
             <div>
               <h1 className="text-[1.6rem] font-bold text-zinc-900">Acesso negado</h1>
               <p className="mt-2 text-sm text-zinc-500">
@@ -409,42 +489,44 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       {erro ? (
         <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
           {erro}
         </div>
       ) : null}
 
-      <section className="rounded-[24px] border border-zinc-200 bg-white p-4 shadow-sm">
-        <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+      <section className="relative overflow-hidden rounded-[30px] border border-zinc-200 bg-white p-5 shadow-sm">
+        <div className="pointer-events-none absolute right-0 top-0 h-40 w-40 rounded-full bg-amber-100/80 blur-3xl" />
+        <div className="relative flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
           <div className="max-w-3xl">
-            <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-zinc-400">
-              Resumo do salão
+            <div className="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-[11px] font-black uppercase tracking-[0.18em] text-amber-800">
+              <Sparkles size={13} />
+              Comando do salão
             </div>
-            <h1 className="mt-1.5 text-[1.85rem] font-bold tracking-[-0.04em] text-zinc-950">
+            <h1 className="mt-3 text-[2.35rem] font-black tracking-[-0.05em] text-zinc-950">
               Dashboard
             </h1>
-            <p className="mt-1.5 text-sm leading-6 text-zinc-500">
-              O painel abre primeiro com o essencial e termina o restante em
-              segundo plano para você entrar mais rápido no sistema.
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-500">
+              Visão executiva do salão: agenda, faturamento, clientes sem retorno,
+              profissionais em destaque e serviços com mais procura.
             </p>
           </div>
 
-          <div className="grid gap-2.5 sm:grid-cols-2 xl:min-w-[400px]">
+          <div className="grid gap-2.5 sm:grid-cols-2 xl:min-w-[430px]">
             <InfoMetric
-              title="Status do carregamento"
-              value="Pronto"
-              helper={faseCarregamento}
+              title="Plano"
+              value={resumo.planoSalao || "-"}
+              helper={dashboardAvancado ? "Dashboard avançado ativo" : `Avançado no ${dashboardUpgradeLabel}`}
             />
             <InfoMetric
-              title="Ultima leitura"
+              title="Última leitura"
               value={
                 ultimaAtualizacao
                   ? new Date(ultimaAtualizacao).toLocaleTimeString("pt-BR")
                   : "--:--"
               }
-              helper={`Plano ${resumo.planoSalao || "-"}`}
+              helper={faseCarregamento}
             />
           </div>
         </div>
@@ -452,175 +534,193 @@ export default function DashboardPage() {
 
       <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         <KpiCard
-          title="Agendamentos hoje"
+          title="Agendamentos"
           value={String(resumo.agendamentosHoje)}
           icon={CalendarDays}
-          subtitle={`${resumo.proximosConfirmados} confirmados nas proximas 2 horas`}
+          subtitle={`${resumo.proximosConfirmados} confirmados nas próximas 2 horas`}
           tone="info"
         />
-        <KpiCard
-          title="Clientes ativos"
-          value={String(resumo.clientesAtivos)}
-          icon={Users}
-          subtitle="Base ativa do salão"
-        />
-        <KpiCard
-          title="Serviços do mes"
-          value={String(resumo.servicosMes)}
-          icon={Scissors}
-          subtitle="Comandas fechadas no periodo"
-        />
-        <KpiCard
-          title="Faturamento do mes"
-          value={formatCurrency(resumo.faturamentoMes)}
-          icon={DollarSign}
-          subtitle="Resultado real do periodo"
-          tone="success"
-        />
+        <KpiCard title="Clientes ativos" value={String(resumo.clientesAtivos)} icon={Users} subtitle="Base ativa do salão" />
+        <KpiCard title="Serviços do mês" value={String(resumo.servicosMes)} icon={Scissors} subtitle="Comandas fechadas no período" />
+        <KpiCard title="Faturamento" value={formatCurrency(resumo.faturamentoMes)} icon={DollarSign} subtitle="Resultado real do mês" tone="success" />
       </section>
 
-      <section className="grid gap-3 2xl:grid-cols-[1.2fr_0.8fr]">
-        {dashboardAvancado ? (
-          <div className="rounded-[22px] border border-zinc-200 bg-white p-4 shadow-sm">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <div className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-400">
-                  Visão geral
-                </div>
-                <div className="mt-1 text-lg font-bold text-zinc-950">
-                  Indicadores de operação
+      <section className="grid gap-4 2xl:grid-cols-[1.1fr_0.9fr]">
+        <div className="rounded-[28px] border border-zinc-200 bg-white p-5 shadow-sm">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-zinc-400">Agenda do dia</p>
+              <h2 className="mt-1 text-xl font-black text-zinc-950">Horários em andamento</h2>
+            </div>
+            <div className="rounded-2xl bg-zinc-950 p-3 text-white">
+              <Clock3 size={20} />
+            </div>
+          </div>
+
+          <div className="mt-5 grid gap-3 lg:grid-cols-2">
+            {resumo.agendaHoje.map((item) => (
+              <div key={item.id} className="rounded-[22px] border border-zinc-100 bg-zinc-50 p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-xs font-black uppercase tracking-[0.14em] text-zinc-400">{item.horario}</p>
+                    <h3 className="mt-2 truncate text-base font-black text-zinc-950">{item.servico}</h3>
+                    <p className="mt-1 truncate text-sm font-semibold text-zinc-500">{item.cliente}</p>
+                    <p className="truncate text-xs text-zinc-400">{item.profissional}</p>
+                  </div>
+                  <span className={`rounded-full px-3 py-1 text-[11px] font-black ${statusBadgeClass(item.status)}`}>
+                    {item.status}
+                  </span>
                 </div>
               </div>
-              <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-2.5 text-zinc-700">
-                <TrendingUp size={18} />
+            ))}
+            {!resumo.agendaHoje.length ? (
+              <div className="rounded-[22px] border border-dashed border-zinc-200 bg-zinc-50 p-6 text-sm font-semibold text-zinc-500 lg:col-span-2">
+                Nenhum horário ativo para hoje.
+              </div>
+            ) : null}
+          </div>
+        </div>
+
+        {dashboardAvancado ? (
+          <div className="rounded-[28px] border border-zinc-200 bg-white p-5 shadow-sm">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.18em] text-zinc-400">Curva financeira</p>
+                <h2 className="mt-1 text-xl font-black text-zinc-950">Receita dos últimos 7 dias</h2>
+              </div>
+              <div className="rounded-2xl bg-zinc-950 p-3 text-white">
+                <BarChart3 size={20} />
               </div>
             </div>
 
-            <div className="mt-3.5 grid gap-2.5 md:grid-cols-2 xl:grid-cols-4">
-              <InfoMetric
-                title="Ticket medio"
-                value={formatCurrency(resumo.ticketMedioMes)}
-                helper="Valor medio por comanda fechada"
-              />
-              <InfoMetric
-                title="Comissão pendente"
-                value={formatCurrency(resumo.comissaoPendenteMes)}
-                helper="Pronto para conferencia"
-              />
-              <InfoMetric
-                title="Caixa do dia"
-                value={formatCurrency(resumo.caixaDia)}
-                helper="Total fechado hoje"
-              />
-              <InfoMetric
-                title="Retorno"
-                value={formatPercent(resumo.retornoClientes)}
-                helper="Recorrencia estimada no mes"
-              />
+            <div className="mt-5">
+              <MiniBarChart data={resumo.faturamentoSerie} />
+            </div>
+            <div className="mt-4 grid gap-2.5 md:grid-cols-2">
+              <InfoMetric title="Ticket médio" value={formatCurrency(resumo.ticketMedioMes)} helper="Valor médio por comanda fechada" />
+              <InfoMetric title="Comissão pendente" value={formatCurrency(resumo.comissaoPendenteMes)} helper="Pronto para conferência" />
+              <InfoMetric title="Caixa do dia" value={formatCurrency(resumo.caixaDia)} helper="Total fechado hoje" />
+              <InfoMetric title="Retorno" value={formatPercent(resumo.retornoClientes)} helper="Recorrência estimada no mês" />
             </div>
           </div>
         ) : (
-          <div className="rounded-[22px] border border-zinc-200 bg-white p-4 shadow-sm">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <div className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-400">
-                  Dashboard avancado
-                </div>
-                <div className="mt-1 text-lg font-bold text-zinc-950">
-                  Leitura premium liberada no {dashboardUpgradeLabel}
-                </div>
-              </div>
-              <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-2.5 text-zinc-700">
-                <TrendingUp size={18} />
-              </div>
-            </div>
-
-            <p className="mt-3 max-w-2xl text-sm leading-6 text-zinc-500">
-              Ticket medio, retorno, comissão pendente e leitura gerencial mais
-              forte entram no {dashboardUpgradeLabel} ou acima. O painel atual continua mostrando
-              o essencial da operação.
-            </p>
-            <UpgradeActions plan={dashboardUpgradePlan} />
-          </div>
+          <LockedPanel plan={dashboardUpgradePlan} />
         )}
-
-        <div className="rounded-[22px] border border-zinc-200 bg-white p-4 shadow-sm">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <div className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-400">
-                Status rápido
-              </div>
-              <div className="mt-1 text-lg font-bold text-zinc-950">
-                Leitura do dia
-              </div>
-            </div>
-            <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-2.5 text-zinc-700">
-              <Wallet size={18} />
-            </div>
-          </div>
-
-          <div className="mt-3.5 grid gap-2.5 sm:grid-cols-2">
-            <InfoMetric title="Caixa" value={statusCaixa} helper="Leitura operacional do recebimento" />
-            <InfoMetric
-              title="Profissionais"
-              value={String(resumo.profissionaisAtivos)}
-              helper="Ativos no cadastro"
-            />
-            <InfoMetric
-              title="Aguardando pagamento"
-              value={String(resumo.aguardandoPagamento)}
-              helper="Comandas que pedem ação"
-            />
-            <InfoMetric
-              title="Cancelamentos"
-              value={dashboardAvancado ? String(resumo.cancelamentosMes) : "--"}
-              helper={
-                dashboardAvancado
-                  ? "Ocorrencias no mes"
-                  : "Disponível no dashboard avancado"
-              }
-            />
-          </div>
-          {!dashboardAvancado ? (
-            <div className="mt-3.5 rounded-[20px] border border-dashed border-zinc-200 bg-zinc-50 p-3.5">
-              <div className="text-sm font-semibold text-zinc-900">
-                Quer uma leitura mais gerencial?
-              </div>
-              <div className="mt-1 text-sm text-zinc-500">
-                O dashboard avancado libera ticket medio, cancelamentos, retorno
-                e outros indicadores de crescimento.
-              </div>
-              <UpgradeActions plan={dashboardUpgradePlan} />
-            </div>
-          ) : null}
-        </div>
       </section>
 
-      <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-        <MiniStatusCard
-          icon={<CheckCircle2 size={18} className="text-emerald-600" />}
-          title="Caixa do dia"
-          value={formatCurrency(resumo.caixaDia)}
-        />
-        <MiniStatusCard
-          icon={<CreditCard size={18} className="text-amber-600" />}
-          title="Comissão pendente"
-          value={
-            dashboardAvancado
-              ? formatCurrency(resumo.comissaoPendenteMes)
-              : dashboardUpgradeLabel
-          }
-        />
-        <MiniStatusCard
-          icon={<AlertCircle size={18} className="text-rose-600" />}
-          title="Aguardando pagamento"
-          value={String(resumo.aguardandoPagamento)}
-        />
-        <MiniStatusCard
-          icon={<UserCheck size={18} className="text-sky-600" />}
-          title="Profissionais ativos"
-          value={String(resumo.profissionaisAtivos)}
-        />
+      <section className="grid gap-4 xl:grid-cols-3">
+        <div className="rounded-[28px] border border-zinc-200 bg-white p-5 shadow-sm">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-zinc-400">Próximos horários</p>
+              <h2 className="mt-1 text-xl font-black text-zinc-950">Agenda chegando</h2>
+            </div>
+            <div className="rounded-2xl bg-zinc-950 p-3 text-white">
+              <CalendarDays size={20} />
+            </div>
+          </div>
+          <div className="mt-4 space-y-3">
+            {resumo.proximosAgendamentos.slice(0, 5).map((item) => (
+              <div key={item.id} className="flex items-center gap-3 rounded-2xl border border-zinc-100 bg-zinc-50 p-3">
+                <div className="flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-2xl bg-white text-xs font-black text-zinc-950">
+                  <span>{formatShortDate(item.data)}</span>
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-black text-zinc-950">{item.cliente}</p>
+                  <p className="truncate text-xs font-semibold text-zinc-500">{item.servico}</p>
+                  <p className="text-xs text-zinc-400">{item.horario}</p>
+                </div>
+                <ArrowUpRight size={17} className="text-zinc-400" />
+              </div>
+            ))}
+            {!resumo.proximosAgendamentos.length ? (
+              <p className="rounded-2xl border border-dashed border-zinc-200 bg-zinc-50 p-4 text-sm font-semibold text-zinc-500">
+                Nenhum próximo horário encontrado.
+              </p>
+            ) : null}
+          </div>
+        </div>
+
+        {dashboardAvancado ? (
+          <>
+            <div className="rounded-[28px] border border-zinc-200 bg-white p-5 shadow-sm">
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-zinc-400">Top profissionais</p>
+              <h2 className="mt-1 text-xl font-black text-zinc-950">Maior faturamento</h2>
+              <div className="mt-4 space-y-3">
+                {resumo.topProfissionais.map((item, index) => (
+                  <RankingItem key={`${item.nome}-${index}`} index={index} title={item.nome} value={formatCurrency(item.total)} helper={`${item.atendimentos} item(ns) vendidos`} />
+                ))}
+                {!resumo.topProfissionais.length ? (
+                  <p className="rounded-2xl border border-dashed border-zinc-200 bg-zinc-50 p-4 text-sm font-semibold text-zinc-500">
+                    Sem faturamento por profissional neste mês.
+                  </p>
+                ) : null}
+              </div>
+            </div>
+
+            <div className="rounded-[28px] border border-zinc-200 bg-white p-5 shadow-sm">
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-zinc-400">Serviços em alta</p>
+              <h2 className="mt-1 text-xl font-black text-zinc-950">Mais agendados</h2>
+              <div className="mt-4 space-y-3">
+                {resumo.servicosMaisAgendados.map((item, index) => (
+                  <RankingItem key={`${item.nome}-${index}`} index={index} title={item.nome} value={`${item.total}`} helper={`${formatCurrency(item.receita)} em receita`} />
+                ))}
+                {!resumo.servicosMaisAgendados.length ? (
+                  <p className="rounded-2xl border border-dashed border-zinc-200 bg-zinc-50 p-4 text-sm font-semibold text-zinc-500">
+                    Sem serviços fechados neste mês.
+                  </p>
+                ) : null}
+              </div>
+            </div>
+          </>
+        ) : (
+          <LockedPanel plan={dashboardUpgradePlan} />
+        )}
+      </section>
+
+      <section className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
+        {dashboardAvancado ? (
+          <div className="rounded-[28px] border border-zinc-200 bg-white p-5 shadow-sm">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.18em] text-zinc-400">Clientes sem retorno</p>
+                <h2 className="mt-1 text-xl font-black text-zinc-950">
+                  {resumo.clientesSemVir45Dias} cliente(s) há 45+ dias sem vir
+                </h2>
+              </div>
+              <div className="rounded-2xl bg-zinc-950 p-3 text-white">
+                <Users size={20} />
+              </div>
+            </div>
+            <div className="mt-4 grid gap-3 md:grid-cols-2">
+              {resumo.clientesInativos.map((cliente) => (
+                <div key={cliente.id} className="rounded-[22px] border border-zinc-100 bg-zinc-50 p-4">
+                  <p className="truncate text-sm font-black text-zinc-950">{cliente.nome}</p>
+                  <p className="mt-1 text-xs font-semibold text-zinc-500">{cliente.diasSemVir} dias sem atendimento</p>
+                  <p className="mt-1 truncate text-xs text-zinc-400">{cliente.contato || "Sem contato cadastrado"}</p>
+                </div>
+              ))}
+              {!resumo.clientesInativos.length ? (
+                <p className="rounded-2xl border border-dashed border-zinc-200 bg-zinc-50 p-4 text-sm font-semibold text-zinc-500 md:col-span-2">
+                  Nenhum cliente crítico encontrado na amostra recente.
+                </p>
+              ) : null}
+            </div>
+          </div>
+        ) : (
+          <LockedPanel plan={dashboardUpgradePlan} />
+        )}
+
+        <div className="rounded-[28px] border border-zinc-200 bg-white p-5 shadow-sm">
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-zinc-400">Status rápido</p>
+          <h2 className="mt-1 text-xl font-black text-zinc-950">Operação do dia</h2>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            <MiniStatusCard icon={<CheckCircle2 size={18} className="text-emerald-600" />} title="Caixa" value={statusCaixa} />
+            <MiniStatusCard icon={<CreditCard size={18} className="text-amber-600" />} title="Comissão" value={dashboardAvancado ? formatCurrency(resumo.comissaoPendenteMes) : dashboardUpgradeLabel} />
+            <MiniStatusCard icon={<AlertCircle size={18} className="text-rose-600" />} title="Aguardando" value={String(resumo.aguardandoPagamento)} />
+            <MiniStatusCard icon={<UserCheck size={18} className="text-sky-600" />} title="Profissionais" value={String(resumo.profissionaisAtivos)} />
+          </div>
+        </div>
       </section>
     </div>
   );
