@@ -26,6 +26,10 @@ function isCampaignPublicRoute(pathname: string) {
 export function handleAppProfissionalHost(ctx: ProxyRouteContext) {
   const { request, pathname, pathnameNormalizado } = ctx;
 
+  if (pathnameNormalizado === "/") {
+    return NextResponse.next();
+  }
+
   if (
     pathnameNormalizado === "/dashboard" ||
     pathnameNormalizado === "/app-profissional/dashboard"

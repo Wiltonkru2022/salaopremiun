@@ -7,6 +7,7 @@ import {
   Gift,
   Link2,
   Megaphone,
+  MessageCircle,
   Pause,
   Play,
   Plus,
@@ -72,6 +73,16 @@ function statusClass(label: string) {
   if (label === "Esgotada") return "border-red-200 bg-red-50 text-red-700";
   if (label === "Programada") return "border-blue-200 bg-blue-50 text-blue-700";
   return "border-amber-200 bg-amber-50 text-amber-800";
+}
+
+function campanhaWhatsAppMessage(cupom: Record<string, unknown>, link: string) {
+  const titulo = String(cupom.nome || "campanha especial").trim();
+  const mensagem = String(
+    cupom.mensagem_cliente ||
+      cupom.descricao ||
+      `Preparei uma campanha especial para voce: ${titulo}.`
+  ).trim();
+  return `${mensagem}\n\nAgende pelo link:\n${link}`;
 }
 
 async function loadCampanhasData(idSalao: string, page: number, pageSize: number) {
@@ -400,6 +411,9 @@ export default async function CampanhasPage({
                 : cupom.resgate_token
                   ? `${baseUrl}/resgatar-cupom/${cupom.resgate_token}`
                   : "";
+              const whatsappUrl = link
+                ? `https://wa.me/?text=${encodeURIComponent(campanhaWhatsAppMessage(cupom, link))}`
+                : "";
               const servicos = (cupom.servicos as Array<Record<string, any>> | undefined) || [];
               const statusAtual = String(cupom.status_campanha || "ativa");
               return (
@@ -477,6 +491,11 @@ export default async function CampanhasPage({
                     <a href={link || "#"} target="_blank" className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-zinc-200 bg-white px-4 text-sm font-black text-zinc-950">
                       <Copy size={16} /> Ver link
                     </a>
+                    {whatsappUrl ? (
+                      <a href={whatsappUrl} target="_blank" className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 text-sm font-black text-emerald-800 transition hover:-translate-y-0.5 hover:bg-emerald-100">
+                        <MessageCircle size={16} /> Enviar WhatsApp
+                      </a>
+                    ) : null}
                     <form action={atualizarStatusCampanhaAction}>
                       <input type="hidden" name="id" value={String(cupom.id)} />
                       <input type="hidden" name="status" value={statusAtual === "ativa" ? "pausada" : "ativa"} />
