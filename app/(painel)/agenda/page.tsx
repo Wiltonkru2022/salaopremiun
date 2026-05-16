@@ -4,7 +4,7 @@ import dynamic from "next/dynamic";
 import { useEffect, useRef, useState } from "react";
 import { addDays, format, subDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import AgendaToolbar from "@/components/agenda/AgendaToolbar";
 import AgendaGrid from "@/components/agenda/AgendaGrid";
 import AgendaSidebar from "@/components/agenda/AgendaSidebar";
@@ -84,7 +84,9 @@ function addMinutesToSlotTime(time: string, minutes: number) {
 export default function AgendaPage() {
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const loadAgendaSeqRef = useRef(0);
+  const openedNotificationClientRef = useRef("");
   const [contextMenu, setContextMenu] = useState<
     | { open: false }
     | {
@@ -683,6 +685,17 @@ export default function AgendaPage() {
       setClienteProfileLoading(false);
     }
   }
+
+  useEffect(() => {
+    const clientId = String(searchParams.get("cliente") || "").trim();
+    if (!clientId || openedNotificationClientRef.current === clientId) return;
+    if (!clientes.some((cliente) => cliente.id === clientId)) return;
+
+    openedNotificationClientRef.current = clientId;
+    setSidebarOpen(true);
+    void openClientProfileFromSearch(clientId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clientes, searchParams]);
 
   function openSlotMenu(
     date: string,

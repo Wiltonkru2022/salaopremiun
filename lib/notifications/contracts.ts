@@ -69,8 +69,12 @@ export type AgendamentoNotificacao = {
   data?: string | null;
   hora_inicio?: string | null;
   origem?: string | null;
+  cliente_id?: string | null;
   cliente_nome?: string | null;
   servico_nome?: string | null;
+  codigo_cupom?: string | null;
+  id_cupom_salao?: string | null;
+  desconto_cupom_valor?: number | string | null;
 };
 
 export type CaixaMovimentoNotificacao = {

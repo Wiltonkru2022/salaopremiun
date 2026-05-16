@@ -90,9 +90,9 @@ const loadPainelShellContextCached = unstable_cache(
           .maybeSingle(),
         (supabaseAdmin as any)
           .from("agendamentos")
-          .select("id, status, data, hora_inicio, origem, clientes(nome), servicos(nome)")
+          .select("id, status, data, hora_inicio, origem, cliente_id, codigo_cupom, id_cupom_salao, desconto_cupom_valor, clientes(nome), servicos(nome)")
           .eq("id_salao", usuario.id_salao)
-          .eq("status", "pendente")
+          .in("status", ["pendente", "confirmado"])
           .eq("origem", "app_cliente")
           .order("data", { ascending: true })
           .order("hora_inicio", { ascending: true })
@@ -159,8 +159,12 @@ const loadPainelShellContextCached = unstable_cache(
             data: String(agendamento.data || ""),
             hora_inicio: String(agendamento.hora_inicio || ""),
             origem: String(agendamento.origem || ""),
+            cliente_id: String(agendamento.cliente_id || ""),
             cliente_nome: String(cliente?.nome || "").trim() || null,
             servico_nome: String(servico?.nome || "").trim() || null,
+            codigo_cupom: String(agendamento.codigo_cupom || "").trim() || null,
+            id_cupom_salao: String(agendamento.id_cupom_salao || "").trim() || null,
+            desconto_cupom_valor: agendamento.desconto_cupom_valor ?? null,
           };
         }
       ),

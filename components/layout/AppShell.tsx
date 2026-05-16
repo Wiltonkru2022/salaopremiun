@@ -9,7 +9,6 @@ import { PAINEL_SESSION_STORAGE_KEY } from "@/lib/painel/session-snapshot";
 import Sidebar from "@/components/layout/Sidebar";
 import PainelPwaRuntime from "@/components/pwa/PainelPwaRuntime";
 import MonitoringContextBridge from "@/components/monitoring/MonitoringContextBridge";
-import PushPermissionRuntime from "@/components/push/PushPermissionRuntime";
 import type {
   Permissoes,
   PlanoRecursos,
@@ -163,8 +162,6 @@ export default function AppShell({
           salaoLogoUrl={salaoLogoUrl}
           planoNome={planoNome}
           resumoAssinatura={resumoAssinatura}
-          canSeePerfilSalao={Boolean(permissoes?.perfil_salao_ver)}
-          canSeeConfiguracoes={Boolean(permissoes?.configuracoes_ver)}
           canSeeAssinatura={Boolean(permissoes?.assinatura_ver)}
           criticalNotificationsCount={criticalNotificationsCount}
           mobileOpen={mobileSidebarOpen}
@@ -172,7 +169,7 @@ export default function AppShell({
         />
 
         <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-          <div className="fixed left-0 right-0 top-0 z-30 bg-zinc-50 px-1.5 pb-1 pt-1.5 md:px-2 lg:left-[204px] lg:px-2.5">
+          <div className="fixed left-0 right-0 top-0 z-30 bg-zinc-50 px-1.5 pb-1 pt-1.5 md:px-2 lg:left-[214px] lg:px-2.5">
             <Header
               userName={userName}
               userEmail={userEmail}
@@ -204,9 +201,6 @@ export default function AppShell({
               );
             }}
           >
-            <div className="mb-2 flex justify-end">
-              <PushPermissionRuntime audience="salao_painel" compact />
-            </div>
             <div className="min-h-[calc(100dvh-4.1rem)] bg-zinc-50 p-1 md:p-1.5">
               <div className="min-w-0">{children}</div>
             </div>

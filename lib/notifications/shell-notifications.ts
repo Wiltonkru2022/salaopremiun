@@ -55,6 +55,16 @@ function isWebhookAlert(alerta: SistemaAlertaNotificacao) {
   return haystack.includes("webhook") || haystack.includes("asaas");
 }
 
+function buildAgendaHref(agendamento?: AgendamentoNotificacao | null) {
+  const params = new URLSearchParams();
+  const idAgendamento = String(agendamento?.id || "").trim();
+  const idCliente = String(agendamento?.cliente_id || "").trim();
+  if (idAgendamento) params.set("agendamento", idAgendamento);
+  if (idCliente) params.set("cliente", idCliente);
+  const qs = params.toString();
+  return qs ? `/agenda?${qs}` : "/agenda";
+}
+
 function getOnboardingNextSteps(onboarding?: OnboardingScoreNotificacao | null) {
   const detalhes =
     onboarding?.detalhes_json && typeof onboarding.detalhes_json === "object"
@@ -196,9 +206,15 @@ export function buildShellNotifications({
 
   if (pendentesConfirmacao.length > 0) {
     const primeiro = pendentesConfirmacao[0];
+    const temCupom = pendentesConfirmacao.some(
+      (agendamento) =>
+        String(agendamento.codigo_cupom || agendamento.id_cupom_salao || "").trim() ||
+        Number(agendamento.desconto_cupom_valor || 0) > 0
+    );
     const preview = [
       primeiro?.cliente_nome,
       primeiro?.servico_nome,
+      temCupom ? "com cupom" : null,
       primeiro?.hora_inicio ? String(primeiro.hora_inicio).slice(0, 5) : null,
     ]
       .filter(Boolean)
@@ -214,8 +230,8 @@ export function buildShellNotifications({
       category: "agenda",
       severity: "high",
       eventType: "client_app_appointments_pending_confirmation",
-      href: "/agenda",
-      actionLabel: "Confirmar na agenda",
+      href: buildAgendaHref(primeiro),
+      actionLabel: "Abrir agenda e cliente",
       destination: "internal",
       icon: "agenda",
       sourceModule: "agenda",
@@ -251,22 +267,21 @@ export function buildShellNotifications({
   }
 
   const agendados = agendamentos.filter((agendamento) =>
-    ["agendado", "confirmado", "pendente"].includes(
-      String(agendamento.status || "").toLowerCase()
-    )
+    ["agendado", "confirmado", "pendente"].includes(String(agendamento.status || "").toLowerCase()) &&
+    String(agendamento.origem || "").toLowerCase() === "app_cliente"
   );
 
   if (agendados.length > 0) {
     notifications.push({
       id: "clientes-agendados",
-      title: `${agendados.length} cliente(s) na agenda de hoje`,
-      description: "Acompanhe encaixes, atrasos e conversao em comanda.",
+      title: `${agendados.length} agendamento(s) pelo app`,
+      description: "Pedidos do app cliente ficam aqui para acompanhar confirmação, cupom e ficha da cliente.",
       tone: "neutral",
       category: "agenda",
       severity: "low",
       eventType: "appointments_today_pending",
-      href: "/agenda",
-      actionLabel: "Ver agenda",
+      href: buildAgendaHref(agendados[0]),
+      actionLabel: "Abrir agenda",
       destination: "internal",
       icon: "agenda",
       sourceModule: "agenda",

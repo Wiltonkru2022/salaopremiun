@@ -5,11 +5,9 @@ import { useMemo } from "react";
 import clsx from "clsx";
 import {
   AlertTriangle,
-  Building2,
   ChevronRight,
   CreditCard,
   ExternalLink,
-  Settings,
   X,
 } from "lucide-react";
 import {
@@ -35,22 +33,41 @@ type Props = {
   salaoLogoUrl?: string | null;
   planoNome?: string;
   resumoAssinatura?: ResumoAssinatura | null;
-  canSeePerfilSalao: boolean;
-  canSeeConfiguracoes: boolean;
   canSeeAssinatura: boolean;
   criticalNotificationsCount: number;
   mobileOpen: boolean;
   onClose: () => void;
 };
 
+type SidebarGroup = {
+  label: string;
+  items: PainelNavItem[];
+};
+
+const GROUPS: Array<{ label: string; hrefs: string[] }> = [
+  {
+    label: "Salão",
+    hrefs: ["/dashboard", "/agenda", "/comandas", "/clientes"],
+  },
+  {
+    label: "Equipe",
+    hrefs: ["/profissionais", "/servicos", "/produtos", "/estoque"],
+  },
+  {
+    label: "Financeiro",
+    hrefs: ["/vendas", "/caixa", "/comissoes", "/relatorio-financeiro"],
+  },
+  {
+    label: "Crescimento",
+    hrefs: ["/marketing", "/novidades", "/suporte"],
+  },
+];
+
 export default function Sidebar({
   permissoes,
   planoRecursos,
   nivel,
-  planoNome,
   resumoAssinatura,
-  canSeePerfilSalao,
-  canSeeConfiguracoes,
   canSeeAssinatura,
   criticalNotificationsCount,
   mobileOpen,
@@ -75,24 +92,24 @@ export default function Sidebar({
         <button
           type="button"
           onClick={onClose}
-          className="fixed inset-0 z-40 bg-transparent xl:hidden"
+          className="fixed inset-0 z-40 bg-black/10 backdrop-blur-[1px] xl:hidden"
           aria-label="Fechar menu lateral"
         />
       ) : null}
 
       <aside
         className={clsx(
-          "fixed inset-y-0 left-0 z-50 w-[204px] -translate-x-full bg-zinc-50 p-1 text-zinc-950 transition-transform duration-300 lg:sticky lg:top-0 lg:z-20 lg:flex lg:h-screen lg:translate-x-0 lg:flex-col",
+          "fixed inset-y-0 left-0 z-50 w-[214px] -translate-x-full bg-white text-zinc-950 transition-transform duration-300 lg:sticky lg:top-0 lg:z-20 lg:flex lg:h-screen lg:translate-x-0 lg:flex-col",
           mobileOpen ? "translate-x-0" : ""
         )}
       >
-        <div className="flex h-full flex-col overflow-hidden rounded-[18px] border border-zinc-200 bg-white shadow-sm">
-          <div className="flex items-start justify-between gap-2 px-3 py-2.5 lg:block">
+        <div className="flex h-full flex-col overflow-hidden border-r border-zinc-200 bg-white">
+          <div className="flex items-start justify-between gap-2 border-b border-zinc-100 px-4 py-4 lg:block">
             <div className="flex min-w-0 items-center gap-2.5">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-zinc-950 text-white ring-1 ring-zinc-900/10">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-zinc-950 text-white ring-1 ring-zinc-900/10">
                 <img
                   src="/favicon-preview.png"
-                  alt={"SAL\u00c3O PREMIUM"}
+                  alt="SalãoPremium"
                   className="h-full w-full object-cover"
                 />
               </div>
@@ -101,8 +118,8 @@ export default function Sidebar({
                 <div className="truncate text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-400">
                   Sistema
                 </div>
-                <div className="mt-0.5 truncate font-display text-[0.94rem] font-bold tracking-[-0.02em] text-zinc-950">
-                  {"SAL\u00c3O PREMIUM"}
+                <div className="mt-0.5 truncate font-display text-[0.98rem] font-black tracking-[-0.03em] text-zinc-950">
+                  SalãoPremium
                 </div>
               </div>
             </div>
@@ -117,35 +134,30 @@ export default function Sidebar({
             </button>
           </div>
 
-          <nav className="scroll-premium min-h-0 flex-1 overflow-y-auto px-2 pb-2.5">
+          <nav className="scroll-premium min-h-0 flex-1 overflow-y-auto px-3 py-4">
             {subscriptionAtRisk || criticalNotificationsCount > 0 ? (
               <div
                 className={clsx(
-                  "mb-3 rounded-[14px] border px-2.5 py-2.5",
+                  "mb-4 rounded-[16px] border px-3 py-3",
                   resumoAssinatura?.bloqueioTotal || criticalNotificationsCount > 0
                     ? "border-rose-200 bg-rose-50 text-rose-800"
                     : "border-amber-200 bg-amber-50 text-amber-800"
                 )}
               >
-                <div className="flex items-start gap-3">
-                    <span className="mt-0.5 rounded-xl bg-white p-2">
-                    <AlertTriangle size={16} />
+                <div className="flex items-start gap-2.5">
+                  <span className="mt-0.5 rounded-xl bg-white p-2">
+                    <AlertTriangle size={15} />
                   </span>
                   <div className="min-w-0">
-                    <div className="text-xs font-bold uppercase tracking-[0.18em] text-current/70">
-                      Estado global
+                    <div className="text-[10px] font-black uppercase tracking-[0.16em] text-current/70">
+                      Atenção
                     </div>
-                    <p className="mt-1 text-sm font-semibold">
+                    <p className="mt-1 text-xs font-bold leading-5">
                       {criticalNotificationsCount > 0
-                        ? `${criticalNotificationsCount} alerta(s) crítico(s) em aberto`
+                        ? `${criticalNotificationsCount} alerta(s) em aberto`
                         : resumoAssinatura?.bloqueioTotal
-                          ? "Assinatura com bloqueio ativo"
-                          : "Assinatura vencendo em breve"}
-                    </p>
-                    <p className="mt-1 text-xs leading-5 opacity-80">
-                      {criticalNotificationsCount > 0
-                        ? "Use o sininho e a área de assinatura para não deixar risco escondido."
-                        : `${planoNome || "Plano atual"} exige revisão para manter a operação sem interrupção.`}
+                          ? "Assinatura bloqueada"
+                          : "Assinatura vencendo"}
                     </p>
                     {canSeeAssinatura ? (
                       <button
@@ -154,10 +166,10 @@ export default function Sidebar({
                           onClose();
                           window.location.assign(getRouteHref("/assinatura"));
                         }}
-                        className="mt-3 inline-flex items-center gap-2 rounded-2xl border border-current/10 bg-white px-3 py-2 text-xs font-semibold transition hover:bg-zinc-50"
+                        className="mt-2 inline-flex items-center gap-2 rounded-xl border border-current/10 bg-white px-2.5 py-2 text-[11px] font-black transition hover:bg-zinc-50"
                       >
-                        <CreditCard size={14} />
-                        Abrir assinatura
+                        <CreditCard size={13} />
+                        Assinatura
                       </button>
                     ) : null}
                   </div>
@@ -165,10 +177,10 @@ export default function Sidebar({
               </div>
             ) : null}
 
-            <div className="space-y-3">
+            <div className="space-y-5">
               {groupedItems.map((group) => (
                 <div key={group.label}>
-                  <div className="mb-1 px-2 text-[9px] font-bold uppercase tracking-[0.16em] text-zinc-400">
+                  <div className="mb-2 px-2 text-[10px] font-black uppercase tracking-[0.16em] text-zinc-400">
                     {group.label}
                   </div>
                   <div className="space-y-1">
@@ -186,70 +198,13 @@ export default function Sidebar({
                   </div>
                 </div>
               ))}
-
             </div>
           </nav>
-
-          <div className="border-t border-zinc-100 p-2">
-            <div className="mb-1 px-2 text-[9px] font-bold uppercase tracking-[0.16em] text-zinc-400">
-              Conta
-            </div>
-            <div className="space-y-1">
-              {canSeePerfilSalao ? (
-                <SidebarUtilityLink
-                  href="/perfil-salao"
-                  label="Perfil"
-                  icon={Building2}
-                  onClose={onClose}
-                />
-              ) : null}
-              {canSeeConfiguracoes ? (
-                <SidebarUtilityLink
-                  href="/configuracoes"
-                  label="Configurações"
-                  icon={Settings}
-                  onClose={onClose}
-                />
-              ) : null}
-              {canSeeAssinatura ? (
-                <SidebarUtilityLink
-                  href="/meu-plano"
-                  label="Planos"
-                  icon={CreditCard}
-                  onClose={onClose}
-                />
-              ) : null}
-            </div>
-          </div>
         </div>
       </aside>
     </>
   );
 }
-
-type SidebarGroup = {
-  label: string;
-  items: PainelNavItem[];
-};
-
-const GROUPS: Array<{ label: string; hrefs: string[] }> = [
-  {
-    label: "Salao",
-    hrefs: ["/dashboard", "/agenda", "/comandas", "/clientes"],
-  },
-  {
-    label: "Equipe e catálogo",
-    hrefs: ["/profissionais", "/servicos", "/produtos", "/estoque"],
-  },
-  {
-    label: "Financeiro",
-    hrefs: ["/vendas", "/caixa", "/comissoes", "/relatorio-financeiro"],
-  },
-  {
-    label: "Crescimento",
-    hrefs: ["/marketing", "/novidades", "/suporte"],
-  },
-];
 
 function buildNavigationGroups(items: PainelNavItem[]): SidebarGroup[] {
   const byHref = new Map(items.map((item) => [item.href, item]));
@@ -305,9 +260,9 @@ function SidebarLink({
         }
       }}
       className={clsx(
-        "group/item flex min-w-0 items-center gap-2 rounded-[13px] px-2 py-2 ring-1 ring-transparent transition-all duration-200",
+        "group/item flex min-w-0 items-center gap-2 rounded-[14px] px-2.5 py-2.5 ring-1 ring-transparent transition-all duration-200",
         active
-          ? "bg-zinc-950 text-white ring-zinc-900 shadow-sm"
+          ? "bg-amber-50 text-zinc-950 ring-amber-200 shadow-sm"
           : "text-zinc-600 hover:bg-zinc-50 hover:text-zinc-950"
       )}
       title={`${item.label} - ${item.description}`}
@@ -315,7 +270,7 @@ function SidebarLink({
       <span
         className={clsx(
           "flex h-8 w-8 shrink-0 items-center justify-center rounded-[11px] transition",
-          active ? "bg-white/12 text-white" : "bg-transparent"
+          active ? "bg-zinc-950 text-white" : "bg-transparent"
         )}
       >
         <Icon size={18} />
@@ -329,7 +284,7 @@ function SidebarLink({
         size={15}
         className={clsx(
           "hidden shrink-0 2xl:block",
-          active ? "text-white/60" : "text-zinc-300"
+          active ? "text-zinc-700" : "text-zinc-300"
         )}
       />
       {workspaceTarget && !standalone ? (
@@ -337,35 +292,10 @@ function SidebarLink({
           size={14}
           className={clsx(
             "shrink-0",
-            active ? "text-white/60" : "text-zinc-300"
+            active ? "text-zinc-700" : "text-zinc-300"
           )}
         />
       ) : null}
-    </a>
-  );
-}
-
-function SidebarUtilityLink({
-  href,
-  label,
-  icon: Icon,
-  onClose,
-}: {
-  href: string;
-  label: string;
-  icon: PainelNavItem["icon"];
-  onClose: () => void;
-}) {
-  return (
-    <a
-      href={getRouteHref(href)}
-      onClick={onClose}
-      className="flex min-w-0 items-center gap-2 rounded-[13px] px-2 py-2 text-[12.5px] font-bold text-zinc-600 transition hover:bg-zinc-50 hover:text-zinc-950"
-    >
-      <span className="flex h-8 w-8 items-center justify-center rounded-[11px] text-zinc-500">
-        <Icon size={18} />
-      </span>
-      <span className="truncate">{label}</span>
     </a>
   );
 }
