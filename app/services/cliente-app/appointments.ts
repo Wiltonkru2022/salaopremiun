@@ -244,7 +244,7 @@ async function loadBookingBaseContext(params: {
       (params.supabaseAdmin as any)
         .from("servicos")
         .select(
-          "id, id_salao, nome, ativo, preco, duracao, duracao_minutos, descricao, app_cliente_visivel"
+          "id, id_salao, nome, ativo, preco, preco_padrao, duracao, duracao_minutos, descricao, app_cliente_visivel"
         )
         .eq("id", params.idServico)
         .eq("id_salao", params.idSalao)

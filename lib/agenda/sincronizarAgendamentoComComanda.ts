@@ -42,6 +42,108 @@ type ComboServicoItem = {
   servico: ServicoComandaInfo;
 };
 
+function calcularDescontoCupomComanda(params: {
+  tipo: string;
+  valor: number;
+  subtotal: number;
+}) {
+  const subtotal = Math.max(0, Number(params.subtotal || 0));
+  const valor = Math.max(0, Number(params.valor || 0));
+  if (subtotal <= 0 || valor <= 0) return 0;
+
+  const desconto =
+    params.tipo === "valor_fixo" || params.tipo === "desconto_valor"
+      ? valor
+      : (subtotal * valor) / 100;
+
+  return Math.max(0, Math.min(subtotal, Number(desconto.toFixed(2))));
+}
+
+async function calcularDescontoCupomParaComanda(params: {
+  supabase: SupabaseClient;
+  idSalao: string;
+  idCupom: string;
+  idServico: string;
+  data?: string | null;
+  subtotal: number;
+}) {
+  const idCupom = String(params.idCupom || "").trim();
+  if (!idCupom) return 0;
+
+  const hoje = new Date().toISOString().slice(0, 10);
+  const dataReferencia = String(params.data || "").slice(0, 10) || hoje;
+  const { data: cupom, error } = await (params.supabase as any)
+    .from("cupons_salao")
+    .select(
+      "id, tipo_desconto, valor_desconto, valido_de, valido_ate, ativo, status_campanha"
+    )
+    .eq("id", idCupom)
+    .eq("id_salao", params.idSalao)
+    .limit(1)
+    .maybeSingle();
+
+  if (error || !cupom?.id || cupom.ativo === false) return 0;
+  if (String(cupom.status_campanha || "ativa") !== "ativa") return 0;
+  if (cupom.valido_de && String(cupom.valido_de) > dataReferencia) return 0;
+  if (cupom.valido_ate && String(cupom.valido_ate) < dataReferencia) return 0;
+
+  let desconto = calcularDescontoCupomComanda({
+    tipo: String(cupom.tipo_desconto || "percentual"),
+    valor: Number(cupom.valor_desconto || 0),
+    subtotal: params.subtotal,
+  });
+
+  const { data: servicosCampanha } = await (params.supabase as any)
+    .from("cupom_salao_servicos")
+    .select("id_servico, tipo_beneficio, valor_beneficio")
+    .eq("id_cupom", idCupom)
+    .eq("id_salao", params.idSalao)
+    .limit(200);
+
+  if (Array.isArray(servicosCampanha) && servicosCampanha.length) {
+    const servicoCupom = servicosCampanha.find(
+      (item: Record<string, unknown>) =>
+        String(item.id_servico || "") === params.idServico
+    );
+
+    if (!servicoCupom) return 0;
+
+    const tipoBeneficio = String(servicoCupom.tipo_beneficio || "");
+    const valorBeneficio = Number(servicoCupom.valor_beneficio || 0);
+    if (tipoBeneficio === "preco_fixo") {
+      desconto = Math.max(0, params.subtotal - valorBeneficio);
+    } else if (tipoBeneficio === "desconto_valor") {
+      desconto = Math.min(params.subtotal, valorBeneficio);
+    } else if (tipoBeneficio === "desconto_percentual") {
+      desconto = calcularDescontoCupomComanda({
+        tipo: "percentual",
+        valor: valorBeneficio,
+        subtotal: params.subtotal,
+      });
+    }
+  }
+
+  return desconto;
+}
+
+async function carregarSubtotalComanda(params: {
+  supabase: SupabaseClient;
+  idSalao: string;
+  idComanda: string;
+}) {
+  const { data } = await params.supabase
+    .from("comanda_itens")
+    .select("valor_total")
+    .eq("id_salao", params.idSalao)
+    .eq("id_comanda", params.idComanda)
+    .eq("ativo", true);
+
+  return ((data || []) as Array<{ valor_total?: number | null }>).reduce(
+    (total, item) => total + Number(item.valor_total || 0),
+    0
+  );
+}
+
 async function buscarItensComboServico(params: {
   supabase: SupabaseClient;
   idSalao: string;
@@ -587,7 +689,7 @@ export async function sincronizarAgendamentoComComandaNoCaixa(params: {
     await Promise.all([
       supabase
         .from("agendamentos")
-        .select("id, cliente_id, observacoes, id_cupom_salao, codigo_cupom, desconto_cupom_valor")
+        .select("id, cliente_id, observacoes, id_cupom_salao, codigo_cupom, desconto_cupom_valor, data")
         .eq("id", idAgendamento)
         .eq("id_salao", idSalao)
         .maybeSingle(),
@@ -693,7 +795,24 @@ export async function sincronizarAgendamentoComComandaNoCaixa(params: {
       .eq("id_salao", idSalao);
   }
 
-  const descontoCupom = Number(agendamento.desconto_cupom_valor || 0);
+  const subtotalComanda = await carregarSubtotalComanda({
+    supabase,
+    idSalao,
+    idComanda: comanda.id,
+  });
+  const descontoCupomSalvo = Number(agendamento.desconto_cupom_valor || 0);
+  const descontoCupom =
+    descontoCupomSalvo > 0
+      ? descontoCupomSalvo
+      : await calcularDescontoCupomParaComanda({
+          supabase,
+          idSalao,
+          idCupom: String(agendamento.id_cupom_salao || ""),
+          idServico,
+          data: agendamento.data,
+          subtotal: subtotalComanda,
+        });
+
   if (agendamento.id_cupom_salao && descontoCupom > 0) {
     const descontoAtual = Number(comanda.desconto || 0);
     await supabase
@@ -705,16 +824,51 @@ export async function sincronizarAgendamentoComComandaNoCaixa(params: {
       .eq("id", comanda.id)
       .eq("id_salao", idSalao);
 
-    await (supabase as any)
+    if (descontoCupomSalvo <= 0) {
+      await supabase
+        .from("agendamentos")
+        .update({
+          desconto_cupom_valor: descontoCupom,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", idAgendamento)
+        .eq("id_salao", idSalao);
+    }
+
+    const usoPayload = {
+      id_salao: idSalao,
+      id_cupom: agendamento.id_cupom_salao,
+      id_cliente: agendamento.cliente_id,
+      id_agendamento: idAgendamento,
+      id_comanda: comanda.id,
+      codigo: agendamento.codigo_cupom,
+      valor_desconto: descontoCupom,
+      status: "aplicado",
+      metadata: {
+        origem: "caixa",
+        id_servico: idServico,
+        data: agendamento.data,
+      },
+      updated_at: new Date().toISOString(),
+    };
+
+    const { data: usoExistente } = await (supabase as any)
       .from("cupom_salao_usos")
-      .update({
-        id_comanda: comanda.id,
-        status: "aplicado",
-        updated_at: new Date().toISOString(),
-      })
+      .select("id")
       .eq("id_salao", idSalao)
       .eq("id_agendamento", idAgendamento)
-      .eq("id_cupom", agendamento.id_cupom_salao);
+      .eq("id_cupom", agendamento.id_cupom_salao)
+      .limit(1)
+      .maybeSingle();
+
+    if (usoExistente?.id) {
+      await (supabase as any)
+        .from("cupom_salao_usos")
+        .update(usoPayload)
+        .eq("id", usoExistente.id);
+    } else {
+      await (supabase as any).from("cupom_salao_usos").insert(usoPayload);
+    }
 
     await recalcularTotaisComanda({
       supabase,
