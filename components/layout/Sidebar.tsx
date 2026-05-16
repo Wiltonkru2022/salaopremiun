@@ -104,7 +104,7 @@ export default function Sidebar({
         )}
       >
         <div className="flex h-full flex-col overflow-hidden border-r border-zinc-200 bg-white">
-          <div className="flex items-start justify-between gap-2 border-b border-zinc-100 px-4 py-4 lg:block">
+          <div className="flex min-h-[61px] items-center justify-between gap-2 border-b border-zinc-200 px-4 py-2.5">
             <div className="flex min-w-0 items-center gap-2.5">
               <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-zinc-950 text-white ring-1 ring-zinc-900/10">
                 <img

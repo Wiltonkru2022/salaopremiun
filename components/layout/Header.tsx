@@ -255,7 +255,7 @@ export default function Header({
           <Menu size={18} />
         </button>
 
-        <div className="min-w-0 flex-1 basis-[170px] overflow-hidden">
+        <div className="min-w-0 flex-1 basis-[170px] overflow-hidden lg:max-w-[300px] xl:max-w-[340px]">
           <div className="flex min-w-0 items-center gap-2">
             <h1 className="truncate font-display text-[0.98rem] font-bold tracking-[-0.02em] text-zinc-950 sm:text-[1rem] xl:text-[1.08rem]">
               {pageMeta.title}
@@ -283,7 +283,7 @@ export default function Header({
 
         <div
           ref={searchRef}
-          className="relative hidden min-w-[260px] max-w-[520px] flex-1 xl:block"
+          className="relative hidden min-w-[320px] max-w-[720px] flex-[1.6] xl:block"
         >
           <div
             className={clsx(

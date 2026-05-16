@@ -169,7 +169,7 @@ export default function AppShell({
         />
 
         <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-          <div className="fixed left-0 right-0 top-0 z-30 border-b border-zinc-200 bg-white lg:left-[214px]">
+          <div className="fixed left-0 right-0 top-0 z-30 bg-white lg:left-[214px]">
             <Header
               userName={userName}
               userEmail={userEmail}
