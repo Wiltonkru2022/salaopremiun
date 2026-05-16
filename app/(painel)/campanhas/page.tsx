@@ -16,7 +16,7 @@ import {
 import { getPainelUserContext } from "@/lib/auth/get-painel-user-context";
 import { canUsePlanFeature } from "@/lib/plans/access";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
-import { atualizarStatusCampanhaAction } from "./actions";
+import { atualizarStatusCampanhaAction, auditarCampanhasAction } from "./actions";
 import PaginationLinks from "@/components/ui/PaginationLinks";
 
 export const metadata = {
@@ -360,6 +360,11 @@ export default async function CampanhasPage({
               <Plus size={18} />
               Criar campanha
             </a>
+            <form action={auditarCampanhasAction} className="mt-3">
+              <button className="inline-flex h-11 items-center gap-2 rounded-2xl border border-white/15 bg-white/10 px-4 text-sm font-black text-white transition hover:bg-white/15" type="submit">
+                Auditar campanhas antigas
+              </button>
+            </form>
           </div>
 
           <div className="rounded-[1.75rem] border border-white/10 bg-white/[0.06] p-4 backdrop-blur">
@@ -451,7 +456,7 @@ export default async function CampanhasPage({
                       </p>
                     </div>
                     <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-right">
-                      <p className="text-xs font-black uppercase tracking-[0.14em] text-zinc-400">Usos</p>
+                      <p className="text-xs font-black uppercase tracking-[0.14em] text-zinc-400">Usos finalizados</p>
                       <strong className="text-2xl font-black text-zinc-950">
                         {usados}{limite ? `/${limite}` : ""}
                       </strong>
@@ -472,7 +477,7 @@ export default async function CampanhasPage({
                       </p>
                     </div>
                     <div className="rounded-2xl bg-zinc-50 p-4">
-                      <p className="text-xs font-black uppercase tracking-[0.14em] text-zinc-400">Desconto reservado</p>
+                      <p className="text-xs font-black uppercase tracking-[0.14em] text-zinc-400">Desconto aplicado</p>
                       <p className="mt-1 text-sm font-bold text-zinc-800">{money(Number(cupom.descontos || 0))}</p>
                     </div>
                   </div>

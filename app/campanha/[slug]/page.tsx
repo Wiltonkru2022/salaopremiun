@@ -9,8 +9,8 @@ import {
 import {
   getCampaignAvailability,
   loadPublicCampaign,
-  registerCampaignClick,
 } from "@/lib/campanhas/public";
+import CampaignClickTracker from "@/components/campanhas/CampaignClickTracker";
 
 export const metadata = {
   title: "Campanha",
@@ -48,14 +48,6 @@ export default async function PublicCampaignPage({
     context: null,
     reason: "unauthorized" as const,
   }));
-
-  if (campaign?.id) {
-    await registerCampaignClick({
-      idCampanha: campaign.id,
-      idSalao: campaign.idSalao,
-      metadata: { slug },
-    }).catch(() => null);
-  }
 
   async function resgatarEAgendarAction() {
     "use server";
@@ -111,6 +103,14 @@ export default async function PublicCampaignPage({
 
   return (
     <main className="min-h-dvh bg-[#f7f3ea] px-4 py-6 text-zinc-950">
+      {campaign?.id ? (
+        <CampaignClickTracker
+          idCampanha={campaign.id}
+          idSalao={campaign.idSalao}
+          origem="campanha_publica"
+          slug={slug}
+        />
+      ) : null}
       <section className="mx-auto max-w-5xl overflow-hidden rounded-[2rem] border border-zinc-200 bg-white shadow-[0_30px_90px_rgba(15,23,42,0.15)]">
         <div className="relative min-h-[280px] overflow-hidden bg-zinc-950 p-6 text-white md:p-10">
           {salao?.foto_capa_url ? (

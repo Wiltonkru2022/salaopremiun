@@ -22,6 +22,7 @@ import {
   atualizarCampanhaAction,
   atualizarServicosCampanhaAction,
   atualizarStatusCampanhaAction,
+  auditarCampanhasAction,
   excluirCampanhaAction,
   removerClienteCampanhaAction,
 } from "../actions";
@@ -274,13 +275,30 @@ async function loadCampanhaDetalhe(
         .order("data", { ascending: true })
         .limit(5000)
     : { data: [] };
+  const historicoComandasResult = clienteIdsCampanha.length
+    ? await (supabase as any)
+        .from("comandas")
+        .select("id, id_cliente, status, created_at, fechada_em")
+        .eq("id_salao", idSalao)
+        .in("id_cliente", clienteIdsCampanha)
+        .eq("status", "fechada")
+        .order("created_at", { ascending: true })
+        .limit(5000)
+    : { data: [] };
   const historicoPorCliente = new Map<string, Array<Record<string, any>>>();
   for (const item of ((historicoClientesResult.data || []) as Array<Record<string, any>>)) {
     const idCliente = String(item.cliente_id || "");
     if (!idCliente || isCanceledStatus(item.status)) continue;
     historicoPorCliente.set(idCliente, [...(historicoPorCliente.get(idCliente) || []), item]);
   }
+  const comandasPorCliente = new Map<string, Array<Record<string, any>>>();
+  for (const item of ((historicoComandasResult.data || []) as Array<Record<string, any>>)) {
+    const idCliente = String(item.id_cliente || "");
+    if (!idCliente) continue;
+    comandasPorCliente.set(idCliente, [...(comandasPorCliente.get(idCliente) || []), item]);
+  }
   const clientesNovos = new Set<string>();
+  const campanhaCriadaEm = toDateKey(campanhaResult.data.created_at);
   for (const agenda of agendamentos) {
     if (isCanceledStatus(agenda.status)) continue;
     const idCliente = String(agenda.cliente_id || "");
@@ -292,7 +310,22 @@ async function loadCampanhaDetalhe(
       const dataHistorico = toDateKey(item.data || item.created_at);
       return dataHistorico && dataAgenda && dataHistorico < dataAgenda;
     });
-    if (!tinhaHistoricoAntes) clientesNovos.add(idCliente);
+    const tinhaComandaFechadaAntes = (comandasPorCliente.get(idCliente) || []).some((item) => {
+      const dataComanda = toDateKey(item.fechada_em || item.created_at);
+      return dataComanda && dataAgenda && dataComanda < dataAgenda;
+    });
+    const cliente = getRelationOne(agenda.clientes);
+    const clienteCriadoEm = toDateKey(cliente?.created_at);
+    const clienteAntigoSemHistorico =
+      clienteCriadoEm &&
+      campanhaCriadaEm &&
+      clienteCriadoEm < campanhaCriadaEm &&
+      !tinhaHistoricoAntes &&
+      !tinhaComandaFechadaAntes;
+
+    if (!tinhaHistoricoAntes && !tinhaComandaFechadaAntes && !clienteAntigoSemHistorico) {
+      clientesNovos.add(idCliente);
+    }
   }
   const conversao = cliques > 0 ? Math.round((totalAgendamentos / cliques) * 100) : 0;
   const servicos = (servicosResult.data || []) as Array<Record<string, any>>;
@@ -395,14 +428,14 @@ export default async function CampanhaDetalhePage({
     data.servicos.map((servico) => [String(servico.id_servico), servico])
   );
   const kpiCards = [
-    { label: "Cliques", value: data.metricas.cliques, icon: Link2 },
-    { label: "Resgates", value: data.metricas.resgates, icon: Gift },
-    { label: "Agendamentos", value: data.metricas.agendamentos, icon: CalendarDays },
-    { label: "Conversão", value: `${data.metricas.conversao}%`, icon: BarChart3 },
-    { label: "Receita gerada", value: money(data.metricas.receitaGerada), icon: BarChart3 },
-    { label: "Descontos", value: money(data.metricas.descontoTotal), icon: Gift },
-    { label: "Clientes novos", value: data.metricas.clientesNovos, icon: Users },
-    { label: "Cancelados", value: data.metricas.cancelados, icon: CalendarDays },
+    { label: "Cliques", value: data.metricas.cliques, icon: Link2, hint: "Aberturas registradas no link da campanha." },
+    { label: "Resgates", value: data.metricas.resgates, icon: Gift, hint: "Clientes que ativaram o cupom na conta." },
+    { label: "Agendamentos", value: data.metricas.agendamentos, icon: CalendarDays, hint: "Reservas criadas com esta campanha." },
+    { label: "Conversão", value: `${data.metricas.conversao}%`, icon: BarChart3, hint: "Agendamentos divididos pelos cliques." },
+    { label: "Receita gerada", value: money(data.metricas.receitaGerada), icon: BarChart3, hint: "Soma das comandas fechadas originadas pela campanha." },
+    { label: "Descontos", value: money(data.metricas.descontoTotal), icon: Gift, hint: "Uso = comanda fechada com cupom aplicado." },
+    { label: "Clientes novos", value: data.metricas.clientesNovos, icon: Users, hint: "Cliente criado na campanha e sem agendamento ou comanda fechada anterior." },
+    { label: "Cancelados", value: data.metricas.cancelados, icon: CalendarDays, hint: "Agendamentos da campanha cancelados." },
   ];
   const getUsosHref = (page: number) => {
     const params = new URLSearchParams();
@@ -458,11 +491,12 @@ export default async function CampanhaDetalhePage({
       </section>
 
       <section className="grid gap-4 md:grid-cols-4">
-        {kpiCards.map(({ label, value, icon: Icon }) => (
-          <div key={label} className="rounded-[1.5rem] border border-zinc-200 bg-white p-5 shadow-sm">
+        {kpiCards.map(({ label, value, icon: Icon, hint }) => (
+          <div key={label} title={hint} className="rounded-[1.5rem] border border-zinc-200 bg-white p-5 shadow-sm">
             <Icon className="text-amber-700" size={20} />
             <p className="mt-4 text-sm font-bold text-zinc-500">{String(label)}</p>
             <strong className="mt-1 block text-2xl font-black text-zinc-950">{String(value)}</strong>
+            <p className="mt-2 min-h-10 text-xs font-semibold leading-5 text-zinc-500">{hint}</p>
           </div>
         ))}
       </section>
@@ -581,6 +615,11 @@ export default async function CampanhaDetalhePage({
               <strong>{Number(campanha.limite_uso_total || 0) || "sem"} total</strong>
             </div>
           </div>
+          <form action={auditarCampanhasAction} className="mt-4">
+            <button type="submit" className="h-11 rounded-2xl border border-zinc-200 bg-white px-4 text-sm font-black text-zinc-950 transition hover:bg-zinc-50">
+              Auditar campanhas antigas
+            </button>
+          </form>
         </div>
 
         <div className="rounded-[1.75rem] border border-zinc-200 bg-white p-5 shadow-sm">

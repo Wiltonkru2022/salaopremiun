@@ -8,7 +8,7 @@ import {
   loadCouponRedemptionForAccount,
   redeemClienteCoupon,
 } from "@/lib/client-app/coupons";
-import { registerCampaignClick } from "@/lib/campanhas/public";
+import CampaignClickTracker from "@/components/campanhas/CampaignClickTracker";
 
 export const metadata = {
   title: "Resgatar cupom",
@@ -40,14 +40,6 @@ export default async function ResgatarCupomPage({
       ? cupom.saloes[0]
       : cupom.saloes
     : null;
-
-  if (cupom?.id && cupom?.id_salao) {
-    await registerCampaignClick({
-      idCampanha: String(cupom.id),
-      idSalao: String(cupom.id_salao),
-      metadata: { origem: "resgatar_cupom", token },
-    }).catch(() => null);
-  }
 
   const resgateAtual =
     cupom?.id && validation.context?.idConta
@@ -117,6 +109,14 @@ export default async function ResgatarCupomPage({
 
   return (
     <main className="min-h-dvh overflow-hidden bg-[#f7f7f4] px-4 py-8 text-zinc-950">
+      {cupom?.id && cupom?.id_salao ? (
+        <CampaignClickTracker
+          idCampanha={String(cupom.id)}
+          idSalao={String(cupom.id_salao)}
+          origem="resgatar_cupom"
+          token={token}
+        />
+      ) : null}
       <section className="mx-auto flex min-h-[calc(100dvh-4rem)] w-full max-w-md flex-col justify-center">
         <div className="relative overflow-hidden rounded-[2rem] border border-zinc-200 bg-white p-5 shadow-[0_24px_70px_rgba(15,23,42,0.12)]">
           <div className="pointer-events-none absolute -right-20 -top-20 h-52 w-52 rounded-full bg-amber-200/50 blur-3xl" />

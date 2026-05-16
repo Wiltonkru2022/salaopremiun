@@ -395,6 +395,86 @@ export async function excluirCampanhaAction(formData: FormData) {
   redirect("/campanhas?ok=Campanha%20excluida.");
 }
 
+export async function auditarCampanhasAction() {
+  const { usuario } = await requireCampaignMutation();
+  const supabase = getSupabaseAdmin();
+
+  const { data: cupons } = await (supabase as any)
+    .from("cupons_salao")
+    .select("id")
+    .eq("id_salao", usuario.id_salao)
+    .order("created_at", { ascending: false })
+    .limit(250);
+
+  const cupomIds = ((cupons || []) as Array<Record<string, unknown>>)
+    .map((cupom) => String(cupom.id || ""))
+    .filter(Boolean);
+
+  if (!cupomIds.length) {
+    redirect("/campanhas?ok=Nenhuma%20campanha%20para%20auditar.");
+  }
+
+  const [{ data: agendamentos }, { data: eventos }] = await Promise.all([
+    (supabase as any)
+      .from("agendamentos")
+      .select("id, id_cupom_salao, cliente_id, servico_id, status, created_at")
+      .eq("id_salao", usuario.id_salao)
+      .in("id_cupom_salao", cupomIds)
+      .limit(5000),
+    (supabase as any)
+      .from("campanha_eventos")
+      .select("id_cupom, tipo, metadata")
+      .eq("id_salao", usuario.id_salao)
+      .in("id_cupom", cupomIds)
+      .in("tipo", ["agendamento", "cancelamento"])
+      .limit(10000),
+  ]);
+
+  const existentes = new Set<string>();
+  for (const evento of ((eventos || []) as Array<Record<string, any>>)) {
+    const idAgendamento = String(evento.metadata?.id_agendamento || "");
+    if (idAgendamento) {
+      existentes.add(`${String(evento.id_cupom || "")}:${String(evento.tipo || "")}:${idAgendamento}`);
+    }
+  }
+
+  const novosEventos = ((agendamentos || []) as Array<Record<string, unknown>>)
+    .map((agenda) => {
+      const idCupom = String(agenda.id_cupom_salao || "");
+      const idAgendamento = String(agenda.id || "");
+      const status = String(agenda.status || "").trim().toLowerCase();
+      const tipo = status === "cancelado" || status === "cancelada" ? "cancelamento" : "agendamento";
+      if (!idCupom || !idAgendamento || existentes.has(`${idCupom}:${tipo}:${idAgendamento}`)) return null;
+      return {
+        id_salao: usuario.id_salao,
+        id_cupom: idCupom,
+        id_cliente: String(agenda.cliente_id || "") || null,
+        tipo,
+        created_at: String(agenda.created_at || new Date().toISOString()),
+        metadata: {
+          origem: "auditoria_campanha",
+          id_agendamento: idAgendamento,
+          id_servico: String(agenda.servico_id || "") || null,
+          status_original: status || null,
+        },
+      };
+    })
+    .filter(Boolean);
+
+  if (novosEventos.length) {
+    const { error } = await (supabase as any)
+      .from("campanha_eventos")
+      .insert(novosEventos.slice(0, 2000));
+
+    if (error) {
+      redirect(`/campanhas?erro=${encodeURIComponent(error.message)}`);
+    }
+  }
+
+  revalidatePath("/campanhas");
+  redirect(`/campanhas?ok=${encodeURIComponent(`${novosEventos.length} evento(s) antigo(s) auditado(s).`)}`);
+}
+
 export async function atualizarServicosCampanhaAction(formData: FormData) {
   const { usuario } = await requireCampaignMutation();
   const idCampanha = String(formData.get("id_campanha") || "").trim();
