@@ -14,6 +14,7 @@ import {
   Users,
 } from "lucide-react";
 import { getPainelUserContext } from "@/lib/auth/get-painel-user-context";
+import { canUsePlanFeature } from "@/lib/plans/access";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import PaginationLinks from "@/components/ui/PaginationLinks";
 import {
@@ -26,7 +27,7 @@ import {
 } from "../actions";
 
 export const metadata = {
-  title: "Relatorio da campanha",
+  title: "Relatório da campanha",
 };
 
 function siteUrl() {
@@ -275,6 +276,15 @@ export default async function CampanhaDetalhePage({
   if (!user || !usuario?.id_salao) redirect("/login");
   if (String(usuario.nivel || "").toLowerCase() !== "admin") redirect("/dashboard");
 
+  const featureAccess = await canUsePlanFeature(usuario.id_salao, "campanhas");
+  if (!featureAccess.allowed) {
+    redirect(
+      `/comparar-planos?recurso=campanhas&erro=${encodeURIComponent(
+        featureAccess.reason || "Campanhas não está liberado no plano atual."
+      )}`
+    );
+  }
+
   const paginaUsosParam = Array.isArray(query.pagina_usos) ? query.pagina_usos[0] : query.pagina_usos;
   const paginaClientesParam = Array.isArray(query.pagina_clientes) ? query.pagina_clientes[0] : query.pagina_clientes;
   const buscaClienteParam = Array.isArray(query.busca_cliente) ? query.busca_cliente[0] : query.busca_cliente;
@@ -316,7 +326,7 @@ export default async function CampanhaDetalhePage({
     { label: "Cliques", value: data.metricas.cliques, icon: Link2 },
     { label: "Resgates", value: data.metricas.resgates, icon: Gift },
     { label: "Agendamentos", value: data.metricas.agendamentos, icon: CalendarDays },
-    { label: "Conversao", value: `${data.metricas.conversao}%`, icon: BarChart3 },
+    { label: "Conversão", value: `${data.metricas.conversao}%`, icon: BarChart3 },
     { label: "Receita gerada", value: money(data.metricas.receitaGerada), icon: BarChart3 },
     { label: "Descontos", value: money(data.metricas.descontoTotal), icon: Gift },
     { label: "Clientes novos", value: data.metricas.clientesNovos, icon: Users },
@@ -358,7 +368,7 @@ export default async function CampanhaDetalhePage({
         <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
           <div>
             <span className="inline-flex rounded-full bg-white/10 px-3 py-1 text-[11px] font-black uppercase tracking-[0.14em] text-amber-100">
-              Relatorio da campanha
+              Relatório da campanha
             </span>
             <h1 className="mt-4 text-4xl font-black tracking-tight">{String(campanha.nome || "Campanha")}</h1>
             <p className="mt-3 max-w-3xl text-sm leading-6 text-zinc-300">
@@ -415,7 +425,7 @@ export default async function CampanhaDetalhePage({
 
           <div className="mt-4 grid gap-4 lg:grid-cols-2">
             <label className="grid gap-2 text-sm font-bold text-zinc-700">
-              Descricao interna
+              Descrição interna
               <textarea name="descricao_interna" rows={3} defaultValue={String(campanha.descricao_interna || "")} className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 outline-none focus:border-zinc-950" />
             </label>
             <label className="grid gap-2 text-sm font-bold text-zinc-700">
@@ -426,7 +436,7 @@ export default async function CampanhaDetalhePage({
 
           <div className="mt-4 grid gap-4 lg:grid-cols-5">
             <label className="grid gap-2 text-sm font-bold text-zinc-700">
-              Inicio
+              Início
               <input name="valido_de" type="date" defaultValue={String(campanha.valido_de || "").slice(0, 10)} className="h-12 rounded-2xl border border-zinc-200 bg-zinc-50 px-4 outline-none" />
             </label>
             <label className="grid gap-2 text-sm font-bold text-zinc-700">
@@ -492,7 +502,7 @@ export default async function CampanhaDetalhePage({
             </div>
             <div className="rounded-2xl bg-zinc-50 p-4">
               <p className="text-xs font-black uppercase tracking-[0.14em] text-zinc-400">Validade</p>
-              <strong>{formatDate(campanha.valido_de)} ate {formatDate(campanha.valido_ate)}</strong>
+              <strong>{formatDate(campanha.valido_de)} até {formatDate(campanha.valido_ate)}</strong>
             </div>
             <div className="rounded-2xl bg-zinc-50 p-4">
               <p className="text-xs font-black uppercase tracking-[0.14em] text-zinc-400">Limites</p>
@@ -503,16 +513,16 @@ export default async function CampanhaDetalhePage({
 
         <div className="rounded-[1.75rem] border border-zinc-200 bg-white p-5 shadow-sm">
           <h2 className="flex items-center gap-2 text-xl font-black text-zinc-950">
-            <Scissors size={18} /> Servicos vinculados
+            <Scissors size={18} /> Serviços vinculados
           </h2>
           <div className="mt-4 space-y-3">
             {data.servicos.map((servico) => {
               const rel = Array.isArray(servico.servicos) ? servico.servicos[0] : servico.servicos;
               return (
                 <div key={String(servico.id_servico)} className="rounded-2xl border border-zinc-100 bg-zinc-50 p-4">
-                  <strong className="text-zinc-950">{String(rel?.nome || "Servico")}</strong>
+                  <strong className="text-zinc-950">{String(rel?.nome || "Serviço")}</strong>
                   <p className="mt-1 text-sm text-zinc-500">
-                    {String(servico.tipo_beneficio || "beneficio")} · {Number(servico.valor_beneficio || 0)}
+                    {String(servico.tipo_beneficio || "benefício")} · {Number(servico.valor_beneficio || 0)}
                     {servico.limite_uso_servico ? ` · limite ${servico.limite_uso_servico}` : ""}
                   </p>
                 </div>
@@ -529,10 +539,10 @@ export default async function CampanhaDetalhePage({
         <form action={atualizarServicosCampanhaAction} className="rounded-[1.75rem] border border-zinc-200 bg-white p-5 shadow-sm xl:col-span-2">
           <input type="hidden" name="id_campanha" value={String(campanha.id)} />
           <h2 className="flex items-center gap-2 text-xl font-black text-zinc-950">
-            <Scissors size={18} /> Editar servicos permitidos
+            <Scissors size={18} /> Editar serviços permitidos
           </h2>
           <p className="mt-1 text-sm text-zinc-500">
-            Marque os servicos que aparecem na pagina publica da campanha e ajuste o beneficio.
+            Marque os serviços que aparecem na página pública da campanha e ajuste o benefício.
           </p>
           <div className="mt-4 grid gap-3 lg:grid-cols-2">
             {data.servicosDisponiveis.map((servico) => {
@@ -550,7 +560,7 @@ export default async function CampanhaDetalhePage({
                     />
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
-                        <strong className="truncate text-zinc-950">{String(servico.nome || "Servico")}</strong>
+                        <strong className="truncate text-zinc-950">{String(servico.nome || "Serviço")}</strong>
                         <span className="text-xs font-black text-zinc-500">{money(preco)}</span>
                       </div>
                       <div className="mt-3 grid gap-2 md:grid-cols-3">
@@ -586,7 +596,7 @@ export default async function CampanhaDetalhePage({
                         name={`beneficio_brinde_${servico.id}`}
                         defaultValue={String(vinculo?.brinde_descricao || "")}
                         className="mt-2 h-10 w-full rounded-xl border border-zinc-200 bg-white px-2 text-xs font-bold"
-                        placeholder="Descricao do brinde, se houver"
+                        placeholder="Descrição do brinde, se houver"
                       />
                     </div>
                   </div>
@@ -600,7 +610,7 @@ export default async function CampanhaDetalhePage({
             ) : null}
           </div>
           <button className="mt-4 h-11 rounded-2xl bg-zinc-950 px-5 text-sm font-black text-white" type="submit">
-            Salvar servicos
+            Salvar serviços
           </button>
         </form>
 
@@ -610,7 +620,7 @@ export default async function CampanhaDetalhePage({
             <div>
               <h2 className="text-xl font-black text-red-800">Excluir campanha</h2>
               <p className="mt-1 max-w-3xl text-sm leading-6 text-red-700">
-                Remove o link, os servicos vinculados, clientes permitidos, resgates e eventos da campanha. Agendamentos que ja usaram o cupom ficam preservados, mas sem vinculo ativo com esta campanha.
+                Remove o link, os serviços vinculados, clientes permitidos, resgates e eventos da campanha. Agendamentos que já usaram o cupom ficam preservados, mas sem vínculo ativo com esta campanha.
               </p>
               <label className="mt-4 grid max-w-sm gap-2 text-sm font-black text-red-800">
                 Digite EXCLUIR para confirmar
@@ -769,7 +779,7 @@ export default async function CampanhaDetalhePage({
 
         <div className="rounded-[1.75rem] border border-zinc-200 bg-white p-5 shadow-sm">
           <h2 className="flex items-center gap-2 text-xl font-black text-zinc-950">
-            <BarChart3 size={18} /> Servicos mais vendidos
+            <BarChart3 size={18} /> Serviços mais vendidos
           </h2>
           <div className="mt-4 space-y-3">
             {data.metricas.servicosMaisVendidos.map((servico) => (

@@ -64,6 +64,7 @@ export const PLANOS_CATALOGO: Record<PlanoCodigo, PlanoCatalogo> = {
       "App do profissional",
       "App do cliente",
       "Agenda com link manual do WhatsApp",
+      "Campanhas e cupons por link",
       "Google Calendar",
       "Suporte prioritário",
     ],
@@ -106,6 +107,7 @@ export const PLANOS_CATALOGO: Record<PlanoCodigo, PlanoCatalogo> = {
       "App do cliente",
       "Comissões avançadas",
       "Relatórios e dashboard avançados",
+      "Campanhas e cupons por link",
       "Suporte prioritário",
       "Google Calendar",
     ],
@@ -146,6 +148,7 @@ export const PLANOS_CATALOGO: Record<PlanoCodigo, PlanoCatalogo> = {
       "App do profissional",
       "App do cliente",
       "Agenda com link manual do WhatsApp",
+      "Campanhas e cupons por link",
       "Google Calendar",
     ],
     recursosBloqueados: ["Suporte prioritário"],
@@ -186,6 +189,7 @@ export const PLANOS_CATALOGO: Record<PlanoCodigo, PlanoCatalogo> = {
       "App do profissional",
       "App do cliente",
       "Agenda com link manual do WhatsApp",
+      "Campanhas e cupons por link",
       "Google Calendar",
       "Suporte prioritário",
     ],
@@ -254,6 +258,13 @@ export const PLANOS_TABELA_FEATURES: PlanoTabelaFeature[] = [
   {
     grupo: "Gestão e operação",
     nome: "Google Calendar automático",
+    basico: "Não liberado",
+    pro: "Liberado",
+    premium: "Liberado",
+  },
+  {
+    grupo: "Marketing e crescimento",
+    nome: "Campanhas e cupons por link",
     basico: "Não liberado",
     pro: "Liberado",
     premium: "Liberado",
@@ -413,7 +424,11 @@ export function getPlanoMinimoParaRecurso(
     return "basico";
   }
 
-  if (recurso === "campanhas" || recurso === "marketing") {
+  if (recurso === "campanhas") {
+    return "pro";
+  }
+
+  if (recurso === "marketing") {
     return "premium";
   }
 

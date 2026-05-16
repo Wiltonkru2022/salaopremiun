@@ -4,23 +4,19 @@ import {
   Cake,
   Clock3,
   Copy,
-  Gift,
   Link2,
   Megaphone,
   MessageCircle,
   Pause,
   Play,
   Plus,
-  Scissors,
   Sparkles,
   TrendingUp,
 } from "lucide-react";
 import { getPainelUserContext } from "@/lib/auth/get-painel-user-context";
+import { canUsePlanFeature } from "@/lib/plans/access";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
-import {
-  atualizarStatusCampanhaAction,
-  criarCampanhaCupomAction,
-} from "./actions";
+import { atualizarStatusCampanhaAction } from "./actions";
 import PaginationLinks from "@/components/ui/PaginationLinks";
 
 export const metadata = {
@@ -80,7 +76,7 @@ function campanhaWhatsAppMessage(cupom: Record<string, unknown>, link: string) {
   const mensagem = String(
     cupom.mensagem_cliente ||
       cupom.descricao ||
-      `Preparei uma campanha especial para voce: ${titulo}.`
+      `Preparei uma campanha especial para você: ${titulo}.`
   ).trim();
   return `${mensagem}\n\nAgende pelo link:\n${link}`;
 }
@@ -96,7 +92,6 @@ async function loadCampanhasData(idSalao: string, page: number, pageSize: number
 
   const [
     cuponsResult,
-    servicosResult,
     aniversariantesResult,
     clientesResult,
     agendamentosRecentesResult,
@@ -107,13 +102,6 @@ async function loadCampanhasData(idSalao: string, page: number, pageSize: number
       .eq("id_salao", idSalao)
       .order("created_at", { ascending: false })
       .range(from, to),
-    (supabase as any)
-      .from("servicos")
-      .select("id, nome, preco, preco_padrao, ativo, app_cliente_visivel")
-      .eq("id_salao", idSalao)
-      .eq("ativo", true)
-      .order("nome", { ascending: true })
-      .limit(120),
     (supabase as any)
       .from("clientes")
       .select("id, nome, telefone, whatsapp, data_nascimento")
@@ -266,7 +254,6 @@ async function loadCampanhasData(idSalao: string, page: number, pageSize: number
   return {
     cupons,
     totalCupons: Number(cuponsResult.count || 0),
-    servicos: (servicosResult.data || []) as Array<Record<string, unknown>>,
     aniversariantes,
     inativos,
     kpis: {
@@ -288,13 +275,21 @@ export default async function CampanhasPage({
   if (!user || !usuario?.id_salao) redirect("/login");
   if (String(usuario.nivel || "").toLowerCase() !== "admin") redirect("/dashboard");
 
+  const featureAccess = await canUsePlanFeature(usuario.id_salao, "campanhas");
+  if (!featureAccess.allowed) {
+    redirect(
+      `/comparar-planos?recurso=campanhas&erro=${encodeURIComponent(
+        featureAccess.reason || "Campanhas não está liberado no plano atual."
+      )}`
+    );
+  }
+
   const params = await searchParams;
   const paginaAtual = Math.max(0, Number(firstParam(params.pagina) || 1) - 1);
   const pageSize = 10;
   const data = await loadCampanhasData(usuario.id_salao, paginaAtual, pageSize).catch(() => ({
     cupons: [],
     totalCupons: 0,
-    servicos: [],
     aniversariantes: [],
     inativos: [],
     eventosRecentes: [],
@@ -302,7 +297,6 @@ export default async function CampanhasPage({
   }));
   const baseUrl = siteUrl();
   const campanhas = data.cupons as Array<Record<string, any>>;
-  const servicosCadastro = data.servicos as Array<Record<string, unknown>>;
   const getPageHref = (page: number) => {
     const nextParams = new URLSearchParams();
     nextParams.set("pagina", String(page + 1));
@@ -312,7 +306,7 @@ export default async function CampanhasPage({
     { label: "Campanhas ativas", value: data.kpis.ativas, icon: Sparkles },
     { label: "Cliques no link", value: data.kpis.cliques, icon: Link2 },
     { label: "Agendamentos", value: data.kpis.usos, icon: Megaphone },
-    { label: "Conversao", value: `${data.kpis.conversao}%`, icon: BarChart3 },
+    { label: "Conversão", value: `${data.kpis.conversao}%`, icon: BarChart3 },
   ];
 
   return (
@@ -334,14 +328,14 @@ export default async function CampanhasPage({
             </h1>
             <p className="mt-3 max-w-2xl text-base leading-7 text-zinc-300">
               Crie links privados, vincule serviços, controle limites e acompanhe
-              resultado sem deixar a promoção solta no app.
+              o resultado sem deixar a promoção solta no app.
             </p>
             <a
-              href="#nova-campanha"
+              href="/campanhas/nova"
               className="mt-6 inline-flex h-12 items-center gap-2 rounded-2xl bg-white px-5 text-sm font-black text-zinc-950 shadow-[0_0_28px_rgba(245,197,66,0.32)] transition hover:-translate-y-0.5"
             >
               <Plus size={18} />
-              Nova campanha
+              Criar campanha
             </a>
           </div>
 
@@ -396,7 +390,7 @@ export default async function CampanhasPage({
           <div className="flex items-center justify-between gap-4">
             <div>
               <h2 className="text-2xl font-black text-zinc-950">Lista de campanhas</h2>
-              <p className="text-sm text-zinc-500">Cards com status, link, validade, uso e servicos.</p>
+              <p className="text-sm text-zinc-500">Cards com status, link, validade, uso e serviços.</p>
             </div>
           </div>
 
@@ -445,7 +439,7 @@ export default async function CampanhasPage({
                     <div className="rounded-2xl bg-zinc-50 p-4">
                       <p className="text-xs font-black uppercase tracking-[0.14em] text-zinc-400">Validade</p>
                       <p className="mt-1 text-sm font-bold text-zinc-800">
-                        {formatDate(cupom.valido_de)} ate {formatDate(cupom.valido_ate)}
+                        {formatDate(cupom.valido_de)} até {formatDate(cupom.valido_ate)}
                       </p>
                     </div>
                     <div className="rounded-2xl bg-zinc-50 p-4">
@@ -470,13 +464,13 @@ export default async function CampanhasPage({
                           const rel = Array.isArray(servico.servicos) ? servico.servicos[0] : servico.servicos;
                           return (
                             <span key={String(servico.id_servico)} className="rounded-full bg-amber-50 px-3 py-1 text-xs font-black text-amber-800">
-                              {String(rel?.nome || "Servico")}
+                              {String(rel?.nome || "Serviço")}
                             </span>
                           );
                         })
                       ) : (
                         <span className="rounded-full bg-zinc-100 px-3 py-1 text-xs font-black text-zinc-500">
-                          todos os servicos
+                          todos os serviços
                         </span>
                       )}
                     </div>
@@ -505,7 +499,7 @@ export default async function CampanhasPage({
                       </button>
                     </form>
                     <a href={`/campanhas/${cupom.id}`} className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-zinc-200 bg-white px-4 text-sm font-black text-zinc-950">
-                      <BarChart3 size={16} /> Relatorio
+                      <BarChart3 size={16} /> Relatório
                     </a>
                   </div>
                 </article>
@@ -515,7 +509,10 @@ export default async function CampanhasPage({
               <div className="rounded-[1.75rem] border border-dashed border-zinc-300 bg-white p-8 text-center shadow-sm">
                 <Sparkles className="mx-auto text-amber-700" size={34} />
                 <h3 className="mt-3 text-2xl font-black text-zinc-950">Crie sua primeira campanha</h3>
-                <p className="mt-2 text-sm text-zinc-500">Monte um link privado, escolha os servicos e acompanhe o resultado.</p>
+                <p className="mt-2 text-sm text-zinc-500">Monte um link privado, escolha os serviços e acompanhe o resultado.</p>
+                <a href="/campanhas/nova" className="mt-5 inline-flex h-11 items-center justify-center rounded-2xl bg-zinc-950 px-5 text-sm font-black text-white">
+                  Criar campanha
+                </a>
               </div>
             ) : null}
             <PaginationLinks
@@ -548,29 +545,22 @@ export default async function CampanhasPage({
             <h2 className="flex items-center gap-2 text-lg font-black text-zinc-950">
               <Cake size={18} /> Aniversariantes
             </h2>
-            <p className="mt-1 text-sm text-zinc-500">{data.aniversariantes.length} cliente(s) neste mes.</p>
-            <form action={criarCampanhaCupomAction} className="mt-4 rounded-2xl border border-amber-100 bg-amber-50 p-4">
-              <input type="hidden" name="tipo" value="aniversariantes" />
-              <input type="hidden" name="template" value="aniversario" />
-              <input type="hidden" name="publico_alvo" value="aniversariantes_mes" />
-              <input type="hidden" name="publico_tipo" value="clientes_especificos" />
-              <input type="hidden" name="status_campanha" value="ativa" />
-              <input type="hidden" name="tipo_desconto" value="percentual" />
-              <input type="hidden" name="valor_desconto" value="10" />
-              <input type="hidden" name="limite_cliente" value="1" />
-              <input type="hidden" name="limite_total" value={String(Math.max(data.aniversariantes.length, 1))} />
-              <input type="hidden" name="mensagem_cliente" value="Feliz aniversario! Voce ganhou um cupom especial para cuidar de voce neste mes." />
+            <p className="mt-1 text-sm text-zinc-500">{data.aniversariantes.length} cliente(s) neste mês.</p>
+            <div className="mt-4 rounded-2xl border border-amber-100 bg-amber-50 p-4">
               <p className="text-sm font-bold leading-6 text-amber-950">
-                Cria um cupom de 10% e libera automaticamente para os aniversariantes ativos deste mês.
+                Use o modelo de aniversário para criar um cupom de 10% para os clientes ativos deste mês.
               </p>
-              <button
-                className="mt-3 inline-flex h-10 items-center justify-center rounded-xl bg-zinc-950 px-4 text-xs font-black text-white disabled:opacity-50"
-                type="submit"
-                disabled={!data.aniversariantes.length}
+              <a
+                href="/campanhas/nova?template=aniversario"
+                className={`mt-3 inline-flex h-10 items-center justify-center rounded-xl px-4 text-xs font-black ${
+                  data.aniversariantes.length
+                    ? "bg-zinc-950 text-white"
+                    : "pointer-events-none bg-zinc-200 text-zinc-400"
+                }`}
               >
                 Criar cupom de aniversário
-              </button>
-            </form>
+              </a>
+            </div>
             <div className="mt-4 space-y-2">
               {data.aniversariantes.slice(0, 5).map((cliente) => (
                 <div key={String(cliente.id)} className="rounded-2xl border border-zinc-100 bg-zinc-50 px-4 py-3 text-sm">
@@ -583,137 +573,6 @@ export default async function CampanhasPage({
         </aside>
       </section>
 
-      <section id="nova-campanha" className="rounded-[2rem] border border-zinc-200 bg-white p-5 shadow-sm md:p-6">
-        <div className="flex items-center gap-3">
-          <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-zinc-950 text-white">
-            <Gift size={22} />
-          </span>
-          <div>
-            <h2 className="text-2xl font-black text-zinc-950">Criar campanha</h2>
-            <p className="text-sm text-zinc-500">Dados, link, validade, limites e servicos permitidos.</p>
-          </div>
-        </div>
-
-        <form action={criarCampanhaCupomAction} className="mt-6 space-y-6">
-          <input type="hidden" name="tipo" value="manual" />
-          <div className="grid gap-4 lg:grid-cols-3">
-            <label className="grid gap-2 text-sm font-bold text-zinc-700">
-              Nome da campanha
-              <input name="titulo" required className="h-12 rounded-2xl border border-zinc-200 bg-zinc-50 px-4 outline-none focus:border-zinc-950" placeholder="Promocao Escova Maio" />
-            </label>
-            <label className="grid gap-2 text-sm font-bold text-zinc-700">
-              Slug do link
-              <input name="slug" className="h-12 rounded-2xl border border-zinc-200 bg-zinc-50 px-4 lowercase outline-none focus:border-zinc-950" placeholder="escova-maio" />
-            </label>
-            <label className="grid gap-2 text-sm font-bold text-zinc-700">
-              Codigo
-              <input name="codigo" className="h-12 rounded-2xl border border-zinc-200 bg-zinc-50 px-4 uppercase outline-none focus:border-zinc-950" placeholder="ESCOVA20" />
-            </label>
-          </div>
-
-          <div className="grid gap-4 lg:grid-cols-2">
-            <label className="grid gap-2 text-sm font-bold text-zinc-700">
-              Descricao interna
-              <textarea name="descricao_interna" rows={3} className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 outline-none focus:border-zinc-950" placeholder="Controle interno do salao." />
-            </label>
-            <label className="grid gap-2 text-sm font-bold text-zinc-700">
-              Mensagem para cliente
-              <textarea name="mensagem_cliente" rows={3} className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 outline-none focus:border-zinc-950" placeholder="Agende pelo link e ganhe 20% de desconto." />
-            </label>
-          </div>
-
-          <div className="grid gap-4 lg:grid-cols-5">
-            <label className="grid gap-2 text-sm font-bold text-zinc-700">
-              Status
-              <select name="status_campanha" className="h-12 rounded-2xl border border-zinc-200 bg-zinc-50 px-4 outline-none">
-                <option value="ativa">Ativa</option>
-                <option value="pausada">Pausada</option>
-              </select>
-            </label>
-            <label className="grid gap-2 text-sm font-bold text-zinc-700">
-              Inicio
-              <input name="valido_de" type="date" className="h-12 rounded-2xl border border-zinc-200 bg-zinc-50 px-4 outline-none" />
-            </label>
-            <label className="grid gap-2 text-sm font-bold text-zinc-700">
-              Fim
-              <input name="valido_ate" type="date" className="h-12 rounded-2xl border border-zinc-200 bg-zinc-50 px-4 outline-none" />
-            </label>
-            <label className="grid gap-2 text-sm font-bold text-zinc-700">
-              Limite total
-              <input name="limite_total" type="number" min="1" className="h-12 rounded-2xl border border-zinc-200 bg-zinc-50 px-4 outline-none" placeholder="50" />
-            </label>
-            <label className="grid gap-2 text-sm font-bold text-zinc-700">
-              Limite por dia
-              <input name="limite_dia" type="number" min="1" className="h-12 rounded-2xl border border-zinc-200 bg-zinc-50 px-4 outline-none" placeholder="5" />
-            </label>
-          </div>
-
-          <div className="grid gap-4 lg:grid-cols-4">
-            <label className="grid gap-2 text-sm font-bold text-zinc-700">
-              Publico
-              <select name="publico_tipo" className="h-12 rounded-2xl border border-zinc-200 bg-zinc-50 px-4 outline-none">
-                <option value="link">Aberta pelo link</option>
-                <option value="clientes_especificos">Clientes especificos</option>
-                <option value="novos_clientes">Novos clientes</option>
-              </select>
-            </label>
-            <label className="grid gap-2 text-sm font-bold text-zinc-700">
-              Tipo de beneficio
-              <select name="tipo_desconto" className="h-12 rounded-2xl border border-zinc-200 bg-zinc-50 px-4 outline-none">
-                <option value="percentual">Desconto em %</option>
-                <option value="valor_fixo">Desconto em R$</option>
-              </select>
-            </label>
-            <label className="grid gap-2 text-sm font-bold text-zinc-700">
-              Valor padrao
-              <input name="valor_desconto" required type="number" min="1" step="0.01" className="h-12 rounded-2xl border border-zinc-200 bg-zinc-50 px-4 outline-none" placeholder="20" />
-            </label>
-            <label className="grid gap-2 text-sm font-bold text-zinc-700">
-              Limite por cliente
-              <input name="limite_cliente" type="number" min="1" defaultValue={1} className="h-12 rounded-2xl border border-zinc-200 bg-zinc-50 px-4 outline-none" />
-            </label>
-          </div>
-
-          <div className="rounded-[1.5rem] border border-zinc-200 bg-zinc-50 p-4">
-            <div className="flex items-center gap-2">
-              <Scissors size={18} className="text-amber-700" />
-              <h3 className="text-lg font-black text-zinc-950">Servicos permitidos</h3>
-            </div>
-            <p className="mt-1 text-sm text-zinc-500">Se nenhum servico for marcado, o cupom fica sem vitrine publica de servicos.</p>
-            <div className="mt-4 grid gap-3 lg:grid-cols-2">
-              {servicosCadastro.map((servico) => {
-                const preco = Number(servico.preco_padrao ?? servico.preco ?? 0);
-                return (
-                  <label key={String(servico.id)} className="rounded-2xl border border-zinc-200 bg-white p-4">
-                    <div className="flex items-start gap-3">
-                      <input name="servicos" value={String(servico.id)} type="checkbox" className="mt-1 h-4 w-4 accent-zinc-950" />
-                      <div className="min-w-0 flex-1">
-                        <strong className="block truncate text-sm text-zinc-950">{String(servico.nome || "Servico")}</strong>
-                        <span className="text-xs font-bold text-zinc-500">Preco normal: {money(preco)}</span>
-                        <div className="mt-3 grid gap-2 md:grid-cols-3">
-                          <select name={`beneficio_tipo_${servico.id}`} className="h-10 rounded-xl border border-zinc-200 bg-zinc-50 px-2 text-xs font-bold">
-                            <option value="desconto_percentual">%</option>
-                            <option value="desconto_valor">R$ off</option>
-                            <option value="preco_fixo">Preco fixo</option>
-                            <option value="brinde">Brinde</option>
-                          </select>
-                          <input name={`beneficio_valor_${servico.id}`} type="number" min="0" step="0.01" className="h-10 rounded-xl border border-zinc-200 bg-zinc-50 px-2 text-xs font-bold" placeholder="20" />
-                          <input name={`limite_servico_${servico.id}`} type="number" min="1" className="h-10 rounded-xl border border-zinc-200 bg-zinc-50 px-2 text-xs font-bold" placeholder="limite" />
-                        </div>
-                      </div>
-                    </div>
-                  </label>
-                );
-              })}
-            </div>
-          </div>
-
-          <button className="inline-flex h-13 items-center gap-2 rounded-2xl bg-zinc-950 px-6 py-4 text-sm font-black text-white shadow-[0_18px_30px_rgba(15,23,42,0.18)]" type="submit">
-            <Sparkles size={18} />
-            Criar campanha premium
-          </button>
-        </form>
-      </section>
     </main>
   );
 }

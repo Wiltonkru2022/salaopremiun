@@ -4,6 +4,7 @@ import { randomBytes } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getPainelUserContext } from "@/lib/auth/get-painel-user-context";
+import { PlanAccessError, assertCanMutatePlanFeature } from "@/lib/plans/access";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 const SPECIAL_TEMPLATES: Record<string, { nome: string; descricao: string; codigo: string }> = {
@@ -14,7 +15,7 @@ const SPECIAL_TEMPLATES: Record<string, { nome: string; descricao: string; codig
   },
   namorados: {
     nome: "Dia dos Namorados",
-    descricao: "Um presente para cuidar de voce neste mes especial.",
+    descricao: "Um presente para cuidar de você neste mês especial.",
     codigo: "AMOR",
   },
   natal: {
@@ -28,8 +29,8 @@ const SPECIAL_TEMPLATES: Record<string, { nome: string; descricao: string; codig
     codigo: "BLACK",
   },
   aniversario: {
-    nome: "Aniversariantes do mes",
-    descricao: "Um presente especial para clientes que fazem aniversario neste mes.",
+    nome: "Aniversariantes do mês",
+    descricao: "Um presente especial para clientes que fazem aniversário neste mês.",
     codigo: "NIVER",
   },
 };
@@ -77,8 +78,23 @@ async function requireCampaignAdmin() {
   return { user, usuario };
 }
 
+async function requireCampaignMutation() {
+  const context = await requireCampaignAdmin();
+  try {
+    await assertCanMutatePlanFeature(context.usuario.id_salao, "campanhas");
+  } catch (error) {
+    if (error instanceof PlanAccessError) {
+      redirect(
+        `/comparar-planos?recurso=campanhas&erro=${encodeURIComponent(error.message)}`
+      );
+    }
+    throw error;
+  }
+  return context;
+}
+
 export async function criarCampanhaCupomAction(formData: FormData) {
-  const { usuario } = await requireCampaignAdmin();
+  const { usuario } = await requireCampaignMutation();
   const tipo = String(formData.get("tipo") || "manual");
   const templateKey = String(formData.get("template") || "");
   const template = SPECIAL_TEMPLATES[templateKey];
@@ -112,7 +128,7 @@ export async function criarCampanhaCupomAction(formData: FormData) {
           : null;
 
   if (!titulo || valorDesconto <= 0) {
-    redirect("/campanhas?erro=Preencha%20titulo%20e%20desconto.");
+    redirect("/campanhas/nova?erro=Preencha%20titulo%20e%20desconto.");
   }
 
   const supabase = getSupabaseAdmin();
@@ -157,7 +173,7 @@ export async function criarCampanhaCupomAction(formData: FormData) {
   }).select("id").single();
 
   if (error || !cupom?.id) {
-    redirect(`/campanhas?erro=${encodeURIComponent(error?.message || "Nao foi possivel criar a campanha.")}`);
+    redirect(`/campanhas/nova?erro=${encodeURIComponent(error?.message || "Não foi possível criar a campanha.")}`);
   }
 
   const servicos = formData
@@ -203,11 +219,11 @@ export async function criarCampanhaCupomAction(formData: FormData) {
   }
 
   revalidatePath("/campanhas");
-  redirect("/campanhas?ok=Campanha%20criada.");
+  redirect(`/campanhas/${cupom.id}?ok=Campanha%20criada.`);
 }
 
 export async function atualizarStatusCampanhaAction(formData: FormData) {
-  const { usuario } = await requireCampaignAdmin();
+  const { usuario } = await requireCampaignMutation();
   const id = String(formData.get("id") || "").trim();
   const status = String(formData.get("status") || "").trim();
 
@@ -230,7 +246,7 @@ export async function atualizarStatusCampanhaAction(formData: FormData) {
 }
 
 export async function atualizarCampanhaAction(formData: FormData) {
-  const { usuario } = await requireCampaignAdmin();
+  const { usuario } = await requireCampaignMutation();
   const id = String(formData.get("id") || "").trim();
   const titulo = String(formData.get("titulo") || "").trim();
   const mensagemCliente = String(formData.get("mensagem_cliente") || "").trim();
@@ -277,7 +293,7 @@ export async function atualizarCampanhaAction(formData: FormData) {
 }
 
 export async function adicionarClienteCampanhaAction(formData: FormData) {
-  const { usuario } = await requireCampaignAdmin();
+  const { usuario } = await requireCampaignMutation();
   const idCampanha = String(formData.get("id_campanha") || "").trim();
   const idCliente = String(formData.get("id_cliente") || "").trim();
 
@@ -325,7 +341,7 @@ export async function adicionarClienteCampanhaAction(formData: FormData) {
 }
 
 export async function removerClienteCampanhaAction(formData: FormData) {
-  const { usuario } = await requireCampaignAdmin();
+  const { usuario } = await requireCampaignMutation();
   const idCampanha = String(formData.get("id_campanha") || "").trim();
   const idCliente = String(formData.get("id_cliente") || "").trim();
 
@@ -343,7 +359,7 @@ export async function removerClienteCampanhaAction(formData: FormData) {
 }
 
 export async function excluirCampanhaAction(formData: FormData) {
-  const { usuario } = await requireCampaignAdmin();
+  const { usuario } = await requireCampaignMutation();
   const idCampanha = String(formData.get("id_campanha") || "").trim();
   const confirmacao = String(formData.get("confirmacao") || "").trim().toUpperCase();
 
@@ -380,7 +396,7 @@ export async function excluirCampanhaAction(formData: FormData) {
 }
 
 export async function atualizarServicosCampanhaAction(formData: FormData) {
-  const { usuario } = await requireCampaignAdmin();
+  const { usuario } = await requireCampaignMutation();
   const idCampanha = String(formData.get("id_campanha") || "").trim();
   const servicos = formData
     .getAll("servicos")
@@ -422,5 +438,5 @@ export async function atualizarServicosCampanhaAction(formData: FormData) {
 
   revalidatePath("/campanhas");
   revalidatePath(`/campanhas/${idCampanha}`);
-  redirect(`/campanhas/${idCampanha}?ok=Servicos%20atualizados.`);
+  redirect(`/campanhas/${idCampanha}?ok=Serviços%20atualizados.`);
 }

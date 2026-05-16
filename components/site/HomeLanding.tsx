@@ -43,7 +43,7 @@ const plans = [
     note: "mais vendido",
     description: "Para salão com equipe, estoque, relatórios e app profissional.",
     featured: true,
-    items: ["Tudo do Básico", "Estoque e relatórios", "App profissional"],
+    items: ["Tudo do Básico", "Estoque e relatórios", "Campanhas por link"],
   },
   {
     name: "Premium",
@@ -51,7 +51,7 @@ const plans = [
     price: "R$ 59,90",
     note: "completo",
     description: "Para liberar a vitrine do app cliente, campanhas e estrutura completa.",
-    items: ["Tudo do Pro", "App cliente publicado", "WhatsApp e campanhas"],
+    items: ["Tudo do Pro", "App cliente publicado", "Campanhas e cupons"],
   },
 ];
 

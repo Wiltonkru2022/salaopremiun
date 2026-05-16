@@ -56,7 +56,17 @@ function getPlanoAction(params: {
   };
 }
 
-export default async function CompararPlanosPage() {
+function firstParam(value?: string | string[]) {
+  return Array.isArray(value) ? value[0] : value || "";
+}
+
+export default async function CompararPlanosPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ erro?: string | string[]; recurso?: string | string[] }>;
+}) {
+  const query = searchParams ? await searchParams : undefined;
+  const erro = firstParam(query?.erro);
   const { user, usuario } = await getPainelUserContext();
   const supabaseAdmin = getSupabaseAdmin();
 
@@ -129,6 +139,12 @@ export default async function CompararPlanosPage() {
           </div>
         </div>
       </section>
+
+      {erro ? (
+        <p className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-900">
+          {erro}
+        </p>
+      ) : null}
 
       <section className="grid gap-4 xl:grid-cols-3">
         {planos.map((plano) => {

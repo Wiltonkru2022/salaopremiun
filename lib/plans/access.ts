@@ -113,29 +113,29 @@ export const PLANO_RECURSO_LABELS: Record<PlanoRecursoCodigo, string> = {
 };
 
 export const PLANO_RECURSO_GROUPS: Record<PlanoRecursoCodigo, string> = {
-  agenda: "Operacao",
-  agendamentos_mensais: "Operacao",
-  clientes: "Operacao",
-  profissionais: "Operacao",
-  usuarios: "Gestao",
-  servicos: "Operacao",
-  servicos_extras: "Operacao",
+  agenda: "Operação",
+  agendamentos_mensais: "Operação",
+  clientes: "Operação",
+  profissionais: "Operação",
+  usuarios: "Gestão",
+  servicos: "Operação",
+  servicos_extras: "Operação",
   produtos: "Produtos e estoque",
   estoque: "Produtos e estoque",
   caixa: "Financeiro",
   comandas: "Financeiro",
   vendas: "Financeiro",
-  comissoes_basicas: "Comissoes",
-  comissoes_avancadas: "Comissoes",
-  relatorios_basicos: "Relatorios",
-  relatorios_avancados: "Relatorios",
-  dashboard_avancado: "Relatorios",
-  whatsapp: "Comunicacao",
-  campanhas: "Comunicacao",
+  comissoes_basicas: "Comissões",
+  comissoes_avancadas: "Comissões",
+  relatorios_basicos: "Relatórios",
+  relatorios_avancados: "Relatórios",
+  dashboard_avancado: "Relatórios",
+  whatsapp: "Comunicação",
+  campanhas: "Comunicação",
   google_calendar: "Agenda",
   app_profissional: "Equipe",
   app_cliente: "Equipe",
-  marketing: "Comunicacao",
+  marketing: "Comunicação",
   recursos_beta: "Premium",
   suporte_prioritario: "Premium",
 };
@@ -429,13 +429,13 @@ async function getPlanoAccessSnapshotUncached(
   return {
     idSalao,
     planoCodigo,
-    planoNome: resumo.emTesteGratis && resumo.ativa ? "Teste gratis" : planoRow?.nome || planoCodigo,
+    planoNome: resumo.emTesteGratis && resumo.ativa ? "Teste grátis" : planoRow?.nome || planoCodigo,
     assinaturaStatus,
     salaoStatus,
     bloqueioTotal,
     modoRestrito,
     bloqueioMotivo: bloqueioTotal
-      ? "Assinatura ou salao bloqueado para novas operacoes."
+      ? "Assinatura ou salão bloqueado para novas operações."
       : null,
     limites: {
       usuarios: normalizeLimit(limiteUsuarios),
@@ -490,7 +490,7 @@ export async function canUsePlanFeature(
   if (!snapshot.recursos[recurso]) {
     return {
       allowed: false,
-      reason: `${getPlanoRecursoLabel(recurso)} nao esta liberado no plano atual.`,
+      reason: `${getPlanoRecursoLabel(recurso)} não está liberado no plano atual.`,
       snapshot,
     };
   }
@@ -526,7 +526,7 @@ export async function assertCanMutatePlanFeature(
 
   if (result.snapshot.modoRestrito) {
     throw new PlanAccessError(
-      "Sua assinatura esta em modo restrito. Regularize o plano para realizar novas operacoes.",
+      "Sua assinatura está em modo restrito. Regularize o plano para realizar novas operações.",
       "SUBSCRIPTION_RESTRICTED"
     );
   }
