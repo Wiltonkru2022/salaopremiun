@@ -52,16 +52,65 @@ type NomeRow = {
   nome_exibicao?: string | null;
 };
 
+export type DashboardPeriodo = "hoje" | "7d" | "mes" | "ano";
+
+export function normalizeDashboardPeriodo(value?: string | null): DashboardPeriodo {
+  const normalized = String(value || "").trim().toLowerCase();
+  if (normalized === "hoje" || normalized === "7d" || normalized === "ano") {
+    return normalized;
+  }
+  return "mes";
+}
+
+function getPeriodoDashboard(periodo: DashboardPeriodo, now: Date) {
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  if (periodo === "hoje") {
+    return {
+      start: startOfToday,
+      end: new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1),
+      label: "Hoje",
+      chartDays: 1,
+    };
+  }
+  if (periodo === "7d") {
+    return {
+      start: new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6),
+      end: new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1),
+      label: "Últimos 7 dias",
+      chartDays: 7,
+    };
+  }
+  if (periodo === "ano") {
+    return {
+      start: new Date(now.getFullYear(), 0, 1),
+      end: new Date(now.getFullYear() + 1, 0, 1),
+      label: String(now.getFullYear()),
+      chartDays: 365,
+    };
+  }
+  return {
+    start: new Date(now.getFullYear(), now.getMonth(), 1),
+    end: new Date(now.getFullYear(), now.getMonth() + 1, 1),
+    label: "Mês atual",
+    chartDays: 31,
+  };
+}
+
 function sumNumeric<T>(rows: T[] | null | undefined, getter: (row: T) => unknown) {
   return (rows || []).reduce((sum, row) => sum + Number(getter(row) || 0), 0);
 }
 
-export async function carregarPainelDashboardResumo(idSalao: string, now = new Date()) {
+export async function carregarPainelDashboardResumo(
+  idSalao: string,
+  now = new Date(),
+  periodo: DashboardPeriodo = "mes"
+) {
   const nowIso = now.toISOString();
   const nowDate = nowIso.slice(0, 10);
   const inTwoHoursIso = new Date(now.getTime() + 2 * 60 * 60 * 1000).toISOString();
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-  const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString();
+  const periodoInfo = getPeriodoDashboard(periodo, now);
+  const startOfPeriod = periodoInfo.start.toISOString();
+  const endOfPeriod = periodoInfo.end.toISOString();
   const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
   const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1).toISOString();
 
@@ -70,8 +119,8 @@ export async function carregarPainelDashboardResumo(idSalao: string, now = new D
       cachedSalaoId: string,
       nowDateArg: string,
       inTwoHoursDateArg: string,
-      startOfMonthArg: string,
-      endOfMonthArg: string,
+      startOfPeriodArg: string,
+      endOfPeriodArg: string,
       startOfDayArg: string,
       endOfDayArg: string
     ) => {
@@ -117,22 +166,22 @@ export async function carregarPainelDashboardResumo(idSalao: string, now = new D
           .select("id", { count: "exact", head: true })
           .eq("id_salao", cachedSalaoId)
           .eq("status", "fechada")
-          .gte("fechada_em", startOfMonthArg)
-          .lt("fechada_em", endOfMonthArg),
+          .gte("fechada_em", startOfPeriodArg)
+          .lt("fechada_em", endOfPeriodArg),
         supabaseAdmin
           .from("comandas")
           .select("total, id_cliente")
           .eq("id_salao", cachedSalaoId)
           .eq("status", "fechada")
-          .gte("fechada_em", startOfMonthArg)
-          .lt("fechada_em", endOfMonthArg),
+          .gte("fechada_em", startOfPeriodArg)
+          .lt("fechada_em", endOfPeriodArg),
         supabaseAdmin
           .from("comissoes_lancamentos")
           .select("valor_comissao")
           .eq("id_salao", cachedSalaoId)
           .eq("status", "pendente")
-          .gte("competencia_data", startOfMonthArg.slice(0, 10))
-          .lt("competencia_data", endOfMonthArg.slice(0, 10)),
+          .gte("competencia_data", startOfPeriodArg.slice(0, 10))
+          .lt("competencia_data", endOfPeriodArg.slice(0, 10)),
         supabaseAdmin
           .from("comandas")
           .select("total")
@@ -155,8 +204,8 @@ export async function carregarPainelDashboardResumo(idSalao: string, now = new D
           .select("id", { count: "exact", head: true })
           .eq("id_salao", cachedSalaoId)
           .eq("status", "cancelado")
-          .gte("data", startOfMonthArg.slice(0, 10))
-          .lt("data", endOfMonthArg.slice(0, 10)),
+          .gte("data", startOfPeriodArg.slice(0, 10))
+          .lt("data", endOfPeriodArg.slice(0, 10)),
         supabaseAdmin
           .from("saloes")
           .select("plano")
@@ -198,18 +247,18 @@ export async function carregarPainelDashboardResumo(idSalao: string, now = new D
           .select("id_profissional, id_servico, valor_total, quantidade")
           .eq("id_salao", cachedSalaoId)
           .eq("ativo", true)
-          .gte("created_at", startOfMonthArg)
-          .lt("created_at", endOfMonthArg)
+          .gte("created_at", startOfPeriodArg)
+          .lt("created_at", endOfPeriodArg)
           .limit(1500),
         supabaseAdmin
           .from("comandas")
           .select("total, fechada_em")
           .eq("id_salao", cachedSalaoId)
           .eq("status", "fechada")
-          .gte("fechada_em", new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000).toISOString())
+          .gte("fechada_em", startOfPeriodArg)
           .lt("fechada_em", endOfDayArg)
           .order("fechada_em", { ascending: true })
-          .limit(1000),
+          .limit(1500),
       ]);
 
       const agendaRows = [
@@ -320,8 +369,8 @@ export async function carregarPainelDashboardResumo(idSalao: string, now = new D
     idSalao,
     nowDate,
     inTwoHoursIso.slice(0, 10),
-    startOfMonth,
-    endOfMonth,
+    startOfPeriod,
+    endOfPeriod,
     startOfDay,
     endOfDay
   );
@@ -455,12 +504,21 @@ export async function carregarPainelDashboardResumo(idSalao: string, now = new D
     .sort((a, b) => b.diasSemVir - a.diasSemVir)
     .slice(0, 6);
   const faturamentoPorDia = new Map<string, number>();
-  for (let index = 6; index >= 0; index -= 1) {
-    const date = new Date(now.getFullYear(), now.getMonth(), now.getDate() - index);
-    faturamentoPorDia.set(date.toISOString().slice(0, 10), 0);
+  if (periodo === "ano") {
+    for (let monthIndex = 0; monthIndex < 12; monthIndex += 1) {
+      const date = new Date(now.getFullYear(), monthIndex, 1);
+      faturamentoPorDia.set(date.toISOString().slice(0, 7), 0);
+    }
+  } else {
+    const chartDays = periodo === "hoje" ? 1 : periodo === "7d" ? 7 : Math.min(periodoInfo.chartDays, 31);
+    for (let index = chartDays - 1; index >= 0; index -= 1) {
+      const date = new Date(now.getFullYear(), now.getMonth(), now.getDate() - index);
+      if (periodo === "mes" && date < periodoInfo.start) continue;
+      faturamentoPorDia.set(date.toISOString().slice(0, 10), 0);
+    }
   }
   for (const item of data.comandasSerieRows) {
-    const key = String(item.fechada_em || "").slice(0, 10);
+    const key = String(item.fechada_em || "").slice(0, periodo === "ano" ? 7 : 10);
     if (faturamentoPorDia.has(key)) {
       faturamentoPorDia.set(key, (faturamentoPorDia.get(key) || 0) + Number(item.total || 0));
     }
@@ -472,6 +530,8 @@ export async function carregarPainelDashboardResumo(idSalao: string, now = new D
   const metaMensal = Math.max(faturamentoMes, 1);
 
   return {
+    periodo,
+    periodoLabel: periodoInfo.label,
     agendamentosHoje: Number(data.agendamentosHoje || 0),
     proximosConfirmados: proximosConfirmadosCount,
     clientesAtivos: Number(data.clientesAtivos || 0),

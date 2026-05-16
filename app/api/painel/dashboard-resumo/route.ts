@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { getPainelUserContext } from "@/lib/auth/get-painel-user-context";
-import { carregarPainelDashboardResumo } from "@/services/painelDashboardResumoService";
+import {
+  carregarPainelDashboardResumo,
+  normalizeDashboardPeriodo,
+} from "@/services/painelDashboardResumoService";
 
 export const dynamic = "force-dynamic";
 
@@ -8,7 +11,7 @@ function jsonError(message: string, status = 400) {
   return NextResponse.json({ error: message }, { status });
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   const { user, usuario } = await getPainelUserContext();
 
   if (!user) {
@@ -24,7 +27,9 @@ export async function GET() {
   }
 
   try {
-    const resumo = await carregarPainelDashboardResumo(usuario.id_salao);
+    const url = new URL(request.url);
+    const periodo = normalizeDashboardPeriodo(url.searchParams.get("periodo"));
+    const resumo = await carregarPainelDashboardResumo(usuario.id_salao, new Date(), periodo);
 
     return NextResponse.json({
       usuario: {
