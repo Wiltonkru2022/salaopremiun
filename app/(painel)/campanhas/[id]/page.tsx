@@ -115,7 +115,11 @@ async function loadCampanhaDetalhe(
     servicosResult,
     usosResult,
     eventosResult,
+    cliquesCountResult,
+    agendamentosEventosCountResult,
+    resgatesCountResult,
     agendamentosResult,
+    usosMetricasResult,
     clientesPermitidosResult,
     clientesResult,
     servicosDisponiveisResult,
@@ -147,12 +151,36 @@ async function loadCampanhaDetalhe(
       .order("created_at", { ascending: false })
       .limit(300),
     (supabase as any)
+      .from("campanha_eventos")
+      .select("id", { count: "exact", head: true })
+      .eq("id_salao", idSalao)
+      .eq("id_cupom", id)
+      .eq("tipo", "clique"),
+    (supabase as any)
+      .from("campanha_eventos")
+      .select("id", { count: "exact", head: true })
+      .eq("id_salao", idSalao)
+      .eq("id_cupom", id)
+      .eq("tipo", "agendamento"),
+    (supabase as any)
+      .from("cupom_salao_resgates")
+      .select("id", { count: "exact", head: true })
+      .eq("id_salao", idSalao)
+      .eq("id_cupom", id),
+    (supabase as any)
       .from("agendamentos")
-      .select("id, data, status, cliente_id, servico_id, desconto_cupom_valor, clientes(nome), servicos(nome)")
+      .select("id, data, status, cliente_id, servico_id, desconto_cupom_valor, id_comanda, clientes(nome), servicos(nome, preco, preco_padrao), comandas(total, subtotal)")
       .eq("id_salao", idSalao)
       .eq("id_cupom_salao", id)
       .order("data", { ascending: false })
       .limit(200),
+    (supabase as any)
+      .from("cupom_salao_usos")
+      .select("id, id_cliente, valor_desconto, status, metadata, id_agendamento, id_comanda")
+      .eq("id_salao", idSalao)
+      .eq("id_cupom", id)
+      .neq("status", "cancelado")
+      .limit(5000),
     (supabase as any)
       .from("cupom_salao_clientes")
       .select("id_cliente, clientes(id, nome, telefone, email, whatsapp)", { count: "exact" })
@@ -175,16 +203,30 @@ async function loadCampanhaDetalhe(
   const totalUsos = Number(usosResult.count || usos.length);
   const eventos = (eventosResult.data || []) as Array<Record<string, any>>;
   const agendamentos = (agendamentosResult.data || []) as Array<Record<string, any>>;
-  const cliques = eventos.filter((evento) => evento.tipo === "clique").length;
-  const agendamentosEvento = eventos.filter((evento) => evento.tipo === "agendamento").length;
+  const usosMetricas = (usosMetricasResult.data || []) as Array<Record<string, any>>;
+  const cliques = Number(cliquesCountResult.count || 0);
+  const agendamentosEvento = Number(agendamentosEventosCountResult.count || 0);
+  const resgates = Number(resgatesCountResult.count || 0);
   const cancelados = agendamentos.filter((agenda) => String(agenda.status) === "cancelado").length;
-  const clientesNovos = usos.filter((uso) => String(uso.metadata?.origem || "") === "app_cliente").length;
-  const descontoTotal = usos.reduce((sum, uso) => sum + Number(uso.valor_desconto || 0), 0);
-  const conversao = cliques > 0 ? Math.round((totalUsos / cliques) * 100) : 0;
+  const clientesNovos = new Set(
+    usosMetricas
+      .filter((uso) => String(uso.metadata?.cliente_novo || "") === "true")
+      .map((uso) => String(uso.id_cliente || ""))
+      .filter(Boolean)
+  ).size;
+  const descontoTotal = usosMetricas.reduce((sum, uso) => sum + Number(uso.valor_desconto || 0), 0);
+  const receitaGerada = agendamentos.reduce((sum, agenda) => {
+    const comanda = Array.isArray(agenda.comandas) ? agenda.comandas[0] : agenda.comandas;
+    const servico = Array.isArray(agenda.servicos) ? agenda.servicos[0] : agenda.servicos;
+    const totalComanda = Number(comanda?.total ?? comanda?.subtotal ?? 0);
+    const precoServico = Number(servico?.preco_padrao ?? servico?.preco ?? 0);
+    return sum + (Number.isFinite(totalComanda) && totalComanda > 0 ? totalComanda : Number.isFinite(precoServico) ? precoServico : 0);
+  }, 0);
+  const conversao = cliques > 0 ? Math.round((Math.max(agendamentosEvento, totalUsos) / cliques) * 100) : 0;
   const servicos = (servicosResult.data || []) as Array<Record<string, any>>;
   const servicosMaisVendidos = servicos.map((servico) => {
     const idServico = String(servico.id_servico || "");
-    const total = usos.filter((uso) => String(uso.metadata?.id_servico || "") === idServico).length;
+    const total = usosMetricas.filter((uso) => String(uso.metadata?.id_servico || "") === idServico).length;
     const rel = Array.isArray(servico.servicos) ? servico.servicos[0] : servico.servicos;
     return { nome: String(rel?.nome || "Servico"), total };
   });
@@ -203,8 +245,10 @@ async function loadCampanhaDetalhe(
       totalUsos,
       cliques,
       agendamentos: agendamentosEvento || agendamentos.length,
+      resgates,
       clientesNovos,
       descontoTotal,
+      receitaGerada,
       cancelados,
       conversao,
       servicosMaisVendidos,
@@ -270,9 +314,13 @@ export default async function CampanhaDetalhePage({
   );
   const kpiCards = [
     { label: "Cliques", value: data.metricas.cliques, icon: Link2 },
+    { label: "Resgates", value: data.metricas.resgates, icon: Gift },
     { label: "Agendamentos", value: data.metricas.agendamentos, icon: CalendarDays },
     { label: "Conversao", value: `${data.metricas.conversao}%`, icon: BarChart3 },
-    { label: "Desconto listado", value: money(data.metricas.descontoTotal), icon: Gift },
+    { label: "Receita gerada", value: money(data.metricas.receitaGerada), icon: BarChart3 },
+    { label: "Descontos", value: money(data.metricas.descontoTotal), icon: Gift },
+    { label: "Clientes novos", value: data.metricas.clientesNovos, icon: Users },
+    { label: "Cancelados", value: data.metricas.cancelados, icon: CalendarDays },
   ];
   const getUsosHref = (page: number) => {
     const params = new URLSearchParams();

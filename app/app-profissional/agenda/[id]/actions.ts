@@ -19,6 +19,7 @@ import {
   validarHorarioAgendamento,
 } from "@/app/services/profissional/agenda";
 import { notifyWaitlistAboutReleasedSlot } from "@/lib/client-app/waitlist";
+import { sincronizarAgendamentoComComandaNoCaixa } from "@/lib/agenda/sincronizarAgendamentoComComanda";
 
 const STATUS_PERMITIDOS = new Set([
   "pendente",
@@ -496,10 +497,18 @@ export async function abrirComandaDoAgendamentoAction(formData: FormData) {
           throw new Error(comandaError?.message || "Erro ao abrir comanda.");
         }
 
+        await sincronizarAgendamentoComComandaNoCaixa({
+          supabase,
+          idSalao: session.idSalao,
+          idAgendamento,
+          idComandaNova: String(comanda.id),
+          idServico: String(agendamento.servico_id),
+          idProfissional: session.idProfissional,
+        });
+
         const { error: updateError } = await supabase
           .from("agendamentos")
           .update({
-            id_comanda: comanda.id,
             status: "em_atendimento",
             updated_at: new Date().toISOString(),
           })
@@ -516,19 +525,6 @@ export async function abrirComandaDoAgendamentoAction(formData: FormData) {
           .eq("id_salao", session.idSalao);
 
         if (comandaUpdateError) throw new Error(comandaUpdateError.message);
-
-        if (agendamento.id_cupom_salao && Number(agendamento.desconto_cupom_valor || 0) > 0) {
-          await (supabase as any)
-            .from("cupom_salao_usos")
-            .update({
-              id_comanda: comanda.id,
-              status: "aplicado",
-              updated_at: new Date().toISOString(),
-            })
-            .eq("id_salao", session.idSalao)
-            .eq("id_agendamento", idAgendamento)
-            .eq("id_cupom", agendamento.id_cupom_salao);
-        }
 
         return String(comanda.id);
       },

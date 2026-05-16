@@ -1092,6 +1092,7 @@ export async function createClienteAppAppointment(
           metadata: {
             origem: "app_cliente",
             id_servico: idServico,
+            subtotal: subtotalEstimado,
             data,
             telefone: String(clienteResult.data.telefone || "").replace(/\D/g, "") || null,
             email: String(clienteResult.data.email || "").trim().toLowerCase() || null,

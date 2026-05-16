@@ -157,6 +157,51 @@ async function loadCampanhasData(idSalao: string, page: number, pageSize: number
         { data: [] },
       ];
 
+  const metricasPorCupom = new Map<string, { usos: number; cliques: number; resgates: number; agendamentos: number }>();
+  if (cupomIds.length) {
+    const metricas = await Promise.all(
+      cupomIds.map(async (idCupom) => {
+        const [usosCount, cliquesCount, agendamentosCount, resgatesCount] = await Promise.all([
+          (supabase as any)
+            .from("cupom_salao_usos")
+            .select("id", { count: "exact", head: true })
+            .eq("id_salao", idSalao)
+            .eq("id_cupom", idCupom)
+            .neq("status", "cancelado"),
+          (supabase as any)
+            .from("campanha_eventos")
+            .select("id", { count: "exact", head: true })
+            .eq("id_salao", idSalao)
+            .eq("id_cupom", idCupom)
+            .eq("tipo", "clique"),
+          (supabase as any)
+            .from("campanha_eventos")
+            .select("id", { count: "exact", head: true })
+            .eq("id_salao", idSalao)
+            .eq("id_cupom", idCupom)
+            .eq("tipo", "agendamento"),
+          (supabase as any)
+            .from("cupom_salao_resgates")
+            .select("id", { count: "exact", head: true })
+            .eq("id_salao", idSalao)
+            .eq("id_cupom", idCupom),
+        ]);
+        return [
+          idCupom,
+          {
+            usos: Number(usosCount.count || 0),
+            cliques: Number(cliquesCount.count || 0),
+            agendamentos: Number(agendamentosCount.count || 0),
+            resgates: Number(resgatesCount.count || 0),
+          },
+        ] as const;
+      })
+    );
+    for (const [idCupom, metricasCupom] of metricas) {
+      metricasPorCupom.set(idCupom, metricasCupom);
+    }
+  }
+
   const usosPorCupom = new Map<string, Array<Record<string, unknown>>>();
   for (const uso of ((usosResult.data || []) as Array<Record<string, unknown>>)) {
     const id = String(uso.id_cupom || "");
@@ -178,14 +223,15 @@ async function loadCampanhasData(idSalao: string, page: number, pageSize: number
   const cupons = ((cuponsResult.data || []) as Array<Record<string, unknown>>).map((cupom) => {
     const id = String(cupom.id || "");
     const usos = usosPorCupom.get(id) || [];
-    const eventos = eventosPorCupom.get(id) || [];
+    const metricas = metricasPorCupom.get(id);
     const servicos = servicosPorCupom.get(id) || [];
     return {
       ...cupom,
-      usos: usos.length,
-      cliques: eventos.filter((evento) => evento.tipo === "clique").length,
-      agendamentos: eventos.filter((evento) => evento.tipo === "agendamento").length,
-      receita: usos.reduce((sum, uso) => sum + Number(uso.valor_desconto || 0), 0),
+      usos: metricas?.usos ?? usos.length,
+      cliques: metricas?.cliques ?? 0,
+      resgates: metricas?.resgates ?? 0,
+      agendamentos: metricas?.agendamentos ?? 0,
+      descontos: usos.reduce((sum, uso) => sum + Number(uso.valor_desconto || 0), 0),
       servicos,
     };
   });
@@ -396,7 +442,7 @@ export default async function CampanhasPage({
                     </div>
                     <div className="rounded-2xl bg-zinc-50 p-4">
                       <p className="text-xs font-black uppercase tracking-[0.14em] text-zinc-400">Desconto reservado</p>
-                      <p className="mt-1 text-sm font-bold text-zinc-800">{money(Number(cupom.receita || 0))}</p>
+                      <p className="mt-1 text-sm font-bold text-zinc-800">{money(Number(cupom.descontos || 0))}</p>
                     </div>
                   </div>
 

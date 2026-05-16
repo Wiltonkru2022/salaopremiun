@@ -8,6 +8,7 @@ import {
   loadCouponRedemptionForAccount,
   redeemClienteCoupon,
 } from "@/lib/client-app/coupons";
+import { registerCampaignClick } from "@/lib/campanhas/public";
 
 export const metadata = {
   title: "Resgatar cupom",
@@ -33,6 +34,13 @@ export default async function ResgatarCupomPage({
       ? cupom.saloes[0]
       : cupom.saloes
     : null;
+  if (cupom?.id && cupom?.id_salao) {
+    await registerCampaignClick({
+      idCampanha: String(cupom.id),
+      idSalao: String(cupom.id_salao),
+      metadata: { origem: "resgatar_cupom", token },
+    }).catch(() => null);
+  }
   const resgateAtual =
     cupom?.id && validation.context?.idConta
       ? await loadCouponRedemptionForAccount({
