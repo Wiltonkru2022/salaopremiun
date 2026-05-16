@@ -131,17 +131,17 @@ function AdminMasterLoginContent() {
               </h1>
 
               <p className="mt-4 max-w-xl text-sm leading-6 text-[#d9cbb8] md:text-[15px]">
-                Este ambiente e exclusivo para operação, financeiro, produto e
-                suporte do SalãoPremium. O acesso passa por validacao dedicada
+                Este ambiente é exclusivo para operação, financeiro, produto e
+                suporte do SalãoPremium. O acesso passa por validação dedicada
                 antes de liberar o painel executivo.
               </p>
             </div>
 
             <div className="grid gap-3 md:grid-cols-3">
               {[
-                "Monitora assinaturas, cobrancas e risco operacional em um único shell.",
-                "Centraliza tickets, webhooks, onboarding e saude comercial dos salões.",
-                "Mantem o fluxo separado do login de cliente para reduzir erro humano.",
+                "Monitora assinaturas, cobranças e risco operacional em um único shell.",
+                "Centraliza tickets, webhooks, onboarding e saúde comercial dos salões.",
+                "Mantém o fluxo separado do login de cliente para reduzir erro humano.",
               ].map((item) => (
                 <div
                   key={item}
@@ -173,14 +173,14 @@ function AdminMasterLoginContent() {
           <div className="mx-auto w-full max-w-md">
             <div className="mb-7">
               <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#9d7c45]">
-                SalaoPremium
+                SalãoPremium
               </p>
               <h2 className="mt-2.5 text-[2rem] font-black text-[#21170f]">
                 Entrar no Admin Master
               </h2>
               <p className="mt-2.5 text-sm leading-6 text-[#6b5b45]">
                 Use seu e-mail interno para abrir o ambiente administrativo
-                executivo. Essa sessao não compartilha login com o painel do
+                executivo. Essa sessão não compartilha login com o painel do
                 salão.
               </p>
             </div>
@@ -266,7 +266,7 @@ function AdminMasterLoginContent() {
             </form>
 
             <div className="mt-5 rounded-[20px] border border-[#eadcc8] bg-[#fff6ea] px-4 py-3.5 text-sm leading-6 text-[#654f35]">
-              O Admin Master usa uma sessao separada do painel do salão. Mesmo
+              O Admin Master usa uma sessão separada do painel do salão. Mesmo
               com o mesmo navegador aberto, um acesso não derruba o outro.
             </div>
           </div>

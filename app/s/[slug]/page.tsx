@@ -1,5 +1,4 @@
 import { permanentRedirect } from "next/navigation";
-import { buildSalaoPublicUrl } from "@/lib/saloes/public-link";
 
 export default async function ShortPublicSalaoPage({
   params,
@@ -7,5 +6,5 @@ export default async function ShortPublicSalaoPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  permanentRedirect(buildSalaoPublicUrl(slug));
+  permanentRedirect(`/salao/${encodeURIComponent(slug)}`);
 }

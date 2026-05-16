@@ -338,7 +338,7 @@ function LoginPageContent() {
                 Painel do salão
               </div>
               <h1 className="mt-7 font-display text-[3.2rem] font-black leading-[0.95] tracking-[-0.05em] xl:text-[4.2rem]">
-                Menos peso na rotina, mais controle no seu negocio.
+                Menos peso na rotina, mais controle no seu negócio.
               </h1>
               <p className="mt-5 max-w-md text-base leading-7 text-white/78">
                 Entre para acompanhar agenda, clientes, equipe, vendas e

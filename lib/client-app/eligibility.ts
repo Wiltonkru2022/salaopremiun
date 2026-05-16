@@ -1,6 +1,7 @@
 import "server-only";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { canUsePlanFeature, isSalaoStatusOperational } from "@/lib/plans/access";
+import { normalizeSalaoSlug } from "@/lib/saloes/public-link";
 
 type EligibleSalonRow = {
   id: string;
@@ -181,11 +182,38 @@ async function getEligibleSalonByIdLive(idSalaoOrSlug: string) {
     .limit(1)
     .maybeSingle();
 
-  if (error || !data) {
-    return null;
+  let row = data as unknown as EligibleSalonRow | null;
+
+  if (!row && !isUuid(normalized)) {
+    const slug = normalizeSalaoSlug(normalized);
+    const firstToken = slug.split("-").find(Boolean);
+    let fallbackQuery = buildBaseSalonQuery()
+      .order("nome", { ascending: true })
+      .limit(80);
+
+    if (firstToken && firstToken.length >= 3) {
+      fallbackQuery = fallbackQuery.or(
+        `nome.ilike.%${firstToken}%,nome_fantasia.ilike.%${firstToken}%`
+      );
+    }
+
+    const { data: fallbackData } = await fallbackQuery;
+    row =
+      ((fallbackData || []) as unknown as EligibleSalonRow[]).find((item) => {
+        const slugs = [
+          item.app_cliente_slug,
+          item.nome_fantasia,
+          item.nome,
+          [item.nome_fantasia || item.nome, item.cidade].filter(Boolean).join(" "),
+        ].map((value) => normalizeSalaoSlug(String(value || "")));
+
+        return slugs.includes(slug);
+      }) || null;
   }
 
-  const row = data as unknown as EligibleSalonRow;
+  if (error || !row) {
+    return null;
+  }
 
   if (!isSalaoStatusOperational(row.status)) {
     return null;
