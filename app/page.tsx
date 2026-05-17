@@ -169,7 +169,7 @@ export default async function HomePage() {
   const organizationSchema = {
     "@context": "https://schema.org",
     "@type": "Organization",
-    name: "SalaoPremium",
+    name: "SalãoPremium",
     url: "https://salaopremiun.com.br",
     logo: "https://salaopremiun.com.br/logo.png",
     sameAs: ["https://salaopremiun.com.br"],
@@ -178,7 +178,7 @@ export default async function HomePage() {
   const websiteSchema = {
     "@context": "https://schema.org",
     "@type": "WebSite",
-    name: "SalaoPremium",
+    name: "SalãoPremium",
     url: "https://salaopremiun.com.br",
     inLanguage: "pt-BR",
   };

@@ -3,9 +3,9 @@ import type { MetadataRoute } from "next";
 export default function manifest(): MetadataRoute.Manifest {
   return {
     id: "/dashboard",
-    name: "SalaoPremium",
-    short_name: "SalaoPremium",
-    description: "Gestao premium para saloes com agenda, caixa, comandas e financeiro.",
+    name: "SalãoPremium",
+    short_name: "SalãoPremium",
+    description: "Gestão premium para salões com agenda, caixa, comandas e financeiro.",
     start_url: "/dashboard",
     scope: "/",
     display: "standalone",
