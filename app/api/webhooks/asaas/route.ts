@@ -9,6 +9,12 @@ import { createAsaasWebhookService } from "@/services/asaasWebhookService";
 export async function POST(req: Request) {
   try {
     const body = (await req.json()) as Record<string, unknown>;
+    const service = createAsaasWebhookService();
+
+    if (!service.validarTokenWebhook(req.headers)) {
+      throw new AsaasWebhookUseCaseError("Webhook não autorizado.", 401);
+    }
+
     const oracleResult = await processAsaasWebhookOnOracleVps(body);
 
     if (oracleResult.ok) {
@@ -25,7 +31,7 @@ export async function POST(req: Request) {
     const result = await processarWebhookAsaasUseCase({
       headers: req.headers,
       body,
-      service: createAsaasWebhookService(),
+      service,
     });
 
     return NextResponse.json(
