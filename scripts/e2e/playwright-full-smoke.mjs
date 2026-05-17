@@ -18,6 +18,7 @@ const localPort = new URL(baseUrl).port || "3000";
 const blogBaseUrl = isLocalBase
   ? `http://blog.salaopremiun.com.br:${localPort}`
   : "https://blog.salaopremiun.com.br";
+const adminMasterBaseUrl = isLocalBase ? baseUrl : "https://salaopremiun.com.br";
 const report = {
   baseUrl,
   startedAt: new Date().toISOString(),
@@ -43,7 +44,8 @@ function isIgnorableConsoleError(text) {
 }
 
 async function expectText(page, text, name) {
-  const visible = await page.getByText(text, { exact: false }).first().isVisible().catch(() => false);
+  const locator = page.getByText(text, { exact: false }).first();
+  const visible = await locator.waitFor({ state: "visible", timeout: 12000 }).then(() => true).catch(() => false);
   addCheck(name, visible, text);
   if (!visible) throw new Error(`Texto nao encontrado: ${text}`);
 }
@@ -131,9 +133,11 @@ async function run() {
   addCheck("login app profissional pro", true, page.url());
 
   await context.clearCookies();
-  await page.route("https://painel.salaopremiun.com.br/**", (route) =>
-    route.abort("aborted")
-  );
+  if (isLocalBase) {
+    await page.route("https://painel.salaopremiun.com.br/**", (route) =>
+      route.abort("aborted")
+    );
+  }
   await goto(page, "/login", "login painel salao");
   await page.waitForTimeout(1200);
   await page.locator('input[type="email"]').fill(accounts.salons.premium.email);
@@ -152,7 +156,8 @@ async function run() {
   if (!painelLoginOk) throw new Error("Login do painel nao confirmou redirecionamento.");
   if (page.url().includes("/dashboard")) {
     await page.waitForTimeout(1500);
-    const dashboardResponse = await page.request.get(`${baseUrl}/api/painel/dashboard-resumo`);
+    const dashboardApiBase = isLocalBase ? baseUrl : "https://painel.salaopremiun.com.br";
+    const dashboardResponse = await page.request.get(`${dashboardApiBase}/api/painel/dashboard-resumo`);
     const dashboardOk = dashboardResponse.status() === 200;
     report.dashboardApiOk = dashboardOk;
     addCheck("dashboard painel com sessao", dashboardOk, `status ${dashboardResponse.status()}`);
@@ -160,9 +165,9 @@ async function run() {
   }
 
   await context.clearCookies();
-  await goto(page, "/admin-master/login?next=/admin-master/blog", "login admin master");
+  await gotoUrl(page, `${adminMasterBaseUrl}/admin-master/login?next=/admin-master/blog`, "login admin master");
   await page.waitForTimeout(1200);
-  await page.locator('input[type="email"]').fill(accounts.adminMaster.email);
+  await page.locator('input').nth(0).fill(accounts.adminMaster.email);
   await page.locator('input[type="password"]').fill(accounts.password);
   await page.getByRole("button", { name: /Entrar no Admin Master/i }).click();
   await page.waitForURL((url) => url.pathname === "/admin-master/blog", {

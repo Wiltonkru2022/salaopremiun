@@ -10,6 +10,15 @@ const AUTH_ROUTES = [
   "/app-cliente/cadastro",
   "/app-cliente/recuperar-acesso",
 ];
+const PUBLIC_ROUTES = [
+  "/app-cliente",
+  "/app-cliente/inicio",
+  "/app-cliente/salao",
+  "/app-cliente/duvidas",
+  "/app-cliente/suporte",
+  "/app-cliente/termos",
+  "/app-cliente/privacidade",
+];
 
 export default function ClientSessionKeepAlive() {
   const pathname = usePathname();
@@ -17,6 +26,9 @@ export default function ClientSessionKeepAlive() {
 
   const isAuthRoute = AUTH_ROUTES.some((route) =>
     pathname.startsWith(route)
+  );
+  const isPublicRoute = PUBLIC_ROUTES.some(
+    (route) => pathname === route || pathname.startsWith(`${route}/`)
   );
   const shouldRefresh = pathname.startsWith("/app-cliente") && !isAuthRoute;
 
@@ -35,6 +47,9 @@ export default function ClientSessionKeepAlive() {
 
       const restoreToken =
         window.localStorage.getItem(RESTORE_TOKEN_KEY) || "";
+      if (isPublicRoute && !restoreToken) {
+        return;
+      }
 
       const response = await fetch("/api/app-cliente/session/refresh", {
         method: "POST",
@@ -79,7 +94,7 @@ export default function ClientSessionKeepAlive() {
       window.removeEventListener("focus", refreshWhenVisible);
       document.removeEventListener("visibilitychange", refreshWhenVisible);
     };
-  }, [shouldRefresh]);
+  }, [isPublicRoute, shouldRefresh]);
 
   return null;
 }

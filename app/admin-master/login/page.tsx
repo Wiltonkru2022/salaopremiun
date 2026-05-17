@@ -18,10 +18,19 @@ const LOGIN_HOST =
   process.env.NEXT_PUBLIC_APP_LOGIN_HOST ||
   process.env.APP_LOGIN_HOST ||
   "login.salaopremiun.com.br";
+const PAINEL_HOST =
+  process.env.NEXT_PUBLIC_PAINEL_HOST ||
+  process.env.PAINEL_HOST ||
+  "painel.salaopremiun.com.br";
 
 function buildLoginHostUrl(pathname: string) {
   const normalizedPath = pathname.startsWith("/") ? pathname : `/${pathname}`;
   return `https://${LOGIN_HOST}${normalizedPath}`;
+}
+
+function buildPainelHostUrl(pathname: string) {
+  const normalizedPath = pathname.startsWith("/") ? pathname : `/${pathname}`;
+  return `https://${PAINEL_HOST}${normalizedPath}`;
 }
 
 export default function AdminMasterLoginPage() {
@@ -105,7 +114,17 @@ function AdminMasterLoginContent() {
         return;
       }
 
-      router.push(loginPayload.redirectTo || nextPath);
+      const redirectTo = loginPayload.redirectTo || nextPath;
+      if (
+        typeof window !== "undefined" &&
+        window.location.hostname !== PAINEL_HOST &&
+        redirectTo.startsWith("/")
+      ) {
+        window.location.assign(buildPainelHostUrl(redirectTo));
+        return;
+      }
+
+      router.push(redirectTo);
       router.refresh();
     } finally {
       setLoading(false);
