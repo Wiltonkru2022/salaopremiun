@@ -6,9 +6,6 @@ Use este arquivo para revisar onde o service role ou `auth.admin` aparece. Qualq
 
 | Arquivo | Rota | service role | auth.admin | tenant/guard | log/alerta |
 | --- | --- | --- | --- | --- | --- |
-| `.codex-recovery/blog-posts-audit.mjs` | - | sim | nao | revisar | revisar |
-| `.codex-recovery/blog-posts-polish.mjs` | - | sim | nao | revisar | revisar |
-| `.codex-recovery/blog-posts-verify.mjs` | - | sim | nao | revisar | revisar |
 | `app/(admin-master)/admin-master/campanhas/[id]/page.tsx` | - | sim | nao | sim | revisar |
 | `app/(admin-master)/admin-master/campanhas/actions.ts` | - | sim | nao | sim | revisar |
 | `app/(admin-master)/admin-master/checklists/actions.ts` | - | sim | nao | sim | revisar |
@@ -30,8 +27,13 @@ Use este arquivo para revisar onde o service role ou `auth.admin` aparece. Qualq
 | `app/(admin-master)/admin-master/webhooks/[id]/page.tsx` | - | sim | nao | sim | revisar |
 | `app/(admin-master)/admin-master/whatsapp/[id]/page.tsx` | - | sim | nao | sim | revisar |
 | `app/(admin-master)/admin-master/whatsapp/actions.ts` | - | sim | nao | sim | revisar |
+| `app/(painel)/campanhas/[id]/page.tsx` | - | sim | nao | sim | revisar |
+| `app/(painel)/campanhas/actions.ts` | - | sim | nao | sim | revisar |
+| `app/(painel)/campanhas/nova/page.tsx` | - | sim | nao | sim | revisar |
+| `app/(painel)/campanhas/page.tsx` | - | sim | nao | sim | revisar |
 | `app/(painel)/comparar-planos/page.tsx` | - | sim | nao | sim | revisar |
 | `app/api/agenda/google-calendar/route.ts` | /api/agenda/google-calendar | sim | nao | sim | revisar |
+| `app/api/agenda/lista-espera/liberar/route.ts` | /api/agenda/lista-espera/liberar | sim | nao | sim | revisar |
 | `app/api/agenda/sincronizar-comanda/route.ts` | /api/agenda/sincronizar-comanda | sim | nao | sim | revisar |
 | `app/api/auth/google-login-precheck/route.ts` | /api/auth/google-login-precheck | sim | sim | revisar | revisar |
 | `app/api/auth/google-risc/route.ts` | /api/auth/google-risc | sim | nao | revisar | sim |
@@ -62,12 +64,17 @@ Use este arquivo para revisar onde o service role ou `auth.admin` aparece. Qualq
 | `lib/auth/get-user-permissions.server.ts` | - | sim | nao | sim | revisar |
 | `lib/blog/supabase.ts` | - | sim | nao | revisar | revisar |
 | `lib/caixa/processar/dispatcher.ts` | - | sim | nao | sim | revisar |
+| `lib/campanhas/click.ts` | - | sim | nao | sim | revisar |
+| `lib/campanhas/public.ts` | - | sim | nao | sim | revisar |
+| `lib/client-app/coupons.ts` | - | sim | nao | sim | revisar |
 | `lib/client-app/eligibility.ts` | - | sim | nao | sim | revisar |
+| `lib/client-app/inactive-recovery.ts` | - | sim | nao | sim | revisar |
 | `lib/client-app/queries.ts` | - | sim | nao | sim | revisar |
 | `lib/client-context.server.ts` | - | sim | nao | revisar | revisar |
 | `lib/google-calendar/oauth.ts` | - | sim | nao | sim | revisar |
 | `lib/monitoring/server.ts` | - | sim | nao | sim | sim |
 | `lib/notification-jobs.ts` | - | sim | nao | sim | revisar |
+| `lib/painel/busca-global.ts` | - | sim | nao | sim | revisar |
 | `lib/painel/load-painel-shell-data.ts` | - | sim | nao | sim | revisar |
 | `lib/plans/access.ts` | - | sim | nao | sim | revisar |
 | `lib/plans/catalog-server.ts` | - | sim | nao | revisar | revisar |

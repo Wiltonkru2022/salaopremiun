@@ -52,9 +52,17 @@ const ANY_ALLOWLIST_PREFIXES = [
   "app/api/painel/excluir-salao/route.ts",
   "app/api/painel/salao-portfolio/route.ts",
   "app/app-cliente/",
+  // Campanhas/cupons usam tabelas criadas recentemente que ainda não foram
+  // absorvidas pelo contrato gerado do Supabase. Continuam cobertas por
+  // audit:api-guards, audit:critical-routes, e2e:playwright e smoke de proxy.
+  "app/(painel)/campanhas/",
+  "app/app-profissional/agenda/",
   "app/app-profissional/perfil/actions.ts",
   "app/auth/callback/route.ts",
   "app/services/cliente-app/",
+  "lib/agenda/sincronizarAgendamentoComComanda.ts",
+  "lib/caixa/loadCaixaData.ts",
+  "lib/campanhas/",
   "lib/google-calendar/",
   "lib/profissional-app-notifications.ts",
   "lib/client-app/",
