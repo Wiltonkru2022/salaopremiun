@@ -390,7 +390,7 @@ export function AdminSectionView({ data }: { data: AdminSectionData }) {
         <aside className="space-y-4">
           <div className="rounded-[24px] border border-zinc-200 bg-white p-4 shadow-sm">
             <div className="text-xs font-bold uppercase tracking-[0.25em] text-zinc-400">
-              Diagnostico rapido
+               Diagnóstico rápido
             </div>
             <div className="mt-3 space-y-3 text-sm leading-6 text-zinc-600">
               <p>

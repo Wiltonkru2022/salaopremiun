@@ -59,7 +59,7 @@ export default function LoginClienteForm({
       </h2>
       <p className="mt-2 text-sm leading-6 text-zinc-500">
         Use seu e-mail e senha para ver seus agendamentos, acompanhar o salão e
-        voltar mais rapido na proxima visita.
+        voltar mais rápido na próxima visita.
       </p>
 
       {salaoNome ? (

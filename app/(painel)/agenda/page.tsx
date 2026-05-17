@@ -1112,8 +1112,8 @@ export default function AgendaPage() {
                       : "Novo bloqueio",
                 subtitle:
                   modalMode === "agendamento"
-                    ? "Edite servico, horario, cliente e status sem sair da agenda."
-                    : "Defina ausencia, pausa ou bloqueio da profissional.",
+                    ? "Edite serviço, horário, cliente e status sem sair da agenda."
+                    : "Defina ausência, pausa ou bloqueio da profissional.",
                 onBack: () => {
                   closeModal();
                   setSidebarView("overview");

@@ -20,13 +20,13 @@ const appPortalFeatures: Array<{
   icon: LucideIcon;
 }> = [
   {
-    title: "Instalavel",
+    title: "Instalável",
     text: "Abra no celular e instale como app.",
     icon: Smartphone,
   },
   {
-    title: "Notificacoes",
-    text: "Avisos de agenda, cupom e confirmacao.",
+    title: "Notificações",
+    text: "Avisos de agenda, cupom e confirmação.",
     icon: Bell,
   },
   {
@@ -48,13 +48,13 @@ function AppPortalHome() {
           <div>
             <div className="inline-flex items-center gap-2 rounded-full border border-amber-300/30 bg-white/10 px-4 py-2 text-xs font-black uppercase tracking-[0.16em] text-amber-100">
               <Sparkles size={16} />
-              SalaoPremium Apps
+              SalãoPremium Apps
             </div>
             <h1 className="mt-6 max-w-3xl text-5xl font-black leading-[0.98] tracking-tight md:text-7xl">
               Escolha como quer entrar.
             </h1>
             <p className="mt-5 max-w-2xl text-lg leading-8 text-zinc-300">
-              Um acesso bonito, rapido e direto para cliente agendar e profissional operar o dia sem perder tempo.
+              Um acesso bonito, rápido e direto para cliente agendar e profissional operar o dia sem perder tempo.
             </p>
 
             <div className="mt-8 grid gap-3 sm:grid-cols-2">
@@ -68,7 +68,7 @@ function AppPortalHome() {
                 <span>
                   <strong className="block text-2xl font-black">App Cliente</strong>
                   <span className="mt-1 flex items-center gap-2 text-sm font-bold text-zinc-500">
-                    Agendar, cupons e saloes favoritos
+                    Agendar, cupons e salões favoritos
                     <ArrowRight className="transition group-hover:translate-x-1" size={16} />
                   </span>
                 </span>

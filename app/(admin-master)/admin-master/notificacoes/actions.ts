@@ -36,14 +36,14 @@ export async function dispararNotificacaoAdminMasterAction(formData: FormData) {
       `/admin-master/notificacoes/nova?erro=${encodeURIComponent(
         error instanceof Error
           ? error.message
-          : "Nao foi possivel enviar a notificacao."
+          : "Não foi possível enviar a notificação."
       )}`
     );
   }
 
   redirect(
     `/admin-master/notificacoes/nova?ok=${encodeURIComponent(
-      `Notificacao enviada para ${sent} aparelho(s).`
+      `Notificação enviada para ${sent} aparelho(s).`
     )}`
   );
 }

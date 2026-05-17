@@ -1756,14 +1756,14 @@ export async function getAdminMasterSection(
       totalDestinos > 0 ? `${Math.round((totalLidas / totalDestinos) * 100)}%` : "0%";
 
     return {
-      title: "Notificacoes globais",
-      description:
-        "Comunicados para saloes com leitura, cliques, falhas de entrega e proxima acao operacional.",
+        title: "Notificações globais",
+        description:
+          "Comunicados para salões com leitura, cliques, falhas de entrega e próxima ação operacional.",
       kpis: [
         {
-          label: "Notificacoes",
+            label: "Notificações",
           value: String(rows.length),
-          hint: "Ultimas criadas",
+            hint: "Últimas criadas",
           tone: "dark",
         },
         {
@@ -1806,7 +1806,7 @@ export async function getAdminMasterSection(
           label: "Campanhas",
           value: "Conversao",
           detail:
-            "Use notificacoes globais para avisos institucionais; campanha deve ter objetivo, periodo e publico claros.",
+            "Use notificações globais para avisos institucionais; campanha deve ter objetivo, período e público claros.",
           tone: "blue",
           href: "/admin-master/campanhas",
         },
@@ -1814,7 +1814,7 @@ export async function getAdminMasterSection(
           label: "Nova mensagem",
           value: "Pronta",
           detail:
-            "O botao de nova notificacao abre o fluxo seguro para criar aviso em PT-BR e segmentar saloes.",
+              "O botão de nova notificação abre o fluxo seguro para criar aviso em PT-BR e segmentar salões.",
           tone: "green",
           href: "/admin-master/notificacoes/nova",
         },
@@ -1937,10 +1937,10 @@ export async function getAdminMasterSection(
           tone: semObjetivo > 0 ? "amber" : "green",
         },
         {
-          label: "Notificacoes",
+            label: "Notificações",
           value: "Canal",
           detail:
-            "Campanha precisa conversar com notificacoes globais, WhatsApp e metricas para nao virar pagina sem efeito.",
+            "Campanha precisa conversar com notificações globais, WhatsApp e métricas para não virar página sem efeito.",
           tone: "blue",
           href: "/admin-master/notificacoes",
         },
@@ -1955,7 +1955,7 @@ export async function getAdminMasterSection(
       ],
       rows,
       columns: ["nome", "tipo", "publico", "objetivo", "status", "inicio", "fim", "sinal", "acao"],
-      actions: ["Ver notificacoes", "Abrir relatorios", "Auditar"],
+       actions: ["Ver notificações", "Abrir relatórios", "Auditar"],
     };
   }
 
@@ -2467,9 +2467,9 @@ export async function getAdminMasterSection(
     const revisar = rows.filter((row) => row.sinal === "Revisar validade").length;
 
     return {
-      title: "Configuracoes globais",
-      description:
-        "Controle de chaves globais, historico de alteracoes, configuracoes sensiveis e validade operacional.",
+        title: "Configurações globais",
+        description:
+         "Controle de chaves globais, histórico de alterações, configurações sensíveis e validade operacional.",
       kpis: [
         { label: "Configs", value: String(rows.length), hint: "Chaves globais", tone: "dark" },
         { label: "Sensiveis", value: String(sensiveis), hint: "Podem afetar producao", tone: sensiveis > 0 ? "amber" : "green" },
@@ -3312,7 +3312,7 @@ export async function getAdminMasterSection(
         "Sincronizar webhooks",
         "Testar endpoint Asaas",
         "Ver payload Asaas",
-        "Reprocessar diagnostico",
+         "Reprocessar diagnóstico",
         "Abrir logs",
       ],
     };
@@ -4042,18 +4042,18 @@ export async function getAdminMasterSection(
       actions: ["Abrir tickets", "Abrir suporte", "Abrir saloes", "Auditar"],
     },
     notificacoes: {
-      title: "Notificacoes globais",
-      description: "Comunicados, manutencao, ofertas e avisos institucionais.",
+      title: "Notificações globais",
+        description: "Comunicados, manutenção, ofertas e avisos institucionais.",
       table: "notificacoes_globais",
       columns: ["titulo", "tipo", "publico_tipo", "status", "criada_em"],
-      actions: ["Abrir notificacoes", "Ver campanhas", "Auditar"],
+       actions: ["Abrir notificações", "Ver campanhas", "Auditar"],
     },
     campanhas: {
       title: "Campanhas",
       description: "Promocoes, retencao, conversao de trial e recuperacao.",
       table: "campanhas",
       columns: ["nome", "tipo", "publico_tipo", "status", "inicio_em", "fim_em"],
-      actions: ["Abrir campanhas", "Ver notificacoes", "Abrir relatorios", "Auditar"],
+       actions: ["Abrir campanhas", "Ver notificações", "Abrir relatórios", "Auditar"],
     },
     alertas: {
       title: "Alertas",
@@ -4133,8 +4133,8 @@ export async function getAdminMasterSection(
       actions: ["Ver crescimento", "Ver uso por modulo", "Abrir relatorios"],
     },
     "configuracoes-globais": {
-      title: "Configuracoes globais",
-      description: "Manutencao, banners, onboarding, politicas e templates globais.",
+      title: "Configurações globais",
+        description: "Manutenção, banners, onboarding, políticas e templates globais.",
       table: "configuracoes_globais",
       columns: ["chave", "descricao", "atualizado_em"],
       actions: ["Ver configs globais", "Ver logs", "Auditar"],

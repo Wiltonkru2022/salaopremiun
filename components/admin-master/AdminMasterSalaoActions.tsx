@@ -150,11 +150,11 @@ export default function AdminMasterSalaoActions({
     .filter(Boolean)
     .sort((a, b) => new Date(String(b)).getTime() - new Date(String(a)).getTime())[0];
   const whatsappPhone = normalizeWhatsapp(trialInfo?.whatsapp);
-  const salaoNome = trialInfo?.nomeSalao || "seu salao";
+  const salaoNome = trialInfo?.nomeSalao || "seu salão";
   const whatsappTrialMessage =
-    "Oi, tudo bem?\n\nSeu periodo de teste do SalaoPremium esta chegando ao fim.\n\nSe quiser continuar usando a plataforma, posso te ajudar com a ativacao do plano ou tirar qualquer duvida.\n\nTambem podemos liberar mais alguns dias para voce testar com calma.";
-  const whatsappUpgradeMessage = `Oi, tudo bem?\n\nVi que o ${salaoNome} ja esta usando o SalaoPremium. Posso te ajudar a ativar o plano ideal para continuar com agenda, clientes, caixa e notificacoes funcionando.`;
-  const whatsappExtraDaysMessage = `Oi, tudo bem?\n\nPodemos liberar mais alguns dias de teste no SalaoPremium para voce avaliar com calma. Quer que eu prorrogue o acesso do ${salaoNome}?`;
+    "Oi, tudo bem?\n\nSeu período de teste do SalãoPremium está chegando ao fim.\n\nSe quiser continuar usando a plataforma, posso te ajudar com a ativação do plano ou tirar qualquer dúvida.\n\nTambém podemos liberar mais alguns dias para você testar com calma.";
+  const whatsappUpgradeMessage = `Oi, tudo bem?\n\nVi que o ${salaoNome} já está usando o SalãoPremium. Posso te ajudar a ativar o plano ideal para continuar com agenda, clientes, caixa e notificações funcionando.`;
+  const whatsappExtraDaysMessage = `Oi, tudo bem?\n\nPodemos liberar mais alguns dias de teste no SalãoPremium para você avaliar com calma. Quer que eu prorrogue o acesso do ${salaoNome}?`;
 
   const feedbackClass = useMemo(() => {
     if (feedback.tone === "success") {

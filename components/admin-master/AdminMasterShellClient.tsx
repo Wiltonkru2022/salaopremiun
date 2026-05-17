@@ -201,7 +201,7 @@ const MENU_GROUPS: MenuGroup[] = [
     items: [
       {
         href: "/admin-master/notificacoes",
-        label: "Notificacoes",
+         label: "Notificações",
         icon: Bell,
         permission: "comunicacao_ver",
       },

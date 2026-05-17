@@ -277,8 +277,8 @@ export async function createBlogPost(
         return {
           error:
             newsletterError instanceof Error
-              ? `Post salvo, mas o e-mail nao foi enviado: ${newsletterError.message}`
-              : "Post salvo, mas o e-mail nao foi enviado.",
+              ? `Post salvo, mas o e-mail não foi enviado: ${newsletterError.message}`
+              : "Post salvo, mas o e-mail não foi enviado.",
         };
       }
     }

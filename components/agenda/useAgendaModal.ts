@@ -664,7 +664,7 @@ export function useAgendaModal({
       setQuickClientWhatsapp("");
 
       await handleClienteChange(novoCliente.id);
-      abrirAviso("Cliente criado", "Cadastro rapido concluido e cliente selecionado.", "success");
+      abrirAviso("Cliente criado", "Cadastro rápido concluído e cliente selecionado.", "success");
     } catch (error) {
       abrirAviso("Erro ao cadastrar cliente", getErrorMessage(error), "danger");
     } finally {
