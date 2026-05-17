@@ -228,15 +228,14 @@ const loadPainelShellContextCached = unstable_cache(
 export async function loadPainelShellData() {
   const supabase = await createClient();
   const {
-    data: { session },
-    error: sessionError,
-  } = await supabase.auth.getSession();
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
 
-  if (sessionError || !session?.user) {
+  if (userError || !user) {
     redirect(buildLoginRedirectUrl("sessao_expirada"));
   }
 
-  const user = session.user;
   const userName =
     user.user_metadata?.nome || user.email?.split("@")[0] || "Usuario";
 
