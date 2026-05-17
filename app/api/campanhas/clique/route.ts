@@ -1,5 +1,11 @@
 import { NextResponse } from "next/server";
+import {
+  assertPublicRateLimit,
+  getPublicRateLimitIdentity,
+} from "@/lib/security/public-rate-limit";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+
+export const publicRoute = "rota publica: registro de clique de campanha com rate limit.";
 
 export async function POST(request: Request) {
   try {
@@ -10,6 +16,12 @@ export async function POST(request: Request) {
     if (!idCampanha || !idSalao) {
       return NextResponse.json({ ok: false }, { status: 400 });
     }
+
+    assertPublicRateLimit({
+      key: getPublicRateLimitIdentity(request, `campanha-clique:${idCampanha}`),
+      limit: 60,
+      windowMs: 5 * 60 * 1000,
+    });
 
     const supabase = getSupabaseAdmin();
     const { data: campanha } = await (supabase as any)

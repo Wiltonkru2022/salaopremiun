@@ -16,6 +16,7 @@ const GUARD_HINTS = [
   "requireAdminTenantActor(",
   "requireSalaoMembership(",
   "requireSalaoPermission(",
+  "requireSalaoAnyPermission(",
   "requireAdminSalao(",
   "requireAdminMasterUser(",
   "getAdminMasterAccess(",
