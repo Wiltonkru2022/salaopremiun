@@ -192,7 +192,7 @@ export async function createAsaasSubscription(
   if (input.billingType === "CREDIT_CARD") {
     if (!input.remoteIp) {
       throw new Error(
-        "IP remoto e obrigatorio para provisionar assinatura recorrente no cartao."
+        "IP remoto é obrigatório para provisionar assinatura recorrente no cartão."
       );
     }
 
@@ -201,7 +201,7 @@ export async function createAsaasSubscription(
     } else {
       if (!input.creditCard || !input.creditCardHolderInfo) {
         throw new Error(
-          "Cartao tokenizado ou dados completos do cartao sao obrigatorios para a assinatura recorrente."
+          "Cartão tokenizado ou dados completos do cartão são obrigatórios para a assinatura recorrente."
         );
       }
 

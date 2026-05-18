@@ -59,7 +59,7 @@ async function validarPlanoParaPermissao(
 
   if (recurso && access.recursos[recurso] === false) {
     throw new AuthzError(
-      `Recurso indisponivel no plano atual: ${recurso}.`,
+      `Recurso indisponível no plano atual: ${recurso}.`,
       402,
       "recurso_indisponivel_plano"
     );

@@ -115,7 +115,7 @@ function mapCategory(category: BlogDbCategory): BlogCategory {
     id: category.id,
     slug: looksLikeUuid(category.slug) ? "agenda-online" : category.slug,
     name: readableCategoryName(category),
-    description: category.descricao || "Artigos do blog SalaoPremium.",
+    description: category.descricao || "Artigos do blog SalãoPremium.",
   };
 }
 

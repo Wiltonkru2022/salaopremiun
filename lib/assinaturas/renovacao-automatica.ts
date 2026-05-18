@@ -162,7 +162,7 @@ export function getRenovacaoAutomaticaInfo(
         descricao:
           "A renovacao automatica precisa de uma forma atual compativel para gerar a proxima cobranca antes do vencimento.",
         observacao:
-          "Defina PIX, boleto ou cartao como forma da assinatura para deixar a recorrencia pronta.",
+          "Defina PIX, boleto ou cartão como forma da assinatura para deixar a recorrência pronta.",
         tone: "amber",
         formaPagamentoNormalizada,
         possuiCustomerAsaas,
@@ -185,7 +185,7 @@ export function getRenovacaoAutomaticaInfo(
           code: "ready_enabled",
           titulo: "Ativada e pronta",
           descricao:
-            "O Asaas esta provisionado para gerar as proximas cobrancas mensais no cartao automaticamente.",
+            "O Asaas está provisionado para gerar as próximas cobranças mensais no cartão automaticamente.",
           observacao:
             "Se precisar pausar, desligue a configuracao para remover a assinatura recorrente do Asaas.",
           tone: "green",
@@ -208,14 +208,14 @@ export function getRenovacaoAutomaticaInfo(
           code: "credit_card_subscription_missing",
           titulo: "Ativada com provisionamento pendente",
           descricao:
-            "O cartao esta tokenizado, mas a assinatura recorrente do Asaas ainda nao foi provisionada para as proximas mensalidades.",
+            "O cartão está tokenizado, mas a assinatura recorrente do Asaas ainda não foi provisionada para as próximas mensalidades.",
           observacao:
-            "Desative e ative novamente para tentar provisionar a recorrencia no Asaas com o cartao salvo.",
+            "Desative e ative novamente para tentar provisionar a recorrência no Asaas com o cartão salvo.",
           tone: "red",
           formaPagamentoNormalizada,
           possuiCustomerAsaas,
           erroAtivacao:
-            "Renovacao automatica no cartao ainda nao foi provisionada no Asaas.",
+            "Renovação automática no cartão ainda não foi provisionada no Asaas.",
         },
         {
           assinaturaExiste,
@@ -234,10 +234,10 @@ export function getRenovacaoAutomaticaInfo(
             ? "Cartao recorrente pronto"
             : "Cartao tokenizado e pronto",
           descricao:
-            "O cartao ja pode ser usado para provisionar a recorrencia mensal no Asaas sem pedir os dados novamente.",
+            "O cartão já pode ser usado para provisionar a recorrência mensal no Asaas sem pedir os dados novamente.",
           observacao: possuiAssinaturaRecorrenteCartao
             ? "Ao ativar, o sistema volta a monitorar a assinatura recorrente que ja esta provisionada."
-            : "Ao ativar, o sistema cria a assinatura recorrente mensal no Asaas usando o cartao salvo.",
+            : "Ao ativar, o sistema cria a assinatura recorrente mensal no Asaas usando o cartão salvo.",
           tone: "green",
           formaPagamentoNormalizada,
           possuiCustomerAsaas,
@@ -259,15 +259,15 @@ export function getRenovacaoAutomaticaInfo(
           ? "Ativada com ajuste pendente"
           : "Cartao ainda nao esta apto",
         descricao:
-          "O cartao precisa passar pela primeira cobranca e tokenizacao segura antes de ser usado para recorrencia automatica.",
+          "O cartão precisa passar pela primeira cobrança e tokenização segura antes de ser usado para recorrência automática.",
         observacao: renovacaoAutomatica
-          ? "Desative ate a tokenizacao do cartao ficar pronta ou gere uma nova cobranca no cartao para refazer o provisionamento."
-          : "Gere uma cobranca no cartao uma vez para salvar o token e liberar a recorrencia automatica.",
+          ? "Desative até a tokenização do cartão ficar pronta ou gere uma nova cobrança no cartão para refazer o provisionamento."
+          : "Gere uma cobrança no cartão uma vez para salvar o token e liberar a recorrência automática.",
         tone: "amber",
         formaPagamentoNormalizada,
         possuiCustomerAsaas,
         erroAtivacao:
-          "Renovacao automatica por cartao exige tokenizacao antes de ser ativada.",
+          "Renovação automática por cartão exige tokenização antes de ser ativada.",
       },
       {
         assinaturaExiste,
@@ -288,7 +288,7 @@ export function getRenovacaoAutomaticaInfo(
         descricao:
           "A renovacao automatica precisa de uma forma atual compativel para gerar a proxima cobranca antes do vencimento.",
         observacao:
-          "Defina PIX, boleto ou cartao tokenizado como forma da assinatura para deixar a recorrencia pronta.",
+          "Defina PIX, boleto ou cartão tokenizado como forma da assinatura para deixar a recorrência pronta.",
         tone: "amber",
         formaPagamentoNormalizada,
         possuiCustomerAsaas,

@@ -168,7 +168,7 @@ function buildOpaqueServerComponentMessage(params: CaptureSystemEventParams) {
     normalizeText(params.details?.errorDigest);
 
   return [
-    "Falha opaca de Server Component em producao.",
+    "Falha opaca de Server Component em produção.",
     `Local: ${location}.`,
     `Acao: ${action}.`,
     digest ? `Digest: ${digest}.` : null,

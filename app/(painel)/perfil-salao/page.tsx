@@ -1346,7 +1346,7 @@ export default function PerfilSalaoPage() {
 
       const { data, error } = await supabase.auth.mfa.enroll({
         factorType: "totp",
-        friendlyName: `Administrador ${perfilForm.nome || "SalaoPremium"}`,
+        friendlyName: `Administrador ${perfilForm.nome || "SalãoPremium"}`,
       });
 
       if (error) throw error;
@@ -1651,7 +1651,7 @@ export default function PerfilSalaoPage() {
 
               <div className="rounded-[24px] border border-zinc-200 bg-zinc-50 p-3.5">
                 <div className="font-display text-lg font-bold">
-                  {perfilForm.nome || "SalaoPremium"}
+                  {perfilForm.nome || "SalãoPremium"}
                 </div>
                 <div className="text-sm text-zinc-500">
                   {String(perfilForm.plano || "sem plano").toUpperCase()} |{" "}
@@ -2150,7 +2150,7 @@ export default function PerfilSalaoPage() {
                 <div className="rounded-[24px] border border-zinc-200 bg-white p-3">
                   <img
                     src={qrCodeUrl}
-                    alt={`QR Code do salão ${perfilForm.nome || "SalaoPremium"}`}
+                    alt={`QR Code do salão ${perfilForm.nome || "SalãoPremium"}`}
                     className="aspect-square w-full rounded-[18px] bg-white object-contain"
                   />
                 </div>

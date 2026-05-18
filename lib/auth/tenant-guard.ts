@@ -39,7 +39,7 @@ export async function requireAdminTenantActor(): Promise<TenantActor> {
   const actor = await requireTenantActor();
 
   if (actor.nivel !== "admin") {
-    throw new Error("Apenas administradores podem executar esta operacao.");
+    throw new Error("Apenas administradores podem executar esta operação.");
   }
 
   return actor;

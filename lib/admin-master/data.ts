@@ -504,7 +504,7 @@ export async function getAdminMasterDashboard(): Promise<AdminMasterDashboardDat
       {
         label: "Trials ativos",
         value: String(safeCount(saloesTrial)),
-        hint: "Oportunidade de conversao",
+        hint: "Oportunidade de conversão",
         tone: "blue",
       },
       {
@@ -516,7 +516,7 @@ export async function getAdminMasterDashboard(): Promise<AdminMasterDashboardDat
       {
         label: "Receita do mes",
         value: currency(receitaMes),
-        hint: `${safeCount(cobrancasVencidas)} cobrancas vencidas`,
+        hint: `${safeCount(cobrancasVencidas)} cobranças vencidas`,
         tone: "amber",
       },
       {
@@ -928,12 +928,12 @@ export async function getAdminMasterPlanosSection(): Promise<AdminSectionData> {
   return {
     title: "Planos e recursos",
     description:
-      "Motor comercial do SalaoPremium com limites, recursos liberados e bloqueios por plano.",
+      "Motor comercial do SalãoPremium com limites, recursos liberados e bloqueios por plano.",
     kpis: [
       {
         label: "Planos ativos",
         value: String(activeRows.length),
-        hint: "Trial, Basico, Pro e Premium",
+        hint: "Trial, Básico, Pro e Premium",
         tone: "blue",
       },
       {
@@ -968,7 +968,7 @@ export async function getAdminMasterPlanosSection(): Promise<AdminSectionData> {
         detail:
           destaque?.cta && destaque.cta !== "-"
             ? `CTA atual: ${destaque.cta}`
-            : "Defina um CTA comercial claro no plano destaque para melhorar conversao.",
+            : "Defina um CTA comercial claro no plano destaque para melhorar conversão.",
         tone: destaque ? "green" : "amber",
         href: "/admin-master/planos",
       },
@@ -1389,7 +1389,7 @@ async function getAdminMasterFinanceiroSection(): Promise<AdminSectionData> {
           : PENDING_CHARGE_STATUSES.has(status)
             ? "Aguardando pagamento"
             : "Acompanhar",
-      acao: atrasada && cobranca.id_salao ? "Criar ticket" : "Abrir salao",
+        acao: atrasada && cobranca.id_salao ? "Criar ticket" : "Abrir salão",
       acao_tipo:
         atrasada && cobranca.id_salao
           ? "salao_ticket_financeiro"
@@ -1426,7 +1426,7 @@ async function getAdminMasterFinanceiroSection(): Promise<AdminSectionData> {
       {
         label: "Em atraso",
         value: currency(atrasadoValor),
-        hint: `${cobrancasAtrasadas.length} cobranca(s) vencida(s)`,
+        hint: `${cobrancasAtrasadas.length} cobrança(s) vencida(s)`,
         tone: atrasadoValor > 0 ? "red" : "green",
       },
       {
@@ -1441,7 +1441,7 @@ async function getAdminMasterFinanceiroSection(): Promise<AdminSectionData> {
         label: "Caixa do mes",
         value: currency(receitaMes),
         detail:
-          "Receita confirmada precisa bater com cobrancas pagas e manter o webhook Asaas sem redirecionamento.",
+          "Receita confirmada precisa bater com cobranças pagas e manter o webhook Asaas sem redirecionamento.",
         tone: "blue",
         href: "/admin-master/assinaturas/cobrancas",
       },
@@ -1449,7 +1449,7 @@ async function getAdminMasterFinanceiroSection(): Promise<AdminSectionData> {
         label: "Recebimento",
         value: percent(taxaRecebimento),
         detail:
-          "Percentual recebido nas ultimas cobrancas listadas. Queda aqui vira acao de cobranca e suporte.",
+          "Percentual recebido nas últimas cobranças listadas. Queda aqui vira ação de cobrança e suporte.",
         tone: taxaRecebimento >= 70 ? "green" : "amber",
       },
       {
@@ -1464,7 +1464,7 @@ async function getAdminMasterFinanceiroSection(): Promise<AdminSectionData> {
         label: "Reconciliacao",
         value: `${checkoutsParaReconciliar}/${checkoutsComFalha}`,
         detail:
-          "Checkout com pagamento no provedor e sem cobranca local precisa ser tratado antes de vender em escala.",
+          "Checkout com pagamento no provedor e sem cobrança local precisa ser tratado antes de vender em escala.",
         tone: checkoutsParaReconciliar > 0 ? "red" : "green",
         href: "/admin-master/operacao",
       },
@@ -1484,7 +1484,7 @@ async function getAdminMasterFinanceiroSection(): Promise<AdminSectionData> {
     ],
     actions: [
       "Ver inadimplentes",
-      "Abrir cobrancas",
+      "Abrir cobranças",
       "Abrir relatorios",
       "Reconciliar checkout",
     ],
@@ -1552,7 +1552,7 @@ export async function getAdminMasterSection(
     return {
       title: "Suporte",
       description:
-        "Tickets, clientes com problema, prioridades, ultima resposta e operacao de atendimento.",
+        "Tickets, clientes com problema, prioridades, última resposta e operação de atendimento.",
       kpis: [
         {
           label: "Tickets",
@@ -1602,12 +1602,12 @@ export async function getAdminMasterSection(
   if (section === "saloes") {
     const rows = await getAdminMasterSaloes();
     return {
-      title: "Saloes clientes",
+      title: "Salões clientes",
       description:
         "Controle de clientes, status, assinatura, score de onboarding e acoes administrativas.",
       kpis: [
         {
-          label: "Saloes listados",
+          label: "Salões listados",
           value: String(rows.length),
           hint: "Ultimos 100 saloes",
           tone: "dark",
@@ -1932,7 +1932,7 @@ export async function getAdminMasterSection(
           value: semObjetivo > 0 ? "Ajustar" : "Ok",
           detail:
             semObjetivo > 0
-              ? "Campanha sem objetivo vira disparo solto. Defina conversao, retencao ou recuperacao antes de ativar."
+              ? "Campanha sem objetivo vira disparo solto. Defina conversão, retenção ou recuperação antes de ativar."
               : "As campanhas listadas possuem objetivo registrado.",
           tone: semObjetivo > 0 ? "amber" : "green",
         },
@@ -1948,7 +1948,7 @@ export async function getAdminMasterSection(
           label: "Relatorios",
           value: "Medir",
           detail:
-            "Depois de publicar, acompanhe saloes impactados, leitura e conversao no painel de relatorios.",
+            "Depois de publicar, acompanhe salões impactados, leitura e conversão no painel de relatórios.",
           tone: "dark",
           href: "/admin-master/relatorios",
         },
@@ -2073,7 +2073,7 @@ export async function getAdminMasterSection(
         detalhe: `Saldo ${row.creditos_saldo || 0} de ${row.creditos_total || 0}`,
         creditos: row.creditos_usados || 0,
         criado: dateValue(row.expira_em),
-        sinal: safeNumber(row.creditos_saldo) <= 10 ? "Creditos baixos" : "Acompanhar",
+        sinal: safeNumber(row.creditos_saldo) <= 10 ? "Créditos baixos" : "Acompanhar",
         acao: row.id ? "Detalhes" : row.id_salao ? "Abrir salao" : "-",
         acao_tipo: row.id ? "whatsapp_detail" : row.id_salao ? "salao_detail" : null,
         acao_id: row.id ? `saldo:${row.id}` : row.id_salao || null,
@@ -2090,7 +2090,7 @@ export async function getAdminMasterSection(
     const filaPendente = filaRows.filter((row) =>
       ["pendente", "retry", "erro"].includes(normalizeStatus(row.status))
     ).length;
-    const saldosBaixos = saldoRows.filter((row) => row.sinal === "Creditos baixos").length;
+    const saldosBaixos = saldoRows.filter((row) => row.sinal === "Créditos baixos").length;
     const templatesAtivos = ((templates || []) as { ativo?: boolean | null }[]).filter(
       (template) => template.ativo !== false
     ).length;
@@ -2121,7 +2121,7 @@ export async function getAdminMasterSection(
         {
           label: "Saldo baixo",
           value: String(saldosBaixos),
-          hint: "Saloes com ate 10 creditos",
+          hint: "Salões com até 10 créditos",
           tone: saldosBaixos > 0 ? "amber" : "green",
         },
         {
@@ -2143,10 +2143,10 @@ export async function getAdminMasterSection(
           href: "/admin-master/logs",
         },
         {
-          label: "Creditos",
+          label: "Créditos",
           value: `${saldosBaixos} baixo(s)`,
           detail:
-            "Saloes com poucos creditos podem parar comunicacao automatica; use pacotes antes de falhar atendimento.",
+            "Salões com poucos créditos podem parar comunicação automática; use pacotes antes de falhar atendimento.",
           tone: saldosBaixos > 0 ? "amber" : "green",
           href: "/admin-master/whatsapp/pacotes",
         },
@@ -2245,7 +2245,7 @@ export async function getAdminMasterSection(
     return {
       title: "Feature flags",
       description:
-        "Controle de liberacoes por plano, salao e janela de teste para evitar recurso solto em producao.",
+        "Controle de liberações por plano, salão e janela de teste para evitar recurso solto em produção.",
       kpis: [
         { label: "Flags", value: String(rows.length), hint: "Recursos cadastrados", tone: "dark" },
         { label: "Globais", value: String(globais), hint: "Ativas para todos", tone: globais > 0 ? "amber" : "green" },
@@ -2255,7 +2255,7 @@ export async function getAdminMasterSection(
       ],
       diagnostics: [
         {
-          label: "Risco de producao",
+          label: "Risco de produção",
           value: globais > 0 ? "Acompanhar" : "Baixo",
           detail:
             "Flag global altera todos os saloes. Use apenas quando o recurso ja passou por teste controlado.",
@@ -2376,7 +2376,7 @@ export async function getAdminMasterSection(
           label: "Seguranca",
           value: `${acessoAmplo} amplo(s)`,
           detail:
-            "Admins com acesso amplo devem ser poucos e auditados. Eles podem mexer em saloes, cobrancas, planos e usuarios.",
+            "Admins com acesso amplo devem ser poucos e auditados. Eles podem mexer em salões, cobranças, planos e usuários.",
           tone: acessoAmplo > 0 ? "amber" : "green",
         },
         {
@@ -2392,7 +2392,7 @@ export async function getAdminMasterSection(
           label: "Auditoria",
           value: "Obrigatoria",
           detail:
-            "Toda acao sensivel do AdminMaster deve deixar trilha para diagnostico e responsabilizacao.",
+            "Toda ação sensível do AdminMaster deve deixar trilha para diagnóstico e responsabilização.",
           tone: "blue",
           href: "/admin-master/logs",
         },
@@ -2472,7 +2472,7 @@ export async function getAdminMasterSection(
          "Controle de chaves globais, histórico de alterações, configurações sensíveis e validade operacional.",
       kpis: [
         { label: "Configs", value: String(rows.length), hint: "Chaves globais", tone: "dark" },
-        { label: "Sensiveis", value: String(sensiveis), hint: "Podem afetar producao", tone: sensiveis > 0 ? "amber" : "green" },
+        { label: "Sensíveis", value: String(sensiveis), hint: "Podem afetar produção", tone: sensiveis > 0 ? "amber" : "green" },
         { label: "Mudanca frequente", value: String(frequentes), hint: "Historico movimentado", tone: frequentes > 0 ? "amber" : "green" },
         { label: "Revisar", value: String(revisar), hint: "Sem ajuste ha 90 dias", tone: revisar > 0 ? "blue" : "green" },
         { label: "Historico", value: String((history || []).length), hint: "Ultimas alteracoes", tone: "blue" },
@@ -2487,9 +2487,9 @@ export async function getAdminMasterSection(
         },
         {
           label: "Mudanca critica",
-          value: `${sensiveis} sensivel(is)`,
+          value: `${sensiveis} sensível(is)`,
           detail:
-            "Config global sensivel deve ter motivo, horario e responsavel claros antes de mexer em producao.",
+            "Config global sensível deve ter motivo, horário e responsável claros antes de mexer em produção.",
           tone: sensiveis > 0 ? "amber" : "green",
           href: "/admin-master/logs",
         },
@@ -2633,8 +2633,8 @@ export async function getAdminMasterSection(
       } else if (pendingCharges > 0) {
         risco =
           pendingCharges === 1
-            ? "1 cobranca pendente"
-            : `${pendingCharges} cobrancas pendentes`;
+            ? "1 cobrança pendente"
+            : `${pendingCharges} cobranças pendentes`;
       } else if (diasParaVencer !== null && diasParaVencer === 0) {
         risco = "Vence hoje";
       } else if (diasParaVencer !== null && diasParaVencer <= 7) {
@@ -2653,7 +2653,7 @@ export async function getAdminMasterSection(
         if (item.renovacao_automatica && !renovacaoInfo.estaProntaParaCobranca) {
           return "Corrigir renovacao automatica";
         }
-        if (pendingCharges > 0) return "Acompanhar cobranca pendente";
+        if (pendingCharges > 0) return "Acompanhar cobrança pendente";
         if (!item.renovacao_automatica && diasParaVencer !== null && diasParaVencer <= 15) {
           return "Ativar renovacao ou avisar salao";
         }
@@ -2664,7 +2664,7 @@ export async function getAdminMasterSection(
       let cobranca = "-";
       if (latestCharge) {
         if (PENDING_CHARGE_STATUSES.has(latestChargeStatus)) {
-          cobranca = `Pendente ate ${dateValue(latestCharge.data_expiracao)}`;
+          cobranca = `Pendente até ${dateValue(latestCharge.data_expiracao)}`;
         } else if (PAID_CHARGE_STATUSES.has(latestChargeStatus)) {
           cobranca = `Paga em ${dateValue(latestCharge.pago_em)}`;
         } else {
@@ -2722,7 +2722,7 @@ export async function getAdminMasterSection(
     return {
       title: "Assinaturas",
       description:
-        "Status comercial do SaaS com urgencia por vencimento, cobranca e atalho direto para atuar no salao.",
+        "Status comercial do SaaS com urgência por vencimento, cobrança e atalho direto para atuar no salão.",
       kpis: [
         {
           label: "Assinaturas",
@@ -2780,16 +2780,16 @@ export async function getAdminMasterSection(
           label: "MRR",
           value: currency(mrr),
           detail:
-            "Este valor considera assinaturas ativas/pagas e ajuda a validar se planos e cobrancas estao conversando.",
+            "Este valor considera assinaturas ativas/pagas e ajuda a validar se planos e cobranças estão conversando.",
           tone: "blue",
           href: "/admin-master/financeiro",
         },
         {
-          label: "Renovacao automatica",
+          label: "Renovação automática",
           value: `${renovacaoComAjuste} ajuste(s)`,
           detail:
             semRenovacaoProxima > 0
-              ? `${semRenovacaoProxima} assinatura(s) vencem em ate 15 dias sem renovacao automatica.`
+              ? `${semRenovacaoProxima} assinatura(s) vencem em até 15 dias sem renovação automática.`
               : "Sem assinatura proxima exigindo troca manual de renovacao.",
           tone: renovacaoComAjuste || semRenovacaoProxima ? "amber" : "green",
           href: "/admin-master/assinaturas/cobrancas",
@@ -2810,7 +2810,7 @@ export async function getAdminMasterSection(
       ],
       actions: [
         "Abrir saloes",
-        "Abrir cobrancas",
+        "Abrir cobranças",
         "Abrir planos",
         "Abrir financeiro",
       ],
@@ -3052,7 +3052,7 @@ export async function getAdminMasterSection(
     return {
       title: "Cobrancas",
       description:
-        "Historico financeiro com leitura de atraso, pagamento e checkout travado para acelerar cobranca e suporte.",
+        "Histórico financeiro com leitura de atraso, pagamento e checkout travado para acelerar cobrança e suporte.",
       kpis: [
         {
           label: "Cobrancas recentes",
@@ -3098,7 +3098,7 @@ export async function getAdminMasterSection(
           label: "Atraso",
           value: String(cobrancasEmAtraso),
           detail:
-            `Existe ${currency(valorEmAtraso)} em cobrancas vencidas. Cobranca pendente vencida deve abrir acao no salao antes do bloqueio.`,
+            `Existe ${currency(valorEmAtraso)} em cobranças vencidas. Cobrança pendente vencida deve abrir ação no salão antes do bloqueio.`,
           tone: cobrancasEmAtraso > 0 ? "red" : "green",
           href: "/admin-master/suporte",
         },
@@ -3127,7 +3127,7 @@ export async function getAdminMasterSection(
         "acao",
       ],
       actions: [
-        "Abrir cobrancas",
+        "Abrir cobranças",
         "Abrir saloes",
         "Reprocessar webhook",
         "Ver checkout travado",
@@ -3244,7 +3244,7 @@ export async function getAdminMasterSection(
     return {
       title: "Webhooks",
       description:
-        "Diagnostico operacional dos eventos reais do Asaas, com status consolidado, tentativas, decisao aplicada e impacto por salao.",
+        "Diagnóstico operacional dos eventos reais do Asaas, com status consolidado, tentativas, decisão aplicada e impacto por salão.",
       kpis: [
         {
           label: "Eventos recentes",
@@ -3259,7 +3259,7 @@ export async function getAdminMasterSection(
           tone: erros > 0 ? "red" : "green",
         },
         {
-          label: "Saloes impactados",
+          label: "Salões impactados",
           value: String(saloesImpactados),
           hint: `${sync.processados} processados sem falha`,
           tone: saloesImpactados > 0 ? "blue" : "dark",
@@ -3327,7 +3327,7 @@ export async function getAdminMasterSection(
       syncError =
         error instanceof Error
           ? error.message
-          : "Falha ao sincronizar webhooks para operacao.";
+          : "Falha ao sincronizar webhooks para operação.";
     }
 
     const [{ data: crons }, { data: webhooks }, { data: checkoutLocks }] =
@@ -3482,7 +3482,7 @@ export async function getAdminMasterSection(
     return {
       title: "Operacao",
       description:
-        "Visao operacional unificada com crons recentes, checkouts presos e webhooks com erro ou pendentes para suporte e reprocessamento.",
+        "Visão operacional unificada com crons recentes, checkouts presos e webhooks com erro ou pendentes para suporte e reprocessamento.",
       kpis: [
         {
           label: "Crons com erro",
@@ -3679,7 +3679,7 @@ export async function getAdminMasterSection(
     return {
       title: "Alertas",
       description:
-        "Alertas automaticos do AdminMaster para renovacao automatica, checkout de assinatura, webhook Asaas, cobrancas vencidas e trials terminando, com abertura automatica de ticket nos riscos de recorrencia.",
+        "Alertas automáticos do AdminMaster para renovação automática, checkout de assinatura, webhook Asaas, cobranças vencidas e trials terminando, com abertura automática de ticket nos riscos de recorrência.",
       kpis: [
         {
           label: "Alertas ativos",
@@ -3696,13 +3696,13 @@ export async function getAdminMasterSection(
         {
           label: "Renovacao em risco",
           value: String(renovacoesEmRisco),
-          hint: `${sync.renovacoesComConfigInvalida} sem preparo e ${sync.renovacoesSemCobranca} sem cobranca futura`,
+          hint: `${sync.renovacoesComConfigInvalida} sem preparo e ${sync.renovacoesSemCobranca} sem cobrança futura`,
           tone: renovacoesEmRisco > 0 ? "red" : "green",
         },
         {
           label: "Trials vencendo",
           value: String(sync.trialsVencendo),
-          hint: `${sync.cobrancasVencidas} cobrancas vencidas monitoradas`,
+          hint: `${sync.cobrancasVencidas} cobranças vencidas monitoradas`,
           tone: sync.trialsVencendo > 0 ? "blue" : "dark",
         },
         {
@@ -3734,8 +3734,8 @@ export async function getAdminMasterSection(
           value: String(ativosReabertos),
           detail:
             ativosReabertos > 0
-              ? "O mesmo erro voltou depois de uma resolucao manual. O horario antigo aparece na coluna resolucao."
-              : "Nenhum alerta ativo esta carregando horario antigo de resolucao.",
+              ? "O mesmo erro voltou depois de uma resolução manual. O horário antigo aparece na coluna resolução."
+              : "Nenhum alerta ativo está carregando horário antigo de resolução.",
           tone: ativosReabertos > 0 ? "red" : "green",
         },
       ],
@@ -3873,7 +3873,7 @@ export async function getAdminMasterSection(
       modulo: "assinatura_checkout",
       salao: row.id_salao ? salaoById.get(row.id_salao) || row.id_salao : "-",
       mensagem:
-        "Pagamento existe no provedor, mas nao ha cobranca local vinculada.",
+        "Pagamento existe no provedor, mas não há cobrança local vinculada.",
       referencia: row.asaas_payment_id || row.idempotency_key || row.id || "-",
       criado: dateTimeValue(row.updated_at || row.created_at),
       detalhe:
@@ -3951,7 +3951,7 @@ export async function getAdminMasterSection(
         {
           label: "Reconciliacoes",
           value: String(reconciliationRows.length),
-          hint: "Pagamento no provedor sem cobranca local",
+          hint: "Pagamento no provedor sem cobrança local",
           tone: reconciliationRows.length > 0 ? "red" : "green",
         },
         {
@@ -4050,14 +4050,14 @@ export async function getAdminMasterSection(
     },
     campanhas: {
       title: "Campanhas",
-      description: "Promocoes, retencao, conversao de trial e recuperacao.",
+      description: "Promoções, retenção, conversão de trial e recuperação.",
       table: "campanhas",
       columns: ["nome", "tipo", "publico_tipo", "status", "inicio_em", "fim_em"],
        actions: ["Abrir campanhas", "Ver notificações", "Abrir relatórios", "Auditar"],
     },
     alertas: {
       title: "Alertas",
-      description: "Riscos, falhas, cobrancas, webhooks e operacao.",
+      description: "Riscos, falhas, cobranças, webhooks e operação.",
       table: "alertas_sistema",
       columns: ["tipo", "gravidade", "origem_modulo", "titulo", "resolvido", "criado_em"],
       actions: ["Abrir alertas", "Criar ticket", "Sincronizar alertas", "Abrir suporte"],
@@ -4071,14 +4071,14 @@ export async function getAdminMasterSection(
     },
     logs: {
       title: "Logs",
-      description: "Logs de sistema, financeiro, suporte e operacao.",
+      description: "Logs de sistema, financeiro, suporte e operação.",
       table: "logs_sistema",
       columns: ["gravidade", "modulo", "mensagem", "criado_em"],
       actions: ["Abrir logs", "Abrir tickets", "Auditar"],
     },
     whatsapp: {
       title: "WhatsApp e pacotes",
-      description: "Creditos, consumo, templates, filas e cobranca por envio.",
+      description: "Créditos, consumo, templates, filas e cobrança por envio.",
       table: "whatsapp_envios",
       columns: ["tipo", "destino", "template", "status", "custo_creditos", "criado_em"],
       actions: ["Ver WhatsApp", "Ver pacotes WhatsApp", "Ver templates WhatsApp", "Auditar"],
@@ -4113,7 +4113,7 @@ export async function getAdminMasterSection(
     },
     operacao: {
       title: "Operacao",
-      description: "Saude do sistema, crons, sincronizacoes e reprocessamentos.",
+      description: "Saúde do sistema, crons, sincronizações e reprocessamentos.",
       table: "eventos_cron",
       columns: ["nome", "status", "resumo", "erro_texto", "iniciado_em", "finalizado_em"],
       actions: ["Rodar sincronizacao", "Sincronizar webhooks", "Abrir logs"],
@@ -4143,7 +4143,7 @@ export async function getAdminMasterSection(
 
   const config = map[section] || {
     title: section,
-    description: "Modulo AdminMaster preparado para operacao.",
+    description: "Módulo AdminMaster preparado para operação.",
     table: "admin_master_auditoria",
     columns: ["acao", "entidade", "descricao", "criado_em"],
     actions: ["Abrir logs", "Auditar"],
@@ -4189,7 +4189,7 @@ export async function getAdminMasterSection(
       {
         label: "Atalhos reais",
         value: String(config.actions.length),
-        hint: "Botoes apontam para rotas ou APIs existentes",
+        hint: "Botões apontam para rotas ou APIs existentes",
         tone: "blue",
       },
       {
@@ -4204,14 +4204,14 @@ export async function getAdminMasterSection(
         label: "Fonte real",
         value: config.table,
         detail:
-          "Esta tela le os registros diretamente do Supabase usado pelo SalaoPremium.",
+          "Esta tela lê os registros diretamente do Supabase usado pelo SalãoPremium.",
         tone: "blue",
       },
       {
-        label: "Botoes",
-        value: "Sem ficcao",
+        label: "Botões",
+        value: "Sem ficção",
         detail:
-          "Acoes de listagem agora abrem telas reais ou executam endpoints existentes; operacoes destrutivas ficam no detalhe correto.",
+          "Ações de listagem agora abrem telas reais ou executam endpoints existentes; operações destrutivas ficam no detalhe correto.",
         tone: "green",
       },
       {

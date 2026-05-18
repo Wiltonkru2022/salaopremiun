@@ -505,7 +505,7 @@ export async function assertCanUsePlanFeature(
   const result = await canUsePlanFeature(idSalao, recurso);
   if (!result.allowed) {
     throw new PlanAccessError(
-      result.reason || "Recurso indisponivel no plano atual.",
+      result.reason || "Recurso indisponível no plano atual.",
       "FEATURE_BLOCKED"
     );
   }
@@ -519,7 +519,7 @@ export async function assertCanMutatePlanFeature(
   const result = await canUsePlanFeature(idSalao, recurso);
   if (!result.allowed) {
     throw new PlanAccessError(
-      result.reason || "Recurso indisponivel no plano atual.",
+      result.reason || "Recurso indisponível no plano atual.",
       "FEATURE_BLOCKED"
     );
   }

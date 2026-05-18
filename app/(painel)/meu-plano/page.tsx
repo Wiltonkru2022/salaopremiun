@@ -295,7 +295,7 @@ export default async function MeuPlanoPage({
       ) : access.modoRestrito ? (
         <div className="rounded-[24px] border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900 shadow-sm">
           <strong>Modo restrito ativo.</strong> Você ainda pode consultar dados,
-          pagar a assinatura e falar com suporte, mas novas operacoes criticas
+          pagar a assinatura e falar com suporte, mas novas operações críticas
           ficam bloqueadas até a regularizacao.
         </div>
       ) : null}

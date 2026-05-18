@@ -61,7 +61,7 @@ async function loadClienteAppServerContext(): Promise<ClienteAppServerContext> {
   } catch {
     const context = {
       idConta: session.idConta,
-      nome: session.nome || "Cliente SalaoPremium",
+      nome: session.nome || "Cliente SalãoPremium",
       email: session.email || "cliente@salaopremium.local",
       telefone: session.telefone || null,
     };
@@ -81,7 +81,7 @@ async function loadClienteAppServerContext(): Promise<ClienteAppServerContext> {
   const context = {
     idConta: conta.id,
     nome:
-      String(conta.nome || "").trim() || session.nome || "Cliente SalaoPremium",
+      String(conta.nome || "").trim() || session.nome || "Cliente SalãoPremium",
     email:
       String(conta.email || session.email || "").trim() ||
       "cliente@salaopremium.local",

@@ -115,7 +115,7 @@ export function isStatusTrial(status?: string | null) {
 export function getNomePlano(plano?: string | null) {
   const s = String(plano || "").toLowerCase();
 
-  if (s === "basico") return "Basico";
+  if (s === "basico") return "Básico";
   if (s === "pro") return "Pro";
   if (s === "premium") return "Premium";
   if (s === "teste_gratis" || s === "trial") return "Teste gratis";

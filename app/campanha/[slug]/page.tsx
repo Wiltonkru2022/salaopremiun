@@ -17,7 +17,7 @@ export const metadata = {
   manifest: "/app-cliente/manifest.webmanifest",
   appleWebApp: {
     capable: true,
-    title: "SalaoPremium Cliente",
+    title: "SalãoPremium Cliente",
     statusBarStyle: "default" as const,
   },
 };
@@ -127,7 +127,7 @@ export default async function PublicCampaignPage({
               Campanha exclusiva
             </span>
             <h1 className="mt-5 text-4xl font-black tracking-tight md:text-6xl">
-              {campaign?.nome || "Campanha indisponivel"}
+              {campaign?.nome || "Campanha indisponível"}
             </h1>
             <p className="mt-4 text-base leading-7 text-zinc-200">
               {campaign?.descricao ||
@@ -188,11 +188,11 @@ export default async function PublicCampaignPage({
 
             <aside className="rounded-[1.75rem] border border-zinc-200 bg-zinc-950 p-5 text-white">
               <p className="text-xs font-black uppercase tracking-[0.14em] text-amber-100">
-                {String(salao?.nome_fantasia || salao?.nome || "SalaoPremium")}
+                {String(salao?.nome_fantasia || salao?.nome || "SalãoPremium")}
               </p>
               <h2 className="mt-3 text-3xl font-black">Agende pelo link</h2>
               <p className="mt-2 text-sm leading-6 text-zinc-300">
-                O beneficio sera validado antes de confirmar o horario.
+                O benefício será validado antes de confirmar o horário.
               </p>
               {query.erro && !cupomJaUsado ? (
                 <p className="mt-4 rounded-2xl border border-red-400/40 bg-red-500/10 px-4 py-3 text-sm font-bold text-red-100">

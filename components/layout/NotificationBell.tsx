@@ -288,7 +288,7 @@ export default function NotificationBell({
                 Notificações
               </div>
               <div className="mt-1 text-[11px] text-zinc-400">
-                Pendentes e críticos ficam visiveis até a resolucao.
+                Pendentes e críticos ficam visíveis até a resolução.
               </div>
             </div>
 

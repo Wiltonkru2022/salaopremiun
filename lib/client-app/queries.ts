@@ -1314,7 +1314,7 @@ export async function listClienteAppWrittenReviews(params: {
           id,
           String(salao.nome_fantasia || "").trim() ||
             String(salao.nome || "").trim() ||
-            "SalaoPremium"
+            "SalãoPremium"
         );
       }
     }

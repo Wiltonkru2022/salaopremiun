@@ -83,7 +83,7 @@ export function getLoginRedirectNotice(
   if (reason === "usuario_inativo") {
     return {
       tone: "danger",
-      title: "Acesso temporariamente indisponivel",
+      title: "Acesso temporariamente indisponível",
       description:
         "Sua conta do sistema esta inativa no momento. Fale com o administrador do salao para reativar o acesso.",
     };

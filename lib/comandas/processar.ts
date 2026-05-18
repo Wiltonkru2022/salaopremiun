@@ -664,7 +664,7 @@ export async function removerItemComanda(params: {
   const idItem = sanitizeUuid(item.idItem);
 
   if (!idComanda || !idItem) {
-    throw new Error("Comanda e item sao obrigatorios para remover.");
+    throw new Error("Comanda e item são obrigatórios para remover.");
   }
 
   const { error } = await supabaseAdmin.rpc("fn_remover_item_comanda", {

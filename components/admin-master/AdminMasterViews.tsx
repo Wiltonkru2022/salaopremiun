@@ -174,7 +174,7 @@ function HealthRing({
           />
           <div className="relative text-center">
             <div className="text-xs font-black uppercase tracking-[0.28em] opacity-70">
-              Saude
+              Saúde
             </div>
             <div className="mt-2 font-display text-4xl font-black">{health.score}</div>
             <div className="mt-2 text-sm font-bold uppercase tracking-[0.18em]">
@@ -522,7 +522,7 @@ export function AdminDashboardView({
 
             <div className="mt-5 grid gap-2.5 md:grid-cols-2 xl:grid-cols-4">
               <PrioritySignal
-                label="Saude"
+                label="Saúde"
                 value={String(operational.health.score)}
                 description={operational.health.label}
                 href="/admin-master/operacao"
@@ -607,7 +607,7 @@ export function AdminDashboardView({
         <ExecutiveLinkCard
           href="/admin-master/saloes"
           title="Base e conversao"
-          body={`${totalSaloesKpi?.value || "0"} saloes no sistema. ${trialsKpi?.value || "0"} trials ativos para converter em assinatura.`}
+          body={`${totalSaloesKpi?.value || "0"} salões no sistema. ${trialsKpi?.value || "0"} trials ativos para converter em assinatura.`}
           tone="dark"
         />
         <ExecutiveLinkCard
@@ -620,7 +620,7 @@ export function AdminDashboardView({
 
       <section className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_400px]">
         <DashboardPanel
-          title="Saude Do Sistema"
+          title="Saúde do sistema"
           description="Score operacional em tempo real calculado por incidentes, taxa de erro, lentidao e impacto em salões."
         >
           <HealthRing health={operational.health} />

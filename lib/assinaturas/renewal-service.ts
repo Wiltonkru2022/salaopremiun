@@ -103,7 +103,7 @@ async function registrarCobrancaAutomatica(params: {
     customerId: assinatura.asaas_customer_id!,
     billingType: formaPagamento,
     valor: valorPlano,
-    descricao: `Renovacao ${plano.nome} - SalaoPremium`,
+    descricao: `Renovação ${plano.nome} - SalãoPremium`,
     vencimento: novoVencimentoCobranca,
     referenciaExterna: assinatura.id_salao,
   });
@@ -127,7 +127,7 @@ async function registrarCobrancaAutomatica(params: {
       id_assinatura: assinatura.id,
       id_plano: plano.id,
       referencia,
-      descricao: `Renovacao ${plano.nome} - SalaoPremium`,
+      descricao: `Renovação ${plano.nome} - SalãoPremium`,
       valor: valorPlano,
       status: statusInicial,
       forma_pagamento: formaPagamento,
@@ -289,7 +289,7 @@ async function processarRenovacaoAssinatura(params: {
       ok: false,
       motivo:
         renovacaoInfo.erroAtivacao ||
-        "Renovacao automatica ainda nao esta pronta.",
+        "Renovação automática ainda não está pronta.",
     } satisfies ResultadoRenovacaoAssinatura;
   }
 
@@ -303,7 +303,7 @@ async function processarRenovacaoAssinatura(params: {
       ok: true,
       skipped: true,
       motivo:
-        "Renovacao no cartao gerenciada pela assinatura recorrente do Asaas.",
+        "Renovação no cartão gerenciada pela assinatura recorrente do Asaas.",
       subscriptionId: assinatura.asaas_subscription_id,
     } satisfies ResultadoRenovacaoAssinatura;
   }

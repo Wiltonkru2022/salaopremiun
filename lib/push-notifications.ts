@@ -495,7 +495,7 @@ export async function notifySalonAboutClientBooking(params: {
 
     if (settings.salaoNovoAgendamentoApp && !salaoResult.error && salaoResult.data?.length) {
       await sendPushToRows(salaoResult.data as PushSubscriptionRow[], {
-        title: "Pedido de horario recebido",
+        title: "Pedido de horário recebido",
         body,
         url: `/agenda?agendamento=${params.idAgendamento}`,
         tag: `agendamento-${params.idAgendamento}`,
@@ -508,7 +508,7 @@ export async function notifySalonAboutClientBooking(params: {
           profissionalResult.data as PushSubscriptionRow[]
         );
       await sendPushToRows(profissionais, {
-        title: "Pedido de horario para confirmar",
+        title: "Pedido de horário para confirmar",
         body,
         url: `/app-profissional/agenda/${params.idAgendamento}`,
         tag: `agendamento-${params.idAgendamento}`,
@@ -573,7 +573,7 @@ export async function notifyClientAppointmentConfirmed(params: {
 
     await sendPushToRows(rows as PushSubscriptionRow[], {
       title: "Horario confirmado",
-      body: `${servico?.nome || "Seu horario"} foi confirmado para ${formatAppointmentDate(
+      body: `${servico?.nome || "Seu horário"} foi confirmado para ${formatAppointmentDate(
         agendamento.data,
         agendamento.hora_inicio
       )}. Nos vemos em breve.`,

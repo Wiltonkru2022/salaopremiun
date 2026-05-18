@@ -231,11 +231,11 @@ function humanizeOperationalMessage(params: {
   }
 
   if (/unauthorized|sessao invalida|nao autenticado|não autenticado/i.test(message)) {
-    return "Sessao expirada ou acesso invalido durante a operacao.";
+    return "Sessão expirada ou acesso inválido durante a operação.";
   }
 
   if (/timeout|timed out/i.test(message)) {
-    return "Tempo limite excedido durante a operacao monitorada.";
+    return "Tempo limite excedido durante a operação monitorada.";
   }
 
   if (/network|fetch failed|failed to fetch/i.test(message)) {
@@ -544,7 +544,7 @@ export async function getAdminMasterOperationalSnapshot(): Promise<AdminMasterOp
       recommendedAction: String(
         incident.acao_sugerida || "Investigar causa raiz e acompanhar recorrencia."
       ),
-      automation: incident.resolucao_automatica_disponivel ? "Disponivel" : "Manual",
+      automation: incident.resolucao_automatica_disponivel ? "Disponível" : "Manual",
       severityOrder: mapIncidentSeverity(incident.severidade),
     }))
     .sort((a, b) => b.severityOrder - a.severityOrder)

@@ -94,7 +94,7 @@ export default async function AdminMasterTicketsPage({
             ["Investigar logs", "/admin-master/logs"],
             ["Ver saude 24h", "/admin-master/saude"],
             ["Alertas ativos", "/admin-master/alertas"],
-            ["Saloes em risco", "/admin-master/saloes"],
+            ["Salões em risco", "/admin-master/saloes"],
           ].map(([label, href]) => (
             <Link
               key={href}

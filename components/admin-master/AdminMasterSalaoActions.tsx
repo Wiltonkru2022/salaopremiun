@@ -429,7 +429,7 @@ export default function AdminMasterSalaoActions({
               <div className="mt-2 text-sm opacity-80">
                 {salaoBloqueado
                   ? "Restaura acesso operacional do cliente."
-                  : "Impede novas operacoes até revisao."}
+                  : "Impede novas operações até revisão."}
               </div>
             </button>
 

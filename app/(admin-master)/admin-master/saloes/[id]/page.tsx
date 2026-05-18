@@ -169,7 +169,7 @@ export default async function AdminMasterSalaoDetalhePage({
           <div className="mt-5 grid gap-3">
             {[
               ["Uso recente", scoreSaude.uso_recente ?? "-", "Quanto o salão está usando o sistema."],
-              ["Risco inadimplencia", scoreSaude.inadimplencia_risco ?? "-", "Sinal financeiro que pode virar bloqueio."],
+              ["Risco de inadimplência", scoreSaude.inadimplencia_risco ?? "-", "Sinal financeiro que pode virar bloqueio."],
               ["Tickets abertos", scoreSaude.tickets_abertos ?? data.tickets.length, "Suporte pendente para este salão."],
               ["Risco cancelamento", scoreSaude.risco_cancelamento ?? "-", "Probabilidade operacional de churn."],
             ].map(([label, value, hint]) => (

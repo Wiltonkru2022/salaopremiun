@@ -48,7 +48,7 @@ const categorias: Array<{ value: TicketCategoria; label: string }> = [
   { value: "agenda", label: "Agenda" },
   { value: "comanda", label: "Comanda" },
   { value: "caixa", label: "Caixa" },
-  { value: "cobranca", label: "Cobranca" },
+  { value: "cobranca", label: "Cobrança" },
   { value: "assinatura", label: "Assinatura" },
   { value: "estoque", label: "Estoque" },
   { value: "comissao", label: "Comissao" },

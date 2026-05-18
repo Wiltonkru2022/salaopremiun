@@ -71,7 +71,7 @@ export async function criarCobrancaWebhookDeAssinaturaRecorrente(params: {
         String(params.payment.invoiceNumber || "").trim() || params.paymentId,
       descricao:
         String(params.payment.description || "").trim() ||
-        `Renovacao ${plano?.nome || planoCodigo || "SalaoPremium"} - SalaoPremium`,
+        `Renovação ${plano?.nome || planoCodigo || "SalãoPremium"} - SalãoPremium`,
       valor: Number(params.payment.value || assinatura.valor || 0),
       status: statusInterno,
       forma_pagamento: params.billingType || null,

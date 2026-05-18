@@ -154,7 +154,7 @@ function buildAlertSubtitle(params: {
   return (
     [route ? `Local ${route}` : null, action ? `acao ${action}` : null, digest ? `digest ${digest}` : null]
       .filter(Boolean)
-      .join(" - ") || "Erro opaco registrado em producao"
+      .join(" - ") || "Erro opaco registrado em produção"
   );
 }
 
@@ -323,7 +323,7 @@ export async function getAdminMasterHealthCenter(): Promise<AdminMasterHealthCen
         actions.push({
           title: "Manter monitoramento ativo",
           detail:
-            "Nenhum incidente critico ativo agora. Continue acompanhando webhooks e cobrancas.",
+            "Nenhum incidente crítico ativo agora. Continue acompanhando webhooks e cobranças.",
           href: "/admin-master/operacao",
           tone: "green",
         });
@@ -349,7 +349,7 @@ export async function getAdminMasterHealthCenter(): Promise<AdminMasterHealthCen
         href: "/admin-master/logs",
       },
       {
-        label: "Saloes bloqueados",
+        label: "Salões bloqueados",
         value: String(counts.blockedSalons),
         hint: "Clientes sem acesso operacional",
         tone: counts.blockedSalons ? "amber" : "green",

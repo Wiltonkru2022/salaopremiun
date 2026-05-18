@@ -425,7 +425,7 @@ export default function ProfissionaisListPage() {
         title="Excluir profissional"
         description={`Confirme a exclusao de ${
           profissionalParaExcluir?.nome || "este profissional"
-        }. Se ele ja participou da operacao do salao, o sistema vai bloquear e pedir inativacao.`}
+        }. Se ele já participou da operação do salão, o sistema vai bloquear e pedir inativação.`}
         confirmLabel="Excluir profissional"
         tone="danger"
         loading={Boolean(

@@ -76,13 +76,13 @@ const MENU_GROUPS: MenuGroup[] = [
       },
       {
         href: "/admin-master/saloes",
-        label: "Saloes",
+        label: "Salões",
         icon: Building2,
         permission: "saloes_ver",
       },
       {
         href: "/admin-master/saloes-excluidos",
-        label: "Saloes excluidos",
+        label: "Salões excluídos",
         icon: Trash2,
         permission: "saloes_ver",
       },
@@ -140,7 +140,7 @@ const MENU_GROUPS: MenuGroup[] = [
       },
       {
         href: "/admin-master/saude",
-        label: "Saude operacional",
+        label: "Saúde operacional",
         icon: ShieldCheck,
         permission: "operacao_ver",
         badge: "alertas",
@@ -343,7 +343,7 @@ export default function AdminMasterShellClient({
         <div className="flex items-start justify-between border-b border-white/10 p-5">
           <div>
             <div className="text-xs font-semibold uppercase tracking-[0.35em] text-amber-200">
-              SalaoPremium
+              SalãoPremium
             </div>
             <div className="mt-2 font-display text-[1.55rem] font-bold">AdminMaster</div>
             <div className="mt-3 rounded-2xl border border-white/10 bg-white/5 p-2.5 text-xs leading-5 text-zinc-300">

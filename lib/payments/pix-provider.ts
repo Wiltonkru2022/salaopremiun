@@ -227,7 +227,7 @@ export async function criarCobranca(
   if (input.billingType === "CREDIT_CARD") {
     if (!input.creditCard || !input.creditCardHolderInfo || !input.remoteIp) {
       throw new Error(
-        "Dados do cartao, titular e IP remoto sao obrigatorios para cobranca em cartao."
+        "Dados do cartão, titular e IP remoto são obrigatórios para cobrança em cartão."
       );
     }
 

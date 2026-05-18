@@ -204,7 +204,7 @@ const loadPainelShellContextCached = unstable_cache(
         nivel: String(usuario.nivel || ""),
         status: String(usuario.status || ""),
         permissoes: permissoesFinal,
-        salaoNome: salao?.nome || "SalaoPremium",
+        salaoNome: salao?.nome || "SalãoPremium",
         salaoResponsavel: salao?.responsavel || null,
         salaoLogoUrl: salao?.logo_url || null,
         planoCodigo: planoAccess.planoCodigo,

@@ -382,7 +382,7 @@ function CadastroSalaoContent() {
             <Sparkles size={18} />
           </span>
           <span className="font-display text-lg font-black tracking-[-0.03em]">
-            SalaoPremium
+            SalãoPremium
           </span>
         </Link>
 
@@ -684,7 +684,7 @@ function CadastroCreationExperience({
         <div className="mx-auto flex h-24 w-24 items-center justify-center rounded-[2rem] border border-zinc-200 bg-white shadow-[0_24px_80px_rgba(15,23,42,0.12)]">
           <Image
             src="/favicon-preview.png"
-            alt="SalaoPremium"
+            alt="SalãoPremium"
             width={64}
             height={64}
             className="h-16 w-16 rounded-[1.35rem]"
@@ -726,7 +726,7 @@ function CadastroCreationExperience({
                     </div>
                     <p className="mt-1 text-xs leading-5 text-zinc-600">
                       Entre pelo PC com o mesmo e-mail e senha. Depois do login,
-                      o sistema mostra a instalacao do Dashboard, Agenda e Caixa.
+                      o sistema mostra a instalação do Dashboard, Agenda e Caixa.
                     </p>
                   </div>
                 </div>

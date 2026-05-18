@@ -23,7 +23,7 @@ export async function POST(req: Request) {
         error:
           error instanceof Error
             ? error.message
-            : "Erro interno ao sincronizar cartao da assinatura.",
+            : "Erro interno ao sincronizar cartão da assinatura.",
       },
       { status: 500 }
     );

@@ -270,7 +270,7 @@ export default async function AdminMasterSaudePage() {
         <div className="grid gap-6 p-6 lg:grid-cols-[0.75fr_1.25fr] lg:p-8">
           <div className={`rounded-[32px] bg-gradient-to-br p-6 ${scoreClass(data.statusTone)}`}>
             <div className="text-xs font-black uppercase tracking-[0.28em] opacity-70">
-              Saude operacional
+              Saúde operacional
             </div>
             <div className="mt-6 font-display text-7xl font-black leading-none">
               {data.score}
@@ -504,7 +504,7 @@ export default async function AdminMasterSaudePage() {
             Fila de resposta do Admin Master
           </h2>
           <p className="mt-2 text-sm leading-6 text-zinc-500">
-            Cada item precisa virar resolucao, ticket interno ou acompanhamento. Quando nao houver dados, o painel deve dizer que falta telemetria, nao que esta tudo perfeito.
+            Cada item precisa virar resolução, ticket interno ou acompanhamento. Quando não houver dados, o painel deve dizer que falta telemetria, não que está tudo perfeito.
           </p>
           <div className="mt-4">
             <AdminDataTable

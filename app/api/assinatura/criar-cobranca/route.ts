@@ -27,7 +27,7 @@ export async function POST(req: Request) {
         error:
           error instanceof Error
             ? error.message
-            : "Erro interno ao criar cobranca.",
+            : "Erro interno ao criar cobrança.",
       },
       { status: 500 }
     );

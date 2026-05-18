@@ -339,7 +339,7 @@ export default function ServicosExtrasPage() {
                         </th>
                       ) : null}
                       <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-zinc-600">
-                        Acoes
+                        Ações
                       </th>
                     </tr>
                   </thead>

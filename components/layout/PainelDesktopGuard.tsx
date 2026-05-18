@@ -51,7 +51,7 @@ export default function PainelDesktopGuard({ children }: Props) {
         <div className="mx-auto flex h-16 w-16 items-center justify-center overflow-hidden rounded-2xl bg-zinc-950">
           <Image
             src="/favicon-preview.png"
-            alt="SalaoPremium"
+            alt="SalãoPremium"
             width={64}
             height={64}
             className="h-full w-full object-cover"
@@ -80,7 +80,7 @@ export default function PainelDesktopGuard({ children }: Props) {
               <div className="text-sm font-bold">Próximo passo</div>
               <p className="mt-1 text-xs leading-5 text-zinc-600">
                 Abra este mesmo login no computador. Depois de entrar, o
-                sistema mostra a instalacao do Dashboard, Agenda e Caixa.
+                sistema mostra a instalação do Dashboard, Agenda e Caixa.
               </p>
             </div>
           </div>

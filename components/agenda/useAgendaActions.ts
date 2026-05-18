@@ -57,7 +57,7 @@ export function useAgendaActions({
     (date: string) => {
       if (!ensureDiaFuncionamento({ config, dateString: date })) {
         abrirAviso(
-          "Dia indisponivel",
+          "Dia indisponível",
           "Esse dia nao esta configurado como dia de funcionamento.",
           "warning"
         );

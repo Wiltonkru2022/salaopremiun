@@ -225,7 +225,7 @@ export function buildShellNotifications({
       title: `${pendentesConfirmacao.length} pedido(s) para confirmar`,
       description:
         preview ||
-        "Clientes do app aguardam confirmacao de horario pela agenda.",
+        "Clientes do app aguardam confirmação de horário pela agenda.",
       tone: "warning",
       category: "agenda",
       severity: "high",

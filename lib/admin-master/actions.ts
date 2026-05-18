@@ -569,7 +569,7 @@ export async function resolverAlertaAdminMaster(params: {
     .maybeSingle();
 
   if (alertaError) {
-    throw new Error("Erro ao carregar alerta para resolucao.");
+    throw new Error("Erro ao carregar alerta para resolução.");
   }
 
   if (!alerta) {
@@ -893,7 +893,7 @@ export async function criarTicketSalaoAdminMaster(params: {
   const mensagem = normalizeText(params.mensagem);
 
   if (!assunto || !mensagem) {
-    throw new Error("Assunto e mensagem sao obrigatorios.");
+    throw new Error("Assunto e mensagem são obrigatórios.");
   }
 
   const prioridade = buildTicketPrioridade(params.prioridade);

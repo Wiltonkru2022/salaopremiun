@@ -166,7 +166,7 @@ export default function WhatsAppSendCard({
 
         <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-right">
           <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-zinc-400">
-            Creditos disponiveis
+            Créditos disponíveis
           </div>
           <div className="mt-1 text-2xl font-bold text-zinc-950">
             {creditosDisponiveis}
