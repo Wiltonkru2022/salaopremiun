@@ -409,7 +409,7 @@ export default async function ComandaDetalhePage({
                       ? `${servico.nome} (combo)`
                       : servico.nome;
                     const description = servico.eh_combo
-                      ? `Combo unico - ${formatarMoeda(valor)}`
+                      ? `Combo rateado - ${formatarMoeda(valor)}`
                       : formatarMoeda(valor);
 
                     return {

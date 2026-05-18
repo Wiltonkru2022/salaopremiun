@@ -37,6 +37,50 @@ type Props = {
 
 const ITEM_SECTIONS = ["servico", "produto", "extra", "ajuste"] as const;
 
+type ItemDisplayEntry =
+  | { kind: "item"; item: ComandaItem }
+  | { kind: "combo"; comboName: string; itens: ComandaItem[]; total: number };
+
+function organizarItensParaExibicao(itens: ComandaItem[]): ItemDisplayEntry[] {
+  const combos = new Map<string, { itens: ComandaItem[]; total: number }>();
+  const entries: ItemDisplayEntry[] = [];
+
+  for (const item of itens) {
+    const comboMeta = parseComboDisplayMeta(item.descricao);
+
+    if (!comboMeta.isComboItem || !comboMeta.comboName) {
+      entries.push({ kind: "item", item });
+      continue;
+    }
+
+    const current = combos.get(comboMeta.comboName) || { itens: [], total: 0 };
+    current.itens.push(item);
+    current.total += Number(item.valor_total || 0);
+
+    if (!combos.has(comboMeta.comboName)) {
+      entries.push({
+        kind: "combo",
+        comboName: comboMeta.comboName,
+        itens: current.itens,
+        total: current.total,
+      });
+    }
+
+    const entry = entries.find(
+      (candidate) =>
+        candidate.kind === "combo" && candidate.comboName === comboMeta.comboName
+    );
+    if (entry?.kind === "combo") {
+      entry.itens = current.itens;
+      entry.total = current.total;
+    }
+
+    combos.set(comboMeta.comboName, current);
+  }
+
+  return entries;
+}
+
 export default function CaixaDetalhe({
   comandaSelecionada,
   comandaCarregandoId,
@@ -53,7 +97,9 @@ export default function CaixaDetalhe({
   const itensAgrupados = useMemo(
     () =>
       ITEM_SECTIONS.map((tipo) => ({
-        itens: itens.filter((item) => item.tipo_item === tipo),
+        itens: organizarItensParaExibicao(
+          itens.filter((item) => item.tipo_item === tipo)
+        ),
         tipo,
       })).filter((group) => group.itens.length > 0),
     [itens]
@@ -184,15 +230,27 @@ export default function CaixaDetalhe({
             {itensAgrupados.map((group) => (
               <section key={group.tipo} className="space-y-1.5">
                 <div className="grid gap-1.5">
-                  {group.itens.map((item) => (
-                    <ItemCard
-                      key={item.id}
-                      item={item}
-                      podeEditar={podeEditar}
-                      onEditarItem={onEditarItem}
-                      onRemoverItem={onRemoverItem}
-                    />
-                  ))}
+                  {group.itens.map((entry) =>
+                    entry.kind === "combo" ? (
+                      <ComboCard
+                        key={`combo-${entry.comboName}`}
+                        comboName={entry.comboName}
+                        itens={entry.itens}
+                        total={entry.total}
+                        podeEditar={podeEditar}
+                        onEditarItem={onEditarItem}
+                        onRemoverItem={onRemoverItem}
+                      />
+                    ) : (
+                      <ItemCard
+                        key={entry.item.id}
+                        item={entry.item}
+                        podeEditar={podeEditar}
+                        onEditarItem={onEditarItem}
+                        onRemoverItem={onRemoverItem}
+                      />
+                    )
+                  )}
                 </div>
               </section>
             ))}
@@ -335,6 +393,107 @@ function ItemCard({
             </div>
           ) : null}
         </div>
+      </div>
+    </div>
+  );
+}
+
+function ComboCard({
+  comboName,
+  itens,
+  total,
+  podeEditar,
+  onEditarItem,
+  onRemoverItem,
+}: {
+  comboName: string;
+  itens: ComandaItem[];
+  total: number;
+  podeEditar: boolean;
+  onEditarItem: (item: ComandaItem) => void;
+  onRemoverItem: (idItem: string) => void;
+}) {
+  return (
+    <div className="rounded-[18px] border border-zinc-900 bg-white p-3 shadow-sm">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="flex min-w-0 items-start gap-2">
+          <div className="rounded-lg border border-zinc-900 bg-zinc-950 p-1.5 text-white">
+            {tipoItemIcon("servico")}
+          </div>
+
+          <div className="min-w-0">
+            <div className="break-words text-sm font-bold leading-4 text-zinc-950">
+              {comboName}
+            </div>
+            <div className="mt-1 flex flex-wrap items-center gap-1.5">
+              <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-amber-800">
+                Combo
+              </span>
+              <span className="text-[10px] uppercase tracking-[0.12em] text-zinc-500">
+                {itens.length} serviços vinculados para comissão
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div className="text-right">
+          <div className="text-[10px] uppercase tracking-[0.12em] text-zinc-500">Total</div>
+          <div className="mt-0.5 text-sm font-bold text-zinc-950">
+            {formatCurrency(total)}
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-3 space-y-1.5 border-t border-zinc-200 pt-2.5">
+        {itens.map((item) => {
+          const comboMeta = parseComboDisplayMeta(item.descricao);
+
+          return (
+            <div
+              key={item.id}
+              className="rounded-xl border border-zinc-200 bg-zinc-50 px-2.5 py-2"
+            >
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="break-words text-xs font-semibold text-zinc-900">
+                    {comboMeta.displayTitle}
+                  </div>
+                  <div className="mt-0.5 text-[11px] text-zinc-500">
+                    Comissão de {getJoinedName(item.profissionais, "-")} sobre{" "}
+                    {formatCurrency(item.valor_total)}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-1.5">
+                  <span className="rounded-lg border border-zinc-200 bg-white px-2 py-1 text-xs font-semibold text-zinc-800">
+                    {formatCurrency(item.valor_total)}
+                  </span>
+
+                  {podeEditar ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => onEditarItem(item)}
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-zinc-200 bg-white text-zinc-700 transition hover:bg-zinc-100"
+                        title="Editar serviço do combo"
+                      >
+                        <Pencil size={14} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onRemoverItem(item.id)}
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-rose-200 bg-rose-50 text-rose-600 transition hover:bg-rose-100"
+                        title="Remover serviço do combo"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </>
+                  ) : null}
+                </div>
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

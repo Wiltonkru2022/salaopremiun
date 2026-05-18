@@ -202,7 +202,7 @@ async function expandirItensCombo(params: {
   resolved: ResolvedItemPayload;
 }) {
   const { resolved, supabaseAdmin, idSalao } = params;
-  const ratearComboEmServicosFilhos = false;
+  const ratearComboEmServicosFilhos = true;
 
   if (!ratearComboEmServicosFilhos || !resolved.ehCombo || !resolved.idServico) {
     return [resolved];

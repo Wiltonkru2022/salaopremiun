@@ -5,11 +5,7 @@ import { redirect } from "next/navigation";
 import { runAdminOperation } from "@/lib/supabase/admin-ops";
 import { assertCanMutatePlanFeature, PlanAccessError } from "@/lib/plans/access";
 import { requireProfissionalAppContext } from "@/lib/profissional-context.server";
-import {
-  buscarVinculoProfissionalServico,
-  criarCamposAplicacaoComissao,
-  resolverRegraComissaoServico,
-} from "@/lib/comissoes/regrasServico";
+import { adicionarItemComanda } from "@/lib/comandas/processar";
 import { registrarLogSistema } from "@/lib/system-logs";
 
 const UUID_REGEX =
@@ -202,25 +198,12 @@ export async function adicionarServicoNaComandaAction(formData: FormData) {
           return;
         }
 
-        const [
-          { data: servico, error: servicoError },
-          { data: profissional, error: profissionalError },
-        ] = await Promise.all([
-          supabaseAdmin
-            .from("servicos")
-            .select(
-              "id, nome, preco, preco_padrao, custo_produto, comissao_percentual, comissao_percentual_padrao, comissao_assistente_percentual, base_calculo, desconta_taxa_maquininha, ativo, status, eh_combo, combo_resumo"
-            )
-            .eq("id", idServico)
-            .eq("id_salao", session.idSalao)
-            .maybeSingle(),
-          supabaseAdmin
-            .from("profissionais")
-            .select("id, nome, comissao_percentual")
-            .eq("id", session.idProfissional)
-            .eq("id_salao", session.idSalao)
-            .maybeSingle(),
-        ]);
+        const { data: servico, error: servicoError } = await supabaseAdmin
+          .from("servicos")
+          .select("id, nome, ativo, status, eh_combo")
+          .eq("id", idServico)
+          .eq("id_salao", session.idSalao)
+          .maybeSingle();
 
         if (servicoError || !servico) {
           redirectUrl = buildRedirectUrl(
@@ -231,59 +214,11 @@ export async function adicionarServicoNaComandaAction(formData: FormData) {
           return;
         }
 
-        if (profissionalError || !profissional) {
-          redirectUrl = buildRedirectUrl(
-            idComanda,
-            "erro",
-            "Profissional não encontrado."
-          );
-          return;
-        }
-
         if (!servico.ativo || servico.status !== "ativo") {
           redirectUrl = buildRedirectUrl(idComanda, "erro", "Serviço inativo.");
           return;
         }
 
-        let idsServicosFilhosCombo: string[] = [];
-
-        if (servico.eh_combo === true) {
-          const { data: itensCombo, error: itensComboError } =
-            await supabaseAdmin
-              .from("servicos_combo_itens")
-              .select("id_servico_item")
-              .eq("id_salao", session.idSalao)
-              .eq("id_servico_combo", idServico)
-              .eq("ativo", true);
-
-          if (itensComboError) {
-            redirectUrl = buildRedirectUrl(
-              idComanda,
-              "erro",
-              itensComboError.message || "Nao foi possivel preparar o combo."
-            );
-            return;
-          }
-
-          idsServicosFilhosCombo = (itensCombo ?? [])
-            .map((item) => item.id_servico_item)
-            .filter(
-              (id): id is string => typeof id === "string" && id.length > 0
-            );
-        }
-
-        const vinculo = await buscarVinculoProfissionalServico({
-          supabase: supabaseAdmin,
-          idSalao: session.idSalao,
-          idProfissional: session.idProfissional,
-          idServico,
-        });
-        const regra = resolverRegraComissaoServico({
-          servico,
-          profissional,
-          vinculo,
-        });
-        const camposComissao = criarCamposAplicacaoComissao(regra);
         const itemIdempotencyKey = buildActionKey({
           prefix: "servico",
           idComanda,
@@ -293,71 +228,25 @@ export async function adicionarServicoNaComandaAction(formData: FormData) {
           formKey,
         });
 
-        const { data: itemResult, error: insertError } =
-          await supabaseAdmin.rpc("fn_adicionar_item_comanda_idempotente", {
-            p_id_salao: session.idSalao,
-            p_id_comanda: idComanda,
-            p_tipo_item: "servico",
-            p_id_agendamento: null as unknown as string,
-            p_id_servico: idServico,
-            p_id_produto: null as unknown as string,
-            p_descricao: servico.nome || "Serviço",
-            p_quantidade: quantidade,
-            p_valor_unitario: regra.valorUnitario,
-            p_custo_total: sanitizeMoney(servico.custo_produto),
-            p_id_profissional: session.idProfissional,
-            p_id_assistente: null as unknown as string,
-            p_comissao_percentual:
-              camposComissao.comissao_percentual_aplicada,
-            p_comissao_assistente_percentual:
-              camposComissao.comissao_assistente_percentual_aplicada,
-            p_base_calculo: camposComissao.base_calculo_aplicada,
-            p_desconta_taxa_maquininha:
-              camposComissao.desconta_taxa_maquininha_aplicada,
-            p_origem: "app_profissional",
-            p_observacoes: null as unknown as string,
-            p_desconto: sanitizeMoney(comanda.desconto),
-            p_acrescimo: sanitizeMoney(comanda.acrescimo),
-            p_idempotency_key: itemIdempotencyKey ?? undefined,
-          });
-
-        if (insertError) {
-          redirectUrl = buildRedirectUrl(
+        const resultado = await adicionarItemComanda({
+          supabaseAdmin,
+          idSalao: session.idSalao,
+          comanda: {
             idComanda,
-            "erro",
-            insertError.message || "Erro ao adicionar servico."
-          );
-          return;
-        }
+            desconto: comanda.desconto,
+            acrescimo: comanda.acrescimo,
+          },
+          item: {
+            tipo_item: "servico",
+            id_servico: idServico,
+            quantidade,
+            id_profissional: session.idProfissional,
+            origem: "app_profissional",
+          },
+          idempotencyKey: itemIdempotencyKey,
+        });
 
-        if (idsServicosFilhosCombo.length > 0) {
-          const { error: limpezaComboError } = await supabaseAdmin
-            .from("comanda_itens")
-            .delete()
-            .eq("id_salao", session.idSalao)
-            .eq("id_comanda", idComanda)
-            .eq("tipo_item", "servico")
-            .eq("ativo", true)
-            .in("id_servico", idsServicosFilhosCombo)
-            .ilike("descricao", `${String(servico.nome || "").trim()}%`);
-
-          if (limpezaComboError) {
-            redirectUrl = buildRedirectUrl(
-              idComanda,
-              "erro",
-              limpezaComboError.message ||
-                "Nao foi possivel ajustar os itens antigos do combo."
-            );
-            return;
-          }
-        }
-
-        const resultRow = Array.isArray(itemResult) ? itemResult[0] : null;
-        const jaExistia =
-          resultRow && typeof resultRow === "object" && "ja_existia" in resultRow
-            ? Boolean(resultRow.ja_existia)
-            : false;
-
+        const jaExistia = Boolean(resultado.idempotentReplay);
         await registrarLogSistema({
           gravidade: jaExistia ? "warning" : "info",
           modulo: "app_profissional",
