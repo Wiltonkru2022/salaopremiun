@@ -536,7 +536,9 @@ export async function sincronizarAgendamentoComComanda(params: SincronizarParams
     },
   ];
 
-  if (servico.eh_combo) {
+  const ratearComboEmServicosFilhos = false;
+
+  if (ratearComboEmServicosFilhos && servico.eh_combo) {
     const itensCombo = await buscarItensComboServico({
       supabase,
       idSalao,

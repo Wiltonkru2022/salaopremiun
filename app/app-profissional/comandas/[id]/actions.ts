@@ -209,7 +209,7 @@ export async function adicionarServicoNaComandaAction(formData: FormData) {
           supabaseAdmin
             .from("servicos")
             .select(
-              "id, nome, preco, preco_padrao, custo_produto, comissao_percentual, comissao_percentual_padrao, comissao_assistente_percentual, base_calculo, desconta_taxa_maquininha, ativo, status"
+              "id, nome, preco, preco_padrao, custo_produto, comissao_percentual, comissao_percentual_padrao, comissao_assistente_percentual, base_calculo, desconta_taxa_maquininha, ativo, status, eh_combo, combo_resumo"
             )
             .eq("id", idServico)
             .eq("id_salao", session.idSalao)
@@ -243,6 +243,33 @@ export async function adicionarServicoNaComandaAction(formData: FormData) {
         if (!servico.ativo || servico.status !== "ativo") {
           redirectUrl = buildRedirectUrl(idComanda, "erro", "Serviço inativo.");
           return;
+        }
+
+        let idsServicosFilhosCombo: string[] = [];
+
+        if (servico.eh_combo === true) {
+          const { data: itensCombo, error: itensComboError } =
+            await supabaseAdmin
+              .from("servicos_combo_itens")
+              .select("id_servico_item")
+              .eq("id_salao", session.idSalao)
+              .eq("id_servico_combo", idServico)
+              .eq("ativo", true);
+
+          if (itensComboError) {
+            redirectUrl = buildRedirectUrl(
+              idComanda,
+              "erro",
+              itensComboError.message || "Nao foi possivel preparar o combo."
+            );
+            return;
+          }
+
+          idsServicosFilhosCombo = (itensCombo ?? [])
+            .map((item) => item.id_servico_item)
+            .filter(
+              (id): id is string => typeof id === "string" && id.length > 0
+            );
         }
 
         const vinculo = await buscarVinculoProfissionalServico({
@@ -301,6 +328,28 @@ export async function adicionarServicoNaComandaAction(formData: FormData) {
             insertError.message || "Erro ao adicionar servico."
           );
           return;
+        }
+
+        if (idsServicosFilhosCombo.length > 0) {
+          const { error: limpezaComboError } = await supabaseAdmin
+            .from("comanda_itens")
+            .delete()
+            .eq("id_salao", session.idSalao)
+            .eq("id_comanda", idComanda)
+            .eq("tipo_item", "servico")
+            .eq("ativo", true)
+            .in("id_servico", idsServicosFilhosCombo)
+            .ilike("descricao", `${String(servico.nome || "").trim()}%`);
+
+          if (limpezaComboError) {
+            redirectUrl = buildRedirectUrl(
+              idComanda,
+              "erro",
+              limpezaComboError.message ||
+                "Nao foi possivel ajustar os itens antigos do combo."
+            );
+            return;
+          }
         }
 
         const resultRow = Array.isArray(itemResult) ? itemResult[0] : null;

@@ -60,6 +60,8 @@ type ServicoOption = {
   nome: string;
   preco?: number | string | null;
   preco_padrao?: number | string | null;
+  eh_combo?: boolean | null;
+  combo_resumo?: string | null;
 };
 
 type ExtraOption = {
@@ -167,7 +169,7 @@ export default async function ComandaDetalhePage({
             .order("created_at", { ascending: true }),
           supabaseAdmin
             .from("servicos")
-            .select("id, nome, preco, preco_padrao, ativo, status")
+            .select("id, nome, preco, preco_padrao, ativo, status, eh_combo, combo_resumo")
             .eq("id_salao", session.idSalao)
             .eq("ativo", true)
             .eq("status", "ativo")
@@ -403,11 +405,17 @@ export default async function ComandaDetalhePage({
                   emptyText="Nenhum serviço encontrado."
                   options={((servicos ?? []) as ServicoOption[]).map((servico) => {
                     const valor = Number(servico.preco ?? servico.preco_padrao ?? 0);
+                    const label = servico.eh_combo
+                      ? `${servico.nome} (combo)`
+                      : servico.nome;
+                    const description = servico.eh_combo
+                      ? `Combo unico - ${formatarMoeda(valor)}`
+                      : formatarMoeda(valor);
 
                     return {
                       value: servico.id,
-                      label: servico.nome,
-                      description: formatarMoeda(valor),
+                      label,
+                      description,
                     };
                   })}
                 />
@@ -424,7 +432,7 @@ export default async function ComandaDetalhePage({
 
                     return (
                       <option key={servico.id} value={servico.id}>
-                        {servico.nome} - {formatarMoeda(valor)}
+                        {servico.eh_combo ? `${servico.nome} (combo)` : servico.nome} - {formatarMoeda(valor)}
                       </option>
                     );
                   })}

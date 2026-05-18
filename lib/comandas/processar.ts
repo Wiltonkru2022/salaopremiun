@@ -202,8 +202,9 @@ async function expandirItensCombo(params: {
   resolved: ResolvedItemPayload;
 }) {
   const { resolved, supabaseAdmin, idSalao } = params;
+  const ratearComboEmServicosFilhos = false;
 
-  if (!resolved.ehCombo || !resolved.idServico) {
+  if (!ratearComboEmServicosFilhos || !resolved.ehCombo || !resolved.idServico) {
     return [resolved];
   }
 
@@ -879,7 +880,7 @@ export async function resolverItemPayload(params: {
 
     descricao = descricao || servico.nome || "Serviço";
     custoTotal = sanitizeMoney(servico.custo_produto);
-    comissaoPercentual = servico.eh_combo ? 0 : regra.comissaoPercentual;
+    comissaoPercentual = regra.comissaoPercentual;
     comissaoAssistentePercentual =
       servico.eh_combo ||
       !shouldAplicarComissaoAssistente({
