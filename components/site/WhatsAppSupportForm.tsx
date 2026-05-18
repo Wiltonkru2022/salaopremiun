@@ -11,10 +11,10 @@ export default function WhatsAppSupportForm() {
 
   function abrirWhatsApp() {
     const mensagem = [
-      `Ola, meu nome e ${nome.trim() || "visitante"}.`,
+      `Olá, meu nome é ${nome.trim() || "visitante"}.`,
       duvida.trim()
-        ? `Minha duvida sobre o SalaoPremium: ${duvida.trim()}`
-        : "Quero tirar uma duvida sobre o SalãoPremium.",
+        ? `Minha dúvida sobre o SalãoPremium: ${duvida.trim()}`
+        : "Quero tirar uma dúvida sobre o SalãoPremium.",
     ].join("\n\n");
 
     window.open(
@@ -33,7 +33,7 @@ export default function WhatsAppSupportForm() {
         <div>
           <h3 className="text-lg font-bold text-zinc-950">Fale pelo WhatsApp</h3>
           <p className="text-sm text-emerald-800">
-            Envie seu nome e sua duvida direto para o suporte.
+            Envie seu nome e sua dúvida direto para o suporte.
           </p>
         </div>
       </div>
@@ -48,7 +48,7 @@ export default function WhatsAppSupportForm() {
         <textarea
           value={duvida}
           onChange={(event) => setDuvida(event.target.value)}
-          placeholder="Digite sua duvida"
+          placeholder="Digite sua dúvida"
           rows={4}
           className="resize-none rounded-2xl border border-emerald-200 bg-white px-4 py-3 text-base text-zinc-950 outline-none focus:border-emerald-500"
         />

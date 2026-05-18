@@ -9,21 +9,21 @@ export const metadata: Metadata = {
     ? new URL(process.env.NEXT_PUBLIC_APP_URL)
     : new URL("https://salaopremiun.com.br"),
   title: {
-    default: "SalaoPremium",
-    template: "%s | SalaoPremium",
+    default: "SalãoPremium",
+    template: "%s | SalãoPremium",
   },
   description:
     "Gestão premium para salões: agenda, caixa, comandas, profissionais, estoque, comissões e assinatura em um SaaS multi-tenant.",
-  applicationName: "SalaoPremium",
+  applicationName: "SalãoPremium",
   alternates: {
     canonical: "https://salaopremiun.com.br",
   },
   openGraph: {
-    title: "SalaoPremium",
+    title: "SalãoPremium",
     description:
       "Gestão premium para salões com agenda, caixa, comandas, estoque, comissões e assinatura.",
     url: "https://salaopremiun.com.br",
-    siteName: "SalaoPremium",
+    siteName: "SalãoPremium",
     type: "website",
     locale: "pt_BR",
     images: [
@@ -31,13 +31,13 @@ export const metadata: Metadata = {
         url: "/logo.png",
         width: 512,
         height: 512,
-        alt: "Logo SalaoPremium",
+        alt: "Logo SalãoPremium",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "SalaoPremium",
+    title: "SalãoPremium",
     description:
       "Gestão premium para salões com operação, financeiro e assinatura no mesmo sistema.",
     images: ["/logo.png"],
