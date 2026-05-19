@@ -933,9 +933,12 @@ export default function QrCodeArtEditor({
                   <button key={tab.id} type="button" onClick={() => {
                     setActiveTab(tab.id);
                     if (tab.id === "projetos") loadProjects();
-                  }} className={`flex h-[62px] w-full flex-col items-center justify-center gap-1 rounded-xl text-[10px] font-black transition ${activeTab === tab.id ? "bg-white text-[#8a5a12] shadow-sm ring-1 ring-zinc-200" : "text-zinc-500 hover:bg-white/70"}`}>
+                  }} className={`group relative flex h-[62px] w-full flex-col items-center justify-center gap-1 rounded-xl text-[10px] font-black transition ${activeTab === tab.id ? "bg-white text-[#8a5a12] shadow-sm ring-1 ring-zinc-200" : "text-zinc-500 hover:bg-white/70"}`} aria-pressed={activeTab === tab.id}>
                     <Icon size={14} />
                     {tab.label}
+                    <span className={`absolute left-full top-1/2 ml-2 hidden -translate-y-1/2 whitespace-nowrap rounded-lg border border-zinc-200 bg-white px-2 py-1 text-xs font-bold text-zinc-700 shadow-lg ${activeTab === tab.id ? "" : "group-hover:block"}`}>
+                      {tab.label}
+                    </span>
                   </button>
                 );
               })}
@@ -1048,20 +1051,34 @@ export default function QrCodeArtEditor({
           </aside>
 
           <main className="relative flex min-h-0 flex-col items-center overflow-auto bg-[#ece9e3] p-4 lg:p-6">
-            <div className="sticky top-0 z-10 mb-4 flex flex-wrap items-center gap-2 rounded-2xl border border-zinc-200 bg-white/95 p-2 shadow-sm backdrop-blur">
-              <ToolButton label="Zoom -" onClick={() => changeZoom(zoom - 0.08)}><ZoomOut size={15} /></ToolButton>
-              <span className="px-2 text-xs font-black">{Math.round(zoom * 100)}%</span>
-              <ToolButton label="Zoom +" onClick={() => changeZoom(zoom + 0.08)}><ZoomIn size={15} /></ToolButton>
-              <ToolButton label="Grade" onClick={() => setShowGrid((value) => !value)}><Grid3X3 size={15} /></ToolButton>
-              <ToolButton label="Centro H" onClick={() => alignSelected("h")}><AlignHorizontalJustifyCenter size={15} /></ToolButton>
-              <ToolButton label="Centro V" onClick={() => alignSelected("v")}><AlignVerticalJustifyCenter size={15} /></ToolButton>
-              <ToolButton label="Frente" onClick={() => moveLayer("front")}><BringToFront size={15} /></ToolButton>
-              <ToolButton label="Atras" onClick={() => moveLayer("back")}><Layers size={15} /></ToolButton>
-              <ToolButton label="Agrupar" onClick={groupSelected}><Group size={15} /></ToolButton>
-              <ToolButton label="Desagrupar" onClick={ungroupSelected}><Ungroup size={15} /></ToolButton>
-              <ToolButton label={selectedLocked ? "Destravar" : "Travar"} onClick={() => lockSelected(!selectedLocked)}>{selectedLocked ? <Unlock size={15} /> : <Lock size={15} />}</ToolButton>
-            </div>
-            <div className="flex min-h-[calc(100vh-170px)] w-full items-start justify-center overflow-auto rounded-2xl bg-[#ece9e3] px-6 pb-10 pt-2">
+            {selected ? (
+              <div className="sticky top-0 z-20 mb-4 flex max-w-full flex-wrap items-center gap-2 rounded-2xl border border-zinc-200 bg-white/95 px-3 py-2 shadow-lg shadow-black/10 backdrop-blur">
+                <span className="mr-1 text-sm font-black">Editar</span>
+                <div className="h-6 w-px bg-zinc-200" />
+                <ToolButton label="Cor" onClick={() => applySelected({ fill: "#111111" })}><span className="h-5 w-5 rounded-full bg-zinc-950" /></ToolButton>
+                <ToolButton label="Centro H" onClick={() => alignSelected("h")}><AlignHorizontalJustifyCenter size={15} /></ToolButton>
+                <ToolButton label="Centro V" onClick={() => alignSelected("v")}><AlignVerticalJustifyCenter size={15} /></ToolButton>
+                <div className="h-6 w-px bg-zinc-200" />
+                <ToolButton label="Frente" onClick={() => moveLayer("front")}><BringToFront size={15} /></ToolButton>
+                <ToolButton label="Atras" onClick={() => moveLayer("back")}><Layers size={15} /></ToolButton>
+                <ToolButton label="Agrupar" onClick={groupSelected}><Group size={15} /></ToolButton>
+                <ToolButton label="Desagrupar" onClick={ungroupSelected}><Ungroup size={15} /></ToolButton>
+                <ToolButton label={selectedLocked ? "Destravar" : "Travar"} onClick={() => lockSelected(!selectedLocked)}>{selectedLocked ? <Unlock size={15} /> : <Lock size={15} />}</ToolButton>
+                <button type="button" onClick={() => {
+                  const canvas = canvasRef.current;
+                  canvas?.getActiveObjects().forEach((object) => canvas.remove(object));
+                  canvas?.discardActiveObject();
+                  canvas?.requestRenderAll();
+                  pushHistory();
+                }} className="inline-flex h-9 min-w-9 items-center justify-center rounded-lg border border-transparent px-2 text-zinc-700 transition hover:border-rose-100 hover:bg-rose-50 hover:text-rose-600" title="Apagar">
+                  <Trash2 size={15} />
+                </button>
+              </div>
+            ) : (
+              <div className="mb-4 h-[42px]" />
+            )}
+
+            <div className="flex min-h-[calc(100vh-170px)] w-full items-start justify-center overflow-auto rounded-2xl bg-[#ece9e3] px-6 pb-20 pt-2">
             <div className="rounded-[10px] border border-zinc-200 bg-white shadow-2xl shadow-black/10">
               <div
                 className={showGrid ? "bg-[linear-gradient(rgba(0,0,0,.045)_1px,transparent_1px),linear-gradient(90deg,rgba(0,0,0,.045)_1px,transparent_1px)] bg-[size:32px_32px]" : ""}
@@ -1070,6 +1087,26 @@ export default function QrCodeArtEditor({
                 <canvas ref={canvasElRef} />
               </div>
             </div>
+            </div>
+            <div className="pointer-events-none sticky bottom-0 z-20 flex w-full items-center justify-end gap-4 bg-gradient-to-t from-[#ece9e3] via-[#ece9e3]/95 to-transparent px-4 pb-2 pt-5">
+              <div className="pointer-events-auto flex items-center gap-2 rounded-full border border-zinc-200 bg-white/95 px-3 py-2 shadow-lg shadow-black/10 backdrop-blur">
+                <ToolButton label="Zoom -" onClick={() => changeZoom(zoom - 0.08)}><ZoomOut size={15} /></ToolButton>
+                <input
+                  aria-label="Zoom"
+                  type="range"
+                  min={0.12}
+                  max={1.4}
+                  step={0.02}
+                  value={zoom}
+                  onChange={(event) => changeZoom(Number(event.target.value))}
+                  className="w-36 accent-[#8b3dff]"
+                />
+                <span className="w-10 text-center text-xs font-black">{Math.round(zoom * 100)}%</span>
+                <ToolButton label="Zoom +" onClick={() => changeZoom(zoom + 0.08)}><ZoomIn size={15} /></ToolButton>
+                <div className="h-6 w-px bg-zinc-200" />
+                <ToolButton label="Grade" onClick={() => setShowGrid((value) => !value)}><Grid3X3 size={15} /></ToolButton>
+                <span className="px-2 text-xs font-black text-zinc-600">1/1</span>
+              </div>
             </div>
           </main>
 
