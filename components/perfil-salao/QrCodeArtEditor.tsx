@@ -1,77 +1,47 @@
 "use client";
 
 import {
-  AlignCenter,
+  AlignHorizontalJustifyCenter,
+  AlignVerticalJustifyCenter,
   BringToFront,
-  CalendarDays,
-  CheckCircle2,
-  Copy,
   Download,
+  FolderOpen,
+  Grid3X3,
+  Group,
   ImagePlus,
   Layers,
+  Lock,
   Palette,
-  Plus,
   Redo2,
+  Save,
   Search,
   Scissors,
   Shapes,
   Trash2,
   Type,
   Undo2,
+  Ungroup,
+  Unlock,
   WandSparkles,
   X,
+  ZoomIn,
+  ZoomOut,
 } from "lucide-react";
 import {
+  useCallback,
   useEffect,
   useMemo,
   useRef,
   useState,
   type ChangeEvent,
-  type PointerEvent as ReactPointerEvent,
 } from "react";
+import { getUsuarioLogado } from "@/lib/auth/getUsuarioLogado";
+import { asLooseSupabaseClient } from "@/lib/supabase/loose-client";
 
-type ArtElementType = "text" | "qr" | "logo" | "image" | "frame" | "shape";
-type TextAlign = "left" | "center" | "right";
-type EditorTab = "modelos" | "texto" | "fotos" | "elementos" | "uploads";
-
-type ArtElement = {
-  id: string;
-  type: ArtElementType;
-  label: string;
-  text?: string;
-  src?: string;
-  x: number;
-  y: number;
-  w: number;
-  h: number;
-  color?: string;
-  background?: string;
-  borderColor?: string;
-  borderWidth?: number;
-  fontSize?: number;
-  fontWeight?: number;
-  fontFamily?: string;
-  textAlign?: TextAlign;
-  radius?: number;
-  locked?: boolean;
-};
-
-type ArtState = {
-  background: string;
-  primary: string;
-  accent: string;
-  text: string;
-  elements: ArtElement[];
-};
-
-type DragState = {
-  id: string;
-  startX: number;
-  startY: number;
-  elementX: number;
-  elementY: number;
-  before: ArtState;
-};
+type EditorTab = "modelos" | "texto" | "fotos" | "elementos" | "uploads" | "projetos";
+type FabricModule = typeof import("fabric");
+type FabricCanvas = import("fabric").Canvas;
+type FabricObject = import("fabric").FabricObject;
 
 type Props = {
   open: boolean;
@@ -91,78 +61,45 @@ type StockPhoto = {
   photographer?: string;
 };
 
-const ART_WIDTH = 720;
-const ART_HEIGHT = 900;
-const MAX_HISTORY = 40;
+type EditorProject = {
+  id: string;
+  nome: string;
+  formato: string;
+  largura: number;
+  altura: number;
+  updated_at?: string;
+  thumbnail_url?: string | null;
+  payload_json?: unknown;
+};
 
-const templates = [
-  {
-    id: "claro",
-    name: "Claro",
-    background: "#fff8e7",
-    primary: "#09090b",
-    accent: "#c7a25c",
-    text: "#5f5a4f",
-    titleFont: "Montserrat",
-    subtitleFont: "Lato",
-  },
-  {
-    id: "premium",
-    name: "Premium",
-    background: "#09090b",
-    primary: "#ffffff",
-    accent: "#c7a25c",
-    text: "#d6d3d1",
-    titleFont: "Cinzel",
-    subtitleFont: "Playfair Display",
-  },
-  {
-    id: "leve",
-    name: "Leve",
-    background: "#f7ebe3",
-    primary: "#17251f",
-    accent: "#d39e82",
-    text: "#65736d",
-    titleFont: "Playfair Display",
-    subtitleFont: "Great Vibes",
-  },
-  {
-    id: "salon",
-    name: "SalaoPremium",
-    background: "#f7f4ed",
-    primary: "#111111",
-    accent: "#d8b36b",
-    text: "#66615a",
-    titleFont: "Montserrat",
-    subtitleFont: "Lato",
-  },
+const DEFAULT_WIDTH = 1080;
+const DEFAULT_HEIGHT = 1350;
+
+const projectFormats = [
+  { label: "Story", formato: "story", width: 1080, height: 1920 },
+  { label: "Post", formato: "post", width: 1080, height: 1080 },
+  { label: "Feed", formato: "feed", width: 1080, height: 1350 },
+  { label: "Panfleto", formato: "panfleto", width: 1240, height: 1754 },
 ] as const;
 
-const quickCalls = [
-  {
-    label: "Agendamento rapido",
-    title: "AGENDE SEU HORARIO",
-    subtitle: "Escaneie para ver nossa agenda de servicos",
-  },
-  {
-    label: "Cardapio de servicos",
-    title: "CARDAPIO DE SERVICOS",
-    subtitle: "Confira valores, horarios e especialidades",
-  },
-  {
-    label: "Vitrine do salao",
-    title: "CONHECA NOSSO SALAO",
-    subtitle: "Veja fotos, equipe e escolha seu atendimento",
-  },
+const templates = [
+  { label: "QR Code premium", kind: "qr" },
+  { label: "Antes e depois", kind: "before-after" },
+  { label: "Agenda aberta", kind: "agenda" },
+  { label: "Combo de servicos", kind: "combo" },
+  { label: "Depoimento", kind: "review" },
+  { label: "Aviso de feriado", kind: "notice" },
+  { label: "Aniversario VIP", kind: "birthday" },
+  { label: "Contratando", kind: "hiring" },
 ] as const;
 
 const fontOptions = [
-  { value: "Montserrat", label: "Montserrat" },
-  { value: "Playfair Display", label: "Playfair Display" },
-  { value: "Cinzel", label: "Cinzel" },
-  { value: "Great Vibes", label: "Great Vibes" },
-  { value: "Lato", label: "Lato" },
-  { value: "Arial", label: "Arial" },
+  "Montserrat",
+  "Playfair Display",
+  "Cinzel",
+  "Great Vibes",
+  "Lato",
+  "Arial",
 ] as const;
 
 const photoTags = [
@@ -174,290 +111,60 @@ const photoTags = [
 ] as const;
 
 const elementPresets = [
-  {
-    label: "Beauty",
-    src: "/salaopremiun-editor/elementos/beauty.svg",
-  },
-  {
-    label: "Chuveiro",
-    src: "/salaopremiun-editor/elementos/chuveiro.svg",
-  },
-  {
-    label: "Tesoura classica",
-    src: "/salaopremiun-editor/elementos/scissors.svg",
-  },
-  {
-    label: "Secador rosa",
-    src: "/salaopremiun-editor/elementos/secador.svg",
-  },
-  {
-    label: "Tesoura premium",
-    src: "/salaopremiun-editor/elementos/tesoura-premium.svg",
-  },
-  {
-    label: "Secador luxo",
-    src: "/salaopremiun-editor/elementos/secador-luxo.svg",
-  },
-  {
-    label: "Esmalte chic",
-    src: "/salaopremiun-editor/elementos/esmalte-chic.svg",
-  },
-  {
-    label: "Batom glam",
-    src: "/salaopremiun-editor/elementos/batom-glam.svg",
-  },
-  {
-    label: "Pente dourado",
-    src: "/salaopremiun-editor/elementos/pente-dourado.svg",
-  },
-  {
-    label: "Brilho premium",
-    src: "/salaopremiun-editor/elementos/brilho-premium.svg",
-  },
-  {
-    label: "Espelho salao",
-    src: "/salaopremiun-editor/elementos/espelho-salao.svg",
-  },
-  {
-    label: "Agenda aberta",
-    src: "/salaopremiun-editor/elementos/agenda-aberta.svg",
-  },
-  {
-    label: "Maquina de corte",
-    src: "/salaopremiun-editor/elementos/maquina-corte.svg",
-  },
-  {
-    label: "Cadeira salao",
-    src: "/salaopremiun-editor/elementos/cadeira-salao-rosa.svg",
-  },
-  {
-    label: "Spray rosa",
-    src: "/salaopremiun-editor/elementos/spray-rosa.svg",
-  },
-  {
-    label: "Laco rosa",
-    src: "/salaopremiun-editor/elementos/laco-rosa.svg",
-  },
-  {
-    label: "Rosto beleza",
-    src: "/salaopremiun-editor/elementos/rosto-beleza.svg",
-  },
+  { label: "Beauty", src: "/salaopremiun-editor/elementos/beauty.svg" },
+  { label: "Chuveiro", src: "/salaopremiun-editor/elementos/chuveiro.svg" },
+  { label: "Tesoura classica", src: "/salaopremiun-editor/elementos/scissors.svg" },
+  { label: "Secador rosa", src: "/salaopremiun-editor/elementos/secador.svg" },
+  { label: "Tesoura premium", src: "/salaopremiun-editor/elementos/tesoura-premium.svg" },
+  { label: "Secador luxo", src: "/salaopremiun-editor/elementos/secador-luxo.svg" },
+  { label: "Esmalte chic", src: "/salaopremiun-editor/elementos/esmalte-chic.svg" },
+  { label: "Batom glam", src: "/salaopremiun-editor/elementos/batom-glam.svg" },
+  { label: "Pente dourado", src: "/salaopremiun-editor/elementos/pente-dourado.svg" },
+  { label: "Brilho premium", src: "/salaopremiun-editor/elementos/brilho-premium.svg" },
+  { label: "Espelho salao", src: "/salaopremiun-editor/elementos/espelho-salao.svg" },
+  { label: "Agenda aberta", src: "/salaopremiun-editor/elementos/agenda-aberta.svg" },
+  { label: "Maquina de corte", src: "/salaopremiun-editor/elementos/maquina-corte.svg" },
+  { label: "Cadeira salao", src: "/salaopremiun-editor/elementos/cadeira-salao-rosa.svg" },
+  { label: "Spray rosa", src: "/salaopremiun-editor/elementos/spray-rosa.svg" },
+  { label: "Laco rosa", src: "/salaopremiun-editor/elementos/laco-rosa.svg" },
+  { label: "Rosto beleza", src: "/salaopremiun-editor/elementos/rosto-beleza.svg" },
 ] as const;
 
-function uid(prefix = "el") {
-  return `${prefix}-${Math.random().toString(36).slice(2)}-${Date.now()}`;
-}
-
-function clamp(value: number, min: number, max: number) {
-  return Math.max(min, Math.min(max, value));
-}
+const tabConfig = [
+  { id: "modelos", label: "Modelos", icon: WandSparkles },
+  { id: "texto", label: "Texto", icon: Type },
+  { id: "fotos", label: "Fotos", icon: ImagePlus },
+  { id: "elementos", label: "Elementos", icon: Shapes },
+  { id: "uploads", label: "Uploads", icon: ImagePlus },
+  { id: "projetos", label: "Projetos", icon: FolderOpen },
+] as const;
 
 function safeFileName(value: string) {
   return value.replace(/[^a-zA-Z0-9-_]/g, "-").replace(/-+/g, "-");
 }
 
-function buildInitialState(params: {
-  salaoNome: string;
-  publicUrl: string;
-  qrCodeUrl: string;
-  logoUrl?: string | null;
-}): ArtState {
-  return {
-    background: "#fff8e7",
-    primary: "#09090b",
-    accent: "#c7a25c",
-    text: "#5f5a4f",
-    elements: [
-      {
-        id: "frame",
-        type: "frame",
-        label: "Moldura",
-        x: 34,
-        y: 34,
-        w: 652,
-        h: 832,
-        borderColor: "#c7a25c",
-        borderWidth: 3,
-        radius: 20,
-        locked: true,
-      },
-      ...(params.logoUrl
-        ? [
-            {
-              id: "logo",
-              type: "logo" as const,
-              label: "Logo",
-              src: params.logoUrl,
-              x: 292,
-              y: 54,
-              w: 136,
-              h: 136,
-              background: "#ffffff",
-              radius: 34,
-            },
-          ]
-        : []),
-      {
-        id: "title",
-        type: "text",
-        label: "Titulo",
-        text: (params.salaoNome || "SalaoPremium").toUpperCase(),
-        x: 82,
-        y: params.logoUrl ? 208 : 102,
-        w: 556,
-        h: 78,
-        color: "#09090b",
-        fontSize: 42,
-        fontWeight: 900,
-        fontFamily: "Montserrat",
-        textAlign: "center",
-      },
-      {
-        id: "subtitle",
-        type: "text",
-        label: "Chamada",
-        text: "Agende seu horario pelo app",
-        x: 90,
-        y: params.logoUrl ? 288 : 184,
-        w: 540,
-        h: 54,
-        color: "#5f5a4f",
-        fontSize: 26,
-        fontWeight: 700,
-        fontFamily: "Lato",
-        textAlign: "center",
-      },
-      {
-        id: "qr",
-        type: "qr",
-        label: "QR Code",
-        src: params.qrCodeUrl,
-        x: 190,
-        y: 372,
-        w: 340,
-        h: 340,
-        background: "#ffffff",
-        radius: 30,
-      },
-      {
-        id: "url",
-        type: "text",
-        label: "Link",
-        text: params.publicUrl,
-        x: 82,
-        y: 748,
-        w: 556,
-        h: 52,
-        color: "#09090b",
-        fontSize: 22,
-        fontWeight: 800,
-        fontFamily: "Montserrat",
-        textAlign: "center",
-      },
-      {
-        id: "footer",
-        type: "text",
-        label: "Rodape",
-        text: "Aponte a camera e reserve em poucos segundos",
-        x: 88,
-        y: 814,
-        w: 544,
-        h: 42,
-        color: "#756f65",
-        fontSize: 20,
-        fontWeight: 700,
-        fontFamily: "Lato",
-        textAlign: "center",
-      },
-    ],
-  };
+function downloadDataUrl(dataUrl: string, filename: string) {
+  const link = document.createElement("a");
+  link.href = dataUrl;
+  link.download = filename;
+  link.click();
 }
 
-function cloneState(state: ArtState): ArtState {
-  return {
-    ...state,
-    elements: state.elements.map((item) => ({ ...item })),
-  };
-}
-
-function drawRoundedRect(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  w: number,
-  h: number,
-  radius: number
-) {
-  const r = Math.min(radius, w / 2, h / 2);
-  ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.arcTo(x + w, y, x + w, y + h, r);
-  ctx.arcTo(x + w, y + h, x, y + h, r);
-  ctx.arcTo(x, y + h, x, y, r);
-  ctx.arcTo(x, y, x + w, y, r);
-  ctx.closePath();
-}
-
-function loadImage(src: string) {
-  return new Promise<HTMLImageElement>((resolve, reject) => {
-    const image = new Image();
-    image.crossOrigin = "anonymous";
-    image.onload = () => resolve(image);
-    image.onerror = reject;
-    image.src = src;
-  });
-}
-
-function hexToRgb(hex: string) {
-  const normalized = hex.replace("#", "");
-  if (normalized.length !== 6) return { r: 0, g: 0, b: 0 };
-  return {
-    r: parseInt(normalized.slice(0, 2), 16),
-    g: parseInt(normalized.slice(2, 4), 16),
-    b: parseInt(normalized.slice(4, 6), 16),
-  };
-}
-
-function contrastScore(background: string, foreground: string) {
-  const bg = hexToRgb(background);
-  const fg = hexToRgb(foreground);
-  return Math.abs(
-    0.2126 * bg.r +
-      0.7152 * bg.g +
-      0.0722 * bg.b -
-      (0.2126 * fg.r + 0.7152 * fg.g + 0.0722 * fg.b)
+function objectIsLocked(object: FabricObject | undefined) {
+  return Boolean(
+    object &&
+      (object.lockMovementX ||
+        object.lockMovementY ||
+        object.lockScalingX ||
+        object.lockScalingY ||
+        object.lockRotation)
   );
 }
 
-function textAlignToCanvas(textAlign: TextAlign | undefined) {
-  if (textAlign === "right") return "right";
-  if (textAlign === "left") return "left";
-  return "center";
-}
-
-function textAnchorX(item: ArtElement) {
-  if (item.textAlign === "left") return item.x;
-  if (item.textAlign === "right") return item.x + item.w;
-  return item.x + item.w / 2;
-}
-
-function wrapText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number) {
-  const lines: string[] = [];
-  for (const paragraph of text.split("\n")) {
-    const words = paragraph.split(" ");
-    let line = "";
-    for (const word of words) {
-      const candidate = line ? `${line} ${word}` : word;
-      if (ctx.measureText(candidate).width > maxWidth && line) {
-        lines.push(line);
-        line = word;
-      } else {
-        line = candidate;
-      }
-    }
-    if (line) lines.push(line);
-  }
-  return lines;
+function objectLabel(object: FabricObject | null) {
+  if (!object) return "";
+  const named = object as FabricObject & { name?: string };
+  return named.name || object.type || "Elemento";
 }
 
 export default function QrCodeArtEditor({
@@ -469,272 +176,362 @@ export default function QrCodeArtEditor({
   salaoNome,
   logoUrl,
 }: Props) {
-  const [art, setArt] = useState<ArtState>(() =>
-    buildInitialState({ salaoNome, publicUrl, qrCodeUrl, logoUrl })
-  );
-  const [selectedId, setSelectedId] = useState("qr");
-  const [copiedElement, setCopiedElement] = useState<ArtElement | null>(null);
-  const [past, setPast] = useState<ArtState[]>([]);
-  const [future, setFuture] = useState<ArtState[]>([]);
+  const canvasElRef = useRef<HTMLCanvasElement | null>(null);
+  const canvasRef = useRef<FabricCanvas | null>(null);
+  const fabricRef = useRef<FabricModule | null>(null);
+  const clipboardRef = useRef<FabricObject | null>(null);
+  const historyRef = useRef<string[]>([]);
+  const futureRef = useRef<string[]>([]);
+  const loadingJsonRef = useRef(false);
+
   const [activeTab, setActiveTab] = useState<EditorTab>("modelos");
+  const [selected, setSelected] = useState<FabricObject | null>(null);
+  const [projectName, setProjectName] = useState("Arte sem titulo");
+  const [projectId, setProjectId] = useState<string | null>(null);
+  const [format, setFormat] = useState("feed");
+  const [artSize, setArtSize] = useState({ width: DEFAULT_WIDTH, height: DEFAULT_HEIGHT });
+  const [zoom, setZoom] = useState(0.48);
+  const [showGrid, setShowGrid] = useState(true);
   const [photoQuery, setPhotoQuery] = useState("cabelo salao");
   const [stockPhotos, setStockPhotos] = useState<StockPhoto[]>([]);
   const [photosLoading, setPhotosLoading] = useState(false);
   const [photosError, setPhotosError] = useState("");
-  const [exporting, setExporting] = useState(false);
-  const [exportError, setExportError] = useState("");
-  const stageRef = useRef<HTMLDivElement | null>(null);
-  const dragRef = useRef<DragState | null>(null);
+  const [projects, setProjects] = useState<EditorProject[]>([]);
+  const [status, setStatus] = useState("");
+
+  const selectedLocked = useMemo(() => objectIsLocked(selected || undefined), [selected]);
+
+  const pushHistory = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || loadingJsonRef.current) return;
+    const json = JSON.stringify(canvas.toJSON());
+    const current = historyRef.current[historyRef.current.length - 1];
+    if (current === json) return;
+    historyRef.current = [...historyRef.current.slice(-39), json];
+    futureRef.current = [];
+  }, []);
+
+  const fitZoom = useCallback((width: number, height: number) => {
+    const availableW = window.innerWidth > 1200 ? window.innerWidth - 720 : window.innerWidth - 80;
+    const availableH = window.innerHeight - 190;
+    return Math.max(0.18, Math.min(0.72, availableW / width, availableH / height));
+  }, []);
+
+  const addImageFromUrl = useCallback(
+    async (src: string, label = "Imagem", targetWidth = 360) => {
+      const fabric = fabricRef.current;
+      const canvas = canvasRef.current;
+      if (!fabric || !canvas) return;
+      const image = await fabric.FabricImage.fromURL(src, { crossOrigin: "anonymous" });
+      image.set({
+        left: artSize.width / 2 - targetWidth / 2,
+        top: artSize.height / 2 - targetWidth / 2,
+        name: label,
+        cornerStyle: "circle",
+        transparentCorners: false,
+      });
+      image.scaleToWidth(targetWidth);
+      canvas.add(image);
+      canvas.setActiveObject(image);
+      canvas.requestRenderAll();
+      pushHistory();
+    },
+    [artSize.height, artSize.width, pushHistory]
+  );
+
+  const buildBaseTemplate = useCallback(
+    async (width = artSize.width, height = artSize.height) => {
+      const fabric = fabricRef.current;
+      const canvas = canvasRef.current;
+      if (!fabric || !canvas) return;
+      loadingJsonRef.current = true;
+      canvas.clear();
+      canvas.backgroundColor = "#fff8e7";
+
+      const frame = new fabric.Rect({
+        left: width * 0.06,
+        top: height * 0.05,
+        width: width * 0.88,
+        height: height * 0.9,
+        fill: "transparent",
+        stroke: "#d8b36b",
+        strokeWidth: 5,
+        rx: 28,
+        ry: 28,
+        selectable: false,
+        evented: false,
+        name: "Moldura",
+      });
+      canvas.add(frame);
+
+      if (logoUrl) {
+        const logo = await fabric.FabricImage.fromURL(logoUrl, { crossOrigin: "anonymous" });
+        logo.set({ left: width / 2 - 70, top: height * 0.08, name: "Logo" });
+        logo.scaleToWidth(140);
+        canvas.add(logo);
+      }
+
+      canvas.add(
+        new fabric.IText((salaoNome || "SalaoPremiun").toUpperCase(), {
+          left: width * 0.12,
+          top: logoUrl ? height * 0.19 : height * 0.1,
+          width: width * 0.76,
+          fontFamily: "Montserrat",
+          fontSize: 58,
+          fontWeight: "900",
+          fill: "#111111",
+          textAlign: "center",
+          name: "Titulo",
+        })
+      );
+      canvas.add(
+        new fabric.IText("Agende seu horario pelo app", {
+          left: width * 0.18,
+          top: logoUrl ? height * 0.27 : height * 0.18,
+          width: width * 0.64,
+          fontFamily: "Lato",
+          fontSize: 34,
+          fontWeight: "700",
+          fill: "#5f5a4f",
+          textAlign: "center",
+          name: "Chamada",
+        })
+      );
+
+      const qr = await fabric.FabricImage.fromURL(qrCodeUrl, { crossOrigin: "anonymous" });
+      qr.set({ left: width / 2 - 190, top: height * 0.43, name: "QR Code" });
+      qr.scaleToWidth(380);
+      canvas.add(qr);
+
+      canvas.add(
+        new fabric.IText(publicUrl, {
+          left: width * 0.13,
+          top: height * 0.79,
+          width: width * 0.74,
+          fontFamily: "Montserrat",
+          fontSize: 24,
+          fontWeight: "800",
+          fill: "#111111",
+          textAlign: "center",
+          name: "Link",
+        })
+      );
+
+      canvas.requestRenderAll();
+      loadingJsonRef.current = false;
+      historyRef.current = [JSON.stringify(canvas.toJSON())];
+      futureRef.current = [];
+    },
+    [artSize.height, artSize.width, logoUrl, publicUrl, qrCodeUrl, salaoNome]
+  );
+
+  const resizeProject = useCallback(
+    async (width: number, height: number, nextFormat: string) => {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      setArtSize({ width, height });
+      setFormat(nextFormat);
+      const nextZoom = fitZoom(width, height);
+      setZoom(nextZoom);
+      canvas.setDimensions({ width, height });
+      canvas.setZoom(nextZoom);
+      await buildBaseTemplate(width, height);
+    },
+    [buildBaseTemplate, fitZoom]
+  );
 
   useEffect(() => {
-    if (!open) return;
-    setArt(buildInitialState({ salaoNome, publicUrl, qrCodeUrl, logoUrl }));
-    setSelectedId("qr");
-    setCopiedElement(null);
-    setPast([]);
-    setFuture([]);
-    setActiveTab("modelos");
-    setExportError("");
-  }, [logoUrl, open, publicUrl, qrCodeUrl, salaoNome]);
+    if (!open || !canvasElRef.current || canvasRef.current) return;
+    let cancelled = false;
 
-  const selected = useMemo(
-    () => art.elements.find((item) => item.id === selectedId) || null,
-    [art.elements, selectedId]
-  );
+    async function init() {
+      const fabric = await import("fabric");
+      if (cancelled || !canvasElRef.current) return;
+      fabricRef.current = fabric;
+      const nextZoom = fitZoom(DEFAULT_WIDTH, DEFAULT_HEIGHT);
+      setZoom(nextZoom);
+      const canvas = new fabric.Canvas(canvasElRef.current, {
+        width: DEFAULT_WIDTH,
+        height: DEFAULT_HEIGHT,
+        backgroundColor: "#fff8e7",
+        preserveObjectStacking: true,
+        selection: true,
+      });
+      canvas.setZoom(nextZoom);
+      canvasRef.current = canvas;
 
-  const contrast = useMemo(
-    () => contrastScore(art.background, art.primary),
-    [art.background, art.primary]
-  );
+      fabric.FabricObject.ownDefaults.borderColor = "#d8b36b";
+      fabric.FabricObject.ownDefaults.cornerColor = "#111111";
+      fabric.FabricObject.ownDefaults.cornerStrokeColor = "#ffffff";
+      fabric.FabricObject.ownDefaults.cornerStyle = "circle";
+      fabric.FabricObject.ownDefaults.transparentCorners = false;
 
-  const contrastStatus = useMemo(() => {
-    if (contrast > 120) {
-      return {
-        label: "Perfeito",
-        className: "bg-emerald-500/10 text-emerald-300",
-        description: "O QR Code esta com contraste alto para leitura por celular.",
-      };
+      canvas.on("selection:created", () => setSelected(canvas.getActiveObject() || null));
+      canvas.on("selection:updated", () => setSelected(canvas.getActiveObject() || null));
+      canvas.on("selection:cleared", () => setSelected(null));
+      canvas.on("object:modified", pushHistory);
+      canvas.on("object:added", pushHistory);
+      canvas.on("object:removed", pushHistory);
+      await buildBaseTemplate(DEFAULT_WIDTH, DEFAULT_HEIGHT);
     }
-    if (contrast > 70) {
-      return {
-        label: "Atencao",
-        className: "bg-amber-500/10 text-amber-300",
-        description: "O contraste esta mediano. Funciona melhor em boa luz.",
-      };
-    }
-    return {
-      label: "Inseguro",
-      className: "bg-rose-500/10 text-rose-300",
-      description: "Contraste baixo. Troque fundo ou cor principal antes de imprimir.",
+
+    init();
+
+    return () => {
+      cancelled = true;
+      canvasRef.current?.dispose();
+      canvasRef.current = null;
     };
-  }, [contrast]);
+  }, [buildBaseTemplate, fitZoom, open, pushHistory]);
 
-  function commit(next: ArtState) {
-    setPast((current) => [...current.slice(-(MAX_HISTORY - 1)), cloneState(art)]);
-    setFuture([]);
-    setArt(next);
-  }
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      const active = canvas.getActiveObject();
+      const target = event.target as HTMLElement | null;
+      const typing = target?.tagName === "INPUT" || target?.tagName === "TEXTAREA";
+      if (typing) return;
 
-  function updateArt(mutator: (current: ArtState) => ArtState) {
-    commit(mutator(cloneState(art)));
-  }
+      if ((event.key === "Delete" || event.key === "Backspace") && active) {
+        event.preventDefault();
+        canvas.getActiveObjects().forEach((object) => canvas.remove(object));
+        canvas.discardActiveObject();
+        canvas.requestRenderAll();
+        pushHistory();
+      }
 
-  function updateElement(id: string, patch: Partial<ArtElement>) {
-    updateArt((current) => ({
-      ...current,
-      elements: current.elements.map((item) =>
-        item.id === id ? { ...item, ...patch } : item
-      ),
-    }));
-  }
+      if (event.ctrlKey && event.key.toLowerCase() === "c" && active) {
+        event.preventDefault();
+        active.clone().then((cloned) => {
+          clipboardRef.current = cloned as FabricObject;
+        });
+      }
+
+      if (event.ctrlKey && event.key.toLowerCase() === "v" && clipboardRef.current) {
+        event.preventDefault();
+        clipboardRef.current.clone().then((cloned) => {
+          const object = cloned as FabricObject;
+          object.set({
+            left: (object.left || 0) + 28,
+            top: (object.top || 0) + 28,
+            evented: true,
+          });
+          canvas.add(object);
+          canvas.setActiveObject(object);
+          canvas.requestRenderAll();
+          pushHistory();
+        });
+      }
+
+      if (event.ctrlKey && event.key.toLowerCase() === "z") {
+        event.preventDefault();
+        undo();
+      }
+
+      if (event.ctrlKey && event.key.toLowerCase() === "y") {
+        event.preventDefault();
+        redo();
+      }
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  });
 
   function undo() {
-    const previous = past[past.length - 1];
-    if (!previous) return;
-    setPast((current) => current.slice(0, -1));
-    setFuture((current) => [cloneState(art), ...current]);
-    setArt(cloneState(previous));
+    const canvas = canvasRef.current;
+    const current = historyRef.current.pop();
+    const previous = historyRef.current[historyRef.current.length - 1];
+    if (!canvas || !current || !previous) return;
+    futureRef.current = [current, ...futureRef.current];
+    loadingJsonRef.current = true;
+    canvas.loadFromJSON(previous).then(() => {
+      canvas.requestRenderAll();
+      loadingJsonRef.current = false;
+    });
   }
 
   function redo() {
-    const next = future[0];
-    if (!next) return;
-    setFuture((current) => current.slice(1));
-    setPast((current) => [...current.slice(-(MAX_HISTORY - 1)), cloneState(art)]);
-    setArt(cloneState(next));
-  }
-
-  function applyTemplate(template: (typeof templates)[number]) {
-    updateArt((current) => ({
-      ...current,
-      background: template.background,
-      primary: template.primary,
-      accent: template.accent,
-      text: template.text,
-      elements: current.elements.map((item) => {
-        if (item.id === "frame") {
-          return { ...item, borderColor: template.accent };
-        }
-        if (item.id === "title") {
-          return {
-            ...item,
-            color: template.primary,
-            fontFamily: template.titleFont,
-            fontSize: template.id === "leve" ? 48 : 42,
-          };
-        }
-        if (item.id === "subtitle") {
-          return {
-            ...item,
-            color: template.text,
-            fontFamily: template.subtitleFont,
-            fontSize: template.id === "leve" ? 34 : 26,
-          };
-        }
-        if (item.type === "text") {
-          return { ...item, color: item.id === "footer" ? template.text : template.primary };
-        }
-        return item;
-      }),
-    }));
-  }
-
-  function applyQuickCall(title: string, subtitle: string) {
-    updateArt((current) => ({
-      ...current,
-      elements: current.elements.map((item) => {
-        if (item.id === "title") return { ...item, text: title };
-        if (item.id === "subtitle") return { ...item, text: subtitle };
-        return item;
-      }),
-    }));
-  }
-
-  function updatePalette(patch: Partial<Pick<ArtState, "background" | "primary" | "accent" | "text">>) {
-    updateArt((current) => ({
-      ...current,
-      ...patch,
-      elements: current.elements.map((item) => {
-        if (patch.accent && item.id === "frame") return { ...item, borderColor: patch.accent };
-        if (patch.primary && item.id === "title") return { ...item, color: patch.primary };
-        if (patch.text && (item.id === "subtitle" || item.id === "footer")) {
-          return { ...item, color: patch.text };
-        }
-        return item;
-      }),
-    }));
-  }
-
-  function pointerToArt(event: ReactPointerEvent) {
-    const rect = stageRef.current?.getBoundingClientRect();
-    if (!rect) return { x: 0, y: 0 };
-    return {
-      x: ((event.clientX - rect.left) / rect.width) * ART_WIDTH,
-      y: ((event.clientY - rect.top) / rect.height) * ART_HEIGHT,
-    };
-  }
-
-  function startDrag(event: ReactPointerEvent, item: ArtElement) {
-    if (item.locked) return;
-    const point = pointerToArt(event);
-    dragRef.current = {
-      id: item.id,
-      startX: point.x,
-      startY: point.y,
-      elementX: item.x,
-      elementY: item.y,
-      before: cloneState(art),
-    };
-    setSelectedId(item.id);
-    event.currentTarget.setPointerCapture(event.pointerId);
-  }
-
-  function moveDrag(event: ReactPointerEvent) {
-    const drag = dragRef.current;
-    if (!drag) return;
-    const point = pointerToArt(event);
-    const item = art.elements.find((element) => element.id === drag.id);
-    if (!item) return;
-    setArt((current) => ({
-      ...current,
-      elements: current.elements.map((element) =>
-        element.id === drag.id
-          ? {
-              ...element,
-              x: clamp(drag.elementX + point.x - drag.startX, 0, ART_WIDTH - element.w),
-              y: clamp(drag.elementY + point.y - drag.startY, 0, ART_HEIGHT - element.h),
-            }
-          : element
-      ),
-    }));
-  }
-
-  function stopDrag() {
-    const drag = dragRef.current;
-    if (drag) {
-      setPast((current) => [...current.slice(-(MAX_HISTORY - 1)), drag.before]);
-      setFuture([]);
-    }
-    dragRef.current = null;
+    const canvas = canvasRef.current;
+    const next = futureRef.current.shift();
+    if (!canvas || !next) return;
+    historyRef.current.push(next);
+    loadingJsonRef.current = true;
+    canvas.loadFromJSON(next).then(() => {
+      canvas.requestRenderAll();
+      loadingJsonRef.current = false;
+    });
   }
 
   function addText(kind: "title" | "subtitle" = "title") {
-    const next: ArtElement = {
-      id: uid("text"),
-      type: "text",
-      label: kind === "title" ? "Novo titulo" : "Novo subtitulo",
-      text: kind === "title" ? "NOVO TEXTO" : "Escreva sua chamada",
-      x: 120,
-      y: kind === "title" ? 252 : 316,
-      w: 480,
-      h: kind === "title" ? 64 : 46,
-      color: kind === "title" ? art.primary : art.text,
-      fontSize: kind === "title" ? 34 : 24,
-      fontWeight: kind === "title" ? 900 : 700,
+    const fabric = fabricRef.current;
+    const canvas = canvasRef.current;
+    if (!fabric || !canvas) return;
+    const object = new fabric.IText(kind === "title" ? "NOVO TITULO" : "Escreva sua chamada", {
+      left: artSize.width * 0.22,
+      top: artSize.height * 0.28,
+      width: artSize.width * 0.56,
       fontFamily: kind === "title" ? "Montserrat" : "Lato",
+      fontSize: kind === "title" ? 58 : 36,
+      fontWeight: kind === "title" ? "900" : "700",
+      fill: kind === "title" ? "#111111" : "#5f5a4f",
       textAlign: "center",
-    };
-    updateArt((current) => ({ ...current, elements: [...current.elements, next] }));
-    setSelectedId(next.id);
+      name: kind === "title" ? "Titulo" : "Texto",
+    });
+    canvas.add(object);
+    canvas.setActiveObject(object);
+    canvas.requestRenderAll();
+    pushHistory();
   }
 
-  function addImage(event: ChangeEvent<HTMLInputElement>) {
+  function addShape(kind: "rect" | "circle" | "line") {
+    const fabric = fabricRef.current;
+    const canvas = canvasRef.current;
+    if (!fabric || !canvas) return;
+    const object =
+      kind === "circle"
+        ? new fabric.Circle({
+            left: artSize.width / 2 - 90,
+            top: artSize.height / 2 - 90,
+            radius: 90,
+            fill: "#d8b36b",
+            name: "Circulo",
+          })
+        : kind === "line"
+          ? new fabric.Line([0, 0, 280, 0], {
+              left: artSize.width / 2 - 140,
+              top: artSize.height / 2,
+              stroke: "#111111",
+              strokeWidth: 8,
+              name: "Linha",
+            })
+          : new fabric.Rect({
+              left: artSize.width / 2 - 120,
+              top: artSize.height / 2 - 70,
+              width: 240,
+              height: 140,
+              rx: 24,
+              ry: 24,
+              fill: "#fff8e7",
+              stroke: "#d8b36b",
+              strokeWidth: 4,
+              name: "Forma",
+            });
+    canvas.add(object);
+    canvas.setActiveObject(object);
+    canvas.requestRenderAll();
+    pushHistory();
+  }
+
+  async function addUpload(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = () => {
-      const next: ArtElement = {
-        id: uid("image"),
-        type: "image",
-        label: file.name || "Imagem",
-        src: String(reader.result || ""),
-        x: 250,
-        y: 340,
-        w: 220,
-        h: 170,
-        radius: 18,
-      };
-      updateArt((current) => ({ ...current, elements: [...current.elements, next] }));
-      setSelectedId(next.id);
+    reader.onload = async () => {
+      await addImageFromUrl(String(reader.result || ""), file.name || "Upload", 420);
     };
     reader.readAsDataURL(file);
     event.target.value = "";
-  }
-
-  function addImageElement(params: { src: string; label: string }) {
-    const next: ArtElement = {
-      id: uid("image"),
-      type: "image",
-      label: params.label,
-      src: params.src,
-      x: 150,
-      y: 260,
-      w: 420,
-      h: 300,
-      radius: 22,
-    };
-    updateArt((current) => ({ ...current, elements: [...current.elements, next] }));
-    setSelectedId(next.id);
   }
 
   async function searchPhotos(query = photoQuery) {
@@ -746,392 +543,318 @@ export default function QrCodeArtEditor({
       const response = await fetch(
         `/api/painel/editor/pexels?query=${encodeURIComponent(normalized)}`
       );
-      const result = (await response.json()) as {
-        photos?: StockPhoto[];
-        error?: string;
-      };
+      const result = (await response.json()) as { photos?: StockPhoto[]; error?: string };
       if (!response.ok) throw new Error(result.error || "Erro ao buscar fotos.");
       setStockPhotos(result.photos || []);
     } catch (error) {
       setPhotosError(
-        error instanceof Error
-          ? error.message
-          : "Nao foi possivel buscar fotos agora."
+        error instanceof Error ? error.message : "Nao foi possivel buscar fotos agora."
       );
     } finally {
       setPhotosLoading(false);
     }
   }
 
-  function addSticker(preset: (typeof elementPresets)[number]) {
-    const next: ArtElement = {
-      id: uid("sticker"),
-      type: "image",
-      label: preset.label,
-      src: preset.src,
-      x: 242,
-      y: 318,
-      w: 220,
-      h: 220,
-      radius: 0,
-    };
-    updateArt((current) => ({ ...current, elements: [...current.elements, next] }));
-    setSelectedId(next.id);
-  }
-
-  function addBeforeAfter() {
-    const group: ArtElement[] = [
-      {
-        id: uid("before-box"),
-        type: "shape",
-        label: "Antes",
-        x: 74,
-        y: 278,
-        w: 274,
-        h: 342,
-        background: "#ffffff",
-        borderColor: "#d8b36b",
-        borderWidth: 3,
-        radius: 22,
-      },
-      {
-        id: uid("after-box"),
-        type: "shape",
-        label: "Depois",
-        x: 372,
-        y: 278,
-        w: 274,
-        h: 342,
-        background: "#ffffff",
-        borderColor: "#111111",
-        borderWidth: 3,
-        radius: 22,
-      },
-      {
-        id: uid("before-label"),
-        type: "text",
-        label: "Etiqueta antes",
-        text: "ANTES",
-        x: 106,
-        y: 640,
-        w: 210,
-        h: 42,
-        color: "#111111",
-        fontSize: 24,
-        fontWeight: 900,
-        fontFamily: "Montserrat",
-        textAlign: "center",
-      },
-      {
-        id: uid("after-label"),
-        type: "text",
-        label: "Etiqueta depois",
-        text: "DEPOIS",
-        x: 404,
-        y: 640,
-        w: 210,
-        h: 42,
-        color: "#8a5a12",
-        fontSize: 24,
-        fontWeight: 900,
-        fontFamily: "Montserrat",
-        textAlign: "center",
-      },
-    ];
-    updateArt((current) => ({ ...current, elements: [...current.elements, ...group] }));
-    setSelectedId(group[0].id);
-  }
-
-  function addPriceTable() {
-    const group: ArtElement[] = [
-      {
-        id: uid("price-card"),
-        type: "shape",
-        label: "Tabela de precos",
-        x: 96,
-        y: 282,
-        w: 528,
-        h: 280,
-        background: "#ffffff",
-        borderColor: "#d8b36b",
-        borderWidth: 2,
-        radius: 28,
-      },
-      {
-        id: uid("price-title"),
-        type: "text",
-        label: "Titulo precos",
-        text: "COMBOS DA SEMANA",
-        x: 132,
-        y: 318,
-        w: 456,
-        h: 44,
-        color: "#111111",
-        fontSize: 28,
-        fontWeight: 900,
-        fontFamily: "Montserrat",
-        textAlign: "center",
-      },
-      {
-        id: uid("price-list"),
-        type: "text",
-        label: "Lista de servicos",
-        text: "Corte + Escova ........ R$ 150\nProgressiva ............ R$ 220\nManicure + Pedicure .... R$ 80",
-        x: 132,
-        y: 388,
-        w: 456,
-        h: 126,
-        color: "#5f5a4f",
-        fontSize: 23,
-        fontWeight: 700,
-        fontFamily: "Lato",
-        textAlign: "left",
-      },
-    ];
-    updateArt((current) => ({ ...current, elements: [...current.elements, ...group] }));
-    setSelectedId(group[1].id);
-  }
-
-  function addReviewCard() {
-    const group: ArtElement[] = [
-      {
-        id: uid("review-card"),
-        type: "shape",
-        label: "Depoimento",
-        x: 104,
-        y: 304,
-        w: 512,
-        h: 210,
-        background: "#ffffff",
-        borderColor: "#d8b36b",
-        borderWidth: 2,
-        radius: 28,
-      },
-      {
-        id: uid("review-stars"),
-        type: "text",
-        label: "Estrelas",
-        text: "★★★★★",
-        x: 146,
-        y: 336,
-        w: 428,
-        h: 38,
-        color: "#d8b36b",
-        fontSize: 30,
-        fontWeight: 900,
-        fontFamily: "Arial",
-        textAlign: "center",
-      },
-      {
-        id: uid("review-text"),
-        type: "text",
-        label: "Texto depoimento",
-        text: "Atendimento maravilhoso, amei o resultado!",
-        x: 148,
-        y: 390,
-        w: 424,
-        h: 72,
-        color: "#111111",
-        fontSize: 25,
-        fontWeight: 800,
-        fontFamily: "Lato",
-        textAlign: "center",
-      },
-    ];
-    updateArt((current) => ({ ...current, elements: [...current.elements, ...group] }));
-    setSelectedId(group[2].id);
-  }
-
-  function addAgendaCard() {
-    const group: ArtElement[] = [
-      {
-        id: uid("agenda-card"),
-        type: "shape",
-        label: "Agenda aberta",
-        x: 96,
-        y: 286,
-        w: 528,
-        h: 270,
-        background: "#111111",
-        borderColor: "#d8b36b",
-        borderWidth: 3,
-        radius: 30,
-      },
-      {
-        id: uid("agenda-title"),
-        type: "text",
-        label: "Titulo agenda",
-        text: "AGENDA ABERTA",
-        x: 132,
-        y: 324,
-        w: 456,
-        h: 46,
-        color: "#d8b36b",
-        fontSize: 30,
-        fontWeight: 900,
-        fontFamily: "Montserrat",
-        textAlign: "center",
-      },
-      {
-        id: uid("agenda-list"),
-        type: "text",
-        label: "Horarios",
-        text: "SEG  14:00  16:30\nTER  09:00  11:00\nQUA  15:00  17:00",
-        x: 158,
-        y: 396,
-        w: 404,
-        h: 112,
-        color: "#ffffff",
-        fontSize: 24,
-        fontWeight: 800,
-        fontFamily: "Lato",
-        textAlign: "left",
-      },
-    ];
-    updateArt((current) => ({ ...current, elements: [...current.elements, ...group] }));
-    setSelectedId(group[2].id);
-  }
-
-  function duplicateSelected() {
-    if (!selected || selected.locked) return;
-    const next = {
-      ...selected,
-      id: uid(selected.type),
-      label: `${selected.label} copia`,
-      x: clamp(selected.x + 26, 0, ART_WIDTH - selected.w),
-      y: clamp(selected.y + 26, 0, ART_HEIGHT - selected.h),
-      locked: false,
-    };
-    updateArt((current) => ({ ...current, elements: [...current.elements, next] }));
-    setSelectedId(next.id);
-  }
-
-  function pasteElement() {
-    if (!copiedElement) return;
-    const next = {
-      ...copiedElement,
-      id: uid(copiedElement.type),
-      label: `${copiedElement.label} copia`,
-      x: clamp(copiedElement.x + 32, 0, ART_WIDTH - copiedElement.w),
-      y: clamp(copiedElement.y + 32, 0, ART_HEIGHT - copiedElement.h),
-      locked: false,
-    };
-    updateArt((current) => ({ ...current, elements: [...current.elements, next] }));
-    setSelectedId(next.id);
-  }
-
-  function deleteSelected() {
-    if (!selected || selected.locked || selected.type === "qr") return;
-    updateArt((current) => ({
-      ...current,
-      elements: current.elements.filter((item) => item.id !== selected.id),
-    }));
-    setSelectedId("qr");
-  }
-
-  function alignSelected(position: "left" | "center" | "right") {
-    if (!selected || selected.locked) return;
-    const x =
-      position === "left"
-        ? 64
-        : position === "right"
-          ? ART_WIDTH - selected.w - 64
-          : (ART_WIDTH - selected.w) / 2;
-    updateElement(selected.id, { x });
-  }
-
-  function bringSelectedToFront() {
-    if (!selected || selected.locked) return;
-    updateArt((current) => ({
-      ...current,
-      elements: [
-        ...current.elements.filter((item) => item.id !== selected.id),
-        selected,
-      ],
-    }));
-  }
-
-  function sendSelectedBack() {
-    if (!selected || selected.locked || selected.type === "qr") return;
-    updateArt((current) => {
-      const without = current.elements.filter((item) => item.id !== selected.id);
-      const frameIndex = without.findIndex((item) => item.id === "frame");
-      const next = [...without];
-      next.splice(frameIndex + 1, 0, selected);
-      return { ...current, elements: next };
-    });
-  }
-
-  async function exportPng() {
-    setExporting(true);
-    setExportError("");
-    try {
-      const canvas = document.createElement("canvas");
-      canvas.width = ART_WIDTH * 2;
-      canvas.height = ART_HEIGHT * 2;
-      const ctx = canvas.getContext("2d");
-      if (!ctx) throw new Error("Canvas indisponivel.");
-      ctx.scale(2, 2);
-
-      ctx.fillStyle = art.background;
-      ctx.fillRect(0, 0, ART_WIDTH, ART_HEIGHT);
-
-      for (const item of art.elements) {
-        if (item.type === "frame" || item.type === "shape") {
-          if (item.background) {
-            ctx.fillStyle = item.background;
-            drawRoundedRect(ctx, item.x, item.y, item.w, item.h, item.radius || 0);
-            ctx.fill();
-          }
-          ctx.strokeStyle = item.borderColor || art.accent;
-          ctx.lineWidth = item.borderWidth || 2;
-          if (item.borderWidth) {
-            drawRoundedRect(ctx, item.x, item.y, item.w, item.h, item.radius || 0);
-            ctx.stroke();
-          }
-          continue;
-        }
-
-        if (item.background) {
-          ctx.fillStyle = item.background;
-          drawRoundedRect(ctx, item.x, item.y, item.w, item.h, item.radius || 0);
-          ctx.fill();
-        }
-
-        if (item.type === "text") {
-          const fontSize = item.fontSize || 24;
-          ctx.fillStyle = item.color || art.primary;
-          ctx.font = `${item.fontWeight || 700} ${fontSize}px ${item.fontFamily || "Arial"}, Arial, sans-serif`;
-          ctx.textBaseline = "top";
-          ctx.textAlign = textAlignToCanvas(item.textAlign);
-          const lines = wrapText(ctx, String(item.text || ""), item.w);
-          const maxLines = Math.max(1, Math.floor(item.h / (fontSize * 1.18)));
-          lines.slice(0, maxLines).forEach((text, index) => {
-            ctx.fillText(text, textAnchorX(item), item.y + index * fontSize * 1.18);
-          });
-        }
-
-        if ((item.type === "qr" || item.type === "logo" || item.type === "image") && item.src) {
-          const image = await loadImage(item.src);
-          ctx.save();
-          drawRoundedRect(ctx, item.x, item.y, item.w, item.h, item.radius || 0);
-          ctx.clip();
-          ctx.drawImage(image, item.x, item.y, item.w, item.h);
-          ctx.restore();
-        }
-      }
-
-      const link = document.createElement("a");
-      link.href = canvas.toDataURL("image/png");
-      link.download = `arte-qrcode-${safeFileName(publicSlug || "salao")}.png`;
-      link.click();
-    } catch {
-      setExportError(
-        "Nao foi possivel exportar. Se usou logo externa, envie a imagem pelo botao Imagem e tente de novo."
-      );
-    } finally {
-      setExporting(false);
+  function addTemplate(kind: string) {
+    const fabric = fabricRef.current;
+    const canvas = canvasRef.current;
+    if (!fabric || !canvas) return;
+    if (kind === "qr") {
+      buildBaseTemplate();
+      return;
     }
+
+    const centerX = artSize.width / 2;
+    const baseTop = artSize.height * 0.33;
+    const card = new fabric.Rect({
+      left: centerX - 360,
+      top: baseTop,
+      width: 720,
+      height: kind === "before-after" ? 520 : 360,
+      fill: kind === "agenda" ? "#111111" : "#ffffff",
+      stroke: "#d8b36b",
+      strokeWidth: 5,
+      rx: 34,
+      ry: 34,
+      name: "Card template",
+    });
+    canvas.add(card);
+
+    const titleByKind: Record<string, string> = {
+      "before-after": "ANTES E DEPOIS",
+      agenda: "AGENDA ABERTA",
+      combo: "COMBOS DA SEMANA",
+      review: "DEPOIMENTO DA CLIENTE",
+      notice: "AVISO IMPORTANTE",
+      birthday: "CLIENTE VIP DO MES",
+      hiring: "ESTAMOS CONTRATANDO",
+    };
+    canvas.add(
+      new fabric.IText(titleByKind[kind] || "NOVO TEMPLATE", {
+        left: centerX - 300,
+        top: baseTop + 42,
+        width: 600,
+        fontFamily: "Montserrat",
+        fontSize: 42,
+        fontWeight: "900",
+        fill: kind === "agenda" ? "#d8b36b" : "#111111",
+        textAlign: "center",
+        name: "Titulo template",
+      })
+    );
+
+    if (kind === "before-after") {
+      canvas.add(
+        new fabric.Rect({
+          left: centerX - 315,
+          top: baseTop + 130,
+          width: 285,
+          height: 300,
+          fill: "#f4f0e8",
+          stroke: "#d8b36b",
+          strokeWidth: 3,
+          rx: 20,
+          ry: 20,
+          name: "Slot antes",
+        })
+      );
+      canvas.add(
+        new fabric.Rect({
+          left: centerX + 30,
+          top: baseTop + 130,
+          width: 285,
+          height: 300,
+          fill: "#f4f0e8",
+          stroke: "#111111",
+          strokeWidth: 3,
+          rx: 20,
+          ry: 20,
+          name: "Slot depois",
+        })
+      );
+    } else {
+      canvas.add(
+        new fabric.IText(
+          kind === "combo"
+            ? "Corte + Escova .... R$ 150\nProgressiva ....... R$ 220\nManicure + Pedicure .... R$ 80"
+            : kind === "agenda"
+              ? "SEG 14:00  16:30\nTER 09:00  11:00\nQUA 15:00  17:00"
+              : "Edite este texto com a mensagem do seu salao.",
+          {
+            left: centerX - 280,
+            top: baseTop + 135,
+            width: 560,
+            fontFamily: "Lato",
+            fontSize: 34,
+            fontWeight: "700",
+            fill: kind === "agenda" ? "#ffffff" : "#5f5a4f",
+            textAlign: kind === "combo" || kind === "agenda" ? "left" : "center",
+            name: "Texto template",
+          }
+        )
+      );
+    }
+    canvas.requestRenderAll();
+    pushHistory();
+  }
+
+  function applySelected(patch: Partial<{
+    fill: string;
+    fontSize: number;
+    fontFamily: string;
+    fontWeight: string;
+    charSpacing: number;
+    stroke: string;
+    strokeWidth: number;
+    shadow: string | null;
+  }>) {
+    const canvas = canvasRef.current;
+    const active = canvas?.getActiveObject();
+    if (!canvas || !active) return;
+    active.set(patch);
+    canvas.requestRenderAll();
+    pushHistory();
+    setSelected(active);
+  }
+
+  function selectedTextValue(key: "fontSize" | "fontFamily" | "fill") {
+    const value = selected?.get(key);
+    return typeof value === "string" || typeof value === "number" ? value : "";
+  }
+
+  function lockSelected(locked: boolean) {
+    const canvas = canvasRef.current;
+    const objects = canvas?.getActiveObjects() || [];
+    for (const object of objects) {
+      object.set({
+        lockMovementX: locked,
+        lockMovementY: locked,
+        lockScalingX: locked,
+        lockScalingY: locked,
+        lockRotation: locked,
+        hasControls: !locked,
+      });
+    }
+    canvas?.requestRenderAll();
+    setSelected(canvas?.getActiveObject() || null);
+    pushHistory();
+  }
+
+  function groupSelected() {
+    const fabric = fabricRef.current;
+    const canvas = canvasRef.current;
+    const objects = canvas?.getActiveObjects() || [];
+    if (!fabric || !canvas || objects.length < 2) return;
+    const group = new fabric.Group(objects);
+    objects.forEach((object) => canvas.remove(object));
+    canvas.add(group);
+    canvas.setActiveObject(group);
+    canvas.requestRenderAll();
+    pushHistory();
+  }
+
+  function ungroupSelected() {
+    const canvas = canvasRef.current;
+    const active = canvas?.getActiveObject();
+    if (!canvas || !active || active.type !== "group") return;
+    const group = active as import("fabric").Group;
+    const objects = group.removeAll();
+    canvas.remove(group);
+    objects.forEach((object) => canvas.add(object));
+    canvas.discardActiveObject();
+    canvas.requestRenderAll();
+    pushHistory();
+  }
+
+  function alignSelected(type: "h" | "v") {
+    const canvas = canvasRef.current;
+    const active = canvas?.getActiveObject();
+    if (!canvas || !active) return;
+    if (type === "h") active.set({ left: artSize.width / 2 - active.getScaledWidth() / 2 });
+    if (type === "v") active.set({ top: artSize.height / 2 - active.getScaledHeight() / 2 });
+    active.setCoords();
+    canvas.requestRenderAll();
+    pushHistory();
+  }
+
+  function changeZoom(next: number) {
+    const canvas = canvasRef.current;
+    const value = Math.max(0.12, Math.min(1.4, next));
+    setZoom(value);
+    canvas?.setZoom(value);
+    canvas?.requestRenderAll();
+  }
+
+  function moveLayer(direction: "front" | "back") {
+    const canvas = canvasRef.current;
+    const active = canvas?.getActiveObject();
+    if (!canvas || !active) return;
+    if (direction === "front") canvas.bringObjectToFront(active);
+    if (direction === "back") canvas.sendObjectToBack(active);
+    canvas.requestRenderAll();
+    pushHistory();
+  }
+
+  function exportImage(formatType: "png" | "jpeg") {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    canvas.discardActiveObject();
+    canvas.requestRenderAll();
+    const dataUrl = canvas.toDataURL({
+      format: formatType,
+      quality: 1,
+      multiplier: 2 / zoom,
+    });
+    downloadDataUrl(dataUrl, `${safeFileName(projectName || publicSlug)}.${formatType === "jpeg" ? "jpg" : "png"}`);
+  }
+
+  async function exportPdf() {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const { jsPDF } = await import("jspdf");
+    const dataUrl = canvas.toDataURL({ format: "png", quality: 1, multiplier: 2 / zoom });
+    const pdf = new jsPDF({
+      orientation: artSize.width > artSize.height ? "landscape" : "portrait",
+      unit: "px",
+      format: [artSize.width, artSize.height],
+    });
+    pdf.addImage(dataUrl, "PNG", 0, 0, artSize.width, artSize.height);
+    pdf.save(`${safeFileName(projectName || publicSlug)}.pdf`);
+  }
+
+  async function loadProjects() {
+    const session = await getUsuarioLogado();
+    if (!session.ok || !session.idSalao) return;
+    const supabase = asLooseSupabaseClient(session.supabase);
+    const { data, error } = await supabase
+      .from("editor_projetos")
+      .select("id, nome, formato, largura, altura, updated_at, thumbnail_url, payload_json")
+      .eq("id_salao", session.idSalao)
+      .eq("status", "ativo")
+      .order("updated_at", { ascending: false })
+      .limit(20);
+    if (error) {
+      setStatus("Ainda nao foi possivel carregar projetos. A migration precisa estar aplicada no Supabase.");
+      return;
+    }
+    setProjects((data || []) as EditorProject[]);
+  }
+
+  async function saveProject() {
+    const canvas = canvasRef.current;
+    const session = await getUsuarioLogado();
+    if (!canvas || !session.ok || !session.idSalao) return;
+    const supabase = asLooseSupabaseClient(session.supabase);
+    const payload = canvas.toJSON();
+    const thumbnail = canvas.toDataURL({ format: "png", quality: 0.8, multiplier: 0.25 / zoom });
+    const row = {
+      id_salao: session.idSalao,
+      id_usuario: session.perfil?.id || null,
+      nome: projectName || "Arte sem titulo",
+      formato: format,
+      largura: artSize.width,
+      altura: artSize.height,
+      thumbnail_url: thumbnail,
+      payload_json: payload,
+      updated_at: new Date().toISOString(),
+    };
+    const query = projectId
+      ? supabase.from("editor_projetos").update(row).eq("id", projectId).select("id").single<{ id: string }>()
+      : supabase.from("editor_projetos").insert(row).select("id").single<{ id: string }>();
+    const { data, error } = await query;
+    if (error || !data?.id) {
+      setStatus("Nao salvou no banco. Verifique se a migration do editor foi aplicada.");
+      return;
+    }
+    setProjectId(data.id);
+    setStatus("Projeto salvo.");
+    await loadProjects();
+  }
+
+  async function openProject(project: EditorProject) {
+    const canvas = canvasRef.current;
+    if (!canvas || !project.payload_json) return;
+    loadingJsonRef.current = true;
+    setProjectId(project.id);
+    setProjectName(project.nome);
+    setFormat(project.formato);
+    setArtSize({ width: project.largura, height: project.altura });
+    const nextZoom = fitZoom(project.largura, project.altura);
+    setZoom(nextZoom);
+    canvas.setDimensions({ width: project.largura, height: project.altura });
+    canvas.setZoom(nextZoom);
+    await canvas.loadFromJSON(project.payload_json);
+    canvas.requestRenderAll();
+    loadingJsonRef.current = false;
+    historyRef.current = [JSON.stringify(canvas.toJSON())];
+    futureRef.current = [];
+  }
+
+  async function duplicateProject(project: EditorProject) {
+    await openProject(project);
+    setProjectId(null);
+    setProjectName(`${project.nome} copia`);
+    setStatus("Projeto duplicado. Clique em salvar para gravar a copia.");
   }
 
   if (!open) return null;
@@ -1142,11 +865,7 @@ export default function QrCodeArtEditor({
         <header className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-200 bg-white px-4 py-3">
           <div className="flex items-center gap-3">
             {logoUrl ? (
-              <img
-                src={logoUrl}
-                alt={salaoNome || "SalãoPremiun"}
-                className="h-11 w-11 rounded-xl border border-[#d8b36b]/40 bg-white object-contain p-1"
-              />
+              <img src={logoUrl} alt={salaoNome} className="h-11 w-11 rounded-xl border border-[#d8b36b]/40 bg-white object-contain p-1" />
             ) : (
               <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#111111] text-[#d8b36b]">
                 <Scissors size={21} />
@@ -1156,67 +875,41 @@ export default function QrCodeArtEditor({
               <div className="flex items-center gap-2 text-lg font-black leading-none">
                 SalãoPremiun Editor
                 <span className="rounded-full bg-[#d8b36b]/20 px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.18em] text-[#8a5a12]">
-                  Marketing
+                  Beta
                 </span>
               </div>
-              <p className="mt-1 text-xs font-semibold text-zinc-500">
-                Artes, QR Code, stories e posts para o seu salao
-              </p>
+              <input
+                value={projectName}
+                onChange={(event) => setProjectName(event.target.value)}
+                className="mt-1 w-72 rounded-lg border border-transparent bg-transparent text-xs font-semibold text-zinc-500 outline-none focus:border-zinc-200 focus:bg-zinc-50"
+              />
             </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <div className="flex rounded-xl border border-zinc-200 bg-zinc-50 p-1">
-              <IconButton label="Desfazer" onClick={undo} disabled={!past.length}>
-                <Undo2 size={17} />
-              </IconButton>
-              <IconButton label="Refazer" onClick={redo} disabled={!future.length}>
-                <Redo2 size={17} />
-              </IconButton>
-            </div>
-            <button
-              type="button"
-              onClick={exportPng}
-              disabled={exporting}
-              className="inline-flex h-11 items-center gap-2 rounded-xl bg-zinc-950 px-4 text-sm font-black text-white shadow-lg shadow-black/10 transition active:scale-[0.98] disabled:opacity-60"
-            >
-              <Download size={17} />
-              {exporting ? "Gerando..." : "Baixar PNG"}
-            </button>
-            <button
-              type="button"
-              onClick={onClose}
-              className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-zinc-200 bg-white text-zinc-700 transition hover:bg-zinc-50"
-              aria-label="Fechar editor"
-            >
+            <HeaderButton label="Salvar" onClick={saveProject}><Save size={16} /></HeaderButton>
+            <HeaderButton label="Desfazer" onClick={undo}><Undo2 size={16} /></HeaderButton>
+            <HeaderButton label="Refazer" onClick={redo}><Redo2 size={16} /></HeaderButton>
+            <HeaderButton label="PNG" onClick={() => exportImage("png")}><Download size={16} /></HeaderButton>
+            <HeaderButton label="JPG" onClick={() => exportImage("jpeg")}><Download size={16} /></HeaderButton>
+            <HeaderButton label="PDF" onClick={exportPdf}><Download size={16} /></HeaderButton>
+            <button type="button" onClick={onClose} className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-zinc-200 bg-white text-zinc-700 transition hover:bg-zinc-50" aria-label="Fechar editor">
               <X size={19} />
             </button>
           </div>
         </header>
 
-        <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[320px_minmax(0,1fr)_320px]">
+        <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[330px_minmax(0,1fr)_330px]">
           <aside className="min-h-0 overflow-y-auto border-r border-zinc-200 bg-white p-4">
-            <div className="mb-4 grid grid-cols-5 gap-1 rounded-2xl bg-zinc-100 p-1">
-              {[
-                { id: "modelos", label: "Modelos", icon: WandSparkles },
-                { id: "texto", label: "Texto", icon: Type },
-                { id: "fotos", label: "Fotos", icon: ImagePlus },
-                { id: "elementos", label: "Elementos", icon: Shapes },
-                { id: "uploads", label: "Uploads", icon: ImagePlus },
-              ].map((tab) => {
+            <div className="mb-4 grid grid-cols-6 gap-1 rounded-2xl bg-zinc-100 p-1">
+              {tabConfig.map((tab) => {
                 const Icon = tab.icon;
                 return (
-                  <button
-                    key={tab.id}
-                    type="button"
-                    onClick={() => setActiveTab(tab.id as EditorTab)}
-                    className={`flex h-12 flex-col items-center justify-center rounded-xl text-[10px] font-black transition ${
-                      activeTab === tab.id
-                        ? "bg-white text-[#8a5a12] shadow-sm"
-                        : "text-zinc-500 hover:bg-white/70"
-                    }`}
-                  >
-                    <Icon size={15} />
+                  <button key={tab.id} type="button" onClick={() => {
+                    setActiveTab(tab.id);
+                    if (tab.id === "projetos") loadProjects();
+                  }} className={`flex h-12 flex-col items-center justify-center rounded-xl text-[9px] font-black transition ${activeTab === tab.id ? "bg-white text-[#8a5a12] shadow-sm" : "text-zinc-500 hover:bg-white/70"}`}>
+                    <Icon size={14} />
                     {tab.label}
                   </button>
                 );
@@ -1224,487 +917,171 @@ export default function QrCodeArtEditor({
             </div>
 
             {activeTab === "modelos" ? (
-              <>
-                <PanelTitle icon={<Layers size={15} />} title="Novo projeto" />
-                <div className="mb-6 grid grid-cols-2 gap-2">
-                  {[
-                    "Story 1080x1920",
-                    "Post 1080x1080",
-                    "Feed 1080x1350",
-                    "Personalizado",
-                  ].map((format) => (
-                    <button
-                      key={format}
-                      type="button"
-                      className="rounded-xl border border-zinc-200 bg-[#fff8e7] px-3 py-2 text-left text-xs font-black text-zinc-800 transition hover:border-[#d8b36b]"
-                    >
-                      {format}
-                    </button>
-                  ))}
-                </div>
-                <PanelTitle icon={<WandSparkles size={15} />} title="Modelos de estilo" />
+              <Panel title="Novo projeto" icon={<Layers size={15} />}>
                 <div className="grid grid-cols-2 gap-2">
-                  {templates.map((template) => (
-                    <button
-                      key={template.id}
-                      type="button"
-                      onClick={() => applyTemplate(template)}
-                      className="rounded-xl border border-zinc-200 bg-white p-2 text-left shadow-sm transition hover:border-[#d8b36b]"
-                    >
-                      <div
-                        className="mb-2 flex h-14 items-center justify-center rounded-lg border text-sm font-black"
-                        style={{
-                          backgroundColor: template.background,
-                          color: template.primary,
-                          borderColor: template.accent,
-                        }}
-                      >
-                        A
-                      </div>
-                      <span className="text-xs font-black">{template.name}</span>
+                  {projectFormats.map((item) => (
+                    <button key={item.formato} type="button" onClick={() => resizeProject(item.width, item.height, item.formato)} className="rounded-xl border border-zinc-200 bg-[#fff8e7] px-3 py-2 text-left text-xs font-black text-zinc-800 transition hover:border-[#d8b36b]">
+                      {item.label}<br /><span className="text-[10px] text-zinc-500">{item.width}x{item.height}</span>
                     </button>
                   ))}
                 </div>
-              </>
+                <div className="mt-5 grid grid-cols-2 gap-2">
+                  {templates.map((item) => (
+                    <button key={item.kind} type="button" onClick={() => addTemplate(item.kind)} className="rounded-xl border border-zinc-200 bg-white p-3 text-left text-xs font-black text-zinc-800 shadow-sm transition hover:border-[#d8b36b]">
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
+              </Panel>
             ) : null}
 
             {activeTab === "texto" ? (
-              <>
-                <PanelTitle icon={<Type size={15} />} title="Texto e chamadas" />
+              <Panel title="Texto avancado" icon={<Type size={15} />}>
                 <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => addText("title")}
-                    className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-zinc-950 text-xs font-black text-white transition hover:bg-zinc-800"
-                  >
-                    <Plus size={14} />
-                    Titulo
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => addText("subtitle")}
-                    className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-zinc-200 bg-white text-xs font-black text-zinc-800 transition hover:bg-zinc-50"
-                  >
-                    <Plus size={14} />
-                    Subtitulo
-                  </button>
+                  <button type="button" onClick={() => addText("title")} className="h-10 rounded-xl bg-zinc-950 text-xs font-black text-white">Titulo</button>
+                  <button type="button" onClick={() => addText("subtitle")} className="h-10 rounded-xl border border-zinc-200 bg-white text-xs font-black">Subtitulo</button>
                 </div>
-
-                <div className="mt-3 space-y-2">
-                  {quickCalls.map((call) => (
-                    <button
-                      key={call.label}
-                      type="button"
-                      onClick={() => applyQuickCall(call.title, call.subtitle)}
-                      className="w-full rounded-xl border border-zinc-200 bg-white p-3 text-left shadow-sm transition hover:border-[#d8b36b]"
-                    >
-                      <span className="block text-xs font-black text-[#d8b36b]">
-                        {call.label}
-                      </span>
-                      <span className="mt-1 block text-[11px] font-semibold text-zinc-500">
-                        {call.title}
-                      </span>
-                    </button>
-                  ))}
+                <div className="mt-3 grid grid-cols-3 gap-2">
+                  <button type="button" onClick={() => addShape("rect")} className="rounded-xl border p-2 text-xs font-bold">Forma</button>
+                  <button type="button" onClick={() => addShape("circle")} className="rounded-xl border p-2 text-xs font-bold">Circulo</button>
+                  <button type="button" onClick={() => addShape("line")} className="rounded-xl border p-2 text-xs font-bold">Linha</button>
                 </div>
-              </>
+              </Panel>
             ) : null}
 
             {activeTab === "fotos" ? (
-              <>
-                <PanelTitle icon={<ImagePlus size={15} />} title="Fotos profissionais" />
-                <form
-                  className="flex gap-2"
-                  onSubmit={(event) => {
-                    event.preventDefault();
-                    searchPhotos();
-                  }}
-                >
-                  <input
-                    value={photoQuery}
-                    onChange={(event) => setPhotoQuery(event.target.value)}
-                    placeholder="Buscar: cabelo, unhas..."
-                    className="h-10 min-w-0 flex-1 rounded-xl border border-zinc-200 px-3 text-sm font-semibold outline-none focus:border-[#d8b36b]"
-                  />
-                  <button
-                    type="submit"
-                    className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-950 text-white"
-                    aria-label="Buscar fotos"
-                  >
-                    <Search size={16} />
-                  </button>
+              <Panel title="Fotos profissionais" icon={<ImagePlus size={15} />}>
+                <form className="flex gap-2" onSubmit={(event) => { event.preventDefault(); searchPhotos(); }}>
+                  <input value={photoQuery} onChange={(event) => setPhotoQuery(event.target.value)} className="h-10 min-w-0 flex-1 rounded-xl border border-zinc-200 px-3 text-sm font-semibold outline-none focus:border-[#d8b36b]" />
+                  <button type="submit" className="h-10 w-10 rounded-xl bg-zinc-950 text-white"><Search className="mx-auto" size={16} /></button>
                 </form>
                 <div className="mt-3 flex flex-wrap gap-2">
                   {photoTags.map((tag) => (
-                    <button
-                      key={tag.query}
-                      type="button"
-                      onClick={() => {
-                        setPhotoQuery(tag.label);
-                        searchPhotos(tag.query);
-                      }}
-                      className="rounded-full border border-zinc-200 bg-[#fff8e7] px-3 py-1.5 text-[11px] font-black text-[#8a5a12]"
-                    >
+                    <button key={tag.query} type="button" onClick={() => { setPhotoQuery(tag.label); searchPhotos(tag.query); }} className="rounded-full border border-zinc-200 bg-[#fff8e7] px-3 py-1.5 text-[11px] font-black text-[#8a5a12]">
                       {tag.label}
                     </button>
                   ))}
                 </div>
-                {photosError ? (
-                  <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs font-semibold text-amber-800">
-                    {photosError}
-                  </div>
-                ) : null}
+                {photosError ? <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs font-semibold text-amber-800">{photosError}</div> : null}
                 <div className="mt-4 grid grid-cols-2 gap-2">
-                  {photosLoading ? (
-                    <div className="col-span-2 rounded-xl bg-zinc-100 p-4 text-center text-xs font-bold text-zinc-500">
-                      Buscando fotos...
-                    </div>
-                  ) : null}
+                  {photosLoading ? <div className="col-span-2 rounded-xl bg-zinc-100 p-4 text-center text-xs font-bold text-zinc-500">Buscando fotos...</div> : null}
                   {stockPhotos.map((photo) => (
-                    <button
-                      key={photo.id}
-                      type="button"
-                      onClick={() => addImageElement({ src: photo.src, label: photo.alt || "Foto" })}
-                      className="overflow-hidden rounded-xl border border-zinc-200 bg-zinc-50 text-left"
-                      title={photo.photographer ? `Foto: ${photo.photographer}` : photo.alt}
-                    >
-                      <img
-                        src={photo.thumb}
-                        alt={photo.alt || "Foto de banco de imagens"}
-                        className="h-28 w-full object-cover"
-                        draggable={false}
-                      />
+                    <button key={photo.id} type="button" onClick={() => addImageFromUrl(photo.src, photo.alt || "Foto", 520)} className="overflow-hidden rounded-xl border border-zinc-200 bg-zinc-50 text-left" title={photo.photographer || photo.alt}>
+                      <img src={photo.thumb} alt={photo.alt || "Foto"} className="h-28 w-full object-cover" draggable={false} />
                     </button>
                   ))}
                 </div>
-              </>
+              </Panel>
             ) : null}
 
             {activeTab === "elementos" ? (
-              <>
-                <PanelTitle icon={<Shapes size={15} />} title="Elementos do salao" />
+              <Panel title="Elementos do salao" icon={<Shapes size={15} />}>
                 <div className="grid grid-cols-2 gap-2">
-                  {elementPresets.map((preset) => {
-                    return (
-                      <button
-                        key={preset.src}
-                        type="button"
-                        onClick={() => addSticker(preset)}
-                        className="flex min-h-28 flex-col items-center justify-center gap-2 rounded-xl border border-zinc-200 bg-white p-3 text-xs font-black text-zinc-800 shadow-sm transition hover:border-[#d8b36b]"
-                      >
-                        <img
-                          src={preset.src}
-                          alt={preset.label}
-                          className="h-14 w-14 object-contain"
-                          draggable={false}
-                        />
-                        {preset.label}
-                      </button>
-                    );
-                  })}
+                  {elementPresets.map((preset) => (
+                    <button key={preset.src} type="button" onClick={() => addImageFromUrl(preset.src, preset.label, 240)} className="flex min-h-28 flex-col items-center justify-center gap-2 rounded-xl border border-zinc-200 bg-white p-3 text-xs font-black text-zinc-800 shadow-sm transition hover:border-[#d8b36b]">
+                      <img src={preset.src} alt={preset.label} className="h-14 w-14 object-contain" draggable={false} />
+                      {preset.label}
+                    </button>
+                  ))}
                 </div>
-                <div className="mt-4 space-y-2">
-                  <button
-                    type="button"
-                    onClick={addBeforeAfter}
-                    className="w-full rounded-xl border border-zinc-200 bg-[#111111] p-3 text-left text-xs font-black text-white transition hover:border-[#d8b36b]"
-                  >
-                    Antes e Depois
-                  </button>
-                  <button
-                    type="button"
-                    onClick={addPriceTable}
-                    className="w-full rounded-xl border border-zinc-200 bg-white p-3 text-left text-xs font-black text-zinc-900 transition hover:border-[#d8b36b]"
-                  >
-                    Tabela de precos / combos
-                  </button>
-                  <button
-                    type="button"
-                    onClick={addReviewCard}
-                    className="w-full rounded-xl border border-zinc-200 bg-white p-3 text-left text-xs font-black text-zinc-900 transition hover:border-[#d8b36b]"
-                  >
-                    Depoimento 5 estrelas
-                  </button>
-                  <button
-                    type="button"
-                    onClick={addAgendaCard}
-                    className="flex w-full items-center gap-2 rounded-xl border border-zinc-200 bg-white p-3 text-left text-xs font-black text-zinc-900 transition hover:border-[#d8b36b]"
-                  >
-                    <CalendarDays size={16} className="text-[#d8b36b]" />
-                    Card agenda aberta
-                  </button>
-                </div>
-              </>
+              </Panel>
             ) : null}
 
             {activeTab === "uploads" ? (
-              <>
-                <PanelTitle icon={<ImagePlus size={15} />} title="Uploads" />
+              <Panel title="Uploads" icon={<ImagePlus size={15} />}>
                 <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-zinc-300 bg-zinc-50 p-4 text-center transition hover:border-[#d8b36b] hover:bg-[#fff8e7]">
                   <ImagePlus size={24} className="text-[#d8b36b]" />
                   <span className="mt-2 text-xs font-black">Adicionar imagem</span>
-                  <span className="mt-1 text-[11px] text-zinc-500">
-                    Foto, logo extra ou fundo decorativo
-                  </span>
-                  <input type="file" accept="image/*" onChange={addImage} className="sr-only" />
+                  <span className="mt-1 text-[11px] text-zinc-500">Foto, logo extra ou fundo decorativo</span>
+                  <input type="file" accept="image/*" onChange={addUpload} className="sr-only" />
                 </label>
-              </>
+              </Panel>
             ) : null}
 
-            <div className="mt-6 rounded-xl border border-zinc-200 bg-zinc-50 p-4">
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-xs font-black uppercase tracking-[0.14em] text-zinc-500">
-                  Validador QR
-                </span>
-                <span className={`rounded-full px-2 py-1 text-[10px] font-black ${contrastStatus.className}`}>
-                  {contrastStatus.label}
-                </span>
-              </div>
-              <p className="mt-2 text-xs leading-5 text-zinc-600">
-                {contrastStatus.description}
-              </p>
-            </div>
+            {activeTab === "projetos" ? (
+              <Panel title="Projetos salvos" icon={<FolderOpen size={15} />}>
+                <button type="button" onClick={loadProjects} className="mb-3 h-10 w-full rounded-xl bg-zinc-950 text-xs font-black text-white">Atualizar lista</button>
+                <div className="space-y-2">
+                  {projects.map((project) => (
+                    <div key={project.id} className="rounded-xl border border-zinc-200 bg-white p-2">
+                      {project.thumbnail_url ? <img src={project.thumbnail_url} alt={project.nome} className="mb-2 h-24 w-full rounded-lg object-cover" /> : null}
+                      <div className="text-xs font-black">{project.nome}</div>
+                      <div className="mt-2 grid grid-cols-2 gap-2">
+                        <button type="button" onClick={() => openProject(project)} className="rounded-lg border px-2 py-1 text-xs font-bold">Abrir</button>
+                        <button type="button" onClick={() => duplicateProject(project)} className="rounded-lg border px-2 py-1 text-xs font-bold">Duplicar</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </Panel>
+            ) : null}
+
+            {status ? <div className="mt-4 rounded-xl border border-zinc-200 bg-zinc-50 p-3 text-xs font-semibold text-zinc-600">{status}</div> : null}
           </aside>
 
           <main className="relative flex min-h-0 flex-col items-center justify-center overflow-auto bg-[#efebe3] p-4 lg:p-8">
-            <div className="rounded-xl border border-zinc-200 bg-white p-1 shadow-2xl shadow-black/10">
+            <div className="mb-3 flex flex-wrap items-center gap-2 rounded-xl border border-zinc-200 bg-white p-2">
+              <ToolButton label="Zoom -" onClick={() => changeZoom(zoom - 0.08)}><ZoomOut size={15} /></ToolButton>
+              <span className="px-2 text-xs font-black">{Math.round(zoom * 100)}%</span>
+              <ToolButton label="Zoom +" onClick={() => changeZoom(zoom + 0.08)}><ZoomIn size={15} /></ToolButton>
+              <ToolButton label="Grade" onClick={() => setShowGrid((value) => !value)}><Grid3X3 size={15} /></ToolButton>
+              <ToolButton label="Centro H" onClick={() => alignSelected("h")}><AlignHorizontalJustifyCenter size={15} /></ToolButton>
+              <ToolButton label="Centro V" onClick={() => alignSelected("v")}><AlignVerticalJustifyCenter size={15} /></ToolButton>
+              <ToolButton label="Frente" onClick={() => moveLayer("front")}><BringToFront size={15} /></ToolButton>
+              <ToolButton label="Atras" onClick={() => moveLayer("back")}><Layers size={15} /></ToolButton>
+              <ToolButton label="Agrupar" onClick={groupSelected}><Group size={15} /></ToolButton>
+              <ToolButton label="Desagrupar" onClick={ungroupSelected}><Ungroup size={15} /></ToolButton>
+              <ToolButton label={selectedLocked ? "Destravar" : "Travar"} onClick={() => lockSelected(!selectedLocked)}>{selectedLocked ? <Unlock size={15} /> : <Lock size={15} />}</ToolButton>
+            </div>
+            <div className="overflow-auto rounded-xl border border-zinc-200 bg-white p-1 shadow-2xl shadow-black/10">
               <div
-                ref={stageRef}
-                className="relative aspect-[4/5] w-[min(72vw,520px)] max-w-[520px] overflow-hidden"
-                style={{ background: art.background }}
-                onPointerMove={moveDrag}
-                onPointerUp={stopDrag}
-                onPointerCancel={stopDrag}
+                className={showGrid ? "bg-[linear-gradient(rgba(0,0,0,.045)_1px,transparent_1px),linear-gradient(90deg,rgba(0,0,0,.045)_1px,transparent_1px)] bg-[size:32px_32px]" : ""}
+                style={{ width: artSize.width * zoom, height: artSize.height * zoom }}
               >
-                {art.elements.map((item) => {
-                  const selectedClass =
-                    selectedId === item.id
-                      ? "ring-2 ring-[#d8b36b] ring-offset-2 ring-offset-white"
-                      : item.locked
-                        ? ""
-                        : "ring-1 ring-black/5";
-                  return (
-                    <button
-                      key={item.id}
-                      type="button"
-                      onPointerDown={(event) => startDrag(event, item)}
-                      onClick={() => setSelectedId(item.id)}
-                      className={`absolute overflow-hidden text-left ${item.locked ? "pointer-events-none" : "cursor-move"} ${selectedClass}`}
-                      style={{
-                        left: `${(item.x / ART_WIDTH) * 100}%`,
-                        top: `${(item.y / ART_HEIGHT) * 100}%`,
-                        width: `${(item.w / ART_WIDTH) * 100}%`,
-                        height: `${(item.h / ART_HEIGHT) * 100}%`,
-                        background: item.background || "transparent",
-                        borderColor: item.borderColor || "transparent",
-                        borderWidth: item.borderWidth || 0,
-                        borderRadius: item.radius || 0,
-                      }}
-                    >
-                      {item.type === "text" ? (
-                        <span
-                          className="block h-full w-full whitespace-pre-wrap break-words leading-tight"
-                          style={{
-                            color: item.color,
-                            fontFamily: `${item.fontFamily || "Arial"}, Arial, sans-serif`,
-                            fontSize: `clamp(9px, ${((item.fontSize || 24) / ART_WIDTH) * 80}vw, ${
-                              (item.fontSize || 24) * 0.72
-                            }px)`,
-                            fontWeight: item.fontWeight,
-                            textAlign: item.textAlign || "center",
-                          }}
-                        >
-                          {item.text}
-                        </span>
-                      ) : item.type === "frame" || item.type === "shape" ? null : (
-                        <img
-                          src={item.src}
-                          alt={item.label}
-                          className="h-full w-full object-contain"
-                          draggable={false}
-                        />
-                      )}
-                    </button>
-                  );
-                })}
+                <canvas ref={canvasElRef} />
               </div>
             </div>
-
-            <p className="mt-4 flex items-center gap-2 text-xs font-semibold text-zinc-500">
-              <CheckCircle2 size={14} />
-              Arraste elementos. Edite texto, fonte, tamanho e cores no painel.
-            </p>
           </main>
 
           <aside className="min-h-0 overflow-y-auto border-l border-zinc-200 bg-white p-4">
-            <PanelTitle icon={<Palette size={15} />} title="Paleta da arte" />
-            <div className="space-y-3">
-              <ColorField
-                label="Fundo"
-                description="Base da arte"
-                value={art.background}
-                onChange={(value) => updatePalette({ background: value })}
-              />
-              <ColorField
-                label="Principal"
-                description="Titulo e contraste"
-                value={art.primary}
-                onChange={(value) => updatePalette({ primary: value })}
-              />
-              <ColorField
-                label="Destaque"
-                description="Molduras e detalhes"
-                value={art.accent}
-                onChange={(value) => updatePalette({ accent: value })}
-              />
-              <ColorField
-                label="Texto"
-                description="Subtitulos e apoio"
-                value={art.text}
-                onChange={(value) => updatePalette({ text: value })}
-              />
-            </div>
-
-            {selected ? (
-              <div className="mt-6 border-t border-zinc-200 pt-5">
-                <PanelTitle icon={<Type size={15} />} title="Elemento selecionado" />
-                <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-3">
-                  <div className="text-sm font-black">{selected.label}</div>
-                  <div className="mt-3 grid grid-cols-4 gap-2">
-                    <IconAction label="Centro" onClick={() => alignSelected("center")}>
-                      <AlignCenter size={16} />
-                    </IconAction>
-                    <IconAction label="Frente" onClick={bringSelectedToFront}>
-                      <BringToFront size={16} />
-                    </IconAction>
-                    <IconAction label="Atras" onClick={sendSelectedBack}>
-                      <Layers size={16} />
-                    </IconAction>
-                    <IconAction label="Duplicar" onClick={duplicateSelected}>
-                      <Copy size={16} />
-                    </IconAction>
+            <Panel title="Elemento selecionado" icon={<Palette size={15} />}>
+              {selected ? (
+                <div className="space-y-3">
+                  <div className="text-sm font-black">{objectLabel(selected)}</div>
+                  <label className="block text-xs font-black text-zinc-500">Cor
+                    <input type="color" value={String(selectedTextValue("fill") || "#111111")} onChange={(event) => applySelected({ fill: event.target.value })} className="mt-1 h-10 w-full rounded-xl border" />
+                  </label>
+                  <label className="block text-xs font-black text-zinc-500">Fonte
+                    <select value={String(selectedTextValue("fontFamily") || "Montserrat")} onChange={(event) => applySelected({ fontFamily: event.target.value })} className="mt-1 h-10 w-full rounded-xl border px-3">
+                      {fontOptions.map((font) => <option key={font} value={font}>{font}</option>)}
+                    </select>
+                  </label>
+                  <label className="block text-xs font-black text-zinc-500">Tamanho
+                    <input type="number" min={8} max={220} value={Number(selectedTextValue("fontSize") || 32)} onChange={(event) => applySelected({ fontSize: Number(event.target.value || 32) })} className="mt-1 h-10 w-full rounded-xl border px-3" />
+                  </label>
+                  <label className="block text-xs font-black text-zinc-500">Espacamento letras
+                    <input type="range" min={0} max={600} step={10} onChange={(event) => applySelected({ charSpacing: Number(event.target.value) })} className="mt-1 w-full" />
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button type="button" onClick={() => applySelected({ fontWeight: "900" })} className="h-10 rounded-xl border text-xs font-black">Negrito</button>
+                    <button type="button" onClick={() => applySelected({ shadow: "0px 8px 14px rgba(0,0,0,0.25)" })} className="h-10 rounded-xl border text-xs font-black">Sombra</button>
+                    <button type="button" onClick={() => applySelected({ stroke: "#ffffff", strokeWidth: 2 })} className="h-10 rounded-xl border text-xs font-black">Contorno</button>
+                    <button type="button" onClick={() => applySelected({ shadow: null, strokeWidth: 0 })} className="h-10 rounded-xl border text-xs font-black">Limpar</button>
                   </div>
-
-                  {selected.type === "text" ? (
-                    <div className="mt-3 space-y-3">
-                      <label className="block text-xs font-black text-zinc-500">
-                        Texto
-                        <textarea
-                          value={selected.text || ""}
-                          onChange={(event) =>
-                            updateElement(selected.id, { text: event.target.value })
-                          }
-                          className="mt-1 min-h-20 w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm font-semibold text-zinc-900 outline-none focus:border-[#d8b36b]"
-                        />
-                      </label>
-                      <label className="block text-xs font-black text-zinc-500">
-                        Fonte
-                        <select
-                          value={selected.fontFamily || "Montserrat"}
-                          onChange={(event) =>
-                            updateElement(selected.id, { fontFamily: event.target.value })
-                          }
-                          className="mt-1 h-10 w-full rounded-xl border border-zinc-200 bg-white px-3 text-sm font-semibold text-zinc-900 outline-none focus:border-[#d8b36b]"
-                        >
-                          {fontOptions.map((font) => (
-                            <option key={font.value} value={font.value}>
-                              {font.label}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                      <div className="grid grid-cols-2 gap-2">
-                        <ColorField
-                          compact
-                          label="Cor"
-                          value={selected.color || art.primary}
-                          onChange={(value) => updateElement(selected.id, { color: value })}
-                        />
-                        <NumberField
-                          label="Tamanho"
-                          value={selected.fontSize || 24}
-                          min={10}
-                          max={96}
-                          onChange={(value) => updateElement(selected.id, { fontSize: value })}
-                        />
-                      </div>
-                      <div className="grid grid-cols-3 gap-2 rounded-xl bg-zinc-100 p-1">
-                        {(["left", "center", "right"] as const).map((align) => (
-                          <button
-                            key={align}
-                            type="button"
-                            onClick={() => updateElement(selected.id, { textAlign: align })}
-                            className={`h-9 rounded-lg text-xs font-black transition ${
-                              selected.textAlign === align
-                                ? "bg-[#d8b36b] text-black"
-                                : "text-zinc-600 hover:bg-white"
-                            }`}
-                          >
-                            {align === "left" ? "Esq" : align === "right" ? "Dir" : "Centro"}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  ) : null}
-
-                  {!selected.locked ? (
-                    <div className="mt-3 grid grid-cols-2 gap-2">
-                      <NumberField
-                        label="Largura"
-                        value={Math.round(selected.w)}
-                        min={40}
-                        max={ART_WIDTH}
-                        onChange={(value) =>
-                          updateElement(selected.id, {
-                            w: clamp(value, 40, ART_WIDTH - selected.x),
-                          })
-                        }
-                      />
-                      <NumberField
-                        label="Altura"
-                        value={Math.round(selected.h)}
-                        min={32}
-                        max={ART_HEIGHT}
-                        onChange={(value) =>
-                          updateElement(selected.id, {
-                            h: clamp(value, 32, ART_HEIGHT - selected.y),
-                          })
-                        }
-                      />
-                    </div>
-                  ) : null}
-
-                  <div className="mt-3 grid grid-cols-3 gap-2">
-                    <IconAction
-                      label="Copiar"
-                      onClick={() => selected && setCopiedElement(selected)}
-                    >
-                      <Copy size={16} />
-                    </IconAction>
-                    <IconAction
-                      label={copiedElement ? "Colar" : "Duplicar"}
-                      onClick={copiedElement ? pasteElement : duplicateSelected}
-                    >
-                      <Plus size={16} />
-                    </IconAction>
-                    <IconAction
-                      label="Apagar"
-                      onClick={deleteSelected}
-                      disabled={selected.locked || selected.type === "qr"}
-                      danger
-                    >
-                      <Trash2 size={16} />
-                    </IconAction>
-                  </div>
+                  <button type="button" onClick={() => {
+                    const canvas = canvasRef.current;
+                    canvas?.getActiveObjects().forEach((object) => canvas.remove(object));
+                    canvas?.discardActiveObject();
+                    canvas?.requestRenderAll();
+                    pushHistory();
+                  }} className="h-10 w-full rounded-xl border border-rose-200 text-xs font-black text-rose-600">
+                    <Trash2 className="mr-2 inline" size={14} /> Apagar
+                  </button>
                 </div>
-              </div>
-            ) : null}
-
-            {exportError ? (
-              <div className="mt-4 rounded-xl border border-rose-500/25 bg-rose-500/10 px-3 py-2 text-xs font-semibold text-rose-200">
-                {exportError}
-              </div>
-            ) : null}
+              ) : (
+                <p className="text-sm font-semibold text-zinc-500">Selecione um item para editar cor, fonte, tamanho, sombra, contorno e camadas.</p>
+              )}
+            </Panel>
           </aside>
         </div>
       </div>
@@ -1712,131 +1089,30 @@ export default function QrCodeArtEditor({
   );
 }
 
-function PanelTitle({ icon, title }: { icon: React.ReactNode; title: string }) {
+function Panel({ icon, title, children }: { icon: React.ReactNode; title: string; children: React.ReactNode }) {
   return (
-    <div className="mb-3 flex items-center gap-2 text-xs font-black uppercase tracking-[0.16em] text-zinc-500">
-      <span className="text-[#d8b36b]">{icon}</span>
-      {title}
-    </div>
-  );
-}
-
-function ColorField({
-  label,
-  description,
-  value,
-  onChange,
-  compact = false,
-}: {
-  label: string;
-  description?: string;
-  value: string;
-  onChange: (value: string) => void;
-  compact?: boolean;
-}) {
-  return (
-    <label
-      className={`flex items-center justify-between gap-3 rounded-xl border border-zinc-200 bg-zinc-50 ${
-        compact ? "p-2" : "p-3"
-      }`}
-    >
-      <span>
-        <span className="block text-xs font-black text-zinc-900">{label}</span>
-        {description ? (
-          <span className="mt-0.5 block text-[11px] font-semibold text-zinc-500">
-            {description}
-          </span>
-        ) : null}
-      </span>
-      <input
-        type="color"
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        className="h-9 w-10 cursor-pointer rounded-lg border-0 bg-transparent"
-      />
-    </label>
-  );
-}
-
-function NumberField({
-  label,
-  value,
-  min,
-  max,
-  onChange,
-}: {
-  label: string;
-  value: number;
-  min: number;
-  max: number;
-  onChange: (value: number) => void;
-}) {
-  return (
-    <label className="block text-xs font-black text-zinc-500">
-      {label}
-      <input
-        type="number"
-        value={value}
-        min={min}
-        max={max}
-        onChange={(event) => onChange(Number(event.target.value || min))}
-        className="mt-1 h-10 w-full rounded-xl border border-zinc-200 bg-white px-3 text-sm font-semibold text-zinc-900 outline-none focus:border-[#d8b36b]"
-      />
-    </label>
-  );
-}
-
-function IconButton({
-  label,
-  disabled,
-  onClick,
-  children,
-}: {
-  label: string;
-  disabled?: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-zinc-700 transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-35"
-      title={label}
-      aria-label={label}
-    >
+    <section>
+      <div className="mb-3 flex items-center gap-2 text-xs font-black uppercase tracking-[0.16em] text-zinc-500">
+        <span className="text-[#d8b36b]">{icon}</span>
+        {title}
+      </div>
       {children}
+    </section>
+  );
+}
+
+function HeaderButton({ label, onClick, children }: { label: string; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button type="button" onClick={onClick} className="inline-flex h-11 items-center gap-2 rounded-xl border border-zinc-200 bg-white px-3 text-sm font-black text-zinc-800 transition hover:bg-zinc-50">
+      {children}
+      {label}
     </button>
   );
 }
 
-function IconAction({
-  label,
-  disabled,
-  danger,
-  onClick,
-  children,
-}: {
-  label: string;
-  disabled?: boolean;
-  danger?: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
+function ToolButton({ label, onClick, children }: { label: string; onClick: () => void; children: React.ReactNode }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      className={`inline-flex h-10 items-center justify-center rounded-xl border text-xs font-black transition disabled:cursor-not-allowed disabled:opacity-35 ${
-        danger
-          ? "border-rose-200 bg-white text-rose-600 hover:bg-rose-50"
-          : "border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50"
-      }`}
-      title={label}
-      aria-label={label}
-    >
+    <button type="button" onClick={onClick} title={label} className="inline-flex h-9 min-w-9 items-center justify-center rounded-lg border border-zinc-200 bg-white px-2 text-xs font-black text-zinc-700 transition hover:bg-zinc-50">
       {children}
     </button>
   );
