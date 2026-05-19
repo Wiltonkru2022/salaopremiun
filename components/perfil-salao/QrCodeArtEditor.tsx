@@ -2,8 +2,6 @@
 
 import {
   AlignCenter,
-  AlignLeft,
-  AlignRight,
   BringToFront,
   CheckCircle2,
   Copy,
@@ -762,28 +760,36 @@ export default function QrCodeArtEditor({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[90] overflow-hidden bg-[#050505]/75 backdrop-blur-sm">
-      <div className="flex h-dvh flex-col bg-[#0b0b0d] text-zinc-100">
-        <header className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 bg-[#111113] px-4 py-3">
+    <div className="fixed inset-0 z-[90] overflow-hidden bg-[#f4f0e8]">
+      <div className="flex h-dvh flex-col bg-[#f7f4ed] text-zinc-950">
+        <header className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-200 bg-white px-4 py-3">
           <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-tr from-[#d8b36b] to-[#111111]">
-              <Scissors size={21} />
-            </div>
+            {logoUrl ? (
+              <img
+                src={logoUrl}
+                alt={salaoNome || "SalãoPremiun"}
+                className="h-11 w-11 rounded-xl border border-[#d8b36b]/40 bg-white object-contain p-1"
+              />
+            ) : (
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#111111] text-[#d8b36b]">
+                <Scissors size={21} />
+              </div>
+            )}
             <div>
               <div className="flex items-center gap-2 text-lg font-black leading-none">
-                SalonArt
-                <span className="rounded-full bg-[#d8b36b]/15 px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.18em] text-[#d8b36b]">
-                  Pro
+                SalãoPremiun Editor
+                <span className="rounded-full bg-[#d8b36b]/20 px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.18em] text-[#8a5a12]">
+                  Marketing
                 </span>
               </div>
-              <p className="mt-1 text-xs font-semibold text-zinc-400">
-                Marketing visual do seu salao
+              <p className="mt-1 text-xs font-semibold text-zinc-500">
+                Artes, QR Code, stories e posts para o seu salao
               </p>
             </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <div className="flex rounded-xl border border-white/10 bg-white/5 p-1">
+            <div className="flex rounded-xl border border-zinc-200 bg-zinc-50 p-1">
               <IconButton label="Desfazer" onClick={undo} disabled={!past.length}>
                 <Undo2 size={17} />
               </IconButton>
@@ -795,7 +801,7 @@ export default function QrCodeArtEditor({
               type="button"
               onClick={exportPng}
               disabled={exporting}
-              className="inline-flex h-11 items-center gap-2 rounded-xl bg-gradient-to-r from-[#d8b36b] to-[#111111] px-4 text-sm font-black text-white shadow-lg shadow-black/30 transition active:scale-[0.98] disabled:opacity-60"
+              className="inline-flex h-11 items-center gap-2 rounded-xl bg-zinc-950 px-4 text-sm font-black text-white shadow-lg shadow-black/10 transition active:scale-[0.98] disabled:opacity-60"
             >
               <Download size={17} />
               {exporting ? "Gerando..." : "Baixar PNG"}
@@ -803,7 +809,7 @@ export default function QrCodeArtEditor({
             <button
               type="button"
               onClick={onClose}
-              className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-zinc-300 transition hover:bg-white/10"
+              className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-zinc-200 bg-white text-zinc-700 transition hover:bg-zinc-50"
               aria-label="Fechar editor"
             >
               <X size={19} />
@@ -812,7 +818,24 @@ export default function QrCodeArtEditor({
         </header>
 
         <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[320px_minmax(0,1fr)_320px]">
-          <aside className="min-h-0 overflow-y-auto border-r border-white/10 bg-[#111113] p-4">
+          <aside className="min-h-0 overflow-y-auto border-r border-zinc-200 bg-white p-4">
+            <PanelTitle icon={<Layers size={15} />} title="Novo projeto" />
+            <div className="mb-6 grid grid-cols-2 gap-2">
+              {[
+                "Story 1080x1920",
+                "Post 1080x1080",
+                "Feed 1080x1350",
+                "Personalizado",
+              ].map((format) => (
+                <button
+                  key={format}
+                  type="button"
+                  className="rounded-xl border border-zinc-200 bg-[#fff8e7] px-3 py-2 text-left text-xs font-black text-zinc-800 transition hover:border-[#d8b36b]"
+                >
+                  {format}
+                </button>
+              ))}
+            </div>
             <PanelTitle icon={<WandSparkles size={15} />} title="Modelos de estilo" />
             <div className="grid grid-cols-2 gap-2">
               {templates.map((template) => (
@@ -820,7 +843,7 @@ export default function QrCodeArtEditor({
                   key={template.id}
                   type="button"
                   onClick={() => applyTemplate(template)}
-                  className="rounded-xl border border-white/10 bg-white/[0.04] p-2 text-left transition hover:border-[#d8b36b]/60 hover:bg-white/[0.07]"
+                  className="rounded-xl border border-zinc-200 bg-white p-2 text-left shadow-sm transition hover:border-[#d8b36b]"
                 >
                   <div
                     className="mb-2 flex h-14 items-center justify-center rounded-lg border text-sm font-black"
@@ -843,7 +866,7 @@ export default function QrCodeArtEditor({
                 <button
                   type="button"
                   onClick={() => addText("title")}
-                  className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-white/[0.06] text-xs font-black transition hover:bg-white/[0.1]"
+                  className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-zinc-950 text-xs font-black text-white transition hover:bg-zinc-800"
                 >
                   <Plus size={14} />
                   Titulo
@@ -851,7 +874,7 @@ export default function QrCodeArtEditor({
                 <button
                   type="button"
                   onClick={() => addText("subtitle")}
-                  className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-white/[0.06] text-xs font-black transition hover:bg-white/[0.1]"
+                  className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-zinc-200 bg-white text-xs font-black text-zinc-800 transition hover:bg-zinc-50"
                 >
                   <Plus size={14} />
                   Subtitulo
@@ -864,12 +887,12 @@ export default function QrCodeArtEditor({
                     key={call.label}
                     type="button"
                     onClick={() => applyQuickCall(call.title, call.subtitle)}
-                    className="w-full rounded-xl border border-white/10 bg-white/[0.035] p-3 text-left transition hover:border-[#d8b36b]/50 hover:bg-white/[0.07]"
+                    className="w-full rounded-xl border border-zinc-200 bg-white p-3 text-left shadow-sm transition hover:border-[#d8b36b]"
                   >
                     <span className="block text-xs font-black text-[#d8b36b]">
                       {call.label}
                     </span>
-                    <span className="mt-1 block text-[11px] font-semibold text-zinc-400">
+                    <span className="mt-1 block text-[11px] font-semibold text-zinc-500">
                       {call.title}
                     </span>
                   </button>
@@ -879,7 +902,7 @@ export default function QrCodeArtEditor({
 
             <div className="mt-6">
               <PanelTitle icon={<ImagePlus size={15} />} title="Imagens e logo" />
-              <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-white/15 bg-white/[0.035] p-4 text-center transition hover:border-[#d8b36b]/60 hover:bg-white/[0.06]">
+              <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-zinc-300 bg-zinc-50 p-4 text-center transition hover:border-[#d8b36b] hover:bg-[#fff8e7]">
                 <ImagePlus size={24} className="text-[#d8b36b]" />
                 <span className="mt-2 text-xs font-black">Adicionar imagem</span>
                 <span className="mt-1 text-[11px] text-zinc-500">
@@ -889,50 +912,23 @@ export default function QrCodeArtEditor({
               </label>
             </div>
 
-            <div className="mt-6 rounded-xl border border-white/10 bg-black/30 p-4">
+            <div className="mt-6 rounded-xl border border-zinc-200 bg-zinc-50 p-4">
               <div className="flex items-center justify-between gap-2">
-                <span className="text-xs font-black uppercase tracking-[0.14em] text-zinc-400">
+                <span className="text-xs font-black uppercase tracking-[0.14em] text-zinc-500">
                   Validador QR
                 </span>
                 <span className={`rounded-full px-2 py-1 text-[10px] font-black ${contrastStatus.className}`}>
                   {contrastStatus.label}
                 </span>
               </div>
-              <p className="mt-2 text-xs leading-5 text-zinc-400">
+              <p className="mt-2 text-xs leading-5 text-zinc-600">
                 {contrastStatus.description}
               </p>
             </div>
           </aside>
 
-          <main className="relative flex min-h-0 flex-col items-center justify-center overflow-auto bg-[#050506] p-4 lg:p-8">
-            {selected ? (
-              <div className="sticky top-0 z-20 mb-4 flex flex-wrap items-center justify-center gap-2 rounded-xl border border-white/10 bg-[#111113]/95 p-2 shadow-2xl backdrop-blur">
-                <ToolbarButton label="Centralizar" onClick={() => alignSelected("center")}>
-                  <AlignCenter size={15} />
-                </ToolbarButton>
-                <ToolbarButton label="Esquerda" onClick={() => alignSelected("left")}>
-                  <AlignLeft size={15} />
-                </ToolbarButton>
-                <ToolbarButton label="Direita" onClick={() => alignSelected("right")}>
-                  <AlignRight size={15} />
-                </ToolbarButton>
-                <div className="h-6 w-px bg-white/10" />
-                <ToolbarButton label="Frente" onClick={bringSelectedToFront}>
-                  <BringToFront size={15} />
-                </ToolbarButton>
-                <ToolbarButton label="Atras" onClick={sendSelectedBack}>
-                  <Layers size={15} />
-                </ToolbarButton>
-                <ToolbarButton label="Duplicar" onClick={duplicateSelected}>
-                  <Copy size={15} />
-                </ToolbarButton>
-                <ToolbarButton label="Apagar" onClick={deleteSelected} danger>
-                  <Trash2 size={15} />
-                </ToolbarButton>
-              </div>
-            ) : null}
-
-            <div className="rounded-xl border border-white/10 bg-white p-1 shadow-2xl shadow-black/50">
+          <main className="relative flex min-h-0 flex-col items-center justify-center overflow-auto bg-[#efebe3] p-4 lg:p-8">
+            <div className="rounded-xl border border-zinc-200 bg-white p-1 shadow-2xl shadow-black/10">
               <div
                 ref={stageRef}
                 className="relative aspect-[4/5] w-[min(72vw,520px)] max-w-[520px] overflow-hidden"
@@ -1001,7 +997,7 @@ export default function QrCodeArtEditor({
             </p>
           </main>
 
-          <aside className="min-h-0 overflow-y-auto border-l border-white/10 bg-[#111113] p-4">
+          <aside className="min-h-0 overflow-y-auto border-l border-zinc-200 bg-white p-4">
             <PanelTitle icon={<Palette size={15} />} title="Paleta da arte" />
             <div className="space-y-3">
               <ColorField
@@ -1031,31 +1027,45 @@ export default function QrCodeArtEditor({
             </div>
 
             {selected ? (
-              <div className="mt-6 border-t border-white/10 pt-5">
+              <div className="mt-6 border-t border-zinc-200 pt-5">
                 <PanelTitle icon={<Type size={15} />} title="Elemento selecionado" />
-                <div className="rounded-xl border border-white/10 bg-white/[0.035] p-3">
+                <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-3">
                   <div className="text-sm font-black">{selected.label}</div>
+                  <div className="mt-3 grid grid-cols-4 gap-2">
+                    <IconAction label="Centro" onClick={() => alignSelected("center")}>
+                      <AlignCenter size={16} />
+                    </IconAction>
+                    <IconAction label="Frente" onClick={bringSelectedToFront}>
+                      <BringToFront size={16} />
+                    </IconAction>
+                    <IconAction label="Atras" onClick={sendSelectedBack}>
+                      <Layers size={16} />
+                    </IconAction>
+                    <IconAction label="Duplicar" onClick={duplicateSelected}>
+                      <Copy size={16} />
+                    </IconAction>
+                  </div>
 
                   {selected.type === "text" ? (
                     <div className="mt-3 space-y-3">
-                      <label className="block text-xs font-black text-zinc-400">
+                      <label className="block text-xs font-black text-zinc-500">
                         Texto
                         <textarea
                           value={selected.text || ""}
                           onChange={(event) =>
                             updateElement(selected.id, { text: event.target.value })
                           }
-                          className="mt-1 min-h-20 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm font-semibold text-white outline-none focus:border-[#d8b36b]"
+                          className="mt-1 min-h-20 w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm font-semibold text-zinc-900 outline-none focus:border-[#d8b36b]"
                         />
                       </label>
-                      <label className="block text-xs font-black text-zinc-400">
+                      <label className="block text-xs font-black text-zinc-500">
                         Fonte
                         <select
                           value={selected.fontFamily || "Montserrat"}
                           onChange={(event) =>
                             updateElement(selected.id, { fontFamily: event.target.value })
                           }
-                          className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-black/30 px-3 text-sm font-semibold text-white outline-none focus:border-[#d8b36b]"
+                          className="mt-1 h-10 w-full rounded-xl border border-zinc-200 bg-white px-3 text-sm font-semibold text-zinc-900 outline-none focus:border-[#d8b36b]"
                         >
                           {fontOptions.map((font) => (
                             <option key={font.value} value={font.value}>
@@ -1079,7 +1089,7 @@ export default function QrCodeArtEditor({
                           onChange={(value) => updateElement(selected.id, { fontSize: value })}
                         />
                       </div>
-                      <div className="grid grid-cols-3 gap-2 rounded-xl bg-black/25 p-1">
+                      <div className="grid grid-cols-3 gap-2 rounded-xl bg-zinc-100 p-1">
                         {(["left", "center", "right"] as const).map((align) => (
                           <button
                             key={align}
@@ -1088,7 +1098,7 @@ export default function QrCodeArtEditor({
                             className={`h-9 rounded-lg text-xs font-black transition ${
                               selected.textAlign === align
                                 ? "bg-[#d8b36b] text-black"
-                                : "text-zinc-400 hover:bg-white/10"
+                                : "text-zinc-600 hover:bg-white"
                             }`}
                           >
                             {align === "left" ? "Esq" : align === "right" ? "Dir" : "Centro"}
@@ -1165,7 +1175,7 @@ export default function QrCodeArtEditor({
 
 function PanelTitle({ icon, title }: { icon: React.ReactNode; title: string }) {
   return (
-    <div className="mb-3 flex items-center gap-2 text-xs font-black uppercase tracking-[0.16em] text-zinc-400">
+    <div className="mb-3 flex items-center gap-2 text-xs font-black uppercase tracking-[0.16em] text-zinc-500">
       <span className="text-[#d8b36b]">{icon}</span>
       {title}
     </div>
@@ -1187,12 +1197,12 @@ function ColorField({
 }) {
   return (
     <label
-      className={`flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/[0.035] ${
+      className={`flex items-center justify-between gap-3 rounded-xl border border-zinc-200 bg-zinc-50 ${
         compact ? "p-2" : "p-3"
       }`}
     >
       <span>
-        <span className="block text-xs font-black text-white">{label}</span>
+        <span className="block text-xs font-black text-zinc-900">{label}</span>
         {description ? (
           <span className="mt-0.5 block text-[11px] font-semibold text-zinc-500">
             {description}
@@ -1223,7 +1233,7 @@ function NumberField({
   onChange: (value: number) => void;
 }) {
   return (
-    <label className="block text-xs font-black text-zinc-400">
+    <label className="block text-xs font-black text-zinc-500">
       {label}
       <input
         type="number"
@@ -1231,7 +1241,7 @@ function NumberField({
         min={min}
         max={max}
         onChange={(event) => onChange(Number(event.target.value || min))}
-        className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-black/30 px-3 text-sm font-semibold text-white outline-none focus:border-[#d8b36b]"
+        className="mt-1 h-10 w-full rounded-xl border border-zinc-200 bg-white px-3 text-sm font-semibold text-zinc-900 outline-none focus:border-[#d8b36b]"
       />
     </label>
   );
@@ -1253,39 +1263,11 @@ function IconButton({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-zinc-300 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-35"
+      className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-zinc-700 transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-35"
       title={label}
       aria-label={label}
     >
       {children}
-    </button>
-  );
-}
-
-function ToolbarButton({
-  label,
-  danger,
-  onClick,
-  children,
-}: {
-  label: string;
-  danger?: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`inline-flex h-9 items-center gap-1.5 rounded-lg px-3 text-xs font-black transition ${
-        danger
-          ? "text-rose-300 hover:bg-rose-500/10"
-          : "text-zinc-300 hover:bg-white/10"
-      }`}
-      title={label}
-    >
-      {children}
-      {label}
     </button>
   );
 }
@@ -1310,8 +1292,8 @@ function IconAction({
       disabled={disabled}
       className={`inline-flex h-10 items-center justify-center rounded-xl border text-xs font-black transition disabled:cursor-not-allowed disabled:opacity-35 ${
         danger
-          ? "border-rose-500/25 text-rose-300 hover:bg-rose-500/10"
-          : "border-white/10 text-zinc-300 hover:bg-white/10"
+          ? "border-rose-200 bg-white text-rose-600 hover:bg-rose-50"
+          : "border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50"
       }`}
       title={label}
       aria-label={label}

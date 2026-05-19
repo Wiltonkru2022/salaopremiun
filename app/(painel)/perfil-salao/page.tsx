@@ -38,7 +38,6 @@ import AppModal from "@/components/ui/AppModal";
 import { Field, SectionCard, TextInput } from "@/components/configuracoes/ui";
 import { EMPTY_SALAO } from "@/components/configuracoes/constants";
 import type { SalaoForm } from "@/components/configuracoes/types";
-import QrCodeArtEditor from "@/components/perfil-salao/QrCodeArtEditor";
 import { PAINEL_SESSION_STORAGE_KEY } from "@/lib/painel/session-snapshot";
 import { getPlanoCatalogo } from "@/lib/plans/catalog";
 import {
@@ -345,7 +344,6 @@ export default function PerfilSalaoPage() {
   const [passwordForm, setPasswordForm] =
     useState<PasswordForm>(EMPTY_PASSWORD);
   const [activeModal, setActiveModal] = useState<ModalKey>(null);
-  const [qrArtEditorOpen, setQrArtEditorOpen] = useState(false);
   const [totpFactor, setTotpFactor] = useState<TotpFactor | null>(null);
   const [mfaSnapshot, setMfaSnapshot] = useState<MfaSnapshot>(EMPTY_MFA_SNAPSHOT);
   const [totpSetup, setTotpSetup] = useState<TotpSetupState | null>(null);
@@ -2169,14 +2167,15 @@ export default function PerfilSalaoPage() {
                       <Copy size={16} />
                       Copiar link
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => setQrArtEditorOpen(true)}
+                    <a
+                      href="/salaopremiuneditor"
+                      target="_blank"
+                      rel="noreferrer"
                       className="inline-flex h-11 items-center gap-2 rounded-2xl border border-[#d8b36b] bg-[#fff8e7] px-4 text-sm font-bold text-[#8a5a12] transition hover:bg-[#fff1c8]"
                     >
                       <PencilLine size={16} />
                       Personalizar arte
-                    </button>
+                    </a>
                       <a
                         href={qrCodeUrl}
                         download={`qrcode-${publicSlug}.svg`}
@@ -2274,16 +2273,6 @@ export default function PerfilSalaoPage() {
           </aside>
         </div>
       </div>
-
-      <QrCodeArtEditor
-        open={qrArtEditorOpen}
-        onClose={() => setQrArtEditorOpen(false)}
-        publicUrl={publicUrl}
-        qrCodeUrl={qrCodeUrl}
-        publicSlug={publicSlug}
-        salaoNome={perfilForm.nome || "SalaoPremium"}
-        logoUrl={perfilForm.logo_url}
-      />
 
       <AppModal
         open={activeModal === "excluir_salao"}
