@@ -53,7 +53,7 @@ export default function NovoAgendamentoProfissionalFields({
   useEffect(() => {
     if (!permiteEscolherProfissional) return;
 
-    if (!servicoId) {
+    if (!servicoId || !profissionalId) {
       setProfissionalId("");
       return;
     }
@@ -62,9 +62,7 @@ export default function NovoAgendamentoProfissionalFields({
       (profissional) => profissional.value === profissionalId
     );
 
-    if (!profissionalAtualAindaAtende) {
-      setProfissionalId(profissionaisDoServico[0]?.value || "");
-    }
+    if (!profissionalAtualAindaAtende) setProfissionalId("");
   }, [
     permiteEscolherProfissional,
     profissionalId,
