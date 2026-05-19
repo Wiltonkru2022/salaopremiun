@@ -5,7 +5,6 @@ import {
   BringToFront,
   CalendarDays,
   CheckCircle2,
-  Circle,
   Copy,
   Download,
   ImagePlus,
@@ -16,9 +15,6 @@ import {
   Search,
   Scissors,
   Shapes,
-  Sparkles,
-  Square,
-  Star,
   Trash2,
   Type,
   Undo2,
@@ -178,10 +174,38 @@ const photoTags = [
 ] as const;
 
 const elementPresets = [
-  { label: "Circulo", kind: "circle", icon: Circle },
-  { label: "Quadrado", kind: "square", icon: Square },
-  { label: "Selo", kind: "badge", icon: Star },
-  { label: "Brilho", kind: "spark", icon: Sparkles },
+  {
+    label: "Tesoura premium",
+    src: "/salaopremiun-editor/elementos/tesoura-premium.svg",
+  },
+  {
+    label: "Secador luxo",
+    src: "/salaopremiun-editor/elementos/secador-luxo.svg",
+  },
+  {
+    label: "Esmalte chic",
+    src: "/salaopremiun-editor/elementos/esmalte-chic.svg",
+  },
+  {
+    label: "Batom glam",
+    src: "/salaopremiun-editor/elementos/batom-glam.svg",
+  },
+  {
+    label: "Pente dourado",
+    src: "/salaopremiun-editor/elementos/pente-dourado.svg",
+  },
+  {
+    label: "Brilho premium",
+    src: "/salaopremiun-editor/elementos/brilho-premium.svg",
+  },
+  {
+    label: "Espelho salao",
+    src: "/salaopremiun-editor/elementos/espelho-salao.svg",
+  },
+  {
+    label: "Agenda aberta",
+    src: "/salaopremiun-editor/elementos/agenda-aberta.svg",
+  },
 ] as const;
 
 function uid(prefix = "el") {
@@ -703,27 +727,17 @@ export default function QrCodeArtEditor({
     }
   }
 
-  function addShape(kind: string) {
-    const isCircle = kind === "circle" || kind === "badge";
+  function addSticker(preset: (typeof elementPresets)[number]) {
     const next: ArtElement = {
-      id: uid("shape"),
-      type: "shape",
-      label:
-        kind === "circle"
-          ? "Circulo"
-          : kind === "square"
-            ? "Quadrado"
-            : kind === "badge"
-              ? "Selo"
-              : "Brilho",
-      x: kind === "spark" ? 498 : 96,
-      y: kind === "spark" ? 98 : 360,
-      w: isCircle ? 132 : 180,
-      h: isCircle ? 132 : 120,
-      background: kind === "spark" ? "#fff8e7" : "#d8b36b",
-      borderColor: kind === "spark" ? "#d8b36b" : "#111111",
-      borderWidth: kind === "spark" ? 2 : 0,
-      radius: isCircle ? 999 : 18,
+      id: uid("sticker"),
+      type: "image",
+      label: preset.label,
+      src: preset.src,
+      x: 242,
+      y: 318,
+      w: 220,
+      h: 220,
+      radius: 0,
     };
     updateArt((current) => ({ ...current, elements: [...current.elements, next] }));
     setSelectedId(next.id);
@@ -1335,15 +1349,19 @@ export default function QrCodeArtEditor({
                 <PanelTitle icon={<Shapes size={15} />} title="Elementos do salao" />
                 <div className="grid grid-cols-2 gap-2">
                   {elementPresets.map((preset) => {
-                    const Icon = preset.icon;
                     return (
                       <button
-                        key={preset.kind}
+                        key={preset.src}
                         type="button"
-                        onClick={() => addShape(preset.kind)}
-                        className="flex h-20 flex-col items-center justify-center gap-2 rounded-xl border border-zinc-200 bg-white text-xs font-black text-zinc-800 shadow-sm transition hover:border-[#d8b36b]"
+                        onClick={() => addSticker(preset)}
+                        className="flex min-h-28 flex-col items-center justify-center gap-2 rounded-xl border border-zinc-200 bg-white p-3 text-xs font-black text-zinc-800 shadow-sm transition hover:border-[#d8b36b]"
                       >
-                        <Icon size={20} className="text-[#d8b36b]" />
+                        <img
+                          src={preset.src}
+                          alt={preset.label}
+                          className="h-14 w-14 object-contain"
+                          draggable={false}
+                        />
                         {preset.label}
                       </button>
                     );

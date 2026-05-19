@@ -2167,15 +2167,6 @@ export default function PerfilSalaoPage() {
                       <Copy size={16} />
                       Copiar link
                     </button>
-                    <a
-                      href="/salaopremiuneditor"
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex h-11 items-center gap-2 rounded-2xl border border-[#d8b36b] bg-[#fff8e7] px-4 text-sm font-bold text-[#8a5a12] transition hover:bg-[#fff1c8]"
-                    >
-                      <PencilLine size={16} />
-                      Personalizar arte
-                    </a>
                       <a
                         href={qrCodeUrl}
                         download={`qrcode-${publicSlug}.svg`}
