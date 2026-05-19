@@ -3,7 +3,9 @@
 import {
   AlignCenter,
   BringToFront,
+  CalendarDays,
   CheckCircle2,
+  Circle,
   Copy,
   Download,
   ImagePlus,
@@ -11,7 +13,12 @@ import {
   Palette,
   Plus,
   Redo2,
+  Search,
   Scissors,
+  Shapes,
+  Sparkles,
+  Square,
+  Star,
   Trash2,
   Type,
   Undo2,
@@ -27,8 +34,9 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from "react";
 
-type ArtElementType = "text" | "qr" | "logo" | "image" | "frame";
+type ArtElementType = "text" | "qr" | "logo" | "image" | "frame" | "shape";
 type TextAlign = "left" | "center" | "right";
+type EditorTab = "modelos" | "texto" | "fotos" | "elementos" | "uploads";
 
 type ArtElement = {
   id: string;
@@ -77,6 +85,14 @@ type Props = {
   publicSlug: string;
   salaoNome: string;
   logoUrl?: string | null;
+};
+
+type StockPhoto = {
+  id: string;
+  alt: string;
+  thumb: string;
+  src: string;
+  photographer?: string;
 };
 
 const ART_WIDTH = 720;
@@ -151,6 +167,21 @@ const fontOptions = [
   { value: "Great Vibes", label: "Great Vibes" },
   { value: "Lato", label: "Lato" },
   { value: "Arial", label: "Arial" },
+] as const;
+
+const photoTags = [
+  { label: "Cabelo loiro", query: "blonde hair salon" },
+  { label: "Unhas decoradas", query: "nail art beauty salon" },
+  { label: "Maquiagem", query: "makeup beauty salon" },
+  { label: "Estetica", query: "skincare facial spa" },
+  { label: "Salao", query: "hair salon beauty" },
+] as const;
+
+const elementPresets = [
+  { label: "Circulo", kind: "circle", icon: Circle },
+  { label: "Quadrado", kind: "square", icon: Square },
+  { label: "Selo", kind: "badge", icon: Star },
+  { label: "Brilho", kind: "spark", icon: Sparkles },
 ] as const;
 
 function uid(prefix = "el") {
@@ -351,19 +382,21 @@ function textAnchorX(item: ArtElement) {
 }
 
 function wrapText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number) {
-  const words = text.split(" ");
   const lines: string[] = [];
-  let line = "";
-  for (const word of words) {
-    const candidate = line ? `${line} ${word}` : word;
-    if (ctx.measureText(candidate).width > maxWidth && line) {
-      lines.push(line);
-      line = word;
-    } else {
-      line = candidate;
+  for (const paragraph of text.split("\n")) {
+    const words = paragraph.split(" ");
+    let line = "";
+    for (const word of words) {
+      const candidate = line ? `${line} ${word}` : word;
+      if (ctx.measureText(candidate).width > maxWidth && line) {
+        lines.push(line);
+        line = word;
+      } else {
+        line = candidate;
+      }
     }
+    if (line) lines.push(line);
   }
-  if (line) lines.push(line);
   return lines;
 }
 
@@ -383,6 +416,11 @@ export default function QrCodeArtEditor({
   const [copiedElement, setCopiedElement] = useState<ArtElement | null>(null);
   const [past, setPast] = useState<ArtState[]>([]);
   const [future, setFuture] = useState<ArtState[]>([]);
+  const [activeTab, setActiveTab] = useState<EditorTab>("modelos");
+  const [photoQuery, setPhotoQuery] = useState("cabelo salao");
+  const [stockPhotos, setStockPhotos] = useState<StockPhoto[]>([]);
+  const [photosLoading, setPhotosLoading] = useState(false);
+  const [photosError, setPhotosError] = useState("");
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState("");
   const stageRef = useRef<HTMLDivElement | null>(null);
@@ -395,6 +433,7 @@ export default function QrCodeArtEditor({
     setCopiedElement(null);
     setPast([]);
     setFuture([]);
+    setActiveTab("modelos");
     setExportError("");
   }, [logoUrl, open, publicUrl, qrCodeUrl, salaoNome]);
 
@@ -622,6 +661,287 @@ export default function QrCodeArtEditor({
     event.target.value = "";
   }
 
+  function addImageElement(params: { src: string; label: string }) {
+    const next: ArtElement = {
+      id: uid("image"),
+      type: "image",
+      label: params.label,
+      src: params.src,
+      x: 150,
+      y: 260,
+      w: 420,
+      h: 300,
+      radius: 22,
+    };
+    updateArt((current) => ({ ...current, elements: [...current.elements, next] }));
+    setSelectedId(next.id);
+  }
+
+  async function searchPhotos(query = photoQuery) {
+    const normalized = query.trim();
+    if (!normalized) return;
+    setPhotosLoading(true);
+    setPhotosError("");
+    try {
+      const response = await fetch(
+        `/api/painel/editor/pexels?query=${encodeURIComponent(normalized)}`
+      );
+      const result = (await response.json()) as {
+        photos?: StockPhoto[];
+        error?: string;
+      };
+      if (!response.ok) throw new Error(result.error || "Erro ao buscar fotos.");
+      setStockPhotos(result.photos || []);
+    } catch (error) {
+      setPhotosError(
+        error instanceof Error
+          ? error.message
+          : "Nao foi possivel buscar fotos agora."
+      );
+    } finally {
+      setPhotosLoading(false);
+    }
+  }
+
+  function addShape(kind: string) {
+    const isCircle = kind === "circle" || kind === "badge";
+    const next: ArtElement = {
+      id: uid("shape"),
+      type: "shape",
+      label:
+        kind === "circle"
+          ? "Circulo"
+          : kind === "square"
+            ? "Quadrado"
+            : kind === "badge"
+              ? "Selo"
+              : "Brilho",
+      x: kind === "spark" ? 498 : 96,
+      y: kind === "spark" ? 98 : 360,
+      w: isCircle ? 132 : 180,
+      h: isCircle ? 132 : 120,
+      background: kind === "spark" ? "#fff8e7" : "#d8b36b",
+      borderColor: kind === "spark" ? "#d8b36b" : "#111111",
+      borderWidth: kind === "spark" ? 2 : 0,
+      radius: isCircle ? 999 : 18,
+    };
+    updateArt((current) => ({ ...current, elements: [...current.elements, next] }));
+    setSelectedId(next.id);
+  }
+
+  function addBeforeAfter() {
+    const group: ArtElement[] = [
+      {
+        id: uid("before-box"),
+        type: "shape",
+        label: "Antes",
+        x: 74,
+        y: 278,
+        w: 274,
+        h: 342,
+        background: "#ffffff",
+        borderColor: "#d8b36b",
+        borderWidth: 3,
+        radius: 22,
+      },
+      {
+        id: uid("after-box"),
+        type: "shape",
+        label: "Depois",
+        x: 372,
+        y: 278,
+        w: 274,
+        h: 342,
+        background: "#ffffff",
+        borderColor: "#111111",
+        borderWidth: 3,
+        radius: 22,
+      },
+      {
+        id: uid("before-label"),
+        type: "text",
+        label: "Etiqueta antes",
+        text: "ANTES",
+        x: 106,
+        y: 640,
+        w: 210,
+        h: 42,
+        color: "#111111",
+        fontSize: 24,
+        fontWeight: 900,
+        fontFamily: "Montserrat",
+        textAlign: "center",
+      },
+      {
+        id: uid("after-label"),
+        type: "text",
+        label: "Etiqueta depois",
+        text: "DEPOIS",
+        x: 404,
+        y: 640,
+        w: 210,
+        h: 42,
+        color: "#8a5a12",
+        fontSize: 24,
+        fontWeight: 900,
+        fontFamily: "Montserrat",
+        textAlign: "center",
+      },
+    ];
+    updateArt((current) => ({ ...current, elements: [...current.elements, ...group] }));
+    setSelectedId(group[0].id);
+  }
+
+  function addPriceTable() {
+    const group: ArtElement[] = [
+      {
+        id: uid("price-card"),
+        type: "shape",
+        label: "Tabela de precos",
+        x: 96,
+        y: 282,
+        w: 528,
+        h: 280,
+        background: "#ffffff",
+        borderColor: "#d8b36b",
+        borderWidth: 2,
+        radius: 28,
+      },
+      {
+        id: uid("price-title"),
+        type: "text",
+        label: "Titulo precos",
+        text: "COMBOS DA SEMANA",
+        x: 132,
+        y: 318,
+        w: 456,
+        h: 44,
+        color: "#111111",
+        fontSize: 28,
+        fontWeight: 900,
+        fontFamily: "Montserrat",
+        textAlign: "center",
+      },
+      {
+        id: uid("price-list"),
+        type: "text",
+        label: "Lista de servicos",
+        text: "Corte + Escova ........ R$ 150\nProgressiva ............ R$ 220\nManicure + Pedicure .... R$ 80",
+        x: 132,
+        y: 388,
+        w: 456,
+        h: 126,
+        color: "#5f5a4f",
+        fontSize: 23,
+        fontWeight: 700,
+        fontFamily: "Lato",
+        textAlign: "left",
+      },
+    ];
+    updateArt((current) => ({ ...current, elements: [...current.elements, ...group] }));
+    setSelectedId(group[1].id);
+  }
+
+  function addReviewCard() {
+    const group: ArtElement[] = [
+      {
+        id: uid("review-card"),
+        type: "shape",
+        label: "Depoimento",
+        x: 104,
+        y: 304,
+        w: 512,
+        h: 210,
+        background: "#ffffff",
+        borderColor: "#d8b36b",
+        borderWidth: 2,
+        radius: 28,
+      },
+      {
+        id: uid("review-stars"),
+        type: "text",
+        label: "Estrelas",
+        text: "★★★★★",
+        x: 146,
+        y: 336,
+        w: 428,
+        h: 38,
+        color: "#d8b36b",
+        fontSize: 30,
+        fontWeight: 900,
+        fontFamily: "Arial",
+        textAlign: "center",
+      },
+      {
+        id: uid("review-text"),
+        type: "text",
+        label: "Texto depoimento",
+        text: "Atendimento maravilhoso, amei o resultado!",
+        x: 148,
+        y: 390,
+        w: 424,
+        h: 72,
+        color: "#111111",
+        fontSize: 25,
+        fontWeight: 800,
+        fontFamily: "Lato",
+        textAlign: "center",
+      },
+    ];
+    updateArt((current) => ({ ...current, elements: [...current.elements, ...group] }));
+    setSelectedId(group[2].id);
+  }
+
+  function addAgendaCard() {
+    const group: ArtElement[] = [
+      {
+        id: uid("agenda-card"),
+        type: "shape",
+        label: "Agenda aberta",
+        x: 96,
+        y: 286,
+        w: 528,
+        h: 270,
+        background: "#111111",
+        borderColor: "#d8b36b",
+        borderWidth: 3,
+        radius: 30,
+      },
+      {
+        id: uid("agenda-title"),
+        type: "text",
+        label: "Titulo agenda",
+        text: "AGENDA ABERTA",
+        x: 132,
+        y: 324,
+        w: 456,
+        h: 46,
+        color: "#d8b36b",
+        fontSize: 30,
+        fontWeight: 900,
+        fontFamily: "Montserrat",
+        textAlign: "center",
+      },
+      {
+        id: uid("agenda-list"),
+        type: "text",
+        label: "Horarios",
+        text: "SEG  14:00  16:30\nTER  09:00  11:00\nQUA  15:00  17:00",
+        x: 158,
+        y: 396,
+        w: 404,
+        h: 112,
+        color: "#ffffff",
+        fontSize: 24,
+        fontWeight: 800,
+        fontFamily: "Lato",
+        textAlign: "left",
+      },
+    ];
+    updateArt((current) => ({ ...current, elements: [...current.elements, ...group] }));
+    setSelectedId(group[2].id);
+  }
+
   function duplicateSelected() {
     if (!selected || selected.locked) return;
     const next = {
@@ -707,11 +1027,18 @@ export default function QrCodeArtEditor({
       ctx.fillRect(0, 0, ART_WIDTH, ART_HEIGHT);
 
       for (const item of art.elements) {
-        if (item.type === "frame") {
+        if (item.type === "frame" || item.type === "shape") {
+          if (item.background) {
+            ctx.fillStyle = item.background;
+            drawRoundedRect(ctx, item.x, item.y, item.w, item.h, item.radius || 0);
+            ctx.fill();
+          }
           ctx.strokeStyle = item.borderColor || art.accent;
           ctx.lineWidth = item.borderWidth || 2;
-          drawRoundedRect(ctx, item.x, item.y, item.w, item.h, item.radius || 0);
-          ctx.stroke();
+          if (item.borderWidth) {
+            drawRoundedRect(ctx, item.x, item.y, item.w, item.h, item.radius || 0);
+            ctx.stroke();
+          }
           continue;
         }
 
@@ -819,98 +1146,256 @@ export default function QrCodeArtEditor({
 
         <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[320px_minmax(0,1fr)_320px]">
           <aside className="min-h-0 overflow-y-auto border-r border-zinc-200 bg-white p-4">
-            <PanelTitle icon={<Layers size={15} />} title="Novo projeto" />
-            <div className="mb-6 grid grid-cols-2 gap-2">
+            <div className="mb-4 grid grid-cols-5 gap-1 rounded-2xl bg-zinc-100 p-1">
               {[
-                "Story 1080x1920",
-                "Post 1080x1080",
-                "Feed 1080x1350",
-                "Personalizado",
-              ].map((format) => (
-                <button
-                  key={format}
-                  type="button"
-                  className="rounded-xl border border-zinc-200 bg-[#fff8e7] px-3 py-2 text-left text-xs font-black text-zinc-800 transition hover:border-[#d8b36b]"
-                >
-                  {format}
-                </button>
-              ))}
-            </div>
-            <PanelTitle icon={<WandSparkles size={15} />} title="Modelos de estilo" />
-            <div className="grid grid-cols-2 gap-2">
-              {templates.map((template) => (
-                <button
-                  key={template.id}
-                  type="button"
-                  onClick={() => applyTemplate(template)}
-                  className="rounded-xl border border-zinc-200 bg-white p-2 text-left shadow-sm transition hover:border-[#d8b36b]"
-                >
-                  <div
-                    className="mb-2 flex h-14 items-center justify-center rounded-lg border text-sm font-black"
-                    style={{
-                      backgroundColor: template.background,
-                      color: template.primary,
-                      borderColor: template.accent,
-                    }}
-                  >
-                    A
-                  </div>
-                  <span className="text-xs font-black">{template.name}</span>
-                </button>
-              ))}
-            </div>
-
-            <div className="mt-6">
-              <PanelTitle icon={<Type size={15} />} title="Texto e chamadas" />
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => addText("title")}
-                  className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-zinc-950 text-xs font-black text-white transition hover:bg-zinc-800"
-                >
-                  <Plus size={14} />
-                  Titulo
-                </button>
-                <button
-                  type="button"
-                  onClick={() => addText("subtitle")}
-                  className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-zinc-200 bg-white text-xs font-black text-zinc-800 transition hover:bg-zinc-50"
-                >
-                  <Plus size={14} />
-                  Subtitulo
-                </button>
-              </div>
-
-              <div className="mt-3 space-y-2">
-                {quickCalls.map((call) => (
+                { id: "modelos", label: "Modelos", icon: WandSparkles },
+                { id: "texto", label: "Texto", icon: Type },
+                { id: "fotos", label: "Fotos", icon: ImagePlus },
+                { id: "elementos", label: "Elementos", icon: Shapes },
+                { id: "uploads", label: "Uploads", icon: ImagePlus },
+              ].map((tab) => {
+                const Icon = tab.icon;
+                return (
                   <button
-                    key={call.label}
+                    key={tab.id}
                     type="button"
-                    onClick={() => applyQuickCall(call.title, call.subtitle)}
-                    className="w-full rounded-xl border border-zinc-200 bg-white p-3 text-left shadow-sm transition hover:border-[#d8b36b]"
+                    onClick={() => setActiveTab(tab.id as EditorTab)}
+                    className={`flex h-12 flex-col items-center justify-center rounded-xl text-[10px] font-black transition ${
+                      activeTab === tab.id
+                        ? "bg-white text-[#8a5a12] shadow-sm"
+                        : "text-zinc-500 hover:bg-white/70"
+                    }`}
                   >
-                    <span className="block text-xs font-black text-[#d8b36b]">
-                      {call.label}
-                    </span>
-                    <span className="mt-1 block text-[11px] font-semibold text-zinc-500">
-                      {call.title}
-                    </span>
+                    <Icon size={15} />
+                    {tab.label}
                   </button>
-                ))}
-              </div>
+                );
+              })}
             </div>
 
-            <div className="mt-6">
-              <PanelTitle icon={<ImagePlus size={15} />} title="Imagens e logo" />
-              <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-zinc-300 bg-zinc-50 p-4 text-center transition hover:border-[#d8b36b] hover:bg-[#fff8e7]">
-                <ImagePlus size={24} className="text-[#d8b36b]" />
-                <span className="mt-2 text-xs font-black">Adicionar imagem</span>
-                <span className="mt-1 text-[11px] text-zinc-500">
-                  Foto, logo extra ou fundo decorativo
-                </span>
-                <input type="file" accept="image/*" onChange={addImage} className="sr-only" />
-              </label>
-            </div>
+            {activeTab === "modelos" ? (
+              <>
+                <PanelTitle icon={<Layers size={15} />} title="Novo projeto" />
+                <div className="mb-6 grid grid-cols-2 gap-2">
+                  {[
+                    "Story 1080x1920",
+                    "Post 1080x1080",
+                    "Feed 1080x1350",
+                    "Personalizado",
+                  ].map((format) => (
+                    <button
+                      key={format}
+                      type="button"
+                      className="rounded-xl border border-zinc-200 bg-[#fff8e7] px-3 py-2 text-left text-xs font-black text-zinc-800 transition hover:border-[#d8b36b]"
+                    >
+                      {format}
+                    </button>
+                  ))}
+                </div>
+                <PanelTitle icon={<WandSparkles size={15} />} title="Modelos de estilo" />
+                <div className="grid grid-cols-2 gap-2">
+                  {templates.map((template) => (
+                    <button
+                      key={template.id}
+                      type="button"
+                      onClick={() => applyTemplate(template)}
+                      className="rounded-xl border border-zinc-200 bg-white p-2 text-left shadow-sm transition hover:border-[#d8b36b]"
+                    >
+                      <div
+                        className="mb-2 flex h-14 items-center justify-center rounded-lg border text-sm font-black"
+                        style={{
+                          backgroundColor: template.background,
+                          color: template.primary,
+                          borderColor: template.accent,
+                        }}
+                      >
+                        A
+                      </div>
+                      <span className="text-xs font-black">{template.name}</span>
+                    </button>
+                  ))}
+                </div>
+              </>
+            ) : null}
+
+            {activeTab === "texto" ? (
+              <>
+                <PanelTitle icon={<Type size={15} />} title="Texto e chamadas" />
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => addText("title")}
+                    className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-zinc-950 text-xs font-black text-white transition hover:bg-zinc-800"
+                  >
+                    <Plus size={14} />
+                    Titulo
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => addText("subtitle")}
+                    className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-zinc-200 bg-white text-xs font-black text-zinc-800 transition hover:bg-zinc-50"
+                  >
+                    <Plus size={14} />
+                    Subtitulo
+                  </button>
+                </div>
+
+                <div className="mt-3 space-y-2">
+                  {quickCalls.map((call) => (
+                    <button
+                      key={call.label}
+                      type="button"
+                      onClick={() => applyQuickCall(call.title, call.subtitle)}
+                      className="w-full rounded-xl border border-zinc-200 bg-white p-3 text-left shadow-sm transition hover:border-[#d8b36b]"
+                    >
+                      <span className="block text-xs font-black text-[#d8b36b]">
+                        {call.label}
+                      </span>
+                      <span className="mt-1 block text-[11px] font-semibold text-zinc-500">
+                        {call.title}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </>
+            ) : null}
+
+            {activeTab === "fotos" ? (
+              <>
+                <PanelTitle icon={<ImagePlus size={15} />} title="Fotos profissionais" />
+                <form
+                  className="flex gap-2"
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    searchPhotos();
+                  }}
+                >
+                  <input
+                    value={photoQuery}
+                    onChange={(event) => setPhotoQuery(event.target.value)}
+                    placeholder="Buscar: cabelo, unhas..."
+                    className="h-10 min-w-0 flex-1 rounded-xl border border-zinc-200 px-3 text-sm font-semibold outline-none focus:border-[#d8b36b]"
+                  />
+                  <button
+                    type="submit"
+                    className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-950 text-white"
+                    aria-label="Buscar fotos"
+                  >
+                    <Search size={16} />
+                  </button>
+                </form>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {photoTags.map((tag) => (
+                    <button
+                      key={tag.query}
+                      type="button"
+                      onClick={() => {
+                        setPhotoQuery(tag.label);
+                        searchPhotos(tag.query);
+                      }}
+                      className="rounded-full border border-zinc-200 bg-[#fff8e7] px-3 py-1.5 text-[11px] font-black text-[#8a5a12]"
+                    >
+                      {tag.label}
+                    </button>
+                  ))}
+                </div>
+                {photosError ? (
+                  <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs font-semibold text-amber-800">
+                    {photosError}
+                  </div>
+                ) : null}
+                <div className="mt-4 grid grid-cols-2 gap-2">
+                  {photosLoading ? (
+                    <div className="col-span-2 rounded-xl bg-zinc-100 p-4 text-center text-xs font-bold text-zinc-500">
+                      Buscando fotos...
+                    </div>
+                  ) : null}
+                  {stockPhotos.map((photo) => (
+                    <button
+                      key={photo.id}
+                      type="button"
+                      onClick={() => addImageElement({ src: photo.src, label: photo.alt || "Foto" })}
+                      className="overflow-hidden rounded-xl border border-zinc-200 bg-zinc-50 text-left"
+                      title={photo.photographer ? `Foto: ${photo.photographer}` : photo.alt}
+                    >
+                      <img
+                        src={photo.thumb}
+                        alt={photo.alt || "Foto de banco de imagens"}
+                        className="h-28 w-full object-cover"
+                        draggable={false}
+                      />
+                    </button>
+                  ))}
+                </div>
+              </>
+            ) : null}
+
+            {activeTab === "elementos" ? (
+              <>
+                <PanelTitle icon={<Shapes size={15} />} title="Elementos do salao" />
+                <div className="grid grid-cols-2 gap-2">
+                  {elementPresets.map((preset) => {
+                    const Icon = preset.icon;
+                    return (
+                      <button
+                        key={preset.kind}
+                        type="button"
+                        onClick={() => addShape(preset.kind)}
+                        className="flex h-20 flex-col items-center justify-center gap-2 rounded-xl border border-zinc-200 bg-white text-xs font-black text-zinc-800 shadow-sm transition hover:border-[#d8b36b]"
+                      >
+                        <Icon size={20} className="text-[#d8b36b]" />
+                        {preset.label}
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="mt-4 space-y-2">
+                  <button
+                    type="button"
+                    onClick={addBeforeAfter}
+                    className="w-full rounded-xl border border-zinc-200 bg-[#111111] p-3 text-left text-xs font-black text-white transition hover:border-[#d8b36b]"
+                  >
+                    Antes e Depois
+                  </button>
+                  <button
+                    type="button"
+                    onClick={addPriceTable}
+                    className="w-full rounded-xl border border-zinc-200 bg-white p-3 text-left text-xs font-black text-zinc-900 transition hover:border-[#d8b36b]"
+                  >
+                    Tabela de precos / combos
+                  </button>
+                  <button
+                    type="button"
+                    onClick={addReviewCard}
+                    className="w-full rounded-xl border border-zinc-200 bg-white p-3 text-left text-xs font-black text-zinc-900 transition hover:border-[#d8b36b]"
+                  >
+                    Depoimento 5 estrelas
+                  </button>
+                  <button
+                    type="button"
+                    onClick={addAgendaCard}
+                    className="flex w-full items-center gap-2 rounded-xl border border-zinc-200 bg-white p-3 text-left text-xs font-black text-zinc-900 transition hover:border-[#d8b36b]"
+                  >
+                    <CalendarDays size={16} className="text-[#d8b36b]" />
+                    Card agenda aberta
+                  </button>
+                </div>
+              </>
+            ) : null}
+
+            {activeTab === "uploads" ? (
+              <>
+                <PanelTitle icon={<ImagePlus size={15} />} title="Uploads" />
+                <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-zinc-300 bg-zinc-50 p-4 text-center transition hover:border-[#d8b36b] hover:bg-[#fff8e7]">
+                  <ImagePlus size={24} className="text-[#d8b36b]" />
+                  <span className="mt-2 text-xs font-black">Adicionar imagem</span>
+                  <span className="mt-1 text-[11px] text-zinc-500">
+                    Foto, logo extra ou fundo decorativo
+                  </span>
+                  <input type="file" accept="image/*" onChange={addImage} className="sr-only" />
+                </label>
+              </>
+            ) : null}
 
             <div className="mt-6 rounded-xl border border-zinc-200 bg-zinc-50 p-4">
               <div className="flex items-center justify-between gap-2">
@@ -964,7 +1449,7 @@ export default function QrCodeArtEditor({
                     >
                       {item.type === "text" ? (
                         <span
-                          className="block h-full w-full break-words leading-tight"
+                          className="block h-full w-full whitespace-pre-wrap break-words leading-tight"
                           style={{
                             color: item.color,
                             fontFamily: `${item.fontFamily || "Arial"}, Arial, sans-serif`,
@@ -977,7 +1462,7 @@ export default function QrCodeArtEditor({
                         >
                           {item.text}
                         </span>
-                      ) : item.type === "frame" ? null : (
+                      ) : item.type === "frame" || item.type === "shape" ? null : (
                         <img
                           src={item.src}
                           alt={item.label}
