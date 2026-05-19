@@ -23,6 +23,8 @@ type BaseServico = {
   preco?: number | null;
   preco_padrao?: number | null;
   custo_produto?: number | null;
+  comissao_percentual?: number | null;
+  comissao_percentual_padrao?: number | null;
   profissionais_vinculados?: string[];
 };
 
@@ -139,6 +141,37 @@ export default function ComboServicoForm({ modo }: { modo: "novo" | "editar" }) 
     [comboNormalizado, precoFinalNumero]
   );
 
+  const comissoesProjetadas = useMemo(
+    () =>
+      comboNormalizado.map((item, index) => {
+        const servico = servicosBase.find((base) => base.id === item.id);
+        const percentual = Number(
+          servico?.comissao_percentual_padrao ??
+            servico?.comissao_percentual ??
+            0
+        );
+        const valorBase = valoresRateados[index] || 0;
+
+        return {
+          id: item.id,
+          nome: item.nome,
+          percentual,
+          valorBase,
+          valorComissao: Number(((valorBase * percentual) / 100).toFixed(2)),
+        };
+      }),
+    [comboNormalizado, servicosBase, valoresRateados]
+  );
+
+  const totalComissaoProjetada = useMemo(
+    () =>
+      comissoesProjetadas.reduce(
+        (acc, item) => acc + Number(item.valorComissao || 0),
+        0
+      ),
+    [comissoesProjetadas]
+  );
+
   const duracaoTotal = useMemo(
     () =>
       comboSelecionado.reduce(
@@ -189,7 +222,7 @@ export default function ComboServicoForm({ modo }: { modo: "novo" | "editar" }) 
         supabase
           .from("servicos")
           .select(
-            "id, nome, categoria, duracao_minutos, preco, preco_padrao, custo_produto, eh_combo"
+            "id, nome, categoria, duracao_minutos, preco, preco_padrao, custo_produto, comissao_percentual, comissao_percentual_padrao, eh_combo"
           )
           .eq("id_salao", usuario.idSalao)
           .eq("ativo", true)
@@ -708,6 +741,56 @@ export default function ComboServicoForm({ modo }: { modo: "novo" | "editar" }) 
                       </div>
                     </div>
                   ))
+                )}
+              </div>
+            </section>
+
+            <section className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm">
+              <div className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-400">
+                Comissao prevista
+              </div>
+              <h2 className="mt-2 text-lg font-bold text-zinc-950">
+                Quanto o profissional recebe
+              </h2>
+
+              <div className="mt-4 space-y-3">
+                {comissoesProjetadas.length === 0 ? (
+                  <div className="rounded-2xl border border-dashed border-zinc-300 bg-zinc-50 px-4 py-5 text-sm text-zinc-500">
+                    Selecione os servicos para ver a comissao estimada.
+                  </div>
+                ) : (
+                  <>
+                    {comissoesProjetadas.map((item) => (
+                      <div
+                        key={item.id}
+                        className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4"
+                      >
+                        <div className="text-sm font-semibold text-zinc-900">
+                          {item.nome}
+                        </div>
+                        <div className="mt-2 text-xs text-zinc-500">
+                          {formatCurrency(item.valorBase)} x{" "}
+                          {item.percentual.toLocaleString("pt-BR", {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })}
+                          %
+                        </div>
+                        <div className="mt-2 text-sm font-semibold text-zinc-900">
+                          {formatCurrency(item.valorComissao)}
+                        </div>
+                      </div>
+                    ))}
+
+                    <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+                      <div className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">
+                        Total previsto
+                      </div>
+                      <div className="mt-1 text-xl font-bold text-emerald-950">
+                        {formatCurrency(totalComissaoProjetada)}
+                      </div>
+                    </div>
+                  </>
                 )}
               </div>
             </section>
