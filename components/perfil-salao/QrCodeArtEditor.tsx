@@ -167,6 +167,20 @@ function objectLabel(object: FabricObject | null) {
   return named.name || object.type || "Elemento";
 }
 
+function applyCanvasDisplayScale(canvas: FabricCanvas | null, width: number, height: number, scale: number) {
+  if (!canvas) return;
+  canvas.setZoom(1);
+  canvas.setDimensions(
+    {
+      width: Math.round(width * scale),
+      height: Math.round(height * scale),
+    },
+    { cssOnly: true }
+  );
+  canvas.calcOffset();
+  canvas.requestRenderAll();
+}
+
 export default function QrCodeArtEditor({
   open,
   onClose,
@@ -212,9 +226,9 @@ export default function QrCodeArtEditor({
   }, []);
 
   const fitZoom = useCallback((width: number, height: number) => {
-    const availableW = window.innerWidth > 1200 ? window.innerWidth - 720 : window.innerWidth - 80;
+    const availableW = window.innerWidth > 1180 ? window.innerWidth - 760 : window.innerWidth - 64;
     const availableH = window.innerHeight - 190;
-    return Math.max(0.18, Math.min(0.72, availableW / width, availableH / height));
+    return Math.max(0.16, Math.min(0.86, availableW / width, availableH / height));
   }, []);
 
   const addImageFromUrl = useCallback(
@@ -334,7 +348,7 @@ export default function QrCodeArtEditor({
       const nextZoom = fitZoom(width, height);
       setZoom(nextZoom);
       canvas.setDimensions({ width, height });
-      canvas.setZoom(nextZoom);
+      applyCanvasDisplayScale(canvas, width, height, nextZoom);
       await buildBaseTemplate(width, height);
     },
     [buildBaseTemplate, fitZoom]
@@ -357,7 +371,7 @@ export default function QrCodeArtEditor({
         preserveObjectStacking: true,
         selection: true,
       });
-      canvas.setZoom(nextZoom);
+      applyCanvasDisplayScale(canvas, DEFAULT_WIDTH, DEFAULT_HEIGHT, nextZoom);
       canvasRef.current = canvas;
 
       fabric.FabricObject.ownDefaults.borderColor = "#d8b36b";
@@ -437,6 +451,17 @@ export default function QrCodeArtEditor({
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   });
+
+  useEffect(() => {
+    if (!open) return;
+    function onResize() {
+      const nextZoom = fitZoom(artSize.width, artSize.height);
+      setZoom(nextZoom);
+      applyCanvasDisplayScale(canvasRef.current, artSize.width, artSize.height, nextZoom);
+    }
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, [artSize.height, artSize.width, fitZoom, open]);
 
   function undo() {
     const canvas = canvasRef.current;
@@ -741,8 +766,7 @@ export default function QrCodeArtEditor({
     const canvas = canvasRef.current;
     const value = Math.max(0.12, Math.min(1.4, next));
     setZoom(value);
-    canvas?.setZoom(value);
-    canvas?.requestRenderAll();
+    applyCanvasDisplayScale(canvas || null, artSize.width, artSize.height, value);
   }
 
   function moveLayer(direction: "front" | "back") {
@@ -763,7 +787,7 @@ export default function QrCodeArtEditor({
     const dataUrl = canvas.toDataURL({
       format: formatType,
       quality: 1,
-      multiplier: 2 / zoom,
+      multiplier: 2,
     });
     downloadDataUrl(dataUrl, `${safeFileName(projectName || publicSlug)}.${formatType === "jpeg" ? "jpg" : "png"}`);
   }
@@ -772,7 +796,7 @@ export default function QrCodeArtEditor({
     const canvas = canvasRef.current;
     if (!canvas) return;
     const { jsPDF } = await import("jspdf");
-    const dataUrl = canvas.toDataURL({ format: "png", quality: 1, multiplier: 2 / zoom });
+    const dataUrl = canvas.toDataURL({ format: "png", quality: 1, multiplier: 2 });
     const pdf = new jsPDF({
       orientation: artSize.width > artSize.height ? "landscape" : "portrait",
       unit: "px",
@@ -806,7 +830,7 @@ export default function QrCodeArtEditor({
     if (!canvas || !session.ok || !session.idSalao) return;
     const supabase = asLooseSupabaseClient(session.supabase);
     const payload = canvas.toJSON();
-    const thumbnail = canvas.toDataURL({ format: "png", quality: 0.8, multiplier: 0.25 / zoom });
+    const thumbnail = canvas.toDataURL({ format: "png", quality: 0.8, multiplier: 0.22 });
     const row = {
       id_salao: session.idSalao,
       id_usuario: session.perfil?.id || null,
@@ -842,7 +866,7 @@ export default function QrCodeArtEditor({
     const nextZoom = fitZoom(project.largura, project.altura);
     setZoom(nextZoom);
     canvas.setDimensions({ width: project.largura, height: project.altura });
-    canvas.setZoom(nextZoom);
+    applyCanvasDisplayScale(canvas, project.largura, project.altura, nextZoom);
     await canvas.loadFromJSON(project.payload_json);
     canvas.requestRenderAll();
     loadingJsonRef.current = false;
@@ -861,8 +885,8 @@ export default function QrCodeArtEditor({
 
   return (
     <div className="fixed inset-0 z-[90] overflow-hidden bg-[#f4f0e8]">
-      <div className="flex h-dvh flex-col bg-[#f7f4ed] text-zinc-950">
-        <header className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-200 bg-white px-4 py-3">
+      <div className="flex h-dvh flex-col bg-[#f6f4ef] text-zinc-950">
+        <header className="flex h-[66px] shrink-0 items-center justify-between gap-3 border-b border-zinc-200 bg-white px-4">
           <div className="flex items-center gap-3">
             {logoUrl ? (
               <img src={logoUrl} alt={salaoNome} className="h-11 w-11 rounded-xl border border-[#d8b36b]/40 bg-white object-contain p-1" />
@@ -886,7 +910,7 @@ export default function QrCodeArtEditor({
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-2">
             <HeaderButton label="Salvar" onClick={saveProject}><Save size={16} /></HeaderButton>
             <HeaderButton label="Desfazer" onClick={undo}><Undo2 size={16} /></HeaderButton>
             <HeaderButton label="Refazer" onClick={redo}><Redo2 size={16} /></HeaderButton>
@@ -899,22 +923,24 @@ export default function QrCodeArtEditor({
           </div>
         </header>
 
-        <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[330px_minmax(0,1fr)_330px]">
-          <aside className="min-h-0 overflow-y-auto border-r border-zinc-200 bg-white p-4">
-            <div className="mb-4 grid grid-cols-6 gap-1 rounded-2xl bg-zinc-100 p-1">
+        <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[400px_minmax(0,1fr)_320px]">
+          <aside className="min-h-0 border-r border-zinc-200 bg-white">
+            <div className="flex h-full">
+            <nav className="flex w-[76px] shrink-0 flex-col items-center gap-1 border-r border-zinc-200 bg-[#fbfaf7] px-2 py-3">
               {tabConfig.map((tab) => {
                 const Icon = tab.icon;
                 return (
                   <button key={tab.id} type="button" onClick={() => {
                     setActiveTab(tab.id);
                     if (tab.id === "projetos") loadProjects();
-                  }} className={`flex h-12 flex-col items-center justify-center rounded-xl text-[9px] font-black transition ${activeTab === tab.id ? "bg-white text-[#8a5a12] shadow-sm" : "text-zinc-500 hover:bg-white/70"}`}>
+                  }} className={`flex h-[62px] w-full flex-col items-center justify-center gap-1 rounded-xl text-[10px] font-black transition ${activeTab === tab.id ? "bg-white text-[#8a5a12] shadow-sm ring-1 ring-zinc-200" : "text-zinc-500 hover:bg-white/70"}`}>
                     <Icon size={14} />
                     {tab.label}
                   </button>
                 );
               })}
-            </div>
+            </nav>
+            <div className="min-w-0 flex-1 overflow-y-auto p-4">
 
             {activeTab === "modelos" ? (
               <Panel title="Novo projeto" icon={<Layers size={15} />}>
@@ -1017,10 +1043,12 @@ export default function QrCodeArtEditor({
             ) : null}
 
             {status ? <div className="mt-4 rounded-xl border border-zinc-200 bg-zinc-50 p-3 text-xs font-semibold text-zinc-600">{status}</div> : null}
+            </div>
+            </div>
           </aside>
 
-          <main className="relative flex min-h-0 flex-col items-center justify-center overflow-auto bg-[#efebe3] p-4 lg:p-8">
-            <div className="mb-3 flex flex-wrap items-center gap-2 rounded-xl border border-zinc-200 bg-white p-2">
+          <main className="relative flex min-h-0 flex-col items-center overflow-auto bg-[#ece9e3] p-4 lg:p-6">
+            <div className="sticky top-0 z-10 mb-4 flex flex-wrap items-center gap-2 rounded-2xl border border-zinc-200 bg-white/95 p-2 shadow-sm backdrop-blur">
               <ToolButton label="Zoom -" onClick={() => changeZoom(zoom - 0.08)}><ZoomOut size={15} /></ToolButton>
               <span className="px-2 text-xs font-black">{Math.round(zoom * 100)}%</span>
               <ToolButton label="Zoom +" onClick={() => changeZoom(zoom + 0.08)}><ZoomIn size={15} /></ToolButton>
@@ -1033,13 +1061,15 @@ export default function QrCodeArtEditor({
               <ToolButton label="Desagrupar" onClick={ungroupSelected}><Ungroup size={15} /></ToolButton>
               <ToolButton label={selectedLocked ? "Destravar" : "Travar"} onClick={() => lockSelected(!selectedLocked)}>{selectedLocked ? <Unlock size={15} /> : <Lock size={15} />}</ToolButton>
             </div>
-            <div className="overflow-auto rounded-xl border border-zinc-200 bg-white p-1 shadow-2xl shadow-black/10">
+            <div className="flex min-h-[calc(100vh-170px)] w-full items-start justify-center overflow-auto rounded-2xl bg-[#ece9e3] px-6 pb-10 pt-2">
+            <div className="rounded-[10px] border border-zinc-200 bg-white shadow-2xl shadow-black/10">
               <div
                 className={showGrid ? "bg-[linear-gradient(rgba(0,0,0,.045)_1px,transparent_1px),linear-gradient(90deg,rgba(0,0,0,.045)_1px,transparent_1px)] bg-[size:32px_32px]" : ""}
                 style={{ width: artSize.width * zoom, height: artSize.height * zoom }}
               >
                 <canvas ref={canvasElRef} />
               </div>
+            </div>
             </div>
           </main>
 
