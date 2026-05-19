@@ -7,6 +7,10 @@ import {
   criarPreviewComissaoProduto,
   criarPreviewComissaoServico,
 } from "@/lib/comissoes/regrasServico";
+import {
+  allocateComboUnitPrices,
+  normalizeComboComponents,
+} from "@/lib/servicos/combo-utils";
 import { parseMoneyToNumber } from "@/lib/utils/comanda";
 
 type Profissional = {
@@ -14,6 +18,11 @@ type Profissional = {
   nome: string;
   tipo_profissional?: string | null;
   assistentes_ids?: string[];
+};
+
+type ProfissionalServicoVinculo = {
+  id_servico: string;
+  id_profissional: string;
 };
 
 type Servico = {
@@ -27,6 +36,14 @@ type Servico = {
   desconta_taxa_maquininha?: boolean | null;
   eh_combo?: boolean | null;
   combo_resumo?: string | null;
+};
+
+type ComboItem = {
+  id_servico_combo: string;
+  id_servico_item: string;
+  ordem?: number | null;
+  preco_base?: number | null;
+  percentual_rateio?: number | null;
 };
 
 type Produto = {
@@ -53,14 +70,20 @@ export type ComandaItemModalPayload = {
   comissao_assistente_percentual_aplicada?: number | null;
   base_calculo_aplicada?: string | null;
   desconta_taxa_maquininha_aplicada?: boolean | null;
+  origem?: string | null;
+  combo_resumo?: string | null;
 };
 
 type Props = {
   open: boolean;
   onClose: () => void;
-  onSave: (payload: ComandaItemModalPayload) => Promise<void>;
+  onSave: (
+    payload: ComandaItemModalPayload | ComandaItemModalPayload[]
+  ) => Promise<void>;
   profissionais: Profissional[];
   servicos: Servico[];
+  comboItens: ComboItem[];
+  profissionalServicos: ProfissionalServicoVinculo[];
   produtos: Produto[];
 };
 
@@ -70,6 +93,8 @@ export default function ComandaItemModal({
   onSave,
   profissionais,
   servicos,
+  comboItens,
+  profissionalServicos,
   produtos,
 }: Props) {
   const [saving, setSaving] = useState(false);
@@ -81,6 +106,7 @@ export default function ComandaItemModal({
   const [valorUnitario, setValorUnitario] = useState("");
   const [idProfissional, setIdProfissional] = useState("");
   const [idAssistente, setIdAssistente] = useState("");
+  const [profissionaisCombo, setProfissionaisCombo] = useState<Record<string, string>>({});
   const [observacoes, setObservacoes] = useState("");
   const [erro, setErro] = useState("");
 
@@ -102,6 +128,55 @@ export default function ComandaItemModal({
       ),
     [profissionais]
   );
+
+  const comboItensSelecionados = useMemo(() => {
+    if (!servicoSelecionado?.eh_combo) return [];
+
+    return comboItens
+      .filter((item) => item.id_servico_combo === servicoSelecionado.id)
+      .map((item) => {
+        const servico = servicos.find((base) => base.id === item.id_servico_item);
+        if (!servico) return null;
+
+        return { ...item, servico };
+      })
+      .filter((item): item is ComboItem & { servico: Servico } => Boolean(item))
+      .sort((a, b) => Number(a.ordem || 0) - Number(b.ordem || 0));
+  }, [comboItens, servicoSelecionado, servicos]);
+
+  const comboComponentes = useMemo(
+    () =>
+      normalizeComboComponents(
+        comboItensSelecionados.map((item) => ({
+          id: item.servico.id,
+          nome: item.servico.nome,
+          ordem: item.ordem,
+          preco_base: item.preco_base ?? item.servico.preco_padrao ?? 0,
+          percentual_rateio: item.percentual_rateio,
+        }))
+      ),
+    [comboItensSelecionados]
+  );
+
+  const valoresComboRateados = useMemo(() => {
+    const valorCombo =
+      parseMoneyToNumber(valorUnitario) ||
+      Number(servicoSelecionado?.preco_padrao || 0);
+
+    return allocateComboUnitPrices(valorCombo, comboComponentes);
+  }, [comboComponentes, servicoSelecionado?.preco_padrao, valorUnitario]);
+
+  function profissionaisDoServico(idServico: string) {
+    const vinculados = new Set(
+      profissionalServicos
+        .filter((vinculo) => vinculo.id_servico === idServico)
+        .map((vinculo) => vinculo.id_profissional)
+    );
+
+    return profissionaisOperacionais.filter((profissional) =>
+      vinculados.has(profissional.id)
+    );
+  }
 
   const assistentesDoProfissional = useMemo(() => {
     if (!idProfissional) return [];
@@ -134,6 +209,10 @@ export default function ComandaItemModal({
     }
   }, [open]);
 
+  useEffect(() => {
+    setProfissionaisCombo({});
+  }, [idServico]);
+
   if (!open) return null;
 
   function normalizeMoneyDraft(value: string) {
@@ -162,6 +241,38 @@ export default function ComandaItemModal({
         throw new Error("Selecione um serviço antes de adicionar.");
       }
 
+      if (
+        tipoItem === "servico" &&
+        servicoSelecionado?.eh_combo &&
+        comboItensSelecionados.length > 0
+      ) {
+        const payloads = comboItensSelecionados.map((item, index) => {
+          const idProfissionalItem = profissionaisCombo[item.servico.id] || "";
+          if (!idProfissionalItem) {
+            throw new Error(`Selecione o profissional de ${item.servico.nome}.`);
+          }
+
+          return {
+            tipo_item: "servico",
+            quantidade: 1,
+            valor_unitario: valoresComboRateados[index] || 0,
+            id_servico: item.servico.id,
+            descricao: `${servicoSelecionado.nome} • ${item.servico.nome}`,
+            custo_total: Number(item.servico.custo_produto || 0),
+            id_profissional: idProfissionalItem,
+            id_assistente: null,
+            observacoes: observacoes || null,
+            origem: "combo",
+            combo_resumo: servicoSelecionado.nome,
+            ...criarPreviewComissaoServico(item.servico),
+          } satisfies ComandaItemModalPayload;
+        });
+
+        await onSave(payloads);
+        onClose();
+        return;
+      }
+
       if (tipoItem === "produto" && !idProduto) {
         throw new Error("Selecione um produto antes de adicionar.");
       }
@@ -186,6 +297,8 @@ export default function ComandaItemModal({
           custo_total: Number(servicoSelecionado?.custo_produto || 0),
           id_profissional: idProfissional || null,
           id_assistente: idAssistente || null,
+          origem: servicoSelecionado?.eh_combo ? "combo" : "manual",
+          combo_resumo: servicoSelecionado?.combo_resumo || null,
           ...preview,
         };
       }
@@ -318,7 +431,7 @@ export default function ComandaItemModal({
                 </select>
               </div>
 
-              <div>
+              <div className={servicoSelecionado?.eh_combo ? "hidden" : ""}>
                 <label className="mb-1 block text-sm font-semibold text-zinc-700">Profissional</label>
                 <select
                   value={idProfissional}
@@ -337,7 +450,7 @@ export default function ComandaItemModal({
                 </select>
               </div>
 
-              <div>
+              <div className={servicoSelecionado?.eh_combo ? "hidden" : ""}>
                 <label className="mb-1 block text-sm font-semibold text-zinc-700">Assistente</label>
                 <select
                   value={idAssistente}
@@ -352,6 +465,59 @@ export default function ComandaItemModal({
                   ))}
                 </select>
               </div>
+
+              {servicoSelecionado?.eh_combo && comboItensSelecionados.length > 0 ? (
+                <div className="md:col-span-2 rounded-2xl border border-zinc-200 bg-zinc-50 p-4">
+                  <div className="text-sm font-bold text-zinc-900">
+                    Servicos do combo
+                  </div>
+                  <div className="mt-1 text-sm text-zinc-500">
+                    Selecione o profissional de cada servico. O valor fica rateado pelo combo.
+                  </div>
+
+                  <div className="mt-4 space-y-3">
+                    {comboItensSelecionados.map((item, index) => {
+                      const profissionaisDisponiveis = profissionaisDoServico(item.servico.id);
+
+                      return (
+                        <div
+                          key={item.servico.id}
+                          className="rounded-2xl border border-zinc-200 bg-white p-3"
+                        >
+                          <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                            <div>
+                              <div className="text-sm font-semibold text-zinc-900">
+                                {item.servico.nome}
+                              </div>
+                              <div className="mt-1 text-xs text-zinc-500">
+                                Valor no combo: R$ {Number(valoresComboRateados[index] || 0).toFixed(2)}
+                              </div>
+                            </div>
+
+                            <select
+                              value={profissionaisCombo[item.servico.id] || ""}
+                              onChange={(e) =>
+                                setProfissionaisCombo((current) => ({
+                                  ...current,
+                                  [item.servico.id]: e.target.value,
+                                }))
+                              }
+                              className="w-full rounded-2xl border border-zinc-300 px-4 py-3 md:w-64"
+                            >
+                              <option value="">Profissional</option>
+                              {profissionaisDisponiveis.map((profissional) => (
+                                <option key={profissional.id} value={profissional.id}>
+                                  {profissional.nome}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : null}
             </>
           ) : null}
 

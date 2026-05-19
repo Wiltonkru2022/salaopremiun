@@ -30,6 +30,7 @@ export type ItemPayload = {
   custo_total?: number | null;
   id_profissional?: string | null;
   id_assistente?: string | null;
+  combo_resumo?: string | null;
 };
 
 export type ProcessarComandaBody = {

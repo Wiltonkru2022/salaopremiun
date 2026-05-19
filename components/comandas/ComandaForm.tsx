@@ -50,6 +50,19 @@ type Servico = {
   combo_resumo?: string | null;
 };
 
+type ComboItem = {
+  id_servico_combo: string;
+  id_servico_item: string;
+  ordem?: number | null;
+  preco_base?: number | null;
+  percentual_rateio?: number | null;
+};
+
+type ProfissionalServicoVinculo = {
+  id_servico: string;
+  id_profissional: string;
+};
+
 type Produto = {
   id: string;
   nome: string;
@@ -105,6 +118,8 @@ export default function ComandaForm({ modo }: ComandaFormProps) {
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [profissionais, setProfissionais] = useState<Profissional[]>([]);
   const [servicos, setServicos] = useState<Servico[]>([]);
+  const [comboItens, setComboItens] = useState<ComboItem[]>([]);
+  const [profissionalServicos, setProfissionalServicos] = useState<ProfissionalServicoVinculo[]>([]);
   const [produtos, setProdutos] = useState<Produto[]>([]);
   const [itens, setItens] = useState<ComandaItem[]>([]);
 
@@ -231,6 +246,8 @@ export default function ComandaForm({ modo }: ComandaFormProps) {
         profissionaisRes,
         assistentesRes,
         servicosRes,
+        comboItensRes,
+        profissionalServicosRes,
         produtosRes,
       ] = await Promise.all([
         supabase
@@ -276,6 +293,19 @@ export default function ComandaForm({ modo }: ComandaFormProps) {
           .order("nome", { ascending: true }),
 
         supabase
+          .from("servicos_combo_itens")
+          .select("id_servico_combo, id_servico_item, ordem, preco_base, percentual_rateio")
+          .eq("id_salao", usuarioLogado.idSalao)
+          .eq("ativo", true)
+          .order("ordem", { ascending: true }),
+
+        supabase
+          .from("profissional_servicos")
+          .select("id_servico, id_profissional")
+          .eq("id_salao", usuarioLogado.idSalao)
+          .eq("ativo", true),
+
+        supabase
           .from("produtos")
           .select(
             `
@@ -295,6 +325,8 @@ export default function ComandaForm({ modo }: ComandaFormProps) {
       if (profissionaisRes.error) throw profissionaisRes.error;
       if (assistentesRes.error) throw assistentesRes.error;
       if (servicosRes.error) throw servicosRes.error;
+      if (comboItensRes.error) throw comboItensRes.error;
+      if (profissionalServicosRes.error) throw profissionalServicosRes.error;
       if (produtosRes.error) throw produtosRes.error;
 
       const assistentesPorProfissional = new Map<string, string[]>();
@@ -322,6 +354,10 @@ export default function ComandaForm({ modo }: ComandaFormProps) {
       setClientes((clientesRes.data as Cliente[]) || []);
       setProfissionais(profissionaisComAssistentes);
       setServicos(((servicosRes.data as unknown as Servico[]) || []));
+      setComboItens(((comboItensRes.data as unknown as ComboItem[]) || []));
+      setProfissionalServicos(
+        ((profissionalServicosRes.data as unknown as ProfissionalServicoVinculo[]) || [])
+      );
       setProdutos((produtosRes.data as Produto[]) || []);
 
       if (modo === "novo") {
@@ -406,14 +442,22 @@ export default function ComandaForm({ modo }: ComandaFormProps) {
     }
   }
 
-  async function handleAdicionarItem(payload: ComandaItemModalPayload) {
+  async function handleAdicionarItem(
+    payload: ComandaItemModalPayload | ComandaItemModalPayload[]
+  ) {
     try {
       exigirComandaEditavel();
       setErro("");
       setMsg("");
 
-      const result = await processarComanda("adicionar_item", payload);
-      const id = result.idComanda;
+      const payloads = Array.isArray(payload) ? payload : [payload];
+      let result: ProcessarComandaResponse | null = null;
+
+      for (const item of payloads) {
+        result = await processarComanda("adicionar_item", item);
+      }
+
+      const id = result?.idComanda;
 
       if (!id) {
         throw new Error("Comanda invalida.");
@@ -488,6 +532,8 @@ export default function ComandaForm({ modo }: ComandaFormProps) {
         onSave={handleAdicionarItem}
         profissionais={profissionais}
         servicos={servicos}
+        comboItens={comboItens}
+        profissionalServicos={profissionalServicos}
         produtos={produtos}
       />
 

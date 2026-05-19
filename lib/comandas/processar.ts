@@ -983,7 +983,8 @@ export async function resolverItemPayload(params: {
     const servicoInfo = servicoInfoRaw as ServicoComboLookupRow | null;
 
     resolved.ehCombo = Boolean(servicoInfo?.eh_combo);
-    resolved.comboResumo = sanitizeText(servicoInfo?.combo_resumo);
+    resolved.comboResumo =
+      sanitizeText(servicoInfo?.combo_resumo) || resolved.comboResumo;
   }
 
   return resolved;
