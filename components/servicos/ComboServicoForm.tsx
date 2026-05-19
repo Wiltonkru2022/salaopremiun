@@ -136,9 +136,18 @@ export default function ComboServicoForm({ modo }: { modo: "novo" | "editar" }) 
     [precoCombo]
   );
 
+  const precoReferenciaCombo = useMemo(() => {
+    if (precoFinalNumero > 0) return precoFinalNumero;
+
+    return comboNormalizado.reduce(
+      (acc, item) => acc + Number(item.precoBase || 0),
+      0
+    );
+  }, [comboNormalizado, precoFinalNumero]);
+
   const valoresRateados = useMemo(
-    () => allocateComboUnitPrices(precoFinalNumero, comboNormalizado),
-    [comboNormalizado, precoFinalNumero]
+    () => allocateComboUnitPrices(precoReferenciaCombo, comboNormalizado),
+    [comboNormalizado, precoReferenciaCombo]
   );
 
   const comissoesProjetadas = useMemo(
