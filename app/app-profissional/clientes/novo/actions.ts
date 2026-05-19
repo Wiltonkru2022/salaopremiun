@@ -6,8 +6,8 @@ import {
   assertCanMutatePlanFeature,
   PlanAccessError,
 } from "@/lib/plans/access";
-import { createClient } from "@/lib/supabase/server";
 import { requireProfissionalAppContext } from "@/lib/profissional-context.server";
+import { runAdminOperation } from "@/lib/supabase/admin-ops";
 
 export type NovoClienteState = {
   error: string | null;
@@ -32,7 +32,6 @@ export async function criarClienteProfissionalAction(
     return { error: "Informe o nome do cliente." };
   }
 
-  const supabase = await createClient();
   try {
     await assertCanMutatePlanFeature(session.idSalao, "clientes");
     await assertCanCreateWithinLimit(session.idSalao, "clientes");
@@ -43,19 +42,28 @@ export async function criarClienteProfissionalAction(
     throw error;
   }
 
-  const { error } = await supabase.from("clientes").insert({
-    id_salao: session.idSalao,
-    nome,
-    telefone: telefone || null,
-    email: email || null,
-    observacoes: observacoes || null,
-    status: "ativo",
-    ativo: "true",
-    atualizado_em: new Date().toISOString(),
+  const errorMessage = await runAdminOperation({
+    action: "app_profissional_cliente_criar",
+    actorId: session.idProfissional,
+    idSalao: session.idSalao,
+    run: async (supabase) => {
+      const { error } = await supabase.from("clientes").insert({
+        id_salao: session.idSalao,
+        nome,
+        telefone: telefone || null,
+        email: email || null,
+        observacoes: observacoes || null,
+        status: "ativo",
+        ativo: "true",
+        atualizado_em: new Date().toISOString(),
+      });
+
+      return error?.message || null;
+    },
   });
 
-  if (error) {
-    return { error: error.message || "Nao foi possivel cadastrar o cliente." };
+  if (errorMessage) {
+    return { error: errorMessage || "Nao foi possivel cadastrar o cliente." };
   }
 
   redirect("/app-profissional/clientes");
