@@ -653,51 +653,6 @@ export default function AgendaGrid({
               });
             }
 
-            const busyRanges = [
-              ...sortedDayAgendamentos.map((item) => ({
-                start: timeToMinutes(item.hora_inicio),
-                end: timeToMinutes(item.hora_fim),
-              })),
-              ...dayBloqueios.map((item) => ({
-                start: timeToMinutes(item.hora_inicio),
-                end: timeToMinutes(item.hora_fim),
-              })),
-            ].sort((a, b) => a.start - b.start);
-
-            const mergedRanges: Array<{ start: number; end: number }> = [];
-            for (const range of busyRanges) {
-              const last = mergedRanges[mergedRanges.length - 1];
-              if (!last || range.start > last.end) {
-                mergedRanges.push({ ...range });
-              } else {
-                last.end = Math.max(last.end, range.end);
-              }
-            }
-
-            let largestFreeGap = 0;
-            let largestFreeGapStart = timeToMinutes(startTime);
-            let cursor = timeToMinutes(startTime);
-
-            for (const range of mergedRanges) {
-              if (range.start > cursor) {
-                const gap = range.start - cursor;
-                if (gap > largestFreeGap) {
-                  largestFreeGap = gap;
-                  largestFreeGapStart = cursor;
-                }
-              }
-              cursor = Math.max(cursor, range.end);
-            }
-
-            const agendaEndMinutes = timeToMinutes(endTime);
-            if (agendaEndMinutes > cursor) {
-              const gap = agendaEndMinutes - cursor;
-              if (gap > largestFreeGap) {
-                largestFreeGap = gap;
-                largestFreeGapStart = cursor;
-              }
-            }
-
             return (
               <div
                 key={dayStr}
@@ -795,12 +750,6 @@ export default function AgendaGrid({
                   />
                 ))}
 
-                {largestFreeGap >= 30 ? (
-                  <div className="pointer-events-none absolute bottom-3 right-3 z-10 rounded-full border border-emerald-200 bg-white/96 px-3 py-1.5 text-[10px] font-semibold text-emerald-700 shadow-sm">
-                    Janela livre {Math.round(largestFreeGap)} min às{" "}
-                    {minutesToTime(largestFreeGapStart)}
-                  </div>
-                ) : null}
               </div>
             );
           })}
