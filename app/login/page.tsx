@@ -56,7 +56,10 @@ function LoginPageContent() {
   const returnTo = sanitizeLoginReturnTo(searchParams.get("returnTo"));
   const loginContext = searchParams.get("context")?.trim() || "";
   const redirectNotice = getLoginRedirectNotice(searchParams);
+  const redirectReason = searchParams.get("motivo")?.trim() || "";
   const googleErro = searchParams.get("erro")?.trim() || "";
+  const needsSessionRecovery =
+    redirectReason === "salao_excluido" || googleErro === "google_nao_vinculado";
   const agendaQuickLogin = loginContext === "agenda" || returnTo === "/agenda";
   const redirectHref = returnTo
     ? getManagedHostHrefForPath(appendBootParam(returnTo))
@@ -79,7 +82,7 @@ function LoginPageContent() {
   }, []);
 
   useEffect(() => {
-    if (!supabase || googleErro) return;
+    if (!supabase || needsSessionRecovery) return;
 
     let cancelled = false;
 
@@ -92,7 +95,27 @@ function LoginPageContent() {
     return () => {
       cancelled = true;
     };
-  }, [googleErro, redirectHref, supabase]);
+  }, [needsSessionRecovery, redirectHref, supabase]);
+
+  useEffect(() => {
+    if (!supabase || redirectReason !== "salao_excluido") return;
+
+    let cancelled = false;
+
+    async function clearStaleDeletedSalonSession() {
+      setRedirectMessage("Encerrando a sessão antiga para liberar outro login...");
+      await supabase?.auth.signOut().catch(() => null);
+      if (cancelled) return;
+      clearSupabaseBrowserAuthState();
+      setRedirectMessage("");
+    }
+
+    void clearStaleDeletedSalonSession();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [redirectReason, supabase]);
 
   useEffect(() => {
     if (!emailQuery) return;
@@ -293,10 +316,16 @@ function LoginPageContent() {
     }
   }
 
-  function limparSessaoLocal() {
+  async function limparSessaoLocal() {
+    setLoading(true);
+    setErro("");
+    setRedirectMessage("Limpando a sessão deste navegador...");
+    await supabase?.auth.signOut().catch(() => null);
     clearSupabaseBrowserAuthState();
     setRateLimited(false);
-    setErro("Sessão local limpa. Aguarde alguns segundos e tente entrar de novo.");
+    setRedirectMessage("");
+    setLoading(false);
+    setErro("Sessão local limpa. Agora tente entrar com outra conta.");
   }
 
   function abrirCadastroSalao() {
@@ -391,6 +420,16 @@ function LoginPageContent() {
               >
                 <p className="font-semibold">{redirectNotice.title}</p>
                 <p className="mt-1">{redirectNotice.description}</p>
+                {redirectReason === "salao_excluido" ? (
+                  <button
+                    type="button"
+                    onClick={limparSessaoLocal}
+                    disabled={loading}
+                    className="mt-3 rounded-xl border border-amber-200 bg-white px-3 py-2 text-xs font-black text-amber-900 transition hover:border-amber-300 disabled:opacity-60"
+                  >
+                    Limpar sessão e entrar com outra conta
+                  </button>
+                ) : null}
               </div>
             ) : null}
 

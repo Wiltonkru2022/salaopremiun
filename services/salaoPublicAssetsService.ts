@@ -10,7 +10,12 @@ const ALLOWED_MIME_TYPES = new Set([
 ]);
 
 export function validarSalaoPublicAsset(file: File, tipo: string) {
-  if (tipo !== "logo" && tipo !== "capa" && tipo !== "portfolio") {
+  if (
+    tipo !== "logo" &&
+    tipo !== "capa" &&
+    tipo !== "portfolio" &&
+    tipo !== "profissional"
+  ) {
     throw new Error("Tipo de imagem invalido.");
   }
 

@@ -41,6 +41,7 @@ type AgendamentoConflitoRow = {
 
 type AgendamentoAgendaRow = {
   id: string;
+  profissional_id?: string | null;
   cliente_id: string | null;
   servico_id: string | null;
   hora_inicio: string;
@@ -59,6 +60,10 @@ type ServicoResumoRow = {
   nome: string;
   preco?: number | string | null;
   preco_padrao?: number | string | null;
+};
+
+type BuscarAgendaProfissionalOptions = {
+  verTodos?: boolean;
 };
 
 /* ---------------- UTILS ---------------- */
@@ -287,16 +292,19 @@ export function validarHorarioAgendamento({
 export async function buscarAgendaProfissional(
   idSalao: string,
   idProfissional: string,
-  data?: string
+  data?: string,
+  options: BuscarAgendaProfissionalOptions = {}
 ) {
   const dataSelecionada = data || hojeLocal();
   const diaAtual = dayNamePt(dataSelecionada);
+  const verTodos = Boolean(options.verTodos);
 
   const {
     agendamentos,
     diasComAtendimento,
     clientesMap,
     servicosMap,
+    profissionaisMap,
     profissionalNome,
     expedienteAtivo,
     horaInicioExpediente,
@@ -312,22 +320,36 @@ export async function buscarAgendaProfissional(
         { data: agendamentosMesData, error: agendamentosMesError },
         { data: profissionalData, error: profissionalError },
       ] = await Promise.all([
-        supabase
+        (() => {
+          let query = supabase
           .from("agendamentos")
           .select(SELECT_AGENDAMENTOS)
           .eq("id_salao", idSalao)
-          .eq("profissional_id", idProfissional)
           .eq("data", dataSelecionada)
-          .order("hora_inicio", { ascending: true }),
-        supabase
+          .order("hora_inicio", { ascending: true });
+
+          if (!verTodos) {
+            query = query.eq("profissional_id", idProfissional);
+          }
+
+          return query;
+        })(),
+        (() => {
+          let query = supabase
           .from("agendamentos")
-          .select("data")
+          .select("data, profissional_id")
           .eq("id_salao", idSalao)
-          .eq("profissional_id", idProfissional)
           .gte("data", rangeMes.inicio)
           .lte("data", rangeMes.fim)
           .not("status", "eq", "cancelado")
-          .limit(120),
+          .limit(300);
+
+          if (!verTodos) {
+            query = query.eq("profissional_id", idProfissional);
+          }
+
+          return query;
+        })(),
         supabase
           .from("profissionais")
           .select("nome, nome_exibicao, dias_trabalho")
@@ -347,8 +369,11 @@ export async function buscarAgendaProfissional(
       const servicoIds = Array.from(
         new Set(rows.map((item) => item.servico_id).filter(Boolean))
       ) as string[];
+      const profissionalIds = Array.from(
+        new Set(rows.map((item) => item.profissional_id).filter(Boolean))
+      ) as string[];
 
-      const [clientesResult, servicosResult] = await Promise.all([
+      const [clientesResult, servicosResult, profissionaisResult] = await Promise.all([
         clienteIds.length
           ? supabase.from("clientes").select("id, nome").in("id", clienteIds)
           : Promise.resolve({ data: [], error: null }),
@@ -358,10 +383,20 @@ export async function buscarAgendaProfissional(
               .select("id, nome, preco, preco_padrao")
               .in("id", servicoIds)
           : Promise.resolve({ data: [], error: null }),
+        profissionalIds.length
+          ? supabase
+              .from("profissionais")
+              .select("id, nome, nome_exibicao")
+              .eq("id_salao", idSalao)
+              .in("id", profissionalIds)
+          : Promise.resolve({ data: [], error: null }),
       ]);
 
       if (clientesResult.error) throw new Error(clientesResult.error.message);
       if (servicosResult.error) throw new Error(servicosResult.error.message);
+      if (profissionaisResult.error) {
+        throw new Error(profissionaisResult.error.message);
+      }
 
       const diasTrabalho = parseDiasTrabalho(
         normalizarJsonAgenda(profissionalData?.dias_trabalho)
@@ -399,6 +434,18 @@ export async function buscarAgendaProfissional(
             },
           ])
         ),
+        profissionaisMap: new Map(
+          (
+            (profissionaisResult.data ?? []) as Array<{
+              id: string;
+              nome?: string | null;
+              nome_exibicao?: string | null;
+            }>
+          ).map((profissional) => [
+            profissional.id,
+            profissional.nome_exibicao || profissional.nome || "Profissional",
+          ])
+        ),
       };
     },
   });
@@ -432,6 +479,11 @@ export async function buscarAgendaProfissional(
 
     return {
       id: item.id,
+      idProfissional: item.profissional_id || idProfissional,
+      profissional:
+        profissionaisMap.get(item.profissional_id || "") ||
+        (item.profissional_id === idProfissional ? profissionalNome : "Profissional"),
+      isDoProfissionalLogado: (item.profissional_id || idProfissional) === idProfissional,
       idComanda: item.id_comanda,
       horario: item.hora_inicio.slice(0, 5),
       horaFim: item.hora_fim.slice(0, 5),

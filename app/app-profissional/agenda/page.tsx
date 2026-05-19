@@ -47,7 +47,8 @@ export default async function AgendaProfissionalPage({
   const agenda = await buscarAgendaProfissional(
     session.idSalao,
     session.idProfissional,
-    data
+    data,
+    { verTodos: session.podeVerAgendaTodos }
   );
 
   return (
@@ -62,7 +63,11 @@ export default async function AgendaProfissionalPage({
         <ProfissionalSurface>
           <ProfissionalSectionHeader
             title="Calendário"
-            description="Toque em um dia para ver os atendimentos."
+            description={
+              session.podeVerAgendaTodos
+                ? "Toque em um dia para ver seus atendimentos e os da equipe."
+                : "Toque em um dia para ver os atendimentos."
+            }
             action={
               <Link
                 href={`/app-profissional/agenda/novo?data=${agenda.dataSelecionada}`}
@@ -138,6 +143,12 @@ export default async function AgendaProfissionalPage({
                         <div className="mt-1 text-sm leading-6 text-zinc-500">
                           {card.servico}
                         </div>
+
+                        {session.podeVerAgendaTodos ? (
+                          <div className="mt-2 inline-flex rounded-full bg-white px-2.5 py-1 text-[11px] font-bold text-zinc-600 ring-1 ring-zinc-200">
+                            {card.profissional}
+                          </div>
+                        ) : null}
                       </div>
 
                       <ProfissionalStatusPill
@@ -154,7 +165,8 @@ export default async function AgendaProfissionalPage({
                         Ver detalhes
                       </Link>
 
-                      {["pendente", "confirmado"].includes(String(card.status || "").toLowerCase()) ? (
+                      {card.isDoProfissionalLogado &&
+                      ["pendente", "confirmado"].includes(String(card.status || "").toLowerCase()) ? (
                         <Link
                           href={`/app-profissional/agenda/${card.id}#reagendar`}
                           className="inline-flex h-8.5 items-center gap-2 rounded-full border border-zinc-200 bg-white px-3 text-xs font-bold text-zinc-700"
@@ -164,7 +176,7 @@ export default async function AgendaProfissionalPage({
                         </Link>
                       ) : null}
 
-                      {card.idComanda ? (
+                      {card.isDoProfissionalLogado && card.idComanda ? (
                         <Link
                           href={`/app-profissional/comandas/${card.idComanda}`}
                           className="inline-flex h-8.5 items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 text-xs font-bold text-amber-800"

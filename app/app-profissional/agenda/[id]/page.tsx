@@ -27,6 +27,7 @@ type SearchParams = Promise<{ ok?: string; erro?: string }>;
 
 type AgendamentoRow = {
   id: string;
+  profissional_id?: string | null;
   cliente_id?: string | null;
   servico_id?: string | null;
   data?: string | null;
@@ -57,6 +58,12 @@ type ComandaRow = {
   numero?: number | string | null;
   status?: string | null;
   total?: number | string | null;
+};
+
+type ProfissionalRow = {
+  id: string;
+  nome?: string | null;
+  nome_exibicao?: string | null;
 };
 
 const STATUS_OPTIONS = [
@@ -121,22 +128,28 @@ export default async function AgendamentoDetalheProfissionalPage({
   const { id } = await params;
   const query = searchParams ? await searchParams : {};
 
-  const { agendamento, cliente, servico, comanda, itensCount } =
+  const { agendamento, cliente, servico, comanda, itensCount, profissional } =
     await runAdminOperation({
       action: "app_profissional_agendamento_detalhe_page",
       actorId: session.idProfissional,
       idSalao: session.idSalao,
       run: async (supabase) => {
         const { data: agendamentoData, error: agendamentoError } =
-          await supabase
+          await (() => {
+            let query = supabase
             .from("agendamentos")
             .select(
-              "id, cliente_id, servico_id, data, hora_inicio, hora_fim, status, id_comanda, observacoes, duracao_minutos"
+              "id, profissional_id, cliente_id, servico_id, data, hora_inicio, hora_fim, status, id_comanda, observacoes, duracao_minutos"
             )
             .eq("id", id)
-            .eq("id_salao", session.idSalao)
-            .eq("profissional_id", session.idProfissional)
-            .maybeSingle();
+            .eq("id_salao", session.idSalao);
+
+            if (!session.podeVerAgendaTodos) {
+              query = query.eq("profissional_id", session.idProfissional);
+            }
+
+            return query.maybeSingle();
+          })();
 
         if (agendamentoError) throw new Error(agendamentoError.message);
 
@@ -146,11 +159,12 @@ export default async function AgendamentoDetalheProfissionalPage({
             cliente: null,
             servico: null,
             comanda: null,
+            profissional: null,
             itensCount: 0,
           };
         }
 
-        const [clienteResult, servicoResult, comandaResult, itensResult] =
+        const [clienteResult, servicoResult, comandaResult, itensResult, profissionalResult] =
           await Promise.all([
             agendamentoData.cliente_id
               ? supabase
@@ -184,18 +198,30 @@ export default async function AgendamentoDetalheProfissionalPage({
                   .eq("id_salao", session.idSalao)
                   .eq("ativo", true)
               : Promise.resolve({ data: null, error: null, count: 0 }),
+            agendamentoData.profissional_id
+              ? supabase
+                  .from("profissionais")
+                  .select("id, nome, nome_exibicao")
+                  .eq("id", agendamentoData.profissional_id)
+                  .eq("id_salao", session.idSalao)
+                  .maybeSingle()
+              : Promise.resolve({ data: null, error: null }),
           ]);
 
         if (clienteResult.error) throw new Error(clienteResult.error.message);
         if (servicoResult.error) throw new Error(servicoResult.error.message);
         if (comandaResult.error) throw new Error(comandaResult.error.message);
         if (itensResult.error) throw new Error(itensResult.error.message);
+        if (profissionalResult.error) {
+          throw new Error(profissionalResult.error.message);
+        }
 
         return {
           agendamento: agendamentoData as AgendamentoRow,
           cliente: clienteResult.data as ClienteRow | null,
           servico: servicoResult.data as ServicoRow | null,
           comanda: comandaResult.data as ComandaRow | null,
+          profissional: profissionalResult.data as ProfissionalRow | null,
           itensCount: itensResult.count || 0,
         };
       },
@@ -224,6 +250,10 @@ export default async function AgendamentoDetalheProfissionalPage({
   const horaFim = String(agendamento.hora_fim || "").slice(0, 5);
   const status = String(agendamento.status || "pendente");
   const comandaAberta = comanda && String(comanda.status).toLowerCase() === "aberta";
+  const isDoProfissionalLogado =
+    String(agendamento.profissional_id || "") === session.idProfissional;
+  const profissionalNome =
+    profissional?.nome_exibicao || profissional?.nome || "Profissional";
 
   return (
     <ProfissionalShell title="Agendamento" subtitle={formatDate(agendamento.data)}>
@@ -299,7 +329,13 @@ export default async function AgendamentoDetalheProfissionalPage({
             </div>
           ) : null}
 
-          {String(status).toLowerCase() === "pendente" ? (
+          {session.podeVerAgendaTodos ? (
+            <div className="mt-3 rounded-[1.1rem] bg-white/10 p-3.5 text-sm text-zinc-200">
+              Profissional: <strong className="text-white">{profissionalNome}</strong>
+            </div>
+          ) : null}
+
+          {isDoProfissionalLogado && String(status).toLowerCase() === "pendente" ? (
             <form action={confirmarAgendamentoProfissionalAction} className="mt-3">
               <input type="hidden" name="id_agendamento" value={agendamento.id} />
               <button className="w-full rounded-[18px] bg-white px-4 py-2.5 text-sm font-black text-zinc-950 shadow-sm transition hover:bg-zinc-100">
@@ -313,7 +349,9 @@ export default async function AgendamentoDetalheProfissionalPage({
           <ProfissionalSectionHeader
             title="Comanda e caixa"
             description={
-              comanda
+              !isDoProfissionalLogado
+                ? "Você pode visualizar este atendimento, mas ações de comanda ficam com o profissional responsável."
+                : comanda
                 ? `Comanda ${comanda.numero || ""} pronta para revisar ou enviar ao caixa.`
                 : "Abra uma comanda para lancar itens e seguir para o caixa."
             }
@@ -343,7 +381,7 @@ export default async function AgendamentoDetalheProfissionalPage({
           </div>
 
           <div className="mt-3 grid gap-2">
-            {comanda ? (
+            {!isDoProfissionalLogado ? null : comanda ? (
               <Link
                 href={`/app-profissional/comandas/${comanda.id}`}
                 className="rounded-[18px] bg-zinc-950 px-4 py-2.5 text-center text-sm font-bold text-white"
@@ -359,7 +397,7 @@ export default async function AgendamentoDetalheProfissionalPage({
               </form>
             )}
 
-            {comanda ? (
+            {isDoProfissionalLogado && comanda ? (
               <form action={enviarComandaDoAgendamentoParaCaixaAction}>
                 <input type="hidden" name="id_agendamento" value={agendamento.id} />
                 <button
@@ -373,6 +411,7 @@ export default async function AgendamentoDetalheProfissionalPage({
           </div>
         </ProfissionalSurface>
 
+        {isDoProfissionalLogado ? (
         <ProfissionalSurface>
           <ProfissionalSectionHeader
             title="Editar atendimento"
@@ -456,7 +495,9 @@ export default async function AgendamentoDetalheProfissionalPage({
             </button>
           </form>
         </ProfissionalSurface>
+        ) : null}
 
+        {isDoProfissionalLogado ? (
         <ProfissionalSurface>
           <ProfissionalSectionHeader
             title="Ações rápidas"
@@ -481,6 +522,7 @@ export default async function AgendamentoDetalheProfissionalPage({
             </form>
           </div>
         </ProfissionalSurface>
+        ) : null}
       </div>
     </ProfissionalShell>
   );

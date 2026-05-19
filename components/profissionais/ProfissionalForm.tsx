@@ -148,7 +148,13 @@ const initialAcesso: ProfissionalAcesso = {
   possuiCadastro: false,
 };
 
-const FOTO_BUCKET_CANDIDATES = ["profissionais", "avatars", "images"];
+const FOTO_MAX_FILE_SIZE = 5 * 1024 * 1024;
+const FOTO_ALLOWED_MIME_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+]);
 
 function classNames(...classes: string[]) {
   return classes.filter(Boolean).join(" ");
@@ -156,6 +162,16 @@ function classNames(...classes: string[]) {
 
 function onlyDigits(value: string) {
   return (value || "").replace(/\D/g, "");
+}
+
+function validarFotoProfissional(file: File) {
+  if (!FOTO_ALLOWED_MIME_TYPES.has(file.type)) {
+    throw new Error("Envie uma foto JPG, PNG, WEBP ou GIF.");
+  }
+
+  if (file.size > FOTO_MAX_FILE_SIZE) {
+    throw new Error("A foto precisa ter ate 5MB.");
+  }
 }
 
 function isDiaTrabalho(value: unknown): value is DiaTrabalho {
@@ -457,35 +473,27 @@ export default function ProfissionalForm({
   async function uploadFoto(idProfissional: string) {
     if (!fotoFile) return form.foto_url;
 
-    const ext = fotoFile.name.split(".").pop();
-    const fileName = `${idSalao}/${idProfissional}-${Date.now()}.${ext}`;
+    validarFotoProfissional(fotoFile);
 
-    let lastError: Error | null = null;
+    const body = new FormData();
+    body.append("file", fotoFile);
+    body.append("tipo", "profissional");
+    body.append("id_profissional", idProfissional);
 
-    for (const bucket of FOTO_BUCKET_CANDIDATES) {
-      const { error: uploadError } = await supabase.storage
-        .from(bucket)
-        .upload(fileName, fotoFile, {
-          cacheControl: "3600",
-          upsert: true,
-        });
+    const response = await fetch("/api/painel/salao-public-assets", {
+      method: "POST",
+      body,
+    });
+    const result = (await response.json().catch(() => ({}))) as {
+      publicUrl?: string;
+      message?: string;
+    };
 
-      if (!uploadError) {
-        const { data } = supabase.storage.from(bucket).getPublicUrl(fileName);
-        return data.publicUrl;
-      }
-
-      lastError = uploadError;
-
-      if (!/Bucket not found/i.test(uploadError.message || "")) {
-        throw uploadError;
-      }
+    if (!response.ok || !result.publicUrl) {
+      throw new Error(result.message || "Nao foi possivel enviar a foto.");
     }
 
-    throw (
-      lastError ||
-      new Error("Nenhum bucket de fotos foi encontrado para enviar a imagem.")
-    );
+    return result.publicUrl;
   }
 async function salvarAcessoProfissional(idProfissional: string) {
   const cpfLimpo = onlyDigits(acesso.cpf || form.cpf);

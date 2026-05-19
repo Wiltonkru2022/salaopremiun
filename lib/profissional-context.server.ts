@@ -14,6 +14,8 @@ export type ProfissionalServerContext = {
   idSalao: string;
   nome: string;
   email: string | null;
+  nivelAcesso: string;
+  podeVerAgendaTodos: boolean;
 };
 
 function isUnauthorizedError(error: unknown) {
@@ -30,7 +32,9 @@ async function loadProfissionalServerContext(): Promise<ProfissionalServerContex
   const supabaseAdmin = getSupabaseAdmin();
   const { data: profissional, error: profissionalError } = await supabaseAdmin
     .from("profissionais")
-    .select("id, id_salao, nome, nome_exibicao, email, ativo, tipo_profissional")
+    .select(
+      "id, id_salao, nome, nome_exibicao, email, ativo, tipo_profissional, nivel_acesso"
+    )
     .eq("id", session.idProfissional)
     .eq("id_salao", session.idSalao)
     .maybeSingle();
@@ -70,6 +74,8 @@ async function loadProfissionalServerContext(): Promise<ProfissionalServerContex
     throw new Error("SECURITY_BLOCKED");
   }
 
+  const nivelAcesso = String(profissional.nivel_acesso || "proprio").toLowerCase();
+
   return {
     idProfissional: profissional.id,
     idSalao: session.idSalao,
@@ -78,6 +84,8 @@ async function loadProfissionalServerContext(): Promise<ProfissionalServerContex
       String(profissional.nome || "").trim() ||
       session.nome,
     email: String(profissional.email || "").trim() || null,
+    nivelAcesso,
+    podeVerAgendaTodos: nivelAcesso === "todos",
   };
 }
 
