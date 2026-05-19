@@ -7,7 +7,7 @@ import { buildSalaoPublicUrl } from "@/lib/saloes/public-link";
 const DEV_SALAO_NOME = "Studio Maos de Fadas";
 const DEV_SALAO_SLUG = "studio-maos-de-fadas";
 
-export default function SalaoPremiunEditorDevPage() {
+export default function SalaoPremiunEditorProjectPageClient({ slug }: { slug: string }) {
   const publicUrl = useMemo(() => buildSalaoPublicUrl(DEV_SALAO_SLUG), []);
   const qrCodeUrl = useMemo(
     () => `/api/painel/qrcode?text=${encodeURIComponent(publicUrl)}`,
@@ -25,7 +25,7 @@ export default function SalaoPremiunEditorDevPage() {
       publicSlug={DEV_SALAO_SLUG}
       salaoNome={DEV_SALAO_NOME}
       logoUrl={null}
-      initialProjectSlug={null}
+      initialProjectSlug={slug}
     />
   );
 }

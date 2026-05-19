@@ -2,23 +2,35 @@
 
 import {
   AlignHorizontalJustifyCenter,
+  AlignLeft,
+  AlignCenter,
+  AlignRight,
   AlignVerticalJustifyCenter,
+  ArrowRight,
   BringToFront,
+  Circle,
   Download,
+  Eye,
+  EyeOff,
   FolderOpen,
   Grid3X3,
   Group,
   ImagePlus,
+  Italic,
   Layers,
   Lock,
   Palette,
+  PenLine,
   Redo2,
   Save,
   Search,
   Scissors,
   Shapes,
+  Star,
+  Heart,
   Trash2,
   Type,
+  Underline,
   Undo2,
   Ungroup,
   Unlock,
@@ -27,6 +39,7 @@ import {
   ZoomIn,
   ZoomOut,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import {
   useCallback,
   useEffect,
@@ -51,6 +64,7 @@ type Props = {
   publicSlug: string;
   salaoNome: string;
   logoUrl?: string | null;
+  initialProjectSlug?: string | null;
 };
 
 type StockPhoto = {
@@ -72,6 +86,12 @@ type EditorProject = {
   payload_json?: unknown;
 };
 
+type TemplatePreset = {
+  label: string;
+  kind: string;
+  description: string;
+};
+
 const DEFAULT_WIDTH = 1080;
 const DEFAULT_HEIGHT = 1350;
 const LOCAL_PROJECTS_KEY = "salaopremiun-editor:dev-projects";
@@ -83,17 +103,46 @@ const projectFormats = [
   { label: "Panfleto", formato: "panfleto", width: 1240, height: 1754 },
 ] as const;
 
-const templates = [
-  { label: "QR Code premium", kind: "qr" },
-  { label: "Promo luxo", kind: "promo-luxo" },
-  { label: "Agenda glam", kind: "agenda-glam" },
-  { label: "Antes e depois", kind: "before-after" },
-  { label: "Agenda aberta", kind: "agenda" },
-  { label: "Combo de servicos", kind: "combo" },
-  { label: "Depoimento", kind: "review" },
-  { label: "Aviso de feriado", kind: "notice" },
-  { label: "Aniversario VIP", kind: "birthday" },
-  { label: "Contratando", kind: "hiring" },
+const templates: TemplatePreset[] = [
+  { label: "QR Code premium", kind: "qr", description: "Arte limpa para levar clientes ao app" },
+  { label: "Promo luxo", kind: "promo-luxo", description: "Oferta com preco grande e chamada direta" },
+  { label: "Agenda glam", kind: "agenda-glam", description: "Horarios disponiveis com visual premium" },
+  { label: "Antes e depois", kind: "before-after", description: "Dois slots para fotos de transformacao" },
+  { label: "Agenda aberta", kind: "agenda", description: "Lista de horarios da semana" },
+  { label: "Combo de servicos", kind: "combo", description: "Servicos e precos em formato de card" },
+  { label: "Depoimento", kind: "review", description: "Mensagem de cliente estilo prova social" },
+  { label: "Avaliacao 5 estrelas", kind: "stars-review", description: "Post para elogios e reputacao" },
+  { label: "Aviso de feriado", kind: "notice", description: "Comunicado elegante para redes sociais" },
+  { label: "Contratando", kind: "hiring", description: "Vaga aberta para profissional do salao" },
+  { label: "Cartao fidelidade", kind: "loyalty", description: "Modelo com selos de visitas" },
+  { label: "Ultimos horarios", kind: "free-time", description: "Story para preencher agenda do dia" },
+  { label: "Cliente do mes", kind: "client-month", description: "Post de relacionamento e carinho" },
+  { label: "Menu de precos", kind: "price-menu", description: "Tabela visual para servicos principais" },
+  { label: "Cupom relampago", kind: "flash-coupon", description: "Promocao rapida com selo de desconto" },
+  { label: "Frase beleza", kind: "quote", description: "Conteudo leve para engajamento" },
+  { label: "Story premium", kind: "story-premium", description: "Story com composicao editorial" },
+];
+
+const startCards = [
+  { label: "Comecar em branco", kind: "blank", description: "Tela livre para criar do zero" },
+  { label: "QR Code de agendamento", kind: "qr", description: "Leve o cliente direto para reserva" },
+  { label: "Promocao da semana", kind: "promo-luxo", description: "Oferta bonita para vender hoje" },
+  { label: "Agenda aberta", kind: "agenda-glam", description: "Mostre horarios livres" },
+  { label: "Antes e depois", kind: "before-after", description: "Mostre resultado com duas fotos" },
+  { label: "Combo de servicos", kind: "combo", description: "Monte pacote e preco" },
+] as const;
+
+const elementCategories = [
+  "Cabelo",
+  "Unhas",
+  "Maquiagem",
+  "Estetica",
+  "Agenda",
+  "Promocao",
+  "Luxo",
+  "Redes sociais",
+  "QR Code",
+  "Avaliacao",
 ] as const;
 
 const fontOptions = [
@@ -144,6 +193,29 @@ const tabConfig = [
 
 function safeFileName(value: string) {
   return value.replace(/[^a-zA-Z0-9-_]/g, "-").replace(/-+/g, "-");
+}
+
+function slugifyProjectName(value: string) {
+  const normalized = value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return normalized || "arte-sem-titulo";
+}
+
+function titleFromSlug(slug?: string | null) {
+  if (!slug) return "Arte sem titulo";
+  return slug
+    .split("-")
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+function isPublicEditorRoute() {
+  return typeof window !== "undefined" && window.location.pathname.startsWith("/salaopremiuneditor");
 }
 
 function downloadDataUrl(dataUrl: string, filename: string) {
@@ -211,7 +283,9 @@ export default function QrCodeArtEditor({
   publicSlug,
   salaoNome,
   logoUrl,
+  initialProjectSlug = null,
 }: Props) {
+  const router = useRouter();
   const canvasElRef = useRef<HTMLCanvasElement | null>(null);
   const canvasRef = useRef<FabricCanvas | null>(null);
   const fabricRef = useRef<FabricModule | null>(null);
@@ -219,12 +293,21 @@ export default function QrCodeArtEditor({
   const historyRef = useRef<string[]>([]);
   const futureRef = useRef<string[]>([]);
   const loadingJsonRef = useRef(false);
+  const loadedInitialSlugRef = useRef<string | null>(null);
+  const pendingStartRef = useRef<{
+    width: number;
+    height: number;
+    formato: string;
+    templateKind?: string;
+  } | null>(null);
 
   const [activeTab, setActiveTab] = useState<EditorTab | null>(null);
   const [selected, setSelected] = useState<FabricObject | null>(null);
   const [colorPanelOpen, setColorPanelOpen] = useState(false);
-  const [projectName, setProjectName] = useState("Arte sem titulo");
-  const [projectId, setProjectId] = useState<string | null>(null);
+  const [projectName, setProjectName] = useState(titleFromSlug(initialProjectSlug));
+  const [projectSlug, setProjectSlug] = useState(initialProjectSlug || "");
+  const [projectId, setProjectId] = useState<string | null>(initialProjectSlug);
+  const [projectStarted, setProjectStarted] = useState(Boolean(initialProjectSlug));
   const [format, setFormat] = useState("feed");
   const [artSize, setArtSize] = useState({ width: DEFAULT_WIDTH, height: DEFAULT_HEIGHT });
   const [zoom, setZoom] = useState(0.48);
@@ -236,9 +319,17 @@ export default function QrCodeArtEditor({
   const [photosError, setPhotosError] = useState("");
   const [projects, setProjects] = useState<EditorProject[]>([]);
   const [status, setStatus] = useState("");
+  const [customWidth, setCustomWidth] = useState(1080);
+  const [customHeight, setCustomHeight] = useState(1080);
+  const [backgroundColor, setBackgroundColor] = useState("#fff7e6");
+  const [layerVersion, setLayerVersion] = useState(0);
 
   const selectedLocked = useMemo(() => objectIsLocked(selected || undefined), [selected]);
-  const documentColors = useMemo(() => ["#111111", "#ffffff", "#d8b36b", "#f3d37a", "#fff8e7"], []);
+  const documentColors = useMemo(() => ["#111111", "#ffffff", "#d8b36b", "#f3d37a", "#fff8e7", "#8b3dff", "#ed4f8c", "#20c997"], []);
+  const canvasLayers = useMemo(() => {
+    const canvas = canvasRef.current;
+    return canvas ? [...canvas.getObjects()].reverse() : [];
+  }, [layerVersion, selected]);
 
   const pushHistory = useCallback(() => {
     const canvas = canvasRef.current;
@@ -262,9 +353,11 @@ export default function QrCodeArtEditor({
       const canvas = canvasRef.current;
       if (!fabric || !canvas) return;
       const image = await fabric.FabricImage.fromURL(src, { crossOrigin: "anonymous" });
+      const canvasWidth = canvas.getWidth();
+      const canvasHeight = canvas.getHeight();
       image.set({
-        left: artSize.width / 2 - targetWidth / 2,
-        top: artSize.height / 2 - targetWidth / 2,
+        left: canvasWidth / 2 - targetWidth / 2,
+        top: canvasHeight / 2 - targetWidth / 2,
         name: label,
         cornerStyle: "circle",
         transparentCorners: false,
@@ -273,9 +366,10 @@ export default function QrCodeArtEditor({
       canvas.add(image);
       canvas.setActiveObject(image);
       canvas.requestRenderAll();
+      setLayerVersion((value) => value + 1);
       pushHistory();
     },
-    [artSize.height, artSize.width, pushHistory]
+    [pushHistory]
   );
 
   const addSvgFromUrl = useCallback(
@@ -299,9 +393,10 @@ export default function QrCodeArtEditor({
       canvas.add(group);
       canvas.setActiveObject(group);
       canvas.requestRenderAll();
+      setLayerVersion((value) => value + 1);
       pushHistory();
     },
-    [artSize.height, artSize.width, pushHistory]
+    [pushHistory]
   );
 
   const buildBaseTemplate = useCallback(
@@ -314,7 +409,7 @@ export default function QrCodeArtEditor({
       loadingJsonRef.current = true;
       canvas.clear();
       canvas.setViewportTransform([1, 0, 0, 1, 0, 0]);
-      canvas.backgroundColor = transparentBackground ? "" : "#fff7e6";
+      canvas.backgroundColor = transparentBackground ? "" : backgroundColor;
 
       const contentWidth = width * 0.78;
       const centerX = width / 2;
@@ -421,11 +516,12 @@ export default function QrCodeArtEditor({
       );
 
       canvas.requestRenderAll();
+      setLayerVersion((value) => value + 1);
       loadingJsonRef.current = false;
       historyRef.current = [JSON.stringify(canvas.toJSON())];
       futureRef.current = [];
     },
-    [artSize.height, artSize.width, logoUrl, publicUrl, qrCodeUrl, salaoNome, transparentBackground]
+    [backgroundColor, logoUrl, publicUrl, qrCodeUrl, salaoNome, transparentBackground]
   );
 
   const resizeProject = useCallback(
@@ -438,29 +534,75 @@ export default function QrCodeArtEditor({
       setZoom(nextZoom);
       canvas.setDimensions({ width, height });
       applyCanvasDisplayScale(canvas, width, height, nextZoom);
-      await buildBaseTemplate(width, height);
+      canvas.clear();
+      canvas.setViewportTransform([1, 0, 0, 1, 0, 0]);
+      canvas.backgroundColor = transparentBackground ? "" : backgroundColor;
+      canvas.requestRenderAll();
+      setLayerVersion((value) => value + 1);
+      historyRef.current = [JSON.stringify(canvas.toJSON())];
+      futureRef.current = [];
     },
-    [buildBaseTemplate, fitZoom]
+    [backgroundColor, fitZoom, transparentBackground]
   );
 
+  async function startProject(options: {
+    width: number;
+    height: number;
+    formato: string;
+    templateKind?: string;
+    name?: string;
+  }) {
+    const name = options.name || "Arte sem titulo";
+    const slug = slugifyProjectName(name);
+    pendingStartRef.current = {
+      width: options.width,
+      height: options.height,
+      formato: options.formato,
+      templateKind: options.templateKind,
+    };
+    setProjectStarted(true);
+    setProjectName(name);
+    setProjectSlug(slug);
+    setProjectId(slug);
+    setArtSize({ width: options.width, height: options.height });
+    setFormat(options.formato);
+    const path = `/salaopremiuneditor/${slug}`;
+    window.history.replaceState(null, "", path);
+    router.replace(path);
+  }
+
+  function applyProjectNameToUrl() {
+    if (!projectStarted) return;
+    const slug = slugifyProjectName(projectName);
+    if (slug === projectSlug) return;
+    setProjectSlug(slug);
+    setProjectId((current) => (current === projectSlug || !current ? slug : current));
+    const path = `/salaopremiuneditor/${slug}`;
+    window.history.replaceState(null, "", path);
+    router.replace(path);
+  }
+
   useEffect(() => {
-    if (!open || !canvasElRef.current || canvasRef.current) return;
+    if (!open || !projectStarted || !canvasElRef.current || canvasRef.current) return;
     let cancelled = false;
 
     async function init() {
       const fabric = await import("fabric");
       if (cancelled || !canvasElRef.current) return;
       fabricRef.current = fabric;
-      const nextZoom = fitZoom(DEFAULT_WIDTH, DEFAULT_HEIGHT);
+      const pending = pendingStartRef.current;
+      const initialWidth = pending?.width || artSize.width;
+      const initialHeight = pending?.height || artSize.height;
+      const nextZoom = fitZoom(initialWidth, initialHeight);
       setZoom(nextZoom);
       const canvas = new fabric.Canvas(canvasElRef.current, {
-        width: DEFAULT_WIDTH,
-        height: DEFAULT_HEIGHT,
-        backgroundColor: "#fff8e7",
+        width: initialWidth,
+        height: initialHeight,
+        backgroundColor: transparentBackground ? "" : backgroundColor,
         preserveObjectStacking: true,
         selection: true,
       });
-      applyCanvasDisplayScale(canvas, DEFAULT_WIDTH, DEFAULT_HEIGHT, nextZoom);
+      applyCanvasDisplayScale(canvas, initialWidth, initialHeight, nextZoom);
       canvasRef.current = canvas;
 
       fabric.FabricObject.ownDefaults.borderColor = "#d8b36b";
@@ -472,10 +614,28 @@ export default function QrCodeArtEditor({
       canvas.on("selection:created", () => setSelected(canvas.getActiveObject() || null));
       canvas.on("selection:updated", () => setSelected(canvas.getActiveObject() || null));
       canvas.on("selection:cleared", () => setSelected(null));
-      canvas.on("object:modified", pushHistory);
-      canvas.on("object:added", pushHistory);
-      canvas.on("object:removed", pushHistory);
-      await buildBaseTemplate(DEFAULT_WIDTH, DEFAULT_HEIGHT);
+      canvas.on("object:modified", () => {
+        pushHistory();
+        setLayerVersion((value) => value + 1);
+      });
+      canvas.on("object:added", () => {
+        pushHistory();
+        setLayerVersion((value) => value + 1);
+      });
+      canvas.on("object:removed", () => {
+        pushHistory();
+        setLayerVersion((value) => value + 1);
+      });
+      historyRef.current = [JSON.stringify(canvas.toJSON())];
+      if (pending) {
+        pendingStartRef.current = null;
+        setArtSize({ width: pending.width, height: pending.height });
+        setFormat(pending.formato);
+        const templateKind = pending.templateKind;
+        if (templateKind && templateKind !== "blank") {
+          window.setTimeout(() => addTemplate(templateKind), 120);
+        }
+      }
     }
 
     init();
@@ -485,7 +645,7 @@ export default function QrCodeArtEditor({
       canvasRef.current?.dispose();
       canvasRef.current = null;
     };
-  }, [buildBaseTemplate, fitZoom, open, pushHistory]);
+  }, [addTemplate, artSize.height, artSize.width, backgroundColor, fitZoom, open, projectStarted, pushHistory, transparentBackground]);
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -598,39 +758,101 @@ export default function QrCodeArtEditor({
     pushHistory();
   }
 
-  function addShape(kind: "rect" | "circle" | "line") {
+  function addShape(kind: "rect" | "circle" | "line" | "arrow" | "star" | "heart" | "badge" | "tag" | "speech" | "frame" | "separator" | "qr-corners") {
     const fabric = fabricRef.current;
     const canvas = canvasRef.current;
     if (!fabric || !canvas) return;
+    const centerX = canvas.getWidth() / 2;
+    const centerY = canvas.getHeight() / 2;
+    const starPoints = Array.from({ length: 10 }, (_, index) => {
+      const angle = -Math.PI / 2 + (index * Math.PI) / 5;
+      const radius = index % 2 === 0 ? 96 : 42;
+      return {
+        x: Math.cos(angle) * radius + 96,
+        y: Math.sin(angle) * radius + 96,
+      };
+    });
     const object =
-      kind === "circle"
-        ? new fabric.Circle({
-            left: artSize.width / 2 - 90,
-            top: artSize.height / 2 - 90,
-            radius: 90,
-            fill: "#d8b36b",
-            name: "Circulo",
-          })
-        : kind === "line"
-          ? new fabric.Line([0, 0, 280, 0], {
-              left: artSize.width / 2 - 140,
-              top: artSize.height / 2,
-              stroke: "#111111",
-              strokeWidth: 8,
-              name: "Linha",
-            })
-          : new fabric.Rect({
-              left: artSize.width / 2 - 120,
-              top: artSize.height / 2 - 70,
-              width: 240,
-              height: 140,
-              rx: 24,
-              ry: 24,
-              fill: "#fff8e7",
-              stroke: "#d8b36b",
-              strokeWidth: 4,
-              name: "Forma",
-            });
+      kind === "circle" ? new fabric.Circle({
+        left: centerX - 90,
+        top: centerY - 90,
+        radius: 90,
+        fill: "#d8b36b",
+        name: "Circulo",
+      }) : kind === "line" ? new fabric.Line([0, 0, 280, 0], {
+        left: centerX - 140,
+        top: centerY,
+        stroke: "#111111",
+        strokeWidth: 8,
+        name: "Linha",
+      }) : kind === "arrow" ? new fabric.Group([
+        new fabric.Line([0, 0, 260, 0], { stroke: "#111111", strokeWidth: 10, left: 0, top: 30 }),
+        new fabric.Triangle({ left: 245, top: 15, width: 42, height: 42, fill: "#111111", angle: 90 }),
+      ], { left: centerX - 145, top: centerY - 30, name: "Seta" } as Partial<import("fabric").GroupProps> & { name: string }) : kind === "star" ? new fabric.Polygon(starPoints, {
+        left: centerX - 96,
+        top: centerY - 96,
+        fill: "#d8b36b",
+        name: "Estrela",
+      } as Partial<import("fabric").FabricObjectProps> & { name: string }) : kind === "heart" ? new fabric.Path("M 80 28 C 62 0 18 8 18 44 C 18 78 80 116 80 116 C 80 116 142 78 142 44 C 142 8 98 0 80 28 Z", {
+        left: centerX - 80,
+        top: centerY - 62,
+        fill: "#ed4f8c",
+        name: "Coracao",
+      } as Partial<import("fabric").FabricObjectProps> & { name: string }) : kind === "badge" ? new fabric.Circle({
+        left: centerX - 115,
+        top: centerY - 115,
+        radius: 115,
+        fill: "#111111",
+        stroke: "#d8b36b",
+        strokeWidth: 8,
+        name: "Selo de desconto",
+      } as Partial<import("fabric").CircleProps> & { name: string }) : kind === "tag" ? new fabric.Polygon([
+        { x: 0, y: 0 }, { x: 250, y: 0 }, { x: 310, y: 70 }, { x: 250, y: 140 }, { x: 0, y: 140 },
+      ], {
+        left: centerX - 155,
+        top: centerY - 70,
+        fill: "#fff8e7",
+        stroke: "#d8b36b",
+        strokeWidth: 5,
+        name: "Tag de preco",
+      } as Partial<import("fabric").FabricObjectProps> & { name: string }) : kind === "speech" ? new fabric.Path("M 20 0 H 320 Q 340 0 340 20 V 150 Q 340 170 320 170 H 120 L 64 220 L 78 170 H 20 Q 0 170 0 150 V 20 Q 0 0 20 0 Z", {
+        left: centerX - 170,
+        top: centerY - 110,
+        fill: "#ffffff",
+        stroke: "#d8b36b",
+        strokeWidth: 5,
+        name: "Balao de fala",
+      } as Partial<import("fabric").FabricObjectProps> & { name: string }) : kind === "frame" ? new fabric.Rect({
+        left: centerX - 180,
+        top: centerY - 220,
+        width: 360,
+        height: 440,
+        rx: 34,
+        ry: 34,
+        fill: "transparent",
+        stroke: "#d8b36b",
+        strokeWidth: 10,
+        name: "Moldura de foto",
+      }) : kind === "separator" ? new fabric.Group([
+        new fabric.Line([0, 0, 420, 0], { stroke: "#d8b36b", strokeWidth: 4, left: 0, top: 20 }),
+        new fabric.Circle({ left: 196, top: 0, radius: 20, fill: "#d8b36b" }),
+      ], { left: centerX - 210, top: centerY - 20, name: "Separador elegante" } as Partial<import("fabric").GroupProps> & { name: string }) : kind === "qr-corners" ? new fabric.Group([
+        new fabric.Path("M0 70 V0 H70", { left: 0, top: 0, stroke: "#111111", strokeWidth: 12, fill: "" }),
+        new fabric.Path("M70 0 H0 V70", { left: 250, top: 0, stroke: "#111111", strokeWidth: 12, fill: "" }),
+        new fabric.Path("M70 0 H0 V70", { left: 0, top: 250, angle: 180, stroke: "#111111", strokeWidth: 12, fill: "" }),
+        new fabric.Path("M0 70 V0 H70", { left: 250, top: 250, angle: 180, stroke: "#111111", strokeWidth: 12, fill: "" }),
+      ], { left: centerX - 160, top: centerY - 160, name: "Cantoneiras QR Code" } as Partial<import("fabric").GroupProps> & { name: string }) : new fabric.Rect({
+        left: centerX - 120,
+        top: centerY - 70,
+        width: 240,
+        height: 140,
+        rx: 24,
+        ry: 24,
+        fill: "#fff8e7",
+        stroke: "#d8b36b",
+        strokeWidth: 4,
+        name: "Forma",
+      });
     canvas.add(object);
     canvas.setActiveObject(object);
     canvas.requestRenderAll();
@@ -902,12 +1124,20 @@ export default function QrCodeArtEditor({
     fontFamily: string;
     fontWeight: string;
     charSpacing: number;
+    fontStyle: string;
+    underline: boolean;
+    linethrough: boolean;
+    textAlign: string;
+    backgroundColor: string;
     stroke: string;
     strokeWidth: number;
     shadow: string | null;
     opacity: number;
     flipX: boolean;
     flipY: boolean;
+    rx: number;
+    ry: number;
+    clipPath: undefined;
   }>) {
     const canvas = canvasRef.current;
     const active = canvas?.getActiveObject();
@@ -917,6 +1147,16 @@ export default function QrCodeArtEditor({
       applyFillDeep(active, fill);
     }
     active.set(rest);
+    canvas.requestRenderAll();
+    pushHistory();
+    setSelected(active);
+  }
+
+  function transformSelectedText(mode: "upper" | "lower") {
+    const canvas = canvasRef.current;
+    const active = canvas?.getActiveObject() as (FabricObject & { text?: string }) | undefined;
+    if (!canvas || !active || typeof active.text !== "string") return;
+    active.set({ text: mode === "upper" ? active.text.toUpperCase() : active.text.toLowerCase() });
     canvas.requestRenderAll();
     pushHistory();
     setSelected(active);
@@ -1036,6 +1276,60 @@ export default function QrCodeArtEditor({
     setStatus(kind === "reset" ? "Filtros removidos." : "Filtro aplicado na foto.");
   }
 
+  function applyImageAdjust(kind: "brightness" | "contrast" | "saturation" | "blur", value: number) {
+    const fabric = fabricRef.current as (FabricModule & {
+      filters?: Record<string, new (options?: Record<string, unknown>) => unknown>;
+    }) | null;
+    const canvas = canvasRef.current;
+    const active = canvas?.getActiveObject() as (FabricObject & {
+      filters?: unknown[];
+      applyFilters?: () => void;
+    }) | null;
+    if (!fabric || !canvas || !active || active.type !== "image") return;
+    const FilterClass =
+      kind === "brightness"
+        ? fabric.filters?.Brightness
+        : kind === "contrast"
+          ? fabric.filters?.Contrast
+          : kind === "saturation"
+            ? fabric.filters?.Saturation
+            : fabric.filters?.Blur;
+    if (!FilterClass) return;
+    active.filters = [new FilterClass({ [kind === "blur" ? "blur" : kind]: value })];
+    active.applyFilters?.();
+    active.set({ dirty: true });
+    canvas.requestRenderAll();
+    pushHistory();
+    setSelected(active);
+  }
+
+  function cropSelectedImage(shape: "circle" | "square") {
+    const fabric = fabricRef.current;
+    const canvas = canvasRef.current;
+    const active = canvas?.getActiveObject();
+    if (!fabric || !canvas || !active || active.type !== "image") return;
+    const width = active.width || 240;
+    const height = active.height || 240;
+    active.set({
+      clipPath:
+        shape === "circle"
+          ? new fabric.Circle({
+              radius: Math.min(width, height) / 2,
+              originX: "center",
+              originY: "center",
+            })
+          : new fabric.Rect({
+              width: Math.min(width, height),
+              height: Math.min(width, height),
+              originX: "center",
+              originY: "center",
+            }),
+    });
+    canvas.requestRenderAll();
+    pushHistory();
+    setSelected(active);
+  }
+
   function lockSelected(locked: boolean) {
     const canvas = canvasRef.current;
     const objects = canvas?.getActiveObjects() || [];
@@ -1105,6 +1399,30 @@ export default function QrCodeArtEditor({
     if (direction === "front") canvas.bringObjectToFront(active);
     if (direction === "back") canvas.sendObjectToBack(active);
     canvas.requestRenderAll();
+    pushHistory();
+  }
+
+  function selectLayer(object: FabricObject) {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    canvas.setActiveObject(object);
+    canvas.requestRenderAll();
+    setSelected(object);
+  }
+
+  function toggleLayerVisibility(object: FabricObject) {
+    object.set({ visible: !object.visible });
+    canvasRef.current?.requestRenderAll();
+    setLayerVersion((value) => value + 1);
+    pushHistory();
+  }
+
+  function renameLayer(object: FabricObject) {
+    const current = objectLabel(object);
+    const next = window.prompt("Nome da camada", current);
+    if (!next) return;
+    (object as FabricObject & { name?: string }).name = next;
+    setLayerVersion((value) => value + 1);
     pushHistory();
   }
 
@@ -1201,13 +1519,12 @@ export default function QrCodeArtEditor({
 
   async function saveProject() {
     const canvas = canvasRef.current;
-    const session = await getUsuarioLogado();
     if (!canvas) return;
     const payload = canvas.toJSON();
     const thumbnail = canvas.toDataURL({ format: "png", quality: 0.8, multiplier: 0.22 });
-    if (!session.ok || !session.idSalao) {
+    if (isPublicEditorRoute()) {
       const now = new Date().toISOString();
-      const localId = projectId?.startsWith("local-") ? projectId : `local-${Date.now()}`;
+      const localId = projectSlug || slugifyProjectName(projectName);
       const localProject: EditorProject = {
         id: localId,
         nome: projectName || "Arte sem titulo",
@@ -1224,8 +1541,18 @@ export default function QrCodeArtEditor({
       ];
       writeLocalProjects(nextProjects);
       setProjectId(localId);
+      setProjectSlug(localId);
       setProjects(nextProjects);
       setStatus("Projeto salvo neste navegador.");
+      const path = `/salaopremiuneditor/${localId}`;
+      window.history.replaceState(null, "", path);
+      router.replace(path);
+      return;
+    }
+
+    const session = await getUsuarioLogado();
+    if (!session.ok || !session.idSalao) {
+      setStatus("Projeto salvo apenas em modo local quando o editor esta publico.");
       return;
     }
 
@@ -1258,8 +1585,10 @@ export default function QrCodeArtEditor({
     const canvas = canvasRef.current;
     if (!canvas || !project.payload_json) return;
     loadingJsonRef.current = true;
+    setProjectStarted(true);
     setProjectId(project.id);
     setProjectName(project.nome);
+    setProjectSlug(project.id);
     setFormat(project.formato);
     setArtSize({ width: project.largura, height: project.altura });
     const nextZoom = fitZoom(project.largura, project.altura);
@@ -1271,6 +1600,9 @@ export default function QrCodeArtEditor({
     loadingJsonRef.current = false;
     historyRef.current = [JSON.stringify(canvas.toJSON())];
     futureRef.current = [];
+    const path = `/salaopremiuneditor/${project.id}`;
+    window.history.replaceState(null, "", path);
+    router.replace(path);
   }
 
   async function duplicateProject(project: EditorProject) {
@@ -1280,7 +1612,130 @@ export default function QrCodeArtEditor({
     setStatus("Projeto duplicado. Clique em salvar para gravar a copia.");
   }
 
+  useEffect(() => {
+    if (!initialProjectSlug || loadedInitialSlugRef.current === initialProjectSlug) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    loadedInitialSlugRef.current = initialProjectSlug;
+    const localProject = readLocalProjects().find((project) => project.id === initialProjectSlug);
+    if (localProject) {
+      openProject(localProject);
+      return;
+    }
+    const nextName = titleFromSlug(initialProjectSlug);
+    setProjectStarted(true);
+    setProjectName(nextName);
+    setProjectSlug(initialProjectSlug);
+    setProjectId(initialProjectSlug);
+    resizeProject(DEFAULT_WIDTH, DEFAULT_HEIGHT, "feed");
+  }, [initialProjectSlug, resizeProject]);
+
   if (!open) return null;
+
+  if (!projectStarted) {
+    return (
+      <div className="fixed inset-0 z-[90] overflow-hidden bg-[#f7f4ed] text-zinc-950">
+        <canvas ref={canvasElRef} className="hidden" />
+        <header className="flex h-[72px] items-center justify-between border-b border-zinc-200 bg-white px-6">
+          <div className="flex items-center gap-3">
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#111111] text-[#d8b36b]">
+              <Scissors size={21} />
+            </div>
+            <div>
+              <div className="flex items-center gap-2 text-lg font-black leading-none">
+                SalaoPremiun Editor
+                <span className="rounded-full bg-[#d8b36b]/20 px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.18em] text-[#8a5a12]">
+                  desenvolvimento
+                </span>
+              </div>
+              <p className="mt-1 text-xs font-semibold text-zinc-500">Escolha um formato para comecar em branco ou use um modelo pronto.</p>
+            </div>
+          </div>
+          <button type="button" onClick={onClose} className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-zinc-200 bg-white text-zinc-700 transition hover:bg-zinc-50" aria-label="Fechar editor">
+            <X size={19} />
+          </button>
+        </header>
+
+        <main className="h-[calc(100vh-72px)] overflow-y-auto px-6 py-8">
+          <div className="mx-auto max-w-6xl">
+            <div className="mb-8 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.2em] text-[#8a5a12]">Novo projeto</p>
+                <h1 className="mt-2 text-4xl font-black tracking-tight text-zinc-950">O que vamos criar hoje?</h1>
+              </div>
+              <div className="flex min-w-0 items-center gap-2 rounded-2xl border border-zinc-200 bg-white px-4 py-3 shadow-sm">
+                <Search size={18} className="text-zinc-400" />
+                <input className="w-72 min-w-0 bg-transparent text-sm font-semibold outline-none" placeholder="Busque modelos: agenda, combo, depoimento..." />
+              </div>
+            </div>
+
+            <section className="mb-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+              {projectFormats.map((item) => (
+                <button
+                  key={item.formato}
+                  type="button"
+                  onClick={() => startProject({ width: item.width, height: item.height, formato: item.formato, name: `${item.label} sem titulo` })}
+                  className="rounded-3xl border border-zinc-200 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-[#d8b36b] hover:shadow-xl"
+                >
+                  <div className="mb-4 aspect-[4/3] rounded-2xl border border-[#ecd59d] bg-[#fff8e7]" />
+                  <div className="text-sm font-black">{item.label}</div>
+                  <div className="mt-1 text-xs font-bold text-zinc-500">{item.width}x{item.height}</div>
+                </button>
+              ))}
+              <button
+                type="button"
+                onClick={() => startProject({ width: customWidth, height: customHeight, formato: "personalizado", name: "Projeto personalizado" })}
+                className="rounded-3xl border border-dashed border-[#d8b36b] bg-[#fff8e7] p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-xl"
+              >
+                <div className="mb-4 grid grid-cols-2 gap-2">
+                  <input type="number" value={customWidth} onChange={(event) => setCustomWidth(Number(event.target.value || 1080))} className="h-10 rounded-xl border border-zinc-200 px-2 text-xs font-black" />
+                  <input type="number" value={customHeight} onChange={(event) => setCustomHeight(Number(event.target.value || 1080))} className="h-10 rounded-xl border border-zinc-200 px-2 text-xs font-black" />
+                </div>
+                <div className="text-sm font-black">Tamanho personalizado</div>
+                <div className="mt-1 text-xs font-bold text-zinc-500">Defina largura e altura</div>
+              </button>
+            </section>
+
+            <section>
+              <div className="mb-4 flex items-center justify-between">
+                <h2 className="text-xl font-black">Comece com um modelo</h2>
+                <button type="button" onClick={loadProjects} className="rounded-xl border border-zinc-200 bg-white px-4 py-2 text-xs font-black">Ver projetos salvos</button>
+              </div>
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                {startCards.map((card) => (
+                  <button
+                    key={card.kind}
+                    type="button"
+                    onClick={() => startProject({
+                      width: card.kind === "blank" ? DEFAULT_WIDTH : 1080,
+                      height: card.kind === "blank" ? DEFAULT_HEIGHT : card.kind === "agenda-glam" ? 1920 : 1350,
+                      formato: card.kind === "agenda-glam" ? "story" : "feed",
+                      templateKind: card.kind,
+                      name: card.label,
+                    })}
+                    className="group overflow-hidden rounded-[28px] border border-zinc-200 bg-white text-left shadow-sm transition hover:-translate-y-1 hover:shadow-2xl"
+                  >
+                    <div className="relative h-44 bg-[#17120d]">
+                      <div className="absolute inset-5 rounded-2xl border border-[#d8b36b]/60 bg-[#fff8e7]" />
+                      <div className="absolute left-8 top-8 h-16 w-16 rounded-full bg-[#d8b36b]/30" />
+                      <div className="absolute bottom-8 left-8 right-8 h-3 rounded-full bg-[#d8b36b]" />
+                    </div>
+                    <div className="p-5">
+                      <div className="flex items-center justify-between gap-3">
+                        <h3 className="font-black">{card.label}</h3>
+                        <ArrowRight className="transition group-hover:translate-x-1" size={18} />
+                      </div>
+                      <p className="mt-2 text-sm font-semibold text-zinc-500">{card.description}</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </section>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 z-[90] overflow-hidden bg-[#f4f0e8]">
@@ -1304,12 +1759,14 @@ export default function QrCodeArtEditor({
               <input
                 value={projectName}
                 onChange={(event) => setProjectName(event.target.value)}
+                onBlur={applyProjectNameToUrl}
                 className="mt-1 w-72 rounded-lg border border-transparent bg-transparent text-xs font-semibold text-zinc-500 outline-none focus:border-zinc-200 focus:bg-zinc-50"
               />
             </div>
           </div>
 
           <div className="flex items-center gap-2">
+            {status ? <span className="hidden rounded-full border border-zinc-200 bg-zinc-50 px-3 py-2 text-xs font-bold text-zinc-600 lg:inline-flex">{status}</span> : null}
             <HeaderButton label="Salvar" onClick={saveProject}><Save size={16} /></HeaderButton>
             <HeaderButton label="Desfazer" onClick={undo}><Undo2 size={16} /></HeaderButton>
             <HeaderButton label="Refazer" onClick={redo}><Redo2 size={16} /></HeaderButton>
@@ -1378,9 +1835,24 @@ export default function QrCodeArtEditor({
                   Fundo {transparentBackground ? "transparente ativo" : "transparente"}
                 </button>
                 <div className="mt-3 grid grid-cols-3 gap-2">
-                  <button type="button" onClick={() => addShape("rect")} className="rounded-xl border p-2 text-xs font-bold">Forma</button>
-                  <button type="button" onClick={() => addShape("circle")} className="rounded-xl border p-2 text-xs font-bold">Circulo</button>
-                  <button type="button" onClick={() => addShape("line")} className="rounded-xl border p-2 text-xs font-bold">Linha</button>
+                  {[
+                    ["rect", "Retangulo"],
+                    ["circle", "Circulo"],
+                    ["line", "Linha"],
+                    ["arrow", "Seta"],
+                    ["star", "Estrela"],
+                    ["heart", "Coracao"],
+                    ["badge", "Selo"],
+                    ["tag", "Tag"],
+                    ["speech", "Balao"],
+                    ["frame", "Moldura"],
+                    ["separator", "Separador"],
+                    ["qr-corners", "Cantoneiras"],
+                  ].map(([kind, label]) => (
+                    <button key={kind} type="button" onClick={() => addShape(kind as Parameters<typeof addShape>[0])} className="rounded-xl border p-2 text-xs font-bold">
+                      {label}
+                    </button>
+                  ))}
                 </div>
               </Panel>
             ) : null}
@@ -1412,6 +1884,13 @@ export default function QrCodeArtEditor({
 
             {activeTab === "elementos" ? (
               <Panel title="Elementos do salao" icon={<Shapes size={15} />}>
+                <div className="mb-4 flex flex-wrap gap-2">
+                  {elementCategories.map((category) => (
+                    <button key={category} type="button" className="rounded-full border border-zinc-200 bg-[#fff8e7] px-3 py-1.5 text-[11px] font-black text-[#8a5a12]">
+                      {category}
+                    </button>
+                  ))}
+                </div>
                 <div className="grid grid-cols-2 gap-2">
                   {elementPresets.map((preset) => (
                     <button key={preset.src} type="button" onClick={() => addSvgFromUrl(preset.src, preset.label, 240)} className="flex min-h-28 flex-col items-center justify-center gap-2 rounded-xl border border-zinc-200 bg-white p-3 text-xs font-black text-zinc-800 shadow-sm transition hover:border-[#d8b36b]">
@@ -1579,11 +2058,25 @@ export default function QrCodeArtEditor({
                       className="mt-1 w-full accent-[#8b3dff]"
                     />
                   </label>
+                  <div className="grid grid-cols-3 gap-2">
+                    <button type="button" onClick={() => applySelected({ fontWeight: "900" })} className="h-10 rounded-xl border text-xs font-black">B</button>
+                    <button type="button" onClick={() => applySelected({ fontStyle: "italic" })} className="h-10 rounded-xl border text-xs font-black"><Italic className="mx-auto" size={15} /></button>
+                    <button type="button" onClick={() => applySelected({ underline: true })} className="h-10 rounded-xl border text-xs font-black"><Underline className="mx-auto" size={15} /></button>
+                    <button type="button" onClick={() => applySelected({ linethrough: true })} className="h-10 rounded-xl border text-xs font-black">S</button>
+                    <button type="button" onClick={() => transformSelectedText("upper")} className="h-10 rounded-xl border text-xs font-black">AA</button>
+                    <button type="button" onClick={() => transformSelectedText("lower")} className="h-10 rounded-xl border text-xs font-black">aa</button>
+                    <button type="button" onClick={() => applySelected({ textAlign: "left" })} className="h-10 rounded-xl border text-xs font-black"><AlignLeft className="mx-auto" size={15} /></button>
+                    <button type="button" onClick={() => applySelected({ textAlign: "center" })} className="h-10 rounded-xl border text-xs font-black"><AlignCenter className="mx-auto" size={15} /></button>
+                    <button type="button" onClick={() => applySelected({ textAlign: "right" })} className="h-10 rounded-xl border text-xs font-black"><AlignRight className="mx-auto" size={15} /></button>
+                  </div>
                   <div className="grid grid-cols-2 gap-2">
-                    <button type="button" onClick={() => applySelected({ fontWeight: "900" })} className="h-10 rounded-xl border text-xs font-black">Negrito</button>
-                    <button type="button" onClick={() => applySelected({ shadow: "0px 8px 14px rgba(0,0,0,0.25)" })} className="h-10 rounded-xl border text-xs font-black">Sombra</button>
+                    <button type="button" onClick={() => applySelected({ shadow: "0px 8px 14px rgba(0,0,0,0.25)" })} className="h-10 rounded-xl border text-xs font-black">Sombra suave</button>
+                    <button type="button" onClick={() => applySelected({ shadow: "0px 16px 26px rgba(0,0,0,0.42)" })} className="h-10 rounded-xl border text-xs font-black">Sombra forte</button>
+                    <button type="button" onClick={() => applySelected({ shadow: "0px 0px 18px #d8b36b" })} className="h-10 rounded-xl border text-xs font-black">Brilho dourado</button>
+                    <button type="button" onClick={() => applySelected({ shadow: "0px 0px 18px #ed4f8c" })} className="h-10 rounded-xl border text-xs font-black">Neon</button>
+                    <button type="button" onClick={() => applySelected({ backgroundColor: "#fff0b8" })} className="h-10 rounded-xl border text-xs font-black">Etiqueta</button>
                     <button type="button" onClick={() => applySelected({ stroke: "#ffffff", strokeWidth: 2 })} className="h-10 rounded-xl border text-xs font-black">Contorno</button>
-                    <button type="button" onClick={() => applySelected({ shadow: null, strokeWidth: 0 })} className="h-10 rounded-xl border text-xs font-black">Limpar</button>
+                    <button type="button" onClick={() => applySelected({ shadow: null, strokeWidth: 0, backgroundColor: "" })} className="h-10 rounded-xl border text-xs font-black">Limpar estilo</button>
                   </div>
                   {selected.type === "image" ? (
                     <div className="space-y-2 rounded-2xl border border-zinc-200 bg-zinc-50 p-3">
@@ -1597,6 +2090,28 @@ export default function QrCodeArtEditor({
                         <button type="button" onClick={() => applyImageFilter("blur")} className="h-9 rounded-xl border bg-white text-xs font-black">Blur</button>
                         <button type="button" onClick={() => applySelected({ flipX: !Boolean(selected.get("flipX")) })} className="h-9 rounded-xl border bg-white text-xs font-black">Espelhar H</button>
                         <button type="button" onClick={() => applySelected({ flipY: !Boolean(selected.get("flipY")) })} className="h-9 rounded-xl border bg-white text-xs font-black">Espelhar V</button>
+                      </div>
+                      <div className="space-y-2 pt-1">
+                        <label className="block text-[11px] font-black text-zinc-500">Brilho
+                          <input type="range" min={-0.5} max={0.5} step={0.02} defaultValue={0} onChange={(event) => applyImageAdjust("brightness", Number(event.target.value))} className="w-full accent-[#8b3dff]" />
+                        </label>
+                        <label className="block text-[11px] font-black text-zinc-500">Contraste
+                          <input type="range" min={-0.5} max={0.5} step={0.02} defaultValue={0} onChange={(event) => applyImageAdjust("contrast", Number(event.target.value))} className="w-full accent-[#8b3dff]" />
+                        </label>
+                        <label className="block text-[11px] font-black text-zinc-500">Saturacao
+                          <input type="range" min={-1} max={1} step={0.04} defaultValue={0} onChange={(event) => applyImageAdjust("saturation", Number(event.target.value))} className="w-full accent-[#8b3dff]" />
+                        </label>
+                        <label className="block text-[11px] font-black text-zinc-500">Blur
+                          <input type="range" min={0} max={0.6} step={0.03} defaultValue={0} onChange={(event) => applyImageAdjust("blur", Number(event.target.value))} className="w-full accent-[#8b3dff]" />
+                        </label>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button type="button" onClick={() => applySelected({ rx: 34, ry: 34 })} className="h-9 rounded-xl border bg-white text-xs font-black">Cantos</button>
+                        <button type="button" onClick={() => applySelected({ stroke: "#ffffff", strokeWidth: 12 })} className="h-9 rounded-xl border bg-white text-xs font-black">Moldura</button>
+                        <button type="button" onClick={() => applySelected({ shadow: "0px 18px 32px rgba(0,0,0,0.25)" })} className="h-9 rounded-xl border bg-white text-xs font-black">Sombra</button>
+                        <button type="button" onClick={() => cropSelectedImage("circle")} className="h-9 rounded-xl border bg-white text-xs font-black">Circulo</button>
+                        <button type="button" onClick={() => cropSelectedImage("square")} className="h-9 rounded-xl border bg-white text-xs font-black">Quadrado</button>
+                        <button type="button" onClick={() => applySelected({ clipPath: undefined })} className="h-9 rounded-xl border bg-white text-xs font-black">Livre</button>
                       </div>
                       <button type="button" onClick={removeSelectedImageBackground} className="h-10 w-full rounded-xl border border-zinc-200 bg-white text-xs font-black text-zinc-800 transition hover:border-[#d8b36b]">
                         Remover fundo claro
@@ -1620,6 +2135,28 @@ export default function QrCodeArtEditor({
                 <p className="text-sm font-semibold text-zinc-500">Selecione um item para editar cor, fonte, tamanho, sombra, contorno e camadas.</p>
               )}
             </Panel>
+            <div className="mt-6">
+              <Panel title="Camadas" icon={<Layers size={15} />}>
+                <div className="space-y-2">
+                  {canvasLayers.length ? canvasLayers.map((object, index) => (
+                    <div key={`${objectLabel(object)}-${index}`} className={`rounded-xl border p-2 ${selected === object ? "border-[#d8b36b] bg-[#fff8e7]" : "border-zinc-200 bg-white"}`}>
+                      <button type="button" onClick={() => selectLayer(object)} className="mb-2 block w-full truncate text-left text-xs font-black">
+                        {objectLabel(object)}
+                      </button>
+                      <div className="grid grid-cols-5 gap-1">
+                        <button type="button" onClick={() => toggleLayerVisibility(object)} className="h-8 rounded-lg border text-zinc-700">{object.visible === false ? <EyeOff className="mx-auto" size={13} /> : <Eye className="mx-auto" size={13} />}</button>
+                        <button type="button" onClick={() => { selectLayer(object); lockSelected(!objectIsLocked(object)); }} className="h-8 rounded-lg border text-zinc-700"><Lock className="mx-auto" size={13} /></button>
+                        <button type="button" onClick={() => { selectLayer(object); moveLayer("front"); }} className="h-8 rounded-lg border text-zinc-700"><BringToFront className="mx-auto" size={13} /></button>
+                        <button type="button" onClick={() => { selectLayer(object); moveLayer("back"); }} className="h-8 rounded-lg border text-zinc-700"><Layers className="mx-auto" size={13} /></button>
+                        <button type="button" onClick={() => renameLayer(object)} className="h-8 rounded-lg border text-zinc-700"><PenLine className="mx-auto" size={13} /></button>
+                      </div>
+                    </div>
+                  )) : (
+                    <p className="rounded-xl border border-zinc-200 bg-zinc-50 p-3 text-xs font-semibold text-zinc-500">As camadas aparecem aqui conforme voce adiciona textos, imagens e formas.</p>
+                  )}
+                </div>
+              </Panel>
+            </div>
           </aside>
         </div>
       </div>
