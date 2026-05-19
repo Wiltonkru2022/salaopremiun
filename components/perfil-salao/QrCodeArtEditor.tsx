@@ -167,6 +167,16 @@ function objectLabel(object: FabricObject | null) {
   return named.name || object.type || "Elemento";
 }
 
+function applyFillDeep(object: FabricObject, fill: string) {
+  const maybeGroup = object as FabricObject & { getObjects?: () => FabricObject[] };
+  if (typeof maybeGroup.getObjects === "function") {
+    maybeGroup.getObjects().forEach((child) => applyFillDeep(child, fill));
+  }
+  if (object.type !== "image") {
+    object.set({ fill });
+  }
+}
+
 function applyCanvasDisplayScale(canvas: FabricCanvas | null, width: number, height: number, scale: number) {
   if (!canvas) return;
   canvas.setZoom(1);
@@ -198,8 +208,9 @@ export default function QrCodeArtEditor({
   const futureRef = useRef<string[]>([]);
   const loadingJsonRef = useRef(false);
 
-  const [activeTab, setActiveTab] = useState<EditorTab>("modelos");
+  const [activeTab, setActiveTab] = useState<EditorTab | null>(null);
   const [selected, setSelected] = useState<FabricObject | null>(null);
+  const [colorPanelOpen, setColorPanelOpen] = useState(false);
   const [projectName, setProjectName] = useState("Arte sem titulo");
   const [projectId, setProjectId] = useState<string | null>(null);
   const [format, setFormat] = useState("feed");
@@ -214,6 +225,7 @@ export default function QrCodeArtEditor({
   const [status, setStatus] = useState("");
 
   const selectedLocked = useMemo(() => objectIsLocked(selected || undefined), [selected]);
+  const documentColors = useMemo(() => ["#111111", "#ffffff", "#d8b36b", "#f3d37a", "#fff8e7"], []);
 
   const pushHistory = useCallback(() => {
     const canvas = canvasRef.current;
@@ -253,6 +265,30 @@ export default function QrCodeArtEditor({
     [artSize.height, artSize.width, pushHistory]
   );
 
+  const addSvgFromUrl = useCallback(
+    async (src: string, label = "Elemento", targetWidth = 240) => {
+      const fabric = fabricRef.current;
+      const canvas = canvasRef.current;
+      if (!fabric || !canvas) return;
+      const svg = await fetch(src).then((response) => response.text());
+      const loaded = await fabric.loadSVGFromString(svg);
+      const objects = loaded.objects.filter((object): object is FabricObject => Boolean(object));
+      const group = fabric.util.groupSVGElements(objects, loaded.options);
+      group.set({
+        left: artSize.width / 2 - targetWidth / 2,
+        top: artSize.height / 2 - targetWidth / 2,
+        name: label,
+      });
+      applyFillDeep(group as FabricObject, "#111111");
+      group.scaleToWidth(targetWidth);
+      canvas.add(group);
+      canvas.setActiveObject(group);
+      canvas.requestRenderAll();
+      pushHistory();
+    },
+    [artSize.height, artSize.width, pushHistory]
+  );
+
   const buildBaseTemplate = useCallback(
     async (width = artSize.width, height = artSize.height) => {
       const fabric = fabricRef.current;
@@ -260,74 +296,113 @@ export default function QrCodeArtEditor({
       if (!fabric || !canvas) return;
       loadingJsonRef.current = true;
       canvas.clear();
-      canvas.backgroundColor = "#fff8e7";
+      canvas.backgroundColor = "#fff7e6";
 
-      const frame = new fabric.Rect({
-        left: width * 0.06,
-        top: height * 0.05,
-        width: width * 0.88,
-        height: height * 0.9,
-        fill: "transparent",
-        stroke: "#d8b36b",
-        strokeWidth: 5,
-        rx: 28,
-        ry: 28,
+      const contentWidth = width * 0.78;
+      const centerX = width / 2;
+      const topY = height * 0.1;
+
+      const card = new fabric.Rect({
+        left: centerX - contentWidth / 2,
+        top: height * 0.055,
+        width: contentWidth,
+        height: height * 0.89,
+        fill: "#fffaf0",
+        stroke: "#e2bf6e",
+        strokeWidth: 4,
+        rx: 34,
+        ry: 34,
         selectable: false,
         evented: false,
-        name: "Moldura",
+        name: "Fundo",
       });
-      canvas.add(frame);
+      canvas.add(card);
 
       if (logoUrl) {
         const logo = await fabric.FabricImage.fromURL(logoUrl, { crossOrigin: "anonymous" });
-        logo.set({ left: width / 2 - 70, top: height * 0.08, name: "Logo" });
-        logo.scaleToWidth(140);
+        logo.set({ left: centerX - 55, top: topY, name: "Logo" });
+        logo.scaleToWidth(110);
         canvas.add(logo);
       }
 
       canvas.add(
-        new fabric.IText((salaoNome || "SalaoPremiun").toUpperCase(), {
-          left: width * 0.12,
-          top: logoUrl ? height * 0.19 : height * 0.1,
-          width: width * 0.76,
+        new fabric.Textbox((salaoNome || "SalaoPremiun").toUpperCase(), {
+          left: centerX,
+          top: logoUrl ? height * 0.2 : height * 0.13,
+          width: contentWidth * 0.82,
+          originX: "center",
           fontFamily: "Montserrat",
-          fontSize: 58,
+          fontSize: Math.round(width * 0.052),
           fontWeight: "900",
           fill: "#111111",
           textAlign: "center",
+          lineHeight: 0.95,
           name: "Titulo",
         })
       );
       canvas.add(
-        new fabric.IText("Agende seu horario pelo app", {
-          left: width * 0.18,
-          top: logoUrl ? height * 0.27 : height * 0.18,
-          width: width * 0.64,
-          fontFamily: "Lato",
-          fontSize: 34,
-          fontWeight: "700",
+        new fabric.Textbox("Agende seu horario pelo app", {
+          left: centerX,
+          top: logoUrl ? height * 0.31 : height * 0.25,
+          width: contentWidth * 0.74,
+          originX: "center",
+          fontFamily: "Montserrat",
+          fontSize: Math.round(width * 0.031),
+          fontWeight: "800",
           fill: "#5f5a4f",
           textAlign: "center",
           name: "Chamada",
         })
       );
 
+      const qrBoxSize = Math.min(width * 0.43, height * 0.26);
+      canvas.add(
+        new fabric.Rect({
+          left: centerX - qrBoxSize / 2 - 28,
+          top: height * 0.43 - 28,
+          width: qrBoxSize + 56,
+          height: qrBoxSize + 56,
+          fill: "#ffffff",
+          stroke: "#e2bf6e",
+          strokeWidth: 3,
+          rx: 28,
+          ry: 28,
+          selectable: false,
+          evented: false,
+          name: "Moldura QR Code",
+        })
+      );
       const qr = await fabric.FabricImage.fromURL(qrCodeUrl, { crossOrigin: "anonymous" });
-      qr.set({ left: width / 2 - 190, top: height * 0.43, name: "QR Code" });
-      qr.scaleToWidth(380);
+      qr.set({ left: centerX - qrBoxSize / 2, top: height * 0.43, name: "QR Code" });
+      qr.scaleToWidth(qrBoxSize);
       canvas.add(qr);
 
       canvas.add(
-        new fabric.IText(publicUrl, {
-          left: width * 0.13,
-          top: height * 0.79,
-          width: width * 0.74,
+        new fabric.Textbox(publicUrl, {
+          left: centerX,
+          top: height * 0.77,
+          width: contentWidth * 0.76,
+          originX: "center",
           fontFamily: "Montserrat",
-          fontSize: 24,
+          fontSize: Math.round(width * 0.018),
           fontWeight: "800",
           fill: "#111111",
           textAlign: "center",
           name: "Link",
+        })
+      );
+      canvas.add(
+        new fabric.Textbox("Aponte a camera e reserve em poucos segundos", {
+          left: centerX,
+          top: height * 0.84,
+          width: contentWidth * 0.74,
+          originX: "center",
+          fontFamily: "Montserrat",
+          fontSize: Math.round(width * 0.022),
+          fontWeight: "700",
+          fill: "#6b6255",
+          textAlign: "center",
+          name: "Instrucao",
         })
       );
 
@@ -696,7 +771,11 @@ export default function QrCodeArtEditor({
     const canvas = canvasRef.current;
     const active = canvas?.getActiveObject();
     if (!canvas || !active) return;
-    active.set(patch);
+    const { fill, ...rest } = patch;
+    if (fill) {
+      applyFillDeep(active, fill);
+    }
+    active.set(rest);
     canvas.requestRenderAll();
     pushHistory();
     setSelected(active);
@@ -923,16 +1002,26 @@ export default function QrCodeArtEditor({
           </div>
         </header>
 
-        <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[400px_minmax(0,1fr)_320px]">
+        <div
+          className="grid min-h-0 flex-1 grid-cols-1"
+          style={{ gridTemplateColumns: activeTab ? "400px minmax(0,1fr) 320px" : "76px minmax(0,1fr) 320px" }}
+        >
           <aside className="min-h-0 border-r border-zinc-200 bg-white">
             <div className="flex h-full">
             <nav className="flex w-[76px] shrink-0 flex-col items-center gap-1 border-r border-zinc-200 bg-[#fbfaf7] px-2 py-3">
               {tabConfig.map((tab) => {
                 const Icon = tab.icon;
+                const openTab = () => {
+                  setActiveTab(tab.id);
+                  if (tab.id === "projetos") loadProjects();
+                };
                 return (
-                  <button key={tab.id} type="button" onClick={() => {
-                    setActiveTab(tab.id);
-                    if (tab.id === "projetos") loadProjects();
+                  <button key={tab.id} type="button" onMouseEnter={openTab} onClick={() => {
+                    if (activeTab === tab.id) {
+                      setActiveTab(null);
+                      return;
+                    }
+                    openTab();
                   }} className={`group relative flex h-[62px] w-full flex-col items-center justify-center gap-1 rounded-xl text-[10px] font-black transition ${activeTab === tab.id ? "bg-white text-[#8a5a12] shadow-sm ring-1 ring-zinc-200" : "text-zinc-500 hover:bg-white/70"}`} aria-pressed={activeTab === tab.id}>
                     <Icon size={14} />
                     {tab.label}
@@ -943,7 +1032,7 @@ export default function QrCodeArtEditor({
                 );
               })}
             </nav>
-            <div className="min-w-0 flex-1 overflow-y-auto p-4">
+            {activeTab ? <div className="min-w-0 flex-1 overflow-y-auto p-4">
 
             {activeTab === "modelos" ? (
               <Panel title="Novo projeto" icon={<Layers size={15} />}>
@@ -1007,7 +1096,7 @@ export default function QrCodeArtEditor({
               <Panel title="Elementos do salao" icon={<Shapes size={15} />}>
                 <div className="grid grid-cols-2 gap-2">
                   {elementPresets.map((preset) => (
-                    <button key={preset.src} type="button" onClick={() => addImageFromUrl(preset.src, preset.label, 240)} className="flex min-h-28 flex-col items-center justify-center gap-2 rounded-xl border border-zinc-200 bg-white p-3 text-xs font-black text-zinc-800 shadow-sm transition hover:border-[#d8b36b]">
+                    <button key={preset.src} type="button" onClick={() => addSvgFromUrl(preset.src, preset.label, 240)} className="flex min-h-28 flex-col items-center justify-center gap-2 rounded-xl border border-zinc-200 bg-white p-3 text-xs font-black text-zinc-800 shadow-sm transition hover:border-[#d8b36b]">
                       <img src={preset.src} alt={preset.label} className="h-14 w-14 object-contain" draggable={false} />
                       {preset.label}
                     </button>
@@ -1046,7 +1135,7 @@ export default function QrCodeArtEditor({
             ) : null}
 
             {status ? <div className="mt-4 rounded-xl border border-zinc-200 bg-zinc-50 p-3 text-xs font-semibold text-zinc-600">{status}</div> : null}
-            </div>
+            </div> : null}
             </div>
           </aside>
 
@@ -1055,7 +1144,36 @@ export default function QrCodeArtEditor({
               <div className="sticky top-0 z-20 mb-4 flex max-w-full flex-wrap items-center gap-2 rounded-2xl border border-zinc-200 bg-white/95 px-3 py-2 shadow-lg shadow-black/10 backdrop-blur">
                 <span className="mr-1 text-sm font-black">Editar</span>
                 <div className="h-6 w-px bg-zinc-200" />
-                <ToolButton label="Cor" onClick={() => applySelected({ fill: "#111111" })}><span className="h-5 w-5 rounded-full bg-zinc-950" /></ToolButton>
+                <div className="relative">
+                  <ToolButton label="Cor" onClick={() => setColorPanelOpen((value) => !value)}><span className="h-5 w-5 rounded-full bg-zinc-950" /></ToolButton>
+                  {colorPanelOpen ? (
+                    <div className="absolute left-0 top-12 z-30 w-72 rounded-2xl border border-zinc-200 bg-white p-4 shadow-2xl shadow-black/15">
+                      <div className="mb-3 flex items-center justify-between">
+                        <span className="text-sm font-black">Cor do elemento</span>
+                        <button type="button" onClick={() => setColorPanelOpen(false)} className="text-zinc-500 hover:text-zinc-950">×</button>
+                      </div>
+                      <input
+                        type="color"
+                        value={String(selectedTextValue("fill") || "#111111")}
+                        onChange={(event) => applySelected({ fill: event.target.value })}
+                        className="mb-4 h-10 w-full rounded-xl border"
+                      />
+                      <div className="mb-2 text-xs font-black text-zinc-500">Cores no documento</div>
+                      <div className="flex flex-wrap gap-2">
+                        {documentColors.map((color) => (
+                          <button
+                            key={color}
+                            type="button"
+                            onClick={() => applySelected({ fill: color })}
+                            className="h-9 w-9 rounded-full border border-zinc-200 shadow-sm"
+                            style={{ backgroundColor: color }}
+                            aria-label={`Aplicar cor ${color}`}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
                 <ToolButton label="Centro H" onClick={() => alignSelected("h")}><AlignHorizontalJustifyCenter size={15} /></ToolButton>
                 <ToolButton label="Centro V" onClick={() => alignSelected("v")}><AlignVerticalJustifyCenter size={15} /></ToolButton>
                 <div className="h-6 w-px bg-zinc-200" />
