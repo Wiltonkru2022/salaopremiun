@@ -58,8 +58,7 @@ export async function listarProximosAgendamentosProfissional(
             )
             .eq("id_salao", cachedSalaoId)
             .eq("profissional_id", cachedProfissionalId)
-            .gte("data", cachedHoje)
-            .order("data", { ascending: true })
+            .eq("data", cachedHoje)
             .order("hora_inicio", { ascending: true })
             .limit(10);
 
@@ -121,20 +120,24 @@ export async function listarProximosAgendamentosProfissional(
             ])
           );
 
-          return rows.map((item) => ({
-            id: item.id,
-            data: item.data,
-            hora_inicio: item.hora_inicio,
-            hora_fim: item.hora_fim,
-            status: item.status,
-            id_comanda: item.id_comanda ?? null,
-            cliente_nome: item.cliente_id
-              ? clientesMap.get(item.cliente_id) ?? "Cliente"
-              : "Cliente",
-            servico_nome: item.servico_id
-              ? servicosMap.get(item.servico_id) ?? "Serviço"
-              : "Serviço",
-          }));
+          return rows
+            .sort((a, b) =>
+              String(a.hora_inicio).localeCompare(String(b.hora_inicio))
+            )
+            .map((item) => ({
+              id: item.id,
+              data: item.data,
+              hora_inicio: item.hora_inicio,
+              hora_fim: item.hora_fim,
+              status: item.status,
+              id_comanda: item.id_comanda ?? null,
+              cliente_nome: item.cliente_id
+                ? clientesMap.get(item.cliente_id) ?? "Cliente"
+                : "Cliente",
+              servico_nome: item.servico_id
+                ? servicosMap.get(item.servico_id) ?? "Serviço"
+                : "Serviço",
+            }));
         },
       }),
     ["profissional-inicio-agendamentos"],
