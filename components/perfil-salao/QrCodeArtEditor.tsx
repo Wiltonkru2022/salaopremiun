@@ -175,6 +175,22 @@ const photoTags = [
 
 const elementPresets = [
   {
+    label: "Beauty",
+    src: "/salaopremiun-editor/elementos/beauty.svg",
+  },
+  {
+    label: "Chuveiro",
+    src: "/salaopremiun-editor/elementos/chuveiro.svg",
+  },
+  {
+    label: "Tesoura classica",
+    src: "/salaopremiun-editor/elementos/scissors.svg",
+  },
+  {
+    label: "Secador rosa",
+    src: "/salaopremiun-editor/elementos/secador.svg",
+  },
+  {
     label: "Tesoura premium",
     src: "/salaopremiun-editor/elementos/tesoura-premium.svg",
   },
@@ -205,6 +221,26 @@ const elementPresets = [
   {
     label: "Agenda aberta",
     src: "/salaopremiun-editor/elementos/agenda-aberta.svg",
+  },
+  {
+    label: "Maquina de corte",
+    src: "/salaopremiun-editor/elementos/maquina-corte.svg",
+  },
+  {
+    label: "Cadeira salao",
+    src: "/salaopremiun-editor/elementos/cadeira-salao-rosa.svg",
+  },
+  {
+    label: "Spray rosa",
+    src: "/salaopremiun-editor/elementos/spray-rosa.svg",
+  },
+  {
+    label: "Laco rosa",
+    src: "/salaopremiun-editor/elementos/laco-rosa.svg",
+  },
+  {
+    label: "Rosto beleza",
+    src: "/salaopremiun-editor/elementos/rosto-beleza.svg",
   },
 ] as const;
 
