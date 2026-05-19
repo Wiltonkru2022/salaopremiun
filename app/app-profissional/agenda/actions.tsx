@@ -46,6 +46,11 @@ export async function criarAgendamentoProfissionalAction(formData: FormData) {
 
   const clienteId = String(formData.get("cliente_id") || "");
   const servicoId = String(formData.get("servico_id") || "");
+  const profissionalIdForm = String(formData.get("profissional_id") || "");
+  const profissionalId =
+    session.podeVerAgendaTodos && profissionalIdForm
+      ? profissionalIdForm
+      : session.idProfissional;
   const data = String(formData.get("data") || "");
   const horaInicio = String(formData.get("hora_inicio") || "");
   const observacoes = String(formData.get("observacoes") || "");
@@ -54,17 +59,18 @@ export async function criarAgendamentoProfissionalAction(formData: FormData) {
   const redirectBase = {
     cliente_id: clienteId,
     servico_id: servicoId,
+    profissional_id: profissionalId,
     data,
     hora_inicio: horaInicio,
     observacoes,
   };
 
   try {
-    if (!clienteId || !servicoId || !data || !horaInicio) {
+    if (!clienteId || !servicoId || !profissionalId || !data || !horaInicio) {
       redirect(
         buildNovoUrl({
           ...redirectBase,
-          erro: "Preencha cliente, serviço, data e horário.",
+          erro: "Preencha cliente, serviço, profissional, data e horário.",
         })
       );
     }
@@ -76,9 +82,9 @@ export async function criarAgendamentoProfissionalAction(formData: FormData) {
     ]);
 
     const [configProfissional, servico] = await Promise.all([
-      buscarConfiguracaoAgendaProfissional(session.idSalao, session.idProfissional),
+      buscarConfiguracaoAgendaProfissional(session.idSalao, profissionalId),
       buscarServicoPorId(session.idSalao, servicoId),
-      validarServicoVinculadoAoProfissional(session.idSalao, session.idProfissional, servicoId),
+      validarServicoVinculadoAoProfissional(session.idSalao, profissionalId, servicoId),
     ]);
 
     if (!configProfissional.ativo) {
@@ -102,7 +108,7 @@ export async function criarAgendamentoProfissionalAction(formData: FormData) {
 
     const conflitos = await buscarConflitosNoHorario({
       idSalao: session.idSalao,
-      idProfissional: session.idProfissional,
+      idProfissional: profissionalId,
       dataISO: data,
       horaInicio: inicioValido,
       horaFim,
@@ -127,7 +133,7 @@ export async function criarAgendamentoProfissionalAction(formData: FormData) {
         const { error } = await supabase.from("agendamentos").insert({
           id_salao: session.idSalao,
           cliente_id: clienteId,
-          profissional_id: session.idProfissional,
+          profissional_id: profissionalId,
           servico_id: servicoId,
           data,
           hora_inicio: `${inicioValido}:00`,

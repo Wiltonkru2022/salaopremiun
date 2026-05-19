@@ -1,6 +1,7 @@
 import { CalendarPlus2, Clock3, UsersRound } from "lucide-react";
 import { buscarConfiguracaoAgendaProfissional } from "@/app/services/profissional/agenda";
 import { criarAgendamentoProfissionalAction } from "@/app/app-profissional/agenda/actions";
+import NovoAgendamentoProfissionalFields from "@/components/profissional/agenda/NovoAgendamentoProfissionalFields";
 import ProfissionalShell from "@/components/profissional/layout/ProfissionalShell";
 import ProfissionalSectionHeader from "@/components/profissional/ui/ProfissionalSectionHeader";
 import ProfissionalSearchableFormField from "@/components/profissional/ui/ProfissionalSearchableFormField";
@@ -28,6 +29,7 @@ function formatarDataCompacta(dataISO: string) {
 type SearchParams = Promise<{
   cliente_id?: string;
   servico_id?: string;
+  profissional_id?: string;
   data?: string;
   hora_inicio?: string;
   observacoes?: string;
@@ -59,6 +61,18 @@ type ServicoOption = {
   id: string;
   nome: string;
   duracao_minutos?: number | string | null;
+};
+
+type ProfissionalOption = {
+  id: string;
+  nome?: string | null;
+  nome_exibicao?: string | null;
+  tipo_profissional?: string | null;
+};
+
+type VinculoServicoRow = {
+  id_servico?: string | null;
+  id_profissional?: string | null;
 };
 
 type AgendaDiaRow = {
@@ -123,18 +137,39 @@ export default async function NovoAgendamentoProfissionalPage({
   const session = await requireProfissionalAppContext();
   const query = searchParams ? await searchParams : {};
   const dataSelecionada = query.data || hojeISO();
+  const profissionalSelecionadoId =
+    session.podeVerAgendaTodos && query.profissional_id
+      ? query.profissional_id
+      : session.idProfissional;
 
   const [configProfissional, agendaPageData] = await Promise.all([
-    buscarConfiguracaoAgendaProfissional(session.idSalao, session.idProfissional),
+    buscarConfiguracaoAgendaProfissional(
+      session.idSalao,
+      profissionalSelecionadoId
+    ),
     runAdminOperation({
       action: "app_profissional_agenda_novo_page",
       actorId: session.idProfissional,
       idSalao: session.idSalao,
       run: async (supabaseAdmin) => {
+        let vinculosQuery = supabaseAdmin
+          .from("profissional_servicos")
+          .select("id_servico, id_profissional")
+          .eq("id_salao", session.idSalao)
+          .eq("ativo", true);
+
+        if (!session.podeVerAgendaTodos) {
+          vinculosQuery = vinculosQuery.eq(
+            "id_profissional",
+            session.idProfissional
+          );
+        }
+
         const [
           clientesResult,
           servicosResult,
           vinculosServicosResult,
+          profissionaisResult,
           agendaDiaResult,
         ] = await Promise.all([
           supabaseAdmin
@@ -149,19 +184,20 @@ export default async function NovoAgendamentoProfissionalPage({
             .eq("id_salao", session.idSalao)
             .eq("ativo", true)
             .order("nome", { ascending: true }),
+          vinculosQuery,
           supabaseAdmin
-            .from("profissional_servicos")
-            .select("id_servico")
+            .from("profissionais")
+            .select("id, nome, nome_exibicao, tipo_profissional")
             .eq("id_salao", session.idSalao)
-            .eq("id_profissional", session.idProfissional)
-            .eq("ativo", true),
+            .eq("ativo", true)
+            .order("nome", { ascending: true }),
           supabaseAdmin
             .from("agendamentos")
             .select(
               "id, hora_inicio, hora_fim, status, clientes ( id, nome ), servicos ( id, nome )"
             )
             .eq("id_salao", session.idSalao)
-            .eq("profissional_id", session.idProfissional)
+            .eq("profissional_id", profissionalSelecionadoId)
             .eq("data", dataSelecionada)
             .not("status", "eq", "cancelado")
             .order("hora_inicio", { ascending: true }),
@@ -171,6 +207,7 @@ export default async function NovoAgendamentoProfissionalPage({
           clientesResult,
           servicosResult,
           vinculosServicosResult,
+          profissionaisResult,
           agendaDiaResult,
         };
       },
@@ -181,6 +218,7 @@ export default async function NovoAgendamentoProfissionalPage({
     clientesResult,
     servicosResult,
     vinculosServicosResult,
+    profissionaisResult,
     agendaDiaResult,
   } = agendaPageData;
 
@@ -189,14 +227,33 @@ export default async function NovoAgendamentoProfissionalPage({
   if (vinculosServicosResult.error) {
     throw new Error(vinculosServicosResult.error.message);
   }
+  if (profissionaisResult.error) throw new Error(profissionaisResult.error.message);
   if (agendaDiaResult.error) throw new Error(agendaDiaResult.error.message);
 
   const clientes = (clientesResult.data ?? []) as ClienteOption[];
+  const vinculosServicos = (vinculosServicosResult.data ?? []) as VinculoServicoRow[];
+  const profissionaisAtivos = ((profissionaisResult.data ?? []) as ProfissionalOption[])
+    .filter(
+      (profissional) =>
+        String(profissional.tipo_profissional || "profissional").toLowerCase() !==
+        "assistente"
+    );
+  const profissionaisBase = session.podeVerAgendaTodos
+    ? profissionaisAtivos
+    : profissionaisAtivos.filter(
+        (profissional) => profissional.id === session.idProfissional
+      );
   const idsServicosLiberados = new Set(
-    (vinculosServicosResult.data ?? []).map((item) => item.id_servico).filter(Boolean)
+    vinculosServicos.map((item) => item.id_servico).filter(Boolean)
   );
   const servicos = ((servicosResult.data ?? []) as ServicoOption[]).filter((servico) =>
     idsServicosLiberados.has(servico.id)
+  );
+  const profissionaisComServico = new Set(
+    vinculosServicos.map((item) => item.id_profissional).filter(Boolean)
+  );
+  const profissionais = profissionaisBase.filter((profissional) =>
+    profissionaisComServico.has(profissional.id)
   );
   const agendaDia = ((agendaDiaResult.data ?? []) as AgendaDiaRow[]).map((item) => ({
     id: item.id,
@@ -305,7 +362,7 @@ export default async function NovoAgendamentoProfissionalPage({
 
           <form
             action={criarAgendamentoProfissionalAction}
-            className="space-y-3.5 [&>label:nth-of-type(-n+2)]:hidden"
+            className="space-y-3.5"
           >
             <ProfissionalSearchableFormField
               name="cliente_id"
@@ -320,57 +377,31 @@ export default async function NovoAgendamentoProfissionalPage({
               }))}
             />
 
-            <ProfissionalSearchableFormField
-              name="servico_id"
-              label="Serviço"
-              defaultValue={query.servico_id || ""}
-              placeholder="Digite o nome do serviço"
-              emptyText="Nenhum serviço encontrado."
-              options={servicos.map((servico) => ({
+            <NovoAgendamentoProfissionalFields
+              servicos={servicos.map((servico) => ({
                 value: servico.id,
                 label: servico.nome,
                 description: servico.duracao_minutos
                   ? `${servico.duracao_minutos} min`
                   : null,
               }))}
+              profissionais={profissionais.map((profissional) => ({
+                value: profissional.id,
+                label:
+                  profissional.nome_exibicao ||
+                  profissional.nome ||
+                  "Profissional",
+              }))}
+              vinculos={vinculosServicos
+                .filter((vinculo) => vinculo.id_servico && vinculo.id_profissional)
+                .map((vinculo) => ({
+                  idServico: String(vinculo.id_servico),
+                  idProfissional: String(vinculo.id_profissional),
+                }))}
+              defaultServicoId={query.servico_id || ""}
+              defaultProfissionalId={profissionalSelecionadoId}
+              permiteEscolherProfissional={session.podeVerAgendaTodos}
             />
-            <label className="block text-sm font-medium text-zinc-700">
-              Cliente
-              <select
-                disabled
-                name="_cliente_id_legacy"
-                defaultValue={query.cliente_id || ""}
-                className={inputClass()}
-                required
-              >
-                <option value="">Selecione o cliente</option>
-                {clientes.map((cliente) => (
-                  <option key={cliente.id} value={cliente.id}>
-                    {cliente.nome}
-                    {cliente.telefone ? ` - ${cliente.telefone}` : ""}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label className="block text-sm font-medium text-zinc-700">
-              Serviço
-              <select
-                disabled
-                name="_servico_id_legacy"
-                defaultValue={query.servico_id || ""}
-                className={inputClass()}
-                required
-              >
-                <option value="">Selecione o serviço</option>
-                {servicos.map((servico) => (
-                  <option key={servico.id} value={servico.id}>
-                    {servico.nome}
-                    {servico.duracao_minutos ? ` - ${servico.duracao_minutos} min` : ""}
-                  </option>
-                ))}
-              </select>
-            </label>
 
             <div className="grid w-full min-w-0 grid-cols-1 gap-3 overflow-hidden sm:grid-cols-2">
               <label className="block w-full min-w-0 overflow-hidden text-sm font-medium text-zinc-700">
