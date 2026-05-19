@@ -70,6 +70,7 @@ function buildCsp() {
     "https://*.googleusercontent.com",
     "https://*.gstatic.com",
     "https://images.unsplash.com",
+    "https://images.pexels.com",
   ];
   const frameAncestors = ["'self'"];
   const frameSrc = [
@@ -194,6 +195,11 @@ const nextConfig: NextConfig = {
       {
         protocol: "https",
         hostname: "images.unsplash.com",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "images.pexels.com",
         pathname: "/**",
       },
     ],
