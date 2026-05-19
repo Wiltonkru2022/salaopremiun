@@ -15,6 +15,7 @@ import {
   validarHorarioAgendamento,
   validarServicoVinculadoAoProfissional,
 } from "@/app/services/profissional/agenda";
+import { sincronizarAgendamentoComComandaNoCaixa } from "@/lib/agenda/sincronizarAgendamentoComComanda";
 
 function buildNovaComandaUrl(
   params: Record<string, string | number | undefined | null>
@@ -187,6 +188,15 @@ export async function criarComandaProfissionalAction(formData: FormData) {
             agendamentoError?.message || "Erro ao vincular agenda a comanda."
           );
         }
+
+        await sincronizarAgendamentoComComandaNoCaixa({
+          supabase: supabaseAdmin,
+          idSalao: session.idSalao,
+          idAgendamento: agendamento.id,
+          idComandaNova: comanda.id,
+          idServico: servicoId,
+          idProfissional: session.idProfissional,
+        });
 
         const { error: updateError } = await supabaseAdmin
           .from("comandas")
