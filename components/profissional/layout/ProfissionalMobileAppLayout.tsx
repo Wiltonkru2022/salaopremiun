@@ -40,14 +40,6 @@ export default function ProfissionalMobileAppLayout({
     setMounted(true);
   }, []);
 
-  useEffect(() => {
-    setChrome({
-      title: "SalaoPremium",
-      subtitle: "",
-      showBottomNav: true,
-    });
-  }, [pathname]);
-
   if (hideChrome) {
     return (
       <div className="app-profissional-root min-h-dvh bg-[#f5f5f5] text-zinc-900">

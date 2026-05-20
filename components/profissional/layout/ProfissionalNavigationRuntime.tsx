@@ -23,6 +23,7 @@ const PREFETCH_ROUTES = [
 ];
 
 const PENDING_FEEDBACK_TIMEOUT_MS = 1200;
+const APP_PROFISSIONAL_PREFIX = "/app-profissional";
 
 function buildLabel(pathname: string) {
   if (pathname.includes("/agenda")) return "Abrindo agenda...";
@@ -60,6 +61,31 @@ function getNormalizedPath(value: string) {
   return value;
 }
 
+function removeAppProfissionalPrefix(value: string) {
+  if (value === APP_PROFISSIONAL_PREFIX) return "/";
+  if (value.startsWith(`${APP_PROFISSIONAL_PREFIX}/`)) {
+    return value.slice(APP_PROFISSIONAL_PREFIX.length) || "/";
+  }
+  return value;
+}
+
+function getComparablePathnames(value: string) {
+  const pathname = value.split("?")[0] || "/";
+  const withoutPrefix = removeAppProfissionalPrefix(pathname);
+  return new Set([pathname, withoutPrefix]);
+}
+
+function isSameProfissionalRoute(currentPathname: string, nextPathname: string) {
+  const currentCandidates = getComparablePathnames(currentPathname);
+  const nextCandidates = getComparablePathnames(nextPathname);
+
+  for (const value of nextCandidates) {
+    if (currentCandidates.has(value)) return true;
+  }
+
+  return false;
+}
+
 export default function ProfissionalNavigationRuntime() {
   const router = useRouter();
   const pathname = usePathname();
@@ -80,7 +106,7 @@ export default function ProfissionalNavigationRuntime() {
 
     const normalizedPending = pendingPath.split("?")[0];
 
-    if (pathname === normalizedPending || pathname.startsWith(`${normalizedPending}/`)) {
+    if (isSameProfissionalRoute(pathname, normalizedPending)) {
       if (timeoutRef.current) {
         window.clearTimeout(timeoutRef.current);
         timeoutRef.current = null;
@@ -132,7 +158,7 @@ export default function ProfissionalNavigationRuntime() {
       const normalized = getNormalizedPath(String(href));
       const nextPathname = normalized.split("?")[0];
 
-      if (nextPathname === pathname) return;
+      if (isSameProfissionalRoute(pathname, nextPathname)) return;
 
       setPendingPath(nextPathname);
       scheduleReset();
