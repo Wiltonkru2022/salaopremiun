@@ -210,8 +210,14 @@ export default function ComandasPage() {
   );
 
   const bootstrap = useCallback(async () => {
+    const shouldShowInitialLoading = !acessoCarregado;
+
     try {
-      setLoading(true);
+      if (shouldShowInitialLoading) {
+        setLoading(true);
+      } else {
+        setLoadingMore(true);
+      }
       setErro("");
 
       const acesso = await carregarAcesso();
@@ -221,9 +227,13 @@ export default function ComandasPage() {
       console.error(e);
       setErro(e instanceof Error ? e.message : "Erro ao carregar comandas.");
     } finally {
-      setLoading(false);
+      if (shouldShowInitialLoading) {
+        setLoading(false);
+      } else {
+        setLoadingMore(false);
+      }
     }
-  }, [carregarAcesso, carregarComandas]);
+  }, [acessoCarregado, carregarAcesso, carregarComandas]);
 
   useEffect(() => {
     void bootstrap();

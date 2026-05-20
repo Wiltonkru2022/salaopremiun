@@ -320,6 +320,7 @@ export default function RelatorioFinanceiroPage() {
   const { snapshot: painelSession } = usePainelSession();
 
   const [loading, setLoading] = useState(true);
+  const [dadosCarregados, setDadosCarregados] = useState(false);
   const [semPermissao, setSemPermissao] = useState(false);
   const [erroTela, setErroTela] = useState("");
   const [msg, setMsg] = useState("");
@@ -354,7 +355,13 @@ export default function RelatorioFinanceiroPage() {
 
   const carregarRelatorio = useCallback(
     async (salaoIdParam?: string) => {
+      const shouldShowInitialLoading = !dadosCarregados;
+
       try {
+        if (shouldShowInitialLoading) {
+          setLoading(true);
+        }
+
         const salaoId = salaoIdParam || idSalao;
         if (!salaoId) return;
         const dataInicioRange = getLocalDayRangeIso(dataInicio);
@@ -559,12 +566,27 @@ export default function RelatorioFinanceiroPage() {
         setErroTela(
           error instanceof Error ? error.message : "Erro ao carregar relatório financeiro."
         );
+      } finally {
+        setDadosCarregados(true);
+        if (shouldShowInitialLoading) {
+          setLoading(false);
+        }
       }
     },
-    [supabase, idSalao, statusFiltro, dataInicio, dataFim, painelSession?.planoRecursos]
+    [
+      dadosCarregados,
+      supabase,
+      idSalao,
+      statusFiltro,
+      dataInicio,
+      dataFim,
+      painelSession?.planoRecursos,
+    ]
   );
 
   const init = useCallback(async () => {
+    let handedOffToReportLoad = false;
+
     try {
       setLoading(true);
       setErroTela("");
@@ -587,16 +609,18 @@ export default function RelatorioFinanceiroPage() {
       }
 
       setIdSalao(painelSession.idSalao);
-      await carregarRelatorio(painelSession.idSalao);
+      handedOffToReportLoad = true;
     } catch (error: unknown) {
       console.error(error);
       setErroTela(
         error instanceof Error ? error.message : "Erro ao carregar relatório financeiro."
       );
     } finally {
-      setLoading(false);
+      if (!handedOffToReportLoad) {
+        setLoading(false);
+      }
     }
-  }, [carregarRelatorio, painelSession]);
+  }, [painelSession]);
 
   useEffect(() => {
     void init();
