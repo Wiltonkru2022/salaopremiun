@@ -26,7 +26,7 @@ function SubmitButton() {
   );
 }
 
-function formatTelefone(value: string) {
+function formatWhatsApp(value: string) {
   const digits = value.replace(/\D/g, "").slice(0, 11);
 
   if (digits.length <= 10) {
@@ -46,8 +46,8 @@ export default function NovoClienteForm() {
     initialState
   );
 
-  const [telefone, setTelefone] = useState("");
-  const telefoneFormatado = useMemo(() => telefone, [telefone]);
+  const [whatsapp, setWhatsapp] = useState("");
+  const whatsappFormatado = useMemo(() => whatsapp, [whatsapp]);
 
   return (
     <form
@@ -73,14 +73,14 @@ export default function NovoClienteForm() {
 
       <div>
         <label className="mb-1.5 block text-sm font-medium text-zinc-700">
-          Telefone
+          WhatsApp
         </label>
         <input
-          name="telefone"
+          name="whatsapp"
           type="text"
           inputMode="numeric"
-          value={telefoneFormatado}
-          onChange={(e) => setTelefone(formatTelefone(e.target.value))}
+          value={whatsappFormatado}
+          onChange={(e) => setWhatsapp(formatWhatsApp(e.target.value))}
           placeholder="(00) 00000-0000"
           className="h-11 w-full min-w-0 rounded-[18px] border border-zinc-200 bg-white px-4 text-base outline-none transition focus:border-zinc-400"
         />

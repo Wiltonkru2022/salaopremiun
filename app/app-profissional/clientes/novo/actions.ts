@@ -24,7 +24,7 @@ export async function criarClienteProfissionalAction(
   const session = await requireProfissionalAppContext();
 
   const nome = String(formData.get("nome") || "").trim();
-  const telefone = somenteDigitos(String(formData.get("telefone") || ""));
+  const whatsapp = somenteDigitos(String(formData.get("whatsapp") || ""));
   const email = String(formData.get("email") || "").trim().toLowerCase();
   const observacoes = String(formData.get("observacoes") || "").trim();
 
@@ -50,7 +50,7 @@ export async function criarClienteProfissionalAction(
       const { error } = await supabase.from("clientes").insert({
         id_salao: session.idSalao,
         nome,
-        telefone: telefone || null,
+        whatsapp: whatsapp || null,
         email: email || null,
         observacoes: observacoes || null,
         status: "ativo",

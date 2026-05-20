@@ -23,10 +23,10 @@ type ClienteRow = {
   status?: string | null;
 };
 
-function formatTelefone(value?: string | null) {
+function formatContato(value?: string | null) {
   const digits = String(value || "").replace(/\D/g, "");
 
-  if (!digits) return "Sem telefone";
+  if (!digits) return "Sem WhatsApp";
 
   if (digits.length === 11) {
     return digits.replace(/^(\d{2})(\d{5})(\d{4})$/, "($1) $2-$3");
@@ -36,7 +36,7 @@ function formatTelefone(value?: string | null) {
     return digits.replace(/^(\d{2})(\d{4})(\d{4})$/, "($1) $2-$3");
   }
 
-  return value || "Sem telefone";
+  return value || "Sem WhatsApp";
 }
 
 function clienteEstaAtivo(cliente: ClienteRow) {
@@ -130,7 +130,7 @@ export default async function ClientesPage({
         <ProfissionalSurface>
           <ProfissionalSectionHeader
             title="Buscar cliente"
-            description="Procure por nome, telefone ou email."
+            description="Procure por nome, WhatsApp ou email."
           />
 
           <form method="GET" className="space-y-3">
@@ -182,7 +182,7 @@ export default async function ClientesPage({
               }
               description={
                 buscaLimpa
-                  ? "Tente outro nome, telefone ou email."
+                  ? "Tente outro nome, WhatsApp ou email."
                   : "Cadastre um cliente para comecar a usar agenda e comandas."
               }
               action={
@@ -207,7 +207,7 @@ export default async function ClientesPage({
                   </div>
 
                   <div className="mt-1.5 break-words text-sm text-zinc-500">
-                    {formatTelefone(cliente.telefone || cliente.whatsapp)}
+                    {formatContato(cliente.whatsapp || cliente.telefone)}
                   </div>
 
                   <div className="mt-1 break-all text-sm text-zinc-400">

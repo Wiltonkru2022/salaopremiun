@@ -21,6 +21,7 @@ type ClienteRow = {
   id: string;
   nome?: string | null;
   telefone?: string | null;
+  whatsapp?: string | null;
   email?: string | null;
   observacoes?: string | null;
   ativo?: boolean | string | number | null;
@@ -42,10 +43,10 @@ type ComandaResumo = {
   status?: string | null;
 };
 
-function formatTelefone(value?: string | null) {
+function formatContato(value?: string | null) {
   const digits = String(value || "").replace(/\D/g, "");
 
-  if (!digits) return "Sem telefone";
+  if (!digits) return "Sem WhatsApp";
   if (digits.length === 11) {
     return digits.replace(/^(\d{2})(\d{5})(\d{4})$/, "($1) $2-$3");
   }
@@ -53,7 +54,7 @@ function formatTelefone(value?: string | null) {
     return digits.replace(/^(\d{2})(\d{4})(\d{4})$/, "($1) $2-$3");
   }
 
-  return value || "Sem telefone";
+  return value || "Sem WhatsApp";
 }
 
 function formatDate(value?: string | null) {
@@ -125,7 +126,7 @@ export default async function ClienteDetalheProfissionalPage({
       ] = await Promise.all([
         supabase
           .from("clientes")
-          .select("id, nome, telefone, email, observacoes, ativo, status")
+          .select("id, nome, telefone, whatsapp, email, observacoes, ativo, status")
           .eq("id", id)
           .eq("id_salao", session.idSalao)
           .maybeSingle(),
@@ -256,10 +257,10 @@ export default async function ClienteDetalheProfissionalPage({
               <Phone size={16} className="mt-0.5 shrink-0 text-zinc-500" />
               <div className="min-w-0">
                 <div className="text-xs font-bold uppercase tracking-[0.14em] text-zinc-400">
-                  Telefone
+                  WhatsApp
                 </div>
                 <div className="mt-1 text-sm font-medium text-zinc-900">
-                  {formatTelefone(cliente.telefone)}
+                  {formatContato(cliente.whatsapp || cliente.telefone)}
                 </div>
               </div>
             </div>
