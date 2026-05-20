@@ -97,6 +97,7 @@ export default function AgendaDayStrip({
         <div className="flex gap-2">
           <Link
             href={`${basePath}?data=${previousMonthDate}`}
+            scroll={false}
             aria-label="Mês anterior"
             className="flex h-12 w-12 items-center justify-center rounded-[1.05rem] border border-zinc-200 bg-white text-zinc-800 shadow-sm active:bg-zinc-50"
           >
@@ -104,6 +105,7 @@ export default function AgendaDayStrip({
           </Link>
           <Link
             href={`${basePath}?data=${nextMonthDate}`}
+            scroll={false}
             aria-label="Próximo mês"
             className="flex h-12 w-12 items-center justify-center rounded-[1.05rem] border border-zinc-200 bg-white text-zinc-800 shadow-sm active:bg-zinc-50"
           >
@@ -124,6 +126,7 @@ export default function AgendaDayStrip({
             <Link
               key={day.key}
               href={`${basePath}?data=${day.date}`}
+              scroll={false}
               className={`relative flex aspect-square min-h-11 items-center justify-center rounded-full border text-base font-bold transition ${
                 dataSelecionada === day.date
                   ? "border-cyan-700 bg-cyan-50 text-zinc-950 ring-2 ring-cyan-700"
