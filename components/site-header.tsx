@@ -15,8 +15,8 @@ export default function SiteHeader() {
 
   return (
     <header className="sticky top-0 z-50 border-b border-zinc-200/70 bg-white/95 backdrop-blur">
-      <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4 lg:px-10">
-        <a href="/" className="flex items-center gap-3">
+      <div className="mx-auto flex max-w-7xl items-center justify-between gap-5 px-6 py-4 lg:px-10">
+        <a href="/" className="flex min-w-0 items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#2c0a45] text-white shadow-md">
             <Sparkles size={18} />
           </div>
@@ -31,29 +31,29 @@ export default function SiteHeader() {
           </div>
         </a>
 
-        <nav className="hidden items-center gap-7 lg:flex">
-          <Link href="/#sistema" className="text-sm font-medium text-zinc-700 transition hover:text-[#2c0a45]">
+        <nav className="hidden items-center gap-1 rounded-full border border-zinc-200/70 bg-zinc-50/80 p-1 lg:flex">
+          <Link href="/#sistema" className="rounded-full px-4 py-2 text-sm font-bold text-zinc-700 transition hover:bg-white hover:text-[#2c0a45] hover:shadow-sm">
             Sistema
           </Link>
-          <Link href="/#apps" className="text-sm font-medium text-zinc-700 transition hover:text-[#2c0a45]">
+          <Link href="/#apps" className="rounded-full px-4 py-2 text-sm font-bold text-zinc-700 transition hover:bg-white hover:text-[#2c0a45] hover:shadow-sm">
             Apps
           </Link>
-          <Link href="/#google" className="text-sm font-medium text-zinc-700 transition hover:text-[#2c0a45]">
+          <Link href="/#google" className="rounded-full px-4 py-2 text-sm font-bold text-zinc-700 transition hover:bg-white hover:text-[#2c0a45] hover:shadow-sm">
             Google
           </Link>
-          <Link href="/#planos" className="text-sm font-medium text-zinc-700 transition hover:text-[#2c0a45]">
+          <Link href="/#planos" className="rounded-full px-4 py-2 text-sm font-bold text-zinc-700 transition hover:bg-white hover:text-[#2c0a45] hover:shadow-sm">
             Planos
           </Link>
-          <Link href="/#suporte" className="text-sm font-medium text-zinc-700 transition hover:text-[#2c0a45]">
+          <Link href="/#suporte" className="rounded-full px-4 py-2 text-sm font-bold text-zinc-700 transition hover:bg-white hover:text-[#2c0a45] hover:shadow-sm">
             Suporte
           </Link>
         </nav>
 
         <div className="hidden items-center gap-3 lg:flex">
-          <a href={LOGIN_SALAO_URL} className="rounded-full border border-zinc-300 px-5 py-2 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-100">
-            Login salão
+          <a href={LOGIN_SALAO_URL} className="inline-flex min-h-11 items-center justify-center rounded-full border border-zinc-300 bg-white px-5 py-2 text-sm font-black text-zinc-900 transition hover:-translate-y-0.5 hover:border-zinc-400 hover:bg-zinc-50">
+            Login do salão
           </a>
-          <a href={CADASTRO_SALAO_URL} className="rounded-full bg-zinc-950 px-5 py-2 text-sm font-semibold text-white shadow-lg transition hover:bg-zinc-800">
+          <a href={CADASTRO_SALAO_URL} className="inline-flex min-h-11 items-center justify-center rounded-full bg-zinc-950 px-5 py-2 text-sm font-black text-white shadow-lg transition hover:-translate-y-0.5 hover:bg-zinc-800">
             Cadastrar salão
           </a>
         </div>
@@ -101,19 +101,19 @@ export default function SiteHeader() {
             </Link>
 
             <div className="mt-4 grid gap-3">
-              <a href={LOGIN_SALAO_URL} className="inline-flex items-center justify-center rounded-full border border-zinc-300 px-5 py-2.5 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-100" onClick={() => setOpen(false)}>
-                Login salão
+              <a href={LOGIN_SALAO_URL} className="inline-flex min-h-12 items-center justify-center rounded-full border border-zinc-300 px-5 py-2.5 text-sm font-black text-zinc-900 transition hover:bg-zinc-100" onClick={() => setOpen(false)}>
+                Login do salão
               </a>
-              <a href={APP_CLIENTE_URL} className="inline-flex items-center justify-center rounded-full border border-zinc-300 px-5 py-2.5 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-100" onClick={() => setOpen(false)}>
+              <a href={APP_CLIENTE_URL} className="inline-flex min-h-12 items-center justify-center rounded-full border border-zinc-300 px-5 py-2.5 text-sm font-black text-zinc-900 transition hover:bg-zinc-100" onClick={() => setOpen(false)}>
                 App cliente
               </a>
-              <a href={APP_PROFISSIONAL_URL} className="inline-flex items-center justify-center rounded-full border border-zinc-300 px-5 py-2.5 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-100" onClick={() => setOpen(false)}>
+              <a href={APP_PROFISSIONAL_URL} className="inline-flex min-h-12 items-center justify-center rounded-full border border-zinc-300 px-5 py-2.5 text-sm font-black text-zinc-900 transition hover:bg-zinc-100" onClick={() => setOpen(false)}>
                 App profissional
               </a>
-              <a href={CADASTRO_SALAO_URL} className="inline-flex items-center justify-center rounded-full bg-zinc-950 px-5 py-2.5 text-sm font-semibold text-white shadow-lg transition hover:bg-zinc-800" onClick={() => setOpen(false)}>
+              <a href={CADASTRO_SALAO_URL} className="inline-flex min-h-12 items-center justify-center rounded-full bg-zinc-950 px-5 py-2.5 text-sm font-black text-white shadow-lg transition hover:bg-zinc-800" onClick={() => setOpen(false)}>
                 Cadastrar salão
               </a>
-              <a href="https://wa.me/5567984341742" className="inline-flex items-center justify-center gap-2 rounded-full bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg transition hover:bg-emerald-700" onClick={() => setOpen(false)}>
+              <a href="https://wa.me/5567984341742" className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-emerald-600 px-5 py-2.5 text-sm font-black text-white shadow-lg transition hover:bg-emerald-700" onClick={() => setOpen(false)}>
                 <MessageCircle size={16} />
                 WhatsApp suporte
               </a>

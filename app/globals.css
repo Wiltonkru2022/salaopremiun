@@ -412,6 +412,50 @@ a.bg-white {
   font-family: var(--font-display), sans-serif;
 }
 
+@keyframes home-float-y {
+  0%,
+  100% {
+    transform: translateY(0) rotate(var(--home-rotate, 0deg));
+  }
+
+  50% {
+    transform: translateY(-14px) rotate(var(--home-rotate, 0deg));
+  }
+}
+
+.home-float-slow {
+  --home-rotate: -2deg;
+  animation: home-float-y 7.5s ease-in-out infinite;
+}
+
+.home-float-medium {
+  --home-rotate: 2deg;
+  animation: home-float-y 6.5s ease-in-out infinite;
+  animation-delay: -1.4s;
+}
+
+.home-float-fast {
+  animation: home-float-y 5.8s ease-in-out infinite;
+  animation-delay: -2.2s;
+}
+
+.home-screenshot-lift {
+  transition: transform 220ms ease, box-shadow 220ms ease;
+}
+
+.home-screenshot-lift:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 18px 42px rgba(15, 23, 42, 0.14);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-float-slow,
+  .home-float-medium,
+  .home-float-fast {
+    animation: none;
+  }
+}
+
 @media (max-width: 1440px) {
   html {
     scroll-padding-top: 104px;
