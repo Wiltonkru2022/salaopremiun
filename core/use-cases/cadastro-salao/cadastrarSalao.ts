@@ -51,6 +51,47 @@ export async function cadastrarSalaoUseCase(params: {
     const input = cadastroSalaoSchema.parse(params.body) as CadastroSalaoBody;
     const payload = params.service.normalizePayload(input);
 
+    if (!payload.cpfCnpjLimpo) {
+      throw new CadastroSalaoUseCaseError("Informe o CPF ou CNPJ.", 400);
+    }
+
+    if (payload.cpfCnpjLimpo.length !== 11 && payload.cpfCnpjLimpo.length !== 14) {
+      throw new CadastroSalaoUseCaseError(
+        "Informe um CPF com 11 dígitos ou CNPJ com 14 dígitos.",
+        400
+      );
+    }
+
+    const duplicidade = await params.service.verificarDuplicidade(payload);
+
+    if (duplicidade.email) {
+      throw new CadastroSalaoUseCaseError(
+        "Esse e-mail já está cadastrado. Use outro e-mail ou entre no login.",
+        409
+      );
+    }
+
+    if (duplicidade.nomeSalao) {
+      throw new CadastroSalaoUseCaseError(
+        "Já existe um salão com esse nome. Ajuste o nome para continuar.",
+        409
+      );
+    }
+
+    if (duplicidade.whatsapp) {
+      throw new CadastroSalaoUseCaseError(
+        "Esse WhatsApp já aparece em outro cadastro de salão.",
+        409
+      );
+    }
+
+    if (duplicidade.cpfCnpj) {
+      throw new CadastroSalaoUseCaseError(
+        "Esse CPF/CNPJ já aparece em outro cadastro de salão.",
+        409
+      );
+    }
+
     const user = await params.service.criarUsuarioAuth({
       email: payload.emailNormalizado,
       senha: input.senha,

@@ -53,6 +53,21 @@ function maskPhone(value: string) {
   return `(${v.slice(0, 2)}) ${v.slice(2, 7)}-${v.slice(7)}`;
 }
 
+function maskCpfCnpj(value: string) {
+  const v = onlyNumbers(value).slice(0, 14);
+
+  if (v.length <= 3) return v;
+  if (v.length <= 6) return `${v.slice(0, 3)}.${v.slice(3)}`;
+  if (v.length <= 9) return `${v.slice(0, 3)}.${v.slice(3, 6)}.${v.slice(6)}`;
+  if (v.length <= 11) {
+    return `${v.slice(0, 3)}.${v.slice(3, 6)}.${v.slice(6, 9)}-${v.slice(9)}`;
+  }
+  if (v.length <= 12) {
+    return `${v.slice(0, 2)}.${v.slice(2, 5)}.${v.slice(5, 8)}/${v.slice(8)}`;
+  }
+  return `${v.slice(0, 2)}.${v.slice(2, 5)}.${v.slice(5, 8)}/${v.slice(8, 12)}-${v.slice(12)}`;
+}
+
 function getLoginRedirectHref(params: URLSearchParams) {
   const host =
     process.env.NEXT_PUBLIC_APP_LOGIN_HOST ||
@@ -120,6 +135,7 @@ function CadastroSalaoContent() {
   const [senha, setSenha] = useState("");
   const [nomeSalao, setNomeSalao] = useState("");
   const [responsavel, setResponsavel] = useState("");
+  const [cpfCnpj, setCpfCnpj] = useState("");
   const [whatsapp, setWhatsapp] = useState("");
   const [cep, setCep] = useState("");
   const [endereco, setEndereco] = useState("");
@@ -206,6 +222,7 @@ function CadastroSalaoContent() {
     email?: string;
     nomeSalao?: string;
     whatsapp?: string;
+    cpfCnpj?: string;
   }) {
     const hasValue = Object.values(fields).some((value) => String(value || "").trim());
     if (!hasValue) return true;
@@ -232,6 +249,10 @@ function CadastroSalaoContent() {
         setErro("Esse WhatsApp já aparece em outro cadastro de salão.");
         return false;
       }
+      if (fields.cpfCnpj && exists.cpfCnpj) {
+        setErro("Esse CPF/CNPJ já aparece em outro cadastro de salão.");
+        return false;
+      }
 
       return true;
     } catch {
@@ -246,13 +267,18 @@ function CadastroSalaoContent() {
 
     if (step === "dados") {
       if (!responsavel.trim()) return setErro("Informe seu nome completo."), false;
+      const cpfCnpjLimpo = onlyNumbers(cpfCnpj);
+      if (!cpfCnpjLimpo) return setErro("Informe o CPF ou CNPJ."), false;
+      if (cpfCnpjLimpo.length !== 11 && cpfCnpjLimpo.length !== 14) {
+        return setErro("Informe um CPF com 11 dígitos ou CNPJ com 14 dígitos."), false;
+      }
       if (!whatsapp.trim()) return setErro("Informe seu celular ou WhatsApp."), false;
       if (!email.trim()) return setErro("Informe o e-mail."), false;
       if (!nomeSalao.trim()) return setErro("Informe o nome do negocio."), false;
       if (!aceiteTermos) {
         return setErro("Aceite os termos de uso e a politica de privacidade para continuar."), false;
       }
-      return verificarDadosExistentes({ email, nomeSalao, whatsapp });
+      return verificarDadosExistentes({ email, nomeSalao, whatsapp, cpfCnpj });
     }
 
     if (step === "acesso") {
@@ -337,7 +363,7 @@ function CadastroSalaoContent() {
           nomeSalao,
           responsavel,
           whatsapp,
-          cpfCnpj: "",
+          cpfCnpj,
           cep,
           endereco,
           numero,
@@ -477,6 +503,15 @@ function CadastroSalaoContent() {
               if (erro) setErro("");
             }}
             placeholder="Seu nome"
+          />
+          <Input
+            label="CPF ou CNPJ"
+            value={cpfCnpj}
+            onChange={(value) => {
+              setCpfCnpj(maskCpfCnpj(value));
+              if (erro) setErro("");
+            }}
+            placeholder="000.000.000-00"
           />
           <Input
             label="Celular"
@@ -640,6 +675,7 @@ function CadastroSalaoContent() {
       <FormPanel>
         <div className="grid gap-3">
           <SummaryCard label="Responsavel" value={responsavel || "-"} />
+          <SummaryCard label="CPF/CNPJ" value={cpfCnpj || "-"} />
           <SummaryCard label="E-mail" value={email || "-"} />
           <SummaryCard label="Negocio" value={nomeSalao || "-"} />
           <SummaryCard label="WhatsApp" value={whatsapp || "-"} />

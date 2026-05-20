@@ -8,18 +8,21 @@ export type CadastroSalaoVerificacaoPayload = {
   email: string;
   nomeSalao: string;
   whatsapp: string;
+  cpfCnpj: string;
 };
 
 export async function verificarCadastroSalaoDuplicado({
   email,
   nomeSalao,
   whatsapp,
+  cpfCnpj,
 }: CadastroSalaoVerificacaoPayload) {
   const supabase = getSupabaseAdmin();
   const exists = {
     email: false,
     nomeSalao: false,
     whatsapp: false,
+    cpfCnpj: false,
   };
 
   const checks: PromiseLike<void>[] = [];
@@ -62,6 +65,20 @@ export async function verificarCadastroSalaoDuplicado({
         .maybeSingle()
         .then(({ data }: { data: SalaoExistsRow | null }) => {
           exists.whatsapp = Boolean(data?.id);
+        })
+    );
+  }
+
+  if (cpfCnpj) {
+    checks.push(
+      supabase
+        .from("saloes")
+        .select("id")
+        .or(`cpf_cnpj.eq.${cpfCnpj},cpf_cnpj.ilike.%${cpfCnpj}%`)
+        .limit(1)
+        .maybeSingle()
+        .then(({ data }: { data: SalaoExistsRow | null }) => {
+          exists.cpfCnpj = Boolean(data?.id);
         })
     );
   }

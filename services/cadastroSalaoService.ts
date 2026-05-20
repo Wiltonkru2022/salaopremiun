@@ -54,6 +54,13 @@ export class CadastroSalaoServiceError extends Error {
   }
 }
 
+type CadastroDuplicidade = {
+  email: boolean;
+  nomeSalao: boolean;
+  whatsapp: boolean;
+  cpfCnpj: boolean;
+};
+
 function onlyNumbers(value: string) {
   return String(value || "").replace(/\D/g, "");
 }
@@ -85,6 +92,76 @@ export function createCadastroSalaoService() {
         origemNormalizada:
           String(body.origem || "").trim().slice(0, 80) || "cadastro_salao",
       };
+    },
+
+    async verificarDuplicidade(
+      payload: CadastroSalaoPayloadNormalizado
+    ): Promise<CadastroDuplicidade> {
+      const supabaseAdmin = getSupabaseAdmin();
+      const exists: CadastroDuplicidade = {
+        email: false,
+        nomeSalao: false,
+        whatsapp: false,
+        cpfCnpj: false,
+      };
+      const checks: PromiseLike<void>[] = [];
+
+      checks.push(
+        supabaseAdmin
+          .from("saloes")
+          .select("id")
+          .eq("email", payload.emailNormalizado)
+          .limit(1)
+          .maybeSingle()
+          .then(({ data }: { data: { id?: string | null } | null }) => {
+            exists.email = Boolean(data?.id);
+          })
+      );
+
+      checks.push(
+        supabaseAdmin
+          .from("saloes")
+          .select("id")
+          .ilike("nome", payload.nomeSalaoNormalizado)
+          .limit(1)
+          .maybeSingle()
+          .then(({ data }: { data: { id?: string | null } | null }) => {
+            exists.nomeSalao = Boolean(data?.id);
+          })
+      );
+
+      if (payload.whatsappNormalizado) {
+        checks.push(
+          supabaseAdmin
+            .from("saloes")
+            .select("id")
+            .or(
+              `telefone.eq.${payload.whatsappNormalizado},telefone.ilike.%${payload.whatsappNormalizado}%`
+            )
+            .limit(1)
+            .maybeSingle()
+            .then(({ data }: { data: { id?: string | null } | null }) => {
+              exists.whatsapp = Boolean(data?.id);
+            })
+        );
+      }
+
+      if (payload.cpfCnpjLimpo) {
+        checks.push(
+          supabaseAdmin
+            .from("saloes")
+            .select("id")
+            .or(`cpf_cnpj.eq.${payload.cpfCnpjLimpo},cpf_cnpj.ilike.%${payload.cpfCnpjLimpo}%`)
+            .limit(1)
+            .maybeSingle()
+            .then(({ data }: { data: { id?: string | null } | null }) => {
+              exists.cpfCnpj = Boolean(data?.id);
+            })
+        );
+      }
+
+      await Promise.all(checks);
+      return exists;
     },
 
     async criarUsuarioAuth(params: { email: string; senha: string; nome: string }) {

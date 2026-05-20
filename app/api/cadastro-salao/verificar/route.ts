@@ -28,11 +28,13 @@ export async function POST(request: Request) {
   const email = normalizeText(body.email).toLowerCase();
   const nomeSalao = normalizeText(body.nomeSalao);
   const whatsapp = onlyNumbers(normalizeText(body.whatsapp));
+  const cpfCnpj = onlyNumbers(normalizeText(body.cpfCnpj));
 
   const exists = await verificarCadastroSalaoDuplicado({
     email,
     nomeSalao,
     whatsapp,
+    cpfCnpj,
   });
 
   return NextResponse.json({ exists });
