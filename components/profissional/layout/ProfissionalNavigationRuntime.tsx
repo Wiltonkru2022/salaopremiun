@@ -22,6 +22,8 @@ const PREFETCH_ROUTES = [
   "/app-profissional/avaliacoes",
 ];
 
+const PENDING_FEEDBACK_TIMEOUT_MS = 1200;
+
 function buildLabel(pathname: string) {
   if (pathname.includes("/agenda")) return "Abrindo agenda...";
   if (pathname.includes("/clientes")) return "Abrindo clientes...";
@@ -79,6 +81,10 @@ export default function ProfissionalNavigationRuntime() {
     const normalizedPending = pendingPath.split("?")[0];
 
     if (pathname === normalizedPending || pathname.startsWith(`${normalizedPending}/`)) {
+      if (timeoutRef.current) {
+        window.clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
       setPendingPath(null);
     }
   }, [pathname, pendingPath]);
@@ -95,7 +101,7 @@ export default function ProfissionalNavigationRuntime() {
       clearTimer();
       timeoutRef.current = window.setTimeout(() => {
         setPendingPath(null);
-      }, 3000);
+      }, PENDING_FEEDBACK_TIMEOUT_MS);
     }
 
     function handleIntent(event: Event) {

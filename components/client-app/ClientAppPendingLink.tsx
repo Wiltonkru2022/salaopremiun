@@ -6,6 +6,8 @@ import Link, { useLinkStatus } from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { LoaderCircle, type LucideIcon } from "lucide-react";
 
+const PENDING_LINK_TIMEOUT_MS = 1200;
+
 function PendingHint({
   label,
   forcePending = false,
@@ -68,7 +70,7 @@ export default function ClientAppPendingLink({
 
     const timeout = window.setTimeout(() => {
       setClicked(false);
-    }, 8000);
+    }, PENDING_LINK_TIMEOUT_MS);
 
     return () => window.clearTimeout(timeout);
   }, [clicked]);
