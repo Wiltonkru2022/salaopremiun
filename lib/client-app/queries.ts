@@ -19,6 +19,10 @@ export type ClientAppSalonListItem = ClientAppEligibleSalon & {
   categorias: string[];
 };
 
+export type ClientAppNearbySalonListItem = ClientAppSalonListItem & {
+  distanceKm: number | null;
+};
+
 export type ClientAppProfessionalListItem = {
   id: string;
   nome: string;
@@ -194,6 +198,38 @@ function hasValidCoordinatePair(latitude: number | null, longitude: number | nul
   if (Math.abs(latitude) > 90 || Math.abs(longitude) > 180) return false;
   return !(latitude === 0 && longitude === 0);
 }
+
+function isValidClientCoordinate(latitude: number, longitude: number) {
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return false;
+  if (Math.abs(latitude) > 90 || Math.abs(longitude) > 180) return false;
+  return !(latitude === 0 && longitude === 0);
+}
+
+const CLIENT_APP_SALON_SELECT = [
+  "id",
+  "nome",
+  "nome_fantasia",
+  "cidade",
+  "estado",
+  "bairro",
+  "endereco",
+  "numero",
+  "cep",
+  "logo_url",
+  "telefone",
+  "whatsapp",
+  "descricao_publica",
+  "foto_capa_url",
+  "latitude",
+  "longitude",
+  "estacionamento",
+  "formas_pagamento_publico",
+  "status",
+  "app_cliente_publicado",
+  "app_cliente_pausado",
+  "app_cliente_pausa_mensagem",
+  "app_cliente_slug",
+].join(",");
 
 function mapLiveSalonRow(row: Record<string, unknown>): ClientAppSalonListItem {
   const latitude = parseNullableNumber(row.latitude);
@@ -394,33 +430,7 @@ async function listVisibleClientAppSaloesLive(search: string, limit: number) {
 
     let query: any = supabaseAdmin
       .from("saloes")
-      .select(
-        [
-          "id",
-          "nome",
-          "nome_fantasia",
-          "cidade",
-          "estado",
-          "bairro",
-          "endereco",
-          "numero",
-          "cep",
-          "logo_url",
-          "telefone",
-          "whatsapp",
-          "descricao_publica",
-          "foto_capa_url",
-          "latitude",
-          "longitude",
-          "estacionamento",
-          "formas_pagamento_publico",
-          "status",
-          "app_cliente_publicado",
-          "app_cliente_pausado",
-          "app_cliente_pausa_mensagem",
-          "app_cliente_slug",
-        ].join(",")
-      )
+      .select(CLIENT_APP_SALON_SELECT)
       .eq("app_cliente_publicado", true)
       .eq("app_cliente_pausado", false)
       .order("nome", { ascending: true })
@@ -477,6 +487,83 @@ export async function listVisibleClientAppSaloes(params?: {
     normalizeSearch(params?.search),
     params?.limit ?? 12
   );
+}
+
+export async function listNearbyClientAppSaloes(params: {
+  latitude: number;
+  longitude: number;
+  search?: string;
+  radiusKm?: number;
+  limit?: number;
+}) {
+  const latitude = Number(params.latitude);
+  const longitude = Number(params.longitude);
+
+  if (!isValidClientCoordinate(latitude, longitude)) {
+    return [] as ClientAppNearbySalonListItem[];
+  }
+
+  const supabaseAdmin = getSupabaseAdmin();
+  const limit = Math.min(Math.max(params.limit ?? 24, 1), 50);
+  const radiusKm = Math.min(Math.max(params.radiusKm ?? 20, 1), 100);
+  const search = normalizeSearch(params.search);
+
+  try {
+    const { data: nearbyRows, error: nearbyError } = await (supabaseAdmin as any)
+      .rpc("buscar_saloes_proximos", {
+        lat_cliente: latitude,
+        lon_cliente: longitude,
+        raio_km: radiusKm,
+        limite: limit,
+        busca: search || null,
+      });
+
+    if (nearbyError) throw nearbyError;
+
+    const distances = new Map<string, number | null>();
+    const ids = ((nearbyRows || []) as Array<Record<string, unknown>>)
+      .map((row) => {
+        const id = String(row.id || "").trim();
+        if (id) {
+          const distance = parseNullableNumber(row.distancia_km);
+          distances.set(id, distance);
+        }
+        return id;
+      })
+      .filter(Boolean);
+
+    if (!ids.length) return [] as ClientAppNearbySalonListItem[];
+
+    const { data, error } = await (supabaseAdmin as any)
+      .from("saloes")
+      .select(CLIENT_APP_SALON_SELECT)
+      .in("id", ids)
+      .eq("app_cliente_publicado", true)
+      .eq("app_cliente_pausado", false)
+      .limit(limit);
+
+    if (error || !data) throw error;
+
+    const order = new Map(ids.map((id, index) => [id, index]));
+    const saloes = ((data as unknown as Array<Record<string, unknown>>) || [])
+      .filter((row) => isSalaoStatusOperational(String(row.status || "")))
+      .map(mapLiveSalonRow)
+      .sort((left, right) => (order.get(left.id) ?? 0) - (order.get(right.id) ?? 0));
+
+    const allowed = await filterClientAppPlanAllowed(saloes);
+    const enriched = await attachMarketplaceMetrics(supabaseAdmin, allowed);
+
+    return enriched.map((salao) => ({
+      ...salao,
+      distanceKm: distances.get(salao.id) ?? null,
+    })) satisfies ClientAppNearbySalonListItem[];
+  } catch (error) {
+    await logClientAppQueryError("cliente_app_nearby_saloes", error, {
+      search,
+      radiusKm,
+    });
+    return [] as ClientAppNearbySalonListItem[];
+  }
 }
 
 async function getClientAppSalonDetailLive(idSalao: string) {

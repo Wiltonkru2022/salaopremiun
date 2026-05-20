@@ -37,8 +37,10 @@ export default function ClientAppSalonCard({
           {distanceKm !== null ? (
             <div className="absolute bottom-3 left-3 rounded-full bg-white/95 px-3 py-1 text-xs font-bold text-zinc-900">
               {distanceKm < 1
-                ? `${Math.max(100, Math.round(distanceKm * 1000))} m`
-                : `${distanceKm.toFixed(1)} km`}
+                ? `A ${Math.max(100, Math.round(distanceKm * 1000))}m de você`
+                : `A ${distanceKm.toLocaleString("pt-BR", {
+                    maximumFractionDigits: 1,
+                  })} km de você`}
             </div>
           ) : null}
         </div>
