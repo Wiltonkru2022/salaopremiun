@@ -39,6 +39,12 @@ type ComandaClienteRow = {
   fechada_em?: string | null;
 };
 
+type AgendamentoClienteRow = {
+  cliente_id?: string | null;
+  data?: string | null;
+  hora_inicio?: string | null;
+};
+
 type ItemComandaDashboardRow = {
   id_profissional?: string | null;
   id_servico?: string | null;
@@ -142,6 +148,7 @@ export async function carregarPainelDashboardResumo(
         { data: proximosAgendamentosRows, error: proximosAgendamentosError },
         { data: clientesRows, error: clientesRowsError },
         { data: comandasRecentesClientesRows, error: comandasRecentesClientesError },
+        { data: agendamentosFuturosClientesRows, error: agendamentosFuturosClientesError },
         { data: itensMesRows, error: itensMesError },
         { data: comandasSerieRows, error: comandasSerieError },
       ] = await Promise.all([
@@ -241,6 +248,15 @@ export async function carregarPainelDashboardResumo(
           .eq("status", "fechada")
           .gte("fechada_em", new Date(now.getTime() - 120 * 24 * 60 * 60 * 1000).toISOString())
           .order("fechada_em", { ascending: false })
+          .limit(1000),
+        supabaseAdmin
+          .from("agendamentos")
+          .select("cliente_id, data, hora_inicio")
+          .eq("id_salao", cachedSalaoId)
+          .gte("data", nowDateArg)
+          .in("status", ["confirmado", "pendente"])
+          .order("data", { ascending: true })
+          .order("hora_inicio", { ascending: true })
           .limit(1000),
         supabaseAdmin
           .from("comanda_itens")
@@ -346,6 +362,8 @@ export async function carregarPainelDashboardResumo(
         clientesRowsError,
         comandasRecentesClientesRows: (comandasRecentesClientesRows || []) as ComandaClienteRow[],
         comandasRecentesClientesError,
+        agendamentosFuturosClientesRows: (agendamentosFuturosClientesRows || []) as AgendamentoClienteRow[],
+        agendamentosFuturosClientesError,
         itensMesRows: (itensMesRows || []) as ItemComandaDashboardRow[],
         itensMesError,
         comandasSerieRows: (comandasSerieRows || []) as Array<{ total: number | string | null; fechada_em: string | null }>,
@@ -391,6 +409,7 @@ export async function carregarPainelDashboardResumo(
     data.proximosAgendamentosError ||
     data.clientesRowsError ||
     data.comandasRecentesClientesError ||
+    data.agendamentosFuturosClientesError ||
     data.itensMesError ||
     data.comandasSerieError ||
     data.profissionaisRowsError ||
@@ -485,13 +504,24 @@ export async function carregarPainelDashboardResumo(
       ultimasComandasPorCliente.set(idCliente, dataFechamento);
     }
   }
+  const proximosAgendamentosPorCliente = new Set<string>();
+  for (const item of data.agendamentosFuturosClientesRows) {
+    const idCliente = String(item.cliente_id || "");
+    if (!idCliente) continue;
+
+    const inicio = item.data && item.hora_inicio ? new Date(`${item.data}T${item.hora_inicio}`) : null;
+    if (!inicio || Number.isNaN(inicio.getTime()) || inicio >= now) {
+      proximosAgendamentosPorCliente.add(idCliente);
+    }
+  }
   const clientesInativos = data.clientesRows
+    .filter((cliente) => !proximosAgendamentosPorCliente.has(cliente.id))
     .map((cliente) => {
       const ultimaVisita = ultimasComandasPorCliente.get(cliente.id) || null;
       const referencia = ultimaVisita || cliente.created_at || null;
-      const diasSemVir = referencia
+      const diasSemVir = referencia && !Number.isNaN(new Date(referencia).getTime())
         ? Math.max(0, Math.floor((now.getTime() - new Date(referencia).getTime()) / (24 * 60 * 60 * 1000)))
-        : 999;
+        : 0;
       return {
         id: cliente.id,
         nome: cliente.nome || "Cliente",
