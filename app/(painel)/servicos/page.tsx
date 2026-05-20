@@ -32,6 +32,7 @@ type ServicoListItem = {
   gatilho_retorno_dias?: number | null;
   status?: string | null;
   ativo?: boolean | null;
+  app_cliente_visivel?: boolean | null;
   eh_combo?: boolean | null;
   combo_resumo?: string | null;
 };
@@ -158,6 +159,7 @@ export default function ServicosPage() {
             "gatilho_retorno_dias",
             "status",
             "ativo",
+            "app_cliente_visivel",
             "eh_combo",
             "combo_resumo",
           ].join(", "),
@@ -332,6 +334,10 @@ export default function ServicosPage() {
     const ativos = listaFiltrada.filter(
       (item) => item.ativo ?? item.status === "ativo"
     );
+    const noAppCliente = listaFiltrada.filter((item) => {
+      const ativo = item.ativo ?? item.status === "ativo";
+      return ativo && item.app_cliente_visivel;
+    });
     const precosVariaveis = listaFiltrada.filter((item) => item.preco_variavel);
     const comAvaliacao = listaFiltrada.filter((item) => item.exige_avaliacao);
     const ticketMedio =
@@ -343,6 +349,7 @@ export default function ServicosPage() {
     return {
       total: listaFiltrada.length,
       ativos: ativos.length,
+      noAppCliente: noAppCliente.length,
       precosVariaveis: precosVariaveis.length,
       comAvaliacao: comAvaliacao.length,
       ticketMedio,
@@ -425,7 +432,7 @@ export default function ServicosPage() {
           </div>
         </section>
 
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-5">
           <ResumoCard
             title="Serviços ativos"
             value={`${resumo.ativos}`}
@@ -442,13 +449,19 @@ export default function ServicosPage() {
             title="Preço sob avaliação"
             value={`${resumo.precosVariaveis}`}
             description="Itens que precisam de combinacao antes de fechar"
+            icon={Percent}
+          />
+          <ResumoCard
+            title="No app cliente"
+            value={`${resumo.noAppCliente}`}
+            description="Ativos e marcados para aparecer no app"
             icon={AlertTriangle}
           />
           <ResumoCard
             title="Exigem leitura atenta"
             value={`${resumo.comAvaliacao}`}
             description="Serviços que pedem avaliação antes da execucao"
-            icon={Percent}
+            icon={CircleHelp}
           />
         </div>
 
@@ -501,6 +514,7 @@ export default function ServicosPage() {
           ) : (
             listaFiltrada.map((item) => {
               const ativo = item.ativo ?? item.status === "ativo";
+              const appClienteMarcado = Boolean(item.app_cliente_visivel);
               const pausa = Number(item.pausa_minutos || 0);
               const precoVariavel = Boolean(item.preco_variavel);
               const ehCombo = Boolean(item.eh_combo);
@@ -527,6 +541,7 @@ export default function ServicosPage() {
                           {item.nome}
                         </h2>
                         <StatusBadge ativo={ativo} />
+                        <AppClienteBadge ativo={ativo} visivel={appClienteMarcado} />
                         {ehCombo ? (
                           <span className="rounded-full bg-violet-100 px-2.5 py-1 text-xs font-semibold text-violet-700">
                             Combo
@@ -788,6 +803,11 @@ export default function ServicosPage() {
                 value={servicoSelecionado.eh_combo ? "Por serviço" : `${formatPercent(servicoSelecionado.comissao_percentual_padrao)}%`}
                 detail="Vale enquanto não houver exceção por profissional"
               />
+              <MetricBlock
+                label="App cliente"
+                value={(servicoSelecionado.ativo ?? servicoSelecionado.status === "ativo") && servicoSelecionado.app_cliente_visivel ? "Aparece" : "Nao aparece"}
+                detail={servicoSelecionado.app_cliente_visivel ? "Marcado para vitrine; precisa estar ativo" : "Desmarcado no cadastro do serviço"}
+              />
             </div>
             <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4 text-sm leading-6 text-zinc-600">
               Exceções por profissional, consumo de produtos e composição de combo ficam no detalhe completo do serviço.
@@ -856,6 +876,29 @@ function StatusBadge({ ativo }: { ativo: boolean }) {
       }`}
     >
       {ativo ? "Ativo" : "Inativo"}
+    </span>
+  );
+}
+
+function AppClienteBadge({ ativo, visivel }: { ativo: boolean; visivel: boolean }) {
+  const aparece = ativo && visivel;
+  const label = aparece
+    ? "Ativo no app cliente"
+    : visivel
+      ? "Marcado no app, mas inativo"
+      : "Fora do app cliente";
+
+  return (
+    <span
+      className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${
+        aparece
+          ? "bg-sky-100 text-sky-700"
+          : visivel
+            ? "bg-amber-100 text-amber-700"
+            : "bg-zinc-100 text-zinc-600"
+      }`}
+    >
+      {label}
     </span>
   );
 }
