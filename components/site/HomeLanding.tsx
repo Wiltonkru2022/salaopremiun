@@ -5,13 +5,17 @@ import {
   CalendarDays,
   Check,
   CreditCard,
+  Heart,
+  Home,
   MapPin,
   MonitorSmartphone,
+  ReceiptText,
   Scissors,
   Search,
   ShieldCheck,
   Smartphone,
   Sparkles,
+  UserRound,
   Users,
   Wallet,
   type LucideIcon,
@@ -213,6 +217,14 @@ function HeroSection() {
 }
 
 function ProfessionalPhoneMock({ className }: { className?: string }) {
+  const navItems = [
+    { label: "Início", icon: Home },
+    { label: "Clientes", icon: Users },
+    { label: "Agenda", icon: CalendarDays },
+    { label: "Comandas", icon: ReceiptText },
+    { label: "Perfil", icon: UserRound },
+  ];
+
   return (
     <div className={`relative aspect-[390/844] overflow-hidden rounded-[34px] border border-white/20 bg-white p-2 text-zinc-950 shadow-2xl ${className || ""}`}>
       <div className="h-full rounded-[26px] bg-[#f3f4f6] p-4">
@@ -266,10 +278,26 @@ function ProfessionalPhoneMock({ className }: { className?: string }) {
             ))}
           </div>
         </div>
-        <div className="absolute bottom-2 left-3 right-3 grid grid-cols-5 rounded-[24px] bg-white/95 px-2 py-2 text-center text-[8px] font-black shadow-sm">
-          {["Início", "Clientes", "Agenda", "Comandas", "Perfil"].map((item, index) => (
-            <span key={item} className={index === 0 ? "rounded-2xl bg-zinc-950 px-1 py-2 text-white" : "px-1 py-2 text-zinc-700"}>{item}</span>
-          ))}
+        <div className="absolute bottom-2 left-3 right-3 rounded-[24px] border border-zinc-100 bg-white/95 p-1.5 shadow-[0_12px_32px_rgba(15,23,42,0.12)] backdrop-blur">
+          <div className="grid grid-cols-5 gap-1 text-center">
+            {navItems.map((item, index) => {
+              const Icon = item.icon;
+
+              return (
+                <div
+                  key={item.label}
+                  className={`flex min-h-[42px] flex-col items-center justify-center rounded-[18px] px-1 leading-none ${
+                    index === 0 ? "bg-zinc-950 text-white shadow-sm" : "text-zinc-700"
+                  }`}
+                >
+                  <Icon size={12} strokeWidth={2.6} />
+                  <span className="mt-1 max-w-full text-[6.5px] font-black leading-[1.05]">
+                    {item.label}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
     </div>
@@ -277,6 +305,13 @@ function ProfessionalPhoneMock({ className }: { className?: string }) {
 }
 
 function ClientPhoneMock({ className }: { className?: string }) {
+  const navItems = [
+    { label: "Meu app", icon: Heart },
+    { label: "Explorar", icon: Search },
+    { label: "Agenda", icon: CalendarDays },
+    { label: "Perfil", icon: UserRound },
+  ];
+
   return (
     <div className={`relative aspect-[390/844] overflow-hidden rounded-[34px] border border-white/20 bg-white p-2 text-zinc-950 shadow-2xl ${className || ""}`}>
       <div className="h-full rounded-[26px] bg-white">
@@ -328,10 +363,26 @@ function ClientPhoneMock({ className }: { className?: string }) {
             </div>
           </div>
         </div>
-        <div className="absolute bottom-2 left-3 right-3 grid grid-cols-4 rounded-[24px] bg-white/95 px-2 py-2 text-center text-[8px] font-black shadow-sm">
-          {["Meu app", "Explorar", "Agenda", "Perfil"].map((item, index) => (
-            <span key={item} className={index === 1 ? "rounded-2xl bg-zinc-100 px-1 py-2 text-zinc-950" : "px-1 py-2 text-zinc-700"}>{item}</span>
-          ))}
+        <div className="absolute bottom-2 left-3 right-3 rounded-[24px] border border-zinc-100 bg-white/95 p-1.5 shadow-[0_12px_32px_rgba(15,23,42,0.12)] backdrop-blur">
+          <div className="grid grid-cols-4 gap-1 text-center">
+            {navItems.map((item, index) => {
+              const Icon = item.icon;
+
+              return (
+                <div
+                  key={item.label}
+                  className={`flex min-h-[42px] flex-col items-center justify-center rounded-[18px] px-1 leading-none ${
+                    index === 1 ? "bg-zinc-100 text-zinc-950 shadow-sm" : "text-zinc-700"
+                  }`}
+                >
+                  <Icon size={13} strokeWidth={2.6} />
+                  <span className="mt-1 max-w-full text-[7px] font-black leading-[1.05]">
+                    {item.label}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
     </div>
