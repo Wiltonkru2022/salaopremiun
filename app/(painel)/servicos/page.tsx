@@ -194,8 +194,14 @@ export default function ServicosPage() {
   );
 
   const bootstrap = useCallback(async () => {
+    const shouldShowInitialLoading = !acessoCarregado || !idSalao;
+
     try {
-      setLoading(true);
+      if (shouldShowInitialLoading) {
+        setLoading(true);
+      } else {
+        setLoadingPage(true);
+      }
       setErro("");
       setMsg("");
 
@@ -209,9 +215,13 @@ export default function ServicosPage() {
       console.error(e);
       setErro(getErrorMessage(e, "Erro ao carregar serviços."));
     } finally {
-      setLoading(false);
+      if (shouldShowInitialLoading) {
+        setLoading(false);
+      } else {
+        setLoadingPage(false);
+      }
     }
-  }, [carregarAcesso, carregarServicos]);
+  }, [acessoCarregado, carregarAcesso, carregarServicos, idSalao]);
 
   useEffect(() => {
     void bootstrap();

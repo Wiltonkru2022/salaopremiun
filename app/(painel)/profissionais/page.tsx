@@ -228,8 +228,14 @@ export default function ProfissionaisListPage() {
   );
 
   const bootstrap = useCallback(async () => {
+    const shouldShowInitialLoading = !acessoCarregado || !idSalao;
+
     try {
-      setLoading(true);
+      if (shouldShowInitialLoading) {
+        setLoading(true);
+      } else {
+        setLoadingPage(true);
+      }
       setErro("");
       setMsg("");
 
@@ -242,9 +248,13 @@ export default function ProfissionaisListPage() {
       console.error(e);
       setErro(getErrorMessage(e, "Erro ao carregar profissionais."));
     } finally {
-      setLoading(false);
+      if (shouldShowInitialLoading) {
+        setLoading(false);
+      } else {
+        setLoadingPage(false);
+      }
     }
-  }, [carregarAcesso, carregarProfissionais]);
+  }, [acessoCarregado, carregarAcesso, carregarProfissionais, idSalao]);
 
   useEffect(() => {
     void bootstrap();

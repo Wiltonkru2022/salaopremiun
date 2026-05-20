@@ -88,6 +88,25 @@ export function createServicoService(
         throw new Error("Nao foi possivel obter o servico salvo.");
       }
 
+      if (
+        Object.prototype.hasOwnProperty.call(
+          params.servicoPayload,
+          "app_cliente_visivel"
+        )
+      ) {
+        const { error: updateVisibilityError } = await supabaseAdmin
+          .from("servicos")
+          .update({
+            app_cliente_visivel: Boolean(
+              params.servicoPayload.app_cliente_visivel
+            ),
+          })
+          .eq("id", idServico)
+          .eq("id_salao", params.idSalao);
+
+        if (updateVisibilityError) throw updateVisibilityError;
+      }
+
       return idServico;
     },
 

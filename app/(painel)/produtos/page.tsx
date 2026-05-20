@@ -191,8 +191,14 @@ export default function ProdutosPage() {
   );
 
   const bootstrap = useCallback(async () => {
+    const shouldShowInitialLoading = !acessoCarregado || !idSalao;
+
     try {
-      setLoading(true);
+      if (shouldShowInitialLoading) {
+        setLoading(true);
+      } else {
+        setLoadingMore(true);
+      }
       setErro("");
       setMsg("");
 
@@ -205,9 +211,13 @@ export default function ProdutosPage() {
       console.error(e);
       setErro(getErrorMessage(e, "Erro ao carregar produtos."));
     } finally {
-      setLoading(false);
+      if (shouldShowInitialLoading) {
+        setLoading(false);
+      } else {
+        setLoadingMore(false);
+      }
     }
-  }, [carregarAcesso, carregarProdutos]);
+  }, [acessoCarregado, carregarAcesso, carregarProdutos, idSalao]);
 
   useEffect(() => {
     void bootstrap();

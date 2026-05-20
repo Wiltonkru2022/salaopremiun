@@ -129,8 +129,12 @@ export default function ServicosExtrasPage() {
   );
 
   const bootstrap = useCallback(async () => {
+    const shouldShowInitialLoading = !acessoCarregado || !idSalao;
+
     try {
-      setLoading(true);
+      if (shouldShowInitialLoading) {
+        setLoading(true);
+      }
       setErro("");
       setMsg("");
 
@@ -143,9 +147,11 @@ export default function ServicosExtrasPage() {
       console.error(e);
       setErro(e instanceof Error ? e.message : "Erro ao carregar itens extras.");
     } finally {
-      setLoading(false);
+      if (shouldShowInitialLoading) {
+        setLoading(false);
+      }
     }
-  }, [carregarAcesso, carregarItens]);
+  }, [acessoCarregado, carregarAcesso, carregarItens, idSalao]);
 
   useEffect(() => {
     void bootstrap();

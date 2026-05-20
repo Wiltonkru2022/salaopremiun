@@ -87,8 +87,12 @@ export default function EstoquePage() {
   }, [painelSession, router]);
 
   const bootstrap = useCallback(async () => {
+    const shouldShowInitialLoading = !acessoCarregado;
+
     try {
-      setLoading(true);
+      if (shouldShowInitialLoading) {
+        setLoading(true);
+      }
       setErro("");
       setMsg("");
 
@@ -154,9 +158,11 @@ export default function EstoquePage() {
       console.error(e);
       setErro(e instanceof Error ? e.message : "Erro ao carregar estoque.");
     } finally {
-      setLoading(false);
+      if (shouldShowInitialLoading) {
+        setLoading(false);
+      }
     }
-  }, [busca, carregarAcesso, paginaAtual, supabase]);
+  }, [acessoCarregado, busca, carregarAcesso, paginaAtual, supabase]);
 
   useEffect(() => {
     void bootstrap();

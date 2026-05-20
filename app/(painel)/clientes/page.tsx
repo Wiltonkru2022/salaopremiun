@@ -178,8 +178,14 @@ export default function ClientesPage() {
   );
 
   const bootstrap = useCallback(async () => {
+    const shouldShowInitialLoading = !acessoCarregado || !idSalao;
+
     try {
-      setLoading(true);
+      if (shouldShowInitialLoading) {
+        setLoading(true);
+      } else {
+        setLoadingMore(true);
+      }
       setErro("");
       setMsg("");
 
@@ -192,9 +198,13 @@ export default function ClientesPage() {
       console.error(e);
       setErro(getErrorMessage(e, "Erro ao carregar clientes."));
     } finally {
-      setLoading(false);
+      if (shouldShowInitialLoading) {
+        setLoading(false);
+      } else {
+        setLoadingMore(false);
+      }
     }
-  }, [carregarAcesso, carregarClientes]);
+  }, [acessoCarregado, carregarAcesso, carregarClientes, idSalao]);
 
   useEffect(() => {
     void bootstrap();
