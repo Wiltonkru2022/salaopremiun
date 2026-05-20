@@ -385,7 +385,7 @@ export default function ProdutosPage() {
   }
 
   return (
-    <div className="bg-white">
+    <div className="contents">
       <div className="mx-auto max-w-7xl space-y-4">
         <section className="rounded-[24px] border border-zinc-200 bg-white p-4 text-zinc-950 shadow-sm">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">

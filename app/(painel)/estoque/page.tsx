@@ -216,7 +216,7 @@ export default function EstoquePage() {
   }
 
   return (
-    <div className="bg-white">
+    <div className="contents">
       <div className="mx-auto max-w-7xl space-y-6">
         <div className="rounded-3xl border border-zinc-200 bg-white p-6 text-zinc-950 shadow-sm">
           <div className="mt-2 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">

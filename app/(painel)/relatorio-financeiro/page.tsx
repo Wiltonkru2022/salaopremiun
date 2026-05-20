@@ -1615,7 +1615,7 @@ export default function RelatorioFinanceiroPage() {
   }
 
   return (
-    <div className="bg-white">
+    <div className="contents">
       <div className="mx-auto max-w-[1800px] space-y-5">
         <div className="rounded-[28px] border border-zinc-200 bg-white p-4 text-zinc-950 shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-4">

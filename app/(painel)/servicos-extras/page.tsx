@@ -225,7 +225,7 @@ export default function ServicosExtrasPage() {
         }}
       />
 
-      <div className="bg-white">
+    <div className="contents">
         <div className="mx-auto max-w-7xl space-y-4">
           <section className="rounded-[24px] border border-zinc-200 bg-white p-4 text-zinc-950 shadow-sm">
             <div className="mt-1 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">

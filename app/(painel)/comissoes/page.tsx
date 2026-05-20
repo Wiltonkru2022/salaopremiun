@@ -1035,7 +1035,7 @@ export default function ComissoesPage() {
         </div>
       ) : null}
 
-      <div className="bg-white">
+      <div className="contents">
         <div className="mx-auto max-w-[1800px] space-y-4">
           <div className="overflow-hidden rounded-[24px] border border-zinc-200 bg-white shadow-sm">
             <div className="border-b border-zinc-200 bg-white px-4 py-4 text-zinc-950">
