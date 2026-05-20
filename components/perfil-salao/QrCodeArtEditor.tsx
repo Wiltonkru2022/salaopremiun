@@ -8,7 +8,6 @@ import {
   AlignVerticalJustifyCenter,
   ArrowRight,
   BringToFront,
-  Circle,
   Copy,
   Download,
   Eye,
@@ -27,8 +26,6 @@ import {
   Search,
   Scissors,
   Shapes,
-  Star,
-  Heart,
   Trash2,
   Type,
   Underline,
@@ -419,7 +416,7 @@ export default function QrCodeArtEditor({
   const [customWidth, setCustomWidth] = useState(1080);
   const [customHeight, setCustomHeight] = useState(1080);
   const [backgroundColor, setBackgroundColor] = useState("#fff7e6");
-  const [layerVersion, setLayerVersion] = useState(0);
+  const [_layerVersion, setLayerVersion] = useState(0);
   const [pages, setPages] = useState<EditorPage[]>([]);
   const [currentPageIndex, setCurrentPageIndex] = useState(0);
 
@@ -428,22 +425,22 @@ export default function QrCodeArtEditor({
   const isImageSelected = selected?.type === "image";
   const isVectorSelected = Boolean(selected && !isTextSelected && !isImageSelected);
   const rightPanelOpen = rightPanelMode === "layers" || Boolean(selected);
-  const documentColors = useMemo(() => {
+  const documentColors = (() => {
     const colors = new Set<string>(["#111111", "#ffffff", "#d8b36b"]);
     const canvas = canvasRef.current;
     const bg = colorFromValue(canvas?.backgroundColor);
     if (bg) colors.add(bg);
     canvas?.getObjects().forEach((object) => collectObjectColors(object, colors));
     return [...colors].slice(0, 18);
-  }, [backgroundColor, layerVersion, selected]);
+  })();
   const filteredElementPresets = useMemo(
     () => elementCategory === "Tudo" ? elementPresets : elementPresets.filter((preset) => preset.category === elementCategory),
     [elementCategory]
   );
-  const canvasLayers = useMemo(() => {
+  const canvasLayers = (() => {
     const canvas = canvasRef.current;
     return canvas ? [...canvas.getObjects()].reverse() : [];
-  }, [layerVersion, selected]);
+  })();
 
   const pushHistory = useCallback(() => {
     const canvas = canvasRef.current;
@@ -908,6 +905,8 @@ export default function QrCodeArtEditor({
       canvasRef.current?.dispose();
       canvasRef.current = null;
     };
+    // Canvas init must not rerun when template callbacks or visual settings change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fitZoom, open, projectStarted, pushHistory]);
 
   useEffect(() => {
@@ -2388,6 +2387,8 @@ export default function QrCodeArtEditor({
     setProjectSlug(initialProjectSlug);
     setProjectId(initialProjectSlug);
     resizeProject(DEFAULT_WIDTH, DEFAULT_HEIGHT, "feed");
+    // Loading by slug is a one-time bootstrap; openProject changes while the canvas is being edited.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialProjectSlug, resizeProject]);
 
   if (!open) return null;
@@ -3091,8 +3092,8 @@ export default function QrCodeArtEditor({
                         <button type="button" onClick={() => applyImageFilter("saturate")} className="h-9 rounded-xl border bg-white text-xs font-black">Saturar</button>
                         <button type="button" onClick={() => applyImageFilter("grayscale")} className="h-9 rounded-xl border bg-white text-xs font-black">P&B</button>
                         <button type="button" onClick={() => applyImageFilter("blur")} className="h-9 rounded-xl border bg-white text-xs font-black">Blur</button>
-                        <button type="button" onClick={() => applySelected({ flipX: !Boolean(selected.get("flipX")) })} className="h-9 rounded-xl border bg-white text-xs font-black">Espelhar H</button>
-                        <button type="button" onClick={() => applySelected({ flipY: !Boolean(selected.get("flipY")) })} className="h-9 rounded-xl border bg-white text-xs font-black">Espelhar V</button>
+                        <button type="button" onClick={() => applySelected({ flipX: !selected.get("flipX") })} className="h-9 rounded-xl border bg-white text-xs font-black">Espelhar H</button>
+                        <button type="button" onClick={() => applySelected({ flipY: !selected.get("flipY") })} className="h-9 rounded-xl border bg-white text-xs font-black">Espelhar V</button>
                       </div>
                       <div className="space-y-2 pt-1">
                         <label className="block text-[11px] font-black text-zinc-500">Brilho
