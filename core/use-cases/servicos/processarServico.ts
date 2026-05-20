@@ -72,17 +72,9 @@ function sanitizeBaseCalculo(value: unknown, fallback = "bruto") {
   return parsed === "liquido" ? "liquido" : fallback;
 }
 
-function normalizePlanoCode(value?: string | null) {
-  return String(value || "")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .trim()
-    .toLowerCase()
-    .replace(/[-\s]+/g, "_");
-}
-
-function isPlanoPremium(planoCodigo?: string | null) {
-  return normalizePlanoCode(planoCodigo) === "premium";
+function canPublishServicoInClientApp(planoAccess: Awaited<ReturnType<typeof getPlanoAccessSnapshot>>) {
+  if (planoAccess.bloqueioTotal) return false;
+  return planoAccess.recursos.app_cliente === true;
 }
 
 function resolveServicoHttpStatus(error: unknown) {
@@ -345,7 +337,7 @@ export async function processarServicoUseCase(params: {
         idSalao: input.idSalao,
         servico: input.servico,
         categoria,
-        appClientePermitido: isPlanoPremium(planoAccess.planoCodigo),
+        appClientePermitido: canPublishServicoInClientApp(planoAccess),
       });
 
       const idServico = await service.salvarCatalogoTransacional({

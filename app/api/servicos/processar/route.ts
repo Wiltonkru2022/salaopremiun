@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { ZodError } from "zod";
 import {
   parseProcessarServicoInput,
@@ -24,6 +25,12 @@ const routeService = createSalaoMutacaoRouteService({
     ["salvar", "alterar_status", "excluir"].includes(acaoRaw) ? acaoRaw : null,
 });
 
+function revalidateClientAppServiceViews() {
+  revalidatePath("/app-cliente", "layout");
+  revalidatePath("/app-cliente/salao/[id]", "layout");
+  revalidatePath("/salao/[slug]", "page");
+}
+
 export async function POST(req: NextRequest) {
   let idSalao = "";
   let acaoRaw = "";
@@ -39,6 +46,10 @@ export async function POST(req: NextRequest) {
       input,
       service: createServicoService(),
     });
+
+    if (result.status < 400) {
+      revalidateClientAppServiceViews();
+    }
 
     return NextResponse.json(result.body, { status: result.status });
   } catch (error) {
