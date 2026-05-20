@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { Sparkles } from "lucide-react";
 import ClientAppPendingLink from "@/components/client-app/ClientAppPendingLink";
@@ -32,13 +32,6 @@ export default function ClientMobileAppLayout({
   const hideChrome = HIDDEN_CHROME_ROUTES.some((route) =>
     pathname.startsWith(route)
   );
-
-  useEffect(() => {
-    setChrome({
-      title: "SalaoPremium",
-      subtitle: "Seu app de agendamentos.",
-    });
-  }, [pathname]);
 
   if (hideChrome) {
     return (
