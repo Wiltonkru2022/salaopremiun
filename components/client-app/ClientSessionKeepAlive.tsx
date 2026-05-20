@@ -12,7 +12,9 @@ const AUTH_ROUTES = [
 ];
 const PUBLIC_ROUTES = [
   "/app-cliente",
+  "/app-cliente/meuapp",
   "/app-cliente/inicio",
+  "/app-cliente/explorar",
   "/app-cliente/salao",
   "/app-cliente/duvidas",
   "/app-cliente/suporte",

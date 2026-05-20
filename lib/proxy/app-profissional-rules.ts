@@ -9,7 +9,6 @@ import {
   isAppProfissionalRoute,
   isArquivoPublico,
   redirectToHost,
-  removeAppProfissionalPrefix,
   type ProxyRouteContext,
 } from "@/lib/proxy/host-rules";
 import { redirectAdminMasterLoginFromForeignHost } from "@/lib/proxy/admin-master-rules";
@@ -21,6 +20,38 @@ function isCampaignPublicRoute(pathname: string) {
     pathname === "/resgatar-cupom" ||
     pathname.startsWith("/resgatar-cupom/")
   );
+}
+
+function rewriteToPath(ctx: ProxyRouteContext, pathname: string) {
+  const url = ctx.request.nextUrl.clone();
+  url.pathname = pathname;
+  return NextResponse.rewrite(url);
+}
+
+function getAppProfissionalCanonicalPath(pathname: string) {
+  const routes = [
+    "/inicio",
+    "/clientes",
+    "/agenda",
+    "/comandas",
+    "/perfil",
+    "/comissao",
+    "/suporte",
+    "/duvidas",
+    "/termos",
+    "/privacidade",
+    "/notificacoes",
+    "/avaliacoes",
+    "/instalar",
+    "/recuperar-senha",
+    "/onboarding",
+  ];
+
+  const match = routes.find(
+    (route) => pathname === route || pathname.startsWith(`${route}/`)
+  );
+
+  return match ? `${APP_PROFISSIONAL_PREFIX}${pathname}` : null;
 }
 
 export function handleAppProfissionalHost(ctx: ProxyRouteContext) {
@@ -38,7 +69,7 @@ export function handleAppProfissionalHost(ctx: ProxyRouteContext) {
     pathnameNormalizado === "/dashboard" ||
     pathnameNormalizado === "/app-profissional/dashboard"
   ) {
-    return redirectToHost(request, DOMINIO_APP, "/inicio", "");
+    return redirectToHost(request, DOMINIO_APP, "/app-profissional/inicio", "");
   }
 
   if (ctx.rotaAdminMasterLogin) {
@@ -62,10 +93,45 @@ export function handleAppProfissionalHost(ctx: ProxyRouteContext) {
   }
 
   if (isAppProfissionalRoute(pathnameNormalizado)) {
+    return NextResponse.next();
+  }
+
+  if (pathnameNormalizado === "/app-cliente/meuapp") {
+    return rewriteToPath(ctx, "/app-cliente");
+  }
+
+  if (pathnameNormalizado === "/app-cliente") {
     return redirectToHost(
       request,
       DOMINIO_APP,
-      removeAppProfissionalPrefix(pathnameNormalizado)
+      "/app-cliente/meuapp",
+      request.nextUrl.search
+    );
+  }
+
+  if (pathnameNormalizado === "/app-cliente/explorar") {
+    return rewriteToPath(ctx, "/app-cliente/inicio");
+  }
+
+  if (pathnameNormalizado === "/app-cliente/inicio") {
+    return redirectToHost(
+      request,
+      DOMINIO_APP,
+      "/app-cliente/explorar",
+      request.nextUrl.search
+    );
+  }
+
+  if (pathnameNormalizado === "/app-cliente/agenda") {
+    return rewriteToPath(ctx, "/app-cliente/agendamentos");
+  }
+
+  if (pathnameNormalizado === "/app-cliente/agendamentos") {
+    return redirectToHost(
+      request,
+      DOMINIO_APP,
+      "/app-cliente/agenda",
+      request.nextUrl.search
     );
   }
 
@@ -75,6 +141,17 @@ export function handleAppProfissionalHost(ctx: ProxyRouteContext) {
 
   if (isCampaignPublicRoute(pathnameNormalizado)) {
     return NextResponse.next();
+  }
+
+  const canonicalProfissionalPath =
+    getAppProfissionalCanonicalPath(pathnameNormalizado);
+  if (canonicalProfissionalPath) {
+    return redirectToHost(
+      request,
+      DOMINIO_APP,
+      canonicalProfissionalPath,
+      request.nextUrl.search
+    );
   }
 
   if (

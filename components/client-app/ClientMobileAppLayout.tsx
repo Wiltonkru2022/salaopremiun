@@ -70,13 +70,13 @@ export default function ClientMobileAppLayout({
               <PushPermissionRuntime audience="cliente_app" compact />
               <nav className="hidden flex-wrap items-center gap-2 text-sm font-semibold text-zinc-700 md:flex">
                 <ClientAppPendingLink
-                  href="/app-cliente/inicio"
+                  href="/app-cliente/explorar"
                   className="inline-flex min-h-10 items-center gap-1.5 rounded-full border border-zinc-200 bg-zinc-50 px-3 py-2 transition hover:bg-zinc-100"
                 >
                   Saloes
                 </ClientAppPendingLink>
                 <ClientAppPendingLink
-                  href="/app-cliente/agendamentos"
+                  href="/app-cliente/agenda"
                   pendingLabel="Abrindo"
                   className="inline-flex min-h-10 items-center gap-1.5 rounded-full border border-zinc-200 bg-zinc-50 px-3 py-2 transition hover:bg-zinc-100"
                 >

@@ -26,7 +26,6 @@ import {
   redirectToAdminMasterLogin,
   redirectToHost,
   removeBlogPrefix,
-  removeAppProfissionalPrefix,
 } from "@/lib/proxy/host-rules";
 
 function hasSupabaseAuthCookies(request: NextRequest) {
@@ -120,7 +119,7 @@ function handlePublicHostRouting(ctx: ReturnType<typeof buildProxyRouteContext>)
       return redirectToHost(
         request,
         DOMINIO_APP,
-        removeAppProfissionalPrefix(pathnameNormalizado)
+        pathnameNormalizado
       );
     }
     if (ctx.rotaAppCliente) {
@@ -163,7 +162,7 @@ function handlePublicHostRouting(ctx: ReturnType<typeof buildProxyRouteContext>)
         return redirectToHost(
           request,
           DOMINIO_APP,
-          removeAppProfissionalPrefix(pathnameNormalizado)
+          pathnameNormalizado
         );
       }
       if (ctx.rotaAppCliente) {
@@ -197,7 +196,7 @@ function handlePublicHostRouting(ctx: ReturnType<typeof buildProxyRouteContext>)
         return redirectToHost(
           request,
           DOMINIO_APP,
-          removeAppProfissionalPrefix(pathnameNormalizado)
+          pathnameNormalizado
         );
       }
       if (ctx.rotaAppCliente) {
@@ -238,7 +237,7 @@ function handlePublicHostRouting(ctx: ReturnType<typeof buildProxyRouteContext>)
         return redirectToHost(
           request,
           DOMINIO_APP,
-          removeAppProfissionalPrefix(pathnameNormalizado)
+          pathnameNormalizado
         );
       }
       if (ctx.rotaAppCliente) {
@@ -275,7 +274,7 @@ function handlePublicHostRouting(ctx: ReturnType<typeof buildProxyRouteContext>)
       return redirectToHost(
         request,
         DOMINIO_APP,
-        removeAppProfissionalPrefix(pathnameNormalizado)
+        pathnameNormalizado
       );
     }
     if (ctx.rotaAppCliente) {

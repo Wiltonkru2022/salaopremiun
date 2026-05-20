@@ -8,23 +8,27 @@ const navItems = [
   {
     label: "Meu app",
     icon: Heart,
-    href: "/app-cliente",
-    match: (pathname: string) => pathname === "/app-cliente",
+    href: "/app-cliente/meuapp",
+    match: (pathname: string) =>
+      pathname === "/app-cliente" || pathname === "/app-cliente/meuapp",
   },
   {
-    href: "/app-cliente/inicio",
+    href: "/app-cliente/explorar",
     label: "Explorar",
     icon: Search,
     match: (pathname: string) =>
+      pathname === "/app-cliente/explorar" ||
       pathname === "/app-cliente/inicio" ||
       pathname.startsWith("/app-cliente/salao/") ||
       pathname.startsWith("/salao/"),
   },
   {
-    href: "/app-cliente/agendamentos",
+    href: "/app-cliente/agenda",
     label: "Agenda",
     icon: CalendarDays,
-    match: (pathname: string) => pathname.startsWith("/app-cliente/agendamentos"),
+    match: (pathname: string) =>
+      pathname.startsWith("/app-cliente/agenda") ||
+      pathname.startsWith("/app-cliente/agendamentos"),
   },
   {
     href: "/app-cliente/perfil",

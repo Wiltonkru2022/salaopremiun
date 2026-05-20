@@ -59,7 +59,7 @@ function AppPortalHome() {
 
             <div className="mt-8 grid gap-3 sm:grid-cols-2">
               <Link
-                href="/app-cliente"
+                href="/app-cliente/meuapp"
                 className="group flex min-h-[132px] flex-col justify-between rounded-[1.6rem] border border-white/15 bg-white p-5 text-zinc-950 shadow-[0_24px_70px_rgba(0,0,0,0.22)] transition hover:-translate-y-1"
               >
                 <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-zinc-950 text-white">
