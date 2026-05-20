@@ -288,6 +288,16 @@ function applyFillDeep(object: FabricObject, fill: string) {
   }
 }
 
+function applyStrokeDeep(object: FabricObject, stroke: string, strokeWidth = 3) {
+  const maybeGroup = object as FabricObject & { getObjects?: () => FabricObject[] };
+  if (typeof maybeGroup.getObjects === "function") {
+    maybeGroup.getObjects().forEach((child) => applyStrokeDeep(child, stroke, strokeWidth));
+  }
+  if (object.type !== "image") {
+    object.set({ stroke, strokeWidth });
+  }
+}
+
 function applyCanvasDisplayScale(canvas: FabricCanvas | null, width: number, height: number, scale: number) {
   if (!canvas) return;
   canvas.setZoom(1);
@@ -368,6 +378,8 @@ export default function QrCodeArtEditor({
 
   const selectedLocked = useMemo(() => objectIsLocked(selected || undefined), [selected]);
   const isTextSelected = Boolean(selected && ["i-text", "text", "textbox"].includes(selected.type));
+  const isImageSelected = selected?.type === "image";
+  const isVectorSelected = Boolean(selected && !isTextSelected && !isImageSelected);
   const rightPanelOpen = rightPanelMode === "layers" || Boolean(selected);
   const documentColors = useMemo(() => ["#111111", "#ffffff", "#d8b36b", "#f7f2e7", "#3d372f", "#8b7a55", "#f2efe8", "#000000"], []);
   const filteredElementPresets = useMemo(
@@ -1629,9 +1641,14 @@ export default function QrCodeArtEditor({
     const canvas = canvasRef.current;
     const active = canvas?.getActiveObject();
     if (!canvas || !active) return;
-    const { fill, ...rest } = patch;
+    const { fill, stroke, strokeWidth, ...rest } = patch;
     if (fill) {
       applyFillDeep(active, fill);
+    }
+    if (stroke) {
+      applyStrokeDeep(active, stroke, strokeWidth || 3);
+    } else if (typeof strokeWidth === "number") {
+      active.set({ strokeWidth });
     }
     active.set(rest);
     canvas.requestRenderAll();
@@ -2670,15 +2687,45 @@ export default function QrCodeArtEditor({
                   <label className="block text-xs font-black text-zinc-500">Cor
                     <input type="color" value={String(selectedTextValue("fill") || "#111111")} onChange={(event) => applySelected({ fill: event.target.value })} className="mt-1 h-10 w-full rounded-xl border" />
                   </label>
-                  <label className="block text-xs font-black text-zinc-500">Fonte
+                  <div className="rounded-2xl border border-zinc-200 bg-[#f7f7f5] p-3">
+                    <div className="mb-2 text-xs font-black uppercase tracking-[0.12em] text-zinc-500">Cores do projeto</div>
+                    <div className="flex flex-wrap gap-2">
+                      {documentColors.map((color) => (
+                        <button
+                          key={`inspector-${color}`}
+                          type="button"
+                          onClick={() => applySelected({ fill: color })}
+                          className="h-9 w-9 rounded-full border border-zinc-200 shadow-sm"
+                          style={{ backgroundColor: color }}
+                          aria-label={`Aplicar cor ${color}`}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                  {isVectorSelected ? (
+                    <div className="space-y-2 rounded-2xl border border-zinc-200 bg-white p-3">
+                      <div className="text-xs font-black uppercase tracking-[0.12em] text-zinc-500">Elemento SVG / forma</div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button type="button" onClick={() => applySelected({ fill: "#111111" })} className="h-9 rounded-xl border bg-white text-xs font-black">Preto</button>
+                        <button type="button" onClick={() => applySelected({ fill: "#d8b36b" })} className="h-9 rounded-xl border bg-white text-xs font-black">Dourado</button>
+                        <button type="button" onClick={() => applySelected({ fill: "#ffffff" })} className="h-9 rounded-xl border bg-white text-xs font-black">Branco</button>
+                        <button type="button" onClick={() => applySelected({ fill: "#ed4f8c" })} className="h-9 rounded-xl border bg-white text-xs font-black">Rosa</button>
+                        <button type="button" onClick={() => applySelected({ stroke: "#d8b36b", strokeWidth: 5 })} className="h-9 rounded-xl border bg-white text-xs font-black">Contorno ouro</button>
+                        <button type="button" onClick={() => applySelected({ stroke: "#111111", strokeWidth: 5 })} className="h-9 rounded-xl border bg-white text-xs font-black">Contorno preto</button>
+                        <button type="button" onClick={() => applySelected({ shadow: "0px 18px 30px rgba(0,0,0,0.2)" })} className="h-9 rounded-xl border bg-white text-xs font-black">Sombra</button>
+                        <button type="button" onClick={() => applySelected({ opacity: 0.65 })} className="h-9 rounded-xl border bg-white text-xs font-black">Transparente</button>
+                      </div>
+                    </div>
+                  ) : null}
+                  <label className={`${isTextSelected ? "block" : "hidden"} text-xs font-black text-zinc-500`}>Fonte
                     <select value={String(selectedTextValue("fontFamily") || "Montserrat")} onChange={(event) => applySelected({ fontFamily: event.target.value })} className="mt-1 h-10 w-full rounded-xl border px-3">
                       {fontOptions.map((font) => <option key={font} value={font}>{font}</option>)}
                     </select>
                   </label>
-                  <label className="block text-xs font-black text-zinc-500">Tamanho
+                  <label className={`${isTextSelected ? "block" : "hidden"} text-xs font-black text-zinc-500`}>Tamanho
                     <input type="number" min={8} max={220} value={Number(selectedTextValue("fontSize") || 32)} onChange={(event) => applySelected({ fontSize: Number(event.target.value || 32) })} className="mt-1 h-10 w-full rounded-xl border px-3" />
                   </label>
-                  <label className="block text-xs font-black text-zinc-500">Espacamento letras
+                  <label className={`${isTextSelected ? "block" : "hidden"} text-xs font-black text-zinc-500`}>Espacamento letras
                     <input type="range" min={0} max={600} step={10} onChange={(event) => applySelected({ charSpacing: Number(event.target.value) })} className="mt-1 w-full" />
                   </label>
                   <label className="block text-xs font-black text-zinc-500">Opacidade
@@ -2692,7 +2739,7 @@ export default function QrCodeArtEditor({
                       className="mt-1 w-full accent-[#8b3dff]"
                     />
                   </label>
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className={`${isTextSelected ? "grid" : "hidden"} grid-cols-3 gap-2`}>
                     <button type="button" onClick={() => applySelected({ fontWeight: "900" })} className="h-10 rounded-xl border text-xs font-black">B</button>
                     <button type="button" onClick={() => applySelected({ fontStyle: "italic" })} className="h-10 rounded-xl border text-xs font-black"><Italic className="mx-auto" size={15} /></button>
                     <button type="button" onClick={() => applySelected({ underline: true })} className="h-10 rounded-xl border text-xs font-black"><Underline className="mx-auto" size={15} /></button>
@@ -2703,7 +2750,7 @@ export default function QrCodeArtEditor({
                     <button type="button" onClick={() => applySelected({ textAlign: "center" })} className="h-10 rounded-xl border text-xs font-black"><AlignCenter className="mx-auto" size={15} /></button>
                     <button type="button" onClick={() => applySelected({ textAlign: "right" })} className="h-10 rounded-xl border text-xs font-black"><AlignRight className="mx-auto" size={15} /></button>
                   </div>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className={`${isTextSelected ? "grid" : "hidden"} grid-cols-2 gap-2`}>
                     <button type="button" onClick={() => applySelected({ shadow: "0px 8px 14px rgba(0,0,0,0.25)" })} className="h-10 rounded-xl border text-xs font-black">Sombra suave</button>
                     <button type="button" onClick={() => applySelected({ shadow: "0px 16px 26px rgba(0,0,0,0.42)" })} className="h-10 rounded-xl border text-xs font-black">Sombra forte</button>
                     <button type="button" onClick={() => applySelected({ shadow: "0px 0px 18px #d8b36b" })} className="h-10 rounded-xl border text-xs font-black">Brilho dourado</button>
