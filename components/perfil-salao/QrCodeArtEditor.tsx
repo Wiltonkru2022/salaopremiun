@@ -99,6 +99,19 @@ type UploadedAsset = {
   src: string;
 };
 
+type EditorPage = {
+  id: string;
+  name: string;
+  payload_json: unknown;
+};
+
+type EditorPayload = {
+  version?: number;
+  pages?: EditorPage[];
+  currentPageIndex?: number;
+  canvas?: unknown;
+};
+
 const DEFAULT_WIDTH = 1080;
 const DEFAULT_HEIGHT = 1350;
 const LOCAL_PROJECTS_KEY = "salaopremiun-editor:dev-projects";
@@ -317,6 +330,17 @@ function objectIsFrame(object: FabricObject | null | undefined): object is Frame
   return Boolean((object as FrameObject | null | undefined)?.data?.isFrame);
 }
 
+function createPageId() {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID();
+  }
+  return `page-${Date.now()}-${Math.round(Math.random() * 10000)}`;
+}
+
+function isEditorPayload(value: unknown): value is EditorPayload {
+  return Boolean(value && typeof value === "object" && ("pages" in value || "canvas" in value));
+}
+
 function colorDistance(a: number[], b: number[]) {
   return Math.sqrt(
     (a[0] - b[0]) ** 2 +
@@ -375,6 +399,8 @@ export default function QrCodeArtEditor({
   const [customHeight, setCustomHeight] = useState(1080);
   const [backgroundColor, setBackgroundColor] = useState("#fff7e6");
   const [layerVersion, setLayerVersion] = useState(0);
+  const [pages, setPages] = useState<EditorPage[]>([]);
+  const [currentPageIndex, setCurrentPageIndex] = useState(0);
 
   const selectedLocked = useMemo(() => objectIsLocked(selected || undefined), [selected]);
   const isTextSelected = Boolean(selected && ["i-text", "text", "textbox"].includes(selected.type));
@@ -406,6 +432,110 @@ export default function QrCodeArtEditor({
     const availableH = window.innerHeight - 190;
     return Math.max(0.16, Math.min(0.86, availableW / width, availableH / height));
   }, []);
+
+  function currentCanvasJson() {
+    return canvasRef.current?.toJSON() || null;
+  }
+
+  function currentPagesSnapshot() {
+    const json = currentCanvasJson();
+    const nextPages = pages.length
+      ? pages.map((page, index) => index === currentPageIndex && json ? { ...page, payload_json: json } : page)
+      : [{ id: createPageId(), name: "Pagina 1", payload_json: json }];
+    return nextPages;
+  }
+
+  async function loadPage(index: number, nextPages = pages) {
+    const canvas = canvasRef.current;
+    const page = nextPages[index];
+    if (!canvas || !page) return;
+    loadingJsonRef.current = true;
+    canvas.discardActiveObject();
+    await canvas.loadFromJSON(page.payload_json as Record<string, unknown>);
+    canvas.requestRenderAll();
+    loadingJsonRef.current = false;
+    setCurrentPageIndex(index);
+    setSelected(null);
+    setRightPanelMode("none");
+    historyRef.current = [JSON.stringify(canvas.toJSON())];
+    futureRef.current = [];
+    setLayerVersion((value) => value + 1);
+  }
+
+  async function switchPage(index: number) {
+    if (index === currentPageIndex) return;
+    const nextPages = currentPagesSnapshot();
+    setPages(nextPages);
+    await loadPage(index, nextPages);
+  }
+
+  function addBlankPage() {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const savedPages = currentPagesSnapshot();
+    const blankJson = JSON.parse(JSON.stringify(canvas.toJSON()));
+    blankJson.objects = [];
+    blankJson.background = transparentBackground ? "" : backgroundColor;
+    blankJson.backgroundColor = transparentBackground ? "" : backgroundColor;
+    const nextPages = [
+      ...savedPages,
+      { id: createPageId(), name: `Pagina ${savedPages.length + 1}`, payload_json: blankJson },
+    ];
+    setPages(nextPages);
+    loadPage(nextPages.length - 1, nextPages);
+  }
+
+  function duplicateCurrentPage() {
+    const savedPages = currentPagesSnapshot();
+    const source = savedPages[currentPageIndex];
+    if (!source) return;
+    const copy: EditorPage = {
+      id: createPageId(),
+      name: `${source.name} copia`,
+      payload_json: JSON.parse(JSON.stringify(source.payload_json)),
+    };
+    const nextPages = [
+      ...savedPages.slice(0, currentPageIndex + 1),
+      copy,
+      ...savedPages.slice(currentPageIndex + 1),
+    ];
+    setPages(nextPages);
+    loadPage(currentPageIndex + 1, nextPages);
+  }
+
+  function deleteCurrentPage() {
+    const savedPages = currentPagesSnapshot();
+    if (savedPages.length <= 1) {
+      clearCurrentPage();
+      return;
+    }
+    const nextPages = savedPages.filter((_, index) => index !== currentPageIndex);
+    const nextIndex = Math.max(0, currentPageIndex - 1);
+    setPages(nextPages);
+    loadPage(nextIndex, nextPages);
+  }
+
+  function clearCurrentPage() {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    canvas.clear();
+    canvas.backgroundColor = transparentBackground ? "" : backgroundColor;
+    canvas.requestRenderAll();
+    setSelected(null);
+    setRightPanelMode("none");
+    setLayerVersion((value) => value + 1);
+    pushHistory();
+  }
+
+  function applyPageBackground(color: string) {
+    const canvas = canvasRef.current;
+    setBackgroundColor(color);
+    setTransparentBackground(false);
+    if (!canvas) return;
+    canvas.backgroundColor = color;
+    canvas.requestRenderAll();
+    pushHistory();
+  }
 
   const addImageFromUrl = useCallback(
     async (src: string, label = "Imagem", targetWidth = 360) => {
@@ -633,6 +763,8 @@ export default function QrCodeArtEditor({
       setLayerVersion((value) => value + 1);
       historyRef.current = [JSON.stringify(canvas.toJSON())];
       futureRef.current = [];
+      setPages([{ id: createPageId(), name: "Pagina 1", payload_json: canvas.toJSON() }]);
+      setCurrentPageIndex(0);
     },
     [backgroundColor, fitZoom, transparentBackground]
   );
@@ -728,6 +860,8 @@ export default function QrCodeArtEditor({
         setLayerVersion((value) => value + 1);
       });
       historyRef.current = [JSON.stringify(canvas.toJSON())];
+      setPages([{ id: createPageId(), name: "Pagina 1", payload_json: canvas.toJSON() }]);
+      setCurrentPageIndex(0);
       if (pending) {
         pendingStartRef.current = null;
         setArtSize({ width: pending.width, height: pending.height });
@@ -2025,7 +2159,14 @@ export default function QrCodeArtEditor({
   async function saveProject() {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const payload = canvas.toJSON();
+    const savedPages = currentPagesSnapshot();
+    setPages(savedPages);
+    const payload: EditorPayload = {
+      version: 2,
+      pages: savedPages,
+      currentPageIndex,
+      canvas: canvas.toJSON(),
+    };
     const thumbnail = canvas.toDataURL({ format: "png", quality: 0.8, multiplier: 0.22 });
     if (isPublicEditorRoute()) {
       const now = new Date().toISOString();
@@ -2088,6 +2229,14 @@ export default function QrCodeArtEditor({
   async function openProject(project: EditorProject) {
     const canvas = canvasRef.current;
     if (!canvas || !project.payload_json) return;
+    const storedPayload = project.payload_json;
+    const pagePayloads = isEditorPayload(storedPayload) && Array.isArray(storedPayload.pages)
+      ? storedPayload.pages
+      : [{ id: createPageId(), name: "Pagina 1", payload_json: storedPayload }];
+    const safePages = pagePayloads.length ? pagePayloads : [{ id: createPageId(), name: "Pagina 1", payload_json: storedPayload }];
+    const nextPageIndex = isEditorPayload(storedPayload) && typeof storedPayload.currentPageIndex === "number"
+      ? Math.min(Math.max(0, storedPayload.currentPageIndex), safePages.length - 1)
+      : 0;
     loadingJsonRef.current = true;
     setProjectStarted(true);
     setProjectId(project.id);
@@ -2099,7 +2248,9 @@ export default function QrCodeArtEditor({
     setZoom(nextZoom);
     canvas.setDimensions({ width: project.largura, height: project.altura });
     applyCanvasDisplayScale(canvas, project.largura, project.altura, nextZoom);
-    await canvas.loadFromJSON(project.payload_json);
+    setPages(safePages);
+    setCurrentPageIndex(nextPageIndex);
+    await canvas.loadFromJSON(safePages[nextPageIndex].payload_json as Record<string, unknown>);
     canvas.requestRenderAll();
     loadingJsonRef.current = false;
     historyRef.current = [JSON.stringify(canvas.toJSON())];
@@ -2340,6 +2491,20 @@ export default function QrCodeArtEditor({
                       {item.label}<br /><span className="text-[10px] text-zinc-500">{item.width}x{item.height}</span>
                     </button>
                   ))}
+                </div>
+                <div className="mt-5 rounded-2xl border border-zinc-200 bg-[#f7f7f5] p-3">
+                  <div className="mb-2 text-xs font-black uppercase tracking-[0.14em] text-zinc-500">Pagina atual</div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button type="button" onClick={addBlankPage} className="h-10 rounded-xl border border-zinc-200 bg-white text-xs font-black">Adicionar pagina</button>
+                    <button type="button" onClick={duplicateCurrentPage} className="h-10 rounded-xl border border-zinc-200 bg-white text-xs font-black">Duplicar pagina</button>
+                    <button type="button" onClick={clearCurrentPage} className="h-10 rounded-xl border border-zinc-200 bg-white text-xs font-black">Limpar pagina</button>
+                    <button type="button" onClick={deleteCurrentPage} className="h-10 rounded-xl border border-rose-200 bg-white text-xs font-black text-rose-600">Apagar pagina</button>
+                  </div>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {["#fff7e6", "#ffffff", "#111111", "#f2efe8", "#d8b36b", "#f6d365"].map((color) => (
+                      <button key={color} type="button" onClick={() => applyPageBackground(color)} className="h-8 w-8 rounded-full border border-zinc-200 shadow-sm" style={{ backgroundColor: color }} aria-label={`Fundo ${color}`} />
+                    ))}
+                  </div>
                 </div>
                 <div className="mt-5 grid grid-cols-2 gap-3">
                   {templates.map((item) => (
@@ -2672,7 +2837,25 @@ export default function QrCodeArtEditor({
                 <ToolButton label="Zoom +" onClick={() => changeZoom(zoom + 0.08)}><ZoomIn size={15} /></ToolButton>
                 <div className="h-6 w-px bg-zinc-200" />
                 <ToolButton label="Grade" onClick={() => setShowGrid((value) => !value)}><Grid3X3 size={15} /></ToolButton>
-                <span className="px-2 text-xs font-black text-zinc-600">1/1</span>
+                <button type="button" onClick={addBlankPage} className="h-9 rounded-lg border border-zinc-200 bg-white px-3 text-xs font-black text-zinc-700 transition hover:bg-zinc-50">+ Pagina</button>
+                <button type="button" onClick={duplicateCurrentPage} className="h-9 rounded-lg border border-zinc-200 bg-white px-3 text-xs font-black text-zinc-700 transition hover:bg-zinc-50">Duplicar</button>
+                <button type="button" onClick={deleteCurrentPage} className="h-9 rounded-lg border border-zinc-200 bg-white px-3 text-xs font-black text-zinc-700 transition hover:bg-rose-50 hover:text-rose-600">Apagar</button>
+                <div className="h-6 w-px bg-zinc-200" />
+                {pages.length > 1 ? (
+                  <div className="flex items-center gap-1">
+                    {pages.map((page, index) => (
+                      <button
+                        key={page.id}
+                        type="button"
+                        onClick={() => switchPage(index)}
+                        className={`h-8 min-w-8 rounded-lg border px-2 text-[11px] font-black transition ${index === currentPageIndex ? "border-[#d8b36b] bg-[#111111] text-[#d8b36b]" : "border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50"}`}
+                      >
+                        {index + 1}
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+                <span className="px-2 text-xs font-black text-zinc-600">{currentPageIndex + 1}/{Math.max(1, pages.length || 1)}</span>
               </div>
             </div>
           </main>
