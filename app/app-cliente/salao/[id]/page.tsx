@@ -1,9 +1,11 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Star } from "lucide-react";
 import ClientAppFrame from "@/components/client-app/ClientAppFrame";
 import ClientSalonHeaderActions from "@/components/client-app/ClientSalonHeaderActions";
 import ClientSalonSectionTabs from "@/components/client-app/ClientSalonSectionTabs";
+import { generateClientSalonMetadata } from "@/lib/client-app/salon-metadata";
 import {
   getClientAppSalonDetail,
   isClienteAppSalonFavorite,
@@ -11,9 +13,14 @@ import {
 import { validateClienteAppSession } from "@/lib/client-context.server";
 import { buildSalaoPublicPath } from "@/lib/saloes/public-link";
 
-export const metadata = {
-  title: "Salão",
-};
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  return generateClientSalonMetadata(id);
+}
 
 function formatCurrency(value: number | null) {
   if (value === null) return "Sob consulta";
