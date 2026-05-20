@@ -30,6 +30,10 @@ export function handleAppProfissionalHost(ctx: ProxyRouteContext) {
     return NextResponse.next();
   }
 
+  if (pathnameNormalizado === "/login") {
+    return redirectToHost(request, DOMINIO_APP, "/app-profissional/login");
+  }
+
   if (
     pathnameNormalizado === "/dashboard" ||
     pathnameNormalizado === "/app-profissional/dashboard"

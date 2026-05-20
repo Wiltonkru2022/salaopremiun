@@ -2,7 +2,6 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { ShieldCheck, Sparkles } from "lucide-react";
 import LoginProfissionalForm from "@/components/profissional/auth/LoginProfissionalForm";
-import ProfissionalHeader from "@/components/profissional/layout/ProfissionalHeader";
 import { getPlanoMinimoParaRecurso } from "@/lib/plans/catalog";
 import {
   getProfissionalSessionFromCookie,
@@ -82,12 +81,7 @@ export default async function LoginProfissionalPage({
   return (
     <div className="min-h-dvh bg-[radial-gradient(circle_at_top,#fff2c5_0,#f5f5f5_42%,#e7ecf2_100%)]">
       <div className="mx-auto flex min-h-dvh max-w-md flex-col bg-[#f5f5f5]/95 shadow-[0_0_80px_rgba(15,23,42,0.08)]">
-        <ProfissionalHeader
-          title="SalãoPremium"
-          subtitle="Acesso do profissional"
-        />
-
-        <main className="flex flex-1 items-start px-4 py-4">
+        <main className="flex flex-1 items-start px-4 py-[calc(env(safe-area-inset-top)+1rem)]">
           <div className="w-full space-y-3.5">
             <section className="overflow-hidden rounded-[1.5rem] bg-zinc-950 px-4 py-4 text-white shadow-[0_16px_34px_rgba(15,23,42,0.15)]">
               <div className="flex items-center gap-3">
