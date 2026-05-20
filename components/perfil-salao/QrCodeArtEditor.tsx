@@ -39,7 +39,6 @@ import {
   ZoomIn,
   ZoomOut,
 } from "lucide-react";
-import { useRouter } from "next/navigation";
 import {
   useCallback,
   useEffect,
@@ -51,7 +50,8 @@ import {
 import { getUsuarioLogado } from "@/lib/auth/getUsuarioLogado";
 import { asLooseSupabaseClient } from "@/lib/supabase/loose-client";
 
-type EditorTab = "modelos" | "texto" | "fotos" | "elementos" | "uploads" | "projetos";
+type EditorTab = "modelos" | "texto" | "fotos" | "formas" | "elementos" | "uploads" | "projetos";
+type RightPanelMode = "none" | "inspector" | "layers";
 type FabricModule = typeof import("fabric");
 type FabricCanvas = import("fabric").Canvas;
 type FabricObject = import("fabric").FabricObject;
@@ -105,6 +105,7 @@ const projectFormats = [
 
 const templates: TemplatePreset[] = [
   { label: "QR Code premium", kind: "qr", description: "Arte limpa para levar clientes ao app" },
+  { label: "Campanha premium", kind: "top-campaign", description: "Post forte para vender servicos de beleza" },
   { label: "Promo luxo", kind: "promo-luxo", description: "Oferta com preco grande e chamada direta" },
   { label: "Agenda glam", kind: "agenda-glam", description: "Horarios disponiveis com visual premium" },
   { label: "Antes e depois", kind: "before-after", description: "Dois slots para fotos de transformacao" },
@@ -126,6 +127,7 @@ const templates: TemplatePreset[] = [
 const startCards = [
   { label: "Comecar em branco", kind: "blank", description: "Tela livre para criar do zero" },
   { label: "QR Code de agendamento", kind: "qr", description: "Leve o cliente direto para reserva" },
+  { label: "Campanha premium", kind: "top-campaign", description: "Arte forte com cara de marketing" },
   { label: "Promocao da semana", kind: "promo-luxo", description: "Oferta bonita para vender hoje" },
   { label: "Agenda aberta", kind: "agenda-glam", description: "Mostre horarios livres" },
   { label: "Antes e depois", kind: "before-after", description: "Mostre resultado com duas fotos" },
@@ -133,6 +135,7 @@ const startCards = [
 ] as const;
 
 const elementCategories = [
+  "Tudo",
   "Cabelo",
   "Unhas",
   "Maquiagem",
@@ -163,29 +166,30 @@ const photoTags = [
 ] as const;
 
 const elementPresets = [
-  { label: "Beauty", src: "/salaopremiun-editor/elementos/beauty.svg" },
-  { label: "Chuveiro", src: "/salaopremiun-editor/elementos/chuveiro.svg" },
-  { label: "Tesoura classica", src: "/salaopremiun-editor/elementos/scissors.svg" },
-  { label: "Secador rosa", src: "/salaopremiun-editor/elementos/secador.svg" },
-  { label: "Tesoura premium", src: "/salaopremiun-editor/elementos/tesoura-premium.svg" },
-  { label: "Secador luxo", src: "/salaopremiun-editor/elementos/secador-luxo.svg" },
-  { label: "Esmalte chic", src: "/salaopremiun-editor/elementos/esmalte-chic.svg" },
-  { label: "Batom glam", src: "/salaopremiun-editor/elementos/batom-glam.svg" },
-  { label: "Pente dourado", src: "/salaopremiun-editor/elementos/pente-dourado.svg" },
-  { label: "Brilho premium", src: "/salaopremiun-editor/elementos/brilho-premium.svg" },
-  { label: "Espelho salao", src: "/salaopremiun-editor/elementos/espelho-salao.svg" },
-  { label: "Agenda aberta", src: "/salaopremiun-editor/elementos/agenda-aberta.svg" },
-  { label: "Maquina de corte", src: "/salaopremiun-editor/elementos/maquina-corte.svg" },
-  { label: "Cadeira salao", src: "/salaopremiun-editor/elementos/cadeira-salao-rosa.svg" },
-  { label: "Spray rosa", src: "/salaopremiun-editor/elementos/spray-rosa.svg" },
-  { label: "Laco rosa", src: "/salaopremiun-editor/elementos/laco-rosa.svg" },
-  { label: "Rosto beleza", src: "/salaopremiun-editor/elementos/rosto-beleza.svg" },
+  { label: "Beauty", src: "/salaopremiun-editor/elementos/beauty.svg", category: "Estetica" },
+  { label: "Chuveiro", src: "/salaopremiun-editor/elementos/chuveiro.svg", category: "Cabelo" },
+  { label: "Tesoura classica", src: "/salaopremiun-editor/elementos/scissors.svg", category: "Cabelo" },
+  { label: "Secador rosa", src: "/salaopremiun-editor/elementos/secador.svg", category: "Cabelo" },
+  { label: "Tesoura premium", src: "/salaopremiun-editor/elementos/tesoura-premium.svg", category: "Luxo" },
+  { label: "Secador luxo", src: "/salaopremiun-editor/elementos/secador-luxo.svg", category: "Luxo" },
+  { label: "Esmalte chic", src: "/salaopremiun-editor/elementos/esmalte-chic.svg", category: "Unhas" },
+  { label: "Batom glam", src: "/salaopremiun-editor/elementos/batom-glam.svg", category: "Maquiagem" },
+  { label: "Pente dourado", src: "/salaopremiun-editor/elementos/pente-dourado.svg", category: "Cabelo" },
+  { label: "Brilho premium", src: "/salaopremiun-editor/elementos/brilho-premium.svg", category: "Luxo" },
+  { label: "Espelho salao", src: "/salaopremiun-editor/elementos/espelho-salao.svg", category: "Estetica" },
+  { label: "Agenda aberta", src: "/salaopremiun-editor/elementos/agenda-aberta.svg", category: "Agenda" },
+  { label: "Maquina de corte", src: "/salaopremiun-editor/elementos/maquina-corte.svg", category: "Cabelo" },
+  { label: "Cadeira salao", src: "/salaopremiun-editor/elementos/cadeira-salao-rosa.svg", category: "Estetica" },
+  { label: "Spray rosa", src: "/salaopremiun-editor/elementos/spray-rosa.svg", category: "Cabelo" },
+  { label: "Laco rosa", src: "/salaopremiun-editor/elementos/laco-rosa.svg", category: "Promocao" },
+  { label: "Rosto beleza", src: "/salaopremiun-editor/elementos/rosto-beleza.svg", category: "Estetica" },
 ] as const;
 
 const tabConfig = [
   { id: "modelos", label: "Modelos", icon: WandSparkles },
   { id: "texto", label: "Texto", icon: Type },
   { id: "fotos", label: "Fotos", icon: ImagePlus },
+  { id: "formas", label: "Formas", icon: Shapes },
   { id: "elementos", label: "Elementos", icon: Shapes },
   { id: "uploads", label: "Uploads", icon: ImagePlus },
   { id: "projetos", label: "Projetos", icon: FolderOpen },
@@ -285,7 +289,6 @@ export default function QrCodeArtEditor({
   logoUrl,
   initialProjectSlug = null,
 }: Props) {
-  const router = useRouter();
   const canvasElRef = useRef<HTMLCanvasElement | null>(null);
   const canvasRef = useRef<FabricCanvas | null>(null);
   const fabricRef = useRef<FabricModule | null>(null);
@@ -303,6 +306,8 @@ export default function QrCodeArtEditor({
 
   const [activeTab, setActiveTab] = useState<EditorTab | null>(null);
   const [selected, setSelected] = useState<FabricObject | null>(null);
+  const [rightPanelMode, setRightPanelMode] = useState<RightPanelMode>("none");
+  const [elementCategory, setElementCategory] = useState<(typeof elementCategories)[number]>("Tudo");
   const [colorPanelOpen, setColorPanelOpen] = useState(false);
   const [projectName, setProjectName] = useState(titleFromSlug(initialProjectSlug));
   const [projectSlug, setProjectSlug] = useState(initialProjectSlug || "");
@@ -325,7 +330,12 @@ export default function QrCodeArtEditor({
   const [layerVersion, setLayerVersion] = useState(0);
 
   const selectedLocked = useMemo(() => objectIsLocked(selected || undefined), [selected]);
+  const rightPanelOpen = rightPanelMode === "layers" || Boolean(selected);
   const documentColors = useMemo(() => ["#111111", "#ffffff", "#d8b36b", "#f3d37a", "#fff8e7", "#8b3dff", "#ed4f8c", "#20c997"], []);
+  const filteredElementPresets = useMemo(
+    () => elementCategory === "Tudo" ? elementPresets : elementPresets.filter((preset) => preset.category === elementCategory),
+    [elementCategory]
+  );
   const canvasLayers = useMemo(() => {
     const canvas = canvasRef.current;
     return canvas ? [...canvas.getObjects()].reverse() : [];
@@ -568,7 +578,6 @@ export default function QrCodeArtEditor({
     setFormat(options.formato);
     const path = `/salaopremiuneditor/${slug}`;
     window.history.replaceState(null, "", path);
-    router.replace(path);
   }
 
   function applyProjectNameToUrl() {
@@ -579,7 +588,6 @@ export default function QrCodeArtEditor({
     setProjectId((current) => (current === projectSlug || !current ? slug : current));
     const path = `/salaopremiuneditor/${slug}`;
     window.history.replaceState(null, "", path);
-    router.replace(path);
   }
 
   useEffect(() => {
@@ -610,10 +618,21 @@ export default function QrCodeArtEditor({
       fabric.FabricObject.ownDefaults.cornerStrokeColor = "#ffffff";
       fabric.FabricObject.ownDefaults.cornerStyle = "circle";
       fabric.FabricObject.ownDefaults.transparentCorners = false;
+      fabric.FabricObject.ownDefaults.originX = "left";
+      fabric.FabricObject.ownDefaults.originY = "top";
 
-      canvas.on("selection:created", () => setSelected(canvas.getActiveObject() || null));
-      canvas.on("selection:updated", () => setSelected(canvas.getActiveObject() || null));
-      canvas.on("selection:cleared", () => setSelected(null));
+      const syncSelection = () => {
+        const active = canvas.getActiveObject() || null;
+        setSelected(active);
+        if (active) setRightPanelMode("inspector");
+      };
+      canvas.on("selection:created", syncSelection);
+      canvas.on("selection:updated", syncSelection);
+      canvas.on("selection:cleared", () => {
+        setSelected(null);
+        setRightPanelMode("none");
+        setColorPanelOpen(false);
+      });
       canvas.on("object:modified", () => {
         pushHistory();
         setLayerVersion((value) => value + 1);
@@ -645,7 +664,7 @@ export default function QrCodeArtEditor({
       canvasRef.current?.dispose();
       canvasRef.current = null;
     };
-  }, [addTemplate, artSize.height, artSize.width, backgroundColor, fitZoom, open, projectStarted, pushHistory, transparentBackground]);
+  }, [fitZoom, open, projectStarted, pushHistory]);
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -755,6 +774,7 @@ export default function QrCodeArtEditor({
     canvas.add(object);
     canvas.setActiveObject(object);
     canvas.requestRenderAll();
+    setLayerVersion((value) => value + 1);
     pushHistory();
   }
 
@@ -859,6 +879,67 @@ export default function QrCodeArtEditor({
     pushHistory();
   }
 
+  function addMarketingBlock(kind: "price-list" | "testimonial" | "coupon" | "availability" | "stars") {
+    const fabric = fabricRef.current;
+    const canvas = canvasRef.current;
+    if (!fabric || !canvas) return;
+    const centerX = canvas.getWidth() / 2;
+    const centerY = canvas.getHeight() / 2;
+    const card = new fabric.Rect({
+      left: centerX - 300,
+      top: centerY - 160,
+      width: 600,
+      height: kind === "price-list" ? 360 : 300,
+      rx: 32,
+      ry: 32,
+      fill: kind === "coupon" ? "#111111" : "#ffffff",
+      stroke: "#d8b36b",
+      strokeWidth: 4,
+      shadow: new fabric.Shadow({ color: "rgba(0,0,0,0.16)", blur: 35, offsetX: 0, offsetY: 18 }),
+      name: "Bloco de marketing",
+    });
+    const titleByKind = {
+      "price-list": "MENU DE SERVICOS",
+      testimonial: "CLIENTE APAIXONADA",
+      coupon: "CUPOM RELAMPAGO",
+      availability: "HORARIOS LIVRES HOJE",
+      stars: "5 ESTRELAS",
+    } as const;
+    const bodyByKind = {
+      "price-list": "Corte feminino ........ R$ 80\nEscova modelada ...... R$ 70\nCombo beleza ........ R$ 150",
+      testimonial: "\"Atendimento impecavel e resultado maravilhoso!\"",
+      coupon: "20% OFF\nvalido somente hoje",
+      availability: "14:00  |  16:30  |  18:00\nToque no QR Code e reserve",
+      stars: "Avaliacao 5 estrelas\nStudio Maos de Fadas",
+    } as const;
+    canvas.add(card);
+    canvas.add(new fabric.Textbox(titleByKind[kind], {
+      left: centerX - 240,
+      top: centerY - 115,
+      width: 480,
+      fontFamily: kind === "stars" ? "Montserrat" : "Montserrat",
+      fontSize: kind === "coupon" ? 46 : 34,
+      fontWeight: "900",
+      fill: kind === "coupon" ? "#d8b36b" : kind === "stars" ? "#d8b36b" : "#111111",
+      textAlign: "center",
+      name: "Titulo do bloco",
+    }));
+    canvas.add(new fabric.Textbox(bodyByKind[kind], {
+      left: centerX - 250,
+      top: centerY - 35,
+      width: 500,
+      fontFamily: kind === "testimonial" ? "Playfair Display" : "Lato",
+      fontSize: kind === "coupon" ? 54 : 28,
+      fontWeight: kind === "coupon" ? "900" : "700",
+      fill: kind === "coupon" ? "#fff8e7" : "#5f5a4f",
+      textAlign: "center",
+      lineHeight: 1.25,
+      name: "Texto do bloco",
+    }));
+    canvas.requestRenderAll();
+    pushHistory();
+  }
+
   async function addUpload(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -897,6 +978,137 @@ export default function QrCodeArtEditor({
     if (!fabric || !canvas) return;
     if (kind === "qr") {
       buildBaseTemplate();
+      return;
+    }
+
+    if (kind === "top-campaign") {
+      canvas.clear();
+      canvas.setViewportTransform([1, 0, 0, 1, 0, 0]);
+      canvas.backgroundColor = transparentBackground ? "" : "#f7ead3";
+      const width = canvas.getWidth();
+      const height = canvas.getHeight();
+      const pad = width * 0.07;
+      canvas.add(new fabric.Rect({
+        left: 0,
+        top: 0,
+        width,
+        height,
+        fill: "#f7ead3",
+        selectable: false,
+        evented: false,
+        name: "Fundo champagne",
+      }));
+      canvas.add(new fabric.Rect({
+        left: pad,
+        top: pad,
+        width: width - pad * 2,
+        height: height - pad * 2,
+        rx: 48,
+        ry: 48,
+        fill: "#14110d",
+        stroke: "#d8b36b",
+        strokeWidth: 7,
+        name: "Base premium",
+      }));
+      canvas.add(new fabric.Circle({
+        left: width * 0.58,
+        top: height * 0.08,
+        radius: width * 0.24,
+        fill: "#d8b36b",
+        opacity: 0.14,
+        name: "Luz dourada",
+      }));
+      canvas.add(new fabric.Circle({
+        left: -width * 0.18,
+        top: height * 0.55,
+        radius: width * 0.28,
+        fill: "#ed4f8c",
+        opacity: 0.12,
+        name: "Luz rosa",
+      }));
+      canvas.add(new fabric.Textbox("STUDIO MAOS DE FADAS", {
+        left: width * 0.18,
+        top: height * 0.14,
+        width: width * 0.64,
+        fontFamily: "Montserrat",
+        fontSize: Math.round(width * 0.032),
+        fontWeight: "900",
+        charSpacing: 50,
+        fill: "#f3d37a",
+        textAlign: "center",
+        name: "Marca",
+      }));
+      canvas.add(new fabric.Textbox("DIA DE\nBELEZA", {
+        left: width * 0.12,
+        top: height * 0.255,
+        width: width * 0.76,
+        fontFamily: "Playfair Display",
+        fontSize: Math.round(width * 0.094),
+        fontWeight: "900",
+        fill: "#fff8e7",
+        textAlign: "center",
+        lineHeight: 0.9,
+        name: "Titulo principal",
+      }));
+      canvas.add(new fabric.Textbox("Corte + escova + finalizacao", {
+        left: width * 0.18,
+        top: height * 0.49,
+        width: width * 0.64,
+        fontFamily: "Montserrat",
+        fontSize: Math.round(width * 0.032),
+        fontWeight: "800",
+        fill: "#f3d37a",
+        textAlign: "center",
+        name: "Subtitulo campanha",
+      }));
+      canvas.add(new fabric.Rect({
+        left: width * 0.24,
+        top: height * 0.585,
+        width: width * 0.52,
+        height: height * 0.11,
+        rx: 34,
+        ry: 34,
+        fill: "#fff8e7",
+        shadow: new fabric.Shadow({ color: "rgba(0,0,0,0.24)", blur: 30, offsetX: 0, offsetY: 18 }),
+        name: "Etiqueta preco",
+      }));
+      canvas.add(new fabric.Textbox("R$ 150", {
+        left: width * 0.28,
+        top: height * 0.607,
+        width: width * 0.44,
+        fontFamily: "Montserrat",
+        fontSize: Math.round(width * 0.068),
+        fontWeight: "900",
+        fill: "#111111",
+        textAlign: "center",
+        name: "Preco destaque",
+      }));
+      canvas.add(new fabric.Textbox("AGENDE PELO APP", {
+        left: width * 0.28,
+        top: height * 0.765,
+        width: width * 0.44,
+        fontFamily: "Montserrat",
+        fontSize: Math.round(width * 0.027),
+        fontWeight: "900",
+        fill: "#111111",
+        textAlign: "center",
+        backgroundColor: "#d8b36b",
+        name: "Chamada final",
+      }));
+      canvas.add(new fabric.Textbox(publicUrl, {
+        left: width * 0.22,
+        top: height * 0.87,
+        width: width * 0.56,
+        fontFamily: "Lato",
+        fontSize: Math.round(width * 0.017),
+        fontWeight: "700",
+        fill: "#fff8e7",
+        textAlign: "center",
+        name: "Link de agendamento",
+      }));
+      canvas.requestRenderAll();
+      setLayerVersion((value) => value + 1);
+      pushHistory();
       return;
     }
 
@@ -1020,6 +1232,7 @@ export default function QrCodeArtEditor({
         })
       );
       canvas.requestRenderAll();
+      setLayerVersion((value) => value + 1);
       pushHistory();
       return;
     }
@@ -1115,6 +1328,7 @@ export default function QrCodeArtEditor({
       );
     }
     canvas.requestRenderAll();
+    setLayerVersion((value) => value + 1);
     pushHistory();
   }
 
@@ -1408,6 +1622,7 @@ export default function QrCodeArtEditor({
     canvas.setActiveObject(object);
     canvas.requestRenderAll();
     setSelected(object);
+    setRightPanelMode("inspector");
   }
 
   function toggleLayerVisibility(object: FabricObject) {
@@ -1546,7 +1761,6 @@ export default function QrCodeArtEditor({
       setStatus("Projeto salvo neste navegador.");
       const path = `/salaopremiuneditor/${localId}`;
       window.history.replaceState(null, "", path);
-      router.replace(path);
       return;
     }
 
@@ -1602,7 +1816,6 @@ export default function QrCodeArtEditor({
     futureRef.current = [];
     const path = `/salaopremiuneditor/${project.id}`;
     window.history.replaceState(null, "", path);
-    router.replace(path);
   }
 
   async function duplicateProject(project: EditorProject) {
@@ -1768,6 +1981,7 @@ export default function QrCodeArtEditor({
           <div className="flex items-center gap-2">
             {status ? <span className="hidden rounded-full border border-zinc-200 bg-zinc-50 px-3 py-2 text-xs font-bold text-zinc-600 lg:inline-flex">{status}</span> : null}
             <HeaderButton label="Salvar" onClick={saveProject}><Save size={16} /></HeaderButton>
+            <HeaderButton label="Camadas" onClick={() => setRightPanelMode((mode) => mode === "layers" ? "none" : "layers")}><Layers size={16} /></HeaderButton>
             <HeaderButton label="Desfazer" onClick={undo}><Undo2 size={16} /></HeaderButton>
             <HeaderButton label="Refazer" onClick={redo}><Redo2 size={16} /></HeaderButton>
             <HeaderButton label="PNG" onClick={() => exportImage("png")}><Download size={16} /></HeaderButton>
@@ -1782,7 +1996,7 @@ export default function QrCodeArtEditor({
 
         <div
           className="grid min-h-0 flex-1 grid-cols-1"
-          style={{ gridTemplateColumns: activeTab ? "400px minmax(0,1fr) 320px" : "76px minmax(0,1fr) 320px" }}
+          style={{ gridTemplateColumns: `${activeTab ? "400px" : "76px"} minmax(0,1fr) ${rightPanelOpen ? "320px" : "0px"}` }}
         >
           <aside className="min-h-0 border-r border-zinc-200 bg-white">
             <div className="flex h-full">
@@ -1790,11 +2004,11 @@ export default function QrCodeArtEditor({
               {tabConfig.map((tab) => {
                 const Icon = tab.icon;
                 const openTab = () => {
-                  setActiveTab(tab.id);
+                  setActiveTab((current) => current === tab.id ? null : tab.id);
                   if (tab.id === "projetos") loadProjects();
                 };
                 return (
-                  <button key={tab.id} type="button" onMouseEnter={openTab} onClick={openTab} className={`group relative flex h-[62px] w-full flex-col items-center justify-center gap-1 rounded-xl text-[10px] font-black transition ${activeTab === tab.id ? "bg-white text-[#8a5a12] shadow-sm ring-1 ring-zinc-200" : "text-zinc-500 hover:bg-white/70"}`} aria-pressed={activeTab === tab.id}>
+                  <button key={tab.id} type="button" onClick={openTab} className={`group relative flex h-[62px] w-full flex-col items-center justify-center gap-1 rounded-xl text-[10px] font-black transition ${activeTab === tab.id ? "bg-white text-[#8a5a12] shadow-sm ring-1 ring-zinc-200" : "text-zinc-500 hover:bg-white/70"}`} aria-pressed={activeTab === tab.id}>
                     <Icon size={14} />
                     {tab.label}
                     <span className={`absolute left-full top-1/2 ml-2 hidden -translate-y-1/2 whitespace-nowrap rounded-lg border border-zinc-200 bg-white px-2 py-1 text-xs font-bold text-zinc-700 shadow-lg ${activeTab === tab.id ? "" : "group-hover:block"}`}>
@@ -1822,6 +2036,22 @@ export default function QrCodeArtEditor({
                     </button>
                   ))}
                 </div>
+                <div className="mt-6">
+                  <div className="mb-2 text-xs font-black uppercase tracking-[0.14em] text-zinc-500">Blocos rapidos</div>
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      ["price-list", "Tabela de precos"],
+                      ["testimonial", "Depoimento"],
+                      ["coupon", "Cupom"],
+                      ["availability", "Horarios livres"],
+                      ["stars", "5 estrelas"],
+                    ].map(([kind, label]) => (
+                      <button key={kind} type="button" onClick={() => addMarketingBlock(kind as Parameters<typeof addMarketingBlock>[0])} className="rounded-xl border border-zinc-200 bg-[#fff8e7] p-3 text-left text-xs font-black text-zinc-800 transition hover:border-[#d8b36b]">
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </Panel>
             ) : null}
 
@@ -1834,7 +2064,15 @@ export default function QrCodeArtEditor({
                 <button type="button" onClick={toggleTransparentBackground} className={`mt-3 h-10 w-full rounded-xl border text-xs font-black ${transparentBackground ? "border-emerald-300 bg-emerald-50 text-emerald-700" : "border-zinc-200 bg-white text-zinc-800"}`}>
                   Fundo {transparentBackground ? "transparente ativo" : "transparente"}
                 </button>
-                <div className="mt-3 grid grid-cols-3 gap-2">
+                <div className="mt-4 rounded-2xl border border-zinc-200 bg-[#fff8e7] p-3 text-xs font-semibold text-zinc-600">
+                  Selecione um texto na arte para liberar fonte, cor, sombra, contorno, alinhamento e efeitos no painel da direita.
+                </div>
+              </Panel>
+            ) : null}
+
+            {activeTab === "formas" ? (
+              <Panel title="Formas e molduras" icon={<Shapes size={15} />}>
+                <div className="grid grid-cols-3 gap-2">
                   {[
                     ["rect", "Retangulo"],
                     ["circle", "Circulo"],
@@ -1886,13 +2124,18 @@ export default function QrCodeArtEditor({
               <Panel title="Elementos do salao" icon={<Shapes size={15} />}>
                 <div className="mb-4 flex flex-wrap gap-2">
                   {elementCategories.map((category) => (
-                    <button key={category} type="button" className="rounded-full border border-zinc-200 bg-[#fff8e7] px-3 py-1.5 text-[11px] font-black text-[#8a5a12]">
+                    <button
+                      key={category}
+                      type="button"
+                      onClick={() => setElementCategory(category)}
+                      className={`rounded-full border px-3 py-1.5 text-[11px] font-black transition ${elementCategory === category ? "border-[#d8b36b] bg-[#111111] text-[#f3d37a]" : "border-zinc-200 bg-[#fff8e7] text-[#8a5a12] hover:border-[#d8b36b]"}`}
+                    >
                       {category}
                     </button>
                   ))}
                 </div>
                 <div className="grid grid-cols-2 gap-2">
-                  {elementPresets.map((preset) => (
+                  {filteredElementPresets.map((preset) => (
                     <button key={preset.src} type="button" onClick={() => addSvgFromUrl(preset.src, preset.label, 240)} className="flex min-h-28 flex-col items-center justify-center gap-2 rounded-xl border border-zinc-200 bg-white p-3 text-xs font-black text-zinc-800 shadow-sm transition hover:border-[#d8b36b]">
                       <img src={preset.src} alt={preset.label} className="h-14 w-14 object-contain" draggable={false} />
                       {preset.label}
@@ -1987,6 +2230,8 @@ export default function QrCodeArtEditor({
                   canvas?.getActiveObjects().forEach((object) => canvas.remove(object));
                   canvas?.discardActiveObject();
                   canvas?.requestRenderAll();
+                  setSelected(null);
+                  setRightPanelMode("none");
                   pushHistory();
                 }} className="inline-flex h-9 min-w-9 items-center justify-center rounded-lg border border-transparent px-2 text-zinc-700 transition hover:border-rose-100 hover:bg-rose-50 hover:text-rose-600" title="Apagar">
                   <Trash2 size={15} />
@@ -2028,7 +2273,9 @@ export default function QrCodeArtEditor({
             </div>
           </main>
 
+          {rightPanelOpen ? (
           <aside className="min-h-0 overflow-y-auto border-l border-zinc-200 bg-white p-4">
+            {rightPanelMode === "inspector" && selected ? (
             <Panel title="Elemento selecionado" icon={<Palette size={15} />}>
               {selected ? (
                 <div className="space-y-3">
@@ -2126,6 +2373,8 @@ export default function QrCodeArtEditor({
                     canvas?.getActiveObjects().forEach((object) => canvas.remove(object));
                     canvas?.discardActiveObject();
                     canvas?.requestRenderAll();
+                    setSelected(null);
+                    setRightPanelMode("none");
                     pushHistory();
                   }} className="h-10 w-full rounded-xl border border-rose-200 text-xs font-black text-rose-600">
                     <Trash2 className="mr-2 inline" size={14} /> Apagar
@@ -2135,7 +2384,9 @@ export default function QrCodeArtEditor({
                 <p className="text-sm font-semibold text-zinc-500">Selecione um item para editar cor, fonte, tamanho, sombra, contorno e camadas.</p>
               )}
             </Panel>
-            <div className="mt-6">
+            ) : null}
+            {rightPanelMode === "layers" ? (
+            <div>
               <Panel title="Camadas" icon={<Layers size={15} />}>
                 <div className="space-y-2">
                   {canvasLayers.length ? canvasLayers.map((object, index) => (
@@ -2157,7 +2408,9 @@ export default function QrCodeArtEditor({
                 </div>
               </Panel>
             </div>
+            ) : null}
           </aside>
+          ) : null}
         </div>
       </div>
     </div>
