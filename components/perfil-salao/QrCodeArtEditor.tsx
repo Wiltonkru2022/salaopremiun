@@ -9,6 +9,7 @@ import {
   ArrowRight,
   BringToFront,
   Circle,
+  Copy,
   Download,
   Eye,
   EyeOff,
@@ -311,6 +312,25 @@ function applyStrokeDeep(object: FabricObject, stroke: string, strokeWidth = 3) 
   }
 }
 
+function colorFromValue(value: unknown) {
+  if (typeof value !== "string") return null;
+  const normalized = value.trim();
+  if (/^#[0-9a-f]{3,8}$/i.test(normalized)) return normalized.toLowerCase();
+  if (/^rgb/i.test(normalized)) return normalized;
+  return null;
+}
+
+function collectObjectColors(object: FabricObject, colors: Set<string>) {
+  const fill = colorFromValue(object.get("fill"));
+  const stroke = colorFromValue(object.get("stroke"));
+  if (fill && fill !== "transparent") colors.add(fill);
+  if (stroke && stroke !== "transparent") colors.add(stroke);
+  const maybeGroup = object as FabricObject & { getObjects?: () => FabricObject[] };
+  if (typeof maybeGroup.getObjects === "function") {
+    maybeGroup.getObjects().forEach((child) => collectObjectColors(child, colors));
+  }
+}
+
 function applyCanvasDisplayScale(canvas: FabricCanvas | null, width: number, height: number, scale: number) {
   if (!canvas) return;
   canvas.setZoom(1);
@@ -375,6 +395,7 @@ export default function QrCodeArtEditor({
   } | null>(null);
 
   const [activeTab, setActiveTab] = useState<EditorTab | null>(null);
+  const [pinnedTab, setPinnedTab] = useState<EditorTab | null>(null);
   const [selected, setSelected] = useState<FabricObject | null>(null);
   const [rightPanelMode, setRightPanelMode] = useState<RightPanelMode>("none");
   const [elementCategory, setElementCategory] = useState<(typeof elementCategories)[number]>("Tudo");
@@ -407,7 +428,14 @@ export default function QrCodeArtEditor({
   const isImageSelected = selected?.type === "image";
   const isVectorSelected = Boolean(selected && !isTextSelected && !isImageSelected);
   const rightPanelOpen = rightPanelMode === "layers" || Boolean(selected);
-  const documentColors = useMemo(() => ["#111111", "#ffffff", "#d8b36b", "#f7f2e7", "#3d372f", "#8b7a55", "#f2efe8", "#000000"], []);
+  const documentColors = useMemo(() => {
+    const colors = new Set<string>(["#111111", "#ffffff", "#d8b36b"]);
+    const canvas = canvasRef.current;
+    const bg = colorFromValue(canvas?.backgroundColor);
+    if (bg) colors.add(bg);
+    canvas?.getObjects().forEach((object) => collectObjectColors(object, colors));
+    return [...colors].slice(0, 18);
+  }, [backgroundColor, layerVersion, selected]);
   const filteredElementPresets = useMemo(
     () => elementCategory === "Tudo" ? elementPresets : elementPresets.filter((preset) => preset.category === elementCategory),
     [elementCategory]
@@ -920,6 +948,38 @@ export default function QrCodeArtEditor({
           canvas.requestRenderAll();
           pushHistory();
         });
+      }
+
+      if (event.ctrlKey && event.key.toLowerCase() === "d" && active) {
+        event.preventDefault();
+        active.clone().then((cloned) => {
+          const object = cloned as FabricObject;
+          object.set({
+            left: (object.left || 0) + 28,
+            top: (object.top || 0) + 28,
+            evented: true,
+          });
+          canvas.add(object);
+          canvas.setActiveObject(object);
+          canvas.requestRenderAll();
+          pushHistory();
+        });
+      }
+
+      if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(event.key) && active) {
+        event.preventDefault();
+        const step = event.shiftKey ? 10 : 1;
+        const dx = event.key === "ArrowLeft" ? -step : event.key === "ArrowRight" ? step : 0;
+        const dy = event.key === "ArrowUp" ? -step : event.key === "ArrowDown" ? step : 0;
+        canvas.getActiveObjects().forEach((object) => {
+          object.set({
+            left: (object.left || 0) + dx,
+            top: (object.top || 0) + dy,
+          });
+          object.setCoords();
+        });
+        canvas.requestRenderAll();
+        pushHistory();
       }
 
       if (event.ctrlKey && event.key.toLowerCase() === "z") {
@@ -1871,6 +1931,32 @@ export default function QrCodeArtEditor({
     return typeof value === "number" ? value : key === "opacity" ? 1 : 0;
   }
 
+  function selectedMetricValue(key: "left" | "top" | "angle" | "width" | "height") {
+    if (!selected) return 0;
+    if (key === "width") return Math.round(selected.getScaledWidth());
+    if (key === "height") return Math.round(selected.getScaledHeight());
+    const value = selected.get(key);
+    return typeof value === "number" ? Math.round(value) : 0;
+  }
+
+  function applySelectedMetric(key: "left" | "top" | "angle" | "width" | "height", value: number) {
+    const canvas = canvasRef.current;
+    const active = canvas?.getActiveObject();
+    if (!canvas || !active || !Number.isFinite(value)) return;
+    if (key === "width") {
+      active.scaleToWidth(Math.max(1, value));
+    } else if (key === "height") {
+      active.scaleToHeight(Math.max(1, value));
+    } else {
+      active.set({ [key]: value });
+    }
+    active.setCoords();
+    canvas.requestRenderAll();
+    setSelected(active);
+    setLayerVersion((current) => current + 1);
+    pushHistory();
+  }
+
   function applyImageFilter(kind: "auto" | "grayscale" | "blur" | "warm" | "contrast" | "saturate" | "reset") {
     const fabric = fabricRef.current as (FabricModule & {
       filters?: Record<string, new (options?: Record<string, unknown>) => unknown>;
@@ -2010,6 +2096,26 @@ export default function QrCodeArtEditor({
     canvas.discardActiveObject();
     canvas.requestRenderAll();
     pushHistory();
+  }
+
+  function duplicateSelection() {
+    const canvas = canvasRef.current;
+    const active = canvas?.getActiveObject();
+    if (!canvas || !active) return;
+    active.clone().then((cloned) => {
+      const object = cloned as FabricObject;
+      object.set({
+        left: (object.left || 0) + 28,
+        top: (object.top || 0) + 28,
+        evented: true,
+      });
+      canvas.add(object);
+      canvas.setActiveObject(object);
+      canvas.requestRenderAll();
+      setSelected(object);
+      setLayerVersion((value) => value + 1);
+      pushHistory();
+    });
   }
 
   function alignSelected(type: "h" | "v") {
@@ -2457,19 +2563,29 @@ export default function QrCodeArtEditor({
           className="grid min-h-0 flex-1 grid-cols-1"
           style={{ gridTemplateColumns: `${activeTab ? "400px" : "76px"} minmax(0,1fr) ${rightPanelOpen ? "320px" : "0px"}` }}
         >
-          <aside className="min-h-0 border-r border-zinc-200 bg-white">
+          <aside
+            className="min-h-0 border-r border-zinc-200 bg-white"
+            onMouseLeave={() => {
+              setActiveTab(pinnedTab);
+            }}
+          >
             <div className="flex h-full">
             <nav className="flex w-[88px] shrink-0 flex-col items-center gap-1 border-r border-zinc-200 bg-white px-2 py-3">
               {tabConfig.map((tab) => {
                 const Icon = tab.icon;
                 const openTab = () => {
-                  setActiveTab((current) => current === tab.id ? null : tab.id);
+                  setPinnedTab((current) => {
+                    const next = current === tab.id ? null : tab.id;
+                    setActiveTab(next);
+                    return next;
+                  });
                   if (tab.id === "projetos") loadProjects();
                 };
                 return (
-                  <button key={tab.id} type="button" onMouseEnter={() => setActiveTab(tab.id)} onClick={openTab} className={`group relative flex h-[62px] w-full flex-col items-center justify-center gap-1 rounded-xl text-[10px] font-black leading-tight transition ${activeTab === tab.id ? "bg-[#111111] text-[#d8b36b] shadow-sm" : "text-zinc-500 hover:bg-[#f7f7f5]"}`} aria-pressed={activeTab === tab.id}>
+                  <button key={tab.id} type="button" onMouseEnter={() => { setActiveTab(tab.id); if (tab.id === "projetos") loadProjects(); }} onClick={openTab} className={`group relative flex h-[62px] w-full flex-col items-center justify-center gap-1 rounded-xl text-[10px] font-black leading-tight transition ${activeTab === tab.id ? "bg-[#111111] text-[#d8b36b] shadow-sm" : "text-zinc-500 hover:bg-[#f7f7f5]"}`} aria-pressed={pinnedTab === tab.id}>
                     <Icon size={14} />
                     {tab.label}
+                    {pinnedTab === tab.id ? <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-[#d8b36b]" /> : null}
                     <span className={`absolute left-full top-1/2 ml-2 hidden -translate-y-1/2 whitespace-nowrap rounded-lg border border-zinc-200 bg-white px-2 py-1 text-xs font-bold text-zinc-700 shadow-lg ${activeTab === tab.id ? "" : "group-hover:block"}`}>
                       {tab.label}
                     </span>
@@ -2791,6 +2907,7 @@ export default function QrCodeArtEditor({
                 <div className="h-6 w-px bg-zinc-200" />
                 <ToolButton label="Frente" onClick={() => moveLayer("front")}><BringToFront size={15} /></ToolButton>
                 <ToolButton label="Atras" onClick={() => moveLayer("back")}><Layers size={15} /></ToolButton>
+                <ToolButton label="Duplicar" onClick={duplicateSelection}><Copy size={15} /></ToolButton>
                 <ToolButton label="Agrupar" onClick={groupSelected}><Group size={15} /></ToolButton>
                 <ToolButton label="Desagrupar" onClick={ungroupSelected}><Ungroup size={15} /></ToolButton>
                 <ToolButton label={selectedLocked ? "Destravar" : "Travar"} onClick={() => lockSelected(!selectedLocked)}>{selectedLocked ? <Unlock size={15} /> : <Lock size={15} />}</ToolButton>
@@ -2922,6 +3039,28 @@ export default function QrCodeArtEditor({
                       className="mt-1 w-full accent-[#8b3dff]"
                     />
                   </label>
+                  <div className="rounded-2xl border border-zinc-200 bg-[#f7f7f5] p-3">
+                    <div className="mb-3 text-xs font-black uppercase tracking-[0.12em] text-zinc-500">Posicao e tamanho</div>
+                    <div className="grid grid-cols-2 gap-2">
+                      {([
+                        ["left", "X"],
+                        ["top", "Y"],
+                        ["width", "Largura"],
+                        ["height", "Altura"],
+                        ["angle", "Rotacao"],
+                      ] as const).map(([key, label]) => (
+                        <label key={key} className={key === "angle" ? "col-span-2 text-[11px] font-black text-zinc-500" : "text-[11px] font-black text-zinc-500"}>
+                          {label}
+                          <input
+                            type="number"
+                            value={selectedMetricValue(key)}
+                            onChange={(event) => applySelectedMetric(key, Number(event.target.value))}
+                            className="mt-1 h-9 w-full rounded-xl border border-zinc-200 bg-white px-2 text-xs font-black text-zinc-800 outline-none focus:border-[#d8b36b]"
+                          />
+                        </label>
+                      ))}
+                    </div>
+                  </div>
                   <div className={`${isTextSelected ? "grid" : "hidden"} grid-cols-3 gap-2`}>
                     <button type="button" onClick={() => applySelected({ fontWeight: "900" })} className="h-10 rounded-xl border text-xs font-black">B</button>
                     <button type="button" onClick={() => applySelected({ fontStyle: "italic" })} className="h-10 rounded-xl border text-xs font-black"><Italic className="mx-auto" size={15} /></button>
