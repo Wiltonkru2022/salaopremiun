@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { ArrowLeft } from "lucide-react";
 import Header from "@/components/layout/Header";
 import { PainelSessionProvider } from "@/components/layout/PainelSessionProvider";
 import PainelDesktopGuard from "@/components/layout/PainelDesktopGuard";
@@ -53,6 +55,8 @@ type Props = {
   notifications?: ShellNotification[];
 };
 
+const FULL_SCREEN_PAINEL_PATHS = new Set(["/agenda", "/caixa"]);
+
 export default function AppShell({
   children,
   idSalao,
@@ -80,7 +84,7 @@ export default function AppShell({
   const pathname = usePathname();
   const storageScope = [idSalao, idUsuario].filter(Boolean).join(":");
   const notificationStorageKey = storageScope || undefined;
-  const hideShellChrome = pathname === "/agenda" || pathname === "/caixa";
+  const hideShellChrome = FULL_SCREEN_PAINEL_PATHS.has(pathname);
   const criticalNotificationsCount = shellNotifications.filter(
     (notification) => notification.critical
   ).length;
@@ -148,7 +152,14 @@ export default function AppShell({
       <PainelPwaRuntime />
 
       {hideShellChrome ? (
-        <main className="min-h-screen bg-zinc-50">
+        <main className="relative min-h-screen bg-zinc-50">
+          <Link
+            href="/dashboard"
+            className="fixed left-3 top-3 z-[360] inline-flex h-8 items-center gap-1.5 rounded-full border border-zinc-200 bg-white/95 px-3 text-[11px] font-bold text-zinc-700 shadow-[0_12px_30px_rgba(15,23,42,0.12)] backdrop-blur transition hover:border-zinc-300 hover:bg-white"
+          >
+            <ArrowLeft size={14} />
+            Voltar para o painel
+          </Link>
           <div className="min-w-0">{children}</div>
         </main>
       ) : (
