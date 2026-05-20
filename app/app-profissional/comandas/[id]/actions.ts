@@ -152,6 +152,7 @@ function revalidarComandaProfissional(idComanda: string) {
   revalidatePath("/app-profissional/inicio");
   revalidatePath(`/comandas/${idComanda}`);
   revalidatePath("/comandas");
+  revalidatePath("/caixa");
 }
 
 export async function adicionarServicoNaComandaAction(formData: FormData) {
@@ -566,10 +567,7 @@ export async function enviarComandaParaCaixaAction(formData: FormData) {
 
   try {
     const { session, comanda } = await buscarComandaPermitida(idComanda);
-    await Promise.all([
-      assertCanMutatePlanFeature(session.idSalao, "comandas"),
-      assertCanMutatePlanFeature(session.idSalao, "caixa"),
-    ]);
+    await assertCanMutatePlanFeature(session.idSalao, "comandas");
 
     await runAdminOperation({
       action: "app_profissional_comanda_enviar_caixa",
@@ -610,23 +608,23 @@ export async function enviarComandaParaCaixaAction(formData: FormData) {
           return;
         }
 
-        const { error: updateError } = await supabaseAdmin.rpc(
-          "fn_enviar_comanda_para_pagamento",
-          {
-            p_id_salao: session.idSalao,
-            p_id_comanda: idComanda,
-            p_id_cliente: (comanda.id_cliente || null) as unknown as string,
-            p_observacoes: (comanda.observacoes || null) as unknown as string,
-            p_desconto: sanitizeMoney(comanda.desconto),
-            p_acrescimo: sanitizeMoney(comanda.acrescimo),
-          }
-        );
+        const { data: updatedComanda, error: updateError } = await supabaseAdmin
+          .from("comandas")
+          .update({
+            status: "aguardando_pagamento",
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", idComanda)
+          .eq("id_salao", session.idSalao)
+          .eq("status", "aberta")
+          .select("id")
+          .maybeSingle();
 
-        if (updateError) {
+        if (updateError || !updatedComanda?.id) {
           redirectUrl = buildRedirectUrl(
             idComanda,
             "erro",
-            updateError.message || "Erro ao enviar comanda para o caixa."
+            updateError?.message || "Erro ao enviar comanda para o caixa."
           );
           return;
         }

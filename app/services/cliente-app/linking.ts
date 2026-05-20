@@ -8,6 +8,13 @@ type ClienteAppLinkAccount = {
   senha_hash?: string | null;
 };
 
+export type ClienteManualLinkRow = {
+  id?: string | null;
+  id_salao?: string | null;
+  telefone?: string | null;
+  whatsapp?: string | null;
+};
+
 export type ClienteAppLinkSummary = {
   matched: number;
   linked: number;
@@ -19,6 +26,93 @@ export function normalizeClienteAppEmail(value: string | null | undefined) {
 
 export function normalizeClienteAppPhone(value: string | null | undefined) {
   return String(value || "").replace(/\D/g, "").trim();
+}
+
+function clienteRowMatchesPhone(row: ClienteManualLinkRow, telefone: string) {
+  return (
+    normalizeClienteAppPhone(row.telefone) === telefone ||
+    normalizeClienteAppPhone(row.whatsapp) === telefone
+  );
+}
+
+function uniqueClienteRows(rows: ClienteManualLinkRow[]) {
+  const seen = new Set<string>();
+  const unique: ClienteManualLinkRow[] = [];
+
+  for (const row of rows) {
+    const idCliente = String(row.id || "").trim();
+    const idSalao = String(row.id_salao || "").trim();
+    const key = `${idSalao}:${idCliente}`;
+
+    if (!idCliente || !idSalao || seen.has(key)) continue;
+
+    seen.add(key);
+    unique.push(row);
+  }
+
+  return unique;
+}
+
+export async function findClienteRowsByNormalizedPhone(params: {
+  supabaseAdmin: any;
+  telefone: string;
+  idSalao?: string | null;
+  limit?: number;
+}) {
+  const telefone = normalizeClienteAppPhone(params.telefone);
+  const outputLimit = params.limit || 500;
+  if (!telefone) {
+    return { data: [] as ClienteManualLinkRow[], error: null as unknown };
+  }
+
+  const selectColumns = "id, id_salao, telefone, whatsapp";
+  let exactQuery = params.supabaseAdmin.from("clientes").select(selectColumns);
+
+  if (params.idSalao) {
+    exactQuery = exactQuery.eq("id_salao", params.idSalao);
+  }
+
+  const exactResult = await exactQuery
+    .or(`telefone.eq.${telefone},whatsapp.eq.${telefone}`)
+    .limit(outputLimit);
+
+  if (exactResult.error) {
+    return { data: [] as ClienteManualLinkRow[], error: exactResult.error };
+  }
+
+  const exactRows = uniqueClienteRows(
+    ((exactResult.data || []) as ClienteManualLinkRow[]).filter((row) =>
+      clienteRowMatchesPhone(row, telefone)
+    )
+  );
+
+  if (exactRows.length) {
+    return { data: exactRows.slice(0, outputLimit), error: null as unknown };
+  }
+
+  let fallbackQuery = params.supabaseAdmin
+    .from("clientes")
+    .select(selectColumns)
+    .or("telefone.not.is.null,whatsapp.not.is.null");
+
+  if (params.idSalao) {
+    fallbackQuery = fallbackQuery.eq("id_salao", params.idSalao);
+  }
+
+  const fallbackResult = await fallbackQuery.limit(params.idSalao ? 500 : 2000);
+
+  if (fallbackResult.error) {
+    return { data: [] as ClienteManualLinkRow[], error: fallbackResult.error };
+  }
+
+  return {
+    data: uniqueClienteRows(
+      ((fallbackResult.data || []) as ClienteManualLinkRow[]).filter((row) =>
+        clienteRowMatchesPhone(row, telefone)
+      )
+    ).slice(0, outputLimit),
+    error: null as unknown,
+  };
 }
 
 async function upsertClienteAuthLink(params: {
@@ -136,11 +230,11 @@ export async function syncClienteAppLinksByPhone(params: {
         return { matched: 0, linked: 0 };
       }
 
-      const { data: clienteRows, error: clientesError } = await supabaseAdmin
-        .from("clientes")
-        .select("id, id_salao")
-        .or(`telefone.eq.${telefone},whatsapp.eq.${telefone}`)
-        .limit(500);
+      const { data: clienteRows, error: clientesError } =
+        await findClienteRowsByNormalizedPhone({
+          supabaseAdmin,
+          telefone,
+        });
 
       if (clientesError || !clienteRows?.length) {
         return { matched: 0, linked: 0 };
@@ -149,10 +243,7 @@ export async function syncClienteAppLinksByPhone(params: {
       let linked = 0;
       const seen = new Set<string>();
 
-      for (const row of clienteRows as Array<{
-        id?: string | null;
-        id_salao?: string | null;
-      }>) {
+      for (const row of clienteRows) {
         const idCliente = String(row.id || "").trim();
         const idSalao = String(row.id_salao || "").trim();
         const key = `${idSalao}:${idCliente}`;

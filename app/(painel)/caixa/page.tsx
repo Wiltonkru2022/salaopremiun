@@ -298,6 +298,49 @@ export default function CaixaPage() {
   ]);
 
   useEffect(() => {
+    if (!acessoCarregado || !idSalao || loading || saving) {
+      return;
+    }
+
+    const refreshFila = () => {
+      void carregarFilaOperacional(idSalao);
+      void carregarSessaoOperacional(idSalao);
+
+      if (comandaSelecionada?.id) {
+        void aplicarDetalheComanda(comandaSelecionada.id);
+      }
+    };
+
+    const channel = supabase
+      .channel(`caixa-comandas-${idSalao}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "comandas",
+          filter: `id_salao=eq.${idSalao}`,
+        },
+        refreshFila
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [
+    acessoCarregado,
+    idSalao,
+    loading,
+    saving,
+    supabase,
+    carregarFilaOperacional,
+    carregarSessaoOperacional,
+    aplicarDetalheComanda,
+    comandaSelecionada?.id,
+  ]);
+
+  useEffect(() => {
     if (!requestedAgendamentoId || !acessoCarregado || !caixaAberto || loading) {
       return;
     }

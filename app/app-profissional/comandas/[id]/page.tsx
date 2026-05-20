@@ -531,7 +531,7 @@ export default async function ComandaDetalhePage({
                 disabled={!itens?.length}
                 className="h-11 w-full rounded-[18px] bg-zinc-950 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
               >
-                Enviar para o caixa
+                Enviar para o Caixa
               </button>
             </form>
           </>

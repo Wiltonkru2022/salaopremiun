@@ -10,6 +10,7 @@ import {
   listEligibleSalonIdsByEmail,
 } from "@/lib/client-app/eligibility";
 import {
+  findClienteRowsByNormalizedPhone,
   normalizeClienteAppEmail,
   normalizeClienteAppPhone,
   syncClienteAppLinksByPhone,
@@ -223,12 +224,12 @@ export async function ensureClienteContaVinculadaAoSalao(params: {
       const [{ data: clienteByPhoneRows, error: clienteByPhoneError }, { data: authByEmailRows, error: authByEmailError }, { data: clientesByEmailRows, error: clienteByEmailError }] =
         await Promise.all([
           telefone
-            ? supabaseAdmin
-                .from("clientes")
-                .select("id")
-                .eq("id_salao", idSalao)
-                .or(`telefone.eq.${telefone},whatsapp.eq.${telefone}`)
-                .limit(1)
+            ? findClienteRowsByNormalizedPhone({
+                supabaseAdmin,
+                telefone,
+                idSalao,
+                limit: 1,
+              })
             : Promise.resolve({ data: [], error: null }),
           email
             ? supabaseAdmin
