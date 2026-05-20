@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 import { Suspense } from "react";
 import ClientInstallOnboardingGate from "@/components/client-app/ClientInstallOnboardingGate";
+import ClientMobileAppLayout from "@/components/client-app/ClientMobileAppLayout";
 import ClientSessionKeepAlive from "@/components/client-app/ClientSessionKeepAlive";
 import MobileViewportRuntime from "@/components/pwa/MobileViewportRuntime";
 
@@ -32,13 +33,13 @@ export default function AppClienteLayout({
   children: ReactNode;
 }) {
   return (
-    <div className="app-cliente-root min-h-dvh bg-[#f7f7f5] text-zinc-900">
+    <>
       <Suspense fallback={null}>
         <ClientInstallOnboardingGate />
       </Suspense>
       <MobileViewportRuntime />
       <ClientSessionKeepAlive />
-      {children}
-    </div>
+      <ClientMobileAppLayout>{children}</ClientMobileAppLayout>
+    </>
   );
 }

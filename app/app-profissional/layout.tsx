@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { Suspense } from "react";
+import ProfissionalMobileAppLayout from "@/components/profissional/layout/ProfissionalMobileAppLayout";
 import ProfissionalInstallOnboardingGate from "@/components/profissional/pwa/ProfissionalInstallOnboardingGate";
 
 export const dynamic = "force-dynamic";
@@ -20,11 +21,11 @@ export default function AppProfissionalLayout({
   children: ReactNode;
 }) {
   return (
-    <div className="app-profissional-root min-h-dvh bg-[#f5f5f5] text-zinc-900">
+    <>
       <Suspense fallback={null}>
         <ProfissionalInstallOnboardingGate />
       </Suspense>
-      {children}
-    </div>
+      <ProfissionalMobileAppLayout>{children}</ProfissionalMobileAppLayout>
+    </>
   );
 }
