@@ -53,7 +53,7 @@ export default function ClientAppBottomNav() {
   }
 
   return (
-    <nav className="sp-mobile-fixed fixed inset-x-0 bottom-0 z-40 translate-y-0 border-t border-zinc-200 bg-white px-2 pb-[max(env(safe-area-inset-bottom),0.45rem)] pt-2 shadow-[0_-14px_34px_rgba(15,23,42,0.10)] md:hidden">
+    <nav className="sp-mobile-fixed fixed inset-x-0 bottom-[var(--sp-fixed-bottom,0px)] z-40 translate-y-0 border-t border-zinc-200 bg-white px-2 pb-[max(env(safe-area-inset-bottom),0.45rem)] pt-2 shadow-[0_-14px_34px_rgba(15,23,42,0.10)] md:hidden">
       <div className="mx-auto grid max-w-md grid-cols-4 gap-1">
         {navItems.map((item) => {
           const Icon = item.icon;
