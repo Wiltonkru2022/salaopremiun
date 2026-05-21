@@ -2579,6 +2579,7 @@ export type Database = {
           desconta_taxa_profissional: boolean | null
           dias_funcionamento: Json
           exigir_cliente_na_venda: boolean | null
+          fuso_horario: string
           hora_abertura: string
           hora_fechamento: string
           id: string
@@ -2614,6 +2615,7 @@ export type Database = {
           desconta_taxa_profissional?: boolean | null
           dias_funcionamento?: Json
           exigir_cliente_na_venda?: boolean | null
+          fuso_horario?: string
           hora_abertura?: string
           hora_fechamento?: string
           id?: string
@@ -2649,6 +2651,7 @@ export type Database = {
           desconta_taxa_profissional?: boolean | null
           dias_funcionamento?: Json
           exigir_cliente_na_venda?: boolean | null
+          fuso_horario?: string
           hora_abertura?: string
           hora_fechamento?: string
           id?: string

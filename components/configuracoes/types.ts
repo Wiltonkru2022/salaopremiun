@@ -33,6 +33,7 @@ export type ConfigSalaoForm = {
   id_salao: string;
   hora_abertura: string;
   hora_fechamento: string;
+  fuso_horario: string;
   intervalo_minutos: number;
   dias_funcionamento: string[];
   taxa_maquininha_credito: number;

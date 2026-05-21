@@ -5,7 +5,12 @@ import {
   sendPushToRows,
   type PushAudience,
 } from "@/lib/push-notifications";
+import { getSalonTimeZone } from "@/lib/salon-timezone.server";
 import { loadSalonNotificationSettings } from "@/lib/salon-notification-settings";
+import {
+  DEFAULT_SALON_TIME_ZONE,
+  localTimeToUtc,
+} from "@/lib/timezones";
 
 type NotificationChannel = "cliente_app" | "profissional_app" | "salao_painel";
 type NotificationStatus = "pendente" | "processando" | "enviada" | "falhou" | "cancelada";
@@ -281,6 +286,11 @@ export async function processPendingNotificationJobs(limit = 80) {
     if (lock.error || !lock.data?.id) continue;
 
     try {
+      if (await realignReminderJobIfTooEarly(job)) {
+        processed += 1;
+        continue;
+      }
+
       const rows = await findSubscriptionsForJob(job);
       const result = await sendPushToRows(rows, {
         title: job.titulo,
@@ -318,10 +328,14 @@ function addMinutes(date: Date, minutes: number) {
   return next;
 }
 
-function appointmentDateTime(data?: string | null, hora?: string | null) {
+function appointmentDateTime(
+  data?: string | null,
+  hora?: string | null,
+  timeZone = DEFAULT_SALON_TIME_ZONE
+) {
   const date = String(data || "").slice(0, 10);
   const time = String(hora || "").slice(0, 5);
-  const parsed = new Date(`${date}T${time || "00:00"}:00`);
+  const parsed = localTimeToUtc(date, time || "00:00", timeZone);
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
 
@@ -368,6 +382,78 @@ async function loadAppointmentContext(idAgendamento: string, idSalao: string) {
   return data as AppointmentNotificationContext;
 }
 
+async function cancelPendingAppointmentReminderNotifications(idAgendamento: string) {
+  const prefix = `lembrete_30min:${idAgendamento}:`;
+
+  await (getSupabaseAdmin() as any)
+    .from("notification_jobs")
+    .update({
+      status: "cancelada",
+      updated_at: new Date().toISOString(),
+    })
+    .like("idempotency_key", `${prefix}%`)
+    .eq("status", "pendente");
+}
+
+function appointmentIdFromReminderKey(key?: string | null) {
+  const parts = String(key || "").split(":");
+  return parts[0] === "lembrete_30min" ? parts[1] || null : null;
+}
+
+async function realignReminderJobIfTooEarly(job: NotificationJobRow) {
+  if (!String(job.tipo || "").startsWith("lembrete_30min")) return false;
+  if (!job.id_salao) return false;
+
+  const idAgendamento = appointmentIdFromReminderKey(job.idempotency_key);
+  if (!idAgendamento) return false;
+
+  const agendamento = await loadAppointmentContext(idAgendamento, job.id_salao);
+  if (!agendamento) {
+    await markJob(job.id, "cancelada", {
+      erro_texto: "Agendamento nao encontrado para lembrete.",
+    });
+    return true;
+  }
+
+  if (
+    !["confirmado", "em_atendimento"].includes(
+      String(agendamento.status || "").toLowerCase()
+    )
+  ) {
+    await markJob(job.id, "cancelada", {
+      erro_texto: "Agendamento sem status valido para lembrete.",
+    });
+    return true;
+  }
+
+  const timeZone = await getSalonTimeZone(job.id_salao);
+  const start = appointmentDateTime(
+    agendamento.data,
+    agendamento.hora_inicio,
+    timeZone
+  );
+  if (!start) return false;
+
+  const settings = await loadSalonNotificationSettings(job.id_salao);
+  const minutosAntes = settings.lembreteMinutosAntes || 30;
+  const expectedSendAt = addMinutes(start, -minutosAntes);
+
+  if (expectedSendAt.getTime() > Date.now()) {
+    await (getSupabaseAdmin() as any)
+      .from("notification_jobs")
+      .update({
+        status: "pendente",
+        enviar_em: expectedSendAt.toISOString(),
+        updated_at: new Date().toISOString(),
+        erro_texto: null,
+      })
+      .eq("id", job.id);
+    return true;
+  }
+
+  return false;
+}
+
 async function findClienteAppContaId(params: {
   idSalao: string;
   idCliente?: string | null;
@@ -394,11 +480,17 @@ export async function scheduleAppointmentReminderNotifications(params: {
   if (!agendamento) return;
   if (!["confirmado", "em_atendimento"].includes(String(agendamento.status || "").toLowerCase())) return;
 
-  const start = appointmentDateTime(agendamento.data, agendamento.hora_inicio);
+  const timeZone = await getSalonTimeZone(params.idSalao);
+  const start = appointmentDateTime(
+    agendamento.data,
+    agendamento.hora_inicio,
+    timeZone
+  );
   if (!start) return;
   const settings = await loadSalonNotificationSettings(params.idSalao);
   const minutosAntes = settings.lembreteMinutosAntes || 30;
   const enviarEm = addMinutes(start, -minutosAntes);
+  await cancelPendingAppointmentReminderNotifications(agendamento.id);
   if (enviarEm.getTime() <= Date.now()) return;
 
   const cliente = firstRelation(agendamento.clientes);
@@ -409,6 +501,7 @@ export async function scheduleAppointmentReminderNotifications(params: {
     String(profissional?.nome_exibicao || profissional?.nome || "profissional").trim();
   const servicoNome = String(servico?.nome || "atendimento").trim();
   const quando = formatAppointmentDate(agendamento.data, agendamento.hora_inicio);
+  const reminderKey = `${agendamento.data}:${String(agendamento.hora_inicio).slice(0, 5)}:${minutosAntes}`;
   const clienteAppContaId = await findClienteAppContaId({
     idSalao: params.idSalao,
     idCliente: agendamento.cliente_id,
@@ -426,7 +519,7 @@ export async function scheduleAppointmentReminderNotifications(params: {
           url: `/app-profissional/agenda/${agendamento.id}`,
           tag: `lembrete-profissional-${agendamento.id}`,
           enviarEm,
-          idempotencyKey: `lembrete_30min:${agendamento.id}:profissional`,
+          idempotencyKey: `lembrete_30min:${agendamento.id}:profissional:${reminderKey}`,
         })
       : Promise.resolve(),
     clienteAppContaId
@@ -441,7 +534,7 @@ export async function scheduleAppointmentReminderNotifications(params: {
           url: "/app-cliente/agendamentos",
           tag: `lembrete-cliente-${agendamento.id}`,
           enviarEm,
-          idempotencyKey: `lembrete_30min:${agendamento.id}:cliente`,
+          idempotencyKey: `lembrete_30min:${agendamento.id}:cliente:${reminderKey}`,
         })
       : Promise.resolve(),
   ]);

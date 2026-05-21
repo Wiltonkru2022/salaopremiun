@@ -12,7 +12,9 @@ import {
   isGoogleCalendarConfigured,
   upsertGoogleCalendarEvent,
 } from "@/lib/google-calendar/oauth";
+import { getSalonTimeZone } from "@/lib/salon-timezone.server";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { localTimeToUtc } from "@/lib/timezones";
 
 const payloadSchema = z.object({
   idSalao: z.string().uuid(),
@@ -45,11 +47,14 @@ function getPeriod(viewMode: "day" | "week", data: string) {
   };
 }
 
-function toGoogleDateTime(date: string, time: string) {
-  return `${date}T${String(time || "00:00").slice(0, 5)}:00-04:00`;
+function toGoogleDateTime(date: string, time: string, timeZone: string) {
+  const parsed = localTimeToUtc(date, String(time || "00:00").slice(0, 5), timeZone);
+  return Number.isNaN(parsed.getTime())
+    ? `${date}T${String(time || "00:00").slice(0, 5)}:00`
+    : parsed.toISOString();
 }
 
-function buildGoogleEvent(row: AppointmentRow) {
+function buildGoogleEvent(row: AppointmentRow, timeZone: string) {
   const clienteNome = row.clientes?.nome || "Cliente";
   const servicoNome = row.servicos?.nome || "Atendimento";
   const profissionalNome =
@@ -67,12 +72,12 @@ function buildGoogleEvent(row: AppointmentRow) {
       .filter(Boolean)
       .join("\n"),
     start: {
-      dateTime: toGoogleDateTime(row.data, row.hora_inicio),
-      timeZone: "America/Campo_Grande",
+      dateTime: toGoogleDateTime(row.data, row.hora_inicio, timeZone),
+      timeZone,
     },
     end: {
-      dateTime: toGoogleDateTime(row.data, row.hora_fim),
-      timeZone: "America/Campo_Grande",
+      dateTime: toGoogleDateTime(row.data, row.hora_fim, timeZone),
+      timeZone,
     },
   };
 }
@@ -189,6 +194,7 @@ export async function POST(req: NextRequest) {
     }
 
     const accessToken = await getValidGoogleCalendarAccessToken(connection);
+    const timeZone = await getSalonTimeZone(body.idSalao);
     let synced = 0;
 
     for (const row of rows) {
@@ -196,7 +202,7 @@ export async function POST(req: NextRequest) {
         accessToken,
         calendarId: connection.calendar_id || "primary",
         eventId: row.google_calendar_event_id,
-        event: buildGoogleEvent(row),
+        event: buildGoogleEvent(row, timeZone),
       });
 
       const { error: updateError } = await (supabase as any)

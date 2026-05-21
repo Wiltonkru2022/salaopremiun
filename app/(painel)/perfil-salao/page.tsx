@@ -2100,6 +2100,26 @@ export default function PerfilSalaoPage() {
                 </a>
 
                 <a
+                  href="/configuracoes/agenda-horarios#fuso-horario"
+                  className="rounded-[22px] border border-zinc-200 bg-zinc-50 p-4 transition hover:-translate-y-0.5 hover:bg-zinc-100"
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="rounded-2xl border border-zinc-200 bg-white p-2.5 text-zinc-800">
+                      <Globe size={17} />
+                    </div>
+                    <div>
+                      <div className="text-sm font-bold text-zinc-950">
+                        Fuso horario do salao
+                      </div>
+                      <p className="mt-1 text-sm leading-5 text-zinc-600">
+                        Defina o fuso usado na agenda, lembretes, notificacoes
+                        e Google Calendar.
+                      </p>
+                    </div>
+                  </div>
+                </a>
+
+                <a
                   href="/servicos"
                   className="rounded-[22px] border border-zinc-200 bg-zinc-50 p-4 transition hover:-translate-y-0.5 hover:bg-zinc-100"
                 >

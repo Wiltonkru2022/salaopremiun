@@ -65,6 +65,10 @@ import {
 } from "@/components/configuracoes/ConfiguracoesChrome";
 import PlanoLimiteNotice from "@/components/plans/PlanoLimiteNotice";
 import { usePlanoAccessSnapshot } from "@/components/plans/usePlanoAccessSnapshot";
+import {
+  normalizeSalonTimeZone,
+  SALON_TIME_ZONE_OPTIONS,
+} from "@/lib/timezones";
 
 export type ConfiguracoesSecao =
   | "agenda"
@@ -78,7 +82,8 @@ const sectionMeta: Record<
 > = {
   agenda: {
     title: "Agenda e horários",
-    description: "Dias de funcionamento, horários e intervalo da agenda.",
+    description:
+      "Dias de funcionamento, fuso horário, horários e intervalo da agenda.",
   },
   caixa: {
     title: "Caixa e taxas",
@@ -261,7 +266,7 @@ export default function ConfiguracoesPageClient({
         supabase.from("saloes").select("bairro, cep, cidade, complemento, cpf_cnpj, created_at, email, endereco, estado, id, inscricao_estadual, limite_profissionais, limite_usuarios, logo_url, nome, nome_fantasia, numero, plano, razao_social, renovacao_automatica, responsavel, status, telefone, tipo_pessoa, trial_ativo, trial_fim_em, trial_inicio_em, updated_at, whatsapp").eq("id", painelSession.idSalao).maybeSingle(),
         supabase
           .from("configuracoes_salao")
-          .select("cor_primaria, created_at, desconta_taxa_profissional, dias_funcionamento, exigir_cliente_na_venda, hora_abertura, hora_fechamento, id, id_salao, intervalo_minutos, modo_compacto, permitir_reabrir_venda, rateio_config, repassa_taxa_cliente, taxa_credito_10x, taxa_credito_11x, taxa_credito_12x, taxa_credito_1x, taxa_credito_2x, taxa_credito_3x, taxa_credito_4x, taxa_credito_5x, taxa_credito_6x, taxa_credito_7x, taxa_credito_8x, taxa_credito_9x, taxa_maquininha_boleto, taxa_maquininha_credito, taxa_maquininha_debito, taxa_maquininha_outro, taxa_maquininha_pix, taxa_maquininha_transferencia, updated_at")
+          .select("cor_primaria, created_at, desconta_taxa_profissional, dias_funcionamento, exigir_cliente_na_venda, fuso_horario, hora_abertura, hora_fechamento, id, id_salao, intervalo_minutos, modo_compacto, permitir_reabrir_venda, rateio_config, repassa_taxa_cliente, taxa_credito_10x, taxa_credito_11x, taxa_credito_12x, taxa_credito_1x, taxa_credito_2x, taxa_credito_3x, taxa_credito_4x, taxa_credito_5x, taxa_credito_6x, taxa_credito_7x, taxa_credito_8x, taxa_credito_9x, taxa_maquininha_boleto, taxa_maquininha_credito, taxa_maquininha_debito, taxa_maquininha_outro, taxa_maquininha_pix, taxa_maquininha_transferencia, updated_at")
           .eq("id_salao", painelSession.idSalao)
           .maybeSingle(),
       ]);
@@ -300,6 +305,7 @@ export default function ConfiguracoesPageClient({
         setConfigForm({
           id: configData.id || "",
           id_salao: configData.id_salao || painelSession.idSalao,
+          fuso_horario: normalizeSalonTimeZone(configData.fuso_horario),
           hora_abertura: normalizeTime(configData.hora_abertura) || "08:00",
           hora_fechamento: normalizeTime(configData.hora_fechamento) || "19:00",
           intervalo_minutos: parseNumber(configData.intervalo_minutos || 15),
@@ -383,6 +389,9 @@ export default function ConfiguracoesPageClient({
     const dataToSave = {
       ...(configForm.id ? { id: configForm.id } : {}),
       id_salao: salaoIdFinal,
+      fuso_horario: normalizeSalonTimeZone(
+        payload.fuso_horario ?? configForm.fuso_horario
+      ),
       hora_abertura: payload.hora_abertura ?? configForm.hora_abertura,
       hora_fechamento: payload.hora_fechamento ?? configForm.hora_fechamento,
       intervalo_minutos: payload.intervalo_minutos ?? configForm.intervalo_minutos,
@@ -422,7 +431,7 @@ export default function ConfiguracoesPageClient({
     const { data, error } = await supabase
       .from("configuracoes_salao")
       .upsert(dataToSave, { onConflict: "id_salao" })
-      .select("cor_primaria, created_at, desconta_taxa_profissional, dias_funcionamento, exigir_cliente_na_venda, hora_abertura, hora_fechamento, id, id_salao, intervalo_minutos, modo_compacto, permitir_reabrir_venda, rateio_config, repassa_taxa_cliente, taxa_credito_10x, taxa_credito_11x, taxa_credito_12x, taxa_credito_1x, taxa_credito_2x, taxa_credito_3x, taxa_credito_4x, taxa_credito_5x, taxa_credito_6x, taxa_credito_7x, taxa_credito_8x, taxa_credito_9x, taxa_maquininha_boleto, taxa_maquininha_credito, taxa_maquininha_debito, taxa_maquininha_outro, taxa_maquininha_pix, taxa_maquininha_transferencia, updated_at")
+      .select("cor_primaria, created_at, desconta_taxa_profissional, dias_funcionamento, exigir_cliente_na_venda, fuso_horario, hora_abertura, hora_fechamento, id, id_salao, intervalo_minutos, modo_compacto, permitir_reabrir_venda, rateio_config, repassa_taxa_cliente, taxa_credito_10x, taxa_credito_11x, taxa_credito_12x, taxa_credito_1x, taxa_credito_2x, taxa_credito_3x, taxa_credito_4x, taxa_credito_5x, taxa_credito_6x, taxa_credito_7x, taxa_credito_8x, taxa_credito_9x, taxa_maquininha_boleto, taxa_maquininha_credito, taxa_maquininha_debito, taxa_maquininha_outro, taxa_maquininha_pix, taxa_maquininha_transferencia, updated_at")
       .maybeSingle();
 
     if (error) throw error;
@@ -431,6 +440,7 @@ export default function ConfiguracoesPageClient({
       setConfigForm({
         id: data.id || configForm.id,
         id_salao: data.id_salao || salaoIdFinal,
+        fuso_horario: normalizeSalonTimeZone(data.fuso_horario),
         hora_abertura: normalizeTime(data.hora_abertura) || "08:00",
         hora_fechamento: normalizeTime(data.hora_fechamento) || "19:00",
         intervalo_minutos: parseNumber(data.intervalo_minutos || 15),
@@ -520,6 +530,7 @@ export default function ConfiguracoesPageClient({
       await upsertConfiguracoes({
         hora_abertura: configForm.hora_abertura,
         hora_fechamento: configForm.hora_fechamento,
+        fuso_horario: configForm.fuso_horario,
         intervalo_minutos: configForm.intervalo_minutos,
         dias_funcionamento: configForm.dias_funcionamento,
       });
@@ -1105,9 +1116,32 @@ export default function ConfiguracoesPageClient({
           <SectionCard
             icon={<CalendarClock size={18} />}
             title="Agenda e horários"
-            description="Dias de funcionamento, abertura, fechamento e intervalo."
+            description="Fuso horário, dias de funcionamento, abertura, fechamento e intervalo."
           >
-            <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-3">
+            <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+              <div id="fuso-horario">
+                <Field label="Fuso horário">
+                  <SelectInput
+                    value={configForm.fuso_horario}
+                    onChange={(e) =>
+                      setConfigForm((prev) => ({
+                        ...prev,
+                        fuso_horario: normalizeSalonTimeZone(e.target.value),
+                      }))
+                    }
+                  >
+                    {SALON_TIME_ZONE_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </SelectInput>
+                </Field>
+                <p className="mt-2 text-xs leading-5 text-zinc-500">
+                  Usado em agenda, lembretes, notificações e Google Calendar.
+                </p>
+              </div>
+
               <Field label="Hora de abertura">
                 <div className="relative">
                   <TextInput

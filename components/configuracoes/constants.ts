@@ -70,6 +70,7 @@ export const EMPTY_CONFIG: ConfigSalaoForm = {
   id_salao: "",
   hora_abertura: "08:00",
   hora_fechamento: "19:00",
+  fuso_horario: "America/Sao_Paulo",
   intervalo_minutos: 15,
   dias_funcionamento: ["segunda", "terca", "quarta", "quinta", "sexta", "sabado"],
   taxa_maquininha_credito: 0,
