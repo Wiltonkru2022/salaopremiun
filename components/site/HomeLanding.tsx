@@ -389,7 +389,7 @@ function ClientPhoneMock({ className }: { className?: string }) {
   );
 }
 
-function CashPanelMock({ className }: { className?: string }) {
+function _CashPanelMock({ className }: { className?: string }) {
   return (
     <div className={`overflow-hidden rounded-[24px] border border-white/20 bg-white p-2 text-zinc-950 shadow-2xl ${className || ""}`}>
       <div className="h-full rounded-[18px] bg-[#f6f7f9] p-3">
