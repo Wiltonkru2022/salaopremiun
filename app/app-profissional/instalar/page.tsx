@@ -90,6 +90,25 @@ export default async function InstalarAppProfissionalPage({
             ))}
           </div>
         </section>
+
+        {isIos ? (
+          <section className="rounded-[1.4rem] border border-amber-200 bg-amber-50 p-3.5 shadow-sm">
+            <div className="text-sm font-black text-amber-950">
+              Perfil de configuraÃ§Ã£o para teste
+            </div>
+            <p className="mt-1.5 text-sm leading-6 text-amber-900">
+              Instala um Ã­cone de teste do App Profissional pelo app Ajustes do
+              iPhone. Use apenas para validaÃ§Ã£o interna.
+            </p>
+            <a
+              href="/app-profissional/ios-perfil/salaopro-teste.mobileconfig"
+              className="mt-3 inline-flex min-h-11 items-center gap-2 rounded-2xl bg-zinc-950 px-4 text-sm font-black text-white"
+            >
+              <Download size={17} />
+              Baixar perfil iOS teste
+            </a>
+          </section>
+        ) : null}
       </div>
     </ProfissionalShell>
   );
