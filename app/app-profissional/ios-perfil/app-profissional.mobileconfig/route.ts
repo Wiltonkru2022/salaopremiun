@@ -7,6 +7,13 @@ import { DOMINIO_APP } from "@/lib/proxy/domain-config";
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
+const SIGNED_PROFILE_PATH = join(
+  process.cwd(),
+  "public",
+  "downloads",
+  "app-profissional.mobileconfig"
+);
+
 function escapeXml(value: string) {
   return value
     .replace(/&/g, "&amp;")
@@ -27,6 +34,21 @@ async function getIconData() {
 }
 
 export async function GET() {
+  try {
+    const signedProfile = await readFile(SIGNED_PROFILE_PATH);
+
+    return new NextResponse(new Uint8Array(signedProfile), {
+      headers: {
+        "Content-Disposition":
+          'attachment; filename="app-profissional.mobileconfig"',
+        "Content-Type": "application/x-apple-aspen-config",
+        "Cache-Control": "no-store",
+      },
+    });
+  } catch {
+    // Fallback for local environments where the signed profile was not generated.
+  }
+
   const profileUuid = randomUUID().toUpperCase();
   const webClipUuid = randomUUID().toUpperCase();
   const appUrl = `https://${DOMINIO_APP}/app-profissional/inicio?origem=ios-perfil`;
