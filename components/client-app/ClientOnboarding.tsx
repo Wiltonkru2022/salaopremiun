@@ -26,6 +26,21 @@ const steps = [
   },
 ];
 
+type DocumentWithGeolocationPolicy = Document & {
+  permissionsPolicy?: { allowsFeature(feature: string): boolean };
+  featurePolicy?: { allowsFeature(feature: string): boolean };
+};
+
+function canRequestGeolocation() {
+  if (!("geolocation" in navigator)) return false;
+
+  const documentWithPolicy = document as DocumentWithGeolocationPolicy;
+  const policy =
+    documentWithPolicy.permissionsPolicy || documentWithPolicy.featurePolicy;
+
+  return policy?.allowsFeature ? policy.allowsFeature("geolocation") : true;
+}
+
 export default function ClientOnboarding() {
   const [step, setStep] = useState(0);
   const router = useRouter();
@@ -45,7 +60,7 @@ export default function ClientOnboarding() {
   }
 
   async function continueFlow() {
-    if (step === 1 && navigator.geolocation) {
+    if (step === 1 && canRequestGeolocation()) {
       navigator.geolocation.getCurrentPosition(
         () => undefined,
         () => undefined,

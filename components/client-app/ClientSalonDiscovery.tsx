@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { LocateFixed, Search, SlidersHorizontal } from "lucide-react";
 import ClientAppSalonCard from "@/components/client-app/ClientAppSalonCard";
 import type {
@@ -45,6 +45,21 @@ type DiscoverableSalon = ClientAppSalonListItem & {
   distanceKm?: number | null;
 };
 
+type DocumentWithGeolocationPolicy = Document & {
+  permissionsPolicy?: { allowsFeature(feature: string): boolean };
+  featurePolicy?: { allowsFeature(feature: string): boolean };
+};
+
+function canRequestGeolocation() {
+  if (!("geolocation" in navigator)) return false;
+
+  const documentWithPolicy = document as DocumentWithGeolocationPolicy;
+  const policy =
+    documentWithPolicy.permissionsPolicy || documentWithPolicy.featurePolicy;
+
+  return policy?.allowsFeature ? policy.allowsFeature("geolocation") : true;
+}
+
 function normalize(value: string) {
   return value
     .normalize("NFD")
@@ -70,7 +85,6 @@ export default function ClientSalonDiscovery({
     "idle" | "loading" | "ready" | "denied" | "unavailable"
   >("idle");
   const [locationError, setLocationError] = useState<string | null>(null);
-  const requestedLocationRef = useRef(false);
 
   useEffect(() => {
     setDisplaySaloes(saloes);
@@ -135,7 +149,7 @@ export default function ClientSalonDiscovery({
 
   function requestLocation() {
     setLocationError(null);
-    if (!navigator.geolocation) {
+    if (!canRequestGeolocation()) {
       setLocationStatus("unavailable");
       setLocationError("Seu navegador não liberou localização.");
       return;
@@ -184,12 +198,6 @@ export default function ClientSalonDiscovery({
       { enableHighAccuracy: true, timeout: 9000, maximumAge: 1000 * 60 * 5 }
     );
   }
-
-  useEffect(() => {
-    if (requestedLocationRef.current) return;
-    requestedLocationRef.current = true;
-    requestLocation();
-  }, []);
 
   return (
     <div className="space-y-8">
@@ -250,7 +258,9 @@ export default function ClientSalonDiscovery({
           </select>
           <button
             type="button"
-            onClick={requestLocation}
+            onClick={() => {
+              requestLocation();
+            }}
             className="inline-flex h-12 shrink-0 items-center gap-2 rounded-xl bg-zinc-100 px-4 text-sm font-bold text-zinc-950"
           >
             <LocateFixed size={18} />
