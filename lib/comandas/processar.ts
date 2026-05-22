@@ -453,9 +453,9 @@ export async function processarCriacaoPorAgendamento(params: {
     throw error;
   }
 
-  const { data: detalhesAgendamento, error: detalhesAgendamentoError } = await supabaseAdmin
+  const { data: detalhesAgendamento, error: detalhesAgendamentoError } = await (supabaseAdmin as any)
     .from("agendamentos")
-    .select("id, profissional_id, servico_id, observacoes")
+    .select("id, profissional_id, servico_id, observacoes, sinal_status, sinal_valor")
     .eq("id", idAgendamento)
     .eq("id_salao", idSalao)
     .maybeSingle();
@@ -509,6 +509,47 @@ export async function processarCriacaoPorAgendamento(params: {
           acrescimo: 0,
         },
       });
+    }
+  }
+
+  if (
+    data &&
+    detalhesAgendamento?.id &&
+    String((detalhesAgendamento as any).sinal_status || "") === "confirmado" &&
+    Number((detalhesAgendamento as any).sinal_valor || 0) > 0
+  ) {
+    const idempotencyKey = `sinal-agendamento-${idAgendamento}`;
+    const { data: pagamentoExistente, error: pagamentoExistenteError } =
+      await (supabaseAdmin as any)
+        .from("comanda_pagamentos")
+        .select("id")
+        .eq("id_salao", idSalao)
+        .eq("id_comanda", data)
+        .eq("idempotency_key", idempotencyKey)
+        .maybeSingle();
+
+    if (pagamentoExistenteError) {
+      throw pagamentoExistenteError;
+    }
+
+    if (!pagamentoExistente?.id) {
+      const { error: pagamentoError } = await (supabaseAdmin as any)
+        .from("comanda_pagamentos")
+        .insert({
+          id_salao: idSalao,
+          id_comanda: data,
+          forma_pagamento: "pix",
+          valor: Number((detalhesAgendamento as any).sinal_valor || 0),
+          parcelas: 1,
+          taxa_maquininha_percentual: 0,
+          taxa_maquininha_valor: 0,
+          idempotency_key: idempotencyKey,
+          observacoes: "Sinal pago antecipadamente no agendamento.",
+        });
+
+      if (pagamentoError) {
+        throw pagamentoError;
+      }
     }
   }
 
