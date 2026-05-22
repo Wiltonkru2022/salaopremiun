@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
 import type { CatalogoExtra, CatalogoProduto, CatalogoServico, ProfissionalResumo } from "./types";
 import type { ModalItemState } from "./page-types";
@@ -31,9 +31,25 @@ export function useCaixaItemModal({
   const [dropdownProfissionalOpen, setDropdownProfissionalOpen] = useState(false);
   const [buscaAssistente, setBuscaAssistente] = useState("");
   const [dropdownAssistenteOpen, setDropdownAssistenteOpen] = useState(false);
+  const lastSyncedModalKeyRef = useRef("");
+  const modalSyncKey = [
+    open ? "open" : "closed",
+    itemModal.mode,
+    itemModal.itemId || "novo",
+    itemModal.tipoItem,
+  ].join(":");
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      lastSyncedModalKeyRef.current = "";
+      return;
+    }
+
+    if (lastSyncedModalKeyRef.current === modalSyncKey) {
+      return;
+    }
+
+    lastSyncedModalKeyRef.current = modalSyncKey;
 
     const profissionalAtual = profissionaisCatalogo.find(
       (item) => item.id === itemModal.idProfissional
@@ -50,8 +66,7 @@ export function useCaixaItemModal({
     setDropdownAssistenteOpen(false);
   }, [
     open,
-    itemModal.mode,
-    itemModal.itemId,
+    modalSyncKey,
     itemModal.descricao,
     itemModal.idProfissional,
     itemModal.idAssistente,

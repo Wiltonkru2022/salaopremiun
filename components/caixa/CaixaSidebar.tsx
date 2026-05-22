@@ -246,7 +246,6 @@ export default function CaixaSidebar({
             saving={saving || !podeGerenciarPagamentos}
             onAdicionarPagamento={onAdicionarPagamento}
             onRemoverPagamento={onRemoverPagamento}
-            showRulesCard
           />
         </div>
       </AppModal>

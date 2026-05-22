@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, type ReactNode } from "react";
-import { CreditCard, Trash2, User2, Wallet } from "lucide-react";
+import { CreditCard, Plus, Trash2, Wallet } from "lucide-react";
 import { ComandaDetalhe, ComandaPagamento } from "./types";
 import {
   formatCurrency,
@@ -82,7 +82,6 @@ type Props = {
     destinoExcedente?: "troco" | "credito_cliente";
   }) => Promise<void> | void;
   onRemoverPagamento: (idPagamento: string) => void;
-  showRulesCard?: boolean;
 };
 
 export default function CaixaPagamentos({
@@ -107,7 +106,6 @@ export default function CaixaPagamentos({
   saving,
   onAdicionarPagamento,
   onRemoverPagamento,
-  showRulesCard = true,
 }: Props) {
   const [confirmarExcedenteOpen, setConfirmarExcedenteOpen] = useState(false);
   const [destinoExcedentePendente, setDestinoExcedentePendente] = useState<
@@ -304,7 +302,26 @@ export default function CaixaPagamentos({
         </div>
 
         {podeEditar ? (
-          <div className="mt-4 space-y-3 border-t border-zinc-200 pt-4">
+          <div className="mt-4 space-y-3 rounded-[24px] border border-zinc-200 bg-zinc-50 p-3.5">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-400">
+                  Novo pagamento
+                </div>
+                <div className="mt-0.5 text-base font-bold text-zinc-900">
+                  Lançar recebimento
+                </div>
+              </div>
+              <div className="rounded-2xl border border-zinc-200 bg-white px-3 py-2 text-right">
+                <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-400">
+                  Falta
+                </div>
+                <div className="text-sm font-black text-zinc-950">
+                  {formatCurrency(faltaReceber)}
+                </div>
+              </div>
+            </div>
+
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
               <PreviewCard
                 label="Crédito disponível"
@@ -336,38 +353,40 @@ export default function CaixaPagamentos({
               </div>
             )}
 
-            <Field label="Forma de pagamento">
-              <select
-                value={formaPagamento}
-                onChange={(e) => setFormaPagamento(e.target.value)}
-                className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-zinc-900"
-              >
-                {FORMAS_PAGAMENTO.map((item) => (
-                  <option key={item.value} value={item.value}>
-                    {item.label}
-                  </option>
-                ))}
-              </select>
-            </Field>
-
-            <MoneyField
-              label="Valor base"
-              value={valorPagamento}
-              onChange={setValorPagamento}
-            />
-
-            {exibeParcelas ? (
-              <Field label="Parcelas">
-                <input
-                  type="number"
-                  min="1"
-                  max="12"
-                  value={parcelas}
-                  onChange={(e) => setParcelas(e.target.value)}
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+              <Field label="Forma de pagamento">
+                <select
+                  value={formaPagamento}
+                  onChange={(e) => setFormaPagamento(e.target.value)}
                   className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-zinc-900"
-                />
+                >
+                  {FORMAS_PAGAMENTO.map((item) => (
+                    <option key={item.value} value={item.value}>
+                      {item.label}
+                    </option>
+                  ))}
+                </select>
               </Field>
-            ) : null}
+
+              <MoneyField
+                label="Valor base"
+                value={valorPagamento}
+                onChange={setValorPagamento}
+              />
+
+              {exibeParcelas ? (
+                <Field label="Parcelas">
+                  <input
+                    type="number"
+                    min="1"
+                    max="12"
+                    value={parcelas}
+                    onChange={(e) => setParcelas(e.target.value)}
+                    className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-zinc-900"
+                  />
+                </Field>
+              ) : null}
+            </div>
 
             <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
               <PreviewCard label="Valor base" value={formatCurrency(valorBaseDigitado)} />
@@ -418,8 +437,9 @@ export default function CaixaPagamentos({
               type="button"
               onClick={handleAdicionarPagamento}
               disabled={saving || !comandaSelecionada || valorBaseDigitado <= 0}
-              className="w-full rounded-2xl bg-zinc-900 px-4 py-3 text-sm font-bold text-white transition hover:opacity-95 disabled:opacity-60"
+              className="inline-flex min-h-14 w-full items-center justify-center gap-2 rounded-[20px] bg-emerald-600 px-5 py-4 text-base font-black text-white shadow-lg shadow-emerald-900/20 transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-zinc-300 disabled:shadow-none"
             >
+              <Plus size={19} />
               {saving ? "Adicionando pagamento..." : "Adicionar pagamento"}
             </button>
           </div>
@@ -432,21 +452,6 @@ export default function CaixaPagamentos({
           <InfoRow label="Troco" value={formatCurrency(troco)} />
         </div>
       </div>
-
-      {showRulesCard ? (
-        <div className="rounded-[28px] border border-zinc-200 bg-white p-4 shadow-sm">
-          <div className="mb-3 flex items-center gap-2 text-zinc-800">
-            <User2 size={16} />
-            <div className="font-semibold">Fechamento</div>
-          </div>
-
-          <div className="space-y-2 text-sm leading-5 text-zinc-500">
-            <p>O total dos pagamentos precisa bater com a comanda.</p>
-            <p>Ao finalizar, o sistema baixa estoque, gera comissão e encerra vínculos.</p>
-            <p>Agendamento sem comanda vira comanda automática ao abrir no caixa.</p>
-          </div>
-        </div>
-      ) : null}
 
       {confirmarExcedenteOpen ? (
         <div className="fixed inset-0 z-[170] flex items-center justify-center bg-black/45 p-4 backdrop-blur-sm">
