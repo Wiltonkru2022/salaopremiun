@@ -2,6 +2,9 @@
   "name": "salaopremium",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": "22.x"
+  },
   "scripts": {
     "// desenvolvimento": "Rotina leve para codar e testar tela/fluxo",
     "dev": "next dev",
