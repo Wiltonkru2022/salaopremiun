@@ -163,6 +163,18 @@ export function ServicoFormPrecoSection({
           onChange={(v) => setField("preco_minimo", maskMoneyInput(v))}
         />
 
+        <Switch
+          label="Cobrar sinal no agendamento"
+          checked={servico.cobra_sinal_agendamento}
+          onChange={(v) => setField("cobra_sinal_agendamento", v)}
+        />
+
+        <Input
+          label="Percentual personalizado do sinal (%)"
+          value={servico.sinal_percentual_personalizado}
+          onChange={(v) => setField("sinal_percentual_personalizado", v)}
+        />
+
         <Input
           label="Custo de produto"
           value={servico.custo_produto}

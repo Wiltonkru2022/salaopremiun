@@ -144,6 +144,9 @@ const TAXAS_CREDITO_KEYS = [
   "taxa_credito_12x",
 ] as const;
 
+const CONFIG_SELECT =
+  "cor_primaria, created_at, desconta_taxa_profissional, dias_funcionamento, exigir_cliente_na_venda, fuso_horario, hora_abertura, hora_fechamento, id, id_salao, intervalo_minutos, modo_compacto, permitir_reabrir_venda, rateio_config, repassa_taxa_cliente, sinal_agendamento_ativo, sinal_agendamento_percentual, sinal_pix_chave, sinal_pix_recebedor, sinal_pix_cidade, sinal_whatsapp, sinal_reserva_minutos, sinal_mensagem_comprovante, taxa_credito_10x, taxa_credito_11x, taxa_credito_12x, taxa_credito_1x, taxa_credito_2x, taxa_credito_3x, taxa_credito_4x, taxa_credito_5x, taxa_credito_6x, taxa_credito_7x, taxa_credito_8x, taxa_credito_9x, taxa_maquininha_boleto, taxa_maquininha_credito, taxa_maquininha_debito, taxa_maquininha_outro, taxa_maquininha_pix, taxa_maquininha_transferencia, updated_at";
+
 export default function ConfiguracoesPageClient({
   secao,
 }: {
@@ -264,9 +267,9 @@ export default function ConfiguracoesPageClient({
         { data: configData, error: configError },
       ] = await Promise.all([
         supabase.from("saloes").select("bairro, cep, cidade, complemento, cpf_cnpj, created_at, email, endereco, estado, id, inscricao_estadual, limite_profissionais, limite_usuarios, logo_url, nome, nome_fantasia, numero, plano, razao_social, renovacao_automatica, responsavel, status, telefone, tipo_pessoa, trial_ativo, trial_fim_em, trial_inicio_em, updated_at, whatsapp").eq("id", painelSession.idSalao).maybeSingle(),
-        supabase
+        (supabase as any)
           .from("configuracoes_salao")
-          .select("cor_primaria, created_at, desconta_taxa_profissional, dias_funcionamento, exigir_cliente_na_venda, fuso_horario, hora_abertura, hora_fechamento, id, id_salao, intervalo_minutos, modo_compacto, permitir_reabrir_venda, rateio_config, repassa_taxa_cliente, taxa_credito_10x, taxa_credito_11x, taxa_credito_12x, taxa_credito_1x, taxa_credito_2x, taxa_credito_3x, taxa_credito_4x, taxa_credito_5x, taxa_credito_6x, taxa_credito_7x, taxa_credito_8x, taxa_credito_9x, taxa_maquininha_boleto, taxa_maquininha_credito, taxa_maquininha_debito, taxa_maquininha_outro, taxa_maquininha_pix, taxa_maquininha_transferencia, updated_at")
+          .select(CONFIG_SELECT)
           .eq("id_salao", painelSession.idSalao)
           .maybeSingle(),
       ]);
@@ -312,9 +315,19 @@ export default function ConfiguracoesPageClient({
           dias_funcionamento:
             Array.isArray(configData.dias_funcionamento) && configData.dias_funcionamento.length > 0
               ? configData.dias_funcionamento.filter(
-                  (dia): dia is string => typeof dia === "string"
+                  (dia: unknown): dia is string => typeof dia === "string"
                 )
               : EMPTY_CONFIG.dias_funcionamento,
+          sinal_agendamento_ativo: Boolean(configData.sinal_agendamento_ativo),
+          sinal_agendamento_percentual: parseNumber(configData.sinal_agendamento_percentual || 10),
+          sinal_pix_chave: String(configData.sinal_pix_chave || ""),
+          sinal_pix_recebedor: String(configData.sinal_pix_recebedor || ""),
+          sinal_pix_cidade: String(configData.sinal_pix_cidade || ""),
+          sinal_whatsapp: String(configData.sinal_whatsapp || ""),
+          sinal_reserva_minutos: parseNumber(configData.sinal_reserva_minutos || 10),
+          sinal_mensagem_comprovante:
+            String(configData.sinal_mensagem_comprovante || "") ||
+            EMPTY_CONFIG.sinal_mensagem_comprovante,
           taxa_maquininha_credito: parseNumber(configData.taxa_maquininha_credito),
           taxa_maquininha_debito: parseNumber(configData.taxa_maquininha_debito),
           taxa_maquininha_pix: parseNumber(configData.taxa_maquininha_pix),
@@ -396,6 +409,19 @@ export default function ConfiguracoesPageClient({
       hora_fechamento: payload.hora_fechamento ?? configForm.hora_fechamento,
       intervalo_minutos: payload.intervalo_minutos ?? configForm.intervalo_minutos,
       dias_funcionamento: payload.dias_funcionamento ?? configForm.dias_funcionamento,
+      sinal_agendamento_ativo:
+        payload.sinal_agendamento_ativo ?? configForm.sinal_agendamento_ativo,
+      sinal_agendamento_percentual:
+        payload.sinal_agendamento_percentual ?? configForm.sinal_agendamento_percentual,
+      sinal_pix_chave: payload.sinal_pix_chave ?? configForm.sinal_pix_chave,
+      sinal_pix_recebedor:
+        payload.sinal_pix_recebedor ?? configForm.sinal_pix_recebedor,
+      sinal_pix_cidade: payload.sinal_pix_cidade ?? configForm.sinal_pix_cidade,
+      sinal_whatsapp: payload.sinal_whatsapp ?? configForm.sinal_whatsapp,
+      sinal_reserva_minutos:
+        payload.sinal_reserva_minutos ?? configForm.sinal_reserva_minutos,
+      sinal_mensagem_comprovante:
+        payload.sinal_mensagem_comprovante ?? configForm.sinal_mensagem_comprovante,
       taxa_maquininha_credito:
         payload.taxa_maquininha_credito ?? configForm.taxa_maquininha_credito,
       taxa_maquininha_debito:
@@ -428,10 +454,10 @@ export default function ConfiguracoesPageClient({
       updated_at: new Date().toISOString(),
     };
 
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from("configuracoes_salao")
       .upsert(dataToSave, { onConflict: "id_salao" })
-      .select("cor_primaria, created_at, desconta_taxa_profissional, dias_funcionamento, exigir_cliente_na_venda, fuso_horario, hora_abertura, hora_fechamento, id, id_salao, intervalo_minutos, modo_compacto, permitir_reabrir_venda, rateio_config, repassa_taxa_cliente, taxa_credito_10x, taxa_credito_11x, taxa_credito_12x, taxa_credito_1x, taxa_credito_2x, taxa_credito_3x, taxa_credito_4x, taxa_credito_5x, taxa_credito_6x, taxa_credito_7x, taxa_credito_8x, taxa_credito_9x, taxa_maquininha_boleto, taxa_maquininha_credito, taxa_maquininha_debito, taxa_maquininha_outro, taxa_maquininha_pix, taxa_maquininha_transferencia, updated_at")
+      .select(CONFIG_SELECT)
       .maybeSingle();
 
     if (error) throw error;
@@ -447,9 +473,19 @@ export default function ConfiguracoesPageClient({
         dias_funcionamento:
           Array.isArray(data.dias_funcionamento) && data.dias_funcionamento.length > 0
             ? data.dias_funcionamento.filter(
-                (dia): dia is string => typeof dia === "string"
+                (dia: unknown): dia is string => typeof dia === "string"
               )
             : EMPTY_CONFIG.dias_funcionamento,
+        sinal_agendamento_ativo: Boolean(data.sinal_agendamento_ativo),
+        sinal_agendamento_percentual: parseNumber(data.sinal_agendamento_percentual || 10),
+        sinal_pix_chave: String(data.sinal_pix_chave || ""),
+        sinal_pix_recebedor: String(data.sinal_pix_recebedor || ""),
+        sinal_pix_cidade: String(data.sinal_pix_cidade || ""),
+        sinal_whatsapp: String(data.sinal_whatsapp || ""),
+        sinal_reserva_minutos: parseNumber(data.sinal_reserva_minutos || 10),
+        sinal_mensagem_comprovante:
+          String(data.sinal_mensagem_comprovante || "") ||
+          EMPTY_CONFIG.sinal_mensagem_comprovante,
         taxa_maquininha_credito: parseNumber(data.taxa_maquininha_credito),
         taxa_maquininha_debito: parseNumber(data.taxa_maquininha_debito),
         taxa_maquininha_pix: parseNumber(data.taxa_maquininha_pix),
@@ -533,6 +569,14 @@ export default function ConfiguracoesPageClient({
         fuso_horario: configForm.fuso_horario,
         intervalo_minutos: configForm.intervalo_minutos,
         dias_funcionamento: configForm.dias_funcionamento,
+        sinal_agendamento_ativo: configForm.sinal_agendamento_ativo,
+        sinal_agendamento_percentual: configForm.sinal_agendamento_percentual,
+        sinal_pix_chave: configForm.sinal_pix_chave,
+        sinal_pix_recebedor: configForm.sinal_pix_recebedor,
+        sinal_pix_cidade: configForm.sinal_pix_cidade,
+        sinal_whatsapp: configForm.sinal_whatsapp,
+        sinal_reserva_minutos: configForm.sinal_reserva_minutos,
+        sinal_mensagem_comprovante: configForm.sinal_mensagem_comprovante,
       });
 
       setMsg("Configurações da agenda salvas com sucesso.");
@@ -1215,6 +1259,123 @@ export default function ConfiguracoesPageClient({
 
               <div className="mt-3 rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-2.5 text-sm text-zinc-600">
                 <strong className="text-zinc-800">Resumo:</strong> {resumoDias}
+              </div>
+            </div>
+
+            <div className="mt-6 border-t border-zinc-100 pt-6">
+              <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <div className="text-sm font-black text-zinc-950">
+                    Taxa/Sinal de agendamento
+                  </div>
+                  <p className="mt-1 text-sm leading-5 text-zinc-500">
+                    Pré-reserva o horário, mostra Pix ao cliente e envia o comprovante pelo WhatsApp.
+                  </p>
+                </div>
+                <Toggle
+                  checked={configForm.sinal_agendamento_ativo}
+                  onChange={(checked) =>
+                    setConfigForm((prev) => ({
+                      ...prev,
+                      sinal_agendamento_ativo: checked,
+                    }))
+                  }
+                  label="Cobrar sinal"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                <Field label="Percentual padrão (%)">
+                  <TextInput
+                    type="number"
+                    min={0}
+                    max={100}
+                    step="0.01"
+                    value={configForm.sinal_agendamento_percentual}
+                    onChange={(e) =>
+                      setConfigForm((prev) => ({
+                        ...prev,
+                        sinal_agendamento_percentual: parseNumber(e.target.value),
+                      }))
+                    }
+                  />
+                </Field>
+                <Field label="Tempo de reserva (min)">
+                  <TextInput
+                    type="number"
+                    min={1}
+                    max={120}
+                    step={1}
+                    value={configForm.sinal_reserva_minutos}
+                    onChange={(e) =>
+                      setConfigForm((prev) => ({
+                        ...prev,
+                        sinal_reserva_minutos: parseNumber(e.target.value),
+                      }))
+                    }
+                  />
+                </Field>
+                <Field label="WhatsApp do salão">
+                  <TextInput
+                    value={configForm.sinal_whatsapp}
+                    onChange={(e) =>
+                      setConfigForm((prev) => ({
+                        ...prev,
+                        sinal_whatsapp: e.target.value,
+                      }))
+                    }
+                    placeholder="67999999999"
+                  />
+                </Field>
+                <Field label="Chave Pix">
+                  <TextInput
+                    value={configForm.sinal_pix_chave}
+                    onChange={(e) =>
+                      setConfigForm((prev) => ({
+                        ...prev,
+                        sinal_pix_chave: e.target.value,
+                      }))
+                    }
+                    placeholder="studio@email.com"
+                  />
+                </Field>
+                <Field label="Nome do recebedor">
+                  <TextInput
+                    value={configForm.sinal_pix_recebedor}
+                    onChange={(e) =>
+                      setConfigForm((prev) => ({
+                        ...prev,
+                        sinal_pix_recebedor: e.target.value,
+                      }))
+                    }
+                    placeholder="Nome do salão"
+                  />
+                </Field>
+                <Field label="Cidade do Pix">
+                  <TextInput
+                    value={configForm.sinal_pix_cidade}
+                    onChange={(e) =>
+                      setConfigForm((prev) => ({
+                        ...prev,
+                        sinal_pix_cidade: e.target.value,
+                      }))
+                    }
+                    placeholder="Campo Grande"
+                  />
+                </Field>
+                <div className="md:col-span-3">
+                  <Field label="Mensagem padrão para comprovante">
+                    <TextInput
+                      value={configForm.sinal_mensagem_comprovante}
+                      onChange={(e) =>
+                        setConfigForm((prev) => ({
+                          ...prev,
+                          sinal_mensagem_comprovante: e.target.value,
+                        }))
+                      }
+                    />
+                  </Field>
+                </div>
               </div>
             </div>
 

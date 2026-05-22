@@ -650,6 +650,13 @@ export function useAgendaMutations({
             .from("agendamentos")
             .update({
               status: nextStatus,
+              ...(nextStatus === "confirmado" && item.sinal_status
+                ? {
+                    sinal_status: "confirmado",
+                    sinal_confirmado_em: updatedAt,
+                    reserva_expira_em: null,
+                  }
+                : {}),
               updated_at: updatedAt,
             })
             .eq("id", item.id)

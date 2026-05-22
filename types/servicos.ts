@@ -85,6 +85,8 @@ export type ServicoState = {
   preco_padrao: string;
   preco_variavel: boolean;
   preco_minimo: string;
+  cobra_sinal_agendamento: boolean;
+  sinal_percentual_personalizado: string;
   custo_produto: string;
   comissao_percentual_padrao: string;
   comissao_assistente_percentual: string;
@@ -118,6 +120,8 @@ export type ServicoProcessarPayload = {
   preco_padrao: number;
   preco_variavel: boolean;
   preco_minimo: number | null;
+  cobra_sinal_agendamento: boolean;
+  sinal_percentual_personalizado: number | null;
   custo_produto: number;
   comissao_percentual_padrao: number | null;
   comissao_assistente_percentual: number;

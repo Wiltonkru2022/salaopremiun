@@ -34,7 +34,7 @@ const CLIENT_BOOKING_SLOT_STEP_MINUTES = 5;
 const CLIENT_BOOKING_LOOKAHEAD_DAYS = 45;
 
 type ClienteAppActionResult =
-  | { ok: true; message: string }
+  | { ok: true; message: string; idAgendamento?: string; requiresSignal?: boolean }
   | { ok: false; error: string };
 
 type ClienteBookingParams = {
@@ -201,6 +201,16 @@ function hasAppointmentConflictWithBuffer(params: {
       return false;
     }
 
+    const status = String(item.status || "").trim();
+    const reservaExpiraEm = String(item.reserva_expira_em || "").trim();
+    if (
+      status === "reservado_aguardando_pagamento" &&
+      reservaExpiraEm &&
+      new Date(reservaExpiraEm).getTime() <= Date.now()
+    ) {
+      return false;
+    }
+
     const expanded = expandAppointmentWindow({
       horaInicio: normalizeTimeString(String(item.hora_inicio || "")),
       horaFim: normalizeTimeString(String(item.hora_fim || "")),
@@ -227,7 +237,7 @@ async function loadBookingBaseContext(params: {
       params.supabaseAdmin
         .from("configuracoes_salao")
         .select(
-          "id_salao, hora_abertura, hora_fechamento, intervalo_minutos, dias_funcionamento"
+          "id_salao, hora_abertura, hora_fechamento, intervalo_minutos, dias_funcionamento, sinal_agendamento_ativo, sinal_agendamento_percentual, sinal_pix_chave, sinal_pix_recebedor, sinal_pix_cidade, sinal_whatsapp, sinal_reserva_minutos, sinal_mensagem_comprovante"
         )
         .eq("id_salao", params.idSalao)
         .limit(1)
@@ -244,7 +254,7 @@ async function loadBookingBaseContext(params: {
       (params.supabaseAdmin as any)
         .from("servicos")
         .select(
-          "id, id_salao, nome, ativo, preco, preco_padrao, duracao, duracao_minutos, descricao, app_cliente_visivel"
+          "id, id_salao, nome, ativo, preco, preco_padrao, duracao, duracao_minutos, descricao, app_cliente_visivel, cobra_sinal_agendamento, sinal_percentual_personalizado"
         )
         .eq("id", params.idServico)
         .eq("id_salao", params.idSalao)
@@ -312,6 +322,7 @@ async function loadBookingBaseContext(params: {
     Number(vinculoResult.data.duracao_minutos || 0) ||
     Number(servicoResult.data.duracao_minutos || servicoResult.data.duracao || 0) ||
     30;
+  const configSinal = (configResult.data as Record<string, unknown> | null) || {};
 
   return {
     ok: true as const,
@@ -321,7 +332,30 @@ async function loadBookingBaseContext(params: {
     servicoNome: String(servicoResult.data.nome || "").trim() || "Serviço",
     servicoPreco:
       Number(servicoResult.data.preco_padrao ?? servicoResult.data.preco ?? 0) || 0,
+    sinalAtivo: Boolean(
+      configSinal.sinal_agendamento_ativo &&
+        servicoResult.data.cobra_sinal_agendamento
+    ),
+    sinalPercentual:
+      Number(servicoResult.data.sinal_percentual_personalizado ?? 0) > 0
+        ? Number(servicoResult.data.sinal_percentual_personalizado)
+        : Number(configSinal.sinal_agendamento_percentual ?? 10),
+    sinalReservaMinutos: Number(configSinal.sinal_reserva_minutos ?? 10) || 10,
+    sinalPixChave: String(configSinal.sinal_pix_chave || "").trim() || null,
+    sinalPixRecebedor: String(configSinal.sinal_pix_recebedor || "").trim() || null,
+    sinalPixCidade: String(configSinal.sinal_pix_cidade || "").trim() || null,
+    sinalWhatsapp: String(configSinal.sinal_whatsapp || "").trim() || null,
+    sinalMensagemComprovante:
+      String(configSinal.sinal_mensagem_comprovante || "").trim() || null,
   };
+}
+
+function addMinutes(date: Date, minutes: number) {
+  return new Date(date.getTime() + minutes * 60_000);
+}
+
+function roundMoney(value: number) {
+  return Number((Number.isFinite(value) ? value : 0).toFixed(2));
 }
 
 function calcularDescontoCupom(params: {
@@ -860,7 +894,21 @@ export async function createClienteAppAppointment(
         return bookingContext;
       }
 
-      const { config, profissional, duracao, servicoNome, servicoPreco } = bookingContext;
+      const {
+        config,
+        profissional,
+        duracao,
+        servicoNome,
+        servicoPreco,
+        sinalAtivo,
+        sinalPercentual,
+        sinalReservaMinutos,
+        sinalPixChave,
+        sinalPixRecebedor,
+        sinalPixCidade,
+        sinalWhatsapp,
+        sinalMensagemComprovante,
+      } = bookingContext;
       const horaFim = addDurationToTime(horaInicio, duracao);
 
       if (!ensureDiaFuncionamento({ config, dateString: data })) {
@@ -894,9 +942,9 @@ export async function createClienteAppAppointment(
             .eq("id_salao", idSalao)
             .eq("profissional_id", idProfissional)
             .eq("data", data),
-          supabaseAdmin
+          (supabaseAdmin as any)
             .from("agendamentos")
-            .select("id, hora_inicio, hora_fim, status")
+            .select("id, hora_inicio, hora_fim, status, reserva_expira_em")
             .eq("id_salao", idSalao)
             .eq("profissional_id", idProfissional)
             .eq("data", data)
@@ -1023,6 +1071,18 @@ export async function createClienteAppAppointment(
         return { ok: false, error: cupomResult.erro };
       }
 
+      const totalEstimado = Math.max(0, subtotalEstimado - cupomResult.desconto);
+      const requiresSignal = Boolean(
+        sinalAtivo &&
+          totalEstimado > 0 &&
+          sinalPercentual > 0 &&
+          sinalPixChave &&
+          sinalWhatsapp
+      );
+      const sinalValor = requiresSignal
+        ? roundMoney(totalEstimado * (Number(sinalPercentual || 0) / 100))
+        : 0;
+
       if (cupomResult.cupom?.id && cupomResult.desconto > 0) {
         observacoesComAdicionais = [
           observacoesComAdicionais,
@@ -1050,7 +1110,18 @@ export async function createClienteAppAppointment(
           id_cupom_salao: cupomResult.cupom?.id || null,
           codigo_cupom: cupomResult.cupom?.id ? codigoCupom : null,
           desconto_cupom_valor: cupomResult.desconto,
-          status: "pendente",
+          status: requiresSignal ? "reservado_aguardando_pagamento" : "pendente",
+          reserva_expira_em: requiresSignal
+            ? addMinutes(new Date(), sinalReservaMinutos).toISOString()
+            : null,
+          sinal_percentual: requiresSignal ? sinalPercentual : null,
+          sinal_valor: sinalValor,
+          sinal_status: requiresSignal ? "aguardando_pagamento" : "nao_exigido",
+          sinal_pix_chave: requiresSignal ? sinalPixChave : null,
+          sinal_pix_recebedor: requiresSignal ? sinalPixRecebedor : null,
+          sinal_pix_cidade: requiresSignal ? sinalPixCidade : null,
+          sinal_whatsapp: requiresSignal ? sinalWhatsapp : null,
+          sinal_mensagem_comprovante: requiresSignal ? sinalMensagemComprovante : null,
           origem: "app_cliente",
         })
         .select("id")
@@ -1137,6 +1208,8 @@ export async function createClienteAppAppointment(
 
       return {
         ok: true,
+        idAgendamento,
+        requiresSignal,
         message:
           "Pedido enviado. O salão vai confirmar seu horário.",
       };
@@ -1222,9 +1295,9 @@ export async function getClienteAppBookingAvailability(params: {
             .eq("profissional_id", idProfissional)
             .gte("data", dateFrom)
             .lte("data", dateTo),
-          supabaseAdmin
+          (supabaseAdmin as any)
             .from("agendamentos")
-            .select("id, data, hora_inicio, hora_fim, status")
+            .select("id, data, hora_inicio, hora_fim, status, reserva_expira_em")
             .eq("id_salao", idSalao)
             .eq("profissional_id", idProfissional)
             .gte("data", dateFrom)
@@ -1682,9 +1755,9 @@ export async function rescheduleClienteAppAppointment(
             .eq("id_salao", ownership.idSalao)
             .eq("profissional_id", ownership.idProfissional)
             .eq("data", data),
-          supabaseAdmin
+          (supabaseAdmin as any)
             .from("agendamentos")
-            .select("id, hora_inicio, hora_fim, status")
+            .select("id, hora_inicio, hora_fim, status, reserva_expira_em")
             .eq("id_salao", ownership.idSalao)
             .eq("profissional_id", ownership.idProfissional)
             .eq("data", data)

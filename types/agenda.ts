@@ -4,8 +4,11 @@ export type AgendaDensityMode = "standard" | "reception";
 export type StatusAgenda =
   | "confirmado"
   | "pendente"
+  | "reservado_aguardando_pagamento"
+  | "aguardando_confirmacao_salao"
   | "atendido"
   | "cancelado"
+  | "expirado"
   | "aguardando_pagamento"
   | "bloqueado";
 
@@ -90,6 +93,9 @@ export type Agendamento = {
   updated_at?: string | null;
   comanda_numero?: number | null;
   comanda_status?: string | null;
+  reserva_expira_em?: string | null;
+  sinal_valor?: number | null;
+  sinal_status?: string | null;
 
   cliente?: {
     nome: string;

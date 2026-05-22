@@ -48,6 +48,9 @@ export async function createClienteBookingAction(
 
   revalidatePath(`/app-cliente/salao/${idSalao}`);
   revalidatePath("/app-cliente/agendamentos");
+  if (result.requiresSignal && result.idAgendamento) {
+    redirect(`/app-cliente/agendamentos/${result.idAgendamento}/sinal`);
+  }
   redirect("/app-cliente/agendamentos?status=agendado");
 }
 

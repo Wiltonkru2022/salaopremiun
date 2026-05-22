@@ -100,10 +100,16 @@ export default function AppointmentCard({
         return "Confirmado";
       case "pendente":
         return "Pendente";
+      case "reservado_aguardando_pagamento":
+        return "Aguardando sinal";
+      case "aguardando_confirmacao_salao":
+        return "Comprovante enviado";
       case "atendido":
         return "Atendido";
       case "cancelado":
         return "Cancelado";
+      case "expirado":
+        return "Expirado";
       case "aguardando_pagamento":
         return "Aguardando caixa";
       default:
@@ -116,6 +122,10 @@ export default function AppointmentCard({
         return "OK";
       case "pendente":
         return "Pendente";
+      case "reservado_aguardando_pagamento":
+        return "Sinal";
+      case "aguardando_confirmacao_salao":
+        return "Confirmar";
       case "atendido":
         return "Atendido";
       case "cancelado":

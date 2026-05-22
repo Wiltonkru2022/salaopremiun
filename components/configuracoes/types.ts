@@ -36,6 +36,14 @@ export type ConfigSalaoForm = {
   fuso_horario: string;
   intervalo_minutos: number;
   dias_funcionamento: string[];
+  sinal_agendamento_ativo: boolean;
+  sinal_agendamento_percentual: number;
+  sinal_pix_chave: string;
+  sinal_pix_recebedor: string;
+  sinal_pix_cidade: string;
+  sinal_whatsapp: string;
+  sinal_reserva_minutos: number;
+  sinal_mensagem_comprovante: string;
   taxa_maquininha_credito: number;
   taxa_maquininha_debito: number;
   taxa_maquininha_pix: number;

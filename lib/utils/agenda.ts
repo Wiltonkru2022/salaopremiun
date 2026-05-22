@@ -125,6 +125,18 @@ export function getStatusStyles(status: string) {
         badge: "border border-amber-200 bg-amber-100 text-amber-700",
       };
 
+    case "reservado_aguardando_pagamento":
+      return {
+        card: "border-yellow-200 bg-gradient-to-br from-yellow-50 via-yellow-50 to-white text-yellow-950",
+        badge: "border border-yellow-200 bg-yellow-100 text-yellow-800",
+      };
+
+    case "aguardando_confirmacao_salao":
+      return {
+        card: "border-orange-200 bg-gradient-to-br from-orange-50 via-orange-50 to-white text-orange-950",
+        badge: "border border-orange-200 bg-orange-100 text-orange-700",
+      };
+
     case "atendido":
       return {
         card: "border-sky-200 bg-gradient-to-br from-sky-50 via-sky-50 to-white text-sky-950",
@@ -135,6 +147,12 @@ export function getStatusStyles(status: string) {
       return {
         card: "border-rose-200 bg-gradient-to-br from-rose-50 via-rose-50 to-white text-rose-950 opacity-95",
         badge: "border border-rose-200 bg-rose-100 text-rose-700",
+      };
+
+    case "expirado":
+      return {
+        card: "border-zinc-200 bg-gradient-to-br from-zinc-100 via-zinc-50 to-white text-zinc-600 opacity-90",
+        badge: "border border-zinc-200 bg-zinc-100 text-zinc-600",
       };
 
     case "aguardando_pagamento":

@@ -51,6 +51,8 @@ const initialState: ServicoState = {
   preco_padrao: "",
   preco_variavel: false,
   preco_minimo: "",
+  cobra_sinal_agendamento: false,
+  sinal_percentual_personalizado: "",
   custo_produto: "",
   comissao_percentual_padrao: "",
   comissao_assistente_percentual: "",
@@ -286,9 +288,9 @@ export default function ServicoForm({ modo }: ServicoFormProps) {
     salaoId: string,
     listaProfissionais: ProfissionalServico[]
   ) {
-    const { data: row, error } = await supabase
+    const { data: row, error } = await (supabase as any)
       .from("servicos")
-      .select("app_cliente_visivel, ativo, atualizado_em, base_calculo, categoria, comissao_assistente_percentual, comissao_percentual, comissao_percentual_padrao, created_at, criado_em, custo_produto, desconta_taxa_maquininha, descricao, duracao, duracao_minutos, exige_avaliacao, gatilho_retorno_dias, id, id_categoria, id_salao, nome, pausa_minutos, preco, preco_minimo, preco_padrao, preco_variavel, recurso_nome, status, updated_at")
+      .select("app_cliente_visivel, ativo, atualizado_em, base_calculo, categoria, cobra_sinal_agendamento, comissao_assistente_percentual, comissao_percentual, comissao_percentual_padrao, created_at, criado_em, custo_produto, desconta_taxa_maquininha, descricao, duracao, duracao_minutos, exige_avaliacao, gatilho_retorno_dias, id, id_categoria, id_salao, nome, pausa_minutos, preco, preco_minimo, preco_padrao, preco_variavel, recurso_nome, sinal_percentual_personalizado, status, updated_at")
       .eq("id", id)
       .eq("id_salao", salaoId)
       .maybeSingle();
@@ -321,6 +323,12 @@ export default function ServicoForm({ modo }: ServicoFormProps) {
       preco_padrao: formatMoneyFromDb(row.preco_padrao),
       preco_variavel: row.preco_variavel ?? false,
       preco_minimo: formatMoneyFromDb(row.preco_minimo),
+      cobra_sinal_agendamento: Boolean(row.cobra_sinal_agendamento),
+      sinal_percentual_personalizado:
+        row.sinal_percentual_personalizado === null ||
+        row.sinal_percentual_personalizado === undefined
+          ? ""
+          : String(row.sinal_percentual_personalizado).replace(".", ","),
       custo_produto: formatMoneyFromDb(row.custo_produto),
       comissao_percentual_padrao:
         row.comissao_percentual_padrao?.toString() || "",
@@ -517,6 +525,10 @@ export default function ServicoForm({ modo }: ServicoFormProps) {
         preco_variavel: servico.preco_variavel,
         preco_minimo: servico.preco_minimo
           ? parseMoneyToNumber(servico.preco_minimo)
+          : null,
+        cobra_sinal_agendamento: servico.cobra_sinal_agendamento,
+        sinal_percentual_personalizado: servico.sinal_percentual_personalizado
+          ? Number(String(servico.sinal_percentual_personalizado).replace(",", "."))
           : null,
         custo_produto: parseMoneyToNumber(servico.custo_produto),
         comissao_percentual_padrao: servico.comissao_percentual_padrao

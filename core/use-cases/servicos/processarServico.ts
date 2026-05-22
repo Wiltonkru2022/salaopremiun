@@ -111,6 +111,8 @@ const servicoSchema = z
     preco_padrao: optionalNumber,
     preco_variavel: z.boolean().optional(),
     preco_minimo: optionalNumber,
+    cobra_sinal_agendamento: z.boolean().optional(),
+    sinal_percentual_personalizado: optionalNumber,
     custo_produto: optionalNumber,
     comissao_percentual_padrao: optionalNumber,
     comissao_assistente_percentual: optionalNumber,
@@ -238,6 +240,13 @@ function buildServicoPayload(params: {
     preco_padrao: sanitizeMoney(params.servico.preco_padrao),
     preco_variavel: sanitizeBoolean(params.servico.preco_variavel, false),
     preco_minimo: sanitizeOptionalMoney(params.servico.preco_minimo),
+    cobra_sinal_agendamento: sanitizeBoolean(
+      params.servico.cobra_sinal_agendamento,
+      false
+    ),
+    sinal_percentual_personalizado: sanitizeOptionalMoney(
+      params.servico.sinal_percentual_personalizado
+    ),
     custo_produto: sanitizeMoney(params.servico.custo_produto),
     comissao_percentual_padrao: sanitizeOptionalMoney(
       params.servico.comissao_percentual_padrao

@@ -40,6 +40,8 @@ export type ClientAppServiceListItem = {
   exigeAvaliacao: boolean;
   ehCombo: boolean;
   comboResumo: string | null;
+  cobraSinalAgendamento: boolean;
+  sinalPercentualPersonalizado: number | null;
   profissionaisPermitidos: string[];
 };
 
@@ -592,7 +594,7 @@ async function getClientAppSalonDetailLive(idSalao: string) {
           .limit(16),
         (supabaseAdmin as any)
           .from("servicos")
-          .select("id, nome, descricao_publica, descricao, preco, preco_padrao, duracao, duracao_minutos, exige_avaliacao, eh_combo, combo_resumo")
+          .select("id, nome, descricao_publica, descricao, preco, preco_padrao, duracao, duracao_minutos, exige_avaliacao, eh_combo, combo_resumo, cobra_sinal_agendamento, sinal_percentual_personalizado")
           .eq("id_salao", resolvedSalaoId)
           .eq("ativo", true)
           .eq("app_cliente_visivel", true)
@@ -676,6 +678,12 @@ async function getClientAppSalonDetailLive(idSalao: string) {
               exigeAvaliacao: Boolean(item.exige_avaliacao),
               ehCombo: Boolean(item.eh_combo),
               comboResumo: String(item.combo_resumo || "").trim() || null,
+              cobraSinalAgendamento: Boolean(item.cobra_sinal_agendamento),
+              sinalPercentualPersonalizado:
+                item.sinal_percentual_personalizado === null ||
+                item.sinal_percentual_personalizado === undefined
+                  ? null
+                  : Number(item.sinal_percentual_personalizado),
               profissionaisPermitidos:
                 vinculosPorServico.get(String(item.id || "").trim()) || [],
             })

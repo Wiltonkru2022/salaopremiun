@@ -1388,6 +1388,8 @@ export default function AgendaPage() {
                 );
                 const isInteractiveStatus = [
                   "pendente",
+                  "reservado_aguardando_pagamento",
+                  "aguardando_confirmacao_salao",
                   "confirmado",
                   "atendido",
                 ].includes(item.status);
