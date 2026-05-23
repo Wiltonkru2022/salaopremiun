@@ -455,7 +455,16 @@ export type Database = {
           observacoes: string | null
           origem: string | null
           profissional_id: string
+          reserva_expira_em: string | null
+          cliente_confirmacao_status: string | null
+          cliente_confirmou_em: string | null
           servico_id: string
+          sinal_comprovante_enviado_em: string | null
+          sinal_comprovante_nome: string | null
+          sinal_comprovante_path: string | null
+          sinal_comprovante_tipo: string | null
+          sinal_status: string | null
+          sinal_valor: number | null
           status: string
           updated_at: string | null
         }
@@ -472,7 +481,16 @@ export type Database = {
           observacoes?: string | null
           origem?: string | null
           profissional_id: string
+          reserva_expira_em?: string | null
+          cliente_confirmacao_status?: string | null
+          cliente_confirmou_em?: string | null
           servico_id: string
+          sinal_comprovante_enviado_em?: string | null
+          sinal_comprovante_nome?: string | null
+          sinal_comprovante_path?: string | null
+          sinal_comprovante_tipo?: string | null
+          sinal_status?: string | null
+          sinal_valor?: number | null
           status: string
           updated_at?: string | null
         }
@@ -489,7 +507,16 @@ export type Database = {
           observacoes?: string | null
           origem?: string | null
           profissional_id?: string
+          reserva_expira_em?: string | null
+          cliente_confirmacao_status?: string | null
+          cliente_confirmou_em?: string | null
           servico_id?: string
+          sinal_comprovante_enviado_em?: string | null
+          sinal_comprovante_nome?: string | null
+          sinal_comprovante_path?: string | null
+          sinal_comprovante_tipo?: string | null
+          sinal_status?: string | null
+          sinal_valor?: number | null
           status?: string
           updated_at?: string | null
         }

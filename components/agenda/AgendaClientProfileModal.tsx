@@ -17,6 +17,8 @@ type ClienteHistoricoItem = {
   status: string;
   servicoNome: string;
   observacoes: string | null;
+  sinalStatus?: string | null;
+  sinalComprovantePath?: string | null;
 };
 
 type Props = {
@@ -42,6 +44,10 @@ function getStatusLabel(status: string) {
       return "Cancelado";
     case "aguardando_pagamento":
       return "Em caixa";
+    case "reservado_aguardando_pagamento":
+      return "Aguardando sinal";
+    case "aguardando_confirmacao_salao":
+      return "Comprovante enviado";
     default:
       return status;
   }
@@ -169,6 +175,11 @@ function ProfileBody({
                         <span className="rounded-full border border-zinc-200 bg-white px-3 py-1 text-xs font-semibold text-zinc-700">
                           {getStatusLabel(item.status)}
                         </span>
+                        {item.sinalStatus === "comprovante_enviado" ? (
+                          <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+                            Comprovante enviado
+                          </span>
+                        ) : null}
                       </div>
 
                       <div className="mt-2 flex items-start gap-2 text-sm font-semibold text-zinc-900">
@@ -177,6 +188,17 @@ function ProfileBody({
                       </div>
                     </div>
                   </div>
+
+                  {item.sinalComprovantePath ? (
+                    <a
+                      href={`/api/painel/agendamentos/${item.id}/comprovante`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="mt-3 inline-flex h-10 items-center justify-center rounded-2xl bg-zinc-950 px-4 text-sm font-semibold text-white transition hover:bg-zinc-800"
+                    >
+                      Abrir comprovante
+                    </a>
+                  ) : null}
 
                   <div className="mt-3 rounded-[16px] bg-zinc-50 px-3 py-2.5 text-sm text-zinc-600">
                     <div className="mb-1 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-400">

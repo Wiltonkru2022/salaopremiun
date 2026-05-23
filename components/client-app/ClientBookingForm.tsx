@@ -9,6 +9,7 @@ import {
   ChevronRight,
   Clock3,
   Search,
+  Scissors,
   UserRound,
 } from "lucide-react";
 import { useActionState, useEffect, useMemo, useState } from "react";
@@ -138,9 +139,9 @@ function SubmitButton({ disabled }: { disabled?: boolean }) {
     <button
       type="submit"
       disabled={pending || disabled}
-      className="mt-6 flex h-16 w-full items-center justify-center gap-3 rounded-2xl bg-[#f6b93f] text-xl font-black text-black disabled:opacity-50"
+      className="mt-6 flex h-14 w-full items-center justify-center gap-3 rounded-2xl bg-[#f6b93f] text-lg font-black text-black disabled:opacity-50"
     >
-      <CalendarDays size={26} />
+      <CalendarDays size={23} />
       {pending ? "Confirmando..." : "Confirmar agendamento"}
     </button>
   );
@@ -149,9 +150,9 @@ function SubmitButton({ disabled }: { disabled?: boolean }) {
 function Stepper({ step }: { step: StepKey }) {
   const current = step === "profissional" ? 1 : step === "servico" ? 2 : 3;
   return (
-    <div className="rounded-[1.35rem] border border-white/10 bg-[#101113] px-6 py-5">
+    <div className="rounded-[1.2rem] border border-white/10 bg-[#101113] px-5 py-4">
       <div className="relative grid grid-cols-3">
-        <div className="absolute left-[16%] right-[16%] top-7 h-px bg-[#f6b93f]" />
+        <div className="absolute left-[16%] right-[16%] top-6 h-px bg-[#f6b93f]" />
         {[
           ["1", "Profissional"],
           ["2", "Serviço"],
@@ -161,7 +162,7 @@ function Stepper({ step }: { step: StepKey }) {
           return (
             <div key={number} className="relative z-10 text-center">
               <span
-                className={`mx-auto flex h-14 w-14 items-center justify-center rounded-full text-xl font-black ${
+                className={`mx-auto flex h-12 w-12 items-center justify-center rounded-full text-lg font-black ${
                   active
                     ? "bg-[#f6b93f] text-black"
                     : "bg-[#1b1c1f] text-zinc-300"
@@ -170,7 +171,7 @@ function Stepper({ step }: { step: StepKey }) {
                 {number}
               </span>
               <span
-                className={`mt-3 block text-base ${
+                className={`mt-2 block text-sm ${
                   active ? "font-bold text-[#f6b93f]" : "text-zinc-400"
                 }`}
               >
@@ -376,7 +377,7 @@ export default function ClientBookingForm({
           >
             <ArrowLeft size={34} />
           </button>
-          <h1 className="text-3xl font-black tracking-[-0.05em]">
+          <h1 className="text-[1.65rem] font-black leading-tight tracking-[-0.03em]">
             {step === "resumo" ? "Confirmar agendamento" : "Reserva online"}
           </h1>
           <a
@@ -392,10 +393,10 @@ export default function ClientBookingForm({
 
         {step === "profissional" ? (
           <section className="mt-8">
-            <h2 className="text-3xl font-black tracking-[-0.04em]">
+            <h2 className="text-[1.75rem] font-black tracking-[-0.03em]">
               Escolha seu atendimento
             </h2>
-            <p className="mt-3 text-xl leading-snug text-zinc-300">
+            <p className="mt-3 text-lg leading-snug text-zinc-300">
               Primeiro o profissional, depois o serviço e por último data e hora.
             </p>
             <div className="mt-6 space-y-3">
@@ -406,28 +407,28 @@ export default function ClientBookingForm({
               ].map(([title, subtitle], index) => (
                 <div
                   key={title}
-                  className={`flex items-center gap-4 rounded-[1.15rem] border p-5 ${
+                  className={`flex items-center gap-4 rounded-[1.1rem] border p-4 ${
                     index === 0
                       ? "border-[#b88918] bg-[#111214]"
                       : "border-white/8 bg-[#111214] text-zinc-400"
                   }`}
                 >
-                  <span className="flex h-16 w-16 items-center justify-center rounded-full bg-[#1e1f22] text-2xl font-black text-[#f6b93f]">
-                    {index === 0 ? <UserRound size={34} /> : index + 1}
+                  <span className="flex h-14 w-14 items-center justify-center rounded-full bg-[#1e1f22] text-xl font-black text-[#f6b93f]">
+                    {index === 0 ? <UserRound size={28} /> : index + 1}
                   </span>
                   <span className="flex-1">
-                    <strong className="block text-xl text-white">{title}</strong>
-                    <span className="mt-1 block text-base">{subtitle}</span>
+                    <strong className="block text-lg text-white">{title}</strong>
+                    <span className="mt-1 block text-sm">{subtitle}</span>
                   </span>
-                  <ChevronRight size={28} className="text-[#f6b93f]" />
+                  <ChevronRight size={24} className="text-[#f6b93f]" />
                 </div>
               ))}
             </div>
 
             <div className="mt-8 border-t border-white/10 pt-6">
-              <h3 className="flex items-center gap-4 text-2xl font-black">
-                <span className="flex h-16 w-16 items-center justify-center rounded-full bg-[#1e1f22] text-[#f6b93f]">
-                  <UserRound size={34} />
+              <h3 className="flex items-center gap-4 text-xl font-black">
+                <span className="flex h-14 w-14 items-center justify-center rounded-full bg-[#1e1f22] text-[#f6b93f]">
+                  <UserRound size={28} />
                 </span>
                 Escolha o profissional
               </h3>
@@ -484,11 +485,11 @@ export default function ClientBookingForm({
         ) : null}
 
         {step === "servico" ? (
-          <section className="mt-8">
-            <h2 className="text-3xl font-black tracking-[-0.04em]">
+          <section className="mt-8 pb-44">
+            <h2 className="text-[1.8rem] font-black tracking-[-0.03em]">
               Escolha o serviço
             </h2>
-            <p className="mt-3 text-xl text-zinc-300">
+            <p className="mt-2 text-lg leading-snug text-zinc-300">
               Selecione um ou mais serviços que deseja realizar.
             </p>
             <label className="mt-6 flex h-16 items-center gap-3 rounded-2xl bg-[#151618] px-4 text-zinc-400">
@@ -506,7 +507,7 @@ export default function ClientBookingForm({
                   key={categoria}
                   type="button"
                   onClick={() => setCategoriaAtiva(categoria)}
-                  className={`h-14 shrink-0 rounded-2xl px-6 text-lg font-bold ${
+                  className={`h-12 shrink-0 rounded-2xl px-5 text-lg font-bold ${
                     categoriaAtiva === categoria
                       ? "bg-[#f6b93f] text-black"
                       : "bg-[#151618] text-white"
@@ -527,30 +528,32 @@ export default function ClientBookingForm({
                     key={servico.id}
                     type="button"
                     onClick={() => toggleServico(servico.id)}
-                    className={`grid w-full grid-cols-[104px_1fr_auto] items-center gap-4 rounded-[1.15rem] border p-4 text-left ${
+                    className={`grid w-full grid-cols-[1fr_auto] items-center gap-3 rounded-[1.15rem] border p-4 text-left ${
                       selected
                         ? "border-[#f6b93f] bg-[#111214]"
                         : "border-white/8 bg-[#111214]"
                     }`}
                   >
-                    <img
-                      src="/app-cliente-hero-woman.jpeg"
-                      alt=""
-                      className="h-[104px] w-[104px] rounded-2xl object-cover"
-                    />
-                    <span>
-                      <strong className="block text-xl text-white">
-                        {servico.nome}
-                      </strong>
-                      <span className="mt-2 line-clamp-2 block text-base leading-6 text-zinc-400">
+                    <span className="min-w-0">
+                      <span className="flex items-start gap-3">
+                        <span className="mt-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#1d1e21] text-[#f6b93f]">
+                          <Scissors size={22} />
+                        </span>
+                        <strong className="block min-w-0 break-words text-lg font-black leading-tight text-white">
+                          {servico.nome}
+                        </strong>
+                      </span>
+                      <span className="mt-2 line-clamp-2 block text-sm leading-6 text-zinc-400">
                         {servico.descricao || "Atendimento premium do salão."}
                       </span>
-                      <span className="mt-3 flex items-center gap-3 text-base text-zinc-400">
+                      <span className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-zinc-400">
                         <Clock3 size={18} />
-                        {servico.duracaoMinutos || 60} min
+                        <span className="whitespace-nowrap font-medium">
+                          {servico.duracaoMinutos || 60} min
+                        </span>
                         <span className="h-5 w-px bg-white/20" />
-                        A partir de{" "}
-                        <strong className="text-[#f6b93f]">
+                        <span className="whitespace-nowrap">A partir de</span>
+                        <strong className="whitespace-nowrap font-black text-[#f6b93f]">
                           {formatCurrency(servico.preco)}
                         </strong>
                       </span>
@@ -568,20 +571,29 @@ export default function ClientBookingForm({
                 );
               })}
             </div>
-            <button
-              type="button"
-              disabled={!servicoIds.length || !profissionaisCompativeis.some((item) => item.id === profissionalId)}
-              onClick={() => setStep("horario")}
-              className="mt-6 h-16 w-full rounded-2xl bg-[#f6b93f] text-xl font-black text-black disabled:opacity-50"
-            >
-              Continuar
-            </button>
             {!profissionaisCompativeis.some((item) => item.id === profissionalId) && servicoIds.length ? (
               <p className="mt-3 rounded-2xl border border-[#f6b93f]/40 bg-[#211805] p-4 text-sm text-[#f6b93f]">
                 Nenhum profissional disponível para todos os serviços selecionados.
                 Remova um serviço ou escolha outro.
               </p>
             ) : null}
+            <div className="pointer-events-none fixed inset-x-0 bottom-[5.15rem] z-40 bg-gradient-to-t from-[#050505] via-[#050505]/92 to-transparent px-5 pb-4 pt-10 md:bottom-0">
+              <div className="pointer-events-auto mx-auto max-w-md">
+                <button
+                  type="button"
+                  disabled={
+                    !servicoIds.length ||
+                    !profissionaisCompativeis.some(
+                      (item) => item.id === profissionalId
+                    )
+                  }
+                  onClick={() => setStep("horario")}
+                  className="h-14 w-full rounded-2xl bg-[#f6b93f] text-lg font-black text-black shadow-[0_18px_40px_rgba(246,185,63,0.32)] disabled:opacity-50"
+                >
+                  Continuar
+                </button>
+              </div>
+            </div>
           </section>
         ) : null}
 

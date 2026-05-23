@@ -52,13 +52,16 @@ export default function ClientAppBottomNav() {
     return null;
   }
 
+  const isReservationRoute =
+    pathname.startsWith("/app-cliente/salao/") && pathname.includes("/reserva");
+  const isDarkSalonInfoRoute =
+    pathname.startsWith("/app-cliente/salao/") && pathname.includes("/detalhes");
   const isDark =
-    (pathname === "/app-cliente" ||
-      pathname.startsWith("/app-cliente/inicio") ||
-      pathname.startsWith("/app-cliente/explorar") ||
-      pathname.startsWith("/app-cliente/salao")) &&
-    !pathname.startsWith("/app-cliente/agendamentos") &&
-    !pathname.startsWith("/app-cliente/perfil");
+    pathname === "/app-cliente" ||
+    pathname.startsWith("/app-cliente/inicio") ||
+    pathname.startsWith("/app-cliente/explorar") ||
+    isReservationRoute ||
+    isDarkSalonInfoRoute;
 
   return (
     <nav

@@ -96,6 +96,7 @@ export type Agendamento = {
   reserva_expira_em?: string | null;
   sinal_valor?: number | null;
   sinal_status?: string | null;
+  sinal_comprovante_path?: string | null;
 
   cliente?: {
     nome: string;

@@ -55,6 +55,7 @@ export async function loadAgendaData(params: {
         reserva_expira_em,
         sinal_valor,
         sinal_status,
+        sinal_comprovante_path,
         origem,
         created_at,
         updated_at,

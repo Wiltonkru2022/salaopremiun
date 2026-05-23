@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { Sparkles } from "lucide-react";
 import ClientAppPendingLink from "@/components/client-app/ClientAppPendingLink";
@@ -16,13 +16,6 @@ const HIDDEN_CHROME_ROUTES = [
   "/app-cliente/cadastro",
   "/app-cliente/recuperar-acesso",
   "/app-cliente/onboarding",
-];
-
-const DARK_APP_ROUTES = [
-  "/app-cliente",
-  "/app-cliente/inicio",
-  "/app-cliente/explorar",
-  "/app-cliente/salao",
 ];
 
 const CUSTOM_HEADER_ROUTES = [
@@ -52,12 +45,32 @@ export default function ClientMobileAppLayout({
   const hasCustomHeader = CUSTOM_HEADER_ROUTES.some((route) =>
     pathname === route || pathname.startsWith(`${route}/`)
   );
+  const isReservationRoute =
+    pathname.startsWith("/app-cliente/salao/") && pathname.includes("/reserva");
+  const isDarkSalonInfoRoute =
+    pathname.startsWith("/app-cliente/salao/") && pathname.includes("/detalhes");
   const isDarkRoute =
-    DARK_APP_ROUTES.some(
-      (route) => pathname === route || pathname.startsWith(`${route}/`)
-    ) &&
-    !pathname.startsWith("/app-cliente/perfil") &&
-    !pathname.startsWith("/app-cliente/agendamentos");
+    pathname === "/app-cliente" ||
+    pathname.startsWith("/app-cliente/inicio") ||
+    pathname.startsWith("/app-cliente/explorar") ||
+    isReservationRoute ||
+    isDarkSalonInfoRoute;
+
+  useEffect(() => {
+    const html = document.documentElement;
+    const body = document.body;
+    const previousHtml = html.style.backgroundColor;
+    const previousBody = body.style.backgroundColor;
+    const nextColor = isDarkRoute ? "#050505" : "#ffffff";
+
+    html.style.backgroundColor = nextColor;
+    body.style.backgroundColor = nextColor;
+
+    return () => {
+      html.style.backgroundColor = previousHtml;
+      body.style.backgroundColor = previousBody;
+    };
+  }, [isDarkRoute]);
 
   if (hideChrome) {
     return (

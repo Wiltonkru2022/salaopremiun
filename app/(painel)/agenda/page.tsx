@@ -69,6 +69,8 @@ type ClienteHistoricoItem = {
   status: string;
   servicoNome: string;
   observacoes: string | null;
+  sinalStatus?: string | null;
+  sinalComprovantePath?: string | null;
 };
 
 function addMinutesToSlotTime(time: string, minutes: number) {
@@ -555,7 +557,7 @@ export default function AgendaPage() {
           supabase
             .from("agendamentos")
             .select(
-              "id, data, hora_inicio, hora_fim, status, observacoes, servicos(nome)"
+              "id, data, hora_inicio, hora_fim, status, observacoes, sinal_comprovante_path, servicos(nome)"
             )
             .eq("id_salao", idSalao)
             .eq("cliente_id", item.cliente_id)
@@ -576,6 +578,7 @@ export default function AgendaPage() {
         hora_fim: string;
         status: string;
         observacoes: string | null;
+        sinal_comprovante_path?: string | null;
         servicos?: { nome?: string | null } | Array<{ nome?: string | null }> | null;
       }>).map((row) => ({
         id: row.id,
@@ -583,6 +586,8 @@ export default function AgendaPage() {
         horaInicio: normalizeTimeString(row.hora_inicio),
         horaFim: normalizeTimeString(row.hora_fim),
         status: row.status,
+        sinalStatus: null,
+        sinalComprovantePath: row.sinal_comprovante_path || null,
         servicoNome: Array.isArray(row.servicos)
           ? row.servicos[0]?.nome || "Serviço"
           : row.servicos?.nome || "Serviço",
@@ -599,6 +604,8 @@ export default function AgendaPage() {
           horaInicio: normalizeTimeString(item.hora_inicio),
           horaFim: normalizeTimeString(item.hora_fim),
           status: item.status,
+          sinalStatus: item.sinal_status || null,
+          sinalComprovantePath: item.sinal_comprovante_path || null,
           servicoNome: item.servico?.nome || "Serviço",
           observacoes: item.observacoes,
         },
@@ -635,7 +642,7 @@ export default function AgendaPage() {
           supabase
             .from("agendamentos")
             .select(
-              "id, data, hora_inicio, hora_fim, status, observacoes, servicos(nome)"
+              "id, data, hora_inicio, hora_fim, status, observacoes, sinal_comprovante_path, servicos(nome)"
             )
             .eq("id_salao", idSalao)
             .eq("cliente_id", clientId)
@@ -660,6 +667,7 @@ export default function AgendaPage() {
         hora_fim: string;
         status: string;
         observacoes: string | null;
+        sinal_comprovante_path?: string | null;
         servicos?: { nome?: string | null } | Array<{ nome?: string | null }> | null;
       }>).map((row) => ({
         id: row.id,
@@ -667,6 +675,8 @@ export default function AgendaPage() {
         horaInicio: normalizeTimeString(row.hora_inicio),
         horaFim: normalizeTimeString(row.hora_fim),
         status: row.status,
+        sinalStatus: null,
+        sinalComprovantePath: row.sinal_comprovante_path || null,
         servicoNome: Array.isArray(row.servicos)
           ? row.servicos[0]?.nome || "Serviço"
           : row.servicos?.nome || "Serviço",

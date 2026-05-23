@@ -7,10 +7,9 @@ type ClientSalonSectionTabsProps = {
 
 const tabs = [
   { key: "servicos", label: "Serviços", href: "" },
-  { key: "reserva", label: "Reserva online", href: "/reserva" },
   { key: "avaliacoes", label: "Avaliações", href: "/avaliacoes" },
-  { key: "portfolio", label: "Portfólio", href: "/portfolio" },
-  { key: "detalhes", label: "Detalhes", href: "/detalhes" },
+  { key: "portfolio", label: "Profissionais", href: "/portfolio" },
+  { key: "detalhes", label: "Sobre", href: "/detalhes" },
 ] as const;
 
 export default function ClientSalonSectionTabs({
@@ -18,15 +17,15 @@ export default function ClientSalonSectionTabs({
   active,
 }: ClientSalonSectionTabsProps) {
   return (
-    <nav className="sticky top-[calc(env(safe-area-inset-top)+76px)] z-20 border-b border-zinc-200 bg-white/95 px-4 backdrop-blur md:top-[88px] md:px-6">
-      <div className="mx-auto flex max-w-6xl gap-8 overflow-x-auto text-sm font-black uppercase tracking-[0.08em] text-zinc-500">
+    <nav className="border-b border-zinc-200 bg-white px-4 md:px-6">
+      <div className="mx-auto flex max-w-6xl gap-7 overflow-x-auto text-[1.04rem] font-semibold text-zinc-500">
         {tabs.map((tab) => (
           <Link
             key={tab.key}
             href={`/app-cliente/salao/${salonId}${tab.href}`}
-            className={`shrink-0 border-b-4 px-0 py-4 transition hover:border-zinc-950 hover:text-zinc-950 ${
+            className={`shrink-0 whitespace-nowrap border-b-[3px] px-0 py-4 transition hover:border-zinc-950 hover:text-zinc-950 ${
               active === tab.key
-                ? "border-zinc-950 text-zinc-950"
+                ? "border-zinc-950 font-black text-zinc-950"
                 : "border-transparent"
             }`}
           >
