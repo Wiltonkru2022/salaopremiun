@@ -41,15 +41,19 @@ function ProfileRow({
     <Link
       href={href}
       prefetch={prefetch}
-      className={`flex min-h-16 items-center justify-between border-b border-zinc-100 px-1 text-lg ${
+      className={`flex min-h-[5.2rem] items-center justify-between border-b border-zinc-100 px-2 text-xl ${
         muted ? "text-zinc-400" : "text-zinc-950"
       }`}
     >
-      <span className="inline-flex items-center gap-3">
-        <Icon size={22} className="text-zinc-400" />
+      <span className="inline-flex items-center gap-5">
+        <Icon
+          size={29}
+          strokeWidth={1.9}
+          className={muted ? "text-zinc-950" : "text-[#b88918]"}
+        />
         {label}
       </span>
-      <ChevronRight size={26} className="text-zinc-300" />
+      <ChevronRight size={28} className="text-zinc-300" />
     </Link>
   );
 }
@@ -68,19 +72,19 @@ export default async function ClientePerfilPage({
 
   return (
     <ClientAppFrame title="Perfil" subtitle="Sua conta no Salão Premium.">
-      <section className="mx-auto max-w-3xl px-4 py-4 md:px-6">
-        <div className="flex items-center gap-5 py-6">
-          <div className="relative flex h-24 w-24 shrink-0 items-center justify-center rounded-full border-4 border-zinc-900 bg-zinc-100 text-4xl font-black text-zinc-900">
+      <section className="mx-auto max-w-3xl px-5 py-5 md:px-6">
+        <div className="flex items-center gap-7 py-8">
+          <div className="relative flex h-32 w-32 shrink-0 items-center justify-center rounded-full border-[3px] border-zinc-950 bg-zinc-50 text-6xl font-black text-zinc-950">
             {initial}
-            <span className="absolute -bottom-1 -right-1 flex h-10 w-10 items-center justify-center rounded-full border-4 border-white bg-zinc-100 text-zinc-700">
-              <UserRound size={20} />
+            <span className="absolute bottom-1 right-0 flex h-12 w-12 items-center justify-center rounded-full border-4 border-white bg-white text-[#b88918] shadow-sm">
+              <UserRound size={24} />
             </span>
           </div>
           <div className="min-w-0">
-            <h1 className="break-words text-3xl font-black tracking-[-0.04em] text-zinc-800">
+            <h1 className="break-words text-4xl font-black tracking-[-0.05em] text-zinc-950">
               {profile.nome || session.nome}
             </h1>
-            <p className="mt-2 text-lg text-zinc-500">
+            <p className="mt-3 text-xl text-zinc-500">
               {profile.telefone || profile.email || session.email}
             </p>
           </div>
@@ -119,7 +123,7 @@ export default async function ClientePerfilPage({
           </div>
         ) : null}
 
-        <div className="rounded-[1.5rem] bg-white p-4 shadow-[0_18px_45px_rgba(15,23,42,0.08)]">
+        <div className="rounded-[1.5rem] bg-white p-4 shadow-[0_18px_45px_rgba(15,23,42,0.08)] ring-1 ring-zinc-100">
           <ProfileRow
             href="/app-cliente/perfil/editar"
             label="Detalhes da conta"

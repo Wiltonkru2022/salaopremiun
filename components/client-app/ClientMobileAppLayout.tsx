@@ -18,6 +18,21 @@ const HIDDEN_CHROME_ROUTES = [
   "/app-cliente/onboarding",
 ];
 
+const DARK_APP_ROUTES = [
+  "/app-cliente",
+  "/app-cliente/inicio",
+  "/app-cliente/explorar",
+  "/app-cliente/salao",
+];
+
+const CUSTOM_HEADER_ROUTES = [
+  "/app-cliente",
+  "/app-cliente/inicio",
+  "/app-cliente/explorar",
+  "/app-cliente/salao",
+  "/app-cliente/agendamentos",
+];
+
 export default function ClientMobileAppLayout({
   children,
 }: {
@@ -32,6 +47,15 @@ export default function ClientMobileAppLayout({
   const hideChrome = HIDDEN_CHROME_ROUTES.some((route) =>
     pathname.startsWith(route)
   );
+  const hasCustomHeader = CUSTOM_HEADER_ROUTES.some((route) =>
+    pathname === route || pathname.startsWith(`${route}/`)
+  );
+  const isDarkRoute =
+    DARK_APP_ROUTES.some(
+      (route) => pathname === route || pathname.startsWith(`${route}/`)
+    ) &&
+    !pathname.startsWith("/app-cliente/perfil") &&
+    !pathname.startsWith("/app-cliente/agendamentos");
 
   if (hideChrome) {
     return (
@@ -43,8 +67,13 @@ export default function ClientMobileAppLayout({
 
   return (
     <ClientMobileLayoutContext.Provider value={contextValue}>
-      <div className="app-cliente-root min-h-dvh overflow-x-hidden bg-white text-zinc-950">
+      <div
+        className={`app-cliente-root min-h-dvh overflow-x-hidden ${
+          isDarkRoute ? "bg-[#050505] text-white" : "bg-white text-zinc-950"
+        }`}
+      >
         <div className="relative mx-auto flex min-h-dvh max-w-6xl flex-col pb-24 md:pb-4">
+          {!hasCustomHeader ? (
           <header className="sp-mobile-fixed fixed inset-x-0 top-0 z-50 mx-auto flex max-w-6xl items-center justify-between gap-2 border-b border-zinc-100 bg-white/95 px-3 py-3 pt-[calc(env(safe-area-inset-top)+0.75rem)] shadow-[0_12px_30px_rgba(15,23,42,0.06)] backdrop-blur-xl sm:gap-3 sm:px-4 md:top-3 md:rounded-[1.5rem] md:border md:pt-3">
             <div className="min-w-0 flex-1">
               <div className="inline-flex max-w-full items-center gap-1.5 truncate rounded-full bg-amber-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.12em] text-amber-800 sm:tracking-[0.14em]">
@@ -84,8 +113,15 @@ export default function ClientMobileAppLayout({
               </nav>
             </div>
           </header>
+          ) : null}
 
-          <main className="flex-1 pb-4 pt-[calc(env(safe-area-inset-top)+7.75rem)] md:pt-[8.75rem]">
+          <main
+            className={`flex-1 pb-4 ${
+              hasCustomHeader
+                ? "pt-0"
+                : "pt-[calc(env(safe-area-inset-top)+7.75rem)] md:pt-[8.75rem]"
+            }`}
+          >
             {children}
           </main>
 

@@ -1,3 +1,5 @@
+import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 import ClientAppFrame from "@/components/client-app/ClientAppFrame";
 import ClientAppointmentsManager from "@/components/client-app/ClientAppointmentsManager";
 import { requireClienteAppContext } from "@/lib/client-context.server";
@@ -28,12 +30,26 @@ export default async function ClienteAppointmentsPage({
       title="Meus agendamentos"
       subtitle={`Tudo certo, ${session.nome}. Veja o que está marcado e o que já pode avaliar.`}
     >
-      <ClientAppointmentsManager
-        agendamentos={agendamentos.slice(0, pageSize)}
-        successKey={params?.status || null}
-        currentPage={paginaAtual}
-        hasMore={hasMore}
-      />
+      <section className="mx-auto min-h-dvh max-w-3xl bg-white px-5 pb-28 pt-[calc(env(safe-area-inset-top)+1rem)] text-zinc-950">
+        <header className="mb-8 flex items-center gap-5">
+          <Link
+            href="/app-cliente"
+            className="flex h-12 w-12 items-center justify-center -ml-2"
+            aria-label="Voltar"
+          >
+            <ArrowLeft size={34} />
+          </Link>
+          <h1 className="text-3xl font-black tracking-[-0.05em]">
+            Meus agendamentos
+          </h1>
+        </header>
+        <ClientAppointmentsManager
+          agendamentos={agendamentos.slice(0, pageSize)}
+          successKey={params?.status || null}
+          currentPage={paginaAtual}
+          hasMore={hasMore}
+        />
+      </section>
     </ClientAppFrame>
   );
 }

@@ -1,13 +1,13 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { CalendarDays, CalendarPlus, Search, UserRound } from "lucide-react";
+import { CalendarDays, Home, Search, UserRound } from "lucide-react";
 import ClientAppPendingLink from "@/components/client-app/ClientAppPendingLink";
 
 const navItems = [
   {
-    label: "Reservar",
-    icon: CalendarPlus,
+    label: "Início",
+    icon: Home,
     href: "/app-cliente",
     match: (pathname: string) =>
       pathname === "/app-cliente" || pathname === "/app-cliente/meuapp",
@@ -52,8 +52,22 @@ export default function ClientAppBottomNav() {
     return null;
   }
 
+  const isDark =
+    (pathname === "/app-cliente" ||
+      pathname.startsWith("/app-cliente/inicio") ||
+      pathname.startsWith("/app-cliente/explorar") ||
+      pathname.startsWith("/app-cliente/salao")) &&
+    !pathname.startsWith("/app-cliente/agendamentos") &&
+    !pathname.startsWith("/app-cliente/perfil");
+
   return (
-    <nav className="sp-mobile-fixed fixed inset-x-0 bottom-[var(--sp-fixed-bottom,0px)] z-40 translate-y-0 border-t border-zinc-200 bg-white px-2 pb-[max(env(safe-area-inset-bottom),0.45rem)] pt-2 shadow-[0_-14px_34px_rgba(15,23,42,0.10)] md:hidden">
+    <nav
+      className={`sp-mobile-fixed fixed inset-x-0 bottom-[var(--sp-fixed-bottom,0px)] z-40 translate-y-0 px-4 pb-[max(env(safe-area-inset-bottom),0.45rem)] pt-2 md:hidden ${
+        isDark
+          ? "border-t border-white/10 bg-[#111214]/95 shadow-[0_-18px_45px_rgba(0,0,0,0.45)] backdrop-blur-xl"
+          : "border-t border-zinc-200 bg-white shadow-[0_-14px_34px_rgba(15,23,42,0.10)]"
+      }`}
+    >
       <div className="mx-auto grid max-w-md grid-cols-4 gap-1">
         {navItems.map((item) => {
           const Icon = item.icon;
@@ -67,8 +81,12 @@ export default function ClientAppBottomNav() {
               iconSize={20}
               className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-2xl text-[11px] font-semibold transition ${
                 active
-                  ? "bg-zinc-100 text-zinc-950"
-                  : "text-zinc-700 hover:bg-zinc-50 hover:text-zinc-950"
+                  ? isDark
+                    ? "text-[#f5b83d]"
+                    : "text-[#b88918]"
+                  : isDark
+                    ? "text-zinc-200 hover:text-[#f5b83d]"
+                    : "text-zinc-950 hover:bg-zinc-50"
               }`}
             >
               {item.label}

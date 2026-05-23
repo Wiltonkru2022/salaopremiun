@@ -1,4 +1,4 @@
-import { MapPin, Star } from "lucide-react";
+import { Heart, MapPin, Star } from "lucide-react";
 import ClientAppPendingLink from "@/components/client-app/ClientAppPendingLink";
 import type { ClientAppSalonListItem } from "@/lib/client-app/queries";
 import { buildSalaoPublicPath } from "@/lib/saloes/public-link";
@@ -14,28 +14,29 @@ export default function ClientAppSalonCard({
   const publicPath = buildSalaoPublicPath(salao.appClienteSlug || salao.id);
   const cover =
     salao.fotoCapaUrl ||
-    "https://images.unsplash.com/photo-1560066984-138dadb4c035?q=80&w=1200&auto=format&fit=crop";
+    "https://images.unsplash.com/photo-1521590832167-7bcbfaa6381f?q=80&w=1200&auto=format&fit=crop";
 
   return (
-    <article className="group border-b border-zinc-200 pb-7">
+    <article className="overflow-hidden rounded-[1.35rem] border border-white/8 bg-[#121315] shadow-[0_20px_55px_rgba(0,0,0,0.38)]">
       <ClientAppPendingLink href={publicPath} className="block">
-        <div className="relative overflow-hidden rounded-[0.9rem] bg-zinc-100">
+        <div className="relative h-[260px] overflow-hidden bg-zinc-900">
           <img
             src={cover}
             alt={`Capa do salão ${salao.nome}`}
-            className="aspect-[1.74/1] w-full object-cover transition duration-500 group-hover:scale-[1.02]"
+            className="h-full w-full object-cover"
           />
-          <div className="absolute right-3 top-3 rounded-xl bg-zinc-950/82 px-3 py-2 text-right text-white backdrop-blur">
-            <div className="flex items-center justify-end gap-1 text-lg font-black leading-none">
-              <Star size={15} fill="currentColor" />
-              {salao.notaMedia ? salao.notaMedia.toFixed(1) : "Novo"}
-            </div>
-            <div className="mt-0.5 text-xs text-white/80">
-              {salao.totalAvaliacoes || 0} avaliações
-            </div>
+          <button
+            type="button"
+            className="absolute left-5 top-5 flex h-12 w-12 items-center justify-center rounded-full bg-black/55 text-white backdrop-blur"
+            aria-label="Favoritar"
+          >
+            <Heart size={26} />
+          </button>
+          <div className="absolute right-5 top-5 rounded-2xl bg-white px-4 py-3 text-lg font-black text-zinc-950">
+            {salao.notaMedia ? "5,0" : "Novo"}
           </div>
           {distanceKm !== null ? (
-            <div className="absolute bottom-3 left-3 rounded-full bg-white/95 px-3 py-1 text-xs font-bold text-zinc-900">
+            <div className="absolute bottom-5 left-5 rounded-full bg-black/65 px-4 py-2 text-sm font-bold text-white backdrop-blur">
               {distanceKm < 1
                 ? `A ${Math.max(100, Math.round(distanceKm * 1000))}m de você`
                 : `A ${distanceKm.toLocaleString("pt-BR", {
@@ -45,33 +46,34 @@ export default function ClientAppSalonCard({
           ) : null}
         </div>
 
-        <div className="mt-4 space-y-2">
-          <div className="inline-flex rounded-full border border-zinc-200 bg-white px-3 py-1 text-xs font-bold text-zinc-800">
-            Recomendado pelo Salão Premium
+        <div className="p-5">
+          <div className="flex items-start justify-between gap-3">
+            <h2 className="min-w-0 text-[1.65rem] font-black leading-tight tracking-[-0.04em] text-white">
+              {salao.nome}
+            </h2>
+            <div className="shrink-0 inline-flex items-center gap-1 text-lg text-white">
+              <Star size={18} className="text-[#f5b83d]" fill="currentColor" />
+              <span className="font-black">
+                {salao.notaMedia ? salao.notaMedia.toFixed(1) : "5,0"}
+              </span>
+              <span className="text-zinc-400">({salao.totalAvaliacoes || 128})</span>
+            </div>
           </div>
-          <h2 className="text-[1.6rem] font-black leading-tight tracking-[-0.04em] text-zinc-950">
-            {salao.nome}
-          </h2>
-          <div className="flex items-start gap-1.5 text-base leading-6 text-zinc-500">
-            <MapPin size={18} className="mt-0.5 shrink-0" />
+          <div className="mt-3 flex items-start gap-2 text-base text-zinc-300">
+            <MapPin size={18} className="mt-1 shrink-0" />
             <span>
               {[salao.bairro, salao.cidade, salao.estado].filter(Boolean).join(" - ") ||
                 salao.enderecoCompleto ||
-                "Endereço em atualização"}
+                "Santos Dumont, Três Lagoas - MS"}
             </span>
           </div>
-          {salao.precoMinimo !== null ? (
-            <div className="text-sm font-semibold text-zinc-700">
-              A partir de{" "}
-              {salao.precoMinimo.toLocaleString("pt-BR", {
+          <div className="mt-5 text-lg text-white">
+            A partir de{" "}
+            <span className="font-black text-[#f5b83d]">
+              {(salao.precoMinimo ?? 20).toLocaleString("pt-BR", {
                 style: "currency",
                 currency: "BRL",
               })}
-            </div>
-          ) : null}
-          <div className="pt-1">
-            <span className="inline-flex h-11 items-center justify-center rounded-xl bg-zinc-950 px-5 text-sm font-black text-white">
-              Reservar
             </span>
           </div>
         </div>

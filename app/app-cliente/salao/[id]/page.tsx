@@ -1,10 +1,21 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Star } from "lucide-react";
+import {
+  ArrowLeft,
+  CalendarDays,
+  ChevronRight,
+  Coffee,
+  Heart,
+  MapPin,
+  ParkingSquare,
+  Share2,
+  Sparkles,
+  Star,
+  Wifi,
+  Wind,
+} from "lucide-react";
 import ClientAppFrame from "@/components/client-app/ClientAppFrame";
-import ClientSalonHeaderActions from "@/components/client-app/ClientSalonHeaderActions";
-import ClientSalonSectionTabs from "@/components/client-app/ClientSalonSectionTabs";
 import { generateClientSalonMetadata } from "@/lib/client-app/salon-metadata";
 import {
   getClientAppSalonDetail,
@@ -30,72 +41,14 @@ function formatCurrency(value: number | null) {
   }).format(value);
 }
 
-type ServiceRowProps = {
-  salonId: string;
-  servico: {
-    id: string;
-    nome: string;
-    descricao: string | null;
-    preco: number | null;
-    duracaoMinutos: number | null;
-    exigeAvaliacao: boolean;
-    ehCombo?: boolean;
-  };
-};
-
-function ServiceRow({ salonId, servico }: ServiceRowProps) {
-  return (
-    <div className="grid grid-cols-[1fr_auto] items-center gap-4 py-5">
-      <div>
-        <div className="flex flex-wrap items-center gap-2">
-          {servico.ehCombo ? (
-            <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.12em] text-amber-700">
-              Combo
-            </span>
-          ) : null}
-          <div className="text-xl font-medium text-zinc-950">{servico.nome}</div>
-        </div>
-        {servico.descricao ? (
-          <p className="mt-1 text-sm leading-6 text-zinc-500">
-            {servico.descricao}
-          </p>
-        ) : null}
-      </div>
-      <div className="text-right">
-        <div className="text-lg font-black text-zinc-950">
-          {servico.exigeAvaliacao
-            ? "Exige avaliação"
-            : formatCurrency(servico.preco)}
-        </div>
-        <div className="mt-1 text-sm text-zinc-500">
-          {servico.duracaoMinutos
-            ? `${servico.duracaoMinutos} min`
-            : "Tempo sob consulta"}
-        </div>
-        <Link
-          href={`/app-cliente/salao/${salonId}/reserva?servico=${encodeURIComponent(
-            servico.id
-          )}`}
-          className="mt-3 inline-flex h-11 items-center justify-center rounded-xl bg-zinc-950 px-5 text-sm font-black text-white"
-        >
-          Agendar
-        </Link>
-      </div>
-    </div>
-  );
-}
-
 export default async function ClienteSalonPage({
   params,
-  searchParams,
-  publicOnly = false,
 }: {
   params: Promise<{ id: string }>;
   searchParams?: Promise<{ status?: string }>;
   publicOnly?: boolean;
 }) {
   const { id } = await params;
-  const query = searchParams ? await searchParams : undefined;
 
   try {
     const salao = await getClientAppSalonDetail(id);
@@ -110,192 +63,178 @@ export default async function ClienteSalonPage({
     const notaMedia = salao.avaliacoes.length
       ? salao.avaliacoes.reduce((sum, item) => sum + item.nota, 0) /
         salao.avaliacoes.length
-      : null;
-    const salaoPausado = salao.appClientePausado;
-    const pausaMensagem =
-      salao.appClientePausaMensagem ||
-      "Salão pausado no momento. Assim que a agenda voltar, você poderá reservar por aqui.";
-    const salaoPublicPath = buildSalaoPublicPath(
-      salao.appClienteSlug || salao.id
-    );
+      : 5;
     const cover =
       salao.fotoCapaUrl ||
-      "https://images.unsplash.com/photo-1560066984-138dadb4c035?q=80&w=1400&auto=format&fit=crop";
-    const popularServices = salao.servicos.slice(0, 5);
-    const otherServices = salao.servicos.slice(5);
-    const destaqueAvaliacoes = salao.avaliacoes
-      .filter((avaliacao) => avaliacao.nota >= 4 && avaliacao.comentario)
-      .slice(0, 2);
+      "https://images.unsplash.com/photo-1521590832167-7bcbfaa6381f?q=80&w=1400&auto=format&fit=crop";
+    const publicPath = buildSalaoPublicPath(salao.appClienteSlug || salao.id);
+    const popular = salao.servicos.slice(0, 1);
 
     return (
       <ClientAppFrame title={salao.nome} subtitle="Agendamento online">
-        <div className="bg-white">
-          <section className="-mt-4">
-            <div className="relative h-[360px] overflow-hidden bg-zinc-200 md:h-[460px]">
-              <img
-                src={cover}
-                alt={`Capa do salão ${salao.nome}`}
-                className="h-full w-full object-cover"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-black/35" />
-
-              <div className="absolute left-4 right-4 top-5 flex items-center justify-between">
-                <Link
-                  href="/app-cliente/inicio"
-                  className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/95 text-zinc-950 shadow-xl"
-                  aria-label="Voltar"
+        <section className="min-h-dvh bg-white pb-28 text-zinc-950">
+          <div className="relative h-[430px] overflow-hidden bg-zinc-900">
+            <img
+              src={cover}
+              alt={`Capa do salão ${salao.nome}`}
+              className="h-full w-full object-cover"
+            />
+            <div className="absolute inset-0 bg-gradient-to-b from-black/35 via-transparent to-black/10" />
+            <div className="absolute left-5 right-5 top-[calc(env(safe-area-inset-top)+1rem)] flex items-center justify-between">
+              <Link
+                href="/app-cliente/explorar"
+                className="flex h-16 w-16 items-center justify-center rounded-full bg-black/45 text-white backdrop-blur"
+                aria-label="Voltar"
+              >
+                <ArrowLeft size={32} />
+              </Link>
+              <div className="flex gap-3">
+                <a
+                  href={publicPath}
+                  className="flex h-16 w-16 items-center justify-center rounded-full bg-black/45 text-white backdrop-blur"
+                  aria-label="Compartilhar"
                 >
-                  <ArrowLeft size={24} />
-                </Link>
-                <ClientSalonHeaderActions
-                  idSalao={salao.id}
-                  salaoNome={salao.nome}
-                  publicPath={salaoPublicPath}
-                  initialFavorite={isFavorite}
-                  canFavorite={hasSession}
-                />
+                  <Share2 size={30} />
+                </a>
+                <button
+                  type="button"
+                  className="flex h-16 w-16 items-center justify-center rounded-full bg-black/45 text-white backdrop-blur"
+                  aria-label="Favoritar"
+                >
+                  <Heart size={34} fill={isFavorite && hasSession ? "currentColor" : "none"} />
+                </button>
               </div>
             </div>
+          </div>
 
-            <div className="px-4 py-6 md:px-6">
-              <div className="mx-auto max-w-6xl">
-                <h1 className="text-4xl font-black uppercase tracking-[-0.04em] text-zinc-800">
+          <div className="-mt-10 rounded-t-[2rem] bg-white px-6 pb-8 pt-8">
+            <div className="mx-auto max-w-md">
+              <div className="flex items-start justify-between gap-4">
+                <h1 className="text-[2.1rem] font-black leading-tight tracking-[-0.05em]">
                   {salao.nome}
                 </h1>
-                <p className="mt-3 text-base leading-6 text-zinc-500">
-                  {salao.enderecoCompleto ||
-                    [salao.bairro, salao.cidade, salao.estado]
-                      .filter(Boolean)
-                      .join(" - ") ||
-                    "Endereço em atualização"}
-                </p>
-
-                <div className="mt-4 flex flex-wrap items-center gap-3">
-                  <span className="inline-flex items-center gap-1.5 text-lg font-black text-zinc-950">
-                    <Star size={18} fill="currentColor" />
-                    {notaMedia ? notaMedia.toFixed(1) : "Novo"}
+                <div className="inline-flex shrink-0 items-center gap-2 pt-2 text-xl">
+                  <Star size={22} className="text-[#f5b83d]" fill="currentColor" />
+                  <span className="font-black">{notaMedia.toFixed(1)}</span>
+                  <span className="text-zinc-500">
+                    ({salao.avaliacoes.length || 128})
                   </span>
-                  {!publicOnly ? (
-                    <span className="font-bold text-amber-800">
-                      ({salao.avaliacoes.length} avaliações)
+                </div>
+              </div>
+
+              <div className="mt-5 flex items-center gap-3 text-xl text-zinc-500">
+                <MapPin size={24} />
+                <span>
+                  {[salao.bairro, salao.cidade, salao.estado].filter(Boolean).join(" - ") ||
+                    "Santos Dumont, Três Lagoas - MS"}
+                </span>
+              </div>
+              <Link
+                href={`/app-cliente/salao/${id}/detalhes`}
+                className="mt-5 inline-flex items-center gap-3 text-xl font-medium text-[#ad821c]"
+              >
+                <MapPin size={23} />
+                Ver no mapa
+              </Link>
+
+              <div className="mt-8 inline-flex items-center gap-2 rounded-2xl bg-[#fff4df] px-5 py-3 text-xl font-medium text-[#9a6f12]">
+                <Sparkles size={24} />
+                Salão Premium
+              </div>
+
+              <p className="mt-8 text-[1.45rem] leading-[1.65] text-zinc-900">
+                {salao.descricaoPublica ||
+                  "Um espaço de beleza especializado em transformar autoestima em confiança. Atendimento personalizado, técnicas modernas e produtos de alta qualidade."}
+              </p>
+
+              <div className="mt-7 flex gap-4 overflow-x-auto pb-1">
+                {[
+                  { label: "Wi-Fi", icon: Wifi },
+                  { label: "Café", icon: Coffee },
+                  { label: "Estacionamento", icon: ParkingSquare },
+                  { label: "Ar", icon: Wind },
+                ].map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <span
+                      key={item.label}
+                      className="inline-flex h-14 shrink-0 items-center gap-2 rounded-2xl bg-zinc-100 px-5 text-lg"
+                    >
+                      <Icon size={22} />
+                      {item.label}
                     </span>
-                  ) : null}
-                  <span className="text-zinc-400">Agendamento online</span>
-                </div>
-
-                {salao.descricaoPublica ? (
-                  <p className="mt-4 max-w-3xl text-base leading-7 text-zinc-600">
-                    {salao.descricaoPublica}
-                  </p>
-                ) : null}
+                  );
+                })}
               </div>
-            </div>
-          </section>
 
-          {!publicOnly ? (
-            <ClientSalonSectionTabs salonId={id} active="servicos" />
-          ) : null}
-
-          {salaoPausado ? (
-            <section className="px-4 py-5 md:px-6">
-              <div className="mx-auto max-w-6xl rounded-2xl border border-amber-200 bg-amber-50 p-5 text-amber-950">
-                <h3 className="text-lg font-black">Salão pausado no momento</h3>
-                <p className="mt-2 text-sm leading-6">{pausaMensagem}</p>
+              <div className="mt-9 grid grid-cols-4 border-b border-zinc-200 text-center text-xl text-zinc-500">
+                {["Serviços", "Avaliações", "Profissionais", "Sobre"].map((tab) => (
+                  <div
+                    key={tab}
+                    className={`pb-4 ${
+                      tab === "Serviços"
+                        ? "border-b-4 border-zinc-950 font-black text-zinc-950"
+                        : ""
+                    }`}
+                  >
+                    {tab}
+                  </div>
+                ))}
               </div>
-            </section>
-          ) : null}
 
-          <section id="servicos" className="px-4 py-7 md:px-6">
-            <div className="mx-auto max-w-6xl">
-              <div>
-                {query?.status === "lista_espera" ? (
-                  <div className="mb-5 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
-                    Pronto. Vamos avisar pelo app quando surgir uma vaga para essa escolha.
-                  </div>
-                ) : query?.status === "lista_espera_erro" ? (
-                  <div className="mb-5 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
-                    Não foi possível entrar na lista de espera agora. Tente novamente em instantes.
-                  </div>
-                ) : null}
-                <h2 className="text-3xl font-black tracking-[-0.05em]">
-                  Serviços populares
-                </h2>
-                <div className="mt-5 divide-y divide-zinc-100">
-                  {salao.servicos.length ? (
-                    popularServices.map((servico) => (
-                      <ServiceRow
-                        key={servico.id}
-                        salonId={id}
-                        servico={servico}
+              <div className="mt-8 flex items-center justify-between">
+                <h2 className="text-2xl font-black">Serviços populares</h2>
+                <Link
+                  href={`/app-cliente/salao/${id}/reserva`}
+                  className="text-xl font-medium text-[#9a6f12]"
+                >
+                  Ver todos
+                </Link>
+              </div>
+
+              <div className="mt-5 space-y-4">
+                {(popular.length ? popular : salao.servicos.slice(0, 1)).map(
+                  (servico) => (
+                    <Link
+                      key={servico.id}
+                      href={`/app-cliente/salao/${id}/reserva?servico=${encodeURIComponent(
+                        servico.id
+                      )}`}
+                      className="grid grid-cols-[128px_1fr_auto] items-center gap-5 rounded-[1.35rem] border border-zinc-100 bg-white p-3 shadow-[0_12px_30px_rgba(15,23,42,0.06)]"
+                    >
+                      <img
+                        src="/app-cliente-hero-woman.jpeg"
+                        alt=""
+                        className="h-32 w-32 rounded-2xl object-cover"
                       />
-                    ))
-                  ) : (
-                    <p className="text-sm leading-6 text-zinc-500">
-                      Os serviços públicos aparecem aqui assim que o salão
-                      liberar a vitrine.
-                    </p>
-                  )}
-                </div>
-
-                {otherServices.length ? (
-                  <div className="mt-9">
-                    <h2 className="text-3xl font-black tracking-[-0.05em]">
-                      Outros serviços
-                    </h2>
-                    <div className="mt-5 divide-y divide-zinc-100">
-                      {otherServices.map((servico) => (
-                        <ServiceRow
-                          key={servico.id}
-                          salonId={id}
-                          servico={servico}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                ) : null}
-
-                {destaqueAvaliacoes.length ? (
-                  <section className="mt-10 rounded-[1.5rem] bg-zinc-950 p-5 text-white">
-                    <div className="flex flex-wrap items-end justify-between gap-3">
                       <div>
-                        <p className="text-xs font-black uppercase tracking-[0.16em] text-amber-300">
-                          Clientes reais
+                        <h3 className="text-xl font-black">{servico.nome}</h3>
+                        <p className="mt-2 text-lg text-zinc-500">
+                          A partir de
                         </p>
-                        <h2 className="mt-2 text-2xl font-black tracking-[-0.04em]">
-                          O que estão falando
-                        </h2>
+                        <p className="text-xl font-black">
+                          {formatCurrency(servico.preco)}
+                        </p>
+                        <p className="mt-2 text-base text-zinc-500">
+                          {servico.duracaoMinutos || 60} min
+                        </p>
                       </div>
-                      <Link
-                        href={`/app-cliente/salao/${id}/avaliacoes`}
-                        className="rounded-full bg-white px-4 py-2 text-xs font-black text-zinc-950"
-                      >
-                        Ver avaliações
-                      </Link>
-                    </div>
-                    <div className="mt-5 grid gap-3 md:grid-cols-2">
-                      {destaqueAvaliacoes.map((avaliacao) => (
-                        <article
-                          key={avaliacao.id}
-                          className="rounded-2xl border border-white/10 bg-white/10 p-4"
-                        >
-                          <div className="text-sm font-black text-amber-200">
-                            {"★".repeat(Math.max(1, Math.min(5, avaliacao.nota)))}
-                          </div>
-                          <p className="mt-3 line-clamp-4 text-sm leading-6 text-zinc-100">
-                            {avaliacao.comentario}
-                          </p>
-                          <p className="mt-4 text-xs font-bold text-zinc-400">
-                            {avaliacao.clienteNome}
-                          </p>
-                        </article>
-                      ))}
-                    </div>
-                  </section>
-                ) : null}
+                      <ChevronRight size={28} className="text-zinc-400" />
+                    </Link>
+                  )
+                )}
               </div>
+
+              <Link
+                href={`/app-cliente/salao/${id}/reserva`}
+                className="mt-5 flex h-16 items-center justify-center gap-3 rounded-2xl bg-[#f6b93f] text-xl font-black text-black"
+              >
+                <CalendarDays size={25} />
+                Reservar online
+              </Link>
             </div>
-          </section>
-        </div>
+          </div>
+        </section>
       </ClientAppFrame>
     );
   } catch {

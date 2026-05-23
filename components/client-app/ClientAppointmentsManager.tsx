@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useActionState, useMemo, useState } from "react";
 import { useFormStatus } from "react-dom";
+import { Bell, CalendarDays, Clock3, MapPin, WalletCards } from "lucide-react";
 import {
   cancelClienteAppointmentAction,
   confirmClienteAppointmentAction,
@@ -60,6 +61,16 @@ function formatCurrency(value: number | null | undefined) {
   }).format(value);
 }
 
+function formatDuration(item: ClientAppAppointmentListItem) {
+  const start = item.horaInicio?.split(":").map(Number) || [];
+  const end = item.horaFim?.split(":").map(Number) || [];
+  if (start.length < 2 || end.length < 2) return "60 min";
+  const startMinutes = start[0] * 60 + start[1];
+  const endMinutes = end[0] * 60 + end[1];
+  const diff = Math.max(0, endMinutes - startMinutes);
+  return `${diff || 60} min`;
+}
+
 function formatClientConfirmation(value: string) {
   const normalized = String(value || "").toLowerCase();
   if (normalized === "confirmado") return "Você confirmou presença";
@@ -110,16 +121,16 @@ function ActionButton({
   const { pending } = useFormStatus();
   const toneClass =
     tone === "danger"
-      ? "border border-red-200 bg-red-50 text-red-700"
+      ? "bg-[#f4b43f] text-black"
       : tone === "light"
-        ? "border border-zinc-200 bg-white text-zinc-900"
+        ? "bg-zinc-50 text-zinc-950"
         : "bg-zinc-950 text-white";
 
   return (
     <button
       type="submit"
       disabled={pending}
-      className={`h-11 rounded-xl px-4 text-sm font-black transition disabled:cursor-not-allowed disabled:opacity-60 ${toneClass}`}
+      className={`h-12 rounded-2xl px-5 text-base font-black transition disabled:cursor-not-allowed disabled:opacity-60 ${toneClass}`}
     >
       {pending ? pendingLabel : label}
     </button>
@@ -136,7 +147,7 @@ function CancelAppointmentForm({ idAgendamento }: { idAgendamento: string }) {
   return (
     <form action={formAction} className="space-y-2">
       <input type="hidden" name="agendamento" value={idAgendamento} />
-      <ActionButton label="Cancelar" pendingLabel="Cancelando..." tone="light" />
+      <ActionButton label="Cancelar agendamento" pendingLabel="Cancelando..." tone="danger" />
       {state.error ? (
         <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
           {state.error}
@@ -235,7 +246,7 @@ function RescheduleAppointmentForm({
       <button
         type="button"
         onClick={() => void loadAvailability()}
-        className="h-11 rounded-xl border border-zinc-200 bg-white px-4 text-sm font-black text-zinc-900"
+        className="h-12 rounded-2xl bg-zinc-50 px-5 text-base font-black text-zinc-950"
       >
         Reagendar
       </button>
@@ -340,7 +351,7 @@ export default function ClientAppointmentsManager({
   }, [successKey]);
 
   return (
-    <section className="space-y-4 px-4 md:px-6">
+    <section className="space-y-5">
       {successMessage ? (
         <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
           {successMessage}
@@ -350,127 +361,133 @@ export default function ClientAppointmentsManager({
       <div className="space-y-4">
         {agendamentos.length ? (
           agendamentos.map((item) => (
-            <article
-              key={item.id}
-              className="grid grid-cols-[1fr_96px] gap-4 rounded-[1.5rem] bg-white p-4 shadow-[0_18px_45px_rgba(15,23,42,0.08)]"
-            >
-              <div className="min-w-0">
-                <div className="flex flex-wrap gap-2">
-                  <span className="inline-flex rounded-full bg-zinc-100 px-3 py-1 text-xs font-bold text-zinc-500">
-                    {formatStatus(item.status)}
+            <article key={item.id} className="space-y-5">
+              <div className="flex flex-wrap gap-3">
+                <span className="inline-flex items-center gap-3 rounded-2xl bg-zinc-100 px-5 py-3 text-base font-semibold text-zinc-800">
+                  <Bell size={18} />
+                  {formatStatus(item.status)}
+                </span>
+                {needsSignalPayment(item) && item.sinalValor ? (
+                  <span className="inline-flex items-center gap-3 rounded-2xl bg-amber-50 px-5 py-3 text-base font-semibold text-[#996512]">
+                    <WalletCards size={20} />
+                    Sinal {formatCurrency(item.sinalValor)}
                   </span>
-                  {needsSignalPayment(item) && item.sinalValor ? (
-                    <span className="inline-flex rounded-full bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700">
-                      Sinal {formatCurrency(item.sinalValor)}
-                    </span>
-                  ) : null}
-                  {item.podeCancelar ? (
-                    <span
-                      className={`inline-flex rounded-full px-3 py-1 text-xs font-bold ${
-                        item.confirmacaoClienteStatus === "confirmado"
-                          ? "bg-emerald-50 text-emerald-700"
-                          : "bg-amber-50 text-amber-700"
-                      }`}
-                    >
-                      {formatClientConfirmation(item.confirmacaoClienteStatus)}
-                    </span>
-                  ) : null}
-                </div>
-                <h2 className="mt-3 break-words text-xl font-black text-zinc-950">
-                  {item.servicoNome}
-                </h2>
-                <p className="mt-1 text-sm text-zinc-500">
-                  com {item.profissionalNome}
-                </p>
-                <p className="mt-3 text-base font-semibold text-zinc-900">
-                  {item.salaoNome}
-                </p>
+                ) : null}
+                {item.podeCancelar ? (
+                  <span className="inline-flex items-center gap-3 rounded-2xl bg-amber-50 px-5 py-3 text-base font-semibold text-[#996512]">
+                    <Clock3 size={20} />
+                    {formatClientConfirmation(item.confirmacaoClienteStatus)}
+                  </span>
+                ) : null}
+              </div>
 
-                <div className="mt-4 flex flex-wrap gap-2">
-                  {needsSignalPayment(item) ? (
-                    <a
-                      href={`/app-cliente/agendamentos/${item.id}/sinal`}
-                      className="inline-flex h-11 items-center rounded-xl bg-emerald-600 px-4 text-sm font-black text-white"
-                    >
-                      Pagar sinal e enviar comprovante
-                    </a>
-                  ) : null}
-                  {canConfirmPresence(item) ? (
-                    <ConfirmAppointmentForm idAgendamento={item.id} />
-                  ) : null}
-                  {canBookAgain(item) ? (
-                    <Link
-                      href={`/app-cliente/salao/${item.idSalao}`}
-                      className="inline-flex h-11 items-center rounded-xl bg-zinc-950 px-4 text-sm font-black text-white"
-                    >
-                      Reservar novamente
-                    </Link>
-                  ) : null}
-                  {item.podeCancelar ? (
-                    <>
-                      <RescheduleAppointmentForm item={item} />
-                      <CancelAppointmentForm idAgendamento={item.id} />
-                    </>
-                  ) : null}
-                  {buildWhatsappLink(item) ? (
-                    <a
-                      href={buildWhatsappLink(item) || "#"}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex h-11 items-center rounded-xl border border-emerald-200 bg-emerald-50 px-4 text-sm font-black text-emerald-700"
-                    >
-                      Falar no WhatsApp
-                    </a>
-                  ) : null}
-                  {item.podeAvaliar ? (
-                    <Link
-                      href={`/app-cliente/agendamentos/${item.id}/avaliar`}
-                      className="inline-flex h-11 items-center rounded-xl bg-zinc-950 px-4 text-sm font-black text-white"
-                    >
-                      Avaliar
-                    </Link>
-                  ) : null}
+              <div className="grid grid-cols-[1fr_96px] gap-4 rounded-[1.5rem] border border-zinc-100 bg-white p-5 shadow-[0_16px_42px_rgba(15,23,42,0.08)]">
+                <div className="min-w-0">
+                  <h2 className="break-words text-3xl font-black tracking-[-0.04em] text-zinc-950">
+                    {item.servicoNome}
+                  </h2>
+                  <p className="mt-4 text-xl text-zinc-500">
+                    com {item.profissionalNome}
+                  </p>
+                  <p className="mt-4 text-xl font-black text-zinc-950">
+                    {item.salaoNome}
+                  </p>
+                  <div className="mt-7 space-y-4 text-lg text-zinc-700">
+                    <p className="flex items-center gap-4">
+                      <MapPin size={26} />
+                      <span>Três Lagoas - MS</span>
+                    </p>
+                    <p className="flex items-center gap-4">
+                      <Clock3 size={26} />
+                      <span>{formatDuration(item)}</span>
+                    </p>
+                  </div>
+                </div>
+
+                <div className="border-l border-zinc-200 pl-4 text-center">
+                  <div className="text-2xl font-black text-zinc-950">
+                    {formatMonth(item.data)}
+                  </div>
+                  <div className="mt-2 text-7xl font-light leading-none text-zinc-950">
+                    {formatDay(item.data)}
+                  </div>
+                  <div className="mt-3 text-2xl font-black text-zinc-950">
+                    {item.horaInicio.slice(0, 5)}
+                  </div>
+                </div>
+
+                <div className="col-span-2 mt-2 border-t border-zinc-100 pt-5">
+                  <div className="flex flex-wrap gap-3">
+                    {needsSignalPayment(item) ? (
+                      <Link
+                        href={`/app-cliente/agendamentos/${item.id}/sinal`}
+                        className="inline-flex h-12 items-center rounded-2xl bg-emerald-600 px-5 text-base font-black text-white"
+                      >
+                        Pagar sinal e enviar comprovante
+                      </Link>
+                    ) : null}
+                    {canConfirmPresence(item) ? (
+                      <ConfirmAppointmentForm idAgendamento={item.id} />
+                    ) : null}
+                    {item.podeCancelar ? (
+                      <>
+                        <RescheduleAppointmentForm item={item} />
+                        <CancelAppointmentForm idAgendamento={item.id} />
+                      </>
+                    ) : null}
+                    {canBookAgain(item) && !item.podeCancelar ? (
+                      <Link
+                        href={`/app-cliente/salao/${item.idSalao}`}
+                        className="inline-flex h-12 items-center rounded-2xl bg-zinc-950 px-5 text-base font-black text-white"
+                      >
+                        Reservar novamente
+                      </Link>
+                    ) : null}
+                    {buildWhatsappLink(item) ? (
+                      <a
+                        href={buildWhatsappLink(item) || "#"}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex h-12 items-center rounded-2xl border border-emerald-200 bg-emerald-50 px-5 text-base font-black text-emerald-700"
+                      >
+                        Falar no WhatsApp
+                      </a>
+                    ) : null}
+                    {item.podeAvaliar ? (
+                      <Link
+                        href={`/app-cliente/agendamentos/${item.id}/avaliar`}
+                        className="inline-flex h-12 items-center rounded-2xl bg-zinc-950 px-5 text-base font-black text-white"
+                      >
+                        Avaliar
+                      </Link>
+                    ) : null}
+                  </div>
                 </div>
 
                 {item.podeAvaliar ? (
-                  <div className="mt-4">
+                  <div className="col-span-2 mt-1">
                     <ClientAppointmentReviewForm idAgendamento={item.id} compact />
                   </div>
                 ) : null}
                 {item.avaliado ? (
-                  <div className="mt-4 rounded-xl bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-700">
+                  <div className="col-span-2 rounded-xl bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-700">
                     Avaliação enviada.
                   </div>
                 ) : null}
               </div>
-
-              <div className="border-l border-zinc-200 pl-4 text-center">
-                <div className="text-sm text-zinc-600">{formatMonth(item.data)}</div>
-                <div className="text-5xl font-light leading-none text-zinc-950">
-                  {formatDay(item.data)}
-                </div>
-                <div className="mt-1 text-sm font-semibold text-zinc-900">
-                  {item.horaInicio.slice(0, 5)}
-                </div>
-              </div>
             </article>
           ))
         ) : (
-          <div className="flex min-h-[55vh] flex-col items-center justify-center rounded-[1.5rem] bg-white p-8 text-center shadow-[0_18px_45px_rgba(15,23,42,0.08)]">
-            <div className="mb-6 h-24 w-36 rounded-2xl border border-zinc-200 bg-zinc-50" />
-            <h2 className="text-2xl font-black text-zinc-950">
-              Ainda não há agendamentos
-            </h2>
-            <p className="mt-2 max-w-sm text-sm leading-6 text-zinc-500">
-              Quando você reservar um horário, ele aparece aqui com status,
-              reagendamento, cancelamento e avaliação.
-            </p>
-            <Link
-              href="/app-cliente"
-              className="mt-6 inline-flex h-12 items-center justify-center rounded-2xl bg-zinc-950 px-6 text-sm font-black text-white"
-            >
-              Reservar Online
-            </Link>
+          <div className="flex items-center gap-5 rounded-[1.5rem] bg-zinc-50 p-6">
+            <CalendarDays size={46} className="shrink-0 text-zinc-950" />
+            <div>
+              <h2 className="text-xl font-black text-zinc-950">
+                Ainda não há agendamento ativo
+              </h2>
+              <p className="mt-1 text-base text-zinc-500">
+                Escolha um salão e reserve quando quiser.
+              </p>
+            </div>
           </div>
         )}
       </div>

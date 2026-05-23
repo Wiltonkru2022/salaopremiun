@@ -1,7 +1,16 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { LocateFixed, Search, SlidersHorizontal } from "lucide-react";
+import {
+  Bell,
+  ChevronRight,
+  Hand,
+  Search,
+  Scissors,
+  ShieldPlus,
+  Sparkles,
+  UserRound,
+} from "lucide-react";
 import ClientAppSalonCard from "@/components/client-app/ClientAppSalonCard";
 import type {
   ClientAppNearbySalonListItem,
@@ -9,56 +18,19 @@ import type {
 } from "@/lib/client-app/queries";
 
 const categories = [
-  {
-    label: "Barbeiros",
-    query: "barba corte",
-    image:
-      "https://images.unsplash.com/photo-1503951914875-452162b0f3f1?q=80&w=240&auto=format&fit=crop",
-  },
-  {
-    label: "Cabeleireiro",
-    query: "cabelo escova",
-    image:
-      "https://images.unsplash.com/photo-1522338242992-e1a54906a8da?q=80&w=240&auto=format&fit=crop",
-  },
-  {
-    label: "Manicure",
-    query: "unha manicure",
-    image:
-      "https://images.unsplash.com/photo-1604654894610-df63bc536371?q=80&w=240&auto=format&fit=crop",
-  },
-  {
-    label: "Sobrancelha",
-    query: "sobrancelha",
-    image:
-      "https://images.unsplash.com/photo-1516975080664-ed2fc6a32937?q=80&w=240&auto=format&fit=crop",
-  },
-  {
-    label: "Estética",
-    query: "estetica pele",
-    image:
-      "https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?q=80&w=240&auto=format&fit=crop",
-  },
+  { label: "Cabelos", query: "cabelo", icon: Sparkles },
+  { label: "Unhas", query: "unha manicure", icon: Hand },
+  { label: "Sobrancelha", query: "sobrancelha", icon: ShieldPlus },
+  { label: "Estética", query: "estetica", icon: Sparkles },
+  { label: "Barbearia", query: "barba corte", icon: UserRound },
+  { label: "Maquiagem", query: "maquiagem", icon: Sparkles },
+  { label: "Depilação", query: "depilacao", icon: Scissors },
+  { label: "Massagem", query: "massagem", icon: UserRound },
 ];
 
 type DiscoverableSalon = ClientAppSalonListItem & {
   distanceKm?: number | null;
 };
-
-type DocumentWithGeolocationPolicy = Document & {
-  permissionsPolicy?: { allowsFeature(feature: string): boolean };
-  featurePolicy?: { allowsFeature(feature: string): boolean };
-};
-
-function canRequestGeolocation() {
-  if (!("geolocation" in navigator)) return false;
-
-  const documentWithPolicy = document as DocumentWithGeolocationPolicy;
-  const policy =
-    documentWithPolicy.permissionsPolicy || documentWithPolicy.featurePolicy;
-
-  return policy?.allowsFeature ? policy.allowsFeature("geolocation") : true;
-}
 
 function normalize(value: string) {
   return value
@@ -76,254 +48,114 @@ export default function ClientSalonDiscovery({
   isLoggedIn?: boolean;
 }) {
   const [localSearch, setLocalSearch] = useState(initialSearch);
-  const [sortMode, setSortMode] = useState<"recommended" | "rating" | "price">(
-    "recommended"
-  );
-  const [selectedCity, setSelectedCity] = useState("");
   const [displaySaloes, setDisplaySaloes] = useState<DiscoverableSalon[]>(saloes);
-  const [locationStatus, setLocationStatus] = useState<
-    "idle" | "loading" | "ready" | "denied" | "unavailable"
-  >("idle");
-  const [locationError, setLocationError] = useState<string | null>(null);
 
   useEffect(() => {
     setDisplaySaloes(saloes);
   }, [saloes]);
 
-  const availableCities = useMemo(
-    () =>
-      Array.from(
-        new Set(displaySaloes.map((item) => item.cidade).filter(Boolean) as string[])
-      )
-        .sort((a, b) => a.localeCompare(b))
-        .slice(0, 6),
-    [displaySaloes]
-  );
-
   const orderedSaloes = useMemo(() => {
     const term = normalize(localSearch.trim());
-    const base = displaySaloes.filter((salao) => {
-      if (selectedCity && salao.cidade !== selectedCity) return false;
-      if (!term) return true;
-
-      return normalize(
-        [
-          salao.nome,
-          salao.bairro,
-          salao.cidade,
-          salao.descricaoPublica,
-          ...salao.categorias,
-        ]
-          .filter(Boolean)
-          .join(" ")
-      ).includes(term);
-    });
-
-    return base.sort((left, right) => {
-      if (sortMode === "rating") {
+    return displaySaloes
+      .filter((salao) => {
+        if (!term) return true;
+        return normalize(
+          [
+            salao.nome,
+            salao.bairro,
+            salao.cidade,
+            salao.descricaoPublica,
+            ...salao.categorias,
+          ]
+            .filter(Boolean)
+            .join(" ")
+        ).includes(term);
+      })
+      .sort((left, right) => {
+        if (left.distanceKm != null && right.distanceKm != null) {
+          return left.distanceKm - right.distanceKm;
+        }
         return (
-          (right.notaMedia || 0) - (left.notaMedia || 0) ||
-          right.totalAvaliacoes - left.totalAvaliacoes
+          Number(Boolean(right.notaMedia)) - Number(Boolean(left.notaMedia)) ||
+          right.totalAvaliacoes - left.totalAvaliacoes ||
+          right.totalServicos - left.totalServicos ||
+          left.nome.localeCompare(right.nome)
         );
-      }
-
-      if (sortMode === "price") {
-        if (left.precoMinimo === null && right.precoMinimo === null) return 0;
-        if (left.precoMinimo === null) return 1;
-        if (right.precoMinimo === null) return -1;
-        return left.precoMinimo - right.precoMinimo;
-      }
-
-      if (left.distanceKm != null && right.distanceKm != null) {
-        return left.distanceKm - right.distanceKm;
-      }
-
-      return (
-        Number(Boolean(right.notaMedia)) - Number(Boolean(left.notaMedia)) ||
-        right.totalAvaliacoes - left.totalAvaliacoes ||
-        right.totalServicos - left.totalServicos ||
-        left.nome.localeCompare(right.nome)
-      );
-    });
-  }, [displaySaloes, localSearch, selectedCity, sortMode]);
-
-  function requestLocation() {
-    setLocationError(null);
-    if (!canRequestGeolocation()) {
-      setLocationStatus("unavailable");
-      setLocationError("Seu navegador não liberou localização.");
-      return;
-    }
-
-    setLocationStatus("loading");
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        if (position.coords.accuracy > 50000) {
-          setLocationStatus("unavailable");
-          setLocationError(
-            "Sua localização veio muito imprecisa. Use o filtro de cidade ou tente novamente."
-          );
-          return;
-        }
-
-        try {
-          const params = new URLSearchParams({
-            lat: String(position.coords.latitude),
-            lon: String(position.coords.longitude),
-          });
-          if (localSearch.trim()) params.set("busca", localSearch.trim());
-
-          const response = await fetch(
-            `/api/app-cliente/saloes-proximos?${params.toString()}`
-          );
-          const payload = (await response.json().catch(() => ({}))) as {
-            saloes?: ClientAppNearbySalonListItem[];
-          };
-
-          if (!response.ok) throw new Error("Falha ao buscar proximidade.");
-
-          setDisplaySaloes(payload.saloes ?? []);
-          setLocationStatus("ready");
-        } catch {
-          setLocationStatus("unavailable");
-          setLocationError(
-            "Não conseguimos ordenar por proximidade agora. Mostramos os recomendados."
-          );
-        }
-      },
-      () => {
-        setLocationStatus("denied");
-        setLocationError(null);
-      },
-      { enableHighAccuracy: true, timeout: 9000, maximumAge: 1000 * 60 * 5 }
-    );
-  }
+      });
+  }, [displaySaloes, localSearch]);
 
   return (
-    <div className="space-y-8">
-      <section className="-mx-4 -mt-4 overflow-hidden bg-[radial-gradient(circle_at_10%_0%,rgba(199,162,92,0.28),transparent_32%),linear-gradient(145deg,#071b1f,#18181b)] px-4 pb-8 pt-8 text-white md:-mx-6 md:px-6">
-        <div className="mx-auto max-w-6xl">
-          <div className="text-center text-3xl font-black tracking-[-0.06em]">
-            Salão Premium
-          </div>
-          <label className="mt-7 flex h-16 items-center gap-3 rounded-2xl border border-white/20 bg-white px-5 shadow-2xl">
-            <Search size={25} className="text-zinc-500" />
-            <input
-              type="search"
-              value={localSearch}
-              onChange={(event) => setLocalSearch(event.target.value)}
-              placeholder="Pesquise serviços ou salões"
-              className="min-w-0 flex-1 bg-transparent text-base font-medium text-zinc-950 outline-none placeholder:text-zinc-400"
-            />
-          </label>
+    <section className="min-h-dvh bg-[#050505] px-5 pb-28 pt-[calc(env(safe-area-inset-top)+1.35rem)] text-white">
+      <div className="mx-auto max-w-md">
+        <header className="flex items-center justify-between">
+          <h1 className="text-[2.65rem] font-black tracking-[-0.06em]">
+            Explorar
+          </h1>
+          <a
+            href="/app-cliente/notificacoes"
+            className="flex h-12 w-12 items-center justify-center rounded-full text-[#f5b83d]"
+            aria-label="Notificações"
+          >
+            <Bell size={29} />
+          </a>
+        </header>
 
-          <div className="mt-7 flex gap-5 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none]">
-            {categories.map((category) => (
+        <label className="mt-7 flex h-[72px] items-center gap-4 rounded-[1.45rem] bg-[#151618] px-5 text-xl text-zinc-300">
+          <Search size={31} />
+          <input
+            type="search"
+            value={localSearch}
+            onChange={(event) => setLocalSearch(event.target.value)}
+            placeholder="Buscar salões ou serviços"
+            className="min-w-0 flex-1 bg-transparent text-xl font-medium text-white outline-none placeholder:text-zinc-300"
+          />
+        </label>
+
+        <div className="mt-9 grid grid-cols-4 gap-x-5 gap-y-8">
+          {categories.map((category) => {
+            const Icon = category.icon;
+            return (
               <button
                 key={category.label}
                 type="button"
                 onClick={() => setLocalSearch(category.query)}
-                className="w-[96px] shrink-0 text-center"
+                className="text-center"
               >
-                <img
-                  src={category.image}
-                  alt={category.label}
-                  className="mx-auto h-24 w-24 rounded-full object-cover shadow-[0_12px_30px_rgba(0,0,0,0.22)]"
-                />
-                <div className="mt-3 whitespace-nowrap text-xs font-bold leading-tight text-white sm:text-sm">
+                <span className="mx-auto flex h-[86px] w-[86px] items-center justify-center rounded-full bg-[#151618] text-[#f5b83d]">
+                  <Icon size={42} strokeWidth={1.7} />
+                </span>
+                <span className="mt-3 block text-base font-medium text-white">
                   {category.label}
-                </div>
+                </span>
               </button>
-            ))}
-          </div>
+            );
+          })}
         </div>
-      </section>
 
-      <section className="px-4 md:px-6">
-        <div className="flex gap-3 overflow-x-auto pb-2">
-          <button className="inline-flex h-12 shrink-0 items-center gap-2 rounded-xl bg-zinc-100 px-4 text-sm font-bold text-zinc-950">
-            <SlidersHorizontal size={18} />
-            Filtros
+        <div className="mt-10 flex items-center justify-between">
+          <h2 className="text-2xl font-black">Salões para você</h2>
+          <button className="inline-flex items-center gap-1 text-lg font-bold text-[#f5b83d]">
+            Ver todos
+            <ChevronRight size={22} />
           </button>
-          <select
-            value={sortMode}
-            onChange={(event) =>
-              setSortMode(event.target.value as "recommended" | "rating" | "price")
-            }
-            className="h-12 shrink-0 rounded-xl border-0 bg-zinc-100 px-4 text-sm font-bold text-zinc-950 outline-none"
-          >
-            <option value="recommended">Ordenar: Recomendado</option>
-            <option value="rating">Melhor avaliados</option>
-            <option value="price">Menor preço</option>
-          </select>
-          <button
-            type="button"
-            onClick={() => {
-              requestLocation();
-            }}
-            className="inline-flex h-12 shrink-0 items-center gap-2 rounded-xl bg-zinc-100 px-4 text-sm font-bold text-zinc-950"
-          >
-            <LocateFixed size={18} />
-            {locationStatus === "loading" ? "Localizando..." : "Perto de mim"}
-          </button>
-          {availableCities.map((city) => (
-            <button
-              key={city}
-              type="button"
-              onClick={() => setSelectedCity(selectedCity === city ? "" : city)}
-              className={`h-12 shrink-0 rounded-xl px-4 text-sm font-bold ${
-                selectedCity === city
-                  ? "bg-zinc-950 text-white"
-                  : "bg-zinc-100 text-zinc-950"
-              }`}
-            >
-              {city}
-            </button>
-          ))}
         </div>
 
-        <div className="mt-8">
-          <h2 className="text-3xl font-black tracking-[-0.05em] text-zinc-950">
-            Resultados ({orderedSaloes.length})
-          </h2>
-          <p className="mt-1 text-sm text-zinc-500">
-            {locationStatus === "ready"
-              ? "Ordenado pelos salões mais perto de você."
-              : "Escolha um salão, veja avaliações e reserve seu horário."}
-          </p>
-          {locationStatus === "denied" ? (
-            <p className="mt-2 text-xs font-semibold text-zinc-500">
-              Localização negada. Mantivemos recomendados e filtro por cidade.
-            </p>
-          ) : null}
-          {locationError ? (
-            <p className="mt-2 text-xs font-semibold text-amber-700">
-              {locationError}
-            </p>
-          ) : null}
+        <div className="mt-5 space-y-7">
+          {orderedSaloes.length ? (
+            orderedSaloes.map((salao) => (
+              <ClientAppSalonCard
+                key={salao.id}
+                salao={salao}
+                distanceKm={salao.distanceKm ?? null}
+              />
+            ))
+          ) : (
+            <div className="rounded-[1.35rem] border border-white/8 bg-[#121315] p-6 text-center text-zinc-300">
+              Nenhum salão encontrado agora.
+            </div>
+          )}
         </div>
-
-        <div className="mt-6 grid gap-7 md:grid-cols-2">
-          {orderedSaloes.map((salao) => (
-            <ClientAppSalonCard
-              key={salao.id}
-              salao={salao}
-              distanceKm={salao.distanceKm ?? null}
-            />
-          ))}
-        </div>
-
-        {!orderedSaloes.length ? (
-          <div className="mt-8 rounded-[1.8rem] border border-zinc-200 bg-white p-6 text-center">
-            <h3 className="text-lg font-black text-zinc-950">
-              Nenhum salão com esses filtros
-            </h3>
-            <p className="mt-2 text-sm leading-6 text-zinc-500">
-              Tente outro serviço, bairro ou cidade.
-            </p>
-          </div>
-        ) : null}
-      </section>
-    </div>
+      </div>
+    </section>
   );
 }

@@ -1,52 +1,50 @@
-﻿import Link from "next/link";
+import Link from "next/link";
 import {
+  ArrowRight,
+  Bell,
   CalendarDays,
-  ChevronRight,
+  Clock3,
+  Gift,
   Search,
   Sparkles,
   Star,
-  WalletCards,
 } from "lucide-react";
 import ClientAppFrame from "@/components/client-app/ClientAppFrame";
 import { validateClienteAppSession } from "@/lib/client-context.server";
 import {
   getClienteAppProfileData,
   listClienteAppAppointments,
-  listVisibleClientAppSaloes,
 } from "@/lib/client-app/queries";
 
 export const metadata = {
-  title: "Reservar Online",
+  title: "Início",
 };
 
-function formatDate(date: string) {
-  if (!date) return "Data a confirmar";
-  return new Intl.DateTimeFormat("pt-BR", {
-    day: "2-digit",
-    month: "short",
-  }).format(new Date(`${date}T12:00:00`));
+function formatDay(date: string) {
+  if (!date) return "--";
+  return new Intl.DateTimeFormat("pt-BR", { day: "2-digit" }).format(
+    new Date(`${date}T12:00:00`)
+  );
 }
 
-function statusLabel(status: string) {
-  const normalized = String(status || "").toLowerCase();
-  if (normalized === "confirmado") return "Confirmado";
-  if (normalized === "pendente") return "Aguardando";
-  if (normalized === "atendido") return "Finalizado";
-  if (normalized === "cancelado") return "Cancelado";
-  return "Em andamento";
+function formatMonth(date: string) {
+  if (!date) return "";
+  return new Intl.DateTimeFormat("pt-BR", { month: "short" })
+    .format(new Date(`${date}T12:00:00`))
+    .replace(".", "")
+    .toUpperCase();
 }
 
 export default async function AppClienteIndexPage() {
   const session = await validateClienteAppSession();
   const isLoggedIn = Boolean(session.context);
-  const [appointments, saloes, profile] = await Promise.all([
+  const [appointments, profile] = await Promise.all([
     session.context
       ? listClienteAppAppointments({
           idConta: session.context.idConta,
           limit: 4,
         })
       : Promise.resolve([]),
-    listVisibleClientAppSaloes({ limit: 6 }),
     session.context
       ? getClienteAppProfileData({ idConta: session.context.idConta })
       : Promise.resolve(null),
@@ -54,173 +52,162 @@ export default async function AppClienteIndexPage() {
 
   const nextAppointment =
     appointments.find((item) =>
-      ["pendente", "confirmado"].includes(String(item.status).toLowerCase())
+      ["pendente", "confirmado", "reservado_aguardando_pagamento"].includes(
+        String(item.status).toLowerCase()
+      )
     ) || null;
+  const firstName =
+    (profile?.nome || session.context?.nome || "Bruna").trim().split(" ")[0] ||
+    "Bruna";
 
   return (
-    <ClientAppFrame
-      title="Reservar Online"
-      subtitle={
-        isLoggedIn
-          ? "Escolha um salão e reserve seu horário."
-          : "Entre para reservar e acompanhar seus horários."
-      }
-    >
-      <section className="mx-auto max-w-5xl space-y-5 px-4 py-2 md:px-6">
-        <div className="rounded-[2rem] bg-zinc-950 p-5 text-white shadow-[0_24px_70px_rgba(15,23,42,0.22)] sm:p-6">
-          <div className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.18em] text-amber-200">
-            <Sparkles size={16} />
-            Salão Premium
-          </div>
-          <h2 className="mt-5 text-3xl font-black tracking-[-0.04em] sm:text-4xl">
-            {isLoggedIn
-              ? `Reserve seu horário, ${profile?.nome || session.context?.nome || "cliente"}`
-              : "Reserve horário em poucos passos"}
-          </h2>
-          <p className="mt-3 max-w-2xl text-sm leading-6 text-zinc-300 sm:text-base">
-            A primeira ação do app é agendar. Escolha o salão, selecione serviços,
-            profissional, data e horário sem procurar menu escondido.
+    <ClientAppFrame title="Início" subtitle="Salão Premium">
+      <section className="min-h-dvh bg-[#050505] px-5 pb-28 pt-[calc(env(safe-area-inset-top)+1.25rem)] text-white">
+        <div className="mx-auto max-w-md">
+          <header className="flex items-center justify-between">
+            <div className="inline-flex items-center gap-2 text-[13px] font-black uppercase tracking-[0.24em] text-[#f5c15a]">
+              <Sparkles size={22} />
+              Salão Premium
+            </div>
+            <Link
+              href="/app-cliente/notificacoes"
+              className="flex h-11 w-11 items-center justify-center rounded-full text-[#f5c15a]"
+              aria-label="Notificações"
+            >
+              <Bell size={25} />
+            </Link>
+          </header>
+
+          <h1 className="mt-12 text-[2.55rem] font-black leading-tight tracking-[-0.05em]">
+            Olá, {firstName}! 👋
+          </h1>
+          <p className="mt-4 text-2xl leading-snug text-zinc-300">
+            Sua beleza, seu tempo.
+            <br />
+            Do seu jeito.
           </p>
-          <div className="mt-5 flex flex-wrap gap-3">
-            <Link
-              href="/app-cliente/inicio"
-              className="inline-flex min-h-12 items-center gap-2 rounded-full bg-white px-5 text-sm font-black text-zinc-950"
-            >
-              <Search size={18} />
-              Reservar Online
-            </Link>
-            {!isLoggedIn ? (
-              <Link
-                href="/app-cliente/login?next=/app-cliente"
-                className="inline-flex min-h-12 items-center rounded-full border border-white/20 px-5 text-sm font-black text-white"
-              >
-                Entrar na conta
-              </Link>
-            ) : null}
-          </div>
-        </div>
 
-        {nextAppointment ? (
           <Link
-            href="/app-cliente/agendamentos"
-            className="block rounded-[1.7rem] border border-zinc-100 bg-white p-5 shadow-[0_18px_48px_rgba(15,23,42,0.08)]"
+            href="/app-cliente/explorar"
+            className="mt-8 flex h-[72px] items-center gap-4 rounded-[1.45rem] bg-[#151618] px-5 text-xl text-zinc-300"
           >
-            <div className="flex items-start justify-between gap-4">
-              <div className="min-w-0">
-                <span className="rounded-full bg-zinc-100 px-3 py-1 text-xs font-black text-zinc-700">
-                  {statusLabel(nextAppointment.status)}
-                </span>
-                <h3 className="mt-4 text-2xl font-black tracking-[-0.03em] text-zinc-950">
-                  {nextAppointment.servicoNome}
-                </h3>
-                <p className="mt-1 text-sm font-semibold text-zinc-500">
-                  com {nextAppointment.profissionalNome}
-                </p>
-                <p className="mt-3 text-sm text-zinc-600">
-                  {nextAppointment.salaoNome}
-                </p>
-              </div>
-              <div className="shrink-0 rounded-3xl border border-zinc-100 px-4 py-3 text-center">
-                <div className="text-sm font-bold text-zinc-500">
-                  {formatDate(nextAppointment.data)}
-                </div>
-                <div className="mt-1 text-2xl font-black text-zinc-950">
-                  {nextAppointment.horaInicio.slice(0, 5)}
-                </div>
-              </div>
-            </div>
+            <Search size={31} />
+            Buscar serviços ou salões
           </Link>
-        ) : (
-          <div className="rounded-[1.7rem] border border-zinc-100 bg-white p-5 shadow-[0_18px_48px_rgba(15,23,42,0.08)]">
-            <div className="flex items-center gap-3">
-              <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-zinc-100 text-zinc-950">
-                <CalendarDays size={22} />
-              </span>
-              <div>
-                <h3 className="text-lg font-black text-zinc-950">
-                  Ainda não há agendamento ativo
-                </h3>
-                <p className="text-sm text-zinc-500">
-                  Escolha um salão e reserve quando quiser.
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
 
-        {profile?.creditos.length ? (
-          <div className="rounded-[1.7rem] border border-amber-100 bg-amber-50 p-5">
-            <div className="flex items-center gap-2 text-sm font-black text-amber-900">
-              <WalletCards size={18} />
-              Crédito disponível
-            </div>
-            <div className="mt-3 grid gap-2 sm:grid-cols-2">
-              {profile.creditos.slice(0, 4).map((item) => (
-                <div
-                  key={item.idSalao}
-                  className="rounded-2xl bg-white px-4 py-3 text-sm"
-                >
-                  <div className="truncate font-bold text-zinc-900">
-                    {item.salaoNome}
-                  </div>
-                  <div className="mt-1 font-black text-amber-900">
-                    {item.credito.toLocaleString("pt-BR", {
-                      style: "currency",
-                      currency: "BRL",
-                    })}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        ) : null}
-
-        <div>
-          <div className="mb-3 flex items-center justify-between">
-            <h3 className="text-xl font-black tracking-[-0.03em] text-zinc-950">
-              Recomendados
-            </h3>
-            <Link
-              href="/app-cliente/inicio"
-              className="inline-flex items-center gap-1 text-sm font-black text-zinc-700"
-            >
-              Ver salões
-              <ChevronRight size={16} />
-            </Link>
-          </div>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {saloes.slice(0, 3).map((salao) => (
+          <div className="relative mt-6 h-[356px] overflow-hidden rounded-[1.45rem] bg-zinc-900">
+            <img
+              src="/app-cliente-hero-woman.jpeg"
+              alt="Modelo com cabelo produzido"
+              className="absolute inset-0 h-full w-full object-cover object-[64%_center]"
+            />
+            <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/35 to-transparent" />
+            <div className="absolute left-6 top-16 max-w-[210px]">
+              <h2 className="text-[2.05rem] font-black leading-tight tracking-[-0.04em]">
+                Seu novo visual, sua melhor versão.
+              </h2>
               <Link
-                key={salao.id}
-                href={`/app-cliente/salao/${salao.id}`}
-                className="rounded-[1.5rem] border border-zinc-100 bg-white p-4 shadow-[0_14px_38px_rgba(15,23,42,0.07)]"
+                href="/app-cliente/explorar"
+                className="mt-8 inline-flex h-16 items-center gap-4 rounded-2xl bg-[#f8bd44] px-7 text-lg font-black text-black"
               >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <h4 className="truncate text-lg font-black text-zinc-950">
-                      {salao.nome}
-                    </h4>
-                    <p className="mt-1 truncate text-sm text-zinc-500">
-                      {[salao.bairro, salao.cidade].filter(Boolean).join(", ") ||
-                        "Salão parceiro"}
-                    </p>
-                  </div>
-                  <div className="inline-flex items-center gap-1 rounded-full bg-zinc-100 px-2.5 py-1 text-xs font-black text-zinc-900">
-                    <Star size={13} fill="currentColor" />
-                    {salao.notaMedia ? salao.notaMedia.toFixed(1) : "Novo"}
-                  </div>
-                </div>
-                <div className="mt-5 inline-flex min-h-10 items-center rounded-full bg-zinc-950 px-4 text-sm font-black text-white">
-                  Reservar
-                </div>
+                Reservar agora
+                <ArrowRight size={24} />
               </Link>
-            ))}
+            </div>
           </div>
+
+          <h2 className="mt-7 text-2xl font-black">Acesso rápido</h2>
+          <div className="mt-4 grid grid-cols-4 rounded-[1.35rem] border border-white/8 bg-[#121315] px-3 py-5 shadow-[0_22px_60px_rgba(0,0,0,0.35)]">
+            {[
+              {
+                href: "/app-cliente/explorar",
+                label: "Reservar online",
+                icon: CalendarDays,
+              },
+              {
+                href: "/app-cliente/agendamentos",
+                label: "Meus agendamentos",
+                icon: CalendarDays,
+              },
+              {
+                href: "/app-cliente/perfil/avaliacoes",
+                label: "Avaliações",
+                icon: Star,
+              },
+              {
+                href: "/app-cliente/cupons",
+                label: "Indique e ganhe",
+                icon: Gift,
+              },
+            ].map((item) => {
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.label}
+                  href={item.href}
+                  className="flex flex-col items-center gap-3 text-center text-sm font-medium leading-tight text-white"
+                >
+                  <span className="flex h-16 w-16 items-center justify-center rounded-full bg-[#2b2618] text-[#f5bd42]">
+                    <Icon size={30} />
+                  </span>
+                  {item.label}
+                </Link>
+              );
+            })}
+          </div>
+
+          <div className="mt-8 flex items-center gap-2 text-xl font-black text-[#f5bd42]">
+            <Clock3 size={21} />
+            Próximo agendamento
+          </div>
+
+          {nextAppointment ? (
+            <Link
+              href="/app-cliente/agendamentos"
+              className="mt-4 block rounded-[1.35rem] border border-white/8 bg-[#121315] p-5 shadow-[0_22px_60px_rgba(0,0,0,0.35)]"
+            >
+              <div className="grid grid-cols-[64px_1fr_86px] items-center gap-4">
+                <div className="h-16 w-16 overflow-hidden rounded-xl bg-zinc-800">
+                  <img
+                    src="/app-cliente-hero-woman.jpeg"
+                    alt=""
+                    className="h-full w-full object-cover"
+                  />
+                </div>
+                <div className="min-w-0">
+                  <h3 className="truncate text-xl font-black">
+                    {nextAppointment.servicoNome}
+                  </h3>
+                  <p className="mt-2 truncate text-base text-zinc-400">
+                    com {nextAppointment.profissionalNome}
+                  </p>
+                </div>
+                <div className="border-l border-white/10 pl-5 text-center">
+                  <div className="text-4xl font-light">
+                    {formatDay(nextAppointment.data)}
+                  </div>
+                  <div className="text-lg text-zinc-300">
+                    {formatMonth(nextAppointment.data)}
+                  </div>
+                  <div className="mt-1 text-lg font-black">
+                    {nextAppointment.horaInicio.slice(0, 5)}
+                  </div>
+                </div>
+              </div>
+              <div className="mt-5 border-t border-white/10 pt-4 text-center text-lg font-black text-[#f5bd42]">
+                Ver todos os agendamentos <ArrowRight className="inline" size={21} />
+              </div>
+            </Link>
+          ) : (
+            <Link
+              href="/app-cliente/explorar"
+              className="mt-4 block rounded-[1.35rem] border border-white/8 bg-[#121315] p-5 text-zinc-300"
+            >
+              Ainda não há agendamento ativo. Escolha um salão e reserve quando quiser.
+            </Link>
+          )}
         </div>
       </section>
     </ClientAppFrame>
   );
 }
-
-
-

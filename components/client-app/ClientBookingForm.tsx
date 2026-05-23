@@ -2,16 +2,14 @@
 
 import {
   ArrowLeft,
+  Bell,
   CalendarDays,
   Check,
   ChevronLeft,
   ChevronRight,
   Clock3,
-  Plus,
   Search,
-  Scissors,
   UserRound,
-  UsersRound,
 } from "lucide-react";
 import { useActionState, useEffect, useMemo, useState } from "react";
 import { useFormStatus } from "react-dom";
@@ -46,32 +44,7 @@ export type ClientBookingCoupon = {
   validoAte: string | null;
 };
 
-type StepKey =
-  | "servicos"
-  | "selecionados"
-  | "pessoa"
-  | "profissional"
-  | "data"
-  | "horario"
-  | "resumo";
-
-const STEP_LABELS: Record<StepKey, string> = {
-  servicos: "Serviços",
-  selecionados: "Selecionados",
-  pessoa: "Pessoa",
-  profissional: "Profissional",
-  data: "Data",
-  horario: "Horário",
-  resumo: "Resumo",
-};
-
-function normalizeSearch(value: string) {
-  return value
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .trim();
-}
+type StepKey = "profissional" | "servico" | "horario" | "resumo";
 
 function formatCurrency(value: number | null | undefined) {
   if (value === null || value === undefined) return "Sob consulta";
@@ -81,15 +54,18 @@ function formatCurrency(value: number | null | undefined) {
   }).format(value);
 }
 
+function normalize(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+}
+
 function formatDateInput(date: Date) {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate())
     .toISOString()
     .slice(0, 10);
-}
-
-function getTodayDate() {
-  const now = new Date();
-  return new Date(now.getFullYear(), now.getMonth(), now.getDate());
 }
 
 function addMonths(date: Date, amount: number) {
@@ -103,9 +79,19 @@ function formatMonthLabel(date: Date) {
   }).format(new Date(date.getFullYear(), date.getMonth(), 1));
 }
 
+function formatFullDate(value: string) {
+  if (!value) return "Data";
+  return new Intl.DateTimeFormat("pt-BR", {
+    weekday: "short",
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  }).format(new Date(`${value}T12:00:00`));
+}
+
 function buildCalendarDays(diasDisponiveis: AvailabilityDay[], monthCursor: Date) {
   const availableDates = new Set(diasDisponiveis.map((dia) => dia.data));
-  const todayKey = formatDateInput(getTodayDate());
+  const todayKey = formatDateInput(new Date());
   const year = monthCursor.getFullYear();
   const month = monthCursor.getMonth();
   const firstDay = new Date(year, month, 1);
@@ -152,41 +138,48 @@ function SubmitButton({ disabled }: { disabled?: boolean }) {
     <button
       type="submit"
       disabled={pending || disabled}
-      className="h-14 w-full rounded-2xl bg-zinc-950 text-base font-black text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
+      className="mt-6 flex h-16 w-full items-center justify-center gap-3 rounded-2xl bg-[#f6b93f] text-xl font-black text-black disabled:opacity-50"
     >
+      <CalendarDays size={26} />
       {pending ? "Confirmando..." : "Confirmar agendamento"}
     </button>
   );
 }
 
-function StepPill({
-  step,
-  active,
-  done,
-}: {
-  step: StepKey;
-  active: boolean;
-  done: boolean;
-}) {
+function Stepper({ step }: { step: StepKey }) {
+  const current = step === "profissional" ? 1 : step === "servico" ? 2 : 3;
   return (
-    <span
-      className={`whitespace-nowrap rounded-full px-3 py-2 text-xs font-black ${
-        active
-          ? "bg-zinc-950 text-white"
-          : done
-            ? "bg-emerald-50 text-emerald-700"
-            : "bg-zinc-100 text-zinc-500"
-      }`}
-    >
-      {STEP_LABELS[step]}
-    </span>
-  );
-}
-
-function EmptyBox({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="rounded-2xl border border-dashed border-zinc-300 bg-zinc-50 px-4 py-5 text-center text-sm leading-6 text-zinc-500">
-      {children}
+    <div className="rounded-[1.35rem] border border-white/10 bg-[#101113] px-6 py-5">
+      <div className="relative grid grid-cols-3">
+        <div className="absolute left-[16%] right-[16%] top-7 h-px bg-[#f6b93f]" />
+        {[
+          ["1", "Profissional"],
+          ["2", "Serviço"],
+          ["3", "Horário"],
+        ].map(([number, label], index) => {
+          const active = current === index + 1;
+          return (
+            <div key={number} className="relative z-10 text-center">
+              <span
+                className={`mx-auto flex h-14 w-14 items-center justify-center rounded-full text-xl font-black ${
+                  active
+                    ? "bg-[#f6b93f] text-black"
+                    : "bg-[#1b1c1f] text-zinc-300"
+                }`}
+              >
+                {number}
+              </span>
+              <span
+                className={`mt-3 block text-base ${
+                  active ? "font-bold text-[#f6b93f]" : "text-zinc-400"
+                }`}
+              >
+                {label}
+              </span>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -210,634 +203,436 @@ export default function ClientBookingForm({
     createClienteBookingAction,
     initialState
   );
-  const [step, setStep] = useState<StepKey>("servicos");
-  const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>([]);
+  const [step, setStep] = useState<StepKey>("profissional");
   const [profissionalId, setProfissionalId] = useState("");
+  const [servicoIds, setServicoIds] = useState<string[]>([]);
+  const [buscaProfissional, setBuscaProfissional] = useState("");
   const [buscaServico, setBuscaServico] = useState("");
-  const [categoriaAtiva, setCategoriaAtiva] = useState<string>("todos");
-  const [pessoaTipo, setPessoaTipo] = useState<"mim" | "outra_pessoa">("mim");
-  const [pessoaNome, setPessoaNome] = useState("");
-  const [pessoaWhatsapp, setPessoaWhatsapp] = useState("");
-  const [pessoaObservacao, setPessoaObservacao] = useState("");
+  const [categoriaAtiva, setCategoriaAtiva] = useState("Todos");
   const [diasDisponiveis, setDiasDisponiveis] = useState<AvailabilityDay[]>([]);
   const [selectedDate, setSelectedDate] = useState("");
   const [selectedTime, setSelectedTime] = useState("");
-  const [codigoCupom, setCodigoCupom] = useState(
-    cupomInicial || cuponsDisponiveis[0]?.codigo || ""
-  );
   const [monthCursor, setMonthCursor] = useState(() => {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1);
   });
   const [loadingAvailability, setLoadingAvailability] = useState(false);
   const [availabilityError, setAvailabilityError] = useState<string | null>(null);
+  const [codigoCupom, setCodigoCupom] = useState(
+    cupomInicial || cuponsDisponiveis[0]?.codigo || ""
+  );
 
   const selectedServices = useMemo(
     () =>
-      selectedServiceIds
+      servicoIds
         .map((id) => servicos.find((servico) => servico.id === id))
         .filter((servico): servico is ClientAppServiceListItem => Boolean(servico)),
-    [selectedServiceIds, servicos]
+    [servicoIds, servicos]
   );
-  const primaryServiceId = selectedServiceIds[0] || "";
-
-  const categorias = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const servico of servicos) {
-      const nome = servico.categoriaNome || "Outros serviços";
-      map.set(nome, nome);
-    }
-    return Array.from(map.values()).sort((a, b) => a.localeCompare(b, "pt-BR"));
-  }, [servicos]);
-
-  const servicesByCategory = useMemo(() => {
-    const term = normalizeSearch(buscaServico);
+  const primaryService = selectedServices[0] || null;
+  const selectedProfissional =
+    profissionais.find((profissional) => profissional.id === profissionalId) || null;
+  const categorias = useMemo(
+    () => [
+      "Todos",
+      ...Array.from(
+        new Set(servicos.map((servico) => servico.categoriaNome || "Outros"))
+      ),
+    ],
+    [servicos]
+  );
+  const profissionaisFiltrados = useMemo(() => {
+    const term = normalize(buscaProfissional);
+    return profissionais.filter((profissional) =>
+      !term
+        ? true
+        : normalize(
+            [profissional.nome, profissional.especialidade].filter(Boolean).join(" ")
+          ).includes(term)
+    );
+  }, [buscaProfissional, profissionais]);
+  const servicosFiltrados = useMemo(() => {
+    const term = normalize(buscaServico);
     return servicos.filter((servico) => {
-      const categoryOk =
-        categoriaAtiva === "todos" || servico.categoriaNome === categoriaAtiva;
-      if (!categoryOk) return false;
+      if (categoriaAtiva !== "Todos" && servico.categoriaNome !== categoriaAtiva) {
+        return false;
+      }
       if (!term) return true;
-      return normalizeSearch(
-        [servico.nome, servico.descricao, servico.categoriaNome].filter(Boolean).join(" ")
-      ).includes(term);
+      return normalize([servico.nome, servico.descricao].filter(Boolean).join(" ")).includes(
+        term
+      );
     });
   }, [buscaServico, categoriaAtiva, servicos]);
-
-  const profissionaisCompativeis = useMemo(() => {
-    if (!selectedServices.length) return [];
-    return profissionais.filter((profissional) =>
-      selectedServices.every((servico) => {
-        if (!servico.profissionaisPermitidos.length) return true;
-        return servico.profissionaisPermitidos.includes(profissional.id);
-      })
-    );
-  }, [profissionais, selectedServices]);
-
-  const selectedProfissional = useMemo(
+  const profissionaisCompativeis = useMemo(
     () =>
-      profissionaisCompativeis.find((profissional) => profissional.id === profissionalId) ||
-      null,
-    [profissionaisCompativeis, profissionalId]
+      selectedServices.length
+        ? profissionais.filter((profissional) =>
+            selectedServices.every((servico) => {
+              if (!servico.profissionaisPermitidos.length) return true;
+              return servico.profissionaisPermitidos.includes(profissional.id);
+            })
+          )
+        : profissionais,
+    [profissionais, selectedServices]
   );
-
   const totalDuration = selectedServices.reduce(
-    (sum, servico) => sum + (Number(servico.duracaoMinutos || 0) || 0),
+    (sum, servico) => sum + (servico.duracaoMinutos || 0),
     0
   );
-  const hasUnknownPrice = selectedServices.some(
-    (servico) => servico.preco === null || servico.exigeAvaliacao
-  );
-  const subtotalEstimado = hasUnknownPrice
-    ? null
-    : selectedServices.reduce((sum, servico) => sum + Number(servico.preco || 0), 0);
-  const selectedCoupon = useMemo(
-    () =>
-      cuponsDisponiveis.find(
-        (cupom) => codigoCupom.trim().toUpperCase() === cupom.codigo
-      ) || null,
-    [codigoCupom, cuponsDisponiveis]
-  );
-  const descontoEstimado =
-    selectedCoupon && subtotalEstimado
-      ? selectedCoupon.tipoDesconto === "valor_fixo"
-        ? Math.min(subtotalEstimado, selectedCoupon.valorDesconto)
-        : Math.min(subtotalEstimado, subtotalEstimado * (selectedCoupon.valorDesconto / 100))
-      : 0;
-  const totalEstimado =
-    subtotalEstimado === null ? null : Math.max(0, subtotalEstimado - descontoEstimado);
-
-  const horariosDoDiaSelecionado = useMemo(
-    () => diasDisponiveis.find((dia) => dia.data === selectedDate)?.horarios || [],
-    [diasDisponiveis, selectedDate]
+  const totalValue = selectedServices.reduce(
+    (sum, servico) => sum + (servico.preco || 0),
+    0
   );
   const calendarDays = useMemo(
     () => buildCalendarDays(diasDisponiveis, monthCursor),
     [diasDisponiveis, monthCursor]
   );
-  const canGoPreviousMonth = monthCursor > new Date(new Date().getFullYear(), new Date().getMonth(), 1);
-  const canSubmit = Boolean(
-    selectedServiceIds.length &&
-      profissionalId &&
-      selectedDate &&
-      selectedTime &&
-      (pessoaTipo === "mim" || (pessoaNome.trim() && pessoaWhatsapp.trim()))
+  const horariosDoDia = useMemo(
+    () => diasDisponiveis.find((dia) => dia.data === selectedDate)?.horarios || [],
+    [diasDisponiveis, selectedDate]
   );
 
   useEffect(() => {
-    if (!selectedServiceIds.length) {
-      setProfissionalId("");
-      return;
-    }
-    if (profissionalId && !profissionaisCompativeis.some((item) => item.id === profissionalId)) {
-      setProfissionalId("");
-      setSelectedDate("");
-      setSelectedTime("");
-      setDiasDisponiveis([]);
-    }
-  }, [profissionaisCompativeis, profissionalId, selectedServiceIds.length]);
-
-  useEffect(() => {
-    setDiasDisponiveis([]);
-    setSelectedDate("");
-    setSelectedTime("");
-    setAvailabilityError(null);
-
-    if (!primaryServiceId || !profissionalId) return;
-
+    if (!primaryService?.id || !profissionalId) return;
     const controller = new AbortController();
-    const params = new URLSearchParams({
-      salao: idSalao,
-      servico: primaryServiceId,
-      profissional: profissionalId,
-      inicio: formatDateInput(monthCursor),
-    });
-    selectedServiceIds.forEach((id) => params.append("servicos", id));
-
-    setLoadingAvailability(true);
-    fetch(`/api/app-cliente/disponibilidade?${params.toString()}`, {
-      method: "GET",
-      signal: controller.signal,
-      credentials: "same-origin",
-    })
-      .then(async (response) => {
+    async function loadAvailability() {
+      try {
+        setLoadingAvailability(true);
+        setAvailabilityError(null);
+        const params = new URLSearchParams({
+          salao: idSalao,
+          servico: primaryService?.id || "",
+          profissional: profissionalId,
+          inicio: formatDateInput(monthCursor),
+        });
+        for (const id of servicoIds) params.append("servicos", id);
+        const response = await fetch(
+          `/api/app-cliente/disponibilidade?${params.toString()}`,
+          { signal: controller.signal, credentials: "same-origin" }
+        );
         const payload = await response.json();
         if (!response.ok || !payload?.ok) {
-          throw new Error(payload?.error || "Não foi possível carregar os horários agora.");
+          throw new Error(payload?.error || "Não foi possível carregar horários.");
         }
-
-        const dias = Array.isArray(payload.dias) ? (payload.dias as AvailabilityDay[]) : [];
+        const dias = Array.isArray(payload.dias)
+          ? (payload.dias as AvailabilityDay[])
+          : [];
         setDiasDisponiveis(dias);
-        setSelectedDate(dias[0]?.data || "");
-        setSelectedTime(dias[0]?.horarios[0]?.horaInicio || "");
-      })
-      .catch((error: unknown) => {
+        setSelectedDate((current) => current || dias[0]?.data || "");
+        setSelectedTime((current) => current || dias[0]?.horarios[0]?.horaInicio || "");
+      } catch (error) {
         if (controller.signal.aborted) return;
         setAvailabilityError(
-          error instanceof Error ? error.message : "Não foi possível carregar os horários agora."
+          error instanceof Error
+            ? error.message
+            : "Não foi possível carregar horários."
         );
-      })
-      .finally(() => {
+        setDiasDisponiveis([]);
+      } finally {
         if (!controller.signal.aborted) setLoadingAvailability(false);
-      });
-
-    return () => controller.abort();
-  }, [idSalao, monthCursor, primaryServiceId, profissionalId, selectedServiceIds]);
-
-  useEffect(() => {
-    if (!horariosDoDiaSelecionado.some((item) => item.horaInicio === selectedTime)) {
-      setSelectedTime(horariosDoDiaSelecionado[0]?.horaInicio || "");
+      }
     }
-  }, [horariosDoDiaSelecionado, selectedTime]);
+    void loadAvailability();
+    return () => controller.abort();
+  }, [idSalao, monthCursor, primaryService?.id, profissionalId, servicoIds]);
 
-  function toggleService(id: string) {
-    setSelectedServiceIds((current) =>
+  function toggleServico(id: string) {
+    setServicoIds((current) =>
       current.includes(id)
         ? current.filter((item) => item !== id)
-        : current.length >= 8
-          ? current
-          : [...current, id]
+        : [...current, id].slice(0, 8)
     );
+    setSelectedDate("");
+    setSelectedTime("");
   }
 
-  function goNextFromServices(id?: string) {
-    if (id && !selectedServiceIds.includes(id)) {
-      setSelectedServiceIds((current) => [...current, id]);
-    }
-    setStep("selecionados");
-  }
+  const canSubmit = Boolean(primaryService && selectedProfissional && selectedDate && selectedTime);
 
   return (
-    <form
-      action={formAction}
-      className="overflow-hidden rounded-[1.8rem] border border-zinc-200 bg-white shadow-[0_20px_56px_rgba(15,23,42,0.1)]"
-    >
+    <form action={formAction} className="min-h-dvh bg-[#050505] px-5 pb-28 pt-[calc(env(safe-area-inset-top)+1.25rem)] text-white">
       <input type="hidden" name="salao" value={idSalao} />
-      <input type="hidden" name="servico" value={primaryServiceId} />
-      {selectedServiceIds.map((id) => (
+      <input type="hidden" name="servico" value={primaryService?.id || ""} />
+      {servicoIds.map((id) => (
         <input key={id} type="hidden" name="servicos" value={id} />
       ))}
       <input type="hidden" name="profissional" value={profissionalId} />
       <input type="hidden" name="data" value={selectedDate} />
       <input type="hidden" name="hora_inicio" value={selectedTime} />
-      <input type="hidden" name="pessoa_tipo" value={pessoaTipo} />
+      <input type="hidden" name="pessoa_tipo" value="mim" />
+      <input type="hidden" name="cupom" value={codigoCupom} />
 
-      <div className="border-b border-zinc-100 bg-white p-5">
-        <div className="inline-flex items-center gap-2 rounded-full bg-zinc-100 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.14em] text-zinc-600">
-          <CalendarDays size={14} />
-          Reservar Online
-        </div>
-        <h3 className="mt-3 text-2xl font-black tracking-[-0.04em] text-zinc-950">
-          Escolha seus serviços
-        </h3>
-        <p className="mt-2 text-sm leading-6 text-zinc-500">
-          Selecione um ou mais serviços. Depois o app mostra somente profissionais compatíveis.
-        </p>
+      <div className="mx-auto max-w-md">
+        <header className="mb-7 flex items-center justify-between">
+          <button
+            type="button"
+            onClick={() => {
+              if (step === "resumo") setStep("horario");
+              else if (step === "horario") setStep("servico");
+              else if (step === "servico") setStep("profissional");
+              else history.back();
+            }}
+            className="flex h-12 w-12 items-center justify-center text-white"
+            aria-label="Voltar"
+          >
+            <ArrowLeft size={34} />
+          </button>
+          <h1 className="text-3xl font-black tracking-[-0.05em]">
+            {step === "resumo" ? "Confirmar agendamento" : "Reserva online"}
+          </h1>
+          <a
+            href="/app-cliente/notificacoes"
+            className="flex h-12 w-12 items-center justify-center text-[#f6b93f]"
+            aria-label="Notificações"
+          >
+            <Bell size={31} />
+          </a>
+        </header>
 
-        <div className="-mx-1 mt-4 flex gap-2 overflow-x-auto px-1 pb-1">
-          {(Object.keys(STEP_LABELS) as StepKey[]).map((item) => (
-            <StepPill
-              key={item}
-              step={item}
-              active={step === item}
-              done={
-                (item === "servicos" && selectedServiceIds.length > 0) ||
-                (item === "profissional" && Boolean(profissionalId)) ||
-                (item === "data" && Boolean(selectedDate)) ||
-                (item === "horario" && Boolean(selectedTime))
-              }
-            />
-          ))}
-        </div>
-      </div>
+        {step !== "resumo" ? <Stepper step={step} /> : null}
 
-      <div className="space-y-5 p-4 sm:p-5">
-        {step === "servicos" ? (
-          <section className="space-y-4">
-            <label className="flex h-12 items-center gap-2 rounded-2xl border border-zinc-200 bg-zinc-50 px-4">
-              <Search size={17} className="text-zinc-500" />
+        {step === "profissional" ? (
+          <section className="mt-8">
+            <h2 className="text-3xl font-black tracking-[-0.04em]">
+              Escolha seu atendimento
+            </h2>
+            <p className="mt-3 text-xl leading-snug text-zinc-300">
+              Primeiro o profissional, depois o serviço e por último data e hora.
+            </p>
+            <div className="mt-6 space-y-3">
+              {[
+                ["1. Profissional", "Escolha quem vai te atender"],
+                ["2. Serviço", "Escolha o serviço desejado"],
+                ["3. Horário", "Escolha a data e horário"],
+              ].map(([title, subtitle], index) => (
+                <div
+                  key={title}
+                  className={`flex items-center gap-4 rounded-[1.15rem] border p-5 ${
+                    index === 0
+                      ? "border-[#b88918] bg-[#111214]"
+                      : "border-white/8 bg-[#111214] text-zinc-400"
+                  }`}
+                >
+                  <span className="flex h-16 w-16 items-center justify-center rounded-full bg-[#1e1f22] text-2xl font-black text-[#f6b93f]">
+                    {index === 0 ? <UserRound size={34} /> : index + 1}
+                  </span>
+                  <span className="flex-1">
+                    <strong className="block text-xl text-white">{title}</strong>
+                    <span className="mt-1 block text-base">{subtitle}</span>
+                  </span>
+                  <ChevronRight size={28} className="text-[#f6b93f]" />
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-8 border-t border-white/10 pt-6">
+              <h3 className="flex items-center gap-4 text-2xl font-black">
+                <span className="flex h-16 w-16 items-center justify-center rounded-full bg-[#1e1f22] text-[#f6b93f]">
+                  <UserRound size={34} />
+                </span>
+                Escolha o profissional
+              </h3>
+              <p className="ml-20 mt-1 text-base text-zinc-400">
+                Digite o nome ou toque em uma opção para continuar.
+              </p>
+              <label className="mt-5 flex h-16 items-center gap-3 rounded-2xl border border-white/10 bg-[#111214] px-4 text-zinc-400">
+                <Search size={28} />
+                <input
+                  value={buscaProfissional}
+                  onChange={(event) => setBuscaProfissional(event.target.value)}
+                  placeholder="Buscar profissional"
+                  className="min-w-0 flex-1 bg-transparent text-lg text-white outline-none"
+                />
+              </label>
+              <div className="mt-4 space-y-3">
+                {profissionaisFiltrados.map((profissional) => (
+                  <button
+                    key={profissional.id}
+                    type="button"
+                    onClick={() => {
+                      setProfissionalId(profissional.id);
+                      setStep("servico");
+                    }}
+                    className="grid w-full grid-cols-[72px_1fr_auto] items-center gap-4 rounded-[1.15rem] border border-white/8 bg-[#111214] p-4 text-left"
+                  >
+                    <span className="h-[72px] w-[72px] overflow-hidden rounded-full bg-zinc-800">
+                      {profissional.fotoUrl ? (
+                        <img
+                          src={profissional.fotoUrl}
+                          alt={profissional.nome}
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <span className="flex h-full w-full items-center justify-center text-2xl font-black">
+                          {profissional.nome.slice(0, 1)}
+                        </span>
+                      )}
+                    </span>
+                    <span>
+                      <strong className="block text-xl text-white">
+                        {profissional.nome}
+                      </strong>
+                      <span className="mt-1 block text-base text-zinc-400">
+                        {profissional.especialidade || "Atendimento do salão"}
+                      </span>
+                    </span>
+                    <ChevronRight size={30} className="text-[#f6b93f]" />
+                  </button>
+                ))}
+              </div>
+            </div>
+          </section>
+        ) : null}
+
+        {step === "servico" ? (
+          <section className="mt-8">
+            <h2 className="text-3xl font-black tracking-[-0.04em]">
+              Escolha o serviço
+            </h2>
+            <p className="mt-3 text-xl text-zinc-300">
+              Selecione um ou mais serviços que deseja realizar.
+            </p>
+            <label className="mt-6 flex h-16 items-center gap-3 rounded-2xl bg-[#151618] px-4 text-zinc-400">
+              <Search size={28} />
               <input
-                type="search"
                 value={buscaServico}
                 onChange={(event) => setBuscaServico(event.target.value)}
-                placeholder="Buscar serviço"
-                className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-zinc-400"
+                placeholder="Buscar serviços"
+                className="min-w-0 flex-1 bg-transparent text-lg text-white outline-none"
               />
             </label>
-            <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
-              <button
-                type="button"
-                onClick={() => setCategoriaAtiva("todos")}
-                className={`rounded-full px-4 py-2 text-xs font-black ${
-                  categoriaAtiva === "todos"
-                    ? "bg-zinc-950 text-white"
-                    : "bg-zinc-100 text-zinc-700"
-                }`}
-              >
-                Todos
-              </button>
+            <div className="mt-5 flex gap-3 overflow-x-auto pb-1">
               {categorias.map((categoria) => (
                 <button
                   key={categoria}
                   type="button"
                   onClick={() => setCategoriaAtiva(categoria)}
-                  className={`rounded-full px-4 py-2 text-xs font-black ${
+                  className={`h-14 shrink-0 rounded-2xl px-6 text-lg font-bold ${
                     categoriaAtiva === categoria
-                      ? "bg-zinc-950 text-white"
-                      : "bg-zinc-100 text-zinc-700"
+                      ? "bg-[#f6b93f] text-black"
+                      : "bg-[#151618] text-white"
                   }`}
                 >
                   {categoria}
                 </button>
               ))}
             </div>
-
-            <div className="grid gap-3">
-              {servicesByCategory.length ? (
-                servicesByCategory.map((servico) => {
-                  const selected = selectedServiceIds.includes(servico.id);
-                  return (
-                    <article
-                      key={servico.id}
-                      className={`rounded-2xl border p-4 transition ${
-                        selected
-                          ? "border-zinc-950 bg-zinc-950 text-white"
-                          : "border-zinc-200 bg-white text-zinc-950"
-                      }`}
-                    >
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="min-w-0">
-                          <p
-                            className={`text-[11px] font-black uppercase tracking-[0.14em] ${
-                              selected ? "text-zinc-300" : "text-amber-700"
-                            }`}
-                          >
-                            {servico.categoriaNome}
-                          </p>
-                          <h4 className="mt-1 text-lg font-black">{servico.nome}</h4>
-                          {servico.descricao ? (
-                            <p
-                              className={`mt-1 text-sm leading-6 ${
-                                selected ? "text-zinc-300" : "text-zinc-500"
-                              }`}
-                            >
-                              {servico.descricao}
-                            </p>
-                          ) : null}
-                        </div>
-                        <div className="shrink-0 text-right">
-                          <div className="text-sm font-black">
-                            {servico.exigeAvaliacao
-                              ? "A avaliar"
-                              : formatCurrency(servico.preco)}
-                          </div>
-                          {servico.duracaoMinutos ? (
-                            <div
-                              className={`mt-1 text-xs ${
-                                selected ? "text-zinc-300" : "text-zinc-500"
-                              }`}
-                            >
-                              {servico.duracaoMinutos} min
-                            </div>
-                          ) : null}
-                        </div>
-                      </div>
-                      <div className="mt-4 flex gap-2">
-                        <button
-                          type="button"
-                          onClick={() => toggleService(servico.id)}
-                          className={`inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-xl text-sm font-black ${
-                            selected
-                              ? "bg-white text-zinc-950"
-                              : "bg-zinc-100 text-zinc-950"
-                          }`}
-                        >
-                          {selected ? <Check size={16} /> : <Plus size={16} />}
-                          {selected ? "Selecionado" : "Adicionar"}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => goNextFromServices(servico.id)}
-                          className={`inline-flex h-11 items-center rounded-xl px-4 text-sm font-black ${
-                            selected
-                              ? "border border-white/20 text-white"
-                              : "bg-zinc-950 text-white"
-                          }`}
-                        >
-                          Agendar
-                        </button>
-                      </div>
-                    </article>
-                  );
-                })
-              ) : (
-                <EmptyBox>Nenhum serviço encontrado nessa categoria.</EmptyBox>
-              )}
-            </div>
-          </section>
-        ) : null}
-
-        {step === "selecionados" ? (
-          <section className="space-y-4">
-            <button
-              type="button"
-              onClick={() => setStep("servicos")}
-              className="inline-flex items-center gap-2 text-sm font-black text-zinc-700"
-            >
-              <ArrowLeft size={16} />
-              Adicionar mais serviços
-            </button>
-            <div className="rounded-[1.5rem] bg-zinc-50 p-4">
-              <h4 className="text-xl font-black text-zinc-950">
-                Serviços selecionados
-              </h4>
-              <div className="mt-4 grid gap-2">
-                {selectedServices.length ? (
-                  selectedServices.map((servico) => (
-                    <div
-                      key={servico.id}
-                      className="flex items-center justify-between gap-3 rounded-2xl bg-white p-3"
-                    >
-                      <div>
-                        <div className="text-sm font-black text-zinc-950">
-                          {servico.nome}
-                        </div>
-                        <div className="mt-1 text-xs text-zinc-500">
-                          {servico.duracaoMinutos || 0} min
-                        </div>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => toggleService(servico.id)}
-                        className="rounded-full border border-zinc-200 px-3 py-1 text-xs font-black text-zinc-700"
-                      >
-                        Remover
-                      </button>
-                    </div>
-                  ))
-                ) : (
-                  <EmptyBox>Escolha pelo menos um serviço para continuar.</EmptyBox>
-                )}
-              </div>
-              <div className="mt-4 grid grid-cols-2 gap-2">
-                <div className="rounded-2xl bg-white p-4">
-                  <div className="text-xs font-black uppercase tracking-[0.14em] text-zinc-500">
-                    Duração
-                  </div>
-                  <div className="mt-1 text-xl font-black text-zinc-950">
-                    {totalDuration || 0} min
-                  </div>
-                </div>
-                <div className="rounded-2xl bg-white p-4">
-                  <div className="text-xs font-black uppercase tracking-[0.14em] text-zinc-500">
-                    Valor
-                  </div>
-                  <div className="mt-1 text-xl font-black text-zinc-950">
-                    {formatCurrency(totalEstimado)}
-                  </div>
-                </div>
-              </div>
-            </div>
-            <button
-              type="button"
-              disabled={!selectedServices.length}
-              onClick={() => setStep("pessoa")}
-              className="h-14 w-full rounded-2xl bg-zinc-950 text-sm font-black text-white disabled:opacity-50"
-            >
-              Continuar
-            </button>
-          </section>
-        ) : null}
-
-        {step === "pessoa" ? (
-          <section className="space-y-4">
-            <button
-              type="button"
-              onClick={() => setStep("selecionados")}
-              className="inline-flex items-center gap-2 text-sm font-black text-zinc-700"
-            >
-              <ArrowLeft size={16} />
-              Serviços
-            </button>
-            <div className="grid gap-3">
-              {[
-                { value: "mim", label: "A reserva é para mim", icon: UserRound },
-                {
-                  value: "outra_pessoa",
-                  label: "A reserva é para outra pessoa",
-                  icon: UsersRound,
-                },
-              ].map((option) => {
-                const Icon = option.icon;
-                const selected = pessoaTipo === option.value;
+            <h3 className="mt-8 text-2xl font-black">
+              {categoriaAtiva === "Todos" ? "Serviços populares" : categoriaAtiva}
+            </h3>
+            <div className="mt-5 space-y-3">
+              {servicosFiltrados.map((servico) => {
+                const selected = servicoIds.includes(servico.id);
                 return (
                   <button
-                    key={option.value}
+                    key={servico.id}
                     type="button"
-                    onClick={() => setPessoaTipo(option.value as typeof pessoaTipo)}
-                    className={`flex items-center gap-3 rounded-2xl border p-4 text-left ${
+                    onClick={() => toggleServico(servico.id)}
+                    className={`grid w-full grid-cols-[104px_1fr_auto] items-center gap-4 rounded-[1.15rem] border p-4 text-left ${
                       selected
-                        ? "border-zinc-950 bg-zinc-950 text-white"
-                        : "border-zinc-200 bg-white text-zinc-950"
+                        ? "border-[#f6b93f] bg-[#111214]"
+                        : "border-white/8 bg-[#111214]"
                     }`}
                   >
-                    <Icon size={20} />
-                    <span className="font-black">{option.label}</span>
+                    <img
+                      src="/app-cliente-hero-woman.jpeg"
+                      alt=""
+                      className="h-[104px] w-[104px] rounded-2xl object-cover"
+                    />
+                    <span>
+                      <strong className="block text-xl text-white">
+                        {servico.nome}
+                      </strong>
+                      <span className="mt-2 line-clamp-2 block text-base leading-6 text-zinc-400">
+                        {servico.descricao || "Atendimento premium do salão."}
+                      </span>
+                      <span className="mt-3 flex items-center gap-3 text-base text-zinc-400">
+                        <Clock3 size={18} />
+                        {servico.duracaoMinutos || 60} min
+                        <span className="h-5 w-px bg-white/20" />
+                        A partir de{" "}
+                        <strong className="text-[#f6b93f]">
+                          {formatCurrency(servico.preco)}
+                        </strong>
+                      </span>
+                    </span>
+                    <span
+                      className={`flex h-12 w-12 items-center justify-center rounded-full border-2 ${
+                        selected
+                          ? "border-[#f6b93f] bg-[#f6b93f] text-black"
+                          : "border-zinc-400 text-zinc-400"
+                      }`}
+                    >
+                      {selected ? <Check size={26} /> : null}
+                    </span>
                   </button>
                 );
               })}
             </div>
-
-            {pessoaTipo === "outra_pessoa" ? (
-              <div className="space-y-3 rounded-[1.5rem] bg-zinc-50 p-4">
-                <input
-                  name="pessoa_nome"
-                  value={pessoaNome}
-                  onChange={(event) => setPessoaNome(event.target.value)}
-                  placeholder="Nome da pessoa"
-                  className="h-12 w-full rounded-2xl border border-zinc-200 bg-white px-4 text-sm outline-none focus:border-zinc-950"
-                />
-                <input
-                  name="pessoa_whatsapp"
-                  value={pessoaWhatsapp}
-                  onChange={(event) => setPessoaWhatsapp(event.target.value)}
-                  placeholder="WhatsApp da pessoa"
-                  inputMode="tel"
-                  className="h-12 w-full rounded-2xl border border-zinc-200 bg-white px-4 text-sm outline-none focus:border-zinc-950"
-                />
-                <textarea
-                  name="pessoa_observacao"
-                  value={pessoaObservacao}
-                  onChange={(event) => setPessoaObservacao(event.target.value)}
-                  placeholder="Observação opcional"
-                  className="min-h-24 w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm outline-none focus:border-zinc-950"
-                />
-              </div>
-            ) : null}
-
             <button
               type="button"
-              disabled={
-                pessoaTipo === "outra_pessoa" &&
-                (!pessoaNome.trim() || !pessoaWhatsapp.trim())
-              }
-              onClick={() => setStep("profissional")}
-              className="h-14 w-full rounded-2xl bg-zinc-950 text-sm font-black text-white disabled:opacity-50"
+              disabled={!servicoIds.length || !profissionaisCompativeis.some((item) => item.id === profissionalId)}
+              onClick={() => setStep("horario")}
+              className="mt-6 h-16 w-full rounded-2xl bg-[#f6b93f] text-xl font-black text-black disabled:opacity-50"
             >
-              Escolher profissional
+              Continuar
             </button>
-          </section>
-        ) : null}
-
-        {step === "profissional" ? (
-          <section className="space-y-4">
-            <button
-              type="button"
-              onClick={() => setStep("pessoa")}
-              className="inline-flex items-center gap-2 text-sm font-black text-zinc-700"
-            >
-              <ArrowLeft size={16} />
-              Para quem é
-            </button>
-            <h4 className="text-xl font-black text-zinc-950">
-              Profissionais compatíveis
-            </h4>
-            {profissionaisCompativeis.length ? (
-              <div className="grid gap-2">
-                {profissionaisCompativeis.map((profissional) => {
-                  const selected = profissional.id === profissionalId;
-                  return (
-                    <button
-                      key={profissional.id}
-                      type="button"
-                      onClick={() => {
-                        setProfissionalId(profissional.id);
-                        setStep("data");
-                      }}
-                      className={`flex items-center gap-3 rounded-2xl border p-3 text-left ${
-                        selected
-                          ? "border-zinc-950 bg-zinc-950 text-white"
-                          : "border-zinc-200 bg-white text-zinc-900"
-                      }`}
-                    >
-                      <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-zinc-100 text-sm font-black text-zinc-700">
-                        {profissional.fotoUrl ? (
-                          <img
-                            src={profissional.fotoUrl}
-                            alt={profissional.nome}
-                            className="h-full w-full object-cover"
-                          />
-                        ) : (
-                          profissional.nome.slice(0, 1).toUpperCase()
-                        )}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="truncate text-sm font-black">
-                          {profissional.nome}
-                        </div>
-                        <div className={`mt-0.5 text-xs ${selected ? "text-zinc-300" : "text-zinc-500"}`}>
-                          {profissional.especialidade || "Atendimento do salão"}
-                        </div>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            ) : (
-              <EmptyBox>
+            {!profissionaisCompativeis.some((item) => item.id === profissionalId) && servicoIds.length ? (
+              <p className="mt-3 rounded-2xl border border-[#f6b93f]/40 bg-[#211805] p-4 text-sm text-[#f6b93f]">
                 Nenhum profissional disponível para todos os serviços selecionados.
                 Remova um serviço ou escolha outro.
-              </EmptyBox>
-            )}
+              </p>
+            ) : null}
           </section>
         ) : null}
 
-        {step === "data" ? (
-          <section className="space-y-4">
-            <button
-              type="button"
-              onClick={() => setStep("profissional")}
-              className="inline-flex items-center gap-2 text-sm font-black text-zinc-700"
-            >
-              <ArrowLeft size={16} />
-              Profissional
-            </button>
-            <div className="rounded-[1.4rem] border border-zinc-200 bg-white p-4 shadow-sm">
-              <div className="mb-4 flex items-center justify-between gap-3">
-                <h5 className="text-xl font-black capitalize text-zinc-950">
+        {step === "horario" ? (
+          <section className="mt-8">
+            <h2 className="text-3xl font-black tracking-[-0.04em]">
+              Escolha o horário
+            </h2>
+            <p className="mt-3 text-xl leading-snug text-zinc-300">
+              Selecione a data e o horário que deseja realizar seu agendamento.
+            </p>
+            <div className="mt-7 rounded-[1.35rem] border border-white/10 bg-[#111214] p-6">
+              <div className="flex items-center justify-between">
+                <h3 className="text-2xl font-black capitalize">
                   {formatMonthLabel(monthCursor)}
-                </h5>
-                <div className="flex gap-2">
+                </h3>
+                <div className="flex gap-3">
                   <button
                     type="button"
-                    disabled={!canGoPreviousMonth}
                     onClick={() => setMonthCursor((current) => addMonths(current, -1))}
-                    className="flex h-11 w-11 items-center justify-center rounded-xl border border-zinc-200 bg-white text-zinc-700 disabled:opacity-40"
+                    className="flex h-12 w-12 items-center justify-center"
                     aria-label="Mês anterior"
                   >
-                    <ChevronLeft size={20} />
+                    <ChevronLeft size={30} />
                   </button>
                   <button
                     type="button"
                     onClick={() => setMonthCursor((current) => addMonths(current, 1))}
-                    className="flex h-11 w-11 items-center justify-center rounded-xl border border-zinc-200 bg-white text-zinc-700"
+                    className="flex h-12 w-12 items-center justify-center"
                     aria-label="Próximo mês"
                   >
-                    <ChevronRight size={20} />
+                    <ChevronRight size={30} />
                   </button>
                 </div>
               </div>
               {loadingAvailability ? (
-                <EmptyBox>Carregando horários disponíveis...</EmptyBox>
+                <div className="py-16 text-center text-zinc-400">
+                  Carregando horários disponíveis...
+                </div>
               ) : availabilityError ? (
-                <EmptyBox>{availabilityError}</EmptyBox>
+                <div className="py-16 text-center text-zinc-400">
+                  {availabilityError}
+                </div>
               ) : (
                 <>
-                  <div className="grid grid-cols-7 gap-2 text-center text-xs font-medium text-zinc-500">
-                    {["Dom.", "Seg.", "Ter.", "Qua.", "Qui.", "Sex.", "Sáb."].map((day) => (
+                  <div className="mt-7 grid grid-cols-7 text-center text-lg text-zinc-400">
+                    {["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"].map((day) => (
                       <span key={day}>{day}</span>
                     ))}
                   </div>
-                  <div className="mt-4 grid grid-cols-7 gap-2">
+                  <div className="mt-6 grid grid-cols-7 gap-y-5 text-center">
                     {calendarDays.map((day) =>
                       day.currentMonth ? (
                         <button
@@ -845,23 +640,21 @@ export default function ClientBookingForm({
                           type="button"
                           disabled={!day.available || !day.selectable}
                           onClick={() => {
-                            const nextDay = diasDisponiveis.find((item) => item.data === day.date);
+                            const nextDay = diasDisponiveis.find(
+                              (item) => item.data === day.date
+                            );
                             setSelectedDate(day.date);
                             setSelectedTime(nextDay?.horarios[0]?.horaInicio || "");
-                            setStep("horario");
                           }}
-                          className={`relative aspect-square rounded-full border text-sm font-semibold transition ${
+                          className={`mx-auto flex h-12 w-12 items-center justify-center rounded-full text-xl font-bold ${
                             selectedDate === day.date
-                              ? "border-cyan-700 bg-cyan-50 text-zinc-950 ring-2 ring-cyan-700"
+                              ? "bg-[#f6b93f] text-black"
                               : day.available
-                                ? "border-zinc-100 bg-zinc-100 text-zinc-900"
-                                : "border-zinc-100 bg-white text-zinc-300"
+                                ? "text-white"
+                                : "text-zinc-600"
                           }`}
                         >
                           {day.label}
-                          {day.available ? (
-                            <span className="absolute bottom-2 left-1/2 h-1 w-6 -translate-x-1/2 rounded-full bg-emerald-500" />
-                          ) : null}
                         </button>
                       ) : (
                         <span key={day.key} />
@@ -871,137 +664,100 @@ export default function ClientBookingForm({
                 </>
               )}
             </div>
-          </section>
-        ) : null}
 
-        {step === "horario" ? (
-          <section className="space-y-4">
+            <h3 className="mt-8 text-2xl font-black">Horários disponíveis</h3>
+            <p className="mt-2 text-xl text-zinc-400">
+              {selectedDate ? formatFullDate(selectedDate) : "Escolha uma data"}
+            </p>
+            <div className="mt-5 grid grid-cols-4 gap-3">
+              {horariosDoDia.map((horario) => (
+                <button
+                  key={horario.horaInicio}
+                  type="button"
+                  onClick={() => setSelectedTime(horario.horaInicio)}
+                  className={`h-16 rounded-2xl border text-xl font-black ${
+                    selectedTime === horario.horaInicio
+                      ? "border-[#f6b93f] bg-[#f6b93f] text-black"
+                      : "border-zinc-600 bg-transparent text-white"
+                  }`}
+                >
+                  {horario.horaInicio}
+                </button>
+              ))}
+            </div>
             <button
               type="button"
-              onClick={() => setStep("data")}
-              className="inline-flex items-center gap-2 text-sm font-black text-zinc-700"
+              disabled={!selectedDate || !selectedTime}
+              onClick={() => setStep("resumo")}
+              className="mt-7 h-16 w-full rounded-2xl bg-[#f6b93f] text-xl font-black text-black disabled:opacity-50"
             >
-              <ArrowLeft size={16} />
-              Data
+              Continuar
             </button>
-            <div className="flex items-center gap-2 text-sm font-bold text-zinc-600">
-              <Clock3 size={16} />
-              Escolha o horário
-            </div>
-            {horariosDoDiaSelecionado.length ? (
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                {horariosDoDiaSelecionado.map((horario) => (
-                  <button
-                    key={`${selectedDate}-${horario.horaInicio}`}
-                    type="button"
-                    onClick={() => {
-                      setSelectedTime(horario.horaInicio);
-                      setStep("resumo");
-                    }}
-                    className={`h-14 rounded-2xl border px-5 text-lg font-black shadow-sm transition ${
-                      selectedTime === horario.horaInicio
-                        ? "border-cyan-700 bg-cyan-50 text-cyan-950 ring-2 ring-cyan-700"
-                        : "border-zinc-100 bg-zinc-100 text-zinc-900"
-                    }`}
-                  >
-                    {horario.horaInicio}
-                  </button>
-                ))}
-              </div>
-            ) : (
-              <EmptyBox>Não há horários livres para essa combinação.</EmptyBox>
-            )}
           </section>
         ) : null}
 
         {step === "resumo" ? (
-          <section className="space-y-4">
-            <button
-              type="button"
-              onClick={() => setStep("horario")}
-              className="inline-flex items-center gap-2 text-sm font-black text-zinc-700"
-            >
-              <ArrowLeft size={16} />
-              Horário
-            </button>
-            <div className="rounded-[1.5rem] bg-zinc-950 p-5 text-white">
-              <div className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.14em] text-amber-200">
-                <Scissors size={15} />
-                Resumo
+          <section className="mt-5">
+            <div className="rounded-[1.35rem] border border-[#f6b93f]/60 bg-[#111214] p-8 text-center shadow-[0_0_80px_rgba(246,185,63,0.12)]">
+              <div className="mx-auto flex h-28 w-28 items-center justify-center rounded-full bg-[#f6b93f] text-black">
+                <Check size={62} strokeWidth={4} />
               </div>
-              <h4 className="mt-3 text-2xl font-black">Confirmar agendamento</h4>
-              <div className="mt-5 space-y-3 text-sm">
-                <p>
-                  <strong>{selectedServices.length}</strong> serviço(s) com{" "}
-                  <strong>{selectedProfissional?.nome || "profissional"}</strong>
-                </p>
-                <p>
-                  {selectedDate || "Data"} às {selectedTime || "--:--"}.
-                </p>
-                <p>
-                  Duração total: <strong>{totalDuration || 0} min</strong>.
-                </p>
-                <p>
-                  Valor estimado: <strong>{formatCurrency(totalEstimado)}</strong>.
-                </p>
-                <p>
-                  Reserva para:{" "}
-                  <strong>
-                    {pessoaTipo === "mim" ? "mim" : pessoaNome || "outra pessoa"}
-                  </strong>
-                </p>
+              <h2 className="mt-8 text-5xl font-black tracking-[-0.06em]">
+                Quase lá!
+              </h2>
+              <p className="mt-5 text-2xl leading-snug text-zinc-300">
+                Revise os detalhes e confirme seu agendamento.
+              </p>
+            </div>
+
+            <div className="mt-6 rounded-[1.35rem] border border-white/10 bg-[#111214] p-6">
+              <h3 className="text-3xl font-black">Resumo do agendamento</h3>
+              <div className="mt-6 space-y-5 text-xl">
+                {[
+                  ["Serviço", selectedServices.map((item) => item.nome).join(", ")],
+                  ["Profissional", selectedProfissional?.nome || "Profissional"],
+                  ["Data", formatFullDate(selectedDate)],
+                  ["Horário", selectedTime],
+                  ["Duração", `${totalDuration || 0} min`],
+                ].map(([label, value]) => (
+                  <div
+                    key={label}
+                    className="grid grid-cols-[44px_1fr_1.2fr] items-center gap-4 border-b border-white/10 pb-4"
+                  >
+                    <span className="flex h-11 w-11 items-center justify-center rounded-full bg-[#272116] text-[#f6b93f]">
+                      <UserRound size={23} />
+                    </span>
+                    <span className="text-zinc-300">{label}</span>
+                    <strong className="text-right text-white">{value}</strong>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-6 flex items-center justify-between border-t border-[#f6b93f]/50 pt-5 text-2xl font-black">
+                <span>Total</span>
+                <span className="text-4xl text-[#f6b93f]">
+                  {formatCurrency(totalValue)}
+                </span>
               </div>
             </div>
 
-            <div className="rounded-2xl border border-zinc-100 bg-white p-3 text-left">
-              <label
-                htmlFor="cliente-booking-cupom"
-                className="text-xs font-black uppercase tracking-[0.14em] text-zinc-500"
-              >
-                Cupom
-              </label>
-              {cuponsDisponiveis.length ? (
-                <div className="mb-3 mt-2 space-y-2">
-                  {cuponsDisponiveis.map((cupom) => {
-                    const selected = codigoCupom.trim().toUpperCase() === cupom.codigo;
-                    return (
-                      <button
-                        key={cupom.codigo}
-                        type="button"
-                        onClick={() => setCodigoCupom(cupom.codigo)}
-                        className={`w-full rounded-2xl border px-3 py-3 text-left transition ${
-                          selected
-                            ? "border-emerald-300 bg-emerald-50 text-emerald-950"
-                            : "border-zinc-200 bg-zinc-50 text-zinc-800"
-                        }`}
-                      >
-                        <span className="flex items-center justify-between gap-3">
-                          <span className="text-sm font-black">{cupom.nome}</span>
-                          <span className="shrink-0 rounded-full bg-white px-2 py-1 text-[11px] font-black text-emerald-700">
-                            {cupom.codigo}
-                          </span>
-                        </span>
-                        <span className="mt-1 block text-xs leading-5 text-zinc-600">
-                          {cupom.descontoLabel}.
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              ) : null}
-              <input
-                id="cliente-booking-cupom"
-                name="cupom"
+            {cuponsDisponiveis.length ? (
+              <select
                 value={codigoCupom}
-                onChange={(event) => setCodigoCupom(event.target.value.toUpperCase())}
-                placeholder="Ex.: SAUDADES"
-                className="mt-2 h-11 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 text-sm font-bold uppercase outline-none focus:border-zinc-950"
-              />
-            </div>
+                onChange={(event) => setCodigoCupom(event.target.value)}
+                className="mt-5 h-14 w-full rounded-2xl border border-white/10 bg-[#111214] px-4 text-white"
+              >
+                <option value="">Sem cupom</option>
+                {cuponsDisponiveis.map((cupom) => (
+                  <option key={cupom.codigo} value={cupom.codigo}>
+                    {cupom.nome}
+                  </option>
+                ))}
+              </select>
+            ) : null}
 
             <SubmitButton disabled={!canSubmit} />
             {state.error ? (
-              <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+              <div className="mt-4 rounded-2xl border border-red-400/40 bg-red-950/40 p-4 text-sm text-red-100">
                 {state.error}
               </div>
             ) : null}
