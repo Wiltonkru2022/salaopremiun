@@ -2,7 +2,6 @@ import "server-only";
 
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { ensureClienteContaVinculadaAoSalao } from "@/app/services/cliente-app/auth";
-import { queueNotificationJob } from "@/lib/notification-jobs";
 
 function normalizeToken(value: string) {
   return String(value || "").trim();
@@ -131,24 +130,9 @@ export async function redeemClienteCoupon(params: {
     // O resgate não deve falhar se a telemetria da campanha oscilar.
   }
 
-  await queueNotificationJob({
-    idSalao,
-    idCliente: vinculo.idCliente,
-    clienteAppContaId: idConta,
-    canal: "cliente_app",
-    tipo: "cupom_recebido_cliente",
-    titulo,
-    mensagem: buildCouponPushMessage(cupom as Record<string, unknown>),
-    url: `/app-cliente/salao/${salaoSlug}/reserva?cupom=${encodeURIComponent(codigoCupom)}`,
-    tag: `cupom-${cupom.id}`,
-    enviarEm: addMinutesIso(Number(cupom.push_delay_minutos || 5)),
-    idempotencyKey: `cupom-resgatado:${idConta}:${cupom.id}`,
-    metadata: { id_cupom: cupom.id, codigo: codigoCupom },
-  }).catch(() => null);
-
   await (supabase as any)
     .from("cupom_salao_resgates")
-    .update({ notificado_em: new Date().toISOString(), updated_at: new Date().toISOString() })
+    .update({ updated_at: new Date().toISOString() })
     .eq("id_cupom", cupom.id)
     .eq("cliente_app_conta_id", idConta);
 

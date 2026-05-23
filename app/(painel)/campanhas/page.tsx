@@ -100,6 +100,7 @@ async function loadCampanhasData(idSalao: string, page: number, pageSize: number
       .from("cupons_salao")
       .select("id, codigo, nome, descricao, descricao_interna, mensagem_cliente, tipo_campanha, publico_alvo, publico_tipo, valor_desconto, tipo_desconto, valido_de, valido_ate, ativo, status_campanha, resgate_token, slug, limite_uso_total, limite_uso_cliente, limite_uso_dia, created_at", { count: "exact" })
       .eq("id_salao", idSalao)
+      .or("automatico_recuperacao.is.null,automatico_recuperacao.eq.false")
       .order("created_at", { ascending: false })
       .range(from, to),
     (supabase as any)

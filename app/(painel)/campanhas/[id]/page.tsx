@@ -150,6 +150,7 @@ async function loadCampanhaDetalhe(
       .select("id, codigo, nome, descricao, descricao_interna, mensagem_cliente, tipo_campanha, publico_tipo, valor_desconto, tipo_desconto, valido_de, valido_ate, ativo, status_campanha, resgate_token, slug, limite_uso_total, limite_uso_cliente, limite_uso_dia, created_at")
       .eq("id_salao", idSalao)
       .eq("id", id)
+      .or("automatico_recuperacao.is.null,automatico_recuperacao.eq.false")
       .maybeSingle(),
     (supabase as any)
       .from("cupom_salao_servicos")

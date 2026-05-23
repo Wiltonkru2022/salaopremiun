@@ -149,7 +149,7 @@ export async function criarCampanhaCupomAction(formData: FormData) {
     valido_ate: validoAte,
     ativo: true,
     status_campanha: statusCampanha,
-    automatico_recuperacao: tipo === "inativos",
+    automatico_recuperacao: false,
     tipo_campanha: tipo,
     publico_alvo: publicoAlvo,
     titulo_push: titulo,
