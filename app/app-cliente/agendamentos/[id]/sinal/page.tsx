@@ -24,7 +24,7 @@ export default async function ClienteAgendamentoSinalPage({
 
   const { data: agendamento } = await (supabaseAdmin as any)
     .from("agendamentos")
-    .select("id, cliente_id, id_salao, data, hora_inicio, status, sinal_valor, sinal_percentual, sinal_pix_chave, sinal_pix_recebedor, sinal_pix_cidade, sinal_reserva_minutos, reserva_expira_em, servicos(nome, preco_padrao, preco)")
+    .select("id, cliente_id, id_salao, data, hora_inicio, status, sinal_valor, sinal_percentual, sinal_pix_chave, sinal_pix_recebedor, sinal_pix_cidade, reserva_expira_em, servicos(nome, preco_padrao, preco)")
     .eq("id", id)
     .maybeSingle();
 
