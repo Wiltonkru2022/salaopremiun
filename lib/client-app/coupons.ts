@@ -11,20 +11,6 @@ function todayIso() {
   return new Date().toISOString().slice(0, 10);
 }
 
-function addMinutesIso(minutes: number) {
-  return new Date(Date.now() + Math.max(0, minutes) * 60_000).toISOString();
-}
-
-function buildCouponPushMessage(cupom: Record<string, unknown>) {
-  const nome = String(cupom.nome || "").trim();
-  const descricao = String(cupom.descricao || "").trim();
-  return (
-    String(cupom.mensagem_push || "").trim() ||
-    descricao ||
-    `Seu cupom ${nome || "especial"} já está liberado para o próximo agendamento.`
-  );
-}
-
 export async function redeemClienteCoupon(params: {
   token: string;
   idConta: string;
@@ -112,7 +98,6 @@ export async function redeemClienteCoupon(params: {
 
   const salaoRel = Array.isArray(cupom.saloes) ? cupom.saloes[0] : cupom.saloes;
   const salaoSlug = String(salaoRel?.app_cliente_slug || idSalao).trim();
-  const titulo = String(cupom.titulo_push || cupom.nome || "Você recebeu um cupom").trim();
   const codigoCupom = String(cupom.codigo || "").trim();
 
   try {
