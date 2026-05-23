@@ -143,21 +143,8 @@ async function carregarPerfil(params: {
   });
 }
 
-function getPerfilNotice(params: {
-  google?: string | string[];
-  erro?: string | string[];
-}) {
-  const googleStatus = Array.isArray(params.google)
-    ? params.google[0]
-    : params.google;
+function getPerfilNotice(params: { erro?: string | string[] }) {
   const erro = Array.isArray(params.erro) ? params.erro[0] : params.erro;
-
-  if (googleStatus === "conectado") {
-    return {
-      type: "success" as const,
-      message: "Conta Google conectada com sucesso.",
-    };
-  }
 
   if (erro) {
     return {
@@ -173,7 +160,6 @@ export default async function PerfilProfissionalPage({
   searchParams,
 }: {
   searchParams: Promise<{
-    google?: string | string[];
     erro?: string | string[];
   }>;
 }) {
@@ -245,11 +231,7 @@ export default async function PerfilProfissionalPage({
 
         {notice ? (
           <div
-            className={
-              notice.type === "success"
-                ? "mb-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800"
-                : "mb-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700"
-            }
+            className="mb-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700"
           >
             {notice.message}
           </div>

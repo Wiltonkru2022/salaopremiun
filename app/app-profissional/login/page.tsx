@@ -9,27 +9,6 @@ import {
 import { validateProfissionalAppSession } from "@/lib/profissional-context.server";
 import { buildSecurityBlockPath } from "@/lib/security/user-security";
 
-function getGoogleErrorMessage(value: string | string[] | undefined) {
-  const code = Array.isArray(value) ? value[0] : value;
-
-  if (!code) return null;
-
-  const messages: Record<string, string> = {
-    google_indisponivel: "Login Google indisponível agora. Use CPF e senha.",
-    google_codigo_ausente: "Retorno do Google inválido. Tente novamente.",
-    google_sessao_invalida: "Não foi possível validar sua sessão Google.",
-    google_usuario_invalido: "Não foi possível identificar sua conta Google.",
-    sessao_expirada: "Sessão expirada. Entre novamente para conectar o Google.",
-  };
-
-  return (
-    messages[code] ||
-    (code.includes("Conta Google")
-      ? code
-      : "Não foi possível entrar com Google. Use CPF e senha.")
-  );
-}
-
 function getPlanoError(value: string | string[] | undefined) {
   const code = Array.isArray(value) ? value[0] : value;
   return code === "plano_sem_app";
@@ -137,7 +116,11 @@ export default async function LoginProfissionalPage({
               </div>
             ) : null}
             <LoginProfissionalForm
-              oauthError={getGoogleErrorMessage(params.erro)}
+              errorMessage={
+                params.erro === "sessao_expirada"
+                  ? "Sessão expirada. Entre novamente com CPF e senha."
+                  : null
+              }
             />
           </div>
         </main>

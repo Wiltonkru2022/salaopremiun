@@ -36,9 +36,9 @@ function formatCpf(value: string) {
 }
 
 export default function LoginProfissionalForm({
-  oauthError,
+  errorMessage,
 }: {
-  oauthError?: string | null;
+  errorMessage?: string | null;
 }) {
   const [state, formAction] = useActionState(
     loginProfissionalAction,
@@ -101,9 +101,9 @@ export default function LoginProfissionalForm({
           Lembrar meu acesso
         </label>
 
-        {oauthError ? (
+        {errorMessage ? (
           <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-            {oauthError}
+            {errorMessage}
           </div>
         ) : null}
 
