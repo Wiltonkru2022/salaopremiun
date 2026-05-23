@@ -9,6 +9,7 @@ import {
   Bell,
   ShieldCheck,
   Settings,
+  Sparkles,
   Star,
   TicketPercent,
   UserRound,
@@ -29,12 +30,14 @@ function ProfileRow({
   label,
   icon: Icon,
   muted,
+  gold,
   prefetch,
 }: {
   href: string;
   label: string;
   icon: LucideIcon;
   muted?: boolean;
+  gold?: boolean;
   prefetch?: boolean;
 }) {
   return (
@@ -49,7 +52,7 @@ function ProfileRow({
         <Icon
           size={29}
           strokeWidth={1.9}
-          className={muted ? "text-zinc-950" : "text-[#b88918]"}
+          className={gold ? "text-[#b88918]" : "text-zinc-950"}
         />
         {label}
       </span>
@@ -72,7 +75,29 @@ export default async function ClientePerfilPage({
 
   return (
     <ClientAppFrame title="Perfil" subtitle="Sua conta no Salão Premium.">
-      <section className="mx-auto max-w-3xl px-5 py-5 md:px-6">
+      <section className="mx-auto min-h-dvh max-w-3xl bg-white px-5 pb-28 pt-[calc(env(safe-area-inset-top)+1.2rem)] md:px-6">
+        <header className="flex items-start justify-between">
+          <div>
+            <div className="inline-flex items-center gap-2 text-[13px] font-black uppercase tracking-[0.24em] text-[#9b6110]">
+              <Sparkles size={18} />
+              Salão Premium Cliente
+            </div>
+            <h1 className="mt-5 text-[2.2rem] font-black leading-none tracking-[-0.05em] text-zinc-950">
+              Perfil
+            </h1>
+            <p className="mt-3 text-xl text-zinc-500">
+              Sua conta no Salão Premium.
+            </p>
+          </div>
+          <Link
+            href="/app-cliente/notificacoes"
+            className="mt-11 flex h-14 w-14 items-center justify-center rounded-full border border-emerald-100 bg-emerald-50 text-emerald-500"
+            aria-label="Notificações"
+          >
+            <Bell size={27} strokeWidth={1.8} />
+          </Link>
+        </header>
+
         <div className="flex items-center gap-7 py-8">
           <div className="relative flex h-32 w-32 shrink-0 items-center justify-center rounded-full border-[3px] border-zinc-950 bg-zinc-50 text-6xl font-black text-zinc-950">
             {initial}
@@ -81,7 +106,7 @@ export default async function ClientePerfilPage({
             </span>
           </div>
           <div className="min-w-0">
-            <h1 className="break-words text-4xl font-black tracking-[-0.05em] text-zinc-950">
+            <h1 className="break-words text-[2.1rem] font-black leading-tight tracking-[-0.05em] text-zinc-950">
               {profile.nome || session.nome}
             </h1>
             <p className="mt-3 text-xl text-zinc-500">
@@ -128,21 +153,25 @@ export default async function ClientePerfilPage({
             href="/app-cliente/perfil/editar"
             label="Detalhes da conta"
             icon={UserRound}
+            gold
           />
           <ProfileRow
             href="/app-cliente/favoritos"
             label="Salões favoritos"
             icon={Star}
+            gold
           />
           <ProfileRow
             href="/app-cliente/cupons"
             label="Meus cupons"
             icon={TicketPercent}
+            gold
           />
           <ProfileRow
             href="/app-cliente/perfil/avaliacoes"
             label="Avaliações"
             icon={Star}
+            gold
           />
           <ProfileRow
             href="/app-cliente/perfil/pagamentos"

@@ -31,7 +31,7 @@ export default async function ClienteAppointmentsPage({
       subtitle={`Tudo certo, ${session.nome}. Veja o que está marcado e o que já pode avaliar.`}
     >
       <section className="mx-auto min-h-dvh max-w-3xl bg-white px-5 pb-28 pt-[calc(env(safe-area-inset-top)+1rem)] text-zinc-950">
-        <header className="mb-8 flex items-center gap-5">
+        <header className="mb-8 flex items-center gap-4">
           <Link
             href="/app-cliente"
             className="flex h-12 w-12 items-center justify-center -ml-2"
@@ -39,7 +39,7 @@ export default async function ClienteAppointmentsPage({
           >
             <ArrowLeft size={34} />
           </Link>
-          <h1 className="text-3xl font-black tracking-[-0.05em]">
+          <h1 className="min-w-0 flex-1 whitespace-nowrap text-[1.85rem] font-black leading-none tracking-[-0.05em]">
             Meus agendamentos
           </h1>
         </header>

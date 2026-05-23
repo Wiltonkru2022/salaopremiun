@@ -30,7 +30,9 @@ const CUSTOM_HEADER_ROUTES = [
   "/app-cliente/inicio",
   "/app-cliente/explorar",
   "/app-cliente/salao",
+  "/app-cliente/agenda",
   "/app-cliente/agendamentos",
+  "/app-cliente/perfil",
 ];
 
 export default function ClientMobileAppLayout({

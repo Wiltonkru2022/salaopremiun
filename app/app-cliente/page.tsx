@@ -37,7 +37,6 @@ function formatMonth(date: string) {
 
 export default async function AppClienteIndexPage() {
   const session = await validateClienteAppSession();
-  const isLoggedIn = Boolean(session.context);
   const [appointments, profile] = await Promise.all([
     session.context
       ? listClienteAppAppointments({

@@ -12,10 +12,7 @@ import {
   UserRound,
 } from "lucide-react";
 import ClientAppSalonCard from "@/components/client-app/ClientAppSalonCard";
-import type {
-  ClientAppNearbySalonListItem,
-  ClientAppSalonListItem,
-} from "@/lib/client-app/queries";
+import type { ClientAppSalonListItem } from "@/lib/client-app/queries";
 
 const categories = [
   { label: "Cabelos", query: "cabelo", icon: Sparkles },

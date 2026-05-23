@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useActionState, useMemo, useState } from "react";
 import { useFormStatus } from "react-dom";
-import { Bell, CalendarDays, Clock3, MapPin, WalletCards } from "lucide-react";
+import { Bell, CalendarDays, Clock3, MapPin, WalletCards, XCircle } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import {
   cancelClienteAppointmentAction,
   confirmClienteAppointmentAction,
@@ -113,10 +114,12 @@ function ActionButton({
   label,
   pendingLabel,
   tone = "dark",
+  icon: Icon,
 }: {
   label: string;
   pendingLabel: string;
   tone?: "dark" | "light" | "danger";
+  icon?: LucideIcon;
 }) {
   const { pending } = useFormStatus();
   const toneClass =
@@ -130,8 +133,9 @@ function ActionButton({
     <button
       type="submit"
       disabled={pending}
-      className={`h-12 rounded-2xl px-5 text-base font-black transition disabled:cursor-not-allowed disabled:opacity-60 ${toneClass}`}
+      className={`inline-flex h-12 items-center justify-center gap-3 rounded-2xl px-5 text-base font-black transition disabled:cursor-not-allowed disabled:opacity-60 ${toneClass}`}
     >
+      {Icon ? <Icon size={22} /> : null}
       {pending ? pendingLabel : label}
     </button>
   );
@@ -147,7 +151,12 @@ function CancelAppointmentForm({ idAgendamento }: { idAgendamento: string }) {
   return (
     <form action={formAction} className="space-y-2">
       <input type="hidden" name="agendamento" value={idAgendamento} />
-      <ActionButton label="Cancelar agendamento" pendingLabel="Cancelando..." tone="danger" />
+      <ActionButton
+        label="Cancelar agendamento"
+        pendingLabel="Cancelando..."
+        tone="danger"
+        icon={XCircle}
+      />
       {state.error ? (
         <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
           {state.error}
@@ -246,8 +255,9 @@ function RescheduleAppointmentForm({
       <button
         type="button"
         onClick={() => void loadAvailability()}
-        className="h-12 rounded-2xl bg-zinc-50 px-5 text-base font-black text-zinc-950"
+        className="inline-flex h-12 items-center justify-center gap-3 rounded-2xl bg-zinc-50 px-5 text-base font-black text-zinc-950"
       >
+        <CalendarDays size={22} />
         Reagendar
       </button>
 
@@ -302,10 +312,7 @@ function RescheduleAppointmentForm({
                   </button>
                 ))}
               </div>
-              <ActionButton
-                label="Confirmar"
-                pendingLabel="Reagendando..."
-              />
+              <ActionButton label="Confirmar" pendingLabel="Reagendando..." />
             </>
           ) : (
             <div className="rounded-xl bg-white px-3 py-2 text-sm text-zinc-500">
@@ -360,7 +367,8 @@ export default function ClientAppointmentsManager({
 
       <div className="space-y-4">
         {agendamentos.length ? (
-          agendamentos.map((item) => (
+          <>
+          {agendamentos.map((item) => (
             <article key={item.id} className="space-y-5">
               <div className="flex flex-wrap gap-3">
                 <span className="inline-flex items-center gap-3 rounded-2xl bg-zinc-100 px-5 py-3 text-base font-semibold text-zinc-800">
@@ -476,7 +484,19 @@ export default function ClientAppointmentsManager({
                 ) : null}
               </div>
             </article>
-          ))
+          ))}
+          <div className="flex items-center gap-5 rounded-[1.5rem] bg-zinc-50 p-6">
+            <CalendarDays size={46} className="shrink-0 text-zinc-950" />
+            <div>
+              <h2 className="text-xl font-black text-zinc-950">
+                Ainda não há agendamento ativo
+              </h2>
+              <p className="mt-1 text-base text-zinc-500">
+                Escolha um salão e reserve quando quiser.
+              </p>
+            </div>
+          </div>
+          </>
         ) : (
           <div className="flex items-center gap-5 rounded-[1.5rem] bg-zinc-50 p-6">
             <CalendarDays size={46} className="shrink-0 text-zinc-950" />

@@ -82,11 +82,11 @@ export default function ClientAppBottomNav() {
               className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-2xl text-[11px] font-semibold transition ${
                 active
                   ? isDark
-                    ? "text-[#f5b83d]"
-                    : "text-[#b88918]"
+                    ? "text-[#f5b83d] [&_span]:text-[#f5b83d] [&_svg]:text-[#f5b83d]"
+                    : "text-[#b88918] [&_span]:text-[#b88918] [&_svg]:text-[#b88918]"
                   : isDark
-                    ? "text-zinc-200 hover:text-[#f5b83d]"
-                    : "text-zinc-950 hover:bg-zinc-50"
+                    ? "text-zinc-200 hover:text-[#f5b83d] [&_span]:text-zinc-200 [&_svg]:text-zinc-200"
+                    : "text-zinc-950 hover:bg-zinc-50 [&_span]:text-zinc-950 [&_svg]:text-zinc-950"
               }`}
             >
               {item.label}
