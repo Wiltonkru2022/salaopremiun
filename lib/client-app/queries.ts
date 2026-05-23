@@ -6,7 +6,6 @@ import {
 } from "@/lib/client-app/eligibility";
 import { captureSystemError } from "@/lib/monitoring/server";
 import { canUsePlanFeature, isSalaoStatusOperational } from "@/lib/plans/access";
-import { ensureRecoveryCoupons } from "@/lib/client-app/inactive-recovery";
 
 export type ClientAppSalonListItem = ClientAppEligibleSalon & {
   notaMedia: number | null;
@@ -761,7 +760,6 @@ export async function listClienteAppAvailableCoupons(params: {
 
   try {
     const supabaseAdmin = getSupabaseAdmin();
-    await ensureRecoveryCoupons(idSalao);
 
     const { data: vinculo } = await (supabaseAdmin as any)
       .from("clientes_auth")
@@ -847,6 +845,19 @@ export async function listClienteAppAvailableCoupons(params: {
         String(resgate.id_cupom || "").trim()
       )
     );
+    const { data: permitidos } = cupomIds.length
+      ? await (supabaseAdmin as any)
+          .from("cupom_salao_clientes")
+          .select("id_cupom")
+          .eq("id_salao", idSalao)
+          .eq("id_cliente", idCliente)
+          .in("id_cupom", cupomIds)
+      : { data: [] };
+    const allowedCouponIds = new Set(
+      ((permitidos || []) as Array<Record<string, unknown>>).map((permitido) =>
+        String(permitido.id_cupom || "").trim()
+      )
+    );
 
     return ((cupons || []) as Array<Record<string, unknown>>)
       .filter((cupom) => {
@@ -855,12 +866,12 @@ export async function listClienteAppAvailableCoupons(params: {
         const validoDe = String(cupom.valido_de || "").slice(0, 10);
         const validoAte = String(cupom.valido_ate || "").slice(0, 10);
         const diasInativo = Number(cupom.dias_cliente_inativo || 0);
+        const clienteTemAcesso =
+          allowedCouponIds.has(idCupom) || redeemedCouponIds.has(idCupom);
         if (usedCouponIds.has(idCupom)) return false;
+        if (!clienteTemAcesso) return false;
         if (validoDe && validoDe > hoje) return false;
         if (validoAte && validoAte < hoje) return false;
-        if (cupom.requer_resgate !== false && !redeemedCouponIds.has(idCupom)) {
-          return false;
-        }
         if (cupom.requer_resgate === false && diasInativo > 0 && diasInativo > inactiveDays) {
           return false;
         }
@@ -938,7 +949,7 @@ export async function listClienteAppCouponWallet(params: {
       .filter(Boolean);
     if (!cupomIds.length) return [];
 
-    const [usosResult, resgatesResult] = await Promise.all([
+    const [usosResult, resgatesResult, permitidosResult] = await Promise.all([
       (supabaseAdmin as any)
         .from("cupom_salao_usos")
         .select("id_cupom, id_cliente, status, created_at")
@@ -951,6 +962,11 @@ export async function listClienteAppCouponWallet(params: {
         .eq("cliente_app_conta_id", idConta)
         .eq("status", "resgatado")
         .in("id_cupom", cupomIds),
+      (supabaseAdmin as any)
+        .from("cupom_salao_clientes")
+        .select("id_cupom, id_cliente")
+        .in("id_cupom", cupomIds)
+        .in("id_cliente", idClientes),
     ]);
 
     const usedByCoupon = new Map<string, Record<string, unknown>>();
@@ -962,14 +978,17 @@ export async function listClienteAppCouponWallet(params: {
         String(resgate.id_cupom || "")
       )
     );
+    const allowedIds = new Set(
+      ((permitidosResult.data || []) as Array<Record<string, unknown>>).map((permitido) =>
+        String(permitido.id_cupom || "")
+      )
+    );
     const today = new Date().toISOString().slice(0, 10);
 
     return ((cupons || []) as Array<Record<string, unknown>>)
       .filter((cupom) => {
-        const requerResgate = cupom.requer_resgate !== false;
         const idCupom = String(cupom.id || "");
-        if (requerResgate && !redeemedIds.has(idCupom) && !usedByCoupon.has(idCupom)) return false;
-        return true;
+        return redeemedIds.has(idCupom) || allowedIds.has(idCupom) || usedByCoupon.has(idCupom);
       })
       .map((cupom) => {
         const idCupom = String(cupom.id || "");
