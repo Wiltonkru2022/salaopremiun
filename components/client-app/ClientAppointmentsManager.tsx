@@ -388,12 +388,12 @@ export default function ClientAppointmentsManager({
 
                 <div className="mt-4 flex flex-wrap gap-2">
                   {needsSignalPayment(item) ? (
-                    <Link
+                    <a
                       href={`/app-cliente/agendamentos/${item.id}/sinal`}
                       className="inline-flex h-11 items-center rounded-xl bg-emerald-600 px-4 text-sm font-black text-white"
                     >
                       Pagar sinal e enviar comprovante
-                    </Link>
+                    </a>
                   ) : null}
                   {canConfirmPresence(item) ? (
                     <ConfirmAppointmentForm idAgendamento={item.id} />
