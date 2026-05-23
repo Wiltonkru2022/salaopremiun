@@ -11,6 +11,7 @@ import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 export type ClienteBookingState = {
   error: string | null;
+  redirectTo?: string | null;
 };
 
 export async function createClienteBookingAction(
@@ -48,10 +49,15 @@ export async function createClienteBookingAction(
 
   revalidatePath(`/app-cliente/salao/${idSalao}`);
   revalidatePath("/app-cliente/agendamentos");
+
   if (result.requiresSignal && result.idAgendamento) {
-    redirect(`/app-cliente/agendamentos/${result.idAgendamento}/sinal`);
+    return {
+      error: null,
+      redirectTo: `/app-cliente/agendamentos/${result.idAgendamento}/sinal`,
+    };
   }
-  redirect("/app-cliente/agendamentos?status=agendado");
+
+  return { error: null, redirectTo: "/app-cliente/agendamentos?status=agendado" };
 }
 
 export async function joinClienteWaitlistAction(formData: FormData) {

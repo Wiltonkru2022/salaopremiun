@@ -105,6 +105,9 @@ export type ClientAppAppointmentListItem = {
   horaInicio: string;
   horaFim: string;
   status: string;
+  sinalStatus: string | null;
+  sinalValor: number | null;
+  reservaExpiraEm: string | null;
   confirmacaoClienteStatus: string;
   clienteConfirmouEm: string | null;
   observacoes: string | null;
@@ -1067,7 +1070,7 @@ export async function listClienteAppAppointments(params: {
     const { data, error } = await (supabaseAdmin as any)
       .from("agendamentos")
       .select(
-        "id, cliente_id, id_salao, servico_id, profissional_id, data, hora_inicio, hora_fim, status, cliente_confirmacao_status, cliente_confirmou_em, observacoes, servicos(nome), profissionais(nome, nome_exibicao)"
+        "id, cliente_id, id_salao, servico_id, profissional_id, data, hora_inicio, hora_fim, status, sinal_status, sinal_valor, reserva_expira_em, cliente_confirmacao_status, cliente_confirmou_em, observacoes, servicos(nome), profissionais(nome, nome_exibicao)"
       )
       .in("cliente_id", clientesIds)
       .order("data", { ascending: false })
@@ -1113,6 +1116,12 @@ export async function listClienteAppAppointments(params: {
         horaInicio: String(item.hora_inicio || ""),
         horaFim: String(item.hora_fim || ""),
         status,
+        sinalStatus: String(item.sinal_status || "").trim() || null,
+        sinalValor:
+          item.sinal_valor === null || item.sinal_valor === undefined
+            ? null
+            : Number(item.sinal_valor),
+        reservaExpiraEm: String(item.reserva_expira_em || "").trim() || null,
         confirmacaoClienteStatus:
           String(item.cliente_confirmacao_status || "").trim() || "aguardando",
         clienteConfirmouEm:
@@ -1135,7 +1144,10 @@ export async function listClienteAppAppointments(params: {
               )?.nome ||
               ""
           ).trim() || "Profissional",
-        podeCancelar: status === "pendente" || status === "confirmado",
+        podeCancelar:
+          status === "pendente" ||
+          status === "confirmado" ||
+          status === "reservado_aguardando_pagamento",
         podeAvaliar:
           !avaliado &&
           (status === "atendido" || status === "aguardando_pagamento"),

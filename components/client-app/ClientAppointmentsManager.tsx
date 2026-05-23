@@ -38,12 +38,26 @@ function formatDay(value: string) {
 
 function formatStatus(value: string) {
   const normalized = String(value || "").toLowerCase();
+  if (normalized === "reservado_aguardando_pagamento") {
+    return "Aguardando pagamento do sinal";
+  }
+  if (normalized === "aguardando_confirmacao_salao") {
+    return "Comprovante enviado";
+  }
   if (normalized === "pendente") return "Pendente";
   if (normalized === "confirmado") return "Confirmada";
   if (normalized === "cancelado") return "Cancelada";
   if (normalized === "atendido") return "Finalizada";
   if (normalized === "faltou") return "Não compareceu";
   return value || "Status";
+}
+
+function formatCurrency(value: number | null | undefined) {
+  if (!value) return null;
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  }).format(value);
 }
 
 function formatClientConfirmation(value: string) {
@@ -63,6 +77,14 @@ function canConfirmPresence(item: ClientAppAppointmentListItem) {
   return (
     (status === "pendente" || status === "confirmado") &&
     clientStatus !== "confirmado"
+  );
+}
+
+function needsSignalPayment(item: ClientAppAppointmentListItem) {
+  return (
+    String(item.status || "").toLowerCase() ===
+      "reservado_aguardando_pagamento" ||
+    String(item.sinalStatus || "").toLowerCase() === "aguardando_pagamento"
   );
 }
 
@@ -337,6 +359,11 @@ export default function ClientAppointmentsManager({
                   <span className="inline-flex rounded-full bg-zinc-100 px-3 py-1 text-xs font-bold text-zinc-500">
                     {formatStatus(item.status)}
                   </span>
+                  {needsSignalPayment(item) && item.sinalValor ? (
+                    <span className="inline-flex rounded-full bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700">
+                      Sinal {formatCurrency(item.sinalValor)}
+                    </span>
+                  ) : null}
                   {item.podeCancelar ? (
                     <span
                       className={`inline-flex rounded-full px-3 py-1 text-xs font-bold ${
@@ -360,6 +387,14 @@ export default function ClientAppointmentsManager({
                 </p>
 
                 <div className="mt-4 flex flex-wrap gap-2">
+                  {needsSignalPayment(item) ? (
+                    <Link
+                      href={`/app-cliente/agendamentos/${item.id}/sinal`}
+                      className="inline-flex h-11 items-center rounded-xl bg-emerald-600 px-4 text-sm font-black text-white"
+                    >
+                      Pagar sinal e enviar comprovante
+                    </Link>
+                  ) : null}
                   {canConfirmPresence(item) ? (
                     <ConfirmAppointmentForm idAgendamento={item.id} />
                   ) : null}

@@ -115,7 +115,7 @@ export default async function ClienteAgendamentoSinalPage({
               className="inline-flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-5 text-base font-black text-white shadow-sm transition hover:bg-emerald-700"
             >
               <MessageCircle size={20} />
-              Enviar comprovante pelo WhatsApp
+              Enviar comprovante para o salão
             </button>
           </form>
         </div>

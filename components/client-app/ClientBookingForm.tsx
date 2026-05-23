@@ -12,6 +12,7 @@ import {
   UserRound,
 } from "lucide-react";
 import { useActionState, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useFormStatus } from "react-dom";
 import {
   createClienteBookingAction,
@@ -245,6 +246,7 @@ export default function ClientBookingForm({
   cupomInicial?: string;
 }) {
   const initialState: ClienteBookingState = { error: null };
+  const router = useRouter();
   const [state, formAction] = useActionState<ClienteBookingState, FormData>(
     createClienteBookingAction,
     initialState
@@ -378,6 +380,12 @@ export default function ClientBookingForm({
       ? "Esse profissional ainda não atende esse serviço no app. Escolha outro profissional ou volte para serviços."
       : availabilityError
     : null;
+
+  useEffect(() => {
+    if (state.redirectTo) {
+      router.replace(state.redirectTo);
+    }
+  }, [router, state.redirectTo]);
 
   useEffect(() => {
     if (!profissionalId) return;
