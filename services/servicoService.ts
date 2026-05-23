@@ -88,19 +88,22 @@ export function createServicoService(
         throw new Error("Nao foi possivel obter o servico salvo.");
       }
 
-      if (
-        Object.prototype.hasOwnProperty.call(
-          params.servicoPayload,
-          "app_cliente_visivel"
-        )
-      ) {
+      const camposServicoAtualizados: Record<string, unknown> = {};
+
+      for (const campo of [
+        "app_cliente_visivel",
+        "cobra_sinal_agendamento",
+        "sinal_percentual_personalizado",
+      ]) {
+        if (Object.prototype.hasOwnProperty.call(params.servicoPayload, campo)) {
+          camposServicoAtualizados[campo] = params.servicoPayload[campo];
+        }
+      }
+
+      if (Object.keys(camposServicoAtualizados).length) {
         const { error: updateVisibilityError } = await supabaseAdmin
           .from("servicos")
-          .update({
-            app_cliente_visivel: Boolean(
-              params.servicoPayload.app_cliente_visivel
-            ),
-          })
+          .update(camposServicoAtualizados)
           .eq("id", idServico)
           .eq("id_salao", params.idSalao);
 
