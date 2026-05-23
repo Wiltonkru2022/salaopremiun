@@ -403,7 +403,7 @@ export default function ClientAppointmentsManager({
                       href={`/app-cliente/salao/${item.idSalao}`}
                       className="inline-flex h-11 items-center rounded-xl bg-zinc-950 px-4 text-sm font-black text-white"
                     >
-                      Reserve novamente
+                      Reservar novamente
                     </Link>
                   ) : null}
                   {item.podeCancelar ? (
@@ -466,10 +466,10 @@ export default function ClientAppointmentsManager({
               reagendamento, cancelamento e avaliação.
             </p>
             <Link
-              href="/app-cliente/inicio"
+              href="/app-cliente"
               className="mt-6 inline-flex h-12 items-center justify-center rounded-2xl bg-zinc-950 px-6 text-sm font-black text-white"
             >
-              Agende já
+              Reservar Online
             </Link>
           </div>
         )}

@@ -1,14 +1,14 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { CalendarDays, Heart, Search, UserRound } from "lucide-react";
+import { CalendarDays, CalendarPlus, Search, UserRound } from "lucide-react";
 import ClientAppPendingLink from "@/components/client-app/ClientAppPendingLink";
 
 const navItems = [
   {
-    label: "Meu app",
-    icon: Heart,
-    href: "/app-cliente/meuapp",
+    label: "Reservar",
+    icon: CalendarPlus,
+    href: "/app-cliente",
     match: (pathname: string) =>
       pathname === "/app-cliente" || pathname === "/app-cliente/meuapp",
   },

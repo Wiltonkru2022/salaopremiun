@@ -9,6 +9,10 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const idSalao = String(searchParams.get("salao") || "").trim();
   const idServico = String(searchParams.get("servico") || "").trim();
+  const idsServicos = searchParams
+    .getAll("servicos")
+    .map((item) => String(item || "").trim())
+    .filter(Boolean);
   const idProfissional = String(searchParams.get("profissional") || "").trim();
   const ignoreAgendamentoId = String(searchParams.get("ignorar") || "").trim() || null;
   const startDate = String(searchParams.get("inicio") || "").trim() || null;
@@ -32,6 +36,7 @@ export async function GET(request: Request) {
   const result = await getClienteAppBookingAvailability({
     idSalao,
     idServico,
+    idsServicos,
     idProfissional,
     ignoreAgendamentoId,
     startDate,

@@ -34,6 +34,8 @@ export type ClientAppServiceListItem = {
   id: string;
   nome: string;
   descricao: string | null;
+  categoriaId: string | null;
+  categoriaNome: string;
   preco: number | null;
   duracaoMinutos: number | null;
   exigeAvaliacao: boolean;
@@ -596,7 +598,7 @@ async function getClientAppSalonDetailLive(idSalao: string) {
           .limit(16),
         (supabaseAdmin as any)
           .from("servicos")
-          .select("id, nome, descricao_publica, descricao, preco, preco_padrao, duracao, duracao_minutos, exige_avaliacao, eh_combo, combo_resumo, cobra_sinal_agendamento, sinal_percentual_personalizado")
+          .select("id, nome, descricao_publica, descricao, preco, preco_padrao, duracao, duracao_minutos, exige_avaliacao, eh_combo, combo_resumo, cobra_sinal_agendamento, sinal_percentual_personalizado, id_categoria, categoria")
           .eq("id_salao", resolvedSalaoId)
           .eq("ativo", true)
           .eq("app_cliente_visivel", true)
@@ -674,6 +676,9 @@ async function getClientAppSalonDetailLive(idSalao: string) {
               descricao:
                 String(item.descricao_publica || item.descricao || "").trim() ||
                 null,
+              categoriaId: String(item.id_categoria || "").trim() || null,
+              categoriaNome:
+                String(item.categoria || "").trim() || "Outros serviços",
               preco: parseNullableNumber(item.preco_padrao ?? item.preco),
               duracaoMinutos:
                 Number(item.duracao_minutos ?? item.duracao ?? 0) || null,

@@ -1,4 +1,4 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 import {
   CalendarDays,
   ChevronRight,
@@ -16,7 +16,7 @@ import {
 } from "@/lib/client-app/queries";
 
 export const metadata = {
-  title: "Meu App",
+  title: "Reservar Online",
 };
 
 function formatDate(date: string) {
@@ -59,11 +59,11 @@ export default async function AppClienteIndexPage() {
 
   return (
     <ClientAppFrame
-      title="Meu app"
+      title="Reservar Online"
       subtitle={
         isLoggedIn
-          ? "Sua experiência no Salão Premium."
-          : "Entre para acompanhar seus agendamentos."
+          ? "Escolha um salão e reserve seu horário."
+          : "Entre para reservar e acompanhar seus horários."
       }
     >
       <section className="mx-auto max-w-5xl space-y-5 px-4 py-2 md:px-6">
@@ -74,12 +74,12 @@ export default async function AppClienteIndexPage() {
           </div>
           <h2 className="mt-5 text-3xl font-black tracking-[-0.04em] sm:text-4xl">
             {isLoggedIn
-              ? `Oi, ${profile?.nome || session.context?.nome || "cliente"}`
-              : "Bem-vindo ao seu app de beleza"}
+              ? `Reserve seu horário, ${profile?.nome || session.context?.nome || "cliente"}`
+              : "Reserve horário em poucos passos"}
           </h2>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-zinc-300 sm:text-base">
-            Encontre salões, acompanhe seus horários, veja créditos e volte para
-            seus atendimentos sem se perder.
+            A primeira ação do app é agendar. Escolha o salão, selecione serviços,
+            profissional, data e horário sem procurar menu escondido.
           </p>
           <div className="mt-5 flex flex-wrap gap-3">
             <Link
@@ -87,7 +87,7 @@ export default async function AppClienteIndexPage() {
               className="inline-flex min-h-12 items-center gap-2 rounded-full bg-white px-5 text-sm font-black text-zinc-950"
             >
               <Search size={18} />
-              Explorar salões
+              Reservar Online
             </Link>
             {!isLoggedIn ? (
               <Link
@@ -184,7 +184,7 @@ export default async function AppClienteIndexPage() {
               href="/app-cliente/inicio"
               className="inline-flex items-center gap-1 text-sm font-black text-zinc-700"
             >
-              Ver todos
+              Ver salões
               <ChevronRight size={16} />
             </Link>
           </div>
@@ -221,3 +221,6 @@ export default async function AppClienteIndexPage() {
     </ClientAppFrame>
   );
 }
+
+
+

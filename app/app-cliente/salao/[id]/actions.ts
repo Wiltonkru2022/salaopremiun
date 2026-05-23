@@ -20,10 +20,18 @@ export async function createClienteBookingAction(
   const session = await requireClienteAppContext();
   const idSalao = String(formData.get("salao") || "").trim();
   const idServico = String(formData.get("servico") || "").trim();
+  const idsServicos = formData
+    .getAll("servicos")
+    .map((item) => String(item || "").trim())
+    .filter(Boolean);
   const idProfissional = String(formData.get("profissional") || "").trim();
   const data = String(formData.get("data") || "");
   const horaInicio = String(formData.get("hora_inicio") || "");
   const observacoes = String(formData.get("observacoes") || "");
+  const pessoaAgendadaTipo = String(formData.get("pessoa_tipo") || "mim");
+  const pessoaAgendadaNome = String(formData.get("pessoa_nome") || "");
+  const pessoaAgendadaWhatsapp = String(formData.get("pessoa_whatsapp") || "");
+  const pessoaAgendadaObservacao = String(formData.get("pessoa_observacao") || "");
   const codigoCupom = String(formData.get("cupom") || "");
   const adicionaisIds = formData
     .getAll("adicionais")
@@ -34,10 +42,15 @@ export async function createClienteBookingAction(
     idSalao,
     idConta: session.idConta,
     idServico,
+    idsServicos,
     idProfissional,
     data,
     horaInicio,
     observacoes,
+    pessoaAgendadaTipo,
+    pessoaAgendadaNome,
+    pessoaAgendadaWhatsapp,
+    pessoaAgendadaObservacao,
     adicionaisIds,
     codigoCupom,
   });

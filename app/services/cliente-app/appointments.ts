@@ -41,10 +41,15 @@ type ClienteBookingParams = {
   idSalao: string;
   idConta: string;
   idServico: string;
+  idsServicos?: string[] | null;
   idProfissional: string;
   data: string;
   horaInicio: string;
   observacoes?: string | null;
+  pessoaAgendadaTipo?: "mim" | "outra_pessoa" | string | null;
+  pessoaAgendadaNome?: string | null;
+  pessoaAgendadaWhatsapp?: string | null;
+  pessoaAgendadaObservacao?: string | null;
   adicionaisIds?: string[] | null;
   codigoCupom?: string | null;
 };
@@ -108,6 +113,7 @@ export type ClienteAppAvailabilityResult =
       intervaloMinutos: number;
       bufferMinutos: number;
       duracaoMinutos: number;
+      valorTotal: number;
       dias: ClienteAppAvailabilityDay[];
     }
   | { ok: false; error: string };
@@ -352,6 +358,69 @@ async function loadBookingBaseContext(params: {
 
 function addMinutes(date: Date, minutes: number) {
   return new Date(date.getTime() + minutes * 60_000);
+}
+
+async function loadBookingMultiContext(params: {
+  supabaseAdmin: any;
+  idSalao: string;
+  idServico: string;
+  idsServicos?: string[] | null;
+  idProfissional: string;
+}) {
+  const idsServicos = Array.from(
+    new Set(
+      [params.idServico, ...(params.idsServicos || [])]
+        .map((item) => String(item || "").trim())
+        .filter(Boolean)
+    )
+  );
+
+  const contexts = [];
+  for (const idServico of idsServicos) {
+    const context = await loadBookingBaseContext({
+      supabaseAdmin: params.supabaseAdmin,
+      idSalao: params.idSalao,
+      idServico,
+      idProfissional: params.idProfissional,
+    });
+    if (!context.ok) {
+      return idsServicos.length > 1 &&
+        context.error.toLowerCase().includes("vinculado")
+        ? {
+            ok: false as const,
+            error:
+              "Nenhum profissional disponível para todos os serviços selecionados. Remova um serviço ou escolha outro.",
+          }
+        : context;
+    }
+    contexts.push(context);
+  }
+
+  const first = contexts[0];
+  if (!first) {
+    return { ok: false as const, error: "Escolha pelo menos um serviço." };
+  }
+
+  const servicos = contexts.map((context, index) => ({
+    id: idsServicos[index],
+    nome: context.servicoNome,
+    preco: Number(context.servicoPreco || 0),
+    duracaoMinutos: Number(context.duracao || 0) || 30,
+  }));
+
+  return {
+    ...first,
+    idServicos: idsServicos,
+    servicos,
+    duracao: servicos.reduce((sum, servico) => sum + servico.duracaoMinutos, 0),
+    servicoNome:
+      servicos.length > 1 ? `${servicos.length} serviços` : first.servicoNome,
+    servicoPreco: servicos.reduce((sum, servico) => sum + servico.preco, 0),
+    sinalAtivo: contexts.some((context) => context.sinalAtivo),
+    sinalPercentual:
+      contexts.find((context) => Number(context.sinalPercentual || 0) > 0)
+        ?.sinalPercentual || first.sinalPercentual,
+  };
 }
 
 function roundMoney(value: number) {
@@ -815,6 +884,13 @@ export async function createClienteAppAppointment(
   const idSalao = String(params.idSalao || "").trim();
   const idConta = String(params.idConta || "").trim();
   const idServico = String(params.idServico || "").trim();
+  const idsServicos = Array.from(
+    new Set(
+      [idServico, ...(params.idsServicos || [])]
+        .map((item) => String(item || "").trim())
+        .filter(Boolean)
+    )
+  ).slice(0, 8);
   const idProfissional = String(params.idProfissional || "").trim();
   const data = normalizeDate(params.data);
   const horaInicio = normalizeTimeString(params.horaInicio);
@@ -824,11 +900,11 @@ export async function createClienteAppAppointment(
     new Set(
       (params.adicionaisIds || [])
         .map((item) => String(item || "").trim())
-        .filter((item) => item && item !== idServico)
+        .filter((item) => item && !idsServicos.includes(item))
     )
   ).slice(0, 3);
 
-  if (!idSalao || !idConta || !idServico || !idProfissional || !data) {
+  if (!idSalao || !idConta || !idsServicos.length || !idProfissional || !data) {
     return { ok: false, error: "Preencha serviço, profissional, data e horário." };
   }
 
@@ -871,10 +947,11 @@ export async function createClienteAppAppointment(
           .eq("id_salao", idSalao)
           .limit(1)
           .maybeSingle(),
-        loadBookingBaseContext({
+        loadBookingMultiContext({
           supabaseAdmin,
           idSalao,
           idServico,
+          idsServicos,
           idProfissional,
         }),
       ]);
@@ -897,6 +974,7 @@ export async function createClienteAppAppointment(
       const {
         config,
         profissional,
+        servicos,
         duracao,
         servicoNome,
         servicoPreco,
@@ -1095,6 +1173,35 @@ export async function createClienteAppAppointment(
           .join("\n\n");
       }
 
+      const pessoaTipo =
+        String(params.pessoaAgendadaTipo || "mim") === "outra_pessoa"
+          ? "outra_pessoa"
+          : "mim";
+      const pessoaNome = String(params.pessoaAgendadaNome || "").trim();
+      const pessoaWhatsapp = String(params.pessoaAgendadaWhatsapp || "")
+        .replace(/\D/g, "")
+        .trim();
+      const pessoaObservacao =
+        String(params.pessoaAgendadaObservacao || "").trim() || null;
+      const pessoaTexto =
+        pessoaTipo === "outra_pessoa"
+          ? [
+              `Reserva para outra pessoa: ${pessoaNome || "nome não informado"}.`,
+              pessoaWhatsapp ? `WhatsApp: ${pessoaWhatsapp}.` : "",
+              pessoaObservacao ? `Observação: ${pessoaObservacao}.` : "",
+            ]
+              .filter(Boolean)
+              .join("\n")
+          : null;
+      const servicosTexto =
+        servicos.length > 1
+          ? `Serviços selecionados: ${servicos.map((servico) => servico.nome).join(", ")}.`
+          : null;
+      const observacoesFinais =
+        [observacoesComAdicionais, pessoaTexto, servicosTexto]
+          .filter(Boolean)
+          .join("\n\n") || null;
+
       const { data: insertedAppointment, error: insertError } = await supabaseAdmin
         .from("agendamentos")
         .insert({
@@ -1106,7 +1213,7 @@ export async function createClienteAppAppointment(
           hora_inicio: horaInicio,
           hora_fim: horaFim,
           duracao_minutos: duracao,
-          observacoes: observacoesComAdicionais,
+          observacoes: observacoesFinais,
           id_cupom_salao: cupomResult.cupom?.id || null,
           codigo_cupom: cupomResult.cupom?.id ? codigoCupom : null,
           desconto_cupom_valor: cupomResult.desconto,
@@ -1135,6 +1242,22 @@ export async function createClienteAppAppointment(
       }
 
       const idAgendamento = String(insertedAppointment.id);
+
+      const servicosExtrasDoAgendamento = servicos.slice(1).map((servico) => ({
+        id_salao: idSalao,
+        id_agendamento: idAgendamento,
+        id_servico: servico.id,
+        nome: servico.nome,
+        preco: servico.preco || null,
+        status: "aceito",
+        origem: "app_cliente_reserva_online",
+      }));
+
+      if (servicosExtrasDoAgendamento.length) {
+        await (supabaseAdmin as any)
+          .from("agendamento_adicionais")
+          .insert(servicosExtrasDoAgendamento);
+      }
 
       if (adicionaisRowsSalvos.length) {
         await (supabaseAdmin as any).from("agendamento_adicionais").insert(
@@ -1220,15 +1343,23 @@ export async function createClienteAppAppointment(
 export async function getClienteAppBookingAvailability(params: {
   idSalao: string;
   idServico: string;
+  idsServicos?: string[] | null;
   idProfissional: string;
   ignoreAgendamentoId?: string | null;
   startDate?: string | null;
 }): Promise<ClienteAppAvailabilityResult> {
   const idSalao = String(params.idSalao || "").trim();
   const idServico = String(params.idServico || "").trim();
+  const idsServicos = Array.from(
+    new Set(
+      [idServico, ...(params.idsServicos || [])]
+        .map((item) => String(item || "").trim())
+        .filter(Boolean)
+    )
+  ).slice(0, 8);
   const idProfissional = String(params.idProfissional || "").trim();
 
-  if (!idSalao || !idServico || !idProfissional) {
+  if (!idSalao || !idsServicos.length || !idProfissional) {
     return {
       ok: false,
       error: "Escolha serviço e profissional para ver os horários disponíveis.",
@@ -1248,10 +1379,11 @@ export async function getClienteAppBookingAvailability(params: {
     actorId: idProfissional,
     idSalao,
     run: async (supabaseAdmin) => {
-      const bookingContext = await loadBookingBaseContext({
+      const bookingContext = await loadBookingMultiContext({
         supabaseAdmin,
         idSalao,
         idServico,
+        idsServicos,
         idProfissional,
       });
 
@@ -1259,7 +1391,7 @@ export async function getClienteAppBookingAvailability(params: {
         return bookingContext;
       }
 
-      const { config, profissional, duracao } = bookingContext;
+      const { config, profissional, duracao, servicoPreco } = bookingContext;
       const today = new Date();
       const todayStart = new Date(
         today.getFullYear(),
@@ -1369,6 +1501,7 @@ export async function getClienteAppBookingAvailability(params: {
         intervaloMinutos: config.intervalo_minutos,
         bufferMinutos: CLIENT_BOOKING_BUFFER_MINUTES,
         duracaoMinutos: duracao,
+        valorTotal: Number(servicoPreco || 0),
         dias,
       };
     },

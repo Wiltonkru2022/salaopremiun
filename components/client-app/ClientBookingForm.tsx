@@ -7,15 +7,16 @@ import {
   ChevronLeft,
   ChevronRight,
   Clock3,
+  Plus,
   Search,
   Scissors,
   UserRound,
+  UsersRound,
 } from "lucide-react";
 import { useActionState, useEffect, useMemo, useState } from "react";
 import { useFormStatus } from "react-dom";
 import {
   createClienteBookingAction,
-  joinClienteWaitlistAction,
   type ClienteBookingState,
 } from "@/app/app-cliente/salao/[id]/actions";
 import type {
@@ -45,7 +46,24 @@ export type ClientBookingCoupon = {
   validoAte: string | null;
 };
 
-type StepKey = "profissional" | "servico" | "horario";
+type StepKey =
+  | "servicos"
+  | "selecionados"
+  | "pessoa"
+  | "profissional"
+  | "data"
+  | "horario"
+  | "resumo";
+
+const STEP_LABELS: Record<StepKey, string> = {
+  servicos: "Serviços",
+  selecionados: "Selecionados",
+  pessoa: "Pessoa",
+  profissional: "Profissional",
+  data: "Data",
+  horario: "Horário",
+  resumo: "Resumo",
+};
 
 function normalizeSearch(value: string) {
   return value
@@ -74,57 +92,15 @@ function getTodayDate() {
   return new Date(now.getFullYear(), now.getMonth(), now.getDate());
 }
 
-function getWaitlistDefaultDate(monthCursor: Date) {
-  const today = getTodayDate();
-  const monthStart = new Date(monthCursor.getFullYear(), monthCursor.getMonth(), 1);
-
-  if (
-    monthStart.getFullYear() === today.getFullYear() &&
-    monthStart.getMonth() === today.getMonth()
-  ) {
-    return formatDateInput(today);
-  }
-
-  return formatDateInput(monthStart > today ? monthStart : today);
-}
-
-function getInitialBookingDate(dias: AvailabilityDay[], monthCursor: Date) {
-  const preferredDate = getWaitlistDefaultDate(monthCursor);
-  const preferredDay = dias.find((dia) => dia.data === preferredDate);
-
-  if (preferredDay) {
-    return {
-      data: preferredDay.data,
-      horaInicio: preferredDay.horarios[0]?.horaInicio || "",
-    };
-  }
-
-  if (
-    monthCursor.getFullYear() === getTodayDate().getFullYear() &&
-    monthCursor.getMonth() === getTodayDate().getMonth()
-  ) {
-    return {
-      data: preferredDate,
-      horaInicio: "",
-    };
-  }
-
-  return {
-    data: dias[0]?.data || preferredDate,
-    horaInicio: dias[0]?.horarios[0]?.horaInicio || "",
-  };
-}
-
 function addMonths(date: Date, amount: number) {
   return new Date(date.getFullYear(), date.getMonth() + amount, 1);
 }
 
 function formatMonthLabel(date: Date) {
-  const base = new Date(date.getFullYear(), date.getMonth(), 1);
   return new Intl.DateTimeFormat("pt-BR", {
     month: "long",
     year: "numeric",
-  }).format(base);
+  }).format(new Date(date.getFullYear(), date.getMonth(), 1));
 }
 
 function buildCalendarDays(diasDisponiveis: AvailabilityDay[], monthCursor: Date) {
@@ -172,60 +148,45 @@ function buildCalendarDays(diasDisponiveis: AvailabilityDay[], monthCursor: Date
 
 function SubmitButton({ disabled }: { disabled?: boolean }) {
   const { pending } = useFormStatus();
-  const isDisabled = pending || disabled;
-
   return (
     <button
       type="submit"
-      disabled={isDisabled}
+      disabled={pending || disabled}
       className="h-14 w-full rounded-2xl bg-zinc-950 text-base font-black text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
     >
-      {pending ? "Enviando..." : "Continuar"}
+      {pending ? "Confirmando..." : "Confirmar agendamento"}
     </button>
   );
 }
 
-function StepBadge({
+function StepPill({
+  step,
   active,
   done,
-  index,
-  label,
 }: {
+  step: StepKey;
   active: boolean;
   done: boolean;
-  index: number;
-  label: string;
 }) {
   return (
-    <div
-      className={`flex min-w-0 items-center gap-2 rounded-2xl border px-3 py-2 text-xs font-bold transition ${
+    <span
+      className={`whitespace-nowrap rounded-full px-3 py-2 text-xs font-black ${
         active
-          ? "border-zinc-950 bg-zinc-950 text-white"
+          ? "bg-zinc-950 text-white"
           : done
-            ? "border-amber-200 bg-amber-50 text-amber-900"
-            : "border-zinc-200 bg-white text-zinc-500"
+            ? "bg-emerald-50 text-emerald-700"
+            : "bg-zinc-100 text-zinc-500"
       }`}
     >
-      <span
-        className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] ${
-          active
-            ? "bg-white text-zinc-950"
-            : done
-              ? "bg-amber-100 text-amber-900"
-              : "bg-zinc-100 text-zinc-500"
-        }`}
-      >
-        {index}
-      </span>
-      <span className="truncate">{label}</span>
-    </div>
+      {STEP_LABELS[step]}
+    </span>
   );
 }
 
-function EmptySearch({ text }: { text: string }) {
+function EmptyBox({ children }: { children: React.ReactNode }) {
   return (
-    <div className="rounded-2xl border border-dashed border-zinc-300 bg-zinc-50 px-4 py-5 text-center text-sm text-zinc-500">
-      {text}
+    <div className="rounded-2xl border border-dashed border-zinc-300 bg-zinc-50 px-4 py-5 text-center text-sm leading-6 text-zinc-500">
+      {children}
     </div>
   );
 }
@@ -249,15 +210,18 @@ export default function ClientBookingForm({
     createClienteBookingAction,
     initialState
   );
-  const [step, setStep] = useState<StepKey>("profissional");
+  const [step, setStep] = useState<StepKey>("servicos");
+  const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>([]);
   const [profissionalId, setProfissionalId] = useState("");
-  const [servicoId, setServicoId] = useState("");
-  const [buscaProfissional, setBuscaProfissional] = useState("");
   const [buscaServico, setBuscaServico] = useState("");
+  const [categoriaAtiva, setCategoriaAtiva] = useState<string>("todos");
+  const [pessoaTipo, setPessoaTipo] = useState<"mim" | "outra_pessoa">("mim");
+  const [pessoaNome, setPessoaNome] = useState("");
+  const [pessoaWhatsapp, setPessoaWhatsapp] = useState("");
+  const [pessoaObservacao, setPessoaObservacao] = useState("");
   const [diasDisponiveis, setDiasDisponiveis] = useState<AvailabilityDay[]>([]);
   const [selectedDate, setSelectedDate] = useState("");
   const [selectedTime, setSelectedTime] = useState("");
-  const [adicionaisSelecionados, setAdicionaisSelecionados] = useState<string[]>([]);
   const [codigoCupom, setCodigoCupom] = useState(
     cupomInicial || cuponsDisponiveis[0]?.codigo || ""
   );
@@ -268,14 +232,64 @@ export default function ClientBookingForm({
   const [loadingAvailability, setLoadingAvailability] = useState(false);
   const [availabilityError, setAvailabilityError] = useState<string | null>(null);
 
+  const selectedServices = useMemo(
+    () =>
+      selectedServiceIds
+        .map((id) => servicos.find((servico) => servico.id === id))
+        .filter((servico): servico is ClientAppServiceListItem => Boolean(servico)),
+    [selectedServiceIds, servicos]
+  );
+  const primaryServiceId = selectedServiceIds[0] || "";
+
+  const categorias = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const servico of servicos) {
+      const nome = servico.categoriaNome || "Outros serviços";
+      map.set(nome, nome);
+    }
+    return Array.from(map.values()).sort((a, b) => a.localeCompare(b, "pt-BR"));
+  }, [servicos]);
+
+  const servicesByCategory = useMemo(() => {
+    const term = normalizeSearch(buscaServico);
+    return servicos.filter((servico) => {
+      const categoryOk =
+        categoriaAtiva === "todos" || servico.categoriaNome === categoriaAtiva;
+      if (!categoryOk) return false;
+      if (!term) return true;
+      return normalizeSearch(
+        [servico.nome, servico.descricao, servico.categoriaNome].filter(Boolean).join(" ")
+      ).includes(term);
+    });
+  }, [buscaServico, categoriaAtiva, servicos]);
+
+  const profissionaisCompativeis = useMemo(() => {
+    if (!selectedServices.length) return [];
+    return profissionais.filter((profissional) =>
+      selectedServices.every((servico) => {
+        if (!servico.profissionaisPermitidos.length) return true;
+        return servico.profissionaisPermitidos.includes(profissional.id);
+      })
+    );
+  }, [profissionais, selectedServices]);
+
   const selectedProfissional = useMemo(
-    () => profissionais.find((item) => item.id === profissionalId) || null,
-    [profissionalId, profissionais]
+    () =>
+      profissionaisCompativeis.find((profissional) => profissional.id === profissionalId) ||
+      null,
+    [profissionaisCompativeis, profissionalId]
   );
-  const selectedServico = useMemo(
-    () => servicos.find((item) => item.id === servicoId) || null,
-    [servicoId, servicos]
+
+  const totalDuration = selectedServices.reduce(
+    (sum, servico) => sum + (Number(servico.duracaoMinutos || 0) || 0),
+    0
   );
+  const hasUnknownPrice = selectedServices.some(
+    (servico) => servico.preco === null || servico.exigeAvaliacao
+  );
+  const subtotalEstimado = hasUnknownPrice
+    ? null
+    : selectedServices.reduce((sum, servico) => sum + Number(servico.preco || 0), 0);
   const selectedCoupon = useMemo(
     () =>
       cuponsDisponiveis.find(
@@ -283,72 +297,14 @@ export default function ClientBookingForm({
       ) || null,
     [codigoCupom, cuponsDisponiveis]
   );
-
-  const servicosDoProfissional = useMemo(() => {
-    if (!profissionalId) return [];
-    return servicos.filter((servico) => {
-      if (!servico.profissionaisPermitidos?.length) return true;
-      return servico.profissionaisPermitidos.includes(profissionalId);
-    });
-  }, [profissionalId, servicos]);
-
-  const sugestoesAdicionais = useMemo(() => {
-    if (!servicoId) return [];
-    const combos = servicosDoProfissional.filter(
-      (servico) => servico.id !== servicoId && servico.ehCombo
-    );
-    const extras = servicosDoProfissional.filter(
-      (servico) => servico.id !== servicoId && !servico.ehCombo
-    );
-    return [...combos, ...extras].slice(0, 3);
-  }, [servicoId, servicosDoProfissional]);
-  const adicionaisDetalhe = useMemo(
-    () => servicos.filter((servico) => adicionaisSelecionados.includes(servico.id)),
-    [adicionaisSelecionados, servicos]
-  );
-  const subtotalEstimado = useMemo(() => {
-    const base = selectedServico?.exigeAvaliacao ? 0 : Number(selectedServico?.preco || 0);
-    const adicionais = adicionaisDetalhe.reduce((sum, servico) => {
-      if (servico.exigeAvaliacao) return sum;
-      return sum + Number(servico.preco || 0);
-    }, 0);
-    return base + adicionais;
-  }, [adicionaisDetalhe, selectedServico]);
-  const descontoEstimado = useMemo(() => {
-    if (!selectedCoupon || subtotalEstimado <= 0) return 0;
-    if (selectedCoupon.tipoDesconto === "valor_fixo") {
-      return Math.min(subtotalEstimado, Number(selectedCoupon.valorDesconto || 0));
-    }
-    return Math.min(
-      subtotalEstimado,
-      subtotalEstimado * (Number(selectedCoupon.valorDesconto || 0) / 100)
-    );
-  }, [selectedCoupon, subtotalEstimado]);
-  const totalEstimado = Math.max(0, subtotalEstimado - descontoEstimado);
-
-  const profissionaisFiltrados = useMemo(() => {
-    const term = normalizeSearch(buscaProfissional);
-    if (!term) return profissionais;
-    return profissionais.filter((profissional) =>
-      normalizeSearch(
-        [profissional.nome, profissional.especialidade, profissional.bio]
-          .filter(Boolean)
-          .join(" ")
-      ).includes(term)
-    );
-  }, [buscaProfissional, profissionais]);
-
-  const servicosFiltrados = useMemo(() => {
-    const term = normalizeSearch(buscaServico);
-    if (!term) return servicosDoProfissional;
-    return servicosDoProfissional.filter((servico) =>
-      normalizeSearch(
-        [servico.nome, servico.descricao, String(servico.preco ?? "")]
-          .filter(Boolean)
-          .join(" ")
-      ).includes(term)
-    );
-  }, [buscaServico, servicosDoProfissional]);
+  const descontoEstimado =
+    selectedCoupon && subtotalEstimado
+      ? selectedCoupon.tipoDesconto === "valor_fixo"
+        ? Math.min(subtotalEstimado, selectedCoupon.valorDesconto)
+        : Math.min(subtotalEstimado, subtotalEstimado * (selectedCoupon.valorDesconto / 100))
+      : 0;
+  const totalEstimado =
+    subtotalEstimado === null ? null : Math.max(0, subtotalEstimado - descontoEstimado);
 
   const horariosDoDiaSelecionado = useMemo(
     () => diasDisponiveis.find((dia) => dia.data === selectedDate)?.horarios || [],
@@ -358,37 +314,27 @@ export default function ClientBookingForm({
     () => buildCalendarDays(diasDisponiveis, monthCursor),
     [diasDisponiveis, monthCursor]
   );
-  const monthLabel = formatMonthLabel(monthCursor);
-  const minMonth = useMemo(() => {
-    const now = new Date();
-    return new Date(now.getFullYear(), now.getMonth(), 1);
-  }, []);
-  const canGoPreviousMonth = monthCursor > minMonth;
-  const selectedDayLabel = selectedDate
-    ? new Intl.DateTimeFormat("pt-BR", {
-        weekday: "short",
-        day: "2-digit",
-        month: "short",
-      }).format(new Date(`${selectedDate}T12:00:00`))
-    : "";
-  const canSubmit = Boolean(servicoId && profissionalId && selectedDate && selectedTime);
-  const friendlyAvailabilityError = availabilityError
-    ? availabilityError.toLowerCase().includes("vinculado") ||
-      availabilityError.toLowerCase().includes("profissional")
-      ? "Esse profissional ainda não atende esse serviço no app. Escolha outro profissional ou volte para serviços."
-      : availabilityError
-    : null;
+  const canGoPreviousMonth = monthCursor > new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+  const canSubmit = Boolean(
+    selectedServiceIds.length &&
+      profissionalId &&
+      selectedDate &&
+      selectedTime &&
+      (pessoaTipo === "mim" || (pessoaNome.trim() && pessoaWhatsapp.trim()))
+  );
 
   useEffect(() => {
-    if (!profissionalId) return;
-    if (servicoId && !servicosDoProfissional.some((item) => item.id === servicoId)) {
-      setServicoId("");
+    if (!selectedServiceIds.length) {
+      setProfissionalId("");
+      return;
+    }
+    if (profissionalId && !profissionaisCompativeis.some((item) => item.id === profissionalId)) {
+      setProfissionalId("");
       setSelectedDate("");
       setSelectedTime("");
       setDiasDisponiveis([]);
-      setStep("servico");
     }
-  }, [profissionalId, servicoId, servicosDoProfissional]);
+  }, [profissionaisCompativeis, profissionalId, selectedServiceIds.length]);
 
   useEffect(() => {
     setDiasDisponiveis([]);
@@ -396,18 +342,18 @@ export default function ClientBookingForm({
     setSelectedTime("");
     setAvailabilityError(null);
 
-    if (!servicoId || !profissionalId) return;
+    if (!primaryServiceId || !profissionalId) return;
 
     const controller = new AbortController();
     const params = new URLSearchParams({
       salao: idSalao,
-      servico: servicoId,
+      servico: primaryServiceId,
       profissional: profissionalId,
       inicio: formatDateInput(monthCursor),
     });
+    selectedServiceIds.forEach((id) => params.append("servicos", id));
 
     setLoadingAvailability(true);
-
     fetch(`/api/app-cliente/disponibilidade?${params.toString()}`, {
       method: "GET",
       signal: controller.signal,
@@ -416,26 +362,18 @@ export default function ClientBookingForm({
       .then(async (response) => {
         const payload = await response.json();
         if (!response.ok || !payload?.ok) {
-          throw new Error(
-            payload?.error || "Não foi possível carregar os horários agora."
-          );
+          throw new Error(payload?.error || "Não foi possível carregar os horários agora.");
         }
 
-        const dias = Array.isArray(payload.dias)
-          ? (payload.dias as AvailabilityDay[])
-          : [];
+        const dias = Array.isArray(payload.dias) ? (payload.dias as AvailabilityDay[]) : [];
         setDiasDisponiveis(dias);
-
-        const initialDate = getInitialBookingDate(dias, monthCursor);
-        setSelectedDate(initialDate.data);
-        setSelectedTime(initialDate.horaInicio);
+        setSelectedDate(dias[0]?.data || "");
+        setSelectedTime(dias[0]?.horarios[0]?.horaInicio || "");
       })
       .catch((error: unknown) => {
         if (controller.signal.aborted) return;
         setAvailabilityError(
-          error instanceof Error
-            ? error.message
-            : "Não foi possível carregar os horários agora."
+          error instanceof Error ? error.message : "Não foi possível carregar os horários agora."
         );
       })
       .finally(() => {
@@ -443,7 +381,7 @@ export default function ClientBookingForm({
       });
 
     return () => controller.abort();
-  }, [idSalao, monthCursor, profissionalId, servicoId]);
+  }, [idSalao, monthCursor, primaryServiceId, profissionalId, selectedServiceIds]);
 
   useEffect(() => {
     if (!horariosDoDiaSelecionado.some((item) => item.horaInicio === selectedTime)) {
@@ -451,28 +389,21 @@ export default function ClientBookingForm({
     }
   }, [horariosDoDiaSelecionado, selectedTime]);
 
-  function selectProfissional(id: string) {
-    setProfissionalId(id);
-    setBuscaServico("");
-    setStep("servico");
-  }
-
-  function selectServico(id: string) {
-    setServicoId(id);
-    setAdicionaisSelecionados([]);
-    const now = new Date();
-    setMonthCursor(new Date(now.getFullYear(), now.getMonth(), 1));
-    setStep("horario");
-  }
-
-  function toggleAdicional(id: string) {
-    setAdicionaisSelecionados((current) =>
+  function toggleService(id: string) {
+    setSelectedServiceIds((current) =>
       current.includes(id)
         ? current.filter((item) => item !== id)
-        : current.length >= 3
+        : current.length >= 8
           ? current
           : [...current, id]
     );
+  }
+
+  function goNextFromServices(id?: string) {
+    if (id && !selectedServiceIds.includes(id)) {
+      setSelectedServiceIds((current) => [...current, id]);
+    }
+    setStep("selecionados");
   }
 
   return (
@@ -481,148 +412,47 @@ export default function ClientBookingForm({
       className="overflow-hidden rounded-[1.8rem] border border-zinc-200 bg-white shadow-[0_20px_56px_rgba(15,23,42,0.1)]"
     >
       <input type="hidden" name="salao" value={idSalao} />
+      <input type="hidden" name="servico" value={primaryServiceId} />
+      {selectedServiceIds.map((id) => (
+        <input key={id} type="hidden" name="servicos" value={id} />
+      ))}
       <input type="hidden" name="profissional" value={profissionalId} />
-      <input type="hidden" name="servico" value={servicoId} />
       <input type="hidden" name="data" value={selectedDate} />
       <input type="hidden" name="hora_inicio" value={selectedTime} />
-      {adicionaisSelecionados.map((id) => (
-        <input key={id} type="hidden" name="adicionais" value={id} />
-      ))}
+      <input type="hidden" name="pessoa_tipo" value={pessoaTipo} />
 
       <div className="border-b border-zinc-100 bg-white p-5">
         <div className="inline-flex items-center gap-2 rounded-full bg-zinc-100 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.14em] text-zinc-600">
           <CalendarDays size={14} />
-          Reserva online
+          Reservar Online
         </div>
         <h3 className="mt-3 text-2xl font-black tracking-[-0.04em] text-zinc-950">
-          Escolha seu atendimento
+          Escolha seus serviços
         </h3>
         <p className="mt-2 text-sm leading-6 text-zinc-500">
-          Primeiro o profissional, depois o serviço e por último data e hora.
+          Selecione um ou mais serviços. Depois o app mostra somente profissionais compatíveis.
         </p>
 
-        <div className="mt-4 grid gap-2 sm:grid-cols-3">
-          <StepBadge
-            index={1}
-            label="Profissional"
-            active={step === "profissional"}
-            done={Boolean(profissionalId)}
-          />
-          <StepBadge
-            index={2}
-            label="Serviço"
-            active={step === "servico"}
-            done={Boolean(servicoId)}
-          />
-          <StepBadge
-            index={3}
-            label="Horário"
-            active={step === "horario"}
-            done={Boolean(selectedDate && selectedTime)}
-          />
+        <div className="-mx-1 mt-4 flex gap-2 overflow-x-auto px-1 pb-1">
+          {(Object.keys(STEP_LABELS) as StepKey[]).map((item) => (
+            <StepPill
+              key={item}
+              step={item}
+              active={step === item}
+              done={
+                (item === "servicos" && selectedServiceIds.length > 0) ||
+                (item === "profissional" && Boolean(profissionalId)) ||
+                (item === "data" && Boolean(selectedDate)) ||
+                (item === "horario" && Boolean(selectedTime))
+              }
+            />
+          ))}
         </div>
       </div>
 
-      <div className="space-y-4 p-4 sm:p-5">
-        {step === "profissional" ? (
-          <section className="space-y-3">
-            <div className="flex items-start gap-3">
-              <div className="rounded-2xl bg-zinc-100 p-3 text-zinc-800">
-                <UserRound size={20} />
-              </div>
-              <div>
-                <h4 className="text-lg font-black text-zinc-950">
-                  Escolha o profissional
-                </h4>
-                <p className="mt-1 text-sm leading-6 text-zinc-500">
-                  Digite o nome ou toque em uma opção para continuar.
-                </p>
-              </div>
-            </div>
-
-            <label className="flex h-12 items-center gap-2 rounded-2xl border border-zinc-200 bg-zinc-50 px-4">
-              <Search size={17} className="text-zinc-500" />
-              <input
-                type="search"
-                value={buscaProfissional}
-                onChange={(event) => setBuscaProfissional(event.target.value)}
-                placeholder="Buscar profissional"
-                className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-zinc-400"
-              />
-            </label>
-
-            <div className="grid gap-2">
-              {profissionaisFiltrados.length ? (
-                profissionaisFiltrados.map((profissional) => (
-                  <button
-                    key={profissional.id}
-                    type="button"
-                    onClick={() => selectProfissional(profissional.id)}
-                    className={`flex items-center gap-3 rounded-2xl border p-3 text-left transition ${
-                      profissionalId === profissional.id
-                        ? "border-zinc-950 bg-zinc-950 text-white"
-                        : "border-zinc-200 bg-white text-zinc-900 hover:border-zinc-300 hover:bg-zinc-50"
-                    }`}
-                  >
-                    <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-zinc-100 text-sm font-black text-zinc-700">
-                      {profissional.fotoUrl ? (
-                        <img
-                          src={profissional.fotoUrl}
-                          alt={profissional.nome}
-                          className="h-full w-full object-cover"
-                        />
-                      ) : (
-                        profissional.nome.slice(0, 1).toUpperCase()
-                      )}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="truncate text-sm font-black">
-                        {profissional.nome}
-                      </div>
-                      <div
-                        className={`mt-0.5 text-xs ${
-                          profissionalId === profissional.id
-                            ? "text-zinc-300"
-                            : "text-zinc-500"
-                        }`}
-                      >
-                        {profissional.especialidade || "Atendimento do salão"}
-                      </div>
-                    </div>
-                  </button>
-                ))
-              ) : (
-                <EmptySearch text="Nenhum profissional encontrado." />
-              )}
-            </div>
-          </section>
-        ) : null}
-
-        {step === "servico" ? (
-          <section className="space-y-3">
-            <button
-              type="button"
-              onClick={() => setStep("profissional")}
-              className="inline-flex items-center gap-1 text-sm font-bold text-zinc-600 underline underline-offset-4"
-            >
-              <ArrowLeft size={14} />
-              Trocar profissional
-            </button>
-
-            <div className="flex items-start gap-3">
-              <div className="rounded-2xl bg-zinc-100 p-3 text-zinc-800">
-                <Scissors size={20} />
-              </div>
-              <div>
-                <h4 className="text-lg font-black text-zinc-950">
-                  Agora escolha o serviço
-                </h4>
-                <p className="mt-1 text-sm leading-6 text-zinc-500">
-                  Mostrando serviços disponíveis com {selectedProfissional?.nome}.
-                </p>
-              </div>
-            </div>
-
+      <div className="space-y-5 p-4 sm:p-5">
+        {step === "servicos" ? (
+          <section className="space-y-4">
             <label className="flex h-12 items-center gap-2 rounded-2xl border border-zinc-200 bg-zinc-50 px-4">
               <Search size={17} className="text-zinc-500" />
               <input
@@ -633,173 +463,362 @@ export default function ClientBookingForm({
                 className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-zinc-400"
               />
             </label>
+            <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
+              <button
+                type="button"
+                onClick={() => setCategoriaAtiva("todos")}
+                className={`rounded-full px-4 py-2 text-xs font-black ${
+                  categoriaAtiva === "todos"
+                    ? "bg-zinc-950 text-white"
+                    : "bg-zinc-100 text-zinc-700"
+                }`}
+              >
+                Todos
+              </button>
+              {categorias.map((categoria) => (
+                <button
+                  key={categoria}
+                  type="button"
+                  onClick={() => setCategoriaAtiva(categoria)}
+                  className={`rounded-full px-4 py-2 text-xs font-black ${
+                    categoriaAtiva === categoria
+                      ? "bg-zinc-950 text-white"
+                      : "bg-zinc-100 text-zinc-700"
+                  }`}
+                >
+                  {categoria}
+                </button>
+              ))}
+            </div>
 
-            <div className="grid gap-2">
-              {servicosFiltrados.length ? (
-                servicosFiltrados.map((servico) => (
-                  <button
-                    key={servico.id}
-                    type="button"
-                    onClick={() => selectServico(servico.id)}
-                    className={`rounded-2xl border p-3 text-left transition ${
-                      servicoId === servico.id
-                        ? "border-zinc-950 bg-zinc-950 text-white"
-                        : "border-zinc-200 bg-white text-zinc-900 hover:border-zinc-300 hover:bg-zinc-50"
-                    }`}
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <div className="flex flex-wrap items-center gap-2">
-                          {servico.ehCombo ? (
-                            <span
-                              className={`rounded-full px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.12em] ${
-                                servicoId === servico.id
-                                  ? "bg-white/15 text-white"
-                                  : "bg-amber-50 text-amber-700"
-                              }`}
-                            >
-                              Combo
-                            </span>
-                          ) : null}
-                          <div className="break-words text-sm font-black">
-                            {servico.nome}
-                          </div>
-                        </div>
-                        {servico.descricao ? (
-                          <div
-                            className={`mt-1 line-clamp-2 text-xs leading-5 ${
-                              servicoId === servico.id
-                                ? "text-zinc-300"
-                                : "text-zinc-500"
+            <div className="grid gap-3">
+              {servicesByCategory.length ? (
+                servicesByCategory.map((servico) => {
+                  const selected = selectedServiceIds.includes(servico.id);
+                  return (
+                    <article
+                      key={servico.id}
+                      className={`rounded-2xl border p-4 transition ${
+                        selected
+                          ? "border-zinc-950 bg-zinc-950 text-white"
+                          : "border-zinc-200 bg-white text-zinc-950"
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="min-w-0">
+                          <p
+                            className={`text-[11px] font-black uppercase tracking-[0.14em] ${
+                              selected ? "text-zinc-300" : "text-amber-700"
                             }`}
                           >
-                            {servico.descricao}
-                          </div>
-                        ) : null}
-                      </div>
-                      <div className="shrink-0 text-right">
-                        <div className="text-sm font-black">
-                          {servico.exigeAvaliacao
-                            ? "A avaliar"
-                            : formatCurrency(servico.preco)}
+                            {servico.categoriaNome}
+                          </p>
+                          <h4 className="mt-1 text-lg font-black">{servico.nome}</h4>
+                          {servico.descricao ? (
+                            <p
+                              className={`mt-1 text-sm leading-6 ${
+                                selected ? "text-zinc-300" : "text-zinc-500"
+                              }`}
+                            >
+                              {servico.descricao}
+                            </p>
+                          ) : null}
                         </div>
-                        <div
-                          className={`mt-1 text-xs font-semibold ${
-                            servicoId === servico.id
-                              ? "text-zinc-300"
-                              : "text-zinc-500"
+                        <div className="shrink-0 text-right">
+                          <div className="text-sm font-black">
+                            {servico.exigeAvaliacao
+                              ? "A avaliar"
+                              : formatCurrency(servico.preco)}
+                          </div>
+                          {servico.duracaoMinutos ? (
+                            <div
+                              className={`mt-1 text-xs ${
+                                selected ? "text-zinc-300" : "text-zinc-500"
+                              }`}
+                            >
+                              {servico.duracaoMinutos} min
+                            </div>
+                          ) : null}
+                        </div>
+                      </div>
+                      <div className="mt-4 flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => toggleService(servico.id)}
+                          className={`inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-xl text-sm font-black ${
+                            selected
+                              ? "bg-white text-zinc-950"
+                              : "bg-zinc-100 text-zinc-950"
                           }`}
                         >
-                          {servico.duracaoMinutos
-                            ? `${servico.duracaoMinutos} min`
-                            : "Tempo sob consulta"}
-                        </div>
+                          {selected ? <Check size={16} /> : <Plus size={16} />}
+                          {selected ? "Selecionado" : "Adicionar"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => goNextFromServices(servico.id)}
+                          className={`inline-flex h-11 items-center rounded-xl px-4 text-sm font-black ${
+                            selected
+                              ? "border border-white/20 text-white"
+                              : "bg-zinc-950 text-white"
+                          }`}
+                        >
+                          Agendar
+                        </button>
                       </div>
-                    </div>
-                  </button>
-                ))
+                    </article>
+                  );
+                })
               ) : (
-                <EmptySearch text="Nenhum serviço encontrado para esse profissional." />
+                <EmptyBox>Nenhum serviço encontrado nessa categoria.</EmptyBox>
               )}
             </div>
           </section>
         ) : null}
 
-        {step === "horario" ? (
+        {step === "selecionados" ? (
           <section className="space-y-4">
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={() => setStep("profissional")}
-                className="inline-flex items-center gap-1 rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-xs font-bold text-zinc-700"
-              >
-                <ArrowLeft size={13} />
-                Profissional
-              </button>
-              <button
-                type="button"
-                onClick={() => setStep("servico")}
-                className="rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-xs font-bold text-zinc-700"
-              >
-                Serviço
-              </button>
-            </div>
-
-            <div className="text-center">
-              <h4 className="text-2xl font-black tracking-[-0.04em] text-zinc-950">
-                Selecione data e hora
+            <button
+              type="button"
+              onClick={() => setStep("servicos")}
+              className="inline-flex items-center gap-2 text-sm font-black text-zinc-700"
+            >
+              <ArrowLeft size={16} />
+              Adicionar mais serviços
+            </button>
+            <div className="rounded-[1.5rem] bg-zinc-50 p-4">
+              <h4 className="text-xl font-black text-zinc-950">
+                Serviços selecionados
               </h4>
-              <p className="mt-1 text-sm text-zinc-500">
-                Horários livres para {selectedProfissional?.nome}.
-              </p>
+              <div className="mt-4 grid gap-2">
+                {selectedServices.length ? (
+                  selectedServices.map((servico) => (
+                    <div
+                      key={servico.id}
+                      className="flex items-center justify-between gap-3 rounded-2xl bg-white p-3"
+                    >
+                      <div>
+                        <div className="text-sm font-black text-zinc-950">
+                          {servico.nome}
+                        </div>
+                        <div className="mt-1 text-xs text-zinc-500">
+                          {servico.duracaoMinutos || 0} min
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => toggleService(servico.id)}
+                        className="rounded-full border border-zinc-200 px-3 py-1 text-xs font-black text-zinc-700"
+                      >
+                        Remover
+                      </button>
+                    </div>
+                  ))
+                ) : (
+                  <EmptyBox>Escolha pelo menos um serviço para continuar.</EmptyBox>
+                )}
+              </div>
+              <div className="mt-4 grid grid-cols-2 gap-2">
+                <div className="rounded-2xl bg-white p-4">
+                  <div className="text-xs font-black uppercase tracking-[0.14em] text-zinc-500">
+                    Duração
+                  </div>
+                  <div className="mt-1 text-xl font-black text-zinc-950">
+                    {totalDuration || 0} min
+                  </div>
+                </div>
+                <div className="rounded-2xl bg-white p-4">
+                  <div className="text-xs font-black uppercase tracking-[0.14em] text-zinc-500">
+                    Valor
+                  </div>
+                  <div className="mt-1 text-xl font-black text-zinc-950">
+                    {formatCurrency(totalEstimado)}
+                  </div>
+                </div>
+              </div>
             </div>
+            <button
+              type="button"
+              disabled={!selectedServices.length}
+              onClick={() => setStep("pessoa")}
+              className="h-14 w-full rounded-2xl bg-zinc-950 text-sm font-black text-white disabled:opacity-50"
+            >
+              Continuar
+            </button>
+          </section>
+        ) : null}
 
-            <div className="-mx-2 flex gap-4 overflow-x-auto px-2 pb-1">
-              {profissionais.map((profissional) => {
-                const selected = profissional.id === profissionalId;
+        {step === "pessoa" ? (
+          <section className="space-y-4">
+            <button
+              type="button"
+              onClick={() => setStep("selecionados")}
+              className="inline-flex items-center gap-2 text-sm font-black text-zinc-700"
+            >
+              <ArrowLeft size={16} />
+              Serviços
+            </button>
+            <div className="grid gap-3">
+              {[
+                { value: "mim", label: "A reserva é para mim", icon: UserRound },
+                {
+                  value: "outra_pessoa",
+                  label: "A reserva é para outra pessoa",
+                  icon: UsersRound,
+                },
+              ].map((option) => {
+                const Icon = option.icon;
+                const selected = pessoaTipo === option.value;
                 return (
                   <button
-                    key={profissional.id}
+                    key={option.value}
                     type="button"
-                    onClick={() => selectProfissional(profissional.id)}
-                    className="w-20 shrink-0 text-center"
+                    onClick={() => setPessoaTipo(option.value as typeof pessoaTipo)}
+                    className={`flex items-center gap-3 rounded-2xl border p-4 text-left ${
+                      selected
+                        ? "border-zinc-950 bg-zinc-950 text-white"
+                        : "border-zinc-200 bg-white text-zinc-950"
+                    }`}
                   >
-                    <span
-                      className={`relative mx-auto flex h-14 w-14 items-center justify-center overflow-hidden rounded-full border text-sm font-black ${
-                        selected
-                          ? "border-zinc-950 bg-amber-50 text-amber-800"
-                          : "border-zinc-200 bg-zinc-50 text-zinc-400"
-                      }`}
-                    >
-                      {profissional.fotoUrl ? (
-                        <img
-                          src={profissional.fotoUrl}
-                          alt={profissional.nome}
-                          className="h-full w-full object-cover"
-                        />
-                      ) : (
-                        profissional.nome.slice(0, 1).toUpperCase()
-                      )}
-                      {selected ? (
-                        <span className="absolute right-0 top-0 flex h-5 w-5 items-center justify-center rounded-full bg-zinc-950 text-white">
-                          <Check size={12} />
-                        </span>
-                      ) : null}
-                    </span>
-                    <span
-                      className={`mt-2 block truncate text-xs font-bold ${
-                        selected ? "text-zinc-950" : "text-zinc-500"
-                      }`}
-                    >
-                      {profissional.nome}
-                    </span>
+                    <Icon size={20} />
+                    <span className="font-black">{option.label}</span>
                   </button>
                 );
               })}
             </div>
 
+            {pessoaTipo === "outra_pessoa" ? (
+              <div className="space-y-3 rounded-[1.5rem] bg-zinc-50 p-4">
+                <input
+                  name="pessoa_nome"
+                  value={pessoaNome}
+                  onChange={(event) => setPessoaNome(event.target.value)}
+                  placeholder="Nome da pessoa"
+                  className="h-12 w-full rounded-2xl border border-zinc-200 bg-white px-4 text-sm outline-none focus:border-zinc-950"
+                />
+                <input
+                  name="pessoa_whatsapp"
+                  value={pessoaWhatsapp}
+                  onChange={(event) => setPessoaWhatsapp(event.target.value)}
+                  placeholder="WhatsApp da pessoa"
+                  inputMode="tel"
+                  className="h-12 w-full rounded-2xl border border-zinc-200 bg-white px-4 text-sm outline-none focus:border-zinc-950"
+                />
+                <textarea
+                  name="pessoa_observacao"
+                  value={pessoaObservacao}
+                  onChange={(event) => setPessoaObservacao(event.target.value)}
+                  placeholder="Observação opcional"
+                  className="min-h-24 w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm outline-none focus:border-zinc-950"
+                />
+              </div>
+            ) : null}
+
+            <button
+              type="button"
+              disabled={
+                pessoaTipo === "outra_pessoa" &&
+                (!pessoaNome.trim() || !pessoaWhatsapp.trim())
+              }
+              onClick={() => setStep("profissional")}
+              className="h-14 w-full rounded-2xl bg-zinc-950 text-sm font-black text-white disabled:opacity-50"
+            >
+              Escolher profissional
+            </button>
+          </section>
+        ) : null}
+
+        {step === "profissional" ? (
+          <section className="space-y-4">
+            <button
+              type="button"
+              onClick={() => setStep("pessoa")}
+              className="inline-flex items-center gap-2 text-sm font-black text-zinc-700"
+            >
+              <ArrowLeft size={16} />
+              Para quem é
+            </button>
+            <h4 className="text-xl font-black text-zinc-950">
+              Profissionais compatíveis
+            </h4>
+            {profissionaisCompativeis.length ? (
+              <div className="grid gap-2">
+                {profissionaisCompativeis.map((profissional) => {
+                  const selected = profissional.id === profissionalId;
+                  return (
+                    <button
+                      key={profissional.id}
+                      type="button"
+                      onClick={() => {
+                        setProfissionalId(profissional.id);
+                        setStep("data");
+                      }}
+                      className={`flex items-center gap-3 rounded-2xl border p-3 text-left ${
+                        selected
+                          ? "border-zinc-950 bg-zinc-950 text-white"
+                          : "border-zinc-200 bg-white text-zinc-900"
+                      }`}
+                    >
+                      <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-zinc-100 text-sm font-black text-zinc-700">
+                        {profissional.fotoUrl ? (
+                          <img
+                            src={profissional.fotoUrl}
+                            alt={profissional.nome}
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          profissional.nome.slice(0, 1).toUpperCase()
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-sm font-black">
+                          {profissional.nome}
+                        </div>
+                        <div className={`mt-0.5 text-xs ${selected ? "text-zinc-300" : "text-zinc-500"}`}>
+                          {profissional.especialidade || "Atendimento do salão"}
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              <EmptyBox>
+                Nenhum profissional disponível para todos os serviços selecionados.
+                Remova um serviço ou escolha outro.
+              </EmptyBox>
+            )}
+          </section>
+        ) : null}
+
+        {step === "data" ? (
+          <section className="space-y-4">
+            <button
+              type="button"
+              onClick={() => setStep("profissional")}
+              className="inline-flex items-center gap-2 text-sm font-black text-zinc-700"
+            >
+              <ArrowLeft size={16} />
+              Profissional
+            </button>
             <div className="rounded-[1.4rem] border border-zinc-200 bg-white p-4 shadow-sm">
               <div className="mb-4 flex items-center justify-between gap-3">
                 <h5 className="text-xl font-black capitalize text-zinc-950">
-                  {monthLabel}
+                  {formatMonthLabel(monthCursor)}
                 </h5>
                 <div className="flex gap-2">
                   <button
                     type="button"
                     disabled={!canGoPreviousMonth}
-                    onClick={() =>
-                      setMonthCursor((current) => addMonths(current, -1))
-                    }
-                    className="flex h-11 w-11 items-center justify-center rounded-xl border border-zinc-200 bg-white text-zinc-700"
+                    onClick={() => setMonthCursor((current) => addMonths(current, -1))}
+                    className="flex h-11 w-11 items-center justify-center rounded-xl border border-zinc-200 bg-white text-zinc-700 disabled:opacity-40"
                     aria-label="Mês anterior"
                   >
                     <ChevronLeft size={20} />
                   </button>
                   <button
                     type="button"
-                    onClick={() =>
-                      setMonthCursor((current) => addMonths(current, 1))
-                    }
+                    onClick={() => setMonthCursor((current) => addMonths(current, 1))}
                     className="flex h-11 w-11 items-center justify-center rounded-xl border border-zinc-200 bg-white text-zinc-700"
                     aria-label="Próximo mês"
                   >
@@ -807,300 +826,186 @@ export default function ClientBookingForm({
                   </button>
                 </div>
               </div>
-
-              <div className="grid grid-cols-7 gap-2 text-center text-xs font-medium text-zinc-500">
-                {["Dom.", "Seg.", "Ter.", "Qua.", "Qui.", "Sex.", "Sab."].map(
-                  (day) => (
-                    <span key={day}>{day}</span>
-                  )
-                )}
-              </div>
-
               {loadingAvailability ? (
-                <div className="mt-5 rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-4 text-sm font-semibold text-zinc-600">
-                  Carregando horários disponíveis...
-                </div>
-              ) : friendlyAvailabilityError ? (
-                <div className="mt-5 space-y-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-900">
-                  <div className="font-black">Não encontramos horários para esta escolha.</div>
-                  <p className="leading-6">{friendlyAvailabilityError}</p>
-                  <div className="flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setStep("servico")}
-                      className="rounded-xl bg-white px-3 py-2 text-xs font-black text-amber-900 shadow-sm"
-                    >
-                      Trocar serviço
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setStep("profissional")}
-                      className="rounded-xl bg-white px-3 py-2 text-xs font-black text-amber-900 shadow-sm"
-                    >
-                      Trocar profissional
-                    </button>
-                  </div>
-                </div>
+                <EmptyBox>Carregando horários disponíveis...</EmptyBox>
+              ) : availabilityError ? (
+                <EmptyBox>{availabilityError}</EmptyBox>
               ) : (
-                <div className="mt-4 grid grid-cols-7 gap-2">
-                  {calendarDays.map((day) =>
-                    day.currentMonth ? (
-                      <button
-                        key={day.key}
-                        type="button"
-                        disabled={!day.selectable}
-                        onClick={() => {
-                          const nextDay = diasDisponiveis.find(
-                            (item) => item.data === day.date
-                          );
-                          setSelectedDate(day.date);
-                          setSelectedTime(nextDay?.horarios[0]?.horaInicio || "");
-                        }}
-                        className={`relative aspect-square rounded-full border text-sm font-semibold transition ${
-                          selectedDate === day.date
-                            ? "border-cyan-700 bg-cyan-50 text-zinc-950 ring-2 ring-cyan-700"
-                            : day.available
-                              ? "border-zinc-100 bg-zinc-100 text-zinc-900"
-                              : day.selectable
-                                ? "border-amber-100 bg-amber-50 text-amber-900 hover:border-amber-300"
+                <>
+                  <div className="grid grid-cols-7 gap-2 text-center text-xs font-medium text-zinc-500">
+                    {["Dom.", "Seg.", "Ter.", "Qua.", "Qui.", "Sex.", "Sáb."].map((day) => (
+                      <span key={day}>{day}</span>
+                    ))}
+                  </div>
+                  <div className="mt-4 grid grid-cols-7 gap-2">
+                    {calendarDays.map((day) =>
+                      day.currentMonth ? (
+                        <button
+                          key={day.key}
+                          type="button"
+                          disabled={!day.available || !day.selectable}
+                          onClick={() => {
+                            const nextDay = diasDisponiveis.find((item) => item.data === day.date);
+                            setSelectedDate(day.date);
+                            setSelectedTime(nextDay?.horarios[0]?.horaInicio || "");
+                            setStep("horario");
+                          }}
+                          className={`relative aspect-square rounded-full border text-sm font-semibold transition ${
+                            selectedDate === day.date
+                              ? "border-cyan-700 bg-cyan-50 text-zinc-950 ring-2 ring-cyan-700"
+                              : day.available
+                                ? "border-zinc-100 bg-zinc-100 text-zinc-900"
                                 : "border-zinc-100 bg-white text-zinc-300"
-                        }`}
-                        title={
-                          day.available
-                            ? "Horários disponíveis"
-                            : day.selectable
-                              ? "Sem horário livre; disponível para fila de espera"
-                              : undefined
-                        }
-                      >
-                        {day.label}
-                        {day.available ? (
-                          <span
-                            className={`absolute bottom-2 left-1/2 h-1 w-6 -translate-x-1/2 rounded-full ${
-                              selectedDate === day.date
-                                ? "bg-amber-500"
-                                : "bg-emerald-500"
-                            }`}
-                          />
-                        ) : day.selectable ? (
-                          <span className="absolute bottom-2 left-1/2 h-1 w-6 -translate-x-1/2 rounded-full bg-amber-400" />
-                        ) : null}
-                      </button>
-                    ) : (
-                      <span key={day.key} />
-                    )
-                  )}
-                </div>
+                          }`}
+                        >
+                          {day.label}
+                          {day.available ? (
+                            <span className="absolute bottom-2 left-1/2 h-1 w-6 -translate-x-1/2 rounded-full bg-emerald-500" />
+                          ) : null}
+                        </button>
+                      ) : (
+                        <span key={day.key} />
+                      )
+                    )}
+                  </div>
+                </>
               )}
-            </div>
-
-            <div className="border-y border-zinc-200 py-4">
-              <div className="mb-3 flex items-center gap-2 text-sm font-bold text-zinc-600">
-                <Clock3 size={16} />
-                {selectedDayLabel || "Escolha um dia"}
-              </div>
-              {horariosDoDiaSelecionado.length ? (
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                  {horariosDoDiaSelecionado.map((horario) => (
-                    <button
-                      key={`${selectedDate}-${horario.horaInicio}`}
-                      type="button"
-                      onClick={() => setSelectedTime(horario.horaInicio)}
-                      className={`h-14 rounded-2xl border px-5 text-lg font-black shadow-sm transition ${
-                        selectedTime === horario.horaInicio
-                          ? "border-cyan-700 bg-cyan-50 text-cyan-950 ring-2 ring-cyan-700"
-                          : "border-zinc-100 bg-zinc-100 text-zinc-900 hover:border-zinc-300"
-                      }`}
-                    >
-                      {horario.horaInicio}
-                    </button>
-                  ))}
-                </div>
-              ) : friendlyAvailabilityError ? (
-                <div className="rounded-2xl border border-dashed border-amber-300 bg-amber-50 px-4 py-4 text-sm leading-6 text-amber-900">
-                  Ajuste o profissional ou o serviço para ver horários livres.
-                </div>
-              ) : (
-                <div className="rounded-2xl border border-dashed border-zinc-300 bg-zinc-50 px-4 py-4 text-sm text-zinc-500">
-                  Ainda não há horários livres
-                  {selectedDayLabel ? ` para ${selectedDayLabel}` : ""}. Entre na
-                  fila de espera e o salão recebe sua preferência de data.
-                  {servicoId && profissionalId && selectedDate ? (
-                    <button
-                      type="submit"
-                      formAction={joinClienteWaitlistAction}
-                      className="mt-3 inline-flex h-11 items-center justify-center rounded-xl bg-zinc-950 px-4 text-sm font-black text-white"
-                    >
-                      Entrar na fila de espera
-                    </button>
-                  ) : null}
-                </div>
-              )}
-            </div>
-
-            <div className="rounded-[1.4rem] bg-zinc-50 p-4">
-              <div className="rounded-2xl bg-white p-4 shadow-sm">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <div className="text-sm text-zinc-500">
-                      1 serviço
-                      {selectedServico?.duracaoMinutos
-                        ? ` - ${selectedServico.duracaoMinutos}min`
-                        : ""}
-                    </div>
-                    <div className="mt-1 text-3xl font-black text-zinc-950">
-                      {selectedServico?.exigeAvaliacao
-                        ? "A avaliar"
-                        : formatCurrency(selectedServico?.preco)}
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="font-bold text-zinc-950">
-                      {selectedServico?.nome || "Serviço"}
-                    </div>
-                    <div className="mt-1 text-sm text-zinc-500">
-                      {selectedTime || "--:--"}
-                    </div>
-                  </div>
-                </div>
-                <div className="mt-4">
-                  {sugestoesAdicionais.length ? (
-                    <div className="mb-4 rounded-2xl border border-amber-100 bg-amber-50/70 p-3 text-left">
-                      <div className="text-xs font-black uppercase tracking-[0.14em] text-amber-700">
-                        Combine com
-                      </div>
-                      <p className="mt-1 text-xs leading-5 text-zinc-600">
-                        Marque adicionais para o salão já receber seu interesse junto com a reserva.
-                      </p>
-                      <div className="mt-3 grid gap-2">
-                        {sugestoesAdicionais.map((servico) => {
-                          const selected = adicionaisSelecionados.includes(servico.id);
-                          return (
-                            <button
-                              key={servico.id}
-                              type="button"
-                              onClick={() => toggleAdicional(servico.id)}
-                              className={`flex items-center justify-between gap-3 rounded-xl border px-3 py-2 text-left transition ${
-                                selected
-                                  ? "border-zinc-950 bg-white text-zinc-950"
-                                  : "border-amber-100 bg-white/75 text-zinc-700"
-                              }`}
-                            >
-                              <span className="min-w-0">
-                                <span className="block truncate text-xs font-black">
-                                  {servico.ehCombo ? "Combo: " : ""}
-                                  {servico.nome}
-                                </span>
-                                <span className="mt-0.5 block text-[11px] text-zinc-500">
-                                  {servico.exigeAvaliacao
-                                    ? "A avaliar"
-                                    : formatCurrency(servico.preco)}
-                                </span>
-                              </span>
-                              <span
-                                className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-[11px] font-black ${
-                                  selected
-                                    ? "border-zinc-950 bg-zinc-950 text-white"
-                                    : "border-zinc-200 bg-white text-zinc-400"
-                                }`}
-                              >
-                                {selected ? <Check size={13} /> : "+"}
-                              </span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  ) : null}
-                  <div className="mb-4 rounded-2xl border border-zinc-100 bg-white p-3 text-left">
-                    <label
-                      htmlFor="cliente-booking-cupom"
-                      className="text-xs font-black uppercase tracking-[0.14em] text-zinc-500"
-                    >
-                      Cupom
-                    </label>
-                    {cuponsDisponiveis.length ? (
-                      <div className="mb-3 mt-2 space-y-2">
-                        {cuponsDisponiveis.map((cupom) => {
-                          const selected =
-                            codigoCupom.trim().toUpperCase() === cupom.codigo;
-                          return (
-                            <button
-                              key={cupom.codigo}
-                              type="button"
-                              onClick={() => setCodigoCupom(cupom.codigo)}
-                              className={`w-full rounded-2xl border px-3 py-3 text-left transition ${
-                                selected
-                                  ? "border-emerald-300 bg-emerald-50 text-emerald-950"
-                                  : "border-zinc-200 bg-zinc-50 text-zinc-800"
-                              }`}
-                            >
-                              <span className="flex items-center justify-between gap-3">
-                                <span className="text-sm font-black">
-                                  {cupom.nome}
-                                </span>
-                                <span className="shrink-0 rounded-full bg-white px-2 py-1 text-[11px] font-black text-emerald-700">
-                                  {cupom.codigo}
-                                </span>
-                              </span>
-                              <span className="mt-1 block text-xs leading-5 text-zinc-600">
-                                {cupom.descontoLabel}
-                                {cupom.diasInativo
-                                  ? ` para voltar depois de ${cupom.diasInativo} dias.`
-                                  : "."}
-                              </span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    ) : null}
-                    <input
-                      id="cliente-booking-cupom"
-                      name="cupom"
-                      value={codigoCupom}
-                      onChange={(event) =>
-                        setCodigoCupom(event.target.value.toUpperCase())
-                      }
-                      placeholder="Ex.: SAUDADES"
-                      className="mt-2 h-11 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 text-sm font-bold uppercase outline-none focus:border-zinc-950"
-                    />
-                    <span className="mt-2 block text-xs leading-5 text-zinc-500">
-                      Se o salão enviou um cupom, ele será validado antes de confirmar a reserva.
-                    </span>
-                  </div>
-                  {selectedCoupon && subtotalEstimado > 0 ? (
-                    <div className="mb-4 rounded-2xl border border-emerald-100 bg-emerald-50 p-3 text-left">
-                      <div className="flex items-center justify-between gap-3 text-sm">
-                        <span className="font-bold text-emerald-900">Preço normal</span>
-                        <strong className="text-emerald-950">{formatCurrency(subtotalEstimado)}</strong>
-                      </div>
-                      <div className="mt-2 flex items-center justify-between gap-3 text-sm">
-                        <span className="font-bold text-emerald-900">Cupom {selectedCoupon.codigo}</span>
-                        <strong className="text-emerald-700">- {formatCurrency(descontoEstimado)}</strong>
-                      </div>
-                      <div className="mt-3 border-t border-emerald-200 pt-3">
-                        <div className="flex items-center justify-between gap-3">
-                          <span className="text-sm font-black text-emerald-950">Total com cupom</span>
-                          <strong className="text-xl font-black text-emerald-950">{formatCurrency(totalEstimado)}</strong>
-                        </div>
-                      </div>
-                    </div>
-                  ) : null}
-                  <SubmitButton disabled={!canSubmit} />
-                </div>
-                <p className="mt-3 text-center text-xs leading-5 text-zinc-500">
-                  Seus dados pessoais serão usados apenas para processar este
-                  agendamento com o salão.
-                </p>
-              </div>
             </div>
           </section>
         ) : null}
 
-        {state.error ? (
-          <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
-            {state.error}
-          </div>
+        {step === "horario" ? (
+          <section className="space-y-4">
+            <button
+              type="button"
+              onClick={() => setStep("data")}
+              className="inline-flex items-center gap-2 text-sm font-black text-zinc-700"
+            >
+              <ArrowLeft size={16} />
+              Data
+            </button>
+            <div className="flex items-center gap-2 text-sm font-bold text-zinc-600">
+              <Clock3 size={16} />
+              Escolha o horário
+            </div>
+            {horariosDoDiaSelecionado.length ? (
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                {horariosDoDiaSelecionado.map((horario) => (
+                  <button
+                    key={`${selectedDate}-${horario.horaInicio}`}
+                    type="button"
+                    onClick={() => {
+                      setSelectedTime(horario.horaInicio);
+                      setStep("resumo");
+                    }}
+                    className={`h-14 rounded-2xl border px-5 text-lg font-black shadow-sm transition ${
+                      selectedTime === horario.horaInicio
+                        ? "border-cyan-700 bg-cyan-50 text-cyan-950 ring-2 ring-cyan-700"
+                        : "border-zinc-100 bg-zinc-100 text-zinc-900"
+                    }`}
+                  >
+                    {horario.horaInicio}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <EmptyBox>Não há horários livres para essa combinação.</EmptyBox>
+            )}
+          </section>
+        ) : null}
+
+        {step === "resumo" ? (
+          <section className="space-y-4">
+            <button
+              type="button"
+              onClick={() => setStep("horario")}
+              className="inline-flex items-center gap-2 text-sm font-black text-zinc-700"
+            >
+              <ArrowLeft size={16} />
+              Horário
+            </button>
+            <div className="rounded-[1.5rem] bg-zinc-950 p-5 text-white">
+              <div className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.14em] text-amber-200">
+                <Scissors size={15} />
+                Resumo
+              </div>
+              <h4 className="mt-3 text-2xl font-black">Confirmar agendamento</h4>
+              <div className="mt-5 space-y-3 text-sm">
+                <p>
+                  <strong>{selectedServices.length}</strong> serviço(s) com{" "}
+                  <strong>{selectedProfissional?.nome || "profissional"}</strong>
+                </p>
+                <p>
+                  {selectedDate || "Data"} às {selectedTime || "--:--"}.
+                </p>
+                <p>
+                  Duração total: <strong>{totalDuration || 0} min</strong>.
+                </p>
+                <p>
+                  Valor estimado: <strong>{formatCurrency(totalEstimado)}</strong>.
+                </p>
+                <p>
+                  Reserva para:{" "}
+                  <strong>
+                    {pessoaTipo === "mim" ? "mim" : pessoaNome || "outra pessoa"}
+                  </strong>
+                </p>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-zinc-100 bg-white p-3 text-left">
+              <label
+                htmlFor="cliente-booking-cupom"
+                className="text-xs font-black uppercase tracking-[0.14em] text-zinc-500"
+              >
+                Cupom
+              </label>
+              {cuponsDisponiveis.length ? (
+                <div className="mb-3 mt-2 space-y-2">
+                  {cuponsDisponiveis.map((cupom) => {
+                    const selected = codigoCupom.trim().toUpperCase() === cupom.codigo;
+                    return (
+                      <button
+                        key={cupom.codigo}
+                        type="button"
+                        onClick={() => setCodigoCupom(cupom.codigo)}
+                        className={`w-full rounded-2xl border px-3 py-3 text-left transition ${
+                          selected
+                            ? "border-emerald-300 bg-emerald-50 text-emerald-950"
+                            : "border-zinc-200 bg-zinc-50 text-zinc-800"
+                        }`}
+                      >
+                        <span className="flex items-center justify-between gap-3">
+                          <span className="text-sm font-black">{cupom.nome}</span>
+                          <span className="shrink-0 rounded-full bg-white px-2 py-1 text-[11px] font-black text-emerald-700">
+                            {cupom.codigo}
+                          </span>
+                        </span>
+                        <span className="mt-1 block text-xs leading-5 text-zinc-600">
+                          {cupom.descontoLabel}.
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : null}
+              <input
+                id="cliente-booking-cupom"
+                name="cupom"
+                value={codigoCupom}
+                onChange={(event) => setCodigoCupom(event.target.value.toUpperCase())}
+                placeholder="Ex.: SAUDADES"
+                className="mt-2 h-11 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 text-sm font-bold uppercase outline-none focus:border-zinc-950"
+              />
+            </div>
+
+            <SubmitButton disabled={!canSubmit} />
+            {state.error ? (
+              <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+                {state.error}
+              </div>
+            ) : null}
+          </section>
         ) : null}
       </div>
     </form>
