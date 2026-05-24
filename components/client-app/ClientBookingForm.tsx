@@ -485,7 +485,7 @@ export default function ClientBookingForm({
         ) : null}
 
         {step === "servico" ? (
-          <section className="mt-8 pb-44">
+          <section className="mt-8 pb-52">
             <h2 className="text-[1.8rem] font-black tracking-[-0.03em]">
               Escolha o serviço
             </h2>
@@ -517,7 +517,7 @@ export default function ClientBookingForm({
                 </button>
               ))}
             </div>
-            <h3 className="mt-8 text-2xl font-black">
+            <h3 className="mt-8 text-[1.8rem] font-black">
               {categoriaAtiva === "Todos" ? "Serviços populares" : categoriaAtiva}
             </h3>
             <div className="mt-5 space-y-3">
@@ -528,7 +528,7 @@ export default function ClientBookingForm({
                     key={servico.id}
                     type="button"
                     onClick={() => toggleServico(servico.id)}
-                    className={`grid w-full grid-cols-[1fr_auto] items-center gap-3 rounded-[1.15rem] border p-4 text-left ${
+                    className={`grid w-full grid-cols-[1fr_auto] items-center gap-2 rounded-[1.15rem] border p-4 text-left ${
                       selected
                         ? "border-[#f6b93f] bg-[#111214]"
                         : "border-white/8 bg-[#111214]"
@@ -539,27 +539,27 @@ export default function ClientBookingForm({
                         <span className="mt-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#1d1e21] text-[#f6b93f]">
                           <Scissors size={22} />
                         </span>
-                        <strong className="block min-w-0 break-words text-lg font-black leading-tight text-white">
+                        <strong className="block min-w-0 break-words text-[1.45rem] font-black leading-tight text-white">
                           {servico.nome}
                         </strong>
                       </span>
-                      <span className="mt-2 line-clamp-2 block text-sm leading-6 text-zinc-400">
+                      <span className="mt-2 line-clamp-2 block text-[0.98rem] leading-6 text-zinc-400">
                         {servico.descricao || "Atendimento premium do salão."}
                       </span>
-                      <span className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-zinc-400">
+                      <span className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-[0.98rem] text-zinc-400">
                         <Clock3 size={18} />
-                        <span className="whitespace-nowrap font-medium">
+                        <span className="font-medium">
                           {servico.duracaoMinutos || 60} min
                         </span>
                         <span className="h-5 w-px bg-white/20" />
-                        <span className="whitespace-nowrap">A partir de</span>
-                        <strong className="whitespace-nowrap font-black text-[#f6b93f]">
+                        <span>A partir de</span>
+                        <strong className="font-black text-[#f6b93f]">
                           {formatCurrency(servico.preco)}
                         </strong>
                       </span>
                     </span>
                     <span
-                      className={`flex h-12 w-12 items-center justify-center rounded-full border-2 ${
+                      className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full border-2 ${
                         selected
                           ? "border-[#f6b93f] bg-[#f6b93f] text-black"
                           : "border-zinc-400 text-zinc-400"
@@ -577,7 +577,7 @@ export default function ClientBookingForm({
                 Remova um serviço ou escolha outro.
               </p>
             ) : null}
-            <div className="pointer-events-none fixed inset-x-0 bottom-[5.15rem] z-40 bg-gradient-to-t from-[#050505] via-[#050505]/92 to-transparent px-5 pb-4 pt-10 md:bottom-0">
+            <div className="pointer-events-none fixed inset-x-0 bottom-[5.15rem] z-40 bg-gradient-to-t from-[#050505] via-[#050505]/95 to-transparent px-5 pb-4 pt-12 md:bottom-0">
               <div className="pointer-events-auto mx-auto max-w-md">
                 <button
                   type="button"

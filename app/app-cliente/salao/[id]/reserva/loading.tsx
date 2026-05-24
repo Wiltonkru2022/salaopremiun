@@ -4,8 +4,8 @@ export default function ClienteSalaoReservaLoading() {
   return (
     <ClientAppPageSkeleton
       title="Reserva online"
-      subtitle="Carregando fluxo de reserva."
-      panels={2}
+      subtitle="Carregando horários e serviços."
+      panels={3}
       dark
     />
   );

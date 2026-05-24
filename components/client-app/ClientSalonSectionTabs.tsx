@@ -18,18 +18,18 @@ export default function ClientSalonSectionTabs({
 }: ClientSalonSectionTabsProps) {
   return (
     <nav className="border-b border-zinc-200 bg-white px-4 md:px-6">
-      <div className="mx-auto flex max-w-6xl gap-8 overflow-x-auto text-[1.04rem] font-semibold text-zinc-500">
+      <div className="mx-auto grid max-w-6xl grid-cols-4 items-stretch text-[0.98rem] font-semibold text-zinc-500">
         {tabs.map((tab) => (
           <Link
             key={tab.key}
             href={`/app-cliente/salao/${salonId}${tab.href}`}
-            className={`shrink-0 whitespace-nowrap border-b-[3px] px-0 py-4 transition hover:border-zinc-950 hover:text-zinc-950 ${
+            className={`flex min-h-12 items-center justify-center border-b-[3px] px-2 py-3 text-center transition hover:border-zinc-950 hover:text-zinc-950 ${
               active === tab.key
                 ? "border-zinc-950 font-black text-zinc-950"
                 : "border-transparent"
             }`}
           >
-            {tab.label}
+            <span className="truncate">{tab.label}</span>
           </Link>
         ))}
       </div>
