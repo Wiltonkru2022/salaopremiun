@@ -1,14 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
-  Accessibility,
   ArrowLeft,
   CalendarDays,
   Car,
   Clock,
-  Coffee,
-  Gem,
   Heart,
+  ImageIcon,
   MapPin,
   MessageCircle,
   Phone,
@@ -21,7 +19,7 @@ import { getClientAppSalonDetail } from "@/lib/client-app/queries";
 import { buildSalaoPublicPath } from "@/lib/saloes/public-link";
 
 export const metadata = {
-  title: "Detalhes do Salão",
+  title: "Detalhes do salão",
 };
 
 const DIAS_LABEL: Record<string, string> = {
@@ -87,6 +85,7 @@ export default async function ClienteSalonDetailsPage({
           salao.enderecoCompleto
         )}`
       : null;
+
     const hojeKey = DIAS_BY_INDEX[new Date().getDay()];
     const diasFuncionamento = salao.horarioFuncionamento.diasFuncionamento.map(
       normalizeDia
@@ -104,14 +103,19 @@ export default async function ClienteSalonDetailsPage({
       salao.fotoCapaUrl ||
       "https://images.unsplash.com/photo-1600948836101-f9ffda59d250?q=80&w=1400&auto=format&fit=crop";
     const logo = salao.logoUrl || "/icons/icon-192.png";
-    const photos = salao.portfolio.length
-      ? salao.portfolio.map((foto) => foto.imagemUrl)
-      : [
-          cover,
-          "https://images.unsplash.com/photo-1560066984-138dadb4c035?q=80&w=800&auto=format&fit=crop",
-          "https://images.unsplash.com/photo-1522337660859-02fbefca4702?q=80&w=800&auto=format&fit=crop",
-          "https://images.unsplash.com/photo-1562322140-8baeececf3df?q=80&w=800&auto=format&fit=crop",
-        ];
+    const hasPortfolio = salao.portfolio.length > 0;
+    const photos = salao.portfolio.map((foto) => foto.imagemUrl);
+
+    const amenidades: Array<{ label: string; icon: typeof Wifi }> = [];
+    if (salao.estacionamento) {
+      amenidades.push({ label: "Estacionamento", icon: Car });
+    }
+    if (salao.formasPagamento.some((item) => item.toLowerCase().includes("pix"))) {
+      amenidades.push({ label: "Pagamento Pix", icon: Star });
+    }
+    if (amenidades.length === 0) {
+      amenidades.push({ label: "Sem amenidades cadastradas", icon: Wifi });
+    }
 
     return (
       <ClientAppFrame title={salao.nome} subtitle="Contato e funcionamento">
@@ -278,21 +282,16 @@ export default async function ClienteSalonDetailsPage({
                   "Ambiente acolhedor, profissionais especializados e os melhores serviços para realçar sua beleza."}
               </p>
 
-              <div className="mt-7 grid grid-cols-5 gap-3 text-center text-xs font-semibold text-zinc-100">
-                {[
-                  { label: "Wi-Fi", icon: Wifi },
-                  { label: "Pagamento Pix", icon: Gem },
-                  { label: "Café", icon: Coffee },
-                  { label: "Estacionamento", icon: Car },
-                  { label: "Acessibilidade", icon: Accessibility },
-                ].map((item) => {
+              <div className="mt-7 grid grid-cols-2 gap-3 text-sm font-semibold text-zinc-100">
+                {amenidades.map((item) => {
                   const Icon = item.icon;
                   return (
-                    <div key={item.label} className="min-w-0">
-                      <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-white/10 text-[#f6b93f]">
-                        <Icon size={25} />
-                      </span>
-                      <p className="mt-2 break-words leading-4">{item.label}</p>
+                    <div
+                      key={item.label}
+                      className="flex items-center gap-3 rounded-2xl border border-white/10 px-3 py-3"
+                    >
+                      <Icon size={20} className="text-[#f6b93f]" />
+                      <p className="break-words">{item.label}</p>
                     </div>
                   );
                 })}
@@ -309,16 +308,24 @@ export default async function ClienteSalonDetailsPage({
                   Ver todas
                 </Link>
               </div>
-              <div className="mt-5 flex gap-3 overflow-x-auto pb-1">
-                {photos.slice(0, 6).map((photo, index) => (
-                  <img
-                    key={`${photo}-${index}`}
-                    src={photo}
-                    alt=""
-                    className="h-28 w-36 shrink-0 rounded-2xl object-cover"
-                  />
-                ))}
-              </div>
+
+              {hasPortfolio ? (
+                <div className="mt-5 flex gap-3 overflow-x-auto pb-1">
+                  {photos.slice(0, 6).map((photo, index) => (
+                    <img
+                      key={`${photo}-${index}`}
+                      src={photo}
+                      alt=""
+                      className="h-28 w-36 shrink-0 rounded-2xl object-cover"
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="mt-5 rounded-2xl border border-dashed border-white/20 p-6 text-center text-zinc-300">
+                  <ImageIcon className="mx-auto mb-3 h-8 w-8 text-zinc-400" />
+                  Este salão ainda está sem portfólio publicado.
+                </div>
+              )}
             </section>
           </div>
         </section>

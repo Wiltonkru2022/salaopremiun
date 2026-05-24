@@ -13,17 +13,9 @@ export async function generateMetadata({
 
 export default async function PublicSalaoShortcutPage({
   params,
-  searchParams,
 }: {
   params: Promise<{ slug: string }>;
-  searchParams?: Promise<{ status?: string }>;
 }) {
   const { slug } = await params;
-  return (
-    <ClienteSalonPage
-      params={Promise.resolve({ id: slug })}
-      searchParams={searchParams}
-      publicOnly
-    />
-  );
+  return <ClienteSalonPage params={Promise.resolve({ id: slug })} />;
 }

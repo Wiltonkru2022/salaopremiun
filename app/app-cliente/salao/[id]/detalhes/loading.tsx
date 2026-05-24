@@ -1,11 +1,12 @@
 import ClientAppPageSkeleton from "@/components/client-app/ClientAppPageSkeleton";
 
-export default function ClienteSalaoLoading() {
+export default function ClienteSalaoDetalhesLoading() {
   return (
     <ClientAppPageSkeleton
-      title="Salão"
-      subtitle="Carregando perfil do salão."
+      title="Detalhes do salão"
+      subtitle="Carregando informações do salão."
       panels={3}
+      dark
     />
   );
 }

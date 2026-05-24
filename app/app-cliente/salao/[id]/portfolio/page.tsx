@@ -69,7 +69,7 @@ export default async function ClienteSalonPortfolioPage({
               </div>
               <div className="text-2xl text-zinc-950">Nenhuma foto ainda</div>
               <p className="mt-2 text-lg">
-                Volte em breve para ver imagens dos trabalhos do salão.
+                Este salão ainda está sem portfólio publicado.
               </p>
             </div>
           )}

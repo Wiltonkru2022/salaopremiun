@@ -47,8 +47,6 @@ export default async function ClienteSalonPage({
   params,
 }: {
   params: Promise<{ id: string }>;
-  searchParams?: Promise<{ status?: string }>;
-  publicOnly?: boolean;
 }) {
   const { id } = await params;
 
@@ -71,6 +69,21 @@ export default async function ClienteSalonPage({
       "https://images.unsplash.com/photo-1521590832167-7bcbfaa6381f?q=80&w=1400&auto=format&fit=crop";
     const publicPath = buildSalaoPublicPath(salao.appClienteSlug || salao.id);
     const popular = salao.servicos.slice(0, 1);
+
+    const amenidades: Array<{ label: string; icon: typeof Wifi }> = [];
+    if (salao.estacionamento) {
+      amenidades.push({ label: "Estacionamento", icon: ParkingSquare });
+    }
+    if (salao.formasPagamento.some((item) => item.toLowerCase().includes("pix"))) {
+      amenidades.push({ label: "Pix", icon: Sparkles });
+    }
+    if (amenidades.length === 0) {
+      amenidades.push(
+        { label: "Wi-Fi", icon: Wifi },
+        { label: "Café", icon: Coffee },
+        { label: "Ar", icon: Wind }
+      );
+    }
 
     return (
       <ClientAppFrame title={salao.nome} subtitle="Agendamento online">
@@ -148,12 +161,7 @@ export default async function ClienteSalonPage({
               </p>
 
               <div className="mt-7 flex gap-4 overflow-x-auto pb-1">
-                {[
-                  { label: "Wi-Fi", icon: Wifi },
-                  { label: "Café", icon: Coffee },
-                  { label: "Estacionamento", icon: ParkingSquare },
-                  { label: "Ar", icon: Wind },
-                ].map((item) => {
+                {amenidades.map((item) => {
                   const Icon = item.icon;
                   return (
                     <span
