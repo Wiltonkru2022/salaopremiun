@@ -55,9 +55,9 @@ export default async function AppClienteIndexPage() {
         String(item.status).toLowerCase()
       )
     ) || null;
-  const firstName =
-    (profile?.nome || session.context?.nome || "Bruna").trim().split(" ")[0] ||
-    "Bruna";
+
+  const firstName = (profile?.nome || session.context?.nome || "").trim().split(" ")[0];
+  const greeting = firstName ? `Olá, ${firstName}!` : "Olá, seja bem-vindo!";
 
   return (
     <ClientAppFrame title="Início" subtitle="Salão Premium">
@@ -78,7 +78,7 @@ export default async function AppClienteIndexPage() {
           </header>
 
           <h1 className="mt-12 text-[2.55rem] font-black leading-tight tracking-[-0.05em]">
-            Olá, {firstName}! 👋
+            {greeting}
           </h1>
           <p className="mt-4 text-2xl leading-snug text-zinc-300">
             Sua beleza, seu tempo.
@@ -135,7 +135,7 @@ export default async function AppClienteIndexPage() {
               },
               {
                 href: "/app-cliente/cupons",
-                label: "Indique e ganhe",
+                label: "Cupom",
                 icon: Gift,
               },
             ].map((item) => {
