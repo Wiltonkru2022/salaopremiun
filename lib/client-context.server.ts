@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { getClienteSessionFromCookie } from "@/lib/cliente-auth.server";
 import { asLooseSupabaseClient } from "@/lib/supabase/loose-client";
+import { getClienteAppPublicEmail } from "@/app/services/cliente-app/linking";
 import {
   buildSecurityBlockPath,
   getSecurityAccessDecision,
@@ -62,7 +63,7 @@ async function loadClienteAppServerContext(): Promise<ClienteAppServerContext> {
     const context = {
       idConta: session.idConta,
       nome: session.nome || "Cliente SalãoPremium",
-      email: session.email || "cliente@salaopremium.local",
+      email: getClienteAppPublicEmail(session.email),
       telefone: session.telefone || null,
     };
 
@@ -83,8 +84,7 @@ async function loadClienteAppServerContext(): Promise<ClienteAppServerContext> {
     nome:
       String(conta.nome || "").trim() || session.nome || "Cliente SalãoPremium",
     email:
-      String(conta.email || session.email || "").trim() ||
-      "cliente@salaopremium.local",
+      getClienteAppPublicEmail(conta.email || session.email),
     telefone: String(conta.telefone || session.telefone || "").trim() || null,
   };
 

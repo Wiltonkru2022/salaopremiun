@@ -1,5 +1,6 @@
 import "server-only";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getClienteAppPublicEmail } from "@/app/services/cliente-app/linking";
 import {
   assertSalonCanAppearInClientApp,
   type ClientAppEligibleSalon,
@@ -1684,7 +1685,7 @@ export async function getClienteAppProfileData(params: { idConta: string }) {
 
     return {
       nome: String(conta?.nome || "").trim(),
-      email: String(conta?.email || "").trim(),
+      email: getClienteAppPublicEmail(conta?.email),
       telefone: String(conta?.telefone || "").trim() || null,
       preferenciasGerais: String(conta?.preferencias_gerais || "").trim() || null,
       creditos,

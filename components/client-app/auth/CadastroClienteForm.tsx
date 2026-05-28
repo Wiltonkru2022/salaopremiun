@@ -21,7 +21,7 @@ function SubmitButton() {
       disabled={pending}
       className="h-12 w-full rounded-2xl bg-zinc-950 text-sm font-semibold text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60"
     >
-      {pending ? "Criando conta..." : "Criar conta"}
+      {pending ? "Criando conta..." : "Criar conta e agendar"}
     </button>
   );
 }
@@ -59,9 +59,8 @@ export default function CadastroClienteForm({
         Crie sua conta no app cliente
       </h2>
       <p className="mt-2 text-sm leading-6 text-zinc-500">
-        Crie uma vez e use o mesmo acesso nos salões publicados no app. Se seu
-        telefone já estiver cadastrado em algum salão, a ficha será conectada
-        automaticamente.
+        Use seu telefone para criar acesso. O e-mail é opcional e sua ficha do
+        salão é conectada automaticamente quando o telefone já existe.
       </p>
 
       {salaoNome ? (
@@ -86,6 +85,7 @@ export default function CadastroClienteForm({
             type="text"
             autoComplete="name"
             placeholder="Seu nome"
+            required
             className="h-12 w-full rounded-2xl border border-zinc-200 bg-white px-4 text-base outline-none transition focus:border-zinc-400"
           />
         </div>
@@ -100,13 +100,14 @@ export default function CadastroClienteForm({
             autoComplete="tel"
             inputMode="tel"
             placeholder="(00) 00000-0000"
+            required
             className="h-12 w-full rounded-2xl border border-zinc-200 bg-white px-4 text-base outline-none transition focus:border-zinc-400"
           />
         </div>
 
         <div>
           <label className="mb-1.5 block text-sm font-medium text-zinc-700">
-            E-mail
+            E-mail opcional
           </label>
           <input
             name="email"
@@ -127,6 +128,8 @@ export default function CadastroClienteForm({
             type="password"
             autoComplete="new-password"
             placeholder="Pelo menos 6 caracteres"
+            required
+            minLength={6}
             className="h-12 w-full rounded-2xl border border-zinc-200 bg-white px-4 text-base outline-none transition focus:border-zinc-400"
           />
         </div>

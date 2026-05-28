@@ -69,7 +69,7 @@ export default function ClientProfileForm({
 
           <div>
             <label className="mb-1.5 block text-sm font-medium text-zinc-700">
-              E-mail
+              E-mail opcional
             </label>
             <input
               name="email"
@@ -91,6 +91,7 @@ export default function ClientProfileForm({
               autoComplete="tel"
               inputMode="tel"
               defaultValue={telefone || ""}
+              required
               className="h-12 w-full rounded-2xl border border-zinc-200 bg-white px-4 text-base outline-none transition focus:border-zinc-400"
             />
           </div>

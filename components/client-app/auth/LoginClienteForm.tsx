@@ -58,7 +58,7 @@ export default function LoginClienteForm({
         Entre para acompanhar seus horários
       </h2>
       <p className="mt-2 text-sm leading-6 text-zinc-500">
-        Use seu e-mail e senha para ver seus agendamentos, acompanhar o salão e
+        Use seu telefone ou e-mail e senha para ver seus agendamentos, acompanhar o salão e
         voltar mais rápido na próxima visita.
       </p>
 
@@ -71,14 +71,15 @@ export default function LoginClienteForm({
       <div className="mt-5 space-y-4">
         <div>
           <label className="mb-1.5 block text-sm font-medium text-zinc-700">
-            E-mail
+            Telefone ou e-mail
           </label>
           <input
             name="email"
-            type="email"
-            autoComplete="email"
-            inputMode="email"
-            placeholder="você@exemplo.com"
+            type="text"
+            autoComplete="username"
+            inputMode="text"
+            placeholder="(00) 00000-0000"
+            required
             className="h-12 w-full rounded-2xl border border-zinc-200 bg-white px-4 text-base outline-none transition focus:border-zinc-400"
           />
         </div>
@@ -92,6 +93,7 @@ export default function LoginClienteForm({
             type="password"
             autoComplete="current-password"
             placeholder="Digite sua senha"
+            required
             className="h-12 w-full rounded-2xl border border-zinc-200 bg-white px-4 text-base outline-none transition focus:border-zinc-400"
           />
         </div>

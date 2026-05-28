@@ -90,6 +90,15 @@ function formatFullDate(value: string) {
   }).format(new Date(`${value}T12:00:00`));
 }
 
+function profissionalExecutaServico(
+  servico: ClientAppServiceListItem,
+  profissionalId: string
+) {
+  if (!profissionalId) return true;
+  if (!servico.profissionaisPermitidos.length) return true;
+  return servico.profissionaisPermitidos.includes(profissionalId);
+}
+
 function buildCalendarDays(diasDisponiveis: AvailabilityDay[], monthCursor: Date) {
   const availableDates = new Set(diasDisponiveis.map((dia) => dia.data));
   const todayKey = formatDateInput(new Date());
@@ -233,14 +242,25 @@ export default function ClientBookingForm({
   const primaryService = selectedServices[0] || null;
   const selectedProfissional =
     profissionais.find((profissional) => profissional.id === profissionalId) || null;
+  const servicosDoProfissional = useMemo(
+    () =>
+      servicos.filter((servico) =>
+        profissionalExecutaServico(servico, profissionalId)
+      ),
+    [profissionalId, servicos]
+  );
   const categorias = useMemo(
     () => [
       "Todos",
       ...Array.from(
-        new Set(servicos.map((servico) => servico.categoriaNome || "Outros"))
+        new Set(
+          servicosDoProfissional.map(
+            (servico) => servico.categoriaNome || "Outros"
+          )
+        )
       ),
     ],
-    [servicos]
+    [servicosDoProfissional]
   );
   const profissionaisFiltrados = useMemo(() => {
     const term = normalize(buscaProfissional);
@@ -254,7 +274,7 @@ export default function ClientBookingForm({
   }, [buscaProfissional, profissionais]);
   const servicosFiltrados = useMemo(() => {
     const term = normalize(buscaServico);
-    return servicos.filter((servico) => {
+    return servicosDoProfissional.filter((servico) => {
       if (categoriaAtiva !== "Todos" && servico.categoriaNome !== categoriaAtiva) {
         return false;
       }
@@ -263,7 +283,7 @@ export default function ClientBookingForm({
         term
       );
     });
-  }, [buscaServico, categoriaAtiva, servicos]);
+  }, [buscaServico, categoriaAtiva, servicosDoProfissional]);
   const profissionaisCompativeis = useMemo(
     () =>
       selectedServices.length
@@ -294,7 +314,26 @@ export default function ClientBookingForm({
   );
 
   useEffect(() => {
-    if (!primaryService?.id || !profissionalId) return;
+    if (categoriaAtiva === "Todos") return;
+    if (
+      servicosDoProfissional.some(
+        (servico) => servico.categoriaNome === categoriaAtiva
+      )
+    ) {
+      return;
+    }
+    setCategoriaAtiva("Todos");
+  }, [categoriaAtiva, servicosDoProfissional]);
+
+  useEffect(() => {
+    if (!primaryService?.id || !profissionalId) {
+      setDiasDisponiveis([]);
+      setSelectedDate("");
+      setSelectedTime("");
+      setAvailabilityError(null);
+      setLoadingAvailability(false);
+      return;
+    }
     const controller = new AbortController();
     async function loadAvailability() {
       try {
@@ -319,8 +358,21 @@ export default function ClientBookingForm({
           ? (payload.dias as AvailabilityDay[])
           : [];
         setDiasDisponiveis(dias);
-        setSelectedDate((current) => current || dias[0]?.data || "");
-        setSelectedTime((current) => current || dias[0]?.horarios[0]?.horaInicio || "");
+        let nextSelectedDate = "";
+        setSelectedDate((current) => {
+          nextSelectedDate = dias.some((dia) => dia.data === current)
+            ? current
+            : dias[0]?.data || "";
+          return nextSelectedDate;
+        });
+        setSelectedTime((current) => {
+          const diaSelecionado =
+            dias.find((dia) => dia.data === nextSelectedDate) || dias[0];
+          const horarios = diaSelecionado?.horarios || [];
+          return horarios.some((horario) => horario.horaInicio === current)
+            ? current
+            : horarios[0]?.horaInicio || "";
+        });
       } catch (error) {
         if (controller.signal.aborted) return;
         setAvailabilityError(
@@ -336,6 +388,18 @@ export default function ClientBookingForm({
     void loadAvailability();
     return () => controller.abort();
   }, [idSalao, monthCursor, primaryService?.id, profissionalId, servicoIds]);
+
+  function selectProfissional(id: string) {
+    setProfissionalId(id);
+    setServicoIds([]);
+    setBuscaServico("");
+    setCategoriaAtiva("Todos");
+    setDiasDisponiveis([]);
+    setSelectedDate("");
+    setSelectedTime("");
+    setAvailabilityError(null);
+    setStep("servico");
+  }
 
   function toggleServico(id: string) {
     setServicoIds((current) =>
@@ -449,10 +513,7 @@ export default function ClientBookingForm({
                   <button
                     key={profissional.id}
                     type="button"
-                    onClick={() => {
-                      setProfissionalId(profissional.id);
-                      setStep("servico");
-                    }}
+                    onClick={() => selectProfissional(profissional.id)}
                     className="grid w-full grid-cols-[72px_1fr_auto] items-center gap-4 rounded-[1.15rem] border border-white/8 bg-[#111214] p-4 text-left"
                   >
                     <span className="h-[72px] w-[72px] overflow-hidden rounded-full bg-zinc-800">
@@ -490,7 +551,7 @@ export default function ClientBookingForm({
               Escolha o serviço
             </h2>
             <p className="mt-2 text-lg leading-snug text-zinc-300">
-              Selecione um ou mais serviços que deseja realizar.
+              Mostrando apenas serviços feitos por {selectedProfissional?.nome || "este profissional"}.
             </p>
             <label className="mt-6 flex h-16 items-center gap-3 rounded-2xl bg-[#151618] px-4 text-zinc-400">
               <Search size={28} />
@@ -570,6 +631,11 @@ export default function ClientBookingForm({
                   </button>
                 );
               })}
+              {!servicosFiltrados.length ? (
+                <div className="rounded-[1.15rem] border border-white/10 bg-[#111214] p-5 text-center text-zinc-300">
+                  Nenhum serviço disponível para este profissional nesta categoria.
+                </div>
+              ) : null}
             </div>
             {!profissionaisCompativeis.some((item) => item.id === profissionalId) && servicoIds.length ? (
               <p className="mt-3 rounded-2xl border border-[#f6b93f]/40 bg-[#211805] p-4 text-sm text-[#f6b93f]">

@@ -3,7 +3,11 @@ import {
   clearClienteSession,
   createClienteSession,
 } from "@/lib/cliente-auth.server";
-import { syncClienteAppLinksByPhone } from "@/app/services/cliente-app/linking";
+import {
+  buildClienteAppPhoneOnlyEmail,
+  getClienteAppPublicEmail,
+  syncClienteAppLinksByPhone,
+} from "@/app/services/cliente-app/linking";
 
 type UpdateClienteProfileParams = {
   idConta: string;
@@ -25,6 +29,10 @@ function normalizePhone(value: string) {
   return String(value || "").replace(/\D/g, "").trim();
 }
 
+function getStoredAccountEmail(params: { email: string; telefone: string }) {
+  return normalizeEmail(params.email) || buildClienteAppPhoneOnlyEmail(params.telefone);
+}
+
 export async function updateClienteAppProfile(
   params: UpdateClienteProfileParams
 ): Promise<ClienteProfileActionResult> {
@@ -32,6 +40,7 @@ export async function updateClienteAppProfile(
   const nome = String(params.nome || "").trim();
   const email = normalizeEmail(params.email);
   const telefone = normalizePhone(params.telefone || "");
+  const storedEmail = getStoredAccountEmail({ email, telefone });
   const preferencias = String(params.preferencias || "").trim() || null;
 
   if (!idConta) {
@@ -42,8 +51,12 @@ export async function updateClienteAppProfile(
     return { ok: false, error: "Informe seu nome." };
   }
 
-  if (!email) {
-    return { ok: false, error: "Informe um e-mail valido." };
+  if (!telefone) {
+    return { ok: false, error: "Informe seu telefone." };
+  }
+
+  if (!storedEmail) {
+    return { ok: false, error: "Informe um e-mail valido ou um telefone." };
   }
 
   return runAdminOperation({
@@ -61,12 +74,12 @@ export async function updateClienteAppProfile(
         return { ok: false, error: "Não foi possível localizar sua conta do app." };
       }
 
-      if (email !== String(contaAtual.email || "").trim().toLowerCase()) {
+      if (storedEmail !== String(contaAtual.email || "").trim().toLowerCase()) {
         const { data: duplicateRows, error: duplicateError } =
           await (supabaseAdmin as any)
             .from("clientes_app_auth")
             .select("id")
-            .eq("email", email)
+            .eq("email", storedEmail)
             .neq("id", idConta)
             .limit(1);
 
@@ -115,7 +128,7 @@ export async function updateClienteAppProfile(
           .from("clientes_app_auth")
           .update({
             nome,
-            email,
+            email: storedEmail,
             telefone: telefone || null,
             preferencias_gerais: preferencias,
             updated_at: new Date().toISOString(),
@@ -149,7 +162,7 @@ export async function updateClienteAppProfile(
             .from("clientes")
             .update({
               nome,
-              email,
+              email: email || null,
               telefone: telefone || null,
               whatsapp: telefone || null,
               atualizado_em: new Date().toISOString(),
@@ -159,7 +172,7 @@ export async function updateClienteAppProfile(
           supabaseAdmin
             .from("clientes_auth")
             .update({
-              email,
+              email: email || null,
               updated_at: new Date().toISOString(),
             })
             .eq("id_cliente", idCliente)
@@ -172,7 +185,7 @@ export async function updateClienteAppProfile(
       await createClienteSession({
         idConta,
         nome,
-        email,
+        email: getClienteAppPublicEmail(storedEmail),
         telefone: telefone || null,
         tipo: "cliente",
       });

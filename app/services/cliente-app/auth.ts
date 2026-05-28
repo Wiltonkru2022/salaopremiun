@@ -10,7 +10,9 @@ import {
   listEligibleSalonIdsByEmail,
 } from "@/lib/client-app/eligibility";
 import {
+  buildClienteAppPhoneOnlyEmail,
   findClienteRowsByNormalizedPhone,
+  getClienteAppPublicEmail,
   normalizeClienteAppEmail,
   normalizeClienteAppPhone,
   syncClienteAppLinksByPhone,
@@ -50,6 +52,12 @@ function normalizePhone(value: string) {
   return normalizeClienteAppPhone(value);
 }
 
+function getStoredAccountEmail(params: { email?: string; telefone?: string }) {
+  const email = normalizeEmail(params.email || "");
+  if (email) return email;
+  return buildClienteAppPhoneOnlyEmail(params.telefone || "");
+}
+
 function buildSessionFromAccount(
   account: Pick<
     ClienteAppAccountRow,
@@ -59,9 +67,7 @@ function buildSessionFromAccount(
   return {
     idConta: String(account.id),
     nome: String(account.nome || "").trim() || "Cliente Salão Premium",
-    email:
-      normalizeEmail(String(account.email || "").trim()) ||
-      "cliente@salaopremium.local",
+    email: getClienteAppPublicEmail(account.email) || "",
     telefone: String(account.telefone || "").trim() || null,
     passwordDigest: getClientePasswordSessionDigest(account.senha_hash),
     tipo: "cliente",
@@ -218,7 +224,7 @@ export async function ensureClienteContaVinculadaAoSalao(params: {
         };
       }
 
-      const email = normalizeEmail(account.email || "");
+      const email = getClienteAppPublicEmail(account.email);
       const telefone = normalizePhone(account.telefone || "");
 
       const [{ data: clienteByPhoneRows, error: clienteByPhoneError }, { data: authByEmailRows, error: authByEmailError }, { data: clientesByEmailRows, error: clienteByEmailError }] =
@@ -271,7 +277,7 @@ export async function ensureClienteContaVinculadaAoSalao(params: {
           .from("clientes")
           .update({
             nome: account.nome,
-            email,
+            email: email || null,
             telefone: telefone || null,
             whatsapp: telefone || null,
             status: "ativo",
@@ -294,7 +300,7 @@ export async function ensureClienteContaVinculadaAoSalao(params: {
             .insert({
               id_salao: idSalao,
               nome: account.nome,
-              email,
+              email: email || null,
               telefone: telefone || null,
               whatsapp: telefone || null,
               status: "ativo",
@@ -337,7 +343,7 @@ export async function ensureClienteContaVinculadaAoSalao(params: {
           .update({
             id_cliente: idCliente,
             app_conta_id: idConta,
-            email,
+            email: email || null,
             senha_hash: account.senha_hash,
             app_ativo: true,
             updated_at: new Date().toISOString(),
@@ -357,7 +363,7 @@ export async function ensureClienteContaVinculadaAoSalao(params: {
             id_salao: idSalao,
             id_cliente: idCliente,
             app_conta_id: idConta,
-            email,
+            email: email || null,
             senha_hash: account.senha_hash,
             app_ativo: true,
           });
@@ -386,6 +392,7 @@ export async function createClienteAppAccount(params: {
 }): Promise<ClienteLoginResult> {
   const email = normalizeEmail(params.email);
   const telefone = normalizePhone(params.telefone || "");
+  const storedEmail = getStoredAccountEmail({ email, telefone });
   const nome = String(params.nome || "").trim();
   const senha = String(params.senha || "").trim();
 
@@ -393,8 +400,12 @@ export async function createClienteAppAccount(params: {
     return { ok: false, error: "Informe seu nome." };
   }
 
-  if (!email) {
-    return { ok: false, error: "Informe um e-mail valido." };
+  if (!telefone) {
+    return { ok: false, error: "Informe seu telefone." };
+  }
+
+  if (!storedEmail) {
+    return { ok: false, error: "Informe um e-mail valido ou um telefone." };
   }
 
   if (senha.length < 6) {
@@ -403,9 +414,11 @@ export async function createClienteAppAccount(params: {
 
   return runAdminOperation({
     action: "cliente_app_signup_global",
-    actorId: email,
+    actorId: email || telefone,
     run: async (supabaseAdmin): Promise<ClienteLoginResult> => {
-      const existing = await findGlobalAccountByEmail(supabaseAdmin, email);
+      const existing = email
+        ? await findGlobalAccountByEmail(supabaseAdmin, email)
+        : null;
       if (existing?.id) {
         return {
           ok: false,
@@ -430,7 +443,7 @@ export async function createClienteAppAccount(params: {
         .from("clientes_app_auth")
         .insert({
           nome,
-          email,
+          email: storedEmail,
           telefone: telefone || null,
           senha_hash: senhaHash,
           ativo: true,
@@ -454,7 +467,7 @@ export async function createClienteAppAccount(params: {
         tipoUsuario: "cliente",
         userId: String((data as { id: string }).id),
         origem: "cliente-app",
-        detalhes: { email },
+        detalhes: { email: email || null, telefone },
       });
 
       return {
@@ -475,20 +488,24 @@ export async function loginClienteAppByEmailSenha(params: {
   senha: string;
   idSalao?: string | null;
 }): Promise<ClienteLoginResult> {
-  const email = normalizeEmail(params.email);
+  const identidade = String(params.email || "").trim();
+  const telefone = normalizePhone(identidade);
+  const email = identidade.includes("@") ? normalizeEmail(identidade) : "";
   const senha = String(params.senha || "").trim();
   const idSalao = String(params.idSalao || "").trim() || null;
 
-  if (!email || !senha) {
-    return { ok: false, error: "Informe e-mail e senha." };
+  if ((!email && !telefone) || !senha) {
+    return { ok: false, error: "Informe telefone ou e-mail e senha." };
   }
 
   return runAdminOperation({
     action: "cliente_app_login",
-    actorId: email,
+    actorId: email || telefone,
     idSalao,
     run: async (supabaseAdmin): Promise<ClienteLoginResult> => {
-      const globalAccount = await findGlobalAccountByEmail(supabaseAdmin, email);
+      const globalAccount = email
+        ? await findGlobalAccountByEmail(supabaseAdmin, email)
+        : await findGlobalAccountByPhone(supabaseAdmin, telefone);
 
       if (globalAccount?.id && globalAccount.senha_hash) {
         const senhaOk = await verifyClientePassword(
@@ -550,6 +567,18 @@ export async function loginClienteAppByEmailSenha(params: {
           origem: "cliente-app",
           detalhes: { email },
         });
+      }
+
+      if (!email) {
+        void recordSecurityLoginFailure({
+          evento: "cliente_app_login_falhou",
+          tipoUsuario: "cliente",
+          idSalao,
+          identidade: telefone,
+          origem: "cliente-app",
+          detalhes: { telefone },
+        });
+        return { ok: false, error: "Telefone ou senha invÃ¡lidos." };
       }
 
       let query = supabaseAdmin

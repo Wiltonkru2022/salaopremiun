@@ -36,6 +36,7 @@ export default async function ClienteSalonReservaPage({
     const salaoPublicPath = buildSalaoPublicPath(
       salao.appClienteSlug || salao.id
     );
+    const reservaPath = `${salaoPublicPath}/reserva`;
     const cuponsDisponiveis = session.context
       ? await listClienteAppAvailableCoupons({
           idConta: session.context.idConta,
@@ -93,7 +94,7 @@ export default async function ClienteSalonReservaPage({
               <a
                 href={`/app-cliente/login?salao=${encodeURIComponent(
                   salao.appClienteSlug || salao.id
-                )}&next=${encodeURIComponent(salaoPublicPath)}`}
+                )}&next=${encodeURIComponent(reservaPath)}`}
                 className="mt-6 inline-flex h-14 w-full items-center justify-center rounded-2xl bg-[#f6b93f] px-5 text-sm font-black text-black"
               >
                 Entrar ou criar conta

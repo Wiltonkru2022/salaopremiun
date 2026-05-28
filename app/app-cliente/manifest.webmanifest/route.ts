@@ -4,13 +4,13 @@ import { APP_VERSION } from "@/lib/app-version";
 export function GET() {
   return NextResponse.json({
     id: "/app-cliente",
-    name: "Salão Premium",
-    short_name: "Salão Premium",
+    name: "Salão Premium Cliente",
+    short_name: "Cliente",
     description:
       "Agende horários, acompanhe visitas e avalie seu atendimento pelo app cliente do Salão Premium.",
     version: APP_VERSION,
-    start_url: "/app-cliente",
-    scope: "/",
+    start_url: "/app-cliente?origem=pwa-cliente",
+    scope: "/app-cliente",
     display: "standalone",
     launch_handler: {
       client_mode: ["navigate-existing", "auto"],

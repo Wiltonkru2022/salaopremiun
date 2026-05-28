@@ -28,6 +28,23 @@ export function normalizeClienteAppPhone(value: string | null | undefined) {
   return String(value || "").replace(/\D/g, "").trim();
 }
 
+const PHONE_ONLY_EMAIL_DOMAIN = "telefone.salaopremium.local";
+
+export function buildClienteAppPhoneOnlyEmail(telefone: string) {
+  const normalized = normalizeClienteAppPhone(telefone);
+  return normalized ? `cliente-${normalized}@${PHONE_ONLY_EMAIL_DOMAIN}` : "";
+}
+
+export function isClienteAppPhoneOnlyEmail(email: string | null | undefined) {
+  const normalized = normalizeClienteAppEmail(email);
+  return normalized.endsWith(`@${PHONE_ONLY_EMAIL_DOMAIN}`);
+}
+
+export function getClienteAppPublicEmail(email: string | null | undefined) {
+  const normalized = normalizeClienteAppEmail(email);
+  return isClienteAppPhoneOnlyEmail(normalized) ? "" : normalized;
+}
+
 function clienteRowMatchesPhone(row: ClienteManualLinkRow, telefone: string) {
   return (
     normalizeClienteAppPhone(row.telefone) === telefone ||
