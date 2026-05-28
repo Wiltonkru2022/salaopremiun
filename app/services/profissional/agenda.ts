@@ -50,6 +50,15 @@ type AgendamentoAgendaRow = {
   id_comanda: string | null;
 };
 
+type BloqueioAgendaRow = {
+  id: string;
+  profissional_id: string;
+  data: string;
+  hora_inicio: string;
+  hora_fim: string;
+  motivo: string | null;
+};
+
 type NomeRow = {
   id: string;
   nome: string;
@@ -255,6 +264,36 @@ export async function buscarConflitosNoHorario(params: BuscarConflitosParams) {
   });
 }
 
+export async function buscarConflitosBloqueioNoHorario(params: BuscarConflitosParams) {
+  return runAdminOperation({
+    action: "profissional_agenda_buscar_conflitos_bloqueio",
+    actorId: params.idProfissional,
+    idSalao: params.idSalao,
+    run: async (supabase) => {
+      const { data, error } = await supabase
+        .from("agenda_bloqueios")
+        .select("id, hora_inicio, hora_fim")
+        .eq("id_salao", params.idSalao)
+        .eq("profissional_id", params.idProfissional)
+        .eq("data", params.dataISO);
+
+      if (error) throw new Error(error.message);
+
+      const novoInicio = timeToMinutes(params.horaInicio);
+      const novoFim = timeToMinutes(params.horaFim);
+
+      return ((data ?? []) as AgendamentoConflitoRow[]).filter((i) =>
+        overlaps(
+          novoInicio,
+          novoFim,
+          timeToMinutes(i.hora_inicio),
+          timeToMinutes(i.hora_fim)
+        )
+      );
+    },
+  });
+}
+
 export function validarHorarioAgendamento({
   dataISO,
   horaInicio,
@@ -309,6 +348,7 @@ export async function buscarAgendaProfissional(
     expedienteAtivo,
     horaInicioExpediente,
     horaFimExpediente,
+    bloqueios,
   } = await runAdminOperation({
     action: "profissional_agenda_buscar_agenda",
     actorId: idProfissional,
@@ -318,6 +358,8 @@ export async function buscarAgendaProfissional(
       const [
         { data: agendamentosData, error: agendamentosError },
         { data: agendamentosMesData, error: agendamentosMesError },
+        { data: bloqueiosData, error: bloqueiosError },
+        { data: bloqueiosMesData, error: bloqueiosMesError },
         { data: profissionalData, error: profissionalError },
       ] = await Promise.all([
         (() => {
@@ -350,6 +392,35 @@ export async function buscarAgendaProfissional(
 
           return query;
         })(),
+        (() => {
+          let query = supabase
+          .from("agenda_bloqueios")
+          .select("id, profissional_id, data, hora_inicio, hora_fim, motivo")
+          .eq("id_salao", idSalao)
+          .eq("data", dataSelecionada)
+          .order("hora_inicio", { ascending: true });
+
+          if (!verTodos) {
+            query = query.eq("profissional_id", idProfissional);
+          }
+
+          return query;
+        })(),
+        (() => {
+          let query = supabase
+          .from("agenda_bloqueios")
+          .select("data, profissional_id")
+          .eq("id_salao", idSalao)
+          .gte("data", rangeMes.inicio)
+          .lte("data", rangeMes.fim)
+          .limit(300);
+
+          if (!verTodos) {
+            query = query.eq("profissional_id", idProfissional);
+          }
+
+          return query;
+        })(),
         supabase
           .from("profissionais")
           .select("nome, nome_exibicao, dias_trabalho")
@@ -360,9 +431,12 @@ export async function buscarAgendaProfissional(
 
       if (agendamentosError) throw new Error(agendamentosError.message);
       if (agendamentosMesError) throw new Error(agendamentosMesError.message);
+      if (bloqueiosError) throw new Error(bloqueiosError.message);
+      if (bloqueiosMesError) throw new Error(bloqueiosMesError.message);
       if (profissionalError) throw new Error(profissionalError.message);
 
       const rows = (agendamentosData ?? []) as AgendamentoAgendaRow[];
+      const bloqueiosRows = (bloqueiosData ?? []) as BloqueioAgendaRow[];
       const clienteIds = Array.from(
         new Set(rows.map((item) => item.cliente_id).filter(Boolean))
       ) as string[];
@@ -370,7 +444,12 @@ export async function buscarAgendaProfissional(
         new Set(rows.map((item) => item.servico_id).filter(Boolean))
       ) as string[];
       const profissionalIds = Array.from(
-        new Set(rows.map((item) => item.profissional_id).filter(Boolean))
+        new Set(
+          [
+            ...rows.map((item) => item.profissional_id),
+            ...bloqueiosRows.map((item) => item.profissional_id),
+          ].filter(Boolean)
+        )
       ) as string[];
 
       const [clientesResult, servicosResult, profissionaisResult] = await Promise.all([
@@ -409,11 +488,15 @@ export async function buscarAgendaProfissional(
         agendamentos: rows,
         diasComAtendimento: Array.from(
           new Set(
-            ((agendamentosMesData ?? []) as Array<{ data?: string | null }>)
+            [
+              ...((agendamentosMesData ?? []) as Array<{ data?: string | null }>),
+              ...((bloqueiosMesData ?? []) as Array<{ data?: string | null }>),
+            ]
               .map((item) => String(item.data || "").slice(0, 10))
               .filter(Boolean)
           )
         ),
+        bloqueios: bloqueiosRows,
         profissionalNome:
           profissionalData?.nome_exibicao || profissionalData?.nome || "Profissional",
         expedienteAtivo: Boolean(regraDia?.ativo),
@@ -451,13 +534,23 @@ export async function buscarAgendaProfissional(
   });
 
   const pixelsPorMinuto = 2;
+  const itensAgenda = [
+    ...agendamentos.map((item) => ({
+      inicio: item.hora_inicio,
+      fim: item.hora_fim,
+    })),
+    ...bloqueios.map((item) => ({
+      inicio: item.hora_inicio,
+      fim: item.hora_fim,
+    })),
+  ];
   const inicioMinutos =
-    agendamentos.length > 0
-      ? Math.min(8 * 60, ...agendamentos.map((item) => timeToMinutes(item.hora_inicio)))
+    itensAgenda.length > 0
+      ? Math.min(8 * 60, ...itensAgenda.map((item) => timeToMinutes(item.inicio)))
       : 8 * 60;
   const fimMinutos =
-    agendamentos.length > 0
-      ? Math.max(18 * 60, ...agendamentos.map((item) => timeToMinutes(item.hora_fim)))
+    itensAgenda.length > 0
+      ? Math.max(18 * 60, ...itensAgenda.map((item) => timeToMinutes(item.fim)))
       : 18 * 60;
   const timelineHeight = Math.max((fimMinutos - inicioMinutos) * pixelsPorMinuto, 400);
   const primeiraHora = Math.floor(inicioMinutos / 60);
@@ -472,13 +565,14 @@ export async function buscarAgendaProfissional(
     }
   );
 
-  const cards = agendamentos.map((item) => {
+  const cardsAgendamentos = agendamentos.map((item) => {
     const inicio = timeToMinutes(item.hora_inicio);
     const fim = timeToMinutes(item.hora_fim);
     const servico = item.servico_id ? servicosMap.get(item.servico_id) : null;
 
     return {
       id: item.id,
+      tipo: "agendamento" as const,
       idProfissional: item.profissional_id || idProfissional,
       profissional:
         profissionaisMap.get(item.profissional_id || "") ||
@@ -498,6 +592,34 @@ export async function buscarAgendaProfissional(
     };
   });
 
+  const cardsBloqueios = bloqueios.map((item) => {
+    const inicio = timeToMinutes(item.hora_inicio);
+    const fim = timeToMinutes(item.hora_fim);
+
+    return {
+      id: item.id,
+      tipo: "bloqueio" as const,
+      idProfissional: item.profissional_id,
+      profissional:
+        profissionaisMap.get(item.profissional_id) ||
+        (item.profissional_id === idProfissional ? profissionalNome : "Profissional"),
+      isDoProfissionalLogado: item.profissional_id === idProfissional,
+      idComanda: null,
+      horario: item.hora_inicio.slice(0, 5),
+      horaFim: item.hora_fim.slice(0, 5),
+      cliente: "Horário bloqueado",
+      servico: item.motivo || "Indisponível",
+      valorPrevisto: 0,
+      status: "bloqueado",
+      top: Math.max((inicio - inicioMinutos) * pixelsPorMinuto, 0),
+      height: Math.max((fim - inicio) * pixelsPorMinuto, 72),
+    };
+  });
+
+  const cards = [...cardsAgendamentos, ...cardsBloqueios].sort(
+    (a, b) => timeToMinutes(a.horario) - timeToMinutes(b.horario)
+  );
+
   const totalPrevisto = cards.reduce(
     (acc, item) => acc + Number(item.valorPrevisto || 0),
     0
@@ -513,6 +635,7 @@ export async function buscarAgendaProfissional(
     horaFimExpediente:
       horaFimExpediente || minutesToTime(fimMinutos),
     totalAtendimentos: agendamentos.length,
+    totalBloqueios: bloqueios.length,
     totalPrevisto,
     diasComAtendimento,
     cards,

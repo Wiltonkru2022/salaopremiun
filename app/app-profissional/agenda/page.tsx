@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CalendarClock, CalendarDays, CircleDollarSign, Plus, Receipt } from "lucide-react";
+import { Ban, CalendarClock, CalendarDays, CircleDollarSign, Plus, Receipt } from "lucide-react";
 import AgendaDayStrip from "@/components/profissional/agenda/AgendaDayStrip";
 import ProfissionalShell from "@/components/profissional/layout/ProfissionalShell";
 import ProfissionalEmptyState from "@/components/profissional/ui/ProfissionalEmptyState";
@@ -32,6 +32,7 @@ function getStatusMeta(status: string) {
   }
   if (value === "faltou") return { label: "Não compareceu", tone: "danger" as const };
   if (value === "cancelado") return { label: "Cancelado", tone: "danger" as const };
+  if (value === "bloqueado") return { label: "Bloqueado", tone: "danger" as const };
 
   return { label: "Pendente de confirmação", tone: "warning" as const };
 }
@@ -69,13 +70,22 @@ export default async function AgendaProfissionalPage({
                 : "Toque em um dia para ver os atendimentos."
             }
             action={
-              <Link
-                href={`/app-profissional/agenda/novo?data=${agenda.dataSelecionada}`}
-                className="inline-flex h-10 items-center justify-center gap-2 rounded-[18px] bg-zinc-950 px-4 text-sm font-bold text-white"
-              >
-                <Plus size={16} />
-                Novo
-              </Link>
+              <div className="flex flex-wrap justify-end gap-2">
+                <Link
+                  href={`/app-profissional/agenda/bloquear?data=${agenda.dataSelecionada}`}
+                  className="inline-flex h-10 items-center justify-center gap-2 rounded-[18px] border border-zinc-200 bg-white px-3 text-sm font-bold text-zinc-800"
+                >
+                  <Ban size={16} />
+                  Bloquear
+                </Link>
+                <Link
+                  href={`/app-profissional/agenda/novo?data=${agenda.dataSelecionada}`}
+                  className="inline-flex h-10 items-center justify-center gap-2 rounded-[18px] bg-zinc-950 px-4 text-sm font-bold text-white"
+                >
+                  <Plus size={16} />
+                  Novo
+                </Link>
+              </div>
             }
           />
 
@@ -108,6 +118,18 @@ export default async function AgendaProfissionalPage({
           </ProfissionalSurface>
         </div>
 
+        {agenda.totalBloqueios ? (
+          <ProfissionalSurface>
+            <div className="flex items-center gap-2 text-zinc-500">
+              <Ban size={18} />
+              <span className="text-sm font-medium">Bloqueios no dia</span>
+            </div>
+            <div className="mt-2 text-[1.55rem] font-black tracking-[-0.04em] leading-none text-zinc-950">
+              {agenda.totalBloqueios}
+            </div>
+          </ProfissionalSurface>
+        ) : null}
+
         <ProfissionalSurface>
           <ProfissionalSectionHeader
             title="Dia de trabalho"
@@ -136,7 +158,8 @@ export default async function AgendaProfissionalPage({
                           <span>{card.horaFim}</span>
                         </div>
 
-                        <div className="mt-1.5 text-base font-bold tracking-[-0.02em] text-zinc-950">
+                        <div className="mt-1.5 flex items-center gap-2 text-base font-bold tracking-[-0.02em] text-zinc-950">
+                          {card.tipo === "bloqueio" ? <Ban size={16} /> : null}
                           {card.cliente}
                         </div>
 
@@ -157,6 +180,7 @@ export default async function AgendaProfissionalPage({
                       />
                     </div>
 
+                    {card.tipo === "bloqueio" ? null : (
                     <div className="mt-3 flex flex-wrap gap-2">
                       <Link
                         href={`/app-profissional/agenda/${card.id}`}
@@ -186,6 +210,7 @@ export default async function AgendaProfissionalPage({
                         </Link>
                       ) : null}
                     </div>
+                    )}
                   </div>
                 );
               })}

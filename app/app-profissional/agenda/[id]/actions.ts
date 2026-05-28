@@ -14,6 +14,7 @@ import {
 import { runAdminOperation } from "@/lib/supabase/admin-ops";
 import {
   buscarConfiguracaoAgendaProfissional,
+  buscarConflitosBloqueioNoHorario,
   buscarConflitosNoHorario,
   buscarServicoPorId,
   validarHorarioAgendamento,
@@ -57,6 +58,20 @@ function isRedirectError(error: unknown) {
 
 async function getSessionOrRedirect() {
   return requireProfissionalAppContext();
+}
+
+function getAgendaMutationErrorMessage(message?: string | null) {
+  const value = String(message || "").trim();
+  const normalized = value.toLowerCase();
+
+  if (
+    normalized.includes("up_agendamentos_slot_inicio_ativo") ||
+    normalized.includes("duplicate key value violates unique constraint")
+  ) {
+    return "Já existe um agendamento ativo nesse profissional, dia e horário. Escolha outro horário ou reagende o atendimento existente.";
+  }
+
+  return value || "Erro ao salvar na agenda.";
 }
 
 async function buscarAgendamentoPermitido(params: {
@@ -140,6 +155,23 @@ export async function atualizarAgendamentoProfissionalAction(
     const conflitosDeOutros = conflitos.filter(
       (item) => "id" in item && item.id !== idAgendamento
     );
+    const conflitosBloqueio = await buscarConflitosBloqueioNoHorario({
+      idSalao: session.idSalao,
+      idProfissional: session.idProfissional,
+      dataISO: data,
+      horaInicio: horario.horaInicio,
+      horaFim: horario.horaFim,
+    });
+
+    if (conflitosBloqueio.length) {
+      redirect(
+        buildUrl(
+          idAgendamento,
+          "erro",
+          "Esse horário está bloqueado para o profissional. Escolha outro horário ou remova o bloqueio na agenda."
+        )
+      );
+    }
 
     if (conflitosDeOutros.length && confirmarConflito !== "true") {
       redirect(
@@ -171,7 +203,7 @@ export async function atualizarAgendamentoProfissionalAction(
           .eq("id_salao", session.idSalao)
           .eq("profissional_id", session.idProfissional);
 
-        if (error) throw new Error(error.message);
+        if (error) throw new Error(getAgendaMutationErrorMessage(error.message));
       },
     });
 
@@ -243,7 +275,7 @@ export async function atualizarAgendamentoProfissionalAction(
       error instanceof PlanAccessError
         ? error.message
         : error instanceof Error
-          ? error.message
+          ? getAgendaMutationErrorMessage(error.message)
           : "Erro ao atualizar agendamento.";
     redirect(buildUrl(idAgendamento || "invalido", "erro", message));
   }
