@@ -1,6 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
+import Link from "next/link";
 import { useMemo } from "react";
 import clsx from "clsx";
 import {
@@ -17,7 +18,7 @@ import {
   type PlanoRecursos,
 } from "@/components/layout/navigation";
 import type { ResumoAssinatura } from "@/lib/assinatura-utils";
-import { getAssinaturaUrl, getPainelUrl } from "@/lib/site-urls";
+import { getAssinaturaUrl } from "@/lib/site-urls";
 import {
   getWorkspaceWindowTarget,
   isPainelStandaloneWindow,
@@ -246,27 +247,16 @@ function SidebarLink({
       : item.openInNewTab
         ? "_blank"
         : undefined;
-
-  return (
-    <a
-      href={getRouteHref(item.href)}
-      target={target}
-      rel={target === "_blank" ? "noreferrer" : undefined}
-      onClick={(event) => {
-        onClose();
-        if (workspaceTarget) {
-          event.preventDefault();
-          openPainelWorkspaceWindow(item.href);
-        }
-      }}
-      className={clsx(
-        "group/item flex min-w-0 items-center gap-2 rounded-[14px] px-2.5 py-2.5 ring-1 ring-transparent transition-all duration-200",
-        active
-          ? "bg-amber-50 text-zinc-950 ring-amber-200 shadow-sm"
-          : "text-zinc-600 hover:bg-zinc-50 hover:text-zinc-950"
-      )}
-      title={`${item.label} - ${item.description}`}
-    >
+  const href = getRouteHref(item.href);
+  const isExternalHref = /^https?:\/\//i.test(href);
+  const linkClassName = clsx(
+    "group/item flex min-w-0 items-center gap-2 rounded-[14px] px-2.5 py-2.5 ring-1 ring-transparent transition-all duration-200",
+    active
+      ? "bg-amber-50 text-zinc-950 ring-amber-200 shadow-sm"
+      : "text-zinc-600 hover:bg-zinc-50 hover:text-zinc-950"
+  );
+  const content = (
+    <>
       <span
         className={clsx(
           "flex h-8 w-8 shrink-0 items-center justify-center rounded-[11px] transition",
@@ -296,6 +286,39 @@ function SidebarLink({
           )}
         />
       ) : null}
+    </>
+  );
+
+  if (!workspaceTarget && !target && !isExternalHref) {
+    return (
+      <Link
+        href={href}
+        prefetch
+        onClick={onClose}
+        className={linkClassName}
+        title={`${item.label} - ${item.description}`}
+      >
+        {content}
+      </Link>
+    );
+  }
+
+  return (
+    <a
+      href={href}
+      target={target}
+      rel={target === "_blank" ? "noreferrer" : undefined}
+      onClick={(event) => {
+        onClose();
+        if (workspaceTarget) {
+          event.preventDefault();
+          openPainelWorkspaceWindow(item.href);
+        }
+      }}
+      className={linkClassName}
+      title={`${item.label} - ${item.description}`}
+    >
+      {content}
     </a>
   );
 }
@@ -309,5 +332,5 @@ function getRouteHref(href: string) {
     return getAssinaturaUrl(href);
   }
 
-  return getPainelUrl(href);
+  return href;
 }

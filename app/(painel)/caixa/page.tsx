@@ -230,6 +230,7 @@ export default function CaixaPage() {
 
   const agendamentoAutoOpenRef = useRef<string | null>(null);
   const avisoReaberturaRef = useRef<string | null>(null);
+  const lastFocusRefreshAtRef = useRef(0);
 
   useEffect(() => {
     void init();
@@ -245,6 +246,12 @@ export default function CaixaPage() {
       if (document.visibilityState !== "visible") {
         return;
       }
+
+      const now = Date.now();
+      if (now - lastFocusRefreshAtRef.current < 30000) {
+        return;
+      }
+      lastFocusRefreshAtRef.current = now;
 
       void carregarTudo(idSalao);
       void carregarSessaoOperacional(idSalao);

@@ -32,7 +32,7 @@ import {
 } from "@/lib/agenda/comandasAgenda";
 import { captureClientEvent } from "@/lib/monitoring/client";
 import { sanitizeDiasFuncionamento } from "@/lib/utils/agenda";
-import type { Agendamento, ConfigSalao } from "@/types/agenda";
+import type { Agendamento, ConfigSalao, ViewMode } from "@/types/agenda";
 import { normalizeTimeString } from "@/lib/utils/agenda";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { getAssinaturaUrl } from "@/lib/site-urls";
@@ -61,6 +61,8 @@ const AgendaCreditModal = dynamic(
   () => import("@/components/agenda/AgendaCreditModal")
 );
 
+const AGENDA_WORKSPACE_STATE_KEY = "salaopremium:painel:agenda:workspace:v1";
+
 type ClienteHistoricoItem = {
   id: string;
   data: string;
@@ -72,6 +74,19 @@ type ClienteHistoricoItem = {
   sinalStatus?: string | null;
   sinalComprovantePath?: string | null;
 };
+
+function getAgendaReturnPath() {
+  if (typeof window === "undefined") return "/agenda";
+  return `${window.location.pathname}${window.location.search}`;
+}
+
+function withAgendaReturnTo(href: string) {
+  if (typeof window === "undefined") return href;
+
+  const url = new URL(href, window.location.origin);
+  url.searchParams.set("returnTo", getAgendaReturnPath());
+  return `${url.pathname}${url.search}`;
+}
 
 function addMinutesToSlotTime(time: string, minutes: number) {
   const [hour, minute] = normalizeTimeString(time).split(":").map(Number);
@@ -89,6 +104,8 @@ export default function AgendaPage() {
   const searchParams = useSearchParams();
   const loadAgendaSeqRef = useRef(0);
   const openedNotificationClientRef = useRef("");
+  const agendaStateRestoredRef = useRef(false);
+  const lastFocusRefreshAtRef = useRef(0);
   const [contextMenu, setContextMenu] = useState<
     | { open: false }
     | {
@@ -317,8 +334,65 @@ export default function AgendaPage() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
+    if (agendaStateRestoredRef.current || !profissionais.length) return;
+
+    agendaStateRestoredRef.current = true;
+
+    try {
+      const saved = window.sessionStorage.getItem(AGENDA_WORKSPACE_STATE_KEY);
+      if (!saved) return;
+
+      const parsed = JSON.parse(saved) as {
+        currentDate?: string;
+        selectedProfissionalId?: string;
+        viewMode?: ViewMode;
+      };
+
+      if (parsed.viewMode === "day" || parsed.viewMode === "week") {
+        setViewMode(parsed.viewMode);
+      }
+
+      if (parsed.currentDate) {
+        const date = new Date(parsed.currentDate);
+        if (!Number.isNaN(date.getTime())) {
+          setCurrentDate(date);
+        }
+      }
+
+      if (
+        parsed.selectedProfissionalId &&
+        profissionais.some((item) => item.id === parsed.selectedProfissionalId)
+      ) {
+        setSelectedProfissionalId(parsed.selectedProfissionalId);
+      }
+    } catch {
+      window.sessionStorage.removeItem(AGENDA_WORKSPACE_STATE_KEY);
+    }
+  }, [
+    profissionais,
+    setCurrentDate,
+    setSelectedProfissionalId,
+    setViewMode,
+  ]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
     window.localStorage.setItem("salaopremium:agenda:density", densityMode);
   }, [densityMode]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (!selectedProfissionalId) return;
+
+    window.sessionStorage.setItem(
+      AGENDA_WORKSPACE_STATE_KEY,
+      JSON.stringify({
+        currentDate: currentDate.toISOString(),
+        selectedProfissionalId,
+        viewMode,
+      })
+    );
+  }, [currentDate, selectedProfissionalId, viewMode]);
 
   useEffect(() => {
     if (idSalao && selectedProfissionalId) {
@@ -335,6 +409,12 @@ export default function AgendaPage() {
       if (document.visibilityState !== "visible") {
         return;
       }
+
+      const now = Date.now();
+      if (now - lastFocusRefreshAtRef.current < 30000) {
+        return;
+      }
+      lastFocusRefreshAtRef.current = now;
 
       void loadAgenda();
     };
@@ -838,7 +918,7 @@ export default function AgendaPage() {
       return;
     }
 
-    openPainelWorkspaceWindow(href);
+    openPainelWorkspaceWindow(withAgendaReturnTo(href));
   }
 
   const waitlistItems: AgendaWaitlistItem[] = agendamentos
