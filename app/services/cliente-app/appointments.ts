@@ -6,6 +6,7 @@ import { hasBlockedReviewLanguage } from "@/lib/content-moderation";
 import {
   notifyAppointmentCanceled,
   notifyAppointmentRescheduled,
+  notifyProfessionalAboutClientConfirmation,
   notifyReviewReceived,
   queueNotificationJob,
   scheduleAppointmentReminderNotifications,
@@ -1720,7 +1721,8 @@ export async function confirmClienteAppAppointment(
       }
 
       try {
-        await queueNotificationJob({
+        await Promise.all([
+          queueNotificationJob({
           idSalao: ownership.idSalao,
           idCliente: ownership.idCliente,
           idProfissional: ownership.idProfissional,
@@ -1735,7 +1737,12 @@ export async function confirmClienteAppAppointment(
             origem: "app_cliente",
             idAgendamento,
           },
-        });
+          }),
+          notifyProfessionalAboutClientConfirmation({
+            idSalao: ownership.idSalao,
+            idAgendamento,
+          }),
+        ]);
       } catch {
         // A confirmação do cliente não deve depender do push do salão.
       }

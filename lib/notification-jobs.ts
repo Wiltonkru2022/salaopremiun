@@ -540,6 +540,39 @@ export async function scheduleAppointmentReminderNotifications(params: {
   ]);
 }
 
+export async function notifyProfessionalAboutClientConfirmation(params: {
+  idAgendamento: string;
+  idSalao: string;
+}) {
+  const agendamento = await loadAppointmentContext(params.idAgendamento, params.idSalao);
+  if (!agendamento?.profissional_id) return;
+
+  const cliente = firstRelation(agendamento.clientes);
+  const servico = firstRelation(agendamento.servicos);
+  const clienteNome = String(cliente?.nome || "Cliente").trim();
+  const servicoNome = String(servico?.nome || "atendimento").trim();
+  const quando = formatAppointmentDate(agendamento.data, agendamento.hora_inicio);
+
+  await queueNotificationJob({
+    idSalao: params.idSalao,
+    idCliente: agendamento.cliente_id,
+    idProfissional: agendamento.profissional_id,
+    canal: "profissional_app",
+    tipo: "cliente_confirmou_agendamento_profissional",
+    titulo: "Cliente confirmou o horario",
+    mensagem: `${clienteNome} confirmou ${servicoNome} para ${quando}.`,
+    url: `/app-profissional/agenda/${agendamento.id}`,
+    tag: `cliente-confirmou-profissional-${agendamento.id}`,
+    idempotencyKey: `cliente_confirmou:${agendamento.id}:profissional`,
+    metadata: {
+      origem: "app_cliente",
+      idAgendamento: agendamento.id,
+    },
+  });
+
+  await processPendingNotificationJobs(10);
+}
+
 export async function notifyAppointmentRescheduled(params: {
   idAgendamento: string;
   idSalao: string;

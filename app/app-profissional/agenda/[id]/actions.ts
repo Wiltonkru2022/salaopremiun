@@ -42,6 +42,17 @@ function buildUrl(
   )}`;
 }
 
+function buildAgendaListUrl(params: {
+  data?: string | null;
+  key: "ok" | "erro";
+  value: string;
+}) {
+  const query = new URLSearchParams();
+  if (params.data) query.set("data", params.data);
+  query.set(params.key, params.value);
+  return `/app-profissional/agenda?${query.toString()}`;
+}
+
 function normalizeTime(value: string) {
   return value.slice(0, 5);
 }
@@ -130,6 +141,7 @@ export async function atualizarAgendamentoProfissionalAction(
       idSalao: session.idSalao,
       idProfissional: session.idProfissional,
       idAgendamento,
+      podeVerAgendaTodos: session.podeVerAgendaTodos,
     });
 
     const [configProfissional, servico] = await Promise.all([
@@ -338,6 +350,8 @@ export async function marcarClienteNaoCompareceuAction(formData: FormData) {
 export async function confirmarAgendamentoProfissionalAction(formData: FormData) {
   const session = await getSessionOrRedirect();
   const idAgendamento = String(formData.get("id_agendamento") || "").trim();
+  const returnTo = String(formData.get("return_to") || "").trim();
+  const dataRetorno = String(formData.get("data") || "").trim();
 
   try {
     if (!idAgendamento) throw new Error("Agendamento invalido.");
@@ -346,6 +360,7 @@ export async function confirmarAgendamentoProfissionalAction(formData: FormData)
       idSalao: session.idSalao,
       idProfissional: session.idProfissional,
       idAgendamento,
+      podeVerAgendaTodos: session.podeVerAgendaTodos,
     });
 
     if (String(agendamento.status || "").toLowerCase() !== "confirmado") {
@@ -362,7 +377,7 @@ export async function confirmarAgendamentoProfissionalAction(formData: FormData)
             })
             .eq("id", idAgendamento)
             .eq("id_salao", session.idSalao)
-            .eq("profissional_id", session.idProfissional);
+            .eq("profissional_id", agendamento.profissional_id);
 
           if (error) throw new Error(error.message);
         },
@@ -381,6 +396,15 @@ export async function confirmarAgendamentoProfissionalAction(formData: FormData)
     revalidatePath("/app-profissional/agenda");
     revalidatePath(`/app-profissional/agenda/${idAgendamento}`);
     revalidatePath("/app-profissional/inicio");
+    if (returnTo === "agenda") {
+      redirect(
+        buildAgendaListUrl({
+          data: dataRetorno || String(agendamento.data || "").slice(0, 10),
+          key: "ok",
+          value: "Agendamento confirmado.",
+        })
+      );
+    }
     redirect(buildUrl(idAgendamento, "ok", "Agendamento confirmado."));
   } catch (error) {
     if (isRedirectError(error)) throw error;
@@ -529,6 +553,8 @@ export async function recusarSinalPixProfissionalAction(formData: FormData) {
 export async function cancelarAgendamentoProfissionalAction(formData: FormData) {
   const session = await getSessionOrRedirect();
   const idAgendamento = String(formData.get("id_agendamento") || "").trim();
+  const returnTo = String(formData.get("return_to") || "").trim();
+  const dataRetorno = String(formData.get("data") || "").trim();
 
   try {
     if (!idAgendamento) throw new Error("Agendamento invalido.");
@@ -537,6 +563,7 @@ export async function cancelarAgendamentoProfissionalAction(formData: FormData) 
       idSalao: session.idSalao,
       idProfissional: session.idProfissional,
       idAgendamento,
+      podeVerAgendaTodos: session.podeVerAgendaTodos,
     });
 
     await runAdminOperation({
@@ -553,7 +580,7 @@ export async function cancelarAgendamentoProfissionalAction(formData: FormData) 
           })
           .eq("id", idAgendamento)
           .eq("id_salao", session.idSalao)
-          .eq("profissional_id", session.idProfissional);
+          .eq("profissional_id", agendamento.profissional_id);
 
         if (error) throw new Error(error.message);
       },
@@ -563,7 +590,7 @@ export async function cancelarAgendamentoProfissionalAction(formData: FormData) 
       idSalao: session.idSalao,
       idAgendamento,
       idCliente: agendamento.cliente_id,
-      idProfissional: session.idProfissional,
+      idProfissional: agendamento.profissional_id,
       data: agendamento.data,
       horaInicio: agendamento.hora_inicio,
       actor: "profissional",
@@ -584,7 +611,7 @@ export async function cancelarAgendamentoProfissionalAction(formData: FormData) 
             releasedSlot: {
               idSalao: session.idSalao,
               idServico: agendamento.servico_id || null,
-              idProfissional: session.idProfissional,
+              idProfissional: agendamento.profissional_id,
               data: String(agendamento.data || "").slice(0, 10),
               horaInicio: normalizeTime(String(agendamento.hora_inicio || "")),
               servicoNome: servico.nome || null,
@@ -597,6 +624,15 @@ export async function cancelarAgendamentoProfissionalAction(formData: FormData) 
 
     revalidatePath("/app-profissional/agenda");
     revalidatePath("/app-profissional/inicio");
+    if (returnTo === "agenda") {
+      redirect(
+        buildAgendaListUrl({
+          data: dataRetorno || String(agendamento.data || "").slice(0, 10),
+          key: "ok",
+          value: "Agendamento cancelado.",
+        })
+      );
+    }
     redirect("/app-profissional/agenda?ok=Agendamento%20cancelado.");
   } catch (error) {
     if (isRedirectError(error)) throw error;

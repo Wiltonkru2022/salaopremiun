@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Ban, CalendarClock, CalendarDays, CircleDollarSign, Plus, Receipt } from "lucide-react";
+import { Ban, CalendarCheck2, CalendarClock, CalendarDays, CircleDollarSign, Plus, Receipt, Trash2 } from "lucide-react";
 import AgendaDayStrip from "@/components/profissional/agenda/AgendaDayStrip";
 import ProfissionalShell from "@/components/profissional/layout/ProfissionalShell";
 import ProfissionalEmptyState from "@/components/profissional/ui/ProfissionalEmptyState";
@@ -8,10 +8,16 @@ import ProfissionalStatusPill from "@/components/profissional/ui/ProfissionalSta
 import ProfissionalSurface from "@/components/profissional/ui/ProfissionalSurface";
 import { buscarAgendaProfissional } from "@/app/services/profissional/agenda";
 import { requireProfissionalAppContext } from "@/lib/profissional-context.server";
+import { excluirBloqueioProfissionalAction } from "./actions";
+import {
+  cancelarAgendamentoProfissionalAction,
+  confirmarAgendamentoProfissionalAction,
+} from "./[id]/actions";
 
 type SearchParams = Promise<{
   data?: string;
   ok?: string;
+  erro?: string;
 }>;
 
 function formatarMoeda(valor: number) {
@@ -58,7 +64,7 @@ export default async function AgendaProfissionalPage({
   searchParams: SearchParams;
 }) {
   const session = await requireProfissionalAppContext();
-  const { data, ok } = await searchParams;
+  const { data, ok, erro } = await searchParams;
 
   const agenda = await buscarAgendaProfissional(
     session.idSalao,
@@ -73,6 +79,11 @@ export default async function AgendaProfissionalPage({
         {ok ? (
           <div className="rounded-[1.25rem] border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700 shadow-sm">
             {ok}
+          </div>
+        ) : null}
+        {erro ? (
+          <div className="rounded-[1.25rem] border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 shadow-sm">
+            {erro}
           </div>
         ) : null}
 
@@ -204,36 +215,75 @@ export default async function AgendaProfissionalPage({
                       />
                     </div>
 
-                    {card.tipo === "bloqueio" ? null : (
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      <Link
-                        href={`/app-profissional/agenda/${card.id}`}
-                        className="inline-flex h-8.5 items-center rounded-full border border-zinc-200 bg-white px-3 text-xs font-bold text-zinc-700"
-                      >
-                        Ver detalhes
-                      </Link>
-
-                      {card.isDoProfissionalLogado &&
-                      ["pendente", "confirmado"].includes(String(card.status || "").toLowerCase()) ? (
+                    {card.tipo === "bloqueio" ? (
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {(card.isDoProfissionalLogado || session.podeVerAgendaTodos) ? (
+                          <form action={excluirBloqueioProfissionalAction}>
+                            <input type="hidden" name="id_bloqueio" value={card.id} />
+                            <input type="hidden" name="data" value={agenda.dataSelecionada} />
+                            <button className="inline-flex h-8.5 items-center gap-2 rounded-full border border-red-200 bg-red-50 px-3 text-xs font-bold text-red-700">
+                              <Trash2 size={14} />
+                              Excluir bloqueio
+                            </button>
+                          </form>
+                        ) : null}
+                      </div>
+                    ) : (
+                      <div className="mt-3 flex flex-wrap gap-2">
                         <Link
-                          href={`/app-profissional/agenda/${card.id}#reagendar`}
-                          className="inline-flex h-8.5 items-center gap-2 rounded-full border border-zinc-200 bg-white px-3 text-xs font-bold text-zinc-700"
+                          href={`/app-profissional/agenda/${card.id}`}
+                          className="inline-flex h-8.5 items-center rounded-full border border-zinc-200 bg-white px-3 text-xs font-bold text-zinc-700"
                         >
-                          <CalendarClock size={14} />
-                          Reagendar
+                          Ver detalhes
                         </Link>
-                      ) : null}
 
-                      {card.isDoProfissionalLogado && card.idComanda ? (
-                        <Link
-                          href={`/app-profissional/comandas/${card.idComanda}`}
-                          className="inline-flex h-8.5 items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 text-xs font-bold text-amber-800"
-                        >
-                          <Receipt size={14} />
-                          Abrir comanda
-                        </Link>
-                      ) : null}
-                    </div>
+                        {(card.isDoProfissionalLogado || session.podeVerAgendaTodos) &&
+                        String(card.status || "").toLowerCase() === "pendente" ? (
+                          <form action={confirmarAgendamentoProfissionalAction}>
+                            <input type="hidden" name="id_agendamento" value={card.id} />
+                            <input type="hidden" name="return_to" value="agenda" />
+                            <input type="hidden" name="data" value={agenda.dataSelecionada} />
+                            <button className="inline-flex h-8.5 items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 text-xs font-bold text-emerald-800">
+                              <CalendarCheck2 size={14} />
+                              Confirmar
+                            </button>
+                          </form>
+                        ) : null}
+
+                        {(card.isDoProfissionalLogado || session.podeVerAgendaTodos) &&
+                        ["pendente", "confirmado"].includes(String(card.status || "").toLowerCase()) ? (
+                          <Link
+                            href={`/app-profissional/agenda/${card.id}#reagendar`}
+                            className="inline-flex h-8.5 items-center gap-2 rounded-full border border-zinc-200 bg-white px-3 text-xs font-bold text-zinc-700"
+                          >
+                            <CalendarClock size={14} />
+                            Reagendar
+                          </Link>
+                        ) : null}
+
+                        {(card.isDoProfissionalLogado || session.podeVerAgendaTodos) &&
+                        !["cancelado", "atendido", "faltou"].includes(String(card.status || "").toLowerCase()) ? (
+                          <form action={cancelarAgendamentoProfissionalAction}>
+                            <input type="hidden" name="id_agendamento" value={card.id} />
+                            <input type="hidden" name="return_to" value="agenda" />
+                            <input type="hidden" name="data" value={agenda.dataSelecionada} />
+                            <button className="inline-flex h-8.5 items-center gap-2 rounded-full border border-red-200 bg-red-50 px-3 text-xs font-bold text-red-700">
+                              <Trash2 size={14} />
+                              Excluir
+                            </button>
+                          </form>
+                        ) : null}
+
+                        {card.isDoProfissionalLogado && card.idComanda ? (
+                          <Link
+                            href={`/app-profissional/comandas/${card.idComanda}`}
+                            className="inline-flex h-8.5 items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 text-xs font-bold text-amber-800"
+                          >
+                            <Receipt size={14} />
+                            Abrir comanda
+                          </Link>
+                        ) : null}
+                      </div>
                     )}
                   </div>
                 );

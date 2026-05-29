@@ -381,3 +381,76 @@ export async function bloquearHorarioProfissionalAction(formData: FormData) {
     );
   }
 }
+
+export async function excluirBloqueioProfissionalAction(formData: FormData) {
+  const session = await requireProfissionalAppContext();
+  const idBloqueio = String(formData.get("id_bloqueio") || "").trim();
+  const data = String(formData.get("data") || "").trim();
+
+  try {
+    if (!idBloqueio) throw new Error("Bloqueio invalido.");
+    await assertCanMutatePlanFeature(session.idSalao, "agenda");
+
+    const bloqueio = await runAdminOperation({
+      action: "app_profissional_bloqueio_buscar_para_excluir",
+      actorId: session.idProfissional,
+      idSalao: session.idSalao,
+      run: async (supabase) => {
+        let query = supabase
+          .from("agenda_bloqueios")
+          .select("id, profissional_id, data")
+          .eq("id", idBloqueio)
+          .eq("id_salao", session.idSalao);
+
+        if (!session.podeVerAgendaTodos) {
+          query = query.eq("profissional_id", session.idProfissional);
+        }
+
+        const { data: row, error } = await query.maybeSingle();
+        if (error) throw new Error(error.message);
+        if (!row?.id) throw new Error("Bloqueio nao encontrado.");
+        return row;
+      },
+    });
+
+    await runAdminOperation({
+      action: "app_profissional_bloqueio_excluir",
+      actorId: session.idProfissional,
+      idSalao: session.idSalao,
+      run: async (supabase) => {
+        const { error } = await supabase
+          .from("agenda_bloqueios")
+          .delete()
+          .eq("id", idBloqueio)
+          .eq("id_salao", session.idSalao);
+
+        if (error) throw new Error(error.message);
+      },
+    });
+
+    revalidatePath("/app-profissional/agenda");
+    revalidatePath("/app-profissional/inicio");
+
+    const dataDestino = data || String(bloqueio.data || "").slice(0, 10);
+    redirect(
+      `/app-profissional/agenda?data=${encodeURIComponent(
+        dataDestino
+      )}&ok=${encodeURIComponent("Bloqueio excluido.")}`
+    );
+  } catch (error) {
+    if (isRedirectError(error)) throw error;
+
+    const message =
+      error instanceof PlanAccessError
+        ? error.message
+        : error instanceof Error
+          ? error.message
+          : "Erro ao excluir bloqueio.";
+
+    redirect(
+      `/app-profissional/agenda?data=${encodeURIComponent(
+        data
+      )}&erro=${encodeURIComponent(message)}`
+    );
+  }
+}
