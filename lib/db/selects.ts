@@ -23,7 +23,7 @@ export const SELECT_USUARIOS_PERMISSOES =
 export const SELECT_VW_VENDAS_BUSCA =
   "aberta_em, acrescimo, cancelada_em, cliente_nome, desconto, fechada_em, formas_pagamento, id, id_cliente, id_salao, itens_descricoes, numero, profissionais_nomes, status, subtotal, total";
 export const SELECT_AGENDAMENTOS =
-  "cliente_id, created_at, data, duracao_minutos, hora_fim, hora_inicio, id, id_comanda, id_salao, observacoes, origem, profissional_id, servico_id, status, updated_at";
+  "cliente_id, created_at, data, duracao_minutos, hora_fim, hora_inicio, id, id_comanda, id_salao, observacoes, origem, profissional_id, servico_id, sinal_comprovante_path, sinal_confirmacao_responsavel, sinal_confirmado_em, sinal_confirmado_por_id, sinal_confirmado_por_nome, sinal_confirmado_por_tipo, sinal_status, sinal_valor, status, updated_at";
 export const SELECT_ADMIN_MASTER_PERMISSOES =
   "assinaturas_ajustar, assinaturas_ver, atualizado_em, auditoria_ver, campanhas_editar, cobrancas_reprocessar, cobrancas_ver, comunicacao_ver, criado_em, dashboard_ver, feature_flags_editar, financeiro_ver, id, id_admin_master_usuario, notificacoes_editar, operacao_reprocessar, operacao_ver, planos_editar, produto_ver, recursos_editar, relatorios_ver, saloes_editar, saloes_entrar_como, saloes_ver, suporte_ver, tickets_editar, tickets_ver, usuarios_admin_editar, usuarios_admin_ver, whatsapp_editar, whatsapp_ver";
 export const SELECT_SALOES =
@@ -33,7 +33,7 @@ export const SELECT_ASSINATURAS =
 export const SELECT_CONFIGURACOES_SALAO =
   "cor_primaria, created_at, desconta_taxa_profissional, dias_funcionamento, exigir_cliente_na_venda, fuso_horario, hora_abertura, hora_fechamento, id, id_salao, intervalo_minutos, modo_compacto, permitir_reabrir_venda, repassa_taxa_cliente, taxa_credito_10x, taxa_credito_11x, taxa_credito_12x, taxa_credito_1x, taxa_credito_2x, taxa_credito_3x, taxa_credito_4x, taxa_credito_5x, taxa_credito_6x, taxa_credito_7x, taxa_credito_8x, taxa_credito_9x, taxa_maquininha_boleto, taxa_maquininha_credito, taxa_maquininha_debito, taxa_maquininha_outro, taxa_maquininha_pix, taxa_maquininha_transferencia, updated_at";
 export const SELECT_PROFISSIONAIS =
-  "ativo, bairro, bio, cargo, categoria, cep, cidade, comissao_percentual, comissao_produto_percentual, cor_agenda, cpf, data_admissao, data_nascimento, dias_trabalho, eh_assistente, email, endereco, especialidades, estado, foto, foto_url, id, id_profissional_principal, id_salao, nivel_acesso, nome, nome_exibicao, nome_social, numero, ordem_agenda, pausas, percentual_comissao_assistente, permite_comissao, pix_chave, pix_tipo, pode_usar_sistema, recebe_comissao, rg, status, telefone, tipo_profissional, tipo_vinculo, whatsapp";
+  "ativo, bairro, bio, cargo, categoria, cep, cidade, comissao_percentual, comissao_produto_percentual, cor_agenda, cpf, data_admissao, data_nascimento, dias_trabalho, eh_assistente, email, endereco, especialidades, estado, foto, foto_url, id, id_profissional_principal, id_salao, intervalo_agenda_minutos, nivel_acesso, nome, nome_exibicao, nome_social, numero, ordem_agenda, pausas, percentual_comissao_assistente, permite_comissao, pix_chave, pix_tipo, pode_usar_sistema, recebe_comissao, rg, sinal_confirmacao_responsavel, sinal_pix_proprio, sinal_pix_recebedor, sinal_whatsapp, status, telefone, tipo_profissional, tipo_vinculo, whatsapp";
 export const SELECT_AGENDA_BLOQUEIOS =
   "created_at, data, hora_fim, hora_inicio, id, id_salao, motivo, profissional_id";
 export const SELECT_CAIXA_SESSOES =

@@ -58,13 +58,18 @@ body {
 }
 
 .sp-mobile-fixed {
-  transform: translate3d(0, 0, 0);
   backface-visibility: hidden;
   contain: paint;
+  will-change: transform;
 }
 
 .sp-mobile-resume-repaint .sp-mobile-fixed {
-  transform: translate3d(0, 0, 0.01px);
+  opacity: 0.999;
+}
+
+.sp-bottom-nav {
+  bottom: max(var(--sp-fixed-bottom, 0px), 0px);
+  padding-bottom: max(env(safe-area-inset-bottom), 0.45rem);
 }
 
 a {

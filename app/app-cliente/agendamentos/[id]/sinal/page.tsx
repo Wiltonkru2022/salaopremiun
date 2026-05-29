@@ -34,7 +34,7 @@ export default async function ClienteAgendamentoSinalPage({
 
   const { data: agendamento } = await (supabaseAdmin as any)
     .from("agendamentos")
-    .select("id, cliente_id, id_salao, data, hora_inicio, status, sinal_valor, sinal_percentual, sinal_pix_chave, sinal_pix_recebedor, sinal_pix_cidade, reserva_expira_em, servicos(nome, preco_padrao, preco)")
+    .select("id, cliente_id, id_salao, data, hora_inicio, status, sinal_valor, sinal_percentual, sinal_pix_chave, sinal_pix_recebedor, sinal_pix_cidade, reserva_expira_em, servicos(nome, preco_padrao, preco), profissionais(nome, nome_exibicao)")
     .eq("id", id)
     .maybeSingle();
 
@@ -57,6 +57,11 @@ export default async function ClienteAgendamentoSinalPage({
   const servico = agendamento.servicos as
     | { nome?: string | null; preco_padrao?: number | null; preco?: number | null }
     | null;
+  const profissional = agendamento.profissionais as
+    | { nome?: string | null; nome_exibicao?: string | null }
+    | null;
+  const profissionalNome =
+    profissional?.nome_exibicao || profissional?.nome || "Profissional";
   const valorTotal = Number(servico?.preco_padrao ?? servico?.preco ?? 0);
   const payload = buildPixPayload({
     chave: String(agendamento.sinal_pix_chave || ""),
@@ -111,6 +116,9 @@ export default async function ClienteAgendamentoSinalPage({
               <p className="mt-1 text-lg font-black">
                 {servico?.nome || "Serviço"}
               </p>
+              <p className="mt-1 text-sm font-semibold text-zinc-500">
+                Profissional: {profissionalNome}
+              </p>
             </div>
 
             <span className="flex h-12 w-12 items-center justify-center rounded-full bg-zinc-100 text-zinc-700">
@@ -129,6 +137,18 @@ export default async function ClienteAgendamentoSinalPage({
               </div>
             </div>
           </div>
+        </section>
+
+        <section className="mt-5 rounded-[1.5rem] border border-emerald-100 bg-emerald-50/50 p-5">
+          <p className="text-sm font-bold uppercase tracking-[0.12em] text-emerald-700">
+            Recebedor
+          </p>
+          <p className="mt-2 text-xl font-black">
+            {String(agendamento.sinal_pix_recebedor || "SalaoPremium")}
+          </p>
+          <p className="mt-2 break-words text-base font-semibold text-zinc-700">
+            Chave Pix: {String(agendamento.sinal_pix_chave || "")}
+          </p>
         </section>
 
         <section className="mt-9">

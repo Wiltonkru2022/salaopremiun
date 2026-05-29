@@ -76,6 +76,11 @@ type Profissional = {
   comissao_produto_percentual: string;
   pix_tipo: string;
   pix_chave: string;
+  intervalo_agenda_minutos: string;
+  sinal_pix_proprio: boolean;
+  sinal_pix_recebedor: string;
+  sinal_whatsapp: string;
+  sinal_confirmacao_responsavel: string;
   nivel_acesso: string;
   status: string;
   ativo: boolean;
@@ -136,6 +141,11 @@ const initialForm: Profissional = {
   comissao_produto_percentual: "0",
   pix_tipo: "CPF",
   pix_chave: "",
+  intervalo_agenda_minutos: "30",
+  sinal_pix_proprio: false,
+  sinal_pix_recebedor: "",
+  sinal_whatsapp: "",
+  sinal_confirmacao_responsavel: "salao",
   nivel_acesso: "proprio",
   status: "ativo",
   ativo: true,
@@ -307,7 +317,7 @@ export default function ProfissionalForm({
   async function carregarProfissional(id: string, salaoId: string) {
     const { data, error } = await supabase
       .from("profissionais")
-      .select("ativo, bairro, bio, cargo, categoria, cep, cidade, comissao_percentual, comissao_produto_percentual, cor_agenda, cpf, data_admissao, data_nascimento, dias_trabalho, eh_assistente, email, endereco, especialidades, estado, foto, foto_url, id, id_profissional_principal, id_salao, nivel_acesso, nome, nome_exibicao, nome_social, numero, ordem_agenda, pausas, percentual_comissao_assistente, permite_comissao, pix_chave, pix_tipo, pode_usar_sistema, recebe_comissao, rg, status, telefone, tipo_profissional, tipo_vinculo, whatsapp")
+      .select("ativo, bairro, bio, cargo, categoria, cep, cidade, comissao_percentual, comissao_produto_percentual, cor_agenda, cpf, data_admissao, data_nascimento, dias_trabalho, eh_assistente, email, endereco, especialidades, estado, foto, foto_url, id, id_profissional_principal, id_salao, intervalo_agenda_minutos, nivel_acesso, nome, nome_exibicao, nome_social, numero, ordem_agenda, pausas, percentual_comissao_assistente, permite_comissao, pix_chave, pix_tipo, pode_usar_sistema, recebe_comissao, rg, sinal_confirmacao_responsavel, sinal_pix_proprio, sinal_pix_recebedor, sinal_whatsapp, status, telefone, tipo_profissional, tipo_vinculo, whatsapp")
       .eq("id", id)
       .eq("id_salao", salaoId)
       .limit(1);
@@ -352,6 +362,12 @@ export default function ProfissionalForm({
       ),
       pix_tipo: profissional.pix_tipo || "CPF",
       pix_chave: profissional.pix_chave || "",
+      intervalo_agenda_minutos: String(profissional.intervalo_agenda_minutos || 30),
+      sinal_pix_proprio: Boolean(profissional.sinal_pix_proprio),
+      sinal_pix_recebedor: profissional.sinal_pix_recebedor || "",
+      sinal_whatsapp: profissional.sinal_whatsapp || profissional.whatsapp || "",
+      sinal_confirmacao_responsavel:
+        profissional.sinal_confirmacao_responsavel || "salao",
       nivel_acesso: profissional.nivel_acesso || "proprio",
       status: profissional.status || "ativo",
       ativo:
@@ -576,6 +592,14 @@ async function salvarAcessoProfissional(idProfissional: string) {
         comissao_produto_percentual: Number(form.comissao_produto_percentual || 0),
         pix_tipo: form.pix_tipo || null,
         pix_chave: form.pix_chave.trim() || null,
+        intervalo_agenda_minutos: Number(form.intervalo_agenda_minutos || 30),
+        sinal_pix_proprio: Boolean(form.sinal_pix_proprio),
+        sinal_pix_recebedor: form.sinal_pix_recebedor.trim() || null,
+        sinal_whatsapp: form.sinal_whatsapp.trim() || null,
+        sinal_confirmacao_responsavel:
+          form.sinal_confirmacao_responsavel === "profissional"
+            ? "profissional"
+            : "salao",
         nivel_acesso: isAssistenteSalao ? "sem_acesso" : form.nivel_acesso || "proprio",
         status: form.ativo ? "ativo" : "inativo",
         ativo: form.ativo,
@@ -824,6 +848,22 @@ async function salvarAcessoProfissional(idProfissional: string) {
             </Card>
             <Card title="3. Disponibilidade de referência" subtitle="Dias e horários apenas para consulta. O bloqueio agora e feito direto na agenda.">
               <div className="space-y-4">
+                <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4">
+                  <p className="mb-3 text-sm font-semibold text-zinc-900">
+                    Configuração de agenda
+                  </p>
+                  <Select
+                    label="Intervalo dos horários"
+                    value={form.intervalo_agenda_minutos}
+                    onChange={(v) => handleChange("intervalo_agenda_minutos", v)}
+                    options={[
+                      { value: "30", label: "30 minutos" },
+                      { value: "60", label: "1 hora" },
+                      { value: "120", label: "2 horas" },
+                    ]}
+                  />
+                </div>
+
                 <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
                   Os dias e horários abaixo não bloqueiam mais a agenda. Para travar atendimento, use os bloqueios criados diretamente na agenda.
                 </div>
@@ -1079,6 +1119,49 @@ async function salvarAcessoProfissional(idProfissional: string) {
                   value={form.pix_chave}
                   onChange={(v) => handleChange("pix_chave", v)}
                 />
+
+                <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4">
+                  <p className="font-semibold text-zinc-900">
+                    Configuração Pix do profissional
+                  </p>
+                  <p className="mt-1 text-sm text-zinc-500">
+                    Use quando o sinal deve cair direto no Pix da profissional.
+                  </p>
+
+                  <div className="mt-4 space-y-4">
+                    <Switch
+                      label="Receber sinal no Pix próprio?"
+                      checked={form.sinal_pix_proprio}
+                      onChange={(v) => handleChange("sinal_pix_proprio", v)}
+                    />
+
+                    <Input
+                      label="Nome do recebedor"
+                      value={form.sinal_pix_recebedor}
+                      onChange={(v) => handleChange("sinal_pix_recebedor", v)}
+                      placeholder="Ex.: Ana Souza"
+                    />
+
+                    <Input
+                      label="WhatsApp para comprovante"
+                      value={form.sinal_whatsapp}
+                      onChange={(v) => handleChange("sinal_whatsapp", v)}
+                      placeholder="Ex.: 67999999999"
+                    />
+
+                    <Select
+                      label="Quem confirma o sinal?"
+                      value={form.sinal_confirmacao_responsavel}
+                      onChange={(v) =>
+                        handleChange("sinal_confirmacao_responsavel", v)
+                      }
+                      options={[
+                        { value: "salao", label: "Salão" },
+                        { value: "profissional", label: "Profissional" },
+                      ]}
+                    />
+                  </div>
+                </div>
 
                 <Select
                   label="Nível de acesso"

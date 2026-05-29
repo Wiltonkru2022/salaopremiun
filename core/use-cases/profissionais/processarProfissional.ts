@@ -40,6 +40,11 @@ const PROFISSIONAL_FIELDS = [
   "comissao_produto_percentual",
   "pix_tipo",
   "pix_chave",
+  "intervalo_agenda_minutos",
+  "sinal_pix_proprio",
+  "sinal_pix_recebedor",
+  "sinal_whatsapp",
+  "sinal_confirmacao_responsavel",
   "nivel_acesso",
   "status",
   "ativo",
@@ -212,6 +217,15 @@ function sanitizeProfissionalPayload(
   payload.comissao_produto_percentual = Number(
     payload.comissao_produto_percentual || 0
   );
+  const intervaloAgenda = Number(payload.intervalo_agenda_minutos || 30);
+  payload.intervalo_agenda_minutos = [30, 60, 120].includes(intervaloAgenda)
+    ? intervaloAgenda
+    : 30;
+  payload.sinal_pix_proprio = Boolean(payload.sinal_pix_proprio);
+  payload.sinal_confirmacao_responsavel =
+    getString(payload.sinal_confirmacao_responsavel) === "profissional"
+      ? "profissional"
+      : "salao";
 
   if (!Array.isArray(payload.especialidades)) {
     payload.especialidades = [];

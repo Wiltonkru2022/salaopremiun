@@ -1376,7 +1376,10 @@ export default function AgendaPage() {
                 currentDate={currentDate}
                 startTime={normalizeTimeString(config.hora_abertura)}
                 endTime={normalizeTimeString(config.hora_fechamento)}
-                intervalMinutes={config.intervalo_minutos}
+                intervalMinutes={
+                  Number(selectedProfissional?.intervalo_agenda_minutos || 0) ||
+                  config.intervalo_minutos
+                }
                 diasFuncionamento={diasFuncionamento}
                 agendamentos={agendamentos}
                 bloqueios={bloqueios}

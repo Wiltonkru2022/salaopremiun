@@ -65,7 +65,7 @@ export default function ClientAppBottomNav() {
 
   return (
     <nav
-      className={`sp-mobile-fixed fixed inset-x-0 bottom-[var(--sp-fixed-bottom,0px)] z-40 translate-y-0 px-4 pb-[max(env(safe-area-inset-bottom),0.45rem)] pt-2 md:hidden ${
+      className={`sp-mobile-fixed sp-bottom-nav fixed inset-x-0 z-40 translate-y-0 px-4 pt-2 md:hidden ${
         isDark
           ? "border-t border-white/10 bg-[#111214]/95 shadow-[0_-18px_45px_rgba(0,0,0,0.45)] backdrop-blur-xl"
           : "border-t border-zinc-200 bg-white shadow-[0_-14px_34px_rgba(15,23,42,0.10)]"

@@ -389,6 +389,130 @@ export async function confirmarAgendamentoProfissionalAction(formData: FormData)
   }
 }
 
+export async function confirmarSinalPixProfissionalAction(formData: FormData) {
+  const session = await getSessionOrRedirect();
+  const idAgendamento = String(formData.get("id_agendamento") || "").trim();
+
+  try {
+    if (!idAgendamento) throw new Error("Agendamento invalido.");
+    await assertCanMutatePlanFeature(session.idSalao, "agenda");
+
+    const agendamento = await buscarAgendamentoPermitido({
+      idSalao: session.idSalao,
+      idProfissional: session.idProfissional,
+      idAgendamento,
+    });
+
+    const updatedAt = new Date().toISOString();
+    await runAdminOperation({
+      action: "app_profissional_confirmar_sinal_pix",
+      actorId: session.idProfissional,
+      idSalao: session.idSalao,
+      run: async (supabase) => {
+        const { data: profissional } = await supabase
+          .from("profissionais")
+          .select("nome, nome_exibicao, sinal_confirmacao_responsavel")
+          .eq("id", session.idProfissional)
+          .eq("id_salao", session.idSalao)
+          .maybeSingle();
+
+        if (String(profissional?.sinal_confirmacao_responsavel || "") !== "profissional") {
+          throw new Error("Este profissional nao esta configurado para confirmar sinais.");
+        }
+
+        const { error } = await supabase
+          .from("agendamentos")
+          .update({
+            status: "confirmado",
+            sinal_status: "confirmado",
+            sinal_confirmado_em: updatedAt,
+            sinal_confirmado_por_tipo: "profissional",
+            sinal_confirmado_por_id: session.idProfissional,
+            sinal_confirmado_por_nome:
+              profissional?.nome_exibicao || profissional?.nome || "Profissional",
+            reserva_expira_em: null,
+            updated_at: updatedAt,
+          })
+          .eq("id", idAgendamento)
+          .eq("id_salao", session.idSalao)
+          .eq("profissional_id", session.idProfissional)
+          .eq("sinal_confirmacao_responsavel", "profissional");
+
+        if (error) throw new Error(error.message);
+      },
+    });
+
+    if (String(agendamento.status || "").toLowerCase() !== "confirmado") {
+      await notifyClientAppointmentConfirmed({
+        idAgendamento,
+        idSalao: session.idSalao,
+      });
+      await scheduleAppointmentReminderNotifications({
+        idAgendamento,
+        idSalao: session.idSalao,
+      });
+    }
+
+    revalidatePath("/app-profissional/agenda");
+    revalidatePath(`/app-profissional/agenda/${idAgendamento}`);
+    revalidatePath("/app-profissional/inicio");
+    redirect(buildUrl(idAgendamento, "ok", "Sinal Pix confirmado."));
+  } catch (error) {
+    if (isRedirectError(error)) throw error;
+    const message =
+      error instanceof PlanAccessError
+        ? error.message
+        : error instanceof Error
+          ? error.message
+          : "Erro ao confirmar sinal.";
+    redirect(buildUrl(idAgendamento || "invalido", "erro", message));
+  }
+}
+
+export async function recusarSinalPixProfissionalAction(formData: FormData) {
+  const session = await getSessionOrRedirect();
+  const idAgendamento = String(formData.get("id_agendamento") || "").trim();
+
+  try {
+    if (!idAgendamento) throw new Error("Agendamento invalido.");
+    await assertCanMutatePlanFeature(session.idSalao, "agenda");
+
+    await runAdminOperation({
+      action: "app_profissional_recusar_sinal_pix",
+      actorId: session.idProfissional,
+      idSalao: session.idSalao,
+      run: async (supabase) => {
+        const { error } = await supabase
+          .from("agendamentos")
+          .update({
+            status: "reservado_aguardando_pagamento",
+            sinal_status: "recusado",
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", idAgendamento)
+          .eq("id_salao", session.idSalao)
+          .eq("profissional_id", session.idProfissional)
+          .eq("sinal_confirmacao_responsavel", "profissional");
+
+        if (error) throw new Error(error.message);
+      },
+    });
+
+    revalidatePath("/app-profissional/agenda");
+    revalidatePath(`/app-profissional/agenda/${idAgendamento}`);
+    redirect(buildUrl(idAgendamento, "ok", "Comprovante recusado."));
+  } catch (error) {
+    if (isRedirectError(error)) throw error;
+    const message =
+      error instanceof PlanAccessError
+        ? error.message
+        : error instanceof Error
+          ? error.message
+          : "Erro ao recusar sinal.";
+    redirect(buildUrl(idAgendamento || "invalido", "erro", message));
+  }
+}
+
 export async function cancelarAgendamentoProfissionalAction(formData: FormData) {
   const session = await getSessionOrRedirect();
   const idAgendamento = String(formData.get("id_agendamento") || "").trim();

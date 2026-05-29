@@ -39,7 +39,7 @@ export default function ProfissionalBottomNav() {
   }, [pathname]);
 
   return (
-    <nav className="sp-mobile-fixed fixed inset-x-0 bottom-[var(--sp-fixed-bottom,0px)] z-40 translate-y-0 overflow-x-hidden border-t border-white/70 bg-white/90 pb-[max(env(safe-area-inset-bottom),0.45rem)] shadow-[0_-18px_44px_rgba(15,23,42,0.08)] backdrop-blur-xl">
+    <nav className="sp-mobile-fixed sp-bottom-nav fixed inset-x-0 z-40 translate-y-0 overflow-x-hidden border-t border-white/70 bg-white/90 shadow-[0_-18px_44px_rgba(15,23,42,0.08)] backdrop-blur-xl">
       <div className="mx-auto grid max-w-md grid-cols-5 gap-1 px-2 sm:max-w-lg lg:max-w-2xl">
         {items.map(({ href, label, icon: Icon, key }) => {
           const active = pressedSection ? pressedSection === key : currentSection === key;

@@ -143,6 +143,10 @@ export default function AppointmentCard({
   );
 
   const comandaLabel = item.comanda_numero ? `Comanda #${item.comanda_numero}` : "";
+  const sinalConfirmadoLabel =
+    item.sinal_status === "confirmado" && item.sinal_confirmado_por_nome
+      ? `Confirmado por: ${item.sinal_confirmado_por_nome}`
+      : "";
   const compactTitle = `${item.cliente?.nome || "Cliente"}${
     item.servico?.nome ? ` - ${item.servico.nome}` : ""
   }`;
@@ -488,6 +492,12 @@ export default function AppointmentCard({
                 {!isSmall && !isMedium ? (
                   <span className="rounded-full border border-white/70 bg-white/90 px-2 py-0.5 text-[9px] font-semibold text-zinc-700">
                     {valorServico}
+                  </span>
+                ) : null}
+
+                {sinalConfirmadoLabel && !isSmall && !isMedium ? (
+                  <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[9px] font-semibold text-emerald-700">
+                    {sinalConfirmadoLabel}
                   </span>
                 ) : null}
               </div>

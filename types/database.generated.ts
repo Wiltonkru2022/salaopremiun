@@ -463,8 +463,19 @@ export type Database = {
           sinal_comprovante_nome: string | null
           sinal_comprovante_path: string | null
           sinal_comprovante_tipo: string | null
+          sinal_confirmacao_responsavel: string
+          sinal_confirmado_em: string | null
+          sinal_confirmado_por_id: string | null
+          sinal_confirmado_por_nome: string | null
+          sinal_confirmado_por_tipo: string | null
+          sinal_mensagem_comprovante: string | null
+          sinal_percentual: number | null
+          sinal_pix_chave: string | null
+          sinal_pix_cidade: string | null
+          sinal_pix_recebedor: string | null
           sinal_status: string | null
           sinal_valor: number | null
+          sinal_whatsapp: string | null
           status: string
           updated_at: string | null
         }
@@ -489,8 +500,19 @@ export type Database = {
           sinal_comprovante_nome?: string | null
           sinal_comprovante_path?: string | null
           sinal_comprovante_tipo?: string | null
+          sinal_confirmacao_responsavel?: string
+          sinal_confirmado_em?: string | null
+          sinal_confirmado_por_id?: string | null
+          sinal_confirmado_por_nome?: string | null
+          sinal_confirmado_por_tipo?: string | null
+          sinal_mensagem_comprovante?: string | null
+          sinal_percentual?: number | null
+          sinal_pix_chave?: string | null
+          sinal_pix_cidade?: string | null
+          sinal_pix_recebedor?: string | null
           sinal_status?: string | null
           sinal_valor?: number | null
+          sinal_whatsapp?: string | null
           status: string
           updated_at?: string | null
         }
@@ -515,8 +537,19 @@ export type Database = {
           sinal_comprovante_nome?: string | null
           sinal_comprovante_path?: string | null
           sinal_comprovante_tipo?: string | null
+          sinal_confirmacao_responsavel?: string
+          sinal_confirmado_em?: string | null
+          sinal_confirmado_por_id?: string | null
+          sinal_confirmado_por_nome?: string | null
+          sinal_confirmado_por_tipo?: string | null
+          sinal_mensagem_comprovante?: string | null
+          sinal_percentual?: number | null
+          sinal_pix_chave?: string | null
+          sinal_pix_cidade?: string | null
+          sinal_pix_recebedor?: string | null
           sinal_status?: string | null
           sinal_valor?: number | null
+          sinal_whatsapp?: string | null
           status?: string
           updated_at?: string | null
         }
@@ -3844,6 +3877,7 @@ export type Database = {
           id: string
           id_profissional_principal: string | null
           id_salao: string | null
+          intervalo_agenda_minutos: number
           nivel_acesso: string | null
           nome: string | null
           nome_exibicao: string | null
@@ -3858,6 +3892,10 @@ export type Database = {
           pode_usar_sistema: boolean | null
           recebe_comissao: boolean | null
           rg: string | null
+          sinal_confirmacao_responsavel: string
+          sinal_pix_proprio: boolean
+          sinal_pix_recebedor: string | null
+          sinal_whatsapp: string | null
           status: string | null
           telefone: string | null
           tipo_profissional: string | null
@@ -3889,6 +3927,7 @@ export type Database = {
           id?: string
           id_profissional_principal?: string | null
           id_salao?: string | null
+          intervalo_agenda_minutos?: number
           nivel_acesso?: string | null
           nome?: string | null
           nome_exibicao?: string | null
@@ -3903,6 +3942,10 @@ export type Database = {
           pode_usar_sistema?: boolean | null
           recebe_comissao?: boolean | null
           rg?: string | null
+          sinal_confirmacao_responsavel?: string
+          sinal_pix_proprio?: boolean
+          sinal_pix_recebedor?: string | null
+          sinal_whatsapp?: string | null
           status?: string | null
           telefone?: string | null
           tipo_profissional?: string | null
@@ -3934,6 +3977,7 @@ export type Database = {
           id?: string
           id_profissional_principal?: string | null
           id_salao?: string | null
+          intervalo_agenda_minutos?: number
           nivel_acesso?: string | null
           nome?: string | null
           nome_exibicao?: string | null
@@ -3948,6 +3992,10 @@ export type Database = {
           pode_usar_sistema?: boolean | null
           recebe_comissao?: boolean | null
           rg?: string | null
+          sinal_confirmacao_responsavel?: string
+          sinal_pix_proprio?: boolean
+          sinal_pix_recebedor?: string | null
+          sinal_whatsapp?: string | null
           status?: string | null
           telefone?: string | null
           tipo_profissional?: string | null

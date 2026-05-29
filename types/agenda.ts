@@ -37,6 +37,11 @@ export type Profissional = {
   cor_agenda: string | null;
   status: string;
   ativo?: boolean | null;
+  intervalo_agenda_minutos?: number | null;
+  sinal_pix_proprio?: boolean | null;
+  sinal_pix_recebedor?: string | null;
+  sinal_whatsapp?: string | null;
+  sinal_confirmacao_responsavel?: "salao" | "profissional" | string | null;
   dias_trabalho?: DiaTrabalhoProfissional[] | string | null;
   pausas?: PausaProfissional[] | string | null;
   created_at?: string | null;
@@ -97,6 +102,11 @@ export type Agendamento = {
   sinal_valor?: number | null;
   sinal_status?: string | null;
   sinal_comprovante_path?: string | null;
+  sinal_confirmacao_responsavel?: "salao" | "profissional" | string | null;
+  sinal_confirmado_por_tipo?: "salao" | "profissional" | string | null;
+  sinal_confirmado_por_id?: string | null;
+  sinal_confirmado_por_nome?: string | null;
+  sinal_confirmado_em?: string | null;
 
   cliente?: {
     nome: string;

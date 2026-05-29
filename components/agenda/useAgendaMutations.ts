@@ -654,6 +654,8 @@ export function useAgendaMutations({
                 ? {
                     sinal_status: "confirmado",
                     sinal_confirmado_em: updatedAt,
+                    sinal_confirmado_por_tipo: "salao",
+                    sinal_confirmado_por_nome: "Recepção do salão",
                     reserva_expira_em: null,
                   }
                 : {}),

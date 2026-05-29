@@ -21,6 +21,15 @@ function formatarMoeda(valor: number) {
   }).format(valor);
 }
 
+function getSinalLabel(status?: string | null) {
+  const value = String(status || "").toLowerCase();
+  if (value === "comprovante_enviado") return "Aguardando confirmação";
+  if (value === "confirmado") return "Sinal confirmado";
+  if (value === "aguardando_pagamento") return "Aguardando pagamento";
+  if (value === "recusado") return "Sinal recusado";
+  return null;
+}
+
 function getStatusMeta(status: string) {
   const value = String(status || "").toLowerCase();
 
@@ -166,6 +175,15 @@ export default async function AgendaProfissionalPage({
                         <div className="mt-1 text-sm leading-6 text-zinc-500">
                           {card.servico}
                         </div>
+
+                        {card.tipo === "agendamento" && card.sinalValor ? (
+                          <div className="mt-2 rounded-[0.95rem] border border-emerald-100 bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-800">
+                            Sinal: {formatarMoeda(card.sinalValor)}
+                            {getSinalLabel(card.sinalStatus)
+                              ? ` · ${getSinalLabel(card.sinalStatus)}`
+                              : ""}
+                          </div>
+                        ) : null}
 
                         {session.podeVerAgendaTodos ? (
                           <div className="mt-2 inline-flex rounded-full bg-white px-2.5 py-1 text-[11px] font-bold text-zinc-600 ring-1 ring-zinc-200">

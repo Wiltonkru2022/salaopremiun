@@ -172,6 +172,12 @@ function parseProfissionalRow(row: Record<string, unknown>): Profissional {
     status: String(row.status || "ativo"),
     ativo:
       row.ativo === null || row.ativo === undefined ? true : Boolean(row.ativo),
+    intervalo_agenda_minutos: Number(row.intervalo_agenda_minutos || 0) || null,
+    sinal_pix_proprio: Boolean(row.sinal_pix_proprio),
+    sinal_pix_recebedor: String(row.sinal_pix_recebedor || "").trim() || null,
+    sinal_whatsapp: String(row.sinal_whatsapp || "").trim() || null,
+    sinal_confirmacao_responsavel:
+      String(row.sinal_confirmacao_responsavel || "").trim() || null,
     dias_trabalho: (row.dias_trabalho as Profissional["dias_trabalho"]) ?? null,
     pausas: (row.pausas as Profissional["pausas"]) ?? null,
   };
@@ -251,7 +257,7 @@ async function loadBookingBaseContext(params: {
       (params.supabaseAdmin as any)
         .from("profissionais")
         .select(
-          "id, id_salao, nome, nome_exibicao, foto_url, categoria, cargo, comissao_percentual, cor_agenda, status, ativo, dias_trabalho, pausas, app_cliente_visivel, eh_assistente"
+          "id, id_salao, nome, nome_exibicao, foto_url, categoria, cargo, comissao_percentual, cor_agenda, status, ativo, dias_trabalho, pausas, app_cliente_visivel, eh_assistente, intervalo_agenda_minutos, pix_chave, sinal_confirmacao_responsavel, sinal_pix_proprio, sinal_pix_recebedor, sinal_whatsapp"
         )
         .eq("id", params.idProfissional)
         .eq("id_salao", params.idSalao)
@@ -347,10 +353,24 @@ async function loadBookingBaseContext(params: {
         ? Number(servicoResult.data.sinal_percentual_personalizado)
         : Number(configSinal.sinal_agendamento_percentual ?? 10),
     sinalReservaMinutos: Number(configSinal.sinal_reserva_minutos ?? 10) || 10,
-    sinalPixChave: String(configSinal.sinal_pix_chave || "").trim() || null,
-    sinalPixRecebedor: String(configSinal.sinal_pix_recebedor || "").trim() || null,
+    sinalPixChave:
+      profissional.sinal_pix_proprio && String(profissionalResult.data.pix_chave || "").trim()
+        ? String(profissionalResult.data.pix_chave || "").trim()
+        : String(configSinal.sinal_pix_chave || "").trim() || null,
+    sinalPixRecebedor:
+      profissional.sinal_pix_proprio &&
+      String(profissional.sinal_pix_recebedor || "").trim()
+        ? String(profissional.sinal_pix_recebedor || "").trim()
+        : String(configSinal.sinal_pix_recebedor || "").trim() || null,
     sinalPixCidade: String(configSinal.sinal_pix_cidade || "").trim() || null,
-    sinalWhatsapp: String(configSinal.sinal_whatsapp || "").trim() || null,
+    sinalWhatsapp:
+      profissional.sinal_pix_proprio && String(profissional.sinal_whatsapp || "").trim()
+        ? String(profissional.sinal_whatsapp || "").trim()
+        : String(configSinal.sinal_whatsapp || "").trim() || null,
+    sinalConfirmacaoResponsavel:
+      String(profissional.sinal_confirmacao_responsavel || "") === "profissional"
+        ? "profissional"
+        : "salao",
     sinalMensagemComprovante:
       String(configSinal.sinal_mensagem_comprovante || "").trim() || null,
   };
@@ -420,6 +440,7 @@ async function loadBookingMultiContext(params: {
     sinalPercentual:
       contexts.find((context) => Number(context.sinalPercentual || 0) > 0)
         ?.sinalPercentual || first.sinalPercentual,
+    sinalConfirmacaoResponsavel: first.sinalConfirmacaoResponsavel,
   };
 }
 
@@ -724,7 +745,7 @@ function buildDisponibilidadeDia(params: {
   );
 
   const step = Math.max(
-    Number(params.config.intervalo_minutos || 15),
+    Number(params.profissional.intervalo_agenda_minutos || params.config.intervalo_minutos || 15),
     CLIENT_BOOKING_SLOT_STEP_MINUTES
   );
   const slots = buildTimeSlots(
@@ -985,6 +1006,7 @@ export async function createClienteAppAppointment(
         sinalPixRecebedor,
         sinalPixCidade,
         sinalWhatsapp,
+        sinalConfirmacaoResponsavel,
         sinalMensagemComprovante,
       } = bookingContext;
       const horaFim = addDurationToTime(horaInicio, duracao);
@@ -1228,6 +1250,9 @@ export async function createClienteAppAppointment(
           sinal_pix_recebedor: requiresSignal ? sinalPixRecebedor : null,
           sinal_pix_cidade: requiresSignal ? sinalPixCidade : null,
           sinal_whatsapp: requiresSignal ? sinalWhatsapp : null,
+          sinal_confirmacao_responsavel: requiresSignal
+            ? sinalConfirmacaoResponsavel
+            : "salao",
           sinal_mensagem_comprovante: requiresSignal ? sinalMensagemComprovante : null,
           origem: "app_cliente",
         })
@@ -1498,7 +1523,9 @@ export async function getClienteAppBookingAvailability(params: {
 
       return {
         ok: true,
-        intervaloMinutos: config.intervalo_minutos,
+        intervaloMinutos:
+          Number(profissional.intervalo_agenda_minutos || config.intervalo_minutos) ||
+          config.intervalo_minutos,
         bufferMinutos: CLIENT_BOOKING_BUFFER_MINUTES,
         duracaoMinutos: duracao,
         valorTotal: Number(servicoPreco || 0),

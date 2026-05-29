@@ -3,7 +3,9 @@ import {
   ArrowLeft,
   CalendarClock,
   Clock,
+  FileImage,
   Scissors,
+  ShieldCheck,
   Trash2,
   UserX,
 } from "lucide-react";
@@ -18,8 +20,10 @@ import {
   atualizarAgendamentoProfissionalAction,
   cancelarAgendamentoProfissionalAction,
   confirmarAgendamentoProfissionalAction,
+  confirmarSinalPixProfissionalAction,
   enviarComandaDoAgendamentoParaCaixaAction,
   marcarClienteNaoCompareceuAction,
+  recusarSinalPixProfissionalAction,
 } from "./actions";
 
 type Params = Promise<{ id: string }>;
@@ -37,6 +41,10 @@ type AgendamentoRow = {
   id_comanda?: string | null;
   observacoes?: string | null;
   duracao_minutos?: number | string | null;
+  sinal_status?: string | null;
+  sinal_valor?: number | string | null;
+  sinal_comprovante_path?: string | null;
+  sinal_confirmacao_responsavel?: string | null;
 };
 
 type ClienteRow = {
@@ -93,6 +101,15 @@ function formatMoney(value?: number | string | null) {
   }).format(Number(value || 0));
 }
 
+function getSinalStatusLabel(status?: string | null) {
+  const value = String(status || "").toLowerCase();
+  if (value === "comprovante_enviado") return "Aguardando confirmação";
+  if (value === "confirmado") return "Confirmado";
+  if (value === "aguardando_pagamento") return "Aguardando pagamento";
+  if (value === "recusado") return "Recusado";
+  return status || "Sem sinal";
+}
+
 function getStatusLabel(status?: string | null) {
   const valor = String(status || "").toLowerCase();
   const option = STATUS_OPTIONS.find(([key]) => key === valor);
@@ -139,7 +156,7 @@ export default async function AgendamentoDetalheProfissionalPage({
             let query = supabase
             .from("agendamentos")
             .select(
-              "id, profissional_id, cliente_id, servico_id, data, hora_inicio, hora_fim, status, id_comanda, observacoes, duracao_minutos"
+              "id, profissional_id, cliente_id, servico_id, data, hora_inicio, hora_fim, status, id_comanda, observacoes, duracao_minutos, sinal_status, sinal_valor, sinal_comprovante_path, sinal_confirmacao_responsavel"
             )
             .eq("id", id)
             .eq("id_salao", session.idSalao);
@@ -254,6 +271,15 @@ export default async function AgendamentoDetalheProfissionalPage({
     String(agendamento.profissional_id || "") === session.idProfissional;
   const profissionalNome =
     profissional?.nome_exibicao || profissional?.nome || "Profissional";
+  const sinalValor = Number(agendamento.sinal_valor || 0);
+  const sinalStatus = String(agendamento.sinal_status || "");
+  const profissionalConfirmaSinal =
+    String(agendamento.sinal_confirmacao_responsavel || "") === "profissional";
+  const podeConfirmarSinal =
+    isDoProfissionalLogado &&
+    profissionalConfirmaSinal &&
+    sinalValor > 0 &&
+    sinalStatus === "comprovante_enviado";
 
   return (
     <ProfissionalShell title="Agendamento" subtitle={formatDate(agendamento.data)}>
@@ -344,6 +370,60 @@ export default async function AgendamentoDetalheProfissionalPage({
             </form>
           ) : null}
         </section>
+
+        {sinalValor > 0 ? (
+          <ProfissionalSurface>
+            <ProfissionalSectionHeader
+              title="Sinal Pix"
+              description={
+                profissionalConfirmaSinal
+                  ? "Confira o comprovante enviado pelo cliente e confirme somente se o valor caiu."
+                  : "Este sinal é confirmado pela recepção do salão."
+              }
+            />
+
+            <div className="grid gap-2 rounded-[1.1rem] border border-emerald-100 bg-emerald-50/70 p-3.5 text-sm text-emerald-950">
+              <div className="flex items-center justify-between gap-3">
+                <span className="font-semibold">Valor</span>
+                <strong>{formatMoney(sinalValor)}</strong>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <span className="font-semibold">Status</span>
+                <strong>{getSinalStatusLabel(sinalStatus)}</strong>
+              </div>
+            </div>
+
+            {agendamento.sinal_comprovante_path ? (
+              <a
+                href={`/api/app-profissional/agendamentos/${agendamento.id}/comprovante`}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-3 inline-flex h-10 w-full items-center justify-center gap-2 rounded-[18px] border border-zinc-200 bg-white px-4 text-sm font-bold text-zinc-800"
+              >
+                <FileImage size={16} />
+                Ver comprovante
+              </a>
+            ) : null}
+
+            {podeConfirmarSinal ? (
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                <form action={confirmarSinalPixProfissionalAction}>
+                  <input type="hidden" name="id_agendamento" value={agendamento.id} />
+                  <button className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-[18px] bg-emerald-600 px-3 text-sm font-bold text-white">
+                    <ShieldCheck size={16} />
+                    Confirmar Pix
+                  </button>
+                </form>
+                <form action={recusarSinalPixProfissionalAction}>
+                  <input type="hidden" name="id_agendamento" value={agendamento.id} />
+                  <button className="h-10 w-full rounded-[18px] border border-red-200 bg-red-50 px-3 text-sm font-bold text-red-700">
+                    Recusar
+                  </button>
+                </form>
+              </div>
+            ) : null}
+          </ProfissionalSurface>
+        ) : null}
 
         <ProfissionalSurface>
           <ProfissionalSectionHeader

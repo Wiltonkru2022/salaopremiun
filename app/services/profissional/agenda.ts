@@ -48,6 +48,10 @@ type AgendamentoAgendaRow = {
   hora_fim: string;
   status: string;
   id_comanda: string | null;
+  sinal_status?: string | null;
+  sinal_valor?: number | string | null;
+  sinal_comprovante_path?: string | null;
+  sinal_confirmacao_responsavel?: string | null;
 };
 
 type BloqueioAgendaRow = {
@@ -587,6 +591,13 @@ export async function buscarAgendaProfissional(
       servico: servico?.nome ?? "Serviço",
       valorPrevisto: servico?.valor ?? 0,
       status: item.status,
+      sinalStatus: item.sinal_status || null,
+      sinalValor:
+        item.sinal_valor === null || item.sinal_valor === undefined
+          ? null
+          : Number(item.sinal_valor),
+      sinalComprovantePath: item.sinal_comprovante_path || null,
+      sinalConfirmacaoResponsavel: item.sinal_confirmacao_responsavel || null,
       top: Math.max((inicio - inicioMinutos) * pixelsPorMinuto, 0),
       height: Math.max((fim - inicio) * pixelsPorMinuto, 88),
     };
