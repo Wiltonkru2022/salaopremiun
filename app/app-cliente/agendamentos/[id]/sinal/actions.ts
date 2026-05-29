@@ -35,7 +35,7 @@ export async function enviarComprovanteSinalAction(formData: FormData) {
 
   const { data: row } = await (supabaseAdmin as any)
     .from("agendamentos")
-    .select("id, cliente_id, id_salao, sinal_whatsapp, sinal_mensagem_comprovante")
+    .select("id, cliente_id, id_salao, sinal_whatsapp, sinal_mensagem_comprovante, sinal_confirmacao_responsavel")
     .eq("id", idAgendamento)
     .maybeSingle();
 
@@ -84,7 +84,10 @@ export async function enviarComprovanteSinalAction(formData: FormData) {
   await (supabaseAdmin as any)
     .from("agendamentos")
     .update({
-      status: "aguardando_confirmacao_salao",
+      status:
+        String(row.sinal_confirmacao_responsavel || "") === "profissional"
+          ? "aguardando_confirmacao_profissional"
+          : "aguardando_confirmacao_salao",
       sinal_status: "comprovante_enviado",
       sinal_comprovante_path: storagePath,
       sinal_comprovante_nome: file.name || "comprovante",

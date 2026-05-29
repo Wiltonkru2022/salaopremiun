@@ -36,6 +36,12 @@ function getStatusMeta(status: string) {
   if (value === "confirmado") return { label: "Confirmado", tone: "success" as const };
   if (value === "em_atendimento") return { label: "Em atendimento", tone: "info" as const };
   if (value === "atendido") return { label: "Atendido", tone: "info" as const };
+  if (
+    value === "aguardando_confirmacao_salao" ||
+    value === "aguardando_confirmacao_profissional"
+  ) {
+    return { label: "Aguardando confirmação", tone: "warning" as const };
+  }
   if (value === "aguardando_pagamento") {
     return { label: "Aguardando pagamento", tone: "warning" as const };
   }

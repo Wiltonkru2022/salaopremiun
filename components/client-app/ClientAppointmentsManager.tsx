@@ -43,7 +43,10 @@ function formatStatus(value: string) {
   if (normalized === "reservado_aguardando_pagamento") {
     return "Aguardando pagamento do sinal";
   }
-  if (normalized === "aguardando_confirmacao_salao") {
+  if (
+    normalized === "aguardando_confirmacao_salao" ||
+    normalized === "aguardando_confirmacao_profissional"
+  ) {
     return "Comprovante enviado";
   }
   if (normalized === "pendente") return "Pendente";

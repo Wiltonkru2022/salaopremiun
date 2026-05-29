@@ -78,21 +78,26 @@ async function buscarAgendamentoPermitido(params: {
   idSalao: string;
   idProfissional: string;
   idAgendamento: string;
+  podeVerAgendaTodos?: boolean;
 }) {
   return runAdminOperation({
     action: "app_profissional_agendamento_buscar_permitido",
     actorId: params.idProfissional,
     idSalao: params.idSalao,
     run: async (supabase) => {
-      const { data, error } = await (supabase as any)
+      let query = (supabase as any)
         .from("agendamentos")
         .select(
           "id, id_salao, profissional_id, cliente_id, servico_id, data, hora_inicio, hora_fim, status, id_comanda, observacoes, duracao_minutos, id_cupom_salao, codigo_cupom, desconto_cupom_valor"
         )
         .eq("id", params.idAgendamento)
-        .eq("id_salao", params.idSalao)
-        .eq("profissional_id", params.idProfissional)
-        .maybeSingle();
+        .eq("id_salao", params.idSalao);
+
+      if (!params.podeVerAgendaTodos) {
+        query = query.eq("profissional_id", params.idProfissional);
+      }
+
+      const { data, error } = await query.maybeSingle();
 
       if (error) throw new Error(error.message);
       if (!data) throw new Error("Agendamento nao encontrado.");
@@ -401,6 +406,7 @@ export async function confirmarSinalPixProfissionalAction(formData: FormData) {
       idSalao: session.idSalao,
       idProfissional: session.idProfissional,
       idAgendamento,
+      podeVerAgendaTodos: session.podeVerAgendaTodos,
     });
 
     const updatedAt = new Date().toISOString();
@@ -412,7 +418,7 @@ export async function confirmarSinalPixProfissionalAction(formData: FormData) {
         const { data: profissional } = await supabase
           .from("profissionais")
           .select("nome, nome_exibicao, sinal_confirmacao_responsavel")
-          .eq("id", session.idProfissional)
+          .eq("id", agendamento.profissional_id)
           .eq("id_salao", session.idSalao)
           .maybeSingle();
 
@@ -427,7 +433,7 @@ export async function confirmarSinalPixProfissionalAction(formData: FormData) {
             sinal_status: "confirmado",
             sinal_confirmado_em: updatedAt,
             sinal_confirmado_por_tipo: "profissional",
-            sinal_confirmado_por_id: session.idProfissional,
+            sinal_confirmado_por_id: agendamento.profissional_id,
             sinal_confirmado_por_nome:
               profissional?.nome_exibicao || profissional?.nome || "Profissional",
             reserva_expira_em: null,
@@ -435,7 +441,7 @@ export async function confirmarSinalPixProfissionalAction(formData: FormData) {
           })
           .eq("id", idAgendamento)
           .eq("id_salao", session.idSalao)
-          .eq("profissional_id", session.idProfissional)
+          .eq("profissional_id", agendamento.profissional_id)
           .eq("sinal_confirmacao_responsavel", "profissional");
 
         if (error) throw new Error(error.message);
@@ -477,6 +483,13 @@ export async function recusarSinalPixProfissionalAction(formData: FormData) {
     if (!idAgendamento) throw new Error("Agendamento invalido.");
     await assertCanMutatePlanFeature(session.idSalao, "agenda");
 
+    const agendamento = await buscarAgendamentoPermitido({
+      idSalao: session.idSalao,
+      idProfissional: session.idProfissional,
+      idAgendamento,
+      podeVerAgendaTodos: session.podeVerAgendaTodos,
+    });
+
     await runAdminOperation({
       action: "app_profissional_recusar_sinal_pix",
       actorId: session.idProfissional,
@@ -491,7 +504,7 @@ export async function recusarSinalPixProfissionalAction(formData: FormData) {
           })
           .eq("id", idAgendamento)
           .eq("id_salao", session.idSalao)
-          .eq("profissional_id", session.idProfissional)
+          .eq("profissional_id", agendamento.profissional_id)
           .eq("sinal_confirmacao_responsavel", "profissional");
 
         if (error) throw new Error(error.message);

@@ -1,20 +1,11 @@
 import QRCode from "qrcode";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import {
-  ArrowLeft,
-  CalendarDays,
-  FileImage,
-  ImageIcon,
-  Scissors,
-  Send,
-  ShieldCheck,
-  WalletCards,
-} from "lucide-react";
+import { ArrowLeft, CalendarDays, Scissors, WalletCards } from "lucide-react";
+import ClientSignalReceiptForm from "@/components/client-app/ClientSignalReceiptForm";
 import { requireClienteAppContext } from "@/lib/client-context.server";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { buildPixPayload } from "@/lib/pix/brcode";
-import { enviarComprovanteSinalAction } from "./actions";
 
 function formatCurrency(value: number) {
   return new Intl.NumberFormat("pt-BR", {
@@ -159,48 +150,7 @@ export default async function ClienteAgendamentoSinalPage({
             Envie uma imagem ou PDF do comprovante da transferência Pix.
           </p>
 
-          <form action={enviarComprovanteSinalAction} className="mt-7 space-y-8">
-            <input type="hidden" name="agendamento" value={String(agendamento.id)} />
-            <label className="flex min-h-72 flex-col items-center justify-center rounded-[1.4rem] border border-dashed border-zinc-300 px-5 py-8 text-center">
-              <span className="flex h-20 w-20 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
-                <FileImage size={34} />
-              </span>
-              <span className="mt-6 text-xl font-black">
-                Adicionar comprovante
-              </span>
-              <span className="mt-2 text-base text-zinc-500">
-                Arraste ou selecione um arquivo
-              </span>
-              <span className="mt-7 flex h-16 w-full items-center justify-center gap-3 rounded-2xl border border-zinc-200 text-lg font-bold text-emerald-600">
-                <ImageIcon size={26} />
-                Selecionar da galeria
-              </span>
-              <input
-                type="file"
-                name="comprovante"
-                accept="image/*,application/pdf"
-                className="sr-only"
-              />
-            </label>
-
-            <div className="flex gap-4 rounded-2xl border border-emerald-100 bg-emerald-50/40 p-5 text-emerald-950">
-              <ShieldCheck size={28} className="shrink-0 text-emerald-600" />
-              <div>
-                <p className="text-lg font-semibold">Seus dados estão protegidos</p>
-                <p className="mt-1 text-base leading-7 text-zinc-600">
-                  Utilizamos criptografia para manter suas informações seguras.
-                </p>
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              className="flex h-16 w-full items-center justify-center gap-3 rounded-2xl bg-emerald-600 text-xl font-black text-white shadow-[0_12px_30px_rgba(5,150,105,0.25)] transition hover:bg-emerald-700"
-            >
-              <Send size={27} />
-              Enviar comprovante
-            </button>
-          </form>
+          <ClientSignalReceiptForm agendamentoId={String(agendamento.id)} />
         </section>
       </div>
     </main>

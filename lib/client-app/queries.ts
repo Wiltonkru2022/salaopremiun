@@ -596,7 +596,7 @@ async function getClientAppSalonDetailLive(idSalao: string) {
           .or("eh_assistente.is.null,eh_assistente.eq.false")
           .order("ordem_agenda", { ascending: true })
           .order("nome", { ascending: true })
-          .limit(16),
+          .limit(200),
         (supabaseAdmin as any)
           .from("servicos")
           .select("id, nome, descricao_publica, descricao, preco, preco_padrao, duracao, duracao_minutos, exige_avaliacao, eh_combo, combo_resumo, cobra_sinal_agendamento, sinal_percentual_personalizado, id_categoria, categoria")
@@ -604,7 +604,7 @@ async function getClientAppSalonDetailLive(idSalao: string) {
           .eq("ativo", true)
           .eq("app_cliente_visivel", true)
           .order("nome", { ascending: true })
-          .limit(40),
+          .limit(200),
         (supabaseAdmin as any)
           .from("clientes_avaliacoes")
           .select("id, nota, comentario, created_at, clientes(nome)")

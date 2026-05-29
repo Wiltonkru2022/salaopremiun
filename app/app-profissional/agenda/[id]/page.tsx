@@ -77,6 +77,8 @@ type ProfissionalRow = {
 const STATUS_OPTIONS = [
   ["pendente", "Pendente de confirmação"],
   ["confirmado", "Confirmado"],
+  ["aguardando_confirmacao_salao", "Aguardando confirmação"],
+  ["aguardando_confirmacao_profissional", "Aguardando confirmação"],
   ["em_atendimento", "Em atendimento"],
   ["atendido", "Atendido"],
   ["aguardando_pagamento", "Aguardando pagamento"],
@@ -121,7 +123,12 @@ function getStatusTone(status?: string | null) {
 
   if (valor === "confirmado") return "success" as const;
   if (valor === "em_atendimento" || valor === "atendido") return "info" as const;
-  if (valor === "aguardando_pagamento" || valor === "pendente") {
+  if (
+    valor === "aguardando_pagamento" ||
+    valor === "pendente" ||
+    valor === "aguardando_confirmacao_salao" ||
+    valor === "aguardando_confirmacao_profissional"
+  ) {
     return "warning" as const;
   }
   if (valor === "faltou" || valor === "cancelado") return "danger" as const;
@@ -276,7 +283,7 @@ export default async function AgendamentoDetalheProfissionalPage({
   const profissionalConfirmaSinal =
     String(agendamento.sinal_confirmacao_responsavel || "") === "profissional";
   const podeConfirmarSinal =
-    isDoProfissionalLogado &&
+    (isDoProfissionalLogado || session.podeVerAgendaTodos) &&
     profissionalConfirmaSinal &&
     sinalValor > 0 &&
     sinalStatus === "comprovante_enviado";
