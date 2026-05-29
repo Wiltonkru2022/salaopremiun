@@ -104,9 +104,11 @@ export default async function EditarServicoProfissionalPage({
     notFound();
   }
 
+  const duracaoVinculo = Number(data.vinculo.duracao_minutos || 0);
+  const duracaoServico = Number(data.servico.duracao_minutos || 0);
   const servico = {
     ...data.servico,
-    duracao_minutos: data.vinculo.duracao_minutos ?? data.servico.duracao_minutos,
+    duracao_minutos: duracaoVinculo > 0 ? duracaoVinculo : duracaoServico > 0 ? duracaoServico : 60,
   };
   const totalVinculos = data.agendamentos + data.comandaItens;
   const podeExcluir = totalVinculos === 0;

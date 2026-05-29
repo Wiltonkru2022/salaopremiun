@@ -37,6 +37,12 @@ function formatarMoeda(valor: unknown) {
   }).format(Number(valor || 0));
 }
 
+function duracaoServico(vinculo: ServicoLinkedRow, servico: ServicoLinkedRow["servicos"]) {
+  const duracaoVinculo = Number(vinculo.duracao_minutos || 0);
+  const duracaoServico = Number(servico?.duracao_minutos || 0);
+  return duracaoVinculo > 0 ? duracaoVinculo : duracaoServico > 0 ? duracaoServico : 60;
+}
+
 export default async function ServicosProfissionalPage({
   searchParams,
 }: {
@@ -107,7 +113,7 @@ export default async function ServicosProfissionalPage({
             {servicos.map(({ vinculo, servico }) => {
               const ativo = servico?.ativo !== false && servico?.status !== "inativo";
               const preco = vinculo.preco_personalizado ?? servico?.preco_padrao ?? servico?.preco ?? 0;
-              const duracao = vinculo.duracao_minutos ?? servico?.duracao_minutos ?? 60;
+              const duracao = duracaoServico(vinculo, servico);
 
               return (
                 <ProfissionalSurface key={servico?.id}>
