@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import CaixaPagamentos from "@/components/caixa/CaixaPagamentos";
 import CaixaResumo from "@/components/caixa/CaixaResumo";
 import CaixaSessaoPanel from "@/components/caixa/CaixaSessaoPanel";
@@ -117,8 +118,14 @@ export default function CaixaSidebar({
   onFecharCaixa,
   onLancamento,
 }: Props) {
+  const [ajustesOpen, setAjustesOpen] = useState(false);
   const caixaAberto = schemaReady && sessao?.status === "aberto";
   const totalComanda = Number(comandaSelecionada?.total || 0);
+  const podeAjustarComanda =
+    Boolean(comandaSelecionada) &&
+    comandaSelecionada?.status !== "fechada" &&
+    comandaSelecionada?.status !== "cancelada" &&
+    podeEditarCaixa;
   const statusVenda = comandaSelecionada
     ? formatStatusVenda(comandaSelecionada.status)
     : "Sem venda";
@@ -196,6 +203,80 @@ export default function CaixaSidebar({
                   tone={creditoClienteDisponivel > 0 ? "emerald" : "zinc"}
                 />
               </div>
+
+              <div className="mt-2 rounded-[16px] border border-zinc-200 bg-zinc-50 p-2.5">
+                <div className="text-[8.5px] font-semibold uppercase tracking-[0.14em] text-zinc-400">
+                  Resumo financeiro
+                </div>
+
+                <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  <MiniInfoCard
+                    label="Subtotal"
+                    value={
+                      comandaSelecionada
+                        ? formatCurrency(comandaSelecionada.subtotal)
+                        : "R$ 0,00"
+                    }
+                  />
+                  <MiniInfoCard
+                    label="Desconto"
+                    value={
+                      comandaSelecionada
+                        ? formatCurrency(comandaSelecionada.desconto)
+                        : "R$ 0,00"
+                    }
+                    tone={
+                      Number(comandaSelecionada?.desconto || 0) > 0 ? "amber" : "zinc"
+                    }
+                  />
+                  <MiniInfoCard
+                    label="Acréscimo"
+                    value={
+                      comandaSelecionada
+                        ? formatCurrency(comandaSelecionada.acrescimo)
+                        : "R$ 0,00"
+                    }
+                    tone={
+                      Number(comandaSelecionada?.acrescimo || 0) > 0 ? "sky" : "zinc"
+                    }
+                  />
+                  <MiniInfoCard
+                    label="Total"
+                    value={comandaSelecionada ? formatCurrency(totalComanda) : "R$ 0,00"}
+                    tone={comandaSelecionada ? "emerald" : "zinc"}
+                  />
+                </div>
+
+                {comandaSelecionada?.cupom_aplicado ? (
+                  <div className="mt-2 rounded-[14px] border border-emerald-200 bg-emerald-50 px-2.5 py-2 text-xs text-emerald-950">
+                    <div className="font-bold">Cupom aplicado</div>
+                    <div className="mt-0.5 flex items-center justify-between gap-2">
+                      <span className="truncate">
+                        {comandaSelecionada.cupom_aplicado.nome ||
+                          comandaSelecionada.cupom_aplicado.codigo ||
+                          "Campanha"}
+                      </span>
+                      <span className="shrink-0 font-bold text-emerald-800">
+                        -{" "}
+                        {formatCurrency(
+                          Number(comandaSelecionada.cupom_aplicado.valor_desconto || 0),
+                        )}
+                      </span>
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+
+              <div className="mt-3 border-t border-zinc-200 pt-3">
+                <button
+                  type="button"
+                  onClick={() => setAjustesOpen(true)}
+                  disabled={!podeAjustarComanda || saving}
+                  className="w-full rounded-[14px] border border-zinc-300 bg-white px-3 py-2.5 text-xs font-bold text-zinc-800 transition hover:border-zinc-400 hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-55"
+                >
+                  Acréscimo / desconto
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -213,41 +294,51 @@ export default function CaixaSidebar({
         panelClassName="max-h-[calc(100dvh-2rem)]"
         bodyClassName="bg-[#f7f8fb]"
       >
-        <div className="space-y-4">
-          <CaixaResumo
-            comandaSelecionada={comandaSelecionada}
-            descontoInput={descontoInput}
-            acrescimoInput={acrescimoInput}
-            setDescontoInput={setDescontoInput}
-            setAcrescimoInput={setAcrescimoInput}
-            onSalvar={onSalvarResumo}
-            saving={saving || !podeEditarCaixa}
-          />
+        <CaixaPagamentos
+          comandaSelecionada={comandaSelecionada}
+          repassaTaxaCliente={Boolean(configCaixa?.repassa_taxa_cliente)}
+          pagamentos={pagamentos}
+          formaPagamento={formaPagamento}
+          setFormaPagamento={setFormaPagamento}
+          valorPagamento={valorPagamento}
+          setValorPagamento={setValorPagamento}
+          parcelas={parcelas}
+          setParcelas={setParcelas}
+          taxaPercentual={taxaPercentual}
+          setTaxaPercentual={setTaxaPercentual}
+          observacaoPagamento={observacaoPagamento}
+          setObservacaoPagamento={setObservacaoPagamento}
+          totalPago={totalPago}
+          totalCreditoGerado={totalCreditoGerado}
+          faltaReceber={faltaReceber}
+          troco={troco}
+          creditoClienteDisponivel={creditoClienteDisponivel}
+          saving={saving || !podeGerenciarPagamentos}
+          onAdicionarPagamento={onAdicionarPagamento}
+          onRemoverPagamento={onRemoverPagamento}
+        />
+      </AppModal>
 
-          <CaixaPagamentos
-            comandaSelecionada={comandaSelecionada}
-            repassaTaxaCliente={Boolean(configCaixa?.repassa_taxa_cliente)}
-            pagamentos={pagamentos}
-            formaPagamento={formaPagamento}
-            setFormaPagamento={setFormaPagamento}
-            valorPagamento={valorPagamento}
-            setValorPagamento={setValorPagamento}
-            parcelas={parcelas}
-            setParcelas={setParcelas}
-            taxaPercentual={taxaPercentual}
-            setTaxaPercentual={setTaxaPercentual}
-            observacaoPagamento={observacaoPagamento}
-            setObservacaoPagamento={setObservacaoPagamento}
-            totalPago={totalPago}
-            totalCreditoGerado={totalCreditoGerado}
-            faltaReceber={faltaReceber}
-            troco={troco}
-            creditoClienteDisponivel={creditoClienteDisponivel}
-            saving={saving || !podeGerenciarPagamentos}
-            onAdicionarPagamento={onAdicionarPagamento}
-            onRemoverPagamento={onRemoverPagamento}
-          />
-        </div>
+      <AppModal
+        open={ajustesOpen}
+        onClose={() => setAjustesOpen(false)}
+        closeDisabled={saving}
+        title="Acréscimo / desconto"
+        description="Ajuste o desconto e o acréscimo da comanda selecionada em uma tela separada do pagamento."
+        eyebrow="Resumo financeiro"
+        maxWidthClassName="max-w-3xl"
+        panelClassName="max-h-[calc(100dvh-2rem)]"
+        bodyClassName="bg-[#f7f8fb]"
+      >
+        <CaixaResumo
+          comandaSelecionada={comandaSelecionada}
+          descontoInput={descontoInput}
+          acrescimoInput={acrescimoInput}
+          setDescontoInput={setDescontoInput}
+          setAcrescimoInput={setAcrescimoInput}
+          onSalvar={onSalvarResumo}
+          saving={saving || !podeEditarCaixa}
+        />
       </AppModal>
 
       <AppModal
