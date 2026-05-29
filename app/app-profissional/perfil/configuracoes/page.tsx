@@ -25,7 +25,7 @@ export default async function ConfiguracoesProfissionalPage({
       const { data, error } = await supabase
         .from("profissionais")
         .select(
-          "notificacoes_ativas, notificacao_app_ativa, notificacao_email_ativa, pix_tipo, pix_chave, sinal_pix_proprio, sinal_pix_recebedor, sinal_whatsapp, sinal_confirmacao_responsavel"
+          "nome, nome_social, whatsapp, notificacoes_ativas, notificacao_app_ativa, notificacao_email_ativa, pix_tipo, pix_chave, sinal_pix_proprio, sinal_pix_recebedor, sinal_whatsapp, sinal_confirmacao_responsavel"
         )
         .eq("id", session.idProfissional)
         .eq("id_salao", session.idSalao)
@@ -40,6 +40,9 @@ export default async function ConfiguracoesProfissionalPage({
     notificacoes_ativas?: boolean | null;
     notificacao_app_ativa?: boolean | null;
     notificacao_email_ativa?: boolean | null;
+    nome?: string | null;
+    nome_social?: string | null;
+    whatsapp?: string | null;
     pix_tipo?: string | null;
     pix_chave?: string | null;
     sinal_pix_proprio?: boolean | null;
@@ -53,6 +56,9 @@ export default async function ConfiguracoesProfissionalPage({
     notificacao_app_ativa: row?.notificacao_app_ativa !== false,
     notificacao_email_ativa: row?.notificacao_email_ativa !== false,
   };
+  const pixTipo = String(row?.pix_tipo || "").toUpperCase();
+  const nomeRecebedor = row?.sinal_pix_recebedor || row?.nome_social || row?.nome || "";
+  const whatsappRecebedor = row?.sinal_whatsapp || row?.whatsapp || "";
 
   return (
     <ProfissionalShell
@@ -98,15 +104,15 @@ export default async function ConfiguracoesProfissionalPage({
               </label>
               <select
                 name="pix_tipo"
-                defaultValue={row?.pix_tipo || ""}
+                defaultValue={pixTipo}
                 className="mt-2 h-12 w-full rounded-[1rem] border border-zinc-200 bg-white px-3 text-sm font-bold text-zinc-950 outline-none focus:border-zinc-950"
               >
                 <option value="">Selecione</option>
-                <option value="cpf">CPF</option>
-                <option value="cnpj">CNPJ</option>
-                <option value="telefone">Telefone</option>
-                <option value="email">E-mail</option>
-                <option value="aleatoria">Chave aleatoria</option>
+                <option value="CPF">CPF</option>
+                <option value="CNPJ">CNPJ</option>
+                <option value="TELEFONE">Telefone</option>
+                <option value="EMAIL">E-mail</option>
+                <option value="ALEATORIA">Chave aleatoria</option>
               </select>
             </div>
 
@@ -128,7 +134,7 @@ export default async function ConfiguracoesProfissionalPage({
               </label>
               <input
                 name="sinal_pix_recebedor"
-                defaultValue={row?.sinal_pix_recebedor || ""}
+                defaultValue={nomeRecebedor}
                 className="mt-2 h-12 w-full rounded-[1rem] border border-zinc-200 bg-white px-3 text-sm font-bold text-zinc-950 outline-none focus:border-zinc-950"
                 placeholder="Nome que aparece para a cliente"
               />
@@ -140,7 +146,7 @@ export default async function ConfiguracoesProfissionalPage({
               </label>
               <input
                 name="sinal_whatsapp"
-                defaultValue={row?.sinal_whatsapp || ""}
+                defaultValue={whatsappRecebedor}
                 inputMode="tel"
                 className="mt-2 h-12 w-full rounded-[1rem] border border-zinc-200 bg-white px-3 text-sm font-bold text-zinc-950 outline-none focus:border-zinc-950"
                 placeholder="67999999999"

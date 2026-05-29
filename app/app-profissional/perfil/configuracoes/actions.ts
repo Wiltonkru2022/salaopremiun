@@ -32,7 +32,7 @@ export async function salvarPixSinalProfissionalAction(formData: FormData) {
   const sinalConfirmacaoResponsavel = String(
     formData.get("sinal_confirmacao_responsavel") || "profissional"
   ).trim();
-  const pixTipo = String(formData.get("pix_tipo") || "").trim();
+  const pixTipo = String(formData.get("pix_tipo") || "").trim().toUpperCase();
   const pixChave = String(formData.get("pix_chave") || "").trim();
   const recebedor = String(formData.get("sinal_pix_recebedor") || "").trim();
   const whatsapp = String(formData.get("sinal_whatsapp") || "")
