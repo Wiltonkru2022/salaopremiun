@@ -22,6 +22,7 @@ import type {
   ClientAppProfessionalListItem,
   ClientAppServiceListItem,
 } from "@/lib/client-app/queries";
+import { formatClientDuration } from "@/lib/client-app/duration-format";
 
 type AvailabilitySlot = {
   horaInicio: string;
@@ -610,7 +611,7 @@ export default function ClientBookingForm({
                       <span className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-[0.98rem] text-zinc-400">
                         <Clock3 size={18} />
                         <span className="font-medium">
-                          {servico.duracaoMinutos || 60} min
+                          {formatClientDuration(servico.duracaoMinutos)}
                         </span>
                         <span className="h-5 w-px bg-white/20" />
                         <span>A partir de</span>
@@ -796,7 +797,7 @@ export default function ClientBookingForm({
                   ["Profissional", selectedProfissional?.nome || "Profissional"],
                   ["Data", formatFullDate(selectedDate)],
                   ["Horário", selectedTime],
-                  ["Duração", `${totalDuration || 0} min`],
+                  ["Duração", formatClientDuration(totalDuration)],
                 ].map(([label, value]) => (
                   <div
                     key={label}

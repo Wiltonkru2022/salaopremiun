@@ -23,6 +23,7 @@ import {
   getClientAppSalonDetail,
   isClienteAppSalonFavorite,
 } from "@/lib/client-app/queries";
+import { formatClientDuration } from "@/lib/client-app/duration-format";
 import { validateClienteAppSession } from "@/lib/client-context.server";
 import { buildSalaoPublicPath } from "@/lib/saloes/public-link";
 
@@ -203,7 +204,7 @@ export default async function ClienteSalonPage({
                       <p className="mt-2 text-lg text-zinc-500">A partir de</p>
                       <p className="text-xl font-black">{formatCurrency(servico.preco)}</p>
                       <p className="mt-2 text-base text-zinc-500">
-                        {servico.duracaoMinutos || 60} min
+                        {formatClientDuration(servico.duracaoMinutos)}
                       </p>
                     </div>
                     <ChevronRight size={28} className="text-zinc-400" />

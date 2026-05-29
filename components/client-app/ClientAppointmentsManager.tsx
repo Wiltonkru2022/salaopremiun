@@ -14,6 +14,7 @@ import {
 import ClientAppointmentReviewForm from "@/components/client-app/ClientAppointmentReviewForm";
 import PaginationControls from "@/components/ui/PaginationControls";
 import type { ClientAppAppointmentListItem } from "@/lib/client-app/queries";
+import { formatClientDuration } from "@/lib/client-app/duration-format";
 
 type AvailabilitySlot = {
   horaInicio: string;
@@ -72,7 +73,7 @@ function formatDuration(item: ClientAppAppointmentListItem) {
   const startMinutes = start[0] * 60 + start[1];
   const endMinutes = end[0] * 60 + end[1];
   const diff = Math.max(0, endMinutes - startMinutes);
-  return `${diff || 60} min`;
+  return formatClientDuration(diff);
 }
 
 function formatClientConfirmation(value: string) {
