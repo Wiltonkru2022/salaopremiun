@@ -110,8 +110,7 @@ async function run() {
   addCheck("marketplace oculta basico", !basicoVisible);
 
   await goto(page, `/app-cliente/salao/${accounts.salons.premium.idSalao}`, "perfil salao premium");
-  await expectText(page, "Corte PREMIUM E2E", "servico com preco aparece");
-  await expectText(page, "Exige avaliação", "serviço exige avaliação sem preço");
+  await expectText(page, "Serviços populares", "perfil mostra bloco de servicos");
 
   await goto(page, "/app-cliente/login", "login app cliente");
   await fillByName(page, "email", accounts.client.email);
@@ -119,6 +118,13 @@ async function run() {
   await page.getByRole("button", { name: /^Entrar$/ }).click();
   await page.waitForURL(/\/app-cliente\/agendamentos|\/app-cliente\/salao\//, { timeout: 20000 });
   addCheck("login app cliente", true, page.url());
+
+  await goto(page, `/app-cliente/salao/${accounts.salons.premium.idSalao}/reserva`, "reserva salao premium");
+  await expectText(page, "Pro PREMIUM E2E", "profissional premium aparece na reserva");
+  await page.getByRole("button", { name: /Pro PREMIUM E2E/i }).click();
+  await expectText(page, "Corte PREMIUM E2E", "servico com preco aparece na reserva");
+  await expectText(page, "Coloracao PREMIUM E2E", "servico exige avaliacao aparece na reserva");
+  await expectText(page, "2 horas", "duracao em horas aparece no app cliente");
 
   await goto(page, "/app-cliente/perfil", "perfil app cliente");
   await expectText(page, "Cliente App E2E", "perfil cliente carregado");

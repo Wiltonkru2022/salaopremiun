@@ -9,6 +9,7 @@ import ProfissionalStatusPill from "@/components/profissional/ui/ProfissionalSta
 import ProfissionalSurface from "@/components/profissional/ui/ProfissionalSurface";
 import { requireProfissionalAppContext } from "@/lib/profissional-context.server";
 import { runAdminOperation } from "@/lib/supabase/admin-ops";
+import { formatDurationLabel } from "@/lib/format-duration";
 
 function hojeISO() {
   const now = new Date();
@@ -382,7 +383,7 @@ export default async function NovoAgendamentoProfissionalPage({
                 value: servico.id,
                 label: servico.nome,
                 description: servico.duracao_minutos
-                  ? `${servico.duracao_minutos} min`
+                  ? formatDurationLabel(servico.duracao_minutos)
                   : null,
               }))}
               profissionais={profissionais.map((profissional) => ({

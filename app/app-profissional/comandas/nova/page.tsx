@@ -6,6 +6,7 @@ import ProfissionalSearchableFormField from "@/components/profissional/ui/Profis
 import ProfissionalSurface from "@/components/profissional/ui/ProfissionalSurface";
 import { requireProfissionalAppContext } from "@/lib/profissional-context.server";
 import { runAdminOperation } from "@/lib/supabase/admin-ops";
+import { formatDurationLabel } from "@/lib/format-duration";
 
 type SearchParams = Promise<{
   cliente_id?: string;
@@ -177,7 +178,7 @@ export default async function NovaComandaProfissionalPage({
                 value: servico.id,
                 label: servico.nome,
                 description: servico.duracao_minutos
-                  ? `${servico.duracao_minutos} min`
+                  ? formatDurationLabel(servico.duracao_minutos)
                   : null,
               }))}
             />
@@ -213,7 +214,7 @@ export default async function NovaComandaProfissionalPage({
                 {servicos.map((servico) => (
                   <option key={servico.id} value={servico.id}>
                     {servico.nome}
-                    {servico.duracao_minutos ? ` - ${servico.duracao_minutos} min` : ""}
+                    {servico.duracao_minutos ? ` - ${formatDurationLabel(servico.duracao_minutos)}` : ""}
                   </option>
                 ))}
               </select>

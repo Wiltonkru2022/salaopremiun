@@ -7,6 +7,7 @@ import ProfissionalStatusPill from "@/components/profissional/ui/ProfissionalSta
 import ProfissionalSurface from "@/components/profissional/ui/ProfissionalSurface";
 import { requireProfissionalAppContext } from "@/lib/profissional-context.server";
 import { runAdminOperation } from "@/lib/supabase/admin-ops";
+import { formatDurationLabel } from "@/lib/format-duration";
 
 type SearchParams = Promise<{
   ok?: string;
@@ -121,7 +122,7 @@ export default async function ServicosProfissionalPage({
                     <div className="min-w-0">
                       <div className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.14em] text-zinc-400">
                         <Scissors size={14} />
-                        {duracao} min
+                        {formatDurationLabel(duracao)}
                       </div>
                       <h2 className="mt-1.5 text-lg font-black tracking-[-0.04em] text-zinc-950">
                         {servico?.nome || "Servico"}
