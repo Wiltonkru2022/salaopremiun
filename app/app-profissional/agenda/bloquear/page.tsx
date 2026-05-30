@@ -10,6 +10,7 @@ import { runAdminOperation } from "@/lib/supabase/admin-ops";
 type SearchParams = Promise<{
   profissional_id?: string;
   data?: string;
+  datas?: string;
   hora_inicio?: string;
   hora_fim?: string;
   motivo?: string;
@@ -27,6 +28,67 @@ function hojeISO() {
   const now = new Date();
   const local = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
   return local.toISOString().slice(0, 10);
+}
+
+function isISODate(value: string) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(value);
+}
+
+function monthDays(dateISO: string) {
+  const safe = isISODate(dateISO) ? dateISO : hojeISO();
+  const [year, month] = safe.split("-").map(Number);
+  const lastDay = new Date(year, month, 0).getDate();
+
+  return Array.from({ length: lastDay }, (_, index) => {
+    const day = index + 1;
+    const iso = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+    const weekday = new Intl.DateTimeFormat("pt-BR", { weekday: "short" })
+      .format(new Date(year, month - 1, day))
+      .replace(".", "");
+
+    return { day, iso, weekday };
+  });
+}
+
+function monthLabel(dateISO: string) {
+  const safe = isISODate(dateISO) ? dateISO : hojeISO();
+  const [year, month] = safe.split("-").map(Number);
+
+  return new Intl.DateTimeFormat("pt-BR", {
+    month: "long",
+    year: "numeric",
+  }).format(new Date(year, month - 1, 1));
+}
+
+function addMonths(dateISO: string, amount: number) {
+  const safe = isISODate(dateISO) ? dateISO : hojeISO();
+  const [year, month] = safe.split("-").map(Number);
+  const date = new Date(year, month - 1 + amount, 1);
+
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-01`;
+}
+
+function selectedDatesFromQuery(datas: string | undefined, fallback: string) {
+  const selected = String(datas || "")
+    .split(",")
+    .map((item) => item.trim())
+    .filter(isISODate);
+
+  return selected.length ? selected : [fallback];
+}
+
+function buildBloquearPageUrl(
+  params: Record<string, string | number | undefined | null>
+) {
+  const query = new URLSearchParams();
+
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && String(value) !== "") {
+      query.set(key, String(value));
+    }
+  });
+
+  return `/app-profissional/agenda/bloquear?${query.toString()}`;
 }
 
 function inputClass() {
@@ -57,6 +119,10 @@ export default async function BloquearHorarioProfissionalPage({
   const session = await requireProfissionalAppContext();
   const query = searchParams ? await searchParams : {};
   const dataSelecionada = query.data || hojeISO();
+  const diasDoMes = monthDays(dataSelecionada);
+  const datasSelecionadas = new Set(
+    selectedDatesFromQuery(query.datas, dataSelecionada)
+  );
   const profissionalSelecionadoId =
     session.podeVerAgendaTodos && query.profissional_id
       ? query.profissional_id
@@ -93,13 +159,42 @@ export default async function BloquearHorarioProfissionalPage({
       subtitle="Marcar pausa, saída ou indisponibilidade"
     >
       <div className="space-y-3.5 pb-20">
-        <Link
-          href={`/app-profissional/agenda?data=${dataSelecionada}`}
-          className="inline-flex h-9 items-center gap-2 rounded-full border border-zinc-200 bg-white px-3 text-xs font-bold text-zinc-700"
-        >
-          <ArrowLeft size={14} />
-          Voltar para agenda
-        </Link>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <Link
+            href={`/app-profissional/agenda?data=${dataSelecionada}`}
+            className="inline-flex h-9 items-center gap-2 rounded-full border border-zinc-200 bg-white px-3 text-xs font-bold text-zinc-700"
+          >
+            <ArrowLeft size={14} />
+            Voltar para agenda
+          </Link>
+
+          <div className="flex items-center gap-2">
+            <Link
+              href={buildBloquearPageUrl({
+                profissional_id: profissionalSelecionadoId,
+                data: addMonths(dataSelecionada, -1),
+                hora_inicio: query.hora_inicio,
+                hora_fim: query.hora_fim,
+                motivo: query.motivo,
+              })}
+              className="inline-flex h-9 items-center rounded-full border border-zinc-200 bg-white px-3 text-xs font-black text-zinc-700"
+            >
+              Mes anterior
+            </Link>
+            <Link
+              href={buildBloquearPageUrl({
+                profissional_id: profissionalSelecionadoId,
+                data: addMonths(dataSelecionada, 1),
+                hora_inicio: query.hora_inicio,
+                hora_fim: query.hora_fim,
+                motivo: query.motivo,
+              })}
+              className="inline-flex h-9 items-center rounded-full border border-zinc-200 bg-white px-3 text-xs font-black text-zinc-700"
+            >
+              Proximo
+            </Link>
+          </div>
+        </div>
 
         {query.erro ? (
           <div className="rounded-[1.25rem] border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 shadow-sm">
@@ -147,18 +242,48 @@ export default async function BloquearHorarioProfissionalPage({
               <input type="hidden" name="profissional_id" value={session.idProfissional} />
             )}
 
-            <div className="grid w-full min-w-0 grid-cols-1 gap-3 overflow-hidden sm:grid-cols-3">
-              <label className="block w-full min-w-0 overflow-hidden text-sm font-medium text-zinc-700">
-                Data
-                <input
-                  type="date"
-                  name="data"
-                  defaultValue={dataSelecionada}
-                  className={nativeDateTimeClass()}
-                  style={nativeDateTimeStyle}
-                  required
-                />
-              </label>
+            <input type="hidden" name="data" value={dataSelecionada} />
+
+            <div className="rounded-[1.25rem] border border-zinc-200 bg-zinc-50 p-3">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h3 className="text-sm font-black capitalize text-zinc-950">
+                    {monthLabel(dataSelecionada)}
+                  </h3>
+                  <p className="mt-1 text-xs leading-5 text-zinc-500">
+                    Marque um ou varios dias para aplicar o mesmo bloqueio.
+                  </p>
+                </div>
+                <span className="rounded-full bg-white px-3 py-1 text-[11px] font-black text-zinc-600 shadow-sm">
+                  Dias
+                </span>
+              </div>
+
+              <div className="mt-3 grid grid-cols-4 gap-2 sm:grid-cols-7">
+                {diasDoMes.map((dia) => (
+                  <label
+                    key={dia.iso}
+                    className="group relative min-h-[4.25rem] overflow-hidden rounded-2xl border border-zinc-200 bg-white p-2 text-left shadow-sm transition has-[:checked]:border-zinc-950 has-[:checked]:bg-zinc-950 has-[:checked]:text-white"
+                  >
+                    <input
+                      type="checkbox"
+                      name="datas"
+                      value={dia.iso}
+                      defaultChecked={datasSelecionadas.has(dia.iso)}
+                      className="sr-only"
+                    />
+                    <span className="block text-[0.65rem] font-black uppercase text-zinc-400 group-has-[:checked]:text-zinc-300">
+                      {dia.weekday}
+                    </span>
+                    <span className="mt-1 block text-xl font-black leading-none">
+                      {dia.day}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid w-full min-w-0 grid-cols-1 gap-3 overflow-hidden sm:grid-cols-2">
 
               <label className="block w-full min-w-0 overflow-hidden text-sm font-medium text-zinc-700">
                 Início

@@ -47,6 +47,16 @@ function buildBloquearUrl(
   return `/app-profissional/agenda/bloquear?${query.toString()}`;
 }
 
+function isISODate(value: string) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(value);
+}
+
+function formatDateBR(dateISO: string) {
+  const [year, month, day] = dateISO.split("-").map(Number);
+
+  return `${String(day).padStart(2, "0")}/${String(month).padStart(2, "0")}/${year}`;
+}
+
 function getAgendaMutationErrorMessage(message?: string | null) {
   const value = String(message || "").trim();
   const normalized = value.toLowerCase();
@@ -242,7 +252,21 @@ export async function bloquearHorarioProfissionalAction(formData: FormData) {
     session.podeVerAgendaTodos && profissionalIdForm
       ? profissionalIdForm
       : session.idProfissional;
-  const data = String(formData.get("data") || "");
+  let data = String(formData.get("data") || "");
+  const datasSelecionadas = Array.from(
+    new Set(
+      formData
+        .getAll("datas")
+        .map((value) => String(value || "").trim())
+        .filter(isISODate)
+    )
+  ).sort();
+  const datasBloqueio = datasSelecionadas.length
+    ? datasSelecionadas
+    : isISODate(data)
+      ? [data]
+      : [];
+  data = datasBloqueio[0] || data;
   const horaInicioRaw = String(formData.get("hora_inicio") || "").trim();
   const horaFimRaw = String(formData.get("hora_fim") || "").trim();
   const horaInicio = normalizeTimeString(horaInicioRaw);
@@ -251,18 +275,19 @@ export async function bloquearHorarioProfissionalAction(formData: FormData) {
 
   const redirectBase = {
     profissional_id: profissionalId,
-    data,
+    data: datasBloqueio[0] || data,
+    datas: datasBloqueio.join(","),
     hora_inicio: horaInicio,
     hora_fim: horaFim,
     motivo,
   };
 
   try {
-    if (!profissionalId || !data || !horaInicioRaw || !horaFimRaw) {
+    if (!profissionalId || !datasBloqueio.length || !horaInicioRaw || !horaFimRaw) {
       redirect(
         buildBloquearUrl({
           ...redirectBase,
-          erro: "Preencha profissional, data, hora inicial e hora final.",
+          erro: "Preencha profissional, selecione pelo menos um dia, hora inicial e hora final.",
         })
       );
     }
@@ -292,13 +317,68 @@ export async function bloquearHorarioProfissionalAction(formData: FormData) {
       );
     }
 
-    validarHorarioAgendamento({
-      dataISO: data,
-      horaInicio,
-      duracaoMinutos: timeToMinutes(horaFim) - timeToMinutes(horaInicio),
-      diasTrabalho: configProfissional.diasTrabalho,
-      pausas: [],
-    });
+    const duracaoBloqueio = timeToMinutes(horaFim) - timeToMinutes(horaInicio);
+    const datasInvalidas: string[] = [];
+
+    for (const dataISO of datasBloqueio) {
+      try {
+        validarHorarioAgendamento({
+          dataISO,
+          horaInicio,
+          duracaoMinutos: duracaoBloqueio,
+          diasTrabalho: configProfissional.diasTrabalho,
+          pausas: [],
+        });
+      } catch {
+        datasInvalidas.push(dataISO);
+      }
+    }
+
+    if (datasInvalidas.length) {
+      redirect(
+        buildBloquearUrl({
+          ...redirectBase,
+          erro: `Fora do expediente ou dia sem atendimento: ${datasInvalidas
+            .map(formatDateBR)
+            .join(", ")}.`,
+        })
+      );
+    }
+
+    const conflitosMultiplos = await Promise.all(
+      datasBloqueio.map(async (dataISO) => {
+        const [agendamentos, bloqueios] = await Promise.all([
+          buscarConflitosNoHorario({
+            idSalao: session.idSalao,
+            idProfissional: profissionalId,
+            dataISO,
+            horaInicio,
+            horaFim,
+          }),
+          buscarConflitosBloqueioNoHorario({
+            idSalao: session.idSalao,
+            idProfissional: profissionalId,
+            dataISO,
+            horaInicio,
+            horaFim,
+          }),
+        ]);
+
+        return agendamentos.length || bloqueios.length ? dataISO : null;
+      })
+    );
+    const datasComConflito = conflitosMultiplos.filter(Boolean) as string[];
+
+    if (datasComConflito.length) {
+      redirect(
+        buildBloquearUrl({
+          ...redirectBase,
+          erro: `Ja existe agendamento ou bloqueio nesses dias: ${datasComConflito
+            .map(formatDateBR)
+            .join(", ")}.`,
+        })
+      );
+    }
 
     const [conflitosAgendamento, conflitosBloqueio] = await Promise.all([
       buscarConflitosNoHorario({
@@ -327,18 +407,19 @@ export async function bloquearHorarioProfissionalAction(formData: FormData) {
     }
 
     const insertErrorMessage = await runAdminOperation({
-      action: "app_profissional_bloquear_horario",
+      action: "app_profissional_bloquear_horario_multiplos_dias",
       actorId: session.idProfissional,
       idSalao: session.idSalao,
       run: async (supabase) => {
-        const { error } = await supabase.from("agenda_bloqueios").insert({
+        const rows = datasBloqueio.map((dataISO) => ({
           id_salao: session.idSalao,
           profissional_id: profissionalId,
-          data,
+          data: dataISO,
           hora_inicio: horaInicio,
           hora_fim: horaFim,
           motivo: motivo || null,
-        });
+        }));
+        const { error } = await supabase.from("agenda_bloqueios").insert(rows);
 
         return error?.message ?? null;
       },
