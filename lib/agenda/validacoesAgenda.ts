@@ -1,5 +1,6 @@
 import type { Bloqueio, ConfigSalao, Profissional } from "@/types/agenda";
 import {
+  getHorarioProfissionalNoDia,
   isDiaFuncionamento,
   normalizeTimeString,
   sanitizeDiasFuncionamento,
@@ -57,23 +58,30 @@ export function validateAgendaTimeRange(params: {
     return { ok: false, message: "Configuracao do salao nao carregada." };
   }
 
-  const salonStart = normalizeTimeString(config.hora_abertura);
-  const salonEnd = normalizeTimeString(config.hora_fechamento);
-
-  if (timeToMinutes(horaInicio) < timeToMinutes(salonStart)) {
-    return { ok: false, message: "Horario antes da abertura do salao." };
-  }
-
-  if (timeToMinutes(horaFim) > timeToMinutes(salonEnd)) {
-    return { ok: false, message: "Horario apos o fechamento do salao." };
-  }
-
   const profissional = profissionais.find((p) => p.id === profissionalId);
   if (!profissional) {
     return { ok: false, message: "Profissional nao encontrado." };
   }
 
-  void date;
+  const horarioProfissional = getHorarioProfissionalNoDia(
+    new Date(`${date}T12:00:00`),
+    profissional.dias_trabalho
+  );
+  const agendaStart = normalizeTimeString(
+    horarioProfissional?.inicio || config.hora_abertura
+  );
+  const agendaEnd = normalizeTimeString(
+    horarioProfissional?.fim || config.hora_fechamento
+  );
+
+  if (timeToMinutes(horaInicio) < timeToMinutes(agendaStart)) {
+    return { ok: false, message: "Horario antes da abertura da agenda." };
+  }
+
+  if (timeToMinutes(horaFim) > timeToMinutes(agendaEnd)) {
+    return { ok: false, message: "Horario apos o fechamento da agenda." };
+  }
+
   void getProfessionalAutoBloqueiosFn;
 
   return { ok: true, message: "" };

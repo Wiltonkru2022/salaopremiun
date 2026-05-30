@@ -22,6 +22,7 @@ import {
   buildTimeSlots,
   buildForaExpedienteBloqueiosDoProfissional,
   buildPausasBloqueiosDoProfissional,
+  getHorarioProfissionalNoDia,
   mergeBloqueios,
   minutesToTime,
   normalizeTimeString,
@@ -749,9 +750,13 @@ function buildDisponibilidadeDia(params: {
     Number(params.profissional.intervalo_agenda_minutos || params.config.intervalo_minutos || 15),
     CLIENT_BOOKING_SLOT_STEP_MINUTES
   );
+  const horarioProfissional = getHorarioProfissionalNoDia(
+    new Date(`${params.data}T12:00:00`),
+    params.profissional.dias_trabalho
+  );
   const slots = buildTimeSlots(
-    params.config.hora_abertura,
-    params.config.hora_fechamento,
+    horarioProfissional?.inicio || params.config.hora_abertura,
+    horarioProfissional?.fim || params.config.hora_fechamento,
     step
   );
 
