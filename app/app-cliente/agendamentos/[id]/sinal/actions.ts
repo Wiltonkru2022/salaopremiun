@@ -1,22 +1,14 @@
 "use server";
 
 import { randomUUID } from "crypto";
-import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { requireClienteAppContext } from "@/lib/client-context.server";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 const COMPROVANTES_BUCKET = "agendamento-comprovantes";
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const ALLOWED_TYPES = new Set(["application/pdf"]);
-
-function normalizeWhatsapp(value: string | null | undefined) {
-  const digits = String(value || "").replace(/\D/g, "");
-  if (!digits) return "";
-  if (digits.startsWith("55")) return digits;
-  if (digits.length === 10 || digits.length === 11) return `55${digits}`;
-  return digits;
-}
 
 function getExtension(file: File) {
   const name = file.name || "";
@@ -35,7 +27,7 @@ export async function enviarComprovanteSinalAction(formData: FormData) {
 
   const { data: row } = await (supabaseAdmin as any)
     .from("agendamentos")
-    .select("id, cliente_id, id_salao, sinal_whatsapp, sinal_mensagem_comprovante, sinal_confirmacao_responsavel")
+    .select("id, cliente_id, id_salao, sinal_confirmacao_responsavel")
     .eq("id", idAgendamento)
     .maybeSingle();
 
@@ -98,9 +90,6 @@ export async function enviarComprovanteSinalAction(formData: FormData) {
     .eq("id", idAgendamento);
 
   revalidatePath("/app-cliente/agendamentos");
-  const phone = normalizeWhatsapp(row.sinal_whatsapp);
-  const message =
-    String(row.sinal_mensagem_comprovante || "").trim() ||
-    "Olá, fiz o pagamento do sinal do meu agendamento. Segue o comprovante.";
-  redirect(phone ? `https://wa.me/${phone}?text=${encodeURIComponent(message)}` : "/app-cliente/agendamentos");
+  revalidatePath(`/app-cliente/agendamentos/${idAgendamento}/sinal`);
+  redirect("/app-cliente/agendamentos?status=comprovante_enviado");
 }

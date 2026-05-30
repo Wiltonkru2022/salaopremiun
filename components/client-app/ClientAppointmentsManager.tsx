@@ -356,6 +356,9 @@ export default function ClientAppointmentsManager({
     if (successKey === "confirmado") {
       return "Sua presença foi confirmada para o salão.";
     }
+    if (successKey === "comprovante_enviado") {
+      return "Comprovante enviado. Seu agendamento ficou na lista para conferencia.";
+    }
     if (successKey === "reagendado") return "Seu agendamento foi reagendado.";
     if (successKey === "avaliado") return "Sua avaliação foi enviada.";
     return null;
