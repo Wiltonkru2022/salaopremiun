@@ -2,7 +2,6 @@
 
 import {
   ArrowLeft,
-  Bell,
   CalendarDays,
   Check,
   ChevronLeft,
@@ -18,6 +17,7 @@ import {
   createClienteBookingAction,
   type ClienteBookingState,
 } from "@/app/app-cliente/salao/[id]/actions";
+import ClientAppDrawerNav from "@/components/client-app/ClientAppDrawerNav";
 import type {
   ClientAppProfessionalListItem,
   ClientAppServiceListItem,
@@ -445,13 +445,12 @@ export default function ClientBookingForm({
           <h1 className="text-[1.65rem] font-black leading-tight tracking-[-0.03em]">
             {step === "resumo" ? "Confirmar agendamento" : "Reserva online"}
           </h1>
-          <a
-            href="/app-cliente/notificacoes"
-            className="flex h-12 w-12 items-center justify-center text-[#f6b93f]"
+          <div
+            className="flex h-12 w-12 items-center justify-center"
             aria-label="Notificações"
           >
-            <Bell size={31} />
-          </a>
+            <ClientAppDrawerNav isDark />
+          </div>
         </header>
 
         {step !== "resumo" ? <Stepper step={step} /> : null}

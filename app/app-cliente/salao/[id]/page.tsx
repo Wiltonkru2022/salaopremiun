@@ -17,6 +17,7 @@ import {
   Wind,
 } from "lucide-react";
 import ClientAppFrame from "@/components/client-app/ClientAppFrame";
+import ClientAppDrawerNav from "@/components/client-app/ClientAppDrawerNav";
 import ClientSalonSectionTabs from "@/components/client-app/ClientSalonSectionTabs";
 import { generateClientSalonMetadata } from "@/lib/client-app/salon-metadata";
 import {
@@ -119,6 +120,9 @@ export default async function ClienteSalonPage({
                 >
                   <Heart size={34} fill={isFavorite && hasSession ? "currentColor" : "none"} />
                 </button>
+                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-black/45 text-white backdrop-blur">
+                  <ClientAppDrawerNav isDark />
+                </div>
               </div>
             </div>
           </div>

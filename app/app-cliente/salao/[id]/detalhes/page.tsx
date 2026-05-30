@@ -15,6 +15,7 @@ import {
   Wifi,
 } from "lucide-react";
 import ClientAppFrame from "@/components/client-app/ClientAppFrame";
+import ClientAppDrawerNav from "@/components/client-app/ClientAppDrawerNav";
 import { getClientAppSalonDetail } from "@/lib/client-app/queries";
 import { buildSalaoPublicPath } from "@/lib/saloes/public-link";
 
@@ -151,6 +152,9 @@ export default async function ClienteSalonDetailsPage({
                 >
                   <Heart size={28} />
                 </button>
+                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-black/45 text-white backdrop-blur">
+                  <ClientAppDrawerNav isDark />
+                </div>
               </div>
             </div>
 

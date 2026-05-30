@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { usePathname } from "next/navigation";
 import { CalendarDays, Home, Menu, Search, UserRound, X } from "lucide-react";
 import ClientAppPendingLink from "@/components/client-app/ClientAppPendingLink";
@@ -47,11 +48,16 @@ export default function ClientAppDrawerNav({
   floating?: boolean;
 }) {
   const pathname = usePathname();
+  const [mounted, setMounted] = useState(false);
   const [open, setOpen] = useState(false);
   const activeLabel = useMemo(
     () => navItems.find((item) => item.match(pathname))?.label || "Menu",
     [pathname]
   );
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     setOpen(false);
@@ -70,14 +76,19 @@ export default function ClientAppDrawerNav({
                   ? "border-white/15 bg-white/10 text-white"
                   : "border-zinc-200 bg-white/95 text-zinc-950"
               }`
-            : "flex h-11 w-11 items-center justify-center rounded-full border border-zinc-200 bg-zinc-50 text-zinc-950 transition hover:bg-zinc-100 md:hidden"
+            : `flex h-11 w-11 items-center justify-center rounded-full border transition md:hidden ${
+                isDark
+                  ? "border-white/15 bg-black/45 text-white backdrop-blur"
+                  : "border-zinc-200 bg-zinc-50 text-zinc-950 hover:bg-zinc-100"
+              }`
         }
       >
         <Menu size={24} />
       </button>
 
-      {open ? (
-        <div className="fixed inset-0 z-[90] md:hidden" role="dialog" aria-modal="true">
+      {mounted && open
+        ? createPortal(
+        <div className="fixed inset-0 z-[999] md:hidden" role="dialog" aria-modal="true">
           <button
             type="button"
             aria-label="Fechar menu"
@@ -128,8 +139,10 @@ export default function ClientAppDrawerNav({
               })}
             </nav>
           </aside>
-        </div>
-      ) : null}
+        </div>,
+        document.body
+        )
+        : null}
     </>
   );
 }

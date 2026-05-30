@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { usePathname } from "next/navigation";
 import { CalendarDays, Home, Menu, Receipt, Scissors, User2, Users, X } from "lucide-react";
 
@@ -33,7 +34,12 @@ function getSectionKey(pathname: string | null) {
 export default function ProfissionalDrawerNav() {
   const pathname = usePathname();
   const currentSection = useMemo(() => getSectionKey(pathname), [pathname]);
+  const [mounted, setMounted] = useState(false);
   const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     setOpen(false);
@@ -50,8 +56,9 @@ export default function ProfissionalDrawerNav() {
         <Menu size={24} />
       </button>
 
-      {open ? (
-        <div className="fixed inset-0 z-[90]" role="dialog" aria-modal="true">
+      {mounted && open
+        ? createPortal(
+        <div className="fixed inset-0 z-[999]" role="dialog" aria-modal="true">
           <button
             type="button"
             aria-label="Fechar menu"
@@ -102,8 +109,10 @@ export default function ProfissionalDrawerNav() {
               })}
             </nav>
           </aside>
-        </div>
-      ) : null}
+        </div>,
+        document.body
+        )
+        : null}
     </>
   );
 }

@@ -55,6 +55,7 @@ export default function ClientMobileAppLayout({
     pathname.startsWith("/app-cliente/explorar") ||
     isReservationRoute ||
     isDarkSalonInfoRoute;
+  const usesOwnSalonHeader = pathname.startsWith("/app-cliente/salao/");
 
   useEffect(() => {
     const html = document.documentElement;
@@ -131,7 +132,7 @@ export default function ClientMobileAppLayout({
               </nav>
             </div>
           </header>
-          ) : (
+          ) : usesOwnSalonHeader ? null : (
             <ClientAppDrawerNav isDark={isDarkRoute} floating />
           )}
 
