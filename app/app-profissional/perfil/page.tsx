@@ -2,6 +2,7 @@ import Link from "next/link";
 import {
   Bell,
   ChevronRight,
+  Clock3,
   FileText,
   HelpCircle,
   Info,
@@ -263,6 +264,11 @@ export default async function PerfilProfissionalPage({
             href="/app-profissional/perfil/configuracoes"
             label="Configurações"
             icon={Settings}
+          />
+          <ProfileRow
+            href="/app-profissional/perfil/horarios"
+            label="Ajustar horarios"
+            icon={Clock3}
           />
           <ProfileRow
             href="/app-profissional/recuperar-senha"
