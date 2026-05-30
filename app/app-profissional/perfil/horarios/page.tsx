@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowLeft, CalendarClock, Save } from "lucide-react";
+import { ArrowLeft, CalendarClock, ChevronDown, Save } from "lucide-react";
 import ProfissionalShell from "@/components/profissional/layout/ProfissionalShell";
 import { requireProfissionalAppContext } from "@/lib/profissional-context.server";
 import { runAdminOperation } from "@/lib/supabase/admin-ops";
@@ -37,12 +37,55 @@ const DIA_LABEL: Record<string, string> = {
   domingo: "Domingo",
 };
 
+const HORARIOS_OPCOES = Array.from({ length: 48 }, (_, index) => {
+  const hour = Math.floor(index / 2)
+    .toString()
+    .padStart(2, "0");
+  const minute = index % 2 === 0 ? "00" : "30";
+  return `${hour}:${minute}`;
+});
+
 function normalizeDia(value: string) {
   return String(value || "")
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
     .trim();
+}
+
+function TimeSelect({
+  label,
+  name,
+  defaultValue,
+}: {
+  label: string;
+  name: string;
+  defaultValue: string;
+}) {
+  return (
+    <label className="min-w-0">
+      <span className="text-[0.68rem] font-black uppercase tracking-[0.16em] text-zinc-400">
+        {label}
+      </span>
+      <span className="relative mt-2 block">
+        <select
+          name={name}
+          defaultValue={defaultValue}
+          className="h-12 w-full min-w-0 appearance-none rounded-2xl border border-zinc-200 bg-white px-4 pr-10 text-base font-black text-zinc-950 outline-none transition focus:border-zinc-950 focus:ring-4 focus:ring-zinc-950/5"
+        >
+          {HORARIOS_OPCOES.map((horario) => (
+            <option key={horario} value={horario}>
+              {horario}
+            </option>
+          ))}
+        </select>
+        <ChevronDown
+          size={18}
+          className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-zinc-400"
+        />
+      </span>
+    </label>
+  );
 }
 
 function normalizeTime(value: unknown, fallback: string) {
@@ -137,7 +180,7 @@ export default async function HorariosProfissionalPage({
           action={salvarHorariosProfissionalAction}
           className="space-y-4"
         >
-          <div className="rounded-[1.5rem] bg-white p-4 shadow-[0_18px_45px_rgba(15,23,42,0.08)]">
+          <div className="rounded-3xl bg-white p-4 shadow-[0_18px_45px_rgba(15,23,42,0.08)]">
             <div className="flex items-start gap-3">
               <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-amber-50 text-amber-700">
                 <CalendarClock size={24} />
@@ -175,7 +218,7 @@ export default async function HorariosProfissionalPage({
             </div>
           </div>
 
-          <div className="rounded-[1.5rem] bg-white p-4 shadow-[0_18px_45px_rgba(15,23,42,0.08)]">
+          <div className="rounded-3xl bg-white p-4 shadow-[0_18px_45px_rgba(15,23,42,0.08)]">
             <h2 className="text-lg font-black tracking-[-0.03em] text-zinc-950">
               Horario de atendimento
             </h2>
@@ -187,46 +230,34 @@ export default async function HorariosProfissionalPage({
               {dias.map((dia) => (
                 <div
                   key={dia.dia}
-                  className="rounded-[1.25rem] border border-zinc-200 bg-zinc-50 p-3"
+                  className="rounded-2xl border border-zinc-200 bg-zinc-50 p-3"
                 >
                   <div className="flex items-center justify-between gap-3">
                     <span className="text-base font-black text-zinc-950">
                       {DIA_LABEL[dia.dia] || dia.dia}
                     </span>
-                    <label className="inline-flex items-center gap-2 text-sm font-bold text-zinc-700">
+                    <label className="inline-flex min-h-10 items-center gap-2 rounded-full bg-white px-3 text-sm font-bold text-zinc-700 shadow-sm">
                       <input
                         type="checkbox"
                         name={`${dia.dia}_ativo`}
                         defaultChecked={dia.ativo}
-                        className="h-5 w-5"
+                        className="h-5 w-5 accent-zinc-950"
                       />
                       Ativo
                     </label>
                   </div>
 
-                  <div className="mt-3 grid grid-cols-2 gap-3">
-                    <label className="block">
-                      <span className="text-xs font-black uppercase tracking-[0.14em] text-zinc-400">
-                        Inicio
-                      </span>
-                      <input
-                        type="time"
-                        name={`${dia.dia}_inicio`}
-                        defaultValue={dia.inicio}
-                        className="mt-2 h-12 w-full rounded-[1rem] border border-zinc-200 bg-white px-3 text-sm font-bold text-zinc-950 outline-none focus:border-zinc-950"
-                      />
-                    </label>
-                    <label className="block">
-                      <span className="text-xs font-black uppercase tracking-[0.14em] text-zinc-400">
-                        Fim
-                      </span>
-                      <input
-                        type="time"
-                        name={`${dia.dia}_fim`}
-                        defaultValue={dia.fim}
-                        className="mt-2 h-12 w-full rounded-[1rem] border border-zinc-200 bg-white px-3 text-sm font-bold text-zinc-950 outline-none focus:border-zinc-950"
-                      />
-                    </label>
+                  <div className="mt-3 grid min-w-0 grid-cols-2 gap-2">
+                    <TimeSelect
+                      label="Inicio"
+                      name={`${dia.dia}_inicio`}
+                      defaultValue={dia.inicio}
+                    />
+                    <TimeSelect
+                      label="Fim"
+                      name={`${dia.dia}_fim`}
+                      defaultValue={dia.fim}
+                    />
                   </div>
                 </div>
               ))}
