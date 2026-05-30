@@ -777,6 +777,7 @@ function buildDisponibilidadeDia(params: {
         date: params.data,
         horaInicio,
         horaFim,
+        allowFinishAfterAgendaEnd: true,
       });
 
       if (!range.ok) {
@@ -1032,6 +1033,7 @@ export async function createClienteAppAppointment(
         date: data,
         horaInicio,
         horaFim,
+        allowFinishAfterAgendaEnd: true,
       });
 
       if (!range.ok) {
@@ -1913,6 +1915,7 @@ export async function rescheduleClienteAppAppointment(
         date: data,
         horaInicio,
         horaFim,
+        allowFinishAfterAgendaEnd: true,
       });
 
       if (!range.ok) {

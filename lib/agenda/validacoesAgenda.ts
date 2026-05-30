@@ -43,6 +43,7 @@ export function validateAgendaTimeRange(params: {
   date: string;
   horaInicio: string;
   horaFim: string;
+  allowFinishAfterAgendaEnd?: boolean;
 }) {
   const {
     config,
@@ -52,6 +53,7 @@ export function validateAgendaTimeRange(params: {
     date,
     horaInicio,
     horaFim,
+    allowFinishAfterAgendaEnd = false,
   } = params;
 
   if (!config) {
@@ -78,7 +80,11 @@ export function validateAgendaTimeRange(params: {
     return { ok: false, message: "Horario antes da abertura da agenda." };
   }
 
-  if (timeToMinutes(horaFim) > timeToMinutes(agendaEnd)) {
+  if (timeToMinutes(horaInicio) >= timeToMinutes(agendaEnd)) {
+    return { ok: false, message: "Horario apos o fechamento da agenda." };
+  }
+
+  if (!allowFinishAfterAgendaEnd && timeToMinutes(horaFim) > timeToMinutes(agendaEnd)) {
     return { ok: false, message: "Horario apos o fechamento da agenda." };
   }
 
