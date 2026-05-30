@@ -2,6 +2,7 @@
 
 import { Sparkles } from "lucide-react";
 import PushPermissionRuntime from "@/components/push/PushPermissionRuntime";
+import ProfissionalDrawerNav from "./ProfissionalDrawerNav";
 
 type Props = {
   title?: string;
@@ -29,7 +30,8 @@ export default function ProfissionalHeader({ title, subtitle }: Props) {
           ) : null}
         </div>
 
-        <div className="shrink-0">
+        <div className="flex shrink-0 items-center gap-2">
+          <ProfissionalDrawerNav />
           <PushPermissionRuntime audience="profissional_app" compact />
         </div>
       </div>

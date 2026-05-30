@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { Sparkles } from "lucide-react";
 import ClientAppPendingLink from "@/components/client-app/ClientAppPendingLink";
-import ClientAppBottomNav from "@/components/client-app/ClientAppBottomNav";
+import ClientAppDrawerNav from "@/components/client-app/ClientAppDrawerNav";
 import PushPermissionRuntime from "@/components/push/PushPermissionRuntime";
 import {
   ClientMobileLayoutContext,
@@ -87,7 +87,7 @@ export default function ClientMobileAppLayout({
           isDarkRoute ? "bg-[#050505] text-white" : "bg-white text-zinc-950"
         }`}
       >
-        <div className="relative mx-auto flex min-h-dvh max-w-6xl flex-col pb-24 md:pb-4">
+        <div className="relative mx-auto flex min-h-dvh max-w-6xl flex-col pb-6 md:pb-4">
           {!hasCustomHeader ? (
           <header className="sp-mobile-fixed fixed inset-x-0 top-0 z-50 mx-auto flex max-w-6xl items-center justify-between gap-2 border-b border-zinc-100 bg-white/95 px-3 py-3 pt-[calc(env(safe-area-inset-top)+0.75rem)] shadow-[0_12px_30px_rgba(15,23,42,0.06)] backdrop-blur-xl sm:gap-3 sm:px-4 md:top-3 md:rounded-[1.5rem] md:border md:pt-3">
             <div className="min-w-0 flex-1">
@@ -104,7 +104,10 @@ export default function ClientMobileAppLayout({
             </div>
 
             <div className="flex shrink-0 flex-col items-end gap-2">
-              <PushPermissionRuntime audience="cliente_app" compact />
+              <div className="flex items-center gap-2">
+                <ClientAppDrawerNav />
+                <PushPermissionRuntime audience="cliente_app" compact />
+              </div>
               <nav className="hidden flex-wrap items-center gap-2 text-sm font-semibold text-zinc-700 md:flex">
                 <ClientAppPendingLink
                   href="/app-cliente/explorar"
@@ -128,7 +131,9 @@ export default function ClientMobileAppLayout({
               </nav>
             </div>
           </header>
-          ) : null}
+          ) : (
+            <ClientAppDrawerNav isDark={isDarkRoute} floating />
+          )}
 
           <main
             className={`flex-1 pb-4 ${
@@ -142,7 +147,6 @@ export default function ClientMobileAppLayout({
 
           <div className="h-2" />
         </div>
-        <ClientAppBottomNav />
       </div>
     </ClientMobileLayoutContext.Provider>
   );
