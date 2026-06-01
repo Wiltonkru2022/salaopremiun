@@ -3,7 +3,8 @@ import { NextResponse } from "next/server";
 export const MOBILE_CLIENT_CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+  "Access-Control-Allow-Headers":
+    "Content-Type, Authorization, X-Mobile-Client-Key",
 };
 
 export function mobileOptions() {
