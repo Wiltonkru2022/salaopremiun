@@ -4,9 +4,22 @@ import {
   registrarAcaoAutomaticaSistema,
 } from "@/lib/monitoring/server";
 import type { Json } from "@/types/database.generated";
+import { revalidatePath, revalidateTag } from "next/cache";
 
 function normalizeText(value: unknown) {
   return String(value || "").trim();
+}
+
+function statusForPlano(planoCodigo: string) {
+  return planoCodigo === "teste_gratis" ? "teste_gratis" : "ativo";
+}
+
+function revalidateSalaoPlanoAdminMaster(idSalao: string) {
+  revalidateTag("plano-access-snapshot", "max");
+  revalidatePath("/admin-master/saloes");
+  revalidatePath(`/admin-master/saloes/${idSalao}`);
+  revalidatePath("/meu-plano");
+  revalidatePath("/dashboard");
 }
 
 function buildTicketPrioridade(gravidade?: string | null) {
@@ -468,27 +481,61 @@ export async function trocarPlanoSalaoAdminMaster(params: {
     limite_profissionais: number | null;
   };
   const now = new Date().toISOString();
+  const status = statusForPlano(planoRow.codigo);
+
+  const { data: assinaturaAtual } = await supabase
+    .from("assinaturas")
+    .select("id, vencimento_em")
+    .eq("id_salao", params.idSalao)
+    .maybeSingle();
 
   await supabase
     .from("saloes")
     .update({
       plano: planoRow.codigo,
+      status,
       limite_usuarios: planoRow.limite_usuarios,
       limite_profissionais: planoRow.limite_profissionais,
       updated_at: now,
     })
     .eq("id", params.idSalao);
 
-  await supabase
-    .from("assinaturas")
-    .update({
-      plano: planoRow.codigo,
-      valor: Number(planoRow.valor_mensal || 0),
-      limite_usuarios: planoRow.limite_usuarios,
-      limite_profissionais: planoRow.limite_profissionais,
-      updated_at: now,
-    })
-    .eq("id_salao", params.idSalao);
+  const assinaturaPayload = {
+    id_salao: params.idSalao,
+    status,
+    trial_fim_em: planoRow.codigo === "teste_gratis" ? undefined : null,
+    ...(planoRow.codigo === "teste_gratis" || assinaturaAtual?.vencimento_em
+      ? {}
+      : { vencimento_em: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10) }),
+    plano: planoRow.codigo,
+    valor: Number(planoRow.valor_mensal || 0),
+    limite_usuarios: planoRow.limite_usuarios,
+    limite_profissionais: planoRow.limite_profissionais,
+    updated_at: now,
+  };
+
+  if (assinaturaAtual?.id) {
+    await supabase
+      .from("assinaturas")
+      .update({
+        status,
+        trial_fim_em: planoRow.codigo === "teste_gratis" ? undefined : null,
+        ...(planoRow.codigo === "teste_gratis" || assinaturaAtual.vencimento_em
+          ? {}
+          : { vencimento_em: assinaturaPayload.vencimento_em }),
+        plano: planoRow.codigo,
+        valor: Number(planoRow.valor_mensal || 0),
+        limite_usuarios: planoRow.limite_usuarios,
+        limite_profissionais: planoRow.limite_profissionais,
+        updated_at: now,
+      })
+      .eq("id", assinaturaAtual.id);
+  } else {
+    await supabase.from("assinaturas").insert({
+      ...assinaturaPayload,
+      created_at: now,
+    });
+  }
 
   await registrarAdminMasterAuditoria({
     idAdmin: params.idAdmin,
@@ -496,8 +543,10 @@ export async function trocarPlanoSalaoAdminMaster(params: {
     entidade: "assinaturas",
     entidadeId: params.idSalao,
     descricao: params.motivo,
-    payload: { plano: planoRow.codigo },
+    payload: { plano: planoRow.codigo, status },
   });
+
+  revalidateSalaoPlanoAdminMaster(params.idSalao);
 }
 
 export async function ajustarVencimentoSalaoAdminMaster(params: {
@@ -508,14 +557,47 @@ export async function ajustarVencimentoSalaoAdminMaster(params: {
 }) {
   const supabase = getSupabaseAdmin();
   const now = new Date().toISOString();
+  const hoje = new Date();
+  hoje.setHours(0, 0, 0, 0);
+  const vencimento = new Date(`${params.vencimentoEm}T23:59:59`);
+  const vencimentoFuturo =
+    !Number.isNaN(vencimento.getTime()) && vencimento.getTime() >= hoje.getTime();
 
-  await supabase
+  const { data: assinaturaAtual } = await supabase
     .from("assinaturas")
-    .update({
+    .select("id, plano, status")
+    .eq("id_salao", params.idSalao)
+    .maybeSingle();
+  const planoAtual = String(assinaturaAtual?.plano || "").trim();
+  const deveAtivar = vencimentoFuturo && planoAtual && planoAtual !== "teste_gratis";
+
+  if (assinaturaAtual?.id) {
+    await supabase
+      .from("assinaturas")
+      .update({
+        vencimento_em: params.vencimentoEm,
+        ...(deveAtivar ? { status: "ativo" } : {}),
+        updated_at: now,
+      })
+      .eq("id", assinaturaAtual.id);
+  } else {
+    await supabase.from("assinaturas").insert({
+      id_salao: params.idSalao,
+      plano: "basico",
+      status: vencimentoFuturo ? "ativo" : "vencida",
       vencimento_em: params.vencimentoEm,
+      valor: 0,
+      created_at: now,
       updated_at: now,
-    })
-    .eq("id_salao", params.idSalao);
+    });
+  }
+
+  if (deveAtivar) {
+    await supabase
+      .from("saloes")
+      .update({ status: "ativo", updated_at: now })
+      .eq("id", params.idSalao);
+  }
 
   await registrarAdminMasterAuditoria({
     idAdmin: params.idAdmin,
@@ -523,8 +605,13 @@ export async function ajustarVencimentoSalaoAdminMaster(params: {
     entidade: "assinaturas",
     entidadeId: params.idSalao,
     descricao: params.motivo,
-    payload: { vencimento_em: params.vencimentoEm },
+    payload: {
+      vencimento_em: params.vencimentoEm,
+      ...(deveAtivar ? { status: "ativo" } : {}),
+    },
   });
+
+  revalidateSalaoPlanoAdminMaster(params.idSalao);
 }
 
 export async function criarNotaSalaoAdminMaster(params: {
