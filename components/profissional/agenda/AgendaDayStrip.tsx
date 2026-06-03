@@ -5,6 +5,8 @@ type Props = {
   dataSelecionada: string;
   basePath: string;
   diasComAtendimento?: string[];
+  diasComAgendamentos?: string[];
+  diasComBloqueios?: string[];
 };
 
 function parseISODate(dateISO: string) {
@@ -33,7 +35,11 @@ function formatMonthLabel(date: Date) {
   return label.charAt(0).toUpperCase() + label.slice(1);
 }
 
-function buildCalendarDays(monthCursor: Date, diasComAtendimento: Set<string>) {
+function buildCalendarDays(
+  monthCursor: Date,
+  diasComAgendamentos: Set<string>,
+  diasComBloqueios: Set<string>
+) {
   const year = monthCursor.getFullYear();
   const month = monthCursor.getMonth();
   const firstDay = new Date(year, month, 1);
@@ -44,6 +50,7 @@ function buildCalendarDays(monthCursor: Date, diasComAtendimento: Set<string>) {
     date: string;
     currentMonth: boolean;
     hasAppointments: boolean;
+    hasBlocks: boolean;
   }> = [];
 
   for (let index = 0; index < firstDay.getDay(); index += 1) {
@@ -53,6 +60,7 @@ function buildCalendarDays(monthCursor: Date, diasComAtendimento: Set<string>) {
       date: "",
       currentMonth: false,
       hasAppointments: false,
+      hasBlocks: false,
     });
   }
 
@@ -65,7 +73,8 @@ function buildCalendarDays(monthCursor: Date, diasComAtendimento: Set<string>) {
       label: String(day),
       date: iso,
       currentMonth: true,
-      hasAppointments: diasComAtendimento.has(iso),
+      hasAppointments: diasComAgendamentos.has(iso),
+      hasBlocks: diasComBloqueios.has(iso),
     });
   }
 
@@ -76,6 +85,8 @@ export default function AgendaDayStrip({
   dataSelecionada,
   basePath,
   diasComAtendimento = [],
+  diasComAgendamentos,
+  diasComBloqueios = [],
 }: Props) {
   const selectedDate = parseISODate(dataSelecionada);
   const monthCursor = new Date(
@@ -83,8 +94,9 @@ export default function AgendaDayStrip({
     selectedDate.getMonth(),
     1
   );
-  const appointmentsSet = new Set(diasComAtendimento);
-  const days = buildCalendarDays(monthCursor, appointmentsSet);
+  const appointmentsSet = new Set(diasComAgendamentos ?? diasComAtendimento);
+  const blocksSet = new Set(diasComBloqueios);
+  const days = buildCalendarDays(monthCursor, appointmentsSet, blocksSet);
   const previousMonthDate = formatDateISO(addMonths(monthCursor, -1));
   const nextMonthDate = formatDateISO(addMonths(monthCursor, 1));
 
@@ -130,18 +142,21 @@ export default function AgendaDayStrip({
               className={`relative flex aspect-square min-h-11 items-center justify-center rounded-full border text-base font-bold transition ${
                 dataSelecionada === day.date
                   ? "border-cyan-700 bg-cyan-50 text-zinc-950 ring-2 ring-cyan-700"
-                  : day.hasAppointments
+                  : day.hasAppointments || day.hasBlocks
                     ? "border-zinc-100 bg-zinc-100 text-zinc-950"
                     : "border-zinc-100 bg-white text-zinc-500"
               }`}
             >
               {day.label}
-              {day.hasAppointments ? (
-                <span
-                  className={`absolute bottom-2 left-1/2 h-1 w-6 -translate-x-1/2 rounded-full ${
-                    dataSelecionada === day.date ? "bg-amber-500" : "bg-emerald-500"
-                  }`}
-                />
+              {day.hasAppointments || day.hasBlocks ? (
+                <span className="absolute bottom-2 left-1/2 flex -translate-x-1/2 gap-0.5">
+                  {day.hasAppointments ? (
+                    <span className="h-1 w-3 rounded-full bg-emerald-500" />
+                  ) : null}
+                  {day.hasBlocks ? (
+                    <span className="h-1 w-3 rounded-full bg-amber-500" />
+                  ) : null}
+                </span>
               ) : null}
             </Link>
           ) : (

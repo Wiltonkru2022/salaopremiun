@@ -119,6 +119,8 @@ export default async function AgendaProfissionalPage({
             dataSelecionada={agenda.dataSelecionada}
             basePath="/app-profissional/agenda"
             diasComAtendimento={agenda.diasComAtendimento}
+            diasComAgendamentos={agenda.diasComAgendamentos}
+            diasComBloqueios={agenda.diasComBloqueios}
           />
         </ProfissionalSurface>
 

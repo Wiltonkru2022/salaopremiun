@@ -345,6 +345,8 @@ export async function buscarAgendaProfissional(
   const {
     agendamentos,
     diasComAtendimento,
+    diasComAgendamentos,
+    diasComBloqueios,
     clientesMap,
     servicosMap,
     profissionaisMap,
@@ -488,17 +490,27 @@ export async function buscarAgendaProfissional(
         (item) => normalizeDia(item.dia) === normalizeDia(diaAtual)
       );
 
+      const diasComAgendamentos = Array.from(
+        new Set(
+          ((agendamentosMesData ?? []) as Array<{ data?: string | null }>)
+            .map((item) => String(item.data || "").slice(0, 10))
+            .filter(Boolean)
+        )
+      );
+      const diasComBloqueios = Array.from(
+        new Set(
+          ((bloqueiosMesData ?? []) as Array<{ data?: string | null }>)
+            .map((item) => String(item.data || "").slice(0, 10))
+            .filter(Boolean)
+        )
+      );
+
       return {
         agendamentos: rows,
+        diasComAgendamentos,
+        diasComBloqueios,
         diasComAtendimento: Array.from(
-          new Set(
-            [
-              ...((agendamentosMesData ?? []) as Array<{ data?: string | null }>),
-              ...((bloqueiosMesData ?? []) as Array<{ data?: string | null }>),
-            ]
-              .map((item) => String(item.data || "").slice(0, 10))
-              .filter(Boolean)
-          )
+          new Set([...diasComAgendamentos, ...diasComBloqueios])
         ),
         bloqueios: bloqueiosRows,
         profissionalNome:
@@ -649,6 +661,8 @@ export async function buscarAgendaProfissional(
     totalBloqueios: bloqueios.length,
     totalPrevisto,
     diasComAtendimento,
+    diasComAgendamentos,
+    diasComBloqueios,
     cards,
     labels,
     pausas: [],
