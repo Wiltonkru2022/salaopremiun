@@ -97,8 +97,36 @@ export async function loadAgendaData(params: {
   let bloqueios: Bloqueio[] = [];
 
   if (agRes.data) {
-    agendamentos = (agRes.data as Array<Record<string, unknown>>).map((ag) => {
-      const cliente = clientes.find((c) => c.id === ag.cliente_id);
+    const agendamentoRows = agRes.data as Array<Record<string, unknown>>;
+    const clientesById = new Map(clientes.map((cliente) => [cliente.id, cliente]));
+    const missingClienteIds = Array.from(
+      new Set(
+        agendamentoRows
+          .map((agendamento) => String(agendamento.cliente_id || "").trim())
+          .filter((idCliente) => idCliente && !clientesById.has(idCliente))
+      )
+    );
+
+    if (missingClienteIds.length) {
+      const { data: clientesAgendados, error: clientesAgendadosError } =
+        await supabase
+          .from("clientes")
+          .select("id, nome, whatsapp, telefone, cashback")
+          .eq("id_salao", idSalao)
+          .in("id", missingClienteIds);
+
+      if (clientesAgendadosError) {
+        console.error("Erro ao buscar clientes dos agendamentos:", clientesAgendadosError);
+      }
+
+      ((clientesAgendados || []) as Cliente[]).forEach((cliente) => {
+        clientesById.set(cliente.id, cliente);
+      });
+    }
+
+    agendamentos = agendamentoRows.map((ag) => {
+      const clienteId = String(ag.cliente_id || "").trim();
+      const cliente = clienteId ? clientesById.get(clienteId) : undefined;
       const servico = servicos.find((s) => s.id === ag.servico_id);
 
       const servicoPreco = servico as
