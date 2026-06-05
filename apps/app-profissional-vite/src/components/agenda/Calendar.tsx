@@ -309,9 +309,9 @@ export function Calendar({
         ) : null}
       </Modal>
 
-      <Modal title="Novo agendamento" subtitle="Busque cliente, profissional e servico digitando para selecionar." open={newOpen} onClose={() => setNewOpen(false)}>
+      <Modal title="Novo agendamento" subtitle="Preencha os campos e confirme o horario." open={newOpen} onClose={() => setNewOpen(false)}>
         <form
-          className="grid gap-3"
+          className="grid gap-4"
           onSubmit={async (event) => {
             event.preventDefault();
             if (!newCliente || !newServico || (canChooseProfessional && !newProfissional)) return;
@@ -323,10 +323,10 @@ export function Calendar({
           }}
         >
           {canChooseProfessional ? (
-            <SearchPicker label="Profissional" placeholder="Digite o nome" options={profissionalOptions} value={newProfissional} onChange={(value) => { setNewProfissional(value); setNewServico(""); }} emptyText="Nenhum profissional encontrado." />
+            <SearchPicker hideInputWhenSelected label="Profissional" placeholder="Digite o nome" options={profissionalOptions} value={newProfissional} onChange={(value) => { setNewProfissional(value); setNewServico(""); }} emptyText="Nenhum profissional encontrado." />
           ) : null}
-          <SearchPicker label="Cliente" placeholder="Digite nome ou telefone" options={clienteOptions} value={newCliente} onChange={setNewCliente} />
-          <SearchPicker label="Servico" placeholder={canChooseProfessional && !newProfissional ? "Escolha o profissional primeiro" : "Digite o servico"} options={servicoOptions} value={newServico} onChange={setNewServico} emptyText={canChooseProfessional && !newProfissional ? "Escolha um profissional antes." : "Servico nao encontrado para esse profissional."} />
+          <SearchPicker hideInputWhenSelected label="Cliente" placeholder="Digite nome ou telefone" options={clienteOptions} value={newCliente} onChange={setNewCliente} />
+          <SearchPicker hideInputWhenSelected label="Servico" placeholder={canChooseProfessional && !newProfissional ? "Escolha o profissional primeiro" : "Digite o servico"} options={servicoOptions} value={newServico} onChange={setNewServico} emptyText={canChooseProfessional && !newProfissional ? "Escolha um profissional antes." : "Servico nao encontrado para esse profissional."} />
           <Field label="Horario"><Input type="time" value={newHora} onChange={(event) => setNewHora(event.target.value)} /></Field>
           <ModalActionBar>
             <Button>Criar agendamento</Button>

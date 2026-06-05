@@ -83,7 +83,7 @@ export function ComandasPage({ clientes, servicos, comandas, itens, actions }: {
 
       <Modal title="Nova comanda" subtitle="Digite para procurar o cliente ou abra como consumidor final." open={newOpen} onClose={() => setNewOpen(false)}>
         <form onSubmit={abrir} className="grid gap-3">
-          <SearchPicker label="Cliente" placeholder="Digite nome ou telefone" options={clienteOptions} value={clienteId} onChange={setClienteId} emptyText="Cliente nao encontrado." />
+          <SearchPicker hideInputWhenSelected label="Cliente" placeholder="Digite nome ou telefone" options={clienteOptions} value={clienteId} onChange={setClienteId} emptyText="Cliente nao encontrado." />
           <ModalActionBar>
             <Button loading={loading} onClick={() => setNewOpen(false)}>Abrir atendimento</Button>
             <Button loading={loading} type="button" variant="secondary" onClick={async () => {
@@ -241,7 +241,7 @@ function ComandaDetail({ comanda, servicos, itens, actions, onBack }: { comanda:
 
           <Modal title="Adicionar servico" subtitle="Digite para buscar o servico executado." open={serviceOpen} onClose={() => setServiceOpen(false)}>
             <div className="grid gap-3">
-              <SearchPicker label="Servico" placeholder="Digite o servico" options={servicoOptions} value={servicoId} onChange={setServicoId} />
+              <SearchPicker hideInputWhenSelected label="Servico" placeholder="Digite o servico" options={servicoOptions} value={servicoId} onChange={setServicoId} />
               <Field label="Quantidade"><Input type="number" min={1} step={1} value={quantidade} onChange={(event) => setQuantidade(Number(event.target.value))} /></Field>
               <ModalActionBar>
                 <Button loading={busy} onClick={async () => { await addServico(); setServiceOpen(false); }}>Adicionar servico</Button>

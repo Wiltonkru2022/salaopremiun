@@ -15,7 +15,9 @@ export function SearchPicker({
   value,
   onChange,
   emptyText = "Nada encontrado.",
-  allowClear = true
+  allowClear = true,
+  hideInputWhenSelected = false,
+  maxResults = 6
 }: {
   label: string;
   placeholder?: string;
@@ -24,6 +26,8 @@ export function SearchPicker({
   onChange: (value: string) => void;
   emptyText?: string;
   allowClear?: boolean;
+  hideInputWhenSelected?: boolean;
+  maxResults?: number;
 }) {
   const [query, setQuery] = useState("");
   const selected = options.find((item) => item.value === value) || null;
@@ -33,48 +37,50 @@ export function SearchPicker({
     if (!normalized) return [];
     return options
       .filter((item) => `${item.label} ${item.description || ""} ${item.meta || ""}`.toLowerCase().includes(normalized))
-      .slice(0, 12);
-  }, [options, query]);
+      .slice(0, maxResults);
+  }, [maxResults, options, query]);
 
   const showResults = query.trim().length > 0;
 
   return (
     <div className="grid gap-2">
       <div className="flex items-center justify-between gap-3">
-        <span className="text-xs font-black uppercase tracking-[0.18em] text-zinc-400">{label}</span>
+        <span className="text-[0.68rem] font-black uppercase tracking-[0.18em] text-zinc-400">{label}</span>
         {selected && allowClear ? (
           <button type="button" className="text-xs font-black text-zinc-500" onClick={() => { onChange(""); setQuery(""); }}>
-            Limpar
+            Trocar
           </button>
         ) : null}
       </div>
 
       {selected ? (
-        <div className="flex items-start justify-between gap-3 rounded-2xl border border-zinc-950 bg-zinc-950 p-3 text-white">
+        <div className="flex items-center justify-between gap-3 rounded-2xl border border-zinc-200 bg-zinc-50 px-3 py-2.5 text-zinc-950">
           <div className="min-w-0">
             <div className="truncate text-sm font-black">{selected.label}</div>
-            {selected.description ? <div className="mt-1 truncate text-xs font-bold text-zinc-300">{selected.description}</div> : null}
+            {selected.description ? <div className="mt-0.5 truncate text-xs font-bold text-zinc-500">{selected.description}</div> : null}
           </div>
           {allowClear ? (
-            <button type="button" className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-white/10" onClick={() => onChange("")} aria-label="Remover selecao">
+            <button type="button" className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-white text-zinc-500 shadow-sm" onClick={() => onChange("")} aria-label="Remover selecao">
               <X size={16} />
             </button>
           ) : null}
         </div>
       ) : null}
 
-      <div className="relative">
-        <Search className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={18} />
-        <input
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          placeholder={placeholder || `Buscar ${label.toLowerCase()}`}
-          className="h-12 w-full rounded-2xl border border-zinc-200 bg-white pl-11 pr-4 font-bold outline-none focus:border-zinc-950"
-        />
-      </div>
+      {!(selected && hideInputWhenSelected) ? (
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={18} />
+          <input
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder={placeholder || `Buscar ${label.toLowerCase()}`}
+            className="h-12 w-full rounded-2xl border border-zinc-200 bg-white pl-11 pr-4 font-bold outline-none focus:border-zinc-950"
+          />
+        </div>
+      ) : null}
 
       {showResults ? (
-        <div className="max-h-56 overflow-auto rounded-2xl border border-zinc-200 bg-white shadow-sm">
+        <div className="max-h-48 overflow-auto rounded-2xl border border-zinc-200 bg-white shadow-sm">
           {filtered.length ? filtered.map((item) => (
             <button
               key={item.value}
