@@ -285,6 +285,12 @@ function handlePublicHostRouting(ctx: ReturnType<typeof buildProxyRouteContext>)
   return null;
 }
 
+function rewriteToNovoAppProfissional(request: NextRequest) {
+  const rewriteUrl = request.nextUrl.clone();
+  rewriteUrl.pathname = "/app-profissional/index.html";
+  return NextResponse.rewrite(rewriteUrl);
+}
+
 export async function proxy(request: NextRequest) {
   const ctx = buildProxyRouteContext(request);
 
@@ -307,6 +313,10 @@ export async function proxy(request: NextRequest) {
   }
 
   if (ctx.isAppHost) {
+    if (ctx.rotaAppProfissional) {
+      return rewriteToNovoAppProfissional(request);
+    }
+
     return handleAppProfissionalHost(ctx);
   }
 
@@ -495,7 +505,7 @@ export const config = {
   matcher: [
     {
       source:
-        "/((?!api|app-cliente|app-profissional|_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt|manifest.webmanifest|.*\\..*).*)",
+        "/((?!api|app-cliente|_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt|manifest.webmanifest|.*\\..*).*)",
       missing: [
         { type: "header", key: "next-router-prefetch" },
         { type: "header", key: "purpose", value: "prefetch" },
