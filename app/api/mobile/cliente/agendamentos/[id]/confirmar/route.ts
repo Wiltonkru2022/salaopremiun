@@ -1,4 +1,3 @@
-import { NextResponse } from "next/server";
 import { confirmClienteAppAppointment } from "@/app/services/cliente-app/appointments";
 import {
   mobileJson,

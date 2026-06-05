@@ -1,4 +1,3 @@
-import { NextResponse } from "next/server";
 import { loginClienteAppByEmailSenha } from "@/app/services/cliente-app/auth";
 import {
   mobileJson,

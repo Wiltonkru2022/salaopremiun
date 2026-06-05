@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useActionState, useMemo, useState } from "react";
 import { useFormStatus } from "react-dom";
+import { Eye, EyeOff } from "lucide-react";
 import {
   loginProfissionalAction,
   type LoginProfissionalState,
@@ -45,6 +46,7 @@ export default function LoginProfissionalForm({
     initialState
   );
   const [cpf, setCpf] = useState("");
+  const [showSenha, setShowSenha] = useState(false);
   const cpfFormatado = useMemo(() => cpf, [cpf]);
 
   return (
@@ -88,12 +90,22 @@ export default function LoginProfissionalForm({
             Senha
           </label>
 
-          <input
-            name="senha"
-            type="password"
-            placeholder="Digite sua senha"
-            className="h-12 w-full rounded-2xl border border-zinc-200 bg-white px-4 text-base outline-none transition focus:border-zinc-400"
-          />
+          <div className="relative">
+            <input
+              name="senha"
+              type={showSenha ? "text" : "password"}
+              placeholder="Digite sua senha"
+              className="h-12 w-full rounded-2xl border border-zinc-200 bg-white px-4 pr-12 text-base outline-none transition focus:border-zinc-400"
+            />
+            <button
+              type="button"
+              onClick={() => setShowSenha((value) => !value)}
+              aria-label={showSenha ? "Ocultar senha" : "Mostrar senha"}
+              className="absolute right-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-xl text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-950"
+            >
+              {showSenha ? <EyeOff size={19} /> : <Eye size={19} />}
+            </button>
+          </div>
         </div>
 
         <label className="flex items-center gap-2 text-sm text-zinc-600">

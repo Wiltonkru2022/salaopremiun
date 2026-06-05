@@ -271,7 +271,7 @@ export default async function PerfilProfissionalPage({
             icon={Clock3}
           />
           <ProfileRow
-            href="/app-profissional/recuperar-senha"
+            href="/app-profissional/trocar-senha"
             label="Alterar senha"
             icon={KeyRound}
           />

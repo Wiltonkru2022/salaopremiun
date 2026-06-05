@@ -3,6 +3,7 @@ import { ArrowLeft, Ban, Clock3 } from "lucide-react";
 import { bloquearHorarioProfissionalAction } from "@/app/app-profissional/agenda/actions";
 import ProfissionalShell from "@/components/profissional/layout/ProfissionalShell";
 import ProfissionalSectionHeader from "@/components/profissional/ui/ProfissionalSectionHeader";
+import ProfissionalSearchableFormField from "@/components/profissional/ui/ProfissionalSearchableFormField";
 import ProfissionalSurface from "@/components/profissional/ui/ProfissionalSurface";
 import { requireProfissionalAppContext } from "@/lib/profissional-context.server";
 import { runAdminOperation } from "@/lib/supabase/admin-ops";
@@ -223,21 +224,21 @@ export default async function BloquearHorarioProfissionalPage({
 
           <form action={bloquearHorarioProfissionalAction} className="space-y-3.5">
             {session.podeVerAgendaTodos ? (
-              <label className="block text-sm font-medium text-zinc-700">
-                Profissional
-                <select
-                  name="profissional_id"
-                  defaultValue={profissionalSelecionadoId}
-                  className={inputClass()}
-                  required
-                >
-                  {profissionaisDisponiveis.map((profissional) => (
-                    <option key={profissional.id} value={profissional.id}>
-                      {profissional.nome_exibicao || profissional.nome || "Profissional"}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <ProfissionalSearchableFormField
+                name="profissional_id"
+                label="Profissional"
+                defaultValue={profissionalSelecionadoId}
+                placeholder="Digite o nome do profissional"
+                emptyText="Nenhum profissional encontrado."
+                options={profissionaisDisponiveis.map((profissional) => ({
+                  value: profissional.id,
+                  label:
+                    profissional.nome_exibicao ||
+                    profissional.nome ||
+                    "Profissional",
+                  description: profissional.tipo_profissional || null,
+                }))}
+              />
             ) : (
               <input type="hidden" name="profissional_id" value={session.idProfissional} />
             )}

@@ -1,4 +1,3 @@
-import { NextResponse } from "next/server";
 import { getClienteAppProfileData } from "@/lib/client-app/queries";
 import { updateClienteAppProfile } from "@/app/services/cliente-app/profile";
 import {

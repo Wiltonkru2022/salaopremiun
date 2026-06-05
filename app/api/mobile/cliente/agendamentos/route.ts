@@ -1,4 +1,3 @@
-import { NextResponse } from "next/server";
 import { createClienteAppAppointment } from "@/app/services/cliente-app/appointments";
 import { listClienteAppAppointments } from "@/lib/client-app/queries";
 import {

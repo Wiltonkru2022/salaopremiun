@@ -28,6 +28,9 @@ const STATUS_PERMITIDOS = new Set([
   "em_atendimento",
   "atendido",
   "aguardando_pagamento",
+  "aguardando_confirmacao_salao",
+  "aguardando_confirmacao_profissional",
+  "reservado_aguardando_pagamento",
   "cancelado",
   "faltou",
 ]);
@@ -143,11 +146,14 @@ export async function atualizarAgendamentoProfissionalAction(
       idAgendamento,
       podeVerAgendaTodos: session.podeVerAgendaTodos,
     });
+    const idProfissionalAgendamento = String(
+      agendamento.profissional_id || session.idProfissional
+    );
 
     const [configProfissional, servico] = await Promise.all([
       buscarConfiguracaoAgendaProfissional(
         session.idSalao,
-        session.idProfissional
+        idProfissionalAgendamento
       ),
       buscarServicoPorId(session.idSalao, agendamento.servico_id),
     ]);
@@ -164,7 +170,7 @@ export async function atualizarAgendamentoProfissionalAction(
 
     const conflitos = await buscarConflitosNoHorario({
       idSalao: session.idSalao,
-      idProfissional: session.idProfissional,
+      idProfissional: idProfissionalAgendamento,
       dataISO: data,
       horaInicio: horario.horaInicio,
       horaFim: horario.horaFim,
@@ -174,7 +180,7 @@ export async function atualizarAgendamentoProfissionalAction(
     );
     const conflitosBloqueio = await buscarConflitosBloqueioNoHorario({
       idSalao: session.idSalao,
-      idProfissional: session.idProfissional,
+      idProfissional: idProfissionalAgendamento,
       dataISO: data,
       horaInicio: horario.horaInicio,
       horaFim: horario.horaFim,
@@ -218,7 +224,7 @@ export async function atualizarAgendamentoProfissionalAction(
           })
           .eq("id", idAgendamento)
           .eq("id_salao", session.idSalao)
-          .eq("profissional_id", session.idProfissional);
+          .eq("profissional_id", idProfissionalAgendamento);
 
         if (error) throw new Error(getAgendaMutationErrorMessage(error.message));
       },
@@ -246,7 +252,7 @@ export async function atualizarAgendamentoProfissionalAction(
               releasedSlot: {
                 idSalao: session.idSalao,
                 idServico: agendamento.servico_id || null,
-                idProfissional: session.idProfissional,
+                idProfissional: idProfissionalAgendamento,
                 data: previousDate,
                 horaInicio: previousTime,
                 servicoNome: servico.nome || null,
@@ -305,11 +311,15 @@ export async function marcarClienteNaoCompareceuAction(formData: FormData) {
   try {
     if (!idAgendamento) throw new Error("Agendamento invalido.");
     await assertCanMutatePlanFeature(session.idSalao, "agenda");
-    await buscarAgendamentoPermitido({
+    const agendamento = await buscarAgendamentoPermitido({
       idSalao: session.idSalao,
       idProfissional: session.idProfissional,
       idAgendamento,
+      podeVerAgendaTodos: session.podeVerAgendaTodos,
     });
+    const idProfissionalAgendamento = String(
+      agendamento.profissional_id || session.idProfissional
+    );
 
     await runAdminOperation({
       action: "app_profissional_agendamento_faltou",
@@ -325,7 +335,7 @@ export async function marcarClienteNaoCompareceuAction(formData: FormData) {
           })
           .eq("id", idAgendamento)
           .eq("id_salao", session.idSalao)
-          .eq("profissional_id", session.idProfissional);
+          .eq("profissional_id", idProfissionalAgendamento);
 
         if (error) throw new Error(error.message);
       },
@@ -660,7 +670,11 @@ export async function abrirComandaDoAgendamentoAction(formData: FormData) {
       idSalao: session.idSalao,
       idProfissional: session.idProfissional,
       idAgendamento,
+      podeVerAgendaTodos: session.podeVerAgendaTodos,
     });
+    const idProfissionalAgendamento = String(
+      agendamento.profissional_id || session.idProfissional
+    );
 
     if (agendamento.id_comanda) {
       redirect(`/app-profissional/comandas/${agendamento.id_comanda}`);
@@ -708,7 +722,7 @@ export async function abrirComandaDoAgendamentoAction(formData: FormData) {
           idAgendamento,
           idComandaNova: String(comanda.id),
           idServico: String(agendamento.servico_id),
-          idProfissional: session.idProfissional,
+          idProfissional: idProfissionalAgendamento,
         });
 
         const { error: updateError } = await supabase
@@ -719,7 +733,7 @@ export async function abrirComandaDoAgendamentoAction(formData: FormData) {
           })
           .eq("id", idAgendamento)
           .eq("id_salao", session.idSalao)
-          .eq("profissional_id", session.idProfissional);
+          .eq("profissional_id", idProfissionalAgendamento);
 
         if (updateError) throw new Error(updateError.message);
 
@@ -772,7 +786,11 @@ export async function enviarComandaDoAgendamentoParaCaixaAction(
       idSalao: session.idSalao,
       idProfissional: session.idProfissional,
       idAgendamento,
+      podeVerAgendaTodos: session.podeVerAgendaTodos,
     });
+    const idProfissionalAgendamento = String(
+      agendamento.profissional_id || session.idProfissional
+    );
 
     if (!agendamento.id_comanda) {
       throw new Error("Abra uma comanda antes de enviar para o caixa.");
@@ -837,7 +855,7 @@ export async function enviarComandaDoAgendamentoParaCaixaAction(
           })
           .eq("id", idAgendamento)
           .eq("id_salao", session.idSalao)
-          .eq("profissional_id", session.idProfissional);
+          .eq("profissional_id", idProfissionalAgendamento);
 
         if (agendamentoError) throw new Error(agendamentoError.message);
       },

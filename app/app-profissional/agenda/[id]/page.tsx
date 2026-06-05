@@ -273,9 +273,14 @@ export default async function AgendamentoDetalheProfissionalPage({
   const horaInicio = String(agendamento.hora_inicio || "").slice(0, 5);
   const horaFim = String(agendamento.hora_fim || "").slice(0, 5);
   const status = String(agendamento.status || "pendente");
+  const statusNormalizado = status.toLowerCase();
   const comandaAberta = comanda && String(comanda.status).toLowerCase() === "aberta";
   const isDoProfissionalLogado =
     String(agendamento.profissional_id || "") === session.idProfissional;
+  const podeEditarAgendamento = isDoProfissionalLogado || session.podeVerAgendaTodos;
+  const podeExcluirAgendamento =
+    podeEditarAgendamento &&
+    !["atendido", "cancelado", "faltou"].includes(statusNormalizado);
   const profissionalNome =
     profissional?.nome_exibicao || profissional?.nome || "Profissional";
   const sinalValor = Number(agendamento.sinal_valor || 0);
@@ -368,7 +373,7 @@ export default async function AgendamentoDetalheProfissionalPage({
             </div>
           ) : null}
 
-          {isDoProfissionalLogado && String(status).toLowerCase() === "pendente" ? (
+          {podeEditarAgendamento && statusNormalizado === "pendente" ? (
             <form action={confirmarAgendamentoProfissionalAction} className="mt-3">
               <input type="hidden" name="id_agendamento" value={agendamento.id} />
               <button className="w-full rounded-[18px] bg-white px-4 py-2.5 text-sm font-black text-zinc-950 shadow-sm transition hover:bg-zinc-100">
@@ -436,7 +441,7 @@ export default async function AgendamentoDetalheProfissionalPage({
           <ProfissionalSectionHeader
             title="Comanda e caixa"
             description={
-              !isDoProfissionalLogado
+              !podeEditarAgendamento
                 ? "Você pode visualizar este atendimento, mas ações de comanda ficam com o profissional responsável."
                 : comanda
                 ? `Comanda ${comanda.numero || ""} pronta para revisar ou enviar ao caixa.`
@@ -468,7 +473,7 @@ export default async function AgendamentoDetalheProfissionalPage({
           </div>
 
           <div className="mt-3 grid gap-2">
-            {!isDoProfissionalLogado ? null : comanda ? (
+            {!podeEditarAgendamento ? null : comanda ? (
               <Link
                 href={`/app-profissional/comandas/${comanda.id}`}
                 className="rounded-[18px] bg-zinc-950 px-4 py-2.5 text-center text-sm font-bold text-white"
@@ -484,7 +489,7 @@ export default async function AgendamentoDetalheProfissionalPage({
               </form>
             )}
 
-            {isDoProfissionalLogado && comanda ? (
+            {podeEditarAgendamento && comanda ? (
               <form action={enviarComandaDoAgendamentoParaCaixaAction}>
                 <input type="hidden" name="id_agendamento" value={agendamento.id} />
                 <button
@@ -498,14 +503,14 @@ export default async function AgendamentoDetalheProfissionalPage({
           </div>
         </ProfissionalSurface>
 
-        {isDoProfissionalLogado ? (
+        {podeEditarAgendamento ? (
         <ProfissionalSurface>
           <ProfissionalSectionHeader
             title="Editar atendimento"
             description="Ajuste horário, status e observações."
           />
 
-          {["pendente", "confirmado"].includes(String(status || "").toLowerCase()) ? (
+          {["pendente", "confirmado"].includes(statusNormalizado) ? (
             <div
               id="reagendar"
               className="mb-3 flex items-start gap-3 rounded-[1.1rem] border border-zinc-200 bg-zinc-50 p-3.5 text-sm text-zinc-600"
@@ -584,7 +589,7 @@ export default async function AgendamentoDetalheProfissionalPage({
         </ProfissionalSurface>
         ) : null}
 
-        {isDoProfissionalLogado ? (
+        {podeEditarAgendamento ? (
         <ProfissionalSurface>
           <ProfissionalSectionHeader
             title="Ações rápidas"
@@ -600,13 +605,15 @@ export default async function AgendamentoDetalheProfissionalPage({
               </button>
             </form>
 
-            <form action={cancelarAgendamentoProfissionalAction}>
-              <input type="hidden" name="id_agendamento" value={agendamento.id} />
-              <button className="flex w-full items-center justify-center gap-2 rounded-[18px] border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-bold text-red-700">
-                <Trash2 size={18} />
-                Excluir da agenda
-              </button>
-            </form>
+            {podeExcluirAgendamento ? (
+              <form action={cancelarAgendamentoProfissionalAction}>
+                <input type="hidden" name="id_agendamento" value={agendamento.id} />
+                <button className="flex w-full items-center justify-center gap-2 rounded-[18px] border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-bold text-red-700">
+                  <Trash2 size={18} />
+                  Excluir da agenda
+                </button>
+              </form>
+            ) : null}
           </div>
         </ProfissionalSurface>
         ) : null}

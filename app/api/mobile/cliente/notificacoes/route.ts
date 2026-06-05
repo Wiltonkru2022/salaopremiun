@@ -1,4 +1,3 @@
-import { NextResponse } from "next/server";
 import { listClienteAppNotifications } from "@/lib/client-app/queries";
 import {
   mobileJson,

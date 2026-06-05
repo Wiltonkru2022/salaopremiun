@@ -1,4 +1,3 @@
-import { NextResponse } from "next/server";
 import { getClientAppSalonDetail } from "@/lib/client-app/queries";
 import {
   mobileJson,
