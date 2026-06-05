@@ -36,10 +36,10 @@ const nav = [
 function BrandLogo({ compact = false }: { compact?: boolean }) {
   return (
     <div className="flex items-center gap-3">
-      <img src="/app-profissional/icons/icon-192.png" alt="Salao Premiun" className="h-11 w-11 rounded-2xl shadow-sm" />
+      <img src="/app-profissional/icons/icon-192.png" alt="Salão Premiun" className="h-11 w-11 rounded-2xl shadow-sm" />
       {!compact ? (
         <div className="min-w-0">
-          <div className="text-[0.65rem] font-black uppercase tracking-[0.22em] text-amber-700">Salao Premiun</div>
+          <div className="text-[0.65rem] font-black uppercase tracking-[0.22em] text-amber-700">Salão Premiun</div>
           <div className="truncate text-lg font-black tracking-[-0.04em] text-zinc-950">Profissional</div>
         </div>
       ) : null}
@@ -100,7 +100,7 @@ export function AppShell({ view, setView, title, subtitle, children }: { view: V
               <div className="flex min-w-0 items-center gap-3">
                 <BrandLogo compact />
                 <div className="min-w-0">
-                  <div className="text-[0.68rem] font-black uppercase tracking-[0.22em] text-amber-700">Salao Premiun</div>
+                  <div className="text-[0.68rem] font-black uppercase tracking-[0.22em] text-amber-700">Salão Premiun</div>
                   <h1 className="mt-1 truncate text-3xl font-black tracking-[-0.05em] text-zinc-950">{title}</h1>
                   {subtitle ? <p className="mt-0.5 truncate text-sm font-bold text-zinc-500">{subtitle}</p> : null}
                 </div>

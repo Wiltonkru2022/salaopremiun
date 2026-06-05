@@ -13,7 +13,7 @@ export const supabase = createClient(
       persistSession: true,
       autoRefreshToken: true,
       detectSessionInUrl: true,
-      storageKey: "salaopro.auth"
+      storageKey: "salaopremiun.auth"
     },
     realtime: {
       params: { eventsPerSecond: 8 }

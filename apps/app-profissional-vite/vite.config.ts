@@ -15,9 +15,9 @@ export default defineConfig(({ mode }) => {
         registerType: "autoUpdate",
         includeAssets: ["icons/icon-192.png", "icons/icon-512.png"],
         manifest: {
-          name: "SalaoPremiun Profissional",
-          short_name: "SalaoPro",
-          description: "Agenda, clientes, servicos e comandas para profissional de salao.",
+          name: "Salão Premiun",
+          short_name: "Salão Premiun",
+          description: "Agenda, clientes, serviços e comandas para profissional de salão.",
           theme_color: "#050505",
           background_color: "#f5f5f4",
           display: "standalone",
@@ -47,7 +47,7 @@ export default defineConfig(({ mode }) => {
               urlPattern: ({ request }) => request.destination === "script" || request.destination === "style" || request.destination === "image" || request.destination === "font",
               handler: "CacheFirst",
               options: {
-                cacheName: "salaopro-assets",
+                cacheName: "salaopremiun-assets",
                 expiration: { maxEntries: 80, maxAgeSeconds: 60 * 60 * 24 * 30 }
               }
             },
@@ -55,7 +55,7 @@ export default defineConfig(({ mode }) => {
               urlPattern: ({ url }) => url.origin === supabaseHost && (url.pathname.includes("/rest/v1/") || url.pathname.includes("/auth/v1/user")),
               handler: "NetworkFirst",
               options: {
-                cacheName: "salaopro-supabase-api",
+                cacheName: "salaopremiun-supabase-api",
                 networkTimeoutSeconds: 4,
                 expiration: { maxEntries: 120, maxAgeSeconds: 60 * 60 * 24 }
               }

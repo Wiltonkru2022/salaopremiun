@@ -8,7 +8,7 @@ export function SuportePage() {
       <Card className="bg-zinc-950 text-white">
         <LifeBuoy className="text-amber-300" size={28} />
         <h2 className="mt-5 text-3xl font-black tracking-[-0.06em]">Suporte</h2>
-        <p className="mt-2 text-sm font-semibold leading-6 text-zinc-300">Abra uma conversa com a recepcao ou suporte do SalaoPremiun.</p>
+        <p className="mt-2 text-sm font-semibold leading-6 text-zinc-300">Abra uma conversa com a recepção ou suporte do Salão Premiun.</p>
       </Card>
       <Button className="w-full"><MessageCircle size={18} /> Chamar suporte</Button>
     </div>

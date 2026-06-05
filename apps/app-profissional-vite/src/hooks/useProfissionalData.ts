@@ -82,7 +82,7 @@ export function useProfissionalData(profissionalId?: string) {
     if (!profissionalId) return;
 
     const channel = supabase
-      .channel(`salaopro-${profissionalId}`)
+      .channel(`salaopremiun-${profissionalId}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "agendamentos", filter: `profissional_id=eq.${profissionalId}` }, () => void refresh())
       .on("postgres_changes", { event: "*", schema: "public", table: "comandas", filter: `profissional_id=eq.${profissionalId}` }, () => void refresh())
       .on("postgres_changes", { event: "*", schema: "public", table: "notificacoes", filter: `profissional_id=eq.${profissionalId}` }, () => void refresh())

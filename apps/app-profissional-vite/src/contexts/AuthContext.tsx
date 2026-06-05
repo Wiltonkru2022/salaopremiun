@@ -11,7 +11,7 @@ type AuthContextValue = {
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
-const SESSION_KEY = "salaopro.profissional.session";
+const SESSION_KEY = "salaopremiun.profissional.session";
 
 function normalizeCpf(value: string) {
   return String(value || "").replace(/\D/g, "").trim();

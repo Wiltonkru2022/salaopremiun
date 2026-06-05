@@ -1,4 +1,4 @@
-const PREFIX = "salaopro.cache.";
+const PREFIX = "salaopremiun.cache.";
 
 export function readCache<T>(key: string, fallback: T): T {
   try {
