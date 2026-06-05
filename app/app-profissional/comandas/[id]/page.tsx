@@ -71,6 +71,15 @@ type ExtraOption = {
   ativo?: boolean | null;
 };
 
+type AgendamentoComandaRow = {
+  id: string;
+  profissional_id?: string | null;
+};
+
+type VinculoServicoRow = {
+  id_servico?: string | null;
+};
+
 export default async function ComandaDetalhePage({
   params,
   searchParams,
@@ -86,13 +95,14 @@ export default async function ComandaDetalhePage({
   const {
     comanda,
     comandaError,
-    acessoCount,
+    agendamentoAcesso,
     acessoError,
     cliente,
     itens,
     itensError,
     servicos,
     servicosError,
+    vinculosServicos,
     extrasRaw,
     extrasError,
   } = await runAdminOperation({
@@ -112,43 +122,61 @@ export default async function ComandaDetalhePage({
         return {
           comanda: comandaData,
           comandaError: comandaLoadError,
-          acessoCount: null,
+          agendamentoAcesso: null,
           acessoError: null,
           cliente: null,
           itens: null,
           itensError: null,
           servicos: null,
           servicosError: null,
+          vinculosServicos: null,
           extrasRaw: null,
           extrasError: null,
         };
       }
 
-      const { count: acessoLoadCount, error: acessoLoadError } =
-        await supabaseAdmin
-          .from("agendamentos")
-          .select("id", { count: "exact", head: true })
-          .eq("id_salao", session.idSalao)
-          .eq("profissional_id", session.idProfissional)
-          .eq("id_comanda", id);
+      let acessoQuery = supabaseAdmin
+        .from("agendamentos")
+        .select("id, profissional_id")
+        .eq("id_salao", session.idSalao)
+        .eq("id_comanda", id)
+        .limit(1);
 
-      if (acessoLoadError || !acessoLoadCount) {
+      if (!session.podeVerAgendaTodos) {
+        acessoQuery = acessoQuery.eq("profissional_id", session.idProfissional);
+      }
+
+      const { data: acessoRows, error: acessoLoadError } = await acessoQuery;
+      const agendamentoAcessoLoad =
+        ((acessoRows || []) as AgendamentoComandaRow[])[0] || null;
+
+      if (acessoLoadError || !agendamentoAcessoLoad?.id) {
         return {
           comanda: comandaData,
           comandaError: null,
-          acessoCount: acessoLoadCount,
+          agendamentoAcesso: agendamentoAcessoLoad,
           acessoError: acessoLoadError,
           cliente: null,
           itens: null,
           itensError: null,
           servicos: null,
           servicosError: null,
+          vinculosServicos: null,
           extrasRaw: null,
           extrasError: null,
         };
       }
 
-      const [clienteResult, itensResult, servicosResult, extrasResult] =
+      const idProfissionalComanda =
+        agendamentoAcessoLoad.profissional_id || session.idProfissional;
+
+      const [
+        clienteResult,
+        itensResult,
+        servicosResult,
+        vinculosServicosResult,
+        extrasResult,
+      ] =
         await Promise.all([
           comandaData.id_cliente
             ? supabaseAdmin
@@ -175,6 +203,12 @@ export default async function ComandaDetalhePage({
             .eq("status", "ativo")
             .order("nome", { ascending: true }),
           supabaseAdmin
+            .from("profissional_servicos")
+            .select("id_servico")
+            .eq("id_salao", session.idSalao)
+            .eq("id_profissional", idProfissionalComanda)
+            .eq("ativo", true),
+          supabaseAdmin
             .from("itens_extras")
             .select("id, id_salao, nome, preco_venda, ativo")
             .eq("id_salao", session.idSalao)
@@ -184,13 +218,14 @@ export default async function ComandaDetalhePage({
       return {
         comanda: comandaData,
         comandaError: null,
-        acessoCount: acessoLoadCount,
+        agendamentoAcesso: agendamentoAcessoLoad,
         acessoError: null,
         cliente: clienteResult.data,
         itens: itensResult.data,
         itensError: itensResult.error,
         servicos: servicosResult.data,
-        servicosError: servicosResult.error,
+        servicosError: servicosResult.error || vinculosServicosResult.error,
+        vinculosServicos: vinculosServicosResult.data,
         extrasRaw: extrasResult.data,
         extrasError: extrasResult.error,
       };
@@ -207,7 +242,7 @@ export default async function ComandaDetalhePage({
     );
   }
 
-  if (acessoError || !acessoCount) {
+  if (acessoError || !agendamentoAcesso?.id) {
     return (
       <ProfissionalShell title="Comanda" subtitle="Detalhes">
         <div className="rounded-[1.25rem] border border-red-200 bg-red-50 p-4 text-sm text-red-700 shadow-sm">
@@ -235,6 +270,14 @@ export default async function ComandaDetalhePage({
 
   const extras = ((extrasRaw ?? []) as ExtraOption[]).filter(
     (item) => item.ativo === true
+  );
+  const idsServicosVinculados = new Set(
+    ((vinculosServicos ?? []) as VinculoServicoRow[])
+      .map((item) => item.id_servico)
+      .filter(Boolean)
+  );
+  const servicosVinculados = ((servicos ?? []) as ServicoOption[]).filter(
+    (servico) => idsServicosVinculados.has(servico.id)
   );
   const status = getStatusMeta(String(comanda.status || ""));
 
@@ -403,7 +446,7 @@ export default async function ComandaDetalhePage({
                   label="Serviço"
                   placeholder="Digite o serviço"
                   emptyText="Nenhum serviço encontrado."
-                  options={((servicos ?? []) as ServicoOption[]).map((servico) => {
+                  options={servicosVinculados.map((servico) => {
                     const valor = Number(servico.preco ?? servico.preco_padrao ?? 0);
                     const label = servico.eh_combo
                       ? `${servico.nome} (combo)`
@@ -427,7 +470,7 @@ export default async function ComandaDetalhePage({
                   defaultValue=""
                 >
                   <option value="">Selecione um serviço</option>
-                  {((servicos ?? []) as ServicoOption[]).map((servico) => {
+                  {servicosVinculados.map((servico) => {
                     const valor = Number(servico.preco ?? servico.preco_padrao ?? 0);
 
                     return (

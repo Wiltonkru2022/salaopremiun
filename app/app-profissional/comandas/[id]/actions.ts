@@ -91,22 +91,34 @@ async function buscarComandaPermitida(idComanda: string) {
         throw new Error("Comanda nao encontrada.");
       }
 
-      const { count, error: acessoError } = await supabaseAdmin
+      let acessoQuery = supabaseAdmin
         .from("agendamentos")
-        .select("id", { count: "exact", head: true })
+        .select("id, profissional_id")
         .eq("id_salao", session.idSalao)
-        .eq("profissional_id", session.idProfissional)
-        .eq("id_comanda", safeIdComanda);
+        .eq("id_comanda", safeIdComanda)
+        .limit(1);
+
+      if (!session.podeVerAgendaTodos) {
+        acessoQuery = acessoQuery.eq("profissional_id", session.idProfissional);
+      }
+
+      const { data: acessoRows, error: acessoError } = await acessoQuery;
 
       if (acessoError) {
         throw new Error("Erro ao validar acesso a comanda.");
       }
 
-      if (!count) {
+      const agendamentoAcesso = acessoRows?.[0] || null;
+
+      if (!agendamentoAcesso?.id) {
         throw new Error("Você não tem acesso a esta comanda.");
       }
 
-      return comandaData;
+      return {
+        ...comandaData,
+        id_profissional_comanda:
+          agendamentoAcesso.profissional_id || session.idProfissional,
+      };
     },
   });
 
@@ -175,6 +187,9 @@ export async function adicionarServicoNaComandaAction(formData: FormData) {
     ]);
 
     const { session, comanda } = await buscarComandaPermitida(idComanda);
+    const idProfissionalComanda = String(
+      comanda.id_profissional_comanda || session.idProfissional
+    );
 
     await runAdminOperation({
       action: "app_profissional_comanda_adicionar_servico",
@@ -220,10 +235,29 @@ export async function adicionarServicoNaComandaAction(formData: FormData) {
           return;
         }
 
+        const { data: vinculoServico, error: vinculoServicoError } =
+          await supabaseAdmin
+            .from("profissional_servicos")
+            .select("id")
+            .eq("id_salao", session.idSalao)
+            .eq("id_profissional", idProfissionalComanda)
+            .eq("id_servico", idServico)
+            .eq("ativo", true)
+            .maybeSingle();
+
+        if (vinculoServicoError || !vinculoServico?.id) {
+          redirectUrl = buildRedirectUrl(
+            idComanda,
+            "erro",
+            "Esse servico nao esta vinculado ao profissional do atendimento."
+          );
+          return;
+        }
+
         const itemIdempotencyKey = buildActionKey({
           prefix: "servico",
           idComanda,
-          idProfissional: session.idProfissional,
+          idProfissional: idProfissionalComanda,
           idReferencia: idServico,
           quantidade,
           formKey,
@@ -241,7 +275,7 @@ export async function adicionarServicoNaComandaAction(formData: FormData) {
             tipo_item: "servico",
             id_servico: idServico,
             quantidade,
-            id_profissional: session.idProfissional,
+            id_profissional: idProfissionalComanda,
             origem: "app_profissional",
           },
           idempotencyKey: itemIdempotencyKey,
@@ -259,7 +293,8 @@ export async function adicionarServicoNaComandaAction(formData: FormData) {
             acao: "adicionar_servico",
             id_comanda: idComanda,
             id_servico: idServico,
-            id_profissional: session.idProfissional,
+            id_profissional: idProfissionalComanda,
+            actor_profissional_id: session.idProfissional,
             quantidade,
             idempotency_key: itemIdempotencyKey,
             ja_existia: jaExistia,
@@ -301,6 +336,9 @@ export async function adicionarExtraNaComandaAction(formData: FormData) {
     ]);
 
     const { session, comanda } = await buscarComandaPermitida(idComanda);
+    const idProfissionalComanda = String(
+      comanda.id_profissional_comanda || session.idProfissional
+    );
 
     await runAdminOperation({
       action: "app_profissional_comanda_adicionar_extra",
@@ -355,7 +393,7 @@ export async function adicionarExtraNaComandaAction(formData: FormData) {
         const itemIdempotencyKey = buildActionKey({
           prefix: "extra",
           idComanda,
-          idProfissional: session.idProfissional,
+          idProfissional: idProfissionalComanda,
           idReferencia: idItemExtra,
           quantidade,
           formKey,
@@ -386,7 +424,7 @@ export async function adicionarExtraNaComandaAction(formData: FormData) {
             valor_unitario: valorUnitario,
             valor_total: valorTotal,
             custo_total: 0,
-            id_profissional: session.idProfissional,
+            id_profissional: idProfissionalComanda,
             origem: "app_profissional",
             ativo: true,
             idempotency_key: itemIdempotencyKey,
@@ -422,7 +460,8 @@ export async function adicionarExtraNaComandaAction(formData: FormData) {
             acao: "adicionar_extra",
             id_comanda: idComanda,
             id_item_extra: idItemExtra,
-            id_profissional: session.idProfissional,
+            id_profissional: idProfissionalComanda,
+            actor_profissional_id: session.idProfissional,
             quantidade,
             idempotency_key: itemIdempotencyKey,
             ja_existia: jaExistia,
