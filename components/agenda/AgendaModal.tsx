@@ -48,6 +48,9 @@ export default function AgendaModal(props: Props) {
     setStatus,
     dataBloqueio,
     setDataBloqueio,
+    datasBloqueio,
+    handleAdicionarDataBloqueio,
+    handleRemoverDataBloqueio,
     horaFimBloqueio,
     setHoraFimBloqueio,
     motivoBloqueio,
@@ -161,12 +164,16 @@ export default function AgendaModal(props: Props) {
       <AgendaModalFormBloqueio
         profissionaisOptions={profissionaisOptions}
         profissionalId={profissionalId}
+        editingBlock={editingBlock || null}
         dataBloqueio={dataBloqueio}
+        datasBloqueio={datasBloqueio}
         horaInicio={horaInicio}
         horaFimBloqueio={horaFimBloqueio}
         motivoBloqueio={motivoBloqueio}
         onProfissionalChange={setProfissionalId}
         onDataChange={setDataBloqueio}
+        onAdicionarData={handleAdicionarDataBloqueio}
+        onRemoverData={handleRemoverDataBloqueio}
         onHoraInicioChange={setHoraInicio}
         onHoraFimChange={setHoraFimBloqueio}
         onMotivoChange={setMotivoBloqueio}
@@ -181,6 +188,7 @@ export default function AgendaModal(props: Props) {
       servicoSelecionado={servicoSelecionado}
       horaInicio={horaInicio}
       horaFimPreview={horaFimPreview}
+      datasBloqueio={datasBloqueio}
       horaFimBloqueio={horaFimBloqueio}
       motivoBloqueio={motivoBloqueio}
       comandaNumero={comandaNumero}

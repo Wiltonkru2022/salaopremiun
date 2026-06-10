@@ -4,16 +4,21 @@ import { AlertCircle, CalendarDays, Clock3 } from "lucide-react";
 import SearchableSelect, {
   type SearchableOption,
 } from "@/components/ui/SearchableSelect";
+import type { Bloqueio } from "@/types/agenda";
 
 type Props = {
   profissionaisOptions: SearchableOption[];
   profissionalId: string;
+  editingBlock?: Bloqueio | null;
   dataBloqueio: string;
+  datasBloqueio: string[];
   horaInicio: string;
   horaFimBloqueio: string;
   motivoBloqueio: string;
   onProfissionalChange: (value: string) => void;
   onDataChange: (value: string) => void;
+  onAdicionarData: () => void;
+  onRemoverData: (value: string) => void;
   onHoraInicioChange: (value: string) => void;
   onHoraFimChange: (value: string) => void;
   onMotivoChange: (value: string) => void;
@@ -22,12 +27,16 @@ type Props = {
 export default function AgendaModalFormBloqueio({
   profissionaisOptions,
   profissionalId,
+  editingBlock,
   dataBloqueio,
+  datasBloqueio,
   horaInicio,
   horaFimBloqueio,
   motivoBloqueio,
   onProfissionalChange,
   onDataChange,
+  onAdicionarData,
+  onRemoverData,
   onHoraInicioChange,
   onHoraFimChange,
   onMotivoChange,
@@ -62,16 +71,52 @@ export default function AgendaModalFormBloqueio({
         <div>
           <label className="mb-1.5 flex items-center gap-2 text-xs font-semibold text-zinc-700">
             <CalendarDays size={13} />
-            Data do bloqueio
+            {editingBlock ? "Data do bloqueio" : "Data base do bloqueio"}
           </label>
 
-          <input
-            type="date"
-            value={dataBloqueio}
-            onChange={(e) => onDataChange(e.target.value)}
-            className="w-full rounded-2xl border border-zinc-200 bg-zinc-50 px-3 py-2.5 text-sm outline-none transition focus:border-zinc-900 focus:bg-white"
-            required
-          />
+          <div className="flex gap-2">
+            <input
+              type="date"
+              value={dataBloqueio}
+              onChange={(e) => onDataChange(e.target.value)}
+              className="w-full rounded-2xl border border-zinc-200 bg-zinc-50 px-3 py-2.5 text-sm outline-none transition focus:border-zinc-900 focus:bg-white"
+              required
+            />
+            {!editingBlock ? (
+              <button
+                type="button"
+                onClick={onAdicionarData}
+                className="shrink-0 rounded-2xl border border-zinc-200 bg-white px-3 py-2.5 text-xs font-semibold text-zinc-700 transition hover:bg-zinc-50"
+              >
+                Adicionar
+              </button>
+            ) : null}
+          </div>
+
+          {!editingBlock ? (
+            <div className="mt-2">
+              <p className="text-xs leading-5 text-zinc-500">
+                Adicione quantos dias quiser para repetir o mesmo bloqueio.
+              </p>
+
+              <div className="mt-2 flex flex-wrap gap-2">
+                {datasBloqueio.length ? (
+                  datasBloqueio.map((data) => (
+                    <button
+                      key={data}
+                      type="button"
+                      onClick={() => onRemoverData(data)}
+                      className="rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 transition hover:border-zinc-300 hover:bg-zinc-50"
+                    >
+                      {data} x
+                    </button>
+                  ))
+                ) : (
+                  <span className="text-xs text-zinc-400">Nenhuma data adicionada.</span>
+                )}
+              </div>
+            </div>
+          ) : null}
         </div>
 
         <div>

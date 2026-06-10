@@ -27,6 +27,11 @@ function formatarDataCompacta(dataISO: string) {
   return `${dia}/${mes}/${ano}`;
 }
 
+function parseDuracaoPositiva(value: unknown) {
+  const parsed = Number(value ?? 0);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+}
+
 type SearchParams = Promise<{
   cliente_id?: string;
   servico_id?: string;
@@ -61,6 +66,7 @@ type ClienteOption = {
 type ServicoOption = {
   id: string;
   nome: string;
+  duracao?: number | string | null;
   duracao_minutos?: number | string | null;
 };
 
@@ -74,6 +80,7 @@ type ProfissionalOption = {
 type VinculoServicoRow = {
   id_servico?: string | null;
   id_profissional?: string | null;
+  duracao_minutos?: number | null;
 };
 
 type AgendaDiaRow = {
@@ -155,7 +162,7 @@ export default async function NovoAgendamentoProfissionalPage({
       run: async (supabaseAdmin) => {
         let vinculosQuery = supabaseAdmin
           .from("profissional_servicos")
-          .select("id_servico, id_profissional")
+          .select("id_servico, id_profissional, duracao_minutos")
           .eq("id_salao", session.idSalao)
           .eq("ativo", true);
 
@@ -181,7 +188,7 @@ export default async function NovoAgendamentoProfissionalPage({
             .order("nome", { ascending: true }),
           supabaseAdmin
             .from("servicos")
-            .select("id, nome, duracao_minutos, ativo")
+            .select("id, nome, duracao, duracao_minutos, ativo")
             .eq("id_salao", session.idSalao)
             .eq("ativo", true)
             .order("nome", { ascending: true }),
@@ -247,6 +254,14 @@ export default async function NovoAgendamentoProfissionalPage({
   const idsServicosLiberados = new Set(
     vinculosServicos.map((item) => item.id_servico).filter(Boolean)
   );
+  const duracaoPorServico = new Map<string, number>();
+  for (const vinculo of vinculosServicos) {
+    const idServico = String(vinculo.id_servico || "").trim();
+    const duracao = Number(vinculo.duracao_minutos || 0);
+    if (idServico && duracao > 0 && !duracaoPorServico.has(idServico)) {
+      duracaoPorServico.set(idServico, duracao);
+    }
+  }
   const servicos = ((servicosResult.data ?? []) as ServicoOption[]).filter((servico) =>
     idsServicosLiberados.has(servico.id)
   );
@@ -379,13 +394,20 @@ export default async function NovoAgendamentoProfissionalPage({
             />
 
             <NovoAgendamentoProfissionalFields
-              servicos={servicos.map((servico) => ({
-                value: servico.id,
-                label: servico.nome,
-                description: servico.duracao_minutos
-                  ? formatDurationLabel(servico.duracao_minutos)
-                  : null,
-              }))}
+              servicos={servicos.map((servico) => {
+                const duracaoResolvida =
+                  parseDuracaoPositiva(duracaoPorServico.get(servico.id)) ??
+                  parseDuracaoPositiva(servico.duracao_minutos) ??
+                  parseDuracaoPositiva(servico.duracao);
+
+                return {
+                  value: servico.id,
+                  label: servico.nome,
+                  description: duracaoResolvida
+                    ? formatDurationLabel(duracaoResolvida)
+                    : null,
+                };
+              })}
               profissionais={profissionais.map((profissional) => ({
                 value: profissional.id,
                 label:

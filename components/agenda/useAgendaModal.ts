@@ -47,6 +47,7 @@ export type SaveBloqueioPayload = {
   id: string | null;
   profissionalId: string;
   data: string;
+  datas?: string[];
   horaInicio: string;
   horaFim: string;
   motivo: string;
@@ -124,6 +125,9 @@ export function useAgendaModal({
   const [horaFimBloqueio, setHoraFimBloqueio] = useState(selectedTime);
   const [motivoBloqueio, setMotivoBloqueio] = useState("");
   const [dataBloqueio, setDataBloqueio] = useState(selectedDate);
+  const [datasBloqueio, setDatasBloqueio] = useState<string[]>(
+    selectedDate ? [selectedDate] : []
+  );
 
   const [comandaId, setComandaId] = useState("");
   const [comandaNumero, setComandaNumero] = useState<number | null>(null);
@@ -286,6 +290,7 @@ export function useAgendaModal({
       if (editingBlock) {
         setProfissionalId(editingBlock.profissional_id || selectedProfissionalId);
         setDataBloqueio(editingBlock.data || selectedDate);
+        setDatasBloqueio(editingBlock.data ? [editingBlock.data] : []);
         setHoraInicio(normalizeTimeString(editingBlock.hora_inicio));
         setHoraFimBloqueio(normalizeTimeString(editingBlock.hora_fim));
         setMotivoBloqueio(editingBlock.motivo || "");
@@ -298,6 +303,7 @@ export function useAgendaModal({
 
         setProfissionalId(selectedProfissionalId || "");
         setDataBloqueio(selectedDate);
+        setDatasBloqueio(selectedDate ? [selectedDate] : []);
         setHoraInicio(start);
         setHoraFimBloqueio(initialBlockEndTime || `${endHour}:${endMin}`);
         setMotivoBloqueio(initialBlockReason || "");
@@ -525,6 +531,46 @@ export function useAgendaModal({
     return "WhatsApp";
   }
 
+  function handleDataBloqueioChange(value: string) {
+    setDataBloqueio(value);
+    setDatasBloqueio((prev) => {
+      const next = prev.filter(Boolean);
+
+      if (!value) {
+        return editingBlock ? [] : next.slice(1);
+      }
+
+      if (editingBlock) {
+        return [value];
+      }
+
+      const restantes = next.filter((item, index) => index !== 0 && item !== value);
+      return [value, ...restantes];
+    });
+  }
+
+  function handleAdicionarDataBloqueio() {
+    const value = String(dataBloqueio || "").trim();
+    if (!value) return;
+
+    setDatasBloqueio((prev) => {
+      if (prev.includes(value)) return prev;
+      return [...prev, value].sort();
+    });
+  }
+
+  function handleRemoverDataBloqueio(value: string) {
+    setDatasBloqueio((prev) => {
+      const next = prev.filter((item) => item !== value);
+
+      if (dataBloqueio === value) {
+        setDataBloqueio(next[0] || "");
+      }
+
+      return next;
+    });
+  }
+
   async function handleClienteChange(novoClienteId: string) {
     setClienteId(novoClienteId);
 
@@ -723,10 +769,19 @@ export function useAgendaModal({
     }
 
     if (mode === "bloqueio") {
-      if (!profissionalId || !dataBloqueio || !horaInicio || !horaFimBloqueio) {
+      const datasSelecionadas = editingBlock
+        ? [dataBloqueio]
+        : Array.from(new Set(datasBloqueio.filter(Boolean))).sort();
+
+      if (
+        !profissionalId ||
+        !datasSelecionadas.length ||
+        !horaInicio ||
+        !horaFimBloqueio
+      ) {
         abrirAviso(
           "Campos obrigatórios",
-          "Preencha profissional, data, hora de inicio e hora de fim.",
+          "Preencha profissional, pelo menos uma data, hora de inicio e hora de fim.",
           "warning"
         );
         return;
@@ -771,11 +826,16 @@ export function useAgendaModal({
           status,
         });
       } else {
+        const datasSelecionadas = editingBlock
+          ? [dataBloqueio]
+          : Array.from(new Set(datasBloqueio.filter(Boolean))).sort();
+
         await onSave({
           tipo: "bloqueio",
           id: editingBlock?.id || null,
           profissionalId,
-          data: dataBloqueio,
+          data: datasSelecionadas[0],
+          datas: datasSelecionadas,
           horaInicio: normalizeTimeString(horaInicio),
           horaFim: normalizeTimeString(horaFimBloqueio),
           motivo: motivoBloqueio,
@@ -809,7 +869,10 @@ export function useAgendaModal({
     status,
     setStatus,
     dataBloqueio,
-    setDataBloqueio,
+    setDataBloqueio: handleDataBloqueioChange,
+    datasBloqueio,
+    handleAdicionarDataBloqueio,
+    handleRemoverDataBloqueio,
     horaFimBloqueio,
     setHoraFimBloqueio,
     motivoBloqueio,

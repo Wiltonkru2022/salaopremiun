@@ -197,7 +197,7 @@ export async function buscarServicoPorId(idSalao: string, idServico: string) {
     run: async (supabase) => {
       const { data, error } = await supabase
         .from("servicos")
-        .select("id, nome, duracao_minutos, preco, preco_padrao")
+        .select("id, nome, duracao, duracao_minutos, preco, preco_padrao")
         .eq("id", idServico)
         .eq("id_salao", idSalao)
         .maybeSingle();
@@ -206,6 +206,54 @@ export async function buscarServicoPorId(idSalao: string, idServico: string) {
       if (!data) throw new Error("Serviço não encontrado.");
 
       return data;
+    },
+  });
+}
+
+export async function buscarServicoDoProfissional(params: {
+  idSalao: string;
+  idProfissional: string;
+  idServico: string;
+}) {
+  return runAdminOperation({
+    action: "profissional_agenda_buscar_servico_do_profissional",
+    actorId: params.idProfissional,
+    idSalao: params.idSalao,
+    run: async (supabase) => {
+      const [servicoResult, vinculoResult] = await Promise.all([
+        supabase
+          .from("servicos")
+          .select("id, nome, duracao, duracao_minutos, preco, preco_padrao")
+          .eq("id", params.idServico)
+          .eq("id_salao", params.idSalao)
+          .maybeSingle(),
+        supabase
+          .from("profissional_servicos")
+          .select("duracao_minutos, preco_personalizado")
+          .eq("id_salao", params.idSalao)
+          .eq("id_profissional", params.idProfissional)
+          .eq("id_servico", params.idServico)
+          .eq("ativo", true)
+          .maybeSingle(),
+      ]);
+
+      if (servicoResult.error) throw new Error(servicoResult.error.message);
+      if (vinculoResult.error) throw new Error(vinculoResult.error.message);
+      if (!servicoResult.data) throw new Error("Serviço não encontrado.");
+
+      return {
+        ...servicoResult.data,
+        duracao_minutos:
+          Number(vinculoResult.data?.duracao_minutos || 0) ||
+          Number(servicoResult.data.duracao_minutos || 0) ||
+          Number(servicoResult.data.duracao || 0) ||
+          60,
+        preco:
+          vinculoResult.data?.preco_personalizado ??
+          servicoResult.data.preco ??
+          servicoResult.data.preco_padrao ??
+          0,
+      };
     },
   });
 }

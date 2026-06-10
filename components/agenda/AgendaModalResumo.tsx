@@ -15,6 +15,7 @@ type Props = {
   servicoSelecionado?: Servico;
   horaInicio: string;
   horaFimPreview: string | null;
+  datasBloqueio: string[];
   horaFimBloqueio: string;
   motivoBloqueio: string;
   comandaNumero: number | null;
@@ -70,6 +71,7 @@ export default function AgendaModalResumo({
   servicoSelecionado,
   horaInicio,
   horaFimPreview,
+  datasBloqueio,
   horaFimBloqueio,
   motivoBloqueio,
   comandaNumero,
@@ -126,6 +128,15 @@ export default function AgendaModalResumo({
             </>
           ) : (
             <>
+              <InfoCard
+                label="Dias"
+                value={
+                  datasBloqueio.length > 1
+                    ? `${datasBloqueio.length} dias selecionados`
+                    : datasBloqueio[0] || "Nenhum dia"
+                }
+              />
+
               <div className="grid grid-cols-2 gap-2">
                 <InfoCard
                   label="Inicio"

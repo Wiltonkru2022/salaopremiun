@@ -26,8 +26,19 @@ type ClienteOption = {
 type ServicoOption = {
   id: string;
   nome: string;
+  duracao?: number | null;
   duracao_minutos?: number | null;
 };
+
+type VinculoServicoRow = {
+  id_servico?: string | null;
+  duracao_minutos?: number | null;
+};
+
+function parseDuracaoPositiva(value: unknown) {
+  const parsed = Number(value ?? 0);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+}
 
 function hojeLocal() {
   const now = new Date();
@@ -53,7 +64,7 @@ export default async function NovaComandaProfissionalPage({
   const session = await requireProfissionalAppContext();
   const query = searchParams ? await searchParams : {};
 
-  const { clientes, servicos } = await runAdminOperation({
+  const { clientes, servicos, duracaoPorServico } = await runAdminOperation({
     action: "app_profissional_nova_comanda_page",
     actorId: session.idProfissional,
     idSalao: session.idSalao,
@@ -87,12 +98,13 @@ export default async function NovaComandaProfissionalPage({
         return {
           clientes: (clientesData || []) as ClienteOption[],
           servicos: [] as ServicoOption[],
+          duracaoPorServico: new Map<string, number>(),
         };
       }
 
       const { data: servicosData, error: servicosError } = await supabaseAdmin
         .from("servicos")
-        .select("id, nome, duracao_minutos, ativo, status")
+        .select("id, nome, duracao, duracao_minutos, ativo, status")
         .eq("id_salao", session.idSalao)
         .in("id", idsServicos)
         .eq("ativo", true)
@@ -101,9 +113,19 @@ export default async function NovaComandaProfissionalPage({
 
       if (servicosError) throw new Error(servicosError.message);
 
+      const duracaoMap = new Map<string, number>();
+      for (const vinculo of (vinculosData || []) as VinculoServicoRow[]) {
+        const idServico = String(vinculo.id_servico || "").trim();
+        const duracao = Number(vinculo.duracao_minutos || 0);
+        if (idServico && duracao > 0 && !duracaoMap.has(idServico)) {
+          duracaoMap.set(idServico, duracao);
+        }
+      }
+
       return {
         clientes: (clientesData || []) as ClienteOption[],
         servicos: (servicosData || []) as ServicoOption[],
+        duracaoPorServico: duracaoMap,
       };
     },
   });
@@ -174,13 +196,20 @@ export default async function NovaComandaProfissionalPage({
               defaultValue={query.servico_id || ""}
               placeholder="Digite o nome do serviço"
               emptyText="Nenhum serviço encontrado."
-              options={servicos.map((servico) => ({
-                value: servico.id,
-                label: servico.nome,
-                description: servico.duracao_minutos
-                  ? formatDurationLabel(servico.duracao_minutos)
-                  : null,
-              }))}
+              options={servicos.map((servico) => {
+                const duracaoResolvida =
+                  parseDuracaoPositiva(duracaoPorServico.get(servico.id)) ??
+                  parseDuracaoPositiva(servico.duracao_minutos) ??
+                  parseDuracaoPositiva(servico.duracao);
+
+                return {
+                  value: servico.id,
+                  label: servico.nome,
+                  description: duracaoResolvida
+                    ? formatDurationLabel(duracaoResolvida)
+                    : null,
+                };
+              })}
             />
             <label className="block text-sm font-medium text-zinc-700">
               Cliente
@@ -213,8 +242,17 @@ export default async function NovaComandaProfissionalPage({
                 <option value="">Selecione o serviço inicial</option>
                 {servicos.map((servico) => (
                   <option key={servico.id} value={servico.id}>
-                    {servico.nome}
-                    {servico.duracao_minutos ? ` - ${formatDurationLabel(servico.duracao_minutos)}` : ""}
+                    {`${servico.nome}${
+                      (() => {
+                      const duracaoResolvida =
+                        parseDuracaoPositiva(duracaoPorServico.get(servico.id)) ??
+                        parseDuracaoPositiva(servico.duracao_minutos) ??
+                        parseDuracaoPositiva(servico.duracao);
+                        return duracaoResolvida
+                          ? ` - ${formatDurationLabel(duracaoResolvida)}`
+                          : "";
+                      })()
+                    }`}
                   </option>
                 ))}
               </select>

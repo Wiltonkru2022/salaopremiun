@@ -1,5 +1,11 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Agendamento, Bloqueio, ConfigSalao, Profissional, Servico } from "@/types/agenda";
+import type {
+  Agendamento,
+  Bloqueio,
+  ConfigSalao,
+  Profissional,
+  Servico,
+} from "@/types/agenda";
 import {
   addDurationToTime,
   mergeBloqueios,
@@ -63,7 +69,10 @@ export async function saveAgendaItem(params: {
   servicos: Servico[];
   agendaMonthlyLimit?: number | null;
   ensureDiaFuncionamentoFn: (dateString: string) => boolean;
-  getProfessionalAutoBloqueiosFn: (profissionalId: string, date: string) => Bloqueio[];
+  getProfessionalAutoBloqueiosFn: (
+    profissionalId: string,
+    date: string
+  ) => Bloqueio[];
   validateAgendaTimeRangeFn: (params: {
     profissionalId: string;
     date: string;
@@ -91,18 +100,18 @@ export async function saveAgendaItem(params: {
     sincronizarAgendamentoFn,
   } = params;
 
-  if (!ensureDiaFuncionamentoFn(String(payload.data || ""))) {
-    throw new Error("Esse dia não está configurado como dia de funcionamento.");
-  }
-
   if (payload.tipo === "agendamento") {
+    if (!ensureDiaFuncionamentoFn(String(payload.data || ""))) {
+      throw new Error("Esse dia nao esta configurado como dia de funcionamento.");
+    }
+
     if (!payload.profissionalId || !payload.clienteId || !payload.servicoId) {
-      throw new Error("Preencha profissional, cliente e serviço.");
+      throw new Error("Preencha profissional, cliente e servico.");
     }
 
     const servico = servicos.find((s) => s.id === payload.servicoId);
     if (!servico) {
-      throw new Error("Selecione um serviço válido.");
+      throw new Error("Selecione um servico valido.");
     }
 
     const profissionaisVinculados = servico.profissionais_vinculados || [];
@@ -138,7 +147,7 @@ export async function saveAgendaItem(params: {
     );
 
     if (conflitoBloqueio) {
-      throw new Error("Esse horário está bloqueado.");
+      throw new Error("Esse horario esta bloqueado.");
     }
 
     if (payload.id) {
@@ -231,44 +240,65 @@ export async function saveAgendaItem(params: {
   }
 
   if (payload.tipo === "bloqueio") {
+    const datasBloqueio =
+      payload.id || !Array.isArray(payload.datas)
+        ? [String(payload.data || "")]
+        : Array.from(
+            new Set(
+              payload.datas
+                .map((item) => String(item || "").trim())
+                .filter(Boolean)
+            )
+          ).sort();
+
     const horaInicio = normalizeTimeString(String(payload.horaInicio || ""));
     const horaFim = normalizeTimeString(String(payload.horaFim || ""));
 
-    const validRange = validateAgendaTimeRangeFn({
-      profissionalId: String(payload.profissionalId),
-      date: String(payload.data),
-      horaInicio,
-      horaFim,
-    });
-
-    if (!validRange.ok) {
-      throw new Error(validRange.message);
-    }
-
     if (timeToMinutes(horaFim) <= timeToMinutes(horaInicio)) {
-      throw new Error("Hora fim deve ser maior que a hora início.");
+      throw new Error("Hora fim deve ser maior que a hora inicio.");
     }
 
-    const conflitoAgendamento = agendamentos.some(
-      (a) =>
-        a.profissional_id === payload.profissionalId &&
-        a.data === payload.data &&
-        overlaps(horaInicio, horaFim, a.hora_inicio, a.hora_fim)
+    const datasForaFuncionamento = datasBloqueio.filter(
+      (data) => !ensureDiaFuncionamentoFn(data)
     );
 
-    const conflitoBloqueio = bloqueios.some(
-      (b) =>
-        b.id !== payload.id &&
-        b.profissional_id === payload.profissionalId &&
-        b.data === payload.data &&
-        overlaps(horaInicio, horaFim, b.hora_inicio, b.hora_fim)
-    );
-
-    if (conflitoAgendamento || conflitoBloqueio) {
-      throw new Error("Esse intervalo já possui agendamento ou bloqueio.");
+    if (datasForaFuncionamento.length) {
+      throw new Error(
+        `Esses dias nao estao configurados como funcionamento: ${datasForaFuncionamento.join(", ")}.`
+      );
     }
 
     if (payload.id) {
+      const validRange = validateAgendaTimeRangeFn({
+        profissionalId: String(payload.profissionalId),
+        date: String(payload.data),
+        horaInicio,
+        horaFim,
+      });
+
+      if (!validRange.ok) {
+        throw new Error(validRange.message);
+      }
+
+      const conflitoAgendamento = agendamentos.some(
+        (a) =>
+          a.profissional_id === payload.profissionalId &&
+          a.data === payload.data &&
+          overlaps(horaInicio, horaFim, a.hora_inicio, a.hora_fim)
+      );
+
+      const conflitoBloqueio = bloqueios.some(
+        (b) =>
+          b.id !== payload.id &&
+          b.profissional_id === payload.profissionalId &&
+          b.data === payload.data &&
+          overlaps(horaInicio, horaFim, b.hora_inicio, b.hora_fim)
+      );
+
+      if (conflitoAgendamento || conflitoBloqueio) {
+        throw new Error("Esse intervalo ja possui agendamento ou bloqueio.");
+      }
+
       const { error } = await supabase
         .from("agenda_bloqueios")
         .update({
@@ -289,14 +319,55 @@ export async function saveAgendaItem(params: {
       return;
     }
 
-    const { error } = await supabase.from("agenda_bloqueios").insert({
-      id_salao: idSalao,
-      profissional_id: payload.profissionalId,
-      data: payload.data,
-      hora_inicio: horaInicio,
-      hora_fim: horaFim,
-      motivo: payload.motivo || null,
-    });
+    const datasComConflito: string[] = [];
+
+    for (const data of datasBloqueio) {
+      const validRange = validateAgendaTimeRangeFn({
+        profissionalId: String(payload.profissionalId),
+        date: data,
+        horaInicio,
+        horaFim,
+      });
+
+      if (!validRange.ok) {
+        throw new Error(validRange.message);
+      }
+
+      const conflitoAgendamento = agendamentos.some(
+        (a) =>
+          a.profissional_id === payload.profissionalId &&
+          a.data === data &&
+          overlaps(horaInicio, horaFim, a.hora_inicio, a.hora_fim)
+      );
+
+      const conflitoBloqueio = bloqueios.some(
+        (b) =>
+          b.profissional_id === payload.profissionalId &&
+          b.data === data &&
+          overlaps(horaInicio, horaFim, b.hora_inicio, b.hora_fim)
+      );
+
+      if (conflitoAgendamento || conflitoBloqueio) {
+        datasComConflito.push(data);
+      }
+    }
+
+    if (datasComConflito.length) {
+      throw new Error(
+        `Esse intervalo ja possui agendamento ou bloqueio em: ${datasComConflito.join(", ")}.`
+      );
+    }
+
+    const { error } = await supabase.from("agenda_bloqueios").insert(
+      datasBloqueio.map((data) => ({
+        id_salao: idSalao,
+        profissional_id: payload.profissionalId,
+        data,
+        hora_inicio: horaInicio,
+        hora_fim: horaFim,
+        motivo: payload.motivo || null,
+      }))
+    );
 
     if (error) {
       console.error(error);

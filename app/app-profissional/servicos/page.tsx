@@ -25,6 +25,7 @@ type ServicoLinkedRow = {
     ativo?: boolean | null;
     status?: string | null;
     app_cliente_visivel?: boolean | null;
+    duracao?: number | null;
     duracao_minutos?: number | null;
     preco?: number | string | null;
     preco_padrao?: number | string | null;
@@ -40,7 +41,7 @@ function formatarMoeda(valor: unknown) {
 
 function duracaoServico(vinculo: ServicoLinkedRow, servico: ServicoLinkedRow["servicos"]) {
   const duracaoVinculo = Number(vinculo.duracao_minutos || 0);
-  const duracaoServico = Number(servico?.duracao_minutos || 0);
+  const duracaoServico = Number(servico?.duracao_minutos ?? servico?.duracao ?? 0);
   return duracaoVinculo > 0 ? duracaoVinculo : duracaoServico > 0 ? duracaoServico : 60;
 }
 
@@ -60,7 +61,7 @@ export default async function ServicosProfissionalPage({
       const { data, error } = await (supabase as any)
         .from("profissional_servicos")
         .select(
-          "id_servico, duracao_minutos, preco_personalizado, servicos(id, nome, descricao, ativo, status, app_cliente_visivel, duracao_minutos, preco, preco_padrao)"
+          "id_servico, duracao_minutos, preco_personalizado, servicos(id, nome, descricao, ativo, status, app_cliente_visivel, duracao, duracao_minutos, preco, preco_padrao)"
         )
         .eq("id_salao", session.idSalao)
         .eq("id_profissional", session.idProfissional)

@@ -16,7 +16,7 @@ import {
   buscarConfiguracaoAgendaProfissional,
   buscarConflitosBloqueioNoHorario,
   buscarConflitosNoHorario,
-  buscarServicoPorId,
+  buscarServicoDoProfissional,
   validarHorarioAgendamento,
 } from "@/app/services/profissional/agenda";
 import { notifyWaitlistAboutReleasedSlot } from "@/lib/client-app/waitlist";
@@ -155,7 +155,11 @@ export async function atualizarAgendamentoProfissionalAction(
         session.idSalao,
         idProfissionalAgendamento
       ),
-      buscarServicoPorId(session.idSalao, agendamento.servico_id),
+      buscarServicoDoProfissional({
+        idSalao: session.idSalao,
+        idProfissional: idProfissionalAgendamento,
+        idServico: String(agendamento.servico_id || ""),
+      }),
     ]);
 
     const duracaoMinutos =
@@ -607,10 +611,11 @@ export async function cancelarAgendamentoProfissionalAction(formData: FormData) 
     });
 
     try {
-      const servico = await buscarServicoPorId(
-        session.idSalao,
-        agendamento.servico_id
-      );
+      const servico = await buscarServicoDoProfissional({
+        idSalao: session.idSalao,
+        idProfissional: String(agendamento.profissional_id || session.idProfissional),
+        idServico: String(agendamento.servico_id || ""),
+      });
       await runAdminOperation({
         action: "app_profissional_lista_espera_cancelamento",
         actorId: session.idProfissional,

@@ -11,7 +11,7 @@ import { requireProfissionalAppContext } from "@/lib/profissional-context.server
 import { runAdminOperation } from "@/lib/supabase/admin-ops";
 import {
   buscarConfiguracaoAgendaProfissional,
-  buscarServicoPorId,
+  buscarServicoDoProfissional,
   validarHorarioAgendamento,
   validarServicoVinculadoAoProfissional,
 } from "@/app/services/profissional/agenda";
@@ -85,7 +85,11 @@ export async function criarComandaProfissionalAction(formData: FormData) {
         session.idSalao,
         session.idProfissional
       ),
-      buscarServicoPorId(session.idSalao, servicoId),
+      buscarServicoDoProfissional({
+        idSalao: session.idSalao,
+        idProfissional: session.idProfissional,
+        idServico: servicoId,
+      }),
       validarServicoVinculadoAoProfissional(
         session.idSalao,
         session.idProfissional,

@@ -23,6 +23,7 @@ type ServicoRow = {
   nome?: string | null;
   descricao?: string | null;
   id_categoria?: string | null;
+  duracao?: number | null;
   duracao_minutos?: number | null;
   pausa_minutos?: number | null;
   preco?: number | string | null;
@@ -54,7 +55,7 @@ export default async function EditarServicoProfissionalPage({
           supabase
             .from("servicos")
             .select(
-              "id, nome, descricao, id_categoria, duracao_minutos, pausa_minutos, preco, preco_padrao, ativo, app_cliente_visivel, cobra_sinal_agendamento, sinal_percentual_personalizado"
+              "id, nome, descricao, id_categoria, duracao, duracao_minutos, pausa_minutos, preco, preco_padrao, ativo, app_cliente_visivel, cobra_sinal_agendamento, sinal_percentual_personalizado"
             )
             .eq("id", id)
             .eq("id_salao", session.idSalao)
@@ -105,7 +106,7 @@ export default async function EditarServicoProfissionalPage({
   }
 
   const duracaoVinculo = Number(data.vinculo.duracao_minutos || 0);
-  const duracaoServico = Number(data.servico.duracao_minutos || 0);
+  const duracaoServico = Number(data.servico.duracao_minutos ?? data.servico.duracao ?? 0);
   const servico = {
     ...data.servico,
     duracao_minutos: duracaoVinculo > 0 ? duracaoVinculo : duracaoServico > 0 ? duracaoServico : 60,
