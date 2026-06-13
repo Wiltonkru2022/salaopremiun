@@ -134,7 +134,7 @@ export function createProfissionalAcessoService(
         .from("profissionais_acessos")
         .insert({
           ...payload,
-          senha_hash: params.senhaHash ?? null,
+          senha_hash: params.senhaHash ?? "",
         });
 
       if (error) throw error;
