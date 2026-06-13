@@ -26,11 +26,29 @@ declare
   v_cpf text := regexp_replace(coalesce(p_cpf, ''), '\D', '', 'g');
   v_acesso record;
 begin
-  select a.id, a.id_profissional, a.cpf, a.senha_hash, a.ativo
+  select
+    a.id,
+    a.id_profissional,
+    a.cpf,
+    a.senha_hash,
+    a.ativo,
+    p.cpf as profissional_cpf
     into v_acesso
   from public.profissionais_acessos a
-  where a.cpf = v_cpf
-    and a.ativo = true
+  join public.profissionais p on p.id = a.id_profissional
+  where a.ativo = true
+    and p.ativo = true
+    and coalesce(p.tipo_profissional, 'profissional') <> 'assistente'
+    and coalesce(p.nivel_acesso, 'proprio') <> 'sem_acesso'
+    and coalesce(p.pode_usar_sistema, true) = true
+    and a.senha_hash <> ''
+    and (
+      a.cpf = v_cpf
+      or regexp_replace(coalesce(p.cpf, ''), '\D', '', 'g') = v_cpf
+    )
+  order by
+    case when a.cpf = v_cpf then 0 else 1 end,
+    a.atualizado_em desc
   limit 1;
 
   if v_acesso.id is null then
@@ -51,7 +69,7 @@ begin
     p.id_salao,
     p.nome,
     p.nome_exibicao,
-    v_acesso.cpf::text,
+    coalesce(nullif(v_acesso.cpf, ''), regexp_replace(coalesce(p.cpf, ''), '\D', '', 'g'))::text,
     p.telefone::text,
     p.email::text,
     p.ativo,
@@ -61,6 +79,8 @@ begin
   where p.id = v_acesso.id_profissional
     and p.ativo = true
     and coalesce(p.tipo_profissional, 'profissional') <> 'assistente'
+    and coalesce(p.nivel_acesso, 'proprio') <> 'sem_acesso'
+    and coalesce(p.pode_usar_sistema, true) = true
   limit 1;
 end;
 $$;
