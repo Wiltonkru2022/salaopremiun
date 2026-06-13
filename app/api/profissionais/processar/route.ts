@@ -6,6 +6,8 @@ import {
   ProcessarProfissionalUseCaseError,
 } from "@/core/use-cases/profissionais/processarProfissional";
 import { createProfissionalService } from "@/services/profissionalService";
+import { createProfissionalAcessoService } from "@/services/profissionalAcessoService";
+import { salvarProfissionalAcessoUseCase } from "@/core/use-cases/profissionais-acessos/salvarProfissionalAcesso";
 import {
   AuthzError,
   PlanAccessError,
@@ -38,6 +40,32 @@ export async function POST(req: NextRequest) {
       input,
       service: createProfissionalService(),
     });
+
+    if (
+      (input.acao === "criar" || input.acao === "atualizar") &&
+      input.acessoApp &&
+      result.body.idProfissional
+    ) {
+      const cpfAcesso = String(input.acessoApp.cpf || "").trim();
+
+      if (!cpfAcesso) {
+        throw new ProcessarProfissionalUseCaseError(
+          "Informe o CPF do profissional para salvar o acesso ao app.",
+          400
+        );
+      }
+
+      await salvarProfissionalAcessoUseCase({
+        input: {
+          idProfissional: String(result.body.idProfissional),
+          cpf: cpfAcesso,
+          senha: String(input.acessoApp.senha || "").trim() || undefined,
+          ativo: Boolean(input.acessoApp.ativo),
+          ticketRecuperacaoId: input.acessoApp.ticketRecuperacaoId,
+        },
+        service: createProfissionalAcessoService(),
+      });
+    }
 
     return NextResponse.json(result.body, { status: result.status });
   } catch (error) {

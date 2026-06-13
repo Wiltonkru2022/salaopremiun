@@ -78,6 +78,12 @@ export type ProfissionalProcessarBody = {
   servicos?: ProfissionalServicoPayload[];
   assistentes?: string[];
   foto_url?: string | null;
+  acesso_app?: {
+    cpf?: string;
+    senha?: string;
+    ativo?: boolean;
+    ticket_recuperacao_id?: string;
+  } | null;
 };
 
 export type ProfissionalProcessarResponse = {

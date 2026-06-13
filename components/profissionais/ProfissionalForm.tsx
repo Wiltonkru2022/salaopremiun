@@ -511,7 +511,7 @@ export default function ProfissionalForm({
 
     return result.publicUrl;
   }
-async function salvarAcessoProfissional(idProfissional: string) {
+async function _salvarAcessoProfissional(idProfissional: string) {
   const cpfLimpo = onlyDigits(acesso.cpf || form.cpf);
 
   if (!cpfLimpo) {
@@ -615,6 +615,15 @@ async function salvarAcessoProfissional(idProfissional: string) {
         profissional: payloadBase,
         servicos: isAssistenteSalao ? [] : servicosSelecionados,
         assistentes: isAssistenteSalao ? [] : assistentesSelecionados,
+        acesso_app: isAssistenteSalao
+          ? null
+          : {
+              cpf: onlyDigits(acesso.cpf || form.cpf),
+              senha: acesso.senha.trim() || "",
+              ativo: acesso.ativo,
+              ticket_recuperacao_id:
+                recoveryTicketId && acesso.senha.trim() ? recoveryTicketId : undefined,
+            },
       };
 
       const salvarResponse = await fetch("/api/profissionais/processar", {
@@ -660,10 +669,6 @@ async function salvarAcessoProfissional(idProfissional: string) {
         if (!fotoResponse.ok) {
           throw new Error(fotoResult.error || "Erro ao salvar foto.");
         }
-      }
-
-      if (!isAssistenteSalao) {
-        await salvarAcessoProfissional(idProfissional);
       }
 
       if (modo === "novo") {

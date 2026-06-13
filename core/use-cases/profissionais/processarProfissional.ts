@@ -125,6 +125,14 @@ const processarProfissionalBodySchema = z
     servicos: z.array(servicoSchema).nullish(),
     assistentes: z.array(z.string()).nullish(),
     foto_url: nullableString,
+    acesso_app: z
+      .object({
+        cpf: nullableString,
+        senha: nullableString,
+        ativo: z.boolean().optional(),
+        ticket_recuperacao_id: nullableString,
+      })
+      .nullish(),
   })
   .superRefine((body, ctx) => {
     if (
@@ -178,6 +186,12 @@ export type ProcessarProfissionalInput = {
   servicos: ProfissionalServicoPayload[];
   assistentes: string[];
   fotoUrl?: string;
+  acessoApp?: {
+    cpf?: string;
+    senha?: string;
+    ativo?: boolean;
+    ticketRecuperacaoId?: string;
+  } | null;
 };
 
 export type ProcessarProfissionalUseCaseResult = {
@@ -317,6 +331,15 @@ export function parseProcessarProfissionalInput(
     servicos: (parsed.servicos || []) as ProfissionalServicoPayload[],
     assistentes: parsed.assistentes || [],
     fotoUrl: getString(parsed.foto_url) || undefined,
+    acessoApp: parsed.acesso_app
+      ? {
+          cpf: getString(parsed.acesso_app.cpf) || undefined,
+          senha: getString(parsed.acesso_app.senha) || undefined,
+          ativo: parsed.acesso_app.ativo,
+          ticketRecuperacaoId:
+            getString(parsed.acesso_app.ticket_recuperacao_id) || undefined,
+        }
+      : null,
   };
 }
 

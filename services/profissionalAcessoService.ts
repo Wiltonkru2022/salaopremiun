@@ -126,15 +126,15 @@ export function createProfissionalAcessoService(
         return;
       }
 
-      if (!params.senhaHash) {
-        throw new Error("Senha obrigatória para criar acesso profissional.");
+      if (!params.senhaHash && params.ativo) {
+        throw new Error("Senha obrigatoria para criar acesso profissional.");
       }
 
       const { error } = await supabaseAdmin
         .from("profissionais_acessos")
         .insert({
           ...payload,
-          senha_hash: params.senhaHash,
+          senha_hash: params.senhaHash ?? null,
         });
 
       if (error) throw error;
@@ -173,7 +173,7 @@ export function createProfissionalAcessoService(
       }
 
       const now = new Date().toISOString();
-      const mensagem = `Senha do app redefinida pelo salão ${params.nomeSalao}. O profissional já pode entrar com a nova senha.`;
+      const mensagem = `Senha do app redefinida pelo salao ${params.nomeSalao}. O profissional ja pode entrar com a nova senha.`;
 
       await supabaseAdmin.from("ticket_mensagens").insert({
         id_ticket: params.idTicket,
@@ -183,16 +183,20 @@ export function createProfissionalAcessoService(
         interna: false,
       });
 
-      const { data: eventoSenha } = await supabaseAdmin.from("ticket_eventos").insert({
-        id_ticket: params.idTicket,
-        evento: "senha_redefinida_salao",
-        descricao: `Senha redefinida pelo salão ${params.nomeSalao} para ${params.nomeProfissional}.`,
-        payload_json: {
-          nome_salao: params.nomeSalao,
-          nome_profissional: params.nomeProfissional,
-          id_profissional: params.idProfissional,
-        } as Json,
-      }).select("id").maybeSingle();
+      const { data: eventoSenha } = await supabaseAdmin
+        .from("ticket_eventos")
+        .insert({
+          id_ticket: params.idTicket,
+          evento: "senha_redefinida_salao",
+          descricao: `Senha redefinida pelo salao ${params.nomeSalao} para ${params.nomeProfissional}.`,
+          payload_json: {
+            nome_salao: params.nomeSalao,
+            nome_profissional: params.nomeProfissional,
+            id_profissional: params.idProfissional,
+          } as Json,
+        })
+        .select("id")
+        .maybeSingle();
 
       const notificationId = String(eventoSenha?.id || "").trim();
 
@@ -201,8 +205,8 @@ export function createProfissionalAcessoService(
         idProfissional: params.idProfissional,
         canal: "profissional_app",
         tipo: "senha_redefinida_salao",
-        titulo: "Senha alterada pelo salão",
-        mensagem: `O salão ${params.nomeSalao} redefiniu sua senha de acesso ao App Profissional.`,
+        titulo: "Senha alterada pelo salao",
+        mensagem: `O salao ${params.nomeSalao} redefiniu sua senha de acesso ao App Profissional.`,
         url: notificationId
           ? `/app-profissional/notificacoes?notificacao=${encodeURIComponent(notificationId)}`
           : "/app-profissional/notificacoes",
