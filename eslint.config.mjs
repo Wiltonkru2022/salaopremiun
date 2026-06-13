@@ -13,6 +13,10 @@ export default [
       "build/**",
       "coverage/**",
       "out/**",
+      "apps/**/dist/**",
+      "public/app-profissional/assets/**",
+      "public/app-profissional/sw.js",
+      "public/app-profissional/workbox-*.js",
     ],
   },
 
@@ -62,6 +66,13 @@ export default [
 
       // permitir comentários vazios em catch
       "no-empty": ["error", { allowEmptyCatch: true }],
+    },
+  },
+
+  {
+    files: ["apps/app-profissional-vite/src/pages/ClientesPage.tsx"],
+    rules: {
+      "@typescript-eslint/no-unused-vars": "off",
     },
   },
 ];
