@@ -33,7 +33,7 @@ async function loadProfissionalServerContext(): Promise<ProfissionalServerContex
   const { data: profissional, error: profissionalError } = await supabaseAdmin
     .from("profissionais")
     .select(
-      "id, id_salao, nome, nome_exibicao, email, ativo, tipo_profissional, nivel_acesso"
+      "id, id_salao, nome, nome_exibicao, email, ativo, tipo_profissional, nivel_acesso, pode_usar_sistema"
     )
     .eq("id", session.idProfissional)
     .eq("id_salao", session.idSalao)
@@ -75,6 +75,9 @@ async function loadProfissionalServerContext(): Promise<ProfissionalServerContex
   }
 
   const nivelAcesso = String(profissional.nivel_acesso || "proprio").toLowerCase();
+  if (profissional.pode_usar_sistema === false || nivelAcesso === "sem_acesso") {
+    throw new Error("UNAUTHORIZED");
+  }
 
   return {
     idProfissional: profissional.id,

@@ -46,6 +46,7 @@ const PROFISSIONAL_FIELDS = [
   "sinal_whatsapp",
   "sinal_confirmacao_responsavel",
   "nivel_acesso",
+  "pode_usar_sistema",
   "status",
   "ativo",
   "dias_trabalho",
@@ -212,6 +213,10 @@ function sanitizeProfissionalPayload(
     tipoProfissional === "assistente"
       ? "sem_acesso"
       : getString(payload.nivel_acesso) || "proprio";
+  payload.pode_usar_sistema =
+    tipoProfissional !== "assistente" &&
+    payload.nivel_acesso !== "sem_acesso" &&
+    ativo;
   payload.status = ativo ? "ativo" : "inativo";
   payload.ativo = ativo;
   payload.comissao_produto_percentual = Number(
