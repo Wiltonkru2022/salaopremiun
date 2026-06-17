@@ -104,26 +104,37 @@ export function useProfissionalData(profissionalId?: string) {
       await refresh();
     }
 
-    async function excluirAgendamento(id: string) {
-      if (!profissionalId) return;
+    async function excluirAgendamento(id: string, targetProfissionalId?: string) {
+      const actorId = targetProfissionalId || profissionalId;
+      if (!actorId) return;
       const { error } = await supabase.rpc("app_profissional_excluir_agenda_item", {
-        p_profissional_id: profissionalId,
+        p_profissional_id: actorId,
         p_item_id: id
       });
       if (error) throw new Error(error.message);
       await refresh();
     }
 
-    async function bloquearHorario(data: string, horaInicio: string, duracaoMinutos: number, titulo = "Horario bloqueado") {
-      if (!profissionalId) return;
-      const { error } = await supabase.rpc("app_profissional_bloquear_horario", {
-        p_profissional_id: profissionalId,
-        p_data: data,
-        p_hora_inicio: horaInicio,
-        p_hora_fim: addMinutes(horaInicio, duracaoMinutos),
-        p_motivo: titulo
-      });
-      if (error) throw new Error(error.message);
+    async function bloquearHorario(
+      datas: string[],
+      horaInicio: string,
+      duracaoMinutos: number,
+      titulo = "Horario bloqueado",
+      targetProfissionalId?: string
+    ) {
+      const actorId = targetProfissionalId || profissionalId;
+      if (!actorId) return;
+
+      for (const data of Array.from(new Set(datas.filter(Boolean)))) {
+        const { error } = await supabase.rpc("app_profissional_bloquear_horario", {
+          p_profissional_id: actorId,
+          p_data: data,
+          p_hora_inicio: horaInicio,
+          p_hora_fim: addMinutes(horaInicio, duracaoMinutos),
+          p_motivo: titulo
+        });
+        if (error) throw new Error(error.message);
+      }
       await refresh();
     }
 

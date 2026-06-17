@@ -89,12 +89,25 @@ export function Calendar({
   selectedDate: string;
   onSelectDate: (date: string) => void;
   onConfirm: (id: string) => Promise<void>;
-  onDelete: (id: string) => Promise<void>;
-  onBlock: (data: string, horaInicio: string, duracaoMinutos: number, titulo?: string) => Promise<void>;
+  onDelete: (id: string, targetProfissionalId?: string) => Promise<void>;
+  onBlock: (datas: string[], horaInicio: string, duracaoMinutos: number, titulo?: string, targetProfissionalId?: string) => Promise<void>;
   onConfirmPix?: (id: string) => Promise<void>;
   onCreate?: (payload: { clienteId: string; servicoId: string; data: string; horaInicio: string; profissionalId?: string }) => Promise<void>;
   onReschedule?: (payload: { agendamentoId: string; data: string; horaInicio: string; horaFim: string; status: string }) => Promise<void>;
 }) {
+  function getHorarioDiaTodo(date: string) {
+    const dateObj = parseISODate(date);
+    const weekday = dateObj.getDay();
+    const horario = (profissionalAtual.horario_funcionamento || []).find(
+      (item) => Number(item.dia) === weekday && item.ativo
+    );
+
+    return {
+      inicio: horario?.inicio?.slice(0, 5) || "08:00",
+      fim: horario?.fim?.slice(0, 5) || "18:00"
+    };
+  }
+
   const [cursor, setCursor] = useState(() => {
     const selected = parseISODate(selectedDate);
     return new Date(selected.getFullYear(), selected.getMonth(), 1);
@@ -102,6 +115,9 @@ export function Calendar({
   const [blockHour, setBlockHour] = useState("12:00");
   const [blockDuration, setBlockDuration] = useState(60);
   const [blockReason, setBlockReason] = useState("Almoco");
+  const [blockSelectedDates, setBlockSelectedDates] = useState<string[]>([selectedDate]);
+  const [blockProfissional, setBlockProfissional] = useState("");
+  const [blockAllDay, setBlockAllDay] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [details, setDetails] = useState<Agendamento | null>(null);
   const [newOpen, setNewOpen] = useState(false);
@@ -116,6 +132,10 @@ export function Calendar({
 
   const canChooseProfessional = ["todos", "geral", "admin", "administrador"].includes(String(profissionalAtual.nivel_acesso || "").toLowerCase()) && profissionais.length > 1;
   const days = useMemo(() => buildMonthDays(cursor, agendamentos), [cursor, agendamentos]);
+  const selectedMonthDates = useMemo(
+    () => days.filter((day) => day.currentMonth && day.date).map((day) => day.date),
+    [days]
+  );
   const selectedItems = agendamentos
     .filter((item) => item.data === selectedDate)
     .sort((a, b) => a.hora_inicio.localeCompare(b.hora_inicio));
@@ -142,6 +162,14 @@ export function Calendar({
 
   function moveMonth(amount: number) {
     setCursor(new Date(cursor.getFullYear(), cursor.getMonth() + amount, 1));
+  }
+
+  function toggleBlockDate(date: string) {
+    setBlockSelectedDates((current) =>
+      current.includes(date)
+        ? current.filter((item) => item !== date)
+        : [...current, date].sort()
+    );
   }
 
   async function run(id: string, action: () => Promise<void>) {
@@ -224,7 +252,15 @@ export function Calendar({
             <CalendarPlus size={16} />
             Novo agendamento
           </Button>
-          <Button variant="secondary" onClick={() => setBlockOpen(true)}>
+          <Button
+            variant="secondary"
+            onClick={() => {
+              setBlockSelectedDates([selectedDate]);
+              setBlockProfissional(canChooseProfessional ? "" : profissionalAtual.id);
+              setBlockAllDay(false);
+              setBlockOpen(true);
+            }}
+          >
             <Ban size={16} />
             Bloquear horario
           </Button>
@@ -273,7 +309,7 @@ export function Calendar({
                   </Button>
                 ) : null}
                 {item.status !== "atendido" ? (
-                  <Button loading={busyId === `delete-${item.id}`} variant="danger" className="h-9 px-3" onClick={() => run(`delete-${item.id}`, () => onDelete(item.id))}>
+                  <Button loading={busyId === `delete-${item.id}`} variant="danger" className="h-9 px-3" onClick={() => run(`delete-${item.id}`, () => onDelete(item.id, item.profissional_id || undefined))}>
                     <Trash2 size={15} />
                     Excluir
                   </Button>
@@ -334,17 +370,100 @@ export function Calendar({
         </form>
       </Modal>
 
-      <Modal title="Bloquear horario" subtitle="Informe inicio, tempo e motivo do bloqueio." open={blockOpen} onClose={() => setBlockOpen(false)}>
+      <Modal title="Bloquear horario" subtitle="Selecione varias datas do mes e aplique o mesmo bloqueio." open={blockOpen} onClose={() => { setBlockAllDay(false); setBlockOpen(false); }}>
         <form
           className="grid gap-3"
           onSubmit={async (event) => {
             event.preventDefault();
-            await onBlock(selectedDate, blockHour, blockDuration, blockReason || "Bloqueio");
+            if (!blockSelectedDates.length || (canChooseProfessional && !blockProfissional)) return;
+            const horarioDiaTodo = getHorarioDiaTodo(blockSelectedDates[0] || selectedDate);
+            const horaInicioBloqueio = blockAllDay ? horarioDiaTodo.inicio : blockHour;
+            const duracaoBloqueio = blockAllDay
+              ? Math.max(
+                  5,
+                  Math.round(
+                    (new Date(`2000-01-01T${horarioDiaTodo.fim}`).getTime() -
+                      new Date(`2000-01-01T${horarioDiaTodo.inicio}`).getTime()) / 60000
+                  )
+                )
+              : blockDuration;
+            await onBlock(
+              blockSelectedDates,
+              horaInicioBloqueio,
+              duracaoBloqueio,
+              blockReason || "Bloqueio",
+              canChooseProfessional ? blockProfissional : profissionalAtual.id
+            );
+            setBlockAllDay(false);
             setBlockOpen(false);
           }}
         >
-          <Field label="Horario"><Input type="time" value={blockHour} onChange={(event) => setBlockHour(event.target.value)} /></Field>
-          <Field label="Tempo"><Input type="number" min={5} step={5} value={blockDuration} onChange={(event) => setBlockDuration(Number(event.target.value))} /></Field>
+          {canChooseProfessional ? (
+            <SearchPicker
+              hideInputWhenSelected
+              label="Profissional"
+              placeholder="Digite o nome"
+              options={profissionalOptions}
+              value={blockProfissional}
+              onChange={setBlockProfissional}
+              emptyText="Nenhum profissional encontrado."
+            />
+          ) : null}
+          <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-3">
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <div className="text-sm font-black text-zinc-900">Datas do bloqueio</div>
+              <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-zinc-600">
+                {blockSelectedDates.length} dia(s)
+              </span>
+            </div>
+            <div className="grid grid-cols-4 gap-2 sm:grid-cols-7">
+              {selectedMonthDates.map((date) => {
+                const parsed = parseISODate(date);
+                const active = blockSelectedDates.includes(date);
+
+                return (
+                  <button
+                    key={date}
+                    type="button"
+                    onClick={() => toggleBlockDate(date)}
+                    className={`rounded-2xl border p-2 text-left transition ${
+                      active
+                        ? "border-zinc-950 bg-zinc-950 text-white"
+                        : "border-zinc-200 bg-white text-zinc-800"
+                    }`}
+                  >
+                    <div
+                      className={`text-[0.65rem] font-black uppercase ${
+                        active ? "text-zinc-300" : "text-zinc-400"
+                      }`}
+                    >
+                      {new Intl.DateTimeFormat("pt-BR", { weekday: "short" })
+                        .format(parsed)
+                        .replace(".", "")}
+                    </div>
+                    <div className="mt-1 text-lg font-black leading-none">
+                      {parsed.getDate()}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          <label className="flex items-center gap-2 rounded-2xl border border-zinc-200 bg-zinc-50 px-3 py-3 text-sm font-black text-zinc-800">
+            <input
+              type="checkbox"
+              checked={blockAllDay}
+              onChange={(event) => setBlockAllDay(event.target.checked)}
+            />
+            Bloquear dia todo
+          </label>
+          {blockAllDay ? (
+            <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-xs font-semibold text-zinc-600">
+              Usa o expediente configurado do profissional para a data selecionada.
+            </div>
+          ) : null}
+          <Field label="Horario"><Input type="time" value={blockHour} onChange={(event) => setBlockHour(event.target.value)} disabled={blockAllDay} /></Field>
+          <Field label="Tempo"><Input type="number" min={5} step={5} value={blockDuration} onChange={(event) => setBlockDuration(Number(event.target.value))} disabled={blockAllDay} /></Field>
           <Field label="Observacao"><Input value={blockReason} onChange={(event) => setBlockReason(event.target.value)} placeholder="Ex.: almoco, curso, compromisso" /></Field>
           <ModalActionBar>
             <Button>Bloquear</Button>

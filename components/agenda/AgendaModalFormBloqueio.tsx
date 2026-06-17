@@ -12,6 +12,7 @@ type Props = {
   editingBlock?: Bloqueio | null;
   dataBloqueio: string;
   datasBloqueio: string[];
+  bloquearDiaTodo: boolean;
   horaInicio: string;
   horaFimBloqueio: string;
   motivoBloqueio: string;
@@ -19,6 +20,7 @@ type Props = {
   onDataChange: (value: string) => void;
   onAdicionarData: () => void;
   onRemoverData: (value: string) => void;
+  onBloquearDiaTodoChange: (value: boolean) => void;
   onHoraInicioChange: (value: string) => void;
   onHoraFimChange: (value: string) => void;
   onMotivoChange: (value: string) => void;
@@ -30,6 +32,7 @@ export default function AgendaModalFormBloqueio({
   editingBlock,
   dataBloqueio,
   datasBloqueio,
+  bloquearDiaTodo,
   horaInicio,
   horaFimBloqueio,
   motivoBloqueio,
@@ -37,6 +40,7 @@ export default function AgendaModalFormBloqueio({
   onDataChange,
   onAdicionarData,
   onRemoverData,
+  onBloquearDiaTodoChange,
   onHoraInicioChange,
   onHoraFimChange,
   onMotivoChange,
@@ -58,11 +62,11 @@ export default function AgendaModalFormBloqueio({
         <div className="rounded-[18px] border border-zinc-200 bg-zinc-50 p-3">
           <div className="flex items-center gap-2 text-sm font-semibold text-zinc-700">
             <AlertCircle size={14} />
-            Período indisponível
+            Periodo indisponivel
           </div>
 
           <p className="mt-2 text-xs leading-5 text-zinc-500">
-            Use para almoço, manutenção, reunião, curso ou pausa do profissional.
+            Use para almoco, manutencao, reuniao, curso ou pausa do profissional.
           </p>
         </div>
       </div>
@@ -120,16 +124,33 @@ export default function AgendaModalFormBloqueio({
         </div>
 
         <div>
+          <label className="flex items-center gap-2 rounded-[18px] border border-zinc-200 bg-white px-3 py-3 text-sm font-semibold text-zinc-700">
+            <input
+              type="checkbox"
+              checked={bloquearDiaTodo}
+              onChange={(e) => onBloquearDiaTodoChange(e.target.checked)}
+              className="h-4 w-4 rounded border-zinc-300 text-zinc-900 focus:ring-zinc-900"
+            />
+            Bloquear dia todo
+          </label>
+
+          <p className="mt-1.5 text-xs leading-5 text-zinc-500">
+            Usa automaticamente o inicio e o fim do expediente configurado para esse dia.
+          </p>
+        </div>
+
+        <div>
           <label className="mb-1.5 flex items-center gap-2 text-xs font-semibold text-zinc-700">
             <Clock3 size={13} />
-            Hora início
+            Hora inicio
           </label>
 
           <input
             type="time"
             value={horaInicio}
             onChange={(e) => onHoraInicioChange(e.target.value)}
-            className="w-full rounded-2xl border border-zinc-200 bg-zinc-50 px-3 py-2.5 text-sm outline-none transition focus:border-zinc-900 focus:bg-white"
+            disabled={bloquearDiaTodo}
+            className="w-full rounded-2xl border border-zinc-200 bg-zinc-50 px-3 py-2.5 text-sm outline-none transition focus:border-zinc-900 focus:bg-white disabled:cursor-not-allowed disabled:opacity-60"
             required
           />
         </div>
@@ -144,7 +165,8 @@ export default function AgendaModalFormBloqueio({
             type="time"
             value={horaFimBloqueio}
             onChange={(e) => onHoraFimChange(e.target.value)}
-            className="w-full rounded-2xl border border-zinc-200 bg-zinc-50 px-3 py-2.5 text-sm outline-none transition focus:border-zinc-900 focus:bg-white"
+            disabled={bloquearDiaTodo}
+            className="w-full rounded-2xl border border-zinc-200 bg-zinc-50 px-3 py-2.5 text-sm outline-none transition focus:border-zinc-900 focus:bg-white disabled:cursor-not-allowed disabled:opacity-60"
             required
           />
         </div>
@@ -159,7 +181,7 @@ export default function AgendaModalFormBloqueio({
           value={motivoBloqueio}
           onChange={(e) => onMotivoChange(e.target.value)}
           className="min-h-[100px] w-full rounded-2xl border border-zinc-200 bg-zinc-50 px-3 py-2.5 text-sm outline-none transition focus:border-zinc-900 focus:bg-white"
-          placeholder="Ex.: almoço, curso, reunião"
+          placeholder="Ex.: almoco, curso, reuniao"
         />
       </div>
     </div>

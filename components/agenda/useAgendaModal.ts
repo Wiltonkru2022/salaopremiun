@@ -16,6 +16,7 @@ import {
   addDurationToTime,
   buildWhatsappCancelamentoText,
   buildWhatsappConfirmacaoText,
+  getHorarioProfissionalNoDia,
   normalizeTimeString,
 } from "@/lib/utils/agenda";
 import { getErrorMessage } from "@/lib/get-error-message";
@@ -128,6 +129,7 @@ export function useAgendaModal({
   const [datasBloqueio, setDatasBloqueio] = useState<string[]>(
     selectedDate ? [selectedDate] : []
   );
+  const [bloqueioDiaTodo, setBloqueioDiaTodo] = useState(false);
 
   const [comandaId, setComandaId] = useState("");
   const [comandaNumero, setComandaNumero] = useState<number | null>(null);
@@ -287,6 +289,8 @@ export function useAgendaModal({
     }
 
     if (mode === "bloqueio") {
+      setBloqueioDiaTodo(false);
+
       if (editingBlock) {
         setProfissionalId(editingBlock.profissional_id || selectedProfissionalId);
         setDataBloqueio(editingBlock.data || selectedDate);
@@ -425,6 +429,25 @@ export function useAgendaModal({
     () => profissionais.find((p) => p.id === profissionalId),
     [profissionais, profissionalId]
   );
+
+  useEffect(() => {
+    if (mode !== "bloqueio" || !bloqueioDiaTodo || !dataBloqueio) return;
+
+    const horario = getHorarioProfissionalNoDia(
+      new Date(`${dataBloqueio}T12:00:00`),
+      profissionalSelecionado?.dias_trabalho
+    );
+
+    if (!horario) return;
+
+    setHoraInicio(horario.inicio);
+    setHoraFimBloqueio(horario.fim);
+  }, [
+    mode,
+    bloqueioDiaTodo,
+    dataBloqueio,
+    profissionalSelecionado?.dias_trabalho,
+  ]);
 
   const clienteSelecionado = useMemo(
     () => clientes.find((c) => c.id === clienteId),
@@ -875,6 +898,8 @@ export function useAgendaModal({
     handleRemoverDataBloqueio,
     horaFimBloqueio,
     setHoraFimBloqueio,
+    bloqueioDiaTodo,
+    setBloqueioDiaTodo,
     motivoBloqueio,
     setMotivoBloqueio,
     comandaId,
