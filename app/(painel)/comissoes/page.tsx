@@ -215,6 +215,7 @@ export default function ComissoesPage() {
   const comissaoClickTimerRef = useRef<number | null>(null);
   const {
     loading,
+    dadosCarregados,
     saving,
     erro,
     msg,
@@ -791,7 +792,7 @@ export default function ComissoesPage() {
     win.print();
   }
 
-  if (loading || !acessoCarregado) {
+  if (!acessoCarregado || (!dadosCarregados && loading)) {
     return (
       <AppLoading
         title="Carregando comissões"

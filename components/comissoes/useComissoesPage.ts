@@ -75,6 +75,7 @@ export function useComissoesPage() {
   const [saving, setSaving] = useState(false);
   const [erro, setErro] = useState("");
   const [msg, setMsg] = useState("");
+  const [dadosCarregados, setDadosCarregados] = useState(false);
   const [idSalao, setIdSalao] = useState("");
   const [permissoes, setPermissoes] = useState<ComissaoPermissoes | null>(null);
   const [nivel, setNivel] = useState("");
@@ -329,6 +330,8 @@ export function useComissoesPage() {
         setErro(
           error instanceof Error ? error.message : "Erro ao carregar comissoes."
         );
+      } finally {
+        setDadosCarregados(true);
       }
     },
     [
@@ -377,7 +380,6 @@ export function useComissoesPage() {
       setProfissionais((profissionaisData as ComissaoProfissional[]) || []);
       setSalaoInfo((salaoData as ComissaoSalaoInfo | null) || null);
       setRateioConfig(normalizeRateioConfig(configData?.rateio_config));
-      await carregarComissoes(salaoIdFinal);
     } catch (error) {
       console.error(error);
       setErro(
@@ -386,11 +388,30 @@ export function useComissoesPage() {
     } finally {
       setLoading(false);
     }
-  }, [carregarAcesso, carregarComissoes, supabase]);
+  }, [carregarAcesso, supabase]);
 
   useEffect(() => {
     void init();
   }, [init]);
+
+  useEffect(() => {
+    if (!idSalao || !acessoCarregado || !permissoes?.comissoes_ver) {
+      return;
+    }
+
+    void carregarComissoes(idSalao);
+  }, [
+    acessoCarregado,
+    busca,
+    carregarComissoes,
+    dataFinal,
+    dataInicial,
+    idSalao,
+    permissoes?.comissoes_ver,
+    profissionalId,
+    status,
+    tipoDestinatario,
+  ]);
 
   const processarComissoes = useCallback(
     async (acao: "marcar_pago" | "cancelar", ids: string[]) => {
@@ -656,6 +677,7 @@ export function useComissoesPage() {
 
   return {
     loading,
+    dadosCarregados,
     saving,
     erro,
     msg,
