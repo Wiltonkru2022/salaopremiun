@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { ZodError } from "zod";
 import {
   AuthzError,
+  requireSalaoAnyPermission,
   requireSalaoPermission,
 } from "@/lib/auth/require-salao-permission";
 import { COMANDA_ACTIONS, resolveComandaHttpStatus } from "@/lib/comandas/processar";
@@ -18,6 +19,34 @@ import {
   ProcessarComandaUseCaseError,
 } from "@/core/use-cases/comandas/processarComanda";
 import { createComandaService } from "@/services/comandaService";
+import type { AcaoComanda } from "@/types/comandas";
+
+function requireComandaActionPermission(idSalao: string, acao: AcaoComanda) {
+  if (acao === "criar_por_agendamento") {
+    return requireSalaoAnyPermission(idSalao, [
+      "comandas_ver",
+      "caixa_editar",
+      "caixa_operar",
+    ]);
+  }
+
+  if (acao === "salvar_base" || acao === "adicionar_item" || acao === "editar_item" || acao === "remover_item") {
+    return requireSalaoAnyPermission(idSalao, [
+      "comandas_ver",
+      "caixa_editar",
+    ]);
+  }
+
+  if (acao === "enviar_pagamento") {
+    return requireSalaoAnyPermission(idSalao, [
+      "comandas_ver",
+      "caixa_editar",
+      "caixa_pagamentos",
+    ]);
+  }
+
+  return requireSalaoPermission(idSalao, "comandas_ver");
+}
 
 export async function POST(req: NextRequest) {
   let idSalao = "";
@@ -28,10 +57,7 @@ export async function POST(req: NextRequest) {
     idSalao = input.idSalao;
     acao = input.acao;
 
-    const permissionMembership = await requireSalaoPermission(
-      idSalao,
-      "comandas_ver"
-    );
+    const permissionMembership = await requireComandaActionPermission(idSalao, input.acao);
     await assertCanMutatePlanFeature(idSalao, "comandas");
 
     if (acao === "adicionar_item" || acao === "editar_item") {

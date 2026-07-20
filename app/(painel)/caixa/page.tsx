@@ -379,7 +379,7 @@ export default function CaixaPage() {
     setMsg(montarAvisoReabertura(comandaSelecionada));
   }, [requestedReaberta, comandaSelecionada, setMsg]);
 
-  if (loading || !acessoCarregado) {
+  if (!acessoCarregado) {
     return (
       <AppLoading
         title="Carregando caixa"

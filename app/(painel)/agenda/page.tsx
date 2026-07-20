@@ -835,7 +835,7 @@ export default function AgendaPage() {
     }
   }, [hasSidebarActionPanel]);
 
-  if (loading || !acessoCarregado) {
+  if (!acessoCarregado) {
     return (
       <AppLoading
         title="Carregando agenda"
