@@ -401,9 +401,9 @@ export default function CaixaPage() {
 
   return (
     <>
-      <div className="h-screen overflow-hidden bg-[#f4f5f7] text-[var(--app-ink)]">
-        <div className="mx-auto h-full max-w-[1920px] p-2.5 xl:p-3">
-          <div className="flex h-full min-h-0 flex-col gap-2 overflow-hidden">
+      <div className="min-h-screen bg-[#f6f8fb] text-[var(--app-ink)]">
+        <div className="mx-auto max-w-[1680px] p-4 xl:p-6">
+          <div className="flex min-h-[calc(100vh-3rem)] flex-col gap-5">
             <CaixaHeader
               agendamentosPendentes={agendamentosFila.length}
               comandasAtivas={comandasFila.length}
@@ -414,7 +414,7 @@ export default function CaixaPage() {
             />
 
             {!podeOperarCaixa || erroTela || msg || comandaSelecionada ? (
-              <div className="grid gap-2 xl:grid-cols-[minmax(0,1fr)_minmax(280px,360px)]">
+              <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_280px]">
                 <div className="flex min-h-10 items-center rounded-2xl border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-600 shadow-sm">
                   {!podeOperarCaixa ? (
                     <>
@@ -475,7 +475,7 @@ export default function CaixaPage() {
               </div>
             ) : null}
 
-            <div className="grid min-h-0 flex-1 grid-cols-1 gap-2 xl:grid-cols-[232px_minmax(0,1fr)_248px] 2xl:grid-cols-[285px_minmax(0,1fr)_310px]">
+            <div className="grid min-h-0 flex-1 grid-cols-1 gap-5 xl:grid-cols-[390px_minmax(0,1fr)]">
               <CaixaFila
                 aba={aba}
                 setAba={setAba}
@@ -547,6 +547,7 @@ export default function CaixaPage() {
                 onAbrirCaixa={(payload) => void abrirCaixa(payload)}
                 onFecharCaixa={(payload) => void fecharCaixa(payload)}
                 onLancamento={(payload) => void lancarMovimentoCaixa(payload)}
+                showPanel={false}
               />
             </div>
           </div>
