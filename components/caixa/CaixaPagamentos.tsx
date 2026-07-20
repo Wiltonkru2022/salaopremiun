@@ -13,12 +13,12 @@ import {
 const FORMAS_PAGAMENTO = [
   { value: "dinheiro", label: "Dinheiro" },
   { value: "pix", label: "Pix" },
-  { value: "debito", label: "Débito" },
-  { value: "credito", label: "Crédito" },
-  { value: "transferencia", label: "Transferência" },
+  { value: "debito", label: "Debito" },
+  { value: "credito", label: "Credito" },
+  { value: "transferencia", label: "Transferencia" },
   { value: "boleto", label: "Boleto" },
   { value: "outro", label: "Outro" },
-  { value: "credito_cliente", label: "Crédito da cliente" },
+  { value: "credito_cliente", label: "Credito da cliente" },
 ];
 
 function getFormaPagamentoLabel(value?: string | null) {
@@ -54,7 +54,7 @@ function getFormaPagamentoCardClass(value?: string | null) {
 }
 
 function getParcelasLabel(parcelas?: number | null) {
-  if (!parcelas || parcelas <= 1) return "À vista";
+  if (!parcelas || parcelas <= 1) return "A vista";
   return `${parcelas}x`;
 }
 
@@ -131,7 +131,6 @@ export default function CaixaPagamentos({
     comandaSelecionada &&
     comandaSelecionada.status !== "fechada" &&
     comandaSelecionada.status !== "cancelada";
-
   const exibeParcelas =
     formaPagamento === "credito" ||
     formaPagamento === "debito" ||
@@ -143,6 +142,11 @@ export default function CaixaPagamentos({
         : comandaSelecionada?.clientes?.nome || "Cliente",
     [comandaSelecionada]
   );
+  const ctaLabel =
+    faltaReceber > 0 && valorBaseDigitado >= faltaReceber
+      ? "Fechar pagamento"
+      : "Adicionar pagamento";
+
   async function handleAdicionarPagamento() {
     if (saving || !comandaSelecionada || valorBaseDigitado <= 0) {
       return;
@@ -163,9 +167,7 @@ export default function CaixaPagamentos({
   async function handleConfirmarExcedente(
     destinoExcedente: "troco" | "credito_cliente"
   ) {
-    if (saving) {
-      return;
-    }
+    if (saving) return;
 
     try {
       setDestinoExcedentePendente(destinoExcedente);
@@ -178,182 +180,102 @@ export default function CaixaPagamentos({
 
   return (
     <>
-      <div className="rounded-[28px] border border-zinc-200 bg-white p-4 shadow-sm">
-        <div className="mb-3">
-          <div className="flex items-center gap-2">
-            <CreditCard size={18} className="text-zinc-700" />
-            <div className="text-lg font-bold text-zinc-900">Pagamentos</div>
-          </div>
-        </div>
-
-        <div className="space-y-2.5">
-          {pagamentos.map((pagamento) => {
-            const taxaPercentualItem = Number(
-              pagamento.taxa_maquininha_percentual || 0
-            );
-            const taxaValorItem = Number(pagamento.taxa_maquininha_valor || 0);
-            const valorLiquido = Number(pagamento.valor || 0) - taxaValorItem;
-
-            return (
-              <div
-                key={pagamento.id}
-                className={`rounded-2xl border-l-4 border p-3.5 ${getFormaPagamentoCardClass(
-                  pagamento.forma_pagamento
-                )}`}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="font-semibold text-zinc-900">
-                        {getFormaPagamentoLabel(pagamento.forma_pagamento)}
-                      </span>
-                      <PaymentChip
-                        label={getFormaPagamentoLabel(pagamento.forma_pagamento)}
-                        tone={getFormaPagamentoTone(pagamento.forma_pagamento)}
-                      />
-                    </div>
-
-                    <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-zinc-500">
-                      <span className="font-medium text-zinc-700">
-                        {formatCurrency(pagamento.valor)}
-                      </span>
-                      <span className="rounded-full border border-zinc-200 bg-white px-2 py-0.5 text-[11px] font-medium text-zinc-600">
-                        {getParcelasLabel(pagamento.parcelas)}
-                      </span>
-                      {taxaPercentualItem > 0 || taxaValorItem > 0 ? (
-                        <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700">
-                          Com taxa
-                        </span>
-                      ) : null}
-                    </div>
-
-                    {Number(pagamento.valor_credito_cliente || 0) > 0 ? (
-                      <div className="mt-1.5 inline-flex items-center gap-1.5 rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-700">
-                        <Wallet size={12} />
-                        Crédito gerado:{" "}
-                        {formatCurrency(Number(pagamento.valor_credito_cliente || 0))}
-                      </div>
-                    ) : null}
-
-                    {Number(pagamento.valor_troco || 0) > 0 ? (
-                      <div className="mt-1.5 inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
-                        <Wallet size={12} />
-                        Troco registrado:{" "}
-                        {formatCurrency(Number(pagamento.valor_troco || 0))}
-                      </div>
-                    ) : null}
-
-                    {(taxaPercentualItem > 0 || taxaValorItem > 0) && (
-                      <div className="mt-1.5 space-y-1 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2">
-                        <div className="text-xs font-medium text-amber-800">
-                          Taxa aplicada
-                        </div>
-                        <div className="text-xs text-amber-700">
-                          Percentual:{" "}
-                          {taxaPercentualItem.toLocaleString("pt-BR", {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2,
-                          })}
-                          %
-                        </div>
-                        <div className="text-xs text-amber-700">
-                          Valor taxa: {formatCurrency(taxaValorItem)}
-                        </div>
-                        <div className="text-xs text-amber-700">
-                          Valor sem taxa: {formatCurrency(valorLiquido)}
-                        </div>
-                      </div>
-                    )}
-
-                    {pagamento.observacoes ? (
-                      <div className="mt-1.5 text-xs text-zinc-500">
-                        Obs.: {pagamento.observacoes}
-                      </div>
-                    ) : null}
-
-                    {pagamento.recebido_em || pagamento.created_at ? (
-                      <div className="mt-1.5 text-xs text-zinc-400">
-                        Recebido em{" "}
-                        {formatShortDateTime(pagamento.recebido_em || pagamento.created_at)}
-                      </div>
-                    ) : null}
-                  </div>
-
-                  {podeEditar ? (
-                    <button
-                      type="button"
-                      onClick={() => onRemoverPagamento(pagamento.id)}
-                      className="rounded-xl border border-rose-200 bg-rose-50 p-2 text-rose-600 transition hover:bg-rose-100"
-                      title="Remover pagamento"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  ) : null}
+      <div className="space-y-3">
+        <section className="grid gap-3 md:grid-cols-[minmax(0,1fr)_220px]">
+          <div className="rounded-[24px] border border-zinc-200 bg-white p-4 shadow-sm">
+            <div className="flex items-center gap-2">
+              <CreditCard size={18} className="text-zinc-700" />
+              <div>
+                <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-400">
+                  Falta receber
+                </div>
+                <div className="text-lg font-bold text-zinc-900">
+                  {faltaReceber > 0 ? formatCurrency(faltaReceber) : "Pagamento concluido"}
                 </div>
               </div>
-            );
-          })}
-
-          {pagamentos.length === 0 ? (
-            <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-5 text-center text-sm text-zinc-500">
-              Nenhum pagamento lançado.
             </div>
-          ) : null}
-        </div>
+
+            <div className="mt-3 grid gap-2 sm:grid-cols-3">
+              <PreviewCard label="Pago" value={formatCurrency(totalPago)} compact />
+              <PreviewCard label="Troco" value={formatCurrency(troco)} compact />
+              <PreviewCard
+                label="Credito"
+                value={formatCurrency(creditoClienteDisponivel)}
+                compact
+              />
+            </div>
+          </div>
+
+          <div className="rounded-[24px] border border-zinc-200 bg-white p-4 shadow-sm">
+            <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-400">
+              Atalhos
+            </div>
+            <div className="mt-1 text-sm font-semibold text-zinc-900">
+              Preencher rapido
+            </div>
+
+            <div className="mt-3 grid gap-2">
+              <button
+                type="button"
+                disabled={saving || faltaReceber <= 0}
+                onClick={() =>
+                  setValorPagamento(
+                    faltaReceber.toLocaleString("pt-BR", {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })
+                  )
+                }
+                className="rounded-2xl border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-left text-sm font-semibold text-emerald-900 transition hover:bg-emerald-100 disabled:opacity-50"
+              >
+                Receber restante
+              </button>
+
+              <button
+                type="button"
+                disabled={
+                  saving ||
+                  formaPagamento !== "credito_cliente" ||
+                  creditoClienteDisponivel <= 0
+                }
+                onClick={() =>
+                  setValorPagamento(
+                    Math.min(creditoClienteDisponivel, Math.max(faltaReceber, 0)).toLocaleString(
+                      "pt-BR",
+                      {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      }
+                    )
+                  )
+                }
+                className="rounded-2xl border border-zinc-200 bg-zinc-50 px-3 py-2.5 text-left text-sm font-semibold text-zinc-700 transition hover:bg-zinc-100 disabled:opacity-50"
+              >
+                Usar credito
+              </button>
+            </div>
+          </div>
+        </section>
 
         {podeEditar ? (
-          <div className="mt-4 space-y-3 rounded-[24px] border border-zinc-200 bg-zinc-50 p-3.5">
+          <section className="rounded-[24px] border border-zinc-200 bg-white p-4 shadow-sm">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-400">
                   Novo pagamento
                 </div>
                 <div className="mt-0.5 text-base font-bold text-zinc-900">
-                  Lançar recebimento
+                  Lancar recebimento
                 </div>
               </div>
-              <div className="rounded-2xl border border-zinc-200 bg-white px-3 py-2 text-right">
-                <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-400">
-                  Falta
-                </div>
-                <div className="text-sm font-black text-zinc-950">
-                  {formatCurrency(faltaReceber)}
-                </div>
-              </div>
-            </div>
 
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-              <PreviewCard
-                label="Crédito disponível"
-                value={formatCurrency(creditoClienteDisponivel)}
-              />
-              <PreviewCard
-                label="Crédito gerado"
-                value={formatCurrency(totalCreditoGerado)}
+              <PaymentChip
+                label={getFormaPagamentoLabel(formaPagamento)}
+                tone={getFormaPagamentoTone(formaPagamento)}
               />
             </div>
 
-            {comandaSelecionada?.id_cliente ? (
-              <div
-                className={`rounded-2xl border px-4 py-3 text-sm ${
-                  creditoClienteDisponivel > 0
-                    ? "border-emerald-200 bg-emerald-50 text-emerald-800"
-                    : "border-zinc-200 bg-zinc-50 text-zinc-600"
-                }`}
-              >
-                {creditoClienteDisponivel > 0
-                  ? `${clienteNome} tem ${formatCurrency(
-                      creditoClienteDisponivel
-                    )} em crédito pronto para usar no pagamento.`
-                  : `${clienteNome} ainda não tem crédito disponível.`}
-              </div>
-            ) : (
-              <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-                Vincule uma cliente na comanda para guardar excedente como crédito ou usar saldo existente.
-              </div>
-            )}
-
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+            <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">
               <Field label="Forma de pagamento">
                 <select
                   value={formaPagamento}
@@ -369,7 +291,7 @@ export default function CaixaPagamentos({
               </Field>
 
               <MoneyField
-                label="Valor base"
+                label="Valor"
                 value={valorPagamento}
                 onChange={setValorPagamento}
               />
@@ -386,71 +308,168 @@ export default function CaixaPagamentos({
                   />
                 </Field>
               ) : null}
+
+              <Field label="Observacao opcional">
+                <input
+                  value={observacaoPagamento}
+                  onChange={(e) => setObservacaoPagamento(e.target.value)}
+                  className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-zinc-900"
+                  placeholder="Pix, cartao, parcial..."
+                />
+              </Field>
             </div>
 
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-              <PreviewCard label="Valor base" value={formatCurrency(valorBaseDigitado)} />
-              <PreviewCard
-                label="Taxa automática"
-                value={`${Number(taxaPercentualNumero || 0).toLocaleString(
-                  "pt-BR",
-                  {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  }
-                )}%`}
-              />
-              <PreviewCard
-                label="Valor da taxa"
-                value={formatCurrency(taxaPreviewValor)}
-              />
-            </div>
+            {comandaSelecionada?.id_cliente ? (
+              <div
+                className={`mt-3 rounded-2xl border px-4 py-3 text-sm ${
+                  creditoClienteDisponivel > 0
+                    ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                    : "border-zinc-200 bg-zinc-50 text-zinc-600"
+                }`}
+              >
+                {creditoClienteDisponivel > 0
+                  ? `${clienteNome} tem ${formatCurrency(
+                      creditoClienteDisponivel
+                    )} em credito disponivel.`
+                  : `${clienteNome} ainda nao tem credito disponivel.`}
+              </div>
+            ) : (
+              <div className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                Vincule uma cliente para usar ou guardar credito.
+              </div>
+            )}
 
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+            <div className="mt-3 grid gap-2 sm:grid-cols-2">
               <PreviewCard
                 label="Cliente paga"
                 value={formatCurrency(valorCobradoCliente)}
+                compact
               />
               <PreviewCard
-                label="Líquido previsto"
-                value={formatCurrency(valorLiquidoPrevisto)}
+                label={repassaTaxaCliente ? "Taxa repassada" : "Liquido previsto"}
+                value={
+                  repassaTaxaCliente
+                    ? formatCurrency(taxaPreviewValor)
+                    : formatCurrency(valorLiquidoPrevisto)
+                }
+                compact
               />
             </div>
-
-            <div className="rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-800">
-              {repassaTaxaCliente
-                ? "A taxa é somada ao valor cobrado do cliente."
-                : "A taxa não é somada ao cliente."}
-            </div>
-
-            <Field label="Observação">
-              <textarea
-                rows={3}
-                value={observacaoPagamento}
-                onChange={(e) => setObservacaoPagamento(e.target.value)}
-                className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-zinc-900"
-                placeholder="Ex.: cartão da cliente, pix recepção, pagamento parcial..."
-              />
-            </Field>
 
             <button
               type="button"
               onClick={handleAdicionarPagamento}
               disabled={saving || !comandaSelecionada || valorBaseDigitado <= 0}
-              className="inline-flex min-h-14 w-full items-center justify-center gap-2 rounded-[20px] bg-emerald-600 px-5 py-4 text-base font-black text-white shadow-lg shadow-emerald-900/20 transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-zinc-300 disabled:shadow-none"
+              className="mt-4 inline-flex min-h-14 w-full items-center justify-center gap-2 rounded-[20px] bg-emerald-600 px-5 py-4 text-base font-black text-white shadow-lg shadow-emerald-900/20 transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-zinc-300 disabled:shadow-none"
             >
               <Plus size={19} />
-              {saving ? "Adicionando pagamento..." : "Adicionar pagamento"}
+              {saving ? "Processando pagamento..." : ctaLabel}
             </button>
-          </div>
+          </section>
         ) : null}
 
-        <div className="mt-4 space-y-2.5 border-t border-zinc-200 pt-4">
+        <section className="rounded-[24px] border border-zinc-200 bg-white p-4 shadow-sm">
+          <div className="mb-3 flex items-center gap-2">
+            <Wallet size={16} className="text-zinc-600" />
+            <div className="text-sm font-bold text-zinc-900">Pagamentos lancados</div>
+          </div>
+
+          <div className="space-y-2.5">
+            {pagamentos.map((pagamento) => {
+              const taxaPercentualItem = Number(
+                pagamento.taxa_maquininha_percentual || 0
+              );
+              const taxaValorItem = Number(pagamento.taxa_maquininha_valor || 0);
+              const valorLiquido = Number(pagamento.valor || 0) - taxaValorItem;
+
+              return (
+                <div
+                  key={pagamento.id}
+                  className={`rounded-2xl border-l-4 border p-3.5 ${getFormaPagamentoCardClass(
+                    pagamento.forma_pagamento
+                  )}`}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="font-semibold text-zinc-900">
+                          {getFormaPagamentoLabel(pagamento.forma_pagamento)}
+                        </span>
+                        <span className="text-sm font-medium text-zinc-700">
+                          {formatCurrency(pagamento.valor)}
+                        </span>
+                        <span className="rounded-full border border-zinc-200 bg-white px-2 py-0.5 text-[11px] font-medium text-zinc-600">
+                          {getParcelasLabel(pagamento.parcelas)}
+                        </span>
+                      </div>
+
+                      {(taxaPercentualItem > 0 || taxaValorItem > 0) ? (
+                        <div className="mt-1 text-xs text-zinc-500">
+                          Taxa {taxaPercentualItem.toLocaleString("pt-BR", {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })}
+                          % • liquido {formatCurrency(valorLiquido)}
+                        </div>
+                      ) : null}
+
+                      {Number(pagamento.valor_credito_cliente || 0) > 0 ? (
+                        <div className="mt-1 text-xs font-medium text-sky-700">
+                          Credito gerado:{" "}
+                          {formatCurrency(Number(pagamento.valor_credito_cliente || 0))}
+                        </div>
+                      ) : null}
+
+                      {Number(pagamento.valor_troco || 0) > 0 ? (
+                        <div className="mt-1 text-xs font-medium text-emerald-700">
+                          Troco: {formatCurrency(Number(pagamento.valor_troco || 0))}
+                        </div>
+                      ) : null}
+
+                      {pagamento.observacoes ? (
+                        <div className="mt-1 text-xs text-zinc-500">
+                          Obs.: {pagamento.observacoes}
+                        </div>
+                      ) : null}
+
+                      {pagamento.recebido_em || pagamento.created_at ? (
+                        <div className="mt-1 text-xs text-zinc-400">
+                          {formatShortDateTime(
+                            pagamento.recebido_em || pagamento.created_at
+                          )}
+                        </div>
+                      ) : null}
+                    </div>
+
+                    {podeEditar ? (
+                      <button
+                        type="button"
+                        onClick={() => onRemoverPagamento(pagamento.id)}
+                        className="rounded-xl border border-rose-200 bg-rose-50 p-2 text-rose-600 transition hover:bg-rose-100"
+                        title="Remover pagamento"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    ) : null}
+                  </div>
+                </div>
+              );
+            })}
+
+            {pagamentos.length === 0 ? (
+              <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-5 text-center text-sm text-zinc-500">
+                Nenhum pagamento lancado ainda.
+              </div>
+            ) : null}
+          </div>
+        </section>
+
+        <section className="rounded-[24px] border border-zinc-200 bg-white p-4 shadow-sm">
           <InfoRow label="Total pago" value={formatCurrency(totalPago)} />
-          <InfoRow label="Crédito gerado" value={formatCurrency(totalCreditoGerado)} />
+          <InfoRow label="Credito gerado" value={formatCurrency(totalCreditoGerado)} />
           <InfoRow label="Falta receber" value={formatCurrency(faltaReceber)} />
           <InfoRow label="Troco" value={formatCurrency(troco)} />
-        </div>
+        </section>
       </div>
 
       {confirmarExcedenteOpen ? (
@@ -460,13 +479,13 @@ export default function CaixaPagamentos({
               Excedente no pagamento
             </div>
             <h3 className="mt-2 text-xl font-bold text-zinc-900">
-              A cliente está pagando mais do que falta
+              A cliente esta pagando mais do que falta
             </h3>
             <p className="mt-3 text-sm leading-6 text-zinc-600">
-              Faltam {formatCurrency(faltaReceber)} e você está lançando{" "}
+              Faltam {formatCurrency(faltaReceber)} e voce esta lancando{" "}
               {formatCurrency(valorBaseDigitado)}. O excedente de{" "}
               {formatCurrency(Math.max(valorBaseDigitado - faltaReceber, 0))} vai
-              sair como troco ou ficar salvo como crédito para {clienteNome}.
+              sair como troco ou ficar salvo como credito para {clienteNome}.
             </p>
 
             <div className="mt-5 grid gap-3">
@@ -478,7 +497,7 @@ export default function CaixaPagamentos({
               >
                 <div className="text-sm font-semibold text-zinc-900">
                   {destinoExcedentePendente === "troco"
-                    ? "Lançando troco..."
+                    ? "Lancando troco..."
                     : "Dar troco"}
                 </div>
                 <div className="mt-1 text-sm text-zinc-500">
@@ -494,8 +513,8 @@ export default function CaixaPagamentos({
               >
                 <div className="text-sm font-semibold text-emerald-900">
                   {destinoExcedentePendente === "credito_cliente"
-                    ? "Guardando crédito..."
-                    : "Guardar como crédito"}
+                    ? "Guardando credito..."
+                    : "Guardar como credito"}
                 </div>
                 <div className="mt-1 text-sm text-emerald-700">
                   O excedente entra no saldo da cliente para ela usar depois no caixa.
@@ -556,13 +575,27 @@ function MoneyField({
   );
 }
 
-function PreviewCard({ label, value }: { label: string; value: string }) {
+function PreviewCard({
+  label,
+  value,
+  compact = false,
+}: {
+  label: string;
+  value: string;
+  compact?: boolean;
+}) {
   return (
-    <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3">
+    <div
+      className={`rounded-2xl border border-zinc-200 bg-zinc-50 ${
+        compact ? "px-3 py-2.5" : "px-4 py-3"
+      }`}
+    >
       <div className="text-xs uppercase tracking-[0.14em] text-zinc-500">
         {label}
       </div>
-      <div className="mt-1 text-sm font-semibold text-zinc-900">{value}</div>
+      <div className={`mt-1 font-semibold text-zinc-900 ${compact ? "text-sm" : "text-base"}`}>
+        {value}
+      </div>
     </div>
   );
 }
