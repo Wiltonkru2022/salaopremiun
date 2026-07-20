@@ -27,8 +27,8 @@ export default function CaixaHeader({
   onAbrirSessao,
 }: Props) {
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-2 text-sm text-slate-500">
+    <div className="space-y-3">
+      <div className="hidden flex-wrap items-center gap-2 text-sm text-slate-500 xl:flex">
         <span className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 shadow-sm">
           <Home size={14} />
         </span>
@@ -38,10 +38,10 @@ export default function CaixaHeader({
         <span className="font-semibold text-slate-900">Caixa</span>
       </div>
 
-      <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-        <div className="space-y-2">
+      <div className="flex flex-col gap-2 xl:flex-row xl:items-center xl:justify-between">
+        <div className="space-y-1">
           <div className="flex flex-wrap items-center gap-3">
-            <h1 className="text-[2.5rem] font-bold tracking-[-0.03em] text-slate-950">
+            <h1 className="text-[2.25rem] font-bold tracking-[-0.03em] text-slate-950 xl:text-[2.15rem]">
               Caixa
             </h1>
             <span
@@ -59,7 +59,7 @@ export default function CaixaHeader({
               {caixaAberto ? "Caixa aberto" : "Caixa fechado"}
             </span>
           </div>
-          <p className="max-w-3xl text-[13px] text-slate-500">
+          <p className="max-w-3xl text-[12px] text-slate-500 xl:max-w-2xl">
             Triagem, pagamento e fechamento da comanda em uma tela mais direta.
           </p>
         </div>
@@ -74,7 +74,7 @@ export default function CaixaHeader({
         </button>
       </div>
 
-      <div className="grid gap-3 xl:grid-cols-4">
+      <div className="grid gap-2.5 xl:grid-cols-4">
         <StatCard
           icon={<CircleDollarSign size={18} />}
           label="Em andamento"
@@ -132,21 +132,21 @@ function StatCard({
 
   return (
     <div
-      className={`rounded-[24px] border p-4 shadow-[0_14px_30px_rgba(148,163,184,0.08)] ${toneClass}`}
+      className={`rounded-[22px] border px-4 py-3.5 shadow-[0_12px_24px_rgba(148,163,184,0.07)] ${toneClass}`}
     >
       <div className="flex items-center justify-between gap-3">
-        <div className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-current/10 bg-white/80">
+        <div className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-current/10 bg-white/80">
           {icon}
         </div>
         <ChevronRight size={18} className="text-slate-400" />
       </div>
 
-      <div className="mt-4 text-base font-semibold text-slate-700">{label}</div>
-      <div className="mt-1.5 flex items-end gap-2">
-        <span className="text-4xl font-bold leading-none tracking-[-0.05em] text-slate-950">
+      <div className="mt-3 text-[15px] font-semibold text-slate-700">{label}</div>
+      <div className="mt-1 flex items-end gap-2">
+        <span className="text-[2rem] font-bold leading-none tracking-[-0.05em] text-slate-950 xl:text-[2.1rem]">
           {value}
         </span>
-        <span className="pb-0.5 text-sm text-slate-500">{suffix}</span>
+        <span className="pb-0.5 text-[13px] text-slate-500">{suffix}</span>
       </div>
     </div>
   );

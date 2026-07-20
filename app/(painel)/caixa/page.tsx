@@ -401,9 +401,9 @@ export default function CaixaPage() {
 
   return (
     <>
-      <div className="min-h-screen bg-[#f6f8fb] text-[var(--app-ink)]">
-        <div className="mx-auto max-w-[1680px] p-3 xl:p-4">
-          <div className="flex min-h-[calc(100vh-2rem)] flex-col gap-4">
+      <div className="min-h-screen bg-[#f6f8fb] text-[var(--app-ink)] xl:h-screen xl:overflow-hidden">
+        <div className="mx-auto max-w-[1680px] p-2.5 xl:h-full xl:p-3">
+          <div className="flex min-h-[calc(100vh-1.25rem)] flex-col gap-3 xl:h-full xl:min-h-0">
             <CaixaHeader
               agendamentosPendentes={agendamentosFila.length}
               comandasAtivas={comandasFila.length}
@@ -414,8 +414,8 @@ export default function CaixaPage() {
             />
 
             {!podeOperarCaixa || erroTela || msg || comandaSelecionada ? (
-              <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_260px]">
-                <div className="flex min-h-10 items-center rounded-2xl border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-600 shadow-sm">
+              <div className="grid gap-2 xl:grid-cols-[minmax(0,1fr)_240px]">
+                <div className="flex min-h-9 items-center rounded-2xl border border-zinc-200 bg-white px-3 py-2 text-[11px] text-zinc-600 shadow-sm">
                   {!podeOperarCaixa ? (
                     <>
                       <CircleAlert size={16} className="mr-2 text-zinc-500" />
@@ -460,7 +460,7 @@ export default function CaixaPage() {
                 </div>
                 {comandaSelecionada ? (
                   <div
-                    className={`flex min-h-10 items-center rounded-2xl border px-3 py-2 text-xs shadow-sm ${
+                    className={`flex min-h-9 items-center rounded-2xl border px-3 py-2 text-[11px] shadow-sm ${
                       faltaReceber > 0
                         ? "border-amber-200 bg-amber-50 text-amber-900"
                         : "border-emerald-200 bg-emerald-50 text-emerald-800"
@@ -475,7 +475,7 @@ export default function CaixaPage() {
               </div>
             ) : null}
 
-            <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 xl:grid-cols-[360px_minmax(0,1fr)]">
+            <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 xl:overflow-hidden xl:grid-cols-[320px_minmax(0,1fr)]">
               <CaixaFila
                 aba={aba}
                 setAba={setAba}
