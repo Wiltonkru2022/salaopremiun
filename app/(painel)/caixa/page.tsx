@@ -414,32 +414,32 @@ export default function CaixaPage() {
             />
 
             {!podeOperarCaixa || erroTela || msg || comandaSelecionada ? (
-              <div className="grid gap-2 xl:grid-cols-[minmax(0,1fr)_240px]">
-                <div className="flex min-h-9 items-center rounded-2xl border border-zinc-200 bg-white px-3 py-2 text-[11px] text-zinc-600 shadow-sm">
+              <div className="grid gap-1.5 xl:grid-cols-[minmax(0,1fr)_200px]">
+                <div className="flex min-h-8 items-center rounded-xl border border-zinc-200 bg-white px-2.5 py-1.5 text-[10px] text-zinc-600 shadow-sm">
                   {!podeOperarCaixa ? (
                     <>
-                      <CircleAlert size={16} className="mr-2 text-zinc-500" />
+                      <CircleAlert size={14} className="mr-1.5 text-zinc-500" />
                       Você está em modo de <strong className="ml-1">somente leitura</strong> no caixa.
                     </>
                   ) : erroTela ? (
                     <>
-                      <CircleAlert size={16} className="mr-2 text-rose-500" />
+                      <CircleAlert size={14} className="mr-1.5 text-rose-500" />
                       <span className="text-rose-700">{erroTela}</span>
                     </>
                   ) : msg ? (
                     <>
-                      <CheckCircle2 size={16} className="mr-2 text-emerald-500" />
+                      <CheckCircle2 size={14} className="mr-1.5 text-emerald-500" />
                       <span className="text-emerald-700">{msg}</span>
                     </>
                   ) : comandaSelecionada ? (
                     <>
-                      <CheckCircle2 size={16} className="mr-2 text-zinc-500" />
+                      <CheckCircle2 size={14} className="mr-1.5 text-zinc-500" />
                       <span>
                         {comandaCarregandoId === comandaSelecionada.id ? (
                           <span className="inline-flex items-center gap-1 align-middle" aria-label="Abrindo comanda">
-                            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-current" />
-                            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-current [animation-delay:120ms]" />
-                            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-current [animation-delay:240ms]" />
+                            <span className="h-1 w-1 animate-pulse rounded-full bg-current" />
+                            <span className="h-1 w-1 animate-pulse rounded-full bg-current [animation-delay:120ms]" />
+                            <span className="h-1 w-1 animate-pulse rounded-full bg-current [animation-delay:240ms]" />
                           </span>
                         ) : (
                           <>
@@ -460,13 +460,13 @@ export default function CaixaPage() {
                 </div>
                 {comandaSelecionada ? (
                   <div
-                    className={`flex min-h-9 items-center rounded-2xl border px-3 py-2 text-[11px] shadow-sm ${
+                    className={`flex min-h-8 items-center rounded-xl border px-2.5 py-1.5 text-[10px] shadow-sm ${
                       faltaReceber > 0
                         ? "border-amber-200 bg-amber-50 text-amber-900"
                         : "border-emerald-200 bg-emerald-50 text-emerald-800"
                     }`}
                   >
-                    {faltaReceber > 0 ? <CircleAlert size={16} className="mr-2" /> : <CheckCircle2 size={16} className="mr-2" />}
+                    {faltaReceber > 0 ? <CircleAlert size={14} className="mr-1.5" /> : <CheckCircle2 size={14} className="mr-1.5" />}
                     {faltaReceber > 0 ? "Fechamento pendente" : "Pronto para finalizar"}
                   </div>
                 ) : (

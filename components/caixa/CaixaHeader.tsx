@@ -27,39 +27,39 @@ export default function CaixaHeader({
   onAbrirSessao,
 }: Props) {
   return (
-    <div className="space-y-3">
-      <div className="hidden flex-wrap items-center gap-2 text-sm text-slate-500 xl:flex">
-        <span className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 shadow-sm">
-          <Home size={14} />
+    <div className="space-y-2">
+      <div className="hidden flex-wrap items-center gap-1.5 text-[11px] text-slate-500 xl:flex">
+        <span className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 shadow-sm">
+          <Home size={11} />
         </span>
-        <ChevronRight size={14} className="text-slate-300" />
+        <ChevronRight size={12} className="text-slate-300" />
         <span>Operacoes</span>
-        <ChevronRight size={14} className="text-slate-300" />
+        <ChevronRight size={12} className="text-slate-300" />
         <span className="font-semibold text-slate-900">Caixa</span>
       </div>
 
-      <div className="flex flex-col gap-2 xl:flex-row xl:items-center xl:justify-between">
-        <div className="space-y-1">
-          <div className="flex flex-wrap items-center gap-3">
-            <h1 className="text-[2.25rem] font-bold tracking-[-0.03em] text-slate-950 xl:text-[2.15rem]">
+      <div className="flex flex-col gap-1.5 xl:flex-row xl:items-center xl:justify-between">
+        <div className="space-y-0.5">
+          <div className="flex flex-wrap items-center gap-2.5">
+            <h1 className="text-[1.8rem] font-bold tracking-[-0.03em] text-slate-950 xl:text-[1.7rem]">
               Caixa
             </h1>
             <span
-              className={`inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-sm font-semibold ${
+              className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[12px] font-semibold ${
                 caixaAberto
                   ? "border-emerald-200 bg-emerald-50 text-emerald-700"
                   : "border-zinc-200 bg-zinc-100 text-zinc-600"
               }`}
             >
               <span
-                className={`h-2.5 w-2.5 rounded-full ${
+                className={`h-2 w-2 rounded-full ${
                   caixaAberto ? "bg-emerald-500" : "bg-zinc-400"
                 }`}
               />
               {caixaAberto ? "Caixa aberto" : "Caixa fechado"}
             </span>
           </div>
-          <p className="max-w-3xl text-[12px] text-slate-500 xl:max-w-2xl">
+          <p className="max-w-3xl text-[11px] text-slate-500 xl:max-w-2xl">
             Triagem, pagamento e fechamento da comanda em uma tela mais direta.
           </p>
         </div>
@@ -67,37 +67,37 @@ export default function CaixaHeader({
         <button
           type="button"
           onClick={onAbrirSessao}
-          className="inline-flex h-11 items-center gap-2 self-start rounded-2xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
+          className="inline-flex h-9 items-center gap-2 self-start rounded-xl border border-slate-200 bg-white px-3 text-[12px] font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
         >
-          <WalletCards size={16} />
+          <WalletCards size={14} />
           Sessao do caixa
         </button>
       </div>
 
-      <div className="grid gap-2.5 xl:grid-cols-4">
+      <div className="grid gap-2 xl:grid-cols-4">
         <StatCard
-          icon={<CircleDollarSign size={18} />}
+          icon={<CircleDollarSign size={14} />}
           label="Em andamento"
           value={totalEmAberto}
           suffix="comandas"
           tone="emerald"
         />
         <StatCard
-          icon={<ReceiptText size={18} />}
+          icon={<ReceiptText size={14} />}
           label="Comandas ativas"
           value={comandasAtivas}
           suffix="comandas"
           tone="teal"
         />
         <StatCard
-          icon={<CalendarDays size={18} />}
+          icon={<CalendarDays size={14} />}
           label="Agenda sem comanda"
           value={agendamentosPendentes}
           suffix="agendamentos"
           tone="amber"
         />
         <StatCard
-          icon={<Lock size={18} />}
+          icon={<Lock size={14} />}
           label="Fechadas hoje"
           value={comandasFechadasHoje}
           suffix="vendas"
@@ -132,21 +132,21 @@ function StatCard({
 
   return (
     <div
-      className={`rounded-[22px] border px-4 py-3.5 shadow-[0_12px_24px_rgba(148,163,184,0.07)] ${toneClass}`}
+      className={`rounded-[18px] border px-3 py-2.5 shadow-[0_8px_18px_rgba(148,163,184,0.06)] ${toneClass}`}
     >
-      <div className="flex items-center justify-between gap-3">
-        <div className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-current/10 bg-white/80">
+      <div className="flex items-center justify-between gap-2">
+        <div className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-current/10 bg-white/80">
           {icon}
         </div>
-        <ChevronRight size={18} className="text-slate-400" />
+        <ChevronRight size={14} className="text-slate-400" />
       </div>
 
-      <div className="mt-3 text-[15px] font-semibold text-slate-700">{label}</div>
-      <div className="mt-1 flex items-end gap-2">
-        <span className="text-[2rem] font-bold leading-none tracking-[-0.05em] text-slate-950 xl:text-[2.1rem]">
+      <div className="mt-2 text-[13px] font-semibold text-slate-700">{label}</div>
+      <div className="mt-0.5 flex items-end gap-1.5">
+        <span className="text-[1.5rem] font-bold leading-none tracking-[-0.05em] text-slate-950 xl:text-[1.55rem]">
           {value}
         </span>
-        <span className="pb-0.5 text-[13px] text-slate-500">{suffix}</span>
+        <span className="pb-0.5 text-[11px] text-slate-500">{suffix}</span>
       </div>
     </div>
   );
