@@ -402,8 +402,8 @@ export default function CaixaPage() {
   return (
     <>
       <div className="min-h-screen bg-[#f6f8fb] text-[var(--app-ink)]">
-        <div className="mx-auto max-w-[1680px] p-4 xl:p-6">
-          <div className="flex min-h-[calc(100vh-3rem)] flex-col gap-5">
+        <div className="mx-auto max-w-[1680px] p-3 xl:p-4">
+          <div className="flex min-h-[calc(100vh-2rem)] flex-col gap-4">
             <CaixaHeader
               agendamentosPendentes={agendamentosFila.length}
               comandasAtivas={comandasFila.length}
@@ -414,7 +414,7 @@ export default function CaixaPage() {
             />
 
             {!podeOperarCaixa || erroTela || msg || comandaSelecionada ? (
-              <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_280px]">
+              <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_260px]">
                 <div className="flex min-h-10 items-center rounded-2xl border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-600 shadow-sm">
                   {!podeOperarCaixa ? (
                     <>
@@ -475,7 +475,7 @@ export default function CaixaPage() {
               </div>
             ) : null}
 
-            <div className="grid min-h-0 flex-1 grid-cols-1 gap-5 xl:grid-cols-[390px_minmax(0,1fr)]">
+            <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 xl:grid-cols-[360px_minmax(0,1fr)]">
               <CaixaFila
                 aba={aba}
                 setAba={setAba}

@@ -27,9 +27,9 @@ export default function CaixaHeader({
   onAbrirSessao,
 }: Props) {
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2 text-sm text-slate-500">
-        <span className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 shadow-sm">
+        <span className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 shadow-sm">
           <Home size={14} />
         </span>
         <ChevronRight size={14} className="text-slate-300" />
@@ -38,14 +38,14 @@ export default function CaixaHeader({
         <span className="font-semibold text-slate-900">Caixa</span>
       </div>
 
-      <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
-        <div className="space-y-3">
+      <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+        <div className="space-y-2">
           <div className="flex flex-wrap items-center gap-3">
-            <h1 className="text-4xl font-bold tracking-[-0.03em] text-slate-950">
+            <h1 className="text-[2.5rem] font-bold tracking-[-0.03em] text-slate-950">
               Caixa
             </h1>
             <span
-              className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold ${
+              className={`inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-sm font-semibold ${
                 caixaAberto
                   ? "border-emerald-200 bg-emerald-50 text-emerald-700"
                   : "border-zinc-200 bg-zinc-100 text-zinc-600"
@@ -59,7 +59,7 @@ export default function CaixaHeader({
               {caixaAberto ? "Caixa aberto" : "Caixa fechado"}
             </span>
           </div>
-          <p className="max-w-3xl text-sm text-slate-500">
+          <p className="max-w-3xl text-[13px] text-slate-500">
             Triagem, pagamento e fechamento da comanda em uma tela mais direta.
           </p>
         </div>
@@ -67,14 +67,14 @@ export default function CaixaHeader({
         <button
           type="button"
           onClick={onAbrirSessao}
-          className="inline-flex min-h-12 items-center gap-2 self-start rounded-2xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
+          className="inline-flex h-11 items-center gap-2 self-start rounded-2xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
         >
           <WalletCards size={16} />
           Sessao do caixa
         </button>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2 2xl:grid-cols-4">
+      <div className="grid gap-3 xl:grid-cols-4">
         <StatCard
           icon={<CircleDollarSign size={18} />}
           label="Em andamento"
@@ -132,21 +132,21 @@ function StatCard({
 
   return (
     <div
-      className={`rounded-[26px] border p-5 shadow-[0_18px_40px_rgba(148,163,184,0.10)] ${toneClass}`}
+      className={`rounded-[24px] border p-4 shadow-[0_14px_30px_rgba(148,163,184,0.08)] ${toneClass}`}
     >
       <div className="flex items-center justify-between gap-3">
-        <div className="inline-flex h-14 w-14 items-center justify-center rounded-full border border-current/10 bg-white/75">
+        <div className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-current/10 bg-white/80">
           {icon}
         </div>
         <ChevronRight size={18} className="text-slate-400" />
       </div>
 
-      <div className="mt-5 text-base font-semibold text-slate-700">{label}</div>
-      <div className="mt-2 flex items-end gap-2">
-        <span className="text-5xl font-bold leading-none tracking-[-0.05em] text-slate-950">
+      <div className="mt-4 text-base font-semibold text-slate-700">{label}</div>
+      <div className="mt-1.5 flex items-end gap-2">
+        <span className="text-4xl font-bold leading-none tracking-[-0.05em] text-slate-950">
           {value}
         </span>
-        <span className="pb-1 text-base text-slate-500">{suffix}</span>
+        <span className="pb-0.5 text-sm text-slate-500">{suffix}</span>
       </div>
     </div>
   );
