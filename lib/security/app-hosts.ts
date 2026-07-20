@@ -1,5 +1,9 @@
 export function getAppRootDomain() {
-  return process.env.APP_ROOT_DOMAIN || "salaopremiun.com.br";
+  return (
+    process.env.APP_ROOT_DOMAIN ||
+    process.env.APP_BASE_DOMAIN ||
+    "salaopremiun.com.br"
+  );
 }
 
 export function getLoginHost() {

@@ -1,5 +1,13 @@
 const DEFAULT_BASE_DOMAIN = "salaopremiun.com.br";
 
+function getConfiguredBaseDomain() {
+  return (
+    sanitizeDomain(process.env.APP_ROOT_DOMAIN) ||
+    sanitizeDomain(process.env.APP_BASE_DOMAIN) ||
+    DEFAULT_BASE_DOMAIN
+  );
+}
+
 function sanitizeDomain(value?: string | null) {
   return String(value || "")
     .trim()
@@ -22,8 +30,7 @@ export function isLocalHost(host?: string | null) {
   );
 }
 
-export const APP_BASE_DOMAIN =
-  sanitizeDomain(process.env.APP_BASE_DOMAIN) || DEFAULT_BASE_DOMAIN;
+export const APP_BASE_DOMAIN = getConfiguredBaseDomain();
 
 export const APP_COOKIE_DOMAIN = `.${APP_BASE_DOMAIN}`;
 
