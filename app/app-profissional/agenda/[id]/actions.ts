@@ -498,21 +498,6 @@ export async function confirmarSinalPixProfissionalAction(formData: FormData) {
       },
     });
 
-    if (String(agendamento.status || "").toLowerCase() !== "confirmado") {
-      await notifyClientAppointmentConfirmed({
-        idAgendamento,
-        idSalao: session.idSalao,
-      });
-      await notifyClientAboutSalonConfirmation({
-        idAgendamento,
-        idSalao: session.idSalao,
-      });
-      await scheduleAppointmentReminderNotifications({
-        idAgendamento,
-        idSalao: session.idSalao,
-      });
-    }
-
     revalidatePath("/app-profissional/agenda");
     revalidatePath(`/app-profissional/agenda/${idAgendamento}`);
     revalidatePath("/app-profissional/inicio");
