@@ -73,6 +73,7 @@ export type Agendamento = {
   id_comanda?: string | null;
   sinal_status?: string | null;
   sinal_valor?: number | string | null;
+  sinal_confirmacao_responsavel?: "salao" | "profissional" | string | null;
   sinal_comprovante_path?: string | null;
   sinal_comprovante_nome?: string | null;
   sinal_comprovante_tipo?: string | null;

@@ -132,11 +132,13 @@ function ActionButton({
   pendingLabel,
   tone = "dark",
   icon: Icon,
+  disabled = false,
 }: {
   label: string;
   pendingLabel: string;
   tone?: "dark" | "light" | "danger";
   icon?: LucideIcon;
+  disabled?: boolean;
 }) {
   const { pending } = useFormStatus();
   const toneClass =
@@ -149,7 +151,7 @@ function ActionButton({
   return (
     <button
       type="submit"
-      disabled={pending}
+      disabled={pending || disabled}
       className={`inline-flex h-12 items-center justify-center gap-3 rounded-2xl px-5 text-base font-black transition disabled:cursor-not-allowed disabled:opacity-60 ${toneClass}`}
     >
       {Icon ? <Icon size={22} /> : null}
@@ -279,7 +281,7 @@ function RescheduleAppointmentForm({
       </button>
 
       {open ? (
-        <form action={formAction} className="space-y-3 rounded-2xl bg-zinc-50 p-3">
+          <form action={formAction} className="space-y-4 rounded-2xl bg-zinc-50 p-4">
           <input type="hidden" name="agendamento" value={item.id} />
           <input type="hidden" name="data" value={selectedDate} />
           <input type="hidden" name="hora_inicio" value={selectedTime} />
@@ -294,7 +296,11 @@ function RescheduleAppointmentForm({
             </div>
           ) : dias.length ? (
             <>
-              <div className="flex gap-2 overflow-x-auto pb-1">
+              <div>
+                <p className="mb-2 text-xs font-black uppercase tracking-[0.14em] text-zinc-500">
+                  Escolha o dia
+                </p>
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                 {dias.map((dia) => (
                   <button
                     key={dia.data}
@@ -303,33 +309,43 @@ function RescheduleAppointmentForm({
                       setSelectedDate(dia.data);
                       setSelectedTime(dia.horarios[0]?.horaInicio || "");
                     }}
-                    className={`rounded-full px-4 py-2 text-sm font-black ${
+                    className={`min-h-12 rounded-xl border px-3 py-2 text-left text-sm font-black transition ${
                       selectedDate === dia.data
-                        ? "bg-zinc-950 text-white"
-                        : "bg-white text-zinc-700"
+                        ? "border-zinc-950 bg-zinc-950 text-white"
+                        : "border-zinc-200 bg-white text-zinc-700"
                     }`}
                   >
                     {dia.rotulo}
                   </button>
                 ))}
+                </div>
               </div>
-              <div className="flex gap-2 overflow-x-auto pb-1">
+              <div>
+                <p className="mb-2 text-xs font-black uppercase tracking-[0.14em] text-zinc-500">
+                  Escolha o horário
+                </p>
+                <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
                 {horarios.map((horario) => (
                   <button
                     key={`${selectedDate}-${horario.horaInicio}`}
                     type="button"
                     onClick={() => setSelectedTime(horario.horaInicio)}
-                    className={`rounded-full px-4 py-2 text-sm font-black ${
+                    className={`min-h-11 rounded-xl border px-2 py-2 text-sm font-black transition ${
                       selectedTime === horario.horaInicio
-                        ? "bg-zinc-950 text-white"
-                        : "bg-white text-zinc-700"
+                        ? "border-zinc-950 bg-zinc-950 text-white"
+                        : "border-zinc-200 bg-white text-zinc-700"
                     }`}
                   >
-                    {horario.horaInicio}
+                    {horario.horaInicio.slice(0, 5)}
                   </button>
                 ))}
+                </div>
               </div>
-              <ActionButton label="Confirmar" pendingLabel="Reagendando..." />
+              <ActionButton
+                label="Confirmar reagendamento"
+                pendingLabel="Reagendando..."
+                disabled={!selectedDate || !selectedTime}
+              />
             </>
           ) : (
             <div className="rounded-xl bg-white px-3 py-2 text-sm text-zinc-500">

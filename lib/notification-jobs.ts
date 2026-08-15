@@ -483,16 +483,20 @@ async function findClienteAppContaId(params: {
   idCliente?: string | null;
 }) {
   if (!params.idCliente) return null;
-  const { data } = await (getSupabaseAdmin() as any)
+  const { data, error } = await (getSupabaseAdmin() as any)
     .from("clientes_auth")
     .select("app_conta_id")
     .eq("id_salao", params.idSalao)
     .eq("id_cliente", params.idCliente)
     .eq("app_ativo", true)
     .not("app_conta_id", "is", null)
+    .order("updated_at", { ascending: false })
     .limit(1)
-    .maybeSingle();
+    .single();
 
+  if (error && !String(error.message || "").toLowerCase().includes("no rows")) {
+    return null;
+  }
   return String(data?.app_conta_id || "").trim() || null;
 }
 

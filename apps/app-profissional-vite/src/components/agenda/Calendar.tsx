@@ -122,6 +122,8 @@ export function Calendar({
   const [blockProfissional, setBlockProfissional] = useState("");
   const [blockAllDay, setBlockAllDay] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [actionSuccess, setActionSuccess] = useState<string | null>(null);
   const [details, setDetails] = useState<Agendamento | null>(null);
   const [newOpen, setNewOpen] = useState(false);
   const [blockOpen, setBlockOpen] = useState(false);
@@ -178,8 +180,19 @@ export function Calendar({
 
   async function run(id: string, action: () => Promise<void>) {
     setBusyId(id);
+    setActionError(null);
+    setActionSuccess(null);
     try {
       await action();
+      setActionSuccess(
+        id.startsWith("pix-")
+          ? "Pix confirmado com sucesso."
+          : id.startsWith("reschedule-")
+            ? "Agendamento reagendado com sucesso."
+            : "Agendamento atualizado com sucesso."
+      );
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : "Não foi possível concluir a ação.");
     } finally {
       setBusyId(null);
     }
@@ -201,6 +214,16 @@ export function Calendar({
 
   return (
     <div className="space-y-4">
+      {actionError ? (
+        <div role="alert" className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700">
+          {actionError}
+        </div>
+      ) : null}
+      {actionSuccess ? (
+        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-700">
+          {actionSuccess}
+        </div>
+      ) : null}
       <Card>
         <div className="mb-4 flex items-center justify-between gap-3">
           <h2 className="text-2xl font-black tracking-[-0.05em]">{monthLabel(cursor)}</h2>
@@ -335,6 +358,16 @@ export function Calendar({
       <Modal title="Detalhes do agendamento" subtitle="Revise cliente, servico, caixa e sinal Pix." open={Boolean(details)} onClose={() => setDetails(null)}>
         {details ? (
           <div className="space-y-3">
+            {actionError ? (
+              <div role="alert" className="rounded-2xl border border-red-200 bg-red-50 px-3 py-3 text-sm font-bold text-red-700">
+                {actionError}
+              </div>
+            ) : null}
+            {actionSuccess ? (
+              <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-3 py-3 text-sm font-bold text-emerald-700">
+                {actionSuccess}
+              </div>
+            ) : null}
             <Info label="Cliente" value={details.status === "bloqueado" ? "Horario bloqueado" : details.clientes?.nome || "Cliente"} />
             <Info label="Servico" value={details.servicos?.nome || details.observacoes || "Atendimento"} />
             <Info label="Profissional" value={details.profissional_nome || profissionais.find((item) => item.id === details.profissional_id)?.nome || profissionalAtual.nome} />
@@ -356,7 +389,27 @@ export function Calendar({
                 <div className="text-xs font-black uppercase tracking-[0.18em] text-amber-700">Comprovante enviado</div>
                 <div className="mt-1 break-all text-sm font-bold text-zinc-700">{details.sinal_comprovante_nome || details.sinal_comprovante_path}</div>
                 <Button variant="secondary" className="mt-3 h-10 px-3" onClick={() => openComprovante(details)}>Ver comprovante</Button>
-                <Button className="mt-3 h-10 px-3" onClick={() => run(`pix-${details.id}`, () => onConfirmPix?.(details.id) ?? Promise.resolve())}>Confirmar Pix</Button>
+                {String(details.sinal_confirmacao_responsavel || "").toLowerCase() === "profissional" ? (
+                  <Button
+                    className="mt-3 h-10 px-3"
+                    disabled={busyId === `pix-${details.id}`}
+                    onClick={() =>
+                      void run(
+                        `pix-${details.id}`,
+                        async () => {
+                          await (onConfirmPix?.(details.id) ?? Promise.resolve());
+                          setDetails(null);
+                        }
+                      )
+                    }
+                  >
+                    Confirmar Pix
+                  </Button>
+                ) : (
+                  <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-bold text-amber-800">
+                    A confirmação deste Pix deve ser feita pelo salão.
+                  </div>
+                )}
               </div>
             ) : null}
           </div>
@@ -497,14 +550,16 @@ export function Calendar({
             onSubmit={async (event) => {
               event.preventDefault();
               const duracao = Number(rescheduleItem.servicos?.duracao_minutos || 0) || Math.max(5, Math.round((new Date(`2000-01-01T${rescheduleItem.hora_fim}`).getTime() - new Date(`2000-01-01T${rescheduleItem.hora_inicio}`).getTime()) / 60000)) || 60;
-              await onReschedule?.({
-                agendamentoId: rescheduleItem.id,
-                data: rescheduleDate,
-                horaInicio: rescheduleHour,
-                horaFim: addMinutes(rescheduleHour, duracao),
-                status: rescheduleItem.status
+              await run(`reschedule-${rescheduleItem.id}`, async () => {
+                await onReschedule?.({
+                  agendamentoId: rescheduleItem.id,
+                  data: rescheduleDate,
+                  horaInicio: rescheduleHour,
+                  horaFim: addMinutes(rescheduleHour, duracao),
+                  status: rescheduleItem.status
+                });
+                setRescheduleItem(null);
               });
-              setRescheduleItem(null);
             }}
           >
             <Info label="Cliente" value={rescheduleItem.clientes?.nome || rescheduleItem.titulo || "Cliente"} />
