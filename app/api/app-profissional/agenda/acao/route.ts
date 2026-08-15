@@ -19,7 +19,7 @@ export async function POST(request: Request) {
     const action = String(body.action || "").trim();
     const idAgendamento = String(body.agendamentoId || "").trim();
 
-    if (!idAgendamento || !["confirmar", "reagendar"].includes(action)) {
+    if (!idAgendamento || !["confirmar", "confirmar_pix", "reagendar"].includes(action)) {
       return NextResponse.json({ ok: false, error: "Ação de agenda inválida." }, { status: 400 });
     }
 
@@ -30,7 +30,7 @@ export async function POST(request: Request) {
       run: async (supabase) => {
         let query = (supabase as any)
           .from("agendamentos")
-          .select("id, profissional_id, data, hora_inicio, hora_fim, status")
+          .select("id, profissional_id, data, hora_inicio, hora_fim, status, sinal_confirmacao_responsavel")
           .eq("id", idAgendamento)
           .eq("id_salao", session.idSalao);
 
@@ -45,6 +45,27 @@ export async function POST(request: Request) {
         const previousDate = String(current.data || "").slice(0, 10);
         const previousTime = time(current.hora_inicio);
         const now = new Date().toISOString();
+
+        if (action === "confirmar_pix") {
+          if (String(current.sinal_confirmacao_responsavel || "") !== "profissional") {
+            throw new Error("Este profissional nao esta configurado para confirmar sinais.");
+          }
+          const { error } = await (supabase as any)
+            .from("agendamentos")
+            .update({
+              sinal_status: "confirmado",
+              sinal_confirmado_em: now,
+              sinal_confirmado_por_tipo: "profissional",
+              sinal_confirmado_por_id: session.idProfissional,
+              reserva_expira_em: null,
+              updated_at: now,
+            })
+            .eq("id", idAgendamento)
+            .eq("id_salao", session.idSalao)
+            .eq("sinal_confirmacao_responsavel", "profissional");
+          if (error) throw new Error(error.message);
+          return { id: idAgendamento, action };
+        }
 
         if (action === "confirmar") {
           const { error } = await (supabase as any)

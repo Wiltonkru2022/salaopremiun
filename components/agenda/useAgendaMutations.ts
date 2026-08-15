@@ -391,7 +391,6 @@ export function useAgendaMutations({
       profissionais,
       setAgendamentos,
       sincronizarAgendamento,
-      supabase,
       abrirAviso,
     ]
   );
@@ -585,7 +584,6 @@ export function useAgendaMutations({
       profissionais,
       setAgendamentos,
       sincronizarAgendamento,
-      supabase,
       abrirAviso,
     ]
   );

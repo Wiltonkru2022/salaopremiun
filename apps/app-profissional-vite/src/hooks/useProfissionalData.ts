@@ -302,11 +302,19 @@ export function useProfissionalData(
 
     async function confirmarPix(id: string) {
       if (!profissionalId) return;
-      const { error } = await supabase.rpc("app_profissional_confirmar_pix", {
-        p_profissional_id: profissionalId,
-        p_agendamento_id: id
+      const response = await fetch("/api/app-profissional/agenda/acao", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "confirmar_pix",
+          agendamentoId: id,
+        }),
       });
-      if (error) throw new Error(error.message);
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload.ok) {
+        throw new Error(String(payload.error || "Nao foi possivel confirmar o Pix."));
+      }
       await refresh();
     }
 
