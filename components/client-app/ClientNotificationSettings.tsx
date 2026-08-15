@@ -1,10 +1,12 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { BellRing } from "lucide-react";
 import {
   toggleClienteNotificationPreferenceAction,
   type ClienteNotificationPreferenceKey,
 } from "@/app/app-cliente/perfil/configuracoes/actions";
+import PushPermissionRuntime from "@/components/push/PushPermissionRuntime";
 
 type SettingsState = Record<ClienteNotificationPreferenceKey, boolean>;
 
@@ -118,6 +120,22 @@ export default function ClientNotificationSettings({
     <div>
       <div className="mb-3 bg-zinc-50 px-3 py-3 text-xs font-bold uppercase tracking-[0.12em] text-zinc-500">
         Notificações
+      </div>
+      <div className="mb-3 flex items-center justify-between gap-4 rounded-2xl border border-amber-100 bg-amber-50 px-4 py-4">
+        <div className="flex min-w-0 items-start gap-3">
+          <span className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-amber-700 shadow-sm">
+            <BellRing size={20} />
+          </span>
+          <div className="min-w-0">
+            <p className="text-base font-black text-zinc-950">
+              Notificações no celular
+            </p>
+            <p className="mt-1 text-sm leading-5 text-zinc-600">
+              Receba avisos de reserva, confirmação e reagendamento mesmo fora do app.
+            </p>
+          </div>
+        </div>
+        <PushPermissionRuntime audience="cliente_app" />
       </div>
       <ToggleRow
         label="Ativar notificações"
