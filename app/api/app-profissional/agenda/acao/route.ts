@@ -30,7 +30,7 @@ export async function POST(request: Request) {
       run: async (supabase) => {
         let query = (supabase as any)
           .from("agendamentos")
-          .select("id, profissional_id, data, hora_inicio, hora_fim, status, sinal_confirmacao_responsavel")
+          .select("id, profissional_id, data, hora_inicio, hora_fim, status, sinal_status")
           .eq("id", idAgendamento)
           .eq("id_salao", session.idSalao);
 
@@ -47,8 +47,18 @@ export async function POST(request: Request) {
         const now = new Date().toISOString();
 
         if (action === "confirmar_pix") {
-          if (String(current.sinal_confirmacao_responsavel || "") !== "profissional") {
+          const { data: profissional, error: profissionalError } = await (supabase as any)
+            .from("profissionais")
+            .select("sinal_confirmacao_responsavel")
+            .eq("id", current.profissional_id)
+            .eq("id_salao", session.idSalao)
+            .maybeSingle();
+          if (profissionalError) throw new Error(profissionalError.message);
+          if (String(profissional?.sinal_confirmacao_responsavel || "") !== "profissional") {
             throw new Error("Este profissional nao esta configurado para confirmar sinais.");
+          }
+          if (String(current.sinal_status || "").toLowerCase() !== "comprovante_enviado") {
+            throw new Error("Este agendamento nao possui comprovante Pix aguardando confirmacao.");
           }
           const { error } = await (supabase as any)
             .from("agendamentos")
@@ -62,7 +72,7 @@ export async function POST(request: Request) {
             })
             .eq("id", idAgendamento)
             .eq("id_salao", session.idSalao)
-            .eq("sinal_confirmacao_responsavel", "profissional");
+            .eq("profissional_id", current.profissional_id);
           if (error) throw new Error(error.message);
           return { id: idAgendamento, action };
         }

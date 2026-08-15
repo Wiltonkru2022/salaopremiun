@@ -292,12 +292,36 @@ export async function processPendingNotificationJobs(limit = 80) {
       }
 
       const rows = await findSubscriptionsForJob(job);
+      if (!rows.length) {
+        await markJob(job.id, "falhou", {
+          erro_texto:
+            job.canal === "profissional_app"
+              ? "Nenhuma inscrição push ativa encontrada para este profissional."
+              : job.canal === "cliente_app"
+                ? "Nenhuma inscrição push ativa encontrada para esta cliente."
+                : "Nenhuma inscrição push ativa encontrada para este salão.",
+          sent_count: 0,
+        });
+        processed += 1;
+        failed += 1;
+        continue;
+      }
       const result = await sendPushToRows(rows, {
         title: job.titulo,
         body: job.mensagem,
         url: job.url || "/",
         tag: job.tag || job.idempotency_key,
       });
+
+      if (result.sent === 0) {
+        await markJob(job.id, "falhou", {
+          erro_texto: "O provedor de push nao confirmou nenhum envio.",
+          sent_count: 0,
+        });
+        processed += 1;
+        failed += 1;
+        continue;
+      }
 
       await markJob(job.id, "enviada", {
         enviada_em: new Date().toISOString(),
