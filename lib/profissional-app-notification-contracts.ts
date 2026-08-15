@@ -3,6 +3,8 @@ export type ProfissionalAppNotification = {
   title: string;
   description: string;
   createdAt: string | null;
+  readAt?: string | null;
+  read?: boolean;
   type?: string;
   status?: string | null;
   actionLabel?: string;

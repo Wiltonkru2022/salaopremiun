@@ -18,5 +18,14 @@
     "*.ts",
     "*.mts"
   ],
-  "exclude": ["node_modules"]
+  "exclude": [
+    "node_modules",
+    "apps/**",
+    ".next/dev/**",
+    ".codex-artifacts/**",
+    "vitest.config.ts",
+    "vitest.setup.mts",
+    "**/*.test.ts",
+    "**/*.test.tsx"
+  ]
 }

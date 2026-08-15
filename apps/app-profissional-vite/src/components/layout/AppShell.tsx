@@ -2,6 +2,7 @@ import { Bell, CalendarDays, HelpCircle, Home, Menu, Scissors, Settings, Star, U
 import { useState } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import { Button } from "../ui/Button";
+import { ptBR } from "../../../../../core/i18n/pt-BR";
 
 export type View =
   | "inicio"
@@ -20,17 +21,17 @@ export type View =
   | "privacidade";
 
 const nav = [
-  { id: "inicio", label: "Inicio", icon: Home },
-  { id: "agenda", label: "Agenda", icon: CalendarDays },
-  { id: "clientes", label: "Clientes", icon: Users },
-  { id: "servicos", label: "Servicos", icon: Scissors },
-  { id: "comandas", label: "Comandas", icon: WalletCards },
-  { id: "comissao", label: "Comissao", icon: WalletCards },
-  { id: "avaliacoes", label: "Avaliacoes", icon: Star },
-  { id: "notificacoes", label: "Avisos", icon: Bell },
-  { id: "perfil", label: "Perfil", icon: User2 },
-  { id: "configuracoes", label: "Configuracoes", icon: Settings },
-  { id: "suporte", label: "Suporte", icon: HelpCircle }
+  { id: "inicio", label: ptBR.professional.home, icon: Home },
+  { id: "agenda", label: ptBR.professional.agenda, icon: CalendarDays },
+  { id: "clientes", label: ptBR.professional.clients, icon: Users },
+  { id: "servicos", label: ptBR.professional.services, icon: Scissors },
+  { id: "comandas", label: ptBR.professional.tickets, icon: WalletCards },
+  { id: "comissao", label: ptBR.professional.commission, icon: WalletCards },
+  { id: "avaliacoes", label: ptBR.professional.reviews, icon: Star },
+  { id: "notificacoes", label: ptBR.professional.alerts, icon: Bell },
+  { id: "perfil", label: ptBR.professional.profile, icon: User2 },
+  { id: "configuracoes", label: ptBR.professional.settings, icon: Settings },
+  { id: "suporte", label: ptBR.professional.support, icon: HelpCircle }
 ] as const;
 
 function BrandLogo({ compact = false }: { compact?: boolean }) {
@@ -47,7 +48,7 @@ function BrandLogo({ compact = false }: { compact?: boolean }) {
   );
 }
 
-export function AppShell({ view, setView, title, subtitle, children }: { view: View; setView: (view: View) => void; title: string; subtitle?: string; children: React.ReactNode }) {
+export function AppShell({ view, setView, title, subtitle, children }: { view: View; setView: (view: View) => void; title: string; subtitle: string; children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
   const { profissional, logout } = useAuth();
 

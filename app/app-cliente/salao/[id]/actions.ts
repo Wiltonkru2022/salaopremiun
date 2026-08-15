@@ -8,6 +8,7 @@ import {
   joinClienteAppWaitlist,
 } from "@/app/services/cliente-app/appointments";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { captureSystemEvent } from "@/lib/monitoring/server";
 
 export type ClienteBookingState = {
   error: string | null;
@@ -59,14 +60,41 @@ export async function createClienteBookingAction(
     return { error: result.error };
   }
 
+  await captureSystemEvent({
+    module: "cliente_app",
+    eventType: "funnel",
+    action: "reserva_confirmada",
+    message: "Reserva do cliente confirmada",
+    entity: "agendamento",
+    entityId: result.idAgendamento || null,
+    idSalao,
+    origin: "server_action",
+    surface: "public",
+    actorType: "anonimo",
+    severity: "info",
+    success: true,
+    details: {
+      requiresSignal: Boolean(result.requiresSignal),
+      serviceId: idServico,
+    },
+  });
+
   revalidatePath(`/app-cliente/salao/${idSalao}`);
   revalidatePath("/app-cliente/agendamentos");
 
   if (result.requiresSignal && result.idAgendamento) {
-    redirect(`/app-cliente/agendamentos/${result.idAgendamento}/sinal`);
+    redirect(
+      `/app-cliente/agendamentos/${result.idAgendamento}/sinal?salao=${encodeURIComponent(
+        idSalao
+      )}`
+    );
   }
 
-  redirect("/app-cliente/agendamentos?status=agendado");
+  redirect(
+    `/app-cliente/agendamentos?status=agendado&salao=${encodeURIComponent(
+      idSalao
+    )}`
+  );
 }
 
 export async function joinClienteWaitlistAction(formData: FormData) {
@@ -85,11 +113,11 @@ export async function joinClienteWaitlistAction(formData: FormData) {
   });
 
   if (!result.ok) {
-    redirect(`/app-cliente/salao/${idSalao}?status=lista_espera_erro`);
+    redirect(`/app-cliente/salao/${idSalao}status=lista_espera_erro`);
   }
 
   revalidatePath(`/app-cliente/salao/${idSalao}`);
-  redirect(`/app-cliente/salao/${idSalao}?status=lista_espera`);
+  redirect(`/app-cliente/salao/${idSalao}status=lista_espera`);
 }
 
 export async function toggleClienteSalonFavoriteAction(formData: FormData) {

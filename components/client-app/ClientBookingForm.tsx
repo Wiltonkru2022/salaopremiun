@@ -11,7 +11,7 @@ import {
   Scissors,
   UserRound,
 } from "lucide-react";
-import { useActionState, useEffect, useMemo, useState } from "react";
+import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import {
   createClienteBookingAction,
@@ -23,6 +23,11 @@ import type {
   ClientAppServiceListItem,
 } from "@/lib/client-app/queries";
 import { formatClientDuration } from "@/lib/client-app/duration-format";
+import { ptBR } from "@/core/i18n/pt-BR";
+import {
+  readClientBookingDraft,
+  writeClientBookingDraft,
+} from "@/lib/client-app/booking-draft";
 
 type AvailabilitySlot = {
   horaInicio: string;
@@ -152,7 +157,7 @@ function SubmitButton({ disabled }: { disabled?: boolean }) {
       className="mt-6 flex h-14 w-full items-center justify-center gap-3 rounded-2xl bg-[#f6b93f] text-lg font-black text-black disabled:opacity-50"
     >
       <CalendarDays size={23} />
-      {pending ? "Confirmando..." : "Confirmar agendamento"}
+      {pending ? "Confirmando..." : ptBR.client.confirmBooking}
     </button>
   );
 }
@@ -199,6 +204,8 @@ export default function ClientBookingForm({
   idSalao,
   servicos,
   profissionais,
+  isAuthenticated = true,
+  returnPath,
   cuponsDisponiveis = [],
   cupomInicial = "",
 }: {
@@ -206,6 +213,8 @@ export default function ClientBookingForm({
   servicos: ClientAppServiceListItem[];
   profissionais: ClientAppProfessionalListItem[];
   intervaloMinutos: number;
+  isAuthenticated?: boolean;
+  returnPath?: string;
   cuponsDisponiveis?: ClientBookingCoupon[];
   cupomInicial?: string;
 }) {
@@ -232,6 +241,8 @@ export default function ClientBookingForm({
   const [codigoCupom, setCodigoCupom] = useState(
     cupomInicial || cuponsDisponiveis[0]?.codigo || ""
   );
+  const [draftReady, setDraftReady] = useState(false);
+  const draftHydrated = useRef(false);
 
   const selectedServices = useMemo(
     () =>
@@ -313,6 +324,52 @@ export default function ClientBookingForm({
     () => diasDisponiveis.find((dia) => dia.data === selectedDate)?.horarios || [],
     [diasDisponiveis, selectedDate]
   );
+
+  useEffect(() => {
+    const draft = readClientBookingDraft(idSalao);
+    if (draft) {
+      const validServiceIds = draft.servicoIds.filter((id) =>
+        servicos.some((servico) => servico.id === id)
+      );
+      const professionalStillExists = profissionais.some(
+        (profissional) => profissional.id === draft.profissionalId
+      );
+      setProfissionalId(professionalStillExists ? draft.profissionalId : "");
+      setServicoIds(validServiceIds);
+      setSelectedDate(draft.selectedDate);
+      setSelectedTime(draft.selectedTime);
+      setCodigoCupom(draft.codigoCupom);
+      setStep(
+        draft.step === "resumo" && professionalStillExists && validServiceIds.length
+          ? "resumo"
+          : draft.step
+      );
+    }
+    draftHydrated.current = true;
+    setDraftReady(true);
+  }, [idSalao, profissionais, servicos]);
+
+  useEffect(() => {
+    if (!draftReady) return;
+    writeClientBookingDraft({
+      idSalao,
+      profissionalId,
+      servicoIds,
+      selectedDate,
+      selectedTime,
+      codigoCupom,
+      step,
+    });
+  }, [
+    codigoCupom,
+    draftReady,
+    idSalao,
+    profissionalId,
+    selectedDate,
+    selectedTime,
+    servicoIds,
+    step,
+  ]);
 
   useEffect(() => {
     if (categoriaAtiva === "Todos") return;
@@ -415,7 +472,10 @@ export default function ClientBookingForm({
   const canSubmit = Boolean(primaryService && selectedProfissional && selectedDate && selectedTime);
 
   return (
-    <form action={formAction} className="min-h-dvh bg-[#050505] px-5 pb-28 pt-[calc(env(safe-area-inset-top)+1.25rem)] text-white">
+    <form
+      action={formAction}
+      className="min-h-dvh bg-[#050505] px-5 pb-28 pt-[calc(env(safe-area-inset-top)+1.25rem)] text-white"
+    >
       <input type="hidden" name="salao" value={idSalao} />
       <input type="hidden" name="servico" value={primaryService?.id || ""} />
       {servicoIds.map((id) => (
@@ -443,7 +503,7 @@ export default function ClientBookingForm({
             <ArrowLeft size={34} />
           </button>
           <h1 className="text-[1.65rem] font-black leading-tight tracking-[-0.03em]">
-            {step === "resumo" ? "Confirmar agendamento" : "Reserva online"}
+            {step === "resumo" ? ptBR.client.confirmBooking : ptBR.client.booking}
           </h1>
           <div
             className="flex h-12 w-12 items-center justify-center"
@@ -458,10 +518,10 @@ export default function ClientBookingForm({
         {step === "profissional" ? (
           <section className="mt-8">
             <h2 className="text-[1.75rem] font-black tracking-[-0.03em]">
-              Escolha seu atendimento
+              {ptBR.client.chooseAppointment}
             </h2>
             <p className="mt-3 text-lg leading-snug text-zinc-300">
-              Primeiro o profissional, depois o serviço e por último data e hora.
+              {ptBR.client.bookingOrder}
             </p>
             <div className="mt-6 space-y-3">
               {[
@@ -504,7 +564,7 @@ export default function ClientBookingForm({
                 <input
                   value={buscaProfissional}
                   onChange={(event) => setBuscaProfissional(event.target.value)}
-                  placeholder="Buscar profissional"
+                  placeholder={ptBR.client.professionalSearch}
                   className="min-w-0 flex-1 bg-transparent text-lg text-white outline-none"
                 />
               </label>
@@ -548,7 +608,7 @@ export default function ClientBookingForm({
         {step === "servico" ? (
           <section className="mt-8 pb-52">
             <h2 className="text-[1.8rem] font-black tracking-[-0.03em]">
-              Escolha o serviço
+              {ptBR.client.chooseService}
             </h2>
             <p className="mt-2 text-lg leading-snug text-zinc-300">
               Mostrando apenas serviços feitos por {selectedProfissional?.nome || "este profissional"}.
@@ -558,7 +618,7 @@ export default function ClientBookingForm({
               <input
                 value={buscaServico}
                 onChange={(event) => setBuscaServico(event.target.value)}
-                placeholder="Buscar serviços"
+              placeholder={ptBR.client.serviceSearch}
                 className="min-w-0 flex-1 bg-transparent text-lg text-white outline-none"
               />
             </label>
@@ -579,7 +639,7 @@ export default function ClientBookingForm({
               ))}
             </div>
             <h3 className="mt-8 text-[1.8rem] font-black">
-              {categoriaAtiva === "Todos" ? "Serviços populares" : categoriaAtiva}
+              {categoriaAtiva === "Todos" ? ptBR.client.popularServices : categoriaAtiva}
             </h3>
             <div className="mt-5 space-y-3">
               {servicosFiltrados.map((servico) => {
@@ -605,7 +665,7 @@ export default function ClientBookingForm({
                         </strong>
                       </span>
                       <span className="mt-2 line-clamp-2 block text-[0.98rem] leading-6 text-zinc-400">
-                        {servico.descricao || "Atendimento premium do salão."}
+                        {servico.descricao || ptBR.client.salonService}
                       </span>
                       <span className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-[0.98rem] text-zinc-400">
                         <Clock3 size={18} />
@@ -633,14 +693,13 @@ export default function ClientBookingForm({
               })}
               {!servicosFiltrados.length ? (
                 <div className="rounded-[1.15rem] border border-white/10 bg-[#111214] p-5 text-center text-zinc-300">
-                  Nenhum serviço disponível para este profissional nesta categoria.
+                  {ptBR.client.noServices}
                 </div>
               ) : null}
             </div>
             {!profissionaisCompativeis.some((item) => item.id === profissionalId) && servicoIds.length ? (
               <p className="mt-3 rounded-2xl border border-[#f6b93f]/40 bg-[#211805] p-4 text-sm text-[#f6b93f]">
-                Nenhum profissional disponível para todos os serviços selecionados.
-                Remova um serviço ou escolha outro.
+                {ptBR.client.incompatibleServices}
               </p>
             ) : null}
             <div className="pointer-events-none fixed inset-x-0 bottom-[5.15rem] z-40 bg-gradient-to-t from-[#050505] via-[#050505]/95 to-transparent px-5 pb-4 pt-12 md:bottom-0">
@@ -666,7 +725,7 @@ export default function ClientBookingForm({
         {step === "horario" ? (
           <section className="mt-8">
             <h2 className="text-3xl font-black tracking-[-0.04em]">
-              Escolha o horário
+              {ptBR.client.chooseTime}
             </h2>
             <p className="mt-3 text-xl leading-snug text-zinc-300">
               Selecione a data e o horário que deseja realizar seu agendamento.
@@ -697,7 +756,7 @@ export default function ClientBookingForm({
               </div>
               {loadingAvailability ? (
                 <div className="py-16 text-center text-zinc-400">
-                  Carregando horários disponíveis...
+                  {ptBR.client.loadingTimes}
                 </div>
               ) : availabilityError ? (
                 <div className="py-16 text-center text-zinc-400">
@@ -743,9 +802,9 @@ export default function ClientBookingForm({
               )}
             </div>
 
-            <h3 className="mt-8 text-2xl font-black">Horários disponíveis</h3>
+            <h3 className="mt-8 text-2xl font-black">{ptBR.client.availableTimes}</h3>
             <p className="mt-2 text-xl text-zinc-400">
-              {selectedDate ? formatFullDate(selectedDate) : "Escolha uma data"}
+              {selectedDate ? formatFullDate(selectedDate) : ptBR.client.chooseDate}
             </p>
             <div className="mt-5 grid grid-cols-4 gap-3">
               {horariosDoDia.map((horario) => (
@@ -781,10 +840,10 @@ export default function ClientBookingForm({
                 <Check size={62} strokeWidth={4} />
               </div>
               <h2 className="mt-8 text-5xl font-black tracking-[-0.06em]">
-                Quase lá!
+                {ptBR.client.almostThere}
               </h2>
               <p className="mt-5 text-2xl leading-snug text-zinc-300">
-                Revise os detalhes e confirme seu agendamento.
+                {ptBR.client.reviewBooking}
               </p>
             </div>
 
@@ -833,7 +892,29 @@ export default function ClientBookingForm({
               </select>
             ) : null}
 
-            <SubmitButton disabled={!canSubmit} />
+            {isAuthenticated ? (
+              <SubmitButton disabled={!canSubmit || !draftReady} />
+            ) : (
+              <a
+                href={`/app-cliente/login?salao=${encodeURIComponent(
+                  idSalao
+                )}&next=${encodeURIComponent(returnPath || `/app-cliente/salao/${idSalao}/reserva`)}`}
+                onClick={() => {
+                  writeClientBookingDraft({
+                    idSalao,
+                    profissionalId,
+                    servicoIds,
+                    selectedDate,
+                    selectedTime,
+                    codigoCupom,
+                    step: "resumo",
+                  });
+                }}
+                className="mt-6 flex h-14 w-full items-center justify-center rounded-2xl bg-[#f6b93f] text-lg font-black text-black"
+              >
+                {ptBR.client.enterToConfirm}
+              </a>
+            )}
             {state.error ? (
               <div className="mt-4 rounded-2xl border border-red-400/40 bg-red-950/40 p-4 text-sm text-red-100">
                 {state.error}

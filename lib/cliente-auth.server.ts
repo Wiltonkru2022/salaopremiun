@@ -1,5 +1,5 @@
 import bcrypt from "bcryptjs";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import crypto from "node:crypto";
 import { getAppRootDomain } from "@/lib/security/app-hosts";
@@ -39,12 +39,33 @@ function getSessionSecret() {
   return secret;
 }
 
-function getCookieDomain() {
+async function getCookieDomain() {
   if (process.env.NODE_ENV !== "production") {
     return undefined;
   }
 
+  const requestHeaders = await headers();
+  const host = String(requestHeaders.get("host") || "").split(":")[0].toLowerCase();
+  if (host === "localhost" || host === "127.0.0.1" || host === "::1") {
+    return undefined;
+  }
+
   return `.${getAppRootDomain()}`;
+}
+
+async function shouldUseSecureCookies() {
+  if (process.env.NODE_ENV !== "production") return false;
+
+  const requestHeaders = await headers();
+  const host = String(requestHeaders.get("host") || "").split(":")[0].toLowerCase();
+  const protocol = String(requestHeaders.get("x-forwarded-proto") || "").toLowerCase();
+
+  return !(
+    host === "localhost" ||
+    host === "127.0.0.1" ||
+    host === "::1" ||
+    protocol === "http"
+  );
 }
 
 function deriveKey() {
@@ -152,9 +173,10 @@ export async function verifyClientePassword(password: string, hash: string) {
 export async function createClienteSession(session: ClienteAppSession) {
   const cookieStore = await cookies();
   const token = serializeSession(session);
+  const secure = await shouldUseSecureCookies();
   const baseOptions = {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure,
     sameSite: "lax",
     path: "/",
     maxAge: SESSION_TTL_SECONDS,
@@ -166,7 +188,7 @@ export async function createClienteSession(session: ClienteAppSession) {
   });
   cookieStore.set(COOKIE_NAME, token, baseOptions);
 
-  const cookieDomain = getCookieDomain();
+  const cookieDomain = await getCookieDomain();
   if (cookieDomain) {
     cookieStore.set(LOGOUT_MARKER_COOKIE_NAME, "", {
       ...baseOptions,
@@ -216,9 +238,10 @@ export async function requireClienteSession() {
 
 export async function clearClienteSession() {
   const cookieStore = await cookies();
+  const secure = await shouldUseSecureCookies();
   const baseOptions = {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure,
     sameSite: "lax",
     path: "/",
     maxAge: 0,
@@ -230,7 +253,7 @@ export async function clearClienteSession() {
   });
   cookieStore.set(COOKIE_NAME, "", baseOptions);
 
-  const cookieDomain = getCookieDomain();
+  const cookieDomain = await getCookieDomain();
   if (cookieDomain) {
     cookieStore.set(LOGOUT_MARKER_COOKIE_NAME, String(Date.now()), {
       ...baseOptions,

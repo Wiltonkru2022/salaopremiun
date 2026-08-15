@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, CalendarDays, Scissors, WalletCards } from "lucide-react";
 import ClientSignalReceiptForm from "@/components/client-app/ClientSignalReceiptForm";
+import ClientBookingDraftCleanup from "@/components/client-app/ClientBookingDraftCleanup";
 import { requireClienteAppContext } from "@/lib/client-context.server";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { buildPixPayload } from "@/lib/pix/brcode";
@@ -16,10 +17,14 @@ function formatCurrency(value: number) {
 
 export default async function ClienteAgendamentoSinalPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams?: Promise<{ salao?: string | string[] }>;
 }) {
   const { id } = await params;
+  const query = searchParams ? await searchParams : undefined;
+  const salaoId = Array.isArray(query?.salao) ? query.salao[0] : query?.salao;
   const session = await requireClienteAppContext();
   const supabaseAdmin = getSupabaseAdmin();
 
@@ -66,6 +71,9 @@ export default async function ClienteAgendamentoSinalPage({
 
   return (
     <main className="min-h-dvh bg-white px-5 pb-32 pt-[calc(env(safe-area-inset-top)+1.25rem)] text-zinc-950">
+      {salaoId ? (
+        <ClientBookingDraftCleanup idSalao={salaoId} />
+      ) : null}
       <div className="mx-auto max-w-md">
         <header className="grid grid-cols-[44px_1fr] gap-3">
           <Link

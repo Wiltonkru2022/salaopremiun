@@ -28,6 +28,8 @@ const GUARD_HINTS = [
   "getProfissionalTicketContext(",
   "getPainelTicketContext(",
   "getPainelUserContext(",
+  "requireMobileClientAccess(",
+  "requireProfissionalAppContext(",
   "getClienteSessionFromCookie(",
   "requireClienteAppContext(",
   "carregarContextoVenda(",

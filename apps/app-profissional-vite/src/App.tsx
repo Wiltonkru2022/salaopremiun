@@ -1,5 +1,6 @@
 ﻿import { RefreshCw } from "lucide-react";
 import { useMemo, useState } from "react";
+import { ptBR } from "../../../core/i18n/pt-BR";
 import { AppShell, type View } from "./components/layout/AppShell";
 import { Button } from "./components/ui/Button";
 import { Card } from "./components/ui/Card";
@@ -20,17 +21,17 @@ import { ServicosPage } from "./pages/ServicosPage";
 import { DuvidasPage, InstalarPage, PrivacidadePage, SuportePage } from "./pages/StaticPages";
 
 const titles: Record<View, string> = {
-  inicio: "Inicio",
-  agenda: "Agenda",
-  clientes: "Clientes",
-  servicos: "Servicos",
-  comandas: "Comandas",
-  comissao: "Comissao",
-  avaliacoes: "Avaliacoes",
-  notificacoes: "Notificacoes",
-  perfil: "Perfil",
-  configuracoes: "Configuracoes",
-  suporte: "Suporte",
+  inicio: ptBR.professional.home,
+  agenda: ptBR.professional.agenda,
+  clientes: ptBR.professional.clients,
+  servicos: ptBR.professional.services,
+  comandas: ptBR.professional.tickets,
+  comissao: ptBR.professional.commission,
+  avaliacoes: ptBR.professional.reviews,
+  notificacoes: ptBR.professional.alerts,
+  perfil: ptBR.professional.profile,
+  configuracoes: ptBR.professional.settings,
+  suporte: ptBR.professional.support,
   duvidas: "Duvidas",
   instalar: "Instalar",
   privacidade: "Privacidade"
@@ -40,7 +41,12 @@ export function App() {
   const { profissional, loading: authLoading } = useAuth();
   const [view, setView] = useState<View>("inicio");
   const [selectedDate, setSelectedDate] = useState(toISODate(new Date()));
-  const data = useProfissionalData(profissional?.id);
+  const data = useProfissionalData(
+    profissional?.id,
+    profissional?.podeVerAgendaTodos ??
+      profissional?.pode_ver_agenda_todos ??
+      String(profissional?.nivel_acesso || "").toLowerCase() === "todos"
+  );
 
   const subtitle = useMemo(() => {
     if (view === "agenda") return new Intl.DateTimeFormat("pt-BR", { weekday: "long", day: "2-digit", month: "long" }).format(new Date(selectedDate + "T12:00:00"));
@@ -48,7 +54,7 @@ export function App() {
     if (view === "notificacoes") return `${data.notificacoes.filter((item) => !item.lida).length} nao lidas`;
     if (view === "comissao") return "Repasse e producao";
     if (view === "perfil") return "Dados, horarios e suporte";
-    return profissional?.nome;
+    return profissional?.nome || "";
   }, [view, selectedDate, data.comandas, data.notificacoes, profissional?.nome]);
 
   if (authLoading) {
@@ -58,7 +64,7 @@ export function App() {
   if (!profissional) return <LoginPage />;
 
   return (
-    <AppShell view={view} setView={setView} title={titles[view]} subtitle={subtitle || undefined}>
+    <AppShell view={view} setView={setView} title={titles[view]} subtitle={subtitle || ""}>
       {data.error ? (
         <Card className="mb-4 border-red-200 bg-red-50 text-red-700">
           <div className="text-sm font-bold">{data.error}</div>
@@ -66,7 +72,13 @@ export function App() {
       ) : null}
 
       <div className="mb-4 flex items-center justify-between gap-3">
-        <div className="text-xs font-black uppercase tracking-[0.18em] text-zinc-400">{data.loading ? "Sincronizando" : "Offline cache ativo"}</div>
+        <div className="min-w-0 text-xs font-black uppercase tracking-[0.12em] text-zinc-400">
+          {data.loading
+            ? ptBR.common.syncing
+            : data.isOnline
+              ? `${ptBR.common.online}${data.lastSyncedAt ? ` · ${new Date(data.lastSyncedAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}` : ""}`
+              : ptBR.professional.offlineWarning}
+        </div>
         <Button variant="secondary" className="h-10 px-3" onClick={() => data.refresh()}>
           <RefreshCw size={16} />
           Atualizar

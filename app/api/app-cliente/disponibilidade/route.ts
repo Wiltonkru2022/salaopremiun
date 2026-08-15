@@ -1,11 +1,8 @@
 import { NextResponse } from "next/server";
-import { requireClienteAppContext } from "@/lib/client-context.server";
 import { getClienteAppBookingAvailability } from "@/app/services/cliente-app/appointments";
 import { requestOracleVpsProtected } from "@/lib/oracle-vps/client";
 
 export async function GET(request: Request) {
-  await requireClienteAppContext();
-
   const { searchParams } = new URL(request.url);
   const idSalao = String(searchParams.get("salao") || "").trim();
   const idServico = String(searchParams.get("servico") || "").trim();

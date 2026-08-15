@@ -65,7 +65,14 @@ export default defineConfig(({ mode }) => {
       })
     ],
     server: {
-      port: 5177
+      port: 5177,
+      proxy: {
+        "/api": {
+          target: env.VITE_NEXT_APP_ORIGIN || "http://localhost:3000",
+          changeOrigin: true,
+          secure: false,
+        },
+      },
     }
   };
 });

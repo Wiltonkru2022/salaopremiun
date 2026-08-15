@@ -98,7 +98,10 @@ export function Calendar({
   function getHorarioDiaTodo(date: string) {
     const dateObj = parseISODate(date);
     const weekday = dateObj.getDay();
-    const horario = (profissionalAtual.horario_funcionamento || []).find(
+    const selectedProfessional = profissionais.find((item) => item.id === blockProfissional);
+    const horarioFuncionamento =
+      selectedProfessional?.horario_funcionamento || profissionalAtual.horario_funcionamento || [];
+    const horario = horarioFuncionamento.find(
       (item) => Number(item.dia) === weekday && item.ativo
     );
 
@@ -129,6 +132,7 @@ export function Calendar({
   const [newServico, setNewServico] = useState("");
   const [newProfissional, setNewProfissional] = useState("");
   const [newHora, setNewHora] = useState("09:00");
+  const [blockError, setBlockError] = useState<string | null>(null);
 
   const canChooseProfessional = ["todos", "geral", "admin", "administrador"].includes(String(profissionalAtual.nivel_acesso || "").toLowerCase()) && profissionais.length > 1;
   const days = useMemo(() => buildMonthDays(cursor, agendamentos), [cursor, agendamentos]);
@@ -258,6 +262,7 @@ export function Calendar({
               setBlockSelectedDates([selectedDate]);
               setBlockProfissional(canChooseProfessional ? "" : profissionalAtual.id);
               setBlockAllDay(false);
+              setBlockError(null);
               setBlockOpen(true);
             }}
           >
@@ -370,12 +375,16 @@ export function Calendar({
         </form>
       </Modal>
 
-      <Modal title="Bloquear horario" subtitle="Selecione varias datas do mes e aplique o mesmo bloqueio." open={blockOpen} onClose={() => { setBlockAllDay(false); setBlockOpen(false); }}>
+      <Modal title="Bloquear horario" subtitle="Selecione varias datas do mes e aplique o mesmo bloqueio." open={blockOpen} onClose={() => { setBlockAllDay(false); setBlockError(null); setBlockOpen(false); }}>
         <form
           className="grid gap-3"
           onSubmit={async (event) => {
             event.preventDefault();
-            if (!blockSelectedDates.length || (canChooseProfessional && !blockProfissional)) return;
+            setBlockError(null);
+            if (!blockSelectedDates.length || (canChooseProfessional && !blockProfissional)) {
+              setBlockError(canChooseProfessional ? "Selecione o profissional e pelo menos um dia." : "Selecione pelo menos um dia.");
+              return;
+            }
             const horarioDiaTodo = getHorarioDiaTodo(blockSelectedDates[0] || selectedDate);
             const horaInicioBloqueio = blockAllDay ? horarioDiaTodo.inicio : blockHour;
             const duracaoBloqueio = blockAllDay
@@ -387,15 +396,19 @@ export function Calendar({
                   )
                 )
               : blockDuration;
-            await onBlock(
-              blockSelectedDates,
-              horaInicioBloqueio,
-              duracaoBloqueio,
-              blockReason || "Bloqueio",
-              canChooseProfessional ? blockProfissional : profissionalAtual.id
-            );
-            setBlockAllDay(false);
-            setBlockOpen(false);
+            try {
+              await onBlock(
+                blockSelectedDates,
+                horaInicioBloqueio,
+                duracaoBloqueio,
+                blockReason || "Bloqueio",
+                canChooseProfessional ? blockProfissional : profissionalAtual.id
+              );
+              setBlockAllDay(false);
+              setBlockOpen(false);
+            } catch (error) {
+              setBlockError(error instanceof Error ? error.message : "Nao foi possivel bloquear o horario.");
+            }
           }}
         >
           {canChooseProfessional ? (
@@ -465,6 +478,7 @@ export function Calendar({
           <Field label="Horario"><Input type="time" value={blockHour} onChange={(event) => setBlockHour(event.target.value)} disabled={blockAllDay} /></Field>
           <Field label="Tempo"><Input type="number" min={5} step={5} value={blockDuration} onChange={(event) => setBlockDuration(Number(event.target.value))} disabled={blockAllDay} /></Field>
           <Field label="Observacao"><Input value={blockReason} onChange={(event) => setBlockReason(event.target.value)} placeholder="Ex.: almoco, curso, compromisso" /></Field>
+          {blockError ? <div role="alert" className="rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-bold text-red-700">{blockError}</div> : null}
           <ModalActionBar>
             <Button>Bloquear</Button>
           </ModalActionBar>

@@ -19,6 +19,8 @@ export type Profissional = {
   sinal_pix_recebedor?: string | null;
   sinal_whatsapp?: string | null;
   nivel_acesso?: string | null;
+  podeVerAgendaTodos?: boolean;
+  pode_ver_agenda_todos?: boolean;
   ativo: boolean;
   intervalo_agenda_minutos: number;
   horario_funcionamento: HorarioDia[];
@@ -108,6 +110,9 @@ export type Notificacao = {
   mensagem: string;
   lida: boolean;
   created_at: string;
+  url?: string | null;
+  tipo?: string | null;
+  status?: string | null;
 };
 
 export type ComissaoLancamento = {
@@ -136,4 +141,5 @@ export type ProfissionalResumo = {
   id: string;
   nome: string;
   nome_exibicao?: string | null;
+  horario_funcionamento?: HorarioDia[] | null;
 };

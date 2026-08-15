@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import ClientAppFrame from "@/components/client-app/ClientAppFrame";
 import ClientAppointmentsManager from "@/components/client-app/ClientAppointmentsManager";
+import ClientBookingDraftCleanup from "@/components/client-app/ClientBookingDraftCleanup";
 import { requireClienteAppContext } from "@/lib/client-context.server";
 import { listClienteAppAppointments } from "@/lib/client-app/queries";
 
@@ -12,7 +13,7 @@ export const metadata = {
 export default async function ClienteAppointmentsPage({
   searchParams,
 }: {
-  searchParams?: Promise<{ status?: string; pagina?: string }>;
+  searchParams?: Promise<{ status?: string; pagina?: string; salao?: string }>;
 }) {
   const session = await requireClienteAppContext();
   const params = searchParams ? await searchParams : undefined;
@@ -31,6 +32,9 @@ export default async function ClienteAppointmentsPage({
       subtitle={`Tudo certo, ${session.nome}. Veja o que está marcado e o que já pode avaliar.`}
     >
       <section className="mx-auto min-h-dvh max-w-3xl bg-white px-5 pb-28 pt-[calc(env(safe-area-inset-top)+1rem)] text-zinc-950">
+        {params?.status === "agendado" ? (
+          <ClientBookingDraftCleanup idSalao={params.salao || null} />
+        ) : null}
         <header className="mb-8 flex items-center gap-4">
           <Link
             href="/app-cliente"

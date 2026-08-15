@@ -1,6 +1,5 @@
 import "server-only";
 
-import { unstable_cache } from "next/cache";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import type { ProfissionalAppNotification } from "@/lib/profissional-app-notification-contracts";
 import type { ProfissionalServerContext } from "@/lib/profissional-context.server";
@@ -29,6 +28,7 @@ type NotificationJobRow = {
   url?: string | null;
   enviar_em?: string | null;
   created_at?: string | null;
+  metadata?: Record<string, unknown> | null;
 };
 
 function notificationActionLabel(type?: string | null) {
@@ -120,7 +120,7 @@ async function fetchJobNotifications(
   const supabaseAdmin = getSupabaseAdmin();
   const { data, error } = await (supabaseAdmin as any)
     .from("notification_jobs")
-    .select("id, tipo, titulo, mensagem, status, url, enviar_em, created_at")
+    .select("id, tipo, titulo, mensagem, status, url, enviar_em, created_at, metadata")
     .eq("id_salao", idSalao)
     .eq("id_profissional", idProfissional)
     .eq("canal", "profissional_app")
@@ -141,6 +141,7 @@ async function fetchJobNotifications(
   return ((data || []) as NotificationJobRow[]).map((item) => {
     const type = String(item.tipo || "").trim();
     const url = String(item.url || "").trim();
+    const readAt = String(item.metadata?.profissional_lida_em || "").trim() || null;
 
     return {
       id: item.id,
@@ -149,6 +150,8 @@ async function fetchJobNotifications(
         String(item.mensagem || "").trim() ||
         "Você tem uma atualização importante no App Profissional.",
       createdAt: String(item.created_at || item.enviar_em || "").trim() || null,
+      readAt,
+      read: Boolean(readAt),
       type,
       status: String(item.status || "").trim() || null,
       actionLabel: notificationActionLabel(type),
@@ -176,19 +179,10 @@ async function fetchProfissionalAppNotifications(
     .slice(0, 40);
 }
 
-const getCachedProfissionalAppNotifications = unstable_cache(
-  async (cachedSalaoId: string, cachedProfissionalId: string) =>
-    fetchProfissionalAppNotifications(cachedSalaoId, cachedProfissionalId),
-  ["profissional-app-notifications"],
-  {
-    revalidate: 30,
-  }
-);
-
 export async function listProfissionalAppNotifications(
   context: ProfissionalServerContext
 ): Promise<ProfissionalAppNotification[]> {
-  return getCachedProfissionalAppNotifications(
+  return fetchProfissionalAppNotifications(
     context.idSalao,
     context.idProfissional
   );

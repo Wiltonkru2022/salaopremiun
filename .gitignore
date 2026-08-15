@@ -17,9 +17,9 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
-.codex-dev-server*.log
-.codex-test-accounts.local.json
-.codex-playwright-report.local.json
+debug.log
+*.log
+.codex-*
 
 # os
 .DS_Store
@@ -29,8 +29,10 @@ Thumbs.db
 .vercel
 .cloudflared
 tsconfig.tsbuildinfo
+*.tsbuildinfo
 coverage
 backups/
+**/dist/
 
 .vercel
 .env*.local

@@ -10,7 +10,22 @@ import type { Servico } from "../types/database";
 type Payload = Pick<Servico, "nome" | "preco" | "duracao_minutos">;
 const PAGE_SIZE = 10;
 
-export function ServicosPage({ servicos, onSave, onEdit }: { servicos: Servico[]; onSave: (payload: Payload) => Promise<void>; onEdit?: (id: string, payload: Payload) => Promise<void> }) {
+function formatMoneyInput(value: string) {
+  const digits = String(value || "").replace(/\D/g, "");
+  if (!digits) return "";
+  return (Number(digits) / 100).toLocaleString("pt-BR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
+}
+
+function parseMoneyInput(value: string) {
+  const normalized = String(value || "").replace(/\./g, "").replace(",", ".");
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+export function ServicosPage({ servicos, onSave, onEdit }: { servicos: Servico[]; onSave: (payload: Payload) => Promise<void>; onEdit: (id: string, payload: Payload) => Promise<void> }) {
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<Servico | null>(null);
   const [query, setQuery] = useState("");
@@ -91,7 +106,9 @@ export function ServicosPage({ servicos, onSave, onEdit }: { servicos: Servico[]
 
 function ServicoForm({ initial, onSubmit }: { initial?: Servico; onSubmit: (payload: Payload) => Promise<void> }) {
   const [nome, setNome] = useState(initial?.nome || "");
-  const [preco, setPreco] = useState(String(initial?.preco ?? 0));
+  const [preco, setPreco] = useState(
+    initial?.preco ? formatMoneyInput(String(initial.preco)) : ""
+  );
   const [duracao, setDuracao] = useState(String(initial?.duracao_minutos || 30));
   const [descricao, setDescricao] = useState(initial?.descricao || "");
   const [loading, setLoading] = useState(false);
@@ -99,7 +116,7 @@ function ServicoForm({ initial, onSubmit }: { initial?: Servico; onSubmit: (payl
   async function submit(event: FormEvent) {
     event.preventDefault();
     setLoading(true);
-    await onSubmit({ nome, preco: Number(preco), duracao_minutos: Number(duracao || 0) });
+    await onSubmit({ nome, preco: parseMoneyInput(preco), duracao_minutos: Number(duracao || 0) });
     setLoading(false);
   }
 
@@ -107,7 +124,7 @@ function ServicoForm({ initial, onSubmit }: { initial?: Servico; onSubmit: (payl
     <form onSubmit={submit} className="grid gap-3">
       <Field label="Nome"><Input required value={nome} onChange={(event) => setNome(event.target.value)} /></Field>
       <div className="grid grid-cols-2 gap-3">
-        <Field label="Preco"><Input inputMode="decimal" value={preco} onChange={(event) => setPreco(event.target.value)} /></Field>
+        <Field label="Preco"><Input inputMode="decimal" value={preco} onChange={(event) => setPreco(formatMoneyInput(event.target.value))} placeholder="0,00" /></Field>
         <Field label="Tempo em minutos"><Input type="number" min={1} step={1} value={duracao} onChange={(event) => setDuracao(event.target.value)} /></Field>
       </div>
       <Field label="Descricao"><Textarea value={descricao} onChange={(event) => setDescricao(event.target.value)} placeholder="Opcional" /></Field>

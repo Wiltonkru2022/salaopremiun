@@ -2,6 +2,13 @@ import { NextResponse } from "next/server";
 import { getAdminMasterAccess } from "@/lib/admin-master/auth/requireAdminMasterUser";
 import { queueOracleVpsNotificationProcessing } from "@/lib/oracle-vps/client";
 
+function oracleNotificationProcessingFailed(value: unknown) {
+  if (!value || typeof value !== "object") return false;
+
+  const result = value as Record<string, unknown>;
+  return result.ok === false || result.success === false || result.status === "error";
+}
+
 export async function POST() {
   const access = await getAdminMasterAccess("operacao_reprocessar");
 
@@ -18,6 +25,13 @@ export async function POST() {
       requestedBy: access.usuario.id,
       requestedFrom: "admin_master_saude",
     });
+
+    if (oracleNotificationProcessingFailed(result)) {
+      return NextResponse.json(
+        { ok: false, error: "Oracle VPS retornou falha ao processar notificacoes.", result },
+        { status: 502 }
+      );
+    }
 
     return NextResponse.json({ ok: true, result }, { status: 202 });
   } catch (error) {

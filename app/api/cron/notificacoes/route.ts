@@ -4,6 +4,13 @@ import { processPendingNotificationJobs } from "@/lib/notification-jobs";
 import { queueOracleVpsNotificationProcessing } from "@/lib/oracle-vps/client";
 import { processInactiveClientRecovery } from "@/lib/client-app/inactive-recovery";
 
+function oracleNotificationProcessingFailed(value: unknown) {
+  if (!value || typeof value !== "object") return false;
+
+  const result = value as Record<string, unknown>;
+  return result.ok === false || result.success === false || result.status === "error";
+}
+
 async function handleCron(req: Request) {
   if (!verifyBearerSecret(req.headers.get("authorization"), process.env.CRON_SECRET)) {
     return NextResponse.json({ error: "Nao autorizado." }, { status: 401 });
@@ -16,6 +23,9 @@ async function handleCron(req: Request) {
         trigger: "cron",
         limit: 60,
       });
+      if (oracleNotificationProcessingFailed(vpsResult)) {
+        throw new Error("Oracle VPS retornou falha ao processar notificacoes.");
+      }
       return NextResponse.json({
         ok: true,
         provider: "oracle-vps",

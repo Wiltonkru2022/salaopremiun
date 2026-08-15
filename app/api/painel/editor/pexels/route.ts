@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getPainelUserContext } from "@/lib/auth/get-painel-user-context";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +19,14 @@ function normalizeQuery(value: string) {
 }
 
 export async function GET(request: Request) {
+  const { user, usuario } = await getPainelUserContext();
+  if (!user || !usuario?.id_salao) {
+    return NextResponse.json(
+      { error: "Sessao expirada. Entre novamente para buscar fotos." },
+      { status: 401 }
+    );
+  }
+
   const apiKey = process.env.PEXELS_API_KEY;
   if (!apiKey) {
     return NextResponse.json(
@@ -33,7 +42,7 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const query = normalizeQuery(String(url.searchParams.get("query") || ""));
   const response = await fetch(
-    `https://api.pexels.com/v1/search?query=${encodeURIComponent(
+    `https://api.pexels.com/v1/searchquery=${encodeURIComponent(
       query
     )}&per_page=18&orientation=portrait`,
     {
@@ -52,14 +61,14 @@ export async function GET(request: Request) {
   }
 
   const data = (await response.json()) as {
-    photos?: Array<{
+    photos: Array<{
       id: number;
-      alt?: string;
-      photographer?: string;
-      src?: {
-        medium?: string;
-        large2x?: string;
-        large?: string;
+      alt: string;
+      photographer: string;
+      src: {
+        medium: string;
+        large2x: string;
+        large: string;
       };
     }>;
   };
@@ -69,8 +78,8 @@ export async function GET(request: Request) {
       id: String(photo.id),
       alt: photo.alt || "Foto de salao de beleza",
       photographer: photo.photographer || "",
-      thumb: photo.src?.medium || "",
-      src: photo.src?.large2x || photo.src?.large || photo.src?.medium || "",
+      thumb: photo.src.medium || "",
+      src: photo.src.large2x || photo.src.large || photo.src.medium || "",
     })),
   });
 }

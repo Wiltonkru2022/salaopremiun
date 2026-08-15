@@ -9,13 +9,14 @@ import {
   rescheduleClienteAppAppointment,
   reviewClienteAppAppointment,
 } from "@/app/services/cliente-app/appointments";
+import { captureSystemEvent } from "@/lib/monitoring/server";
 
 export type ClienteAppointmentActionState = {
   error: string | null;
 };
 
 function buildReturnUrl(status: string) {
-  return `/app-cliente/agendamentos?status=${status}`;
+  return `/app-cliente/agendamentos?status=${encodeURIComponent(status)}`;
 }
 
 export async function cancelClienteAppointmentAction(
@@ -34,6 +35,19 @@ export async function cancelClienteAppointmentAction(
     return { error: result.error };
   }
 
+  await captureSystemEvent({
+    module: "cliente_app",
+    eventType: "funnel",
+    action: "agendamento_cancelado",
+    message: "Agendamento cancelado pelo cliente",
+    entity: "agendamento",
+    entityId: idAgendamento,
+    origin: "server_action",
+    surface: "public",
+    actorType: "anonimo",
+    severity: "info",
+    success: true,
+  });
   revalidatePath("/app-cliente/agendamentos");
   redirect(buildReturnUrl("cancelado"));
 }
@@ -78,6 +92,20 @@ export async function rescheduleClienteAppointmentAction(
     return { error: result.error };
   }
 
+  await captureSystemEvent({
+    module: "cliente_app",
+    eventType: "funnel",
+    action: "agendamento_reagendado",
+    message: "Agendamento reagendado pelo cliente",
+    entity: "agendamento",
+    entityId: idAgendamento,
+    origin: "server_action",
+    surface: "public",
+    actorType: "anonimo",
+    severity: "info",
+    success: true,
+    details: { data, horaInicio },
+  });
   revalidatePath("/app-cliente/agendamentos");
   redirect(buildReturnUrl("reagendado"));
 }
@@ -104,5 +132,7 @@ export async function reviewClienteAppointmentAction(
 
   revalidatePath("/app-cliente/agendamentos");
   revalidatePath(`/app-cliente/agendamentos/${idAgendamento}/avaliar`);
-  redirect(`/app-cliente/agendamentos/${idAgendamento}/avaliar?status=avaliado`);
+  redirect(
+    `/app-cliente/agendamentos/${idAgendamento}/avaliar?status=avaliado`
+  );
 }

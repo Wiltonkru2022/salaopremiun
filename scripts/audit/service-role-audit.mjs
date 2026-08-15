@@ -9,7 +9,8 @@ const GUARDRULES = [
   ["supabase_user", /auth\.getUser\(|getUser\(|getPainelUserContext|validarSalaoDoUsuario|getPainelTicketContext|requireSalao/],
   ["public_rate_limit", /assertPublicRateLimit|getPublicRateLimitIdentity/],
   ["salao_admin", /requireAdminSalao/],
-  ["profissional_session", /getProfissionalSessionFromCookie|getProfissionalTicketContext|requireProfissionalSession/],
+  ["profissional_session", /getProfissionalSessionFromCookie|getProfissionalTicketContext|requireProfissionalSession|requireProfissionalAppContext|validateProfissionalAppSession/],
+  ["mobile_client_access", /requireMobileClientAccess/],
   [
     "webhook_secret",
     /validarTokenWebhook|ASAAS_WEBHOOK_TOKEN|verifyHeaderSecret|isMetaWebhookSignatureValid|getMetaWhatsAppAppSecret|isMetaWebhookVerifyRequest/,
@@ -47,7 +48,7 @@ function routeFromFile(file) {
   return `/${toPosix(file)
     .replace(/^app\/api/, "api")
     .replace(/\/route\.ts$/, "")
-    .replace(/\[(.+?)\]/g, ":$1")}`;
+    .replace(/\[(.+)\]/g, ":$1")}`;
 }
 
 function hasTenantGuard(source) {

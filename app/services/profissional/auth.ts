@@ -17,6 +17,8 @@ type LoginResult =
         idSalao: string;
         nome: string;
         cpf: string;
+        nivelAcesso: string;
+        podeVerAgendaTodos: boolean;
         tipo: "profissional";
       };
     }
@@ -188,6 +190,8 @@ async function buildProfissionalSession(params: {
       idSalao: profissional.id_salao,
       nome: profissional.nome_exibicao || profissional.nome || "Profissional",
       cpf: params.cpf,
+      nivelAcesso,
+      podeVerAgendaTodos: nivelAcesso === "todos",
       tipo: "profissional",
     },
   };
