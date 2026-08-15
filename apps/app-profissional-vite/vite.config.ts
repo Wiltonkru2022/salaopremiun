@@ -10,6 +10,9 @@ export default defineConfig(({ mode }) => {
     plugins: [
       react(),
       VitePWA({
+        strategies: "injectManifest",
+        srcDir: "src",
+        filename: "sw.ts",
         registerType: "autoUpdate",
         includeAssets: ["icons/icon-192.png", "icons/icon-512.png"],
         manifest: {
@@ -38,28 +41,9 @@ export default defineConfig(({ mode }) => {
             }
           ]
         },
-        workbox: {
-          cleanupOutdatedCaches: true,
-          runtimeCaching: [
-            {
-              urlPattern: ({ request }) => request.destination === "script" || request.destination === "style" || request.destination === "image" || request.destination === "font",
-              handler: "CacheFirst",
-              options: {
-                cacheName: "salaopremiun-assets",
-                expiration: { maxEntries: 80, maxAgeSeconds: 60 * 60 * 24 * 30 }
-              }
-            },
-            {
-              urlPattern: ({ url }) => url.pathname.includes("/rest/v1/") || url.pathname.includes("/auth/v1/user"),
-              handler: "NetworkFirst",
-              options: {
-                cacheName: "salaopremiun-supabase-api",
-                networkTimeoutSeconds: 4,
-                expiration: { maxEntries: 120, maxAgeSeconds: 60 * 60 * 24 }
-              }
-            }
-          ]
-        }
+        injectManifest: {
+          globPatterns: ["**/*.{js,css,html,ico,png,svg,webmanifest}"],
+        },
       })
     ],
     server: {

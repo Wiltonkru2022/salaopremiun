@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import { Button } from "../ui/Button";
 import { ptBR } from "../../../../../core/i18n/pt-BR";
+import { PushPermissionButton } from "../PushPermissionButton";
 
 export type View =
   | "inicio"
@@ -106,9 +107,12 @@ export function AppShell({ view, setView, title, subtitle, children }: { view: V
                   {subtitle ? <p className="mt-0.5 truncate text-sm font-bold text-zinc-500">{subtitle}</p> : null}
                 </div>
               </div>
-              <button className="grid h-12 w-12 shrink-0 place-items-center rounded-full border border-zinc-200 bg-white shadow-sm md:hidden" onClick={() => setOpen(true)} aria-label="Abrir menu">
-                <Menu size={24} />
-              </button>
+              <div className="flex shrink-0 items-center gap-2">
+                <PushPermissionButton />
+                <button className="grid h-12 w-12 place-items-center rounded-full border border-zinc-200 bg-white shadow-sm md:hidden" onClick={() => setOpen(true)} aria-label="Abrir menu">
+                  <Menu size={24} />
+                </button>
+              </div>
             </div>
           </header>
 
