@@ -185,7 +185,16 @@ export default function PushPermissionRuntime({
       const registration = await navigator.serviceWorker
         .register("/sw.js", { scope: "/" })
         .catch(() => null);
-      let subscription = await registration?.pushManager
+      if (!registration) {
+        setStatus("ready");
+        return;
+      }
+
+      await registration.update().catch(() => undefined);
+      const readyRegistration = await navigator.serviceWorker.ready.catch(
+        () => registration
+      );
+      let subscription = await readyRegistration.pushManager
         .getSubscription()
         .catch(() => null);
 
@@ -206,7 +215,7 @@ export default function PushPermissionRuntime({
         await subscription.unsubscribe().catch(() => false);
         subscription = null;
 
-        subscription = await registration.pushManager.subscribe({
+        subscription = await readyRegistration.pushManager.subscribe({
           userVisibleOnly: true,
           applicationServerKey: urlBase64ToUint8Array(String(payload.publicKey)),
         });
@@ -242,7 +251,11 @@ export default function PushPermissionRuntime({
       const registration = await navigator.serviceWorker.register("/sw.js", {
         scope: "/",
       });
-      let subscription = await registration.pushManager.getSubscription();
+      await registration.update().catch(() => undefined);
+      const readyRegistration = await navigator.serviceWorker.ready.catch(
+        () => registration
+      );
+      let subscription = await readyRegistration.pushManager.getSubscription();
       const savedVapidKey = getSavedVapidKey(audience);
       const subscriptionKey = arrayBufferToUrlBase64(
         subscription?.options.applicationServerKey || null
@@ -261,7 +274,7 @@ export default function PushPermissionRuntime({
 
       subscription =
         subscription ||
-        (await registration.pushManager.subscribe({
+        (await readyRegistration.pushManager.subscribe({
           userVisibleOnly: true,
           applicationServerKey: urlBase64ToUint8Array(publicKey),
         }));

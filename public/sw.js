@@ -1,9 +1,16 @@
+const SW_VERSION = "2026-08-15-push-client-2";
+
 self.addEventListener("install", (event) => {
   event.waitUntil(self.skipWaiting());
 });
 
 self.addEventListener("activate", (event) => {
-  event.waitUntil(self.clients.claim());
+  event.waitUntil(
+    Promise.all([
+      self.clients.claim(),
+      self.registration.navigationPreload?.enable?.().catch(() => undefined),
+    ])
+  );
 });
 
 self.addEventListener("push", (event) => {
@@ -27,7 +34,7 @@ self.addEventListener("push", (event) => {
       body: payload.body || fallback.body,
       icon: "/favicon-preview.png",
       badge: "/favicon-preview.png",
-      tag: payload.tag || "salaopremium-update",
+      tag: payload.tag || `salaopremium-update-${SW_VERSION}`,
       renotify: asBoolean(payload.renotify),
       requireInteraction: asBoolean(payload.requireInteraction),
       silent: asBoolean(payload.silent),
