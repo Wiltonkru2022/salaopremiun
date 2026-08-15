@@ -141,6 +141,19 @@ export async function upsertPushSubscription(params: {
   if (error) {
     throw new Error(error.message);
   }
+
+  if (params.audience === "cliente_app" && params.clienteAppContaId) {
+    await (supabase as any)
+      .from("push_subscriptions")
+      .update({
+        ativo: false,
+        updated_at: now,
+      })
+      .eq("audience", "cliente_app")
+      .eq("cliente_app_conta_id", params.clienteAppContaId)
+      .neq("endpoint", parsed.endpoint)
+      .eq("ativo", true);
+  }
 }
 
 async function markSubscriptionInactive(id: string) {
@@ -381,7 +394,7 @@ export async function sendPushToRows(
           typeof error === "object" && error !== null && "statusCode" in error
             ? Number((error as { statusCode?: unknown }).statusCode)
             : 0;
-        if (statusCode === 404 || statusCode === 410) {
+        if (statusCode === 403 || statusCode === 404 || statusCode === 410) {
           await markSubscriptionInactive(row.id);
         }
       }

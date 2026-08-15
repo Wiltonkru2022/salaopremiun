@@ -16,13 +16,43 @@ type PushStatus =
 
 const SUBSCRIPTION_SAVE_TTL_MS = 12 * 60 * 60 * 1000;
 
-function getSubscriptionCacheKey(audience: PushAudience, subscription: PushSubscription) {
-  return `salaopremium:push-subscription:${audience}:${subscription.endpoint}`;
+function getSubscriptionCacheKey(
+  audience: PushAudience,
+  subscription: PushSubscription,
+  publicKey: string
+) {
+  return `salaopremium:push-subscription:${audience}:${publicKey}:${subscription.endpoint}`;
 }
 
-function wasSubscriptionSavedRecently(audience: PushAudience, subscription: PushSubscription) {
+function getVapidKeyCacheKey(audience: PushAudience) {
+  return `salaopremium:push-vapid-key:${audience}`;
+}
+
+function getSavedVapidKey(audience: PushAudience) {
   try {
-    const value = window.localStorage.getItem(getSubscriptionCacheKey(audience, subscription));
+    return window.localStorage.getItem(getVapidKeyCacheKey(audience)) || "";
+  } catch {
+    return "";
+  }
+}
+
+function markVapidKeySaved(audience: PushAudience, publicKey: string) {
+  try {
+    window.localStorage.setItem(getVapidKeyCacheKey(audience), publicKey);
+  } catch {
+    // A marcacao local e apenas uma protecao contra rotacoes repetidas.
+  }
+}
+
+function wasSubscriptionSavedRecently(
+  audience: PushAudience,
+  subscription: PushSubscription,
+  publicKey: string
+) {
+  try {
+    const value = window.localStorage.getItem(
+      getSubscriptionCacheKey(audience, subscription, publicKey)
+    );
     const lastSavedAt = Number(value || "0");
     return Number.isFinite(lastSavedAt) && Date.now() - lastSavedAt < SUBSCRIPTION_SAVE_TTL_MS;
   } catch {
@@ -30,10 +60,14 @@ function wasSubscriptionSavedRecently(audience: PushAudience, subscription: Push
   }
 }
 
-function markSubscriptionSaved(audience: PushAudience, subscription: PushSubscription) {
+function markSubscriptionSaved(
+  audience: PushAudience,
+  subscription: PushSubscription,
+  publicKey: string
+) {
   try {
     window.localStorage.setItem(
-      getSubscriptionCacheKey(audience, subscription),
+      getSubscriptionCacheKey(audience, subscription, publicKey),
       String(Date.now())
     );
   } catch {
@@ -70,8 +104,13 @@ function arrayBufferToUrlBase64(value: ArrayBuffer | null) {
     .replace(/=+$/g, "");
 }
 
-async function saveSubscription(audience: PushAudience, subscription: PushSubscription) {
-  if (wasSubscriptionSavedRecently(audience, subscription)) {
+async function saveSubscription(
+  audience: PushAudience,
+  subscription: PushSubscription,
+  publicKey: string
+) {
+  if (wasSubscriptionSavedRecently(audience, subscription, publicKey)) {
+    markVapidKeySaved(audience, publicKey);
     return new Response(JSON.stringify({ ok: true, cached: true }), { status: 200 });
   }
 
@@ -85,7 +124,8 @@ async function saveSubscription(audience: PushAudience, subscription: PushSubscr
     }),
   }).then((response) => {
     if (response.ok) {
-      markSubscriptionSaved(audience, subscription);
+      markSubscriptionSaved(audience, subscription, publicKey);
+      markVapidKeySaved(audience, publicKey);
     }
     return response;
   });
@@ -152,26 +192,30 @@ export default function PushPermissionRuntime({
       const subscriptionKey = arrayBufferToUrlBase64(
         subscription?.options.applicationServerKey || null
       );
+      const savedVapidKey = getSavedVapidKey(audience);
 
       if (
         registration &&
         subscription &&
-        subscriptionKey &&
-        subscriptionKey !== String(payload.publicKey)
+        permission === "granted" &&
+        (
+          savedVapidKey !== String(payload.publicKey) ||
+          (subscriptionKey && subscriptionKey !== String(payload.publicKey))
+        )
       ) {
         await subscription.unsubscribe().catch(() => false);
         subscription = null;
 
-        if (permission === "granted") {
-          subscription = await registration.pushManager.subscribe({
-            userVisibleOnly: true,
-            applicationServerKey: urlBase64ToUint8Array(String(payload.publicKey)),
-          });
-        }
+        subscription = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(String(payload.publicKey)),
+        });
       }
 
       if (subscription) {
-        await saveSubscription(audience, subscription).catch(() => null);
+        await saveSubscription(audience, subscription, String(payload.publicKey)).catch(
+          () => null
+        );
       }
 
       if (!active) return;
@@ -198,14 +242,31 @@ export default function PushPermissionRuntime({
       const registration = await navigator.serviceWorker.register("/sw.js", {
         scope: "/",
       });
-      const subscription =
-        (await registration.pushManager.getSubscription()) ||
+      let subscription = await registration.pushManager.getSubscription();
+      const savedVapidKey = getSavedVapidKey(audience);
+      const subscriptionKey = arrayBufferToUrlBase64(
+        subscription?.options.applicationServerKey || null
+      );
+
+      if (
+        subscription &&
+        (
+          savedVapidKey !== publicKey ||
+          (subscriptionKey && subscriptionKey !== publicKey)
+        )
+      ) {
+        await subscription.unsubscribe().catch(() => false);
+        subscription = null;
+      }
+
+      subscription =
+        subscription ||
         (await registration.pushManager.subscribe({
           userVisibleOnly: true,
           applicationServerKey: urlBase64ToUint8Array(publicKey),
         }));
 
-      const response = await saveSubscription(audience, subscription);
+      const response = await saveSubscription(audience, subscription, publicKey);
 
       if (!response.ok) {
         throw new Error("subscribe_failed");
