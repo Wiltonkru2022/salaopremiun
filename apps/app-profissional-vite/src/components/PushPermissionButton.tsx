@@ -3,6 +3,20 @@ import { useEffect, useState } from "react";
 
 type PushState = "checking" | "ready" | "enabled" | "denied" | "unsupported";
 
+function arrayBufferToBase64Url(value: ArrayBuffer | null) {
+  if (!value) return "";
+  const bytes = new Uint8Array(value);
+  let binary = "";
+  bytes.forEach((byte) => {
+    binary += String.fromCharCode(byte);
+  });
+  return window
+    .btoa(binary)
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/g, "");
+}
+
 function base64ToBytes(value: string) {
   const padding = "=".repeat((4 - (value.length % 4)) % 4);
   const raw = window.atob(`${value}${padding}`.replace(/-/g, "+").replace(/_/g, "/"));
@@ -47,12 +61,47 @@ export function PushPermissionButton() {
       const registration = await navigator.serviceWorker
         .register("/app-profissional/sw.js", { scope: "/app-profissional/" })
         .catch(() => null);
-      const subscription = await registration?.pushManager
+      let subscription = await registration?.pushManager
         .getSubscription()
         .catch(() => null);
+      const subscriptionKey = arrayBufferToBase64Url(
+        subscription?.options.applicationServerKey || null
+      );
 
       if (!active) return;
       setPublicKey(key);
+      if (
+        subscription &&
+        subscriptionKey &&
+        subscriptionKey !== key &&
+        Notification.permission === "granted"
+      ) {
+        await subscription.unsubscribe().catch(() => false);
+        subscription = await registration?.pushManager
+          .subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: base64ToBytes(key),
+          })
+          .catch(() => null);
+      }
+
+      if (subscription) {
+        const saveResponse = await fetch("/api/push/subscribe", {
+          method: "POST",
+          credentials: "same-origin",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            audience: "profissional_app",
+            subscription: subscription.toJSON(),
+          }),
+        }).catch(() => null);
+
+        if (!saveResponse?.ok) {
+          setState("ready");
+          return;
+        }
+      }
+
       setState(subscription ? "enabled" : "ready");
     }
 
@@ -74,8 +123,18 @@ export function PushPermissionButton() {
       "/app-profissional/sw.js",
       { scope: "/app-profissional/" }
     );
-    const subscription =
-      (await registration.pushManager.getSubscription()) ||
+    let subscription = await registration.pushManager.getSubscription();
+    const subscriptionKey = arrayBufferToBase64Url(
+      subscription?.options.applicationServerKey || null
+    );
+
+    if (subscription && subscriptionKey && subscriptionKey !== publicKey) {
+      await subscription.unsubscribe().catch(() => false);
+      subscription = null;
+    }
+
+    subscription =
+      subscription ||
       (await registration.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: base64ToBytes(publicKey),
