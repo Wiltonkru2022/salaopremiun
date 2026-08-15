@@ -286,6 +286,11 @@ export function Calendar({
                   <div className="mt-2 rounded-full bg-white/60 px-3 py-1 text-xs font-black text-zinc-800">
                     Profissional: {item.profissional_nome || profissionais.find((profissional) => profissional.id === item.profissional_id)?.nome || profissionalAtual.nome_exibicao || profissionalAtual.nome}
                   </div>
+                  {formatCreatedAt(item.created_at) ? (
+                    <div className="mt-2 text-xs font-bold opacity-70">
+                      Agendado em {formatCreatedAt(item.created_at)}
+                    </div>
+                  ) : null}
                 </div>
                 <span className="rounded-full bg-white/70 px-2.5 py-1 text-[0.68rem] font-black uppercase text-zinc-900">{item.status.replace("_", " ")}</span>
               </div>
@@ -335,6 +340,14 @@ export function Calendar({
             <Info label="Profissional" value={details.profissional_nome || profissionais.find((item) => item.id === details.profissional_id)?.nome || profissionalAtual.nome} />
             <Info label="Horario" value={`${details.data} das ${details.hora_inicio} as ${details.hora_fim}`} />
             <Info label="Status" value={details.status.replace("_", " ")} />
+            <Info
+              label="Confirmação da cliente"
+              value={
+                details.cliente_confirmacao_status === "confirmado"
+                  ? `Confirmada${details.cliente_confirmou_em ? ` em ${formatCreatedAt(details.cliente_confirmou_em) || ""}` : ""}`
+                  : "Aguardando confirmação da cliente"
+              }
+            />
             <Info label="Observacoes" value={details.observacoes || "Sem observacoes"} />
             <Info label="Caixa" value={details.id_comanda ? "Ja passou pelo caixa" : "Sem comanda vinculada"} />
             <Info label="Sinal Pix" value={details.sinal_valor ? `${details.sinal_status || "sem status"} - R$ ${Number(details.sinal_valor).toFixed(2)}` : "Sem sinal"} />
@@ -515,4 +528,17 @@ function Info({ label, value }: { label: string; value: string }) {
       <div className="mt-1 text-sm font-black text-zinc-900">{value}</div>
     </div>
   );
+}
+
+function formatCreatedAt(value?: string | null) {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return new Intl.DateTimeFormat("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit"
+  }).format(date);
 }

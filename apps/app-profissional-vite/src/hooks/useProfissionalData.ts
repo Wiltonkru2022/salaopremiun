@@ -155,11 +155,16 @@ export function useProfissionalData(
     async function confirmarAgendamento(id: string) {
       if (!profissionalId) return;
       const startedAt = performance.now();
-      const { error } = await supabase.rpc("app_profissional_confirmar_agendamento", {
-        p_profissional_id: profissionalId,
-        p_agendamento_id: id
+      const response = await fetch("/api/app-profissional/agenda/acao", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "confirmar", agendamentoId: id }),
       });
-      if (error) throw new Error(error.message);
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload.ok) {
+        throw new Error(String(payload.error || "Nao foi possivel confirmar o agendamento."));
+      }
       trackProfessionalDuration("confirmar_agendamento", performance.now() - startedAt, {
         entityId: id,
       });
@@ -222,14 +227,22 @@ export function useProfissionalData(
 
     async function reagendarAgendamento(payload: { agendamentoId: string; data: string; horaInicio: string; horaFim: string; status: string }) {
       if (!profissionalId) return;
-      const { error } = await supabase.rpc("app_profissional_reagendar_agendamento", {
-        p_profissional_id: profissionalId,
-        p_agendamento_id: payload.agendamentoId,
-        p_data: payload.data,
-        p_hora_inicio: payload.horaInicio,
-        p_hora_fim: payload.horaFim
+      const response = await fetch("/api/app-profissional/agenda/acao", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "reagendar",
+          agendamentoId: payload.agendamentoId,
+          data: payload.data,
+          horaInicio: payload.horaInicio,
+          horaFim: payload.horaFim,
+        }),
       });
-      if (error) throw new Error(error.message);
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || !result.ok) {
+        throw new Error(String(result.error || "Nao foi possivel reagendar o agendamento."));
+      }
       trackProfessionalProductivity("agendamento_reagendado", {
         entityId: payload.agendamentoId,
         details: { data: payload.data, horaInicio: payload.horaInicio },

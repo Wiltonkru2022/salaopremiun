@@ -59,7 +59,7 @@ export function ServicosPage({ servicos, onSave, onEdit }: { servicos: Servico[]
       <div className="space-y-3">
         {pageItems.map((servico) => (
           <Card key={servico.id}>
-            <div className="flex items-start justify-between gap-3">
+            <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
               <div className="min-w-0">
                 <div className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.14em] text-zinc-400">
                   <Clock3 size={14} />
@@ -68,9 +68,9 @@ export function ServicosPage({ servicos, onSave, onEdit }: { servicos: Servico[]
                 <h3 className="mt-1.5 text-lg font-black tracking-[-0.03em]">{servico.nome}</h3>
                 <p className="mt-1 text-sm font-bold text-zinc-500">{servico.descricao || "Sem descricao."}</p>
               </div>
-              <div className="text-right text-lg font-black">{money(servico.preco)}</div>
+              <div className="justify-self-start text-lg font-black sm:justify-self-end">{money(servico.preco)}</div>
             </div>
-            <Button className="mt-3 h-9 px-3" variant="secondary" onClick={() => setEditing(servico)}>
+            <Button className="mt-4 h-10 w-full sm:w-auto" variant="secondary" onClick={() => setEditing(servico)}>
               <Edit3 size={15} />
               Editar servico
             </Button>
@@ -106,28 +106,58 @@ export function ServicosPage({ servicos, onSave, onEdit }: { servicos: Servico[]
 
 function ServicoForm({ initial, onSubmit }: { initial?: Servico; onSubmit: (payload: Payload) => Promise<void> }) {
   const [nome, setNome] = useState(initial?.nome || "");
-  const [preco, setPreco] = useState(
-    initial?.preco ? formatMoneyInput(String(initial.preco)) : ""
-  );
-  const [duracao, setDuracao] = useState(String(initial?.duracao_minutos || 30));
+  const [preco, setPreco] = useState(initial?.preco ? formatMoneyInput(String(initial.preco)) : "");
+  const [duracao, setDuracao] = useState(initial?.duracao_minutos ? String(initial.duracao_minutos) : "");
   const [descricao, setDescricao] = useState(initial?.descricao || "");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function submit(event: FormEvent) {
     event.preventDefault();
+    const valor = parseMoneyInput(preco);
+    const minutos = Number(duracao);
+    if (!nome.trim() || !Number.isFinite(valor) || valor < 0 || !Number.isInteger(minutos) || minutos < 1) {
+      setError("Informe nome, preço válido e tempo em minutos maior que zero.");
+      return;
+    }
+
     setLoading(true);
-    await onSubmit({ nome, preco: parseMoneyInput(preco), duracao_minutos: Number(duracao || 0) });
-    setLoading(false);
+    setError(null);
+    try {
+      await onSubmit({ nome: nome.trim(), preco: valor, duracao_minutos: minutos });
+    } catch (submitError) {
+      setError(submitError instanceof Error ? submitError.message : "Não foi possível salvar o serviço.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
     <form onSubmit={submit} className="grid gap-3">
       <Field label="Nome"><Input required value={nome} onChange={(event) => setNome(event.target.value)} /></Field>
-      <div className="grid grid-cols-2 gap-3">
-        <Field label="Preco"><Input inputMode="decimal" value={preco} onChange={(event) => setPreco(formatMoneyInput(event.target.value))} placeholder="0,00" /></Field>
-        <Field label="Tempo em minutos"><Input type="number" min={1} step={1} value={duracao} onChange={(event) => setDuracao(event.target.value)} /></Field>
+      <div className="grid min-w-0 gap-3 sm:grid-cols-2">
+        <Field label="Preço">
+          <Input
+            inputMode="decimal"
+            value={preco}
+            onChange={(event) => setPreco(event.target.value.replace(/[^\d,]/g, ""))}
+            onBlur={() => setPreco(preco ? formatMoneyInput(preco) : "")}
+            placeholder="0,00"
+          />
+        </Field>
+        <Field label="Tempo em minutos">
+          <Input
+            type="number"
+            min={1}
+            step={1}
+            value={duracao}
+            onChange={(event) => setDuracao(event.target.value)}
+            placeholder="Ex.: 60"
+          />
+        </Field>
       </div>
       <Field label="Descricao"><Textarea value={descricao} onChange={(event) => setDescricao(event.target.value)} placeholder="Opcional" /></Field>
+      {error ? <div role="alert" className="rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-bold text-red-700">{error}</div> : null}
       <Button loading={loading}>Salvar servico</Button>
     </form>
   );

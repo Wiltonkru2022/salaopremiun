@@ -1699,6 +1699,13 @@ export async function confirmClienteAppAppointment(
         return { ok: false, error: "Este agendamento foi cancelado." };
       }
 
+      if (!["confirmado"].includes(status)) {
+        return {
+          ok: false,
+          error: "O salao ainda precisa confirmar este horario antes da sua confirmacao.",
+        };
+      }
+
       if (status === "atendido" || status === "aguardando_pagamento") {
         return {
           ok: false,
@@ -1710,7 +1717,7 @@ export async function confirmClienteAppAppointment(
       const { error: updateError } = await (supabaseAdmin as any)
         .from("agendamentos")
         .update({
-          status: status === "pendente" ? "confirmado" : ownership.status,
+          status: "confirmado",
           cliente_confirmacao_status: "confirmado",
           cliente_confirmou_em: now,
           cliente_cancelou_em: null,
@@ -2007,7 +2014,10 @@ export async function rescheduleClienteAppAppointment(
           hora_inicio: horaInicio,
           hora_fim: horaFim,
           duracao_minutos: duracao,
-          status: "confirmado",
+          status: "pendente",
+          cliente_confirmacao_status: "aguardando",
+          cliente_confirmou_em: null,
+          cliente_cancelou_em: null,
           updated_at: new Date().toISOString(),
         })
         .eq("id", idAgendamento)

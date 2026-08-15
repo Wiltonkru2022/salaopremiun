@@ -106,6 +106,7 @@ export type ClientAppAppointmentListItem = {
   data: string;
   horaInicio: string;
   horaFim: string;
+  criadoEm: string | null;
   status: string;
   sinalStatus: string | null;
   sinalValor: number | null;
@@ -1095,7 +1096,7 @@ export async function listClienteAppAppointments(params: {
     const { data, error } = await (supabaseAdmin as any)
       .from("agendamentos")
       .select(
-        "id, cliente_id, id_salao, servico_id, profissional_id, data, hora_inicio, hora_fim, status, sinal_status, sinal_valor, reserva_expira_em, cliente_confirmacao_status, cliente_confirmou_em, observacoes, servicos(nome), profissionais(nome, nome_exibicao)"
+        "id, cliente_id, id_salao, servico_id, profissional_id, data, hora_inicio, hora_fim, status, sinal_status, sinal_valor, reserva_expira_em, cliente_confirmacao_status, cliente_confirmou_em, observacoes, created_at, servicos(nome), profissionais(nome, nome_exibicao)"
       )
       .in("cliente_id", clientesIds)
       .order("data", { ascending: false })
@@ -1140,6 +1141,7 @@ export async function listClienteAppAppointments(params: {
         data: String(item.data || ""),
         horaInicio: String(item.hora_inicio || ""),
         horaFim: String(item.hora_fim || ""),
+        criadoEm: String(item.created_at || "").trim() || null,
         status,
         sinalStatus: String(item.sinal_status || "").trim() || null,
         sinalValor:

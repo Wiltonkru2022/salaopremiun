@@ -76,6 +76,19 @@ function formatDuration(item: ClientAppAppointmentListItem) {
   return formatClientDuration(diff);
 }
 
+function formatCreatedAt(value: string | null) {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return new Intl.DateTimeFormat("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+}
+
 function formatClientConfirmation(value: string) {
   const normalized = String(value || "").toLowerCase();
   if (normalized === "confirmado") return "Você confirmou presença";
@@ -91,7 +104,7 @@ function canConfirmPresence(item: ClientAppAppointmentListItem) {
   const status = String(item.status || "").toLowerCase();
   const clientStatus = String(item.confirmacaoClienteStatus || "").toLowerCase();
   return (
-    (status === "pendente" || status === "confirmado") &&
+    status === "confirmado" &&
     clientStatus !== "confirmado"
   );
 }
@@ -391,7 +404,9 @@ export default function ClientAppointmentsManager({
                 {item.podeCancelar ? (
                   <span className="inline-flex items-center gap-3 rounded-2xl bg-amber-50 px-5 py-3 text-base font-semibold text-[#996512]">
                     <Clock3 size={20} />
-                    {formatClientConfirmation(item.confirmacaoClienteStatus)}
+                    {String(item.status || "").toLowerCase() === "pendente"
+                      ? "Aguardando confirmação do salão"
+                      : formatClientConfirmation(item.confirmacaoClienteStatus)}
                   </span>
                 ) : null}
               </div>
@@ -416,6 +431,12 @@ export default function ClientAppointmentsManager({
                       <Clock3 size={26} />
                       <span>{formatDuration(item)}</span>
                     </p>
+                    {formatCreatedAt(item.criadoEm) ? (
+                      <p className="flex items-center gap-4 text-base text-zinc-500">
+                        <CalendarDays size={24} />
+                        <span>Solicitado em {formatCreatedAt(item.criadoEm)}</span>
+                      </p>
+                    ) : null}
                   </div>
                 </div>
 

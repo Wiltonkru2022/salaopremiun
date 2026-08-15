@@ -573,6 +573,41 @@ export async function notifyProfessionalAboutClientConfirmation(params: {
   await processPendingNotificationJobs(10);
 }
 
+export async function notifyClientAboutSalonConfirmation(params: {
+  idAgendamento: string;
+  idSalao: string;
+}) {
+  const agendamento = await loadAppointmentContext(params.idAgendamento, params.idSalao);
+  if (!agendamento?.cliente_id) return;
+
+  const clienteAppContaId = await findClienteAppContaId({
+    idSalao: params.idSalao,
+    idCliente: agendamento.cliente_id,
+  });
+  if (!clienteAppContaId) return;
+
+  await queueNotificationJob({
+    idSalao: params.idSalao,
+    idCliente: agendamento.cliente_id,
+    clienteAppContaId,
+    canal: "cliente_app",
+    tipo: "agendamento_confirmado_cliente",
+    titulo: "Horario confirmado pelo salao",
+    mensagem: `Seu horario foi confirmado para ${formatAppointmentDate(
+      agendamento.data,
+      agendamento.hora_inicio
+    )}. Abra o app para confirmar sua presenca.`,
+    url: "/app-cliente/agendamentos",
+    tag: `agendamento-confirmado-cliente-${params.idAgendamento}`,
+    idempotencyKey: `agendamento_confirmado_cliente:${params.idAgendamento}`,
+    metadata: {
+      origem: "salao",
+      idAgendamento: params.idAgendamento,
+    },
+  });
+  await processPendingNotificationJobs(10);
+}
+
 export async function notifyAppointmentRescheduled(params: {
   idAgendamento: string;
   idSalao: string;

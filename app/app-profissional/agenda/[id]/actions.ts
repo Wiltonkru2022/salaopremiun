@@ -9,6 +9,7 @@ import {
   notifyAppointmentCanceled,
   notifyAppointmentFinished,
   notifyAppointmentRescheduled,
+  notifyClientAboutSalonConfirmation,
   scheduleAppointmentReminderNotifications,
 } from "@/lib/notification-jobs";
 import { runAdminOperation } from "@/lib/supabase/admin-ops";
@@ -210,6 +211,10 @@ export async function atualizarAgendamentoProfissionalAction(
       );
     }
 
+    const previousDate = String(agendamento.data || "").slice(0, 10);
+    const previousTime = normalizeTime(String(agendamento.hora_inicio || ""));
+    const mudouHorario = previousDate !== data || previousTime !== horaInicio;
+
     await runAdminOperation({
       action: "app_profissional_agendamento_atualizar",
       actorId: session.idProfissional,
@@ -221,9 +226,16 @@ export async function atualizarAgendamentoProfissionalAction(
             data,
             hora_inicio: `${horario.horaInicio}:00`,
             hora_fim: `${horario.horaFim}:00`,
-            status,
+            status: mudouHorario ? "pendente" : status,
             observacoes: observacoes || null,
             duracao_minutos: duracaoMinutos,
+            ...(mudouHorario || status === "confirmado"
+              ? {
+                  cliente_confirmacao_status: "aguardando",
+                  cliente_confirmou_em: null,
+                  cliente_cancelou_em: null,
+                }
+              : {}),
             updated_at: new Date().toISOString(),
           })
           .eq("id", idAgendamento)
@@ -234,9 +246,7 @@ export async function atualizarAgendamentoProfissionalAction(
       },
     });
 
-    const previousDate = String(agendamento.data || "").slice(0, 10);
-    const previousTime = normalizeTime(String(agendamento.hora_inicio || ""));
-    if (previousDate !== data || previousTime !== horaInicio) {
+    if (mudouHorario) {
       await notifyAppointmentRescheduled({
         idAgendamento,
         idSalao: session.idSalao,
@@ -269,10 +279,15 @@ export async function atualizarAgendamentoProfissionalAction(
     }
 
     if (
+      !mudouHorario &&
       status === "confirmado" &&
       String(agendamento.status || "").toLowerCase() !== "confirmado"
     ) {
       await notifyClientAppointmentConfirmed({
+        idAgendamento,
+        idSalao: session.idSalao,
+      });
+      await notifyClientAboutSalonConfirmation({
         idAgendamento,
         idSalao: session.idSalao,
       });
@@ -387,6 +402,9 @@ export async function confirmarAgendamentoProfissionalAction(formData: FormData)
             .from("agendamentos")
             .update({
               status: "confirmado",
+              cliente_confirmacao_status: "aguardando",
+              cliente_confirmou_em: null,
+              cliente_cancelou_em: null,
               updated_at: new Date().toISOString(),
             })
             .eq("id", idAgendamento)
@@ -397,14 +415,6 @@ export async function confirmarAgendamentoProfissionalAction(formData: FormData)
         },
       });
 
-      await notifyClientAppointmentConfirmed({
-        idAgendamento,
-        idSalao: session.idSalao,
-      });
-      await scheduleAppointmentReminderNotifications({
-        idAgendamento,
-        idSalao: session.idSalao,
-      });
     }
 
     revalidatePath("/app-profissional/agenda");
@@ -467,13 +477,15 @@ export async function confirmarSinalPixProfissionalAction(formData: FormData) {
         const { error } = await supabase
           .from("agendamentos")
           .update({
-            status: "confirmado",
+            status: String(agendamento.status || "").toLowerCase() === "confirmado"
+              ? "confirmado"
+              : "pendente",
             sinal_status: "confirmado",
             sinal_confirmado_em: updatedAt,
             sinal_confirmado_por_tipo: "profissional",
             sinal_confirmado_por_id: agendamento.profissional_id,
             sinal_confirmado_por_nome:
-              profissional?.nome_exibicao || profissional?.nome || "Profissional",
+            profissional?.nome_exibicao || profissional?.nome || "Profissional",
             reserva_expira_em: null,
             updated_at: updatedAt,
           })
@@ -488,6 +500,10 @@ export async function confirmarSinalPixProfissionalAction(formData: FormData) {
 
     if (String(agendamento.status || "").toLowerCase() !== "confirmado") {
       await notifyClientAppointmentConfirmed({
+        idAgendamento,
+        idSalao: session.idSalao,
+      });
+      await notifyClientAboutSalonConfirmation({
         idAgendamento,
         idSalao: session.idSalao,
       });

@@ -40,7 +40,7 @@ export async function GET(request: Request) {
         const scoped = (query: any) => verTodos ? query.in("profissional_id", ids) : query.eq("profissional_id", session.idProfissional);
 
         const [agendamentosResult, bloqueiosResult, clientesResult, servicosResult] = await Promise.all([
-          scoped(supabase.from("agendamentos").select("id, profissional_id, cliente_id, servico_id, data, hora_inicio, hora_fim, status, observacoes, id_comanda, sinal_status, sinal_valor, sinal_comprovante_path").eq("id_salao", session.idSalao).gte("data", inicio).lte("data", fim).order("data").order("hora_inicio")),
+          scoped(supabase.from("agendamentos").select("id, profissional_id, cliente_id, servico_id, data, hora_inicio, hora_fim, status, created_at, cliente_confirmacao_status, cliente_confirmou_em, observacoes, id_comanda, sinal_status, sinal_valor, sinal_comprovante_path").eq("id_salao", session.idSalao).gte("data", inicio).lte("data", fim).order("data").order("hora_inicio")),
           scoped(supabase.from("agenda_bloqueios").select("id, profissional_id, data, hora_inicio, hora_fim, motivo").eq("id_salao", session.idSalao).gte("data", inicio).lte("data", fim).order("data").order("hora_inicio")),
           (supabase as any).from("clientes").select("id, nome, telefone, whatsapp, observacoes, created_at").eq("id_salao", session.idSalao).is("deleted_at", null).order("nome"),
           (supabase as any).from("profissional_servicos").select("id_profissional, id_servico, duracao_minutos, preco_personalizado, ativo, servicos(id, nome, descricao, preco, preco_padrao, duracao_minutos, duracao, ativo)").eq("id_salao", session.idSalao).eq("ativo", true),

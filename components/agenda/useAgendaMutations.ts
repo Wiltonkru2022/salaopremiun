@@ -315,15 +315,26 @@ export function useAgendaMutations({
           successMessage: "Agendamento redimensionado com sucesso.",
           errorMessage: "Falha ao redimensionar agendamento.",
         },
-        async () =>
-          await supabase
-            .from("agendamentos")
-            .update({
-              duracao_minutos: newDuration,
-              hora_fim: novoFim,
-              updated_at: updatedAt,
-            })
-            .eq("id", item.id)
+        async () => {
+          const response = await fetch("/api/painel/agendamentos/reagendar", {
+            method: "POST",
+            credentials: "same-origin",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              idAgendamento: item.id,
+              data: item.data,
+              horaInicio: startTime,
+              horaFim: novoFim,
+            }),
+          });
+          const payload = await response.json().catch(() => ({}));
+          return {
+            data: null,
+            error: response.ok && payload.ok
+              ? null
+              : new Error(String(payload.error || "Falha ao reagendar agendamento.")),
+          };
+        }
       );
 
       if (error) {
@@ -485,16 +496,26 @@ export function useAgendaMutations({
           successMessage: "Agendamento movido com sucesso.",
           errorMessage: "Falha ao mover agendamento.",
         },
-        async () =>
-          await supabase
-            .from("agendamentos")
-            .update({
+        async () => {
+          const response = await fetch("/api/painel/agendamentos/reagendar", {
+            method: "POST",
+            credentials: "same-origin",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              idAgendamento: item.id,
               data: move.newDate,
-              hora_inicio: startTime,
-              hora_fim: novoFim,
-              updated_at: updatedAt,
-            })
-            .eq("id", item.id)
+              horaInicio: startTime,
+              horaFim: novoFim,
+            }),
+          });
+          const payload = await response.json().catch(() => ({}));
+          return {
+            data: null,
+            error: response.ok && payload.ok
+              ? null
+              : new Error(String(payload.error || "Falha ao reagendar agendamento.")),
+          };
+        }
       );
 
       if (error) {
@@ -646,11 +667,27 @@ export function useAgendaMutations({
           errorMessage: "Falha ao atualizar status do agendamento.",
         },
         async () =>
-          await supabase
+          nextStatus === "confirmado"
+            ? await (async () => {
+                const response = await fetch("/api/painel/agendamentos/status", {
+                  method: "POST",
+                  credentials: "same-origin",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ idAgendamento: item.id, status: nextStatus }),
+                });
+                const payload = await response.json().catch(() => ({}));
+                return {
+                  data: null,
+                  error: response.ok && payload.ok
+                    ? null
+                    : new Error(String(payload.error || "Falha ao confirmar agendamento.")),
+                };
+              })()
+            : await supabase
             .from("agendamentos")
             .update({
               status: nextStatus,
-              ...(nextStatus === "confirmado" && item.sinal_status
+              ...(item.sinal_status
                 ? {
                     sinal_status: "confirmado",
                     sinal_confirmado_em: updatedAt,
