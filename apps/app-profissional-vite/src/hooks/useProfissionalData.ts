@@ -10,6 +10,7 @@ import type { Agendamento, Avaliacao, Cliente, Comanda, ComissaoLancamento, Item
 
 type DataState = {
   agendamentos: Agendamento[];
+  bloqueios: Agendamento[];
   clientes: Cliente[];
   servicos: Servico[];
   comandas: Comanda[];
@@ -22,6 +23,7 @@ type DataState = {
 
 const emptyState: DataState = {
   agendamentos: [],
+  bloqueios: [],
   clientes: [],
   servicos: [],
   comandas: [],
@@ -79,7 +81,11 @@ export function useProfissionalData(
     const payload = (data || {}) as Partial<DataState>;
 
     const nextState: DataState = {
-      agendamentos: uniqueById((payload.agendamentos ?? []) as Agendamento[]),
+      agendamentos: uniqueById([
+        ...((payload.agendamentos ?? []) as Agendamento[]),
+        ...((payload.bloqueios ?? []) as Agendamento[]),
+      ]),
+      bloqueios: uniqueById((payload.bloqueios ?? []) as Agendamento[]),
       clientes: uniqueById((payload.clientes ?? []) as Cliente[]),
       servicos: uniqueById((payload.servicos ?? []) as Servico[]),
       comandas: uniqueById((payload.comandas ?? []) as Comanda[]),

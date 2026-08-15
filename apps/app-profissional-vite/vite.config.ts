@@ -4,8 +4,6 @@ import { VitePWA } from "vite-plugin-pwa";
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
-  const supabaseUrl = env.VITE_SUPABASE_URL || "https://example.supabase.co";
-  const supabaseHost = new URL(supabaseUrl).origin;
 
   return {
     base: "/app-profissional/",
@@ -52,7 +50,7 @@ export default defineConfig(({ mode }) => {
               }
             },
             {
-              urlPattern: ({ url }) => url.origin === supabaseHost && (url.pathname.includes("/rest/v1/") || url.pathname.includes("/auth/v1/user")),
+              urlPattern: ({ url }) => url.pathname.includes("/rest/v1/") || url.pathname.includes("/auth/v1/user"),
               handler: "NetworkFirst",
               options: {
                 cacheName: "salaopremiun-supabase-api",
