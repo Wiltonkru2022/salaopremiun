@@ -25,7 +25,7 @@ export async function GET(request: Request) {
       run: async (supabase) => {
         const profissionaisQuery = (supabase as any)
           .from("profissionais")
-          .select("id, nome, nome_exibicao, dias_trabalho, ativo, tipo_profissional")
+          .select("id, nome, nome_exibicao, dias_trabalho, ativo, tipo_profissional, sinal_confirmacao_responsavel")
           .eq("id_salao", session.idSalao)
           .eq("ativo", true)
           .order("nome");
@@ -74,6 +74,10 @@ export async function GET(request: Request) {
             ...item,
             hora_inicio: String(item.hora_inicio).slice(0, 5),
             hora_fim: String(item.hora_fim).slice(0, 5),
+            sinal_confirmacao_responsavel:
+              item.sinal_confirmacao_responsavel ||
+              professionalRowsById.get(String(item.profissional_id))?.sinal_confirmacao_responsavel ||
+              "salao",
             profissional_nome: professionalRowsById.get(String(item.profissional_id))?.nome_exibicao || professionalRowsById.get(String(item.profissional_id))?.nome || null,
             clientes: item.cliente_id ? clientsById.get(item.cliente_id) || null : null,
             servicos: item.servico_id ? servicesById.get(item.servico_id) || null : null,

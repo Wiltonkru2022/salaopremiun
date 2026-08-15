@@ -310,7 +310,9 @@ export async function processPendingNotificationJobs(limit = 80) {
         title: job.titulo,
         body: job.mensagem,
         url: job.url || "/",
-        tag: job.tag || job.idempotency_key,
+        tag: `${job.tag || job.idempotency_key}-${job.id}`,
+        renotify: true,
+        requireInteraction: true,
       });
 
       if (result.sent === 0) {
