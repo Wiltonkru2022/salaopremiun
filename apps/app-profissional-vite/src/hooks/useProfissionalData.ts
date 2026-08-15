@@ -1,6 +1,5 @@
 ﻿import { useCallback, useEffect, useMemo, useState } from "react";
 import { getCacheSavedAt, readCache, writeCache } from "../lib/cache";
-import { addMinutes } from "../lib/date";
 import { supabase } from "../lib/supabase";
 import {
   trackProfessionalDuration,
@@ -182,7 +181,7 @@ export function useProfissionalData(
     async function bloquearHorario(
       datas: string[],
       horaInicio: string,
-      duracaoMinutos: number,
+      horaFim: string,
       titulo = "Horario bloqueado",
       targetProfissionalId?: string
     ) {
@@ -197,7 +196,7 @@ export function useProfissionalData(
           datas: Array.from(new Set(datas.filter(Boolean))),
           profissionalId: actorId,
           horaInicio,
-          horaFim: addMinutes(horaInicio, duracaoMinutos),
+          horaFim,
           motivo: titulo,
         }),
       });

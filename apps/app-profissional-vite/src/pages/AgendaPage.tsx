@@ -21,7 +21,7 @@ export function AgendaPage({
   actions: {
     confirmarAgendamento: (id: string) => Promise<void>;
     excluirAgendamento: (id: string, targetProfissionalId?: string) => Promise<void>;
-    bloquearHorario: (datas: string[], horaInicio: string, duracaoMinutos: number, titulo?: string, targetProfissionalId?: string) => Promise<void>;
+    bloquearHorario: (datas: string[], horaInicio: string, horaFim: string, titulo?: string, targetProfissionalId?: string) => Promise<void>;
     confirmarPix?: (id: string) => Promise<void>;
     criarAgendamento?: (payload: { clienteId: string; servicoId: string; data: string; horaInicio: string; profissionalId?: string }) => Promise<void>;
     reagendarAgendamento?: (payload: { agendamentoId: string; data: string; horaInicio: string; horaFim: string; status: string }) => Promise<void>;

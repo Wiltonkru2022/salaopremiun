@@ -90,7 +90,7 @@ export function Calendar({
   onSelectDate: (date: string) => void;
   onConfirm: (id: string) => Promise<void>;
   onDelete: (id: string, targetProfissionalId?: string) => Promise<void>;
-  onBlock: (datas: string[], horaInicio: string, duracaoMinutos: number, titulo?: string, targetProfissionalId?: string) => Promise<void>;
+  onBlock: (datas: string[], horaInicio: string, horaFim: string, titulo?: string, targetProfissionalId?: string) => Promise<void>;
   onConfirmPix?: (id: string) => Promise<void>;
   onCreate?: (payload: { clienteId: string; servicoId: string; data: string; horaInicio: string; profissionalId?: string }) => Promise<void>;
   onReschedule?: (payload: { agendamentoId: string; data: string; horaInicio: string; horaFim: string; status: string }) => Promise<void>;
@@ -116,7 +116,7 @@ export function Calendar({
     return new Date(selected.getFullYear(), selected.getMonth(), 1);
   });
   const [blockHour, setBlockHour] = useState("12:00");
-  const [blockDuration, setBlockDuration] = useState(60);
+  const [blockEndHour, setBlockEndHour] = useState("13:00");
   const [blockReason, setBlockReason] = useState("Almoco");
   const [blockSelectedDates, setBlockSelectedDates] = useState<string[]>([selectedDate]);
   const [blockProfissional, setBlockProfissional] = useState("");
@@ -387,20 +387,12 @@ export function Calendar({
             }
             const horarioDiaTodo = getHorarioDiaTodo(blockSelectedDates[0] || selectedDate);
             const horaInicioBloqueio = blockAllDay ? horarioDiaTodo.inicio : blockHour;
-            const duracaoBloqueio = blockAllDay
-              ? Math.max(
-                  5,
-                  Math.round(
-                    (new Date(`2000-01-01T${horarioDiaTodo.fim}`).getTime() -
-                      new Date(`2000-01-01T${horarioDiaTodo.inicio}`).getTime()) / 60000
-                  )
-                )
-              : blockDuration;
+            const horaFimBloqueio = blockAllDay ? horarioDiaTodo.fim : blockEndHour;
             try {
               await onBlock(
                 blockSelectedDates,
                 horaInicioBloqueio,
-                duracaoBloqueio,
+                horaFimBloqueio,
                 blockReason || "Bloqueio",
                 canChooseProfessional ? blockProfissional : profissionalAtual.id
               );
@@ -475,8 +467,8 @@ export function Calendar({
               Usa o expediente configurado do profissional para a data selecionada.
             </div>
           ) : null}
-          <Field label="Horario"><Input type="time" value={blockHour} onChange={(event) => setBlockHour(event.target.value)} disabled={blockAllDay} /></Field>
-          <Field label="Tempo"><Input type="number" min={5} step={5} value={blockDuration} onChange={(event) => setBlockDuration(Number(event.target.value))} disabled={blockAllDay} /></Field>
+          <Field label="Horario inicio"><Input type="time" value={blockHour} onChange={(event) => setBlockHour(event.target.value)} disabled={blockAllDay} /></Field>
+          <Field label="Horario fim"><Input type="time" value={blockEndHour} onChange={(event) => setBlockEndHour(event.target.value)} disabled={blockAllDay} /></Field>
           <Field label="Observacao"><Input value={blockReason} onChange={(event) => setBlockReason(event.target.value)} placeholder="Ex.: almoco, curso, compromisso" /></Field>
           {blockError ? <div role="alert" className="rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-bold text-red-700">{blockError}</div> : null}
           <ModalActionBar>
