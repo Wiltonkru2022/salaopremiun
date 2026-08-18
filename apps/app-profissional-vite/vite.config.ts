@@ -7,6 +7,12 @@ export default defineConfig(({ mode }) => {
 
   return {
     base: "/app-profissional/",
+    build: {
+      // A aplicacao e publicada pelo projeto Next/Vercel a partir de /public.
+      // Gerar diretamente aqui evita servir bundles antigos commitados.
+      outDir: "../../public/app-profissional",
+      emptyOutDir: true,
+    },
     plugins: [
       react(),
       VitePWA({
