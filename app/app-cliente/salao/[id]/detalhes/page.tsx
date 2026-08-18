@@ -5,18 +5,21 @@ import {
   CalendarDays,
   Car,
   Clock,
-  Heart,
   ImageIcon,
   MapPin,
   MessageCircle,
   Phone,
-  Share2,
   Star,
   Wifi,
 } from "lucide-react";
 import ClientAppFrame from "@/components/client-app/ClientAppFrame";
 import ClientAppDrawerNav from "@/components/client-app/ClientAppDrawerNav";
-import { getClientAppSalonDetail } from "@/lib/client-app/queries";
+import ClientSalonHeroActions from "@/components/client-app/ClientSalonHeroActions";
+import {
+  getClientAppSalonDetail,
+  isClienteAppSalonFavorite,
+} from "@/lib/client-app/queries";
+import { validateClienteAppSession } from "@/lib/client-context.server";
 import { buildSalaoPublicPath } from "@/lib/saloes/public-link";
 
 export const metadata = {
@@ -79,6 +82,14 @@ export default async function ClienteSalonDetailsPage({
 
   try {
     const salao = await getClientAppSalonDetail(id);
+    const session = await validateClienteAppSession();
+    const hasSession = Boolean(session.context);
+    const isFavorite = session.context
+      ? await isClienteAppSalonFavorite({
+          idConta: session.context.idConta,
+          idSalao: salao.id,
+        })
+      : false;
     const phone = normalizePhone(salao.whatsapp || salao.telefone);
     const publicPath = buildSalaoPublicPath(salao.appClienteSlug || salao.id);
     const mapsUrl = salao.enderecoCompleto
@@ -132,27 +143,20 @@ export default async function ClienteSalonDetailsPage({
             <div className="relative z-10 flex items-center justify-between">
               <Link
                 href={`/app-cliente/salao/${id}`}
-                className="flex h-14 w-14 items-center justify-center rounded-full bg-black/45 text-white backdrop-blur"
+                className="flex h-16 w-16 items-center justify-center rounded-full bg-black/45 text-white backdrop-blur"
                 aria-label="Voltar"
               >
                 <ArrowLeft size={28} />
               </Link>
-              <div className="flex gap-3">
-                <a
-                  href={publicPath}
-                  className="flex h-14 w-14 items-center justify-center rounded-full bg-black/45 text-white backdrop-blur"
-                  aria-label="Compartilhar"
-                >
-                  <Share2 size={25} />
-                </a>
-                <button
-                  type="button"
-                  className="flex h-14 w-14 items-center justify-center rounded-full bg-black/45 text-white backdrop-blur"
-                  aria-label="Favoritar"
-                >
-                  <Heart size={28} />
-                </button>
-                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-black/45 text-white backdrop-blur">
+              <div className="flex items-center gap-3">
+                <ClientSalonHeroActions
+                  idSalao={salao.id}
+                  salaoNome={salao.nome}
+                  publicPath={publicPath}
+                  initialFavorite={isFavorite}
+                  canFavorite={hasSession}
+                />
+                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-black/45 text-white backdrop-blur">
                   <ClientAppDrawerNav isDark />
                 </div>
               </div>
@@ -216,7 +220,7 @@ export default async function ClienteSalonDetailsPage({
                     {abertoHoje ? "Aberto hoje" : "Fechado hoje"}
                   </p>
                   <p className="text-zinc-200">
-                    {abertoHoje ? "Fecha às 19:00" : diasLabel}
+                    {abertoHoje ? "Confira o horário de funcionamento" : diasLabel}
                   </p>
                 </div>
                 <div className="text-right">
