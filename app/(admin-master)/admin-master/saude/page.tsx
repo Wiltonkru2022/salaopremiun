@@ -1,12 +1,9 @@
 import Link from "next/link";
-import { getAdminMasterHealthCenter, type HealthTone } from "@/lib/admin-master/health-center";
-import {
-  getOracleVpsOperationalSnapshot,
-  getOracleVpsStatus,
-} from "@/lib/oracle-vps/client";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { AdminDataTable } from "@/components/admin-master/AdminMasterViews";
-import OracleVpsActionButton from "@/components/admin-master/OracleVpsActionButton";
+import {
+  getAdminMasterHealthCenter,
+  type HealthTone,
+} from "@/lib/admin-master/health-center";
 
 export const dynamic = "force-dynamic";
 
@@ -23,43 +20,6 @@ function scoreClass(tone: HealthTone) {
   if (tone === "amber") return "from-amber-500 to-yellow-200 text-amber-950";
   if (tone === "red") return "from-rose-600 to-orange-300 text-red-950";
   return "from-blue-500 to-sky-200 text-blue-950";
-}
-
-function asRecord(value: unknown): Record<string, unknown> {
-  return value && typeof value === "object" ? (value as Record<string, unknown>) : {};
-}
-
-function asNumber(value: unknown, fallback = 0) {
-  const number = Number(value);
-  return Number.isFinite(number) ? number : fallback;
-}
-
-function formatPercent(value: unknown) {
-  return `${asNumber(value).toFixed(1).replace(".", ",")}%`;
-}
-
-function formatUptime(seconds: unknown) {
-  const total = asNumber(seconds);
-  const days = Math.floor(total / 86400);
-  const hours = Math.floor((total % 86400) / 3600);
-  const minutes = Math.floor((total % 3600) / 60);
-
-  if (days > 0) return `${days}d ${hours}h`;
-  if (hours > 0) return `${hours}h ${minutes}min`;
-  return `${minutes}min`;
-}
-
-function oracleTone(params: {
-  ok: boolean;
-  diskPercent: number;
-  pendingJobs: number;
-  errors: number;
-}): HealthTone {
-  if (!params.ok || params.diskPercent >= 90 || params.errors >= 5) return "red";
-  if (params.diskPercent >= 80 || params.pendingJobs >= 10 || params.errors > 0) {
-    return "amber";
-  }
-  return "green";
 }
 
 function HealthList({
@@ -122,123 +82,9 @@ function HealthList({
   );
 }
 
-async function getOracleVpsSampleSalon() {
-  try {
-    const { data } = await getSupabaseAdmin()
-      .from("saloes")
-      .select("id, nome")
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    return {
-      id: String(data?.id || ""),
-      nome: String(data?.nome || "Salão de amostra"),
-    };
-  } catch {
-    return { id: "", nome: "" };
-  }
-}
-
 export default async function AdminMasterSaudePage() {
-  const [data, oracleVps, oracleSampleSalon] = await Promise.all([
-    getAdminMasterHealthCenter(),
-    getOracleVpsStatus(),
-    getOracleVpsSampleSalon(),
-  ]);
-  const oracleOperational = await getOracleVpsOperationalSnapshot({
-    idSalao: oracleSampleSalon.id,
-    salaoNome: oracleSampleSalon.nome,
-  });
-  const oraclePublic = oracleVps.configured ? asRecord(oracleVps.publicStatus) : {};
-  const oracleSystem = oracleVps.configured ? asRecord(oracleVps.system) : {};
-  const oracleHost = asRecord(oracleSystem.host);
-  const oracleMemory = asRecord(oracleHost.memory);
-  const oracleDisk = asRecord(oracleHost.disk);
-  const oracleJobsPayload = oracleVps.configured ? asRecord(oracleVps.jobs) : {};
-  const oracleJobs = Array.isArray(oracleJobsPayload.items)
-    ? (oracleJobsPayload.items as Record<string, unknown>[])
-    : [];
-  const oracleBackupsPayload = oracleVps.configured ? asRecord(oracleVps.backups) : {};
-  const oracleBackups = Array.isArray(oracleBackupsPayload.items)
-    ? (oracleBackupsPayload.items as Record<string, unknown>[])
-    : [];
-  const oracleReprocessPayload = oracleVps.configured ? asRecord(oracleVps.reprocess) : {};
-  const oracleReprocess = Array.isArray(oracleReprocessPayload.items)
-    ? (oracleReprocessPayload.items as Record<string, unknown>[])
-    : [];
-  const pendingJobs = oracleJobs.filter(
-    (job) => String(job.status || "").toLowerCase() === "queued"
-  ).length;
-  const pendingReprocess = oracleReprocess.filter(
-    (job) => String(job.status || "").toLowerCase() === "queued"
-  ).length;
-  const oracleErrorsPayload = oracleVps.configured
-    ? asRecord(oracleVps.monitoringErrors)
-    : {};
-  const oracleErrors = Array.isArray(oracleErrorsPayload.items)
-    ? (oracleErrorsPayload.items as Record<string, unknown>[])
-    : [];
-  const oraclePerfPayload = oracleVps.configured
-    ? asRecord(oracleVps.monitoringPerformance)
-    : {};
-  const slowEvents = Array.isArray(oraclePerfPayload.slowEvents)
-    ? (oraclePerfPayload.slowEvents as Record<string, unknown>[])
-    : [];
-  const diskPercent = asNumber(oracleDisk.usedPercent);
-  const oracleHealthTone = oracleTone({
-    ok: oracleVps.ok,
-    diskPercent,
-    pendingJobs,
-    errors: oracleErrors.length,
-  });
-  const oracleRows = oracleJobs.slice(0, 5).map((job) => ({
-    id: String(job.id || "-"),
-    tipo: String(job.type || "-"),
-    status: String(job.status || "-"),
-    criado: String(job.createdAt || "-"),
-    processado: String(job.processedAt || "-"),
-  }));
-  const oracleBackupRows = oracleBackups.slice(0, 5).map((backup) => ({
-    id: String(backup.id || "-"),
-    tipo: String(backup.type || "-"),
-    status: String(backup.status || "-"),
-    tabelas:
-      backup.counts && typeof backup.counts === "object"
-        ? String(Object.keys(backup.counts as Record<string, unknown>).length)
-        : "-",
-    criado: String(backup.createdAt || "-"),
-  }));
-  const oracleReprocessRows = oracleReprocess.slice(0, 5).map((item) => ({
-    id: String(item.id || "-"),
-    tipo: String(item.type || "-"),
-    status: String(item.status || "-"),
-    motivo: String(item.reason || "-"),
-    criado: String(item.createdAt || "-"),
-  }));
-  const oracleErrorRows = oracleErrors.slice(0, 5).map((item) => ({
-    id: String(item.id || "-"),
-    severidade: String(item.severity || "-"),
-    tipo: String(item.type || "-"),
-    rota: String(item.route || "-"),
-    mensagem: String(item.message || "-"),
-    quando: String(item.createdAt || "-"),
-  }));
-  const oracleSlowRows = slowEvents.slice(0, 5).map((item) => ({
-    id: String(item.id || "-"),
-    severidade: String(item.severity || "performance"),
-    tipo: String(item.type || "-"),
-    rota: String(item.route || "-"),
-    mensagem: `${String(item.durationMs || "-")}ms`,
-    quando: String(item.createdAt || "-"),
-  }));
-  const oracleOperationalRows = oracleOperational.items.map((item) => ({
-    modulo: item.modulo,
-    status: item.status === "online" ? "Online" : "Atenção",
-    rota: item.rota,
-    amostra: item.amostra || oracleOperational.amostra,
-    detalhe: item.detalhe,
-  }));
+  const data = await getAdminMasterHealthCenter();
+
   const incidentRows = data.operational.incidents.map((item) => ({
     incidente: item.title,
     modulo: item.module,
@@ -248,6 +94,7 @@ export default async function AdminMasterSaudePage() {
     ultima: item.lastOccurrence,
     acao: item.recommendedAction,
   }));
+
   const telemetryRows = data.operational.moduleTelemetry.map((item) => ({
     modulo: item.module,
     sucesso: item.successRate,
@@ -257,8 +104,14 @@ export default async function AdminMasterSaudePage() {
     erro_mais_comum: item.topError,
     tendencia: item.trend,
   }));
+
   const suggestionRows = data.operational.suggestions.map((item) => ({
-    prioridade: item.kind === "automatico" ? "Automatica" : item.kind === "sugerido" ? "Sugerida" : "Manual",
+    prioridade:
+      item.kind === "automatico"
+        ? "Automatica"
+        : item.kind === "sugerido"
+          ? "Sugerida"
+          : "Manual",
     acao: item.title,
     alvo: item.target,
     detalhe: item.detail,
@@ -282,15 +135,13 @@ export default async function AdminMasterSaudePage() {
           <div className="flex flex-col justify-between gap-6">
             <div>
               <div className="text-xs font-black uppercase tracking-[0.28em] text-amber-200">
-                Centro de comando
+                Centro de comando serverless
               </div>
               <h1 className="mt-3 max-w-3xl font-display text-4xl font-black leading-tight md:text-5xl">
-                Webhooks, checkouts, bloqueios e jobs em uma tela acionavel.
+                Vercel e Supabase como núcleo operacional do SalãoPremium.
               </h1>
               <p className="mt-4 max-w-3xl text-sm leading-6 text-zinc-300">
-                Esta página junta os sinais que mais afetam venda de assinatura:
-                cobrança Asaas, cron de renovação, salões bloqueados, alertas e
-                falhas recentes.
+                Webhooks, checkouts, crons, alertas, incidentes e telemetria são acompanhados diretamente no banco e nas APIs do sistema, sem servidor auxiliar externo.
               </p>
             </div>
 
@@ -332,142 +183,16 @@ export default async function AdminMasterSaudePage() {
         })}
       </section>
 
-      <section
-        className={`rounded-[32px] border p-5 shadow-sm ${toneClass(oracleHealthTone)}`}
-      >
-        <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
-          <div className="min-w-0">
-            <div className="text-xs font-black uppercase tracking-[0.25em] opacity-60">
-              Oracle VPS
-            </div>
-            <h2 className="mt-2 font-display text-3xl font-black">
-              {oracleVps.ok ? "API auxiliar online" : "API auxiliar exige atenção"}
-            </h2>
-            <p className="mt-2 max-w-3xl text-sm leading-6 opacity-75">
-              {oracleVps.ok
-                ? "A Vercel está comunicando com a VPS. Jobs leves, monitoramento e ping estão disponíveis para operação."
-                : oracleVps.error || "A integração com a VPS ainda não respondeu corretamente."}
-            </p>
-          </div>
-
-          <div className="flex flex-wrap gap-2">
-            <OracleVpsActionButton action="ping" />
-            <OracleVpsActionButton action="backup" />
-            <OracleVpsActionButton action="notifications" />
-            <OracleVpsActionButton action="report" />
-            <OracleVpsActionButton action="cleanup" />
-          </div>
+      <section className="rounded-[30px] border border-blue-200 bg-blue-50 p-5 text-blue-950 shadow-sm">
+        <div className="text-xs font-black uppercase tracking-[0.25em] text-blue-600">
+          Infraestrutura atual
         </div>
-
-        <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
-          {[
-            ["Status", oracleVps.ok ? "Online" : "Offline"],
-            ["Memória", formatPercent(oracleMemory.usedPercent)],
-            ["Disco", formatPercent(oracleDisk.usedPercent)],
-            ["Uptime", formatUptime(oraclePublic.uptimeSeconds)],
-            ["Jobs pendentes", String(pendingJobs)],
-            ["Reprocessar", String(pendingReprocess)],
-          ].map(([label, value]) => (
-            <div
-              key={label}
-              className="rounded-[22px] border border-black/10 bg-white/55 p-4"
-            >
-              <div className="text-[11px] font-black uppercase tracking-[0.22em] opacity-60">
-                {label}
-              </div>
-              <div className="mt-2 font-display text-2xl font-black">{value}</div>
-            </div>
-          ))}
-        </div>
-
-        <div className="mt-5 rounded-[24px] border border-black/10 bg-white/60 p-4">
-          <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
-            <div>
-              <div className="text-xs font-black uppercase tracking-[0.24em] opacity-60">
-                APIs operacionais na VPS
-              </div>
-              <p className="mt-2 text-sm leading-6 opacity-75">
-                {oracleOperational.online}/{oracleOperational.total} rotas respondendo.
-                Amostra: {oracleOperational.amostra}.
-              </p>
-            </div>
-            <span
-              className={`rounded-full border px-3 py-1 text-[11px] font-black ${
-                oracleOperational.ok
-                  ? "border-emerald-200 bg-emerald-100 text-emerald-950"
-                  : "border-amber-200 bg-amber-100 text-amber-950"
-              }`}
-            >
-              {oracleOperational.ok ? "Tudo online" : `${oracleOperational.failed} falha(s)`}
-            </span>
-          </div>
-          <div className="mt-4">
-            <AdminDataTable
-              rows={oracleOperationalRows}
-              columns={["modulo", "status", "rota", "amostra", "detalhe"]}
-              emptyTitle="Nenhuma API operacional testada."
-              emptyDescription="Quando houver um salão de amostra, o Admin Master valida as rotas operacionais da VPS aqui."
-            />
-          </div>
-        </div>
-
-        <div className="mt-5 grid gap-4 xl:grid-cols-2">
-          <div className="rounded-[24px] border border-black/10 bg-white/60 p-4">
-            <div className="text-xs font-black uppercase tracking-[0.24em] opacity-60">
-              Jobs recentes da VPS
-            </div>
-            <div className="mt-3">
-              <AdminDataTable
-                rows={oracleRows}
-                columns={["tipo", "status", "criado", "processado"]}
-                emptyTitle="Nenhum job recente na VPS."
-                emptyDescription="Use os botões acima para registrar jobs leves e validar a fila."
-              />
-            </div>
-          </div>
-          <div className="rounded-[24px] border border-black/10 bg-white/60 p-4">
-            <div className="text-xs font-black uppercase tracking-[0.24em] opacity-60">
-              Erros e lentidão espelhados
-            </div>
-            <div className="mt-3">
-              <AdminDataTable
-                rows={oracleErrorRows.length ? oracleErrorRows : oracleSlowRows}
-                columns={["severidade", "tipo", "rota", "mensagem", "quando"]}
-                emptyTitle="Nenhum erro espelhado na VPS."
-                emptyDescription="Erros globais, webhooks, crons e rotas lentas começam a aparecer aqui quando ocorrerem."
-              />
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-5 grid gap-4 xl:grid-cols-2">
-          <div className="rounded-[24px] border border-black/10 bg-white/60 p-4">
-            <div className="text-xs font-black uppercase tracking-[0.24em] opacity-60">
-              Backups controlados
-            </div>
-            <div className="mt-3">
-              <AdminDataTable
-                rows={oracleBackupRows}
-                columns={["tipo", "status", "tabelas", "criado"]}
-                emptyTitle="Nenhum backup metadata-only recente."
-                emptyDescription="Use o backup leve para registrar contagens sem gerar carga pesada na VPS."
-              />
-            </div>
-          </div>
-          <div className="rounded-[24px] border border-black/10 bg-white/60 p-4">
-            <div className="text-xs font-black uppercase tracking-[0.24em] opacity-60">
-              Fila de reprocessamento
-            </div>
-            <div className="mt-3">
-              <AdminDataTable
-                rows={oracleReprocessRows}
-                columns={["tipo", "status", "motivo", "criado"]}
-                emptyTitle="Nenhum item aguardando reprocessamento."
-                emptyDescription="Falhas de webhook, notificação ou cobrança entram aqui para revisão segura."
-              />
-            </div>
-          </div>
-        </div>
+        <h2 className="mt-2 font-display text-2xl font-black">
+          Sem dependência de VM
+        </h2>
+        <p className="mt-2 max-w-4xl text-sm leading-6 text-blue-900/80">
+          As rotinas de API executam na Vercel. Persistência, filas, eventos, segurança e agendamentos de cron ficam no Supabase. Falhas são registradas no próprio centro de observabilidade abaixo.
+        </p>
       </section>
 
       <div className="grid gap-5 xl:grid-cols-2">
@@ -486,7 +211,7 @@ export default async function AdminMasterSaudePage() {
             Onde o sistema esta falhando, lento ou instavel
           </h2>
           <p className="mt-2 text-sm leading-6 text-zinc-500">
-            A leitura abaixo cruza incidentes, eventos de erro, rotas lentas e impacto em saloes. Use isso para abrir tickets internos com contexto, em vez de procurar erro no escuro.
+            Esta leitura cruza incidentes, erros, rotas lentas e impacto em salões diretamente da telemetria persistida no Supabase.
           </p>
           <div className="mt-4">
             <AdminDataTable
@@ -504,7 +229,7 @@ export default async function AdminMasterSaudePage() {
             Fila de resposta do Admin Master
           </h2>
           <p className="mt-2 text-sm leading-6 text-zinc-500">
-            Cada item precisa virar resolução, ticket interno ou acompanhamento. Quando não houver dados, o painel deve dizer que falta telemetria, não que está tudo perfeito.
+            Cada item precisa virar resolução, ticket interno ou acompanhamento.
           </p>
           <div className="mt-4">
             <AdminDataTable

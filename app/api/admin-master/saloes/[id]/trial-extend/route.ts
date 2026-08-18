@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminMasterAccess } from "@/lib/admin-master/auth/requireAdminMasterUser";
 import { registrarAdminMasterAuditoria } from "@/lib/admin-master/actions";
-import { extendOracleVpsTrial } from "@/lib/oracle-vps/client";
+import { extendTrial } from "@/services/trialLifecycleService";
 
 export async function POST(
   req: NextRequest,
@@ -23,8 +23,8 @@ export async function POST(
       currentTrialEndsAt?: string | null;
     };
     const dias = Math.min(Math.max(Number(body.dias || 3), 1), 30);
-    const result = await extendOracleVpsTrial({
-      id_salao: id,
+    const result = await extendTrial({
+      idSalao: id,
       days: dias,
       reason: body.motivo || `Trial prorrogado por ${dias} dia(s) pelo Admin Master.`,
       currentTrialEndsAt: body.currentTrialEndsAt || null,

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { verifyBearerSecret } from "@/lib/auth/verify-secret";
-import { queueOracleVpsTrialAlerts } from "@/lib/oracle-vps/client";
+import { processTrialAlerts } from "@/services/trialLifecycleService";
 
 async function handleCron(req: Request) {
   if (!verifyBearerSecret(req.headers.get("authorization"), process.env.CRON_SECRET)) {
@@ -8,27 +8,24 @@ async function handleCron(req: Request) {
   }
 
   try {
-    const result = await queueOracleVpsTrialAlerts({
-      trigger: "cron",
-      limit: 80,
-    });
+    const result = await processTrialAlerts(80);
 
     return NextResponse.json({
-      ok: true,
-      provider: "oracle-vps",
+      ok: result.ok,
+      provider: "vercel-supabase",
       result,
     });
   } catch (error) {
     return NextResponse.json(
       {
         ok: false,
-        provider: "oracle-vps",
+        provider: "vercel-supabase",
         error:
           error instanceof Error
             ? error.message
             : "Erro ao processar avisos de teste gratis.",
       },
-      { status: 502 }
+      { status: 500 }
     );
   }
 }

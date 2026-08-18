@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { reportOperationalIncident } from "@/lib/monitoring/operational-incidents";
-import { requestOracleVpsProtected } from "@/lib/oracle-vps/client";
 import { getProfissionalSessionFromCookie } from "@/lib/profissional-auth.server";
 import { runAdminOperation } from "@/lib/supabase/admin-ops";
 import {
@@ -19,27 +18,6 @@ export async function POST(req: Request) {
     }
     idSalao = session.idSalao;
     const body = await req.json().catch(() => null);
-
-    try {
-      const upstream = await requestOracleVpsProtected<Record<string, unknown>>(
-        "/app-profissional/suporte/finalizar",
-        {
-          method: "POST",
-          timeoutMs: 5000,
-          body: {
-            ...(body && typeof body === "object" ? body : {}),
-            id_salao: session.idSalao,
-            id_profissional: session.idProfissional,
-            nome: session.nome,
-            email: null,
-          },
-        }
-      );
-
-      return NextResponse.json(upstream, { status: 200 });
-    } catch {
-      // Fallback local para nao travar o encerramento do chat.
-    }
 
     const result = await finalizarSuporteIAUseCase({
       body,

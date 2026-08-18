@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminMasterAccess } from "@/lib/admin-master/auth/requireAdminMasterUser";
 import { registrarAdminMasterAuditoria } from "@/lib/admin-master/actions";
-import { sendOracleVpsTrialAlertNow } from "@/lib/oracle-vps/client";
+import { sendTrialAlertNow } from "@/services/trialLifecycleService";
 
 export async function POST(
   req: NextRequest,
@@ -21,11 +21,10 @@ export async function POST(
       tipo?: string;
       markSent?: boolean;
     };
-    const result = await sendOracleVpsTrialAlertNow({
-      id_salao: id,
+    const result = await sendTrialAlertNow({
+      idSalao: id,
       type: body.tipo || "manual",
       markSent: Boolean(body.markSent),
-      requestedBy: access.usuario.id,
     });
 
     await registrarAdminMasterAuditoria({
@@ -33,7 +32,7 @@ export async function POST(
       acao: "enviar_email_trial",
       entidade: "assinaturas",
       entidadeId: id,
-      descricao: "Aviso de teste gratis enviado pela VPS.",
+      descricao: "Aviso de teste gratis enviado pelo sistema.",
       payload: { tipo: body.tipo || "manual", result },
     });
 
