@@ -65,6 +65,10 @@ export type Agendamento = {
   hora_inicio: string;
   hora_fim: string;
   created_at?: string | null;
+  origem?: string | null;
+  agendado_por_nome?: string | null;
+  agendado_por_tipo?: string | null;
+  agendado_em?: string | null;
   cliente_confirmacao_status?: string | null;
   cliente_confirmou_em?: string | null;
   status: StatusAgendamento;
