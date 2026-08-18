@@ -37,6 +37,12 @@ function uniqueById<T extends { id: string }>(items: T[] = []) {
   return Array.from(new Map(items.map((item) => [item.id, item])).values());
 }
 
+function uniqueServices(items: Servico[] = []) {
+  return Array.from(
+    new Map(items.map((item) => [`${item.profissional_id}:${item.id}`, item])).values()
+  );
+}
+
 export function useProfissionalData(
   profissionalId?: string,
   podeVerAgendaTodos = false
@@ -86,7 +92,7 @@ export function useProfissionalData(
       ]),
       bloqueios: uniqueById((payload.bloqueios ?? []) as Agendamento[]),
       clientes: uniqueById((payload.clientes ?? []) as Cliente[]),
-      servicos: uniqueById((payload.servicos ?? []) as Servico[]),
+      servicos: uniqueServices((payload.servicos ?? []) as Servico[]),
       comandas: uniqueById((payload.comandas ?? []) as Comanda[]),
       itensComanda: uniqueById((payload.itensComanda ?? []) as ItemComanda[]),
       notificacoes: uniqueById((payload.notificacoes ?? []) as Notificacao[]),
@@ -418,5 +424,4 @@ export function useProfissionalData(
 
   return { ...state, loading, error, refresh, actions, lastSyncedAt, isOnline };
 }
-
 
