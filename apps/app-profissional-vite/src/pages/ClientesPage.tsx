@@ -24,7 +24,7 @@ const STATUS_LABELS: Record<string, string> = {
 
 function statusLabel(value?: string | null) {
   const normalized = String(value || "").trim().toLowerCase();
-  return STATUS_LABELS[normalized] || (normalized ? normalized.replaceAll("_", " ") : "Não informado");
+  return STATUS_LABELS[normalized] || (normalized ? normalized.replace(/_/g, " ") : "Não informado");
 }
 
 function dateLabel(value?: string | null) {
@@ -136,7 +136,6 @@ export function ClientesPage({
               if (!onEdit) throw new Error("Edição de cliente indisponível.");
               await onEdit(editing.id, payload);
               setEditing(null);
-              if (selected?.id === editing.id) setSelected(null);
             }}
           />
         ) : null}
