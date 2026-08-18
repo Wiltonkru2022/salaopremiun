@@ -12,7 +12,11 @@ export type ClienteAppServerContext = {
   idConta: string;
   nome: string;
   email: string;
+  whatsapp: string | null;
   telefone: string | null;
+  cpf: string | null;
+  dataNascimento: string | null;
+  migracaoIdentidadeConcluida: boolean;
 };
 
 function isUnauthorizedError(error: unknown) {
@@ -23,7 +27,9 @@ async function getClienteAppAccount(idConta: string) {
   const supabaseAdmin = asLooseSupabaseClient(getSupabaseAdmin());
   const { data: conta, error } = await supabaseAdmin
     .from("clientes_app_auth")
-    .select("id, nome, email, telefone, ativo")
+    .select(
+      "id, nome, email, telefone, whatsapp, cpf, data_nascimento, ativo, auth_version, migracao_identidade_concluida"
+    )
     .eq("id", idConta)
     .limit(1)
     .maybeSingle<{
@@ -31,13 +37,15 @@ async function getClienteAppAccount(idConta: string) {
       nome?: string | null;
       email?: string | null;
       telefone?: string | null;
+      whatsapp?: string | null;
+      cpf?: string | null;
+      data_nascimento?: string | null;
       ativo?: boolean | null;
+      auth_version?: number | null;
+      migracao_identidade_concluida?: boolean | null;
     }>();
 
-  if (error) {
-    throw new Error("ACCOUNT_LOOKUP_FAILED");
-  }
-
+  if (error) throw new Error("ACCOUNT_LOOKUP_FAILED");
   return conta;
 }
 
@@ -50,49 +58,31 @@ async function getClienteSecurityDecision(context: ClienteAppServerContext) {
 
 async function loadClienteAppServerContext(): Promise<ClienteAppServerContext> {
   const session = await getClienteSessionFromCookie();
+  if (!session?.idConta) throw new Error("UNAUTHORIZED");
 
-  if (!session?.idConta) {
+  const conta = await getClienteAppAccount(session.idConta).catch(() => null);
+  if (!conta?.id || conta.ativo === false) throw new Error("UNAUTHORIZED");
+
+  const authVersion = Number(conta.auth_version || 1);
+  if (Number(session.authVersion || 1) !== authVersion) {
     throw new Error("UNAUTHORIZED");
   }
 
-  let conta: Awaited<ReturnType<typeof getClienteAppAccount>>;
-
-  try {
-    conta = await getClienteAppAccount(session.idConta);
-  } catch {
-    const context = {
-      idConta: session.idConta,
-      nome: session.nome || "Cliente SalãoPremium",
-      email: getClienteAppPublicEmail(session.email),
-      telefone: session.telefone || null,
-    };
-
-    const securityDecision = await getClienteSecurityDecision(context);
-    if (!securityDecision.allowed) {
-      throw new Error("SECURITY_BLOCKED");
-    }
-
-    return context;
-  }
-
-  if (!conta?.id || conta.ativo === false) {
-    throw new Error("UNAUTHORIZED");
-  }
-
-  const context = {
-    idConta: conta.id,
-    nome:
-      String(conta.nome || "").trim() || session.nome || "Cliente SalãoPremium",
-    email:
-      getClienteAppPublicEmail(conta.email || session.email),
-    telefone: String(conta.telefone || session.telefone || "").trim() || null,
+  const context: ClienteAppServerContext = {
+    idConta: String(conta.id),
+    nome: String(conta.nome || "").trim() || session.nome || "Cliente SalãoPremium",
+    email: getClienteAppPublicEmail(conta.email || session.email),
+    whatsapp:
+      String(conta.whatsapp || session.whatsapp || conta.telefone || session.telefone || "").trim() || null,
+    telefone:
+      String(conta.telefone || session.telefone || conta.whatsapp || session.whatsapp || "").trim() || null,
+    cpf: String(conta.cpf || "").trim() || null,
+    dataNascimento: String(conta.data_nascimento || "").trim() || null,
+    migracaoIdentidadeConcluida: Boolean(conta.migracao_identidade_concluida),
   };
 
   const securityDecision = await getClienteSecurityDecision(context);
-  if (!securityDecision.allowed) {
-    throw new Error("SECURITY_BLOCKED");
-  }
-
+  if (!securityDecision.allowed) throw new Error("SECURITY_BLOCKED");
   return context;
 }
 
@@ -104,21 +94,16 @@ export async function validateClienteAppSession(): Promise<{
     const context = await loadClienteAppServerContext();
     return { context, reason: null };
   } catch (error) {
-    if (isUnauthorizedError(error)) {
-      return { context: null, reason: "unauthorized" };
-    }
-
+    if (isUnauthorizedError(error)) return { context: null, reason: "unauthorized" };
     if (error instanceof Error && error.message === "SECURITY_BLOCKED") {
       return { context: null, reason: "security_blocked" };
     }
-
     throw error;
   }
 }
 
 export async function requireClienteAppContext(): Promise<ClienteAppServerContext> {
   const validation = await validateClienteAppSession();
-
   if (!validation.context) {
     const destino =
       validation.reason === "security_blocked"
@@ -130,6 +115,5 @@ export async function requireClienteAppContext(): Promise<ClienteAppServerContex
         : "/app-cliente/login?erro=sessao_expirada";
     redirect(`/app-cliente/logout?destino=${encodeURIComponent(destino)}`);
   }
-
   return validation.context;
 }

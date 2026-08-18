@@ -14,16 +14,14 @@ export async function POST(request: Request) {
   const body = await request.json().catch(() => ({}));
   const result = await createClienteAppAccount({
     nome: String(body?.nome || ""),
-    telefone: String(body?.telefone || ""),
+    cpf: String(body?.cpf || ""),
+    dataNascimento: String(body?.dataNascimento || ""),
+    whatsapp: String(body?.whatsapp || ""),
     email: String(body?.email || ""),
-    senha: String(body?.senha || ""),
   });
 
   if (!result.ok) {
-    return mobileJson(
-      { ok: false, message: result.error },
-      { status: 400 }
-    );
+    return mobileJson({ ok: false, message: result.error }, { status: 400 });
   }
 
   return mobileJson({ ok: true, session: result.session });

@@ -1,126 +1,123 @@
+import crypto from "node:crypto";
 import { runAdminOperation } from "@/lib/supabase/admin-ops";
 import {
-  getClientePasswordSessionDigest,
   hashClientePassword,
   verifyClientePassword,
   type ClienteAppSession,
 } from "@/lib/cliente-auth.server";
+import { canSalonAppearInClientApp, listEligibleSalonIdsByEmail } from "@/lib/client-app/eligibility";
 import {
-  canSalonAppearInClientApp,
-  listEligibleSalonIdsByEmail,
-} from "@/lib/client-app/eligibility";
-import {
-  buildClienteAppPhoneOnlyEmail,
+  findClienteRowsByCpf,
   findClienteRowsByNormalizedPhone,
   getClienteAppPublicEmail,
   normalizeClienteAppEmail,
   normalizeClienteAppPhone,
-  syncClienteAppLinksByPhone,
+  syncClienteAppLinksByIdentity,
 } from "@/app/services/cliente-app/linking";
 import {
-  getSecurityAccessDecision,
-  getSecurityStatusMessage,
-} from "@/lib/security/user-security";
+  isValidCpf,
+  normalizeClienteEmail,
+  normalizeCpf,
+  normalizeWhatsapp,
+  parseClienteBirthDate,
+} from "@/lib/client-app/identity";
+import { getSecurityAccessDecision, getSecurityStatusMessage } from "@/lib/security/user-security";
 import { recordSecurityLoginFailure } from "@/lib/security/login-attempts";
 import { emitSecurityEvent } from "@/lib/security/security-events";
 
 type ClienteLoginResult =
-  | {
-      ok: true;
-      session: ClienteAppSession;
-    }
-  | {
-      ok: false;
-      error: string;
-      redirectTo?: string;
-    };
+  | { ok: true; session: ClienteAppSession; migrationRequired?: boolean }
+  | { ok: false; error: string; redirectTo?: string };
 
 type ClienteAppAccountRow = {
   id: string;
   nome: string | null;
   email: string | null;
   telefone: string | null;
+  whatsapp: string | null;
+  cpf: string | null;
+  data_nascimento: string | null;
   senha_hash: string | null;
+  auth_version: number | null;
+  migracao_identidade_concluida: boolean | null;
   ativo: boolean | null;
 };
 
-function normalizeEmail(value: string) {
-  return normalizeClienteAppEmail(value);
+const GENERIC_LOGIN_ERROR = "Não foi possível validar os dados informados.";
+
+function fingerprintIdentity(value: string) {
+  const secret =
+    process.env.CLIENT_APP_IDENTITY_HASH_SECRET ||
+    process.env.CLIENTE_SESSION_SECRET ||
+    process.env.PROFISSIONAL_SESSION_SECRET ||
+    "salaopremium-identity";
+  return crypto.createHmac("sha256", secret).update(value).digest("hex");
 }
 
-function normalizePhone(value: string) {
-  return normalizeClienteAppPhone(value);
-}
-
-function getStoredAccountEmail(params: { email?: string; telefone?: string }) {
-  const email = normalizeEmail(params.email || "");
-  if (email) return email;
-  return buildClienteAppPhoneOnlyEmail(params.telefone || "");
-}
-
-function buildSessionFromAccount(
-  account: Pick<
-    ClienteAppAccountRow,
-    "id" | "nome" | "email" | "telefone"
-  > & { senha_hash?: string | null }
-): ClienteAppSession {
+function buildSessionFromAccount(account: ClienteAppAccountRow): ClienteAppSession {
+  const whatsapp = normalizeWhatsapp(account.whatsapp || account.telefone);
   return {
     idConta: String(account.id),
-    nome: String(account.nome || "").trim() || "Cliente Salão Premium",
-    email: getClienteAppPublicEmail(account.email) || "",
-    telefone: String(account.telefone || "").trim() || null,
-    passwordDigest: getClientePasswordSessionDigest(account.senha_hash),
+    nome: String(account.nome || "").trim() || "Cliente SalãoPremium",
+    email: getClienteAppPublicEmail(account.email),
+    whatsapp: whatsapp || null,
+    telefone: whatsapp || null,
+    authVersion: Number(account.auth_version || 1),
     tipo: "cliente",
   };
 }
 
-async function findGlobalAccountByEmail(supabaseAdmin: any, email: string) {
+async function findGlobalAccountByCpf(supabaseAdmin: any, cpfInput: string) {
+  const cpf = normalizeCpf(cpfInput);
+  if (!cpf) return null;
   const { data, error } = await supabaseAdmin
     .from("clientes_app_auth")
-    .select("id, nome, email, telefone, senha_hash, ativo")
+    .select(
+      "id, nome, email, telefone, whatsapp, cpf, data_nascimento, senha_hash, auth_version, migracao_identidade_concluida, ativo"
+    )
+    .eq("cpf", cpf)
+    .limit(1)
+    .maybeSingle();
+  if (error || !data?.id) return null;
+  return data as ClienteAppAccountRow;
+}
+
+async function findGlobalAccountByEmail(supabaseAdmin: any, emailInput: string) {
+  const email = normalizeClienteAppEmail(emailInput);
+  if (!email) return null;
+  const { data, error } = await supabaseAdmin
+    .from("clientes_app_auth")
+    .select(
+      "id, nome, email, telefone, whatsapp, cpf, data_nascimento, senha_hash, auth_version, migracao_identidade_concluida, ativo"
+    )
     .eq("email", email)
     .limit(1)
     .maybeSingle();
-
-  if (error || !data?.id) {
-    return null;
-  }
-
+  if (error || !data?.id) return null;
   return data as ClienteAppAccountRow;
 }
 
-async function findGlobalAccountByPhone(supabaseAdmin: any, telefone: string) {
-  const normalizedPhone = normalizePhone(telefone);
-  if (!normalizedPhone) return null;
-
-  const { data, error } = await (supabaseAdmin as any)
+async function findGlobalAccountByPhone(supabaseAdmin: any, phoneInput: string) {
+  const phone = normalizeClienteAppPhone(phoneInput);
+  if (!phone) return null;
+  const { data, error } = await supabaseAdmin
     .from("clientes_app_auth")
-    .select("id, nome, email, telefone, senha_hash, ativo")
-    .eq("telefone", normalizedPhone)
-    .limit(1)
-    .maybeSingle();
-
-  if (error || !data?.id) {
-    return null;
-  }
-
-  return data as ClienteAppAccountRow;
+    .select(
+      "id, nome, email, telefone, whatsapp, cpf, data_nascimento, senha_hash, auth_version, migracao_identidade_concluida, ativo"
+    )
+    .or(`whatsapp.eq.${phone},telefone.eq.${phone}`)
+    .limit(2);
+  if (error || !data?.length || data.length !== 1) return null;
+  return data[0] as ClienteAppAccountRow;
 }
 
-async function assertClienteSecurityAccess(params: {
-  userId: string;
-  idSalao?: string | null;
-}) {
+async function assertClienteSecurityAccess(params: { userId: string; idSalao?: string | null }) {
   const decision = await getSecurityAccessDecision({
     tipoUsuario: "cliente",
     userId: params.userId,
     idSalao: String(params.idSalao || "").trim() || undefined,
   });
-
-  if (decision.allowed) {
-    return null;
-  }
-
+  if (decision.allowed) return null;
   return {
     error: getSecurityStatusMessage({
       status: decision.status,
@@ -131,6 +128,158 @@ async function assertClienteSecurityAccess(params: {
   };
 }
 
+async function recordCpfLoginFailure(params: {
+  cpf: string;
+  userId?: string | null;
+  idSalao?: string | null;
+  ip?: string | null;
+  userAgent?: string | null;
+}) {
+  return recordSecurityLoginFailure({
+    evento: "cliente_app_login_falha",
+    tipoUsuario: "cliente",
+    userId: params.userId || null,
+    idSalao: params.idSalao || null,
+    identidade: `cpf:${fingerprintIdentity(params.cpf)}`,
+    ip: params.ip || null,
+    userAgent: params.userAgent || null,
+    origem: "cliente-app",
+    detalhes: { identidade_tipo: "cpf" },
+  });
+}
+
+export async function createClienteAppAccount(params: {
+  nome: string;
+  cpf: string;
+  dataNascimento: string;
+  whatsapp: string;
+  email?: string | null;
+}): Promise<ClienteLoginResult> {
+  const nome = String(params.nome || "").trim().replace(/\s+/g, " ");
+  const cpf = normalizeCpf(params.cpf);
+  const dataNascimento = parseClienteBirthDate(params.dataNascimento);
+  const whatsapp = normalizeWhatsapp(params.whatsapp);
+  const rawEmail = String(params.email || "").trim();
+  const email = normalizeClienteEmail(rawEmail);
+
+  if (nome.split(" ").filter(Boolean).length < 2) return { ok: false, error: "Informe seu nome completo." };
+  if (!isValidCpf(cpf)) return { ok: false, error: "Informe um CPF válido." };
+  if (!dataNascimento) return { ok: false, error: "Informe uma data de nascimento válida." };
+  if (whatsapp.length < 10 || whatsapp.length > 13) return { ok: false, error: "Informe um WhatsApp válido." };
+  if (rawEmail && !email) return { ok: false, error: "Informe um e-mail válido ou deixe o campo vazio." };
+
+  return runAdminOperation({
+    action: "cliente_app_signup_cpf",
+    actorId: `cpf:${fingerprintIdentity(cpf)}`,
+    run: async (supabaseAdmin): Promise<ClienteLoginResult> => {
+      const existingCpf = await findGlobalAccountByCpf(supabaseAdmin, cpf);
+      if (existingCpf?.id) {
+        return { ok: false, error: "Já existe uma conta com estes dados. Use Recuperar acesso." };
+      }
+
+      if (email) {
+        const existingEmail = await findGlobalAccountByEmail(supabaseAdmin, email);
+        if (existingEmail?.id) {
+          return { ok: false, error: "Este e-mail já está vinculado a uma conta. Use Recuperar acesso." };
+        }
+      }
+
+      const { data, error } = await supabaseAdmin
+        .from("clientes_app_auth")
+        .insert({
+          nome,
+          cpf,
+          data_nascimento: dataNascimento,
+          whatsapp,
+          telefone: whatsapp,
+          email: email || null,
+          senha_hash: null,
+          auth_version: 1,
+          migracao_identidade_concluida: true,
+          ativo: true,
+        })
+        .select(
+          "id, nome, email, telefone, whatsapp, cpf, data_nascimento, senha_hash, auth_version, migracao_identidade_concluida, ativo"
+        )
+        .maybeSingle();
+
+      if (error || !data?.id) return { ok: false, error: "Não foi possível criar sua conta do app agora." };
+
+      await syncClienteAppLinksByIdentity({ idConta: String(data.id) });
+      void emitSecurityEvent({
+        evento: "cliente_app_cadastro_sucesso",
+        tipoUsuario: "cliente",
+        userId: String(data.id),
+        origem: "cliente-app",
+        detalhes: { cpf_final: cpf.slice(-4), possui_email: Boolean(email) },
+      });
+
+      return { ok: true, session: buildSessionFromAccount(data as ClienteAppAccountRow) };
+    },
+  });
+}
+
+export async function loginClienteAppByCpfNascimento(params: {
+  cpf: string;
+  dataNascimento: string;
+  idSalao?: string | null;
+  ip?: string | null;
+  userAgent?: string | null;
+}): Promise<ClienteLoginResult> {
+  const cpf = normalizeCpf(params.cpf);
+  const dataNascimento = parseClienteBirthDate(params.dataNascimento);
+  const idSalao = String(params.idSalao || "").trim() || null;
+
+  if (!isValidCpf(cpf) || !dataNascimento) return { ok: false, error: GENERIC_LOGIN_ERROR };
+
+  return runAdminOperation({
+    action: "cliente_app_login_cpf",
+    actorId: `cpf:${fingerprintIdentity(cpf)}`,
+    idSalao,
+    run: async (supabaseAdmin): Promise<ClienteLoginResult> => {
+      const account = await findGlobalAccountByCpf(supabaseAdmin, cpf);
+      if (!account?.id || account.ativo === false || String(account.data_nascimento || "") !== dataNascimento) {
+        const failure = await recordCpfLoginFailure({
+          cpf,
+          userId: account?.id || null,
+          idSalao,
+          ip: params.ip,
+          userAgent: params.userAgent,
+        });
+        if (failure.blocked && failure.redirectTo) {
+          return { ok: false, error: GENERIC_LOGIN_ERROR, redirectTo: failure.redirectTo };
+        }
+        return { ok: false, error: GENERIC_LOGIN_ERROR };
+      }
+
+      const securityAccess = await assertClienteSecurityAccess({ userId: account.id, idSalao });
+      if (securityAccess) return { ok: false, error: securityAccess.error, redirectTo: securityAccess.redirectTo };
+
+      await supabaseAdmin
+        .from("clientes_app_auth")
+        .update({
+          ultimo_login_em: new Date().toISOString(),
+          migracao_identidade_concluida: true,
+        })
+        .eq("id", account.id);
+
+      await syncClienteAppLinksByIdentity({ idConta: account.id });
+      void emitSecurityEvent({
+        evento: "cliente_app_login_sucesso",
+        tipoUsuario: "cliente",
+        userId: account.id,
+        idSalao,
+        origem: "cliente-app",
+        ip: params.ip || null,
+        userAgent: params.userAgent || null,
+        detalhes: { identidade_tipo: "cpf", cpf_final: cpf.slice(-4) },
+      });
+
+      return { ok: true, session: buildSessionFromAccount(account) };
+    },
+  });
+}
+
 async function createGlobalAccountFromLegacy(params: {
   supabaseAdmin: any;
   email: string;
@@ -138,349 +287,26 @@ async function createGlobalAccountFromLegacy(params: {
   nome?: string | null;
   telefone?: string | null;
 }) {
+  const whatsapp = normalizeWhatsapp(params.telefone);
   const { data, error } = await params.supabaseAdmin
     .from("clientes_app_auth")
     .insert({
-      nome: String(params.nome || "").trim() || "Cliente Salão Premium",
-      email: params.email,
-      telefone: String(params.telefone || "").trim() || null,
+      nome: String(params.nome || "").trim() || "Cliente SalãoPremium",
+      email: normalizeClienteEmail(params.email) || null,
+      telefone: whatsapp || null,
+      whatsapp: whatsapp || null,
       senha_hash: params.legacyHash,
+      auth_version: 1,
+      migracao_identidade_concluida: false,
       ativo: true,
       ultimo_login_em: new Date().toISOString(),
     })
-    .select("id, nome, email, telefone, senha_hash, ativo")
+    .select(
+      "id, nome, email, telefone, whatsapp, cpf, data_nascimento, senha_hash, auth_version, migracao_identidade_concluida, ativo"
+    )
     .maybeSingle();
-
-  if (error || !data?.id) {
-    return null;
-  }
-
+  if (error || !data?.id) return null;
   return data as ClienteAppAccountRow;
-}
-
-export async function ensureClienteContaVinculadaAoSalao(params: {
-  idConta: string;
-  idSalao: string;
-}) {
-  const idConta = String(params.idConta || "").trim();
-  const idSalao = String(params.idSalao || "").trim();
-
-  if (!idConta || !idSalao) {
-    return {
-      ok: false as const,
-      error: "Não foi possível identificar a conta para este salão.",
-    };
-  }
-
-  const elegibilidade = await canSalonAppearInClientApp(idSalao);
-  if (!elegibilidade.allowed) {
-    return {
-      ok: false as const,
-      error: "Este salão não está publicado no app cliente agora.",
-    };
-  }
-
-  return runAdminOperation({
-    action: "cliente_app_ensure_salon_link",
-    actorId: idConta,
-    idSalao,
-    run: async (supabaseAdmin) => {
-      const { data: accountRow, error: accountError } = await (supabaseAdmin as any)
-        .from("clientes_app_auth")
-        .select("id, nome, email, telefone, senha_hash, ativo")
-        .eq("id", idConta)
-        .limit(1)
-        .maybeSingle();
-
-      if (accountError || !accountRow?.id || accountRow.ativo === false) {
-        return {
-          ok: false as const,
-          error: "Sua conta global de cliente não está disponível agora.",
-        };
-      }
-
-      const account = accountRow as ClienteAppAccountRow;
-
-      const { data: linkedAuthRows, error: linkedAuthError } = await supabaseAdmin
-        .from("clientes_auth")
-        .select("id, id_cliente")
-        .eq("id_salao", idSalao)
-        .eq("app_conta_id", idConta)
-        .eq("app_ativo", true)
-        .limit(1);
-
-      if (linkedAuthError) {
-        return {
-          ok: false as const,
-          error: "Não foi possível validar seu acesso ao salão agora.",
-        };
-      }
-
-      const linkedAuth = linkedAuthRows?.[0];
-      if (linkedAuth?.id && linkedAuth.id_cliente) {
-        return {
-          ok: true as const,
-          idCliente: String(linkedAuth.id_cliente),
-        };
-      }
-
-      const email = getClienteAppPublicEmail(account.email);
-      const telefone = normalizePhone(account.telefone || "");
-
-      const [{ data: clienteByPhoneRows, error: clienteByPhoneError }, { data: authByEmailRows, error: authByEmailError }, { data: clientesByEmailRows, error: clienteByEmailError }] =
-        await Promise.all([
-          telefone
-            ? findClienteRowsByNormalizedPhone({
-                supabaseAdmin,
-                telefone,
-                idSalao,
-                limit: 1,
-              })
-            : Promise.resolve({ data: [], error: null }),
-          email
-            ? supabaseAdmin
-                .from("clientes_auth")
-                .select("id, id_cliente")
-                .eq("id_salao", idSalao)
-                .eq("email", email)
-                .limit(1)
-            : Promise.resolve({ data: [], error: null }),
-          email
-            ? supabaseAdmin
-                .from("clientes")
-                .select("id, nome, email, telefone, whatsapp")
-                .eq("id_salao", idSalao)
-                .eq("email", email)
-                .limit(1)
-            : Promise.resolve({ data: [], error: null }),
-        ]);
-
-      if (clienteByPhoneError || authByEmailError || clienteByEmailError) {
-        return {
-          ok: false as const,
-          error: "Não foi possível validar sua ficha neste salão agora.",
-        };
-      }
-
-      let idCliente = String(clienteByPhoneRows?.[0]?.id || "").trim();
-
-      if (!idCliente) {
-        idCliente = String(authByEmailRows?.[0]?.id_cliente || "").trim();
-      }
-
-      if (!idCliente && clientesByEmailRows?.[0]?.id) {
-        idCliente = String(clientesByEmailRows[0].id);
-      }
-
-      if (idCliente) {
-        const { error: clienteUpdateError } = await supabaseAdmin
-          .from("clientes")
-          .update({
-            nome: account.nome,
-            email: email || null,
-            telefone: telefone || null,
-            whatsapp: telefone || null,
-            status: "ativo",
-            ativo: "ativo",
-            atualizado_em: new Date().toISOString(),
-          })
-          .eq("id", idCliente)
-          .eq("id_salao", idSalao);
-
-        if (clienteUpdateError) {
-          return {
-            ok: false as const,
-            error: "Não foi possível atualizar seu cadastro neste salão.",
-          };
-        }
-      } else {
-        const { data: createdCliente, error: insertClienteError } =
-          await supabaseAdmin
-            .from("clientes")
-            .insert({
-              id_salao: idSalao,
-              nome: account.nome,
-              email: email || null,
-              telefone: telefone || null,
-              whatsapp: telefone || null,
-              status: "ativo",
-              ativo: "ativo",
-            })
-            .select("id")
-            .maybeSingle();
-
-        if (insertClienteError || !createdCliente?.id) {
-          return {
-            ok: false as const,
-            error: "Não foi possível criar sua ficha de cliente neste salão.",
-          };
-        }
-
-        idCliente = String(createdCliente.id);
-      }
-
-      const { data: authByClientRows, error: authByClientError } =
-        await supabaseAdmin
-          .from("clientes_auth")
-          .select("id")
-          .eq("id_salao", idSalao)
-          .eq("id_cliente", idCliente)
-          .limit(1);
-
-      if (authByClientError) {
-        return {
-          ok: false as const,
-          error: "Não foi possível ativar seu acesso neste salão.",
-        };
-      }
-
-      const authByClient = authByClientRows?.[0];
-      const authByEmail = authByEmailRows?.[0];
-      const authRowId = authByClient?.id || authByEmail?.id;
-      if (authRowId) {
-        const { error: authUpdateError } = await supabaseAdmin
-          .from("clientes_auth")
-          .update({
-            id_cliente: idCliente,
-            app_conta_id: idConta,
-            email: email || null,
-            senha_hash: account.senha_hash,
-            app_ativo: true,
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", authRowId);
-
-        if (authUpdateError) {
-          return {
-            ok: false as const,
-            error: "Não foi possível ativar seu acesso neste salão.",
-          };
-        }
-      } else {
-        const { error: authInsertError } = await supabaseAdmin
-          .from("clientes_auth")
-          .insert({
-            id_salao: idSalao,
-            id_cliente: idCliente,
-            app_conta_id: idConta,
-            email: email || null,
-            senha_hash: account.senha_hash,
-            app_ativo: true,
-          });
-
-        if (authInsertError) {
-          return {
-            ok: false as const,
-            error: "Não foi possível ativar seu acesso neste salão.",
-          };
-        }
-      }
-
-      return {
-        ok: true as const,
-        idCliente,
-      };
-    },
-  });
-}
-
-export async function createClienteAppAccount(params: {
-  nome: string;
-  email: string;
-  telefone?: string;
-  senha: string;
-}): Promise<ClienteLoginResult> {
-  const email = normalizeEmail(params.email);
-  const telefone = normalizePhone(params.telefone || "");
-  const storedEmail = getStoredAccountEmail({ email, telefone });
-  const nome = String(params.nome || "").trim();
-  const senha = String(params.senha || "").trim();
-
-  if (!nome) {
-    return { ok: false, error: "Informe seu nome." };
-  }
-
-  if (!telefone) {
-    return { ok: false, error: "Informe seu telefone." };
-  }
-
-  if (!storedEmail) {
-    return { ok: false, error: "Informe um e-mail valido ou um telefone." };
-  }
-
-  if (senha.length < 6) {
-    return { ok: false, error: "A senha precisa ter pelo menos 6 caracteres." };
-  }
-
-  return runAdminOperation({
-    action: "cliente_app_signup_global",
-    actorId: email || telefone,
-    run: async (supabaseAdmin): Promise<ClienteLoginResult> => {
-      const existing = email
-        ? await findGlobalAccountByEmail(supabaseAdmin, email)
-        : null;
-      if (existing?.id) {
-        return {
-          ok: false,
-          error:
-            "Já existe uma conta do app com este e-mail. Use Entrar ou Recuperar acesso.",
-        };
-      }
-
-      const existingPhone = telefone
-        ? await findGlobalAccountByPhone(supabaseAdmin, telefone)
-        : null;
-      if (existingPhone?.id) {
-        return {
-          ok: false,
-          error:
-            "Já existe uma conta do app com este telefone. Use Recuperar acesso para receber um link seguro no e-mail cadastrado.",
-        };
-      }
-
-      const senhaHash = await hashClientePassword(senha);
-      const { data, error } = await (supabaseAdmin as any)
-        .from("clientes_app_auth")
-        .insert({
-          nome,
-          email: storedEmail,
-          telefone: telefone || null,
-          senha_hash: senhaHash,
-          ativo: true,
-        })
-        .select("id, nome, email, telefone, senha_hash")
-        .maybeSingle();
-
-      if (error || !(data as { id?: string } | null)?.id) {
-        return {
-          ok: false,
-          error: "Não foi possível criar sua conta do app agora.",
-        };
-      }
-
-      await syncClienteAppLinksByPhone({
-        idConta: String((data as { id: string }).id),
-      });
-
-      void emitSecurityEvent({
-        evento: "cliente_app_cadastro_sucesso",
-        tipoUsuario: "cliente",
-        userId: String((data as { id: string }).id),
-        origem: "cliente-app",
-        detalhes: { email: email || null, telefone },
-      });
-
-      return {
-        ok: true,
-        session: buildSessionFromAccount(
-          data as Pick<
-            ClienteAppAccountRow,
-            "id" | "nome" | "email" | "telefone" | "senha_hash"
-          >
-        ),
-      };
-    },
-  });
 }
 
 export async function loginClienteAppByEmailSenha(params: {
@@ -488,98 +314,43 @@ export async function loginClienteAppByEmailSenha(params: {
   senha: string;
   idSalao?: string | null;
 }): Promise<ClienteLoginResult> {
-  const identidade = String(params.email || "").trim();
-  const telefone = normalizePhone(identidade);
-  const email = identidade.includes("@") ? normalizeEmail(identidade) : "";
+  const identity = String(params.email || "").trim();
+  const phone = normalizeClienteAppPhone(identity);
+  const email = identity.includes("@") ? normalizeClienteAppEmail(identity) : "";
   const senha = String(params.senha || "").trim();
   const idSalao = String(params.idSalao || "").trim() || null;
 
-  if ((!email && !telefone) || !senha) {
-    return { ok: false, error: "Informe telefone ou e-mail e senha." };
-  }
+  if ((!email && !phone) || !senha) return { ok: false, error: "Informe telefone/e-mail e senha." };
 
   return runAdminOperation({
-    action: "cliente_app_login",
-    actorId: email || telefone,
+    action: "cliente_app_login_legado",
+    actorId: email || `telefone:${fingerprintIdentity(phone)}`,
     idSalao,
     run: async (supabaseAdmin): Promise<ClienteLoginResult> => {
       const globalAccount = email
         ? await findGlobalAccountByEmail(supabaseAdmin, email)
-        : await findGlobalAccountByPhone(supabaseAdmin, telefone);
+        : await findGlobalAccountByPhone(supabaseAdmin, phone);
 
       if (globalAccount?.id && globalAccount.senha_hash) {
-        const senhaOk = await verifyClientePassword(
-          senha,
-          globalAccount.senha_hash
-        );
+        const passwordOk = await verifyClientePassword(senha, globalAccount.senha_hash);
+        if (passwordOk && globalAccount.ativo !== false) {
+          const securityAccess = await assertClienteSecurityAccess({ userId: globalAccount.id, idSalao });
+          if (securityAccess) return { ok: false, error: securityAccess.error, redirectTo: securityAccess.redirectTo };
 
-        if (senhaOk && globalAccount.ativo !== false) {
-          const securityAccess = await assertClienteSecurityAccess({
-            userId: globalAccount.id,
-            idSalao,
-          });
-
-          if (securityAccess) {
-            void emitSecurityEvent({
-              evento: "cliente_app_login_bloqueado_seguranca",
-              tipoUsuario: "cliente",
-              userId: globalAccount.id,
-              idSalao,
-              origem: "cliente-app",
-              detalhes: { email },
-            });
-
-            return {
-              ok: false,
-              error: securityAccess.error,
-              redirectTo: securityAccess.redirectTo,
-            };
-          }
-
-          await (supabaseAdmin as any)
+          await supabaseAdmin
             .from("clientes_app_auth")
             .update({ ultimo_login_em: new Date().toISOString() })
             .eq("id", globalAccount.id);
-
-          await syncClienteAppLinksByPhone({ idConta: globalAccount.id });
-
-          void emitSecurityEvent({
-            evento: "cliente_app_login_sucesso",
-            tipoUsuario: "cliente",
-            userId: globalAccount.id,
-            idSalao,
-            origem: "cliente-app",
-            detalhes: { email },
-          });
-
+          await syncClienteAppLinksByIdentity({ idConta: globalAccount.id });
           return {
             ok: true,
             session: buildSessionFromAccount(globalAccount),
+            migrationRequired: !globalAccount.cpf || !globalAccount.data_nascimento,
           };
         }
-
-        void recordSecurityLoginFailure({
-          evento: "cliente_app_login_falhou",
-          tipoUsuario: "cliente",
-          userId: globalAccount.id,
-          idSalao,
-          identidade: email,
-          origem: "cliente-app",
-          detalhes: { email },
-        });
       }
 
-      if (!email) {
-        void recordSecurityLoginFailure({
-          evento: "cliente_app_login_falhou",
-          tipoUsuario: "cliente",
-          idSalao,
-          identidade: telefone,
-          origem: "cliente-app",
-          detalhes: { telefone },
-        });
-        return { ok: false, error: "Telefone ou senha invÃ¡lidos." };
-      }
+      if (!email) return { ok: false, error: "Acesso antigo não reconhecido." };
 
       let query = supabaseAdmin
         .from("clientes_auth")
@@ -587,60 +358,20 @@ export async function loginClienteAppByEmailSenha(params: {
         .eq("email", email)
         .eq("app_ativo", true)
         .limit(idSalao ? 1 : 5);
-
-      if (idSalao) {
-        query = query.eq("id_salao", idSalao);
-      }
-
+      if (idSalao) query = query.eq("id_salao", idSalao);
       const { data: authRows, error } = await query;
-      if (error || !authRows?.length) {
-        void recordSecurityLoginFailure({
-          evento: "cliente_app_login_falhou",
-          tipoUsuario: "cliente",
-          idSalao,
-          identidade: email,
-          origem: "cliente-app",
-          detalhes: { email },
-        });
-        return { ok: false, error: "E-mail ou senha inválidos." };
-      }
+      if (error || !authRows?.length) return { ok: false, error: "Acesso antigo não reconhecido." };
 
       if (!idSalao && authRows.length > 1) {
         const eligibleSalonIds = await listEligibleSalonIdsByEmail(email);
         if (eligibleSalonIds.length > 1) {
-          return {
-            ok: false,
-            error:
-              "Sua conta antiga ainda aparece em mais de um salão. Entre pela página do salão desejado para concluir a migração.",
-          };
+          return { ok: false, error: "Entre pelo salão em que sua conta antiga foi criada para atualizar o acesso." };
         }
       }
 
       const acesso = authRows[0];
-      if (!acesso?.senha_hash) {
-        void recordSecurityLoginFailure({
-          evento: "cliente_app_login_falhou",
-          tipoUsuario: "cliente",
-          idSalao: acesso?.id_salao || idSalao,
-          identidade: email,
-          origem: "cliente-app",
-          detalhes: { email },
-        });
-        return { ok: false, error: "E-mail ou senha inválidos." };
-      }
-
-      const senhaOk = await verifyClientePassword(senha, acesso.senha_hash);
-      if (!senhaOk) {
-        void recordSecurityLoginFailure({
-          evento: "cliente_app_login_falhou",
-          tipoUsuario: "cliente",
-          userId: null,
-          idSalao: acesso.id_salao,
-          identidade: email,
-          origem: "cliente-app",
-          detalhes: { email },
-        });
-        return { ok: false, error: "E-mail ou senha inválidos." };
+      if (!acesso?.senha_hash || !(await verifyClientePassword(senha, acesso.senha_hash))) {
+        return { ok: false, error: "Acesso antigo não reconhecido." };
       }
 
       const { data: cliente } = await supabaseAdmin
@@ -651,97 +382,162 @@ export async function loginClienteAppByEmailSenha(params: {
         .limit(1)
         .maybeSingle();
 
-      const contaGlobal =
-        globalAccount?.id
-          ? globalAccount
-          : await createGlobalAccountFromLegacy({
-              supabaseAdmin,
-              email,
-              legacyHash: acesso.senha_hash,
-              nome: cliente?.nome,
-              telefone: cliente?.telefone || cliente?.whatsapp,
-            });
-
-      if (!contaGlobal?.id) {
-        return {
-          ok: false,
-          error: "Não foi possível concluir a atualização da sua conta agora.",
-        };
-      }
-
-      const securityAccess = await assertClienteSecurityAccess({
-        userId: contaGlobal.id,
-        idSalao: acesso.id_salao,
-      });
-
-      if (securityAccess) {
-        void emitSecurityEvent({
-          evento: "cliente_app_login_bloqueado_seguranca",
-          tipoUsuario: "cliente",
-          userId: contaGlobal.id,
-          idSalao: acesso.id_salao,
-          origem: "cliente-app",
-          detalhes: { email },
-        });
-
-        return {
-          ok: false,
-          error: securityAccess.error,
-          redirectTo: securityAccess.redirectTo,
-        };
-      }
-
-      await Promise.all([
-        supabaseAdmin
-          .from("clientes_auth")
-          .update({
-            app_conta_id: contaGlobal.id,
+      const conta = globalAccount?.id
+        ? globalAccount
+        : await createGlobalAccountFromLegacy({
+            supabaseAdmin,
             email,
-            senha_hash: contaGlobal.senha_hash,
-            ultimo_login_em: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", acesso.id),
-        (supabaseAdmin as any)
-          .from("clientes_app_auth")
-          .update({
-            senha_hash: acesso.senha_hash,
-            ultimo_login_em: new Date().toISOString(),
-            nome:
-              String(contaGlobal.nome || cliente?.nome || "").trim() ||
-              "Cliente SalãoPremium",
-            telefone:
-              String(
-                contaGlobal.telefone || cliente?.telefone || cliente?.whatsapp || ""
-              ).trim() || null,
-          })
-          .eq("id", contaGlobal.id),
-      ]);
+            legacyHash: acesso.senha_hash,
+            nome: cliente?.nome,
+            telefone: cliente?.whatsapp || cliente?.telefone,
+          });
+      if (!conta?.id) return { ok: false, error: "Não foi possível atualizar seu acesso antigo agora." };
 
-      await syncClienteAppLinksByPhone({ idConta: contaGlobal.id });
-
-      void emitSecurityEvent({
-        evento: "cliente_app_login_sucesso",
-        tipoUsuario: "cliente",
-        userId: contaGlobal.id,
-        idSalao: acesso.id_salao,
-        origem: "cliente-app",
-        detalhes: { email },
-      });
-
-      return {
-        ok: true,
-        session: buildSessionFromAccount({
-          ...contaGlobal,
-          nome:
-            String(contaGlobal.nome || cliente?.nome || "").trim() ||
-            "Cliente SalãoPremium",
-          telefone:
-            String(
-              contaGlobal.telefone || cliente?.telefone || cliente?.whatsapp || ""
-            ).trim() || null,
-        }),
-      };
+      await supabaseAdmin
+        .from("clientes_auth")
+        .update({ app_conta_id: conta.id, updated_at: new Date().toISOString() })
+        .eq("id", acesso.id);
+      return { ok: true, session: buildSessionFromAccount(conta), migrationRequired: true };
     },
   });
 }
+
+export async function ensureClienteContaVinculadaAoSalao(params: {
+  idConta: string;
+  idSalao: string;
+}) {
+  const idConta = String(params.idConta || "").trim();
+  const idSalao = String(params.idSalao || "").trim();
+  if (!idConta || !idSalao) return { ok: false as const, error: "Não foi possível identificar a conta para este salão." };
+
+  const eligibility = await canSalonAppearInClientApp(idSalao);
+  if (!eligibility.allowed) return { ok: false as const, error: "Este salão não está publicado no app cliente agora." };
+
+  return runAdminOperation({
+    action: "cliente_app_ensure_salon_link",
+    actorId: idConta,
+    idSalao,
+    run: async (supabaseAdmin) => {
+      const { data: accountRow, error: accountError } = await supabaseAdmin
+        .from("clientes_app_auth")
+        .select(
+          "id, nome, email, telefone, whatsapp, cpf, data_nascimento, senha_hash, auth_version, migracao_identidade_concluida, ativo"
+        )
+        .eq("id", idConta)
+        .limit(1)
+        .maybeSingle();
+      if (accountError || !accountRow?.id || accountRow.ativo === false) {
+        return { ok: false as const, error: "Sua conta global de cliente não está disponível agora." };
+      }
+      const account = accountRow as ClienteAppAccountRow;
+
+      const { data: linkedRows, error: linkedError } = await supabaseAdmin
+        .from("clientes_auth")
+        .select("id, id_cliente")
+        .eq("id_salao", idSalao)
+        .eq("app_conta_id", idConta)
+        .eq("app_ativo", true)
+        .limit(1);
+      if (linkedError) return { ok: false as const, error: "Não foi possível validar seu acesso ao salão agora." };
+      if (linkedRows?.[0]?.id_cliente) return { ok: true as const, idCliente: String(linkedRows[0].id_cliente) };
+
+      let idCliente = "";
+      const cpf = normalizeCpf(account.cpf);
+      if (cpf) {
+        const byCpf = await findClienteRowsByCpf({ supabaseAdmin, cpf, idSalao, limit: 2 });
+        if (byCpf.error) return { ok: false as const, error: "Não foi possível validar sua identidade neste salão." };
+        if (byCpf.data.length > 1) return { ok: false as const, error: "Encontramos cadastros duplicados com este CPF. O salão precisa revisar a ficha." };
+        idCliente = String(byCpf.data[0]?.id || "");
+      }
+
+      if (!idCliente && !cpf) {
+        const phone = normalizeClienteAppPhone(account.whatsapp || account.telefone);
+        if (phone) {
+          const byPhone = await findClienteRowsByNormalizedPhone({ supabaseAdmin, telefone: phone, idSalao, limit: 3 });
+          if (!byPhone.error && byPhone.data.length === 1) idCliente = String(byPhone.data[0].id || "");
+        }
+      }
+
+      const email = getClienteAppPublicEmail(account.email);
+      if (!idCliente && !cpf && email) {
+        const { data: byEmail } = await supabaseAdmin
+          .from("clientes")
+          .select("id")
+          .eq("id_salao", idSalao)
+          .eq("email", email)
+          .limit(2);
+        if (byEmail?.length === 1) idCliente = String(byEmail[0].id || "");
+      }
+
+      const whatsapp = normalizeWhatsapp(account.whatsapp || account.telefone);
+      let createdNew = false;
+      if (!idCliente) {
+        const { data: created, error: createError } = await supabaseAdmin
+          .from("clientes")
+          .insert({
+            id_salao: idSalao,
+            nome: account.nome,
+            email: email || null,
+            telefone: whatsapp || null,
+            whatsapp: whatsapp || null,
+            cpf: cpf || null,
+            data_nascimento: account.data_nascimento || null,
+            status: "ativo",
+            ativo: "ativo",
+          })
+          .select("id")
+          .maybeSingle();
+        if (createError || !created?.id) return { ok: false as const, error: "Não foi possível criar sua ficha de cliente neste salão." };
+        idCliente = String(created.id);
+        createdNew = true;
+      } else {
+        const updateResult = await supabaseAdmin
+          .from("clientes")
+          .update({
+            nome: account.nome,
+            email: email || null,
+            telefone: whatsapp || null,
+            whatsapp: whatsapp || null,
+            cpf: cpf || null,
+            data_nascimento: account.data_nascimento || null,
+            status: "ativo",
+            ativo: "ativo",
+            atualizado_em: new Date().toISOString(),
+          })
+          .eq("id", idCliente)
+          .eq("id_salao", idSalao);
+        if (updateResult.error) return { ok: false as const, error: "Não foi possível atualizar seu cadastro neste salão." };
+      }
+
+      const { data: authByClient } = await supabaseAdmin
+        .from("clientes_auth")
+        .select("id")
+        .eq("id_salao", idSalao)
+        .eq("id_cliente", idCliente)
+        .limit(1);
+
+      const authPayload = {
+        id_cliente: idCliente,
+        app_conta_id: idConta,
+        email: email || null,
+        senha_hash: account.senha_hash || null,
+        app_ativo: true,
+        updated_at: new Date().toISOString(),
+      };
+
+      const authResult = authByClient?.[0]?.id
+        ? await supabaseAdmin.from("clientes_auth").update(authPayload).eq("id", authByClient[0].id)
+        : await supabaseAdmin.from("clientes_auth").insert({ id_salao: idSalao, ...authPayload });
+
+      if (authResult.error) {
+        if (createdNew) await supabaseAdmin.from("clientes").delete().eq("id", idCliente).eq("id_salao", idSalao);
+        return { ok: false as const, error: "Não foi possível ativar seu acesso neste salão." };
+      }
+
+      return { ok: true as const, idCliente };
+    },
+  });
+}
+
+// Export temporário utilizado por rotinas legadas que ainda precisam criar hash.
+export { hashClientePassword };

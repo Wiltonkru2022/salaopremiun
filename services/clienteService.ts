@@ -3,13 +3,162 @@ import {
   normalizarEmailCliente,
   normalizarTelefoneCliente,
 } from "@/core/entities/cliente";
+import {
+  isValidCpf,
+  normalizeCpf,
+  normalizeWhatsapp,
+  parseClienteBirthDate,
+} from "@/lib/client-app/identity";
 
 type SupabaseAdminClient = ReturnType<typeof getSupabaseAdmin>;
+
+type AppIdentityCandidate = {
+  cpf?: string | null;
+  dataNascimento?: string | null;
+  whatsapp?: string | null;
+};
 
 export function createClienteService(
   supabaseAdmin: SupabaseAdminClient = getSupabaseAdmin()
 ) {
+  async function loadLinkedGlobalAccount(params: {
+    idSalao: string;
+    idCliente: string;
+  }) {
+    const { data: auth, error: authError } = await supabaseAdmin
+      .from("clientes_auth")
+      .select("app_conta_id")
+      .eq("id_salao", params.idSalao)
+      .eq("id_cliente", params.idCliente)
+      .limit(1)
+      .maybeSingle();
+    if (authError) throw authError;
+    if (!auth?.app_conta_id) return null;
+
+    const { data: account, error: accountError } = await supabaseAdmin
+      .from("clientes_app_auth")
+      .select("id, cpf, data_nascimento, whatsapp, telefone, auth_version, ativo")
+      .eq("id", auth.app_conta_id)
+      .limit(1)
+      .maybeSingle();
+    if (accountError) throw accountError;
+    if (!account?.id || account.ativo === false) return null;
+    return account;
+  }
+
+  function normalizeIdentityCandidate(candidate: AppIdentityCandidate) {
+    const rawCpf = String(candidate.cpf || "").trim();
+    const cpf = rawCpf ? normalizeCpf(rawCpf) : "";
+    const rawBirth = String(candidate.dataNascimento || "").trim();
+    const dataNascimento = rawBirth ? parseClienteBirthDate(rawBirth) : null;
+    const whatsapp = normalizeWhatsapp(candidate.whatsapp);
+
+    if (rawCpf && !isValidCpf(cpf)) {
+      throw new Error("Informe um CPF valido.");
+    }
+    if (rawBirth && !dataNascimento) {
+      throw new Error("Informe uma data de nascimento valida.");
+    }
+    return { cpf, dataNascimento, whatsapp };
+  }
+
+  async function validarIdentidadeAppVinculada(params: {
+    idSalao: string;
+    idCliente: string;
+    candidate: AppIdentityCandidate;
+  }) {
+    const account = await loadLinkedGlobalAccount(params);
+    if (!account) return null;
+    const normalized = normalizeIdentityCandidate(params.candidate);
+
+    const currentCpf = normalizeCpf(account.cpf);
+    if (currentCpf && normalized.cpf && currentCpf !== normalized.cpf) {
+      throw new Error(
+        "O CPF informado difere da identidade da conta global do App Cliente. Revise o cadastro antes de continuar."
+      );
+    }
+
+    const currentBirth = String(account.data_nascimento || "").slice(0, 10);
+    if (
+      currentBirth &&
+      normalized.dataNascimento &&
+      currentBirth !== normalized.dataNascimento
+    ) {
+      throw new Error(
+        "A data de nascimento informada difere da identidade da conta global do App Cliente. Revise o cadastro antes de continuar."
+      );
+    }
+
+    if (normalized.cpf) {
+      const { data: duplicate, error } = await supabaseAdmin
+        .from("clientes_app_auth")
+        .select("id")
+        .eq("cpf", normalized.cpf)
+        .neq("id", account.id)
+        .limit(1);
+      if (error) throw error;
+      if (duplicate?.length) {
+        throw new Error(
+          "Este CPF ja pertence a outra conta global do App Cliente. Nao foi feita nenhuma mesclagem automatica."
+        );
+      }
+    }
+
+    return { account, normalized };
+  }
+
+  async function sincronizarIdentidadeAppVinculada(params: {
+    idSalao: string;
+    idCliente: string;
+    candidate: AppIdentityCandidate;
+  }) {
+    const validated = await validarIdentidadeAppVinculada(params);
+    if (!validated) return;
+
+    const { account, normalized } = validated;
+    const currentCpf = normalizeCpf(account.cpf);
+    const currentBirth = String(account.data_nascimento || "").slice(0, 10);
+    const currentWhatsapp = normalizeWhatsapp(account.whatsapp || account.telefone);
+    const cpfChanged = Boolean(normalized.cpf && normalized.cpf !== currentCpf);
+    const birthChanged = Boolean(
+      normalized.dataNascimento && normalized.dataNascimento !== currentBirth
+    );
+    const whatsappChanged = Boolean(
+      normalized.whatsapp && normalized.whatsapp !== currentWhatsapp
+    );
+
+    if (!cpfChanged && !birthChanged && !whatsappChanged) return;
+
+    const update: Record<string, unknown> = {
+      updated_at: new Date().toISOString(),
+    };
+    if (normalized.cpf) update.cpf = normalized.cpf;
+    if (normalized.dataNascimento) update.data_nascimento = normalized.dataNascimento;
+    if (normalized.whatsapp) {
+      update.whatsapp = normalized.whatsapp;
+      update.telefone = normalized.whatsapp;
+    }
+    if (
+      (normalized.cpf || currentCpf) &&
+      (normalized.dataNascimento || currentBirth)
+    ) {
+      update.migracao_identidade_concluida = true;
+    }
+    if (cpfChanged || birthChanged) {
+      update.auth_version = Number(account.auth_version || 1) + 1;
+    }
+
+    const { error } = await supabaseAdmin
+      .from("clientes_app_auth")
+      .update(update)
+      .eq("id", account.id);
+    if (error) throw error;
+  }
+
   return {
+    validarIdentidadeAppVinculada,
+    sincronizarIdentidadeAppVinculada,
+
     async verificarDuplicidade(params: {
       idSalao: string;
       idClienteAtual?: string | null;
@@ -21,7 +170,11 @@ export function createClienteService(
       const email = normalizarEmailCliente(params.email);
       const whatsapp = normalizarTelefoneCliente(params.whatsapp);
       const telefone = normalizarTelefoneCliente(params.telefone);
-      const cpf = normalizarTelefoneCliente(params.cpf);
+      const cpf = normalizeCpf(params.cpf);
+
+      if (params.cpf && !isValidCpf(cpf)) {
+        throw new Error("Informe um CPF valido.");
+      }
 
       if (email) {
         const { data, error } = await supabaseAdmin
@@ -29,13 +182,10 @@ export function createClienteService(
           .select("id, nome, email")
           .eq("id_salao", params.idSalao)
           .eq("email", email);
-
         if (error) throw error;
-
         const duplicado = (data || []).find(
           (item) => item.id !== params.idClienteAtual
         );
-
         if (duplicado) {
           throw new Error(
             `Ja existe cliente com este e-mail: ${duplicado.nome || "cadastro existente"}.`
@@ -44,29 +194,23 @@ export function createClienteService(
       }
 
       if (!whatsapp && !telefone && !cpf) return;
-
       const { data, error } = await supabaseAdmin
         .from("clientes")
         .select("id, nome, whatsapp, telefone, cpf")
         .eq("id_salao", params.idSalao);
-
       if (error) throw error;
 
       const duplicadoContato = (data || []).find((item) => {
         if (item.id === params.idClienteAtual) return false;
         const itemWhatsapp = normalizarTelefoneCliente(item.whatsapp);
         const itemTelefone = normalizarTelefoneCliente(item.telefone);
-        const itemCpf = normalizarTelefoneCliente(item.cpf);
-
+        const itemCpf = normalizeCpf(item.cpf);
         return Boolean(
-          (whatsapp &&
-            (whatsapp === itemWhatsapp || whatsapp === itemTelefone)) ||
-            (telefone &&
-              (telefone === itemTelefone || telefone === itemWhatsapp)) ||
+          (whatsapp && (whatsapp === itemWhatsapp || whatsapp === itemTelefone)) ||
+            (telefone && (telefone === itemTelefone || telefone === itemWhatsapp)) ||
             (cpf && cpf === itemCpf)
         );
       });
-
       if (duplicadoContato) {
         throw new Error(
           `Ja existe cliente com contato ou CPF parecido: ${duplicadoContato.nome || "cadastro existente"}.`
@@ -87,13 +231,9 @@ export function createClienteService(
           .eq("id_salao", params.idSalao)
           .select("id")
           .maybeSingle();
-
         if (error) throw error;
         if (!data?.id) throw new Error("Cliente nao encontrado para atualizacao.");
-
-        return {
-          idCliente: String(data.id),
-        };
+        return { idCliente: String(data.id) };
       }
 
       const { data, error } = await supabaseAdmin
@@ -101,13 +241,9 @@ export function createClienteService(
         .insert(params.payload)
         .select("id")
         .maybeSingle();
-
       if (error) throw error;
       if (!data?.id) throw new Error("Nao foi possivel obter o ID da cliente.");
-
-      return {
-        idCliente: String(data.id),
-      };
+      return { idCliente: String(data.id) };
     },
 
     async alterarStatus(params: {
@@ -125,10 +261,8 @@ export function createClienteService(
         .eq("id_salao", params.idSalao)
         .select("id, ativo, status")
         .maybeSingle();
-
       if (error) throw error;
       if (!data?.id) throw new Error("Cliente nao encontrada para alterar status.");
-
       return {
         idCliente: String(data.id),
         ativo: String(data.ativo || "").toLowerCase() === "ativo",
@@ -155,10 +289,8 @@ export function createClienteService(
           .eq("id_salao", params.idSalao)
           .eq("id_cliente", params.idCliente),
       ]);
-
       if (agendamentosError) throw agendamentosError;
       if (comandasError) throw comandasError;
-
       return {
         agendamentosCount: agendamentosCount || 0,
         comandasCount: comandasCount || 0,
@@ -206,7 +338,6 @@ export function createClienteService(
         .eq("id_salao", params.idSalao)
         .eq("id_cliente", params.idCliente)
         .limit(1);
-
       if (findError) throw findError;
 
       if (existing?.[0]?.id) {
@@ -215,7 +346,6 @@ export function createClienteService(
           .update(params.payload)
           .eq("id_salao", params.idSalao)
           .eq("id_cliente", params.idCliente);
-
         if (error) throw error;
         return;
       }
@@ -223,54 +353,26 @@ export function createClienteService(
       const { error } = await complementoClient
         .from(params.table)
         .insert(params.payload);
-
       if (error) throw error;
     },
 
     async excluir(params: { idSalao: string; idCliente: string }) {
       const deletionResults = await Promise.all([
-        supabaseAdmin
-          .from("clientes_ficha_tecnica")
-          .delete()
-          .eq("id_salao", params.idSalao)
-          .eq("id_cliente", params.idCliente),
-        supabaseAdmin
-          .from("clientes_preferencias")
-          .delete()
-          .eq("id_salao", params.idSalao)
-          .eq("id_cliente", params.idCliente),
-        supabaseAdmin
-          .from("clientes_autorizacoes")
-          .delete()
-          .eq("id_salao", params.idSalao)
-          .eq("id_cliente", params.idCliente),
-        supabaseAdmin
-          .from("clientes_auth")
-          .delete()
-          .eq("id_salao", params.idSalao)
-          .eq("id_cliente", params.idCliente),
-        supabaseAdmin
-          .from("clientes_historico")
-          .delete()
-          .eq("id_salao", params.idSalao)
-          .eq("id_cliente", params.idCliente),
+        supabaseAdmin.from("clientes_ficha_tecnica").delete().eq("id_salao", params.idSalao).eq("id_cliente", params.idCliente),
+        supabaseAdmin.from("clientes_preferencias").delete().eq("id_salao", params.idSalao).eq("id_cliente", params.idCliente),
+        supabaseAdmin.from("clientes_autorizacoes").delete().eq("id_salao", params.idSalao).eq("id_cliente", params.idCliente),
+        supabaseAdmin.from("clientes_auth").delete().eq("id_salao", params.idSalao).eq("id_cliente", params.idCliente),
+        supabaseAdmin.from("clientes_historico").delete().eq("id_salao", params.idSalao).eq("id_cliente", params.idCliente),
       ]);
-
-      for (const result of deletionResults) {
-        if (result.error) throw result.error;
-      }
+      for (const result of deletionResults) if (result.error) throw result.error;
 
       const { error } = await supabaseAdmin
         .from("clientes")
         .delete()
         .eq("id", params.idCliente)
         .eq("id_salao", params.idSalao);
-
       if (error) throw error;
-
-      return {
-        idCliente: params.idCliente,
-      };
+      return { idCliente: params.idCliente };
     },
   };
 }

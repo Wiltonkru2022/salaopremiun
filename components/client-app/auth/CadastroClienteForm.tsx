@@ -8,20 +8,17 @@ import {
   type CadastroClienteState,
 } from "@/app/app-cliente/cadastro/actions";
 
-const initialState: CadastroClienteState = {
-  error: null,
-};
+const initialState: CadastroClienteState = { error: null };
 
 function SubmitButton() {
   const { pending } = useFormStatus();
-
   return (
     <button
       type="submit"
       disabled={pending}
       className="h-12 w-full rounded-2xl bg-zinc-950 text-sm font-semibold text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60"
     >
-      {pending ? "Criando conta..." : "Criar conta e agendar"}
+      {pending ? "Criando conta..." : "Criar conta"}
     </button>
   );
 }
@@ -35,10 +32,7 @@ export default function CadastroClienteForm({
   salaoNome?: string | null;
   next?: string | null;
 }) {
-  const [state, formAction] = useActionState(
-    cadastroClienteAction,
-    initialState
-  );
+  const [state, formAction] = useActionState(cadastroClienteAction, initialState);
 
   return (
     <form
@@ -49,97 +43,46 @@ export default function CadastroClienteForm({
       {next ? <input type="hidden" name="next" value={next} /> : null}
 
       <div className="mb-4 inline-flex rounded-full bg-zinc-100 p-1 text-xs font-bold text-zinc-600">
-        <span className="rounded-full bg-zinc-950 px-3 py-1.5 text-white">
-          Novo acesso
-        </span>
+        <span className="rounded-full bg-zinc-950 px-3 py-1.5 text-white">Novo acesso</span>
         <span className="px-3 py-1.5">Cliente</span>
       </div>
 
-      <h2 className="text-[1.55rem] font-semibold text-zinc-950">
-        Crie sua conta no app cliente
-      </h2>
+      <h2 className="text-[1.55rem] font-semibold text-zinc-950">Crie sua conta no App Cliente</h2>
       <p className="mt-2 text-sm leading-6 text-zinc-500">
-        Use seu telefone para criar acesso. O e-mail é opcional e sua ficha do
-        salão é conectada automaticamente quando o telefone já existe.
+        Seu acesso será feito por CPF + data de nascimento. O e-mail é opcional e nenhuma senha é criada.
       </p>
 
       {salaoNome ? (
         <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-          Depois do cadastro, você volta para <strong>{salaoNome}</strong> e
-          decide se quer agendar ali.
+          Depois do cadastro, você volta para <strong>{salaoNome}</strong>.
         </div>
-      ) : (
-        <div className="mt-4 rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-600">
-          Crie a conta uma vez e use o mesmo acesso em qualquer salão publicado
-          no app cliente.
-        </div>
-      )}
+      ) : null}
 
       <div className="mt-5 space-y-4">
         <div>
-          <label className="mb-1.5 block text-sm font-medium text-zinc-700">
-            Nome completo
-          </label>
-          <input
-            name="nome"
-            type="text"
-            autoComplete="name"
-            placeholder="Seu nome"
-            required
-            className="h-12 w-full rounded-2xl border border-zinc-200 bg-white px-4 text-base outline-none transition focus:border-zinc-400"
-          />
+          <label className="mb-1.5 block text-sm font-medium text-zinc-700">Nome completo</label>
+          <input name="nome" type="text" autoComplete="name" placeholder="Seu nome completo" required className="h-12 w-full rounded-2xl border border-zinc-200 bg-white px-4 text-base outline-none transition focus:border-zinc-400" />
         </div>
-
         <div>
-          <label className="mb-1.5 block text-sm font-medium text-zinc-700">
-            Telefone
-          </label>
-          <input
-            name="telefone"
-            type="tel"
-            autoComplete="tel"
-            inputMode="tel"
-            placeholder="(00) 00000-0000"
-            required
-            className="h-12 w-full rounded-2xl border border-zinc-200 bg-white px-4 text-base outline-none transition focus:border-zinc-400"
-          />
+          <label className="mb-1.5 block text-sm font-medium text-zinc-700">Data de nascimento</label>
+          <input name="dataNascimento" type="text" inputMode="numeric" autoComplete="bday" placeholder="DD/MM/AAAA" maxLength={10} required className="h-12 w-full rounded-2xl border border-zinc-200 bg-white px-4 text-base outline-none transition focus:border-zinc-400" />
         </div>
-
         <div>
-          <label className="mb-1.5 block text-sm font-medium text-zinc-700">
-            E-mail opcional
-          </label>
-          <input
-            name="email"
-            type="email"
-            autoComplete="email"
-            inputMode="email"
-            placeholder="você@exemplo.com"
-            className="h-12 w-full rounded-2xl border border-zinc-200 bg-white px-4 text-base outline-none transition focus:border-zinc-400"
-          />
+          <label className="mb-1.5 block text-sm font-medium text-zinc-700">CPF</label>
+          <input name="cpf" type="text" inputMode="numeric" autoComplete="off" placeholder="000.000.000-00" maxLength={14} required className="h-12 w-full rounded-2xl border border-zinc-200 bg-white px-4 text-base outline-none transition focus:border-zinc-400" />
         </div>
-
         <div>
-          <label className="mb-1.5 block text-sm font-medium text-zinc-700">
-            Senha
-          </label>
-          <input
-            name="senha"
-            type="password"
-            autoComplete="new-password"
-            placeholder="Pelo menos 6 caracteres"
-            required
-            minLength={6}
-            className="h-12 w-full rounded-2xl border border-zinc-200 bg-white px-4 text-base outline-none transition focus:border-zinc-400"
-          />
+          <label className="mb-1.5 block text-sm font-medium text-zinc-700">WhatsApp</label>
+          <input name="whatsapp" type="tel" autoComplete="tel" inputMode="tel" placeholder="(00) 00000-0000" required className="h-12 w-full rounded-2xl border border-zinc-200 bg-white px-4 text-base outline-none transition focus:border-zinc-400" />
+        </div>
+        <div>
+          <label className="mb-1.5 block text-sm font-medium text-zinc-700">E-mail opcional</label>
+          <input name="email" type="email" autoComplete="email" inputMode="email" placeholder="voce@exemplo.com" className="h-12 w-full rounded-2xl border border-zinc-200 bg-white px-4 text-base outline-none transition focus:border-zinc-400" />
         </div>
 
         {state.error ? (
-          <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-            {state.error}
-          </div>
+          <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{state.error}</div>
         ) : null}
-
         <SubmitButton />
 
         <div className="space-y-2 pt-1 text-center">
@@ -151,14 +94,11 @@ export default function CadastroClienteForm({
                   ? `/app-cliente/login?next=${encodeURIComponent(next)}`
                   : "/app-cliente/login"
             }
-            className="block w-full text-sm font-medium text-zinc-700 underline underline-offset-4"
+            className="block text-sm font-medium text-zinc-700 underline underline-offset-4"
           >
             Já tenho conta
           </Link>
-          <Link
-            href="/app-cliente/inicio"
-            className="block w-full text-sm font-medium text-zinc-500 underline underline-offset-4"
-          >
+          <Link href="/app-cliente/inicio" className="block text-sm font-medium text-zinc-500 underline underline-offset-4">
             Voltar para os salões
           </Link>
         </div>
