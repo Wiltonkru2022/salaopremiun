@@ -20,6 +20,14 @@ function replaceKnown(source, search, replacement, label) {
   return source.replace(search, replacement);
 }
 
+function ensureImport(source, anchor, importLine, label) {
+  if (source.includes(importLine)) return source;
+  if (!source.includes(anchor)) {
+    throw new Error(`[ui-structure] import esperado não encontrado: ${label}`);
+  }
+  return source.replace(anchor, `${anchor}\n${importLine}`);
+}
+
 function writeIfChanged(absolutePath, original, source) {
   if (source === original) return false;
   fs.writeFileSync(absolutePath, source, "utf8");
@@ -80,12 +88,12 @@ function fixCampaignStatusSubmit() {
   const { absolutePath, source: original } = read(relativePath);
   let source = original;
 
-  const importAnchor = 'import PaginationLinks from "@/components/ui/PaginationLinks";';
-  const pendingImport = 'import PendingActionButton from "@/components/ui/PendingActionButton";';
-  if (!source.includes(pendingImport)) {
-    if (!source.includes(importAnchor)) throw new Error(`[ui-structure] import esperado não encontrado: ${relativePath}`);
-    source = source.replace(importAnchor, `${importAnchor}\n${pendingImport}`);
-  }
+  source = ensureImport(
+    source,
+    'import PaginationLinks from "@/components/ui/PaginationLinks";',
+    'import PendingActionButton from "@/components/ui/PendingActionButton";',
+    relativePath
+  );
 
   source = replaceKnown(
     source,
@@ -97,11 +105,55 @@ function fixCampaignStatusSubmit() {
   return writeIfChanged(absolutePath, original, source);
 }
 
+function fixDashboardStatus() {
+  const relativePath = "app/(painel)/dashboard/page.tsx";
+  const { absolutePath, source: original } = read(relativePath);
+  let source = original;
+
+  source = ensureImport(
+    source,
+    'import { getAssinaturaUrl } from "@/lib/site-urls";',
+    'import { statusPtBR } from "@/core/i18n/pt-BR";',
+    relativePath
+  );
+  source = replaceKnown(
+    source,
+    "                    {item.status}",
+    "                    {statusPtBR(item.status)}",
+    `${relativePath}: status da agenda do dia`
+  );
+
+  return writeIfChanged(absolutePath, original, source);
+}
+
+function fixFinancialReportStatus() {
+  const relativePath = "app/(painel)/relatorio-financeiro/page.tsx";
+  const { absolutePath, source: original } = read(relativePath);
+  let source = original;
+
+  source = ensureImport(
+    source,
+    'import { getAssinaturaUrl } from "@/lib/site-urls";',
+    'import { statusPtBR } from "@/core/i18n/pt-BR";',
+    relativePath
+  );
+  source = replaceKnown(
+    source,
+    "                          {item.status}",
+    "                          {statusPtBR(item.status)}",
+    `${relativePath}: status da comanda`
+  );
+
+  return writeIfChanged(absolutePath, original, source);
+}
+
 const changed = [
   fixAgendaSidebar(),
   fixCaixaFila(),
   fixProfessionalCalendarSubmit(),
   fixCampaignStatusSubmit(),
+  fixDashboardStatus(),
+  fixFinancialReportStatus(),
 ].filter(Boolean).length;
 
-console.log(`[ui-structure] ${changed} arquivos corrigidos; ações e controles visuais foram normalizados.`);
+console.log(`[ui-structure] ${changed} arquivos corrigidos; ações, status e controles visuais foram normalizados.`);
