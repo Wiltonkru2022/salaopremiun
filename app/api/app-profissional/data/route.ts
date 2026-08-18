@@ -7,6 +7,14 @@ function isoDate(value: string) {
   return /^\d{4}-\d{2}-\d{2}$/.test(value);
 }
 
+function firstPositiveNumber(...values: unknown[]) {
+  for (const value of values) {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed) && parsed > 0) return parsed;
+  }
+  return 30;
+}
+
 export async function GET(request: Request) {
   try {
     const session = await requireProfissionalAppContext();
@@ -65,7 +73,15 @@ export async function GET(request: Request) {
             nome: service?.nome || "Servico",
             descricao: service?.descricao || null,
             preco: Number(link.preco_personalizado ?? service?.preco ?? service?.preco_padrao ?? 0),
-            duracao_minutos: Number(link.duracao_minutos ?? service?.duracao_minutos ?? service?.duracao ?? 30),
+            // Zero no vinculo significa ausência de uma duração personalizada válida.
+            // Nesse caso use a duração cadastrada no serviço, que é a mesma referência
+            // utilizada pela Agenda do salão. Só aceite override do profissional > 0.
+            duracao_minutos: firstPositiveNumber(
+              link.duracao_minutos,
+              service?.duracao_minutos,
+              service?.duracao,
+              30
+            ),
             ativo: link.ativo !== false && service?.ativo !== false,
           };
         }).filter((item: any) => item.ativo);
