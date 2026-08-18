@@ -217,7 +217,7 @@ export default function AdminMasterSalaoActions({
                 Acompanhe o teste gratis deste salao
               </h3>
               <p className="mt-2 text-sm leading-6 text-zinc-600">
-                Os e-mails automaticos rodam pela VPS uma vez por dia. Aqui voce pode agir
+                Os e-mails automaticos rodam pelo sistema uma vez por dia. Aqui voce pode agir
                 manualmente sem duplicar disparos do cron.
               </p>
             </div>
@@ -301,7 +301,7 @@ export default function AdminMasterSalaoActions({
                   "trial-email",
                   `/api/admin-master/saloes/${idSalao}/trial-email`,
                   { tipo: "manual" },
-                  "E-mail de trial enviado pela VPS."
+                  "E-mail de trial enviado pelo sistema."
                 )
               }
               disabled={loadingKey !== null}
@@ -330,7 +330,7 @@ export default function AdminMasterSalaoActions({
                       currentTrialEndsAt: trialInfo?.trialFimEm || null,
                       motivo: `Prorrogacao manual de ${trialDias} dia(s) pelo Admin Master.`,
                     },
-                    "Teste gratis prorrogado pela VPS."
+                    "Teste gratis prorrogado pelo sistema."
                   )
                 }
                 disabled={loadingKey !== null}
