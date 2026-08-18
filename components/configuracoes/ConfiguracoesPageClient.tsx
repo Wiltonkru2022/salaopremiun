@@ -1023,7 +1023,7 @@ export default function ConfiguracoesPageClient({
                 <TextInput
                   value={salaoForm.nome}
                   onChange={(e) => setSalaoForm((prev) => ({ ...prev, nome: e.target.value }))}
-                  placeholder="Ex.: Salão Premium"
+                  placeholder="Ex.: Salão Premiun"
                 />
               </Field>
 

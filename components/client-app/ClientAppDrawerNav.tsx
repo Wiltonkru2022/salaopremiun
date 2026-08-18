@@ -8,7 +8,7 @@ import ClientAppPendingLink from "@/components/client-app/ClientAppPendingLink";
 
 const navItems = [
   {
-    label: "Inicio",
+    label: "Início",
     icon: Home,
     href: "/app-cliente",
     match: (pathname: string) =>
@@ -100,7 +100,7 @@ export default function ClientAppDrawerNav({
             <div className="flex items-center justify-between gap-3 border-b border-zinc-100 pb-4">
               <div className="min-w-0">
                 <p className="text-xs font-black uppercase tracking-[0.16em] text-amber-700">
-                  Salao Premium
+                  Salão Premiun
                 </p>
                 <p className="mt-1 truncate text-xl font-black tracking-[-0.04em]">
                   {activeLabel}

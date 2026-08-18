@@ -66,7 +66,7 @@ export default function AgendaModalFormBloqueio({
           </div>
 
           <p className="mt-2 text-xs leading-5 text-zinc-500">
-            Use para almoco, manutencao, reuniao, curso ou pausa do profissional.
+            Use para almoço, manutencao, reuniao, curso ou pausa do profissional.
           </p>
         </div>
       </div>
@@ -135,14 +135,14 @@ export default function AgendaModalFormBloqueio({
           </label>
 
           <p className="mt-1.5 text-xs leading-5 text-zinc-500">
-            Usa automaticamente o inicio e o fim do expediente configurado para esse dia.
+            Usa automaticamente o início e o fim do expediente configurado para esse dia.
           </p>
         </div>
 
         <div>
           <label className="mb-1.5 flex items-center gap-2 text-xs font-semibold text-zinc-700">
             <Clock3 size={13} />
-            Hora inicio
+            Hora início
           </label>
 
           <input
@@ -181,7 +181,7 @@ export default function AgendaModalFormBloqueio({
           value={motivoBloqueio}
           onChange={(e) => onMotivoChange(e.target.value)}
           className="min-h-[100px] w-full rounded-2xl border border-zinc-200 bg-zinc-50 px-3 py-2.5 text-sm outline-none transition focus:border-zinc-900 focus:bg-white"
-          placeholder="Ex.: almoco, curso, reuniao"
+          placeholder="Ex.: almoço, curso, reuniao"
         />
       </div>
     </div>

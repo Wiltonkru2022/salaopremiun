@@ -241,7 +241,7 @@ export function Calendar({
             <button className="grid h-11 w-11 place-items-center rounded-full border border-zinc-200 bg-white" onClick={() => moveMonth(-1)} aria-label="Mes anterior">
               <ChevronLeft size={21} />
             </button>
-            <button className="grid h-11 w-11 place-items-center rounded-full border border-zinc-200 bg-white" onClick={() => moveMonth(1)} aria-label="Proximo mes">
+            <button className="grid h-11 w-11 place-items-center rounded-full border border-zinc-200 bg-white" onClick={() => moveMonth(1)} aria-label="Próximo mes">
               <ChevronRight size={21} />
             </button>
           </div>
@@ -300,7 +300,7 @@ export function Calendar({
             }}
           >
             <Ban size={16} />
-            Bloquear horario
+            Bloquear horário
           </Button>
         </div>
 
@@ -402,12 +402,12 @@ export function Calendar({
               </div>
             );
           }) : (
-            <div className="rounded-2xl border border-dashed border-zinc-300 p-6 text-center text-sm font-bold text-zinc-500">Nenhum horario nesse dia.</div>
+            <div className="rounded-2xl border border-dashed border-zinc-300 p-6 text-center text-sm font-bold text-zinc-500">Nenhum horário nesse dia.</div>
           )}
         </div>
       </Card>
 
-      <Modal title="Detalhes do agendamento" subtitle="Revise cliente, servico, caixa e sinal Pix." open={Boolean(details)} onClose={() => setDetails(null)}>
+      <Modal title="Detalhes do agendamento" subtitle="Revise cliente, serviço, caixa e sinal Pix." open={Boolean(details)} onClose={() => setDetails(null)}>
         {details ? (
           <div className="space-y-3">
             {actionError ? (
@@ -421,9 +421,9 @@ export function Calendar({
               </div>
             ) : null}
             <Info label="Cliente" value={details.status === "bloqueado" ? "Horario bloqueado" : details.clientes?.nome || "Cliente"} />
-            <Info label="Servico" value={details.servicos?.nome || details.observacoes || "Atendimento"} />
+            <Info label="Serviço" value={details.servicos?.nome || details.observacoes || "Atendimento"} />
             <Info label="Profissional" value={details.profissional_nome || profissionais.find((item) => item.id === details.profissional_id)?.nome || profissionalAtual.nome} />
-            <Info label="Horario" value={`${details.data} das ${details.hora_inicio} as ${details.hora_fim}`} />
+            <Info label="Horário" value={`${details.data} das ${details.hora_inicio} as ${details.hora_fim}`} />
             <Info label="Status" value={details.status.replace("_", " ")} />
             {details.status !== "bloqueado" ? (
               <>
@@ -445,7 +445,7 @@ export function Calendar({
                   : "Aguardando confirmação da cliente"
               }
             />
-            <Info label="Observacoes" value={details.observacoes || "Sem observacoes"} />
+            <Info label="Observações" value={details.observacoes || "Sem observacoes"} />
             <Info label="Caixa" value={details.id_comanda ? "Ja passou pelo caixa" : "Sem comanda vinculada"} />
             <Info label="Sinal Pix" value={details.sinal_valor ? `${details.sinal_status || "sem status"} - R$ ${Number(details.sinal_valor).toFixed(2)}` : "Sem sinal"} />
             {details.sinal_comprovante_path ? (
@@ -537,7 +537,7 @@ export function Calendar({
 
       <Modal
         title="Novo agendamento"
-        subtitle="Preencha os campos e confirme o horario."
+        subtitle="Preencha os campos e confirme o horário."
         open={newOpen}
         onClose={() => {
           if (newSubmitting) return;
@@ -582,8 +582,8 @@ export function Calendar({
             <SearchPicker hideInputWhenSelected label="Profissional" placeholder="Digite o nome" options={profissionalOptions} value={newProfissional} onChange={(value) => { setNewProfissional(value); setNewServico(""); setNewError(null); }} emptyText="Nenhum profissional encontrado." />
           ) : null}
           <SearchPicker hideInputWhenSelected label="Cliente" placeholder="Digite nome ou telefone" options={clienteOptions} value={newCliente} onChange={(value) => { setNewCliente(value); setNewError(null); }} />
-          <SearchPicker hideInputWhenSelected label="Servico" placeholder={canChooseProfessional && !newProfissional ? "Escolha o profissional primeiro" : "Digite o servico"} options={servicoOptions} value={newServico} onChange={(value) => { setNewServico(value); setNewError(null); }} emptyText={canChooseProfessional && !newProfissional ? "Escolha um profissional antes." : "Servico nao encontrado para esse profissional."} />
-          <Field label="Horario"><Input type="time" value={newHora} onChange={(event) => { setNewHora(event.target.value); setNewError(null); }} disabled={newSubmitting} /></Field>
+          <SearchPicker hideInputWhenSelected label="Serviço" placeholder={canChooseProfessional && !newProfissional ? "Escolha o profissional primeiro" : "Digite o servico"} options={servicoOptions} value={newServico} onChange={(value) => { setNewServico(value); setNewError(null); }} emptyText={canChooseProfessional && !newProfissional ? "Escolha um profissional antes." : "Servico nao encontrado para esse profissional."} />
+          <Field label="Horário"><Input type="time" value={newHora} onChange={(event) => { setNewHora(event.target.value); setNewError(null); }} disabled={newSubmitting} /></Field>
           {newError ? <div role="alert" className="rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-bold text-red-700">{newError}</div> : null}
           <ModalActionBar>
             <Button type="submit" loading={newSubmitting} disabled={newSubmitting}>
@@ -593,7 +593,7 @@ export function Calendar({
         </form>
       </Modal>
 
-      <Modal title="Bloquear horario" subtitle="Selecione varias datas do mes e aplique o mesmo bloqueio." open={blockOpen} onClose={() => { setBlockAllDay(false); setBlockError(null); setBlockOpen(false); }}>
+      <Modal title="Bloquear horário" subtitle="Selecione varias datas do mes e aplique o mesmo bloqueio." open={blockOpen} onClose={() => { setBlockAllDay(false); setBlockError(null); setBlockOpen(false); }}>
         <form
           className="grid gap-3"
           onSubmit={async (event) => {
@@ -685,19 +685,19 @@ export function Calendar({
               Usa o expediente configurado do profissional para a data selecionada.
             </div>
           ) : null}
-          <Field label="Horario inicio"><Input type="time" value={blockHour} onChange={(event) => setBlockHour(event.target.value)} disabled={blockAllDay} /></Field>
-          <Field label="Horario fim"><Input type="time" value={blockEndHour} onChange={(event) => setBlockEndHour(event.target.value)} disabled={blockAllDay} /></Field>
-          <Field label="Observacao"><Input value={blockReason} onChange={(event) => setBlockReason(event.target.value)} placeholder="Ex.: almoco, curso, compromisso" /></Field>
+          <Field label="Horário início"><Input type="time" value={blockHour} onChange={(event) => setBlockHour(event.target.value)} disabled={blockAllDay} /></Field>
+          <Field label="Horário fim"><Input type="time" value={blockEndHour} onChange={(event) => setBlockEndHour(event.target.value)} disabled={blockAllDay} /></Field>
+          <Field label="Observação"><Input value={blockReason} onChange={(event) => setBlockReason(event.target.value)} placeholder="Ex.: almoço, curso, compromisso" /></Field>
           {blockError ? <div role="alert" className="rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-bold text-red-700">{blockError}</div> : null}
           <ModalActionBar>
-            <Button>Bloquear</Button>
+            <Button type="submit">Bloquear</Button>
           </ModalActionBar>
         </form>
       </Modal>
 
       <Modal
         title="Reagendar"
-        subtitle="Altere data e horario mantendo o cliente e servico."
+        subtitle="Altere data e horário mantendo o cliente e serviço."
         open={Boolean(rescheduleItem)}
         onClose={() => {
           if (busyId?.startsWith("reschedule-")) return;
@@ -726,9 +726,9 @@ export function Calendar({
             }}
           >
             <Info label="Cliente" value={rescheduleItem.clientes?.nome || rescheduleItem.titulo || "Cliente"} />
-            <Info label="Servico" value={rescheduleItem.servicos?.nome || "Atendimento"} />
+            <Info label="Serviço" value={rescheduleItem.servicos?.nome || "Atendimento"} />
             <Field label="Data"><Input type="date" value={rescheduleDate} onChange={(event) => setRescheduleDate(event.target.value)} disabled={busyId === `reschedule-${rescheduleItem.id}`} /></Field>
-            <Field label="Horario"><Input type="time" value={rescheduleHour} onChange={(event) => setRescheduleHour(event.target.value)} disabled={busyId === `reschedule-${rescheduleItem.id}`} /></Field>
+            <Field label="Horário"><Input type="time" value={rescheduleHour} onChange={(event) => setRescheduleHour(event.target.value)} disabled={busyId === `reschedule-${rescheduleItem.id}`} /></Field>
             {actionError ? <div role="alert" className="rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-bold text-red-700">{actionError}</div> : null}
             <ModalActionBar>
               <Button type="submit" loading={busyId === `reschedule-${rescheduleItem.id}`} disabled={busyId === `reschedule-${rescheduleItem.id}`}>

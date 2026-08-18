@@ -150,10 +150,10 @@ export default function CaixaDetalhe({
             <div className="overflow-x-auto">
               <div className="min-w-[700px]">
                 <div className="grid grid-cols-[minmax(220px,1.6fr)_105px_80px_110px_110px] gap-4 border-b border-slate-100 px-4 py-2.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">
-                  <span>Servico</span>
+                  <span>Serviço</span>
                   <span>Tipo</span>
                   <span>Qtd.</span>
-                  <span>Unitario</span>
+                  <span>Unitário</span>
                   <span>Total</span>
                 </div>
 
@@ -214,7 +214,7 @@ export default function CaixaDetalhe({
                 Nenhum item nesta comanda.
               </div>
               <div className="mt-2 text-sm text-slate-500">
-                Adicione servicos, produtos ou extras para seguir com o fechamento.
+                Adicione serviços, produtos ou extras para seguir com o fechamento.
               </div>
             </div>
           )}

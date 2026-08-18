@@ -139,7 +139,7 @@ export default function AgendaModalResumo({
 
               <div className="grid grid-cols-2 gap-2">
                 <InfoCard
-                  label="Inicio"
+                  label="Início"
                   value={normalizeTimeString(horaInicio)}
                 />
                 <InfoCard

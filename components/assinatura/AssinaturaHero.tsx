@@ -88,7 +88,7 @@ export default function AssinaturaHero({
         <div className="max-w-4xl">
           <div className="flex flex-wrap gap-2">
             <div className="inline-flex rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.28em] text-zinc-600">
-              Assinatura SalãoPremium
+              Assinatura Salão Premiun
             </div>
 
             {planoAtualNome ? (

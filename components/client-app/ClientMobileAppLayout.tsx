@@ -35,7 +35,7 @@ export default function ClientMobileAppLayout({
 }) {
   const pathname = usePathname();
   const [chrome, setChrome] = useState<ClientMobileChromeState>({
-    title: "SalaoPremium",
+    title: "Salão Premiun",
     subtitle: "Seu app de agendamentos.",
   });
   const contextValue = useMemo(() => ({ setChrome }), []);
@@ -94,7 +94,7 @@ export default function ClientMobileAppLayout({
             <div className="min-w-0 flex-1">
               <div className="inline-flex max-w-full items-center gap-1.5 truncate rounded-full bg-amber-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.12em] text-amber-800 sm:tracking-[0.14em]">
                 <Sparkles size={12} />
-                <span className="truncate">Salao Premium Cliente</span>
+                <span className="truncate">Salão Premiun Cliente</span>
               </div>
               <h1 className="mt-2 max-w-full truncate text-[1.22rem] font-black tracking-[-0.04em] sm:text-[1.35rem] md:text-[1.55rem]">
                 {chrome.title}

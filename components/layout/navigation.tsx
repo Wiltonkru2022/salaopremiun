@@ -54,8 +54,8 @@ const NAV_PLAN_FEATURE_MAP: Record<string, string> = {
 export const painelNavigationItems: PainelNavItem[] = [
   {
     href: "/dashboard",
-    label: "Dashboard",
-    shortLabel: "Dashboard",
+    label: "Visão geral",
+    shortLabel: "Visão geral",
     description: "Panorama do salão em tempo real.",
     icon: LayoutDashboard,
     permissionKey: "dashboard_ver",

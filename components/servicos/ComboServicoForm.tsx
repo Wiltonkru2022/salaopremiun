@@ -756,7 +756,7 @@ export default function ComboServicoForm({ modo }: { modo: "novo" | "editar" }) 
 
             <section className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm">
               <div className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-400">
-                Comissao prevista
+                Comissão prevista
               </div>
               <h2 className="mt-2 text-lg font-bold text-zinc-950">
                 Quanto o profissional recebe
@@ -765,7 +765,7 @@ export default function ComboServicoForm({ modo }: { modo: "novo" | "editar" }) 
               <div className="mt-4 space-y-3">
                 {comissoesProjetadas.length === 0 ? (
                   <div className="rounded-2xl border border-dashed border-zinc-300 bg-zinc-50 px-4 py-5 text-sm text-zinc-500">
-                    Selecione os servicos para ver a comissao estimada.
+                    Selecione os serviços para ver a comissão estimada.
                   </div>
                 ) : (
                   <>

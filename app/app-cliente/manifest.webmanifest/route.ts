@@ -7,7 +7,7 @@ export function GET() {
     name: "Salão Premium Cliente",
     short_name: "Cliente",
     description:
-      "Agende horários, acompanhe visitas e avalie seu atendimento pelo app cliente do Salão Premium.",
+      "Agende horários, acompanhe visitas e avalie seu atendimento pelo app cliente do Salão Premiun.",
     version: APP_VERSION,
     start_url: "/app-cliente?origem=pwa-cliente",
     scope: "/app-cliente",

@@ -879,7 +879,7 @@ async function _salvarAcessoProfissional(idProfissional: string) {
                       <tr>
                         <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-zinc-600">Dia</th>
                         <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-zinc-600">Ativo</th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-zinc-600">Inicio</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-zinc-600">Início</th>
                         <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-zinc-600">Fim</th>
                       </tr>
                     </thead>
