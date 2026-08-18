@@ -432,7 +432,7 @@ export async function confirmClienteRecoveryCodeByIdentity(params: {
       if (!consumed.ok) return consumed;
 
       const currentEmail = getClienteAppPublicEmail(account.email);
-      let next = Number(account.auth_version || 1) + 1;
+      const next = Number(account.auth_version || 1) + 1;
       const payload: Record<string, unknown> = {
         auth_version: next,
         updated_at: new Date().toISOString(),
@@ -556,7 +556,6 @@ export async function confirmClienteEmailChange(params: {
   });
 }
 
-// Compatibilidade temporária com a rota antiga. Novas solicitações não geram links de senha.
 export async function requestClienteAppRecovery(emailInput: string): Promise<BasicResult> {
   return requestClienteRecoveryCodeByEmail({ email: emailInput });
 }

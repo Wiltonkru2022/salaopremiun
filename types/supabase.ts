@@ -113,26 +113,40 @@ type ClienteAppMigracaoTokensTable = {
   Relationships: [];
 };
 
-type DatabaseWithAppExtensions = Database & {
-  public: Database["public"] & {
-    Tables: Database["public"]["Tables"] & {
-      servicos: Database["public"]["Tables"]["servicos"] & ServicosTableExtensions;
-      servicos_combo_itens: ServicosComboItensTable;
-      saloes_recursos_extras: Database["public"]["Tables"]["saloes_recursos_extras"] & SaloesRecursosExtrasTableExtensions;
-      saloes: Database["public"]["Tables"]["saloes"] & SaloesSecurityTableExtensions;
-      clientes_app_auth: ClientesAppAuthTable;
-      cliente_app_email_verificacoes: ClienteAppEmailVerificacoesTable;
-      cliente_app_migracao_tokens: ClienteAppMigracaoTokensTable;
-      security_login_attempts: SecurityLoginAttemptsTable;
-      user_security_status: UserSecurityStatusTable;
-      whatsapp_pacote_compras: WhatsappPacoteComprasTable;
-    };
-    Functions: Database["public"]["Functions"] & {
-      fn_dashboard_resumo_painel: { Args: never; Returns: Json };
-      reservar_credito_whatsapp: { Args: { p_id_salao: string; p_quantidade?: number }; Returns: string };
-      estornar_credito_whatsapp: { Args: { p_credito_id: string; p_quantidade?: number }; Returns: undefined };
-    };
-  };
+type PublicSchema = Database["public"];
+type BaseTables = PublicSchema["Tables"];
+type ExtendedTables = Omit<
+  BaseTables,
+  | "servicos"
+  | "saloes_recursos_extras"
+  | "saloes"
+  | "clientes_app_auth"
+> & {
+  servicos: BaseTables["servicos"] & ServicosTableExtensions;
+  servicos_combo_itens: ServicosComboItensTable;
+  saloes_recursos_extras: BaseTables["saloes_recursos_extras"] & SaloesRecursosExtrasTableExtensions;
+  saloes: BaseTables["saloes"] & SaloesSecurityTableExtensions;
+  clientes_app_auth: ClientesAppAuthTable;
+  cliente_app_email_verificacoes: ClienteAppEmailVerificacoesTable;
+  cliente_app_migracao_tokens: ClienteAppMigracaoTokensTable;
+  security_login_attempts: SecurityLoginAttemptsTable;
+  user_security_status: UserSecurityStatusTable;
+  whatsapp_pacote_compras: WhatsappPacoteComprasTable;
+};
+
+type ExtendedFunctions = PublicSchema["Functions"] & {
+  fn_dashboard_resumo_painel: { Args: never; Returns: Json };
+  reservar_credito_whatsapp: { Args: { p_id_salao: string; p_quantidade?: number }; Returns: string };
+  estornar_credito_whatsapp: { Args: { p_credito_id: string; p_quantidade?: number }; Returns: undefined };
+};
+
+type ExtendedPublicSchema = Omit<PublicSchema, "Tables" | "Functions"> & {
+  Tables: ExtendedTables;
+  Functions: ExtendedFunctions;
+};
+
+type DatabaseWithAppExtensions = Omit<Database, "public"> & {
+  public: ExtendedPublicSchema;
 };
 
 export type AnySupabaseDatabase = DatabaseWithAppExtensions;
