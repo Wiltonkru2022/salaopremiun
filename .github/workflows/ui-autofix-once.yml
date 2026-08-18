@@ -4,8 +4,6 @@ on:
   push:
     branches:
       - agent/auditoria-ptbr-painel-real
-    paths-ignore:
-      - '.github/workflows/ui-autofix-once.yml'
   workflow_dispatch:
 
 permissions:
