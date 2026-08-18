@@ -3,7 +3,6 @@ import {
   AsaasWebhookUseCaseError,
   processarWebhookAsaasUseCase,
 } from "@/core/use-cases/assinatura/webhook-asaas";
-import { processAsaasWebhookOnOracleVps } from "@/lib/oracle-vps/client";
 import { createAsaasWebhookService } from "@/services/asaasWebhookService";
 
 export async function POST(req: Request) {
@@ -15,19 +14,6 @@ export async function POST(req: Request) {
       throw new AsaasWebhookUseCaseError("Webhook não autorizado.", 401);
     }
 
-    const oracleResult = await processAsaasWebhookOnOracleVps(body);
-
-    if (oracleResult.ok) {
-      return NextResponse.json(
-        {
-          ok: true,
-          provider: "oracle-vps",
-          result: oracleResult.result,
-        },
-        { status: 200 }
-      );
-    }
-
     const result = await processarWebhookAsaasUseCase({
       headers: req.headers,
       body,
@@ -37,8 +23,7 @@ export async function POST(req: Request) {
     return NextResponse.json(
       {
         ...result.body,
-        provider: "vercel-fallback",
-        oracleError: oracleResult.error || null,
+        provider: "vercel",
       },
       { status: result.status }
     );
