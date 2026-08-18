@@ -3,14 +3,17 @@ import { requireProfissionalAppContext } from "@/lib/profissional-context.server
 import { runAdminOperation } from "@/lib/supabase/admin-ops";
 import {
   buscarConfiguracaoAgendaProfissional,
+  buscarServicoDoProfissional,
   validarHorarioAgendamento,
 } from "@/app/services/profissional/agenda";
 import {
+  notifyAppointmentCanceled,
   notifyClientAboutSalonConfirmation,
   notifyAppointmentRescheduled,
   scheduleAppointmentReminderNotifications,
 } from "@/lib/notification-jobs";
 import { notifyClientAppointmentConfirmed } from "@/lib/push-notifications";
+import { notifyWaitlistAboutReleasedSlot } from "@/lib/client-app/waitlist";
 
 function time(value: unknown) {
   return String(value || "").trim().slice(0, 5);
@@ -37,7 +40,7 @@ export async function POST(request: Request) {
     const action = String(body.action || "").trim();
     const idAgendamento = String(body.agendamentoId || "").trim();
 
-    if (!idAgendamento || !["confirmar", "confirmar_pix", "reagendar"].includes(action)) {
+    if (!idAgendamento || !["confirmar", "confirmar_pix", "reagendar", "remover"].includes(action)) {
       return NextResponse.json({ ok: false, error: "Ação de agenda inválida." }, { status: 400 });
     }
 
@@ -46,9 +49,40 @@ export async function POST(request: Request) {
       actorId: session.idProfissional,
       idSalao: session.idSalao,
       run: async (supabase) => {
+        if (action === "remover") {
+          let blockQuery = (supabase as any)
+            .from("agenda_bloqueios")
+            .select("id, profissional_id")
+            .eq("id", idAgendamento)
+            .eq("id_salao", session.idSalao);
+
+          if (!session.podeVerAgendaTodos) {
+            blockQuery = blockQuery.eq("profissional_id", session.idProfissional);
+          }
+
+          const { data: block, error: blockLoadError } = await blockQuery.maybeSingle();
+          if (blockLoadError) throw new Error(blockLoadError.message);
+
+          if (block?.id) {
+            let deleteBlockQuery = (supabase as any)
+              .from("agenda_bloqueios")
+              .delete()
+              .eq("id", idAgendamento)
+              .eq("id_salao", session.idSalao);
+
+            if (!session.podeVerAgendaTodos) {
+              deleteBlockQuery = deleteBlockQuery.eq("profissional_id", session.idProfissional);
+            }
+
+            const { error: deleteBlockError } = await deleteBlockQuery;
+            if (deleteBlockError) throw new Error(deleteBlockError.message);
+            return { id: idAgendamento, action, kind: "bloqueio" };
+          }
+        }
+
         let query = (supabase as any)
           .from("agendamentos")
-          .select("id, profissional_id, data, hora_inicio, hora_fim, status, sinal_status")
+          .select("id, profissional_id, cliente_id, servico_id, data, hora_inicio, hora_fim, status, sinal_status")
           .eq("id", idAgendamento)
           .eq("id_salao", session.idSalao);
 
@@ -63,6 +97,60 @@ export async function POST(request: Request) {
         const previousDate = String(current.data || "").slice(0, 10);
         const previousTime = time(current.hora_inicio);
         const now = new Date().toISOString();
+
+        if (action === "remover") {
+          if (["cancelado", "atendido", "faltou"].includes(String(current.status || "").toLowerCase())) {
+            throw new Error("Este agendamento não pode mais ser cancelado.");
+          }
+
+          const { error } = await (supabase as any)
+            .from("agendamentos")
+            .update({
+              status: "cancelado",
+              observacoes: "Agendamento cancelado pelo app profissional.",
+              updated_at: now,
+            })
+            .eq("id", idAgendamento)
+            .eq("id_salao", session.idSalao)
+            .eq("profissional_id", current.profissional_id);
+          if (error) throw new Error(error.message);
+
+          await notifyAppointmentCanceled({
+            idSalao: session.idSalao,
+            idAgendamento,
+            idCliente: current.cliente_id,
+            idProfissional: current.profissional_id,
+            data: current.data,
+            horaInicio: current.hora_inicio,
+            actor: "profissional",
+          });
+
+          try {
+            const servico = current.servico_id
+              ? await buscarServicoDoProfissional({
+                  idSalao: session.idSalao,
+                  idProfissional: String(current.profissional_id),
+                  idServico: String(current.servico_id),
+                })
+              : null;
+
+            await notifyWaitlistAboutReleasedSlot({
+              supabaseAdmin: supabase,
+              releasedSlot: {
+                idSalao: session.idSalao,
+                idServico: current.servico_id || null,
+                idProfissional: current.profissional_id,
+                data: previousDate,
+                horaInicio: previousTime,
+                servicoNome: servico?.nome || null,
+              },
+            });
+          } catch {
+            // O cancelamento ja foi salvo; falha na lista de espera nao bloqueia o fluxo.
+          }
+
+          return { id: idAgendamento, action, kind: "agendamento" };
+        }
 
         if (action === "confirmar_pix") {
           const { data: profissional, error: profissionalError } = await (supabase as any)
