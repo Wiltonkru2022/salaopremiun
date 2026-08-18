@@ -1,377 +1,575 @@
-import crypto from "crypto";
-import { revalidateTag } from "next/cache";
+import crypto from "node:crypto";
 import { runAdminOperation } from "@/lib/supabase/admin-ops";
-import { hashClientePassword } from "@/lib/cliente-auth.server";
 import { htmlEscape, sendResendEmail } from "@/lib/email/resend";
-import { DOMINIO_APP } from "@/lib/proxy/domain-config";
+import type { ClienteAppSession } from "@/lib/cliente-auth.server";
+import {
+  isValidCpf,
+  normalizeClienteEmail,
+  normalizeCpf,
+  normalizeWhatsapp,
+  parseClienteBirthDate,
+} from "@/lib/client-app/identity";
+import { getClienteAppPublicEmail } from "@/app/services/cliente-app/linking";
+import { emitSecurityEvent } from "@/lib/security/security-events";
 
-type RecoverClienteAppAccessResult =
-  | { ok: true; message: string }
+type RecoveryPurpose =
+  | "recuperar_acesso_email"
+  | "recuperar_acesso_identidade"
+  | "alterar_email"
+  | "verificar_email_cadastro";
+
+type BasicResult = { ok: true; message: string } | { ok: false; error: string };
+type SessionResult =
+  | { ok: true; message: string; session: ClienteAppSession }
+  | { ok: false; error: string };
+type IdentityStartResult =
+  | { ok: true; token: string; message: string }
   | { ok: false; error: string };
 
-type RequestClienteAppRecoveryResult =
-  | { ok: true; message: string }
-  | { ok: false; error: string };
-
-type ResetClienteAppPasswordParams = {
-  token: string;
-  senha: string;
-  confirmacao: string;
-  ip?: string | null;
-  userAgent?: string | null;
+type AccountRow = {
+  id: string;
+  nome: string | null;
+  email: string | null;
+  telefone: string | null;
+  whatsapp: string | null;
+  cpf: string | null;
+  data_nascimento: string | null;
+  auth_version: number | null;
+  ativo: boolean | null;
 };
 
-function normalizeEmail(value: string) {
-  return String(value || "").trim().toLowerCase();
-}
+const GENERIC_REQUEST_MESSAGE =
+  "Se os dados estiverem vinculados a uma conta válida, enviaremos um código.";
+const OTP_TTL_MS = 10 * 60 * 1000;
+const OTP_RESEND_MS = 60 * 1000;
+const OTP_MAX_ATTEMPTS = 5;
 
-function hashRecoveryToken(token: string) {
-  return crypto.createHash("sha256").update(token).digest("hex");
-}
-
-function getClientAppBaseUrl() {
-  const root =
-    process.env.NEXT_PUBLIC_APP_URL ||
-    process.env.APP_MAIN_HOST ||
-    `https://${DOMINIO_APP}`;
-
-  if (root.startsWith("http")) return root.replace(/\/$/, "");
-
-  return `https://${root.replace(/\/$/, "")}`;
-}
-
-function buildClienteRecoveryEmailHtml(params: { link: string; email: string }) {
-  return `
-    <div style="font-family:Inter,Arial,sans-serif;background:#f8fafc;padding:32px;color:#0f172a">
-      <div style="max-width:620px;margin:0 auto;background:#ffffff;border:1px solid #e2e8f0;border-radius:20px;overflow:hidden">
-        <div style="padding:30px 30px 12px">
-          <p style="margin:0 0 10px;font-size:12px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:#64748b">App cliente SalãoPremium</p>
-          <h1 style="margin:0;font-size:30px;line-height:1.15;color:#0f172a">Recuperar acesso</h1>
-          <p style="margin:18px 0 0;font-size:16px;line-height:1.7;color:#475569">
-            Use o link abaixo para criar uma nova senha da conta ${htmlEscape(params.email)}.
-          </p>
-          <a href="${htmlEscape(params.link)}" style="display:inline-block;margin-top:24px;background:#0f172a;color:#ffffff;text-decoration:none;border-radius:999px;padding:13px 20px;font-size:14px;font-weight:800">Criar nova senha</a>
-        </div>
-        <div style="padding:20px 30px 30px">
-          <p style="margin:0;font-size:13px;line-height:1.7;color:#64748b">
-            Se você não pediu esta recuperação, ignore este e-mail. O link expira em 15 minutos e funciona somente uma vez.
-          </p>
-        </div>
-      </div>
-    </div>
-  `;
-}
-
-function base64urlEncode(value: string) {
-  return Buffer.from(value, "utf8").toString("base64url");
-}
-
-function base64urlDecode(value: string) {
-  return Buffer.from(value, "base64url").toString("utf8");
-}
-
-function getClienteRecoverySecret() {
-  return (
+function secret() {
+  const value =
     process.env.CLIENT_APP_RECOVERY_SECRET ||
-    process.env.PASSWORD_REUSE_SECRET ||
-    ""
-  );
+    process.env.CLIENTE_SESSION_SECRET ||
+    process.env.PROFISSIONAL_SESSION_SECRET;
+  if (!value) throw new Error("CLIENT_APP_RECOVERY_SECRET ausente.");
+  return value;
 }
 
-function signTokenPayload(payload: string) {
-  const secret = getClienteRecoverySecret();
-  if (!secret) {
-    throw new Error("CLIENT_APP_RECOVERY_SECRET ausente.");
-  }
-
-  return crypto.createHmac("sha256", secret).update(payload).digest("base64url");
+function hmac(value: string) {
+  return crypto.createHmac("sha256", secret()).update(value).digest("hex");
 }
 
-function createClienteRecoveryToken(params: {
-  email: string;
-  passwordHash: string;
-}) {
-  const payload = base64urlEncode(
-    JSON.stringify({
-      email: params.email,
-      pwd: hashRecoveryToken(params.passwordHash),
-      exp: Date.now() + 1000 * 60 * 15,
-    })
-  );
-  const signature = signTokenPayload(payload);
-
-  return `${payload}.${signature}`;
+function hashMetadata(value?: string | null) {
+  const normalized = String(value || "").trim();
+  return normalized ? hmac(normalized) : null;
 }
 
-function parseClienteRecoveryToken(token: string):
-  | { email: string; passwordHashDigest: string }
-  | null {
-  const [payload, signature] = token.split(".");
+function generateCode() {
+  return String(crypto.randomInt(0, 1_000_000)).padStart(6, "0");
+}
+
+function buildSession(account: AccountRow, authVersion?: number): ClienteAppSession {
+  const whatsapp = normalizeWhatsapp(account.whatsapp || account.telefone);
+  return {
+    idConta: account.id,
+    nome: String(account.nome || "").trim() || "Cliente SalãoPremium",
+    email: getClienteAppPublicEmail(account.email),
+    whatsapp: whatsapp || null,
+    telefone: whatsapp || null,
+    authVersion: Number(authVersion || account.auth_version || 1),
+    tipo: "cliente",
+  };
+}
+
+function buildIdentityToken(accountId: string, purpose: "recover" | "change-email") {
+  const payload = Buffer.from(
+    JSON.stringify({ accountId, purpose, exp: Date.now() + 15 * 60 * 1000 }),
+    "utf8"
+  ).toString("base64url");
+  return `${payload}.${crypto.createHmac("sha256", secret()).update(payload).digest("base64url")}`;
+}
+
+function parseIdentityToken(token: string, expectedPurpose: "recover" | "change-email") {
+  const [payload, signature] = String(token || "").split(".");
   if (!payload || !signature) return null;
-
-  const expectedSignature = signTokenPayload(payload);
-  if (signature.length !== expectedSignature.length) return null;
-
-  if (
-    !crypto.timingSafeEqual(
-      Buffer.from(signature),
-      Buffer.from(expectedSignature)
-    )
-  ) {
-    return null;
-  }
-
+  const expected = crypto.createHmac("sha256", secret()).update(payload).digest("base64url");
+  if (signature.length !== expected.length) return null;
+  if (!crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected))) return null;
   try {
-    const parsed = JSON.parse(base64urlDecode(payload)) as {
-      email?: string;
-      pwd?: string;
+    const parsed = JSON.parse(Buffer.from(payload, "base64url").toString("utf8")) as {
+      accountId?: string;
+      purpose?: string;
       exp?: number;
     };
-    const email = normalizeEmail(parsed.email || "");
-    const passwordHashDigest = String(parsed.pwd || "");
-    const expiresAt = Number(parsed.exp || 0);
-
-    if (!email || !passwordHashDigest || !expiresAt || expiresAt < Date.now()) {
-      return null;
-    }
-
-    return { email, passwordHashDigest };
+    if (!parsed.accountId || parsed.purpose !== expectedPurpose || Number(parsed.exp || 0) < Date.now()) return null;
+    return parsed.accountId;
   } catch {
     return null;
   }
 }
 
-function buildPasswordChangedEmailHtml(params: {
-  email: string;
-  context: string;
-  occurredAt: Date;
-  ip?: string | null;
-  userAgent?: string | null;
-}) {
-  const formattedDate = new Intl.DateTimeFormat("pt-BR", {
-    dateStyle: "short",
-    timeStyle: "short",
-    timeZone: "America/Sao_Paulo",
-  }).format(params.occurredAt);
-
-  const baseUrl = getClientAppBaseUrl();
-  const okUrl = `${baseUrl}/app-cliente/login`;
-  const recoveryUrl = `${baseUrl}/app-cliente/recuperar-acesso?email=${encodeURIComponent(params.email)}`;
-
-  return `
-    <div style="font-family:Inter,Arial,sans-serif;background:#f8fafc;padding:32px;color:#0f172a">
-      <div style="max-width:620px;margin:0 auto;background:#ffffff;border:1px solid #e2e8f0;border-radius:20px;overflow:hidden">
-        <div style="padding:30px 30px 12px">
-          <p style="margin:0 0 10px;font-size:12px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:#64748b">Segurança SalãoPremium</p>
-          <h1 style="margin:0;font-size:28px;line-height:1.15;color:#0f172a">Sua senha foi alterada</h1>
-          <p style="margin:18px 0 0;font-size:16px;line-height:1.7;color:#475569">
-            A senha de ${htmlEscape(params.context)} da conta ${htmlEscape(params.email)} foi alterada em ${htmlEscape(formattedDate)}.
-          </p>
-          <p style="margin:14px 0 0;font-size:13px;line-height:1.7;color:#64748b">
-            IP: ${htmlEscape(params.ip || "não identificado")}<br />
-            Navegador/dispositivo: ${htmlEscape(params.userAgent || "não identificado")}
-          </p>
-          <p style="margin:18px 0 0;font-size:14px;line-height:1.7;color:#64748b">
-            Se foi você, confirme abaixo. Se não foi você, solicite imediatamente uma nova recuperação de senha e avise o suporte.
-          </p>
-          <div style="margin-top:22px;display:flex;gap:10px;flex-wrap:wrap">
-            <a href="${htmlEscape(okUrl)}" style="display:inline-block;background:#ecfdf5;color:#065f46;text-decoration:none;border-radius:999px;padding:12px 18px;font-size:14px;font-weight:800">Fui eu</a>
-            <a href="${htmlEscape(recoveryUrl)}" style="display:inline-block;background:#fee2e2;color:#991b1b;text-decoration:none;border-radius:999px;padding:12px 18px;font-size:14px;font-weight:800">Não fui eu</a>
-          </div>
-        </div>
-      </div>
-    </div>
-  `;
-}
-
-async function sendPasswordChangedNotice(params: {
-  email?: string | null;
-  context: string;
-  ip?: string | null;
-  userAgent?: string | null;
-}) {
-  const email = normalizeEmail(params.email || "");
-  if (!email) return;
-
-  const occurredAt = new Date();
-
+async function sendCodeEmail(params: { to: string; code: string; title: string }) {
   await sendResendEmail({
     from:
       process.env.PASSWORD_RECOVERY_EMAIL_FROM ||
-      "Salão Premium <recuperar@salaopremiun.com.br>",
-    to: email,
-    subject: "Sua senha foi alterada - Salão Premium",
-    html: buildPasswordChangedEmailHtml({
-      email,
-      context: params.context,
-      occurredAt,
-      ip: params.ip,
-      userAgent: params.userAgent,
-    }),
-    text: `Sua senha de ${params.context} foi alterada em ${occurredAt.toLocaleString("pt-BR")}. IP: ${params.ip || "não identificado"}. Navegador/dispositivo: ${params.userAgent || "não identificado"}. Se não foi você, solicite uma nova recuperação e fale com o suporte.`,
+      "SalãoPremium <recuperar@salaopremiun.com.br>",
+    to: params.to,
+    subject: `${params.title} - SalãoPremium`,
+    text: `Seu código de confirmação é ${params.code}. Ele expira em 10 minutos e funciona uma única vez.`,
+    html: `<div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;padding:28px;color:#18181b"><h1 style="font-size:24px">${htmlEscape(params.title)}</h1><p>Use o código abaixo no App Cliente:</p><div style="font-size:36px;font-weight:900;letter-spacing:8px;padding:20px 0">${htmlEscape(params.code)}</div><p style="color:#71717a">Ele expira em 10 minutos e funciona uma única vez. Se você não solicitou, ignore este e-mail.</p></div>`,
     replyTo: process.env.PASSWORD_RECOVERY_EMAIL_REPLY_TO || undefined,
   });
 }
 
-export async function requestClienteAppRecovery(
-  emailInput: string
-): Promise<RequestClienteAppRecoveryResult> {
-  const email = normalizeEmail(emailInput);
+async function createOtp(params: {
+  supabaseAdmin: any;
+  accountId: string;
+  purpose: RecoveryPurpose;
+  email: string;
+  ip?: string | null;
+  userAgent?: string | null;
+}) {
+  const now = Date.now();
+  const { data: latest } = await params.supabaseAdmin
+    .from("cliente_app_email_verificacoes")
+    .select("id, criado_em")
+    .eq("conta_id", params.accountId)
+    .eq("finalidade", params.purpose)
+    .eq("email", params.email)
+    .is("consumido_em", null)
+    .order("criado_em", { ascending: false })
+    .limit(1)
+    .maybeSingle();
 
-  if (!email) {
-    return { ok: false, error: "Informe o e-mail da conta." };
+  if (latest?.criado_em) {
+    const createdAt = new Date(latest.criado_em).getTime();
+    if (Number.isFinite(createdAt) && now - createdAt < OTP_RESEND_MS) {
+      return { ok: false as const, error: "Aguarde um minuto antes de pedir outro código." };
+    }
   }
 
+  await params.supabaseAdmin
+    .from("cliente_app_email_verificacoes")
+    .update({ consumido_em: new Date().toISOString() })
+    .eq("conta_id", params.accountId)
+    .eq("finalidade", params.purpose)
+    .is("consumido_em", null);
+
+  const code = generateCode();
+  const { error } = await params.supabaseAdmin.from("cliente_app_email_verificacoes").insert({
+    conta_id: params.accountId,
+    finalidade: params.purpose,
+    email: params.email,
+    codigo_hash: hmac(`${params.accountId}:${params.purpose}:${params.email}:${code}`),
+    expira_em: new Date(now + OTP_TTL_MS).toISOString(),
+    tentativas: 0,
+    ip_hash: hashMetadata(params.ip),
+    user_agent_hash: hashMetadata(params.userAgent),
+  });
+  if (error) return { ok: false as const, error: "Não foi possível gerar o código agora." };
+  return { ok: true as const, code };
+}
+
+async function consumeOtp(params: {
+  supabaseAdmin: any;
+  accountId: string;
+  purpose: RecoveryPurpose;
+  email: string;
+  code: string;
+}) {
+  const { data: row, error } = await params.supabaseAdmin
+    .from("cliente_app_email_verificacoes")
+    .select("id, codigo_hash, expira_em, tentativas, consumido_em")
+    .eq("conta_id", params.accountId)
+    .eq("finalidade", params.purpose)
+    .eq("email", params.email)
+    .is("consumido_em", null)
+    .order("criado_em", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error || !row?.id || row.consumido_em || new Date(row.expira_em).getTime() < Date.now()) {
+    return { ok: false as const, error: "Código inválido ou expirado." };
+  }
+  if (Number(row.tentativas || 0) >= OTP_MAX_ATTEMPTS) {
+    return { ok: false as const, error: "Código bloqueado por excesso de tentativas. Solicite outro." };
+  }
+
+  const expected = hmac(`${params.accountId}:${params.purpose}:${params.email}:${String(params.code || "").trim()}`);
+  const actual = String(row.codigo_hash || "");
+  const matches = actual.length === expected.length && crypto.timingSafeEqual(Buffer.from(actual), Buffer.from(expected));
+  if (!matches) {
+    await params.supabaseAdmin
+      .from("cliente_app_email_verificacoes")
+      .update({ tentativas: Number(row.tentativas || 0) + 1 })
+      .eq("id", row.id);
+    return { ok: false as const, error: "Código inválido ou expirado." };
+  }
+
+  const consumed = await params.supabaseAdmin
+    .from("cliente_app_email_verificacoes")
+    .update({ consumido_em: new Date().toISOString() })
+    .eq("id", row.id)
+    .is("consumido_em", null);
+  if (consumed.error) return { ok: false as const, error: "Não foi possível confirmar o código agora." };
+  return { ok: true as const };
+}
+
+async function loadAccountById(supabaseAdmin: any, accountId: string) {
+  const { data, error } = await supabaseAdmin
+    .from("clientes_app_auth")
+    .select("id, nome, email, telefone, whatsapp, cpf, data_nascimento, auth_version, ativo")
+    .eq("id", accountId)
+    .limit(1)
+    .maybeSingle();
+  if (error || !data?.id || data.ativo === false) return null;
+  return data as AccountRow;
+}
+
+async function bumpAuthVersion(supabaseAdmin: any, account: AccountRow) {
+  const next = Number(account.auth_version || 1) + 1;
+  const { error } = await supabaseAdmin
+    .from("clientes_app_auth")
+    .update({ auth_version: next, updated_at: new Date().toISOString() })
+    .eq("id", account.id);
+  return error ? null : next;
+}
+
+async function syncEmailAcrossLinks(supabaseAdmin: any, accountId: string, email: string) {
+  const { data: links } = await supabaseAdmin
+    .from("clientes_auth")
+    .select("id_cliente, id_salao")
+    .eq("app_conta_id", accountId);
+  await supabaseAdmin
+    .from("clientes_auth")
+    .update({ email, updated_at: new Date().toISOString() })
+    .eq("app_conta_id", accountId);
+  for (const link of links || []) {
+    if (!link.id_cliente || !link.id_salao) continue;
+    await supabaseAdmin
+      .from("clientes")
+      .update({ email, atualizado_em: new Date().toISOString() })
+      .eq("id", link.id_cliente)
+      .eq("id_salao", link.id_salao);
+  }
+}
+
+export async function requestClienteRecoveryCodeByEmail(params: {
+  email: string;
+  ip?: string | null;
+  userAgent?: string | null;
+}): Promise<BasicResult> {
+  const email = normalizeClienteEmail(params.email);
+  if (!email) return { ok: false, error: "Informe um e-mail válido." };
+
   return runAdminOperation({
-    action: "cliente_app_request_recovery",
-    actorId: email,
-    run: async (supabaseAdmin) => {
-      const { data: conta, error } = await (supabaseAdmin as any)
+    action: "cliente_app_recovery_email_request",
+    actorId: `email:${hmac(email)}`,
+    run: async (supabaseAdmin): Promise<BasicResult> => {
+      const { data: account } = await supabaseAdmin
         .from("clientes_app_auth")
-        .select("id, email, senha_hash, ativo")
+        .select("id, ativo")
         .eq("email", email)
         .limit(1)
         .maybeSingle();
 
-      if (error) {
-        return {
-          ok: false as const,
-          error: "Não foi possível iniciar a recuperação agora.",
-        };
-      }
-
-      if (conta?.id && conta.ativo !== false) {
-        const token = createClienteRecoveryToken({
+      if (account?.id && account.ativo !== false) {
+        const otp = await createOtp({
+          supabaseAdmin,
+          accountId: account.id,
+          purpose: "recuperar_acesso_email",
           email,
-          passwordHash: String(conta.senha_hash || ""),
+          ip: params.ip,
+          userAgent: params.userAgent,
         });
-        const link = `${getClientAppBaseUrl()}/app-cliente/recuperar-acesso/${encodeURIComponent(token)}`;
-
-        await sendResendEmail({
-          from:
-            process.env.PASSWORD_RECOVERY_EMAIL_FROM ||
-            "Salão Premium <recuperar@salaopremiun.com.br>",
-          to: email,
-          subject: "Recuperar acesso do app cliente - Salão Premium",
-          html: buildClienteRecoveryEmailHtml({ link, email }),
-          text: `Use este link para criar uma nova senha no app cliente: ${link}. Ele expira em 15 minutos e funciona somente uma vez.`,
-          replyTo: process.env.PASSWORD_RECOVERY_EMAIL_REPLY_TO || undefined,
-        });
+        if (otp.ok) {
+          await sendCodeEmail({ to: email, code: otp.code, title: "Código para recuperar seu acesso" });
+          void emitSecurityEvent({
+            evento: "cliente_app_email_codigo_enviado",
+            tipoUsuario: "cliente",
+            userId: account.id,
+            origem: "cliente-app",
+            detalhes: { finalidade: "recuperar_acesso_email" },
+          });
+        }
       }
 
+      return { ok: true, message: GENERIC_REQUEST_MESSAGE };
+    },
+  });
+}
+
+export async function confirmClienteRecoveryCodeByEmail(params: {
+  email: string;
+  code: string;
+}): Promise<SessionResult> {
+  const email = normalizeClienteEmail(params.email);
+  if (!email) return { ok: false, error: "Código inválido ou expirado." };
+
+  return runAdminOperation({
+    action: "cliente_app_recovery_email_confirm",
+    actorId: `email:${hmac(email)}`,
+    run: async (supabaseAdmin): Promise<SessionResult> => {
+      const { data: accountRow } = await supabaseAdmin
+        .from("clientes_app_auth")
+        .select("id, nome, email, telefone, whatsapp, cpf, data_nascimento, auth_version, ativo")
+        .eq("email", email)
+        .limit(1)
+        .maybeSingle();
+      if (!accountRow?.id || accountRow.ativo === false) return { ok: false, error: "Código inválido ou expirado." };
+      const account = accountRow as AccountRow;
+      const consumed = await consumeOtp({
+        supabaseAdmin,
+        accountId: account.id,
+        purpose: "recuperar_acesso_email",
+        email,
+        code: params.code,
+      });
+      if (!consumed.ok) return consumed;
+      const next = await bumpAuthVersion(supabaseAdmin, account);
+      if (!next) return { ok: false, error: "Não foi possível recuperar o acesso agora." };
+      return { ok: true, message: "Acesso recuperado com sucesso.", session: buildSession(account, next) };
+    },
+  });
+}
+
+export async function startClienteRecoveryByIdentity(params: {
+  cpf: string;
+  dataNascimento: string;
+  purpose?: "recover" | "change-email";
+}): Promise<IdentityStartResult> {
+  const cpf = normalizeCpf(params.cpf);
+  const birth = parseClienteBirthDate(params.dataNascimento);
+  if (!isValidCpf(cpf) || !birth) return { ok: false, error: "Não foi possível validar os dados informados." };
+
+  return runAdminOperation({
+    action: "cliente_app_recovery_identity_start",
+    actorId: `cpf:${hmac(cpf)}`,
+    run: async (supabaseAdmin): Promise<IdentityStartResult> => {
+      const { data: account } = await supabaseAdmin
+        .from("clientes_app_auth")
+        .select("id, data_nascimento, ativo")
+        .eq("cpf", cpf)
+        .limit(1)
+        .maybeSingle();
+      if (!account?.id || account.ativo === false || String(account.data_nascimento || "") !== birth) {
+        return { ok: false, error: "Não foi possível validar os dados informados." };
+      }
       return {
-        ok: true as const,
-        message:
-          "Se esse e-mail existir no app cliente, enviaremos um link de recuperação.",
+        ok: true,
+        token: buildIdentityToken(account.id, params.purpose || "recover"),
+        message: "Identidade confirmada.",
       };
     },
   });
 }
 
-export async function resetClienteAppPasswordWithToken(
-  params: ResetClienteAppPasswordParams
-): Promise<RecoverClienteAppAccessResult> {
-  const rawToken = String(params.token || "").trim();
-  const senha = String(params.senha || "").trim();
-  const confirmacao = String(params.confirmacao || "").trim();
-
-  if (!rawToken) {
-    return {
-      ok: false,
-      error: "Link de recuperação inválido ou expirado. Solicite um novo link.",
-    };
-  }
-
-  if (senha.length < 6) {
-    return { ok: false, error: "A nova senha precisa ter pelo menos 6 caracteres." };
-  }
-
-  if (senha !== confirmacao) {
-    return { ok: false, error: "A confirmação da senha não confere." };
-  }
+export async function requestClienteRecoveryCodeByIdentity(params: {
+  token: string;
+  email: string;
+  ip?: string | null;
+  userAgent?: string | null;
+}): Promise<BasicResult> {
+  const accountId = parseIdentityToken(params.token, "recover");
+  const email = normalizeClienteEmail(params.email);
+  if (!accountId || !email) return { ok: false, error: "Não foi possível continuar a recuperação." };
 
   return runAdminOperation({
-    action: "cliente_app_reset_password_with_token",
-    actorId: "cliente_app_recovery_token",
-    run: async (supabaseAdmin) => {
-      const recoveryToken = parseClienteRecoveryToken(rawToken);
-
-      if (!recoveryToken) {
-        return {
-          ok: false as const,
-          error: "Link de recuperação inválido ou expirado. Solicite um novo link.",
-        };
+    action: "cliente_app_recovery_identity_email_request",
+    actorId: accountId,
+    run: async (supabaseAdmin): Promise<BasicResult> => {
+      const account = await loadAccountById(supabaseAdmin, accountId);
+      if (!account) return { ok: false, error: "Não foi possível continuar a recuperação." };
+      const currentEmail = getClienteAppPublicEmail(account.email);
+      if (currentEmail && currentEmail !== email) {
+        return { ok: false, error: "Este não é o e-mail atual da conta. Se perdeu o e-mail, use Alterar meu e-mail." };
       }
-
-      const { data: conta, error } = await (supabaseAdmin as any)
-        .from("clientes_app_auth")
-        .select("id, email, senha_hash, ativo")
-        .eq("email", recoveryToken.email)
-        .limit(1)
-        .maybeSingle();
-
-      if (error || !conta?.id || conta.ativo === false) {
-        return {
-          ok: false as const,
-          error: "Não encontramos uma conta ativa do app para este link.",
-        };
-      }
-
-      const currentPasswordHashDigest = hashRecoveryToken(
-        String(conta.senha_hash || "")
-      );
-      if (currentPasswordHashDigest !== recoveryToken.passwordHashDigest) {
-        return {
-          ok: false as const,
-          error: "Este link já foi usado. Solicite uma nova recuperação.",
-        };
-      }
-
-      const senhaHash = await hashClientePassword(senha);
-      const [updateContaResult, vinculosResult] = await Promise.all([
-        (supabaseAdmin as any)
+      if (!currentEmail) {
+        const { data: duplicate } = await supabaseAdmin
           .from("clientes_app_auth")
-          .update({
-            senha_hash: senhaHash,
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", conta.id),
-        supabaseAdmin
-          .from("clientes_auth")
           .select("id")
-          .eq("app_conta_id", conta.id),
-      ]);
-
-      if (updateContaResult.error || vinculosResult.error) {
-        return {
-          ok: false as const,
-          error: "Não foi possível atualizar sua senha agora.",
-        };
+          .eq("email", email)
+          .neq("id", accountId)
+          .limit(1);
+        if (duplicate?.length) return { ok: false, error: "Este e-mail já pertence a outra conta." };
       }
 
-      if (vinculosResult.data?.length) {
-        await supabaseAdmin
-          .from("clientes_auth")
-          .update({
-            senha_hash: senhaHash,
-            updated_at: new Date().toISOString(),
-          })
-          .eq("app_conta_id", conta.id);
-      }
-
-      revalidateTag("cliente-app-session", "max");
-      await sendPasswordChangedNotice({
-        email: conta.email,
-        context: "App cliente",
+      const otp = await createOtp({
+        supabaseAdmin,
+        accountId,
+        purpose: "recuperar_acesso_identidade",
+        email,
         ip: params.ip,
         userAgent: params.userAgent,
       });
-
-      return {
-        ok: true as const,
-        message:
-          "Senha atualizada com sucesso. Agora você já pode voltar ao login.",
-      };
+      if (!otp.ok) return otp;
+      await sendCodeEmail({ to: email, code: otp.code, title: "Confirme o e-mail para recuperar seu acesso" });
+      return { ok: true, message: "Código enviado para o e-mail informado." };
     },
   });
+}
+
+export async function confirmClienteRecoveryCodeByIdentity(params: {
+  token: string;
+  email: string;
+  code: string;
+}): Promise<SessionResult> {
+  const accountId = parseIdentityToken(params.token, "recover");
+  const email = normalizeClienteEmail(params.email);
+  if (!accountId || !email) return { ok: false, error: "Código inválido ou expirado." };
+
+  return runAdminOperation({
+    action: "cliente_app_recovery_identity_email_confirm",
+    actorId: accountId,
+    run: async (supabaseAdmin): Promise<SessionResult> => {
+      const account = await loadAccountById(supabaseAdmin, accountId);
+      if (!account) return { ok: false, error: "Código inválido ou expirado." };
+      const consumed = await consumeOtp({
+        supabaseAdmin,
+        accountId,
+        purpose: "recuperar_acesso_identidade",
+        email,
+        code: params.code,
+      });
+      if (!consumed.ok) return consumed;
+
+      const currentEmail = getClienteAppPublicEmail(account.email);
+      let next = Number(account.auth_version || 1) + 1;
+      const payload: Record<string, unknown> = {
+        auth_version: next,
+        updated_at: new Date().toISOString(),
+      };
+      if (!currentEmail) {
+        payload.email = email;
+        payload.email_verificado_em = new Date().toISOString();
+      }
+      const updated = await supabaseAdmin.from("clientes_app_auth").update(payload).eq("id", accountId);
+      if (updated.error) return { ok: false, error: "Não foi possível recuperar o acesso agora." };
+      if (!currentEmail) {
+        account.email = email;
+        await syncEmailAcrossLinks(supabaseAdmin, accountId, email);
+      }
+      return { ok: true, message: "Acesso recuperado com sucesso.", session: buildSession(account, next) };
+    },
+  });
+}
+
+export async function requestClienteEmailChangeCode(params: {
+  token: string;
+  newEmail: string;
+  ip?: string | null;
+  userAgent?: string | null;
+}): Promise<BasicResult> {
+  const accountId = parseIdentityToken(params.token, "change-email");
+  const email = normalizeClienteEmail(params.newEmail);
+  if (!accountId || !email) return { ok: false, error: "Informe um novo e-mail válido." };
+
+  return runAdminOperation({
+    action: "cliente_app_email_change_request",
+    actorId: accountId,
+    run: async (supabaseAdmin): Promise<BasicResult> => {
+      const account = await loadAccountById(supabaseAdmin, accountId);
+      if (!account) return { ok: false, error: "Não foi possível validar sua conta." };
+      const { data: duplicate } = await supabaseAdmin
+        .from("clientes_app_auth")
+        .select("id")
+        .eq("email", email)
+        .neq("id", accountId)
+        .limit(1);
+      if (duplicate?.length) return { ok: false, error: "Este e-mail já pertence a outra conta." };
+
+      const otp = await createOtp({
+        supabaseAdmin,
+        accountId,
+        purpose: "alterar_email",
+        email,
+        ip: params.ip,
+        userAgent: params.userAgent,
+      });
+      if (!otp.ok) return otp;
+      await sendCodeEmail({ to: email, code: otp.code, title: "Confirme seu novo e-mail" });
+      return { ok: true, message: "Código enviado para o novo e-mail." };
+    },
+  });
+}
+
+export async function confirmClienteEmailChange(params: {
+  token: string;
+  newEmail: string;
+  code: string;
+}): Promise<SessionResult> {
+  const accountId = parseIdentityToken(params.token, "change-email");
+  const email = normalizeClienteEmail(params.newEmail);
+  if (!accountId || !email) return { ok: false, error: "Código inválido ou expirado." };
+
+  return runAdminOperation({
+    action: "cliente_app_email_change_confirm",
+    actorId: accountId,
+    run: async (supabaseAdmin): Promise<SessionResult> => {
+      const account = await loadAccountById(supabaseAdmin, accountId);
+      if (!account) return { ok: false, error: "Código inválido ou expirado." };
+      const consumed = await consumeOtp({
+        supabaseAdmin,
+        accountId,
+        purpose: "alterar_email",
+        email,
+        code: params.code,
+      });
+      if (!consumed.ok) return consumed;
+
+      const next = Number(account.auth_version || 1) + 1;
+      const updated = await supabaseAdmin
+        .from("clientes_app_auth")
+        .update({
+          email,
+          email_verificado_em: new Date().toISOString(),
+          auth_version: next,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", accountId);
+      if (updated.error) return { ok: false, error: "Não foi possível alterar o e-mail agora." };
+
+      account.email = email;
+      await syncEmailAcrossLinks(supabaseAdmin, accountId, email);
+      await supabaseAdmin
+        .from("cliente_app_email_verificacoes")
+        .update({ consumido_em: new Date().toISOString() })
+        .eq("conta_id", accountId)
+        .is("consumido_em", null);
+
+      void emitSecurityEvent({
+        evento: "cliente_app_email_alterado",
+        tipoUsuario: "cliente",
+        userId: accountId,
+        origem: "cliente-app",
+        detalhes: { email_hash: hmac(email) },
+      });
+
+      await sendResendEmail({
+        from: process.env.PASSWORD_RECOVERY_EMAIL_FROM || "SalãoPremium <recuperar@salaopremiun.com.br>",
+        to: email,
+        subject: "Seu e-mail foi atualizado - SalãoPremium",
+        text: "Seu e-mail do App Cliente foi atualizado com sucesso. Se você não reconhece esta alteração, fale com o suporte.",
+        html: `<div style="font-family:Arial,sans-serif;padding:28px"><h1>E-mail atualizado</h1><p>Seu novo e-mail do App Cliente foi confirmado com sucesso.</p><p>Se você não reconhece esta alteração, fale com o suporte.</p></div>`,
+      });
+
+      return { ok: true, message: "E-mail atualizado com sucesso.", session: buildSession(account, next) };
+    },
+  });
+}
+
+// Compatibilidade temporária com a rota antiga. Novas solicitações não geram links de senha.
+export async function requestClienteAppRecovery(emailInput: string): Promise<BasicResult> {
+  return requestClienteRecoveryCodeByEmail({ email: emailInput });
+}
+
+export async function resetClienteAppPasswordWithToken(_params: {
+  token: string;
+  senha: string;
+  confirmacao: string;
+  ip?: string | null;
+  userAgent?: string | null;
+}): Promise<BasicResult> {
+  return {
+    ok: false,
+    error: "Este link pertence ao fluxo antigo. Volte para Recuperar acesso e solicite um código novo.",
+  };
 }

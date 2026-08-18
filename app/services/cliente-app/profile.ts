@@ -1,18 +1,12 @@
 import { runAdminOperation } from "@/lib/supabase/admin-ops";
-import {
-  clearClienteSession,
-  createClienteSession,
-} from "@/lib/cliente-auth.server";
-import {
-  buildClienteAppPhoneOnlyEmail,
-  getClienteAppPublicEmail,
-  syncClienteAppLinksByPhone,
-} from "@/app/services/cliente-app/linking";
+import { clearClienteSession, createClienteSession } from "@/lib/cliente-auth.server";
+import { getClienteAppPublicEmail, syncClienteAppLinksByIdentity } from "@/app/services/cliente-app/linking";
+import { normalizeClienteEmail, normalizeWhatsapp } from "@/lib/client-app/identity";
 
 type UpdateClienteProfileParams = {
   idConta: string;
   nome: string;
-  email: string;
+  email?: string | null;
   telefone?: string | null;
   preferencias?: string | null;
 };
@@ -21,179 +15,81 @@ export type ClienteProfileActionResult =
   | { ok: true; message: string }
   | { ok: false; error: string };
 
-function normalizeEmail(value: string) {
-  return String(value || "").trim().toLowerCase();
-}
-
-function normalizePhone(value: string) {
-  return String(value || "").replace(/\D/g, "").trim();
-}
-
-function getStoredAccountEmail(params: { email: string; telefone: string }) {
-  return normalizeEmail(params.email) || buildClienteAppPhoneOnlyEmail(params.telefone);
-}
-
 export async function updateClienteAppProfile(
   params: UpdateClienteProfileParams
 ): Promise<ClienteProfileActionResult> {
   const idConta = String(params.idConta || "").trim();
-  const nome = String(params.nome || "").trim();
-  const email = normalizeEmail(params.email);
-  const telefone = normalizePhone(params.telefone || "");
-  const storedEmail = getStoredAccountEmail({ email, telefone });
+  const nome = String(params.nome || "").trim().replace(/\s+/g, " ");
+  const whatsapp = normalizeWhatsapp(params.telefone);
+  const requestedEmail = normalizeClienteEmail(params.email);
   const preferencias = String(params.preferencias || "").trim() || null;
 
-  if (!idConta) {
-    return { ok: false, error: "Não foi possível identificar a conta do cliente." };
-  }
-
-  if (!nome) {
-    return { ok: false, error: "Informe seu nome." };
-  }
-
-  if (!telefone) {
-    return { ok: false, error: "Informe seu telefone." };
-  }
-
-  if (!storedEmail) {
-    return { ok: false, error: "Informe um e-mail valido ou um telefone." };
-  }
+  if (!idConta) return { ok: false, error: "Não foi possível identificar a conta do cliente." };
+  if (!nome) return { ok: false, error: "Informe seu nome." };
+  if (!whatsapp) return { ok: false, error: "Informe seu WhatsApp." };
 
   return runAdminOperation({
     action: "cliente_app_update_profile_global",
     actorId: idConta,
     run: async (supabaseAdmin) => {
-      const { data: contaAtual, error: contaError } = await (supabaseAdmin as any)
+      const { data: account, error } = await supabaseAdmin
         .from("clientes_app_auth")
-        .select("id, email, telefone")
+        .select("id, email, auth_version")
         .eq("id", idConta)
         .limit(1)
         .maybeSingle();
+      if (error || !account?.id) return { ok: false as const, error: "Não foi possível localizar sua conta do app." };
 
-      if (contaError || !contaAtual?.id) {
-        return { ok: false, error: "Não foi possível localizar sua conta do app." };
-      }
-
-      if (storedEmail !== String(contaAtual.email || "").trim().toLowerCase()) {
-        const { data: duplicateRows, error: duplicateError } =
-          await (supabaseAdmin as any)
-            .from("clientes_app_auth")
-            .select("id")
-            .eq("email", storedEmail)
-            .neq("id", idConta)
-            .limit(1);
-
-        if (duplicateError) {
-          return {
-            ok: false,
-            error: "Não foi possível validar seu novo e-mail agora.",
-          };
-        }
-
-        if (duplicateRows?.length) {
-          return {
-            ok: false,
-            error: "Já existe outra conta do app com esse e-mail.",
-          };
-        }
-      }
-
-      if (telefone && telefone !== String(contaAtual.telefone || "").trim()) {
-        const { data: duplicatePhoneRows, error: duplicatePhoneError } =
-          await (supabaseAdmin as any)
-            .from("clientes_app_auth")
-            .select("id")
-            .eq("telefone", telefone)
-            .neq("id", idConta)
-            .limit(1);
-
-        if (duplicatePhoneError) {
-          return {
-            ok: false,
-            error: "Não foi possível validar seu novo telefone agora.",
-          };
-        }
-
-        if (duplicatePhoneRows?.length) {
-          return {
-            ok: false,
-            error:
-              "Já existe outra conta do app com esse telefone. Use Recuperar acesso se esse numero for seu.",
-          };
-        }
-      }
-
-      const [contaUpdateResult, clientesAuthRowsResult] = await Promise.all([
-        (supabaseAdmin as any)
-          .from("clientes_app_auth")
-          .update({
-            nome,
-            email: storedEmail,
-            telefone: telefone || null,
-            preferencias_gerais: preferencias,
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", idConta),
-        supabaseAdmin
-          .from("clientes_auth")
-          .select("id_cliente, id_salao")
-          .eq("app_conta_id", idConta),
-      ]);
-
-      if (contaUpdateResult.error || clientesAuthRowsResult.error) {
+      const currentEmail = getClienteAppPublicEmail(account.email);
+      if (requestedEmail && requestedEmail !== currentEmail) {
         return {
-          ok: false,
-          error: "Não foi possível salvar seu perfil agora.",
+          ok: false as const,
+          error: "Para alterar o e-mail, use a opção Alterar e-mail e confirme o código enviado ao novo endereço.",
         };
       }
 
-      const vinculos =
-        clientesAuthRowsResult.data?.filter(
-          (item) => item.id_cliente && item.id_salao
-        ) || [];
+      const updated = await supabaseAdmin
+        .from("clientes_app_auth")
+        .update({
+          nome,
+          whatsapp,
+          telefone: whatsapp,
+          preferencias_gerais: preferencias,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", idConta);
+      if (updated.error) return { ok: false as const, error: "Não foi possível salvar seu perfil agora." };
 
-      for (const vinculo of vinculos) {
-        const idCliente = String(vinculo.id_cliente || "").trim();
-        const idSalao = String(vinculo.id_salao || "").trim();
-        if (!idCliente || !idSalao) continue;
-
-        await Promise.all([
-          supabaseAdmin
-            .from("clientes")
-            .update({
-              nome,
-              email: email || null,
-              telefone: telefone || null,
-              whatsapp: telefone || null,
-              atualizado_em: new Date().toISOString(),
-            })
-            .eq("id", idCliente)
-            .eq("id_salao", idSalao),
-          supabaseAdmin
-            .from("clientes_auth")
-            .update({
-              email: email || null,
-              updated_at: new Date().toISOString(),
-            })
-            .eq("id_cliente", idCliente)
-            .eq("id_salao", idSalao),
-        ]);
+      const { data: links } = await supabaseAdmin
+        .from("clientes_auth")
+        .select("id_cliente, id_salao")
+        .eq("app_conta_id", idConta);
+      for (const link of links || []) {
+        if (!link.id_cliente || !link.id_salao) continue;
+        await supabaseAdmin
+          .from("clientes")
+          .update({
+            nome,
+            telefone: whatsapp,
+            whatsapp,
+            atualizado_em: new Date().toISOString(),
+          })
+          .eq("id", link.id_cliente)
+          .eq("id_salao", link.id_salao);
       }
 
-      await syncClienteAppLinksByPhone({ idConta });
-
+      await syncClienteAppLinksByIdentity({ idConta });
       await createClienteSession({
         idConta,
         nome,
-        email: getClienteAppPublicEmail(storedEmail),
-        telefone: telefone || null,
+        email: currentEmail,
+        whatsapp,
+        telefone: whatsapp,
+        authVersion: Number(account.auth_version || 1),
         tipo: "cliente",
       });
 
-      return {
-        ok: true,
-        message: "Perfil atualizado com sucesso.",
-      };
+      return { ok: true as const, message: "Perfil atualizado com sucesso." };
     },
   });
 }
@@ -202,34 +98,21 @@ export async function deleteClienteAppAccount(params: {
   idConta: string;
 }): Promise<ClienteProfileActionResult> {
   const idConta = String(params.idConta || "").trim();
-
-  if (!idConta) {
-    return { ok: false, error: "Não foi possível identificar a conta do cliente." };
-  }
+  if (!idConta) return { ok: false, error: "Não foi possível identificar a conta do cliente." };
 
   return runAdminOperation({
     action: "cliente_app_delete_account",
     actorId: idConta,
     run: async (supabaseAdmin) => {
-      const { data: vinculos, error: vinculosError } = await supabaseAdmin
+      const { data: links, error } = await supabaseAdmin
         .from("clientes_auth")
         .select("id, id_cliente, id_salao")
         .eq("app_conta_id", idConta);
+      if (error) return { ok: false as const, error: "Não foi possível carregar seus vínculos agora." };
 
-      if (vinculosError) {
-        return {
-          ok: false as const,
-          error: "Não foi possível carregar seus vínculos agora.",
-        };
-      }
-
-      const hoje = new Date().toISOString().slice(0, 10);
-
-      for (const vinculo of vinculos || []) {
-        const idCliente = String(vinculo.id_cliente || "").trim();
-        const idSalao = String(vinculo.id_salao || "").trim();
-        if (!idCliente || !idSalao) continue;
-
+      const today = new Date().toISOString().slice(0, 10);
+      for (const link of links || []) {
+        if (!link.id_cliente || !link.id_salao) continue;
         await supabaseAdmin
           .from("agendamentos")
           .update({
@@ -237,40 +120,23 @@ export async function deleteClienteAppAccount(params: {
             updated_at: new Date().toISOString(),
             observacoes: "Cancelado por encerramento da conta do app cliente.",
           })
-          .eq("id_salao", idSalao)
-          .eq("cliente_id", idCliente)
-          .gte("data", hoje)
+          .eq("id_salao", link.id_salao)
+          .eq("cliente_id", link.id_cliente)
+          .gte("data", today)
           .in("status", ["pendente", "confirmado"]);
       }
 
-      const [authUpdateResult, deleteContaResult] = await Promise.all([
-        supabaseAdmin
-          .from("clientes_auth")
-          .update({
-            app_ativo: false,
-            app_conta_id: null,
-            updated_at: new Date().toISOString(),
-          })
-          .eq("app_conta_id", idConta),
-        (supabaseAdmin as any)
-          .from("clientes_app_auth")
-          .delete()
-          .eq("id", idConta),
-      ]);
-
-      if (authUpdateResult.error || deleteContaResult.error) {
-        return {
-          ok: false as const,
-          error: "Não foi possível encerrar sua conta agora.",
-        };
+      const authUpdate = await supabaseAdmin
+        .from("clientes_auth")
+        .update({ app_ativo: false, app_conta_id: null, updated_at: new Date().toISOString() })
+        .eq("app_conta_id", idConta);
+      const deleteAccount = await supabaseAdmin.from("clientes_app_auth").delete().eq("id", idConta);
+      if (authUpdate.error || deleteAccount.error) {
+        return { ok: false as const, error: "Não foi possível encerrar sua conta agora." };
       }
 
       await clearClienteSession();
-
-      return {
-        ok: true as const,
-        message: "Conta encerrada com sucesso.",
-      };
+      return { ok: true as const, message: "Conta encerrada com sucesso." };
     },
   });
 }
