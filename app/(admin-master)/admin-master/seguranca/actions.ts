@@ -3,10 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { registrarAdminMasterAuditoria } from "@/lib/admin-master/actions";
 import { requireAdminMasterUser } from "@/lib/admin-master/auth/requireAdminMasterUser";
-import {
-  queueOracleVpsSecurityCleanup,
-  sendOracleVpsSecurityEvent,
-} from "@/lib/oracle-vps/client";
+import { captureSystemEvent } from "@/lib/monitoring/server";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 function formText(formData: FormData, key: string) {
@@ -49,20 +46,21 @@ export async function desbloquearUsuarioSegurancaAction(formData: FormData) {
     payload: { tipo_usuario: tipoUsuario },
   });
 
-  void sendOracleVpsSecurityEvent({
-    type: "security_event",
-    severity: "info",
+  void captureSystemEvent({
     module: "security",
     eventType: "admin_master_desbloqueou_usuario",
-    source: "admin-master",
-    idUsuario: userId,
-    userId,
-    tipoUsuario,
-    details: {
-      id_admin_master: admin.usuario.id,
-      admin_email: admin.usuario.email,
-    },
+    severity: "info",
     message: "Usuário desbloqueado pelo Admin Master.",
+    idUsuario: userId,
+    idAdminUsuario: admin.usuario.id,
+    origin: "server_action",
+    route: "/admin-master/seguranca",
+    success: true,
+    createIncident: false,
+    details: {
+      tipoUsuario,
+      adminEmail: admin.usuario.email,
+    },
   });
 
   revalidatePath("/admin-master/seguranca");
@@ -99,19 +97,21 @@ export async function desbloquearSalaoSegurancaAction(formData: FormData) {
     payload: {},
   });
 
-  void sendOracleVpsSecurityEvent({
-    type: "security_event",
-    severity: "info",
+  void captureSystemEvent({
     module: "security",
     eventType: "admin_master_desbloqueou_salao",
-    source: "admin-master",
-    idSalao,
-    tipoUsuario: "salao",
-    details: {
-      id_admin_master: admin.usuario.id,
-      admin_email: admin.usuario.email,
-    },
+    severity: "info",
     message: "Salão desbloqueado pelo Admin Master.",
+    idSalao,
+    idAdminUsuario: admin.usuario.id,
+    origin: "server_action",
+    route: "/admin-master/seguranca",
+    success: true,
+    createIncident: false,
+    details: {
+      tipoUsuario: "salao",
+      adminEmail: admin.usuario.email,
+    },
   });
 
   revalidatePath("/admin-master/seguranca");
@@ -122,19 +122,34 @@ export async function limparLogsSegurancaAction() {
   const supabase = getSupabaseAdmin();
   const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
 
-  await supabase.from("security_login_attempts").delete().lt("criado_em", cutoff);
-  const result = await queueOracleVpsSecurityCleanup({
-    securityRetentionDays: 90,
-    requestedBy: admin.usuario.email,
-  });
+  const { error } = await supabase
+    .from("security_login_attempts")
+    .delete()
+    .lt("criado_em", cutoff);
+
+  if (error) {
+    throw new Error("Não foi possível aplicar a retenção dos logs de segurança.");
+  }
 
   await registrarAdminMasterAuditoria({
     idAdmin: admin.usuario.id,
     acao: "limpar_logs_seguranca",
-    entidade: "security_events",
-    descricao:
-      "Retenção de logs de segurança executada no banco principal e na VPS.",
-    payload: { cutoff_principal: cutoff, result },
+    entidade: "security_login_attempts",
+    descricao: "Retenção de logs de segurança executada no banco principal.",
+    payload: { cutoff_principal: cutoff },
+  });
+
+  void captureSystemEvent({
+    module: "security",
+    eventType: "admin_master_limpeza_logs_seguranca",
+    severity: "info",
+    message: "Retenção de logs de segurança executada.",
+    idAdminUsuario: admin.usuario.id,
+    origin: "server_action",
+    route: "/admin-master/seguranca",
+    success: true,
+    createIncident: false,
+    details: { cutoff },
   });
 
   revalidatePath("/admin-master/seguranca");
