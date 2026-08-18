@@ -115,18 +115,30 @@ type ClienteAppMigracaoTokensTable = {
 
 type PublicSchema = Database["public"];
 type BaseTables = PublicSchema["Tables"];
+
+type ClientesAuthTable = Omit<
+  BaseTables["clientes_auth"],
+  "Row" | "Insert" | "Update"
+> & {
+  Row: BaseTables["clientes_auth"]["Row"] & { app_conta_id: string | null };
+  Insert: BaseTables["clientes_auth"]["Insert"] & { app_conta_id?: string | null };
+  Update: BaseTables["clientes_auth"]["Update"] & { app_conta_id?: string | null };
+};
+
 type ExtendedTables = Omit<
   BaseTables,
   | "servicos"
   | "saloes_recursos_extras"
   | "saloes"
   | "clientes_app_auth"
+  | "clientes_auth"
 > & {
   servicos: BaseTables["servicos"] & ServicosTableExtensions;
   servicos_combo_itens: ServicosComboItensTable;
   saloes_recursos_extras: BaseTables["saloes_recursos_extras"] & SaloesRecursosExtrasTableExtensions;
   saloes: BaseTables["saloes"] & SaloesSecurityTableExtensions;
   clientes_app_auth: ClientesAppAuthTable;
+  clientes_auth: ClientesAuthTable;
   cliente_app_email_verificacoes: ClienteAppEmailVerificacoesTable;
   cliente_app_migracao_tokens: ClienteAppMigracaoTokensTable;
   security_login_attempts: SecurityLoginAttemptsTable;

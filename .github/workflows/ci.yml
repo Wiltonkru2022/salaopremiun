@@ -15,8 +15,6 @@ jobs:
     env:
       NEXT_PUBLIC_SUPABASE_URL: https://rcyoqfmduockncbztmen.supabase.co
       NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_T_BPx7iurGWoYHJgbWEYNw_s_6VqoIf
-      # Alias temporario para os pontos legados do app Next que ainda usam o
-      # nome ANON_KEY. O valor continua sendo a publishable key de baixo privilegio.
       NEXT_PUBLIC_SUPABASE_ANON_KEY: sb_publishable_T_BPx7iurGWoYHJgbWEYNw_s_6VqoIf
 
     steps:
@@ -37,6 +35,9 @@ jobs:
 
       - name: Typecheck
         run: npm run typecheck
+
+      - name: Test App Cliente identity
+        run: npx vitest run lib/client-app/identity.test.ts
 
       - name: Audit
         continue-on-error: true
