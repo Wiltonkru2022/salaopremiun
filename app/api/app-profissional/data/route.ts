@@ -38,21 +38,20 @@ export async function GET(request: Request) {
           .filter((item: any) => String(item.tipo_profissional || "profissional").toLowerCase() !== "assistente")
           .map((item: any) => item.id);
         const scoped = (query: any) => verTodos ? query.in("profissional_id", ids) : query.eq("profissional_id", session.idProfissional);
+        const scopedServices = (query: any) => verTodos ? query.in("id_profissional", ids) : query.eq("id_profissional", session.idProfissional);
 
         const [agendamentosResult, bloqueiosResult, clientesResult, servicosResult] = await Promise.all([
           scoped(supabase.from("agendamentos").select("id, profissional_id, cliente_id, servico_id, data, hora_inicio, hora_fim, status, created_at, cliente_confirmacao_status, cliente_confirmou_em, observacoes, id_comanda, sinal_status, sinal_valor, sinal_confirmacao_responsavel, sinal_comprovante_path, sinal_comprovante_nome, sinal_comprovante_tipo").eq("id_salao", session.idSalao).gte("data", inicio).lte("data", fim).order("data").order("hora_inicio")),
           scoped(supabase.from("agenda_bloqueios").select("id, profissional_id, data, hora_inicio, hora_fim, motivo").eq("id_salao", session.idSalao).gte("data", inicio).lte("data", fim).order("data").order("hora_inicio")),
           (supabase as any).from("clientes").select("id, nome, telefone, whatsapp, observacoes, created_at").eq("id_salao", session.idSalao).is("deleted_at", null).order("nome"),
-          (supabase as any).from("profissional_servicos").select("id_profissional, id_servico, duracao_minutos, preco_personalizado, ativo, servicos(id, nome, descricao, preco, preco_padrao, duracao_minutos, duracao, ativo)").eq("id_salao", session.idSalao).eq("ativo", true),
+          scopedServices((supabase as any).from("profissional_servicos").select("id_profissional, id_servico, duracao_minutos, preco_personalizado, ativo, servicos(id, nome, descricao, preco, preco_padrao, duracao_minutos, duracao, ativo)").eq("id_salao", session.idSalao).eq("ativo", true)),
         ]);
         for (const result of [agendamentosResult, bloqueiosResult, clientesResult, servicosResult]) {
           if (result.error) throw new Error(result.error.message);
         }
 
         const professionalRows = (profissionaisResult.data || []) as Array<Record<string, any>>;
-        const appointmentRows = (agendamentosResult.data || []) as Array<Record<string, any>>;
         const professionalRowsById = new Map(professionalRows.map((item) => [String(item.id), item]));
-        const serviceIds = Array.from(new Set(appointmentRows.map((item) => item.servico_id).filter(Boolean)));
         const clientRows = (clientesResult.data || []) as Array<Record<string, any>>;
         const clientsById = new Map(clientRows.map((item) => [String(item.id), item]));
         const links: Array<Record<string, any>> = (servicosResult.data || []).map((link: any) => {
@@ -66,8 +65,10 @@ export async function GET(request: Request) {
             duracao_minutos: Number(link.duracao_minutos ?? service?.duracao_minutos ?? service?.duracao ?? 30),
             ativo: link.ativo !== false && service?.ativo !== false,
           };
-        }).filter((item: any) => serviceIds.length === 0 || serviceIds.includes(item.id) || verTodos);
-        const servicesById = new Map(links.map((item: Record<string, any>) => [item.id, item]));
+        }).filter((item: any) => item.ativo);
+        const servicesByProfessionalAndId = new Map(
+          links.map((item: Record<string, any>) => [`${String(item.profissional_id)}:${String(item.id)}`, item])
+        );
 
         return {
           agendamentos: (agendamentosResult.data || []).map((item: any) => ({
@@ -80,7 +81,9 @@ export async function GET(request: Request) {
               "salao",
             profissional_nome: professionalRowsById.get(String(item.profissional_id))?.nome_exibicao || professionalRowsById.get(String(item.profissional_id))?.nome || null,
             clientes: item.cliente_id ? clientsById.get(item.cliente_id) || null : null,
-            servicos: item.servico_id ? servicesById.get(item.servico_id) || null : null,
+            servicos: item.servico_id
+              ? servicesByProfessionalAndId.get(`${String(item.profissional_id)}:${String(item.servico_id)}`) || null
+              : null,
           })),
           bloqueios: (bloqueiosResult.data || []).map((item: any) => ({
             id: item.id,
