@@ -109,7 +109,6 @@ const copyRules = [
   [/(^|\b)Almoco(\b|$)/g, "Almoço"],
   [/(^|\b)Terca(\b|$)/g, "Terça"],
   [/(^|\b)Sabado(\b|$)/g, "Sábado"],
-  [/(^|\b)Proxima(\b|$)/g, "Próxima"],
   [/(^|\b)Inicio(\b|$)/g, "Início"],
   [/(^|\b)Dashboard(\b|$)/g, "Visão geral"],
 ];
@@ -139,6 +138,7 @@ function normalizeText(value) {
 }
 
 function literalText(node) {
+  if (!node) return null;
   if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) return node.text;
   return null;
 }
@@ -211,7 +211,12 @@ function collectVisibleCandidates(sourceFile) {
       }
     }
 
-    if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name) && ts.isArrayLiteralExpression(node.initializer)) {
+    if (
+      ts.isVariableDeclaration(node) &&
+      ts.isIdentifier(node.name) &&
+      node.initializer &&
+      ts.isArrayLiteralExpression(node.initializer)
+    ) {
       if (/^(dias|items|steps|tabs|options|navItems)$/i.test(node.name.text)) {
         for (const element of node.initializer.elements) {
           const value = literalText(element);
@@ -244,7 +249,11 @@ function buttonLabel(node, sourceFile) {
   const parts = [];
   for (const child of node.children) {
     if (ts.isJsxText(child)) parts.push(child.getText(sourceFile));
-    if (ts.isJsxExpression(child) && child.expression && (ts.isStringLiteral(child.expression) || ts.isNoSubstitutionTemplateLiteral(child.expression))) {
+    if (
+      ts.isJsxExpression(child) &&
+      child.expression &&
+      (ts.isStringLiteral(child.expression) || ts.isNoSubstitutionTemplateLiteral(child.expression))
+    ) {
       parts.push(child.expression.text);
     }
   }
@@ -296,7 +305,12 @@ for (const file of files) {
         const onClick = attrs.get("onClick");
         const formAction = attrs.get("formAction");
         const type = jsxAttributeString(attrs.get("type"));
-        const inForm = Boolean(closestAncestor(node, ts.isJsxElement) && closestAncestor(node, (ancestor) => ts.isJsxElement(ancestor) && jsxTagName(ancestor.openingElement) === "form"));
+        const inForm = Boolean(
+          closestAncestor(
+            node,
+            (ancestor) => ts.isJsxElement(ancestor) && jsxTagName(ancestor.openingElement) === "form"
+          )
+        );
         const label = ts.isJsxElement(node) ? buttonLabel(node, sourceFile) : "";
 
         if (!onClick && !formAction && type !== "submit" && !inForm) {
