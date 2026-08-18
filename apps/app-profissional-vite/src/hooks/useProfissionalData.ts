@@ -220,14 +220,34 @@ export function useProfissionalData(
 
     async function criarAgendamento(payload: { clienteId: string; servicoId: string; data: string; horaInicio: string; profissionalId?: string }) {
       if (!profissionalId) return;
+      const targetProfissionalId = payload.profissionalId || profissionalId;
       const { error } = await supabase.rpc("app_profissional_criar_agendamento", {
-        p_profissional_id: payload.profissionalId || profissionalId,
+        p_profissional_id: targetProfissionalId,
         p_cliente_id: payload.clienteId,
         p_servico_id: payload.servicoId,
         p_data: payload.data,
         p_hora_inicio: payload.horaInicio
       });
       if (error) throw new Error(error.message);
+
+      try {
+        const auditResponse = await fetch("/api/app-profissional/agenda/auditoria-criacao", {
+          method: "POST",
+          credentials: "same-origin",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            ...payload,
+            profissionalId: targetProfissionalId,
+          }),
+        });
+
+        if (!auditResponse.ok) {
+          console.warn("Nao foi possivel registrar a autoria do agendamento.");
+        }
+      } catch (auditError) {
+        console.warn("Falha ao registrar autoria do agendamento.", auditError);
+      }
+
       await refresh();
     }
 
