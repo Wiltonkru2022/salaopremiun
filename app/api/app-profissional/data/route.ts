@@ -15,6 +15,14 @@ function firstPositiveNumber(...values: unknown[]) {
   return 30;
 }
 
+function normalizeOrigin(value: unknown) {
+  const origem = String(value || "").trim().toLowerCase();
+  if (origem === "app_cliente") return "app_cliente";
+  if (origem === "app_profissional") return "app_profissional";
+  if (origem === "painel" || origem === "manual") return "painel";
+  return origem || null;
+}
+
 export async function GET(request: Request) {
   try {
     const session = await requireProfissionalAppContext();
@@ -49,7 +57,7 @@ export async function GET(request: Request) {
         const scopedServices = (query: any) => verTodos ? query.in("id_profissional", ids) : query.eq("id_profissional", session.idProfissional);
 
         const [agendamentosResult, bloqueiosResult, clientesResult, servicosResult] = await Promise.all([
-          scoped(supabase.from("agendamentos").select("id, profissional_id, cliente_id, servico_id, data, hora_inicio, hora_fim, status, created_at, cliente_confirmacao_status, cliente_confirmou_em, observacoes, id_comanda, sinal_status, sinal_valor, sinal_confirmacao_responsavel, sinal_comprovante_path, sinal_comprovante_nome, sinal_comprovante_tipo").eq("id_salao", session.idSalao).gte("data", inicio).lte("data", fim).order("data").order("hora_inicio")),
+          scoped(supabase.from("agendamentos").select("id, profissional_id, cliente_id, servico_id, data, hora_inicio, hora_fim, status, created_at, origem, cliente_confirmacao_status, cliente_confirmou_em, observacoes, id_comanda, sinal_status, sinal_valor, sinal_confirmacao_responsavel, sinal_comprovante_path, sinal_comprovante_nome, sinal_comprovante_tipo").eq("id_salao", session.idSalao).gte("data", inicio).lte("data", fim).order("data").order("hora_inicio")),
           scoped(supabase.from("agenda_bloqueios").select("id, profissional_id, data, hora_inicio, hora_fim, motivo").eq("id_salao", session.idSalao).gte("data", inicio).lte("data", fim).order("data").order("hora_inicio")),
           (supabase as any).from("clientes").select("id, nome, telefone, whatsapp, observacoes, created_at").eq("id_salao", session.idSalao).is("deleted_at", null).order("nome"),
           // O isolamento do salao ja e garantido pelos IDs de profissionais acima.
@@ -61,10 +69,58 @@ export async function GET(request: Request) {
           if (result.error) throw new Error(result.error.message);
         }
 
+        const appointmentRows = (agendamentosResult.data || []) as Array<Record<string, any>>;
         const professionalRows = (profissionaisResult.data || []) as Array<Record<string, any>>;
         const professionalRowsById = new Map(professionalRows.map((item) => [String(item.id), item]));
         const clientRows = (clientesResult.data || []) as Array<Record<string, any>>;
         const clientsById = new Map(clientRows.map((item) => [String(item.id), item]));
+
+        const appointmentClientIds = Array.from(
+          new Set(
+            appointmentRows
+              .map((item) => String(item.cliente_id || "").trim())
+              .filter(Boolean)
+          )
+        );
+        const auditByAppointmentId = new Map<string, Record<string, any>>();
+
+        if (appointmentClientIds.length) {
+          try {
+            const { data: auditRows, error: auditError } = await (supabase as any)
+              .from("clientes_timeline")
+              .select("id, id_cliente, metadata, created_at")
+              .eq("id_salao", session.idSalao)
+              .eq("tipo", "agendamento")
+              .contains("metadata", { evento: "agendamento_criado" })
+              .in("id_cliente", appointmentClientIds)
+              .order("created_at", { ascending: false })
+              .limit(2000);
+
+            if (!auditError) {
+              for (const row of auditRows || []) {
+                const metadata =
+                  row?.metadata && typeof row.metadata === "object"
+                    ? row.metadata as Record<string, any>
+                    : {};
+                const agendamentoId = String(metadata.agendamento_id || "").trim();
+                if (agendamentoId && !auditByAppointmentId.has(agendamentoId)) {
+                  auditByAppointmentId.set(agendamentoId, {
+                    ...metadata,
+                    created_at: row.created_at || null,
+                  });
+                }
+              }
+            } else {
+              console.warn("[AGENDAMENTO_AUDIT_READ_ERROR]", auditError.message);
+            }
+          } catch (auditError) {
+            console.warn(
+              "[AGENDAMENTO_AUDIT_READ_ERROR]",
+              auditError instanceof Error ? auditError.message : "erro_desconhecido"
+            );
+          }
+        }
+
         const links: Array<Record<string, any>> = (servicosResult.data || []).map((link: any) => {
           const service = Array.isArray(link.servicos) ? link.servicos[0] : link.servicos;
           return {
@@ -90,20 +146,49 @@ export async function GET(request: Request) {
         );
 
         return {
-          agendamentos: (agendamentosResult.data || []).map((item: any) => ({
-            ...item,
-            hora_inicio: String(item.hora_inicio).slice(0, 5),
-            hora_fim: String(item.hora_fim).slice(0, 5),
-            sinal_confirmacao_responsavel:
-              item.sinal_confirmacao_responsavel ||
-              professionalRowsById.get(String(item.profissional_id))?.sinal_confirmacao_responsavel ||
-              "salao",
-            profissional_nome: professionalRowsById.get(String(item.profissional_id))?.nome_exibicao || professionalRowsById.get(String(item.profissional_id))?.nome || null,
-            clientes: item.cliente_id ? clientsById.get(item.cliente_id) || null : null,
-            servicos: item.servico_id
-              ? servicesByProfessionalAndId.get(`${String(item.profissional_id)}:${String(item.servico_id)}`) || null
-              : null,
-          })),
+          agendamentos: appointmentRows.map((item: any) => {
+            const audit = auditByAppointmentId.get(String(item.id));
+            const origem = normalizeOrigin(audit?.origem || item.origem);
+            const cliente = item.cliente_id
+              ? clientsById.get(String(item.cliente_id)) || null
+              : null;
+            const profissional = professionalRowsById.get(String(item.profissional_id));
+
+            let agendadoPorNome = String(audit?.ator_nome || "").trim() || null;
+            let agendadoPorTipo = String(audit?.ator_tipo || "").trim() || null;
+
+            if (!agendadoPorNome && origem === "app_cliente") {
+              agendadoPorNome = String(cliente?.nome || "").trim() || "Cliente";
+              agendadoPorTipo = "cliente";
+            } else if (!agendadoPorNome && origem === "app_profissional") {
+              agendadoPorNome =
+                String(profissional?.nome_exibicao || profissional?.nome || "").trim() ||
+                "Profissional";
+              agendadoPorTipo = "profissional";
+            } else if (!agendadoPorNome && origem === "painel") {
+              agendadoPorNome = "Equipe do salao";
+              agendadoPorTipo = "painel";
+            }
+
+            return {
+              ...item,
+              origem,
+              agendado_por_nome: agendadoPorNome,
+              agendado_por_tipo: agendadoPorTipo,
+              agendado_em: audit?.created_at || item.created_at || null,
+              hora_inicio: String(item.hora_inicio).slice(0, 5),
+              hora_fim: String(item.hora_fim).slice(0, 5),
+              sinal_confirmacao_responsavel:
+                item.sinal_confirmacao_responsavel ||
+                professionalRowsById.get(String(item.profissional_id))?.sinal_confirmacao_responsavel ||
+                "salao",
+              profissional_nome: profissional?.nome_exibicao || profissional?.nome || null,
+              clientes: cliente,
+              servicos: item.servico_id
+                ? servicesByProfessionalAndId.get(`${String(item.profissional_id)}:${String(item.servico_id)}`) || null
+                : null,
+            };
+          }),
           bloqueios: (bloqueiosResult.data || []).map((item: any) => ({
             id: item.id,
             profissional_id: item.profissional_id,
