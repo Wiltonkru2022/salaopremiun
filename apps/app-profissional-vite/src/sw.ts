@@ -1,7 +1,7 @@
 /// <reference lib="webworker" />
 
 import { clientsClaim } from "workbox-core";
-import { precacheAndRoute } from "workbox-precaching";
+import { cleanupOutdatedCaches, precacheAndRoute } from "workbox-precaching";
 import { registerRoute } from "workbox-routing";
 import { CacheFirst, NetworkFirst } from "workbox-strategies";
 import { ExpirationPlugin } from "workbox-expiration";
@@ -22,13 +22,15 @@ type PushPayload = {
 };
 
 clientsClaim();
+cleanupOutdatedCaches();
 precacheAndRoute(self.__WB_MANIFEST);
 
+// JS e CSS do app sao versionados pelo precache do Workbox. Nao use CacheFirst
+// nesses arquivos, pois isso pode manter um bundle antigo ativo depois do deploy.
 registerRoute(
-  ({ request }) =>
-    ["script", "style", "image", "font"].includes(request.destination),
+  ({ request }) => ["image", "font"].includes(request.destination),
   new CacheFirst({
-    cacheName: "salaopremiun-assets",
+    cacheName: "salaopremiun-static-media-v2",
     plugins: [
       new ExpirationPlugin({
         maxEntries: 80,
@@ -59,7 +61,13 @@ self.addEventListener("install", (event) => {
 });
 
 self.addEventListener("activate", (event) => {
-  event.waitUntil(self.clients.claim());
+  event.waitUntil(
+    Promise.all([
+      self.clients.claim(),
+      // Remove o cache antigo que podia conter JS/CSS de releases anteriores.
+      caches.delete("salaopremiun-assets"),
+    ])
+  );
 });
 
 self.addEventListener("push", (event) => {
