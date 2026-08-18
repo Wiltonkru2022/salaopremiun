@@ -5,6 +5,7 @@ import ts from "typescript";
 
 const ROOT = process.cwd();
 const FIX = process.argv.includes("--fix");
+
 const TARGETS = [
   "apps/app-profissional-vite/src",
   "app/app-cliente",
@@ -91,10 +92,6 @@ const copyRules = [
   [/(^|\b)avaliacao(\b|$)/g, "$1avaliação$2"],
   [/(^|\b)Avaliacoes(\b|$)/g, "$1Avaliações$2"],
   [/(^|\b)avaliacoes(\b|$)/g, "$1avaliações$2"],
-  [/(^|\b)Comentario(\b|$)/g, "$1Comentário$2"],
-  [/(^|\b)comentario(\b|$)/g, "$1comentário$2"],
-  [/(^|\b)Comentarios(\b|$)/g, "$1Comentários$2"],
-  [/(^|\b)comentarios(\b|$)/g, "$1comentários$2"],
   [/(^|\b)Comissao(\b|$)/g, "$1Comissão$2"],
   [/(^|\b)comissao(\b|$)/g, "$1comissão$2"],
   [/(^|\b)Comissoes(\b|$)/g, "$1Comissões$2"],
@@ -108,25 +105,49 @@ const copyRules = [
   [/(^|\b)Credito(\b|$)/g, "$1Crédito$2"],
   [/(^|\b)credito(\b|$)/g, "$1crédito$2"],
   [/(^|\b)Almoco(\b|$)/g, "$1Almoço$2"],
+  [/(^|\b)almoco(\b|$)/g, "$1almoço$2"],
   [/(^|\b)Terca(\b|$)/g, "$1Terça$2"],
+  [/(^|\b)terca(\b|$)/g, "$1terça$2"],
   [/(^|\b)Sabado(\b|$)/g, "$1Sábado$2"],
+  [/(^|\b)sabado(\b|$)/g, "$1sábado$2"],
   [/(^|\b)Inicio(\b|$)/g, "$1Início$2"],
+  [/(^|\b)inicio(\b|$)/g, "$1início$2"],
+  [/(^|\b)Rapido(\b|$)/g, "$1Rápido$2"],
+  [/(^|\b)rapido(\b|$)/g, "$1rápido$2"],
+  [/(^|\b)Tecnica(\b|$)/g, "$1Técnica$2"],
+  [/(^|\b)tecnica(\b|$)/g, "$1técnica$2"],
+  [/(^|\b)Concluido(\b|$)/g, "$1Concluído$2"],
+  [/(^|\b)concluido(\b|$)/g, "$1concluído$2"],
+  [/(^|\b)Contratacao(\b|$)/g, "$1Contratação$2"],
+  [/(^|\b)contratacao(\b|$)/g, "$1contratação$2"],
+  [/(^|\b)Interrupcao(\b|$)/g, "$1Interrupção$2"],
+  [/(^|\b)interrupcao(\b|$)/g, "$1interrupção$2"],
+  [/(^|\b)Aparecera(\b|$)/g, "$1Aparecerá$2"],
+  [/(^|\b)aparecera(\b|$)/g, "$1aparecerá$2"],
+  [/(^|\b)Conferencia(\b|$)/g, "$1Conferência$2"],
+  [/(^|\b)conferencia(\b|$)/g, "$1conferência$2"],
   [/(^|\b)Dashboard(\b|$)/g, "$1Visão geral$2"],
 ];
 
 const canonicalBrand = "Salão Premiun";
-const brandVariants = ["Salão Premium", "Salao Premium", "Salao Premiun", "SalãoPremium", "SalaoPremium"];
+const brandVariants = [
+  "Salão Premium",
+  "Salao Premium",
+  "Salao Premiun",
+  "SalãoPremium",
+  "SalaoPremium",
+];
 
 function walkDirectory(dir, files) {
   if (!fs.existsSync(dir)) return;
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
     if (IGNORE_DIRS.has(entry.name)) continue;
-    const full = path.join(dir, entry.name);
+    const fullPath = path.join(dir, entry.name);
     if (entry.isDirectory()) {
-      walkDirectory(full, files);
-      continue;
+      walkDirectory(fullPath, files);
+    } else if (EXTENSIONS.has(path.extname(entry.name))) {
+      files.push(fullPath);
     }
-    if (EXTENSIONS.has(path.extname(entry.name))) files.push(full);
   }
 }
 
@@ -140,7 +161,9 @@ function normalizeText(value) {
 
 function literalText(node) {
   if (!node) return null;
-  if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) return node.text;
+  if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) {
+    return node.text;
+  }
   return null;
 }
 
@@ -148,6 +171,32 @@ function propertyNameText(node) {
   if (!node) return "";
   if (ts.isIdentifier(node) || ts.isStringLiteral(node)) return node.text;
   return node.getText();
+}
+
+function jsxTagName(opening) {
+  return opening.tagName?.getText?.() || "";
+}
+
+function jsxAttributes(opening) {
+  const attrs = new Map();
+  for (const prop of opening.attributes?.properties || []) {
+    if (ts.isJsxAttribute(prop)) attrs.set(prop.name.getText(), prop);
+  }
+  return attrs;
+}
+
+function jsxAttributeTarget(attr) {
+  if (!attr?.initializer) return null;
+  if (ts.isStringLiteral(attr.initializer)) return attr.initializer;
+  if (
+    ts.isJsxExpression(attr.initializer) &&
+    attr.initializer.expression &&
+    (ts.isStringLiteral(attr.initializer.expression) ||
+      ts.isNoSubstitutionTemplateLiteral(attr.initializer.expression))
+  ) {
+    return attr.initializer.expression;
+  }
+  return null;
 }
 
 function closestAncestor(node, predicate) {
@@ -159,58 +208,43 @@ function closestAncestor(node, predicate) {
   return null;
 }
 
-function jsxTagName(node) {
-  return node.tagName?.getText?.() || "";
-}
-
-function jsxAttributes(opening) {
-  const map = new Map();
-  for (const prop of opening.attributes?.properties || []) {
-    if (!ts.isJsxAttribute(prop)) continue;
-    map.set(prop.name.getText(), prop);
-  }
-  return map;
-}
-
-function jsxAttributeTarget(attr) {
-  if (!attr?.initializer) return null;
-  if (ts.isStringLiteral(attr.initializer)) return attr.initializer;
-  if (
-    ts.isJsxExpression(attr.initializer) &&
-    attr.initializer.expression &&
-    (ts.isStringLiteral(attr.initializer.expression) || ts.isNoSubstitutionTemplateLiteral(attr.initializer.expression))
-  ) {
-    return attr.initializer.expression;
-  }
-  return null;
+function insideForm(node) {
+  return Boolean(
+    closestAncestor(
+      node,
+      (ancestor) =>
+        ts.isJsxElement(ancestor) && jsxTagName(ancestor.openingElement) === "form"
+    )
+  );
 }
 
 function collectVisibleCandidates(sourceFile) {
   const candidates = [];
-  const push = (node, target, value, kind) => {
+
+  function push(node, target, value) {
+    if (!target) return;
     const raw = String(value ?? "");
     const text = normalizeText(raw);
-    if (!text || !/[A-Za-zÀ-ÿ]/.test(text) || !target) return;
-    candidates.push({ node, target, raw, text, kind });
-  };
+    if (!text || !/[A-Za-zÀ-ÿ]/.test(text)) return;
+    candidates.push({ node, target, raw, text });
+  }
 
   function visit(node) {
-    if (ts.isJsxText(node)) push(node, node, node.getText(sourceFile), "jsx");
+    if (ts.isJsxText(node)) {
+      push(node, node, node.getText(sourceFile));
+    }
 
-    if (ts.isJsxAttribute(node)) {
-      const name = node.name.getText();
-      if (visibleAttributeNames.has(name)) {
-        const target = jsxAttributeTarget(node);
-        const value = literalText(target);
-        if (value != null) push(node, target, value, `attr:${name}`);
-      }
+    if (ts.isJsxAttribute(node) && visibleAttributeNames.has(node.name.getText())) {
+      const target = jsxAttributeTarget(node);
+      const value = literalText(target);
+      if (value !== null) push(node, target, value);
     }
 
     if (ts.isPropertyAssignment(node)) {
       const name = propertyNameText(node.name);
       if (visiblePropertyNames.has(name)) {
         const value = literalText(node.initializer);
-        if (value != null) push(node, node.initializer, value, `prop:${name}`);
+        if (value !== null) push(node, node.initializer, value);
       }
     }
 
@@ -218,28 +252,31 @@ function collectVisibleCandidates(sourceFile) {
       ts.isVariableDeclaration(node) &&
       ts.isIdentifier(node.name) &&
       node.initializer &&
-      ts.isArrayLiteralExpression(node.initializer)
+      ts.isArrayLiteralExpression(node.initializer) &&
+      /^(dias|items|steps|tabs|options|navItems)$/i.test(node.name.text)
     ) {
-      if (/^(dias|items|steps|tabs|options|navItems)$/i.test(node.name.text)) {
-        for (const element of node.initializer.elements) {
-          const value = literalText(element);
-          if (value != null) push(element, element, value, `array:${node.name.text}`);
-        }
+      for (const element of node.initializer.elements) {
+        const value = literalText(element);
+        if (value !== null) push(element, element, value);
       }
     }
 
-    if (ts.isCallExpression(node) && ts.isIdentifier(node.expression)) {
-      if (/^(setError|setErro|setOk|setSuccess|setMessage|setMensagem|alert)$/.test(node.expression.text)) {
-        const target = node.arguments[0];
-        const value = literalText(target);
-        if (value != null) push(target, target, value, `call:${node.expression.text}`);
-      }
+    if (
+      ts.isCallExpression(node) &&
+      ts.isIdentifier(node.expression) &&
+      /^(setError|setErro|setOk|setSuccess|setMessage|setMensagem|alert)$/.test(
+        node.expression.text
+      )
+    ) {
+      const target = node.arguments[0];
+      const value = literalText(target);
+      if (value !== null) push(target, target, value);
     }
 
     if (ts.isNewExpression(node) && node.expression.getText(sourceFile) === "Error") {
       const target = node.arguments?.[0];
       const value = literalText(target);
-      if (value != null) push(target, target, value, "error");
+      if (value !== null) push(target, target, value);
     }
 
     ts.forEachChild(node, visit);
@@ -257,7 +294,8 @@ function buttonLabel(node, sourceFile) {
     if (
       ts.isJsxExpression(child) &&
       child.expression &&
-      (ts.isStringLiteral(child.expression) || ts.isNoSubstitutionTemplateLiteral(child.expression))
+      (ts.isStringLiteral(child.expression) ||
+        ts.isNoSubstitutionTemplateLiteral(child.expression))
     ) {
       parts.push(child.expression.text);
     }
@@ -267,7 +305,9 @@ function buttonLabel(node, sourceFile) {
 
 function correctedCopy(raw) {
   let value = String(raw ?? "");
-  for (const variant of brandVariants) value = value.split(variant).join(canonicalBrand);
+  for (const variant of brandVariants) {
+    value = value.split(variant).join(canonicalBrand);
+  }
   for (const [pattern, replacement] of copyRules) {
     pattern.lastIndex = 0;
     value = value.replace(pattern, replacement);
@@ -280,16 +320,25 @@ function renderTarget(target, corrected) {
   if (ts.isStringLiteral(target)) return JSON.stringify(corrected);
   if (ts.isNoSubstitutionTemplateLiteral(target)) {
     const escaped = corrected
-      .replaceAll("\\", "\\\\")
-      .replaceAll("`", "\\`")
-      .replaceAll("${", "\\${");
+      .split("\\").join("\\\\")
+      .split("`").join("\\`")
+      .split("${").join("\\${");
     return `\`${escaped}\``;
   }
   return null;
 }
 
+function isDirectlyRenderedStatus(node) {
+  if (!ts.isJsxExpression(node) || !node.expression) return false;
+  if (!ts.isPropertyAccessExpression(node.expression)) return false;
+  if (node.expression.name.text !== "status") return false;
+  return ts.isJsxElement(node.parent) || ts.isJsxFragment(node.parent);
+}
+
 const files = [];
-for (const target of TARGETS) walkDirectory(path.join(ROOT, target), files);
+for (const target of TARGETS) {
+  walkDirectory(path.join(ROOT, target), files);
+}
 
 const errors = [];
 const warnings = [];
@@ -300,19 +349,30 @@ let fixedTexts = 0;
 
 for (const file of files) {
   let source = fs.readFileSync(file, "utf8");
-  const rel = path.relative(ROOT, file).replaceAll(path.sep, "/");
-  const scriptKind = file.endsWith(".tsx") || file.endsWith(".jsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS;
-  const sourceFile = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true, scriptKind);
+  const rel = path.relative(ROOT, file).split(path.sep).join("/");
+  const scriptKind =
+    file.endsWith(".tsx") || file.endsWith(".jsx")
+      ? ts.ScriptKind.TSX
+      : ts.ScriptKind.TS;
+  const sourceFile = ts.createSourceFile(
+    file,
+    source,
+    ts.ScriptTarget.Latest,
+    true,
+    scriptKind
+  );
   const candidates = collectVisibleCandidates(sourceFile);
 
   if (FIX) {
     const replacements = [];
     const seen = new Set();
+
     for (const candidate of candidates) {
       const corrected = correctedCopy(candidate.raw);
       if (corrected === candidate.raw) continue;
       const replacement = renderTarget(candidate.target, corrected);
-      if (replacement == null) continue;
+      if (replacement === null) continue;
+
       const start = candidate.target.getStart(sourceFile);
       const end = candidate.target.getEnd();
       const key = `${start}:${end}`;
@@ -335,9 +395,10 @@ for (const file of files) {
 
   for (const candidate of candidates) {
     textCount += 1;
-    const corrected = correctedCopy(candidate.raw);
-    if (corrected !== candidate.raw) {
-      errors.push(`${rel}:${lineOf(sourceFile, candidate.node)} texto visual fora do padrão PT-BR: \"${candidate.text}\".`);
+    if (correctedCopy(candidate.raw) !== candidate.raw) {
+      errors.push(
+        `${rel}:${lineOf(sourceFile, candidate.node)} texto visual fora do padrão PT-BR: "${candidate.text}".`
+      );
     }
   }
 
@@ -357,41 +418,56 @@ for (const file of files) {
         const formAction = attrs.get("formAction");
         const type = literalText(jsxAttributeTarget(attrs.get("type")));
         const disabled = attrs.has("disabled");
-        const isPrimitiveDefinition = rel === "apps/app-profissional-vite/src/components/ui/Button.tsx";
-        const inForm = Boolean(
-          closestAncestor(
-            node,
-            (ancestor) => ts.isJsxElement(ancestor) && jsxTagName(ancestor.openingElement) === "form"
-          )
-        );
+        const loading = attrs.has("loading");
+        const inForm = insideForm(node);
+        const isPrimitiveDefinition =
+          rel === "apps/app-profissional-vite/src/components/ui/Button.tsx";
         const label = ts.isJsxElement(node) ? buttonLabel(node, sourceFile) : "";
+        const labelSuffix = label ? ` ("${label}")` : "";
 
-        if (!isPrimitiveDefinition && !disabled && !onClick && !formAction && type !== "submit" && !inForm) {
-          errors.push(`${rel}:${lineOf(sourceFile, opening)} botão sem ação explícita${label ? ` (\"${label}\")` : ""}.`);
+        if (
+          !isPrimitiveDefinition &&
+          !disabled &&
+          !onClick &&
+          !formAction &&
+          type !== "submit" &&
+          !inForm
+        ) {
+          errors.push(
+            `${rel}:${lineOf(sourceFile, opening)} botão sem ação explícita${labelSuffix}.`
+          );
         }
 
         if (!disabled && !onClick && !formAction && !type && inForm) {
-          warnings.push(`${rel}:${lineOf(sourceFile, opening)} botão usa submit implícito${label ? ` (\"${label}\")` : ""}; prefira type=\"submit\".`);
+          warnings.push(
+            `${rel}:${lineOf(sourceFile, opening)} botão usa submit implícito${labelSuffix}; prefira type="submit".`
+          );
         }
 
         if (onClick) {
           const clickText = onClick.getText(sourceFile);
           if (/=>\s*\{\s*\}/.test(clickText)) {
-            errors.push(`${rel}:${lineOf(sourceFile, onClick)} botão possui onClick vazio${label ? ` (\"${label}\")` : ""}.`);
+            errors.push(
+              `${rel}:${lineOf(sourceFile, onClick)} botão possui onClick vazio${labelSuffix}.`
+            );
           }
-          if (/async\s*\(/.test(clickText) || /async\s+/.test(clickText)) {
-            if (!attrs.has("disabled") && !attrs.has("loading")) {
-              warnings.push(`${rel}:${lineOf(sourceFile, opening)} ação assíncrona sem loading/disabled visível${label ? ` (\"${label}\")` : ""}.`);
-            }
+          if (
+            (/async\s*\(/.test(clickText) || /async\s+/.test(clickText)) &&
+            !disabled &&
+            !loading
+          ) {
+            warnings.push(
+              `${rel}:${lineOf(sourceFile, opening)} ação assíncrona sem loading/disabled visível${labelSuffix}.`
+            );
           }
         }
       }
     }
 
-    if (ts.isJsxExpression(node) && ts.isPropertyAccessExpression(node.expression)) {
-      if (node.expression.name.text === "status") {
-        warnings.push(`${rel}:${lineOf(sourceFile, node)} status bruto exibido; prefira rótulo PT-BR centralizado.`);
-      }
+    if (isDirectlyRenderedStatus(node)) {
+      warnings.push(
+        `${rel}:${lineOf(sourceFile, node)} status bruto exibido; prefira rótulo PT-BR centralizado.`
+      );
     }
 
     ts.forEachChild(node, visit);
@@ -401,22 +477,35 @@ for (const file of files) {
 }
 
 if (FIX) {
-  console.log(`[ui-ptbr] ${fixedTexts} textos corrigidos com segurança em ${fixedFiles} arquivos visuais.`);
+  console.log(
+    `[ui-ptbr] ${fixedTexts} textos corrigidos com segurança em ${fixedFiles} arquivos visuais.`
+  );
   process.exit(0);
 }
 
-console.log(`[ui-audit] ${files.length} arquivos, ${buttonCount} botões e ${textCount} textos visuais analisados.`);
+console.log(
+  `[ui-audit] ${files.length} arquivos, ${buttonCount} botões e ${textCount} textos visuais analisados.`
+);
 
-if (warnings.length) {
-  console.log(`\n[ui-audit] AVISOS (${warnings.length})`);
-  for (const warning of [...new Set(warnings)].slice(0, 250)) console.log(`- ${warning}`);
+const uniqueWarnings = [...new Set(warnings)];
+const uniqueErrors = [...new Set(errors)];
+
+if (uniqueWarnings.length) {
+  console.log(`\n[ui-audit] AVISOS (${uniqueWarnings.length})`);
+  for (const warning of uniqueWarnings.slice(0, 250)) {
+    console.log(`- ${warning}`);
+  }
 }
 
-if (errors.length) {
-  console.error(`\n[ui-audit] ERROS (${errors.length})`);
-  for (const error of [...new Set(errors)].slice(0, 300)) console.error(`- ${error}`);
+if (uniqueErrors.length) {
+  console.error(`\n[ui-audit] ERROS (${uniqueErrors.length})`);
+  for (const error of uniqueErrors.slice(0, 300)) {
+    console.error(`- ${error}`);
+  }
   console.error("\nCorrija os botões acima antes de promover a interface.");
   process.exit(1);
 }
 
-console.log("[ui-audit] OK: sem botão morto ou texto PT-BR conhecido incorreto nas superfícies auditadas.");
+console.log(
+  "[ui-audit] OK: sem botão morto ou texto PT-BR conhecido incorreto nas superfícies auditadas."
+);
