@@ -621,7 +621,7 @@ export default function ClientesPage() {
                           <AppStatusBadge status={item.appStatus} />
                           {Number(item.cashback || 0) > 0 ? (
                             <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-800">
-                              Credito{" "}
+                              Crédito{" "}
                               {Number(item.cashback || 0).toLocaleString("pt-BR", {
                                 style: "currency",
                                 currency: "BRL",

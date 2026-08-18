@@ -131,7 +131,12 @@ export default function ClientSalonDiscovery({
 
         <div className="mt-10 flex items-center justify-between">
           <h2 className="text-2xl font-black">Salões para você</h2>
-          <button className="inline-flex items-center gap-1 text-lg font-bold text-[#f5b83d]">
+          <button
+            type="button"
+            onClick={() => setLocalSearch("")}
+            disabled={!localSearch.trim()}
+            className="inline-flex items-center gap-1 text-lg font-bold text-[#f5b83d] transition disabled:cursor-default disabled:opacity-45"
+          >
             Ver todos
             <ChevronRight size={22} />
           </button>

@@ -1,5 +1,6 @@
 "use client";
 
+import { statusPtBR } from "@/core/i18n/pt-BR";
 import type { ComandaResumo } from "./page-types";
 
 type Props = {
@@ -45,7 +46,7 @@ export default function AgendaModalComandaDecision({
               <div className="font-semibold text-zinc-900">
                 Comanda #{comanda.numero}
               </div>
-              <div className="text-sm text-zinc-500">Status: {comanda.status}</div>
+              <div className="text-sm text-zinc-500">Status: {statusPtBR(comanda.status)}</div>
             </div>
 
             <span className="text-sm font-semibold text-zinc-700">Usar</span>
@@ -57,14 +58,15 @@ export default function AgendaModalComandaDecision({
         <button
           type="button"
           onClick={onClose}
-          className="rounded-2xl border border-zinc-300 px-4 py-2.5 text-sm font-semibold text-zinc-700"
+          disabled={loading}
+          className="rounded-2xl border border-zinc-300 px-4 py-2.5 text-sm font-semibold text-zinc-700 disabled:opacity-60"
         >
           Cancelar
         </button>
 
         <button
           type="button"
-          onClick={onCreateNew}
+          onClick={() => void onCreateNew()}
           disabled={loading}
           className="rounded-2xl bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
         >
@@ -79,8 +81,8 @@ export default function AgendaModalComandaDecision({
   }
 
   return (
-    <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/45 p-4">
-      <div className="w-full max-w-md">{content}</div>
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 p-4">
+      <div className="w-full max-w-lg">{content}</div>
     </div>
   );
 }

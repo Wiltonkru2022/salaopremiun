@@ -130,7 +130,7 @@ function ProfileBody({
           <div className="space-y-4">
             <div className="grid gap-3 sm:grid-cols-2">
               <ProfileStat
-                label="Historico"
+                label="Histórico"
                 value={`${historico.length} agendamento${historico.length === 1 ? "" : "s"}`}
                 helper="Ultimos agendamentos da cliente"
               />
@@ -147,7 +147,7 @@ function ProfileBody({
                 tone="success"
               />
               <ProfileStat
-                label="Ultima observacao"
+                label="Ultima observação"
                 value={
                   historico.find((item) => item.observacoes)?.observacoes ||
                   "Sem observacoes salvas."
@@ -203,7 +203,7 @@ function ProfileBody({
                   <div className="mt-3 rounded-[16px] bg-zinc-50 px-3 py-2.5 text-sm text-zinc-600">
                     <div className="mb-1 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-400">
                       <MessageSquareText size={12} />
-                      Observacoes
+                      Observações
                     </div>
                     <div className="break-words">
                       {item.observacoes || "Sem observacoes registradas."}

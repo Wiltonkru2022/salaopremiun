@@ -10,7 +10,7 @@ export const metadata: Metadata = {
   title: "App Cliente",
   applicationName: "Salão Premium Cliente",
   description:
-    "Agende horários, acompanhe visitas e avalie atendimentos no app cliente do SalãoPremium.",
+    "Agende horários, acompanhe visitas e avalie atendimentos no app cliente do Salão Premiun.",
   manifest: "/app-cliente/manifest.webmanifest",
   icons: {
     icon: "/app-brand-icon.svg",

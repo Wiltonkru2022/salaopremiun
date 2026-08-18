@@ -7,7 +7,7 @@ import { ONBOARDING_DONE_KEY } from "@/components/client-app/ClientInstallOnboar
 
 const steps = [
   {
-    title: "Bem-vindo ao Salão Premium",
+    title: "Bem-vindo ao Salão Premiun",
     text: "Encontre salões, veja serviços, escolha profissionais e agende sem precisar ligar.",
     icon: Sparkles,
     action: "Comecar",

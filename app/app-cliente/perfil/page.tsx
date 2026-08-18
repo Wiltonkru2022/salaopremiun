@@ -74,19 +74,19 @@ export default async function ClientePerfilPage({
   const initial = (profile.nome || session.nome || "C").slice(0, 1).toUpperCase();
 
   return (
-    <ClientAppFrame title="Perfil" subtitle="Sua conta no Salão Premium.">
+    <ClientAppFrame title="Perfil" subtitle="Sua conta no Salão Premiun.">
       <section className="mx-auto min-h-dvh max-w-3xl bg-white px-5 pb-28 pt-[calc(env(safe-area-inset-top)+1.2rem)] md:px-6">
         <header className="flex items-start justify-between">
           <div>
             <div className="inline-flex items-center gap-2 text-[13px] font-black uppercase tracking-[0.24em] text-[#9b6110]">
               <Sparkles size={18} />
-              Salão Premium Cliente
+              Salão Premiun Cliente
             </div>
             <h1 className="mt-5 text-[2.2rem] font-black leading-none tracking-[-0.05em] text-zinc-950">
               Perfil
             </h1>
             <p className="mt-3 text-xl text-zinc-500">
-              Sua conta no Salão Premium.
+              Sua conta no Salão Premiun.
             </p>
           </div>
           <Link

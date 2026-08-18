@@ -6,7 +6,7 @@ export default function AppClienteNotFound() {
       <section className="mx-auto flex min-h-[72dvh] max-w-md flex-col justify-center">
         <div className="rounded-[32px] border border-zinc-200 bg-white p-7 text-center shadow-sm">
           <p className="text-xs font-black uppercase tracking-[0.22em] text-[#8a5a1f]">
-            Salão Premium Cliente
+            Salão Premiun Cliente
           </p>
           <h1 className="mt-4 text-3xl font-black tracking-tight">
             Página não encontrada

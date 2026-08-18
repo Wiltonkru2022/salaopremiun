@@ -4,7 +4,6 @@ import type { ReactNode } from "react";
 import {
   ArrowLeft,
   CalendarDays,
-  ChevronDown,
   CreditCard,
   Eye,
   Lock,
@@ -255,15 +254,11 @@ export default function AgendaSidebar(props: Props) {
               </section>
 
               <section className="rounded-[18px] border border-zinc-200/80 bg-white/98 p-2.5 shadow-[0_10px_24px_rgba(15,23,42,0.045)] transition duration-300 hover:-translate-y-[1px] hover:shadow-[0_18px_40px_rgba(15,23,42,0.07)]">
-                <button
-                  type="button"
-                  className="flex w-full items-center justify-between gap-3 text-left"
-                >
+                <div className="flex w-full items-center justify-between gap-3 text-left">
                   <span className="truncate text-[1.15rem] font-semibold tracking-[-0.03em] text-slate-900 capitalize">
                     {currentMonthLabel}
                   </span>
-                  <ChevronDown size={18} className="shrink-0 text-zinc-500" />
-                </button>
+                </div>
 
                 <div className="mt-2.5 grid grid-cols-2 gap-2">
                   <MetricCard

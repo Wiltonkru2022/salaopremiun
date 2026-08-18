@@ -24,7 +24,7 @@ export default function ClienteTermosPage() {
               atendimento definidas pelo salão.
             </p>
             <p>
-              O Salão Premium organiza a experiência digital, mas cada salão é
+              O Salão Premiun organiza a experiência digital, mas cada salão é
               responsável pelos serviços prestados, preços, profissionais,
               horários disponíveis e atendimento presencial.
             </p>

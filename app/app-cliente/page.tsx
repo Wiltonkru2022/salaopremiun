@@ -60,13 +60,13 @@ export default async function AppClienteIndexPage() {
   const greeting = firstName ? `Olá, ${firstName}!` : "Olá, seja bem-vindo!";
 
   return (
-    <ClientAppFrame title="Início" subtitle="Salão Premium">
+    <ClientAppFrame title="Início" subtitle="Salão Premiun">
       <section className="min-h-dvh bg-[#050505] px-5 pb-28 pt-[calc(env(safe-area-inset-top)+1.25rem)] text-white">
         <div className="mx-auto max-w-md">
           <header className="flex items-center justify-between">
             <div className="inline-flex items-center gap-2 text-[13px] font-black uppercase tracking-[0.24em] text-[#f5c15a]">
               <Sparkles size={22} />
-              Salão Premium
+              Salão Premiun
             </div>
             <Link
               href="/app-cliente/notificacoes"
