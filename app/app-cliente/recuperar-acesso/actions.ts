@@ -27,6 +27,15 @@ export type RecoverClienteAccessState = {
   email?: string | null;
 };
 
+const EMAIL_PROVIDER_ERROR =
+  "Não foi possível enviar o código por e-mail agora. Tente novamente em alguns minutos.";
+
+function reportRecoveryError(context: string, error: unknown) {
+  console.error(`[cliente-app-recovery] ${context}`, {
+    message: error instanceof Error ? error.message : "erro_desconhecido",
+  });
+}
+
 async function requestMetadata() {
   const h = await headers();
   return {
@@ -43,17 +52,22 @@ export async function requestClienteRecoveryEmailAction(
   formData: FormData
 ): Promise<RecoverClienteAccessState> {
   const email = String(formData.get("email") || "");
-  const result = await requestClienteRecoveryCodeByEmail({
-    email,
-    ...(await requestMetadata()),
-  });
-  if (!result.ok) return { error: result.error, success: null, step: "choose" };
-  return {
-    error: null,
-    success: result.message,
-    step: "email-code",
-    email: email.trim().toLowerCase(),
-  };
+  try {
+    const result = await requestClienteRecoveryCodeByEmail({
+      email,
+      ...(await requestMetadata()),
+    });
+    if (!result.ok) return { error: result.error, success: null, step: "choose" };
+    return {
+      error: null,
+      success: result.message,
+      step: "email-code",
+      email: email.trim().toLowerCase(),
+    };
+  } catch (error) {
+    reportRecoveryError("falha ao solicitar recuperação por e-mail", error);
+    return { error: EMAIL_PROVIDER_ERROR, success: null, step: "choose" };
+  }
 }
 
 export async function confirmClienteRecoveryEmailAction(
@@ -95,15 +109,20 @@ export async function requestClienteRecoveryIdentityEmailAction(
 ): Promise<RecoverClienteAccessState> {
   const token = String(formData.get("token") || "");
   const email = String(formData.get("email") || "");
-  const result = await requestClienteRecoveryCodeByIdentity({
-    token,
-    email,
-    ...(await requestMetadata()),
-  });
-  if (!result.ok) {
-    return { error: result.error, success: null, step: "identity-email", token, email };
+  try {
+    const result = await requestClienteRecoveryCodeByIdentity({
+      token,
+      email,
+      ...(await requestMetadata()),
+    });
+    if (!result.ok) {
+      return { error: result.error, success: null, step: "identity-email", token, email };
+    }
+    return { error: null, success: result.message, step: "identity-code", token, email };
+  } catch (error) {
+    reportRecoveryError("falha ao enviar código após validar CPF e nascimento", error);
+    return { error: EMAIL_PROVIDER_ERROR, success: null, step: "identity-email", token, email };
   }
-  return { error: null, success: result.message, step: "identity-code", token, email };
 }
 
 export async function confirmClienteRecoveryIdentityAction(
@@ -131,13 +150,18 @@ export async function requestClienteChangeEmailAction(
   if (confirmEmail && email.trim().toLowerCase() !== confirmEmail.trim().toLowerCase()) {
     return { error: "A confirmação do e-mail não confere.", success: null, step: "change-email", token };
   }
-  const result = await requestClienteEmailChangeCode({
-    token,
-    newEmail: email,
-    ...(await requestMetadata()),
-  });
-  if (!result.ok) return { error: result.error, success: null, step: "change-email", token, email };
-  return { error: null, success: result.message, step: "change-email-code", token, email };
+  try {
+    const result = await requestClienteEmailChangeCode({
+      token,
+      newEmail: email,
+      ...(await requestMetadata()),
+    });
+    if (!result.ok) return { error: result.error, success: null, step: "change-email", token, email };
+    return { error: null, success: result.message, step: "change-email-code", token, email };
+  } catch (error) {
+    reportRecoveryError("falha ao enviar código para o novo e-mail", error);
+    return { error: EMAIL_PROVIDER_ERROR, success: null, step: "change-email", token, email };
+  }
 }
 
 export async function confirmClienteChangeEmailAction(
