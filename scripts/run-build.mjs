@@ -40,6 +40,7 @@ const nodeBin = process.execPath;
 const npmBin = process.platform === "win32" ? "npm.cmd" : "npm";
 const nextBin = "./node_modules/next/dist/bin/next";
 const typecheckScript = "./scripts/run-typecheck.mjs";
+const uiAuditScript = "./scripts/audit/ui-quality-audit.mjs";
 const professionalAppDir = "apps/app-profissional-vite";
 
 const supabasePublicKey = String(
@@ -60,6 +61,12 @@ const professionalAppEnv = {
   VITE_SUPABASE_PUBLISHABLE_KEY: supabasePublicKey,
   VITE_SUPABASE_ANON_KEY: supabasePublicKey,
 };
+
+// Valida as tres interfaces oficiais antes de gerar qualquer bundle:
+// App Profissional Vite, App Cliente e painel real em app/(painel).
+if (process.env.SKIP_UI_AUDIT !== "1") {
+  await run(nodeBin, [uiAuditScript]);
+}
 
 // O app profissional e um Vite/PWA independente servido a partir de
 // public/app-profissional. Sempre gere esse bundle antes do Next build para
