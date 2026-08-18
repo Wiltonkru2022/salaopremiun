@@ -6,11 +6,9 @@ import {
   CalendarDays,
   ChevronRight,
   Coffee,
-  Heart,
   MapPin,
   ParkingSquare,
   Scissors,
-  Share2,
   Sparkles,
   Star,
   Wifi,
@@ -18,6 +16,7 @@ import {
 } from "lucide-react";
 import ClientAppFrame from "@/components/client-app/ClientAppFrame";
 import ClientAppDrawerNav from "@/components/client-app/ClientAppDrawerNav";
+import ClientSalonHeroActions from "@/components/client-app/ClientSalonHeroActions";
 import ClientSalonSectionTabs from "@/components/client-app/ClientSalonSectionTabs";
 import { generateClientSalonMetadata } from "@/lib/client-app/salon-metadata";
 import {
@@ -105,21 +104,14 @@ export default async function ClienteSalonPage({
               >
                 <ArrowLeft size={32} />
               </Link>
-              <div className="flex gap-3">
-                <a
-                  href={publicPath}
-                  className="flex h-16 w-16 items-center justify-center rounded-full bg-black/45 text-white backdrop-blur"
-                  aria-label="Compartilhar"
-                >
-                  <Share2 size={30} />
-                </a>
-                <button
-                  type="button"
-                  className="flex h-16 w-16 items-center justify-center rounded-full bg-black/45 text-white backdrop-blur"
-                  aria-label="Favoritar"
-                >
-                  <Heart size={34} fill={isFavorite && hasSession ? "currentColor" : "none"} />
-                </button>
+              <div className="flex items-center gap-3">
+                <ClientSalonHeroActions
+                  idSalao={salao.id}
+                  salaoNome={salao.nome}
+                  publicPath={publicPath}
+                  initialFavorite={isFavorite}
+                  canFavorite={hasSession}
+                />
                 <div className="flex h-16 w-16 items-center justify-center rounded-full bg-black/45 text-white backdrop-blur">
                   <ClientAppDrawerNav isDark />
                 </div>
@@ -157,7 +149,7 @@ export default async function ClienteSalonPage({
 
               <div className="mt-3 inline-flex min-h-11 items-center gap-2 rounded-2xl bg-[#fff4df] px-4 text-base font-semibold text-[#9a6f12]">
                 <Sparkles size={20} />
-                Salão Premium
+                Salão Premiun
               </div>
 
               <p className="mt-7 text-[1.02rem] leading-[1.7] text-zinc-900 sm:text-[1.18rem]">
