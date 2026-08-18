@@ -1,4 +1,4 @@
-﻿import { FormEvent, useMemo, useState } from "react";
+﻿import { FormEvent, useState } from "react";
 import { ArrowLeft, CalendarPlus2, Edit3, Phone, Plus, Receipt, Search } from "lucide-react";
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
@@ -9,6 +9,29 @@ import type { Agendamento, Cliente, Comanda } from "../types/database";
 
 type Payload = Pick<Cliente, "nome" | "telefone" | "observacoes">;
 const PAGE_SIZE = 10;
+
+const STATUS_LABELS: Record<string, string> = {
+  ativo: "Ativo",
+  inativo: "Inativo",
+  pendente: "Pendente",
+  confirmado: "Confirmado",
+  atendido: "Atendido",
+  em_atendimento: "Em atendimento",
+  aguardando_pagamento: "Aguardando pagamento",
+  cancelado: "Cancelado",
+  faltou: "Faltou",
+};
+
+function statusLabel(value?: string | null) {
+  const normalized = String(value || "").trim().toLowerCase();
+  return STATUS_LABELS[normalized] || (normalized ? normalized.replaceAll("_", " ") : "Não informado");
+}
+
+function dateLabel(value?: string | null) {
+  const date = String(value || "").slice(0, 10);
+  if (!date) return "Sem data";
+  return new Date(`${date}T12:00:00`).toLocaleDateString("pt-BR");
+}
 
 export function ClientesPage({
   clientes,
@@ -47,7 +70,7 @@ export function ClientesPage({
 
   return (
     <div className="space-y-4">
-      <Button className="w-full" onClick={() => setCreating(true)}>
+      <Button type="button" className="w-full" onClick={() => setCreating(true)}>
         <Plus size={18} />
         Novo cliente
       </Button>
@@ -56,7 +79,7 @@ export function ClientesPage({
         <div className="flex items-center justify-between gap-3">
           <div>
             <h2 className="text-xl font-black tracking-[-0.04em]">Clientes</h2>
-            <p className="text-sm font-bold text-zinc-500">Toque para ver historico e observacoes.</p>
+            <p className="text-sm font-bold text-zinc-500">Toque para ver histórico e observações.</p>
           </div>
           <span className="rounded-full bg-zinc-100 px-3 py-1 text-xs font-black text-zinc-600">{filtered.length}</span>
         </div>
@@ -71,7 +94,7 @@ export function ClientesPage({
           const historico = agendamentos.filter((item) => item.cliente_id === cliente.id);
           return (
             <Card key={cliente.id}>
-              <button className="block w-full text-left" onClick={() => setSelected(cliente)}>
+              <button type="button" className="block w-full text-left" onClick={() => setSelected(cliente)}>
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <h3 className="truncate text-lg font-black tracking-[-0.03em]">{cliente.nome}</h3>
@@ -79,9 +102,13 @@ export function ClientesPage({
                   </div>
                   <span className="rounded-full bg-zinc-100 px-3 py-1 text-xs font-black text-zinc-600">{historico.length} ag.</span>
                 </div>
-                {historico.length ? <p className="mt-3 text-sm font-semibold text-zinc-500">Ultimo horario: {historico[0]?.data} as {historico[0]?.hora_inicio.slice(0, 5)}</p> : null}
+                {historico.length ? (
+                  <p className="mt-3 text-sm font-semibold text-zinc-500">
+                    Último horário: {dateLabel(historico[0]?.data)} às {historico[0]?.hora_inicio.slice(0, 5)}
+                  </p>
+                ) : null}
               </button>
-              <Button className="mt-3 h-9 px-3" variant="secondary" onClick={() => setEditing(cliente)}>
+              <Button type="button" className="mt-3 h-9 px-3" variant="secondary" onClick={() => setEditing(cliente)}>
                 <Edit3 size={15} />
                 Editar cliente
               </Button>
@@ -92,8 +119,8 @@ export function ClientesPage({
 
       {filtered.length > PAGE_SIZE ? (
         <div className="grid grid-cols-2 gap-2">
-          <Button variant="secondary" disabled={page === 1} onClick={() => setPage((current) => Math.max(1, current - 1))}>Anterior</Button>
-          <Button variant="secondary" disabled={page === totalPages} onClick={() => setPage((current) => Math.min(totalPages, current + 1))}>Proxima</Button>
+          <Button type="button" variant="secondary" disabled={page === 1} onClick={() => setPage((current) => Math.max(1, current - 1))}>Anterior</Button>
+          <Button type="button" variant="secondary" disabled={page === totalPages} onClick={() => setPage((current) => Math.min(totalPages, current + 1))}>Próxima</Button>
         </div>
       ) : null}
 
@@ -106,8 +133,10 @@ export function ClientesPage({
           <ClienteForm
             initial={editing}
             onSubmit={async (payload) => {
-              await onEdit?.(editing.id, payload);
+              if (!onEdit) throw new Error("Edição de cliente indisponível.");
+              await onEdit(editing.id, payload);
               setEditing(null);
+              if (selected?.id === editing.id) setSelected(null);
             }}
           />
         ) : null}
@@ -122,7 +151,7 @@ function ClienteDetail({ cliente, agendamentos, comandas, onBack, onEdit }: { cl
 
   return (
     <div className="space-y-4 pb-6">
-      <button className="inline-flex items-center gap-2 text-sm font-black text-zinc-700" onClick={onBack}>
+      <button type="button" className="inline-flex items-center gap-2 text-sm font-black text-zinc-700" onClick={onBack}>
         <ArrowLeft size={18} />
         Voltar para clientes
       </button>
@@ -137,7 +166,7 @@ function ClienteDetail({ cliente, agendamentos, comandas, onBack, onEdit }: { cl
             <h2 className="mt-3 text-2xl font-black tracking-[-0.05em]">{cliente.nome}</h2>
             <p className="mt-2 text-sm font-semibold text-zinc-300">{cliente.telefone || cliente.whatsapp || "Sem telefone"}</p>
           </div>
-          <Button variant="secondary" className="h-10 px-3" onClick={onEdit}>
+          <Button type="button" variant="secondary" className="h-10 px-3" onClick={onEdit}>
             <Edit3 size={15} />
             Editar
           </Button>
@@ -147,7 +176,7 @@ function ClienteDetail({ cliente, agendamentos, comandas, onBack, onEdit }: { cl
       <div className="grid grid-cols-2 gap-3">
         <Card>
           <Receipt className="text-emerald-600" size={20} />
-          <div className="mt-4 text-xs font-black uppercase tracking-[0.18em] text-zinc-400">Credito gerado</div>
+          <div className="mt-4 text-xs font-black uppercase tracking-[0.18em] text-zinc-400">Crédito gerado</div>
           <div className="mt-1 text-xl font-black">{money(creditoGerado)}</div>
         </Card>
         <Card>
@@ -158,33 +187,33 @@ function ClienteDetail({ cliente, agendamentos, comandas, onBack, onEdit }: { cl
       </div>
 
       <Card>
-        <h2 className="text-xl font-black tracking-[-0.04em]">Informacoes</h2>
+        <h2 className="text-xl font-black tracking-[-0.04em]">Informações</h2>
         <div className="mt-3 grid gap-2 text-sm font-bold text-zinc-600">
-          <div>Email: {cliente.email || "Sem email"}</div>
-          <div>WhatsApp: {cliente.whatsapp || cliente.telefone || "Sem WhatsApp"}</div>
-          <div>Status: {cliente.status || "Ativo"}</div>
+          <div>E-mail: {cliente.email || "Não informado"}</div>
+          <div>WhatsApp: {cliente.whatsapp || cliente.telefone || "Não informado"}</div>
+          <div>Status: {statusLabel(cliente.status)}</div>
         </div>
         {cliente.observacoes ? <p className="mt-3 rounded-2xl bg-zinc-50 p-3 text-sm font-semibold leading-6 text-zinc-600">{cliente.observacoes}</p> : null}
       </Card>
 
       <Card>
-        <h2 className="text-xl font-black tracking-[-0.04em]">Historico de atendimentos</h2>
+        <h2 className="text-xl font-black tracking-[-0.04em]">Histórico de atendimentos</h2>
         <div className="mt-4 space-y-3">
           {agendamentos.length ? agendamentos.map((item) => (
             <div key={item.id} className="rounded-2xl border border-zinc-200 bg-zinc-50 p-3">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <div className="text-sm font-black text-zinc-950">{item.data} as {item.hora_inicio.slice(0, 5)}</div>
-                  <div className="mt-1 text-sm font-bold text-zinc-600">{item.servicos?.nome || "Servico"}</div>
-                  <div className="mt-1 text-xs font-black uppercase tracking-[0.14em] text-zinc-400">{item.status}</div>
+                  <div className="text-sm font-black text-zinc-950">{dateLabel(item.data)} às {item.hora_inicio.slice(0, 5)}</div>
+                  <div className="mt-1 text-sm font-bold text-zinc-600">{item.servicos?.nome || "Serviço"}</div>
+                  <div className="mt-1 text-xs font-black uppercase tracking-[0.14em] text-zinc-400">{statusLabel(item.status)}</div>
                 </div>
                 <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-zinc-600">{item.profissional_nome || "Profissional"}</span>
               </div>
               <div className="mt-3 rounded-2xl bg-white p-3 text-sm font-semibold leading-6 text-zinc-600">
-                Observacao do atendimento: {item.observacoes || "Sem observacao registrada."}
+                Observação do atendimento: {item.observacoes || "Sem observação registrada."}
               </div>
             </div>
-          )) : <div className="rounded-2xl border border-dashed border-zinc-300 p-6 text-center text-sm font-bold text-zinc-500">Sem historico ainda.</div>}
+          )) : <div className="rounded-2xl border border-dashed border-zinc-300 p-6 text-center text-sm font-bold text-zinc-500">Sem histórico ainda.</div>}
         </div>
       </Card>
     </div>
@@ -196,20 +225,34 @@ function ClienteForm({ initial, onSubmit }: { initial?: Cliente; onSubmit: (payl
   const [telefone, setTelefone] = useState(initial?.telefone || "");
   const [observacoes, setObservacoes] = useState(initial?.observacoes || "");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   async function submit(event: FormEvent) {
     event.preventDefault();
+    if (loading) return;
+    if (!nome.trim()) {
+      setError("Informe o nome da cliente.");
+      return;
+    }
+
     setLoading(true);
-    await onSubmit({ nome, telefone, observacoes });
-    setLoading(false);
+    setError("");
+    try {
+      await onSubmit({ nome: nome.trim(), telefone: telefone.trim(), observacoes: observacoes.trim() });
+    } catch (submitError) {
+      setError(submitError instanceof Error ? submitError.message : "Não foi possível salvar a cliente.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
     <form onSubmit={submit} className="grid gap-3">
       <Field label="Nome"><Input required value={nome} onChange={(event) => setNome(event.target.value)} /></Field>
       <Field label="Telefone"><Input inputMode="tel" value={telefone} onChange={(event) => setTelefone(event.target.value)} /></Field>
-      <Field label="Observacoes"><Textarea value={observacoes} onChange={(event) => setObservacoes(event.target.value)} /></Field>
-      <Button loading={loading}>Salvar cliente</Button>
+      <Field label="Observações"><Textarea value={observacoes} onChange={(event) => setObservacoes(event.target.value)} /></Field>
+      {error ? <div role="alert" className="rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-bold text-red-700">{error}</div> : null}
+      <Button type="submit" loading={loading}>Salvar cliente</Button>
     </form>
   );
 }
