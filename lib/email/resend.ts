@@ -20,7 +20,7 @@ export async function sendResendEmail(input: {
   replyTo?: string;
   idempotencyKey?: string;
 }) {
-  const apiKey = process.env.RESEND_API_KEY;
+  const apiKey = process.env.RESEND_API_KEY?.trim();
 
   if (!apiKey) {
     throw new Error("RESEND_API_KEY não configurada.");
