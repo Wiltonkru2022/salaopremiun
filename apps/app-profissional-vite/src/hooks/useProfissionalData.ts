@@ -178,14 +178,22 @@ export function useProfissionalData(
       await refresh();
     }
 
-    async function excluirAgendamento(id: string, targetProfissionalId?: string) {
-      const actorId = targetProfissionalId || profissionalId;
-      if (!actorId) return;
-      const { error } = await supabase.rpc("app_profissional_excluir_agenda_item", {
-        p_profissional_id: actorId,
-        p_item_id: id
+    async function excluirAgendamento(id: string, _targetProfissionalId?: string) {
+      if (!profissionalId) return;
+      const response = await fetch("/api/app-profissional/agenda/acao", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "remover", agendamentoId: id }),
       });
-      if (error) throw new Error(error.message);
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload.ok) {
+        throw new Error(String(payload.error || "Nao foi possivel cancelar ou excluir o item da agenda."));
+      }
+      trackProfessionalProductivity(
+        payload.kind === "bloqueio" ? "bloqueio_excluido" : "agendamento_cancelado",
+        { entityId: id }
+      );
       await refresh();
     }
 
