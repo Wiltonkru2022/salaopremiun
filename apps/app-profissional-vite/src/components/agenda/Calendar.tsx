@@ -311,9 +311,14 @@ export function Calendar({
                   <div className="mt-2 rounded-full bg-white/60 px-3 py-1 text-xs font-black text-zinc-800">
                     Profissional: {item.profissional_nome || profissionais.find((profissional) => profissional.id === item.profissional_id)?.nome || profissionalAtual.nome_exibicao || profissionalAtual.nome}
                   </div>
-                  {formatCreatedAt(item.created_at) ? (
-                    <div className="mt-2 text-xs font-bold opacity-70">
-                      Agendado em {formatCreatedAt(item.created_at)}
+                  {item.status !== "bloqueado" && formatCreatedAt(item.agendado_em || item.created_at) ? (
+                    <div className="mt-2 rounded-xl border border-white/60 bg-white/55 px-3 py-2 text-xs font-bold text-zinc-800">
+                      <div>
+                        Agendado por <span className="font-black">{item.agendado_por_nome || "Nao identificado"}</span>
+                      </div>
+                      <div className="mt-0.5 opacity-75">
+                        {bookingSourceLabel(item.origem)} • {formatCreatedAt(item.agendado_em || item.created_at)}
+                      </div>
                     </div>
                   ) : null}
                 </div>
@@ -375,6 +380,18 @@ export function Calendar({
             <Info label="Profissional" value={details.profissional_nome || profissionais.find((item) => item.id === details.profissional_id)?.nome || profissionalAtual.nome} />
             <Info label="Horario" value={`${details.data} das ${details.hora_inicio} as ${details.hora_fim}`} />
             <Info label="Status" value={details.status.replace("_", " ")} />
+            {details.status !== "bloqueado" ? (
+              <>
+                <Info
+                  label="Agendado por"
+                  value={`${details.agendado_por_nome || "Nao identificado"} • ${bookingSourceLabel(details.origem)}`}
+                />
+                <Info
+                  label="Agendado em"
+                  value={formatCreatedAt(details.agendado_em || details.created_at) || "Nao informado"}
+                />
+              </>
+            ) : null}
             <Info
               label="Confirmação da cliente"
               value={
@@ -620,15 +637,26 @@ function Info({ label, value }: { label: string; value: string }) {
   );
 }
 
+function bookingSourceLabel(value?: string | null) {
+  const origem = String(value || "").trim().toLowerCase();
+  if (origem === "app_cliente") return "App Cliente";
+  if (origem === "app_profissional") return "App Profissional";
+  if (origem === "painel" || origem === "manual") return "Painel do salao";
+  return "Origem nao identificada";
+}
+
 function formatCreatedAt(value?: string | null) {
   if (!value) return null;
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return null;
-  return new Intl.DateTimeFormat("pt-BR", {
+  const data = new Intl.DateTimeFormat("pt-BR", {
     day: "2-digit",
     month: "2-digit",
-    year: "numeric",
+    year: "numeric"
+  }).format(date);
+  const hora = new Intl.DateTimeFormat("pt-BR", {
     hour: "2-digit",
     minute: "2-digit"
   }).format(date);
+  return `${data} as ${hora}`;
 }
