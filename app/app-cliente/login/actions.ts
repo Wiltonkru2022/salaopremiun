@@ -7,6 +7,7 @@ import {
   loginClienteAppByCpfNascimento,
   loginClienteAppByEmailSenha,
 } from "@/app/services/cliente-app/auth";
+import { assertClienteCpfLoginAllowed } from "@/lib/client-app/login-rate-limit";
 
 export type LoginClienteState = { error: string | null };
 
@@ -28,6 +29,15 @@ export async function loginClienteAction(
   const idSalao = String(formData.get("salao") || "").trim() || null;
   const next = String(formData.get("next") || "").trim();
   const metadata = await getRequestMetadata();
+
+  try {
+    const limit = await assertClienteCpfLoginAllowed({ cpf, ip: metadata.ip });
+    if (!limit.allowed) {
+      return { error: "Muitas tentativas de acesso. Aguarde alguns minutos e tente novamente." };
+    }
+  } catch {
+    return { error: "Não foi possível validar o acesso agora. Tente novamente." };
+  }
 
   const result = await loginClienteAppByCpfNascimento({
     cpf,
