@@ -42,10 +42,30 @@ const nextBin = "./node_modules/next/dist/bin/next";
 const typecheckScript = "./scripts/run-typecheck.mjs";
 const professionalAppDir = "apps/app-profissional-vite";
 
+// O Next usa NEXT_PUBLIC_SUPABASE_*. O Vite so expoe variaveis VITE_*.
+// Reaproveite as mesmas credenciais publicas no build do PWA para impedir
+// que o bundle de producao caia em URLs placeholder como example.supabase.co.
+const professionalAppEnv = {
+  VITE_SUPABASE_URL: String(
+    process.env.VITE_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || ""
+  ).trim(),
+  VITE_SUPABASE_ANON_KEY: String(
+    process.env.VITE_SUPABASE_ANON_KEY ||
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+      ""
+  ).trim(),
+};
+
 // O app profissional e um Vite/PWA independente servido a partir de
 // public/app-profissional. Sempre gere esse bundle antes do Next build para
 // impedir que a Vercel publique fontes novos com assets antigos ja commitados.
 if (process.env.SKIP_PROFESSIONAL_BUILD !== "1") {
+  if (!professionalAppEnv.VITE_SUPABASE_URL || !professionalAppEnv.VITE_SUPABASE_ANON_KEY) {
+    throw new Error(
+      "Build do app profissional exige NEXT_PUBLIC_SUPABASE_URL e NEXT_PUBLIC_SUPABASE_ANON_KEY (ou os equivalentes VITE_SUPABASE_*)."
+    );
+  }
+
   await run(npmBin, [
     "ci",
     "--prefix",
@@ -54,7 +74,11 @@ if (process.env.SKIP_PROFESSIONAL_BUILD !== "1") {
     "--no-audit",
     "--no-fund",
   ]);
-  await run(npmBin, ["--prefix", professionalAppDir, "run", "build"]);
+  await run(
+    npmBin,
+    ["--prefix", professionalAppDir, "run", "build"],
+    professionalAppEnv
+  );
 }
 
 if (process.env.SKIP_PREBUILD_TYPECHECK !== "1") {
