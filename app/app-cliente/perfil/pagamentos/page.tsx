@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowLeft, ReceiptText } from "lucide-react";
 import ClientAppFrame from "@/components/client-app/ClientAppFrame";
 import PaginationLinks from "@/components/ui/PaginationLinks";
+import { statusPtBR } from "@/core/i18n/pt-BR";
 import { listClienteAppReceipts } from "@/lib/client-app/queries";
 import { requireClienteAppContext } from "@/lib/client-context.server";
 
@@ -82,8 +83,8 @@ export default async function ClienteProfilePaymentsPage({
                     <div className="text-xl font-black text-zinc-950">
                       {formatCurrency(receipt.total)}
                     </div>
-                    <div className="mt-1 rounded-full bg-zinc-100 px-3 py-1 text-xs font-bold capitalize text-zinc-600">
-                      {receipt.status}
+                    <div className="mt-1 rounded-full bg-zinc-100 px-3 py-1 text-xs font-bold text-zinc-600">
+                      {statusPtBR(receipt.status)}
                     </div>
                   </div>
                 </div>
