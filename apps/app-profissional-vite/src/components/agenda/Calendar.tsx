@@ -125,6 +125,7 @@ export function Calendar({
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
   const [details, setDetails] = useState<Agendamento | null>(null);
+  const [deleteItem, setDeleteItem] = useState<Agendamento | null>(null);
   const [newOpen, setNewOpen] = useState(false);
   const [blockOpen, setBlockOpen] = useState(false);
   const [rescheduleItem, setRescheduleItem] = useState<Agendamento | null>(null);
@@ -191,7 +192,13 @@ export function Calendar({
           ? "Pix confirmado com sucesso."
           : id.startsWith("reschedule-")
             ? "Agendamento reagendado com sucesso."
-            : "Agendamento atualizado com sucesso."
+            : id.startsWith("delete-block-")
+              ? "Bloqueio excluido com sucesso."
+              : id.startsWith("delete-")
+                ? "Agendamento cancelado com sucesso."
+                : id.startsWith("confirm-")
+                  ? "Agendamento confirmado com sucesso."
+                  : "Agendamento atualizado com sucesso."
       );
     } catch (error) {
       setActionError(error instanceof Error ? error.message : "Não foi possível concluir a ação.");
@@ -209,6 +216,7 @@ export function Calendar({
   }
 
   function openReschedule(item: Agendamento) {
+    setActionError(null);
     setRescheduleItem(item);
     setRescheduleDate(item.data || selectedDate);
     setRescheduleHour(item.hora_inicio.slice(0, 5));
@@ -297,66 +305,103 @@ export function Calendar({
         </div>
 
         <div className="mt-5 space-y-3">
-          {selectedItems.length ? selectedItems.map((item) => (
-            <div key={item.id} className={`rounded-2xl border p-4 ${statusClass[item.status] || statusClass.pendente}`}>
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <div className="text-xs font-black uppercase tracking-[0.18em] opacity-70">
-                    {item.hora_inicio.slice(0, 5)} - {item.hora_fim.slice(0, 5)}
-                  </div>
-                  <div className="mt-1 text-lg font-black tracking-[-0.03em]">
-                    {item.status === "bloqueado" ? item.titulo || "Horario bloqueado" : item.clientes?.nome || item.titulo || "Cliente"}
-                  </div>
-                  <div className="text-sm font-bold opacity-75">{item.status === "bloqueado" ? item.observacoes || "Indisponivel" : item.servicos?.nome || "Atendimento"}</div>
-                  <div className="mt-2 rounded-full bg-white/60 px-3 py-1 text-xs font-black text-zinc-800">
-                    Profissional: {item.profissional_nome || profissionais.find((profissional) => profissional.id === item.profissional_id)?.nome || profissionalAtual.nome_exibicao || profissionalAtual.nome}
-                  </div>
-                  {item.status !== "bloqueado" && formatCreatedAt(item.agendado_em || item.created_at) ? (
-                    <div className="mt-2 rounded-xl border border-white/60 bg-white/55 px-3 py-2 text-xs font-bold text-zinc-800">
-                      <div>
-                        Agendado por <span className="font-black">{item.agendado_por_nome || "Nao identificado"}</span>
-                      </div>
-                      <div className="mt-0.5 opacity-75">
-                        {bookingSourceLabel(item.origem)} • {formatCreatedAt(item.agendado_em || item.created_at)}
-                      </div>
+          {selectedItems.length ? selectedItems.map((item) => {
+            const isBlocked = item.status === "bloqueado";
+            const canConfirm = item.status === "pendente";
+            const canReschedule = item.status === "pendente" || item.status === "confirmado";
+            const canRemove = isBlocked || item.status === "pendente" || item.status === "confirmado";
+            const hasReceipt = Boolean(item.sinal_comprovante_path);
+            const actionCount = 1 + Number(canConfirm) + Number(hasReceipt) + Number(canReschedule) + Number(canRemove);
+            const detailsFull = actionCount === 1;
+            const removeFull = canRemove && actionCount % 2 === 1;
+
+            return (
+              <div key={item.id} className={`rounded-2xl border p-4 ${statusClass[item.status] || statusClass.pendente}`}>
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="text-xs font-black uppercase tracking-[0.18em] opacity-70">
+                      {item.hora_inicio.slice(0, 5)} - {item.hora_fim.slice(0, 5)}
                     </div>
+                    <div className="mt-1 text-lg font-black tracking-[-0.03em]">
+                      {isBlocked ? item.titulo || "Horario bloqueado" : item.clientes?.nome || item.titulo || "Cliente"}
+                    </div>
+                    <div className="text-sm font-bold opacity-75">{isBlocked ? item.observacoes || "Indisponivel" : item.servicos?.nome || "Atendimento"}</div>
+                    <div className="mt-2 rounded-full bg-white/60 px-3 py-1 text-xs font-black text-zinc-800">
+                      Profissional: {item.profissional_nome || profissionais.find((profissional) => profissional.id === item.profissional_id)?.nome || profissionalAtual.nome_exibicao || profissionalAtual.nome}
+                    </div>
+                    {!isBlocked && formatCreatedAt(item.agendado_em || item.created_at) ? (
+                      <div className="mt-2 rounded-xl border border-white/60 bg-white/55 px-3 py-2 text-xs font-bold text-zinc-800">
+                        <div>
+                          Agendado por <span className="font-black">{item.agendado_por_nome || "Nao identificado"}</span>
+                        </div>
+                        <div className="mt-0.5 opacity-75">
+                          {bookingSourceLabel(item.origem)} • {formatCreatedAt(item.agendado_em || item.created_at)}
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+                  <span className="shrink-0 rounded-full bg-white/70 px-2.5 py-1 text-[0.68rem] font-black uppercase text-zinc-900">{item.status.replace("_", " ")}</span>
+                </div>
+
+                <div className="mt-4 grid grid-cols-2 gap-2">
+                  <Button
+                    variant="secondary"
+                    className={`h-11 w-full px-3 ${detailsFull ? "col-span-2" : ""}`}
+                    onClick={() => setDetails(item)}
+                  >
+                    <Eye size={16} />
+                    Detalhes
+                  </Button>
+
+                  {hasReceipt ? (
+                    <Button variant="secondary" className="h-11 w-full px-3" onClick={() => openComprovante(item)}>
+                      <FileImage size={16} />
+                      Comprovante
+                    </Button>
+                  ) : null}
+
+                  {canReschedule ? (
+                    <Button
+                      variant="secondary"
+                      className="h-11 w-full px-3"
+                      disabled={Boolean(busyId)}
+                      onClick={() => openReschedule(item)}
+                    >
+                      <RefreshCw size={16} />
+                      Reagendar
+                    </Button>
+                  ) : null}
+
+                  {canConfirm ? (
+                    <Button
+                      loading={busyId === `confirm-${item.id}`}
+                      className="h-11 w-full px-3"
+                      disabled={Boolean(busyId) && busyId !== `confirm-${item.id}`}
+                      onClick={() => void run(`confirm-${item.id}`, () => onConfirm(item.id))}
+                    >
+                      <CheckCircle2 size={16} />
+                      Confirmar
+                    </Button>
+                  ) : null}
+
+                  {canRemove ? (
+                    <Button
+                      variant="danger"
+                      className={`h-11 w-full px-3 ${removeFull ? "col-span-2" : ""}`}
+                      disabled={Boolean(busyId)}
+                      onClick={() => {
+                        setActionError(null);
+                        setDeleteItem(item);
+                      }}
+                    >
+                      <Trash2 size={16} />
+                      {isBlocked ? "Excluir bloqueio" : "Cancelar"}
+                    </Button>
                   ) : null}
                 </div>
-                <span className="rounded-full bg-white/70 px-2.5 py-1 text-[0.68rem] font-black uppercase text-zinc-900">{item.status.replace("_", " ")}</span>
               </div>
-
-              <div className="mt-3 flex flex-wrap gap-2">
-                <Button variant="secondary" className="h-9 px-3" onClick={() => setDetails(item)}>
-                  <Eye size={15} />
-                  Detalhes
-                </Button>
-                {item.status === "pendente" ? (
-                  <Button loading={busyId === `confirm-${item.id}`} variant="secondary" className="h-9 px-3" onClick={() => run(`confirm-${item.id}`, () => onConfirm(item.id))}>
-                    <CheckCircle2 size={15} />
-                    Confirmar
-                  </Button>
-                ) : null}
-                {item.sinal_comprovante_path ? (
-                  <Button variant="secondary" className="h-9 px-3" onClick={() => openComprovante(item)}>
-                    <FileImage size={15} />
-                    Ver comprovante
-                  </Button>
-                ) : null}
-                {(item.status === "pendente" || item.status === "confirmado") ? (
-                  <Button variant="secondary" className="h-9 px-3" onClick={() => openReschedule(item)}>
-                    <RefreshCw size={15} />
-                    Reagendar
-                  </Button>
-                ) : null}
-                {item.status !== "atendido" ? (
-                  <Button loading={busyId === `delete-${item.id}`} variant="danger" className="h-9 px-3" onClick={() => run(`delete-${item.id}`, () => onDelete(item.id, item.profissional_id || undefined))}>
-                    <Trash2 size={15} />
-                    Excluir
-                  </Button>
-                ) : null}
-              </div>
-            </div>
-          )) : (
+            );
+          }) : (
             <div className="rounded-2xl border border-dashed border-zinc-300 p-6 text-center text-sm font-bold text-zinc-500">Nenhum horario nesse dia.</div>
           )}
         </div>
@@ -411,7 +456,8 @@ export function Calendar({
                 {String(details.sinal_confirmacao_responsavel || "").toLowerCase() === "profissional" ? (
                   <Button
                     className="mt-3 h-10 px-3"
-                    disabled={busyId === `pix-${details.id}`}
+                    loading={busyId === `pix-${details.id}`}
+                    disabled={Boolean(busyId) && busyId !== `pix-${details.id}`}
                     onClick={() =>
                       void run(
                         `pix-${details.id}`,
@@ -431,6 +477,60 @@ export function Calendar({
                 )}
               </div>
             ) : null}
+          </div>
+        ) : null}
+      </Modal>
+
+      <Modal
+        title={deleteItem?.status === "bloqueado" ? "Excluir bloqueio" : "Cancelar agendamento"}
+        subtitle={deleteItem?.status === "bloqueado" ? "Confirme a exclusao deste horario bloqueado." : "O agendamento ficara com status cancelado e continuara no historico."}
+        open={Boolean(deleteItem)}
+        onClose={() => {
+          if (busyId?.startsWith("delete-")) return;
+          setDeleteItem(null);
+        }}
+      >
+        {deleteItem ? (
+          <div className="space-y-4">
+            <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4">
+              <div className="text-sm font-black text-zinc-950">
+                {deleteItem.status === "bloqueado"
+                  ? deleteItem.observacoes || "Horario bloqueado"
+                  : deleteItem.clientes?.nome || "Cliente"}
+              </div>
+              <div className="mt-1 text-sm font-bold text-zinc-500">
+                {deleteItem.data} • {deleteItem.hora_inicio.slice(0, 5)} - {deleteItem.hora_fim.slice(0, 5)}
+              </div>
+            </div>
+            {actionError ? (
+              <div role="alert" className="rounded-2xl border border-red-200 bg-red-50 px-3 py-3 text-sm font-bold text-red-700">
+                {actionError}
+              </div>
+            ) : null}
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                variant="secondary"
+                disabled={Boolean(busyId)}
+                onClick={() => setDeleteItem(null)}
+              >
+                Voltar
+              </Button>
+              <Button
+                variant="danger"
+                loading={busyId === `${deleteItem.status === "bloqueado" ? "delete-block" : "delete"}-${deleteItem.id}`}
+                disabled={Boolean(busyId) && busyId !== `${deleteItem.status === "bloqueado" ? "delete-block" : "delete"}-${deleteItem.id}`}
+                onClick={() => {
+                  const actionId = `${deleteItem.status === "bloqueado" ? "delete-block" : "delete"}-${deleteItem.id}`;
+                  void run(actionId, async () => {
+                    await onDelete(deleteItem.id, deleteItem.profissional_id || undefined);
+                    setDeleteItem(null);
+                  });
+                }}
+              >
+                <Trash2 size={16} />
+                {deleteItem.status === "bloqueado" ? "Excluir" : "Cancelar"}
+              </Button>
+            </div>
           </div>
         ) : null}
       </Modal>
@@ -595,15 +695,26 @@ export function Calendar({
         </form>
       </Modal>
 
-      <Modal title="Reagendar" subtitle="Altere data e horario mantendo o cliente e servico." open={Boolean(rescheduleItem)} onClose={() => setRescheduleItem(null)}>
+      <Modal
+        title="Reagendar"
+        subtitle="Altere data e horario mantendo o cliente e servico."
+        open={Boolean(rescheduleItem)}
+        onClose={() => {
+          if (busyId?.startsWith("reschedule-")) return;
+          setRescheduleItem(null);
+        }}
+      >
         {rescheduleItem ? (
           <form
             className="grid gap-3"
             onSubmit={async (event) => {
               event.preventDefault();
+              const actionId = `reschedule-${rescheduleItem.id}`;
+              if (busyId === actionId) return;
               const duracao = Number(rescheduleItem.servicos?.duracao_minutos || 0) || Math.max(5, Math.round((new Date(`2000-01-01T${rescheduleItem.hora_fim}`).getTime() - new Date(`2000-01-01T${rescheduleItem.hora_inicio}`).getTime()) / 60000)) || 60;
-              await run(`reschedule-${rescheduleItem.id}`, async () => {
-                await onReschedule?.({
+              await run(actionId, async () => {
+                if (!onReschedule) throw new Error("Reagendamento indisponivel.");
+                await onReschedule({
                   agendamentoId: rescheduleItem.id,
                   data: rescheduleDate,
                   horaInicio: rescheduleHour,
@@ -616,10 +727,13 @@ export function Calendar({
           >
             <Info label="Cliente" value={rescheduleItem.clientes?.nome || rescheduleItem.titulo || "Cliente"} />
             <Info label="Servico" value={rescheduleItem.servicos?.nome || "Atendimento"} />
-            <Field label="Data"><Input type="date" value={rescheduleDate} onChange={(event) => setRescheduleDate(event.target.value)} /></Field>
-            <Field label="Horario"><Input type="time" value={rescheduleHour} onChange={(event) => setRescheduleHour(event.target.value)} /></Field>
+            <Field label="Data"><Input type="date" value={rescheduleDate} onChange={(event) => setRescheduleDate(event.target.value)} disabled={busyId === `reschedule-${rescheduleItem.id}`} /></Field>
+            <Field label="Horario"><Input type="time" value={rescheduleHour} onChange={(event) => setRescheduleHour(event.target.value)} disabled={busyId === `reschedule-${rescheduleItem.id}`} /></Field>
+            {actionError ? <div role="alert" className="rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-bold text-red-700">{actionError}</div> : null}
             <ModalActionBar>
-              <Button>Salvar reagendamento</Button>
+              <Button type="submit" loading={busyId === `reschedule-${rescheduleItem.id}`} disabled={busyId === `reschedule-${rescheduleItem.id}`}>
+                {busyId === `reschedule-${rescheduleItem.id}` ? "Reagendando..." : "Salvar reagendamento"}
+              </Button>
             </ModalActionBar>
           </form>
         ) : null}
@@ -640,7 +754,7 @@ function Info({ label, value }: { label: string; value: string }) {
 function bookingSourceLabel(value?: string | null) {
   const origem = String(value || "").trim().toLowerCase();
   if (origem === "app_cliente") return "App Cliente";
-  if (origem === "app_profissional") return "App Profissional";
+  if (origem === "app_profissional" || origem === "app_profissional_vite") return "App Profissional";
   if (origem === "painel" || origem === "manual") return "Painel do salao";
   return "Origem nao identificada";
 }
