@@ -37,8 +37,25 @@ function run(command, args, extraEnv = {}) {
 }
 
 const nodeBin = process.execPath;
+const npmBin = process.platform === "win32" ? "npm.cmd" : "npm";
 const nextBin = "./node_modules/next/dist/bin/next";
 const typecheckScript = "./scripts/run-typecheck.mjs";
+const professionalAppDir = "apps/app-profissional-vite";
+
+// O app profissional e um Vite/PWA independente servido a partir de
+// public/app-profissional. Sempre gere esse bundle antes do Next build para
+// impedir que a Vercel publique fontes novos com assets antigos ja commitados.
+if (process.env.SKIP_PROFESSIONAL_BUILD !== "1") {
+  await run(npmBin, [
+    "ci",
+    "--prefix",
+    professionalAppDir,
+    "--include=dev",
+    "--no-audit",
+    "--no-fund",
+  ]);
+  await run(npmBin, ["--prefix", professionalAppDir, "run", "build"]);
+}
 
 if (process.env.SKIP_PREBUILD_TYPECHECK !== "1") {
   await run(nodeBin, [typecheckScript], {
