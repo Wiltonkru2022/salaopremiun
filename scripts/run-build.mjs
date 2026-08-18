@@ -62,9 +62,11 @@ const professionalAppEnv = {
   VITE_SUPABASE_ANON_KEY: supabasePublicKey,
 };
 
-// Valida as tres interfaces oficiais antes de gerar qualquer bundle:
-// App Profissional Vite, App Cliente e painel real em app/(painel).
+// Corrige somente textos que chegam a interface e depois valida as tres
+// superficies oficiais. Identificadores, rotas, tabelas e colunas nao sao
+// alterados pelo corretor AST.
 if (process.env.SKIP_UI_AUDIT !== "1") {
+  await run(nodeBin, [uiAuditScript, "--fix"]);
   await run(nodeBin, [uiAuditScript]);
 }
 
