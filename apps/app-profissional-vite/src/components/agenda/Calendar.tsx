@@ -1,4 +1,4 @@
-﻿import {
+import {
   Ban,
   CalendarPlus,
   CheckCircle2,
@@ -134,6 +134,8 @@ export function Calendar({
   const [newServico, setNewServico] = useState("");
   const [newProfissional, setNewProfissional] = useState("");
   const [newHora, setNewHora] = useState("09:00");
+  const [newSubmitting, setNewSubmitting] = useState(false);
+  const [newError, setNewError] = useState<string | null>(null);
   const [blockError, setBlockError] = useState<string | null>(null);
 
   const canChooseProfessional = ["todos", "geral", "admin", "administrador"].includes(String(profissionalAtual.nivel_acesso || "").toLowerCase()) && profissionais.length > 1;
@@ -275,7 +277,7 @@ export function Calendar({
         </div>
 
         <div className="mt-4 grid grid-cols-2 gap-2">
-          <Button onClick={() => setNewOpen(true)}>
+          <Button onClick={() => { setNewError(null); setNewOpen(true); }}>
             <CalendarPlus size={16} />
             Novo agendamento
           </Button>
@@ -416,27 +418,60 @@ export function Calendar({
         ) : null}
       </Modal>
 
-      <Modal title="Novo agendamento" subtitle="Preencha os campos e confirme o horario." open={newOpen} onClose={() => setNewOpen(false)}>
+      <Modal
+        title="Novo agendamento"
+        subtitle="Preencha os campos e confirme o horario."
+        open={newOpen}
+        onClose={() => {
+          if (newSubmitting) return;
+          setNewError(null);
+          setNewOpen(false);
+        }}
+      >
         <form
           className="grid gap-4"
           onSubmit={async (event) => {
             event.preventDefault();
-            if (!newCliente || !newServico || (canChooseProfessional && !newProfissional)) return;
-            await onCreate?.({ clienteId: newCliente, servicoId: newServico, data: selectedDate, horaInicio: newHora, profissionalId: canChooseProfessional ? newProfissional : profissionalAtual.id });
-            setNewOpen(false);
-            setNewCliente("");
-            setNewServico("");
-            setNewProfissional("");
+            if (newSubmitting) return;
+            if (!newCliente || !newServico || (canChooseProfessional && !newProfissional)) {
+              setNewError("Selecione cliente, servico e profissional antes de agendar.");
+              return;
+            }
+
+            setNewError(null);
+            setNewSubmitting(true);
+            try {
+              if (!onCreate) throw new Error("Criacao de agendamento indisponivel.");
+              await onCreate({
+                clienteId: newCliente,
+                servicoId: newServico,
+                data: selectedDate,
+                horaInicio: newHora,
+                profissionalId: canChooseProfessional ? newProfissional : profissionalAtual.id
+              });
+              setNewOpen(false);
+              setNewCliente("");
+              setNewServico("");
+              setNewProfissional("");
+              setNewError(null);
+            } catch (error) {
+              setNewError(error instanceof Error ? error.message : "Nao foi possivel criar o agendamento.");
+            } finally {
+              setNewSubmitting(false);
+            }
           }}
         >
           {canChooseProfessional ? (
-            <SearchPicker hideInputWhenSelected label="Profissional" placeholder="Digite o nome" options={profissionalOptions} value={newProfissional} onChange={(value) => { setNewProfissional(value); setNewServico(""); }} emptyText="Nenhum profissional encontrado." />
+            <SearchPicker hideInputWhenSelected label="Profissional" placeholder="Digite o nome" options={profissionalOptions} value={newProfissional} onChange={(value) => { setNewProfissional(value); setNewServico(""); setNewError(null); }} emptyText="Nenhum profissional encontrado." />
           ) : null}
-          <SearchPicker hideInputWhenSelected label="Cliente" placeholder="Digite nome ou telefone" options={clienteOptions} value={newCliente} onChange={setNewCliente} />
-          <SearchPicker hideInputWhenSelected label="Servico" placeholder={canChooseProfessional && !newProfissional ? "Escolha o profissional primeiro" : "Digite o servico"} options={servicoOptions} value={newServico} onChange={setNewServico} emptyText={canChooseProfessional && !newProfissional ? "Escolha um profissional antes." : "Servico nao encontrado para esse profissional."} />
-          <Field label="Horario"><Input type="time" value={newHora} onChange={(event) => setNewHora(event.target.value)} /></Field>
+          <SearchPicker hideInputWhenSelected label="Cliente" placeholder="Digite nome ou telefone" options={clienteOptions} value={newCliente} onChange={(value) => { setNewCliente(value); setNewError(null); }} />
+          <SearchPicker hideInputWhenSelected label="Servico" placeholder={canChooseProfessional && !newProfissional ? "Escolha o profissional primeiro" : "Digite o servico"} options={servicoOptions} value={newServico} onChange={(value) => { setNewServico(value); setNewError(null); }} emptyText={canChooseProfessional && !newProfissional ? "Escolha um profissional antes." : "Servico nao encontrado para esse profissional."} />
+          <Field label="Horario"><Input type="time" value={newHora} onChange={(event) => { setNewHora(event.target.value); setNewError(null); }} disabled={newSubmitting} /></Field>
+          {newError ? <div role="alert" className="rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-bold text-red-700">{newError}</div> : null}
           <ModalActionBar>
-            <Button>Criar agendamento</Button>
+            <Button type="submit" loading={newSubmitting} disabled={newSubmitting}>
+              {newSubmitting ? "Agendando..." : "Criar agendamento"}
+            </Button>
           </ModalActionBar>
         </form>
       </Modal>
