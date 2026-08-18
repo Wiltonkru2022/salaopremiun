@@ -215,7 +215,7 @@ export async function saveAgendaItem(params: {
         duracao_minutos: duracao,
         observacoes: payload.observacoes || null,
         status: payload.status || "confirmado",
-        origem: "manual",
+        origem: "painel",
       })
       .select("id")
       .limit(1);
@@ -234,6 +234,21 @@ export async function saveAgendaItem(params: {
         idServico: String(payload.servicoId),
         idProfissional: String(payload.profissionalId),
       });
+
+      try {
+        const auditResponse = await fetch("/api/painel/agendamentos/auditoria-criacao", {
+          method: "POST",
+          credentials: "same-origin",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ idAgendamento: novoAgendamentoId }),
+        });
+
+        if (!auditResponse.ok) {
+          console.warn("Nao foi possivel registrar a autoria do agendamento do painel.");
+        }
+      } catch (auditError) {
+        console.warn("Falha ao registrar autoria do agendamento do painel.", auditError);
+      }
     }
 
     return;
