@@ -11,7 +11,6 @@ import {
   resolveVendaHttpStatus,
 } from "@/lib/vendas/processar";
 import { runAdminOperation } from "@/lib/supabase/admin-ops";
-import { mirrorOracleVpsVendaOperation } from "@/lib/oracle-vps/client";
 import {
   parseProcessarVendaInput,
   processarVendaUseCase,
@@ -38,13 +37,6 @@ export async function POST(req: NextRequest) {
       input,
       actorUserId: membership.usuario.id,
       service: createVendaService(supabaseAdmin),
-    });
-
-    void mirrorOracleVpsVendaOperation({
-      idSalao,
-      acao,
-      idComanda: input.idComanda,
-      responseBody: result.body,
     });
 
     return NextResponse.json(result.body, { status: result.status });
