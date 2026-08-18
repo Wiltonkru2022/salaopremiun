@@ -1,14 +1,11 @@
 import { NextResponse } from "next/server";
 import { verifyBearerSecret } from "@/lib/auth/verify-secret";
 import { processPendingNotificationJobs } from "@/lib/notification-jobs";
-import { queueOracleVpsNotificationProcessing } from "@/lib/oracle-vps/client";
 import { processInactiveClientRecovery } from "@/lib/client-app/inactive-recovery";
 
-function oracleNotificationProcessingFailed(value: unknown) {
-  if (!value || typeof value !== "object") return false;
-
-  const result = value as Record<string, unknown>;
-  return result.ok === false || result.success === false || result.status === "error";
+function shouldRunClientRecovery() {
+  const now = new Date();
+  return now.getUTCMinutes() % 30 === 0;
 }
 
 async function handleCron(req: Request) {
@@ -17,34 +14,17 @@ async function handleCron(req: Request) {
   }
 
   try {
-    const recovery = await processInactiveClientRecovery(20);
-    try {
-      const vpsResult = await queueOracleVpsNotificationProcessing({
-        trigger: "cron",
-        limit: 60,
-      });
-      if (oracleNotificationProcessingFailed(vpsResult)) {
-        throw new Error("Oracle VPS retornou falha ao processar notificacoes.");
-      }
-      return NextResponse.json({
-        ok: true,
-        provider: "oracle-vps",
-        recovery,
-        result: vpsResult,
-      });
-    } catch (oracleError) {
-      const result = await processPendingNotificationJobs(60);
-      return NextResponse.json({
-        ok: true,
-        provider: "vercel-fallback",
-        recovery,
-        oracleError:
-          oracleError instanceof Error
-            ? oracleError.message
-            : "Falha ao processar notificações na VPS.",
-        ...result,
-      });
-    }
+    const recovery = shouldRunClientRecovery()
+      ? await processInactiveClientRecovery(20)
+      : null;
+    const result = await processPendingNotificationJobs(80);
+
+    return NextResponse.json({
+      ok: true,
+      provider: "vercel-web-push",
+      recovery,
+      ...result,
+    });
   } catch (error) {
     return NextResponse.json(
       {
