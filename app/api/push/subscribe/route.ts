@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { getClienteSessionFromCookie } from "@/lib/cliente-auth.server";
 import { getPainelUserContext } from "@/lib/auth/get-painel-user-context";
 import { getProfissionalSessionFromCookie } from "@/lib/profissional-auth.server";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { upsertPushSubscription, type PushAudience } from "@/lib/push-notifications";
 
 function isAudience(value: unknown): value is PushAudience {
@@ -31,6 +32,37 @@ async function getSalaoPainelContext() {
   };
 }
 
+async function listActiveClientEndpoints(clienteAppContaId: string) {
+  const { data } = await (getSupabaseAdmin() as any)
+    .from("push_subscriptions")
+    .select("endpoint")
+    .eq("audience", "cliente_app")
+    .eq("cliente_app_conta_id", clienteAppContaId)
+    .eq("ativo", true);
+
+  return Array.from(
+    new Set(
+      ((data || []) as Array<{ endpoint?: string | null }>)
+        .map((item) => String(item.endpoint || "").trim())
+        .filter(Boolean)
+    )
+  );
+}
+
+async function restorePreviouslyActiveClientEndpoints(
+  clienteAppContaId: string,
+  endpoints: string[]
+) {
+  if (!endpoints.length) return;
+
+  await (getSupabaseAdmin() as any)
+    .from("push_subscriptions")
+    .update({ ativo: true })
+    .eq("audience", "cliente_app")
+    .eq("cliente_app_conta_id", clienteAppContaId)
+    .in("endpoint", endpoints);
+}
+
 export async function POST(request: Request) {
   const payload = await request.json().catch(() => null);
   const audience = payload?.audience;
@@ -52,12 +84,19 @@ export async function POST(request: Request) {
         return NextResponse.json({ ok: false }, { status: 401 });
       }
 
+      const activeEndpoints = await listActiveClientEndpoints(session.idConta);
+
       await upsertPushSubscription({
         audience,
         subscription: payload.subscription,
         clienteAppContaId: session.idConta,
         userAgent,
       });
+
+      // O helper legado desativa os outros endpoints da cliente. Reativamos apenas
+      // os que ja estavam validos antes deste cadastro para permitir celular,
+      // tablet e computador simultaneamente sem ressuscitar subscriptions antigas.
+      await restorePreviouslyActiveClientEndpoints(session.idConta, activeEndpoints);
     }
 
     if (audience === "profissional_app") {
