@@ -6,6 +6,17 @@ import type { ComissaoLancamento } from "../types/database";
 
 type StatusFiltro = "todos" | "pendente" | "pago";
 
+const statusLabels: Record<StatusFiltro, string> = {
+  todos: "Todos",
+  pendente: "Pendente",
+  pago: "Pago",
+};
+
+function dateLabel(value?: string | null) {
+  const date = String(value || "").slice(0, 10);
+  return date ? new Date(`${date}T12:00:00`).toLocaleDateString("pt-BR") : "Sem data";
+}
+
 export function ComissaoPage({ comissoes }: { comissoes: ComissaoLancamento[] }) {
   const [mes, setMes] = useState(() => new Date().toISOString().slice(0, 7));
   const [status, setStatus] = useState<StatusFiltro>("todos");
@@ -32,8 +43,8 @@ export function ComissaoPage({ comissoes }: { comissoes: ComissaoLancamento[] })
       <Card>
         <div className="grid gap-3">
           <div>
-            <h2 className="text-xl font-black tracking-[-0.04em]">Comissao por mes</h2>
-            <p className="text-sm font-bold text-zinc-500">Somente comissoes geradas no caixa entram aqui.</p>
+            <h2 className="text-xl font-black tracking-[-0.04em]">Comissão por mês</h2>
+            <p className="text-sm font-bold text-zinc-500">Somente comissões geradas no caixa entram aqui.</p>
           </div>
 
           <div className="grid grid-cols-[1fr_auto] gap-2">
@@ -46,9 +57,10 @@ export function ComissaoPage({ comissoes }: { comissoes: ComissaoLancamento[] })
             <button
               type="button"
               onClick={() => setMes("")}
-              className="h-12 rounded-2xl border border-zinc-200 px-4 text-sm font-black"
+              disabled={!mes}
+              className="h-12 rounded-2xl border border-zinc-200 px-4 text-sm font-black disabled:cursor-default disabled:opacity-50"
             >
-              Todos
+              Todos os meses
             </button>
           </div>
 
@@ -58,11 +70,12 @@ export function ComissaoPage({ comissoes }: { comissoes: ComissaoLancamento[] })
                 key={option}
                 type="button"
                 onClick={() => setStatus(option)}
-                className={`h-10 rounded-xl text-sm font-black capitalize ${
+                aria-pressed={status === option}
+                className={`h-10 rounded-xl text-sm font-black ${
                   status === option ? "bg-zinc-950 text-white" : "text-zinc-600"
                 }`}
               >
-                {option}
+                {statusLabels[option]}
               </button>
             ))}
           </div>
@@ -88,7 +101,7 @@ export function ComissaoPage({ comissoes }: { comissoes: ComissaoLancamento[] })
       </div>
 
       <Card>
-        <h2 className="text-xl font-black tracking-[-0.04em]">Comissoes geradas</h2>
+        <h2 className="text-xl font-black tracking-[-0.04em]">Comissões geradas</h2>
         <div className="mt-4 space-y-2.5">
           {filtradas.length ? (
             filtradas.map((item) => (
@@ -96,7 +109,7 @@ export function ComissaoPage({ comissoes }: { comissoes: ComissaoLancamento[] })
                 <div className="min-w-0">
                   <div className="truncate text-sm font-black">{item.descricao}</div>
                   <div className="text-xs font-bold text-zinc-500">
-                    {item.competenciaData || "Sem data"} - {item.status}
+                    {dateLabel(item.competenciaData)} - {item.status === "pago" ? "Pago" : "Pendente"}
                   </div>
                 </div>
                 <div className={`flex items-center gap-2 text-sm font-black ${item.status === "pago" ? "text-emerald-700" : "text-yellow-700"}`}>
@@ -107,7 +120,7 @@ export function ComissaoPage({ comissoes }: { comissoes: ComissaoLancamento[] })
             ))
           ) : (
             <div className="rounded-2xl border border-dashed border-zinc-300 p-6 text-center text-sm font-bold text-zinc-500">
-              Nenhuma comissao nesse filtro.
+              Nenhuma comissão nesse filtro.
             </div>
           )}
         </div>
