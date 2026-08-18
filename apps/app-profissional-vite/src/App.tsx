@@ -32,9 +32,9 @@ const titles: Record<View, string> = {
   perfil: ptBR.professional.profile,
   configuracoes: ptBR.professional.settings,
   suporte: ptBR.professional.support,
-  duvidas: "Duvidas",
-  instalar: "Instalar",
-  privacidade: "Privacidade"
+  duvidas: ptBR.professional.questions,
+  instalar: ptBR.professional.install,
+  privacidade: ptBR.professional.privacy
 };
 
 export function App() {
@@ -51,14 +51,14 @@ export function App() {
   const subtitle = useMemo(() => {
     if (view === "agenda") return new Intl.DateTimeFormat("pt-BR", { weekday: "long", day: "2-digit", month: "long" }).format(new Date(selectedDate + "T12:00:00"));
     if (view === "comandas") return `${data.comandas.filter((item) => item.status === "aberta").length} abertas`;
-    if (view === "notificacoes") return `${data.notificacoes.filter((item) => !item.lida).length} nao lidas`;
-    if (view === "comissao") return "Repasse e producao";
-    if (view === "perfil") return "Dados, horarios e suporte";
+    if (view === "notificacoes") return `${data.notificacoes.filter((item) => !item.lida).length} ${ptBR.professional.unreadNotifications}`;
+    if (view === "comissao") return ptBR.professional.commissionSubtitle;
+    if (view === "perfil") return ptBR.professional.profileSubtitle;
     return profissional?.nome || "";
   }, [view, selectedDate, data.comandas, data.notificacoes, profissional?.nome]);
 
   if (authLoading) {
-    return <div className="grid min-h-screen place-items-center bg-zinc-950 text-sm font-black uppercase tracking-[0.22em] text-white">Carregando</div>;
+    return <div className="grid min-h-screen place-items-center bg-zinc-950 text-sm font-black uppercase tracking-[0.22em] text-white">{ptBR.common.loading}</div>;
   }
 
   if (!profissional) return <LoginPage />;
@@ -79,9 +79,16 @@ export function App() {
               ? `${ptBR.common.online}${data.lastSyncedAt ? ` · ${new Date(data.lastSyncedAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}` : ""}`
               : ptBR.professional.offlineWarning}
         </div>
-        <Button variant="secondary" className="h-10 px-3" onClick={() => data.refresh()}>
+        <Button
+          type="button"
+          variant="secondary"
+          className="h-10 px-3"
+          loading={data.loading}
+          disabled={data.loading}
+          onClick={() => void data.refresh()}
+        >
           <RefreshCw size={16} />
-          Atualizar
+          {ptBR.common.refresh}
         </Button>
       </div>
 
@@ -102,4 +109,3 @@ export function App() {
     </AppShell>
   );
 }
-
