@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import PushPermissionRuntime from "@/components/push/PushPermissionRuntime";
 
 export default function PainelPwaRuntime() {
   useEffect(() => {
@@ -11,5 +12,9 @@ export default function PainelPwaRuntime() {
     });
   }, []);
 
-  return null;
+  return (
+    <div className="fixed bottom-4 right-4 z-[420] rounded-full shadow-[0_14px_34px_rgba(15,23,42,0.16)]">
+      <PushPermissionRuntime audience="salao_painel" compact />
+    </div>
+  );
 }
