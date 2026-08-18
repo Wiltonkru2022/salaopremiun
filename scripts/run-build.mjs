@@ -41,6 +41,7 @@ const npmBin = process.platform === "win32" ? "npm.cmd" : "npm";
 const nextBin = "./node_modules/next/dist/bin/next";
 const typecheckScript = "./scripts/run-typecheck.mjs";
 const uiAuditScript = "./scripts/audit/ui-quality-audit.mjs";
+const uiStructuralCorrectorScript = "./scripts/audit/ui-structural-corrector.mjs";
 const professionalAppDir = "apps/app-profissional-vite";
 
 const supabasePublicKey = String(
@@ -62,10 +63,12 @@ const professionalAppEnv = {
   VITE_SUPABASE_ANON_KEY: supabasePublicKey,
 };
 
-// Corrige somente textos que chegam a interface e depois valida as tres
-// superficies oficiais. Identificadores, rotas, tabelas e colunas nao sao
-// alterados pelo corretor AST.
+// Corrige somente elementos visuais das tres superficies oficiais. O corretor
+// estrutural remove controles decorativos sem acao; o corretor AST ajusta
+// apenas textos que chegam a interface. Identificadores, rotas, tabelas e
+// colunas nao sao alterados.
 if (process.env.SKIP_UI_AUDIT !== "1") {
+  await run(nodeBin, [uiStructuralCorrectorScript]);
   await run(nodeBin, [uiAuditScript, "--fix"]);
   await run(nodeBin, [uiAuditScript]);
 }
