@@ -1,4 +1,4 @@
-﻿import { FormEvent, useState } from "react";
+import { FormEvent, useState } from "react";
 import { Clock3, Edit3, Plus, Search } from "lucide-react";
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
@@ -10,19 +10,26 @@ import type { Servico } from "../types/database";
 type Payload = Pick<Servico, "nome" | "preco" | "duracao_minutos">;
 const PAGE_SIZE = 10;
 
-function formatMoneyInput(value: string) {
-  const digits = String(value || "").replace(/\D/g, "");
-  if (!digits) return "";
-  return (Number(digits) / 100).toLocaleString("pt-BR", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-  });
+function sanitizeMoneyInput(value: string) {
+  const cleaned = String(value || "").replace(/[^\d,]/g, "");
+  const [integerPart = "", ...decimalParts] = cleaned.split(",");
+  const decimalPart = decimalParts.join("").slice(0, 2);
+  return decimalParts.length ? `${integerPart},${decimalPart}` : integerPart;
 }
 
 function parseMoneyInput(value: string) {
-  const normalized = String(value || "").replace(/\./g, "").replace(",", ".");
+  const normalized = String(value || "").trim().replace(/\./g, "").replace(",", ".");
   const parsed = Number(normalized);
   return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function formatMoneyInput(value: string) {
+  const parsed = parseMoneyInput(value);
+  if (!String(value || "").trim() || !Number.isFinite(parsed)) return "";
+  return parsed.toLocaleString("pt-BR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
 }
 
 export function ServicosPage({ servicos, onSave, onEdit }: { servicos: Servico[]; onSave: (payload: Payload) => Promise<void>; onEdit: (id: string, payload: Payload) => Promise<void> }) {
@@ -106,7 +113,7 @@ export function ServicosPage({ servicos, onSave, onEdit }: { servicos: Servico[]
 
 function ServicoForm({ initial, onSubmit }: { initial?: Servico; onSubmit: (payload: Payload) => Promise<void> }) {
   const [nome, setNome] = useState(initial?.nome || "");
-  const [preco, setPreco] = useState(initial?.preco ? formatMoneyInput(String(initial.preco)) : "");
+  const [preco, setPreco] = useState(initial?.preco != null ? formatMoneyInput(String(initial.preco)) : "");
   const [duracao, setDuracao] = useState(initial?.duracao_minutos ? String(initial.duracao_minutos) : "");
   const [descricao, setDescricao] = useState(initial?.descricao || "");
   const [loading, setLoading] = useState(false);
@@ -140,7 +147,7 @@ function ServicoForm({ initial, onSubmit }: { initial?: Servico; onSubmit: (payl
           <Input
             inputMode="decimal"
             value={preco}
-            onChange={(event) => setPreco(event.target.value.replace(/[^\d,]/g, ""))}
+            onChange={(event) => setPreco(sanitizeMoneyInput(event.target.value))}
             onBlur={() => setPreco(preco ? formatMoneyInput(preco) : "")}
             placeholder="0,00"
           />
