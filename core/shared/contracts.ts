@@ -89,6 +89,7 @@ export const PROFESSIONAL_PRODUCTIVITY_EVENTS = [
   "modo_online_restaurado",
   "agendamento_reagendado",
   "agendamento_cancelado",
+  "bloqueio_excluido",
 ] as const;
 
 export type ProfessionalProductivityEvent =
