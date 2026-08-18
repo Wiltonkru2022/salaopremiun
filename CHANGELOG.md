@@ -2,6 +2,26 @@
 
 Todas as mudancas importantes do projeto serao documentadas aqui.
 
+## [0.4.0] - 2026-08-18
+
+### App Cliente
+
+- Novo cadastro sem senha com nome completo, CPF valido, data de nascimento, WhatsApp e e-mail opcional.
+- Novo login principal por CPF + data de nascimento, com rate limit por identidade derivada e IP.
+- Acesso legado mantido temporariamente apenas para contas antigas concluirem a migracao sem perder acesso.
+- Sessao do cliente passou a usar `auth_version` para invalidacao controlada.
+- Recuperacao de acesso por codigo de 6 digitos via e-mail, sem redefinicao de senha.
+- Fluxo de recuperacao por CPF + nascimento e fluxo de alteracao segura de e-mail com codigo no novo endereco.
+- E-mail nao pode mais ser alterado diretamente pelo perfil sem verificacao.
+- Vinculo de cliente com saloes passou a priorizar CPF e foi corrigido para permitir a mesma conta global em varios saloes.
+- E-mails sinteticos `.local` foram removidos das contas globais sem excluir IDs, historico ou vinculos.
+- Criados links individuais, temporarios e de uso unico para migracao de clientes antigos, sem CPF ou nascimento na URL.
+- Painel ganhou a area `Clientes > Atualizar App Cliente`, com abertura do WhatsApp comum usando mensagem pronta e envio manual, sem depender de WhatsApp API.
+- Clientes com e-mail real podem receber o link seguro pela infraestrutura de e-mail existente.
+- Endpoints mobile foram alinhados com cadastro, login, recuperacao e alteracao de e-mail novos.
+- Tabelas de OTP e tokens de migracao protegidas por RLS e sem acesso direto de `anon`/`authenticated`.
+- Testes de CPF e data de nascimento adicionados ao CI.
+
 ## [0.3.0] - 2026-04-14
 
 ### Corrigido
