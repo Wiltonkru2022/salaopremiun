@@ -1,4 +1,4 @@
-import { sendOracleVpsSecurityEvent } from "@/lib/oracle-vps/client";
+import { captureSystemEvent } from "@/lib/monitoring/server";
 import type { SecurityTipoUsuario } from "@/lib/security/user-security";
 
 export type SecurityEventPayload = {
@@ -17,40 +17,40 @@ export type SecurityEventPayload = {
 function riskToSeverity(risk: string | null | undefined) {
   const normalized = String(risk || "").trim().toLowerCase();
 
-  if (["critico", "critical", "alto", "alta"].includes(normalized)) {
-    return "critical";
+  if (["critico", "crítico", "critical", "alto", "alta"].includes(normalized)) {
+    return "critical" as const;
   }
 
   if (["medio", "médio", "medium", "warning", "warn"].includes(normalized)) {
-    return "warning";
+    return "warning" as const;
   }
 
-  if (["baixo", "low"].includes(normalized)) {
-    return "info";
-  }
-
-  return "info";
+  return "info" as const;
 }
 
 export async function emitSecurityEvent(payload: SecurityEventPayload) {
-  const resposta = await sendOracleVpsSecurityEvent({
-    type: "security_event",
-    severity: riskToSeverity(payload.risco),
+  const severity = riskToSeverity(payload.risco);
+
+  await captureSystemEvent({
     module: "security",
     eventType: payload.evento,
-    route: payload.route || null,
-    source: payload.origem || "salaopremium-next",
+    severity,
+    message: payload.evento,
     idSalao: payload.idSalao || null,
     idUsuario: payload.userId || null,
-    userId: payload.userId || null,
-    tipoUsuario: payload.tipoUsuario,
+    route: payload.route || null,
+    origin: "server",
     details: {
+      tipoUsuario: payload.tipoUsuario,
+      risco: payload.risco || null,
       ip: payload.ip || null,
       userAgent: payload.userAgent || null,
+      origemOriginal: payload.origem || "salaopremium-next",
       ...((payload.detalhes as Record<string, unknown>) || {}),
     },
-    message: payload.evento,
+    success: severity !== "critical",
+    createIncident: severity === "critical",
   });
 
-  return resposta;
+  return { ok: true, provider: "supabase" as const };
 }
