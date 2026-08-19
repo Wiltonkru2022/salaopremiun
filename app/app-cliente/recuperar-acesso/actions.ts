@@ -81,7 +81,7 @@ export async function confirmClienteRecoveryEmailAction(
     return { error: result.error, success: null, step: "email-code", email };
   }
   await createClienteSession(result.session);
-  redirect(result.session.authVersion > 0 ? "/app-cliente/agendamentos" : "/app-cliente/inicio");
+  redirect("/app-cliente/atualizar-acesso?next=%2Fapp-cliente%2Fagendamentos");
 }
 
 export async function startClienteRecoveryIdentityAction(
