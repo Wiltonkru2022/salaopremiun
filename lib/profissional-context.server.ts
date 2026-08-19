@@ -30,16 +30,40 @@ async function loadProfissionalServerContext(): Promise<ProfissionalServerContex
   }
 
   const supabaseAdmin = getSupabaseAdmin();
-  const { data: profissional, error: profissionalError } = await supabaseAdmin
-    .from("profissionais")
-    .select(
-      "id, id_salao, nome, nome_exibicao, email, ativo, tipo_profissional, nivel_acesso, pode_usar_sistema"
-    )
-    .eq("id", session.idProfissional)
-    .eq("id_salao", session.idSalao)
-    .maybeSingle();
+  const [{ data: profissional, error: profissionalError }, acessoResult] = await Promise.all([
+    supabaseAdmin
+      .from("profissionais")
+      .select(
+        "id, id_salao, nome, nome_exibicao, email, ativo, tipo_profissional, nivel_acesso, pode_usar_sistema"
+      )
+      .eq("id", session.idProfissional)
+      .eq("id_salao", session.idSalao)
+      .maybeSingle(),
+    (supabaseAdmin as any)
+      .from("profissionais_acessos")
+      .select("id, auth_version, ativo")
+      .eq("id_profissional", session.idProfissional)
+      .eq("ativo", true)
+      .limit(1)
+      .maybeSingle(),
+  ]);
 
-  if (profissionalError || !profissional?.id || profissional.ativo === false) {
+  const acesso = acessoResult.data as
+    | { id?: string | null; auth_version?: number | string | null; ativo?: boolean | null }
+    | null;
+  const acessoError = acessoResult.error;
+  const authVersionAtual = Number(acesso?.auth_version || 0);
+
+  if (
+    profissionalError ||
+    !profissional?.id ||
+    profissional.ativo === false ||
+    acessoError ||
+    !acesso?.id ||
+    !Number.isSafeInteger(authVersionAtual) ||
+    authVersionAtual < 1 ||
+    authVersionAtual !== session.authVersion
+  ) {
     throw new Error("UNAUTHORIZED");
   }
 
