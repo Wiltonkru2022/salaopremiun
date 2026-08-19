@@ -46,54 +46,74 @@ export function ClientesPage({
   }
 
   return (
-    <div className="space-y-4">
-      <Button className="w-full" onClick={() => setCreating(true)}>
-        <Plus size={18} />
+    <div className="space-y-5 pb-6">
+      <Button
+        className="h-14 w-full rounded-[1.35rem] text-[15px] shadow-[0_14px_30px_rgba(9,9,11,0.16)] active:scale-[0.99]"
+        onClick={() => setCreating(true)}
+      >
+        <Plus size={19} />
         Novo cliente
       </Button>
 
-      <Card>
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <h2 className="text-xl font-black tracking-[-0.04em]">Clientes</h2>
-            <p className="text-sm font-bold text-zinc-500">Toque para ver historico e observacoes.</p>
+      <Card className="rounded-[1.6rem] !p-5 shadow-[0_10px_30px_rgba(15,23,42,0.06)]">
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <div className="text-[11px] font-black uppercase tracking-[0.2em] text-amber-700">Sua base de clientes</div>
+            <h2 className="mt-1 text-2xl font-black tracking-[-0.05em] text-zinc-950">Clientes</h2>
+            <p className="mt-1 text-sm font-semibold leading-5 text-zinc-500">Encontre rapidamente e consulte o histórico de cada cliente.</p>
           </div>
-          <span className="rounded-full bg-zinc-100 px-3 py-1 text-xs font-black text-zinc-600">{filtered.length}</span>
+          <span className="shrink-0 rounded-full bg-zinc-950 px-3.5 py-1.5 text-xs font-black text-white shadow-sm">{filtered.length}</span>
         </div>
-        <div className="relative mt-4">
-          <Search className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={18} />
-          <Input className="pl-11" placeholder="Buscar cliente" value={query} onChange={(event) => { setQuery(event.target.value); setPage(1); }} />
+        <div className="relative mt-5">
+          <Search className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={19} />
+          <Input
+            className="h-12 rounded-[1.15rem] border-zinc-200 bg-zinc-50 pl-11 shadow-inner shadow-zinc-100/60 focus:bg-white"
+            placeholder="Buscar por nome ou telefone"
+            value={query}
+            onChange={(event) => { setQuery(event.target.value); setPage(1); }}
+          />
         </div>
       </Card>
 
-      <div className="space-y-3">
+      <div className="space-y-3.5">
         {pageItems.map((cliente) => {
           const historico = agendamentos.filter((item) => item.cliente_id === cliente.id);
           return (
-            <Card key={cliente.id}>
-              <button className="block w-full text-left" onClick={() => setSelected(cliente)}>
+            <Card key={cliente.id} className="overflow-hidden rounded-[1.55rem] !p-0 shadow-[0_8px_24px_rgba(15,23,42,0.055)]">
+              <button className="block w-full px-5 pb-4 pt-5 text-left transition active:bg-zinc-50" onClick={() => setSelected(cliente)}>
                 <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <h3 className="truncate text-lg font-black tracking-[-0.03em]">{cliente.nome}</h3>
-                    <p className="text-sm font-bold text-zinc-500">{cliente.telefone || cliente.whatsapp || "Sem telefone"}</p>
+                  <div className="flex min-w-0 items-center gap-3.5">
+                    <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-zinc-950 text-white shadow-sm">
+                      <Phone size={18} />
+                    </span>
+                    <div className="min-w-0">
+                      <h3 className="truncate text-[1.08rem] font-black tracking-[-0.035em] text-zinc-950">{cliente.nome}</h3>
+                      <p className="mt-1 truncate text-sm font-semibold text-zinc-500">{cliente.telefone || cliente.whatsapp || "Sem telefone"}</p>
+                    </div>
                   </div>
-                  <span className="rounded-full bg-zinc-100 px-3 py-1 text-xs font-black text-zinc-600">{historico.length} ag.</span>
+                  <span className="shrink-0 rounded-full bg-zinc-100 px-3 py-1.5 text-[11px] font-black text-zinc-600">{historico.length} ag.</span>
                 </div>
-                {historico.length ? <p className="mt-3 text-sm font-semibold text-zinc-500">Ultimo horario: {historico[0]?.data} as {historico[0]?.hora_inicio.slice(0, 5)}</p> : null}
+                {historico.length ? (
+                  <div className="mt-4 rounded-2xl bg-zinc-50 px-3.5 py-2.5 text-xs font-bold text-zinc-500">
+                    Último horário: <span className="text-zinc-800">{historico[0]?.data} às {historico[0]?.hora_inicio.slice(0, 5)}</span>
+                  </div>
+                ) : null}
               </button>
-              <Button className="mt-3 h-9 px-3" variant="secondary" onClick={() => setEditing(cliente)}>
-                <Edit3 size={15} />
-                Editar cliente
-              </Button>
+              <div className="border-t border-zinc-100 px-4 py-3">
+                <Button className="h-10 w-full rounded-xl px-3 text-sm" variant="secondary" onClick={() => setEditing(cliente)}>
+                  <Edit3 size={15} />
+                  Editar dados
+                </Button>
+              </div>
             </Card>
           );
         })}
       </div>
 
       {filtered.length > PAGE_SIZE ? (
-        <div className="grid grid-cols-2 gap-2">
-          <Button variant="secondary" disabled={page === 1} onClick={() => setPage((current) => Math.max(1, current - 1))}>Anterior</Button>
-          <Button variant="secondary" disabled={page === totalPages} onClick={() => setPage((current) => Math.min(totalPages, current + 1))}>Proxima</Button>
+        <div className="grid grid-cols-2 gap-2 rounded-[1.25rem] bg-white p-2 shadow-sm ring-1 ring-zinc-200">
+          <Button className="rounded-xl" variant="secondary" disabled={page === 1} onClick={() => setPage((current) => Math.max(1, current - 1))}>Anterior</Button>
+          <Button className="rounded-xl" variant="secondary" disabled={page === totalPages} onClick={() => setPage((current) => Math.min(totalPages, current + 1))}>Próxima</Button>
         </div>
       ) : null}
 
