@@ -31,6 +31,7 @@ const REPLACEMENTS = [
   ],
   ["Dashboard avançado", "Visão geral avançada"],
   ["Visão geral avançado", "Visão geral avançada"],
+  ["Visão geral avançada ativo", "Visão geral avançada ativa"],
   ["Escolha o plano certo sem poluicao.", "Escolha o plano certo sem poluição."],
   ["Agora a comparacao mostra somente o que importa", "Agora a comparação mostra somente o que importa"],
   ["/ mes", "/ mês"],

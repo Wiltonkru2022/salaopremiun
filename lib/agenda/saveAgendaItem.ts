@@ -14,49 +14,7 @@ import {
   timeToMinutes,
 } from "@/lib/utils/agenda";
 
-async function assertAgendaMonthlyLimit(params: {
-  supabase: SupabaseClient;
-  idSalao: string;
-  dataReferencia: string;
-  limite: number | null;
-}) {
-  const { supabase, idSalao, dataReferencia, limite } = params;
-
-  if (limite == null) {
-    return;
-  }
-
-  const baseDate = new Date(`${String(dataReferencia).slice(0, 10)}T12:00:00`);
-  if (Number.isNaN(baseDate.getTime())) {
-    throw new Error("Nao foi possivel validar o periodo do plano.");
-  }
-
-  const inicioMes = new Date(baseDate.getFullYear(), baseDate.getMonth(), 1)
-    .toISOString()
-    .slice(0, 10);
-  const fimMes = new Date(baseDate.getFullYear(), baseDate.getMonth() + 1, 0)
-    .toISOString()
-    .slice(0, 10);
-
-  const { count, error } = await supabase
-    .from("agendamentos")
-    .select("id", { count: "exact", head: true })
-    .eq("id_salao", idSalao)
-    .gte("data", inicioMes)
-    .lte("data", fimMes);
-
-  if (error) {
-    throw new Error("Nao foi possivel validar o limite mensal da agenda.");
-  }
-
-  const uso = Number(count || 0);
-
-  if (uso >= limite) {
-    throw new Error(
-      `Limite do plano atingido: ${uso} de ${limite} agendamentos no mes.`
-    );
-  }
-}
+const STATUS_SEM_CONFLITO = new Set(["cancelado", "faltou", "atendido", "expirado"]);
 
 export async function saveAgendaItem(params: {
   supabase: SupabaseClient;
@@ -93,7 +51,6 @@ export async function saveAgendaItem(params: {
     bloqueios,
     agendamentos,
     servicos,
-    agendaMonthlyLimit = null,
     ensureDiaFuncionamentoFn,
     getProfessionalAutoBloqueiosFn,
     validateAgendaTimeRangeFn,
@@ -102,21 +59,19 @@ export async function saveAgendaItem(params: {
 
   if (payload.tipo === "agendamento") {
     if (!ensureDiaFuncionamentoFn(String(payload.data || ""))) {
-      throw new Error("Esse dia nao esta configurado como dia de funcionamento.");
+      throw new Error("Esse dia não está configurado como dia de funcionamento.");
     }
 
     if (!payload.profissionalId || !payload.clienteId || !payload.servicoId) {
-      throw new Error("Preencha profissional, cliente e servico.");
+      throw new Error("Preencha profissional, cliente e serviço.");
     }
 
-    const servico = servicos.find((s) => s.id === payload.servicoId);
-    if (!servico) {
-      throw new Error("Selecione um servico valido.");
-    }
+    const servico = servicos.find((item) => item.id === payload.servicoId);
+    if (!servico) throw new Error("Selecione um serviço válido.");
 
     const profissionaisVinculados = servico.profissionais_vinculados || [];
     if (!profissionaisVinculados.includes(String(payload.profissionalId))) {
-      throw new Error("Este servico nao esta vinculado ao profissional selecionado.");
+      throw new Error("Este serviço não está vinculado ao profissional selecionado.");
     }
 
     const servicoInfo = servico as Servico & { duracao_minutos?: number | null };
@@ -130,125 +85,76 @@ export async function saveAgendaItem(params: {
       horaInicio,
       horaFim,
     });
-
-    if (!validRange.ok) {
-      throw new Error(validRange.message);
-    }
+    if (!validRange.ok) throw new Error(validRange.message);
 
     const bloqueiosTotais = mergeBloqueios(
       bloqueios.filter(
-        (b) => b.data === payload.data && b.profissional_id === payload.profissionalId
+        (item) =>
+          item.data === payload.data &&
+          item.profissional_id === payload.profissionalId
       ),
-      getProfessionalAutoBloqueiosFn(String(payload.profissionalId), String(payload.data))
+      getProfessionalAutoBloqueiosFn(
+        String(payload.profissionalId),
+        String(payload.data)
+      )
     );
-
     const conflitoBloqueio = bloqueiosTotais.some(
-      (b) => b.id !== payload.id && overlaps(horaInicio, horaFim, b.hora_inicio, b.hora_fim)
+      (item) =>
+        item.id !== payload.id &&
+        overlaps(horaInicio, horaFim, item.hora_inicio, item.hora_fim)
+    );
+    const conflitoAgendamento = agendamentos.some(
+      (item) =>
+        item.id !== payload.id &&
+        item.profissional_id === payload.profissionalId &&
+        item.data === payload.data &&
+        !STATUS_SEM_CONFLITO.has(String(item.status || "").toLowerCase()) &&
+        overlaps(horaInicio, horaFim, item.hora_inicio, item.hora_fim)
     );
 
-    if (conflitoBloqueio) {
-      throw new Error("Esse horario esta bloqueado.");
+    if (conflitoAgendamento || conflitoBloqueio) {
+      throw new Error("Esse horário já possui outro agendamento ou bloqueio.");
     }
 
-    if (payload.id) {
-      const agendamentoAtual = agendamentos.find((a) => a.id === payload.id);
-      const agendamentoInfo = agendamentoAtual as
-        | (Agendamento & { id_comanda?: string | null })
-        | undefined;
-
-      const idComandaAnterior = agendamentoInfo?.id_comanda || null;
-      const idComandaNova = (payload.idComanda as string | null) || null;
-
-      const { error } = await supabase
-        .from("agendamentos")
-        .update({
-          cliente_id: payload.clienteId,
-          profissional_id: payload.profissionalId,
-          servico_id: payload.servicoId,
-          id_comanda: idComandaNova,
-          data: payload.data,
-          hora_inicio: horaInicio,
-          hora_fim: horaFim,
-          duracao_minutos: duracao,
-          observacoes: payload.observacoes || null,
-          status: payload.status || "confirmado",
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", payload.id)
-        .eq("id_salao", idSalao);
-
-      if (error) {
-        console.error(error);
-        throw new Error("Erro ao atualizar agendamento.");
-      }
-
-      if (idComandaAnterior || idComandaNova) {
-        await sincronizarAgendamentoFn({
-          idAgendamento: String(payload.id),
-          idComandaNova,
-          idServico: String(payload.servicoId),
-          idProfissional: String(payload.profissionalId),
-        });
-      }
-
-      return;
-    }
-
-    await assertAgendaMonthlyLimit({
-      supabase,
-      idSalao,
-      dataReferencia: String(payload.data || ""),
-      limite: agendaMonthlyLimit,
-    });
-
-    const { data: insertedRows, error } = await supabase
-      .from("agendamentos")
-      .insert({
-        id_salao: idSalao,
-        cliente_id: payload.clienteId,
-        profissional_id: payload.profissionalId,
-        servico_id: payload.servicoId,
-        id_comanda: payload.idComanda || null,
+    const idComandaNova = (payload.idComanda as string | null) || null;
+    const response = await fetch("/api/painel/agendamentos/salvar", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        idAgendamento: payload.id || null,
+        idCliente: payload.clienteId,
+        idProfissional: payload.profissionalId,
+        idServico: payload.servicoId,
+        idComanda: idComandaNova,
         data: payload.data,
-        hora_inicio: horaInicio,
-        hora_fim: horaFim,
-        duracao_minutos: duracao,
+        horaInicio,
         observacoes: payload.observacoes || null,
         status: payload.status || "confirmado",
-        origem: "painel",
-      })
-      .select("id")
-      .limit(1);
-
-    if (error) {
-      console.error(error);
-      throw new Error("Erro ao salvar agendamento.");
+      }),
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok || !result.ok) {
+      throw new Error(String(result.error || "Erro ao salvar agendamento."));
     }
 
-    const novoAgendamentoId = insertedRows?.[0]?.id;
+    const idAgendamento = String(result.idAgendamento || payload.id || "");
+    if (!idAgendamento) throw new Error("Agendamento salvo sem identificador.");
 
-    if (novoAgendamentoId) {
+    const agendamentoAtual = payload.id
+      ? agendamentos.find((item) => item.id === payload.id)
+      : null;
+    const idComandaAnterior =
+      (agendamentoAtual as (Agendamento & { id_comanda?: string | null }) | null)
+        ?.id_comanda || null;
+
+    if (idComandaAnterior || idComandaNova) {
       await sincronizarAgendamentoFn({
-        idAgendamento: novoAgendamentoId,
-        idComandaNova: (payload.idComanda as string | null) || null,
+        idAgendamento,
+        idComandaNova,
         idServico: String(payload.servicoId),
         idProfissional: String(payload.profissionalId),
       });
-
-      try {
-        const auditResponse = await fetch("/api/painel/agendamentos/auditoria-criacao", {
-          method: "POST",
-          credentials: "same-origin",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ idAgendamento: novoAgendamentoId }),
-        });
-
-        if (!auditResponse.ok) {
-          console.warn("Nao foi possivel registrar a autoria do agendamento do painel.");
-        }
-      } catch (auditError) {
-        console.warn("Falha ao registrar autoria do agendamento do painel.", auditError);
-      }
     }
 
     return;
@@ -270,16 +176,15 @@ export async function saveAgendaItem(params: {
     const horaFim = normalizeTimeString(String(payload.horaFim || ""));
 
     if (timeToMinutes(horaFim) <= timeToMinutes(horaInicio)) {
-      throw new Error("Hora fim deve ser maior que a hora inicio.");
+      throw new Error("A hora final deve ser maior que a hora inicial.");
     }
 
     const datasForaFuncionamento = datasBloqueio.filter(
       (data) => !ensureDiaFuncionamentoFn(data)
     );
-
     if (datasForaFuncionamento.length) {
       throw new Error(
-        `Esses dias nao estao configurados como funcionamento: ${datasForaFuncionamento.join(", ")}.`
+        `Estes dias não estão configurados como funcionamento: ${datasForaFuncionamento.join(", ")}.`
       );
     }
 
@@ -290,28 +195,24 @@ export async function saveAgendaItem(params: {
         horaInicio,
         horaFim,
       });
-
-      if (!validRange.ok) {
-        throw new Error(validRange.message);
-      }
+      if (!validRange.ok) throw new Error(validRange.message);
 
       const conflitoAgendamento = agendamentos.some(
-        (a) =>
-          a.profissional_id === payload.profissionalId &&
-          a.data === payload.data &&
-          overlaps(horaInicio, horaFim, a.hora_inicio, a.hora_fim)
+        (item) =>
+          item.profissional_id === payload.profissionalId &&
+          item.data === payload.data &&
+          !STATUS_SEM_CONFLITO.has(String(item.status || "").toLowerCase()) &&
+          overlaps(horaInicio, horaFim, item.hora_inicio, item.hora_fim)
       );
-
       const conflitoBloqueio = bloqueios.some(
-        (b) =>
-          b.id !== payload.id &&
-          b.profissional_id === payload.profissionalId &&
-          b.data === payload.data &&
-          overlaps(horaInicio, horaFim, b.hora_inicio, b.hora_fim)
+        (item) =>
+          item.id !== payload.id &&
+          item.profissional_id === payload.profissionalId &&
+          item.data === payload.data &&
+          overlaps(horaInicio, horaFim, item.hora_inicio, item.hora_fim)
       );
-
       if (conflitoAgendamento || conflitoBloqueio) {
-        throw new Error("Esse intervalo ja possui agendamento ou bloqueio.");
+        throw new Error("Esse intervalo já possui agendamento ou bloqueio.");
       }
 
       const { error } = await supabase
@@ -325,17 +226,11 @@ export async function saveAgendaItem(params: {
         })
         .eq("id", payload.id)
         .eq("id_salao", idSalao);
-
-      if (error) {
-        console.error(error);
-        throw new Error("Erro ao atualizar bloqueio.");
-      }
-
+      if (error) throw new Error("Erro ao atualizar bloqueio.");
       return;
     }
 
     const datasComConflito: string[] = [];
-
     for (const data of datasBloqueio) {
       const validRange = validateAgendaTimeRangeFn({
         profissionalId: String(payload.profissionalId),
@@ -343,33 +238,27 @@ export async function saveAgendaItem(params: {
         horaInicio,
         horaFim,
       });
-
-      if (!validRange.ok) {
-        throw new Error(validRange.message);
-      }
+      if (!validRange.ok) throw new Error(validRange.message);
 
       const conflitoAgendamento = agendamentos.some(
-        (a) =>
-          a.profissional_id === payload.profissionalId &&
-          a.data === data &&
-          overlaps(horaInicio, horaFim, a.hora_inicio, a.hora_fim)
+        (item) =>
+          item.profissional_id === payload.profissionalId &&
+          item.data === data &&
+          !STATUS_SEM_CONFLITO.has(String(item.status || "").toLowerCase()) &&
+          overlaps(horaInicio, horaFim, item.hora_inicio, item.hora_fim)
       );
-
       const conflitoBloqueio = bloqueios.some(
-        (b) =>
-          b.profissional_id === payload.profissionalId &&
-          b.data === data &&
-          overlaps(horaInicio, horaFim, b.hora_inicio, b.hora_fim)
+        (item) =>
+          item.profissional_id === payload.profissionalId &&
+          item.data === data &&
+          overlaps(horaInicio, horaFim, item.hora_inicio, item.hora_fim)
       );
-
-      if (conflitoAgendamento || conflitoBloqueio) {
-        datasComConflito.push(data);
-      }
+      if (conflitoAgendamento || conflitoBloqueio) datasComConflito.push(data);
     }
 
     if (datasComConflito.length) {
       throw new Error(
-        `Esse intervalo ja possui agendamento ou bloqueio em: ${datasComConflito.join(", ")}.`
+        `Esse intervalo já possui agendamento ou bloqueio em: ${datasComConflito.join(", ")}.`
       );
     }
 
@@ -383,10 +272,6 @@ export async function saveAgendaItem(params: {
         motivo: payload.motivo || null,
       }))
     );
-
-    if (error) {
-      console.error(error);
-      throw new Error("Erro ao salvar bloqueio.");
-    }
+    if (error) throw new Error("Erro ao salvar bloqueio.");
   }
 }
