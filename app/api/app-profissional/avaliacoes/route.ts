@@ -2,6 +2,13 @@ import { NextResponse } from "next/server";
 import { requireProfissionalAppContext } from "@/lib/profissional-context.server";
 import { runAdminOperation } from "@/lib/supabase/admin-ops";
 
+type AppointmentReviewSource = {
+  id: string;
+  cliente_id?: string | null;
+  servico_id?: string | null;
+  profissional_id?: string | null;
+};
+
 export async function GET() {
   try {
     const session = await requireProfissionalAppContext();
@@ -18,8 +25,8 @@ export async function GET() {
           .limit(1000);
         if (appointmentsError) throw new Error(appointmentsError.message);
 
-        const appointmentRows = appointments || [];
-        const appointmentIds = appointmentRows.map((row: any) => String(row.id)).filter(Boolean);
+        const appointmentRows = (appointments || []) as AppointmentReviewSource[];
+        const appointmentIds = appointmentRows.map((row) => String(row.id)).filter(Boolean);
         if (!appointmentIds.length) return { avaliacoes: [] };
 
         const { data: reviews, error: reviewsError } = await (supabase as any)
@@ -32,16 +39,14 @@ export async function GET() {
         if (reviewsError) throw new Error(reviewsError.message);
         if (!(reviews || []).length) return { avaliacoes: [] };
 
-        const appointmentById = new Map(
-          appointmentRows.map((row: any) => [String(row.id), row])
+        const appointmentById = new Map<string, AppointmentReviewSource>(
+          appointmentRows.map((row) => [String(row.id), row])
         );
         const clientIds = Array.from(
           new Set((reviews || []).map((row: any) => String(row.id_cliente || "")).filter(Boolean))
         );
         const serviceIds = Array.from(
-          new Set(
-            appointmentRows.map((row: any) => String(row.servico_id || "")).filter(Boolean)
-          )
+          new Set(appointmentRows.map((row) => String(row.servico_id || "")).filter(Boolean))
         );
 
         const [clientsResult, servicesResult, professionalResult] = await Promise.all([
@@ -76,12 +81,15 @@ export async function GET() {
         const services = new Map(
           (servicesResult.data || []).map((row: any) => [String(row.id), String(row.nome || "Serviço")])
         );
-        const professionalName =
-          String(professionalResult.data?.nome_exibicao || professionalResult.data?.nome || "Profissional");
+        const professionalName = String(
+          professionalResult.data?.nome_exibicao ||
+            professionalResult.data?.nome ||
+            "Profissional"
+        );
 
         return {
           avaliacoes: (reviews || []).map((row: any) => {
-            const appointment = appointmentById.get(String(row.id_agendamento)) || {};
+            const appointment = appointmentById.get(String(row.id_agendamento)) ?? null;
             return {
               id: String(row.id),
               nota: Number(row.nota || 0),
@@ -90,7 +98,7 @@ export async function GET() {
               cliente_nome: row.id_cliente
                 ? clients.get(String(row.id_cliente)) || "Cliente"
                 : "Cliente",
-              servico_nome: appointment.servico_id
+              servico_nome: appointment?.servico_id
                 ? services.get(String(appointment.servico_id)) || "Serviço"
                 : "Serviço",
               profissional_id: session.idProfissional,
@@ -104,7 +112,13 @@ export async function GET() {
     return NextResponse.json({ ok: true, ...payload });
   } catch (error) {
     return NextResponse.json(
-      { ok: false, error: error instanceof Error ? error.message : "Não foi possível carregar as avaliações." },
+      {
+        ok: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : "Não foi possível carregar as avaliações.",
+      },
       { status: 400 }
     );
   }
