@@ -17,6 +17,8 @@ type LoginResult =
         idSalao: string;
         nome: string;
         cpf: string;
+        acessoId: string;
+        authVersion: number;
         nivelAcesso: string;
         podeVerAgendaTodos: boolean;
         tipo: "profissional";
@@ -34,6 +36,7 @@ type ProfissionalAcessoLoginRow = {
   senha_hash: string;
   ativo?: boolean | null;
   id_profissional: string;
+  auth_version?: number | null;
   passwordAlreadyVerified?: boolean;
 };
 
@@ -54,35 +57,25 @@ async function findAcessoByProfissionalCpf(params: {
       .eq("ativo", true)
       .limit(10);
 
-  if (profissionaisError || !profissionais?.length) {
-    return null;
-  }
+  if (profissionaisError || !profissionais?.length) return null;
 
   const idsProfissionais = profissionais
     .map((item) => String(item.id || "").trim())
     .filter(Boolean);
 
-  if (!idsProfissionais.length) {
-    return null;
-  }
+  if (!idsProfissionais.length) return null;
 
   const { data: acessos, error: acessosError } = await params.supabaseAdmin
     .from("profissionais_acessos")
-    .select("id, cpf, senha_hash, ativo, id_profissional")
+    .select("id, cpf, senha_hash, ativo, id_profissional, auth_version")
     .eq("ativo", true)
     .in("id_profissional", idsProfissionais);
 
-  if (acessosError || !acessos?.length) {
-    return null;
-  }
+  if (acessosError || !acessos?.length) return null;
 
   for (const acesso of acessos as ProfissionalAcessoLoginRow[]) {
-    const senhaOk = await verifyPassword(params.senha, acesso.senha_hash);
-    if (senhaOk) {
-      return {
-        ...acesso,
-        passwordAlreadyVerified: true,
-      };
+    if (await verifyPassword(params.senha, acesso.senha_hash)) {
+      return { ...acesso, passwordAlreadyVerified: true };
     }
   }
 
@@ -91,9 +84,8 @@ async function findAcessoByProfissionalCpf(params: {
 
 async function buildProfissionalSession(params: {
   supabaseAdmin: SupabaseAdminClient;
-  idProfissional: string;
+  acesso: ProfissionalAcessoLoginRow;
   cpf: string;
-  acessoId?: string | null;
 }): Promise<LoginResult> {
   const { data: profissional, error: profissionalError } =
     await params.supabaseAdmin
@@ -101,21 +93,13 @@ async function buildProfissionalSession(params: {
       .select(
         "id, nome, nome_exibicao, ativo, id_salao, tipo_profissional, nivel_acesso, pode_usar_sistema"
       )
-      .eq("id", params.idProfissional)
+      .eq("id", params.acesso.id_profissional)
       .limit(1)
       .maybeSingle();
 
-  if (profissionalError) {
-    return { ok: false, error: "Erro ao buscar profissional." };
-  }
-
-  if (!profissional) {
-    return { ok: false, error: "Profissional nao encontrado." };
-  }
-
-  if (!profissional.ativo) {
-    return { ok: false, error: "Profissional inativo." };
-  }
+  if (profissionalError) return { ok: false, error: "Erro ao buscar profissional." };
+  if (!profissional) return { ok: false, error: "Profissional não encontrado." };
+  if (!profissional.ativo) return { ok: false, error: "Profissional inativo." };
 
   if (
     String(profissional.tipo_profissional || "profissional").toLowerCase() ===
@@ -123,20 +107,17 @@ async function buildProfissionalSession(params: {
   ) {
     return {
       ok: false,
-      error: "Assistente do salao nao possui acesso ao app profissional.",
+      error: "Assistente do salão não possui acesso ao App Profissional.",
     };
   }
 
   const nivelAcesso = String(profissional.nivel_acesso || "proprio").toLowerCase();
   if (profissional.pode_usar_sistema === false || nivelAcesso === "sem_acesso") {
-    return {
-      ok: false,
-      error: "Profissional sem acesso liberado para o app.",
-    };
+    return { ok: false, error: "Profissional sem acesso liberado para o app." };
   }
 
   if (!profissional.id_salao) {
-    return { ok: false, error: "Profissional sem salao vinculado." };
+    return { ok: false, error: "Profissional sem salão vinculado." };
   }
 
   const { data: salao, error: salaoError } = await params.supabaseAdmin
@@ -146,16 +127,10 @@ async function buildProfissionalSession(params: {
     .limit(1)
     .maybeSingle();
 
-  if (salaoError) {
-    return { ok: false, error: "Erro ao buscar salao." };
-  }
-
-  if (!salao) {
-    return { ok: false, error: "Salao nao encontrado." };
-  }
-
+  if (salaoError) return { ok: false, error: "Erro ao buscar salão." };
+  if (!salao) return { ok: false, error: "Salão não encontrado." };
   if (!isSalaoStatusOperational(salao.status)) {
-    return { ok: false, error: "Salao inativo ou bloqueado." };
+    return { ok: false, error: "Salão inativo ou bloqueado." };
   }
 
   const securityAccess = await getSecurityAccessDecision({
@@ -176,12 +151,11 @@ async function buildProfissionalSession(params: {
     };
   }
 
-  if (params.acessoId) {
-    await params.supabaseAdmin
-      .from("profissionais_acessos")
-      .update({ ultimo_login_em: new Date().toISOString() })
-      .eq("id", params.acessoId);
-  }
+  await params.supabaseAdmin
+    .from("profissionais_acessos")
+    .update({ ultimo_login_em: new Date().toISOString() })
+    .eq("id", params.acesso.id)
+    .eq("id_profissional", profissional.id);
 
   return {
     ok: true,
@@ -190,6 +164,8 @@ async function buildProfissionalSession(params: {
       idSalao: profissional.id_salao,
       nome: profissional.nome_exibicao || profissional.nome || "Profissional",
       cpf: params.cpf,
+      acessoId: params.acesso.id,
+      authVersion: Math.max(Number(params.acesso.auth_version || 1), 1),
       nivelAcesso,
       podeVerAgendaTodos: nivelAcesso === "todos",
       tipo: "profissional",
@@ -217,7 +193,7 @@ export async function loginProfissionalByCpfSenha(
       if (!acesso) {
         const { data: acessoPorCpf, error: acessoError } = await supabaseAdmin
           .from("profissionais_acessos")
-          .select("id, cpf, senha_hash, ativo, id_profissional")
+          .select("id, cpf, senha_hash, ativo, id_profissional, auth_version")
           .eq("cpf", cpfLimpo)
           .eq("ativo", true)
           .limit(1)
@@ -238,11 +214,10 @@ export async function loginProfissionalByCpfSenha(
           origem: "app-profissional",
           detalhes: { cpf: cpfLimpo },
         });
-        return { ok: false, error: "CPF ou senha invalidos." };
+        return { ok: false, error: "CPF ou senha inválidos." };
       }
 
       let senhaOk = true;
-
       if (acesso.passwordAlreadyVerified !== true) {
         senhaOk =
           normalizeCpf(acesso.cpf || "") === cpfLimpo
@@ -259,14 +234,13 @@ export async function loginProfissionalByCpfSenha(
           origem: "app-profissional",
           detalhes: { cpf: cpfLimpo },
         });
-        return { ok: false, error: "CPF ou senha invalidos." };
+        return { ok: false, error: "CPF ou senha inválidos." };
       }
 
       const session = await buildProfissionalSession({
         supabaseAdmin,
-        idProfissional: acesso.id_profissional,
+        acesso,
         cpf: cpfLimpo,
-        acessoId: acesso.id,
       });
 
       if (session.ok) {
