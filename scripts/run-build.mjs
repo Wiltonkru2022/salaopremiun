@@ -40,6 +40,7 @@ const nodeBin = process.execPath;
 const npmBin = process.platform === "win32" ? "npm.cmd" : "npm";
 const nextBin = "./node_modules/next/dist/bin/next";
 const typecheckScript = "./scripts/run-typecheck.mjs";
+const prepareClientHeroScript = "./scripts/prepare-client-hero-video.mjs";
 const professionalAppDir = "apps/app-profissional-vite";
 
 const supabasePublicKey = String(
@@ -60,6 +61,10 @@ const professionalAppEnv = {
   VITE_SUPABASE_PUBLISHABLE_KEY: supabasePublicKey,
   VITE_SUPABASE_ANON_KEY: supabasePublicKey,
 };
+
+// Reconstrua o vídeo estático do hero antes do Next build. O arquivo final fica
+// em public/ e é servido diretamente pelo app cliente.
+await run(nodeBin, [prepareClientHeroScript]);
 
 // O app profissional e um Vite/PWA independente servido a partir de
 // public/app-profissional. Sempre gere esse bundle antes do Next build para
