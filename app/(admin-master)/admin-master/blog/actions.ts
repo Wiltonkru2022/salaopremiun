@@ -12,6 +12,8 @@ import { enviarNewsletterPostPublicado } from "@/services/blogNewsletterEmail";
 
 type BlogSupabaseClient = LooseSupabaseClient;
 
+type BlogPostStatus = "rascunho" | "publicado" | "arquivado";
+
 function slugify(value: string) {
   return value
     .normalize("NFD")
@@ -37,9 +39,15 @@ function readTags(value: string) {
 function isUuid(value: string) {
   return Boolean(
     value.match(
-      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{12}$/i
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
     )
   );
+}
+
+function readStatus(formData: FormData): BlogPostStatus {
+  const value = readText(formData, "status");
+  if (value === "publicado" || value === "arquivado") return value;
+  return "rascunho";
 }
 
 function titleFromSlug(value: string) {
@@ -93,6 +101,10 @@ async function getDefaultCategoryId(supabase: BlogSupabaseClient) {
 
 async function resolveCategoryId(supabase: BlogSupabaseClient, value: string) {
   const cleanValue = value.trim();
+
+  if (!cleanValue) {
+    return getDefaultCategoryId(supabase);
+  }
 
   if (isUuid(cleanValue)) {
     const { data, error } = await supabase
@@ -206,20 +218,29 @@ export async function createBlogPost(
   const imagemCapaUrl = readText(formData, "imagem_capa_url");
   const imagemCapaAlt = readText(formData, "imagem_capa_alt");
   const tempoLeitura = readText(formData, "tempo_leitura") || "5 min";
-  const status = readText(formData, "status") || "rascunho";
+  const status = readStatus(formData);
   const destaque = readText(formData, "destaque") === "on";
   const enviarEmailNewsletter =
     readText(formData, "enviar_email_newsletter") === "on";
   const tags = readTags(readText(formData, "tags"));
 
-  if (!titulo || !slug || !descricao || !conteudo || !categoriaId) {
+  if (!titulo || !slug) {
     return {
-      error: "Título, categoria, descrição e conteúdo são obrigatórios.",
+      error: "Informe o título antes de salvar o post.",
     };
   }
 
+  if (status === "publicado" && (!descricao || !conteudo)) {
+    return {
+      error: "Para publicar, preencha a descrição e o conteúdo do post.",
+    };
+  }
+
+  const safeDescricao = descricao || "Rascunho em edição.";
+  const safeConteudo = conteudo || "<p></p>";
   const now = new Date().toISOString();
   const supabase = asLooseSupabaseClient(getBlogSupabaseAdmin());
+
   try {
     const resolvedCategoryId = await resolveCategoryId(supabase, categoriaId);
     const { data: existingPost } = id
@@ -241,9 +262,9 @@ export async function createBlogPost(
       categoria_id: resolvedCategoryId,
       titulo,
       slug,
-      descricao,
-      resumo: resumo || descricao,
-      conteudo,
+      descricao: safeDescricao,
+      resumo: resumo || safeDescricao,
+      conteudo: safeConteudo,
       imagem_capa_url: imagemCapaUrl || "/marketing-kit/site-hero.png",
       imagem_capa_alt: imagemCapaAlt || titulo,
       tempo_leitura: tempoLeitura,
@@ -265,13 +286,14 @@ export async function createBlogPost(
         error: `Não foi possível salvar o post: ${error.message}`,
       };
     }
+
     if (shouldSendNewsletter) {
       try {
         await enviarNewsletterPostPublicado({
           slug,
           titulo,
-          descricao,
-          resumo: resumo || descricao,
+          descricao: safeDescricao,
+          resumo: resumo || safeDescricao,
         });
       } catch (newsletterError) {
         return {
