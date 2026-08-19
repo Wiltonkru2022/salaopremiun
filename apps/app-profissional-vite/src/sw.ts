@@ -3,7 +3,7 @@
 import { clientsClaim } from "workbox-core";
 import { cleanupOutdatedCaches, precacheAndRoute } from "workbox-precaching";
 import { registerRoute } from "workbox-routing";
-import { CacheFirst, NetworkFirst } from "workbox-strategies";
+import { CacheFirst } from "workbox-strategies";
 import { ExpirationPlugin } from "workbox-expiration";
 
 declare const self: ServiceWorkerGlobalScope & {
@@ -25,32 +25,19 @@ clientsClaim();
 cleanupOutdatedCaches();
 precacheAndRoute(self.__WB_MANIFEST);
 
-// JS e CSS do app sao versionados pelo precache do Workbox. Nao use CacheFirst
+// JS e CSS do app são versionados pelo precache do Workbox. Não use CacheFirst
 // nesses arquivos, pois isso pode manter um bundle antigo ativo depois do deploy.
+// Respostas de API, Auth e REST do Supabase nunca são persistidas pelo Service Worker.
 registerRoute(
-  ({ request }) => ["image", "font"].includes(request.destination),
+  ({ request, url }) =>
+    url.origin === self.location.origin &&
+    ["image", "font"].includes(request.destination),
   new CacheFirst({
-    cacheName: "salaopremiun-static-media-v2",
+    cacheName: "salaopremium-static-media-v3",
     plugins: [
       new ExpirationPlugin({
         maxEntries: 80,
         maxAgeSeconds: 60 * 60 * 24 * 30,
-      }),
-    ],
-  })
-);
-
-registerRoute(
-  ({ url }) =>
-    url.pathname.includes("/rest/v1/") ||
-    url.pathname.includes("/auth/v1/user"),
-  new NetworkFirst({
-    cacheName: "salaopremiun-supabase-api",
-    networkTimeoutSeconds: 4,
-    plugins: [
-      new ExpirationPlugin({
-        maxEntries: 120,
-        maxAgeSeconds: 60 * 60 * 24,
       }),
     ],
   })
@@ -64,16 +51,19 @@ self.addEventListener("activate", (event) => {
   event.waitUntil(
     Promise.all([
       self.clients.claim(),
-      // Remove o cache antigo que podia conter JS/CSS de releases anteriores.
+      // Remove caches antigos, inclusive o que podia guardar respostas privadas.
       caches.delete("salaopremiun-assets"),
+      caches.delete("salaopremiun-static-media-v2"),
+      caches.delete("salaopremiun-supabase-api"),
+      caches.delete("salaopremium-supabase-api"),
     ])
   );
 });
 
 self.addEventListener("push", (event) => {
   const fallback: PushPayload = {
-    title: "SalaoPremium",
-    body: "Voce tem uma nova atualizacao.",
+    title: "Salão Premium",
+    body: "Você tem uma nova atualização.",
     url: "/app-profissional/",
   };
 

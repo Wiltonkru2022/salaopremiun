@@ -41,11 +41,17 @@ jobs:
       - name: Install
         run: npm ci
 
+      - name: Install App Profissional PWA
+        run: npm --prefix apps/app-profissional-vite ci
+
       - name: Lint
         run: npm run lint
 
       - name: Typecheck
         run: npm run typecheck
+
+      - name: Typecheck App Profissional PWA
+        run: npm run typecheck:professional
 
       - name: Test global input masks
         run: npx vitest run lib/utils/input-masks.test.ts
@@ -56,6 +62,12 @@ jobs:
       - name: Test App Cliente visual notices
         run: npx vitest run lib/client-app/visual-notifications.test.ts
 
+      - name: Test App Cliente safe redirects
+        run: npx vitest run lib/client-app/safe-next.test.ts
+
+      - name: Test App Profissional RPC boundary
+        run: npx vitest run lib/security/profissional-pwa-boundary.test.ts
+
       - name: Test Web Push delivery policies
         run: npx vitest run lib/push-delivery-utils.test.ts
 
@@ -65,6 +77,9 @@ jobs:
       - name: Audit
         continue-on-error: true
         run: npm run audit
+
+      - name: Build App Profissional PWA
+        run: npm run build:professional
 
       - name: Build
         run: npm run build

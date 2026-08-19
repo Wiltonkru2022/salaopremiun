@@ -32,7 +32,7 @@ const titles: Record<View, string> = {
   perfil: ptBR.professional.profile,
   configuracoes: ptBR.professional.settings,
   suporte: ptBR.professional.support,
-  duvidas: "Duvidas",
+  duvidas: ptBR.professional.questions,
   instalar: "Instalar",
   privacidade: "Privacidade"
 };
@@ -45,15 +45,16 @@ export function App() {
     profissional?.id,
     profissional?.podeVerAgendaTodos ??
       profissional?.pode_ver_agenda_todos ??
-      String(profissional?.nivel_acesso || "").toLowerCase() === "todos"
+      String(profissional?.nivel_acesso || "").toLowerCase() === "todos",
+    view
   );
 
   const subtitle = useMemo(() => {
     if (view === "agenda") return new Intl.DateTimeFormat("pt-BR", { weekday: "long", day: "2-digit", month: "long" }).format(new Date(selectedDate + "T12:00:00"));
     if (view === "comandas") return `${data.comandas.filter((item) => item.status === "aberta").length} abertas`;
-    if (view === "notificacoes") return `${data.notificacoes.filter((item) => !item.lida).length} nao lidas`;
-    if (view === "comissao") return "Repasse e producao";
-    if (view === "perfil") return "Dados, horarios e suporte";
+    if (view === "notificacoes") return `${data.notificacoes.filter((item) => !item.lida).length} não lidas`;
+    if (view === "comissao") return "Repasse e produção";
+    if (view === "perfil") return "Dados, horários e suporte";
     return profissional?.nome || "";
   }, [view, selectedDate, data.comandas, data.notificacoes, profissional?.nome]);
 
@@ -93,7 +94,7 @@ export function App() {
       {view === "comissao" ? <ComissaoPage comissoes={data.comissoes} /> : null}
       {view === "avaliacoes" ? <AvaliacoesPage avaliacoes={data.avaliacoes} onDelete={data.actions.excluirAvaliacao} /> : null}
       {view === "notificacoes" ? <NotificacoesPage notificacoes={data.notificacoes} onRead={data.actions.marcarNotificacaoLida} /> : null}
-      {view === "perfil" ? <PerfilPage profissional={profissional} goTo={setView} onChangePassword={data.actions.trocarSenha} /> : null}
+      {view === "perfil" ? <PerfilPage profissional={profissional} goTo={setView} /> : null}
       {view === "configuracoes" ? <ConfiguracoesPage /> : null}
       {view === "suporte" ? <SuportePage /> : null}
       {view === "duvidas" ? <DuvidasPage /> : null}
@@ -102,4 +103,3 @@ export function App() {
     </AppShell>
   );
 }
-

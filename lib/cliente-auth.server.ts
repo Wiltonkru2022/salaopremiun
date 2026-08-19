@@ -18,6 +18,7 @@ export type ClienteAppSession = {
 const COOKIE_NAME = "sp_cliente_session";
 const LOGOUT_MARKER_COOKIE_NAME = "sp_cliente_logout";
 const SESSION_TTL_SECONDS = 60 * 60 * 24 * 180;
+const RESTORE_TOKEN_TTL_SECONDS = 60 * 60 * 12;
 const ENC_ALGORITHM = "aes-256-gcm";
 const IV_LENGTH = 12;
 
@@ -91,11 +92,19 @@ function decryptEnvelope(token: string): SessionEnvelope | null {
   }
 }
 
-function serializeSession(session: ClienteAppSession) {
+function serializeSessionWithTtl(session: ClienteAppSession, ttlSeconds: number) {
   return encryptEnvelope({
-    session: { ...session, authVersion: Number(session.authVersion || 1), issuedAt: session.issuedAt || Date.now() },
-    exp: Math.floor(Date.now() / 1000) + SESSION_TTL_SECONDS,
+    session: {
+      ...session,
+      authVersion: Number(session.authVersion || 1),
+      issuedAt: session.issuedAt || Date.now(),
+    },
+    exp: Math.floor(Date.now() / 1000) + ttlSeconds,
   });
+}
+
+function serializeSession(session: ClienteAppSession) {
+  return serializeSessionWithTtl(session, SESSION_TTL_SECONDS);
 }
 
 function parseSession(token: string): ClienteAppSession | null {
@@ -104,7 +113,10 @@ function parseSession(token: string): ClienteAppSession | null {
 }
 
 export function createClienteSessionRestoreToken(session: ClienteAppSession) {
-  return serializeSession(session);
+  return serializeSessionWithTtl(
+    { ...session, issuedAt: Date.now() },
+    RESTORE_TOKEN_TTL_SECONDS
+  );
 }
 
 export function parseClienteSessionRestoreToken(token: string) {

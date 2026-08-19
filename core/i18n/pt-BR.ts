@@ -1,6 +1,8 @@
+export const BRAND_NAME_PT_BR = "Salão Premium";
+
 export const ptBR = {
   brand: {
-    name: "Salão Premium",
+    name: BRAND_NAME_PT_BR,
     professional: "Profissional",
   },
   common: {
@@ -79,6 +81,7 @@ export const ptBR = {
     profile: "Perfil",
     settings: "Configurações",
     support: "Suporte",
+    questions: "Dúvidas",
     activeAccess: "Acesso ativo",
     nextAppointment: "Próximo atendimento",
     openAgenda: "Abrir agenda",

@@ -5,7 +5,10 @@ import {
   getClienteSessionFromCookie,
   hasClienteLogoutMarker,
   parseClienteSessionRestoreToken,
+  type ClienteAppSession,
 } from "@/lib/cliente-auth.server";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { asLooseSupabaseClient } from "@/lib/supabase/loose-client";
 
 async function readRestoreToken(request: Request) {
   try {
@@ -16,11 +19,46 @@ async function readRestoreToken(request: Request) {
   }
 }
 
+async function validateSessionAgainstAccount(session: ClienteAppSession) {
+  const supabase = asLooseSupabaseClient(getSupabaseAdmin());
+  const { data: account, error } = await supabase
+    .from("clientes_app_auth")
+    .select("id, nome, email, telefone, whatsapp, ativo, auth_version")
+    .eq("id", session.idConta)
+    .limit(1)
+    .maybeSingle<{
+      id?: string | null;
+      nome?: string | null;
+      email?: string | null;
+      telefone?: string | null;
+      whatsapp?: string | null;
+      ativo?: boolean | null;
+      auth_version?: number | null;
+    }>();
+
+  if (error || !account?.id || account.ativo === false) return null;
+  const authVersion = Number(account.auth_version || 1);
+  if (Number(session.authVersion || 1) !== authVersion) return null;
+
+  return {
+    idConta: String(account.id),
+    nome: String(account.nome || session.nome || "Cliente").trim() || "Cliente",
+    email: String(account.email || session.email || "").trim(),
+    telefone: String(account.telefone || session.telefone || "").trim() || null,
+    whatsapp:
+      String(account.whatsapp || session.whatsapp || account.telefone || session.telefone || "").trim() ||
+      null,
+    authVersion,
+    issuedAt: Date.now(),
+    tipo: "cliente" as const,
+  } satisfies ClienteAppSession;
+}
+
 export async function POST(request: Request) {
   if (await hasClienteLogoutMarker()) {
     return NextResponse.json(
       { ok: false, message: "Sessão encerrada neste aparelho." },
-      { status: 401 }
+      { status: 401, headers: { "Cache-Control": "no-store" } }
     );
   }
 
@@ -29,12 +67,20 @@ export async function POST(request: Request) {
   const restoredSession = restoreToken
     ? parseClienteSessionRestoreToken(restoreToken)
     : null;
-  const session = cookieSession || restoredSession;
+  const candidateSession = cookieSession || restoredSession;
 
-  if (!session?.idConta) {
+  if (!candidateSession?.idConta) {
     return NextResponse.json(
       { ok: false, message: "Sessão do cliente indisponível." },
-      { status: 401 }
+      { status: 401, headers: { "Cache-Control": "no-store" } }
+    );
+  }
+
+  const session = await validateSessionAgainstAccount(candidateSession);
+  if (!session) {
+    return NextResponse.json(
+      { ok: false, message: "Sua sessão não é mais válida. Entre novamente." },
+      { status: 401, headers: { "Cache-Control": "no-store" } }
     );
   }
 

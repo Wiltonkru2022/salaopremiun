@@ -26,6 +26,8 @@ type ClientVisualNotice = {
   priority: number;
 };
 
+const NOTICE_POLL_INTERVAL_MS = 5 * 60 * 1000;
+
 function noticeIcon(tone: string) {
   if (tone === "manutencao") return ShieldAlert;
   if (tone === "aviso") return AlertTriangle;
@@ -98,7 +100,7 @@ export default function ClientVisualNoticeRuntime() {
     window.addEventListener("focus", onFocus);
     const timer = window.setInterval(() => {
       if (document.visibilityState === "visible") void loadNotice();
-    }, 60_000);
+    }, NOTICE_POLL_INTERVAL_MS);
 
     return () => {
       window.removeEventListener("focus", onFocus);
@@ -164,7 +166,7 @@ export default function ClientVisualNoticeRuntime() {
 
             <div className="min-w-0 flex-1">
               <div className="text-[10px] font-black uppercase tracking-[0.18em] text-zinc-400">
-                Aviso do SalãoPremium
+                Aviso do Salão Premium
               </div>
               <h2 className="mt-1 text-base font-black tracking-[-0.02em]">
                 {notice.title}
@@ -210,7 +212,6 @@ export default function ClientVisualNoticeRuntime() {
     >
       <section className={`w-full max-w-md overflow-hidden rounded-[30px] border ${classes.border} bg-zinc-950 text-white shadow-2xl`}>
         {notice.imageUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
           <img
             src={notice.imageUrl}
             alt=""
@@ -243,7 +244,7 @@ export default function ClientVisualNoticeRuntime() {
           </div>
 
           <div className="mt-5 text-[10px] font-black uppercase tracking-[0.22em] text-zinc-400">
-            SalãoPremium
+            Salão Premium
           </div>
           <h2
             id={`client-notice-title-${notice.id}`}

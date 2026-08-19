@@ -9,11 +9,9 @@ import type { Profissional } from "../types/database";
 export function PerfilPage({
   profissional,
   goTo,
-  onChangePassword
 }: {
   profissional: Profissional;
   goTo: (view: "configuracoes" | "suporte" | "duvidas" | "instalar" | "privacidade") => void;
-  onChangePassword?: (senha: string) => Promise<void>;
 }) {
   const [passwordOpen, setPasswordOpen] = useState(false);
 
@@ -31,28 +29,23 @@ export function PerfilPage({
         <h3 className="text-xl font-black tracking-[-0.04em]">Informações</h3>
         <div className="mt-4 grid gap-2">
           <Info label="Telefone" value={profissional.telefone || profissional.whatsapp || "Não informado"} />
-          <Info label="Email" value={profissional.email || "Não informado"} />
+          <Info label="E-mail" value={profissional.email || "Não informado"} />
           <Info label="CPF" value={profissional.cpf || "Não informado"} />
           <Info label="Pix" value={profissional.pix_chave || profissional.sinal_pix_recebedor || "Não informado"} />
-          <Info label="Intervalo agenda" value={`${profissional.intervalo_agenda_minutos || 30} minutos`} />
+          <Info label="Intervalo da agenda" value={`${profissional.intervalo_agenda_minutos || 30} minutos`} />
         </div>
       </Card>
 
       <div className="grid gap-3">
         <ProfileAction icon={<Clock size={21} />} title="Ajustar horários" text="Expediente e intervalo da agenda" onClick={() => goTo("configuracoes")} />
-        <ProfileAction icon={<KeyRound size={21} />} title="Trocar senha" text="Senha do app profissional" onClick={() => setPasswordOpen(true)} />
+        <ProfileAction icon={<KeyRound size={21} />} title="Trocar senha" text="Senha do App Profissional" onClick={() => setPasswordOpen(true)} />
         <ProfileAction icon={<Smartphone size={21} />} title="Instalar app" text="PWA na tela inicial" onClick={() => goTo("instalar")} />
         <ProfileAction icon={<HelpCircle size={21} />} title="Suporte e dúvidas" text="Ajuda rápida do profissional" onClick={() => goTo("suporte")} />
         <ProfileAction icon={<ShieldCheck size={21} />} title="Privacidade" text="Termos e regras de uso" onClick={() => goTo("privacidade")} />
       </div>
 
       <Modal title="Trocar senha" open={passwordOpen} onClose={() => setPasswordOpen(false)}>
-        <PasswordForm
-          onSubmit={async (senha) => {
-            await onChangePassword?.(senha);
-            setPasswordOpen(false);
-          }}
-        />
+        <PasswordForm />
       </Modal>
     </div>
   );
@@ -67,7 +60,8 @@ function Info({ label, value }: { label: string; value: string }) {
   );
 }
 
-function PasswordForm({ onSubmit }: { onSubmit: (senha: string) => Promise<void> }) {
+function PasswordForm() {
+  const [senhaAtual, setSenhaAtual] = useState("");
   const [senha, setSenha] = useState("");
   const [confirmar, setConfirmar] = useState("");
   const [erro, setErro] = useState("");
@@ -76,17 +70,46 @@ function PasswordForm({ onSubmit }: { onSubmit: (senha: string) => Promise<void>
   async function submit(event: FormEvent) {
     event.preventDefault();
     setErro("");
-    if (senha.length < 6) return setErro("A senha precisa ter pelo menos 6 caracteres.");
+    if (!senhaAtual) return setErro("Informe sua senha atual.");
+    if (senha.length < 6) return setErro("A nova senha precisa ter pelo menos 6 caracteres.");
+    if (senhaAtual === senha) return setErro("Escolha uma senha diferente da atual.");
     if (senha !== confirmar) return setErro("As senhas não conferem.");
+
     setLoading(true);
-    await onSubmit(senha);
-    setLoading(false);
+    try {
+      const response = await fetch("/api/app-profissional/mutacoes", {
+        method: "POST",
+        credentials: "same-origin",
+        cache: "no-store",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "trocar_senha",
+          senhaAtual,
+          senha,
+        }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload.ok) {
+        throw new Error(String(payload.error || "Não foi possível trocar a senha."));
+      }
+      window.location.assign("/app-profissional/");
+    } catch (error) {
+      setErro(error instanceof Error ? error.message : "Não foi possível trocar a senha.");
+      setLoading(false);
+    }
   }
 
   return (
     <form onSubmit={submit} className="grid gap-3">
-      <Field label="Nova senha"><Input type="password" value={senha} onChange={(event) => setSenha(event.target.value)} /></Field>
-      <Field label="Confirmar senha"><Input type="password" value={confirmar} onChange={(event) => setConfirmar(event.target.value)} /></Field>
+      <Field label="Senha atual">
+        <Input type="password" autoComplete="current-password" value={senhaAtual} onChange={(event) => setSenhaAtual(event.target.value)} />
+      </Field>
+      <Field label="Nova senha">
+        <Input type="password" autoComplete="new-password" value={senha} onChange={(event) => setSenha(event.target.value)} />
+      </Field>
+      <Field label="Confirmar nova senha">
+        <Input type="password" autoComplete="new-password" value={confirmar} onChange={(event) => setConfirmar(event.target.value)} />
+      </Field>
       {erro ? <div className="rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-bold text-red-700">{erro}</div> : null}
       <Button loading={loading}>Salvar nova senha</Button>
     </form>

@@ -9,6 +9,7 @@ export type ProfissionalSession = {
   idSalao: string;
   nome: string;
   cpf: string;
+  authVersion: number;
   tipo: "profissional";
 };
 
@@ -127,7 +128,16 @@ function parseSession(token: string): ProfissionalSession | null {
   if (!envelope?.session) {
     return null;
   }
-  return envelope.session;
+
+  const authVersion = Number(envelope.session.authVersion);
+  if (!Number.isSafeInteger(authVersion) || authVersion < 1) {
+    return null;
+  }
+
+  return {
+    ...envelope.session,
+    authVersion,
+  };
 }
 
 export async function hashPassword(password: string) {

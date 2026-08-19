@@ -17,6 +17,7 @@ type LoginResult =
         idSalao: string;
         nome: string;
         cpf: string;
+        authVersion: number;
         nivelAcesso: string;
         podeVerAgendaTodos: boolean;
         tipo: "profissional";
@@ -34,11 +35,17 @@ type ProfissionalAcessoLoginRow = {
   senha_hash: string;
   ativo?: boolean | null;
   id_profissional: string;
+  auth_version?: number | string | null;
   passwordAlreadyVerified?: boolean;
 };
 
 function normalizeCpf(value: string) {
   return String(value || "").replace(/\D/g, "").trim();
+}
+
+function normalizeAuthVersion(value: unknown) {
+  const parsed = Number(value);
+  return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : 1;
 }
 
 async function findAcessoByProfissionalCpf(params: {
@@ -66,9 +73,9 @@ async function findAcessoByProfissionalCpf(params: {
     return null;
   }
 
-  const { data: acessos, error: acessosError } = await params.supabaseAdmin
+  const { data: acessos, error: acessosError } = await (params.supabaseAdmin as any)
     .from("profissionais_acessos")
-    .select("id, cpf, senha_hash, ativo, id_profissional")
+    .select("id, cpf, senha_hash, ativo, id_profissional, auth_version")
     .eq("ativo", true)
     .in("id_profissional", idsProfissionais);
 
@@ -93,6 +100,7 @@ async function buildProfissionalSession(params: {
   supabaseAdmin: SupabaseAdminClient;
   idProfissional: string;
   cpf: string;
+  authVersion: number;
   acessoId?: string | null;
 }): Promise<LoginResult> {
   const { data: profissional, error: profissionalError } =
@@ -190,6 +198,7 @@ async function buildProfissionalSession(params: {
       idSalao: profissional.id_salao,
       nome: profissional.nome_exibicao || profissional.nome || "Profissional",
       cpf: params.cpf,
+      authVersion: normalizeAuthVersion(params.authVersion),
       nivelAcesso,
       podeVerAgendaTodos: nivelAcesso === "todos",
       tipo: "profissional",
@@ -215,9 +224,9 @@ export async function loginProfissionalByCpfSenha(
       });
 
       if (!acesso) {
-        const { data: acessoPorCpf, error: acessoError } = await supabaseAdmin
+        const { data: acessoPorCpf, error: acessoError } = await (supabaseAdmin as any)
           .from("profissionais_acessos")
-          .select("id, cpf, senha_hash, ativo, id_profissional")
+          .select("id, cpf, senha_hash, ativo, id_profissional, auth_version")
           .eq("cpf", cpfLimpo)
           .eq("ativo", true)
           .limit(1)
@@ -266,6 +275,7 @@ export async function loginProfissionalByCpfSenha(
         supabaseAdmin,
         idProfissional: acesso.id_profissional,
         cpf: cpfLimpo,
+        authVersion: normalizeAuthVersion(acesso.auth_version),
         acessoId: acesso.id,
       });
 
