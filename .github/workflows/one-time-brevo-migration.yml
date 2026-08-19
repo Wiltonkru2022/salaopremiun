@@ -3,6 +3,7 @@ name: One-time Brevo cleanup
 on:
   push:
     branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -55,6 +56,10 @@ jobs:
           legacy = Path('lib/email/resend.ts')
           if legacy.exists():
               legacy.unlink()
+
+          marker = Path('.brevo-migration-trigger')
+          if marker.exists():
+              marker.unlink()
 
           workflow = Path('.github/workflows/one-time-brevo-migration.yml')
           if workflow.exists():
