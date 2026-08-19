@@ -22,12 +22,16 @@ export default function ClientProfileForm({
   nome,
   email,
   telefone,
+  cpf,
+  dataNascimento,
   preferenciasGerais,
   successKey,
 }: {
   nome: string;
   email: string;
   telefone?: string | null;
+  cpf?: string | null;
+  dataNascimento?: string | null;
   preferenciasGerais?: string | null;
   successKey?: string | null;
 }) {
@@ -41,10 +45,47 @@ export default function ClientProfileForm({
     <div className="space-y-4">
       <form id="editar-cadastro" action={formAction} className="rounded-[1.8rem] border border-white/70 bg-white p-5 shadow-[0_18px_48px_rgba(15,23,42,0.08)]">
         <h2 className="text-lg font-black text-zinc-950">Editar dados</h2>
+        <p className="mt-2 text-sm leading-6 text-zinc-500">
+          CPF e data de nascimento fazem parte do novo acesso ao App Cliente.
+        </p>
+
         <div className="mt-5 space-y-4">
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-zinc-700">Nome</label>
+            <label className="mb-1.5 block text-sm font-medium text-zinc-700">Nome completo</label>
             <input name="nome" type="text" autoComplete="name" defaultValue={nome} required className="h-12 w-full rounded-2xl border border-zinc-200 bg-white px-4 text-base outline-none" />
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-zinc-700">CPF</label>
+              <input
+                name="cpf"
+                type="text"
+                inputMode="numeric"
+                autoComplete="off"
+                defaultValue={cpf || ""}
+                placeholder="000.000.000-00"
+                maxLength={14}
+                required
+                className="h-12 w-full rounded-2xl border border-zinc-200 bg-white px-4 text-base outline-none"
+              />
+            </div>
+
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-zinc-700">Data de nascimento</label>
+              <input
+                name="dataNascimento"
+                type="date"
+                autoComplete="bday"
+                defaultValue={dataNascimento || ""}
+                required
+                className="h-12 w-full rounded-2xl border border-zinc-200 bg-white px-4 text-base outline-none"
+              />
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs leading-5 text-amber-900">
+            Ao alterar CPF ou data de nascimento, o sistema valida os novos dados e atualiza também o acesso usado no login.
           </div>
 
           <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4">
