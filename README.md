@@ -13,7 +13,7 @@ Vercel / Next.js
       ├── APIs e Server Actions
       ├── webhooks Asaas
       ├── Web Push / VAPID
-      ├── e-mails Resend
+      ├── e-mails Brevo
       └── rotas cron
       │
       ▼
@@ -42,7 +42,7 @@ Não existe dependência de VPS auxiliar. APIs, jobs e processamento assíncrono
 | Auth | Supabase Auth + sessões SSR |
 | Storage | Supabase Storage |
 | Blog | Supabase separado |
-| E-mail | Resend |
+| E-mail | Brevo |
 | Pagamentos | Asaas |
 | Push | Web Push + VAPID + `web-push` |
 | Jobs recorrentes | Supabase Cron/pg_cron + rotas cron Vercel |
@@ -89,17 +89,18 @@ SUPABASE_SERVICE_ROLE_KEY=
 
 `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` é a chave preferida para navegador/PWA. `NEXT_PUBLIC_SUPABASE_ANON_KEY` permanece apenas como alias de compatibilidade enquanto pontos legados são migrados. `SUPABASE_SERVICE_ROLE_KEY` é exclusivamente de backend.
 
-### Resend / trial
+### Brevo / trial
 
 ```env
-RESEND_API_KEY=
+BREVO_API_KEY=
+BREVO_EMAIL_FROM=
 CADASTRO_SALAO_EMAIL_FROM=
 CADASTRO_SALAO_EMAIL_REPLY_TO=
 TRIAL_EMAIL_FROM=
 TRIAL_EMAIL_REPLY_TO=
 ```
 
-O ciclo de trial roda diretamente pelo sistema: a rota cron consulta `assinaturas`, envia os avisos via Resend e grava os marcadores de 3 dias, 1 dia, hoje e expirado no Supabase.
+O ciclo de trial roda diretamente pelo sistema: a rota cron consulta `assinaturas`, envia os avisos via Brevo e grava os marcadores de 3 dias, 1 dia, hoje e expirado no Supabase.
 
 ### Asaas
 
@@ -204,7 +205,7 @@ Regras:
 - `push_subscriptions`: dispositivos/navegadores inscritos.
 - Supabase Cron: dispara processamento recorrente.
 - Vercel: executa as rotas de processamento.
-- `trial-alerts`: envia avisos de trial pelo Resend.
+- `trial-alerts`: envia avisos de trial pela Brevo.
 - `security-cleanup`: aplica retenção no banco principal.
 - `renovar-assinaturas`: processa rotina comercial recorrente.
 
@@ -227,9 +228,9 @@ O Admin Master usa esses dados para Saúde, Segurança e Relatórios.
 
 Assinaturas e cobranças são processadas pelo fluxo local. O webhook não depende de serviço intermediário.
 
-### Resend
+### Brevo
 
-Usado em recuperação de senha, boas-vindas, blog e avisos de trial.
+Usado em recuperação de senha, recuperação e alteração de e-mail do App Cliente, boas-vindas, alertas de segurança, blog e avisos de trial.
 
 ### Google Calendar
 
@@ -257,6 +258,6 @@ Fluxo recomendado:
 2. executar lint, typecheck e build;
 3. revisar migrations;
 4. abrir PR;
-5. validar preview Vercel;
+5. validar preview Vercel quando necessário;
 6. mergear em `main`;
 7. confirmar deployment `READY` e logs de produção.
