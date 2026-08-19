@@ -50,7 +50,7 @@ export default function ClientSessionAutoRestore({
           window.localStorage.setItem(RESTORE_TOKEN_KEY, payload.restoreToken);
         }
 
-        router.replace(next || "/app-cliente/agendamentos");
+        router.replace(next || "/app-cliente/inicio");
         router.refresh();
       })
       .finally(() => {

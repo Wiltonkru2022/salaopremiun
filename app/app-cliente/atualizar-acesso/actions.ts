@@ -22,5 +22,5 @@ export async function completeClienteIdentityAction(
 
   await createClienteSession(result.session);
   const next = String(formData.get("next") || "").trim();
-  redirect(next || "/app-cliente/agendamentos");
+  redirect(next || "/app-cliente/inicio");
 }
