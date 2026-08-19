@@ -50,7 +50,7 @@ export function SearchPicker({
   onChange,
   emptyText = "Nada encontrado.",
   allowClear = true,
-  hideInputWhenSelected = false,
+  hideInputWhenSelected = true,
   maxResults = 6,
   createKind
 }: {
@@ -88,6 +88,11 @@ export function SearchPicker({
 
   const showResults = query.trim().length > 0;
 
+  function clearSelection() {
+    onChange("");
+    setQuery("");
+  }
+
   function acceptCreated(option: SearchPickerOption) {
     setCreatedOptions((current) => [option, ...current.filter((item) => item.value !== option.value)]);
     onChange(option.value);
@@ -99,14 +104,9 @@ export function SearchPicker({
 
   return (
     <div className="grid gap-2">
-      {visibleLabel || (selected && allowClear) ? (
+      {visibleLabel ? (
         <div className="flex items-center justify-between gap-3">
-          {visibleLabel ? <span className="text-[0.68rem] font-black uppercase tracking-[0.18em] text-zinc-400">{visibleLabel}</span> : <span />}
-          {selected && allowClear ? (
-            <button type="button" className="text-xs font-black text-amber-700" onClick={() => { onChange(""); setQuery(""); }}>
-              Trocar
-            </button>
-          ) : null}
+          <span className="text-[0.68rem] font-black uppercase tracking-[0.18em] text-zinc-400">{visibleLabel}</span>
         </div>
       ) : null}
 
@@ -117,7 +117,7 @@ export function SearchPicker({
             {selected.description ? <div className="mt-0.5 truncate text-xs font-bold text-zinc-500">{selected.description}</div> : null}
           </div>
           {allowClear ? (
-            <button type="button" className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-white text-zinc-500 shadow-sm ring-1 ring-zinc-200" onClick={() => { onChange(""); setQuery(""); }} aria-label="Remover seleção">
+            <button type="button" className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-white text-zinc-500 shadow-sm ring-1 ring-zinc-200" onClick={clearSelection} aria-label="Alterar seleção">
               <X size={16} />
             </button>
           ) : null}
