@@ -22,7 +22,6 @@ export async function GET() {
           .order("created_at", { ascending: false })
           .limit(100);
         if (error) throw error;
-
         const ids = (cupons || []).map((item: any) => item.id);
         if (!ids.length) return { cupons: [] };
         const [{ data: convites }, { data: usos }] = await Promise.all([
@@ -61,6 +60,7 @@ export async function POST(request: Request) {
     if (valorDesconto <= 0) throw new Error("Informe um desconto maior que zero.");
     if (tipoDesconto === "percentual" && valorDesconto > 100) throw new Error("O desconto percentual não pode passar de 100%.");
     if (!validoAte) throw new Error("Informe a validade do cupom.");
+    if (validoAte < new Date().toISOString().slice(0, 10)) throw new Error("A validade não pode estar no passado.");
     if (!clienteIds.length) throw new Error("Selecione pelo menos uma cliente com WhatsApp.");
 
     const result = await runAdminOperation({
@@ -98,7 +98,6 @@ export async function POST(request: Request) {
             publico_tipo: "link_privado",
             origem: "app_profissional",
             status_campanha: "ativa",
-            criado_por_painel: context.idProfissional,
             mensagem_cliente: text(body.mensagem) || null,
             metadata: { privado_por_destinatario: true, criado_por_profissional: context.idProfissional },
           })
@@ -114,12 +113,11 @@ export async function POST(request: Request) {
           status: "enviado",
           metadata: { origem: "app_profissional_whatsapp", profissional_id: context.idProfissional },
         }));
-        const linksClientes = validas.map((cliente: any) => ({ id_salao: context.idSalao, id_cupom: cupom.id, id_cliente: cliente.id }));
-        const [{ error: vinculoError }, { data: convitesCriados, error: conviteError }] = await Promise.all([
-          (supabase as any).from("cupom_salao_clientes").insert(linksClientes),
-          (supabase as any).from("cupom_salao_resgates").insert(convites).select("id_cliente,token,status"),
-        ]);
-        if (vinculoError || conviteError) throw vinculoError || conviteError;
+        const { data: convitesCriados, error: conviteError } = await (supabase as any)
+          .from("cupom_salao_resgates")
+          .insert(convites)
+          .select("id_cliente,token,status");
+        if (conviteError) throw conviteError;
         const tokenByCliente = new Map((convitesCriados || []).map((item: any) => [item.id_cliente, item.token]));
         return {
           cupom,
