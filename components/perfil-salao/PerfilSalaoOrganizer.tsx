@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Building2, Globe2, PlugZap, ShieldCheck } from "lucide-react";
+import PublicSalonDetailsEditor from "@/components/perfil-salao/PublicSalonDetailsEditor";
 
 type TabKey = "perfil" | "vitrine" | "seguranca" | "integracoes";
 
@@ -20,7 +21,7 @@ const tabs: Array<{
   {
     key: "vitrine",
     label: "Vitrine e portfólio",
-    description: "App Cliente, fotos, divulgação e QR Code.",
+    description: "App Cliente, informações públicas, fotos, divulgação e QR Code.",
     icon: <Globe2 size={17} />,
   },
   {
@@ -56,7 +57,8 @@ function sectionTab(section: HTMLElement): TabKey | "always" | "unknown" {
     heading.includes("app cliente") ||
     heading.includes("criar vitrine") ||
     heading.includes("configurar vitrine") ||
-    heading.includes("divulgacao do salao")
+    heading.includes("divulgacao do salao") ||
+    heading.includes("portfolio")
   ) {
     return "vitrine";
   }
@@ -80,7 +82,14 @@ function actionTab(button: HTMLButtonElement): TabKey | "unknown" {
   if (text.includes("editar dados comerciais") || text.includes("editar endereco")) {
     return "perfil";
   }
-  if (text.includes("app cliente") || text.includes("criar vitrine")) return "vitrine";
+  if (
+    text.includes("app cliente") ||
+    text.includes("criar vitrine") ||
+    text.includes("portfolio") ||
+    text.includes("qr code")
+  ) {
+    return "vitrine";
+  }
   if (
     text.includes("trocar senha") ||
     text.includes("autenticador") ||
@@ -192,6 +201,7 @@ export default function PerfilSalaoOrganizer({ children }: { children: ReactNode
         <div className="mt-1 text-xs leading-5 text-zinc-500">{current.description}</div>
       </div>
 
+      {activeTab === "vitrine" ? <PublicSalonDetailsEditor /> : null}
       <div ref={rootRef}>{children}</div>
     </div>
   );
