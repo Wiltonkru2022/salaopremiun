@@ -1,9 +1,11 @@
 import {
   Ban,
+  CalendarDays,
   CalendarPlus,
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
+  Clock3,
   Eye,
   FileImage,
   RefreshCw,
@@ -276,14 +278,84 @@ export function Calendar({
         </div>
       </Modal>
 
-      <Modal title="Bloquear horário" subtitle="Escolha os dias e o período que ficarão indisponíveis." open={blockOpen} onClose={() => setBlockOpen(false)}>
+      <Modal title="Bloquear horário" subtitle="Defina quando este profissional ficará indisponível." open={blockOpen} onClose={() => setBlockOpen(false)}>
         <div className="space-y-4">
-          {canChooseProfessional ? <Field label="Profissional"><SearchPicker value={blockProfissional} onChange={setBlockProfissional} options={profissionalOptions} placeholder="Selecione o profissional" /></Field> : null}
-          <Field label="Motivo"><Input value={blockReason} onChange={(event) => setBlockReason(event.target.value)} /></Field>
-          <label className="flex items-center gap-3 rounded-2xl border border-zinc-200 bg-zinc-50 p-3 text-sm font-black text-zinc-700"><input type="checkbox" checked={blockAllDay} onChange={(event) => { const checked = event.target.checked; setBlockAllDay(checked); if (checked) { const schedule = getHorarioDiaTodo(selectedDate); setBlockHour(schedule.inicio); setBlockEndHour(schedule.fim); } }} />Dia todo</label>
-          <div className="grid grid-cols-2 gap-3"><Field label="Início"><Input type="time" value={blockHour} disabled={blockAllDay} onChange={(event) => setBlockHour(event.target.value)} /></Field><Field label="Fim"><Input type="time" value={blockEndHour} disabled={blockAllDay} onChange={(event) => setBlockEndHour(event.target.value)} /></Field></div>
-          <div><div className="mb-2 text-xs font-black uppercase tracking-[0.18em] text-zinc-400">Dias</div><div className="grid grid-cols-4 gap-2">{selectedMonthDates.map((date) => <button key={date} className={`rounded-xl border px-2 py-2 text-xs font-black ${blockSelectedDates.includes(date) ? "border-zinc-950 bg-zinc-950 text-white" : "border-zinc-200 bg-white text-zinc-700"}`} onClick={() => toggleBlockDate(date)}>{date.slice(8, 10)}</button>)}</div></div>
-          {blockError ? <div role="alert" className="rounded-2xl border border-red-200 bg-red-50 px-3 py-3 text-sm font-bold text-red-700">{blockError}</div> : null}
+          <div className="rounded-[1.2rem] border border-amber-100 bg-gradient-to-br from-amber-50 to-white p-4">
+            <div className="flex items-start gap-3">
+              <div className="grid h-11 w-11 shrink-0 place-items-center rounded-[0.9rem] bg-white text-amber-800 shadow-sm ring-1 ring-amber-100"><Ban size={20} /></div>
+              <div className="min-w-0">
+                <div className="text-[0.65rem] font-black uppercase tracking-[0.18em] text-amber-700">Bloqueio de agenda</div>
+                <div className="mt-1 text-base font-black text-zinc-950">{blockSelectedDates.length} {blockSelectedDates.length === 1 ? "dia selecionado" : "dias selecionados"}</div>
+                <div className="mt-0.5 text-xs font-semibold text-zinc-500">{blockAllDay ? "O dia inteiro ficará indisponível." : `${blockHour} às ${blockEndHour}`}</div>
+              </div>
+            </div>
+          </div>
+
+          {canChooseProfessional ? <Field label="Profissional"><SearchPicker value={blockProfissional} onChange={setBlockProfissional} options={profissionalOptions} placeholder="Selecione o profissional" hideInputWhenSelected /></Field> : null}
+
+          <Field label="Motivo"><Input value={blockReason} onChange={(event) => setBlockReason(event.target.value)} placeholder="Ex.: almoço, folga, compromisso" /></Field>
+
+          <button
+            type="button"
+            onClick={() => {
+              const checked = !blockAllDay;
+              setBlockAllDay(checked);
+              if (checked) {
+                const schedule = getHorarioDiaTodo(selectedDate);
+                setBlockHour(schedule.inicio);
+                setBlockEndHour(schedule.fim);
+              }
+            }}
+            className={`flex w-full items-center justify-between rounded-[1.05rem] border px-4 py-3.5 text-left transition ${blockAllDay ? "border-amber-300 bg-amber-50" : "border-zinc-200 bg-zinc-50"}`}
+          >
+            <div className="flex items-center gap-3">
+              <div className={`grid h-10 w-10 place-items-center rounded-[0.85rem] ${blockAllDay ? "bg-amber-100 text-amber-800" : "bg-white text-zinc-600"}`}><CalendarDays size={19} /></div>
+              <div>
+                <div className="text-sm font-black text-zinc-950">Dia todo</div>
+                <div className="mt-0.5 text-xs font-semibold text-zinc-500">Bloquear o expediente completo.</div>
+              </div>
+            </div>
+            <span className={`relative h-7 w-12 rounded-full transition ${blockAllDay ? "bg-amber-500" : "bg-zinc-300"}`}>
+              <span className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow-sm transition ${blockAllDay ? "left-6" : "left-1"}`} />
+            </span>
+          </button>
+
+          {!blockAllDay ? (
+            <div className="rounded-[1.05rem] border border-zinc-200 bg-zinc-50/70 p-3">
+              <div className="mb-3 flex items-center gap-2 text-[0.68rem] font-black uppercase tracking-[0.16em] text-zinc-400"><Clock3 size={15} /> Período</div>
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="Início"><Input type="time" value={blockHour} onChange={(event) => setBlockHour(event.target.value)} /></Field>
+                <Field label="Fim"><Input type="time" value={blockEndHour} onChange={(event) => setBlockEndHour(event.target.value)} /></Field>
+              </div>
+            </div>
+          ) : null}
+
+          <div className="rounded-[1.1rem] border border-zinc-200 bg-white p-3.5">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <div>
+                <div className="text-[0.68rem] font-black uppercase tracking-[0.18em] text-zinc-400">Dias de</div>
+                <div className="mt-0.5 text-lg font-black capitalize tracking-[-0.03em] text-zinc-950">{monthLabel(cursor)}</div>
+              </div>
+              <span className="rounded-full bg-amber-50 px-3 py-1.5 text-xs font-black text-amber-800">{blockSelectedDates.length} selecionado{blockSelectedDates.length === 1 ? "" : "s"}</span>
+            </div>
+            <div className="grid grid-cols-7 gap-1 text-center text-[0.62rem] font-black uppercase tracking-wide text-zinc-400">
+              {["D", "S", "T", "Q", "Q", "S", "S"].map((day, index) => <span key={`${day}-${index}`} className="py-1">{day}</span>)}
+            </div>
+            <div className="mt-1 grid grid-cols-7 gap-1.5">
+              {days.map((day) => day.currentMonth ? (
+                <button
+                  key={`block-${day.key}`}
+                  type="button"
+                  onClick={() => toggleBlockDate(day.date)}
+                  className={`aspect-square rounded-[0.8rem] border text-xs font-black transition ${blockSelectedDates.includes(day.date) ? "border-zinc-950 bg-zinc-950 text-white shadow-sm" : "border-zinc-200 bg-white text-zinc-700 active:bg-zinc-50"}`}
+                >
+                  {day.label}
+                </button>
+              ) : <span key={`block-${day.key}`} />)}
+            </div>
+          </div>
+
+          {blockError ? <div role="alert" className="rounded-[1rem] border border-red-200 bg-red-50 px-3 py-3 text-sm font-bold text-red-700">{blockError}</div> : null}
           <ModalActionBar><Button onClick={async () => { if (!blockSelectedDates.length || (canChooseProfessional && !blockProfissional)) { setBlockError("Selecione pelo menos um dia e o profissional."); return; } const selectedProfessionalId = canChooseProfessional ? blockProfissional : profissionalAtual.id; setBlockError(null); try { await onBlock(blockSelectedDates, blockHour, blockEndHour, blockReason, selectedProfessionalId); setBlockOpen(false); } catch (error) { setBlockError(error instanceof Error ? error.message : "Não foi possível bloquear o horário."); } }}>Bloquear horário</Button></ModalActionBar>
         </div>
       </Modal>
