@@ -2,11 +2,16 @@ import { NextResponse } from "next/server";
 import { getPainelUserContext } from "@/lib/auth/get-painel-user-context";
 import { requireSalaoPermission } from "@/lib/auth/require-salao-permission";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { cancelarAgendamentoComComanda } from "@/lib/agenda/cancelarAgendamentoComComanda";
 import {
+  notifyAppointmentCanceled,
+  notifyAppointmentFinished,
   notifyClientAboutSalonConfirmation,
   scheduleAppointmentReminderNotifications,
 } from "@/lib/notification-jobs";
 import { notifyClientAppointmentConfirmed } from "@/lib/push-notifications";
+import { notifyWaitlistAboutReleasedSlot } from "@/lib/client-app/waitlist";
+import { buscarServicoPorId } from "@/app/services/profissional/agenda";
 
 const STATUS_PERMITIDOS = new Set([
   "pendente",
@@ -56,7 +61,9 @@ export async function POST(request: Request) {
     const supabase = getSupabaseAdmin();
     const { data: appointment, error: loadError } = await (supabase as any)
       .from("agendamentos")
-      .select("id, status, sinal_status")
+      .select(
+        "id, status, sinal_status, cliente_id, profissional_id, servico_id, data, hora_inicio, hora_fim, id_comanda"
+      )
       .eq("id", idAgendamento)
       .eq("id_salao", usuario.id_salao)
       .maybeSingle();
@@ -68,9 +75,52 @@ export async function POST(request: Request) {
       );
     }
 
+    const previousStatus = String(appointment.status || "").toLowerCase();
+    if (status === "cancelado") {
+      if (["cancelado", "atendido", "faltou"].includes(previousStatus)) {
+        throw new Error("Este agendamento não pode mais ser cancelado.");
+      }
+
+      await cancelarAgendamentoComComanda({
+        supabase: supabase as any,
+        idSalao: usuario.id_salao,
+        idAgendamento,
+      });
+
+      await notifyAppointmentCanceled({
+        idSalao: usuario.id_salao,
+        idAgendamento,
+        idCliente: appointment.cliente_id,
+        idProfissional: appointment.profissional_id,
+        data: appointment.data,
+        horaInicio: appointment.hora_inicio,
+        actor: "salao",
+      });
+
+      try {
+        const servico = appointment.servico_id
+          ? await buscarServicoPorId(usuario.id_salao, String(appointment.servico_id))
+          : null;
+        await notifyWaitlistAboutReleasedSlot({
+          supabaseAdmin: supabase,
+          releasedSlot: {
+            idSalao: usuario.id_salao,
+            idServico: appointment.servico_id || null,
+            idProfissional: appointment.profissional_id || null,
+            data: appointment.data,
+            horaInicio: appointment.hora_inicio,
+            servicoNome: servico?.nome || null,
+          },
+        });
+      } catch {
+        // O cancelamento já foi concluído; a fila de espera não bloqueia a operação.
+      }
+
+      return NextResponse.json({ ok: true, status: "cancelado" });
+    }
+
     const now = new Date().toISOString();
     const patch: Record<string, unknown> = { status, updated_at: now };
-
     if (status === "confirmado") {
       patch.cliente_confirmacao_status = "aguardando";
       patch.cliente_confirmou_em = null;
@@ -91,10 +141,7 @@ export async function POST(request: Request) {
       .eq("id_salao", usuario.id_salao);
     if (updateError) throw new Error(updateError.message);
 
-    if (
-      status === "confirmado" &&
-      String(appointment.status || "").toLowerCase() !== "confirmado"
-    ) {
+    if (status === "confirmado" && previousStatus !== "confirmado") {
       await notifyClientAppointmentConfirmed({
         idAgendamento,
         idSalao: usuario.id_salao,
@@ -109,7 +156,14 @@ export async function POST(request: Request) {
       });
     }
 
-    return NextResponse.json({ ok: true });
+    if (status === "atendido" && previousStatus !== "atendido") {
+      await notifyAppointmentFinished({
+        idAgendamento,
+        idSalao: usuario.id_salao,
+      });
+    }
+
+    return NextResponse.json({ ok: true, status });
   } catch (error) {
     const statusCode =
       typeof error === "object" && error && "status" in error
