@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import GlobalInputEnhancements from "@/components/forms/GlobalInputEnhancements";
 import ChunkRecoveryRuntime from "@/components/monitoring/ChunkRecoveryRuntime";
 import MonitoringClient from "@/components/monitoring/MonitoringClient";
 import RouteDocumentTitle from "@/components/layout/RouteDocumentTitle";
@@ -39,7 +40,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "SalãoPremium",
     description:
-      "Gestão premium para salões com operação, financeiro e assinatura no mesmo sistema.",
+      "Gestão premium para salões com operação, financeiro e assinatura.",
     images: ["/logo.png"],
   },
   robots: {
@@ -63,6 +64,7 @@ export default function RootLayout({
         <RouteDocumentTitle />
         <ChunkRecoveryRuntime />
         <MonitoringClient />
+        <GlobalInputEnhancements />
         {children}
       </body>
     </html>

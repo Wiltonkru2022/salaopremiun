@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Eye, EyeOff, Lock, Mail } from "lucide-react";
+import { Lock, Mail } from "lucide-react";
 import { Button, Input } from "../components/ui";
 
 export function LoginPage({
@@ -11,7 +11,6 @@ export function LoginPage({
 }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [show, setShow] = useState(false);
   const [busy, setBusy] = useState(false);
   const [localError, setLocalError] = useState("");
 
@@ -61,11 +60,8 @@ export function LoginPage({
           <label className="grid gap-1.5">
             <span className="text-xs font-black uppercase tracking-[0.18em] text-zinc-400">Senha</span>
             <div className="relative">
-              <Lock className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400" size={18} />
-              <Input className="pl-10 pr-12" type={show ? "text" : "password"} value={password} onChange={(event) => setPassword(event.target.value)} required />
-              <button type="button" onClick={() => setShow((value) => !value)} className="absolute right-2 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-xl text-zinc-500" aria-label="Ver senha">
-                {show ? <EyeOff size={18} /> : <Eye size={18} />}
-              </button>
+              <Lock className="pointer-events-none absolute left-3.5 top-1/2 z-10 -translate-y-1/2 text-zinc-400" size={18} />
+              <Input className="pl-10" type="password" value={password} onChange={(event) => setPassword(event.target.value)} required />
             </div>
           </label>
         </div>
