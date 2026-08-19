@@ -57,7 +57,7 @@ export function SearchPicker({
   onChange,
   emptyText = "Nada encontrado.",
   allowClear = true,
-  hideInputWhenSelected = false,
+  hideInputWhenSelected = true,
   maxResults = 6,
   createKind
 }: {
