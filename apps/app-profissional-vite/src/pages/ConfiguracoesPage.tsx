@@ -1,86 +1,46 @@
-import { FormEvent, useState } from "react";
+import { FormEvent, useMemo, useState } from "react";
+import { Check, Clock3, UserRound } from "lucide-react";
 import { Button } from "../components/ui/Button";
-import { Card } from "../components/ui/Card";
 import { Field, Input, Select } from "../components/ui/Input";
 import { useAuth } from "../contexts/AuthContext";
-import { supabase } from "../lib/supabase";
 import type { HorarioDia } from "../types/database";
 
-const dias = ["Domingo", "Segunda", "Terca", "Quarta", "Quinta", "Sexta", "Sabado"];
+const nomesDias = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
+function diaIndex(value: number | string) { if (typeof value === "number") return value; const normalized = String(value).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase(); return nomesDias.findIndex((d) => d.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase() === normalized); }
 
 export function ConfiguracoesPage() {
   const { profissional, refreshProfissional } = useAuth();
   const [nome, setNome] = useState(profissional?.nome || "");
-  const [telefone, setTelefone] = useState(profissional?.telefone || "");
+  const [telefone, setTelefone] = useState(profissional?.telefone || profissional?.whatsapp || "");
   const [intervalo, setIntervalo] = useState(profissional?.intervalo_agenda_minutos || 30);
-  const [horarios, setHorarios] = useState<HorarioDia[]>(profissional?.horario_funcionamento || []);
-  const [loading, setLoading] = useState(false);
-  const [ok, setOk] = useState("");
-
-  function updateHorario(index: number, patch: Partial<HorarioDia>) {
-    setHorarios((current) => current.map((item, itemIndex) => (itemIndex === index ? { ...item, ...patch } : item)));
-  }
+  const iniciais = useMemo<HorarioDia[]>(() => nomesDias.map((dia, index) => {
+    const found = (profissional?.dias_trabalho || profissional?.horario_funcionamento || []).find((item) => diaIndex(item.dia) === index);
+    return found ? { ...found, dia } : { dia, ativo: index > 0 && index < 7, inicio: "09:00", fim: "18:00" };
+  }), [profissional]);
+  const [horarios, setHorarios] = useState(iniciais);
+  const [loading, setLoading] = useState(false); const [ok, setOk] = useState(""); const [erro, setErro] = useState("");
+  function updateHorario(index: number, patch: Partial<HorarioDia>) { setHorarios((current) => current.map((item, i) => i === index ? { ...item, ...patch } : item)); }
 
   async function submit(event: FormEvent) {
-    event.preventDefault();
-    if (!profissional) return;
-    setLoading(true);
-    setOk("");
-    const { error } = await supabase
-      .from("profissionais")
-      .update({
-        nome,
-        telefone,
-        intervalo_agenda_minutos: intervalo,
-        horario_funcionamento: horarios
-      })
-      .eq("id", profissional.id);
-    setLoading(false);
-    if (error) throw new Error(error.message);
-    await refreshProfissional();
-    setOk("Configuracoes salvas.");
+    event.preventDefault(); setLoading(true); setOk(""); setErro("");
+    try {
+      const response = await fetch("/api/app-profissional/configuracoes", { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ nome, telefone, intervalo, diasTrabalho: horarios }) });
+      const payload = await response.json().catch(() => ({})); if (!response.ok || !payload.ok) throw new Error(payload.error || "Não foi possível salvar.");
+      await refreshProfissional(); setOk("Configurações salvas com sucesso.");
+    } catch (error) { setErro(error instanceof Error ? error.message : "Não foi possível salvar."); } finally { setLoading(false); }
   }
 
-  return (
-    <form onSubmit={submit} className="space-y-4">
-      <Card>
-        <h2 className="text-xl font-black tracking-[-0.04em]">Perfil</h2>
-        <div className="mt-4 grid gap-3">
-          <Field label="Nome"><Input value={nome} onChange={(event) => setNome(event.target.value)} /></Field>
-          <Field label="Telefone"><Input value={telefone} onChange={(event) => setTelefone(event.target.value)} /></Field>
-          <Field label="Intervalo agenda">
-            <Select value={intervalo} onChange={(event) => setIntervalo(Number(event.target.value))}>
-              <option value={30}>30 em 30 minutos</option>
-              <option value={60}>1h em 1h</option>
-              <option value={120}>2h em 2h</option>
-            </Select>
-          </Field>
-        </div>
-      </Card>
+  return <form onSubmit={submit} className="space-y-4 pb-6">
+    <section className="rounded-[1.35rem] border border-zinc-200 bg-white p-4 shadow-sm">
+      <div className="mb-4 flex items-center gap-3"><div className="grid h-11 w-11 place-items-center rounded-2xl bg-amber-50 text-amber-800"><UserRound size={22}/></div><div><h2 className="text-xl font-black tracking-[-0.04em]">Seu perfil</h2><p className="text-sm font-semibold text-zinc-500">Dados usados no App Profissional</p></div></div>
+      <div className="grid gap-3"><Field label="Nome"><Input value={nome} onChange={(e) => setNome(e.target.value)}/></Field><Field label="Telefone / WhatsApp"><Input inputMode="tel" value={telefone} onChange={(e) => setTelefone(e.target.value)}/></Field><Field label="Intervalo da agenda"><Select value={intervalo} onChange={(e) => setIntervalo(Number(e.target.value))}><option value={15}>15 em 15 minutos</option><option value={30}>30 em 30 minutos</option><option value={60}>1h em 1h</option><option value={120}>2h em 2h</option></Select></Field></div>
+    </section>
 
-      <Card>
-        <h2 className="text-xl font-black tracking-[-0.04em]">Horario de funcionamento</h2>
-        <div className="mt-4 space-y-3">
-          {horarios.map((horario, index) => (
-            <div key={horario.dia} className="rounded-2xl border border-zinc-200 bg-zinc-50 p-3">
-              <div className="mb-3 flex items-center justify-between gap-3">
-                <span className="font-black">{dias[horario.dia]}</span>
-                <label className="flex items-center gap-2 text-sm font-black">
-                  <input type="checkbox" checked={horario.ativo} onChange={(event) => updateHorario(index, { ativo: event.target.checked })} />
-                  Ativo
-                </label>
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                <Field label="Inicio"><Input type="time" value={horario.inicio} onChange={(event) => updateHorario(index, { inicio: event.target.value })} /></Field>
-                <Field label="Fim"><Input type="time" value={horario.fim} onChange={(event) => updateHorario(index, { fim: event.target.value })} /></Field>
-              </div>
-            </div>
-          ))}
-        </div>
-      </Card>
-
-      {ok ? <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-700">{ok}</div> : null}
-      <Button loading={loading} className="w-full">Salvar configuracoes</Button>
-    </form>
-  );
+    <section className="rounded-[1.35rem] border border-zinc-200 bg-white p-4 shadow-sm">
+      <div className="mb-4 flex items-center gap-3"><div className="grid h-11 w-11 place-items-center rounded-2xl bg-emerald-50 text-emerald-700"><Clock3 size={22}/></div><div><h2 className="text-xl font-black tracking-[-0.04em]">Horário de funcionamento</h2><p className="text-sm font-semibold text-zinc-500">Defina seus dias e expediente</p></div></div>
+      <div className="divide-y divide-zinc-100">{horarios.map((horario, index) => <div key={String(horario.dia)} className="py-3 first:pt-0 last:pb-0"><div className="flex items-center justify-between gap-3"><div><div className="font-black text-zinc-900">{nomesDias[index]}</div><div className="text-xs font-bold text-zinc-400">{horario.ativo ? `${horario.inicio} às ${horario.fim}` : "Não atende"}</div></div><button type="button" aria-pressed={horario.ativo} onClick={() => updateHorario(index,{ativo:!horario.ativo})} className={`relative h-8 w-14 rounded-full transition ${horario.ativo ? "bg-zinc-950" : "bg-zinc-200"}`}><span className={`absolute top-1 h-6 w-6 rounded-full bg-white shadow-sm transition ${horario.ativo ? "left-7" : "left-1"}`}/></button></div>{horario.ativo ? <div className="mt-3 grid grid-cols-2 gap-2"><Field label="Início"><Input type="time" value={horario.inicio} onChange={(e)=>updateHorario(index,{inicio:e.target.value})}/></Field><Field label="Fim"><Input type="time" value={horario.fim} onChange={(e)=>updateHorario(index,{fim:e.target.value})}/></Field></div> : null}</div>)}</div>
+    </section>
+    {ok ? <div className="flex items-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-700"><Check size={18}/>{ok}</div> : null}{erro ? <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700">{erro}</div> : null}
+    <Button loading={loading} className="h-14 w-full rounded-[1.1rem]">Salvar configurações</Button>
+  </form>;
 }
