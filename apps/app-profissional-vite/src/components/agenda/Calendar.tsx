@@ -203,7 +203,15 @@ export function Calendar({
         </div>
         <div className="mt-4 grid grid-cols-2 gap-2">
           <Button onClick={() => { setNewError(null); setNewOpen(true); }}><CalendarPlus size={16} />Novo agendamento</Button>
-          <Button variant="secondary" onClick={() => { setBlockSelectedDates([selectedDate]); setBlockProfissional(canChooseProfessional ? "" : profissionalAtual.id); setBlockAllDay(false); setBlockError(null); setBlockOpen(true); }}><Ban size={16} />Bloquear horario</Button>
+          <Button variant="secondary" onClick={() => {
+            const selected = parseISODate(selectedDate);
+            const selectedIsVisible = selected.getFullYear() === cursor.getFullYear() && selected.getMonth() === cursor.getMonth();
+            setBlockSelectedDates(selectedIsVisible ? [selectedDate] : []);
+            setBlockProfissional(canChooseProfessional ? "" : profissionalAtual.id);
+            setBlockAllDay(false);
+            setBlockError(null);
+            setBlockOpen(true);
+          }}><Ban size={16} />Bloquear horario</Button>
         </div>
         <div className="mt-5 space-y-3">
           {selectedItems.length ? selectedItems.map((item) => {
