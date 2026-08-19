@@ -54,14 +54,14 @@ export function InicioPage({
       <div className="grid grid-cols-2 gap-3">
         <ActionCard icon={<CalendarClock size={22} />} title="Agenda" text="Ver horarios" onClick={() => goTo("agenda")} />
         <ActionCard icon={<Users size={22} />} title="Clientes" text={`${clientes.length} cadastros`} onClick={() => goTo("clientes")} />
-        <ActionCard icon={<CheckCircle2 size={22} />} title="Servicos" text={`${servicos.length} ativos`} onClick={() => goTo("servicos")} />
+        <ActionCard icon={<CheckCircle2 size={22} />} title="Serviços" text={`${servicos.length} ativos`} onClick={() => goTo("servicos")} />
         <ActionCard icon={<CircleDollarSign size={22} />} title="Comandas" text={`${comandas.filter((item) => item.status === "aberta").length} abertas`} onClick={() => goTo("comandas")} />
       </div>
 
       <Card>
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h3 className="text-xl font-black tracking-[-0.04em]">Proximo atendimento</h3>
+            <h3 className="text-xl font-black tracking-[-0.04em]">Próximo atendimento</h3>
             <p className="text-sm font-bold text-zinc-500">Toque na agenda para ver detalhes.</p>
           </div>
           <Button className="h-10 px-3" variant="secondary" onClick={() => goTo("agenda")}>
@@ -79,7 +79,7 @@ export function InicioPage({
           </div>
         ) : (
           <div className="mt-4 rounded-2xl border border-dashed border-zinc-300 p-5 text-center text-sm font-bold text-zinc-500">
-            Nenhum proximo horario para hoje.
+            Nenhum próximo horário para hoje.
           </div>
         )}
       </Card>

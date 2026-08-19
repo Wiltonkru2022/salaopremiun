@@ -31,17 +31,17 @@ export function PerfilPage({
         <h3 className="text-xl font-black tracking-[-0.04em]">Informações</h3>
         <div className="mt-4 grid gap-2">
           <Info label="Telefone" value={profissional.telefone || profissional.whatsapp || "Não informado"} />
-          <Info label="Email" value={profissional.email || "Não informado"} />
+          <Info label="E-mail" value={profissional.email || "Não informado"} />
           <Info label="CPF" value={profissional.cpf || "Não informado"} />
           <Info label="Pix" value={profissional.pix_chave || profissional.sinal_pix_recebedor || "Não informado"} />
-          <Info label="Intervalo agenda" value={`${profissional.intervalo_agenda_minutos || 30} minutos`} />
+          <Info label="Intervalo da agenda" value={`${profissional.intervalo_agenda_minutos || 30} minutos`} />
         </div>
       </Card>
 
       <div className="grid gap-3">
         <ProfileAction icon={<Clock size={21} />} title="Ajustar horários" text="Expediente e intervalo da agenda" onClick={() => goTo("configuracoes")} />
         <ProfileAction icon={<KeyRound size={21} />} title="Trocar senha" text="Senha do app profissional" onClick={() => setPasswordOpen(true)} />
-        <ProfileAction icon={<Smartphone size={21} />} title="Instalar app" text="PWA na tela inicial" onClick={() => goTo("instalar")} />
+        <ProfileAction icon={<Smartphone size={21} />} title="Instalar app" text="Adicionar à tela inicial" onClick={() => goTo("instalar")} />
         <ProfileAction icon={<HelpCircle size={21} />} title="Suporte e dúvidas" text="Ajuda rápida do profissional" onClick={() => goTo("suporte")} />
         <ProfileAction icon={<ShieldCheck size={21} />} title="Privacidade" text="Termos e regras de uso" onClick={() => goTo("privacidade")} />
       </div>
@@ -49,7 +49,8 @@ export function PerfilPage({
       <Modal title="Trocar senha" open={passwordOpen} onClose={() => setPasswordOpen(false)}>
         <PasswordForm
           onSubmit={async (senha) => {
-            await onChangePassword?.(senha);
+            if (!onChangePassword) throw new Error("Troca de senha indisponível.");
+            await onChangePassword(senha);
             setPasswordOpen(false);
           }}
         />
@@ -75,27 +76,34 @@ function PasswordForm({ onSubmit }: { onSubmit: (senha: string) => Promise<void>
 
   async function submit(event: FormEvent) {
     event.preventDefault();
+    if (loading) return;
     setErro("");
     if (senha.length < 6) return setErro("A senha precisa ter pelo menos 6 caracteres.");
     if (senha !== confirmar) return setErro("As senhas não conferem.");
+
     setLoading(true);
-    await onSubmit(senha);
-    setLoading(false);
+    try {
+      await onSubmit(senha);
+    } catch (submitError) {
+      setErro(submitError instanceof Error ? submitError.message : "Não foi possível alterar a senha.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
     <form onSubmit={submit} className="grid gap-3">
-      <Field label="Nova senha"><Input type="password" value={senha} onChange={(event) => setSenha(event.target.value)} /></Field>
-      <Field label="Confirmar senha"><Input type="password" value={confirmar} onChange={(event) => setConfirmar(event.target.value)} /></Field>
-      {erro ? <div className="rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-bold text-red-700">{erro}</div> : null}
-      <Button loading={loading}>Salvar nova senha</Button>
+      <Field label="Nova senha"><Input required minLength={6} autoComplete="new-password" type="password" value={senha} onChange={(event) => setSenha(event.target.value)} /></Field>
+      <Field label="Confirmar senha"><Input required minLength={6} autoComplete="new-password" type="password" value={confirmar} onChange={(event) => setConfirmar(event.target.value)} /></Field>
+      {erro ? <div role="alert" className="rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-bold text-red-700">{erro}</div> : null}
+      <Button type="submit" loading={loading}>Salvar nova senha</Button>
     </form>
   );
 }
 
 function ProfileAction({ icon, title, text, onClick }: { icon: React.ReactNode; title: string; text: string; onClick: () => void }) {
   return (
-    <button onClick={onClick} className="flex items-center gap-3 rounded-[1.25rem] border border-zinc-200 bg-white p-4 text-left shadow-sm active:bg-zinc-50">
+    <button type="button" onClick={onClick} className="flex items-center gap-3 rounded-[1.25rem] border border-zinc-200 bg-white p-4 text-left shadow-sm active:bg-zinc-50">
       <div className="grid h-12 w-12 place-items-center rounded-2xl bg-zinc-100 text-zinc-900">{icon}</div>
       <div className="min-w-0 flex-1">
         <div className="truncate text-base font-black tracking-[-0.03em]">{title}</div>

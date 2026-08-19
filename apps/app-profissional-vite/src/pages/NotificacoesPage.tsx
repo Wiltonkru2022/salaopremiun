@@ -1,11 +1,34 @@
 import { BellRing } from "lucide-react";
+import { useState } from "react";
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
 import type { Notificacao } from "../types/database";
 
 export function NotificacoesPage({ notificacoes, onRead }: { notificacoes: Notificacao[]; onRead: (id: string) => Promise<void> }) {
+  const [readingId, setReadingId] = useState<string | null>(null);
+  const [error, setError] = useState("");
+
+  async function markAsRead(id: string) {
+    if (readingId) return;
+    setReadingId(id);
+    setError("");
+    try {
+      await onRead(id);
+    } catch (readError) {
+      setError(readError instanceof Error ? readError.message : "Não foi possível marcar a notificação como lida.");
+    } finally {
+      setReadingId(null);
+    }
+  }
+
   return (
     <div className="space-y-3">
+      {error ? (
+        <div role="alert" className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700">
+          {error}
+        </div>
+      ) : null}
+
       {notificacoes.length ? (
         notificacoes.map((item) => (
           <Card key={item.id} className={item.lida ? "opacity-70" : "border-amber-200 bg-amber-50"}>
@@ -20,7 +43,14 @@ export function NotificacoesPage({ notificacoes, onRead }: { notificacoes: Notif
               </div>
             </div>
             {!item.lida ? (
-              <Button className="mt-3 h-9 px-3" variant="secondary" onClick={() => onRead(item.id)}>
+              <Button
+                type="button"
+                className="mt-3 h-9 px-3"
+                variant="secondary"
+                loading={readingId === item.id}
+                disabled={Boolean(readingId) && readingId !== item.id}
+                onClick={() => void markAsRead(item.id)}
+              >
                 Marcar como lida
               </Button>
             ) : null}
@@ -28,7 +58,7 @@ export function NotificacoesPage({ notificacoes, onRead }: { notificacoes: Notif
         ))
       ) : (
         <Card>
-          <div className="py-8 text-center text-sm font-bold text-zinc-500">Nenhuma notificacao por enquanto.</div>
+          <div className="py-8 text-center text-sm font-bold text-zinc-500">Nenhuma notificação por enquanto.</div>
         </Card>
       )}
     </div>

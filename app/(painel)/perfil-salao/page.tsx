@@ -2109,7 +2109,7 @@ export default function PerfilSalaoPage() {
                     </div>
                     <div>
                       <div className="text-sm font-bold text-zinc-950">
-                        Fuso horario do salao
+                        Fuso horário do salao
                       </div>
                       <p className="mt-1 text-sm leading-5 text-zinc-600">
                         Defina o fuso usado na agenda, lembretes, notificacoes
@@ -2393,7 +2393,7 @@ export default function PerfilSalaoPage() {
                   nome: event.target.value,
                 }))
               }
-              placeholder="Ex.: Salão Premium"
+              placeholder="Ex.: Salão Premiun"
             />
           </Field>
 

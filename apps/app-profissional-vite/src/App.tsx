@@ -32,7 +32,7 @@ const titles: Record<View, string> = {
   perfil: ptBR.professional.profile,
   configuracoes: ptBR.professional.settings,
   suporte: ptBR.professional.support,
-  duvidas: "Duvidas",
+  duvidas: "Dúvidas",
   instalar: "Instalar",
   privacidade: "Privacidade"
 };
@@ -51,9 +51,9 @@ export function App() {
   const subtitle = useMemo(() => {
     if (view === "agenda") return new Intl.DateTimeFormat("pt-BR", { weekday: "long", day: "2-digit", month: "long" }).format(new Date(selectedDate + "T12:00:00"));
     if (view === "comandas") return `${data.comandas.filter((item) => item.status === "aberta").length} abertas`;
-    if (view === "notificacoes") return `${data.notificacoes.filter((item) => !item.lida).length} nao lidas`;
-    if (view === "comissao") return "Repasse e producao";
-    if (view === "perfil") return "Dados, horarios e suporte";
+    if (view === "notificacoes") return `${data.notificacoes.filter((item) => !item.lida).length} não lidas`;
+    if (view === "comissao") return "Repasse e produção";
+    if (view === "perfil") return "Dados, horários e suporte";
     return profissional?.nome || "";
   }, [view, selectedDate, data.comandas, data.notificacoes, profissional?.nome]);
 
@@ -79,7 +79,7 @@ export function App() {
               ? `${ptBR.common.online}${data.lastSyncedAt ? ` · ${new Date(data.lastSyncedAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}` : ""}`
               : ptBR.professional.offlineWarning}
         </div>
-        <Button variant="secondary" className="h-10 px-3" onClick={() => data.refresh()}>
+        <Button type="button" loading={data.loading} variant="secondary" className="h-10 px-3" onClick={() => void data.refresh()}>
           <RefreshCw size={16} />
           Atualizar
         </Button>
@@ -102,4 +102,3 @@ export function App() {
     </AppShell>
   );
 }
-

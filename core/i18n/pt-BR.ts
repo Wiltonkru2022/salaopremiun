@@ -1,6 +1,6 @@
 export const ptBR = {
   brand: {
-    name: "Salão Premium",
+    name: "Salão Premiun",
     professional: "Profissional",
   },
   common: {
@@ -88,5 +88,42 @@ export const ptBR = {
     staleWarning: "Os dados podem estar desatualizados.",
   },
 } as const;
+
+const STATUS_PT_BR: Record<string, string> = {
+  ativo: "Ativo",
+  ativa: "Ativa",
+  inativo: "Inativo",
+  inativa: "Inativa",
+  pendente: "Pendente",
+  confirmado: "Confirmado",
+  confirmada: "Confirmada",
+  atendido: "Atendido",
+  atendida: "Atendida",
+  em_atendimento: "Em atendimento",
+  aguardando_pagamento: "Aguardando pagamento",
+  aguardando_sinal: "Aguardando sinal",
+  aguardando_confirmacao: "Aguardando confirmação",
+  cancelado: "Cancelado",
+  cancelada: "Cancelada",
+  faltou: "Faltou",
+  bloqueado: "Bloqueado",
+  aberta: "Aberta",
+  fechado: "Fechado",
+  fechada: "Fechada",
+  pago: "Pago",
+  paga: "Paga",
+  aprovado: "Aprovado",
+  aprovada: "Aprovada",
+  recusado: "Recusado",
+  recusada: "Recusada",
+  vencido: "Vencido",
+  vencida: "Vencida",
+};
+
+export function statusPtBR(value?: string | null) {
+  const normalized = String(value || "").trim().toLowerCase();
+  if (!normalized) return "Não informado";
+  return STATUS_PT_BR[normalized] || normalized.replace(/_/g, " ").replace(/^./, (letter) => letter.toUpperCase());
+}
 
 export type PtBR = typeof ptBR;
